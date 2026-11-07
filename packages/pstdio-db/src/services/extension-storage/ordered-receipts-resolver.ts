@@ -70,12 +70,17 @@ export const createOrderedReceiptResolver = (
     dependency,
     probeDependency: findDependency,
     hydrateDependencies,
-    async availableDependencies(operation: OrderedOperation, epoch: string) {
+    /**
+     * A base only chooses which paths apply, so it can name this device's own earlier save that is
+     * already ahead of it in relay order (`ordered`) instead of waiting for that save's receipt.
+     */
+    async availableDependencies(operation: OrderedOperation, epoch: string, ordered = new Set<string>()) {
       const known = new Map<string, OrderedDecision>();
+      const refusing = operationDependencies(operation, { base: false });
       for (const [id, fingerprint] of operationDependencies(operation)) {
         const decision = await findDependency(id, fingerprint, epoch);
-        if (!decision) return;
-        known.set(id, decision);
+        if (decision) known.set(id, decision);
+        else if (refusing.has(id) || !ordered.has(id)) return;
       }
       return known;
     },

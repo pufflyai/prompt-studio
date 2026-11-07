@@ -364,17 +364,17 @@ const baseEdit = (
       throw error;
     }
   };
-  if (
-    base.exists &&
-    !(record && superseded(record.lifetime)) &&
-    (!record ||
-      base.deleted !== record.deleted ||
-      (base.lifetime === null ? null : normalize(base.lifetime)) !== normalize(record.lifetime))
-  )
-    return whole();
+  // Deleting or restoring decides the whole record, so any change after the base keeps the in-sync record.
+  // Plain edits compare only their own paths: a restore elsewhere leaves untouched fields writable.
   if (lifecycleEdit(edit.deleted, base.deleted)) {
+    const moved =
+      base.exists &&
+      !(record && superseded(record.lifetime)) &&
+      (!record ||
+        base.deleted !== record.deleted ||
+        (base.lifetime === null ? null : normalize(base.lifetime)) !== normalize(record.lifetime));
     const all = [{ path: [], remove: true as const }];
-    return sameStamps(base.stamps, record?.stamps ?? {}, all, normalize, superseded) ? { edit } : whole();
+    return !moved && sameStamps(base.stamps, record?.stamps ?? {}, all, normalize, superseded) ? { edit } : whole();
   }
   const kept: JsonChange[] = [];
   const skipped: string[] = [];

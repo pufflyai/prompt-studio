@@ -4,13 +4,9 @@ import { createSyncSpace } from "pstdio-sync/encryption";
 import { createRecordStreamSync } from "pstdio-sync/relay";
 import type { Json } from "pstdio-sync-contracts";
 import { createDb } from "../../db/connection.pglite";
-import {
-  storage_ordered_operations as operations,
-  storage_ordered_owners as owners,
-  projects,
-} from "../../db/schemas.pg";
+import { storage_ordered_operations as operations, projects } from "../../db/schemas.pg";
 import { createDocumentStorageDBService } from "./document-storage";
-import { orderedReturnLimits } from "./ordered-return";
+import { orderedReturnLimits, readOrderedReturnState } from "./ordered-return";
 import { createRelay } from "./record-stream-relay.fixture";
 
 const cleanup: (() => Promise<unknown>)[] = [];
@@ -57,9 +53,7 @@ const devices = async () => {
         );
       return row!.count;
     };
-    const state = async () =>
-      (await db.select({ state: owners.return_state }).from(owners).where(eq(owners.workbench_id, projectId)))[0]
-        ?.state;
+    const state = () => readOrderedReturnState(db, owner);
     const save = (recordId: string, edit: { set?: Record<string, Json>; deleted?: boolean; replace?: Json }) =>
       records.commit({ operationId: crypto.randomUUID(), edits: [{ recordId, ...edit }] });
     const value = async (recordId: string) => {

@@ -1,12 +1,18 @@
 import { sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { jsonPointer, type OrderedOperation, type OrderedSkip } from "pstdio-sync/records";
-import { storage_ordered_records as records, storage_ordered_replaced as replaced } from "../../db/schemas.pg";
+import { storage_ordered_records as records } from "../../db/schemas.pg";
 import type { OrderedJournal } from "./ordered-journal";
+import { saveOrderedMarker } from "./ordered-native-metadata";
 import { pendingOrderedOperations } from "./ordered-pending";
-import { dropPending, editRecords, orderedReturnLimits, setOrderedReturnState } from "./ordered-return";
+import {
+  dropPending,
+  editRecords,
+  orderedReturnLimits,
+  readOrderedReturnState,
+  setOrderedReturnState,
+} from "./ordered-return";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
-import { readOrderedOwner } from "./ordered-stream-state";
 
 export interface OrderedReturnSummary {
   records: { recordId: string; paths: string[]; deleted: boolean; created: boolean }[];
@@ -45,8 +51,8 @@ const canonicalCount = async (tx: OrderedTransaction, owner: StorageOwner) => {
 
 /** On reconnecting, a large return waits for review; anything smaller uploads under the base rule. */
 export const evaluateOrderedReturn = async (journal: OrderedJournal, tx: OrderedTransaction, owner: StorageOwner) => {
-  const row = await readOrderedOwner(tx, owner);
-  if (row.return_state !== "signed-out" && row.return_state !== "folded") return row.return_state;
+  const state = await readOrderedReturnState(tx, owner);
+  if (state !== "signed-out" && state !== "folded") return state;
   const summary = await orderedReturnSummary(journal);
   const limits = orderedReturnLimits;
   const held =
@@ -72,6 +78,15 @@ export const discardOrderedReturn = async (journal: OrderedJournal, tx: OrderedT
   return [...ids];
 };
 
+/** One notice per record, private to this device like other ordered markers. */
+export const orderedReplacedPrefix = '["ordered-replaced",';
+export interface OrderedReplacedNotice {
+  paths: string[];
+  whole: boolean;
+  deleted: boolean;
+  replacedAt: number;
+}
+
 /** Remember which of this device's changes Cloud did not apply, so the person can see them. */
 export const recordOrderedReplaced = async (
   journal: OrderedJournal,
@@ -82,24 +97,14 @@ export const recordOrderedReplaced = async (
 ) => {
   // Only this device's own saves become notices; other devices' skipped writes are not news here.
   if (!skipped.length || !(await journal.localOperation(operation.operationId))) return;
-  const now = Date.now();
+  const replacedAt = Date.now();
   for (const skip of skipped) {
     const edit = operation.edits.find((candidate) => candidate.recordId === skip.recordId);
-    const row = {
-      workbench_id: owner.workbenchId,
-      extension_id: owner.extensionId,
-      record_id: skip.recordId,
+    await saveOrderedMarker(tx, owner, JSON.stringify(["ordered-replaced", skip.recordId]), {
       paths: skip.paths,
       whole: skip.whole,
       deleted: edit?.deleted === true,
-      replaced_at: now,
-    };
-    await tx
-      .insert(replaced)
-      .values(row)
-      .onConflictDoUpdate({
-        target: [replaced.workbench_id, replaced.extension_id, replaced.record_id],
-        set: { paths: row.paths, whole: row.whole, deleted: row.deleted, replaced_at: row.replaced_at },
-      });
+      replacedAt,
+    } satisfies OrderedReplacedNotice);
   }
 };

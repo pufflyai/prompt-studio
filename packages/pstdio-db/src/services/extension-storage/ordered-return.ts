@@ -13,18 +13,27 @@ import {
 } from "pstdio-sync/records";
 import { canonicalJson, type Json } from "pstdio-sync-contracts";
 import {
+  storage_documents as documents,
   storage_ordered_operations as operations,
-  storage_ordered_owners as owners,
   storage_ordered_touches as touches,
 } from "../../db/schemas.pg";
 import type { OrderedJournal } from "./ordered-journal";
 import { isOrderedNativeRequest } from "./ordered-native-identity";
+import { readOrderedMarker, saveOrderedMarker } from "./ordered-native-metadata";
 import { pendingOrderedOperations } from "./ordered-pending";
 import { knownDependencies } from "./ordered-rebase";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { orderedOwnerJoinedCloud, readOrderedOwner } from "./ordered-stream-state";
 
-export type OrderedReturnState = NonNullable<(typeof owners.$inferSelect)["return_state"]>;
+/**
+ * Why a joined owner is away from Cloud. `signed-out` and `folded` keep at most one folded save per
+ * record; `held` uploads nothing until someone applies or discards it. Absent while syncing normally.
+ */
+export type OrderedReturnState = "signed-out" | "folded" | "held";
+const returnMarker = JSON.stringify(["ordered-return"]);
+
+export const readOrderedReturnState = async (tx: Pick<OrderedTransaction, "select">, owner: StorageOwner) =>
+  (await readOrderedMarker<{ state: OrderedReturnState }>(tx, owner, returnMarker))?.value.state ?? null;
 
 export const orderedReturnLimits = {
   /** Unsent saves per owner before a signed-in device folds them into one save per record. */
@@ -62,7 +71,9 @@ const overFoldLimit = async (tx: OrderedTransaction, owner: StorageOwner) => {
 };
 
 export const setOrderedReturnState = (tx: OrderedTransaction, owner: StorageOwner, state: OrderedReturnState | null) =>
-  tx.update(owners).set({ return_state: state }).where(orderedOwnerWhere(owners, owner));
+  state
+    ? saveOrderedMarker(tx, owner, returnMarker, { state })
+    : tx.delete(documents).where(and(orderedOwnerWhere(documents, owner), eq(documents.document_id, returnMarker)));
 
 export const editRecords = (local: Local) => local.operation.edits.map((edit) => edit.recordId);
 const foldable = (local: Local) =>
@@ -297,8 +308,8 @@ export const foldOrderedSaves = async (
   changed: string[],
 ) => {
   if (owner.extensionId === coreOwnerId) return [];
-  const row = await readOrderedOwner(tx, owner);
-  if (!row.return_state) {
+  if (!(await readOrderedReturnState(tx, owner))) {
+    const row = await readOrderedOwner(tx, owner);
     if (!(await orderedOwnerJoinedCloud(tx, owner, row)) || !(await overFoldLimit(tx, owner))) return [];
     await setOrderedReturnState(tx, owner, "folded");
     return foldAllOrderedSaves(journal, tx, owner);
@@ -307,8 +318,6 @@ export const foldOrderedSaves = async (
 };
 
 /** Whether a save must take the full rebase path so it can fold. */
-export const orderedSavesFold = async (
-  tx: OrderedTransaction,
-  owner: StorageOwner,
-  row: { return_state: string | null },
-) => owner.extensionId !== coreOwnerId && (!!row.return_state || (await overFoldLimit(tx, owner)));
+export const orderedSavesFold = async (tx: OrderedTransaction, owner: StorageOwner) =>
+  owner.extensionId !== coreOwnerId &&
+  (!!(await readOrderedReturnState(tx, owner)) || (await overFoldLimit(tx, owner)));

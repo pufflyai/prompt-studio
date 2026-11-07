@@ -22,11 +22,6 @@ export const storage_ordered_owners = pgTable(
     state_bytes: bigint("state_bytes", { mode: "number" }).notNull().default(0),
     skipped: boolean("skipped").notNull().default(false),
     receipt_root: bytea("receipt_root"),
-    /**
-     * Why this joined device is away from Cloud. `signed-out` and `folded` keep at most one
-     * folded save per record; `held` uploads nothing until someone applies or discards it.
-     */
-    return_state: text("return_state").$type<"signed-out" | "folded" | "held">(),
   },
   (table) => [
     primaryKey({ columns: [table.workbench_id, table.extension_id] }),
@@ -134,28 +129,6 @@ export const storage_ordered_receipts = pgTable(
         storage_ordered_operations.extension_id,
         storage_ordered_operations.operation_id,
       ],
-    }).onDelete("cascade"),
-  ],
-);
-
-/** Fields of this device's saves that Cloud kept from another device, until someone dismisses them. */
-export const storage_ordered_replaced = pgTable(
-  "storage_ordered_replaced",
-  {
-    ...owner(),
-    record_id: text("record_id").notNull(),
-    /** JSON Pointers of the plain values that were not applied. */
-    paths: text("paths").array().notNull(),
-    /** The whole edit was dropped, for example an edit to a record another device deleted. */
-    whole: boolean("whole").notNull(),
-    deleted: boolean("deleted").notNull(),
-    replaced_at: bigint("replaced_at", { mode: "number" }).notNull(),
-  },
-  (table) => [
-    primaryKey({ columns: [table.workbench_id, table.extension_id, table.record_id] }),
-    foreignKey({
-      columns: [table.workbench_id, table.extension_id],
-      foreignColumns: [storage_ordered_owners.workbench_id, storage_ordered_owners.extension_id],
     }).onDelete("cascade"),
   ],
 );

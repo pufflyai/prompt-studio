@@ -1,19 +1,23 @@
-import { and, desc, eq, inArray, notInArray, or, sql } from "drizzle-orm";
+import { and, eq, inArray, like, notInArray, or, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { DbClient } from "../../db/connection.pglite";
 import {
+  storage_documents as documents,
   storage_record_sync as legacy,
   storage_ordered_resource_numbers as numbers,
   storage_ordered_owners as owners,
-  storage_ordered_replaced as replaced,
 } from "../../db/schemas.pg";
 import { createOrderedJournal, withOrderedOwner } from "./ordered-journal";
 import { initializeOrderedOwner } from "./ordered-projection";
 import { rebaseOrderedProjection } from "./ordered-rebase";
-import { foldAllOrderedSaves, setOrderedReturnState } from "./ordered-return";
-import { discardOrderedReturn, orderedReturnSummary } from "./ordered-return-review";
-import { orderedOwnerWhere } from "./ordered-sql";
-import { readOrderedOwner } from "./ordered-stream-state";
+import { foldAllOrderedSaves, readOrderedReturnState, setOrderedReturnState } from "./ordered-return";
+import {
+  discardOrderedReturn,
+  type OrderedReplacedNotice,
+  orderedReplacedPrefix,
+  orderedReturnSummary,
+} from "./ordered-return-review";
+import { decodeOrderedJson, orderedOwnerWhere } from "./ordered-sql";
 
 /** How many changed or replaced records a status lists; totals still count all of them. */
 const listed = 50;
@@ -36,7 +40,7 @@ export interface CloudReturnStatus {
 
 const joinedOwners = (db: Pick<DbClient, "select">, projectIds?: string[]) =>
   db
-    .select({ workbenchId: owners.workbench_id, extensionId: owners.extension_id, state: owners.return_state })
+    .select({ workbenchId: owners.workbench_id, extensionId: owners.extension_id })
     .from(owners)
     .where(
       and(
@@ -49,6 +53,9 @@ const joinedOwners = (db: Pick<DbClient, "select">, projectIds?: string[]) =>
         ),
       ),
     );
+
+const withStates = (db: Pick<DbClient, "select">, rows: { workbenchId: string; extensionId: string }[]) =>
+  Promise.all(rows.map(async (row) => ({ ...row, state: await readOrderedReturnState(db, row) })));
 
 /** Fields inside the record value; other channels such as files keep their own names. */
 const fields = (paths: string[]) => [
@@ -95,8 +102,8 @@ export const createOrderedCloudReturn = (db: DbClient, deps: { changed: (owner: 
     async signOut() {
       await each(await joinedOwners(db), (owner) =>
         run(owner, async (journal, tx) => {
-          const row = await readOrderedOwner(tx, owner);
-          if (row.return_state !== "held") await setOrderedReturnState(tx, owner, "signed-out");
+          if ((await readOrderedReturnState(tx, owner)) !== "held")
+            await setOrderedReturnState(tx, owner, "signed-out");
           const changed = await foldAllOrderedSaves(journal, tx, owner);
           if (changed.length) await rebaseOrderedProjection(journal, tx, owner, changed);
           return changed.length > 0;
@@ -133,10 +140,10 @@ export const createOrderedCloudReturn = (db: DbClient, deps: { changed: (owner: 
                 state_bytes: 0,
                 skipped: false,
                 receipt_root: null,
-                return_state: null,
               })
               .where(orderedOwnerWhere(owners, owner));
             await tx.update(legacy).set({ joined: false }).where(orderedOwnerWhere(legacy, owner));
+            await setOrderedReturnState(tx, owner, null);
             // Rebasing settles every unsent save locally under the new local order.
             await rebaseOrderedProjection(journal, tx, owner, []);
             return true;
@@ -144,7 +151,7 @@ export const createOrderedCloudReturn = (db: DbClient, deps: { changed: (owner: 
       );
     },
     async status(projectId: string): Promise<CloudReturnStatus> {
-      const rows = (await joinedOwners(db, [projectId])).filter((row) => row.state);
+      const rows = (await withStates(db, await joinedOwners(db, [projectId]))).filter((row) => row.state);
       const changed: CloudReturnStatus["changed"] = { total: 0, deletions: 0, records: [] };
       for (const row of rows) {
         const owner = { workbenchId: row.workbenchId, extensionId: row.extensionId };
@@ -161,19 +168,21 @@ export const createOrderedCloudReturn = (db: DbClient, deps: { changed: (owner: 
             created: record.created,
           });
       }
-      const notices = await db
-        .select()
-        .from(replaced)
-        .where(eq(replaced.workbench_id, projectId))
-        .orderBy(desc(replaced.replaced_at))
-        .limit(listed);
-      const [count] = await db
-        .select({ total: sql<number>`count(*)::int` })
-        .from(replaced)
-        .where(eq(replaced.workbench_id, projectId));
+      const notices = (
+        await db
+          .select({ extensionId: documents.extension_id, id: documents.document_id, state: documents.state })
+          .from(documents)
+          .where(and(eq(documents.workbench_id, projectId), like(documents.document_id, `${orderedReplacedPrefix}%`)))
+      )
+        .map((row) => ({
+          extensionId: row.extensionId,
+          recordId: (JSON.parse(row.id) as string[])[1]!,
+          ...decodeOrderedJson<OrderedReplacedNotice>(row.state),
+        }))
+        .sort((first, second) => second.replacedAt - first.replacedAt);
       const names = await labels(db, projectId, [
         ...changed.records.map((record) => record.recordId),
-        ...notices.map((notice) => notice.record_id),
+        ...notices.map((notice) => notice.recordId),
       ]);
       let state: CloudReturnStatus["state"] = null;
       if (rows.some((row) => row.state === "held")) state = "held";
@@ -183,22 +192,22 @@ export const createOrderedCloudReturn = (db: DbClient, deps: { changed: (owner: 
         state,
         changed: { ...changed, records: changed.records.map((record) => ({ ...record, ...label(record.recordId) })) },
         replaced: {
-          total: count?.total ?? 0,
-          records: notices.map((notice) => ({
-            extensionId: notice.extension_id,
-            recordId: notice.record_id,
-            ...label(notice.record_id),
+          total: notices.length,
+          records: notices.slice(0, listed).map((notice) => ({
+            extensionId: notice.extensionId,
+            recordId: notice.recordId,
+            ...label(notice.recordId),
             fields: fields(notice.paths),
             deleted: notice.deleted,
             whole: notice.whole,
-            replacedAt: notice.replaced_at,
+            replacedAt: notice.replacedAt,
           })),
         },
       };
     },
     /** Upload held changes. The base rule still keeps whatever the in-sync devices changed. */
     async apply(projectId: string) {
-      const held = (await joinedOwners(db, [projectId])).filter((row) => row.state === "held");
+      const held = (await withStates(db, await joinedOwners(db, [projectId]))).filter((row) => row.state === "held");
       await each(held, (owner) =>
         run(owner, async (_journal, tx) => {
           await setOrderedReturnState(tx, owner, null);
@@ -209,7 +218,7 @@ export const createOrderedCloudReturn = (db: DbClient, deps: { changed: (owner: 
     },
     /** Take Cloud's copy: unsent saves of held owners are removed from this device. */
     async discard(projectId: string) {
-      const held = (await joinedOwners(db, [projectId])).filter((row) => row.state === "held");
+      const held = (await withStates(db, await joinedOwners(db, [projectId]))).filter((row) => row.state === "held");
       await each(held, (owner) =>
         run(owner, async (journal, tx) => {
           const changed = await discardOrderedReturn(journal, tx, owner);
@@ -220,7 +229,9 @@ export const createOrderedCloudReturn = (db: DbClient, deps: { changed: (owner: 
       return held.length > 0;
     },
     async dismissReplaced(projectId: string) {
-      await db.delete(replaced).where(eq(replaced.workbench_id, projectId));
+      await db
+        .delete(documents)
+        .where(and(eq(documents.workbench_id, projectId), like(documents.document_id, `${orderedReplacedPrefix}%`)));
     },
   };
 };
