@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createClient } from "@pstdio/sdk/client";
 import { EXTENSION_API_VERSION } from "@pstdio/sdk/extensions";
-import { owners, seedOwner, type Workload, workload } from "storage-scale-fixture";
+import { owners, type SeedTarget, seedOwner, type Workload, workload } from "storage-scale-fixture";
 import { folderProjectInput } from "../helpers/folder-project";
 import { PACKAGED_BINARY_PATH } from "../packaged/packaged-helpers";
 import { preparePlannerSource } from "../packaged/packaged-planner-source";
@@ -203,12 +203,26 @@ export const seedScaleRuntime = async (home: string, kind: Workload, churn: bool
         install(runtime, home, source, `scale-owner-${owner.index}`);
       }
       const plannerOwner = owner.index === 9;
-      if (plannerOwner) await runtime.execute(project.id, owner.id, "ticket-status.read", {});
-      const target = {
-        commit: (input: Parameters<Parameters<typeof seedOwner>[0]["commit"]>[0]) =>
+      const target: SeedTarget = {
+        commit: (input) =>
           runtime.execute(project.id, owner.id, "scale", {
             input: { action: "seed", ...input, count: owner.rows, planner: plannerOwner },
           }),
+        // Planner creates each ticket, with its core number, through its public ticket command.
+        ...(plannerOwner && {
+          create: async (rows) => {
+            const tickets: string[] = [];
+            for (const row of rows) {
+              const { value } = await runtime.execute<{ id: string }>(project.id, owner.id, "create-ticket", {
+                title: row.title,
+              });
+              tickets.push(value.id);
+            }
+            await runtime.execute(project.id, owner.id, "scale", {
+              input: { action: "adopt", rows, tickets, count: owner.rows, planner: true },
+            });
+          },
+        }),
       };
       await seedOwner(target, kind, owner.index, owner.rows, false, (progress) => {
         if (progress.completed % 1_000 === 0)

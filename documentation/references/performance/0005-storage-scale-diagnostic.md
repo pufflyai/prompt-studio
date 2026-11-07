@@ -33,11 +33,13 @@ before accepted measurement; the small preparation group avoids thousands of
 setup commits without removing rows or edit rounds. The separately measured
 atomic operation always changes exactly 100 rows.
 
-Planner creation uses its public collection API, one resource per commit. Later
-Planner seed edits discover opaque record addresses through the public API and
-preserve those addresses in grouped commits. No code reconstructs a private
-collection address. The manifest describes generator inputs; Planner adds domain
-fields. `--verify-fixture` records actual stored counts, byte distributions, field
+Planner creates each ticket, with its core ticket number, through its public
+`create-ticket` command, in view order (rank, then ID). The fixture then stores the
+generator row under the ticket's `scale` field beside Planner's own fields, and sets
+the ticket title and status the board shows. Later Planner seed edits find tickets
+through the identity index and keep their opaque record addresses in grouped
+commits. No code reconstructs a private collection address. The manifest describes
+generator inputs; Planner adds domain fields. `--verify-fixture` records actual stored counts, byte distributions, field
 counts and final history values after the full seed, in a process that then exits.
 
 A separate `--churn` seed creates and edits another complete set of distinct IDs,
@@ -59,8 +61,8 @@ a page and its counts, the read is repeated until both describe one revision. Pl
 fixture edits find ticket addresses through the identity index. Only fixture
 verification during preparation lists every stored row.
 The `all-owner-edit-burst` shard also submits one durable write per owner together,
-records each acknowledgement and fairness, then kills/reopens and restores them.
-Planner's legacy collection retry-identity gap remains an explicit failure.
+records each acknowledgement and fairness, then kills/reopens, retries each
+acknowledged write with its operation ID and restores them.
 
 ## Exclusive machine timing window
 

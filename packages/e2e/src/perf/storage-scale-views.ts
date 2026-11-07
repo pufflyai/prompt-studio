@@ -45,7 +45,7 @@ const readPage = async (
   if (input.filter.rules.length || input.filter.groups?.length || input.sorts.length || request.search.trim())
     throw new Error("Scale views show only their fixed selection");
   const index = "scale-rows";
-  const where = scaleScopePredicate(false, scaleSelectionPredicate(count, selection));
+  const where = scaleScopePredicate(scaleSelectionPredicate(count, selection));
   const { value } = await consistentRead(async () => {
     const rows = await storage.records.query({
       index,

@@ -15,11 +15,14 @@ const indexFields: Record<string, { path: string[]; type: FieldType }> = {
   shorthand: { path: ["shorthand"], type: "string" },
 };
 
+// A Planner ticket keeps Planner's own fields and holds the generator row under `scale`.
+export const plannerScaleField = "scale";
+
 export const scaleStorageIndexes = (planner = false) => {
   const fields = Object.fromEntries(
     Object.entries(indexFields).map(([name, field]) => [
       name,
-      { ...field, path: planner ? ["value", ...field.path] : field.path },
+      { ...field, path: planner ? ["value", plannerScaleField, ...field.path] : field.path },
     ]),
   );
   const directions = ["asc", "desc"] as const;
@@ -60,10 +63,9 @@ export const scaleSelectionPredicate = (count: number, selection: Selection) => 
 
 type Predicate = ReturnType<typeof scaleSelectionPredicate>;
 
-// Planner also stores statuses and tags, and Planner saves drop the shorthand because core owns
-// ticket numbers, so only the generator's ordinal identifies a fixture ticket.
-export const scaleScopePredicate = (planner: boolean, where?: Predicate) => ({
-  all: [{ field: planner ? "ordinal" : "id", op: "exists" as const }, ...(where ? [where] : [])],
+// Planner also stores statuses, tags and its own tickets; only fixture tickets hold a generator row.
+export const scaleScopePredicate = (where?: Predicate) => ({
+  all: [{ field: "id", op: "exists" as const }, ...(where ? [where] : [])],
 });
 
 export const scaleViewFields = ["id", "title", "rank", "owner", "ordinal"];

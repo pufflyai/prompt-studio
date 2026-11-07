@@ -6,7 +6,6 @@ import { type Background, contract, createRow } from "storage-scale-fixture";
 import { createPackagedSyncPeer } from "../packaged/packaged-sync-relay.fixture";
 import { scaleBackgroundOwner } from "./storage-scale-background";
 import { configuredContainer } from "./storage-scale-container";
-import { plannerValue } from "./storage-scale-extension";
 import type { ScaleFixture, ScaleRuntime } from "./storage-scale-runtime";
 import { prepareScaleSyncDevices, waitScaleSynced } from "./storage-scale-sync-setup";
 
@@ -130,7 +129,7 @@ export const createScaleSyncFixture = async (home: string, fixture: ScaleFixture
         input: { action: "read", id: createRow(fixture.kind, ownerIndex, 83, 3).id, ...scope },
       });
       const restored = createRow(fixture.kind, ownerIndex, 83, 3);
-      assert.deepEqual(received.value, scope.planner ? plannerValue(restored, owner.rows) : restored);
+      assert.deepEqual(received.value, restored);
     }
     return {
       background,
