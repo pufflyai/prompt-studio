@@ -29,6 +29,16 @@ test("the Workspaces extension saves shared views and isolates each project's se
     await page.getByRole("textbox", { name: "View name" }).fill("Release workspaces");
     await page.getByRole("button", { name: "Rename", exact: true }).click();
     await page.getByRole("button", { name: "Display settings" }).click();
+    await page.getByRole("button", { name: "Children Hidden", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Nested", exact: true }).click();
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Save view", exact: true }).click();
+    expect(
+      (await (await request.get(path)).json()).views.find(
+        (view: { title: string }) => view.title === "Release workspaces",
+      ).settings.showChildren,
+    ).toBe(true);
+    await page.getByRole("button", { name: "Display settings" }).click();
     await page.getByRole("button", { name: "Children Nested", exact: true }).click();
     await page.getByRole("menuitem", { name: "Hidden", exact: true }).click();
     await page.keyboard.press("Escape");
