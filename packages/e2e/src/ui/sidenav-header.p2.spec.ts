@@ -261,7 +261,14 @@ test("moves rows back into an emptied header or footer", async ({ page, request 
     const box = (await target.boundingBox())!;
     return box.y + box.height / 2;
   };
-  const drag = async (source: Locator, targetY: () => Promise<number>) => {
+  const drag = async (source: Locator, targetY: () => Promise<number>, scrollingTarget?: Locator) => {
+    if (scrollingTarget) {
+      // Leave room for the target to move while the pointer is held down.
+      await scrollingTarget.evaluate((element) => {
+        const viewport = element.closest('[data-scope="scroll-area"][data-part="viewport"]')!;
+        viewport.scrollTop = Math.max(0, viewport.scrollHeight - viewport.clientHeight - 30);
+      });
+    }
     await revealTreeEntry(page, sidenav, source);
     await expect
       .poll(() =>
@@ -280,7 +287,24 @@ test("moves rows back into an emptied header or footer", async ({ page, request 
     await page.mouse.move(from.x + 40, from.y + from.height / 2);
     await page.mouse.down();
     await page.mouse.move(from.x + 40, from.y + from.height / 2 + 8, { steps: 4 });
-    await page.mouse.move(from.x + 40, await targetY(), { steps: 12 });
+    const destinationY = await targetY();
+    await page.mouse.move(from.x + 40, destinationY, { steps: 12 });
+    if (scrollingTarget) {
+      // Reproduce a scroll leaving the sampled destination on the row boundary.
+      const boundary = await scrollingTarget.evaluate((element, pointerY) => {
+        const viewport = element.closest('[data-scope="scroll-area"][data-part="viewport"]')!;
+        const delta = element.getBoundingClientRect().bottom - pointerY;
+        viewport.scrollTop += delta;
+        return element.getBoundingClientRect().bottom;
+      }, destinationY);
+      expect(boundary).toBe(destinationY);
+      await page.evaluate(
+        () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
+      );
+      await page.mouse.move(from.x + 41, destinationY);
+    }
+    // Scrolling during traversal can move the row away from the sampled point.
+    await page.mouse.move(from.x + 40, await targetY());
     await expect(sidenav.locator("[data-tree-list-drop-indicator]")).toHaveCount(1);
     await page.mouse.up();
     // dnd-kit swallows clicks for 50ms after a drop so the drop is not also a click.
@@ -297,7 +321,7 @@ test("moves rows back into an emptied header or footer", async ({ page, request 
   await drag(option("Search"), middleOf(zone));
   await expect(sidenav.locator("[data-tree-list-node-id]").first()).toHaveAttribute("data-tree-list-node-id", "search");
 
-  await drag(option("Settings"), lowerHalfOf(option("Workspaces")));
+  await drag(option("Settings"), lowerHalfOf(option("Workspaces")), option("Workspaces"));
   await drag(sidenav.getByRole("button", { name: "Help", exact: true }), lowerHalfOf(option("Workspaces")));
   await drag(option("Extensions"), lowerHalfOf(option("Workspaces")));
   const contentListbox = await option("Workspaces").evaluateHandle((element) => element.closest('[role="listbox"]'));
