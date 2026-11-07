@@ -45,6 +45,7 @@ test("new session tabs focus their composer and keep workspace selection availab
 
     await header.getByRole("button", { name: "Add panel", exact: true }).focus();
     await page.keyboard.press("Enter");
+    await expect(page.getByRole("menu")).toBeFocused();
     await page.keyboard.press("ArrowDown");
     await expect(page.getByRole("menuitem", { name: "New session", exact: true })).toHaveAttribute(
       "data-highlighted",

@@ -1,6 +1,7 @@
 import { describe, expect, mock, test } from "bun:test";
 import { folderWorkspaceCapabilities } from "pstdio-db";
 import { testHarnessId } from "../../harnesses/test-harness-registry";
+import { createSessionQueueLifecycle } from "../session-queue-lifecycle";
 import { createTrackedSessionStore } from "../session-store.test-utils";
 import { createSessionHandler } from "./create-session";
 
@@ -56,6 +57,7 @@ describe("createSessionHandler hooks", () => {
       agent: input.agent,
     }));
     const deps = {
+      sessionQueueLifecycle: createSessionQueueLifecycle(),
       projectService: {
         get: async () => ({ id: "project-1" }),
       },
@@ -141,6 +143,7 @@ describe("createSessionHandler hooks", () => {
       agent: FAKE_ID,
     }));
     const deps = {
+      sessionQueueLifecycle: createSessionQueueLifecycle(),
       projectService: {
         get: async () => ({ id: "project-1" }),
       },
@@ -202,6 +205,7 @@ describe("createSessionHandler hooks", () => {
       agent: "missing-agent",
     }));
     const deps = {
+      sessionQueueLifecycle: createSessionQueueLifecycle(),
       projectService: {
         get: async () => ({ id: "project-1" }),
       },

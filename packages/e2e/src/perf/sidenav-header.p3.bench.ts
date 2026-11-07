@@ -5,6 +5,7 @@ import { showSidenavEntry } from "../ui/helpers/sidenav-navigation";
 import {
   afterTwoFrames,
   budgetMisses,
+  checkPerformance,
   PERF_START_ATTRIBUTE,
   preparePerfPage,
   readInteraction,
@@ -27,12 +28,29 @@ const settleWhenNavShows = (page: Page, collection: Collection) =>
   page.evaluate((expectedCollection) => {
     const nav = document.querySelector<HTMLElement>('[data-workbench-region="nav"]');
     if (!nav) throw new Error("Nav Chrome is not mounted");
-    const observer = new MutationObserver(() => {
+    let frame: number | undefined;
+    const check = () => {
+      frame = undefined;
       if (!nav.textContent?.includes(expectedCollection)) return;
+      const header = document.querySelector<HTMLElement>('[data-workbench-panel-header="main"]');
+      if (expectedCollection === "Workspaces") {
+        const selected = header?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
+        if (!selected?.checkVisibility() || !selected.textContent?.includes(expectedCollection)) return;
+      } else if (header?.checkVisibility()) return;
       observer.disconnect();
-      window.__perfSettled = performance.now();
+      requestAnimationFrame(() => {
+        window.__perfSettled = performance.now();
+      });
+    };
+    const observer = new MutationObserver(() => {
+      // Match the rendered state without forcing layout in the input's mutation microtask.
+      if (frame === undefined) frame = requestAnimationFrame(check);
     });
-    observer.observe(nav, { attributes: true, childList: true, subtree: true });
+    observer.observe(nav.closest('[data-workbench-panel="main"]') ?? nav, {
+      attributes: true,
+      childList: true,
+      subtree: true,
+    });
   }, collection);
 
 test("navigates global collections within the interaction budget", async ({ page, request }) => {
@@ -59,15 +77,14 @@ test("navigates global collections within the interaction budget", async ({ page
   }
   await afterTwoFrames(page);
 
-  const samples: Array<{ collection: Collection; duration: number }> = [];
+  const samples: Array<{ collection: Collection } & Awaited<ReturnType<typeof readInteraction>>> = [];
   for (const collection of collections) {
     await resetInteraction(page);
     await settleWhenNavShows(page, collection);
     await collectionRow(page, collection).click();
     await expect(breadcrumb.getByText(collection, { exact: true })).toBeVisible();
     const result = await readInteraction(page);
-    expect(result.longTasks).toEqual([]);
-    samples.push({ collection, duration: result.duration });
+    samples.push({ collection, ...result });
   }
 
   await reportPageMemory(page, "sidenav-header");
@@ -83,5 +100,8 @@ test("navigates global collections within the interaction budget", async ({ page
       workbenchBudgets.sidenavHeader.value,
     ),
   );
-  expect(misses).toEqual([]);
+  checkPerformance(() => {
+    for (const sample of samples) expect(sample.longTasks).toEqual([]);
+    expect(misses).toEqual([]);
+  });
 });

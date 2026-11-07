@@ -216,39 +216,41 @@ export const launchPackagedApp = async (home: string, runtimeEnvironment: Record
   }
 };
 
-export const waitForExit = async (child: ChildProcess) => {
-  await new Promise<void>((resolveExit, rejectExit) => {
-    if (child.exitCode !== null || child.signalCode !== null) {
-      resolveExit();
-      return;
-    }
-    const timeout = setTimeout(() => rejectExit(new Error("Packaged app did not exit gracefully")), 10_000);
-    child.once("exit", () => {
-      clearTimeout(timeout);
-      resolveExit();
+export const waitForExit = (child: ChildProcess) =>
+  test.step("Wait for packaged app process to exit", async () => {
+    await new Promise<void>((resolveExit, rejectExit) => {
+      if (child.exitCode !== null || child.signalCode !== null) {
+        resolveExit();
+        return;
+      }
+      const timeout = setTimeout(() => rejectExit(new Error("Packaged app did not exit gracefully")), 10_000);
+      child.once("exit", () => {
+        clearTimeout(timeout);
+        resolveExit();
+      });
     });
+    expect(child.exitCode).toBe(0);
+    expect(child.signalCode).toBeNull();
   });
-  expect(child.exitCode).toBe(0);
-  expect(child.signalCode).toBeNull();
-};
 
 export const runPackagedCli = (home: string, args: string[], runtimeEnvironment: Record<string, string> = {}) =>
-  new Promise<{ exitCode: number | null; stderr: string; stdout: string }>((resolveExit) => {
-    const child = spawnPackagedProcess(packageLayout.sidecar, args, {
-      cwd: home,
-      env: { ...packagedEnvironment(home), ...runtimeEnvironment },
-      stdio: "pipe",
-    });
-    let stdout = "";
-    let stderr = "";
-    child.stdout.on("data", (chunk) => {
-      stdout += String(chunk);
-    });
-    child.stderr.on("data", (chunk) => {
-      stderr += String(chunk);
-    });
-    child.once("exit", (exitCode) => resolveExit({ exitCode, stderr, stdout }));
-  });
+  test.step(`Run packaged CLI ${args[0] ?? ""}`, () =>
+    new Promise<{ exitCode: number | null; stderr: string; stdout: string }>((resolveExit) => {
+      const child = spawnPackagedProcess(packageLayout.sidecar, args, {
+        cwd: home,
+        env: { ...packagedEnvironment(home), ...runtimeEnvironment },
+        stdio: "pipe",
+      });
+      let stdout = "";
+      let stderr = "";
+      child.stdout.on("data", (chunk) => {
+        stdout += String(chunk);
+      });
+      child.stderr.on("data", (chunk) => {
+        stderr += String(chunk);
+      });
+      child.once("exit", (exitCode) => resolveExit({ exitCode, stderr, stdout }));
+    }));
 
 export const disposePackagedApp = async (app: PackagedWindow | null) => {
   if (!app) return;
@@ -265,12 +267,13 @@ export const removePackagedHome = async (home: string) => {
   if (!existsSync(home)) return;
   const runtime = readDescriptor(home);
   try {
-    if (runtime) await stopPackagedRuntime(runtime.pid);
+    if (runtime) await test.step("Stop remaining packaged runtime", () => stopPackagedRuntime(runtime.pid));
   } finally {
     try {
-      await attachPackagedLogs(home, [runtime?.token ?? ""], test.info());
+      await test.step("Attach packaged runtime logs", () =>
+        attachPackagedLogs(home, [runtime?.token ?? ""], test.info()));
     } finally {
-      await removeTestDirectory(home);
+      await test.step("Remove packaged app directory", () => removeTestDirectory(home));
     }
   }
 };

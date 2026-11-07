@@ -13,11 +13,11 @@ const useWorkbenchCompositionChanges = (workbench: WorkbenchCore) => {
   useWorkbenchStore(workbench.context.store, (state) => state);
 };
 
-export const useWorkbenchCompositionRegionPanels = (workbench: WorkbenchCore, region: WorkbenchPanelRegion) => {
+export const useWorkbenchCompositionRegionPanels = (workbench: WorkbenchCore, region?: WorkbenchPanelRegion) => {
   "use no memo";
 
   useWorkbenchCompositionChanges(workbench);
-  return workbench.composition.panelsFor(region);
+  return region ? workbench.composition.panelsFor(region) : { open: [], addable: [], closable: [] };
 };
 
 export const useWorkbenchCompositionPanels = (workbench: WorkbenchCore): WorkbenchCompositionPanelsByRegion => {

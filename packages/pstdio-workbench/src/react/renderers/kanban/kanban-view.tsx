@@ -123,7 +123,7 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     identity: rendererQueryKey([storageKey, settings, filter, sorts, pageParams]),
     scope: storageKey,
     fields: kanbanPageFields(attributes, settings),
-    append: true,
+    rowId: (row) => row.id,
   });
   const paged = Boolean(contribution.executePage);
   // The last board a load produced, for the next load to compare against. Written by the load itself,
@@ -135,12 +135,13 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     ownerKey: rendererReadKey(placement),
     queryKey: JSON.stringify([contribution.id, storageKey]),
     // Paged providers apply search before selecting rows; legacy providers keep local search.
-    refreshKey: rendererQueryKey([settings, filter, sorts, pageParams, ...(paged ? [pages.request, pages.key] : [])]),
+    refreshKey: rendererQueryKey([settings, filter, sorts, pageParams, ...(paged ? [pages.refreshKey] : [])]),
 
     load: async (signal) => {
       const state = { settings, filter, sorts, pageParams };
-      const loaded = contribution.executePage
-        ? pages.accept(await contribution.executePage({ ...state, page: pages.request }, signal), signal)
+      const executePage = contribution.executePage;
+      const loaded = executePage
+        ? await pages.load((page) => executePage({ ...state, page }, signal), signal)
         : { rows: await contribution.executeQuery(state, signal), page: undefined, position: undefined };
       // Rows equal to the last loaded board keep their objects, so a reload that changed nothing,
       // such as returning to the page, renders no cards again.

@@ -352,6 +352,7 @@ test("a new device downloads a large owner from chunked latest states with a bou
   const third = await device(fixture.relay);
   await third.sync.synchronize();
   expect((await third.records.list()).length).toBe(300);
+  expect(fixture.requests.reads - reads).toBeLessThanOrEqual(3);
   for (const round of [0, 4]) expect(await third.value(`record-${round}-59`)).toMatchObject({ round, index: 59 });
   // 300 records arrive through a few reads and chunk downloads, not one request per record.
   expect(fixture.requests.reads - reads + fixture.requests.blobs).toBeLessThan(20);
@@ -938,5 +939,26 @@ test("an offline file binding cannot replace an earlier peer asset authority", a
     const sources = "nativeSources" in record ? record.nativeSources : undefined;
     expect(Object.keys(sources ?? {})).toHaveLength(0);
     expect(peer.failures).toEqual([]);
+  }
+});
+
+test("downloaded record changes notify views without being reported as local writes", async () => {
+  const fixture = createRelay();
+  const first = await device(fixture.relay);
+  const second = await device(fixture.relay);
+  await first.records.commit({ operationId: "seed", edits: [{ recordId: "note", replace: "Downloaded" }] });
+  await first.sync.synchronize();
+  const events: { workbenchId: string; extensionId: string; origin?: string }[] = [];
+  const stop = second.service.watch((event, origin) => events.push({ ...event, origin }));
+  try {
+    await second.sync.synchronize();
+    expect(await second.value("note")).toBe("Downloaded");
+    expect(events).toEqual([expect.objectContaining({ ...owner, origin: "relay" })]);
+    events.length = 0;
+    await second.records.commit({ operationId: "edit", edits: [{ recordId: "note", replace: "Local edit" }] });
+    expect(events.length).toBeGreaterThan(0);
+    expect(events.every((event) => event.origin !== "relay")).toBe(true);
+  } finally {
+    stop();
   }
 });

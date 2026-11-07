@@ -3,60 +3,57 @@ import { copyFileSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
-import { createRow, pageRows, workload } from "storage-scale-fixture";
+import { createTicketCommand } from "pstdio-planner/src/commands/create-ticket";
+import { runTicketsQuery } from "pstdio-planner/src/data/query";
+import { compareRows, createRow, type FixtureRow, pageRows, workload } from "storage-scale-fixture";
 import { fixtureCommands, plannerStorageIndexes } from "./storage-scale-extension";
 import { extendPlannerSource } from "./storage-scale-runtime";
 
-test("Planner fixture edits preserve discovered opaque collection addresses through public grouped commits", async () => {
+// Stands in for Planner's create-ticket command: it stores a ticket under an ID it chooses.
+const plannerOwner = async (rows: FixtureRow[], count: number) => {
   const storage = createMemoryStorage({ indexes: plannerStorageIndexes });
   const command = fixtureCommands[0];
   const run = (input: Parameters<typeof command.run>[1]["input"]) =>
     command.run(makeCommandContext({ storage, params: { input } }), { input });
-  const first = createRow("rich", 9, 37, 0);
-  await run({ action: "seed", planner: true, rows: [first], count: 10_000, operationId: "create" });
+  await storage.collection("ticket-statuses").put("ready", { id: "ready", name: "Ready" });
+  const tickets = rows.map((_, index) => `ticket-${index}`);
+  for (const [index, id] of tickets.entries())
+    await storage.collection("tickets").put(id, { id, title: rows[index].title, content: "", archived: false });
+  await run({ action: "adopt", planner: true, rows, tickets, count });
+  return { storage, run, tickets };
+};
+
+test("Planner keeps its ticket IDs while fixture edits find tickets by generator row", async () => {
+  const { storage, run } = await plannerOwner([createRow("rich", 9, 37, 0)], 10_000);
   const before = await storage.records.list();
   const edited = createRow("rich", 9, 37, 3);
   await run({ action: "seed", planner: true, rows: [edited], count: 10_000, operationId: "edit" });
   expect((await storage.records.list()).map((row) => row.recordId)).toEqual(before.map((row) => row.recordId));
-  expect(await storage.collection("tickets").get(first.id)).toMatchObject({ title: edited.title, history: 3 });
+  expect(await storage.collection("tickets").get("ticket-0")).toMatchObject({
+    id: "ticket-0",
+    title: edited.title,
+    statusId: "ready",
+    scale: edited,
+  });
+  expect(await run({ action: "read", planner: true, id: edited.id })).toEqual(edited);
   expect(await storage.records.outcome("edit")).toMatchObject({ status: "saved-locally" });
 });
 
 test("Planner background commits update existing tickets with durable retry identities", async () => {
-  const storage = createMemoryStorage({ indexes: plannerStorageIndexes });
-  const command = fixtureCommands[0];
-  const run = (input: Parameters<typeof command.run>[1]["input"]) =>
-    command.run(makeCommandContext({ storage, params: { input } }), { input });
   const row = createRow("rich", 9, 83, 3);
-  await run({ action: "seed", planner: true, rows: [{ ...row, history: 0 }], count: 10_000, operationId: "seed" });
+  const { run } = await plannerOwner([row], 10_000);
   const changed = { ...row, title: "Incoming change" };
   const input = { action: "commit" as const, planner: true, rows: [changed], count: 10_000, operationId: "incoming" };
   await run(input);
-  expect(await storage.records.outcome("incoming")).toMatchObject({ status: "saved-locally" });
-  expect(await run({ action: "read", planner: true, id: row.id })).toMatchObject(changed);
+  expect(await run({ action: "read", planner: true, id: row.id })).toEqual(changed);
   await run({ ...input, operationId: "later", rows: [{ ...changed, title: "Later change" }] });
   await run(input);
   expect(await run({ action: "read", planner: true, id: row.id })).toMatchObject({ title: "Later change" });
 });
 
 test("Planner fixture pages read only fixture tickets through the shared indexes", async () => {
-  const storage = createMemoryStorage({ indexes: plannerStorageIndexes });
-  const command = fixtureCommands[0];
-  const run = (input: Parameters<typeof command.run>[1]["input"]) =>
-    command.run(makeCommandContext({ storage, params: { input } }), { input });
-  await storage.collection("ticket-statuses").put("ready", { id: "ready", name: "Ready" });
-  for (let index = 0; index < 400; index++)
-    await run({
-      action: "seed",
-      planner: true,
-      rows: [createRow("rich", 9, index, 0)],
-      count: 400,
-      operationId: `create-${index}`,
-    });
-  for (let start = 0; start < 400; start += 200) {
-    const rows = Array.from({ length: 200 }, (_, offset) => createRow("rich", 9, start + offset, 3));
-    await run({ action: "seed", planner: true, rows, count: 400, operationId: `edit-${start}` });
-  }
+  const rows = Array.from({ length: 400 }, (_, index) => createRow("rich", 9, index, 3)).sort(compareRows);
+  const { run } = await plannerOwner(rows, 400);
   const page = await run({ action: "page", planner: true, count: 400, selection: "pages", page: 1 });
   expect(page).toMatchObject({ materialized: 100, total: 400, readAttempts: 1 });
   expect((page as { rows: { id: string }[] }).rows.map((row) => row.id)).toEqual(
@@ -78,4 +75,30 @@ test("extending Planner's entry is the same from its source and from an older ex
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
+});
+
+test("Planner shows tickets created through its command and adopted by the fixture in view order", async () => {
+  const storage = createMemoryStorage({ indexes: plannerStorageIndexes });
+  const ctx = makeCommandContext({ storage, params: {}, resourcePrefixes: { ticket: "PS" } });
+  // Planner builds against its released SDK, so its command context type differs from this package's.
+  const planner = ctx as unknown as Parameters<typeof createTicketCommand.run>[0];
+  const count = 60;
+  const created = Array.from({ length: count }, (_, index) => createRow("rich", 9, index, 0)).sort(compareRows);
+  const tickets: string[] = [];
+  for (const row of created) tickets.push((await createTicketCommand.run(planner, { title: row.title })).id);
+  const edited = created.map((row) => createRow("rich", 9, row.ordinal, 1));
+  const command = fixtureCommands[0];
+  const input = { action: "adopt" as const, planner: true, rows: edited, tickets, count };
+  await command.run(makeCommandContext({ storage, params: { input } }), { input });
+  const board = await runTicketsQuery({
+    storage: planner.storage,
+    resources: planner.resources,
+    projectId: ctx.projectId,
+  });
+  const ready = board.rows.filter((row) => row.attributes.status === "ready").map((row) => row.title);
+  expect(ready).toEqual(
+    pageRows({ ...workload("rich"), rows: count }, 0, "focus", 0).map(
+      (row) => createRow("rich", 9, row.ordinal, 1).title,
+    ),
+  );
 });

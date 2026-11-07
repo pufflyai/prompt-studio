@@ -29,6 +29,7 @@ export const startPublicTextPeer = async (root: string, binaryPath = PACKAGED_BI
   let nextId = 0;
   const pending = new Map<number, { resolve: (value: unknown) => void; reject: (error: Error) => void }>();
   const lines = createInterface({ input: child.stdout! });
+  child.stderr!.on("data", (chunk) => process.stderr.write(`[Public text relay] ${String(chunk)}`));
   lines.on("line", (line) => {
     const message = JSON.parse(line);
     if (message.type === "ready") ready = { origin: message.origin };
@@ -36,7 +37,10 @@ export const startPublicTextPeer = async (root: string, binaryPath = PACKAGED_BI
       const request = pending.get(message.id);
       pending.delete(message.id);
       if (message.ok) request?.resolve(message.value);
-      else request?.reject(new Error(message.error));
+      else {
+        console.info(`Public text relay rejected control ${message.id}: ${message.error}`);
+        request?.reject(new Error(message.error));
+      }
     }
   });
   child.on("exit", () => {

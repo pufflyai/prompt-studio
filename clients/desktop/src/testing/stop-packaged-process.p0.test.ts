@@ -5,6 +5,25 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { stopPackagedProcess } from "./stop-packaged-process";
 
+test.skipIf(process.platform !== "darwin")(
+  "Darwin cleanup drains an owned child when its group refuses a signal",
+  async () => {
+    const child = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], {
+      detached: true,
+      stdio: "ignore",
+    });
+    try {
+      await stopPackagedProcess(child, async () => {
+        throw Object.assign(new Error("kill EPERM"), { code: "EPERM" });
+      });
+      expect(child.exitCode !== null || child.signalCode !== null).toBe(true);
+      expect(() => process.kill(-child.pid!, 0)).toThrow();
+    } finally {
+      child.kill("SIGKILL");
+    }
+  },
+);
+
 test("Node cleanup terminates a packaged process and its descendants", async () => {
   const node = Bun.which("node");
   if (!node) throw new Error("The packaged Playwright tests require Node.js");

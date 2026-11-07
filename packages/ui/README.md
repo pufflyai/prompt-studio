@@ -33,6 +33,12 @@ gets its own entry: `./rich-text`, `./param-editor`, `./kanban-renderer`,
 from the root entry may import one of those, or every consumer's bundler emits the
 heavy chunks even when the consumer never renders the feature.
 
+Import `LazyMarkdownEditor` from `@pstdio/ui/lazy-markdown-editor` when a host registers
+an editor before opening a document. This entry loads the editor when mounted; the
+`./rich-text` entry also exports the eager editor and its supporting tools. Import
+`ChatSkeleton` from `@pstdio/ui/chat-skeleton` to show a session loading state
+without loading the conversation and editor implementation.
+
 Code and diff editors follow the active theme preference, including live theme previews.
 Themes can supply a `monacoTheme` palette. Otherwise, the editors use the built-in
 light or dark palette for the preference's color mode.

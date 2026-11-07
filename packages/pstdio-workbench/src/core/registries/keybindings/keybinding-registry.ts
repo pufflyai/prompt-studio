@@ -12,7 +12,12 @@ import type { CommandRegistry } from "../commands/command-registry";
 import type { NavigationTarget } from "../navigation/navigation-registry";
 import { getNavigationTargetKey } from "../navigation/navigation-target-key";
 import type { PreferenceRegistry } from "../preferences/preference-registry";
-import { readShortcutPreferences, type ShortcutLayer, sharedShortcutLayer } from "./shortcut-preferences";
+import {
+  readShortcutPreferences,
+  type ShortcutLayer,
+  type ShortcutPreferences,
+  sharedShortcutLayer,
+} from "./shortcut-preferences";
 
 export interface Keybinding {
   id?: string;
@@ -60,7 +65,7 @@ export interface KeybindingRegistry {
   listCatalog(): RegisteredKeybinding[];
   resolve(binding: RegisteredKeybinding): RegisteredKeybinding & { disabled: boolean };
   getId(binding: Keybinding): string;
-  listActiveKeybindings(): RegisteredKeybinding[];
+  listActiveKeybindings(action?: NavigationTarget): RegisteredKeybinding[];
   /** Chords bound to plain command actions, for rendering shortcut hints beside commands. */
   listCommandKeybindings(): { commandId: string; keybinding: KeybindingSequence }[];
 }
@@ -97,8 +102,8 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
   const getId = (binding: Keybinding) =>
     binding.id ??
     `${binding.sourceExtensionId ?? "workbench"}:${binding.layer ?? "direct"}:${getNavigationTargetKey(binding.action)}`;
-  const resolve = (binding: RegisteredKeybinding) => {
-    const override = readShortcutPreferences(deps.preferences?.()).overrides[getId(binding)];
+  const resolveWithPreferences = (binding: RegisteredKeybinding, preferences: ShortcutPreferences) => {
+    const override = preferences.overrides[getId(binding)];
     const assigned = override?.layer === "direct" ? undefined : (override?.layer ?? binding.layer);
     const layer = assigned ? sharedShortcutLayer(assigned) : undefined;
     let defaultScope: Keybinding["targetScope"];
@@ -158,7 +163,7 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
   return {
     store,
     getId,
-    resolve,
+    resolve: (binding) => resolveWithPreferences(binding, readShortcutPreferences(deps.preferences?.())),
     listCatalog,
 
     registerKeybinding(keybinding, metadata) {
@@ -187,11 +192,30 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
       return [...store.getState().keybindings].sort(byContributionPriority);
     },
 
-    listActiveKeybindings() {
-      const bindings = [...store.getState().keybindings].sort(byContributionPriority);
-      const declared = new Set(bindings.map(getId));
+    listActiveKeybindings(action) {
+      // Resolve a profile against one settings snapshot. In the browser every
+      // read can cross localStorage and parse the complete preference document.
+      const preferences = readShortcutPreferences(deps.preferences?.());
+      const registered = store.getState().keybindings;
+      const actionKey = action ? getNavigationTargetKey(action) : undefined;
+      const matchesAction = (binding: RegisteredKeybinding) => {
+        if (!action) return true;
+        if (binding.action.kind !== action.kind) return false;
+        // Direct hints normally request one command. Unrelated command arguments
+        // cannot affect that hint and need no recursive canonical serialization.
+        if (
+          action.kind === "command" &&
+          binding.action.kind === "command" &&
+          action.commandId !== binding.action.commandId
+        )
+          return false;
+        return getNavigationTargetKey(binding.action) === actionKey;
+      };
+      const bindings = registered.filter(matchesAction).sort(byContributionPriority);
+      const overrides = Object.entries(preferences.overrides);
+      const declared = overrides.length ? new Set(registered.map(getId)) : new Set<string>();
       const assigned = new Set(
-        Object.entries(readShortcutPreferences(deps.preferences?.()).overrides)
+        overrides
           .filter(
             ([id, value]) =>
               !declared.has(id) &&
@@ -203,9 +227,10 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
       );
       // Generated discovery actions have no chord until a person assigns one.
       // Input dispatch must not enumerate page/menu providers on every layout change.
-      if (assigned.size) bindings.push(...listCatalog().filter((binding) => assigned.has(getId(binding))));
+      if (assigned.size)
+        bindings.push(...listCatalog().filter((binding) => assigned.has(getId(binding)) && matchesAction(binding)));
       return bindings
-        .map(resolve)
+        .map((binding) => resolveWithPreferences(binding, preferences))
         .filter(
           (binding) =>
             !binding.disabled &&
@@ -216,9 +241,10 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
     },
 
     listCommandKeybindings() {
+      const preferences = readShortcutPreferences(deps.preferences?.());
       return [...store.getState().keybindings]
         .sort(byContributionPriority)
-        .map(resolve)
+        .map((binding) => resolveWithPreferences(binding, preferences))
         .filter((record) => !record.layer && !record.disabled)
         .flatMap((record) =>
           record.action.kind === "command"

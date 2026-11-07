@@ -39,7 +39,7 @@ export const writeFixture = async (root: string, kind: Workload) => {
     owners: ownerStats,
     exportedShape: "generator-input",
     plannerTransform:
-      "storage-scale-extension.ts plannerValue adds Planner fields; measure actual stored shape with scale action=stats",
+      "Planner creates its tickets through create-ticket; storage-scale-extension.ts plannerTicket keeps each generator row under its scale field; measure actual stored shape with scale action=stats",
     history: {
       createsPerResource: 1,
       editsPerResource: 3,

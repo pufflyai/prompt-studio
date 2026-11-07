@@ -1,4 +1,5 @@
 import { Box, Stack } from "@chakra-ui/react";
+import type { CollectionPageRequest } from "@pstdio/sdk/extensions";
 import { EmptyState } from "@pstdio/ui";
 import {
   DataTable,
@@ -116,24 +117,19 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
     ownerKey: rendererReadKey(placement),
     queryKey,
     // Paged providers also receive display fields and search before selecting a bounded page.
-    refreshKey: rendererQueryKey([filter, sorts, pageParams, ...(paged ? [settings, pages.request, pages.key] : [])]),
+    refreshKey: rendererQueryKey([filter, sorts, pageParams, ...(paged ? [settings, pages.refreshKey] : [])]),
     load: async (signal) => {
-      const result = await contribution.executeQuery(
-        {
-          pageParams,
-          resource: placement.resource,
-          modeId,
-          filter,
-          sorts,
-          settings,
-          ...(paged && { page: pages.request }),
-        },
-        signal,
-      );
-      if (paged && settings.showStats) requirePageStatistics(result, contribution.columns, settings.hiddenColumns);
-      return paged
-        ? { ...result, ...pages.accept(acceptRendererPage(result, pages.request), signal) }
-        : { ...result, position: undefined };
+      const query = (page?: CollectionPageRequest) =>
+        contribution.executeQuery(
+          { pageParams, resource: placement.resource, modeId, filter, sorts, settings, ...(page && { page }) },
+          signal,
+        );
+      if (!paged) return { ...(await query()), position: undefined };
+      return pages.load(async (page) => {
+        const result = await query(page);
+        if (settings.showStats) requirePageStatistics(result, contribution.columns, settings.hiddenColumns);
+        return { ...result, ...acceptRendererPage(result, page) };
+      }, signal);
     },
     subscribe: (refresh) => {
       const invalidate = () => {

@@ -22,6 +22,18 @@ Run each API test file in a fresh Bun process, with at most two files running at
 
 The driver is limited to the API package's test command. It adds process startup cost and interleaves two files' output. It does not change the API runtime, extension loading, installed packages, or test assertions. Fixtures must still close their resources explicitly.
 
+## Update: native process deadline isolation (2026-11-06)
+
+The established `.exclusive.p1.test.ts` scheduling rule also covers the process
+host limits fixture. Its native Windows timeout check returned after 1,685 ms in
+[production validation](https://github.com/pufflyai/prompt-studio/actions/runs/42149715856/job/127669792575),
+185 ms above its unchanged 1,500 ms assertion. It previously shared the API's
+two-worker pool with PGlite cold starts, unlike the other native process fixtures.
+Run the complete file alone through the same scheduler; retain every command,
+process-tree check, output limit, cancellation assertion, and timeout. This
+isolates the timing measurement and does not establish contention as its only
+cause. Fresh Windows execution must still demonstrate the existing limit.
+
 ## Removal
 
 Remove the driver when the repository's Bun version releases completed file state within the current memory budget and passes the asynchronous skill-import regression with built-in isolation. Run the complete API suite and both release gates before removing it. Do not raise timeouts or alter the fixture's import semantics to satisfy that check.

@@ -328,3 +328,24 @@ describe("local workspace package registry", () => {
     expect((await fetch(metadata.versions["0.26.0"].dist.tarball)).status).toBe(200);
   });
 });
+
+// A dependency outage must not be reported as a missing published package.
+test("preserves the upstream failure status for published tarball downloads", async () => {
+  const { root } = await fixture();
+  const upstream = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch: () => new Response("Unavailable", { status: 503 }),
+  });
+  cleanups.push(async () => upstream.stop(true));
+  const registry = await startLocalWorkspaceRegistry({
+    configPath: join(root, ".npmrc"),
+    outputRoot: join(root, "packed"),
+    packagePaths: [],
+    upstreamOrigin: upstream.url.origin,
+  });
+  cleanups.push(registry.close);
+
+  const response = await fetch(`${registry.origin}/@pstdio/sdk/-/sdk-0.25.0.tgz`);
+  expect(response.status).toBe(503);
+});

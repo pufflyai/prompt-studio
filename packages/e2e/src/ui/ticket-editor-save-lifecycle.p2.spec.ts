@@ -54,6 +54,40 @@ const editorSelectionState = (editor: import("@playwright/test").Locator) =>
     };
   });
 
+test("starts the requested editor download while its document opens", async ({ page, request }) => {
+  const project = await createProject(request);
+  const ticket = await createPlannerTicket(request, apiBase, project.id, {
+    content: "# Concurrent editor opening\n\nKeep the complete document.",
+  });
+  await bypassOnboarding(page, project.id);
+  let editorRequested = false;
+  page.on("request", (request) => {
+    if (/markdown-editor[^/]*\.(?:js|tsx?)(?:\?|$)/.test(request.url())) editorRequested = true;
+  });
+  await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
+  const card = page.getByTestId("renderer-card").filter({ hasText: ticket.title }).first();
+  await expect(card).toBeVisible();
+  expect(editorRequested).toBe(false);
+  const opening = Promise.withResolvers<void>();
+  let documentRequested = false;
+  await page.route(/\/v1\/projects\/[^/]+\/text-editing$/, async (route) => {
+    if (route.request().method() === "POST") {
+      documentRequested = true;
+      await opening.promise;
+    }
+    await route.continue();
+  });
+  try {
+    await card.click();
+    await expect.poll(() => documentRequested).toBe(true);
+    await expect.poll(() => editorRequested).toBe(true);
+  } finally {
+    opening.resolve();
+    await page.unrouteAll({ behavior: "wait" });
+  }
+  await expect(page.locator('[contenteditable="true"]').first()).toContainText("Keep the complete document.");
+});
+
 test("loads ticket content independently of editor downloads", async ({ page, request }) => {
   const project = await createProject(request);
   const ticket = await createPlannerTicket(request, apiBase, project.id, {
