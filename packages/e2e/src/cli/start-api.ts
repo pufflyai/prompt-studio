@@ -68,6 +68,7 @@ export const startApi = async (options: StartApiOptions = {}) => {
       PSTDIO_HOME: homePath,
       PSTDIO_LOG_PATH: join(evidenceRoot, `${basename(homePath)}.jsonl`),
       HOME: homePath,
+      BUN_INSTALL_CACHE_DIR: process.env.E2E_BUN_CACHE_DIR ?? process.env.BUN_INSTALL_CACHE_DIR,
       ...options.env,
     },
     stdio: ["ignore", "pipe", "pipe"],

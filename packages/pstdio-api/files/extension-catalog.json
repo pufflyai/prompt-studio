@@ -31,6 +31,20 @@
       "extensionId": "pstdio.pstdio-home"
     },
     {
+      "installName": "pstdio-session-browser",
+      "displayName": "Sessions",
+      "icon": "messages-circle",
+      "description": "Browse conversations and compose in pages and Side panels.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/pstdio-session-browser",
+        "ref": "{hostRelease}"
+      },
+      "default": true,
+      "extensionId": "pstdio.pstdio-session-browser"
+    },
+    {
       "installName": "pstdio-onboarding",
       "displayName": "Onboarding",
       "description": "Choose harnesses and default tools when opening a new project.",

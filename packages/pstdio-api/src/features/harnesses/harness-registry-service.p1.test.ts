@@ -14,7 +14,7 @@ const fixtureAgents = [
     extensionId: "pstdio.workbench-fixture",
     name: "Fake Agent",
     availability: { type: "INSTALLED" },
-    capabilities: [],
+    capabilities: ["SessionFork"],
     supportsModels: true,
   },
   ...[
@@ -26,7 +26,7 @@ const fixtureAgents = [
     name,
     availability: { type: "INSTALLED" },
     params: { planning: { type: "boolean", label: "Planning", defaultValue: false, control: "command" } },
-    capabilities: [],
+    capabilities: ["SessionFork"],
     supportsModels: true,
   })),
 ];

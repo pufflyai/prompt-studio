@@ -6,8 +6,8 @@ import {
   l10n,
   params,
   type ResourceAnchor,
+  sessionBrowser,
   type TemplateParam,
-  workbenchPanels,
 } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
@@ -24,7 +24,7 @@ const openActionSession = (
 ) => {
   ctx.navigation.open({
     kind: "panel",
-    panel: workbenchPanels.projectSession,
+    panel: sessionBrowser.panels.conversation,
     open: "preview",
     resource: {
       type: "session",

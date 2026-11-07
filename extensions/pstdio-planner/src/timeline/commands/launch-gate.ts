@@ -1,5 +1,5 @@
 // Launch a gate review that checks project dependencies and updates the saved plan.
-import { defineCommand, params, workbenchPanels } from "@pstdio/sdk/extensions";
+import { defineCommand, params, sessionBrowser } from "@pstdio/sdk/extensions";
 import { resolveTicketId } from "../../data/resolve";
 import type { PlanRow } from "../contracts";
 import { plannerExtensionId } from "../planner";
@@ -53,7 +53,7 @@ export const launchGateCommand = defineCommand({
     });
     ctx.navigation.open({
       kind: "panel",
-      panel: workbenchPanels.projectSession,
+      panel: sessionBrowser.panels.conversation,
       open: "preview",
       resource: { type: "session", id: session.id, extensionId: "pstdio", label: session.title },
     });
