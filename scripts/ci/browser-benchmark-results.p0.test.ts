@@ -52,3 +52,15 @@ test("duplicate stable cases and unexpected stable skips are rejected too", () =
   skipped.suites[0]!.specs![0]!.tests[0]!.results[0]!.status = "skipped";
   expect(() => browserBenchmarkResults(skipped, expected, "/repo")).toThrow("unexpectedly skipped");
 });
+
+test("performance quarantine keeps functional failures blocking", () => {
+  const performanceOnly = expected.map((entry) => ({ ...entry, failureKind: "performance" as const }));
+  const input = report();
+  expect(browserBenchmarkResults(input, performanceOnly, "/repo").stableFailures).toHaveLength(1);
+  Object.assign(input.suites[0]!.specs![1]!.tests[0]!, {
+    annotations: [{ type: "performance-budget-failure" }],
+  });
+  expect(browserBenchmarkResults(input, performanceOnly, "/repo").stableFailures).toEqual([]);
+  input.suites[0]!.specs![1]!.tests[0]!.results[0]!.status = "timedOut";
+  expect(browserBenchmarkResults(input, performanceOnly, "/repo").stableFailures).toHaveLength(1);
+});

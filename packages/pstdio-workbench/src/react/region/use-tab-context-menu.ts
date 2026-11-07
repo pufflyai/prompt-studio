@@ -1,16 +1,17 @@
-import type { useScopedMenu } from "@pstdio/ui";
-import { type MouseEvent, useRef, useState } from "react";
-
-type TriggerProps = ReturnType<ReturnType<typeof useScopedMenu>["api"]["getContextTriggerProps"]>;
+import { useScopedMenu as useMenu } from "@pstdio/ui";
+import { type MouseEvent, useRef } from "react";
 
 export const useTabContextMenu = (triggerId: string, disabled = false) => {
   const anchor = useRef({ x: 0, y: 0, width: 0, height: 0 });
   const trigger = useRef<HTMLElement | null>(null);
-  const handlers = useRef<TriggerProps | null>(null);
-  const [state, setState] = useState<{
-    opening?: { x: number; y: number };
-    open: boolean;
-  } | null>(null);
+  const menu = useMenu({
+    ids: { contextTrigger: triggerId },
+    positioning: { placement: "bottom-start", getAnchorRect: () => anchor.current, offset: { mainAxis: 0 } },
+    onEscapeKeyDown: () => {
+      const element = trigger.current;
+      if (element) requestAnimationFrame(() => element.focus({ preventScroll: true }));
+    },
+  });
   const onContextMenu = (event: MouseEvent<HTMLElement>) => {
     if (disabled) {
       event.preventDefault();
@@ -19,11 +20,8 @@ export const useTabContextMenu = (triggerId: string, disabled = false) => {
     event.stopPropagation();
     trigger.current = event.currentTarget;
     anchor.current = event.currentTarget.getBoundingClientRect();
-    if (handlers.current) handlers.current.onContextMenu?.(event);
-    else {
-      event.preventDefault();
-      setState({ opening: { x: event.clientX, y: event.clientY }, open: false });
-    }
+    // Context-menu dismissal preserves outside focus; Escape restores it explicitly.
+    menu.api.getContextTriggerProps().onContextMenu?.(event);
   };
   const show = (element: HTMLElement) => {
     if (disabled) return;
@@ -37,26 +35,5 @@ export const useTabContextMenu = (triggerId: string, disabled = false) => {
       }),
     );
   };
-  return {
-    menu: {
-      triggerId,
-      state,
-      api: { open: state?.open ?? false },
-      getAnchorRect: () => anchor.current,
-      onTriggerPropsChange: (props: TriggerProps | null) => {
-        handlers.current = props;
-      },
-      onOpeningSent: () => setState((current) => (current ? { open: current.open } : current)),
-      onOpenChange: ({ open }: { open: boolean }) =>
-        setState((current) => (current && current.open !== open ? { ...current, open } : current)),
-      onEscapeKeyDown: () => {
-        const element = trigger.current;
-        if (element) requestAnimationFrame(() => element.focus({ preventScroll: true }));
-      },
-    },
-    show,
-    onContextMenu,
-  };
+  return { menu, show, onContextMenu };
 };
-
-export type TabContextMenu = ReturnType<typeof useTabContextMenu>["menu"];

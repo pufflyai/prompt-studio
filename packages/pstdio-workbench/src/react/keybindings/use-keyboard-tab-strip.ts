@@ -1,23 +1,24 @@
-import { type RefObject, useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import type { WorkbenchCore, WorkbenchPanelRegion, WorkbenchWidgetPlacement } from "../../core";
+import { useWorkbenchStore } from "../shared/use-workbench-store";
 
 export const useKeyboardTabStrip = (
   workbench: WorkbenchCore,
   region: WorkbenchPanelRegion | undefined,
   visible: boolean,
   placements: WorkbenchWidgetPlacement[],
-  viewportRef: RefObject<HTMLDivElement | null>,
+  viewport: HTMLDivElement | null,
 ) => {
-  const current = useRef({ visible, placements });
+  const layout = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
+  const current = useRef({ visible, placements, viewport });
   useLayoutEffect(() => {
-    current.current = { visible, placements };
-  }, [visible, placements]);
+    current.current = { visible, placements, viewport };
+  }, [visible, placements, viewport]);
   useLayoutEffect(() => {
-    if (!region || !visible) return;
-    const viewport = viewportRef.current;
+    if (!region) return;
     const registration = workbench.keyboard.registerTabStrip(region, () => {
       const state = current.current;
-      const bounds = viewport?.querySelector('[role="tablist"]')?.getBoundingClientRect();
+      const bounds = state.viewport?.querySelector('[role="tablist"]')?.getBoundingClientRect();
       return {
         ids: state.visible ? state.placements.map((tab) => tab.widgetId) : [],
         top: bounds?.top ?? 0,
@@ -33,23 +34,11 @@ export const useKeyboardTabStrip = (
       observer.disconnect();
       window.removeEventListener("resize", resize);
     };
-  }, [workbench, region, visible, viewportRef]);
-  // Geometry invalidation does not require rerendering every tab strip for every layout change.
+  }, [workbench, region, viewport]);
+  // The reader keeps current placements; notify consumers after its geometry inputs commit.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: these inputs change the transient geometry reader.
   useLayoutEffect(() => {
-    if (!region || !visible) return;
-    let frame: number | undefined;
-    const schedule = () => {
-      if (frame === undefined)
-        frame = requestAnimationFrame(() => {
-          frame = undefined;
-          workbench.keyboard.refresh();
-        });
-    };
-    const stop = workbench.layout.store.subscribe(schedule);
-    schedule();
-    return () => {
-      stop();
-      if (frame !== undefined) cancelAnimationFrame(frame);
-    };
-  }, [workbench, region, visible]);
+    const frame = requestAnimationFrame(() => workbench.keyboard.refresh());
+    return () => cancelAnimationFrame(frame);
+  }, [workbench, layout, visible]);
 };

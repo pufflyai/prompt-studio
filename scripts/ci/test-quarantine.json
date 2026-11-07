@@ -1,5 +1,30 @@
 [
   {
+    "runner": "workbench-benchmark",
+    "file": "packages/e2e/src/perf/panel-tabs.p3.bench.ts",
+    "name": "opens one Panel tab within the interaction budget",
+    "platforms": ["linux", "darwin", "win32"],
+    "owner": "PS-1018 / panel opening performance",
+    "reason": "User-authorized quarantine on 2026-11-07; implementation repair is deferred to separate work. After correcting the temporary Terminal 1 label assertion to use the new tab identity, local Apple Silicon still recorded a 135 ms overlapping task. Earlier hosted Linux recorded 504 ms. Preserve the one-tab workload, selected identity, live terminal check, full input task and original 800 ms duration budget. This is known performance debt.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/42370043986/job/128396162824"],
+    "removeWhen": "Fix panel opening and pass the unchanged cold one-tab operation in one normal first-attempt hosted Linux and Apple Silicon run, below 800 ms with no overlapping task of 50 ms or longer and all identity, selection and terminal assertions intact.",
+    "failureKind": "performance"
+  },
+  {
+    "runner": "workbench-benchmark",
+    "file": "packages/e2e/src/perf/side-panel.p3.bench.ts",
+    "name": "closes and reopens the live Side Panel within budget",
+    "platforms": ["darwin"],
+    "arch": "arm64",
+    "owner": "PS-1018 / side panel performance",
+    "reason": "User-authorized quarantine on 2026-11-07. The unchanged complete close/reopen operation recorded a 51 ms task on local Apple Silicon against the no-long-task assertion. The existing Linux quarantine remains separate. Keep all samples, transition, duration and geometry assertions; performance repair is deferred to separate work.",
+    "evidence": [
+      "PR #1771 local Apple Silicon run at ec3a026923e61fdab5a3ddce5a098a53a63863f4; test-results/menu-workbench.log"
+    ],
+    "removeWhen": "Fix the long-task source and pass every original close/reopen sample in one normal first-attempt Apple Silicon run with no task of 50 ms or longer and unchanged transition, duration and geometry assertions.",
+    "failureKind": "performance"
+  },
+  {
     "runner": "bun",
     "file": "scripts/release/version-patch.p0.test.ts",
     "name": "uses a patch bump even when the selected fix has a minor changeset",
@@ -448,7 +473,8 @@
     "owner": "PS-1018 / workbench navigation performance",
     "reason": "User-authorized quarantine on 2026-11-07 for Workspaces/Tickets navigation. Hosted Linux recorded long tasks of 578, 350, 142 and 58 ms; the local Apple Silicon run recorded 213 ms. Keep the complete two-destination workload, selected-header and paint checks, original 425 ms duration budget and no-long-task assertion. This is known performance debt, not a confirmed flake.",
     "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/42374538544/job/128409383024"],
-    "removeWhen": "Fix collection navigation and pass both Workspaces and Tickets samples in one normal first-attempt run on hosted Linux and Apple Silicon with each duration below 425 ms and no overlapping task of 50 ms or longer. Preserve the original workload and all correctness assertions."
+    "removeWhen": "Fix collection navigation and pass both Workspaces and Tickets samples in one normal first-attempt run on hosted Linux and Apple Silicon with each duration below 425 ms and no overlapping task of 50 ms or longer. Preserve the original workload and all correctness assertions.",
+    "failureKind": "performance"
   },
   {
     "runner": "workbench-benchmark",
@@ -462,7 +488,8 @@
       "https://github.com/pufflyai/prompt-studio/actions/runs/41254526863/job/124697622966",
       "https://github.com/pufflyai/prompt-studio/actions/runs/41248380174/job/124676622461"
     ],
-    "removeWhen": "Fix the long task source and complete every declared close/reopen sample in one first-attempt hosted Linux x64 execution with no task above 50 ms and all collapse-transition, duration and geometry assertions intact."
+    "removeWhen": "Fix the long task source and complete every declared close/reopen sample in one first-attempt hosted Linux x64 execution with no task above 50 ms and all collapse-transition, duration and geometry assertions intact.",
+    "failureKind": "performance"
   },
   {
     "runner": "packaged-desktop-benchmark",
@@ -604,7 +631,8 @@
       "https://github.com/pufflyai/prompt-studio/actions/runs/41234623888",
       "https://github.com/pufflyai/prompt-studio/actions/runs/41245408313/job/124667798482"
     ],
-    "removeWhen": "Optimize project switching and pass the complete twenty-switch workload in its first hosted Linux x64 execution below 1850 ms per switch and 525 ms per long task, with all correctness assertions intact."
+    "removeWhen": "Optimize project switching and pass the complete twenty-switch workload in its first hosted Linux x64 execution below 1850 ms per switch and 525 ms per long task, with all correctness assertions intact.",
+    "failureKind": "performance"
   },
   {
     "runner": "packaged-desktop-benchmark",

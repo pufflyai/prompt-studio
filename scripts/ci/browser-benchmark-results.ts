@@ -3,6 +3,7 @@ import { verifyBunQuarantineCases } from "./quarantine-reports";
 
 interface BenchmarkTest {
   expectedStatus?: string;
+  annotations?: { type: string }[];
   results: { status: string }[];
 }
 interface BenchmarkSuite {
@@ -31,17 +32,23 @@ const benchmarkRecord = (spec: NonNullable<BenchmarkSuite["specs"]>[number], roo
   if (!outcome) throw new Error("Incomplete browser benchmark execution");
   if (status === "skipped" && test.expectedStatus !== "skipped")
     throw new Error("Browser benchmark was unexpectedly skipped");
-  return { file, title: spec.title, outcome };
+  return {
+    file,
+    title: spec.title,
+    outcome,
+    performanceFailure:
+      status === "failed" && test.annotations?.some((entry) => entry.type === "performance-budget-failure") === true,
+  };
 };
 
 /** Classify one ordered execution; quarantine changes the gate, never the workload or ordering. */
 export const browserBenchmarkResults = (
   report: BrowserBenchmarkReport,
-  expected: { file: string; name: string }[],
+  expected: { file: string; name: string; failureKind?: "performance" }[],
   root: string,
 ) => {
   if (report.errors?.length) throw new Error("Browser benchmark setup failed");
-  const records: { file: string; title: string; outcome: string }[] = [];
+  const records: { file: string; title: string; outcome: string; performanceFailure: boolean }[] = [];
   const filtered = (suites: BenchmarkSuite[]): BenchmarkSuite[] =>
     suites.map((suite) => ({
       ...suite,
@@ -61,7 +68,11 @@ export const browserBenchmarkResults = (
   return {
     quarantineReport,
     quarantined: summary,
-    stableFailures: records.filter((entry) => !quarantined(entry) && entry.outcome === "failure"),
+    stableFailures: records.filter((entry) => {
+      if (entry.outcome !== "failure") return false;
+      const quarantine = expected.find((test) => test.file === entry.file && test.name === entry.title);
+      return !quarantine || (quarantine.failureKind === "performance" && !entry.performanceFailure);
+    }),
     executed: records.filter((entry) => entry.outcome !== "skipped").length,
   };
 };

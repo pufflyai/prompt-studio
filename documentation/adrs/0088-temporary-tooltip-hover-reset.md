@@ -18,8 +18,6 @@ A presence-only gate hides the popup but leaves the hidden machine open and cons
 
 Keep the tooltip root mounted and use its native disabled state when the label fits or the tooltip is unavailable. A small helper inside the shared Tooltip remembers the last committed, enabled trigger's public pointer-leave callback. When the tooltip becomes disabled, the helper calls that callback once to clear the native hover state.
 
-Clipped labels first measure on pointer or focus intent, rather than forcing layout for every mounted row. An eligibility change is flushed in the capture handler so Zag sees the enabled trigger during that same event. Eligible or explicitly open labels then observe size and text changes. The root and trigger stay mounted throughout, and fitting labels retain the native disabled gate and hover reset.
-
 The callback currently ignores its event argument. The helper casts it to a no-argument callback and does not dispatch a fabricated DOM event. It adds no separate hover state and is isolated in the shared Tooltip component. Uncontrolled callers remain uncontrolled during overflow measurement.
 
 ## Limitations

@@ -3,6 +3,7 @@ import { workbenchBudgets } from "pstdio-benchmarks";
 import { createProjectViaApi, deleteAllProjects } from "../ui/helpers/session-follow-up";
 import {
   budgetMisses,
+  checkPerformance,
   PERF_START_ATTRIBUTE,
   preparePerfPage,
   readInteraction,
@@ -80,12 +81,16 @@ test("opens one Panel tab within the interaction budget", async ({ page, request
   );
   expect(finalTabs - initial.count).toBe(1);
   await expect(page.getByRole("textbox", { name: "Terminal input", exact: true })).toBeVisible();
-  expect(result.longTasks).toEqual([]);
+  checkPerformance(() => {
+    expect(result.longTasks).toEqual([]);
+  });
 
   await reportPageMemory(page, "panel-tabs");
 
   const results = [result.duration];
   expect(results).toHaveLength(1);
   // Set on 2026-10-26 from four hosted ubuntu-24.04 runs (slowest 664 ms) plus about 20%.
-  expect(budgetMisses("panel-tabs", "open-panel", results, workbenchBudgets.panelTabs.value)).toEqual([]);
+  checkPerformance(() => {
+    expect(budgetMisses("panel-tabs", "open-panel", results, workbenchBudgets.panelTabs.value)).toEqual([]);
+  });
 });

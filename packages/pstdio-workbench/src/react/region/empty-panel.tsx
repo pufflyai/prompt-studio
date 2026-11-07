@@ -14,16 +14,12 @@ interface EmptyPanelProps {
   region: WorkbenchPanelRegion;
 }
 
-const hiddenShortcuts = { active: false, preview: false };
-
 export const EmptyPanel = (props: EmptyPanelProps) => {
   const { workbench, region } = props;
   const resource = useWorkbenchLocationResource(workbench);
   const panels = useWorkbenchCompositionRegionPanels(workbench, region).addable;
   const bounds = useRef<HTMLDivElement>(null);
-  const keyboard = useWorkbenchStore(workbench.keyboard.store, (state) =>
-    state.active || state.preview ? state : hiddenShortcuts,
-  );
+  const keyboard = useWorkbenchStore(workbench.keyboard.store, (state) => state);
   const panelIds = panels.map((panel) => panel.panelId).join("\0");
   useLayoutEffect(() => {
     const registration = workbench.keyboard.registerEmptyPanel(region, () => {

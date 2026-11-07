@@ -1,21 +1,33 @@
-import { useSyncExternalStore } from "react";
 import type { WorkbenchCompositionRegionPanels, WorkbenchCore, WorkbenchPanelRegion } from "../../core";
-import { compositionPanelSnapshot } from "./composition-panel-snapshot";
+import { useWorkbenchStore } from "./use-workbench-store";
 
 export type WorkbenchCompositionPanelsByRegion = Record<WorkbenchPanelRegion, WorkbenchCompositionRegionPanels>;
-const empty: WorkbenchCompositionRegionPanels = { open: [], addable: [], closable: [] };
-const emptyReader = { refresh: () => empty, read: () => empty, subscribe: (_changed: () => void) => () => {} };
+
+const useWorkbenchCompositionChanges = (workbench: WorkbenchCore) => {
+  "use no memo";
+
+  useWorkbenchStore(workbench.layout.store, (state) => state);
+  useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
+  useWorkbenchStore(workbench.pages.store, (state) => state);
+  useWorkbenchStore(workbench.commands.store, (state) => state);
+  useWorkbenchStore(workbench.context.store, (state) => state);
+};
 
 export const useWorkbenchCompositionRegionPanels = (workbench: WorkbenchCore, region?: WorkbenchPanelRegion) => {
   "use no memo";
-  const reader = region ? compositionPanelSnapshot(workbench, region) : emptyReader;
-  // Opening a palette can reveal live provider availability without another store transition.
-  reader.refresh();
-  return useSyncExternalStore(reader.subscribe, reader.read, reader.read);
+
+  useWorkbenchCompositionChanges(workbench);
+  return region ? workbench.composition.panelsFor(region) : { open: [], addable: [], closable: [] };
 };
 
-export const useWorkbenchCompositionPanels = (workbench: WorkbenchCore): WorkbenchCompositionPanelsByRegion => ({
-  main: useWorkbenchCompositionRegionPanels(workbench, "main"),
-  secondary: useWorkbenchCompositionRegionPanels(workbench, "secondary"),
-  side: useWorkbenchCompositionRegionPanels(workbench, "side"),
-});
+export const useWorkbenchCompositionPanels = (workbench: WorkbenchCore): WorkbenchCompositionPanelsByRegion => {
+  "use no memo";
+
+  useWorkbenchCompositionChanges(workbench);
+
+  return {
+    main: workbench.composition.panelsFor("main"),
+    secondary: workbench.composition.panelsFor("secondary"),
+    side: workbench.composition.panelsFor("side"),
+  };
+};

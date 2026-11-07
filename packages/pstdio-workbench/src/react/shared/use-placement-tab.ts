@@ -5,9 +5,8 @@ import { resolveResourcePreview } from "../../core/registries/resources/resource
 import { useWorkbenchStore } from "./use-workbench-store";
 
 type Placement = WorkbenchWidgetPlacement | WorkbenchPanelInstance;
-const emptySnapshot: WorkbenchTabSnapshot = {};
 const readPlacementTab = (placement: Placement | undefined) =>
-  placement?.tab?.getSnapshot("instanceId" in placement ? placement : toPanelInstance(placement)) ?? emptySnapshot;
+  placement?.tab?.getSnapshot("instanceId" in placement ? placement : toPanelInstance(placement)) ?? {};
 
 export const usePlacementTab = (placement: Placement | undefined, workbench: WorkbenchCore) => {
   const changes = useWorkbenchStore(workbench.resources.preview.store, (state) => state.changes);
@@ -16,7 +15,6 @@ export const usePlacementTab = (placement: Placement | undefined, workbench: Wor
     snapshot: readPlacementTab(placement),
   }));
   useEffect(() => {
-    if (!placement?.tab) return;
     const refresh = () => setState({ placement, snapshot: readPlacementTab(placement) });
     const subscription = placement?.tab?.subscribe?.(refresh);
     refresh();

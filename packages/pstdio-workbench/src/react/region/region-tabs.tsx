@@ -10,7 +10,7 @@ import {
   Tooltip,
 } from "@pstdio/ui";
 import type { MouseEvent as ReactMouseEvent } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   type WorkbenchCore,
   type WorkbenchPanelRegion,
@@ -71,8 +71,8 @@ const WorkbenchRegionTabsContent = (props: WorkbenchRegionTabsContentProps) => {
   } = state;
   const tabOverrides = tabStore.tabOverrides;
   const getKey = (placement: WorkbenchWidgetPlacement) => toTabKey(region, placement);
-  const viewportRef = useRef<HTMLDivElement | null>(null);
-  useKeyboardTabStrip(workbench, panelRegion, showTabs, visiblePlacements, viewportRef);
+  const [viewport, setViewport] = useState<HTMLDivElement | null>(null);
+  useKeyboardTabStrip(workbench, panelRegion, showTabs, visiblePlacements, viewport);
   const [menuOpen, setMenuOpen] = useState(false);
   const [anchor, setAnchor] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const menuActions = buildTabVisibilityMenuActions(
@@ -102,8 +102,6 @@ const WorkbenchRegionTabsContent = (props: WorkbenchRegionTabsContentProps) => {
   // Translate vertical wheel into horizontal scrolling so the tab strip scrolls
   // with a plain mouse wheel — no modifier key required.
   useEffect(() => {
-    if (!showTabs) return;
-    const viewport = viewportRef.current;
     if (!viewport) return;
     const onWheel = (event: WheelEvent) => {
       if (event.deltaY === 0 || viewport.scrollWidth <= viewport.clientWidth) return;
@@ -112,26 +110,21 @@ const WorkbenchRegionTabsContent = (props: WorkbenchRegionTabsContentProps) => {
     };
     viewport.addEventListener("wheel", onWheel, { passive: false });
     return () => viewport.removeEventListener("wheel", onWheel);
-  }, [showTabs]);
+  }, [viewport]);
   const activeWidgetId = resolveDisplayedActiveWidgetId(visiblePlacements, regionState.activeWidgetId);
   useEffect(() => {
-    if (!showTabs) return;
-    const viewport = viewportRef.current;
     if (!activeWidgetId || !viewport) return;
-    const frame = requestAnimationFrame(() => {
-      const tab = viewport.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
-      if (!tab) return;
-      const left = viewport.getBoundingClientRect().left + viewport.clientLeft;
-      const right = left + viewport.clientWidth;
-      const bounds = tab.getBoundingClientRect();
-      const leftDelta = bounds.left - left;
-      const rightDelta = bounds.right - right;
-      // Revealing a tab must not scroll the split containers around its strip.
-      if (leftDelta < 0 && rightDelta < 0) viewport.scrollLeft += Math.max(leftDelta, rightDelta);
-      else if (leftDelta > 0 && rightDelta > 0) viewport.scrollLeft += Math.min(leftDelta, rightDelta);
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [activeWidgetId, showTabs]);
+    const tab = viewport.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
+    if (!tab) return;
+    const left = viewport.getBoundingClientRect().left + viewport.clientLeft;
+    const right = left + viewport.clientWidth;
+    const bounds = tab.getBoundingClientRect();
+    const leftDelta = bounds.left - left;
+    const rightDelta = bounds.right - right;
+    // Revealing a tab must not scroll the split containers around its strip.
+    if (leftDelta < 0 && rightDelta < 0) viewport.scrollLeft += Math.max(leftDelta, rightDelta);
+    else if (leftDelta > 0 && rightDelta > 0) viewport.scrollLeft += Math.min(leftDelta, rightDelta);
+  }, [activeWidgetId, viewport]);
   if (!showTabs && !hasActions) return null;
   const onSelectLeadingItem = (item: WorkbenchMenuItem) => {
     const command = commands[item.commandId]?.command;
@@ -203,7 +196,7 @@ const WorkbenchRegionTabsContent = (props: WorkbenchRegionTabsContentProps) => {
             height so the active tab still meets the header's bottom edge.
           The content minimum overrides Zag's inline style; see ADR 0049. */}
         <ScrollArea
-          viewportRef={viewportRef}
+          viewportRef={setViewport}
           size="xs"
           h="full"
           maxW="full"

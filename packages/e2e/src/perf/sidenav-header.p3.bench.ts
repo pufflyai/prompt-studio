@@ -5,6 +5,7 @@ import { showSidenavEntry } from "../ui/helpers/sidenav-navigation";
 import {
   afterTwoFrames,
   budgetMisses,
+  checkPerformance,
   PERF_START_ATTRIBUTE,
   preparePerfPage,
   readInteraction,
@@ -83,7 +84,9 @@ test("navigates global collections within the interaction budget", async ({ page
     await collectionRow(page, collection).click();
     await expect(breadcrumb.getByText(collection, { exact: true })).toBeVisible();
     const result = await readInteraction(page);
-    expect(result.longTasks).toEqual([]);
+    checkPerformance(() => {
+      expect(result.longTasks).toEqual([]);
+    });
     samples.push({ collection, duration: result.duration });
   }
 
@@ -100,5 +103,7 @@ test("navigates global collections within the interaction budget", async ({ page
       workbenchBudgets.sidenavHeader.value,
     ),
   );
-  expect(misses).toEqual([]);
+  checkPerformance(() => {
+    expect(misses).toEqual([]);
+  });
 });

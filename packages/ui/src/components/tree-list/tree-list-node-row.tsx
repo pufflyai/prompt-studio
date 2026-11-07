@@ -13,7 +13,7 @@ import { DropIndicator } from "../primitives/drop-indicator";
 import type { TreeListLinkComponent, TreeListNavigateEvent, TreeListNode } from "./tree-list.types";
 import { readDraggedTreeNodeId, writeDraggedTreeNodeId } from "./tree-list-drag";
 import { TreeListInlineInputRow } from "./tree-list-inline-input";
-import { hasExpandableChildren, isNavigableNode } from "./tree-list-model";
+import { hasExpandableChildren, isActiveNode, isInList, isNavigableNode } from "./tree-list-model";
 import { TreeListMoveContext, TreeListSelectionContext } from "./tree-list-selection-context";
 
 type TreeListRowVariant = "compact" | "tree";
@@ -22,8 +22,8 @@ interface TreeListNodeRowProps {
   sectionId: string;
   node: TreeListNode;
   level: number;
-  expanded: boolean;
-  active: boolean;
+  expandedNodeIds: string[];
+  activeNodeId?: string | string[] | null;
   rowVariant: TreeListRowVariant;
   nodeGap: StackProps["gap"];
   linkComponent?: TreeListLinkComponent;
@@ -39,8 +39,8 @@ export const TreeListNodeRow = (props: TreeListNodeRowProps) => {
     sectionId,
     node,
     level,
-    expanded,
-    active,
+    expandedNodeIds,
+    activeNodeId,
     rowVariant,
     nodeGap,
     linkComponent: LinkComponent,
@@ -59,6 +59,8 @@ export const TreeListNodeRow = (props: TreeListNodeRowProps) => {
   }
 
   const hasChildren = hasExpandableChildren(node);
+  const expanded = hasChildren && isInList(node.id, expandedNodeIds);
+  const isActive = isActiveNode(node.id, activeNodeId);
   const isDisabled = node.disabled === true;
   const isNavigable = isNavigableNode(node);
   const canLink = Boolean(LinkComponent && node.href && isNavigable && !hasChildren && !isDisabled);
@@ -125,7 +127,7 @@ export const TreeListNodeRow = (props: TreeListNodeRowProps) => {
     ...listRowItem,
     depth: level,
     variant: nodeRowVariant ?? rowVariant,
-    isSelected: active,
+    isSelected: isActive,
     isExpanded: expanded,
     showExpandToggle: hasChildren,
     expandOnClick: !selection && !opensPage,
