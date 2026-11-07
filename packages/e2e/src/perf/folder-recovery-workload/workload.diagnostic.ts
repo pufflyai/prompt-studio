@@ -191,6 +191,15 @@ const main = async () => {
   log(`Working directory ${work}`);
   const memory = sampleMemory();
   const devices: FolderDevice[] = [];
+  // An interrupted run still removes its hosts and every file it wrote.
+  const interrupted = () => {
+    log("Interrupted; removing the workload's processes and files");
+    void Promise.allSettled(devices.map((device) => stopProcess(device.host.child)))
+      .then(() => rm(work, { recursive: true, force: true }))
+      .finally(() => process.exit(130));
+  };
+  process.once("SIGINT", interrupted);
+  process.once("SIGTERM", interrupted);
   const peer = await (async () => {
     await mkdir(join(work, "relay-blobs"));
     const tls = writeCertificate(work);
@@ -336,6 +345,8 @@ const main = async () => {
     if (mismatched.length) throw new Error(`Restored files differ: ${mismatched.map((file) => file.path).join(", ")}`);
     log(`Restored and verified in ${restoreMs} ms`);
   } finally {
+    process.off("SIGINT", interrupted);
+    process.off("SIGTERM", interrupted);
     memory.stop();
     results.peakMemoryBytes = memory.peaks();
     await Promise.allSettled([...devices.map((device) => stopProcess(device.host.child)), peer.stop()]);

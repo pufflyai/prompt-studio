@@ -239,6 +239,29 @@ their documents. Before it writes, the restore saves the current state in the ho
 the 12-hour point when there is no hour point, so the restore can be undone without a fourth
 point. A restore that would change nothing keeps every point. Purging an extension's data also removes it from recovery points.
 
+## Project folder recovery
+
+[Folder recovery](../../../packages/pstdio-api/src/services/relay/folder-recovery.ts) is a core relay owner
+per cloud project. It captures this device's project folder and keeps every completed copy of the
+account's devices in a local recovery store, so another computer can restore a folder without a Git
+host or the source device online ([PRD 0015](../../requirements/platform/0015-project-data-recovery.md)).
+The code lives in `packages/pstdio-api/src/services/project-recovery/`.
+
+| Part | Rule |
+| --- | --- |
+| Coverage | Every entry below the default workspace's folder except paths the root `.pstignore` excludes. `.gitignore` does not apply. The first enrollment seeds `node_modules/`; an inherited copy keeps its policy, including deliberate absence. External Git administration and object stores are captured only inside registered repository roots. |
+| Chunks | Bounded 1 MiB chunks sealed with the account's private-project key. A device reuses its own sealed chunk for equal content; nothing is shared or deduplicated across accounts. Plaintext exists only in one in-memory chunk. |
+| Manifest | Pages of entries and a root manifest form a DAG of chunks. A capture records its interval, applied policy, exclusions, Git dependencies and counts. |
+| Scheduling | Startup, reconnect, a new project folder and an explicit capture scan at once; change hints wait for a quiet period and the 30-second gap after the previous scan. One process owns a source through a lock; the unacknowledged candidate is journaled across restarts. |
+| Publication | The candidate's whole DAG uploads, children before parents, before the private catalog document names it. A failed upload keeps the previous complete copy. |
+| Catalog | One private document per project lists each device source's latest root. Document sync downloads and verifies every referenced chunk before it merges a root, and resumes from chunks already stored. |
+| Retention | Local and relay storage keep the roots the catalog and candidate reference, plus superseded ciphertext for a grace period. Folder copies are not recovery points. |
+| Restore | Validates the manifest, stages a hidden sibling folder through a journal, verifies every chunk and file digest, then publishes with a no-replace rename ([ADR 0138](../../adrs/0138-temporary-native-filesystem-operations-for-recovery.md)) and attaches the folder through the normal flow when the project has none. It runs no Git, hooks or extension code. |
+| Progress | Capture, download and restore progress is derived in memory and reported by the folder endpoints and the `folder` field of project sync status. |
+
+Capture and restore run on macOS and on Linux with glibc 2.28 or later. Capture loads `libSystem` or glibc
+through FFI, so it cannot run on Windows or musl, and restore reports `unsupported` there.
+
 ## Record stream
 
 Each extension owner syncs its records through one relay document, named

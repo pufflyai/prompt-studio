@@ -42,7 +42,13 @@ const fixture = async () => {
       published.push(candidate);
     },
   } as unknown as ReturnType<typeof createRecoveryCatalog>;
-  const workspace: { id: string; root_path: string | null; [key: string]: unknown } = {
+  const workspace: {
+    id: string;
+    root_path: string | null;
+    execution_kind: string;
+    initializing: boolean;
+    provider_state: string;
+  } = {
     id: "workspace",
     root_path: folder,
     execution_kind: "local",
