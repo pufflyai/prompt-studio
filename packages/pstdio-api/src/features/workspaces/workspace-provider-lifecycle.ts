@@ -1,4 +1,8 @@
-import type { WorkspaceProviderRef, WorkspaceProviderResult } from "pstdio-api-contracts/extension-kernel";
+import type {
+  ExtensionContextBase,
+  WorkspaceProviderRef,
+  WorkspaceProviderResult,
+} from "pstdio-api-contracts/extension-kernel";
 import { cancelWorkspaceSessions } from "./cancel-workspace-sessions";
 import type { WorkspacesRouteDeps } from "./deps";
 import {
@@ -10,7 +14,11 @@ import {
   type WorkspaceProviderOperationKind,
   type WorkspaceRecord,
 } from "./workspace-provider-projection";
-import { findWorkspaceProvider, runWorkspaceProviderCall } from "./workspace-provider-runtime";
+import {
+  findWorkspaceProvider,
+  runWorkspaceProviderOperation,
+  type WorkspaceProviderHandle,
+} from "./workspace-provider-runtime";
 import { isBuiltInProviderId, normalizeResult } from "./workspace-provider-service";
 import { cleanupWorkspaceWorktree } from "./worktree-cleanup";
 
@@ -71,12 +79,16 @@ const runProviderMutation = async (
   input: {
     kind: Exclude<WorkspaceProviderOperationKind, "create" | "delete">;
     pendingState: "provisioning" | "archiving";
-    mutate: (input: {
-      operationId: string;
-      projectId: string;
-      workspaceId: string;
-      providerRef: WorkspaceProviderRef;
-    }) => Promise<WorkspaceProviderResult> | WorkspaceProviderResult;
+    handle: WorkspaceProviderHandle;
+    mutate: (
+      context: ExtensionContextBase,
+      input: {
+        operationId: string;
+        projectId: string;
+        workspaceId: string;
+        providerRef: WorkspaceProviderRef;
+      },
+    ) => Promise<WorkspaceProviderResult> | WorkspaceProviderResult;
     fallbackState: "cancelled" | "archived";
     operationId?: string;
   },
@@ -86,8 +98,8 @@ const runProviderMutation = async (
     : await persistOperation(deps, workspace, input.kind, input.pendingState);
   const operationId = input.operationId ?? pending.provider_operation_id!;
   try {
-    const result = await runWorkspaceProviderCall(() =>
-      input.mutate({
+    const result = await runWorkspaceProviderOperation(input.handle, (ctx) =>
+      input.mutate(ctx, {
         operationId,
         projectId: workspace.project_id,
         workspaceId: workspace.id,
@@ -178,7 +190,8 @@ export const cancelProviderBackedWorkspace = async (
     return runProviderMutation(deps, pending, {
       kind: "cancel",
       pendingState: "provisioning",
-      mutate: (input) => handle.provider.cancel!(handle.context, input),
+      handle,
+      mutate: (ctx, input) => handle.provider.cancel!(ctx, input),
       fallbackState: "cancelled",
       operationId,
     });
@@ -196,8 +209,8 @@ export const cancelProviderBackedWorkspace = async (
   }
 
   try {
-    await runWorkspaceProviderCall(() =>
-      handle.provider.delete!(handle.context, {
+    await runWorkspaceProviderOperation(handle, (ctx) =>
+      handle.provider.delete!(ctx, {
         operationId,
         projectId: workspace.project_id,
         workspaceId: workspace.id,
@@ -244,8 +257,8 @@ export const cleanupProviderBackedWorkspace = async (
     throw error;
   }
   try {
-    await runWorkspaceProviderCall(() =>
-      handle.provider.delete!(handle.context, {
+    await runWorkspaceProviderOperation(handle, (ctx) =>
+      handle.provider.delete!(ctx, {
         operationId,
         projectId: workspace.project_id,
         workspaceId: workspace.id,

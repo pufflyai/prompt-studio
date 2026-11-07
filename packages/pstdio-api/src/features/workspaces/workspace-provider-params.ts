@@ -3,6 +3,7 @@ import { resolveDeclaredParams } from "pstdio-extensions";
 import { git } from "pstdio-wt";
 import type { WorkspacesRouteDeps } from "./deps";
 import { findWorktreeProvider } from "./workspace-provider-catalog";
+import { discoverWorkspaceProvider } from "./workspace-provider-discovery";
 import { rootProviderId, worktreeProviderId } from "./workspace-provider-identity";
 import { findWorkspaceProvider } from "./workspace-provider-runtime";
 
@@ -40,7 +41,9 @@ export const resolveWorkspaceParams = async (
   } else {
     const handle = await findWorkspaceProvider(deps, { projectId, providerId });
     if (!handle) throw new InvalidWorkspaceParamsError(`Workspace provider is unavailable: ${providerId}`);
-    schema = handle.provider.params ?? {};
+    const discovery = await discoverWorkspaceProvider(handle);
+    if (!discovery) throw new InvalidWorkspaceParamsError(`Workspace provider is unavailable: ${providerId}`);
+    schema = discovery.params;
   }
   return validateWorkspaceParams(providerId, schema, input);
 };

@@ -12,7 +12,7 @@ import {
 import { persistRetryParams } from "./workspace-provider-retry-params";
 import {
   findWorkspaceProvider,
-  runWorkspaceProviderCall,
+  runWorkspaceProviderOperation,
   type WorkspaceProviderHandle,
 } from "./workspace-provider-runtime";
 import { isBuiltInProviderId, normalizeResult } from "./workspace-provider-service";
@@ -75,9 +75,10 @@ const reconcileCancellation = async (
     if (!handle.provider.delete) {
       throw new Error(`Workspace provider cannot clean up its cancelled create: ${workspace.provider_id}`);
     }
-    await runWorkspaceProviderCall(
-      () =>
-        handle.provider.delete!(handle.context, {
+    await runWorkspaceProviderOperation(
+      handle,
+      (ctx) =>
+        handle.provider.delete!(ctx, {
           operationId,
           projectId: workspace.project_id,
           workspaceId: workspace.id,
@@ -88,9 +89,10 @@ const reconcileCancellation = async (
     await settleWithoutProviderMethod(deps, workspace, "cancelled");
     return;
   }
-  const result = await runWorkspaceProviderCall(
-    () =>
-      handle.provider.cancel!(handle.context, {
+  const result = await runWorkspaceProviderOperation(
+    handle,
+    (ctx) =>
+      handle.provider.cancel!(ctx, {
         operationId,
         projectId: workspace.project_id,
         workspaceId: workspace.id,
@@ -112,13 +114,15 @@ const recoverProviderReference = async (
   if (current.provider_ref_json) return current;
   const kind = current.provider_operation_kind!;
   const operationId = current.provider_operation_id!;
-  const result = await runWorkspaceProviderCall(
-    () =>
-      handle.provider.create(handle.context, {
+  const result = await runWorkspaceProviderOperation(
+    handle,
+    (ctx, signal) =>
+      handle.provider.create(ctx, {
         operationId,
         projectId: current.project_id,
         workspaceId: current.id,
         params: current.provider_params_json as JsonObject,
+        signal,
       }),
     { signal: options.signal, timeoutMs: options.providerTimeoutMs },
   );
@@ -167,9 +171,10 @@ const reconcileStoredOperation = async (
   if (!handle.provider.delete || !workspace.provider_ref_json) {
     throw new Error(`Workspace provider cannot finish remote deletion: ${workspace.provider_id}`);
   }
-  await runWorkspaceProviderCall(
-    () =>
-      handle.provider.delete!(handle.context, {
+  await runWorkspaceProviderOperation(
+    handle,
+    (ctx) =>
+      handle.provider.delete!(ctx, {
         operationId,
         projectId: workspace.project_id,
         workspaceId: workspace.id,
@@ -199,9 +204,10 @@ const reconcileWorkspace = async (
 
   if (await reconcileStoredOperation(deps, workspace, handle, options)) return;
   if (!workspace.provider_ref_json) return;
-  const result = await runWorkspaceProviderCall(
-    () =>
-      handle.provider.resolve(handle.context, {
+  const result = await runWorkspaceProviderOperation(
+    handle,
+    (ctx) =>
+      handle.provider.resolve(ctx, {
         projectId: workspace.project_id,
         workspaceId: workspace.id,
         providerRef: workspace.provider_ref_json as WorkspaceProviderRef,
