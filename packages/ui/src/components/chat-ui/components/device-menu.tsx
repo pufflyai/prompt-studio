@@ -46,6 +46,8 @@ export const ChatDeviceMenu = (props: ChatDeviceMenuProps) => {
     );
   }
 
+  if (devices.length < 2) return null;
+
   return (
     <SearchableMenu
       trigger={

@@ -27,7 +27,7 @@ test("chat model and harness parameters retain the compact toolbar", async ({ pa
   await preview.locator("body").screenshot({ path: info.outputPath("compact-composer.png") });
 });
 
-// Critical risk: provider options must stay inside the workspace frame without replacing the unsent input.
+// Critical parity: existing workspace selection stays in its frame without replacing the unsent input.
 test("existing workspace selection and extension harness icon retain composer parity", async ({ page }, info) => {
   const preview = await openCanvasPreview(
     page,

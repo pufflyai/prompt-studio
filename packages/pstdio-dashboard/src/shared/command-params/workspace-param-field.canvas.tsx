@@ -2,6 +2,7 @@ import { Button, Dialog, HStack, Stack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { WorkspaceProviderDescriptor } from "@pstdio/sdk/api";
 import {
+  ChatDeviceMenu,
   ChatInput,
   ChatWorkspaceHub,
   ChatWorkspaceMenu,
@@ -128,6 +129,7 @@ export const ComposerWorkspace = () => {
           deletions={0}
           workspaceControl={
             <HStack gap="2xs">
+              <ChatDeviceMenu devices={[{ id: "", name: "This device", current: true }]} selectedDeviceId="" />
               <ChatWorkspaceMenu
                 workspaces={[
                   { id: "main", title: "Main", shorthand: "MAIN", branch: "main" },

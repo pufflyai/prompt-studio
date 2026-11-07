@@ -57,7 +57,7 @@ export const NativeChatWorkspace = (props: NativeChatWorkspaceProps) => {
       <ChatWorkspaceHub
         workspaceControl={
           <HStack gap="2xs" minW="0">
-            {device?.type === "selection" && (device.options.length > 1 || device.readOnly) && (
+            {device?.type === "selection" && (
               <ChatDeviceMenu
                 devices={device.options.map((option) => ({ ...option, current: option.id === "" }))}
                 selectedDeviceId={String(draft.values[device.id] ?? device.defaultValue ?? "")}
