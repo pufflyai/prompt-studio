@@ -57,8 +57,12 @@ anything.
   its user's private project data, including file contents. It works fully offline.
   Append-only logs load bounded pages on demand under R60; a partial reader cannot
   publish a replacement that claims to contain history it has not downloaded.
-- R2. Plain record fields apply in relay order. The later ordered write wins at each
-  changed JSON path. Objects contribute changed fields at every depth; arrays and
+- R2. Plain record fields apply in relay order. A save records the stamps of the paths
+  it changes as its author saw them. At each changed JSON path, the later ordered write
+  wins only if that path has not changed since the save's base; otherwise the earlier
+  write stands. A device that was away therefore never overrides what devices that stayed
+  in sync changed, and its deletions and edits lose to edits and deletions made after
+  its base ([ADR 0139](../../adrs/0139-devices-that-return-never-override-in-sync-devices.md)). Objects contribute changed fields at every depth; arrays and
   undeclared strings, including multiline strings, are whole values. A replacement
   uses the caller's observed baseline to identify changed paths. Explicit set/unset
   paths state the author's intent directly. Neither clocks nor the relay interpret
@@ -217,6 +221,15 @@ anything.
   to.
 - R37. Removing a device or a member stops their future access. Data already on their
   machines stays there.
+- R61. Signing out, a rejected login and removing this device end sync on the device.
+  Local data stays. Unsent changes and later saves fold into one pending save per
+  record, so nothing grows with the number of saves. Signing in again sends only the
+  fields that changed, under R2. A project the signed-in account does not sync stays
+  local with every edit.
+- R62. A device keeps at most 1,000 unsent saves per extension while signed in, then
+  folds them as in R61. A device that returns with an unusually large set of deletions
+  or changes uploads nothing until someone applies or discards them on that device. The
+  device shows its changes held for review and the changes Cloud replaced.
 - R54. During early access, the account manager turns Cloud on per account. An operator
   turns it on by the account's email. Only those accounts get cloud projects, keys and
   relay access. Every other user can still log in and sees Cloud sync as coming soon.

@@ -21,6 +21,7 @@ import { coverOrderedReceiptRoot, coversOrderedReceipts } from "./ordered-receip
 import { createOrderedReceiptResolver } from "./ordered-receipts-resolver";
 import { receiptRoots, sameReceiptRoot, saveReceiptRoots } from "./ordered-receipts-state";
 import { nextOrderedUpload } from "./ordered-receipts-upload";
+import { recordOrderedReplaced } from "./ordered-return-review";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { admissibleOrderedFrame, applyOrderedStreamFrame } from "./ordered-stream-frames";
 import { readOrderedPending } from "./ordered-stream-pending";
@@ -74,6 +75,7 @@ export const createOrderedStreamStore = (
       previous,
       await admissionDecisions(journal, admission),
     );
+    await recordOrderedReplaced(journal, tx, owner, operation, applied.skipped);
     const result = await applyOrderedNumberPolicy(tx, owner, operation, epoch, applied, !!previous);
     await journal.saveCanonical(result.records);
     await journal.recordDecision(result.decision, await fingerprint(admission as unknown as Json));

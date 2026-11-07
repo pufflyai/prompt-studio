@@ -10,6 +10,7 @@ import { createDocumentCache } from "./document-cache";
 import { createDocumentDirectory } from "./document-directory";
 import { createDocumentTransactions } from "./document-transactions";
 import { createNativeDocumentStore, openNativeDocument } from "./native-document-storage";
+import { createOrderedCloudReturn } from "./ordered-cloud-return";
 import { createOrderedLogs } from "./ordered-logs";
 import { createOrderedResourceRecords } from "./ordered-resource-records";
 import { createOrderedStreamStore } from "./ordered-stream-store";
@@ -142,9 +143,16 @@ export const createDocumentStorageDBService = (
       for (const listener of listeners) listener(owner);
     },
   });
+  const cloudReturn = createOrderedCloudReturn(db, {
+    changed: (owner) => {
+      notifyOwnerNative(owner);
+      for (const listener of listeners) listener(owner);
+    },
+  });
   return {
     transaction,
     logs,
+    cloudReturn,
     observer,
     getEnvironment,
     flushStatistics: async () => {

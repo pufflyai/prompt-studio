@@ -22,4 +22,6 @@ export const createWebviewAccountClient = (host: GuestHost) =>
     syncProject: (projectId) => host.call("account.manage", { op: "syncProject", ...(projectId ? { projectId } : {}) }),
     stopProjectSync: (projectId) =>
       host.call("account.manage", { op: "stopProjectSync", ...(projectId ? { projectId } : {}) }),
+    resolveReturnedChanges: (action, projectId) =>
+      host.call("account.manage", { op: "resolveReturnedChanges", action, ...(projectId ? { projectId } : {}) }),
   }) satisfies WebviewAccountClient;

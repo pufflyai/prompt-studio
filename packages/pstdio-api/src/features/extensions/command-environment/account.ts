@@ -33,4 +33,7 @@ export const createAccountApi = (account: ExtensionsRouteDeps["accountService"],
     stopProjectSync: async (id = projectId) => {
       await safe(() => account.stopProjectSync(id));
     },
+    resolveReturnedChanges: async (action, id = projectId) => {
+      await safe(() => account.resolveReturnedChanges(id, action));
+    },
   }) satisfies ExtensionAccountApi;

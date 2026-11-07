@@ -15,12 +15,13 @@ const conditionStamps = (edit: OrderedOperation["edits"][number]) => {
 const baseStamps = (edit: OrderedOperation["edits"][number]) =>
   edit.base ? [edit.base.lifetime, ...Object.values(edit.base.stamps)] : [];
 
-export const operationDependencies = (operation: OrderedOperation) => {
+/** Base stamps only choose which paths apply; `base: false` lists dependencies that can refuse a save. */
+export const operationDependencies = (operation: OrderedOperation, options: { base?: boolean } = {}) => {
   const references = new Map<string, string>();
   for (const edit of operation.edits) {
     for (const text of edit.texts ?? [])
       for (const dependency of text.dependencies) references.set(dependency.operationId, dependency.fingerprint);
-    for (const stamp of [...conditionStamps(edit), ...baseStamps(edit)]) {
+    for (const stamp of [...conditionStamps(edit), ...(options.base === false ? [] : baseStamps(edit))]) {
       if (!stamp || stamp === "initial") continue;
       const [kind, id, fingerprint] = JSON.parse(stamp) as string[];
       if (kind === "pending") references.set(id!, fingerprint!);

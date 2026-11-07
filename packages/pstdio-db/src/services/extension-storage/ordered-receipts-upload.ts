@@ -9,6 +9,7 @@ import { pendingOrderedOperations } from "./ordered-pending";
 import { prepareOrderedAdmission, rebaseOrderedProjection } from "./ordered-rebase";
 import { createOrderedReceiptResolver } from "./ordered-receipts-resolver";
 import { receiptRoots } from "./ordered-receipts-state";
+import { evaluateOrderedReturn } from "./ordered-return-review";
 import type { OrderedTransaction } from "./ordered-sql";
 import { readOrderedOwner } from "./ordered-stream-state";
 
@@ -40,6 +41,8 @@ export const nextOrderedUpload = async (
 ) => {
   const row = await readOrderedOwner(tx, owner);
   if (!row.epoch) return [];
+  // A returning device decides here, once connected, whether its changes upload or wait for review.
+  if ((await evaluateOrderedReturn(journal, tx, owner)) === "held") return [];
   const resolver = createOrderedReceiptResolver(journal, receiptRoots(row.receipt_root).root, index);
   const uploads = [];
   let bytes = 0;

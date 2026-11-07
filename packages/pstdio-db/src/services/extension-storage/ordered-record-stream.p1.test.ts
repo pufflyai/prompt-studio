@@ -271,7 +271,7 @@ const scenarios: { name: string; initial: Json; firstValue: Json; lastValue: Jso
   { name: "arrays", initial: ["seed"], firstValue: ["laptop"], lastValue: ["desktop"] },
 ];
 for (const { name, initial, firstValue, lastValue } of scenarios) {
-  test(`the later-ordered offline save replaces plain ${name} whole on every device`, async () => {
+  test(`the first offline save to reach Cloud keeps plain ${name} whole on every device`, async () => {
     const [first, second] = await peers();
     await first.records.commit({ operationId: "seed", edits: [{ recordId: "card", replace: { value: initial } }] });
     await first.sync.synchronize();
@@ -282,9 +282,12 @@ for (const { name, initial, firstValue, lastValue } of scenarios) {
     await second.sync.synchronize();
     await first.sync.synchronize();
     for (const peer of [first, second]) {
-      expect((await peer.records.read("card")).value).toEqual({ value: lastValue });
+      expect((await peer.records.read("card")).value).toEqual({ value: firstValue });
       expect(peer.failures).toEqual([]);
     }
+    expect((await second.service.cloudReturn.status(second.owner.workbenchId)).replaced.records).toMatchObject([
+      { recordId: "card", fields: ["/value"], whole: false },
+    ]);
   });
 }
 
