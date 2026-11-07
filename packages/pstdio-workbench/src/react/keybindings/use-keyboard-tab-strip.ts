@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from "react";
+import { type RefObject, useLayoutEffect, useRef } from "react";
 import type { WorkbenchCore, WorkbenchPanelRegion, WorkbenchWidgetPlacement } from "../../core";
 
 export const useKeyboardTabStrip = (
@@ -6,17 +6,18 @@ export const useKeyboardTabStrip = (
   region: WorkbenchPanelRegion | undefined,
   visible: boolean,
   placements: WorkbenchWidgetPlacement[],
-  viewport: HTMLDivElement | null,
+  viewportRef: RefObject<HTMLDivElement | null>,
 ) => {
-  const current = useRef({ visible, placements, viewport });
+  const current = useRef({ visible, placements });
   useLayoutEffect(() => {
-    current.current = { visible, placements, viewport };
-  }, [visible, placements, viewport]);
+    current.current = { visible, placements };
+  }, [visible, placements]);
   useLayoutEffect(() => {
-    if (!region) return;
+    if (!region || !visible) return;
+    const viewport = viewportRef.current;
     const registration = workbench.keyboard.registerTabStrip(region, () => {
       const state = current.current;
-      const bounds = state.viewport?.querySelector('[role="tablist"]')?.getBoundingClientRect();
+      const bounds = viewport?.querySelector('[role="tablist"]')?.getBoundingClientRect();
       return {
         ids: state.visible ? state.placements.map((tab) => tab.widgetId) : [],
         top: bounds?.top ?? 0,
@@ -32,16 +33,17 @@ export const useKeyboardTabStrip = (
       observer.disconnect();
       window.removeEventListener("resize", resize);
     };
-  }, [workbench, region, viewport]);
+  }, [workbench, region, visible, viewportRef]);
   // Geometry invalidation does not require rerendering every tab strip for every layout change.
   useLayoutEffect(() => {
     if (!region || !visible) return;
     let frame: number | undefined;
     const schedule = () => {
-      frame ??= requestAnimationFrame(() => {
-        frame = undefined;
-        workbench.keyboard.refresh();
-      });
+      if (frame === undefined)
+        frame = requestAnimationFrame(() => {
+          frame = undefined;
+          workbench.keyboard.refresh();
+        });
     };
     const stop = workbench.layout.store.subscribe(schedule);
     schedule();

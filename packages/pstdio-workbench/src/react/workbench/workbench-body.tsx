@@ -1,6 +1,5 @@
 import { Box, Grid } from "@chakra-ui/react";
 import { Header, PANEL_HEADER_CONTROL_SIZE, ResizableSplitLayout } from "@pstdio/ui";
-import { useDeferredValue } from "react";
 import { headerTrailingMenuPath, type WorkbenchCore, type WorkbenchRegionSize } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchHeaderActions } from "../header/header-actions";
@@ -48,9 +47,7 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
   const { workbench, hasMainHeader } = props;
   const hasMainContentTabs = useWorkbenchRegionTabsVisible(workbench, "main");
   const policy = usePanelPolicy(workbench, "main");
-  // Mount new chrome in a render React can yield; tab selection still reads the current layout.
-  const presentedHeader = useDeferredValue(policy.showHeader);
-  if (!policy.showHeader || !presentedHeader) return null;
+  if (!policy.showHeader) return null;
 
   return (
     <Header

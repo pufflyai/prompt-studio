@@ -442,6 +442,16 @@
   },
   {
     "runner": "workbench-benchmark",
+    "file": "packages/e2e/src/perf/sidenav-header.p3.bench.ts",
+    "name": "navigates global collections within the interaction budget",
+    "platforms": ["linux", "darwin", "win32"],
+    "owner": "PS-1018 / workbench navigation performance",
+    "reason": "User-authorized quarantine on 2026-11-07 for Workspaces/Tickets navigation. Hosted Linux recorded long tasks of 578, 350, 142 and 58 ms; the local Apple Silicon run recorded 213 ms. Keep the complete two-destination workload, selected-header and paint checks, original 425 ms duration budget and no-long-task assertion. This is known performance debt, not a confirmed flake.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/42374538544/job/128409383024"],
+    "removeWhen": "Fix collection navigation and pass both Workspaces and Tickets samples in one normal first-attempt run on hosted Linux and Apple Silicon with each duration below 425 ms and no overlapping task of 50 ms or longer. Preserve the original workload and all correctness assertions."
+  },
+  {
+    "runner": "workbench-benchmark",
     "file": "packages/e2e/src/perf/side-panel.p3.bench.ts",
     "name": "closes and reopens the live Side Panel within budget",
     "platforms": ["linux"],

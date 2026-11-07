@@ -10,7 +10,7 @@ import {
   Tooltip,
 } from "@pstdio/ui";
 import type { MouseEvent as ReactMouseEvent } from "react";
-import { useDeferredValue, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   type WorkbenchCore,
   type WorkbenchPanelRegion,
@@ -69,13 +69,10 @@ const WorkbenchRegionTabsContent = (props: WorkbenchRegionTabsContentProps) => {
     showTabs,
     hasActions,
   } = state;
-  // Only defer the empty-to-populated strip mount, never its controlled selection or placements.
-  const presentedTabs = useDeferredValue(showTabs);
-  const renderTabs = showTabs && presentedTabs;
   const tabOverrides = tabStore.tabOverrides;
   const getKey = (placement: WorkbenchWidgetPlacement) => toTabKey(region, placement);
-  const [viewport, setViewport] = useState<HTMLDivElement | null>(null);
-  useKeyboardTabStrip(workbench, panelRegion, showTabs, visiblePlacements, viewport);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  useKeyboardTabStrip(workbench, panelRegion, showTabs, visiblePlacements, viewportRef);
   const [menuOpen, setMenuOpen] = useState(false);
   const [anchor, setAnchor] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const menuActions = buildTabVisibilityMenuActions(
@@ -105,6 +102,8 @@ const WorkbenchRegionTabsContent = (props: WorkbenchRegionTabsContentProps) => {
   // Translate vertical wheel into horizontal scrolling so the tab strip scrolls
   // with a plain mouse wheel — no modifier key required.
   useEffect(() => {
+    if (!showTabs) return;
+    const viewport = viewportRef.current;
     if (!viewport) return;
     const onWheel = (event: WheelEvent) => {
       if (event.deltaY === 0 || viewport.scrollWidth <= viewport.clientWidth) return;
@@ -113,9 +112,11 @@ const WorkbenchRegionTabsContent = (props: WorkbenchRegionTabsContentProps) => {
     };
     viewport.addEventListener("wheel", onWheel, { passive: false });
     return () => viewport.removeEventListener("wheel", onWheel);
-  }, [viewport]);
+  }, [showTabs]);
   const activeWidgetId = resolveDisplayedActiveWidgetId(visiblePlacements, regionState.activeWidgetId);
   useEffect(() => {
+    if (!showTabs) return;
+    const viewport = viewportRef.current;
     if (!activeWidgetId || !viewport) return;
     const frame = requestAnimationFrame(() => {
       const tab = viewport.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
@@ -130,8 +131,8 @@ const WorkbenchRegionTabsContent = (props: WorkbenchRegionTabsContentProps) => {
       else if (leftDelta > 0 && rightDelta > 0) viewport.scrollLeft += Math.min(leftDelta, rightDelta);
     });
     return () => cancelAnimationFrame(frame);
-  }, [activeWidgetId, viewport]);
-  if (!renderTabs && !hasActions) return null;
+  }, [activeWidgetId, showTabs]);
+  if (!showTabs && !hasActions) return null;
   const onSelectLeadingItem = (item: WorkbenchMenuItem) => {
     const command = commands[item.commandId]?.command;
     if (command && hasCommandParameters(command.params)) {
@@ -158,7 +159,7 @@ const WorkbenchRegionTabsContent = (props: WorkbenchRegionTabsContentProps) => {
       </IconButton>
     </Tooltip>
   ));
-  if (!renderTabs) {
+  if (!showTabs) {
     return (
       <HStack flex="1" h="full" minW="0" gap="2xs">
         {panelRegion ? (
@@ -202,7 +203,7 @@ const WorkbenchRegionTabsContent = (props: WorkbenchRegionTabsContentProps) => {
             height so the active tab still meets the header's bottom edge.
           The content minimum overrides Zag's inline style; see ADR 0049. */}
         <ScrollArea
-          viewportRef={setViewport}
+          viewportRef={viewportRef}
           size="xs"
           h="full"
           maxW="full"
