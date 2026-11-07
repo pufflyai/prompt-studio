@@ -1,28 +1,73 @@
 import {
+  type CollectionPageRequest,
   defineCommand,
   definePage,
   defineView,
   type ExtensionStorageApi,
   eventRef,
   params,
+  type ViewFilterGroup,
+  type ViewSort,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
 import {
-  compareRows,
   editOperation,
-  type FixtureRow,
-  matches,
   pageRows,
   rowSummary,
+  type Selection,
+  type SummaryFields,
+  scaleScopePredicate,
+  scaleSelectionPredicate,
   type Workload,
   workload,
 } from "storage-scale-fixture";
 
-const readRows = async (storage: ExtensionStorageApi) =>
-  (await storage.records.list()).filter((row) => !row.deleted).map((row) => row.value as FixtureRow);
+interface PagedInput {
+  page?: CollectionPageRequest;
+  filter: ViewFilterGroup;
+  sorts: ViewSort[];
+}
+
+const summaryIndexFields = ["id", "title", "ordinal", "tags", "progress", "content"];
+
+// Each view requests one bounded page through the declared scale indexes. The fixed selection
+// is the view; other filters, sorts or searches are outside this benchmark and are refused.
+const readPage = async (
+  storage: ExtensionStorageApi,
+  input: PagedInput,
+  selection: Selection,
+  count: number,
+  fields: string[],
+) => {
+  const request = input.page;
+  if (!request) throw new Error("Scale views require the bounded page contract");
+  if (input.filter.rules.length || input.filter.groups?.length || input.sorts.length || request.search.trim())
+    throw new Error("Scale views show only their fixed selection");
+  const index = "scale-rows";
+  const where = scaleScopePredicate(false, scaleSelectionPredicate(count, selection));
+  const rows = await storage.records.query({
+    index,
+    where,
+    fields,
+    limit: request.limit,
+    ...(request.cursor ? { cursor: request.cursor } : { offset: request.offset }),
+    revision: request.revision,
+  });
+  const selected = await storage.records.aggregate({ index, where });
+  if (selected.revision !== rows.revision) throw new Error("Scale rows changed while reading one page");
+  return {
+    records: rows.records,
+    page: {
+      revision: rows.revision,
+      cursor: rows.cursor,
+      total: selected.count,
+      filteredTotal: selected.count,
+      groups: [],
+    },
+  };
+};
 
 // Ordinary public-API consumer views, using the existing native renderers and command form.
-// They deliberately expose the legacy list baseline; no product performance UI is installed.
 export const createScaleViews = (kind: Workload, index: number, count: number) => {
   const changed = eventRef({ extensionId: `scale.scale-owner-${index}`, id: "rows.changed" });
   const schema = {
@@ -62,18 +107,24 @@ export const createScaleViews = (kind: Workload, index: number, count: number) =
         toolbarActions,
         refreshEvents: [changed],
         attributes: [{ id: "summary", label: "Saved values", type: { kind: "string" }, displayable: true }],
+        queryMode: "paged",
         defaultSettings: {
           viewMode: mode,
           columnGrouping: "none",
           rowGrouping: "none",
           displayProperties: ["summary"],
         },
-        query: async (ctx) => ({
-          rows: (await readRows(ctx.storage))
-            .filter((row) => matches(row, "focus", count))
-            .sort(compareRows)
-            .map((row) => ({ id: row.id, title: row.title, attributes: { summary: rowSummary(row) } })),
-        }),
+        query: async (ctx, input) => {
+          const { records, page } = await readPage(ctx.storage, input, "focus", count, summaryIndexFields);
+          return {
+            rows: records.map(({ fields }) => ({
+              id: String(fields.id),
+              title: String(fields.title),
+              attributes: { summary: rowSummary(fields as unknown as SummaryFields) },
+            })),
+            page,
+          };
+        },
       },
     }),
   );
@@ -82,16 +133,18 @@ export const createScaleViews = (kind: Workload, index: number, count: number) =
     title: "Paged records",
     body: {
       kind: "dataTable",
+      queryMode: "paged",
       initialPageSize: 100,
       pageSizeOptions: [100],
       refreshEvents: [changed],
       columns: [{ id: "title", label: "Title", type: "string" }],
-      query: async (ctx) => ({
-        rows: (await readRows(ctx.storage))
-          .filter((row) => matches(row, "pages", count))
-          .sort(compareRows)
-          .map((row) => ({ id: row.id, values: { title: row.title } })),
-      }),
+      query: async (ctx, input) => {
+        const { records, page } = await readPage(ctx.storage, input, "pages", count, ["id", "title"]);
+        return {
+          rows: records.map(({ fields }) => ({ id: String(fields.id), values: { title: fields.title } })),
+          page,
+        };
+      },
     },
   });
   const allViews = [...views, table];

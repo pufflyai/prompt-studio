@@ -10,6 +10,7 @@ import {
   type Profile,
   pageRows,
   rowSummary,
+  summaryFields,
   workload,
 } from "storage-scale-fixture";
 import { openScaleBrowser } from "./storage-scale-browser-session";
@@ -39,7 +40,7 @@ export const sampleVisibleEdit = async (
   expected.sort(compareRows);
   const runtime = await startRuntime(home, environment);
   const { browser, page, replies, diagnostics } = await openScaleBrowser(profile);
-  const changedSummary = edit.expected ? rowSummary(edit.expected) : "";
+  const changedSummary = edit.expected ? rowSummary(summaryFields(edit.expected)) : "";
   const visibleValue = operation === "short" && edit.expected ? edit.expected.title : changedSummary;
   try {
     await page.addInitScript(
@@ -91,7 +92,11 @@ export const sampleVisibleEdit = async (
     await page.getByRole("button", { name: "Save resource", exact: true }).click();
     const saved = await (await response).json();
     assert.equal(saved.outcome.value.outcome.status, "saved-locally");
-    const expectedValues = expected.map((row) => ({ id: row.id, title: row.title, summary: rowSummary(row) }));
+    const expectedValues = expected.map((row) => ({
+      id: row.id,
+      title: row.title,
+      summary: rowSummary(summaryFields(row)),
+    }));
     const committedQuery = (reply: (typeof replies)[number]) =>
       reply.path.includes(".records-board.kanban.query") &&
       JSON.stringify(reply.rows.map((row) => ({ id: row.id, title: row.title, summary: row.attributes?.summary }))) ===
@@ -140,11 +145,10 @@ export const sampleVisibleEdit = async (
       committedMatching: expected.length,
       screenshot,
       backgroundResult,
-      effectiveTemperature: "owner-hydrated-by-editor-preparation",
+      effectiveTemperature: "board-page-loaded-by-editor-preparation",
       passed: false,
       failures: [
         ...(committedVisibleMs >= contract.ceilingMs ? ["durable-visible-latency"] : []),
-        "legacy-editor-preparation-hydrates-owner",
         "index-work-unmeasured",
       ],
     };

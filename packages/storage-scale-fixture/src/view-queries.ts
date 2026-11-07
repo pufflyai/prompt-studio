@@ -60,8 +60,10 @@ export const scaleSelectionPredicate = (count: number, selection: Selection) => 
 
 type Predicate = ReturnType<typeof scaleSelectionPredicate>;
 
+// Planner also stores statuses and tags, and its tickets carry core numbers rather than a stored
+// shorthand, so only the generator's ordinal identifies a fixture ticket.
 export const scaleScopePredicate = (planner: boolean, where?: Predicate) => ({
-  all: [{ field: planner ? "shorthand" : "id", op: "exists" as const }, ...(where ? [where] : [])],
+  all: [{ field: planner ? "ordinal" : "id", op: "exists" as const }, ...(where ? [where] : [])],
 });
 
 export const scaleViewFields = ["id", "title", "rank", "owner", "ordinal"];

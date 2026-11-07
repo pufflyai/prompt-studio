@@ -1,5 +1,14 @@
 import { strict as assert } from "node:assert";
-import { assess, createRow, owners, pageRows, type Selection, type Workload, workload } from "storage-scale-fixture";
+import {
+  assess,
+  contract,
+  createRow,
+  owners,
+  pageRows,
+  type Selection,
+  type Workload,
+  workload,
+} from "storage-scale-fixture";
 import type { ScaleFixture, ScaleRuntime } from "./storage-scale-runtime";
 
 export const queryOracles = (kind: Workload) =>
@@ -46,7 +55,7 @@ const page = async (
       fullOwnerLoads: null,
       durable: true,
     }),
-    paging: "legacy-full-list-slice; no indexed cursor API",
+    paging: "indexed offset page",
     valueBytes: Buffer.byteLength(JSON.stringify(value)),
   };
 };
@@ -64,8 +73,23 @@ export const sampleQuery = async (
   }
   if (operation === "second-page") return page(runtime, fixture, oracles[0], "pages", 1);
   if (operation === "aggregate") {
-    const reply = await page(runtime, fixture, oracles[0], "focus", 0);
-    return { ...reply, aggregateKind: "legacy scan; indexed aggregates are unavailable" };
+    const oracle = oracles[0];
+    const { value, sdkRequestMs } = await runtime.execute<{ selected: number; total: number; scanned: null }>(
+      fixture.projectId,
+      oracle.owner.id,
+      "scale",
+      { input: { action: "aggregate", selection: "focus", count: oracle.owner.rows } },
+    );
+    assert.equal(value.selected, oracle.focus.length);
+    assert.equal(value.total, oracle.owner.rows);
+    return {
+      durationMs: sdkRequestMs,
+      ...value,
+      correct: true,
+      aggregateKind: "indexed counts of the selection and the owner",
+      passed: false,
+      failures: [...(sdkRequestMs >= contract.ceilingMs ? ["latency"] : []), "work-unmeasured"],
+    };
   }
   const row = createRow(fixture.kind, 0, 37, 3);
   const result = await runtime.execute(fixture.projectId, oracles[0].owner.id, "scale", {
@@ -77,6 +101,6 @@ export const sampleQuery = async (
     correct: true,
     valueBytes: Buffer.byteLength(JSON.stringify(result.value)),
     passed: false,
-    failures: ["indexed-point-access-unavailable", "owner-hydration-unmeasured"],
+    failures: [...(result.sdkRequestMs >= contract.ceilingMs ? ["latency"] : []), "work-unmeasured"],
   };
 };

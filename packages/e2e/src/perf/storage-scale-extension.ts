@@ -1,10 +1,18 @@
 import { defineCommand, defineExtension, type ExtensionStorageApi, params } from "@pstdio/sdk/extensions";
-import { compareRows, type FixtureRow, matches, type Selection } from "storage-scale-fixture";
+import {
+  type FixtureRow,
+  matches,
+  type Selection,
+  scaleScopePredicate,
+  scaleSelectionPredicate,
+  scaleStorageIndexes,
+  scaleViewFields,
+} from "storage-scale-fixture";
 
 export { createScaleViews } from "./storage-scale-views";
 
 interface Input {
-  action: "seed" | "read" | "record" | "page" | "commit" | "outcome" | "stats";
+  action: "seed" | "read" | "record" | "page" | "aggregate" | "commit" | "outcome" | "stats";
   planner?: boolean;
   rows?: FixtureRow[];
   deleted?: string[];
@@ -108,14 +116,13 @@ export const fixtureCommands = [
           ? ctx.storage.collection("tickets").get(input.id!)
           : (await ctx.storage.records.read(ctx.storage.records.id(input.id!))).value;
       }
-      const start = performance.now();
-      const all = input.planner
-        ? await ctx.storage.collection<FixtureRow>("tickets").list()
-        : (await ctx.storage.records.list())
-            .filter((record) => !record.deleted)
-            .map((record) => record.value as FixtureRow);
-      const materialized = all.length;
       if (input.action === "stats") {
+        // Preparation verifies every stored row, so it alone reads whole owners.
+        const all = input.planner
+          ? await ctx.storage.collection<FixtureRow>("tickets").list()
+          : (await ctx.storage.records.list())
+              .filter((record) => !record.deleted)
+              .map((record) => record.value as FixtureRow);
         const sizes = all.map((row) => Buffer.byteLength(JSON.stringify(row))).sort((a, b) => a - b);
         return {
           count: all.length,
@@ -133,21 +140,56 @@ export const fixtureCommands = [
           shape: input.planner ? "stored-planner-ticket" : "stored-fixture-row",
         };
       }
-      const selected = all.filter((row) => matches(row, input.selection ?? "focus", input.count!)).sort(compareRows);
-      const page = selected.slice((input.page ?? 0) * 100, ((input.page ?? 0) + 1) * 100);
-      return {
-        // This deliberate baseline reports its scan. It cannot pass indexed-read acceptance.
-        capability: "legacy-list-scan",
-        queryMs: performance.now() - start,
-        scanned: null,
-        consumerScanned: all.length,
-        materialized,
-        total: all.length,
-        matching: selected.length,
-        rows: page.map(({ id, title, rank, owner, ordinal }) => ({ id, title, rank, owner, ordinal })),
-      };
+      if (input.action === "aggregate") return countScaleRows(ctx.storage, input);
+      return queryScalePage(ctx.storage, input);
     },
   }),
 ];
 
-export default defineExtension({ commands: fixtureCommands });
+const scaleIndex = "scale-rows";
+
+const selectionWhere = (input: Input) =>
+  scaleScopePredicate(input.planner ?? false, scaleSelectionPredicate(input.count!, input.selection ?? "focus"));
+
+// The selection's count and the owner's total, from one committed revision.
+const countScaleRows = async (storage: ExtensionStorageApi, input: Input) => {
+  const matching = await storage.records.aggregate({ index: scaleIndex, where: selectionWhere(input) });
+  // Owners hold only rows, so their stored count answers the total; Planner also stores statuses.
+  const total = await storage.records.aggregate(
+    input.planner ? { index: scaleIndex, where: scaleScopePredicate(true) } : { index: scaleIndex },
+  );
+  if (matching.revision !== total.revision) throw new Error("Scale rows changed while counting them");
+  // Extension APIs expose no database counters; the database layer diagnostic measures them.
+  return { revision: total.revision, selected: matching.count, total: total.count, scanned: null };
+};
+
+// One bounded indexed page plus the counts a collection view shows with it.
+const queryScalePage = async (storage: ExtensionStorageApi, input: Input) => {
+  const start = performance.now();
+  const page = await storage.records.query({
+    index: scaleIndex,
+    where: selectionWhere(input),
+    fields: scaleViewFields,
+    limit: 100,
+    offset: (input.page ?? 0) * 100,
+  });
+  const counts = await countScaleRows(storage, input);
+  if (counts.revision !== page.revision) throw new Error("Scale rows changed while reading one page");
+  return {
+    capability: "indexed-query",
+    queryMs: performance.now() - start,
+    scanned: counts.scanned,
+    consumerScanned: 0,
+    materialized: page.records.length,
+    total: counts.total,
+    matching: counts.selected,
+    rows: page.records.map(
+      (record) => record.fields as Pick<FixtureRow, "id" | "title" | "rank" | "owner" | "ordinal">,
+    ),
+  };
+};
+
+export const ownerStorageIndexes = scaleStorageIndexes();
+export const plannerStorageIndexes = scaleStorageIndexes(true);
+
+export default defineExtension({ storageIndexes: ownerStorageIndexes, commands: fixtureCommands });
