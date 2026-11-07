@@ -36,8 +36,15 @@ import { orderedOwnerJoinedCloud, readOrderedOwner } from "./ordered-stream-stat
 export type OrderedReturnState = "signed-out" | "returning" | "folded" | "held";
 const returnMarker = JSON.stringify(["ordered-return"]);
 
+interface OrderedReturnMarker {
+  state: OrderedReturnState;
+  /** Signing out has not finished folding the backlog that was queued before it. */
+  folding?: boolean;
+}
+export const readOrderedReturnMarker = async (tx: Pick<OrderedTransaction, "select">, owner: StorageOwner) =>
+  (await readOrderedMarker<OrderedReturnMarker>(tx, owner, returnMarker))?.value;
 export const readOrderedReturnState = async (tx: Pick<OrderedTransaction, "select">, owner: StorageOwner) =>
-  (await readOrderedMarker<{ state: OrderedReturnState }>(tx, owner, returnMarker))?.value.state ?? null;
+  (await readOrderedReturnMarker(tx, owner))?.state ?? null;
 
 export const orderedReturnLimits = {
   /** Unsent saves per owner before a signed-in device folds them into one save per record. */
@@ -78,8 +85,9 @@ export const setOrderedReturnState = async (
   tx: OrderedTransaction,
   owner: StorageOwner,
   state: OrderedReturnState | null,
+  options: Omit<OrderedReturnMarker, "state"> = {},
 ) => {
-  if (state) await saveOrderedMarker(tx, owner, returnMarker, { state });
+  if (state) await saveOrderedMarker(tx, owner, returnMarker, { state, ...options } satisfies OrderedReturnMarker);
   else
     await tx.delete(documents).where(and(orderedOwnerWhere(documents, owner), eq(documents.document_id, returnMarker)));
 };

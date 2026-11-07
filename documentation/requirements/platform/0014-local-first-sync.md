@@ -224,10 +224,10 @@ anything.
 - R61. Signing out, a rejected login and removing this device end sync on the device.
   Local data stays. Unsent changes and later saves fold into one pending save per
   record, so nothing grows with the number of saves. Signing in again sends only the
-  fields that changed, under R2. Signing in to another account keeps the first
-  account's projects on the device the same way, so signing back in to it never
-  overrides devices that stayed in sync. A project its own account stops syncing
-  becomes local with every edit.
+  fields that changed, under R2. A project the signed-in account does not sync,
+  because it was made local or another account signed in, stays on the device the
+  same way with every edit, so syncing it again never overrides devices that stayed
+  in sync.
 - R62. A device keeps at most 1,000 unsent saves per extension while signed in, then
   folds them as in R61 and uploads them under R2 without a hold. A device that returns
   after signing out with an unusually large set of deletions or changes uploads nothing

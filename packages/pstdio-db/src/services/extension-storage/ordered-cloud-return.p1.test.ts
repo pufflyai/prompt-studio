@@ -283,33 +283,39 @@ test("a project the signed-in account does not sync stays here with every edit a
   expect(await desktop.state()).toBeNull();
 });
 
-test("a project its own account stops syncing becomes local and settles every edit here", async () => {
-  const { laptop, desktop, projectId } = await seeded({ "PS-1": { title: "Personal" } });
-  await laptop.service.cloudReturn.release([projectId], "personal");
-  await laptop.save("PS-1", { set: { "/title": "Unsent" } });
-  // `pst projects local` on any device: the same account's list no longer has the project.
-  await laptop.service.cloudReturn.release([crypto.randomUUID()], "personal");
-  expect(await laptop.pending()).toBe(0);
-  expect(await laptop.state()).toBeNull();
-  expect(await laptop.value("PS-1")).toEqual({ title: "Unsent" });
-  expect((await laptop.status()).state).toBeNull();
-  await laptop.save("PS-1", { set: { "/title": "Local" } });
-  expect(await laptop.pending()).toBe(0);
+test("making a project local and syncing it again never overrides the devices that kept editing", async () => {
+  const { laptop, desktop, sync, projectId } = await seeded({
+    "PS-1": { title: "A", status: "Todo" },
+    "PS-2": { title: "Two" },
+  });
+  // `pst projects local`: the account's list no longer has the project, even when it is empty.
+  await laptop.service.cloudReturn.release([]);
+  expect(await laptop.state()).toBe("signed-out");
+  await laptop.save("PS-2", { set: { "/assignee": "Ann" } });
+  await desktop.save("PS-1", { set: { "/status": "Done" } });
+  await desktop.save("PS-2", { set: { "/title": "Renamed" } });
   await desktop.sync.synchronize();
-  expect(await desktop.value("PS-1")).toEqual({ title: "Personal" });
+  // `pst projects cloud` again.
+  await laptop.service.cloudReturn.release([projectId]);
+  await sync();
+  for (const device of [laptop, desktop]) {
+    expect(await device.value("PS-1")).toEqual({ title: "A", status: "Done" });
+    expect(await device.value("PS-2")).toEqual({ title: "Renamed", assignee: "Ann" });
+  }
 });
 
-test("switching accounts keeps the original account's join, so switching back never overrides", async () => {
-  const { laptop, desktop, sync, projectId } = await seeded({ "PS-1": { title: "A", status: "Todo" } });
-  await laptop.service.cloudReturn.release([projectId], "personal");
-  await laptop.service.cloudReturn.release([crypto.randomUUID()], "work");
-  expect(await laptop.state()).toBe("signed-out");
-  await desktop.save("PS-1", { set: { "/status": "Done" } });
-  await desktop.sync.synchronize();
-  await laptop.service.cloudReturn.release([projectId], "personal");
-  expect(await laptop.state()).toBe("returning");
-  await sync();
-  for (const device of [laptop, desktop]) expect(await device.value("PS-1")).toEqual({ title: "A", status: "Done" });
+test("a finished sign-out costs one read per refresh", async () => {
+  const { laptop } = await seeded({ "PS-1": { title: "A" } });
+  await laptop.service.cloudReturn.signOut();
+  let transactions = 0;
+  const transaction = laptop.db.transaction.bind(laptop.db);
+  laptop.db.transaction = ((...input: Parameters<typeof transaction>) => {
+    transactions += 1;
+    return transaction(...input);
+  }) as typeof transaction;
+  await laptop.service.cloudReturn.signOut();
+  await laptop.service.cloudReturn.release([crypto.randomUUID()]);
+  expect(transactions).toBe(0);
 });
 
 test("signing back in to the original account sends only this device's edits after a release", async () => {

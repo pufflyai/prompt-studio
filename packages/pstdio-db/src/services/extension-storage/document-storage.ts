@@ -133,7 +133,6 @@ export const createDocumentStorageDBService = (
     id.startsWith('["ordered-dependency",') ||
     id.startsWith('["ordered-replaced",') ||
     id === '["ordered-return"]' ||
-    id === '["ordered-account"]' ||
     id === '["ordered-directory"]';
   directory = createDocumentDirectory(db, {
     metadata: transaction,
