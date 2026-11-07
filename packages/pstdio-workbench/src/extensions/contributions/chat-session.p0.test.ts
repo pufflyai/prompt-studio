@@ -11,6 +11,37 @@ const deferred = <T>() => {
 };
 const message = (text: string) => ({ id: "m", role: "assistant" as const, parts: [{ type: "text" as const, text }] });
 
+test("a failed message fork rejects to its control without changing conversation error, history or draft", async () => {
+  const failure = new Error("This harness does not support forking conversations.");
+  const session = createChatSession({
+    initial: { messages: [message("Saved reply")], fork: { disabledReason: null } },
+    query: async () => ({}),
+    action: async () => {
+      throw failure;
+    },
+  });
+  session.changeDraft({ text: "Keep typing", values: { model: "saved-model" } });
+  const before = session.getSnapshot();
+  await expect(session.run({ type: "fork", messageId: "m" })).rejects.toBe(failure);
+  expect(session.getSnapshot().error).toBeUndefined();
+  expect(session.getSnapshot().messages).toBe(before.messages);
+  expect(session.getSnapshot().draft).toBe(before.draft);
+});
+
+test("message fork failures preserve existing connection feedback and other action failures remain visible", async () => {
+  const session = createChatSession({
+    query: async () => ({}),
+    action: async (action) => {
+      throw new Error(action.type === "fork" ? "Fork failed" : "Refresh failed");
+    },
+  });
+  session.reportError(new Error("Connection lost"));
+  await expect(session.run({ type: "fork", messageId: "m" })).rejects.toThrow("Fork failed");
+  expect(session.getSnapshot().error).toBe("Connection lost");
+  await expect(session.run({ type: "operation", id: "refresh", values: {} })).rejects.toThrow("Refresh failed");
+  expect(session.getSnapshot().error).toBe("Refresh failed");
+});
+
 test("post-submit native recovery preserves drafts that were already recovered", async () => {
   const earlier = { text: "Earlier work", attachments: [{ id: "B", name: "B.txt" }], values: { model: "B" } };
   const failed = { text: "Send work", attachments: [{ id: "A", name: "A.txt" }], values: { model: "A" } };

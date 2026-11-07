@@ -119,8 +119,9 @@ const trackChatAction = <T extends Promise<unknown>>(actions: Set<Promise<unknow
   void running.then(settled, settled);
   return running;
 };
-const failChatAction = (fail: (error: unknown) => void) => (error: unknown) => {
-  fail(error);
+const failChatAction = (fail: (error: unknown) => void, action: ChatRendererAction) => (error: unknown) => {
+  // The per-message Fork control owns its failure; reconnecting the transcript cannot retry it.
+  if (action.type !== "fork") fail(error);
   throw error;
 };
 
@@ -293,7 +294,7 @@ export const createChatSession = (input: ChatSessionInput) => {
   const run = (action: ChatRendererAction, handler = input.action) =>
     trackChatAction(
       actions,
-      action.type === "submit" ? submit(action, handler) : execute(action, handler).catch(failChatAction(fail)),
+      action.type === "submit" ? submit(action, handler) : execute(action, handler).catch(failChatAction(fail, action)),
     );
   return {
     getSnapshot: () => state,
