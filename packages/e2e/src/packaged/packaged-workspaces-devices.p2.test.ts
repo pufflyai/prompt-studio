@@ -1,10 +1,12 @@
 import { expect, test } from "bun:test";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { mkdir, mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium, expect as expectUI } from "@playwright/test";
 import { createClient } from "@pstdio/sdk/client";
 import type { KanbanRendererQueryResult, ResourceListRendererRow } from "@pstdio/sdk/extensions";
+import { $ } from "bun";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { createDeviceCommandPeer } from "./packaged-device-commands.fixture";
@@ -310,7 +312,8 @@ test(
       await peer.close();
       progress("device peer closed");
       progress("remove fixture directory");
-      await rm(root, { recursive: true, force: true });
+      await $`rm -rf ${root}`;
+      expect(existsSync(root)).toBe(false);
       progress("cleanup complete");
     }
   },
