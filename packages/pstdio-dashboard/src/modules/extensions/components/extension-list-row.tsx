@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { ExtensionAutomationsPopover } from "./extension-automations-popover";
 import { ExtensionHealthPopover } from "./extension-health-popover";
 import { ExtensionIcon } from "./extension-icon";
+import { ExtensionIdentity } from "./extension-identity";
 
 export interface ExtensionListRowProps {
   extension: ProjectExtensionInstance;
@@ -80,9 +81,12 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
       </Flex>
 
       <Stack gap="0" flex="1" minW="0">
-        <Text textStyle="label/S/medium" color={extension.enabled ? "fg" : "fg.muted"} truncate>
-          {extension.displayName}
-        </Text>
+        <HStack gap="sm" minW="0">
+          <Text textStyle="label/S/medium" color={extension.enabled ? "fg" : "fg.muted"} truncate>
+            {extension.displayName}
+          </Text>
+          {extension.version && <ExtensionIdentity value={`v${extension.version}`} />}
+        </HStack>
         <Text textStyle="label/XS" color="fg.muted" truncate>
           {extension.description ?? t("projectSettings.extensionsPanel.noDescription")}
         </Text>

@@ -361,3 +361,14 @@ export const InteractiveAutomations = () => {
 export const AutomationSaving: Story = {
   args: { ...Populated.args, togglingAutomation: true },
 };
+
+export const VersionLabels: Story = {
+  args: {
+    ...Populated.args,
+    extensions: [
+      installedExtensions[0]!,
+      { ...installedExtensions[1]!, version: "1.2.3-beta.1" },
+      { ...installedExtensions[2]!, version: undefined },
+    ],
+  },
+};
