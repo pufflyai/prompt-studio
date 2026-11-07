@@ -140,7 +140,16 @@ export const startCoreDocumentSync = (input: {
   };
   const stops = [
     deps.extensionResourceSequencesService.watchChanges(changed),
-    deps.projectInfoService.watchChanges(changed),
+    deps.projectInfoService.watchChanges((event, origin) => {
+      changed(event);
+      if (
+        origin === "relay" &&
+        event.workbenchId === owner.workbenchId &&
+        event.extensionId === coreOwnerId &&
+        event.documentId === projectInfoDocumentId
+      )
+        deps.extensionRuntimeCatalog.invalidate({ projectId: owner.workbenchId, reason: "runtime_refresh" });
+    }),
   ];
   return {
     wake: connection.wake,

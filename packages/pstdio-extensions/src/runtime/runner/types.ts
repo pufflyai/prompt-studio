@@ -45,6 +45,7 @@ export const DEFAULT_MAX_COMMAND_DEPTH = 10;
 export type ScopedHostApis = Pick<
   CommandRunnerEnvironment,
   | "sessions"
+  | "resources"
   | "workspaces"
   | "connections"
   | "process"

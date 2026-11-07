@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { dockedWorkbenchRegions, extensionPanelRegions } from "../extension-kernel/types/composition";
+import { projectCompositionSchema } from "../project-composition";
 import { chatRendererSnapshotSchema } from "./chat-renderer";
 import {
   extensionCommandPaletteContributionSchema,
@@ -246,6 +247,7 @@ const workbenchExtensionStatusBarItemRecordSchema = z.object({
 });
 
 export const workbenchExtensionMetadataSchema = z.object({
+  composition: projectCompositionSchema.optional(),
   projectSetups: z
     .array(z.object({ extensionId: z.string(), view: viewRefSchema, hiddenSetting: z.string().optional() }))
     .optional(),

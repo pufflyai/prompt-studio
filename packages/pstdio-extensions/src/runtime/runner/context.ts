@@ -173,7 +173,7 @@ export const createContextFactory = (
       extensionId: ids.extensionId,
       name: ids.name,
       storage: hostApis.storage,
-      resources: env.resources,
+      resources: hostApis.resources,
       views: env.views ?? unavailableViewsApi,
       navigation: {
         open: (target) => {
