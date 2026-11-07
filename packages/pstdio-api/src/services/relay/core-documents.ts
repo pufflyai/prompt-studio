@@ -7,6 +7,7 @@ import {
   createLiveConnection,
   fetchSyncSpaces,
 } from "pstdio-sync/relay";
+import { announceProjectCompositionChange } from "../../features/projects/project-composition";
 import { apiLogger } from "../../lib/logger";
 import type { RelayDeps } from "./deps";
 import { documentProgress } from "./document-progress";
@@ -148,7 +149,7 @@ export const startCoreDocumentSync = (input: {
         event.extensionId === coreOwnerId &&
         event.documentId === projectInfoDocumentId
       )
-        deps.extensionRuntimeCatalog.invalidate({ projectId: owner.workbenchId, reason: "runtime_refresh" });
+        announceProjectCompositionChange(deps, owner.workbenchId);
     }),
   ];
   return {

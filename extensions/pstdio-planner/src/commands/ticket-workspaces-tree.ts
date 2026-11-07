@@ -106,7 +106,10 @@ export const buildWorkspacesSection = async (
           const target = opening?.target;
           return {
             ...node,
-            target: target?.kind === "page" ? { ...target, parent: ticketPageTarget(ticket.resourceParent) } : target,
+            target:
+              target?.kind === "page"
+                ? { ...target, parent: target.parent ?? ticketPageTarget(ticket.resourceParent) }
+                : target,
             ...(!target ? { disabled: true } : {}),
           };
         })

@@ -8,6 +8,7 @@ import { getDashboardQueryClient } from "@/lib/query-client";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { executeExtensionCommand } from "@/shared/extensions/api";
 import { getCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
+import { beginDashboardNavigation } from "@/shared/workbench/navigation-request";
 import { openProjectPageUrl } from "@/shared/workbench/open-project-page-url";
 import { workspaceFileQueryOptions, workspaceFolderQueryOptions } from "@/shared/workspaces/workspace-file-query";
 import { workspaceFileResource } from "@/shared/workspaces/workspace-file-resource";
@@ -16,7 +17,7 @@ import {
   createDashboardWorkspaceOptionResource,
   type DashboardWorkspaceOption,
 } from "@/shared/workspaces/workspace-options";
-import { resolveResourcePath } from "./resource-path-resolution";
+import { resolveResourcePath, withSourcePosition } from "./resource-path-resolution";
 
 interface SessionLinkHandlerInput {
   workbench: WorkbenchCore;
@@ -39,22 +40,31 @@ const resolveWorkspaceFile = async (
   parsed: Extract<ReturnType<typeof parseChatLink>, { kind: "file" }>,
   pages: ReturnType<WorkbenchCore["pages"]["listPages"]>,
   resources: typeof defaultPageResourceCodec,
+  signal?: AbortSignal,
 ) => {
   const workspace = sessionWorkspace(input);
   const path = workspaceLinkPath(parsed.path, workspace.workspacePath);
   const resource = workspaceFileResource(createDashboardWorkspaceOptionResource(workspace, input.projectId), path);
-  const [opening] = await getApiClient().projects.resolveResourceOpenings(input.projectId!, [resource]);
-  if (opening?.target?.kind !== "page") throw new Error("The configured workspace file opener is unavailable.");
-  const target = { ...opening.target, position: parsed.position };
+  const [opening] = await getApiClient().projects.resolveResourceOpenings(input.projectId!, [resource], { signal });
+  if (!opening?.target) throw new Error("The configured workspace file opener is unavailable.");
+  const target = withSourcePosition(
+    opening.target,
+    parsed.position,
+    (page) =>
+      pages.find((item) => item.ref.extensionId === page.extensionId && item.ref.id === page.id)?.document?.metadataKey,
+  );
   return {
-    kind: "page" as const,
+    kind: "navigation" as const,
     target,
-    href: serializeWorkbenchPageUrl({ projectId: input.projectId!, location: target, pages, resources }),
+    href:
+      target.kind === "page"
+        ? serializeWorkbenchPageUrl({ projectId: input.projectId!, location: target, pages, resources })
+        : null,
   };
 };
 
 export const createSessionLinkHandler = (input: SessionLinkHandlerInput): ChatLinkHandler => {
-  const resolveOwnedPath = async (candidate: ChatLinkCandidate) => {
+  const resolveOwnedPath = async (candidate: ChatLinkCandidate, signal?: AbortSignal) => {
     const parsed = parseChatLink(candidate, input.origin);
     if (parsed?.kind !== "file" || !input.projectId) return null;
     const workspace = sessionWorkspace(input);
@@ -70,7 +80,12 @@ export const createSessionLinkHandler = (input: SessionLinkHandlerInput): ChatLi
           .listPages()
           .find((item) => item.ref.id === page.id && item.ref.extensionId === page.extensionId)?.document?.metadataKey,
       execute: async (command, params) => {
-        const response = await executeExtensionCommand(input.projectId!, command, { params, source: "dashboard" });
+        const response = await executeExtensionCommand(
+          input.projectId!,
+          command,
+          { params, source: "dashboard" },
+          signal,
+        );
         if (!response.outcome.ok) throw new Error("Could not resolve the resource path.");
         return response.outcome.value;
       },
@@ -126,11 +141,16 @@ export const createSessionLinkHandler = (input: SessionLinkHandlerInput): ChatLi
     }
     return undefined;
   };
-  const resolveFile = (candidate: ChatLinkCandidate) => {
+  const resolveFile = (candidate: ChatLinkCandidate, signal?: AbortSignal) => {
     const parsed = parseChatLink(candidate, input.origin);
     return parsed?.kind === "file" && input.projectId
-      ? resolveWorkspaceFile(input, parsed, input.workbench.pages.listPages(), defaultPageResourceCodec)
+      ? resolveWorkspaceFile(input, parsed, input.workbench.pages.listPages(), defaultPageResourceCodec, signal)
       : undefined;
+  };
+  const resolveDestination = async (candidate: ChatLinkCandidate, signal: AbortSignal) => {
+    const owned = await resolveOwnedPath(candidate, signal);
+    if (owned) return { kind: "navigation" as const, target: owned.target, href: null };
+    return resolve(candidate) ?? (await resolveFile(candidate, signal));
   };
   return {
     async resolveResource(candidate) {
@@ -153,8 +173,8 @@ export const createSessionLinkHandler = (input: SessionLinkHandlerInput): ChatLi
         const parsed = parseChatLink(candidate, input.origin);
         if (parsed?.kind === "file" && isGuessedChatLink(candidate) && !(await hasWorkspaceFile(parsed.path)))
           return null;
-        const href = (resolve(candidate) ?? (await resolveFile(candidate)))?.href;
-        return href ? { href } : null;
+        const destination = resolve(candidate) ?? (await resolveFile(candidate));
+        return destination ? { href: destination.href } : null;
       } catch {
         return null;
       }
@@ -197,16 +217,11 @@ export const createSessionLinkHandler = (input: SessionLinkHandlerInput): ChatLi
       }
     },
     async open(candidate) {
+      if (!input.projectId || getDashboardSelectedProjectId(input.workbench) !== input.projectId) return;
+      const request = beginDashboardNavigation(input.workbench, input.projectId);
       try {
-        if (getDashboardSelectedProjectId(input.workbench) !== input.projectId) return;
-        const owned = await resolveOwnedPath(candidate);
-        if (getDashboardSelectedProjectId(input.workbench) !== input.projectId) return;
-        if (owned) {
-          await input.workbench.navigation.openTarget(toWorkbenchNavigationTarget(owned.target));
-          return;
-        }
-        const destination = resolve(candidate) ?? (await resolveFile(candidate));
-        if (getDashboardSelectedProjectId(input.workbench) !== input.projectId || !destination) return;
+        const destination = await resolveDestination(candidate, request.signal);
+        if (!request.isCurrent() || !destination) return;
         if (destination.kind === "project") {
           await openProjectPageUrl({
             workbench: input.workbench,
@@ -216,10 +231,12 @@ export const createSessionLinkHandler = (input: SessionLinkHandlerInput): ChatLi
           });
           return;
         }
-        const result = input.workbench.pageLocations.navigate(destination.target);
-        if (!result.ok) throw new Error(result.diagnostic.message);
+        await input.workbench.navigation.openTarget(toWorkbenchNavigationTarget(destination.target));
       } catch (error) {
+        if (!request.isCurrent()) return;
         input.onError(`${candidate.source}: ${error instanceof Error ? error.message : "Could not open this link."}`);
+      } finally {
+        request.dispose();
       }
     },
   };

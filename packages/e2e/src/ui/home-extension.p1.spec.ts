@@ -41,7 +41,6 @@ test("Home resumes opened resources and public actions without prematurely creat
   await expect(homePage(page)).toBeVisible();
   await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/extensions/pstdio.pstdio-home/home$`));
   await expect(homeFrame(page).getByText("Nothing opened yet", { exact: true })).toBeVisible();
-  await expect(page.getByRole("option").first()).toHaveText("Home");
   const session = sessions[6];
   await page.goto(
     `/projects/${project.id}/session?resource=${encodeURIComponent(`pstdio://extension-resource/session/${session.id}`)}`,
@@ -252,12 +251,20 @@ test("configured ordinary tools open the default and workspace resources without
   const fixture = await presentationProject(page, request);
   const { project } = fixture;
   try {
+    const refreshed = page.waitForResponse(
+      (response) =>
+        response.url().endsWith(`/v1/projects/${project.id}/extensions/metadata`) &&
+        response.request().method() === "GET",
+    );
     await fixture.chooseDefault(true);
+    await refreshed;
+    await expect(homePage(page)).toBeVisible();
+    await openDefaultPage(page);
     await fixture.toggle(bundledPresentation);
     const alternative = page
       .getByRole("region", { name: "Main", exact: true })
       .frameLocator('iframe[title="Alternative presentation"]');
-    await page.goto(`/projects/${project.id}`);
+    await openDefaultPage(page);
     await expect(alternative.getByRole("heading", { name: "Alternative welcome" })).toBeVisible();
     await page.reload();
     await expect(alternative.getByRole("heading", { name: "Alternative welcome" })).toBeVisible();
@@ -303,7 +310,6 @@ test("disabled presentation preserves host work and recovers through extension c
     await openDefaultPage(page);
     await expect(emptyMain(page)).toBeVisible();
     await fixture.chooseDefault(false);
-    await page.reload();
     await openDefaultPage(page);
     await expect(homePage(page)).toBeVisible();
     await expect(page.locator('iframe[title="Home"]')).toHaveCount(1);

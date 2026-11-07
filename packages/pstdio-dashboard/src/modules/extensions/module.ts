@@ -33,6 +33,10 @@ import {
   setDashboardExtensionsReadyProject,
   setDashboardExtensionsRegisteredProject,
 } from "@/shared/extensions/extension-readiness";
+import {
+  projectCompositionChangedEventId,
+  subscribeToExtensionEventFeed,
+} from "@/shared/extensions/extension-webview-broadcast";
 import { invalidateExtensionQueries } from "@/shared/extensions/project-extension-cache";
 import { subscribeResourceViewDataEvents } from "@/shared/extensions/resource-view-data-events";
 import {
@@ -272,6 +276,16 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
       refreshProject();
       i18n.on("languageChanged", reapplyLocale);
       const unsubscribeProject = subscribeDashboardSelectedProject(ctx, refreshProject);
+      const unsubscribeComposition = subscribeToExtensionEventFeed((event) => {
+        if (
+          event.id !== projectCompositionChangedEventId ||
+          !projectId ||
+          (event.projectId && event.projectId !== projectId)
+        )
+          return;
+        void invalidateExtensionQueries(getDashboardQueryClient(owner), projectId);
+        metadataRefresh.refresh(projectId);
+      }, owner);
       const unsubscribeViewData = subscribeCoreViewDataEvents();
       const unsubscribeResourceData = subscribeResourceViewDataEvents({
         projectId: () => projectId,
@@ -302,6 +316,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           i18n.off("languageChanged", reapplyLocale);
           activityRail.dispose();
           unsubscribeProject();
+          unsubscribeComposition();
           unsubscribeSync();
           unsubscribeViewData();
           unsubscribeResourceData();

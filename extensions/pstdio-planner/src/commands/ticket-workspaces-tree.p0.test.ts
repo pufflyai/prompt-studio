@@ -18,6 +18,38 @@ const ticketRendererParams = (ticket: { id: string; shorthand: string }, documen
 });
 
 describe("ticket files tree workspace commands", () => {
+  test("keeps the configured opener's explicit parent chain", async () => {
+    const storage = createMemoryStorage();
+    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));
+    const parent = {
+      kind: "page" as const,
+      page: { kind: "page" as const, extensionId: "example.reader", id: "collection" },
+      params: { grouping: "device" },
+    };
+    const sections = await listTicketFilesTreeCommand.run(
+      ...makeCommandArgs({
+        storage,
+        params: ticketRendererParams(ticket),
+        overrides: {
+          workspaces: { list: async () => [{ id: "ws-1", anchors_json: [{ type: "ticket", id: ticket.id }] }] },
+          resources: {
+            resolveOpenings: async (resources) =>
+              resources.map((resource) => ({
+                resource,
+                target: {
+                  kind: "page" as const,
+                  page: { kind: "page" as const, extensionId: "example.reader", id: "inspect" },
+                  resource,
+                  parent,
+                },
+              })),
+          },
+        },
+      }),
+    );
+    expect(sections[2]?.nodes[0]).toHaveProperty("target.parent", parent);
+  });
+
   test("appends a Workspaces section for linked workspaces and excludes unrelated ones", async () => {
     const storage = createMemoryStorage();
     const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));

@@ -42,7 +42,14 @@ test("project composition stores explicit ordinary references in the existing sy
       },
     ],
   };
+  const sequence = fixture.deps.eventBus.seq;
   expect((await save(p.id, configured)).status).toBe(200);
+  expect(fixture.deps.eventBus.getSince(sequence)).toContainEqual(
+    expect.objectContaining({
+      table: "extension_events",
+      data: expect.objectContaining({ projectId: p.id, eventId: "pstdio.event.project-composition-changed" }),
+    }),
+  );
   const read = await fixture.app.request(`/v1/projects/${p.id}/composition`);
   expect(read.status).toBe(200);
   expect(await read.json()).toEqual(configured);

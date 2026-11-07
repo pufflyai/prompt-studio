@@ -102,6 +102,11 @@ test("remote project info changes refresh project composition metadata", async (
     notify!({ ...change, workbenchId: "another-project" }, "relay");
     notify!(change);
     expect(invalidations).toEqual([{ projectId: "project", reason: "runtime_refresh" }]);
+    expect(app.deps.eventBus.getSince(0).filter((event) => event.table === "extension_events")).toEqual([
+      expect.objectContaining({
+        data: expect.objectContaining({ projectId: "project", eventId: "pstdio.event.project-composition-changed" }),
+      }),
+    ]);
   } finally {
     connection.close();
     renewal.resolve({ token: "unused", expiresAt: new Date().toISOString() });

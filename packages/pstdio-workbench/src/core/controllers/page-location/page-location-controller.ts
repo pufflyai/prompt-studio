@@ -36,7 +36,7 @@ import { createPageNavigationMemory } from "./page-navigation-memory";
 import { connectPageOwnerRemoval } from "./page-owner-removal";
 import { createPagePlacementCloser } from "./page-placement-closer";
 import { createPageResourceRemover } from "./page-resource-remover";
-import { createPageUrlResolver, isPageHistoryState, isExplicitPageUrl } from "./page-url-resolver";
+import { createPageUrlResolver, isExplicitPageUrl, isPageHistoryState } from "./page-url-resolver";
 
 export type {
   CreateWorkbenchPageLocationControllerInput,

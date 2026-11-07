@@ -1,10 +1,12 @@
 import { expect, test } from "bun:test";
 import type { ResourceRef } from "@pstdio/sdk/extensions";
+import type { WorkbenchModuleContext } from "@pstdio/workbench";
 import { createWorkbench } from "@pstdio/workbench";
 import { parsePageUrl } from "pstdio-api-contracts";
 import { getDashboardQueryClient } from "@/lib/query-client";
 import { createWorkspacesModule } from "@/modules/workspaces/module";
 import { selectDashboardProject } from "@/shared/app/project-context";
+import { openDashboardResource } from "@/shared/workbench/resource-openers";
 import { buildDashboardWorkspaceOptionsFromRows } from "@/shared/workspaces/workspace-options";
 import { registerWorkspaceProviderViews, workspacePages } from "@/workspaces-provider.test-support";
 import { createSessionLinkHandler } from "./session-link-handler";
@@ -45,6 +47,106 @@ const projectWorkbench = () => {
   workbench.pageLocations.setProject(projectId);
   return workbench;
 };
+
+test("a pending chat file opening yields to a newer resource opening", async () => {
+  const entered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const runtime = globalThis as typeof globalThis & { __PSTDIO_CONFIG__?: { apiBaseUrl?: string } };
+  const previous = runtime.__PSTDIO_CONFIG__;
+  const server = Bun.serve({
+    port: 0,
+    async fetch(request) {
+      const { resources } = (await request.json()) as { resources: ResourceRef[] };
+      if (resources[0]?.id === "workspace-a") {
+        entered.resolve();
+        await release.promise;
+      }
+      return Response.json(
+        resources.map((resource) => ({ resource, target: { kind: "page", page: workspacePages.files, resource } })),
+      );
+    },
+  });
+  runtime.__PSTDIO_CONFIG__ = { apiBaseUrl: server.url.origin };
+  const workbench = projectWorkbench();
+  const errors: string[] = [];
+  const handler = createSessionLinkHandler({
+    workbench,
+    projectId,
+    workspace: workspace("workspace-a"),
+    origin: "http://local",
+    onError: (message) => errors.push(message),
+  });
+  const first = handler.open({ source: "src/app.ts:12", origin: "markdown" });
+  try {
+    await entered.promise;
+    await openDashboardResource(workbench as WorkbenchModuleContext, {
+      type: "workspace",
+      extensionId: "pstdio",
+      id: "workspace-b",
+    });
+    release.resolve();
+    await first;
+    expect(workbench.pages.store.getState().location?.resource?.id).toBe("workspace-b");
+    expect(errors).toEqual([]);
+  } finally {
+    release.resolve();
+    await first;
+    workbench.dispose();
+    runtime.__PSTDIO_CONFIG__ = previous;
+    await server.stop(true);
+  }
+});
+
+for (const kind of ["panel", "compound"] as const) {
+  test(`session file links open a configured ${kind} destination`, async () => {
+    const runtime = globalThis as typeof globalThis & { __PSTDIO_CONFIG__?: { apiBaseUrl?: string } };
+    const previous = runtime.__PSTDIO_CONFIG__;
+    const server = Bun.serve({
+      port: 0,
+      async fetch(request) {
+        const { resources } = (await request.json()) as { resources: ResourceRef[] };
+        return Response.json(
+          resources.map((resource) => {
+            const panel = {
+              kind: "panel",
+              panel: { kind: "page-slot", page: workspacePages.workspace, id: "files" },
+            };
+            return { resource, target: kind === "panel" ? panel : { kind: "compound", targets: [panel] } };
+          }),
+        );
+      },
+    });
+    runtime.__PSTDIO_CONFIG__ = { apiBaseUrl: server.url.origin };
+    const workbench = projectWorkbench();
+    workbench.pageLocations.navigate({
+      kind: "page",
+      page: workspacePages.workspace,
+      resource: { type: "workspace", id: "workspace-a" },
+    });
+    const errors: string[] = [];
+    const handler = createSessionLinkHandler({
+      workbench,
+      projectId,
+      workspace: workspace("workspace-a"),
+      origin: "http://local",
+      onError: (message) => errors.push(message),
+    });
+    try {
+      const candidate = { source: "src/app.ts:12", origin: "markdown" as const };
+      expect(await handler.resolveResource!(candidate)).toEqual({ href: null });
+      await handler.open(candidate);
+      expect(errors).toEqual([]);
+      expect(workbench.layout.getActivePanel("main")?.placementIdentity).toMatchObject({
+        kind: "page",
+        slotId: "files",
+      });
+    } finally {
+      workbench.dispose();
+      runtime.__PSTDIO_CONFIG__ = previous;
+      await server.stop(true);
+    }
+  });
+}
 
 test("chat paths become resources only when the session workspace has the file", async () => {
   const runtime = globalThis as typeof globalThis & { __PSTDIO_CONFIG__?: { apiBaseUrl?: string } };

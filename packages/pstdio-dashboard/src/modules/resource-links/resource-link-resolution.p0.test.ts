@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { createWorkbench, type WorkbenchModuleContext } from "@pstdio/workbench";
+import { selectDashboardProject } from "@/shared/app/project-context";
 import { resolveLinkedResources } from "./resource-link-resolution";
 
 test("bare links use the public configured-opener API once and preserve its ordinary navigation target", async () => {
@@ -22,6 +23,28 @@ test("bare links use the public configured-opener API once and preserve its ordi
   runtime.__PSTDIO_CONFIG__ = { apiBaseUrl: server.url.origin };
   const ctx = createWorkbench();
   try {
+    ctx.modes.registerMode({ id: "project", activate() {} });
+    ctx.views.registerView({ id: "reader", title: "Reader", body: { kind: "react", render: () => null } });
+    ctx.pages.registerPage({
+      id: "collection",
+      ref: { kind: "page", extensionId: "example.viewer", id: "collection" },
+      path: "collection",
+      modeId: "project",
+      main: { kind: "panels" },
+      slots: [],
+    });
+    ctx.pages.registerPage({
+      id: "inspect",
+      ref: target.page,
+      path: "inspect",
+      modeId: "project",
+      parentId: "collection",
+      resource: { kinds: [{ kind: "resource-kind", id: "workspace" }] },
+      main: { kind: "view", view: { kind: "view", id: "reader" }, cardinality: "one" },
+      slots: [],
+    });
+    ctx.pageLocations.setProject("project");
+    selectDashboardProject(ctx, { id: "project", name: "Project" });
     const result = await resolveLinkedResources(ctx as WorkbenchModuleContext, "project", [
       refs[0]!,
       refs[1]!,
@@ -32,6 +55,10 @@ test("bare links use the public configured-opener API once and preserve its ordi
       { resource: refs[0], target },
       { resource: refs[1], target: undefined, open: undefined },
     ]);
+    selectDashboardProject(ctx, { id: "another", name: "Another project" });
+    const before = ctx.pages.store.getState().location;
+    await result[0]!.open!();
+    expect(ctx.pages.store.getState().location).toEqual(before);
   } finally {
     ctx.dispose();
     runtime.__PSTDIO_CONFIG__ = previous;

@@ -22,6 +22,7 @@ export interface ExtensionResetEvent {
 }
 
 const eventFeed = createRuntimeFeed<ExtensionRefreshEvent>();
+export const projectCompositionChangedEventId = "pstdio.event.project-composition-changed";
 const resetFeed = createRuntimeFeed<ExtensionResetEvent>();
 const commandTicks = createRuntimeState(() => ({ tick: 0 }));
 export const subscribeToExtensionCommandFeed = commandFeed.subscribe;

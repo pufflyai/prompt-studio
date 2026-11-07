@@ -97,16 +97,17 @@ test("an explicit ordinary page URL takes precedence over the project default", 
   w.dispose();
 });
 
-test("an unavailable or resource-bound default leaves an empty workbench and unrelated controls usable", () => {
+test("an unavailable or resource-bound default leaves an empty workbench and unrelated controls usable", async () => {
   for (const configured of [undefined, { ...desk, id: "unavailable" }, desk]) {
     const w = createWorkbench({ defaultPage: configured });
     w.modes.registerMode({ id: "project", activate() {} });
     register(w, inbox);
     if (configured === desk) register(w, desk, true);
-    w.commands.registerCommand({ id: "example.manage", title: "Manage tools", handler: () => "available" });
+    w.commands.registerCommand({ id: "example.manage", label: "Manage tools" }, { execute: () => "available" });
     w.pageLocations.boot("one");
     expect(w.pages.store.getState().location).toBeUndefined();
     expect(w.commands.getCommand("example.manage")).toBeDefined();
+    expect(await w.commands.executeCommand("example.manage")).toBe("available");
     expect(w.pageLocations.navigate({ kind: "page", page: inbox }).ok).toBe(true);
     expect(w.pages.store.getState().location?.page).toEqual(inbox);
     w.dispose();

@@ -1,4 +1,4 @@
-import { commandRefId, type ResourceRef } from "@pstdio/sdk/extensions";
+import { commandRefId, contributionRefId, type ResourceRef } from "@pstdio/sdk/extensions";
 import type { WorkbenchModuleContext } from "@pstdio/workbench";
 import { toWorkbenchNavigationTarget } from "@pstdio/workbench/extensions";
 import { relatedResourceOpeningSchema } from "pstdio-api-contracts";
@@ -7,6 +7,7 @@ import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { executeExtensionCommand } from "@/shared/extensions/api";
 import { canonicalDashboardResource } from "@/shared/extensions/resource-identity";
 import { getCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
+import { beginDashboardNavigation } from "./navigation-request";
 
 export const configuredResourceOpener = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
   const projectId = resource.projectId ?? getDashboardSelectedProjectId(ctx);
@@ -24,12 +25,18 @@ export const configuredResourceOpener = (ctx: WorkbenchModuleContext, resource: 
   return available ? binding : undefined;
 };
 
-export const resolveDashboardResourceOpening = async (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
+export const resolveDashboardResourceOpening = async (
+  ctx: WorkbenchModuleContext,
+  resource: ResourceRef,
+  signal?: AbortSignal,
+) => {
   const projectId = resource.projectId ?? getDashboardSelectedProjectId(ctx);
   if (!projectId) throw new Error("Resource opening requires a project");
-  const [opening] = await getApiClient().projects.resolveResourceOpenings(projectId, [
-    canonicalDashboardResource(resource, projectId),
-  ]);
+  const [opening] = await getApiClient().projects.resolveResourceOpenings(
+    projectId,
+    [canonicalDashboardResource(resource, projectId)],
+    { signal },
+  );
   if (!opening?.target) throw new Error("The configured resource opener is unavailable");
   return opening;
 };
@@ -37,9 +44,16 @@ export const resolveDashboardResourceOpening = async (ctx: WorkbenchModuleContex
 export const openDashboardResource = async (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
   const projectId = getDashboardSelectedProjectId(ctx);
   if (!projectId || (resource.projectId && resource.projectId !== projectId)) return;
-  const opening = await resolveDashboardResourceOpening(ctx, resource);
-  if (getDashboardSelectedProjectId(ctx) !== projectId) return;
-  await ctx.navigation.openTarget(toWorkbenchNavigationTarget(opening.target!));
+  const request = beginDashboardNavigation(ctx, projectId);
+  try {
+    const opening = await resolveDashboardResourceOpening(ctx, resource, request.signal);
+    if (!request.isCurrent()) return;
+    await ctx.navigation.openTarget(toWorkbenchNavigationTarget(opening.target!));
+  } catch (error) {
+    if (request.isCurrent()) throw error;
+  } finally {
+    request.dispose();
+  }
 };
 
 export const configuredRelatedOpenings = async (
@@ -51,16 +65,19 @@ export const configuredRelatedOpenings = async (
   if (!projectId || (source.projectId && source.projectId !== projectId)) return [];
   const resource = canonicalDashboardResource(source, projectId);
   const binding = configuredResourceOpener(ctx, resource);
-  const ref = binding?.relatedOpenings;
-  if (!ref) return [];
+  if (!binding?.relatedOpenings) return [];
+  const ref = binding.relatedOpenings;
   const commandId = commandRefId(ref);
   const command = ctx.commands.getCommand(commandId);
   if (!command) return [];
   const response = await executeExtensionCommand(projectId, commandId, { resource, source: "dashboard" }, signal);
   signal.throwIfAborted();
+  const current = configuredResourceOpener(ctx, resource);
   if (
     getDashboardSelectedProjectId(ctx) !== projectId ||
-    configuredResourceOpener(ctx, resource) !== binding ||
+    !current?.relatedOpenings ||
+    commandRefId(current.relatedOpenings) !== commandId ||
+    contributionRefId(current.opener) !== contributionRefId(binding.opener) ||
     ctx.commands.getCommand(commandId) !== command
   )
     return [];
