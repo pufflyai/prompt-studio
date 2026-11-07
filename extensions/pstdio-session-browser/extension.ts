@@ -132,6 +132,7 @@ const list = defineView({
     kind: "tree",
     searchable: true,
     searchPlaceholder: l10n("sessions.search", "Search sessions"),
+    defaultExpandedNodeIds: ["workspace-sessions"],
     structure: [{ id: "sessions", label: l10n("sessions.title", "Sessions"), collapsible: false }],
     refreshEvents: [viewDataEvents.sessionsChanged],
     body: browse,
