@@ -18,6 +18,7 @@ interface CreateTerminalSessionCapabilityInput {
  */
 export const createTerminalSessionCapability = (input: CreateTerminalSessionCapabilityInput): HostCapability => {
   const { terminal, hostEvents } = input;
+  const ownedSessions = new Set<string>();
 
   const emit = (payload: TerminalHostEvent) => {
     hostEvents.emit({ scope: TERMINAL_SESSION_EVENT_SCOPE, payload });
@@ -25,10 +26,13 @@ export const createTerminalSessionCapability = (input: CreateTerminalSessionCapa
 
   return async (params) => {
     const operation = params as TerminalSessionOperation;
+    if (operation.operation !== "open" && !ownedSessions.has(operation.sessionId))
+      throw new Error("Unknown terminal session for this owner");
 
     switch (operation.operation) {
       case "open": {
         const { sessionId } = await terminal.open({ request: operation.request });
+        ownedSessions.add(sessionId);
         return { operation: "open", sessionId } satisfies TerminalSessionResult;
       }
       case "write":

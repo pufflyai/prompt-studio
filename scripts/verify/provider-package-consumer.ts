@@ -33,7 +33,8 @@ export const verifyProviderPackageConsumer = (root: string, sdkArchive: string, 
 export const save = defineCommand({ id: "save", title: "Save", params: { text: params.text({ required: true }) }, run: async (_ctx, input) => ({ text: input.text }) });
 const view = defineView({ id: "content", title: "Content", body: { kind: "controls", query: async () => ({ params: [] }) } });
 export const page = definePage({ id: "notes", title: "Notes", path: "notes", mode: workbenchModes.project, main: { kind: "view", view: view.ref, cardinality: "one" }, slots: [{ id: "inspector", region: "side", item: { kind: "view", view: view.ref, presence: "closed" } }] });
-export default defineExtension({ commands: [save], views: [view], pages: [page] });\n`,
+const terminal = defineView({ id: "shell", title: "Shell", body: { kind: "terminal", session: async (ctx) => ({ workspaceId: ctx.workspaceId, env: { TOOL: "provider" } }) } });
+export default defineExtension({ commands: [save], views: [view, terminal], pages: [page] });\n`,
   );
   writeFileSync(
     join(provider, "contracts.ts"),

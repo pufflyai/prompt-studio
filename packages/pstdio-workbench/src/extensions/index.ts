@@ -54,6 +54,7 @@ export {
 } from "./contributions/file-renderer-contributions";
 export type { WorkbenchExtensionKanbanRendererAdapter } from "./contributions/kanban-renderer-adapter";
 export { registerWorkbenchExtensionKanbanRenderers } from "./contributions/kanban-renderer-contributions";
+export { createWorkbenchExtensionTerminalRendererOwners } from "./contributions/terminal-renderer-contributions";
 export {
   type RegisterWorkbenchExtensionTreeRenderersInput,
   registerWorkbenchExtensionTreeRenderers,
