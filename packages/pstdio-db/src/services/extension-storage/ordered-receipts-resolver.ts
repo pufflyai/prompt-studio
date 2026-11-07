@@ -59,6 +59,10 @@ export const createOrderedReceiptResolver = (
   };
   const hydrateDependencies = async (admission: OrderedAdmission) => {
     for (const dependency of admission.dependencies) {
+      // A receipt this owner already holds was bound to its identity when it was recorded. Earlier
+      // saves of the same stream are the common case, so skip the encrypted index walk for them.
+      const held = await journal.cachedDecision(dependency.operationId, dependency.epoch);
+      if (held?.fingerprint === dependency.fingerprint) continue;
       await identity(dependency.operationId, dependency.fingerprint);
       if (!(await exact(dependency.operationId, dependency.epoch)))
         throw new Error("An ordered dependency requires its exact receipt");

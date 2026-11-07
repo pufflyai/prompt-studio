@@ -65,7 +65,16 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
     return row;
   };
   const bind = (id: string, identity: string) => bindOperationIdentity(tx, owner, id, identity);
+  // Receipts are immutable, so a found receipt stays valid for this owner transaction.
+  const held = new Map<string, Awaited<ReturnType<typeof readDecision>>>();
   const cachedDecision = async (id: string, epoch: string) => {
+    const key = JSON.stringify([id, epoch]);
+    if (held.has(key)) return held.get(key);
+    const row = await readDecision(id, epoch);
+    if (row) held.set(key, row);
+    return row;
+  };
+  const readDecision = async (id: string, epoch: string) => {
     const [row] = await tx
       .select({
         operationId: receipts.operation_id,
@@ -251,6 +260,7 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
     },
     /** Checkpoint reconciliation explicitly selects a known exact receipt before any readmission. */
     async settleKnown(decision: OrderedDecision) {
+      dependencies.forget(decision.operationId);
       const row = await operation(decision.operationId);
       const known = await cachedDecision(decision.operationId, decision.epoch);
       if (!row?.envelope || row.settled_epoch) return;
