@@ -1,5 +1,6 @@
 import type { CollectionPage, CollectionPageRequest } from "@pstdio/sdk/extensions";
 import { useRef, useState } from "react";
+import { loadRendererPage } from "./renderer-page-continuation";
 import { rendererPagePosition } from "./renderer-page-position";
 
 interface PagePosition {
@@ -83,16 +84,23 @@ export const useRendererPages = <TRow>(input: {
             },
           }
         : undefined,
-    accept: (result: { rows: TRow[]; page: CollectionPage }, signal: AbortSignal) => {
+    load: async <TResult extends { rows: TRow[]; page: CollectionPage }>(
+      read: (request: CollectionPageRequest) => Promise<TResult>,
+      signal: AbortSignal,
+    ) => {
+      // A growing list cannot join rows from two revisions, so it starts again from the first page.
+      const loaded = await loadRendererPage(request, read, input.append ? 0 : current.offset);
+      const result = loaded.value;
+      const offset = loaded.request.offset;
       const saved = previous.current;
       const append =
-        input.append &&
-        current.offset > 0 &&
-        saved?.identity === identity &&
-        saved.page.revision === result.page.revision;
-      const rows = append ? [...saved.rows.slice(0, current.offset), ...result.rows] : result.rows;
-      if (!signal.aborted) previous.current = { identity, offset: current.offset, rows, page: result.page };
-      return { ...result, rows, position: request };
+        input.append && offset > 0 && saved?.identity === identity && saved.page.revision === result.page.revision;
+      const rows = append ? [...saved.rows.slice(0, offset), ...result.rows] : result.rows;
+      if (!signal.aborted) {
+        previous.current = { identity, offset, rows, page: result.page };
+        if (offset !== current.offset) setPosition({ identity, offset });
+      }
+      return { ...result, rows, position: loaded.request };
     },
   };
 };

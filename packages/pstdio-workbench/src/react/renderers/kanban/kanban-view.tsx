@@ -139,8 +139,9 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
 
     load: async (signal) => {
       const state = { settings, filter, sorts, pageParams };
-      const loaded = contribution.executePage
-        ? pages.accept(await contribution.executePage({ ...state, page: pages.request }, signal), signal)
+      const executePage = contribution.executePage;
+      const loaded = executePage
+        ? await pages.load((page) => executePage({ ...state, page }, signal), signal)
         : { rows: await contribution.executeQuery(state, signal), page: undefined, position: undefined };
       // Rows equal to the last loaded board keep their objects, so a reload that changed nothing,
       // such as returning to the page, renders no cards again.
