@@ -7,29 +7,33 @@ import type { RelayWorkbench } from "../relay/runtime";
  */
 export const createMissingProjectRecovery = (input: {
   exists: (projectId: string) => Promise<boolean>;
-  /** Called after a project was created, so it starts syncing. */
+  /** Refresh relay admission when the project row or its setup readiness changes. */
   recovered: () => void;
 }) => {
   // Until the relay runtime starts, nothing can be recovered.
-  let recover: (connection: RelayWorkbench, signal: AbortSignal) => Promise<void> = async () => {};
+  let recover: (connection: RelayWorkbench, signal: AbortSignal, created: () => void) => Promise<void> = async () => {};
   const shutdown = new AbortController();
   let running: Promise<void> | undefined;
   let batch: { login: string | undefined; controller: AbortController } | undefined;
   let next: RelayWorkbench[] | undefined;
-  // A project is created before its extensions are set up. It must not sync until it is complete.
+  // A project can download data during setup, but cannot be ready until this owner finishes.
   let current: string | undefined;
   const run = (connections: RelayWorkbench[]) => {
     const controller = new AbortController();
     const signal = AbortSignal.any([shutdown.signal, controller.signal]);
     batch = { login: connections[0]?.renewalGrant, controller };
     running = (async () => {
-      let created = false;
       for (const connection of connections) {
         if (signal.aborted) return;
         // A queued list can name a project that was created since. A failed lookup waits for the next refresh.
         if (await input.exists(connection.workbenchId).catch(() => true)) continue;
+        let changed = false;
         current = connection.workbenchId;
-        await recover(connection, signal).catch((error: unknown) =>
+        await recover(connection, signal, () => {
+          if (signal.aborted) return;
+          changed = true;
+          input.recovered();
+        }).catch((error: unknown) =>
           apiLogger.warn(
             { event: "account.cloud_project.recovery_failed", projectId: connection.workbenchId, error },
             "Recovery will retry",
@@ -37,9 +41,11 @@ export const createMissingProjectRecovery = (input: {
         );
         current = undefined;
         // A failed recovery can still have created the project.
-        if (await input.exists(connection.workbenchId).catch(() => false)) created = true;
+        if (await input.exists(connection.workbenchId).catch(() => false)) changed = true;
+        // Drain rollback owners and release completed readiness before the next
+        // project can wait on network or extension setup.
+        if (changed && !signal.aborted) input.recovered();
       }
-      if (created && !signal.aborted) input.recovered();
     })().finally(() => {
       current = undefined;
       running = undefined;

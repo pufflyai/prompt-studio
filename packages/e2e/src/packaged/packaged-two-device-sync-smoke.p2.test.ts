@@ -178,6 +178,7 @@ test(
         const project = await first.client.projects.create(
           folderProjectInput({ name: "Shared notes" }, repository.checkout),
         );
+        await first.command(project.id, "offline-collection", { action: "seed" });
         await write(first, project.id, "note", "written on the first device");
         await first.command(project.id, "write-file", { path: "note.md", content: "# Shared note" });
         await first.command(project.id, "write-file", { path: "artifact.html", content: "<h1>Shared artifact</h1>" });
@@ -207,6 +208,10 @@ test(
       expect((await second.client.projects.folder(project.id)).path).toBeNull();
       await waitFor(() => peer.failedReads() > 0);
       await second.reach(project.id, "first-download-incomplete");
+      expect(await second.client.account.projectSyncStatus(project.id)).toMatchObject({
+        state: "first-download-incomplete",
+        offlineReady: false,
+      });
       phase("new device waiting for download");
       const prematureOpen = await fetch(`${second.host.baseUrl}/v1/projects/${project.id}/open`, {
         method: "POST",
@@ -247,11 +252,16 @@ test(
       await first.reach(project.id, "synced");
       await second.reach(project.id, "synced");
       await picker.ready();
+      // Folder preparation can replace a synced owner; navigation does not await its next download.
+      await waitFor(async () => (await second.client.account.projectSyncStatus(project.id)).offlineReady);
       phase("project folder prepared");
       expect((await second.command<Record<string, StorageRecord>>(project.id, "read")).note?.value).toBe(
         "written on the first device",
       );
 
+      expect(await second.command(project.id, "offline-collection", { action: "read" })).toMatchObject({
+        value: { title: "Original", track: "api" },
+      });
       phase("downloaded records read");
       const folderAfterSelection = await second.client.projects.folder(project.id);
       expect(folderAfterSelection.path).toBeTruthy();
@@ -282,6 +292,11 @@ test(
       await first.reach(project.id, "local");
       await second.reach(project.id, "local");
       phase("both devices local");
+      for (const [device, action] of [
+        [first, "left"],
+        [second, "right"],
+      ] as const)
+        expect(await device.command(project.id, "offline-collection", { action })).toMatchObject({ saved: true });
       await write(first, project.id, "note", "edited on the first device while local");
       await write(second, project.id, "caption", "edited on the second device while local");
 
@@ -299,6 +314,16 @@ test(
       const expected = ["edited on the first device while local", "edited on the second device while local"];
       await waitFor(async () => Bun.deepEquals(await merged(first), expected));
       await waitFor(async () => Bun.deepEquals(await merged(second), expected));
+
+      for (const device of [first, second])
+        await waitFor(async () => {
+          const { value } = await device.command<{ value: { title: string; track: string; updatedAt: string } }>(
+            project.id,
+            "offline-collection",
+            { action: "read" },
+          );
+          return value.title === "Edited" && value.track === "ui" && ["left", "right"].includes(value.updatedAt);
+        });
 
       const history = await first.command<{ events: ProjectSyncState[]; current: unknown }>(project.id, "sync-history");
       expect(history.current).toMatchObject({ state: "synced", offlineReady: true, pendingItems: 0 });

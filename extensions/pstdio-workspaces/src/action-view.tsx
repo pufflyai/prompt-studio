@@ -136,6 +136,7 @@ const Action = ({
     });
   const cancel = () => {
     if (host.presentation === "dialog") return client.placement.close();
+    if (!data && workspaceId) return client.commands.open({ id: workspaceId, selected: selectedPath(host) });
     if (!data?.workspace) return client.navigation.open({ kind: "page", page: workspacePages.list });
     const path = selectedPath(host);
     const projectId = host.projectId ?? data.workspace.projectId;
