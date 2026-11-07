@@ -10,7 +10,7 @@ test("traffic measurements count actual streamed bytes and identify the start of
     traffic.actor("fixture-token", "sender");
     traffic.phase("large-upload");
     const started = traffic.nextPart("sender");
-    const send = async (route: Parameters<typeof syncPath>[0], body?: Uint8Array) =>
+    const send = async (route: Parameters<typeof syncPath>[0], body?: Uint8Array<ArrayBuffer>) =>
       (
         await fetch(`${origin}${syncPath(route)}`, {
           method: body ? "PUT" : "POST",
