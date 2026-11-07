@@ -1,14 +1,16 @@
 import { expect, test } from "bun:test";
 import { createWorkbench } from "@pstdio/workbench";
+import {
+  emptyWorkbenchExtensionMetadata,
+  type NativeChatHostProps,
+  registerWorkbenchExtensionContributions,
+} from "@pstdio/workbench/extensions";
 import { WorkbenchThemeProvider } from "@pstdio/workbench/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { I18nextProvider } from "react-i18next";
 import i18n from "@/i18n/config";
-import { createChatSession } from "../../../../pstdio-workbench/src/extensions/contributions/chat-session";
-import type { NativeChatHostProps } from "../../../../pstdio-workbench/src/react/renderers/chat/native-chat-host";
-import { NativeChatView } from "../../../../pstdio-workbench/src/react/renderers/chat/native-chat-view";
 import { useNativeHarnessAccount } from "./use-native-harness-account";
 
 const renderAccount = async (
@@ -28,30 +30,8 @@ const renderAccount = async (
       .getQueryCache()
       .find({ queryKey: key })!
       .setState({ status: "error", error: new Error("Unavailable") });
-  const session = createChatSession({
-    initial: {
-      nativeHarnessAccount: { controlId: "provider" },
-      values: { provider: { harnessId: "agent" } },
-      messages: history
-        ? [{ id: "reply", role: "assistant", parts: [{ type: "text", text: "Retained history" }] }]
-        : [],
-    },
-    query: async () => ({}),
-    action: async () => ({}),
-  });
-  const release = session.retain();
-  await new Promise<void>((resolve) => {
-    if (!session.getSnapshot().initializing) resolve();
-    else {
-      const off = session.subscribe(() => {
-        if (!session.getSnapshot().initializing) {
-          off();
-          resolve();
-        }
-      });
-    }
-  });
   const workbench = createWorkbench();
+  let session!: NativeChatHostProps["session"];
   let account!: ReturnType<typeof useNativeHarnessAccount>;
   let panel!: ReactElement<{ messages: unknown[] }>;
   const Host = ({ children, values }: NativeChatHostProps) => {
@@ -66,16 +46,67 @@ const renderAccount = async (
     panel = children({ account }) as typeof panel;
     return panel;
   };
+  const viewId = "fixture.auth.view.chat";
+  const registration = registerWorkbenchExtensionContributions({
+    workbench,
+    projectId: "p",
+    executeCommand: async () => ({}),
+    createChatHost: () => Host,
+    metadata: {
+      ...emptyWorkbenchExtensionMetadata,
+      views: [
+        {
+          id: viewId,
+          localId: "chat",
+          extensionId: "fixture.auth",
+          title: "Chat",
+          body: {
+            kind: "chat",
+            draftKey: "auth",
+            queryHandlerId: "query",
+            actionHandlerId: "act",
+            initial: {
+              nativeHarnessAccount: { controlId: "provider" },
+              values: { provider: { harnessId: "agent" } },
+              messages: history
+                ? [{ id: "reply", role: "assistant", parts: [{ type: "text", text: "Retained history" }] }]
+                : [],
+            },
+          },
+        },
+      ],
+    },
+  });
+  const body = workbench.views.getView(viewId)!.body;
+  if (body.kind !== "react") throw new Error("Expected native chat view");
+  const view = body.render({
+    workbench,
+    instance: { instanceId: "main", panelId: viewId, closable: true },
+    panel: { id: viewId, title: "Chat", region: "main", rendererId: viewId },
+    refresh: () => {},
+  }) as ReactElement<NativeChatHostProps>;
+  session = view.props.session;
+  const release = session.retain();
+  await new Promise<void>((resolve) => {
+    if (!session.getSnapshot().initializing) resolve();
+    else {
+      const off = session.subscribe(() => {
+        if (!session.getSnapshot().initializing) {
+          off();
+          resolve();
+        }
+      });
+    }
+  });
   const html = renderToStaticMarkup(
     <QueryClientProvider client={queries}>
       <I18nextProvider i18n={i18n}>
-        <WorkbenchThemeProvider>
-          <NativeChatView session={session} action={undefined} conversationKey="auth" Host={Host} />
-        </WorkbenchThemeProvider>
+        <WorkbenchThemeProvider>{view}</WorkbenchThemeProvider>
       </I18nextProvider>
     </QueryClientProvider>,
   );
   release();
+  registration.dispose();
   workbench.dispose();
   queries.clear();
   return { html, account, panel };
