@@ -40,7 +40,9 @@ test("actual saved-session snapshot supplies reply fork and native dispatch pres
           queue: { requests: [], activeRunStartedAt: null, steeringAvailable: true, steeringUnavailableReason: null },
         }),
         getHarnessCommands: async () => ({ harnessId: "fixture", commands: [], modes: [], slashCommands: true }),
-        getForkState: async () => ({ supported: true, disabledReason: null }),
+        getForkState: async () => {
+          throw new Error("The host reply action must not depend on native harness fork discovery.");
+        },
         fork: async (...args) => {
           forks.push(args);
           return { ...saved, id: "forked" } as never;

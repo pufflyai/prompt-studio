@@ -267,13 +267,12 @@ persisted nondefault value is actually replaced. The default `"overrides"` mode
 keeps generic settings forms sparse, including removing an override on reset.
 
 Set `snapshot.fork` to expose per-message fork actions, with a nullable
-`disabledReason`. For per-reply controls use `ctx.sessions.getForkState(id, { scope: "reply" })`
-and `ctx.sessions.fork(id, messageId)`: keep local saved-session metadata present with its
-disabled reason when unsupported, so the message action can explain why it is unavailable.
+`disabledReason`. Local saved-session reply controls call `ctx.sessions.fork(id, messageId)`
+without a preemptive native harness capability gate, matching Main's message action.
 Drafts and foreign-device sessions omit this action. Completed earlier replies remain available
 while later work runs. The shared native UI hides the current streaming reply's
 fork control; the service authoritatively rejects that unfinished reply. Omit the
-scope (or use `"conversation"`) for a whole-conversation copy, which retains its
+scope from `ctx.sessions.getForkState` (or use `"conversation"`) for a whole-conversation copy, which retains its
 idle/queue guards. Both paths preserve independent transcript identity.
 Queue steering must pass the `activeRunStartedAt` captured with the selected
 request along with its revision, rather than reading a newer run when clicked.

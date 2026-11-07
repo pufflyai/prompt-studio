@@ -134,15 +134,12 @@ test("unavailable remote queue leaves online execution usable with a refresh ope
   expect(snapshot.queuedFollowUps).toBeUndefined();
 });
 
-test("reply controls request per-reply fork availability while later work continues", async () => {
+test("local reply fork stays available while later work continues without a harness capability query", async () => {
   const ctx = fixture(false, true);
-  const requests: unknown[] = [];
-  ctx.sessions.getForkState = async (...args) => {
-    requests.push(args);
-    return { supported: true, disabledReason: args[1]?.scope === "reply" ? null : "Session has pending work." };
+  ctx.sessions.getForkState = async () => {
+    throw new Error("Reply actions must use the host fork operation, not harness capability discovery.");
   };
   const snapshot = await readSnapshot(ctx, { type: "session", id: "s", extensionId: "pstdio" });
-  expect(requests).toEqual([["s", { scope: "reply" }]]);
   expect(snapshot).toMatchObject({ streaming: true, fork: { disabledReason: null } });
 });
 
@@ -211,14 +208,14 @@ test("changing draft device selects an available workspace on that owner and pre
   expect(noFolder.submitDisabled).toBe(false);
 });
 
-test("saved local replies retain a visible disabled fork when unsupported; remote history omits it", async () => {
+test("saved local replies offer the host fork action regardless of native harness support; remote history omits it", async () => {
   const local = fixture(false, true);
   local.sessions.getForkState = async () => ({
     supported: false,
     disabledReason: "This harness does not support forking conversations.",
   });
   const snapshot = await readSnapshot(local, { type: "session", id: "s" });
-  expect(snapshot.fork).toEqual({ disabledReason: "This harness does not support forking conversations." });
+  expect(snapshot.fork).toEqual({ disabledReason: null });
   expect((await readSnapshot(fixture(true, true), { type: "session", id: "s" })).fork).toBeUndefined();
   expect((await readSnapshot(fixture(false, true))).fork).toBeUndefined();
 });

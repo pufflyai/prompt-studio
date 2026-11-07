@@ -50,10 +50,9 @@ export const readSessionSnapshot = async (
     const sources = remote && options.messages !== false ? await ctx.sessions.getConversationSources(id) : undefined;
     return { session, messages: sources?.checkpoint ?? [] };
   };
-  const [{ session, messages }, harness, fork] = await Promise.all([
+  const [{ session, messages }, harness] = await Promise.all([
     readConversation(),
     remote ? undefined : ctx.sessions.getHarnessCommands(id),
-    remote ? { supported: false, disabledReason: null } : ctx.sessions.getForkState(id, { scope: "reply" }),
   ]);
   const workspaceId = session.workspaceId ?? undefined;
   const workspaces = await ctx.workspaces.list();
@@ -96,12 +95,7 @@ export const readSessionSnapshot = async (
       device: session.device?.id ?? "",
       ...values,
     },
-    fork: remote
-      ? undefined
-      : {
-          disabledReason:
-            fork.disabledReason ?? (fork.supported ? null : "This harness does not support forking conversations."),
-        },
+    fork: remote ? undefined : { disabledReason: null },
     resources: [],
     operations: conversationOperations(remote, Boolean(display.queueReadOnly)),
   };

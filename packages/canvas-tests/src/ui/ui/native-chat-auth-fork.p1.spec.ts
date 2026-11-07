@@ -17,12 +17,12 @@ test("native account setup and completed-reply fork retain their own surfaces", 
   await expect(preview.getByRole("button", { name: "Copy message", exact: true })).toBeVisible();
   await preview.getByRole("button", { name: "Fork conversation", exact: true }).click();
   await expect(preview.getByTestId("forked-message")).toHaveText("completed-reply");
-  preview = await openCanvasPreview(page, `${canvas}#UnsupportedFork`);
+  preview = await openCanvasPreview(page, `${canvas}#ReadOnlyFork`);
   await preview.locator('[data-chat-message-id="completed-reply"]').hover();
   const fork = preview.getByRole("button", { name: "Fork conversation", exact: true });
   await expect(fork).toBeVisible();
   await expect(fork).toHaveAttribute("aria-disabled", "true");
-  await expect(fork).toHaveAttribute("title", "This harness does not support forking conversations.");
+  await expect(fork).toHaveAttribute("title", "This conversation is read only.");
   // aria-disabled keeps its explanation discoverable; even a dispatched click must not invoke the action.
   await fork.dispatchEvent("click");
   await expect(preview.getByTestId("forked-message")).toHaveText("");
