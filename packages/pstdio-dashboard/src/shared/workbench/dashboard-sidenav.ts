@@ -54,8 +54,6 @@ const registerSidenavWidget = (ctx: WorkbenchModuleContext) => {
         getStructure: () => navigation.getStructure("content"),
         getHeaderStructure: () => homeFirst(navigation.getStructure("header")),
         getFooterStructure: () => navigation.getStructure("footer"),
-        defaultExpandedNodeIds: ["workspace-sessions"],
-        defaultExpandedSectionIds: ["sessions-wrap"],
         canMove: ({ source, destination }) => source.moveScope === destination.moveScope,
         getHeader: async (context) =>
           homeFirst(
@@ -84,6 +82,16 @@ const registerSidenavWidget = (ctx: WorkbenchModuleContext) => {
 // Explicit mode chrome replaces or hides the host navigation at the region boundary.
 export const registerDashboardSidenav = (ctx: WorkbenchModuleContext) => {
   registerSidenavWidget(ctx);
+  const appliedNodeDefaults = new Set<string>();
+  const syncSidenavForActiveMode = () => {
+    if (!ctx.modes.getActiveModeId()) return;
+    for (const nodeId of createLevelNavigation(ctx).getDefaultExpandedNodeIds()) {
+      if (appliedNodeDefaults.has(nodeId)) continue;
+      appliedNodeDefaults.add(nodeId);
+      ctx.treeViews.setNodeExpanded(dashboardWidgetIds.dashboardSidenav, nodeId, true);
+    }
+    updateDashboardSidenav(ctx);
+  };
   const refresh = () => {
     if (ctx.views.getView(dashboardWidgetIds.dashboardSidenav))
       ctx.views.refreshView(dashboardWidgetIds.dashboardSidenav);
@@ -96,7 +104,7 @@ export const registerDashboardSidenav = (ctx: WorkbenchModuleContext) => {
     const next = readScope();
     if (next === scope) return;
     scope = next;
-    updateDashboardSidenav(ctx);
+    syncSidenavForActiveMode();
   };
   // Location and primary-resource updates can describe the same selection. Only changes
   // to a contribution's declared data scope need another read; data events refresh below.
@@ -107,8 +115,9 @@ export const registerDashboardSidenav = (ctx: WorkbenchModuleContext) => {
   const unsubscribeProject = subscribeDashboardSelectedProject(ctx, refresh);
   const navigationContributionSubscription = ctx.navigationTrees.onDidChange(() => {
     scope = readScope();
-    updateDashboardSidenav(ctx);
+    syncSidenavForActiveMode();
   });
+  syncSidenavForActiveMode();
   return {
     dispose: () => {
       modeSubscription.dispose();

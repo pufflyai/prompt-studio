@@ -5,6 +5,7 @@ import {
   defineExtensionView,
   type ExtensionViewRenderContext,
   getCommandValue,
+  sessionBrowser,
   workbenchCommands,
 } from "@pstdio/sdk/extensions";
 import { AlertMessage, ChakraProvider, psTheme, ScrollArea } from "@pstdio/ui";
@@ -85,7 +86,11 @@ const HomeApp = (props: AppProps) => {
       label: "New conversation",
       icon: "message-square-plus",
       run: () => {
-        void run("new-conversation", workbenchCommands.newConversation.id);
+        void context.host
+          .call("navigation.open", {
+            target: { kind: "command", target: { command: sessionBrowser.commands.create, params: {} } },
+          })
+          .catch((error) => setActionError({ id: "new-conversation", message: String(error) }));
       },
     },
     {

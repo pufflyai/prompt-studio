@@ -6,13 +6,36 @@ Prompt Studio tracks conversations between users and coding agents as sessions. 
 
 CLI and dashboard clients call the session API. Domain services coordinate database rows, the scheduler, workspace providers, extension harnesses, and the conversation owner. The host's sync stream carries row changes; a separate session stream carries conversation patches.
 
+## Presentation ownership
+
+The default-installed `pstdio.pstdio-session-browser` extension owns browsing,
+search, session actions, draft policy and conversation composition. It declares
+native `chat` and tree views through the public SDK. The workbench renders chat
+with `@pstdio/ui/chat-ui` in its own document; no extension React entry or webview
+is loaded to open a conversation. Page Main and shared Side use the same view.
+
+Consumers navigate through `sessionBrowser` refs from `@pstdio/sdk/extensions`.
+Session and draft resources keep the canonical `pstdio` owner. Core retains
+identity, execution, transcripts, queues, attachments, workspace associations,
+permissions, sync and resource retention. Deprecated host pages, placements and
+commands delegate to the installed provider; they contain no second chat/list
+implementation. Disabling the provider removes its presentation while core data
+and running work remain intact. Missing targets use normal unavailable feedback.
+
+Draft text, attachments and settings use public project storage, including
+projects without a local folder. The native host transfers the existing browser
+`session-drafts` and `session-attachments` as one guarded source snapshot, only
+acknowledging it after durable save. Generic layout remains the owner of selected
+panels and page/panel conversion. See [native chat](../extensions/0028-native-chat.md)
+and the [provider README](../../../extensions/pstdio-session-browser/README.md).
+
 ## Personal history across devices
 
 For a cloud project, each device publishes its workspace summaries, session records, and full harness-neutral conversations to the user's personal space. Each device writes its own append-only encrypted index log. Completed conversations use append-only encrypted message logs over the existing document protocol. Large messages use encrypted blobs. Live snapshots use the unstored channel and are fragmented within its wire limit. The relay cannot read their content. See [ADR 0131](../../adrs/0131-personal-session-message-logs.md) and [ADR 0133](../../adrs/0133-sync-session-index-changes-by-device.md).
 
 Local page files retain downloaded conversations and device indexes with their saved cursors. Local materialized index rows serve reads. The session and workspace read APIs, extension read APIs, and dashboard sync snapshot include the user's other devices. A downloaded conversation stays readable after its source stops and after the reader restarts offline. Signing out hides cached personal records; another account uses a separate local namespace. Local publication records their first account owner so changing accounts does not republish already-owned local records to a different personal space.
 
-Synced records include `device: { ownerId, id, name }`. They stay separate from local execution rows. The scheduler, startup recovery, workspace providers, and mutation endpoints only use local rows. Reading a foreign-device session never starts a local harness or resolves its source path on this device. The dashboard shows the device and a read-only composer. Remote commands are a separate feature.
+Synced records include `device: { ownerId, id, name }`. They stay separate from local execution rows. The scheduler, startup recovery, workspace providers, and mutation endpoints only use local rows. Reading a foreign-device session never starts a local harness or resolves its source path on this device. The provider shows the owning device and uses the public execution state to distinguish online remote controls from offline read-only history. Online owners retain follow-up, stop, questions, approvals and supported queue operations through host relay services; live steering is unavailable on another device.
 
 A project-key document holds shared workspace/session pointers. Each pointer contains only the resource type, opaque ID, owner ID, device ID, and device name. Shared resource anchors receive that device information without private labels, paths, or conversation content. Other project members cannot open the personal record or decrypt its transcript.
 
@@ -297,7 +320,14 @@ The SDK opens the stream for the first subscription and closes it after the last
 
 Inactive streams use the same history loader as GET and send the readable snapshot and end. A waiting reader follows a replacement owner instead of publishing an obsolete initializer's result.
 
-The dashboard uses one transcript source at a time. Active sessions load the stream's initial snapshot and subsequent patches, without a competing conversation GET or an extra GET after a complete stream ends. Inactive sessions use the conversation GET. Recently loaded inactive history belongs to a cache scoped to the API client. Its version uses the synced session's update time, status, and request start/end times. Reopening an unchanged session reuses that history before the first paint. A changed version or explicit retry reads fresh history. The query-cache lifecycle retains history while a view uses it and removes it five minutes after its last view closes. Connection generations and message revisions reject obsolete reads and stream callbacks. A stream failure preserves displayed content but prevents partial history from entering the completed-history cache.
+The provider seeds native chat through scoped public conversation reads and follows
+`ctx.sessions.stream` for complete snapshots and patches. Run and queue clocks
+reject stale refresh results. Reconnect preserves displayed content; disposal
+closes subscriptions and retention claims without stopping execution. The native
+host keeps transient view state and independently guards draft hydration, action
+responses and unsent edits. The superseded dashboard history hook/cache no longer
+owns conversation presentation. The shared host transport remains responsible
+for multiplexing session subscriptions.
 
 Queued prompts are a separate overlay loaded through GET /v1/sessions/:id/queued-messages. Queue edits, removals, reorders, and claims publish the owning session row. While a session stream is live, it carries those queue changes itself. After the stream ends, a session row event refreshes the queue; a changed inactive history version refreshes its transcript too. A changed run-start timestamp reconnects the stream, even before the previous stream ends. An active stream waits if the run status arrives before its owner is published.
 
@@ -338,7 +368,7 @@ The dashboard uses TanStack DB collections with the SDK SSE sync client:
 
 ### Session status indicator
 
-`SessionIndicator` component renders:
+The provider tree and tab presentation map synchronized session status to icons:
 
 - `completed` → green CircleCheck
 - `failed` → red CircleAlert

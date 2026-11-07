@@ -1,21 +1,37 @@
 import { expect, type Page } from "@playwright/test";
+import {
+  isSessionChatAction,
+  sessionChatActionCommandId,
+  sessionChatActionRoute,
+} from "../helpers/session-chat-actions";
 
 export const expectPackagedQueuedSubmission = async (page: Page, sessionId: string) => {
   const editor = page.getByTestId("content-editable").filter({ visible: true }).last();
   const prompt = "Check the pending queue submission";
   const held = Promise.withResolvers<void>();
-  const path = `**/v1/sessions/${sessionId}/follow-up`;
+  const path = sessionChatActionRoute;
   await page.route(path, async (route) => {
+    if (!isSessionChatAction(route.request(), "submit")) return route.continue();
+    expect(route.request().postDataJSON().params.renderer.resource.id).toBe(sessionId);
     await held.promise;
     await route.fulfill({
-      status: 500,
-      contentType: "application/json",
-      body: JSON.stringify({ error: "Could not send" }),
+      json: {
+        commandId: sessionChatActionCommandId,
+        extensionId: "pstdio.pstdio-session-browser",
+        outcome: {
+          ok: false,
+          status: "error",
+          reason: "Could not send",
+          error: { message: "Could not send" },
+          notices: [],
+        },
+      },
     });
   });
   await editor.fill(prompt);
   const send = page.getByTestId("send-message-button").filter({ visible: true }).last();
   await expect(send).toBeEnabled();
+  await expect(send).toHaveAttribute("aria-label", "Queue message");
   await send.click();
   try {
     const row = page.locator("[data-queued-follow-up-id]").filter({ hasText: prompt, visible: true });

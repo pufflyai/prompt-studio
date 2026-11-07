@@ -1,5 +1,5 @@
 import type { KanbanRendererResourceRef } from "@pstdio/sdk/extensions";
-import { workbenchPanels } from "@pstdio/sdk/extensions";
+import { sessionBrowser } from "@pstdio/sdk/extensions";
 import type { AttributeDescriptor, KanbanRendererRow } from "@pstdio/ui/kanban-renderer";
 import {
   type MenuPath,
@@ -120,7 +120,7 @@ const decorateAttribute = (
       if (resource.type === "session") {
         void ctx.navigation.openTarget({
           kind: "panel",
-          panel: workbenchPanels.projectSession,
+          panel: sessionBrowser.panels.conversation,
           resource: resource,
         });
       }

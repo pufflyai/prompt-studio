@@ -132,7 +132,7 @@ test("preserves other Session tabs when selecting from New session", async ({ pa
   const newSession = menu.getByRole("menuitem", { name: "New session" });
   await expect(newSession).toBeVisible();
   await expect(menu.getByRole("menuitem").first()).toContainText("New session");
-  await expect(menu.getByRole("menuitem", { name: "Pin tab", exact: true })).toBeVisible();
+  await expect(menu.getByRole("menuitem", { name: "Unpin tab", exact: true })).toBeVisible();
   await expect(menu.getByRole("menuitem", { name: "Reset layout", exact: true })).toBeVisible();
   await expect(menu.getByRole("group", { name: "Sessions", exact: true })).toBeVisible();
   await expect(menu.getByRole("group", { name: "Tab", exact: true })).toBeVisible();

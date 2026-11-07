@@ -16,6 +16,7 @@ describe("resolveDefaultExtensionsConfig", () => {
     expect(config.defaultExtensions).toEqual([
       "pstdio-cloud",
       "pstdio-home",
+      "pstdio-session-browser",
       "pstdio-onboarding",
       "pstdio-workspaces",
       "pstdio-base-themes",

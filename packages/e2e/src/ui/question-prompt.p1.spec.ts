@@ -1,8 +1,16 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Request, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin as apiBase } from "../ui-server";
 
 const questionPrompt = "Question follow-up test __fake_question_prompt__";
+const actionCommand = "pstdio.pstdio-session-browser.view.conversation.chat.onAction";
+const actionRoute = `**/extensions/commands/${actionCommand}/execute`;
+const isQuestionReply = (request: Request, sessionId: string) => {
+  if (request.method() !== "POST" || !request.url().endsWith(`/extensions/commands/${actionCommand}/execute`))
+    return false;
+  const { renderer, action } = request.postDataJSON().params;
+  return renderer.resource.id === sessionId && action.type === "submit" && Boolean(action.questionResponse);
+};
 
 test("answers a hydrated question tool call from the session composer", async ({ page, request }) => {
   const project = process.env.E2E_COMMAND_PROJECT_ID
@@ -57,16 +65,13 @@ test("answers a hydrated question tool call from the session composer", async ({
   await page.getByRole("form", { name: "Question form" }).getByText("TypeScript", { exact: true }).click();
   await expect(sendButton).toBeEnabled();
 
-  const followUpRequestPromise = page.waitForRequest(
-    (followUpRequest) =>
-      followUpRequest.method() === "POST" && followUpRequest.url().endsWith(`/v1/sessions/${session.id}/follow-up`),
-  );
+  const followUpRequestPromise = page.waitForRequest((request) => isQuestionReply(request, session.id));
   await sendButton.click();
 
   const followUpRequest = await followUpRequestPromise;
-  expect(followUpRequest.postDataJSON()).toMatchObject({
-    prompt: "Which language do you want to use?: TypeScript",
-    question_response: { answers: [["TypeScript"]] },
+  expect(followUpRequest.postDataJSON().params.action).toMatchObject({
+    text: "Which language do you want to use?: TypeScript",
+    questionResponse: { answers: [["TypeScript"]] },
   });
   await expect(page.getByText('Fake Agent: follow-up "Which language do you want to use?: TypeScript"')).toBeVisible();
 });
@@ -104,10 +109,9 @@ test("async question replies preserve the draft and files until every request is
   await editor.fill("Keep my draft /go");
   await page.getByRole("listbox", { name: "Harness commands" }).getByRole("option", { name: "/goal" }).click();
   await expect(page.getByRole("button", { name: "Remove Goal", exact: true })).toBeVisible();
-  await page
-    .locator('input[type="file"]')
-    .last()
-    .setInputFiles({ name: "draft.txt", mimeType: "text/plain", buffer: Buffer.from("Saved context") });
+  const chooser = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Attach files", exact: true }).click();
+  await (await chooser).setFiles({ name: "draft.txt", mimeType: "text/plain", buffer: Buffer.from("Saved context") });
   await expect(page.getByText("draft.txt", { exact: true }).filter({ visible: true })).toBeVisible();
   await editor.focus();
   await editor.press("Home");
@@ -138,27 +142,26 @@ test("async question replies preserve the draft and files until every request is
     })
     .toBe(true);
   await expect(first).toBeChecked();
-  const failReply = async (route: import("@playwright/test").Route) =>
-    route.fulfill({
+  const failReply = async (route: import("@playwright/test").Route) => {
+    if (!isQuestionReply(route.request(), session.id)) return route.continue();
+    return route.fulfill({
       status: 503,
       contentType: "application/json",
       body: JSON.stringify({ error: "Provider unavailable" }),
     });
-  await page.route(`**/sessions/${session.id}/follow-up`, failReply);
+  };
+  await page.route(actionRoute, failReply);
   await page.getByTestId("send-message-button").filter({ visible: true }).click();
-  await expect(page.getByText("Message not sent", { exact: true }).filter({ visible: true })).toBeVisible();
+  await expect(page.getByRole("alert").filter({ visible: true })).toHaveText("Provider unavailable");
   await expect(first).toBeChecked();
   await expect(page.getByTestId("send-message-button").filter({ visible: true })).toBeEnabled();
-  await page.getByRole("button", { name: "Dismiss", exact: true }).click();
-  await page.unroute(`**/sessions/${session.id}/follow-up`, failReply);
-  const reply = page.waitForRequest(
-    (r) => r.method() === "POST" && r.url().endsWith(`/sessions/${session.id}/follow-up`),
-  );
+  await page.unroute(actionRoute, failReply);
+  const reply = page.waitForRequest((request) => isQuestionReply(request, session.id));
   await page.getByTestId("send-message-button").filter({ visible: true }).click();
-  expect((await reply).postDataJSON()).toMatchObject({
-    question_response: { callId: "first-question", answers: [["TypeScript"]] },
+  expect((await reply).postDataJSON().params.action).toMatchObject({
+    questionResponse: { callId: "first-question", answers: [["TypeScript"]] },
   });
-  expect((await reply).postDataJSON().attachments ?? []).toEqual([]);
+  expect((await reply).postDataJSON().params.action.attachments).toEqual([]);
   await expect(page.getByRole("button", { name: "Which language? → TypeScript", exact: true })).toBeDisabled();
   await expect(editor).toHaveText("Keep my draft");
   const secondBubble = page.getByRole("button", { name: "Which validation? → Browser. Open question", exact: true });

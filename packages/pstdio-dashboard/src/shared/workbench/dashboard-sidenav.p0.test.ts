@@ -53,13 +53,37 @@ describe("registerDashboardSidenav", () => {
       ]);
     }
   });
-  test("defaults the Sessions group to expanded", () => {
+  test("applies provider node defaults once using their scoped navigation IDs", () => {
     const workbench = createWorkbench();
+    workbench.modes.registerMode({ id: "project", activate: () => undefined });
+    const page = registerModePage(workbench, "project", "workspace");
     registerDashboardSidenav(workbench);
-    expect(workbench.treeViews.getTreeState(dashboardWidgetIds.dashboardSidenav)).toMatchObject({
-      expandedNodeIds: ["workspace-sessions"],
-      expandedSectionIds: ["sessions-wrap"],
+    workbench.pageLocations.setProject("project-1");
+    workbench.pageLocations.navigate({ kind: "page", page });
+    workbench.views.registerView({
+      id: "provider.sessions",
+      title: "Sessions",
+      body: {
+        kind: "tree",
+        defaultExpandedNodeIds: ["sessions"],
+        getBody: () => [{ id: "group", nodes: [{ id: "sessions", label: "Sessions", collapsible: true }] }],
+        getChildren: () => [],
+      },
     });
+    workbench.navigationTrees.registerContribution({
+      id: "provider.tree",
+      idScope: "provider.tree",
+      owner: { kind: "page", id: "test.page.workspace", extensionId: "test" },
+      sourceExtensionId: "provider",
+      declarationIndex: 0,
+      viewId: "provider.sessions",
+    });
+    expect(workbench.treeViews.getTreeState(dashboardWidgetIds.dashboardSidenav).expandedNodeIds).toEqual([
+      "provider.tree:sessions",
+    ]);
+    workbench.treeViews.setNodeExpanded(dashboardWidgetIds.dashboardSidenav, "provider.tree:sessions", false);
+    workbench.views.refreshView("provider.sessions");
+    expect(workbench.treeViews.getTreeState(dashboardWidgetIds.dashboardSidenav).expandedNodeIds).toEqual([]);
   });
   test("applies section defaults from contributions registered after the sidenav", () => {
     const workbench = createWorkbench();
@@ -77,7 +101,6 @@ describe("registerDashboardSidenav", () => {
       getSections: () => [],
     });
     expect(workbench.treeViews.getTreeState(dashboardWidgetIds.dashboardSidenav).expandedSectionIds).toEqual([
-      "sessions-wrap",
       "files",
       "sessions",
     ]);
