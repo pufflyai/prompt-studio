@@ -52,6 +52,7 @@ export const createExtensionStorageDBService = (
       upgradeNativeSourceLifetimes(db, options),
     installIndexes: (owners: Parameters<typeof installRecordIndexes>[1], validate: () => void = () => {}) =>
       installRecordIndexes(db, owners, validate),
+    convertLegacyOwners: documents.convertLegacyOwners,
     recovery: createRecoveryPoints(db, documents, options),
     watch: documents.watch,
     flushStatistics: documents.flushStatistics,

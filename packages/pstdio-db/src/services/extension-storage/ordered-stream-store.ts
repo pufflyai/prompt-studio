@@ -13,7 +13,6 @@ import { applyOrderedNativeAdmission } from "./ordered-native-apply";
 import { applyOrderedNumberPolicy } from "./ordered-number-admission";
 import { combineNumberEvents } from "./ordered-number-projection";
 import { applyBoundedOrderedOperation } from "./ordered-policy";
-import { initializeOrderedOwner } from "./ordered-projection";
 import { admissionDecisions, rebaseOrderedProjection } from "./ordered-rebase";
 import { adoptOrderedCheckpoint } from "./ordered-receipts-adoption";
 import { createOrderedManifestCache } from "./ordered-receipts-blobs";
@@ -46,8 +45,7 @@ export const createOrderedStreamStore = (
     return index;
   };
   const run = <T>(action: (journal: OrderedJournal, tx: OrderedTransaction) => Promise<T>) =>
-    withOrderedOwner(db, owner, async (journal, tx, created) => {
-      await initializeOrderedOwner(journal, tx, owner, created);
+    withOrderedOwner(db, owner, async (journal, tx) => {
       return cache ? cache.transaction(tx, () => action(journal, tx)) : action(journal, tx);
     });
   const notify = (events: NumberChange[] = []) => {
