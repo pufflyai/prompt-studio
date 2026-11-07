@@ -1,13 +1,13 @@
 import { execFileSync, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readFileSync } from "node:fs";
+import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, rmSync } from "node:fs";
 import { arch, cpus, freemem, platform, release, totalmem } from "node:os";
 import { join, resolve } from "node:path";
 import { contract, type Profile, runBenchmarkCase, type Workload } from "storage-scale-fixture";
 import { PACKAGED_BINARY_PATH } from "../packaged/packaged-helpers";
 import { configuredContainer } from "./storage-scale-container";
 import { sampleScaleRuntime } from "./storage-scale-samples";
-import { readScaleSyncService, scaleSyncServicePath } from "./storage-scale-sync-service";
+import { readScaleSyncServiceState, scaleSyncServicePath } from "./storage-scale-sync-service";
 import { enterMeasurementWindow } from "./storage-scale-window";
 
 const option = (flag: string, fallback?: string) => {
@@ -132,9 +132,20 @@ const runPreparation = async (
   }
 };
 
+const running = (pid: number) => {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 // The sync service outlives this command, so it runs detached, not under a case supervisor.
+// It records its process before preparing, so an interrupted preparation can still be stopped.
 const prepareSyncService = async (root: string, home: string, emit: (data: object) => void) => {
-  if (existsSync(scaleSyncServicePath(home))) throw new Error("A sync service is already prepared for this home");
+  const path = scaleSyncServicePath(home);
+  if (existsSync(path)) throw new Error("A sync service is recorded for this home; stop it with --stop-sync first");
   const stdout = openSync(join(root, "sync-service.jsonl"), "a");
   const stderr = openSync(join(root, "sync-service.stderr.log"), "a");
   const started = performance.now();
@@ -146,13 +157,21 @@ const prepareSyncService = async (root: string, home: string, emit: (data: objec
   closeSync(stdout);
   closeSync(stderr);
   let exited: number | null | undefined;
-  child.once("exit", (code) => {
-    exited = code;
+  child.once("exit", (code, signal) => {
+    exited = code ?? (signal ? -1 : null);
   });
+  const interrupt = () => child.kill("SIGTERM");
+  process.once("SIGINT", interrupt);
+  process.once("SIGTERM", interrupt);
   emit({ phase: "sync-preparation-start", pid: child.pid, acceptedTiming: false });
-  while (!existsSync(scaleSyncServicePath(home))) {
-    if (exited !== undefined) throw new Error(`Sync service exited with ${exited}; see sync-service.stderr.log`);
-    await Bun.sleep(250);
+  try {
+    while (!existsSync(path) || readScaleSyncServiceState(home) !== "ready") {
+      if (exited !== undefined) throw new Error(`Sync service exited with ${exited}; see sync-service.stderr.log`);
+      await Bun.sleep(250);
+    }
+  } finally {
+    process.off("SIGINT", interrupt);
+    process.off("SIGTERM", interrupt);
   }
   child.unref();
   emit({
@@ -163,11 +182,15 @@ const prepareSyncService = async (root: string, home: string, emit: (data: objec
   });
 };
 
+// A stopped service has stopped its devices and removed the second device's home.
 const stopSyncService = async (home: string, emit: (data: object) => void) => {
-  const service = readScaleSyncService(home);
-  process.kill(service.pid, "SIGTERM");
-  while (existsSync(scaleSyncServicePath(home))) await Bun.sleep(100);
-  emit({ phase: "sync-service-stopped", pid: service.pid });
+  const path = scaleSyncServicePath(home);
+  if (!existsSync(path)) throw new Error("No sync service is recorded for this home");
+  const { pid } = JSON.parse(readFileSync(path, "utf8")) as { pid: number };
+  if (running(pid)) process.kill(pid, "SIGTERM");
+  while (running(pid)) await Bun.sleep(100);
+  rmSync(path, { force: true });
+  emit({ phase: "sync-service-stopped", pid });
 };
 
 export const runScaleDiagnostic = async () => {
@@ -228,10 +251,10 @@ unsupported controls and missing phase evidence remain explicit coverage failure
     }
     const home = option("--home");
     if (!home && !process.argv.includes("--emit-fixture")) throw new Error("Pass a disposable --home");
-    if (home && process.argv.includes("--prepare-sync")) return await prepareSyncService(root, resolve(home), emit);
-    if (home && process.argv.includes("--stop-sync")) return await stopSyncService(resolve(home), emit);
     const containerConfig = option("--container-config");
     if (containerConfig) process.env.PSTDIO_SCALE_CONTAINER_CONFIG = resolve(containerConfig);
+    if (home && process.argv.includes("--prepare-sync")) return await prepareSyncService(root, resolve(home), emit);
+    if (home && process.argv.includes("--stop-sync")) return await stopSyncService(resolve(home), emit);
     const preparation = ["--emit-fixture", "--seed", "--refresh-source", "--verify-fixture"].find((flag) =>
       process.argv.includes(flag),
     );

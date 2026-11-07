@@ -14,8 +14,10 @@ const withHome = (run: (home: string) => void) => {
   }
 };
 
-const descriptor = (pid: number) => ({
+const descriptor = (pid: number, state = "ready") => ({
+  state,
   pid,
+  binarySha256: "other-build",
   control: "http://127.0.0.1:1",
   environment: {},
   remote: { baseUrl: "http://127.0.0.1:2", descriptor: {} },
@@ -23,13 +25,13 @@ const descriptor = (pid: number) => ({
   preparedMs: 1,
 });
 
-test("sync cases attach only to a prepared, running sync service", () => {
+test("sync cases refuse a missing, stopped or unprepared sync service", () => {
   withHome((home) => {
     expect(() => readScaleSyncService(home)).toThrow("--prepare-sync");
     const exited = Bun.spawnSync([process.execPath, "--eval", ""]).pid;
     writeFileSync(scaleSyncServicePath(home), JSON.stringify(descriptor(exited)));
     expect(() => readScaleSyncService(home)).toThrow("no longer running");
-    writeFileSync(scaleSyncServicePath(home), JSON.stringify(descriptor(process.pid)));
-    expect(readScaleSyncService(home)).toMatchObject({ pid: process.pid, preparedMs: 1 });
+    writeFileSync(scaleSyncServicePath(home), JSON.stringify(descriptor(process.pid, "preparing")));
+    expect(() => readScaleSyncService(home)).toThrow("still preparing");
   });
 });

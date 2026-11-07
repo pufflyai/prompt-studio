@@ -29,12 +29,15 @@ export const prepareScaleSyncDevices = async (
   environment: Record<string, string>,
   origins: { primary: string; remote: string },
   emit: (row: object) => void,
+  started: (runtime: ScaleRuntime) => void = () => {},
 ) => {
   const primary = await startScaleRuntime(home, environment);
+  started(primary);
   try {
     mkdirSync(join(remoteHome, "project"), { recursive: true });
     // The producer models another device. It is deliberately outside the receiver's CPU cgroup.
     const remote = await startNativeScaleRuntime(remoteHome, environment);
+    started(remote);
     try {
       const started = performance.now();
       const step = (name: string) =>

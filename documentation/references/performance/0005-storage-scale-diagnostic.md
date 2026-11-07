@@ -299,8 +299,11 @@ returns once the fixture is uploaded, the second device has installed every owne
 and downloaded the whole fixture. The service keeps running between shards, so each
 `--sync` case attaches to two devices that are already synced; initial upload,
 download and extension installation stay outside the 60-second case cap.
-`--stop-sync` stops it and removes the second device. Run idle shards before
-preparing sync, because a signed-in home keeps syncing afterwards.
+`--stop-sync` stops it, waits for its devices to stop and removes the second device;
+it also clears a service that crashed or was interrupted while preparing. Sync cases
+refuse a service that is still preparing, has stopped, or runs another runtime build.
+Run idle shards before preparing sync: the home stays signed in to the service's relay,
+also after it stops, so idle measurement afterwards needs a fresh seed.
 
 ```sh
 bun packages/e2e/src/perf/storage-scale.diagnostic.ts --fixture small --output /path/evidence/sync-service --home /path/native-small --prepare-sync --timing-owner /path/owner.json

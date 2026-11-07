@@ -33,6 +33,7 @@ export const attachScaleSyncFixture = (home: string, fixture: ScaleFixture, emit
     let completed = 0;
     let failed = 0;
     const initialReads = await peer.reads();
+    const initialStates = await peer.states();
     for (let index = 0; index < count; index++) {
       if (index > 0) await Bun.sleep(Math.max(0, offeredAt + index * contract.incoming.intervalMs - performance.now()));
       const nonce = randomUUID();
@@ -110,7 +111,7 @@ export const attachScaleSyncFixture = (home: string, fixture: ScaleFixture, emit
       intervalMs: contract.incoming.intervalMs,
       depths,
       drainedAtMs,
-      peerStates: await peer.states(),
+      peerStates: { before: initialStates, after: await peer.states() },
       relayReads: (await peer.reads()) - initialReads,
       controllerMemoryAfter: process.memoryUsage(),
       runtimeMemoryAfter: null,
@@ -121,5 +122,6 @@ export const attachScaleSyncFixture = (home: string, fixture: ScaleFixture, emit
       queueMetric: "driver requests; runtime queues remain uninstrumented",
     };
   };
-  return { environment, begin, remote, preparedMs: service.preparedMs };
+  emit({ phase: "sync-service", pid: service.pid, preparedMs: service.preparedMs, binarySha256: service.binarySha256 });
+  return { environment, begin };
 };
