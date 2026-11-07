@@ -11,6 +11,17 @@ interface PiEntry {
   display?: boolean;
 }
 
+export const piEntryMessage = (entry: PiEntry) => {
+  if (entry.type === "message") return entry.message;
+  if (entry.type === "custom_message")
+    return {
+      role: "custom",
+      content: entry.content,
+      timestamp: Date.parse(entry.timestamp ?? ""),
+      display: entry.display,
+    } satisfies PiMessage;
+};
+
 // Pi's RPC get_messages is model context, which drops old turns after compaction.
 // Its append-only session tree retains the full conversation on the active branch.
 export const readPiHistory = async (path: string) => {
@@ -36,14 +47,8 @@ export const readPiHistory = async (path: string) => {
   while (leaf) {
     const entry = entries.get(leaf);
     if (!entry) throw new Error("Pi session history has a missing parent entry.");
-    if (entry.type === "message" && entry.message) branch.push(entry.message);
-    if (entry.type === "custom_message")
-      branch.push({
-        role: "custom",
-        content: entry.content,
-        timestamp: Date.parse(entry.timestamp ?? ""),
-        display: entry.display,
-      });
+    const message = piEntryMessage(entry);
+    if (message) branch.push(message);
     leaf = entry.parentId ?? undefined;
   }
   return normalizePiMessages(branch.reverse());

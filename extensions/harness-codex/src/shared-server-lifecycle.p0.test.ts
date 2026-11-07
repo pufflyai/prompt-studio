@@ -67,6 +67,22 @@ test("retiring a history reader cancels only its scope", async () => {
   await other.stop();
   expect(await other.done).toEqual({ status: "cancelled" });
 });
+
+test("scope retirement releases a fork acknowledged after the caller is cancelled", async () => {
+  const { runtime, holdNext, calls } = setup();
+  const other = await runtime.run(input("b", "q"));
+  const held = holdNext("thread/fork");
+  const fork = runtime.fork({ agentSessionId: "original", env: { PSTDIO_PROJECT_ID: "p" } }).catch((error) => error);
+  await held.requested;
+  await runtime.disposeScope("p");
+  expect(await fork).toBeInstanceOf(Error);
+  held.reply();
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  expect(calls.some((call) => call.method === "thread/unsubscribe" && call.params.threadId === "forked-thread")).toBe(
+    true,
+  );
+  await other.stop();
+});
 test.each([
   "thread/goal/set",
   "thread/compact/start",
