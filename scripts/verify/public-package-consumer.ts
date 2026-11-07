@@ -112,7 +112,9 @@ const checkConsumer = (
   run(directory, [
     "--eval",
     `
-import { EXTENSION_API_VERSION } from "@pstdio/sdk/extensions";
+import { applySessionMessagePatch, EXTENSION_API_VERSION } from "@pstdio/sdk/extensions";
+const patched = applySessionMessagePatch([], { op: "add", path: "/messages/0", value: { id: "public", role: "assistant", parts: [{ type: "text", text: "SDK-only patch" }] } });
+if (patched[0]?.id !== "public") throw new Error("Packed SDK message patch helper is unavailable");
 const path = new URL("../../package.json", import.meta.resolve("@pstdio/sdk/extensions"));
 const manifest = await Bun.file(path).json();
 if (manifest.pstdio?.extensionApiVersion !== EXTENSION_API_VERSION)

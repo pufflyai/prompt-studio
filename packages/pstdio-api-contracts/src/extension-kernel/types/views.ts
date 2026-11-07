@@ -1,4 +1,5 @@
 import type { Localizable } from "../l10n";
+import type { ChatRendererContribution } from "./chat-renderer";
 import type { ExtensionPanelRegion } from "./composition";
 import type { RendererCallback } from "./context";
 import type { ContributionDefinition, ModeRef, PageRef, ResourceKindRef, ViewRef } from "./contribution-identity";
@@ -26,8 +27,10 @@ export type ControlsViewBody = NativeViewBody<"controls", ControlsRendererContri
 export type KanbanViewBody = NativeViewBody<"kanban", KanbanRendererContribution>;
 export type ResourceListViewBody = NativeViewBody<"resourceList", ResourceListRendererContribution>;
 export type DataTableViewBody = NativeViewBody<"dataTable", DataTableRendererContribution>;
+export type ChatViewBody = NativeViewBody<"chat", ChatRendererContribution>;
 
 export type ViewBody =
+  | ChatViewBody
   | WebviewViewBody
   | TreeViewBody
   | FileViewBody
@@ -57,6 +60,8 @@ export interface NavigationItemContribution extends ContributionDefinition<"navi
 
 export interface NavigationTreeContribution extends ContributionDefinition<"navigation-tree"> {
   readonly owner: NavigationOwnerRef;
+  /** Stay inactive while a foreign owner extension is absent; local or present-owner typos still fail. */
+  readonly optionalOwner?: boolean;
   readonly slot?: NavigationTreeSlot;
   readonly view: ViewRef;
   /** Project-scoped trees read without a selected resource. Defaults to selection. */

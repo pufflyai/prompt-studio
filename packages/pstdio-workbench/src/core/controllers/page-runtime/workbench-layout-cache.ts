@@ -19,6 +19,7 @@ import { createPageHeaderCache } from "./page-header-layout";
 import { assemblePageLayout } from "./page-layout-assembly";
 import { isDefaultPageMain } from "./page-layout-baseline";
 import { createPageMainScopes, mainScope } from "./page-main-scope";
+import { retainUnavailableModePlacements } from "./unavailable-mode-placements";
 
 const selectPlacements = (
   layout: WorkbenchLayout,
@@ -43,6 +44,13 @@ const modeScope = (projectId: string | undefined, modeId: string) =>
 const isModePlacement = (placement: WorkbenchWidgetPlacement, region: (typeof workbenchRegions)[number]) =>
   region !== "main" &&
   (placement.placementIdentity?.kind === "mode" || Boolean(getWorkbenchModePanelForRegion(region)));
+
+const modeSnapshot = (layout: WorkbenchLayout, modeId: string) =>
+  selectPlacements(
+    layout,
+    (p, region) =>
+      isModePlacement(p, region) && (p.placementIdentity?.kind !== "mode" || p.placementIdentity.modeId === modeId),
+  );
 
 const legacyMainOwner = (input: {
   layout: WorkbenchLayout;
@@ -89,6 +97,7 @@ export const createWorkbenchLayoutCache = (
   getTab: (contributionId: string) => WorkbenchWidgetPlacement["tab"] = () => undefined,
   getPages: () => readonly WorkbenchPageContribution[] = () => [],
   migratePanelView?: MigratePagePanelView,
+  registeredModePlacements?: (modeId: string) => ReadonlySet<string>,
 ) => {
   const { pageMainOwner, pageMainScope } = createPageMainScopes(getPages);
   const memory = new Map<string | undefined, WorkbenchLayout>();
@@ -288,15 +297,23 @@ export const createWorkbenchLayoutCache = (
       },
     },
     readMode: (projectId: string | undefined, modeId: string) => read(modeScope(projectId, modeId)),
-    saveMode: (projectId: string | undefined, modeId: string, layout: WorkbenchLayout) =>
-      write(
-        selectPlacements(
-          layout,
-          (p, region) =>
-            isModePlacement(p, region) &&
-            (p.placementIdentity?.kind !== "mode" || p.placementIdentity.modeId === modeId),
-        ),
-        modeScope(projectId, modeId),
-      ),
+    clearMode: (projectId: string | undefined, modeId: string, fallback: WorkbenchLayout) =>
+      clear(modeScope(projectId, modeId), fallback),
+    saveMode(projectId: string | undefined, modeId: string, layout: WorkbenchLayout, activatedWidgetId?: string) {
+      const scope = modeScope(projectId, modeId);
+      const current = modeSnapshot(layout, modeId);
+      return write(
+        registeredModePlacements
+          ? retainUnavailableModePlacements(
+              current,
+              read(scope),
+              modeId,
+              registeredModePlacements(modeId),
+              activatedWidgetId,
+            )
+          : current,
+        scope,
+      );
+    },
   };
 };

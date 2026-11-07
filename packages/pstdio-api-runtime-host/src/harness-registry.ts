@@ -55,6 +55,8 @@ export type HarnessHandle = {
   id: string;
   localId: string;
   extensionId: string;
+  /** Entry file of the exact registered extension source. */
+  sourcePath?: string;
   label: Localizable<string>;
   /** Normalized skill directories when the provider declares them. */
   skills: { dir: string; globalDir: string } | null;
@@ -169,6 +171,7 @@ const toHandle = (
     id: record.id,
     localId: record.localId,
     extensionId: record.extensionId,
+    sourcePath: record.sourcePath,
     label: provider.label,
     skills: normalizeSkills(provider.skills),
     params,

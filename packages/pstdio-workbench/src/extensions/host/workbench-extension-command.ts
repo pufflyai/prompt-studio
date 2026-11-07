@@ -1,5 +1,5 @@
 import type { CommandExecuteRequest, CommandExecutionResult, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import type { PlacementIdentity } from "@pstdio/sdk/extensions";
+import type { NavigationTarget, PlacementIdentity } from "@pstdio/sdk/extensions";
 import type {
   ResourceRef,
   WorkbenchCommandExecutionContext,
@@ -7,6 +7,7 @@ import type {
   WorkbenchPanelRegion,
 } from "../../core";
 import { resolveCommandResourceParams } from "../../core/registries/commands/command-resource-params";
+import { isPageContent } from "../../core/registries/pages/page-main";
 import { unwrapCommandValue } from "./command-response";
 import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
 import { runResourceMutation } from "./workbench-resource-mutation";
@@ -23,6 +24,7 @@ export interface WorkbenchExtensionCommandContext {
   workbench: WorkbenchModuleContext;
 }
 export interface ExecuteWorkbenchExtensionCommandInput {
+  onViewerReplace?(resource: ResourceRef): void;
   removalVersion?: number;
   isViewerCurrent?(): boolean;
   placement?: PlacementIdentity;
@@ -44,9 +46,22 @@ export const createExtensionSlot = (input: {
   kind: input.kind,
   context: { projectId: input.projectId, ...(input.context ?? {}) },
 });
+// Command callbacks do not receive private placement identity. A returned viewer
+// page is a destination hint for captured Main; panels keep their binding. Core
+// from/current-viewer checks still apply after this presentation-only adaptation.
+const commandViewerTarget = (
+  target: NavigationTarget,
+  viewer: PlacementIdentity | undefined,
+  pages: WorkbenchModuleContext["pages"],
+) => {
+  if (target.kind !== "viewer" || !target.page || !viewer) return target;
+  if (viewer.kind === "page" && isPageContent(pages.getPage(viewer.pageId), viewer)) return target;
+  const { page: _mainPage, ...panelTarget } = target;
+  return panelTarget;
+};
 export const executeWorkbenchExtensionCommandResponse = async (
   context: Pick<WorkbenchExtensionCommandContext, "executeCommand" | "projectId"> & {
-    workbench: Pick<WorkbenchModuleContext, "navigation" | "notifications" | "resources" | "viewers">;
+    workbench: Pick<WorkbenchModuleContext, "navigation" | "notifications" | "resources" | "viewers" | "pages">;
   },
   commandId: string,
   input: ExecuteWorkbenchExtensionCommandInput = {},
@@ -55,6 +70,7 @@ export const executeWorkbenchExtensionCommandResponse = async (
   const captured = context.workbench.viewers.captureContext(input.placement);
   const invocation = {
     ...captured,
+    onViewerReplace: input.onViewerReplace,
     removalVersion: input.removalVersion ?? captured.removalVersion,
     isViewerCurrent: input.isViewerCurrent ?? captured.isViewerCurrent,
   };
@@ -77,10 +93,14 @@ export const executeWorkbenchExtensionCommandResponse = async (
     for (const target of outcome.navigationRequests ?? []) {
       if (input.signal?.aborted) break;
       try {
-        await context.workbench.navigation.openTarget(toWorkbenchNavigationTarget(target, { region: input.region }), {
-          ...invocation,
-          projectId: context.projectId,
-        });
+        const navigationTarget = commandViewerTarget(target, captured.viewer, context.workbench.pages);
+        await context.workbench.navigation.openTarget(
+          toWorkbenchNavigationTarget(navigationTarget, { region: input.region }),
+          {
+            ...invocation,
+            projectId: context.projectId,
+          },
+        );
       } catch (error) {
         reportNavigationError(error);
       }

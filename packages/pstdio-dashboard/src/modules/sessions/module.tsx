@@ -123,7 +123,7 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
       ctx.resources.registerKind({
         kind: "session",
         label: "Session",
-        icon: "MessageCircle",
+        icon: "message-circle",
         resolve: (resource) => findDashboardSession(resource.id)?.resource,
         subscribe: subscribeSessionListData,
       });

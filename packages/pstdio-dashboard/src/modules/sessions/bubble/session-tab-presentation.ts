@@ -64,7 +64,7 @@ export const createSessionTabPresentation = (ctx: WorkbenchModuleContext): Workb
             {
               id: "new-session",
               label: "New session",
-              icon: "MessageSquarePlus",
+              icon: "message-circle",
               action: {
                 kind: "command",
                 commandId: dashboardCommandIds.createSession,

@@ -6,6 +6,7 @@ export interface CommandPaletteResourceQueryContext {
   query: string;
   limit: number;
   signal?: AbortSignal;
+  resourceType?: string;
 }
 
 // A single dynamic palette result. `activate` is supplied by whoever registers the
@@ -17,6 +18,7 @@ export interface CommandPaletteResourceResult {
   label: string;
   description?: string;
   icon?: string;
+  indicator?: { icon: string; color?: string; label?: string };
   keywords?: string[];
   group?: string;
   activate(): void | Promise<void>;
@@ -25,6 +27,7 @@ export interface CommandPaletteResourceResult {
 export interface CommandPaletteResourceProvider {
   id: string;
   title: string;
+  resourceKind?: string;
   refreshEventIds?: string[];
   query(context: CommandPaletteResourceQueryContext): Promise<readonly CommandPaletteResourceResult[]>;
 }
@@ -92,7 +95,9 @@ export const createCommandPaletteResourceRegistry = (): CommandPaletteResourceRe
     },
 
     async queryProviders(context) {
-      const providers = Object.values(store.getState().providers);
+      const providers = Object.values(store.getState().providers).filter(
+        (provider) => !context.resourceType || provider.resourceKind === context.resourceType,
+      );
       return Promise.all(
         providers.map(async (provider) => {
           try {

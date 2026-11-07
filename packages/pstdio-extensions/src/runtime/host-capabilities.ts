@@ -18,6 +18,7 @@ export const dashboardExtensionHostCapabilities = {
     "view.file.v1": { version: 1, since: "0.26.0" },
     "view.controls.v1": { version: 1, since: "0.26.0" },
     "view.resourceList.v1": { version: 1, since: "0.46.0" },
+    "view.chat.v1": { version: 1, since: "0.47.0" },
     "view.kanban.v1": { version: 1, since: "0.26.0" },
     "view.data-table.v1": { version: 1, since: "0.26.0" },
     "placement.v1": { version: 1, since: "0.26.0" },

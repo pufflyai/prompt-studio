@@ -48,6 +48,7 @@ export default {
       capabilities:{files:"none",diff:false,merge:false,rebase:false,archive:false,delete:false}}),
   }],
   views:[...["dataTable","kanban","resourceList"].map(kind=>({id:kind.toLowerCase(),ref:{kind:"view",id:kind.toLowerCase()},title:kind,body:{kind,...(kind==="dataTable"?{columns:[{id:"approved",type:"boolean"}]}:{schemaRefreshEvents:[],...(kind==="kanban"?{onMove:(_ctx,input)=>input}:{}),attributes:[{id:"approved",label:"Approved",type:{kind:"boolean"},filterable:true}]}),query:()=>({rows:[kind==="dataTable"?{id:"one",values:{approved:false}}:{id:"one",title:"One",attributes:{approved:false}}]}),toolbarActions:[{id:"run",label:"Run",command:run,presentation:"primary",input}]}})),
+    {id:"conversation",ref:{kind:"view",id:"conversation"},title:"Native conversation",body:{kind:"chat",draftKey:"compose",initial:{messages:[],values:{}},query:(ctx)=>({messages:[],notice:ctx.projectId}),onAction:(_ctx,input)=>({draft:{text:input.action.text,attachments:input.action.attachments,values:input.action.values}})}},
     {id:"agent",ref:{kind:"view",id:"agent"},title:"Research agent",body:{kind:"controls",query:()=>({params:[{id:"agent",name:"Model",type:"harness",defaultValue:{harnessId:"test.native-actions.harness.worker",model:"research",params:{effort:"high"}}}]}),onApply:(_ctx,input)=>input.values}}
   ],
 };
@@ -131,6 +132,26 @@ export const expectPackagedNativeActions = async (input: {
       input: { value: { options: { command: { id: "choices", extensionId: "test.native-actions" } } } },
     });
   }
+  const chat = body.views.find(
+    (view: { localId: string; extensionId: string }) =>
+      view.localId === "conversation" && view.extensionId === "test.native-actions",
+  );
+  expect(chat?.body).toMatchObject({ kind: "chat", draftKey: "compose", initial: { messages: [], values: {} } });
+  const chatAction = await fetch(`${root}/commands/${chat.body.actionHandlerId}/execute`, {
+    method: "POST",
+    headers: { ...input.headers, "content-type": "application/json" },
+    body: JSON.stringify({
+      params: {
+        draftKey: "compose",
+        renderer: { rendererId: chat.id, projectId: input.projectId },
+        action: { type: "submit", text: "Unsent work", attachments: [], values: {} },
+      },
+    }),
+  });
+  expect(chatAction.status).toBe(200);
+  expect((await chatAction.json()).outcome.value).toEqual({
+    draft: { text: "Unsent work", attachments: [], values: {} },
+  });
   const execute = (command: string, params: unknown) =>
     fetch(`${root}/commands/test.native-actions.command.${command}/execute`, {
       method: "POST",

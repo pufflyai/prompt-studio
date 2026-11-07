@@ -21,10 +21,22 @@ export type ExtensionSessionStreamEvent =
   | { event: "end"; data: { status: string } };
 
 export interface ExtensionSessionControlsApi {
+  /** Local sessions remain usable when signed out. Remote control requires the owning account device online. */
+  getExecutionState(
+    sessionId: string,
+  ): Promise<{ kind: "local" | "remote"; available: boolean; device?: { id: string; name: string } }>;
   getConversation(sessionId: string): Promise<{
     session: SessionDetails;
     messages: SessionQueuedMessagesResponse["messages"];
   }>;
+  /** Fork a local conversation or completed earlier reply through the native harness without starting execution. */
+  fork(sessionId: string, messageId?: string): Promise<ExtensionSession>;
+  /** Whole-conversation copies require idle work. Reply controls may remain available during later work;
+   * fork() still validates the selected reply and rejects the current in-flight reply. */
+  getForkState(
+    sessionId: string,
+    input?: { scope: "conversation" | "reply" },
+  ): Promise<{ supported: boolean; disabledReason: string | null }>;
   getConversationSources(sessionId: string): Promise<SessionConversationSources>;
   getQueuedMessages(sessionId: string): Promise<SessionQueuedMessagesResponse>;
   /** Streams a snapshot, live patches, approvals, and queue changes until the run ends or the signal aborts. */

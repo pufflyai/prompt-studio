@@ -60,6 +60,14 @@ test.each([
   if (!result.success) expect(result.error.issues[0]?.path.slice(0, 4)).toEqual(["groups", 0, "params", 0]);
 });
 
+test("native harness controls preserve an unselected picker before a harness is chosen", () => {
+  const result = {
+    params: [{ id: "harness", name: "Harness", type: "harness" as const, defaultValue: { harnessId: "" } }],
+    values: { harness: { harnessId: "" } },
+  };
+  expect(controlsQueryResultSchema.parse(result)).toEqual(result);
+});
+
 test("numeric controls retain the boolean control that enables input", () => {
   const result = {
     params: [{ id: "count", name: "Count", type: "number" as const, defaultValue: 6, enabledBy: "limited" }],

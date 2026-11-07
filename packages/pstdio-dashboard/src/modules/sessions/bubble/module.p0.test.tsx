@@ -118,7 +118,7 @@ describe("switching session placements", () => {
         title: "Selected session",
         status: "completed",
       });
-      const resource = createDashboardResource("session", "session-origin", "Origin", "MessageCircle", "project-1");
+      const resource = createDashboardResource("session", "session-origin", "Origin", "message-circle", "project-1");
       await workbench.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
         resource,
         tabRetention: retention,
@@ -154,7 +154,7 @@ describe("switching session placements", () => {
       const workbench = createWorkbench();
       workbench.registerModule(createSessionBubbleModule());
       await activateProjectPage(workbench);
-      const resource = createDashboardResource("session", "session-origin", "Origin", "MessageCircle", "project-1");
+      const resource = createDashboardResource("session", "session-origin", "Origin", "message-circle", "project-1");
       await workbench.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
         resource,
         tabRetention: retention,
@@ -242,8 +242,8 @@ describe("createSessionBubbleModule", () => {
   });
   test("replaces the preview but retains pinned session tabs", async () => {
     const workbench = createWorkbench();
-    const first = createDashboardResource("session", "session-1", "First", "MessageCircle", "project-1");
-    const second = createDashboardResource("session", "session-2", "Second", "MessageCircle", "project-1");
+    const first = createDashboardResource("session", "session-1", "First", "message-circle", "project-1");
+    const second = createDashboardResource("session", "session-2", "Second", "message-circle", "project-1");
     workbench.registerModule(createSessionBubbleModule());
     await activateProjectPage(workbench);
     await workbench.commands.executeCommand(dashboardCommandIds.openSessionPanel, { resource: first });
@@ -264,7 +264,13 @@ describe("createSessionBubbleModule", () => {
   });
   test("uses resource type and id as the canonical session identity", async () => {
     const workbench = createWorkbench();
-    const dashboardSession = createDashboardResource("session", "session-1", "Session A", "MessageCircle", "project-1");
+    const dashboardSession = createDashboardResource(
+      "session",
+      "session-1",
+      "Session A",
+      "message-circle",
+      "project-1",
+    );
     const extensionSession = {
       type: "session",
       id: "session-1",
@@ -286,7 +292,7 @@ describe("New session while a session page is open", () => {
   test("adds a Side Panel session tab from the panel's add button", async () => {
     const workbench = createWorkbench();
     workbench.registerModule(createWorkspacesModule());
-    const session = createDashboardResource("session", "session-1", "My session", "MessageCircle", "project-1", {
+    const session = createDashboardResource("session", "session-1", "My session", "message-circle", "project-1", {
       status: "completed",
     });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
@@ -306,12 +312,12 @@ describe("New session while a session page is open", () => {
   test("replaces a Side Panel session tab from its own New session action", async () => {
     const workbench = createWorkbench();
     workbench.registerModule(createWorkspacesModule());
-    const session = createDashboardResource("session", "session-1", "My session", "MessageCircle", "project-1", {
+    const session = createDashboardResource("session", "session-1", "My session", "message-circle", "project-1", {
       status: "completed",
     });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     workbench.registerModule(createSessionsModule());
-    const panelSession = createDashboardResource("session", "session-2", "Panel", "MessageCircle", "project-1");
+    const panelSession = createDashboardResource("session", "session-2", "Panel", "message-circle", "project-1");
     openSessionsPage(workbench, session);
     await workbench.commands.executeCommand(dashboardCommandIds.openSessionPanel, { resource: panelSession });
     const location = workbench.pages.store.getState().location;

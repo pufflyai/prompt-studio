@@ -180,6 +180,7 @@ test("frame parameters and playback stay independent across themes and movement"
   await timeline.getByRole("button", { name: "Animation settings", exact: true }).click();
   const settings = surface.getByRole("dialog", { name: "Animation settings", exact: true });
   const loopStart = settings.getByText("Loop start", { exact: true }).locator("../..").getByRole("spinbutton");
+  await loopStart.click();
   await loopStart.fill("0.5");
   await loopStart.press("Tab");
   await expect(timeline.getByRole("slider", { name: "Loop start", exact: true })).toHaveAttribute(
@@ -198,6 +199,7 @@ test("frame parameters and playback stay independent across themes and movement"
   expect(Number(await endHandle.getAttribute("aria-valuenow"))).toBeLessThan(2);
   await timeline.getByRole("button", { name: "Animation settings", exact: true }).click();
   const loopEnd = settings.getByText("Loop end", { exact: true }).locator("../..").getByRole("spinbutton");
+  await loopEnd.click();
   await loopEnd.fill("1.5");
   await loopEnd.press("Tab");
   await expect(endHandle).toHaveAttribute("aria-valuenow", "1.5");

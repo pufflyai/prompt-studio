@@ -16,10 +16,10 @@ test("folderless projects can choose an installed remote workspace provider", as
   expect(targets).toEqual([{ kind: "dialog", page: workspacePages.create, params: {} }]);
 });
 
-test("deleting a workspace publishes removal without replacing another open resource", async () => {
+test("deleting a workspace refreshes navigation without replacing another open resource", async () => {
   const targets: NavigationTarget[] = [];
   const deleted: string[] = [];
-  const removed: unknown[] = [];
+  const changes: unknown[] = [];
   const context = {
     project: { id: "project" },
     resource: { type: "workspace", id: "workspace", extensionId: "pstdio", projectId: "project" },
@@ -32,19 +32,19 @@ test("deleting a workspace publishes removal without replacing another open reso
         deleted.push(id);
       },
     },
-    resources: {
-      removed: async (resource: unknown) => {
-        removed.push(resource);
+    events: {
+      emit: async (event: unknown) => {
+        changes.push(event);
       },
     },
-    events: { emit: async () => {} },
     navigation: { open: (target: NavigationTarget) => targets.push(target) },
   } as unknown as Parameters<typeof remove.run>[0];
   await remove.run(context, { id: "workspace", confirmed: true });
   expect(deleted).toEqual(["workspace"]);
-  expect(removed).toEqual([{ type: "workspace", id: "workspace", projectId: "project", extensionId: "pstdio" }]);
+  expect(changes).toHaveLength(1);
   expect(targets).toEqual([]);
   await showDelete.run(context, {});
   expect(deleted).toEqual(["workspace", "workspace"]);
+  expect(changes).toHaveLength(2);
   expect(targets).toEqual([]);
 });
