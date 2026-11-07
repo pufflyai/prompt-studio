@@ -45,7 +45,14 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await close?.();
+  try {
+    await close?.();
+  } finally {
+    // Hooks recreate these owners; release closed engines between cases and files.
+    close = undefined!;
+    db = undefined!;
+    service = undefined!;
+  }
 });
 
 test("insert and get returns the file record", async () => {

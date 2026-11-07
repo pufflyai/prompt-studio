@@ -40,11 +40,17 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
   const loadSource = input.loadSource ?? loadExtensionSource;
   const webviewCacheRoot = input.webviewCacheRoot ?? defaultWebviewCacheRoot(process.env);
   const { reportResult } = createBuildReporters(input);
+  // A refresh checks every installed source, so reading the whole list for each one costs
+  // quadratic work on the event loop as installs accumulate.
+  const getInstalledSource =
+    input.getInstalledSource ??
+    (async (installedExtensionId: string) =>
+      (await input.listInstalledSources()).find((row) => row.id === installedExtensionId) ?? null);
   const loadCurrentSource = (installedExtensionId: string, validatedSource?: LoadedExtensionSnapshot) =>
     loadCurrentWebviewSource({
       backoff,
       installedExtensionId,
-      listInstalledSources: input.listInstalledSources,
+      getInstalledSource,
       loadSource,
       onError: input.onError,
       validatedSource,

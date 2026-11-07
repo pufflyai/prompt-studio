@@ -8,14 +8,19 @@ import { claudeCommandState, prepareClaudeOperation } from "./commands";
 import { detectClaude } from "./detection";
 import { recoverClaudeMessages } from "./history-reconciliation";
 import { discoverClaudeModels } from "./models";
-import { normalizeClaudeCodeMessages } from "./normalize-transcript";
+import { getClaudeForkMessageId, normalizeClaudeCodeMessages } from "./normalize-transcript";
 import { resumeClaudeCodeSession, startClaudeCodeSession } from "./spawn";
 import type { ClaudeCodeTranscriptEntry } from "./types";
 
 export const buildTranscriptPath = (agentSessionId: string, cwd?: string) => {
   const projectDir = cwd ?? process.cwd();
   const sanitized = projectDir.replace(/[^a-zA-Z0-9]/g, "-");
-  return join(homedir(), ".claude", "projects", sanitized, `${agentSessionId}.jsonl`);
+  return join(
+    process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), ".claude"),
+    "projects",
+    sanitized,
+    `${agentSessionId}.jsonl`,
+  );
 };
 
 const defaultReadTranscript = async (agentSessionId: string, cwd?: string) => {
@@ -158,6 +163,17 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
       modelCache = undefined;
     },
     listModels,
+    fork: async (_ctx, input) => {
+      const { forkSession } = await import("@anthropic-ai/claude-agent-sdk");
+      const upToMessageId = input.messageId
+        ? getClaudeForkMessageId(
+            parseTranscript(await deps.readTranscript(input.agentSessionId, input.cwd)),
+            input.messageId,
+          )
+        : undefined;
+      const result = await forkSession(input.agentSessionId, { dir: input.cwd, upToMessageId });
+      return { agentSessionId: result.sessionId };
+    },
     getCommandState: (_ctx, input) => claudeCommandState(input),
     prepareOperation: (ctx, input, operation) => prepareClaudeOperation(input, operation, ctx.projectId),
 

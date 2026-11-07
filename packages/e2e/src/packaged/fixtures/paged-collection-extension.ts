@@ -183,6 +183,21 @@ export const createPagedCollectionFixture = (owner: string) => {
       return outcome;
     },
   });
+  // Models a change arriving from another device: it commits without a view refresh event.
+  const touch = defineCommand({
+    id: "touch",
+    title: "Change a paged row without notifying views",
+    mutating: true,
+    params: { id: params.text({ required: true }) },
+    async run(ctx, input) {
+      const id = ctx.storage.records.id(input.id);
+      const row = await ctx.storage.records.read(id);
+      return ctx.storage.records.commit({
+        operationId: crypto.randomUUID(),
+        edits: [{ recordId: id, replace: { ...(row.value as Record<string, unknown>), body: crypto.randomUUID() } }],
+      });
+    },
+  });
   const table = defineView({
     id: "table",
     title: `${owner} table`,
@@ -261,7 +276,7 @@ export const createPagedCollectionFixture = (owner: string) => {
   );
   return defineExtension({
     storageIndexes: indexes,
-    commands: [seed, change, select],
+    commands: [seed, change, touch, select],
     views: [table, board],
     pages,
     navigationItems: pages.map((page) =>

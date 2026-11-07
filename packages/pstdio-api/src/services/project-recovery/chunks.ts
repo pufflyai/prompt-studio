@@ -138,11 +138,24 @@ export const createRecoveryChunkStore = async ({ root, space }: { root: string; 
     stage,
     encrypted,
     read,
+    /** Whether the complete ciphertext is retained, without reading it. `read` still verifies it. */
+    async has(input: RecoveryChunk) {
+      const reference = referenceSchema.parse(input);
+      const stat = await lstat(path(reference)).catch(() => null);
+      return !!stat?.isFile() && stat.size === reference.encryptedByteLength;
+    },
     async receive(input: RecoveryChunk, bytes: Uint8Array) {
       const reference = referenceSchema.parse(input);
       await verify(reference, bytes);
       await retain(path(reference), bytes);
-      await read(reference);
+      try {
+        await read(reference);
+      } catch {
+        // A damaged retained copy is replaced by the verified bytes.
+        await unlink(path(reference)).catch(() => {});
+        await retain(path(reference), bytes);
+        await read(reference);
+      }
     },
   };
 };

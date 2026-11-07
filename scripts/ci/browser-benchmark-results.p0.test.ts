@@ -52,3 +52,28 @@ test("duplicate stable cases and unexpected stable skips are rejected too", () =
   skipped.suites[0]!.specs![0]!.tests[0]!.results[0]!.status = "skipped";
   expect(() => browserBenchmarkResults(skipped, expected, "/repo")).toThrow("unexpectedly skipped");
 });
+
+test("performance quarantine keeps functional failures blocking", () => {
+  const performanceOnly = expected.map((entry) => ({ ...entry, failureKind: "performance" as const }));
+  const input = report();
+  expect(browserBenchmarkResults(input, performanceOnly, "/repo").stableFailures).toHaveLength(1);
+  Object.assign(input.suites[0]!.specs![1]!.tests[0]!, {
+    annotations: [{ type: "performance-budget-failure", description: "over budget" }],
+    results: [{ status: "failed", errors: [{ message: "over budget" }] }],
+  });
+  expect(browserBenchmarkResults(input, performanceOnly, "/repo").stableFailures).toEqual([]);
+  input.suites[0]!.specs![1]!.tests[0]!.results[0]!.errors = [{ message: "over budget\n\n  1 | code frame" }];
+  expect(browserBenchmarkResults(input, performanceOnly, "/repo").stableFailures).toEqual([]);
+  input.suites[0]!.specs![1]!.tests[0]!.results[0]!.status = "timedOut";
+  expect(browserBenchmarkResults(input, performanceOnly, "/repo").stableFailures).toHaveLength(1);
+});
+
+test("a timing failure cannot hide a later functional or cleanup failure", () => {
+  const input = report();
+  Object.assign(input.suites[0]!.specs![1]!.tests[0]!, {
+    annotations: [{ type: "performance-budget-failure", description: "over budget" }],
+    results: [{ status: "failed", errors: [{ message: "over budget" }, { message: "cleanup failed" }] }],
+  });
+  const performanceOnly = expected.map((entry) => ({ ...entry, failureKind: "performance" as const }));
+  expect(browserBenchmarkResults(input, performanceOnly, "/repo").stableFailures).toHaveLength(1);
+});

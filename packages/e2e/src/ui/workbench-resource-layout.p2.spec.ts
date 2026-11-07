@@ -76,12 +76,14 @@ test("keeps the mode's secondary panel preference across resources and reload", 
     const workspaceASize = await separator.getAttribute("aria-valuenow");
     expect(workspaceASize).not.toBeNull();
 
+    await page.getByRole("button", { name: "Back to project", exact: true }).click();
     await workspacesNavigation.click();
     await openWorkspace(page, attemptB.workspace.workspace_shorthand);
     await expect(separator).toBeVisible();
     await expect(separator).toHaveAttribute("aria-valuenow", workspaceASize!);
     await page.getByRole("button", { name: "Hide Bottom Panel", exact: true }).click();
 
+    await page.getByRole("button", { name: "Back to project", exact: true }).click();
     await workspacesNavigation.click();
     await openWorkspace(page, attemptA.workspace.workspace_shorthand);
     await expect(page.getByRole("region", { name: "Secondary Panel" })).not.toBeVisible();

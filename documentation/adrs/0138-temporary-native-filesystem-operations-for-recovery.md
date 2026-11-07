@@ -23,6 +23,8 @@ Prepare the initial `.pstignore` with the supported asynchronous file API in pri
 
 This removes the prototype's Apple ARM64 variadic `openat` creation shim. Native `openat` is now used only for access to existing entries; supported file creation owns the mode and native code owns only the final no-replace link. The source journal in recovery storage records enrollment after the starter decision, so a restart never recreates a deliberately deleted policy.
 
+Restore publication renames the verified staging folder beside the destination relative to the held parent directory, after checking that parent's identity. macOS uses `renameatx_np` with `RENAME_EXCL`; Linux uses `renameat2` with `RENAME_NOREPLACE`, which needs glibc 2.28 or later and a filesystem that supports the flag. Either refusal leaves restoration incomplete. Staging writes create every entry exclusively below directories the restore made itself, so no write passes through a restored link.
+
 On Windows, [NtCreateFile](https://learn.microsoft.com/windows/win32/api/winternl/nf-winternl-ntcreatefile) supplies directory-relative opens and reparse-point access. [NtQueryDirectoryFile](https://learn.microsoft.com/windows-hardware/drivers/ddi/ntifs/nf-ntifs-ntquerydirectoryfile) enumerates a held handle. [FILE_RENAME_INFORMATION](https://learn.microsoft.com/windows-hardware/drivers/ddi/ntifs/ns-ntifs-_file_rename_information) supplies the refusal-to-replace publication contract. Native errors leave the operation incomplete; no weaker fallback is allowed.
 
 ## Limitations

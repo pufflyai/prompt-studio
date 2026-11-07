@@ -152,7 +152,7 @@ test("an offline account lookup never labels an unknown Cloud project local-only
   }
 });
 
-test("an existing project starts syncing after another device enables Cloud", async () => {
+test("scheduled discovery follows remote Cloud enable and make-local while preserving the project", async () => {
   const realTimeout = setTimeout;
   let nextRefresh: (() => void) | undefined;
   const clock = spyOn(globalThis, "setTimeout").mockImplementation(((...args: Parameters<typeof setTimeout>) => {
@@ -190,11 +190,11 @@ test("an existing project starts syncing after another device enables Cloud", as
     projects: { get: async () => project },
   });
   let synced: string[] = [];
-  const discovered = Promise.withResolvers<void>();
+  let discovered = Promise.withResolvers<void>();
   account.start(
     async (connections) => {
       synced = connections.map((entry) => entry.workbenchId);
-      if (synced.length) discovered.resolve();
+      discovered.resolve();
     },
     async () => ({ state: "synced", offlineReady: true }),
     async () => {},
@@ -203,6 +203,7 @@ test("an existing project starts syncing after another device enables Cloud", as
     await account.refresh();
     expect(synced).toEqual([]);
     ids = [project.id];
+    discovered = Promise.withResolvers<void>();
     expect(nextRefresh).toBeDefined();
     nextRefresh!();
     const refreshed = await Promise.race([
@@ -211,8 +212,23 @@ test("an existing project starts syncing after another device enables Cloud", as
     ]);
     expect(refreshed).toBe(true);
     expect(synced).toEqual([project.id]);
+    expect((await account.projectSyncStatus(project.id)).state).toBe("synced");
+    ids = [];
+    // An idle host keeps its last known membership until the scheduled discovery.
+    expect((await account.projectSyncStatus(project.id)).state).toBe("synced");
+    discovered = Promise.withResolvers<void>();
+    nextRefresh!();
+    expect(
+      await Promise.race([
+        discovered.promise.then(() => true),
+        new Promise<boolean>((resolve) => realTimeout(() => resolve(false), 1_000)),
+      ]),
+    ).toBe(true);
+    expect(synced).toEqual([]);
+    expect(await account.projectSyncStatus(project.id)).toEqual({ state: "local", offlineReady: false });
+    expect(await account.status()).toMatchObject({ login: { deviceId: "device" }, cloudProjects: [] });
   } finally {
-    account.close();
+    await account.close();
     clock.mockRestore();
     await manager.stop(true);
     await rm(root, { recursive: true, force: true });

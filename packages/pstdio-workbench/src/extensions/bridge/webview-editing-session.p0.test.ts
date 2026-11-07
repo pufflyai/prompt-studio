@@ -417,3 +417,17 @@ test("an equal authoritative refresh reconciles the saved baseline after reset r
   await guard.getActions()!.reset();
   expect(await frame.call({ operation: "save", sessionId: "settings" })).toMatchObject({ value: { title: "Latest" } });
 });
+
+test("saving a clean shared editor does not invalidate another view's backend read", async () => {
+  const editor = createEditor();
+  const first = editor.frame();
+  const second = editor.frame();
+  const before = (await first.call(open("first"))) as { version: number };
+  await second.call(open("second"));
+  await second.call({ operation: "save", sessionId: "second" });
+  const updated = { ...initial, title: "Saved externally" };
+  expect(
+    await first.call({ operation: "refresh", sessionId: "first", expectedVersion: before.version, value: updated }),
+  ).toMatchObject({ value: updated });
+  expect(editor.writes).toHaveLength(0);
+});

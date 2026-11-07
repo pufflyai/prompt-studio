@@ -1,10 +1,12 @@
 import { expect, test } from "bun:test";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { mkdir, mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium, expect as expectUI } from "@playwright/test";
 import { createClient } from "@pstdio/sdk/client";
 import type { KanbanRendererQueryResult, ResourceListRendererRow } from "@pstdio/sdk/extensions";
+import { $ } from "bun";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { createDeviceCommandPeer } from "./packaged-device-commands.fixture";
@@ -108,24 +110,12 @@ const connectDevice = async (
         projectId,
         invocation: { placement: "visible" },
       },
-      settings: { showChildren: true },
+      settings: {},
     });
     expect(result.ok, result.reason).toBe(true);
     return result.value as ResourceListRendererQueryResult;
   };
-  const details = async (deviceId: string) => {
-    const result = await command("view.device-capacity.controls.query", {
-      renderer: {
-        rendererId: "pstdio.pstdio-workspaces.view.device-capacity",
-        projectId,
-        invocation: { placement: "visible" },
-        pageParams: { "device-id": deviceId },
-      },
-    });
-    expect(result.ok, result.reason).toBe(true);
-    return result.value;
-  };
-  return { client, id: identity.environmentId, command, query, details };
+  return { client, id: identity.environmentId, command, query };
 };
 
 test(
@@ -167,28 +157,41 @@ test(
     };
     await mkdir(join(root, "a"));
     await mkdir(join(root, "b"));
-    progress("start first runtime");
-    const a = await startPackagedServe(join(root, "a"), env);
-    let b: typeof a | undefined;
+    let a: Awaited<ReturnType<typeof startPackagedServe>> | undefined;
+    let b: typeof a;
     let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
     try {
-      // Both cold starts remain inside the timed case; browser startup does not depend on device sync.
+      // Both runtimes and the browser start cold inside this case and own separate state.
+      const startingRuntimes = Promise.allSettled([
+        startPackagedServe(join(root, "a"), env)
+          .then((runtime) => (a = runtime))
+          .catch((error) => {
+            console.error("Workspaces device A startup failed", error);
+            throw error;
+          }),
+        startPackagedServe(join(root, "b"), env)
+          .then((runtime) => (b = runtime))
+          .catch((error) => {
+            console.error("Workspaces device B startup failed", error);
+            throw error;
+          }),
+      ]);
       const openingBrowser = chromium.launch(PACKAGED_DASHBOARD_BROWSER).then((opened) => {
         browser = opened;
         progress("browser launched");
         return opened;
       });
       const preparingDevices = (async () => {
-        progress("start second runtime");
-        b = await startPackagedServe(join(root, "b"), env);
+        progress("start both runtimes");
+        const [firstRuntime, secondRuntime] = await startingRuntimes;
+        if (firstRuntime.status === "rejected") throw firstRuntime.reason;
+        if (secondRuntime.status === "rejected") throw secondRuntime.reason;
+        progress("both runtimes ready");
         const projectId = crypto.randomUUID();
         const [first, second] = await Promise.all([
-          connectDevice(a, "a", projectId, peer.origin, progress),
-          connectDevice(b, "b", projectId, peer.origin, progress),
+          connectDevice(firstRuntime.value, "a", projectId, peer.origin, progress),
+          connectDevice(secondRuntime.value, "b", projectId, peer.origin, progress),
         ]);
-        progress("set device limits");
-        await first.command("command.set-limit", { limit: 4 });
-        await second.command("command.set-limit", { limit: 7 });
         progress("create private history");
         const session = await first.client.sessions.create(projectId, {
           title: "Device A history",
@@ -205,25 +208,33 @@ test(
         await waitFor(async () =>
           (await second.client.workspaces.query(projectId)).items.some((row) => row.device?.id === first.id),
         );
-        progress("query device menus and capacity");
+        progress("query device groups and workspace history");
         const data = await second.query();
         const device = data.attributes!.find((field) => field.id === "device")!;
         if (device.type.kind !== "enum") throw new Error("Device groups are unavailable");
         expect(device.type.options[0]!.value).toBe(second.id);
-        expect(device.type.options[0]!.contextMenuActions).toEqual(
-          expect.arrayContaining([
-            expect.objectContaining({ id: "details", label: "This device" }),
-            expect.objectContaining({ id: "create", label: "Create workspace" }),
-          ]),
+        expect(device.type.options[0]!.contextMenuActions).toContainEqual(
+          expect.objectContaining({
+            id: "create",
+            action: {
+              kind: "command",
+              target: { command: { kind: "command", extensionId: "pstdio.pstdio-workspaces", id: "show-create" } },
+            },
+          }),
         );
-        const localDetails = await second.details(second.id);
-        expect(localDetails.params).toContainEqual(expect.objectContaining({ id: "limit", defaultValue: 7 }));
-        expect(device.type.options.find((option) => option.value === first.id)?.contextMenuActions).toEqual([
-          expect.objectContaining({ id: "details", label: "Device details" }),
-        ]);
         const foreign = data.rows.find((row) => row.resource?.device?.id === first.id)!;
         expect(foreign.target).toMatchObject({ kind: "page", page: { id: "history" } });
-        expect(foreign.children).toContainEqual(
+        const history = await second.command("view.history.resourceList.query", {
+          renderer: {
+            rendererId: "pstdio.pstdio-workspaces.view.history",
+            projectId,
+            invocation: { placement: "visible" },
+            resource: foreign.resource,
+          },
+          settings: {},
+        });
+        expect(history.ok, history.reason).toBe(true);
+        expect(history.value.rows).toContainEqual(
           expect.objectContaining({
             title: "Device A history",
             target: expect.objectContaining({
@@ -238,7 +249,7 @@ test(
           (await second.command("command.read-changes", { workspaceId: resource.id, mode: "current" }, resource)).ok,
         ).toBe(false);
         expect((await second.command("command.create-file", { name: "Denied.txt" }, resource)).ok).toBe(false);
-        return { first, second, session, projectId, runtime: b };
+        return { first, second, session, projectId, runtime: secondRuntime.value };
       })();
       const [devices, opened] = await Promise.allSettled([preparingDevices, openingBrowser]);
       if (devices.status === "rejected") throw devices.reason;
@@ -258,43 +269,41 @@ test(
       progress("browser signed in");
       await expectUI(page.getByTestId("resource-list-renderer")).toBeVisible();
       progress("workspaces collection visible");
-      const history = page.getByRole("option").filter({ hasText: "Device A history" });
-      await expectUI(history).toBeVisible();
-      await page.getByRole("tab", { name: "Compact", exact: true }).click();
-      await expectUI(history).toHaveCount(0);
-      await page.getByRole("tab", { name: "By device", exact: true }).click();
-      await expectUI(history).toBeVisible();
-      progress("Compact and By device verified");
-      await history.click();
-      await expectUI(page).toHaveURL(/\/session\?/);
-      await expectUI(page.getByText("Private workspace history", { exact: true })).toBeVisible();
+      const foreignWorkspace = (await second.query()).rows.find((row) => row.resource?.device?.id === first.id);
+      if (!foreignWorkspace) throw new Error("Foreign workspace is unavailable");
+      await page.locator(`[role="option"][id='${JSON.stringify(["resource", foreignWorkspace.id])}']`).click();
+      await expectUI(page).toHaveURL(/\/history\?/);
+      await page
+        .getByRole("region", { name: "Main", exact: true })
+        .getByRole("option")
+        .filter({ hasText: "Device A history" })
+        .click();
+      await expectUI(
+        page
+          .getByRole("region", { name: "Side Panel", exact: true })
+          .getByText("Private workspace history", { exact: true }),
+      ).toBeVisible();
       progress("private history visible");
       progress("stop first runtime");
-      await stopProcess(a.child);
+      if (a) await stopProcess(a.child);
       peer.setDeviceOnline(first.id, false);
-      progress("query offline device and cached capacity");
+      progress("query offline workspace history");
       const offline = await second.query();
-      const options = offline.attributes!.find((field) => field.id === "device")!.type;
-      if (options.kind !== "enum") throw new Error("Device groups are unavailable");
-      expect(options.options.find((option) => option.value === first.id)?.contextMenuActions).toEqual([
-        expect.objectContaining({ id: "details", label: "Device details" }),
-      ]);
-      progress("query offline capacity controls");
-      const offlineDetails = await second.details(first.id);
-      expect(offlineDetails.readOnly).toBe(true);
-      expect(offlineDetails.params).toContainEqual(
-        expect.objectContaining({ id: "presence", value: expect.stringContaining("Offline") }),
+      expect(offline.rows).toContainEqual(
+        expect.objectContaining({
+          resource: expect.objectContaining({ device: expect.objectContaining({ id: first.id }) }),
+          target: expect.objectContaining({ page: expect.objectContaining({ id: "history" }) }),
+        }),
       );
-      expect(offlineDetails.params).toContainEqual(expect.objectContaining({ id: "limit", value: "4" }));
       expect((await second.client.sessions.getConversation(session.id)).messages).toContainEqual(
         expect.objectContaining({ id: "private" }),
       );
-      progress("history and offline capacity verified");
+      progress("online and offline history verified");
     } finally {
       progress("cleanup");
       await browser?.close();
       progress("stop first runtime");
-      await stopProcess(a.child);
+      if (a) await stopProcess(a.child);
       progress("first runtime stopped");
       progress("stop second runtime");
       if (b) await stopProcess(b.child);
@@ -303,7 +312,8 @@ test(
       await peer.close();
       progress("device peer closed");
       progress("remove fixture directory");
-      await rm(root, { recursive: true, force: true });
+      await $`rm -rf ${root}`;
+      expect(existsSync(root)).toBe(false);
       progress("cleanup complete");
     }
   },

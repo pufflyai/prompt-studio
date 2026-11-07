@@ -1,6 +1,5 @@
 import type { StorageOwner } from "pstdio-sync";
 import { coreOwnerId, type OrderedOperation, type OrderedRecord, operationDependencies } from "pstdio-sync/records";
-import type { NativeProjectedRecord } from "./native-record-projection";
 import type { OrderedJournal } from "./ordered-journal";
 import { publishOrderedProjection } from "./ordered-projection";
 import { rebaseOrderedProjection } from "./ordered-rebase";
@@ -18,7 +17,6 @@ export const publishCommittedOrderedGroup = async (input: {
   operation: OrderedOperation;
   projected: OrderedRecord[];
   before: ReadonlyMap<string, OrderedRecord>;
-  records: NativeProjectedRecord[];
 }) => {
   const { journal, tx, owner, operation, projected } = input;
   if (

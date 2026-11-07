@@ -196,7 +196,9 @@ test("remote workspaces open synced history; offline sessions stay readable and 
   ).toHaveCount(0);
   await expect(main.getByRole("button", { name: "Open workspace", exact: true })).toHaveCount(0);
   await expect(
-    page.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true }),
+    page
+      .locator('[data-testid="content-editable"][contenteditable]:not([contenteditable="false"])')
+      .filter({ visible: true }),
   ).toHaveCount(0);
   await expect(main.getByRole("button", { name: "Stop Response", exact: true })).toHaveCount(0);
   await page.screenshot({ path: test.info().outputPath("offline-readable.png") });

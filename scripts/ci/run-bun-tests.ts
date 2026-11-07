@@ -4,8 +4,12 @@ import { bunRunIdentity, junitCases, registeredUnselectedScope } from "./bun-tes
 import { assertStableQuarantineExclusions, verifyQuarantineReport } from "./quarantine-reports";
 import { priorityIgnorePatterns, readTestPriorities } from "./test-discovery";
 import { stopsAtFirstFailure } from "./test-policy";
-import { bunTestSelection, narrowStablePattern, quarantineDirectory } from "./test-quarantine";
-import cases from "./test-quarantine.json";
+import {
+  bunTestSelection,
+  quarantineRegistry as cases,
+  narrowStablePattern,
+  quarantineDirectory,
+} from "./test-quarantine";
 
 const root = realpathSync.native(resolve(import.meta.dir, "../.."));
 const cwd = realpathSync.native(process.cwd());

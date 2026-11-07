@@ -1,9 +1,9 @@
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
-import { installBuiltSdk } from "../helpers/installed-sdk";
 
 // Critical risk: a delayed extension command must never gate the native composer or lose a typed draft.
 test("independent native chat paints and accepts input before history, then retains its draft across reload", async ({
@@ -13,7 +13,13 @@ test("independent native chat paints and accepts input before history, then reta
   const parent = resolve(import.meta.dirname, "../../../../__test-tmp__");
   mkdirSync(parent, { recursive: true });
   const sourcePath = mkdtempSync(join(parent, "native-chat-"));
-  copyFileSync(join(import.meta.dirname, "../fixtures/native-chat/extension.ts"), join(sourcePath, "extension.ts"));
+  execFileSync("bun", [
+    "build",
+    join(import.meta.dirname, "../fixtures/native-chat/extension.ts"),
+    "--target=bun",
+    "--outfile",
+    join(sourcePath, "extension.ts"),
+  ]);
   writeFileSync(
     join(sourcePath, "package.json"),
     JSON.stringify({
@@ -25,7 +31,6 @@ test("independent native chat paints and accepts input before history, then reta
       engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     }),
   );
-  installBuiltSdk(sourcePath);
   const projectPath = join(sourcePath, "project");
   mkdirSync(projectPath);
   let projectId: string | undefined;
@@ -43,7 +48,7 @@ test("independent native chat paints and accepts input before history, then reta
     const upload = new FormData();
     upload.append("kind", "upload");
     upload.append("folderName", "native-chat");
-    for (const name of ["package.json", "extension.ts", "sdk.tgz", "bun.lock"])
+    for (const name of ["package.json", "extension.ts"])
       upload.append("files", new File([readFileSync(join(sourcePath, name))], name));
     const installed = await request.post(`/v1/projects/${projectId}/extensions/install`, { multipart: upload });
     expect(installed.ok()).toBe(true);
@@ -174,7 +179,11 @@ test("independent native chat paints and accepts input before history, then reta
     });
     await main.getByRole("button", { name: "Show saved queue", exact: true }).click();
     await expect.poll(() => authenticatedModels.includes("A")).toBe(true);
-    await expect(main.getByRole("img", { name: "Provider image" })).toBeVisible();
+    // The transcript follows the queue to the bottom; bring this lazy image's paragraph back into view.
+    await main.getByRole("link", { name: "Provider document" }).scrollIntoViewIfNeeded();
+    const providerImage = main.getByRole("img", { name: "Provider image" });
+    await expect(providerImage).toBeVisible();
+    await expect.poll(() => providerImage.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBe(1);
     await main.getByRole("link", { name: "Provider document" }).click();
     await expect(main.getByText("Provider link opened", { exact: true })).toBeVisible();
     await main.getByRole("button", { name: "Edit queued message: Saved queued prompt", exact: true }).click();

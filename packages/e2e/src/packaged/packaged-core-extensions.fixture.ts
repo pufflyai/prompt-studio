@@ -1,7 +1,7 @@
 import { expect } from "bun:test";
 import type { ChildProcess } from "node:child_process";
 import { mkdirSync, mkdtempSync } from "node:fs";
-import { rm } from "node:fs/promises";
+import { readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
@@ -14,6 +14,7 @@ import { runtimeAuthorization, startPackagedServe, stopProcess } from "./package
 export const CORE_EXTENSIONS_SMOKE_TEST_TIMEOUT = 120_000;
 const REPO_ROOT = join(import.meta.dirname, "../../../..");
 const CORE_DEFAULT_EXTENSION_NAMES = [
+  "pstdio-cloud",
   "pstdio-home",
   "pstdio-session-browser",
   "pstdio-onboarding",
@@ -36,6 +37,16 @@ interface CoreExtensionsFixture {
   extensions: { canUpgrade: boolean; enabled: boolean; id: string; installName: string; name: string }[];
   metadata: WorkbenchExtensionMetadata;
 }
+
+const removeCoreFixture = async (root: string) => {
+  // The installed sources, private package cache, and projects are independent
+  // after shutdown. Remove their trees concurrently and await every result.
+  const removals = await Promise.allSettled(
+    (await readdir(root)).map((name) => rm(join(root, name), { recursive: true, force: true })),
+  );
+  for (const removal of removals) if (removal.status === "rejected") throw removal.reason;
+  await rm(root, { recursive: true, force: true });
+};
 
 export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFixture) => Promise<void>) => {
   const startedAt = Date.now();
@@ -85,6 +96,11 @@ export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFi
     expect(createRes.status).toBe(201);
     const project = (await createRes.json()) as CoreExtensionsFixture["project"];
     phase("project created");
+    const workspacesRes = await fetch(`${started.baseUrl}/v1/workspaces?project_id=${project.id}`, { headers });
+    expect(workspacesRes.status).toBe(200);
+    expect(await workspacesRes.json()).toContainEqual(
+      expect.objectContaining({ is_default: true, initializing: false, provider_state: "ready", setup_error: null }),
+    );
     const extensionsRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions`, { headers });
     expect(extensionsRes.status).toBe(200);
     const { extensions } = (await extensionsRes.json()) as { extensions: CoreExtensionsFixture["extensions"] };
@@ -100,7 +116,7 @@ export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFi
     phase("runtime stopped");
     if (closeRegistry) await closeRegistry();
     phase("registry closed");
-    await rm(tempRoot, { recursive: true, force: true });
+    await removeCoreFixture(tempRoot);
     phase("files removed");
   }
 };

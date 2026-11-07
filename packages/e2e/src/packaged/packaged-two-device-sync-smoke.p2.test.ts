@@ -5,7 +5,6 @@ import { join } from "node:path";
 import { chromium } from "@playwright/test";
 import { createClient } from "@pstdio/sdk/client";
 import type { ProjectSyncState, StorageRecord } from "@pstdio/sdk/extensions";
-import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createSyncSpace } from "pstdio-sync/encryption";
 import { coreOwnerId, projectInfoDocumentId } from "pstdio-sync/records";
 import { folderProjectInput } from "../helpers/folder-project";
@@ -13,6 +12,7 @@ import { logTestPhase } from "../scripts/log-test-phase";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { openCloudProjectInPicker, reopenPreparedProjectOffline } from "./packaged-cloud-project-picker";
 import { startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+import { writeSharedNotesExtension } from "./packaged-shared-notes-extension.fixture";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 import { createPackagedSyncPeer, packagedProjectKey } from "./packaged-sync-relay.fixture";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
@@ -28,29 +28,6 @@ const writeCertificate = (root: string) => {
   const options = ["-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", key, "-out", cert, "-days", "1"];
   expect(Bun.spawnSync(["openssl", "req", ...options, ...subject]).exitCode).toBe(0);
   return { key, cert };
-};
-
-const writeExtension = async (root: string) => {
-  const source = join(root, "source");
-  await mkdir(source);
-  const build = await Bun.build({
-    entrypoints: [join(import.meta.dir, "fixtures/grouped-storage-extension.ts")],
-    target: "bun",
-  });
-  if (!build.success) throw new AggregateError(build.logs, "Could not build storage fixture");
-  await Bun.write(join(source, "extension.js"), build.outputs[0]!);
-  await Bun.write(
-    join(source, "package.json"),
-    JSON.stringify({
-      name: "shared-notes",
-      publisher: "example",
-      version: "1.0.0",
-      type: "module",
-      main: "extension.js",
-      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
-    }),
-  );
-  return source;
 };
 
 const startDevice = async (root: string, env: Record<string, string>) => {
@@ -168,7 +145,7 @@ test(
     let picker: Awaited<ReturnType<typeof openCloudProjectInPicker>> | undefined;
     const failures: unknown[] = [];
     try {
-      const source = await writeExtension(root);
+      const source = await writeSharedNotesExtension(root);
       const env = {
         PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([{ source, installName: "shared-notes" }]),
         NODE_EXTRA_CA_CERTS: tls.cert,
@@ -178,6 +155,7 @@ test(
         const project = await first.client.projects.create(
           folderProjectInput({ name: "Shared notes" }, repository.checkout),
         );
+        await first.command(project.id, "offline-collection", { action: "seed" });
         await write(first, project.id, "note", "written on the first device");
         await first.command(project.id, "write-file", { path: "note.md", content: "# Shared note" });
         await first.command(project.id, "write-file", { path: "artifact.html", content: "<h1>Shared artifact</h1>" });
@@ -207,6 +185,10 @@ test(
       expect((await second.client.projects.folder(project.id)).path).toBeNull();
       await waitFor(() => peer.failedReads() > 0);
       await second.reach(project.id, "first-download-incomplete");
+      expect(await second.client.account.projectSyncStatus(project.id)).toMatchObject({
+        state: "first-download-incomplete",
+        offlineReady: false,
+      });
       phase("new device waiting for download");
       const prematureOpen = await fetch(`${second.host.baseUrl}/v1/projects/${project.id}/open`, {
         method: "POST",
@@ -247,11 +229,16 @@ test(
       await first.reach(project.id, "synced");
       await second.reach(project.id, "synced");
       await picker.ready();
+      // Folder preparation can replace a synced owner; navigation does not await its next download.
+      await waitFor(async () => (await second.client.account.projectSyncStatus(project.id)).offlineReady);
       phase("project folder prepared");
       expect((await second.command<Record<string, StorageRecord>>(project.id, "read")).note?.value).toBe(
         "written on the first device",
       );
 
+      expect(await second.command(project.id, "offline-collection", { action: "read" })).toMatchObject({
+        value: { title: "Original", track: "api" },
+      });
       phase("downloaded records read");
       const folderAfterSelection = await second.client.projects.folder(project.id);
       expect(folderAfterSelection.path).toBeTruthy();
@@ -282,6 +269,11 @@ test(
       await first.reach(project.id, "local");
       await second.reach(project.id, "local");
       phase("both devices local");
+      for (const [device, action] of [
+        [first, "left"],
+        [second, "right"],
+      ] as const)
+        expect(await device.command(project.id, "offline-collection", { action })).toMatchObject({ saved: true });
       await write(first, project.id, "note", "edited on the first device while local");
       await write(second, project.id, "caption", "edited on the second device while local");
 
@@ -299,6 +291,16 @@ test(
       const expected = ["edited on the first device while local", "edited on the second device while local"];
       await waitFor(async () => Bun.deepEquals(await merged(first), expected));
       await waitFor(async () => Bun.deepEquals(await merged(second), expected));
+
+      for (const device of [first, second])
+        await waitFor(async () => {
+          const { value } = await device.command<{ value: { title: string; track: string; updatedAt: string } }>(
+            project.id,
+            "offline-collection",
+            { action: "read" },
+          );
+          return value.title === "Edited" && value.track === "ui" && ["left", "right"].includes(value.updatedAt);
+        });
 
       const history = await first.command<{ events: ProjectSyncState[]; current: unknown }>(project.id, "sync-history");
       expect(history.current).toMatchObject({ state: "synced", offlineReady: true, pendingItems: 0 });

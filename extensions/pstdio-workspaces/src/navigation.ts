@@ -20,7 +20,7 @@ export const open = defineCommand({
     },
   ],
   cli: true,
-  params: { id: params.text({ resolvedFrom: "resource" }) },
+  params: { id: params.text({ resolvedFrom: "resource" }), selected: params.text() },
   async run(ctx, args) {
     const id = args.id ?? ctx.resource?.id;
     if (!id) {
@@ -29,7 +29,9 @@ export const open = defineCommand({
     }
     const workspace = await ctx.workspaces.get(id);
     if (!workspace) throw new Error("Workspace not found.");
-    ctx.navigation.open(workspaceTarget(workspace, ctx.project.id));
+    ctx.navigation.open(
+      workspaceTarget(workspace, ctx.project.id, args.selected ? { workspaceFilePath: args.selected } : {}),
+    );
   },
 });
 export const openFiles = defineCommand({
@@ -93,8 +95,8 @@ export const device = defineCommand({
   title: "Device details",
   cli: true,
   params: { deviceId: params.text({ required: true }) },
-  run(ctx, args) {
-    ctx.navigation.open({ kind: "dialog", page: workspacePages.device, params: { "device-id": args.deviceId } });
+  run(ctx) {
+    ctx.navigation.open({ kind: "page", page: workspacePages.list });
   },
 });
 

@@ -86,3 +86,22 @@ To end work in a workspace:
 - On 0.43.x, `ctx.workspaces.archive(id)` is a deprecated name for `delete(id)`. It deletes the workspace; it does not keep it readable. It is removed on `main`, so do not use it.
 
 See [Workspaces](https://prompt.studio/docs/references/cli/workspaces/) and [Projects and workspaces](https://prompt.studio/docs/guides/concepts/projects-and-workspaces/).
+
+## Choose ordered fields, collaborative text or logs
+
+Extension API 0.4 changes plain record merging. Check the installed SDK and host
+before using it. Plain object fields apply their changed JSON paths in relay
+order; arrays and undeclared strings are whole values, including multiline text.
+Use `set` and `unset` JSON Pointers for known paths, or pass `observedRevision`
+with a replacement to preserve a prior read's baseline. `expectedRevision` makes
+the entire group conditional; an earlier overlapping change reports `refused`
+through its outcome. Use a new operation ID to express a new choice.
+
+Declare collaborative fields in `storage.records.text` by record prefix and
+JSON Pointer, then use `storage.text(recordId, field).edit` or a grouped record
+text edit. Real editable files keep their native text owner. Declare append-only
+histories in `storage.logs`; `storage.log(name)` supports append, bounded reads
+and cancellable follow. Device logs have independent writers; `keep.days`
+filters expired entries before downloading payloads. Preserve the existing
+record/group size limits. See [storage](https://prompt.studio/docs/references/sdk/storage/)
+and [append-only logs](https://prompt.studio/docs/references/sdk/append-only-logs/).

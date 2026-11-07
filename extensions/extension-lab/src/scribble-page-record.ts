@@ -17,9 +17,10 @@ export const scribblePageFields = (
 
 export const scribblePageEdit = (storage: ExtensionStorageApi, id: string, fields: JsonObject) => ({
   recordId: storage.records.id(`scribble.page:${id}`),
-  shared: Object.entries({ kind: "scribble.page", id, ...fields }).map(([key, value]) => ({
-    kind: "map.set" as const,
-    key,
-    value,
-  })),
+  set: Object.fromEntries(
+    Object.entries({ kind: "scribble.page", id, ...fields }).map(([key, value]) => [
+      `/${key.replaceAll("~", "~0").replaceAll("/", "~1")}`,
+      value,
+    ]),
+  ),
 });

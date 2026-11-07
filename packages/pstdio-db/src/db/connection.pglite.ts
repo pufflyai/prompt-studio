@@ -13,6 +13,7 @@ import { type PgliteRetirementPhase, prepareCurrentPgliteHome } from "./pglite-c
 import { pgliteIdentity } from "./pglite-identity";
 import { acquirePgliteLock } from "./pglite-lock";
 import * as schema from "./schemas.pg";
+import { type DatabaseMaintenancePhase, maintainDatabase } from "./startup-maintenance";
 
 type EmbeddedFile = Blob & { name: string };
 // Bun's embedded file objects are runtime-specific; narrowing the contract keeps extraction testable
@@ -129,6 +130,7 @@ export const resolvePgliteOptions = async (embeddedFiles: readonly EmbeddedFile[
 // Startup steps in order. The runtime publishes itself once the database is locked and logs every step.
 export type DbOpenPhase =
   | PgliteRetirementPhase
+  | DatabaseMaintenancePhase
   | "database_locked"
   | "database_engine_loaded"
   | "database_image_restored"
@@ -147,6 +149,11 @@ export const createDb = async (options?: {
   const releaseLock = dbPath === ":memory:" ? () => {} : acquirePgliteLock(dbPath);
 
   let pglite: PGlite | undefined;
+  let fresh = dbPath === ":memory:";
+  const onImageRestored = () => {
+    fresh = true;
+    onPhase("database_image_restored");
+  };
   try {
     onPhase("database_locked");
     options?.signal?.throwIfAborted();
@@ -159,18 +166,21 @@ export const createDb = async (options?: {
         runtime: pgliteOpts,
         embedded,
         signal: options?.signal,
-        onImageRestored: () => onPhase("database_image_restored"),
+        onImageRestored,
         onPhase,
       });
     options?.signal?.throwIfAborted();
-    pglite = await openPglite(dbPath, pgliteOpts, () => onPhase("database_image_restored"));
+    pglite = await openPglite(dbPath, pgliteOpts, onImageRestored);
     const openedPglite = pglite;
     await openedPglite.waitReady;
     onPhase("database_opened");
 
     const db = drizzle(openedPglite, { schema });
     await withMigrationsFolder(async (migrationsFolder) => {
-      if (fs.existsSync(migrationsFolder)) await migrate(db, { migrationsFolder });
+      if (fs.existsSync(migrationsFolder)) {
+        await migrate(db, { migrationsFolder });
+        await maintainDatabase(openedPglite, dbPath, fresh, onPhase);
+      }
     });
     onPhase("database_migrated");
 

@@ -1,3 +1,4 @@
+<<<<<<<< HEAD:packages/pstdio-dashboard/src/shared/agents/use-harness-account.tsx
 import { Button, Stack, Text } from "@chakra-ui/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AgentInfo } from "pstdio-api-contracts";
@@ -76,3 +77,6 @@ export const useHarnessAccount = (
     ) : null,
   };
 };
+========
+export * from "@/shared/agents/use-harness-account";
+>>>>>>>> origin/main:packages/pstdio-dashboard/src/modules/sessions/components/use-harness-account.tsx

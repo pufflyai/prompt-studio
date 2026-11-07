@@ -11,6 +11,7 @@ const REPO_ROOT = resolve(import.meta.dir, "../../../../..");
 const fixtureAgents = [
   {
     id: "pstdio.workbench-fixture.harness.fake",
+    extensionId: "pstdio.workbench-fixture",
     name: "Fake Agent",
     availability: { type: "INSTALLED" },
     capabilities: ["SessionFork"],
@@ -21,6 +22,7 @@ const fixtureAgents = [
     ["native-action", "Native action fixture"],
   ].map(([id, name]) => ({
     id: `pstdio.workbench-fixture.harness.${id}`,
+    extensionId: "pstdio.workbench-fixture",
     name,
     availability: { type: "INSTALLED" },
     params: { planning: { type: "boolean", label: "Planning", defaultValue: false, control: "command" } },

@@ -10,7 +10,12 @@ const RECOVERY_TIMEOUT_MS = 30_000;
  * Creates a cloud project of the account on a device that does not have it yet. Its data needs no
  * folder, so discovery starts without one. Opening the project prepares its local folder.
  */
-export const recoverCloudProject = async (deps: ProjectsRouteDeps, connection: RelayWorkbench, signal: AbortSignal) => {
+export const recoverCloudProject = async (
+  deps: ProjectsRouteDeps,
+  connection: RelayWorkbench,
+  signal: AbortSignal,
+  created?: () => void,
+) => {
   const { info, state } = await readCloudProjectInfo(
     connection,
     AbortSignal.any([signal, AbortSignal.timeout(RECOVERY_TIMEOUT_MS)]),
@@ -29,6 +34,8 @@ export const recoverCloudProject = async (deps: ProjectsRouteDeps, connection: R
     // Keep the downloaded history, so a rename here before the first full sync builds on it.
     await deps.projectInfoService.merge(project.id, state);
     await deps.workspaceService.ensureDefault({ project_id: project.id, name: "Project folder" });
+    signal.throwIfAborted();
+    created?.();
     await setupProjectExtensions(deps, project.id, installDefaults);
   });
   await deps.extensionRuntimeCatalog.activate(connection.workbenchId);

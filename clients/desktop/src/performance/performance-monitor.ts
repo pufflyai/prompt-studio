@@ -23,6 +23,12 @@ const WINDOW_SAMPLES = WARNING.windowMs / SAMPLE_INTERVAL_MS;
 
 const round = (value: number) => Math.round(value * 10) / 10;
 
+interface PerformanceCaptureOwner {
+  sample: (readProcesses: () => PerformanceProcessSample[]) => Promise<void>;
+  snapshot: () => PerformanceCapture;
+  close: () => Promise<void>;
+}
+
 export interface PerformanceMonitorOptions {
   preference: { readonly enabled: boolean; set: (enabled: boolean) => void };
   readMetrics: () => ProcessMetric[];
@@ -32,11 +38,7 @@ export interface PerformanceMonitorOptions {
   // Logical CPUs. Electron divides each process's CPU by this count.
   cpuCount: number;
   openEndpoint: (read: () => PerformanceSnapshot | null) => Promise<{ close: () => Promise<void> }>;
-  createCapture?: () => {
-    sample: (readProcesses: () => PerformanceProcessSample[]) => Promise<void>;
-    snapshot: () => PerformanceCapture;
-    close: () => Promise<void>;
-  };
+  createCapture?: () => PerformanceCaptureOwner | Promise<PerformanceCaptureOwner>;
   recordings?: () => PerformanceRecordingExport;
   now?: () => number;
   schedule?: (callback: () => void, intervalMs: number) => () => void;
@@ -53,7 +55,7 @@ export class DesktopPerformanceMonitor {
   readonly #options: PerformanceMonitorOptions;
   #cancel: (() => void) | null = null;
   #endpoint: { close: () => Promise<void> } | null = null;
-  #capture: ReturnType<NonNullable<PerformanceMonitorOptions["createCapture"]>> | null = null;
+  #capture: PerformanceCaptureOwner | null = null;
   #cpuHistory = new Map<string, number[]>();
   #lastSampleAt: number | null = null;
   #latest: { capturedAt: number; windowMs: number; processes: PerformanceProcess[] } | null = null;
@@ -184,7 +186,7 @@ export class DesktopPerformanceMonitor {
   async #begin() {
     if (this.#cancel) return;
     try {
-      this.#capture = this.#options.createCapture?.() ?? null;
+      this.#capture = (await this.#options.createCapture?.()) ?? null;
       void this.#capture?.sample(() => []);
       this.#cancel = (this.#options.schedule ?? scheduleInterval)(() => {
         try {

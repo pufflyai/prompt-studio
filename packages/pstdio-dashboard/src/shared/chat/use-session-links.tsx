@@ -1,3 +1,4 @@
+<<<<<<<< HEAD:packages/pstdio-dashboard/src/shared/chat/use-session-links.tsx
 import { AlertMessage } from "@pstdio/ui";
 import type { WorkbenchCore } from "@pstdio/workbench";
 import { useState } from "react";
@@ -34,3 +35,6 @@ export const useSessionLinks = (workbench: WorkbenchCore, projectId?: string, wo
     ) : null,
   };
 };
+========
+export * from "@/shared/chat/use-session-links";
+>>>>>>>> origin/main:packages/pstdio-dashboard/src/modules/sessions/components/session-chat-links.tsx

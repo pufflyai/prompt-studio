@@ -1,3 +1,4 @@
+import type { ProjectFolderRecoveryStatus } from "pstdio-api-contracts";
 import { createLiveConnection, createRelayAccess, type LiveConnection } from "pstdio-sync/relay";
 import { canonicalJson } from "pstdio-sync-contracts";
 import { publishedExtensionsId } from "../../features/extensions/publication/catalog";
@@ -63,6 +64,8 @@ const projectOwnerProgress = (
   workbenchId: string,
   statuses: Parameters<typeof projectSyncStatus>[0],
   extensionIds: string[],
+  /** Folder progress sits beside records and never makes them unready. */
+  folder?: ProjectFolderRecoveryStatus,
 ) => {
   const names = ["core", "publications", "automations", "personal", ...extensionIds];
   apiLogger.debug(
@@ -73,7 +76,31 @@ const projectOwnerProgress = (
     },
     "Project data owner progress",
   );
-  return projectSyncStatus(statuses);
+  return { ...projectSyncStatus(statuses), ...(folder ? { folder } : {}) };
+};
+
+/** What other services call on one project: online device commands and its folder recovery owner. */
+const projectEntryPoints = (
+  commands: Parameters<typeof createDeviceCommandCaller>[0],
+  folders: (workbenchId: string) => ReturnType<typeof startFolderRecovery> | undefined,
+) => ({ call: createDeviceCommandCaller(commands), folders });
+
+// Drain every start before another refresh can admit owners from a newer snapshot.
+const drainOwnerStarts = async (starts: Promise<void>[]) => {
+  const results = await Promise.allSettled(starts);
+  for (const result of results) if (result.status === "rejected") throw result.reason;
+};
+
+type ExtensionConnection = Awaited<ReturnType<typeof startRelayExtension>>;
+
+const stopRelayConnection = async (
+  connections: Map<string, ExtensionConnection>,
+  key: string,
+  connection: ExtensionConnection,
+) => {
+  connection.close();
+  await connection.done;
+  if (connections.get(key) === connection) connections.delete(key);
 };
 
 // `denied` runs when the manager rejects a device credential, for example after another device removed this one.
@@ -105,11 +132,8 @@ export const startRelayRuntime = async (input: {
   const commands = createWorkbenchConnections((config) => startDeviceCommands(core(config)));
   const recovery = createWorkbenchConnections((config) => startFolderRecovery(core(config)));
   const lifecycleOwners = [...coreOwners, commands, recovery];
-  const stopConnection = async (key: string, connection: Awaited<ReturnType<typeof startRelayExtension>>) => {
-    connection.close();
-    await connection.done;
-    if (connections.get(key) === connection) connections.delete(key);
-  };
+  const stopConnection = (key: string, connection: ExtensionConnection) =>
+    stopRelayConnection(connections, key, connection);
   let running: Promise<void> | undefined;
   let dirty = false;
   // Committed storage changes, local or downloaded, refresh the project's open views.
@@ -137,28 +161,31 @@ export const startRelayRuntime = async (input: {
         connection.contextKey !== desired.get(connection.owner.extensionId),
     );
     await Promise.all(obsolete.map(([key, connection]) => stopConnection(key, connection)));
-    for (const source of snapshot.enabledSources) {
-      if (workbenches.get(workbenchId) !== config) return;
-      const key = JSON.stringify([workbenchId, source.installedSource.extension_id]);
-      if (connections.has(key)) continue;
-      const connection = await startRelayExtension({
-        config,
-        source,
-        snapshot,
-        contextKey: desired.get(source.installedSource.extension_id)!,
-        access: access.get(workbenchId)!,
-        live: live.get(workbenchId)!,
-        deps,
-        signal: controller.signal,
-        statusChanged: () => statusChanged(workbenchId),
-      });
-      if (controller.signal.aborted || workbenches.get(workbenchId) !== config) {
-        connection.close();
-        await connection.done;
-        return;
-      }
-      connections.set(key, connection);
-    }
+    // Folder lookup and preparation belong to each owner; one slow source must not delay the others.
+    await drainOwnerStarts(
+      snapshot.enabledSources.map(async (source) => {
+        if (workbenches.get(workbenchId) !== config) return;
+        const key = JSON.stringify([workbenchId, source.installedSource.extension_id]);
+        if (connections.has(key)) return;
+        const connection = await startRelayExtension({
+          config,
+          source,
+          snapshot,
+          contextKey: desired.get(source.installedSource.extension_id)!,
+          access: access.get(workbenchId)!,
+          live: live.get(workbenchId)!,
+          deps,
+          signal: controller.signal,
+          statusChanged: () => statusChanged(workbenchId),
+        });
+        if (controller.signal.aborted || workbenches.get(workbenchId) !== config) {
+          connection.close();
+          await connection.done;
+          return;
+        }
+        connections.set(key, connection);
+      }),
+    );
     statusChanged(workbenchId);
   };
   const reconcile = async () => {
@@ -211,7 +238,7 @@ export const startRelayRuntime = async (input: {
   const stopEvents = watchRuntimeChanges(deps, refresh);
   await refresh();
   return {
-    call: createDeviceCommandCaller(commands.get),
+    ...projectEntryPoints(commands.get, recovery.get),
     async retry(workbenchId: string) {
       await refresh();
       personal.get(workbenchId)?.retry();
@@ -240,6 +267,7 @@ export const startRelayRuntime = async (input: {
         workbenchId,
         await Promise.all(owners.map((owner) => owner?.status() ?? missingOwnerStatus)),
         snapshot.enabledSources.map(({ installedSource }) => installedSource.extension_id),
+        await recovery.get(workbenchId)?.folder(),
       );
     },
     // Replaces the synced workbenches. Only workbenches whose login changed restart their connections.

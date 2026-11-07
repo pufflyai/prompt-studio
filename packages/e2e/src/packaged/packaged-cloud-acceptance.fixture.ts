@@ -9,7 +9,11 @@ import { startPublicTextPeer } from "./packaged-public-text-peer.fixture";
 import { runtimeAuthorization, startPackagedServe } from "./packaged-serve-helpers";
 
 export const acceptanceOwner = "example.shared-notes";
-export const createCloudAcceptanceFixture = async (root: string, children: Set<ChildProcess>) => {
+export const createCloudAcceptanceFixture = async (
+  root: string,
+  children: Set<ChildProcess>,
+  options: { cloudUi?: boolean } = {},
+) => {
   const key = join(root, "peer-key.pem");
   const cert = join(root, "peer-cert.pem");
   execFileSync(
@@ -55,6 +59,7 @@ export const createCloudAcceptanceFixture = async (root: string, children: Set<C
   // The unrelated extension consumes the packed public SDK. It has no sync, merge or crypto code.
   installBuiltSdk(source);
   const defaults = JSON.parse(e2eExtensions("pstdio-notes", "pstdio-artifacts", "pstdio-planner"));
+  if (options.cloudUi) defaults.defaultExtensions.push(...JSON.parse(e2eExtensions("pstdio-cloud")).defaultExtensions);
   defaults.defaultExtensions.push({ source, installName: "shared-notes", skipInstall: true });
   const peer = await startPublicTextPeer(root);
   const devices: CloudAcceptanceDevice[] = [];
@@ -69,7 +74,8 @@ export const createCloudAcceptanceFixture = async (root: string, children: Set<C
       PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify(defaults),
       PSTDIO_LOG_PATH: logPath,
       PSTDIO_LOG_LEVEL: "debug",
-      PSTDIO_EXTENSION_WEBVIEW_BUILDS: "0",
+      PSTDIO_EXTENSION_WEBVIEW_BUILDS: options.cloudUi ? "1" : "0",
+      ...(options.cloudUi ? { PSTDIO_ACCOUNT_MANAGER_ORIGIN: peer.origin } : {}),
     });
     children.add(host.child);
     const client = createClient({ baseUrl: host.baseUrl, token: host.descriptor.token });
@@ -95,9 +101,9 @@ export const createCloudAcceptanceFixture = async (root: string, children: Set<C
   // Diagnostic collection has its own stricter deadline so a dead peer cannot prevent teardown.
   const diagnostics = async (projectId?: string) => {
     const signal = AbortSignal.timeout(1_000);
-    return {
-      relay: await peer.inspect(signal).catch((error) => ({ error: String(error) })),
-      devices: await Promise.all(
+    const [relay, snapshots] = await Promise.all([
+      peer.inspect(signal).catch((error) => ({ error: String(error) })),
+      Promise.all(
         devices.map(async (device) => ({
           name: device.name,
           environmentId: device.environmentId,
@@ -121,7 +127,8 @@ export const createCloudAcceptanceFixture = async (root: string, children: Set<C
           })(),
         })),
       ),
-    };
+    ]);
+    return { relay, devices: snapshots };
   };
   return { peer, start, devices, diagnostics };
 };

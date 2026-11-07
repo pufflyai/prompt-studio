@@ -1224,6 +1224,7 @@ jobs:
         uses: ./.github/actions/setup-ci-cache
         with:
           install-strategy: native
+          windows-dev-drive: ${{ matrix.platform == 'win32' }}
       - name: Test native DMG attachment cleanup
         id: dmg_cleanup
         if: needs.scope.outputs.production == 'true' && matrix.platform == 'darwin' && matrix.shard == 1

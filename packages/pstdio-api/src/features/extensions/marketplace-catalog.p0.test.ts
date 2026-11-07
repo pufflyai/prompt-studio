@@ -117,6 +117,7 @@ describe("extension catalog", () => {
       .map((catalogEntry) => catalogEntry.installName);
 
     expect(defaults).toEqual([
+      "pstdio-cloud",
       "pstdio-home",
       "pstdio-session-browser",
       "pstdio-onboarding",

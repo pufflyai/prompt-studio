@@ -49,6 +49,8 @@ Agents can use the same operation with `client.projects.open(projectId)`. This p
 
 If a download or extension activation failed, `client.account.retryProjectSync(projectId)` retries discovery and wakes the project's sync owners immediately. It also clears the extension activation retry delay. The opening dialog uses this operation for Retry while waiting for content.
 
+To get the whole project folder back from another of your computers, including uncommitted files and local Git history, restore its folder copy before opening the project. Opening first creates the managed folder, and a restored folder then stays beside it instead of becoming the project's folder. On macOS and Linux, run `pst projects folder sources PROJECT_ID`, then `pst projects folder restore PROJECT_ID --device DEVICE_ID --source SOURCE_ID --path /absolute/path/to/new-folder`, or use `client.projects.folderSources` and `client.projects.restoreFolder`. See [restore a project folder](../concepts/0007-cloud-sync.md#restore-a-project-folder-on-another-computer).
+
 To use a folder you already have instead, bind the project ID before opening it on the new machine:
 
 ```sh

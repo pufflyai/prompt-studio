@@ -7,6 +7,8 @@ interface BenchmarkCase {
   args: string[];
   cwd?: string;
   timeoutMs?: number;
+  // Fixture construction is preparation, not a measured case: no case cap applies (performance reference 0005).
+  preparation?: boolean;
   stdout?: number;
   stderr?: number;
   // Docker services are outside the host process tree. Only name the owned service.
@@ -115,10 +117,18 @@ export const finalizeBenchmarkCase = (input: CaseCompletion) => {
 };
 
 export const runBenchmarkCase = async (input: BenchmarkCase) => {
-  const limitMs = Math.min(input.timeoutMs ?? contract.caseTimeoutMs, contract.caseTimeoutMs);
-  if (!Number.isFinite(limitMs) || limitMs <= 0) throw new Error("Case allowance must be positive and finite");
+  const limitMs = input.preparation
+    ? Number.POSITIVE_INFINITY
+    : Math.min(input.timeoutMs ?? contract.caseTimeoutMs, contract.caseTimeoutMs);
+  if (!input.preparation && (!Number.isFinite(limitMs) || limitMs <= 0))
+    throw new Error("Case allowance must be positive and finite");
   const started = performance.now();
-  input.emit({ phase: "case-start", case: input.name, limitMs, boundary: "spawn-through-worker-exit-including-setup" });
+  input.emit({
+    phase: "case-start",
+    case: input.name,
+    limitMs: input.preparation ? null : limitMs,
+    boundary: input.preparation ? "uncapped-fixture-preparation" : "spawn-through-worker-exit-including-setup",
+  });
   const child = spawn(input.command, input.args, {
     cwd: input.cwd,
     env: { ...process.env, PSTDIO_SCALE_SUPERVISOR_PID: String(process.pid) },
@@ -172,7 +182,9 @@ export const runBenchmarkCase = async (input: BenchmarkCase) => {
   process.once("SIGINT", abort);
   process.once("SIGTERM", abort);
   // Absolute deadline. Output/progress never changes this timer.
-  const timer = setTimeout(() => terminate("timed-out"), Math.max(0, limitMs - (performance.now() - started)));
+  const timer = input.preparation
+    ? undefined
+    : setTimeout(() => terminate("timed-out"), Math.max(0, limitMs - (performance.now() - started)));
   try {
     const exited = new Promise<{ code: number | null; signal: NodeJS.Signals | null; error?: string }>((resolve) => {
       child.once("error", (error) => resolve({ code: null, signal: null, error: String(error) }));
@@ -195,7 +207,7 @@ export const runBenchmarkCase = async (input: BenchmarkCase) => {
         elapsedWallMs,
         limitMs,
       }),
-      limitMs,
+      limitMs: input.preparation ? null : limitMs,
       elapsedWallMs,
       workerWallMs,
       exitCode: completionCode ?? exit.code,

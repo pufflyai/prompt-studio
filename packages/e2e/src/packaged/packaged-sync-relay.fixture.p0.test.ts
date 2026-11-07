@@ -2,7 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { createSyncSpace } from "pstdio-sync/encryption";
 import { createDocumentRelay } from "pstdio-sync/relay";
 import { syncPath } from "pstdio-sync-contracts";
-import { createPackagedSyncPeer } from "./packaged-sync-relay.fixture";
+import { createPackagedSyncPeer, packagedAccountCode, packagedPersonalKey } from "./packaged-sync-relay.fixture";
 
 const NativeWebSocket = globalThis.WebSocket as {
   new (url: string | URL, options?: Bun.WebSocketOptions): WebSocket;
@@ -29,9 +29,19 @@ afterEach(async () => {
     );
 });
 
-const enrolledAccess = async (origin: string, deviceId: string, workbenchId: string) => {
+const enrolledAccess = async (origin: string, deviceId: string, workbenchId: string, code?: string) => {
+  // A device signs in through a one-use code; without one it joins the default account.
+  const session = code
+    ? ((await (
+        await fetch(`${origin}/api/auth/one-time-token/verify`, {
+          method: "POST",
+          body: JSON.stringify({ token: code }),
+        })
+      ).json()) as { session: { token: string } })
+    : undefined;
   const enrolled = await fetch(`${origin}/v1/device-login`, {
     method: "POST",
+    headers: session ? { authorization: `Bearer ${session.session.token}` } : {},
     body: JSON.stringify({ deviceId, name: `Device ${deviceId}` }),
   });
   expect(enrolled.ok).toBe(true);
@@ -74,6 +84,36 @@ test("relay fixture access preserves the enrolled device and project identity", 
   } finally {
     await stopPeer(peer);
   }
+});
+
+test("relay fixture keeps each account's private space, keys and projects to its own devices", async () => {
+  const peer = createPeer();
+  const projectId = "shared-name";
+  const owner = await enrolledAccess(peer.origin, "laptop", projectId);
+  const other = await enrolledAccess(peer.origin, "desk", projectId, packagedAccountCode("second"));
+  const read = (token: string, spaceOwner: string) =>
+    fetch(
+      `${peer.origin}${syncPath({ kind: "document", projectId, spaceOwner, documentId: "records_0123456789abcdef", operation: "read" })}`,
+      {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}`, "pstdio-sync-protocol": "1" },
+        body: JSON.stringify({ after: 0 }),
+      },
+    );
+  expect((await read(owner.token, "owner")).status).toBe(200);
+  expect((await read(other.token, "second")).status).toBe(200);
+  expect((await read(other.token, "owner")).status).toBe(403);
+  expect((await read(owner.token, "second")).status).toBe(403);
+  const manager = (credential: string, path: string, method = "GET") =>
+    fetch(`${peer.origin}${path}`, { method, headers: { authorization: `Bearer ${credential}` } });
+  expect((await manager(owner.credential, `/v1/workbenches/${projectId}`, "PUT")).ok).toBe(true);
+  expect(await (await manager(owner.credential, "/v1/workbenches")).json()).toEqual([{ workbenchId: projectId }]);
+  expect(await (await manager(other.credential, "/v1/workbenches")).json()).toEqual([]);
+  const keys = (await (await manager(other.credential, `/v1/workbenches/${projectId}/keys`)).json()) as {
+    personal: unknown[];
+  };
+  expect(keys.personal).toEqual([packagedPersonalKey("second")]);
+  expect(packagedPersonalKey("second").secret).not.toBe(packagedPersonalKey("owner").secret);
 });
 
 test("relay fixture forwards volatile frames with the authenticated sender without writing documents", async () => {

@@ -71,7 +71,6 @@ export const createPersonalDocuments = (input: {
       allIndexes = true;
     },
     async prepare(signal: AbortSignal) {
-      await context.discardLegacy();
       requestSignal = signal;
       const renewed = keysFor !== signal;
       const revision = keyRevision;

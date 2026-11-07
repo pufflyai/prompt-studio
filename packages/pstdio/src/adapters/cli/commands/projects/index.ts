@@ -4,6 +4,7 @@ import * as cloudCommand from "./cloud";
 import * as createCommand from "./create";
 import * as deleteCommand from "./delete";
 import * as environmentCommand from "./environment";
+import * as folderCommand from "./folder";
 import * as listCommand from "./list";
 import * as localCommand from "./local";
 import * as recoveryPointsCommand from "./recovery-points";
@@ -22,4 +23,5 @@ export const { command, describe, subcommands, builder, handler } = defineComman
   viewCommand,
   recoveryPointsCommand,
   restoreCommand,
+  folderCommand,
 );

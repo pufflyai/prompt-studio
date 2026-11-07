@@ -65,7 +65,8 @@ export const createAppAccount = (
             // A first point waits for the first full download, so it never holds a partial project.
             projects: async () => {
               const ready: string[] = [];
-              for (const id of cloudProjects) if ((await relay.status(id)).offlineReady) ready.push(id);
+              for (const id of cloudProjects)
+                if ((await accountService.projectSyncStatus(id)).offlineReady) ready.push(id);
               return ready;
             },
           });
@@ -79,9 +80,10 @@ export const createAppAccount = (
               for (const project of await projects.list()) void syncEvents.changed(project.id);
             },
             relay.status,
-            (connection, signal) => recoverCloudProject(app.deps, connection, signal),
+            (connection, signal, created) => recoverCloudProject(app.deps, connection, signal, created),
             relay.retry,
             relay.call,
+            relay.folders,
           );
         },
       },

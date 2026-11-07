@@ -125,6 +125,9 @@ test("uninstalled Home leaves the project root on the existing empty panel", asy
   await expect(page).toHaveURL(new RegExp(`/projects/${project.id}$`));
   await page.goto(`/projects/${project.id}/workspaces`);
   await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/workspaces$`));
+  await expect(
+    page.locator('[data-workbench-region="main"] [data-workbench-view="pstdio.pstdio-workspaces.view.workspaces"]'),
+  ).toBeVisible();
   await page.getByRole("option", { name: "Sessions", exact: true }).click();
   await page.getByRole("button", { name: "Back to project", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/workspaces$`));

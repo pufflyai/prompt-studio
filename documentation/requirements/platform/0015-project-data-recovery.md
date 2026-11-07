@@ -1,34 +1,82 @@
 # PRD: Restore project files without a Git host
 
-Status: Proposed implementation design. Created: 2026-10-30. Owner: platform.
-Ticket: PS-960, under PS-716. The user chose project-folder coverage with a separate
+Status: Implemented in core for macOS and Linux (PS-1069); Cloud extension UI pending (PS-1068).
+Created: 2026-10-30. Owner: platform. Ticket: PS-960, under PS-716. The user chose project-folder coverage with a separate
 `.pstignore` file on 2026-10-30. `.gitignore` does not control sync, so `.env` files
 remain included unless explicitly excluded in `.pstignore`. This document and
-[PRD 0014](0014-local-first-sync.md) reflect that decision. Runtime work is not yet
-implemented by this documentation change.
+[PRD 0014](0014-local-first-sync.md) reflect that decision. PS-1069 implemented the runtime
+in #1793 (capture and transfer), #1858 (restore and public API, SDK and CLI) and a third PR
+(integrated qualification, the 5 GiB workload and documentation).
 
 ## Implementation status
 
-Checked 2026-11-06 on the PS-1069 draft branch; not released. Core captures and downloads
-folders, but no restore, public API, CLI or Cloud UI exists yet. Nothing advertises recovery.
+Checked 2026-11-07 on the third PS-1069 PR's branch; not released yet. Core captures, downloads
+and restores project folders on macOS and Linux (glibc 2.28 or later) through a public API, SDK and
+`pst projects folder`. The Cloud extension UI does not exist yet (PS-1068), so the CLI and SDK are
+the only ways to restore. User and reference documentation:
+[Cloud sync guide](../../guides/concepts/0007-cloud-sync.md#restore-a-project-folder-on-another-computer),
+[CLI](../../references/cli/0004-projects.md),
+[architecture](../../references/architecture/0026-synchronization-contracts.md#project-folder-recovery)
+and the [workload results](../../references/performance/0008-folder-recovery-workload.md).
 
-- Done in core: bounded encrypted capture on macOS and Linux, Git dependencies limited to
-  registered repository roots, acknowledged upload before publication, the private
-  per-source catalog, scheduled capture, durable enrollment, and automatic download.
-- Scheduling: startup, reconnect, watcher loss and an explicit request run a full scan.
-  Change hints wait for a quiet period. Files whose source identity is unchanged reuse their
-  encrypted content. The final pass still re-checks every identity.
-- One process owns a source through a lock in recovery storage. A complete capture waits
-  there as a candidate until the relay acknowledges it, including across restarts.
-- Local retention keeps every graph that current catalog roots or the candidate reference.
-  Superseded ciphertext stays for one hour, like the relay's grace copy.
-- R53 client snapshots do not include folder captures. A snapshot restore is a normal edit.
-  Restoring an older catalog root would need blobs that latest-plus-grace retention has
-  already released. Folder history is the latest complete capture of each source, plus the
-  grace copy. Removed devices keep their catalog entries, so remaining devices can still
-  restore them.
-- Still open: a worker for capture hashing and encryption, Windows access, restore, the
-  public SDK/API/CLI, separate progress in project status, and the 5 GiB qualification.
+- Capture: bounded encrypted capture under the root `.pstignore`, Git dependencies limited to
+  registered repository roots, acknowledged upload before publication, the private per-source
+  catalog and durable enrollment. Startup, reconnect, an explicit request and a new project folder
+  (such as a restored one) scan at once; watcher loss and change hints wait for the 30-second gap
+  and quiet period. Unchanged files reuse their encrypted content.
+- One process owns a source through a lock in recovery storage. A complete capture waits there
+  as a candidate until the relay acknowledges it, including across restarts. Local retention keeps
+  every graph the catalog or candidate references, plus superseded ciphertext for one hour.
+- Download: every completed copy of the account downloads automatically into the local recovery
+  store and resumes from verified chunks after an interruption, so restoring works with the source
+  device off. Folder history is each source's latest complete copy plus the relay grace copy; R53
+  recovery points do not include folder copies. Removed devices keep their catalog entries.
+- Restore validates the whole manifest, stages a journaled hidden sibling folder, verifies every
+  chunk and file digest, re-reads the staged tree through held handles and publishes with
+  `renameatx_np(RENAME_EXCL)` or `renameat2(RENAME_NOREPLACE)`
+  ([ADR 0138](../../adrs/0138-temporary-native-filesystem-operations-for-recovery.md)). The
+  folder becomes the project's folder through the normal attach flow only when the project has no
+  folder on this device. Recovery runs no Git, hooks, scripts or extension code; restored
+  `.pstdio/extensions` register disabled. Restored entries keep permission bits only. External Git
+  administration is rebuilt under `.pstdio/recovery/<copy>/`; links to unrestored targets are
+  omitted and listed.
+- Progress for capture, download and restore is derived in memory and exposed by
+  `GET /projects/{id}/folder/sources|recovery`, `POST /projects/{id}/folder/capture|download|restore|cancel`,
+  the SDK `projects` methods, `pst projects folder` and the `folder` field of project sync status.
+
+Gaps that remain:
+
+- No Cloud extension UI or critical Playwright folder/download scenario (PS-1068). Opening a cloud
+  project in the picker creates a managed folder first, after which a restored folder stays beside
+  it; restore before opening. A second restore is not bound as its own workspace.
+- Capture hashing and encryption run on the host's main thread; no worker yet.
+- Windows and musl Linux: the native capture adapter loads `libSystem` or glibc, so capture cannot
+  run there, and restore reports `unsupported`.
+- Progress has no per-entry problem list or pending file and byte counts.
+- A restored folder is sealed again with new random chunk IDs, so the restoring device uploads
+  the whole folder once more as its own copy.
+- Removing a device relies on the existing R15/R37 key rotation; no folder-specific test covers it.
+- Hosted capacity and cost for the 5 GiB workload remain PS-789; the local workload uses the
+  packaged wire peer, not the deployed relay.
+
+### Acceptance evidence
+
+Integrated qualification:
+[`packaged-folder-recovery.p2.test.ts`](../../../packages/e2e/src/packaged/packaged-folder-recovery.p2.test.ts)
+runs three compiled hosts with separate homes against the packaged relay peer: two computers of
+one account and one of a second account. The peer keeps each account's private space, keys and
+project list apart; it is not the deployed relay. Unit and service tests live next to
+`packages/pstdio-api/src/services/project-recovery/`.
+
+| Group | Result | Evidence |
+| --- | --- | --- |
+| 1. Bytes and metadata without Git | Passed | Integrated: the laptop stops before any folder byte downloads; the restored tree matches type, permission bits, size and SHA-256 of every entry, link text and empty folders. `restore.p0`. |
+| 2. `.pstignore` | Passed | Integrated: starter policy seeded and restored; root and nested `node_modules` excluded; `.env` and Git-ignored `build/` restored. `policy.p0` (globs, negation, last rule, existing/emptied/absent policies), `capture.p0`, `folder-recovery.p1` and the endpoint test (deliberate absence survives restore). |
+| 3. Functional Git | Passed | Integrated: HEAD, branches, all commits (unpushed on two branches), reflog, staged and unstaged diffs, untracked files and local config match; `git fsck --full` passes; the post-checkout hook never runs. `git-dependencies.p0` and `restore.p0` cover linked worktrees, submodules, unregistered and crafted administration. Detached commits are covered only by object-level capture, not a dedicated test. |
+| 4. Restarts, watcher loss, interruption | Passed | Integrated: a download interrupted by relay failures resumes after retry and reads no blob twice. `schedule.p0`, `local-source.p0` (restart candidate, new folder scanned at once), `capture.p0` (changing files stay pending), `transfer.p0` (corruption, cancellation). Quota and full-disk failures are mapped to errors but not exercised end to end. |
+| 5. Independent copies and confidentiality | Passed, device removal unproved | Integrated: the laptop's and the desktop's copies are both listed and restorable; the second account sees neither the project nor its copy; relay blobs and documents contain no known file name, credential or file bytes from either account. Device removal is not tested for folders. |
+| 6. Destination safety | Passed | Integrated: an existing empty folder is refused without writes; a folder created during a restore is kept with `destination_created` and no staging is left; hooks do not run. `restore.p0` (traversal, links, case collisions, cancellation, staging cleanup), endpoint test (restored extension stays disabled and its code never runs). |
+| 7. Interfaces and the 1 GiB file | Partly proved | Integrated: `pst projects folder sources` equals the API listing, `status` equals `folderRecovery`, CLI `download` and `restore` complete and an existing destination fails with exit status 1. No Playwright scenario (no UI). The [5 GiB workload](../../references/performance/0008-folder-recovery-workload.md) passed on 2026-11-07: capture and upload 249.6 s, download with the laptop off 191.0 s, CLI restore 58.7 s, every digest matched; all 140 record saves completed with an update at the relay (max 787 ms) and all 103 second-account captures published (max 4.6 s) during the transfers. |
 
 ## Outcome and boundary
 

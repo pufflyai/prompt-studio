@@ -1,5 +1,6 @@
 import { existsSync, rmSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+import { defaultPageResourceCodec } from "@pstdio/sdk/extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, createPlannerTicketFile } from "../helpers/planner-api";
 import { observeTreeRows } from "../helpers/tree-continuity";
@@ -89,13 +90,23 @@ test("workspace navigation owns selection while keeping ticket document context"
     await expect(rootRow).toHaveAttribute("aria-selected", "true");
     await expect(body).toHaveAttribute("aria-selected", "false");
     await page.getByRole("button", { name: "Hide Side Panel" }).click();
+    expect(await finishObservingRows()).toEqual([]);
     await linkedRow.click();
-    await expect(linkedRow).toHaveAttribute("aria-selected", "true");
-    await expect(rootRow).toHaveAttribute("aria-selected", "false");
+    const expectLinkedWorkspace = async () => {
+      await expect(page).toHaveURL(
+        (url) => defaultPageResourceCodec.fromUri(url.searchParams.get("resource") ?? "")?.id === linkedWorkspace.id,
+      );
+      await expect(page.getByRole("button", { name: "Back to project", exact: true })).toBeVisible();
+      await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText(ticket.shorthand);
+    };
+    await expectLinkedWorkspace();
     await page.goBack();
     await expect(rootRow).toHaveAttribute("aria-selected", "true");
     await page.goForward();
-    await expect(linkedRow).toHaveAttribute("aria-selected", "true");
+    await expectLinkedWorkspace();
+    await page.goBack();
+    await expect(rootRow).toHaveAttribute("aria-selected", "true");
+    const finishObservingProjectRows = await observeTreeRows(sidenav, [body, file, rootRow]);
     await file.click();
     await expect(file).toHaveAttribute("aria-selected", "true");
     await rootRow.click();
@@ -106,7 +117,7 @@ test("workspace navigation owns selection while keeping ticket document context"
     await body.click();
     await expect(body).toHaveAttribute("aria-selected", "true");
     await expect(file).toHaveAttribute("aria-selected", "false");
-    expect(await finishObservingRows()).toEqual([]);
+    expect(await finishObservingProjectRows()).toEqual([]);
   } finally {
     if (projectId) await request.delete(`${uiOrigin}/v1/projects/${projectId}`);
     if (existsSync(path)) rmSync(path, { recursive: true, force: true });
