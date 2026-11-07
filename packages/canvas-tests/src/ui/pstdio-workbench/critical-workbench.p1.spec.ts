@@ -50,7 +50,13 @@ test("resource previews share a tray and retain pinned tabs", async ({ page }) =
   );
   const header = preview.locator('[data-workbench-panel-header="secondary"]');
   await preview.getByRole("button", { name: "Preview Alpha" }).click();
-  await expect(header.getByRole("tab", { name: "Alpha.md" })).toBeVisible();
+  const alpha = header.getByRole("tab", { name: "Alpha.md" });
+  await expect(alpha).toBeVisible();
+  await alpha.press("Shift+F10");
+  await expect(preview.getByRole("menu", { name: "Alpha.md context menu" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(preview.getByRole("menu")).toHaveCount(0);
+  await expect(alpha).toBeFocused();
   await preview.getByRole("button", { name: "Preview Beta" }).click();
   await expect(header.getByRole("tab", { name: "Alpha.md" })).toHaveCount(0);
   const beta = header.getByRole("tab", { name: "Beta.md" });

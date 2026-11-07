@@ -114,18 +114,20 @@ const WorkbenchRegionTabsContent = (props: WorkbenchRegionTabsContentProps) => {
   const activeWidgetId = resolveDisplayedActiveWidgetId(visiblePlacements, regionState.activeWidgetId);
   useEffect(() => {
     if (!activeWidgetId || !viewport) return;
-    const tab = viewport.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
-    if (!tab) return;
-    const left = viewport.getBoundingClientRect().left + viewport.clientLeft;
-    const right = left + viewport.clientWidth;
-    const bounds = tab.getBoundingClientRect();
-    const leftDelta = bounds.left - left;
-    const rightDelta = bounds.right - right;
-    // Revealing a tab must not scroll the split containers around its strip.
-    if (leftDelta < 0 && rightDelta < 0) viewport.scrollLeft += Math.max(leftDelta, rightDelta);
-    else if (leftDelta > 0 && rightDelta > 0) viewport.scrollLeft += Math.min(leftDelta, rightDelta);
+    const frame = requestAnimationFrame(() => {
+      const tab = viewport.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
+      if (!tab) return;
+      const left = viewport.getBoundingClientRect().left + viewport.clientLeft;
+      const right = left + viewport.clientWidth;
+      const bounds = tab.getBoundingClientRect();
+      const leftDelta = bounds.left - left;
+      const rightDelta = bounds.right - right;
+      // Revealing a tab must not scroll the split containers around its strip.
+      if (leftDelta < 0 && rightDelta < 0) viewport.scrollLeft += Math.max(leftDelta, rightDelta);
+      else if (leftDelta > 0 && rightDelta > 0) viewport.scrollLeft += Math.min(leftDelta, rightDelta);
+    });
+    return () => cancelAnimationFrame(frame);
   }, [activeWidgetId, viewport]);
-  if (!showTabs && !hasActions) return null;
   const onSelectLeadingItem = (item: WorkbenchMenuItem) => {
     const command = commands[item.commandId]?.command;
     if (command && hasCommandParameters(command.params)) {
@@ -152,24 +154,11 @@ const WorkbenchRegionTabsContent = (props: WorkbenchRegionTabsContentProps) => {
       </IconButton>
     </Tooltip>
   ));
-  if (!showTabs) {
-    return (
-      <HStack flex="1" h="full" minW="0" gap="2xs">
-        {panelRegion ? (
-          <WorkbenchPanelAddMenu
-            workbench={workbench}
-            region={panelRegion}
-            resource={resource}
-            panels={eligibleSubPanels}
-          />
-        ) : null}
-        {leadingActions}
-      </HStack>
-    );
-  }
   return (
-    <HStack flex="1" h="full" minW="0" gap="2xs">
+    <HStack flex="1" h="full" minW="0" gap="2xs" display={showTabs || hasActions ? "flex" : "none"}>
       <Tabs.Root
+        display={showTabs ? "flex" : "none"}
+        inert={!showTabs}
         value={activeWidgetId}
         onValueChange={(details) => {
           const placement = visiblePlacements.find((candidate) => candidate.widgetId === details.value);
