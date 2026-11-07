@@ -6,6 +6,7 @@ import { identitySchema } from "pstdio-sync-contracts";
 import { z } from "zod";
 import type { RouteDeps } from "../../features/deps";
 import { apiLogger } from "../../lib/logger";
+import type { startFolderRecovery } from "../relay/folder-recovery";
 import type { RelayWorkbench } from "../relay/runtime";
 import { readAccountStatus } from "./account-status";
 import { createDeviceIdentity } from "./device-identity";
@@ -15,6 +16,8 @@ import { createMissingProjectRecovery } from "./missing-project-recovery";
 import { createNativeLoginRequests } from "./native-login-requests";
 import { createNativePresence } from "./native-presence";
 import { createNativeStore, type DeviceLogin } from "./native-store";
+
+type FolderRecoveryOwners = (projectId: string) => ReturnType<typeof startFolderRecovery> | undefined;
 
 const RETRY_MS = 60_000;
 const loginSchema = z.object({
@@ -131,6 +134,7 @@ export const createNativeAccount = (input: {
     login?.token === cloudProjects?.credential ? cloudProjects?.ids : undefined;
   let update: (connections: RelayWorkbench[]) => Promise<void> = async () => {};
   let retryProject: (projectId: string) => Promise<void> = async () => {};
+  let folders: FolderRecoveryOwners = () => undefined;
   const commands = createDeviceCommandSender();
   const missing = createMissingProjectRecovery({
     exists: async (id) => Boolean(await input.projects.get(id)),
@@ -263,8 +267,10 @@ export const createNativeAccount = (input: {
       recoverProject: Parameters<typeof missing.start>[0],
       retrySync: typeof retryProject = async () => {},
       sendCommand?: SendDeviceCommand,
+      folderRecovery?: FolderRecoveryOwners,
     ) {
       update = relay;
+      if (folderRecovery) folders = folderRecovery;
       retryProject = retrySync;
       if (sendCommand) commands.connect(sendCommand);
       projectStatus = status;
@@ -301,6 +307,17 @@ export const createNativeAccount = (input: {
       return projectStatus(projectId);
     },
     retryProjectSync: (projectId: string) => retryProjectSync(projectId, input.projects, refresh, retryProject),
+    /** The project's folder capture, download and restore owner on this device. */
+    async folderRecovery(projectId: string) {
+      if (!(await input.projects.get(projectId))) throw new AccountRequestError("Unknown project");
+      const login = await readLogin();
+      if (!login) throw new AccountRequestError("Log in first with pst login");
+      if (!projectsFor(login)?.includes(projectId))
+        throw new AccountRequestError("This project does not sync with Cloud on this device");
+      const owner = folders(projectId);
+      if (!owner) throw new AccountRequestError("Cloud sync for this project is starting. Try again shortly.");
+      return owner;
+    },
     logout,
     async devices() {
       const listed = devicesSchema.parse(await call("/v1/devices"));

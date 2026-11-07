@@ -108,3 +108,19 @@ export const pruneProjectExtensionInstances = async (
 
   return removed;
 };
+
+// Deleting a project removes its instances, so the sources discovered in its own folder lose
+// their last user. Keeping them would leave every deleted project's copies installed, watched
+// and checked for webview builds by every later runtime refresh.
+export const removeUnusedFolderSources = async (deps: PruneProjectExtensionInstancesDeps, folder: string) => {
+  const removed: string[] = [];
+  for (const installedSource of await deps.installedExtensionSourcesService.listBySourcePathPrefix(folder)) {
+    const instances = await deps.extensionInstancesService.list({ installed_extension_id: installedSource.id });
+    if (instances.length > 0) continue;
+    if (!(await deps.installedExtensionSourcesService.remove(installedSource.id))) continue;
+    deps.eventBus?.emit("installed_extension_sources", "delete", { id: installedSource.id });
+    removed.push(installedSource.source_path);
+  }
+  for (const sourcePath of removed) await deps.notifyInstalledSourcesChanged(sourcePath);
+  return removed;
+};

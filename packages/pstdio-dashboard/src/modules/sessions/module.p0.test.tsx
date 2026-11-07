@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { resourceKey, workbenchPages } from "@pstdio/sdk/extensions";
+import { contributionRefId, resourceKey, workbenchPages, workspacePages } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
 import { getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
@@ -27,26 +27,6 @@ describe("createSessionsModule", () => {
       modeId: "project",
       path: "sessions",
     });
-  });
-  test("renders aggregate sessions in the Sessions level and scoped sessions for a workspace resource", async () => {
-    const workbench = createWorkbench();
-    registerWorkspaceProviderViews(workbench);
-    workbench.registerModule(createWorkspacesModule());
-    const workspace = createDashboardResource("workspace", "workspace-1", "Workspace one", "GitBranch", "project-1");
-    const ticket = createDashboardResource("ticket", "ticket-1", "PS-1", "FileText", "project-1");
-    workbench.registerModule(createSessionsModule());
-    const sections = (owner: "sessions" | "project", resource?: typeof workspace) =>
-      workbench.navigationTrees.getSections(
-        { kind: owner === "sessions" ? "page" : "mode", id: owner, extensionId: "pstdio" },
-        "content",
-        resource ? { resource } : {},
-      );
-    const nodeIdsForContext = async (owner: "project", resource?: typeof workspace) =>
-      (await sections(owner, resource)).flatMap((section) => section.nodes).map((node) => node.id);
-    expect((await sections("sessions")).map((section) => section.id)).toEqual(["session-list"]);
-    expect(await nodeIdsForContext("project", workspace)).toContain("workspace-sessions");
-    expect(await nodeIdsForContext("project", ticket)).not.toContain("workspace-sessions");
-    expect(await nodeIdsForContext("project")).not.toContain("workspace-sessions");
   });
   test("adds sessions navigation as a sidenav section", async () => {
     const workbench = createWorkbench();
@@ -249,4 +229,40 @@ test("global Sessions navigation establishes the selected project before opening
   await workbench.commands.executeCommand(dashboardCommandIds.openSessions);
   expect(workbench.pages.store.getState().projectId).toBe("project-1");
   expect(workbench.pages.store.getState().location?.page).toEqual(workbenchPages.sessionComposer);
+});
+
+test("renders aggregate sessions in the Sessions level and scoped sessions for a workspace resource", async () => {
+  const workbench = createWorkbench();
+  registerWorkspaceProviderViews(workbench);
+  workbench.registerModule(createWorkspacesModule());
+  const workspace = createDashboardResource("workspace", "workspace-1", "Workspace one", "GitBranch", "project-1");
+  const ticket = createDashboardResource("ticket", "ticket-1", "PS-1", "FileText", "project-1");
+  workbench.registerModule(createSessionsModule());
+  const sections = (owner: "sessions" | "project", resource?: typeof workspace) =>
+    workbench.navigationTrees.getSections(
+      { kind: owner === "sessions" ? "page" : "mode", id: owner, extensionId: "pstdio" },
+      "content",
+      resource ? { resource } : {},
+    );
+  const nodeIdsForContext = async (owner: "project", resource?: typeof workspace) =>
+    (await sections(owner, resource)).flatMap((section) => section.nodes).map((node) => node.id);
+  expect((await sections("sessions")).map((section) => section.id)).toEqual(["session-list"]);
+  expect(await nodeIdsForContext("project", workspace)).not.toContain("workspace-sessions");
+  expect(await nodeIdsForContext("project", ticket)).not.toContain("workspace-sessions");
+  expect(await nodeIdsForContext("project")).not.toContain("workspace-sessions");
+  for (const page of [
+    workspacePages.workspace,
+    workspacePages.overview,
+    workspacePages.history,
+    workbenchPages.workspace,
+  ]) {
+    const workspaceSections = await workbench.navigationTrees.getSections(
+      { kind: "page", id: contributionRefId(page), extensionId: page.extensionId ?? "pstdio" },
+      "content",
+      { resource: workspace },
+    );
+    expect(workspaceSections.flatMap((section) => section.nodes).map((node) => node.id)).toContain(
+      "workspace-sessions",
+    );
+  }
 });

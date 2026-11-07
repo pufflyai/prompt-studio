@@ -58,6 +58,7 @@
     "pstdio-diagnostics": "workspace:*",
     "pstdio-extensions": "workspace:*",
     "pstdio-notes": "workspace:*",
+    "pstdio-cloud": "workspace:*",
     "pstdio-performance": "workspace:*",
     "pstdio-planner": "workspace:*",
     "pstdio-reports": "workspace:*",

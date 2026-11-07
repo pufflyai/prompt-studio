@@ -1,3 +1,4 @@
+import type { ProjectFolderRecoveryStatus } from "pstdio-api-contracts";
 import { createLiveConnection, createRelayAccess, type LiveConnection } from "pstdio-sync/relay";
 import { canonicalJson } from "pstdio-sync-contracts";
 import { publishedExtensionsId } from "../../features/extensions/publication/catalog";
@@ -63,6 +64,8 @@ const projectOwnerProgress = (
   workbenchId: string,
   statuses: Parameters<typeof projectSyncStatus>[0],
   extensionIds: string[],
+  /** Folder progress sits beside records and never makes them unready. */
+  folder?: ProjectFolderRecoveryStatus,
 ) => {
   const names = ["core", "publications", "automations", "personal", ...extensionIds];
   apiLogger.debug(
@@ -73,8 +76,14 @@ const projectOwnerProgress = (
     },
     "Project data owner progress",
   );
-  return projectSyncStatus(statuses);
+  return { ...projectSyncStatus(statuses), ...(folder ? { folder } : {}) };
 };
+
+/** What other services call on one project: online device commands and its folder recovery owner. */
+const projectEntryPoints = (
+  commands: Parameters<typeof createDeviceCommandCaller>[0],
+  folders: (workbenchId: string) => ReturnType<typeof startFolderRecovery> | undefined,
+) => ({ call: createDeviceCommandCaller(commands), folders });
 
 // `denied` runs when the manager rejects a device credential, for example after another device removed this one.
 // `statusChanged` runs when a project's sync status may have changed. Read `status` to get the new value.
@@ -211,7 +220,7 @@ export const startRelayRuntime = async (input: {
   const stopEvents = watchRuntimeChanges(deps, refresh);
   await refresh();
   return {
-    call: createDeviceCommandCaller(commands.get),
+    ...projectEntryPoints(commands.get, recovery.get),
     async retry(workbenchId: string) {
       await refresh();
       personal.get(workbenchId)?.retry();
@@ -240,6 +249,7 @@ export const startRelayRuntime = async (input: {
         workbenchId,
         await Promise.all(owners.map((owner) => owner?.status() ?? missingOwnerStatus)),
         snapshot.enabledSources.map(({ installedSource }) => installedSource.extension_id),
+        await recovery.get(workbenchId)?.folder(),
       );
     },
     // Replaces the synced workbenches. Only workbenches whose login changed restart their connections.

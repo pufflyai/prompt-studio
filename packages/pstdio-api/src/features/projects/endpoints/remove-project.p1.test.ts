@@ -8,6 +8,9 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import type { AppBindings } from "../../../types";
+import { hashExtensionSource, loadExtensionSource } from "../../extensions/extension-runtime";
+import { syncRepoExtensionsForProjectFolder } from "../../extensions/repo-extensions";
+import { createTestExtensionSource } from "../../extensions/test-utils/create-test-extension-source";
 import { removeProjectHandler, removeProjectRoute } from "./remove-project";
 
 let app: OpenAPIHono<AppBindings>;
@@ -164,6 +167,45 @@ describe("DELETE /v1/projects/:id", () => {
 
     expect(response.status).toBe(204);
     expect(existsSync(file.storage_path)).toBe(false);
+  });
+
+  test("uninstalls extensions found only in the project's folder and keeps extensions other projects use", async () => {
+    const project = await createProject("folder-extensions");
+    const other = await createProject("folder-extensions-neighbor");
+    const folder = (await appHandle.deps.workspaceService.getDefault(project.id))!.root_path!;
+    const source = (installName: string, root: string) =>
+      createTestExtensionSource({ displayName: installName, installName, name: installName, root });
+    const enable = async (projectId: string, sourcePath: string, installName: string) => {
+      const loaded = await loadExtensionSource(sourcePath);
+      await appHandle.deps.extensionService.enableInstalledSourceForProject({
+        displayName: loaded.metadata.displayName,
+        extensionId: loaded.metadata.id,
+        installName,
+        manifest: loaded.manifest,
+        name: loaded.metadata.name,
+        projectId,
+        sourceHash: hashExtensionSource(sourcePath),
+        sourcePath,
+        version: loaded.metadata.version ?? null,
+      });
+    };
+    const local = source("folder-lab", join(folder, ".pstdio"));
+    const borrowed = source("borrowed-lab", join(folder, ".pstdio"));
+    await syncRepoExtensionsForProjectFolder({ ...appHandle.deps, projectId: project.id });
+    await enable(other.id, borrowed, "borrowed-lab");
+    const shared = source("shared-lab", join(tempRoot, "shared-extensions"));
+    await enable(project.id, shared, "shared-lab");
+    const installedPaths = async () =>
+      (await appHandle.deps.installedExtensionSourcesService.list()).map((row) => row.source_path);
+    expect(await installedPaths()).toEqual(expect.arrayContaining([local, borrowed, shared]));
+
+    const response = await app.request(`/v1/projects/${project.id}`, { method: "DELETE" });
+
+    expect(response.status).toBe(204);
+    const remaining = await installedPaths();
+    expect(remaining).not.toContain(local);
+    expect(remaining).toEqual(expect.arrayContaining([borrowed, shared]));
+    expect(existsSync(local)).toBe(true);
   });
 
   test("removes worktree directories on disk", async () => {

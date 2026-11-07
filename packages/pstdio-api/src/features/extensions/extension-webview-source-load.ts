@@ -37,15 +37,15 @@ const loadWebviewSource = async (input: SourceLoadInput) => {
 export const loadCurrentWebviewSource = async (
   input: Omit<SourceLoadInput, "row"> & {
     installedExtensionId: string;
-    listInstalledSources: () => Promise<InstalledSourceWithManifest[]>;
+    getInstalledSource: (installedExtensionId: string) => Promise<InstalledSourceWithManifest | null>;
   },
 ) => {
   while (true) {
-    const row = (await input.listInstalledSources()).find((row) => row.id === input.installedExtensionId);
+    const row = await input.getInstalledSource(input.installedExtensionId);
     if (!row) return null;
     const snapshot = await loadWebviewSource({ ...input, row });
     if (!snapshot) return null;
-    const current = (await input.listInstalledSources()).find((row) => row.id === input.installedExtensionId);
+    const current = await input.getInstalledSource(input.installedExtensionId);
     if (!current) return null;
     if (row.source_path !== current.source_path || snapshot.loadKey !== extensionLoadKey(current.source_path)) continue;
     return { row: current, snapshot };

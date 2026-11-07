@@ -108,24 +108,12 @@ const connectDevice = async (
         projectId,
         invocation: { placement: "visible" },
       },
-      settings: { showChildren: true },
+      settings: {},
     });
     expect(result.ok, result.reason).toBe(true);
     return result.value as ResourceListRendererQueryResult;
   };
-  const details = async (deviceId: string) => {
-    const result = await command("view.device-capacity.controls.query", {
-      renderer: {
-        rendererId: "pstdio.pstdio-workspaces.view.device-capacity",
-        projectId,
-        invocation: { placement: "visible" },
-        pageParams: { "device-id": deviceId },
-      },
-    });
-    expect(result.ok, result.reason).toBe(true);
-    return result.value;
-  };
-  return { client, id: identity.environmentId, command, query, details };
+  return { client, id: identity.environmentId, command, query };
 };
 
 test(
@@ -186,9 +174,6 @@ test(
           connectDevice(a, "a", projectId, peer.origin, progress),
           connectDevice(b, "b", projectId, peer.origin, progress),
         ]);
-        progress("set device limits");
-        await first.command("command.set-limit", { limit: 4 });
-        await second.command("command.set-limit", { limit: 7 });
         progress("create private history");
         const session = await first.client.sessions.create(projectId, {
           title: "Device A history",
@@ -205,25 +190,33 @@ test(
         await waitFor(async () =>
           (await second.client.workspaces.query(projectId)).items.some((row) => row.device?.id === first.id),
         );
-        progress("query device menus and capacity");
+        progress("query device groups and workspace history");
         const data = await second.query();
         const device = data.attributes!.find((field) => field.id === "device")!;
         if (device.type.kind !== "enum") throw new Error("Device groups are unavailable");
         expect(device.type.options[0]!.value).toBe(second.id);
-        expect(device.type.options[0]!.contextMenuActions).toEqual(
-          expect.arrayContaining([
-            expect.objectContaining({ id: "details", label: "This device" }),
-            expect.objectContaining({ id: "create", label: "Create workspace" }),
-          ]),
+        expect(device.type.options[0]!.contextMenuActions).toContainEqual(
+          expect.objectContaining({
+            id: "create",
+            action: {
+              kind: "command",
+              target: { command: { kind: "command", extensionId: "pstdio.pstdio-workspaces", id: "show-create" } },
+            },
+          }),
         );
-        const localDetails = await second.details(second.id);
-        expect(localDetails.params).toContainEqual(expect.objectContaining({ id: "limit", defaultValue: 7 }));
-        expect(device.type.options.find((option) => option.value === first.id)?.contextMenuActions).toEqual([
-          expect.objectContaining({ id: "details", label: "Device details" }),
-        ]);
         const foreign = data.rows.find((row) => row.resource?.device?.id === first.id)!;
         expect(foreign.target).toMatchObject({ kind: "page", page: { id: "history" } });
-        expect(foreign.children).toContainEqual(
+        const history = await second.command("view.history.resourceList.query", {
+          renderer: {
+            rendererId: "pstdio.pstdio-workspaces.view.history",
+            projectId,
+            invocation: { placement: "visible" },
+            resource: foreign.resource,
+          },
+          settings: {},
+        });
+        expect(history.ok, history.reason).toBe(true);
+        expect(history.value.rows).toContainEqual(
           expect.objectContaining({
             title: "Device A history",
             target: expect.objectContaining({
@@ -258,38 +251,36 @@ test(
       progress("browser signed in");
       await expectUI(page.getByTestId("resource-list-renderer")).toBeVisible();
       progress("workspaces collection visible");
-      const history = page.getByRole("option").filter({ hasText: "Device A history" });
-      await expectUI(history).toBeVisible();
-      await page.getByRole("tab", { name: "Compact", exact: true }).click();
-      await expectUI(history).toHaveCount(0);
-      await page.getByRole("tab", { name: "By device", exact: true }).click();
-      await expectUI(history).toBeVisible();
-      progress("Compact and By device verified");
-      await history.click();
-      await expectUI(page).toHaveURL(/\/session\?/);
-      await expectUI(page.getByText("Private workspace history", { exact: true })).toBeVisible();
+      const foreignWorkspace = (await second.query()).rows.find((row) => row.resource?.device?.id === first.id);
+      if (!foreignWorkspace) throw new Error("Foreign workspace is unavailable");
+      await page.locator(`[role="option"][id='${JSON.stringify(["resource", foreignWorkspace.id])}']`).click();
+      await expectUI(page).toHaveURL(/\/history\?/);
+      await page
+        .getByRole("region", { name: "Main", exact: true })
+        .getByRole("option")
+        .filter({ hasText: "Device A history" })
+        .click();
+      await expectUI(
+        page
+          .getByRole("region", { name: "Side Panel", exact: true })
+          .getByText("Private workspace history", { exact: true }),
+      ).toBeVisible();
       progress("private history visible");
       progress("stop first runtime");
       await stopProcess(a.child);
       peer.setDeviceOnline(first.id, false);
-      progress("query offline device and cached capacity");
+      progress("query offline workspace history");
       const offline = await second.query();
-      const options = offline.attributes!.find((field) => field.id === "device")!.type;
-      if (options.kind !== "enum") throw new Error("Device groups are unavailable");
-      expect(options.options.find((option) => option.value === first.id)?.contextMenuActions).toEqual([
-        expect.objectContaining({ id: "details", label: "Device details" }),
-      ]);
-      progress("query offline capacity controls");
-      const offlineDetails = await second.details(first.id);
-      expect(offlineDetails.readOnly).toBe(true);
-      expect(offlineDetails.params).toContainEqual(
-        expect.objectContaining({ id: "presence", value: expect.stringContaining("Offline") }),
+      expect(offline.rows).toContainEqual(
+        expect.objectContaining({
+          resource: expect.objectContaining({ device: expect.objectContaining({ id: first.id }) }),
+          target: expect.objectContaining({ page: expect.objectContaining({ id: "history" }) }),
+        }),
       );
-      expect(offlineDetails.params).toContainEqual(expect.objectContaining({ id: "limit", value: "4" }));
       expect((await second.client.sessions.getConversation(session.id)).messages).toContainEqual(
         expect.objectContaining({ id: "private" }),
       );
-      progress("history and offline capacity verified");
+      progress("online and offline history verified");
     } finally {
       progress("cleanup");
       await browser?.close();

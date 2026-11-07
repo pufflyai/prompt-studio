@@ -17,6 +17,7 @@ import { createExtensionEnablement } from "./extension-enablement";
 import {
   type PruneProjectExtensionInstancesInput,
   pruneProjectExtensionInstances as pruneProjectExtensionInstancesImpl,
+  removeUnusedFolderSources,
 } from "./extension-prune";
 import {
   createWebviewBuildReports,
@@ -303,6 +304,8 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
       reloadInstalledSourceBySourcePathImpl(reloadDeps, sourcePath),
     removeProjectExtensionInstance,
     pruneProjectExtensionInstances,
+    removeUnusedFolderSources: (folder: string) =>
+      removeUnusedFolderSources({ ...deps, notifyInstalledSourcesChanged }, folder),
     ...createWebviewBuildReports(reloadDeps, mutateSource),
     registerInstalledSource,
     setProjectExtensionEnabled,

@@ -10,6 +10,20 @@ import {
   getProjectFolderHandler,
   getProjectFolderRoute,
 } from "./endpoints/folder";
+import {
+  cancelFolderRecoveryHandler,
+  cancelFolderRecoveryRoute,
+  captureFolderHandler,
+  captureFolderRoute,
+  downloadFolderHandler,
+  downloadFolderRoute,
+  getFolderRecoveryHandler,
+  getFolderRecoveryRoute,
+  listFolderSourcesHandler,
+  listFolderSourcesRoute,
+  restoreFolderHandler,
+  restoreFolderRoute,
+} from "./endpoints/folder-recovery";
 import { getProjectHandler, getProjectRoute } from "./endpoints/get-project";
 import {
   getHarnessParamDefaultsHandler,
@@ -41,6 +55,12 @@ export const createProjectRoutes = (deps: ProjectsRouteDeps) => {
   routes.openapi(attachWorkspaceRoute, attachWorkspaceHandler(deps));
   routes.openapi(getProjectFolderRoute, getProjectFolderHandler(deps));
   routes.openapi(chooseProjectFolderRoute, chooseProjectFolderHandler(deps));
+  routes.openapi(getFolderRecoveryRoute, getFolderRecoveryHandler(deps));
+  routes.openapi(listFolderSourcesRoute, listFolderSourcesHandler(deps));
+  routes.openapi(captureFolderRoute, captureFolderHandler(deps));
+  routes.openapi(downloadFolderRoute, downloadFolderHandler(deps));
+  routes.openapi(restoreFolderRoute, restoreFolderHandler(deps));
+  routes.openapi(cancelFolderRecoveryRoute, cancelFolderRecoveryHandler(deps));
   routes.openapi(openProjectRoute, openProjectHandler(deps));
   routes.openapi(createProjectRoute, createProjectHandler(deps));
   routes.openapi(retryProjectSetupRoute, retryProjectSetupHandler(deps));

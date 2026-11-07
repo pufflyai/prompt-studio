@@ -52,8 +52,9 @@ test("opens notes in the project Sidenav tree and follows the active note throug
     const secondRow = sidebar.getByRole("option", { name: second.title, exact: true });
     await expect(firstRow).toHaveCount(0);
     await sidebar.getByRole("option", { name: "Notes", exact: true }).click();
-    // Notes stay nested in the same project navigation.
+    // Notes stay nested in the same project navigation, and expanding them keeps the open page.
     await expect(firstRow).toHaveAttribute("aria-level", "2");
+    await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-planner\/tickets$/);
     await expect(sidebar.getByRole("option", { name: "Tickets", exact: true })).toBeVisible();
     await firstRow.click();
     await expect(firstRow).toHaveAttribute("aria-selected", "true");

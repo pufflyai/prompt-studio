@@ -84,7 +84,8 @@ export const downloadRecoveryCapture = async (input: TransferInput) => {
         await input.chunks.read(reference);
         return;
       } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+        // A missing or damaged local chunk is fetched again and verified.
+        if (input.signal?.aborted) throw error;
       }
       await input.chunks.receive(reference, await input.transport.get(reference.blobId, reference.encryptedByteLength));
       bytes += reference.encryptedByteLength;

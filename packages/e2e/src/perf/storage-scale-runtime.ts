@@ -127,7 +127,7 @@ export const refreshScaleSources = async (home: string, kind: Workload) => {
   const command = fixtureCommand();
   const runtime = await startScaleRuntime(home);
   try {
-    const planner = join(home, "sources", "planner-source");
+    const planner = join(home, "sources", "extension-source");
     writeFileSync(join(planner, "scale.ts"), command);
     install(runtime, home, planner, "pstdio-planner");
     for (const owner of owners(workload(kind)).filter((owner) => owner.index !== 9)) {
@@ -159,13 +159,15 @@ export const seedScaleRuntime = async (home: string, kind: Workload, churn: bool
     const planner = await preparePlannerSource(join(home, "sources"));
     writeFileSync(join(planner, "scale.ts"), command);
     const entry = join(planner, "extension.ts");
-    writeFileSync(
-      entry,
-      `import { fixtureCommands } from "./scale";\n${readFileSync(entry, "utf8").replace(
-        "commands: [...plannerCommands,",
-        "commands: [...fixtureCommands, ...plannerCommands,",
-      )}`,
+    const original = readFileSync(entry, "utf8");
+    const extended = original.replace(
+      /commands: \[(\s*)\.\.\.plannerCommands,/,
+      "commands: [$1...fixtureCommands,$1...plannerCommands,",
     );
+    // Fail before seeding the other owners if Planner's entry no longer matches.
+    if (extended === original)
+      throw new Error("Planner extension.ts no longer lists ...plannerCommands first in commands");
+    writeFileSync(entry, `import { fixtureCommands } from "./scale";\n${extended}`);
     install(runtime, home, planner, "pstdio-planner");
     const manifest = JSON.parse(readFileSync(join(planner, "package.json"), "utf8"));
     for (const owner of owners(workload(kind))) {

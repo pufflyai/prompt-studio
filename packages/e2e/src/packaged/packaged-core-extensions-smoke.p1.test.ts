@@ -82,6 +82,7 @@ test(
       const body = { extensions };
       expect(body.extensions).toEqual(
         expect.arrayContaining([
+          expect.objectContaining({ enabled: true, installName: "pstdio-cloud" }),
           expect.objectContaining({ enabled: true, installName: "pstdio-onboarding" }),
           expect.objectContaining({ enabled: true, installName: "harness-claude-code" }),
           expect.objectContaining({ enabled: true, installName: "harness-codex" }),
@@ -125,6 +126,18 @@ test(
         expect.objectContaining({
           extensionId: "pstdio.pstdio-workspaces",
           body: expect.objectContaining({ kind: "resourceList" }),
+        }),
+      );
+      expect(metadata.statusBarItems).toContainEqual(
+        expect.objectContaining({
+          extensionId: "pstdio.pstdio-cloud",
+          popover: expect.objectContaining({ id: "details" }),
+        }),
+      );
+      expect(metadata.settingsPanels).toContainEqual(
+        expect.objectContaining({
+          extensionId: "pstdio.pstdio-cloud",
+          slot: expect.objectContaining({ id: "global.settings" }),
         }),
       );
       const planner = extensions.find((extension) => extension.installName === "pstdio-planner");

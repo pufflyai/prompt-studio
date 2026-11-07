@@ -21,25 +21,37 @@ export const openRecoverySource = async (selected: string) => {
   if (process.platform !== "darwin" && process.platform !== "linux")
     throw new Error("Recovery requires a qualified native source adapter for this platform");
   const darwin = process.platform === "darwin";
-  const library = dlopen(darwin ? "/usr/lib/libSystem.B.dylib" : "libc.so.6", {
-    openat: { args: ["int", "ptr", "int"], returns: "int" },
-    linkat: { args: ["int", "ptr", "int", "ptr", "int"], returns: "int" },
-    close: { args: ["int"], returns: "int" },
-    fdopendir: { args: ["int"], returns: "ptr" },
-    readdir: { args: ["ptr"], returns: "ptr" },
-    closedir: { args: ["ptr"], returns: "int" },
-    readlinkat: { args: ["int", "ptr", "ptr", "u64"], returns: "i64" },
-    [darwin ? "__error" : "__errno_location"]: { args: [], returns: "ptr" },
-  });
+  const load = () =>
+    dlopen(darwin ? "/usr/lib/libSystem.B.dylib" : "libc.so.6", {
+      openat: { args: ["int", "ptr", "int"], returns: "int" },
+      linkat: { args: ["int", "ptr", "int", "ptr", "int"], returns: "int" },
+      close: { args: ["int"], returns: "int" },
+      fdopendir: { args: ["int"], returns: "ptr" },
+      readdir: { args: ["ptr"], returns: "ptr" },
+      closedir: { args: ["ptr"], returns: "int" },
+      readlinkat: { args: ["int", "ptr", "ptr", "u64"], returns: "i64" },
+      [darwin ? "__error" : "__errno_location"]: { args: [], returns: "ptr" },
+    });
+  let library: ReturnType<typeof load>;
+  try {
+    library = load();
+  } catch (cause) {
+    throw Object.assign(new Error("This system's C library is not supported for folder recovery"), {
+      code: "ENOTSUP",
+      cause,
+    });
+  }
   const native = library.symbols;
   const handles = new Set<number>();
   const streams = new Set<NonNullable<ReturnType<typeof native.fdopendir>>>();
   const errno = new DataView(toArrayBuffer(native[darwin ? "__error" : "__errno_location"]!()!, 0, 4));
-  const failure = () =>
-    Object.assign(new Error("Recovery source filesystem access failed"), {
-      errno: errno.getInt32(0, true),
-      code: getSystemErrorName(-errno.getInt32(0, true)),
+  const failure = () => {
+    const value = errno.getInt32(0, true);
+    return Object.assign(new Error("Recovery source filesystem access failed"), {
+      errno: value,
+      code: value > 0 ? getSystemErrorName(-value) : "EIO",
     });
+  };
   const common = (darwin ? 0x1000000 : 0x80000) | constants.O_NONBLOCK;
   const metadata = darwin ? 0x8000 | 0x200000 : 0x200000;
   let closed = false;

@@ -64,12 +64,14 @@ export const TreeListNodeRow = (props: TreeListNodeRowProps) => {
   const isDisabled = node.disabled === true;
   const isNavigable = isNavigableNode(node);
   const canLink = Boolean(LinkComponent && node.href && isNavigable && !hasChildren && !isDisabled);
+  // A page with children gets its own chevron: expanding it must not open the page again.
+  const opensPage = isNavigable && Boolean(onNavigate);
 
   const handleActivate = () => {
     if (isDisabled) return;
-    if (isNavigable && onNavigate) {
+    if (opensPage) {
       if (hasChildren) onToggleNode?.(node.id);
-      onNavigate({ sectionId, nodeId: node.id, node, intent: node.navigationIntent });
+      onNavigate?.({ sectionId, nodeId: node.id, node, intent: node.navigationIntent });
       return;
     }
     if (hasChildren) {
@@ -128,7 +130,7 @@ export const TreeListNodeRow = (props: TreeListNodeRowProps) => {
     isSelected: isActive,
     isExpanded: expanded,
     showExpandToggle: hasChildren,
-    expandOnClick: !selection,
+    expandOnClick: !selection && !opensPage,
     tabIndex,
     "data-tree-list-focus-id": node.id,
     "aria-level": level + 1,
@@ -149,7 +151,7 @@ export const TreeListNodeRow = (props: TreeListNodeRowProps) => {
           }
         : undefined,
     onActivate: handleActivate,
-    onToggleExpand: selection ? () => onToggleNode?.(node.id) : handleActivate,
+    onToggleExpand: () => onToggleNode?.(node.id),
   };
 
   const row =
@@ -179,14 +181,18 @@ export const TreeListNodeRow = (props: TreeListNodeRowProps) => {
       }}
     >
       {row}
-      {dropPosition === "before" || dropPosition === "after" ? (
-        <DropIndicator
-          data-tree-list-drop-indicator={dropPosition}
-          {...(dropPosition === "before"
-            ? { top: "0", transform: "translateY(-50%)" }
-            : { bottom: "0", transform: "translateY(50%)" })}
-        />
-      ) : null}
+      <NodeDropIndicator position={dropPosition} />
     </Stack>
   );
+};
+
+const NodeDropIndicator = (props: { position: "before" | "after" | "inside" | null }) => {
+  const { position } = props;
+  if (position === "before") {
+    return <DropIndicator data-tree-list-drop-indicator={position} top="0" transform="translateY(-50%)" />;
+  }
+  if (position === "after") {
+    return <DropIndicator data-tree-list-drop-indicator={position} bottom="0" transform="translateY(50%)" />;
+  }
+  return null;
 };

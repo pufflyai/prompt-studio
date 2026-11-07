@@ -155,6 +155,7 @@ export const createPackagedSyncPeer = (
       return server.url.origin;
     },
     ...documentStore,
+    setEarlyAccess: identity.setEarlyAccess,
     blobContents: blobs.contents,
     /** One device loses durable relay access while its peers can continue replacing latest states. */
     blockDevice(deviceId: string, blocked: boolean) {

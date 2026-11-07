@@ -1,6 +1,8 @@
 import { afterEach, expect, test } from "bun:test";
 import { ProjectTrustStore, SessionManager } from "@earendil-works/pi-coding-agent";
+import { resolvePiCommand } from "./cli";
 import { piFixture } from "./cli.test-helpers";
+import { detectPi } from "./detection";
 import { createPiHarness } from "./harness";
 
 let fixture: Awaited<ReturnType<typeof piFixture>>;
@@ -31,6 +33,22 @@ test.each(["start", "resume", "getMessages"] as const)("refuses vulnerable Pi du
   };
   await expect(harness[action](fixture.context, input)).rejects.toThrow("Requires Pi 0.79.0");
   expect(await Bun.file(marker).exists()).toBe(false);
+});
+
+test("detects the bundled Pi version without initializing the agent", async () => {
+  fixture = await piFixture();
+  const commands: unknown[] = [];
+  const run = fixture.context.process.run;
+  fixture.context.process.run = async (input) => {
+    commands.push(input.command);
+    return run(input);
+  };
+  const resolved = resolvePiCommand({ which: () => null });
+  expect(await detectPi(fixture.context, { ...resolved, env: { ...resolved.env, PI_PACKAGE_DIR: "" } })).toMatchObject({
+    available: true,
+    version: "0.79.0",
+  });
+  expect(commands).toEqual([]);
 });
 
 test("discovers authenticated Pi models", async () => {

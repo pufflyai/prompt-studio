@@ -8,10 +8,20 @@ export const seedSidenavStory = (projectId: string) => {
     sessionRow(projectId, "session-today-1", "Refactor sidenav", "completed", "2026-06-24T09:00:00Z", "workspace-1"),
     sessionRow(projectId, "session-today-2", "Investigate flaky test", "failed", "2026-06-24T08:00:00Z"),
     sessionRow(projectId, "session-yesterday", "Wire up board", "completed", "2026-06-23T15:00:00Z", "workspace-1"),
+    sessionRow(
+      projectId,
+      "session-folder",
+      "Read project files",
+      "completed",
+      "2026-06-23T14:00:00Z",
+      "workspace-folder",
+    ),
   ]);
   getWriter("workspaces")?.truncateAndWrite([
     {
       id: "workspace-1",
+      provider_id: "pstdio.worktree",
+      provider_capabilities_json: { files: "write", diff: true },
       project_id: projectId,
       name: "Mode-driven sidenav",
       branch: "feature/PS-107",
@@ -22,6 +32,17 @@ export const seedSidenavStory = (projectId: string) => {
       created_at: "2026-06-22T08:10:00Z",
       updated_at: "2026-06-24T09:00:00Z",
       deleted_at: null,
+    },
+    {
+      id: "workspace-folder",
+      project_id: projectId,
+      name: "Project folder",
+      is_default: true,
+      provider_id: "pstdio.root",
+      provider_capabilities_json: { files: "write", diff: false },
+      root_path: "/repo",
+      archived: false,
+      workspace_shorthand: "default",
     },
   ]);
   getWriter("notifications")?.truncateAndWrite([

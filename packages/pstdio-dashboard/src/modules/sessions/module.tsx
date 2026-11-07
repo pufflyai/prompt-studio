@@ -26,7 +26,8 @@ import { registerSessionPages } from "./session-pages";
 import { registerSessionResourceActions } from "./session-resource-actions";
 import { registerSessionResourceRetention } from "./session-resource-retention";
 import { registerSessionResourceSync } from "./session-resource-sync";
-import { buildSessionsLevelSections, buildWorkspaceSessionsSections } from "./sessions-sidenav-tree";
+import { buildSessionsLevelSections } from "./sessions-sidenav-tree";
+import { registerWorkspaceSessionNavigation } from "./workspace-session-navigation";
 
 const SessionWidget = lazy(() =>
   import("@/modules/sessions/components/session-widget").then((module) => ({ default: module.SessionWidget })),
@@ -109,16 +110,7 @@ const registerSidenavSessions = (ctx: WorkbenchModuleContext) => {
     modes: ["project"],
     getSections: () => [{ ...dashboardNavigationSections.root, nodes: [createSessionsNavigationNode()] }],
   });
-  registerDashboardNavigationContribution(ctx, {
-    id: "dashboard.sessions.list",
-    modes: ["project"],
-    resolveResource: ({ resource }) => (resource?.type === "workspace" ? resource : undefined),
-    getSections: (_workbench, input) => {
-      const workspace = input.resource?.type === "workspace" ? input.resource : undefined;
-      if (!workspace) return [];
-      return buildWorkspaceSessionsSections(createDashboardSessions(getDashboardSelectedProjectId(ctx)), workspace);
-    },
-  });
+  registerWorkspaceSessionNavigation(ctx);
 };
 interface CreateSessionsModuleInput {
   sessionDraftPersistence?: DashboardSessionDraftPersistence;

@@ -1,18 +1,41 @@
 import { definePage, l10n, workbenchModes, workbenchResourceKinds } from "@pstdio/sdk/extensions";
 import { fileView } from "./files";
-import { workspaceFileDocument } from "./refs";
-import { capacityView } from "./settings";
+import { workspaceCommands, workspaceFileDocument } from "./refs";
 import { actionView, changesView, historyView, summaryView, workspacesView } from "./views";
 
 const mode = workbenchModes.project;
 const resource = { kinds: [workbenchResourceKinds.workspace] };
+const workspaceListTitle = l10n("page.workspaces", "Workspaces");
 export const workspaces = definePage({
   id: "workspaces",
-  title: "Workspaces",
+  title: workspaceListTitle,
   icon: "folder-git-2",
   path: "workspaces",
   mode,
-  main: { kind: "view", view: workspacesView.ref, cardinality: "one", presentation: "tabs" },
+  main: {
+    kind: "view",
+    view: workspacesView.ref,
+    cardinality: "one",
+    presentation: "tabs",
+    tab: {
+      query: () => ({
+        label: workspaceListTitle,
+        menu: [
+          {
+            id: "workspaces",
+            rows: [
+              {
+                id: "create-workspace",
+                label: l10n("action.create", "Create workspace"),
+                icon: "plus",
+                action: { kind: "command", target: { command: workspaceCommands.create } },
+              },
+            ],
+          },
+        ],
+      }),
+    },
+  },
   slots: [],
 });
 export const files = definePage({
@@ -95,13 +118,14 @@ export const createPage = definePage({
 });
 export const devicePage = definePage({
   id: "device",
-  title: l10n("page.device", "Device details"),
+  // Retain the public device destination as a collection alias after removing its controls.
+  title: "Workspaces",
   icon: "monitor",
   path: "device",
   mode,
   parent: workspaces.ref,
   params: { "device-id": { type: "string" } },
-  main: { kind: "view", view: capacityView.ref, cardinality: "one", presentation: "page" },
+  main: { kind: "view", view: workspacesView.ref, cardinality: "one", presentation: "page" },
   slots: [],
 });
 

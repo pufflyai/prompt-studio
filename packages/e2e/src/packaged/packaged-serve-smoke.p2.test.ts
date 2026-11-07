@@ -1,5 +1,6 @@
 // packaged-page-params-during-mount.p2.test.ts covers host props changed during async guest initialization.
 // packaged-session-import.p1.test.ts restores JSONL session exports through the compiled CLI and API, including the on-disk metadata index.
+// packaged-database-maintenance.p1.test.ts reclaims legacy transcript storage before serving offline projects.
 // packaged-extensions-navigation.p1.spec.ts covers fixed headers and nested extension URLs.
 // packaged-collection-view-order-smoke.p2.test.ts keeps Save view clickable beneath explanatory tooltips.
 // packaged-extension-icons.p1.spec.ts covers public SVG assets and light/dark image colors.
