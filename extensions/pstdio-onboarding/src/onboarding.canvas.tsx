@@ -16,7 +16,12 @@ const harnessIcons = Object.fromEntries(
 const info: OnboardingInfo = {
   platform: "darwin",
   detectedHarnesses: ["codex", "open-code"],
-  installedExtensions: ["pstdio.pstdio-base-themes", "pstdio.pstdio-skills"],
+  installedExtensions: [
+    "pstdio.pstdio-home",
+    "pstdio.pstdio-onboarding",
+    "pstdio.pstdio-base-themes",
+    "pstdio.pstdio-skills",
+  ],
   state: { completed: false, hidden: false, harnesses: null, workAreas: null },
 };
 
@@ -78,7 +83,13 @@ export const CompactInstalledWork: Story = {
 
 export const CompactExtensionsToInstall: Story = {
   id: "onboarding-setup--compact-extensions-to-install",
-  description: "Continue to see both extension lists use the same small rows, icons and text.",
+  description:
+    "Continue to see Home, Onboarding, Themes and Skills already installed, with Workspaces selected for Coding.",
+};
+
+export const Planning: Story = {
+  description: "Continue to see Project planning selected, without Workspaces in the install list.",
+  args: { info: { ...info, state: { ...info.state, workAreas: ["planning"] } } },
 };
 
 export const Opening: Story = {

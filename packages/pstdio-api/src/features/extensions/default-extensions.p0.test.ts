@@ -14,14 +14,11 @@ describe("resolveDefaultExtensionsConfig", () => {
     const config = await resolveDefaultExtensionsConfig({});
 
     expect(config.defaultExtensions).toEqual([
-      "pstdio-cloud",
       "pstdio-home",
       "pstdio-session-browser",
       "pstdio-onboarding",
-      "pstdio-workspaces",
       "pstdio-base-themes",
       "pstdio-skills",
-      "pstdio-performance",
     ]);
   });
 
@@ -277,13 +274,7 @@ describe("installDefaultExtensions sources", () => {
     });
 
     expect(prepareSharedCheckout).not.toHaveBeenCalled();
-    expect(calls.map((call) => call.installName)).toEqual([
-      "pstdio-cloud",
-      "pstdio-onboarding",
-      "pstdio-base-themes",
-      "pstdio-skills",
-      "pstdio-performance",
-    ]);
+    expect(calls.map((call) => call.installName)).toEqual(["pstdio-onboarding", "pstdio-base-themes", "pstdio-skills"]);
     expect(
       calls.every(
         (call) =>

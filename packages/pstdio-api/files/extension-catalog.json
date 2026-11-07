@@ -13,8 +13,7 @@
         "path": "extensions/pstdio-cloud",
         "ref": "{hostRelease}"
       },
-      "default": true,
-      "alwaysEnabled": true
+      "default": false
     },
     {
       "installName": "pstdio-home",
@@ -69,8 +68,7 @@
         "path": "extensions/pstdio-workspaces",
         "ref": "{hostRelease}"
       },
-      "default": true,
-      "alwaysEnabled": true,
+      "default": false,
       "extensionId": "pstdio.pstdio-workspaces"
     },
     {
@@ -225,7 +223,7 @@
         "path": "extensions/pstdio-performance",
         "ref": "{hostRelease}"
       },
-      "default": true,
+      "default": false,
       "icon": "Gauge"
     },
     {
