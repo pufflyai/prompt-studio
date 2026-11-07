@@ -2,6 +2,7 @@ import type { JsonObject, WorkspaceProviderRef, WorkspaceProviderResult } from "
 import { defaultLocalWorkspaceCapabilities, folderWorkspaceCapabilities } from "pstdio-db";
 import type { WorkspacesRouteDeps } from "./deps";
 import { failWorkspaceCreation } from "./workspace-provider-create-failure";
+import { requireWorkspaceProviderParams } from "./workspace-provider-discovery";
 import {
   isBuiltInProviderId,
   remoteReadOnlyCapabilities,
@@ -18,7 +19,7 @@ import {
   type WorkspaceRecord,
 } from "./workspace-provider-projection";
 import { normalizeResult } from "./workspace-provider-result";
-import { findWorkspaceProvider, runWorkspaceProviderCall } from "./workspace-provider-runtime";
+import { findWorkspaceProvider, runWorkspaceProviderOperation } from "./workspace-provider-runtime";
 import type { setupWorkspaceWorktree } from "./worktree-setup";
 
 const asString = (value: unknown) => (typeof value === "string" && value.trim() ? value : undefined);
@@ -102,8 +103,8 @@ const cleanUpAcceptedCreate = async (
 
   try {
     if (input.handle.provider.cancel) {
-      const cancelled = await runWorkspaceProviderCall(() =>
-        input.handle.provider.cancel!(input.handle.context, {
+      const cancelled = await runWorkspaceProviderOperation(input.handle, (ctx) =>
+        input.handle.provider.cancel!(ctx, {
           operationId,
           projectId: input.projectId,
           workspaceId: input.workspace.id,
@@ -116,8 +117,8 @@ const cleanUpAcceptedCreate = async (
       return (await deps.workspaceService.updateProviderProjection(input.workspace.id, patch)) ?? pending;
     }
     if (input.handle.provider.delete) {
-      await runWorkspaceProviderCall(() =>
-        input.handle.provider.delete!(input.handle.context, {
+      await runWorkspaceProviderOperation(input.handle, (ctx) =>
+        input.handle.provider.delete!(ctx, {
           operationId,
           projectId: input.projectId,
           workspaceId: input.workspace.id,
@@ -179,9 +180,10 @@ const resolveAcceptedCreate = async (
   while (current.provider_state === "provisioning" && current.provider_ref_json && Date.now() < deadline) {
     if (input.signal?.aborted) return current;
     try {
-      const result = await runWorkspaceProviderCall(
-        () =>
-          input.handle.provider.resolve(input.handle.context, {
+      const result = await runWorkspaceProviderOperation(
+        input.handle,
+        (ctx) =>
+          input.handle.provider.resolve(ctx, {
             projectId: input.projectId,
             workspaceId: current.id,
             providerRef: current.provider_ref_json as WorkspaceProviderRef,
@@ -268,7 +270,11 @@ export const provisionProviderWorkspace = async (
     }
 
     if (handle) {
-      const params = validateWorkspaceParams(input.providerId, handle.provider.params ?? {}, input.params);
+      const params = validateWorkspaceParams(
+        input.providerId,
+        await requireWorkspaceProviderParams(handle, input.providerId),
+        input.params,
+      );
       const projection = await updateCreateProjection(deps, input.workspace, input.operationId, {
         provider_params_json: params,
       });
@@ -278,14 +284,17 @@ export const provisionProviderWorkspace = async (
     }
 
     const result = handle
-      ? await runWorkspaceProviderCall(() =>
-          handle.provider.create(handle.context, {
-            operationId: input.operationId,
-            projectId: input.projectId,
-            workspaceId: input.workspace.id,
-            params: input.params,
-            signal: input.signal,
-          }),
+      ? await runWorkspaceProviderOperation(
+          handle,
+          (ctx, signal) =>
+            handle.provider.create(ctx, {
+              operationId: input.operationId,
+              projectId: input.projectId,
+              workspaceId: input.workspace.id,
+              params: input.params,
+              signal,
+            }),
+          { resourceSignal: input.signal },
         )
       : await builtInCreate({
           providerId: input.providerId,

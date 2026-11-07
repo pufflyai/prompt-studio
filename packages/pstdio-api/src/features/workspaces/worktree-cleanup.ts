@@ -1,10 +1,9 @@
 import { existsSync } from "node:fs";
-import { realpath, rm } from "node:fs/promises";
-import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
+import { rm } from "node:fs/promises";
 import { git, listWorktrees, removeWorktreeAndBranch } from "pstdio-wt";
 import type { WorkspacesRouteDeps } from "./deps";
+import { canonicalWorkspacePath, isManagedWorkspaceDirectory } from "./workspace-directory-paths";
 import { worktreeProviderId } from "./workspace-provider-identity";
-import { resolveWorkspacesRoot } from "./worktree-setup";
 
 export const workspaceGitPaths = (workspace: {
   provider_id: string;
@@ -14,26 +13,6 @@ export const workspaceGitPaths = (workspace: {
   const data = workspace.provider_ref_json?.data;
   if (typeof data?.sourceRoot !== "string" || typeof data.worktreeRoot !== "string") return undefined;
   return { sourceRoot: data.sourceRoot, worktreeRoot: data.worktreeRoot };
-};
-
-const canonicalPath = async (path: string) => {
-  let current = resolve(path);
-  const missing: string[] = [];
-  while (true) {
-    try {
-      return resolve(await realpath(current), ...missing);
-    } catch (error) {
-      const parent = dirname(current);
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT" || parent === current) throw error;
-      missing.unshift(basename(current));
-      current = parent;
-    }
-  }
-};
-
-const isManagedWorktreePath = async (path: string) => {
-  const rel = relative(await canonicalPath(resolveWorkspacesRoot()), await canonicalPath(path));
-  return rel !== "" && rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
 };
 
 export const cleanupWorkspaceWorktree = async (
@@ -47,8 +26,8 @@ export const cleanupWorkspaceWorktree = async (
   const paths = workspaceGitPaths(workspace);
   if (
     !paths ||
-    !(await isManagedWorktreePath(paths.worktreeRoot)) ||
-    (await canonicalPath(paths.worktreeRoot)) === (await canonicalPath(paths.sourceRoot))
+    !(await isManagedWorkspaceDirectory(paths.worktreeRoot)) ||
+    (await canonicalWorkspacePath(paths.worktreeRoot)) === (await canonicalWorkspacePath(paths.sourceRoot))
   )
     return false;
   if (!existsSync(paths.worktreeRoot)) return true;
@@ -57,8 +36,8 @@ export const cleanupWorkspaceWorktree = async (
     return true;
   }
   const registered = await listWorktrees(paths.sourceRoot);
-  const targetPath = await canonicalPath(paths.worktreeRoot);
-  const registeredPaths = await Promise.all(registered.map((entry) => canonicalPath(entry.worktree)));
+  const targetPath = await canonicalWorkspacePath(paths.worktreeRoot);
+  const registeredPaths = await Promise.all(registered.map((entry) => canonicalWorkspacePath(entry.worktree)));
   if (!registeredPaths.includes(targetPath)) {
     await rm(paths.worktreeRoot, { recursive: true, force: true });
     if (workspace.branch) await git(paths.sourceRoot, ["branch", "-D", workspace.branch]).catch(() => {});

@@ -48,6 +48,12 @@ The [native chat view body](0028-native-chat.md) also shares the coordinated API
 step. Released extensions must use a published SDK containing that declaration
 and a host that supports it before adopting it.
 
+Optional workspace provider discovery and provider-bound `ctx.localDirectory()`
+share the coordinated API 0.4.0 step on `main`. They expose current project choices
+and owned local preparation before readiness. Publish the host and SDK before
+separately released providers adopt them; SDK 0.46.0 does not include them. See
+[local workspace providers](0003-command-and-process-api.md#local-workspace-providers-on-main).
+
 ### Which version each check uses
 
 | Check | Where it runs | Extension API version it compares with |
