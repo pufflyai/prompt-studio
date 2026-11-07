@@ -102,7 +102,7 @@ const renderDashboard = async () => {
               </>
             }
             renderParamField={renderParamField}
-            sidePanelBubbleIcon={<WorkbenchIcon name="messages-circle" size={20} />}
+            sidePanelBubbleIcon={<WorkbenchIcon name="message-circle" size={20} />}
             onOpenSidePanel={() => void openDashboardSidePanel(dashboardWorkbench)}
           />
         </SyncProvider>

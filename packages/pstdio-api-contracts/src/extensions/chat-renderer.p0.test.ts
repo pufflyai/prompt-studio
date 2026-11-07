@@ -63,16 +63,12 @@ test("chat snapshots use canonical messages and reject malformed controls and me
   expect(chatRendererSnapshotSchema.safeParse({ controls: [{ type: "selection", id: "model" }] }).success).toBe(false);
 });
 
-test("workspace bindings keep provider-owned JSON values typed through drafts, actions and queued requests", () => {
-  const workspace = {
-    providerId: "acme.container",
-    params: { image: "custom", nested: { ports: [8080], enabled: true } },
-  };
+test("workspace bindings retain existing selections through queued requests", () => {
   const snapshot = chatRendererSnapshotSchema.parse({
-    workspace: { controlId: "target", deviceControlId: "machine", create: { actionId: "create-target" } },
-    values: { target: workspace },
-    queuedFollowUps: [{ id: "q", prompt: "Next", values: { target: workspace } }],
+    workspace: { controlId: "target", deviceControlId: "machine", openResourceId: "saved" },
+    values: { target: "saved" },
+    queuedFollowUps: [{ id: "q", prompt: "Next", values: { target: "saved" } }],
   });
-  expect(snapshot.values?.target).toEqual(workspace);
-  expect(snapshot.queuedFollowUps?.[0]?.values?.target).toEqual(workspace);
+  expect(snapshot.values?.target).toBe("saved");
+  expect(snapshot.queuedFollowUps?.[0]?.values?.target).toBe("saved");
 });

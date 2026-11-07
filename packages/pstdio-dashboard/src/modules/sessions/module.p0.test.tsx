@@ -19,7 +19,7 @@ describe("createSessionsModule", () => {
     workbench.registerModule(createSessionsModule());
     expect(workbench.resources.getKind("session")).toMatchObject({
       label: "Session",
-      icon: "messages-circle",
+      icon: "message-circle",
     });
     expect(workbench.views.getView(dashboardWidgetIds.session)).toBeDefined();
     expect(workbench.pages.getPage(dashboardViews.sessions.id)).toMatchObject({

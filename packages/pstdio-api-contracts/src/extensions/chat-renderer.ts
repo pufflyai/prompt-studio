@@ -93,13 +93,6 @@ export const chatRendererSnapshotSchema = z.strictObject({
     .strictObject({
       controlId: z.string().min(1),
       deviceControlId: z.string().min(1).optional(),
-      create: z
-        .strictObject({
-          actionId: z.string().min(1),
-          providers: z.array(z.string()).optional(),
-          disabledReason: z.string().optional(),
-        })
-        .optional(),
       status: z.enum(["ready", "loading", "error"]).optional(),
       statusLabel: z.string().optional(),
       additions: z.number().optional(),

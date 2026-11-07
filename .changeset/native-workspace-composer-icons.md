@@ -5,6 +5,4 @@
 "pstdio": patch
 ---
 
-Add a typed optional native chat workspace hub binding that reuses provider creation forms and keeps draft values, validation, readiness and device ownership intact. Resolve harness selection icons from their exact installed extension source, and make attachment upload an accessible icon-only action.
-
-Preserve compact chat workspace/device menus, use the exact Sessions messages-circle and upload paperclip icons, and only offer workspace opening for the selected existing workspace.
+Add an optional native chat workspace hub binding for existing workspace/device selection, setup status and diff information. Reuse compact workspace menus, retain existing-session-only opening and keep global workspace creation separate. Resolve harness selection icons from their exact installed extension source and make attachment upload an accessible Paperclip action. Use messages-circle for Sessions extension/collection identity and message-circle for individual sessions and the bubble.

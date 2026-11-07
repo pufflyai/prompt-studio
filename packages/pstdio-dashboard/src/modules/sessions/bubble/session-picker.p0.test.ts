@@ -27,7 +27,7 @@ test("session picker exposes the complete project source and navigates the invok
   try {
     openSessionsPage(
       workbench,
-      createDashboardResource("session", "picker-0", "History 0", "messages-circle", "picker-project"),
+      createDashboardResource("session", "picker-0", "History 0", "message-circle", "picker-project"),
     );
     const main = workbench.pages.getContent()!;
     await workbench.commands.executeCommand(dashboardCommandIds.switchSession, {

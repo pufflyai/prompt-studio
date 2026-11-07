@@ -74,9 +74,6 @@ const NativeChatContent = (props: NativeChatViewProps) => {
   const edit = selected ? edits[selected.id] : undefined;
   const activeDraft = edit ? { ...draft, ...edit } : draft;
   const values = activeDraft.values;
-  const workspacePending = Boolean(
-    conversation.workspace && typeof values[conversation.workspace.controlId] === "object",
-  );
   const attachments = visibleChatDraftAttachments(activeDraft.attachments, selected ? undefined : pending);
   const changeActive = (update: Partial<typeof activeDraft>) => {
     if (selected) setEdits((current) => ({ ...current, [selected.id]: { values, attachments, ...update } }));
@@ -125,7 +122,7 @@ const NativeChatContent = (props: NativeChatViewProps) => {
           conversation,
           draft: activeDraft,
           editingQueuedRequest: Boolean(selected),
-          unavailable: host.account?.blocked || workspacePending,
+          unavailable: host.account?.blocked,
           initializing,
           renderParamField,
           changeValues: (next) => changeActive({ values: next }),
@@ -155,7 +152,6 @@ const NativeChatContent = (props: NativeChatViewProps) => {
             inputDisabled={sending || conversation.readOnly || uploading > 0 || Boolean(host.account?.progress)}
             submitDisabled={
               conversation.submitDisabled ||
-              workspacePending ||
               Boolean(selected && conversation.queueReadOnly) ||
               sending ||
               uploading > 0 ||
@@ -190,8 +186,6 @@ const NativeChatContent = (props: NativeChatViewProps) => {
                 conversation={conversation}
                 draft={activeDraft}
                 initializing={initializing || Boolean(selected)}
-                renderParamField={renderParamField}
-                currentValues={() => session.getSnapshot().draft.values}
                 run={run}
                 changeValues={(next) =>
                   changeActive({ values: typeof next === "function" ? next(session.getSnapshot().draft.values) : next })

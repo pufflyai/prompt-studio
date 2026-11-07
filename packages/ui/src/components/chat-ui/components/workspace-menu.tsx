@@ -18,7 +18,6 @@ interface ChatWorkspaceMenuProps {
   onSelectWorkspace: (workspaceId: string) => void;
   onOpenWorkspace?: () => void;
   isDisabled?: boolean;
-  createItem?: SearchableMenuItem;
 }
 
 const buildWorkspaceItems = (
@@ -78,7 +77,6 @@ export const ChatWorkspaceMenu = (props: ChatWorkspaceMenuProps) => {
     onSelectWorkspace,
     onOpenWorkspace,
     isDisabled = false,
-    createItem,
   } = props;
   const selectedLabel = selectedWorkspaceLabel || "Select workspace";
 
@@ -103,14 +101,11 @@ export const ChatWorkspaceMenu = (props: ChatWorkspaceMenuProps) => {
         trigger={
           <Box minW="0">
             <Tooltip content={workspaces.length === 0 ? "No workspaces" : "Select workspace"}>
-              <WorkspaceMenuButton label={selectedLabel} disabled={workspaces.length === 0 && !createItem} />
+              <WorkspaceMenuButton label={selectedLabel} disabled={workspaces.length === 0} />
             </Tooltip>
           </Box>
         }
-        items={[
-          ...buildWorkspaceItems(workspaces, selectedWorkspaceId, onSelectWorkspace),
-          ...(createItem ? [createItem] : []),
-        ]}
+        items={buildWorkspaceItems(workspaces, selectedWorkspaceId, onSelectWorkspace)}
         width="280px"
         showSearch={workspaces.length > 10}
         searchPlaceholder="Search workspaces..."
