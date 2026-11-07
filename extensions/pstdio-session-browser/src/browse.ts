@@ -12,6 +12,7 @@ import {
 import { sessionBrowser } from "../refs";
 import { create } from "./navigation";
 import { sessionResource, sessionTarget } from "./resource";
+import { sessionIndicator } from "./session-indicator";
 
 const icons: Record<string, string> = {
   completed: "circle-check",
@@ -165,7 +166,7 @@ export const search = defineCommandPaletteResource({
         id: session.id,
         label: session.title,
         icon: "message-circle",
-        indicator: { icon: icons[session.status] ?? "circle-dashed", label: `Session status: ${session.status}` },
+        indicator: sessionIndicator(session.status),
         target: sessionTarget(sessionResource(session, ctx.projectId)),
       })),
     };

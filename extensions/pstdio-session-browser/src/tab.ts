@@ -1,25 +1,8 @@
 import type { PlacementTabPresentation } from "@pstdio/sdk/extensions";
 import { l10n, viewDataEvents } from "@pstdio/sdk/extensions";
 import { newInViewer, switchConversation } from "./navigation";
+import { sessionIndicator } from "./session-indicator";
 
-const icons: Record<string, string> = {
-  in_progress: "loader-circle",
-  completed: "circle-check",
-  failed: "circle-alert",
-  cancelled: "circle-stop",
-  disconnected: "circle-pause",
-  queued: "clock-alert",
-  awaiting_input: "circle-dot",
-};
-const colors: Record<string, string> = {
-  in_progress: "fg.info",
-  queued: "fg.info",
-  completed: "fg.success",
-  failed: "fg.error",
-  cancelled: "fg.warning",
-  disconnected: "fg.warning",
-  awaiting_input: "fg.warning",
-};
 export const conversationTab: PlacementTabPresentation = {
   refreshEvents: [viewDataEvents.sessionsChanged, viewDataEvents.workspacesChanged],
   async query(ctx, { renderer }) {
@@ -31,11 +14,7 @@ export const conversationTab: PlacementTabPresentation = {
       icon: "message-circle",
       ...(status
         ? {
-            indicator: {
-              icon: icons[status] ?? "circle-dashed",
-              color: colors[status] ?? "fg.muted",
-              label: `Session status: ${status}`,
-            },
+            indicator: sessionIndicator(status),
           }
         : {}),
       menu: [

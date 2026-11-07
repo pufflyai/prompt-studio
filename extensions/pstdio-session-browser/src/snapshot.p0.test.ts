@@ -210,3 +210,15 @@ test("changing draft device selects an available workspace on that owner and pre
   expect(noFolder.values?.workspace).toBe("");
   expect(noFolder.submitDisabled).toBe(false);
 });
+
+test("saved local replies retain a visible disabled fork when unsupported; remote history omits it", async () => {
+  const local = fixture(false, true);
+  local.sessions.getForkState = async () => ({
+    supported: false,
+    disabledReason: "This harness does not support forking conversations.",
+  });
+  const snapshot = await readSnapshot(local, { type: "session", id: "s" });
+  expect(snapshot.fork).toEqual({ disabledReason: "This harness does not support forking conversations." });
+  expect((await readSnapshot(fixture(true, true), { type: "session", id: "s" })).fork).toBeUndefined();
+  expect((await readSnapshot(fixture(false, true))).fork).toBeUndefined();
+});

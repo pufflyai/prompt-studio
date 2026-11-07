@@ -96,7 +96,12 @@ export const readSessionSnapshot = async (
       device: session.device?.id ?? "",
       ...values,
     },
-    fork: fork.supported ? { disabledReason: fork.disabledReason } : undefined,
+    fork: remote
+      ? undefined
+      : {
+          disabledReason:
+            fork.disabledReason ?? (fork.supported ? null : "This harness does not support forking conversations."),
+        },
     resources: [],
     operations: conversationOperations(remote, Boolean(display.queueReadOnly)),
   };
