@@ -21,7 +21,7 @@ const runTooltip = (run: Run, threads: Thread[], names: Record<string, string>) 
   const skipped = run.skippedSites?.map((skip) => names[skip.site] ?? skip.site) ?? [];
   return [plural(found, "thread"), skipped.length ? `Skipped ${skipped.join(", ")}` : ""].filter(Boolean).join(" · ");
 };
-const runNode = (run: Run, threads: Thread[], names: Record<string, string>): TreeNode => {
+const runNode = (run: Run, threads: Thread[], names: Record<string, string>, projectId: string): TreeNode => {
   const resource = runRef(run);
   const digest: TreeNode = {
     id: `${run.id}:digest`,
@@ -36,7 +36,13 @@ const runNode = (run: Run, threads: Thread[], names: Record<string, string>): Tr
     target: {
       kind: "panel",
       panel: workbenchPanels.projectSession,
-      resource: { type: "session", id: run.sessionId, label: `Social radar ${resource.label}` },
+      resource: {
+        type: "session",
+        extensionId: "pstdio",
+        projectId,
+        id: run.sessionId,
+        label: `Social radar ${resource.label}`,
+      },
       open: "preview",
     },
   };
@@ -89,7 +95,7 @@ export const radarTree = defineView({
             },
           ],
           emptyState: { title: "No runs yet", description: "Start a research session, or wait for the 07:00 run." },
-          nodes: runs.map((run) => runNode(run, threads, names)),
+          nodes: runs.map((run) => runNode(run, threads, names, ctx.projectId)),
         },
       ];
     },

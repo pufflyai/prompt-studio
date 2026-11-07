@@ -4,6 +4,7 @@ import { playwrightQuarantineSelection } from "pstdio-scripts/test-quarantine";
 const quarantine = process.env.E2E_TEST_LANE === "quarantine";
 const reportName = quarantine ? "packaged-browser-quarantine" : "packaged-browser";
 export default defineConfig({
+  globalSetup: "./src/packaged/packaged-playwright-setup.ts",
   testDir: "./src/packaged",
   testMatch:
     process.env.TEST_PRIORITIES?.split(",").map((priority) => `packaged-*.${priority.toLowerCase()}.spec.ts`) ??

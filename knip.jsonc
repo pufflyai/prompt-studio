@@ -145,6 +145,7 @@
         "src/perf/storage-scale-prepare.ts",
         "src/perf/storage-scale-extension.ts",
         "src/**/*.test.ts",
+        "src/**/*.test.tsx",
         "src/**/*.fixture.ts",
         "src/**/*.fixture.tsx",
         // Packaged smoke tests bundle these extension entries by path.
@@ -172,6 +173,7 @@
         "pstdio-cloud",
         "pstdio-dashboard",
         "pstdio-home",
+        "pstdio-session-browser",
         "pstdio-workspaces",
         "pstdio-notes",
         "pstdio-performance",

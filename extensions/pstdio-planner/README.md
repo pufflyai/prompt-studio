@@ -88,3 +88,17 @@ Metadata updates use the public observed-read and conditional-update API from
 PS-1073. If a remote edit wins, Planner reads the new value and recomputes only the
 intended metadata. A matching published host and SDK are required; a development
 SDK link does not satisfy the production delivery gate.
+
+
+## Offline tag edits
+
+Ticket commands keep flat `tagIds`. The data layer projects single choices and
+multi-select lists from private per-tag selections. Each multi-select option has
+its own stored membership value, so adding a flag offline preserves another
+device's different addition. Clearing a list removes observed choices while
+retaining additions made concurrently. Ordinary storage arrays remain whole values.
+
+Existing `tags` values remain migration input when selections are first edited.
+A single/multi conversion preserves a concurrent choice as an editable list;
+a later explicit selection resolves it. Storage also fences each observed record
+lifetime, so an offline edit cannot change a deleted-and-recreated ticket.
