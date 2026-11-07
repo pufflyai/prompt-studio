@@ -68,7 +68,7 @@ const terminalWebSocketUrl = () => {
 };
 
 /** Opens a PTY over one bidirectional WebSocket, including stdin and resize. */
-export const openDashboardTerminalSession: WorkbenchTerminalSessionOpener = (request) =>
+export const openDashboardTerminalSession: WorkbenchTerminalSessionOpener = (request, view) =>
   new Promise((resolve, reject) => {
     const url = terminalWebSocketUrl();
     const socket = new WebSocket(url, browserSessionWebSocketProtocols(readBrowserSession(url)));
@@ -77,7 +77,13 @@ export const openDashboardTerminalSession: WorkbenchTerminalSessionOpener = (req
 
     const send = (message: TerminalWebSocketClientMessage) => socket.send(JSON.stringify(message));
 
-    socket.addEventListener("open", () => send({ type: "open", request }));
+    socket.addEventListener("open", () =>
+      send(
+        view
+          ? { type: "openView", request: { ...view, cols: request.cols, rows: request.rows } }
+          : { type: "open", request },
+      ),
+    );
     socket.addEventListener("message", (event) => {
       const message = JSON.parse(String(event.data)) as TerminalWebSocketServerMessage;
       if (message.type !== "open") {

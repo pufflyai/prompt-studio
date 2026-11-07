@@ -48,6 +48,22 @@ const setupTerminal = () => {
 };
 
 describe("createTerminalSessionCapability", () => {
+  test("a webview cannot control a native terminal or another webview's session", async () => {
+    const { workbench, hostEvents, scripted } = setupTerminal();
+    const foreign = createTerminalSessionCapability({ terminal: workbench.terminal, hostEvents });
+    const owner = createTerminalSessionCapability({ terminal: workbench.terminal, hostEvents });
+    await owner({ operation: "open", request: { cols: 80, rows: 24 } });
+    for (const operation of [
+      { operation: "write", data: "foreign" },
+      { operation: "resize", cols: 1, rows: 1 },
+      { operation: "subscribe" },
+      { operation: "kill" },
+    ]) {
+      await expect(foreign({ ...operation, sessionId: "session-1" })).rejects.toThrow(/owner/i);
+    }
+    expect(scripted.calls).toEqual([]);
+    await owner({ operation: "kill", sessionId: "session-1" });
+  });
   test("open returns only a serializable session id", async () => {
     const { workbench, hostEvents } = setupTerminal();
     const capability = createTerminalSessionCapability({ terminal: workbench.terminal, hostEvents });

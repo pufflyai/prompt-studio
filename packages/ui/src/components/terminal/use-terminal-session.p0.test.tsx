@@ -122,6 +122,25 @@ describe("useTerminalSession", () => {
     expect(result?.error).toEqual({ message: "pty failed" });
   });
 
+  test("a replayed exit stays exited after session admission", async () => {
+    const session = new FakeSession();
+    session.onExit = (handler) => {
+      handler({ code: 7, signal: null });
+      return () => {};
+    };
+    let result: UseTerminalSessionResult | null = null;
+    let renderer: ReactTestRenderer;
+    await act(async () => {
+      renderer = create(
+        <HookHarness bridge={createBridge(Promise.resolve(session))} onResult={(next) => (result = next)} />,
+      );
+    });
+    expect(result?.status).toBe("exited");
+    expect(result?.exit).toEqual({ code: 7, signal: null });
+    await act(async () => renderer.unmount());
+    expect(session.killSignals).toEqual([]);
+  });
+
   test("kills a session that opens after unmount", async () => {
     const session = new FakeSession();
     const deferred = createDeferred<TerminalSessionAdapter>();

@@ -9,7 +9,10 @@ import {
   type WorkbenchModuleContext,
   type WorkbenchModuleContribution,
 } from "@pstdio/workbench";
-import { createWorkbenchExtensionChatRendererOwners } from "@pstdio/workbench/extensions";
+import {
+  createWorkbenchExtensionChatRendererOwners,
+  createWorkbenchExtensionTerminalRendererOwners,
+} from "@pstdio/workbench/extensions";
 import { logExtensionHostDiagnostic } from "pstdio-extensions/bridge/host";
 import i18n from "@/i18n";
 import { getDashboardQueryClient } from "@/lib/query-client";
@@ -100,12 +103,15 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
       let translationDisposable: Disposable | undefined;
       let contributionDisposables: Disposable[] = [];
       const chatRendererOwners = createWorkbenchExtensionChatRendererOwners();
+      const terminalRendererOwners = createWorkbenchExtensionTerminalRendererOwners();
       let displacedPageLocation: PageLocation | undefined;
 
       const clearContributions = (preserveChatOwners = false) => {
         disposeExtensionContributions(contributionDisposables);
         contributionDisposables = [];
-        if (!preserveChatOwners) chatRendererOwners.dispose();
+        if (!preserveChatOwners) {
+          chatRendererOwners.dispose();
+        }
       };
 
       const clearTranslations = () => {
@@ -143,6 +149,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
       // Returns what is registered now; a failed extension is left out so the next refresh retries it.
       const replaceContributions = (nextProjectId: string, nextMetadata: ResolvedWorkbenchExtensionMetadata) => {
         chatRendererOwners.reconcile(nextProjectId, nextMetadata);
+        terminalRendererOwners.reconcile(nextProjectId, nextMetadata);
         clearContributions(true);
         try {
           const registration = registerHealthyExtensions({
@@ -156,6 +163,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
                   registerExtensionContributions({
                     ctx: contributionCtx,
                     chatRendererOwners,
+                    terminalRendererOwners,
                     executeCommand,
                     metadata,
                     projectId: nextProjectId,
@@ -165,10 +173,12 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           });
           contributionDisposables = [registration.disposable];
           chatRendererOwners.reconcile(nextProjectId, registration.metadata);
+          terminalRendererOwners.reconcile(nextProjectId, registration.metadata);
           return registration.metadata;
         } catch (error) {
           registrationError(nextProjectId, error);
           chatRendererOwners.dispose();
+          terminalRendererOwners.reconcile(nextProjectId, emptyDashboardExtensionMetadata);
           return omitExtensionMetadata(nextMetadata, new Set(nextMetadata.extensions.map((extension) => extension.id)));
         }
       };
@@ -298,6 +308,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           clearDashboardExtensionsReadyProject(ctx);
           clearDashboardExtensionsRegisteredProject(ctx);
           clearContributions();
+          terminalRendererOwners.dispose();
           clearAppearance();
           i18n.off("languageChanged", reapplyLocale);
           activityRail.dispose();

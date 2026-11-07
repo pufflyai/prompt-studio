@@ -51,6 +51,125 @@ const createFakeAdapter = (id: string) => {
 
 const request: WorkbenchTerminalSessionRequest = { cols: 80, rows: 24 };
 
+describe("terminal presentation lifetime", () => {
+  test("a fast command replays its output and exit without becoming a running ghost", async () => {
+    const terminal = createWorkbenchTerminalController();
+    const fake = createFakeAdapter("fast");
+    let detached = 0;
+    fake.adapter.onData = (handler) => {
+      handler(new TextEncoder().encode("finished"));
+      return () => {
+        detached += 1;
+      };
+    };
+    fake.adapter.onExit = (handler) => {
+      handler({ code: 7, signal: null });
+      return () => {
+        detached += 1;
+      };
+    };
+    terminal.setSessionOpener(async () => fake.adapter);
+    await terminal.open({ bindingId: "shell", request });
+    expect(terminal.getSession("fast")).toMatchObject({ status: "exited", exit: { code: 7, signal: null } });
+    const data: string[] = [];
+    const exits: unknown[] = [];
+    terminal.subscribe("fast", {
+      onData: (chunk) => data.push(new TextDecoder().decode(chunk)),
+      onExit: (exit) => exits.push(exit),
+    });
+    expect(data).toEqual(["finished"]);
+    expect(exits).toEqual([{ code: 7, signal: null }]);
+    expect(detached).toBe(2);
+    await terminal.dispose();
+    expect(fake.calls).toEqual([]);
+  });
+
+  test("remounting an exited presentation retains its output and exit until explicit close", async () => {
+    const terminal = createWorkbenchTerminalController();
+    let opens = 0;
+    const fake = createFakeAdapter("retained");
+    terminal.setSessionOpener(async () => {
+      opens += 1;
+      return fake.adapter;
+    });
+    await terminal.open({ bindingId: "shell", ownerId: "console", request });
+    fake.emitData(new TextEncoder().encode("last output"));
+    fake.emitExit({ code: 0, signal: null });
+    expect(await terminal.open({ bindingId: "shell", ownerId: "console", request })).toEqual({ sessionId: "retained" });
+    const output: string[] = [];
+    terminal.subscribe("retained", { onData: (chunk) => output.push(new TextDecoder().decode(chunk)) });
+    expect(output).toEqual(["last output"]);
+    terminal.write({ sessionId: "retained", data: "late input" });
+    terminal.resize({ sessionId: "retained", cols: 120, rows: 40 });
+    expect(opens).toBe(1);
+    expect(fake.calls).toEqual([]);
+    await terminal.killBinding("shell", "console");
+    await terminal.open({ bindingId: "shell", ownerId: "console", request });
+    expect(opens).toBe(2);
+    await terminal.dispose();
+  });
+  test("the same placement id in different owners never shares a terminal", async () => {
+    const terminal = createWorkbenchTerminalController();
+    const first = createFakeAdapter("first");
+    const second = createFakeAdapter("second");
+    const pending = [first, second];
+    terminal.setSessionOpener(async () => pending.shift()!.adapter);
+    expect(await terminal.open({ bindingId: "shell", ownerId: "project-a", request })).toEqual({ sessionId: "first" });
+    expect(await terminal.open({ bindingId: "shell", ownerId: "project-b", request })).toEqual({ sessionId: "second" });
+    await terminal.killBinding("shell", "project-b");
+    expect(first.calls).toEqual([]);
+    expect(second.calls).toEqual(["kill:default"]);
+    await terminal.dispose();
+  });
+  test("disposing a terminal owner closes its pending and hidden sessions only", async () => {
+    const terminal = createWorkbenchTerminalController();
+    const hidden = createFakeAdapter("hidden");
+    const pending = createFakeAdapter("pending");
+    const other = createFakeAdapter("other");
+    let release!: (adapter: WorkbenchTerminalSessionAdapter) => void;
+    let opens = 0;
+    terminal.setSessionOpener(async () => {
+      opens += 1;
+      if (opens === 1) return hidden.adapter;
+      if (opens === 2) return other.adapter;
+      return await new Promise((resolve) => {
+        release = resolve;
+      });
+    });
+    await terminal.open({ bindingId: "hidden", ownerId: "console", request });
+    await terminal.open({ bindingId: "other", ownerId: "other", request });
+    const opening = terminal.open({ bindingId: "pending", ownerId: "console", request });
+    const closing = terminal.killOwner("console");
+    release(pending.adapter);
+    await opening;
+    await closing;
+    expect(hidden.calls).toEqual(["kill:default"]);
+    expect(pending.calls).toEqual(["kill:default"]);
+    expect(other.calls).toEqual([]);
+    await terminal.dispose();
+  });
+
+  test("host disposal cleans a terminal admitted after teardown", async () => {
+    const terminal = createWorkbenchTerminalController();
+    const late = createFakeAdapter("late");
+    let release!: (adapter: WorkbenchTerminalSessionAdapter) => void;
+    terminal.setSessionOpener(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+    );
+    const opening = terminal.open({ request });
+    const closing = terminal.dispose();
+    release(late.adapter);
+    await opening.catch(() => undefined);
+    await closing;
+    expect(late.calls).toEqual(["kill:default"]);
+    expect(terminal.listSessions().some((session) => session.status === "running")).toBe(false);
+    await expect(terminal.open({ request })).rejects.toThrow();
+  });
+});
+
 describe("createWorkbenchTerminalController", () => {
   test("is unavailable until a session presenter is set", async () => {
     const terminal = createWorkbenchTerminalController();

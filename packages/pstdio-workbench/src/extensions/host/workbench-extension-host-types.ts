@@ -26,6 +26,7 @@ import type {
   WorkbenchExtensionMenuWhenBuilder,
 } from "../contributions/extension-contributions";
 import type { WorkbenchExtensionKanbanRendererAdapter } from "../contributions/kanban-renderer-adapter";
+import type { TerminalRendererOwners } from "../contributions/terminal-renderer-contributions";
 import type { RegisterWorkbenchExtensionTreeRenderersInput } from "../contributions/tree-renderer-contributions";
 import type { InternalWorkbenchExtensionMetadata } from "./internal-workbench-extension-metadata";
 import type { WorkbenchExtensionRefreshEvent } from "./workbench-extension-refresh";
@@ -36,6 +37,7 @@ export interface WorkbenchExtensionHostMenuRegistration
 }
 
 export interface RegisterWorkbenchExtensionContributionsInput extends ChatCommandTransport {
+  terminalRendererOwners?: TerminalRendererOwners;
   createKeybindingWhenExpression?: (when: ExtensionKeybindingRecord["when"]) => string | undefined;
   createMenuWhenExpression?: WorkbenchExtensionMenuWhenBuilder;
   createNavigationWhenExpression?: (

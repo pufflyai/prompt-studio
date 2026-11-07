@@ -38,7 +38,8 @@ export const createTerminalModule = () =>
           return [...existing, ...available];
         },
       });
-      ctx.terminal.setSessionOpener((request) => {
+      ctx.terminal.setSessionOpener((request, view) => {
+        if (view) return openDashboardTerminalSession(request, view);
         if (request.cwd) return openDashboardTerminalSession(request);
         // The host process may run from any folder (`/` for the desktop app), so a
         // terminal that names no workspace starts in the project's root checkout.

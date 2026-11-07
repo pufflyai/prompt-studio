@@ -55,6 +55,27 @@ afterEach(() => {
 });
 
 describe("openDashboardTerminalSession", () => {
+  test("native view admission sends its project/view binding and dimensions, with launch settings resolved on the host", async () => {
+    globalThis.WebSocket = TestWebSocket as unknown as typeof WebSocket;
+    const binding = {
+      projectId: "project",
+      viewId: "owner.view.shell",
+      resource: { type: "workspace", id: "workspace", projectId: "project" },
+    };
+    const opening = openDashboardTerminalSession(
+      { cols: 80, rows: 24, cwd: "/renderer", command: ["renderer-command"] },
+      binding,
+    );
+    const socket = TestWebSocket.latest;
+    socket.emitOpen();
+    expect(socket.sent.map((message) => JSON.parse(message))).toEqual([
+      { type: "openView", request: { ...binding, cols: 80, rows: 24 } },
+    ]);
+    socket.emitMessage({ type: "open", sessionId: "host-session" });
+    const session = await opening;
+    expect(session.id).toBe("host-session");
+    await session.kill();
+  });
   test("opens a same-origin cookie-authenticated URL without credentials in the query", async () => {
     globalThis.WebSocket = TestWebSocket as unknown as typeof WebSocket;
 
