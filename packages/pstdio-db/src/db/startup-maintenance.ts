@@ -41,7 +41,14 @@ export const maintainDatabase = async (
   // FULL returns unused table/index/TOAST space to disk; a fresh image has none to reclaim.
   if (!fresh || rows[0].legacy) {
     onPhase("database_compacting");
-    await db.exec("VACUUM (FULL, ANALYZE)");
+    try {
+      await db.exec("VACUUM (FULL, ANALYZE)");
+    } catch (error) {
+      // Space reclamation is optional. In particular, FULL needs temporary disk space;
+      // its failure must not lock people out of an otherwise usable database.
+      console.warn("Database space reclamation did not finish; it will retry on the next startup.", error);
+      return;
+    }
   }
   const temporary = `${marker}.tmp`;
   try {

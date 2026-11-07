@@ -57,7 +57,9 @@ disk space to rewrite tables. It does not remove conversation files or reset WAL
 timestamp and maintenance version. An existing database without this marker receives one
 initial maintenance pass. Startup invalidates completion before legacy deletion
 and writes the marker atomically after vacuum, so interrupted work retries on the
-next start. An unchanged startup skips vacuum. Fresh databases record completion
+next start. A vacuum failure is logged and leaves maintenance pending while the
+app continues opening; insufficient rewrite space must not lock people out.
+An unchanged startup skips vacuum. Fresh databases record completion
 without rewriting their newly created tables.
 
 Desktop shows “Updating Prompt Studio” during migrations, removal of previous-version

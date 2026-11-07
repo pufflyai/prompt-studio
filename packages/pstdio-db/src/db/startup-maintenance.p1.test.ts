@@ -1,8 +1,9 @@
-import { expect, test } from "bun:test";
+import { expect, spyOn, test } from "bun:test";
 import { randomBytes } from "node:crypto";
-import { mkdtemp, rm } from "node:fs/promises";
+import { access, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { PGlite } from "@electric-sql/pglite";
 import { createDb } from "./connection.pglite";
 
 const diskLimit = process.platform === "win32" ? 15_000 : undefined;
@@ -14,6 +15,44 @@ const relation = async (client: Awaited<ReturnType<typeof createDb>>, table = "s
       [table],
     )
   ).rows[0];
+
+test(
+  "a failed vacuum keeps the database usable and retries maintenance on the next start",
+  async () => {
+    const root = await mkdtemp(join(tmpdir(), "pstdio-maintenance-failure-"));
+    const path = join(root, "database");
+    let client = await createDb({ path });
+    const originalExec = PGlite.prototype.exec;
+    const execute = spyOn(PGlite.prototype, "exec");
+    const warning = spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const before = await relation(client);
+      await client.close();
+      await rm(join(path, ".pstdio-maintenance.json"));
+      execute.mockImplementation(function (this: PGlite, query, options) {
+        if (query === "VACUUM (FULL, ANALYZE)")
+          throw Object.assign(new Error("could not extend file: No space left on device"), { code: "53100" });
+        return originalExec.call(this, query, options);
+      });
+      client = await createDb({ path });
+      expect((await client.pglite.query("SELECT 1 AS ready")).rows).toEqual([{ ready: 1 }]);
+      expect(warning).toHaveBeenCalledTimes(1);
+      expect(await Bun.file(join(path, ".pstdio-maintenance.json")).exists()).toBe(false);
+      expect((await relation(client)).node).toBe(before.node);
+      await client.close();
+      execute.mockRestore();
+      client = await createDb({ path });
+      expect((await relation(client)).node).not.toBe(before.node);
+      await access(join(path, ".pstdio-maintenance.json"));
+    } finally {
+      execute.mockRestore();
+      warning.mockRestore();
+      await client.close();
+      await rm(root, { recursive: true, force: true });
+    }
+  },
+  diskLimit,
+);
 
 test(
   "startup removes retired conversation documents across projects and reclaims their storage",
