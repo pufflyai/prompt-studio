@@ -2,7 +2,9 @@ import { describe, expect, test } from "bun:test";
 import { createContextKeyService } from "../../shared/context/context-key-service";
 import { createWorkbench } from "../../workbench-core";
 import { createCommandRegistry } from "../commands/command-registry";
+import { createPreferenceRegistry } from "../preferences/preference-registry";
 import { createKeybindingRegistry } from "./keybinding-registry";
+import { SHORTCUT_PREFERENCE_KEY } from "./shortcut-preferences";
 
 test("direct input dispatch does not enumerate unassigned navigation actions", () => {
   const commands = createCommandRegistry();
@@ -16,6 +18,48 @@ test("direct input dispatch does not enumerate unassigned navigation actions", (
   });
   keybindings.registerKeybinding({ action: { kind: "command", commandId: "direct" }, keybinding: "Alt+J" });
   expect(keybindings.listActiveKeybindings()).toMatchObject([{ keybinding: "Alt+J" }]);
+});
+
+test("a hint resolves only the requested navigation target, including its arguments", () => {
+  const commands = createCommandRegistry();
+  commands.registerCommand({ id: "open", label: "Open" }, { execute() {} });
+  const context = createContextKeyService();
+  const keybindings = createKeybindingRegistry({ commands, context });
+  const first = { kind: "command" as const, commandId: "open", args: { id: "first" } };
+  const second = { kind: "command" as const, commandId: "open", args: { id: "second" } };
+  keybindings.registerKeybinding({ id: "first", action: first, keybinding: "Alt+J", when: "available" });
+  keybindings.registerKeybinding({ id: "second", action: second, keybinding: "Alt+K" });
+  context.set("available", true);
+  expect(keybindings.listActiveKeybindings(first).map((binding) => binding.id)).toEqual(["first"]);
+  expect(keybindings.listActiveKeybindings(second).map((binding) => binding.id)).toEqual(["second"]);
+  context.set("available", false);
+  expect(keybindings.listActiveKeybindings(first)).toEqual([]);
+});
+
+test("a direct hint does not inspect arguments belonging to other commands", () => {
+  const commands = createCommandRegistry();
+  commands.registerCommand({ id: "wanted", label: "Wanted" }, { execute() {} });
+  commands.registerCommand({ id: "other", label: "Other" }, { execute() {} });
+  const keybindings = createKeybindingRegistry({ commands, context: createContextKeyService() });
+  let argumentReads = 0;
+  keybindings.registerKeybinding({
+    action: {
+      kind: "command",
+      commandId: "other",
+      args: {
+        get resource() {
+          argumentReads++;
+          return "other";
+        },
+      },
+    },
+    keybinding: "Alt+K",
+  });
+  keybindings.registerKeybinding({ action: { kind: "command", commandId: "wanted" }, keybinding: "Alt+J" });
+  expect(keybindings.listActiveKeybindings({ kind: "command", commandId: "wanted" })).toMatchObject([
+    { keybinding: "Alt+J" },
+  ]);
+  expect(argumentReads).toBe(0);
 });
 
 test("assigning a chord makes a discovered command active without an explicit binding", async () => {
@@ -135,3 +179,33 @@ test("only chords holding Alt, Ctrl or Cmd work while typing", () => {
   );
   expect(typing).toEqual({ plain: false, shifted: false, held: true, command: true });
 });
+
+for (const commandHints of [false, true]) {
+  test(`resolves ${commandHints ? "command hints" : "active shortcuts"} from one preference snapshot`, () => {
+    const commands = createCommandRegistry();
+    const preferences = createPreferenceRegistry();
+    let generation = 0;
+    preferences.registerValueAdapter(SHORTCUT_PREFERENCE_KEY, {
+      get: () => {
+        const keybinding = generation++ === 0 ? "Alt+J" : "Alt+K";
+        return {
+          overrides: Object.fromEntries(Array.from({ length: 20 }, (_, index) => [`open-${index}`, { keybinding }])),
+        };
+      },
+      set() {},
+    });
+    const keybindings = createKeybindingRegistry({
+      commands,
+      context: createContextKeyService(),
+      preferences: () => preferences,
+    });
+    for (let index = 0; index < 20; index++) {
+      const id = `open-${index}`;
+      commands.registerCommand({ id, label: id }, { execute() {} });
+      keybindings.registerKeybinding({ id, action: { kind: "command", commandId: id }, keybinding: "Alt+X" });
+    }
+    const read = () => (commandHints ? keybindings.listCommandKeybindings() : keybindings.listActiveKeybindings());
+    expect(new Set(read().map((binding) => binding.keybinding))).toEqual(new Set(["Alt+J"]));
+    expect(new Set(read().map((binding) => binding.keybinding))).toEqual(new Set(["Alt+K"]));
+  });
+}

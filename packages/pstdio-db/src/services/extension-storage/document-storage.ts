@@ -10,6 +10,8 @@ import { createDocumentCache } from "./document-cache";
 import { createDocumentDirectory } from "./document-directory";
 import { createDocumentTransactions } from "./document-transactions";
 import { createNativeDocumentStore, openNativeDocument } from "./native-document-storage";
+import { createOrderedCloudReturn } from "./ordered-cloud-return";
+import { convertLegacyOwners } from "./ordered-conversion";
 import { createOrderedLogs } from "./ordered-logs";
 import { createOrderedResourceRecords } from "./ordered-resource-records";
 import { createOrderedStreamStore } from "./ordered-stream-store";
@@ -51,7 +53,7 @@ const hasProjectedRecords = async (db: DbClient, owner: StorageOwner) => {
     .limit(1);
   return !!record;
 };
-type StorageChange = StorageOwner & { documentId?: string };
+export type StorageChange = StorageOwner & { documentId?: string };
 
 const documentRevision = (db: DbClient, documentId: string) => async (owner: StorageOwner) => {
   const [row] = await db
@@ -125,11 +127,14 @@ export const createDocumentStorageDBService = (
   const nativeStore = (id: string) => createNativeDocumentStore(db, id, transactionFor, documentRevision(db, id));
   const isResourceDocument = (id: string) =>
     id.startsWith(resourceDocumentId("").slice(0, -2)) ||
+    id.startsWith('["ordered-conversion') ||
     id.startsWith('["ordered-index-blob",') ||
     id.startsWith('["ordered-native-field",') ||
     id.startsWith('["ordered-native-room",') ||
     id.startsWith('["ordered-native-authored",') ||
     id.startsWith('["ordered-dependency",') ||
+    id.startsWith('["ordered-replaced",') ||
+    id === '["ordered-return"]' ||
     id === '["ordered-directory"]';
   directory = createDocumentDirectory(db, {
     metadata: transaction,
@@ -142,9 +147,17 @@ export const createDocumentStorageDBService = (
       for (const listener of listeners) listener(owner);
     },
   });
+  const cloudReturn = createOrderedCloudReturn(db, {
+    changed: (owner) => {
+      notifyOwnerNative(owner);
+      for (const listener of listeners) listener(owner);
+    },
+  });
   return {
     transaction,
+    convertLegacyOwners: (options: Parameters<typeof convertLegacyOwners>[1]) => convertLegacyOwners(db, options),
     logs,
+    cloudReturn,
     observer,
     getEnvironment,
     flushStatistics: async () => {

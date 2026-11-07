@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { ProjectSyncStatus } from "pstdio-api-contracts";
 import { createRecordAssets } from "../../features/extensions/command-environment/record-assets";
 import { loadExtensionSource } from "../../features/extensions/extension-runtime";
 import { documentPeer } from "../../features/extensions/publication/document-peer.fixture";
@@ -22,13 +23,13 @@ test("resuming Cloud after local edits replaces every owner of the retired proje
   const configs: RelayWorkbench[] = [];
   const reachSynced = async () => {
     const end = Date.now() + 3000;
-    let states: string[] = [];
+    let statuses: ProjectSyncStatus[] = [];
     do {
-      states = await Promise.all(runtimes.map(async (runtime) => (await runtime.status(owner.workbenchId)).state));
-      if (states.every((state) => state === "synced")) return;
+      statuses = await Promise.all(runtimes.map((runtime) => runtime.status(owner.workbenchId)));
+      if (statuses.every((status) => status.state === "synced")) return;
       await Bun.sleep(10);
     } while (Date.now() < end);
-    expect(states).toEqual(["synced", "synced"]);
+    expect(statuses).toMatchObject([{ state: "synced" }, { state: "synced" }]);
   };
   try {
     for (const [index, app] of apps.entries()) {

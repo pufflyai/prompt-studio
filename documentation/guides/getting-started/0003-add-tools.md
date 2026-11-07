@@ -13,7 +13,7 @@ Prompt Studio publishes these tools as extensions. They use the public extension
 | [Reports](../../../extensions/pstdio-reports/README.md) | Reports that agents hand to each other | `pstdio-reports` |
 | [Artifacts](../../../extensions/pstdio-artifacts/README.md) | Interactive HTML pages with saved revisions | `pstdio-artifacts` |
 
-New projects start with Home, Onboarding, base themes, Prompt Studio Skills, and performance monitoring. Onboarding offers agent harnesses and optional tools; you can choose them there or install them later through Extensions.
+New projects start with Home, Onboarding, base themes, and Prompt Studio Skills. Onboarding offers agent harnesses and optional tools. Choosing Coding also installs Workspaces. Cloud and performance monitoring can be installed later through Extensions.
 
 ## Install from the dashboard
 

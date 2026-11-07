@@ -13,7 +13,6 @@ import { applyOrderedNativeAdmission } from "./ordered-native-apply";
 import { applyOrderedNumberPolicy } from "./ordered-number-admission";
 import { combineNumberEvents } from "./ordered-number-projection";
 import { applyBoundedOrderedOperation } from "./ordered-policy";
-import { initializeOrderedOwner } from "./ordered-projection";
 import { admissionDecisions, rebaseOrderedProjection } from "./ordered-rebase";
 import { adoptOrderedCheckpoint } from "./ordered-receipts-adoption";
 import { createOrderedManifestCache } from "./ordered-receipts-blobs";
@@ -21,6 +20,7 @@ import { coverOrderedReceiptRoot, coversOrderedReceipts } from "./ordered-receip
 import { createOrderedReceiptResolver } from "./ordered-receipts-resolver";
 import { receiptRoots, sameReceiptRoot, saveReceiptRoots } from "./ordered-receipts-state";
 import { nextOrderedUpload } from "./ordered-receipts-upload";
+import { recordOrderedReplaced } from "./ordered-return-review";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { admissibleOrderedFrame, applyOrderedStreamFrame } from "./ordered-stream-frames";
 import { readOrderedPending } from "./ordered-stream-pending";
@@ -46,8 +46,7 @@ export const createOrderedStreamStore = (
     return index;
   };
   const run = <T>(action: (journal: OrderedJournal, tx: OrderedTransaction) => Promise<T>) =>
-    withOrderedOwner(db, owner, async (journal, tx, created) => {
-      await initializeOrderedOwner(journal, tx, owner, created);
+    withOrderedOwner(db, owner, async (journal, tx) => {
       return cache ? cache.transaction(tx, () => action(journal, tx)) : action(journal, tx);
     });
   const notify = (events: NumberChange[] = []) => {
@@ -74,6 +73,7 @@ export const createOrderedStreamStore = (
       previous,
       await admissionDecisions(journal, admission),
     );
+    await recordOrderedReplaced(journal, tx, owner, operation, applied.skipped);
     const result = await applyOrderedNumberPolicy(tx, owner, operation, epoch, applied, !!previous);
     await journal.saveCanonical(result.records);
     await journal.recordDecision(result.decision, await fingerprint(admission as unknown as Json));

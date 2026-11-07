@@ -202,7 +202,7 @@ export const createFakeHarness = (longStream: LongStreamShape = DEFAULT_LONG_STR
     id: "fake",
     label: l10n("harness.fake", "Fake Agent"),
 
-    capabilities: () => [],
+    capabilities: () => ["SessionFork"],
     listModels: () => [{ id: "fake" }],
 
     start: (_ctx, input) => {
@@ -260,9 +260,21 @@ export const createFakeHarness = (longStream: LongStreamShape = DEFAULT_LONG_STR
 
       if (input.prompt.includes("__fake_async_questions__"))
         return createAsyncQuestionSession(input.agentSessionId, input, nextMessages);
+      if (input.prompt.includes(HOLD_PROMPT_TRIGGER))
+        return createSession(input.agentSessionId, (signal) => waitForRelease(input.cwd, signal));
       return createSession(input.agentSessionId);
     },
 
+    fork: (_ctx, input) => {
+      const history = sessions.get(input.agentSessionId) ?? [];
+      const boundary = input.messageId
+        ? history.findIndex((message) => message.id === input.messageId)
+        : history.length - 1;
+      if (boundary < 0) throw new Error("Fixture reply not found.");
+      const agentSessionId = `fake-${randomUUID()}`;
+      sessions.set(agentSessionId, structuredClone(history.slice(0, boundary + 1)));
+      return { agentSessionId };
+    },
     getMessages: (_ctx, input) => sessions.get(input.agentSessionId) ?? [],
     recoverMessages: (_ctx, input) => reconcileMessageHistory(input),
   } satisfies Omit<HarnessProvider, "ref">;

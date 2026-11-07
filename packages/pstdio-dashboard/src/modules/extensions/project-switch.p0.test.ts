@@ -10,6 +10,7 @@ import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import {
   clearCachedDashboardExtensionMetadata,
   getCachedDashboardExtensionMetadata,
+  subscribeDashboardExtensionMetadata,
 } from "@/shared/extensions/workbench-extension-contributions";
 import { createExtensionsModule } from "./module";
 import { emptyAppearance, flushMicrotasks, metadataWithResourceExtension } from "./module-test-fixtures";
@@ -264,7 +265,17 @@ describe("project-switch extension refresh", () => {
         harness.resetCounts();
 
         selectDashboardProject(harness.workbench, { id: "project-b", name: "Project B" });
-        await harness.settleProject("project-b", order);
+        const catalogs: DashboardExtensionMetadata[] = [];
+        const stopCatalog = subscribeDashboardExtensionMetadata(() => {
+          const current = getCachedDashboardExtensionMetadata("project-b");
+          if (current) catalogs.push(current);
+        });
+        try {
+          await harness.settleProject("project-b", order);
+        } finally {
+          stopCatalog();
+        }
+        expect(catalogs).toHaveLength(1);
 
         expect(harness.loadMetadata).toHaveBeenCalledTimes(1);
         expect(harness.loadAppearance).toHaveBeenCalledTimes(1);

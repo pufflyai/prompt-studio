@@ -10,6 +10,7 @@ import { createBootstrapModule } from "../bootstrap";
 import { createExtensionsModule } from "../extensions/module";
 import { emptyAppearance, flushMicrotasks, metadataWithResourceExtension } from "../extensions/module-test-fixtures";
 import { createSessionsModule } from "../sessions/module";
+import { registerSessionProvider } from "../sessions/session-provider.fixture";
 import { DesktopProjectTabsController } from "./desktop-project-tabs-controller";
 import { createProjectsModule } from "./module";
 
@@ -75,6 +76,7 @@ test.each([
     await flushMicrotasks();
     await flushMicrotasks();
   };
+  registerSessionProvider(workbench, { projectId: "first" });
   const firstPage = { extensionId: "pstdio.extension-lab", kind: "page", id: "labPage" } as const;
   const secondPage = { extensionId: "acme.issue-tracker", kind: "page", id: "issue" } as const;
   try {

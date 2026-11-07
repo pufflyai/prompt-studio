@@ -1,9 +1,16 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
+import { type APIRequestContext, expect, type Page, type Request, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { switchSession } from "../helpers/session-side-panel";
 import { uiOrigin as apiBase } from "../ui-server";
+
+const commandId = "pstdio.pstdio-session-browser.view.conversation.chat.onAction";
+const actionRoute = `**/extensions/commands/${commandId}/execute`;
+const isSubmit = (request: Request) =>
+  request.method() === "POST" &&
+  request.url().endsWith(`/extensions/commands/${commandId}/execute`) &&
+  request.postDataJSON()?.params?.action?.type === "submit";
 
 const setup = async (page: Page, request: APIRequestContext, prompts = ["Session A", "Session B"]) => {
   const project = await (
@@ -71,15 +78,18 @@ test("queues two follow-ups without stopping the active session and keeps a fail
   for (const [index, prompt] of ["First waiting message", "Second waiting message"].entries()) {
     await editor.fill(prompt);
     await expect(send).toHaveAttribute("aria-label", "Queue message");
-    const accepted = page.waitForResponse(
-      (response) => response.url() === `${url}/follow-up` && response.request().method() === "POST",
-    );
+    const accepted = page.waitForResponse((response) => isSubmit(response.request()));
     let release!: () => void;
     const held = new Promise<void>((resolve) => {
       release = resolve;
     });
-    await page.route(`${url}/follow-up`, async (route) => {
-      await held;
+    let submits = 0;
+    await page.route(actionRoute, async (route) => {
+      if (isSubmit(route.request())) {
+        submits++;
+        expect(route.request().postDataJSON().params.renderer.resource.id).toBe(session.id);
+        await held;
+      }
       await route.continue();
     });
     if (index === 0) await editor.press("Enter");
@@ -93,8 +103,9 @@ test("queues two follow-ups without stopping the active session and keeps a fail
     } finally {
       release();
     }
-    expect((await (await accepted).json()).follow_up.status).toBe("queued");
-    await page.unroute(`${url}/follow-up`);
+    expect((await (await accepted).json()).outcome.ok).toBe(true);
+    expect(submits).toBe(1);
+    await page.unroute(actionRoute);
     await expect(editor).toHaveAttribute("contenteditable", "true");
     await expect(editor).toBeEmpty();
     await expect(page.getByText(prompt, { exact: true })).toBeVisible();
@@ -105,9 +116,23 @@ test("queues two follow-ups without stopping the active session and keeps a fail
   await page.reload();
   for (const prompt of ["First waiting message", "Second waiting message"])
     await expect(page.getByText(prompt, { exact: true })).toHaveCount(1);
-  await page.route(`${url}/follow-up`, (route) =>
-    route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: "Could not send" }) }),
-  );
+  await page.route(actionRoute, (route) => {
+    if (!isSubmit(route.request())) return route.continue();
+    expect(route.request().postDataJSON().params.renderer.resource.id).toBe(session.id);
+    return route.fulfill({
+      json: {
+        commandId,
+        extensionId: "pstdio.pstdio-session-browser",
+        outcome: {
+          ok: false,
+          status: "error",
+          reason: "Could not send",
+          error: { message: "Could not send" },
+          notices: [],
+        },
+      },
+    });
+  });
   await editor.fill("Keep this draft");
   await expect(send).toHaveAttribute("aria-label", "Queue message");
   await send.click();
@@ -117,7 +142,7 @@ test("queues two follow-ups without stopping the active session and keeps a fail
   await page.getByRole("button", { name: "Dismiss" }).click();
   await expect(page.getByText("Message not sent")).toHaveCount(0);
   await expect(editor).toHaveText("Keep this draft");
-  await page.unroute(`${url}/follow-up`);
+  await page.unroute(actionRoute);
   await send.click();
   await expect(editor).toBeEmpty();
   await expect(page.getByText("Keep this draft", { exact: true })).toHaveCount(1);

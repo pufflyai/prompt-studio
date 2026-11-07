@@ -1,9 +1,20 @@
-import { isNavigationTarget, type ResourceRef, type ResourceResolution, resourceKey } from "@pstdio/sdk/extensions";
+import {
+  contributionRefId,
+  isNavigationTarget,
+  type ResourceRef,
+  type ResourceResolution,
+  resourceKey,
+  sessionBrowser,
+} from "@pstdio/sdk/extensions";
 import type { WorkbenchModuleContext } from "@pstdio/workbench";
 import { toWorkbenchNavigationTarget } from "@pstdio/workbench/extensions";
 import type { ResourceLinkCandidate } from "@pstdio/workbench/react";
 import { extensionResourceRefSchema, qualifyNavigationTarget } from "pstdio-api-contracts";
 import { executeExtensionCommand } from "@/shared/extensions/api";
+import {
+  getDashboardExtensionsReadyProjectId,
+  subscribeDashboardExtensionsReadyProject,
+} from "@/shared/extensions/extension-readiness";
 import { canonicalDashboardResource } from "@/shared/extensions/resource-identity";
 import { getCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 
@@ -50,6 +61,44 @@ export const resolveOwnerBatch = async (input: {
   return resolved;
 };
 
+// Canonical identity stays in core; the installed provider owns its destination.
+const resolveCanonicalSessions = async (
+  ctx: WorkbenchModuleContext,
+  projectId: string,
+  resources: ResourceRef[],
+  signal?: AbortSignal,
+) => {
+  signal?.throwIfAborted();
+  const command = contributionRefId(sessionBrowser.commands.resolve);
+  if (!resources.length) return [];
+  // Core routes may boot before provider declarations; wait for that registration,
+  // then treat a missing or explicitly disabled provider as unavailable.
+  if (!ctx.commands.getCommand(command) && getDashboardExtensionsReadyProjectId(ctx) !== projectId) {
+    await new Promise<void>((resolve, reject) => {
+      const finish = (error?: unknown) => {
+        stop();
+        signal?.removeEventListener("abort", abort);
+        if (error) reject(error);
+        else resolve();
+      };
+      const abort = () => finish(signal?.reason);
+      const stop = subscribeDashboardExtensionsReadyProject(ctx, () => {
+        if (getDashboardExtensionsReadyProjectId(ctx) === projectId) finish();
+      });
+      signal?.addEventListener("abort", abort, { once: true });
+    });
+  }
+  signal?.throwIfAborted();
+  if (!ctx.commands.getCommand(command)) return [];
+  return resolveOwnerBatch({
+    resources,
+    resolve: () => ctx.commands.executeCommand(command, { resources }, { projectId, signal }),
+    navigate: async (target) => {
+      await ctx.navigation.openTarget(toWorkbenchNavigationTarget(target));
+    },
+  });
+};
+
 export const resolveLinkedResources = async (
   ctx: WorkbenchModuleContext,
   projectId: string,
@@ -65,6 +114,7 @@ export const resolveLinkedResources = async (
     }),
   );
   const candidates: ResourceLinkCandidate[] = [];
+  const sessions: ResourceRef[] = [];
   const batches = new Map<string, { command: string; resources: ResourceRef[] }>();
   const metadata = getCachedDashboardExtensionMetadata(projectId);
   for (const ref of unique.values()) {
@@ -80,6 +130,8 @@ export const resolveLinkedResources = async (
               }
             : undefined,
         });
+      else if (ref.type === "session" && (!ref.projectId || ref.projectId === projectId))
+        sessions.push(canonicalDashboardResource(ref, projectId));
       continue;
     }
     const kind = metadata?.resourceKinds.find(
@@ -117,5 +169,5 @@ export const resolveLinkedResources = async (
   candidates.sort(
     (left, right) => hostOrder.get(resourceKey(left.resource))! - hostOrder.get(resourceKey(right.resource))!,
   );
-  return [...candidates, ...owners.flat()];
+  return [...candidates, ...owners.flat(), ...(await resolveCanonicalSessions(ctx, projectId, sessions, signal))];
 };

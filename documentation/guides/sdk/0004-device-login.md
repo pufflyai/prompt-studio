@@ -69,7 +69,7 @@ pst devices remove DEVICE_ID
 pst logout
 ```
 
-`devices list` marks the current device with `*`. Removing a device stops it from renewing access. Access it already has ends within the access lifetime the service sets. Data already on that device stays there. `pst logout` removes the current device and stops its sync. If the account service cannot be reached, it still logs out here; remove the device from another one later.
+`devices list` marks the current device with `*`. Removing a device stops it from renewing access. Access it already has ends within the access lifetime the service sets. Data already on that device stays there. `pst logout` removes the current device and ends sync on it. Edits made while signed out stay on the device and upload when you sign in again. Fields another device changed meanwhile keep that device's version, and an unusually large set of changes waits on the device until you apply or discard it with `pst projects returned-changes PROJECT_ID apply` or `discard`. Run `pst projects returned-changes PROJECT_ID` to list what is waiting. Signing in to another account keeps your projects from the first one on the device the same way, and signing back in to the first account sends only your own changes. If the account service cannot be reached, it still logs out here; remove the device from another one later.
 
 ## Native storage and SDK
 

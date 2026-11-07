@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { BrowserWindow, type Session, session, shell, WebContentsView } from "electron";
 import type { RuntimeDescriptor } from "pstdio/runtime";
+import { createLogger } from "pstdio-logging";
 import { DESKTOP_CHANNELS, type DesktopStartupAppearance } from "../desktop-api";
 import type { DesktopState } from "../lifecycle/lifecycle-machine";
 import type { OwnedFrame } from "../performance/process-attribution";
@@ -11,11 +12,13 @@ import { LIFECYCLE_SCHEME, LIFECYCLE_URL, readLifecycleAsset } from "./lifecycle
 import type { TitleBarAppearance } from "./title-bar-appearance";
 
 const WORKBENCH_PARTITION = "pstdio-workbench";
+const logger = createLogger({ component: "desktop", level: "info", service: "pstdio-desktop", sync: true });
 
 export class DesktopWindowController {
   #runtimeOrigin: string | null = null;
   #workbench: WebContentsView | null = null;
   #workbenchLoad: Promise<void> | undefined;
+  #workbenchRuntimeId: string | undefined;
   readonly #shown: Promise<void>;
   readonly lifecycleUrl: string;
   readonly window: BrowserWindow;
@@ -46,6 +49,12 @@ export class DesktopWindowController {
       // resources must not keep that screen behind a hidden native window.
       this.window.webContents.once("dom-ready", () => {
         this.window.show();
+        // Native visibility and content paint are separate startup evidence. Record
+        // the explicit show result here; renderer visibility also allows hidden windows.
+        logger.info(
+          { event: "desktop.window.ready", visible: this.window.isVisible() },
+          "Desktop startup window is ready",
+        );
         resolve();
       });
     });
@@ -172,22 +181,48 @@ export class DesktopWindowController {
     contents.focus();
   }
 
-  showWorkbench(descriptor: RuntimeDescriptor) {
-    // A quit during startup joins the load in progress. A second load would abort it.
-    this.#workbenchLoad ??= this.#loadWorkbench(descriptor).finally(() => {
+  prepareWorkbench(descriptor: RuntimeDescriptor) {
+    if (this.#workbenchRuntimeId !== descriptor.instanceId) {
+      this.#workbenchRuntimeId = descriptor.instanceId;
       this.#workbenchLoad = undefined;
-    });
+    }
+    this.#workbenchLoad ??= this.#prepareWorkbenchAssets(descriptor);
+    // Keep an early failure owned until showWorkbench joins this preparation.
+    void this.#workbenchLoad.catch(() => {});
     return this.#workbenchLoad;
+  }
+
+  async showWorkbench(descriptor: RuntimeDescriptor) {
+    if (this.#workbenchRuntimeId !== descriptor.instanceId) this.#workbenchLoad = undefined;
+    this.#workbenchRuntimeId = descriptor.instanceId;
+    this.#workbenchLoad ??= this.#loadWorkbench(descriptor);
+    const loading = this.#workbenchLoad;
+    try {
+      await loading;
+      this.#workbench!.setVisible(true);
+      this.#workbench!.webContents.focus();
+    } finally {
+      if (this.#workbenchLoad === loading) this.#workbenchLoad = undefined;
+    }
   }
 
   async #loadWorkbench(descriptor: RuntimeDescriptor) {
     this.#runtimeOrigin = descriptor.origin;
-    // Prepare login while the startup window loads, but keep the second renderer from
-    // competing with showing that window. Its remaining resources can load alongside the workbench.
     const [loginUrl] = await Promise.all([createRuntimeLoginUrl(fetch, descriptor), this.#shown]);
     const view = this.#workbench ?? this.createWorkbench();
     await view.webContents.loadURL(loginUrl);
-    view.setVisible(true);
-    view.webContents.focus();
+  }
+
+  async #prepareWorkbenchAssets(descriptor: RuntimeDescriptor) {
+    this.#runtimeOrigin = descriptor.origin;
+    // Show the startup window before a second renderer competes with its first paint.
+    await this.#shown;
+    const view = this.#workbench ?? this.createWorkbench();
+    const [loginUrl] = await Promise.all([
+      createRuntimeLoginUrl(fetch, descriptor),
+      view.webContents.loadURL(`${descriptor.origin}/?desktop-startup=1`),
+    ]);
+    // The dashboard waits for this fragment during native bootstrap; it redeems it without reloading.
+    await view.webContents.executeJavaScript(`void (window.location.hash = ${JSON.stringify(new URL(loginUrl).hash)})`);
   }
 }

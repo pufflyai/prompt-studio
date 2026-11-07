@@ -1,4 +1,3 @@
-import { and, eq } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import {
   applyJsonChanges,
@@ -7,31 +6,10 @@ import {
   parseJsonPointer,
   readOrderedPath,
 } from "pstdio-sync/records";
-import { storage_ordered_records as canonical } from "../../db/schemas.pg";
 import type { OrderedJournal } from "./ordered-journal";
 import { minimalLegacyPaths } from "./ordered-legacy-paths";
-import { indexInitialCanonicalNumbers, removeInitialCanonicalNumbers } from "./ordered-number-canonical";
-import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
-
-/** Import the state before the first pending lifecycle, then replay its exact occurrence normally. */
-export const normalizeLegacyPendingBaseline = async (
-  journal: OrderedJournal,
-  tx: OrderedTransaction,
-  owner: StorageOwner,
-  record: OrderedRecord,
-  lifecycle: "create" | "delete" | "restore",
-) => {
-  if (lifecycle === "create") {
-    await tx
-      .delete(canonical)
-      .where(and(orderedOwnerWhere(canonical, owner), eq(canonical.record_id, record.recordId)));
-    await removeInitialCanonicalNumbers(tx, owner, [record.recordId]);
-    return;
-  }
-  const baseline = { ...record, deleted: lifecycle === "restore", lifetime: "initial" };
-  await journal.saveCanonical([baseline]);
-  await indexInitialCanonicalNumbers(tx, owner, [baseline]);
-};
+import { indexInitialCanonicalNumbers } from "./ordered-number-canonical";
+import type { OrderedTransaction } from "./ordered-sql";
 
 const ordinaryRemovals = (record: OrderedRecord, paths: string[][]) => {
   const texts = Object.keys(record.texts ?? {}).map(parseJsonPointer);

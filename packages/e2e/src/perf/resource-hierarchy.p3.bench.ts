@@ -62,7 +62,7 @@ test("derives ticket ancestry within the interaction budget", async ({ page, req
         observer.disconnect();
         window.__perfSettled = performance.now();
       });
-      if (nav) observer.observe(nav, { attributes: true, childList: true, subtree: true });
+      if (nav) observer.observe(nav, { attributes: true, childList: true, characterData: true, subtree: true });
     });
 
     await back.click();

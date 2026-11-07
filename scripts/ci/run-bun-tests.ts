@@ -4,8 +4,12 @@ import { bunRunIdentity, junitCases, registeredUnselectedScope } from "./bun-tes
 import { assertStableQuarantineExclusions, verifyQuarantineReport } from "./quarantine-reports";
 import { priorityIgnorePatterns, readTestPriorities } from "./test-discovery";
 import { stopsAtFirstFailure } from "./test-policy";
-import { bunTestSelection, narrowStablePattern, quarantineDirectory } from "./test-quarantine";
-import cases from "./test-quarantine.json";
+import {
+  bunTestSelection,
+  quarantineRegistry as cases,
+  narrowStablePattern,
+  quarantineDirectory,
+} from "./test-quarantine";
 
 const root = realpathSync.native(resolve(import.meta.dir, "../.."));
 const cwd = realpathSync.native(process.cwd());
@@ -133,7 +137,13 @@ if (quarantine && !selection.files.length) {
     stdout: "inherit",
     stderr: "inherit",
   });
-  const exitCode = await child.exited;
+  // The caller owns fixture files until this wrapper exits. Forward cancellation
+  // and await the actual test process before allowing that owner to clean up.
+  const forward = (signal: NodeJS.Signals) => child.kill(signal);
+  for (const signal of ["SIGINT", "SIGTERM"] as const) process.on(signal, forward);
+  const exitCode = await child.exited.finally(() => {
+    for (const signal of ["SIGINT", "SIGTERM"] as const) process.off(signal, forward);
+  });
   let reported: ReturnType<typeof junitCases> = [];
   let reportError: string | null = null;
   try {

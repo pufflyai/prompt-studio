@@ -22,10 +22,15 @@ test("Session menus share resource actions and switch through the full history",
     ).toBe(true);
   }
   await prepareResourceActionsDashboard(page, project.id);
-  await page.goto(`/projects/${project.id}/sessions`);
+  await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-session-browser/conversations`);
   const nav = page.locator('[data-workbench-region="sidenav"]');
   await expect(nav.getByRole("option", { name: "History 64", exact: true })).toBeVisible();
   // The oldest sessions are outside the virtualized viewport until it is scrolled.
+  await nav.locator('[data-scope="scroll-area"][data-part="viewport"]').evaluateAll((elements) => {
+    for (const element of elements) element.scrollTop = element.scrollHeight;
+  });
+  // Native tree pagination exposes the next history page through its expandable branch.
+  await nav.getByRole("option", { name: "More sessions", exact: true }).press("ArrowRight");
   await nav.locator('[data-scope="scroll-area"][data-part="viewport"]').evaluateAll((elements) => {
     for (const element of elements) element.scrollTop = element.scrollHeight;
   });

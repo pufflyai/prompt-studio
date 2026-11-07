@@ -36,8 +36,10 @@ for (const [harness, modes] of [
     await editor.fill("Finish the release notes /go");
     const menu = page.getByRole("listbox", { name: "Harness commands" });
     await expect(menu).toBeVisible();
-    if (modes) await editor.press("Enter");
-    else await menu.getByRole("option", { name: "/goal" }).click();
+    if (modes) {
+      await expect(editor).toBeFocused();
+      await page.keyboard.press("Enter");
+    } else await menu.getByRole("option", { name: "/goal" }).click();
     await expect(editor).toHaveText("Finish the release notes ");
     await expect(page.getByRole("button", { name: "Remove Goal", exact: true })).toBeVisible();
     expect((await (await request.get(`${url}/harness-commands`)).json()).modes).toHaveLength(0);
@@ -99,7 +101,7 @@ for (const [harness, modes] of [
     }
     await editor.fill("/unknown");
     await send.click();
-    await expect(page.getByText("Command failed", { exact: true })).toBeVisible();
+    await expect(page.getByRole("alert")).toHaveText("Unsupported fixture command.");
     await expect(editor).toHaveText("/unknown");
     await editor.fill("/fail");
     await send.click();

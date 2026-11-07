@@ -1,12 +1,13 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { once } from "node:events";
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import type { Page } from "@playwright/test";
 import { stopChildProcess } from "../scripts/child-process";
 import { registerPendingTestProcess } from "../scripts/pending-test-processes";
 import { waitForProcessReady } from "../scripts/process-readiness";
 import { PACKAGED_BINARY_PATH } from "./packaged-helpers";
+import { stagePackagedPackageCache } from "./packaged-package-cache";
 
 export type RuntimeDescriptor = {
   pid: number;
@@ -116,7 +117,9 @@ export const startPackagedServe = async (
   env: Record<string, string> = {},
   binaryPath = PACKAGED_BINARY_PATH,
   observe?: (process: PackagedRuntimeObservation) => void,
+  onOutput?: (chunk: Buffer) => void,
 ) => {
+  stagePackagedPackageCache(tempRoot);
   const descriptorPath = join(tempRoot, "runtime.json");
   const {
     PSTDIO_EXTENSION_SOURCE_ROOT: _sourceRoot,
@@ -136,14 +139,26 @@ export const startPackagedServe = async (
         PSTDIO_DB_PATH: join(tempRoot, "db.sqlite"),
         PSTDIO_DEFAULT_EXTENSIONS: "[]",
         PSTDIO_STORAGE_PATH: join(tempRoot, "storage"),
+        // Retain setup/shutdown phases after the fixture removes its disposable home.
+        PSTDIO_LOG_PATH: join(
+          import.meta.dirname,
+          "../../test-results/packaged-runtime",
+          `${basename(tempRoot)}.jsonl`,
+        ),
         ...env,
       },
       stdio: "pipe",
     },
   );
+  if (onOutput) {
+    child.stdout?.on("data", onOutput);
+    child.stderr?.on("data", onOutput);
+  }
   try {
     if (child.pid !== undefined) observe?.({ pid: child.pid, descriptor: null });
     const descriptor = await waitForPackagedReady(descriptorPath, child, observe);
+    child.stdout!.resume();
+    child.stderr!.resume();
     return { child, baseUrl: descriptor.origin, descriptor };
   } catch (error) {
     await stopProcess(child);

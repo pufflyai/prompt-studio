@@ -5,10 +5,22 @@ interface NamedPath {
   whole: boolean;
 }
 type Lifecycle = "create" | "delete" | "restore" | undefined;
-const lifecycleFor = (name: string, item: Y.Item, inserted: boolean, previous: Lifecycle): Lifecycle => {
+const lifecycleFor = (
+  name: string,
+  item: Y.Item,
+  inserted: boolean,
+  previous: Lifecycle,
+  tombstones: Set<Y.Item>,
+): Lifecycle => {
   if (name === "records" && inserted) return item.left === null ? "create" : "restore";
-  if (name === "deleted") return inserted ? "delete" : "restore";
-  return previous ?? "delete";
+  if (name !== "deleted") return previous ?? "delete";
+  if (inserted) {
+    tombstones.add(item);
+    return "delete";
+  }
+  // Deleting a deleted record writes a new tombstone, which removes the one it replaces.
+  if (tombstones.size > 0 && !tombstones.has(item)) return previous;
+  return "restore";
 };
 const prefix = (name: string, offset: number) => {
   const colon = name.indexOf(":", offset);
@@ -66,11 +78,12 @@ export const legacyPendingPaths = (document: Y.Doc, recordId: string, bytes: Uin
   const paths = new Map<string, string[]>();
   let lifecycle: Lifecycle;
   const objects = new Map<string, string[]>();
+  const insertedTombstones = new Set<Y.Item>();
   const visit = (item: Y.Item, inserted = false, object = false) => {
     if (!(item.parent instanceof Y.AbstractType)) throw new Error("Pending legacy item has no retained parent");
     const name = Y.findRootTypeKey(item.parent);
     if (name === "records" || name === "deleted") {
-      if (item.parentSub === recordId) lifecycle = lifecycleFor(name, item, inserted, lifecycle);
+      if (item.parentSub === recordId) lifecycle = lifecycleFor(name, item, inserted, lifecycle, insertedTombstones);
       return;
     }
     const named = namedPath(name, recordId);

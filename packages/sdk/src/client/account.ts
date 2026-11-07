@@ -4,6 +4,7 @@ import type {
   AccountLoginStatus,
   AccountStatus,
   DeviceCommand,
+  ProjectReturnAction,
   ProjectSyncStatus,
 } from "pstdio-api-contracts";
 import type { RequestFn } from "./request";
@@ -44,6 +45,9 @@ export const createAccountClient = (request: RequestFn) => {
     syncProject: (projectId: string) => request<Ok>(project(projectId), { method: "PUT" }),
     /** Stops syncing a cloud project. Every device keeps its local copy. */
     stopProjectSync: (projectId: string) => request<Ok>(project(projectId), { method: "DELETE" }),
+    /** Applies or discards a held return, or clears the replaced-changes list, on this device. */
+    resolveReturnedChanges: (projectId: string, action: ProjectReturnAction) =>
+      request<Ok>(`${project(projectId)}/returned-changes`, { method: "POST", body: { action } }),
   };
 };
 export type AccountClient = ReturnType<typeof createAccountClient>;

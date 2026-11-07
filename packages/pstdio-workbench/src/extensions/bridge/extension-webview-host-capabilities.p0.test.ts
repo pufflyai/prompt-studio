@@ -348,6 +348,7 @@ test("account capabilities route reads and changes to the host account and valid
       devices: record("devices"),
       renameDevice: record("renameDevice"),
       removeDevice: record("removeDevice"),
+      resolveReturnedChanges: record("resolveReturnedChanges"),
       projectSyncStatus: record("projectSyncStatus", { state: "synced", offlineReady: true }),
       syncProject: record("syncProject"),
       stopProjectSync: record("stopProjectSync"),

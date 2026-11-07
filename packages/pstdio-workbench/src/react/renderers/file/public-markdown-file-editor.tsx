@@ -1,6 +1,7 @@
 import { Flex, Text } from "@chakra-ui/react";
 import type { TextEditingSession } from "@pstdio/sdk/extensions";
-import { LazyMarkdownEditor, type MarkdownEditorProps } from "@pstdio/ui/rich-text";
+import { LazyMarkdownEditor, preloadMarkdownEditor } from "@pstdio/ui/lazy-markdown-editor";
+import type { MarkdownEditorProps } from "@pstdio/ui/rich-text";
 import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { NativeTextPresentation } from "../../../extensions/bridge/native-text-presentation";
 import { createRetainedTextPresentation } from "../../../extensions/bridge/retained-text-presentation";
@@ -32,6 +33,7 @@ export const PublicMarkdownFileEditor = (props: PublicMarkdownFileEditorProps) =
     // Retained views keep their document DOM while their public authority closes and reopens.
     setOpeningError(undefined);
     if (!open) return;
+    void preloadMarkdownEditor().catch(() => {});
     let mounted = true;
     const receive = async (operation: () => Promise<TextEditingSession | undefined>) => {
       setOpeningError(undefined);

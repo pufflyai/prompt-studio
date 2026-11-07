@@ -57,6 +57,15 @@ export const openSessionSidePanel = async (page: Page, title: string) => {
   await switchSession(page, title);
   const tab = page.locator('[data-workbench-panel-header="side"]').getByRole("tab", { name: title, exact: true });
   await tab.click({ button: "right" });
-  await page.getByRole("menuitem", { name: "Pin tab", exact: true }).click();
+  // Provider navigation can already pin the selected destination. Preserve that state
+  // instead of waiting for an action that only exists on a transient legacy tab.
+  const pin = page.getByRole("menuitem", { name: "Pin tab", exact: true });
+  const unpin = page.getByRole("menuitem", { name: "Unpin tab", exact: true });
+  await expect(pin.or(unpin)).toBeVisible();
+  if (await pin.count()) await pin.click();
+  else {
+    await expect(unpin).toBeVisible();
+    await page.keyboard.press("Escape");
+  }
   await expect(tab).toHaveCSS("font-style", "normal");
 };

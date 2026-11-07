@@ -72,5 +72,11 @@ export const recordBenchmark = async (benchmark: Benchmark) => {
     });
   }
   if (performance) await attachBenchmarkPerformance(performance.app, benchmark.name, performance.endedAt);
-  expect(findBudgetFailures(benchmark.metrics), benchmark.name).toEqual([]);
+  try {
+    expect(findBudgetFailures(benchmark.metrics), benchmark.name).toEqual([]);
+  } catch (error) {
+    if (error instanceof Error)
+      test.info().annotations.push({ type: "performance-budget-failure", description: String(error) });
+    throw error;
+  }
 };

@@ -7,7 +7,7 @@ import { createTextEditingClient, type TextEditingSession } from "@pstdio/sdk/ex
 import { folderProjectInput } from "../helpers/folder-project";
 import { installBuiltSdk } from "../helpers/installed-sdk";
 import { verifyNativePublicTextEditor } from "../helpers/verify-public-text-editor";
-import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
+import { registerPendingTestProcess, stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import { type Browser, test as base, chromium, expect } from "../scripts/playwright-test";
 import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { buildBinary } from "./packaged-helpers";
@@ -19,6 +19,7 @@ interface Resources {
   browser?: Browser;
   connections: Set<TextEditingConnection>;
   sessions: Set<TextEditingSession>;
+  guests: Set<ReturnType<TextEditingConnection["guest"]>>;
 }
 const test = base.extend<{ resources: Resources }>({
   // biome-ignore lint/correctness/noEmptyPattern: Playwright reads fixture dependency patterns.
@@ -27,6 +28,7 @@ const test = base.extend<{ resources: Resources }>({
       root: realpathSync(mkdtempSync(join(tmpdir(), "pstdio-text-consumers-"))),
       connections: new Set(),
       sessions: new Set(),
+      guests: new Set(),
     };
     const failures: unknown[] = [];
     try {
@@ -38,16 +40,29 @@ const test = base.extend<{ resources: Resources }>({
       for (const outcome of await Promise.allSettled(operations))
         if (outcome.status === "rejected") failures.push(outcome.reason);
     };
-    // Final teardown must release the process/browser even if graceful transport draining is held.
-    await settle([
-      ...[...resources.sessions].map((session) => session.close()),
-      ...[...resources.connections].map((connection) => connection.disconnect()),
-      stopPendingTestProcesses(),
-      resources.browser?.close() ?? Promise.resolve(),
-      resources.child ? stopProcess(resources.child) : Promise.resolve(),
-    ]);
-    rmSync(resources.root, { recursive: true, force: true });
-    if (failures.length) throw new AggregateError(failures, "Text consumer cleanup failed");
+    // Keep the host alive while its text transports drain. The automatic process fixture
+    // still owns cancellation if graceful teardown reaches the test's existing deadline.
+    const pending = resources.child ? registerPendingTestProcess(resources.child) : undefined;
+    try {
+      console.info("Text consumer cleanup: close sessions");
+      await settle([...resources.sessions].map((session) => session.close()));
+      console.info("Text consumer cleanup: close guests");
+      await settle([...resources.guests].map((guest) => guest.close()));
+      console.info("Text consumer cleanup: disconnect transports");
+      await settle([...resources.connections].map((connection) => connection.disconnect()));
+      console.info("Text consumer cleanup: transports drained");
+    } finally {
+      // Browser placements still own text connections. Let them detach while their
+      // host can finish close requests, before stopping the runtime transport.
+      console.info("Text consumer cleanup: stop browser");
+      await settle([resources.browser?.close() ?? Promise.resolve()]);
+      console.info("Text consumer cleanup: browser stopped; stop host");
+      pending?.finish();
+      await settle([stopPendingTestProcesses(), resources.child ? stopProcess(resources.child) : Promise.resolve()]);
+      rmSync(resources.root, { recursive: true, force: true });
+    }
+    if (failures.length)
+      throw new AggregateError(failures, `Text consumer cleanup failed: ${failures.map(String).join("; ")}`);
   },
 });
 
@@ -98,6 +113,7 @@ test("Notes and Planner use public native sessions while retaining domain titles
     });
     resources.connections.add(connection);
     const guest = connection.guest();
+    resources.guests.add(guest);
     const text = createTextEditingClient(guest.host);
     const grant = await text.current();
     expect(grant).toBeDefined();

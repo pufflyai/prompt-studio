@@ -35,10 +35,6 @@ const CloudDetails = (props: CloudStatusProps) => {
   else if (state === "Local") settingsPreview = "CloudSettingsLocal";
   return (
     <Stack gap="md">
-      <HStack gap="xs" color={statusColor(state)}>
-        <CloudIcon name={statusIcon(state)} />
-        <Text textStyle="paragraph/S/regular">{earlyAccess ? state : "Cloud sync · Coming soon"}</Text>
-      </HStack>
       {earlyAccess && connected && (
         <Stack gap="xs">
           <Text textStyle="label/S/medium" color="fg.muted">

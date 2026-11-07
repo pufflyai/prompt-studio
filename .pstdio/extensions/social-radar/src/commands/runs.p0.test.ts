@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { workbenchPanels } from "@pstdio/sdk/extensions";
+import { type TreeViewSection, workbenchPanels } from "@pstdio/sdk/extensions";
 import type { Run, Thread } from "../schemas";
 import { defaults } from "../settings";
+import { radarTree } from "../views/navigation";
 import { commands } from ".";
 import { finish, foundThread, newPost, setup } from "./test-context";
 
@@ -20,7 +21,21 @@ describe("social radar runs", () => {
     expect(targets[0]).toMatchObject({
       kind: "panel",
       panel: workbenchPanels.projectSession,
-      resource: { type: "session", id: sessions[0].id },
+      resource: { type: "session", extensionId: "pstdio", projectId: ctx.projectId, id: sessions[0].id },
+    });
+  });
+
+  test("opening a saved research run keeps its session owned by Core in the current project", async () => {
+    const { ctx } = setup();
+    const run = await commands["run-daily"].run(ctx, {});
+    const sections: TreeViewSection[] = await radarTree.body.body(ctx);
+    const session = sections
+      .find((section) => section.id === "runs")
+      ?.nodes[0]?.children?.find((node) => node.id === `${run.runId}:session`);
+    expect(session?.target).toMatchObject({
+      kind: "panel",
+      panel: workbenchPanels.projectSession,
+      resource: { type: "session", extensionId: "pstdio", projectId: ctx.projectId, id: run.sessionId },
     });
   });
 
