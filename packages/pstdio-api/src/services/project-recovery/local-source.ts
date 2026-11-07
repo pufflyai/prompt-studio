@@ -98,6 +98,8 @@ export const createLocalRecoverySource = (input: {
     }
     return false;
   };
+  // The source the last scan read. A workspace change to another source scans at once.
+  let scanned: string | undefined;
   const capture = async (runSignal: AbortSignal) => {
     const store = input.chunks();
     // Private-project keys arrive with the first relay pass; that pass requests a scan.
@@ -105,6 +107,7 @@ export const createLocalRecoverySource = (input: {
     await pruning;
     const current = await source();
     if (!current) return;
+    scanned = current.id;
     restartWatch(current.folder);
     await own(current);
     if (!(await current.journal.read()).enrolled) {
@@ -226,6 +229,12 @@ export const createLocalRecoverySource = (input: {
 
   return {
     request: scheduler.request,
+    /** The project's workspaces changed here. A different folder, such as a restored one that
+     * became the project's folder, is scanned at once; the folder scanned last rescans after the gap. */
+    async workspaceChanged() {
+      const current = await source();
+      scheduler.request(current && current.id !== scanned ? "folder" : "watcher-lost");
+    },
     publish,
     prune,
     async status() {
