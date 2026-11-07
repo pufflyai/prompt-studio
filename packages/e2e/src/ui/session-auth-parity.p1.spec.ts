@@ -52,9 +52,7 @@ test("native auth checking stays quiet and sign-in replaces only empty conversat
     await expect
       .poll(async () => (await (await request.get(`/v1/sessions/${saved.id}`)).json()).status)
       .toBe("completed");
-    const resource = encodeURIComponent(
-      JSON.stringify({ type: "session", id: saved.id, extensionId: "pstdio", projectId: project.id }),
-    );
+    const resource = encodeURIComponent(`pstdio://extension-resource/session/${saved.id}`);
     await page.goto(
       `/projects/${project.id}/extensions/pstdio.pstdio-session-browser/conversation?resource=${resource}`,
     );

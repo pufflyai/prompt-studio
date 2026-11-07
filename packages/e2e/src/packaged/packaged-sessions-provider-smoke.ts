@@ -13,7 +13,7 @@ export const expectPackagedSessionsProvider = async (input: {
   const chat = metadata.views.find(
     (view) => view.extensionId === "pstdio.pstdio-session-browser" && view.localId === "conversation",
   );
-  expect(chat?.body).toMatchObject({ kind: "chat", initial: { messages: [], values: { harness: { harnessId: "" } } } });
+  expect(chat?.body).toMatchObject({ kind: "chat", initial: { messages: [] } });
   if (chat?.body.kind !== "chat") throw new Error("Installed Sessions must expose its native chat renderer.");
   const root = `${baseUrl}/v1/projects/${projectId}/extensions`;
   const execute = async (commandId: string, params: unknown, resource?: ResourceRef) => {

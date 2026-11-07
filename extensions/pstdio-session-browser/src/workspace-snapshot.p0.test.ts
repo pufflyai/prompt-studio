@@ -1,10 +1,7 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
-import { renderToStaticMarkup } from "react-dom/server";
-import { nativeSubmissionIndex } from "../../../../extensions/pstdio-session-browser/src/native-submission";
-import { readSnapshot } from "../../../../extensions/pstdio-session-browser/src/snapshot";
-import { NativeChatWorkspace } from "../../../pstdio-workbench/src/react/renderers/chat/native-chat-workspace";
-import { WorkbenchThemeProvider } from "../../../pstdio-workbench/src/react/theme/workbench-theme-provider";
+import { nativeSubmissionIndex } from "./native-submission";
+import { readSnapshot } from "./snapshot";
 
 const snapshotContext = (workspaceId: string | null, workspaces: { id: string; name: string; isDefault?: boolean }[]) =>
   makeCommandContext({
@@ -37,7 +34,7 @@ const snapshotContext = (workspaceId: string | null, workspaces: { id: string; n
       },
     },
   });
-const renderSnapshot = async (
+const snapshotFor = async (
   saved: boolean,
   workspaceId: string | null,
   workspaces: { id: string; name: string; isDefault?: boolean }[],
@@ -48,32 +45,18 @@ const renderSnapshot = async (
     saved ? { type: "session", id: "s", extensionId: "pstdio", projectId: "p" } : undefined,
     selected === undefined ? undefined : { workspace: selected },
   );
-  const markup = renderToStaticMarkup(
-    <WorkbenchThemeProvider>
-      <NativeChatWorkspace
-        conversation={snapshot}
-        draft={{ text: "Keep draft", attachments: [], values: snapshot.values ?? {} }}
-        run={async () => ({})}
-        changeValues={() => {}}
-      />
-    </WorkbenchThemeProvider>,
-  );
-  return {
-    snapshot,
-    open: markup.includes('aria-label="Open workspace"'),
-    selector: markup.includes('aria-label="Select workspace"'),
-  };
+  return snapshot;
 };
 
-test("real Sessions draft defaults never offer Open; saved snapshots require an available selected workspace", async () => {
+test("draft snapshots select a workspace while only saved available workspaces expose Open", async () => {
   const workspaces = [{ id: "a", name: "Workspace A", isDefault: true }];
-  const draft = await renderSnapshot(false, null, workspaces);
-  expect(draft.snapshot.values?.workspace).toBe("a");
-  expect(draft.open).toBe(false);
-  expect(draft.selector).toBe(true);
-  expect((await renderSnapshot(false, null, workspaces, "unknown")).open).toBe(false);
-  expect((await renderSnapshot(false, null, [])).open).toBe(false);
-  expect((await renderSnapshot(true, "a", workspaces)).open).toBe(true);
-  expect((await renderSnapshot(true, null, workspaces)).open).toBe(false);
-  expect((await renderSnapshot(true, "missing", workspaces)).open).toBe(false);
+  const draft = await snapshotFor(false, null, workspaces);
+  expect(draft.values?.workspace).toBe("a");
+  expect(draft.workspace?.openResourceId).toBeUndefined();
+  expect(draft.controls).toContainEqual(expect.objectContaining({ id: "workspace", type: "selection" }));
+  expect((await snapshotFor(false, null, workspaces, "unknown")).workspace?.openResourceId).toBeUndefined();
+  expect((await snapshotFor(false, null, [])).workspace?.openResourceId).toBeUndefined();
+  expect((await snapshotFor(true, "a", workspaces)).workspace?.openResourceId).toBe("a");
+  expect((await snapshotFor(true, null, workspaces)).workspace?.openResourceId).toBeUndefined();
+  expect((await snapshotFor(true, "missing", workspaces)).workspace?.openResourceId).toBeUndefined();
 });

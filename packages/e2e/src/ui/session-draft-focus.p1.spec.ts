@@ -14,7 +14,7 @@ test("new session tabs focus their composer and keep workspace selection availab
     });
     expect(created.ok()).toBe(true);
     projectId = (await created.json()).id;
-    // A selection with no alternative is intentionally inert. Give the picker a real choice.
+    // Exercise changing the workspace while preserving the unsent draft.
     const alternativeResponse = await request.post(`${uiOrigin}/v1/workspaces`, {
       data: { project_id: projectId, provider_id: "pstdio.worktree", params: {} },
     });
@@ -33,10 +33,15 @@ test("new session tabs focus their composer and keep workspace selection availab
     await expect(mainInput).toBeFocused();
     await page.keyboard.type("Main session draft");
     await expect(mainInput).toHaveText("Main session draft");
-    await expect(main.getByRole("button", { name: workspaceLabel, exact: true })).toBeEnabled();
-    await main.getByRole("button", { name: workspaceLabel, exact: true }).click();
-    await page.getByRole("menuitemradio", { name: alternative.workspace_shorthand, exact: true }).click();
-    await expect(main.getByRole("button", { name: alternative.workspace_shorthand, exact: true })).toBeEnabled();
+    await expect(main.getByRole("button", { name: "Select workspace", exact: true })).toBeEnabled();
+    await expect(main.getByRole("button", { name: "Select workspace", exact: true })).toHaveText(workspaceLabel);
+    await main.getByRole("button", { name: "Select workspace", exact: true }).click();
+    await page
+      .getByRole("menuitem", { name: alternative.name ?? alternative.workspace_shorthand, exact: true })
+      .click();
+    await expect(main.getByRole("button", { name: "Select workspace", exact: true })).toHaveText(
+      alternative.name ?? alternative.workspace_shorthand,
+    );
     await expect(mainInput).toHaveText("Main session draft");
     await expect(main.getByRole("button", { name: "Open workspace", exact: true })).toHaveCount(0);
 
@@ -51,7 +56,8 @@ test("new session tabs focus their composer and keep workspace selection availab
     await page.keyboard.type("New tab draft");
     await expect(sideInput).toHaveText("New tab draft");
     await expect(mainInput).toHaveText("Main session draft");
-    await expect(side.getByRole("button", { name: workspaceLabel, exact: true })).toBeEnabled();
+    await expect(side.getByRole("button", { name: "Select workspace", exact: true })).toBeEnabled();
+    await expect(side.getByRole("button", { name: "Select workspace", exact: true })).toHaveText(workspaceLabel);
     await expect(side.getByRole("button", { name: "Open workspace", exact: true })).toHaveCount(0);
 
     await header.getByRole("button", { name: "Add panel", exact: true }).focus();

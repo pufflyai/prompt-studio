@@ -33,7 +33,7 @@
     {
       "installName": "pstdio-session-browser",
       "displayName": "Sessions",
-      "icon": "message-circle",
+      "icon": "messages-circle",
       "description": "Browse conversations and compose in pages and Side panels.",
       "origin": {
         "kind": "git",

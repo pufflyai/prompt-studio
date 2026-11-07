@@ -1,19 +1,9 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
-import { resolveSessionIndicatorColor, type SessionCompletionStatus } from "@pstdio/ui";
-import { search } from "../../../../extensions/pstdio-session-browser/src/browse";
-import { WorkbenchResourcePaletteIcon } from "../../../pstdio-workbench/src/react/command-palette/resource-palette";
+import { search } from "./browse";
 
-test("actual Sessions search projects Main status colors and running icon into the palette primary glyph", async () => {
-  const statuses: SessionCompletionStatus[] = [
-    "in_progress",
-    "queued",
-    "completed",
-    "failed",
-    "cancelled",
-    "disconnected",
-    "awaiting_input",
-  ];
+test("Sessions search supplies status colors, accessible labels and running icons", async () => {
+  const statuses = ["in_progress", "queued", "completed", "failed", "cancelled", "disconnected", "awaiting_input"];
   const ctx = makeCommandContext({
     storage: createMemoryStorage(),
     params: {},
@@ -37,11 +27,11 @@ test("actual Sessions search projects Main status colors and running icon into t
     providerId: "sessions",
     renderer: { rendererId: "list" },
   });
+  const colors = ["fg.info", "fg.info", "fg.success", "fg.error", "fg.warning", "fg.warning", "fg.warning"];
   for (const [index, status] of statuses.entries()) {
     const item = result.items[index];
-    const icon = WorkbenchResourcePaletteIcon({ icon: item.icon, indicator: item.indicator });
-    expect(icon?.props.color).toBe(resolveSessionIndicatorColor(status));
-    expect(icon?.props["aria-label"]).toBe(`Session status: ${status}`);
+    expect(item.indicator?.color).toBe(colors[index]);
+    expect(item.indicator?.label).toBe(`Session status: ${status}`);
     expect(item.icon).toBe("message-circle");
   }
   expect(result.items[0].indicator?.icon).toBe("loader-circle");

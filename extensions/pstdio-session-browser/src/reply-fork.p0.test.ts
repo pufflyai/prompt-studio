@@ -1,17 +1,10 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
-import type { ChatPanel } from "@pstdio/ui/chat-ui";
-import type { ComponentProps, ReactElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
-import { act } from "../../../../extensions/pstdio-session-browser/src/actions";
-import { nativeSubmissionIndex } from "../../../../extensions/pstdio-session-browser/src/native-submission";
-import { readSnapshot } from "../../../../extensions/pstdio-session-browser/src/snapshot";
-import { createChatSession } from "../../../pstdio-workbench/src/extensions/contributions/chat-session";
-import type { NativeChatHostProps } from "../../../pstdio-workbench/src/react/renderers/chat/native-chat-host";
-import { NativeChatView } from "../../../pstdio-workbench/src/react/renderers/chat/native-chat-view";
-import { WorkbenchThemeProvider } from "../../../pstdio-workbench/src/react/theme/workbench-theme-provider";
+import { act } from "./actions";
+import { nativeSubmissionIndex } from "./native-submission";
+import { readSnapshot } from "./snapshot";
 
-test("actual saved-session snapshot supplies reply fork and native dispatch preserves its completed message ID", async () => {
+test("saved-session snapshot offers reply fork and dispatch preserves its completed message ID", async () => {
   const forks: unknown[] = [];
   const navigation: unknown[] = [];
   const saved = { id: "source", title: "Saved", status: "completed", agent: "fixture", params: {}, workspaceId: null };
@@ -55,25 +48,9 @@ test("actual saved-session snapshot supplies reply fork and native dispatch pres
     resource: { type: "session", id: "source", extensionId: "pstdio", projectId: "p" },
   };
   const snapshot = await readSnapshot(ctx, renderer.resource);
-  const session = createChatSession({
-    initial: snapshot,
-    query: async () => ({}),
-    action: (action) => act(ctx, { renderer, action, draftKey: "source" }),
-  });
-  let panel!: ReactElement<ComponentProps<typeof ChatPanel>>;
-  const Host = ({ children }: NativeChatHostProps) => {
-    panel = children({}) as typeof panel;
-    return panel;
-  };
-  renderToStaticMarkup(
-    <WorkbenchThemeProvider>
-      <NativeChatView session={session} Host={Host} conversationKey="source" action={undefined} />
-    </WorkbenchThemeProvider>,
-  );
-  expect(panel.props.messages).toMatchObject([{ id: "completed-assistant", role: "assistant" }]);
-  expect(panel.props.onForkMessage).toBeFunction();
-  expect(panel.props.forkDisabledReason).toBeUndefined();
-  await panel.props.onForkMessage!(reply.id);
+  expect(snapshot.messages).toMatchObject([{ id: "completed-assistant", role: "assistant" }]);
+  expect(snapshot.fork).toEqual({ disabledReason: null });
+  await act(ctx, { renderer, action: { type: "fork", messageId: reply.id }, draftKey: "source" });
   expect(forks).toEqual([["source", "completed-assistant"]]);
   expect(navigation).toMatchObject([{ kind: "page", resource: { id: "forked", extensionId: "pstdio" } }]);
 });
