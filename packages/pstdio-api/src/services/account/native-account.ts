@@ -17,6 +17,7 @@ import { createMissingProjectRecovery } from "./missing-project-recovery";
 import { createNativeLoginRequests } from "./native-login-requests";
 import { createNativePresence } from "./native-presence";
 import { createNativeStore, type DeviceLogin } from "./native-store";
+import { initialProjectSyncStatus, recoveringProjectSyncStatus } from "./project-sync-readiness";
 
 type FolderRecoveryOwners = (projectId: string) => ReturnType<typeof startFolderRecovery> | undefined;
 
@@ -144,10 +145,7 @@ export const createNativeAccount = (input: {
     },
   });
   // Until the relay runtime starts, no sync owner has downloaded anything in this run.
-  let projectStatus = async (_projectId: string): Promise<ProjectSyncStatus> => ({
-    state: "first-download-incomplete",
-    offlineReady: false,
-  });
+  let projectStatus: (projectId: string) => Promise<ProjectSyncStatus> = initialProjectSyncStatus;
   let retry: ReturnType<typeof setTimeout> | undefined;
   let closed = false;
   const shutdown = new AbortController();
@@ -310,11 +308,7 @@ export const createNativeAccount = (input: {
       if (!projects?.includes(projectId)) return { state: "local" as const, offlineReady: false };
       const status = await projectStatus(projectId);
       if (!missing.recovering(projectId)) return status;
-      return {
-        ...status,
-        state: status.state === "needs-attention" ? status.state : ("first-download-incomplete" as const),
-        offlineReady: false,
-      };
+      return recoveringProjectSyncStatus(status);
     },
     retryProjectSync: (projectId: string) => retryProjectSync(projectId, input.projects, refresh, retryProject),
     /** The project's folder capture, download and restore owner on this device. */
