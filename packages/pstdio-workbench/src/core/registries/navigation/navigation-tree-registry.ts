@@ -1,4 +1,3 @@
-import { resourceKey } from "@pstdio/sdk/extensions";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import type { TreeNode, TreeViewSection } from "../renderers/tree-renderer-registry";
 import type { ResourceRef } from "../resources/resource-registry";
@@ -237,10 +236,7 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
     getReadKey(owner, context = {}) {
       return JSON.stringify(
         (["header", "content", "footer"] as const).flatMap((slot) =>
-          matching(owner, slot).map((contribution) => [
-            contribution.id,
-            resourceKey(readContext(contribution, context).resource),
-          ]),
+          matching(owner, slot).map((contribution) => [contribution.id, readContext(contribution, context).resource]),
         ),
       );
     },
