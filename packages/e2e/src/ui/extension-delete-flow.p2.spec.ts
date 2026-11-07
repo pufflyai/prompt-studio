@@ -46,7 +46,7 @@ const createInstalledExtension = (input: { displayName: string; installName: str
 };
 
 // Regression: interacting with the delete confirmation (e.g. the delete-data
-// checkbox) must not dismiss the modal or the settings overlay behind it.
+// checkbox) must not dismiss the modal or the extension page behind it.
 test("delete extension flow survives clicks inside the confirmation modal", async ({ page, request }) => {
   const unique = Date.now();
   const installName = `e2e-delete-flow-${unique}`;
@@ -84,7 +84,6 @@ test("delete extension flow survives clicks inside the confirmation modal", asyn
   await expect(row).toBeVisible();
   await row.click();
   await expect(page.getByTestId("extension-detail")).toBeVisible();
-  await page.getByRole("tab", { name: "Settings" }).click();
   await page.getByTestId("extension-delete").click();
 
   const dialog = page.getByRole("dialog").last();
