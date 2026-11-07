@@ -15,9 +15,10 @@ Keep it fixed. Do not shrink it, exclude any of it with `.pstignore`, or raise l
 - Three compiled hosts with separate homes: the laptop and desktop of one account, and one computer of
   a second account. Each host installs the grouped-storage fixture extension.
 - The relay is the packaged wire peer (`packaged-sync-relay.fixture.ts`) on loopback TLS, with blobs
-  stored on disk. It checks access per account, device and project, but it is not the deployed relay.
+  stored on disk. It keeps each account's private space, keys and project list apart and binds access
+  tokens to a device and project, but it is not the deployed relay.
 - While the laptop uploads, it saves a record every 3 seconds; a sample completes when the peer holds
-  the encrypted update. The second account adds a file and requests a capture every 3 seconds; a sample
+  the device's encrypted update to the notes record stream. The second account adds a file and requests a capture every 3 seconds; a sample
   completes when its new copy is published. The desktop repeats the record probe while it downloads,
   and the second account repeats its capture probe. A sample that makes no progress within 120 seconds
   counts as missed.
@@ -32,11 +33,11 @@ bun packages/e2e/src/perf/folder-recovery-workload/workload.diagnostic.ts [outpu
 
 `E2E_PACKAGED_BINARY_PATH` selects another compiled host. The default output is
 `.pstdio/extension-storage/pstdio.pstdio-artifacts/folder-recovery-workload` with `results.json`
-and `run.log`. The runner needs 25 GiB free in the system temporary folder. At most four copies exist
+and `run.log`. The runner needs 25 GiB free in the system temporary folder. Three 5 GiB copies exist
 at once: the source, the laptop's recovery store and the peer's blobs while uploading, then the peer's
 blobs, the desktop's recovery store and the restored folder after the runner removes the laptop's
-files. It stops the desktop right after the restore, before the desktop uploads the restored folder
-as its own copy. It removes its hosts and files when it finishes, fails or receives SIGINT or SIGTERM.
+files. The rest is headroom, including the start of the desktop's own capture of the restored folder:
+the runner stops the desktop right after the restore, before it uploads that folder as its own copy. It removes its hosts and files when it finishes, fails or receives SIGINT or SIGTERM.
 
 ## Results, 2026-11-07
 
@@ -51,7 +52,9 @@ qualification branch. Other agents were running on the machine, so treat the tim
 | Download on the desktop, from sign-in to every byte verified locally (5,181 blob reads) | 191.0 s | 28.1 MB/s |
 | Restore through the CLI, including staging, verification and attach | 58.7 s | 91.5 MB/s |
 
-Every restored file matched its source digest. Throughput uses the copy's 5,368,709,263 included
+Every restored file matched its source digest. In this run the record probes counted any update the
+device sent to the peer, not only the notes stream, so a sample could end on another document's
+update; the runner now counts only the notes stream. Every save itself completed. Throughput uses the copy's 5,368,709,263 included
 bytes; MB is 10^6 bytes.
 
 | Progress during the transfer | Samples | Missed | Median | Max |

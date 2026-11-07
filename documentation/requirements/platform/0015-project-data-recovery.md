@@ -10,7 +10,7 @@ in #1793 (capture and transfer), #1858 (restore and public API, SDK and CLI) and
 
 ## Implementation status
 
-Checked 2026-11-07 on main after the third PS-1069 PR; not released yet. Core captures, downloads
+Checked 2026-11-07 on the third PS-1069 PR's branch; not released yet. Core captures, downloads
 and restores project folders on macOS and Linux (glibc 2.28 or later) through a public API, SDK and
 `pst projects folder`. The Cloud extension UI does not exist yet (PS-1068), so the CLI and SDK are
 the only ways to restore. User and reference documentation:
@@ -64,7 +64,8 @@ Gaps that remain:
 Integrated qualification:
 [`packaged-folder-recovery.p2.test.ts`](../../../packages/e2e/src/packaged/packaged-folder-recovery.p2.test.ts)
 runs three compiled hosts with separate homes against the packaged relay peer: two computers of
-one account and one of a second account. Unit and service tests live next to
+one account and one of a second account. The peer keeps each account's private space, keys and
+project list apart; it is not the deployed relay. Unit and service tests live next to
 `packages/pstdio-api/src/services/project-recovery/`.
 
 | Group | Result | Evidence |
@@ -75,7 +76,7 @@ one account and one of a second account. Unit and service tests live next to
 | 4. Restarts, watcher loss, interruption | Passed | Integrated: a download interrupted by relay failures resumes after retry and reads no blob twice. `schedule.p0`, `local-source.p0` (restart candidate, new folder scanned at once), `capture.p0` (changing files stay pending), `transfer.p0` (corruption, cancellation). Quota and full-disk failures are mapped to errors but not exercised end to end. |
 | 5. Independent copies and confidentiality | Passed, device removal unproved | Integrated: the laptop's and the desktop's copies are both listed and restorable; the second account sees neither the project nor its copy; relay blobs and documents contain no known file name, credential or file bytes from either account. Device removal is not tested for folders. |
 | 6. Destination safety | Passed | Integrated: an existing empty folder is refused without writes; a folder created during a restore is kept with `destination_created` and no staging is left; hooks do not run. `restore.p0` (traversal, links, case collisions, cancellation, staging cleanup), endpoint test (restored extension stays disabled and its code never runs). |
-| 7. Interfaces and the 1 GiB file | Partly proved | Integrated: `pst projects folder sources` equals the API listing, `status` equals `folderRecovery`, CLI `download` and `restore` complete and an existing destination fails with exit status 1. No Playwright scenario (no UI). The [5 GiB workload](../../references/performance/0008-folder-recovery-workload.md) passed on 2026-11-07: capture and upload 249.6 s, download with the laptop off 191.0 s, CLI restore 58.7 s, every digest matched; all 140 record saves reached the relay (max 787 ms) and all 103 second-account captures published (max 4.6 s) during the transfers. |
+| 7. Interfaces and the 1 GiB file | Partly proved | Integrated: `pst projects folder sources` equals the API listing, `status` equals `folderRecovery`, CLI `download` and `restore` complete and an existing destination fails with exit status 1. No Playwright scenario (no UI). The [5 GiB workload](../../references/performance/0008-folder-recovery-workload.md) passed on 2026-11-07: capture and upload 249.6 s, download with the laptop off 191.0 s, CLI restore 58.7 s, every digest matched; all 140 record saves completed with an update at the relay (max 787 ms) and all 103 second-account captures published (max 4.6 s) during the transfers. |
 
 ## Outcome and boundary
 

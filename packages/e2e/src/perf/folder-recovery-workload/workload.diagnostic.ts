@@ -12,6 +12,7 @@ import { mkdir, mkdtemp, open, readdir, rm, statfs } from "node:fs/promises";
 import { cpus, release, tmpdir, totalmem } from "node:os";
 import { join, resolve } from "node:path";
 import type { ProjectFolderRecoveryStatus } from "pstdio-api-contracts";
+import { createSyncSpace } from "pstdio-sync/encryption";
 import { folderProjectInput } from "../../helpers/folder-project";
 import {
   type FolderDevice,
@@ -26,7 +27,11 @@ import {
 import { PACKAGED_BINARY_PATH } from "../../packaged/packaged-helpers";
 import { stopProcess } from "../../packaged/packaged-serve-helpers";
 import { writeSharedNotesExtension } from "../../packaged/packaged-shared-notes-extension.fixture";
-import { createPackagedSyncPeer, packagedAccountCode } from "../../packaged/packaged-sync-relay.fixture";
+import {
+  createPackagedSyncPeer,
+  packagedAccountCode,
+  packagedProjectKey,
+} from "../../packaged/packaged-sync-relay.fixture";
 import { runTestCommand } from "../../scripts/run-test-command";
 
 const MiB = 1024 * 1024;
@@ -140,21 +145,28 @@ const writeNote = async (device: FolderDevice, projectId: string, value: string)
 const readNote = async (device: FolderDevice, projectId: string) =>
   (await command<Record<string, { value?: unknown } | null>>(device, projectId, "read").catch(() => null))?.note?.value;
 
+type Until = (condition: () => boolean | Promise<boolean>) => Promise<void>;
 /** Repeats a timed step until stopped; each sample is its latency or a missed deadline. */
-const probe = (name: string, step: (index: number) => Promise<void>, everyMs = 3_000, deadlineMs = 120_000) => {
+const probe = (
+  name: string,
+  step: (index: number, until: Until) => Promise<void>,
+  everyMs = 3_000,
+  deadlineMs = 120_000,
+) => {
   const samples: { at: string; ms: number | null; error?: string }[] = [];
   let stopped = false;
   const running = (async () => {
     for (let index = 0; !stopped; index++) {
       const started = performance.now();
       const at = new Date().toISOString();
+      const until: Until = async (condition) => {
+        while (!(await condition())) {
+          if (performance.now() - started > deadlineMs) throw new Error(`No progress within ${deadlineMs} ms`);
+          await Bun.sleep(25);
+        }
+      };
       try {
-        await Promise.race([
-          step(index),
-          Bun.sleep(deadlineMs).then(() => {
-            throw new Error(`No progress within ${deadlineMs} ms`);
-          }),
-        ]);
+        await step(index, until);
         samples.push({ at, ms: Math.round(performance.now() - started) });
       } catch (error) {
         samples.push({ at, ms: null, error: error instanceof Error ? error.message : String(error) });
@@ -242,17 +254,20 @@ const main = async () => {
     started = performance.now();
     const uploadStartedAt = new Date().toISOString();
     await laptop!.client.account.syncProject(project.id);
-    const updatesFrom = (device: string) =>
-      [...peer.documents.values()].reduce(
-        (sum, document) => sum + document.updates.filter((update) => update.deviceId === device).length,
-        0,
-      );
-    // A saved record counts once the relay holds the device's encrypted update.
+    // A saved note counts once the relay holds the device's encrypted update to the notes record stream.
+    const space = await createSyncSpace({ projectId: project.id, spaceOwner: null, keys: [packagedProjectKey] });
+    const notes = `~${await space.documentId(JSON.stringify(["example.shared-notes", "record-stream-v2"]))}`;
+    // The device's updates, or a latest state it stored; the first save founds the stream with a state.
+    const notesFrom = (device: string) => {
+      const document = peer.documents.get(notes);
+      const updates = document?.updates.filter((update) => update.deviceId === device).length ?? 0;
+      return `${updates}:${document?.state?.deviceId === device ? document.state.stateId : ""}`;
+    };
     const recordProbe = (name: string, device: FolderDevice, deviceId: () => string) =>
-      probe(`${name} record`, async (index) => {
-        const before = updatesFrom(deviceId());
+      probe(`${name} record`, async (index, until) => {
+        const before = notesFrom(deviceId());
         await writeNote(device, project.id, `${name}-${index}`);
-        await waitFor(() => updatesFrom(deviceId()) > before);
+        await until(() => notesFrom(deviceId()) !== before);
       });
     const recordsDuringUpload = recordProbe("laptop", laptop!, () => laptopDevice);
     const otherFolder = join(work, "other-project");
@@ -264,11 +279,11 @@ const main = async () => {
     await signInDevice(other!, peer.origin, packagedAccountCode("second"));
     await other!.client.account.syncProject(otherProject.id);
     const otherCapture = (phase: string) =>
-      probe(`other account ${phase} capture`, async (index) => {
+      probe(`other account ${phase} capture`, async (index, until) => {
         const before = (await ownCopy(other!, otherProject.id))?.completedAt ?? null;
         await Bun.write(join(otherFolder, `${phase}-${index}.md`), `saved during ${phase}`);
         await other!.client.projects.captureFolder(otherProject.id);
-        await waitFor(async () => {
+        await until(async () => {
           const copy = await ownCopy(other!, otherProject.id);
           return !!copy && copy.completedAt !== before;
         });

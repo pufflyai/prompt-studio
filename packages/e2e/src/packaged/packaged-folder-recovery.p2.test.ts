@@ -161,9 +161,12 @@ test.skipIf(process.platform === "win32")(
 
       // The download is interrupted part way, then resumes without reading finished chunks again.
       const desktopReads = () => peer.blobReads().filter((read) => read.deviceId === desktopDevice);
+      // The copy holds over 100 chunks and the project's records need few blobs, so this is part way
+      // through the folder download.
+      const interruptAfter = 40;
       let failedReads = 0;
       peer.failBlobReads((device) => {
-        const fail = device === desktopDevice && desktopReads().length >= 6;
+        const fail = device === desktopDevice && desktopReads().length >= interruptAfter;
         if (fail) failedReads++;
         return fail;
       });
@@ -177,7 +180,7 @@ test.skipIf(process.platform === "win32")(
         (copy) => !!copy?.available,
       );
       const reads = desktopReads().map((read) => read.blobId);
-      expect(reads.length).toBeGreaterThan(24);
+      expect(reads.length).toBeGreaterThan(2 * interruptAfter);
       expect(new Set(reads).size).toBe(reads.length);
       phase(`desktop downloaded ${reads.length} blobs after an interruption`);
       expect(listed).toMatchObject({

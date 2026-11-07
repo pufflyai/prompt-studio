@@ -95,6 +95,24 @@ test("a folder that becomes the project's folder, such as a restored one, is cap
   await owner.local.close();
 });
 
+test("a workspace change that keeps the same folder waits for the rescan gap, even after its watch was lost", async () => {
+  const f = await fixture();
+  const owner = f.start(undefined, 60_000);
+  owner.local.request("startup");
+  await until(() => owner.captured() > 0);
+  await until(async () => !(await owner.local.status()).capturing);
+  const first = (await (await f.journal()).read()).candidate;
+  // Losing the watch must not turn every later workspace event into an immediate full scan.
+  await rm(f.folder, { recursive: true });
+  await mkdir(f.folder);
+  await writeFile(join(f.folder, "notes"), "saved again");
+  await Bun.sleep(50);
+  await owner.local.workspaceChanged();
+  await Bun.sleep(300);
+  expect((await (await f.journal()).read()).candidate).toEqual(first);
+  await owner.local.close();
+});
+
 test("a candidate saved before a restart is published even when the folder did not change", async () => {
   const f = await fixture();
   const first = f.start();
