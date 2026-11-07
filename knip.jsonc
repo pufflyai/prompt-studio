@@ -216,6 +216,7 @@
         "src/db/pglite-export-worker.ts",
         "src/services/sessions/session-query.p3.bench.ts",
         "src/services/extension-storage/document-storage.p3.bench.ts",
+        "src/services/extension-storage/ordered-legacy-backlog.p3.bench.ts",
         "src/services/extension-storage/document-scale.diagnostic.ts",
         "src/services/extension-storage/record-read-scale.diagnostic.ts",
         "src/services/extension-storage/ordered-log-query-plan.diagnostic.ts",
