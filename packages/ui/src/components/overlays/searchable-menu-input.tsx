@@ -28,7 +28,10 @@ export const SearchableMenuInput = (props: SearchableMenuInputProps) => {
           onChange={(event) => onValueChange(event.target.value)}
           onKeyDown={(event) => {
             onKeyDown?.(event);
-            if (!onKeyDown || event.key !== "Escape") event.stopPropagation();
+            // Let the owning menu navigate/select its highlighted choice. Keep
+            // text editing (including IME composition) inside the search field.
+            const navigate = !event.nativeEvent.isComposing && ["ArrowDown", "ArrowUp", "Enter"].includes(event.key);
+            if (!navigate && (!onKeyDown || event.key !== "Escape")) event.stopPropagation();
           }}
         />
       </InputGroup>

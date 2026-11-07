@@ -27,7 +27,7 @@ type InstalledSourceLike = {
 };
 
 const optionalString = (value: unknown) => (typeof value === "string" && value.length > 0 ? value : undefined);
-const instanceIcon = (source: InstalledSourceLike, icon: unknown) => {
+export const instanceIcon = (source: InstalledSourceLike, icon: unknown) => {
   try {
     return readExtensionIcon(source.source_path, optionalString(icon));
   } catch {

@@ -9,6 +9,7 @@ import {
   type WorkbenchModuleContext,
   type WorkbenchModuleContribution,
 } from "@pstdio/workbench";
+import { createWorkbenchExtensionChatRendererOwners } from "@pstdio/workbench/extensions";
 import { logExtensionHostDiagnostic } from "pstdio-extensions/bridge/host";
 import i18n from "@/i18n";
 import { getDashboardQueryClient } from "@/lib/query-client";
@@ -96,11 +97,13 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
       let appearanceDisposable: ReturnType<typeof registerExtensionAppearance> | undefined;
       let translationDisposable: Disposable | undefined;
       let contributionDisposables: Disposable[] = [];
+      const chatRendererOwners = createWorkbenchExtensionChatRendererOwners();
       let displacedPageLocation: PageLocation | undefined;
 
-      const clearContributions = () => {
+      const clearContributions = (preserveChatOwners = false) => {
         disposeExtensionContributions(contributionDisposables);
         contributionDisposables = [];
+        if (!preserveChatOwners) chatRendererOwners.dispose();
       };
 
       const clearTranslations = () => {
@@ -137,7 +140,8 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
 
       // Returns what is registered now; a failed extension is left out so the next refresh retries it.
       const replaceContributions = (nextProjectId: string, nextMetadata: ResolvedWorkbenchExtensionMetadata) => {
-        clearContributions();
+        chatRendererOwners.reconcile(nextProjectId, nextMetadata);
+        clearContributions(true);
         try {
           const registration = registerHealthyExtensions({
             metadata: nextMetadata,
@@ -149,6 +153,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
                 activate: (contributionCtx) =>
                   registerExtensionContributions({
                     ctx: contributionCtx,
+                    chatRendererOwners,
                     executeCommand,
                     metadata,
                     projectId: nextProjectId,
@@ -157,9 +162,11 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
             onFailure: (extensionId, error) => registrationError(nextProjectId, error, extensionId),
           });
           contributionDisposables = [registration.disposable];
+          chatRendererOwners.reconcile(nextProjectId, registration.metadata);
           return registration.metadata;
         } catch (error) {
           registrationError(nextProjectId, error);
+          chatRendererOwners.dispose();
           return omitExtensionMetadata(nextMetadata, new Set(nextMetadata.extensions.map((extension) => extension.id)));
         }
       };

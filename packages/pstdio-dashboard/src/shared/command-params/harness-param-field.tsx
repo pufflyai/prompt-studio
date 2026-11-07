@@ -1,20 +1,26 @@
+import { HStack } from "@chakra-ui/react";
 import {
   filterHarnessParamValues,
   HarnessModelPicker,
   HarnessParamEditor,
+  HarnessParamInlineControls,
   type HarnessParamValues,
   harnessParamValuesEqual,
+  resolveHarnessParamDefaults,
 } from "@pstdio/ui/param-editor";
 import type { WorkbenchCore } from "@pstdio/workbench";
 import { type CommandParamFieldProps, commandParamName } from "@pstdio/workbench/react";
 import { findAgentModel, resolveAgentModelParams } from "pstdio-api-contracts/agent-model-params";
 import { useEffect } from "react";
-import { useHarnessParamDefaults } from "@/modules/sessions/hooks/use-harness-param-defaults";
 import { resolveSynchronizedModel } from "@/shared/agents/agent-model-selection";
 import { useAgentModels } from "@/shared/agents/use-agent-models";
 import { useAgents } from "@/shared/agents/use-agents";
+import { useHarnessParamDefaults } from "@/shared/agents/use-harness-param-defaults";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
+import { ExtensionIcon } from "@/shared/components/extension-icon";
+import { WorkspaceAgentMenu } from "@/shared/components/workspace-agent-menu";
 import { useProject } from "@/shared/projects/use-project";
+import { changedHarnessParams } from "./harness-settings";
 import { parseParamRecord, serializeParamRecord } from "./param-field-shared";
 import {
   readRecentHarnessSelection,
@@ -41,6 +47,7 @@ const readHarness = (value: CommandParamFieldProps["value"]) => {
 
 export const HarnessParamField = (props: HarnessParamFieldProps) => {
   const { entry, value, disabled, onChange, workbench } = props;
+  const { lockIdentity, preserveSettings, settingsMode } = props.harness ?? {};
   const projectId = getDashboardSelectedProjectId(workbench);
   const { data: project } = useProject(projectId);
   const { data: agents = [], isLoading: isAgentsLoading } = useAgents(projectId);
@@ -49,7 +56,11 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
   // unselected so the menu shows its empty state instead of fetching 404ing models.
   const isResolvedAgent = agents.some((agent) => agent.id === harnessId);
   const selectedAgentInfo = agents.find((agent) => agent.id === harnessId);
-  const harnessParamDefaults = useHarnessParamDefaults(projectId, isResolvedAgent ? harnessId : undefined);
+  const harnessParamDefaults = useHarnessParamDefaults(
+    projectId,
+    isResolvedAgent ? harnessId : undefined,
+    model || undefined,
+  );
   const modelsQuery = useAgentModels(harnessId, {
     enabled: Boolean(harnessId) && isResolvedAgent,
     projectId,
@@ -61,6 +72,7 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
     value: agent.id,
     disabled: agent.availability.type === "NOT_FOUND",
     description: agent.availability.reason,
+    icon: agent.icon ? () => <ExtensionIcon name={agent.icon} /> : undefined,
   }));
   const modelOptions = models.map((entry) => ({
     label: entry.label ?? entry.id,
@@ -75,13 +87,13 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
   const baseParamSchema = harnessParamDefaults.data?.schema ?? selectedAgentInfo?.params;
   const selectedModelInfo = findAgentModel(models, model);
   const effectiveParamSchema = resolveAgentModelParams(baseParamSchema, selectedModelInfo);
-  const effectiveParamDefaults = filterHarnessParamValues(effectiveParamSchema, harnessParamDefaults.data?.defaults);
+  const effectiveParamDefaults = resolveHarnessParamDefaults(effectiveParamSchema, harnessParamDefaults.data?.defaults);
   const effectiveParams = filterHarnessParamValues(effectiveParamSchema, params);
 
   useEffect(() => {
     // Wait for the agent list so the first-available fallback resolves to a real harness
     // instead of committing an empty value before the options arrive.
-    if (disabled || isAgentsLoading) return;
+    if (disabled || isAgentsLoading || lockIdentity || preserveSettings) return;
     const next = resolveInitialHarnessSelection({
       current: { harnessId, model },
       recent: readRecentHarnessSelection(projectId),
@@ -90,11 +102,23 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
     });
     if (next.harnessId === harnessId && next.model === model) return;
     onChange(serializeParamRecord({ harnessId: next.harnessId, ...(next.model ? { model: next.model } : {}) }));
-  }, [agents, defaultAgent, disabled, harnessId, isAgentsLoading, model, onChange, projectId]);
+  }, [
+    agents,
+    defaultAgent,
+    disabled,
+    harnessId,
+    isAgentsLoading,
+    model,
+    onChange,
+    projectId,
+    lockIdentity,
+    preserveSettings,
+  ]);
 
   useEffect(() => {
     // Saved overrides must survive until both harness and model schemas are known.
-    if (disabled || !isResolvedAgent || !harnessParamDefaults.isSuccess || !modelsQuery.isSuccess) return;
+    if (disabled || preserveSettings || !isResolvedAgent || !harnessParamDefaults.isSuccess || !modelsQuery.isSuccess)
+      return;
     // A remembered model can be stale for the selected harness; swap it for an
     // offered one (or clear it) once the model list is known.
     const next = resolveSynchronizedModel({
@@ -117,6 +141,7 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
     );
   }, [
     baseParamSchema,
+    preserveSettings,
     disabled,
     harnessId,
     harnessParamDefaults.isSuccess,
@@ -129,8 +154,9 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
   ]);
 
   const handleSelectAgent = (agent: string) => {
+    if (lockIdentity) return;
     const next = { harnessId: agent };
-    saveRecentHarnessSelection(projectId, next);
+    if (!preserveSettings) saveRecentHarnessSelection(projectId, next);
     onChange(serializeParamRecord(next));
   };
   const handleSelectModel = (selected: string) => {
@@ -141,10 +167,11 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
       ...(selected ? { model: selected } : {}),
       ...(Object.keys(selectedParams).length ? { params: selectedParams } : {}),
     };
-    saveRecentHarnessSelection(projectId, next);
+    if (!preserveSettings) saveRecentHarnessSelection(projectId, next);
     onChange(serializeParamRecord(next));
   };
-  const handleParamsChange = (nextParams: HarnessParamValues) => {
+  const handleParamsChange = (overrides: HarnessParamValues) => {
+    const nextParams = changedHarnessParams(overrides, effectiveParamDefaults, settingsMode);
     onChange(
       serializeParamRecord({
         harnessId,
@@ -153,6 +180,34 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
       }),
     );
   };
+
+  if (props.harness?.presentation === "chat")
+    return (
+      <HStack gap="2xs" minW="0">
+        <WorkspaceAgentMenu
+          agentOptions={agentOptions}
+          selectedAgent={isResolvedAgent ? harnessId : ""}
+          onSelectAgent={handleSelectAgent}
+          modelOptions={modelOptions}
+          selectedModel={model}
+          onSelectModel={handleSelectModel}
+          offersModels={selectedAgentInfo?.supportsModels}
+          isDisabled={disabled}
+          isAgentSwitchDisabled={lockIdentity}
+          isAgentsLoading={isAgentsLoading}
+          isModelsLoading={modelsQuery.isLoading}
+          size="xs"
+        />
+        <HarnessParamInlineControls
+          schema={effectiveParamSchema ?? undefined}
+          defaults={effectiveParamDefaults}
+          overrides={effectiveParams}
+          onOverridesChange={handleParamsChange}
+          disabled={disabled || !isResolvedAgent}
+          size="xs"
+        />
+      </HStack>
+    );
 
   return (
     <>
@@ -168,6 +223,7 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
         harnessId={isResolvedAgent ? harnessId : ""}
         model={model}
         disabled={disabled}
+        lockHarness={lockIdentity}
         loadingHarnesses={isAgentsLoading}
         loadingModels={modelsQuery.isLoading}
         onHarnessChange={handleSelectAgent}

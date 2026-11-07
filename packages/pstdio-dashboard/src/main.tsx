@@ -2,7 +2,7 @@ import "@pstdio/ui/style.css";
 
 import { PstdioApiError } from "@pstdio/sdk/client";
 import { HostStorageProvider } from "@pstdio/ui";
-import { Workbench, WorkbenchThemeProvider } from "@pstdio/workbench/react";
+import { Workbench, WorkbenchIcon, WorkbenchThemeProvider } from "@pstdio/workbench/react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { getApiClient } from "@/lib/api";
@@ -102,6 +102,7 @@ const renderDashboard = async () => {
               </>
             }
             renderParamField={renderParamField}
+            sidePanelBubbleIcon={<WorkbenchIcon name="message-circle" size={20} />}
             onOpenSidePanel={() => void openDashboardSidePanel(dashboardWorkbench)}
           />
         </SyncProvider>

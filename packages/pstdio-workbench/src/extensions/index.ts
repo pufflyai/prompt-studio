@@ -1,3 +1,4 @@
+export type { NativeChatHostProps, NativeChatHostServices } from "../react/renderers/chat/native-chat-host";
 export type {
   BridgeWebviewConfig,
   BridgeWebviewRenderContext,
@@ -26,6 +27,7 @@ export {
   createWorkbenchWebviewHostCapabilities,
 } from "./bridge/webview-host-capabilities";
 export { resolveWebviewPageProps } from "./bridge/webview-page-props";
+export { createWorkbenchExtensionChatRendererOwners } from "./contributions/chat-renderer-contributions";
 export { registerWorkbenchExtensionCommandPaletteResources } from "./contributions/command-palette-resource-contributions";
 export {
   registerWorkbenchExtensionControlsRenderers,

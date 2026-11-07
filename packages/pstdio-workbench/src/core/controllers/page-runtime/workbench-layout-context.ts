@@ -52,9 +52,10 @@ export const createShellLayoutContext = (resolve: () => WorkbenchCore) => ({
 
 export const connectModeLayoutCache = (core: WorkbenchCore, cache: ReturnType<typeof createWorkbenchLayoutCache>) => {
   caches.set(core, cache);
-  const save = () => {
+  const save = (activatedWidgetId?: string) => {
     const state = core.pages.store.getState();
-    if (state.activeModeId) cache.saveMode(state.projectId, state.activeModeId, core.layout.getLayout());
+    if (state.activeModeId)
+      cache.saveMode(state.projectId, state.activeModeId, core.layout.getLayout(), activatedWidgetId);
     if (state.activeModeId === core.modes.getActiveModeId())
       cache.savePageMain(pageLayoutContext(state), core.layout.getLayout(), state.pages[state.activePageId ?? ""]);
   };
@@ -66,5 +67,11 @@ export const connectModeLayoutCache = (core: WorkbenchCore, cache: ReturnType<ty
     )
       save();
   });
-  core.pages.store.subscribe(save);
+  core.pages.store.subscribe(() => save());
+  core.layout.onDidActivatePanel((panel) => save(panel.instanceId));
+  core.onDidResetLayout(() => {
+    const state = core.pages.store.getState();
+    if (state.activeModeId) cache.clearMode(state.projectId, state.activeModeId, core.layout.getLayout());
+    save();
+  });
 };

@@ -9,6 +9,7 @@ interface HarnessModelPickerProps {
   harnessId: string;
   model?: string;
   disabled?: boolean;
+  lockHarness?: boolean;
   loadingHarnesses?: boolean;
   loadingModels?: boolean;
   onHarnessChange: (id: string) => void;
@@ -58,7 +59,7 @@ export const HarnessModelPicker = (props: HarnessModelPickerProps) => {
       searchable: harnesses.length > 10,
       searchPlaceholder: "Search harnesses…",
       emptyText: "No harnesses available",
-      disabled: disabled || loadingHarnesses || harnesses.length <= 1,
+      disabled: disabled || props.lockHarness || loadingHarnesses || harnesses.length <= 1,
     },
   };
   return (

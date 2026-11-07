@@ -80,6 +80,7 @@ test("a plain-folder ticket creates a linked cloud workspace through its provide
     });
     expect(workspace.provider_ref_json).toEqual({ version: 1, data: { environment: workspace.id, params } });
     await expect(page.locator('iframe[title="Workspace action"]')).toBeHidden();
+    await page.getByRole("button", { name: "Back to project", exact: true }).click();
     await workspaceNavigation.click();
     await expect(
       page

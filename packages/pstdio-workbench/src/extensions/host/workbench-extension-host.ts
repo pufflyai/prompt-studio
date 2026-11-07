@@ -3,6 +3,7 @@ import { matchesResourceWhen } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import type { Disposable, WorkbenchCommandExecutionContext } from "../../core";
 import { workbenchCommandPaletteMenuPath } from "../../core";
+import { registerWorkbenchExtensionChatRenderers } from "../contributions/chat-renderer-contributions";
 import { registerWorkbenchExtensionCommandPaletteResources } from "../contributions/command-palette-resource-contributions";
 import { registerWorkbenchExtensionControlsRenderers } from "../contributions/controls-renderer-contributions";
 import { registerWorkbenchExtensionDataTableRenderers } from "../contributions/data-table-renderer-contributions";
@@ -204,6 +205,7 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
   const disposables: Disposable[] = [];
   const context: WorkbenchExtensionCommandContext = input;
   try {
+    disposables.push(registerWorkbenchExtensionChatRenderers(sourceInput));
     disposables.push(...registerCommands(context, input.metadata));
     disposables.push(
       ...registerWorkbenchExtensionKeybindings({

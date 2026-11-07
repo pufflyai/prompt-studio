@@ -27,10 +27,25 @@ export const CommandParamField = (props: CommandParamFieldProps) => {
     onChange({ ...nextValue, refs });
   };
 
+  const param = buildCommandParam(entry, value);
+  // Pending options must make the existing picker inert, rather than replace
+  // its component tree and dismiss an open menu on a search-field blur.
+  const selection = param.type === "selection";
   return (
     <ParamEditorRow
-      param={buildCommandParam(entry, value)}
-      readOnly={disabled}
+      param={
+        selection
+          ? {
+              ...param,
+              disabled: disabled || param.disabled,
+              options: param.options.map((option) => ({
+                ...option,
+                disabled: disabled || param.disabled || option.disabled,
+              })),
+            }
+          : param
+      }
+      readOnly={!selection && disabled}
       onChange={(_id, next) => change(next)}
     />
   );

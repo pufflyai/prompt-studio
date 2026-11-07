@@ -86,8 +86,43 @@ test("native view actions load dependent options and submit explicit values", as
       }
       await dialog.getByRole("button", { name: /Select region|Europe|America|Empty/ }).click();
       await page.getByRole("menuitemradio", { name: "Europe", exact: true }).click();
-      await dialog.getByRole("button", { name: /Select locale|German|English/ }).click();
-      await page.getByRole("menuitemradio", { name: "German", exact: true }).click();
+      await expect(dialog.getByRole("button", { name: /Select locale|German|English/ })).toBeVisible();
+      // Blurring a dependent search into its picker must not destroy the popup during refresh.
+      let releaseChoices!: () => void;
+      let choicesRequested!: () => void;
+      const heldChoices = new Promise<void>((resolve) => {
+        releaseChoices = resolve;
+      });
+      const requestedChoices = new Promise<void>((resolve) => {
+        choicesRequested = resolve;
+      });
+      const choicesRoute = "**/commands/e2e.native-actions.command.locales/execute";
+      await page.route(choicesRoute, async (route) => {
+        choicesRequested();
+        await heldChoices;
+        await route.continue();
+      });
+      try {
+        await dialog.getByRole("textbox", { name: "Search locales", exact: true }).fill("Ger");
+        await dialog.getByRole("button", { name: /Select locale|German|English/ }).click();
+        await requestedChoices;
+        const popup = page.getByRole("menu");
+        await expect(popup).toBeVisible();
+        await expect(page.getByRole("menuitemradio", { name: "German", exact: true })).toBeDisabled();
+        await expect(dialog.getByRole("button", { name: "Start experiment" })).toBeDisabled();
+        releaseChoices();
+        await expect(page.getByRole("menuitemradio", { name: "German", exact: true })).toBeEnabled();
+        await expect(popup).toBeVisible();
+        await page.keyboard.press("ArrowDown");
+        // This composite uses virtual item focus; DOM focus stays on the menu.
+        const german = page.getByRole("menuitemradio", { name: "German", exact: true });
+        await expect(popup).toBeFocused();
+        await expect(popup).toHaveAttribute("aria-activedescendant", (await german.getAttribute("id"))!);
+        await page.keyboard.press("Enter");
+      } finally {
+        releaseChoices();
+        await page.unroute(choicesRoute);
+      }
       await expect(dialog.getByRole("button", { name: "Start experiment" })).toBeEnabled();
       await dialog.getByRole("button", { name: /Select region|Europe|America|Empty/ }).click();
       await page.getByRole("menuitemradio", { name: "America", exact: true }).click();
