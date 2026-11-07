@@ -1,6 +1,6 @@
 import { PstdioApiError } from "@pstdio/sdk/client";
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useQueries } from "@tanstack/react-query";
 import { apiClientOptions } from "./api";
 import { safeApiFileBlob } from "./api-file-blob";
 
@@ -26,13 +26,6 @@ const apiFileUrlQuery = (url: string) => {
     },
     staleTime: Number.POSITIVE_INFINITY,
   };
-};
-
-/** Returns a URL an <img> can load. API files resolve to a blob URL, other URLs stay as they are. */
-export const useApiFileUrl = (url: string) => {
-  const apiFile = isApiFilePath(url);
-  const { data } = useQuery({ ...apiFileUrlQuery(url), enabled: apiFile });
-  return apiFile ? data : url;
 };
 
 const apiFileUrlsIn = (messages: SessionMessage[], allowed: (url: string) => boolean) => [

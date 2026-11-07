@@ -73,10 +73,14 @@ export const expectPackagedQueuedEditRecovery = async (
     const cancel = page.getByRole("button", { name: "Cancel", exact: true });
     expect(await cancel.evaluate((element) => element.nextElementSibling?.textContent)).toBe("Update");
     logQueuedPhase(scenario, "change saved model and parameters");
-    await expect(page.getByRole("button", { name: "one", exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "one", exact: true }).click();
-    await page.getByRole("menuitem", { name: "two", exact: true }).click();
-    await page.getByRole("button", { name: "High", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Select model", exact: true })).toHaveText("one");
+    await page.getByRole("button", { name: "Select model", exact: true }).click();
+    await page
+      .getByTestId("workspace-agent-model-options")
+      .filter({ visible: true })
+      .getByText("two", { exact: true })
+      .click();
+    await page.getByRole("button", { name: "thinking: High", exact: true }).click();
     await page.getByRole("menuitemradio", { name: "Low", exact: true }).click();
     logQueuedPhase(scenario, "attach edited context");
     const editUpload = page.waitForResponse((response) => isSessionChatAction(response.request(), "upload"));
@@ -107,8 +111,8 @@ export const expectPackagedQueuedEditRecovery = async (
       ),
     ).toBe(true);
     await expect(editor).toHaveText("Retained complete edit");
-    await expect(page.getByRole("button", { name: "two", exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Low", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Select model", exact: true })).toHaveText("two");
+    await expect(page.getByRole("button", { name: "thinking: Low", exact: true })).toBeVisible();
     if (scenario === "empty") {
       await expect(page.getByRole("button", { name: "Update", exact: true })).toHaveCount(0);
       await expect(page.getByRole("button", { name: "Edit saved draft", exact: true })).toHaveCount(0);
