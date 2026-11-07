@@ -210,7 +210,8 @@ export const runScenario = async (input: {
       const bound = measureDocument(
         stored.rows,
         owner.source.documentId,
-        new Set([...owner.input.chunks, ...owner.input.frames, ...owner.input.index]),
+        new Set([...owner.input.chunks, ...owner.input.frames]),
+        owner.input.index,
       );
       checkpoints.push({ owner: ownerIndex, edits: editsPerOwner, ...bound });
       log(

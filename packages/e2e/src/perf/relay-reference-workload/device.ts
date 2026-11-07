@@ -86,7 +86,7 @@ export const createDevice = async (input: {
           async update(update) {
             const frame = decodeRecordFrame(await openUpdate(space, documentId, update));
             if (frame.blob) frames.add(frame.blob.blobId);
-            for (const id of update.blobIds) if (id !== frame.blob?.blobId && !index.has(id)) fileIds.add(id);
+            for (const id of update.blobIds) if (id !== frame.blob?.blobId) fileIds.add(id);
             return relay.update(update);
           },
           async replace(state) {
@@ -101,6 +101,7 @@ export const createDevice = async (input: {
               const manifest = JSON.parse(new TextDecoder().decode(bytes)) as { chunks: { blobId: string }[] };
               for (const chunk of manifest.chunks) chunks.add(chunk.blobId);
               const current = new Set(manifest.chunks.map((chunk) => chunk.blobId));
+              // A latest state also names its receipt-index root, which the index set already holds.
               for (const id of state.blobIds) if (!current.has(id) && !index.has(id)) fileIds.add(id);
             }
             return accepted;
