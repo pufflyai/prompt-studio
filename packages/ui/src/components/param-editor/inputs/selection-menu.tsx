@@ -23,6 +23,8 @@ export interface SelectionMenuProps {
   options: SelectionMenuOption[];
   selectedIds: string[];
   multiSelect: boolean;
+  open?: boolean;
+  onOpenChange?: (details: { open: boolean }) => void;
   /** Selecting the active item can clear a value or repeat an action. */
   reselectable?: boolean;
   disabled?: boolean;
@@ -63,6 +65,8 @@ export const selectionOptionIcon = (option: SelectionMenuOption | undefined, box
 export const SelectionMenu = (props: SelectionMenuProps) => {
   const {
     triggerLabel,
+    open,
+    onOpenChange,
     options,
     selectedIds,
     multiSelect,
@@ -81,7 +85,8 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
     onGroupChange,
   } = props;
   const canChangeGroup = Boolean(
-    onGroupChange &&
+    !disabled &&
+      onGroupChange &&
       group &&
       !group.disabled &&
       group.options.some((option) => !option.disabled && option.id !== group.defaultValue),
@@ -129,15 +134,19 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
       secondaryLabel: option.description,
       icon: selectionIconComponent(option),
       iconColor: option.color ? `${option.color}.500` : undefined,
-      isDisabled: option.disabled,
+      isDisabled: disabled || option.disabled,
       isSelected: selectedIds.includes(option.id),
-      onSelect: () => onToggle(option.id),
+      onSelect: () => {
+        if (!disabled && !option.disabled) onToggle(option.id);
+      },
     }));
     const selectedGroup = group?.options.find((option) => option.id === group.defaultValue);
 
     return (
       <SearchableMenu
         trigger={trigger}
+        open={open}
+        onOpenChange={onOpenChange}
         items={items}
         listId={group?.defaultValue}
         showSearch={searchable || allowCustomValues}
@@ -145,7 +154,17 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
           const filtered = filterSearchableMenuItems(items, query);
           const value = query.trim();
           if (!allowCustomValues || !value || options.some((option) => option.id === value)) return filtered;
-          return [...filtered, { id: value, label: `Use "${value}"`, onSelect: () => onToggle(value) }];
+          return [
+            ...filtered,
+            {
+              id: value,
+              label: `Use "${value}"`,
+              isDisabled: disabled,
+              onSelect: () => {
+                if (!disabled) onToggle(value);
+              },
+            },
+          ];
         }}
         searchPlaceholder={searchPlaceholder}
         multiple={multiSelect}
@@ -165,7 +184,7 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
                   secondaryLabel: option.description,
                   icon: selectionIconComponent(option),
                   iconColor: option.color ? `${option.color}.500` : undefined,
-                  isDisabled: option.disabled,
+                  isDisabled: disabled || option.disabled,
                   isSelected: option.id === group.defaultValue,
                 })),
                 selectedLabel: selectedGroup?.name ?? group.placeholder ?? `Select ${group.name.toLowerCase()}`,
@@ -185,7 +204,9 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
                     />
                   </Menu.Item>
                 ),
-                onSelect: (item) => onGroupChange?.(item.id),
+                onSelect: (item) => {
+                  if (!disabled) onGroupChange?.(item.id);
+                },
               }
             : undefined
         }
@@ -194,7 +215,7 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
   }
 
   return (
-    <Menu.Root closeOnSelect={!multiSelect}>
+    <Menu.Root closeOnSelect={!multiSelect} open={open} onOpenChange={onOpenChange}>
       <Menu.Trigger asChild>{trigger}</Menu.Trigger>
       {/* Portaled like every other menu: rendered inline it is clipped by the
           panel's overflow and can extend past the viewport. */}
@@ -207,8 +228,10 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
                 <Menu.Item
                   key={option.id}
                   value={option.id}
-                  disabled={option.disabled}
-                  onSelect={() => onToggle(option.id)}
+                  disabled={disabled || option.disabled}
+                  onSelect={() => {
+                    if (!disabled && !option.disabled) onToggle(option.id);
+                  }}
                   asChild
                 >
                   <ListRow
@@ -219,7 +242,7 @@ export const SelectionMenu = (props: SelectionMenuProps) => {
                     label={option.name}
                     icon={selectionOptionIcon(option, "16px")}
                     tooltip={option.description}
-                    disabled={option.disabled}
+                    disabled={disabled || option.disabled}
                     isSelected={selected}
                     endContent={selected ? <Icon as={Check} boxSize="3.5" color="fg" /> : undefined}
                   />

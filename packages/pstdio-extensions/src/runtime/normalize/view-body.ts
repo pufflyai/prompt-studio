@@ -11,7 +11,7 @@ const handler = (input: {
   index: RegistryIndex;
   viewId: string;
   localId: string;
-  kind: "controls" | "dataTable" | "file" | "kanban" | "resourceList" | "tree";
+  kind: "chat" | "controls" | "dataTable" | "file" | "kanban" | "resourceList" | "tree";
   operation: string;
   value: unknown;
 }) =>
@@ -38,6 +38,17 @@ export const normalizeViewBody = (input: {
 }) => {
   const body = input.body as ViewBody & Record<string, unknown>;
   if (body.kind === "webview") return body;
+  if (body.kind === "chat") {
+    return {
+      ...body,
+      queryHandlerId: handler({ ...input, kind: "chat", operation: "query", value: body.query }),
+      actionHandlerId: handler({ ...input, kind: "chat", operation: "onAction", value: body.onAction }),
+      loadDraftHandlerId: handler({ ...input, kind: "chat", operation: "loadDraft", value: body.loadDraft }),
+      saveDraftHandlerId: handler({ ...input, kind: "chat", operation: "saveDraft", value: body.saveDraft }),
+      resolveLinkHandlerId: handler({ ...input, kind: "chat", operation: "resolveLink", value: body.resolveLink }),
+      resolveImageHandlerId: handler({ ...input, kind: "chat", operation: "resolveImage", value: body.resolveImage }),
+    };
+  }
   if (body.kind === "tree") {
     return {
       ...body,

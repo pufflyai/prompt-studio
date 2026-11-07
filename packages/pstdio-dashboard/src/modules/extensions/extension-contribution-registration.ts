@@ -1,12 +1,16 @@
 import type { Disposable, WorkbenchModuleContext } from "@pstdio/workbench";
 import {
   fileRendererRefreshEnvelopeFromCommand,
+  type RegisterWorkbenchExtensionContributionsInput,
   registerWorkbenchExtensionContributions,
   toWorkbenchWhenExpression,
 } from "@pstdio/workbench/extensions";
 import { createElement } from "react";
 import { buildAbsoluteApiUrl, getApiClient } from "@/lib/api";
 import { getRuntimeCollections } from "@/lib/sync/collections";
+import { readLegacySessionChatDraft } from "@/shared/app/legacy-session-chat-draft";
+import { createDashboardChatHost } from "@/shared/chat/native-chat-host";
+import { createDashboardParamFieldRenderer } from "@/shared/command-params/dashboard-param-field";
 import { uploadExtensionCommandFile } from "@/shared/extensions/api";
 import { collectExtensionCommandNotifications } from "@/shared/extensions/command-outcome";
 import {
@@ -19,6 +23,7 @@ import {
   subscribeToExtensionEventFeed,
   subscribeToExtensionEventReset,
 } from "@/shared/extensions/extension-webview-broadcast";
+import { canonicalDashboardResource } from "@/shared/extensions/resource-identity";
 import { subscribeToResourceRemovals } from "@/shared/extensions/resource-removal-feed";
 import {
   buildDashboardExtensionMenuRegistrations,
@@ -57,6 +62,7 @@ export const disposeExtensionContributions = (disposables: Disposable[]) => {
 };
 
 interface RegisterExtensionContributionsInput {
+  chatRendererOwners?: RegisterWorkbenchExtensionContributionsInput["chatRendererOwners"];
   ctx: WorkbenchModuleContext;
   executeCommand: ExecuteDashboardExtensionCommand;
   metadata: ResolvedWorkbenchExtensionMetadata;
@@ -108,6 +114,13 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
     });
     disposables.push(
       registerWorkbenchExtensionContributions({
+        chatRendererOwners: input.chatRendererOwners,
+        readLegacySessionDraft: readLegacySessionChatDraft,
+        createChatHost: createDashboardChatHost,
+        resolveChatResource: canonicalDashboardResource,
+        createChatParamField: createDashboardParamFieldRenderer,
+        streamChatCommand: (commandId, body, signal) =>
+          getApiClient().extensions.streamCommand(input.projectId, commandId, body, { signal }),
         createKeybindingWhenExpression: buildDashboardWorkbenchWhenExpression,
         createMenuWhenExpression: (contribution) => buildDashboardWorkbenchWhenExpression(contribution.when),
         createNavigationWhenExpression: (when) =>

@@ -40,6 +40,7 @@ const matches = (row: SessionRow, input: ExtensionSessionQuery) => {
   if (!input.includeArchived && row.archived) return false;
   if (input.status && !input.status.includes(row.status)) return false;
   if (input.agent && row.agent !== input.agent) return false;
+  if (input.search && !row.title.toLowerCase().includes(input.search.toLowerCase())) return false;
   if (input.workspaceId && row.workspace_id !== input.workspaceId) return false;
   if (input.createdFrom && row.created_at < new Date(input.createdFrom).toISOString()) return false;
   if (input.createdTo && row.created_at > new Date(input.createdTo).toISOString()) return false;

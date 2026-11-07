@@ -6,6 +6,8 @@ import type { WorkbenchCommandConfirmation } from "../../core/controllers/comman
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { type CommandParamFieldRenderer, CommandParamsDialog } from "./command-params-dialog";
 import { RendererCreateDialog } from "./renderer-create-dialog";
+import { ResourceCommandDialog } from "./resource-command-dialog";
+import { singleResourceCommandParam } from "./resource-command-params";
 
 interface PaletteParamsDialogProps {
   workbench: WorkbenchCore;
@@ -26,15 +28,24 @@ export const PaletteParamsDialog = (props: PaletteParamsDialogProps) => {
         (renderer) =>
           renderer.createCommandId === request.record.command.id && renderer.createRow && renderer.onCreateRow,
       );
+  const resourceParam = singleResourceCommandParam(request);
   const closeParams = () => {
     if (workbench.commandPalette.getParamsRequest() === request) workbench.commandPalette.clearParams();
   };
   return (
     <>
       {confirmation ? <CommandConfirmationDialog key={confirmation.label} confirmation={confirmation} /> : null}
-      {creation ? (
-        <RendererCreateDialog key={creation.id} contribution={creation} onClose={closeParams} />
-      ) : (
+      {creation ? <RendererCreateDialog key={creation.id} contribution={creation} onClose={closeParams} /> : null}
+      {!creation && request && resourceParam ? (
+        <ResourceCommandDialog
+          key={request.record.command.id}
+          workbench={workbench}
+          request={request}
+          param={resourceParam}
+          onClose={closeParams}
+        />
+      ) : null}
+      {!creation && !resourceParam ? (
         <CommandParamsDialog
           request={request}
           renderParamField={renderParamField}
@@ -45,19 +56,11 @@ export const PaletteParamsDialog = (props: PaletteParamsDialogProps) => {
             workbench.commands.prepareCommandArgs(input.commandId, input.args, input.context, input.onArgsChange)
           }
           onClose={closeParams}
-          onRun={async ({ commandId, args, context, label }) => {
-            if (request?.record.command.resourceMutation?.kind === "rename") {
-              const reportError = workbench.notifications.captureActionError(label);
-              // Resource previews already show the new title and roll it back on failure.
-              // The dialog must not hold focus while persistence and refresh finish.
-              void workbench.commands.executeCommand(commandId, args, context).catch(reportError);
-              closeParams();
-              return;
-            }
+          onRun={async ({ commandId, args, context }) => {
             await workbench.commands.executeCommand(commandId, args, context);
           }}
         />
-      )}
+      ) : null}
     </>
   );
 };

@@ -82,7 +82,7 @@ test("chat paths become resources only when the session workspace has the file",
       handler.resolveResource!({ source, origin });
 
     const href = handler.resolveHref({ source: "src/app.ts:12", origin: "inline-code" });
-    expect(href).toContain("workspace");
+    expect(href).toContain("/extensions/pstdio.pstdio-workspaces/files");
     expect(await resolve("src/app.ts:12", "inline-code")).toEqual({ href });
     expect(await resolve("README.md", "text")).toMatchObject({ href: expect.any(String) });
     expect(await resolve("large/big.ts", "text")).toMatchObject({ href: expect.any(String) });

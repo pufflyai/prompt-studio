@@ -16,6 +16,18 @@ Main, Side, and Secondary are the three panel regions. Page and mode owners can 
 
 Use page targets to change location and panel targets for auxiliary content. A panel target opens one instance without changing the page location. Generated refs such as `page.panels.inspector` keep the page as the panel's owner. A compound page-and-panel target enters an owner before opening its dependent panel, and commits only when all steps resolve.
 
+Sessions consumers use `sessionBrowser.commands.create` from `@pstdio/sdk/extensions`.
+Use `side: true` to create a draft beside the current page. Its optional `panel`
+is a declared `PlacementRef`; omitting it selects the Sessions Project placement.
+Compatibility callers can supply an existing placement in another mode without
+owning draft identity or persistence. Normal placement availability and resource
+binding checks still apply. `replace: true` instead switches the invoking viewer;
+the captured Main or Side placement remains the navigation owner.
+
+Current-view keyboard commands receive the selected target's resource, region and
+placement. That placement is captured before awaiting an extension response, so
+a returned viewer action cannot accidentally act on another focused panel.
+
 ## Mode chrome and navigation
 
 Navigation items and trees contribute to the default host sidebar, including in custom modes. When a mode omits a chrome key, the host keeps its own navigation there, including custom-mode navigation items. A declared view replaces that chrome; `false` hides it. Mode placements keep their identity across pages in the same mode and are removed when their owner is removed.

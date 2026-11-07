@@ -1,9 +1,11 @@
 export type {
+  ChatRendererStreamEvent,
   HistoryProjection,
   HistoryRecoveryInput,
   HistoryRecoveryResult,
   ToolResultSummary,
 } from "pstdio-api-contracts";
+export { chatRendererStreamFrames } from "pstdio-api-contracts";
 export {
   createToolOutputBuffer,
   HistoryConflict,
@@ -59,6 +61,8 @@ export {
   projectSlots,
   rebaseEditingChanges,
   resourceEvents,
+  sessionBrowser,
+  sessionBrowserId,
   sessionEvents,
   sessionSlots,
   storageLimits,
@@ -142,6 +146,7 @@ export { params } from "./params";
 export { type QualifiedRef, qualifyRef } from "./qualify-ref";
 export { artifactChanged, commandEvent, commandRef, eventRef } from "./refs";
 export { resourceKey } from "./resource-key";
+export { applySessionMessagePatch, type SessionMessagePatch } from "./session-message-patch";
 export {
   createTerminalSessionBridge,
   type TerminalSessionAdapter,

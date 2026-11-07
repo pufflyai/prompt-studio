@@ -49,8 +49,8 @@ export const followUpBodySchema = z
         attachments: attachments?.map(({ fileId }) => ({ file_id: fileId })),
       })),
   ])
-  .refine((data) => data.prompt || data.summary_from_session_id, {
-    message: "At least one of 'prompt' or 'summary_from_session_id' is required.",
+  .refine((data) => data.prompt || data.summary_from_session_id || data.question_response, {
+    message: "A prompt, summary source or structured question response is required.",
   });
 
 export const approveBodySchema = approvalInputSchema.strict();

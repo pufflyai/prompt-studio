@@ -160,7 +160,7 @@ test("artifacts are created from the panel menu and inspected in the Side Panel"
       ) && response.request().method() === "POST",
   );
   await page.getByRole("menuitem", { name: "Delete artifact" }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "Delete", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Delete Glass Lab artifact", exact: true }).click();
   expect((await deleteResponse).ok()).toBe(true);
   // Deleting the inspected resource returns to Overview. Reopening the collection
   // must refresh its retained snapshot before showing the remaining artifacts.

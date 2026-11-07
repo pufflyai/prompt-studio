@@ -155,6 +155,8 @@ export interface CommandPaletteResourceItem {
   label: string;
   description?: string;
   icon?: string;
+  /** Live resource status, presented without changing its canonical identity. */
+  indicator?: { icon: string; color?: string; label?: string };
   keywords?: string[];
   target: CommandPaletteResourceTarget;
 }
