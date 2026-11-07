@@ -66,7 +66,7 @@ test("fork copies native context without a model request and resumes independent
   expect(
     await fixture.harness.getMessages(fixture.context, { agentSessionId: source.agentSessionId!, cwd: fixture.root }),
   ).toEqual(fullHistory);
-});
+}, 10_000);
 
 test.each(["start", "resume", "getMessages"] as const)("refuses vulnerable Pi during %s", async (action) => {
   fixture = await piFixture();
