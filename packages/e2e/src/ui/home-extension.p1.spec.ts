@@ -1,4 +1,4 @@
-import { expect, type Page, test } from "@playwright/test";
+import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { homeFrame, homePage } from "../helpers/home-loading";
 import { installPresentationTool } from "../helpers/presentation-tool";
@@ -168,35 +168,31 @@ test("Home keeps setup recovery feedback beside the action", async ({ page, requ
   }
 });
 
-// Critical risk: disabling presentation must leave recovery controls and live host-owned work usable.
-test("independently installed presentation tools replace defaults and recover through extension controls", async ({
-  page,
-  request,
-}) => {
+const presentationProject = async (page: Page, request: APIRequestContext) => {
   const created = await request.post("/v1/projects", { data: folderProjectInput({ name: "Replaceable tools" }) });
   expect(created.ok()).toBe(true);
   const project = (await created.json()) as { id: string };
   const cleanup = await installPresentationTool(request, project.id);
-  try {
-    const workspacesUrl = `/v1/workspaces?project_id=${project.id}`;
-    const before = (await (await request.get(workspacesUrl)).json()) as { id: string; isDefault: boolean }[];
-    const sessionResponse = await request.post("/v1/sessions", {
-      data: {
-        project_id: project.id,
-        title: "Retained conversation",
-        prompt: "Keep running __fake_hold__",
-        agent: "pstdio.workbench-fixture.harness.fake",
-      },
-    });
-    expect(sessionResponse.ok()).toBe(true);
-    const session = await sessionResponse.json();
-    await expect
-      .poll(async () => (await (await request.get(`/v1/sessions/${session.id}`)).json()).status)
-      .toBe("in_progress");
-    await page.goto(`/projects/${project.id}`);
-    await expect(homePage(page)).toBeVisible();
-    const toggle = async (name: string) => {
-      await page.getByRole("option", { name: "Extensions", exact: true }).click();
+  const workspacesUrl = `/v1/workspaces?project_id=${project.id}`;
+  const before = (await (await request.get(workspacesUrl)).json()) as { id: string; isDefault: boolean }[];
+  const sessionResponse = await request.post("/v1/sessions", {
+    data: {
+      project_id: project.id,
+      title: "Retained conversation",
+      prompt: "Keep running __fake_hold__",
+      agent: "pstdio.workbench-fixture.harness.fake",
+    },
+  });
+  expect(sessionResponse.ok()).toBe(true);
+  const session = await sessionResponse.json();
+  await expect
+    .poll(async () => (await (await request.get(`/v1/sessions/${session.id}`)).json()).status)
+    .toBe("in_progress");
+  await page.goto(`/projects/${project.id}`);
+  await expect(homePage(page)).toBeVisible();
+  const toggle = async (names: string[]) => {
+    await page.getByRole("option", { name: "Extensions", exact: true }).click();
+    for (const name of names) {
       const row = page.getByTestId("extension-entry").filter({ hasText: name });
       const changed = page.waitForResponse(
         (response) =>
@@ -204,8 +200,36 @@ test("independently installed presentation tools replace defaults and recover th
       );
       await row.locator(`label[aria-label="Toggle ${name}"]`).click();
       expect((await changed).ok()).toBe(true);
-    };
-    for (const name of ["Home", "Workspaces", "Prompt Studio Cloud"]) await toggle(name);
+    }
+  };
+  return {
+    project,
+    before,
+    toggle,
+    assertRetained: async () => {
+      expect(await (await request.get(workspacesUrl)).json()).toEqual(before);
+      expect((await (await request.get(`/v1/sessions/${session.id}`)).json()).status).toBe("in_progress");
+    },
+    dispose: async () => {
+      try {
+        await request.delete(`/v1/projects/${project.id}`);
+      } finally {
+        cleanup();
+      }
+    },
+  };
+};
+const bundledPresentation = ["Home", "Workspaces", "Prompt Studio Cloud"];
+
+// Critical risk: independently installed tools must restore startup and supported saved links.
+test("independently installed presentation tools replace defaults and restore saved links", async ({
+  page,
+  request,
+}) => {
+  const fixture = await presentationProject(page, request);
+  const { project } = fixture;
+  try {
+    await fixture.toggle(bundledPresentation);
     const alternative = page
       .getByRole("region", { name: "Main", exact: true })
       .frameLocator('iframe[title="Alternative presentation"]');
@@ -218,7 +242,7 @@ test("independently installed presentation tools replace defaults and recover th
     await page.goto(`/projects/${project.id}/workspaces`);
     await expect(alternative.getByRole("heading", { name: "Alternative browse" })).toBeVisible();
     await expect(page).toHaveURL(/\/extensions\/test.presentation-tool\/workspaces$/);
-    const workspace = before.find((item) => item.isDefault)!;
+    const workspace = fixture.before.find((item) => item.isDefault)!;
     expect(workspace).toBeTruthy();
     const resource = encodeURIComponent(`pstdio://extension-resource/workspace/${workspace.id}?extensionId=pstdio`);
     await page.goto(`/projects/${project.id}/workspace?resource=${resource}`);
@@ -229,21 +253,30 @@ test("independently installed presentation tools replace defaults and recover th
     await expect(cloud.getByText("Cloud signed out", { exact: true })).toBeVisible();
     expect((await request.get("/v1/account")).ok()).toBe(true);
     expect((await request.get(`/v1/account/projects/${project.id}/sync`)).ok()).toBe(true);
-    expect(await (await request.get(workspacesUrl)).json()).toEqual(before);
-    expect((await (await request.get(`/v1/sessions/${session.id}`)).json()).status).toBe("in_progress");
-    await toggle("Alternative presentation");
+    await fixture.assertRetained();
+  } finally {
+    await fixture.dispose();
+  }
+});
+
+// Critical risk: absence must retain recovery controls, shared records, and a live session.
+test("disabled presentation preserves host work and recovers through extension controls", async ({ page, request }) => {
+  const fixture = await presentationProject(page, request);
+  const { project } = fixture;
+  try {
+    await fixture.toggle(bundledPresentation);
+    await fixture.toggle(["Alternative presentation"]);
     await page.goto(`/projects/${project.id}`);
     await expect(emptyMain(page)).toBeVisible();
     await expect(page.getByRole("option", { name: "Notes", exact: true })).toBeVisible();
     await expect(page.getByRole("option", { name: "Sessions", exact: true })).toBeVisible();
-    for (const name of ["Home", "Workspaces", "Prompt Studio Cloud"]) await toggle(name);
+    await fixture.assertRetained();
+    await fixture.toggle(bundledPresentation);
     await page.goto(`/projects/${project.id}`);
     await expect(homePage(page)).toBeVisible();
     await expect(page.locator('iframe[title="Home"]')).toHaveCount(1);
-    expect(await (await request.get(workspacesUrl)).json()).toEqual(before);
-    expect((await (await request.get(`/v1/sessions/${session.id}`)).json()).status).toBe("in_progress");
+    await fixture.assertRetained();
   } finally {
-    await request.delete(`/v1/projects/${project.id}`);
-    cleanup();
+    await fixture.dispose();
   }
 });
