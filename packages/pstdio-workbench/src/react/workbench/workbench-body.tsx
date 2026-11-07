@@ -47,11 +47,10 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
   const { workbench, hasMainHeader } = props;
   const hasMainContentTabs = useWorkbenchRegionTabsVisible(workbench, "main");
   const policy = usePanelPolicy(workbench, "main");
+  if (!policy.showHeader) return null;
 
   return (
     <Header
-      display={policy.showHeader ? "flex" : "none"}
-      inert={!policy.showHeader}
       data-workbench-panel-header="main"
       variant="main"
       bg={workbenchBackgrounds.main}

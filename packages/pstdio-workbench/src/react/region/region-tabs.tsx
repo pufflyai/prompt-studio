@@ -128,6 +128,7 @@ const WorkbenchRegionTabsContent = (props: WorkbenchRegionTabsContentProps) => {
     });
     return () => cancelAnimationFrame(frame);
   }, [activeWidgetId, viewport]);
+  if (!showTabs && !hasActions) return null;
   const onSelectLeadingItem = (item: WorkbenchMenuItem) => {
     const command = commands[item.commandId]?.command;
     if (command && hasCommandParameters(command.params)) {
@@ -154,11 +155,24 @@ const WorkbenchRegionTabsContent = (props: WorkbenchRegionTabsContentProps) => {
       </IconButton>
     </Tooltip>
   ));
+  if (!showTabs) {
+    return (
+      <HStack flex="1" h="full" minW="0" gap="2xs">
+        {panelRegion ? (
+          <WorkbenchPanelAddMenu
+            workbench={workbench}
+            region={panelRegion}
+            resource={resource}
+            panels={eligibleSubPanels}
+          />
+        ) : null}
+        {leadingActions}
+      </HStack>
+    );
+  }
   return (
-    <HStack flex="1" h="full" minW="0" gap="2xs" display={showTabs || hasActions ? "flex" : "none"}>
+    <HStack flex="1" h="full" minW="0" gap="2xs">
       <Tabs.Root
-        display={showTabs ? "flex" : "none"}
-        inert={!showTabs}
         value={activeWidgetId}
         onValueChange={(details) => {
           const placement = visiblePlacements.find((candidate) => candidate.widgetId === details.value);
