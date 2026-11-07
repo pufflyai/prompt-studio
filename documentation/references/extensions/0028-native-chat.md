@@ -48,8 +48,7 @@ An optional snapshot `workspace` binding places workspace/device identity, creat
 setup status, diff counts and opening in the shared workspace hub. It references provider-owned
 selection controls by `controlId` and optional `deviceControlId`; those controls are consumed
 there once instead of appearing among generic composer fields. Existing conversations can keep
-read-only selectors visible, including their owning device. Omit `create` to lock creation.
-Use `null` to remove the binding. Existing `resources` actions remain available independently.
+read-only selectors visible, including their owning device. Use `null` to remove the binding. Existing `resources` actions remain available independently.
 
 ```ts
 import type { ChatRendererSnapshot } from "@pstdio/sdk/extensions";
@@ -57,31 +56,23 @@ import type { ChatRendererSnapshot } from "@pstdio/sdk/extensions";
 const workspace: ChatRendererSnapshot["workspace"] = {
   controlId: "workspace",
   deviceControlId: "device",
-  create: { actionId: "create-workspace" },
   openResourceId: "workspace-id",
   status: "ready", additions: 12, deletions: 3,
 };
 ```
 
-An existing workspace selection is a string ID. Selecting New workspace stages the typed
-control value `{ providerId: string, params?: JsonObject }` in the same draft values map;
-it survives saves, recovery, action and queue serialization. The host reuses the workspace
-provider's declared schema, defaults, dynamic choices and validation through its ordinary
-workspace form renderer. JSON strings are only the existing host command-form adapter detail,
-never draft/wire values. Pending/invalid provider choices prevent creation. The native host
-blocks submission and executing harness modes while creation is unresolved.
+Workspace selections are existing workspace string IDs. The native composer reuses the shared
+workspace menu; workspace creation stays in the existing global workspace commands/forms.
+Only an existing session with a bound read-only workspace control, an available selected workspace
+and matching `openResourceId` exposes Open workspace. Draft/default/empty/stale selections do not.
+Saved sessions display the selected workspace as the Open button. Device selection appears only
+with multiple devices; a saved session's owning device remains a readable, read-only identity.
+These controls use the native owner's existing draft values and per-control action clocks.
 
-The explicit creation operation receives current values. Call `ctx.workspaces.create` with
-the selected provider inputs, then acknowledge the committed ID in `snapshot.values[controlId]`;
-do not lose that acknowledgement if optional metadata refresh fails. A successful full snapshot
-may also refresh the new label, setup state and open action. Existing per-control action clocks
-preserve later selections. Creation errors keep the form and draft for correction/retry. The
-public create service runs on this device: do not create locally for a different selected
-account device. Providers retain their own execution targets and operations; Sessions never
-interprets provider-specific field names. Existing sessions keep their bound workspace. The shared workspace/device menus match the chat
-menus: saved workspace labels open the selected workspace and device identity remains read-only.
-An Open action requires a visible existing workspace choice matching `openResourceId`; empty and
-provider-create values never expose it.
+Sessions uses `messages-circle` for extension identity and the collection page/navigation, and
+`message-circle` for each conversation/draft/resource/tab and the Dashboard bubble. Session tree
+status colors preserve the host mapping: completed success, failed error, cancelled/disconnected
+warning, queued info and every other status muted.
 
 Harness choices use agent metadata's exact owning `extensionId` and installed manifest `icon`.
 The host resolves package SVG assets with the same bounded asset reader used by Extensions;

@@ -28,22 +28,21 @@ test("chat model and harness parameters retain the compact toolbar", async ({ pa
 });
 
 // Critical risk: provider options must stay inside the workspace frame without replacing the unsent input.
-test("workspace provider fields and extension harness icon remain usable in the composer frame", async ({
-  page,
-}, info) => {
+test("existing workspace selection and extension harness icon retain composer parity", async ({ page }, info) => {
   const preview = await openCanvasPreview(
     page,
     "packages/pstdio-dashboard/src/shared/command-params/workspace-param-field.canvas.tsx#ComposerWorkspace",
   );
-  await expect(preview.getByText("Base branch", { exact: true })).toBeVisible();
+  await expect(preview.getByRole("button", { name: "Select device", exact: true })).toHaveCount(0);
+  await preview.getByRole("button", { name: "Select workspace", exact: true }).click();
+  await preview.getByRole("menuitem", { name: "Documentation", exact: true }).click();
   await expect(preview.getByRole("button", { name: "Open workspace", exact: true })).toHaveCount(0);
   await preview.getByRole("button", { name: "Select model", exact: true }).click();
   const harness = preview.getByRole("menuitem", { name: "Select harness", exact: true });
   await expect(harness.locator('img[src^="data:image/svg+xml;base64,"]')).toBeVisible();
   await preview.locator("body").press("Escape");
-  await preview.getByRole("button", { name: "Create workspace", exact: true }).last().click();
-  await expect(preview.getByText("Base branch", { exact: true })).toHaveCount(0);
-  await expect(preview.getByRole("button", { name: "Open workspace", exact: true })).toContainText("New workspace");
+  await preview.getByRole("button", { name: "View saved session", exact: true }).click();
+  await expect(preview.getByRole("button", { name: "Open workspace", exact: true })).toContainText("Documentation");
   await expect(preview.locator('[contenteditable="true"]')).toHaveText("Keep this draft");
   await preview.locator("body").screenshot({ path: info.outputPath("workspace-composer.png") });
 });

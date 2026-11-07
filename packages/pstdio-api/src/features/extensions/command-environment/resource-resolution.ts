@@ -45,7 +45,7 @@ const resolveHostResource = async (deps: ExtensionsRouteDeps, ref: ResourceRef) 
   if (ref.type === "session") {
     const session = await deps.sessionService.get(ref.id);
     if (!session || session.project_id !== ref.projectId) return;
-    const resource = { ...ref, label: session.title || session.id, icon: "messages-circle" };
+    const resource = { ...ref, label: session.title || session.id, icon: "message-circle" };
     return { resource, target: { kind: "page" as const, page: workbenchPages.session, resource } };
   }
 };

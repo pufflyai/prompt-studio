@@ -1,25 +1,19 @@
 import { HStack } from "@chakra-ui/react";
 import type { ChatDraft, ChatRendererSnapshot, ControlValueMap, SelectionControl } from "@pstdio/sdk/extensions";
 import { ChatDeviceMenu, ChatWorkspaceHub, ChatWorkspaceMenu } from "@pstdio/ui/chat-ui";
-import { Plus } from "lucide-react";
 import type { ChatSession } from "../../../extensions/contributions/chat-session";
-import type { CommandParamFieldRenderer } from "../../command-palette/command-param-field";
 import { NativeChatResources } from "./native-chat-status";
-import { NativeWorkspaceCreation } from "./native-chat-workspace-creation";
 
 export interface NativeChatWorkspaceProps {
   conversation: ChatRendererSnapshot;
   draft: ChatDraft;
   initializing?: boolean;
-  renderParamField?: CommandParamFieldRenderer;
   run: ChatSession["run"];
-  currentValues?(): ControlValueMap;
   /** Native owner updates synchronously; command dispatch follows the accepted local edit. */
   changeValues(values: ControlValueMap | ((current: ControlValueMap) => ControlValueMap)): void;
 }
 
 const workspaceLabel = (workspace: SelectionControl, value: unknown) => {
-  if (typeof value === "object" && value !== null) return "New workspace";
   return workspace.options.find((option) => option.id === value)?.name ?? workspace.placeholder ?? "Select workspace";
 };
 
@@ -33,6 +27,7 @@ const selectedWorkspaceId = (
   value !== "" &&
   value === openId &&
   workspace?.type === "selection" &&
+  workspace.readOnly &&
   workspace.options?.some((option) => option.id === value)
     ? value
     : undefined;
@@ -57,13 +52,13 @@ export const NativeChatWorkspace = (props: NativeChatWorkspaceProps) => {
   };
   const selectedId =
     workspace?.type === "selection" ? (draft.values[workspace.id] ?? workspace.defaultValue) : undefined;
-  const openId = selectedWorkspaceId(workspace, selectedId, binding.openResourceId);
+  const openId = locked ? undefined : selectedWorkspaceId(workspace, selectedId, binding.openResourceId);
   return (
     <>
       <ChatWorkspaceHub
         workspaceControl={
           <HStack gap="2xs" minW="0">
-            {device?.type === "selection" && (
+            {device?.type === "selection" && (device.options.length > 1 || device.readOnly) && (
               <ChatDeviceMenu
                 devices={device.options.map((option) => ({ ...option, current: option.id === "" }))}
                 selectedDeviceId={String(draft.values[device.id] ?? device.defaultValue ?? "")}
@@ -86,20 +81,6 @@ export const NativeChatWorkspace = (props: NativeChatWorkspaceProps) => {
                 onOpenWorkspace={
                   openId ? () => void run({ type: "openResource", id: openId }).catch(() => undefined) : undefined
                 }
-                createItem={
-                  binding.create
-                    ? {
-                        id: "native-create-workspace",
-                        label: "New workspace",
-                        icon: Plus,
-                        isDisabled: Boolean(binding.create.disabledReason),
-                        secondaryLabel: binding.create.disabledReason,
-                        onSelect: () => {
-                          if (!binding.create?.disabledReason) change(workspace.id, { providerId: "", params: {} });
-                        },
-                      }
-                    : undefined
-                }
               />
             )}
           </HStack>
@@ -108,12 +89,6 @@ export const NativeChatWorkspace = (props: NativeChatWorkspaceProps) => {
         deletions={binding.deletions ?? 0}
         status={binding.status}
         statusLabel={binding.statusLabel}
-        options={
-          <NativeWorkspaceCreation
-            {...props}
-            disabled={locked || Boolean(workspace?.readOnly || (workspace?.type === "selection" && workspace.disabled))}
-          />
-        }
       />
       <NativeChatResources resources={conversation.resources} run={run} />
     </>

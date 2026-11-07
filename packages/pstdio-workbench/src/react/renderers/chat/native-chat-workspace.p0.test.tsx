@@ -1,5 +1,4 @@
 import { expect, test } from "bun:test";
-import type { ControlValueMap } from "@pstdio/sdk/extensions";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createChatSession } from "../../../extensions/contributions/chat-session";
 import { WorkbenchThemeProvider } from "../../theme/workbench-theme-provider";
@@ -8,7 +7,7 @@ import { NativeChatControls } from "./native-chat-controls";
 import { NativeChatWorkspace } from "./native-chat-workspace";
 
 const initial = {
-  workspace: { controlId: "target", deviceControlId: "machine", create: { actionId: "make-target" } },
+  workspace: { controlId: "target", deviceControlId: "machine" },
   controls: [
     {
       id: "target",
@@ -43,46 +42,10 @@ test("native workspace identity renders once in its hub and leaves other control
     </WorkbenchThemeProvider>,
   );
   expect(hub).toContain("Existing workspace");
-  expect(hub).toContain("This device");
+  expect(hub).not.toContain('aria-label="Select device"');
   expect(controls).not.toContain("Existing workspace");
   expect(controls).not.toContain("This device");
   expect(controls).toContain("Model");
-});
-
-test("provider creation inputs survive persistence and delayed creation cannot replace a newer selection", async () => {
-  const provider = {
-    providerId: "custom.provider",
-    params: { image: "custom", nested: { tools: ["a"], enabled: true } },
-  };
-  let complete!: (result: unknown) => void;
-  let saved: unknown;
-  const session = createChatSession({
-    initial,
-    query: async () => ({}),
-    action: () =>
-      new Promise((resolve) => {
-        complete = resolve;
-      }),
-    saveDraft: async (draft) => {
-      saved = draft;
-    },
-  });
-  session.changeDraft({
-    text: "Keep text",
-    attachments: [{ id: "file", name: "notes.txt" }],
-    values: { ...initial.values, target: provider },
-  });
-  await session.flushDraft();
-  expect(saved).toMatchObject({ values: { target: provider } });
-  const create = session.run({ type: "operation", id: "make-target", values: session.getSnapshot().draft.values });
-  session.changeDraft({ values: { ...session.getSnapshot().draft.values, target: "later", machine: "laptop" } });
-  complete({ snapshot: { values: { target: "created", machine: "" } } });
-  await create;
-  expect(session.getSnapshot().draft).toMatchObject({
-    text: "Keep text",
-    attachments: [{ id: "file" }],
-    values: { target: "later", machine: "laptop" },
-  });
 });
 
 test("file attachment action is icon-only with its accessible label and tooltip", () => {
@@ -138,38 +101,61 @@ test("a workspace menu opened before another control edit dispatches the latest 
   expect(session.getSnapshot().draft.values.target).toBe("a");
 });
 
-test("Open workspace requires the visible existing selection, never metadata alone or staged creation", () => {
-  const actions: unknown[] = [];
-  const conversation = { ...initial, workspace: { ...initial.workspace, openResourceId: "a" } };
-  const hub = (
-    value: typeof initial.values.target | { providerId: string; params: Record<string, never> } | undefined,
-    options: { id: string; name: string }[] = initial.controls[0].options ?? [],
-  ) => {
-    const values: ControlValueMap = { ...initial.values };
-    if (value === undefined) delete values.target;
-    else values.target = value;
-    return NativeChatWorkspace({
-      conversation: {
-        ...conversation,
-        controls: initial.controls.map((control) =>
-          control.type === "selection" && control.id === "target" ? { ...control, options } : control,
-        ),
-      },
-      draft: { text: "Keep draft", attachments: [], values },
-      run: async (action) => {
-        actions.push(action);
-        return {};
-      },
-      changeValues: () => {},
-    }).props.children[0].props.workspaceControl.props.children[1];
-  };
-  expect(hub("").props.onOpenWorkspace).toBeUndefined();
-  expect(hub({ providerId: "custom", params: {} }).props.onOpenWorkspace).toBeUndefined();
-  expect(hub("other").props.onOpenWorkspace).toBeUndefined();
-  expect(hub("a", []).props.onOpenWorkspace).toBeUndefined();
-  expect(hub(undefined).props.onOpenWorkspace).toBeDefined();
-  const open = hub("a").props.onOpenWorkspace;
-  expect(open).toBeDefined();
-  open();
-  expect(actions).toEqual([{ type: "openResource", id: "a" }]);
+test("drafts never expose Open and only a saved available selected workspace opens", () => {
+  const render = (
+    readOnly: boolean,
+    value: string | undefined,
+    options = [{ id: "a", name: "Existing workspace" }],
+    unavailable = false,
+  ) =>
+    renderToStaticMarkup(
+      <WorkbenchThemeProvider>
+        <NativeChatWorkspace
+          conversation={{
+            ...initial,
+            readOnly: unavailable,
+            workspace: { controlId: "target", openResourceId: "a" },
+            controls: [{ id: "target", type: "selection", name: "Workspace", defaultValue: "a", readOnly, options }],
+          }}
+          draft={{ text: "Keep", attachments: [], values: value === undefined ? {} : { target: value } }}
+          run={async () => ({})}
+          changeValues={() => {}}
+        />
+      </WorkbenchThemeProvider>,
+    );
+  expect(render(false, undefined)).not.toContain('aria-label="Open workspace"');
+  expect(render(false, "unknown")).not.toContain('aria-label="Open workspace"');
+  expect(render(false, "a")).not.toContain('aria-label="Open workspace"');
+  expect(render(false, "")).not.toContain('aria-label="Open workspace"');
+  expect(render(true, "a", [])).not.toContain('aria-label="Open workspace"');
+  expect(render(true, "a", undefined, true)).not.toContain('aria-label="Open workspace"');
+  expect(render(true, "a")).toContain('aria-label="Open workspace"');
+});
+
+test("device selection exists only with multiple choices; saved remote identity stays read-only", () => {
+  const render = (options: { id: string; name: string }[], readOnly = false) =>
+    renderToStaticMarkup(
+      <WorkbenchThemeProvider>
+        <NativeChatWorkspace
+          conversation={{
+            workspace: { controlId: "target", deviceControlId: "machine" },
+            controls: [{ id: "machine", name: "Device", type: "selection", defaultValue: "laptop", readOnly, options }],
+          }}
+          draft={{ text: "Keep", attachments: [], values: { machine: "laptop" } }}
+          run={async () => ({})}
+          changeValues={() => {}}
+        />
+      </WorkbenchThemeProvider>,
+    );
+  expect(render([])).not.toContain('aria-label="Select device"');
+  expect(render([{ id: "", name: "This device" }])).not.toContain('aria-label="Select device"');
+  expect(
+    render([
+      { id: "", name: "This device" },
+      { id: "laptop", name: "Laptop" },
+    ]),
+  ).toContain('aria-label="Select device"');
+  const saved = render([{ id: "laptop", name: "Laptop" }], true);
+  expect(saved).toContain('data-testid="session-device"');
+  expect(saved).not.toContain('aria-label="Select device"');
 });

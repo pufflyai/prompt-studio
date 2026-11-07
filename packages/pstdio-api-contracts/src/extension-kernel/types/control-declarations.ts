@@ -1,4 +1,3 @@
-import type { JsonObject } from "./json";
 import type { ResourceRef } from "./resources";
 import type { ExtensionHarnessInput } from "./sessions";
 
@@ -260,20 +259,5 @@ export interface ControlGroup {
   defaultCollapsed?: boolean;
 }
 
-/** Provider-owned workspace creation inputs. Existing workspace selections remain string IDs. */
-export type WorkspaceControlValue = {
-  providerId: string;
-  params?: JsonObject;
-};
-
-export type ControlValue =
-  | number
-  | string
-  | boolean
-  | null
-  | string[]
-  | RangeValue
-  | VectorValue
-  | HarnessControlValue
-  | WorkspaceControlValue;
+export type ControlValue = number | string | boolean | null | string[] | RangeValue | VectorValue | HarnessControlValue;
 export type ControlValueMap = Record<string, ControlValue>;
