@@ -130,3 +130,43 @@ test("session resource search follows cursors beyond the public 200-row page lim
     { limit: 100, orderBy: "lastActivity", search: "history", cursor: "200" },
   ]);
 });
+
+test("session rows preserve status colors and singular resource identity alongside the Sessions collection", async () => {
+  const statuses = ["completed", "failed", "cancelled", "disconnected", "queued", "in_progress", "awaiting_input"];
+  const ctx = makeCommandContext({
+    storage: createMemoryStorage(),
+    params: {},
+    overrides: {
+      sessions: {
+        query: async () => ({
+          items: statuses.map((status, index) => ({
+            id: `s${index}`,
+            title: status,
+            status,
+            updatedAt: new Date().toISOString(),
+          })) as never,
+          nextCursor: null,
+        }),
+      },
+    },
+  });
+  const sections = await browse(ctx, { renderer: { rendererId: "list" } });
+  const rows = sections[0].nodes.filter((row) => row.resource);
+  expect(rows.map((row) => row.iconColor)).toEqual([
+    "fg.success",
+    "fg.error",
+    "fg.warning",
+    "fg.warning",
+    "fg.info",
+    "fg.muted",
+    "fg.muted",
+  ]);
+  expect(rows.every((row) => row.resource?.icon === "message-circle")).toBe(true);
+  const result = await search.query(ctx, {
+    query: "",
+    limit: 10,
+    providerId: "sessions",
+    renderer: { rendererId: "list" },
+  });
+  expect(result.items.every((item) => item.icon === "message-circle")).toBe(true);
+});

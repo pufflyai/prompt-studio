@@ -7,7 +7,7 @@ export const sessionResource = (session: ExtensionSession, projectId: string): R
   extensionId: "pstdio",
   projectId,
   label: session.title,
-  icon: "messages-circle",
+  icon: "message-circle",
   device: session.device,
   metadata: { status: session.status, ...(session.workspaceId ? { workspaceId: session.workspaceId } : {}) },
 });
@@ -25,7 +25,7 @@ export const draftResource = (
   extensionId: "pstdio",
   projectId,
   label: "New session",
-  icon: "messages-circle",
+  icon: "message-circle",
   metadata: {
     ...(input.deviceId ? { deviceId: input.deviceId } : {}),
     ...(input.workspaceId ? { workspaceId: input.workspaceId } : {}),

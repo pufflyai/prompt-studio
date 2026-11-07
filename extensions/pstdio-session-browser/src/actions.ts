@@ -12,7 +12,6 @@ import { sessionId, sessionResource } from "./resource";
 import { readSnapshot } from "./snapshot";
 import { submitMessage } from "./submit-message";
 import { submitNativeDraft } from "./submit-native";
-import { createDraftWorkspace } from "./workspace";
 
 const upload = async (ctx: ExtensionContextBase, action: Extract<ChatRendererAction, { type: "upload" }>) => {
   const file = await ctx.sessions.uploadAttachment({
@@ -92,21 +91,6 @@ export const act = async (
       await queueAction(ctx.sessions, requireSession(id), action);
       break;
     case "operation":
-      if (action.id === "create-workspace") {
-        if (id) throw new Error("This conversation already has a workspace.");
-        const workspace = await createDraftWorkspace(ctx, action.values);
-        // A committed mutation must be acknowledged independently of optional metadata/harness reads.
-        // Ordinary workspacesChanged refreshes update hub status/options; per-control clocks protect later edits.
-        const snapshot = await readSnapshot(ctx, resource, { ...action.values, workspace: workspace.id }).catch(
-          () => ({}),
-        );
-        return {
-          snapshot: {
-            ...snapshot,
-            values: { ...("values" in snapshot ? snapshot.values : {}), workspace: workspace.id },
-          },
-        };
-      }
       if (action.id !== "refresh-queue") throw new Error("This conversation control is unavailable.");
       break;
     default:

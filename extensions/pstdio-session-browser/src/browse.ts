@@ -21,6 +21,13 @@ const icons: Record<string, string> = {
   queued: "clock-alert",
   awaiting_input: "circle-dot",
 };
+const sessionStatusColor = (status: string) => {
+  if (status === "completed") return "fg.success";
+  if (status === "failed") return "fg.error";
+  if (status === "cancelled" || status === "disconnected") return "fg.warning";
+  if (status === "queued") return "fg.info";
+  return "fg.muted";
+};
 const sessionDayLabel = (date: Date) => {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -59,6 +66,7 @@ const sessionNodes = (
       id: session.id,
       label: session.title,
       icon: icons[session.status] ?? "circle-dashed",
+      iconColor: sessionStatusColor(session.status),
       resource,
       target: workspaceId
         ? { kind: "panel", panel: sessionBrowser.panels.conversation, resource, open: "preview" }
@@ -156,7 +164,7 @@ export const search = defineCommandPaletteResource({
       items: sessions.map((session) => ({
         id: session.id,
         label: session.title,
-        icon: "messages-circle",
+        icon: "message-circle",
         indicator: { icon: icons[session.status] ?? "circle-dashed", label: `Session status: ${session.status}` },
         target: sessionTarget(sessionResource(session, ctx.projectId)),
       })),

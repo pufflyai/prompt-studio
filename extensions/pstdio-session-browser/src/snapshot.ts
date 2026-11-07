@@ -75,9 +75,8 @@ export const readSessionSnapshot = async (
     workspaceId,
     workspace: await workspacePresentation(ctx, workspaceInfo, {
       id: workspaceId,
-      locked: true,
+      existingSession: true,
       available: execution.available,
-      remote,
     }),
     controls: [...savedControls, ...savedWorkspaceControls(workspaceId, workspaceInfo, session.device)],
     harness,
