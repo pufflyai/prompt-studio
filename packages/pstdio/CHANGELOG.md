@@ -1,5 +1,131 @@
 # pstdio
 
+## 0.47.0-nightly.20261107111918
+
+_2026-11-07_
+
+### Minor Changes
+
+- 9c44404: Expose accurate Cloud document progress and persistent sign-in recovery through the public SDK.
+- 826dc74: Announce account status changes, including sign-in recovery, through `accountEvents.changed`, and include session history in Cloud sync progress.
+- def61ff: Expose native Cloud sign-in progress and cancel replaced browser requests across all views.
+- c4aaecb: Add Cloud status, account settings and device controls through the bundled Cloud extension.
+- f917d92: Support resource-group context menus and content-sized page dialogs with shared headers and form actions.
+- b1d2971: Run signed device actions and continue sessions across online Cloud devices.
+- dec410f: Add message actions, SDK support, and a CLI command to fork conversations through a selected agent reply.
+- 2f798b7: Let extensions offer a setup view for new projects and install catalog extensions for their project with `ctx.extensions`. New projects enable only the configured defaults.
+- d9e7781: Preserve received collection edits and check which source may upgrade shared data.
+- 7516ff7: Let extensions display grouped resource lists with nested children and shared saved views.
+- 5c1e728: Provide the existing project Home page as a default project-local extension using public navigation, recently opened resources with session status, and setup recovery. Each project owns editable Home source under `.pstdio/extensions/pstdio-home/`; setup preserves its customizations.
+- e68fb45: Let extensions use public dashboard commands for conversations, tools, setup recovery, and recently opened resources, with exact update-time conversation queries.
+- 0edb970: Share declared Markdown sources live across devices with durable offline edits and transient cursors.
+- d7f4af9: Add device-local active workspace limits and expose live capacity through the SDK.
+- f614716: Continue sessions on online devices with the normal composer, editable queue, approval responses, and target-owned workspace files and changes.
+- 14e4de7: Add resumable API and CLI imports for exported session history, preserving dates, messages and attachments while skipping previous imports.
+- be09ff4: Apply records in relay order with atomic conditional outcomes, explicit collaborative text and paged logs; settle local saves before first Cloud join.
+- 184e167: Restore a cloud project's folder from another device's copy into a new folder, with verified no-replace publication, separate capture, download and restore progress, and `pst projects folder` commands.
+- 39796d3: Let extensions browse workspace files, rename workspaces, review changes, read device capacity and retain native file, tree and terminal interactions through scoped host services.
+- 3535d18: Route Cloud live events and change notices through shared topic subscriptions, report remote reader state immediately, and support device calls with cancellation and immediate offline errors. Live protocol 2 requires both devices and relay to update; durable sync stays at protocol 1.
+- 121c013: Let extensions present single-view pages in host modals with scoped resources and parameters while preserving the current page. Numeric controls can follow an enabling boolean control without losing their value.
+
+### Patch Changes
+
+- 61473a4: Support extension-owned SVG icons and searchable full IDs with a Tool Case fallback while preserving servicing sources for unlisted downloads.
+
+  Keep keyboard toggles on the extension list, constrain long identities beside actions, and warn with a fallback for invalid optional SVG icons while bounding asset reads and publication at 256 KiB.
+
+- be09ff4: Keep shared editor refreshes current when another unchanged view requests a save.
+- d205fee: Keep tooltip positioning layers from blocking nearby controls.
+- 0c55374: Reclaim database space after migrations, remove obsolete conversation sync documents, and show update progress during startup.
+- be2c584: Follow other devices' sessions live with durable message logs and steady Cloud sync memory.
+- 275c256: Capture a folder at once when it becomes a project's folder, so a restored folder is uploaded as this device's own copy without waiting for the 30-second rescan gap.
+- a078cf4: Start Cloud sync on a new device without waiting for every extension view to finish building.
+- ee368ab: Open workspace files, linked workspaces and workspace creation through the bundled Workspaces provider while preserving contextual ticket navigation and existing host links.
+- f899484: Keep native-document observations on the shared event connection and handle native cancellation safely so retained resources cannot block project tools.
+- 28358cd: Deleting a project uninstalls the extensions found in its folder, and extension refreshes no longer stall the app as more extensions are installed.
+- 3d76d3a: Read unchanged artifact files without reconciling unrelated files while preserving mount boundaries and remote updates; wait for Canvas watcher shutdown before releasing project files.
+- 33e54fd: Resolve linked resources through their owners in batches and keep card badge activation separate from ticket gestures.
+- 69a70df: Use public text sessions for legacy Markdown and retain correct editor presence across delayed lifecycle replies. Retain native and installed recovery views through resource removal and allow explicit closure after the person has recovered their text.
+
+  Stop cancelled Cloud transports locally while draining their admitted synchronization work.
+
+  Preserve each retained Markdown view’s scroll and private recovery while releasing its previous public session before a successor opens.
+
+- adfdf60: Allow page scrolling through inline alerts and at the end of long alert messages.
+- be79dba: Create notes immediately from the command palette and respect bound palette arguments.
+- 70f26ed: Open and leave Sessions faster: tree rows whose data did not change no longer render again while the sidenav loads, and each row starts its context menu only when you first open it.
+- 6df39fc: Open Tickets and other kanban pages faster: returning to an unchanged board no longer re-renders every card, and an open command palette updates when extension results change.
+- 094a099: Keep nested navigation's back button in a separate fixed group above the scrolling content.
+- 149ddeb: Remove replaced grouped synchronization and relay recovery code while preserving CRDT storage and public storage adapters.
+- 691b9ed: Bound tool results to 256 KiB and coalesce pending chat updates while preserving history recovery.
+- 9e87db1: Focus new composers after their selecting menu restores focus.
+- 8cf242e: Focus new-session chat inputs, show session skeletons during mount, narrow chat content, match user messages to workspace rounding, improve workspace and command-menu controls, and prevent sent-message entrance animations from replaying.
+- b118f4b: Keep workbench interactions responsive as saved preferences grow.
+- 395cc0b: Keep Cloud document sync connected when extension views finish building.
+- c921b20: Keep Cloud sync quiet while unread sessions stream, and sync session index changes through device logs.
+- 93d1e74: Declare extension IDs and official harness SVG logos with Gallery Thumbnails for UI Canvas, optional Agent Reports, Themes, and unlisted Remote Workspaces.
+- f892128: Standardize themed charts on TanStack Charts with Carbon-based palettes and add a shared dependency Gantt chart.
+- 0b9d542: Add a reusable keyframe timeline with grouped property tracks, full-height playhead scrubbing, frame snapping, context-menu keyframe actions, keyboard timing edits, a loop playback toggle, loop ranges, ruler pinch zoom and read-only marker review.
+- 9f47beb: Keep document errors and recovery notices in a sticky footer without moving the editor's first line.
+- c77c07a: Keep the Markdown editor in a lazy chunk so ticket content loads independently and failed editor downloads can recover.
+- c3a5eb3: Keep status details loaded after closing so they reopen without restarting their views.
+- bba1008: Repair missing cloud records from retained device copies when a latest state omits acknowledged edits.
+- 630f667: Keep navigation responsive while text editors are open by sharing their live connection.
+- 14e4de7: Allow forking through an earlier agent reply while later work continues in the source conversation.
+- 3bfc96b: Keep extension testbench resource queries in the preview's project so linked-resource ticket rows load correctly.
+- 8fe92d5: Download Cloud data during new-device tool setup while keeping offline readiness fenced until setup completes.
+- 63e3a12: Refresh artifact views when the folder watch limit is reached.
+- 8de4621: Show desktop recovery promptly after a runtime crash.
+- b3ad06a: Keep project files in project navigation and show workspace sessions in workspace sub-navigation.
+- 9f1605d: Close menus and popovers when their trigger is clicked again, including Auto Build activity, tab context menus, and controls with custom IDs.
+- d55065f: Keep the navigation header inside Main and preserve embedded views when panels change sides.
+- 69a70df: Refresh note and file metadata after native text edits by delivering their extension change events.
+- Nightly build of main.
+- 3b6d139: Serialize import checkpoint polling with atomic progress updates.
+- 8de4621: Dismiss closed dialogs after their exit animations finish, including when WebKit misses an animation event.
+- 52b26bd: Keep chosen menu and navigation focus when a waiting composer becomes editable.
+- afd5581: Organize the Canvas catalog by purpose and consolidate navigable examples into fewer frames; make in-frame navigation the default for Canvas authoring.
+- 1e3a060: Review motion studies and shader versions in UI Canvas, with parameters and explicit version saving in a right-hand editor and the selected animation’s timeline and transport in a bottom tray.
+
+  Show the selected animated frame’s timeline and transport in a contextual bottom tray, using the shared UI keyframe timeline. Keep parameter and version editing in the right menu.
+
+- 7aeeddf: Reject unavailable workspace providers before saving new workspaces, and allow explicit forgetting of orphaned remote workspace records without deleting remote resources.
+- 66a040e: Keep text observation failures through delayed delivery. Upgrade @pstdio/sdk and pstdio together because shared text subscriptions require the matching server.
+- 2f798b7: Keep project setup overlays transient across reloads and open them only after an enabled setup contribution is known.
+- bb38760: Expand and collapse pages with children, such as Notes, from their own chevron without reopening the page.
+- 80180e9: Keep page parameters and other host props current when they change during asynchronous extension view initialization.
+- be2c584: Show which device runs a session beside its workspace, and show another device's queued messages read-only while you follow its session. `ChatPanel` gains `readOnlyQueue` to show the queue above `composerFallback`.
+- f614716: Keep read-only queues readable without mutation controls while their conversation composer remains available.
+- 4157ced: Keep shared Markdown typing responsive by batching background publication, distinguishing unchanged receipts from incoming edits, reusing source analysis, preserving input-owned undo groups, and avoiding unchanged workbench refreshes and inactive link-editor work.
+- 9043ae7: Continue a session on another online device without clicking Refresh queue after a brief relay reconnect.
+- e03b165: Reconnect ticket text editing when its viewer reopens after navigation.
+- 248be6a: Honor declared group icons in resource lists, including the device monitor icon.
+- 9924e18: Restore optional project onboarding so each new project can choose its agents and tools.
+- 121c013: Keep retained tool visibility in sync when navigating between pages.
+- 3c56ac3: Open sessions without React render-time update errors from the Extensions resource labels.
+- cd4d565: Keep concurrent shared-editor refreshes responsive when content is unchanged.
+- 39796d3: Expose reusable command form fields and dynamic options through the public UI package so extensions can render provider forms without depending on Workbench. Preserve Workbench's contextual defaults and field renderer API. Keep the selected panel open when a webview updates its page parameters. Preserve the acted-on resource's owner during shared mutation confirmation, and reveal new inline inputs in long trees.
+
+  Keep sidebar drag targets inside their visible scroll viewport so virtualized rows cannot intercept moves into an empty header or footer.
+
+  Load complete lazy folder contents after optimistic moves and retain expanded branches when a provider snapshot refreshes.
+
+  Keep queued tree move previews on one provider snapshot, and report completion of startup extension registration.
+
+- 5f46a0d: Delete workspaces without stalling Prompt Studio: workspace deletes no longer reload every project's extensions, and reloading unchanged extension storage indexes no longer re-analyzes the shared records table.
+- 5022989: Keep document saving silent, ticket properties compact, and long dropdown values contained; hide empty review links.
+- c3a5eb3: Prepare status details before the first click, preserve their state, and pause hidden views through shared presentation visibility.
+- 1805dcf: Prepare bounded encrypted folder-capture storage and inclusion policy for recovery.
+- de140a3: Preserve locally accepted legacy collection edits across independent offline changes while protecting record lifetimes.
+- 76df8c9: Project synchronized note edits to their local files even when no editor has opened them on this device.
+- 4224569: Keep repeated record saves fast as edit histories grow while preserving offline merges and transaction rollback.
+- fd35161: Open Extensions between Help and Settings with Tool Case, fixed page headers and detail tabs, and nested extension detail navigation.
+- a2ee01c: Respect header and footer placement across navigation levels and align extension list status tags with location last.
+- c7a8149: Unify settings layouts, keep save and reset actions in the header, and protect unsaved settings when navigating or closing. Align Planner status and tag editors, group workflow and automation settings, and show visible loading skeletons.
+- 204885f: Keep saved harness credentials private to the current user.
+- 671e777: Provide a shared icon and title header for popovers and use it for System errors.
+- 3bfc96b: Show ticket-linked workspaces, artifacts, and other resources in one badge list with owner navigation and unavailable states.
+
 ## 0.46.0
 
 _2026-10-31_

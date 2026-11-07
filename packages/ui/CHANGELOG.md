@@ -1,5 +1,56 @@
 # @pstdio/ui
 
+## 0.47.0-nightly.20261107111918
+
+_2026-11-07_
+
+### Minor Changes
+
+- f917d92: Support resource-group context menus and content-sized page dialogs with shared headers and form actions.
+- dec410f: Add message actions, SDK support, and a CLI command to fork conversations through a selected agent reply.
+- 7516ff7: Let extensions display grouped resource lists with nested children and shared saved views.
+- 0edb970: Share declared Markdown sources live across devices with durable offline edits and transient cursors.
+- f892128: Standardize themed charts on TanStack Charts with Carbon-based palettes and add a shared dependency Gantt chart.
+- 0b9d542: Add a reusable keyframe timeline with grouped property tracks, full-height playhead scrubbing, frame snapping, context-menu keyframe actions, keyboard timing edits, a loop playback toggle, loop ranges, ruler pinch zoom and read-only marker review.
+- 39796d3: Expose reusable command form fields and dynamic options through the public UI package so extensions can render provider forms without depending on Workbench. Preserve Workbench's contextual defaults and field renderer API. Keep the selected panel open when a webview updates its page parameters. Preserve the acted-on resource's owner during shared mutation confirmation, and reveal new inline inputs in long trees.
+
+  Keep sidebar drag targets inside their visible scroll viewport so virtualized rows cannot intercept moves into an empty header or footer.
+
+  Load complete lazy folder contents after optimistic moves and retain expanded branches when a provider snapshot refreshes.
+
+  Keep queued tree move previews on one provider snapshot, and report completion of startup extension registration.
+
+- 39796d3: Let extensions browse workspace files, rename workspaces, review changes, read device capacity and retain native file, tree and terminal interactions through scoped host services.
+- 121c013: Let extensions present single-view pages in host modals with scoped resources and parameters while preserving the current page. Numeric controls can follow an enabling boolean control without losing their value.
+
+### Patch Changes
+
+- 61473a4: Support extension-owned SVG icons and searchable full IDs with a Tool Case fallback while preserving servicing sources for unlisted downloads.
+
+  Keep keyboard toggles on the extension list, constrain long identities beside actions, and warn with a fallback for invalid optional SVG icons while bounding asset reads and publication at 256 KiB.
+
+- d205fee: Keep tooltip positioning layers from blocking nearby controls.
+- 33e54fd: Resolve linked resources through their owners in batches and keep card badge activation separate from ticket gestures.
+- adfdf60: Allow page scrolling through inline alerts and at the end of long alert messages.
+- 70f26ed: Open and leave Sessions faster: tree rows whose data did not change no longer render again while the sidenav loads, and each row starts its context menu only when you first open it.
+- 9e87db1: Focus new composers after their selecting menu restores focus.
+- 8cf242e: Focus new-session chat inputs, show session skeletons during mount, narrow chat content, match user messages to workspace rounding, improve workspace and command-menu controls, and prevent sent-message entrance animations from replaying.
+- 9f47beb: Keep document errors and recovery notices in a sticky footer without moving the editor's first line.
+- c77c07a: Keep the Markdown editor in a lazy chunk so ticket content loads independently and failed editor downloads can recover.
+- 14e4de7: Allow forking through an earlier agent reply while later work continues in the source conversation.
+- 9f1605d: Close menus and popovers when their trigger is clicked again, including Auto Build activity, tab context menus, and controls with custom IDs.
+- d55065f: Keep the navigation header inside Main and preserve embedded views when panels change sides.
+- 52b26bd: Keep chosen menu and navigation focus when a waiting composer becomes editable.
+- afd5581: Organize the Canvas catalog by purpose and consolidate navigable examples into fewer frames; make in-frame navigation the default for Canvas authoring.
+- bb38760: Expand and collapse pages with children, such as Notes, from their own chevron without reopening the page.
+- be2c584: Show which device runs a session beside its workspace, and show another device's queued messages read-only while you follow its session. `ChatPanel` gains `readOnlyQueue` to show the queue above `composerFallback`.
+- f614716: Keep read-only queues readable without mutation controls while their conversation composer remains available.
+- 4157ced: Keep shared Markdown typing responsive by batching background publication, distinguishing unchanged receipts from incoming edits, reusing source analysis, preserving input-owned undo groups, and avoiding unchanged workbench refreshes and inactive link-editor work.
+- 248be6a: Honor declared group icons in resource lists, including the device monitor icon.
+- 5022989: Keep document saving silent, ticket properties compact, and long dropdown values contained; hide empty review links.
+- c7a8149: Unify settings layouts, keep save and reset actions in the header, and protect unsaved settings when navigating or closing. Align Planner status and tag editors, group workflow and automation settings, and show visible loading skeletons.
+- 671e777: Provide a shared icon and title header for popovers and use it for System errors.
+
 ## 0.46.0
 
 _2026-10-31_

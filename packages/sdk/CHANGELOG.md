@@ -1,5 +1,50 @@
 # @pstdio/sdk
 
+## 0.47.0-nightly.20261107111918
+
+_2026-11-07_
+
+### Minor Changes
+
+- 9c44404: Expose accurate Cloud document progress and persistent sign-in recovery through the public SDK.
+- 826dc74: Announce account status changes, including sign-in recovery, through `accountEvents.changed`, and include session history in Cloud sync progress.
+- def61ff: Expose native Cloud sign-in progress and cancel replaced browser requests across all views.
+- f917d92: Support resource-group context menus and content-sized page dialogs with shared headers and form actions.
+- b1d2971: Run signed device actions and continue sessions across online Cloud devices.
+- dec410f: Add message actions, SDK support, and a CLI command to fork conversations through a selected agent reply.
+- 2f798b7: Let extensions offer a setup view for new projects and install catalog extensions for their project with `ctx.extensions`. New projects enable only the configured defaults.
+- d9e7781: Preserve received collection edits and check which source may upgrade shared data.
+- 7516ff7: Let extensions display grouped resource lists with nested children and shared saved views.
+- e68fb45: Let extensions use public dashboard commands for conversations, tools, setup recovery, and recently opened resources, with exact update-time conversation queries.
+- 0edb970: Share declared Markdown sources live across devices with durable offline edits and transient cursors.
+- d7f4af9: Add device-local active workspace limits and expose live capacity through the SDK.
+- 14e4de7: Add resumable API and CLI imports for exported session history, preserving dates, messages and attachments while skipping previous imports.
+- be09ff4: Apply records in relay order with atomic conditional outcomes, explicit collaborative text and paged logs; settle local saves before first Cloud join.
+- 184e167: Restore a cloud project's folder from another device's copy into a new folder, with verified no-replace publication, separate capture, download and restore progress, and `pst projects folder` commands.
+- 39796d3: Let extensions browse workspace files, rename workspaces, review changes, read device capacity and retain native file, tree and terminal interactions through scoped host services.
+- 121c013: Let extensions present single-view pages in host modals with scoped resources and parameters while preserving the current page. Numeric controls can follow an enabling boolean control without losing their value.
+
+### Patch Changes
+
+- 61473a4: Support extension-owned SVG icons and searchable full IDs with a Tool Case fallback while preserving servicing sources for unlisted downloads.
+
+  Keep keyboard toggles on the extension list, constrain long identities beside actions, and warn with a fallback for invalid optional SVG icons while bounding asset reads and publication at 256 KiB.
+
+- f899484: Keep native-document observations on the shared event connection and handle native cancellation safely so retained resources cannot block project tools.
+- 33e54fd: Resolve linked resources through their owners in batches and keep card badge activation separate from ticket gestures.
+- 69a70df: Use public text sessions for legacy Markdown and retain correct editor presence across delayed lifecycle replies. Retain native and installed recovery views through resource removal and allow explicit closure after the person has recovered their text.
+
+  Stop cancelled Cloud transports locally while draining their admitted synchronization work.
+
+  Preserve each retained Markdown view’s scroll and private recovery while releasing its previous public session before a successor opens.
+
+- 691b9ed: Bound tool results to 256 KiB and coalesce pending chat updates while preserving history recovery.
+- 630f667: Keep navigation responsive while text editors are open by sharing their live connection.
+- 7aeeddf: Reject unavailable workspace providers before saving new workspaces, and allow explicit forgetting of orphaned remote workspace records without deleting remote resources.
+- 66a040e: Keep text observation failures through delayed delivery. Upgrade @pstdio/sdk and pstdio together because shared text subscriptions require the matching server.
+- 4157ced: Keep shared Markdown typing responsive by batching background publication, distinguishing unchanged receipts from incoming edits, reusing source analysis, preserving input-owned undo groups, and avoiding unchanged workbench refreshes and inactive link-editor work.
+- fd35161: Open Extensions between Help and Settings with Tool Case, fixed page headers and detail tabs, and nested extension detail navigation.
+
 ## 0.46.0
 
 _2026-10-31_

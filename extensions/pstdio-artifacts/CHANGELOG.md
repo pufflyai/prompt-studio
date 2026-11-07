@@ -1,5 +1,16 @@
 # pstdio-artifacts
 
+## 0.46.1-nightly.20261107111918
+
+_2026-11-07_
+
+### Patch Changes
+
+- 93d1e74: Declare extension IDs and official harness SVG logos with Gallery Thumbnails for UI Canvas, optional Agent Reports, Themes, and unlisted Remote Workspaces.
+- afd5581: Organize the Canvas catalog by purpose and consolidate navigable examples into fewer frames; make in-frame navigation the default for Canvas authoring.
+- ed40a9d: Keep maintained extensions loadable across the existing and upcoming ordered-storage API hosts.
+- 3bfc96b: Show ticket-linked workspaces, artifacts, and other resources in one badge list with owner navigation and unavailable states.
+
 ## 0.46.0
 
 _2026-10-31_
