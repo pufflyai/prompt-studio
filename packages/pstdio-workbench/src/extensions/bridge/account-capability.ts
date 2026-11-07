@@ -32,6 +32,8 @@ const runAccountOperation = (
       return account.syncProject(request.projectId);
     case "stopProjectSync":
       return account.stopProjectSync(request.projectId);
+    case "resolveReturnedChanges":
+      return account.resolveReturnedChanges(request.action, request.projectId);
   }
 };
 

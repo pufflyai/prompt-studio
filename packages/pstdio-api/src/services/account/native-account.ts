@@ -1,6 +1,6 @@
 import { hostname } from "node:os";
 import { dirname, join } from "node:path";
-import type { DeviceCommand, ProjectSyncStatus } from "pstdio-api-contracts";
+import type { DeviceCommand, ProjectReturnAction, ProjectSyncStatus } from "pstdio-api-contracts";
 import type { Json } from "pstdio-sync-contracts";
 import { identitySchema } from "pstdio-sync-contracts";
 import { z } from "zod";
@@ -8,12 +8,14 @@ import type { RouteDeps } from "../../features/deps";
 import { apiLogger } from "../../lib/logger";
 import type { startFolderRecovery } from "../relay/folder-recovery";
 import type { RelayWorkbench } from "../relay/runtime";
+
 import { createAccountRefresh } from "./account-refresh";
 import { readAccountStatus } from "./account-status";
 import { createDeviceIdentity } from "./device-identity";
 import { readManagerAccount } from "./manager-account";
 import { ManagerRequestDenied, managerOriginSchema, managerRequest } from "./manager-client";
 import { createMissingProjectRecovery } from "./missing-project-recovery";
+import { type CloudReturn, createNativeCloudReturn } from "./native-cloud-return";
 import { createNativeLoginRequests } from "./native-login-requests";
 import { createNativePresence } from "./native-presence";
 import { createNativeStore, type DeviceLogin } from "./native-store";
@@ -117,6 +119,20 @@ const retryProjectSync = async (
   return { ok: true };
 };
 
+const connectionSyncStatus = async (
+  projectId: string,
+  login: DeviceLogin | null,
+  projectsFor: (login: DeviceLogin | null) => string[] | undefined,
+  projectStatus: (projectId: string) => Promise<ProjectSyncStatus>,
+  missing: { recovering(projectId: string): boolean },
+): Promise<ProjectSyncStatus> => {
+  const projects = projectsFor(login);
+  if (login && !projects) return { state: "offline", offlineReady: false };
+  if (!projects?.includes(projectId)) return { state: "local", offlineReady: false };
+  const status = await projectStatus(projectId);
+  return missing.recovering(projectId) ? recoveringProjectSyncStatus(status) : status;
+};
+
 export const createNativeAccount = (input: {
   file: string;
   environment: RouteDeps["environmentService"];
@@ -137,6 +153,7 @@ export const createNativeAccount = (input: {
   let update: (connections: RelayWorkbench[]) => Promise<void> = async () => {};
   let retryProject: (projectId: string) => Promise<void> = async () => {};
   let folders: FolderRecoveryOwners = () => undefined;
+  const away = createNativeCloudReturn();
   const commands = createDeviceCommandSender();
   const missing = createMissingProjectRecovery({
     exists: async (id) => Boolean(await input.projects.get(id)),
@@ -187,6 +204,7 @@ export const createNativeAccount = (input: {
     }
     await update(login ? local.map((id) => connectionFor(login, id)) : []);
     if (recoverMissing) missing.recover(login ? absent.map((id) => connectionFor(login, id)) : []);
+    await away.settle(login, projectsFor);
   };
   const load = async () => {
     clearTimeout(retry);
@@ -270,8 +288,10 @@ export const createNativeAccount = (input: {
       retrySync: typeof retryProject = async () => {},
       sendCommand?: SendDeviceCommand,
       folderRecovery?: FolderRecoveryOwners,
+      cloudReturn?: CloudReturn,
     ) {
       update = relay;
+      away.connect(cloudReturn);
       if (folderRecovery) folders = folderRecovery;
       retryProject = retrySync;
       if (sendCommand) commands.connect(sendCommand);
@@ -300,16 +320,13 @@ export const createNativeAccount = (input: {
       const loginAttempt = logins.attempt();
       return { ...account, ...(loginAttempt ? { loginAttempt } : {}) };
     },
-    async projectSyncStatus(projectId: string) {
+    async projectSyncStatus(projectId: string): Promise<ProjectSyncStatus> {
       if (!(await input.projects.get(projectId))) throw new AccountRequestError("Unknown project");
-      const login = await readLogin();
-      const projects = projectsFor(login);
-      if (login && !projects) return { state: "offline" as const, offlineReady: false };
-      if (!projects?.includes(projectId)) return { state: "local" as const, offlineReady: false };
-      const status = await projectStatus(projectId);
-      if (!missing.recovering(projectId)) return status;
-      return recoveringProjectSyncStatus(status);
+      const status = await connectionSyncStatus(projectId, await readLogin(), projectsFor, projectStatus, missing);
+      return { ...status, ...(await away.status(projectId)) };
     },
+    resolveReturnedChanges: (id: string, action: ProjectReturnAction) =>
+      away.resolve(id, action, input.projects, refresh),
     retryProjectSync: (projectId: string) => retryProjectSync(projectId, input.projects, refresh, retryProject),
     /** The project's folder capture, download and restore owner on this device. */
     async folderRecovery(projectId: string) {

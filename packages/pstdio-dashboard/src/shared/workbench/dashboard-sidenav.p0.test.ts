@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import { resourceKey } from "@pstdio/sdk/extensions";
 import { createWorkbench, type WorkbenchCore } from "@pstdio/workbench";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -254,4 +254,50 @@ test("the project header preserves contribution order and retains unrelated entr
   expect((await header()).flatMap((section) => section.nodes).map((node) => node.id)).toEqual(["search", "home"]);
   home.dispose();
   expect((await header()).flatMap((section) => section.nodes).map((node) => node.id)).toEqual(["search"]);
+});
+
+test("opening project-scoped notes keeps the sidebar data while dependent resources refresh", () => {
+  const workbench = createWorkbench();
+  workbench.modes.registerMode({ id: "project", activate() {} });
+  const page = registerModePage(workbench, "project", "notes", "note");
+  workbench.navigationTrees.registerContribution({
+    id: "notes",
+    owner: { kind: "mode", id: "project", extensionId: "pstdio" },
+    sourceExtensionId: "notes",
+    declarationIndex: 0,
+    resolveResource: () => undefined,
+    getSections: () => [{ id: "notes", nodes: [] }],
+  });
+  const registration = registerDashboardSidenav(workbench);
+  workbench.pageLocations.setProject("project-1");
+  const open = (id: string) => workbench.pageLocations.navigate({ kind: "page", page, resource: { type: "note", id } });
+  open("first");
+  const refresh = spyOn(workbench.views, "refreshView");
+  try {
+    open("second");
+    expect(refresh).not.toHaveBeenCalled();
+    workbench.views.registerView({
+      id: "dependent",
+      title: "Dependent",
+      body: { kind: "tree", getBody: () => [], getChildren: () => [] },
+    });
+    workbench.navigationTrees.registerContribution({
+      id: "dependent",
+      owner: { kind: "mode", id: "project", extensionId: "pstdio" },
+      sourceExtensionId: "dependent",
+      declarationIndex: 1,
+      viewId: "dependent",
+    });
+    expect(refresh).toHaveBeenCalledWith(dashboardWidgetIds.dashboardSidenav);
+    refresh.mockClear();
+    open("third");
+    expect(refresh).toHaveBeenCalledWith(dashboardWidgetIds.dashboardSidenav);
+    refresh.mockClear();
+    workbench.views.refreshView("dependent");
+    expect(refresh).toHaveBeenCalledWith(dashboardWidgetIds.dashboardSidenav);
+  } finally {
+    refresh.mockRestore();
+    registration.dispose();
+    workbench.dispose();
+  }
 });

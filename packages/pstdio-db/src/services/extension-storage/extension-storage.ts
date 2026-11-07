@@ -52,10 +52,13 @@ export const createExtensionStorageDBService = (
       upgradeNativeSourceLifetimes(db, options),
     installIndexes: (owners: Parameters<typeof installRecordIndexes>[1], validate: () => void = () => {}) =>
       installRecordIndexes(db, owners, validate),
+    convertLegacyOwners: documents.convertLegacyOwners,
     recovery: createRecoveryPoints(db, documents, options),
     watch: documents.watch,
     flushStatistics: documents.flushStatistics,
     documents: documents.documents,
+    /** Sign-out, return review and replaced-change notices for Cloud projects on this device. */
+    cloudReturn: documents.cloudReturn,
     logs: documents.logs,
     personalHistoryIndex: createPersonalHistoryIndex(db),
     openTextDocument: documents.openTextDocument,

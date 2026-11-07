@@ -17,6 +17,7 @@ import { markOrderedNumberProjectionCurrent, projectPendingNumberRecords } from 
 import { pendingOrderedOperations } from "./ordered-pending";
 import { projectBoundedOrderedOperation } from "./ordered-policy";
 import { publishOrderedProjection, removeOrderedProjection } from "./ordered-projection";
+import { foldOrderedSaves } from "./ordered-return";
 import type { OrderedTransaction } from "./ordered-sql";
 
 export { operationDependencies } from "pstdio-sync/records";
@@ -125,6 +126,7 @@ export const rebaseOrderedProjection = async (
   changed: string[],
 ) => {
   changed = [...new Set([...changed, ...(await settleLocalOrderedSaves(journal, tx, owner))])];
+  changed = [...new Set([...changed, ...(await foldOrderedSaves(journal, tx, owner, changed))])];
   const { ids, views, events, suppressed } = await projectWithOrderedNumberPolicy(
     journal,
     tx,

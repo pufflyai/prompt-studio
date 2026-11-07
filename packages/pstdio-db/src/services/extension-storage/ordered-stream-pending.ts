@@ -1,6 +1,7 @@
-import { sql } from "drizzle-orm";
+import { and, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { storage_ordered_owners as owners } from "../../db/schemas.pg";
+import { conversionId } from "./ordered-conversion-state";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 
 /** Progress polls must not contend with synchronization for the project write lock. */
@@ -21,6 +22,15 @@ export const readOrderedPending = async (db: Pick<OrderedTransaction, "select">,
   `,
     })
     .from(owners)
-    .where(orderedOwnerWhere(owners, owner));
+    .where(
+      and(
+        orderedOwnerWhere(owners, owner),
+        sql`NOT EXISTS (
+      SELECT 1 FROM storage_documents conversion
+      WHERE conversion.workbench_id = ${owner.workbenchId} AND conversion.extension_id = ${owner.extensionId}
+        AND conversion.document_id = ${conversionId}
+    )`,
+      ),
+    );
   return row?.pending;
 };

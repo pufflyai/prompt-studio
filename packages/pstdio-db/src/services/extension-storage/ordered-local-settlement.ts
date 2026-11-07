@@ -11,13 +11,18 @@ import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { orderedOwnerJoinedCloud, readOrderedOwner } from "./ordered-stream-state";
 
 /** Never-joined devices own their order. Joining Cloud permanently ends local settlement. */
-export const settleLocalOrderedSaves = async (journal: OrderedJournal, tx: OrderedTransaction, owner: StorageOwner) => {
+export const settleLocalOrderedSaves = async (
+  journal: OrderedJournal,
+  tx: OrderedTransaction,
+  owner: StorageOwner,
+  selected?: Awaited<ReturnType<OrderedJournal["pending"]>>,
+) => {
   const row = await readOrderedOwner(tx, owner);
   if (await orderedOwnerJoinedCloud(tx, owner, row)) return [];
   const epoch = row.epoch ?? `local:${crypto.randomUUID()}`;
   if (!row.epoch) await tx.update(owners).set({ epoch }).where(orderedOwnerWhere(owners, owner));
   const changed = new Set<string>();
-  for await (const { operation, requestFingerprint } of pendingOrderedOperations(journal)) {
+  for await (const { operation, requestFingerprint } of selected ?? pendingOrderedOperations(journal)) {
     const decisions = new Map();
     const dependencies = [];
     for (const [operationId, identity] of operationDependencies(operation)) {

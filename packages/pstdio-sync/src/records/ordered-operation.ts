@@ -1,4 +1,5 @@
 import { fingerprint, type Json } from "pstdio-sync-contracts";
+import { baseOperation, type OrderedBase, type OrderedSkip, orderedBase } from "./ordered-base";
 import {
   applyJsonChanges,
   type JsonChange,
@@ -11,6 +12,9 @@ import {
   validateJsonChanges,
 } from "./ordered-json";
 import { readOrderedObservation } from "./ordered-operation-wire";
+
+export { type OrderedBase, type OrderedSkip, orderedBase } from "./ordered-base";
+
 import { mergeOrderedText, type OrderedTextChange, type OrderedTextState, retainOrderedTexts } from "./ordered-text";
 
 /** Canonical plain data. A query projection can overlay unresolved local operations on this state. */
@@ -45,17 +49,28 @@ export interface OrderedEdit {
   expectedLifetime?: string;
   /** Refuse the whole group when this observation's written paths or lifetime have changed. */
   expectedRevision?: string;
+  /**
+   * Defaults to the prepared view's stamps. Folding several saves passes their earliest base;
+   * `null` authors a save that applies in relay order without a base.
+   */
+  base?: OrderedBase | null;
 }
 export interface OrderedOperation {
   version: 1;
   operationId: string;
   fingerprint: string;
+  /**
+   * Earlier saves from the same device that this folded save replaces. They may already have
+   * reached Cloud, so their writes count as part of this save's base rather than as newer writes.
+   */
+  supersedes?: string[];
   edits: {
     recordId: string;
     changes: JsonChange[];
     texts?: OrderedTextChange[];
     deleted?: boolean;
     condition?: OrderedObservation | OrderedLifetime;
+    base?: OrderedBase;
   }[];
 }
 /** Delivery coordinates can change after true relay loss; authored conditions remain immutable. */
@@ -101,30 +116,41 @@ const lifetimeObservation = (revision: string) => {
   return { version, exists, deleted, lifetime };
 };
 
+const preparedEdit = async (edit: OrderedEdit, current: OrderedRecord | undefined) => {
+  if (edit.replace === undefined && edit.changes === undefined && edit.deleted === undefined)
+    throw new Error("Empty record edit");
+  const changes = await preparedChanges(edit, current);
+  const base = edit.base === undefined ? orderedBase(current, changes, edit.deleted) : (edit.base ?? undefined);
+  let condition: OrderedObservation | OrderedLifetime | undefined;
+  if (edit.expectedRevision !== undefined) condition = readOrderedObservation(edit.expectedRevision);
+  else if (edit.expectedLifetime !== undefined) condition = lifetimeObservation(edit.expectedLifetime);
+  return {
+    recordId: edit.recordId,
+    changes,
+    ...(edit.texts?.length ? { texts: structuredClone(edit.texts) } : {}),
+    ...(edit.deleted === undefined ? {} : { deleted: edit.deleted }),
+    ...(condition ? { condition } : {}),
+    ...(base ? { base } : {}),
+  } satisfies OrderedOperation["edits"][number];
+};
+
 /** Prepare once and persist this immutable envelope before opening transport. */
 export const prepareOrderedOperation = async (
-  group: { operationId: string; edits: OrderedEdit[] },
+  group: { operationId: string; edits: OrderedEdit[]; supersedes?: string[] },
   records: ReadonlyMap<string, OrderedRecord>,
 ) => {
   if (!group.operationId || !group.edits.length) throw new Error("Empty storage commit");
   const ids = group.edits.map(({ recordId }) => recordId);
   if (ids.some((id) => !id) || new Set(ids).size !== ids.length) throw new Error("A commit must name each record once");
   const edits: OrderedOperation["edits"] = [];
-  for (const edit of group.edits) {
-    if (edit.replace === undefined && edit.changes === undefined && edit.deleted === undefined)
-      throw new Error("Empty record edit");
-    edits.push({
-      recordId: edit.recordId,
-      changes: await preparedChanges(edit, records.get(edit.recordId)),
-      ...(edit.texts?.length ? { texts: structuredClone(edit.texts) } : {}),
-      ...(edit.deleted === undefined ? {} : { deleted: edit.deleted }),
-      ...(edit.expectedRevision === undefined ? {} : { condition: readOrderedObservation(edit.expectedRevision) }),
-      ...(edit.expectedRevision === undefined && edit.expectedLifetime !== undefined
-        ? { condition: lifetimeObservation(edit.expectedLifetime) }
-        : {}),
-    });
-  }
-  const envelope = { version: 1 as const, operationId: group.operationId, edits };
+  for (const edit of group.edits) edits.push(await preparedEdit(edit, records.get(edit.recordId)));
+  const supersedes = [...new Set(group.supersedes ?? [])].sort();
+  const envelope = {
+    version: 1 as const,
+    operationId: group.operationId,
+    ...(supersedes.length ? { supersedes } : {}),
+    edits,
+  };
   return { ...envelope, fingerprint: await fingerprint(envelope as unknown as Json) } satisfies OrderedOperation;
 };
 
@@ -234,7 +260,19 @@ const acceptsEdit = (
   conditionAccepted(record, edit, decisions, optimistic) &&
   textDependenciesAccepted(record, edit, decisions, optimistic);
 
-const applyRecord = (before: OrderedRecord | undefined, edit: OrderedOperation["edits"][number], stamp: string) => {
+type OrderedEditInput = OrderedOperation["edits"][number];
+
+/** A refused dependency never became canonical, so a base written over it is no longer current. */
+const baseNormalizer = (decisions: ReadonlyMap<string, OrderedDecision>, optimistic: boolean) => (stamp: string) => {
+  try {
+    return resolveStamp(stamp, decisions, optimistic);
+  } catch (error) {
+    if (error instanceof RefusedDependency) return JSON.stringify(["refused", stamp]);
+    throw error;
+  }
+};
+
+const applyRecord = (before: OrderedRecord | undefined, edit: OrderedEditInput, stamp: string) => {
   // Ordinary stale writes never resurrect a deleted record. Recreating it is explicit.
   if (before?.deleted && edit.deleted === undefined) return;
   const recreating = before?.deleted && edit.deleted === false;
@@ -284,7 +322,7 @@ export const applyOrderedOperation = (
     if (previous.operationId !== operation.operationId || previous.fingerprint !== operation.fingerprint)
       throw new Error("Operation identity reused with changed payload");
     if (previous.epoch !== epoch) throw new Error("An ordered decision belongs to another epoch");
-    return { decision: previous, records: [] as OrderedRecord[] };
+    return { decision: previous, records: [] as OrderedRecord[], skipped: [] as OrderedSkip[] };
   }
   const decision: OrderedDecision = {
     epoch,
@@ -295,12 +333,15 @@ export const applyOrderedOperation = (
       : "refused",
   };
   const records: OrderedRecord[] = [];
-  if (decision.state === "refused") return { decision, records };
-  for (const edit of operation.edits) {
-    const record = applyRecord(current.get(edit.recordId), edit, canonicalStamp(epoch, operation.operationId));
+  const skipped: OrderedSkip[] = [];
+  if (decision.state === "refused") return { decision, records, skipped };
+  const based = baseOperation(current, operation, baseNormalizer(dependencies, false));
+  skipped.push(...based.skipped);
+  for (const { before, edit } of based.edits) {
+    const record = applyRecord(before, edit, canonicalStamp(epoch, operation.operationId));
     if (record) records.push(record);
   }
-  return { decision, records };
+  return { decision, records, skipped };
 };
 
 /** Pending overlays use authored identities until exact ordered receipts resolve their dependencies. */
@@ -310,8 +351,8 @@ export const projectOrderedOperation = (
   dependencies: ReadonlyMap<string, OrderedDecision> = new Map(),
 ) => {
   if (!operation.edits.every((edit) => acceptsEdit(current.get(edit.recordId), edit, dependencies, true))) return [];
-  return operation.edits.flatMap((edit) => {
-    const record = applyRecord(current.get(edit.recordId), edit, pendingStamp(operation));
+  return baseOperation(current, operation, baseNormalizer(dependencies, true)).edits.flatMap(({ before, edit }) => {
+    const record = applyRecord(before, edit, pendingStamp(operation));
     return record ? [record] : [];
   });
 };
