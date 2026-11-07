@@ -1,6 +1,6 @@
 import type { CollectionPage, CollectionPageRequest } from "@pstdio/sdk/extensions";
 import { useRef, useState } from "react";
-import { loadRendererPage } from "./renderer-page-continuation";
+import { appendRendererRows, loadRendererPage } from "./renderer-page-continuation";
 import { rendererPagePosition } from "./renderer-page-position";
 
 interface PagePosition {
@@ -15,7 +15,8 @@ export const useRendererPages = <TRow>(input: {
   identity: string;
   scope: string;
   fields: string[];
-  append?: boolean;
+  /** A growing list, such as a board, appends each page to the rows it already shows. */
+  rowId?: (row: TRow) => string;
   initialPageSize?: number;
 }) => {
   const [epoch, setEpoch] = useState(0);
@@ -47,12 +48,14 @@ export const useRendererPages = <TRow>(input: {
   };
   const go = (index: number) => {
     const saved = previous.current;
-    if (saved?.identity !== identity || (input.append && saved.offset !== current.offset)) return;
+    if (saved?.identity !== identity || (input.rowId && saved.offset !== current.offset)) return;
     setPosition(rendererPagePosition(identity, index * limit, limit, saved));
   };
   return {
     key: identity,
     request,
+    // A restarted continuation drops its cursor and revision without asking for the page again.
+    refreshKey: JSON.stringify([identity, current.offset]),
     search,
     setSearch,
     collapsedGroups,
@@ -88,17 +91,17 @@ export const useRendererPages = <TRow>(input: {
       read: (request: CollectionPageRequest) => Promise<TResult>,
       signal: AbortSignal,
     ) => {
-      // A growing list cannot join rows from two revisions, so it starts again from the first page.
-      const loaded = await loadRendererPage(request, read, input.append ? 0 : current.offset);
+      const loaded = await loadRendererPage(request, read, signal);
       const result = loaded.value;
-      const offset = loaded.request.offset;
       const saved = previous.current;
-      const append =
-        input.append && offset > 0 && saved?.identity === identity && saved.page.revision === result.page.revision;
-      const rows = append ? [...saved.rows.slice(0, offset), ...result.rows] : result.rows;
+      const rows =
+        input.rowId && current.offset > 0 && saved?.identity === identity
+          ? appendRendererRows(saved.rows.slice(0, current.offset), result.rows, input.rowId)
+          : result.rows;
       if (!signal.aborted) {
-        previous.current = { identity, offset, rows, page: result.page };
-        if (offset !== current.offset) setPosition({ identity, offset });
+        previous.current = { identity, offset: current.offset, rows, page: result.page };
+        // Later reloads of this position must not repeat the rejected continuation.
+        if (loaded.request !== request) setPosition({ identity, offset: current.offset });
       }
       return { ...result, rows, position: loaded.request };
     },

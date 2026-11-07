@@ -117,7 +117,7 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
     ownerKey: rendererReadKey(placement),
     queryKey,
     // Paged providers also receive display fields and search before selecting a bounded page.
-    refreshKey: rendererQueryKey([filter, sorts, pageParams, ...(paged ? [settings, pages.request, pages.key] : [])]),
+    refreshKey: rendererQueryKey([filter, sorts, pageParams, ...(paged ? [settings, pages.refreshKey] : [])]),
     load: async (signal) => {
       const query = (page?: CollectionPageRequest) =>
         contribution.executeQuery(

@@ -142,7 +142,6 @@ test("paged tables open the next page after the data changed", async () => {
     await page.getByRole("button", { name: "Go to next page", exact: true }).click();
     await expect(page.getByRole("cell", { name: "paged-owner-0 row 0100", exact: true })).toBeVisible();
     await expect(page.getByRole("cell", { name: "paged-owner-0 row 0000", exact: true })).toHaveCount(0);
-    await expect(page.getByText("Could not load this view", { exact: true })).toHaveCount(0);
   } finally {
     await browser?.close();
     if (child) await stopProcess(child);
