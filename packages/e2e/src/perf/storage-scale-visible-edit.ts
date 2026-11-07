@@ -97,10 +97,12 @@ export const sampleVisibleEdit = async (
       title: row.title,
       summary: rowSummary(summaryFields(row)),
     }));
+    // The board shows one page of at most 100; its count proves the whole selection's membership.
     const committedQuery = (reply: (typeof replies)[number]) =>
       reply.path.includes(".records-board.kanban.query") &&
+      reply.page?.filteredTotal === expected.length &&
       JSON.stringify(reply.rows.map((row) => ({ id: row.id, title: row.title, summary: row.attributes?.summary }))) ===
-        JSON.stringify(expectedValues);
+        JSON.stringify(expectedValues.slice(0, 100));
     await page.waitForFunction(() => window.scaleEditClock.visible !== undefined);
     const committedReadAt = await page.evaluate(() => performance.now());
     const committedVisibleMs = await page.evaluate((readAt) => {

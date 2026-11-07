@@ -6,6 +6,7 @@ import {
   owners,
   pageRows,
   type Selection,
+  scaleSelectionPredicate,
   type Workload,
   workload,
 } from "storage-scale-fixture";
@@ -16,6 +17,7 @@ export const queryOracles = (kind: Workload) =>
     owner,
     focus: pageRows(workload(kind), owner.index, "focus", 0).map((row) => row.id),
     second: pageRows(workload(kind), owner.index, "pages", 1).map((row) => row.id),
+    focusCount: scaleSelectionPredicate(owner.rows, "focus").value.filter((ordinal) => ordinal < owner.rows).length,
   }));
 export type QueryOracles = ReturnType<typeof queryOracles>;
 
@@ -80,7 +82,7 @@ export const sampleQuery = async (
       "scale",
       { input: { action: "aggregate", selection: "focus", count: oracle.owner.rows } },
     );
-    assert.equal(value.selected, oracle.focus.length);
+    assert.equal(value.selected, oracle.focusCount);
     assert.equal(value.total, oracle.owner.rows);
     return {
       durationMs: sdkRequestMs,
@@ -88,7 +90,11 @@ export const sampleQuery = async (
       correct: true,
       aggregateKind: "indexed counts of the selection and the owner",
       passed: false,
-      failures: [...(sdkRequestMs >= contract.ceilingMs ? ["latency"] : []), "work-unmeasured"],
+      failures: [
+        ...(sdkRequestMs >= contract.ceilingMs ? ["latency"] : []),
+        "owner-wide-hydration-or-unknown",
+        "work-unmeasured",
+      ],
     };
   }
   const row = createRow(fixture.kind, 0, 37, 3);
@@ -101,6 +107,6 @@ export const sampleQuery = async (
     correct: true,
     valueBytes: Buffer.byteLength(JSON.stringify(result.value)),
     passed: false,
-    failures: [...(result.sdkRequestMs >= contract.ceilingMs ? ["latency"] : []), "work-unmeasured"],
+    failures: ["indexed-point-access-unavailable", "owner-hydration-unmeasured"],
   };
 };

@@ -50,11 +50,14 @@ more than 100, so page two is distinct and sorting is real. Sort ties use record
 ID. B view measurements target the 100,000-row owner. A also measures Planner.
 Simultaneous public queries target all ten owners.
 
-Every owner, including the fixture commands added to Planner, declares the shared
-`scaleStorageIndexes` before its first write. Fixture views use the paged collection
-contract, and fixture page, count and burst reads use `records.query` and
-`records.aggregate`. They read one bounded page and its counts, never the whole owner.
-Only fixture verification during preparation lists every stored row.
+Every owner declares the shared `scaleStorageIndexes` before its first write. For
+Planner, the fixture adds them beside its commands, so Planner writes in this fixture
+also maintain these indexes. Fixture views use the paged collection contract, and
+fixture page, count and burst reads use `records.query` and `records.aggregate`. They
+read one bounded page and its counts, never the whole owner. When a write lands between
+a page and its counts, the read is repeated until both describe one revision. Planner
+fixture edits find ticket addresses through the identity index. Only fixture
+verification during preparation lists every stored row.
 The `all-owner-edit-burst` shard also submits one durable write per owner together,
 records each acknowledgement and fairness, then kills/reopens and restores them.
 Planner's legacy collection retry-identity gap remains an explicit failure.

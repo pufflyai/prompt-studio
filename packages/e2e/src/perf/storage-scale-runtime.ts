@@ -112,11 +112,14 @@ export type ScaleRuntime = Awaited<ReturnType<typeof startScaleRuntime>>;
 const plannerFixtureImport = 'import { fixtureCommands, plannerStorageIndexes } from "./scale";\n';
 
 // Planner keeps its own entry; the fixture adds its commands and the shared scale indexes, which
-// install before any fixture ticket is written. Refreshing an extended entry leaves it unchanged.
-const extendPlannerSource = (planner: string) => {
+// install before any fixture ticket is written.
+export const extendPlannerSource = (planner: string) => {
   const entry = join(planner, "extension.ts");
-  const original = readFileSync(entry, "utf8");
-  if (original.startsWith(plannerFixtureImport)) return;
+  // Start from Planner's own entry, also when an older harness already extended it.
+  const original = readFileSync(entry, "utf8")
+    .replace(/^import \{[^}]*\} from "\.\/scale";\n/, "")
+    .replace(/\.\.\.fixtureCommands,\s*/, "")
+    .replace(/\n {2}storageIndexes: plannerStorageIndexes,/, "");
   const extended = original
     .replace(/commands: \[(\s*)\.\.\.plannerCommands,/, "commands: [$1...fixtureCommands,$1...plannerCommands,")
     .replace(

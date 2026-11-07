@@ -21,6 +21,7 @@ import {
   type Workload,
   workload,
 } from "storage-scale-fixture";
+import { consistentRead } from "./storage-scale-consistent-read";
 
 interface PagedInput {
   page?: CollectionPageRequest;
@@ -45,23 +46,25 @@ const readPage = async (
     throw new Error("Scale views show only their fixed selection");
   const index = "scale-rows";
   const where = scaleScopePredicate(false, scaleSelectionPredicate(count, selection));
-  const rows = await storage.records.query({
-    index,
-    where,
-    fields,
-    limit: request.limit,
-    ...(request.cursor ? { cursor: request.cursor } : { offset: request.offset }),
-    revision: request.revision,
+  const { value } = await consistentRead(async () => {
+    const rows = await storage.records.query({
+      index,
+      where,
+      fields,
+      limit: request.limit,
+      ...(request.cursor ? { cursor: request.cursor } : { offset: request.offset }),
+      revision: request.revision,
+    });
+    const selected = await storage.records.aggregate({ index, where });
+    return { rows, selected, consistent: selected.revision === rows.revision };
   });
-  const selected = await storage.records.aggregate({ index, where });
-  if (selected.revision !== rows.revision) throw new Error("Scale rows changed while reading one page");
   return {
-    records: rows.records,
+    records: value.rows.records,
     page: {
-      revision: rows.revision,
-      cursor: rows.cursor,
-      total: selected.count,
-      filteredTotal: selected.count,
+      revision: value.rows.revision,
+      cursor: value.rows.cursor,
+      total: value.selected.count,
+      filteredTotal: value.selected.count,
       groups: [],
     },
   };

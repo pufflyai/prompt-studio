@@ -9,6 +9,8 @@ import {
   scaleViewFields,
 } from "storage-scale-fixture";
 
+import { consistentRead } from "./storage-scale-consistent-read";
+
 export { createScaleViews } from "./storage-scale-views";
 
 interface Input {
@@ -40,29 +42,37 @@ export const plannerValue = (row: FixtureRow, count: number) => ({
   sortOrder: row.rank,
 });
 
+// At most 100 tickets per lookup, the public query limit; the identity index finds each by ID.
+const plannerAddresses = async (storage: ExtensionStorageApi, ids: string[]) => {
+  const addresses = new Map<string, { recordId: string; wrapper: Record<string, unknown> }>();
+  for (let start = 0; start < ids.length; start += 100) {
+    const found = await storage.records.query({
+      index: "scale-identities",
+      where: { field: "id", op: "in", value: ids.slice(start, start + 100) },
+      fields: ["id"],
+      limit: 100,
+    });
+    const records = await storage.records.readMany(found.records.map((record) => record.recordId));
+    for (const [index, record] of records.entries())
+      addresses.set(String(found.records[index].fields.id), {
+        recordId: record.recordId,
+        wrapper: record.value as Record<string, unknown>,
+      });
+  }
+  return addresses;
+};
+
 const saveRows = async (storage: ExtensionStorageApi, input: Input) => {
   if (input.planner) {
     // Use the same public collection as Planner. No database or owner impersonation.
     const tickets = storage.collection("tickets");
     if (input.action === "commit" || (input.rows ?? []).some((row) => row.history > 0) || input.deleted?.length) {
-      // Discover opaque addresses through the public API and keep them unchanged. Creation
-      // uses the collection API; later fixture edits can use ordinary grouped commits.
-      const addresses = new Map(
-        (await storage.records.list()).flatMap((record) => {
-          const wrapper = record.value;
-          if (!wrapper || typeof wrapper !== "object" || Array.isArray(wrapper)) return [];
-          const value = wrapper.value;
-          if (
-            !value ||
-            typeof value !== "object" ||
-            Array.isArray(value) ||
-            typeof value.id !== "string" ||
-            typeof value.shorthand !== "string"
-          )
-            return [];
-          return [[value.id, { recordId: record.recordId, wrapper }] as const];
-        }),
-      );
+      // Discover opaque addresses through the public indexed API and keep them unchanged.
+      // Creation uses the collection API; later fixture edits can use ordinary grouped commits.
+      const addresses = await plannerAddresses(storage, [
+        ...(input.rows ?? []).map((row) => row.id),
+        ...(input.deleted ?? []),
+      ]);
       const existing = (id: string) => {
         const record = addresses.get(id);
         if (!record) throw new Error(`Planner seed record missing: ${id}`);
@@ -140,7 +150,10 @@ export const fixtureCommands = [
           shape: input.planner ? "stored-planner-ticket" : "stored-fixture-row",
         };
       }
-      if (input.action === "aggregate") return countScaleRows(ctx.storage, input);
+      if (input.action === "aggregate") {
+        const { attempts, value } = await consistentRead(() => countScaleRows(ctx.storage, input));
+        return { ...value, readAttempts: attempts };
+      }
       return queryScalePage(ctx.storage, input);
     },
   }),
@@ -158,25 +171,34 @@ const countScaleRows = async (storage: ExtensionStorageApi, input: Input) => {
   const total = await storage.records.aggregate(
     input.planner ? { index: scaleIndex, where: scaleScopePredicate(true) } : { index: scaleIndex },
   );
-  if (matching.revision !== total.revision) throw new Error("Scale rows changed while counting them");
   // Extension APIs expose no database counters; the database layer diagnostic measures them.
-  return { revision: total.revision, selected: matching.count, total: total.count, scanned: null };
+  return {
+    revision: total.revision,
+    consistent: matching.revision === total.revision,
+    selected: matching.count,
+    total: total.count,
+    scanned: null,
+  };
 };
 
 // One bounded indexed page plus the counts a collection view shows with it.
 const queryScalePage = async (storage: ExtensionStorageApi, input: Input) => {
   const start = performance.now();
-  const page = await storage.records.query({
-    index: scaleIndex,
-    where: selectionWhere(input),
-    fields: scaleViewFields,
-    limit: 100,
-    offset: (input.page ?? 0) * 100,
+  const { attempts, value } = await consistentRead(async () => {
+    const page = await storage.records.query({
+      index: scaleIndex,
+      where: selectionWhere(input),
+      fields: scaleViewFields,
+      limit: 100,
+      offset: (input.page ?? 0) * 100,
+    });
+    const counts = await countScaleRows(storage, input);
+    return { page, counts, consistent: counts.consistent && counts.revision === page.revision };
   });
-  const counts = await countScaleRows(storage, input);
-  if (counts.revision !== page.revision) throw new Error("Scale rows changed while reading one page");
+  const { page, counts } = value;
   return {
     capability: "indexed-query",
+    readAttempts: attempts,
     queryMs: performance.now() - start,
     scanned: counts.scanned,
     consumerScanned: 0,
