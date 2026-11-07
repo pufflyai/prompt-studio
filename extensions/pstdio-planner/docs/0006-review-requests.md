@@ -10,6 +10,8 @@ Missing resources, credentials, access, reproduction details and non-decision ac
 
 Planner owns the saved requests and answers used by Auto Build, card and milestone modals, and the ticket page. The numbered **Needs attention** bubble counts open or unreadable requests. “Review” here means a person's answer. Code reviews use `run-review` and `submit-review`; see [Attempts](0002-attempts.md).
 
+Opening a ticket from the Tickets board goes directly to its content, even when it has pending requests. Navigation does not wait for a review-request check. Use the **Needs attention** bubble or the ticket sidebar entry to read and answer requests.
+
 ## Request forms
 
 A **decision** asks one or more questions using text, one choice, or several choices. Its response is `{"answers":{"<question-id>":"<answer>"}}`. A text or single-choice answer is a string; multiple-choice answers are arrays of choice IDs. Required answers must be present. Unknown questions, unknown choices, duplicates and wrong value types are refused.
