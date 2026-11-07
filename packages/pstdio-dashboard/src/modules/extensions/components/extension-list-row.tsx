@@ -20,7 +20,9 @@ export interface ExtensionListRowProps {
   unavailableHarnesses?: AgentInfo[];
   toggling: boolean;
   upgrading: boolean;
+  togglingAutomation?: boolean;
   onToggle: (enabled: boolean) => void;
+  onToggleAutomation: (automation: WorkbenchExtensionAutomationRecord, enabled: boolean) => Promise<unknown>;
   onUpgrade: () => void;
   onOpen: () => void;
 }
@@ -35,7 +37,9 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
     unavailableHarnesses = [],
     toggling,
     upgrading,
+    togglingAutomation,
     onToggle,
+    onToggleAutomation,
     onUpgrade,
     onOpen,
   } = props;
@@ -81,7 +85,7 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
           <Text textStyle="label/S/medium" color={extension.enabled ? "fg" : "fg.muted"} truncate>
             {extension.displayName}
           </Text>
-          <ExtensionIdentity value={`${extension.extensionId}${extension.version ? ` · v${extension.version}` : ""}`} />
+          {extension.version && <ExtensionIdentity value={`v${extension.version}`} />}
         </HStack>
         <Text textStyle="label/XS" color="fg.muted" truncate>
           {extension.description ?? t("projectSettings.extensionsPanel.noDescription")}
@@ -96,7 +100,11 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
         onClick={stopRowClick}
         data-testid="extension-automation-status"
       >
-        <ExtensionAutomationsPopover extensionName={extension.displayName} automations={automations} />
+        <ExtensionAutomationsPopover
+          automations={automations}
+          togglingAutomation={togglingAutomation}
+          onToggleAutomation={onToggleAutomation}
+        />
       </Box>
 
       <Box
@@ -135,6 +143,13 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
         )}
       </Box>
 
+      <HStack gap="2xs" w="72px" flexShrink="0" justifyContent="flex-end" color="fg.subtle">
+        <Icon boxSize="3.5">{extension.scope === "repo" ? <Folder /> : <Globe />}</Icon>
+        <Text textStyle="label/XS" fontFamily="mono">
+          {t(`projectSettings.extensionsPanel.scope.${extension.scope}`)}
+        </Text>
+      </HStack>
+
       <Box flexShrink="0" onClick={stopRowClick}>
         <Switch
           size="sm"
@@ -144,13 +159,6 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
           aria-label={t("projectSettings.extensionsPanel.toggleAriaLabel", { name: extension.displayName })}
         />
       </Box>
-
-      <HStack gap="2xs" w="72px" flexShrink="0" justifyContent="flex-end" color="fg.subtle">
-        <Icon boxSize="3.5">{extension.scope === "repo" ? <Folder /> : <Globe />}</Icon>
-        <Text textStyle="label/XS" fontFamily="mono">
-          {t(`projectSettings.extensionsPanel.scope.${extension.scope}`)}
-        </Text>
-      </HStack>
     </HStack>
   );
 };

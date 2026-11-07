@@ -1,5 +1,5 @@
 import { type StorageObserver, type StorageOwner, StorageRevisionChangedError } from "pstdio-sync";
-import { observeOrderedRecord, projectOrderedOperation } from "pstdio-sync/records";
+import { observeOrderedRecord, orderedBody, projectOrderedOperation } from "pstdio-sync/records";
 import {
   assertStorageLimits,
   fingerprint,
@@ -19,7 +19,7 @@ import { type OrderedJournal, withOrderedOwner } from "./ordered-journal";
 import { rememberOrderedTextGeneration } from "./ordered-native-recovery";
 import { bindOrderedNativeSource, type OrderedSourceInput } from "./ordered-native-source";
 import { combineNumberEvents } from "./ordered-number-projection";
-import { initializeOrderedOwner, orderedProjection } from "./ordered-projection";
+import { initializeOrderedOwner } from "./ordered-projection";
 import { knownDependencies, rebaseOrderedProjection } from "./ordered-rebase";
 import { compileOrderedGroup } from "./ordered-record-compiler";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
@@ -135,14 +135,16 @@ export const createOrderedResourceRecords = (
     const { views } = prepared;
     const operation = await compileOrderedGroup(group, views, deps.textFields);
     const projected = projectOrderedOperation(views, operation, await knownDependencies(journal, operation));
-    const records = await Promise.all(projected.map(orderedProjection));
-    assertStorageLimits(records);
+    // Admission measures content. Publication computes revisions after local settlement.
+    assertStorageLimits(
+      projected.map((record) => ({ recordId: record.recordId, deleted: record.deleted, ...orderedBody(record) })),
+    );
     const assets = group.edits.flatMap((edit) => (edit.asset ? [edit.asset] : []));
     if (assets.length) {
       if (!deps.assets) throw new Error("Asset verification is unavailable");
       await deps.assets.verifyComplete(assets);
     }
-    await rememberOrderedTextGeneration(tx, owner, operation, records.length > 0);
+    await rememberOrderedTextGeneration(tx, owner, operation, projected.length > 0);
     await journal.queue(operation, identity);
     const saved = await publishCommittedOrderedGroup({
       journal,
@@ -151,7 +153,6 @@ export const createOrderedResourceRecords = (
       operation,
       projected,
       before: views,
-      records,
     });
     return {
       ...saved,
