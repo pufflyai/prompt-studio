@@ -61,6 +61,8 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
     return;
   }
   const hold = await ctx.sessions.retainResources(id);
+  const subscriptionController = new AbortController();
+  const subscriptionSignal = AbortSignal.any([ctx.signal, subscriptionController.signal]);
   let revision = 0;
   let messages: SessionMessage[] = [];
   let queueMessages: SessionMessage[] = [];
@@ -170,10 +172,10 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
             await write({ streaming: false, approval: null });
           }
         },
-        { signal: ctx.signal },
+        { signal: subscriptionSignal },
       )
       .catch(async (error) => {
-        if (!ctx.signal.aborted) {
+        if (!subscriptionSignal.aborted) {
           retryStream = true;
           await write({ notice: error instanceof Error ? error.message : String(error) });
         }
@@ -217,6 +219,7 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
       await waitForRefresh(ctx.signal);
     }
   } finally {
+    subscriptionController.abort();
     try {
       await stream;
       await writes;
