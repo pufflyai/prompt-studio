@@ -122,12 +122,6 @@ export const remove = defineCommand({
     const workspace = await requireWorkspace(ctx, undefined, args.id);
     if (workspace.isDefault || !workspace.capabilities?.delete) throw new Error("This workspace cannot be deleted.");
     await ctx.workspaces.delete(workspace.id);
-    await ctx.resources.removed({
-      type: "workspace",
-      id: workspace.id,
-      extensionId: "pstdio",
-      projectId: ctx.project.id,
-    });
     await ctx.events.emit(changed, {});
   },
 });
