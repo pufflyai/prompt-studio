@@ -81,6 +81,7 @@ export const peers = async () => {
     };
     devices.push({
       ...connection,
+      owner,
       legacy,
       oldSync,
       upgrade,

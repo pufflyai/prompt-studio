@@ -93,6 +93,17 @@ const ensureDefaultExtensionsInstalled = async (deps: RouteDeps, signal?: AbortS
 };
 
 export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, options?: StartupTaskOptions) => {
+  registerBackgroundTask(
+    deps.extensionStorageService.convertLegacyOwners({
+      signal,
+      onError: (owner, err) =>
+        apiLogger.error(
+          { err, owner, event: "storage.legacy_conversion.failed" },
+          "Legacy storage conversion failed; retained input can be resumed",
+        ),
+    }),
+    options,
+  );
   const defaultExtensionPreparation = (async () => {
     signal?.throwIfAborted();
     if (options?.prepareDefaultExtensions) await options.prepareDefaultExtensions(signal);

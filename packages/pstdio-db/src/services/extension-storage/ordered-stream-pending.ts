@@ -1,10 +1,12 @@
 import { sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { storage_ordered_owners as owners } from "../../db/schemas.pg";
+import { readConversion } from "./ordered-conversion-state";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 
 /** Progress polls must not contend with synchronization for the project write lock. */
 export const readOrderedPending = async (db: Pick<OrderedTransaction, "select">, owner: StorageOwner) => {
+  if (await readConversion(db, owner)) return undefined;
   const [row] = await db
     .select({
       pending: sql<boolean>`

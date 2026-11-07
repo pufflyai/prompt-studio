@@ -91,3 +91,10 @@ export const relayStorageBudget = limit(
   "unrecorded",
   "PRD 0014 R23: stored bytes stay below twice the latest state size plus the grace-period copy. This ratio is a product storage bound, not a timing measurement.",
 );
+
+export const legacyConversionMacrotaskBudget = limit(
+  1000,
+  "ms",
+  "2026-11-07",
+  "PS-1114 acceptance: a macrotask timer runs at least once per second while converting 60,000 legacy records and 80,000 pending frames.",
+);
