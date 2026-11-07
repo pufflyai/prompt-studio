@@ -35,6 +35,7 @@ export const useKeyboardTabStrip = (
   }, [workbench, region, viewport]);
   // Geometry invalidation does not require rerendering every tab strip for every layout change.
   useLayoutEffect(() => {
+    if (!region || !visible) return;
     let frame: number | undefined;
     const schedule = () => {
       frame ??= requestAnimationFrame(() => {
@@ -48,5 +49,5 @@ export const useKeyboardTabStrip = (
       stop();
       if (frame !== undefined) cancelAnimationFrame(frame);
     };
-  }, [workbench, visible]);
+  }, [workbench, region, visible]);
 };
