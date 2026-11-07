@@ -113,7 +113,9 @@ test("tree file menus rename and delete files while workspace menus delete the c
     await expect(confirmation.getByRole("button", { name: "Delete", exact: true })).toBeVisible();
     await expect(page).toHaveURL(openedUrl);
     await confirmation.getByRole("button", { name: "Delete", exact: true }).click();
-    expect((await deleted).ok()).toBe(true);
+    const deletion = await deleted;
+    expect(deletion.ok()).toBe(true);
+    expect((await deletion.json()).outcome).toMatchObject({ ok: true });
     await expect(workspaceRow).toHaveCount(0);
     await expect(renamedRow).toBeVisible();
     await expect(page).toHaveURL(openedUrl);
