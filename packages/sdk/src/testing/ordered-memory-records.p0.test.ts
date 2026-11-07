@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorageDevices } from "./index";
 
-test("offline helper uses ordered whole values and atomic conditional refusal", async () => {
+test("offline helper keeps whole values from the first device to reach Cloud and refuses conditions atomically", async () => {
   const pair = await createMemoryStorageDevices();
   const [first, second] = pair.devices;
   await first.records.commit({
@@ -33,7 +33,8 @@ test("offline helper uses ordered whole values and atomic conditional refusal", 
   });
   await pair.merge();
   for (const storage of pair.devices) {
-    expect((await storage.records.read("note")).value).toEqual({ body: "first\nLAST", items: [4], left: 1, right: 2 });
+    // The peer reached Cloud first: its body and items stay; the right field nobody else changed applies.
+    expect((await storage.records.read("note")).value).toEqual({ body: "FIRST\nlast", items: [3], left: 1, right: 2 });
     expect((await storage.records.read("audit")).exists).toBe(false);
   }
   expect((await second.records.outcome("conditional"))?.state).toBe("refused");
