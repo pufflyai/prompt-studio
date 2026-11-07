@@ -189,7 +189,8 @@ and worker cleanup all consume that same allowance.
 | Case boundary | Included work |
 | --- | --- |
 | One database sample process | Database open/close, cold and warm operations, verification and shutdown. Fixture construction and copying finish before the process starts. Ten independent cold cases are still required. |
-| Application and sync layer controllers | These still include some fixture work inside their old case wrappers. PS-909 must move initial relay download, extension/view preparation and sync-layer seeding outside measured workers before claiming compliance with the corrected boundary. |
+| Application cases | Runtime startup, the offered background, foreground operations, drain, restoration and reset propagation. Rich board and list cases also save Planner's view settings before the timer. Initial relay upload and download and the second device's extension installation finish in `--prepare-sync` first. |
+| Sync layer controllers | These still include sync-layer seeding inside their case wrappers. PS-909 must move it outside measured workers before claiming compliance with the corrected boundary. |
 
 Separate binary and fixture extension builds run before these cases under their existing build limits.
 Run `perf:storage-scale:build` again after changing the fixture consumer; seed and
@@ -292,8 +293,22 @@ A scenario exception records the error and invalidates the fixture rather than
 retrying or continuing with unproved restoration. Missing remaining samples stay
 missing in the coverage ledger.
 
-`--sync` prepares a local TLS relay and a second full device through public APIs.
-Initial upload/download is separate preparation. The offered incoming workload is
+Sync shards need a prepared sync service. `--prepare-sync` starts it for one seeded
+home: a local TLS relay and a second full device, signed in through public APIs. It
+returns once the fixture is uploaded, the second device has installed every owner
+and downloaded the whole fixture. The service keeps running between shards, so each
+`--sync` case attaches to two devices that are already synced; initial upload,
+download and extension installation stay outside the 60-second case cap.
+`--stop-sync` stops it and removes the second device. Run idle shards before
+preparing sync, because a signed-in home keeps syncing afterwards.
+
+```sh
+bun packages/e2e/src/perf/storage-scale.diagnostic.ts --fixture small --output /path/evidence/sync-service --home /path/native-small --prepare-sync --timing-owner /path/owner.json
+bun packages/e2e/src/perf/storage-scale.diagnostic.ts --fixture small --output /path/evidence/incoming-board --home /path/native-small --measure --profile native --operation board --background incoming --sync --timing-owner /path/owner.json
+bun packages/e2e/src/perf/storage-scale.diagnostic.ts --fixture small --output /path/evidence/sync-service --home /path/native-small --stop-sync --timing-owner /path/owner.json
+```
+
+The offered incoming workload is
 100 operations at 100 ms intervals over ten seconds. Fold pressure offers 129
 writes to cross the current persisted threshold. Driver offered/completed counts,
 failures, backlog and drain are recorded. Drain requires both sync statuses and

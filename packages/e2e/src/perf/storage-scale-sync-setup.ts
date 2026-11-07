@@ -37,9 +37,13 @@ export const prepareScaleSyncDevices = async (
     const remote = await startNativeScaleRuntime(remoteHome, environment);
     try {
       const started = performance.now();
+      const step = (name: string) =>
+        emit({ phase: "sync-preparation-step", step: name, elapsedMs: performance.now() - started });
       await signIn(primary, origins.primary);
       await primary.client.account.syncProject(fixture.projectId);
+      step("primary-sync-requested");
       await waitScaleSynced(primary, fixture.projectId);
+      step("primary-uploaded");
       await signIn(remote, origins.remote);
       const { environmentId } = await remote.client.runtime.environment();
       const folder = join(remoteHome, "project");
@@ -61,6 +65,7 @@ export const prepareScaleSyncDevices = async (
           installName: name,
         });
       }
+      step("remote-extensions-installed");
       await waitScaleSynced(remote, fixture.projectId);
       emit({
         phase: "initial-remote-download",
