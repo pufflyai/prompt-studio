@@ -90,13 +90,17 @@ test.describe("Session bubble workspace selection", () => {
     const sidePanel = page.getByTestId("workbench-side-panel-attached");
     await expect(sidePanel).toBeVisible();
 
-    // Native selections expose the selected public workspace label and radio choices.
-    await sidePanel.getByRole("button", { name: current.name ?? current.shorthand ?? current.id, exact: true }).click();
-    await page.getByRole("menuitemradio", { name: workspace.workspace_shorthand, exact: true }).click();
+    // Shared Main menu parity: selecting an existing draft workspace never exposes navigation or creation.
+    await expect(sidePanel.getByRole("button", { name: "Open workspace", exact: true })).toHaveCount(0);
+    await expect(sidePanel.getByRole("button", { name: "Select device", exact: true })).toHaveCount(0);
+    await sidePanel.getByRole("button", { name: "Select workspace", exact: true }).click();
+    await expect(page.getByRole("menuitem", { name: "New workspace", exact: true })).toHaveCount(0);
+    await page.getByRole("menuitem", { name: workspace.workspace_shorthand, exact: true }).click();
 
+    await expect(sidePanel.getByRole("button", { name: "Open workspace", exact: true })).toHaveCount(0);
     await expect(page).toHaveURL(ticketUrl);
     await expect(page.getByRole("navigation", { name: "breadcrumb" })).not.toContainText(workspace.workspace_shorthand);
-    await expect(sidePanel.getByRole("button", { name: workspace.workspace_shorthand, exact: true })).toContainText(
+    await expect(sidePanel.getByRole("button", { name: "Select workspace", exact: true })).toContainText(
       workspace.workspace_shorthand,
     );
   });
