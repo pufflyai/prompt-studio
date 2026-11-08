@@ -119,7 +119,9 @@ export const startPackagedServe = async (
   binaryPath = PACKAGED_BINARY_PATH,
   observe?: (process: PackagedRuntimeObservation) => void,
   onOutput?: (chunk: Buffer) => void,
+  signal?: AbortSignal,
 ) => {
+  signal?.throwIfAborted();
   stagePackagedPackageCache(tempRoot);
   const descriptorPath = join(tempRoot, "runtime.json");
   const {
@@ -151,6 +153,11 @@ export const startPackagedServe = async (
       stdio: "pipe",
     },
   );
+  // A timed-out owner can cancel readiness and already-returned runtimes alike.
+  // Keep this fence until exit so a late readiness result cannot admit a live child.
+  const abort = () => child.kill("SIGKILL");
+  signal?.addEventListener("abort", abort, { once: true });
+  child.once("close", () => signal?.removeEventListener("abort", abort));
   if (onOutput) {
     child.stdout?.on("data", onOutput);
     child.stderr?.on("data", onOutput);
