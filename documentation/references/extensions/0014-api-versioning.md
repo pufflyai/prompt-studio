@@ -48,6 +48,14 @@ The [native chat view body](0028-native-chat.md) also shares the coordinated API
 step. Released extensions must use a published SDK containing that declaration
 and a host that supports it before adopting it.
 
+The [native terminal view body](0022-terminal-sessions.md#native-terminal-views)
+shares this same API 0.4.0 step on `main`. It requires a published SDK exporting
+`TerminalViewBody` and a compatible host advertising `view.terminal.v1` (planned
+for the release after 0.46.0). A packed candidate SDK proves development
+compatibility; it does not satisfy the publication gate for a production
+extension. Qualify the installed consumer against the delivered host and record
+both released versions before adopting the surface.
+
 ### Which version each check uses
 
 | Check | Where it runs | Extension API version it compares with |

@@ -11,7 +11,7 @@ Contributions are what an extension adds to Prompt Studio. This page lists every
 | `middlewares`                                     | Pre-command checks that may continue, patch params, replace invocation data, or reject.           |
 | `hooks`                                           | Event observers that run after a product event is emitted.                                        |
 | `schedules`                                       | Cron-driven command invocation.                                                                   |
-| `views`                                           | Reusable webview, tree, file, controls, chat, table, and Kanban bodies.                                  |
+| `views`                                           | Reusable webview, tree, file, controls, chat, terminal, table, and Kanban bodies.                                  |
 | `viewMenus`                                       | View bodies attached as menus owned by another view.                                               |
 | `pages`                                           | Routed screens with resource constraints, Main presentation, and extra panel slots.                                 |
 | `placements`                                      | Mode-wide static views or resource bindings.                                                        |
@@ -36,6 +36,10 @@ UI contributions attach to targets that the host owns. [Workbench composition](0
 
 [Native chat](0028-native-chat.md) provides immediate composers and canonical
 conversations with scoped callbacks to the existing session services.
+
+[Native terminal views](0022-terminal-sessions.md#native-terminal-views) bind an
+interactive PTY to a view through a serializable launch callback. The host owns
+the renderer, workspace validation, transport, and process lifetime.
 
 ## Kanban create results
 

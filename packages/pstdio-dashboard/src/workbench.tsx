@@ -1,5 +1,5 @@
 import { createWorkbench, type SettingsRegistry, type WorkbenchPageLocationBrowser } from "@pstdio/workbench";
-import { createWorkbenchTerminalModule, WORKBENCH_TERMINAL_PANEL_SIZE } from "@pstdio/workbench/react";
+import { WORKBENCH_TERMINAL_PANEL_SIZE } from "@pstdio/workbench/react";
 import { createLocalStorageWorkbenchPersistence, type WorkbenchStorageLike } from "@pstdio/workbench/storage";
 import { resolveDashboardStorage } from "@/shared/app/dashboard-storage";
 import { dashboardWorkbenchStorageNamespace } from "@/shared/app/dashboard-workbench-storage-keys";
@@ -8,6 +8,7 @@ import {
   createDashboardProjectSelectionPersistence,
   type DashboardProjectSelectionPersistence,
 } from "@/shared/app/project-selection-persistence";
+import { migrateLegacyTerminalLayout } from "@/shared/terminal/legacy-terminal-layout";
 import { createBootstrapModule } from "./modules/bootstrap";
 import { createCommandPaletteModule } from "./modules/command-palette/module";
 import { createExtensionsModule } from "./modules/extensions/module";
@@ -69,7 +70,6 @@ export const createDashboardModules = (input: CreateDashboardModulesInput & { se
     createSettingsModule(),
     createPerformanceModule(input.settings),
     createUpdatesModule(),
-    createWorkbenchTerminalModule(),
     createTerminalModule(),
     projectOpening.module,
     createBootstrapModule({
@@ -89,6 +89,11 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
     storage,
     debounceMs: input.layoutDebounceMs,
   });
+
+  for (const { scope, layout } of persistence.layoutPersistence.listLayouts?.() ?? []) {
+    const migrated = migrateLegacyTerminalLayout(layout);
+    if (migrated !== layout) persistence.layoutPersistence.setLayout(migrated, scope);
+  }
 
   const pageLocationBrowser =
     input.pageLocationBrowser ??

@@ -20,7 +20,7 @@ export const e2eExtension = (name: string) => {
     source: prepared ?? resolve(repoRoot, extensionSource(name)),
     installName,
     // Prepared consumers install their own fresh public dependencies in the runtime.
-    ...(prepared ? {} : { skipInstall: !name.startsWith(".pstdio/extensions/") }),
+    ...(prepared ? {} : { skipInstall: name !== "pstdio-terminal" && !name.startsWith(".pstdio/extensions/") }),
   };
 };
 
@@ -31,6 +31,7 @@ const e2eDefaultExtensions = [
   e2eExtension("pstdio-home"),
   e2eExtension("pstdio-session-browser"),
   e2eExtension("pstdio-workspaces"),
+  e2eExtension("pstdio-terminal"),
   e2eExtension("pstdio-base-themes"),
   e2eExtension("canvas"),
   e2eExtension("pstdio-artifacts"),

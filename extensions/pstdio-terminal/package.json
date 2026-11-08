@@ -1,0 +1,26 @@
+{
+  "name": "pstdio-terminal",
+  "version": "0.1.0",
+  "displayName": "Terminal",
+  "description": "Open native terminals in a project or its selected workspace.",
+  "publisher": "pstdio",
+  "private": true,
+  "type": "module",
+  "main": "./extension.ts",
+  "icon": "square-terminal",
+  "engines": {
+    "pstdio": "^0.4.0"
+  },
+  "scripts": {
+    "typecheck": "bun check",
+    "lint": "bun run typecheck",
+    "test": "bun ../../scripts/ci/run-bun-tests.ts"
+  },
+  "dependencies": {
+    "@pstdio/sdk": "0.47.0-preview.sha-8184397490cfa0fa22d136b99ac75c708878512a"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.4",
+    "typescript": "6.0.2"
+  }
+}

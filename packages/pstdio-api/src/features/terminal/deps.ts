@@ -1,3 +1,3 @@
-import type { RouteDeps } from "../deps";
+import type { ExtensionsRouteDeps } from "../extensions/deps";
 
-export type TerminalRouteDeps = Pick<RouteDeps, "terminal">;
+export type TerminalRouteDeps = ExtensionsRouteDeps;

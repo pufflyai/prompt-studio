@@ -11,7 +11,7 @@ const handler = (input: {
   index: RegistryIndex;
   viewId: string;
   localId: string;
-  kind: "chat" | "controls" | "dataTable" | "file" | "kanban" | "resourceList" | "tree";
+  kind: "chat" | "controls" | "dataTable" | "file" | "kanban" | "resourceList" | "terminal" | "tree";
   operation: string;
   value: unknown;
 }) =>
@@ -38,6 +38,12 @@ export const normalizeViewBody = (input: {
 }) => {
   const body = input.body as ViewBody & Record<string, unknown>;
   if (body.kind === "webview") return body;
+  if (body.kind === "terminal") {
+    return {
+      ...body,
+      sessionHandlerId: handler({ ...input, kind: "terminal", operation: "session", value: body.session }),
+    };
+  }
   if (body.kind === "chat") {
     return {
       ...body,

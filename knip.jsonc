@@ -170,6 +170,7 @@
         "local-example",
         "pstdio-artifacts",
         "pstdio-base-themes",
+        "pstdio-terminal",
         "pstdio-cloud",
         "pstdio-dashboard",
         "pstdio-home",
@@ -204,6 +205,7 @@
       "ignoreDependencies": [
         "extension-lab",
         "pstdio-base-themes",
+        "pstdio-terminal",
         "pstdio-planner",
         "pstdio-skills",
         "workbench-fixture"

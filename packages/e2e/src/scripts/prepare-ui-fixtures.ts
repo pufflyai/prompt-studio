@@ -9,6 +9,7 @@ const currentApiConsumers = [
   "pstdio-home",
   "pstdio-planner",
   "pstdio-workspaces",
+  "pstdio-terminal",
 ];
 export const preparedUiSourcesPath = (home: string) => join(home, "fixtures", "sources.json");
 

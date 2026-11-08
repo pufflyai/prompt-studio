@@ -1,4 +1,5 @@
 import { Box, Center, Text } from "@chakra-ui/react";
+import type { TerminalViewBinding } from "@pstdio/sdk/api";
 import { useThemePreference } from "@pstdio/ui";
 import { createTerminalThemeFromPreference, Terminal, type TerminalBridge } from "@pstdio/ui/terminal";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -6,6 +7,8 @@ import type { ResourceRef, WorkbenchCore, WorkbenchPanelInstance, WorkbenchTermi
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 
 interface ControllerTerminalBridgeOptions {
+  getOwnerId?: () => string | undefined;
+  getViewBinding?: () => TerminalViewBinding | undefined;
   getBindingId?: () => string | undefined;
   getResource?: () => ResourceRef | undefined;
   getTitle?: () => string | undefined;
@@ -33,9 +36,12 @@ export const createControllerTerminalBridge = (
   options: ControllerTerminalBridgeOptions = {},
 ): TerminalBridge => ({
   async openSession(request) {
+    const view = options.getViewBinding?.();
     const { sessionId } = await terminal.open({
+      ownerId: options.getOwnerId?.(),
+      view,
       bindingId: options.getBindingId?.(),
-      request: withTerminalRequestDefaults(request, options.getResource?.()),
+      request: view ? request : withTerminalRequestDefaults(request, options.getResource?.()),
       title: options.getTitle?.(),
     });
     return {
@@ -50,7 +56,15 @@ export const createControllerTerminalBridge = (
   },
 });
 
+export interface NativeTerminalViewOwner {
+  ownerId: string;
+  projectId: string;
+  viewId: string;
+  isCurrent(): boolean;
+}
+
 interface WorkbenchTerminalPanelProps {
+  nativeView?: NativeTerminalViewOwner;
   placement: WorkbenchPanelInstance;
   workbench: WorkbenchCore;
 }
@@ -63,7 +77,7 @@ interface WorkbenchTerminalPanelProps {
  * module ends it when its tab is explicitly closed.
  */
 export const WorkbenchTerminalPanel = (props: WorkbenchTerminalPanelProps) => {
-  const { placement, workbench } = props;
+  const { placement, workbench, nativeView } = props;
   const { themePreference, themePreferences } = useThemePreference();
   const preference = themePreferences.find((theme) => theme.id === themePreference)!;
   const placementRef = useRef(placement);
@@ -75,6 +89,15 @@ export const WorkbenchTerminalPanel = (props: WorkbenchTerminalPanelProps) => {
   const [bridge] = useState(() =>
     createControllerTerminalBridge(workbench.terminal, {
       getBindingId: () => placementRef.current.instanceId,
+      getOwnerId: () => nativeView?.ownerId,
+      getViewBinding: () => {
+        if (!nativeView) return;
+        if (!nativeView.isCurrent()) throw new Error("Native terminal owner was disposed");
+        const resource = placementRef.current.resource;
+        if (resource?.projectId && resource.projectId !== nativeView.projectId)
+          throw new Error("Native terminal resource belongs to another project");
+        return { projectId: nativeView.projectId, viewId: nativeView.viewId, resource };
+      },
       getResource: () => placementRef.current.resource,
       getTitle: () => placementRef.current.title,
     }),
