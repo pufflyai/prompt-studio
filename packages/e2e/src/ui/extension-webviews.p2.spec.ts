@@ -304,7 +304,7 @@ test.describe("Extension webviews", () => {
     await addTerminal();
     await expect(terminalTabs).toHaveCount(2);
     await expect(terminalTabs.nth(1)).toHaveAttribute("aria-selected", "true");
-    await expect(terminalTabs.nth(1)).toHaveAccessibleName(/^(bash|zsh|dash|sh)$/);
+    await expect(terminalTabs.nth(1)).toHaveAccessibleName("Terminal 2");
     await expectVisibleTerminalOutput();
 
     await terminalTabs.first().click();
