@@ -43,7 +43,7 @@ export const productionToolchainPlatforms = (channel: string) =>
     ],
     (row) => row.platform_pkg,
   ).flatMap((row) => {
-    const shards = row.platform_pkg === "cli-win-arm64" || row.platform_pkg === "cli-darwin-x64" ? 2 : 1;
+    const shards = row.platform_pkg.startsWith("cli-win-") || row.platform_pkg === "cli-darwin-x64" ? 2 : 1;
     const priorities = featureHosts.has(row.platform_pkg) ? "P0,P1,P2" : "P0,P1";
     return Array.from({ length: shards }, (_, index) => ({ ...row, priorities, shard: index + 1, shards }));
   });
