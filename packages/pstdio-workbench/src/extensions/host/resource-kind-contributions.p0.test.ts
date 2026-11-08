@@ -70,3 +70,32 @@ test("related opening results reject malformed resources, regions, and opt-in va
     s.registration.dispose();
   }
 });
+
+test("host composition supplies related openings for an extension-owned kind", async () => {
+  const workbench = createWorkbench();
+  const calls: unknown[] = [];
+  const openings = [{ resource: { ...source, id: "two" }, autoOpen: true, region: "side" as const }];
+  const registration = registerWorkbenchExtensionContributions({
+    workbench,
+    projectId: "project",
+    executeCommand() {
+      throw new Error("The data owner does not choose the project's related opener");
+    },
+    resolveRelatedResourceOpenings: async (resource, signal) => {
+      calls.push({ resource, signal });
+      return openings;
+    },
+    metadata: {
+      ...emptyWorkbenchExtensionMetadata,
+      resourceKinds: [{ id: "note", localId: "note", extensionId: "example.notes" }],
+    },
+  });
+  try {
+    const signal = new AbortController().signal;
+    expect(await workbench.resources.getKind("note")!.relatedOpenings!(source, signal)).toEqual(openings);
+    expect(calls).toEqual([{ resource: source, signal }]);
+  } finally {
+    registration.dispose();
+    await workbench.dispose();
+  }
+});
