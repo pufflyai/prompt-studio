@@ -98,6 +98,8 @@ export const createPausedOpeningFixture = async (pause: "describe" | "inspect") 
   return {
     ...fixture,
     project,
+    install,
+    url: server.url.toString(),
     reader,
     resource,
     entered,

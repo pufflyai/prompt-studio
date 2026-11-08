@@ -5,10 +5,6 @@ import { resolveCommandWorkspaceDir } from "../execute-project-extension-command
 import { createExtensionLogger } from "../extension-logger";
 import { createCommandEnvironment } from "./index";
 
-const rejectLinkMutation = async (): Promise<never> => {
-  throw new Error("Anchor validators cannot mutate resource links.");
-};
-
 export const runAnchorValidator = async (
   deps: ExtensionsRouteDeps,
   projectId: string,
@@ -20,40 +16,13 @@ export const runAnchorValidator = async (
   const workspace = await deps.workspaceService.getDefault(projectId);
   const runner = createCommandRunner(snapshot.runtime, {
     createLogger: createExtensionLogger,
-    buildEnvironment: (input) => {
-      const environment = createCommandEnvironment(deps, snapshot.enabledSources, {
+    buildEnvironment: (input) =>
+      createCommandEnvironment(deps, snapshot.enabledSources, {
         ...input,
         project: snapshot.project,
         settings: snapshot.runtime.settings,
-      });
-      const scoped = (apis: ReturnType<typeof environment.withScope>) => ({
-        ...apis,
-        resources: {
-          ...apis.resources,
-          addAnchors: rejectLinkMutation,
-          removeAnchors: rejectLinkMutation,
-          removed: rejectLinkMutation,
-        },
-        workspaces: {
-          ...apis.workspaces,
-          create: rejectLinkMutation,
-          addAnchors: rejectLinkMutation,
-          removeAnchors: rejectLinkMutation,
-          delete: rejectLinkMutation,
-        },
-        sessions: {
-          ...apis.sessions,
-          create: rejectLinkMutation,
-          addAnchors: rejectLinkMutation,
-          removeAnchors: rejectLinkMutation,
-        },
-      });
-      return {
-        ...environment,
-        ...scoped(environment),
-        withScope: (scope) => scoped(environment.withScope(scope)),
-      };
-    },
+        resourceLinksReadOnly: true,
+      }),
   });
   const outcome = await runner.execute({
     commandId,

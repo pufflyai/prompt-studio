@@ -19,21 +19,23 @@ const request = (startTime: number, responseEnd: number, url = "https://benchmar
 
 test("request completion uses the browser click clock despite protocol wall-clock disagreement", () => {
   const requests = [request(1_301_000, 126.6)];
-  const resources = [{ name: requests[0].url, responseEnd: 1_333 }];
+  const resources = [{ name: requests[0].url, startTime: 1_010, responseEnd: 1_333 }];
 
-  expect(measureSubnavRequests(requests, resources, 1_000)).toEqual([{ durationMs: 126.6, completedMs: 333 }]);
+  expect(measureSubnavRequests(requests, resources, 1_000)).toEqual([
+    { startedMs: 10, durationMs: 126.6, completedMs: 333 },
+  ]);
 });
 
 test("matches every repeated request and keeps unrelated resources outside the measurement", () => {
   const requests = [request(1, 100), request(999_999, 200)];
   const resources = [
-    { name: "https://benchmark.test/asset.js", responseEnd: 9_999 },
-    { name: requests[0].url, responseEnd: 1_100 },
-    { name: requests[1].url, responseEnd: 1_500 },
+    { name: "https://benchmark.test/asset.js", startTime: 1_000, responseEnd: 9_999 },
+    { name: requests[0].url, startTime: 990, responseEnd: 1_100 },
+    { name: requests[1].url, startTime: 1_200, responseEnd: 1_500 },
   ];
   expect(measureSubnavRequests(requests, resources, 1_000)).toEqual([
-    { durationMs: 100, completedMs: 100 },
-    { durationMs: 200, completedMs: 500 },
+    { startedMs: -10, durationMs: 100, completedMs: 100 },
+    { startedMs: 200, durationMs: 200, completedMs: 500 },
   ]);
 });
 
@@ -44,8 +46,8 @@ test("missing or ambiguous browser timings fail instead of dropping requests", (
     measureSubnavRequests(
       requests,
       [
-        { name: requests[0].url, responseEnd: 1_100 },
-        { name: requests[0].url, responseEnd: 1_200 },
+        { name: requests[0].url, startTime: 1_010, responseEnd: 1_100 },
+        { name: requests[0].url, startTime: 1_020, responseEnd: 1_200 },
       ],
       1_000,
     ),

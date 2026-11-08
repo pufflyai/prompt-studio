@@ -29,6 +29,7 @@ import { createExtensionFilesApi } from "./extension-files";
 import { createFilesApi } from "./files";
 import { createNotifyApi } from "./notifications";
 import { createExtensionPackageFilesApi } from "./package-files";
+import { restrictResourceLinkMutations } from "./resource-link-mutation";
 import { createResourcesApi } from "./resources";
 import { createScopedHostApis } from "./scoped-host-apis";
 import { createSettingsApi } from "./settings";
@@ -65,6 +66,7 @@ export const createCommandEnvironment = (
     name: string;
     project: ExtensionProjectContext;
     projectId: string;
+    resourceLinksReadOnly?: boolean;
     settings?: RuntimeExtensionSettingRecord[];
     workspaceDir?: string;
     workspaceId?: string;
@@ -127,7 +129,7 @@ export const createCommandEnvironment = (
       signal,
     });
 
-    return {
+    const apis = {
       resources: createResourcesApi(deps, { ...input, signal: resourceSignal }),
       storage,
       artifacts: createArtifactsApi(
@@ -180,6 +182,7 @@ export const createCommandEnvironment = (
       },
       ...createScopedHostApis(deps, input, { connections, terminal }, runtimeDeps, scope),
     } satisfies ScopedHostApis;
+    return input.resourceLinksReadOnly ? restrictResourceLinkMutations(apis) : apis;
   };
   const hostApis = scopedHostApis();
   return {

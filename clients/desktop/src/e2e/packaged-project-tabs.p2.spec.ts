@@ -30,6 +30,11 @@ test(
           defaultExtensions: [
             { source: fixturePath, installName: "workbench-fixture", skipInstall: true },
             { source: homePath, installName: "pstdio-home", skipInstall: true },
+            {
+              source: dirname(fileURLToPath(import.meta.resolve("pstdio-session-browser/refs"))),
+              installName: "pstdio-session-browser",
+              skipInstall: true,
+            },
           ],
         }),
       });
@@ -95,7 +100,7 @@ test(
 
       await openPackagedProject(app.page, second);
       await app.page.getByRole("option", { name: "Sessions", exact: true }).click();
-      await expect(app.page).toHaveURL(/\/sessions\/compose$/);
+      await expect(app.page).toHaveURL(/\/extensions\/pstdio\.pstdio-session-browser\/conversations\/compose$/);
       const secondPageUrl = app.page.url();
       await expect(app.page.getByRole("tablist", { name: "Project tabs" }).getByRole("tab")).toHaveCount(2);
       await app.page.getByRole("tab", { name: first.name, exact: true }).click();

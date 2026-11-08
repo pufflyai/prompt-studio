@@ -1,4 +1,6 @@
 import type { Locator, Page, Request } from "@playwright/test";
+import type { SubnavObservedRequest } from "./subnav-request-outcomes";
+import { withSubnavClientAborts } from "./subnav-request-signals";
 import { measureSubnavRequests, type SubnavRequestClockInput } from "./subnav-resource-clock";
 
 export interface SubnavSample {
@@ -10,15 +12,7 @@ export interface SubnavSample {
   editorResources?: { path: string; startMs: number; durationMs: number; bytes: number }[];
   lastRequestMs: number;
   mountedRows: number;
-  requests: {
-    path: string;
-    durationMs: number;
-    completedMs: number;
-    status?: number;
-    outcomeOk?: boolean;
-    sessionRows?: number;
-    failure?: string;
-  }[];
+  requests: SubnavObservedRequest[];
   longTasks: { startTime: number; duration: number }[];
 }
 
@@ -141,7 +135,8 @@ export const installSubnavClock = (page: Page) =>
 const isSubnavRequest = (request: Request) => {
   const path = new URL(request.url()).pathname;
   return (
-    (path.includes("/extensions/commands/") && request.postData()?.includes('"treeId"')) ||
+    (path.includes("/extensions/commands/") &&
+      (request.postData()?.includes('"treeId"') || /\.tree\.(body|children)\/execute$/.test(path))) ||
     /\/workspaces\/[^/]+\/diff-summary$/.test(path)
   );
 };
@@ -212,10 +207,12 @@ export const measureSubnav = async (
   // Waiting for quiescence verifies completion, but the quiet interval is excluded from the sample.
   await page.waitForFunction(() => performance.now() - window.__subnavBenchmark.lastMutation >= 200);
   await recorder.settled(since);
-  const { state, resources } = await page.evaluate(() => ({
+  const { state, resources, fetchSignals } = await page.evaluate(() => ({
     state: window.__subnavBenchmark,
+    fetchSignals: window.__subnavFetchSignals,
     resources: (performance.getEntriesByType("resource") as PerformanceResourceTiming[]).map((entry) => ({
       name: entry.name,
+      startTime: entry.startTime,
       responseEnd: entry.responseEnd,
     })),
   }));
@@ -232,6 +229,9 @@ export const measureSubnav = async (
     clocks.push({ url: request.url(), timing, elapsedMs: (entry.finished ?? performance.now()) - entry.started });
     responses.push({
       path: new URL(request.url()).pathname,
+      url: request.url(),
+      method: request.method(),
+      postData: request.postDataJSON(),
       status: response?.status(),
       outcomeOk: result?.outcome?.ok,
       ...(sessions ? { sessionRows: sessions.nodes.length } : {}),
@@ -239,7 +239,11 @@ export const measureSubnav = async (
     });
   }
   const measured = measureSubnavRequests(clocks, resources, state.started);
-  const requestRows = responses.map((response, index) => ({ ...response, ...measured[index]! }));
+  const requestRows = withSubnavClientAborts(
+    responses.map((response, index) => ({ ...response, ...measured[index]! })),
+    fetchSignals,
+    state.started,
+  );
   const structureMs = state.structure - state.started;
   const lastRequestMs = Math.max(0, ...requestRows.map((row) => row.completedMs));
   const dataMs = Math.max(structureMs, state.stableFrame - state.started, lastRequestMs);

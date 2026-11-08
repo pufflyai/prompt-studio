@@ -40,9 +40,10 @@ const prepareDashboard = async (page: Page, projectId: string) => {
 test("navigates ticket ancestry to a linked workspace and back", async ({ page, request }) => {
   test.slow();
   const repoRoot = createGitRepo("pstdio-ps-173-", "resource hierarchy e2e");
-  const project = await createProject(request, repoRoot);
-
+  let projectId: string | undefined;
   try {
+    const project = await createProject(request, repoRoot);
+    projectId = project.id;
     const statuses = await getPlannerTicketStatuses(request, apiBase, project.id);
     const statusId = (statuses.find((status) => status.isDefault) ?? statuses[0])?.id;
     const root = await createPlannerTicket(request, apiBase, project.id, {
@@ -113,6 +114,11 @@ test("navigates ticket ancestry to a linked workspace and back", async ({ page, 
     await expect(sidenav.getByRole("button", { name: "New file", includeHidden: true })).toHaveCount(1);
     await expect(sidenav.getByRole("button", { name: "Create workspace", includeHidden: true })).toHaveCount(1);
   } finally {
+    await page.close();
+    if (projectId) {
+      const deleted = await request.delete(`/v1/projects/${projectId}`);
+      expect(deleted.ok(), await deleted.text()).toBe(true);
+    }
     rmSync(repoRoot, { recursive: true, force: true });
   }
 });

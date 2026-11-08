@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { expect } from "@playwright/test";
+import { sessionBrowser } from "pstdio-api-contracts/extension-kernel";
 import { test } from "../testing/packaged-fixture";
 import { allowPageClose } from "./lifecycle-actions";
 import {
@@ -109,7 +110,7 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
     const pageLocation = firstValues[pageLocationKey];
     expect(JSON.parse(pageLocation ?? "null")).toMatchObject({
       version: 1,
-      location: { page: { id: "session-composer", kind: "page" } },
+      location: { page: sessionBrowser.pages.compose },
     });
     // The opposite of the default proves the restored theme is the saved choice, not the system mode.
     const chosenTheme = await test.step("Choose the theme opposite to the one shown", async () => {

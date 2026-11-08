@@ -79,3 +79,17 @@ test("composition requires fully qualified references and one configured opener 
   expect((await save(p.id, { resourceOpeners: [binding, binding] })).status).toBe(400);
   expect((await save("missing", {})).status).toBe(404);
 });
+
+for (const value of ["{broken", JSON.stringify({ defaultPage: { kind: "page", id: "unqualified" } })]) {
+  test(`invalid synced composition preserves metadata and stored data: ${value}`, async () => {
+    const p = await project();
+    await fixture.deps.projectInfoService.write(p.id, { composition: value });
+    const metadata = await fixture.app.request(`/v1/projects/${p.id}/extensions/ui`);
+    expect(metadata.status).toBe(200);
+    expect(await metadata.json()).toMatchObject({ composition: { defaultPage: null, resourceOpeners: [] } });
+    const composition = await fixture.app.request(`/v1/projects/${p.id}/composition`);
+    expect(composition.status).toBe(200);
+    expect(await composition.json()).toEqual({ defaultPage: null, resourceOpeners: [] });
+    expect((await fixture.deps.projectInfoService.read(p.id)).composition).toBe(value);
+  });
+}
