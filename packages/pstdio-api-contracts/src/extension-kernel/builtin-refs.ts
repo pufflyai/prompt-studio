@@ -47,7 +47,6 @@ export const workbenchResourceKinds = {
 };
 
 export const workbenchPages = {
-  start: hostRef("page", "start"),
   /** @deprecated Use sessionBrowser.pages.sessions; the legacy target delegates to the installed provider. */
   sessions: hostRef("page", "sessions"),
   /** @deprecated Use sessionBrowser.pages.session; the legacy target delegates to the installed provider. */
@@ -56,19 +55,9 @@ export const workbenchPages = {
   newSession: hostRef("page", "new-session"),
   /** @deprecated Use sessionBrowser.pages.compose; the legacy target delegates to the installed provider. */
   sessionComposer: hostRef("page", "session-composer"),
-  /** @deprecated Use workspacePages.list from the Workspaces provider. */
-  workspaces: hostRef("page", "workspaces"),
-  /** @deprecated Use workspacePages.workspace, files, or history from the Workspaces provider. */
-  workspace: hostRef("page", "workspace"),
 };
 
 export const workbenchPageDefinitions = {
-  start: {
-    ref: workbenchPages.start,
-    mode: workbenchModes.project,
-    path: "",
-    primary: { cardinality: "one", resourceKinds: [] },
-  },
   sessions: {
     ref: workbenchPages.sessions,
     mode: workbenchModes.sessions,
@@ -92,20 +81,6 @@ export const workbenchPageDefinitions = {
     mode: workbenchModes.sessions,
     path: "sessions/compose",
     primary: { cardinality: "one", resourceKinds: [] },
-  },
-  workspaces: {
-    legacy: true,
-    ref: workbenchPages.workspaces,
-    mode: workbenchModes.project,
-    path: "workspaces",
-    primary: { cardinality: "one", resourceKinds: [] },
-  },
-  workspace: {
-    legacy: true,
-    ref: workbenchPages.workspace,
-    mode: workbenchModes.project,
-    path: "workspace",
-    primary: { cardinality: "many", resourceKinds: ["workspace"] },
   },
 } as const;
 
@@ -139,7 +114,6 @@ export const workbenchSlots = {
 export const workbenchCommands = {
   /** Open the project's configured ordinary default page. */
   openDefaultPage: commandRef<Record<string, never>, void>({ extensionId: "pstdio", id: "workbench.page.openDefault" }),
-
   /** Attach this project to a folder on the serving device through the host's folder picker. */
   chooseProjectFolder: commandRef<Record<string, never>, void>({
     extensionId: "pstdio",

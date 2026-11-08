@@ -13,7 +13,6 @@ import {
   packageAsset,
   resourceMenuSlotRef,
   workbenchModes,
-  workbenchPages,
   workbenchSlots,
 } from "./index";
 
@@ -103,7 +102,6 @@ describe("extension contribution definitions", () => {
       id: "ticket.headerOverflow",
       kind: "menu",
     });
-    expect(workbenchPages.start).toEqual({ extensionId: "pstdio", kind: "page", id: "start" });
   });
   test("keeps contribution registries as arrays and dictionaries as records", () => {
     const command = defineCommand({ id: "tickets.open", title: "Open ticket", run: async () => undefined });
