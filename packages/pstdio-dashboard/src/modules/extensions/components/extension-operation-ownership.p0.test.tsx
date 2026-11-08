@@ -37,8 +37,11 @@ test("install, toggle and batch upgrades share catalog owners while only two upg
         await gates[index]!.promise;
         return Response.json({ changed: true, extension: { ...targets[index]!, canUpgrade: false } });
       }
-      if (request.method === "POST") return Response.json({ extension: targets[0] });
-      return Response.json(targets[0]);
+      if (request.method === "POST" && path === "/v1/projects/project/extensions/install")
+        return Response.json({ extension: targets[0] });
+      if (request.method === "PATCH" && path === "/v1/projects/project/extensions/one-instance")
+        return Response.json(targets[0]);
+      return Response.json({ error: `Unexpected request: ${request.method} ${path}` }, { status: 404 });
     },
   });
   const globals = globalThis as unknown as { __PSTDIO_CONFIG__?: { apiBaseUrl: string } };

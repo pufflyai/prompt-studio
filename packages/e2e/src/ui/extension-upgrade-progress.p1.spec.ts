@@ -144,10 +144,6 @@ test("retains fresh-install retry and dismiss ownership from marketplace through
   let installed = false;
   const installs: Route[] = [];
   await page.route(`**/v1/projects/${project.id}/extensions`, async (route) => {
-    if (route.request().method() === "POST") {
-      installs.push(route);
-      return;
-    }
     await route.fulfill({
       json: {
         ...inventory,
@@ -155,6 +151,9 @@ test("retains fresh-install retry and dismiss ownership from marketplace through
         marketplace: [...inventory.marketplace, { ...catalog, installed }],
       },
     });
+  });
+  await page.route(`**/v1/projects/${project.id}/extensions/install`, (route) => {
+    installs.push(route);
   });
   await page.addInitScript((id) => {
     localStorage.setItem("onboarding-complete", "true");
