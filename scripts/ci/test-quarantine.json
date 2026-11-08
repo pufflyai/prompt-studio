@@ -793,5 +793,16 @@
     "reason": "The unchanged five-second functional execution allowance expired at 5029.12ms during a native get_state history RPC in full-root macOS arm64 qualification. The same Pi source previously passed full/native CI; a phase-instrumented diagnostic completed all four real CLI launches in 750ms, and the isolated original-main package passed the full scenario in 1560ms. These comparisons establish intermittent execution, not a diagnosed cause or a passing replacement for the retained full-run failure. See RP-537 evidence linked from the Pi repair PR.",
     "evidence": ["https://github.com/pufflyai/prompt-studio/pull/1850"],
     "removeWhen": "Identify and repair the native RPC stall, then qualify the original full-root scenario and applicable Linux/native CI within the unchanged five-second allowance, preserving both real turns, both history reads, all assertions and platform coverage; do not use repeated pass-seeking runs."
+  },
+  {
+    "runner": "bun",
+    "file": "clients/desktop/src/performance/performance-endpoint.p0.test.ts",
+    "name": "performance endpoint > Windows grants credential access only to the current user",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "owner": "PS-148 / Windows credential inspection",
+    "reason": "Authorized release quarantine: the first stable desktop producer exceeded the unchanged 5000 ms allowance at 5001.34 ms while the PowerShell ACL inspection was pending. Incorrect permissions have not been established. Keep the current-user-only directory/file ACL assertions and valid/invalid credential checks. Added phase timings distinguish endpoint preparation, process overhead and ACL lookup; cleanup cancels and drains a pending probe before deleting its directory.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/42421804580/job/128551796344"],
+    "removeWhen": "Fix the measured slow Windows phase, then complete the entire first-attempt native Windows x64 case within its unchanged 5000 ms allowance, with both sole-SID ACL checks, good/bad credential assertions, and clean child-process shutdown. Preserve all platforms and do not retry to obtain a pass."
   }
 ]
