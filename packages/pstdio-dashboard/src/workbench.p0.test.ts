@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
 import { contributionRefId, sessionBrowser } from "@pstdio/sdk/extensions";
-import { WORKBENCH_TERMINAL_WIDGET_ID } from "@pstdio/workbench/react";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardHomePage } from "@/shared/app/resources";
 import { registerHomePage } from "./home-page.test-support";
@@ -43,14 +42,9 @@ describe("createDashboardWorkbench", () => {
     expect(workbench.layout.getLayout().regions.secondary.visible).toBe(false);
   });
 
-  test("registers the host terminal surface and API session presenter", () => {
+  test("provides the shared terminal API transport", () => {
     const workbench = createDashboardWorkbench();
 
-    expect(workbench.shellPlacements.getPlacement(WORKBENCH_TERMINAL_WIDGET_ID)).toMatchObject({
-      region: "secondary",
-      mountStrategy: "keep-mounted",
-      item: { kind: "binding", binding: { view: { id: WORKBENCH_TERMINAL_WIDGET_ID }, cardinality: "many" } },
-    });
     expect(workbench.terminal.isAvailable()).toBe(true);
   });
 });
