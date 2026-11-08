@@ -5,7 +5,11 @@ import type { WorkspacesRouteDeps } from "./deps";
 import { findWorktreeProvider } from "./workspace-provider-catalog";
 import { discoverWorkspaceProvider } from "./workspace-provider-discovery";
 import { rootProviderId, worktreeProviderId } from "./workspace-provider-identity";
-import { findWorkspaceProvider } from "./workspace-provider-runtime";
+import {
+  findWorkspaceProvider,
+  runWorkspaceProviderOperation,
+  type WorkspaceProviderHandle,
+} from "./workspace-provider-runtime";
 
 export class InvalidWorkspaceParamsError extends Error {}
 
@@ -41,11 +45,30 @@ export const resolveWorkspaceParams = async (
   } else {
     const handle = await findWorkspaceProvider(deps, { projectId, providerId });
     if (!handle) throw new InvalidWorkspaceParamsError(`Workspace provider is unavailable: ${providerId}`);
-    const discovery = await discoverWorkspaceProvider(handle);
-    if (!discovery) throw new InvalidWorkspaceParamsError(`Workspace provider is unavailable: ${providerId}`);
-    schema = discovery.params;
+    return validateProviderWorkspaceParams(handle, providerId, input);
   }
   return validateWorkspaceParams(providerId, schema, input);
+};
+
+export const validateProviderWorkspaceParams = async (
+  handle: WorkspaceProviderHandle,
+  providerId: string,
+  input: JsonObject,
+) => {
+  const discovery = await discoverWorkspaceProvider(handle);
+  if (!discovery) throw new InvalidWorkspaceParamsError(`Workspace provider is unavailable: ${providerId}`);
+  const params = validateWorkspaceParams(providerId, discovery.params, input);
+  if (handle.provider.validateParams) {
+    try {
+      await runWorkspaceProviderOperation(handle, (ctx) => handle.provider.validateParams!(ctx, params));
+    } catch (cause) {
+      throw new InvalidWorkspaceParamsError(
+        `Invalid params for workspace provider "${providerId}": ${cause instanceof Error ? cause.message : String(cause)}`,
+        { cause },
+      );
+    }
+  }
+  return params;
 };
 
 export const validateWorkspaceParams = (providerId: string, schema: ParamObjectSchema, input: JsonObject) => {

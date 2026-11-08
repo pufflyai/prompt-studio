@@ -43,6 +43,9 @@ export const local = defineWorkspaceType({
   async discover(ctx) {
     return (await ctx.workspaces.getDefault()) ? { params: { revision: params.text({ defaultValue: "main" }) } } : null;
   },
+  async validateParams(ctx, input) {
+    if (!await ctx.workspaces.getDefault() || typeof input.revision !== "string") throw new Error("Choose a revision");
+  },
   async create(ctx, input) {
     if (!ctx.localDirectory) throw new Error("Host does not provide local workspace directories");
     const directory = await ctx.localDirectory();
