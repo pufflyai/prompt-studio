@@ -126,6 +126,13 @@ export const renderBridgeWebviewFrame = (input: {
       theme={createTheme(context)}
       capabilities={createExtensionWebviewHostCapabilities(
         createHostAdapters({ ...context, extensionId: ownerId ?? context.extensionId }),
+        JSON.stringify([
+          context.workbench.pages.store.getState().projectId,
+          ownerId ?? context.extensionId,
+          context.webviewId,
+          webview.runtimeUrl,
+          webview.moduleUrl,
+        ]),
       )}
       hostEvents={context.hostEvents}
     />

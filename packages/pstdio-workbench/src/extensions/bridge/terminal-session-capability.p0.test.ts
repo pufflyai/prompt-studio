@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { createHostCapabilityGate, type HostCapabilityRegistry } from "pstdio-extensions/bridge/contract";
 import { createHostEventPublisher, type HostEventMessage } from "pstdio-extensions/bridge/host";
 import { createWorkbench, type WorkbenchTerminalSessionAdapter } from "../../core";
+import { createExtensionWebviewHostCapabilities } from "./extension-webview-host-capabilities";
 import { createTerminalSessionCapability } from "./terminal-session-capability";
 import { createWorkbenchWebviewHostCapabilities } from "./webview-host-capabilities";
 
@@ -179,4 +180,55 @@ describe("terminal.session capability gate", () => {
       gate.call({ method: "terminal.session", params: { operation: "open", request: { cols: 80, rows: 24 } } }),
     ).resolves.toEqual({ operation: "open", sessionId: "session-1" });
   });
+});
+
+test("dashboard capability refresh preserves the same webview's terminal ownership", async () => {
+  const { workbench, hostEvents, scripted } = setupTerminal();
+  const adapters = { terminal: workbench.terminal, hostEvents };
+  const first = createExtensionWebviewHostCapabilities(adapters)["terminal.session"];
+  await first({ operation: "open", request: { cols: 80, rows: 24 } });
+  const refreshed = createExtensionWebviewHostCapabilities(adapters)["terminal.session"];
+  const foreign = createExtensionWebviewHostCapabilities({ ...adapters, hostEvents: createHostEventPublisher() })[
+    "terminal.session"
+  ];
+  try {
+    await expect(foreign({ operation: "write", sessionId: "session-1", data: "foreign" })).rejects.toThrow(/owner/i);
+    await refreshed({ operation: "write", sessionId: "session-1", data: "retained" });
+    expect(scripted.calls).toEqual(["write:retained"]);
+    await refreshed({ operation: "kill", sessionId: "session-1" });
+  } finally {
+    await workbench.dispose();
+  }
+});
+
+test("a replacement webview guest cannot inherit the prior guest's terminal ownership", async () => {
+  const { workbench, hostEvents } = setupTerminal();
+  const adapters = { terminal: workbench.terminal, hostEvents };
+  const original = createExtensionWebviewHostCapabilities(adapters, "installed-one/project/view/module-one")[
+    "terminal.session"
+  ];
+  await original({ operation: "open", request: { cols: 80, rows: 24 } });
+  const replacement = createExtensionWebviewHostCapabilities(adapters, "installed-two/project/view/module-two")[
+    "terminal.session"
+  ];
+  try {
+    await expect(replacement({ operation: "kill", sessionId: "session-1" })).rejects.toThrow(/owner/i);
+  } finally {
+    await workbench.dispose();
+  }
+});
+
+test("the public Workbench capability helper scopes ownership to its logical guest", async () => {
+  const { workbench, hostEvents } = setupTerminal();
+  const input = { workbench, hostEvents, projectId: "project", extensionId: "example.owner", webviewId: "first" };
+  const first = createWorkbenchWebviewHostCapabilities(input)["terminal.session"];
+  await first({ operation: "open", request: { cols: 80, rows: 24 } });
+  const refreshed = createWorkbenchWebviewHostCapabilities(input)["terminal.session"];
+  await refreshed({ operation: "write", sessionId: "session-1", data: "retained" });
+  const replacement = createWorkbenchWebviewHostCapabilities({ ...input, webviewId: "second" })["terminal.session"];
+  try {
+    await expect(replacement({ operation: "kill", sessionId: "session-1" })).rejects.toThrow(/owner/i);
+  } finally {
+    await workbench.dispose();
+  }
 });

@@ -141,7 +141,7 @@ describe("terminal presentation lifetime", () => {
     const opening = terminal.open({ bindingId: "pending", ownerId: "console", request });
     const closing = terminal.killOwner("console");
     release(pending.adapter);
-    await opening;
+    await expect(opening).rejects.toThrow(/cancelled/i);
     await closing;
     expect(hidden.calls).toEqual(["kill:default"]);
     expect(pending.calls).toEqual(["kill:default"]);
@@ -344,3 +344,39 @@ describe("createWorkbenchTerminalController", () => {
     expect(statuses.at(-1)).toEqual(["exited"]);
   });
 });
+
+for (const scope of ["host", "owner", "binding"] as const) {
+  test(`${scope} cleanup releases live sessions while admission is pending and rejects its late adapter`, async () => {
+    const terminal = createWorkbenchTerminalController();
+    const running = createFakeAdapter("running");
+    const late = createFakeAdapter("late");
+    const admission = Promise.withResolvers<WorkbenchTerminalSessionAdapter>();
+    let opens = 0;
+    terminal.setSessionOpener(async () => (++opens === 1 ? running.adapter : admission.promise));
+    await terminal.open({ ownerId: "owner", bindingId: "running", request });
+    const pending = terminal.open({ ownerId: "owner", bindingId: "pending", request });
+    const rejected = pending.catch((error) => error);
+    const cleanups = {
+      host: () => terminal.dispose(),
+      owner: () => terminal.killOwner("owner"),
+      binding: () => terminal.killBinding("pending", "owner"),
+    };
+    const cleanup = cleanups[scope]();
+    let finished = false;
+    void cleanup.then(() => {
+      finished = true;
+    });
+    try {
+      await Bun.sleep(0);
+      expect(finished).toBe(true);
+      if (scope !== "binding") expect(running.calls).toEqual(["kill:default"]);
+    } finally {
+      admission.resolve(late.adapter);
+      await cleanup;
+      await rejected;
+      await terminal.dispose();
+    }
+    expect(late.calls).toEqual(["kill:default"]);
+    expect(terminal.getSession("late")).toBeUndefined();
+  });
+}

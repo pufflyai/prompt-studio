@@ -144,6 +144,15 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
       textTarget: props.textTarget,
       ownedPreferences: createDashboardOwnedPreferences({ projectId, instanceId: extensionInstanceId, installName }),
     }),
+    JSON.stringify([
+      projectId,
+      extensionId,
+      extensionInstanceId,
+      installedExtensionId,
+      webviewId,
+      webview.runtimeUrl,
+      webview.moduleUrl,
+    ]),
   );
 
   if (!webview.runtimeUrl || !webview.moduleUrl) {
