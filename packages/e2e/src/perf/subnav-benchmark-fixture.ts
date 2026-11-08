@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { EXTENSION_API_VERSION } from "@pstdio/sdk/extensions";
+import { e2eExtension } from "../default-extensions";
 import { buildBinary, PACKAGED_BINARY_PATH } from "../packaged/packaged-helpers";
 import { preparePlannerSource } from "../packaged/packaged-planner-source";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "../packaged/packaged-serve-helpers";
@@ -103,7 +104,11 @@ export const startSubnavBenchmarkFixture = async () => {
   );
   const cache = process.env.BUN_INSTALL_CACHE_DIR ?? execFileSync("bun", ["pm", "cache"], { encoding: "utf8" }).trim();
   const started = await startPackagedServe(root, {
-    PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([{ source: fixtureSource, installName: "subnav-fixture" }]),
+    PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([
+      { source: fixtureSource, installName: "subnav-fixture" },
+      e2eExtension("pstdio-session-browser"),
+      e2eExtension("pstdio-workspaces"),
+    ]),
     PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1",
     BUN_INSTALL_CACHE_DIR: cache,
   });
@@ -112,8 +117,9 @@ export const startSubnavBenchmarkFixture = async () => {
   started.child.stdout?.on("data", (chunk) => log.write(chunk));
   started.child.stderr?.on("data", (chunk) => log.write(chunk));
   const stop = async () => {
-    await stopProcess(started.child);
-    await log.end();
+    const stopped = await Promise.allSettled([stopProcess(started.child)]);
+    const drained = await Promise.allSettled([log.end()]);
+    for (const result of [...stopped, ...drained]) if (result.status === "rejected") throw result.reason;
   };
   const headers = { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" };
   const request = async (path: string, body?: unknown, method = body === undefined ? "GET" : "POST") => {

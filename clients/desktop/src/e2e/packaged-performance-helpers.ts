@@ -8,6 +8,7 @@ import { createPackagedProject, openPackagedProject } from "./packaged-project-h
 const fixturePath = dirname(fileURLToPath(import.meta.resolve("workbench-fixture/package.json")));
 const homePath = dirname(fileURLToPath(import.meta.resolve("pstdio-home/package.json")));
 const performancePath = dirname(fileURLToPath(import.meta.resolve("pstdio-performance/package.json")));
+const sessionsPath = dirname(fileURLToPath(import.meta.resolve("pstdio-session-browser/refs")));
 
 export type { PerformanceSnapshot } from "pstdio-api-contracts/performance-diagnostics";
 
@@ -24,6 +25,7 @@ export const launchProject = async (name: string, options: { monitoring?: boolea
       defaultExtensions: [
         { source: fixturePath, installName: "workbench-fixture", skipInstall: true },
         { source: homePath, installName: "pstdio-home", skipInstall: true },
+        { source: sessionsPath, installName: "pstdio-session-browser", skipInstall: true },
         ...(options.monitoring
           ? [{ source: performancePath, installName: "pstdio-performance", skipInstall: true }]
           : []),

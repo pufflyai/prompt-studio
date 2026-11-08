@@ -1,6 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import { resourceOpeningsRequestSchema, resourceOpeningsResponseSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
+import { ResourceProjectMismatchError } from "../../extensions/command-environment/resource-link-policy";
 import type { ProjectsRouteDeps } from "../deps";
 import { resolveResourceOpenings } from "../resource-openers";
 
@@ -35,6 +36,11 @@ export const resolveResourceOpeningsHandler =
     const { resources } = c.req.valid("json");
     if (resources.some((resource) => resource.projectId && resource.projectId !== projectId))
       return c.json({ error: "Resource belongs to another project." }, 400);
-    const openings = await resolveResourceOpenings(deps, { projectId, signal: c.req.raw.signal }, resources);
-    return c.json(resourceOpeningsResponseSchema.parse(openings), 200);
+    try {
+      const openings = await resolveResourceOpenings(deps, { projectId, signal: c.req.raw.signal }, resources);
+      return c.json(resourceOpeningsResponseSchema.parse(openings), 200);
+    } catch (error) {
+      if (error instanceof ResourceProjectMismatchError) return c.json({ error: error.message }, 400);
+      throw error;
+    }
   };

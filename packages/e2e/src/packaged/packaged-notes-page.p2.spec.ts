@@ -23,7 +23,12 @@ test("Notes offers note creation and restores its Main tabs separately from Arti
   let browser: Browser | null = null;
   try {
     const started = await startPackagedServe(root, {
-      PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-artifacts", "pstdio-notes", "pstdio-planner"),
+      PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions(
+        "pstdio-artifacts",
+        "pstdio-notes",
+        "pstdio-planner",
+        "pstdio-session-browser",
+      ),
     });
     child = started.child;
     const folder = join(root, "project");

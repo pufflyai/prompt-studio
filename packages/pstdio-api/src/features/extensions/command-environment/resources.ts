@@ -6,7 +6,7 @@ import { resolveResources } from "./resource-resolution";
 
 export const createResourcesApi = (
   deps: ExtensionsRouteDeps,
-  input: { projectId: string; extensionId: string; signal?: AbortSignal },
+  input: { projectId: string; extensionId: string; signal?: AbortSignal; resourceLinksReadOnly?: boolean },
 ): ExtensionResourcesApi => ({
   resolveMany: (resources) => resolveResources(deps, input, resources),
   resolveOpenings: (resources) => resolveResourceOpenings(deps, input, resources),

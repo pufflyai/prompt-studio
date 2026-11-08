@@ -1,39 +1,51 @@
 import type { ResourceAnchor, ResourceRef } from "pstdio-api-contracts/extension-kernel";
 import { legacyResourceOwner } from "pstdio-db";
+import { createReadBoundary } from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
 import { runAnchorValidator } from "./anchor-validator";
 
+export class ResourceReferenceError extends Error {}
+
+export class ResourceProjectMismatchError extends ResourceReferenceError {
+  constructor() {
+    super("Resource belongs to another project.");
+  }
+}
+
 const hostKinds = new Set(["project", "workspace", "session"]);
 const assertProject = (resource: ResourceRef, projectId: string) => {
-  if (resource.projectId && resource.projectId !== projectId) throw new Error("Resource belongs to another project.");
+  if (resource.projectId && resource.projectId !== projectId) throw new ResourceProjectMismatchError();
 };
-const hostProject = async (deps: ExtensionsRouteDeps, resource: ResourceRef) => {
-  if (!hostKinds.has(resource.type)) throw new Error(`Unknown host resource kind "${resource.type}".`);
-  if (resource.type === "workspace") return (await deps.workspaceService.get(resource.id))?.project_id;
-  if (resource.type === "session") return (await deps.sessionService.get(resource.id))?.project_id;
-  return (await deps.projectService.get(resource.id))?.id;
+const hostProject = async (deps: ExtensionsRouteDeps, resource: ResourceRef, signal?: AbortSignal) => {
+  const read = createReadBoundary(signal);
+  if (!hostKinds.has(resource.type)) throw new ResourceReferenceError(`Unknown host resource kind "${resource.type}".`);
+  if (resource.type === "workspace") return (await read(() => deps.workspaceService.get(resource.id)))?.project_id;
+  if (resource.type === "session") return (await read(() => deps.sessionService.get(resource.id)))?.project_id;
+  return (await read(() => deps.projectService.get(resource.id)))?.id;
 };
 
 export const canonicalResource = async (
   deps: ExtensionsRouteDeps,
-  input: { projectId: string; extensionId?: string },
+  input: { projectId: string; extensionId?: string; signal?: AbortSignal },
   resource: ResourceRef,
 ) => {
+  const read = createReadBoundary(input.signal);
+  input.signal?.throwIfAborted();
   assertProject(resource, input.projectId);
-  const { runtime } = await deps.extensionRuntimeCatalog.get(input.projectId);
+  const { runtime } = await read(() => deps.extensionRuntimeCatalog.get(input.projectId));
   const owners = runtime.resourceKinds.filter((kind) => kind.localId === resource.type);
   let extensionId = resource.extensionId;
   if (!extensionId && hostKinds.has(resource.type)) extensionId = "pstdio";
   if (!extensionId && owners.some((kind) => kind.extensionId === input.extensionId)) extensionId = input.extensionId;
   if (!extensionId && owners.length === 1) extensionId = owners[0]!.extensionId;
   if (!extensionId && owners.length === 0)
-    throw new Error(`No enabled extension declares resource kind "${resource.type}".`);
-  if (!extensionId) throw new Error(`Resource owner is ambiguous for "${resource.type}".`);
+    throw new ResourceReferenceError(`No enabled extension declares resource kind "${resource.type}".`);
+  if (!extensionId) throw new ResourceReferenceError(`Resource owner is ambiguous for "${resource.type}".`);
   const ref = { ...resource, extensionId, projectId: input.projectId };
   if (extensionId === "pstdio") {
-    const projectId = await hostProject(deps, ref);
-    if (projectId && projectId !== input.projectId) throw new Error("Resource belongs to another project.");
-    const pointer = await deps.personalHistoryService.reference(input.projectId, ref.type, ref.id);
+    const projectId = await hostProject(deps, ref, input.signal);
+    if (projectId && projectId !== input.projectId) throw new ResourceProjectMismatchError();
+    const pointer = await read(() => deps.personalHistoryService.reference(input.projectId, ref.type, ref.id));
     if (pointer) {
       const { label: _label, shorthand: _shorthand, metadata: _metadata, icon: _icon, ...publicRef } = ref;
       return { ...publicRef, device: pointer.device };
