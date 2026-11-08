@@ -1,18 +1,20 @@
 import { Button, Flex, HStack, Stack, Text } from "@chakra-ui/react";
 import type { MarketplaceExtension } from "@pstdio/sdk/api";
 import { Download } from "lucide-react";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ExtensionIcon } from "./extension-icon";
 
 interface MarketplaceExtensionRowProps {
   extension: MarketplaceExtension;
   installing: boolean;
+  feedback?: ReactNode;
   onInstall: () => void;
   onOpen: () => void;
 }
 
 export const MarketplaceExtensionRow = (props: MarketplaceExtensionRowProps) => {
-  const { extension, installing, onInstall, onOpen } = props;
+  const { extension, installing, feedback, onInstall, onOpen } = props;
   const { t } = useTranslation("projects");
 
   return (
@@ -57,6 +59,9 @@ export const MarketplaceExtensionRow = (props: MarketplaceExtensionRowProps) => 
           {extension.publisher ? `${extension.publisher} · ` : ""}
           {extension.origin.url}@{extension.origin.ref}#{extension.origin.path}
         </Text>
+        <Stack onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
+          {feedback}
+        </Stack>
       </Stack>
       <Button
         variant="outline"

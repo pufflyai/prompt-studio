@@ -156,6 +156,16 @@
         "title": "取代 {{name}}？",
         "message": "這將取代已安裝的檔案。使用此擴充功能的其他專案也會使用新檔案。",
         "action": "取代"
+      },
+      "feedback": {
+        "queued": "等待升級",
+        "upgrading": "正在升級 {{name}}",
+        "updating": "正在更新 {{name}}",
+        "updated": "擴充功能已更新",
+        "installing": "正在安裝 {{name}}",
+        "batch": "已完成 {{count}} / {{total}} 個升級",
+        "retry": "重試",
+        "dismiss": "關閉"
       }
     }
   },

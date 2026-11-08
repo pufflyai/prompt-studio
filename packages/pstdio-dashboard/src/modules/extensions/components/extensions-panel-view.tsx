@@ -12,13 +12,19 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PageContentLayout } from "@/shared/components/page-content-layout";
 import type { DroppedExtensionFolder } from "@/shared/extensions/api";
+import { ExtensionActionFeedback, type ExtensionActionState } from "./extension-action-feedback";
 import { ExtensionFolderDropZone } from "./extension-folder-drop-zone";
 import { unavailableExtensionHarnesses } from "./extension-harness-availability";
 import { ExtensionListRow } from "./extension-list-row";
+import { ExtensionUpgradeProgress } from "./extension-upgrade-progress";
 import { MarketplaceExtensionRow } from "./marketplace-extension-row";
 
 export interface ExtensionsPanelViewProps {
   extensions: ProjectExtensionInstance[];
+  actionStates?: Record<string, ExtensionActionState>;
+  onDismissAction?: (id: string) => void;
+  onRetryAction?: (id: string) => void;
+  batch?: { ids: string[]; startedAt: number; finishedAt?: number };
   marketplace: MarketplaceExtension[];
   diagnostics: ExtensionDiagnostic[];
   automations: WorkbenchExtensionAutomationRecord[];
@@ -78,6 +84,10 @@ const matchesMarketplaceSearch = (extension: MarketplaceExtension, search: strin
 export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
   const {
     extensions,
+    actionStates = {},
+    onDismissAction,
+    onRetryAction,
+    batch,
     marketplace,
     diagnostics,
     automations,
@@ -125,7 +135,7 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
             <Text textStyle="heading/M" flex="1" minW="0">
               {t("projectSettings.extensionsPanel.title")}
             </Text>
-            {upgradable.length > 0 && (
+            {(upgradable.length > 0 || upgradingAll) && (
               <Button
                 variant="primary"
                 size="sm"
@@ -149,6 +159,7 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
               />
             </InputGroup>
           </HStack>
+          <ExtensionUpgradeProgress batch={batch} actions={actionStates} />
         </Stack>
       }
     >
@@ -183,6 +194,9 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
           toggling={togglingInstanceId === extension.id}
           togglingAutomation={togglingAutomation}
           upgrading={upgradingInstanceIds.includes(extension.id)}
+          action={actionStates[extension.id] ?? actionStates[extension.installName]}
+          onDismissAction={() => onDismissAction?.(actionStates[extension.id] ? extension.id : extension.installName)}
+          onRetryAction={() => onRetryAction?.(extension.id)}
           onToggle={(enabled) => onToggle?.(extension, enabled)}
           onToggleAutomation={async (automation, enabled) => onToggleAutomation?.(extension, automation, enabled)}
           onUpgrade={() => onUpgrade?.(extension)}
@@ -208,12 +222,24 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
           key={extension.installName}
           extension={extension}
           installing={installingNames.has(extension.installName)}
+          feedback={
+            <ExtensionActionFeedback
+              action={actionStates[extension.installName]}
+              onDismiss={() => onDismissAction?.(extension.installName)}
+              onRetry={() => onInstallMarketplace?.(extension)}
+            />
+          }
           onInstall={() => onInstallMarketplace?.(extension)}
           onOpen={() => onOpenMarketplace?.(extension)}
         />
       ))}
 
       <Stack padding="lg">
+        <ExtensionActionFeedback
+          action={actionStates.$folder}
+          onDismiss={() => onDismissAction?.("$folder")}
+          onRetry={() => onRetryAction?.("$folder")}
+        />
         <ExtensionFolderDropZone addingName={addingFolderName} onDropFolder={(folder) => onDropFolder?.(folder)} />
       </Stack>
     </PageContentLayout>

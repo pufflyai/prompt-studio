@@ -2,7 +2,7 @@ import { Button, HStack, Progress, Stack, Text } from "@chakra-ui/react";
 import { useState } from "react";
 import { ExtensionActionFeedback, type ExtensionActionState } from "./extension-action-feedback";
 
-export default { title: "Proposals/PS-149 Extension upgrades" };
+export default { title: "ProjectSettings/Extension action feedback" };
 export const UpgradeFeedback = () => {
   const [status, setStatus] = useState<ExtensionActionState["status"]>("running");
   const labels = {

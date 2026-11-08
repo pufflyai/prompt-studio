@@ -34,6 +34,7 @@ export interface ExtensionDetailProps {
   unavailableHarnesses?: AgentInfo[];
   settings: ExtensionSettingValueRecord[];
   settingsViews?: ReactNode;
+  actionFeedback?: ReactNode;
   toggling?: boolean;
   reloading?: boolean;
   upgrading?: boolean;
@@ -61,6 +62,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
     unavailableHarnesses = [],
     settings,
     settingsViews,
+    actionFeedback,
     toggling,
     reloading,
     upgrading,
@@ -76,6 +78,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
     onUninstall,
   } = props;
   const { t } = useTranslation("projects");
+  const changingSource = [toggling, reloading, uninstalling, upgrading].some(Boolean);
   const failed = extension.status === "error";
   // Changed source on disk is adopted by reloading it. Upgrade is only for sources a release replaces.
   const showReload = !extension.canUpgrade && extension.updateAvailable;
@@ -113,7 +116,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                     extension={extension}
                     diagnostics={diagnostics}
                     unavailableHarnesses={unavailableHarnesses}
-                    upgrading={upgrading}
+                    upgrading={changingSource}
                     onUpgrade={onUpgrade}
                   />
                 )}
@@ -146,6 +149,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                     size="2xs"
                     onClick={onUpgrade}
                     loading={upgrading}
+                    disabled={changingSource}
                     data-testid="extension-upgrade"
                     flexShrink="0"
                   >
@@ -159,6 +163,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                     size="2xs"
                     onClick={onReload}
                     loading={reloading}
+                    disabled={changingSource}
                     data-testid="extension-reload"
                     flexShrink="0"
                   >
@@ -170,11 +175,12 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                   size="sm"
                   checked={extension.enabled}
                   onCheckedChange={handleCheckedChange}
-                  disabled={toggling || uninstalling}
+                  disabled={changingSource}
                   aria-label={t("projectSettings.extensionsPanel.toggleAriaLabel", { name: extension.displayName })}
                 />
               </HStack>
 
+              {actionFeedback}
               {extension.description && (
                 <Text textStyle="paragraph/S/regular" color="fg.muted">
                   {extension.description}
@@ -202,7 +208,9 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                 </Text>
               </Stack>
 
-              {failed && <ExtensionDetailHealth extension={extension} upgrading={upgrading} onUpgrade={onUpgrade} />}
+              {failed && (
+                <ExtensionDetailHealth extension={extension} upgrading={changingSource} onUpgrade={onUpgrade} />
+              )}
 
               {!failed && diagnostics.length > 0 && (
                 <AlertMessage
@@ -277,7 +285,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                         <Switch
                           size="sm"
                           checked={automation.enabled}
-                          disabled={togglingAutomationId === automation.id}
+                          disabled={togglingAutomationId === automation.id || upgrading}
                           onCheckedChange={(details) => onToggleAutomation(automation, details.checked)}
                           aria-label={t("projectSettings.extensionsPanel.automations.toggleAriaLabel", {
                             name: resolveLocalizableString(automation.title, automation.extensionId),
@@ -301,7 +309,12 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
               />
             </Stack>
           </Tabs.Content>
-          <ExtensionDeleteSection scope={extension.scope} uninstalling={uninstalling} onUninstall={onUninstall} />
+          <ExtensionDeleteSection
+            scope={extension.scope}
+            uninstalling={uninstalling}
+            disabled={changingSource}
+            onUninstall={onUninstall}
+          />
         </Stack>
       </PageContentLayout>
     </Tabs.Root>

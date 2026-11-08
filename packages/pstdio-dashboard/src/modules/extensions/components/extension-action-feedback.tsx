@@ -14,9 +14,10 @@ interface ExtensionActionFeedbackProps {
   action?: ExtensionActionState;
   onDismiss?: () => void;
   onRetry?: () => void;
+  progress?: boolean;
 }
 export const ExtensionActionFeedback = (props: ExtensionActionFeedbackProps) => {
-  const { action, onDismiss, onRetry } = props;
+  const { action, onDismiss, onRetry, progress = true } = props;
   const { t } = useTranslation("projects");
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
@@ -56,7 +57,7 @@ export const ExtensionActionFeedback = (props: ExtensionActionFeedbackProps) => 
           </Button>
         )}
       </HStack>
-      {action.status === "running" && (
+      {action.status === "running" && progress && (
         <Progress.Root value={null} size="xs" aria-label={action.label}>
           <Progress.Track>
             <Progress.Range />

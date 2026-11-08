@@ -8,6 +8,7 @@ import { Switch, type SwitchProps, Tooltip } from "@pstdio/ui";
 import { ArrowUpCircle, Folder, Globe } from "lucide-react";
 import type { AgentInfo } from "pstdio-api-contracts";
 import { useTranslation } from "react-i18next";
+import { ExtensionActionFeedback, type ExtensionActionState } from "./extension-action-feedback";
 import { ExtensionAutomationsPopover } from "./extension-automations-popover";
 import { ExtensionHealthPopover } from "./extension-health-popover";
 import { ExtensionIcon } from "./extension-icon";
@@ -20,6 +21,9 @@ export interface ExtensionListRowProps {
   unavailableHarnesses?: AgentInfo[];
   toggling: boolean;
   upgrading: boolean;
+  action?: ExtensionActionState;
+  onDismissAction?: () => void;
+  onRetryAction?: () => void;
   togglingAutomation?: boolean;
   onToggle: (enabled: boolean) => void;
   onToggleAutomation: (automation: WorkbenchExtensionAutomationRecord, enabled: boolean) => Promise<unknown>;
@@ -37,6 +41,9 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
     unavailableHarnesses = [],
     toggling,
     upgrading,
+    action,
+    onDismissAction,
+    onRetryAction,
     togglingAutomation,
     onToggle,
     onToggleAutomation,
@@ -90,6 +97,9 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
         <Text textStyle="label/XS" color="fg.muted" truncate>
           {extension.description ?? t("projectSettings.extensionsPanel.noDescription")}
         </Text>
+        <Box onClick={stopRowClick} onKeyDown={stopRowClick}>
+          <ExtensionActionFeedback action={action} onDismiss={onDismissAction} onRetry={onRetryAction} />
+        </Box>
       </Stack>
 
       <Box
@@ -155,7 +165,7 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
           size="sm"
           checked={extension.enabled}
           onCheckedChange={handleCheckedChange}
-          disabled={toggling}
+          disabled={toggling || upgrading}
           aria-label={t("projectSettings.extensionsPanel.toggleAriaLabel", { name: extension.displayName })}
         />
       </Box>

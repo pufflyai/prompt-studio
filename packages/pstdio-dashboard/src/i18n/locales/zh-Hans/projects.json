@@ -156,6 +156,16 @@
         "title": "替换 {{name}}？",
         "message": "这将替换已安装的文件。使用此扩展的其他项目也会使用新文件。",
         "action": "替换"
+      },
+      "feedback": {
+        "queued": "等待升级",
+        "upgrading": "正在升级 {{name}}",
+        "updating": "正在更新 {{name}}",
+        "updated": "扩展已更新",
+        "installing": "正在安装 {{name}}",
+        "batch": "已完成 {{count}} / {{total}} 个升级",
+        "retry": "重试",
+        "dismiss": "关闭"
       }
     }
   },

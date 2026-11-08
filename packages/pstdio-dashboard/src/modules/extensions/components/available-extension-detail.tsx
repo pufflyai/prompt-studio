@@ -1,6 +1,7 @@
 import { Button, Flex, HStack, Spinner, Stack, Tabs, Text } from "@chakra-ui/react";
 import type { MarketplaceExtension } from "@pstdio/sdk/api";
 import { ArrowLeft, Blocks, Download } from "lucide-react";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { PageContentLayout } from "@/shared/components/page-content-layout";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
@@ -14,12 +15,14 @@ interface AvailableExtensionDetailProps {
   contributionsError?: string;
   loadingContributions: boolean;
   installing: boolean;
+  feedback?: ReactNode;
   onBack: () => void;
   onInstall: () => void;
 }
 
 export const AvailableExtensionDetail = (props: AvailableExtensionDetailProps) => {
-  const { extension, metadata, contributionsError, loadingContributions, installing, onBack, onInstall } = props;
+  const { extension, metadata, contributionsError, loadingContributions, installing, feedback, onBack, onInstall } =
+    props;
   const { t } = useTranslation("projects");
   const extensionId =
     extension.extensionId ?? metadata?.extensions[0]?.id ?? extension.registry?.extensionId ?? extension.installName;
@@ -74,6 +77,7 @@ export const AvailableExtensionDetail = (props: AvailableExtensionDetailProps) =
                 </Button>
               </HStack>
 
+              {feedback}
               <Text textStyle="paragraph/S/regular" color="fg.muted">
                 {extension.description}
               </Text>

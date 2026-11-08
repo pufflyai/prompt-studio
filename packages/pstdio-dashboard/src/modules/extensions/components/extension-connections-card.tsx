@@ -1,6 +1,5 @@
 import { Button, HStack, Input, Stack, Text } from "@chakra-ui/react";
 import type { ExtensionConnectionRecord, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import { useToaster } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useActionError } from "@/shared/components/use-action-error";
@@ -21,7 +20,6 @@ interface ExtensionConnectionRowProps {
 }
 
 const ExtensionConnectionRow = (props: ExtensionConnectionRowProps) => {
-  const toaster = useToaster();
   const { projectId, definition, configured } = props;
   const { showError, errorNotice, clearError } = useActionError();
   const { t } = useTranslation("projects");
@@ -48,7 +46,6 @@ const ExtensionConnectionRow = (props: ExtensionConnectionRowProps) => {
       {
         onSuccess: () => {
           setSecret("");
-          toaster.create({ type: "success", title: t("projectSettings.extensionsPanel.connections.saved") });
         },
         onError: notifyError,
       },

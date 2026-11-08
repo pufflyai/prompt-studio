@@ -286,9 +286,12 @@ export const UpgradingOneExtension: Story = {
     diagnostics: [],
     automations,
     upgradingInstanceIds: ["planner-instance"],
+    actionStates: {
+      "planner-instance": { status: "running", label: "Upgrading Project Planner", startedAt: Date.now() - 12000 },
+    },
   },
 };
-// Upgrade all marks every row it will upgrade, so rows still waiting their turn show a spinner too.
+// Two installs can run at once; each active row identifies the extension and elapsed time.
 export const UpgradingAll: Story = {
   id: "projectsettings-extensionspanel--upgrading-all",
   args: {
@@ -297,6 +300,11 @@ export const UpgradingAll: Story = {
     diagnostics: [],
     automations,
     upgradingAll: true,
+    batch: { ids: ["planner-instance", "lab-instance"], startedAt: Date.now() - 12000 },
+    actionStates: {
+      "planner-instance": { status: "running", label: "Upgrading Project Planner", startedAt: Date.now() - 12000 },
+      "lab-instance": { status: "running", label: "Upgrading Extension Lab", startedAt: Date.now() - 12000 },
+    },
     upgradingInstanceIds: installedExtensions
       .filter((extension) => extension.canUpgrade)
       .map((extension) => extension.id),
