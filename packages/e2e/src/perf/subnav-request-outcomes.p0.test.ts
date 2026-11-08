@@ -170,3 +170,46 @@ test("timeout, synthetic, pre-aborted, mismatched and invalid signal evidence re
     expect(classifySubnavRequests([aborted({ clientAbort }), replacement()]).errors).toHaveLength(1);
   expect(classifySubnavRequests([aborted(), replacement({ startedMs: 129 })]).errors).toHaveLength(1);
 });
+
+test("an already running duplicate does not obscure a later post-cancellation replacement", () => {
+  const original = aborted();
+  const overlapping = replacement({ startedMs: 129, completedMs: 170 });
+  const fresh = replacement({ startedMs: 180, completedMs: 240 });
+  const result = classifySubnavRequests([original, overlapping, fresh]);
+  expect(result.errors).toEqual([]);
+  expect(result.requests).toEqual([{ ...original, supersededBy: 2 }, overlapping, fresh]);
+  // An overlapping copy alone cannot prove a replacement after cancellation.
+  expect(classifySubnavRequests([original, overlapping]).errors).toContainEqual(original);
+  // Other owners and failed latest reads cannot provide that proof.
+  expect(
+    classifySubnavRequests([
+      original,
+      overlapping,
+      replacement({ startedMs: 180, postData: postData("Other", { filter: "other" }) }),
+    ]).errors,
+  ).toContainEqual(original);
+  expect(classifySubnavRequests([original, overlapping, { ...fresh, outcomeOk: false }]).errors).toContainEqual(
+    original,
+  );
+  // A separate failed copy remains visible even when the original was superseded.
+  const failed = { ...overlapping, failure: "net::ERR_CONNECTION_RESET", status: undefined, outcomeOk: undefined };
+  expect(classifySubnavRequests([original, failed, fresh]).errors).toEqual([failed]);
+});
+
+test("malformed same-owner chronology cannot be skipped to find a later successful replacement", () => {
+  for (const intervening of [
+    replacement({ startedMs: Number.NaN }),
+    replacement({ startedMs: 129, completedMs: Number.POSITIVE_INFINITY }),
+    replacement({ startedMs: 99 }),
+  ])
+    expect(
+      classifySubnavRequests([aborted(), intervening, replacement({ startedMs: 180, completedMs: 240 })]).errors,
+    ).toContainEqual(aborted());
+  expect(
+    classifySubnavRequests([
+      aborted(),
+      replacement({ startedMs: 180, completedMs: 240 }),
+      replacement({ startedMs: 140, completedMs: 220 }),
+    ]).errors,
+  ).toContainEqual(aborted());
+});

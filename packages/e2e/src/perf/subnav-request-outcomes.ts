@@ -108,29 +108,35 @@ export const classifySubnavRequests = (requests: SubnavObservedRequest[]) => {
       !isDeepStrictEqual(abort.postData, request.postData)
     )
       return { ...request, supersededBy: undefined };
-    const nextIndex = requests.findIndex(
-      (_, candidate) => candidate > index && isDeepStrictEqual(context.owner, contexts[candidate]?.owner),
+    const following = requests.flatMap((candidate, candidateIndex) =>
+      candidateIndex > index && isDeepStrictEqual(context.owner, contexts[candidateIndex]?.owner)
+        ? [{ request: candidate, index: candidateIndex }]
+        : [],
     );
-    const next = requests[nextIndex];
-    if (!next || !validClock(next) || next.startedMs <= request.startedMs || next.startedMs < abort.atMs)
-      return { ...request, supersededBy: undefined };
-    const replacementIndex = requests.findLastIndex(
-      (_, candidate) => candidate > index && isDeepStrictEqual(context.owner, contexts[candidate]?.owner),
-    );
-    const replacement = requests[replacementIndex];
-    const replacementContext = contexts[replacementIndex];
     if (
-      replacement &&
-      replacementContext &&
-      validClock(replacement) &&
-      replacement.startedMs > request.startedMs &&
-      !replacement.failure &&
-      replacement.status !== undefined &&
-      replacement.status >= 200 &&
-      replacement.status < 300 &&
-      replacement.outcomeOk === true
+      following.some(
+        ({ request: candidate }, position) =>
+          !validClock(candidate) ||
+          candidate.startedMs <= request.startedMs ||
+          (position > 0 && candidate.startedMs < following[position - 1]!.request.startedMs),
+      )
     )
-      return { ...request, supersededBy: replacementIndex };
+      return { ...request, supersededBy: undefined };
+    // Snapshot reconciliation and the owning read can overlap. An already running
+    // copy neither proves nor invalidates a later replacement after cancellation.
+    const next = following.find(({ request: candidate }) => candidate.startedMs >= abort.atMs);
+    const replacement = following.at(-1);
+    if (
+      next &&
+      replacement &&
+      replacement.request.startedMs >= next.request.startedMs &&
+      !replacement.request.failure &&
+      replacement.request.status !== undefined &&
+      replacement.request.status >= 200 &&
+      replacement.request.status < 300 &&
+      replacement.request.outcomeOk === true
+    )
+      return { ...request, supersededBy: replacement.index };
     return { ...request, supersededBy: undefined };
   });
   return {
