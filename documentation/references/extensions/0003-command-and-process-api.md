@@ -466,6 +466,13 @@ providers must still enforce their own resource ownership rules. Command-backed
 choice references are qualified to the provider and checked against installed
 commands, sibling fields and dependency cycles, just like static schemas.
 
+Use optional `validateParams(ctx, params)` for provider-specific checks, such as
+whether a revision exists. It receives schema-validated values with defaults
+applied. Throw a useful error to reject creation before the host saves a workspace.
+The host runs this callback again before creating or recovering a backing resource.
+It runs in project context, without an allocated workspace directory. Keep it
+read-only; allocate resources in `create` after the host owns their identity.
+
 During workspace-bound provider callbacks, the optional `ctx.localDirectory()`
 allocates or reopens a host-managed local directory owned by that provider,
 project and workspace. It is available before the workspace is ready and returns

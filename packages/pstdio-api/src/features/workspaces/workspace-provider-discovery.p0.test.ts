@@ -1,8 +1,9 @@
-import { expect, test } from "bun:test";
+import { expect, mock, test } from "bun:test";
 import { params } from "@pstdio/sdk/extensions";
 import type { WorkspacesRouteDeps } from "./deps";
 import { listWorkspaceProviders } from "./workspace-provider-catalog";
 import { resolveWorkspaceParams } from "./workspace-provider-params";
+import { createProviderBackedWorkspace } from "./workspace-provider-service";
 
 const discoveryFixture = () => {
   let revision: string | null | Error = "main";
@@ -73,4 +74,25 @@ test("one failed discovery preserves the other provider choices", async () => {
   expect(await resolveWorkspaceParams(fixture.deps, "project", fixture.staticId, {})).toEqual({
     revision: "static-fallback",
   });
+});
+
+test("provider semantic validation receives resolved defaults and rejects creation before allocating a workspace", async () => {
+  const createStandalone = mock(async () => {
+    throw new Error("Unexpected workspace allocation");
+  });
+  const validateParams = mock(async (ctx: { projectId: string }, input: { revision: string }) => {
+    expect(ctx.projectId).toBe("project");
+    expect(input).toEqual({ revision: "main" });
+    throw new Error("Revision is unavailable");
+  });
+  const provider = { params: { revision: params.text({ defaultValue: "main" }) }, validateParams };
+  const deps = {
+    workspaceService: { getDefault: async () => null, createStandalone },
+    workspaceProviderRuntime: { find: async () => ({ context: { projectId: "project" }, provider }) },
+  } as never;
+  await expect(
+    createProviderBackedWorkspace(deps, { projectId: "project", providerId: "example.local", standalone: true }),
+  ).rejects.toThrow(/Invalid params.*Revision is unavailable/);
+  expect(validateParams).toHaveBeenCalledTimes(1);
+  expect(createStandalone).not.toHaveBeenCalled();
 });
