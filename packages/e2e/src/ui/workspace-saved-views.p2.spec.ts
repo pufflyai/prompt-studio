@@ -5,12 +5,13 @@ const board = "pstdio.pstdio-workspaces.view.workspaces";
 import { folderProjectInput } from "../helpers/folder-project";
 
 test("the Workspaces extension saves shared views and isolates each project's selection", async ({ page, request }) => {
-  const projects: { id: string }[] = [];
-  for (const name of ["Saved workspace views", "Other workspace views"]) {
-    const response = await request.post("/v1/projects", { data: folderProjectInput({ name }) });
-    expect(response.ok()).toBe(true);
-    projects.push(await response.json());
-  }
+  const projects: { id: string }[] = await Promise.all(
+    ["Saved workspace views", "Other workspace views"].map(async (name) => {
+      const response = await request.post("/v1/projects", { data: folderProjectInput({ name }) });
+      expect(response.ok()).toBe(true);
+      return response.json();
+    }),
+  );
   const [first, second] = projects;
   const path = `/v1/projects/${first!.id}/boards/${board}/views`;
   await page.addInitScript((projectId) => {
