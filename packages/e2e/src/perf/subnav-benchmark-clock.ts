@@ -1,5 +1,6 @@
 import type { Locator, Page, Request } from "@playwright/test";
 import type { SubnavObservedRequest } from "./subnav-request-outcomes";
+import { withSubnavClientAborts } from "./subnav-request-signals";
 import { measureSubnavRequests, type SubnavRequestClockInput } from "./subnav-resource-clock";
 
 export interface SubnavSample {
@@ -206,8 +207,9 @@ export const measureSubnav = async (
   // Waiting for quiescence verifies completion, but the quiet interval is excluded from the sample.
   await page.waitForFunction(() => performance.now() - window.__subnavBenchmark.lastMutation >= 200);
   await recorder.settled(since);
-  const { state, resources } = await page.evaluate(() => ({
+  const { state, resources, fetchSignals } = await page.evaluate(() => ({
     state: window.__subnavBenchmark,
+    fetchSignals: window.__subnavFetchSignals,
     resources: (performance.getEntriesByType("resource") as PerformanceResourceTiming[]).map((entry) => ({
       name: entry.name,
       startTime: entry.startTime,
@@ -227,6 +229,8 @@ export const measureSubnav = async (
     clocks.push({ url: request.url(), timing, elapsedMs: (entry.finished ?? performance.now()) - entry.started });
     responses.push({
       path: new URL(request.url()).pathname,
+      url: request.url(),
+      method: request.method(),
       postData: request.postDataJSON(),
       status: response?.status(),
       outcomeOk: result?.outcome?.ok,
@@ -235,7 +239,11 @@ export const measureSubnav = async (
     });
   }
   const measured = measureSubnavRequests(clocks, resources, state.started);
-  const requestRows = responses.map((response, index) => ({ ...response, ...measured[index]! }));
+  const requestRows = withSubnavClientAborts(
+    responses.map((response, index) => ({ ...response, ...measured[index]! })),
+    fetchSignals,
+    state.started,
+  );
   const structureMs = state.structure - state.started;
   const lastRequestMs = Math.max(0, ...requestRows.map((row) => row.completedMs));
   const dataMs = Math.max(structureMs, state.stableFrame - state.started, lastRequestMs);

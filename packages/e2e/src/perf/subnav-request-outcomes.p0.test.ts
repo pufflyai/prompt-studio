@@ -3,6 +3,11 @@ import { classifySubnavRequests, type SubnavObservedRequest } from "./subnav-req
 
 const postData = (label = "Ticket", overrides: Record<string, unknown> = {}) => ({
   projectId: "project",
+  slot: {
+    id: "planner.ticket-files",
+    kind: "renderer",
+    context: { projectId: "project", treeId: "planner.ticket-files" },
+  },
   resource: { extensionId: "planner", projectId: "project", type: "ticket", id: "one", label },
   params: {
     renderer: {
@@ -17,6 +22,8 @@ const postData = (label = "Ticket", overrides: Record<string, unknown> = {}) => 
 });
 const request = (overrides: Partial<SubnavObservedRequest> = {}): SubnavObservedRequest => ({
   path: "/v1/projects/project/extensions/commands/planner.view.ticket-files.tree.body/execute",
+  url: "https://benchmark.test/v1/projects/project/extensions/commands/planner.view.ticket-files.tree.body/execute",
+  method: "POST",
   startedMs: 100,
   durationMs: 50,
   completedMs: 150,
@@ -25,7 +32,24 @@ const request = (overrides: Partial<SubnavObservedRequest> = {}): SubnavObserved
   outcomeOk: true,
   ...overrides,
 });
-const aborted = () => request({ failure: "net::ERR_ABORTED", status: undefined, outcomeOk: undefined });
+const aborted = (overrides: Partial<SubnavObservedRequest> = {}) =>
+  request({
+    failure: "net::ERR_ABORTED",
+    status: undefined,
+    outcomeOk: undefined,
+    clientAbort: {
+      url: request().url,
+      method: "POST",
+      postData: postData(),
+      fetchStartedMs: 99.9,
+      atMs: 130,
+      name: "AbortError",
+      message: "The operation was aborted",
+      signalAborted: true,
+      preAborted: false,
+    },
+    ...overrides,
+  });
 const replacement = (overrides: Partial<SubnavObservedRequest> = {}) =>
   request({ startedMs: 140, completedMs: 220, postData: postData("Resolved ticket"), ...overrides });
 
@@ -39,10 +63,10 @@ test("a superseded bound-resource read retains its abort, payload and timing whi
   expect(result.requests.map(({ completedMs }) => completedMs)).toEqual([150, 220]);
 });
 
-test("unmatched aborts, unchanged-payload retries and other transport failures remain errors", () => {
+test("unmatched aborts, unproven retries and other transport failures remain errors", () => {
   for (const rows of [
     [aborted()],
-    [aborted(), replacement({ postData: postData() })],
+    [aborted({ clientAbort: undefined }), replacement({ postData: postData() })],
     [request({ failure: "net::ERR_CONNECTION_RESET" }), replacement()],
     [aborted(), replacement({ postData: undefined })],
     [aborted(), replacement({ startedMs: 90 })],
@@ -95,18 +119,54 @@ test("missing or malformed ownership context fails closed", () => {
 });
 
 test("a chain of supersessions requires the latest matching owner to succeed", () => {
-  const middle = replacement({ failure: "net::ERR_ABORTED", status: undefined, outcomeOk: undefined });
+  const middle = replacement({
+    failure: "net::ERR_ABORTED",
+    status: undefined,
+    outcomeOk: undefined,
+    clientAbort: { ...aborted().clientAbort!, postData: postData("Resolved ticket"), fetchStartedMs: 139.9, atMs: 180 },
+  });
   const latest = replacement({ startedMs: 200, completedMs: 260, postData: postData("Latest ticket") });
   const result = classifySubnavRequests([aborted(), middle, latest]);
   expect(result.errors).toEqual([]);
   expect(result.requests.map(({ supersededBy }) => supersededBy)).toEqual([2, 2, undefined]);
   expect(classifySubnavRequests([aborted(), middle]).errors).toHaveLength(2);
-  expect(classifySubnavRequests([aborted(), replacement({ postData: postData() }), latest]).errors).toContainEqual(
-    aborted(),
-  );
+  expect(
+    classifySubnavRequests([aborted({ clientAbort: undefined }), replacement({ postData: postData() }), latest]).errors,
+  ).toContainEqual(aborted({ clientAbort: undefined }));
   for (const clock of [Number.NaN, Number.POSITIVE_INFINITY]) {
     expect(classifySubnavRequests([aborted(), replacement({ startedMs: clock })]).errors).toContainEqual(aborted());
     expect(classifySubnavRequests([aborted(), replacement({ completedMs: clock })]).errors).toContainEqual(aborted());
     expect(classifySubnavRequests([request({ ...aborted(), startedMs: clock }), latest]).errors).toHaveLength(1);
   }
+});
+
+test("project-scoped tree replacement requires explicit in-flight client cancellation", () => {
+  const wire = postData();
+  const { projectId: _project, resource: _resource, ...body } = wire;
+  const { resource: _bound, ...renderer } = body.params.renderer;
+  const payload = { ...body, params: { ...body.params, renderer } };
+  const first = aborted({ postData: payload, clientAbort: { ...aborted().clientAbort!, postData: payload } });
+  const latest = replacement({ postData: payload });
+  const result = classifySubnavRequests([first, latest]);
+  expect(result.errors).toEqual([]);
+  expect(result.requests[0]).toMatchObject({ failure: "net::ERR_ABORTED", supersededBy: 1 });
+  expect(classifySubnavRequests([{ ...first, clientAbort: undefined }, latest]).errors).toHaveLength(1);
+});
+
+test("timeout, synthetic, pre-aborted, mismatched and invalid signal evidence remains blocking", () => {
+  const proof = aborted().clientAbort!;
+  for (const clientAbort of [
+    undefined,
+    { ...proof, name: "TimeoutError" },
+    { ...proof, signalAborted: false },
+    { ...proof, preAborted: true },
+    { ...proof, atMs: 99 },
+    { ...proof, atMs: 151 },
+    { ...proof, atMs: Number.NaN },
+    { ...proof, fetchStartedMs: -1 },
+    { ...proof, url: `${proof.url}/another` },
+    { ...proof, postData: postData("Other") },
+  ])
+    expect(classifySubnavRequests([aborted({ clientAbort }), replacement()]).errors).toHaveLength(1);
+  expect(classifySubnavRequests([aborted(), replacement({ startedMs: 129 })]).errors).toHaveLength(1);
 });

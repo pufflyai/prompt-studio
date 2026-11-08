@@ -1,7 +1,10 @@
 import { isDeepStrictEqual } from "node:util";
+import type { SubnavClientAbort } from "./subnav-request-signals";
 
 export interface SubnavObservedRequest {
   path: string;
+  url: string;
+  method: string;
   startedMs: number;
   durationMs: number;
   completedMs: number;
@@ -10,6 +13,7 @@ export interface SubnavObservedRequest {
   outcomeOk?: boolean;
   sessionRows?: number;
   failure?: string;
+  clientAbort?: SubnavClientAbort;
 }
 
 const record = (value: unknown) =>
@@ -37,28 +41,34 @@ const treeRead = (request: SubnavObservedRequest) => {
   const body = record(request.postData);
   const params = record(body?.params);
   const renderer = record(params?.renderer);
+  const slot = record(body?.slot);
+  const slotContext = record(slot?.context);
   const resource = record(renderer?.resource);
   const identity = resourceIdentity(resource);
   if (
-    typeof body?.projectId !== "string" ||
-    !body.projectId ||
-    body.projectId !== path[1] ||
-    renderer?.projectId !== body.projectId ||
+    !body ||
+    request.method !== "POST" ||
+    (body?.projectId !== undefined && body.projectId !== path[1]) ||
+    renderer?.projectId !== path[1] ||
     typeof renderer?.rendererId !== "string" ||
     !renderer.rendererId ||
-    !identity ||
+    slot?.kind !== "renderer" ||
+    slot.id !== renderer.rendererId ||
+    slotContext?.projectId !== path[1] ||
+    slotContext.treeId !== renderer.rendererId ||
+    (renderer.resource !== undefined && !identity) ||
+    (body.resource !== undefined && !resourceIdentity(body.resource)) ||
     !isDeepStrictEqual(identity, resourceIdentity(body.resource))
   )
     return;
   // Resource identity follows resourceKey; labels/metadata can replace the tree's getReadKey.
   return {
-    resource,
     owner: {
       path: request.path,
       body: {
         ...body,
-        resource: identity,
-        params: { ...params, renderer: { ...renderer, resource: identity } },
+        resource: identity ?? null,
+        params: { ...params, renderer: { ...renderer, resource: identity ?? null } },
       },
     },
   };
@@ -76,26 +86,33 @@ export const classifySubnavRequests = (requests: SubnavObservedRequest[]) => {
   const contexts = requests.map(treeRead);
   const annotated: (SubnavObservedRequest & { supersededBy?: number })[] = requests.map((request, index) => {
     const context = contexts[index];
+    const abort = request.clientAbort;
     if (
       !context ||
       request.failure !== "net::ERR_ABORTED" ||
       request.status !== undefined ||
       request.outcomeOk !== undefined ||
-      !validClock(request)
+      !validClock(request) ||
+      !abort ||
+      abort.preAborted ||
+      !abort.signalAborted ||
+      abort.name !== "AbortError" ||
+      !Number.isFinite(abort.atMs) ||
+      !Number.isFinite(abort.fetchStartedMs) ||
+      abort.fetchStartedMs < 0 ||
+      abort.fetchStartedMs > request.startedMs ||
+      abort.atMs < request.startedMs ||
+      abort.atMs > request.completedMs ||
+      abort.url !== request.url ||
+      abort.method !== request.method ||
+      !isDeepStrictEqual(abort.postData, request.postData)
     )
       return { ...request, supersededBy: undefined };
     const nextIndex = requests.findIndex(
       (_, candidate) => candidate > index && isDeepStrictEqual(context.owner, contexts[candidate]?.owner),
     );
     const next = requests[nextIndex];
-    const nextContext = contexts[nextIndex];
-    if (
-      !next ||
-      !nextContext ||
-      !validClock(next) ||
-      next.startedMs <= request.startedMs ||
-      isDeepStrictEqual(context.resource, nextContext.resource)
-    )
+    if (!next || !validClock(next) || next.startedMs <= request.startedMs || next.startedMs < abort.atMs)
       return { ...request, supersededBy: undefined };
     const replacementIndex = requests.findLastIndex(
       (_, candidate) => candidate > index && isDeepStrictEqual(context.owner, contexts[candidate]?.owner),

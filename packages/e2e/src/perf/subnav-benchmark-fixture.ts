@@ -117,8 +117,9 @@ export const startSubnavBenchmarkFixture = async () => {
   started.child.stdout?.on("data", (chunk) => log.write(chunk));
   started.child.stderr?.on("data", (chunk) => log.write(chunk));
   const stop = async () => {
-    await stopProcess(started.child);
-    await log.end();
+    const stopped = await Promise.allSettled([stopProcess(started.child)]);
+    const drained = await Promise.allSettled([log.end()]);
+    for (const result of [...stopped, ...drained]) if (result.status === "rejected") throw result.reason;
   };
   const headers = { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" };
   const request = async (path: string, body?: unknown, method = body === undefined ? "GET" : "POST") => {

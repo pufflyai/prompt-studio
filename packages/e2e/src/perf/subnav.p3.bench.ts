@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { copyFileSync, existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { cpus, totalmem } from "node:os";
 import { join, resolve } from "node:path";
@@ -7,7 +8,7 @@ import { benchmarkSampleCount, isBelowBudget, subnavBudgets } from "pstdio-bench
 import { recordMeasurement } from "pstdio-benchmarks/writer";
 import { PROVISIONED_CHROMIUM } from "../packaged/packaged-chromium";
 import { PACKAGED_BINARY_PATH } from "../packaged/packaged-helpers";
-import { signInBrowser } from "../packaged/packaged-serve-helpers";
+import { runtimeAuthorization, signInBrowser } from "../packaged/packaged-serve-helpers";
 import {
   createSubnavNetworkRecorder,
   installSubnavClock,
@@ -17,6 +18,7 @@ import {
 import { SUBNAV_WORKLOAD, startSubnavBenchmarkFixture, subnavFixtureRoot } from "./subnav-benchmark-fixture";
 import { subnavBenchmarkResults } from "./subnav-benchmark-results";
 import { classifySubnavRequests } from "./subnav-request-outcomes";
+import { installSubnavRequestSignals } from "./subnav-request-signals";
 
 // Set on 2026-10-26 from four hosted ubuntu-24.04 runs (slowest 293 / 1,263 / 1,089 ms) plus about 20%.
 const SUBNAV_BUDGETS = {
@@ -42,6 +44,7 @@ try {
     const page = await context.newPage();
     try {
       page.on("pageerror", (error) => errors.push(error.message));
+      await installSubnavRequestSignals(page);
       await installSubnavClock(page);
       await page.addInitScript((projectId) => {
         localStorage.setItem("onboarding-complete", "true");
@@ -127,13 +130,13 @@ try {
       if (iteration === 0 && process.env.SUBNAV_TRACE === "1")
         await context.tracing.stop({ path: join(output, "first-visits.zip") });
     } catch (error) {
-      await page.screenshot({ path: join(output, "failure.png") });
-      await Bun.write(
-        join(output, "failure-state.json"),
-        JSON.stringify(
-          await page.evaluate(() => ({
+      await Promise.allSettled([
+        page.screenshot({ path: join(output, "failure.png") }),
+        page
+          .evaluate(() => ({
             url: location.href,
             clock: window.__subnavBenchmark,
+            fetchSignals: window.__subnavFetchSignals,
             regions: [...document.querySelectorAll("[data-workbench-region]")].map((element) =>
               element.getAttribute("data-workbench-region"),
             ),
@@ -143,11 +146,9 @@ try {
               region: element.closest("[data-workbench-region]")?.getAttribute("data-workbench-region"),
             })),
             text: document.body.innerText.slice(0, 3000),
-          })),
-          null,
-          2,
-        ),
-      );
+          }))
+          .then((state) => Bun.write(join(output, "failure-state.json"), JSON.stringify(state, null, 2))),
+      ]);
       throw error;
     } finally {
       await context.close();
@@ -237,11 +238,50 @@ try {
   console.info(JSON.stringify({ label, summary, errors }, null, 2));
   if (errors.length || summary.some((row) => row.structureMisses || row.dataMisses || row.editorMisses))
     process.exitCode = 1;
+} catch (error) {
+  const status = () => ({ pid: fixture.child.pid, exitCode: fixture.child.exitCode, signal: fixture.child.signalCode });
+  const before = status();
+  // Inspect the already-failed setup without retrying login or changing its verdict.
+  const ready = await fetch(`${fixture.baseUrl}/runtime/ready`, {
+    headers: { ...runtimeAuthorization(fixture.descriptor), connection: "close" },
+    signal: AbortSignal.timeout(1000),
+  })
+    .then(async (response) => ({ status: response.status, body: await response.text() }))
+    .catch((reason) => ({ error: String(reason) }));
+  const saved = await Promise.allSettled([
+    Bun.write(
+      join(output, "partial-results.json"),
+      JSON.stringify({ complete: false, expected: sampleCount * 4, samples, errors, error: String(error) }, null, 2),
+    ),
+    Bun.write(
+      join(output, "runtime-failure.json"),
+      JSON.stringify(
+        {
+          observedAt: new Date().toISOString(),
+          runtimeCleanupStarted: false,
+          before,
+          ready,
+          after: status(),
+          error: String(error),
+        },
+        null,
+        2,
+      ),
+    ),
+  ]);
+  for (const result of saved)
+    if (result.status === "rejected") console.error("Could not retain benchmark diagnostics", result.reason);
+  throw error;
 } finally {
   try {
     await browser?.close();
   } finally {
-    await fixture.stop();
+    try {
+      await fixture.stop();
+    } finally {
+      const log = join(subnavFixtureRoot, "runtime.log");
+      if (existsSync(log)) copyFileSync(log, join(output, "runtime.log"));
+    }
   }
 }
 // Publish execution evidence only after browser and runtime cleanup both complete.
