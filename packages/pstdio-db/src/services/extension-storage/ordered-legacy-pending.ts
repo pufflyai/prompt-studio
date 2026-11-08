@@ -61,6 +61,9 @@ const legacyEdit = (record: OrderedRecord, touched: LegacyRecordPlan) => {
   if (!changes.length && !touched.lifecycle) return;
   return {
     recordId: record.recordId,
+    // Legacy frames predate write guards. A shared pre-backlog base would reject
+    // a later delete after its own create or edit has replayed.
+    base: null,
     changes: changes.filter((change) => !texts.some((text) => jsonPointer(change.path) === jsonPointer(text.path))),
     ...(texts.length ? { texts } : {}),
     ...(touched.lifecycle && touched.lifecycle !== "create" ? { deleted: touched.lifecycle === "delete" } : {}),
