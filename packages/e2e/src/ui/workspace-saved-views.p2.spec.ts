@@ -32,7 +32,22 @@ test("the Workspaces extension saves shared views and isolates each project's se
     await page.getByRole("button", { name: "Children Hidden", exact: true }).click();
     await page.getByRole("menuitem", { name: "Nested", exact: true }).click();
     await page.keyboard.press("Escape");
-    await page.getByRole("button", { name: "Save view", exact: true }).click();
+    // Keep the real persistence request pending long enough to expose a click-before-save race.
+    await page.route(`**/v1/projects/${first!.id}/board-views/*`, async (route) => {
+      if (route.request().method() === "PATCH") await new Promise((resolve) => setTimeout(resolve, 300));
+      await route.continue();
+    });
+    const saveView = async (showChildren: boolean) => {
+      const saved = page.waitForResponse(
+        (response) =>
+          response.request().method() === "PATCH" &&
+          new URL(response.url()).pathname.startsWith(`/v1/projects/${first!.id}/board-views/`) &&
+          response.request().postDataJSON()?.settings?.showChildren === showChildren,
+      );
+      await page.getByRole("button", { name: "Save view", exact: true }).click();
+      expect((await saved).ok()).toBe(true);
+    };
+    await saveView(true);
     expect(
       (await (await request.get(path)).json()).views.find(
         (view: { title: string }) => view.title === "Release workspaces",
@@ -42,7 +57,7 @@ test("the Workspaces extension saves shared views and isolates each project's se
     await page.getByRole("button", { name: "Children Nested", exact: true }).click();
     await page.getByRole("menuitem", { name: "Hidden", exact: true }).click();
     await page.keyboard.press("Escape");
-    await page.getByRole("button", { name: "Save view", exact: true }).click();
+    await saveView(false);
     await expect(page.getByLabel("Unsaved view changes")).toHaveCount(0);
     const releaseTab = page.getByRole("tab", { name: "Release workspaces", exact: true });
     const saved = await (await request.get(path)).json();
@@ -93,6 +108,7 @@ test("the Workspaces extension saves shared views and isolates each project's se
     await page.goto(`/projects/${first!.id}/workspaces`);
     await expect(releaseTab).toHaveAttribute("aria-selected", "true");
   } finally {
+    await page.unrouteAll({ behavior: "wait" });
     for (const project of projects) await request.delete(`/v1/projects/${project.id}`);
   }
 });
