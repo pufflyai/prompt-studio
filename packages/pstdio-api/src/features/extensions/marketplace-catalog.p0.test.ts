@@ -117,6 +117,7 @@ describe("extension catalog", () => {
       "pstdio-onboarding",
       "pstdio-base-themes",
       "pstdio-skills",
+      "pstdio-terminal",
     ]);
   });
 });

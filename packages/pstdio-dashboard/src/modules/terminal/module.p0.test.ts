@@ -27,17 +27,20 @@ class TestWebSocket extends EventTarget {
   close() {}
 }
 
-const openedRequest = async (cwd?: string) => {
+const openedRequest = async (cwd?: string, native = false) => {
   const workbench = createWorkbench();
   workbench.registerModule(createTerminalModule());
   selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
 
-  void workbench.terminal.open({ request: { cols: 80, rows: 24, ...(cwd ? { cwd } : {}) } });
+  void workbench.terminal.open({
+    request: { cols: 80, rows: 24, ...(cwd ? { cwd } : {}) },
+    ...(native ? { view: { projectId: "project-1", viewId: "tool.view.terminal" } } : {}),
+  });
   await Promise.resolve();
   await Promise.resolve();
 
   const [message] = TestWebSocket.latest.sent;
-  return message?.type === "open" ? message.request : undefined;
+  return message?.type === "open" || message?.type === "openView" ? message.request : undefined;
 };
 
 afterEach(() => {
@@ -46,7 +49,7 @@ afterEach(() => {
 });
 
 describe("dashboard terminal sessions", () => {
-  test("start in the selected project's root when the request names no folder", async () => {
+  test("legacy unbound sessions use the selected project's folder and preserve explicit folders", async () => {
     globalThis.WebSocket = TestWebSocket as unknown as typeof WebSocket;
     getWriter("workspaces")?.truncateAndWrite([
       {
@@ -71,5 +74,32 @@ describe("dashboard terminal sessions", () => {
     expect(await openedRequest("/repo/.pstdio/workspaces/PS-1_A1")).toMatchObject({
       cwd: "/repo/.pstdio/workspaces/PS-1_A1",
     });
+    expect(await openedRequest(undefined, true)).toEqual({
+      projectId: "project-1",
+      viewId: "tool.view.terminal",
+      cols: 80,
+      rows: 24,
+    });
   });
+});
+
+test("the legacy open command delegates to the installed terminal tool with its invoking workspace", async () => {
+  const workbench = createWorkbench();
+  const calls: unknown[] = [];
+  workbench.commands.registerCommand(
+    { id: "pstdio.pstdio-terminal.command.open", label: "Open terminal" },
+    {
+      execute: (args, context) => {
+        calls.push({ args, resource: context?.resource });
+      },
+    },
+  );
+  workbench.registerModule(createTerminalModule());
+  const resource = { type: "workspace", id: "selected", projectId: "project-1" };
+  try {
+    await workbench.commands.executeCommand("workbench.terminal.open", undefined, { resource });
+    expect(calls).toEqual([{ args: undefined, resource }]);
+  } finally {
+    await workbench.dispose();
+  }
 });

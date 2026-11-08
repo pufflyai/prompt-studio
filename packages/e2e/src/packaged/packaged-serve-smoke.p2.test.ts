@@ -22,6 +22,7 @@ import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // Native actions retain failed outcomes for the UI entry point to report.
 // Includes boolean board/table rules with a stored false value.
 // Also checks native chat declarations, static composer state and scoped action callbacks.
+// packaged-terminal-tool.p1.test.ts installs the production Terminal with package-local SDK dependencies and exercises its actual native shell.
 // packaged-native-terminal.p1.test.ts opens an installed SDK native terminal through the compiled host and existing PTY transport.
 // packaged-core-extensions-smoke.p1.test.ts installs the production Sessions provider with local public artifacts,
 // runs CLI dev -> add --force with package-local dependencies and unavailable authoring source,

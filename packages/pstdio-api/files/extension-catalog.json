@@ -269,6 +269,20 @@
       "default": false,
       "icon": "Cloud",
       "listed": false
+    },
+    {
+      "installName": "pstdio-terminal",
+      "extensionId": "pstdio.pstdio-terminal",
+      "displayName": "Terminal",
+      "description": "Open native terminals in a project or selected workspace.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/pstdio-terminal",
+        "ref": "{hostRelease}"
+      },
+      "default": true,
+      "icon": "square-terminal"
     }
   ]
 }

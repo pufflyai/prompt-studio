@@ -55,7 +55,7 @@ const getTerminalResource = (ctx: WorkbenchCoreContributionContext, resource: Te
     primaryResource
   );
 };
-// Opens a new terminal in the requested region, or Bottom when no region is given.
+/** @deprecated Install a native terminal extension and execute its public open command. */
 export const openWorkbenchTerminal = (
   ctx: WorkbenchCoreContributionContext,
   input: OpenWorkbenchTerminalOptions = {},
@@ -97,6 +97,7 @@ export const openWorkbenchTerminal = (
   return toPanelInstance(placement);
 };
 /**
+ * @deprecated Hosts should install a native terminal extension; retain this only for existing embedders.
  * Host-owned terminal surface: tabbed placements in the `secondary` region whose
  * chrome, focus, lifecycle, and styling belong to the workbench. Sessions are
  * owned by `workbench.terminal` (the same registry the `terminal.session`

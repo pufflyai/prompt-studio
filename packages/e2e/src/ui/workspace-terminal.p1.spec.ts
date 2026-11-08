@@ -55,7 +55,7 @@ const persistHiddenLauncherAsActive = async (page: import("@playwright/test").Pa
   const updatedKeys = await page.evaluate(() => {
     const keys = Object.keys(localStorage).filter((candidate) => {
       if (!candidate.startsWith("dashboard-wb2:layout:")) return false;
-      return localStorage.getItem(candidate)?.includes('"viewId":"workbench.terminal"') === true;
+      return localStorage.getItem(candidate)?.includes('"viewId":"pstdio.pstdio-terminal.view.terminal"') === true;
     });
 
     for (const key of keys) {
@@ -296,6 +296,64 @@ test("keeps tab-menu focus when the terminal renderer finishes loading", async (
     await expect(tab).toHaveCount(0);
   } finally {
     release.resolve();
+    await request.delete(`${apiBase}/v1/projects/${project.id}`);
+  }
+});
+
+test("disabling the installed Terminal removes its action and re-enabling opens one fresh terminal", async ({
+  page,
+  request,
+}) => {
+  const created = await request.post(`${apiBase}/v1/projects`, {
+    data: folderProjectInput({ name: "Terminal lifecycle" }),
+  });
+  expect(created.ok()).toBe(true);
+  const project = await created.json();
+  try {
+    await prepareDashboard(page, project.id);
+    await page.goto(`/projects/${project.id}/workspaces`);
+    await openWorkspaceTerminal(page, "Project folder");
+    const listing = await (await request.get(`${apiBase}/v1/projects/${project.id}/extensions`)).json();
+    const owner = listing.extensions.find(
+      (extension: { extensionId: string }) => extension.extensionId === "pstdio.pstdio-terminal",
+    );
+    expect(owner.enabled).toBe(true);
+    const disabledRegistration = page.waitForEvent(
+      "console",
+      (message) => message.text().includes('"event":"registration-ready"') && message.text().includes(project.id),
+    );
+    expect(
+      (
+        await request.patch(`${apiBase}/v1/projects/${project.id}/extensions/${owner.id}`, { data: { enabled: false } })
+      ).ok(),
+    ).toBe(true);
+    await disabledRegistration;
+    await expect(page.getByRole("textbox", { name: "Terminal input" })).toHaveCount(0);
+    const row = page
+      .getByRole("region", { name: "Main", exact: true })
+      .getByRole("option")
+      .filter({ hasText: "Project folder" })
+      .first();
+    await row.click({ button: "right" });
+    await expect(page.getByRole("menuitem", { name: "Open terminal", exact: true })).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    const enabledRegistration = page.waitForEvent(
+      "console",
+      (message) => message.text().includes('"event":"registration-ready"') && message.text().includes(project.id),
+    );
+    expect(
+      (
+        await request.patch(`${apiBase}/v1/projects/${project.id}/extensions/${owner.id}`, { data: { enabled: true } })
+      ).ok(),
+    ).toBe(true);
+    await enabledRegistration;
+    await openWorkspaceTerminal(page, "Project folder");
+    await expect(page.locator(".xterm:visible")).toHaveCount(1);
+    const input = page.getByRole("textbox", { name: "Terminal input" });
+    await input.pressSequentially("echo TERMINAL_REENABLED");
+    await input.press("Enter");
+    await expect(page.locator(".xterm:visible .xterm-rows")).toContainText("TERMINAL_REENABLED");
+  } finally {
     await request.delete(`${apiBase}/v1/projects/${project.id}`);
   }
 });

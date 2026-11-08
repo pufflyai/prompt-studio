@@ -1,5 +1,4 @@
 import type { ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
-import { openWorkbenchTerminal, WORKBENCH_TERMINAL_WIDGET_ID } from "@pstdio/workbench/react";
 import { getApiClient } from "@/lib/api";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
@@ -67,6 +66,7 @@ export const registerWorkspaceHostActions = (ctx: WorkbenchModuleContext, resolv
   ctx.commands.registerCommand(
     { id: dashboardCommandIds.openWorkspaceTerminal, label: "Open terminal", icon: "SquareTerminal" },
     {
+      isVisible: () => false,
       execute: (args: { workspaceId?: string } | undefined, invocation) => {
         const resource = args?.workspaceId
           ? { type: "workspace", id: args.workspaceId, projectId: invocation?.projectId }
@@ -107,12 +107,10 @@ export const openWorkspaceTerminalResource = async (
   resource: ResourceRef,
   resolve = resolveWorkspaceHostResource,
 ) => {
-  if (
-    !resource.id ||
-    resource.metadata?.workspaceReadOnly === true ||
-    !ctx.shellPlacements.getPlacement(WORKBENCH_TERMINAL_WIDGET_ID)
-  )
-    return;
   const canonical = await resolve(ctx, resource);
-  return openWorkbenchTerminal(ctx, { resource: canonical });
+  return ctx.commands.executeCommand(
+    "pstdio.pstdio-terminal.command.open-workspace",
+    { workspaceId: canonical.id },
+    { resource: canonical, projectId: canonical.projectId },
+  );
 };
