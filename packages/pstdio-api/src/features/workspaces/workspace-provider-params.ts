@@ -18,6 +18,7 @@ export const resolveWorkspaceParams = async (
   projectId: string,
   providerId: string,
   input: JsonObject,
+  options: { signal?: AbortSignal } = {},
 ) => {
   let schema: ParamObjectSchema;
   if (providerId === rootProviderId) schema = { path: { type: "text", label: "Project folder" } };
@@ -45,29 +46,39 @@ export const resolveWorkspaceParams = async (
   } else {
     const handle = await findWorkspaceProvider(deps, { projectId, providerId });
     if (!handle) throw new InvalidWorkspaceParamsError(`Workspace provider is unavailable: ${providerId}`);
-    return validateProviderWorkspaceParams(handle, providerId, input);
+    return validateProviderWorkspaceParams(handle, providerId, input, options);
   }
   return validateWorkspaceParams(providerId, schema, input);
 };
 
-export const validateProviderWorkspaceParams = async (
+const validateProviderWorkspaceParams = async (
   handle: WorkspaceProviderHandle,
   providerId: string,
   input: JsonObject,
+  options: { signal?: AbortSignal },
 ) => {
-  const discovery = await discoverWorkspaceProvider(handle);
+  const discovery = await discoverWorkspaceProvider(handle, options);
   if (!discovery) throw new InvalidWorkspaceParamsError(`Workspace provider is unavailable: ${providerId}`);
   const params = validateWorkspaceParams(providerId, discovery.params, input);
   if (handle.provider.validateParams) {
-    try {
-      await runWorkspaceProviderOperation(handle, (ctx) => handle.provider.validateParams!(ctx, params));
-    } catch (cause) {
-      throw new InvalidWorkspaceParamsError(
-        `Invalid params for workspace provider "${providerId}": ${cause instanceof Error ? cause.message : String(cause)}`,
-        { cause },
-      );
-    }
+    await runWorkspaceProviderOperation(
+      handle,
+      async (ctx, signal) => {
+        try {
+          await handle.provider.validateParams!(ctx, params);
+        } catch (cause) {
+          options.signal?.throwIfAborted();
+          signal.throwIfAborted();
+          throw new InvalidWorkspaceParamsError(
+            `Invalid params for workspace provider "${providerId}": ${cause instanceof Error ? cause.message : String(cause)}`,
+            { cause },
+          );
+        }
+      },
+      options,
+    );
   }
+  options.signal?.throwIfAborted();
   return params;
 };
 
