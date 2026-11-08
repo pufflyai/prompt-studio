@@ -91,6 +91,7 @@ describe("startup default extensions", () => {
     const deps = {
       projectService: { list: async () => [] },
       sessionService: { listActive: async () => [] },
+      extensionStorageService: { convertLegacyOwners: async () => {} },
     } as unknown as Parameters<typeof runStartupTasks>[0];
 
     try {
@@ -133,6 +134,7 @@ describe("startup default extensions", () => {
     const deps = {
       projectService: { list: async () => [] },
       sessionService: { listActive: async () => [] },
+      extensionStorageService: { convertLegacyOwners: async () => {} },
     } as unknown as Parameters<typeof runStartupTasks>[0];
 
     try {

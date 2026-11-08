@@ -1,5 +1,5 @@
 // Settle review requests and notify readers to refresh pending input and request counts.
-import { type CommandContext, workbenchPanels } from "@pstdio/sdk/extensions";
+import { type CommandContext, sessionBrowser } from "@pstdio/sdk/extensions";
 import { plannerTicketsChanged } from "../events";
 import { actorFromSource } from "./attempt-actors";
 import { ticketsCollection } from "./collections";
@@ -88,7 +88,7 @@ export const openReviewRequestSession = async (ctx: CommandContext, requestId: s
   const session = await getReviewRequestSession(ctx, requestId);
   ctx.navigation.open({
     kind: "panel",
-    panel: workbenchPanels.projectSession,
+    panel: sessionBrowser.panels.conversation,
     open: "preview",
     resource: { type: "session", id: session.id, extensionId: "pstdio", label: session.title },
   });

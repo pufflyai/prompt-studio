@@ -338,3 +338,62 @@ test("automatic quarantine handoff rejects missing or unregistered skipped cases
     await rm(fixture.root, { recursive: true, force: true });
   }
 });
+
+test("cancelling the wrapper waits for its actual test child before returning", async () => {
+  const fixture = await registeredFixture();
+  const pidFile = join(fixture.root, "child-pid");
+  await writeFile(
+    join(fixture.cwd, "registered.test.ts"),
+    `import { test } from "bun:test";
+    test("held child", async () => {
+      await Bun.write(${JSON.stringify(pidFile)}, String(process.pid));
+      await new Promise<void>(() => {});
+    });`,
+  );
+  const child = Bun.spawn(
+    [process.execPath, join(fixture.root, "scripts/ci/run-bun-tests.ts"), "./registered.test.ts"],
+    {
+      cwd: fixture.cwd,
+      env: {
+        ...process.env,
+        CI_PRIORITY: "P2",
+        E2E_TEST_LANE: "stable",
+        BUN_TEST_EVIDENCE_FILE: join(fixture.root, "evidence.json"),
+      },
+      stdout: "ignore",
+      stderr: "ignore",
+    },
+  );
+  let pid: number | undefined;
+  try {
+    await Promise.race([
+      (async () => {
+        while (!(await Bun.file(pidFile).exists())) await Bun.sleep(10);
+      })(),
+      child.exited.then(() => {
+        throw new Error("Wrapper exited before its test started");
+      }),
+    ]);
+    pid = Number(await Bun.file(pidFile).text());
+    child.kill("SIGTERM");
+    expect(await child.exited).not.toBe(0);
+    let alive = true;
+    try {
+      process.kill(pid, 0);
+    } catch {
+      alive = false;
+    }
+    expect(alive).toBe(false);
+  } finally {
+    child.kill();
+    await child.exited;
+    if (pid) {
+      try {
+        process.kill(pid, "SIGTERM");
+      } catch {
+        /* already exited */
+      }
+    }
+    await rm(fixture.root, { recursive: true, force: true });
+  }
+});

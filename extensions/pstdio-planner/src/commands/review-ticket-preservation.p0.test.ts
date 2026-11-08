@@ -31,10 +31,11 @@ test("answering a request preserves ticket edits that race with its reads", asyn
   collection.get = async (id) => {
     const snapshot = await get(id);
     if (!snapshot) return snapshot;
+    const title = `Edit ${++edits}`;
     latest = {
       ...snapshot,
-      title: `Edit ${++edits}`,
-      content: "Keep the new body",
+      title,
+      content: `${title}\n\nKeep the new body`,
       statusId: "ready",
       tags: { labels: ["other"] },
     };

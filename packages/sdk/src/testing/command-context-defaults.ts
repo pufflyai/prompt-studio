@@ -164,6 +164,7 @@ export const createCommandContextDefaults = (input: {
       projectSyncStatus: async () => ({ state: "local", offlineReady: false }),
       syncProject: unavailable,
       stopProjectSync: unavailable,
+      resolveReturnedChanges: unavailable,
     },
     process: { run: unavailable, runOrThrow: unavailable, spawnDetached: unavailable },
     net: { findFreePort: unavailable },

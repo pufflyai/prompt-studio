@@ -64,11 +64,10 @@ export const directShortcutHint = (
   core: AvailabilityCore & Pick<WorkbenchCore, "keybindings">,
   action: NavigationTarget,
 ) => {
-  const key = getNavigationTargetKey(action);
   const binding = core.keybindings
-    .listActiveKeybindings()
+    .listActiveKeybindings(action)
     .reverse()
-    .find((binding) => getNavigationTargetKey(binding.action) === key && isShortcutBindingAvailable(core, binding));
+    .find((binding) => isShortcutBindingAvailable(core, binding));
   return binding ? getKeybindingSteps(binding.keybinding).join(" ") : undefined;
 };
 

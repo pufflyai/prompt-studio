@@ -1,12 +1,13 @@
 import { execFileSync, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readFileSync } from "node:fs";
+import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, rmSync } from "node:fs";
 import { arch, cpus, freemem, platform, release, totalmem } from "node:os";
 import { join, resolve } from "node:path";
 import { contract, type Profile, runBenchmarkCase, type Workload } from "storage-scale-fixture";
 import { PACKAGED_BINARY_PATH } from "../packaged/packaged-helpers";
 import { configuredContainer } from "./storage-scale-container";
 import { sampleScaleRuntime } from "./storage-scale-samples";
+import { readScaleSyncServiceState, scaleSyncServicePath } from "./storage-scale-sync-service";
 import { enterMeasurementWindow } from "./storage-scale-window";
 
 const option = (flag: string, fallback?: string) => {
@@ -131,6 +132,67 @@ const runPreparation = async (
   }
 };
 
+const running = (pid: number) => {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+// The sync service outlives this command, so it runs detached, not under a case supervisor.
+// It records its process before preparing, so an interrupted preparation can still be stopped.
+const prepareSyncService = async (root: string, home: string, emit: (data: object) => void) => {
+  const path = scaleSyncServicePath(home);
+  if (existsSync(path)) throw new Error("A sync service is recorded for this home; stop it with --stop-sync first");
+  const stdout = openSync(join(root, "sync-service.jsonl"), "a");
+  const stderr = openSync(join(root, "sync-service.stderr.log"), "a");
+  const started = performance.now();
+  const child = spawn(process.execPath, [join(import.meta.dirname, "storage-scale-sync-service.ts"), home], {
+    detached: true,
+    stdio: ["ignore", stdout, stderr],
+    env: process.env,
+  });
+  closeSync(stdout);
+  closeSync(stderr);
+  let exited: number | null | undefined;
+  child.once("exit", (code, signal) => {
+    exited = code ?? (signal ? -1 : null);
+  });
+  const interrupt = () => child.kill("SIGTERM");
+  process.once("SIGINT", interrupt);
+  process.once("SIGTERM", interrupt);
+  emit({ phase: "sync-preparation-start", pid: child.pid, acceptedTiming: false });
+  try {
+    while (!existsSync(path) || readScaleSyncServiceState(home) !== "ready") {
+      if (exited !== undefined) throw new Error(`Sync service exited with ${exited}; see sync-service.stderr.log`);
+      await Bun.sleep(250);
+    }
+  } finally {
+    process.off("SIGINT", interrupt);
+    process.off("SIGTERM", interrupt);
+  }
+  child.unref();
+  emit({
+    phase: "sync-preparation-end",
+    pid: child.pid,
+    durationMs: performance.now() - started,
+    acceptedTiming: false,
+  });
+};
+
+// A stopped service has stopped its devices and removed the second device's home.
+const stopSyncService = async (home: string, emit: (data: object) => void) => {
+  const path = scaleSyncServicePath(home);
+  if (!existsSync(path)) throw new Error("No sync service is recorded for this home");
+  const { pid } = JSON.parse(readFileSync(path, "utf8")) as { pid: number };
+  if (running(pid)) process.kill(pid, "SIGTERM");
+  while (running(pid)) await Bun.sleep(100);
+  rmSync(path, { force: true });
+  emit({ phase: "sync-service-stopped", pid });
+};
+
 export const runScaleDiagnostic = async () => {
   if (process.argv.includes("--help")) {
     console.log(`Diagnostic storage scale baseline (not a required release check).
@@ -138,15 +200,17 @@ export const runScaleDiagnostic = async () => {
   --fixture rich|small --output <directory> --home <disposable-directory> --seed [--churn]
   --fixture rich|small --output <directory> --home <seeded-directory> --measure --profile native|renderer
   Add --container-config <runtime.json> for isolated native|renderer|runtime|combined profiles.
-  --operation <name> --background <name> select complete ten-cold/ten-warm shards; --sync prepares a relay.
+  --operation <name> --background <name> select complete ten-cold/ten-warm shards; --sync uses the sync service.
+  --fixture rich|small --output <directory> --home <seeded-directory> --prepare-sync | --stop-sync
+    Start or stop the sync service: a relay and a second device that downloaded the whole fixture.
   --fixture rich|small --output <directory> --layer sync|database --rows 1000|10000|100000
   Every heavy command also requires --timing-owner <acknowledged-window-owner.json>.
 
 Full fixtures and sample counts are fixed; the approved operation ceiling is 1,250 ms.
 Database fixture preparation and copying
 finish before a fresh sample worker starts its external 60-second cap. Build separately.
-Sync and application paths still include setup in their 60-second cap; separating their preparation
-remains follow-up work. Timeout is incomplete failure.
+Sync shards attach to the prepared sync service, so initial upload, download and extension
+installation stay outside their 60-second cap. Timeout is incomplete failure.
 Layer measurements are not user-visible acceptance. Runtime quota profiles require isolated runtime control;
 unsupported controls and missing phase evidence remain explicit coverage failures. See performance reference 0005.`);
     return;
@@ -189,6 +253,8 @@ unsupported controls and missing phase evidence remain explicit coverage failure
     if (!home && !process.argv.includes("--emit-fixture")) throw new Error("Pass a disposable --home");
     const containerConfig = option("--container-config");
     if (containerConfig) process.env.PSTDIO_SCALE_CONTAINER_CONFIG = resolve(containerConfig);
+    if (home && process.argv.includes("--prepare-sync")) return await prepareSyncService(root, resolve(home), emit);
+    if (home && process.argv.includes("--stop-sync")) return await stopSyncService(resolve(home), emit);
     const preparation = ["--emit-fixture", "--seed", "--refresh-source", "--verify-fixture"].find((flag) =>
       process.argv.includes(flag),
     );

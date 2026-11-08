@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -18,13 +18,12 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await api?.stop();
+  // The shared API owns each created project's watchers until it stops. Removing
+  // a live workspace between cases can strand its Windows filesystem work.
+  cleanupDirs(dirs);
 });
 
 const dirs: string[] = [];
-
-afterEach(() => {
-  cleanupDirs(dirs);
-});
 
 // Keep the event loop available to drain the API pipes while it handles the CLI request.
 const run = (args: string[], cwd: string) => runPackagedAsync(args, cwd, { PSTDIO_API_URL: api.url });
@@ -102,14 +101,20 @@ describe("packaged pstdio — tickets", () => {
   test(
     "creates and lists a ticket",
     async () => {
+      const startedAt = performance.now();
+      const phase = (name: string) =>
+        console.info(`Packaged tickets +${Math.round(performance.now() - startedAt)}ms: ${name}`);
+      phase("create project");
       const repo = await createInitializedRepo("pkg-tickets");
-
+      phase("project created; create ticket");
       const created = JSON.parse(await run(["tickets", "create", "--content", "Packaged test ticket"], repo));
+      phase("ticket created; list tickets");
       expect(created.shorthand).toMatch(/^PT-\d+$/);
       expect(created.title).toBe("Packaged test ticket");
 
       const tickets = JSON.parse(await run(["tickets", "list"], repo));
       expect(tickets.map((ticket: { title: string }) => ticket.title)).toContain("Packaged test ticket");
+      phase("tickets listed");
     },
     TEST_TIMEOUT,
   );

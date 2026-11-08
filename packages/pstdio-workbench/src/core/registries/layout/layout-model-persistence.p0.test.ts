@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import {
   createLayoutModel,
   type LayoutModel,
@@ -128,4 +129,44 @@ describe("createLayoutModel persisted widget ids", () => {
     const fourthPlacement = restoredLayout.openWidget(terminalContribution.id);
     expect(fourthPlacement.widgetId).toBe("workbench.terminal:3");
   });
+});
+
+test("publishes only the completed layout when a transition opens several tabs", () => {
+  const { persistence, savedLayouts } = createPersistedLayout();
+  const layout = createTerminalLayout(persistence);
+  savedLayouts.length = 0;
+  batchWorkbenchChanges(() => {
+    layout.openWidget(terminalContribution.id);
+    layout.openWidget(terminalContribution.id);
+    layout.setRegionSize("secondary", 300);
+  });
+  expect(savedLayouts.length).toBeGreaterThan(0);
+  expect(
+    savedLayouts.every((saved) => saved.regions.secondary.widgets.length === 2 && saved.regions.secondary.size === 300),
+  ).toBe(true);
+});
+
+test("keeps each project's completed tabs when scopes rotate inside one transition", () => {
+  const saved = new Map<string | undefined, WorkbenchLayout>();
+  const layout = createTerminalLayout({
+    getLayout: (scope) => saved.get(scope),
+    setLayout: (value, scope) => {
+      saved.set(scope, structuredClone(value));
+    },
+  });
+  batchWorkbenchChanges(() => {
+    layout.setPersistenceScope("project:a");
+    expect(layout.enteredWithPersistedLayout()).toBe(false);
+    const first = layout.openWidget(terminalContribution.id);
+    expect(layout.hasPersistedLayout()).toBe(true);
+    layout.setPersistenceScope("project:b");
+    expect(widgetIds(layout)).toEqual([]);
+    layout.openWidget(terminalContribution.id);
+    layout.openWidget(terminalContribution.id);
+    layout.setPersistenceScope("project:a");
+    expect(layout.enteredWithPersistedLayout()).toBe(true);
+    expect(widgetIds(layout)).toEqual([first.widgetId]);
+  });
+  expect(saved.get("project:a")?.regions.secondary.widgets).toHaveLength(1);
+  expect(saved.get("project:b")?.regions.secondary.widgets).toHaveLength(2);
 });

@@ -1,13 +1,26 @@
-import { Box, Button } from "@chakra-ui/react";
+import { Button } from "@chakra-ui/react";
 import { type ComponentType, useEffect, useState } from "react";
 import { AlertMessage } from "@/components/primitives/alert";
 import { installPrismGlobal } from "@/utils/prism";
 import type { MarkdownEditorProps } from "./markdown-editor/markdown-editor";
+import { MarkdownEditorSkeleton } from "./markdown-editor-skeleton";
+
+export { MarkdownEditorSkeleton } from "./markdown-editor-skeleton";
 
 type EditorLoadState =
   | { kind: "loading" }
   | { kind: "ready"; Editor: ComponentType<MarkdownEditorProps> }
   | { kind: "failed" };
+
+const loadMarkdownEditor = async () => {
+  await installPrismGlobal();
+  return import("./markdown-editor/markdown-editor");
+};
+
+/** Begin loading for an opened document while its content is still being read. */
+export const preloadMarkdownEditor = async () => {
+  await loadMarkdownEditor();
+};
 
 export const LazyMarkdownEditor = (props: MarkdownEditorProps) => {
   const [state, setState] = useState<EditorLoadState>({ kind: "loading" });
@@ -17,8 +30,7 @@ export const LazyMarkdownEditor = (props: MarkdownEditorProps) => {
 
     void (async () => {
       try {
-        await installPrismGlobal();
-        const module = await import("./markdown-editor/markdown-editor");
+        const module = await loadMarkdownEditor();
         if (!cancelled) setState({ kind: "ready", Editor: module.MarkdownEditor });
       } catch {
         if (!cancelled) setState({ kind: "failed" });
@@ -44,5 +56,5 @@ export const LazyMarkdownEditor = (props: MarkdownEditorProps) => {
     );
   }
 
-  return <Box minH="7rem" borderWidth="1px" borderColor="border" borderRadius="xs" />;
+  return <MarkdownEditorSkeleton />;
 };

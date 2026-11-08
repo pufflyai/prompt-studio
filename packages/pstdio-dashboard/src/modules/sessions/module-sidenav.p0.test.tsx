@@ -1,6 +1,5 @@
 import { expect, test } from "bun:test";
 import { createWorkbench } from "@pstdio/workbench";
-import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { openSessionsPage } from "@/shared/workbench/page-navigation";
@@ -8,54 +7,37 @@ import { treeViewBody, treeViewSections } from "@/shared/workbench/workbench-vie
 import { createSidenavModule } from "../sidenav/module";
 import { createWorkspacesModule } from "../workspaces/module";
 import { createSessionsModule } from "./module";
+import { registerSessionProvider } from "./session-provider.fixture";
 
-test("shows existing sessions immediately on the sessions aggregate", async () => {
-  getWriter("sessions")?.truncateAndWrite([
-    {
-      id: "session-existing",
-      project_id: "project-1",
-      title: "Existing session",
-      status: "completed",
-      agent: null,
-      last_selected_model: null,
-      archived: false,
-      created_at: "2026-06-02T10:00:00Z",
-      updated_at: "2026-06-02T10:00:00Z",
-      deleted_at: null,
+test("Sessions navigation uses the provider's project list and keeps its scope across conversation selection", async () => {
+  const workbench = createWorkbench();
+  workbench.registerModule(createSidenavModule());
+  workbench.registerModule(createWorkspacesModule());
+  workbench.registerModule(createSessionsModule());
+  registerSessionProvider(workbench, {
+    sessions: {
+      query: async () => ({
+        items: [
+          { id: "saved", title: "Existing session", status: "completed", updatedAt: "2026-06-02T10:00:00Z" },
+        ] as never,
+        nextCursor: null,
+      }),
     },
-  ]);
-  const workbench = createWorkbench();
-
-  selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-  workbench.registerModule(createSidenavModule());
-  workbench.registerModule(createWorkspacesModule());
-  workbench.registerModule(createSessionsModule());
-
+  });
+  selectDashboardProject(workbench, { id: "project-1", name: "Project" });
   openSessionsPage(workbench);
-
-  const sessionRows = (await treeViewSections(workbench, dashboardWidgetIds.dashboardSidenav)).find(
-    (section) => section.id === "session-list",
-  )?.nodes;
-
-  expect(sessionRows?.filter((node) => node.resource || node.target).map((node) => node.label)).toEqual([
-    "Existing session",
-  ]);
-});
-
-test("session navigation keeps its data scope while resource-dependent contributions still change scope", () => {
-  const workbench = createWorkbench();
-  selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-  workbench.registerModule(createSidenavModule());
-  workbench.registerModule(createWorkspacesModule());
-  workbench.registerModule(createSessionsModule());
-  const open = (id: string) => openSessionsPage(workbench, { type: "session", id });
+  const sections = await treeViewSections(workbench, dashboardWidgetIds.dashboardSidenav);
+  expect(
+    sections
+      .flatMap((section) => section.nodes)
+      .filter((node) => node.resource?.type === "session")
+      .map((node) => node.label),
+  ).toEqual(["Existing session"]);
   const readKey = () => treeViewBody(workbench, dashboardWidgetIds.dashboardSidenav).getReadKey?.({});
-  open("first");
-  const firstKey = readKey();
-  expect(firstKey).toBeDefined();
-  open("second");
-  expect(readKey()).toBe(firstKey);
-
+  openSessionsPage(workbench, { type: "session", extensionId: "pstdio", id: "first" });
+  const first = readKey();
+  openSessionsPage(workbench, { type: "session", extensionId: "pstdio", id: "second" });
+  expect(readKey()).toBe(first);
   workbench.navigationTrees.registerContribution({
     id: "extension.session-actions",
     owner: { kind: "mode", id: "project", extensionId: "pstdio" },
@@ -63,7 +45,8 @@ test("session navigation keeps its data scope while resource-dependent contribut
     declarationIndex: 0,
     getSections: () => [],
   });
-  const dependentKey = readKey();
-  open("first");
-  expect(readKey()).not.toBe(dependentKey);
+  const dependent = readKey();
+  openSessionsPage(workbench, { type: "session", extensionId: "pstdio", id: "first" });
+  expect(readKey()).not.toBe(dependent);
+  workbench.dispose();
 });

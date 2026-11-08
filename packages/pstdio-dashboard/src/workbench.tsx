@@ -8,10 +8,6 @@ import {
   createDashboardProjectSelectionPersistence,
   type DashboardProjectSelectionPersistence,
 } from "@/shared/app/project-selection-persistence";
-import {
-  createDashboardSessionDraftPersistence,
-  type DashboardSessionDraftPersistence,
-} from "@/shared/app/session-draft-persistence";
 import { createBootstrapModule } from "./modules/bootstrap";
 import { createCommandPaletteModule } from "./modules/command-palette/module";
 import { createExtensionsModule } from "./modules/extensions/module";
@@ -48,7 +44,6 @@ type CreateDashboardModulesInput = {
   initialProjectId?: string;
   projectTabs?: DesktopProjectTabsController;
   projectSelectionPersistence?: DashboardProjectSelectionPersistence;
-  sessionDraftPersistence?: DashboardSessionDraftPersistence;
 };
 
 export const createDashboardModules = (input: CreateDashboardModulesInput & { settings: SettingsRegistry }) => {
@@ -69,9 +64,7 @@ export const createDashboardModules = (input: CreateDashboardModulesInput & { se
     createKeyboardShortcutsModule(),
     createHelpModule(),
     createCommandPaletteModule(),
-    createSessionsModule({
-      sessionDraftPersistence: input.sessionDraftPersistence,
-    }),
+    createSessionsModule(),
     createNotificationsModule(),
     createSettingsModule(),
     createPerformanceModule(input.settings),
@@ -91,13 +84,6 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
     namespace: dashboardWorkbenchStorageNamespace,
     storage,
   });
-  const scopedByProject = {
-    namespace: dashboardWorkbenchStorageNamespace,
-    storage,
-    projectSelection: projectSelectionPersistence,
-  };
-  const sessionDraftPersistence = createDashboardSessionDraftPersistence(scopedByProject);
-
   const persistence = createLocalStorageWorkbenchPersistence({
     namespace: dashboardWorkbenchStorageNamespace,
     storage,
@@ -134,7 +120,6 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
     initialProjectId: urlProjectId,
     projectTabs: input.projectTabs,
     projectSelectionPersistence,
-    sessionDraftPersistence,
   });
   for (const module of modules) workbench.registerModule(module);
 

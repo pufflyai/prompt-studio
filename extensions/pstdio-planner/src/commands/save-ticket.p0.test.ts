@@ -111,7 +111,7 @@ test("a ticket write that read the ticket before a save keeps the saved image", 
   const { storage, ticket, save, imageBytes } = await ticketWithChangedImage();
 
   await save();
-  await updateTicket(ticketContext(storage), { ...ticket, title: "Renamed" });
+  await updateTicket(ticketContext(storage), { ...ticket, title: "Renamed", content: "# Renamed\n" });
 
   expect((await ticketsCollection(storage).get(ticket.id))?.title).toBe("Renamed");
   expect(await imageBytes()).toEqual([[2]]);

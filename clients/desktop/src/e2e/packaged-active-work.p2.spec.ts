@@ -14,9 +14,11 @@ import {
   runPackagedCli,
   waitForExit,
 } from "./packaged-app-helpers";
+import { homePage } from "./packaged-performance-helpers";
 import { createPackagedProject, openPackagedProject } from "./packaged-project-helpers";
 
 const fixturePath = dirname(fileURLToPath(import.meta.resolve("workbench-fixture/package.json")));
+const homePath = dirname(fileURLToPath(import.meta.resolve("pstdio-home/package.json")));
 
 for (const shutdown of ["desktop confirmation", "forced CLI close"] as const) {
   test(`protects a running terminal before ${shutdown}`, async () => {
@@ -25,12 +27,15 @@ for (const shutdown of ["desktop confirmation", "forced CLI close"] as const) {
     try {
       app = await launchPackagedApp(home, {
         PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
-          defaultExtensions: [{ source: fixturePath, installName: "workbench-fixture", skipInstall: true }],
+          defaultExtensions: [
+            { source: fixturePath, installName: "workbench-fixture", skipInstall: true },
+            { source: homePath, installName: "pstdio-home", skipInstall: true },
+          ],
         }),
       });
       const created = await createPackagedProject(app, "Active terminal work");
       await openPackagedProject(app.page, created);
-      await app.page.getByTestId("start-page").waitFor();
+      await homePage(app.page).waitFor();
       const socketOpened = app.page.waitForEvent(
         "websocket",
         (socket) => new URL(socket.url()).pathname === "/v1/terminal",

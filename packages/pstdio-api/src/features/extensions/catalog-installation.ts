@@ -1,14 +1,17 @@
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
 import type { ExtensionInstallations } from "../../services/extension-installations";
 import type { createExtensionService } from "../../services/extension-service";
+import type { createExtensionUpgradeService } from "../../services/extension-upgrade-service";
 import { installMissingDefaultExtensions, registerInstalledExtensionSources } from "./default-extensions";
 import { findExtensionCatalogEntry } from "./extension-catalog";
+import { toExtensionEnableInput } from "./install-extension-source";
 import { getInstalledUserSources } from "./installed-user-extensions";
 
 export const createCatalogInstaller =
   (input: {
     extensionService: ReturnType<typeof createExtensionService>;
     installedExtensionSourcesService: Pick<ReturnType<typeof createInstalledExtensionSourcesDBService>, "list">;
+    extensionUpgradeService: Pick<ReturnType<typeof createExtensionUpgradeService>, "installSource">;
     releaseRef?: string;
   }) =>
   async (installName: string, signal: AbortSignal, projectId: string) => {
@@ -34,6 +37,17 @@ export const createCatalogInstaller =
     let selected = (await input.extensionService.listProjectExtensionInstances(projectId)).find(
       ({ installedSource }) => installedSource.extension_id === extensionId,
     );
+    if (!selected && !installed) {
+      const source = await input.extensionUpgradeService.installSource(projectId, {
+        source: { kind: "catalog", name: installName },
+      });
+      signal.throwIfAborted();
+      selected = await input.extensionService.enableInstalledSourceForProject({
+        projectId,
+        installName: source.installName,
+        ...toExtensionEnableInput(source),
+      });
+    }
     if (!selected && installed) {
       selected =
         (await input.extensionService.attachRegisteredSourceForProject({

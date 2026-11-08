@@ -39,6 +39,10 @@
       "import": "./dist/rich-text.js",
       "types": "./dist/rich-text.d.ts"
     },
+    "./lazy-markdown-editor": {
+      "import": "./dist/lazy-markdown-editor.js",
+      "types": "./dist/lazy-markdown-editor.d.ts"
+    },
     "./theme": {
       "import": "./dist/theme.js",
       "types": "./dist/theme.d.ts"
@@ -46,6 +50,10 @@
     "./chat-ui": {
       "import": "./dist/chat-ui.js",
       "types": "./dist/chat-ui.d.ts"
+    },
+    "./chat-skeleton": {
+      "import": "./dist/chat-skeleton.js",
+      "types": "./dist/chat-skeleton.d.ts"
     },
     "./diff": {
       "import": "./dist/diff.js",
@@ -148,7 +156,7 @@
     "dompurify": "^3.4.13",
     "katex": "^0.19.0",
     "lexical": "^0.40.0",
-    "lucide-react": "^0.557.0",
+    "lucide-react": "^0.564.0",
     "mdast-util-from-markdown": "^2.0.3",
     "mdast-util-gfm": "^3.1.0",
     "mdast-util-math": "^3.0.0",

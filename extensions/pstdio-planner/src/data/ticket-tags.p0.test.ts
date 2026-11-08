@@ -111,4 +111,62 @@ describe("tag edits from two offline devices", () => {
 
     for (const device of [0, 1] as const) expect((await tagsOn(device))?.flags).toEqual(["needs-docs"]);
   });
+
+  test("converged selections survive ordinary ticket edits and later remove/add rounds", async () => {
+    const { pair, set, tagsOn } = await offlineDevices();
+    await set(0, "flags", ["risky", "blocked-upstream"]);
+    await set(1, "flags", ["risky", "needs-docs"]);
+    await pair.merge();
+    const records = ticketRecords(pair.devices[0]);
+    await records.put(ticket.id, { ...(await records.get(ticket.id))!, title: "Renamed" });
+    await pair.merge();
+    for (const device of [0, 1] as const) {
+      expect((await ticketRecords(pair.devices[device]).get(ticket.id))?.title).toBe("Renamed");
+      expect(new Set((await tagsOn(device))?.flags)).toEqual(new Set(["risky", "blocked-upstream", "needs-docs"]));
+    }
+    await set(0, "flags", ["needs-docs"]);
+    await set(1, "flags", ["risky", "blocked-upstream"]);
+    await pair.merge();
+    for (const device of [0, 1] as const) expect((await tagsOn(device))?.flags).toEqual([]);
+    await set(0, "flags", ["risky"]);
+    await set(1, "flags", ["needs-docs"]);
+    await pair.merge();
+    for (const device of [0, 1] as const)
+      expect(new Set((await tagsOn(device))?.flags)).toEqual(new Set(["risky", "needs-docs"]));
+  });
+});
+
+test("a later offline multi-select addition remains visible after a concurrent scalar conversion", async () => {
+  const { pair, set, tagsOn } = await offlineDevices();
+  await set(0, "flags", ["risky", "blocked-upstream"]);
+  await pair.merge();
+  await set(0, "flags", ["risky"]);
+  await pair.merge();
+  const first = ticketRecords(pair.devices[0]);
+  const observed = (await first.get(ticket.id))!;
+  await first.put(ticket.id, { ...observed, tags: { ...observed.tags, flags: "risky" } });
+  await set(1, "flags", ["risky", "needs-docs"]);
+  await pair.merge();
+  for (const device of [0, 1] as const)
+    expect(new Set((await tagsOn(device))?.flags)).toEqual(new Set(["risky", "needs-docs"]));
+});
+
+test("a multi-select conversion keeps a concurrent changed scalar visible", async () => {
+  const { pair, tagsOn } = await offlineDevices();
+  const first = ticketRecords(pair.devices[0]);
+  let observed = (await first.get(ticket.id))!;
+  await first.put(ticket.id, { ...observed, tags: { ...observed.tags, flags: "risky" } });
+  await pair.merge();
+  observed = (await first.get(ticket.id))!;
+  const second = ticketRecords(pair.devices[1]);
+  const other = (await second.get(ticket.id))!;
+  await first.put(ticket.id, { ...observed, tags: { ...observed.tags, flags: "blocked-upstream" } });
+  await second.put(ticket.id, { ...other, tags: { ...other.tags, flags: ["risky"] } });
+  await pair.merge();
+  for (const device of [0, 1] as const)
+    expect(new Set((await tagsOn(device))?.flags)).toEqual(new Set(["risky", "blocked-upstream"]));
+  const merged = (await first.get(ticket.id))!;
+  await first.put(ticket.id, { ...merged, tags: { ...merged.tags, flags: ["risky"] } });
+  await pair.merge();
+  for (const device of [0, 1] as const) expect((await tagsOn(device))?.flags).toEqual(["risky"]);
 });

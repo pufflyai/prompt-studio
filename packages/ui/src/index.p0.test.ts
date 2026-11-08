@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 test("a basic UI consumer does not import unused lazy components", async () => {
@@ -44,4 +44,48 @@ test("the UI entry point supports server rendering", () => {
   expect(result.stderr.toString()).toBe("");
   expect(result.exitCode).toBe(0);
   expect(result.stdout.toString()).toContain("Ready");
+});
+
+test.each([
+  { entry: "chat-skeleton", exported: "ChatSkeleton" },
+  { entry: "lazy-markdown-editor", exported: "LazyMarkdownEditor" },
+  { entry: "lazy-markdown-editor", exported: "preloadMarkdownEditor" },
+])("$exported keeps editor dependencies out of its eager browser graph", async ({ entry, exported }) => {
+  const root = mkdtempSync(join(tmpdir(), "pstdio-ui-startup-"));
+  const consumer = join(root, "consumer.ts");
+  writeFileSync(
+    consumer,
+    `export { ${exported} } from ${JSON.stringify(fileURLToPath(new URL(`../dist/${entry}.js`, import.meta.url)))};`,
+  );
+  try {
+    const result = await Bun.build({
+      entrypoints: [consumer],
+      outdir: join(root, "out"),
+      target: "browser",
+      packages: "external",
+      splitting: true,
+    });
+    expect(result.success).toBe(true);
+    const first = result.outputs.find((output) => output.kind === "entry-point");
+    if (!first) throw new Error("Consumer entry was not built.");
+    const outputs = new Map(result.outputs.map((output) => [output.path, output]));
+    const pending = [first];
+    const visited = new Set<string>();
+    const eagerEditors = new Set<string>();
+    const scanner = new Bun.Transpiler({ loader: "js" });
+    while (pending.length) {
+      const output = pending.pop()!;
+      if (visited.has(output.path)) continue;
+      visited.add(output.path);
+      for (const dependency of scanner.scanImports(await output.text())) {
+        if (dependency.kind === "dynamic-import") continue;
+        if (/^(?:@lexical\/|lexical$|katex$)/.test(dependency.path)) eagerEditors.add(dependency.path);
+        const next = outputs.get(resolve(dirname(output.path), dependency.path));
+        if (next) pending.push(next);
+      }
+    }
+    expect([...eagerEditors]).toEqual([]);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

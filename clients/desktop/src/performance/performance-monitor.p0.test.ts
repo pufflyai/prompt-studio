@@ -248,6 +248,43 @@ test("starting the same enabled monitor twice does not duplicate its endpoint or
   expect(harness.endpoint.closed).toBe(1);
 });
 
+test("waits for private recording setup and releases it when stop arrives during startup", async () => {
+  const harness = createHarness(true);
+  const ready = Promise.withResolvers<{
+    sample: () => Promise<void>;
+    snapshot: () => never;
+    close: () => Promise<void>;
+  }>();
+  let closed = 0;
+  let startupError: unknown;
+  harness.options.createCapture = () => ready.promise;
+  const starting = harness.monitor.start();
+  void starting.catch((error) => {
+    startupError = error;
+  });
+  for (let turn = 0; turn < 5; turn++) await Promise.resolve();
+  expect(startupError).toBeUndefined();
+  expect(harness.monitor.snapshot()).toBeNull();
+  expect(harness.scheduled()).toBe(false);
+  const stopping = harness.monitor.stop();
+  ready.resolve({
+    sample: async () => {},
+    snapshot: () => {
+      throw new Error("unused");
+    },
+    close: async () => {
+      closed++;
+    },
+  });
+  await starting;
+  await stopping;
+  expect(closed).toBe(1);
+  expect(harness.endpoint.opened).toBe(1);
+  expect(harness.endpoint.closed).toBe(1);
+  expect(harness.scheduled()).toBe(false);
+  expect(harness.monitor.snapshot()).toBeNull();
+});
+
 test("the first periodic capture stays on schedule when the baseline metrics read is slow", async () => {
   const harness = createHarness(true);
   let now = 0;

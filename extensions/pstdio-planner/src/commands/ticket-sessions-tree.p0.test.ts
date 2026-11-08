@@ -78,7 +78,7 @@ describe("buildSessionsSection", () => {
     });
   });
 
-  test("opens each session in the project session panel", () => {
+  test("opens each session in the Sessions provider panel", () => {
     const sessions = [session({ id: "a", title: "Refine ticket: PS-1", anchors_json: [ticketAnchor("ticket-1")] })];
 
     const node = buildSessionsSection({ sessions, ticketId: "ticket-1" })?.nodes[0];
@@ -86,7 +86,7 @@ describe("buildSessionsSection", () => {
     expect(node?.resource).toEqual({ type: "session", extensionId: "pstdio", id: "a", label: "Refine ticket: PS-1" });
     expect(node?.target).toEqual({
       kind: "panel",
-      panel: { extensionId: "pstdio", kind: "placement", id: "project-session" },
+      panel: { extensionId: "pstdio.pstdio-session-browser", kind: "placement", id: "conversation" },
       resource: { type: "session", extensionId: "pstdio", id: "a", label: "Refine ticket: PS-1" },
       open: "preview",
     });

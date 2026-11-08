@@ -1,5 +1,20 @@
 import { describe, expect, it } from "bun:test";
-import { budgetMisses, summarizeSamples } from "./perf-helpers";
+import { budgetMisses, summarizeInteraction, summarizeSamples } from "./perf-helpers";
+
+it("counts the long task containing the input event, excluding work outside the interaction", () => {
+  expect(
+    summarizeInteraction({
+      start: 100,
+      settled: 800,
+      longTasks: [
+        { startTime: 10, duration: 90 },
+        { startTime: 99, duration: 633 },
+        { startTime: 750, duration: 60 },
+        { startTime: 800, duration: 80 },
+      ],
+    }),
+  ).toEqual({ duration: 700, longTasks: [633, 60] });
+});
 
 describe("summarizeSamples", () => {
   it("reports every sample with the median and range", () => {

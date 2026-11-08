@@ -94,6 +94,7 @@ const unavailableAccount: ExtensionAccountApi = {
   projectSyncStatus: unavailableAccountCall,
   syncProject: unavailableAccountCall,
   stopProjectSync: unavailableAccountCall,
+  resolveReturnedChanges: unavailableAccountCall,
 };
 
 const unavailableViews = (): never => {

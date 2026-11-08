@@ -87,6 +87,7 @@ for (const aba of [false, true])
     expect(applyOrderedOperation(new Map(), careful, "epoch", result.decision)).toEqual({
       decision: result.decision,
       records: [],
+      skipped: [],
     });
   });
 

@@ -357,9 +357,10 @@ On `main`, `ctx.account` reads this device's Cloud account, the account's device
 | `ctx.account.devices()` | Lists the account's devices with `name`, `platform`, `lastSeenAt`, `online`, and `current` for this device. |
 | `ctx.account.renameDevice(id, name)` | Renames a device. |
 | `ctx.account.removeDevice(id)` | Stops a device from renewing Cloud access. Removing the current device signs it out. |
-| `ctx.account.projectSyncStatus(projectId?)` | Returns `{ state, offlineReady, pendingItems?, download? }` for a project. |
+| `ctx.account.projectSyncStatus(projectId?)` | Returns `{ state, offlineReady, pendingItems?, download?, away?, replaced? }` for a project. `away` lists changes made while signed out or held for review; `replaced` lists this device's changes Cloud did not apply because another device changed them first. |
 | `ctx.account.syncProject(projectId?)` | Syncs the project on every device of the account that has it. |
 | `ctx.account.stopProjectSync(projectId?)` | Makes the project local on every device. |
+| `ctx.account.resolveReturnedChanges(action, projectId?)` | `apply` uploads changes held for review on this device, `discard` drops them and takes Cloud's copy, `dismiss` clears the replaced-changes list in `projectSyncStatus().replaced`. |
 
 `state` is one of these values. The host derives it on each read from the local documents, the record assets and the relay connections. It never stores a second status.
 

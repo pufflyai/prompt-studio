@@ -154,6 +154,11 @@ const schemas = {
     z.object({ op: z.literal("removeDevice"), id: identifier }),
     z.object({ op: z.literal("syncProject"), ...projectId }),
     z.object({ op: z.literal("stopProjectSync"), ...projectId }),
+    z.object({
+      op: z.literal("resolveReturnedChanges"),
+      action: z.enum(["apply", "discard", "dismiss"]),
+      ...projectId,
+    }),
   ]),
 } satisfies Record<WebviewHostCapability, z.ZodType>;
 

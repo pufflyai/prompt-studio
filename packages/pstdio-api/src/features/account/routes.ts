@@ -108,5 +108,16 @@ export const createAccountRoutes = (service: ReturnType<typeof createNativeAccou
     createRoute({ method: "delete", path: "/account/projects/{id}", tags, request: { params }, responses }),
     async (c) => c.json(await service.stopProjectSync(c.req.valid("param").id), 200),
   );
+  routes.openapi(
+    createRoute({
+      method: "post",
+      path: "/account/projects/{id}/returned-changes",
+      description: "Apply or discard changes held for review on this device, or clear its replaced-changes list.",
+      tags,
+      request: { params, body: json(z.object({ action: z.enum(["apply", "discard", "dismiss"]) })) },
+      responses,
+    }),
+    async (c) => c.json(await service.resolveReturnedChanges(c.req.valid("param").id, c.req.valid("json").action), 200),
+  );
   return routes;
 };

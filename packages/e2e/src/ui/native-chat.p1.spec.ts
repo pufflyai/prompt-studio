@@ -179,7 +179,11 @@ test("independent native chat paints and accepts input before history, then reta
     });
     await main.getByRole("button", { name: "Show saved queue", exact: true }).click();
     await expect.poll(() => authenticatedModels.includes("A")).toBe(true);
-    await expect(main.getByRole("img", { name: "Provider image" })).toBeVisible();
+    // The transcript follows the queue to the bottom; bring this lazy image's paragraph back into view.
+    await main.getByRole("link", { name: "Provider document" }).scrollIntoViewIfNeeded();
+    const providerImage = main.getByRole("img", { name: "Provider image" });
+    await expect(providerImage).toBeVisible();
+    await expect.poll(() => providerImage.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBe(1);
     await main.getByRole("link", { name: "Provider document" }).click();
     await expect(main.getByText("Provider link opened", { exact: true })).toBeVisible();
     await main.getByRole("button", { name: "Edit queued message: Saved queued prompt", exact: true }).click();

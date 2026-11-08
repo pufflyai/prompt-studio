@@ -1,9 +1,9 @@
-import { resourceKey } from "@pstdio/sdk/extensions";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import type { TreeNode, TreeViewSection } from "../renderers/tree-renderer-registry";
 import type { ResourceRef } from "../resources/resource-registry";
 import { settleReadBatch } from "../views/settle-read-batch";
 import type { NavigationTarget } from "./navigation-registry";
+import { stableNavigationValue } from "./navigation-target-key";
 import { getNavigationTreeNodeSource, setNavigationTreeNodeSource } from "./navigation-tree-node-source";
 import { createNavigationTreeSnapshots } from "./navigation-tree-snapshots";
 
@@ -54,6 +54,7 @@ export interface NavigationTreeContribution {
 export interface CreateNavigationTreeRegistryInput {
   subscribeViewRefresh?(viewId: string, listener: () => void): Disposable;
   getViewDefaultExpandedSectionIds?(viewId: string): readonly string[] | undefined;
+  getViewDefaultExpandedNodeIds?(viewId: string): readonly string[] | undefined;
   getViewSections?(viewId: string, context: NavigationTreeContext): Promise<TreeViewSection[]> | TreeViewSection[];
   getViewStructure?(viewId: string, context: NavigationTreeContext): TreeViewSection[];
   getViewChildren?(viewId: string, node: TreeNode, context: NavigationTreeContext): Promise<TreeNode[]> | TreeNode[];
@@ -87,6 +88,7 @@ export interface NavigationTreeRegistry {
   getChildren(node: TreeNode, context?: NavigationTreeContext): Promise<TreeNode[]>;
   moveNode(source: TreeNode, target: TreeNode | undefined, context?: NavigationTreeMoveContext): Promise<void>;
   getDefaultExpandedSectionIds(owner: NavigationTreeOwner, slot?: NavigationTreeSlot): string[];
+  getDefaultExpandedNodeIds(owner: NavigationTreeOwner, slot?: NavigationTreeSlot): string[];
   /** Counts contributions registered and removed, unlike `onDidChange`, which also fires on refreshes. */
   getRegistrationRevision(): number;
   onDidChange(listener: () => void): Disposable;
@@ -236,11 +238,10 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
 
     getReadKey(owner, context = {}) {
       return JSON.stringify(
-        (["header", "content", "footer"] as const).flatMap((slot) =>
-          matching(owner, slot).map((contribution) => [
-            contribution.id,
-            resourceKey(readContext(contribution, context).resource),
-          ]),
+        stableNavigationValue(
+          (["header", "content", "footer"] as const).flatMap((slot) =>
+            matching(owner, slot).map((contribution) => [contribution.id, readContext(contribution, context).resource]),
+          ),
         ),
       );
     },
@@ -311,6 +312,17 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
             (contribution.viewId ? input.getViewDefaultExpandedSectionIds?.(contribution.viewId) : undefined) ??
             []
           ).map((id) => scopedId(contribution.idScope, id)),
+        ),
+      );
+    },
+
+    getDefaultExpandedNodeIds(owner, selectedSlot) {
+      const slots: readonly NavigationTreeSlot[] = selectedSlot ? [selectedSlot] : ["header", "content", "footer"];
+      return slots.flatMap((slot) =>
+        matching(owner, slot).flatMap((contribution) =>
+          (contribution.viewId ? (input.getViewDefaultExpandedNodeIds?.(contribution.viewId) ?? []) : []).map((id) =>
+            scopedId(contribution.idScope, id),
+          ),
         ),
       );
     },

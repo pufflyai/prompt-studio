@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin } from "../ui-server";
+import { deleteAllProjects } from "./helpers/session-follow-up";
 
 // The script runs in a sandboxed frame next to the webview, like an HTML artifact or another
 // extension would. It forges the rimless handshake and init calls that only the host may send.
@@ -27,6 +28,19 @@ const forgedHostScript = `
 `;
 
 test("host messages to a webview leave no listeners on the host window", async ({ page, request }) => {
+  await deleteAllProjects(request);
+  await page.goto("/");
+  const picker = page.getByRole("dialog", { name: "Projects", exact: true }).last();
+  await expect(picker).toBeVisible();
+  const cdp = await page.context().newCDPSession(page);
+  const hostMessageListeners = async () => {
+    const { result } = await cdp.send("Runtime.evaluate", { expression: "window" });
+    const objectId = result.objectId as string;
+    const { listeners } = await cdp.send("DOMDebugger.getEventListeners", { objectId });
+    await cdp.send("Runtime.releaseObject", { objectId });
+    return listeners.filter((listener) => listener.type === "message").length;
+  };
+  const withoutWebviews = await hostMessageListeners();
   const response = await request.post(`${uiOrigin}/v1/projects`, {
     data: folderProjectInput({ name: "Webview bridge listeners" }),
   });
@@ -41,14 +55,6 @@ test("host messages to a webview leave no listeners on the host window", async (
     const increment = lab.getByRole("button", { name: "Increment" });
     await expect(lab.getByText("0", { exact: true })).toBeVisible();
 
-    const cdp = await page.context().newCDPSession(page);
-    const hostMessageListeners = async () => {
-      const { result } = await cdp.send("Runtime.evaluate", { expression: "window" });
-      const objectId = result.objectId as string;
-      const { listeners } = await cdp.send("DOMDebugger.getEventListeners", { objectId });
-      await cdp.send("Runtime.releaseObject", { objectId });
-      return listeners.filter((listener) => listener.type === "message").length;
-    };
     await increment.click();
     await expect(lab.getByText("1", { exact: true })).toBeVisible();
     const baseline = await hostMessageListeners();
@@ -60,7 +66,11 @@ test("host messages to a webview leave no listeners on the host window", async (
     }
 
     await expect.poll(hostMessageListeners).toBeLessThanOrEqual(baseline);
+    expect((await request.delete(`${uiOrigin}/v1/projects/${project.id}`)).ok()).toBe(true);
+    await expect(page.locator("iframe")).toHaveCount(0);
+    await expect.poll(hostMessageListeners).toBeLessThanOrEqual(withoutWebviews);
   } finally {
+    await cdp.detach().catch(() => {});
     await request.delete(`${uiOrigin}/v1/projects/${project.id}`);
   }
 });
