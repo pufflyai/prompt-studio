@@ -167,7 +167,9 @@
         "installing": "Installation de {{name}}",
         "batch": "{{count}} mises à niveau terminées sur {{total}}",
         "retry": "Réessayer",
-        "dismiss": "Fermer"
+        "dismiss": "Fermer",
+        "upgradingButton": "Mise à niveau",
+        "batchFailed": "{{count}} mises à niveau sur {{total}} ont échoué"
       }
     }
   },

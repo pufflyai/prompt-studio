@@ -111,11 +111,13 @@ Explicit Git refs and other repository sources use the system Git executable. Wh
   Healthy local-path extensions stay under local control.
 - In the extension panel, every row that can take a newer release shows an upgrade button next to
   its switch. The button upgrades only that extension. **Upgrade all** in the panel header runs
-  Upgrade for every extension that offers it, with at most two installs running at once. Queued rows
-  say they are waiting; active rows show the extension name, a progress bar and elapsed time. The
-  header counts finished upgrades. Each row keeps its result and elapsed time, and failures offer
-  Retry and Dismiss beside the action. The individual install bar is indeterminate; the host does not
-  report download percentages. Successful responses update the displayed version and upgrade action
+  Upgrade for every extension that offers it, with at most two installs running at once. Each button
+  shows queued or running state and elapsed time, with progress along its bottom edge. The Upgrade all
+  button counts completed attempts and retains the batch outcome. Individual buttons retain their
+  result and elapsed time; clicking a result opens an anchored notification with error details, Retry
+  and Dismiss. Dismiss clears only that operation's retained button state, without clearing a newer
+  result or changing batch counts. List and detail controls share the same state. Individual install
+  progress is indeterminate; the host does not report download percentages. Successful responses update the displayed version and upgrade action
   immediately, while the remaining inventory refreshes in the background. Workspaces are prepared
   again only when an enabled upgrade changes skills or workspace setup hooks. Overlapping project
   refresh requests share a maintenance pass; a change arriving mid-pass revisits only workspaces that

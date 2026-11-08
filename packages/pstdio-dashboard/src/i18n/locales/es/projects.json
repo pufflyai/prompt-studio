@@ -167,7 +167,9 @@
         "installing": "Instalando {{name}}",
         "batch": "{{count}} de {{total}} actualizaciones terminadas",
         "retry": "Reintentar",
-        "dismiss": "Cerrar"
+        "dismiss": "Cerrar",
+        "upgradingButton": "Actualizando",
+        "batchFailed": "{{count}} de {{total}} actualizaciones fallaron"
       }
     }
   },

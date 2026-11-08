@@ -165,7 +165,9 @@
         "installing": "正在安裝 {{name}}",
         "batch": "已完成 {{count}} / {{total}} 個升級",
         "retry": "重試",
-        "dismiss": "關閉"
+        "dismiss": "關閉",
+        "upgradingButton": "正在升級",
+        "batchFailed": "{{total}} 個升級中有 {{count}} 個失敗"
       }
     }
   },

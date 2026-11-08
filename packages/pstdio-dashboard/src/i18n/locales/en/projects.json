@@ -167,7 +167,9 @@
         "installing": "Installing {{name}}",
         "batch": "{{count}} of {{total}} upgrades finished",
         "retry": "Retry",
-        "dismiss": "Dismiss"
+        "dismiss": "Dismiss",
+        "upgradingButton": "Upgrading",
+        "batchFailed": "{{count}} of {{total}} upgrades failed"
       }
     },
     "machineTokens": {

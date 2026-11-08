@@ -23,7 +23,7 @@ export const useExtensionPanelActions = (projectId: string | undefined, onInstal
     feedback.run(
       extension.id,
       {
-        running: t("projectSettings.extensionsPanel.feedback.upgrading", { name: extension.displayName }),
+        running: t("projectSettings.extensionsPanel.feedback.upgradingButton"),
         success: t("projectSettings.extensionsPanel.upgrade.succeeded"),
         failed: t("projectSettings.extensionsPanel.upgrade.failed"),
       },

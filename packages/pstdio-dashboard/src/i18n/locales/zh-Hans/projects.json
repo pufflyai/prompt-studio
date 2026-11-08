@@ -165,7 +165,9 @@
         "installing": "正在安装 {{name}}",
         "batch": "已完成 {{count}} / {{total}} 个升级",
         "retry": "重试",
-        "dismiss": "关闭"
+        "dismiss": "关闭",
+        "upgradingButton": "正在升级",
+        "batchFailed": "{{total}} 个升级中有 {{count}} 个失败"
       }
     }
   },

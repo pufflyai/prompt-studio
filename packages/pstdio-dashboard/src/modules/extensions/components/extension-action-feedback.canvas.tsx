@@ -1,15 +1,19 @@
-import { Button, HStack, Progress, Stack, Text } from "@chakra-ui/react";
+import { Button, HStack, Stack, Text } from "@chakra-ui/react";
 import { useState } from "react";
-import { ExtensionActionFeedback, type ExtensionActionState } from "./extension-action-feedback";
+import { ExtensionActionButton } from "./extension-action-button";
+import type { ExtensionActionState } from "./extension-action-feedback";
+import { ExtensionUpgradeProgress } from "./extension-upgrade-progress";
 
 export default { title: "ProjectSettings/Extension action feedback" };
 export const UpgradeFeedback = () => {
-  const [status, setStatus] = useState<ExtensionActionState["status"]>("running");
+  const [status, setStatus] = useState<ExtensionActionState["status"] | undefined>("running");
+  const [completed, setCompleted] = useState(1);
+  const [showBatch, setShowBatch] = useState(true);
   const labels = {
     queued: "Queued for upgrade",
-    running: "Upgrading Project Planner",
+    running: "Upgrading",
     success: "Extension upgraded",
-    error: "Could not upgrade extension",
+    error: "Upgrade failed",
   };
   return (
     <Stack padding="lg" gap="md">
@@ -19,33 +23,64 @@ export const UpgradeFeedback = () => {
             {value}
           </Button>
         ))}
-      </HStack>
-      <Text textStyle="heading/M">Extensions</Text>
-      <Text textStyle="label/S/medium">1 of 3 upgrades finished · Project Planner upgrading</Text>
-      <Progress.Root value={1} max={3} size="xs" aria-label="Extension upgrades">
-        <Progress.Track>
-          <Progress.Range />
-        </Progress.Track>
-      </Progress.Root>
-      <Stack borderBottomWidth="1px" borderColor="border.subtle" paddingY="sm" gap="xs">
-        <Text textStyle="label/S/medium">Project Planner · v0.4.2</Text>
-        <Text textStyle="label/XS" color="fg.muted">
-          Plan and track tickets across workspaces.
-        </Text>
-        <ExtensionActionFeedback
-          action={{
-            status,
-            label: labels[status],
-            startedAt: Date.now() - 12000,
-            finishedAt: status === "running" ? undefined : Date.now(),
-            error: "The registry could not be reached.",
+        <Button
+          onClick={() => {
+            setShowBatch(true);
+            setCompleted((value) => (value + 1) % 4);
           }}
-          onRetry={() => setStatus("running")}
-          onDismiss={() => setStatus("queued")}
+        >
+          Advance batch
+        </Button>
+      </HStack>
+      <HStack justifyContent="space-between">
+        <Text textStyle="heading/M">Extensions</Text>
+        <ExtensionUpgradeProgress
+          batch={
+            showBatch
+              ? {
+                  ids: ["planner", "notes", "tickets"],
+                  startedAt: Date.now() - 12000,
+                  completed,
+                  failed: status === "error" ? 1 : 0,
+                  finishedAt: completed === 3 ? Date.now() : undefined,
+                }
+              : undefined
+          }
+          onUpgrade={() => {
+            setShowBatch(true);
+            setCompleted(0);
+          }}
+          onDismiss={() => setShowBatch(false)}
+          canUpgrade
         />
-      </Stack>
-      <Text textStyle="label/S/medium">Notes</Text>
-      <ExtensionActionFeedback action={{ status: "queued", label: "Queued for upgrade" }} />
+      </HStack>
+      <HStack borderBottomWidth="1px" borderColor="border.subtle" paddingY="sm" gap="md">
+        <Stack flex="1" gap="0">
+          <Text textStyle="label/S/medium">Project Planner · v0.4.2</Text>
+          <Text textStyle="label/XS" color="fg.muted">
+            Plan and track tickets across workspaces.
+          </Text>
+        </Stack>
+        <ExtensionActionButton
+          size="2xs"
+          action={
+            status
+              ? {
+                  status,
+                  label: labels[status],
+                  startedAt: status === "queued" ? undefined : Date.now() - 12000,
+                  finishedAt: status === "success" || status === "error" ? Date.now() : undefined,
+                  error: status === "error" ? "The registry could not be reached." : undefined,
+                }
+              : undefined
+          }
+          onAction={() => setStatus("running")}
+          onRetry={() => setStatus("running")}
+          onDismiss={() => setStatus(undefined)}
+        >
+          Upgrade
+        </ExtensionActionButton>
+      </HStack>
     </Stack>
   );
 };

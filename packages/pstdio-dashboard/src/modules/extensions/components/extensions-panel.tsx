@@ -95,7 +95,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
         onBack={() => openList()}
         upgradeAction={actions.actions[selected.id]}
         onUpgrade={() => void actions.handleUpgrade(selected)}
-        onDismissUpgrade={() => actions.dismiss(selected.id)}
+        onDismissUpgrade={(expected) => actions.dismiss(selected.id, expected)}
         onRetryAction={() => actions.retry(selected.id)}
       />
     );
@@ -139,6 +139,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
         agents={agents}
         actionStates={actions.actions}
         onDismissAction={actions.dismiss}
+        onDismissBatch={actions.dismissBatch}
         onRetryAction={actions.retry}
         batch={actions.batch}
         togglingAutomation={setAutomationEnabled.isPending}

@@ -1,14 +1,15 @@
-import { Box, Flex, HStack, Icon, IconButton, Stack, Text } from "@chakra-ui/react";
+import { Box, Flex, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 import type {
   ExtensionDiagnostic,
   ProjectExtensionInstance,
   WorkbenchExtensionAutomationRecord,
 } from "@pstdio/sdk/api";
-import { Switch, type SwitchProps, Tooltip } from "@pstdio/ui";
-import { ArrowUpCircle, Folder, Globe } from "lucide-react";
+import { Switch, type SwitchProps } from "@pstdio/ui";
+import { Folder, Globe } from "lucide-react";
 import type { AgentInfo } from "pstdio-api-contracts";
 import { useTranslation } from "react-i18next";
-import { ExtensionActionFeedback, type ExtensionActionState } from "./extension-action-feedback";
+import { ExtensionActionButton } from "./extension-action-button";
+import type { ExtensionActionState } from "./extension-action-feedback";
 import { ExtensionAutomationsPopover } from "./extension-automations-popover";
 import { ExtensionHealthPopover } from "./extension-health-popover";
 import { ExtensionIcon } from "./extension-icon";
@@ -22,7 +23,7 @@ export interface ExtensionListRowProps {
   toggling: boolean;
   upgrading: boolean;
   action?: ExtensionActionState;
-  onDismissAction?: () => void;
+  onDismissAction?: (action: ExtensionActionState) => void;
   onRetryAction?: () => void;
   togglingAutomation?: boolean;
   onToggle: (enabled: boolean) => void;
@@ -97,9 +98,6 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
         <Text textStyle="label/XS" color="fg.muted" truncate>
           {extension.description ?? t("projectSettings.extensionsPanel.noDescription")}
         </Text>
-        <Box onClick={stopRowClick} onKeyDown={stopRowClick}>
-          <ExtensionActionFeedback action={action} onDismiss={onDismissAction} onRetry={onRetryAction} />
-        </Box>
       </Stack>
 
       <Box
@@ -134,22 +132,20 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
         />
       </Box>
 
-      {/* The slot stays when there is nothing to upgrade, so the switches line up across rows. The row
-          opens on Enter, so a key press on the button must not reach it either. */}
-      <Box boxSize="6" flexShrink="0" onClick={stopRowClick} onKeyDown={stopRowClick}>
-        {extension.canUpgrade && (
-          <Tooltip content={t("projectSettings.extensionsPanel.upgrade.action")}>
-            <IconButton
-              variant="ghost"
-              size="2xs"
-              loading={upgrading}
-              onClick={onUpgrade}
-              aria-label={t("projectSettings.extensionsPanel.upgrade.action")}
-              data-testid="extension-row-upgrade"
-            >
-              <ArrowUpCircle />
-            </IconButton>
-          </Tooltip>
+      <Box flexShrink="0" onClick={stopRowClick} onKeyDown={stopRowClick}>
+        {(extension.canUpgrade || action) && (
+          <ExtensionActionButton
+            variant="outline"
+            size="2xs"
+            action={action}
+            onAction={onUpgrade}
+            onDismiss={onDismissAction}
+            onRetry={action?.status === "error" ? onRetryAction : undefined}
+            disabled={upgrading || toggling}
+            data-testid="extension-row-upgrade"
+          >
+            {t("projectSettings.extensionsPanel.upgrade.action")}
+          </ExtensionActionButton>
         )}
       </Box>
 

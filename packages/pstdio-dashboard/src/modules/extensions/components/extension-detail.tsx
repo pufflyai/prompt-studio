@@ -8,13 +8,15 @@ import type {
 import { AlertMessage, Switch, type SwitchProps } from "@pstdio/ui";
 import type { WorkbenchCore } from "@pstdio/workbench";
 import type { ExecuteOptionCommand } from "@pstdio/workbench/react";
-import { ArrowLeft, ArrowUpCircle, Blocks, RotateCw, SlidersHorizontal, Timer } from "lucide-react";
+import { ArrowLeft, Blocks, RotateCw, SlidersHorizontal, Timer } from "lucide-react";
 import type { AgentInfo } from "pstdio-api-contracts";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PageContentLayout } from "@/shared/components/page-content-layout";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
+import { ExtensionActionButton } from "./extension-action-button";
+import type { ExtensionActionState } from "./extension-action-feedback";
 import { ExtensionConnectionsCard } from "./extension-connections-card";
 import { ExtensionContributions } from "./extension-contributions";
 import { ExtensionDeleteSection } from "./extension-delete-section";
@@ -35,6 +37,9 @@ export interface ExtensionDetailProps {
   settings: ExtensionSettingValueRecord[];
   settingsViews?: ReactNode;
   actionFeedback?: ReactNode;
+  upgradeAction?: ExtensionActionState;
+  onDismissUpgrade?: (action: ExtensionActionState) => void;
+  onRetryUpgrade?: () => void;
   toggling?: boolean;
   reloading?: boolean;
   upgrading?: boolean;
@@ -63,6 +68,9 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
     settings,
     settingsViews,
     actionFeedback,
+    upgradeAction,
+    onDismissUpgrade,
+    onRetryUpgrade,
     toggling,
     reloading,
     upgrading,
@@ -143,19 +151,19 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                     {t(`projectSettings.extensionsPanel.scope.${extension.scope}`)}
                   </Text>
                 </Stack>
-                {extension.canUpgrade && (
-                  <Button
+                {(extension.canUpgrade || upgradeAction) && (
+                  <ExtensionActionButton
                     variant="primary"
                     size="2xs"
-                    onClick={onUpgrade}
-                    loading={upgrading}
+                    onAction={onUpgrade}
+                    action={upgradeAction}
+                    onDismiss={onDismissUpgrade}
+                    onRetry={onRetryUpgrade}
                     disabled={changingSource}
                     data-testid="extension-upgrade"
-                    flexShrink="0"
                   >
-                    <ArrowUpCircle size={12} />
                     {t("projectSettings.extensionsPanel.upgrade.action")}
-                  </Button>
+                  </ExtensionActionButton>
                 )}
                 {showReload && (
                   <Button

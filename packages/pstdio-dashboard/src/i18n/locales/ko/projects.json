@@ -165,7 +165,9 @@
         "installing": "{{name}} 설치 중",
         "batch": "업그레이드 {{total}}개 중 {{count}}개 완료",
         "retry": "다시 시도",
-        "dismiss": "닫기"
+        "dismiss": "닫기",
+        "upgradingButton": "업그레이드 중",
+        "batchFailed": "업그레이드 {{total}}개 중 {{count}}개 실패"
       }
     }
   },

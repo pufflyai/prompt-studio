@@ -1,4 +1,4 @@
-import { Button, HStack, Input, InputGroup, Stack, Text } from "@chakra-ui/react";
+import { HStack, Input, InputGroup, Stack, Text } from "@chakra-ui/react";
 import type {
   ExtensionDiagnostic,
   MarketplaceExtension,
@@ -6,13 +6,14 @@ import type {
   WorkbenchExtensionAutomationRecord,
   WorkbenchExtensionHarnessRecord,
 } from "@pstdio/sdk/api";
-import { ArrowUpCircle, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import type { AgentInfo } from "pstdio-api-contracts";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PageContentLayout } from "@/shared/components/page-content-layout";
 import type { DroppedExtensionFolder } from "@/shared/extensions/api";
 import { ExtensionActionFeedback, type ExtensionActionState } from "./extension-action-feedback";
+import type { ExtensionUpgradeBatch } from "./extension-actions";
 import { ExtensionFolderDropZone } from "./extension-folder-drop-zone";
 import { unavailableExtensionHarnesses } from "./extension-harness-availability";
 import { ExtensionListRow } from "./extension-list-row";
@@ -22,9 +23,10 @@ import { MarketplaceExtensionRow } from "./marketplace-extension-row";
 export interface ExtensionsPanelViewProps {
   extensions: ProjectExtensionInstance[];
   actionStates?: Record<string, ExtensionActionState>;
-  onDismissAction?: (id: string) => void;
+  onDismissAction?: (id: string, expected?: ExtensionActionState) => void;
+  onDismissBatch?: (batch: ExtensionUpgradeBatch) => void;
   onRetryAction?: (id: string) => void;
-  batch?: { ids: string[]; startedAt: number; finishedAt?: number };
+  batch?: ExtensionUpgradeBatch;
   marketplace: MarketplaceExtension[];
   diagnostics: ExtensionDiagnostic[];
   automations: WorkbenchExtensionAutomationRecord[];
@@ -87,6 +89,7 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
     actionStates = {},
     onDismissAction,
     onRetryAction,
+    onDismissBatch,
     batch,
     marketplace,
     diagnostics,
@@ -135,18 +138,13 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
             <Text textStyle="heading/M" flex="1" minW="0">
               {t("projectSettings.extensionsPanel.title")}
             </Text>
-            {(upgradable.length > 0 || upgradingAll) && (
-              <Button
-                variant="primary"
-                size="sm"
-                flexShrink="0"
-                loading={upgradingAll}
-                onClick={() => onUpgradeAll?.(upgradable)}
-                data-testid="extensions-upgrade-all"
-              >
-                <ArrowUpCircle size={14} />
-                {t("projectSettings.extensionsPanel.upgradeAll.action")}
-              </Button>
+            {(upgradable.length > 0 || batch || upgradingAll) && (
+              <ExtensionUpgradeProgress
+                batch={batch}
+                onUpgrade={() => onUpgradeAll?.(upgradable)}
+                onDismiss={onDismissBatch}
+                canUpgrade={upgradable.length > 0}
+              />
             )}
             <InputGroup startElement={<Search size={14} />} width="260px">
               <Input
@@ -159,7 +157,6 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
               />
             </InputGroup>
           </HStack>
-          <ExtensionUpgradeProgress batch={batch} actions={actionStates} />
         </Stack>
       }
     >
@@ -195,7 +192,9 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
           togglingAutomation={togglingAutomation}
           upgrading={upgradingInstanceIds.includes(extension.id)}
           action={actionStates[extension.id] ?? actionStates[extension.installName]}
-          onDismissAction={() => onDismissAction?.(actionStates[extension.id] ? extension.id : extension.installName)}
+          onDismissAction={(expected) =>
+            onDismissAction?.(actionStates[extension.id] ? extension.id : extension.installName, expected)
+          }
           onRetryAction={() => onRetryAction?.(extension.id)}
           onToggle={(enabled) => onToggle?.(extension, enabled)}
           onToggleAutomation={async (automation, enabled) => onToggleAutomation?.(extension, automation, enabled)}

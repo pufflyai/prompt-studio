@@ -1,43 +1,56 @@
-import { Progress, Stack, Text } from "@chakra-ui/react";
 import { useTranslation } from "react-i18next";
-import { ExtensionActionFeedback, type ExtensionActionState } from "./extension-action-feedback";
+import { ExtensionActionButton } from "./extension-action-button";
+import type { ExtensionActionState } from "./extension-action-feedback";
+import type { ExtensionUpgradeBatch } from "./extension-actions";
 
 interface ExtensionUpgradeProgressProps {
-  batch?: { ids: string[]; startedAt: number; finishedAt?: number };
-  actions: Record<string, ExtensionActionState>;
+  batch?: ExtensionUpgradeBatch;
+  onUpgrade: () => void;
+  onDismiss?: (batch: ExtensionUpgradeBatch) => void;
+  canUpgrade: boolean;
 }
+
+/** The batch owns its counts: dismissing a row result cannot rewrite the batch outcome. */
 export const ExtensionUpgradeProgress = (props: ExtensionUpgradeProgressProps) => {
-  const { batch, actions } = props;
+  const { batch, onUpgrade, onDismiss, canUpgrade } = props;
   const { t } = useTranslation("projects");
-  if (!batch?.ids.length) return null;
-  const ids = batch.ids;
-  const entries = ids.flatMap((id) => (actions[id] ? [actions[id]!] : []));
-  const pending = entries.filter(({ status }) => status === "queued" || status === "running");
-  const completed = ids.length - pending.length;
-  const label = t("projectSettings.extensionsPanel.feedback.batch", { count: completed, total: ids.length });
+  const finished = batch?.finishedAt !== undefined;
+  let action: ExtensionActionState | undefined;
+  if (batch) {
+    action = {
+      status: "running",
+      label: t("projectSettings.extensionsPanel.feedback.batch", { count: batch.completed, total: batch.ids.length }),
+      startedAt: batch.startedAt,
+      finishedAt: batch.finishedAt,
+    };
+    if (finished) {
+      action.status = batch.failed > 0 ? "error" : "success";
+      if (batch.failed > 0)
+        action.label = t("projectSettings.extensionsPanel.feedback.batchFailed", {
+          count: batch.failed,
+          total: batch.ids.length,
+        });
+    }
+    if (batch.failed > 0)
+      action.error = t("projectSettings.extensionsPanel.feedback.batchFailed", {
+        count: batch.failed,
+        total: batch.ids.length,
+      });
+  }
   return (
-    <Stack gap="xs" data-testid="extension-upgrade-progress">
-      <ExtensionActionFeedback
-        progress={false}
-        action={{
-          status: batch.finishedAt === undefined ? "running" : "success",
-          label,
-          startedAt: batch.startedAt,
-          finishedAt: batch.finishedAt,
-        }}
-      />
-      <Progress.Root value={completed} max={ids.length} size="xs" aria-label={label}>
-        <Progress.Track>
-          <Progress.Range />
-        </Progress.Track>
-      </Progress.Root>
-      {pending
-        .filter(({ status }) => status === "running")
-        .map((action) => (
-          <Text key={action.label} textStyle="label/XS" color="fg.muted">
-            {action.label}
-          </Text>
-        ))}
-    </Stack>
+    <ExtensionActionButton
+      variant="primary"
+      size="sm"
+      data-testid="extensions-upgrade-all"
+      action={action}
+      progress={batch ? { value: batch.completed, max: batch.ids.length, label: action!.label } : undefined}
+      onAction={onUpgrade}
+      onRetry={canUpgrade ? onUpgrade : undefined}
+      retryLabel={t("projectSettings.extensionsPanel.upgradeAll.action")}
+      onDismiss={() => batch && onDismiss?.(batch)}
+      disabled={!canUpgrade}
+    >
+      {t("projectSettings.extensionsPanel.upgradeAll.action")}
+    </ExtensionActionButton>
   );
 };

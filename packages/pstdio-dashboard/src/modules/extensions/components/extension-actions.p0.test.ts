@@ -59,3 +59,43 @@ test("retries failed work, but releases retry callbacks on success and dismissal
   actions.retry("upload");
   expect(calls).toBe(3);
 });
+
+test("dismissing an older result cannot clear a newer operation or its retry", async () => {
+  const actions = createExtensionActions();
+  await actions.run("notes", labels, async () => {});
+  const older = actions.getSnapshot().actions.notes!;
+  await actions.run("notes", labels, async () => {
+    throw new Error("New failure");
+  });
+  const latest = actions.getSnapshot().actions.notes!;
+  actions.dismiss("notes", older);
+  expect(actions.getSnapshot().actions.notes).toBe(latest);
+  actions.dismiss("notes", latest);
+  expect(actions.getSnapshot().actions.notes).toBeUndefined();
+});
+
+test("batch counts and failure outcome survive individual dismissal and reject stale batch dismissal", async () => {
+  const actions = createExtensionActions();
+  const gate = Promise.withResolvers<void>();
+  const pending = actions.runBatch([{ id: "one" }, { id: "two" }], "Queued", ({ id }) =>
+    actions.run(id, labels, async () => {
+      if (id === "one") throw new Error("Offline");
+      await gate.promise;
+    }),
+  );
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  expect(actions.getSnapshot().batch?.completed).toBe(1);
+  expect(actions.getSnapshot().batch?.failed).toBe(1);
+  actions.dismiss("one");
+  gate.resolve();
+  await pending;
+  const older = actions.getSnapshot().batch!;
+  expect(older.completed).toBe(2);
+  expect(older.failed).toBe(1);
+  await actions.runBatch([{ id: "one" }], "Queued", ({ id }) => actions.run(id, labels, async () => {}));
+  const latest = actions.getSnapshot().batch!;
+  actions.dismissBatch(older);
+  expect(actions.getSnapshot().batch).toBe(latest);
+  actions.dismissBatch(latest);
+  expect(actions.getSnapshot().batch).toBeUndefined();
+});

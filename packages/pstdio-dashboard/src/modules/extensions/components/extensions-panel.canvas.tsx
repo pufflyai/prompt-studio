@@ -300,7 +300,7 @@ export const UpgradingAll: Story = {
     diagnostics: [],
     automations,
     upgradingAll: true,
-    batch: { ids: ["planner-instance", "lab-instance"], startedAt: Date.now() - 12000 },
+    batch: { ids: ["planner-instance", "lab-instance"], startedAt: Date.now() - 12000, completed: 0, failed: 0 },
     actionStates: {
       "planner-instance": { status: "running", label: "Upgrading Project Planner", startedAt: Date.now() - 12000 },
       "lab-instance": { status: "running", label: "Upgrading Extension Lab", startedAt: Date.now() - 12000 },

@@ -2,9 +2,17 @@ import type { QueryClient } from "@tanstack/react-query";
 import type { ExtensionActionState } from "./extension-action-feedback";
 import { runExtensionUpgrades } from "./run-extension-upgrades";
 
+export interface ExtensionUpgradeBatch {
+  ids: string[];
+  startedAt: number;
+  finishedAt?: number;
+  completed: number;
+  failed: number;
+}
+
 interface ActionSnapshot {
   actions: Record<string, ExtensionActionState>;
-  batch?: { ids: string[]; startedAt: number; finishedAt?: number };
+  batch?: ExtensionUpgradeBatch;
 }
 
 export const createExtensionActions = () => {
@@ -19,7 +27,8 @@ export const createExtensionActions = () => {
   };
   const setAction = (id: string, action: ExtensionActionState) =>
     publish({ ...snapshot, actions: { ...snapshot.actions, [id]: action } });
-  const dismiss = (id: string) => {
+  const dismiss = (id: string, expected = snapshot.actions[id]) => {
+    if (snapshot.actions[id] !== expected) return;
     if (active.has(id) || snapshot.actions[id]?.status === "queued") return;
     retries.delete(id);
     const actions = { ...snapshot.actions };
@@ -65,9 +74,22 @@ export const createExtensionActions = () => {
     batchRunning = true;
     const actions = { ...snapshot.actions };
     for (const { id } of pending) actions[id] = { status: "queued", label: queuedLabel };
-    publish({ actions, batch: { ids: pending.map(({ id }) => id), startedAt: Date.now() } });
+    publish({ actions, batch: { ids: pending.map(({ id }) => id), startedAt: Date.now(), completed: 0, failed: 0 } });
     try {
-      await runExtensionUpgrades(pending, upgrade);
+      await runExtensionUpgrades(pending, async (target) => {
+        let failed = false;
+        try {
+          failed = (await upgrade(target)) === false;
+        } catch {
+          failed = true;
+        } finally {
+          const batch = snapshot.batch!;
+          publish({
+            ...snapshot,
+            batch: { ...batch, completed: batch.completed + 1, failed: batch.failed + Number(failed) },
+          });
+        }
+      });
     } finally {
       batchRunning = false;
       publish({ ...snapshot, batch: { ...snapshot.batch!, finishedAt: Date.now() } });
@@ -82,6 +104,10 @@ export const createExtensionActions = () => {
       };
     },
     dismiss,
+    dismissBatch: (expected = snapshot.batch) => {
+      if (batchRunning || snapshot.batch !== expected) return;
+      publish({ ...snapshot, batch: undefined });
+    },
     run,
     runBatch,
     retry: (id: string) => {

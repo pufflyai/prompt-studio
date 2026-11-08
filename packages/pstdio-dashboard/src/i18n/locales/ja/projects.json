@@ -165,7 +165,9 @@
         "installing": "{{name}} をインストール中",
         "batch": "{{total}} 件中 {{count}} 件のアップグレードが完了",
         "retry": "再試行",
-        "dismiss": "閉じる"
+        "dismiss": "閉じる",
+        "upgradingButton": "更新中",
+        "batchFailed": "{{total}} 件中 {{count}} 件の更新に失敗しました"
       }
     }
   },
