@@ -6,7 +6,8 @@ import {
   qualifyNavigationTarget,
   resourceKey,
 } from "pstdio-api-contracts/extension-kernel";
-import { createReadBoundary, isRuntimeNavigationTargetAvailable } from "pstdio-extensions";
+import { createReadBoundary, type ExtensionRuntime, isRuntimeNavigationTargetAvailable } from "pstdio-extensions";
+import { canonicalResource, ResourceReferenceError } from "../extensions/command-environment/resource-link-policy";
 import { resolveResourceRecords } from "../extensions/command-environment/resource-resolution";
 import type { ExtensionsRouteDeps } from "../extensions/deps";
 import { executeProjectExtensionCommand } from "../extensions/execute-project-extension-command";
@@ -16,23 +17,55 @@ interface OpeningContext {
   projectId: string;
   extensionId?: string;
   signal?: AbortSignal;
+  resourceLinksReadOnly?: boolean;
 }
 const bindingFor = (bindings: ResourceOpener[], resource: ResourceRef) =>
   bindings.find(
     ({ resourceKind }) => resourceKind.extensionId === resource.extensionId && resourceKind.id === resource.type,
   );
-const inProject = (target: NavigationTarget, projectId: string) => {
+const openingItems = (target: NavigationTarget) => {
   const pending: NavigationTarget[] = [target];
+  const items: Extract<NavigationTarget, { kind: "page" | "panel" }>[] = [];
   while (pending.length) {
     const item = pending.pop()!;
     if (item.kind === "compound") pending.push(...item.targets);
-    else {
-      if (item.kind !== "page" && item.kind !== "panel") return false;
-      if (item.resource?.projectId && item.resource.projectId !== projectId) return false;
+    else if (item.kind === "page" || item.kind === "panel") {
+      items.push(item);
       if (item.kind === "page" && item.parent) pending.push(item.parent);
-    }
+    } else return undefined;
   }
-  return true;
+  return items;
+};
+const isResourceAvailable = (runtime: ExtensionRuntime, resource: ResourceRef) =>
+  resource.extensionId === "pstdio" ||
+  runtime.resourceKinds.some((kind) => kind.extensionId === resource.extensionId && kind.localId === resource.type);
+const isOpeningAvailable = (runtime: ExtensionRuntime, target: NavigationTarget) =>
+  openingItems(target)?.every((item) => !item.resource || isResourceAvailable(runtime, item.resource)) &&
+  isRuntimeNavigationTargetAvailable(runtime, target);
+const canonicalOpeningTarget = async (
+  deps: ExtensionsRouteDeps,
+  input: OpeningContext,
+  requested: NavigationTarget,
+  extensionId: string,
+) => {
+  const sources = openingItems(requested);
+  if (!sources) return undefined;
+  const target = qualifyNavigationTarget(requested, extensionId, input.projectId);
+  if (target.kind !== "page" && target.kind !== "panel" && target.kind !== "compound") return undefined;
+  const items = openingItems(target)!;
+  const read = createReadBoundary(input.signal);
+  try {
+    await Promise.all(
+      items.map(async (item, index) => {
+        const resource = sources[index]!.resource;
+        if (resource) item.resource = await read(() => canonicalResource(deps, { ...input, extensionId }, resource));
+      }),
+    );
+  } catch (error) {
+    if (error instanceof ResourceReferenceError) return undefined;
+    throw error;
+  }
+  return target;
 };
 const resolveOpening = async (
   deps: ExtensionsRouteDeps,
@@ -53,6 +86,7 @@ const resolveOpening = async (
         projectId: input.projectId,
         commandId,
         signal: input.signal,
+        resourceLinksReadOnly: input.resourceLinksReadOnly,
         body: { source: "api", resource },
       });
       if (response.outcome.ok) value = response.outcome.value;
@@ -62,9 +96,7 @@ const resolveOpening = async (
     }
   }
   if (!isNavigationTarget(value)) return undefined;
-  const target = qualifyNavigationTarget(value, opener.extensionId, input.projectId);
-  if (target.kind !== "page" && target.kind !== "panel" && target.kind !== "compound") return undefined;
-  return inProject(target, input.projectId) ? target : undefined;
+  return canonicalOpeningTarget(deps, input, value, opener.extensionId);
 };
 
 export const resolveResourceOpenings = async (
@@ -104,9 +136,10 @@ export const resolveResourceOpenings = async (
       selected.id === binding.opener.id &&
       (selected.kind !== "command" ||
         snapshot.runtime.commands.some((command) => command.id === commandRefId(selected)));
+    const available = isResourceAvailable(snapshot.runtime, resource);
     return {
       resource,
-      ...(target && unchanged && isRuntimeNavigationTargetAvailable(snapshot.runtime, target) ? { target } : {}),
+      ...(target && unchanged && available && isOpeningAvailable(snapshot.runtime, target) ? { target } : {}),
     };
   });
 };

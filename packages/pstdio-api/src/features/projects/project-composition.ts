@@ -7,5 +7,16 @@ export const readProjectComposition = async (
   projectId: string,
 ) => {
   const info = await deps.projectInfoService.read(projectId);
-  return projectCompositionSchema.parse(info.composition === undefined ? defaults : JSON.parse(info.composition));
+  if (info.composition === undefined) return projectCompositionSchema.parse(defaults);
+  const empty = () => projectCompositionSchema.parse({ defaultPage: null, resourceOpeners: [] });
+  let value: unknown;
+  try {
+    value = JSON.parse(info.composition);
+  } catch (error) {
+    if (error instanceof SyntaxError) return empty();
+    throw error;
+  }
+  const parsed = projectCompositionSchema.safeParse(value);
+  // Synced bytes remain intact so a compatible peer or a later explicit edit can recover them.
+  return parsed.success ? parsed.data : empty();
 };
