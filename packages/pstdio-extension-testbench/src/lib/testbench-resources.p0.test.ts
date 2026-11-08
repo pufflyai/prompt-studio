@@ -6,10 +6,13 @@ test("preview workspace resolution stays within the selected project", async () 
     { id: "workspace", workspace_shorthand: "WS-1" },
   ]);
   const workspace = { type: "workspace", id: "workspace", extensionId: "pstdio" };
-  expect(await resources.resolveMany([{ ...workspace, projectId: "another-project" }])).toEqual([]);
+  expect(await resources.resolveOpenings([{ ...workspace, projectId: "another-project" }])).toEqual([]);
   for (const ref of [workspace, { ...workspace, projectId: "selected-project" }]) {
-    expect(await resources.resolveMany([ref])).toMatchObject([
-      { resource: { ...workspace, projectId: "selected-project", label: "WS-1" } },
+    expect(await resources.resolveOpenings([ref])).toMatchObject([
+      {
+        resource: { ...workspace, projectId: "selected-project", label: "WS-1" },
+        target: { kind: "page", page: { kind: "page", extensionId: "bench.workspaces", id: "inspect" } },
+      },
     ]);
   }
 });

@@ -1,8 +1,7 @@
-import type { CommandRef, PageRef, ViewRef } from "@pstdio/sdk/extensions";
+import type { CommandRef, PageRef } from "@pstdio/sdk/extensions";
 
 const extensionId = "pstdio.pstdio-workspaces";
 const page = (id: string): PageRef => ({ kind: "page", extensionId, id });
-const view = (id: string): ViewRef => ({ kind: "view", extensionId, id });
 const command = (id: string): CommandRef => ({ kind: "command", extensionId, id });
 export const workspacePages = {
   create: page("create"),
@@ -13,14 +12,6 @@ export const workspacePages = {
   history: page("history"),
   form: page("action"),
   device: page("device"),
-};
-export const workspaceViews = {
-  list: view("workspaces"),
-  file: view("file"),
-  tree: view("file-tree"),
-  changes: view("changes"),
-  summary: view("summary"),
-  history: view("history"),
 };
 export const workspaceCommands = {
   open: command("open"),
