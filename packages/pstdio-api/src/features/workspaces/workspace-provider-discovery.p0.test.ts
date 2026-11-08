@@ -96,3 +96,33 @@ test("provider semantic validation receives resolved defaults and rejects creati
   expect(validateParams).toHaveBeenCalledTimes(1);
   expect(createStandalone).not.toHaveBeenCalled();
 });
+
+test("cancelling a paused provider validation prevents late workspace allocation", async () => {
+  const started = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const controller = new AbortController();
+  const createStandalone = mock(async () => {
+    throw new Error("Unexpected workspace allocation");
+  });
+  const provider = {
+    validateParams: async () => {
+      started.resolve();
+      await release.promise;
+    },
+  };
+  const deps = {
+    workspaceService: { getDefault: async () => null, createStandalone },
+    workspaceProviderRuntime: { find: async () => ({ context: { projectId: "project" }, provider }) },
+  } as never;
+  const creating = createProviderBackedWorkspace(deps, {
+    projectId: "project",
+    providerId: "example.local",
+    standalone: true,
+    signal: controller.signal,
+  });
+  await started.promise;
+  controller.abort();
+  release.resolve();
+  await expect(creating).rejects.toThrow(/abort/i);
+  expect(createStandalone).not.toHaveBeenCalled();
+});

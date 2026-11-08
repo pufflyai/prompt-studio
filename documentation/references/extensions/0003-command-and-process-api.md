@@ -470,9 +470,10 @@ commands, sibling fields and dependency cycles, just like static schemas.
 Use optional `validateParams(ctx, params)` for provider-specific checks, such as
 whether a revision exists. It receives schema-validated values with defaults
 applied. Throw a useful error to reject creation before the host saves a workspace.
-The host runs this callback again before creating or recovering a backing resource.
 It runs in project context, without an allocated workspace directory. Keep it
 read-only; allocate resources in `create` after the host owns their identity.
+This preflight runs only before initial allocation. `create` and `resolve` must
+still check backing-resource invariants when the environment changes afterward.
 
 During workspace-bound provider callbacks, the optional `ctx.localDirectory()`
 allocates or reopens a host-managed local directory owned by that provider,
