@@ -84,11 +84,13 @@ for (const suite of ["desktop", "subnav"])
         .trim()
         .split("\n")
         .map((line) => JSON.parse(line));
-      expect(calls).toHaveLength(1);
-      if (suite === "desktop")
+      if (suite === "desktop") {
+        expect(calls).toHaveLength(1);
         expect(calls[0]).toEqual(expect.arrayContaining(["--suites", "desktop", "--samples", "1"]));
-      else {
-        expect(calls[0]).toEqual({ orderedSubnav: true, samples: "30" });
+      } else {
+        expect(calls).toHaveLength(2);
+        expect(calls[0]).toEqual(expect.arrayContaining(["prepare", "--suites", "subnav"]));
+        expect(calls[1]).toEqual({ orderedSubnav: true, samples: "30" });
         expect(
           await Bun.file(join(root, "test-results/edited-tests/performance/subnav/current/results.json")).json(),
         ).toEqual({ samples: "30" });

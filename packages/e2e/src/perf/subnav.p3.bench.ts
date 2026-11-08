@@ -16,6 +16,7 @@ import {
 } from "./subnav-benchmark-clock";
 import { SUBNAV_WORKLOAD, startSubnavBenchmarkFixture, subnavFixtureRoot } from "./subnav-benchmark-fixture";
 import { subnavBenchmarkResults } from "./subnav-benchmark-results";
+import { classifySubnavRequests } from "./subnav-request-outcomes";
 
 // Set on 2026-10-26 from four hosted ubuntu-24.04 runs (slowest 293 / 1,263 / 1,089 ms) plus about 20%.
 const SUBNAV_BUDGETS = {
@@ -222,13 +223,13 @@ try {
     summary,
     errors,
   };
-  errors.push(
-    ...samples.flatMap((sample) =>
-      sample.requests
-        .filter((request) => request.failure || !request.status || request.status >= 400 || request.outcomeOk === false)
-        .map((request) => `${sample.destination}/${sample.visit}: ${JSON.stringify(request)}`),
-    ),
-  );
+  for (const sample of samples) {
+    const classified = classifySubnavRequests(sample.requests);
+    sample.requests = classified.requests;
+    errors.push(
+      ...classified.errors.map((request) => `${sample.destination}/${sample.visit}: ${JSON.stringify(request)}`),
+    );
+  }
   const browserErrors = errors.map((message) => ({ message }));
   errors.push(...budgetResult.budgetErrors);
   await Bun.write(join(output, "results.json"), JSON.stringify(report, null, 2));

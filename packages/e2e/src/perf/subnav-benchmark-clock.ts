@@ -1,4 +1,5 @@
 import type { Locator, Page, Request } from "@playwright/test";
+import type { SubnavObservedRequest } from "./subnav-request-outcomes";
 import { measureSubnavRequests, type SubnavRequestClockInput } from "./subnav-resource-clock";
 
 export interface SubnavSample {
@@ -10,15 +11,7 @@ export interface SubnavSample {
   editorResources?: { path: string; startMs: number; durationMs: number; bytes: number }[];
   lastRequestMs: number;
   mountedRows: number;
-  requests: {
-    path: string;
-    durationMs: number;
-    completedMs: number;
-    status?: number;
-    outcomeOk?: boolean;
-    sessionRows?: number;
-    failure?: string;
-  }[];
+  requests: SubnavObservedRequest[];
   longTasks: { startTime: number; duration: number }[];
 }
 
@@ -217,6 +210,7 @@ export const measureSubnav = async (
     state: window.__subnavBenchmark,
     resources: (performance.getEntriesByType("resource") as PerformanceResourceTiming[]).map((entry) => ({
       name: entry.name,
+      startTime: entry.startTime,
       responseEnd: entry.responseEnd,
     })),
   }));
@@ -233,6 +227,7 @@ export const measureSubnav = async (
     clocks.push({ url: request.url(), timing, elapsedMs: (entry.finished ?? performance.now()) - entry.started });
     responses.push({
       path: new URL(request.url()).pathname,
+      postData: request.postDataJSON(),
       status: response?.status(),
       outcomeOk: result?.outcome?.ok,
       ...(sessions ? { sessionRows: sessions.nodes.length } : {}),

@@ -46,26 +46,41 @@ const checkQuarantine = async (file: string, runner: string, owner: string, env:
 if (row.suite) {
   // Suites own cold-start order and their fixed workloads. An edit checks the complete suite once.
   const orderedSubnav = row.suite === "subnav";
-  const code = orderedSubnav
-    ? await execute(["bun", "scripts/ci/run-subnav-benchmarks.ts"], {
+  let code: number;
+  if (orderedSubnav) {
+    code = await execute([
+      "bun",
+      "packages/benchmarks/src/cli.ts",
+      "prepare",
+      "--suites",
+      "subnav",
+      "--sha",
+      sha,
+      "--cache",
+      join(process.env.RUNNER_TEMP ?? evidence, "edited-benchmarks"),
+    ]);
+    if (code === 0)
+      code = await execute(["bun", "scripts/ci/run-subnav-benchmarks.ts"], {
         BENCHMARK_SAMPLES: "30",
         PSTDIO_EXTENSION_RELEASE_REF: sha,
-      })
-    : await execute([
-        "bun",
-        "packages/benchmarks/src/cli.ts",
-        "run",
-        "--checkout",
-        `${root}=${sha}=edited-tests`,
-        "--suites",
-        row.suite,
-        "--samples",
-        "1",
-        "--cache",
-        join(process.env.RUNNER_TEMP ?? evidence, "edited-benchmarks"),
-        "--out",
-        join(evidence, "performance"),
-      ]);
+      });
+  } else {
+    code = await execute([
+      "bun",
+      "packages/benchmarks/src/cli.ts",
+      "run",
+      "--checkout",
+      `${root}=${sha}=edited-tests`,
+      "--suites",
+      row.suite,
+      "--samples",
+      "1",
+      "--cache",
+      join(process.env.RUNNER_TEMP ?? evidence, "edited-benchmarks"),
+      "--out",
+      join(evidence, "performance"),
+    ]);
+  }
   if (orderedSubnav) {
     const rawResults = join(root, "__test-tmp__/subnav-benchmark/results");
     if (existsSync(rawResults)) cpSync(rawResults, join(evidence, "performance/subnav"), { recursive: true });
