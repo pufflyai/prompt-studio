@@ -1,5 +1,15 @@
 # pstdio-base-themes
 
+## 0.45.2
+
+_2026-11-08_
+
+### Patch Changes
+
+- 93d1e74: Declare extension IDs and official harness SVG logos with Gallery Thumbnails for UI Canvas, optional Agent Reports, Themes, and unlisted Remote Workspaces.
+- afd5581: Organize the Canvas catalog by purpose and consolidate navigable examples into fewer frames; make in-frame navigation the default for Canvas authoring.
+- ed40a9d: Keep maintained extensions loadable across the existing and upcoming ordered-storage API hosts.
+
 ## 0.45.1
 
 _2026-10-31_

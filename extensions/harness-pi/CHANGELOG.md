@@ -1,5 +1,20 @@
 # harness-pi
 
+## 0.46.0
+
+_2026-11-08_
+
+### Minor Changes
+
+- 8e68cbf: Support independent conversation forks through a selected agent reply without starting a model turn.
+
+### Patch Changes
+
+- bfaee04: Read the bundled Pi version from its installed package metadata without starting the agent for each compatibility check.
+- 93d1e74: Declare extension IDs and official harness SVG logos with Gallery Thumbnails for UI Canvas, optional Agent Reports, Themes, and unlisted Remote Workspaces.
+- ed40a9d: Keep maintained extensions loadable across the existing and upcoming ordered-storage API hosts.
+- ea3ad77: Bound native tool-result retention and publish only changed conversation messages.
+
 ## 0.45.0
 
 _2026-10-31_

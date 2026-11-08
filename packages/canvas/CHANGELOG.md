@@ -1,5 +1,16 @@
 # @pstdio/canvas
 
+## 0.47.0
+
+_2026-11-08_
+
+### Minor Changes
+
+- 3d76d3a: UI Canvas shows the project's own canvases from the build that `pstdio-canvas watch` writes, reloads only the frames whose code changed, and no longer ships a prebuilt catalog; canvas code always imports the `@pstdio/canvas` that runs the build; `@pstdio/canvas` no longer exports `./indexer`.
+- 1e3a060: Review motion studies and shader versions in UI Canvas, with parameters and explicit version saving in a right-hand editor and the selected animation’s timeline and transport in a bottom tray.
+
+  Show the selected animated frame’s timeline and transport in a contextual bottom tray, using the shared UI keyframe timeline. Keep parameter and version editing in the right menu.
+
 ## 0.46.0
 
 _2026-10-31_
