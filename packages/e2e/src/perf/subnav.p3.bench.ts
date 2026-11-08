@@ -14,7 +14,7 @@ import {
   measureSubnav,
   type SubnavSample,
 } from "./subnav-benchmark-clock";
-import { startSubnavBenchmarkFixture, subnavFixtureRoot } from "./subnav-benchmark-fixture";
+import { SUBNAV_WORKLOAD, startSubnavBenchmarkFixture, subnavFixtureRoot } from "./subnav-benchmark-fixture";
 import { subnavBenchmarkResults } from "./subnav-benchmark-results";
 
 // Set on 2026-10-26 from four hosted ubuntu-24.04 runs (slowest 293 / 1,263 / 1,089 ms) plus about 20%.
@@ -88,13 +88,39 @@ try {
         );
         samples.push(sessions);
         console.info(JSON.stringify({ iteration: iteration + 1, ...sessions }));
-        // Verify the full list remains reachable after the timed interval, despite virtualization.
-        await sidenav
-          .getByRole("option", { name: /^Benchmark session/ })
-          .first()
-          .focus();
-        await page.keyboard.press("End");
-        await expect(sidenav.getByRole("option", { name: "Benchmark session 0001", exact: true })).toBeVisible();
+        // The extracted Sessions tree pages its children. Keep all 1,000 sessions
+        // reachable after measurement without changing the timed navigation interval.
+        const sessionRows = sidenav.getByRole("option", { name: /^Benchmark session/ });
+        const oldest = sidenav.getByRole("option", { name: "Benchmark session 0001", exact: true });
+        const focusLastSessionPage = async (previousMoreId?: string) => {
+          // Let virtual-row focus commit before observing readiness. Repeatedly
+          // refocusing the first row races the pending End navigation.
+          await sessionRows.first().press("End");
+          await expect
+            .poll(async () => {
+              if (await oldest.isVisible()) return true;
+              const more = sidenav.getByRole("option", { name: "More sessions", exact: true }).last();
+              return (
+                (await more.isVisible()) &&
+                (await more.getAttribute("aria-expanded")) === "false" &&
+                (await more.getAttribute("id")) !== previousMoreId
+              );
+            })
+            .toBe(true);
+        };
+        await focusLastSessionPage();
+        for (let offset = 50; offset < SUBNAV_WORKLOAD.sessions && !(await oldest.isVisible()); offset += 50) {
+          const more = sidenav.getByRole("option", { name: "More sessions", exact: true }).last();
+          const id = await more.getAttribute("id");
+          if (!id) throw new Error("Sessions pagination row has no identity");
+          const expandedSince = performance.now();
+          await more.click();
+          // Cached pages need no fresh RPC, while a new page must finish loading
+          // before End can reach its final row. This is outside the timed sample.
+          await network.settled(expandedSince);
+          await focusLastSessionPage(id);
+        }
+        await expect(oldest).toBeVisible();
         await page.goBack();
       }
       if (iteration === 0 && process.env.SUBNAV_TRACE === "1")

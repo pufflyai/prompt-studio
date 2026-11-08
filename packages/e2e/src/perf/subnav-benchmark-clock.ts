@@ -141,7 +141,8 @@ export const installSubnavClock = (page: Page) =>
 const isSubnavRequest = (request: Request) => {
   const path = new URL(request.url()).pathname;
   return (
-    (path.includes("/extensions/commands/") && request.postData()?.includes('"treeId"')) ||
+    (path.includes("/extensions/commands/") &&
+      (request.postData()?.includes('"treeId"') || /\.tree\.(body|children)\/execute$/.test(path))) ||
     /\/workspaces\/[^/]+\/diff-summary$/.test(path)
   );
 };
