@@ -1,4 +1,4 @@
-import { type ResourceRef, standardResourceIcons } from "@pstdio/workbench";
+import type { ResourceRef } from "@pstdio/workbench";
 export const dashboardCollectionsProjectId = "dashboard-project";
 export const createDashboardResource = (
   kind: string,
@@ -25,10 +25,5 @@ export const createDashboardSessionResource = (
   extensionId: "pstdio",
   projectId,
 });
-export const dashboardViews = {
-  workspaces: { id: "workspaces", label: "Workspaces", icon: standardResourceIcons.workspace },
-  sessions: { id: "sessions", label: "Sessions", icon: "messages-circle" },
-} as const;
-
 export const dashboardExtensionsPage = { kind: "page", extensionId: "pstdio", id: "extensions" } as const;
 export const dashboardExtensionDetailPage = { ...dashboardExtensionsPage, id: "extension-detail" } as const;
