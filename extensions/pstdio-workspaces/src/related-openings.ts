@@ -7,6 +7,7 @@ export const relatedOpenings = defineCommand({
   async run(ctx) {
     const resource = ctx.resource;
     if (resource?.extensionId !== "pstdio" || resource.type !== "workspace") return [];
+    if (!resource.device && (await ctx.workspaces.get(resource.id))?.isDefault) return [];
     const { items } = await ctx.sessions.query({ workspaceId: resource.id, limit: 1, orderBy: "lastActivity" });
     const latest = items[0];
     return latest
