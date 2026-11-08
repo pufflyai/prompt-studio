@@ -316,9 +316,11 @@ The owner can be a mode or page ref. A mode-owned tree adds sections to that mod
 On `main` (API 0.4.0), a navigation tree can declare `optionalOwner: true` when its page or mode
 belongs to another extension. The tree stays inactive while that extension is absent, disabled, or removed,
 and attaches through normal registration when the provider returns. This supports independent installation
-and default-install ordering. It does not make the view optional: the consumer must still supply its tree view.
+and default-install ordering. Declare `optionalView: true` separately when the tree view belongs to another
+extension: the tree stays inactive while that view provider is absent and attaches when it returns.
 Missing local owners and missing pages/modes in a present foreign extension remain validation errors.
-Without this opt-in, missing owners retain their existing validation error.
+Missing local views, missing views in a present provider, and references to non-tree views also remain errors.
+Without the corresponding opt-in, missing owners and views retain their existing validation errors.
 
 
 Inside a command declaration, use a typed menu slot and limit visibility with `when`. Import `workspaceSlots` and `workbenchResourceKinds` from `@pstdio/sdk/extensions`:

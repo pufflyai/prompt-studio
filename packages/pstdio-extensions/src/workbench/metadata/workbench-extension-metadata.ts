@@ -3,7 +3,10 @@ import type { ContributionKind, ContributionRef, WhenExpression } from "@pstdio/
 import { toCommandPaletteContributions } from "../../runtime/command-palette-contributions";
 import { serializeWhenExpression } from "../../runtime/normalize/references";
 import { toSettingDefinitionRecord } from "../../runtime/normalize/settings";
-import { hasAbsentOptionalNavigationOwner } from "../../runtime/optional-navigation-owner";
+import {
+  hasAbsentOptionalNavigationOwner,
+  hasAbsentOptionalNavigationView,
+} from "../../runtime/optional-navigation-reference";
 import type { ExtensionRuntime } from "../../types/runtime";
 import {
   commandRef,
@@ -224,7 +227,11 @@ export const createWorkbenchExtensionMetadata = (
     action: normalizeTarget(item.contribution.action, item.extensionId),
   })),
   navigationTrees: input.runtime.navigationTrees
-    .filter((tree) => !hasAbsentOptionalNavigationOwner(tree, input.runtime.extensions))
+    .filter(
+      (tree) =>
+        !hasAbsentOptionalNavigationOwner(tree, input.runtime.extensions) &&
+        !hasAbsentOptionalNavigationView(tree, input.runtime.extensions),
+    )
     .map((tree) => ({
       id: tree.id,
       extensionId: tree.extensionId,

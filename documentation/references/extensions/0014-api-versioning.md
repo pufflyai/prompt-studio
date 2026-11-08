@@ -402,3 +402,7 @@ unavailable; shared workspace and session records keep their identity and storag
 matching SDK and host. Validate consumer PRs against the candidate SDK, then update
 their published dependency ranges before release. See
 [project composition](0004-contribution-api.md#configure-project-composition).
+
+## Optional navigation views in API 0.4.0
+
+`NavigationTreeContribution.optionalView` lets a tool attach a tree supplied by an independently installed view provider. An absent foreign provider keeps the tree inactive; missing local views, missing views in a present provider, and non-tree views still fail validation. This additive contract shares the existing API 0.4 release step. Publish the compatible SDK and host before consumers adopt it. See [navigation trees](0004-contribution-api.md#dashboard-ui-contributions).
