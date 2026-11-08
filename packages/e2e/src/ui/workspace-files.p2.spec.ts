@@ -54,7 +54,7 @@ test("browses and edits workspace files, then refreshes the lazy diff", async ({
         commands.push(new URL(request.url()).pathname);
     });
     await prepareDashboard(page, project.id);
-    await page.goto(`/projects/${project.id}/workspaces`);
+    await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-workspaces/workspaces`);
     await openWorkspace(page, attempt.workspace.workspace_shorthand);
     const filesTab = page.getByRole("tab", { name: "Files", exact: true });
     const changesTab = page.getByRole("tab", { name: "Changes", exact: true });

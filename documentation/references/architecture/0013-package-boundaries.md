@@ -10,6 +10,24 @@ Cross-package native editor integration tests live in `packages/e2e`. They may
 start the real `pstdio-api/app` host and use the public `@pstdio/workbench` session
 API. The workbench package itself does not depend on the API host.
 
+## Bundled presentation ownership
+
+Home, Workspaces, and Cloud are optional presentation extensions. The catalog supplies
+ready-to-use defaults; their identities are not required to keep a project usable.
+Core owns workspace records, execution, account services, synchronization, and extension
+management independently of these tools.
+
+Project composition stores an explicit default page and resource-opener bindings in
+core's existing synced project information. The default is an ordinary resource-free
+page. Openers return normal navigation targets independently of data ownership.
+Names, paths, navigation order, and workspace capability-to-page decisions belong to
+tools. Missing contributions leave the existing empty workbench and recovery controls.
+
+The catalog supplies editable defaults. Enabling or disabling a tool preserves an
+explicit project choice and the shared workspace/session records. The alpha API
+removes old presentation aliases and selectors together with their callers.
+See [project composition](../extensions/0004-contribution-api.md#configure-project-composition).
+
 ## Layers
 
 1. **Contracts and utilities**

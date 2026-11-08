@@ -1,4 +1,3 @@
-import { contributionRefId, workspaceViews } from "@pstdio/sdk/extensions";
 import type { WorkbenchModuleContext } from "@pstdio/workbench";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
@@ -37,8 +36,11 @@ export const watchOpenWorkspaceResource = (ctx: WorkbenchModuleContext) => {
     setResourceBreadcrumb(ctx, resource);
     // Tree reads key on the workspace's identity. A workspace that becomes ready, or gets its project
     // folder on this device, has new files to show.
-    if (fileAvailability(primary.metadata) !== fileAvailability(resource.metadata))
-      ctx.views.refreshView(contributionRefId(workspaceViews.tree));
+    if (fileAvailability(primary.metadata) !== fileAvailability(resource.metadata)) {
+      for (const view of ctx.views.listViews()) {
+        if (view.id.startsWith(`${location.page.extensionId}.view.`)) ctx.views.refreshView(view.id);
+      }
+    }
   };
   const unsubscribeData = subscribeDashboardData((change) => {
     if (!change || change.table === "workspaces") sync();

@@ -32,7 +32,7 @@ test("resource batches use enabled owners, preserve identity, and resolve host w
         }));
       }}],
       views: [{id:"notes",ref:{kind:"view",id:"notes"},title:"Notes",body:{kind:"controls",query:async()=>({fields:[],values:{}})}}],
-      pages: [{id:"notes",ref:{kind:"page",id:"notes"},title:"Notes",path:"notes",slots:[],panels:{},parent:{extensionId:"pstdio",kind:"page",id:"start"},mode:{extensionId:"pstdio",kind:"mode",id:"project"},resource:{kinds:[{kind:"resource-kind",id:"note"},{kind:"resource-kind",id:"draft"}]},main:{kind:"view",view:{kind:"view",id:"notes"},cardinality:"one"}}],
+      pages: [{id:"collection",ref:{kind:"page",id:"collection"},title:"Notes",path:"collection",slots:[],panels:{},mode:{extensionId:"pstdio",kind:"mode",id:"project"},main:{kind:"panels"}}, {id:"notes",ref:{kind:"page",id:"notes"},title:"Notes",path:"notes",slots:[],panels:{},parent:{kind:"page",id:"collection"},mode:{extensionId:"pstdio",kind:"mode",id:"project"},resource:{kinds:[{kind:"resource-kind",id:"note"},{kind:"resource-kind",id:"draft"}]},main:{kind:"view",view:{kind:"view",id:"notes"},cardinality:"one"}}],
       resourceKinds: ["note","draft"].map(id => ({id,ref:{kind:"resource-kind",id},resolveMany:{kind:"command",id:"resolve"}}))
     };`,
     );
@@ -80,7 +80,6 @@ test("resource batches use enabled owners, preserve identity, and resolve host w
     });
     expect(result.find((r) => r.resource.id === workspace.id)).toMatchObject({
       resource: { label: "Current workspace", extensionId: "pstdio" },
-      target: { kind: "page", page: { id: "files", extensionId: "pstdio.pstdio-workspaces" } },
     });
     const worktree = await app.deps.workspaceService.createStandalone({
       project_id: project.id,
@@ -93,7 +92,6 @@ test("resource batches use enabled owners, preserve identity, and resolve host w
       resource: {
         metadata: { workspaceProviderState: "ready", workspaceSupportsDiff: true, workspaceType: "worktree" },
       },
-      target: { page: { id: "workspace", extensionId: "pstdio.pstdio-workspaces" } },
     });
     expect(result.find((r) => r.resource.id === "no-destination")?.target).toBeUndefined();
     await expect(api.resolveMany([{ ...ref("one"), projectId: "another-project" }])).rejects.toThrow("another project");

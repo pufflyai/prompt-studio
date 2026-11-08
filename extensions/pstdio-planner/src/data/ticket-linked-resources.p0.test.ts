@@ -34,7 +34,7 @@ test("one resource list deduplicates incoming and outgoing links while keeping o
   await ctx.resources.addAnchors(workspace, [ticket("one"), ticket("two")]);
   let label = "Current artifact";
   const batches: ResourceRef[][] = [];
-  ctx.resources.resolveMany = async (refs) => {
+  ctx.resources.resolveOpenings = async (refs) => {
     batches.push(refs);
     return refs.map((resource) => ({
       resource: {
@@ -97,7 +97,7 @@ test("relationships include every page and owner resolution uses bounded batches
   const refs = Array.from({ length: 105 }, (_, index) => ({ ...artifact, id: String(index) }));
   await ctx.resources.addAnchors(ticket("one"), refs);
   const sizes: number[] = [];
-  ctx.resources.resolveMany = async (refs) => {
+  ctx.resources.resolveOpenings = async (refs) => {
     sizes.push(refs.length);
     return [];
   };

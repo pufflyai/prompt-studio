@@ -1,7 +1,7 @@
 import { resourceKey } from "@pstdio/sdk/extensions";
 import type { DataTableRendererRow, ResourceRef } from "@pstdio/workbench";
-import { getCollection, type SyncedRow } from "@/lib/sync/collections";
-import { createDashboardResource, dashboardViews } from "@/shared/app/resources";
+import type { SyncedRow } from "@/lib/sync/collections";
+import { createDashboardResource } from "@/shared/app/resources";
 import {
   type DashboardRows,
   isDashboardProjectRow,
@@ -171,12 +171,6 @@ export const buildDashboardWorkspacesFromRows = (
     })
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 };
-// Tools can link a workspace by id alone. Its icon still comes from the synced row, so every route shows the same icon.
-export const resolveDashboardWorkspaceIcon = (workspaceId: string) => {
-  const workspace = getCollection("workspaces").state.get(workspaceId);
-  return workspace ? workspaceIcon(workspaceKind(workspace)) : dashboardViews.workspaces.icon;
-};
-
 export const createDashboardWorkspaces = (projectId?: string) => {
   const rows = readWorkspaceRows();
   return buildDashboardWorkspacesFromRows(rows, {

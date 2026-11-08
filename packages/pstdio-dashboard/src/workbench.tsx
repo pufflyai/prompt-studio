@@ -27,7 +27,8 @@ import { createSidenavModule } from "./modules/sidenav/module";
 import { createTerminalModule } from "./modules/terminal/module";
 import { createUpdatesModule } from "./modules/updates/module";
 import { createWorkspacesModule } from "./modules/workspaces/module";
-import { dashboardHomePage } from "./shared/app/resources";
+import { getDashboardSelectedProjectId } from "./shared/app/project-context";
+import { getCachedDashboardExtensionMetadata } from "./shared/extensions/workbench-extension-contributions";
 import { resolveDashboardPersistenceScope } from "./shared/workbench/dashboard-persistence-scope";
 import { DASHBOARD_SIDENAV_REGION_SIZE } from "./shared/workbench/dashboard-sidenav";
 
@@ -96,8 +97,13 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
   // The URL decides the project, so shared links and bookmarks open the project they name.
   const urlProjectId = pageLocationBrowser && readPageUrlProjectId(pageLocationBrowser.current().url);
   if (urlProjectId) projectSelectionPersistence.setSelectedProjectId(urlProjectId);
-  const workbench = createWorkbench({
-    startPage: dashboardHomePage,
+  const workbench: ReturnType<typeof createWorkbench> = createWorkbench({
+    defaultPage: () => {
+      const projectId = getDashboardSelectedProjectId(workbench);
+      return projectId
+        ? (getCachedDashboardExtensionMetadata(projectId)?.composition?.defaultPage ?? undefined)
+        : undefined;
+    },
     initialSidePanelMode: "closed",
     defaultPanelOpenByRegionId: { secondary: false },
     regionSettings: {

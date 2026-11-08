@@ -220,7 +220,7 @@ describe("extension tree resource navigation", () => {
   test("applies explicit navigation from a tree action", async () => {
     const startPage = { kind: "page", extensionId: "pstdio.lab", id: "start" } as const;
     const page = { kind: "page", extensionId: "pstdio.lab", id: "ticket" } as const;
-    const workbench = createWorkbench({ startPage });
+    const workbench = createWorkbench({ defaultPage: startPage });
     workbench.modes.registerMode({ id: "project", activate: () => undefined });
     for (const id of ["start", "ticket"]) {
       workbench.views.registerView({ id, title: id, body: { kind: "react", render: () => null } });

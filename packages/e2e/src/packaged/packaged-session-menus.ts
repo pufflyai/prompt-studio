@@ -1,20 +1,16 @@
 import { expect, type Locator, type Page } from "@playwright/test";
-import { serializePageUrl, workspacePages } from "@pstdio/sdk/extensions";
+import { serializePageUrl } from "@pstdio/sdk/extensions";
+import { workspacePages } from "../helpers/installed-workspaces";
 import { isSessionChatAction } from "../helpers/session-chat-actions";
 import { verifyExtensionModeSessionRestore, verifyModePanelState } from "./packaged-mode-panel-state";
 import { verifyPageSessionTab } from "./packaged-page-session-tab";
+import { createPackagedPreviewWorkspace } from "./packaged-preview-workspace";
 import { verifyClosedSidePreference, verifyGlobalBottomState } from "./packaged-related-resource-preferences";
 import { verifySharedPageTab } from "./packaged-shared-page-tab";
 import { verifyRetainedTerminalDrop } from "./packaged-tab-drop-pinning";
 
 const createSessionFixture = async (baseUrl: string, projectId: string, authorization: Record<string, string>) => {
-  const workspacesResponse = await fetch(`${baseUrl}/v1/workspaces?project_id=${projectId}`, {
-    headers: authorization,
-  });
-  expect(workspacesResponse.ok).toBe(true);
-  const workspaces = (await workspacesResponse.json()) as Array<{ id: string; is_default: boolean }>;
-  const workspace = workspaces.find((workspace) => workspace.is_default)!;
-  expect(workspace).toBeDefined();
+  const workspace = await createPackagedPreviewWorkspace(baseUrl, projectId, authorization);
   const response = await fetch(`${baseUrl}/v1/sessions`, {
     method: "POST",
     headers: { ...authorization, "content-type": "application/json" },

@@ -29,6 +29,7 @@ import { createExtensionFilesApi } from "./extension-files";
 import { createFilesApi } from "./files";
 import { createNotifyApi } from "./notifications";
 import { createExtensionPackageFilesApi } from "./package-files";
+import { restrictResourceLinkMutations } from "./resource-link-mutation";
 import { createResourcesApi } from "./resources";
 import { createScopedHostApis } from "./scoped-host-apis";
 import { createSettingsApi } from "./settings";
@@ -65,6 +66,7 @@ export const createCommandEnvironment = (
     name: string;
     project: ExtensionProjectContext;
     projectId: string;
+    resourceLinksReadOnly?: boolean;
     settings?: RuntimeExtensionSettingRecord[];
     workspaceDir?: string;
     workspaceId?: string;
@@ -85,6 +87,11 @@ export const createCommandEnvironment = (
 
   const scopedHostApis = (scope?: InvocationScope) => {
     const signal = scope?.signal;
+    // Presentation lookups may dispatch another tool. They must stop when their caller returns,
+    // without aborting ctx.signal that durable host work can keep using after that return.
+    const resourceReads = new AbortController();
+    scope?.register(() => resourceReads.abort());
+    const resourceSignal = signal ? AbortSignal.any([signal, resourceReads.signal]) : undefined;
     const provisioningWorkspaceId = input.eventId === workspaceEvents.provision.id ? input.workspaceId : undefined;
     const resolveWorkingPath = (access: FileAccess) =>
       resolveWorkspaceFilesPath(
@@ -122,7 +129,8 @@ export const createCommandEnvironment = (
       signal,
     });
 
-    return {
+    const apis = {
+      resources: createResourcesApi(deps, { ...input, signal: resourceSignal }),
       storage,
       artifacts: createArtifactsApi(
         resolveProjectPath,
@@ -174,13 +182,13 @@ export const createCommandEnvironment = (
       },
       ...createScopedHostApis(deps, input, { connections, terminal }, runtimeDeps, scope),
     } satisfies ScopedHostApis;
+    return input.resourceLinksReadOnly ? restrictResourceLinkMutations(apis) : apis;
   };
   const hostApis = scopedHostApis();
   return {
     project: input.project,
     workspaceId: input.workspaceId,
     ...hostApis,
-    resources: createResourcesApi(deps, input),
     views: createViewsApi(deps, input),
     activity: createActivityApi(deps, { projectId: input.projectId, enabledSource }),
     notify: createNotifyApi(deps, { projectId: input.projectId, enabledSource }),

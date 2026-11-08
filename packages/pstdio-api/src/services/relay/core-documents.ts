@@ -7,6 +7,7 @@ import {
   createLiveConnection,
   fetchSyncSpaces,
 } from "pstdio-sync/relay";
+import { announceProjectCompositionChange } from "../../features/projects/project-composition";
 import { apiLogger } from "../../lib/logger";
 import type { RelayDeps } from "./deps";
 import { documentProgress } from "./document-progress";
@@ -140,7 +141,16 @@ export const startCoreDocumentSync = (input: {
   };
   const stops = [
     deps.extensionResourceSequencesService.watchChanges(changed),
-    deps.projectInfoService.watchChanges(changed),
+    deps.projectInfoService.watchChanges((event, origin) => {
+      changed(event);
+      if (
+        origin === "relay" &&
+        event.workbenchId === owner.workbenchId &&
+        event.extensionId === coreOwnerId &&
+        event.documentId === projectInfoDocumentId
+      )
+        announceProjectCompositionChange(deps, owner.workbenchId);
+    }),
   ];
   return {
     wake: connection.wake,

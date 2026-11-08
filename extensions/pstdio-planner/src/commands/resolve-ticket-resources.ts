@@ -1,4 +1,4 @@
-import { defineCommand, params, type ResourceRef, type ResourceResolution } from "@pstdio/sdk/extensions";
+import { defineCommand, l10n, params, type ResourceRef, type ResourceResolution } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
 import { selectedDocumentFromResource, TICKET_BODY_DOCUMENT } from "../data/document-selection";
 import { TICKET_RESOURCE_ICON } from "../data/mappers";
@@ -43,5 +43,15 @@ export const resolveTicketResourcesCommand = defineCommand({
       const target = ticketFileTarget(reference, document, isImageAttachment(document) ? "Image" : "FileText");
       return [{ resource: target.resource, target }];
     });
+  },
+});
+
+export const resolveTicketOpeningCommand = defineCommand({
+  id: "resolve-ticket-opening",
+  title: l10n("commands.resolveTicketOpening", "Resolve ticket opening"),
+  cli: true,
+  async run(ctx) {
+    if (!ctx.resource) return null;
+    return (await resolveTicketResourcesCommand.run(ctx, { resources: [ctx.resource] }))[0]?.target ?? null;
   },
 });

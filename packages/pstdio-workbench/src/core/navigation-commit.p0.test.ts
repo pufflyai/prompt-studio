@@ -22,7 +22,7 @@ function harness(
   let saved: PersistedWorkbenchPageLocation | undefined;
   const entries: WorkbenchPageBrowserEntry[] = [{ url: "/projects/project" }];
   const workbench = createWorkbench({
-    startPage: page("home"),
+    defaultPage: page("home"),
     resolvePagePersistenceScope: ({ pageId }) => ({ scope: pageId }),
     panelMenuStatePersistence: {
       getMenuStates() {

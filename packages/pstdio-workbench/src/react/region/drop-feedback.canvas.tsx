@@ -6,7 +6,7 @@ import { WorkbenchStory } from "../../examples/workbench-story";
 const createDropFeedbackWorkbench = (pinned = false, floating = false) => {
   const page = { kind: "page", extensionId: "preview", id: "drop-feedback" } as const;
   const workbench = createWorkbench({
-    startPage: page,
+    defaultPage: page,
     initialSidePanelMode: floating ? "floating" : "attached",
     defaultPanelOpenByRegionId: { side: true, secondary: true },
   });

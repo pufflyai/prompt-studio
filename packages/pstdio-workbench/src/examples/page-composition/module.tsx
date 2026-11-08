@@ -182,11 +182,11 @@ const registerPage = (workbench: WorkbenchCore, page: PageExample, showNavigatio
 interface PageCompositionWorkbenchOptions {
   projectId?: string;
   showNavigation?: boolean;
-  startPage?: PageRef;
+  defaultPage?: PageRef;
 }
 export const createPageCompositionWorkbench = (options: PageCompositionWorkbenchOptions = {}) => {
-  const { projectId = "preview", showNavigation = true, startPage = sessionPage } = options;
-  const workbench = createWorkbench({ startPage });
+  const { projectId = "preview", showNavigation = true, defaultPage = sessionPage } = options;
+  const workbench = createWorkbench({ defaultPage });
   workbench.modes.registerMode({ id: "session", label: "Session", activate: () => undefined });
   workbench.modes.registerMode({ id: "lab", label: "Extension Lab", activate: () => undefined });
   for (const page of pages) registerPage(workbench, page, showNavigation);
@@ -206,14 +206,14 @@ export const PageCompositionExample = () => {
     createPageCompositionWorkbench({
       projectId: "preview-session-composition",
       showNavigation: false,
-      startPage: sessionPage,
+      defaultPage: sessionPage,
     }),
   );
   const [labWorkbench] = useState(() =>
     createPageCompositionWorkbench({
       projectId: "preview-lab-composition",
       showNavigation: false,
-      startPage: labPage,
+      defaultPage: labPage,
     }),
   );
   return (

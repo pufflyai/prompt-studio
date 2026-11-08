@@ -1,129 +1,53 @@
 import { expect, test } from "bun:test";
-import { commandRefId, workbenchPages, workspaceCommands, workspaceViews } from "@pstdio/sdk/extensions";
-import { createWorkbench, workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
-import { dashboardCommandIds } from "@/shared/app/commands";
-import { registerWorkspaceProviderViews } from "@/workspaces-provider.test-support";
+import { createWorkbench } from "@pstdio/workbench";
+import { getCollection, getWriter } from "@/lib/sync/collections";
+import { selectDashboardProject } from "@/shared/app/project-context";
+import {
+  clearCachedDashboardExtensionMetadata,
+  emptyDashboardExtensionMetadata,
+  setCachedDashboardExtensionMetadata,
+} from "@/shared/extensions/workbench-extension-contributions";
 import { createWorkspacesModule } from "./module";
 
-test("workspace infrastructure preserves old public page refs using provider views without core presentation", () => {
-  const workbench = createWorkbench();
-  registerWorkspaceProviderViews(workbench);
-  workbench.registerModule(createWorkspacesModule());
-  expect(workbench.pages.getPage(workbenchPages.workspaces.id)?.main).toMatchObject({
-    kind: "view",
-    view: workspaceViews.list,
+test("workspace search follows the configured ordinary opener while core retains its records", () => {
+  getCollection("workspaces");
+  const row = { id: "retained", project_id: "presentation-choice", name: "Retained workspace", is_default: true };
+  getWriter("workspaces")!.upsert(row);
+  const w = createWorkbench();
+  w.registerModule(createWorkspacesModule());
+  selectDashboardProject(w, { id: row.project_id, name: "Project" });
+  const page = { kind: "page" as const, extensionId: "example.reader", id: "desk" };
+  setCachedDashboardExtensionMetadata(row.project_id, {
+    ...emptyDashboardExtensionMetadata,
+    composition: {
+      resourceOpeners: [
+        { resourceKind: { kind: "resource-kind", extensionId: "pstdio", id: "workspace" }, opener: page },
+      ],
+    },
   });
-  expect(workbench.pages.getPage(workbenchPages.workspace.id)?.slots.map((slot) => slot.item)).toEqual([
-    { kind: "view", view: workspaceViews.history, presence: "open" },
-    { kind: "view", view: workspaceViews.file, presence: "open" },
-    { kind: "view", view: workspaceViews.changes, presence: "open" },
-  ]);
-  expect(workbench.views.getView(workspaceViews.file.id)).toBeUndefined();
-  workbench.dispose();
-});
-test("legacy create command delegates to the provider command without owning another form", async () => {
-  const workbench = createWorkbench();
-  registerWorkspaceProviderViews(workbench);
-  workbench.registerModule(createWorkspacesModule());
-  let received: unknown;
-  workbench.commands.registerCommand(
-    { id: commandRefId(workspaceCommands.create), label: "Create" },
-    {
-      execute: (args) => {
-        received = args;
-      },
-    },
-  );
-  await workbench.commands.executeCommand(dashboardCommandIds.createWorkspace, { shorthand_base: "PS-61" });
-  expect(received).toEqual({ shorthand_base: "PS-61" });
-  workbench.dispose();
-});
-
-test("legacy mutation aliases retain clicked resource and viewer guard instead of using the active resource", async () => {
-  const workbench = createWorkbench();
-  registerWorkspaceProviderViews(workbench);
-  workbench.registerModule(createWorkspacesModule());
-  const invocation = {
-    resource: { type: "workspace", id: "clicked" },
-    isViewerCurrent: () => true,
-    signal: new AbortController().signal,
-  };
-  let received: unknown;
-  workbench.commands.registerCommand(
-    { id: commandRefId(workspaceCommands.rename), label: "Rename" },
-    {
-      execute: (_args, context) => {
-        received = context;
-      },
-    },
-  );
-  await workbench.commands.executeCommand(dashboardCommandIds.renameWorkspace, {}, invocation);
-  expect(received).toBe(invocation);
-  workbench.dispose();
-});
-
-test("legacy Go to workspaces keeps list navigation when called from a contextual resource", async () => {
-  const workbench = createWorkbench();
-  registerWorkspaceProviderViews(workbench);
-  workbench.registerModule(createWorkspacesModule());
-  let received: unknown;
-  workbench.commands.registerCommand(
-    { id: commandRefId(workspaceCommands.open), label: "Open" },
-    {
-      execute: (_args, context) => {
-        received = context?.resource;
-      },
-    },
-  );
-  expect(workbench.layout.listMenuItems(workbenchCommandPaletteMenuPath)).toContainEqual(
-    expect.objectContaining({ commandId: dashboardCommandIds.openWorkspaces }),
-  );
-  await workbench.commands.executeCommand(
-    dashboardCommandIds.openWorkspaces,
-    {},
-    { resource: { type: "session", id: "session" } },
-  );
-  expect(received).toBeUndefined();
-  workbench.dispose();
-});
-
-test("workspace palette navigation follows provider availability", () => {
-  const workbench = createWorkbench();
   try {
-    workbench.registerModule(createWorkspacesModule());
-    const entries = () =>
-      workbench.layout
-        .listMenuItems(workbenchCommandPaletteMenuPath)
-        .filter((item) => item.commandId === dashboardCommandIds.openWorkspaces);
-    expect(entries()).toHaveLength(0);
-    const views = registerWorkspaceProviderViews(workbench);
-    expect(entries()).toHaveLength(1);
-    views[0]!.dispose();
-    expect(entries()).toHaveLength(0);
-  } finally {
-    workbench.dispose();
-  }
-});
-
-test("saved Workspaces URLs keep the provider's creation action in the title menu", () => {
-  const workbench = createWorkbench();
-  try {
-    registerWorkspaceProviderViews(workbench);
-    workbench.registerModule(createWorkspacesModule());
-    const main = workbench.pages.getPage(workbenchPages.workspaces.id)!.main;
-    if (main.kind !== "view") throw new Error("Expected workspace collection");
-    expect(main.tab?.getSnapshot?.({ instanceId: "list", panelId: "workspaces", closable: false }).menu).toContainEqual(
-      expect.objectContaining({
-        rows: expect.arrayContaining([
-          expect.objectContaining({
-            id: "create-workspace",
-            icon: "plus",
-            action: { kind: "command", commandId: commandRefId(workspaceCommands.create) },
-          }),
-        ]),
-      }),
+    expect(w.resources.listResources("")).toEqual([]);
+    const installed = w.pages.registerPage({
+      id: "example.reader.page.desk",
+      ref: page,
+      path: "custom-destination",
+      modeId: "project",
+      resource: { kinds: [{ kind: "resource-kind", extensionId: "pstdio", id: "workspace" }] },
+      main: { kind: "panels" },
+      slots: [],
+    });
+    expect(w.resources.listResources("")).toContainEqual(
+      expect.objectContaining({ resource: expect.objectContaining({ id: row.id }) }),
     );
+    installed.dispose();
+    expect(w.resources.listResources("")).toEqual([]);
+    expect(
+      w.resources.getKind("workspace", "pstdio")!.resolve!({ type: "workspace", extensionId: "pstdio", id: row.id })
+        ?.label,
+    ).toBe(row.name);
   } finally {
-    workbench.dispose();
+    clearCachedDashboardExtensionMetadata(row.project_id);
+    getWriter("workspaces")!.remove(row.id);
+    w.dispose();
   }
 });

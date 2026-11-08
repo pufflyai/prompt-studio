@@ -58,7 +58,7 @@ export const loadTicketLinkedResources = async (resources: ExtensionResourcesApi
     batches.push(refs.slice(offset, offset + 100));
   }
   const resolved = new Map<string, ResourceResolution>(
-    (await Promise.all(batches.map((batch) => resources.resolveMany(batch))))
+    (await Promise.all(batches.map((batch) => resources.resolveOpenings(batch))))
       .flat()
       .map((item) => [resourceKey(item.resource), item]),
   );

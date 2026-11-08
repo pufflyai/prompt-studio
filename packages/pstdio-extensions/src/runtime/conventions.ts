@@ -2,7 +2,7 @@ import { contributionRefId } from "@pstdio/sdk/extensions";
 import { isValidLocalContributionId, localContributionIdGrammar } from "pstdio-api-contracts/extension-kernel";
 import type { ExtensionDiagnostic, ExtensionRuntime } from "../types/runtime";
 import { createDiagnostic } from "./diagnostics";
-import { hasAbsentOptionalNavigationOwner } from "./optional-navigation-owner";
+import { hasAbsentOptionalNavigationOwner, hasAbsentOptionalNavigationView } from "./optional-navigation-reference";
 import { workbenchIconNames } from "./workbench-icon-names";
 
 // Convention diagnostics for `extensions check`: invalid icon names, contribution ids
@@ -191,7 +191,8 @@ const collectViewReferenceDiagnostics = (runtime: ExtensionRuntime) => {
       });
   }
   for (const record of runtime.navigationTrees)
-    sites.push({ record, reference: referencedContributionId(record.contribution.view), kind: "navigationTree" });
+    if (!hasAbsentOptionalNavigationView(record, runtime.extensions))
+      sites.push({ record, reference: referencedContributionId(record.contribution.view), kind: "navigationTree" });
   for (const site of sites) {
     if (!site.reference || known.has(site.reference)) continue;
     diagnostics.push(

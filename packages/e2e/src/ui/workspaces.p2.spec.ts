@@ -220,7 +220,7 @@ test.describe("Grouped Workspaces", () => {
       window.localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
     }, projectId);
 
-    await page.goto(`/projects/${projectId}/workspaces`);
+    await page.goto(`/projects/${projectId}/extensions/pstdio.pstdio-workspaces/workspaces`);
     const workspaceRow = page
       .getByRole("region", { name: "Main", exact: true })
       .getByRole("option")

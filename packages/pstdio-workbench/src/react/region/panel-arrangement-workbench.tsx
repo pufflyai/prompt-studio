@@ -11,7 +11,7 @@ export const createArrangementWorkbench = (
 ) => {
   const page = { kind: "page", extensionId: "preview", id: "arrangement" } as const;
   const w = createWorkbench({
-    startPage: page,
+    defaultPage: page,
     initialSidePanelMode: sourceRegion === "side" ? "attached" : "closed",
     defaultPanelOpenByRegionId: { secondary: bottomInitiallyOpen },
   });

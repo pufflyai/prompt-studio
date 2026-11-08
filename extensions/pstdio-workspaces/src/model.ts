@@ -3,7 +3,7 @@ import {
   type ExtensionWorkspace,
   type NavigationTargetPage,
   type ResourceRef,
-  workbenchPages,
+  sessionBrowser,
 } from "@pstdio/sdk/extensions";
 import { workspacePages } from "./refs";
 
@@ -75,7 +75,7 @@ export const sessionTarget = (
   projectId: string,
 ): NavigationTargetPage => ({
   kind: "page",
-  page: workbenchPages.session,
+  page: sessionBrowser.pages.session,
   resource: {
     type: "session",
     id: session.id,

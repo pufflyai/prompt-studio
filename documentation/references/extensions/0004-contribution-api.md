@@ -37,6 +37,56 @@ UI contributions attach to targets that the host owns. [Workbench composition](0
 [Native chat](0028-native-chat.md) provides immediate composers and canonical
 conversations with scoped callbacks to the existing session services.
 
+## Configure project composition
+
+Extension API 0.4 treats Home, Workspaces, and Cloud as ordinary optional tools.
+The project chooses a fully qualified, resource-free page as its default. Page
+names, paths, parents, panels, and navigation order belong to extensions.
+
+Read or replace the same public configuration from the CLI or SDK:
+
+```sh
+pst projects composition
+pst projects composition --value '{"defaultPage":{"kind":"page","extensionId":"example.space","id":"desk"},"resourceOpeners":[{"resourceKind":{"kind":"resource-kind","extensionId":"pstdio","id":"workspace"},"opener":{"kind":"command","extensionId":"example.reader","id":"inspect"}}]}'
+```
+
+The SDK client exposes `projects.composition(projectId)` and
+`projects.setComposition(projectId, value)`. The HTTP endpoints are
+`GET` and `PUT /v1/projects/{projectId}/composition`. Configuration is synced with
+the existing project information. An explicit empty configuration stays empty.
+Catalog defaults are editable distribution data; enabling an extension preserves
+an existing choice.
+
+The default opens when there is no explicit destination or valid saved location.
+A missing, disabled, or resource-bound default leaves the existing empty workbench.
+Extension management and other available navigation remain usable. The public
+`workbenchCommands.openDefaultPage` command opens the configured default explicitly.
+
+Each `resourceOpeners` entry binds a fully qualified resource kind to an ordinary
+page or command. An opener command reads `ctx.resource` and returns a normal page,
+panel, or compound navigation target. It can belong to another extension than the
+data owner. A missing opener or unavailable target makes the operation unavailable.
+Explicit navigation targets keep their declared destination.
+
+Use `ctx.resources.resolveOpenings(refs)` or the SDK client's
+`projects.resolveResourceOpenings(projectId, refs)` for bare resource links.
+`resolveMany` remains the data-owner metadata API. An opener can present an ordinary
+kind without a batch metadata resolver. Its command owns any further data lookup.
+
+A binding can also name a `relatedOpenings` command returning
+`RelatedResourceOpenings`. This selects automatic previews through the same saved
+workbench preferences. Workspaces owns its workspace page choices and related
+session selection. It declares scoped conversation navigation through the public
+Sessions renderer. Cloud uses normal status/settings slots and the public account
+API. Core keeps execution, records, account services, sync, and extension management
+independent of those presentation contributions.
+
+This alpha API change removes the old host Start/Home/Workspaces aliases, presentation
+selectors, redirects, and replaced SDK references. Update callers to configured
+openers or explicit ordinary targets. Existing presentation URLs and saved page
+references may become unavailable. Workspace and session data stay in their existing
+stores.
+
 ## Kanban create results
 
 A successful `createRow` result with string `id` and `title` is passed to the renderer's declared `onRowActivate` callback. That callback owns navigation through `ctx.navigation.open` with an explicit page or panel target. Creating a resource does not choose its presentation. Use the same activation callback for opening an existing row and a newly created row.
@@ -266,9 +316,11 @@ The owner can be a mode or page ref. A mode-owned tree adds sections to that mod
 On `main` (API 0.4.0), a navigation tree can declare `optionalOwner: true` when its page or mode
 belongs to another extension. The tree stays inactive while that extension is absent, disabled, or removed,
 and attaches through normal registration when the provider returns. This supports independent installation
-and default-install ordering. It does not make the view optional: the consumer must still supply its tree view.
+and default-install ordering. Declare `optionalView: true` separately when the tree view belongs to another
+extension: the tree stays inactive while that view provider is absent and attaches when it returns.
 Missing local owners and missing pages/modes in a present foreign extension remain validation errors.
-Without this opt-in, missing owners retain their existing validation error.
+Missing local views, missing views in a present provider, and references to non-tree views also remain errors.
+Without the corresponding opt-in, missing owners and views retain their existing validation errors.
 
 
 Inside a command declaration, use a typed menu slot and limit visibility with `when`. Import `workspaceSlots` and `workbenchResourceKinds` from `@pstdio/sdk/extensions`:
@@ -631,7 +683,7 @@ export default defineExtension({
 
 The header and footer keep the mode's sections, followed by the sections of every open level from the outermost inward. Header rows therefore stay visible in nested levels. Rows that users drag into the header or footer also stay there inside levels.
 
-Inside a level, the shared Sidenav adds a fixed left-arrow button labeled Back to followed by the current mode name, such as Back to project. It is the first entry in the main navigation content, with the same padding and row spacing as other entries. It cannot be moved or hidden. Selecting it opens the last root-level page, or Start when no root-level page has been used. The breadcrumb and browser history also remain available.
+Inside a level, the shared Sidenav adds a fixed left-arrow button labeled Back to followed by the current mode name, such as Back to project. It is the first entry in the main navigation content, with the same padding and row spacing as other entries. It cannot be moved or hidden. Selecting it opens the last root-level page, or the configured default when no root-level page has been used. The breadcrumb and browser history also remain available.
 
 The same action is available with **Alt+Shift+Up**, both outside and inside shortcut mode. Its shortcut hint appears on the return row in keyboard mode, and it is listed under the current mode's name in shortcut discovery and the command palette.
 

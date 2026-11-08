@@ -6,8 +6,10 @@ import { createProjectsDBService } from "pstdio-db";
 import { createInvocationScope } from "pstdio-extensions";
 import { artifactFilesFixture } from "../../../services/shared-files/artifact-files.fixture";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { createOpeningBoundaryFixture } from "../../projects/resource-opening-boundaries.test-fixture";
 import { createArtifactMountWriteLedger } from "../artifact-mount-watch/write-ledger";
 import { createCommandEnvironment } from "./index";
+import { createResourcesApi } from "./resources";
 import { createSessionsApi } from "./sessions";
 import { createWorkspacesApi } from "./workspaces";
 
@@ -106,5 +108,64 @@ test("anchor edits keep their project checks after a reader is cancelled", async
     }
   } finally {
     await app.close();
+  }
+});
+
+for (const operation of ["add", "remove", "removed"] as const) {
+  test(`resource ${operation} writes outlive their cancelled reader`, async () => {
+    const fixture = await createOpeningBoundaryFixture();
+    try {
+      await fixture.install("writer", '{resourceKinds:[{id:"item"}]}');
+      const input = { projectId: fixture.project.id, extensionId: "example.writer" };
+      const reader = createResourcesApi(fixture.deps, input);
+      const source = { type: "item", id: "one" };
+      const target = { type: "project", extensionId: "pstdio", id: fixture.project.id };
+      if (operation !== "add") await reader.addAnchors(source, [target]);
+      const controller = new AbortController();
+      controller.abort();
+      const writer = createResourcesApi(fixture.deps, { ...input, signal: controller.signal });
+      if (operation === "add") await writer.addAnchors(source, [target]);
+      if (operation === "remove") await writer.removeAnchors(source, [target]);
+      if (operation === "removed") await writer.removed(source);
+      const page = await reader.queryAnchors({ resource: source });
+      expect(page.items).toHaveLength(operation === "add" ? 1 : 0);
+      if (operation === "add") expect(page.items[0]?.target).toMatchObject(target);
+      await expect(writer.queryAnchors({ resource: source })).rejects.toThrow();
+    } finally {
+      await fixture.close();
+    }
+  });
+}
+
+test("cancelled resource writers retain project, owner and anchor policy checks", async () => {
+  const fixture = await createOpeningBoundaryFixture();
+  try {
+    await fixture.install("writer", '{resourceKinds:[{id:"item"}]}');
+    await fixture.install(
+      "guard",
+      `{commands:[{id:"check",title:"Check",run:()=>({allowed:false,reason:"Owner rejected"})}],
+        resourceKinds:[{id:"protected",validateAnchors:{kind:"command",id:"check"}}]}`,
+    );
+    const foreign = await fixture.deps.projectService.create({ name: "Foreign" });
+    const foreignWorkspace = await fixture.deps.workspaceService.createStandalone({ project_id: foreign.id });
+    const controller = new AbortController();
+    controller.abort();
+    const writer = createResourcesApi(fixture.deps, {
+      projectId: fixture.project.id,
+      extensionId: "example.writer",
+      signal: controller.signal,
+    });
+    const source = { type: "item", id: "one" };
+    const foreignTarget = { type: "workspace", extensionId: "pstdio", id: foreignWorkspace.id };
+    const protectedTarget = { type: "protected", extensionId: "example.guard", id: "one" };
+    await expect(writer.addAnchors(source, [foreignTarget])).rejects.toThrow("another project");
+    await expect(writer.removeAnchors(source, [foreignTarget])).rejects.toThrow("another project");
+    await expect(writer.addAnchors(source, [protectedTarget])).rejects.toThrow("Owner rejected");
+    await expect(writer.removeAnchors(source, [protectedTarget])).rejects.toThrow("Owner rejected");
+    await expect(writer.removed({ ...source, projectId: foreign.id })).rejects.toThrow("another project");
+    await expect(writer.removed({ ...source, extensionId: "example.guard" })).rejects.toThrow("another extension");
+    await expect(writer.removed({ type: "unknown", id: "one" })).rejects.toThrow("not owned");
+  } finally {
+    await fixture.close();
   }
 });

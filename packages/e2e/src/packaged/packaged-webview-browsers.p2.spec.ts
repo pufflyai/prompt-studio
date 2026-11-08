@@ -175,7 +175,7 @@ const verifyPackagedBehavior = async (browserCase: (typeof webviewBrowsers)[numb
       phase("collection checked; document state start");
       await verifyPackagedDocumentState(page, started.baseUrl, project.id);
       phase("documents checked; tree start");
-      await page.goto(`${started.baseUrl}/projects/${project.id}/workspaces`);
+      await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/pstdio.pstdio-workspaces/workspaces`);
       const sidenav = page.locator('[data-workbench-region="sidenav"]');
       await verifyTreeGroups(page, sidenav, sidenav.getByRole("option", { name: "Search", exact: true }));
     }

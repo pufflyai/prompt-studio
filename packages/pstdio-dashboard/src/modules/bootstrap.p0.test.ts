@@ -1,9 +1,8 @@
 import { describe, expect, mock, test } from "bun:test";
 import { createWorkbench, type WorkbenchPageLocationBrowser } from "@pstdio/workbench";
-import { createHomeModule } from "@/home-page.fixture";
+import { createHomeModule, dashboardHomePage } from "@/home-page.fixture";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { dashboardHomePage } from "@/shared/app/resources";
 import {
   getDashboardExtensionsReadyProjectId,
   setDashboardExtensionsRegisteredProject,
@@ -37,7 +36,7 @@ const browserAt = (url: string): WorkbenchPageLocationBrowser => {
 
 describe("createBootstrapModule", () => {
   test("waits for project contributions before opening the configured default page", async () => {
-    const workbench = createWorkbench({ startPage: dashboardHomePage });
+    const workbench = createWorkbench({ defaultPage: dashboardHomePage });
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const start = workbench.registerModule(createHomeModule());
@@ -57,7 +56,7 @@ describe("createBootstrapModule", () => {
   });
 
   test("does not open project selection while a persisted project is still loading", () => {
-    const workbench = createWorkbench({ startPage: dashboardHomePage });
+    const workbench = createWorkbench({ defaultPage: dashboardHomePage });
     workbench.modes.registerMode({ id: "project-selection", label: "Projects", activate: () => undefined });
 
     const bootstrap = workbench.registerModule(
@@ -82,7 +81,7 @@ describe("createBootstrapModule", () => {
       const loading = Promise.withResolvers<typeof metadata>();
       const browser = browserAt("/projects/project-1/extensions/pstdio.extension-lab/lab");
       const workbench = createWorkbench({
-        startPage: dashboardHomePage,
+        defaultPage: dashboardHomePage,
         pageLocationBrowser: browser,
       });
       workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
@@ -124,7 +123,7 @@ describe("createBootstrapModule", () => {
 test("restores an extension URL from the first applied metadata while a sync change reloads it", async () => {
   const loads: ReturnType<typeof Promise.withResolvers<typeof metadata>>[] = [];
   const browser = browserAt("/projects/project-1/extensions/pstdio.extension-lab/lab");
-  const workbench = createWorkbench({ startPage: dashboardHomePage, pageLocationBrowser: browser });
+  const workbench = createWorkbench({ defaultPage: dashboardHomePage, pageLocationBrowser: browser });
   workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
   selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
   const start = workbench.registerModule(createHomeModule());
@@ -162,7 +161,7 @@ test("restores an extension URL from the first applied metadata while a sync cha
 test("an extension URL the first catalog read cannot serve waits for the newest read", async () => {
   const loads: ReturnType<typeof Promise.withResolvers<typeof metadata>>[] = [];
   const browser = browserAt("/projects/project-1/extensions/pstdio.extension-lab/lab");
-  const workbench = createWorkbench({ startPage: dashboardHomePage, pageLocationBrowser: browser });
+  const workbench = createWorkbench({ defaultPage: dashboardHomePage, pageLocationBrowser: browser });
   workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
   selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
   const start = workbench.registerModule(createHomeModule());
@@ -200,7 +199,7 @@ test("an extension URL the first catalog read cannot serve waits for the newest 
 
 test("delayed boot preserves the active project recovery overlay", () => {
   const workbench = createWorkbench({
-    startPage: { kind: "page", extensionId: "pstdio", id: "tools" },
+    defaultPage: { kind: "page", extensionId: "pstdio", id: "tools" },
     resolvePagePersistenceScope: resolveDashboardPersistenceScope,
   });
   workbench.modes.registerMode({ id: "project", activate: () => undefined });

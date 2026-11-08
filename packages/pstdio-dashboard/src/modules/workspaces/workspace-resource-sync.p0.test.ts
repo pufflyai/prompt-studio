@@ -1,9 +1,8 @@
 import { expect, test } from "bun:test";
-import { workbenchPages } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
 import { getCollection, getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { registerWorkspaceProviderViews } from "@/workspaces-provider.test-support";
+import { registerWorkspaceProviderViews, workspacePages } from "@/workspaces-provider.test-support";
 
 import { createWorkspacesModule } from "./module";
 
@@ -27,7 +26,7 @@ test("workspace links resolve current capabilities and retain their navigation m
   workbench.pageLocations.setProject(row.project_id);
   workbench.pageLocations.navigate({
     kind: "page",
-    page: workbenchPages.workspace,
+    page: workspacePages.workspace,
     resource: { type: "workspace", id: row.id, label: row.name, metadata: { workspaceView: "files" } },
   });
   const resource = workbench.getPrimaryResource()!;
@@ -64,7 +63,7 @@ test("a workspace opened without an icon shows its kind's icon in the breadcrumb
   // Tool sidebars link a workspace by identity only, as the Planner ticket tree does.
   workbench.pageLocations.navigate({
     kind: "page",
-    page: workbenchPages.workspace,
+    page: workspacePages.workspace,
     resource: { type: "workspace", id: row.id, label: row.name },
   });
 
@@ -103,7 +102,7 @@ test("an open file tree reloads when its project gets a folder on this device", 
   workbench.pageLocations.setProject(row.project_id);
   workbench.pageLocations.navigate({
     kind: "page",
-    page: workbenchPages.workspace,
+    page: workspacePages.workspace,
     resource: { type: "workspace", id: row.id, label: row.name, metadata: { workspaceView: "files" } },
   });
   getWriter("workspaces")!.upsert({ ...row, root_path: "/projects/cloud-project" });

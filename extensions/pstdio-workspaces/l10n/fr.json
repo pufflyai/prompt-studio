@@ -4,5 +4,7 @@
   "action.create": "Créer un espace de travail",
   "sidebar.files": "Fichiers",
   "sidebar.title": "Espaces de travail du projet",
-  "sidebar.workspaces": "Espaces de travail"
+  "sidebar.workspaces": "Espaces de travail",
+  "command.resolveOpening": "Résoudre la destination de l’espace de travail",
+  "command.relatedOpenings": "Ressources liées à l’espace de travail"
 }

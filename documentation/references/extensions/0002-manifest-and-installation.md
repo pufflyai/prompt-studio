@@ -307,7 +307,7 @@ Every local contribution id follows one grammar: lowercase kebab-case segments s
 `[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)*`. Dots express local grouping (and derive default CLI paths
 for commands): `ticket-status.create` becomes `pst <extension> ticket-status create`. Ownership never lives in the id:
 a ref's `extensionId` carries it. `pst extensions check` rejects ids outside the grammar with the code
-`extension_contribution_id_invalid`. Host-published refs (for example `workbenchPages.workspaces`) resolve to the
+`extension_contribution_id_invalid`. Host-published refs (for example `workbenchModes.project`) resolve to the
 host's registered id without owner prefixing, for every contribution kind; runtime ids such as
 `pstdio.planner.command.tickets.create` are opaque routing values that no code may split back into parts.
 `contributionRefId(ref, ownerExtensionId?)` and `commandRefId(ref, ownerExtensionId?)` from `@pstdio/sdk/extensions`

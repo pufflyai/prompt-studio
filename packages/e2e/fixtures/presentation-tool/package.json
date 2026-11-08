@@ -1,0 +1,14 @@
+{
+  "name": "presentation-tool",
+  "publisher": "test",
+  "displayName": "Alternative presentation",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./extension.ts",
+  "engines": {
+    "pstdio": "^0.3.1 || ^0.4.0"
+  },
+  "dependencies": {
+    "@pstdio/sdk": "0.47.0-nightly.20261104030253"
+  }
+}

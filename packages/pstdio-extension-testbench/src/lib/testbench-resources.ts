@@ -1,9 +1,4 @@
-import {
-  type ExtensionResourcesApi,
-  type ExtensionWorkspace,
-  type ResourceIdentity,
-  workbenchPages,
-} from "@pstdio/sdk/extensions";
+import type { ExtensionResourcesApi, ExtensionWorkspace, ResourceIdentity } from "@pstdio/sdk/extensions";
 import { createMemoryResources, createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 
 export const createBenchResources = async (
@@ -46,7 +41,7 @@ export const createBenchResources = async (
   };
   const resources: ExtensionResourcesApi = {
     ...context.resources,
-    resolveMany: async (refs) =>
+    resolveOpenings: async (refs) =>
       refs.flatMap((ref) => {
         if (ref.projectId && ref.projectId !== projectId) return [];
         const workspace =
@@ -58,7 +53,16 @@ export const createBenchResources = async (
           label: workspace.name || workspace.workspace_shorthand || workspace.id,
           icon: "folder",
         };
-        return [{ resource, target: { kind: "page" as const, page: workbenchPages.workspace, resource } }];
+        return [
+          {
+            resource,
+            target: {
+              kind: "page" as const,
+              page: { kind: "page" as const, extensionId: "bench.workspaces", id: "inspect" },
+              resource,
+            },
+          },
+        ];
       }),
     allocate: allocated.allocate,
     identity: async (input) => seededIdentity(input.kind, input.id) ?? allocated.identity(input),

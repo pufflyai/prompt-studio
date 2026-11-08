@@ -64,6 +64,8 @@ export interface NavigationTreeContribution extends ContributionDefinition<"navi
   readonly optionalOwner?: boolean;
   readonly slot?: NavigationTreeSlot;
   readonly view: ViewRef;
+  /** Stay inactive while the foreign view provider is absent; local or present-provider typos still fail. */
+  readonly optionalView?: boolean;
   /** Project-scoped trees read without a selected resource. Defaults to selection. */
   readonly resourceScope?: "project" | "selection";
 }

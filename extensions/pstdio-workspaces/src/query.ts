@@ -135,9 +135,9 @@ export const queryWorkspaces = async (ctx: ExtensionContextBase) => {
     } while (cursor);
   }
   const refs = [...new Map(links.map((link) => [resourceKey(link.target), link.target])).values()];
-  const related: Awaited<ReturnType<typeof ctx.resources.resolveMany>> = [];
+  const related: Awaited<ReturnType<typeof ctx.resources.resolveOpenings>> = [];
   for (let index = 0; index < refs.length; index += 100)
-    related.push(...(await ctx.resources.resolveMany(refs.slice(index, index + 100))));
+    related.push(...(await ctx.resources.resolveOpenings(refs.slice(index, index + 100))));
   const rows: ResourceListRendererRow[] = workspaces.map((workspace) => ({
     id: workspace.id,
     title: workspace.name || workspace.shorthand || workspace.id,

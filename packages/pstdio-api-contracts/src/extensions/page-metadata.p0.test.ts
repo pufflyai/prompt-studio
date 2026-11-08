@@ -10,7 +10,7 @@ const page = (main: object) => ({
   title: "Document",
   path: "document",
   mode: { extensionId: "pstdio", kind: "mode", id: "project" },
-  parent: { extensionId: "pstdio", kind: "page", id: "start" },
+  parent: { extensionId: "example", kind: "page", id: "overview" },
   resource,
   main,
   slots: [],

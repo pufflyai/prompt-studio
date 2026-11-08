@@ -389,3 +389,20 @@ project/global settings, extension detail panels, and published custom global
 slots keep working. Device settings use `ctx.settings` and the existing typed
 webview settings capabilities. Publish the SDK and host before extensions adopt
 them. See [app-wide settings](0004-contribution-api.md#app-wide-settings).
+
+## Project composition in API 0.4
+
+The coordinated alpha break removes the host Start/Home/Workspaces aliases and
+bundled presentation references from the SDK. Projects choose an ordinary default
+page and public resource openers. Paths, parents, navigation order, and workspace
+presentation decisions belong to extensions. Existing presentation links may become
+unavailable; shared workspace and session records keep their identity and storage.
+
+`ctx.resources.resolveOpenings` and the SDK project composition client require the
+matching SDK and host. Validate consumer PRs against the candidate SDK, then update
+their published dependency ranges before release. See
+[project composition](0004-contribution-api.md#configure-project-composition).
+
+## Optional navigation views in API 0.4.0
+
+`NavigationTreeContribution.optionalView` lets a tool attach a tree supplied by an independently installed view provider. An absent foreign provider keeps the tree inactive; missing local views, missing views in a present provider, and non-tree views still fail validation. This additive contract shares the existing API 0.4 release step. Publish the compatible SDK and host before consumers adopt it. See [navigation trees](0004-contribution-api.md#dashboard-ui-contributions).

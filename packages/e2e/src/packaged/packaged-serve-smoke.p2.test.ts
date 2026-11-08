@@ -45,6 +45,7 @@ import { expectPackagedNativeMarkdown, writeNativeMarkdownExtension } from "./pa
 // scripts/verify/public-package-consumer.ts checks legacy hidden headers and explicit page/tab presentation in the built workbench.
 // It also imports the packed SDK's browser-free theme converter, checks both packed UI contrast palettes, and bundles the charts entry with a Gantt consumer.
 // packaged-session-tools.p1.spec.ts checks draft/session/tool tab restoration across navigation and reload, creation, closure and New session tools.
+// home-extension.p1.spec.ts checks installed presentation replacements, public SDK dependencies, and recovery after disabling all presentation.
 // packaged-empty-panels.p2.spec.ts checks Home startup without tool cards and page-scoped headers through reload and immediate navigation.
 // packaged-main-fullscreen.p2.spec.ts checks panel/fullscreen shortcuts and mode completion through the bundled opaque guest runtime.
 // packaged-notes-page.p2.spec.ts checks immediate palette creation, Notes creation cards, Add actions, and page-owned Main tabs across navigation and reload.
@@ -69,6 +70,7 @@ import { expectPackagedNativeMarkdown, writeNativeMarkdownExtension } from "./pa
 // packaged-board-panning-smoke.p2.test.ts retains card opening and dragging; the UI Card Gestures story covers nested-control pointer ownership.
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { expectPackagedSavedRecordings } from "./packaged-performance-smoke";
+import { expectPackagedProjectComposition } from "./packaged-project-composition-smoke";
 import { expectPackagedProjectChoices, writePackagedChoiceSources } from "./packaged-project-setup-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
@@ -237,6 +239,12 @@ test(
       expect(extension).toMatchObject({
         enabled: true,
         name: "dep-ext",
+      });
+      await expectPackagedProjectComposition({
+        projectFolder,
+        projectId: project.id,
+        baseUrl: started.baseUrl,
+        headers: runtimeAuthorization(started.descriptor),
       });
       await expectPackagedNativeActions({
         projectFolder,

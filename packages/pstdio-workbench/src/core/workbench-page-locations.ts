@@ -1,4 +1,3 @@
-import { workbenchPages } from "@pstdio/sdk/extensions";
 import { createWorkbenchPageLocationController } from "./controllers/page-location/page-location-controller";
 import {
   createMemoryWorkbenchPageLocationBrowser,
@@ -22,7 +21,7 @@ export const createPageLocations = (
     navigationTrees,
     modes,
     persistence: input.pageLocationPersistence ?? createMemoryWorkbenchPageLocationPersistence(),
-    startPage: input.startPage ?? workbenchPages.start,
+    defaultPage: input.defaultPage,
     getResourceRemovalVersion: () => resolveCore().resources.getRemovalVersion(),
     getResourceRemovalEpoch: () => resolveCore().resources.getRemovalEpoch(),
     restoreLocation: (location, projectId, removalVersion) =>

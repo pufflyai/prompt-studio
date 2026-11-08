@@ -1,6 +1,7 @@
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { writeCompositionPackageConsumer } from "./composition-package-consumer";
 import { freshInstallArgs } from "./fresh-install";
 import { verifyMonacoPackageAssets } from "./monaco-package-assets";
 import { verifyProviderPackageConsumer } from "./provider-package-consumer";
@@ -80,6 +81,7 @@ const writeConsumerTypecheckConfig = (directory: string, react: boolean, workben
       include: [
         "consumer.ts",
         "storage-consumer.ts",
+        "composition-consumer.ts",
         ...(workbenchConsumer ? [workbenchConsumer] : []),
         "performance-example/*.ts",
         "performance-example/*.tsx",
@@ -264,6 +266,7 @@ void [invalidAttribute, invalidColumn];
         : ""),
   );
   writeStoragePackageConsumer(directory);
+  writeCompositionPackageConsumer(directory);
   const workbenchConsumer = writeWorkbenchPackageConsumer(directory, react, Object.keys(overrides));
   if (react && dependencies["@pstdio/ui"]) {
     cpSync(join(directory, "node_modules/@pstdio/ui/examples/performance"), join(directory, "performance-example"), {
@@ -274,6 +277,7 @@ void [invalidAttribute, invalidColumn];
   run(directory, ["node_modules/typescript/bin/tsc", "-p", "tsconfig.json"]);
   run(directory, ["check", "-p", "tsconfig.json"]);
   if (workbenchConsumer) run(directory, [workbenchConsumer]);
+  run(directory, ["composition-consumer.ts"]);
   if (react) {
     writeFileSync(
       join(directory, "vite.config.ts"),

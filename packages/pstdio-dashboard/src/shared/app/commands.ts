@@ -8,9 +8,6 @@ export const dashboardCommandIds = {
   forkSession: "dashboard.forkSession",
   archiveSession: "dashboard.archiveSession",
   deleteSession: "dashboard.deleteSession",
-  createWorkspace: "workbench.workspace.create",
-  deleteWorkspace: "dashboard.deleteWorkspace",
-  renameWorkspace: "dashboard.renameWorkspace",
   openCommandPalette: "dashboard.openCommandPalette",
   openNotifications: "dashboard.openNotifications",
   openCurrentWorkspace: "dashboard.openCurrentWorkspace",
@@ -22,10 +19,8 @@ export const dashboardCommandIds = {
   openSessions: "dashboard.openSessions",
   openShortcuts: "dashboard.openShortcuts",
   openWorkspaceTerminal: "dashboard.openWorkspaceTerminal",
-  openWorkspaces: "dashboard.openWorkspaces",
   productInfo: "dashboard.productInfo",
   selectProject: "dashboard.selectProject",
-  selectWorkspaceSidenavSession: "dashboard.selectWorkspaceSidenavSession",
 } as const;
 
 export interface SelectProjectInput {
