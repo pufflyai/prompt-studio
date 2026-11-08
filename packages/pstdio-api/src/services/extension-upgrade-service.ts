@@ -1,7 +1,10 @@
 import { join, resolve } from "node:path";
 import { GitUnavailableError, isGitAvailable } from "pstdio-wt";
 import type { ExtensionRelease } from "../app-config";
-import { hasBundledExtensionSource } from "../features/extensions/bundled-extension-source";
+import {
+  hasBundledExtensionSource,
+  resolveBundledExtensionCommit,
+} from "../features/extensions/bundled-extension-source";
 import {
   type ExtensionCatalog,
   type ExtensionCatalogEntry,
@@ -80,6 +83,13 @@ const matchesCatalogOrigin = (
   source: ReturnType<typeof parseExtensionSourceRef>,
 ) => !entry || !source || (entry.origin.url === source.url && entry.origin.path === source.path);
 
+const matchesPinnedRelease = async (source: ReturnType<typeof parseExtensionSourceRef>, ref: string) => {
+  if (source?.commit !== ref.toLowerCase()) return false;
+  // Nightly refs can map to another bundled source commit. Only that local alias can change a pinned target.
+  const bundled = await resolveBundledExtensionCommit(source.url, ref);
+  return !bundled || bundled === source.commit;
+};
+
 export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps) => {
   const install = deps.installExtensionSource ?? installExtensionSourceDefault;
   const registry = createRegistryExtensionSource(deps, install);
@@ -138,6 +148,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     if (!matchesCatalogOrigin(entry, parsed)) return false;
     const releaseRef = upgradeRef(entry);
     if (!releaseRef) return false;
+    if (await matchesPinnedRelease(parsed, releaseRef)) return false;
     if (!(await canReadSource(entry, parsed, releaseRef))) return false;
     if (!parsed) return compatibilityError(source) !== null;
     try {

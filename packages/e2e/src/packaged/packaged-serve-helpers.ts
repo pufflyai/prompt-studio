@@ -34,9 +34,10 @@ export const signInBrowser = async (
   descriptor: Pick<RuntimeDescriptor, "origin" | "token">,
   path = "/",
 ) => {
+  // This one-use control exchange must not leave an idle connection across isolated browsers.
   const response = await fetch(`${descriptor.origin}/runtime/browser-login`, {
     method: "POST",
-    headers: runtimeAuthorization(descriptor),
+    headers: { ...runtimeAuthorization(descriptor), connection: "close" },
   });
   if (!response.ok) throw new Error(`Browser login failed with HTTP ${response.status}`);
   const redeemed = page.waitForResponse((reply) => new URL(reply.url()).pathname === "/runtime/browser-session");
