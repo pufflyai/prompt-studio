@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { test as baseTest, expect } from "bun:test";
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -9,9 +9,12 @@ import { createTestApp } from "../../test-utils/create-test-app";
 import { createRecoveryCatalog } from "../project-recovery/catalog";
 import { createRecoveryChunkStore } from "../project-recovery/chunks";
 import { openRecoveryJournal } from "../project-recovery/journal";
+import { nativeRecoverySupported } from "../project-recovery/native-recovery.fixture";
 import { createRecoveryPages } from "../project-recovery/pages";
 import { downloadRecoveryCapture } from "../project-recovery/transfer";
 import { startFolderRecovery } from "./folder-recovery";
+
+const test = baseTest.skipIf(!nativeRecoverySupported);
 
 const until = async (condition: () => boolean | Promise<boolean>) => {
   const end = Date.now() + 10_000;

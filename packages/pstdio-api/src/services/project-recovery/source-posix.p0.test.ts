@@ -1,8 +1,11 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, test as baseTest, expect } from "bun:test";
 import { mkdir, mkdtemp, readFile, rename, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { nativeRecoverySupported } from "./native-recovery.fixture";
 import { openRecoverySource } from "./source-posix";
+
+const test = baseTest.skipIf(!nativeRecoverySupported);
 
 const roots: string[] = [];
 afterEach(async () => {

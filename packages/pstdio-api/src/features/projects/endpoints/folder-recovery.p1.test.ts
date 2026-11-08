@@ -1,15 +1,18 @@
-import { expect, test } from "bun:test";
+import { test as baseTest, expect } from "bun:test";
 import { lstat, mkdir, mkdtemp, readFile, realpath, rm, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { ProjectFolderRecoveryStatus, ProjectFolderSource } from "pstdio-api-contracts";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { nativeRecoverySupported } from "../../../services/project-recovery/native-recovery.fixture";
 import { startFolderRecovery } from "../../../services/relay/folder-recovery";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import type { AppBindings } from "../../../types";
 import { documentPeer } from "../../extensions/publication/document-peer.fixture";
 import { createProjectRoutes } from "../routes";
+
+const test = baseTest.skipIf(!nativeRecoverySupported);
 
 const until = async (condition: () => boolean | Promise<boolean>) => {
   const end = Date.now() + 15_000;
