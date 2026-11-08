@@ -193,7 +193,7 @@ test("Run attempt starts from the chosen base branch", async ({ page, fixture })
   const dialog = page.getByRole("dialog").filter({ has: page.getByText("Run attempt", { exact: true }) });
   await expect(dialog.getByRole("button", { name: "Git worktree", exact: true })).toBeVisible();
   await dialog.getByRole("button", { name: "main", exact: true }).click();
-  await page.getByRole("menuitemradio", { name: "feature/base", exact: true }).click();
+  await page.getByRole("menuitem", { name: "feature/base", exact: true }).click();
   const response = page.waitForResponse(
     (response) => response.request().method() === "POST" && response.url().includes("command.run-attempt/execute"),
   );
