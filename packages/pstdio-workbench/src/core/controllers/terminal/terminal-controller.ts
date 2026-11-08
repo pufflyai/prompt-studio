@@ -22,7 +22,10 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
 
   let opener: WorkbenchTerminalSessionOpener | null = null;
   let disposed = false;
-  const openings = new Map<Promise<{ sessionId: string }>, string | undefined>();
+  const openings = new Map<
+    Promise<{ sessionId: string }>,
+    { ownerId?: string; bindingId?: string; controller: AbortController }
+  >();
   const sessionOwners = new Map<string, string>();
   const adapters = new Map<string, WorkbenchTerminalSessionAdapter>();
   const adapterDisposers = new Map<string, Array<() => void>>();
@@ -92,16 +95,15 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
 
   const killBinding = async (placementId: string, ownerId?: string) => {
     const bindingId = bindingKey(placementId, ownerId);
+    for (const admission of openings.values()) {
+      if (admission.bindingId === bindingId) admission.controller.abort();
+    }
+    pendingSessionByBindingId.delete(bindingId);
     const sessionId = sessionIdByBindingId.get(bindingId);
     if (sessionId) {
       await kill({ sessionId });
       return;
     }
-
-    const pending = pendingSessionByBindingId.get(bindingId);
-    if (!pending) return;
-    const opened = await pending.catch(() => undefined);
-    if (opened) await kill({ sessionId: opened.sessionId });
   };
 
   const open = async (input: {
@@ -121,11 +123,12 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
       if (pending) return await pending;
     }
 
+    const controller = new AbortController();
     const openSession = (async () => {
-      const adapter = await opener(input.request, input.view);
-      if (disposed) {
+      const adapter = await opener(input.request, input.view, controller.signal);
+      if (disposed || controller.signal.aborted) {
         await adapter.kill();
-        throw new Error("Terminal host has been disposed");
+        throw new Error("Terminal admission was cancelled");
       }
       if (input.ownerId) sessionOwners.set(adapter.id, input.ownerId);
       adapters.set(adapter.id, adapter);
@@ -170,7 +173,7 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
       return { sessionId: adapter.id };
     })();
 
-    openings.set(openSession, input.ownerId);
+    openings.set(openSession, { ownerId: input.ownerId, bindingId, controller });
     if (bindingId) pendingSessionByBindingId.set(bindingId, openSession);
     try {
       return await openSession;
@@ -208,7 +211,9 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
     killBinding,
 
     async killOwner(ownerId) {
-      await Promise.allSettled([...openings].filter(([, owner]) => owner === ownerId).map(([opening]) => opening));
+      for (const admission of openings.values()) {
+        if (admission.ownerId === ownerId) admission.controller.abort();
+      }
       await Promise.all(
         [...sessionOwners].filter(([, owner]) => owner === ownerId).map(([sessionId]) => kill({ sessionId })),
       );
@@ -247,7 +252,7 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
 
     async dispose() {
       disposed = true;
-      await Promise.allSettled([...openings.keys()]);
+      for (const admission of openings.values()) admission.controller.abort();
       const running = Object.values(store.getState().sessionsById).filter((session) => session.status === "running");
       await Promise.all(running.map((session) => kill({ sessionId: session.id })));
       for (const session of Object.values(store.getState().sessionsById)) cleanupSession(session.id);

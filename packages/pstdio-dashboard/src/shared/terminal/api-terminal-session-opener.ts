@@ -68,12 +68,20 @@ const terminalWebSocketUrl = () => {
 };
 
 /** Opens a PTY over one bidirectional WebSocket, including stdin and resize. */
-export const openDashboardTerminalSession: WorkbenchTerminalSessionOpener = (request, view) =>
+export const openDashboardTerminalSession: WorkbenchTerminalSessionOpener = (request, view, signal) =>
   new Promise((resolve, reject) => {
+    if (signal?.aborted) return reject(signal.reason);
     const url = terminalWebSocketUrl();
     const socket = new WebSocket(url, browserSessionWebSocketProtocols(readBrowserSession(url)));
     const hub = createSessionEventHub();
     let opened = false;
+    const releaseAdmission = () => signal?.removeEventListener("abort", cancelAdmission);
+    const cancelAdmission = () => {
+      releaseAdmission();
+      reject(signal?.reason);
+      socket.close();
+    };
+    signal?.addEventListener("abort", cancelAdmission, { once: true });
 
     const send = (message: TerminalWebSocketClientMessage) => socket.send(JSON.stringify(message));
 
@@ -87,12 +95,16 @@ export const openDashboardTerminalSession: WorkbenchTerminalSessionOpener = (req
     socket.addEventListener("message", (event) => {
       const message = JSON.parse(String(event.data)) as TerminalWebSocketServerMessage;
       if (message.type !== "open") {
-        if (!opened && message.type === "error") reject(new Error(message.message));
-        else hub.dispatch(message);
+        if (!opened && message.type === "error") {
+          releaseAdmission();
+          socket.close();
+          reject(new Error(message.message));
+        } else hub.dispatch(message);
         return;
       }
 
       opened = true;
+      releaseAdmission();
       resolve({
         id: message.sessionId,
         write(data) {
@@ -112,9 +124,11 @@ export const openDashboardTerminalSession: WorkbenchTerminalSessionOpener = (req
       });
     });
     socket.addEventListener("error", () => {
+      releaseAdmission();
       if (!opened) reject(new Error("Could not open a terminal session."));
     });
     socket.addEventListener("close", (event) => {
+      releaseAdmission();
       if (!opened) reject(new Error("The terminal connection closed before the session opened."));
       else if (!event.wasClean) hub.dispatch({ type: "error", message: "Terminal connection lost." });
     });

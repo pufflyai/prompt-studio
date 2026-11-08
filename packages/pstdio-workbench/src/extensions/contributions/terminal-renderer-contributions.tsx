@@ -6,8 +6,16 @@ import type { RegisterWorkbenchExtensionContributionsInput } from "../host/workb
 
 type TerminalRecord = WorkbenchExtensionMetadata["views"][number];
 const keyFor = (projectId: string, viewId: string) => JSON.stringify([projectId, viewId]);
-const declaration = (metadata: WorkbenchExtensionMetadata, view: TerminalRecord) =>
-  JSON.stringify([metadata.extensions.find((extension) => extension.id === view.extensionId), view]);
+const declaration = (metadata: WorkbenchExtensionMetadata, view: TerminalRecord) => {
+  const owner = metadata.extensions.find((extension) => extension.id === view.extensionId);
+  return JSON.stringify([
+    view.extensionId,
+    owner?.extensionInstanceId,
+    owner?.installedExtensionId,
+    owner?.sourcePath,
+    view.body,
+  ]);
+};
 
 const createOwner = (input: RegisterWorkbenchExtensionContributionsInput, view: TerminalRecord) => {
   const ownerId = crypto.randomUUID();
@@ -15,17 +23,18 @@ const createOwner = (input: RegisterWorkbenchExtensionContributionsInput, view: 
   const watch = watchClosedTerminalPlacements(input.workbench, view.id, ownerId, input.projectId);
   const nativeView = { ownerId, projectId: input.projectId, viewId: view.id, isCurrent: () => current };
   return {
-    register(next: RegisterWorkbenchExtensionContributionsInput) {
+    register(next: RegisterWorkbenchExtensionContributionsInput, currentView: TerminalRecord) {
       return next.workbench.views.registerView(
         {
           id: view.id,
-          title: text(view.title, view.id),
-          icon: view.icon,
+          title: text(currentView.title, view.id),
+          icon: currentView.icon,
           body: {
             kind: "terminal",
             render: (render) =>
               current ? (
                 <WorkbenchTerminalPanel
+                  key={ownerId}
                   placement={render.instance}
                   workbench={render.workbench}
                   nativeView={nativeView}
@@ -69,7 +78,7 @@ export const createWorkbenchExtensionTerminalRendererOwners = () => {
         entry = { declaration: description, owner: createOwner(input, view) };
         owners.set(key, entry);
       }
-      return entry.owner.register(input);
+      return entry.owner.register(input, view);
     },
     dispose() {
       for (const entry of owners.values()) entry.owner.dispose();
@@ -82,13 +91,18 @@ export type TerminalRendererOwners = ReturnType<typeof createWorkbenchExtensionT
 export const registerWorkbenchExtensionTerminalRenderers = (input: RegisterWorkbenchExtensionContributionsInput) => {
   const local = input.terminalRendererOwners ? undefined : createWorkbenchExtensionTerminalRendererOwners();
   const owners = input.terminalRendererOwners ?? local!;
-  const registrations = input.metadata.views.flatMap((view) =>
-    view.body.kind === "terminal" ? [owners.register(input, view)] : [],
-  );
-  return {
-    dispose() {
-      for (const registration of registrations.reverse()) registration.dispose();
-      local?.dispose();
-    },
+  const registrations: Array<{ dispose(): void }> = [];
+  const dispose = () => {
+    for (const registration of registrations.reverse()) registration.dispose();
+    local?.dispose();
   };
+  try {
+    for (const view of input.metadata.views) {
+      if (view.body.kind === "terminal") registrations.push(owners.register(input, view));
+    }
+    return { dispose };
+  } catch (error) {
+    dispose();
+    throw error;
+  }
 };
