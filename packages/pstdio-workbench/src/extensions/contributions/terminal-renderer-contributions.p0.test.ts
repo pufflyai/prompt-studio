@@ -179,3 +179,114 @@ test("closing the same static placement in another project preserves the hidden 
   owners.dispose();
   await w.dispose();
 });
+
+test("localized terminal titles retain their live owner and update the displayed view", async () => {
+  const workbench = createWorkbench();
+  const owners = createWorkbenchExtensionTerminalRendererOwners();
+  const input = { workbench, projectId: "project", metadata, terminalRendererOwners: owners, executeCommand() {} };
+  let registration = registerWorkbenchExtensionContributions(input);
+  const original = nativeView(workbench).ownerId;
+  const localized = { ...metadata, views: metadata.views.map((view) => ({ ...view, title: "Konsole" })) };
+  owners.reconcile("project", localized);
+  registration.dispose();
+  registration = registerWorkbenchExtensionContributions({ ...input, metadata: localized });
+  expect(nativeView(workbench).ownerId).toBe(original);
+  expect(workbench.views.getView(viewId)?.title).toBe("Konsole");
+  registration.dispose();
+  owners.dispose();
+  await workbench.dispose();
+});
+
+test("failed terminal contribution registration rolls back earlier views", async () => {
+  const workbench = createWorkbench();
+  const conflict = { ...metadata.views[0]!, id: `${viewId}-conflict`, localId: "conflict" };
+  workbench.views.registerView({
+    id: conflict.id,
+    title: "Existing",
+    body: { kind: "terminal", render: () => null },
+  });
+  expect(() =>
+    registerWorkbenchExtensionContributions({
+      workbench,
+      projectId: "project",
+      executeCommand() {},
+      metadata: { ...metadata, views: [...metadata.views, conflict] },
+    }),
+  ).toThrow();
+  expect(workbench.views.getView(viewId)).toBeUndefined();
+  await workbench.dispose();
+});
+
+test("a replaced terminal owner keys a fresh panel session", async () => {
+  const workbench = createWorkbench();
+  const owners = createWorkbenchExtensionTerminalRendererOwners();
+  const input = { workbench, projectId: "project", metadata, terminalRendererOwners: owners, executeCommand() {} };
+  let registration = registerWorkbenchExtensionContributions(input);
+  const element = () =>
+    getWorkbenchRenderers(workbench)
+      .getRenderer(viewId)!
+      .render({ workbench } as WorkbenchPanelRenderInput) as {
+      key: string;
+      props: { nativeView: { ownerId: string } };
+    };
+  const first = element();
+  const replacement = {
+    ...metadata,
+    views: metadata.views.map((view) => ({
+      ...view,
+      body: { kind: "terminal" as const, sessionHandlerId: "replacement" },
+    })),
+  };
+  owners.reconcile("project", replacement);
+  registration.dispose();
+  registration = registerWorkbenchExtensionContributions({ ...input, metadata: replacement });
+  const next = element();
+  expect(first.key).toBe(first.props.nativeView.ownerId);
+  expect(next.key).toBe(next.props.nativeView.ownerId);
+  expect(next.key).not.toBe(first.key);
+  registration.dispose();
+  owners.dispose();
+  await workbench.dispose();
+});
+
+test("replacing an installed terminal source creates a different presentation owner", async () => {
+  const workbench = createWorkbench();
+  const owners = createWorkbenchExtensionTerminalRendererOwners();
+  const initial = {
+    ...metadata,
+    extensions: [
+      {
+        id: "example.console",
+        name: "console",
+        displayName: "Console",
+        sourcePath: "/one/extension.ts",
+        extensionInstanceId: "instance-a",
+        installedExtensionId: "installed-a",
+      },
+    ],
+  };
+  const input = {
+    workbench,
+    projectId: "project",
+    metadata: initial,
+    terminalRendererOwners: owners,
+    executeCommand() {},
+  };
+  let registration = registerWorkbenchExtensionContributions(input);
+  const original = nativeView(workbench).ownerId;
+  const replacement = {
+    ...initial,
+    extensions: initial.extensions.map((extension) => ({
+      ...extension,
+      extensionInstanceId: "instance-b",
+      installedExtensionId: "installed-b",
+    })),
+  };
+  owners.reconcile("project", replacement);
+  registration.dispose();
+  registration = registerWorkbenchExtensionContributions({ ...input, metadata: replacement });
+  expect(nativeView(workbench).ownerId).not.toBe(original);
+  registration.dispose();
+  owners.dispose();
+  await workbench.dispose();
+});

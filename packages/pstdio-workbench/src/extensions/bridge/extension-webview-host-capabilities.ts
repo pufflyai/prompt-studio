@@ -17,6 +17,22 @@ import { createWebviewCommandStreamHandler, withFrameSignal } from "./webview-co
 
 const commandResponse = z.object({ outcome: validatedCommandOutcomeSchema }).passthrough();
 const streamHandlers = new WeakMap<HostEventPublisher, ReturnType<typeof createWebviewCommandStreamHandler>>();
+const terminalHandlers = new WeakMap<
+  HostEventPublisher,
+  { terminal: NonNullable<ExtensionWebviewHostAdapters["terminal"]>; ownerId?: string; capability: HostCapability }
+>();
+const terminalHandler = (
+  terminal: NonNullable<ExtensionWebviewHostAdapters["terminal"]>,
+  hostEvents: HostEventPublisher,
+  ownerId?: string,
+) => {
+  let entry = terminalHandlers.get(hostEvents);
+  if (entry?.terminal !== terminal || entry.ownerId !== ownerId) {
+    entry = { terminal, ownerId, capability: createTerminalSessionCapability({ terminal, hostEvents }) };
+    terminalHandlers.set(hostEvents, entry);
+  }
+  return entry.capability;
+};
 const streamHandler = (events: HostEventPublisher) => {
   let handler = streamHandlers.get(events);
   if (!handler) {
@@ -71,7 +87,10 @@ const editingSession = (adapters: ExtensionWebviewHostAdapters) => {
     });
 };
 
-export const createExtensionWebviewHostCapabilities = (adapters: ExtensionWebviewHostAdapters) => {
+export const createExtensionWebviewHostCapabilities = (
+  adapters: ExtensionWebviewHostAdapters,
+  terminalOwnerId?: string,
+) => {
   const {
     hostEvents,
     navigation,
@@ -85,7 +104,7 @@ export const createExtensionWebviewHostCapabilities = (adapters: ExtensionWebvie
     terminal,
   } = adapters;
   const terminalCapability =
-    terminal && hostEvents ? createTerminalSessionCapability({ terminal, hostEvents }) : undefined;
+    terminal && hostEvents ? terminalHandler(terminal, hostEvents, terminalOwnerId) : undefined;
   const readHarnesses = adapters.harnesses?.read.bind(adapters.harnesses);
   const account = createAccountCapability(adapters.account);
   return {

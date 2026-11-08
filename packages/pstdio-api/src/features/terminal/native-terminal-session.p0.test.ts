@@ -105,3 +105,27 @@ test("closing the view releases the PTY and removing its installed owner release
   await second.kill();
   expect(kills).toBe(2);
 });
+
+test("reloading another contribution retains the enabled terminal owner", async () => {
+  const session = await openNativeTerminalSession(fixture.deps, binding, new AbortController().signal);
+  const path = `${fixture.root}/extension.ts`;
+  const source = await Bun.file(path).text();
+  await writeFile(path, source.replace('title: "Console"', 'title: "Localized console"'));
+  fixture.deps.extensionRuntimeCatalog.invalidate({ sourcePath: fixture.root, reason: "source_changed" });
+  await fixture.deps.extensionRuntimeCatalog.get(binding.projectId);
+  await Bun.sleep(0);
+  expect(kills).toBe(0);
+  await session.kill();
+  expect(kills).toBe(1);
+});
+
+test("replacing the enabled installed instance releases its existing terminal", async () => {
+  const session = await openNativeTerminalSession(fixture.deps, binding, new AbortController().signal);
+  fixture.source.instance = { ...fixture.source.instance, id: "replacement-instance" };
+  fixture.deps.extensionRuntimeCatalog.invalidate({ sourcePath: fixture.root, reason: "enablement_changed" });
+  await fixture.deps.extensionRuntimeCatalog.get(binding.projectId);
+  await Bun.sleep(0);
+  expect(kills).toBe(1);
+  await session.kill();
+  expect(kills).toBe(1);
+});

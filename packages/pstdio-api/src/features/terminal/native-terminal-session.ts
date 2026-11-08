@@ -5,6 +5,10 @@ import { z } from "zod";
 import { resolveLocalWorkspaceTarget } from "../extensions/command-environment/workspace-target";
 import type { ExtensionsRouteDeps } from "../extensions/deps";
 import { executeProjectExtensionCommand } from "../extensions/execute-project-extension-command";
+import {
+  type ProjectExtensionRuntimeSnapshot,
+  resolveEnabledSourceForRecord,
+} from "../extensions/project-extension-runtime-snapshot";
 
 const size = z.number().int().positive().max(65535);
 export const nativeTerminalOpenSchema = z
@@ -23,6 +27,10 @@ const sessionSchema = z
     env: z.record(z.string(), z.string()).optional(),
   })
   .strict();
+const installedOwnerKey = (snapshot: ProjectExtensionRuntimeSnapshot, sourcePath: string) => {
+  const source = resolveEnabledSourceForRecord(sourcePath, snapshot.enabledSources);
+  return JSON.stringify([sourcePath, source?.instance.id, source?.installedSource.id]);
+};
 
 /** Resolve executable settings on the host, then transfer PTY lifetime to the presentation's socket. */
 export const openNativeTerminalSession = async (
@@ -40,13 +48,13 @@ export const openNativeTerminalSession = async (
   const view = snapshot.runtime.views.find((candidate) => candidate.id === viewId);
   if (!view || view.contribution.body.kind !== "terminal")
     throw new Error("Native terminal view is not enabled in this project");
-  const callback = view.contribution.body.session;
   const handler = snapshot.runtime.privateHandlers.find(
     (candidate) =>
       candidate.rendererId === viewId && candidate.rendererKind === "terminal" && candidate.operation === "session",
   );
   if (!handler || handler.extensionId !== view.extensionId)
     throw new Error("Native terminal view has no session callback");
+  const installedOwner = installedOwnerKey(snapshot, view.sourcePath);
 
   const owner = new AbortController();
   const lifetime = AbortSignal.any([signal, owner.signal]);
@@ -74,7 +82,10 @@ export const openNativeTerminalSession = async (
       !next ||
       next.extensionId !== view.extensionId ||
       next.contribution.body.kind !== "terminal" ||
-      next.contribution.body.session !== callback
+      installedOwnerKey(current, next.sourcePath) !== installedOwner ||
+      !current.runtime.privateHandlers.some(
+        (candidate) => candidate.id === handler.id && candidate.extensionId === handler.extensionId,
+      )
     )
       owner.abort(new Error("Native terminal owner was disposed"));
   };

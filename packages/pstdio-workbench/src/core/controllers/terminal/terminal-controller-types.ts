@@ -19,6 +19,7 @@ export type WorkbenchTerminalSessionAdapter = TerminalSessionAdapter;
 export type WorkbenchTerminalSessionOpener = (
   request: WorkbenchTerminalSessionRequest,
   view?: TerminalViewBinding,
+  signal?: AbortSignal,
 ) => Promise<WorkbenchTerminalSessionAdapter>;
 
 export type WorkbenchTerminalSessionStatus = "running" | "exited" | "killed";
