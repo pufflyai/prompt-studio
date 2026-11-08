@@ -638,7 +638,7 @@
     "platforms": ["linux"],
     "arch": "x64",
     "owner": "PS-932 / workbench performance",
-    "reason": "User-authorized release quarantine on 2026-10-31. The complete twenty-switch workload still reaches 1885\u20131917 ms against its unchanged 1850 ms budget after the label/layout optimizations. Preserve every sample, request-count and stable-instance assertion; this remains product performance debt.",
+    "reason": "User-authorized release quarantine on 2026-10-31. The complete twenty-switch workload still reaches 1885–1917 ms against its unchanged 1850 ms budget after the label/layout optimizations. Preserve every sample, request-count and stable-instance assertion; this remains product performance debt.",
     "evidence": [
       "https://github.com/pufflyai/prompt-studio/actions/runs/41234623888",
       "https://github.com/pufflyai/prompt-studio/actions/runs/41245408313/job/124667798482"
@@ -795,6 +795,58 @@
     "removeWhen": "Identify and repair the native RPC stall, then qualify the original full-root scenario and applicable Linux/native CI within the unchanged five-second allowance, preserving both real turns, both history reads, all assertions and platform coverage; do not use repeated pass-seeking runs."
   },
   {
+    "runner": "subnav-benchmark",
+    "file": "packages/e2e/src/perf/subnav.p3.bench.ts",
+    "name": "ticket/first data",
+    "platforms": ["linux"],
+    "arch": "x64",
+    "owner": "PS-151 / workbench navigation performance",
+    "reason": "Authorized measured performance debt: the first hosted edited-test execution recorded ticket/first data at 1560.4 ms against its unchanged 1500 ms budget. Its generic sampling path used one sample per destination/visit and bypassed the ordered quarantine adapter; it is not full release qualification. Edited navigation now delegates once to the existing adapter with all thirty ordered samples. Keep the complete fixed fixture, original request/reachability assertions, sample ordering and budgets. The slowdown cause remains unresolved; this is not a flake claim.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/42434991559/job/128591888257"],
+    "removeWhen": "Diagnose and repair first-ticket data latency, then complete the entire 120-sample Linux x64 workload in one first-attempt run with all thirty ticket/first data samples below the original 1500 ms budget and every original workload, timing, request, reachability and cleanup assertion intact. Missing, skipped, cancelled or stale execution remains blocking; no retries, prewarming or raised limits.",
+    "failureKind": "performance"
+  },
+  {
+    "runner": "subnav-benchmark",
+    "file": "packages/e2e/src/perf/subnav.p3.bench.ts",
+    "name": "ticket/first editor",
+    "platforms": ["linux"],
+    "arch": "x64",
+    "owner": "PS-151 / workbench navigation performance",
+    "reason": "Authorized measured performance debt: the first hosted edited-test execution recorded ticket/first editor at 1451 ms against its unchanged 1325 ms budget. Its generic sampling path used one sample per destination/visit and bypassed the ordered quarantine adapter; it is not full release qualification. Edited navigation now delegates once to the existing adapter with all thirty ordered samples. Keep the complete fixed fixture, original request/reachability assertions, sample ordering and budgets. The slowdown cause remains unresolved; this is not a flake claim.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/42434991559/job/128591888257"],
+    "removeWhen": "Diagnose and repair first-ticket editor latency, then complete the entire 120-sample Linux x64 workload in one first-attempt run with all thirty ticket/first editor samples below the original 1325 ms budget and every original workload, timing, request, reachability and cleanup assertion intact. Missing, skipped, cancelled or stale execution remains blocking; no retries, prewarming or raised limits.",
+    "failureKind": "performance"
+  },
+  {
+    "runner": "packaged-desktop",
+    "file": "clients/desktop/src/e2e/packaged-app.p1.spec.ts",
+    "name": "starts without editors and serves both authenticated transport paths",
+    "platforms": ["linux"],
+    "arch": "x64",
+    "owner": "PS-151 / Linux desktop cold project setup",
+    "reason": "User-authorized setup debt. Hosted Linux x64 first attempt 42441508001/job128611579214 exhausted the existing 30000 ms case during its first POST /v1/projects. Runtime app readiness took 9635 ms; Onboarding dependency preparation took 9182 ms and its default install 10660 ms. Project setup reached repo-extension/default checkout without completing before cancellation. The precise slow checkout or installation cause is unproven. Retain the fresh home/cache, real defaults, both projects, editor exclusion, both transport authorization paths, version/token checks, CLI and cleanup.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/42441508001/job/128611579214",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/42441508001/artifacts/13602600439"
+    ],
+    "removeWhen": "Identify and repair cold native Linux x64 launch/default-install/project-setup latency, then complete this entire case in its first ordinary native execution within the unchanged 30000 ms allowance. Preserve every cold fixture, both projects and all transport, editor, security, CLI and cleanup assertions; no retries, prewarming, reduced defaults or raised limits. Missing, skipped, cancelled or stale execution remains blocking."
+  },
+  {
+    "runner": "subnav-benchmark",
+    "file": "packages/e2e/src/perf/subnav.p3.bench.ts",
+    "name": "sessions/repeat requests",
+    "platforms": ["linux"],
+    "arch": "x64",
+    "owner": "PS-151 / navigation snapshot read lifecycle",
+    "reason": "User-authorized functional request debt. First attempt 42443218459/job128616715673 completed all 120 original samples but retained one Sessions/repeat pagination net::ERR_ABORTED with real client AbortError proof. The same cursor previously completed 200/outcome OK, and provider snapshot replacement cancels lazy reads, but current authoritative acceptance/coverage is not proven. Do not classify the cancellation as harmless or a flake. This entry defers the entire exact request contract, including other request failures in that group; other destination/visit request contracts and global browser, reachability, setup and cleanup failures still block. Retain every raw error/timing, all 30 ordered samples per group, workload and unchanged budgets.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/42443218459/job/128616715673",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/42443218459/artifacts/13602079035"
+    ],
+    "removeWhen": "Repair or prove current authoritative snapshot coverage for disposed child reads, then execute the complete Linux x64 workload once with no unresolved request failure in all 30 Sessions/repeat samples and all original timing, reachability, history and cleanup assertions intact. Restore this exact request contract to the stable gate. Missing, skipped, cancelled or stale evidence remains blocking; no retries, prewarming, reduced workload or raised limits."
+  },
+  {
     "runner": "packaged-bun",
     "file": "packages/e2e/src/packaged/packaged-board-views-smoke.p2.test.ts",
     "name": "packaged collection views include native Workspaces and survive a runtime restart",
@@ -907,7 +959,7 @@
   {
     "runner": "packaged-bun",
     "file": "packages/e2e/src/packaged/packaged.p1.test.ts",
-    "name": "packaged pstdio \u2014 project lifecycle > creates a project and lists it",
+    "name": "packaged pstdio — project lifecycle > creates a project and lists it",
     "platforms": ["win32"],
     "arch": "x64",
     "owner": "PS-151 / deferred release qualification",
@@ -918,7 +970,7 @@
   {
     "runner": "packaged-bun",
     "file": "packages/e2e/src/packaged/packaged.p1.test.ts",
-    "name": "packaged pstdio \u2014 tickets > creates and lists a ticket",
+    "name": "packaged pstdio — tickets > creates and lists a ticket",
     "platforms": ["win32"],
     "arch": "x64",
     "owner": "PS-151 / deferred release qualification",
@@ -998,7 +1050,7 @@
   {
     "runner": "packaged-bun",
     "file": "packages/e2e/src/packaged/packaged.p1.test.ts",
-    "name": "packaged pstdio \u2014 project lifecycle > creates a project and lists it",
+    "name": "packaged pstdio — project lifecycle > creates a project and lists it",
     "platforms": ["win32"],
     "arch": "arm64",
     "owner": "PS-151 / deferred release qualification",
@@ -1009,7 +1061,7 @@
   {
     "runner": "packaged-bun",
     "file": "packages/e2e/src/packaged/packaged.p1.test.ts",
-    "name": "packaged pstdio \u2014 tickets > creates and lists a ticket",
+    "name": "packaged pstdio — tickets > creates and lists a ticket",
     "platforms": ["win32"],
     "arch": "arm64",
     "owner": "PS-151 / deferred release qualification",
