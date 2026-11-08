@@ -44,3 +44,5 @@ The namespace is the extension's full publisher and name. A deprecated name-only
 namespace works while exactly one enabled extension uses that name. Ambiguous
 names fail and list the full-ID choices. Declared global aliases such as
 pst tickets keep their short form.
+
+*Updated at: 2026-11-02*

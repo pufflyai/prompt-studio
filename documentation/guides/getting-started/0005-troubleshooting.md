@@ -88,3 +88,5 @@ Run `pst --open-browser false` and open the exact `127.0.0.1` address it prints.
 ## Report a problem
 
 Open an issue on [GitHub](https://github.com/pufflyai/prompt-studio/issues) or ask on [Discord](https://discord.gg/3RxwUEk8fW). Include the output of `pst --version` and the end of `pst logs`.
+
+*Updated at: 2026-11-05*

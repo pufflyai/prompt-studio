@@ -59,3 +59,5 @@ without retaining a live subscription while closed.
 ## Examples
 
 The [workbench cookbook](../../guides/extensions/0002-workbench-cookbook.md) links working examples for editable pages, inspectors, shared panels, editor collections, provider refs, and webview lifecycle. See also [Contributions](0004-contribution-api.md), [Modes and layout](0009-modes-and-layout.md), and [Navigation and layout state](0010-navigation-and-layout-state.md).
+
+*Updated at: 2026-11-07*

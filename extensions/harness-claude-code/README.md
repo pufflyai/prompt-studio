@@ -55,3 +55,5 @@ Claude receives the correction at its next supported input boundary, usually aft
 Prompt Studio confirms delivery after Claude acknowledges the message. Each submission appears once in the conversation, including identical messages, and keeps its identity when history is reopened. Claude saves corrections received during a tool as queued-command entries; the harness reads those as user messages.
 
 If the run has already stopped accepting input, delivery is rejected. If the connection fails after a possible send, delivery remains uncertain and is never resent automatically. A run completes after its pending input and background work finish.
+
+*Updated at: 2026-10-31*

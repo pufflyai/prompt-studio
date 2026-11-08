@@ -182,3 +182,5 @@ adds the new APIs and deprecates the old ones. 0.45 moves extensions to the new 
 published 0.44 SDK and removes everything deprecated in 0.44. Before that adoption, repeat the
 workflow and safety checks using published dependencies. Do not use these syntax counts as release
 acceptance evidence.
+
+*Updated at: 2026-10-18*

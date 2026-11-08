@@ -53,3 +53,5 @@ Cloud settings lists your devices when early access is enabled. Choose **Rename*
 In Cloud settings, choose **Make local** and confirm. Syncing stops on this device immediately. Other devices discover the change when they refresh account membership; an idle device may take up to a minute. Each device keeps its copy.
 
 Choose **Sync with Cloud** to enable syncing again. The copies merge. Where both copies changed the same thing, one change is kept.
+
+*Updated at: 2026-11-07*

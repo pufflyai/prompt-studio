@@ -85,3 +85,5 @@ Snoozing requires a timestamp; other statuses reject a snooze timestamp.
 `ctx.notify.resolve`, `ctx.notify.dismiss`, the old HTTP status routes and `PATCH snoozedUntil`
 remain available but deprecated in 0.44. Use the methods above before their 0.45 removal.
 Notification types come from `@pstdio/sdk/resources`.
+
+*Updated at: 2026-10-24*

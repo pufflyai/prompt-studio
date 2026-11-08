@@ -21,3 +21,4 @@ In the dashboard, a WebSocket at `/v1/terminal` opens a PTY in the runtime and c
 
 Logs record only lifecycle data: session ID, process ID, exit code, and signal. Terminal content is never logged.
 
+*Updated at: 2026-10-18*

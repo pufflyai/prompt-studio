@@ -171,3 +171,5 @@ the calling extension and project.
 number is saved locally. Use it to refresh displayed numbers and generated references.
 The host handles collision repair and alias storage; extensions need no sync code.
 Workspace numbers (`WS-`) are separate and do not use this API.
+
+*Updated at: 2026-11-03*

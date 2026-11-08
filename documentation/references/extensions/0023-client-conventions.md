@@ -83,3 +83,5 @@ settings, saved-view filters and other user data.
 These APIs are additive in 0.44. Keep extension adoption in separate PRs against the published
 0.44 SDK. Notify Granite maintainers before 0.45, since it uses `createClient` and `client.projects`.
 Do not remove a field or method before its stable deprecation release.
+
+*Updated at: 2026-10-18*

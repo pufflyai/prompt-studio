@@ -58,3 +58,5 @@ Keyboard forwarding continues through the private runtime path and requires no d
 The API report covers the eight public SDK subpaths from `api-report-entries.json`. `/hooks`
 is host-only and deprecated. Export aliases keep their existing type and runtime behavior for the
 window above. The 0.45 removal must inspect both SDK exports and real HTTP/bridge registrations.
+
+*Updated at: 2026-11-05*
