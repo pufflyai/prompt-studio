@@ -8,9 +8,7 @@ export const verifyPackagedShortcutReference = async (
   projectId: string,
   headers: Record<string, string>,
 ) => {
-  const navigationShortcuts = [
-    { label: "Go to workspaces", key: "W" },
-  ];
+  const navigationShortcuts = [{ label: "Go to workspaces", key: "W" }];
   const commands = [
     { label: "Go to sessions", key: "S", layered: true },
     { label: "New workspace", key: "W", layered: true },
