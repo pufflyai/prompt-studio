@@ -350,9 +350,12 @@ test("disabling the installed Terminal removes its action and re-enabling opens 
     await openWorkspaceTerminal(page, "Project folder");
     await expect(page.locator(".xterm:visible")).toHaveCount(1);
     const input = page.getByRole("textbox", { name: "Terminal input" });
+    const rows = page.locator(".xterm:visible .xterm-rows");
+    await expect(rows).toContainText(/\S/);
+    await expect(input).toBeFocused();
     await input.pressSequentially("echo TERMINAL_REENABLED");
     await input.press("Enter");
-    await expect(page.locator(".xterm:visible .xterm-rows")).toContainText("TERMINAL_REENABLED");
+    await expect(rows).toContainText("TERMINAL_REENABLED");
   } finally {
     await request.delete(`${apiBase}/v1/projects/${project.id}`);
   }
