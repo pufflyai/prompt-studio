@@ -793,5 +793,37 @@
     "reason": "The unchanged five-second functional execution allowance expired at 5029.12ms during a native get_state history RPC in full-root macOS arm64 qualification. The same Pi source previously passed full/native CI; a phase-instrumented diagnostic completed all four real CLI launches in 750ms, and the isolated original-main package passed the full scenario in 1560ms. These comparisons establish intermittent execution, not a diagnosed cause or a passing replacement for the retained full-run failure. See RP-537 evidence linked from the Pi repair PR.",
     "evidence": ["https://github.com/pufflyai/prompt-studio/pull/1850"],
     "removeWhen": "Identify and repair the native RPC stall, then qualify the original full-root scenario and applicable Linux/native CI within the unchanged five-second allowance, preserving both real turns, both history reads, all assertions and platform coverage; do not use repeated pass-seeking runs."
+  },
+  {
+    "runner": "subnav-benchmark",
+    "file": "packages/e2e/src/perf/subnav.p3.bench.ts",
+    "name": "ticket/first data",
+    "platforms": [
+      "linux"
+    ],
+    "arch": "x64",
+    "owner": "PS-151 / workbench navigation performance",
+    "reason": "Authorized measured performance debt: the first hosted edited-test execution recorded ticket/first data at 1560.4 ms against its unchanged 1500 ms budget. Its generic sampling path used one sample per destination/visit and bypassed the ordered quarantine adapter; it is not full release qualification. Edited navigation now delegates once to the existing adapter with all thirty ordered samples. Keep the complete fixed fixture, original request/reachability assertions, sample ordering and budgets. The slowdown cause remains unresolved; this is not a flake claim.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/42434991559/job/128591888257"
+    ],
+    "removeWhen": "Diagnose and repair first-ticket data latency, then complete the entire 120-sample Linux x64 workload in one first-attempt run with all thirty ticket/first data samples below the original 1500 ms budget and every original workload, timing, request, reachability and cleanup assertion intact. Missing, skipped, cancelled or stale execution remains blocking; no retries, prewarming or raised limits.",
+    "failureKind": "performance"
+  },
+  {
+    "runner": "subnav-benchmark",
+    "file": "packages/e2e/src/perf/subnav.p3.bench.ts",
+    "name": "ticket/first editor",
+    "platforms": [
+      "linux"
+    ],
+    "arch": "x64",
+    "owner": "PS-151 / workbench navigation performance",
+    "reason": "Authorized measured performance debt: the first hosted edited-test execution recorded ticket/first editor at 1451 ms against its unchanged 1325 ms budget. Its generic sampling path used one sample per destination/visit and bypassed the ordered quarantine adapter; it is not full release qualification. Edited navigation now delegates once to the existing adapter with all thirty ordered samples. Keep the complete fixed fixture, original request/reachability assertions, sample ordering and budgets. The slowdown cause remains unresolved; this is not a flake claim.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/42434991559/job/128591888257"
+    ],
+    "removeWhen": "Diagnose and repair first-ticket editor latency, then complete the entire 120-sample Linux x64 workload in one first-attempt run with all thirty ticket/first editor samples below the original 1325 ms budget and every original workload, timing, request, reachability and cleanup assertion intact. Missing, skipped, cancelled or stale execution remains blocking; no retries, prewarming or raised limits.",
+    "failureKind": "performance"
   }
 ]

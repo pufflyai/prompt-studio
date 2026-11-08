@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync } from "node:fs";
+import { appendFileSync, cpSync, existsSync, mkdirSync, readFileSync, renameSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type { createEditedTestMatrix } from "./edited-test-matrix";
 import { createPriorityPlan } from "./priority-plan";
@@ -45,26 +45,36 @@ const checkQuarantine = async (file: string, runner: string, owner: string, env:
 };
 if (row.suite) {
   // Suites own cold-start order and their fixed workloads. An edit checks the complete suite once.
-  const code = await execute([
-    "bun",
-    "packages/benchmarks/src/cli.ts",
-    "run",
-    "--checkout",
-    `${root}=${sha}=edited-tests`,
-    "--suites",
-    row.suite,
-    "--samples",
-    "1",
-    "--cache",
-    join(process.env.RUNNER_TEMP ?? evidence, "edited-benchmarks"),
-    "--out",
-    join(evidence, "performance"),
-  ]);
+  const orderedSubnav = row.suite === "subnav";
+  const code = orderedSubnav
+    ? await execute(["bun", "scripts/ci/run-subnav-benchmarks.ts"], {
+        BENCHMARK_SAMPLES: "30",
+        PSTDIO_EXTENSION_RELEASE_REF: sha,
+      })
+    : await execute([
+        "bun",
+        "packages/benchmarks/src/cli.ts",
+        "run",
+        "--checkout",
+        `${root}=${sha}=edited-tests`,
+        "--suites",
+        row.suite,
+        "--samples",
+        "1",
+        "--cache",
+        join(process.env.RUNNER_TEMP ?? evidence, "edited-benchmarks"),
+        "--out",
+        join(evidence, "performance"),
+      ]);
+  if (orderedSubnav) {
+    const rawResults = join(root, "__test-tmp__/subnav-benchmark/results");
+    if (existsSync(rawResults)) cpSync(rawResults, join(evidence, "performance/subnav"), { recursive: true });
+  }
   results.push({ files, lane: "performance", exitCode: code });
   failed = code !== 0;
-  // The desktop benchmark adapter already executes stable and quarantined cases together,
-  // in cold-start order, and requires their reports. Never execute those cases a second time.
-  if (row.suite !== "desktop") {
+  // Ordered adapters execute stable and quarantined contracts together and require
+  // their matching reports. Never repeat those cases through another lane.
+  if (row.suite !== "desktop" && !orderedSubnav) {
     const packages = readWorkspacePackages(root);
     for (const file of files) {
       const owner = packages.find((pkg) => file.startsWith(`${pkg.dir}/`))?.name ?? "repository";

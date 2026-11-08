@@ -34,6 +34,7 @@ export const subnavBenchmarkResults = (samples: Sample[], sampleCount: number) =
         file: "src/perf/subnav.p3.bench.ts",
         tests: [
           {
+            annotations: failures.map((message) => ({ type: "performance-budget-failure", description: message })),
             results: [
               { status: failures.length ? "failed" : "passed", errors: failures.map((message) => ({ message })) },
             ],

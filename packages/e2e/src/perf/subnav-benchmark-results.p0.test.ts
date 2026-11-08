@@ -33,3 +33,16 @@ test("invalid timing evidence blocks instead of becoming a quarantined budget mi
   samples[2]!.structureMs = Number.NaN;
   expect(() => subnavBenchmarkResults(samples, 30)).toThrow("Invalid navigation measurement");
 });
+
+test("navigation budget failures retain the exact performance-only classification evidence", () => {
+  const samples = measurements();
+  samples[0]!.dataMs = 1560.4;
+  samples[0]!.editorMs = 1451;
+  const { specs } = subnavBenchmarkResults(samples, 30);
+  for (const spec of specs) {
+    const result = spec.tests[0]!;
+    expect((result as { annotations?: unknown[] }).annotations).toEqual(
+      result.results[0]!.errors.map(({ message }) => ({ type: "performance-budget-failure", description: message })),
+    );
+  }
+});
