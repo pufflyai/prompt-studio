@@ -253,7 +253,7 @@ test("configured ordinary tools open the default and workspace resources without
   try {
     const refreshed = page.waitForResponse(
       (response) =>
-        response.url().endsWith(`/v1/projects/${project.id}/extensions/metadata`) &&
+        response.url().endsWith(`/v1/projects/${project.id}/extensions/ui`) &&
         response.request().method() === "GET",
     );
     await fixture.chooseDefault(true);
