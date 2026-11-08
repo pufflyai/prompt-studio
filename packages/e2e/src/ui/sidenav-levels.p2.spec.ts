@@ -77,7 +77,7 @@ test("Notes and Sidenav levels keep rows users pinned to the header", async ({ p
   await row("Sessions").click();
   await expect(sidenav.getByText("Today", { exact: true })).toBeVisible();
   await row("Level session").click();
-  await expect(page).toHaveURL(/\/session\?/);
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-session-browser\/conversation\?resource=/);
   await expect(firstRow).toHaveAccessibleName("Tickets");
   await row("Search").click();
   await expect(page.getByRole("dialog")).toBeVisible();

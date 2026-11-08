@@ -69,6 +69,14 @@ const observation = (input: unknown) => {
 
 export const readOrderedObservation = (revision: string) => observation(jsonSchema.parse(JSON.parse(revision)));
 
+const base = (input: unknown) => {
+  lifetimeObservation(input, ["version", "exists", "deleted", "lifetime", "stamps"]);
+  for (const [pointer, write] of Object.entries(shape(shape(input).stamps))) {
+    parseJsonPointer(pointer);
+    stamp(write);
+  }
+};
+
 const changes = (input: unknown) => {
   if (!Array.isArray(input)) throw new Error("Invalid ordered changes");
   for (const entry of input) {
@@ -84,28 +92,40 @@ const changes = (input: unknown) => {
   validateJsonChanges(input as OrderedOperation["edits"][number]["changes"]);
 };
 
+const supersedes = (input: unknown) => {
+  if (!Array.isArray(input) || !input.length) throw new Error("Invalid superseded saves");
+  for (const id of input) text(id);
+  if (new Set(input).size !== input.length) throw new Error("Duplicate superseded save");
+};
+
+const verifiedEdit = (input: unknown, ids: ReadonlySet<string>) => {
+  const edit = shape(input, ["recordId", "changes", "texts", "deleted", "condition", "base"]);
+  const id = text(edit.recordId);
+  if (ids.has(id)) throw new Error("A save must name each record once");
+  changes(edit.changes);
+  if (edit.texts !== undefined) validateOrderedTextChanges(edit.texts);
+  if (edit.deleted !== undefined && typeof edit.deleted !== "boolean") throw new Error("Invalid deletion");
+  if (edit.condition !== undefined) {
+    const condition = shape(edit.condition);
+    if (Object.hasOwn(condition, "value") || Object.hasOwn(condition, "stamps")) observation(condition);
+    else lifetimeObservation(condition);
+  }
+  if (edit.base !== undefined) base(edit.base);
+  return id;
+};
+
 /** Validate before any ordered state changes; return an owned snapshot rather than a caller-mutable envelope. */
 export const verifyOrderedOperation = async (input: unknown) => {
   const value = JSON.parse(JSON.stringify(jsonSchema.parse(input))) as Record<string, unknown>;
-  shape(value, ["version", "operationId", "fingerprint", "edits"]);
+  shape(value, ["version", "operationId", "fingerprint", "supersedes", "edits"]);
   if (value.version !== 1 || !Array.isArray(value.edits) || !value.edits.length)
     throw new Error("Invalid ordered save");
   text(value.operationId);
+  if (value.supersedes !== undefined) supersedes(value.supersedes);
   digest(value.fingerprint);
   const ids = new Set<string>();
   for (const input of value.edits) {
-    const edit = shape(input, ["recordId", "changes", "texts", "deleted", "condition"]);
-    const id = text(edit.recordId);
-    if (ids.has(id)) throw new Error("A save must name each record once");
-    ids.add(id);
-    changes(edit.changes);
-    if (edit.texts !== undefined) validateOrderedTextChanges(edit.texts);
-    if (edit.deleted !== undefined && typeof edit.deleted !== "boolean") throw new Error("Invalid deletion");
-    if (edit.condition !== undefined) {
-      const condition = shape(edit.condition);
-      if (Object.hasOwn(condition, "value") || Object.hasOwn(condition, "stamps")) observation(condition);
-      else lifetimeObservation(condition);
-    }
+    ids.add(verifiedEdit(input, ids));
   }
   const { fingerprint: identity, ...body } = value;
   if ((await fingerprint(body as Json)) !== identity)

@@ -24,4 +24,7 @@ export const createAccountAdapter = (projectId: string, client: Pick<PstdioClien
     stopProjectSync: async (id = projectId) => {
       await client.account.stopProjectSync(id);
     },
+    resolveReturnedChanges: async (action, id = projectId) => {
+      await client.account.resolveReturnedChanges(id, action);
+    },
   }) satisfies ExtensionAccountApi;

@@ -1,7 +1,13 @@
 import { Buffer } from "node:buffer";
-import { expect, test } from "@playwright/test";
+import { expect, type Request, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin as apiBase } from "../ui-server";
+
+const actionPath = "/extensions/commands/pstdio.pstdio-session-browser.view.conversation.chat.onAction/execute";
+const isSubmit = (request: Request) =>
+  request.method() === "POST" &&
+  request.url().endsWith(actionPath) &&
+  request.postDataJSON()?.params?.action?.type === "submit";
 
 type ConversationMessage = {
   role?: string;
@@ -78,7 +84,9 @@ test.describe("Session attachments", () => {
     await bypassOnboarding(page, projectId);
     await openSessionsView(page);
 
-    await page.locator("input[type='file']").setInputFiles([
+    const chooser = page.waitForEvent("filechooser");
+    await page.getByRole("button", { name: "Attach files", exact: true }).click();
+    await (await chooser).setFiles([
       {
         name: "diagram.png",
         mimeType: "image/png",
@@ -107,16 +115,19 @@ test.describe("Session attachments", () => {
 
     const prompt = "Use the attached diagram in your answer";
     const createResponsePromise = page.waitForResponse(
-      (response) =>
-        response.request().method() === "POST" && response.url().endsWith("/v1/sessions") && response.status() === 201,
+      (response) => isSubmit(response.request()) && response.status() === 200,
     );
 
     let release!: () => void;
     const held = new Promise<void>((resolve) => {
       release = resolve;
     });
-    await page.route("**/v1/sessions", async (route) => {
-      if (route.request().method() === "POST") await held;
+    let submitCount = 0;
+    await page.route(`**${actionPath}`, async (route) => {
+      if (isSubmit(route.request())) {
+        submitCount++;
+        await held;
+      }
       await route.continue();
     });
     const editor = page.getByTestId("content-editable").last();
@@ -134,11 +145,19 @@ test.describe("Session attachments", () => {
       release();
     }
     const createResponse = await createResponsePromise;
-    await page.unroute("**/v1/sessions");
-    const createRequest = createResponse.request();
-    const createPayload = createRequest.postDataJSON() as { attachments?: Array<{ file_id: string }> };
-    expect(createPayload.attachments).toHaveLength(1);
-    const session = (await createResponse.json()) as { id: string };
+    await page.unroute(`**${actionPath}`);
+    expect(submitCount).toBe(1);
+    const createPayload = createResponse.request().postDataJSON() as {
+      params: { action: { attachments: Array<{ id: string }> } };
+    };
+    expect(createPayload.params.action.attachments).toHaveLength(1);
+    const created = await createResponse.json();
+    expect(created.outcome.ok).toBe(true);
+    const sessions = created.outcome.navigationRequests
+      .map((target: { resource?: { type: string; id: string } }) => target.resource)
+      .filter((resource: { type: string } | undefined) => resource?.type === "session");
+    expect(sessions).toHaveLength(1);
+    const session = sessions[0] as { id: string };
 
     await expect(page.getByText(`Fake Agent: completed "${prompt}"`).first()).toBeVisible();
     await expect

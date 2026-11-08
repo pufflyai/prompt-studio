@@ -1,10 +1,4 @@
-import {
-  l10n,
-  type ResourceAnchor,
-  type TreeNode,
-  type TreeViewSection,
-  workbenchPanels,
-} from "@pstdio/sdk/extensions";
+import { l10n, type ResourceAnchor, sessionBrowser, type TreeNode, type TreeViewSection } from "@pstdio/sdk/extensions";
 
 // Session query fields used by the sidenav.
 export interface TicketSession {
@@ -52,7 +46,7 @@ const sessionNode = (session: TicketSession): TreeNode => {
     iconColor: sessionStatusColor(session.status),
     target: {
       kind: "panel",
-      panel: workbenchPanels.projectSession,
+      panel: sessionBrowser.panels.conversation,
       resource,
       open: "preview",
     },

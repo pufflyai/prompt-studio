@@ -225,6 +225,22 @@ describe("createWorkspaceFilesMount.syncDir", () => {
 });
 
 describe("createWorkspaceFilesMount browsing", () => {
+  test("searches project files without descending into installed dependencies", async () => {
+    const root = createTempDir();
+    writeWorkspaceFile(root, "docs/report.md", "report");
+    writeWorkspaceFile(root, ".pstdio/config.json", "{}");
+    writeWorkspaceFile(root, "node_modules/example/report.js", "dependency");
+    writeWorkspaceFile(root, ".pstdio/extensions/tool/node_modules/example/report.js", "dependency");
+    const mount = createWorkspaceFilesMount(root);
+
+    expect((await mount.searchEntries("report", 10)).entries.map((entry) => entry.path)).toEqual(["docs/report.md"]);
+    expect((await mount.searchEntries("config", 10)).entries.map((entry) => entry.path)).toEqual([
+      ".pstdio/config.json",
+    ]);
+    expect((await mount.listEntries("node_modules/example")).map((entry) => entry.name)).toEqual(["report.js"]);
+    expect((await mount.searchEntries("report", 10, "node_modules/example")).entries).toHaveLength(1);
+  });
+
   test("lists immediate files and directories without exposing .git", async () => {
     const root = createTempDir();
     mkdirSync(join(root, ".git/objects"), { recursive: true });

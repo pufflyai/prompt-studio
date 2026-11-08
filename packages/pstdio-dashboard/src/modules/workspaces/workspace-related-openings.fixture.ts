@@ -1,3 +1,4 @@
+import type { ResourceRef } from "@pstdio/sdk/extensions";
 import { createWorkbench, type WorkbenchModuleContext } from "@pstdio/workbench";
 import { createWorkbenchTerminalModule } from "@pstdio/workbench/react";
 import { getWriter, markInitialCollectionsSyncComplete } from "@/lib/sync/collections";
@@ -7,7 +8,7 @@ import { createSessionsModule } from "../sessions/module";
 import { createSidenavModule } from "../sidenav/module";
 import { createWorkspacesModule } from "./module";
 
-export const setupWorkspaceOpening = (ready = true) => {
+export const setupWorkspaceOpening = (ready = true, isDefault = false) => {
   if (ready) markInitialCollectionsSyncComplete();
   const workbench = createWorkbench();
   registerWorkspaceProviderViews(workbench);
@@ -26,10 +27,10 @@ export const setupWorkspaceOpening = (ready = true) => {
       name: "Workspace",
       archived: false,
       root_path: "/repo",
-      is_default: true,
+      is_default: isDefault,
     },
   ]);
-  const source = { type: "workspace", id: "workspace", extensionId: "pstdio", projectId: "project" };
+  const source: ResourceRef = { type: "workspace", id: "workspace", extensionId: "pstdio", projectId: "project" };
   const resolve = (resource = source, signal = new AbortController().signal) =>
     workbench.resources.getKind("workspace")?.relatedOpenings?.(resource, signal);
   return { workbench, ctx: workbench as WorkbenchModuleContext, source, resolve };

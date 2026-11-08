@@ -1,31 +1,39 @@
 import { expect, type Page } from "@playwright/test";
+import { isSessionChatAction } from "./session-chat-actions";
 
 export const verifySessionTools = async (page: Page) => {
   const main = page.locator('[data-workbench-panel="main"]');
   const editor = main.getByTestId("content-editable").filter({ visible: true });
   await expect(editor).toBeVisible();
-  const landingUrl = page.url();
+  const landingPath = new URL(page.url()).pathname.replace(
+    /\/sessions\/compose$/,
+    "/extensions/pstdio.pstdio-session-browser/conversations/compose",
+  );
   const breadcrumb = page.getByRole("navigation", { name: "breadcrumb" });
   await expect(breadcrumb).toContainText("Sessions");
-  await expect(breadcrumb.locator("svg.lucide-messages-circle")).toBeVisible();
-  await expect(breadcrumb.locator("svg.lucide-message-circle")).toBeVisible();
+  const sessionIcons = breadcrumb.locator("svg.lucide-message-circle");
+  await expect(sessionIcons).toHaveCount(2);
+  await expect(sessionIcons.nth(0)).toBeVisible();
+  await expect(sessionIcons.nth(1)).toBeVisible();
   await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("New session");
   await expect(main.getByRole("tab")).toHaveCount(0);
   await expect(main.getByRole("button", { name: "Add panel", exact: true })).toHaveCount(0);
-  const created = page.waitForResponse(
-    (response) => response.request().method() === "POST" && new URL(response.url()).pathname === "/v1/sessions",
-  );
+  const created = page.waitForResponse((response) => isSessionChatAction(response.request(), "submit"));
   await editor.fill("Main session");
   await main.getByTestId("send-message-button").filter({ visible: true }).click();
   const response = await created;
-  expect(response.status()).toBe(201);
-  const session = (await response.json()) as { id: string };
-  await expect(page).toHaveURL(new RegExp(`/session\\?.*${session.id}`));
+  expect(response.ok()).toBe(true);
+  const outcome = (await response.json()).outcome;
+  expect(outcome.ok).toBe(true);
+  const session = outcome.navigationRequests[0].resource as { id: string };
+  await expect(page).toHaveURL(
+    (url) => url.pathname.endsWith("/conversation") && Boolean(url.searchParams.get("resource")?.includes(session.id)),
+  );
   await expect(main.getByRole("tab")).toHaveCount(0);
   const mainUrl = page.url();
   await page.locator("[data-workbench-breadcrumb-resource-actions]").click();
   await page.getByRole("menuitem", { name: "New session", exact: true }).click();
-  await expect(page).toHaveURL(/\/sessions\/new\?/);
+  await expect(page).toHaveURL(/\/conversations\/new\?/);
   await expect(breadcrumb).toContainText("New session");
   await page.goBack();
   await expect(page).toHaveURL(mainUrl);
@@ -37,12 +45,12 @@ export const verifySessionTools = async (page: Page) => {
   await page.getByRole("menuitem", { name: "New session", exact: true }).click();
   const draft = side.getByRole("tab", { name: "New session", exact: true });
   await expect(draft).toBeVisible();
-  const sideCreated = page.waitForResponse(
-    (response) => response.request().method() === "POST" && new URL(response.url()).pathname === "/v1/sessions",
-  );
+  const sideCreated = page.waitForResponse((response) => isSessionChatAction(response.request(), "submit"));
   await side.getByTestId("content-editable").filter({ visible: true }).fill("Side session");
   await side.getByTestId("send-message-button").filter({ visible: true }).click();
-  expect((await sideCreated).status()).toBe(201);
+  const sideResponse = await sideCreated;
+  expect(sideResponse.ok()).toBe(true);
+  expect((await sideResponse.json()).outcome.ok).toBe(true);
   const sideSession = side.getByRole("tab", { name: /Side session/ });
   await expect(sideSession).toBeVisible();
   await expect(page).toHaveURL(mainUrl);
@@ -64,7 +72,7 @@ export const verifySessionTools = async (page: Page) => {
   await page.getByRole("button", { name: "Back to project", exact: true }).click();
   await page.getByRole("option", { name: "Home", exact: true }).click();
   await page.getByRole("option", { name: "Sessions", exact: true }).click();
-  await expect(page).toHaveURL(landingUrl);
+  await expect(page).toHaveURL((url) => url.pathname === landingPath);
   await expect(breadcrumb).toContainText("New session");
   await expect(side.getByRole("tab")).toHaveCount(2);
   await page.reload();

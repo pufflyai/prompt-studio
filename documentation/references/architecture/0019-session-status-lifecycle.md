@@ -1,6 +1,6 @@
 # Session Status Lifecycle
 
-Session status has one authoritative path: DB → SSE sync → UI badges. The session stream is a separate concern that only carries messages.
+Session status has one authoritative path: DB → SSE sync → UI badges. The session stream is a separate concern that carries conversation updates.
 
 ## Architecture
 
@@ -23,27 +23,28 @@ graph TD
 
     subgraph "Status path (badges)"
         SSE_SYNC["/v1/sync/stream\nSSE sync"] --> TANSTACK["TanStack DB\nsessions collection"]
-        TANSTACK -- "useLiveQuery" --> BADGES["Session badges\n(side navigation, tabs)"]
+        TANSTACK -- "refresh event" --> PUBLIC["Public sessions query/get"]
+        PUBLIC --> BADGES["Sessions provider\n(side navigation, tabs)"]
     end
 
     subgraph "Message path (chat)"
-        STREAM_SSE["/v1/session-stream\nSSE session stream"] --> HOOK["useDashboardSessionMessages\nmessages, streaming"]
-        HOOK --> CHAT["DashboardSessionChatPanel"]
+        STREAM_SSE["/v1/session-stream\nSSE session stream"] --> HOOK["Public sessions.stream\nprovider snapshot/patch adapter"]
+        HOOK --> CHAT["Native workbench chat"]
     end
 
 ```
 
 ### Status path — DB sync (badges)
 
-Every session badge in the UI reads from the synced sessions collection:
+Session status comes from authoritative session rows:
 
 1. Server mutates `sessions` table via `sessionService.transitionStatus()`.
 2. That same domain-service operation emits the successful mutation.
 3. SSE sync stream delivers `sync:set` event to all connected clients.
 4. Client `sync-client.ts` writes to the TanStack DB `sessions` collection.
-5. `useLiveQuery` re-renders badge components with the new status.
+5. Public session reads and refresh events update provider list/tab presentations.
 
-Components on this path: the dashboard session badges in the side navigation and session tabs (`SessionIndicator`). Ticket cards belong to the planner extension, which reads sessions through the SDK.
+The Sessions extension owns side-navigation and tab badges. Planner ticket cards also read sessions through the public SDK. Core keeps canonical resource metadata synchronized.
 
 ### Message path — session stream (chat)
 
@@ -51,11 +52,9 @@ The session chat panel reads messages from the shared session stream:
 
 1. The SDK subscribes the session on the client's one `/v1/session-stream` connection.
 2. Server sends `patch` events (JSON patches for messages) and `approval_request` events for that subscription.
-3. The `useDashboardSessionMessages` hook maintains local state for messages and the streaming indicator.
+3. The Sessions provider adapts public snapshots/patches to the native chat contract; the workbench maintains the displayed conversation and composer.
 
-Components on this path: `DashboardSessionChatPanel` (messages and streaming indicator only).
-
-`useDashboardSessionMessages` does not expose session status. All visible status badges come from the DB sync path.
+The shared UI chat components render in the workbench document. The transcript does not infer lifecycle status from message content; session row state remains authoritative.
 
 ## Status transitions
 

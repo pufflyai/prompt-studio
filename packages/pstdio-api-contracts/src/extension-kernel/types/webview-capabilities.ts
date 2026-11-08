@@ -6,7 +6,7 @@ import type {
   PerformanceReadRequest,
   PerformanceReadResult,
 } from "../../performance-control";
-import type { ExtensionAccountApi } from "./account";
+import type { ExtensionAccountApi, ProjectReturnAction } from "./account";
 import type { CommandNotice, CommandOutcome } from "./commands";
 import type { ExtensionBlobRef } from "./context";
 import type { JsonObject, JsonValue } from "./json";
@@ -188,7 +188,8 @@ export type WebviewAccountManageParams =
   | { op: "renameDevice"; id: string; name: string }
   | { op: "removeDevice"; id: string }
   | { op: "syncProject"; projectId?: string }
-  | { op: "stopProjectSync"; projectId?: string };
+  | { op: "stopProjectSync"; projectId?: string }
+  | { op: "resolveReturnedChanges"; action: ProjectReturnAction; projectId?: string };
 
 export type WebviewAccountResult<Params extends { op: keyof ExtensionAccountApi }> = Awaited<
   ReturnType<ExtensionAccountApi[Params["op"]]>

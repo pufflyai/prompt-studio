@@ -1,0 +1,48 @@
+# Devices that return never override devices that stayed in sync
+
+Proposed: 2026-11-07
+Status: Accepted for PS-1116. Amends [PRD 0014](../requirements/platform/0014-local-first-sync.md) R2 and [ADR 0137](0137-order-record-saves-and-declare-collaborative-text.md). The Cloud extension's status states and review popovers ship separately because extensions use only released SDK types.
+
+## Context
+
+A device can be away from a Cloud project in two ways: signed out, or signed in but offline. Before this decision both ended the same way. Signing out stopped the relay but left every project joined, so each save kept a pending envelope forever. One signed-out laptop queued 90,297 saves in a week and then froze an upgrade (PS-1114). When an away device returned, its saves reached Cloud last and won every conflict by relay order, so its deletions removed tickets other devices had edited and its edits revived tickets they had deleted.
+
+The relay is blind, so any conflict rule must be applied identically by every device that reads the stream.
+
+## Decision
+
+1. **Every save carries a base.** For each plain edit, the author records the record lifetime and the write stamps of every path it changes, as its view showed them when saving (`OrderedBase` in `packages/pstdio-sync/src/records/ordered-operation.ts`). A deletion or restore records every stamp of the record. Text-only edits carry no base; declared text still merges as Yjs updates.
+2. **In-sync devices win.** Applying a save in relay order skips a path whose stamps moved past its base. A deletion is skipped when anything in the record changed after its base, and an edit is skipped when the record was deleted or recreated. Paths nobody else wrote still apply in relay order. A plain save that spans several records and reaches Cloud as one save stays one atomic group ([ADR 0137](0137-order-record-saves-and-declare-collaborative-text.md) rule 2): if the base rule skips any part of it, the whole save is skipped, so a created record never lands without the link saved with it. Folded saves cover one record each (rule 4), so this does not hold for groups folded while signed out. Saves that carry collaborative text keep per-edit skips, because their text updates must always merge. Pending stamps in a base resolve through exact receipts, like conditions, so successive saves from one device chain normally; a base over a refused save is no longer current. Every device computes the same skips, so the relay needs no change. Saves without a base, from before this decision, keep the old rule.
+3. **Signing out ends sync.** `pst logout`, a 401 rejection and removing this device all reach the account refresh with no login. Each joined owner then marks itself `signed-out` and folds its unsent saves into one pending save per record. It keeps its join, cursor and receipts, so its folded saves keep their bases. The marker records that folding is unfinished until the last page commits, so an interrupted sign-out resumes on the next account refresh and a finished one costs a single read. Signing in to an account that syncs the project marks it `returning` until it next connects. While signed out, held or folded, each new save folds into that record's save, so storage grows with records changed, not with saves. Nothing is deleted locally.
+4. **Folding.** A folded save writes the visible value of every path the folded saves changed, where it differs from Cloud's copy plus the saves that stay pending ahead of it. Each path keeps the latest base a folded save saw, so an edit made after seeing another device's change is based on that change. When a folded save may already be in Cloud, the folded save restates every path and the visible deletion state instead of a difference. It lists the folded saves that may already be in Cloud in `supersedes`; their writes count as part of its base, so a lost acknowledgement never turns a device's own write into a conflict. Folded saves are unconditional. Saves with declared or native text, and every save sharing a record with them, keep their identities because their CRDT history depends on each save. Resource-number (core) saves never fold.
+5. **The queue is bounded while signed in.** Past 1,000 unsent saves an owner folds the same way and is marked `folded`. The device never left, so its next upload clears the mark and sends the folded saves under rule 2 without a hold.
+6. **Large returns wait for review.** When a `signed-out` or `returning` owner next connects, it uploads nothing if its return deletes more than 25 records, changes more than 500, or deletes at least 3 records and half of the owner's records. The owner is `held` until someone applies or discards it on that device, with `pst projects returned-changes <project> apply|discard` or `ctx.account.resolveReturnedChanges`. Applying uploads under rule 2. Discarding drops every unsent save and shows Cloud's copy. Remote changes keep arriving while held. Only returns from signing out are held. A signed-in device that was offline, or that saved faster than it uploads, sends its saves under rule 2 without a hold: the storage layer cannot tell an offline device from a slow uploader, and rule 2 already keeps what in-sync devices changed.
+7. **Leaving the account.** Once a signed-in account's project list loads, every joined project it does not sync is treated as signed out (rule 3), whether that account stopped syncing it (`pst projects local`) or another account signed in. Its edits stay visible and fold, nothing uploads, and its join, cursor and receipts stay. When an account that syncs it signs in, or the project is synced again, it returns under rules 2 and 6: it sends only its own changes with their bases and never resubmits whole records over changes it did not make. If the stream was lost meanwhile, the device refounds it from its copy like any relay loss.
+8. **People see what happened.** Project sync status gains `away` (signed-out or held changes, by record and field) and `replaced` (this device's changes Cloud did not apply). `ctx.account.resolveReturnedChanges("apply" | "discard" | "dismiss")` acts on them.
+
+## Consequences
+
+- PRD 0014 R2 changes from "the later ordered write wins" to "the first write to reach Cloud after a save's base wins". Two online devices racing on one field now keep the first save to reach Cloud.
+- ADR 0137's "a successful join permanently ends local settlement" still holds while signed in. Signing out does not settle saves locally; it folds them. Leaving the account settles them and ends the join.
+- Offline conditional saves keep their conditions until they fold. A folded save loses its condition; the base rule protects most of what the condition guarded, but not every case.
+- A device that sends one folded save per record loses the atomicity of multi-record groups it folded.
+- A multi-record save that loses any path under rule 2 is skipped whole, including paths nobody else changed.
+- Saves queued before this decision carry no base and keep the old rule: if the device uploads them without folding, they still win in relay order. This is limited to devices that were offline with unsent saves during the upgrade. Folding gives them a base from the canonical state at fold time, which may already include changes that device downloaded.
+- A project kept as signed out stays joined to its original stream and shows its unsent changes as signed-out, even after `pst projects local`. If it is later made a cloud project of another account, it continues as a joined device: an empty stream is refounded from its state, but a stream another device already founded replaces its canonical state, and its own unsent changes lose to that stream under rule 2.
+- A pending multi-record save whose base went stale before it uploaded is hidden from the device's view, as it will be skipped. If the device folds before uploading it, the fold drops it without a replaced notice.
+- Text-heavy editing while signed out still keeps one pending save per text save. That remains unbounded until text folding exists.
+- Operation identity rows of folded saves stay, like settled ones, so retries and outcomes resolve.
+- Every save is a little larger: one stamp per changed path.
+- Devices on releases before this decision reject saves that carry `base` or `supersedes`. Such a device fails to read the first new save in a project's stream and retries it on every sync, so it stops receiving that project's changes until it updates; its own saves still apply on updated devices. During alpha every device of an account must update together, and the changeset says so.
+- A save whose base names an earlier pending save of the same field waits for it. If that earlier save waits on another device's collaborative text group, later saves of the field wait too.
+- Repair saves that every device derives with the same identity, such as resource-number aliases, carry no base.
+
+## Alternatives considered
+
+| Option | Trade-off |
+| --- | --- |
+| Keep relay order (R2 as before) | No metadata, but the device that was away longest wins every conflict. |
+| Compare whole records with Cloud on sign-in | No tracking while away, but it cannot tell who changed a field, so stale values overwrite newer ones. |
+| Keep queuing while signed out, with a cap | Keeps per-save conditions, but contradicts "sign-out ends sync". |
+| A separate changed-field table while away | Equivalent semantics, but needs a second projection overlay and its own upload path. A folded pending save reuses the existing journal, projection and transport. |
+| Hold every return for review | Safest, but adds friction to ordinary offline work. |

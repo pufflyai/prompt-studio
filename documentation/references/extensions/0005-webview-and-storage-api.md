@@ -158,7 +158,7 @@ Use `resources.actions` with `{ operation: "list", resource }` to read the same 
 
 ### Cloud account and sync status
 
-On `main`, extension API 0.2.1 also adds `account.read` and `account.manage`. `client.account` has the same methods as [`ctx.account`](0003-command-and-process-api.md#cloud-account-and-sync-status). Declare `account.read` for `client.account.status`, `loginStatus`, `devices`, and `projectSyncStatus`. Declare `account.manage` for `client.account.login`, `cancelLogin`, `logout`, `renameDevice`, `removeDevice`, `syncProject`, and `stopProjectSync`. Without a project ID, a call uses the webview's project.
+On `main`, extension API 0.2.1 also adds `account.read` and `account.manage`. `client.account` has the same methods as [`ctx.account`](0003-command-and-process-api.md#cloud-account-and-sync-status). Declare `account.read` for `client.account.status`, `loginStatus`, `devices`, and `projectSyncStatus`. Declare `account.manage` for `client.account.login`, `cancelLogin`, `logout`, `renameDevice`, `removeDevice`, `syncProject`, `stopProjectSync`, and `resolveReturnedChanges`. Without a project ID, a call uses the webview's project.
 
 ```ts
 const client = createWebviewClient<typeof commands>(host);

@@ -7,6 +7,7 @@ import { stopChildProcess } from "../scripts/child-process";
 import { registerPendingTestProcess } from "../scripts/pending-test-processes";
 import { waitForProcessReady } from "../scripts/process-readiness";
 import { PACKAGED_BINARY_PATH } from "./packaged-helpers";
+import { stagePackagedPackageCache } from "./packaged-package-cache";
 
 export type RuntimeDescriptor = {
   pid: number;
@@ -116,7 +117,9 @@ export const startPackagedServe = async (
   env: Record<string, string> = {},
   binaryPath = PACKAGED_BINARY_PATH,
   observe?: (process: PackagedRuntimeObservation) => void,
+  onOutput?: (chunk: Buffer) => void,
 ) => {
+  stagePackagedPackageCache(tempRoot);
   const descriptorPath = join(tempRoot, "runtime.json");
   const {
     PSTDIO_EXTENSION_SOURCE_ROOT: _sourceRoot,
@@ -147,6 +150,10 @@ export const startPackagedServe = async (
       stdio: "pipe",
     },
   );
+  if (onOutput) {
+    child.stdout?.on("data", onOutput);
+    child.stderr?.on("data", onOutput);
+  }
   try {
     if (child.pid !== undefined) observe?.({ pid: child.pid, descriptor: null });
     const descriptor = await waitForPackagedReady(descriptorPath, child, observe);

@@ -1,8 +1,11 @@
-import { Box, Button } from "@chakra-ui/react";
+import { Button } from "@chakra-ui/react";
 import { type ComponentType, useEffect, useState } from "react";
 import { AlertMessage } from "@/components/primitives/alert";
 import { installPrismGlobal } from "@/utils/prism";
 import type { MarkdownEditorProps } from "./markdown-editor/markdown-editor";
+import { MarkdownEditorSkeleton } from "./markdown-editor-skeleton";
+
+export { MarkdownEditorSkeleton } from "./markdown-editor-skeleton";
 
 type EditorLoadState =
   | { kind: "loading" }
@@ -53,5 +56,5 @@ export const LazyMarkdownEditor = (props: MarkdownEditorProps) => {
     );
   }
 
-  return <Box minH="7rem" borderWidth="1px" borderColor="border" borderRadius="xs" />;
+  return <MarkdownEditorSkeleton />;
 };

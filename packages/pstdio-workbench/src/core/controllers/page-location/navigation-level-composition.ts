@@ -128,5 +128,14 @@ export const createLevelNavigation = (host: LevelNavigationHost) => {
         ).flatMap((slot) => host.navigationTrees.getDefaultExpandedSectionIds(owner, slot)),
       );
     },
+    getDefaultExpandedNodeIds: () => {
+      const all = queries();
+      return all.flatMap(({ owner }, index) =>
+        (index === all.length - 1
+          ? (["header", "content", "footer"] as const)
+          : (["header", "footer"] as const)
+        ).flatMap((slot) => host.navigationTrees.getDefaultExpandedNodeIds(owner, slot)),
+      );
+    },
   };
 };

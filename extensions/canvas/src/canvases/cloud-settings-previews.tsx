@@ -1,5 +1,12 @@
 import { HStack, Input, Stack, Text } from "@chakra-ui/react";
-import { AlertMessage, DeleteConfirmationModal, ScrollArea, SimpleCard, SimpleCardBody } from "@pstdio/ui";
+import {
+  AlertMessage,
+  DeleteConfirmationModal,
+  ScrollArea,
+  SettingsPage,
+  SimpleCard,
+  SimpleCardBody,
+} from "@pstdio/ui";
 import { type ReactNode, useState } from "react";
 import { Button } from "../components/themed-primitives";
 import { CloudIcon, type CloudIconName } from "./cloud-icon";
@@ -70,107 +77,105 @@ const CloudSettings = (props: CloudSettingsProps) => {
     { id: "linux", name: "Office Linux" },
   ]);
   return (
-    <ScrollArea h="full">
-      <Stack gap="md" p="lg">
-        <HStack gap="sm">
-          <CloudIcon name="cloud" />
-          <Text textStyle="heading/S">Cloud</Text>
-        </HStack>
-        <SimpleCard>
-          <SimpleCardBody>
-            <Stack gap="sm">
-              <SectionTitle icon="user-round">Account</SectionTitle>
-              <HStack justify="space-between">
-                <Stack gap="2xs">
-                  <Text>{signedIn ? "Alex Morgan" : "Not signed in"}</Text>
-                  {signedIn && (
-                    <Text textStyle="paragraph/S/regular" color="fg.muted">
-                      alex@example.test
-                    </Text>
-                  )}
-                </Stack>
-                <Button size="sm" variant="outline" onClick={() => setSignedIn(!signedIn)}>
-                  <CloudIcon name={signedIn ? "log-out" : "log-in"} />
-                  {signedIn ? "Sign out" : "Sign in"}
-                </Button>
-              </HStack>
-            </Stack>
-          </SimpleCardBody>
-        </SimpleCard>
-        <SimpleCard>
-          <SimpleCardBody>
-            <Stack gap="sm">
-              <SectionTitle icon="shield-check">Cloud access</SectionTitle>
-              <HStack gap="xs" color="fg.muted">
-                <CloudIcon name={earlyAccess ? "circle-check" : "cloud"} />
-                <Text>{earlyAccess ? "Early access enabled" : "Coming soon"}</Text>
-              </HStack>
-            </Stack>
-          </SimpleCardBody>
-        </SimpleCard>
-        {earlyAccess && signedIn && (
-          <>
-            <SimpleCard>
-              <SimpleCardBody>
-                <Stack gap="md">
-                  <SectionTitle icon="monitor">Your devices</SectionTitle>
-                  {devices.map((device) => (
-                    <DeviceRow
-                      key={device.id}
-                      name={device.name}
-                      current={device.id === "mac"}
-                      onRename={(name) =>
-                        setDevices((current) =>
-                          current.map((entry) => (entry.id === device.id ? { ...entry, name } : entry)),
-                        )
-                      }
-                      onRemove={() => setDevices((current) => current.filter((entry) => entry.id !== device.id))}
-                    />
-                  ))}
-                </Stack>
-              </SimpleCardBody>
-            </SimpleCard>
-            <SimpleCard>
-              <SimpleCardBody>
-                <Stack gap="sm">
-                  <HStack justify="space-between">
-                    <SectionTitle icon="folder">This project</SectionTitle>
-                    <HStack gap="xs" color={local ? "fg.muted" : "fg.success"}>
-                      <CloudIcon name={local ? "cloud-off" : "circle-check"} />
-                      <Text>{local ? "Local" : "Synced"}</Text>
-                    </HStack>
-                  </HStack>
-                  {local && (
-                    <>
+    <SettingsPage title="Cloud" icon={<CloudIcon name="cloud" />} contentLayout="fill">
+      <ScrollArea flex="1" minH="0">
+        <Stack gap="md" px="lg" pb="lg" maxW="3xl" w="full" mx="auto">
+          <SimpleCard>
+            <SimpleCardBody>
+              <Stack gap="sm">
+                <SectionTitle icon="user-round">Account</SectionTitle>
+                <HStack justify="space-between">
+                  <Stack gap="2xs">
+                    <Text>{signedIn ? "Alex Morgan" : "Not signed in"}</Text>
+                    {signedIn && (
                       <Text textStyle="paragraph/S/regular" color="fg.muted">
-                        Syncing again merges the copies. Where both copies changed the same thing, one change is kept.
+                        alex@example.test
                       </Text>
-                      <Button size="sm" variant="primary" alignSelf="flex-start" onClick={() => setLocal(false)}>
-                        <CloudIcon name="cloud-upload" />
-                        Sync with Cloud
-                      </Button>
-                    </>
-                  )}
-                </Stack>
-              </SimpleCardBody>
-            </SimpleCard>
-            {!local && (
-              <AlertMessage
-                status="warning"
-                title="Make this project local"
-                endElement={
-                  <Button size="2xs" variant="ghost" onClick={() => setConfirming(true)}>
-                    <CloudIcon name="cloud-off" />
-                    Make local
+                    )}
+                  </Stack>
+                  <Button size="sm" variant="outline" onClick={() => setSignedIn(!signedIn)}>
+                    <CloudIcon name={signedIn ? "log-out" : "log-in"} />
+                    {signedIn ? "Sign out" : "Sign in"}
                   </Button>
-                }
-              >
-                Syncing stops on all devices. Each device keeps its copy.
-              </AlertMessage>
-            )}
-          </>
-        )}
-      </Stack>
+                </HStack>
+              </Stack>
+            </SimpleCardBody>
+          </SimpleCard>
+          <SimpleCard>
+            <SimpleCardBody>
+              <Stack gap="sm">
+                <SectionTitle icon="shield-check">Cloud access</SectionTitle>
+                <HStack gap="xs" color="fg.muted">
+                  <CloudIcon name={earlyAccess ? "circle-check" : "cloud"} />
+                  <Text>{earlyAccess ? "Early access enabled" : "Coming soon"}</Text>
+                </HStack>
+              </Stack>
+            </SimpleCardBody>
+          </SimpleCard>
+          {earlyAccess && signedIn && (
+            <>
+              <SimpleCard>
+                <SimpleCardBody>
+                  <Stack gap="md">
+                    <SectionTitle icon="monitor">Your devices</SectionTitle>
+                    {devices.map((device) => (
+                      <DeviceRow
+                        key={device.id}
+                        name={device.name}
+                        current={device.id === "mac"}
+                        onRename={(name) =>
+                          setDevices((current) =>
+                            current.map((entry) => (entry.id === device.id ? { ...entry, name } : entry)),
+                          )
+                        }
+                        onRemove={() => setDevices((current) => current.filter((entry) => entry.id !== device.id))}
+                      />
+                    ))}
+                  </Stack>
+                </SimpleCardBody>
+              </SimpleCard>
+              <SimpleCard>
+                <SimpleCardBody>
+                  <Stack gap="sm">
+                    <HStack justify="space-between">
+                      <SectionTitle icon="folder">This project</SectionTitle>
+                      <HStack gap="xs" color={local ? "fg.muted" : "fg.success"}>
+                        <CloudIcon name={local ? "cloud-off" : "circle-check"} />
+                        <Text>{local ? "Local" : "Synced"}</Text>
+                      </HStack>
+                    </HStack>
+                    {local && (
+                      <>
+                        <Text textStyle="paragraph/S/regular" color="fg.muted">
+                          Syncing again merges the copies. Where both copies changed the same thing, one change is kept.
+                        </Text>
+                        <Button size="sm" variant="primary" alignSelf="flex-start" onClick={() => setLocal(false)}>
+                          <CloudIcon name="cloud-upload" />
+                          Sync with Cloud
+                        </Button>
+                      </>
+                    )}
+                  </Stack>
+                </SimpleCardBody>
+              </SimpleCard>
+              {!local && (
+                <AlertMessage
+                  status="warning"
+                  title="Make this project local"
+                  endElement={
+                    <Button size="2xs" variant="ghost" onClick={() => setConfirming(true)}>
+                      <CloudIcon name="cloud-off" />
+                      Make local
+                    </Button>
+                  }
+                >
+                  Syncing stops on all devices. Each device keeps its copy.
+                </AlertMessage>
+              )}
+            </>
+          )}
+        </Stack>
+      </ScrollArea>
       <DeleteConfirmationModal
         open={confirming}
         onClose={() => setConfirming(false)}
@@ -181,7 +186,7 @@ const CloudSettings = (props: CloudSettingsProps) => {
           setLocal(true);
         }}
       />
-    </ScrollArea>
+    </SettingsPage>
   );
 };
 

@@ -84,6 +84,7 @@ export const createAppAccount = (
             relay.retry,
             relay.call,
             relay.folders,
+            app.deps.extensionStorageService.cloudReturn,
           );
         },
       },

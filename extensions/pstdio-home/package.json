@@ -7,7 +7,7 @@
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.3.1 || ^0.4.0"
+    "pstdio": "^0.4.0"
   },
   "pstdio": {
     "scope": "repo"
@@ -22,8 +22,8 @@
   "dependencies": {
     "@chakra-ui/react": "^3.0.0",
     "@emotion/react": "^11.0.0",
-    "@pstdio/sdk": "0.47.0-nightly.20261104030253",
-    "@pstdio/ui": "0.47.0-nightly.20261104030253",
+    "@pstdio/sdk": "0.47.0-preview.sha-8184397490cfa0fa22d136b99ac75c708878512a",
+    "@pstdio/ui": "0.47.0-preview.sha-8184397490cfa0fa22d136b99ac75c708878512a",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

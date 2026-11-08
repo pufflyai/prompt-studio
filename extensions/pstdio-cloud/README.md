@@ -1,6 +1,7 @@
 # Prompt Studio Cloud
 
-The bundled Cloud extension shows account and project sync status in the status bar.
+The optional Cloud extension shows account and project sync status in the status bar.
+Install **Prompt Studio Cloud** from **Extensions**.
 Open it for details, then choose **Cloud settings** to sign in, manage your devices,
 or make this project local. Making a project local stops syncing on every device;
 each keeps its copy. Syncing again merges those copies.

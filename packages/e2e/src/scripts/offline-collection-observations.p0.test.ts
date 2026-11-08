@@ -16,8 +16,9 @@ test("locally accepted collection edits keep independent offline fields when tim
     true,
   );
   await pair.merge();
+  // Independent fields both apply; the contested timestamp keeps the first save to reach Cloud.
   for (const collection of [first, second])
-    expect(await collection.get("a")).toEqual({ title: "Edited", track: "ui", updatedAt: "right" });
+    expect(await collection.get("a")).toEqual({ title: "Edited", track: "ui", updatedAt: "left" });
 });
 
 test("an offline collection edit cannot change a deleted and recreated lifetime", async () => {

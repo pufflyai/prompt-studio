@@ -40,6 +40,7 @@ describe("isolated development paths", () => {
       [
         ["pstdio-cloud", "extensions/pstdio-cloud"],
         ["pstdio-home", "extensions/pstdio-home"],
+        ["pstdio-session-browser", "extensions/pstdio-session-browser"],
         ["pstdio-workspaces", "extensions/pstdio-workspaces"],
         ["harness-claude-code", "extensions/harness-claude-code"],
         ["harness-codex", "extensions/harness-codex"],

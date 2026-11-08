@@ -154,7 +154,8 @@ export const repairOptimisticNumbers = async (
       const operation = await prepareOrderedOperation(
         {
           operationId,
-          edits: [{ recordId: record.recordId, changes: [{ path: ["numberAliases"], set: [shorthand] }] }],
+          // Every device derives this same repair; a per-device base would give it different identities.
+          edits: [{ recordId: record.recordId, changes: [{ path: ["numberAliases"], set: [shorthand] }], base: null }],
         },
         views,
       );

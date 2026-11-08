@@ -44,7 +44,12 @@ test("streams every opened session over one shared connection", async ({ page, r
       if (/^\/v1\/sessions\/[^/]+\/stream$/.test(path)) perSessionStreams.push(path);
       if (path.endsWith("/subscriptions") && sent.method() === "POST") {
         const subscription = sent.postDataJSON();
-        if (subscription.session_id) subscribed.push(subscription.session_id);
+        // Native provider watches share this transport and carry their scoped resource
+        // in the public command envelope rather than a browser transcript subscription.
+        const command = subscription.command;
+        const resource = command?.body.resource;
+        if (command?.command_id === "pstdio.pstdio-session-browser.command.watch" && resource?.type === "session")
+          subscribed.push(resource.id);
         if (subscription.retain_session_id) retained.push(subscription.retain_session_id);
       }
     });

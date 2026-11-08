@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { isSessionChatAction, sessionChatActionRoute } from "../helpers/session-chat-actions";
 import { uiOrigin } from "../ui-server";
 
 test("plan actions take over the composer and restore its draft without sending it", async ({ page, request }) => {
@@ -61,31 +62,38 @@ test("plan actions take over the composer and restore its draft without sending 
   await expect(decision).toBeVisible();
   await decision.getByRole("button", { name: "Skip", exact: true }).click();
   await expect(editor).toHaveText("Keep this unsent draft");
-  await page
-    .locator('input[type="file"]')
-    .last()
-    .setInputFiles({
-      name: "draft-context.txt",
-      mimeType: "text/plain",
-      buffer: Buffer.from("Context for the unsent message."),
-    });
+  const chooser = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "Attach files", exact: true }).click();
+  await (await chooser).setFiles({
+    name: "draft-context.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("Context for the unsent message."),
+  });
   await expect(page.getByText("draft-context.txt", { exact: true })).toBeVisible();
   await reopen();
+  let rejectedApprovals = 0;
   const failApproval = async (route: import("@playwright/test").Route) => {
-    if (route.request().method() === "POST")
+    if (
+      isSessionChatAction(route.request(), "decision") &&
+      route.request().postDataJSON().params.action.actionId === "approve"
+    ) {
+      rejectedApprovals++;
       await route.fulfill({
         status: 503,
         contentType: "application/json",
         body: JSON.stringify({ error: "Provider unavailable" }),
       });
-    else await route.continue();
+    } else await route.continue();
   };
-  await page.route("**/harness-commands", failApproval);
+  await page.route(sessionChatActionRoute, failApproval);
   await decision.getByRole("button", { name: "Approve and implement", exact: true }).click();
-  await expect(page.getByText("Command failed", { exact: true })).toBeVisible();
+  await expect(page.getByRole("alert")).toContainText("Provider unavailable");
+  expect(rejectedApprovals).toBe(1);
   await expect(decision).toBeVisible();
-  await page.getByRole("button", { name: "Dismiss", exact: true }).click();
-  await page.unroute("**/harness-commands", failApproval);
+  await page.unroute(sessionChatActionRoute, failApproval);
+  await page.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(decision).toBeVisible();
   await propose("# Revised workflow\n\nUse the revised native plan.");
   await controls.getByRole("button", { name: "Plan details" }).hover();
   await expect(page.getByRole("tooltip")).toContainText("Revised workflow");

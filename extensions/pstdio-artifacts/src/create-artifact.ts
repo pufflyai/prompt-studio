@@ -1,4 +1,4 @@
-import { defineCommand, l10n, params, workbenchPanels } from "@pstdio/sdk/extensions";
+import { defineCommand, l10n, params, sessionBrowser } from "@pstdio/sdk/extensions";
 import { libraryTarget } from "./contracts";
 
 export const openCreation = defineCommand({
@@ -50,7 +50,7 @@ export const startCreation = defineCommand({
     });
     ctx.navigation.open({
       kind: "panel",
-      panel: workbenchPanels.projectSession,
+      panel: sessionBrowser.panels.conversation,
       open: "pin",
       resource: {
         type: "session",

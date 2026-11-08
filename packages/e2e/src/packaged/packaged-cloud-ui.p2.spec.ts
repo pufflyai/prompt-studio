@@ -120,7 +120,6 @@ test("Cloud settings respect early access and manage devices and project sync th
   await closeSettings();
   const detailsButton = details.getByRole("button", { name: "Cloud settings" });
   if (!(await detailsButton.isVisible())) await status.click();
-  await expect(details.getByText("Cloud sync · Coming soon", { exact: true })).toBeVisible();
   await expect(details.getByText("Devices", { exact: true })).toHaveCount(0);
   await details.getByRole("button", { name: "Cloud settings" }).click();
   await expect(settings.getByText("Coming soon", { exact: true })).toBeVisible();
