@@ -31,11 +31,14 @@ test("an installed terminal survives a contribution refresh that temporarily unr
         page: { extensionId: "pstdio.extension-lab", kind: "page", id: "labPage" },
       }).ok,
     ).toBe(true);
-    const panel = w.layout.listPanelInstances("main").find((panel) => panel.viewId === viewId)!;
-    const body = w.views.getView(viewId)!.body;
-    if (body.kind !== "terminal") throw new Error("Expected a native terminal view");
-    const rendered = body.render({ workbench: w, instance: panel } as never) as {
-      props: { nativeView: { ownerId: string } };
+    const nativeBinding = () => {
+      const panel = w.layout.listPanelInstances("main").find((panel) => panel.viewId === viewId)!;
+      const body = w.views.getView(viewId)!.body;
+      if (body.kind !== "terminal") throw new Error("Expected a native terminal view");
+      const rendered = body.render({ workbench: w, instance: panel } as never) as {
+        props: { nativeView: { ownerId: string } };
+      };
+      return { bindingId: panel.instanceId, ownerId: rendered.props.nativeView.ownerId };
     };
     w.terminal.setSessionOpener(async () => {
       opens += 1;
@@ -53,8 +56,7 @@ test("an installed terminal survives a contribution refresh that temporarily unr
     });
     const open = () =>
       w.terminal.open({
-        bindingId: panel.instanceId,
-        ownerId: rendered.props.nativeView.ownerId,
+        ...nativeBinding(),
         request: { cols: 80, rows: 24 },
       });
     await open();
@@ -65,6 +67,7 @@ test("an installed terminal survives a contribution refresh that temporarily unr
     writer?.upsert({ id: "native-refresh-update" });
     await flushMicrotasks();
     await flushMicrotasks();
+    expect(w.commands.getCommand("other.command.new")).toBeDefined();
     expect(w.views.getView(viewId)).toBeDefined();
     expect(kills).toBe(0);
     await open();

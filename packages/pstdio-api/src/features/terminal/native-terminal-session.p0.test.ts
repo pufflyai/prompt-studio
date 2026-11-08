@@ -16,10 +16,13 @@ beforeEach(async () => {
     `${fixture.root}/extension.ts`,
     `export default { views: [{
     id: "console", ref: { kind: "view", id: "console" }, title: "Console", body: {
-      kind: "terminal", session: async (ctx, input) => ({
-        workspaceId: input.renderer.resource?.id,
-        command: ["sh"], env: { PROJECT: ctx.projectId }
-      })
+      kind: "terminal", session: async (ctx, input) => {
+        await ctx.storage.set("native-launch-called", true);
+        return {
+          workspaceId: input.renderer.resource?.id,
+          command: ["sh"], env: { PROJECT: ctx.projectId }
+        };
+      }
     }
   }] };`,
   );
@@ -45,6 +48,7 @@ afterEach(async () => {
 test("the callback resolves a project workspace, then the view owns the PTY beyond invocation return", async () => {
   const session = await openNativeTerminalSession(fixture.deps, binding, new AbortController().signal);
   expect(requests).toEqual([{ cols: 80, rows: 24, cwd: fixture.root, command: ["sh"], env: { PROJECT: "project-1" } }]);
+  expect(fixture.values.get("native-launch-called")).toBe(true);
   expect(kills).toBe(0);
   await session.kill();
   expect(kills).toBe(1);
@@ -59,6 +63,7 @@ test("native views reject a resource from another project before invoking it", a
     ),
   ).rejects.toThrow(/project/i);
   expect(requests).toEqual([]);
+  expect(fixture.values.has("native-launch-called")).toBe(false);
 });
 
 test("only a terminal view in the enabled project runtime can open a native PTY", async () => {
