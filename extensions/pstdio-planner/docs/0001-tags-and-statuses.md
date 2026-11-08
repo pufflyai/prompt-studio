@@ -66,3 +66,5 @@ Statuses and tag options use the same color names: `gray`, `red`, `orange`, `amb
 ## Where the data lives
 
 Planner keeps tickets, statuses, and tags in Prompt Studio's storage for the project, not in your repository. Other tools read and change them through Planner's commands. The [CLI](0004-cli.md) lists them.
+
+*Updated at: 2026-11-04*

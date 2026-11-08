@@ -60,3 +60,5 @@ pst automation cancel --project project-id --id run-id
 List and revoke credentials with `pst auth tokens list --project project-id` and `pst auth tokens revoke --id token-id`.
 
 The host accepts at most 60 new runs per principal and project each minute by default. Set `PSTDIO_AUTOMATION_RUNS_PER_MINUTE` to change the limit. Idempotent retries do not consume another run. Accepted runs are stored before execution. Queued runs resume after a host restart. A run that was executing when the host stopped fails with a retryable `host_restarted` error, because extension commands cannot resume halfway. Terminal runs and their events are retained for 30 days and pruned at startup and during new-run admission.
+
+*Updated at: 2026-10-06*

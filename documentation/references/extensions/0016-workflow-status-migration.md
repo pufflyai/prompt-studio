@@ -72,3 +72,5 @@ remain shared core plumbing.
 
 The ownership decision is recorded in
 [ADR 0066](../../adrs/0066-planner-owns-workflow-statuses.md).
+
+*Updated at: 2026-10-22*

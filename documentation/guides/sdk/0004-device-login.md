@@ -99,3 +99,5 @@ On `main`, `account.cancelLogin(id)` cancels a pending native login. `account.pr
 ## Extensions
 
 Extensions use the same account through `ctx.account` and, in webviews, `client.account` with the `account.read` and `account.manage` capabilities. They receive `accountEvents.projectSyncChanged` when a project's sync status changes. See [Cloud account and sync status](../../references/extensions/0003-command-and-process-api.md#cloud-account-and-sync-status) for the methods and the meaning of each sync state.
+
+*Updated at: 2026-11-07*

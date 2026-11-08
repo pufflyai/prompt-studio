@@ -56,3 +56,5 @@ The host retained the source after import and failure. Reading it does not ackno
 `createMemoryStorage({ legacyData: { old_notes: { version: "old-schema", records: [...] } } })` from `@pstdio/sdk/testing` supplies retained-data fixtures. It implements scope-local migration versions and returns copies of source records. Test first import, retry after a partial write, newer-data preservation, and repeated calls.
 
 See [ADR 0077](../../adrs/0077-extension-owned-data-migrations.md) for storage ownership and retention.
+
+*Updated at: 2026-10-24*

@@ -75,3 +75,5 @@ Legacy free-text requests are not inferred as actionable requests. Inspect the t
 Board, CLI, and timeline reads derive pending input and counts from current requests, including on archived and completed tickets. Request changes refresh readers without rewriting ticket tags. The storage upgrade removes the old Needs attention tag option and its ticket references, while preserving custom flag options and request history.
 
 Unreadable request or outcome records remain visible and keep work paused. Ask your project maintainer to restore the named record and its outcome from a known-good backup through the public extension storage API, then reopen the ticket. Reconciliation does not delete or mark a broken record as answered.
+
+*Updated at: 2026-11-05*

@@ -29,3 +29,5 @@ Choose **Delete session**, then confirm the named conversation. Deletion cannot 
 Stop active or queued work before deleting. Delete is disabled for running, queued, or awaiting-input sessions. The server also checks that work has stopped and final saving has finished.
 
 Archive and delete close only that session's views. Removing the session on the current page returns you to Sessions. A failed save restores the session and shows one inline error; you can try again.
+
+*Updated at: 2026-10-18*

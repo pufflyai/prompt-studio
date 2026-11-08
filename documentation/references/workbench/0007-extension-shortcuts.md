@@ -46,3 +46,5 @@ Managed webviews negotiate entry chords with the host. Artifacts installs the pu
 ## Release dependency
 
 Extension adoption uses the keyboard API from [SDK/core PR #1377](https://github.com/pufflyai/prompt-studio/pull/1377) and pins the published SDK/UI preview pair from main commit `2c2b2e4c6b144c418cc048219c56553afe938bf4`. It requires a host providing extension API 0.3.0. Future adoption changes that need an unpublished SDK or UI must keep the waiting-for-release label until compatible packages are published; then update dependency ranges and rerun published-extension validation. Do not bypass the published dependency check.
+
+*Updated at: 2026-11-03*

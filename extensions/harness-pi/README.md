@@ -37,3 +37,5 @@ Project skills are copied to `.pi/skills` before workspace sessions start. `pst 
 Pi loads project instructions, skills, settings, and native extensions only after you save a trust decision for that workspace in Pi. Run Pi interactively in the workspace and use `/trust`, then restart the Prompt Studio session. Account discovery uses the same saved decision before loading project providers.
 
 See [Pi's documentation](https://github.com/earendil-works/pi/tree/main/packages/coding-agent) for provider setup, models, skills and tools.
+
+*Updated at: 2026-10-30*

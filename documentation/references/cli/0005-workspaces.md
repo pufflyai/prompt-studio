@@ -70,3 +70,5 @@ pst workspaces file-link --workspace WS-1 --path src/app.ts --line 12 --column 4
 ```
 
 The command accepts a workspace shorthand or UUID and prints JSON containing `href`, a canonical dashboard path. Paths are workspace-root relative. The command does not read or change the file. A column requires a line; coordinates must be positive integers. Copied URLs restore the selected file after reload. Unreleased Cloud device commands let the API read another device's files and diff while that device is online; remote file content is read-only.
+
+*Updated at: 2026-11-04*

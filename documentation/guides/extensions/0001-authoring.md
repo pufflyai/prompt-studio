@@ -516,3 +516,5 @@ describes allocation, current identities, aliases, and change events available o
 ## Project Home on main
 
 The default `pstdio.pstdio-home` extension owns the project home presentation. It uses public session/workspace queries, webview commands and navigation. Prompt Studio directly configures its ordinary Home page as the project default. If Home is disabled or uninstalled, the dashboard uses its existing empty-panel UI. See [dashboard commands and session ordering](../../references/extensions/0004-contribution-api.md#dashboard-commands-and-session-ordering-api-031-on-main).
+
+*Updated at: 2026-11-07*

@@ -758,3 +758,5 @@ Dashboard webviews with `commands.execute` can use public `workbenchCommands` re
 The old `workbenchPages.sessions`, `session`, `newSession`, `sessionComposer`, `workbenchPanels.projectSession`, and `workbenchCommands.newConversation` refs remain at their original identities and are deprecated in favor of these provider refs. The adoption stage supplies thin legacy definitions; remove deprecated public refs only together in a breaking release.
 
 Resource mutation commands can act on another provider's canonical resource. When the invoking resource matches the declared mutation type and resolved ID in the selected project, native optimistic previews and write serialization preserve that resource's identity. Without a matching subject, the command's own extension identity remains the default. This changes presentation ownership only; the command service still enforces its normal permissions and scope.
+
+*Updated at: 2026-11-07*

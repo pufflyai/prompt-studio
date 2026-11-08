@@ -385,3 +385,5 @@ check `await storage.canMigrate()`. It returns false for a private override when
 the synced extension owns migrations, or a published extension's Cloud membership is unknown.
 This is a fresh policy read, not a stored flag. Ordinary edits still use the
 existing publication write permissions.
+
+*Updated at: 2026-11-07*

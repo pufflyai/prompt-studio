@@ -49,3 +49,5 @@ Mode and page Sidenav contributions carry opaque owner keys. TreeRenderer receiv
 - Never infer ownership from region, resource kind, label, or current tab.
 - Never use ownership as a permission decision by itself.
 - Return and track every registration disposable.
+
+*Updated at: 2026-11-07*
