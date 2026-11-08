@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { createClient } from "@pstdio/sdk/client";
 import { writePublicTextExtensions } from "../helpers/public-text-extension";
 import { startPublicTextPeer } from "./packaged-public-text-peer.fixture";
@@ -45,9 +45,14 @@ export const publicTextSyncFixture = async (root: string) => {
   const startDevice = async (name: string) => {
     const home = join(root, name);
     mkdirSync(home, { recursive: true });
-    const host = await startPackagedServe(home, env);
+    const logPath = join(import.meta.dirname, "../../test-results/packaged-runtime", `${basename(root)}-${name}.jsonl`);
+    const host = await startPackagedServe(home, {
+      ...env,
+      PSTDIO_LOG_PATH: logPath,
+      PSTDIO_LOG_LEVEL: "debug",
+    });
     const client = createClient({ baseUrl: host.baseUrl, token: host.descriptor.token });
-    return { home, host, client };
+    return { home, host, client, logPath };
   };
   return { peer, startDevice };
 };

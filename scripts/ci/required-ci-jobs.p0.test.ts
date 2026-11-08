@@ -48,7 +48,7 @@ test("queue requires startup smoke while production requires all six independent
     ).outcome,
   ).toBe("failure");
   const production = plannedCiJobs(resolveCiScope({ ...input, event: "workflow_dispatch", profile: "production" }));
-  expect(production.find((job) => job.id === "packaged_toolchain")?.count).toBe(8);
+  expect(production.find((job) => job.id === "packaged_toolchain")?.count).toBe(9);
 });
 
 test("production cannot pass without native UI quarantine execution", () => {
@@ -69,24 +69,27 @@ test("production cannot pass without native UI quarantine execution", () => {
   ).toBe("failure");
 });
 
-test("production requires both Windows ARM packaged runtime shards", () => {
+test("production requires every packaged runtime shard on both Windows architectures", () => {
   const scope = resolveCiScope({ ...scopeFixture(), event: "workflow_dispatch", profile: "production" });
   const plan = plannedCiJobs(scope);
   const names = plan.find((job) => job.id === "packaged_toolchain")!.names!;
+  expect(names).toContain("packaged_toolchain / verify (cli-win-x64 1/2)");
+  expect(names).toContain("packaged_toolchain / verify (cli-win-x64 2/2)");
   expect(names).toContain("packaged_toolchain / verify (cli-win-arm64 1/2)");
   expect(names).toContain("packaged_toolchain / verify (cli-win-arm64 2/2)");
   const observed = plan.flatMap((job) =>
     job.names!.map((name) => ({ name, status: "completed", conclusion: "success" })),
   );
   expect(evaluateCiGate(plan, observed, false, true).outcome).toBe("success");
-  expect(
-    evaluateCiGate(
-      plan,
-      observed.filter((job) => job.name !== "packaged_toolchain / verify (cli-win-arm64 2/2)"),
-      false,
-      true,
-    ).outcome,
-  ).toBe("failure");
+  for (const platform of ["cli-win-x64", "cli-win-arm64"])
+    expect(
+      evaluateCiGate(
+        plan,
+        observed.filter((job) => job.name !== `packaged_toolchain / verify (${platform} 2/2)`),
+        false,
+        true,
+      ).outcome,
+    ).toBe("failure");
 });
 
 test("production requires both Intel Mac desktop smoke shards while keeping physical release targets unique", async () => {
