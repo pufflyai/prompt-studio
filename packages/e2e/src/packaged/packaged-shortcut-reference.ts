@@ -10,9 +10,9 @@ export const verifyPackagedShortcutReference = async (
 ) => {
   const navigationShortcuts = [
     { label: "Go to workspaces", key: "W" },
-    { label: "Go to sessions", key: "S" },
   ];
   const commands = [
+    { label: "Go to sessions", key: "S", layered: true },
     { label: "New workspace", key: "W", layered: true },
     { label: "Open settings", key: ",", layered: false },
     { label: "Shortcut greeting", key: "g", layered: false },
