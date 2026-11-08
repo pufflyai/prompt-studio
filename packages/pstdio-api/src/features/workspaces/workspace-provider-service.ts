@@ -47,9 +47,12 @@ export const createProviderBackedWorkspace = async (
     signal?: AbortSignal;
   },
 ) => {
+  input.signal?.throwIfAborted();
   if (input.shorthandBase !== undefined) assertWorkspaceShorthand(input.shorthandBase);
   const providerId = input.providerId;
-  const params = await resolveWorkspaceParams(deps, input.projectId, providerId, input.params ?? {});
+  const params = await resolveWorkspaceParams(deps, input.projectId, providerId, input.params ?? {}, {
+    signal: input.signal,
+  });
   const home = await deps.workspaceService.getDefault(input.projectId);
   if (providerId === rootProviderId && !input.isDefault) {
     if (home) return home;
@@ -92,6 +95,7 @@ export const createProviderBackedWorkspace = async (
       anchors: input.anchors,
     });
   };
+  input.signal?.throwIfAborted();
   const workspace = await createWorkspace();
   if (isBuiltInProviderId(providerId) && (input.isDefault || input.provision)) {
     await deps.workspaceService.setInitializing(workspace.id, true);

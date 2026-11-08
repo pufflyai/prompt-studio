@@ -42,6 +42,10 @@ export default { commands: [{ id: "ordinary", ref: { kind: "command", id: "ordin
     if (process.stdout !== directory.path) throw new Error("Provider process used a different directory.");
     return result(directory);
   },
+  async validateParams(ctx, input) {
+    await ctx.projectFiles.readText("revision.txt");
+    if (input.revision === "missing") throw new Error("Choose an existing revision.");
+  },
   async resolve(ctx) { return result(await ctx.localDirectory()); },
   async delete(ctx) { await (await ctx.localDirectory()).remove(); },
 }] };
@@ -253,6 +257,18 @@ test("an installed provider that becomes unavailable cannot create a workspace",
   } finally {
     await writeFile(join(sourceFolder, "revision.txt"), "review");
   }
+});
+
+test("installed validation rejects semantic values before storing a workspace or allocating files", async () => {
+  const before = await handle.deps.workspaceService.list(projectId);
+  const response = await post("/v1/workspaces", {
+    project_id: projectId,
+    provider_id: providerId,
+    params: { revision: "missing" },
+  });
+  expect(response.status).toBe(400);
+  expect(await response.json()).toMatchObject({ error: expect.stringContaining("Choose an existing revision.") });
+  expect(await handle.deps.workspaceService.list(projectId)).toEqual(before);
 });
 
 test("a completed provider cannot allocate or write through a retained directory", async () => {
