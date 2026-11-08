@@ -5,8 +5,8 @@ import type { ProjectExtensionInstance } from "@pstdio/sdk/api";
 import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin } from "../ui-server";
 
-// Critical risks: retained results must not repeat completed work; recovery stays accessible in the button popover.
-test("keeps upgrade progress and retained results inside buttons with accessible recovery", async ({
+// Critical risks: real queue ownership and directly reachable recovery must survive list/detail navigation.
+test("distinguishes waiting from active upgrades and dismisses grouped results without navigation", async ({
   page,
   request,
 }) => {
@@ -48,18 +48,14 @@ test("keeps upgrade progress and retained results inside buttons with accessible
       .filter({ hasText: targets.find((extension) => extension.id === id)!.displayName });
   await page.getByTestId("extensions-upgrade-all").click();
   await expect.poll(() => waiting.length).toBe(2);
-  await expect(row(targets[2]!.id).getByText("Queued for upgrade")).toBeVisible();
-  const activeButton = row(targets[0]!.id).getByTestId("extension-row-upgrade");
-  await expect(activeButton).toHaveAttribute("aria-busy", "true");
-  const installProgress = activeButton.getByRole("progressbar");
-  await expect(installProgress).toBeVisible();
-  await expect(installProgress).not.toHaveAttribute("aria-valuenow");
-  const buttonBounds = (await activeButton.boundingBox())!;
-  const progressBounds = (await installProgress.boundingBox())!;
-  const bottomBorder = await activeButton.evaluate((button) =>
-    Number.parseFloat(getComputedStyle(button).borderBottomWidth),
-  );
-  expect(progressBounds.y + progressBounds.height).toBeCloseTo(buttonBounds.y + buttonBounds.height - bottomBorder, 0);
+  await expect(row(targets[2]!.id).getByTestId("extension-row-upgrade")).toHaveText("Waiting");
+  await expect(row(targets[2]!.id).getByTestId("extension-row-upgrade")).not.toHaveAttribute("aria-busy", "true");
+  for (const target of targets.slice(0, 2)) {
+    const button = row(target.id).getByTestId("extension-row-upgrade");
+    await expect(button).toContainText("Upgrading");
+    await expect(button).toHaveAttribute("aria-busy", "true");
+    await expect(row(target.id).getByRole("progressbar")).toHaveCount(0);
+  }
   await expect(page.getByTestId("extensions-upgrade-all").getByRole("progressbar")).toHaveAttribute(
     "aria-valuenow",
     "0",
@@ -67,7 +63,7 @@ test("keeps upgrade progress and retained results inside buttons with accessible
   await row(targets[0]!.id).click();
   await expect(page.getByTestId("extension-detail")).toBeVisible();
   await expect(page.getByTestId("extension-upgrade")).toBeDisabled();
-  await expect(page.getByTestId("extension-upgrade").getByRole("progressbar")).toBeVisible();
+  await expect(page.getByTestId("extension-upgrade").getByRole("progressbar")).toHaveCount(0);
   await page.getByTestId("extension-detail-back").click();
   await expect(page.getByTestId("extensions-panel")).toBeVisible();
   expect(waiting).toHaveLength(2);
@@ -79,51 +75,122 @@ test("keeps upgrade progress and retained results inside buttons with accessible
   try {
     await succeed(waiting[0]!);
     await expect.poll(() => waiting.length).toBe(3);
-    const succeededButton = row(waiting[0]!.extension.id).getByTestId("extension-row-upgrade");
-    await expect(succeededButton).toContainText("Extension upgraded");
-    await succeededButton.click();
+    const succeededRow = row(waiting[0]!.extension.id);
+    const succeededButton = succeededRow.getByTestId("extension-row-upgrade");
+    await expect(succeededButton).toHaveAttribute("aria-label", "Extension upgraded");
+    await succeededRow.getByTestId("extension-action-dismiss").click();
+    await expect(page.getByTestId("extensions-panel")).toBeVisible();
     expect(waiting).toHaveLength(3);
-    const notification = page.getByTestId("extension-action-notification").and(page.getByRole("dialog"));
-    await expect(notification).toContainText("Extension upgraded");
-    await notification.getByRole("button", { name: "Dismiss", exact: true }).click();
     await expect(succeededButton).toHaveCount(0);
     await waiting[1]!.route.fulfill({ status: 400, json: { error: "Registry unavailable" } });
     const failedButton = row(waiting[1]!.extension.id).getByTestId("extension-row-upgrade");
-    await expect(failedButton).toContainText("Extension upgrade failed");
-    await failedButton.click();
-    await expect(notification.getByRole("alert")).toContainText("Registry unavailable");
-    await expect(notification.getByRole("button", { name: "Retry", exact: true })).toBeVisible();
-    // The trigger toggles its anchored notification without starting another request.
-    await failedButton.click();
-    await expect(notification).toHaveCount(0);
+    await expect(failedButton.getByRole("alert")).toContainText("Registry unavailable");
+    await expect(failedButton).toContainText("Retry");
+    await expect(failedButton).not.toContainText(/\d+s/);
     await succeed(waiting[2]!);
-    await expect(page.getByTestId("extensions-upgrade-all").getByRole("progressbar")).toHaveAttribute(
-      "aria-valuenow",
-      "3",
-    );
-    await expect(row(waiting[2]!.extension.id).getByTestId("extension-row-upgrade")).toContainText(
-      "Extension upgraded",
-    );
     const batchButton = page.getByTestId("extensions-upgrade-all");
-    await expect(batchButton).not.toHaveAttribute("aria-busy", "true");
-    await batchButton.click();
-    await expect(notification.getByRole("alert")).toContainText("1 of 3 upgrades failed");
-    await notification.getByRole("button", { name: "Dismiss", exact: true }).click();
+    await expect(batchButton.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "3");
+    await expect(batchButton).toContainText("1 of 3 upgrades failed");
+    await expect(batchButton).not.toContainText(/\d+s/);
+    await batchButton.locator("..").getByTestId("extension-action-dismiss").click();
     await expect(batchButton).toContainText("Upgrade all");
-    // Dismissing batch feedback preserves the individual failure and its retry.
+    // Batch dismissal preserves the individual failure and its direct retry action.
     await failedButton.click();
-    await notification.getByRole("button", { name: "Retry", exact: true }).click();
     await expect.poll(() => waiting.length).toBe(4);
     await expect(failedButton).toHaveAttribute("aria-busy", "true");
     await succeed(waiting[3]!);
-    await expect(failedButton).toContainText("Extension upgraded");
+    await expect(failedButton).toHaveAttribute("aria-label", "Extension upgraded");
     await row(waiting[3]!.extension.id).click();
-    await expect(page.getByTestId("extension-upgrade")).toContainText("Extension upgraded");
-    await page.getByTestId("extension-upgrade").click();
-    await notification.getByRole("button", { name: "Dismiss", exact: true }).click();
+    await expect(page.getByTestId("extension-upgrade")).toHaveAttribute("aria-label", "Extension upgraded");
+    await page.getByTestId("extension-detail").getByTestId("extension-action-dismiss").click();
     await expect(page.getByTestId("extension-upgrade")).toHaveCount(0);
+    expect(waiting).toHaveLength(4);
   } finally {
     await Promise.all(heldReads.map((route) => route.abort()));
     await page.unrouteAll({ behavior: "ignoreErrors" });
   }
+});
+
+// Critical risk: the catalog name owns an install before an instance id exists; its result must follow it.
+test("retains fresh-install retry and dismiss ownership from marketplace through installed list and detail", async ({
+  page,
+  request,
+}) => {
+  const folder = join(process.env.E2E_HOME!, `install-feedback-${Date.now()}`);
+  mkdirSync(folder, { recursive: true });
+  const created = await request.post(`${uiOrigin}/v1/projects`, {
+    data: folderProjectInput({ name: "Install feedback" }, folder),
+  });
+  expect(created.ok()).toBe(true);
+  const project = (await created.json()) as { id: string };
+  const inventory = await (await request.get(`${uiOrigin}/v1/projects/${project.id}/extensions`)).json();
+  const catalog = {
+    installName: "grouped-install-fixture",
+    extensionId: "example.grouped-install",
+    displayName: "Grouped install fixture",
+    description: "Fresh install feedback",
+    installed: false,
+    origin: { kind: "git", url: "https://example.com/tools.git", ref: "main", path: "grouped" },
+  };
+  const instance: ProjectExtensionInstance = {
+    ...inventory.extensions[0],
+    id: "grouped-installed-instance",
+    installName: catalog.installName,
+    extensionId: catalog.extensionId,
+    displayName: catalog.displayName,
+    canUpgrade: false,
+    version: "1.0.0",
+  };
+  let installed = false;
+  const installs: Route[] = [];
+  await page.route(`**/v1/projects/${project.id}/extensions`, async (route) => {
+    if (route.request().method() === "POST") {
+      installs.push(route);
+      return;
+    }
+    await route.fulfill({
+      json: {
+        ...inventory,
+        extensions: installed ? [...inventory.extensions, instance] : inventory.extensions,
+        marketplace: [...inventory.marketplace, { ...catalog, installed }],
+      },
+    });
+  });
+  await page.addInitScript((id) => {
+    localStorage.setItem("onboarding-complete", "true");
+    localStorage.setItem("dashboard-wb2:selected-project:global", id);
+  }, project.id);
+  await page.goto(`/projects/${project.id}`);
+  await page.getByRole("option", { name: "Extensions", exact: true }).click();
+  const availableRow = page.getByTestId("marketplace-extension-entry").filter({ hasText: catalog.displayName });
+  await availableRow.getByTestId("marketplace-extension-install").click();
+  await expect.poll(() => installs.length).toBe(1);
+  await expect(availableRow.getByTestId("marketplace-extension-install")).toContainText("Installing");
+  await expect(availableRow.getByRole("progressbar")).toHaveCount(0);
+  await availableRow.click();
+  const availableButton = page.getByTestId("available-extension-install");
+  await expect(availableButton).toHaveAttribute("aria-busy", "true");
+  await installs[0]!.fulfill({ status: 400, json: { error: "Registry unavailable" } });
+  await expect(availableButton.getByRole("alert")).toContainText("Registry unavailable");
+  await expect(availableButton).toContainText("Retry");
+  await expect(availableButton).not.toContainText(/\d+s/);
+  await availableButton.click();
+  await expect.poll(() => installs.length).toBe(2);
+  await expect(availableButton).toHaveAttribute("aria-busy", "true");
+  installed = true;
+  await installs[1]!.fulfill({ json: { extension: instance } });
+  await expect(page.getByTestId("extension-detail")).toBeVisible();
+  await expect(page.getByTestId("extension-upgrade")).toHaveAttribute("aria-label", "Installed");
+  await page.getByTestId("extension-detail-back").click();
+  const installedRow = page.getByTestId("extension-entry").filter({ hasText: catalog.displayName });
+  await expect(installedRow.getByTestId("extension-row-upgrade")).toHaveAttribute("aria-label", "Installed");
+  await installedRow.click();
+  await expect(page.getByTestId("extension-upgrade")).toHaveAttribute("aria-label", "Installed");
+  await page.getByTestId("extension-detail").getByTestId("extension-action-dismiss").click();
+  await expect(page.getByTestId("extension-upgrade")).toHaveCount(0);
+  await expect(page.getByTestId("extension-detail")).toBeVisible();
+  expect(installs).toHaveLength(2);
+  await page.getByTestId("extension-detail-back").click();
+  await expect(installedRow.getByTestId("extension-row-upgrade")).toHaveCount(0);
+  await page.unrouteAll({ behavior: "ignoreErrors" });
 });

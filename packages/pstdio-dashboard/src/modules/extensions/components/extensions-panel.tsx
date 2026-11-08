@@ -10,7 +10,7 @@ import {
   useSetExtensionAutomationEnabled,
 } from "@/shared/extensions/use-project-extensions";
 import { AvailableExtensionDetail } from "./available-extension-detail";
-import { ExtensionActionFeedback } from "./extension-action-feedback";
+import { resolveExtensionAction } from "./extension-actions";
 import { ExtensionDetailContainer } from "./extension-detail-container";
 import { ExtensionReplacementConfirmation } from "./extension-replacement-confirmation";
 import { ExtensionsPanelView } from "./extensions-panel-view";
@@ -43,9 +43,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
       page: dashboardExtensionDetailPage,
       resource: { type: "extension", extensionId: "pstdio", id, label: displayName },
     });
-  const actions = useExtensionPanelActions(projectId, (name) => {
-    if (selectedMarketplaceName === name) openList();
-  });
+  const actions = useExtensionPanelActions(projectId);
   const upgradingInstanceIds = Object.keys(actions.actions).filter((id) =>
     ["queued", "running"].includes(actions.actions[id]!.status),
   );
@@ -79,12 +77,15 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
 
   const extensions = extensionsQuery.data?.extensions ?? [];
   const marketplace = extensionsQuery.data?.marketplace ?? [];
-  const selected = extensions.find((extension) => extension.id === selectedInstanceId);
+  const selected = extensions.find(
+    (extension) => extension.id === selectedInstanceId || extension.installName === selectedMarketplaceName,
+  );
   const selectedMarketplace = marketplace.find(
     (extension) => extension.installName === selectedMarketplaceName && !extension.installed,
   );
 
   if (selected) {
+    const owned = resolveExtensionAction(actions.actions, selected);
     return (
       <ExtensionDetailContainer
         projectId={projectId}
@@ -93,10 +94,10 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
         agents={agents}
         settingsInput={settingsInput}
         onBack={() => openList()}
-        upgradeAction={actions.actions[selected.id]}
+        upgradeAction={owned.action}
         onUpgrade={() => void actions.handleUpgrade(selected)}
-        onDismissUpgrade={(expected) => actions.dismiss(selected.id, expected)}
-        onRetryAction={() => actions.retry(selected.id)}
+        onDismissUpgrade={(expected) => actions.dismiss(owned.key, expected)}
+        onRetryAction={() => actions.retry(owned.key)}
       />
     );
   }
@@ -112,14 +113,9 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
             marketplaceContributions.error instanceof Error ? marketplaceContributions.error.message : undefined
           }
           loadingContributions={marketplaceContributions.isLoading}
-          installing={actions.actions[selectedMarketplace.installName]?.status === "running"}
-          feedback={
-            <ExtensionActionFeedback
-              action={actions.actions[selectedMarketplace.installName]}
-              onDismiss={() => actions.dismiss(selectedMarketplace.installName)}
-              onRetry={() => void actions.handleInstall(selectedMarketplace)}
-            />
-          }
+          action={actions.actions[selectedMarketplace.installName]}
+          onDismissAction={(expected) => actions.dismiss(selectedMarketplace.installName, expected)}
+          onRetryAction={() => actions.retry(selectedMarketplace.installName)}
           onBack={() => openList()}
           onInstall={() => void actions.handleInstall(selectedMarketplace)}
         />
@@ -144,9 +140,6 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
         batch={actions.batch}
         togglingAutomation={setAutomationEnabled.isPending}
         upgradingInstanceIds={upgradingInstanceIds}
-        installingMarketplaceNames={marketplace
-          .filter((entry) => actions.actions[entry.installName]?.status === "running")
-          .map((entry) => entry.installName)}
         onToggle={(extension, enabled) => void actions.handleToggle(extension, enabled)}
         onToggleAutomation={(extension, automation, enabled) =>
           setAutomationEnabled.mutateAsync({ instanceId: extension.id, automationId: automation.id, enabled })

@@ -111,13 +111,16 @@ Explicit Git refs and other repository sources use the system Git executable. Wh
   Healthy local-path extensions stay under local control.
 - In the extension panel, every row that can take a newer release shows an upgrade button next to
   its switch. The button upgrades only that extension. **Upgrade all** in the panel header runs
-  Upgrade for every extension that offers it, with at most two installs running at once. Each button
-  shows queued or running state and elapsed time, with progress along its bottom edge. The Upgrade all
-  button counts completed attempts and retains the batch outcome. Individual buttons retain their
-  result and elapsed time; clicking a result opens an anchored notification with error details, Retry
-  and Dismiss. Dismiss clears only that operation's retained button state, without clearing a newer
-  result or changing batch counts. List and detail controls share the same state. Individual install
-  progress is indeterminate; the host does not report download percentages. Successful responses update the displayed version and upgrade action
+  Upgrade for every extension that offers it, with at most two installs running at once. Queued
+  buttons say Waiting; only active work shows Upgrading with a spinner and elapsed time. Individual
+  extension controls have no progress bar. Upgrade all retains its bottom-edge batch progress and
+  counts completed attempts. Completed and failed states omit elapsed seconds. Each final state has
+  an attached × button to dismiss it; errors show details and Retry directly in the grouped control,
+  without a result popover or additional status row. Fresh marketplace installs use the same controls
+  in the list and detail page. Their result follows the extension into the installed list/detail.
+  Install, toggle, upgrade and batch ownership share the catalog name, so an older result cannot
+  reappear after dismissal or clear a newer operation. Dismissing individual results does not change
+  batch counts. Successful responses update the displayed version and upgrade action
   immediately, while the remaining inventory refreshes in the background. Workspaces are prepared
   again only when an enabled upgrade changes skills or workspace setup hooks. Overlapping project
   refresh requests share a maintenance pass; a change arriving mid-pass revisits only workspaces that

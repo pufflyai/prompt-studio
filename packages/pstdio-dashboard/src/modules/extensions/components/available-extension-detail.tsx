@@ -1,10 +1,11 @@
 import { Button, Flex, HStack, Spinner, Stack, Tabs, Text } from "@chakra-ui/react";
 import type { MarketplaceExtension } from "@pstdio/sdk/api";
 import { ArrowLeft, Blocks, Download } from "lucide-react";
-import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { PageContentLayout } from "@/shared/components/page-content-layout";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
+import { ExtensionActionButton } from "./extension-action-button";
+import type { ExtensionActionState } from "./extension-action-feedback";
 import { ExtensionContributions } from "./extension-contributions";
 import { ExtensionIcon } from "./extension-icon";
 import { ExtensionIdentity } from "./extension-identity";
@@ -14,15 +15,25 @@ interface AvailableExtensionDetailProps {
   metadata: DashboardExtensionMetadata | undefined;
   contributionsError?: string;
   loadingContributions: boolean;
-  installing: boolean;
-  feedback?: ReactNode;
+  action?: ExtensionActionState;
+  onDismissAction?: (action: ExtensionActionState) => void;
+  onRetryAction?: () => void;
   onBack: () => void;
   onInstall: () => void;
 }
 
 export const AvailableExtensionDetail = (props: AvailableExtensionDetailProps) => {
-  const { extension, metadata, contributionsError, loadingContributions, installing, feedback, onBack, onInstall } =
-    props;
+  const {
+    extension,
+    metadata,
+    contributionsError,
+    loadingContributions,
+    action,
+    onDismissAction,
+    onRetryAction,
+    onBack,
+    onInstall,
+  } = props;
   const { t } = useTranslation("projects");
   const extensionId =
     extension.extensionId ?? metadata?.extensions[0]?.id ?? extension.registry?.extensionId ?? extension.installName;
@@ -65,19 +76,20 @@ export const AvailableExtensionDetail = (props: AvailableExtensionDetailProps) =
                     {origin}
                   </Text>
                 </Stack>
-                <Button
+                <ExtensionActionButton
                   variant="outline"
                   size="2xs"
-                  loading={installing}
-                  onClick={onInstall}
+                  icon={<Download />}
+                  action={action}
+                  onAction={onInstall}
+                  onDismiss={onDismissAction}
+                  onRetry={onRetryAction}
                   data-testid="available-extension-install"
                 >
-                  <Download size={12} />
                   {t("projectSettings.extensionsPanel.marketplace.install")}
-                </Button>
+                </ExtensionActionButton>
               </HStack>
 
-              {feedback}
               <Text textStyle="paragraph/S/regular" color="fg.muted">
                 {extension.description}
               </Text>

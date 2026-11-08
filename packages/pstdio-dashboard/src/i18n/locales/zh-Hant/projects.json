@@ -158,7 +158,7 @@
         "action": "取代"
       },
       "feedback": {
-        "queued": "等待升級",
+        "queued": "等待中",
         "upgrading": "正在升級 {{name}}",
         "updating": "正在更新 {{name}}",
         "updated": "擴充功能已更新",
@@ -167,7 +167,9 @@
         "retry": "重試",
         "dismiss": "關閉",
         "upgradingButton": "正在升級",
-        "batchFailed": "{{total}} 個升級中有 {{count}} 個失敗"
+        "batchFailed": "{{total}} 個升級中有 {{count}} 個失敗",
+        "installingButton": "正在安裝",
+        "installedButton": "已安裝"
       }
     }
   },

@@ -1,6 +1,6 @@
-import { Button, HStack, Popover, Stack, Text } from "@chakra-ui/react";
-import { Portal, ProgressButton, type ProgressButtonProps } from "@pstdio/ui";
-import { ArrowUpCircle, Check, CircleAlert, Clock } from "lucide-react";
+import { ButtonGroup, IconButton, Spinner, Text } from "@chakra-ui/react";
+import { ProgressButton, type ProgressButtonProps } from "@pstdio/ui";
+import { ArrowUpCircle, Check, CircleAlert, Clock, X } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ExtensionActionState } from "./extension-action-feedback";
@@ -11,10 +11,23 @@ interface ExtensionActionButtonProps extends Omit<ProgressButtonProps, "onClick"
   onDismiss?: (action: ExtensionActionState) => void;
   onRetry?: () => void;
   retryLabel?: string;
+  icon?: ReactNode;
 }
 
 export const ExtensionActionButton = (props: ExtensionActionButtonProps) => {
-  const { action, onAction, onDismiss, onRetry, retryLabel, children, disabled, progress, ...rest } = props;
+  const {
+    action,
+    onAction,
+    onDismiss,
+    onRetry,
+    retryLabel,
+    icon = <ArrowUpCircle />,
+    children,
+    disabled,
+    progress,
+    ...rest
+  } = props;
+  const { t } = useTranslation("projects");
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
     if (action?.status !== "running") return;
@@ -22,96 +35,65 @@ export const ExtensionActionButton = (props: ExtensionActionButtonProps) => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [action?.status]);
+  const running = action?.status === "running";
+  const queued = action?.status === "queued";
   const final = action?.status === "success" || action?.status === "error";
-  const busy = action?.status === "queued" || action?.status === "running";
+  const failed = action?.status === "error";
   const elapsed =
-    action?.startedAt === undefined
-      ? undefined
-      : Math.max(0, Math.floor(((action.finishedAt ?? now) - action.startedAt) / 1000));
+    running && action.startedAt !== undefined ? Math.max(0, Math.floor((now - action.startedAt) / 1000)) : undefined;
   const label = action ? `${action.label}${elapsed === undefined ? "" : ` · ${elapsed}s`}` : undefined;
-  const button = (
-    <ProgressButton
-      {...rest}
-      status={action?.status}
-      disabled={busy || (!final && disabled)}
-      aria-busy={busy || undefined}
-      aria-label={label}
-      aria-live="polite"
-      aria-atomic="true"
-      progress={progress ?? (action?.status === "running" ? { value: null, label: action.label } : undefined)}
-      onClick={final ? undefined : onAction}
-    >
-      {action?.status === "error" && <CircleAlert />}
-      {action?.status === "success" && <Check />}
-      {action?.status === "queued" && <Clock />}
-      {(!action || action.status === "running") && <ArrowUpCircle />}
-      {label ?? children}
-    </ProgressButton>
-  );
-  if (!final) return button;
+  const retry = retryLabel ?? t("projectSettings.extensionsPanel.feedback.retry", "Retry");
+  const error = action?.error === action?.label ? undefined : action?.error;
+  const name = error ? `${label}: ${error}` : label;
   return (
-    <ActionNotification action={action} onRetry={onRetry} onDismiss={onDismiss} retryLabel={retryLabel}>
-      {button}
-    </ActionNotification>
+    <ButtonGroup
+      attached
+      size={rest.size}
+      variant={rest.variant}
+      alignItems="stretch"
+      data-testid="extension-action-group"
+    >
+      <ProgressButton
+        {...rest}
+        status={action?.status}
+        disabled={running || queued || (final ? !failed || !onRetry : disabled)}
+        aria-busy={running || undefined}
+        aria-label={failed && onRetry ? `${name} · ${retry}` : name}
+        aria-live="polite"
+        aria-atomic="true"
+        progress={progress}
+        onClick={failed ? onRetry : onAction}
+      >
+        <ActionIcon status={action?.status} icon={icon} />
+        <Text as="span">
+          {label ?? children}
+          {error && (
+            <Text as="span" role="alert">
+              {" "}
+              · {error}
+            </Text>
+          )}
+          {failed && onRetry && ` · ${retry}`}
+        </Text>
+      </ProgressButton>
+      {final && onDismiss && (
+        <IconButton
+          height="auto"
+          aria-label={`${t("projectSettings.extensionsPanel.feedback.dismiss", "Dismiss")} ${action.label}`}
+          onClick={() => onDismiss(action)}
+          data-testid="extension-action-dismiss"
+        >
+          <X />
+        </IconButton>
+      )}
+    </ButtonGroup>
   );
 };
 
-interface ActionNotificationProps extends Pick<ExtensionActionButtonProps, "onRetry" | "onDismiss" | "retryLabel"> {
-  action: ExtensionActionState;
-  children: ReactNode;
-}
-const ActionNotification = (props: ActionNotificationProps) => {
-  const { action, children, onRetry, onDismiss, retryLabel } = props;
-  const { t } = useTranslation("projects");
-  const [openedFor, setOpenedFor] = useState<ExtensionActionState>();
-  return (
-    <Popover.Root
-      open={openedFor === action}
-      onOpenChange={({ open }) => setOpenedFor(open ? action : undefined)}
-      positioning={{ placement: "bottom-end" }}
-    >
-      <Popover.Trigger asChild>{children}</Popover.Trigger>
-      <Portal>
-        <Popover.Positioner>
-          <Popover.Content data-testid="extension-action-notification">
-            <Popover.Body>
-              <Stack gap="sm">
-                <Popover.Title>{action.label}</Popover.Title>
-                {action.error && (
-                  <Text role="alert" whiteSpace="pre-wrap" wordBreak="break-word">
-                    {action.error}
-                  </Text>
-                )}
-                <HStack>
-                  {onRetry && (
-                    <Button
-                      size="2xs"
-                      onClick={() => {
-                        setOpenedFor(undefined);
-                        onRetry();
-                      }}
-                    >
-                      {retryLabel ?? t("projectSettings.extensionsPanel.feedback.retry")}
-                    </Button>
-                  )}
-                  {onDismiss && (
-                    <Button
-                      size="2xs"
-                      variant="ghost"
-                      onClick={() => {
-                        setOpenedFor(undefined);
-                        onDismiss(action);
-                      }}
-                    >
-                      {t("projectSettings.extensionsPanel.feedback.dismiss")}
-                    </Button>
-                  )}
-                </HStack>
-              </Stack>
-            </Popover.Body>
-          </Popover.Content>
-        </Popover.Positioner>
-      </Portal>
-    </Popover.Root>
-  );
+const ActionIcon = ({ status, icon }: { status?: ExtensionActionState["status"]; icon: ReactNode }) => {
+  if (status === "running") return <Spinner size="xs" />;
+  if (status === "queued") return <Clock />;
+  if (status === "success") return <Check />;
+  if (status === "error") return <CircleAlert />;
+  return icon;
 };

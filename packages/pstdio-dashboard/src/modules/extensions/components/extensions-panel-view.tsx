@@ -13,7 +13,7 @@ import { useTranslation } from "react-i18next";
 import { PageContentLayout } from "@/shared/components/page-content-layout";
 import type { DroppedExtensionFolder } from "@/shared/extensions/api";
 import { ExtensionActionFeedback, type ExtensionActionState } from "./extension-action-feedback";
-import type { ExtensionUpgradeBatch } from "./extension-actions";
+import { type ExtensionUpgradeBatch, resolveExtensionAction } from "./extension-actions";
 import { ExtensionFolderDropZone } from "./extension-folder-drop-zone";
 import { unavailableExtensionHarnesses } from "./extension-harness-availability";
 import { ExtensionListRow } from "./extension-list-row";
@@ -43,7 +43,6 @@ export interface ExtensionsPanelViewProps {
   ) => Promise<unknown>;
   onUpgrade?: (extension: ProjectExtensionInstance) => void;
   onOpen?: (extension: ProjectExtensionInstance) => void;
-  installingMarketplaceNames?: string[];
   onInstallMarketplace?: (extension: MarketplaceExtension) => void;
   onOpenMarketplace?: (extension: MarketplaceExtension) => void;
   upgradingAll?: boolean;
@@ -99,7 +98,6 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
     togglingInstanceId,
     togglingAutomation,
     upgradingInstanceIds = [],
-    installingMarketplaceNames = [],
     onToggle,
     onToggleAutomation,
     onUpgrade,
@@ -118,7 +116,6 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
   const visible = extensions.filter((extension) => matchesSearch(extension, search));
   const availableMarketplace = marketplace.filter((extension) => !extension.installed);
   const visibleMarketplace = availableMarketplace.filter((extension) => matchesMarketplaceSearch(extension, search));
-  const installingNames = new Set(installingMarketplaceNames);
   const upgradable = extensions.filter((extension) => extension.canUpgrade);
 
   return (
@@ -190,12 +187,15 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
           unavailableHarnesses={unavailableExtensionHarnesses(extension, harnesses, agents)}
           toggling={togglingInstanceId === extension.id}
           togglingAutomation={togglingAutomation}
-          upgrading={upgradingInstanceIds.includes(extension.id)}
-          action={actionStates[extension.id] ?? actionStates[extension.installName]}
-          onDismissAction={(expected) =>
-            onDismissAction?.(actionStates[extension.id] ? extension.id : extension.installName, expected)
+          upgrading={
+            upgradingInstanceIds.includes(extension.id) ||
+            ["queued", "running"].includes(resolveExtensionAction(actionStates, extension).action?.status ?? "")
           }
-          onRetryAction={() => onRetryAction?.(extension.id)}
+          action={resolveExtensionAction(actionStates, extension).action}
+          onDismissAction={(expected) =>
+            onDismissAction?.(resolveExtensionAction(actionStates, extension).key, expected)
+          }
+          onRetryAction={() => onRetryAction?.(resolveExtensionAction(actionStates, extension).key)}
           onToggle={(enabled) => onToggle?.(extension, enabled)}
           onToggleAutomation={async (automation, enabled) => onToggleAutomation?.(extension, automation, enabled)}
           onUpgrade={() => onUpgrade?.(extension)}
@@ -220,14 +220,9 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
         <MarketplaceExtensionRow
           key={extension.installName}
           extension={extension}
-          installing={installingNames.has(extension.installName)}
-          feedback={
-            <ExtensionActionFeedback
-              action={actionStates[extension.installName]}
-              onDismiss={() => onDismissAction?.(extension.installName)}
-              onRetry={() => onInstallMarketplace?.(extension)}
-            />
-          }
+          action={actionStates[extension.installName]}
+          onDismissAction={(expected) => onDismissAction?.(extension.installName, expected)}
+          onRetryAction={() => onRetryAction?.(extension.installName)}
           onInstall={() => onInstallMarketplace?.(extension)}
           onOpen={() => onOpenMarketplace?.(extension)}
         />

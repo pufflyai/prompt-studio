@@ -160,7 +160,7 @@
         "action": "Remplacer"
       },
       "feedback": {
-        "queued": "Mise à niveau en attente",
+        "queued": "En attente",
         "upgrading": "Mise à niveau de {{name}}",
         "updating": "Mise à jour de {{name}}",
         "updated": "Extension mise à jour",
@@ -169,7 +169,9 @@
         "retry": "Réessayer",
         "dismiss": "Fermer",
         "upgradingButton": "Mise à niveau",
-        "batchFailed": "{{count}} mises à niveau sur {{total}} ont échoué"
+        "batchFailed": "{{count}} mises à niveau sur {{total}} ont échoué",
+        "installingButton": "Installation",
+        "installedButton": "Installée"
       }
     }
   },

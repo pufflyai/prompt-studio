@@ -158,7 +158,7 @@
         "action": "置き換える"
       },
       "feedback": {
-        "queued": "アップグレード待機中",
+        "queued": "待機中",
         "upgrading": "{{name}} をアップグレード中",
         "updating": "{{name}} を更新中",
         "updated": "拡張機能を更新しました",
@@ -167,7 +167,9 @@
         "retry": "再試行",
         "dismiss": "閉じる",
         "upgradingButton": "更新中",
-        "batchFailed": "{{total}} 件中 {{count}} 件の更新に失敗しました"
+        "batchFailed": "{{total}} 件中 {{count}} 件の更新に失敗しました",
+        "installingButton": "インストール中",
+        "installedButton": "インストール済み"
       }
     }
   },

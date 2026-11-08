@@ -1,4 +1,5 @@
 import { Button, HStack, Stack, Text } from "@chakra-ui/react";
+import { Download } from "lucide-react";
 import { useState } from "react";
 import { ExtensionActionButton } from "./extension-action-button";
 import type { ExtensionActionState } from "./extension-action-feedback";
@@ -7,22 +8,24 @@ import { ExtensionUpgradeProgress } from "./extension-upgrade-progress";
 export default { title: "ProjectSettings/Extension action feedback" };
 export const UpgradeFeedback = () => {
   const [status, setStatus] = useState<ExtensionActionState["status"] | undefined>("running");
+  const [install, setInstall] = useState(false);
   const [completed, setCompleted] = useState(1);
   const [showBatch, setShowBatch] = useState(true);
   const labels = {
-    queued: "Queued for upgrade",
-    running: "Upgrading",
-    success: "Extension upgraded",
-    error: "Upgrade failed",
+    queued: "Waiting",
+    running: install ? "Installing" : "Upgrading",
+    success: install ? "Installed" : "Upgraded",
+    error: install ? "Install failed" : "Upgrade failed",
   };
   return (
     <Stack padding="lg" gap="md">
       <HStack>
         {(["queued", "running", "success", "error"] as const).map((value) => (
-          <Button key={value} size="sm" variant="outline" onClick={() => setStatus(value)}>
+          <Button key={value} onClick={() => setStatus(value)}>
             {value}
           </Button>
         ))}
+        <Button onClick={() => setInstall((value) => !value)}>Toggle fresh install</Button>
         <Button
           onClick={() => {
             setShowBatch(true);
@@ -56,13 +59,14 @@ export const UpgradeFeedback = () => {
       </HStack>
       <HStack borderBottomWidth="1px" borderColor="border.subtle" paddingY="sm" gap="md">
         <Stack flex="1" gap="0">
-          <Text textStyle="label/S/medium">Project Planner · v0.4.2</Text>
+          <Text textStyle="label/S/medium">{install ? "Pi" : "Project Planner"}</Text>
           <Text textStyle="label/XS" color="fg.muted">
-            Plan and track tickets across workspaces.
+            {install ? "Available extension" : "Installed extension"}
           </Text>
         </Stack>
         <ExtensionActionButton
           size="2xs"
+          icon={install ? <Download /> : undefined}
           action={
             status
               ? {
@@ -70,7 +74,7 @@ export const UpgradeFeedback = () => {
                   label: labels[status],
                   startedAt: status === "queued" ? undefined : Date.now() - 12000,
                   finishedAt: status === "success" || status === "error" ? Date.now() : undefined,
-                  error: status === "error" ? "The registry could not be reached." : undefined,
+                  error: status === "error" ? "Registry unavailable" : undefined,
                 }
               : undefined
           }
@@ -78,6 +82,12 @@ export const UpgradeFeedback = () => {
           onRetry={() => setStatus("running")}
           onDismiss={() => setStatus(undefined)}
         >
+          {install ? "Install" : "Upgrade"}
+        </ExtensionActionButton>
+      </HStack>
+      <HStack justifyContent="space-between">
+        <Text textStyle="label/S/medium">Notes</Text>
+        <ExtensionActionButton size="2xs" action={{ status: "queued", label: "Waiting" }}>
           Upgrade
         </ExtensionActionButton>
       </HStack>

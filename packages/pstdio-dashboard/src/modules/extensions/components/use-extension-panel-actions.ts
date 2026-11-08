@@ -11,7 +11,7 @@ import {
 } from "@/shared/extensions/use-project-extensions";
 import { useExtensionActions } from "./use-extension-actions";
 
-export const useExtensionPanelActions = (projectId: string | undefined, onInstalled: (name: string) => void) => {
+export const useExtensionPanelActions = (projectId: string | undefined) => {
   const { t } = useTranslation("projects");
   const feedback = useExtensionActions(projectId);
   const upgrade = useUpgradeProjectExtension(projectId);
@@ -21,7 +21,7 @@ export const useExtensionPanelActions = (projectId: string | undefined, onInstal
   const [replacement, setReplacement] = useState<{ name: string; retry: () => Promise<void> } | null>(null);
   const handleUpgrade = (extension: ProjectExtensionInstance) =>
     feedback.run(
-      extension.id,
+      extension.installName,
       {
         running: t("projectSettings.extensionsPanel.feedback.upgradingButton"),
         success: t("projectSettings.extensionsPanel.upgrade.succeeded"),
@@ -30,10 +30,14 @@ export const useExtensionPanelActions = (projectId: string | undefined, onInstal
       () => upgrade.mutateAsync({ instanceId: extension.id }),
     );
   const handleUpgradeAll = (extensions: ProjectExtensionInstance[]) =>
-    feedback.runBatch(extensions, t("projectSettings.extensionsPanel.feedback.queued"), handleUpgrade);
+    feedback.runBatch(
+      extensions.map((extension) => ({ id: extension.installName, extension })),
+      t("projectSettings.extensionsPanel.feedback.queued"),
+      ({ extension }) => handleUpgrade(extension),
+    );
   const handleToggle = (extension: ProjectExtensionInstance, enabled: boolean) =>
     feedback.run(
-      extension.id,
+      extension.installName,
       {
         running: t("projectSettings.extensionsPanel.feedback.updating", { name: extension.displayName }),
         success: t("projectSettings.extensionsPanel.feedback.updated"),
@@ -45,14 +49,13 @@ export const useExtensionPanelActions = (projectId: string | undefined, onInstal
     await feedback.run(
       extension.installName,
       {
-        running: t("projectSettings.extensionsPanel.feedback.installing", { name: extension.displayName }),
-        success: t("projectSettings.extensionsPanel.marketplace.installSucceeded", { name: extension.displayName }),
+        running: t("projectSettings.extensionsPanel.feedback.installingButton"),
+        success: t("projectSettings.extensionsPanel.feedback.installedButton"),
         failed: t("projectSettings.extensionsPanel.marketplace.installFailed"),
       },
       async () => {
         try {
           await install.mutateAsync({ installName: extension.installName, force });
-          onInstalled(extension.installName);
         } catch (error) {
           if (error instanceof PstdioApiError && error.code === "extension_already_installed" && !force) {
             setReplacement({ name: extension.displayName, retry: () => handleInstall(extension, true) });

@@ -87,7 +87,6 @@ const meta: CanvasMeta<typeof AvailableExtensionDetail> = {
     },
     metadata,
     loadingContributions: false,
-    installing: false,
     onBack: noop,
     onInstall: noop,
   },
@@ -103,7 +102,7 @@ export const RepositorySource: Story = {
 };
 export const Installing: Story = {
   id: "projectsettings-availableextensiondetail--installing",
-  args: { installing: true },
+  args: { action: { status: "running", label: "Installing", startedAt: Date.now() - 12000 } },
 };
 
 export const LongIdentity: Story = {

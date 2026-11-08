@@ -160,7 +160,7 @@
         "action": "Reemplazar"
       },
       "feedback": {
-        "queued": "Actualización en cola",
+        "queued": "En espera",
         "upgrading": "Actualizando {{name}}",
         "updating": "Actualizando {{name}}",
         "updated": "Extensión actualizada",
@@ -169,7 +169,9 @@
         "retry": "Reintentar",
         "dismiss": "Cerrar",
         "upgradingButton": "Actualizando",
-        "batchFailed": "{{count}} de {{total}} actualizaciones fallaron"
+        "batchFailed": "{{count}} de {{total}} actualizaciones fallaron",
+        "installingButton": "Instalando",
+        "installedButton": "Instalada"
       }
     }
   },

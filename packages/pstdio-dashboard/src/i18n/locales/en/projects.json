@@ -160,7 +160,7 @@
         "action": "Replace"
       },
       "feedback": {
-        "queued": "Queued for upgrade",
+        "queued": "Waiting",
         "upgrading": "Upgrading {{name}}",
         "updating": "Updating {{name}}",
         "updated": "Extension updated",
@@ -169,7 +169,9 @@
         "retry": "Retry",
         "dismiss": "Dismiss",
         "upgradingButton": "Upgrading",
-        "batchFailed": "{{count}} of {{total}} upgrades failed"
+        "batchFailed": "{{count}} of {{total}} upgrades failed",
+        "installingButton": "Installing",
+        "installedButton": "Installed"
       }
     },
     "machineTokens": {

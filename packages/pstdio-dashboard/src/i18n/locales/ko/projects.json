@@ -158,7 +158,7 @@
         "action": "교체"
       },
       "feedback": {
-        "queued": "업그레이드 대기 중",
+        "queued": "대기 중",
         "upgrading": "{{name}} 업그레이드 중",
         "updating": "{{name}} 업데이트 중",
         "updated": "확장 기능 업데이트 완료",
@@ -167,7 +167,9 @@
         "retry": "다시 시도",
         "dismiss": "닫기",
         "upgradingButton": "업그레이드 중",
-        "batchFailed": "업그레이드 {{total}}개 중 {{count}}개 실패"
+        "batchFailed": "업그레이드 {{total}}개 중 {{count}}개 실패",
+        "installingButton": "설치 중",
+        "installedButton": "설치됨"
       }
     }
   },

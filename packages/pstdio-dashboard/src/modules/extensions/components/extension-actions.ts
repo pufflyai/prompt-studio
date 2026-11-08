@@ -132,3 +132,13 @@ export const getExtensionActions = (client: QueryClient, projectId: string | und
   }
   return owner;
 };
+
+// Installs begin with a catalog name before an instance id exists. Every installed surface must
+// resolve that same owner until its result is dismissed; retry must use the resolved key too.
+export const resolveExtensionAction = (
+  actions: Record<string, ExtensionActionState>,
+  extension: { installName: string },
+) => {
+  const key = extension.installName;
+  return { key, action: actions[key] };
+};
