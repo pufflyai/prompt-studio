@@ -7,10 +7,14 @@ export const writeCompositionPackageConsumer = (directory: string) => {
     `
 import { createClient } from "@pstdio/sdk/client";
 import type { ProjectComposition } from "@pstdio/sdk/api";
-import { defineCommand, workbenchCommands } from "@pstdio/sdk/extensions";
+import { defineCommand, defineNavigationTree, workbenchCommands } from "@pstdio/sdk/extensions";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 
 const page = { kind: "page" as const, extensionId: "example.reader", id: "desk" };
+const related = defineNavigationTree({
+  id: "related", owner: page, view: { kind: "view", extensionId: "example.related", id: "items" }, optionalView: true,
+});
+if (!related.optionalView) throw new Error("Optional navigation view declaration was lost");
 let saved: ProjectComposition = { defaultPage: null, resourceOpeners: [] };
 const methods: string[] = [];
 const client = createClient({ baseUrl: "https://composition.test", fetch: async (input, init) => {
