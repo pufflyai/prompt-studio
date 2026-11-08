@@ -8,6 +8,7 @@ import { runWindowsPowerShell } from "../cli/windows-user-path";
 import { openPerformanceEndpoint } from "./performance-endpoint";
 
 const roots: string[] = [];
+const commands = new Set<{ controller: AbortController; done: Promise<string> }>();
 const endpointPath = () => {
   const root = mkdtempSync(join(tmpdir(), "pstdio-perf-"));
   roots.push(root);
@@ -30,7 +31,11 @@ const read = async (path: string, credential?: string) => {
   });
 };
 
-afterEach(() => {
+afterEach(async () => {
+  // A timed-out ACL probe must stop before its credential directory is removed.
+  for (const command of commands) command.controller.abort();
+  await Promise.allSettled([...commands].map((command) => command.done));
+  commands.clear();
   for (const root of roots) rmSync(root, { force: true, recursive: true });
   roots.length = 0;
 });
@@ -98,34 +103,48 @@ describe("performance endpoint", () => {
     }
   });
 
-  test.skipIf(process.platform !== "win32")("Windows grants credential access only to the current user", async () => {
-    const path = endpointPath();
-    const endpoint = await openPerformanceEndpoint(path, () => ({ ok: true }));
-    try {
-      // Query both ACLs in one PowerShell process; startup dominates the check on Windows.
-      const output = await runWindowsPowerShell(
-        `
+  test.skipIf(process.platform !== "win32")(
+    "Windows grants credential access only to the current user",
+    async () => {
+      const started = performance.now();
+      const path = endpointPath();
+      const endpoint = await openPerformanceEndpoint(path, () => ({ ok: true }));
+      console.info(`Windows ACL endpoint ready in ${performance.now() - started}ms`);
+      try {
+        // Query both ACLs in one PowerShell process; startup dominates the check on Windows.
+        const controller = new AbortController();
+        const probing = performance.now();
+        const done = runWindowsPowerShell(
+          `
+$clock = [System.Diagnostics.Stopwatch]::StartNew()
 $sid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
 $directory = [System.IO.Directory]::GetAccessControl([System.IO.Path]::GetDirectoryName($env:PSTDIO_ACL_TEST_PATH))
 $file = [System.IO.File]::GetAccessControl($env:PSTDIO_ACL_TEST_PATH)
 @{
   sid = $sid
+  aclMs = $clock.ElapsedMilliseconds
   directory = @($directory.GetAccessRules($true, $true, [System.Security.Principal.SecurityIdentifier]) | ForEach-Object { $_.IdentityReference.Value })
   file = @($file.GetAccessRules($true, $true, [System.Security.Principal.SecurityIdentifier]) | ForEach-Object { $_.IdentityReference.Value })
 } | ConvertTo-Json -Compress
 `,
-        { PSTDIO_ACL_TEST_PATH: path },
-      );
-      const permissions = JSON.parse(output);
-      expect(permissions.sid).toMatch(/^S-1-5-\d+(?:-\d+)+$/);
-      expect(permissions.directory).toEqual([permissions.sid]);
-      expect(permissions.file).toEqual([permissions.sid]);
-      expect(await read(path)).toEqual({ ok: true });
-      expect(await read(path, "wrong-token")).toBeNull();
-    } finally {
-      await endpoint.close();
-    }
-  });
+          { PSTDIO_ACL_TEST_PATH: path },
+          controller.signal,
+        );
+        commands.add({ controller, done });
+        const output = await done;
+        const permissions = JSON.parse(output);
+        console.info(`Windows ACL probe: ${performance.now() - probing}ms total, ${permissions.aclMs}ms ACL lookup`);
+        expect(permissions.sid).toMatch(/^S-1-5-\d+(?:-\d+)+$/);
+        expect(permissions.directory).toEqual([permissions.sid]);
+        expect(permissions.file).toEqual([permissions.sid]);
+        expect(await read(path)).toEqual({ ok: true });
+        expect(await read(path, "wrong-token")).toBeNull();
+      } finally {
+        await endpoint.close();
+      }
+    },
+    5_000,
+  );
 });
 
 test("an oversized credential cannot keep feeding a rejected connection", async () => {

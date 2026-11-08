@@ -10,6 +10,20 @@ const matrixPlan = <T extends { priority: TestPriority }>(id: string, rows: T[],
   });
 };
 
+const quarantinePlan = (scope: Scope) => {
+  if (!scope.production) return [];
+  const names = scope.quarantineBunOs.map((os) => `quarantined_bun_tests (${os})`);
+  return [
+    { id: "quarantined_bun_tests", priority: "P2" as const, count: names.length, names },
+    ...(scope.windowsOnly ? [] : ["quarantined_browser_tests", "quarantined_native_ui_tests"]).map((id) => ({
+      id,
+      priority: "P2" as const,
+      count: 1,
+      names: [id],
+    })),
+  ];
+};
+
 export const plannedCiJobs = (scope: Scope) => {
   const jobs: PlannedJob[] = [];
   const add = (id: string, names = [id], priority = priorityForJob(id)) =>
@@ -43,7 +57,7 @@ export const plannedCiJobs = (scope: Scope) => {
   if (scope.stage === "full") {
     jobs.push(...matrixPlan("e2e", scope.appMatrix, (row) => `${row.shard}/${row.total}`));
     jobs.push(...matrixPlan("packaged_and_vite_e2e", scope.packagedMatrix, (row) => `${row.suite} ${row.shard}`));
-    add("e2e_cli", ["e2e_cli"], scope.production ? "P2" : "P1");
+    if (!scope.windowsOnly) add("e2e_cli", ["e2e_cli"], scope.production ? "P2" : "P1");
     add(
       "build_clients",
       scope.clientMatrix.map((row) => `build_clients (${row.target} ${row.shard}/${row.shards})`),
@@ -94,15 +108,7 @@ export const plannedCiJobs = (scope: Scope) => {
       "P2",
     );
   }
-  if (scope.production) {
-    add(
-      "quarantined_bun_tests",
-      scope.quarantineBunOs.map((os) => `quarantined_bun_tests (${os})`),
-      "P2",
-    );
-    add("quarantined_browser_tests", ["quarantined_browser_tests"], "P2");
-    add("quarantined_native_ui_tests", ["quarantined_native_ui_tests"], "P2");
-  }
+  jobs.push(...quarantinePlan(scope));
   return jobs;
 };
 export const requiredCiJobs = (scope: Scope) => plannedCiJobs(scope).map((job) => job.id);

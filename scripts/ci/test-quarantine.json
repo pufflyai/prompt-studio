@@ -1133,5 +1133,16 @@
       "Planner RP511 files_105/personal-history-main-control.json and personal-history-main-control.log: main9781fda34 diagnostic control, one macOS case/3assertions/5064.97ms, not native Linux qualification."
     ],
     "removeWhen": "Identify and repair the slow phase, then complete the entire original case in one first-attempt native Linux x64 execution within its unchanged 30000 ms allowance, preserving all 1000 write/publish pairs and all three snapshot/newer-tail/other-device/read-cursor assertions. Retain phase diagnostics until resolved. Missing, skipped, cancelled, duplicate or stale execution remains blocking; no retries, prewarming, reduced workload or raised limits."
+  },
+  {
+    "runner": "bun",
+    "file": "clients/desktop/src/performance/performance-endpoint.p0.test.ts",
+    "name": "Windows grants credential access only to the current user",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "owner": "PS-151 / Windows credential inspection",
+    "reason": "Authorized release quarantine: the first stable desktop producer exceeded the unchanged 5000 ms allowance at 5001.34 ms while the PowerShell ACL inspection was pending. Incorrect permissions have not been established. Keep the current-user-only directory/file ACL assertions and valid/invalid credential checks. Added phase timings distinguish endpoint preparation, process overhead and ACL lookup; cleanup cancels and drains a pending probe before deleting its directory.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/42421804580/job/128551796344"],
+    "removeWhen": "Fix the measured slow Windows phase, then complete the entire first-attempt native Windows x64 case within its unchanged 5000 ms allowance, with both sole-SID ACL checks, good/bad credential assertions, and clean child-process shutdown. Preserve all platforms and do not retry to obtain a pass."
   }
 ]

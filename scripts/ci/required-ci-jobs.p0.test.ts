@@ -147,3 +147,36 @@ test("production accepts every supported harness version and requires the Window
     ).outcome,
   ).toBe("failure");
 });
+
+test("Windows diagnostics require all selected Windows shards and report a separate gate", () => {
+  const scope = resolveCiScope({ ...scopeFixture(), event: "workflow_dispatch", profile: "windows" });
+  const plan = plannedCiJobs(scope);
+  expect(plan.map((row) => row.id).sort()).toEqual([
+    "build_clients",
+    "harness_cli_support",
+    "packaged_toolchain",
+    "quarantined_bun_tests",
+    "scope",
+    "static_checks",
+    "windows_database_tests",
+    "windows_test_and_build",
+  ]);
+  expect(plan.find((row) => row.id === "windows_database_tests")?.count).toBe(12);
+  expect(plan.find((row) => row.id === "windows_test_and_build")?.count).toBe(5);
+  expect(plan.find((row) => row.id === "packaged_toolchain")?.count).toBe(4);
+  const observed = plan.flatMap((job) =>
+    job.names!.map((name) => ({ name, status: "completed", conclusion: "success" })),
+  );
+  expect(
+    evaluateCiGate(plan, [...observed, { name: "windows_ci_passed", status: "queued", conclusion: null }], false, true)
+      .outcome,
+  ).toBe("success");
+  expect(
+    evaluateCiGate(
+      plan,
+      observed.filter((row) => !row.name.includes("cli-win-arm64 2/2")),
+      false,
+      true,
+    ).outcome,
+  ).toBe("failure");
+});
