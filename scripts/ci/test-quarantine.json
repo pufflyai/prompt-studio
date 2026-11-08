@@ -831,5 +831,19 @@
       "https://github.com/pufflyai/prompt-studio/actions/runs/42441508001/artifacts/13602600439"
     ],
     "removeWhen": "Identify and repair cold native Linux x64 launch/default-install/project-setup latency, then complete this entire case in its first ordinary native execution within the unchanged 30000 ms allowance. Preserve every cold fixture, both projects and all transport, editor, security, CLI and cleanup assertions; no retries, prewarming, reduced defaults or raised limits. Missing, skipped, cancelled or stale execution remains blocking."
+  },
+  {
+    "runner": "subnav-benchmark",
+    "file": "packages/e2e/src/perf/subnav.p3.bench.ts",
+    "name": "sessions/repeat requests",
+    "platforms": ["linux"],
+    "arch": "x64",
+    "owner": "PS-151 / navigation snapshot read lifecycle",
+    "reason": "User-authorized functional request debt. First attempt 42443218459/job128616715673 completed all 120 original samples but retained one Sessions/repeat pagination net::ERR_ABORTED with real client AbortError proof. The same cursor previously completed 200/outcome OK, and provider snapshot replacement cancels lazy reads, but current authoritative acceptance/coverage is not proven. Do not classify the cancellation as harmless or a flake. This entry defers the entire exact request contract, including other request failures in that group; other destination/visit request contracts and global browser, reachability, setup and cleanup failures still block. Retain every raw error/timing, all 30 ordered samples per group, workload and unchanged budgets.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/42443218459/job/128616715673",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/42443218459/artifacts/13602079035"
+    ],
+    "removeWhen": "Repair or prove current authoritative snapshot coverage for disposed child reads, then execute the complete Linux x64 workload once with no unresolved request failure in all 30 Sessions/repeat samples and all original timing, reachability, history and cleanup assertions intact. Restore this exact request contract to the stable gate. Missing, skipped, cancelled or stale evidence remains blocking; no retries, prewarming, reduced workload or raised limits."
   }
 ]

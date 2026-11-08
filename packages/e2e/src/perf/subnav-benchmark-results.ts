@@ -1,7 +1,8 @@
 import { findBudgetFailures, subnavBudgets } from "pstdio-benchmarks";
 import type { SubnavSample } from "./subnav-benchmark-clock";
+import { classifySubnavRequests } from "./subnav-request-outcomes";
 
-type Sample = Pick<SubnavSample, "destination" | "visit" | "structureMs" | "dataMs" | "editorMs">;
+type Sample = Pick<SubnavSample, "destination" | "visit" | "structureMs" | "dataMs" | "editorMs" | "requests">;
 
 export const subnavBenchmarkResults = (samples: Sample[], sampleCount: number) => {
   const order = ["ticket/first", "sessions/first", "ticket/repeat", "sessions/repeat"];
@@ -11,6 +12,7 @@ export const subnavBenchmarkResults = (samples: Sample[], sampleCount: number) =
   )
     throw new Error("Navigation benchmark must contain every ordered measurement exactly once");
   const budgetErrors: string[] = [];
+  const requestErrors: string[] = [];
   const specs = order.flatMap((group) => {
     const rows = samples.filter((sample) => `${sample.destination}/${sample.visit}` === group);
     const metrics = [
@@ -20,7 +22,7 @@ export const subnavBenchmarkResults = (samples: Sample[], sampleCount: number) =
         ? [{ key: "editorMs", name: "editor", budget: subnavBudgets.editorMs.value }]
         : []),
     ];
-    return metrics.map((metric) => {
+    const metricSpecs = metrics.map((metric) => {
       const title = `${group} ${metric.name}`;
       const values = rows.map((row) => row[metric.key as "structureMs" | "dataMs" | "editorMs"]);
       if (values.some((value) => value === undefined || !Number.isFinite(value) || value < 0))
@@ -42,6 +44,25 @@ export const subnavBenchmarkResults = (samples: Sample[], sampleCount: number) =
         ],
       };
     });
+    const failures = rows.flatMap((row) =>
+      classifySubnavRequests(row.requests).errors.map((request) => `${group}: ${JSON.stringify(request)}`),
+    );
+    requestErrors.push(...failures);
+    return [
+      ...metricSpecs,
+      {
+        title: `${group} requests`,
+        file: "src/perf/subnav.p3.bench.ts",
+        tests: [
+          {
+            annotations: [],
+            results: [
+              { status: failures.length ? "failed" : "passed", errors: failures.map((message) => ({ message })) },
+            ],
+          },
+        ],
+      },
+    ];
   });
-  return { specs, budgetErrors };
+  return { specs, budgetErrors, requestErrors };
 };

@@ -198,7 +198,6 @@ try {
     record("dataMs", "data", sample.dataMs);
     record("editorMs", "editor", sample.editorMs);
   }
-  const budgetResult = subnavBenchmarkResults(samples, sampleCount);
   const report = {
     label,
     measuredAt: new Date().toISOString(),
@@ -227,12 +226,10 @@ try {
   for (const sample of samples) {
     const classified = classifySubnavRequests(sample.requests);
     sample.requests = classified.requests;
-    errors.push(
-      ...classified.errors.map((request) => `${sample.destination}/${sample.visit}: ${JSON.stringify(request)}`),
-    );
   }
+  const budgetResult = subnavBenchmarkResults(samples, sampleCount);
   const browserErrors = errors.map((message) => ({ message }));
-  errors.push(...budgetResult.budgetErrors);
+  errors.push(...budgetResult.requestErrors, ...budgetResult.budgetErrors);
   await Bun.write(join(output, "results.json"), JSON.stringify(report, null, 2));
   executionReport = { suites: [{ specs: budgetResult.specs }], errors: browserErrors };
   console.info(JSON.stringify({ label, summary, errors }, null, 2));
