@@ -817,5 +817,19 @@
     "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/42434991559/job/128591888257"],
     "removeWhen": "Diagnose and repair first-ticket editor latency, then complete the entire 120-sample Linux x64 workload in one first-attempt run with all thirty ticket/first editor samples below the original 1325 ms budget and every original workload, timing, request, reachability and cleanup assertion intact. Missing, skipped, cancelled or stale execution remains blocking; no retries, prewarming or raised limits.",
     "failureKind": "performance"
+  },
+  {
+    "runner": "packaged-desktop",
+    "file": "clients/desktop/src/e2e/packaged-app.p1.spec.ts",
+    "name": "starts without editors and serves both authenticated transport paths",
+    "platforms": ["linux"],
+    "arch": "x64",
+    "owner": "PS-151 / Linux desktop cold project setup",
+    "reason": "User-authorized setup debt. Hosted Linux x64 first attempt 42441508001/job128611579214 exhausted the existing 30000 ms case during its first POST /v1/projects. Runtime app readiness took 9635 ms; Onboarding dependency preparation took 9182 ms and its default install 10660 ms. Project setup reached repo-extension/default checkout without completing before cancellation. The precise slow checkout or installation cause is unproven. Retain the fresh home/cache, real defaults, both projects, editor exclusion, both transport authorization paths, version/token checks, CLI and cleanup.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/42441508001/job/128611579214",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/42441508001/artifacts/13602600439"
+    ],
+    "removeWhen": "Identify and repair cold native Linux x64 launch/default-install/project-setup latency, then complete this entire case in its first ordinary native execution within the unchanged 30000 ms allowance. Preserve every cold fixture, both projects and all transport, editor, security, CLI and cleanup assertions; no retries, prewarming, reduced defaults or raised limits. Missing, skipped, cancelled or stale execution remains blocking."
   }
 ]
