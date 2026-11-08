@@ -20,7 +20,6 @@ import {
   type WorkspaceProviderHandle,
 } from "./workspace-provider-runtime";
 import { isBuiltInProviderId, normalizeResult } from "./workspace-provider-service";
-import { cleanupWorkspaceWorktree } from "./worktree-cleanup";
 
 export type WorkspaceProviderLifecycleDeps = WorkspacesRouteDeps;
 
@@ -237,7 +236,7 @@ export const cleanupProviderBackedWorkspace = async (
   workspace: WorkspaceRecord,
 ) => {
   await cancelWorkspaceSessions(deps, workspace.id);
-  if (isBuiltInProviderId(workspace.provider_id)) return cleanupWorkspaceWorktree(deps, workspace);
+  if (isBuiltInProviderId(workspace.provider_id)) return false;
 
   const pending = await persistOperation(deps, workspace, "delete", "deleting");
   const operationId = pending.provider_operation_id!;
@@ -265,7 +264,7 @@ export const cleanupProviderBackedWorkspace = async (
         providerRef: pending.provider_ref_json as WorkspaceProviderRef,
       }),
     );
-    return false;
+    return true;
   } catch (error) {
     await updateFailedOperation(deps, pending, { kind: "delete", operationId, state: "deleting", error });
     throw error;

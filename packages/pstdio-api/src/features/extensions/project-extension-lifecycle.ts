@@ -8,6 +8,8 @@ import { apiLogger } from "../../lib/logger";
 import { ExtensionUpgradeUnavailableError } from "../../services/extension-upgrade-unavailable-error";
 import type { RouteDeps } from "../deps";
 import { provisionProjectWorkspaces } from "../workspaces/provision-coordinator";
+import { runtimeProviderId } from "../workspaces/workspace-provider-identity";
+import { reconcileProviderWorkspaces } from "../workspaces/workspace-provider-reconciliation";
 import type { ExtensionsRouteDeps } from "./deps";
 import { setDeviceAutomationEnabled } from "./device-automations";
 import { findExtensionCatalogEntry } from "./extension-catalog";
@@ -31,6 +33,18 @@ export type ProjectExtensionLifecycleRouteDeps = ExtensionsRouteDeps & {
 
 export class ExtensionProviderInUseError extends Error {}
 
+const extensionProviderWorkspaces = async (deps: LifecycleDeps, projectId: string, extensionId: string) => {
+  const prefix = `${extensionId}.workspace-type.`;
+  return (await deps.workspaceService.listForProviderReconciliation(projectId)).filter((workspace) =>
+    runtimeProviderId(workspace.provider_id).startsWith(prefix),
+  );
+};
+
+const refreshProviderWorkspaces = async (deps: LifecycleDeps, projectId: string, extensionId: string) => {
+  if ((await extensionProviderWorkspaces(deps, projectId, extensionId)).length)
+    await reconcileProviderWorkspaces(deps, projectId);
+};
+
 export const completeProjectExtensionInstallation = async (
   deps: LifecycleDeps,
   projectId: string,
@@ -47,6 +61,7 @@ export const completeProjectExtensionInstallation = async (
   }
   if (selected && (await extensionChangesWorkspaceProvisioning(deps, selected.installedSource)))
     await (deps.provisionProjectWorkspaces ?? provisionProjectWorkspaces)(deps, projectId);
+  if (selected) await refreshProviderWorkspaces(deps, projectId, selected.installedSource.extension_id);
 };
 
 export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
@@ -96,6 +111,7 @@ export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
     const extensionId = existing.installedSource.extension_id;
     const updated = await deps.extensionService.setProjectExtensionEnabled(instanceId, enabled);
     if (!updated) return null;
+    await refreshProviderWorkspaces(deps, projectId, extensionId);
     // Shared only after this device accepted the change, so other devices never get a state it refused.
     // A leftover copy that this device does not run leaves the shared choice alone.
     if (selectPublicationSource(await copiesOf(projectId, extensionId))?.instance.id === instanceId)
@@ -138,10 +154,7 @@ export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
     const existing = await deps.extensionService.getProjectExtensionInstance(input.projectId, input.instanceId);
     if (!existing) return null;
     const requiresProvisioning = await changesWorkspaceProvisioning(existing.installedSource);
-    const providerPrefix = `${existing.installedSource.extension_id}.workspace-type.`;
-    const providerWorkspaces = (await deps.workspaceService.listForProviderReconciliation(input.projectId)).filter(
-      (workspace) => workspace.provider_id.startsWith(providerPrefix),
-    );
+    const providerWorkspaces = await extensionProviderWorkspaces(deps, input.projectId, existing.installedSource.extension_id);
     if (providerWorkspaces.length > 0) {
       throw new ExtensionProviderInUseError(
         `Extension still owns ${providerWorkspaces.length} provider-backed workspace(s). Delete them before uninstalling.`,

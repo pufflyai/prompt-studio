@@ -4,7 +4,9 @@ import { join, resolve } from "node:path";
 import { benchmarkSampleCount } from "pstdio-benchmarks";
 import { recordMeasurement } from "pstdio-benchmarks/writer";
 import { git } from "pstdio-wt";
-import { cleanupWorkspaceWorktree } from "./worktree-cleanup";
+import { createTestApp } from "../../test-utils/create-test-app";
+import { enableGitWorkspaceProvider } from "../../test-utils/git-workspace-provider.fixture";
+import { deleteProviderBackedWorkspace } from "./workspace-provider-lifecycle";
 
 // Run manually on a disposable filesystem, never against existing workspaces.
 // BENCH_ROOT selects the filesystem; /tmp can be a RAM disk and is not the default.
@@ -69,22 +71,35 @@ writeFileSync(join(repo, "README.md"), "Workspace cleanup fixture\n");
 await git(repo, ["add", "."]);
 await git(repo, ["commit", "-qm", "Fixture"]);
 
+const previousDefaults = process.env.PSTDIO_DEFAULT_EXTENSIONS;
+process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
+const app = await createTestApp({ storageRoot: join(root, "storage") });
+const projectResponse = await app.app.request("/v1/projects", {
+  method: "POST", headers: { "content-type": "application/json" },
+  body: JSON.stringify({ name: "Cleanup benchmark", initial_workspace: { provider_id: "pstdio.root", params: { path: repo } } }),
+});
+if (projectResponse.status !== 201) throw new Error(await projectResponse.text());
+const project = await projectResponse.json();
+await enableGitWorkspaceProvider(app, project.id);
+
 const prepare = async (run: string) => {
   const workspaces = [];
   for (let index = 0; index < count; index++) {
-    const branch = `bench-${run}-${index}`;
-    const worktreeRoot = join(root, "home", "workspaces", branch);
+    const workspace = await app.deps.workspaceService.createStandalone({
+      project_id: project.id, name: `bench-${run}-${index}`, provider_id: "pstdio.worktree", provider_state: "ready",
+    });
+    const branch = `workspace/${workspace.workspace_shorthand}-${workspace.id}`;
+    const worktreeRoot = join(root, "home", "workspaces", workspace.id);
     await git(repo, ["worktree", "add", "-qb", branch, worktreeRoot]);
     for (let file = 0; file < filesPerWorkspace; file++) {
       const folder = join(worktreeRoot, "node_modules", `package-${Math.floor(file / 50)}`);
       if (file % 50 === 0) mkdirSync(folder, { recursive: true });
       writeFileSync(join(folder, `${file}.js`), "x".repeat(1024));
     }
-    workspaces.push({
-      provider_id: "pstdio.worktree",
-      provider_ref_json: { data: { sourceRoot: repo, worktreeRoot } },
-      branch,
-    });
+    workspaces.push((await app.deps.workspaceService.updateProviderProjection(workspace.id, {
+      branch, root_path: worktreeRoot, execution_kind: "local", provider_state: "ready",
+      provider_ref_json: { version: 1, data: { sourceRoot: repo, worktreeRoot, relativePath: "" } },
+    }))!);
   }
   return workspaces;
 };
@@ -131,7 +146,7 @@ const measure = async (workspaces: Awaited<ReturnType<typeof prepare>>, concurre
           active++;
           peakActive = Math.max(peakActive, active);
           try {
-            await cleanupWorkspaceWorktree({} as never, workspace);
+            await deleteProviderBackedWorkspace(app.deps, workspace);
           } finally {
             active--;
           }
@@ -163,7 +178,7 @@ try {
     for (const limit of ordered) {
       const workspaces = await prepare(`${repeat}-${limit}`);
       const result = await measure(workspaces, limit);
-      if (workspaces.some((workspace) => existsSync(workspace.provider_ref_json.data.worktreeRoot))) {
+      if (workspaces.some((workspace) => existsSync(workspace.root_path!))) {
         throw new Error("Cleanup left a benchmark worktree on disk.");
       }
       console.log(JSON.stringify({ repeat, ...result }));
@@ -183,6 +198,9 @@ try {
     }
   }
 } finally {
+  await app.close();
+  if (previousDefaults === undefined) delete process.env.PSTDIO_DEFAULT_EXTENSIONS;
+  else process.env.PSTDIO_DEFAULT_EXTENSIONS = previousDefaults;
   if (previousHome === undefined) delete process.env.PSTDIO_HOME;
   else process.env.PSTDIO_HOME = previousHome;
   rmSync(root, { recursive: true, force: true });

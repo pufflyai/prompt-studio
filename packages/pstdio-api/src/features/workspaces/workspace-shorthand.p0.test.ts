@@ -1,7 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 import { createWorkspacesApi } from "../extensions/command-environment/workspaces";
 import { createProviderBackedWorkspace } from "./workspace-provider-service";
-import { setupWorkspaceWorktree } from "./worktree-setup";
 
 const invalidShorthands = [
   "../outside",
@@ -41,14 +40,4 @@ describe("workspace shorthand identifiers", () => {
     expect(find).not.toHaveBeenCalled();
   });
 
-  test.each(invalidShorthands)("rejects unsafe worktree identifier %s before accessing Git", async (shorthand) => {
-    await expect(
-      setupWorkspaceWorktree({
-        repoPath: "/missing-repository",
-        workspaceId: "workspace-1",
-        workspaceShorthand: shorthand,
-        base: "HEAD",
-      }),
-    ).rejects.toThrow("Workspace shorthand");
-  });
 });

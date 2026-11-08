@@ -94,8 +94,8 @@ describe("reconcileProviderWorkspaces", () => {
     });
   });
 
-  test("does not touch built-in or settled workspaces", async () => {
-    const workspace = makeWorkspace({ provider_id: "pstdio.worktree", provider_state: "ready" });
+  test("does not reconcile the built-in project folder", async () => {
+    const workspace = makeWorkspace({ provider_id: "pstdio.root", provider_state: "ready" });
     const { deps, updateProviderProjection } = makeDeps({}, workspace);
 
     await reconcileProviderWorkspaces(deps, "project-1");

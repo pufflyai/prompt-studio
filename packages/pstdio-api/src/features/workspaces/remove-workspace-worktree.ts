@@ -1,7 +1,7 @@
 import { type ExtensionWorkspace, worktreeEvents } from "pstdio-api-contracts/extension-kernel";
 import { fireExtensionEventAsync } from "../extensions/extension-event-runtime";
 import type { WorkspacesRouteDeps } from "./deps";
-import { cleanupWorkspaceWorktree } from "./worktree-cleanup";
+import { deleteProviderBackedWorkspace } from "./workspace-provider-lifecycle";
 
 type WorkspaceRecord = NonNullable<Awaited<ReturnType<WorkspacesRouteDeps["workspaceService"]["get"]>>>;
 
@@ -14,12 +14,13 @@ export const removeWorkspaceWorktree = async (
   deps: WorkspacesRouteDeps,
   workspace: WorkspaceRecord,
   overrides: {
-    cleanup?: typeof cleanupWorkspaceWorktree;
+    cleanup?: typeof deleteProviderBackedWorkspace;
     fireEvent?: typeof fireExtensionEventAsync;
   } = {},
 ) => {
   const worktreePath = workspace.root_path;
-  const cleanup = overrides.cleanup ?? cleanupWorkspaceWorktree;
+  if (!worktreePath) return false;
+  const cleanup = overrides.cleanup ?? deleteProviderBackedWorkspace;
   const removed = await cleanup(deps, workspace);
   if (!removed || !worktreePath) return false;
 

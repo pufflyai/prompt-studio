@@ -39,3 +39,30 @@ test("targeted recovery skips pending siblings while background recovery still i
   await reconcileProviderWorkspaces(deps, "project-1");
   expect(resolved).toEqual(["home", "home", "other"]);
 });
+
+test("a ready local provider becomes unavailable without losing its target and recovers when enabled", async () => {
+  const workspace = makeWorkspace({ execution_kind: "local", root_path: "/owned/workspace", provider_state: "ready" });
+  const reference = workspace.provider_ref_json;
+  let enabled = false;
+  const deps = {
+    workspaceService: {
+      listForProviderReconciliation: async () => [workspace],
+      updateProviderProjection: async (_id: string, patch: Record<string, unknown>) => Object.assign(workspace, patch),
+    },
+    workspaceProviderRuntime: {
+      find: async () => enabled ? {
+        context: {},
+        provider: { resolve: async () => ({
+          state: "ready", executionKind: "local", providerRef: reference,
+          executionTarget: { kind: "local", rootPath: "/owned/workspace" },
+          capabilities: { files: "write", diff: true, merge: true, rebase: true, delete: true },
+        }) },
+      } : undefined,
+    },
+  } as never;
+  await reconcileProviderWorkspaces(deps, "project-1");
+  expect(workspace).toMatchObject({ provider_state: "provider_missing", root_path: "/owned/workspace", provider_ref_json: reference });
+  enabled = true;
+  await reconcileProviderWorkspaces(deps, "project-1");
+  expect(workspace).toMatchObject({ provider_state: "ready", root_path: "/owned/workspace", provider_ref_json: reference });
+});

@@ -519,7 +519,14 @@ describe("createCommandEnvironment workspaces", () => {
     const env = createCommandEnvironment(
       {
         extensionStorageService: makeStorageService(),
-
+        workspaceProviderRuntime: { find: async () => ({ context: {}, provider: {
+          create: async () => ({
+            state: "ready", executionKind: "local", branch: "workspace/T-1_A1",
+            providerRef: { version: 1, data: { directory: "/repo/.worktrees/T-1_A1" } },
+            executionTarget: { kind: "local", rootPath: "/repo/.worktrees/T-1_A1" },
+            capabilities: { files: "write", diff: true, merge: true, rebase: true, delete: true },
+          }),
+        } }) },
         workspaceService: {
           setInitializing: async () => null,
           getDefault: async () => ({
@@ -552,13 +559,6 @@ describe("createCommandEnvironment workspaces", () => {
       },
       {
         runWorkspaceProvisioning: async (_deps, input) => input.workspace,
-        setupWorkspaceWorktree: async () => ({
-          branch: "workspace/T-1_A1",
-          worktreePath: "/repo/.worktrees/T-1_A1",
-          rootPath: "/repo/.worktrees/T-1_A1",
-          sourceRoot: "/repo",
-          relativePath: "",
-        }),
       },
     );
 
@@ -825,7 +825,14 @@ describe("createCommandEnvironment workspaces worktree mode", () => {
     const env = createCommandEnvironment(
       {
         extensionStorageService: makeStorageService(),
-
+        workspaceProviderRuntime: { find: async () => ({ context: {}, provider: {
+          create: async () => ({
+            state: "ready", executionKind: "local", branch: "workspace/T-1_A1",
+            providerRef: { version: 1, data: { directory: "/repo/.worktrees/T-1_A1" } },
+            executionTarget: { kind: "local", rootPath: "/repo/.worktrees/T-1_A1" },
+            capabilities: { files: "write", diff: true, merge: true, rebase: true, delete: true },
+          }),
+        } }) },
         workspaceService: {
           setInitializing: async () => null,
           getDefault: async () => ({
@@ -863,13 +870,6 @@ describe("createCommandEnvironment workspaces worktree mode", () => {
           provisioned.push(input as never);
           return input.workspace;
         },
-        setupWorkspaceWorktree: async () => ({
-          branch: "workspace/T-1_A1",
-          worktreePath: "/repo/.worktrees/T-1_A1",
-          rootPath: "/repo/.worktrees/T-1_A1",
-          sourceRoot: "/repo",
-          relativePath: "",
-        }),
       },
     );
 

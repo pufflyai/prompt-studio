@@ -248,8 +248,7 @@ const reconcileProviderWorkspacePass = async (
     (workspace) =>
       !isBuiltInProviderId(workspace.provider_id) &&
       (workspace.provider_operation_id !== null ||
-        (workspace.execution_kind === "remote" &&
-          workspace.provider_state === "ready" &&
+        (workspace.provider_state === "ready" &&
           workspace.provider_ref_json !== null) ||
         workspace.provider_state === "provisioning" ||
         workspace.provider_state === "archiving" ||

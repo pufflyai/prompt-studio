@@ -3,11 +3,11 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { enableGitWorkspaceProvider } from "../../test-utils/git-workspace-provider.fixture";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { createWorkspacesApi } from "../extensions/command-environment/workspaces";
 import { runWorkspaceProvisioning } from "./provision-coordinator";
 import { resolveWorkspaceExecutionTarget } from "./workspace-provider-execution-target";
-import { setupWorkspaceWorktree } from "./worktree-setup";
 
 let handle: Awaited<ReturnType<typeof createTestApp>>;
 let root: string;
@@ -50,6 +50,7 @@ const createFixture = async (name: string) => {
   });
   expect(projectResponse.status).toBe(201);
   const project = (await projectResponse.json()) as { id: string };
+  await enableGitWorkspaceProvider(handle, project.id);
   const configPath = join(repoPath, ".pstdio", "config.json");
   const config = readFileSync(configPath, "utf8");
   writeFileSync(configPath, "{ invalid config");
@@ -79,7 +80,7 @@ describe("local provider creation setup failures", () => {
         const workspaces = createWorkspacesApi(
           handle.deps,
           { projectId: fixture.projectId },
-          { setupWorkspaceWorktree, runWorkspaceProvisioning },
+          { runWorkspaceProvisioning },
         );
         try {
           await workspaces.create({ provider_id: "pstdio.worktree", shorthand_base: "EXTENSION" });

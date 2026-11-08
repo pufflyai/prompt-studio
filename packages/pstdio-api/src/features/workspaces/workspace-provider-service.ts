@@ -1,6 +1,5 @@
 import { realpath, stat } from "node:fs/promises";
 import type { JsonObject } from "pstdio-api-contracts/extension-kernel";
-import { ProjectFolderMissingError } from "../projects/project-folder-missing";
 import type { WorkspacesRouteDeps } from "./deps";
 import { provisionProviderWorkspace } from "./workspace-provider-creation";
 import {
@@ -12,7 +11,6 @@ import {
 import { resolveWorkspaceParams } from "./workspace-provider-params";
 import type { WorkspaceRecord } from "./workspace-provider-projection";
 import { assertWorkspaceShorthand } from "./workspace-shorthand";
-import { setupWorkspaceWorktree } from "./worktree-setup";
 
 export { resolveWorkspaceExecutionTarget } from "./workspace-provider-execution-target";
 export { normalizeResult } from "./workspace-provider-result";
@@ -45,7 +43,6 @@ export const createProviderBackedWorkspace = async (
     params?: JsonObject;
     isDefault?: boolean;
     standalone?: boolean;
-    setupWorktree?: typeof setupWorkspaceWorktree;
     provision?: (workspace: WorkspaceRecord, projectPath: string) => Promise<WorkspaceRecord>;
     signal?: AbortSignal;
   },
@@ -60,12 +57,6 @@ export const createProviderBackedWorkspace = async (
   }
   let sourcePath: string | null = null;
   if (providerId === rootProviderId) sourcePath = await canonicalFolder(params.path);
-  if (providerId === worktreeProviderId) {
-    if (home?.execution_kind !== "local")
-      throw new WorkspaceSourceNotFoundError("A local project folder is required for a Git workspace.");
-    if (!home.root_path) throw new ProjectFolderMissingError();
-    sourcePath = home.root_path;
-  }
   const operationId = crypto.randomUUID();
   const createInput = {
     project_id: input.projectId,
@@ -111,7 +102,6 @@ export const createProviderBackedWorkspace = async (
     providerId,
     params,
     sourcePath,
-    setupWorktree: input.setupWorktree ?? setupWorkspaceWorktree,
     signal: input.signal,
     workspace,
   });

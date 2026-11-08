@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { enableGitWorkspaceProvider } from "../../../test-utils/git-workspace-provider.fixture";
 import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import type { AppBindings } from "../../../types";
 import {
@@ -41,6 +42,7 @@ const createWorkspaceAttempt = async (repoRoot: string) => {
   });
   expect(projectRes.status).toBe(201);
   projectId = (await projectRes.json()).id;
+  await enableGitWorkspaceProvider(appHandle, projectId);
 
   const workspaceRes = await app.request("/v1/workspaces", {
     method: "POST",
