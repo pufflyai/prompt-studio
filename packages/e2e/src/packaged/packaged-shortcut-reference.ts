@@ -8,9 +8,11 @@ export const verifyPackagedShortcutReference = async (
   projectId: string,
   headers: Record<string, string>,
 ) => {
-  const shortcuts = [
-    { label: "Go to workspaces", key: "W", layered: true },
-    { label: "Go to sessions", key: "S", layered: true },
+  const navigationShortcuts = [
+    { label: "Go to workspaces", key: "W" },
+    { label: "Go to sessions", key: "S" },
+  ];
+  const commands = [
     { label: "New workspace", key: "W", layered: true },
     { label: "Open settings", key: ",", layered: false },
     { label: "Shortcut greeting", key: "g", layered: false },
@@ -30,7 +32,7 @@ export const verifyPackagedShortcutReference = async (
   await expect(dialog.getByRole("heading", { name: "Shortcut reference", exact: true })).toBeVisible();
   await expect(dialog.getByRole("group", { name: "Go to shortcut destination", exact: true })).toContainText(/J/i);
   await expect(dialog.getByText("https://example.com/shortcuts", { exact: true })).toBeVisible();
-  for (const { label, key } of shortcuts) {
+  for (const { label, key } of [...navigationShortcuts, ...commands]) {
     const shortcut = dialog.getByRole("group", { name: label, exact: true });
     await shortcut.scrollIntoViewIfNeeded();
     await expect(shortcut.locator("kbd").last()).toHaveText(key);
@@ -70,7 +72,7 @@ export const verifyPackagedShortcutReference = async (
   }
   await page.getByText("Search", { exact: true }).first().click();
   const palette = page.getByRole("dialog").last();
-  for (const { label, key, layered } of shortcuts) {
+  for (const { label, key, layered } of commands) {
     await palette.locator("input").fill(`>${label}`);
     const entry = palette.getByRole("option", { name: new RegExp(label) });
     await expect(entry).toBeVisible();

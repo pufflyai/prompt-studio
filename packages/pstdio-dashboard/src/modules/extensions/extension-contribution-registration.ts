@@ -30,6 +30,7 @@ import {
   buildDashboardWorkbenchWhenExpression,
   dashboardMenuTargetsById,
 } from "@/shared/extensions/workbench-extension-contributions";
+import { configuredRelatedOpenings } from "@/shared/workbench/resource-openers";
 import { ExtensionViewWidget } from "./components/extension-view-widget";
 import { createSharedTableViews } from "./extension-board-views";
 import {
@@ -179,6 +180,7 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
             uploadFile: uploadExtensionCommandFile,
           }),
         projectId: input.projectId,
+        resolveRelatedResourceOpenings: (resource, signal) => configuredRelatedOpenings(input.ctx, resource, signal),
         resolveTreeNodeResource: (resource) =>
           toDashboardExtensionResource(resource, input.projectId, input.metadata.resourceKinds)!,
         renderWebview: (renderInput) => createElement(ExtensionViewWidget, { input: renderInput }),
