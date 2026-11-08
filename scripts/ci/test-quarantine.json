@@ -1137,7 +1137,7 @@
   {
     "runner": "bun",
     "file": "clients/desktop/src/performance/performance-endpoint.p0.test.ts",
-    "name": "performance endpoint > Windows grants credential access only to the current user",
+    "name": "Windows grants credential access only to the current user",
     "platforms": ["win32"],
     "arch": "x64",
     "owner": "PS-151 / Windows credential inspection",
