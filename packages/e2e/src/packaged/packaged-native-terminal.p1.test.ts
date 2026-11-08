@@ -87,6 +87,8 @@ test("the compiled host admits an installed SDK terminal view and reports real P
     socket = second;
     const accepted = Promise.withResolvers<void>();
     const ownerExited = Promise.withResolvers<TerminalWebSocketServerMessage>();
+    let ownerOutput = "";
+    let ownerEnded = false;
     second.onopen = () =>
       second.send(
         JSON.stringify({
@@ -101,14 +103,30 @@ test("the compiled host admits an installed SDK terminal view and reports real P
       );
     second.onmessage = (event) => {
       const message = JSON.parse(String(event.data)) as TerminalWebSocketServerMessage;
-      if (message.type === "open") accepted.resolve();
-      if (message.type === "exit") ownerExited.resolve(message);
+      if (message.type === "open") {
+        // The marker is assembled by the shell, then a builtin blocks on input until owner cleanup.
+        const hold =
+          process.platform === "win32"
+            ? "echo NATIVE_^OWNER_READY & set /p NATIVE_HOLD=\r"
+            : "printf 'NATIVE_%s_READY\\n' OWNER; read -r native_hold\n";
+        second.send(JSON.stringify({ type: "write", data: Buffer.from(hold).toString("base64") }));
+      }
+      if (message.type === "data") {
+        ownerOutput += Buffer.from(message.chunk, "base64").toString();
+        if (ownerOutput.includes("NATIVE_OWNER_READY")) accepted.resolve();
+      }
+      if (message.type === "exit") {
+        ownerEnded = true;
+        accepted.reject(new Error("Native owner exited before the live-session probe"));
+        ownerExited.resolve(message);
+      }
       if (message.type === "error") {
         accepted.reject(new Error(message.message));
         ownerExited.reject(new Error(message.message));
       }
     };
     await accepted.promise;
+    expect(ownerEnded).toBe(false);
     const disabled = await fetch(`${runtime.baseUrl}/v1/projects/${project.id}/extensions/${installed.extension.id}`, {
       method: "PATCH",
       headers,
