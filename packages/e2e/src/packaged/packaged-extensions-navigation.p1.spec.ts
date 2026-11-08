@@ -58,6 +58,7 @@ test("extension pages keep headers reachable and restore nested navigation", asy
   try {
     const repo = createRepository(root);
     const longId = `acme.${"extension-".repeat(40)}tools`;
+    const longName = `Example ${"long extension name ".repeat(40)}tools`;
     const catalog = join(root, "catalog.json");
     writeFileSync(
       catalog,
@@ -66,7 +67,7 @@ test("extension pages keep headers reachable and restore nested navigation", asy
         extensions: Array.from({ length: 40 }, (_, index) => ({
           installName: `tool-${index}`,
           extensionId: ["acme.tool", longId][index] ?? `acme.tool-${index}`,
-          displayName: `Example tool ${index}`,
+          displayName: index === 1 ? longName : `Example tool ${index}`,
           description: "Example extension",
           default: false,
           origin: { kind: "git", url: pathToFileURL(repo).href, ref: "HEAD", path: "tool" },
@@ -110,9 +111,10 @@ test("extension pages keep headers reachable and restore nested navigation", asy
     await listScroll.evaluate((node) => {
       node.scrollTop = 0;
     });
+    await search.fill(longId);
     const longRow = page
       .getByTestId("marketplace-extension-entry")
-      .filter({ has: page.getByText(longId, { exact: true }) });
+      .filter({ has: page.getByText(longName, { exact: true }) });
     await expect(longRow).toBeVisible();
     // A visible row must not clip its primary action when an ID exceeds the available width.
     const rowAction = longRow.getByTestId("marketplace-extension-install");
@@ -123,7 +125,7 @@ test("extension pages keep headers reachable and restore nested navigation", asy
         return action.right <= row.right && action.left >= row.left;
       }),
     ).toBe(true);
-    const rowIdentity = (await longRow.getByText(longId, { exact: true }).boundingBox())!;
+    const rowIdentity = (await longRow.getByText(longName, { exact: true }).boundingBox())!;
     expect(rowIdentity.x + rowIdentity.width).toBeLessThanOrEqual((await rowAction.boundingBox())!.x);
     await longRow.click();
     const longDetail = availableDetail;
@@ -135,6 +137,7 @@ test("extension pages keep headers reachable and restore nested navigation", asy
     expect(await longDetail.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
     await longDetail.getByTestId("extension-detail-back").click();
     await expect(page).toHaveURL(listUrl);
+    await search.fill("");
     const row = page
       .getByTestId("marketplace-extension-entry")
       .filter({ has: page.getByText("Example tool 0", { exact: true }) });

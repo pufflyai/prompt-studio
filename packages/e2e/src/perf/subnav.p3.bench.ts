@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { copyFileSync, existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { cpus, totalmem } from "node:os";
 import { join, resolve } from "node:path";
@@ -7,15 +8,17 @@ import { benchmarkSampleCount, isBelowBudget, subnavBudgets } from "pstdio-bench
 import { recordMeasurement } from "pstdio-benchmarks/writer";
 import { PROVISIONED_CHROMIUM } from "../packaged/packaged-chromium";
 import { PACKAGED_BINARY_PATH } from "../packaged/packaged-helpers";
-import { signInBrowser } from "../packaged/packaged-serve-helpers";
+import { runtimeAuthorization, signInBrowser } from "../packaged/packaged-serve-helpers";
 import {
   createSubnavNetworkRecorder,
   installSubnavClock,
   measureSubnav,
   type SubnavSample,
 } from "./subnav-benchmark-clock";
-import { startSubnavBenchmarkFixture, subnavFixtureRoot } from "./subnav-benchmark-fixture";
+import { SUBNAV_WORKLOAD, startSubnavBenchmarkFixture, subnavFixtureRoot } from "./subnav-benchmark-fixture";
 import { subnavBenchmarkResults } from "./subnav-benchmark-results";
+import { classifySubnavRequests } from "./subnav-request-outcomes";
+import { installSubnavRequestSignals } from "./subnav-request-signals";
 
 // Set on 2026-10-26 from four hosted ubuntu-24.04 runs (slowest 293 / 1,263 / 1,089 ms) plus about 20%.
 const SUBNAV_BUDGETS = {
@@ -41,6 +44,7 @@ try {
     const page = await context.newPage();
     try {
       page.on("pageerror", (error) => errors.push(error.message));
+      await installSubnavRequestSignals(page);
       await installSubnavClock(page);
       await page.addInitScript((projectId) => {
         localStorage.setItem("onboarding-complete", "true");
@@ -88,25 +92,51 @@ try {
         );
         samples.push(sessions);
         console.info(JSON.stringify({ iteration: iteration + 1, ...sessions }));
-        // Verify the full list remains reachable after the timed interval, despite virtualization.
-        await sidenav
-          .getByRole("option", { name: /^Benchmark session/ })
-          .first()
-          .focus();
-        await page.keyboard.press("End");
-        await expect(sidenav.getByRole("option", { name: "Benchmark session 0001", exact: true })).toBeVisible();
+        // The extracted Sessions tree pages its children. Keep all 1,000 sessions
+        // reachable after measurement without changing the timed navigation interval.
+        const sessionRows = sidenav.getByRole("option", { name: /^Benchmark session/ });
+        const oldest = sidenav.getByRole("option", { name: "Benchmark session 0001", exact: true });
+        const focusLastSessionPage = async (previousMoreId?: string) => {
+          // Let virtual-row focus commit before observing readiness. Repeatedly
+          // refocusing the first row races the pending End navigation.
+          await sessionRows.first().press("End");
+          await expect
+            .poll(async () => {
+              if (await oldest.isVisible()) return true;
+              const more = sidenav.getByRole("option", { name: "More sessions", exact: true }).last();
+              return (
+                (await more.isVisible()) &&
+                (await more.getAttribute("aria-expanded")) === "false" &&
+                (await more.getAttribute("id")) !== previousMoreId
+              );
+            })
+            .toBe(true);
+        };
+        await focusLastSessionPage();
+        for (let offset = 50; offset < SUBNAV_WORKLOAD.sessions && !(await oldest.isVisible()); offset += 50) {
+          const more = sidenav.getByRole("option", { name: "More sessions", exact: true }).last();
+          const id = await more.getAttribute("id");
+          if (!id) throw new Error("Sessions pagination row has no identity");
+          const expandedSince = performance.now();
+          await more.click();
+          // Cached pages need no fresh RPC, while a new page must finish loading
+          // before End can reach its final row. This is outside the timed sample.
+          await network.settled(expandedSince);
+          await focusLastSessionPage(id);
+        }
+        await expect(oldest).toBeVisible();
         await page.goBack();
       }
       if (iteration === 0 && process.env.SUBNAV_TRACE === "1")
         await context.tracing.stop({ path: join(output, "first-visits.zip") });
     } catch (error) {
-      await page.screenshot({ path: join(output, "failure.png") });
-      await Bun.write(
-        join(output, "failure-state.json"),
-        JSON.stringify(
-          await page.evaluate(() => ({
+      await Promise.allSettled([
+        page.screenshot({ path: join(output, "failure.png") }),
+        page
+          .evaluate(() => ({
             url: location.href,
             clock: window.__subnavBenchmark,
+            fetchSignals: window.__subnavFetchSignals,
             regions: [...document.querySelectorAll("[data-workbench-region]")].map((element) =>
               element.getAttribute("data-workbench-region"),
             ),
@@ -116,11 +146,9 @@ try {
               region: element.closest("[data-workbench-region]")?.getAttribute("data-workbench-region"),
             })),
             text: document.body.innerText.slice(0, 3000),
-          })),
-          null,
-          2,
-        ),
-      );
+          }))
+          .then((state) => Bun.write(join(output, "failure-state.json"), JSON.stringify(state, null, 2))),
+      ]);
       throw error;
     } finally {
       await context.close();
@@ -170,7 +198,6 @@ try {
     record("dataMs", "data", sample.dataMs);
     record("editorMs", "editor", sample.editorMs);
   }
-  const budgetResult = subnavBenchmarkResults(samples, sampleCount);
   const report = {
     label,
     measuredAt: new Date().toISOString(),
@@ -196,25 +223,62 @@ try {
     summary,
     errors,
   };
-  errors.push(
-    ...samples.flatMap((sample) =>
-      sample.requests
-        .filter((request) => request.failure || !request.status || request.status >= 400 || request.outcomeOk === false)
-        .map((request) => `${sample.destination}/${sample.visit}: ${JSON.stringify(request)}`),
-    ),
-  );
+  for (const sample of samples) {
+    const classified = classifySubnavRequests(sample.requests);
+    sample.requests = classified.requests;
+  }
+  const budgetResult = subnavBenchmarkResults(samples, sampleCount);
   const browserErrors = errors.map((message) => ({ message }));
-  errors.push(...budgetResult.budgetErrors);
+  errors.push(...budgetResult.requestErrors, ...budgetResult.budgetErrors);
   await Bun.write(join(output, "results.json"), JSON.stringify(report, null, 2));
   executionReport = { suites: [{ specs: budgetResult.specs }], errors: browserErrors };
   console.info(JSON.stringify({ label, summary, errors }, null, 2));
   if (errors.length || summary.some((row) => row.structureMisses || row.dataMisses || row.editorMisses))
     process.exitCode = 1;
+} catch (error) {
+  const status = () => ({ pid: fixture.child.pid, exitCode: fixture.child.exitCode, signal: fixture.child.signalCode });
+  const before = status();
+  // Inspect the already-failed setup without retrying login or changing its verdict.
+  const ready = await fetch(`${fixture.baseUrl}/runtime/ready`, {
+    headers: { ...runtimeAuthorization(fixture.descriptor), connection: "close" },
+    signal: AbortSignal.timeout(1000),
+  })
+    .then(async (response) => ({ status: response.status, body: await response.text() }))
+    .catch((reason) => ({ error: String(reason) }));
+  const saved = await Promise.allSettled([
+    Bun.write(
+      join(output, "partial-results.json"),
+      JSON.stringify({ complete: false, expected: sampleCount * 4, samples, errors, error: String(error) }, null, 2),
+    ),
+    Bun.write(
+      join(output, "runtime-failure.json"),
+      JSON.stringify(
+        {
+          observedAt: new Date().toISOString(),
+          runtimeCleanupStarted: false,
+          before,
+          ready,
+          after: status(),
+          error: String(error),
+        },
+        null,
+        2,
+      ),
+    ),
+  ]);
+  for (const result of saved)
+    if (result.status === "rejected") console.error("Could not retain benchmark diagnostics", result.reason);
+  throw error;
 } finally {
   try {
     await browser?.close();
   } finally {
-    await fixture.stop();
+    try {
+      await fixture.stop();
+    } finally {
+      const log = join(subnavFixtureRoot, "runtime.log");
+      if (existsSync(log)) copyFileSync(log, join(output, "runtime.log"));
+    }
   }
 }
 // Publish execution evidence only after browser and runtime cleanup both complete.

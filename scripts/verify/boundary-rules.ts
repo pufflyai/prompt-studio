@@ -166,6 +166,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-paths",
     "workbench-fixture",
     "pstdio-home",
+    "pstdio-session-browser",
     "pstdio-performance",
     "pstdio-benchmarks",
     "pstdio-scripts",
