@@ -163,6 +163,7 @@
       "ignoreDependencies": [
         "canvas",
         "extension-lab",
+        "git-workspaces",
         "harness-claude-code",
         "harness-codex",
         "harness-open-code",
@@ -203,6 +204,7 @@
       // Tests install these extensions and fixtures from source. Declared so CI treats their changes as API changes.
       "ignoreDependencies": [
         "extension-lab",
+        "git-workspaces",
         "pstdio-base-themes",
         "pstdio-planner",
         "pstdio-skills",

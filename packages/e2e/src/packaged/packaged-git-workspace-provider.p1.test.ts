@@ -50,9 +50,9 @@ test(
           headers: { ...runtimeAuthorization(runtime.descriptor), "content-type": "application/json" },
           ...(body === undefined ? {} : { body: JSON.stringify(body) }),
         });
-        const value = await response.json();
-        expect(response.status, JSON.stringify(value)).toBeLessThan(300);
-        return value;
+        const value = await response.text();
+        expect(response.status, `${method} ${path}: ${value}`).toBeLessThan(300);
+        return value ? JSON.parse(value) : null;
       };
       const project = await request("/projects", folderProjectInput({ name: "Installed Git" }, projectFolder));
       const env = { PSTDIO_HOME: root, PSTDIO_API_URL: runtime.baseUrl, PSTDIO_API_TOKEN: runtime.descriptor.token };
@@ -81,8 +81,22 @@ test(
           lifetime.finish();
         }
       }
-      await runPackagedAsync(["extensions", "add", source, "--force", "--name", "git-workspaces"], projectFolder, env);
-      const installed = join(projectFolder, ".pstdio/extensions/git-workspaces");
+      console.log(
+        await runPackagedAsync(
+          ["extensions", "add", source, "--force", "--name", "git-workspaces"],
+          projectFolder,
+          env,
+        ),
+      );
+      const listing = await request(`/projects/${project.id}/extensions`);
+      const provider = listing.extensions.find(
+        (extension: { extensionId: string }) => extension.extensionId === "pstdio.git-workspaces",
+      );
+      expect(provider).toMatchObject({ enabled: true, status: "loaded" });
+      // Workspace providers are user-scoped; use the host's installed source
+      // rather than assuming a project-local install directory.
+      const installed = realpathSync(provider.sourcePath);
+      expect(relative(root, installed).startsWith("..")).toBe(false);
       const dependency = realpathSync(join(installed, "node_modules/@pstdio/sdk"));
       expect(relative(join(installed, "node_modules"), dependency).startsWith("..")).toBe(false);
       renameSync(source, `${source}.unavailable`);
@@ -100,7 +114,10 @@ test(
       child = undefined;
       runtime = await startPackagedServe(root, { PSTDIO_DEFAULT_EXTENSIONS: "[]" });
       child = runtime.child;
-      expect(await request(`/workspaces/${workspace.id}`)).toMatchObject({
+      const reopened = (await request(`/workspaces?project_id=${project.id}`)).find(
+        (entry: { id: string }) => entry.id === workspace.id,
+      );
+      expect(reopened).toMatchObject({
         id: workspace.id,
         root_path: workspace.root_path,
         branch: workspace.branch,
