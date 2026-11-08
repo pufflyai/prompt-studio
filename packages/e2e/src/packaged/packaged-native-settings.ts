@@ -63,7 +63,7 @@ export async function verifyPackagedNativeSettings(page: Page, input: NativeSett
   await page.getByRole("option", { name: "Extensions", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/extensions$`));
   await page.reload();
-  const entry = page.getByTestId("extension-entry").filter({ hasText: "test.native-settings" });
+  const entry = page.getByTestId("extension-entry").filter({ has: page.getByText("Native settings", { exact: true }) });
   await entry.click();
   const detail = page.getByRole("textbox", { name: "Detail 0", exact: true });
   await detail.fill("invalid");

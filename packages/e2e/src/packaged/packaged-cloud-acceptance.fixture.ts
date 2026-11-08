@@ -12,8 +12,9 @@ export const acceptanceOwner = "example.shared-notes";
 export const createCloudAcceptanceFixture = async (
   root: string,
   children: Set<ChildProcess>,
-  options: { cloudUi?: boolean } = {},
+  options: { cloudUi?: boolean; signal?: AbortSignal } = {},
 ) => {
+  options.signal?.throwIfAborted();
   const key = join(root, "peer-key.pem");
   const cert = join(root, "peer-cert.pem");
   execFileSync(
@@ -61,24 +62,43 @@ export const createCloudAcceptanceFixture = async (
   const defaults = JSON.parse(e2eExtensions("pstdio-notes", "pstdio-artifacts", "pstdio-planner"));
   if (options.cloudUi) defaults.defaultExtensions.push(...JSON.parse(e2eExtensions("pstdio-cloud")).defaultExtensions);
   defaults.defaultExtensions.push({ source, installName: "shared-notes", skipInstall: true });
-  const peer = await startPublicTextPeer(root);
+  const peer = await startPublicTextPeer(root, undefined, options.signal);
   const devices: CloudAcceptanceDevice[] = [];
   const start = async (name: string) => {
+    options.signal?.throwIfAborted();
     const home = join(root, name);
     const folder = join(root, `${name}-folder`);
     mkdirSync(home, { recursive: true });
     mkdirSync(folder, { recursive: true });
     const logPath = join(root, `${name}.jsonl`);
-    const host = await startPackagedServe(home, {
-      NODE_EXTRA_CA_CERTS: cert,
-      PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify(defaults),
-      PSTDIO_LOG_PATH: logPath,
-      PSTDIO_LOG_LEVEL: "debug",
-      PSTDIO_EXTENSION_WEBVIEW_BUILDS: options.cloudUi ? "1" : "0",
-      ...(options.cloudUi ? { PSTDIO_ACCOUNT_MANAGER_ORIGIN: peer.origin } : {}),
-    });
+    const host = await startPackagedServe(
+      home,
+      {
+        NODE_EXTRA_CA_CERTS: cert,
+        PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify(defaults),
+        PSTDIO_LOG_PATH: logPath,
+        PSTDIO_LOG_LEVEL: "debug",
+        PSTDIO_EXTENSION_WEBVIEW_BUILDS: options.cloudUi ? "1" : "0",
+        ...(options.cloudUi ? { PSTDIO_ACCOUNT_MANAGER_ORIGIN: peer.origin } : {}),
+      },
+      undefined,
+      undefined,
+      undefined,
+      options.signal,
+    );
     children.add(host.child);
-    const client = createClient({ baseUrl: host.baseUrl, token: host.descriptor.token });
+    options.signal?.throwIfAborted();
+    const client = createClient({
+      baseUrl: host.baseUrl,
+      token: host.descriptor.token,
+      fetch: ((url, init) =>
+        fetch(url, {
+          ...init,
+          signal: options.signal
+            ? AbortSignal.any([options.signal, ...(init?.signal ? [init.signal] : [])])
+            : init?.signal,
+        })) as typeof fetch,
+    });
     const { environmentId } = await client.runtime.environment();
     const command = async <T>(projectId: string, owner: string, id: string, params: object = {}) => {
       const response = await fetch(
@@ -87,6 +107,7 @@ export const createCloudAcceptanceFixture = async (
           method: "POST",
           headers: { ...runtimeAuthorization(host.descriptor), "content-type": "application/json" },
           body: JSON.stringify({ params, source: "api" }),
+          signal: options.signal,
         },
       );
       const body = (await response.json()) as { outcome?: { ok: boolean; value: T } };
@@ -94,7 +115,7 @@ export const createCloudAcceptanceFixture = async (
         throw new Error(`${name}: ${owner}.${id}: HTTP ${response.status}: ${JSON.stringify(body)}`);
       return body.outcome.value;
     };
-    const device = { name, home, folder, host, client, environmentId, command, logPath };
+    const device = { name, home, folder, host, client, environmentId, command, logPath, signal: options.signal };
     devices.push(device);
     return device;
   };
@@ -135,6 +156,7 @@ export const createCloudAcceptanceFixture = async (
 
 export interface CloudAcceptanceDevice {
   name: string;
+  signal?: AbortSignal;
   home: string;
   folder: string;
   host: Awaited<ReturnType<typeof startPackagedServe>>;
@@ -148,7 +170,7 @@ export const signInCloudAcceptanceDevice = async (device: CloudAcceptanceDevice,
   const callback = new URL(login.searchParams.get("callback")!);
   callback.searchParams.set("state", login.searchParams.get("state")!);
   callback.searchParams.set("code", "controlled-fixture-login");
-  const response = await fetch(callback);
+  const response = await fetch(callback, { signal: device.signal });
   if (!response.ok) throw new Error(`${device.name} controlled login failed: ${response.status}`);
   const status = await device.client.account.status();
   if (status.login?.deviceId !== device.environmentId || status.login.accountId !== "owner")

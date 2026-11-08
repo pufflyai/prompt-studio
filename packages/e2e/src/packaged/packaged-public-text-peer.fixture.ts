@@ -20,14 +20,23 @@ export interface RelayContents {
 }
 
 /** Use the embedded Bun already checked by packaged smoke; Node owns the test and all browsers. */
-export const startPublicTextPeer = async (root: string, binaryPath = PACKAGED_BINARY_PATH) => {
+export const startPublicTextPeer = async (root: string, binaryPath = PACKAGED_BINARY_PATH, signal?: AbortSignal) => {
+  signal?.throwIfAborted();
   const child = spawn(binaryPath, [join(import.meta.dirname, "packaged-public-text-relay.fixture.ts"), root], {
     env: { ...process.env, BUN_BE_BUN: "1" },
     stdio: "pipe",
   });
+  const abort = () => child.kill("SIGKILL");
+  signal?.addEventListener("abort", abort, { once: true });
+  child.once("close", () => signal?.removeEventListener("abort", abort));
   let ready: { origin: string } | undefined;
   let nextId = 0;
   const pending = new Map<number, { resolve: (value: unknown) => void; reject: (error: Error) => void }>();
+  // A cancelled control write can report EPIPE before the process exit event.
+  child.stdin!.on("error", (error) => {
+    for (const request of pending.values()) request.reject(error);
+    pending.clear();
+  });
   const lines = createInterface({ input: child.stdout! });
   child.stderr!.on("data", (chunk) => process.stderr.write(`[Public text relay] ${String(chunk)}`));
   lines.on("line", (line) => {
@@ -54,19 +63,23 @@ export const startPublicTextPeer = async (root: string, binaryPath = PACKAGED_BI
     await stopChildProcess(child);
     throw error;
   }
-  const call = (operation: string, input: object = {}, signal?: AbortSignal) =>
+  const call = (operation: string, input: object = {}, requestSignal = signal) =>
     new Promise<unknown>((resolve, reject) => {
-      if (signal?.aborted) {
-        reject(signal.reason);
+      if (requestSignal?.aborted) {
+        reject(requestSignal.reason);
+        return;
+      }
+      if (child.exitCode !== null || child.signalCode !== null) {
+        reject(new Error("Controlled relay is closed"));
         return;
       }
       const id = nextId++;
       const abort = () => {
         pending.delete(id);
-        reject(signal!.reason);
+        reject(requestSignal!.reason);
       };
-      signal?.addEventListener("abort", abort, { once: true });
-      const finish = () => signal?.removeEventListener("abort", abort);
+      requestSignal?.addEventListener("abort", abort, { once: true });
+      const finish = () => requestSignal?.removeEventListener("abort", abort);
       pending.set(id, {
         resolve: (value) => {
           finish();

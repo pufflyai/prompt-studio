@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { resolve } from "node:path";
 import type { ProjectFolderRecoveryStatus } from "pstdio-api-contracts";
 import type { Arguments } from "yargs";
 import { createHandler, type RestoreArgs } from "./restore";
@@ -19,7 +20,9 @@ const status = (restore: Partial<ProjectFolderRecoveryStatus["restore"]>, files 
     ...restore,
   },
 });
-const args = { _: [], $0: "", id: "project", device: "laptop", source: "workspace", path: "/new", wait: true };
+const caller = resolve("/caller");
+const destination = resolve("/new");
+const args = { _: [], $0: "", id: "project", device: "laptop", source: "workspace", path: destination, wait: true };
 
 const fixture = (responses: ProjectFolderRecoveryStatus[]) => {
   const output: string[] = [];
@@ -40,7 +43,7 @@ const fixture = (responses: ProjectFolderRecoveryStatus[]) => {
         return responses[0]!;
       },
     }),
-    cwd: () => "/caller",
+    cwd: () => caller,
     log: (text) => output.push(text),
     progress: (text) => progress.push(text),
     sleep: async () => {},
@@ -64,7 +67,9 @@ test("restore prints the API's own final progress and reports progress until it 
   );
   const run = fixture([status({}), status({}, 1), complete]);
   await createHandler(run.deps)(args as Arguments<RestoreArgs>);
-  expect(run.calls).toEqual([`restore ${JSON.stringify({ deviceId: "laptop", sourceId: "workspace", path: "/new" })}`]);
+  expect(run.calls).toEqual([
+    `restore ${JSON.stringify({ deviceId: "laptop", sourceId: "workspace", path: destination })}`,
+  ]);
   expect(JSON.parse(run.output.join(""))).toEqual(complete);
   expect(run.progress).toEqual(["restore: 0/2 files, 0/10 bytes", "restore: 1/2 files, 5/10 bytes"]);
   expect(run.failed()).toBe(false);
@@ -98,8 +103,8 @@ test("a relative restore path is the caller's folder, and a home path stays for 
     2,
   );
   for (const [path, expected] of [
-    ["restored", "/caller/restored"],
-    ["../elsewhere", "/elsewhere"],
+    ["restored", resolve(caller, "restored")],
+    ["../elsewhere", resolve(caller, "../elsewhere")],
     ["~/restored", "~/restored"],
   ]) {
     const run = fixture([complete]);

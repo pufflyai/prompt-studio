@@ -3,6 +3,7 @@ import { type BigIntStats, constants, fstat, read } from "node:fs";
 import { open, realpath, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { getSystemErrorName } from "node:util";
+import { supportsNativeRecovery } from "./platform";
 
 const component = (name: string) => {
   if (!name || name === "." || name === ".." || name.includes("/") || name.includes("\0"))
@@ -18,8 +19,10 @@ const sameIdentity = (before: BigIntStats, after: BigIntStats) => before.dev ===
 /** Private held-directory access. See ADR 0138. A path is never reconstructed for
  * child reads; swapping a parent pathname cannot redirect the selected handle. */
 export const openRecoverySource = async (selected: string) => {
-  if (process.platform !== "darwin" && process.platform !== "linux")
-    throw new Error("Recovery requires a qualified native source adapter for this platform");
+  if (!supportsNativeRecovery())
+    throw Object.assign(new Error("Recovery requires a qualified native source adapter for this platform"), {
+      code: "ENOTSUP",
+    });
   const darwin = process.platform === "darwin";
   const load = () =>
     dlopen(darwin ? "/usr/lib/libSystem.B.dylib" : "libc.so.6", {
