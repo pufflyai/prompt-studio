@@ -117,7 +117,13 @@ Explicit Git refs and other repository sources use the system Git executable. Wh
   Retry and Dismiss beside the action. The individual install bar is indeterminate; the host does not
   report download percentages. Successful responses update the displayed version and upgrade action
   immediately, while the remaining inventory refreshes in the background. Workspaces are prepared
-  again only when an enabled upgrade changes skills or workspace setup hooks.
+  again only when an enabled upgrade changes skills or workspace setup hooks. Overlapping project
+  refresh requests share a maintenance pass; a change arriving mid-pass revisits only workspaces that
+  have not seen it. Healthy maintenance does not publish workspace lifecycle changes. New session
+  launches wait for file maintenance, including after a host interruption, and queued sessions wake
+  when it settles. Actual setup failures and recoveries remain visible on the workspace.
+  Upgrade requests still await maintenance completion; the two install slots are not released early
+  with an optimistic success response. Sequential waves of upgrades can require separate passes.
 - `pst extensions update [name]` runs that same host-owned upgrade path for the project in the
   current folder, or the one named with `--project-id`. When `name` is omitted, it upgrades every
   instance the host marks as eligible. The command does not replace healthy local sources or change
