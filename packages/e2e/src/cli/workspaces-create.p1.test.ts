@@ -2,6 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { e2eExtensions } from "../default-extensions";
 import { cleanupDirs, createGitRepo, runPstdio } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
@@ -9,7 +10,7 @@ import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
 let api: ApiInstance;
 
 beforeAll(async () => {
-  api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: "[]" } });
+  api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("git-workspaces") } });
 }, SETUP_TIMEOUT);
 
 afterAll(async () => {
@@ -55,9 +56,9 @@ describe("pstdio workspaces create", () => {
       const byShorthandUrl = `${api.url}/v1/workspaces/by-shorthand?project_id=${encodeURIComponent(projectId)}&shorthand=WS-1`;
       const createdRes = await fetch(byShorthandUrl);
       expect(createdRes.status).toBe(200);
-      const created = (await createdRes.json()) as { branch: string | null; root_path: string | null };
+      const created = (await createdRes.json()) as { id: string; branch: string | null; root_path: string | null };
       expect(created.branch).toBe(`workspace/WS-1-${created.id}`);
-      expect(created.root_path).toBe(worktreePath);
+      expect(created.root_path).toBe(worktreePath!);
 
       const deleteOutput = run("workspaces delete --id WS-1", repo);
       expect(deleteOutput).toContain("Deleted workspace WS-1");

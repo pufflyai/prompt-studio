@@ -12,8 +12,15 @@ export const enableGitWorkspaceProvider = async (
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      name: "git-workspaces", displayName: "Git workspaces", extensionId: "pstdio.git-workspaces", manifest,
-      sourcePath, sourceHash: null, sourceKind: "local_path", sourceRef: null, version: manifest.version,
+      name: "git-workspaces",
+      displayName: "Git workspaces",
+      extensionId: "pstdio.git-workspaces",
+      manifest,
+      sourcePath,
+      sourceHash: null,
+      sourceKind: "local_path",
+      sourceRef: null,
+      version: manifest.version,
     }),
   });
   if (response.status !== 200) throw new Error(`Cannot enable Git workspace fixture: ${await response.text()}`);

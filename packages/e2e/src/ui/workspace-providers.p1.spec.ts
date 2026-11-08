@@ -1,4 +1,5 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
@@ -94,6 +95,81 @@ test("the global workspace action uses declared cloud parameters without a repos
   } finally {
     if (projectId) expect((await request.delete(`${uiOrigin}/v1/projects/${projectId}`)).ok()).toBe(true);
     rmSync(sourcePath, { recursive: true, force: true });
+    rmSync(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test("the installed Git provider creates the chosen branch, runs a session and removes its checkout safely", async ({
+  page,
+  request,
+}) => {
+  const projectRoot = mkdtempSync(join(tmpdir(), "pstdio-git-provider-ui-"));
+  const git = (...args: string[]) => execFileSync("git", args, { cwd: projectRoot, encoding: "utf8" }).trim();
+  let projectId: string | undefined;
+  try {
+    git("init", "-b", "main");
+    git("config", "user.name", "Fixture");
+    git("config", "user.email", "fixture@example.test");
+    writeFileSync(join(projectRoot, "notes.txt"), "Original project\n");
+    git("add", ".");
+    git("commit", "-m", "Initial project");
+    git("switch", "-c", "feature/base");
+    git("commit", "--allow-empty", "-m", "Chosen base");
+    const base = git("rev-parse", "HEAD");
+    git("switch", "main");
+    const created = await request.post(`${uiOrigin}/v1/projects`, {
+      data: folderProjectInput({ name: "Installed Git provider" }, projectRoot),
+    });
+    expect(created.ok(), await created.text()).toBe(true);
+    projectId = (await created.json()).id;
+    await page.addInitScript((id) => {
+      localStorage.setItem("onboarding-complete", "true");
+      localStorage.setItem("dashboard-wb2:selected-project:global", id);
+    }, projectId!);
+    await page.goto(`/projects/${projectId}`);
+    await (await showSidenavEntry(page, "Workspaces")).click();
+    const capacity = await (await request.get(`${uiOrigin}/v1/workspaces/capacity`)).json();
+    await page.getByText(capacity.deviceName, { exact: true }).filter({ visible: true }).click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Create workspace", exact: true }).click();
+    const dialog = page.frameLocator('iframe[title="Workspace action"]');
+    await dialog.getByRole("button", { name: "main", exact: true }).click();
+    await dialog.getByRole("menuitem", { name: "feature/base", exact: true }).click();
+    await dialog.getByRole("button", { name: "Create workspace", exact: true }).click();
+    await expect(page).toHaveURL(/extensions\/pstdio.pstdio-workspaces\/workspace\?resource=/);
+    const workspaces = await (await request.get(`${uiOrigin}/v1/workspaces?project_id=${projectId}`)).json();
+    const workspace = workspaces.find((item: { is_default: boolean }) => !item.is_default);
+    expect(workspace).toMatchObject({
+      provider_id: "pstdio.worktree",
+      provider_state: "ready",
+      execution_kind: "local",
+    });
+    expect(execFileSync("git", ["-C", workspace.root_path, "rev-parse", "HEAD"], { encoding: "utf8" }).trim()).toBe(
+      base,
+    );
+    const started = await request.post(`${uiOrigin}/v1/sessions`, {
+      data: {
+        project_id: projectId,
+        workspace_id: workspace.id,
+        title: "Git provider readiness",
+        prompt: "Git provider readiness",
+        agent: "pstdio.workbench-fixture.harness.fake",
+      },
+    });
+    expect(started.ok(), await started.text()).toBe(true);
+    const session = await started.json();
+    await expect
+      .poll(async () => (await (await request.get(`${uiOrigin}/v1/sessions/${session.id}`)).json()).status)
+      .toBe("completed");
+    expect((await request.delete(`${uiOrigin}/v1/workspaces/${workspace.id}`)).ok()).toBe(true);
+    expect(existsSync(workspace.root_path)).toBe(false);
+    expect(git("branch", "--list", workspace.branch)).toBe("");
+    expect(existsSync(join(projectRoot, "notes.txt"))).toBe(true);
+    expect(await (await request.get(`${uiOrigin}/v1/sessions/${session.id}`)).json()).toMatchObject({
+      id: session.id,
+      archived: true,
+    });
+  } finally {
+    if (projectId) expect((await request.delete(`${uiOrigin}/v1/projects/${projectId}`)).ok()).toBe(true);
     rmSync(projectRoot, { recursive: true, force: true });
   }
 });

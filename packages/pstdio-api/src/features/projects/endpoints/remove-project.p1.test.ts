@@ -6,8 +6,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { createTestApp } from "../../../test-utils/create-test-app";
-import { enableGitWorkspaceProvider } from "../../../test-utils/git-workspace-provider.fixture";
 import { folderProjectInput } from "../../../test-utils/folder-project-input";
+import { enableGitWorkspaceProvider } from "../../../test-utils/git-workspace-provider.fixture";
 import type { AppBindings } from "../../../types";
 import { hashExtensionSource, loadExtensionSource } from "../../extensions/extension-runtime";
 import { syncRepoExtensionsForProjectFolder } from "../../extensions/repo-extensions";
@@ -67,7 +67,7 @@ const createProject = async (name: string, path?: string) => {
         : folderProjectInput({ name }),
     ),
   });
-  const project = await res.json() as { id: string; name: string; shorthand: string };
+  const project = (await res.json()) as { id: string; name: string; shorthand: string };
   if (path) await enableGitWorkspaceProvider(appHandle, project.id);
   return project;
 };

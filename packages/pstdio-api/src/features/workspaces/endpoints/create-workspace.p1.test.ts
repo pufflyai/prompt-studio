@@ -5,8 +5,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createTestApp } from "../../../test-utils/create-test-app";
-import { enableGitWorkspaceProvider } from "../../../test-utils/git-workspace-provider.fixture";
 import { folderProjectInput } from "../../../test-utils/folder-project-input";
+import { enableGitWorkspaceProvider } from "../../../test-utils/git-workspace-provider.fixture";
 import type { AppBindings } from "../../../types";
 
 let app: OpenAPIHono<AppBindings>;

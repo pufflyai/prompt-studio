@@ -6,12 +6,12 @@ import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { workspaceSchema } from "pstdio-api-contracts";
 import type { ResourceAnchor, WorkspaceTypeProvider } from "pstdio-api-contracts/extension-kernel";
-import { enableGitWorkspaceProvider } from "../../../test-utils/git-workspace-provider.fixture";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { enableGitWorkspaceProvider } from "../../../test-utils/git-workspace-provider.fixture";
 import type { AppBindings } from "../../../types";
-import { defaultWorkspaceProviderRuntime } from "../workspace-provider-runtime";
 import { createWorkspaceRoutes } from "../routes";
 import { remoteWorkspaceCapabilities } from "../workspace-provider.test-fixture";
+import { defaultWorkspaceProviderRuntime } from "../workspace-provider-runtime";
 
 let root: string;
 let handle: Awaited<ReturnType<typeof createTestApp>>;
@@ -71,17 +71,20 @@ beforeAll(async () => {
             ...snapshot,
             runtime: {
               ...snapshot.runtime,
-              workspaceTypes: [...snapshot.runtime.workspaceTypes, ...(cloudAvailable
-                ? [
-                    {
-                      id: "example.cloud",
-                      extensionId: "example.environments",
-                      name: "cloud",
-                      sourcePath: root,
-                      provider: cloudProvider,
-                    },
-                  ]
-                : [])],
+              workspaceTypes: [
+                ...snapshot.runtime.workspaceTypes,
+                ...(cloudAvailable
+                  ? [
+                      {
+                        id: "example.cloud",
+                        extensionId: "example.environments",
+                        name: "cloud",
+                        sourcePath: root,
+                        provider: cloudProvider,
+                      },
+                    ]
+                  : []),
+              ],
             },
           };
         },
@@ -235,6 +238,7 @@ const gitProject = async () => {
 
 test.each([
   { baseRef: "main" },
+  { base: "missing-branch" },
   { base: 42 },
 ])("rejects invalid Git params before creating a row or worktree: %j", async (params) => {
   const { folder, project } = await gitProject();
@@ -245,16 +249,6 @@ test.each([
   expect((await response.json()).error).toMatch(/pstdio.worktree.*base/);
   expect(await handle.deps.workspaceService.list(project.id)).toEqual(before);
   expect(execFileSync("git", ["worktree", "list", "--porcelain"], { cwd: folder }).toString()).toBe(worktrees);
-});
-
-test("an invalid Git revision retains a failed workspace for retry without allocating a checkout", async () => {
-  const { folder, project } = await gitProject();
-  const response = await postWorkspace(project.id, "pstdio.worktree", { base: "missing-branch" });
-  expect(response.status).toBe(500);
-  const workspaces = (await handle.deps.workspaceService.list(project.id)).filter((workspace) => !workspace.is_default);
-  expect(workspaces).toHaveLength(1);
-  expect(workspaces[0]).toMatchObject({ provider_state: "failed", provider_ref_json: null, root_path: null, provider_error_json: { retryable: true } });
-  expect(execFileSync("git", ["worktree", "list", "--porcelain"], { cwd: folder }).toString().match(/^worktree /gm)).toHaveLength(1);
 });
 
 test("persists the declared current branch default when base is omitted", async () => {

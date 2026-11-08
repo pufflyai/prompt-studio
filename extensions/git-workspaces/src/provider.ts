@@ -1,6 +1,7 @@
 import { defineWorkspaceType, l10n, params } from "@pstdio/sdk/extensions";
 import { discoverGitWorkspace } from "./discovery";
 import { deleteWorktree, prepareWorktree, resolveWorktree } from "./lifecycle";
+import { validateGitParams } from "./validate-params";
 import { localResult } from "./worktree-ref";
 
 export const gitWorkspace = defineWorkspaceType({
@@ -9,6 +10,7 @@ export const gitWorkspace = defineWorkspaceType({
   icon: "git-branch",
   params: { base: params.text({ label: l10n("params.base", "Base branch"), required: true, defaultValue: "HEAD" }) },
   discover: discoverGitWorkspace,
+  validateParams: validateGitParams,
   create: prepareWorktree,
   resolve: resolveWorktree,
   async cancel(ctx, input) {

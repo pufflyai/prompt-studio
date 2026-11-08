@@ -39,5 +39,4 @@ describe("workspace shorthand identifiers", () => {
     expect(create).not.toHaveBeenCalled();
     expect(find).not.toHaveBeenCalled();
   });
-
 });

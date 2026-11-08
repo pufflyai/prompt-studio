@@ -1,5 +1,7 @@
 import type { WorkspacesRouteDeps } from "./deps";
-import type { WorkspaceRecord } from "./workspace-provider-projection";
+import { isBuiltInProviderId } from "./workspace-provider-identity";
+import { missingProviderPatch, type WorkspaceRecord } from "./workspace-provider-projection";
+import { findWorkspaceProvider } from "./workspace-provider-runtime";
 
 type ProviderProjectionPatch = Parameters<
   WorkspacesRouteDeps["workspaceService"]["updateProviderOperationProjection"]
@@ -11,6 +13,24 @@ export const updateCreateProjection = async (
   operationId: string,
   patch: ProviderProjectionPatch,
 ) => {
+  if (
+    !isBuiltInProviderId(workspace.provider_id) &&
+    !(await findWorkspaceProvider(deps, {
+      projectId: workspace.project_id,
+      providerId: workspace.provider_id,
+      workspaceId: workspace.id,
+    }))
+  ) {
+    patch = {
+      ...patch,
+      ...missingProviderPatch({
+        ...workspace,
+        ...patch,
+        provider_operation_id: patch.provider_operation_id ?? operationId,
+        provider_operation_kind: patch.provider_operation_kind ?? workspace.provider_operation_kind ?? "create",
+      }),
+    };
+  }
   const updated = await deps.workspaceService.updateProviderOperationProjection(workspace.id, {
     operationId,
     operationKind: "create",

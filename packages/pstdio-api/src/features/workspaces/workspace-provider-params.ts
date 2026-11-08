@@ -3,7 +3,11 @@ import { resolveDeclaredParams } from "pstdio-extensions";
 import type { WorkspacesRouteDeps } from "./deps";
 import { discoverWorkspaceProvider } from "./workspace-provider-discovery";
 import { rootProviderId } from "./workspace-provider-identity";
-import { findWorkspaceProvider, runWorkspaceProviderOperation, type WorkspaceProviderHandle } from "./workspace-provider-runtime";
+import {
+  findWorkspaceProvider,
+  runWorkspaceProviderOperation,
+  type WorkspaceProviderHandle,
+} from "./workspace-provider-runtime";
 
 export class InvalidWorkspaceParamsError extends Error {}
 

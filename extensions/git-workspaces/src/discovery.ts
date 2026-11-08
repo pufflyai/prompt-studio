@@ -13,7 +13,11 @@ export const discoverGitWorkspace = async (ctx: Pick<ExtensionContextBase, "work
   } catch {
     return null;
   }
-  const output = await git(ctx, ["for-each-ref", "--sort=refname", "--format=%(refname:short)\t%(HEAD)", "refs/heads", "refs/remotes"], home.rootPath);
+  const output = await git(
+    ctx,
+    ["for-each-ref", "--sort=refname", "--format=%(refname:short)\t%(HEAD)", "refs/heads", "refs/remotes"],
+    home.rootPath,
+  );
   const head = await git(ctx, ["rev-parse", "--abbrev-ref", "HEAD"], home.rootPath);
   const current = head === "HEAD" ? "" : head;
   const branches = output

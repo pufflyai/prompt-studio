@@ -18,4 +18,3 @@ export const canonicalWorkspacePath = async (path: string) => {
     }
   }
 };
-

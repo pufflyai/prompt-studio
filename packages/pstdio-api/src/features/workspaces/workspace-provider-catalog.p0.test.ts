@@ -3,9 +3,10 @@ import { workspaceProviderDescriptorSchema } from "pstdio-api-contracts";
 import type { WorkspacesRouteDeps } from "./deps";
 import { listWorkspaceProviders } from "./workspace-provider-catalog";
 
-const providerCatalog = () => ({
-  extensionRuntimeCatalog: { get: async () => ({ runtime: { workspaceTypes: [] } }) },
-}) as unknown as WorkspacesRouteDeps;
+const providerCatalog = () =>
+  ({
+    extensionRuntimeCatalog: { get: async () => ({ runtime: { workspaceTypes: [] } }) },
+  }) as unknown as WorkspacesRouteDeps;
 
 describe("installed workspace provider catalog", () => {
   test("does not hide extension discovery failures when Git discovery also fails", async () => {

@@ -34,6 +34,8 @@ Other workspaces come from workspace providers. A provider creates the workspace
 
 A Git worktree gives a session its own copy of the repository on a new branch. Work there does not touch your folder until you merge it with `pst workspaces merge`. Git worktrees need a repository with at least one commit. If the project is a subfolder of a repository, the session works in the same subfolder of the worktree.
 
+The installed Git Workspaces extension supplies these workspaces. Prompt Studio owns their identity, permissions, readiness and session cancellation; the extension owns Git branch and checkout operations. Disabling the extension preserves existing folders, branches and session history. Provider operations become available again when you re-enable it. Your default project folder remains available without a Git provider.
+
 Workspaces get short names that you can pass to `pst` commands instead of their IDs:
 
 | Short name | Workspace |

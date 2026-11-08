@@ -7,7 +7,12 @@ import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 export const gitFixture = async (commit = true) => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "git-workspaces-")));
   const run = async (input: ProcessRunInput) => {
-    const child = Bun.spawn(input.command, { cwd: input.cwd ?? root, env: { ...process.env, ...input.env }, stdout: "pipe", stderr: "pipe" });
+    const child = Bun.spawn(input.command, {
+      cwd: input.cwd ?? root,
+      env: { ...process.env, ...input.env },
+      stdout: "pipe",
+      stderr: "pipe",
+    });
     const [stdout, stderr, exitCode] = await Promise.all([
       new Response(child.stdout).text(),
       new Response(child.stderr).text(),

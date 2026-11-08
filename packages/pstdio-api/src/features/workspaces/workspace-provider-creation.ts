@@ -3,11 +3,7 @@ import { folderWorkspaceCapabilities } from "pstdio-db";
 import type { WorkspacesRouteDeps } from "./deps";
 import { failWorkspaceCreation } from "./workspace-provider-create-failure";
 import { requireWorkspaceProviderParams } from "./workspace-provider-discovery";
-import {
-  isBuiltInProviderId,
-  remoteReadOnlyCapabilities,
-  rootProviderId,
-} from "./workspace-provider-identity";
+import { isBuiltInProviderId, remoteReadOnlyCapabilities, rootProviderId } from "./workspace-provider-identity";
 import { handOffLateCreateProjection, updateCreateProjection } from "./workspace-provider-operation-projection";
 import { validateWorkspaceParams } from "./workspace-provider-params";
 import {
@@ -20,14 +16,15 @@ import {
 import { normalizeResult } from "./workspace-provider-result";
 import { findWorkspaceProvider, runWorkspaceProviderOperation } from "./workspace-provider-runtime";
 
-const builtInCreate = (sourcePath: string) => ({
-  providerRef: { version: 1 as const, data: { providerId: rootProviderId } },
-  state: "ready",
-  executionKind: "local",
-  executionTarget: { kind: "local", rootPath: sourcePath, displayPath: sourcePath },
-  displayPath: sourcePath,
-  capabilities: folderWorkspaceCapabilities,
-}) satisfies WorkspaceProviderResult;
+const builtInCreate = (sourcePath: string) =>
+  ({
+    providerRef: { version: 1 as const, data: { providerId: rootProviderId } },
+    state: "ready",
+    executionKind: "local",
+    executionTarget: { kind: "local", rootPath: sourcePath, displayPath: sourcePath },
+    displayPath: sourcePath,
+    capabilities: folderWorkspaceCapabilities,
+  }) satisfies WorkspaceProviderResult;
 
 const persistCancelledCreate = (deps: WorkspacesRouteDeps, workspace: WorkspaceRecord) =>
   deps.workspaceService.updateProviderProjection(workspace.id, cancelledProviderPatch(workspace));
@@ -240,6 +237,7 @@ export const provisionProviderWorkspace = async (
         provider_params_json: params,
       });
       if (!projection.applied) return projection.workspace;
+      if (projection.workspace.provider_state === "provider_missing") return projection.workspace;
       input.params = params;
       input.workspace = projection.workspace;
     }

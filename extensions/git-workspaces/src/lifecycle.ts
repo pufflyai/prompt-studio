@@ -6,7 +6,7 @@ import type {
 } from "@pstdio/sdk/extensions";
 import { resolveBase } from "./base";
 import { git } from "./git";
-import { localResult, ownedDirectory, registeredWorktrees } from "./worktree-ref";
+import { localResult, ownedDirectory, readyResult, registeredWorktrees } from "./worktree-ref";
 
 export const prepareWorktree = async (ctx: ExtensionContextBase, input: WorkspaceProviderCreateInput) => {
   input.signal?.throwIfAborted();
@@ -19,7 +19,10 @@ export const prepareWorktree = async (ctx: ExtensionContextBase, input: Workspac
   const relativePath = (await git(ctx, ["rev-parse", "--show-prefix"], home.rootPath)).replace(/\/$/, "");
   const base = await resolveBase(ctx, sourceRoot, typeof input.params.base === "string" ? input.params.base : "HEAD");
   if (relativePath) {
-    const entry = await ctx.process.run({ command: ["git", "cat-file", "-t", `${base}:${relativePath}`], cwd: sourceRoot });
+    const entry = await ctx.process.run({
+      command: ["git", "cat-file", "-t", `${base}:${relativePath}`],
+      cwd: sourceRoot,
+    });
     if (entry.exitCode || entry.stdout.trim() !== "tree")
       throw new Error("The project folder is not a directory at the chosen revision.");
   }
@@ -47,13 +50,13 @@ export const resolveWorktree = async (ctx: ExtensionContextBase, input: Workspac
   const branch = typeof input.providerRef.data.branch === "string" ? input.providerRef.data.branch : workspace?.branch;
   const target = entries.find((entry) => entry.path === normalize(paths.worktreeRoot) && !entry.prunable);
   if (target) {
-    return localResult(
+    return readyResult(
       { ...input.providerRef, data: { ...input.providerRef.data, ...(branch ? { branch } : {}) } },
-      "ready",
+      paths.directory.files,
     );
   }
   const base = input.providerRef.data.base;
-  if (workspace?.providerState !== "provisioning" || typeof base !== "string" || !branch)
+  if (typeof base !== "string" || !branch)
     return {
       ...localResult(input.providerRef, "failed"),
       error: {
@@ -62,6 +65,8 @@ export const resolveWorktree = async (ctx: ExtensionContextBase, input: Workspac
         retryable: true,
       },
     };
+  if (!workspace?.shorthand || branch !== `workspace/${workspace.shorthand}-${input.workspaceId}`)
+    throw new Error("The prepared branch does not belong to this workspace.");
   if (entries.some((entry) => entry.branch === branch && !entry.prunable))
     throw new Error("The workspace branch is checked out outside its owned directory.");
   await git(ctx, ["worktree", "prune"], paths.sourceRoot);
@@ -74,7 +79,7 @@ export const resolveWorktree = async (ctx: ExtensionContextBase, input: Workspac
   entries = await registeredWorktrees(ctx, paths.sourceRoot);
   if (!entries.some((entry) => entry.path === normalize(paths.worktreeRoot) && entry.branch === branch))
     throw new Error("Git did not register the owned workspace directory.");
-  return localResult(input.providerRef, "ready");
+  return readyResult(input.providerRef, paths.directory.files);
 };
 
 export const deleteWorktree = async (ctx: ExtensionContextBase, input: WorkspaceProviderResolveInput) => {
@@ -100,7 +105,20 @@ export const deleteWorktree = async (ctx: ExtensionContextBase, input: Workspace
     await git(ctx, ["worktree", "remove", "--force", paths.worktreeRoot], paths.sourceRoot);
   else await git(ctx, ["worktree", "prune"], paths.sourceRoot);
   const workspace = await ctx.workspaces.get(input.workspaceId);
-  const ownedBranch = workspace?.shorthand ? `workspace/${workspace.shorthand}-${input.workspaceId}` : undefined;
-  if (ownedBranch) await ctx.process.run({ command: ["git", "branch", "-D", ownedBranch], cwd: paths.sourceRoot });
+  const shorthand = workspace?.shorthand;
+  let ownedBranch: string | undefined;
+  if (shorthand) {
+    ownedBranch = `workspace/${shorthand}-${input.workspaceId}`;
+    if (workspace.branch === `workspace/${shorthand}`) ownedBranch = workspace.branch;
+  }
+  if (ownedBranch) {
+    const exists = await ctx.process.run({
+      command: ["git", "show-ref", "--verify", "--quiet", `refs/heads/${ownedBranch}`],
+      cwd: paths.sourceRoot,
+    });
+    if (exists.exitCode === 0) await git(ctx, ["branch", "-D", ownedBranch], paths.sourceRoot);
+    else if (exists.exitCode !== 1)
+      throw new Error(exists.stderr.trim() || "The workspace branch could not be inspected.");
+  }
   await paths.directory.remove();
 };

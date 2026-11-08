@@ -4,6 +4,7 @@ import { preparePackagedExtensionSource } from "../packaged/packaged-extension-s
 
 const currentApiConsumers = [
   "extension-lab",
+  "git-workspaces",
   "pstdio-session-browser",
   "pstdio-artifacts",
   "pstdio-home",

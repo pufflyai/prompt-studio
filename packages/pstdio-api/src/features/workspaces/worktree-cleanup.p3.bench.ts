@@ -75,8 +75,12 @@ const previousDefaults = process.env.PSTDIO_DEFAULT_EXTENSIONS;
 process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
 const app = await createTestApp({ storageRoot: join(root, "storage") });
 const projectResponse = await app.app.request("/v1/projects", {
-  method: "POST", headers: { "content-type": "application/json" },
-  body: JSON.stringify({ name: "Cleanup benchmark", initial_workspace: { provider_id: "pstdio.root", params: { path: repo } } }),
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({
+    name: "Cleanup benchmark",
+    initial_workspace: { provider_id: "pstdio.root", params: { path: repo } },
+  }),
 });
 if (projectResponse.status !== 201) throw new Error(await projectResponse.text());
 const project = await projectResponse.json();
@@ -86,7 +90,10 @@ const prepare = async (run: string) => {
   const workspaces = [];
   for (let index = 0; index < count; index++) {
     const workspace = await app.deps.workspaceService.createStandalone({
-      project_id: project.id, name: `bench-${run}-${index}`, provider_id: "pstdio.worktree", provider_state: "ready",
+      project_id: project.id,
+      name: `bench-${run}-${index}`,
+      provider_id: "pstdio.worktree",
+      provider_state: "ready",
     });
     const branch = `workspace/${workspace.workspace_shorthand}-${workspace.id}`;
     const worktreeRoot = join(root, "home", "workspaces", workspace.id);
@@ -96,10 +103,15 @@ const prepare = async (run: string) => {
       if (file % 50 === 0) mkdirSync(folder, { recursive: true });
       writeFileSync(join(folder, `${file}.js`), "x".repeat(1024));
     }
-    workspaces.push((await app.deps.workspaceService.updateProviderProjection(workspace.id, {
-      branch, root_path: worktreeRoot, execution_kind: "local", provider_state: "ready",
-      provider_ref_json: { version: 1, data: { sourceRoot: repo, worktreeRoot, relativePath: "" } },
-    }))!);
+    workspaces.push(
+      (await app.deps.workspaceService.updateProviderProjection(workspace.id, {
+        branch,
+        root_path: worktreeRoot,
+        execution_kind: "local",
+        provider_state: "ready",
+        provider_ref_json: { version: 1, data: { sourceRoot: repo, worktreeRoot, relativePath: "" } },
+      }))!,
+    );
   }
   return workspaces;
 };

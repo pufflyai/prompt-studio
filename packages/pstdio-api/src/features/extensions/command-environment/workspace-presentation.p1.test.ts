@@ -31,11 +31,7 @@ const fixture = async () => {
     provider_state: "ready",
   });
   const api = (signal?: AbortSignal) =>
-    createWorkspacesApi(
-      handle.deps,
-      { projectId: project.id, signal },
-      { runWorkspaceProvisioning },
-    );
+    createWorkspacesApi(handle.deps, { projectId: project.id, signal }, { runWorkspaceProvisioning });
   return { project, workspace, path, api };
 };
 

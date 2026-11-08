@@ -154,7 +154,11 @@ export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
     const existing = await deps.extensionService.getProjectExtensionInstance(input.projectId, input.instanceId);
     if (!existing) return null;
     const requiresProvisioning = await changesWorkspaceProvisioning(existing.installedSource);
-    const providerWorkspaces = await extensionProviderWorkspaces(deps, input.projectId, existing.installedSource.extension_id);
+    const providerWorkspaces = await extensionProviderWorkspaces(
+      deps,
+      input.projectId,
+      existing.installedSource.extension_id,
+    );
     if (providerWorkspaces.length > 0) {
       throw new ExtensionProviderInUseError(
         `Extension still owns ${providerWorkspaces.length} provider-backed workspace(s). Delete them before uninstalling.`,

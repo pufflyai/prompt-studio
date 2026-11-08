@@ -1,5 +1,5 @@
 import { isAbsolute, normalize, relative, resolve, sep } from "node:path";
-import type { ExtensionContextBase, WorkspaceProviderRef } from "@pstdio/sdk/extensions";
+import type { ArtifactMount, ExtensionContextBase, WorkspaceProviderRef } from "@pstdio/sdk/extensions";
 import { git } from "./git";
 
 export const readGitRef = (ref: WorkspaceProviderRef) => {
@@ -50,4 +50,16 @@ export const localResult = (ref: WorkspaceProviderRef, state: "provisioning" | "
     ...(typeof ref.data.branch === "string" ? { branch: ref.data.branch } : {}),
     capabilities: { files: "write" as const, diff: true, merge: true, rebase: true, delete: true },
   };
+};
+
+export const readyResult = async (ref: WorkspaceProviderRef, files: ArtifactMount) => {
+  // The mount resolves symlinks inside the owned directory. Check after checkout
+  // hooks, and on every reopen, before granting the project an execution root.
+  const { relativePath } = readGitRef(ref);
+  if (!(await files.exists(relativePath))) throw new Error("The workspace project folder is missing.");
+  await files.listDirs(relativePath);
+  // A prepared base is an unfinished checkout intent. Drop it once Git has
+  // registered the checkout so recovery never recreates a lost ready workspace.
+  const { base: _base, ...data } = ref.data;
+  return localResult({ ...ref, data }, "ready");
 };
