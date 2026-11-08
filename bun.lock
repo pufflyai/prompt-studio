@@ -140,6 +140,7 @@
         "pstdio-home": "workspace:*",
         "pstdio-performance": "workspace:*",
         "pstdio-scripts": "workspace:*",
+        "pstdio-session-browser": "workspace:*",
         "typescript": "6.0.2",
         "vite": "7.3.7",
         "workbench-fixture": "workspace:*",
