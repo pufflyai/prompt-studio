@@ -1045,9 +1045,7 @@
     "runner": "bun",
     "file": "packages/pstdio-db/src/services/extension-storage/recovery-points.p1.test.ts",
     "name": "restoring records that together are over one commit's size limit splits the restore",
-    "platforms": [
-      "darwin"
-    ],
+    "platforms": ["darwin"],
     "arch": "arm64",
     "owner": "PS-151 / deferred storage execution",
     "reason": "Authorized exact-case execution debt: the first WS-133 full-root run exhausted the unchanged 5000 ms allowance at 5088.51 ms. The current main full-package control completed this identical case at 2746.56 ms, and the parallel Windows-repair branch control completed it at 2299.80 ms. WS-133 changes no storage production source. Cause remains unresolved; this is timing variation, not a repaired performance contract or a flake claim. Preserve all twenty 220 KiB records, individual create/delete commits, capture, restore and every restored-value assertion.",
@@ -1055,5 +1053,18 @@
       "Planner change_request_105 files_105/full-tests-execution.log: first WS-133 full root 5088.51/5000 ms; files_105/db-full-main-baseline.log: main619dd427 full-package control2746.56 ms; files_105/full-tests-windows.log: identical case2299.80 ms."
     ],
     "removeWhen": "Diagnose the named timing variation and complete the full original case in one native macOS arm64 first attempt within its unchanged 5000 ms allowance, retaining all twenty records, payload sizes, commit/capture/restore order, assertions and cleanup. Missing, skipped, cancelled or stale execution remains blocking; no retries, prewarming or raised limits."
+  },
+  {
+    "runner": "bun",
+    "file": "packages/pstdio-db/src/services/environment/environment.p1.test.ts",
+    "name": "independent runtime stores preserve their environment and shared workbench identities after restart",
+    "platforms": ["darwin"],
+    "arch": "arm64",
+    "owner": "PS-151 / deferred storage startup execution",
+    "reason": "Authorized exact-case execution debt: the first pure-main619dd427 full database-package control exhausted the unchanged5000 ms macOS allowance at5676.65 ms, after recording the second initial database_compacting phase at+4218 ms. This is a pre-existing main failure; its cause remains unresolved. Retain both independent disk stores, original cold image extraction, concurrent identity reads, project/workspace writes, both restarts, distinct-environment/shared-workbench assertions and cleanup. No storage production change or flake diagnosis is claimed.",
+    "evidence": [
+      "Planner change_request_105 files_105/db-full-main-baseline.log: main619dd427 first full-package control,530 cases before bail, environment restart5676.65/5000 ms; second initial database_compacting+4218 ms."
+    ],
+    "removeWhen": "Diagnose the slow startup/restart phase and complete the entire original two-store case in one native macOS arm64 first attempt within its unchanged5000 ms allowance. Preserve cold image extraction, concurrency, all writes/restarts/identity assertions and cleanup. Missing, skipped, cancelled or stale execution remains blocking; no retries, prewarming or raised limits."
   }
 ]
