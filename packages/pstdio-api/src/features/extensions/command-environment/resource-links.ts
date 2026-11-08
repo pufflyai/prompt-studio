@@ -16,6 +16,9 @@ export const createResourceLinksApi = (
 ) => {
   const read = createReadBoundary(input.signal);
   const canonical = (resource: ResourceRef) => read(() => canonicalResource(deps, input, resource));
+  // Writes retain project and owner validation independently of the reader lifetime.
+  const canonicalWrite = (resource: ResourceRef) =>
+    canonicalResource(deps, { projectId: input.projectId, extensionId: input.extensionId }, resource);
   const listAnchors = async (query: ResourceAnchorQuery) => {
     const parsed = resourceAnchorQuerySchema.parse(query);
     const resource = await canonical(parsed.resource);
@@ -57,8 +60,8 @@ export const createResourceLinksApi = (
     addAnchors: async (resource: ResourceRef, anchors: ResourceAnchor[]) => {
       ({ resource, anchors } = addResourceAnchorsSchema.parse({ resource, anchors }));
       const policy = await createAnchorPolicy(deps, input.projectId);
-      const source = await canonical(resource);
-      const targets = await Promise.all(anchors.map((anchor) => canonical(anchor)));
+      const source = await canonicalWrite(resource);
+      const targets = await Promise.all(anchors.map(canonicalWrite));
       policy.requireKind(source);
       for (const target of targets) {
         await policy.validate(source, target, "add");
@@ -69,8 +72,8 @@ export const createResourceLinksApi = (
     removeAnchors: async (resource: ResourceRef, refs: ResourceRef[]) => {
       ({ resource, refs } = removeResourceAnchorsSchema.parse({ resource, refs }));
       const policy = await createAnchorPolicy(deps, input.projectId);
-      const source = await canonical(resource);
-      const targets = await Promise.all(refs.map((ref) => canonical(ref)));
+      const source = await canonicalWrite(resource);
+      const targets = await Promise.all(refs.map(canonicalWrite));
       // Validators run outside the transaction. Retry if an edge changed while they ran.
       while (true) {
         const existing = await deps.resourceLinksService.find(source, targets);
@@ -95,6 +98,6 @@ export const createResourceLinksApi = (
     },
     listAnchors,
     removedLinks: async (resource: ResourceRef) =>
-      publish(await deps.resourceLinksService.removeResource(await canonical(resource)), "remove"),
+      publish(await deps.resourceLinksService.removeResource(await canonicalWrite(resource)), "remove"),
   };
 };
