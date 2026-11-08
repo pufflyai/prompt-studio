@@ -15,7 +15,7 @@ test("the fullscreen shortcut toggles from editing and completes shortcut mode",
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
   await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
-  await page.goto(`/projects/${project.id}/sessions/compose`);
+  await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-session-browser/conversations/compose`);
   const draft = page.locator('[data-workbench-region="main"]').getByRole("textbox").last();
   await draft.fill("Keep fullscreen draft");
   await page.keyboard.press("Alt+Shift+Z");
@@ -86,7 +86,7 @@ test("direct panel shortcuts open, focus, move and close tabs without entering s
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
   await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
-  await page.goto(`/projects/${project.id}/sessions`);
+  await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-session-browser/conversations`);
   await expect(page.getByRole("button", { name: "Help", exact: true })).toBeVisible();
   const secondary = page.locator('[data-workbench-region="secondary"]');
   const before = await secondary.getByRole("tab").count();

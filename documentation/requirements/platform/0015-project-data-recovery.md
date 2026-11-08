@@ -24,7 +24,11 @@ and the [workload results](../../references/performance/0008-folder-recovery-wor
   catalog and durable enrollment. Startup, reconnect, an explicit request and a new project folder
   (such as a restored one) scan at once; watcher loss and change hints wait for the 30-second gap
   and quiet period. Unchanged files reuse their encrypted content.
-- One process owns a source through a lock in recovery storage. A complete capture waits there
+- One updated process owns a source through an OS-backed SQLite lease in recovery storage;
+  it remains held through marker cleanup and releases on process death. Keep its lock file on
+  the same inode between operations. Stop older development runtimes before sharing this
+  recovery store: their PID/heartbeat protocol does not honor the new lease.
+  A complete capture waits there
   as a candidate until the relay acknowledges it, including across restarts. Local retention keeps
   every graph the catalog or candidate references, plus superseded ciphertext for one hour.
 - Download: every completed copy of the account downloads automatically into the local recovery

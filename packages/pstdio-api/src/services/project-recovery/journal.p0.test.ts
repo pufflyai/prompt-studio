@@ -38,7 +38,8 @@ test("one live process owns a source operation and an exited owner's lock is tak
   expect(await journal.acquire()).toBeNull();
   const [lock] = (await readdir(join(root, "sources"))).filter((name) => name.endsWith(".lock"));
   await release!();
-  expect(await readdir(join(root, "sources"))).toEqual([]);
+  // The OS lease file stays on the same inode between owners.
+  expect(await readdir(join(root, "sources"))).toEqual([`${lock}.sqlite`]);
   await writeFile(join(root, "sources", lock!), String(Bun.spawnSync(["true"]).pid));
   const takeover = await journal.acquire();
   expect(takeover).not.toBeNull();

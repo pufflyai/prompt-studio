@@ -8,6 +8,7 @@ export interface SubnavRequestClockInput {
 
 export interface SubnavResourceClockEntry {
   name: string;
+  startTime: number;
   responseEnd: number;
 }
 
@@ -28,6 +29,7 @@ export const measureSubnavRequests = (
     const resource = byUrl.get(url)?.shift();
     if (!resource) throw new Error(`Missing browser resource timing for ${url}`);
     return {
+      startedMs: resource.startTime - started,
       durationMs: timing.responseEnd >= 0 ? timing.responseEnd : elapsedMs,
       completedMs: resource.responseEnd - started,
     };
