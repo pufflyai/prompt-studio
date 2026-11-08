@@ -1,5 +1,6 @@
-import { Button, Stack, Text } from "@chakra-ui/react";
+import { Button } from "@chakra-ui/react";
 import type { ChatRendererSnapshot, ControlValue } from "@pstdio/sdk/extensions";
+import { AlertMessage } from "@pstdio/ui";
 import type { WorkbenchCore } from "@pstdio/workbench";
 import type { NativeChatHostProps, NativeChatHostServices } from "@pstdio/workbench/extensions";
 import type { AgentInfo } from "pstdio-api-contracts";
@@ -27,12 +28,12 @@ const NativeHarnessSetup = (props: {
   if (props.selectionPending || account.progress) return null;
   if (agent?.availability.type === "INSTALLED" && account.authenticationError)
     return (
-      <Stack gap="xs">
-        <Text role="alert">Could not check harness authentication.</Text>
-        <Button size="xs" variant="ghost" onClick={account.retryAuthentication}>
-          Retry
-        </Button>
-      </Stack>
+      <AlertMessage
+        role="alert"
+        status="error"
+        title="Could not check harness authentication."
+        endElement={<Button onClick={account.retryAuthentication}>Retry</Button>}
+      />
     );
   if (!agentsChecked) return null;
   if (agent?.availability.type !== "INSTALLED")
