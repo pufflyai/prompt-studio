@@ -126,6 +126,7 @@ test("refresh retains loaded depth and old rows until fresh cursor pages finish"
   const current: TreeViewSection[] = [
     {
       ...sections[0]!,
+      nodes: [{ id: "newest", label: "Newest" }],
       nextPage: async () =>
         new Promise((resolve) => {
           finish = resolve;
@@ -137,8 +138,8 @@ test("refresh retains loaded depth and old rows until fresh cursor pages finish"
   expect(read().nodes.map((node) => node.label)).toEqual(["First", "Old title"]);
   const pending = refreshed.revalidate();
   expect(read().nodes).toHaveLength(2);
-  finish({ nodes: [{ id: "second", label: "New title" }] });
+  finish({ nodes: [first, { id: "second", label: "New title" }] });
   await pending;
-  expect(read().nodes.map((node) => node.label)).toEqual(["First", "New title"]);
+  expect(read().nodes.map((node) => node.label)).toEqual(["Newest", "First", "New title"]);
   expect(read().pagination).toBeUndefined();
 });

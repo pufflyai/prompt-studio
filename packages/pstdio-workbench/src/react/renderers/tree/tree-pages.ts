@@ -2,6 +2,9 @@ import type { TreeNode, TreeNodePage, TreePageLoader, TreePageStatus, TreeViewSe
 
 interface PageState {
   firstPage: TreePageLoader;
+  initialNodes: TreeNode[];
+  /** Keep the old whole collection visible when an insertion shifts the first page's boundary. */
+  retainedInitial?: TreeNode[];
   nodes: TreeNode[];
   freshNodes: TreeNode[];
   depth: number;
@@ -11,6 +14,7 @@ interface PageState {
 }
 
 interface RetainedPage {
+  initialNodes: TreeNode[];
   nodes: TreeNode[];
   depth: number;
 }
@@ -22,12 +26,14 @@ export const createTreePages = (
   retained = new Map<string, RetainedPage>(),
 ) => {
   const states = new Map<string, PageState>();
-  const stateFor = (firstPage: TreePageLoader, key: string) => {
+  const stateFor = (firstPage: TreePageLoader, key: string, initialNodes: TreeNode[]) => {
     const state = states.get(key);
     if (state?.firstPage === firstPage) return state;
     const previous = state ? retainPage(state) : retained.get(key);
     const created: PageState = {
       firstPage,
+      initialNodes,
+      retainedInitial: previous?.depth ? previous.initialNodes : undefined,
       nodes: previous?.nodes ?? [],
       freshNodes: [],
       depth: 0,
@@ -42,10 +48,13 @@ export const createTreePages = (
   };
   const nodes = (values: TreeNode[], childrenByNodeId: Record<string, TreeNode[]>): TreeNode[] =>
     values.map((node) => {
-      const state = node.nextPage ? stateFor(node.nextPage, `node:${node.id}`) : undefined;
       const initialChildren = childrenByNodeId[node.id] ?? node.children;
+      const state = node.nextPage ? stateFor(node.nextPage, `node:${node.id}`, initialChildren ?? []) : undefined;
       if (!initialChildren && !state) return node;
-      const children = nodes(appendNodes(initialChildren ?? [], state?.nodes ?? []), childrenByNodeId);
+      const children = nodes(
+        appendNodes(state?.retainedInitial ?? initialChildren ?? [], state?.nodes ?? []),
+        childrenByNodeId,
+      );
       const pagination = state?.nextPage ? state.status : undefined;
       if (
         !state &&
@@ -68,8 +77,11 @@ export const createTreePages = (
     },
     sections: (sections: TreeViewSection[], childrenByNodeId: Record<string, TreeNode[]> = {}) => {
       const next = sections.map((section) => {
-        const state = section.nextPage ? stateFor(section.nextPage, `section:${section.id}`) : undefined;
-        const children = nodes(appendNodes(section.nodes, state?.nodes ?? []), childrenByNodeId);
+        const state = section.nextPage ? stateFor(section.nextPage, `section:${section.id}`, section.nodes) : undefined;
+        const children = nodes(
+          appendNodes(state?.retainedInitial ?? section.nodes, state?.nodes ?? []),
+          childrenByNodeId,
+        );
         if (!state && children.every((child, index) => child === section.nodes[index])) return section;
         return { ...section, nodes: children, pagination: state?.nextPage ? state.status : undefined };
       });
@@ -78,7 +90,11 @@ export const createTreePages = (
   };
 };
 
-const retainPage = (state: PageState) => ({ nodes: state.nodes, depth: Math.max(state.depth, state.targetDepth) });
+const retainPage = (state: PageState) => ({
+  initialNodes: state.retainedInitial ?? state.initialNodes,
+  nodes: state.nodes,
+  depth: Math.max(state.depth, state.targetDepth),
+});
 
 const loadPageState = async (state: PageState, signal: AbortSignal, publish: () => void) => {
   if (signal.aborted || state.status.loading || !state.nextPage) return;
@@ -93,6 +109,7 @@ const loadPageState = async (state: PageState, signal: AbortSignal, publish: () 
       state.depth++;
     } while (state.nextPage && state.depth < state.targetDepth);
     state.nodes = state.freshNodes;
+    state.retainedInitial = undefined;
   } catch (error) {
     if (!signal.aborted) state.status = { ...state.status, error: pageError(error) };
   } finally {
