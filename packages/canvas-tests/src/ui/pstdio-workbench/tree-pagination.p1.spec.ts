@@ -37,7 +37,9 @@ test("scrolling appends sibling sessions, retains keyboard focus, and retries in
   await last.focus();
   const scrollTop = await viewport.evaluate((element) => element.scrollTop);
   // A live provider event refreshes without taking focus from the reader.
-  await frame.getByRole("button", { name: "Refresh", exact: true }).evaluate((button) => button.click());
+  await frame.getByRole("button", { name: "Refresh", exact: true }).evaluate((button) => {
+    if (button instanceof HTMLElement) button.click();
+  });
   await expect(requests).toHaveText("7");
   await expect(last).toBeFocused();
   expect(await viewport.evaluate((element) => element.scrollTop)).toBeCloseTo(scrollTop, 0);
