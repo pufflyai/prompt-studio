@@ -56,6 +56,10 @@ The [native chat view body](0028-native-chat.md) also shares the coordinated API
 step. Released extensions must use a published SDK containing that declaration
 and a host that supports it before adopting it.
 
+Infinite tree scrolling also shares API 0.4.0 on `main`. Tree sections and child collections can return
+`nextCursor`; their `page` callback returns `TreeNodePage` for automatic sibling appends. A supporting host
+advertises `view.tree.pages.v1`. Publish the SDK and host before separately releasing an extension that uses it.
+
 Optional workspace provider discovery and provider-bound `ctx.localDirectory()`
 share the coordinated API 0.4.0 step on `main`. They expose current project choices
 and owned local preparation before readiness. Publish the host and SDK before

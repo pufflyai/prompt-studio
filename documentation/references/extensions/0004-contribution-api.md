@@ -210,6 +210,16 @@ export default defineExtension({
 content. Renderer callbacks receive the active project, resource, renderer id, tree state, filter text, and selected
 node context.
 
+For long collections, set `nextCursor` on a section or on a node with its first `children` page, and provide
+`page(ctx, input)`. It receives the cursor, the same renderer/filter scope, and either
+`parent: { kind: "section", id }` or `parent: { kind: "node", node }`. Return `{ nodes, nextCursor? }`.
+The host appends these nodes as siblings when the collection's end enters the viewport. Omit the cursor when
+exhausted. Keep node IDs stable across pages, including date headings. Collapsed collections do not load pages.
+The host preserves existing rows and focus, prevents concurrent duplicate reads, cancels pages after query/resource
+changes or refresh, and shows failures with inline Retry. Do not add a synthetic “More” node or a pagination button.
+This additive API shares the coordinated API 0.4.0 step on `main` and requires a supporting published SDK and
+host capability `view.tree.pages.v1`.
+
 Optional `structure` declares body section IDs, labels, and collapse and visibility settings in view metadata. The host renders this layout synchronously, then starts content reads after that render commits. Pending sections show a spinner rather than an empty result. The callback's final sections replace the structure, including sections that turn out to be empty or absent. Use the same IDs in both declarations so expansion and customization stay attached to the section. A structure section can include `resourceNode: { id, icon }` to show the bound resource using its already-known label without a callback.
 
 Navigation trees default to `resourceScope: "selection"`, so selecting a different resource starts a new read. Use `resourceScope: "project"` when the tree reads project data independently of the selected resource, such as a shared notes list. Its callbacks receive the project and no resource; selection changes keep its rows visible. Declared refresh events still update its data. The owner still controls where the tree appears.

@@ -47,6 +47,19 @@ export interface TreeAction {
 
 export type TreeNodeRowVariant = "empty-state" | "file";
 
+export interface TreeNodePage {
+  nodes: TreeNode[];
+  nextPage?: TreePageLoader;
+}
+
+export type TreePageLoader = (signal: AbortSignal) => Promise<TreeNodePage>;
+
+export interface TreePageStatus {
+  loading?: boolean;
+  error?: string;
+  loadMore(): Promise<void> | void;
+}
+
 export interface TreeNodeInlineInput {
   ariaLabel: string;
   defaultValue?: string;
@@ -84,6 +97,10 @@ export interface TreeNode {
   collapsible?: boolean;
   disabled?: boolean;
   children?: TreeNode[];
+  /** Read the next bounded page of children. */
+  nextPage?: TreePageLoader;
+  /** Owned by the current tree read; passed to the shared list. */
+  pagination?: TreePageStatus;
   description?: string;
   contextValue?: string;
   hiddenByDefault?: boolean;
@@ -118,6 +135,8 @@ export interface TreeViewSection {
   collapsible?: boolean;
   emptyState?: TreeSectionEmptyState;
   nodes: TreeNode[];
+  nextPage?: TreePageLoader;
+  pagination?: TreePageStatus;
   hiddenByDefault?: boolean;
   /** When true, the section (category) opts in to the tree's hide/show customization menu. */
   canHide?: boolean;

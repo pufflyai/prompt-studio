@@ -66,6 +66,7 @@ const body = z.discriminatedUnion("kind", [
       header: callbackSchema.optional(),
       footer: callbackSchema.optional(),
       children: callbackSchema.optional(),
+      page: callbackSchema.optional(),
       onMove: callbackSchema.optional(),
       searchable: z.boolean().optional(),
       searchPlaceholder: localizableStringSchema.optional(),
