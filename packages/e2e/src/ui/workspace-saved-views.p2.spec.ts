@@ -102,7 +102,11 @@ test("the Workspaces extension saves shared views and isolates each project's se
     await page.getByRole("button", { name: "Switch project", exact: true }).click();
     const projectPicker = page.getByRole("dialog", { name: "Projects", exact: true });
     await projectPicker.getByText("Other workspace views", { exact: true }).click();
-    await page.goto(`/projects/${second!.id}/workspaces`);
+    await expect(page).toHaveURL(new RegExp(`/projects/${second!.id}(?:/|$)`));
+    await page
+      .locator('[data-workbench-region="sidenav"]')
+      .getByRole("option", { name: "Workspaces", exact: true })
+      .click();
     await expect(page.getByRole("tab", { name: "By device", exact: true })).toHaveAttribute("aria-selected", "true");
     await expect(releaseTab).toHaveCount(0);
     await expect(page.getByRole("tab", { name: "Compact", exact: true })).toBeVisible();
@@ -110,7 +114,11 @@ test("the Workspaces extension saves shared views and isolates each project's se
     expect(otherViews.views).toHaveLength(2);
     await page.getByRole("button", { name: "Switch project", exact: true }).click();
     await projectPicker.getByText("Saved workspace views", { exact: true }).click();
-    await page.goto(`/projects/${first!.id}/workspaces`);
+    await expect(page).toHaveURL(new RegExp(`/projects/${first!.id}(?:/|$)`));
+    await page
+      .locator('[data-workbench-region="sidenav"]')
+      .getByRole("option", { name: "Workspaces", exact: true })
+      .click();
     await expect(releaseTab).toHaveAttribute("aria-selected", "true");
   } finally {
     await page.unrouteAll({ behavior: "wait" });
