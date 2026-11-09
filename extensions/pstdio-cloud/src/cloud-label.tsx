@@ -11,17 +11,17 @@ export const CloudIcon = (props: { name: string }) => {
 
 const CloudStatusIcon = (props: { status?: ReturnType<typeof cloudStatus>; active?: boolean; error?: string }) => {
   const { status, active, error } = props;
-  if (active) return <Spinner size="xs" />;
+  if (active && status?.key !== "offline") return <Spinner size="xs" />;
   let icon = status?.icon ?? "cloud";
   if (error) icon = "triangle-alert";
   if (status?.key === "offline") icon = "wifi-off";
   return <CloudIcon name={icon} />;
 };
 
-export const CloudLabel = (props: { data: ReturnType<typeof useCloud>["data"]; error?: string }) => {
-  const { data, error } = props;
+export const CloudLabel = (props: { data: ReturnType<typeof useCloud>["data"]; online: boolean; error?: string }) => {
+  const { data, online, error } = props;
   const { t } = useCloudContext();
-  const status = data ? cloudStatus(data.account, data.sync, data.project) : undefined;
+  const status = cloudStatus(data?.account, data?.sync, data?.project, online);
   let label = t("status.loading", "Cloud");
   if (status?.key === "offline") label = t("status.offline", "Connection lost");
   else if (error) label = t("status.attention", "Needs attention");

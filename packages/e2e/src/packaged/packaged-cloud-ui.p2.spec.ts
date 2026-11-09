@@ -85,6 +85,10 @@ test("Cloud settings respect early access and manage devices and project sync th
     await expect(settingsFrame).toBeHidden();
   };
   await expect(status).toHaveText("Sign in");
+  await context.setOffline(true);
+  await expect(status).toHaveText("Connection lost");
+  await context.setOffline(false);
+  await expect(status).toHaveText("Sign in");
   await openSettings();
   const startSignIn = async () => {
     const viewport = page.viewportSize()!;

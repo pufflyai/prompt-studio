@@ -18,14 +18,14 @@ At noon each day, it starts an evidence-gated search for one high-impact issue. 
 
 ## Performance
 
-The **Performance** page has three tabs and keeps the project navigation visible. **Trends** shows every benchmark across releases, one line per platform. **Compare** compares two commits, or shows one commit's own results, and measures commits that have none. **Runs** starts benchmark runs on GitHub Actions and skips commits that already have results. Results are cached in extension storage; see [Benchmark results](../../../documentation/references/performance/0006-benchmark-results.md).
+The **Performance** page has three native Prompt Studio tabs in its Main panel and keeps the project navigation visible. **Trends** shows every benchmark across releases, one line per platform. **Compare** compares two commits, or shows one commit's own results, and measures commits that have none. **Runs** starts benchmark runs on GitHub Actions and skips commits that already have results. Results are cached in extension storage; see [Benchmark results](../../../documentation/references/performance/0006-benchmark-results.md).
 
 ```sh
 pst pstdio-dev benchmarks sync
 pst pstdio-dev benchmarks start-run --commits pstdio@0.45.0 --commits main --platforms linux-x64
 ```
 
-The pages use your GitHub CLI login. Run `gh auth login` in this repository first.
+The tabs use your GitHub CLI login. Run `gh auth login` in this repository first.
 
 ## Merge queue repair
 

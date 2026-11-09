@@ -14,7 +14,7 @@ const openSettings = commandRef<{ panelId: string }, void>({ extensionId: "pstdi
 export const CloudDetails = (props: { projectId?: string }) => {
   const { projectId } = props;
   const { client, t } = useCloudContext();
-  const { data, error, refresh } = useCloud(projectId, true);
+  const { data, online, error, refresh } = useCloud(projectId, true);
   const [navigationError, setNavigationError] = useState<string>();
   const navigate = async () => {
     setNavigationError(undefined);
@@ -34,7 +34,7 @@ export const CloudDetails = (props: { projectId?: string }) => {
     <Stack gap="0">
       <PopoverHeader icon={<CloudIcon name="cloud" />} title={t("popover.title", "Prompt Studio Cloud")} />
       <Stack gap="md" px="md" pb="sm">
-        <CloudLabel data={data} error={error} />
+        <CloudLabel data={data} online={online} error={error} />
         {data?.project?.error && <AlertMessage status="error">{data.project.error}</AlertMessage>}
         {error && <AlertMessage status="error">{error}</AlertMessage>}
         {projectId && data && earlyAccess && <CloudProjectRecovery data={data} refresh={refresh} />}

@@ -5,11 +5,14 @@ import {
   definePage,
   defineSkill,
   defineView,
+  defineViewMenu,
   l10n,
   packageAsset,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
 import { commands } from "./src/commands";
+import { settingsView } from "./src/settings-view";
+import { studioCommands } from "./src/studio-commands";
 
 const studio = defineView({
   id: "studio",
@@ -26,12 +29,12 @@ const page = definePage({
   title: l10n("pages.shapeArt.title", "Shape Art"),
   path: "shape-art",
   mode: workbenchModes.project,
-  main: { kind: "view", view: studio.ref, cardinality: "one" },
+  main: { kind: "view", view: studio.ref, cardinality: "one", presentation: "page" },
   slots: [],
 });
 
 export default defineExtension({
-  commands: Object.values(commands),
+  commands: [...Object.values(commands), ...Object.values(studioCommands)],
   keybindings: [
     defineKeybinding({
       id: "keyboard-open",
@@ -62,7 +65,8 @@ export default defineExtension({
       }),
     ),
   ],
-  views: [studio],
+  views: [studio, settingsView],
+  viewMenus: [defineViewMenu({ id: "settings", owner: studio.ref, view: settingsView.ref, side: "right" })],
   pages: [page],
   navigationItems: [
     defineNavigationItem({

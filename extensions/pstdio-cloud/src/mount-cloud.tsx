@@ -19,10 +19,10 @@ const isVisible = () => !document.hidden;
 
 const Status = (props: { projectId?: string }) => {
   const { projectId } = props;
-  const { data, error } = useCloud(projectId, false);
+  const { data, online, error } = useCloud(projectId, false);
   return (
     <Button variant="ghost-static" size="xs" tabIndex={-1} h="100dvh" data-testid="cloud-status-item">
-      <CloudLabel data={data} error={error} />
+      <CloudLabel data={data} online={online} error={error} />
     </Button>
   );
 };
