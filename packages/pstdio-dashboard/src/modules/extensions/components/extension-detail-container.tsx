@@ -144,7 +144,6 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
         togglingAutomationId={
           setAutomationEnabled.isPending ? (setAutomationEnabled.variables?.automationId ?? undefined) : undefined
         }
-        onBack={onBack}
         onToggle={(enabled) => {
           clearError();
           setEnabled.mutate(

@@ -145,7 +145,6 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
           }
           loadingContributions={marketplaceContributions.isLoading}
           installing={installingMarketplaceNames.includes(selectedMarketplace.installName)}
-          onBack={() => openList()}
           onInstall={() => void handleInstallMarketplace(selectedMarketplace)}
         />
       </>

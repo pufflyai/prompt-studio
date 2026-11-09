@@ -1,22 +1,25 @@
-import { Button } from "@chakra-ui/react";
+import { Button, Text } from "@chakra-ui/react";
 import { SearchableMenu } from "@pstdio/ui";
+import { ChevronDown } from "lucide-react";
 
 interface IconSetChooserProps {
   value: string;
+  family: string;
   disabled: boolean;
   onChange(value: string): void;
 }
-const sets = [
-  { id: "all", label: "Prompt Studio" },
-  { id: "custom", label: "Custom icons" },
-];
 export const IconSetChooser = (props: IconSetChooserProps) => {
-  const { value, disabled, onChange } = props;
+  const { value, family, disabled, onChange } = props;
+  const sets = [
+    { id: "all", label: family },
+    { id: "custom", label: "Custom icons" },
+  ];
   return (
     <SearchableMenu
       trigger={
-        <Button variant="outline" disabled={disabled} aria-label="Choose icon set">
-          {sets.find((set) => set.id === value)?.label}
+        <Button variant="ghost" maxW="full" disabled={disabled} aria-label="Choose icon set">
+          <Text truncate>{sets.find((set) => set.id === value)?.label}</Text>
+          <ChevronDown />
         </Button>
       }
       items={sets.map((set) => ({ ...set, isSelected: value === set.id, onSelect: () => onChange(set.id) }))}

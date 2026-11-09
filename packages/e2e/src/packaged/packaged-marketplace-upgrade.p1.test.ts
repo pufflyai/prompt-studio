@@ -222,7 +222,10 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
     await expectPage(detail.getByTestId("extension-detail-health")).toHaveCount(0);
     await expectPage(detail.getByTestId("extension-upgrade")).toHaveCount(0);
 
-    await detail.getByTestId("extension-detail-back").click();
+    await page
+      .getByRole("navigation", { name: "breadcrumb" })
+      .getByRole("button", { name: "Extensions", exact: true })
+      .click();
     const adoptedRow = list.getByTestId("extension-entry").filter({ hasText: "Prompt Studio Skills" });
     await adoptedRow.waitFor();
     await adoptedRow.click();
@@ -239,7 +242,10 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
     await expectPage(detail.getByTestId("extension-detail-health")).toHaveCount(0);
     await expectPage(detail.getByTestId("extension-upgrade")).toHaveCount(0);
 
-    await detail.getByTestId("extension-detail-back").click();
+    await page
+      .getByRole("navigation", { name: "breadcrumb" })
+      .getByRole("button", { name: "Extensions", exact: true })
+      .click();
     const localRow = list.getByTestId("extension-entry").filter({ hasText: "Local Example" });
     await localRow.waitFor();
     await localRow.click();
@@ -249,7 +255,10 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
     await expectPage(detail.getByTestId("extension-upgrade")).toHaveCount(0);
     await expectPage(detail.getByTestId("extension-incompatible-upgrade")).toHaveCount(0);
 
-    await detail.getByTestId("extension-detail-back").click();
+    await page
+      .getByRole("navigation", { name: "breadcrumb" })
+      .getByRole("button", { name: "Extensions", exact: true })
+      .click();
     await installedRow.click();
 
     await detail.getByTestId("extension-delete").click();

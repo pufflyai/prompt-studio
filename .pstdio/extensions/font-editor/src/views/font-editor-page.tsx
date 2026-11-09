@@ -1,4 +1,4 @@
-import { Badge, Box, Button, Flex, Grid, Heading, HStack, Input, Spinner, Text, VStack } from "@chakra-ui/react";
+import { Badge, Box, Button, Flex, Grid, HStack, Input, Spinner, Text, VStack } from "@chakra-ui/react";
 import type { GuestHost, WebviewFilesClient } from "@pstdio/sdk/extensions";
 import { AlertMessage, EmptyState, ScrollArea } from "@pstdio/ui";
 import { useEffect, useState } from "react";
@@ -111,23 +111,20 @@ export const FontEditorPage = (props: FontEditorPageProps) => {
         borderColor="border.subtle"
         background="bg.panel"
       >
-        <Box flex="1">
-          <Heading size="lg">{inspection.family}</Heading>
+        <Box flex="1" minW="0">
+          <IconSetChooser
+            family={inspection.family}
+            value={iconSet}
+            disabled={busy}
+            onChange={(value) => {
+              setIconSet(value);
+              setSelectedName(undefined);
+            }}
+          />
           <HStack marginTop="2xs">
-            <Badge variant="subtle">{inspection.glyphs.length} glyphs</Badge>
-            <Text textStyle="xs" color="fg.muted">
-              {inspection.unitsPerEm} units per em
-            </Text>
+            <Badge variant="subtle">{visibleGlyphs.length} glyphs</Badge>
           </HStack>
         </Box>
-        <IconSetChooser
-          value={iconSet}
-          disabled={busy}
-          onChange={(value) => {
-            setIconSet(value);
-            setSelectedName(undefined);
-          }}
-        />
         <Input
           maxWidth={{ base: "full", lg: "22rem" }}
           value={query}

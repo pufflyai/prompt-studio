@@ -24,7 +24,15 @@ const withExtension = async (
     upload.append("kind", "upload");
     upload.append("folderName", name);
     for (const file of globSync(
-      ["package.json", "extension.ts", "merge-queue-repair.ts", "src/**/*.ts", "src/**/*.tsx", "skills/**/*.*"],
+      [
+        "package.json",
+        "extension.ts",
+        "merge-queue-repair.ts",
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        "skills/**/*.*",
+        "l10n/*.json",
+      ],
       { cwd: source },
     ))
       upload.append("files", new File([readFileSync(join(source, file))], file));
@@ -41,22 +49,61 @@ const withExtension = async (
   }
 };
 
-// Critical: host tabs must remain keyboard-accessible without replacing project navigation.
-test("Performance exposes Trends Compare and Runs as native tabs on one page", async ({ request, page }) => {
+// Critical: all destinations and the run form stay reachable through native project navigation and menus.
+test("Performance expands in project navigation and Runs retains its native menu draft", async ({ request, page }) => {
   await withExtension(request, page, "pstdio-dev", async (projectId) => {
-    const path = `/projects/${projectId}/extensions/pstdio.pstdio-dev/performance`;
-    await page.goto(path);
-    const main = page.getByRole("main");
+    const path = `/projects/${projectId}/extensions/pstdio.pstdio-dev`;
+    await page.goto(`${path}/performance`);
+    const nav = page.locator('[data-workbench-region="sidenav"]');
+    const performance = nav.getByRole("option", { name: "Performance", exact: true });
+    await performance.focus();
+    await performance.press("ArrowRight");
+    await expect(performance).toHaveAttribute("aria-expanded", "true");
     for (const name of ["Trends", "Compare", "Runs"]) {
-      const tab = main.getByRole("tab", { name, exact: true });
-      await tab.click();
-      await expect(tab).toHaveAttribute("aria-selected", "true");
-      await expect(page).toHaveURL(new RegExp(`${path}$`));
-      await expect(main.locator(`iframe[title="${name}"]`).filter({ visible: true })).toBeVisible();
+      await nav.getByRole("option", { name, exact: true }).click();
+      await expect(page.getByRole("main").locator(`iframe[title="${name}"]`)).toBeVisible();
+      await expect(nav.getByRole("option", { name: "Tickets", exact: true })).toBeVisible();
     }
-    await expect(
-      page.locator('[data-workbench-region="sidenav"]').getByRole("option", { name: "Tickets", exact: true }),
-    ).toBeVisible();
+    const menu = page.locator('[data-workbench-panel-menu="main-right"]');
+    const form = menu.frameLocator('iframe[title="New run"]');
+    const commit = form.getByRole("combobox", { name: "Add a commit, branch, or tag" });
+    await commit.fill("retained-run-ref");
+    const resize = page.getByRole("separator", { name: "Resize Main right menu", exact: true });
+    await resize.focus();
+    await resize.press("Home");
+    await expect(menu).toBeHidden();
+    await page.getByRole("button", { name: "Open Main right menu", exact: true }).click();
+    await expect(commit).toHaveValue("retained-run-ref");
+    await expect(menu).toBeVisible();
+    await page.setViewportSize({ width: 700, height: 1000 });
+    await expect(menu).toBeHidden();
+    const opener = page.getByRole("button", { name: "Open Main right menu", exact: true });
+    await opener.click();
+    const floating = page.locator('[data-workbench-panel-menu-controls="main-right-menu"]');
+    await expect(floating).toBeVisible();
+    const floatingCommit = floating.frameLocator('iframe[title="New run"]').getByRole("combobox");
+    await expect(floatingCommit).toHaveValue("retained-run-ref");
+    await floatingCommit.fill("retained-floating-ref");
+    await opener.click();
+    await expect(floating).toBeHidden();
+    await expect
+      .poll(() =>
+        page
+          .frameLocator('iframe[title="New run"]')
+          .locator("body")
+          .evaluate(() => document.hidden),
+      )
+      .toBe(true);
+    await opener.click();
+    await expect(floatingCommit).toHaveValue("retained-floating-ref");
+    await expect(page.locator('iframe[title="New run"]')).toHaveCount(1);
+    await page.setViewportSize({ width: 1280, height: 1000 });
+    await expect(commit).toHaveValue("retained-floating-ref");
+    await nav.getByRole("option", { name: "Trends", exact: true }).click();
+    await expect(page.getByRole("main").locator('iframe[title="Trends"]')).toBeVisible();
+    await performance.focus();
+    await performance.press("ArrowLeft");
+    await expect(performance).toHaveAttribute("aria-expanded", "false");
   });
 });
 

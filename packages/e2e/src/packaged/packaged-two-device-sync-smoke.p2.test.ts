@@ -22,6 +22,13 @@ const waitFor = async (condition: () => Promise<boolean> | boolean) => {
   while (!(await condition())) await Bun.sleep(25);
 };
 
+// Settle every in-flight mutation before a failure lets the fixture stop its hosts.
+const finishMutations = async (operations: Promise<unknown>[]) => {
+  const results = await Promise.allSettled(operations);
+  const failures = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+  if (failures.length) throw new AggregateError(failures, "Could not prepare shared Cloud data");
+};
+
 const writeCertificate = (root: string) => {
   const key = join(root, "peer-key.pem");
   const cert = join(root, "peer-cert.pem");
@@ -160,12 +167,15 @@ test(
         const project = await first.client.projects.create(
           folderProjectInput({ name: "Shared notes" }, repository.checkout),
         );
-        await first.command(project.id, "offline-collection", { action: "seed" });
-        await write(first, project.id, "note", "written on the first device");
-        await first.command(project.id, "write-file", { path: "note.md", content: "# Shared note" });
-        await first.command(project.id, "write-file", { path: "artifact.html", content: "<h1>Shared artifact</h1>" });
-        phase("source files saved");
-        await signIn(first, peer.origin);
+        // These independent records, files and account login can prepare together after the cold start.
+        await finishMutations([
+          first.command(project.id, "offline-collection", { action: "seed" }),
+          write(first, project.id, "note", "written on the first device"),
+          first.command(project.id, "write-file", { path: "note.md", content: "# Shared note" }),
+          first.command(project.id, "write-file", { path: "artifact.html", content: "<h1>Shared artifact</h1>" }),
+          signIn(first, peer.origin),
+        ]);
+        phase("source files saved and account signed in");
         await first.client.account.syncProject(project.id);
         await first.reach(project.id, "synced");
         phase("source project synced");
@@ -231,8 +241,7 @@ test(
       peer.restart();
       await picker.retry();
       phase("retry requested");
-      await first.reach(project.id, "synced");
-      await second.reach(project.id, "synced");
+      await Promise.all([first.reach(project.id, "synced"), second.reach(project.id, "synced")]);
       await picker.ready();
       // Folder preparation can replace a synced owner; navigation does not await its next download.
       await waitFor(async () => (await second.client.account.projectSyncStatus(project.id)).offlineReady);
@@ -271,41 +280,48 @@ test(
       // which a project change starts at once.
       await first.client.account.stopProjectSync(project.id);
       await second.client.projects.update(project.id, { name: "Shared notes (local)" });
-      await first.reach(project.id, "local");
-      await second.reach(project.id, "local");
+      await Promise.all([first.reach(project.id, "local"), second.reach(project.id, "local")]);
       phase("both devices local");
-      for (const [device, action] of [
-        [first, "left"],
-        [second, "right"],
-      ] as const)
-        expect(await device.command(project.id, "offline-collection", { action })).toMatchObject({ saved: true });
-      await write(first, project.id, "note", "edited on the first device while local");
-      await write(second, project.id, "caption", "edited on the second device while local");
+      await finishMutations([
+        ...(
+          [
+            [first, "left"],
+            [second, "right"],
+          ] as const
+        ).map(async ([device, action]) =>
+          expect(await device.command(project.id, "offline-collection", { action })).toMatchObject({ saved: true }),
+        ),
+        write(first, project.id, "note", "edited on the first device while local"),
+        write(second, project.id, "caption", "edited on the second device while local"),
+      ]);
 
       await first.client.account.syncProject(project.id);
       phase("first syncProject returned");
       await second.client.projects.update(project.id, { name: "Shared notes" });
       phase("second project refreshed");
-      await first.reach(project.id, "synced");
-      await second.reach(project.id, "synced");
+      await Promise.all([first.reach(project.id, "synced"), second.reach(project.id, "synced")]);
       phase("both devices resynced");
       const merged = async (device: typeof first) => {
         const records = await device.command<Record<string, StorageRecord>>(project.id, "read");
         return [records.note?.value, records.caption?.value];
       };
       const expected = ["edited on the first device while local", "edited on the second device while local"];
-      await waitFor(async () => Bun.deepEquals(await merged(first), expected));
-      await waitFor(async () => Bun.deepEquals(await merged(second), expected));
+      await Promise.all(
+        [first, second].map((device) => waitFor(async () => Bun.deepEquals(await merged(device), expected))),
+      );
 
-      for (const device of [first, second])
-        await waitFor(async () => {
-          const { value } = await device.command<{ value: { title: string; track: string; updatedAt: string } }>(
-            project.id,
-            "offline-collection",
-            { action: "read" },
-          );
-          return value.title === "Edited" && value.track === "ui" && ["left", "right"].includes(value.updatedAt);
-        });
+      await Promise.all(
+        [first, second].map((device) =>
+          waitFor(async () => {
+            const { value } = await device.command<{ value: { title: string; track: string; updatedAt: string } }>(
+              project.id,
+              "offline-collection",
+              { action: "read" },
+            );
+            return value.title === "Edited" && value.track === "ui" && ["left", "right"].includes(value.updatedAt);
+          }),
+        ),
+      );
 
       const history = await first.command<{ events: ProjectSyncState[]; current: unknown }>(project.id, "sync-history");
       expect(history.current).toMatchObject({ state: "synced", offlineReady: true, pendingItems: 0 });

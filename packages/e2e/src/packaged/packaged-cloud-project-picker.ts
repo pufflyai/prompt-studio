@@ -64,6 +64,7 @@ export const reopenPreparedProjectOffline = async (
       "Could not restart the offline device and browser",
     );
   }
+  logTestPhase("Cloud project opening: offline host and cold browser ready");
   const input = device.value;
   const browser = launched.value;
   try {
@@ -74,6 +75,7 @@ export const reopenPreparedProjectOffline = async (
       localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
     }, input.projectId);
     await signInBrowser(page, { origin: input.baseUrl, token: input.token }, `/projects/${input.projectId}`);
+    logTestPhase("Cloud project opening: offline browser signed in");
     await expect(page.getByRole("main")).toBeVisible();
     await expect(page.getByRole("dialog", { name: /^Opening / })).toHaveCount(0);
     await page.screenshot({ path: join(import.meta.dir, "../../test-results/cloud-project-offline.png") });
