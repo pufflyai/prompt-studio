@@ -19,12 +19,18 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 type ResourceListRendererQueryResult = Omit<KanbanRendererQueryResult, "rows"> & { rows: ResourceListRendererRow[] };
 let root: string;
 let extensionSource: string;
+let sessionsSource: string;
 let harness: string;
 setupPackagedSmokeTests(async () => {
   root = await mkdtemp(join(tmpdir(), "packaged-workspace-devices-"));
   extensionSource = await preparePackagedExtensionSource(
     join(root, "source"),
     join(import.meta.dirname, "../../../../extensions/pstdio-workspaces"),
+    { install: true },
+  );
+  sessionsSource = await preparePackagedExtensionSource(
+    join(root, "sessions-source"),
+    join(import.meta.dirname, "../../../../extensions/pstdio-session-browser"),
     { install: true },
   );
   harness = join(root, "harness");
@@ -71,6 +77,25 @@ const connectDevice = async (
     }),
   });
   expect(response.status).toBe(201);
+  // Binding chooses a local folder. Select the shared providers separately,
+  // as with the fixture harness below; it does not enable optional user tools.
+  for (const [installName, sourcePath] of [
+    ["pstdio-workspaces", extensionSource],
+    ["pstdio-session-browser", sessionsSource],
+  ] as const) {
+    const manifest = await Bun.file(join(sourcePath, "package.json")).json();
+    await client.extensions.enableInstalled(projectId, installName, {
+      displayName: manifest.displayName ?? installName,
+      extensionId: `${manifest.publisher}.${manifest.name}`,
+      name: manifest.name,
+      manifest,
+      sourceKind: "local_path",
+      sourcePath,
+      sourceHash: null,
+      sourceRef: null,
+      version: manifest.version,
+    });
+  }
   await client.extensions.enableInstalled(projectId, "workspace-history-fixture", {
     displayName: "Workspace history fixture",
     extensionId: "test.workspace-history-fixture",
