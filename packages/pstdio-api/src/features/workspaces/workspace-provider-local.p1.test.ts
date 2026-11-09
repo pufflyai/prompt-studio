@@ -222,7 +222,7 @@ test("cancelling a provider operation stops its child before the operation rejec
           command: [
             process.execPath,
             "-e",
-            "require('fs').writeFileSync(process.argv[1], String(process.pid)); setInterval(() => {}, 1000)",
+            "const fs = require('fs'); const path = process.argv[1]; fs.writeFileSync(path + '.tmp', String(process.pid)); fs.renameSync(path + '.tmp', path); setInterval(() => {}, 1000)",
             marker,
           ],
         })
@@ -307,7 +307,7 @@ test.each(["timeout", "return"] as const)("provider %s releases its still-runnin
           command: [
             process.execPath,
             "-e",
-            "require('fs').writeFileSync(process.argv[1], String(process.pid)); setInterval(() => {}, 1000)",
+            "const fs = require('fs'); const path = process.argv[1]; fs.writeFileSync(path + '.tmp', String(process.pid)); fs.renameSync(path + '.tmp', path); setInterval(() => {}, 1000)",
             marker,
           ],
         })
