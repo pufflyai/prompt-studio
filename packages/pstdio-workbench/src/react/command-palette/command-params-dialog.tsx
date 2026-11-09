@@ -197,6 +197,7 @@ const CommandParamsForm = (props: CommandParamsDialogProps & { request: CommandP
                   const dynamic = entry.options && !Array.isArray(entry.options);
                   const fieldProps = {
                     fullWidth: entry.key === titleParam,
+                    changeDelay: entry.key === titleParam ? 0 : undefined,
                     entry: dynamic ? { ...entry, options: state?.options ?? [] } : entry,
                     value: values[entry.key],
                     disabled: submitting || Boolean(dynamic && state?.status !== "ready"),
