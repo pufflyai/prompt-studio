@@ -1,4 +1,6 @@
 import { expect, test } from "bun:test";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   browserQuarantineReportPath,
@@ -106,4 +108,47 @@ test("explicit file scope selects only its registered quarantine cases", () => {
   expect(selection.files).toEqual(["a.test.ts"]);
   expect(selection.count).toBe(1);
   expect(new RegExp(selection.pattern!).test("other")).toBe(false);
+});
+
+test.each(["bun", "packaged-bun"])("%s runs nested registered cases only in quarantine", async (runner) => {
+  const root = await mkdtemp(join(tmpdir(), "nested-quarantine-"));
+  const marker = join(root, "executed");
+  const file = join(root, "nested.test.ts");
+  const entries = [
+    {
+      runner,
+      file: "packages/fixture/nested.test.ts",
+      name: "parent (cold) > nested [group] > registered case",
+      platforms: [process.platform],
+    },
+  ];
+  try {
+    await writeFile(
+      file,
+      `import { describe, test } from "bun:test";
+      describe("parent (cold)", () => describe("nested [group]", () => {
+        test("registered case", () => Bun.write(${JSON.stringify(marker)}, "registered"));
+        test("ordinary sibling", () => Bun.write(${JSON.stringify(marker)}, "ordinary"));
+      }));`,
+    );
+    for (const quarantine of [false, true]) {
+      await rm(marker, { force: true });
+      const selection = bunTestSelection(entries, "packages/fixture", process.platform, quarantine, runner);
+      const child = Bun.spawn([process.execPath, "test", file, "--test-name-pattern", selection.pattern!], {
+        cwd: root,
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      const [code, stdout, stderr] = await Promise.all([
+        child.exited,
+        new Response(child.stdout).text(),
+        new Response(child.stderr).text(),
+      ]);
+      expect({ code, output: `${stdout}${stderr}` }).toMatchObject({ code: 0 });
+      expect(await readFile(marker, "utf8")).toBe(quarantine ? "registered" : "ordinary");
+      expect(`${stdout}${stderr}`).toMatch(/1 pass\b/);
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });
