@@ -11,6 +11,7 @@ export type CloudIconName =
   | "log-in"
   | "log-out"
   | "user-round"
+  | "user-round-key"
   | "folder"
   | "pencil"
   | "check"
