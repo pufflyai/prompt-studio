@@ -26,11 +26,16 @@ const terminalHandlers = new WeakMap<
   }
 >();
 const terminalHandler = (
-  terminal: NonNullable<ExtensionWebviewHostAdapters["terminal"]>,
+  terminal: ExtensionWebviewHostAdapters["terminal"],
   hostEvents: HostEventPublisher,
   ownerId?: string,
 ) => {
   let entry = terminalHandlers.get(hostEvents);
+  if (!terminal) {
+    entry?.capability.dispose();
+    terminalHandlers.delete(hostEvents);
+    return;
+  }
   if (entry?.terminal !== terminal || entry.ownerId !== ownerId) {
     entry?.capability.dispose();
     entry = { terminal, ownerId, capability: createTerminalSessionCapability({ terminal, hostEvents }) };
@@ -108,12 +113,7 @@ export const createExtensionWebviewHostCapabilities = (
     artifacts,
     terminal,
   } = adapters;
-  if (hostEvents && !terminal) {
-    terminalHandlers.get(hostEvents)?.capability.dispose();
-    terminalHandlers.delete(hostEvents);
-  }
-  const terminalCapability =
-    terminal && hostEvents ? terminalHandler(terminal, hostEvents, terminalOwnerId) : undefined;
+  const terminalCapability = hostEvents ? terminalHandler(terminal, hostEvents, terminalOwnerId) : undefined;
   const readHarnesses = adapters.harnesses?.read.bind(adapters.harnesses);
   const account = createAccountCapability(adapters.account);
   return {
