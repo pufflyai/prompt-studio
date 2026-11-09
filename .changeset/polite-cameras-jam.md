@@ -1,6 +1,5 @@
 ---
 "pstdio": patch
-"@pstdio/sdk": patch
 "@pstdio/ui": patch
 "@pstdio/workbench": patch
 "pstdio-cloud": patch
