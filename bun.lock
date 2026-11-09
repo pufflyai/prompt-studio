@@ -445,7 +445,7 @@
       "name": "pstdio-session-browser",
       "version": "0.1.0",
       "dependencies": {
-        "@pstdio/sdk": "0.47.0-preview.sha-8184397490cfa0fa22d136b99ac75c708878512a",
+        "@pstdio/sdk": "0.47.0-preview.sha-ce1af652bbf51fce0b29b5e74f4e7f0a16d60ab4",
       },
       "devDependencies": {
         "@types/bun": "1.4.4",
@@ -5684,7 +5684,7 @@
 
     "pstdio-reports/@pstdio/sdk": ["@pstdio/sdk@0.46.0-preview.sha-2c2b2e4c6b144c418cc048219c56553afe938bf4", "", { "dependencies": { "@noble/hashes": "^2.4.0", "mustache": "^4.2.0", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "^19.0.0" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-jWLQJUlq+Wj+QmxdhaYjxFU8bKJSA51RAHjrMoL4cOYIvXAJJhvJxbyt2X/zFqcGkHSbY3Yv2KZqptp5KX/qWg=="],
 
-    "pstdio-session-browser/@pstdio/sdk": ["@pstdio/sdk@0.47.0-preview.sha-8184397490cfa0fa22d136b99ac75c708878512a", "", { "dependencies": { "@noble/hashes": "^2.4.0", "mustache": "^4.2.0", "yjs": "^13.6.29", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "^19.0.0" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-r2GPuzoapk3COyImcyXO5mTzaUZ4s5WtsOiR6jaRFiqMF9WkpWVb+3zxMFp3gjSkPp3P5fIS288BL+qr1uInRg=="],
+    "pstdio-session-browser/@pstdio/sdk": ["@pstdio/sdk@0.47.0-preview.sha-ce1af652bbf51fce0b29b5e74f4e7f0a16d60ab4", "", { "dependencies": { "@noble/hashes": "^2.4.0", "mustache": "^4.2.0", "yjs": "^13.6.29", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "^19.0.0" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-goUuouOuqwVNhOmfOtvHj5g9Dd02tQsKdBazj66g/q1svgOw+xQNdu//Y0OlA8Yyu2qA2Te9aSQWsNRY69abkg=="],
 
     "pstdio-skills/@pstdio/sdk": ["@pstdio/sdk@0.46.0-preview.sha-2c2b2e4c6b144c418cc048219c56553afe938bf4", "", { "dependencies": { "@noble/hashes": "^2.4.0", "mustache": "^4.2.0", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "^19.0.0" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-jWLQJUlq+Wj+QmxdhaYjxFU8bKJSA51RAHjrMoL4cOYIvXAJJhvJxbyt2X/zFqcGkHSbY3Yv2KZqptp5KX/qWg=="],
 
