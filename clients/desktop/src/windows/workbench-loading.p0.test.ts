@@ -68,3 +68,34 @@ test("a failed document releases its login request and retains the navigation er
     server.stop(true);
   }
 });
+
+test("a synchronously destroyed document releases its login request", async () => {
+  const response = Promise.withResolvers<Response>();
+  const failure = new Error("The document was already destroyed");
+  let requesting = false;
+  const server = Bun.serve({ port: 0, fetch: () => response.promise });
+  const contents = {
+    loadURL() {
+      throw failure;
+    },
+    async executeJavaScript() {},
+    stop() {
+      throw failure;
+    },
+  };
+  const fetcher = async (input: string, init: RequestInit) => {
+    requesting = true;
+    try {
+      return await fetch(input, init);
+    } finally {
+      requesting = false;
+    }
+  };
+  try {
+    await expect(prepareWorkbenchDocument(contents, runtime(server.url.origin), fetcher)).rejects.toBe(failure);
+    expect(requesting).toBe(false);
+  } finally {
+    response.resolve(new Response(null, { status: 500 }));
+    server.stop(true);
+  }
+});

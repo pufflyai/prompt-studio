@@ -13,7 +13,7 @@ export const prepareWorkbenchDocument = async (
 ) => {
   const controller = new AbortController();
   const login = createRuntimeLoginUrl((input, init) => fetcher(input, { ...init, signal: controller.signal }), runtime);
-  const navigation = contents.loadURL(`${runtime.origin}/?desktop-startup=1`);
+  const navigation = Promise.resolve().then(() => contents.loadURL(`${runtime.origin}/?desktop-startup=1`));
   try {
     const [loginUrl] = await Promise.all([login, navigation]);
     await contents.executeJavaScript(`void (window.location.hash = ${JSON.stringify(new URL(loginUrl).hash)})`);
