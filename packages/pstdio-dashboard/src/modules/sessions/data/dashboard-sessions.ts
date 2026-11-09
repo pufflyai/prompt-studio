@@ -46,7 +46,7 @@ const createSession = (session: SyncedRow, workspace: SyncedRow | undefined): Da
     workspaceShorthand: (workspace?.workspace_shorthand as string | undefined) ?? "",
     anchors,
     resource: createDashboardSessionResource(session.id, title, projectId, {
-      status: sessionDisplayStatus(session),
+      status: (session.status as string) ?? "unknown",
       ...(parent ? { resourceParent: parent } : {}),
     }),
   };

@@ -23,16 +23,17 @@ const signIn = async (client: ReturnType<typeof createClient>, origin: string) =
   expect((await fetch(callback)).ok).toBe(true);
 };
 
-const startDevices = async (
+const startClients = async (
   homes: [string, string],
   env: [Record<string, string>, Record<string, string>],
   retain: (host: Awaited<ReturnType<typeof startPackagedServe>>, index: number) => void,
+  retainBrowser: (browser: Browser) => void,
 ) => {
-  const hosts = await Promise.allSettled(homes.map((home, index) => startPackagedServe(home, env[index])));
-  hosts.forEach((host, index) => {
-    if (host.status === "fulfilled") retain(host.value, index);
-  });
-  const errors = hosts.flatMap((host) => (host.status === "rejected" ? [host.reason] : []));
+  const starts = await Promise.allSettled([
+    ...homes.map(async (home, index) => retain(await startPackagedServe(home, env[index]), index)),
+    chromium.launch(PACKAGED_DASHBOARD_BROWSER).then(retainBrowser),
+  ]);
+  const errors = starts.flatMap((start) => (start.status === "rejected" ? [start.reason] : []));
   if (errors.length) throw new AggregateError(errors, "Cloud Notes runtimes failed to start");
 };
 
@@ -95,34 +96,40 @@ test(
       const bHome = join(root, "b");
       await Promise.all([mkdir(aHome), mkdir(bHome)]);
       // Only B renders Cloud; A supplies the same Notes-only sync peer as before.
-      await startDevices(
+      await startClients(
         [aHome, bHome],
         [env, { ...env, PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-notes", "pstdio-cloud") }],
         (host, index) => {
           if (index === 0) firstCleanup = host;
           else secondCleanup = host;
         },
+        (browser) => {
+          browserCleanup = browser;
+        },
       );
       const first = firstCleanup!;
       const second = secondCleanup!;
       const a = createClient({ baseUrl: first.baseUrl, token: first.descriptor.token });
       const b = createClient({ baseUrl: second.baseUrl, token: second.descriptor.token });
-      phase("both runtimes ready; open browser");
-      const browser = await chromium.launch(PACKAGED_DASHBOARD_BROWSER);
-      browserCleanup = browser;
+      phase("both runtimes and browser ready");
+      const browser = browserCleanup!;
       const sourceFolder = join(root, "source");
       const localFolder = join(root, "local");
       await Promise.all([mkdir(sourceFolder), mkdir(localFolder)]);
+      const createSource = async () => {
+        const project = await a.projects.create(folderProjectInput({ name: "Cloud notes" }, sourceFolder));
+        const seeded = await a.extensions.execute("pstdio.pstdio-notes.command.notes.create", {
+          projectId: project.id,
+          params: { title: "From device A" },
+          source: "api",
+        });
+        expect(seeded.outcome.ok).toBe(true);
+        return project;
+      };
       const [project] = await Promise.all([
-        a.projects.create(folderProjectInput({ name: "Cloud notes" }, sourceFolder)),
+        createSource(),
         b.projects.create(folderProjectInput({ name: "Local project" }, localFolder)),
       ]);
-      const seeded = await a.extensions.execute("pstdio.pstdio-notes.command.notes.create", {
-        projectId: project.id,
-        params: { title: "From device A" },
-        source: "api",
-      });
-      expect(seeded.outcome.ok).toBe(true);
       phase("both local projects created; sign in A");
       await signIn(a, peer.origin);
       await a.account.syncProject(project.id);
@@ -176,7 +183,10 @@ test(
         await route.continue();
       });
       page.on("response", (response) => {
-        if (new URL(response.url()).pathname === `/v1/projects/${project.id}/open`) opens.push(response.status());
+        const path = new URL(response.url()).pathname;
+        if (path === `/v1/projects/${project.id}/open`) opens.push(response.status());
+        if (path.includes(project.id) && /\/(sync|retry|open|retry-setup)$/.test(path))
+          console.info(`Cloud Notes response: ${response.request().method()} ${path} ${response.status()}`);
       });
       await page.addInitScript(() => {
         if (window !== window.top) return;
@@ -195,11 +205,10 @@ test(
       await status.click();
       await details.getByRole("button", { name: "Retry", exact: true }).click();
       await browserExpect(details.getByText("The sync retry failed.", { exact: false })).toBeVisible();
-      await status.click();
       phase("sync retry failure checked; release download");
       downloaded = true;
-      // A native refresh publishes the real completion event without remounting the dashboard.
-      await b.account.retryProjectSync(project.id);
+      // Remount against the released status without starting another native synchronization.
+      await page.reload();
       await browserExpect.poll(() => attempts).toBe(1);
       await browserExpect(status).toHaveText("Preparing project");
       phase("initial setup pending; release failure");
@@ -207,7 +216,13 @@ test(
       await browserExpect.poll(() => opens).toContain(500);
       await status.click();
       await details.getByRole("button", { name: "Retry", exact: true }).click();
-      await browserExpect.poll(() => attempts).toBe(2);
+      await browserExpect
+        .poll(() => attempts)
+        .toBe(2)
+        .catch(async (error: unknown) => {
+          console.error("Cloud Notes retry details:", await details.locator("body").innerText());
+          throw error;
+        });
       await browserExpect(status).toHaveText("Preparing project");
       phase("setup retry pending; release success");
       completeRetry();
