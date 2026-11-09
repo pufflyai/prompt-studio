@@ -1,10 +1,16 @@
 import type { AccountStatus, ProjectSyncStatus } from "@pstdio/sdk/extensions";
 import type { CloudProjectState } from "./project-state";
 
-export const cloudStatus = (account: AccountStatus, sync: ProjectSyncStatus, project?: CloudProjectState) => {
+export const cloudStatus = (
+  account: AccountStatus | undefined,
+  sync: ProjectSyncStatus | undefined,
+  project?: CloudProjectState,
+  online = true,
+) => {
+  if (!online || sync?.state === "offline") return { key: "offline", icon: "wifi-off", warning: true };
+  if (!account || !sync) return { key: "loading", icon: "cloud" };
   if (account.signInRequired) return { key: "signInAgain", icon: "user-round-key", warning: true };
   if (!account.login) return { key: "signIn", icon: "user-round-key" };
-  if (sync.state === "offline") return { key: "offline", icon: "wifi-off", warning: true };
   if (!account.features?.relay) return { key: "signedIn", icon: "cloud" };
   if (sync.state === "local") return { key: "local", icon: "cloud-off" };
   if (sync.state === "needs-attention") return { key: "attention", icon: "triangle-alert", warning: true };

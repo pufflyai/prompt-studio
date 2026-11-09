@@ -26,8 +26,8 @@ export const useCloud = (projectId: string | undefined, includeDevices: boolean)
   const snapshot = useSyncExternalStore(store.subscribe, store.get);
   const online = useSyncExternalStore(subscribeConnectivity, isOnline);
   const data =
-    snapshot.data && !online && snapshot.data.account.login
+    snapshot.data && !online
       ? { ...snapshot.data, sync: { ...snapshot.data.sync, state: "offline" as const } }
       : snapshot.data;
-  return { ...snapshot, data, refresh: store.refresh };
+  return { ...snapshot, data, online, refresh: store.refresh };
 };

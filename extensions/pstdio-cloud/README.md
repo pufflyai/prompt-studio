@@ -22,3 +22,5 @@ PS-1071 supplies the host/SDK prerequisite. Local development can link that SDK;
 production adoption requires its actual compatible published host and SDK.
 
 Design: `extensions/canvas/src/canvases/cloud.canvas.tsx`.
+
+Network loss shows **Connection lost** before sign-in or account-loading status, including signed-out clients. Reconnecting restores the current account and project status.
