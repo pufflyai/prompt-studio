@@ -1,9 +1,9 @@
 import { Button, Stack } from "@chakra-ui/react";
 import type { ChatRendererSnapshot } from "@pstdio/sdk/extensions";
 import { useState } from "react";
-import { NativeChatWorkspace } from "../../react/renderers/chat/native-chat-workspace";
+import { NativeChatWorkspace } from "./native-chat-workspace";
 
-export default { title: "Proposals/PS-163 Session workspace visibility" };
+export default { title: "Renderers/Native chat workspace" };
 
 export const WorkspaceAvailability = () => {
   const [enabled, setEnabled] = useState(false);

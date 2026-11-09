@@ -32,6 +32,8 @@ export interface ChatCommandTransport {
 export type ChatRecord = WorkbenchExtensionMetadata["views"][number] & {
   body: Extract<WorkbenchExtensionMetadata["views"][number]["body"], { kind: "chat" }>;
 };
+const availableCommandIds = (metadata: WorkbenchExtensionMetadata) =>
+  JSON.stringify(metadata.commands.map((command) => command.id).sort());
 
 const createChatRendererOwner = (initialInput: RegisterWorkbenchExtensionContributionsInput, view: ChatRecord) => {
   let input = initialInput;
@@ -183,8 +185,9 @@ const createChatRendererOwner = (initialInput: RegisterWorkbenchExtensionContrib
   };
   return {
     register(nextInput: RegisterWorkbenchExtensionContributionsInput) {
+      const commandsChanged = availableCommandIds(input.metadata) !== availableCommandIds(nextInput.metadata);
       input = nextInput;
-      return input.workbench.views.registerView(
+      const registration = input.workbench.views.registerView(
         {
           id: view.id,
           title: text(view.title, view.id),
@@ -213,6 +216,10 @@ const createChatRendererOwner = (initialInput: RegisterWorkbenchExtensionContrib
         },
         { source: "extension", ownerId: view.extensionId },
       );
+      // Watches resolve nested commands against their starting runtime. Refresh that runtime
+      // when optional tools change while keeping the conversation and its unsent draft.
+      if (commandsChanged) for (const { session } of sessions.values()) session.reconnect();
+      return registration;
     },
     dispose() {
       for (const { session, releaseDrafts } of sessions.values())

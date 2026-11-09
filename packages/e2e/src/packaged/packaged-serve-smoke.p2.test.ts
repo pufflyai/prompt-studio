@@ -26,6 +26,7 @@ import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // packaged-core-extensions-smoke.p1.test.ts installs the production Sessions provider with local public artifacts,
 // runs CLI dev -> add --force with package-local dependencies and unavailable authoring source,
 // then checks Main/Side native declarations and durable text/files through compiled-host command handlers.
+// It also hides session workspace presentation while Workspaces is disabled, preserving device and execution context.
 // packaged-native-terminal.p1.test.ts opens an installed SDK native terminal through the compiled host and existing PTY transport.
 // Also checks native harness controls and their structured values in packaged command handlers.
 // packaged-claude-plan-smoke.p2.test.ts checks Claude plan review through the live question channel.

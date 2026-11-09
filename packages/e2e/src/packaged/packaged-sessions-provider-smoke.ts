@@ -79,5 +79,38 @@ export const expectPackagedSessionsProvider = async (input: {
     const restored = await execute(chat.body.loadDraftHandlerId!, binding, resource);
     expect(restored.value).toEqual(draft);
   }
+  const inventoryResponse = await fetch(root, { headers });
+  expect(inventoryResponse.status).toBe(200);
+  const inventory = await inventoryResponse.json();
+  const workspaces = inventory.extensions.find(
+    (extension: { extensionId: string }) => extension.extensionId === "pstdio.pstdio-workspaces",
+  );
+  expect(workspaces).toBeDefined();
+  const created = await execute("pstdio.pstdio-session-browser.command.new", {});
+  const resource = created.navigationRequests[0].resource as ResourceRef;
+  const binding = { renderer: { rendererId: chat.id, resource }, draftKey: resource.id };
+  const queryHandlerId = chat.body.queryHandlerId!;
+  const query = async () => (await execute(queryHandlerId, binding, resource)).value;
+  const initial = await query();
+  expect(initial.controls.some((control: { id: string }) => control.id === "workspace")).toBe(true);
+  const setEnabled = async (enabled: boolean) => {
+    const response = await fetch(`${root}/${workspaces.id}`, {
+      method: "PATCH",
+      headers: { ...headers, "content-type": "application/json" },
+      body: JSON.stringify({ enabled }),
+    });
+    expect(response.status).toBe(200);
+  };
+  await setEnabled(false);
+  try {
+    const hidden = await query();
+    expect(hidden.controls.some((control: { id: string }) => control.id === "workspace")).toBe(false);
+    expect(hidden.controls.some((control: { id: string }) => control.id === "device")).toBe(true);
+    expect(hidden.workspace).toEqual({ controlId: "workspace", deviceControlId: "device" });
+    expect(hidden.workspaceId).toBe(initial.workspaceId);
+  } finally {
+    await setEnabled(true);
+  }
+  expect((await query()).controls.some((control: { id: string }) => control.id === "workspace")).toBe(true);
   expect(await list()).toEqual(before);
 };

@@ -3,7 +3,7 @@ import { commandDraftTag, commandIntent, commandSuggestions } from "./command-in
 import { composerControls, conversationOperations } from "./controls";
 import { readDraft } from "./drafts";
 import { selectedHarness, selectedWorkspace } from "./selection";
-import { workspacePresentation } from "./workspace";
+import { workspaceSnapshot } from "./workspace";
 
 const initialDraftValues = (resource: ResourceRef | undefined, saved: ControlValueMap, override?: ControlValueMap) => ({
   harness: { harnessId: typeof resource?.metadata?.agent === "string" ? resource.metadata.agent : "" },
@@ -38,7 +38,6 @@ export const draftSnapshot = async (
     workspaces[0]?.id ??
     "";
   values.workspace = workspace;
-  const selectedWorkspaceInfo = workspaces.find((candidate) => candidate.id === workspace);
   const controls: NonNullable<ChatRendererSnapshot["controls"]> = [
     ...composerControls.map((control) => ({ ...control, readOnly: remote })),
     {
@@ -80,11 +79,10 @@ export const draftSnapshot = async (
     nativeLinks: true,
     nativeHarnessAccount: { controlId: "harness", ...(remote ? { remote: true } : {}) },
     workspaceId: workspace || undefined,
-    workspace: await workspacePresentation(ctx, selectedWorkspaceInfo, {
+    ...(await workspaceSnapshot(ctx, controls, {
       id: workspace || undefined,
       available: !remote || device?.online,
-    }),
-    controls,
+    })),
     operations: conversationOperations(remote, false),
     values,
     harness: commands && commandSuggestions(commands, commandIntent(values)),
