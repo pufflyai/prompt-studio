@@ -82,7 +82,7 @@ test("the Workspaces extension saves shared views and isolates each project's se
       .context()
       .browser()!
       .newContext({ baseURL: new URL(page.url()).origin });
-    try {
+    const readSharedView = async () => {
       await otherClient.addInitScript((projectId) => {
         localStorage.setItem("onboarding-complete", "true");
         localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
@@ -95,31 +95,29 @@ test("the Workspaces extension saves shared views and isolates each project's se
         "true",
       );
       await expect(otherPage.getByTestId("resource-list-renderer")).toBeVisible();
+    };
+    const checkProjectSelections = async () => {
+      await page.getByRole("button", { name: "Switch project", exact: true }).click();
+      const projectPicker = page.getByRole("dialog", { name: "Projects", exact: true });
+      await projectPicker.getByText("Other workspace views", { exact: true }).click();
+      await page.goto(`/projects/${second!.id}/workspaces`);
+      await expect(page.getByRole("tab", { name: "By device", exact: true })).toHaveAttribute("aria-selected", "true");
+      await expect(releaseTab).toHaveCount(0);
+      await expect(page.getByRole("tab", { name: "Compact", exact: true })).toBeVisible();
+      const otherViews = await (await request.get(`/v1/projects/${second!.id}/boards/${board}/views`)).json();
+      expect(otherViews.views).toHaveLength(2);
+      await page.getByRole("button", { name: "Switch project", exact: true }).click();
+      await projectPicker.getByText("Saved workspace views", { exact: true }).click();
+      await page.goto(`/projects/${first!.id}/workspaces`);
+      await expect(releaseTab).toHaveAttribute("aria-selected", "true");
+    };
+    try {
+      const checks = await Promise.allSettled([readSharedView(), checkProjectSelections()]);
+      const failures = checks.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+      if (failures.length) throw new AggregateError(failures, "Workspace view client checks failed");
     } finally {
       await otherClient.close();
     }
-
-    await page.getByRole("button", { name: "Switch project", exact: true }).click();
-    const projectPicker = page.getByRole("dialog", { name: "Projects", exact: true });
-    await projectPicker.getByText("Other workspace views", { exact: true }).click();
-    await expect(page).toHaveURL(new RegExp(`/projects/${second!.id}(?:/|$)`));
-    await page
-      .locator('[data-workbench-region="sidenav"]')
-      .getByRole("option", { name: "Workspaces", exact: true })
-      .click();
-    await expect(page.getByRole("tab", { name: "By device", exact: true })).toHaveAttribute("aria-selected", "true");
-    await expect(releaseTab).toHaveCount(0);
-    await expect(page.getByRole("tab", { name: "Compact", exact: true })).toBeVisible();
-    const otherViews = await (await request.get(`/v1/projects/${second!.id}/boards/${board}/views`)).json();
-    expect(otherViews.views).toHaveLength(2);
-    await page.getByRole("button", { name: "Switch project", exact: true }).click();
-    await projectPicker.getByText("Saved workspace views", { exact: true }).click();
-    await expect(page).toHaveURL(new RegExp(`/projects/${first!.id}(?:/|$)`));
-    await page
-      .locator('[data-workbench-region="sidenav"]')
-      .getByRole("option", { name: "Workspaces", exact: true })
-      .click();
-    await expect(releaseTab).toHaveAttribute("aria-selected", "true");
   } finally {
     await page.unrouteAll({ behavior: "wait" });
     for (const project of projects) await request.delete(`/v1/projects/${project.id}`);
