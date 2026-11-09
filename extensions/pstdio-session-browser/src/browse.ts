@@ -3,7 +3,7 @@ import {
   type ExtensionContextBase,
   l10n,
   type TreeNode,
-  type TreeRendererChildrenParams,
+  type TreeRendererPageParams,
   type TreeRendererQueryParams,
   type TreeViewSection,
   viewDataEvents,
@@ -45,7 +45,6 @@ const sessionDayLabel = (date: Date) => {
 const sessionNodes = (
   ctx: ExtensionContextBase,
   sessions: Awaited<ReturnType<typeof ctx.sessions.query>>["items"],
-  cursor?: string,
   workspaceId?: string,
 ) => {
   const nodes: TreeNode[] = [];
@@ -57,7 +56,7 @@ const sessionNodes = (
     if (day !== date) {
       date = day;
       nodes.push({
-        id: `date:${cursor ?? "root"}:${date}`,
+        id: `date:${date}`,
         label: sessionDayLabel(new Date(session.lastRequestStarted ?? session.updatedAt)),
         disabled: true,
       });
@@ -85,26 +84,19 @@ const queryPage = async (ctx: ExtensionContextBase, input: TreeRendererQueryPara
     search: input.filter?.trim() || undefined,
     ...(cursor ? { cursor } : {}),
   });
-  const nodes = sessionNodes(ctx, page.items, cursor, workspaceId);
-  if (page.nextCursor)
-    nodes.push({
-      id: `more:${page.nextCursor}`,
-      label: l10n("sessions.more", "More sessions"),
-      collapsible: true,
-      metadata: { cursor: page.nextCursor },
-    });
-  return { nodes, workspaceId };
+  const nodes = sessionNodes(ctx, page.items, workspaceId);
+  return { nodes, workspaceId, nextCursor: page.nextCursor ?? undefined };
 };
-export const browseChildren = async (ctx: ExtensionContextBase, input: TreeRendererChildrenParams) => {
-  const cursor = input.node.metadata?.cursor;
-  if (typeof cursor !== "string") return [];
-  return (await queryPage(ctx, input, cursor)).nodes;
+export const browsePage = async (ctx: ExtensionContextBase, input: TreeRendererPageParams) => {
+  const { nodes, nextCursor } = await queryPage(ctx, input, input.cursor);
+  return { nodes, nextCursor };
 };
 export const browse = async (ctx: ExtensionContextBase, input: TreeRendererQueryParams): Promise<TreeViewSection[]> => {
-  const { nodes, workspaceId } = await queryPage(ctx, input);
-  let visibleNodes: TreeNode[] = nodes.length
-    ? nodes
-    : [{ id: "empty", label: l10n("sessions.empty", "No sessions yet"), disabled: true }];
+  const { nodes, workspaceId, nextCursor } = await queryPage(ctx, input);
+  let visibleNodes: TreeNode[] =
+    nodes.length || nextCursor
+      ? nodes
+      : [{ id: "empty", label: l10n("sessions.empty", "No sessions yet"), disabled: true }];
   if (workspaceId)
     visibleNodes = [
       {
@@ -113,6 +105,7 @@ export const browse = async (ctx: ExtensionContextBase, input: TreeRendererQuery
         collapsible: true,
         canHide: true,
         children: nodes,
+        nextCursor,
         actions: [
           {
             id: "new",
@@ -139,6 +132,7 @@ export const browse = async (ctx: ExtensionContextBase, input: TreeRendererQuery
         },
       ],
       nodes: visibleNodes,
+      nextCursor: workspaceId ? undefined : nextCursor,
     },
   ];
 };

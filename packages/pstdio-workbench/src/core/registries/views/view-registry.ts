@@ -29,9 +29,15 @@ export interface WorkbenchWebviewBody extends Omit<WorkbenchReactViewBody, "kind
   kind: "webview";
 }
 
+/** The host supplies the shared terminal renderer; extensions declare serializable native views. */
+export interface WorkbenchTerminalViewBody extends Omit<WorkbenchReactViewBody, "kind"> {
+  kind: "terminal";
+}
+
 export type WorkbenchViewBody =
   | WorkbenchReactViewBody
   | WorkbenchWebviewBody
+  | WorkbenchTerminalViewBody
   | NativeViewBody<"tree", TreeRendererContribution>
   | NativeViewBody<"file", FileRendererContribution>
   | NativeViewBody<"controls", ControlsRendererContribution>

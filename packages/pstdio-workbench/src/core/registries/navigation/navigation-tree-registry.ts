@@ -5,6 +5,7 @@ import type { TreeViewSection } from "../renderers/tree-renderer-registry";
 import { settleReadBatch } from "../views/settle-read-batch";
 import { stableNavigationValue } from "./navigation-target-key";
 import { getNavigationTreeNodeSource } from "./navigation-tree-node-source";
+import { mergeNavigationTreeSection } from "./navigation-tree-pages";
 import { createNavigationTreeProjection, ownerId, scopedId } from "./navigation-tree-projection";
 import { createNavigationTreeSnapshots } from "./navigation-tree-snapshots";
 
@@ -41,16 +42,6 @@ const readContext = (contribution: NavigationTreeContribution, context: Navigati
   resource: contribution.resolveResource ? contribution.resolveResource(context.resource) : context.resource,
 });
 
-const mergeSection = (sections: TreeViewSection[], section: TreeViewSection) => {
-  const index = sections.findIndex((candidate) => candidate.id === section.id);
-  if (index < 0) {
-    sections.push(section);
-    return;
-  }
-  const current = sections[index]!;
-  sections[index] = { ...current, nodes: [...current.nodes, ...section.nodes] };
-};
-
 export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistryInput = {}): NavigationTreeRegistry => {
   const contributions = new Map<string, NavigationTreeContribution>();
   const registryToken = {};
@@ -72,7 +63,7 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
       .filter((contribution) => ownersEqual(contribution.owner, owner) && (contribution.slot ?? "content") === slot)
       .sort(contributionOrder(owner));
 
-  const { projectNode, projectSection } = createNavigationTreeProjection(registryToken);
+  const { projectNode, projectSection } = createNavigationTreeProjection(registryToken, assertCurrent);
 
   const structureOf = (
     contribution: NavigationTreeContribution,
@@ -88,7 +79,7 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
 
   const mergeSections = (groups: TreeViewSection[][]) => {
     const sections: TreeViewSection[] = [];
-    for (const section of groups.flat()) mergeSection(sections, section);
+    for (const section of groups.flat()) mergeNavigationTreeSection(sections, section);
     return sections;
   };
 

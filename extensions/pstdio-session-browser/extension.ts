@@ -16,7 +16,7 @@ import {
 } from "@pstdio/sdk/extensions";
 import { sessionBrowser } from "./refs";
 import { act } from "./src/actions";
-import { browse, browseChildren, search } from "./src/browse";
+import { browse, browsePage, search } from "./src/browse";
 import { connectionRefresh } from "./src/controls";
 import { readDraft, saveDraft } from "./src/drafts";
 import { acknowledgeNativeInputs } from "./src/native-recovery";
@@ -136,7 +136,7 @@ const list = defineView({
     structure: [{ id: "sessions", label: l10n("sessions.title", "Sessions"), collapsible: false }],
     refreshEvents: [viewDataEvents.sessionsChanged],
     body: browse,
-    children: browseChildren,
+    page: browsePage,
   },
 });
 export default defineExtension({

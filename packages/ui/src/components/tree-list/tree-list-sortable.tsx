@@ -13,6 +13,7 @@ import { SharedTreeListDragContext } from "./tree-list-drag-provider";
 import { type TreeListDropIndicator, treeListDropIndicator } from "./tree-list-drop-indicator";
 import { buildVirtualRows, type VirtualRow } from "./tree-list-model";
 import { TreeListNodes } from "./tree-list-nodes";
+import { TreeListPageBoundary } from "./tree-list-page-boundary";
 import { type TreeListMovePolicy, toSectionDragId, verticalTreeDrag } from "./tree-list-reorder";
 import { TreeListReveal } from "./tree-list-reveal";
 import { TreeListSectionHeader } from "./tree-list-section-header";
@@ -120,6 +121,9 @@ const SortableSectionGroup = (props: SortableSectionGroupProps) => {
                 onRowFocus={onRowFocus}
               />
               {section.nodes.length === 0 ? section.emptyState : null}
+              {section.pagination && (!headerRow || (headerRow.kind === "section-header" && headerRow.expanded)) ? (
+                <TreeListPageBoundary pagination={section.pagination} />
+              ) : null}
             </SortableContext>
           </TreeListReveal>
         </>

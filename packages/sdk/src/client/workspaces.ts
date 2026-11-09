@@ -21,7 +21,7 @@ import type { ExtensionWorkspace, ExtensionWorkspaceCreateInput } from "pstdio-a
 import type { Workspace, WorkspaceListItem } from "../resources";
 import { pageQuery } from "./page-query";
 import type { RequestFn } from "./request";
-import { createSessionStreamTransport } from "./session-stream";
+import type { createSessionStreamTransport } from "./session-stream";
 import { type WorkspaceDiffWatchInput, watchWorkspaceDiff } from "./workspace-diff-stream";
 import { createWorkspaceDiffClient } from "./workspace-diffs";
 
@@ -75,7 +75,7 @@ export type WorkspaceClient = ReturnType<typeof createWorkspaceDiffClient> & {
 
 export const createWorkspaceClient = (
   request: RequestFn,
-  streams = createSessionStreamTransport(request, {}),
+  streams: ReturnType<typeof createSessionStreamTransport>,
 ): WorkspaceClient => ({
   watchDiff: (id, input) => watchWorkspaceDiff(streams, id, input),
   ...createWorkspaceDiffClient(request),

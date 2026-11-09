@@ -20,6 +20,8 @@ import {
 } from "./tree-view-load";
 import { canMoveTreeNode, createMoveTreeNode } from "./tree-view-move";
 import { useTreeMovement } from "./use-tree-movement";
+import { useTreePages } from "./use-tree-pages";
+import { useTreeResourceRefresh } from "./use-tree-resource-refresh";
 
 // One empty map for every render: the adapter reads children from the nodes themselves.
 const NO_CHILDREN: Record<string, TreeNode[]> = {};
@@ -191,18 +193,6 @@ export const useTreeData = (
     };
   }, [workbench, treeViewId, resource, viewId, filter, pageParams, childrenKey, read.request, read.value]);
   const loadChildren = (node: TreeNode) => childLoader.current?.(node);
-  useEffect(() => {
-    const subscription = workbench.resources.preview.subscribeRefresh(async (resource) => {
-      const contains = (nodes: TreeNode[]): boolean =>
-        nodes.some(
-          (node) =>
-            (node.resource && resourceKey(node.resource) === resourceKey(resource)) ||
-            contains(read.value?.children[node.id] ?? node.children ?? []),
-        );
-      if (read.value?.body.some((section) => contains(section.nodes))) await read.retry();
-    });
-    return () => subscription.dispose();
-  }, [workbench, read.retry, read.value]);
   const loaded = {
     body: read.loading && !read.value?.body.length ? structure.body : (read.value?.body ?? []),
     header: read.value?.header ?? structure.header,
@@ -224,22 +214,36 @@ export const useTreeData = (
     getWorkbenchRenderers(workbench).getTreeRenderer(treeViewId),
     navigationRegistrations,
   ]);
+  const pages = useTreePages(
+    workbench,
+    {
+      queryScope,
+      sourceId: treeViewId,
+      queryKey: JSON.stringify([queryKey, refreshKey]),
+      queryEvents: getWorkbenchRenderers(workbench).getTreeRenderer(treeViewId)?.queryEvents,
+    },
+    tree,
+    read.value,
+    read.loading,
+    getWorkbenchRenderers(workbench).getTreeState(treeViewId),
+  );
+  useTreeResourceRefresh(workbench, pages, read.retry);
   const renderer = getWorkbenchRenderers(workbench).getTreeRenderer(treeViewId);
   const movement = useTreeMovement({
     scope: childrenKey,
-    body: tree.body,
+    body: pages.body,
     revision: read.request,
-    childrenByNodeId: tree.children,
+    childrenByNodeId: NO_CHILDREN,
     canMove: (sourceId, targetId) =>
-      canMoveTreeNode({ sections: tree.body, childrenByNodeId: tree.children }, sourceId, targetId),
+      canMoveTreeNode({ sections: pages.body, childrenByNodeId: NO_CHILDREN }, sourceId, targetId),
     persist: renderer
       ? createMoveTreeNode({
           workbench,
           renderer,
           resource,
           viewId,
-          sections: tree.body,
-          childrenByNodeId: tree.children,
+          sections: pages.body,
+          childrenByNodeId: NO_CHILDREN,
           onError: onMoveError,
         })
       : undefined,
@@ -248,9 +252,9 @@ export const useTreeData = (
   return {
     ...movement,
     body: previewTreeResources(movement.body, movement.childrenByNodeId, changes),
+    header: pages.header,
+    footer: pages.footer,
     childrenByNodeId: NO_CHILDREN,
-    header: tree.header,
-    footer: tree.footer,
     loadChildren,
     error: read.error ?? null,
     loading: read.loading,

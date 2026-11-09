@@ -128,4 +128,12 @@ export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebview
 };
 
 export const createWorkbenchWebviewHostCapabilities = (input: CreateWorkbenchWebviewHostAdaptersInput) =>
-  createExtensionWebviewHostCapabilities(createWorkbenchWebviewHostAdapters(input));
+  createExtensionWebviewHostCapabilities(
+    createWorkbenchWebviewHostAdapters(input),
+    JSON.stringify([
+      input.projectId ?? input.workbench.pages.store.getState().projectId,
+      input.extensionId,
+      input.webviewId ?? input.placement?.viewId,
+      input.placement?.instanceId,
+    ]),
+  );

@@ -101,16 +101,38 @@ export const exerciseWorkspaceFileOperations = async (input: {
   const moved = filesTree.locator('[data-tree-list-node-id="generated/zzz-folder"]');
   await moved.focus();
   await moved.press("ArrowRight");
-  await filesTree.getByRole("option", { name: "keep.txt", exact: true }).click();
-  await expectWorkspaceDocument(page, "generated/zzz-folder/keep.txt");
-  await generated.click({ button: "right" });
-  await page.getByRole("menuitem", { name: "Rename", exact: true }).click();
-  const renameFolder = filesTree.getByRole("textbox", { name: "Folder name", exact: true });
-  await expect(renameFolder).toBeFocused();
-  await renameFolder.fill("generated-renamed");
-  await renameFolder.press("Enter");
-  await expect.poll(() => existsSync(join(worktreePath, "generated-renamed/zzz-folder/keep.txt"))).toBe(true);
-  await expectWorkspaceDocument(page, "generated-renamed/zzz-folder/keep.txt");
+  const selectedTreeRead = "**/pstdio.pstdio-workspaces.view.file-tree.tree.body/execute";
+  const readPending = Promise.withResolvers<void>();
+  const releaseRead = Promise.withResolvers<void>();
+  const holdSelectedRead = async (route: import("@playwright/test").Route) => {
+    const resource = route.request().postDataJSON()?.params?.renderer?.resource;
+    if (resource?.metadata?.workspaceFilePath === "generated/zzz-folder/keep.txt") {
+      readPending.resolve();
+      await releaseRead.promise;
+    }
+    await route.continue();
+  };
+  await page.route(selectedTreeRead, holdSelectedRead);
+  try {
+    await filesTree.getByRole("option", { name: "keep.txt", exact: true }).click();
+    await expectWorkspaceDocument(page, "generated/zzz-folder/keep.txt");
+    // Retained rows must bind actions to this selection while its tree read is pending.
+    await readPending.promise;
+    await generated.click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Rename", exact: true }).click();
+    const renameFolder = filesTree.getByRole("textbox", { name: "Folder name", exact: true });
+    await expect(renameFolder).toBeFocused();
+    await renameFolder.fill("generated-renamed");
+    const renamed = page.waitForRequest("**/pstdio.pstdio-workspaces.command.rename-entry/execute");
+    await renameFolder.press("Enter");
+    await renamed;
+    releaseRead.resolve();
+    await expect.poll(() => existsSync(join(worktreePath, "generated-renamed/zzz-folder/keep.txt"))).toBe(true);
+    await expectWorkspaceDocument(page, "generated-renamed/zzz-folder/keep.txt");
+  } finally {
+    releaseRead.resolve();
+    await page.unroute(selectedTreeRead, holdSelectedRead);
+  }
   await page.reload();
   await expect(filesTree.getByRole("option", { name: "keep.txt", exact: true })).toBeVisible();
   await expectWorkspaceDocument(page, "generated-renamed/zzz-folder/keep.txt");

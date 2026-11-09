@@ -19,7 +19,7 @@ export const createQueryLedger = <T>() => {
   };
   const resolve = (value: T) => {
     const accepted = current();
-    if (!accepted?.authoritative) return value;
+    if (!accepted) return value;
     if (accepted.error) throw accepted.error;
     return accepted.data!;
   };

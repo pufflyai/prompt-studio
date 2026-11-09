@@ -1,5 +1,6 @@
 import type { TreeNode, TreeViewSection } from "../renderers/tree-renderer-types";
-import { setNavigationTreeNodeSource } from "./navigation-tree-node-source";
+import { setNavigationTreeNodeSource, setNavigationTreeSectionResource } from "./navigation-tree-node-source";
+import { projectNavigationTreePage } from "./navigation-tree-pages";
 import type {
   NavigationTreeContext,
   NavigationTreeContribution,
@@ -17,7 +18,10 @@ export const ownerId = (owner: NavigationTreeOwner) => `${owner.kind}:${owner.ex
 
 export const scopedId = (scope: string | undefined, id: string) => (scope ? `${scope}:${id}` : id);
 
-export const createNavigationTreeProjection = (registryToken: object) => {
+export const createNavigationTreeProjection = (
+  registryToken: object,
+  assertCurrent: (contribution: NavigationTreeContribution) => void,
+) => {
   const projectNode = (
     node: TreeNode,
     contribution: NavigationTreeContribution,
@@ -33,6 +37,11 @@ export const createNavigationTreeProjection = (registryToken: object) => {
       canHide: node.canHide ?? contribution.owner.kind === "mode",
       canReorder: node.canReorder ?? contribution.owner.kind === "mode",
       children: node.children?.map((child) => projectNode(child, contribution, moveScope, context)),
+      nextPage: projectNavigationTreePage(
+        node.nextPage,
+        (child) => projectNode(child, contribution, moveScope, context),
+        () => assertCurrent(contribution),
+      ),
     };
     setNavigationTreeNodeSource(projected, {
       contribution,
@@ -49,17 +58,26 @@ export const createNavigationTreeProjection = (registryToken: object) => {
     contribution: NavigationTreeContribution,
     owner: NavigationTreeOwner,
     context: NavigationTreeContext,
-  ): TreeViewSection => ({
-    ...section,
-    id:
-      contribution.sourceExtensionId !== owner.extensionId && !section.label
-        ? navigationSlotRootSectionId(contribution.slot)
-        : scopedId(contribution.idScope, section.id),
-    moveScope: ownerId(owner),
-    canHide: section.canHide ?? true,
-    canReorder: section.canReorder ?? true,
-    nodes: section.nodes.map((node) => projectNode(node, contribution, ownerId(owner), context)),
-  });
+  ): TreeViewSection => {
+    const projected: TreeViewSection = {
+      ...section,
+      id:
+        contribution.sourceExtensionId !== owner.extensionId && !section.label
+          ? navigationSlotRootSectionId(contribution.slot)
+          : scopedId(contribution.idScope, section.id),
+      moveScope: ownerId(owner),
+      canHide: section.canHide ?? true,
+      canReorder: section.canReorder ?? true,
+      nodes: section.nodes.map((node) => projectNode(node, contribution, ownerId(owner), context)),
+      nextPage: projectNavigationTreePage(
+        section.nextPage,
+        (node) => projectNode(node, contribution, ownerId(owner), context),
+        () => assertCurrent(contribution),
+      ),
+    };
+    setNavigationTreeSectionResource(projected, context.resource);
+    return projected;
+  };
 
   return { projectNode, projectSection };
 };

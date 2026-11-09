@@ -1,4 +1,4 @@
-import { Field, Flex, Input, Stack, Text } from "@chakra-ui/react";
+import { Box, Field, Flex, Input, Stack, Text } from "@chakra-ui/react";
 import { createWebviewClient } from "@pstdio/sdk/extensions";
 import { type Param, ParamEditor } from "@pstdio/ui/param-editor";
 import { useContext, useEffect, useRef, useState } from "react";
@@ -17,6 +17,7 @@ interface ParameterEditorProps {
   active: boolean;
   item: CanvasItem;
   parameters: FrameParameters;
+  information?: { args?: string; description?: string };
   onChange: (values: Values) => void;
 }
 interface Version {
@@ -274,6 +275,21 @@ export const ParameterEditor = (props: ParameterEditorProps) => {
             <Text role="alert" color="fg.error">
               {error}
             </Text>
+          )}
+          {props.information?.description && (
+            <Text textStyle="paragraph/S/regular" color="fg.muted">
+              {props.information.description}
+            </Text>
+          )}
+          {props.information?.args && (
+            <Box as="details">
+              <Box as="summary" cursor="pointer" textStyle="label/S/medium">
+                Props JSON
+              </Box>
+              <Box as="pre" mt="2xs" whiteSpace="pre-wrap" overflowWrap="anywhere" textStyle="mono/XS">
+                {props.information.args}
+              </Box>
+            </Box>
           )}
         </Stack>
       )}

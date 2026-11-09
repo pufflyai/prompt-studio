@@ -11,7 +11,7 @@ Contributions are what an extension adds to Prompt Studio. This page lists every
 | `middlewares`                                     | Pre-command checks that may continue, patch params, replace invocation data, or reject.           |
 | `hooks`                                           | Event observers that run after a product event is emitted.                                        |
 | `schedules`                                       | Cron-driven command invocation.                                                                   |
-| `views`                                           | Reusable webview, tree, file, controls, chat, table, and Kanban bodies.                                  |
+| `views`                                           | Reusable webview, tree, file, controls, chat, terminal, table, and Kanban bodies.                                  |
 | `viewMenus`                                       | View bodies attached as menus owned by another view.                                               |
 | `pages`                                           | Routed screens with resource constraints, Main presentation, and extra panel slots.                                 |
 | `placements`                                      | Mode-wide static views or resource bindings.                                                        |
@@ -36,6 +36,10 @@ UI contributions attach to targets that the host owns. [Workbench composition](0
 
 [Native chat](0028-native-chat.md) provides immediate composers and canonical
 conversations with scoped callbacks to the existing session services.
+
+[Native terminal views](0022-terminal-sessions.md#native-terminal-views) bind an
+interactive PTY to a view through a serializable launch callback. The host owns
+the renderer, workspace validation, transport, and process lifetime.
 
 ## Kanban create results
 
@@ -205,6 +209,16 @@ export default defineExtension({
 `body` and optional `footer` return `TreeViewSection[]`. Optional `children` returns `TreeNode[]` for lazy child
 content. Renderer callbacks receive the active project, resource, renderer id, tree state, filter text, and selected
 node context.
+
+For long collections, set `nextCursor` on a section or on a node with its first `children` page, and provide
+`page(ctx, input)`. It receives the cursor, the same renderer/filter scope, and either
+`parent: { kind: "section", id }` or `parent: { kind: "node", node }`. Return `{ nodes, nextCursor? }`.
+The host appends these nodes as siblings when the collection's end enters the viewport. Omit the cursor when
+exhausted. Keep node IDs stable across pages, including date headings. Collapsed collections do not load pages.
+The host preserves existing rows and focus, prevents concurrent duplicate reads, cancels pages after query/resource
+changes or refresh, and shows failures with inline Retry. Do not add a synthetic “More” node or a pagination button.
+This additive API shares the coordinated API 0.4.0 step on `main` and requires a supporting published SDK and
+host capability `view.tree.pages.v1`.
 
 Optional `structure` declares body section IDs, labels, and collapse and visibility settings in view metadata. The host renders this layout synchronously, then starts content reads after that render commits. Pending sections show a spinner rather than an empty result. The callback's final sections replace the structure, including sections that turn out to be empty or absent. Use the same IDs in both declarations so expansion and customization stay attached to the section. A structure section can include `resourceNode: { id, icon }` to show the bound resource using its already-known label without a callback.
 

@@ -29,7 +29,24 @@ export type ResourceListViewBody = NativeViewBody<"resourceList", ResourceListRe
 export type DataTableViewBody = NativeViewBody<"dataTable", DataTableRendererContribution>;
 export type ChatViewBody = NativeViewBody<"chat", ChatRendererContribution>;
 
+/** Serializable launch settings. The host resolves the workspace's ready local execution target. */
+export interface TerminalViewSession {
+  /** Defaults to the project's default workspace. Must belong to the view's project. */
+  readonly workspaceId?: string;
+  /** Command and arguments; omitted to use the host's shell. */
+  readonly command?: string[];
+  readonly env?: Record<string, string>;
+}
+
+/** A native PTY presentation owned by its view, independent of the callback invocation. */
+export interface TerminalViewBody {
+  readonly kind: "terminal";
+  readonly resourceKind?: ResourceKindRef;
+  readonly session: RendererCallback<JsonObject, TerminalViewSession>;
+}
+
 export type ViewBody =
+  | TerminalViewBody
   | ChatViewBody
   | WebviewViewBody
   | TreeViewBody

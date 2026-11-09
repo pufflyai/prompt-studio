@@ -74,6 +74,8 @@ export const createWorkbenchDisposal = (
     };
     input.modules.close();
     closeWorkbenchModes(core.modes);
+    // Close optional admission before any external teardown can reenter this host.
+    const terminals = Promise.allSettled([core.terminal.dispose()]);
     const preferences = core.preferences.dispose?.();
     const domainWork = disposeWorkbenchRequiredWork(core);
     stopObservation(core, input.renderers);
@@ -98,7 +100,7 @@ export const createWorkbenchDisposal = (
       () => core.presence.dispose(),
     ])
       release(effect);
-    const [stoppedReads, terminal] = await Promise.all([reads, Promise.allSettled([core.terminal.dispose()])]);
+    const [stoppedReads, terminal] = await Promise.all([reads, terminals]);
     release(() => input.queries.dispose());
     for (const result of [...required, ...stoppedReads, ...terminal])
       if (result.status === "rejected") errors.push(result.reason);

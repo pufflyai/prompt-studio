@@ -26,7 +26,7 @@ const refreshable = <T extends { dispose(): void }>(
 export const createWorkbenchViewBodyRegistration =
   (registries: ViewBodyRegistries) => (view: WorkbenchViewContribution, metadata?: ContributionMetadata) => {
     const body = view.body;
-    if (body.kind === "react" || body.kind === "webview") {
+    if (body.kind === "react" || body.kind === "webview" || body.kind === "terminal") {
       return refreshable(registries.registerRenderer({ id: view.id, render: body.render }), (event) =>
         registries.refreshRenderer(view.id, event),
       );

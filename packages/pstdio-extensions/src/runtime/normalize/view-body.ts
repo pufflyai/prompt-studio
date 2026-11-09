@@ -11,7 +11,7 @@ const handler = (input: {
   index: RegistryIndex;
   viewId: string;
   localId: string;
-  kind: "chat" | "controls" | "dataTable" | "file" | "kanban" | "resourceList" | "tree";
+  kind: "chat" | "controls" | "dataTable" | "file" | "kanban" | "resourceList" | "terminal" | "tree";
   operation: string;
   value: unknown;
 }) =>
@@ -38,6 +38,12 @@ export const normalizeViewBody = (input: {
 }) => {
   const body = input.body as ViewBody & Record<string, unknown>;
   if (body.kind === "webview") return body;
+  if (body.kind === "terminal") {
+    return {
+      ...body,
+      sessionHandlerId: handler({ ...input, kind: "terminal", operation: "session", value: body.session }),
+    };
+  }
   if (body.kind === "chat") {
     return {
       ...body,
@@ -55,6 +61,7 @@ export const normalizeViewBody = (input: {
       headerHandlerId: handler({ ...input, kind: "tree", operation: "header", value: body.header }),
       bodyHandlerId: handler({ ...input, kind: "tree", operation: "body", value: body.body }),
       childrenHandlerId: handler({ ...input, kind: "tree", operation: "children", value: body.children }),
+      pageHandlerId: handler({ ...input, kind: "tree", operation: "page", value: body.page }),
       footerHandlerId: handler({ ...input, kind: "tree", operation: "footer", value: body.footer }),
       moveHandlerId: handler({ ...input, kind: "tree", operation: "onMove", value: body.onMove }),
     };

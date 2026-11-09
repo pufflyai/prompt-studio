@@ -57,6 +57,10 @@ export interface RendererReadRegistry {
   dispose(): Promise<void>;
 }
 
+const caches = new WeakMap<RendererReadRegistry, ReturnType<typeof createRendererQueryCache>>();
+/** Internal projections borrow the existing query owner; they never create another cache root. */
+export const getRendererReadCache = (registry: RendererReadRegistry) => caches.get(registry)!;
+
 export const createRendererReadRegistry = (
   input: {
     queries?: ScopedQueryClient;
@@ -106,7 +110,7 @@ export const createRendererReadRegistry = (
     });
   };
 
-  return {
+  const registry: RendererReadRegistry = {
     peek: cache.peek,
     holdForMutation: cache.holdForMutation,
     markStale: cache.markStale,
@@ -220,6 +224,7 @@ export const createRendererReadRegistry = (
     },
     async dispose() {
       disposed = true;
+      const projections = cache.dispose();
       stopRefresh?.();
       const pending: Promise<void>[] = [];
       for (const [key, owner] of owners) {
@@ -235,7 +240,9 @@ export const createRendererReadRegistry = (
         release(key, owner);
       }
       await Promise.allSettled(pending);
-      cache.dispose();
+      await projections;
     },
   };
+  caches.set(registry, cache);
+  return registry;
 };

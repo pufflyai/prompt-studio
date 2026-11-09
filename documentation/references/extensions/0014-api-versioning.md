@@ -30,6 +30,14 @@ The host decides what loads. It compares its own extension API version with `eng
 
 Pages that describe APIs from `main` say so and name the first release that has them.
 
+The [native terminal view body](0022-terminal-sessions.md#native-terminal-views)
+shares the coordinated API 0.4.0 step on `main`. It requires a published SDK exporting
+`TerminalViewBody` and a compatible host advertising `view.terminal.v1` (planned
+for the release after 0.46.0). A packed candidate SDK proves development
+compatibility; it does not satisfy the publication gate for a production
+extension. Qualify the installed consumer against the delivered host and record
+both released versions before adopting the surface.
+
 Status bar items on `main` can also declare a `popover` view through the additive
 `status-bar-item.popover.v1` host capability. This shares the planned API 0.3.0 release.
 
@@ -56,6 +64,16 @@ preserve the existing query, event and editing methods. The matching SDK adds
 [state and project lifetime guide](../../guides/extensions/0010-shared-state-and-project-lifetimes.md).
 Publish the supporting host/SDK/UI before independent consumer releases; local
 tarballs and a widened manifest range are not published compatibility evidence.
+
+Infinite tree scrolling also shares API 0.4.0 on `main`. Tree sections and child collections can return
+`nextCursor`; their `page` callback returns `TreeNodePage` for automatic sibling appends. A supporting host
+advertises `view.tree.pages.v1`. Publish the SDK and host before separately releasing an extension that uses it.
+
+Optional workspace provider discovery and provider-bound `ctx.localDirectory()`
+share the coordinated API 0.4.0 step on `main`. They expose current project choices
+and owned local preparation before readiness. Publish the host and SDK before
+separately released providers adopt them; SDK 0.46.0 does not include them. See
+[local workspace providers](0003-command-and-process-api.md#local-workspace-providers-on-main).
 
 ### Which version each check uses
 

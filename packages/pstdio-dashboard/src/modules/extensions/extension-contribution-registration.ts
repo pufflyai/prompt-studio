@@ -63,6 +63,7 @@ export const disposeExtensionContributions = (disposables: Disposable[]) => {
 };
 
 interface RegisterExtensionContributionsInput {
+  terminalRendererOwners?: RegisterWorkbenchExtensionContributionsInput["terminalRendererOwners"];
   chatRendererOwners?: RegisterWorkbenchExtensionContributionsInput["chatRendererOwners"];
   ctx: WorkbenchModuleContext;
   executeCommand: ExecuteDashboardExtensionCommand;
@@ -119,6 +120,7 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
         queries: getDashboardScopedQueries(owner),
         chatRendererOwners: input.chatRendererOwners,
         chatDraftStorageScope: buildAbsoluteApiUrl("/"),
+        terminalRendererOwners: input.terminalRendererOwners,
         readLegacySessionDraft: readLegacySessionChatDraft,
         createChatHost: createDashboardChatHost,
         resolveChatResource: canonicalDashboardResource,

@@ -94,6 +94,7 @@ describe("createTreeContextMenuItems", () => {
     const workbench = createWorkbench();
     const run = mock();
     const requestParams = mock();
+    const context = { resource: { type: "workspace", id: "clicked" } };
 
     const items = createTreeContextMenuItems({
       actions: [
@@ -105,6 +106,7 @@ describe("createTreeContextMenuItems", () => {
           run,
         },
       ],
+      context,
       onRequestParams: requestParams,
       workbench,
     });
@@ -116,6 +118,7 @@ describe("createTreeContextMenuItems", () => {
       expect.objectContaining({
         run: expect.any(Function),
         request: {
+          context,
           record: {
             command: {
               id: "rename",
@@ -132,7 +135,7 @@ describe("createTreeContextMenuItems", () => {
     const requested = requestParams.mock.calls[0]?.[0];
     requested?.run({ fileId: "file-1", name: "renamed.md" });
 
-    expect(run).toHaveBeenCalledWith({ fileId: "file-1", name: "renamed.md" });
+    expect(run).toHaveBeenCalledWith({ fileId: "file-1", name: "renamed.md" }, context);
   });
 
   test("uses menu action params for prompted command actions", () => {

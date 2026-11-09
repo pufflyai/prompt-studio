@@ -88,6 +88,7 @@ export const createQueryOwner = <T>(
     },
   };
   const observer = new QueryObserver<T, Error>(client, { ...options, enabled: false });
+  let snapshotRevision = ledger.revision();
   let snapshot: ScopedQuerySnapshot<T> = { data: client.getQueryData<T>(queryKey), loading: false, fetching: false };
   const cancelRequest = () => {
     void client.cancelQueries({ queryKey, exact: true }, { revert: false, silent: true });
@@ -108,7 +109,10 @@ export const createQueryOwner = <T>(
       fetching,
       error: selected.error ?? undefined,
     };
-    if (sameSnapshot(next, snapshot)) return;
+    // A successful new revision must wake lifetime adapters even when its data structurally shares every value.
+    const revision = !stale && !fetching ? ledger.revision() : snapshotRevision;
+    if (sameSnapshot(next, snapshot) && revision === snapshotRevision) return;
+    snapshotRevision = revision;
     snapshot = next;
     for (const listener of listeners.values()) listener.notify();
   };

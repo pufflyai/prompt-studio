@@ -694,3 +694,42 @@ test("a failed invalidation callback cannot strand its query, sibling callbacks 
   for (const stop of stops) stop();
   root.dispose();
 });
+
+test("read returns the canonical accepted snapshot after structural sharing a changed value", async () => {
+  let label = "one";
+  const root = createScopedQueryClient(scope);
+  const query = root.query({
+    id: "canonical",
+    read: () => ({ rows: [{ id: "row", label }], stable: { id: "stable" } }),
+  });
+  const first = await query.read();
+  label = "two";
+  query.invalidate();
+  const next = await query.read();
+  expect(next).toBe(query.getSnapshot().data!);
+  expect(next.rows[0].label).toBe("two");
+  expect(next.stable).toBe(first.stable);
+  root.dispose();
+});
+
+test("an equal accepted revision notifies passive lifetime observers without replacing shared data", async () => {
+  const root = createScopedQueryClient(scope);
+  const query = root.query({ id: "equal-revision", read: () => ({ rows: [{ id: "one" }] }) });
+  let settled = 0;
+  const stop = query.subscribe(
+    () => {
+      if (!query.getSnapshot().fetching) settled++;
+    },
+    { automatic: false },
+  );
+  await query.read();
+  const before = query.getSnapshot();
+  settled = 0;
+  query.invalidate();
+  await query.read();
+  expect(query.getSnapshot().data).toBe(before.data!);
+  expect(query.getSnapshot()).not.toBe(before);
+  expect(settled).toBe(1);
+  stop();
+  root.dispose();
+});

@@ -46,7 +46,7 @@ const rendererRefreshTargets = (metadata: WorkbenchExtensionMetadata) => {
   };
 
   for (const view of metadata.views) {
-    if (view.body.kind === "webview" || view.body.kind === "chat") continue;
+    if (view.body.kind === "webview" || view.body.kind === "chat" || view.body.kind === "terminal") continue;
     add(view.body.kind, { id: view.id, refreshEventIds: view.body.refreshEventIds });
   }
   return targets;

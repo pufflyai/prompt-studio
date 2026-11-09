@@ -9,13 +9,14 @@ import {
 } from "@pstdio/sdk/extensions";
 import { createRendererQueryLease } from "./renderer-query-lease";
 import { type createRendererReadAdmission, rendererReadAdmissionFor } from "./renderer-read-admission";
+import { createRendererReadLifetime } from "./renderer-read-lifetime";
 import type { RendererReadRequest } from "./renderer-read-registry";
 
 export type RendererQueryIdentity = Pick<
   RendererReadRequest<unknown>,
   "queryKey" | "queryScope" | "sourceId" | "dependency"
 >;
-interface ProgressiveOwner<T> {
+export interface ProgressiveOwner<T> {
   query: ScopedQuery<T>;
   load: RendererReadRequest<T>["load"];
   version: number;
@@ -59,7 +60,12 @@ export const createRendererQueryCache = (sharedQueries?: ScopedQueryClient) => {
   const queries =
     sharedQueries ?? createScopedQueryClient({ runtimeId: `native-${++nextRuntime}`, extensionId: "pstdio" });
   const entries = new Map<string, { identity: RendererQueryIdentity; owner: ProgressiveOwner<unknown> }>();
+  const lifetime = createRendererReadLifetime(() => {
+    if (!sharedQueries) queries.dispose();
+    entries.clear();
+  });
   const prepare = <T>(request: RendererReadRequest<T>) => {
+    lifetime.assertOpen();
     let owner!: ProgressiveOwner<T>;
     const query = queries.forScope(request.queryScope ?? {}).query({
       id: "native.renderer",
@@ -125,7 +131,15 @@ export const createRendererQueryCache = (sharedQueries?: ScopedQueryClient) => {
     return owner;
   };
   return {
+    queries,
+    isDisposed: lifetime.isDisposed,
+    onDispose: lifetime.onDispose,
+    track: lifetime.track,
     prepare,
+    get(identity: RendererQueryIdentity) {
+      const owner = entries.get(keyFor(identity))?.owner;
+      return owner && !owner.query.isDisposed() ? owner : undefined;
+    },
     lease(query: ScopedQuery<unknown>, notify: () => void, onInvalidate?: () => boolean) {
       const owner = owners.get(query) as ProgressiveOwner<unknown>;
       return createRendererQueryLease(query, notify, owner.admission, onInvalidate);
@@ -234,9 +248,6 @@ export const createRendererQueryCache = (sharedQueries?: ScopedQueryClient) => {
         if (draining) await draining;
       }
     },
-    dispose() {
-      if (!sharedQueries) queries.dispose();
-      entries.clear();
-    },
+    dispose: lifetime.dispose,
   };
 };

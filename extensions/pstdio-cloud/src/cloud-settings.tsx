@@ -198,7 +198,7 @@ export const CloudSettings = (props: { projectId?: string }) => {
                         )
                       }
                     >
-                      <CloudIcon name={signingOut ? "log-out" : "log-in"} />
+                      <CloudIcon name={signingOut ? "log-out" : "user-round-key"} />
                       {accountAction}
                     </Button>
                   )}

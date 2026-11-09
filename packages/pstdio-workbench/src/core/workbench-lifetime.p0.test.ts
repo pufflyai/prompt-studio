@@ -232,3 +232,65 @@ test("normal contribution teardown stops page reconciliation before modes close"
     errors.mockRestore();
   }
 });
+
+test("terminal admission closes while required preferences still hold workbench disposal", async () => {
+  const write = Promise.withResolvers<void>();
+  const core = createWorkbench({ preferencePersistence: { getValue: () => 0, setValue: () => write.promise } });
+  core.preferences.registerSchema({ properties: { size: { type: "number", scope: "user" } } });
+  const opening =
+    Promise.withResolvers<import("./controllers/terminal/terminal-controller").WorkbenchTerminalSessionAdapter>();
+  let signal!: AbortSignal;
+  let killed = 0;
+  core.terminal.setSessionOpener((_request, _view, input) => {
+    signal = input!;
+    return opening.promise;
+  });
+  const admitted = core.terminal.open({ request: { cols: 80, rows: 24 } }).catch((error) => error);
+  const save = core.preferences.setValue("size", 1, { scope: "user" });
+  const disposal = core.dispose();
+  expect(core.terminal.isAvailable()).toBe(false);
+  expect(signal.aborted).toBe(true);
+  await expect(core.terminal.open({ request: { cols: 80, rows: 24 } })).rejects.toThrow("not available");
+  opening.resolve({
+    id: "late",
+    write() {},
+    resize() {},
+    kill() {
+      killed++;
+    },
+    onData: () => () => {},
+    onExit: () => () => {},
+    onError: () => () => {},
+  });
+  await admitted;
+  expect(killed).toBe(1);
+  write.resolve();
+  await Promise.all([save, disposal]);
+});
+
+test("external teardown cannot reenter terminal admission", async () => {
+  const browser = createMemoryWorkbenchPageLocationBrowser();
+  let core!: ReturnType<typeof createWorkbench>;
+  let available: boolean | undefined;
+  let opening: Promise<unknown> | undefined;
+  let opens = 0;
+  core = createWorkbench({
+    pageLocationBrowser: {
+      ...browser,
+      onPopState: () => ({
+        dispose() {
+          available = core.terminal.isAvailable();
+          opening = core.terminal.open({ request: { cols: 80, rows: 24 } }).catch((error) => error);
+        },
+      }),
+    },
+  });
+  core.terminal.setSessionOpener(async () => {
+    opens++;
+    throw new Error("should not open");
+  });
+  await core.dispose();
+  expect(available).toBe(false);
+  expect(opens).toBe(0);
+  expect(await opening).toBeInstanceOf(Error);
+});

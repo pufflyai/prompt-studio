@@ -14,7 +14,7 @@ const statusColor = (state: string) => {
 const statusIcon = (state: string): CloudIconName => {
   if (state === "Offline") return "wifi-off";
   if (state === "Local") return "cloud-off";
-  if (state === "Sign in" || state === "Sign in again") return "log-in";
+  if (state === "Sign in" || state === "Sign in again") return "user-round-key";
   if (state === "Needs attention") return "triangle-alert";
   if (state === "Synced") return "circle-check";
   return "cloud";
