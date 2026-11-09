@@ -1,22 +1,22 @@
-import { Box, Button, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, HStack, IconButton, Stack } from "@chakra-ui/react";
 import { EmptyState, Tooltip } from "@pstdio/ui";
 import { type PointerEvent, useRef, useState } from "react";
+import { EditingError } from "../../editing-error";
 import { ExampleIcon } from "../../icon";
-import type { MarmaladeTool } from "./marmalade.types";
 import { MarmaladeCanvasLayer } from "./marmalade-canvas-layer";
+import { type MarmaladeDrawing, marmaladeDrawingAction } from "./marmalade-drawing";
+import { useMarmaladeGesture } from "./marmalade-gesture";
 import { marmaladeLayers } from "./marmalade-layers";
 import { marmaladeStore, useMarmalade } from "./marmalade-store";
 
-interface Drawing {
-  tool: Extract<MarmaladeTool, "rectangle" | "ellipse" | "brush">;
-  points: [number, number][];
-}
 export const MarmaladeCanvas = () => {
-  const { state, error } = useMarmalade();
+  const state = useMarmalade((projection) => projection.state);
+  const error = useMarmalade((projection) => projection.error);
+  const gesture = useMarmaladeGesture();
   const svg = useRef<SVGSVGElement>(null);
   const documentGroup = useRef<SVGGElement>(null);
-  const drawing = useRef<Drawing | null>(null);
-  const [draft, setDraft] = useState<Drawing>();
+  const drawing = useRef<MarmaladeDrawing | null>(null);
+  const [draft, setDraft] = useState<MarmaladeDrawing>();
   const [pan, setPan] = useState<{ startX: number; startY: number; x: number; y: number; dx: number; dy: number }>();
   const point = (event: PointerEvent, target: SVGSVGElement | SVGGElement | null) => {
     const matrix = target?.getScreenCTM();
@@ -60,11 +60,7 @@ export const MarmaladeCanvas = () => {
           Fit
         </Button>
       </HStack>
-      {error ? (
-        <Text role="alert" color="fg.error" px="sm" textStyle="label/XS">
-          {error}
-        </Text>
-      ) : null}
+      {error ? <EditingError error={error} retry={() => marmaladeStore.retry()} /> : null}
       <Box
         flex="1"
         minH="0"
@@ -109,6 +105,10 @@ export const MarmaladeCanvas = () => {
             if (pan) {
               const next = point(event, svg.current);
               setPan({ ...pan, dx: next.x - pan.startX, dy: next.y - pan.startY });
+              gesture.update({
+                type: "viewport",
+                pan: { x: pan.x + next.x - pan.startX, y: pan.y + next.y - pan.startY },
+              });
             }
             if (drawing.current) {
               const next = point(event, documentGroup.current);
@@ -122,7 +122,7 @@ export const MarmaladeCanvas = () => {
           onPointerUp={(event) => {
             if (pan) {
               const next = point(event, svg.current);
-              void marmaladeStore.dispatch({
+              void gesture.complete({
                 type: "viewport",
                 pan: { x: pan.x + next.x - pan.startX, y: pan.y + next.y - pan.startY },
               });
@@ -132,23 +132,12 @@ export const MarmaladeCanvas = () => {
             if (!current) return;
             const next = point(event, documentGroup.current);
             const points: [number, number][] = [...current.points, [next.x, next.y]];
-            const xs = points.map((p) => p[0]);
-            const ys = points.map((p) => p[1]);
-            const x = Math.min(...xs);
-            const y = Math.min(...ys);
-            void marmaladeStore.dispatch({
-              type: "create",
-              kind: current.tool,
-              x,
-              y,
-              width: Math.max(1, Math.max(...xs) - x),
-              height: Math.max(1, Math.max(...ys) - y),
-              points: current.tool === "brush" ? points.map((p) => [p[0] - x, p[1] - y]) : undefined,
-            });
+            void marmaladeStore.dispatch(marmaladeDrawingAction({ tool: current.tool, points }));
             drawing.current = null;
             setDraft(undefined);
           }}
           onPointerCancel={() => {
+            void gesture.cancel();
             drawing.current = null;
             setDraft(undefined);
             setPan(undefined);

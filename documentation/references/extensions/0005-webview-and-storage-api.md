@@ -205,6 +205,15 @@ the call if the view did not declare `navigation.open` or the target is invalid.
 `@pstdio/sdk/extensions/react` ships react-query hooks built on the client. `react` and
 `@tanstack/react-query` are optional peer dependencies used only by this entry.
 
+On `main` for API 0.4.0, `client.queries`, `useWebviewQuery` and `useScopedQuery`
+provide common project/authority identity, retained finite reads and scoped
+invalidation without a per-component refresh controller. Declare both React peers
+when importing this entry. Use the
+[state and project lifetime guide](../../guides/extensions/0010-shared-state-and-project-lifetimes.md)
+for new consumers, command-backed editing, committed storage observation and the
+reusable lifecycle fixture. Existing `useCommandQuery` consumers retain the
+QueryClientProvider contract below.
+
 ```tsx
 import { useCommandMutation, useCommandQuery } from "@pstdio/sdk/extensions/react";
 
@@ -510,4 +519,4 @@ Agents use the same authenticated API:
 
 These routes store extension-owned values. Declared settings use the settings API. Theme and locale remain host appearance choices. Use `ctx.storage` for extension product data rather than view preferences.
 
-*Updated at: 2026-11-07*
+*Updated at: 2026-11-09*

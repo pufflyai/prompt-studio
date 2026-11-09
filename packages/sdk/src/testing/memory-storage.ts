@@ -126,6 +126,25 @@ export const createMemoryStorageDevice = (options: MemoryStorageOptions = {}) =>
     const { records, legacy } = owner.scope(scopeType, scopeId);
     const blobKey = JSON.stringify([scopeType, scopeId]);
     const api: ExtensionStorageApi = {
+      observe(changed, options) {
+        const stop = options?.signal?.aborted
+          ? () => {}
+          : owner.observe((change) => {
+              if (
+                options?.recordIds &&
+                change.recordIds &&
+                !change.recordIds.some((id) => options.recordIds?.includes(id))
+              )
+                return;
+              changed(change);
+            });
+        const close = () => {
+          stop();
+          options?.signal?.removeEventListener("abort", close);
+        };
+        options?.signal?.addEventListener("abort", close, { once: true });
+        return { close };
+      },
       canMigrate: async () => true,
       migrate: (version, run) =>
         migrateFor(blobKey)(version, (previous) =>

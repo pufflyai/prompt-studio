@@ -197,6 +197,8 @@ export interface WorkbenchPagePersistenceScope {
 }
 
 export interface createWorkbenchInput {
+  /** Share the host runtime cache with native query adapters. */
+  queries?: import("@pstdio/sdk/extensions").ScopedQueryClient;
   /** Whether this workbench owns window effects. Defaults to true for single-workbench hosts. */
   active?: boolean;
   storageScope?: string;

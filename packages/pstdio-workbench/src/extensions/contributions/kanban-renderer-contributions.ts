@@ -229,6 +229,8 @@ export const registerWorkbenchExtensionKanbanRenderers = (
         icon: record.icon,
         body: {
           kind: record.kind === "resourceList" ? "resourceList" : "kanban",
+          queryEvents: record.refreshEventIds,
+          queryScope: { projectId: context.projectId, extensionId: record.extensionId },
           resourceKind: record.resourceKind,
           toolbarActions: mapViewToolbarActions(record),
           listRowActions: () =>

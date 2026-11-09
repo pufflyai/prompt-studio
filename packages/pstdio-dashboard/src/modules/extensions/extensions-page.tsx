@@ -1,11 +1,10 @@
-import type { ListProjectExtensionsResponse } from "@pstdio/sdk/api";
 import type { WorkbenchModuleContext, WorkbenchPanelRenderInput } from "@pstdio/workbench";
 import { useWorkbenchStore } from "@pstdio/workbench/react";
 import { getDashboardQueryClient } from "@/lib/query-client";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
 import { dashboardExtensionDetailPage, dashboardExtensionsPage } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { projectExtensionsQueryKey } from "@/shared/extensions/project-extension-cache";
+import { getProjectExtensionQueries } from "@/shared/extensions/project-extension-queries";
 import {
   dashboardNavigationSections,
   registerDashboardNavigationContribution,
@@ -28,11 +27,9 @@ export const registerExtensionsPage = (ctx: WorkbenchModuleContext) => {
     label: "Extension",
     icon: "tool-case",
     resolve: (resource) => {
-      const projectId = ctx.context.get(dashboardSelectedProjectIdContextKey);
+      const projectId = resource.projectId ?? ctx.context.get(dashboardSelectedProjectIdContextKey);
       if (typeof projectId !== "string") return resource;
-      const data = getDashboardQueryClient().getQueryData<ListProjectExtensionsResponse>(
-        projectExtensionsQueryKey(projectId),
-      );
+      const data = getProjectExtensionQueries(projectId).extensions.getSnapshot().data;
       const installed = data?.extensions.find((entry) => resource.id === `installed:${entry.id}`);
       const available = data?.marketplace.find((entry) => resource.id === `marketplace:${entry.installName}`);
       const extension = installed ?? available;
@@ -44,7 +41,8 @@ export const registerExtensionsPage = (ctx: WorkbenchModuleContext) => {
         .subscribe((event) => {
           // Creating and observing queries happens during render; only changed extension data can rename a resource.
           if (event.type !== "updated" && event.type !== "removed") return;
-          if (event.query.queryKey[0] === projectExtensionsQueryKey(undefined)[0]) listener();
+          if (event.type === "updated" && event.action.type !== "success") return;
+          if (event.query.queryKey[0] === "pstdio" && event.query.queryKey[6] === "extensions.list") listener();
         }),
   });
   ctx.views.registerView({

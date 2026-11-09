@@ -27,7 +27,11 @@ export const createMemoryRecordOwner = (
 ) => {
   const owner = { workbenchId: crypto.randomUUID(), extensionId: "test-extension", ...identity };
   const baseStore = createMemoryDocumentStore();
-  const ordered = createOrderedMemoryRecords(assets, seed.textFields);
+  const listeners = new Set<(change: { recordIds?: readonly string[] }) => void>();
+  const notify = (recordIds?: readonly string[]) => {
+    for (const listener of [...listeners]) listener({ recordIds });
+  };
+  const ordered = createOrderedMemoryRecords(assets, seed.textFields, notify);
   const initial: OrderedRecord[] = [];
   const add = (namespace: string[], id: string, value: unknown) =>
     initial.push({
@@ -77,6 +81,12 @@ export const createMemoryRecordOwner = (
   };
   const legacy = createLegacyRecordStorage({ records });
   return {
+    observe: (listener: (change: { recordIds?: readonly string[] }) => void) => {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
     workbenchId: owner.workbenchId,
     extensionId: owner.extensionId,
     dataVersion: metadata.dataVersion,
@@ -86,7 +96,10 @@ export const createMemoryRecordOwner = (
     snapshot: () => store.transaction(owner, async () => ordered.snapshot()),
     exportOrdered: () => store.transaction(owner, async () => ordered.exportState()),
     pendingOrdered: () => store.transaction(owner, async () => ordered.pending()),
-    installOrdered: (state: OrderedMemoryState) => store.transaction(owner, async () => ordered.install(state)),
+    installOrdered: async (state: OrderedMemoryState) => {
+      await store.transaction(owner, async () => ordered.install(state));
+      notify();
+    },
     duringMigration: async <T>(key: string, run: () => Promise<T>) => {
       await initialized;
       return baseStore.duringMigration(key, run);

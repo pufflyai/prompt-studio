@@ -49,8 +49,8 @@ export const createOrderedStreamStore = (
     withOrderedOwner(db, owner, async (journal, tx) => {
       return cache ? cache.transaction(tx, () => action(journal, tx)) : action(journal, tx);
     });
-  const notify = (events: NumberChange[] = []) => {
-    deps.changed();
+  const notify = (events: NumberChange[] = [], recordIds?: readonly string[]) => {
+    if (!recordIds || recordIds.length) deps.changed(recordIds);
     deps.numbersChanged?.(combineNumberEvents(events));
   };
   const applyAdmission = async (
@@ -152,7 +152,7 @@ export const createOrderedStreamStore = (
         return { ...saved, rejected, cursor: next };
       });
       if (result.projected) deps.statistics.record(result.projected);
-      notify(result.events);
+      notify(result.events, result.recordIds);
       return { rejected: result.rejected, cursor: result.cursor };
     },
     async merge(
@@ -175,7 +175,7 @@ export const createOrderedStreamStore = (
       const result = await run((journal, tx) =>
         mergeIn(journal, tx, incoming, { ...cursor, skipped: cursor.skipped || rejectedFrames.length > 0 }),
       );
-      notify(result.events);
+      notify(result.events, result.recordIds);
       return { rejected: result.rejected, rejectedFrames, cursor: result.cursor };
     },
     outbox: (limit: number) => run((journal, tx) => nextOrderedUpload(journal, tx, owner, receiptIndex(), limit)),
@@ -224,15 +224,15 @@ export const createOrderedStreamStore = (
           };
           await saveOrderedCursor(tx, owner, next);
           await journal.markIndexed(snapshot.receipts);
-          return { cursor: next, events: [] as NumberChange[] };
+          return { cursor: next, events: [] as NumberChange[], recordIds: [] as string[] };
         }
         const remote = new Map(snapshot.records.map((record) => [record.recordId, [record.bytes]]));
         const result = await mergeIn(journal, tx, remote, cursor);
         for (const included of snapshot.native) await journal.completeNative(included.operation, included.state);
         await journal.markIndexed(snapshot.receipts);
-        return { cursor: result.cursor, events: result.events };
+        return { cursor: result.cursor, events: result.events, recordIds: result.recordIds };
       });
-      notify(saved.events);
+      notify(saved.events, saved.recordIds);
       return saved.cursor;
     },
     hasRecords: () =>

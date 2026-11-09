@@ -195,14 +195,18 @@ const registerModes = (input: InternalRegisterWorkbenchExtensionContributionsInp
 const registerModePlacements = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>
   input.metadata.placements.map((placement) => input.workbench.modePlacements.registerPlacement(placement));
 export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWorkbenchExtensionContributionsInput) => {
+  const disposables: Disposable[] = [];
   const input: InternalRegisterWorkbenchExtensionContributionsInput = {
     ...sourceInput,
     metadata: toInternalWorkbenchExtensionMetadata(sourceInput.metadata, {
       projectId: sourceInput.projectId,
-      createTab: (metadata) => createWorkbenchExtensionTabPresentation(sourceInput, metadata),
+      createTab: (metadata) => {
+        const tab = createWorkbenchExtensionTabPresentation(sourceInput, metadata);
+        disposables.push(tab);
+        return tab;
+      },
     }),
   };
-  const disposables: Disposable[] = [];
   const context: WorkbenchExtensionCommandContext = input;
   try {
     disposables.push(registerWorkbenchExtensionChatRenderers(sourceInput));

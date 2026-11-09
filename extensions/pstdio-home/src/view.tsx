@@ -4,23 +4,19 @@ import {
   createWebviewClient,
   defineExtensionView,
   type ExtensionViewRenderContext,
-  getCommandValue,
   sessionBrowser,
   workbenchCommands,
 } from "@pstdio/sdk/extensions";
+import { useScopedQuery, useWebviewVisibility } from "@pstdio/sdk/extensions/react";
 import { AlertMessage, ChakraProvider, psTheme, ScrollArea } from "@pstdio/ui";
-import { Activity, useEffect, useState, useSyncExternalStore } from "react";
+import { Activity, useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
-import type { commands } from "./commands";
 import { ProjectSetupStatus } from "./components/project-setup-status";
 import { StartAboutPanel } from "./components/start-about-panel";
 import { StartActionList } from "./components/start-action-list";
 import { StartRecentList } from "./components/start-recent-list";
-import type { readHome } from "./data";
-import { type RecentProjectResource, recentProjectResources } from "./recent-resources";
-import { subscribeHome } from "./subscriptions";
+import { createHomeQueries } from "./home-queries";
 
-type HomeData = Awaited<ReturnType<typeof readHome>> & { recent: RecentProjectResource[] };
 interface HostProps {
   projectId: string;
 }
@@ -28,45 +24,28 @@ interface AppProps {
   context: ExtensionViewRenderContext<HostProps>;
 }
 
-const HomeApp = (props: AppProps) => {
-  const { context } = props;
-  const [client] = useState(() => createWebviewClient<typeof commands>(context.host));
-  const [data, setData] = useState<HomeData>();
-  const [refresh, setRefresh] = useState(0);
-  const [loadError, setLoadError] = useState<string>();
+const HomeApp = (props: AppProps & HostProps) => {
+  const { context, projectId } = props;
+  const queries = createHomeQueries(context.host, projectId);
+  const home = useScopedQuery(queries.home);
+  const recent = useScopedQuery(queries.recent);
+  const data = home.data;
+  const [openError, setOpenError] = useState<string>();
+  const loadError = home.error?.message ?? recent.error?.message ?? openError;
   const [actionError, setActionError] = useState<{ id: string; message: string }>();
   const [pending, setPending] = useState<string>();
-  useEffect(() => subscribeHome(client.events, () => setRefresh((value) => value + 1)), [client]);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: host events invalidate the query.
-  useEffect(() => {
-    let cancelled = false;
-    void Promise.all([
-      client.commands.read(),
-      context.host.call("commands.execute", { commandId: workbenchCommands.recentResources.id, params: {} }),
-    ])
-      .then(([value, recent]) => {
-        if (!cancelled) {
-          const resources = getCommandValue(recent.outcome) as NonNullable<
-            typeof workbenchCommands.recentResources.result
-          >;
-          setData({ ...value, recent: recentProjectResources(resources) });
-          setLoadError(undefined);
-        }
-      })
-      .catch((error) => {
-        if (!cancelled) setLoadError(String(error));
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [client, context.host, refresh]);
+  const refresh = () => {
+    setOpenError(undefined);
+    queries.home.invalidate();
+    queries.recent.invalidate();
+  };
   const run = async (id: string, commandId: string, params = {}) => {
     setPending(id);
     setActionError(undefined);
     try {
       const response = await context.host.call("commands.execute", { commandId, params });
       if (!response.outcome.ok) throw new Error(response.outcome.reason);
-      if (id === "retry") setRefresh((value) => value + 1);
+      if (id === "retry") refresh();
     } catch (error) {
       setActionError({ id, message: String(error) });
     } finally {
@@ -125,7 +104,7 @@ const HomeApp = (props: AppProps) => {
           <AlertMessage status="error" title="Could not load project home">
             <Stack>
               <Text>{loadError}</Text>
-              <Button onClick={() => setRefresh((value) => value + 1)}>Retry</Button>
+              <Button onClick={refresh}>Retry</Button>
             </Stack>
           </AlertMessage>
         )}
@@ -145,13 +124,13 @@ const HomeApp = (props: AppProps) => {
           </Box>
           <Box flex="1" minW="0" w="full">
             <StartRecentList
-              resources={data?.recent ?? []}
+              resources={recent.data ?? []}
               onOpen={(recent) => {
                 void context.host
                   .call("navigation.open", {
                     target: recent.target,
                   })
-                  .catch((error) => setLoadError(String(error)));
+                  .catch((error) => setOpenError(String(error)));
               }}
             />
           </Box>
@@ -161,20 +140,14 @@ const HomeApp = (props: AppProps) => {
   );
 };
 
-const subscribeVisibility = (listener: () => void) => {
-  document.addEventListener("visibilitychange", listener);
-  return () => document.removeEventListener("visibilitychange", listener);
-};
-const isVisible = () => !document.hidden;
-
 const View = (props: AppProps) => {
   const { context } = props;
   const hostProps = useSyncExternalStore(context.propsStore.subscribe, context.propsStore.get, context.propsStore.get);
-  const visible = useSyncExternalStore(subscribeVisibility, isVisible, () => true);
+  const visible = useWebviewVisibility();
   return (
     <ChakraProvider value={psTheme}>
       <Activity mode={visible ? "visible" : "hidden"}>
-        <HomeApp key={hostProps.projectId} context={context} />
+        <HomeApp key={hostProps.projectId} context={context} projectId={hostProps.projectId} />
       </Activity>
     </ChakraProvider>
   );
@@ -183,6 +156,9 @@ export default defineExtensionView<HostProps>({
   render(context) {
     const root = createRoot(context.mount);
     root.render(<View context={context} />);
-    return () => root.unmount();
+    return () => {
+      root.unmount();
+      createWebviewClient(context.host).queries.dispose();
+    };
   },
 });

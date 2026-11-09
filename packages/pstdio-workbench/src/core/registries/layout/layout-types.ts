@@ -88,7 +88,7 @@ export interface WorkbenchTabSnapshot {
 
 export interface WorkbenchWidgetTab {
   getSnapshot(instance: WorkbenchPanelInstance): WorkbenchTabSnapshot;
-  subscribe?(listener: () => void): { dispose(): void } | (() => void);
+  subscribe?(listener: () => void, instance?: WorkbenchPanelInstance): { dispose(): void } | (() => void);
   refreshEvents?: readonly string[];
 }
 

@@ -12,6 +12,7 @@ import { waitForWorkspaceReady } from "../workspaces/wait-for-ready";
 import type { SessionsRouteDeps } from "./deps";
 import { getSessionHarness } from "./get-session-harness";
 import { initializeConversation } from "./initialize-conversation";
+import { emitSessionCommandsChanged } from "./session-command-events";
 import {
   bindSessionCancellation,
   rejectPersistedSessionCancellation,
@@ -50,6 +51,13 @@ const resolve = async (deps: SessionsRouteDeps, id: string) => {
     params: session.params_json ?? undefined,
   };
   return { session, harness, input, options: { projectId: session.project_id ?? undefined } };
+};
+export const observeSessionHarnessCommands = async (deps: SessionsRouteDeps, id: string, changed: () => void) => {
+  const { harness, input, options } = await resolve(deps, id);
+  if (harness.watchCommandState) return harness.watchCommandState(input, changed, options);
+  // Providers without complete notifications get command-only discovery, never a full session read.
+  const timer = harness.supportsCommandState ? setInterval(changed, 30_000) : undefined;
+  return () => clearInterval(timer);
 };
 export const getSessionHarnessCommands = async (deps: SessionsRouteDeps, id: string) => {
   const { harness, input, options } = await resolve(deps, id);
@@ -105,6 +113,7 @@ const invokeControl = async (
     throw new HarnessOperationError(error instanceof Error ? error.message : String(error), 400);
   } finally {
     control.release();
+    emitSessionCommandsChanged(deps.eventBus, id);
   }
 };
 const emitOperationLifecycle = async (deps: SessionsRouteDeps, id: string, lifecycle: "started" | "resumed") => {
@@ -226,6 +235,8 @@ export const invokeSessionHarnessOperation = async (
     await trackHarnessSession(id, failed, entry.eventStore.subscribe({ activityOnly: true }), deps, undefined, entry);
     if (error instanceof HarnessOperationError) throw error;
     throw new HarnessOperationError(error instanceof Error ? error.message : String(error), 400);
+  } finally {
+    emitSessionCommandsChanged(deps.eventBus, id);
   }
 };
 

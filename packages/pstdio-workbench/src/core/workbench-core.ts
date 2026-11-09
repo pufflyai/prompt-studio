@@ -47,14 +47,13 @@ import { createStatusRegistry } from "./registries/statuses/status-registry";
 import { createFileIconThemeRegistry } from "./registries/themes/file-icon-theme-registry";
 import { createThemeRegistry } from "./registries/themes/theme-registry";
 import { createContextKeyService } from "./shared/context/context-key-service";
-import { createDisposable } from "./shared/disposable";
-import { disposePlacementTextGuests } from "./text-editing/placement-text-guests";
 import { createWorkbenchActivation } from "./workbench-activation";
 import {
   activeWorkbenchResource,
   createCoreCompositionController,
   primaryWorkbenchResource,
   subscribeActiveWorkbenchResource,
+  subscribePrimaryWorkbenchResource,
 } from "./workbench-core-connections";
 import { createCoreNavigationRegistry, revealPanelRegion } from "./workbench-core-navigation";
 import { createWorkbenchNavigationTrees } from "./workbench-core-navigation-trees";
@@ -62,9 +61,11 @@ import { createCoreRenderers } from "./workbench-core-renderers";
 import { connectWorkbenchRuntime, listOpenResources } from "./workbench-core-runtime";
 import type { createWorkbenchInput, WorkbenchCore } from "./workbench-core-types";
 import { createCoreViews } from "./workbench-core-views";
+import { createWorkbenchDisposal } from "./workbench-disposal";
 import { createWorkbenchModuleRegistry } from "./workbench-module-registry";
 import { createPageLocations } from "./workbench-page-locations";
 import { createPagePersistenceScopeHandler } from "./workbench-page-persistence";
+import { createWorkbenchQueryContext } from "./workbench-queries";
 import { createWorkbenchKeyboard } from "./workbench-shortcut-actions";
 
 export * from "./workbench-core-types";
@@ -73,9 +74,10 @@ import { layoutPanelGuards } from "./controllers/shell/layout-panel-policy";
 import { requirePanelOpen } from "./controllers/shell/panel-open-policy";
 import { restorePanelPolicy, workbenchPanelPolicy } from "./controllers/shell/workbench-panel-policy";
 import { createWorkbenchHost } from "./workbench-core-host";
-import { disposeLayoutPersistence } from "./workbench-core-persistence";
 
 export const createWorkbench = (input: createWorkbenchInput = {}) => {
+  const queryContext = createWorkbenchQueryContext(input.queries);
+  input = { ...input, queries: queryContext.queries };
   let core: WorkbenchCore;
   const activation = createWorkbenchActivation(input.active);
   const locationBrowser = createActivePageLocationBrowser(
@@ -158,7 +160,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     onDidChangePersistenceScope: layout.onDidChangePersistenceScope,
   });
 
-  const navigationTrees = createWorkbenchNavigationTrees(renderers);
+  const navigationTrees = createWorkbenchNavigationTrees(renderers, input.queries);
 
   const placeholders = createWorkbenchPlaceholderRegistry({ layout, views });
   const breadcrumbs = createWorkbenchBreadcrumbController();
@@ -215,6 +217,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
 
   const composition = createCoreCompositionController(() => core);
   const viewers = createWorkbenchViewerController(() => core);
+  const modules = createWorkbenchModuleRegistry(() => core);
 
   core = {
     activation,
@@ -268,16 +271,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
 
     getActiveResource: () => activeWorkbenchResource(core),
 
-    async dispose() {
-      await disposePlacementTextGuests(core);
-      core.presence.dispose();
-      locationBrowser.dispose();
-      pageLocations.dispose();
-      viewers.dispose();
-      disposeFullscreen();
-      disposeLayoutPersistence(layoutCache.layout);
-      await Promise.all([views.reads.dispose(), core.terminal.dispose()]);
-    },
+    dispose: () => dispose(),
 
     onDidChangeActiveResource(listener) {
       return subscribeActiveWorkbenchResource(core, listener);
@@ -287,21 +281,24 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
       return primaryWorkbenchResource(core);
     },
 
-    onDidChangePrimaryResource(listener) {
-      return createDisposable(
-        core.pages.store.subscribeSelector(
-          (state) => state.location?.resource,
-          () => listener(core.getPrimaryResource()),
-        ),
-      );
-    },
+    onDidChangePrimaryResource: (listener) => subscribePrimaryWorkbenchResource(core, listener),
 
     registerChildModule: (module) => core.registerModule(module),
 
-    ...createWorkbenchModuleRegistry(() => core),
+    registerModule: modules.registerModule,
+    unregisterModule: modules.unregisterModule,
   };
 
-  const disposeFullscreen = connectWorkbenchRuntime(core, input, renderers, layoutCache);
+  queryContext.bind(core);
+  const dispose = createWorkbenchDisposal(core, {
+    queries: queryContext,
+    renderers,
+    persistence: layoutCache.layout,
+    modules,
+    stopRuntime: connectWorkbenchRuntime(core, input, renderers, layoutCache),
+    location: locationBrowser,
+    viewers,
+  });
 
   return core;
 };

@@ -105,7 +105,12 @@ export type {
 } from "./sessions";
 
 export interface ExtensionEventsApi {
-  emit<TPayload extends Struct>(event: EventRef<TPayload> | string, payload: TPayload): Promise<EventDeliveryResult>;
+  /** `refresh` is shared invalidation metadata; hook payloads remain private to their delivery. */
+  emit<TPayload extends Struct>(
+    event: EventRef<TPayload> | string,
+    payload: TPayload,
+    options?: { refresh?: Omit<import("./events").QueryChangeEnvelope, "projectId"> },
+  ): Promise<EventDeliveryResult>;
 }
 
 export interface ExtensionActivityApi {

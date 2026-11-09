@@ -108,9 +108,15 @@ export interface BuildEnvironmentInput {
 export interface CommandRunnerHostDeps {
   buildEnvironment: (input: BuildEnvironmentInput) => Promise<CommandRunnerEnvironment> | CommandRunnerEnvironment;
   /** Receives each transient extension event before its hooks run. */
-  onWillDispatchEvent?: (eventId: string) => void;
+  onWillDispatchEvent?: (
+    eventId: string,
+    refresh?: import("pstdio-api-contracts/extension-kernel").QueryChangeEnvelope,
+  ) => void;
   /** Receives each transient extension event after its hooks have run. */
-  onDidDispatchEvent?: (eventId: string) => void;
+  onDidDispatchEvent?: (
+    eventId: string,
+    refresh?: import("pstdio-api-contracts/extension-kernel").QueryChangeEnvelope,
+  ) => void;
   /** Optional logger forwarded to extension contexts. */
   logger?: ExtensionLoggerApi;
   /** Binds each command, middleware and hook context to its owning extension. */
@@ -159,4 +165,5 @@ export interface ExtensionEventDispatchInput {
   eventId: string;
   projectId: string;
   payload?: JsonObject;
+  refresh?: import("pstdio-api-contracts/extension-kernel").QueryChangeEnvelope;
 }

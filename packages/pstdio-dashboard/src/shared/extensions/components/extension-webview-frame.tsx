@@ -21,6 +21,7 @@ import { createDashboardExtensionWebviewAdapters } from "../extension-webview-ca
 import { subscribeWebviewExtensionEvents } from "../extension-webview-events";
 import { usePausedExtensions } from "../paused-extensions";
 import { useExecuteExtensionCommand, useProjectExtensions } from "../use-project-extensions";
+import { useDashboardQueryScope } from "../use-query-scope";
 import { useWebviewPageProps } from "../use-webview-page-props";
 import { createDashboardOwnedPreferences } from "../webview-owned-preferences";
 import {
@@ -53,6 +54,7 @@ const currentLocale = () => i18n.resolvedLanguage ?? i18n.language ?? "en";
 export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   const toaster = useToaster();
   const owner = getRuntimeCollections();
+  const queryScope = useDashboardQueryScope();
   const { extensionId, extensionInstanceId, installName, projectId, resource, terminal, title, webview, webviewId } =
     props;
   const { themePreference, themePreferences } = useThemePreference();
@@ -189,6 +191,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
         view={view}
         extensionProps={{
           projectId,
+          queryScope,
           presentation: props.workbench?.layout
             .getLayout()
             .regions.overlay.widgets.some((item) => item.widgetId === props.placement?.instanceId)

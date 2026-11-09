@@ -110,6 +110,7 @@ export const createCommandContextDefaults = (input: {
       delete: unavailable,
     },
     sessions: {
+      observeMetadata: async () => ({ close() {} }),
       getConversation: unavailable,
       getConversationSources: unavailable,
       getQueuedMessages: unavailable,

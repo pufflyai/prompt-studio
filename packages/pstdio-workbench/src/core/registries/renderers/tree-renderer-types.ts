@@ -1,3 +1,4 @@
+import type { QueryChangeEnvelope } from "@pstdio/sdk/extensions";
 import type { ContributionMetadata, RegisteredContributionMetadata } from "../../shared/contributions/metadata";
 import type { Disposable } from "../../shared/disposable";
 import type { WorkbenchStore } from "../../shared/store/workbench-store";
@@ -135,6 +136,9 @@ export interface TreeMoveEndpoint {
 export type TreeMovePolicy = (move: { source: TreeMoveEndpoint; destination: TreeMoveEndpoint }) => boolean;
 
 export interface TreeRendererContribution {
+  /** Captured host identity; never infer a hidden view's project from current selection. */
+  queryEvents?: readonly string[];
+  queryScope?: Partial<import("@pstdio/sdk/extensions").QueryScope>;
   id: string;
   title: string;
   icon?: string;
@@ -166,7 +170,7 @@ export interface TreeRendererState {
   loading?: boolean;
 }
 
-export interface TreeRendererRefreshEvent {
+export interface TreeRendererRefreshEvent extends QueryChangeEnvelope {
   treeId: string;
 }
 
@@ -212,6 +216,6 @@ export interface TreeRendererRegistry {
   setSectionExpanded(id: string, sectionId: string, expanded: boolean): void;
   setSelectedNode(id: string, nodeId: string | undefined): void;
   setLoading(id: string, loading: boolean): void;
-  refresh(id: string): void;
+  refresh(id: string, event?: QueryChangeEnvelope): void;
   onDidRefresh(listener: TreeRendererRefreshListener): Disposable;
 }

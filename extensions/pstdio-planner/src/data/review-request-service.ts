@@ -1,6 +1,6 @@
 // Settle review requests and notify readers to refresh pending input and request counts.
 import { type CommandContext, sessionBrowser } from "@pstdio/sdk/extensions";
-import { plannerTicketsChanged } from "../events";
+import { emitPlannerTicketsChanged } from "../events";
 import { actorFromSource } from "./attempt-actors";
 import { ticketsCollection } from "./collections";
 import { getReviewRequestSession } from "./review-request-session";
@@ -26,7 +26,7 @@ export const keepOwnedRequest = async (ctx: StorageContext, request: Pick<Review
 };
 
 export const publishRequestChange = async (ctx: CommandContext, ticketId: string) => {
-  await ctx.events.emit(plannerTicketsChanged, { ticketId });
+  await emitPlannerTicketsChanged(ctx, { ticketId });
 };
 
 const settledMessage = (request: ReviewRequestView) =>

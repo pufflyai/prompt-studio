@@ -1,10 +1,13 @@
 import type { WorkbenchModeRegistry } from "./mode-registry-types";
 
 interface WorkbenchModeRegistryInternals {
+  close(): void;
   activatePageMode(modeId: string | undefined, applyLayout: () => void): void;
 }
 
 const modeRegistryInternals = new WeakMap<WorkbenchModeRegistry, WorkbenchModeRegistryInternals>();
+
+export const closeWorkbenchModes = (registry: WorkbenchModeRegistry) => modeRegistryInternals.get(registry)?.close();
 
 export const setWorkbenchModeRegistryInternals = (
   registry: WorkbenchModeRegistry,

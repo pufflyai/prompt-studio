@@ -3,16 +3,16 @@ import { EmptyState, ListRow, SearchModalContent } from "@pstdio/ui";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useWorkbenchStore, WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "@pstdio/workbench/react";
 import { Cloud, Folder, Plus, Search, Settings } from "lucide-react";
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useCollectionSelection } from "@/lib/sync/use-collection-selection";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
-import { getDashboardDataVersion, subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { type ProjectCloudState, useCloudProjectStates } from "../data/cloud-project-states";
 import { createDashboardProjects, type DashboardProject } from "../data/project-data";
 import { projectLocationKey } from "../data/project-location";
 
-const filterProjects = (projects: DashboardProject[], searchTerm: string, _dataVersion: number) => {
+const filterProjects = (projects: DashboardProject[], searchTerm: string, _dataVersion: unknown) => {
   const query = searchTerm.trim().toLowerCase();
   if (!query) return projects;
 
@@ -82,11 +82,7 @@ export const ProjectPickerWidget = (props: { input: WorkbenchPanelRenderInput })
     input.workbench.context.store,
     (state) => state.values[dashboardSelectedProjectIdContextKey],
   );
-  const dashboardDataVersion = useSyncExternalStore(
-    subscribeDashboardData,
-    getDashboardDataVersion,
-    getDashboardDataVersion,
-  );
+  const dashboardDataVersion = useCollectionSelection({ tables: ["projects", "workspaces"] });
 
   const selectedProjectId = typeof selectedProjectIdValue === "string" ? selectedProjectIdValue : undefined;
   const allProjects = createDashboardProjects();

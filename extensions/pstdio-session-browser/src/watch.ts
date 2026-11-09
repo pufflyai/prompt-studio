@@ -16,10 +16,10 @@ import {
 import { conversationOperations } from "./controls";
 import { conversationState } from "./conversation-state";
 import { recoverNativeInputs } from "./native-recovery";
-import { readQueue } from "./queue-snapshot";
 import { sessionId } from "./resource";
 import { selectedHarness } from "./selection";
-import { readSessionSnapshot } from "./snapshot";
+import { createSessionMetadataQuery } from "./session-metadata-query";
+import { createStreamRecovery } from "./stream-recovery";
 
 type ChatWatchUpdate =
   | { snapshot: ChatRendererSnapshot }
@@ -37,17 +37,7 @@ export const approvalSnapshot = (approval?: ApprovalRequest): ChatRendererSnapsh
         ],
       }
     : null;
-const waitForRefresh = (signal: AbortSignal) =>
-  new Promise<void>((done) => {
-    const finish = () => {
-      clearTimeout(timer);
-      signal.removeEventListener("abort", finish);
-      done();
-    };
-    const timer = setTimeout(finish, 2000);
-    if (signal.aborted) finish();
-    else signal.addEventListener("abort", finish, { once: true });
-  });
+const startedAt = (value?: string | null) => (value ? new Date(value).getTime() : undefined);
 
 export const watchConversation = async (ctx: CommandContext, resource?: ResourceRef) => {
   const id = sessionId(resource);
@@ -80,6 +70,16 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
   let connected = false;
   let stream = Promise.resolve();
   let writes = Promise.resolve();
+  let wake = Promise.withResolvers<void>();
+  const changed = () => wake.resolve();
+  ctx.signal.addEventListener("abort", changed, { once: true });
+  let failure: unknown;
+  const metadata = createSessionMetadataQuery(ctx, id, () => ({ queue: queueClock, run: runClock }));
+  let stopMetadata = () => {};
+  const recovery = createStreamRecovery(() => {
+    retryStream = true;
+    changed();
+  });
   const emittedRecovery = new Set<string>();
   const writeEvent = (event: ChatWatchUpdate) => {
     writes = writes.then(async () => {
@@ -90,7 +90,10 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
     });
     // Retain the rejection for the loop/finally, but own it immediately while
     // another public stream callback or availability read is still pending.
-    void writes.catch(() => undefined);
+    void writes.catch((error) => {
+      failure = error;
+      changed();
+    });
     return writes;
   };
   const matchesCanonicalMessages = (displayed: SessionMessage[]) =>
@@ -162,6 +165,7 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
         id,
         async (event) => {
           if (ctx.signal.aborted) return;
+          if (event.event !== "ready") recovery.succeeded();
           if (event.event === "patch") await patch(event.data);
           else if (event.event === "queued_messages") await queued(event.data);
           else if (event.event === "approval_request") {
@@ -176,49 +180,64 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
       )
       .catch(async (error) => {
         if (!subscriptionSignal.aborted) {
-          retryStream = true;
+          recovery.failed();
           await write({ notice: error instanceof Error ? error.message : String(error) });
         }
       })
       .finally(() => {
         streamActive = false;
+        changed();
       });
     void stream.catch(() => undefined);
   };
+  const applyMetadata = async (result: NonNullable<ReturnType<typeof metadata.query.getSnapshot>["data"]>) => {
+    metadata.accepted(result);
+    const { session, reads, readAt } = result;
+    const snapshot = { ...result.snapshot };
+    harnessId = selectedHarness(snapshot.values ?? {})?.harnessId;
+    remote = Boolean(snapshot.nativeHarnessAccount?.remote);
+    if (!result.sessionRead || queueClock !== readAt.queue) {
+      delete snapshot.queuedFollowUps;
+      delete snapshot.queueReadOnly;
+      delete snapshot.queueSteeringUnavailableReason;
+      delete snapshot.operations;
+    } else if (!reads.queued.error) {
+      queue = reads.queued.queue;
+      queueMessages = reads.queued.messages;
+    }
+    if (!result.sessionRead || runClock !== readAt.run) {
+      delete snapshot.streaming;
+      delete snapshot.streamingStartedAt;
+    }
+    await write(snapshot);
+    await recoverNativeInputs(ctx, id, session, (recoverDraft) => writeEvent({ recoverDraft }), emittedRecovery);
+  };
   try {
+    stopMetadata = metadata.query.subscribe(changed);
+    let accepted: ReturnType<typeof metadata.query.getSnapshot>["data"];
     while (!ctx.signal.aborted) {
-      const queuedAt = queueClock;
-      const runAt = runClock;
-      const pendingQueue = readQueue(ctx, id);
-      const { snapshot, session } = await readSessionSnapshot(ctx, id, undefined, {
-        messages: false,
-        queue: pendingQueue,
-      });
-      const refreshedQueue = await pendingQueue;
+      const waiting = wake.promise;
+      await metadata.query.read();
       if (ctx.signal.aborted) break;
-      harnessId = selectedHarness(snapshot.values ?? {})?.harnessId;
-      remote = Boolean(snapshot.nativeHarnessAccount?.remote);
-      if (queueClock !== queuedAt) {
-        delete snapshot.queuedFollowUps;
-        delete snapshot.queueReadOnly;
-        delete snapshot.queueSteeringUnavailableReason;
-        delete snapshot.operations;
-      } else if (!refreshedQueue.error) {
-        queue = refreshedQueue.queue;
-        queueMessages = refreshedQueue.messages;
+      if (failure) throw failure;
+      const state = metadata.query.getSnapshot();
+      if (state.error) throw state.error;
+      const result = state.data;
+      if (result && result !== accepted) {
+        accepted = result;
+        await applyMetadata(result);
       }
-      if (runClock !== runAt) {
-        delete snapshot.streaming;
-        delete snapshot.streamingStartedAt;
-      }
-      await write(snapshot);
-      await recoverNativeInputs(ctx, id, session, (recoverDraft) => writeEvent({ recoverDraft }), emittedRecovery);
       if (ctx.signal.aborted) break;
-      if (!streamActive && (!connected || retryStream || snapshot.streamingStartedAt !== lastConnectedRun))
-        connect(snapshot.streamingStartedAt);
-      await waitForRefresh(ctx.signal);
+      const run = startedAt(result?.session.lastRequestStarted);
+      if (!streamActive && (!connected || retryStream || run !== lastConnectedRun)) connect(run);
+      await waiting;
+      wake = Promise.withResolvers<void>();
     }
   } finally {
+    recovery.close();
+    stopMetadata();
+    metadata.dispose();
+    ctx.signal.removeEventListener("abort", changed);
     subscriptionController.abort();
     try {
       await stream;

@@ -1,5 +1,6 @@
 import { createStorageId, createStorageMigration } from "pstdio-api-contracts";
-import { type CommandRunnerEnvironment, createReadBoundary } from "pstdio-extensions";
+import { type CommandRunnerEnvironment, createReadBoundary, type InvocationScope } from "pstdio-extensions";
+import { apiLogger } from "../../../lib/logger";
 import type { ExtensionsRouteDeps } from "../deps";
 import { createPublicationStorageAccess, guardPublicationStorage } from "../publication/storage-access";
 import { createExtensionAssetsApi } from "./assets";
@@ -13,6 +14,7 @@ type StorageApiInput = {
   projectId: string;
   source?: { version: string | null; source_ref: string | null; source_path: string };
   signal?: AbortSignal;
+  scope?: InvocationScope;
   scopeType?: string;
   scopeId?: string;
 };
@@ -43,6 +45,35 @@ export const createStorageApi = (
   };
 
   const api: CommandRunnerEnvironment["storage"] = {
+    observe(changed, options) {
+      let closed = Boolean(input.signal?.aborted || options?.signal?.aborted);
+      const stop = closed
+        ? () => {}
+        : deps.extensionStorageService.watch((event) => {
+            if (closed || event.workbenchId !== input.projectId || event.extensionId !== input.extensionId) return;
+            if (options?.recordIds && event.recordIds && !event.recordIds.some((id) => options.recordIds?.includes(id)))
+              return;
+            // Private text/owner metadata notifications do not change structured record queries.
+            if (event.documentId && event.documentId !== "records") return;
+            try {
+              changed({ recordIds: event.recordIds });
+            } catch (err) {
+              apiLogger.warn({ err, event: "storage.observer_failed" }, "Storage observer failed");
+            }
+          });
+      const close = () => {
+        closed = true;
+        stop();
+        input.signal?.removeEventListener("abort", close);
+        options?.signal?.removeEventListener("abort", close);
+      };
+      if (!closed) {
+        input.signal?.addEventListener("abort", close, { once: true });
+        options?.signal?.addEventListener("abort", close, { once: true });
+      }
+      input.scope?.register(close);
+      return { close };
+    },
     canMigrate: async () => true,
     migrate: (version, run) =>
       deps.extensionStorageService.migrate(scope, version, async (previous) => {

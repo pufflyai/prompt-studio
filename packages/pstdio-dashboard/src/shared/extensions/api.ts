@@ -1,12 +1,24 @@
 import type { CommandExecuteRequest } from "@pstdio/sdk/api";
+import type { ScopedQuery } from "@pstdio/sdk/extensions";
 import { getApiClient } from "@/lib/api";
+import { getProjectExtensionQueries } from "./project-extension-queries";
 
-export const getProjectExtensionMetadata = (projectId: string) => getApiClient().extensions.metadata(projectId);
+const readCatalog = async <T>(query: ScopedQuery<T>) => {
+  const stop = query.subscribe(() => {});
+  try {
+    return await query.read();
+  } finally {
+    stop();
+  }
+};
+export const getProjectExtensionMetadata = (projectId: string) =>
+  readCatalog(getProjectExtensionQueries(projectId).metadata);
 export const getExtensionContributions = (projectId: string, instanceId: string) =>
   getApiClient().extensions.contributions(projectId, instanceId);
 export const getMarketplaceExtensionContributions = (projectId: string, installName: string) =>
   getApiClient().extensions.marketplaceContributions(projectId, installName);
-export const getProjectExtensionAppearance = (projectId: string) => getApiClient().extensions.listAppearance(projectId);
+export const getProjectExtensionAppearance = (projectId: string) =>
+  readCatalog(getProjectExtensionQueries(projectId).appearance);
 export const executeExtensionCommand = (
   projectId: string,
   commandId: string,
@@ -54,14 +66,14 @@ export interface DroppedExtensionFolder {
   files: File[];
 }
 
-export const addLocalExtensionFolder = (projectId: string, folder: DroppedExtensionFolder) => {
+export const addLocalExtensionFolder = (projectId: string, folder: DroppedExtensionFolder, client = getApiClient()) => {
   const upload = new FormData();
   upload.append("kind", "upload");
   if (folder.force) upload.append("force", "true");
   upload.append("folderName", folder.name);
   upload.append("installName", folder.name);
   for (const file of folder.files) upload.append("files", file, file.name);
-  return getApiClient().extensions.install(projectId, { upload });
+  return client.extensions.install(projectId, { upload });
 };
 export const setProjectExtensionEnabled = (projectId: string, instanceId: string, enabled: boolean) =>
   getApiClient().extensions.setEnabled(projectId, instanceId, enabled);

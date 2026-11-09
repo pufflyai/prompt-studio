@@ -50,10 +50,10 @@ const prepareCommitViews = async (
   cache: ReturnType<typeof createOrderedCommitCache>,
 ) => {
   const cached = await cache.read(tx, ids);
-  if (cached) return cached;
+  if (cached) return { ...cached, recordIds: [] as string[] };
   const row = await readOrderedOwner(tx, owner);
   if (!(await orderedOwnerJoinedCloud(tx, owner, row)) && !(await journal.pendingFor(ids, { limit: 1 })).length)
-    return { views: await journal.canonical(ids), events: [] };
+    return { views: await journal.canonical(ids), events: [], recordIds: [] as string[] };
   return rebaseOrderedProjection(journal, tx, owner, ids);
 };
 
@@ -111,6 +111,7 @@ export const createOrderedResourceRecords = (
         events: [],
         outcome: await savedOutcome(journal, group.operationId),
         cache: undefined,
+        recordIds: [] as string[],
       };
     }
     const ids = group.edits.map((edit) => edit.recordId);
@@ -149,6 +150,7 @@ export const createOrderedResourceRecords = (
     });
     return {
       ...saved,
+      recordIds: [...new Set([...prepared.recordIds, ...saved.recordIds])],
       cache: await commitCache.stage(tx, ids, views, projected, saved),
       // Projection maintenance can include other pending groups. Only this
       // command's applied writes may advance its native load observations.
@@ -160,12 +162,15 @@ export const createOrderedResourceRecords = (
     };
   };
   const notify = (
-    result: Pick<Awaited<ReturnType<typeof commitIn>>, "records" | "projected" | "events" | "outcome" | "cache">,
+    result: Pick<
+      Awaited<ReturnType<typeof commitIn>>,
+      "records" | "projected" | "events" | "outcome" | "cache" | "recordIds"
+    >,
   ) => {
     commitCache.committed(result.cache);
     if (result.projected) deps.statistics.record(result.projected);
     deps.numbersChanged?.(result.events);
-    deps.changed();
+    if (result.recordIds.length) deps.changed(result.recordIds);
     if (result.records.length) deps.observer?.committed(owner, result.records, result.outcome);
     return result.outcome;
   };
@@ -206,7 +211,7 @@ export const createOrderedResourceRecords = (
       });
       if (result.projected) deps.statistics.record(result.projected);
       if (result.changed) {
-        deps.changed();
+        deps.changed([input.recordId]);
         deps.nativeChanged?.([result.documentKey]);
       }
       return { documentKey: result.documentKey, lifetime: result.lifetime, changed: result.changed };

@@ -1,11 +1,20 @@
-import { useState, useSyncExternalStore } from "react";
+import { useScopedQueries, useScopedQuery } from "@pstdio/sdk/extensions/react";
 import { useCloudContext } from "./cloud-context";
-import { createCloudStore } from "./cloud-store";
+import { createCloudQueries } from "./cloud-queries";
 
 export const useCloud = (projectId: string | undefined, includeDevices: boolean) => {
   const { client } = useCloudContext();
-  // The mounting view is keyed by project, so an old project's read cannot populate a new one.
-  const [store] = useState(() => createCloudStore(client, projectId, includeDevices));
-  const snapshot = useSyncExternalStore(store.subscribe, store.get);
-  return { ...snapshot, refresh: store.refresh };
+  const queries = createCloudQueries(client, projectId);
+  const snapshot = useScopedQuery(queries.snapshot);
+  const login = snapshot.data?.account.login;
+  const deviceQuery = includeDevices && login ? queries.devices(login) : undefined;
+  const devices = useScopedQueries(deviceQuery ? [deviceQuery] : [])[0];
+  return {
+    data: snapshot.data ? { ...snapshot.data, devices: devices?.data ?? [] } : undefined,
+    error: snapshot.error?.message ?? devices?.error?.message,
+    refresh: () => {
+      queries.snapshot.invalidate();
+      deviceQuery?.invalidate();
+    },
+  };
 };

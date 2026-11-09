@@ -1,8 +1,8 @@
-import type { WorkbenchModuleContext } from "@pstdio/workbench";
-import { isInitialCollectionsSyncComplete } from "@/lib/sync/collections";
+import { createWorkbenchStore, type WorkbenchModuleContext } from "@pstdio/workbench";
+import { createCollectionSelection } from "@/lib/sync/collection-selection";
+import { getRuntimeCollections, isInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
-import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { createDashboardProjects, findDashboardProject } from "./data/project-data";
 import { closeProjectTab, openProjectTab, reconcileProjectTabs, reorderProjectTab } from "./desktop-project-tabs";
 
@@ -11,21 +11,20 @@ const persistenceErrorId = "dashboard.project-tabs.persistence-error";
 
 export class DesktopProjectTabsController {
   #projectIds: readonly string[];
-  readonly #listeners = new Set<() => void>();
+  readonly #projection = createWorkbenchStore<{ projectIds: readonly string[] }>({
+    name: "dashboard.project-tabs",
+    initialState: { projectIds: [] },
+  });
   readonly #persist: (state: { projectIds: string[] }) => Promise<void>;
 
   constructor(projectIds: string[], persist: (state: { projectIds: string[] }) => Promise<void>) {
     this.#projectIds = [...projectIds];
+    this.#projection.setState({ projectIds: this.#projectIds });
     this.#persist = persist;
   }
 
   getProjectIds = () => this.#projectIds;
-  subscribe = (listener: () => void) => {
-    this.#listeners.add(listener);
-    return () => {
-      this.#listeners.delete(listener);
-    };
-  };
+  subscribe = (listener: () => void) => this.#projection.subscribeSelector((state) => state.projectIds, listener);
 
   #update(ctx: ProjectContext, projectIds: readonly string[]) {
     if (
@@ -34,7 +33,7 @@ export class DesktopProjectTabsController {
     )
       return;
     this.#projectIds = projectIds;
-    for (const listener of this.#listeners) listener();
+    this.#projection.setState({ projectIds }, false, "updateProjectTabs");
     void this.#persist({ projectIds: [...projectIds] }).then(
       () => ctx.notifications.dismiss(persistenceErrorId),
       (error: unknown) => {
@@ -92,7 +91,9 @@ export class DesktopProjectTabsController {
       } else syncSelection();
     };
     const unsubscribeSelection = subscribeDashboardSelectedProject(ctx, syncSelection);
-    const unsubscribeData = subscribeDashboardData(syncProjects);
+    const unsubscribeData = createCollectionSelection(getRuntimeCollections(), { tables: ["projects"] }).subscribe(
+      syncProjects,
+    );
     syncProjects();
     return {
       dispose: () => {

@@ -1,23 +1,27 @@
-import type {
-  ListProjectExtensionsResponse,
-  ProjectExtensionInstance,
-  WorkbenchExtensionAutomationRecord,
-} from "@pstdio/sdk/api";
+import type { ProjectExtensionInstance, WorkbenchExtensionAutomationRecord } from "@pstdio/sdk/api";
+import { type ScopedQueryClient, viewDataEvents } from "@pstdio/sdk/extensions";
 import type { QueryClient } from "@tanstack/react-query";
+import { getDashboardScopedQueries } from "@/lib/scoped-queries";
 import { invalidateWorkspaceProviders, workspaceProvidersQueryKey } from "@/shared/workspaces/workspace-providers";
+import { getProjectExtensionQueries } from "./project-extension-queries";
 import type { DashboardExtensionMetadata } from "./types";
 
-export const projectExtensionsQueryKey = (projectId: string | undefined) => ["project-extensions", projectId] as const;
+export const projectExtensionsQueryKey = (projectId: string | undefined, queries?: ScopedQueryClient) =>
+  getProjectExtensionQueries(projectId, { queries }).extensions.key;
+export const projectExtensionMetadataQueryKey = (projectId: string | undefined, queries?: ScopedQueryClient) =>
+  getProjectExtensionQueries(projectId, { queries }).metadata.key;
 
-export const projectExtensionMetadataQueryKey = (projectId: string | undefined) =>
-  ["project-extension-metadata", projectId] as const;
-
-export const invalidateExtensionQueries = (queryClient: QueryClient, projectId: string | undefined) =>
+export const invalidateExtensionQueries = (
+  queryClient: QueryClient,
+  projectId: string | undefined,
+  queries = getDashboardScopedQueries(),
+) => {
+  queries.invalidate({ type: "changed", id: viewDataEvents.extensionCatalogChanged.id, projectId });
+  return invalidateExtensionAuxiliaryQueries(queryClient, projectId);
+};
+export const invalidateExtensionAuxiliaryQueries = (queryClient: QueryClient, projectId: string | undefined) =>
   Promise.all([
     invalidateWorkspaceProviders(queryClient, projectId),
-    queryClient.invalidateQueries({ queryKey: projectExtensionsQueryKey(projectId) }),
-    queryClient.invalidateQueries({ queryKey: projectExtensionMetadataQueryKey(projectId) }),
-    queryClient.invalidateQueries({ queryKey: ["extension-contributions", projectId] }),
     queryClient.invalidateQueries({ queryKey: ["agents-info"] }),
     queryClient.invalidateQueries({ queryKey: ["agent-models"] }),
   ]);
@@ -34,65 +38,95 @@ const replaceAutomation = (
     found = true;
     return automation;
   });
-
   return { ...current, automations: found ? automations : [...automations, automation] };
 };
 
-export const createProjectExtensionCache = (queryClient: QueryClient, projectId: string | undefined) => {
-  const cancelProjectReads = () =>
-    Promise.all([
-      queryClient.cancelQueries({ queryKey: workspaceProvidersQueryKey(projectId) }),
-      queryClient.cancelQueries({ queryKey: projectExtensionsQueryKey(projectId) }),
-      queryClient.cancelQueries({ queryKey: projectExtensionMetadataQueryKey(projectId) }),
-      queryClient.cancelQueries({ queryKey: ["extension-contributions", projectId] }),
-    ]);
-
+export const createProjectExtensionCache = (
+  queryClient: QueryClient,
+  projectId: string | undefined,
+  queries = getDashboardScopedQueries(),
+  input: { instanceId?: string } = {},
+) => {
+  const catalog = getProjectExtensionQueries(projectId, { queries });
+  const metadataQuery = catalog.metadata;
+  const stopMetadata = metadataQuery.subscribe(() => {}, { automatic: false });
+  const extensionsQuery = catalog.extensions;
+  const stopExtensions = extensionsQuery.subscribe(() => {}, { automatic: false });
+  const contribution = input.instanceId ? catalog.contributions(input.instanceId) : undefined;
+  const stopContribution = contribution?.subscribe(() => {}, { automatic: false });
+  const settings = input.instanceId ? catalog.settings(input.instanceId) : undefined;
+  const stopSettings = settings?.subscribe(() => {}, { automatic: false });
+  let closed = false;
+  const valid = () => !closed && !metadataQuery.isDisposed() && !extensionsQuery.isDisposed();
+  const cancelWorkspaceReads = () => queryClient.cancelQueries({ queryKey: workspaceProvidersQueryKey(projectId) });
   const refresh = () => {
-    void invalidateExtensionQueries(queryClient, projectId);
+    if (valid()) void invalidateExtensionQueries(queryClient, projectId, queries);
   };
-
-  const storeExtension = async (extension: ProjectExtensionInstance) => {
-    await cancelProjectReads();
-    queryClient.setQueryData<ListProjectExtensionsResponse>(projectExtensionsQueryKey(projectId), (current) => {
-      if (!current) return current;
-      return {
-        ...current,
-        extensions: [...current.extensions.filter((entry) => entry.id !== extension.id), extension],
-        marketplace: current.marketplace.map((entry) =>
-          entry.installName === extension.installName ? { ...entry, installed: true } : entry,
-        ),
-      };
-    });
-    refresh();
-  };
-
-  const removeExtension = async (instanceId: string) => {
-    await cancelProjectReads();
-    queryClient.setQueryData<ListProjectExtensionsResponse>(projectExtensionsQueryKey(projectId), (current) => {
-      if (!current) return current;
-      const removed = current.extensions.find((extension) => extension.id === instanceId);
-      if (!removed) return current;
-
-      const extensions = current.extensions.filter((extension) => extension.id !== instanceId);
-      const stillInstalled = extensions.some((extension) => extension.installName === removed.installName);
-      return {
-        ...current,
-        extensions,
-        marketplace: current.marketplace.map((entry) =>
-          entry.installName === removed.installName ? { ...entry, installed: stillInstalled } : entry,
-        ),
-      };
-    });
-    refresh();
-  };
-
-  const storeAutomation = async (instanceId: string, automation: WorkbenchExtensionAutomationRecord) => {
-    await cancelProjectReads();
-    const contributionKey = ["extension-contributions", projectId, instanceId];
-    const contributions = queryClient.getQueryData<DashboardExtensionMetadata>(contributionKey);
-    queryClient.setQueryData<DashboardExtensionMetadata>(projectExtensionMetadataQueryKey(projectId), (current) => {
-      // The detail query knows all of this extension's automations even while
-      // the project metadata still reflects its previous disabled state.
+  return {
+    get active() {
+      return valid();
+    },
+    dispose() {
+      if (closed) return;
+      closed = true;
+      stopMetadata();
+      stopExtensions();
+      stopContribution?.();
+      stopSettings?.();
+    },
+    refresh,
+    invalidateMetadata() {
+      if (valid()) metadataQuery.invalidate();
+    },
+    invalidateSettings(instanceId: string) {
+      if (valid()) (instanceId === input.instanceId ? settings : catalog.settings(instanceId))?.invalidate();
+    },
+    async storeExtension(extension: ProjectExtensionInstance) {
+      if (!valid()) return;
+      await cancelWorkspaceReads();
+      if (!valid()) return;
+      extensionsQuery.cancel();
+      const current = extensionsQuery.getSnapshot().data;
+      if (current)
+        extensionsQuery.accept({
+          ...current,
+          extensions: [...current.extensions.filter((entry) => entry.id !== extension.id), extension],
+          marketplace: current.marketplace.map((entry) =>
+            entry.installName === extension.installName ? { ...entry, installed: true } : entry,
+          ),
+        });
+      refresh();
+    },
+    async removeExtension(instanceId: string) {
+      if (!valid()) return;
+      await cancelWorkspaceReads();
+      if (!valid()) return;
+      extensionsQuery.cancel();
+      const current = extensionsQuery.getSnapshot().data;
+      const removed = current?.extensions.find((extension) => extension.id === instanceId);
+      if (current && removed) {
+        const extensions = current.extensions.filter((extension) => extension.id !== instanceId);
+        const stillInstalled = extensions.some((extension) => extension.installName === removed.installName);
+        extensionsQuery.accept({
+          ...current,
+          extensions,
+          marketplace: current.marketplace.map((entry) =>
+            entry.installName === removed.installName ? { ...entry, installed: stillInstalled } : entry,
+          ),
+        });
+      }
+      refresh();
+    },
+    async storeAutomation(instanceId: string, automation: WorkbenchExtensionAutomationRecord) {
+      if (!valid()) return;
+      await cancelWorkspaceReads();
+      if (!valid()) return;
+      const detailQuery = instanceId === input.instanceId ? contribution! : catalog.contributions(instanceId);
+      metadataQuery.cancel();
+      detailQuery.cancel();
+      const current = metadataQuery.getSnapshot().data;
+      const contributions = detailQuery.getSnapshot().data;
+      // Disabled extensions retain their complete automation inventory in their detail query.
       const complete =
         current && contributions?.automations
           ? {
@@ -103,13 +137,11 @@ export const createProjectExtensionCache = (queryClient: QueryClient, projectId:
               ],
             }
           : current;
-      return replaceAutomation(complete, automation, instanceId);
-    });
-    queryClient.setQueryData<DashboardExtensionMetadata>(contributionKey, (current) =>
-      replaceAutomation(current, automation, instanceId),
-    );
-    refresh();
+      const metadata = replaceAutomation(complete, automation, instanceId);
+      const detail = replaceAutomation(contributions, automation, instanceId);
+      if (metadata) metadataQuery.accept(metadata);
+      if (detail) detailQuery.accept(detail);
+      refresh();
+    },
   };
-
-  return { removeExtension, storeAutomation, storeExtension };
 };

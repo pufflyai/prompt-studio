@@ -176,7 +176,9 @@ test("isolates projects, extensions and documents and refuses another frame's se
   const otherExtension = editor.frame("project-1", "pstdio.other");
   const otherDocument = editor.frame();
   await source.call(open("source"));
+  editor.workbench.pageLocations.setProject("project-2");
   await otherProject.call(open("project"));
+  editor.workbench.pageLocations.setProject("project-1");
   await otherExtension.call({ ...open("extension"), save: { commandId: "pstdio.other.command.save" } });
   await otherDocument.call(open("document", "document-2"));
   const saved = source.call(change("source", "Private edit"));
@@ -430,4 +432,25 @@ test("saving a clean shared editor does not invalidate another view's backend re
     await first.call({ operation: "refresh", sessionId: "first", expectedVersion: before.version, value: updated }),
   ).toMatchObject({ value: updated });
   expect(editor.writes).toHaveLength(0);
+});
+
+test("older previews cannot reappear after a sequenced cancellation in a legacy session", async () => {
+  const editor = createEditor();
+  const frame = editor.frame();
+  try {
+    await frame.call(open("member"));
+    await frame.call({ operation: "cancel", sessionId: "member", sequence: 2 });
+    expect(
+      await frame.call({
+        operation: "preview",
+        sessionId: "member",
+        sequence: 1,
+        changes: [{ path: ["title"], value: "Too late" }],
+      }),
+    ).toMatchObject({ value: initial });
+    expect(editor.writes).toEqual([]);
+  } finally {
+    editor.release.resolve();
+    await editor.workbench.dispose();
+  }
 });

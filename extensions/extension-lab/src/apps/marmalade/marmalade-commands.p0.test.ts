@@ -1,33 +1,10 @@
 import { expect, test } from "bun:test";
 import { editMarmalade, readMarmalade } from "./marmalade-commands";
+import { marmaladeContext } from "./marmalade-persistence.test-fixture";
 
 const context = (projectId: string) => {
-  const values = new Map<string, unknown>();
-  let events = 0;
-  return {
-    projectId,
-    storage: {
-      ids: { create: () => crypto.randomUUID() },
-      records: {
-        id: (id: string) => id,
-        read: async (id: string) => ({
-          exists: values.has(id),
-          value: structuredClone(values.get(id)),
-          deleted: false,
-        }),
-        commit: async (group: { operationId: string; edits: { recordId: string; replace: unknown }[] }) => {
-          for (const edit of group.edits) values.set(edit.recordId, structuredClone(edit.replace));
-          return { operationId: group.operationId, state: "saved-locally" };
-        },
-      },
-    },
-    events: {
-      emit: async () => {
-        events += 1;
-      },
-    },
-    eventCount: () => events,
-  };
+  const fixture = marmaladeContext(projectId);
+  return { ...fixture.ctx, eventCount: () => fixture.events.length };
 };
 test("public document commands persist edits from concurrent views and keep projects separate", async () => {
   const ctx = context("project-a");

@@ -48,6 +48,15 @@ The [native chat view body](0028-native-chat.md) also shares the coordinated API
 step. Released extensions must use a published SDK containing that declaration
 and a host that supports it before adopting it.
 
+Scoped query ownership and invalidation metadata, host-supplied webview query scope,
+command-backed shared editing, storage/session metadata observation and optional
+`HarnessProvider.watchCommandState` also share this API 0.4.0 step. These additions
+preserve the existing query, event and editing methods. The matching SDK adds
+`createQueryLifecycleFixture` under `/testing`. See the
+[state and project lifetime guide](../../guides/extensions/0010-shared-state-and-project-lifetimes.md).
+Publish the supporting host/SDK/UI before independent consumer releases; local
+tarballs and a widened manifest range are not published compatibility evidence.
+
 ### Which version each check uses
 
 | Check | Where it runs | Extension API version it compares with |
@@ -390,4 +399,4 @@ slots keep working. Device settings use `ctx.settings` and the existing typed
 webview settings capabilities. Publish the SDK and host before extensions adopt
 them. See [app-wide settings](0004-contribution-api.md#app-wide-settings).
 
-*Updated at: 2026-11-07*
+*Updated at: 2026-11-09*

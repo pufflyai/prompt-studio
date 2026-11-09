@@ -24,6 +24,9 @@ import { useTreeMovement } from "./use-tree-movement";
 // One empty map for every render: the adapter reads children from the nodes themselves.
 const NO_CHILDREN: Record<string, TreeNode[]> = {};
 
+const treeQueryScope = (workbench: WorkbenchCore, id: string, projectId: string | undefined) =>
+  getWorkbenchRenderers(workbench).getTreeRenderer(id)?.queryScope ?? { projectId };
+
 export const useTreeData = (
   workbench: WorkbenchCore,
   treeViewId: string,
@@ -71,6 +74,7 @@ export const useTreeData = (
   const scope = getWorkbenchRenderers(workbench)
     .getTreeRenderer(treeViewId)
     ?.getReadKey?.({ resource, viewId, filter, pageParams });
+  const queryScope = treeQueryScope(workbench, treeViewId, resource?.projectId ?? project);
   const refreshKey = JSON.stringify(scope ?? [resourceKey(resource), resourceKey(location?.resource), mode, pageOwner]);
   const queryKey = JSON.stringify([
     treeViewId,
@@ -107,6 +111,9 @@ export const useTreeData = (
   const read = useRendererRead<LoadedTreeData & { children: Record<string, TreeNode[]> }>({
     workbench,
     ownerKey,
+    sourceId: treeViewId,
+    queryScope,
+    queryEvents: getWorkbenchRenderers(workbench).getTreeRenderer(treeViewId)?.queryEvents,
     queryKey,
     refreshKey,
     load: async (signal, publish) => {
@@ -125,10 +132,6 @@ export const useTreeData = (
         children,
       };
     },
-    subscribe: (refresh) =>
-      getWorkbenchRenderers(workbench).onDidRefresh((event) => {
-        if (event.treeId === treeViewId) refresh();
-      }),
   });
   const childLoader = useRef<((node: TreeNode) => void) | undefined>(undefined);
   // Each provider snapshot owns its lazy reads. A replacement cancels them and repairs any expansion

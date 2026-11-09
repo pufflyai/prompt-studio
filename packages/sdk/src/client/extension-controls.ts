@@ -26,7 +26,8 @@ const preferencePath = (base: string, name: string, scope?: WebviewPreferencesGe
   return `${base}/preferences/${encodeURIComponent(name)}?${query}`;
 };
 const settingsAt = (request: RequestFn, base: string) => ({
-  all: () => request<{ settings: ExtensionSettingValueRecord[] }>(`${base}/settings`),
+  all: (options?: { signal?: AbortSignal }) =>
+    request<{ settings: ExtensionSettingValueRecord[] }>(`${base}/settings`, options),
   get: (key: string) => request<ExtensionSettingValueRecord>(`${base}/settings/${encodeURIComponent(key)}`),
   set: (key: string, value: unknown) =>
     request<ExtensionSettingValueRecord>(`${base}/settings/${encodeURIComponent(key)}`, {
@@ -47,8 +48,8 @@ const preferencesAt = (request: RequestFn, base: string) => ({
 
 export const createExtensionControlsClient = (request: RequestFn) => ({
   projectSettings: {
-    all: (projectId: string, instanceId: string) =>
-      settingsAt(request, projectExtensionPath(projectId, instanceId)).all(),
+    all: (projectId: string, instanceId: string, options?: { signal?: AbortSignal }) =>
+      settingsAt(request, projectExtensionPath(projectId, instanceId)).all(options),
     get: (projectId: string, instanceId: string, key: string) =>
       settingsAt(request, projectExtensionPath(projectId, instanceId)).get(key),
     set: (projectId: string, instanceId: string, key: string, value: unknown) =>

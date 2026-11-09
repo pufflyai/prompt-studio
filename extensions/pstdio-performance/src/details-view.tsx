@@ -1,20 +1,20 @@
 import "@pstdio/ui/style.css";
-import { createWebviewClient, defineExtensionView, type WebviewPerformanceClient } from "@pstdio/sdk/extensions";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { createWebviewClient, defineExtensionView, type WebviewClient } from "@pstdio/sdk/extensions";
+import { useScopedQuery } from "@pstdio/sdk/extensions/react";
+import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { PerformancePopoverContent } from "./components/performance-popover-content";
 import { PerformanceRoot } from "./components/performance-root";
-import { createSnapshotStore, type SnapshotStore } from "./snapshot-store";
+import { createSnapshotQuery } from "./snapshot-query";
 
 interface DetailsProps {
-  store: SnapshotStore;
-  performance: WebviewPerformanceClient;
+  client: WebviewClient<object>;
 }
 
 const Details = (props: DetailsProps) => {
-  const { store, performance } = props;
-  const snapshot = useSyncExternalStore(store.subscribe, store.get);
-  const readError = useSyncExternalStore(store.subscribe, store.getError);
+  const { client } = props;
+  const { performance } = client;
+  const { data: snapshot, error: readError } = useScopedQuery(createSnapshotQuery(client));
   const [copied, setCopied] = useState(false);
   // The check mark confirms one copy, then the button offers to copy again.
   useEffect(() => {
@@ -38,7 +38,7 @@ const Details = (props: DetailsProps) => {
   return (
     <PerformancePopoverContent
       snapshot={snapshot}
-      error={readError}
+      error={readError?.message}
       copied={copied}
       actionError={error}
       onCopy={() => run(copy())}
@@ -52,12 +52,19 @@ const Details = (props: DetailsProps) => {
 export default defineExtensionView({
   render(context) {
     const client = createWebviewClient(context.host);
+    // Prepare closed popovers without retaining a host observation or starting a collector.
+    void createSnapshotQuery(client)
+      .read()
+      .catch(() => {});
     const root = createRoot(context.mount);
     root.render(
       <PerformanceRoot context={context}>
-        <Details store={createSnapshotStore(client.performance)} performance={client.performance} />
+        <Details client={client} />
       </PerformanceRoot>,
     );
-    return () => root.unmount();
+    return () => {
+      root.unmount();
+      client.queries.dispose();
+    };
   },
 });

@@ -75,13 +75,15 @@ export interface ExtensionWebviewHostAdapters {
     signal?: AbortSignal,
     invocation?: import("../../core/registries/navigation/navigation-registry").NavigationInvocationContext,
   ): MaybePromise<unknown>;
+  /** Captured persistence authority used only after editing admission; it outlives its presentation. */
+  executeEditingCommand?: ExtensionWebviewHostAdapters["executeCommand"];
   streamCommand?(input: WebviewCommandsExecuteParams, signal: AbortSignal): AsyncIterable<CommandStreamClientEvent>;
   commandCompleted?(response: CommandExecutionResult): void;
   hostEvents?: HostEventPublisher;
   editing?: {
     request(
       input: WebviewEditingSessionParams,
-      execute: (input: WebviewCommandsExecuteParams) => Promise<unknown>,
+      execute: (input: WebviewCommandsExecuteParams, signal?: AbortSignal) => Promise<unknown>,
     ): Promise<WebviewEditingSnapshot | undefined>;
   };
   navigation?: { open(target: NavigationTarget): MaybePromise<unknown> };

@@ -1,3 +1,4 @@
+import type { ScopedQueryClient } from "@pstdio/sdk/extensions";
 import {
   type ContributionMetadata,
   normalizeContributionMetadata,
@@ -61,6 +62,8 @@ export interface WorkbenchViewRegistry {
 }
 
 export interface CreateWorkbenchViewRegistryInput {
+  queries?: ScopedQueryClient;
+  subscribeRefresh?(invalidate: RendererReadRegistry["invalidate"]): () => void;
   registerBody(
     view: WorkbenchViewContribution,
     metadata?: ContributionMetadata,
@@ -75,10 +78,11 @@ export const createViewRegistry = (input: CreateWorkbenchViewRegistryInput): Wor
     name: "workbench.views",
     initialState: { views: {} },
   });
+  const reads = createRendererReadRegistry({ queries: input.queries, subscribeRefresh: input.subscribeRefresh });
   const bodies = new Map<string, Disposable & { refresh?(input?: unknown): void }>();
 
   return {
-    reads: createRendererReadRegistry(),
+    reads,
     store,
 
     registerView(view, metadata) {

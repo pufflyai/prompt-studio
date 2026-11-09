@@ -1,7 +1,7 @@
 import { Box } from "@chakra-ui/react";
 import type { ChatAttachment, ChatQueuedRequest } from "@pstdio/sdk/extensions";
 import { type ChatLinkHandler, ChatPanel } from "@pstdio/ui/chat-ui";
-import { type ComponentProps, type ComponentType, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { type ComponentProps, type ComponentType, useState, useSyncExternalStore } from "react";
 import { visibleChatDraftAttachments } from "../../../extensions/contributions/chat-pending-submission";
 import type { ChatSession } from "../../../extensions/contributions/chat-session";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-param-field";
@@ -24,6 +24,7 @@ import type { NativeChatHostProps, NativeChatHostServices } from "./native-chat-
 import { findQueuedChatRequest, queuedChatDraft } from "./native-chat-queue";
 import { NativeChatNotices } from "./native-chat-status";
 import { NativeChatWorkspace } from "./native-chat-workspace";
+import { type NativeChatPresentation, useNativeChatPresentation } from "./use-native-chat-presentation";
 
 interface NativeChatViewProps extends NativeChatHostServices {
   Host?: ComponentType<NativeChatHostProps>;
@@ -32,7 +33,8 @@ interface NativeChatViewProps extends NativeChatHostServices {
   action: Parameters<ChatSession["run"]>[1];
   linkHandler?: ChatLinkHandler;
   conversationKey: string;
-  refreshKey?: number;
+  observe?: (session: ChatSession) => () => void;
+  resolve?: () => NativeChatPresentation | undefined;
   /** Hidden retained presentations must not request composer focus. */
   visible?: boolean;
   emptyTitle?: string;
@@ -55,6 +57,21 @@ export const NativeChatView = (props: NativeChatViewProps) => (
 );
 
 const NativeChatContent = (props: NativeChatViewProps) => {
+  const { key, ...presentation } = useNativeChatPresentation({
+    initial: {
+      session: props.session,
+      action: props.action,
+      linkHandler: props.linkHandler,
+      key: props.conversationKey,
+    },
+    resolve: props.resolve,
+    observe: props.observe,
+    visible: props.visible,
+  });
+  return <NativeChatConversation key={key} {...props} {...presentation} conversationKey={key} />;
+};
+
+const NativeChatConversation = (props: NativeChatViewProps) => {
   const { session, conversationKey, renderParamField } = props;
   const state = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot);
   const { conversation, draft, messages, queuedFollowUps, pending, loading, initializing, sending } = state;
@@ -64,13 +81,6 @@ const NativeChatContent = (props: NativeChatViewProps) => {
   const [edits, setEdits] = useState<Record<string, { values: typeof draft.values; attachments: ChatAttachment[] }>>(
     {},
   );
-  useEffect(() => session.retain(), [session]);
-  const refresh = useRef(props.refreshKey);
-  useEffect(() => {
-    if (refresh.current === props.refreshKey) return;
-    refresh.current = props.refreshKey;
-    session.reconnect();
-  }, [props.refreshKey, session]);
   const edit = selected ? edits[selected.id] : undefined;
   const activeDraft = edit ? { ...draft, ...edit } : draft;
   const values = activeDraft.values;
