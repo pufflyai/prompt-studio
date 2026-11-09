@@ -62,7 +62,7 @@ test("a competing process cannot replace a shared source while its owner holds t
   mkdirSync(installed, { recursive: true });
   writeFileSync(join(prepared, "version.txt"), "replacement");
   writeFileSync(join(installed, "version.txt"), "original");
-  const release = acquireFileMutationLock(join(root, ".extension-install-locks/tool"));
+  const release = acquireFileMutationLock(join(root, ".extension-source-locks/tool"));
   try {
     const child = Bun.spawn(
       [

@@ -26,7 +26,7 @@ export const promotePreparedSource = async (
   // Default installs share this target across project and runtime processes. Keep the
   // entire synchronous swap and rollback under one canonical filesystem claim.
   const extensionsRoot = realpathSync.native(dirname(targetPath));
-  const lockPath = join(dirname(extensionsRoot), ".extension-install-locks", basename(targetPath));
+  const lockPath = join(dirname(extensionsRoot), ".extension-source-locks", basename(targetPath));
   return withFileMutationLock(lockPath, () => {
     if (existsSync(targetPath) && !replaceExisting) throw new ExtensionAlreadyInstalledError(targetPath);
     if (
