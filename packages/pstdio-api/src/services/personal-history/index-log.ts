@@ -27,15 +27,25 @@ const importIndexPages = async (input: PersonalHistoryInput, latest: Map<string,
 
 /** A bounded delta page and its materialized SQL cursor commit together. Legacy input is kept intact. */
 export const createPersonalIndexLog = (input: PersonalHistoryInput, owner: StorageOwner, records: DocumentStore) => {
+  let writer: Awaited<ReturnType<typeof input.logs.stream>> | undefined;
+  const append = async (page: PersonalIndexDelta[]) => {
+    const values = page as unknown as Json[];
+    if (writer) return writer.appendMany(values.map((value) => ({ value })));
+    // The private index definition is fixed for this store's lifetime. Register it once;
+    // later appends still use the ordered log's normal durable transaction.
+    const entries = await input.logs.appendMany(owner, { name: "index", writer: "device" }, "project", values);
+    writer = await input.logs.stream(owner, {
+      name: "index",
+      writer: "device",
+      scope: "project",
+      stream: entries[0]!.writerId,
+    });
+    return entries;
+  };
   const writeMany = async (deltas: PersonalIndexDelta[]) => {
     for (let offset = 0; offset < deltas.length; offset += 100) {
       const page = deltas.slice(offset, offset + 100);
-      const entries = await input.logs.appendMany(
-        owner,
-        { name: "index", writer: "device" },
-        "project",
-        page as unknown as Json[],
-      );
+      const entries = await append(page);
       await input.index.applyPending(
         owner,
         entries[0]!.writerId,
