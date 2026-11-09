@@ -33,8 +33,11 @@ export const matchesPlatform = (entry: QuarantinedTest, platform: string, arch: 
 
 export const quarantinePattern = (cases: QuarantinedTest[], runner: string, platform: string, arch = process.arch) => {
   const names = cases.filter((entry) => entry.runner === runner && matchesPlatform(entry, platform, arch));
-  const tags = runner === "bun" || runner === "packaged-bun" ? "" : "(?:\\s+@\\S+)*";
-  return names.length ? `(?:${names.map((entry) => escapeRegex(entry.name)).join("|")})${tags}$` : undefined;
+  const bun = runner === "bun" || runner === "packaged-bun";
+  const tags = bun ? "" : "(?:\\s+@\\S+)*";
+  // JUnit joins suite titles with " > "; Bun's name filter joins them with spaces.
+  const patterns = names.map((entry) => escapeRegex(bun ? entry.name.replaceAll(" > ", " ") : entry.name));
+  return names.length ? `(?:${patterns.join("|")})${tags}$` : undefined;
 };
 
 export const bunTestSelection = (
