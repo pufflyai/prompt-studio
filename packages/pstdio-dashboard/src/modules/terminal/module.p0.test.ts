@@ -13,6 +13,7 @@ class TestWebSocket extends EventTarget {
 
   readonly sent: TerminalWebSocketClientMessage[] = [];
   readyState = TestWebSocket.OPEN;
+  closed = false;
 
   constructor() {
     super();
@@ -24,7 +25,9 @@ class TestWebSocket extends EventTarget {
     this.sent.push(JSON.parse(data));
   }
 
-  close() {}
+  close() {
+    this.closed = true;
+  }
 }
 
 const openedRequest = async (cwd?: string) => {
@@ -46,6 +49,26 @@ afterEach(() => {
 });
 
 describe("dashboard terminal sessions", () => {
+  test("closing a pending binding cancels transport admission for every terminal entry point", async () => {
+    globalThis.WebSocket = TestWebSocket as unknown as typeof WebSocket;
+    for (const input of [
+      { request: { cols: 80, rows: 24 }, view: { projectId: "project-1", viewId: "example.shell" } },
+      { request: { cols: 80, rows: 24, cwd: "/repo" } },
+      { request: { cols: 80, rows: 24 } },
+    ]) {
+      const workbench = createWorkbench();
+      workbench.registerModule(createTerminalModule());
+      const admission = workbench.terminal.open({ ...input, bindingId: "pending" });
+      const rejected = admission.catch((error) => error);
+      try {
+        await workbench.terminal.killBinding("pending");
+        expect(TestWebSocket.latest.closed).toBe(true);
+        expect(await rejected).toBeInstanceOf(Error);
+      } finally {
+        await workbench.dispose();
+      }
+    }
+  });
   test("start in the selected project's root when the request names no folder", async () => {
     globalThis.WebSocket = TestWebSocket as unknown as typeof WebSocket;
     getWriter("workspaces")?.truncateAndWrite([

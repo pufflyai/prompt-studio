@@ -30,6 +30,14 @@ The host decides what loads. It compares its own extension API version with `eng
 
 Pages that describe APIs from `main` say so and name the first release that has them.
 
+The [native terminal view body](0022-terminal-sessions.md#native-terminal-views)
+shares the coordinated API 0.4.0 step on `main`. It requires a published SDK exporting
+`TerminalViewBody` and a compatible host advertising `view.terminal.v1` (planned
+for the release after 0.46.0). A packed candidate SDK proves development
+compatibility; it does not satisfy the publication gate for a production
+extension. Qualify the installed consumer against the delivered host and record
+both released versions before adopting the surface.
+
 Status bar items on `main` can also declare a `popover` view through the additive
 `status-bar-item.popover.v1` host capability. This shares the planned API 0.3.0 release.
 

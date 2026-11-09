@@ -16,6 +16,7 @@ const native = {
   emptyDescription: localizableStringSchema.optional(),
 };
 const body = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("terminal"), resourceKind: native.resourceKind, session: callbackSchema }).strict(),
   z
     .object({
       kind: z.literal("chat"),

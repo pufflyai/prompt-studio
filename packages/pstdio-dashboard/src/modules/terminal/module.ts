@@ -38,14 +38,19 @@ export const createTerminalModule = () =>
           return [...existing, ...available];
         },
       });
-      ctx.terminal.setSessionOpener((request) => {
-        if (request.cwd) return openDashboardTerminalSession(request);
+      ctx.terminal.setSessionOpener((request, view, signal) => {
+        if (view) return openDashboardTerminalSession(request, view, signal);
+        if (request.cwd) return openDashboardTerminalSession(request, undefined, signal);
         // The host process may run from any folder (`/` for the desktop app), so a
         // terminal that names no workspace starts in the project's root checkout.
         const projectRoot = createDashboardWorkspaceOptions(getDashboardSelectedProjectId(ctx)).find(
           (workspace) => workspace.isDefault,
         )?.workspacePath;
-        return openDashboardTerminalSession(projectRoot ? { ...request, cwd: projectRoot } : request);
+        return openDashboardTerminalSession(
+          projectRoot ? { ...request, cwd: projectRoot } : request,
+          undefined,
+          signal,
+        );
       });
       return [{ dispose: () => ctx.terminal.setSessionOpener(null) }];
     },
