@@ -6,6 +6,7 @@ import { folderProjectInput } from "../helpers/folder-project";
 
 test("the Workspaces extension saves shared views and isolates each project's selection", async ({ page, request }) => {
   const projects: { id: string }[] = [];
+  const failures: unknown[] = [];
   try {
     const created = await Promise.allSettled(
       ["Saved workspace views", "Other workspace views"].map(async (name) => {
@@ -111,15 +112,31 @@ test("the Workspaces extension saves shared views and isolates each project's se
       await page.goto(`/projects/${first!.id}/workspaces`);
       await expect(releaseTab).toHaveAttribute("aria-selected", "true");
     };
+    const checks = await Promise.allSettled([readSharedView(), checkProjectSelections()]);
+    for (const result of checks) if (result.status === "rejected") failures.push(result.reason);
     try {
-      const checks = await Promise.allSettled([readSharedView(), checkProjectSelections()]);
-      const failures = checks.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
-      if (failures.length) throw new AggregateError(failures, "Workspace view client checks failed");
-    } finally {
       await otherClient.close();
+    } catch (error) {
+      failures.push(error);
     }
-  } finally {
+  } catch (error) {
+    failures.push(error);
+  }
+  try {
     await page.unrouteAll({ behavior: "wait" });
-    for (const project of projects) await request.delete(`/v1/projects/${project.id}`);
+  } catch (error) {
+    failures.push(error);
+  }
+  const deletions = await Promise.allSettled(
+    projects.map(async (project) => {
+      const response = await request.delete(`/v1/projects/${project.id}`);
+      expect(response.ok(), await response.text()).toBe(true);
+    }),
+  );
+  for (const result of deletions) if (result.status === "rejected") failures.push(result.reason);
+  if (failures.length === 1) throw failures[0];
+  if (failures.length > 1) {
+    for (const failure of failures) console.error(failure);
+    throw new AggregateError(failures, `Workspace view fixture failures: ${failures.map(String).join("; ")}`);
   }
 });
