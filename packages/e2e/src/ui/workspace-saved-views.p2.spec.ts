@@ -5,21 +5,25 @@ const board = "pstdio.pstdio-workspaces.view.workspaces";
 import { folderProjectInput } from "../helpers/folder-project";
 
 test("the Workspaces extension saves shared views and isolates each project's selection", async ({ page, request }) => {
-  const projects: { id: string }[] = await Promise.all(
-    ["Saved workspace views", "Other workspace views"].map(async (name) => {
-      const response = await request.post("/v1/projects", { data: folderProjectInput({ name }) });
-      expect(response.ok()).toBe(true);
-      return response.json();
-    }),
-  );
-  const [first, second] = projects;
-  const path = `/v1/projects/${first!.id}/boards/${board}/views`;
-  await page.addInitScript((projectId) => {
-    localStorage.setItem("onboarding-complete", "true");
-    if (!localStorage.getItem("dashboard-wb2:selected-project:global"))
-      localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
-  }, first!.id);
+  const projects: { id: string }[] = [];
   try {
+    const created = await Promise.allSettled(
+      ["Saved workspace views", "Other workspace views"].map(async (name) => {
+        const response = await request.post("/v1/projects", { data: folderProjectInput({ name }) });
+        expect(response.ok()).toBe(true);
+        return response.json() as Promise<{ id: string }>;
+      }),
+    );
+    for (const result of created) if (result.status === "fulfilled") projects.push(result.value);
+    const failures = created.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+    if (failures.length) throw new AggregateError(failures, "Could not create workspace-view projects");
+    const [first, second] = projects;
+    const path = `/v1/projects/${first!.id}/boards/${board}/views`;
+    await page.addInitScript((projectId) => {
+      localStorage.setItem("onboarding-complete", "true");
+      if (!localStorage.getItem("dashboard-wb2:selected-project:global"))
+        localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
+    }, first!.id);
     await page.goto(`/projects/${first!.id}/workspaces`);
     await expect(page.getByRole("button", { name: "Add view", exact: true })).toBeEnabled();
     await page.getByRole("button", { name: "Add view", exact: true }).click();
