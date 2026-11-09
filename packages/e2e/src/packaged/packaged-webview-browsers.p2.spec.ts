@@ -1,4 +1,4 @@
-import type { ChildProcess } from "node:child_process";
+import { type ChildProcess, execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -87,6 +87,23 @@ const verifyPackagedBehavior = async (browserCase: (typeof webviewBrowsers)[numb
 
     const projectFolder = join(tempRoot, "project");
     mkdirSync(projectFolder);
+    if (behavior !== "commands and settings") {
+      execFileSync("git", ["init", "-b", "main"], { cwd: projectFolder, stdio: "pipe" });
+      execFileSync(
+        "git",
+        [
+          "-c",
+          "user.name=Fixture",
+          "-c",
+          "user.email=fixture@example.test",
+          "commit",
+          "--allow-empty",
+          "-m",
+          "Initialize fixture",
+        ],
+        { cwd: projectFolder, stdio: "pipe" },
+      );
+    }
     const createRes = await fetch(`${started.baseUrl}/v1/projects`, {
       body: JSON.stringify(folderProjectInput({ name: "packaged-extension-webview" }, projectFolder)),
       headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
