@@ -22,6 +22,7 @@ import { createTreeActionItems, createTreeContextMenuItems, type TreeActionParam
 
 interface TreeNodeRenderContext {
   workbench: WorkbenchCore;
+  resource?: ResourceRef;
   /** Row and section actions give way to keyboard hints while shortcut mode or its preview shows them. */
   shortcutHints?: boolean;
   onCommandError?: (error: unknown) => void;
@@ -130,7 +131,7 @@ const toTreeListNode = (
 ) => {
   const navigationIntent = resolveTreeNodeNavigationIntent(node);
   const resource = resolveTreeNodeResource(node);
-  const commandContext = resource ? { resource } : undefined;
+  const commandContext = { resource: resource ?? context.resource };
   const customPath = node.contextMenuPath ?? node.menuPath;
   const resourcePath = resource ? resourceContextMenuPath(resource.type) : undefined;
   // Building a row menu resolves commands, context, and shortcuts. Large trees adapt every row but mount only
@@ -244,6 +245,7 @@ export const toTreeListSection = (
     actions: createTreeActionItems({
       actions: context.shortcutHints ? undefined : section.actions,
       workbench: context.workbench,
+      context: { resource: context.resource },
       onCommandError: context.onCommandError,
       onRequestParams: sectionContext.onRequestParams,
     }),
