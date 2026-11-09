@@ -158,6 +158,20 @@
         "title": "Replace {{name}}?",
         "message": "This replaces the installed files. Other projects using this extension will use the new files too.",
         "action": "Replace"
+      },
+      "feedback": {
+        "queued": "Waiting",
+        "upgrading": "Upgrading {{name}}",
+        "updating": "Updating {{name}}",
+        "updated": "Extension updated",
+        "installing": "Installing {{name}}",
+        "batch": "{{count}} of {{total}} upgrades finished",
+        "retry": "Retry",
+        "dismiss": "Dismiss",
+        "upgradingButton": "Upgrading",
+        "batchFailed": "{{count}} of {{total}} upgrades failed",
+        "installingButton": "Installing",
+        "installedButton": "Installed"
       }
     },
     "machineTokens": {

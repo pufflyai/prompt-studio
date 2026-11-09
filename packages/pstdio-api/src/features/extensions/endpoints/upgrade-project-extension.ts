@@ -3,7 +3,7 @@ import { upgradeProjectExtensionResponseSchema } from "pstdio-api-contracts";
 import { ExtensionUpgradeUnavailableError } from "../../../services/extension-upgrade-unavailable-error";
 import type { AppRouteHandler } from "../../../types";
 import type { ExtensionsRouteDeps } from "../deps";
-import { refreshProjectSkillsInRepos } from "../extension-skill-cleanup";
+import { extensionChangesWorkspaceProvisioning, refreshProjectSkillsInRepos } from "../extension-skill-cleanup";
 import { toProjectExtensionInstance } from "../project-extension-instance";
 
 const errorSchema = z.object({ error: z.string() });
@@ -51,10 +51,19 @@ export const upgradeProjectExtensionHandler = (
     }
 
     try {
+      const existing = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
+      const previouslyProvisioned = existing?.instance.enabled
+        ? await extensionChangesWorkspaceProvisioning(deps, existing.installedSource)
+        : false;
       const result = await deps.extensionUpgradeService.upgrade(projectId, instanceId);
       if (!result) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
 
-      await refreshProjectSkillsInRepos(deps, projectId);
+      if (
+        result.changed &&
+        result.instance.enabled &&
+        (previouslyProvisioned || (await extensionChangesWorkspaceProvisioning(deps, result.installedSource)))
+      )
+        await refreshProjectSkillsInRepos(deps, projectId);
       return c.json(
         {
           changed: result.changed,

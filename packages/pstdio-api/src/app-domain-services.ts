@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import { resourceEvents, workspaceEvents } from "pstdio-api-contracts/extension-kernel";
 import { createAssetBytesStorage, createFilesStorageService } from "pstdio-storage";
 import type { createAppDatabaseServices } from "./app-database";
@@ -48,6 +49,29 @@ export const createCoreDomainServices = (input: {
     bytes: createAssetBytesStorage(storageRoot),
   });
 
+  const workspaceService = createWorkspaceService({
+    maintenancePath: join(storageRoot, "workspace-maintenance"),
+    workspacesDb: dbs.workspacesDBService,
+    sessionsDb: dbs.sessionsDBService,
+    eventBus,
+    onCreated: (workspace) =>
+      fireExtensionEventAsync(
+        input.getCommandDeps(),
+        workspace.project_id,
+        workspaceEvents.created,
+        { workspace },
+        workspace,
+      ),
+    onDeleted: (workspace) =>
+      fireExtensionEventAsync(
+        input.getCommandDeps(),
+        workspace.project_id,
+        workspaceEvents.deleted,
+        { workspace },
+        workspace,
+      ),
+    validateCreatedAnchors: (source, anchors) => validateLegacyAnchors(input.getCommandDeps(), source, anchors),
+  });
   return {
     extensionAutomationPreferencesService: createExtensionAutomationPreferencesService({
       db: dbs.extensionAutomationPreferencesDBService,
@@ -91,30 +115,10 @@ export const createCoreDomainServices = (input: {
     }),
     workspaceSessionService: createWorkspaceSessionService({
       workspaceSessionsDBService: dbs.workspaceSessionsDBService,
+      maintenance: workspaceService.maintenance,
       eventBus,
     }),
-    workspaceService: createWorkspaceService({
-      workspacesDb: dbs.workspacesDBService,
-      sessionsDb: dbs.sessionsDBService,
-      eventBus,
-      onCreated: (workspace) =>
-        fireExtensionEventAsync(
-          input.getCommandDeps(),
-          workspace.project_id,
-          workspaceEvents.created,
-          { workspace },
-          workspace,
-        ),
-      onDeleted: (workspace) =>
-        fireExtensionEventAsync(
-          input.getCommandDeps(),
-          workspace.project_id,
-          workspaceEvents.deleted,
-          { workspace },
-          workspace,
-        ),
-      validateCreatedAnchors: (source, anchors) => validateLegacyAnchors(input.getCommandDeps(), source, anchors),
-    }),
+    workspaceService,
   };
 };
 

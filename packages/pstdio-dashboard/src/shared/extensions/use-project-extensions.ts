@@ -114,19 +114,19 @@ export const useReloadProjectExtension = (projectId: string | undefined) => {
 
 export const useUpgradeProjectExtension = (projectId: string | undefined) => {
   const queryClient = useQueryClient();
+  const cache = createProjectExtensionCache(queryClient, projectId);
   return useMutation({
     mutationFn: ({ instanceId }: { instanceId: string }) => {
       if (!projectId) throw new Error("Project id is required to upgrade extensions.");
       return upgradeProjectExtension(projectId, instanceId);
     },
-    onSuccess: () => {
+    onSuccess: (result) => cache.storeExtension(result.extension),
+    onError: () => {
       void invalidateExtensionQueries(queryClient, projectId);
     },
   });
 };
 
-// Upgrades run one at a time: each one fetches and installs a release, and one failure must not stop
-// the rest. Failures come back as messages so the caller can report them together.
 export const useExtensionContributions = (projectId: string | undefined, instanceId: string | undefined) => {
   return useQuery({
     queryKey: ["extension-contributions", projectId, instanceId],

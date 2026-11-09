@@ -7,6 +7,7 @@ import {
   publishResourceAnchorChanges,
   refreshResourceAnchorSources,
 } from "./resource-anchor-events";
+import { createWorkspaceMaintenance } from "./workspace-maintenance";
 
 type WorkspaceRecord = NonNullable<Awaited<ReturnType<ReturnType<typeof createWorkspacesDBService>["get"]>>>;
 
@@ -14,6 +15,7 @@ export type WorkspaceServiceDeps = {
   sessionsDb: { get: (id: string) => Promise<{ id: string } | null> };
   workspacesDb: ReturnType<typeof createWorkspacesDBService>;
   eventBus: EventBus;
+  maintenancePath?: string;
   onCreated?: (workspace: WorkspaceRecord) => void;
   onDeleted?: (workspace: WorkspaceRecord) => void;
   validateCreatedAnchors?: (source: ResourceRef & { projectId: string }, anchors: ResourceAnchor[]) => Promise<void>;
@@ -21,10 +23,12 @@ export type WorkspaceServiceDeps = {
 
 export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
   const raw = deps.workspacesDb;
+  const maintenance = createWorkspaceMaintenance(deps.maintenancePath);
 
   // Transition-seam contract: every state-changing method either emits a single
   // `workspaces` set/delete event or logs `sync_emit_skipped` for the no-op so a
-  // missing UI update can never silently slip past the seam.
+  // missing UI update can never silently slip past the seam. Healthy file maintenance uses the
+  // runtime-only admission gate above: it changes no stored lifecycle fields and emits no sync row.
   const emitOrLog = <T extends { id: string } | null | undefined>(op: "set", id: string, row: T) => {
     if (!row) {
       apiLogger.warn(
@@ -139,6 +143,7 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
     emitOrLog("set", id, await raw.beginProviderOperation(id, input));
 
   return {
+    maintenance,
     get,
     getByShorthand,
     getDefault,

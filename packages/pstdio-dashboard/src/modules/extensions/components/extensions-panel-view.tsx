@@ -1,4 +1,4 @@
-import { Button, HStack, Input, InputGroup, Stack, Text } from "@chakra-ui/react";
+import { HStack, Input, InputGroup, Stack, Text } from "@chakra-ui/react";
 import type {
   ExtensionDiagnostic,
   MarketplaceExtension,
@@ -6,19 +6,27 @@ import type {
   WorkbenchExtensionAutomationRecord,
   WorkbenchExtensionHarnessRecord,
 } from "@pstdio/sdk/api";
-import { ArrowUpCircle, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import type { AgentInfo } from "pstdio-api-contracts";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PageContentLayout } from "@/shared/components/page-content-layout";
 import type { DroppedExtensionFolder } from "@/shared/extensions/api";
+import { ExtensionActionFeedback, type ExtensionActionState } from "./extension-action-feedback";
+import { type ExtensionUpgradeBatch, resolveExtensionAction } from "./extension-actions";
 import { ExtensionFolderDropZone } from "./extension-folder-drop-zone";
 import { unavailableExtensionHarnesses } from "./extension-harness-availability";
 import { ExtensionListRow } from "./extension-list-row";
+import { ExtensionUpgradeProgress } from "./extension-upgrade-progress";
 import { MarketplaceExtensionRow } from "./marketplace-extension-row";
 
 export interface ExtensionsPanelViewProps {
   extensions: ProjectExtensionInstance[];
+  actionStates?: Record<string, ExtensionActionState>;
+  onDismissAction?: (id: string, expected?: ExtensionActionState) => void;
+  onDismissBatch?: (batch: ExtensionUpgradeBatch) => void;
+  onRetryAction?: (id: string) => void;
+  batch?: ExtensionUpgradeBatch;
   marketplace: MarketplaceExtension[];
   diagnostics: ExtensionDiagnostic[];
   automations: WorkbenchExtensionAutomationRecord[];
@@ -35,7 +43,6 @@ export interface ExtensionsPanelViewProps {
   ) => Promise<unknown>;
   onUpgrade?: (extension: ProjectExtensionInstance) => void;
   onOpen?: (extension: ProjectExtensionInstance) => void;
-  installingMarketplaceNames?: string[];
   onInstallMarketplace?: (extension: MarketplaceExtension) => void;
   onOpenMarketplace?: (extension: MarketplaceExtension) => void;
   upgradingAll?: boolean;
@@ -78,6 +85,11 @@ const matchesMarketplaceSearch = (extension: MarketplaceExtension, search: strin
 export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
   const {
     extensions,
+    actionStates = {},
+    onDismissAction,
+    onRetryAction,
+    onDismissBatch,
+    batch,
     marketplace,
     diagnostics,
     automations,
@@ -86,7 +98,6 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
     togglingInstanceId,
     togglingAutomation,
     upgradingInstanceIds = [],
-    installingMarketplaceNames = [],
     onToggle,
     onToggleAutomation,
     onUpgrade,
@@ -105,7 +116,6 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
   const visible = extensions.filter((extension) => matchesSearch(extension, search));
   const availableMarketplace = marketplace.filter((extension) => !extension.installed);
   const visibleMarketplace = availableMarketplace.filter((extension) => matchesMarketplaceSearch(extension, search));
-  const installingNames = new Set(installingMarketplaceNames);
   const upgradable = extensions.filter((extension) => extension.canUpgrade);
 
   return (
@@ -125,18 +135,13 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
             <Text textStyle="heading/M" flex="1" minW="0">
               {t("projectSettings.extensionsPanel.title")}
             </Text>
-            {upgradable.length > 0 && (
-              <Button
-                variant="primary"
-                size="sm"
-                flexShrink="0"
-                loading={upgradingAll}
-                onClick={() => onUpgradeAll?.(upgradable)}
-                data-testid="extensions-upgrade-all"
-              >
-                <ArrowUpCircle size={14} />
-                {t("projectSettings.extensionsPanel.upgradeAll.action")}
-              </Button>
+            {(upgradable.length > 0 || batch || upgradingAll) && (
+              <ExtensionUpgradeProgress
+                batch={batch}
+                onUpgrade={() => onUpgradeAll?.(upgradable)}
+                onDismiss={onDismissBatch}
+                canUpgrade={upgradable.length > 0}
+              />
             )}
             <InputGroup startElement={<Search size={14} />} width="260px">
               <Input
@@ -182,7 +187,15 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
           unavailableHarnesses={unavailableExtensionHarnesses(extension, harnesses, agents)}
           toggling={togglingInstanceId === extension.id}
           togglingAutomation={togglingAutomation}
-          upgrading={upgradingInstanceIds.includes(extension.id)}
+          upgrading={
+            upgradingInstanceIds.includes(extension.id) ||
+            ["queued", "running"].includes(resolveExtensionAction(actionStates, extension).action?.status ?? "")
+          }
+          action={resolveExtensionAction(actionStates, extension).action}
+          onDismissAction={(expected) =>
+            onDismissAction?.(resolveExtensionAction(actionStates, extension).key, expected)
+          }
+          onRetryAction={() => onRetryAction?.(resolveExtensionAction(actionStates, extension).key)}
           onToggle={(enabled) => onToggle?.(extension, enabled)}
           onToggleAutomation={async (automation, enabled) => onToggleAutomation?.(extension, automation, enabled)}
           onUpgrade={() => onUpgrade?.(extension)}
@@ -207,13 +220,20 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
         <MarketplaceExtensionRow
           key={extension.installName}
           extension={extension}
-          installing={installingNames.has(extension.installName)}
+          action={actionStates[extension.installName]}
+          onDismissAction={(expected) => onDismissAction?.(extension.installName, expected)}
+          onRetryAction={() => onRetryAction?.(extension.installName)}
           onInstall={() => onInstallMarketplace?.(extension)}
           onOpen={() => onOpenMarketplace?.(extension)}
         />
       ))}
 
       <Stack padding="lg">
+        <ExtensionActionFeedback
+          action={actionStates.$folder}
+          onDismiss={() => onDismissAction?.("$folder")}
+          onRetry={() => onRetryAction?.("$folder")}
+        />
         <ExtensionFolderDropZone addingName={addingFolderName} onDropFolder={(folder) => onDropFolder?.(folder)} />
       </Stack>
     </PageContentLayout>
