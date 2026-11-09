@@ -10,7 +10,6 @@ import {
 } from "../../core";
 import { runUserAction } from "../../core/shared/run-user-action";
 import { hasCommandParameters } from "../command-palette/command-palette-params";
-import { createMenuEndContent } from "../menus/command-menu-items";
 import { listWorkbenchMenuItemsFromState, type WorkbenchMenuItem } from "../menus/menu-items";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -114,7 +113,6 @@ export const WorkbenchHeaderActions = (props: WorkbenchHeaderActionsProps) => {
                         label={item.label}
                         icon={item.icon ? <WorkbenchIcon name={item.icon} size={16} /> : undefined}
                         disabled={item.disabled}
-                        endContent={createMenuEndContent({ readOnly: item.readOnly, disabledReason: item.description })}
                         onActivate={() => onSelect(item)}
                       />
                     </Menu.Item>

@@ -7,6 +7,7 @@ import { createClient } from "@pstdio/sdk/client";
 import type { ProjectSyncState, StorageRecord } from "@pstdio/sdk/extensions";
 import { createSyncSpace } from "pstdio-sync/encryption";
 import { coreOwnerId, projectInfoDocumentId } from "pstdio-sync/records";
+import { e2eExtension } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { logTestPhase } from "../scripts/log-test-phase";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
@@ -147,7 +148,11 @@ test(
     try {
       const source = await writeSharedNotesExtension(root);
       const env = {
-        PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([{ source, installName: "shared-notes" }]),
+        PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([
+          { source, installName: "shared-notes" },
+          e2eExtension("pstdio-cloud"),
+        ]),
+        PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1",
         NODE_EXTRA_CA_CERTS: tls.cert,
       };
       const started = await startPickerDevices(root, env, prepareRepository(root), async (first, repository) => {
