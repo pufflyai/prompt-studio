@@ -387,6 +387,7 @@ test("disposing an older registration leaves its peer core's chat observation li
   const first = createWorkbench({ queries }),
     second = createWorkbench({ queries });
   const owners = createWorkbenchExtensionChatRendererOwners();
+  const streamSignals = new Map<WorkbenchCore, AbortSignal>();
   let reads = 0,
     starts = 0,
     stops = 0;
@@ -416,6 +417,7 @@ test("disposing an older registration leaves its peer core's chat observation li
       streamChatCommand: (_id, _input, signal) =>
         (async function* () {
           starts++;
+          streamSignals.set(workbench, signal);
           await new Promise<void>((resolve) =>
             signal.addEventListener(
               "abort",
@@ -443,10 +445,71 @@ test("disposing an older registration leaves its peer core's chat observation li
   await session.query.read();
   expect(reads).toBe(2);
   expect(starts - stops).toBe(1);
+  expect(streamSignals.get(first)?.aborted).toBe(true);
+  expect(streamSignals.get(second)?.aborted).toBe(false);
   expect(session.query.active()).toBe(true);
   b();
   peer.dispose();
   owners.dispose();
   await second.dispose();
   queries.dispose();
+});
+
+test("synchronous contribution replacement retains pending chat reads and streams, including failed cleanup", async () => {
+  const core = createWorkbench();
+  const owners = createWorkbenchExtensionChatRendererOwners();
+  const loaded = Promise.withResolvers<void>();
+  const reads: AbortSignal[] = [];
+  const streams: AbortSignal[] = [];
+  const register = () =>
+    registerWorkbenchExtensionChatRenderers({
+      workbench: core,
+      chatRendererOwners: owners,
+      projectId: "A",
+      metadata: {
+        ...metadata,
+        views: [
+          { ...view, body: { ...view.body, stream: { kind: "command", extensionId: "acme.chat", id: "watch" } } },
+        ],
+      },
+      executeCommand: async (_id, _input, signal) => {
+        reads.push(signal!);
+        await loaded.promise;
+        return {};
+      },
+      streamChatCommand: (_id, _input, signal) =>
+        (async function* () {
+          streams.push(signal);
+          await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve(), { once: true }));
+        })(),
+    });
+  let registration = register();
+  const session = render(core).props.session;
+  const release = session.retain();
+  try {
+    await tick();
+    owners.replaceRegistrations(() => {
+      registration.dispose();
+      registration = register();
+    });
+    expect(render(core).props.session).toBe(session);
+    expect(reads).toHaveLength(1);
+    expect(streams).toHaveLength(1);
+    expect(reads[0].aborted).toBe(false);
+    expect(streams[0].aborted).toBe(false);
+    expect(() =>
+      owners.replaceRegistrations(() => {
+        registration.dispose();
+        throw new Error("Replacement failed");
+      }),
+    ).toThrow("Replacement failed");
+    expect(reads[0].aborted).toBe(true);
+    expect(streams[0].aborted).toBe(true);
+  } finally {
+    loaded.resolve();
+    release();
+    registration.dispose();
+    owners.dispose();
+    await core.dispose();
+  }
 });

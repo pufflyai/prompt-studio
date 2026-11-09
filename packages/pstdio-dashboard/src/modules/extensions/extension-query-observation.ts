@@ -3,7 +3,7 @@ import type { ScopedQuery, ScopedQuerySnapshot } from "@pstdio/sdk/extensions";
 const publication = <T>(snapshot: ScopedQuerySnapshot<T>, applied: T | undefined, fallback: () => T | undefined) => {
   const coldFailure = snapshot.error !== undefined && snapshot.data === undefined;
   return {
-    value: snapshot.data ?? (coldFailure && applied === undefined ? fallback() : undefined),
+    value: snapshot.data ?? (coldFailure ? (applied ?? fallback()) : undefined),
     complete: !snapshot.fetching && (!snapshot.error || coldFailure),
   };
 };

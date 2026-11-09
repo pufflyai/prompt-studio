@@ -62,6 +62,15 @@ export const createWorkbenchExtensionChatRendererOwners = () => {
     }
   };
   return {
+    /** Keep unchanged live sources owned throughout a synchronous contribution replacement. */
+    replaceRegistrations<T>(register: () => T) {
+      const release = [...owners.values()].map(({ owner }) => owner.preserveRegistrations());
+      try {
+        return register();
+      } finally {
+        for (const stop of release) stop();
+      }
+    },
     reconcile(projectId: string, metadata: WorkbenchExtensionMetadata) {
       const current = new Map(
         metadata.views.flatMap((view) =>

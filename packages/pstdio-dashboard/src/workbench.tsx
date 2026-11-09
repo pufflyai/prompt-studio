@@ -52,6 +52,8 @@ export const createDashboardModules = (input: CreateDashboardModulesInput & { se
   return [
     createSidenavModule(),
     createWorkspacesModule(),
+    // Warm catalogs can register synchronously; host settings sections must already have their owner.
+    createSettingsModule(),
     createExtensionsModule(),
     createResourceLinksModule(),
     createRecentResourcesModule(),
@@ -67,7 +69,6 @@ export const createDashboardModules = (input: CreateDashboardModulesInput & { se
     createCommandPaletteModule(),
     createSessionsModule(),
     createNotificationsModule(),
-    createSettingsModule(),
     createPerformanceModule(input.settings),
     createUpdatesModule(),
     createWorkbenchTerminalModule(),

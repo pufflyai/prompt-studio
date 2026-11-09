@@ -23,6 +23,7 @@ export const createChatSessionProvider = (source: {
     body = view.body;
   const resource = render.instance.resource;
   let drafts: ReturnType<typeof createChatDraftPersistence> | undefined;
+  let watchSource: RegisterWorkbenchExtensionContributionsInput | undefined;
   const loadDraft = body.loadDraftHandlerId
     ? () =>
         transferLegacyChatDraft(
@@ -64,6 +65,7 @@ export const createChatSessionProvider = (source: {
     watch: body.stream
       ? (signal) => {
           const input = source.input();
+          watchSource = input;
           if (!input.streamChatCommand) throw new Error("This host cannot stream native conversations.");
           const { renderer, slot } = binding();
           return input.streamChatCommand(
@@ -88,5 +90,11 @@ export const createChatSessionProvider = (source: {
       })
     : undefined;
   drafts?.restore(session);
-  return { session, queries, releaseDrafts: drafts?.dispose };
+  return {
+    session,
+    queries,
+    releaseDrafts: drafts?.dispose,
+    isSource: (render: WorkbenchPanelRenderInput) =>
+      watchSource?.workbench.views.store === render.workbench.views.store,
+  };
 };

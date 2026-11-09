@@ -1,5 +1,5 @@
 import type { ChatLinkHandler } from "@pstdio/ui/chat-ui";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ChatSession } from "../../../extensions/contributions/chat-session";
 
 export interface NativeChatPresentation {
@@ -19,18 +19,34 @@ export const useNativeChatPresentation = (input: {
   const { visible, observe } = input;
   const owner = input.resolve ?? input.initial.session;
   const [binding, setBinding] = useState<{ owner: typeof owner; resolved?: NativeChatPresentation }>({ owner });
+  const retained = useRef<(() => void) | undefined>(undefined);
   useEffect(() => {
-    if (visible === false) return;
+    const previous = retained.current;
+    if (visible === false) {
+      retained.current = undefined;
+      return previous?.();
+    }
     const presentation = typeof owner === "function" ? owner() : undefined;
-    if (typeof owner === "function" && !presentation) return;
+    if (typeof owner === "function" && !presentation) {
+      retained.current = undefined;
+      return previous?.();
+    }
     const session = typeof owner === "function" ? presentation!.session : owner;
     // Retain before yielding to another effect, even when the inactive budget is zero.
-    const release = observe?.(session) ?? session.retain();
+    retained.current = observe?.(session) ?? session.retain();
+    // Callback replacement transfers a committed lease without a last-observer gap.
+    previous?.();
     setBinding((current) =>
       current.owner === owner && current.resolved === presentation ? current : { owner, resolved: presentation },
     );
-    return release;
   }, [owner, visible, observe]);
+  useEffect(
+    () => () => {
+      retained.current?.();
+      retained.current = undefined;
+    },
+    [],
+  );
   return binding.owner === owner && binding.resolved && binding.resolved.session !== input.initial.session
     ? binding.resolved
     : input.initial;

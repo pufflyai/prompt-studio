@@ -3,6 +3,39 @@ import { createScopedQueryClient } from "@pstdio/sdk/extensions";
 import { createExtensionQueryObservation } from "./extension-query-observation";
 
 const turn = () => new Promise<void>((resolve) => setImmediate(resolve));
+test("repeated initial metadata failures keep the accepted fallback eligible for project readiness", async () => {
+  const root = createScopedQueryClient({ runtimeId: "cold-readiness", extensionId: "pstdio" });
+  let completed = 0;
+  const values: string[] = [];
+  const observer = createExtensionQueryObservation({
+    isAvailable: () => !root.isDisposed(),
+    query: (projectId) =>
+      root.forScope({ projectId }).query({
+        id: "metadata",
+        read: async () => {
+          throw new Error("offline");
+        },
+      }),
+    fallback: () => "fallback",
+    apply: (_id, value) => values.push(value),
+    onComplete: () => {
+      completed++;
+    },
+  });
+  try {
+    observer.refresh("project");
+    await turn();
+    expect(completed).toBe(1);
+    observer.refresh("project");
+    await turn();
+    expect(completed).toBe(2);
+    expect(values).toEqual(["fallback"]);
+  } finally {
+    observer.clear();
+    root.dispose();
+  }
+});
+
 test("a failed readiness refresh retains successful metadata without completing the failed refresh", async () => {
   const root = createScopedQueryClient({ runtimeId: "readiness", extensionId: "pstdio" });
   let calls = 0;

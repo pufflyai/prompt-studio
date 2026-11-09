@@ -13,12 +13,6 @@ const readCatalog = async <T>(query: ScopedQuery<T>) => {
 };
 export const getProjectExtensionMetadata = (projectId: string) =>
   readCatalog(getProjectExtensionQueries(projectId).metadata);
-export const getExtensionContributions = (projectId: string, instanceId: string) =>
-  getApiClient().extensions.contributions(projectId, instanceId);
-export const getMarketplaceExtensionContributions = (projectId: string, installName: string) =>
-  getApiClient().extensions.marketplaceContributions(projectId, installName);
-export const getProjectExtensionAppearance = (projectId: string) =>
-  readCatalog(getProjectExtensionQueries(projectId).appearance);
 export const executeExtensionCommand = (
   projectId: string,
   commandId: string,
@@ -56,9 +50,6 @@ export const getExtensionArtifactImageUrl = (
   path: string,
   webviewId: string,
 ) => getApiClient().extensions.artifacts.imageUrl(projectId, instanceId, mountId, path, webviewId);
-export const listProjectExtensions = (projectId: string) => getApiClient().extensions.listProject(projectId);
-export const installMarketplaceExtension = (projectId: string, installName: string, force = false) =>
-  getApiClient().extensions.install(projectId, { source: { kind: "catalog", name: installName }, force });
 export interface DroppedExtensionFolder {
   name: string;
   force?: boolean;
@@ -75,20 +66,6 @@ export const addLocalExtensionFolder = (projectId: string, folder: DroppedExtens
   for (const file of folder.files) upload.append("files", file, file.name);
   return client.extensions.install(projectId, { upload });
 };
-export const setProjectExtensionEnabled = (projectId: string, instanceId: string, enabled: boolean) =>
-  getApiClient().extensions.setEnabled(projectId, instanceId, enabled);
-export const setExtensionAutomationEnabled = (
-  projectId: string,
-  instanceId: string,
-  automationId: string,
-  enabled: boolean,
-) => getApiClient().extensions.setAutomationEnabled(projectId, instanceId, automationId, enabled);
-export const reloadProjectExtension = (projectId: string, instanceId: string) =>
-  getApiClient().extensions.reload(projectId, instanceId);
-export const upgradeProjectExtension = (projectId: string, instanceId: string) =>
-  getApiClient().extensions.upgradeProject(projectId, instanceId);
-export const uninstallProjectExtension = (projectId: string, instanceId: string, deleteUserData = false) =>
-  getApiClient().extensions.uninstall(projectId, instanceId, deleteUserData);
 export const listProjectExtensionSettings = (projectId: string, instanceId: string) =>
   getApiClient().extensions.projectSettings.all(projectId, instanceId);
 export const getProjectExtensionSetting = (projectId: string, instanceId: string, key: string) =>

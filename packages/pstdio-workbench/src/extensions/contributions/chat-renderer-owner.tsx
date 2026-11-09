@@ -10,6 +10,7 @@ import type { RegisterWorkbenchExtensionContributionsInput } from "../host/workb
 import { createChatCommandBinding } from "./chat-command-binding";
 import { createChatLinkHandler } from "./chat-link-handler";
 import type { createChatOwnerRetention } from "./chat-owner-retention";
+import { createChatRegistrationReplacement } from "./chat-registration-replacement";
 import { createChatRendererBindings } from "./chat-renderer-bindings";
 import type { ChatRecord } from "./chat-renderer-contributions";
 import { observeChatRendererRefresh } from "./chat-renderer-refresh";
@@ -45,6 +46,7 @@ export const createChatRendererOwner = (
   let registrations = 0;
   const hosts = new WeakMap<WorkbenchCore, ComponentType<NativeChatHostProps> | undefined>();
   const sessions = new Map<string, ChatRendererSessionOwner>();
+  const replacement = createChatRegistrationReplacement(() => sessions.values());
   const normalizeResource = (resource: ResourceRef | undefined) =>
     resource ? (input.resolveChatResource?.(resource, input.projectId) ?? resource) : undefined;
   const rootKey = createQueryRootKeys();
@@ -91,7 +93,7 @@ export const createChatRendererOwner = (
       });
     };
     if (!owner) {
-      const { session, releaseDrafts } = createChatSessionProvider({
+      const { session, releaseDrafts, isSource } = createChatSessionProvider({
         input: () => owner?.registration ?? registration,
         view,
         render,
@@ -107,12 +109,12 @@ export const createChatRendererOwner = (
       owner.bindings = createChatRendererBindings({
         session,
         viewId: view.id,
+        isSource,
         select: (render, registration) => {
           capturedOwner.render = render;
           capturedOwner.registration = registration;
         },
       });
-      owner.bindings.attach(render, registration, token);
       owner.untrack = retention.add(queries, session, () => {
         if (sessions.get(key) === capturedOwner) sessions.delete(key);
         capturedOwner.bindings?.dispose();
@@ -123,15 +125,15 @@ export const createChatRendererOwner = (
     const { session } = owner;
     owner.bindings!.attach(render, registration, token);
     const { required: run } = binding();
-    const linkHandler = createChatLinkHandler(session, body, run);
     return {
       session,
       key: owner.presentationKey,
-      linkHandler,
+      linkHandler: createChatLinkHandler(session, body, run),
       action: (action: Parameters<ChatSession["run"]>[0]) => run(body.actionHandlerId, { action }),
     };
   };
   return {
+    preserveRegistrations: replacement.preserve,
     active: () => registrations > 0 || [...sessions.values()].some((owner) => owner.session.active()),
     register(nextInput: RegisterWorkbenchExtensionContributionsInput) {
       input = nextInput;
@@ -230,6 +232,7 @@ export const createChatRendererOwner = (
       );
       registrations++;
       let registered = true;
+      replacement.attach(nextInput, token);
       return {
         dispose() {
           if (!registered) return;
@@ -238,7 +241,7 @@ export const createChatRendererOwner = (
           stopEvents();
           slots.clear();
           registration.dispose();
-          for (const owner of sessions.values()) owner.bindings?.detach(token);
+          replacement.detach(token);
         },
       };
     },

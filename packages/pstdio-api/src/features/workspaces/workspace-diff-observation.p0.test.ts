@@ -76,3 +76,41 @@ test.each([
     await rm(repository, { recursive: true, force: true });
   }
 });
+
+test("startup reconciliation covers dropped native hints and is cancelled with its observation", async () => {
+  const { watchWorkspaceDiffFiles } = await import("./workspace-diff-filesystem");
+  const root = await mkdtemp(join(tmpdir(), "pstdio-diff-startup-"));
+  await git(root, ["init"]);
+  let changes = 0;
+  const changed = Promise.withResolvers<void>();
+  const watch = () => ({ close() {} });
+  const first = await watchWorkspaceDiffFiles(
+    root,
+    () => {
+      changes++;
+      changed.resolve();
+    },
+    watch,
+    true,
+  );
+  try {
+    await writeFile(join(root, "unreported.txt"), "No native hint");
+    await changed.promise;
+    expect(changes).toBe(1);
+    first.close();
+    const second = await watchWorkspaceDiffFiles(
+      root,
+      () => {
+        changes++;
+      },
+      watch,
+      true,
+    );
+    second.close();
+    await Bun.sleep(250);
+    expect(changes).toBe(1);
+  } finally {
+    first.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});

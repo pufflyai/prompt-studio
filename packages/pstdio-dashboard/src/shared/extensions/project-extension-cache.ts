@@ -1,15 +1,10 @@
 import type { ProjectExtensionInstance, WorkbenchExtensionAutomationRecord } from "@pstdio/sdk/api";
-import { type ScopedQueryClient, viewDataEvents } from "@pstdio/sdk/extensions";
+import { viewDataEvents } from "@pstdio/sdk/extensions";
 import type { QueryClient } from "@tanstack/react-query";
 import { getDashboardScopedQueries } from "@/lib/scoped-queries";
 import { invalidateWorkspaceProviders, workspaceProvidersQueryKey } from "@/shared/workspaces/workspace-providers";
 import { getProjectExtensionQueries } from "./project-extension-queries";
 import type { DashboardExtensionMetadata } from "./types";
-
-export const projectExtensionsQueryKey = (projectId: string | undefined, queries?: ScopedQueryClient) =>
-  getProjectExtensionQueries(projectId, { queries }).extensions.key;
-export const projectExtensionMetadataQueryKey = (projectId: string | undefined, queries?: ScopedQueryClient) =>
-  getProjectExtensionQueries(projectId, { queries }).metadata.key;
 
 export const invalidateExtensionQueries = (
   queryClient: QueryClient,

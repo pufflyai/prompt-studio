@@ -58,12 +58,19 @@ export const executeProjectExtensionCommand = async (
   if (body.workspaceId && (!workspace || workspace.project_id !== projectId))
     throw new CommandWorkspaceNotFoundError(body.workspaceId);
   const eventIds = new Set<string>();
+  const eventKeys = new Set<string>();
   const events: NonNullable<CommandExecuteResponse["events"]> = [];
   const runner = createCommandRunner(snapshot.runtime, {
     createLogger: createExtensionLogger,
     onDidDispatchEvent: (id, refresh) => {
       eventIds.add(id);
-      events.push({ ...queryChangeEnvelopeSchema.parse(refresh ?? {}), id, projectId });
+      const event = { ...queryChangeEnvelopeSchema.parse({ ...refresh, projectId }), id };
+      const key = JSON.stringify(event);
+      // Repeated hooks still run; consumers need each distinct invalidation only once.
+      if (!eventKeys.has(key)) {
+        eventKeys.add(key);
+        events.push(event);
+      }
     },
     buildEnvironment: (environment) =>
       createCommandEnvironment(deps, snapshot.enabledSources, {

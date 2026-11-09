@@ -1,9 +1,4 @@
-import {
-  matchesQueryDependency,
-  type QueryChangeEnvelope,
-  type ResourceRef,
-  resourceKey,
-} from "@pstdio/sdk/extensions";
+import { type QueryChangeEnvelope, type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 
 export const rendererRefreshScopes = (id: string, event?: QueryChangeEnvelope) => {
   const keys = event?.resourceKeys ?? (event?.resourceKey ? [event.resourceKey] : []);
@@ -16,13 +11,6 @@ export const rendererRefreshKey = (keys: Record<string, number>, id: string, res
   (keys[id] ?? 0) +
   (keys[JSON.stringify([id, "resource", resourceKey(resource)])] ?? 0) +
   (keys[JSON.stringify([id, "id", resource?.id])] ?? 0);
-
-export const rendererRefreshAffectsResource = (event: QueryChangeEnvelope, resource?: ResourceRef) =>
-  matchesQueryDependency(event, {
-    resourceKey: resource ? resourceKey(resource) : undefined,
-    resourceId: resource?.id,
-    projectId: resource?.projectId,
-  });
 
 export const rendererResourceDependency = (resource?: ResourceRef) => ({
   resourceKey: resourceKey(resource),

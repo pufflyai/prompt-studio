@@ -156,3 +156,94 @@ test("a warm chat evicted between render and commit rebinds and reloads once", a
   expect(f.reads).toEqual(["warm", "warm"]);
   expect(f.queries.inspect().active).toBe(1);
 });
+
+test("a committed contribution replacement transfers the chat lease before releasing its predecessor", async () => {
+  environment.IS_REACT_ACT_ENVIRONMENT = true;
+  const { createWorkbenchExtensionChatRendererOwners } = await import(
+    "../../../extensions/contributions/chat-renderer-contributions"
+  );
+  const owners = createWorkbenchExtensionChatRendererOwners();
+  const core = createWorkbench();
+  const loaded = Promise.withResolvers<void>();
+  const reads: AbortSignal[] = [];
+  const streams: AbortSignal[] = [];
+  const id = "acme.chat.view.chat";
+  const register = () =>
+    registerWorkbenchExtensionChatRenderers({
+      workbench: core,
+      chatRendererOwners: owners,
+      projectId: "project",
+      metadata: {
+        ...emptyWorkbenchExtensionMetadata,
+        views: [
+          {
+            id,
+            localId: "chat",
+            extensionId: "acme.chat",
+            title: "Chat",
+            body: {
+              kind: "chat",
+              queryHandlerId: "query",
+              actionHandlerId: "action",
+              draftKey: "draft",
+              stream: { kind: "command", extensionId: "acme.chat", id: "watch" },
+            },
+          },
+        ],
+      },
+      executeCommand: async (_id, _input, signal) => {
+        reads.push(signal!);
+        await loaded.promise;
+        return {};
+      },
+      streamChatCommand: (_id, _input, signal) =>
+        (async function* () {
+          streams.push(signal);
+          await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve(), { once: true }));
+        })(),
+    });
+  let registration = register();
+  const Parent = () => {
+    const element = getWorkbenchRenderers(core)
+      .getRenderer(id)!
+      .render({
+        workbench: core,
+        instance: { instanceId: "compose", panelId: id, closable: true },
+        panel: { id, title: "Chat", rendererId: id, region: "main" },
+        refresh() {},
+      }) as {
+      props: NativeChatPresentation & {
+        conversationKey: string;
+        resolve(): NativeChatPresentation | undefined;
+        observe(session: NativeChatPresentation["session"]): () => void;
+      };
+    };
+    return (
+      <Probe
+        initial={{ ...element.props, key: element.props.conversationKey }}
+        resolve={element.props.resolve}
+        observe={element.props.observe}
+      />
+    );
+  };
+  cleanups.push(async () => {
+    loaded.resolve();
+    registration.dispose();
+    owners.dispose();
+    await core.dispose();
+  });
+  await act(async () => {
+    tree = create(<Parent />);
+  });
+  await act(async () => {
+    owners.replaceRegistrations(() => {
+      registration.dispose();
+      registration = register();
+    });
+    tree!.update(<Parent />);
+  });
+  expect(reads).toHaveLength(1);
+  expect(streams).toHaveLength(1);
+  expect(reads[0].aborted).toBe(false);
+  expect(streams[0].aborted).toBe(false);
+});

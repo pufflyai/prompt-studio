@@ -8,6 +8,7 @@ import type { ChatSession } from "./chat-session";
 export const createChatRendererBindings = (input: {
   session: ChatSession;
   viewId: string;
+  isSource(render: WorkbenchPanelRenderInput): boolean;
   select(render: WorkbenchPanelRenderInput, registration: RegisterWorkbenchExtensionContributionsInput): void;
 }) => {
   const bindings = new Map<
@@ -27,7 +28,11 @@ export const createChatRendererBindings = (input: {
     bindings.delete(token);
     binding.stopRefresh();
     binding.stopClose();
-    if (current === token) {
+    const wasCurrent = current === token;
+    const sourceRetired =
+      input.isSource(binding.render) &&
+      ![...bindings.values()].some((other) => other.render.workbench === binding.render.workbench);
+    if (wasCurrent) {
       const replacement = [...bindings].at(-1);
       current = replacement?.[0];
       if (replacement) {
@@ -35,7 +40,7 @@ export const createChatRendererBindings = (input: {
       }
     }
     if (!bindings.size) input.session.suspend();
-    else if (!disposing) input.session.rebind();
+    else if ((wasCurrent || sourceRetired) && !disposing) input.session.rebind();
   };
   return {
     attach(

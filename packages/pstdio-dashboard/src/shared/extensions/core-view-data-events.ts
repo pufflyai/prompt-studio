@@ -13,36 +13,53 @@ const changedScope = (key: string, value: SyncedRow | undefined, previousValue: 
   return { resourceIds: [key], changedFields, membership, changes: [{ resourceId: key, changedFields, membership }] };
 };
 
+interface PendingViewEvent {
+  id: string;
+  projectId: string;
+  scope: Partial<ExtensionRefreshEvent>;
+  resourceIds?: Set<string>;
+  changedFields?: Set<string>;
+  membership?: boolean;
+  changes: Map<string, { resourceId: string; changedFields: Set<string>; membership?: boolean }>;
+}
+
+const mergeViewChange = (batch: PendingViewEvent, scope: Partial<ExtensionRefreshEvent>) => {
+  batch.scope = scope;
+  batch.membership ||= scope.membership;
+  if (scope.resourceIds) {
+    batch.resourceIds ??= new Set();
+    for (const id of scope.resourceIds) batch.resourceIds.add(id);
+  }
+  if (scope.changedFields) {
+    batch.changedFields ??= new Set();
+    for (const field of scope.changedFields) batch.changedFields.add(field);
+  }
+  for (const change of scope.changes ?? []) {
+    let prior = batch.changes.get(change.resourceId);
+    if (!prior) {
+      prior = { resourceId: change.resourceId, changedFields: new Set() };
+      batch.changes.set(change.resourceId, prior);
+    }
+    for (const field of change.changedFields) prior.changedFields.add(field);
+    prior.membership ||= change.membership;
+  }
+};
+
 export const subscribeCoreViewDataEvents = (publish?: (event: ExtensionRefreshEvent) => void) => {
   const owner = getRuntimeCollections();
   const publishOwned = publish ?? ((event: ExtensionRefreshEvent) => publishExtensionEvent(event, owner));
-  const pending = new Map<string, ExtensionRefreshEvent>();
+  const pending = new Map<string, PendingViewEvent>();
   let scheduled = false;
   let disposed = false;
   const enqueue = (id: string, projectId: string | undefined, scope: Partial<ExtensionRefreshEvent> = {}) => {
     if (!projectId) return;
     const key = JSON.stringify([id, projectId]);
-    const previous = pending.get(key);
-    const changes = new Map((previous?.changes ?? []).map((change) => [change.resourceId, change]));
-    for (const change of scope.changes ?? []) {
-      const prior = changes.get(change.resourceId);
-      changes.set(change.resourceId, {
-        ...change,
-        changedFields: [...new Set([...(prior?.changedFields ?? []), ...change.changedFields])],
-        membership: prior?.membership || change.membership,
-      });
+    let batch = pending.get(key);
+    if (!batch) {
+      batch = { id, projectId, scope, changes: new Map() };
+      pending.set(key, batch);
     }
-    pending.set(key, {
-      ...scope,
-      id,
-      projectId,
-      ...(changes.size && { changes: [...changes.values()] }),
-      ...(scope.resourceIds && { resourceIds: [...new Set([...(previous?.resourceIds ?? []), ...scope.resourceIds])] }),
-      ...(scope.changedFields && {
-        changedFields: [...new Set([...(previous?.changedFields ?? []), ...scope.changedFields])],
-      }),
-      ...((previous?.membership || scope.membership) && { membership: true }),
-    });
+    mergeViewChange(batch, scope);
     if (scheduled) return;
     scheduled = true;
     queueMicrotask(() => {
@@ -50,7 +67,21 @@ export const subscribeCoreViewDataEvents = (publish?: (event: ExtensionRefreshEv
       if (disposed || owner.isDisposed()) return;
       const events = [...pending.values()];
       pending.clear();
-      for (const event of events) publishOwned(event);
+      for (const batch of events)
+        publishOwned({
+          ...batch.scope,
+          id: batch.id,
+          projectId: batch.projectId,
+          ...(batch.resourceIds && { resourceIds: [...batch.resourceIds] }),
+          ...(batch.changedFields && { changedFields: [...batch.changedFields] }),
+          ...(batch.membership && { membership: true }),
+          ...(batch.changes.size && {
+            changes: [...batch.changes.values()].map((change) => ({
+              ...change,
+              changedFields: [...change.changedFields],
+            })),
+          }),
+        });
     });
   };
   const unsubscribeAnchors = subscribeToResourceAnchorChanges(

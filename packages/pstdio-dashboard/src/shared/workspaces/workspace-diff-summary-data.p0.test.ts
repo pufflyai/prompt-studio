@@ -145,45 +145,36 @@ describe("workspace diff summary data", () => {
   });
 
   test("resolves requested summaries for initial render updates", async () => {
-    (globalThis as RuntimeConfigWindow)[RUNTIME_CONFIG_KEY] = { apiBaseUrl: "http://localhost:19840" };
-    getWriter("workspaces")!.upsert({
+    const calls: string[] = [];
+    const server = Bun.serve({
+      port: 0,
+      fetch(request) {
+        const account = accountResponse(request);
+        if (account) return account;
+        calls.push(request.url);
+        return Response.json({ workspace_id: "workspace-first-load", additions: 12, deletions: 3, file_count: 2 });
+      },
+    });
+    const owner = createRuntimeCollections({ baseUrl: server.url.origin, token: "" });
+    owner.getWriter("workspaces")!.upsert({
       id: "workspace-first-load",
       provider_state: "ready",
       root_path: "/project",
       provider_capabilities_json: { diff: true },
     });
-
-    const calls: string[] = [];
-    const fetchMock = Object.assign(
-      async (input: URL | RequestInfo) => {
-        if (toUrl(input).endsWith("/v1/account"))
-          return Response.json({ login: null, features: null, cloudProjects: [], cloudProjectsLoaded: true });
-        calls.push(toUrl(input));
-        await Promise.resolve();
-
-        return new Response(
-          JSON.stringify({
-            workspace_id: "workspace-first-load",
-            additions: 12,
-            deletions: 3,
-            file_count: 2,
-          }),
-          { status: 200, headers: { "content-type": "application/json" } },
-        );
-      },
-      { preconnect: originalFetch.preconnect?.bind(originalFetch) },
-    ) as typeof fetch;
-    globalThis.fetch = fetchMock;
-
-    const summaries = await requestDashboardWorkspaceDiffSummaries(["workspace-first-load"]);
-
-    expect(calls).toEqual(["http://localhost:19840/v1/workspaces/workspace-first-load/diff-summary?mode=fork_point"]);
-    expect(summaries.get("workspace-first-load")).toMatchObject({ additions: 12, deletions: 3, fileCount: 2 });
-    expect(getDashboardWorkspaceDiffSummary("workspace-first-load")).toMatchObject({
-      additions: 12,
-      deletions: 3,
-      fileCount: 2,
-    });
+    try {
+      const summaries = await requestDashboardWorkspaceDiffSummaries(["workspace-first-load"], undefined, owner);
+      expect(calls).toEqual([`${server.url.origin}/v1/workspaces/workspace-first-load/diff-summary?mode=fork_point`]);
+      expect(summaries.get("workspace-first-load")).toMatchObject({ additions: 12, deletions: 3, fileCount: 2 });
+      expect(getDashboardWorkspaceDiffSummary("workspace-first-load", owner)).toMatchObject({
+        additions: 12,
+        deletions: 3,
+        fileCount: 2,
+      });
+    } finally {
+      await owner.dispose();
+      server.stop(true);
+    }
   });
 
   test("requests summaries only while a workspace declares diff support", async () => {

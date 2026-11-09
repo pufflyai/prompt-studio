@@ -8,7 +8,12 @@ const ignored = (path: string) => {
 };
 
 /** A change hint, never a second Git/document reader. See ADR 0140 for gap-only recovery. */
-export const watchWorkspaceDiffFiles = async (root: string, changed: () => void, watch?: WatchDirectory) => {
+export const watchWorkspaceDiffFiles = async (
+  root: string,
+  changed: () => void,
+  watch?: WatchDirectory,
+  startupGap = process.platform === "darwin",
+) => {
   const gitDirectory = resolve(root, await git(root, ["rev-parse", "--git-dir"]));
   const commonDirectory = resolve(root, await git(root, ["rev-parse", "--git-common-dir"]));
   let closed = false;
@@ -51,11 +56,15 @@ export const watchWorkspaceDiffFiles = async (root: string, changed: () => void,
       onDirectoryLimit: gap,
     }),
   );
+  // FSEvents has no public readiness barrier. Reconcile once after its startup grace.
+  const startup = startupGap ? setTimeout(hint, 100) : undefined;
+  startup?.unref?.();
   return {
     close() {
       if (closed) return;
       closed = true;
       clearTimeout(timer);
+      clearTimeout(startup);
       clearInterval(recovery);
       for (const watch of watches) watch.close();
     },

@@ -12,7 +12,6 @@ import {
 import {
   createWorkbenchExtensionChatRendererOwners,
   createWorkbenchExtensionTerminalRendererOwners,
-  reconcileBridgeWebviewHostEventPublishers,
 } from "@pstdio/workbench/extensions";
 import { logExtensionHostDiagnostic } from "pstdio-extensions/bridge/host";
 import i18n from "@/i18n";
@@ -48,16 +47,12 @@ import { syncActiveResourceContext } from "./active-resource-context";
 import { registerDashboardActivityRail } from "./extension-activity-rail";
 import { registerExtensionAppearance, resolveExtensionAppearancePreferences } from "./extension-appearance";
 import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
-import { omitExtensionMetadata, registerHealthyExtensions } from "./extension-contribution-isolation";
 import {
   captureExtensionContributionRefreshLayout,
   restoreExtensionContributionRefreshLayout,
 } from "./extension-contribution-refresh-layout";
-import {
-  disposeExtensionContributions,
-  notifyUnresolvedExtensionMenus,
-  registerExtensionContributions,
-} from "./extension-contribution-registration";
+import { disposeExtensionContributions, notifyUnresolvedExtensionMenus } from "./extension-contribution-registration";
+import { createExtensionContributionReplacement } from "./extension-contribution-replacement";
 import { createExtensionQueryObservation } from "./extension-query-observation";
 import { registerExtensionsPage } from "./extensions-page";
 
@@ -72,7 +67,6 @@ interface CreateExtensionsModuleInput {
 }
 
 const extensionSyncTables = new Set<CollectionChange["table"]>(["installed_extension_sources", "extension_instances"]);
-const extensionContributionModuleId = "dashboard.extensions.contributions";
 
 const hasSameSerializedMetadata = (
   current: ResolvedWorkbenchExtensionMetadata | undefined,
@@ -173,48 +167,17 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           message: error instanceof Error ? error.message : String(error),
         });
 
-      // Returns what is registered now; a failed extension is left out so the next refresh retries it.
-      const replaceContributions = (nextProjectId: string, nextMetadata: ResolvedWorkbenchExtensionMetadata) => {
-        chatRendererOwners.reconcile(nextProjectId, nextMetadata);
-        terminalRendererOwners.reconcile(nextProjectId, nextMetadata);
-        clearContributions(true);
-        try {
-          const registration = registerHealthyExtensions({
-            metadata: nextMetadata,
-            register: (metadata) =>
-              ctx.registerChildModule({
-                id: extensionContributionModuleId,
-                ownerId: "dashboard.extensions",
-                source: "extension",
-                activate: (contributionCtx) =>
-                  registerExtensionContributions({
-                    ctx: contributionCtx,
-                    chatRendererOwners,
-                    terminalRendererOwners,
-                    executeCommand,
-                    metadata,
-                    projectId: nextProjectId,
-                  }),
-              }),
-            onFailure: (extensionId, error) => registrationError(nextProjectId, error, extensionId),
-          });
-          contributionDisposables = [registration.disposable];
-          chatRendererOwners.reconcile(nextProjectId, registration.metadata);
-          terminalRendererOwners.reconcile(nextProjectId, registration.metadata);
-          reconcileBridgeWebviewHostEventPublishers(
-            ctx,
-            nextProjectId,
-            new Set(registration.metadata.views.filter((view) => view.body.kind === "webview").map((view) => view.id)),
-          );
-          return registration.metadata;
-        } catch (error) {
-          registrationError(nextProjectId, error);
-          chatRendererOwners.dispose();
-          terminalRendererOwners.reconcile(nextProjectId, emptyDashboardExtensionMetadata);
-          reconcileBridgeWebviewHostEventPublishers(ctx, nextProjectId, new Set());
-          return omitExtensionMetadata(nextMetadata, new Set(nextMetadata.extensions.map((extension) => extension.id)));
-        }
-      };
+      const replaceContributions = createExtensionContributionReplacement({
+        ctx,
+        chatRendererOwners,
+        terminalRendererOwners,
+        executeCommand,
+        clear: () => clearContributions(true),
+        accept: (disposable) => {
+          contributionDisposables = [disposable];
+        },
+        registrationError,
+      });
 
       const commitMetadata = (nextProjectId: string, registeredMetadata: ResolvedWorkbenchExtensionMetadata) => {
         metadata = registeredMetadata;
