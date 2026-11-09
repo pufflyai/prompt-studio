@@ -9,17 +9,17 @@ import {
   Tooltip,
 } from "@pstdio/ui";
 import type { ReactNode } from "react";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { WorkbenchCore, WorkbenchPanelRegion } from "../../core";
-import { WorkbenchRegion } from "../region/region";
 import { WorkbenchIcon } from "../shared/icon";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
+import { WorkbenchPanelMenuSlot } from "./panel-menu-hosts";
 import { PANEL_CONTENT_MIN_SIZE_PX, PANEL_MENU_RESIZE_HANDLE_SIZE_PX } from "./panel-menu-sizing";
 
 import { useWorkbenchPanelMenus, type WorkbenchPanelMenuView } from "./use-panel-menu";
 
-const WorkbenchPanelMenu = (props: { workbench: WorkbenchCore; view: WorkbenchPanelMenuView }) => {
-  const { view, workbench } = props;
+const WorkbenchPanelMenu = (props: { view: WorkbenchPanelMenuView }) => {
+  const { view } = props;
   const panel = view.region.split("-")[0] as WorkbenchPanelRegion;
   const background = workbenchBackgrounds.main;
 
@@ -29,7 +29,12 @@ const WorkbenchPanelMenu = (props: { workbench: WorkbenchCore; view: WorkbenchPa
       data-workbench-region={view.region}
       bg={background}
     >
-      <WorkbenchRegion workbench={workbench} region={view.region} title={view.label} transparent />
+      <WorkbenchPanelMenuSlot
+        key={view.region}
+        region={view.region}
+        presentation="attached"
+        active={view.has && !view.collapsed}
+      />
     </AttachedMenu>
   );
 };
@@ -49,7 +54,7 @@ const addPanelMenu = (input: PanelMenuLayoutInput) => {
       minH="0"
       minW="0"
       resizableSide={view.side}
-      resizablePanel={<WorkbenchPanelMenu workbench={workbench} view={view} />}
+      resizablePanel={<WorkbenchPanelMenu view={view} />}
       contentPanel={content}
       collapsed={!view.has || view.collapsed}
       collapsible={view.collapsible}
@@ -81,13 +86,16 @@ export const WorkbenchPanelMenuLayout = (props: {
 
 interface WorkbenchPanelMenuOpenerProps {
   view: WorkbenchPanelMenuView;
-  workbench: WorkbenchCore;
   canAttach: boolean;
 }
 
 const WorkbenchPanelMenuOpener = (props: WorkbenchPanelMenuOpenerProps) => {
-  const { canAttach, view, workbench } = props;
+  const { canAttach, view } = props;
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (canAttach) setOpen(false);
+  }, [canAttach]);
 
   const trigger = (
     <IconButton
@@ -98,17 +106,21 @@ const WorkbenchPanelMenuOpener = (props: WorkbenchPanelMenuOpenerProps) => {
       flexShrink={0}
       onClick={canAttach ? view.onOpen : undefined}
     >
-      <WorkbenchIcon name={view.side === "left" ? "PanelLeftOpen" : "PanelRightOpen"} size={14} />
+      <WorkbenchIcon name={view.icon} size={14} />
     </IconButton>
   );
 
   if (canAttach) return <Tooltip content={view.title}>{trigger}</Tooltip>;
 
-  // A floating menu is a temporary view. It keeps the stored open preference so that dismissing it
-  // does not close the menu for wider panels, and opening it does not move another menu out.
+  // Floating presentation keeps its slot connected after dismissal. The host owns one live view.
+  // Its stored attached preference remains unchanged while peeking at the floating menu.
   return (
     <Menu.Root
       variant="panel"
+      open={open}
+      onOpenChange={({ open }) => setOpen(open)}
+      lazyMount={false}
+      unmountOnExit={false}
       positioning={{
         placement: view.side === "left" ? "bottom-start" : "bottom-end",
         offset: { mainAxis: 0 },
@@ -131,7 +143,7 @@ const WorkbenchPanelMenuOpener = (props: WorkbenchPanelMenuOpenerProps) => {
               </Text>
             </Header>
             <Box flex="1" minH="0" minW="0" overflowY="auto">
-              <WorkbenchRegion workbench={workbench} region={view.region} title={view.label} transparent />
+              <WorkbenchPanelMenuSlot key={view.region} region={view.region} presentation="floating" active={open} />
             </Box>
           </Menu.Content>
         </Menu.Positioner>
@@ -150,7 +162,7 @@ export const WorkbenchPanelMenuOpeners = (props: { workbench: WorkbenchCore; pan
   return (
     <HStack flexShrink={0} gap="2xs" minW="0">
       {closedMenus.map((view) => (
-        <WorkbenchPanelMenuOpener key={view.region} view={view} workbench={workbench} canAttach={view.canAttach} />
+        <WorkbenchPanelMenuOpener key={view.region} view={view} canAttach={view.canAttach} />
       ))}
     </HStack>
   );

@@ -12,7 +12,7 @@ import {
 } from "@pstdio/sdk/extensions";
 import { repairRemovedCommand, repairRemovedSchedule } from "./merge-queue-repair";
 import { benchmarkCommands, syncCommandRef } from "./src/benchmarks/commands";
-import { navigationItems, pages, views } from "./src/pages";
+import { navigationTrees, pages, viewMenus, views } from "./src/pages";
 
 const INSTALL_COMMAND = ["bun", "install", "--frozen-lockfile"];
 const BUILD_COMMAND = ["bun", "run", "build"];
@@ -174,7 +174,9 @@ export default defineExtension({
   ],
   views,
   pages,
-  navigationItems,
+  translations: { fr: packageAsset("./l10n/fr.json", import.meta.url) },
+  navigationTrees,
+  viewMenus,
   keybindings: [
     ...(
       [
