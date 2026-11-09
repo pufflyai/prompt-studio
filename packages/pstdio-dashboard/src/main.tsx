@@ -97,7 +97,14 @@ const renderDashboard = async () => {
     // Send native layout writes before a following Quit request can close the renderer.
     layoutDebounceMs: desktopStorage && !secondary ? 0 : undefined,
     windows: windows.host,
+    secondaryWindow: secondary,
   });
+  if (secondary) {
+    // The main window's saved layout must not reopen its Sidenav or panels here.
+    dashboardWorkbench.shell.setRegionOpen("sidenav", false);
+    dashboardWorkbench.shell.setRegionOpen("secondary", false);
+    dashboardWorkbench.sidePanel.setMode("closed");
+  }
   windows.start(dashboardWorkbench);
   const stopDesktopCommands = connectDesktopCommands(desktop, dashboardWorkbench);
   if (stopDesktopCommands) window.addEventListener("pagehide", stopDesktopCommands, { once: true });

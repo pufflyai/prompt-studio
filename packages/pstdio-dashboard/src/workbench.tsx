@@ -44,6 +44,8 @@ interface CreateDashboardWorkbenchInput {
   storage?: WorkbenchStorageLike;
   layoutDebounceMs?: number;
   windows?: WorkbenchWindowHost;
+  /** PS-1128 prototype: a window opened for one tab has no Sidenav and starts with its panels closed. */
+  secondaryWindow?: boolean;
 }
 
 type CreateDashboardModulesInput = {
@@ -105,10 +107,10 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
   const workbench = createWorkbench({
     startPage: dashboardHomePage,
     initialSidePanelMode: "closed",
-    defaultPanelOpenByRegionId: { secondary: false },
+    defaultPanelOpenByRegionId: { secondary: false, ...(input.secondaryWindow ? { sidenav: false } : {}) },
     regionSettings: {
       secondary: { size: WORKBENCH_TERMINAL_PANEL_SIZE },
-      sidenav: { size: DASHBOARD_SIDENAV_REGION_SIZE },
+      sidenav: { size: DASHBOARD_SIDENAV_REGION_SIZE, ...(input.secondaryWindow ? { canOpen: false } : {}) },
     },
     resolvePagePersistenceScope: resolveDashboardPersistenceScope,
     ...persistence,

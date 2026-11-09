@@ -7,12 +7,12 @@ import { readPageUrlProjectId } from "@/shared/app/page-location-browser";
 // closes its copy. The desktop app and a browser use the same path; the desktop only decides
 // that a same-origin window.open becomes a native window.
 
-type NavigationTarget = Parameters<WorkbenchWindowHost["moveTab"]>[0];
+type NavigationTarget = Parameters<WorkbenchWindowHost["openInWindow"]>[0];
 
 type WindowMessage =
   | { type: "hello"; id: string; label: string; projectId?: string; reply: boolean }
   | { type: "bye"; id: string }
-  | { type: "open"; to: string; requestId: string; target: NavigationTarget }
+  | { type: "open"; to: string; requestId: string; target: NavigationTarget; move: boolean }
   | { type: "opened"; requestId: string; ok: boolean };
 
 const CHANNEL = "pstdio.dashboard-windows";
@@ -22,6 +22,7 @@ const PARAMS = {
   home: "pstdio-window-home",
   open: "pstdio-window-open",
   request: "pstdio-window-request",
+  move: "pstdio-window-move",
 } as const;
 // A new window boots the whole dashboard and its extensions before it can confirm.
 const NEW_WINDOW_TIMEOUT_MS = 90_000;
@@ -39,7 +40,7 @@ export interface DashboardWindowLaunch {
   label: string;
   /** The window that opened this one; tabs return there when this window closes. */
   home?: string;
-  open?: { target: NavigationTarget; requestId?: string };
+  open?: { target: NavigationTarget; requestId?: string; move: boolean };
 }
 
 /** Reads and removes this window's launch parameters before the workbench reads the URL. */
@@ -50,6 +51,7 @@ export const takeDashboardWindowLaunch = (): DashboardWindowLaunch => {
   const home = url.searchParams.get(PARAMS.home) ?? undefined;
   const open = url.searchParams.get(PARAMS.open);
   const request = url.searchParams.get(PARAMS.request) ?? undefined;
+  const move = url.searchParams.get(PARAMS.move) === "1";
   for (const name of Object.values(PARAMS)) url.searchParams.delete(name);
   if (!id) return { id: `main-${randomId()}`, label: "Main window" };
   window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
@@ -63,7 +65,7 @@ export const takeDashboardWindowLaunch = (): DashboardWindowLaunch => {
     id,
     label: label ?? "Window",
     ...(home ? { home } : {}),
-    ...(target ? { open: { target, ...(request ? { requestId: request } : {}) } } : {}),
+    ...(target ? { open: { target, move, ...(request ? { requestId: request } : {}) } } : {}),
   };
 };
 
@@ -103,7 +105,7 @@ export const createDashboardWindows = (launch: DashboardWindowLaunch) => {
   const hello = (reply: boolean) =>
     post({ type: "hello", id: launch.id, label: launch.label, projectId: currentProjectId(), reply });
 
-  const openHere = async (target: NavigationTarget) => {
+  const openHere = async (target: NavigationTarget, move: boolean) => {
     // Extensions register their pages and panels after the workbench starts. Keep trying
     // until the target resolves instead of failing a move that arrived early.
     const deadline = Date.now() + NEW_WINDOW_TIMEOUT_MS;
@@ -111,7 +113,8 @@ export const createDashboardWindows = (launch: DashboardWindowLaunch) => {
       try {
         if (!core) throw new Error("The workbench is not ready");
         await core.navigation.openTarget(target);
-        received.add(targetKey(target));
+        // Only moved tabs go back when this window closes; an opened copy already has a home.
+        if (move) received.add(targetKey(target));
         return true;
       } catch (error) {
         if (Date.now() > deadline) {
@@ -146,7 +149,9 @@ export const createDashboardWindows = (launch: DashboardWindowLaunch) => {
     } else if (message.type === "bye") {
       if (peers.delete(message.id)) refresh();
     } else if (message.type === "open" && message.to === launch.id) {
-      void openHere(message.target).then((ok) => post({ type: "opened", requestId: message.requestId, ok }));
+      void openHere(message.target, message.move).then((ok) =>
+        post({ type: "opened", requestId: message.requestId, ok }),
+      );
     } else if (message.type === "opened") {
       pending.get(message.requestId)?.(message.ok);
     }
@@ -168,11 +173,12 @@ export const createDashboardWindows = (launch: DashboardWindowLaunch) => {
         listeners.delete(listener);
       };
     },
-    moveTab: async (target, windowId) => {
+    openInWindow: async (target, options = {}) => {
+      const { windowId, move = false } = options;
       const requestId = randomId();
       if (windowId) {
         const confirmed = waitForConfirmation(requestId, OPEN_WINDOW_TIMEOUT_MS);
-        post({ type: "open", to: windowId, requestId, target });
+        post({ type: "open", to: windowId, requestId, target, move });
         await confirmed;
         received.delete(targetKey(target));
         return;
@@ -184,6 +190,7 @@ export const createDashboardWindows = (launch: DashboardWindowLaunch) => {
       url.searchParams.set(PARAMS.home, launch.home ?? launch.id);
       url.searchParams.set(PARAMS.open, encodeTarget(target));
       url.searchParams.set(PARAMS.request, requestId);
+      if (move) url.searchParams.set(PARAMS.move, "1");
       const confirmed = waitForConfirmation(requestId, NEW_WINDOW_TIMEOUT_MS);
       window.open(url.href, "_blank");
       await confirmed;
@@ -198,7 +205,7 @@ export const createDashboardWindows = (launch: DashboardWindowLaunch) => {
       for (const placement of region.widgets) {
         const target = createTabWindowTarget(core, placement);
         if (target && received.has(targetKey(target))) {
-          post({ type: "open", to: launch.home, requestId: randomId(), target });
+          post({ type: "open", to: launch.home, requestId: randomId(), target, move: false });
         }
       }
     }
@@ -218,7 +225,7 @@ export const createDashboardWindows = (launch: DashboardWindowLaunch) => {
       });
       const open = launch.open;
       if (open) {
-        void openHere(open.target).then((ok) => {
+        void openHere(open.target, open.move).then((ok) => {
           if (open.requestId) post({ type: "opened", requestId: open.requestId, ok });
         });
       }

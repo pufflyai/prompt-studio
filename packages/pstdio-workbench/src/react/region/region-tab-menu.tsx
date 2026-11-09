@@ -46,7 +46,7 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
   // The tab leaves this window only after the other window accepted it.
   const moveToWindow = (windowId?: string) => {
     if (!windowHost || !windowTarget) return;
-    void windowHost.moveTab(windowTarget, windowId).then(close);
+    void windowHost.openInWindow(windowTarget, { windowId, move: true }).then(close);
   };
   const tabAction = (
     key: string,

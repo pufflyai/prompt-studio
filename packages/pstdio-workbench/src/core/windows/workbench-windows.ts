@@ -18,8 +18,11 @@ export interface WorkbenchWindowHost {
   /** Other open windows of the same project, in the order they were opened. */
   getTargets(): readonly WorkbenchWindowTarget[];
   subscribe(listener: () => void): () => void;
-  /** Open the tab in a new window when `windowId` is omitted. Resolves once the host accepted it. */
-  moveTab(target: NavigationTarget, windowId?: string): Promise<void>;
+  /**
+   * Opens a target in another window, or in a new window when `windowId` is omitted. Resolves
+   * once that window opened it. `move` targets return to this window when the other one closes.
+   */
+  openInWindow(target: NavigationTarget, options?: { windowId?: string; move?: boolean }): Promise<void>;
 }
 
 const currentPageTarget = (core: WorkbenchCore): NavigationTargetPage | undefined => {

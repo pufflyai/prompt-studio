@@ -3,6 +3,7 @@ import { Breadcrumb, type ResourceContextAction, type SessionCompletionStatus, S
 import type { ReactNode } from "react";
 import type { WorkbenchBreadcrumbItem, WorkbenchCore } from "../../core";
 import { resolveResourcePreview } from "../../core/registries/resources/resource-preview";
+import { createTabWindowTarget } from "../../core/windows/workbench-windows";
 import { useWorkbenchResourceActionResolver } from "../menus/resource-actions";
 import { createWorkbenchResourceMenu } from "../menus/resource-menu";
 import { WorkbenchIcon } from "../shared/icon";
@@ -64,6 +65,19 @@ export const WorkbenchBreadcrumbView = (props: WorkbenchBreadcrumbViewProps) => 
   useWorkbenchResourceActionResolver(workbench);
   if (items.length === 0) return null;
   const resource = placement?.resource;
+  // PS-1128 prototype: the current resource can open in another window and stays here too.
+  const windowTarget = workbench.windows && placement ? createTabWindowTarget(workbench, placement) : undefined;
+  const openInNewWindow: ResourceContextAction[] = windowTarget
+    ? [
+        {
+          key: "open-new-window",
+          label: "Open in new window",
+          icon: <WorkbenchIcon name="AppWindow" size={14} />,
+          group: { id: "window", label: "Window" },
+          onClick: () => void workbench.windows?.openInWindow(windowTarget),
+        },
+      ]
+    : [];
   const crumbs = items.flatMap((item) => {
     if (!item.resource) return [item];
     const projected = resolveResourcePreview(item.resource, changes);
@@ -121,6 +135,7 @@ export const WorkbenchBreadcrumbView = (props: WorkbenchBreadcrumbViewProps) => 
           item.resource,
           item === crumbs.at(-1) ? placement : undefined,
         ),
+        ...(item === crumbs.at(-1) ? openInNewWindow : []),
       ])}
       separator="/"
       separatorGap="xs"
