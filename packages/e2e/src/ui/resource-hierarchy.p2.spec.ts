@@ -41,6 +41,7 @@ test("navigates ticket ancestry to a linked workspace and back", async ({ page, 
   test.slow();
   const repoRoot = createGitRepo("pstdio-ps-173-", "resource hierarchy e2e");
   let projectId: string | undefined;
+  const failures: unknown[] = [];
   try {
     const project = await createProject(request, repoRoot);
     projectId = project.id;
@@ -113,12 +114,25 @@ test("navigates ticket ancestry to a linked workspace and back", async ({ page, 
     await expect(breadcrumb).not.toContainText(attempt.workspace.workspace_shorthand);
     await expect(sidenav.getByRole("button", { name: "New file", includeHidden: true })).toHaveCount(1);
     await expect(sidenav.getByRole("button", { name: "Create workspace", includeHidden: true })).toHaveCount(1);
-  } finally {
+  } catch (error) {
+    failures.push(error);
+  }
+  try {
     await page.close();
+  } catch (error) {
+    failures.push(error);
+  }
+  try {
     if (projectId) {
       const deleted = await request.delete(`/v1/projects/${projectId}`);
       expect(deleted.ok(), await deleted.text()).toBe(true);
     }
+    // Failed owner release must retain the checkout instead of racing active writers.
     rmSync(repoRoot, { recursive: true, force: true });
+  } catch (error) {
+    failures.push(new Error(`Could not release hierarchy fixture at ${repoRoot}`, { cause: error }));
   }
+  if (failures.length === 1) throw failures[0];
+  if (failures.length > 1)
+    throw new AggregateError(failures, `Hierarchy fixture failures: ${failures.map(String).join("; ")}`);
 });
