@@ -61,6 +61,28 @@ const caches = new WeakMap<RendererReadRegistry, ReturnType<typeof createRendere
 /** Internal projections borrow the existing query owner; they never create another cache root. */
 export const getRendererReadCache = (registry: RendererReadRegistry) => caches.get(registry)!;
 
+const prepareReadQuery = (
+  owner: ReadOwner,
+  query: ScopedQuery<unknown>,
+  createLease: () => ReturnType<typeof createRendererQueryLease>,
+  retry: boolean,
+) => {
+  const changed = owner.query !== query;
+  if (changed || retry) owner.generation++;
+  if (changed) {
+    owner.lease?.dispose();
+    owner.lease = undefined;
+  }
+  if (changed || retry) {
+    owner.active?.controller.abort();
+  }
+  if (changed) {
+    owner.query = query;
+    owner.lease = createLease();
+  }
+  return changed;
+};
+
 export const createRendererReadRegistry = (
   input: {
     queries?: ScopedQueryClient;
@@ -119,31 +141,28 @@ export const createRendererReadRegistry = (
       if (disposed) throw new Error("Read registry is disposed");
       const owner = owners.get(key) ?? { generation: 0, queued: false, waiters: new Set<() => void>() };
       owners.set(key, owner);
-      owner.active?.controller.abort();
+      owner.binding = undefined;
+      owner.generation++;
       owner.lease?.dispose();
       owner.lease = undefined;
+      owner.active?.controller.abort();
       owner.query = undefined;
       owner.notify = undefined;
       owner.pending = undefined;
       const token = Symbol(key);
       let requested = false;
       owner.binding = token;
-      owner.generation++;
       return {
         hold: () => owner.lease?.hold() ?? (() => {}),
         request<T>(request: RendererReadRequest<T>, reason: "refresh" | "retry" | "observe" = "refresh") {
           if (owner.binding !== token || disposed) return Promise.resolve();
           const query = cache.prepare(request).query;
-          const changed = owner.query !== query;
-          if (changed || reason === "retry") {
-            owner.generation++;
-            owner.active?.controller.abort();
-          }
-          if (changed) {
-            owner.lease?.dispose();
-            owner.query = query as ScopedQuery<unknown>;
-            owner.lease = cache.lease(owner.query, () => owner.notify?.(), request.onInvalidate);
-          }
+          const changed = prepareReadQuery(
+            owner,
+            query as ScopedQuery<unknown>,
+            () => cache.lease(query as ScopedQuery<unknown>, () => owner.notify?.(), request.onInvalidate),
+            reason === "retry",
+          );
           if (reason !== "observe" && ((requested && !changed) || reason === "retry"))
             cache.refresh(request, reason === "retry");
           else cache.prepare(request);

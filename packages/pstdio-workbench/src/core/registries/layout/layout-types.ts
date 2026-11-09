@@ -88,6 +88,8 @@ export interface WorkbenchTabSnapshot {
 
 export interface WorkbenchWidgetTab {
   getSnapshot(instance: WorkbenchPanelInstance): WorkbenchTabSnapshot;
+  /** Retired providers are replaced by the current contribution when restoring a layout. */
+  isDisposed?(): boolean;
   subscribe?(listener: () => void, instance?: WorkbenchPanelInstance): { dispose(): void } | (() => void);
   refreshEvents?: readonly string[];
 }

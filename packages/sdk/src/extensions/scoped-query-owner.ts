@@ -4,13 +4,8 @@ import { createQueryReadScheduler } from "./query-read-scheduler";
 import { createQueryReadSignals } from "./query-read-signals";
 import type { ScopedQueryDescriptor, ScopedQuerySnapshot } from "./scoped-query";
 import { createQueryLedger } from "./scoped-query-ledger";
+import { createQueryReadOptions } from "./scoped-query-read-options";
 import { shareQueryValue } from "./share-query-value";
-
-const requireValue = <T>(value: T) => {
-  if (value === undefined)
-    throw new Error("A scoped query must return or accept a value; use null for an empty result.");
-  return value;
-};
 
 const sameSnapshot = <T>(a: ScopedQuerySnapshot<T>, b: ScopedQuerySnapshot<T>) =>
   a.data === b.data && a.loading === b.loading && a.fetching === b.fetching && a.error === b.error;
@@ -43,13 +38,15 @@ export const createQueryOwner = <T>(
   let running: Promise<T> | undefined;
   let stopEvents: (() => void) | undefined;
   let stopObserver: (() => void) | undefined;
+  let sourceDetached = false;
+  let requiredRead = false;
   const listeners = new Map<symbol, { notify(): void; automatic: boolean }>();
   const invalidationListeners = new Map<symbol, () => void>();
   const signals = createQueryReadSignals(() => disposed);
   let automaticReaders = 0;
   const scheduleRead = createQueryReadScheduler(
     () => !disposed && automaticReaders > 0 && ledger.dirty(),
-    () => read(),
+    () => read(true),
   );
   const assertOpen = () => {
     if (disposed) throw new Error("Query owner is disposed");
@@ -58,35 +55,13 @@ export const createQueryOwner = <T>(
     signal.throwIfAborted();
     assertOpen();
   };
-  const options = {
+  const options = createQueryReadOptions({
+    client,
     queryKey,
-    retry: false as const,
-    staleTime: Infinity,
-    gcTime: Infinity,
-    // Fence at Query.setData itself: cancelling an already-resolved retryer is too late.
-    structuralSharing: (previous: unknown, _next: unknown) => {
-      const current = ledger.current();
-      return current ? shareQueryValue(previous, current.data) : previous;
-    },
-    queryFn: async ({ signal }: { signal: AbortSignal }) => {
-      for (;;) {
-        const issued = ledger.revision();
-        let value: T;
-        try {
-          value = requireValue(await signals.read(signal, descriptor.read));
-        } catch (error) {
-          signal.throwIfAborted();
-          if (ledger.fail(issued, client.getQueryData<T>(queryKey), error)) throw error;
-          if (!ledger.dirty()) return client.getQueryData<T>(queryKey)!;
-          continue;
-        }
-        assertActive(signal);
-        if (ledger.complete(issued, shareQueryValue(client.getQueryData<T>(queryKey), value))) return value;
-        // Authoritative mutation/live data supersedes an older read without a second writer.
-        if (!ledger.dirty()) return client.getQueryData<T>(queryKey)!;
-      }
-    },
-  };
+    ledger,
+    read: (signal) => signals.read(signal, descriptor.read),
+    assertActive,
+  });
   const observer = new QueryObserver<T, Error>(client, { ...options, enabled: false });
   let snapshotRevision = ledger.revision();
   let snapshot: ScopedQuerySnapshot<T> = { data: client.getQueryData<T>(queryKey), loading: false, fetching: false };
@@ -116,21 +91,27 @@ export const createQueryOwner = <T>(
     snapshot = next;
     for (const listener of listeners.values()) listener.notify();
   };
-  const read = () => {
+  const read = (automatic = false) => {
     if (disposed) return Promise.reject(new Error("Query owner is disposed"));
+    if (!automatic) requiredRead = true;
     if (running) return running;
+    const needsFollowUp = (error?: unknown) =>
+      ledger.dirty() && (requiredRead || automaticReaders > 0) && !isCancelledError(error);
     const run = async () => {
+      // Explicit readers also reconcile a custom source that lost its cursor.
+      // Keep that gap until observation resumes; further unobserved reads may miss changes too.
+      if (sourceDetached) invalidate();
       for (;;) {
         assertOpen();
         try {
           const value = await client.fetchQuery<T>(options);
           assertOpen();
-          if (!ledger.dirty()) return ledger.resolve(value);
+          if (!needsFollowUp()) return ledger.resolve(value);
           // Invalidation can arrive after queryFn returns, before TanStack commits its result.
           await client.invalidateQueries({ queryKey, exact: true, refetchType: "none" });
         } catch (error) {
           assertOpen();
-          if (ledger.dirty() && !isCancelledError(error)) continue;
+          if (needsFollowUp(error)) continue;
           return ledger.recover(error);
         }
       }
@@ -138,11 +119,16 @@ export const createQueryOwner = <T>(
     const completed = Promise.withResolvers<T>();
     const pending = completed.promise.finally(() => {
       running = undefined;
+      requiredRead = false;
       if (disposed) return;
       observer.updateResult();
       publish();
       if (!disposed && ledger.dirty() && automaticReaders) scheduleRead();
-      if (!disposed && !listeners.size) retire();
+      if (!disposed && !listeners.size && !running) {
+        stopObserver?.();
+        stopObserver = undefined;
+        retire();
+      }
     });
     running = pending;
     void run().then(completed.resolve, completed.reject);
@@ -162,7 +148,7 @@ export const createQueryOwner = <T>(
   return {
     key: queryKey,
     getSnapshot: () => snapshot,
-    read,
+    read: () => read(),
     invalidate,
     /** Cheap adapter notification before automatic admission; does not retain optional observation. */
     subscribeInvalidation(listener: () => void) {
@@ -199,9 +185,13 @@ export const createQueryOwner = <T>(
       if (first) {
         // Subscribe before reading so an event racing admission cannot be missed.
         stopEvents = descriptor.subscribe?.(invalidate);
-        stopObserver = observer.subscribe(publish);
+        stopObserver ??= observer.subscribe(publish);
+        if (sourceDetached) {
+          sourceDetached = false;
+          invalidate();
+        }
       }
-      if (automatic) void read().catch(() => undefined);
+      if (automatic) void read(true).catch(() => undefined);
       let released = false;
       return () => {
         if (released) return;
@@ -209,12 +199,18 @@ export const createQueryOwner = <T>(
         if (!listeners.delete(token)) return;
         if (automatic) automaticReaders--;
         if (listeners.size) return;
+        const interruptedRead = observer.getCurrentResult().isFetching && !ledger.current();
+        sourceDetached = Boolean(descriptor.subscribe);
         stopEvents?.();
         stopEvents = undefined;
-        stopObserver?.();
-        stopObserver = undefined;
-        // A detached custom source has no retained cursor; reconcile when observed again.
-        if (descriptor.subscribe) invalidate();
+        // A coalesced explicit caller still owns the actual read after presentation leaves.
+        if (!requiredRead) {
+          stopObserver?.();
+          stopObserver = undefined;
+        }
+        // TanStack cancels the last observer's unfinished read. A returning observer
+        // must reconcile after that child drains, even when no source event arrived.
+        if (interruptedRead && !requiredRead) invalidate();
         retire();
       };
     },

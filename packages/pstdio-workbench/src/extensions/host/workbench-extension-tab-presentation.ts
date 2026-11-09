@@ -89,6 +89,7 @@ export const createWorkbenchExtensionTabPresentation = (
   const queries = new Map<string, ScopedQuery<WorkbenchTabSnapshot>>();
   const legacy = new Map<() => void, Map<string, () => void>>();
   const releases = new Set<() => void>();
+  let disposed = false;
   const empty: WorkbenchTabSnapshot = {};
   const observe = (query: ScopedQuery<WorkbenchTabSnapshot>, listener: () => void) => {
     let previous = query.getSnapshot().data;
@@ -142,13 +143,15 @@ export const createWorkbenchExtensionTabPresentation = (
   });
   return {
     refreshEvents: metadata.refreshEventIds,
+    isDisposed: () => disposed,
     getSnapshot(instance) {
+      if (disposed) return empty;
       const query = queryFor(instance);
       const state = query.getSnapshot();
-      if (state.data === undefined && !state.error) void query.read().catch(() => undefined);
       return state.data ?? empty;
     },
     subscribe(listener, instance) {
+      if (disposed) return { dispose() {} };
       let stop: () => void;
       if (instance) stop = observe(queryFor(instance), listener);
       else {
@@ -168,6 +171,8 @@ export const createWorkbenchExtensionTabPresentation = (
       return { dispose: release };
     },
     dispose() {
+      if (disposed) return;
+      disposed = true;
       for (const release of releases) release();
       preview.dispose();
       legacy.clear();

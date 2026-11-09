@@ -4,6 +4,36 @@ import { emptyWorkbenchExtensionMetadata } from "../contributions/extension-cont
 import type { RegisterWorkbenchExtensionContributionsInput } from "./workbench-extension-host-types";
 import { createWorkbenchExtensionTabPresentation } from "./workbench-extension-tab-presentation";
 
+test("preparing a tab snapshot starts optional work only when its presentation subscribes", async () => {
+  let reads = 0;
+  const workbench = createWorkbench();
+  const tab = createWorkbenchExtensionTabPresentation(
+    {
+      workbench,
+      projectId: "project",
+      metadata: emptyWorkbenchExtensionMetadata,
+      executeCommand: async () => ({ label: `Session ${++reads}` }),
+    },
+    { extensionId: "sessions", placementId: "conversation", queryHandlerId: "title" },
+  );
+  const instance: WorkbenchPanelInstance = { instanceId: "draft", panelId: "conversation", closable: true };
+  let subscription: ReturnType<NonNullable<typeof tab.subscribe>> | undefined;
+  try {
+    tab.getSnapshot(instance);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(reads).toBe(0);
+    subscription = tab.subscribe!(() => {}, instance);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(tab.getSnapshot(instance).label).toBe("Session 1");
+    expect(reads).toBe(1);
+  } finally {
+    if (typeof subscription === "function") subscription();
+    else subscription?.dispose();
+    tab.dispose();
+    await workbench.dispose();
+  }
+});
+
 test("a storage reset refreshes the current tab title without a named extension event", async () => {
   let label = "Original note";
   let reset: (() => void) | undefined;
@@ -69,6 +99,10 @@ test("a reused viewer queries its new resource and rejects an old resource's lat
     resource: { type: "note", id: "a" },
   };
   const second = { ...first, resource: { type: "note", id: "b" } };
+  const firstSubscription = tab.subscribe!(() => {}, first);
+  if (typeof firstSubscription === "function") firstSubscription();
+  else firstSubscription.dispose();
+  const secondSubscription = tab.subscribe!(() => {}, second);
   tab.getSnapshot(first);
   tab.getSnapshot(second);
   expect(requests).toHaveLength(2);
@@ -78,6 +112,11 @@ test("a reused viewer queries its new resource and rejects an old resource's lat
   requests[0].resolve({ label: "A" });
   await new Promise<void>((resolve) => setImmediate(resolve));
   expect(tab.getSnapshot(second).label).toBe("B");
+  for (const subscription of [firstSubscription, secondSubscription]) {
+    if (typeof subscription === "function") subscription();
+    else subscription.dispose();
+  }
+  tab.dispose();
 });
 
 test("keeps the loaded tab title and actions while an autosave refresh is pending", async () => {

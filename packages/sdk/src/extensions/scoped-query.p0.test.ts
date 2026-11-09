@@ -130,6 +130,187 @@ test("warm remounts reuse empty data while scopes, missed events and authoritati
   root.dispose();
 });
 
+test("an observer returning during a cancelled initial read reconciles after its actual child drains", async () => {
+  const root = createScopedQueryClient(scope);
+  const requests: Array<{ signal: AbortSignal; result: ReturnType<typeof Promise.withResolvers<string>> }> = [];
+  const query = root.query({
+    id: "returning-observer",
+    read: (signal) => {
+      const result = Promise.withResolvers<string>();
+      requests.push({ signal, result });
+      return result.promise;
+    },
+  });
+  let release = query.subscribe(() => {});
+  try {
+    expect(requests).toHaveLength(1);
+    release();
+    release = query.subscribe(() => {});
+    expect(requests[0].signal.aborted).toBe(true);
+    await turn();
+    expect(requests).toHaveLength(1);
+    requests[0].result.resolve("obsolete");
+    await turn();
+    expect(requests).toHaveLength(2);
+    requests[1].result.resolve("current");
+    await turn();
+    expect(query.getSnapshot()).toMatchObject({ data: "current", loading: false, fetching: false });
+  } finally {
+    release();
+    root.dispose();
+    for (const request of requests) request.result.resolve("cleanup");
+    await turn();
+  }
+});
+
+test.each([false, true])("a detached warm refresh continues only for an explicit read (%s)", async (explicit) => {
+  const root = createScopedQueryClient(scope);
+  const requests: Array<{ signal: AbortSignal; result: ReturnType<typeof Promise.withResolvers<string>> }> = [];
+  const query = root.query({
+    id: "detached-warm-refresh",
+    read: (signal) => {
+      const result = Promise.withResolvers<string>();
+      requests.push({ signal, result });
+      return result.promise;
+    },
+  });
+  let release = query.subscribe(() => {});
+  let required: Promise<string> | undefined;
+  try {
+    requests[0].result.resolve("warm");
+    await turn();
+    query.invalidate();
+    await turn();
+    if (explicit) required = query.read();
+    release();
+    expect(requests[1].signal.aborted).toBe(!explicit);
+    requests[1].result.resolve(explicit ? "current" : "obsolete");
+    await turn();
+    expect(requests).toHaveLength(2);
+    if (!explicit) {
+      expect(query.getSnapshot()).toMatchObject({ data: "warm", fetching: false });
+      expect(root.inspect().active).toBe(0);
+      release = query.subscribe(() => {});
+      await turn();
+      expect(requests).toHaveLength(3);
+    }
+    if (!explicit) requests[2].result.resolve("current");
+    if (required) expect(await required).toBe("current");
+    await turn();
+    expect(query.getSnapshot().data).toBe("current");
+  } finally {
+    release();
+    root.dispose();
+    for (const request of requests) request.result.resolve("cleanup");
+    await required?.catch(() => undefined);
+    await turn();
+  }
+});
+
+test("a required read joining an initial observation outlives that optional observer", async () => {
+  const root = createScopedQueryClient(scope);
+  const pending = Promise.withResolvers<string>();
+  let signal!: AbortSignal;
+  let reads = 0;
+  const query = root.query({
+    id: "required-initial-read",
+    read: (actual) => {
+      signal = actual;
+      reads++;
+      return pending.promise;
+    },
+  });
+  const release = query.subscribe(() => {});
+  const required = query.read();
+  void required.catch(() => undefined);
+  try {
+    release();
+    expect(signal.aborted).toBe(false);
+    pending.resolve("current");
+    expect(await required).toBe("current");
+    expect(reads).toBe(1);
+    expect(root.inspect().active).toBe(0);
+  } finally {
+    release();
+    pending.resolve("cleanup");
+    root.dispose();
+    await required.catch(() => undefined);
+  }
+});
+
+test("settling optional work cannot cancel a required read admitted by its settlement observer", async () => {
+  const root = createScopedQueryClient(scope);
+  const requests: ReturnType<typeof Promise.withResolvers<string>>[] = [];
+  const query = root.query({
+    id: "settlement-handoff",
+    read: () => {
+      const pending = Promise.withResolvers<string>();
+      requests.push(pending);
+      return pending.promise;
+    },
+  });
+  const first = query.subscribe(() => {});
+  first();
+  let required: Promise<string> | undefined;
+  let release = () => {};
+  release = query.subscribe(
+    () => {
+      if (required || query.getSnapshot().fetching) return;
+      required = query.read();
+      void required.catch(() => undefined);
+      release();
+    },
+    { automatic: false },
+  );
+  try {
+    await turn();
+    expect(required).toBeDefined();
+    requests[0].resolve("obsolete");
+    await turn();
+    expect(requests).toHaveLength(2);
+    requests[1].resolve("current");
+    expect(await required).toBe("current");
+  } finally {
+    release();
+    root.dispose();
+    for (const request of requests) request.resolve("cleanup");
+    await required?.catch(() => undefined);
+  }
+});
+
+test.each([
+  false,
+  true,
+])("an accepted value survives reentrant last-observer release (custom source: %s)", async (custom) => {
+  const root = createScopedQueryClient(scope);
+  const pending = Promise.withResolvers<string>();
+  let release = () => {};
+  let reads = 0;
+  const query = root.query({
+    id: "accepted-before-teardown",
+    subscribe: custom ? () => () => {} : undefined,
+    read: (signal) => {
+      reads++;
+      signal.addEventListener("abort", () => release(), { once: true });
+      return pending.promise;
+    },
+  });
+  try {
+    release = query.subscribe(() => {});
+    query.accept("accepted");
+    expect(query.getSnapshot().data).toBe("accepted");
+    pending.resolve("obsolete");
+    await turn();
+    expect(query.getSnapshot().data).toBe("accepted");
+    expect(reads).toBe(1);
+  } finally {
+    release();
+    pending.resolve("cleanup");
+    root.dispose();
+    await turn();
+  }
+});
+
 test("an authoritative mutation or live snapshot wins an older in-flight read", async () => {
   const root = createScopedQueryClient(scope);
   const pending = Promise.withResolvers<string>();
@@ -361,6 +542,24 @@ test("a source detached while inactive is reconciled on remount instead of trust
   expect(query.getSnapshot().data).toBe("after");
   again();
   root.dispose();
+});
+
+test("explicit reads reconcile changes missed by a detached custom source", async () => {
+  const root = createScopedQueryClient(scope);
+  let value = "observed";
+  const query = root.query({ id: "explicit-after-detach", read: async () => value, subscribe: () => () => {} });
+  const release = query.subscribe(() => {});
+  try {
+    await turn();
+    release();
+    value = "changed while detached";
+    expect(await query.read()).toBe(value);
+    value = "changed again";
+    expect(await query.read()).toBe(value);
+  } finally {
+    release();
+    root.dispose();
+  }
 });
 
 test("accepted state wins even between queryFn completion and the cache success commit", async () => {

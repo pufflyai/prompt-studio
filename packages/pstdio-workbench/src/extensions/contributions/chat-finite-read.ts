@@ -34,6 +34,7 @@ export const createChatFiniteRead = (input: {
   let accepted: ReturnType<typeof query.getSnapshot>["data"];
   let release: (() => void) | undefined;
   let appliedError: Error | undefined;
+  let settle = () => {};
   const apply = () => {
     const snapshot = query.getSnapshot();
     if (snapshot.data && snapshot.data !== accepted) {
@@ -46,20 +47,24 @@ export const createChatFiniteRead = (input: {
       loading: !input.loaded() && snapshot.fetching,
       ...(errorChanged ? { error: snapshot.error?.message } : {}),
     });
+    if (!query.getSnapshot().fetching && !query.inspect().stale) settle();
   };
   return {
     query,
     observe: () => {
+      settle();
+      const loaded = Promise.withResolvers<void>();
+      settle = loaded.resolve;
       const previous = release;
       release = query.subscribe(apply);
       previous?.();
       apply();
-      return query.read().catch(() => undefined);
+      return loaded.promise;
     },
     stop: () => {
       release?.();
       release = undefined;
-      if (!query.active() && query.getSnapshot().fetching) query.cancel();
+      settle();
     },
     dispose: () => local?.dispose(),
   };

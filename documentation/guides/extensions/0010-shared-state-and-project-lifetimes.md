@@ -78,6 +78,13 @@ In a browser, dispose a guest's root when the view is actually destroyed, not wh
 
 Invalidations coalesce into the current read and one latest follow-up. Old completions cannot overwrite a newer accepted value. Pass cancellation to I/O that supports it. Cancellation fences publication but does not mean an uncooperative child stopped: its admission remains occupied until the actual work settles. Read cancellation never cancels an accepted domain write.
 
+Closing the last presentation stops optional refresh work and retains accepted data.
+An explicit `read()` caller owns its coalesced read until settlement, even when a
+presentation leaves. Explicit cancellation and authority retirement still cancel
+that work. A custom source detached without a retained cursor reconciles on the next
+observation or explicit read; repeated unobserved reads cannot assume that source
+stayed current.
+
 Never acquire subscriptions or retention leases in a React render. Abandoned Suspense renders do not have a cleanup phase. Acquire them at commit and keep the committed placement identity stable when a cache handle is replaced.
 
 ## Share editing across views
