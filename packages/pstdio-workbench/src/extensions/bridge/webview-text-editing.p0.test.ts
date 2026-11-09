@@ -661,11 +661,22 @@ test("a request waiting for its guest cannot enter a viewer that changed project
 test("an interrupted forced disconnect remains owned until disposal can finish it", async () => {
   const f = await fixture();
   await f.frame()();
+  let released = 0;
+  f.workbench.registerModule({
+    id: "text-owner",
+    activate: () => ({
+      dispose: () => {
+        released++;
+      },
+    }),
+  });
   f.refuseDisconnect();
   f.events.unbind();
   await expect(f.workbench.dispose()).rejects.toMatchObject({ code: "source_unavailable" });
+  expect(released).toBe(0);
   await f.workbench.dispose();
   expect(f.disconnected).toEqual(["connection-1", "connection-1"]);
+  expect(released).toBe(1);
 });
 
 test("a retained webview rebound to a new source cannot reuse its old public connection", async () => {
@@ -793,4 +804,28 @@ test("a current adapter rerender can close the same admitted guest without reope
   await f.frame()({ operation: "close", handle: opened.handle });
   expect(f.scopes).toHaveLength(1);
   expect(f.requests.filter((value) => value === "close")).toHaveLength(1);
+});
+
+test("terminal cleanup cannot admit another public text publisher during core retirement", async () => {
+  const f = await fixture();
+  await f.frame()();
+  const publisher = createHostEventPublisher();
+  publisher.bind(() => {});
+  const lateFrame = f.frame(f.placement, "ink.public-text-editor.view.editor", publisher);
+  let late: Promise<unknown> | undefined;
+  f.workbench.terminal.setSessionOpener(async () => ({
+    id: "terminal",
+    write() {},
+    resize() {},
+    onData: () => () => {},
+    onExit: () => () => {},
+    onError: () => () => {},
+    kill() {
+      late = lateFrame().catch((error) => error);
+    },
+  }));
+  await f.workbench.terminal.open({ request: { cols: 80, rows: 24 } });
+  await f.workbench.dispose();
+  expect(await late).toMatchObject({ code: "session_closed" });
+  expect(f.scopes).toHaveLength(1);
 });

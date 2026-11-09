@@ -5,6 +5,7 @@ import type { HostEventPublisher } from "pstdio-extensions/bridge/host";
 import { registerPlacementCloseGuard } from "../controllers/composition/placement-close-guards";
 import type { WorkbenchPanelInstance } from "../registries/layout/layout-model";
 import type { WorkbenchCore } from "../workbench-core-types";
+import { isWorkbenchRetiring } from "../workbench-required-work";
 import { createPlacementTextPresence } from "./placement-text-presence";
 import { retainPlacementTextOnRemoval } from "./placement-text-removal";
 
@@ -162,6 +163,7 @@ const createOwner = (input: PlacementTextGuestInput, state: Ownership) => {
 
 /** One public guest belongs to one live presentation, including while its connection opens. */
 const placementTextOwner = (input: PlacementTextGuestInput) => {
+  if (isWorkbenchRetiring(input.workbench)) throw closed();
   const state = getOwnership(input.workbench);
   // Failed forced cleanup stays owned. A later request or Workbench disposal retries it.
   for (const owner of state.retiring)
@@ -216,8 +218,16 @@ export const disposePlacementTextGuests = (workbench: WorkbenchCore) => {
   const state = getOwnership(workbench);
   state.disposal ??= Promise.resolve()
     .then(async () => {
-      await Promise.all([...state.live.values()].map((owner) => owner.close()));
-      await Promise.all([...state.retiring].map((owner) => retire(state, owner)));
+      const results = await Promise.allSettled([
+        ...[...state.live.values()].map((owner) => owner.close()),
+        ...[...state.retiring].map((owner) => retire(state, owner)),
+      ]);
+      const errors = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+      if (errors.length === 1) throw errors[0];
+      if (errors.length)
+        throw Object.assign(new AggregateError(errors, "Text guest cleanup failed"), {
+          retryable: errors.some((error) => (error as { retryable?: boolean })?.retryable === true),
+        });
     })
     .catch((error) => {
       state.disposal = undefined;

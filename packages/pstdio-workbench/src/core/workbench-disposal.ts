@@ -63,7 +63,8 @@ export const createWorkbenchDisposal = (
   },
 ) => {
   let pending: Promise<void> | undefined;
-  const dispose = async () => {
+  let retryTextClose = false;
+  const begin = () => {
     const errors: unknown[] = [];
     const release = (effect: () => void) => {
       try {
@@ -90,7 +91,20 @@ export const createWorkbenchDisposal = (
     ])
       release(effect);
     const reads = Promise.allSettled([core.views.reads.dispose()]);
+    return { errors, release, preferences, terminals, domainWork, reads };
+  };
+  let initial: ReturnType<typeof begin> | undefined;
+  const dispose = async () => {
+    initial ??= begin();
+    const { errors, release, preferences, terminals, domainWork, reads } = initial;
     const required = await Promise.allSettled([domainWork, disposePlacementTextGuests(core), preferences]);
+    const text = required[1];
+    if (text.status === "rejected" && text.reason?.retryable === true) {
+      // An interrupted native disconnect remains required work. Keep its captured module resources for explicit retry.
+      retryTextClose = true;
+      await Promise.all([reads, terminals]);
+      throw text.reason;
+    }
     // Persist the user's last layout before unregistering its contributions.
     release(() => disposeLayoutPersistence(input.persistence));
     for (const effect of [
@@ -113,7 +127,13 @@ export const createWorkbenchDisposal = (
     const settled = Promise.withResolvers<void>();
     pending = settled.promise;
     // Publish the barrier before external teardown can reenter core.dispose().
-    void dispose().then(settled.resolve, settled.reject);
+    void dispose().then(settled.resolve, (error) => {
+      if (retryTextClose) {
+        pending = undefined;
+        retryTextClose = false;
+      }
+      settled.reject(error);
+    });
     return pending;
   };
 };

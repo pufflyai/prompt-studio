@@ -214,6 +214,26 @@ for new consumers, command-backed editing, committed storage observation and the
 reusable lifecycle fixture. Existing `useCommandQuery` consumers retain the
 QueryClientProvider contract below.
 
+The webview query client also provides these lifetime methods:
+
+| Method | Purpose |
+| --- | --- |
+| `client.queries.getScope()` | Read a stable serialized key for the selected runtime, account/origin and project, suitable for external-store snapshot comparison. |
+| `client.queries.subscribeScope(listener)` | Observe host scope updates; the returned function detaches the listener. Compare `getScope()` to ignore unrelated host props. |
+| `client.queries.inspect()` | Read active query and total retained-owner counts for lifecycle diagnostics. |
+| `client.queries.dispose()` | Retire this guest host's shared query root and release its subscriptions. Reserve this for the owning host's teardown, since peer views share that root. |
+
+`ctx.storage.observe(changed, { recordIds?, signal? })` observes committed structured
+records in the calling project and extension, including local signed-out commits.
+Record IDs are opaque `records.id()` identities. Install observation before its
+finite read; close the returned handle or abort its signal to detach.
+
+`await ctx.sessions.observeMetadata(sessionId, changed, { signal? })` installs
+shared host observation for the session's `session`, `workspace`, `harness` and
+`execution` field-group hints. It does not carry transcript or queue snapshots.
+Await installation before the baseline reads and close the returned handle or
+abort the signal when optional observation ends.
+
 ```tsx
 import { useCommandMutation, useCommandQuery } from "@pstdio/sdk/extensions/react";
 
@@ -358,6 +378,13 @@ The host allows 16 live streams per frame and 8 MiB of unread JSON per stream. O
 The low-level `commands.stream` bridge accepts `start`, `cancel`, and `ack` operations. `createWebviewClient` handles IDs, consumed-byte acknowledgements, and scoped `data`/`end` events for you.
 
 ## Local editing sessions
+
+On main for API 0.4.0, `client.editing.openCommand(options)` joins host-owned
+command editing for the calling project, extension and document key. Its declared
+read sources return full values or patches; semantic commands, stable operation
+IDs and acknowledged previews share one authoritative owner across views.
+See the [shared-state author guide](../../guides/extensions/0010-shared-state-and-project-lifetimes.md)
+for result envelopes, read coverage and required-write retirement.
 
 To try the API, run `bun run --cwd packages/pstdio-workbench canvas` and open
 **Reference → Extension API → Shared editing sessions → Playground**. Hold and release saves,
