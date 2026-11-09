@@ -225,6 +225,7 @@ test("remote workspaces open synced history; offline sessions stay readable and 
   await expect(main.getByRole("button", { name: "Open workspace", exact: true })).toHaveCount(0);
   await main.getByRole("button", { name: "Select device", exact: true }).click();
   await page.getByRole("menuitem", { name: "Laptop", exact: true }).click();
+  await expect(main.getByRole("button", { name: "Select workspace", exact: true })).toContainText("Laptop workspace");
   const editor = main.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true });
   await editor.fill("New session on Laptop");
   await page.reload();
