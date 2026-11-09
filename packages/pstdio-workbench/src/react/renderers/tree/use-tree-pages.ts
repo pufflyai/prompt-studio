@@ -42,7 +42,11 @@ export const useTreePages = (
   useEffect(() => {
     if (!loading && current?.key === key) void current.owner?.revalidate(visiblePageKeys(visible, state));
   }, [current, key, loading, visible, state]);
-  return visible;
+  return {
+    ...visible,
+    loadChildren: (id: string, load: (node: TreeNode, signal: AbortSignal) => Promise<TreeNode[]>, retry?: boolean) =>
+      current?.key === key ? (current.owner?.loadChildren(id, load, retry) ?? Promise.resolve()) : Promise.resolve(),
+  };
 };
 
 const visiblePageKeys = (tree: LoadedTreeData, state: TreeRendererState) => {

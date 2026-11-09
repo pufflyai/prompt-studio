@@ -5,7 +5,7 @@ import { disposeWorkbenchStore } from "./shared/store/workbench-store";
 import { disposePlacementTextGuests } from "./text-editing/placement-text-guests";
 import { disposeLayoutPersistence } from "./workbench-core-persistence";
 import type { createWorkbenchInput, WorkbenchCore, WorkbenchRenderers } from "./workbench-core-types";
-import { disposeWorkbenchRequiredWork } from "./workbench-required-work";
+import { closeWorkbenchRequiredWork, disposeWorkbenchRequiredWork } from "./workbench-required-work";
 
 const stopObservation = (core: WorkbenchCore, renderers: WorkbenchRenderers) => {
   for (const owner of [
@@ -74,9 +74,10 @@ export const createWorkbenchDisposal = (
     };
     input.modules.close();
     closeWorkbenchModes(core.modes);
-    // Close optional admission before any external teardown can reenter this host.
-    const terminals = Promise.allSettled([core.terminal.dispose()]);
+    // Close required write admission before terminal adapters can synchronously reenter editing or preferences.
+    closeWorkbenchRequiredWork(core);
     const preferences = core.preferences.dispose?.();
+    const terminals = Promise.allSettled([core.terminal.dispose()]);
     const domainWork = disposeWorkbenchRequiredWork(core);
     stopObservation(core, input.renderers);
     for (const effect of [

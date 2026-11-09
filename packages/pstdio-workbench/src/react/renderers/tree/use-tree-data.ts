@@ -1,5 +1,5 @@
 import { resourceKey } from "@pstdio/sdk/extensions";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import type { WorkbenchPanelInstance } from "../../../core";
 import { getWorkbenchRenderers, type ResourceRef, type TreeNode, type WorkbenchCore } from "../../../core";
 import { resolveNavigationLevels } from "../../../core/controllers/page-location/navigation-level";
@@ -8,8 +8,6 @@ import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { useSharedEqualValue } from "../share-equal-value";
 import { usePageParams } from "../use-page-params";
 import { useRendererRead } from "../use-renderer-read";
-import { loadTreeNodeChildren } from "./tree-child-loading";
-import { findNodeInSections } from "./tree-list-adapter";
 import { previewTreeResources } from "./tree-resource-preview";
 import {
   expandDefaultTreeSections,
@@ -102,14 +100,6 @@ export const useTreeData = (
 
   // Defaults apply when the view starts. Refreshes keep sections the user collapsed.
   useEffect(() => expandDefaultTreeSections(getWorkbenchRenderers(workbench), treeViewId), [workbench, treeViewId]);
-  const [expandedChildren, setExpandedChildren] = useState<{
-    queryKey: string;
-    request?: symbol;
-    byNodeId: Record<string, TreeNode[]>;
-  }>({
-    queryKey: childrenKey,
-    byNodeId: {},
-  });
   const read = useRendererRead<LoadedTreeData & { children: Record<string, TreeNode[]> }>({
     workbench,
     ownerKey,
@@ -135,74 +125,11 @@ export const useTreeData = (
       };
     },
   });
-  const childLoader = useRef<((node: TreeNode) => void) | undefined>(undefined);
-  // Each provider snapshot owns its lazy reads. A replacement cancels them and repairs any expansion
-  // that happened while the replaced snapshot (or its optimistic move preview) was on screen.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Interactive cache updates belong to this snapshot and must not restart its read lifetime.
-  useEffect(() => {
-    const controller = new AbortController();
-    const trees = getWorkbenchRenderers(workbench);
-    const sections = [...(read.value?.header ?? []), ...(read.value?.body ?? []), ...(read.value?.footer ?? [])];
-    const children = {
-      ...read.value?.children,
-      ...(expandedChildren.queryKey === childrenKey && expandedChildren.request === read.request
-        ? expandedChildren.byNodeId
-        : {}),
-    };
-    const pending = new Set<string>();
-    const reconcile = () => {
-      for (const id of trees.getTreeState(treeViewId).expandedNodeIds) {
-        const node = findNodeInSections(sections, id, children);
-        if (node?.collapsible && !node.children && !children[id]) load(node);
-      }
-    };
-    const load = (node: TreeNode) => {
-      if (pending.has(node.id)) return;
-      pending.add(node.id);
-      void loadTreeNodeChildren(
-        trees,
-        treeViewId,
-        node,
-        { resource, viewId, filter, pageParams, signal: controller.signal },
-        sections,
-        children,
-      )
-        .then((value) => {
-          if (controller.signal.aborted) return;
-          children[node.id] = value;
-          setExpandedChildren((current) => ({
-            queryKey: childrenKey,
-            request: read.request,
-            byNodeId: {
-              ...(current.queryKey === childrenKey && current.request === read.request ? current.byNodeId : {}),
-              [node.id]: value,
-            },
-          }));
-          reconcile();
-        })
-        .catch((error) => {
-          if (!controller.signal.aborted) reportUserActionError(workbench, "Load folder", error);
-        })
-        .finally(() => pending.delete(node.id));
-    };
-    childLoader.current = load;
-    reconcile();
-    return () => {
-      controller.abort();
-      childLoader.current = undefined;
-    };
-  }, [workbench, treeViewId, resource, viewId, filter, pageParams, childrenKey, read.request, read.value]);
-  const loadChildren = (node: TreeNode) => childLoader.current?.(node);
   const loaded = {
     body: read.loading && !read.value?.body.length ? structure.body : (read.value?.body ?? []),
     header: read.value?.header ?? structure.header,
     footer: read.value?.footer ?? structure.footer,
-    children: {
-      ...read.value?.children,
-      ...(expandedChildren.queryKey === childrenKey && expandedChildren.request === read.request
-        ? expandedChildren.byNodeId
-        : {}),
-    },
+    children: read.value?.children ?? {},
   };
   // The renderer's structure, cached reads, and each load step return new objects even when nothing changed.
   // Parts equal to the tree on screen keep their objects, so React Compiler skips the rows whose data did not
@@ -227,6 +154,29 @@ export const useTreeData = (
     read.loading,
     getWorkbenchRenderers(workbench).getTreeState(treeViewId),
   );
+  const loadChildren = (id: string, retry = true) => {
+    void pages
+      .loadChildren(
+        id,
+        (current, signal) =>
+          getWorkbenchRenderers(workbench).getChildren(treeViewId, current, {
+            resource,
+            viewId,
+            filter,
+            pageParams,
+            signal,
+          }),
+        retry,
+      )
+      .catch((error) => reportUserActionError(workbench, "Load folder", error));
+  };
+  const treeState = useWorkbenchStore(
+    getWorkbenchRenderers(workbench).treeStore,
+    (state) => state.statesByTreeId[treeViewId],
+  );
+  useEffect(() => {
+    for (const id of treeState?.expandedNodeIds ?? []) loadChildren(id, false);
+  });
   useTreeResourceRefresh(workbench, pages, read.retry);
   const renderer = getWorkbenchRenderers(workbench).getTreeRenderer(treeViewId);
   const movement = useTreeMovement({
@@ -255,7 +205,7 @@ export const useTreeData = (
     header: pages.header,
     footer: pages.footer,
     childrenByNodeId: NO_CHILDREN,
-    loadChildren,
+    loadChildren: (node: TreeNode) => loadChildren(node.id),
     error: read.error ?? null,
     loading: read.loading,
     retry: read.retry,

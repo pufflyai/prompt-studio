@@ -294,3 +294,40 @@ test("external teardown cannot reenter terminal admission", async () => {
   expect(opens).toBe(0);
   expect(await opening).toBeInstanceOf(Error);
 });
+
+test("terminal teardown cannot admit another required owner or preference write", async () => {
+  const { registerWorkbenchRequiredWork } = await import("./workbench-required-work");
+  let lateOwners = 0;
+  let latePreferences = 0;
+  const core = createWorkbench({
+    preferencePersistence: {
+      getValue: () => 0,
+      setValue: () => {
+        latePreferences++;
+      },
+    },
+  });
+  core.preferences.registerSchema({ properties: { size: { type: "number", scope: "user" } } });
+  core.terminal.setSessionOpener(async () => ({
+    id: "terminal",
+    write() {},
+    resize() {},
+    onData: () => () => {},
+    onExit: () => () => {},
+    onError: () => () => {},
+    kill() {
+      try {
+        registerWorkbenchRequiredWork(core, () => {
+          lateOwners++;
+        });
+      } catch {}
+      try {
+        core.preferences.setValue("size", 1, { scope: "user" });
+      } catch {}
+    },
+  }));
+  await core.terminal.open({ request: { cols: 80, rows: 24 } });
+  await core.dispose();
+  expect(lateOwners).toBe(0);
+  expect(latePreferences).toBe(0);
+});

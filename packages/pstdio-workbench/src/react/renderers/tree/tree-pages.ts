@@ -1,5 +1,6 @@
 import { isScopedQueryCancellation } from "@pstdio/sdk/extensions";
 import type { TreeNode, TreeNodePage, TreePageLoader, TreePageStatus, TreeViewSection } from "../../../core";
+import { TreeContinuationCancelled } from "./tree-continuation-reads";
 
 export interface TreePageRead {
   key: string;
@@ -77,6 +78,19 @@ export const createTreePages = (
       return { ...node, children, pagination };
     });
   return {
+    findNode: (id: string, sections: TreeViewSection[], children: Record<string, TreeNode[]>) => {
+      const visit = (nodes: TreeNode[]): TreeNode | undefined => {
+        for (const node of nodes) {
+          if (node.id === id) return node;
+          const found = visit(children[node.id] ?? node.children ?? []);
+          if (found) return found;
+        }
+      };
+      return visit([
+        ...sections.flatMap((section) => section.nodes),
+        ...[...states.values()].flatMap((state) => state.freshNodes),
+      ]);
+    },
     snapshot: () => new Map([...states].map(([key, state]) => [key, retainPage(state)])),
     revalidate: async (visible = new Set(states.keys())) => {
       await Promise.all(
@@ -127,7 +141,7 @@ const loadPageState = async (
     state.nodes = state.freshNodes;
     state.retainedInitial = undefined;
   } catch (error) {
-    if (!signal.aborted && !isScopedQueryCancellation(error))
+    if (!signal.aborted && !isScopedQueryCancellation(error) && !(error instanceof TreeContinuationCancelled))
       state.status = { ...state.status, error: pageError(error) };
   } finally {
     if (!signal.aborted) {

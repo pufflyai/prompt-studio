@@ -1,9 +1,11 @@
-import type { TreeNode, TreeNodePage } from "../../../core";
-import {
+import type { TreeNode } from "../../../core";
+import type {
   createRendererQueryCache,
-  type RendererQueryIdentity,
+  RendererQueryIdentity,
 } from "../../../core/registries/views/renderer-query-cache";
 import type { RendererReadRequest } from "../../../core/registries/views/renderer-read-registry";
+import { createTreeChildOwner } from "./tree-child-owner";
+import { createTreeContinuationReads } from "./tree-continuation-reads";
 import { createTreePages, type TreePageRead } from "./tree-pages";
 import type { LoadedTreeData } from "./tree-view-load";
 
@@ -11,26 +13,11 @@ type Cache = ReturnType<typeof createRendererQueryCache>;
 type Root = NonNullable<ReturnType<Cache["get"]>>;
 export type PagedTreeData = LoadedTreeData & { children: Record<string, TreeNode[]> };
 export type TreePageIdentity = RendererQueryIdentity & Pick<RendererReadRequest<unknown>, "queryEvents">;
-interface PageJob {
-  controller: AbortController;
-  settled: Promise<unknown>;
-  generation: number;
-  epoch: number;
-}
 const owners = new WeakMap<object, ReturnType<typeof createOwner>>();
-// Only actual outstanding children live here, so exact root retirement cannot admit an overlapping replacement.
-const pending = new WeakMap<object, Map<string, Set<PageJob>>>();
-let nextRootGeneration = 0;
 
 /** A bounded finite-query owner retains page projection/depth, never a presentation or a second query root. */
 const createOwner = (root: Root, parentCache: Cache, identity: TreePageIdentity) => {
-  const rootGeneration = ++nextRootGeneration;
-  const cache = createRendererQueryCache(parentCache.queries);
   const attachments = new Map<symbol, { listener(): void; cache: Cache }>();
-  const running = new Set<PageJob>();
-  const runtimeJobs = pending.get(parentCache.queries) ?? new Map<string, Set<PageJob>>();
-  pending.set(parentCache.queries, runtimeJobs);
-  const jobKey = JSON.stringify(root.query.key);
   let tree: PagedTreeData | undefined;
   let snapshot: unknown;
   let generation = new AbortController();
@@ -45,62 +32,34 @@ const createOwner = (root: Root, parentCache: Cache, identity: TreePageIdentity)
     !root.query.inspect().stale &&
     !root.query.getSnapshot().error &&
     !root.admission.held();
-  const abortRunning = () => {
-    for (const read of running) read.controller.abort();
-  };
+  const reads = createTreeContinuationReads(root.query.key, parentCache, identity, {
+    epoch: () => epoch,
+    available,
+    lifetimes: () => [...attachments.values()].map((entry) => entry.cache),
+  });
   const suspend = () => {
     generation.abort();
-    abortRunning();
+    reads.abort();
   };
   const stopInvalidation = root.query.subscribeInvalidation(suspend);
-  const readPage = (input: TreePageRead): Promise<TreeNodePage> => {
-    if (input.signal.aborted || !available())
-      return Promise.reject(new DOMException("Tree cursor is suspended", "AbortError"));
-    const controller = new AbortController();
-    const abort = () => controller.abort();
-    input.signal.addEventListener("abort", abort, { once: true });
-    const siblings = runtimeJobs.get(jobKey) ?? new Set<PageJob>();
-    runtimeJobs.set(jobKey, siblings);
-    const previous = [...siblings]
-      .filter((entry) => entry.generation !== rootGeneration || entry.epoch !== epoch)
-      .map((entry) => entry.settled);
-    const issued = epoch;
-    const settled = Promise.resolve().then(async () => {
-      await Promise.allSettled(previous);
-      controller.signal.throwIfAborted();
-      if (issued !== epoch || !available()) throw new DOMException("Tree cursor is suspended", "AbortError");
-      const value = await cache.read<TreeNodePage>(
-        {
-          ...identity,
-          queryKey: JSON.stringify([identity.queryKey, "tree-page", rootGeneration, issued, input.key, input.depth]),
-          load: input.load,
-          onValue() {},
-          onError() {},
-        },
-        controller.signal,
-        () => {},
-      );
-      controller.signal.throwIfAborted();
-      if (issued !== epoch || !available()) throw new DOMException("Tree cursor is suspended", "AbortError");
-      return value;
+  const readPage = (input: TreePageRead) => reads.read(["page", input.key, input.depth], input.load, input.signal);
+  const node = (id: string) =>
+    tree && pages.findNode(id, [...tree.header, ...tree.body, ...tree.footer], tree.children);
+  const createChildren = () =>
+    createTreeChildOwner({
+      node,
+      loaded: (id) => Boolean(node(id)?.children || (tree && Object.hasOwn(tree.children, id))),
+      signal: () => generation.signal,
+      available,
+      onCancelled: publish,
+      read: (id, load, signal) => reads.read(["children", id], load, signal),
+      accept: (id, nodes) => {
+        if (!tree) return;
+        tree = { ...tree, children: { ...tree.children, [id]: nodes } };
+        publish();
+      },
     });
-    const entry = { controller, settled, generation: rootGeneration, epoch: issued };
-    running.add(entry);
-    siblings.add(entry);
-    for (const lifetime of new Set([...attachments.values()].map((entry) => entry.cache))) lifetime.track(settled);
-    void settled
-      .then(
-        () => {},
-        () => {},
-      )
-      .finally(() => {
-        running.delete(entry);
-        siblings.delete(entry);
-        if (!siblings.size && runtimeJobs.get(jobKey) === siblings) runtimeJobs.delete(jobKey);
-        input.signal.removeEventListener("abort", abort);
-      });
-    return settled;
-  };
+  let children = createChildren();
   const accept = (value: PagedTreeData, accepted: unknown) => {
     if (!available() || root.query.getSnapshot().data !== accepted) return;
     const sameSnapshot = snapshot === accepted && !generation.signal.aborted;
@@ -109,6 +68,7 @@ const createOwner = (root: Root, parentCache: Cache, identity: TreePageIdentity)
       suspend();
       generation = new AbortController();
       epoch++;
+      children = createChildren();
       pages = createTreePages(generation.signal, publish, retained, readPage);
       snapshot = accepted;
     }
@@ -124,7 +84,7 @@ const createOwner = (root: Root, parentCache: Cache, identity: TreePageIdentity)
     snapshot = undefined;
     stopInvalidation();
     stopRetirement();
-    void cache.dispose();
+    void reads.dispose();
     publish();
   };
   const stopRetirement = parentCache.queries.subscribeRetirement(() => {
@@ -155,7 +115,7 @@ const createOwner = (root: Root, parentCache: Cache, identity: TreePageIdentity)
       const stopAdmission = root.admission.subscribe(() => {
         if (root.admission.held()) suspend();
       });
-      for (const job of running) lifetime.track(job.settled);
+      reads.track(lifetime);
       let released = false;
       let stopLifetime: (() => void) | undefined;
       const release = () => {
@@ -165,12 +125,14 @@ const createOwner = (root: Root, parentCache: Cache, identity: TreePageIdentity)
         stopQuery();
         stopAdmission();
         stopLifetime?.();
-        if (!attachments.size) abortRunning();
+        if (!attachments.size) reads.abort();
       };
       stopLifetime = lifetime.onDispose(release);
       return release;
     },
     accept,
+    loadChildren: (id: string, load: (node: TreeNode, signal: AbortSignal) => Promise<TreeNode[]>, retry?: boolean) =>
+      children.load(id, load, retry),
     sections() {
       return (
         tree && {
