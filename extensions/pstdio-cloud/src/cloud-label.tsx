@@ -9,12 +9,22 @@ export const CloudIcon = (props: { name: string }) => {
   return <Icon as={resolveIconComponent(name)} boxSize="4" aria-hidden="true" />;
 };
 
+const CloudStatusIcon = (props: { status?: ReturnType<typeof cloudStatus>; active?: boolean; error?: string }) => {
+  const { status, active, error } = props;
+  if (active) return <Spinner size="xs" />;
+  let icon = status?.icon ?? "cloud";
+  if (error) icon = "triangle-alert";
+  if (status?.key === "offline") icon = "wifi-off";
+  return <CloudIcon name={icon} />;
+};
+
 export const CloudLabel = (props: { data: ReturnType<typeof useCloud>["data"]; error?: string }) => {
   const { data, error } = props;
   const { t } = useCloudContext();
-  const status = data ? cloudStatus(data.account, data.sync) : undefined;
+  const status = data ? cloudStatus(data.account, data.sync, data.project) : undefined;
   let label = t("status.loading", "Cloud");
-  if (error) label = t("status.attention", "Needs attention");
+  if (status?.key === "offline") label = t("status.offline", "Connection lost");
+  else if (error) label = t("status.attention", "Needs attention");
   else if (data?.signingIn) label = t("status.signingIn", "Signing in…");
   else if (status) {
     switch (status.key) {
@@ -31,10 +41,13 @@ export const CloudLabel = (props: { data: ReturnType<typeof useCloud>["data"]; e
         label = t("status.local", "Local");
         break;
       case "offline":
-        label = t("status.offline", "Offline");
+        label = t("status.offline", "Connection lost");
         break;
       case "attention":
         label = t("status.attention", "Needs attention");
+        break;
+      case "preparing":
+        label = t("status.preparing", "Preparing project");
         break;
       case "downloading":
         label =
@@ -59,11 +72,7 @@ export const CloudLabel = (props: { data: ReturnType<typeof useCloud>["data"]; e
   if (warning) color = "fg.warning";
   return (
     <HStack gap="xs" color={color}>
-      {data?.signingIn || status?.active ? (
-        <Spinner size="xs" />
-      ) : (
-        <CloudIcon name={error ? "triangle-alert" : (status?.icon ?? "cloud")} />
-      )}
+      <CloudStatusIcon status={status} active={data?.signingIn || status?.active} error={error} />
       <Text textStyle="paragraph/S/regular" whiteSpace="nowrap">
         {label}
       </Text>

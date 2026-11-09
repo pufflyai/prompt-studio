@@ -1,4 +1,4 @@
-import { Button, Flex, Text } from "@chakra-ui/react";
+import { Button, CloseButton, Flex, Text } from "@chakra-ui/react";
 import { createWebviewClient, type GuestHost } from "@pstdio/sdk/extensions";
 import { Header, ScrollArea } from "@pstdio/ui";
 import { ParamEditor, type ParamValue } from "@pstdio/ui/param-editor";
@@ -25,6 +25,7 @@ export const Studio = (props: StudioProps) => {
   const [id, setId] = useState("untitled");
   const [recipe, setRecipe] = useState<Recipe>(defaultRecipe);
   const [busy, setBusy] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(true);
 
   useEffect(() => {
     const client = createWebviewClient<typeof commands>(host);
@@ -128,18 +129,36 @@ export const Studio = (props: StudioProps) => {
           <Button size="sm" disabled={busy} onClick={() => void save()}>
             Save
           </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            aria-pressed={settingsOpen}
+            onClick={() => setSettingsOpen((open) => !open)}
+          >
+            Settings
+          </Button>
         </Header>
         <ArtCanvas recipe={recipe} label={id} />
       </Flex>
-      <ScrollArea
-        w="20rem"
-        flexShrink="0"
-        borderLeftWidth="1px"
-        borderColor="border.subtle"
-        viewportProps={{ "aria-label": "Art settings" }}
-      >
-        <ParamEditor groups={[pieceGroup, ...recipeGroups(recipe)]} onChange={change} />
-      </ScrollArea>
+      {settingsOpen ? (
+        <Flex
+          direction="column"
+          w="xs"
+          maxW="full"
+          minH="0"
+          flexShrink="0"
+          borderLeftWidth="1px"
+          borderColor="border.subtle"
+        >
+          <Header px="sm" flexShrink="0">
+            <Text flex="1">Art settings</Text>
+            <CloseButton size="sm" aria-label="Close art settings" onClick={() => setSettingsOpen(false)} />
+          </Header>
+          <ScrollArea minH="0" flex="1" viewportProps={{ "aria-label": "Art settings" }}>
+            <ParamEditor groups={[pieceGroup, ...recipeGroups(recipe)]} onChange={change} />
+          </ScrollArea>
+        </Flex>
+      ) : null}
     </Flex>
   );
 };

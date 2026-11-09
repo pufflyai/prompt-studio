@@ -54,6 +54,8 @@ A session is one agent conversation. It runs in one workspace and can be linked 
 
 See [Sessions](https://prompt.studio/docs/references/cli/sessions/).
 
+A normal follow-up sent during a turn waits in the queue. A successful command does not mean the active agent has read it. Check the returned delivery status. If another agent needs a correction or dependency update during its current turn, use `pst sessions follow-up --id <id> --steer --prompt "<message>"`. Steering delivers live input and fails if the active run cannot accept it; do not silently replace that failure with queued delivery. To deliver an already queued message, read `pst sessions queue --id <id>`, then use `pst sessions steer` with that message's queue position, revision, and active-run identity. Do not resend the same message as a second request.
+
 ### Agents
 
 Agents are external coding tools such as Claude Code, Codex, and OpenCode. Harness extensions connect them. A new session uses the agent you pass with `--agent`. Without it, the session uses the project's default agent from the project settings, and then the first available agent. `pst agents setup` does not choose a default. See [Agents and harnesses](https://prompt.studio/docs/guides/concepts/agents/).

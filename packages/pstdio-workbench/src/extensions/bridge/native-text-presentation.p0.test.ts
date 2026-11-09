@@ -170,6 +170,22 @@ test("native Markdown uses the selected public session and drains its close hand
   }
 });
 
+test("a pinned text presentation remains editable after leaving and returning to its page", async () => {
+  const f = fixture();
+  try {
+    const session = await f.presentation.open();
+    f.workbench.pinPlacement(f.placement.placementIdentity!, true);
+    await f.workbench.navigation.openTarget(navigate("other-workspace"));
+    await f.workbench.navigation.openTarget(navigate("workspace"));
+    expect(f.workbench.layout.getActivePanel("main")?.instanceId).toBe(f.placement.instanceId);
+    session.transact((text) => text.insert(text.length, " moved"));
+    await session.flush();
+    expect(f.document.getText("content").toString()).toBe("source moved");
+  } finally {
+    await f.stop();
+  }
+});
+
 test("native Retry recovers failed initial admission and retains an already admitted public session", async () => {
   const f = fixture();
   f.refuseConnection();

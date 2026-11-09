@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type Browser, expect as browserExpect, chromium } from "@playwright/test";
 import { createClient } from "@pstdio/sdk/client";
+import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
@@ -87,13 +88,8 @@ test(
       peerCleanup = peer;
       const env = {
         NODE_EXTRA_CA_CERTS: cert,
-        PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([
-          {
-            source: join(import.meta.dir, "../../../../extensions/pstdio-notes"),
-            installName: "pstdio-notes",
-            skipInstall: true,
-          },
-        ]),
+        PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-notes", "pstdio-cloud"),
+        PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1",
       };
       const aHome = join(root, "a");
       const bHome = join(root, "b");
@@ -178,6 +174,7 @@ test(
         if (new URL(response.url()).pathname === `/v1/projects/${project.id}/open`) opens.push(response.status());
       });
       await page.addInitScript(() => {
+        if (window !== window.top) return;
         localStorage.setItem("onboarding-complete", "true");
         localStorage.removeItem("dashboard-wb2:selected-project:global");
       });
@@ -188,28 +185,30 @@ test(
         .getByRole("option", { name: "Cloud notes", exact: true })
         .click();
       phase("project selected");
-      const opening = page.getByRole("dialog", { name: /^Opening / });
-      await opening.getByRole("button", { name: "Retry", exact: true }).click();
-      await browserExpect(opening.getByText("The sync retry failed.", { exact: true })).toBeVisible();
+      const status = page.frameLocator('iframe[title="Prompt Studio Cloud"]').getByTestId("cloud-status-item");
+      const details = page.frameLocator('iframe[title="Cloud details"]');
+      await status.click();
+      await details.getByRole("button", { name: "Retry", exact: true }).click();
+      await browserExpect(details.getByText("The sync retry failed.", { exact: false })).toBeVisible();
       phase("sync retry failure checked; release download");
       downloaded = true;
+      // A reconnect refreshes host status; preparation follows that event without polling.
+      await page.reload();
       await browserExpect.poll(() => attempts).toBe(1);
-      await browserExpect(opening.getByText("The sync retry failed.", { exact: true })).toHaveCount(0);
-      await browserExpect(opening.getByRole("status")).toBeVisible();
+      await browserExpect(status).toHaveText("Preparing project");
       phase("initial setup pending; release failure");
       completeInitialSetup();
-      await browserExpect(opening.getByText("The project folder could not be created.", { exact: true })).toBeVisible();
-      await opening.getByRole("button", { name: "Retry", exact: true }).click();
-      await browserExpect(opening.getByText("The project folder could not be created.", { exact: true })).toHaveCount(
-        0,
-      );
-      await browserExpect(opening.getByText("The sync retry failed.", { exact: true })).toHaveCount(0);
-      await browserExpect(opening.getByRole("status")).toBeVisible();
+      await browserExpect.poll(() => opens).toContain(500);
+      await status.click();
+      await details.getByRole("button", { name: "Retry", exact: true }).click();
+      await browserExpect.poll(() => attempts).toBe(2);
+      await browserExpect(status).toHaveText("Preparing project");
       phase("setup retry pending; release success");
       completeRetry();
       await browserExpect.poll(() => opens).toContain(200);
       expect((await b.projects.folder(project.id)).path).toBeTruthy();
-      await browserExpect(page.getByRole("dialog", { name: /^Opening / })).toHaveCount(0);
+      await browserExpect(status).toHaveText("Synced");
+      await status.click();
       phase("project folder opened; Notes navigation");
       const sidebar = page.locator('[data-workbench-region="sidenav"]');
       await sidebar.getByRole("option", { name: "Notes", exact: true }).click();

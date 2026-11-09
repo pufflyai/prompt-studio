@@ -8,6 +8,7 @@ import { CloudContext } from "./cloud-context";
 import { CloudDetails } from "./cloud-details";
 import { CloudLabel } from "./cloud-label";
 import { CloudSettings } from "./cloud-settings";
+import type { cloudCommands } from "./project-state";
 import { useCloud } from "./use-cloud";
 
 const subscribeVisibility = (listener: () => void) => {
@@ -29,7 +30,7 @@ const Status = (props: { projectId?: string }) => {
 export const cloudView = (screen: "status" | "details" | "settings") =>
   defineExtensionView<WebviewHostProps>({
     render(context) {
-      const client = createWebviewClient<Record<never, never>>(context.host);
+      const client = createWebviewClient<typeof cloudCommands>(context.host);
       const App = () => {
         const { projectId } = useSyncExternalStore(context.propsStore.subscribe, context.propsStore.get);
         const visible = useSyncExternalStore(subscribeVisibility, isVisible, () => true);

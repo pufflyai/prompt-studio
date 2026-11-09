@@ -6,6 +6,7 @@ import { AddGlyphDialog } from "./add-glyph-dialog";
 import { createFontEditorCommands, loadFontEditor, showError } from "./font-editor-api";
 import { GlyphCard } from "./glyph-card";
 import { GlyphInspector } from "./glyph-inspector";
+import { IconSetChooser } from "./icon-set-chooser";
 import { SettingsDialog } from "./settings-dialog";
 import type { FontConfigView, FontInspectionView, FontPreviewView, GlyphView } from "./types";
 
@@ -26,6 +27,7 @@ export const FontEditorPage = (props: FontEditorPageProps) => {
   const [success, setSuccess] = useState<string>();
   const [addOpen, setAddOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [iconSet, setIconSet] = useState("all");
 
   const reload = async () => {
     const loaded = await loadFontEditor(host);
@@ -89,9 +91,10 @@ export const FontEditorPage = (props: FontEditorPageProps) => {
   const normalizedQuery = query.trim().toLowerCase();
   const visibleGlyphs = inspection.glyphs.filter(
     (glyph) =>
-      !normalizedQuery ||
-      glyph.name.includes(normalizedQuery) ||
-      glyph.codepoint.toLowerCase().includes(normalizedQuery),
+      (iconSet !== "custom" || inspection.usedGlyphNames.includes(glyph.name)) &&
+      (!normalizedQuery ||
+        glyph.name.includes(normalizedQuery) ||
+        glyph.codepoint.toLowerCase().includes(normalizedQuery)),
   );
   const safeFamily = preview.family.replaceAll('"', "");
 
@@ -117,6 +120,14 @@ export const FontEditorPage = (props: FontEditorPageProps) => {
             </Text>
           </HStack>
         </Box>
+        <IconSetChooser
+          value={iconSet}
+          disabled={busy}
+          onChange={(value) => {
+            setIconSet(value);
+            setSelectedName(undefined);
+          }}
+        />
         <Input
           maxWidth={{ base: "full", lg: "22rem" }}
           value={query}

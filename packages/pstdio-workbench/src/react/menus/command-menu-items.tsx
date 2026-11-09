@@ -1,5 +1,5 @@
 import { Box, Image } from "@chakra-ui/react";
-import { PaletteShortcut, Tooltip, type TreeListActionMenuItem } from "@pstdio/ui";
+import { PaletteShortcut, type TreeListActionMenuItem } from "@pstdio/ui";
 import type { KeybindingSequence, WorkbenchCoreContributionContext } from "../../core";
 import { reportUserActionError } from "../../core/shared/run-user-action";
 import { WorkbenchShortcutHint } from "../keybindings/shortcut-hint";
@@ -32,21 +32,8 @@ const createMenuIcon = (input: { icon?: string; iconSrc?: string }) => {
   return icon ? <WorkbenchIcon name={icon} /> : undefined;
 };
 
-export const createMenuEndContent = (input: {
-  external?: boolean;
-  binding?: KeybindingSequence;
-  disabledReason?: string;
-  readOnly?: boolean;
-}) => {
-  const { binding, external, disabledReason, readOnly } = input;
-  if (readOnly && disabledReason)
-    return (
-      <Tooltip content={disabledReason}>
-        <Box as="span" tabIndex={0} aria-label={disabledReason}>
-          <WorkbenchIcon name="Info" />
-        </Box>
-      </Tooltip>
-    );
+export const createMenuEndContent = (input: { external?: boolean; binding?: KeybindingSequence }) => {
+  const { binding, external } = input;
   if (external) return <WorkbenchIcon name="ArrowUpRight" size={14} color="fg.muted" />;
   if (binding) return <PaletteShortcut binding={binding} />;
   return undefined;
@@ -67,8 +54,6 @@ const toMenuItem = (
     <WorkbenchShortcutHint workbench={workbench} action={entry.action}>
       {createMenuEndContent({
         external: entry.external,
-        disabledReason: entry.description,
-        readOnly: entry.readOnly,
       })}
     </WorkbenchShortcutHint>
   ),

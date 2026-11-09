@@ -193,6 +193,7 @@ export const HarnessModelMenu = (props: HarnessModelMenuProps) => {
     if (isAgentSwitchDisabled) return null;
     return (
       <SearchableMenu
+        fixedHeight
         trigger={
           // Menu.Trigger passes its props to this direct child, so it must stay a DOM element.
           <Box>
@@ -224,6 +225,7 @@ export const HarnessModelMenu = (props: HarnessModelMenuProps) => {
 
   return (
     <SearchableMenu
+      fixedHeight
       trigger={
         <Box>
           <MenuTriggerButton

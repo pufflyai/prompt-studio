@@ -141,7 +141,7 @@ test("only explicitly global bindings are negotiated for editable webviews", asy
   );
   workbench.keybindings.registerKeybinding({
     action: { kind: "command", commandId: "keyboard.open" },
-    keybinding: "Alt+Shift+K",
+    keybinding: "Alt+Shift+J",
     allowInInputs: true,
   });
   workbench.keybindings.registerKeybinding({
@@ -149,8 +149,8 @@ test("only explicitly global bindings are negotiated for editable webviews", asy
     keybinding: "Mod+K",
   });
   const bridge = createWebviewKeyboardShortcuts(workbench);
-  const shortcut = bridge.shortcuts.find((shortcut) => shortcut.key === "K")!;
-  expect(shortcut).toMatchObject({ key: "K", altKey: true, shiftKey: true });
+  const shortcut = bridge.shortcuts.find((shortcut) => shortcut.key === "J")!;
+  expect(shortcut).toMatchObject({ key: "J", altKey: true, shiftKey: true });
   await bridge.dispatch({ id: shortcut.id, repeat: false });
   expect(calls).toBe(1);
 });

@@ -1,5 +1,5 @@
 export const standardResourceIcons = {
-  project: "folder-root",
+  project: "folder",
   workspace: "computer",
   worktree: "git-pull-request-draft",
   settings: "settings",

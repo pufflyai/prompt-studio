@@ -1,5 +1,6 @@
 import type { ExtensionSession, ResourceRef } from "@pstdio/sdk/extensions";
 import { sessionBrowser } from "../refs";
+import { sessionDisplayStatus } from "./session-indicator";
 
 export const sessionResource = (session: ExtensionSession, projectId: string): ResourceRef => ({
   type: "session",
@@ -9,7 +10,10 @@ export const sessionResource = (session: ExtensionSession, projectId: string): R
   label: session.title,
   icon: "message-circle",
   device: session.device,
-  metadata: { status: session.status, ...(session.workspaceId ? { workspaceId: session.workspaceId } : {}) },
+  metadata: {
+    status: sessionDisplayStatus(session),
+    ...(session.workspaceId ? { workspaceId: session.workspaceId } : {}),
+  },
 });
 export const sessionTarget = (resource: ResourceRef) => ({
   kind: "page" as const,
