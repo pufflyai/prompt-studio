@@ -87,8 +87,17 @@ test("the compiled host admits an installed SDK terminal view and reports real P
     socket = second;
     const accepted = Promise.withResolvers<void>();
     const ownerExited = Promise.withResolvers<TerminalWebSocketServerMessage>();
+    // Observe failures even while the owner-disable request is still pending.
+    void ownerExited.promise.catch(() => {});
     let ownerOutput = "";
     let ownerEnded = false;
+    let ownerAccepted = false;
+    const failOwner = (error: Error) => {
+      if (ownerAccepted) ownerExited.reject(error);
+      else accepted.reject(error);
+    };
+    second.onerror = () => failOwner(new Error("Native owner connection failed"));
+    second.onclose = () => failOwner(new Error(`Native owner closed before exit: ${ownerOutput}`));
     second.onopen = () =>
       second.send(
         JSON.stringify({
@@ -113,16 +122,18 @@ test("the compiled host admits an installed SDK terminal view and reports real P
       }
       if (message.type === "data") {
         ownerOutput += Buffer.from(message.chunk, "base64").toString();
-        if (ownerOutput.includes("NATIVE_OWNER_READY")) accepted.resolve();
+        if (ownerOutput.includes("NATIVE_OWNER_READY")) {
+          ownerAccepted = true;
+          accepted.resolve();
+        }
       }
       if (message.type === "exit") {
         ownerEnded = true;
-        accepted.reject(new Error("Native owner exited before the live-session probe"));
+        if (!ownerAccepted) accepted.reject(new Error("Native owner exited before the live-session probe"));
         ownerExited.resolve(message);
       }
       if (message.type === "error") {
-        accepted.reject(new Error(message.message));
-        ownerExited.reject(new Error(message.message));
+        failOwner(new Error(message.message));
       }
     };
     await accepted.promise;

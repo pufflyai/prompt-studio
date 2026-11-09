@@ -56,6 +56,16 @@ const createOwner = (input: RegisterWorkbenchExtensionContributionsInput, view: 
 export const createWorkbenchExtensionTerminalRendererOwners = () => {
   const owners = new Map<string, { declaration: string; owner: ReturnType<typeof createOwner> }>();
   return {
+    checkpoint() {
+      const previous = new Set(owners.values());
+      return () => {
+        for (const [key, entry] of owners) {
+          if (previous.has(entry)) continue;
+          entry.owner.dispose();
+          owners.delete(key);
+        }
+      };
+    },
     reconcile(projectId: string, metadata: WorkbenchExtensionMetadata) {
       const next = new Map(
         metadata.views.flatMap((view) =>
@@ -91,6 +101,7 @@ export type TerminalRendererOwners = ReturnType<typeof createWorkbenchExtensionT
 export const registerWorkbenchExtensionTerminalRenderers = (input: RegisterWorkbenchExtensionContributionsInput) => {
   const local = input.terminalRendererOwners ? undefined : createWorkbenchExtensionTerminalRendererOwners();
   const owners = input.terminalRendererOwners ?? local!;
+  const rollback = owners.checkpoint();
   const registrations: Array<{ dispose(): void }> = [];
   const dispose = () => {
     for (const registration of registrations.reverse()) registration.dispose();
@@ -100,9 +111,10 @@ export const registerWorkbenchExtensionTerminalRenderers = (input: RegisterWorkb
     for (const view of input.metadata.views) {
       if (view.body.kind === "terminal") registrations.push(owners.register(input, view));
     }
-    return { dispose };
+    return { dispose, rollback };
   } catch (error) {
     dispose();
+    rollback();
     throw error;
   }
 };

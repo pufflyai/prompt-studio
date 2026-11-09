@@ -204,10 +204,12 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
     }),
   };
   const disposables: Disposable[] = [];
+  let terminals: ReturnType<typeof registerWorkbenchExtensionTerminalRenderers> | undefined;
   const context: WorkbenchExtensionCommandContext = input;
   try {
     disposables.push(registerWorkbenchExtensionChatRenderers(sourceInput));
-    disposables.push(registerWorkbenchExtensionTerminalRenderers(sourceInput));
+    terminals = registerWorkbenchExtensionTerminalRenderers(sourceInput);
+    disposables.push(terminals);
     disposables.push(...registerCommands(context, input.metadata));
     disposables.push(
       ...registerWorkbenchExtensionKeybindings({
@@ -270,6 +272,7 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
     };
   } catch (error) {
     disposeAll(disposables);
+    terminals?.rollback();
     throw error;
   }
 };

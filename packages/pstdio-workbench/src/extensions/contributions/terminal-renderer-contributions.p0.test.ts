@@ -4,7 +4,10 @@ import { createWorkbench, getWorkbenchRenderers, type WorkbenchCore, type Workbe
 import { createControllerTerminalBridge } from "../../react/terminal/workbench-terminal-panel";
 import { registerWorkbenchExtensionContributions } from "../host/workbench-extension-host";
 import { emptyWorkbenchExtensionMetadata } from "./extension-contributions";
-import { createWorkbenchExtensionTerminalRendererOwners } from "./terminal-renderer-contributions";
+import {
+  createWorkbenchExtensionTerminalRendererOwners,
+  registerWorkbenchExtensionTerminalRenderers,
+} from "./terminal-renderer-contributions";
 
 const viewId = "example.console.view.shell";
 const metadata: WorkbenchExtensionMetadata = {
@@ -215,6 +218,38 @@ test("failed terminal contribution registration rolls back earlier views", async
   ).toThrow();
   expect(workbench.views.getView(viewId)).toBeUndefined();
   await workbench.dispose();
+});
+
+test("failed shared registration invalidates newly created owners and retains existing owners", async () => {
+  const workbench = createWorkbench();
+  const owners = createWorkbenchExtensionTerminalRendererOwners();
+  const input = { workbench, projectId: "project", metadata, terminalRendererOwners: owners, executeCommand() {} };
+  const retained = registerWorkbenchExtensionTerminalRenderers(input);
+  const original = nativeView(workbench).ownerId;
+  const added = { ...metadata.views[0]!, id: `${viewId}-added`, localId: "added" };
+  const conflict = { ...added, id: `${viewId}-conflict` };
+  workbench.views.registerView({ id: conflict.id, title: "Existing", body: { kind: "terminal", render: () => null } });
+  let captured: (() => unknown) | undefined;
+  const unsubscribe = workbench.views.store.subscribe(() => {
+    const renderer = getWorkbenchRenderers(workbench).getRenderer(added.id);
+    if (renderer) captured = () => renderer.render({ workbench } as WorkbenchPanelRenderInput);
+  });
+  try {
+    expect(() =>
+      registerWorkbenchExtensionTerminalRenderers({
+        ...input,
+        metadata: { ...metadata, views: [added, conflict] },
+      }),
+    ).toThrow();
+    expect(captured).toBeDefined();
+    expect(captured!()).toBeNull();
+    expect(nativeView(workbench).ownerId).toBe(original);
+  } finally {
+    unsubscribe();
+    retained.dispose();
+    owners.dispose();
+    await workbench.dispose();
+  }
 });
 
 test("a replaced terminal owner keys a fresh panel session", async () => {

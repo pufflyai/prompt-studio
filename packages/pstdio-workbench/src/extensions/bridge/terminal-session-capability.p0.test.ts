@@ -202,16 +202,23 @@ test("dashboard capability refresh preserves the same webview's terminal ownersh
 });
 
 test("a replacement webview guest cannot inherit the prior guest's terminal ownership", async () => {
-  const { workbench, hostEvents } = setupTerminal();
+  const { workbench, hostEvents, scripted, events } = setupTerminal();
   const adapters = { terminal: workbench.terminal, hostEvents };
   const original = createExtensionWebviewHostCapabilities(adapters, "installed-one/project/view/module-one")[
     "terminal.session"
   ];
   await original({ operation: "open", request: { cols: 80, rows: 24 } });
+  await original({ operation: "subscribe", sessionId: "session-1" });
   const replacement = createExtensionWebviewHostCapabilities(adapters, "installed-two/project/view/module-two")[
     "terminal.session"
   ];
   try {
+    await Promise.resolve();
+    expect(scripted.calls).toEqual(["kill:default"]);
+    expect(events).toEqual([]);
+    scripted.adapter.write("prior guest output");
+    expect(events).toEqual([]);
+    await expect(original({ operation: "write", sessionId: "session-1", data: "stale" })).rejects.toThrow(/disposed/i);
     await expect(replacement({ operation: "kill", sessionId: "session-1" })).rejects.toThrow(/owner/i);
   } finally {
     await workbench.dispose();
@@ -228,6 +235,47 @@ test("the public Workbench capability helper scopes ownership to its logical gue
   const replacement = createWorkbenchWebviewHostCapabilities({ ...input, webviewId: "second" })["terminal.session"];
   try {
     await expect(replacement({ operation: "kill", sessionId: "session-1" })).rejects.toThrow(/owner/i);
+  } finally {
+    await workbench.dispose();
+  }
+});
+
+test("replacing a guest cancels its pending terminal admission and kills a late adapter", async () => {
+  const { workbench, hostEvents, scripted } = setupTerminal();
+  const pending = Promise.withResolvers<WorkbenchTerminalSessionAdapter>();
+  let admissionSignal: AbortSignal | undefined;
+  workbench.terminal.setSessionOpener((_request, _view, signal) => {
+    admissionSignal = signal;
+    return pending.promise;
+  });
+  const adapters = { terminal: workbench.terminal, hostEvents };
+  const original = createExtensionWebviewHostCapabilities(adapters, "original")["terminal.session"];
+  const opening = original({ operation: "open", request: { cols: 80, rows: 24 } });
+  const rejected = Promise.resolve(opening).catch((error) => error);
+  createExtensionWebviewHostCapabilities(adapters, "replacement");
+  try {
+    expect(admissionSignal?.aborted).toBe(true);
+    pending.resolve(scripted.adapter);
+    expect(await rejected).toBeInstanceOf(Error);
+    expect(scripted.calls).toEqual(["kill:default"]);
+    expect(workbench.terminal.listSessions()).toEqual([]);
+  } finally {
+    await workbench.dispose();
+  }
+});
+
+test("removing terminal support releases the previous guest's sessions and subscriptions", async () => {
+  const { workbench, hostEvents, scripted, events } = setupTerminal();
+  const original = createExtensionWebviewHostCapabilities({ terminal: workbench.terminal, hostEvents }, "original")[
+    "terminal.session"
+  ];
+  await original({ operation: "open", request: { cols: 80, rows: 24 } });
+  await original({ operation: "subscribe", sessionId: "session-1" });
+  try {
+    createExtensionWebviewHostCapabilities({ hostEvents }, "replacement");
+    await Promise.resolve();
+    expect(scripted.calls).toEqual(["kill:default"]);
+    expect(events).toEqual([]);
   } finally {
     await workbench.dispose();
   }

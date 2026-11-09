@@ -19,7 +19,11 @@ const commandResponse = z.object({ outcome: validatedCommandOutcomeSchema }).pas
 const streamHandlers = new WeakMap<HostEventPublisher, ReturnType<typeof createWebviewCommandStreamHandler>>();
 const terminalHandlers = new WeakMap<
   HostEventPublisher,
-  { terminal: NonNullable<ExtensionWebviewHostAdapters["terminal"]>; ownerId?: string; capability: HostCapability }
+  {
+    terminal: NonNullable<ExtensionWebviewHostAdapters["terminal"]>;
+    ownerId?: string;
+    capability: ReturnType<typeof createTerminalSessionCapability>;
+  }
 >();
 const terminalHandler = (
   terminal: NonNullable<ExtensionWebviewHostAdapters["terminal"]>,
@@ -28,6 +32,7 @@ const terminalHandler = (
 ) => {
   let entry = terminalHandlers.get(hostEvents);
   if (entry?.terminal !== terminal || entry.ownerId !== ownerId) {
+    entry?.capability.dispose();
     entry = { terminal, ownerId, capability: createTerminalSessionCapability({ terminal, hostEvents }) };
     terminalHandlers.set(hostEvents, entry);
   }
@@ -103,6 +108,10 @@ export const createExtensionWebviewHostCapabilities = (
     artifacts,
     terminal,
   } = adapters;
+  if (hostEvents && !terminal) {
+    terminalHandlers.get(hostEvents)?.capability.dispose();
+    terminalHandlers.delete(hostEvents);
+  }
   const terminalCapability =
     terminal && hostEvents ? terminalHandler(terminal, hostEvents, terminalOwnerId) : undefined;
   const readHarnesses = adapters.harnesses?.read.bind(adapters.harnesses);
