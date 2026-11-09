@@ -133,6 +133,8 @@ test("navigates ticket ancestry to a linked workspace and back", async ({ page, 
     failures.push(new Error(`Could not release hierarchy fixture at ${repoRoot}`, { cause: error }));
   }
   if (failures.length === 1) throw failures[0];
-  if (failures.length > 1)
+  if (failures.length > 1) {
+    for (const failure of failures) console.error(failure);
     throw new AggregateError(failures, `Hierarchy fixture failures: ${failures.map(String).join("; ")}`);
+  }
 });
