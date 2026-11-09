@@ -1,7 +1,7 @@
 import type { ContributionMetadata, RegisteredContributionMetadata } from "../../shared/contributions/metadata";
 import type { Disposable } from "../../shared/disposable";
 import type { WorkbenchStore } from "../../shared/store/workbench-store";
-import type { CommandParamSchema } from "../commands/command-registry";
+import type { CommandParamSchema, WorkbenchCommandExecutionContext } from "../commands/command-registry";
 import type { MenuPath } from "../menus/menu-registry";
 import type { NavigationTarget } from "../navigation/navigation-registry";
 import type { ResourceRef } from "../resources/resource-registry";
@@ -42,7 +42,7 @@ export interface TreeAction {
   submitLabel?: string;
   when?: string;
   disabled?: boolean;
-  run?(args?: unknown): Promise<void> | void;
+  run?(args?: unknown, context?: WorkbenchCommandExecutionContext): Promise<void> | void;
 }
 
 export type TreeNodeRowVariant = "empty-state" | "file";

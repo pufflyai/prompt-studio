@@ -125,15 +125,16 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       // Actions mutate tree data (create/delete/...), so refresh afterwards. Plain
       // node-target navigation runs through the runner command and must not refetch.
       run: commandId
-        ? async (params) => {
+        ? async (params, execution) => {
+            const resource = node?.resource ?? (execution === undefined ? ctx.resource : execution.resource);
             const actionParams = toActionParams(params, toRecordParams(action.params));
             if (action.command?.extensionId === "pstdio") {
               await input.workbench.commands.executeCommand(commandId, actionParams, {
-                resource: node?.resource ?? ctx.resource,
+                resource,
               });
               return;
             }
-            await executeTreeActionCommand(input, record, commandId, actionParams, node?.resource ?? ctx.resource);
+            await executeTreeActionCommand(input, record, commandId, actionParams, resource);
             ctx.refresh();
           }
         : undefined,

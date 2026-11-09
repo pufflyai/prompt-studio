@@ -4,7 +4,11 @@ import type { ResourceRef } from "../resources/resource-registry";
 import { settleReadBatch } from "../views/settle-read-batch";
 import type { NavigationTarget } from "./navigation-registry";
 import { stableNavigationValue } from "./navigation-target-key";
-import { getNavigationTreeNodeSource, setNavigationTreeNodeSource } from "./navigation-tree-node-source";
+import {
+  getNavigationTreeNodeSource,
+  setNavigationTreeNodeSource,
+  setNavigationTreeSectionResource,
+} from "./navigation-tree-node-source";
 import { createNavigationTreeSnapshots } from "./navigation-tree-snapshots";
 
 export interface DeclaredNavigationAction {
@@ -173,17 +177,21 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
     contribution: NavigationTreeContribution,
     owner: NavigationTreeOwner,
     resource?: ResourceRef,
-  ): TreeViewSection => ({
-    ...section,
-    id:
-      contribution.sourceExtensionId !== owner.extensionId && !section.label
-        ? navigationSlotRootSectionId(contribution.slot)
-        : scopedId(contribution.idScope, section.id),
-    moveScope: ownerId(owner),
-    canHide: section.canHide ?? true,
-    canReorder: section.canReorder ?? true,
-    nodes: section.nodes.map((node) => projectNode(node, contribution, ownerId(owner), resource)),
-  });
+  ): TreeViewSection => {
+    const projected: TreeViewSection = {
+      ...section,
+      id:
+        contribution.sourceExtensionId !== owner.extensionId && !section.label
+          ? navigationSlotRootSectionId(contribution.slot)
+          : scopedId(contribution.idScope, section.id),
+      moveScope: ownerId(owner),
+      canHide: section.canHide ?? true,
+      canReorder: section.canReorder ?? true,
+      nodes: section.nodes.map((node) => projectNode(node, contribution, ownerId(owner), resource)),
+    };
+    setNavigationTreeSectionResource(projected, resource);
+    return projected;
+  };
 
   const structureOf = (
     contribution: NavigationTreeContribution,
