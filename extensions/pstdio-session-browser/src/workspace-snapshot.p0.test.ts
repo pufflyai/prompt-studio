@@ -10,10 +10,7 @@ const snapshotContext = (workspaceId: string | null, workspaces: { id: string; n
     projectId: "p",
     overrides: {
       account: { devices: async () => [] },
-      workspaces: {
-        list: async () => workspaces,
-        get: async (id) => workspaces.find((workspace) => workspace.id === id) ?? null,
-      },
+      workspaces: { list: async () => workspaces },
       sessions: {
         getExecutionState: async () => ({ kind: "local", available: true }),
         getConversation: async () => ({

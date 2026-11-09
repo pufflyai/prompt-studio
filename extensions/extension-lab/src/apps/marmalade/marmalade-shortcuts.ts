@@ -1,35 +1,39 @@
-import { defineKeybinding, type ViewRef } from "@pstdio/sdk/extensions";
 import type { MarmaladeAction, MarmaladeTool } from "./marmalade.types";
-import { executeMarmalade } from "./marmalade-commands";
 
-const tools: [string, MarmaladeTool][] = [
-  ["V", "move"],
-  ["T", "text"],
-  ["R", "rectangle"],
-  ["E", "ellipse"],
-  ["B", "brush"],
-  ["H", "hand"],
-  ["Z", "zoom"],
-];
-const actions: readonly (readonly [string, MarmaladeAction, string?])[] = [
-  ...tools.map(([key, tool]) => [key, { type: "tool", tool }] as const),
-  ["Mod+Z", { type: "undo" }],
-  ["Mod+Shift+Z", { type: "redo" }],
-  ["Mod+D", { type: "duplicate" }],
-  ["Mod+G", { type: "group" }],
-  ["Mod+Shift+G", { type: "ungroup" }],
-  ["Delete", { type: "delete" }],
-  // Preserve the two existing aliases during this ownership migration.
-  ["Mod+Y", { type: "redo" }, "marmalade-redo-legacy"],
-  ["Backspace", { type: "delete" }, "marmalade-delete-legacy"],
-];
-
-export const marmaladeShortcuts = (views: ViewRef[]) =>
-  actions.map(([key, action, compatibilityId]) =>
-    defineKeybinding({
-      id: compatibilityId ?? (action.type === "tool" ? `marmalade-tool-${action.tool}` : `marmalade-${action.type}`),
-      key,
-      when: { view: views },
-      action: { kind: "command", target: { command: executeMarmalade.ref, params: { action } } },
-    }),
-  );
+const shortcut = (event: KeyboardEvent) => {
+  const key = event.key.toLowerCase();
+  if (event.ctrlKey || event.metaKey) {
+    const commands: Record<string, MarmaladeAction> = {
+      z: { type: event.shiftKey ? "redo" : "undo" },
+      y: { type: "redo" },
+      d: { type: "duplicate" },
+      g: { type: event.shiftKey ? "ungroup" : "group" },
+    };
+    return commands[key];
+  }
+  if (event.altKey) return;
+  if (key === "delete" || key === "backspace") return { type: "delete" } as const;
+  const tools: Record<string, MarmaladeTool> = {
+    v: "move",
+    t: "text",
+    r: "rectangle",
+    e: "ellipse",
+    b: "brush",
+    h: "hand",
+    z: "zoom",
+  };
+  if (tools[key]) return { type: "tool", tool: tools[key] } as const;
+};
+export const connectMarmaladeShortcuts = (dispatch: (action: MarmaladeAction) => Promise<void>) => {
+  const onKeyDown = (event: KeyboardEvent) => {
+    const target = event.target;
+    if (target instanceof Element && target.closest("input, textarea, select, [contenteditable=true], [role=combobox]"))
+      return;
+    const action = shortcut(event);
+    if (!action) return;
+    event.preventDefault();
+    void dispatch(action);
+  };
+  document.addEventListener("keydown", onKeyDown);
+  return () => document.removeEventListener("keydown", onKeyDown);
+};

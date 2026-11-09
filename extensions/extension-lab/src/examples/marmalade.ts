@@ -1,5 +1,4 @@
 import { defineExtension } from "@pstdio/sdk/extensions";
-import { marmaladeShortcuts } from "../apps/marmalade/marmalade-shortcuts";
 import { defineExample, webview } from "../definition";
 
 const views = [
@@ -42,6 +41,5 @@ export default defineExtension({
   resourceKinds: [example.resourceKind],
   pages: [example.homePage, example.page],
   views,
-  keybindings: marmaladeShortcuts(views.map((view) => view.ref)),
   navigationItems: [example.navigation],
 });

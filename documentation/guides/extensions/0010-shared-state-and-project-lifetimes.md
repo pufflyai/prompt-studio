@@ -117,7 +117,7 @@ Marmalade is the maintained example in `extensions/extension-lab/src/apps/marmal
 
 `ctx.sessions.observeMetadata(sessionId, changed, { signal? })` returns a shared handle for exact session/link, workspace/diff, harness command and execution-availability changes. The callback names the affected group: `session`, `workspace`, `harness` or `execution`. Read only that group. Transcript, queue and approval updates remain on `ctx.sessions.stream` and keep their own revision rules.
 
-Harnesses can supply optional `watchCommandState`. Install it before reading and close it with the last observer. Recovery polling is appropriate only for an evidenced provider coverage gap; bound its payload, cadence and lifetime and record its removal condition. Sessions does not use an unconditional two-second full snapshot poll. See [temporary metadata recovery](../../adrs/0141-temporary-session-metadata-recovery.md).
+Harnesses can supply optional `watchCommandState`. Install it before reading and close it with the last observer. Recovery polling is appropriate only for an evidenced provider coverage gap; bound its payload, cadence and lifetime and record its removal condition. A consumer should replace an unconditional full snapshot timer only after its exact observation coverage is complete. See [temporary metadata recovery](../../adrs/0141-temporary-session-metadata-recovery.md).
 
 ## Reuse the contract fixtures
 

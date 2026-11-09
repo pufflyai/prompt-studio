@@ -9,39 +9,31 @@ interface MarmaladePropertyInputProps {
   disabled?: boolean;
   min?: number;
   max?: number;
-  required?: boolean;
-  onPreview(value: string): void | Promise<void>;
   onEdit(value: string): void | Promise<void>;
-  onCancel(): void | Promise<void>;
 }
 
 export const MarmaladePropertyInput = (props: MarmaladePropertyInputProps) => {
-  const { id, label, value, type = "text", disabled, min, max, required, onPreview, onEdit, onCancel } = props;
+  const { id, label, value, type = "text", disabled, min, max, onEdit } = props;
   const [draft, setDraft] = useState<string>();
   const focused = useRef(false);
-  const pending = useRef<{ value: string; valid: boolean; edit: typeof onEdit; cancel: typeof onCancel } | undefined>(
-    undefined,
-  );
+  const pending = useRef<{ value: string; edit: typeof onEdit } | undefined>(undefined);
   const revision = useRef(0);
-  const valid = (raw: string) => {
-    if (required && !raw.trim()) return false;
-    if (type !== "number") return true;
-    return (
-      raw.trim() !== "" &&
-      Number.isFinite(Number(raw)) &&
-      (min === undefined || Number(raw) >= min) &&
-      (max === undefined || Number(raw) <= max)
-    );
-  };
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const committing = useRef(Promise.resolve());
   useEffect(
     () => () => {
-      const current = pending.current;
+      clearTimeout(timer.current);
+      const edit = pending.current;
       pending.current = undefined;
-      if (current?.valid) void current.edit(current.value);
-      else if (current) void current.cancel();
+      if (edit) void edit.edit(edit.value);
     },
     [],
   );
+  const save = (edit: { value: string; edit: typeof onEdit }) => {
+    pending.current = undefined;
+    committing.current = Promise.resolve(edit.edit(edit.value));
+    return committing.current;
+  };
   return (
     <Input
       id={id}
@@ -52,49 +44,31 @@ export const MarmaladePropertyInput = (props: MarmaladePropertyInputProps) => {
       min={min}
       max={max}
       value={draft ?? value}
-      aria-invalid={draft !== undefined && !valid(draft)}
       onFocus={() => {
         focused.current = true;
         setDraft((current) => current ?? String(value));
       }}
       onChange={(event) => {
         const next = event.target.value;
-        const acceptable = valid(next);
-        if (!acceptable && pending.current?.valid) void onCancel();
         setDraft(next);
-        pending.current = { value: next, valid: acceptable, edit: onEdit, cancel: onCancel };
-        revision.current++;
-        if (acceptable) void onPreview(next);
+        const edit = { value: next, edit: onEdit };
+        pending.current = edit;
+        revision.current += 1;
+        clearTimeout(timer.current);
+        // Match the shared property editor: save after a pause, then flush the final draft on blur.
+        timer.current = setTimeout(() => {
+          void save(edit);
+        }, 540);
       }}
       onBlur={async () => {
         focused.current = false;
-        const current = pending.current;
-        pending.current = undefined;
-        if (!current) {
+        clearTimeout(timer.current);
+        if (pending.current !== undefined) void save(pending.current);
+        const savedRevision = revision.current;
+        const commit = committing.current;
+        await commit;
+        if (!focused.current && revision.current === savedRevision && committing.current === commit) {
           setDraft(undefined);
-          return;
-        }
-        if (!current.valid) {
-          void current.cancel();
-          return;
-        }
-        const acceptedRevision = revision.current;
-        await current.edit(current.value);
-        if (!focused.current && revision.current === acceptedRevision) setDraft(undefined);
-      }}
-      onKeyDown={(event) => {
-        if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
-        if (event.key === "Escape") {
-          event.preventDefault();
-          event.stopPropagation();
-          pending.current = undefined;
-          revision.current++;
-          setDraft(undefined);
-          void onCancel();
-        }
-        if (event.key === "Enter") {
-          event.preventDefault();
-          event.currentTarget.blur();
         }
       }}
     />

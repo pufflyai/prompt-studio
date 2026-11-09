@@ -20,7 +20,7 @@ import {
   ticketRequestsTarget,
 } from "../data/ticket-page-target";
 import { linkedResourceParentMetadata, ticketResourceReference } from "../data/ticket-resource-hierarchy";
-import { emitPlannerTicketsChanged } from "../events";
+import { plannerTicketsChanged } from "../events";
 import { isImageAttachment } from "../utils/is-image-attachment";
 import { readTicketTreeData } from "./ticket-files-tree-data";
 import { buildSessionsSection } from "./ticket-sessions-tree";
@@ -110,7 +110,7 @@ export const createTicketFileCommand = defineCommand({
       ticketId,
       name: commandParams.name,
     });
-    await emitPlannerTicketsChanged(ctx, { ticketId });
+    await ctx.events.emit(plannerTicketsChanged, { ticketId });
     // ticketId travels with the result so the editor can filter the broadcast.
     return { ...file, ticketId };
   },
@@ -134,7 +134,7 @@ export const updateTicketFileCommand = defineCommand({
       content: commandParams.content,
       name: commandParams.name,
     });
-    await emitPlannerTicketsChanged(ctx, { ticketId: commandParams.ticketId });
+    await ctx.events.emit(plannerTicketsChanged, { ticketId: commandParams.ticketId });
     return ticket;
   },
 });
@@ -156,7 +156,7 @@ export const renameTicketFileCommand = defineCommand({
       fileId: input.fileId,
       name: renameWithCurrentFileEnding(input.name, file?.name ?? ""),
     });
-    await emitPlannerTicketsChanged(ctx, { ticketId: input.ticketId });
+    await ctx.events.emit(plannerTicketsChanged, { ticketId: input.ticketId });
     return updated;
   },
 });
@@ -171,7 +171,7 @@ export const deleteTicketFileCommand = defineCommand({
   async run(ctx, commandParams) {
     const { ticketId, fileId } = commandParams;
     await deleteTicketFile({ storage: ctx.storage, resources: ctx.resources, ticketId, fileId });
-    await emitPlannerTicketsChanged(ctx, { ticketId });
+    await ctx.events.emit(plannerTicketsChanged, { ticketId });
     if (selectedDocumentFromResource(ctx.resource) !== fileId) return { ticketId, fileId };
 
     // The open document is gone, so the page moves back to the ticket body.

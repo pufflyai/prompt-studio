@@ -41,7 +41,6 @@ const loseAcknowledgement = (method: string, lose?: boolean) => method === "turn
 const readState = (id: string, active?: boolean) => ({
   thread: {
     id,
-    model: "native-default",
     turns: active ? [{ id: "unresolved", status: "inProgress", items: [] }] : [],
   },
 });

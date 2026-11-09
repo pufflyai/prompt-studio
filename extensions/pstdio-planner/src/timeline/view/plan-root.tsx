@@ -1,7 +1,6 @@
 // Compose the feature-branch graph with its milestone timeline and the selected ticket's details.
-import { Box, Flex, Stack } from "@chakra-ui/react";
-import { createWebviewQueryClient, type GuestHost } from "@pstdio/sdk/extensions";
-import { useWebviewScope } from "@pstdio/sdk/extensions/react";
+import { Box, Flex } from "@chakra-ui/react";
+import type { GuestHost } from "@pstdio/sdk/extensions";
 import { type HostStorage, HostStorageProvider, installPrismGlobal } from "@pstdio/ui";
 import {
   type CollectionViewsSource,
@@ -11,7 +10,6 @@ import {
 } from "@pstdio/ui/collection-view";
 import type { KanbanRendererSettings } from "@pstdio/ui/kanban-renderer";
 import { lazy, Suspense, useEffect, useState } from "react";
-import { PlannerReadError } from "../../views/planner-read-error";
 import { AutoBuildControl } from "./auto-build-control";
 import { BackgroundMenu } from "./background-menu";
 import { formatDay } from "./flags";
@@ -45,13 +43,8 @@ interface PlanRootProps {
 }
 
 export function PlanRoot(props: PlanRootProps) {
-  const scope = useWebviewScope(createWebviewQueryClient(props.host));
-  return <ProjectPlanRoot key={scope} {...props} />;
-}
-
-function ProjectPlanRoot(props: PlanRootProps) {
   const { host, t } = props;
-  const { client, plan, error, retry } = usePlan(host);
+  const { client, plan } = usePlan(host);
   // Restore project presentation before mounting controls or applying collapsed geometry.
   const [storage, setStorage] = useState<HostStorage>();
   useEffect(() => {
@@ -68,21 +61,14 @@ function ProjectPlanRoot(props: PlanRootProps) {
       active = false;
     };
   }, [client, host]);
-  const viewsSource = plan ? timelineViewsSource(client, plan.savedViews) : undefined;
+  if (!plan || !storage) return <PlanLoading t={t} />;
+  const viewsSource = timelineViewsSource(client, plan.savedViews);
   return (
-    <Stack h="full" minH="0" gap="0">
-      <PlannerReadError error={error} retry={retry} />
-      <Box flex="1" minH="0">
-        {plan && storage && viewsSource ? (
-          <HostStorageProvider storage={storage}>
-            <TimelinePresentationProvider key={plan.projectId} projectId={plan.projectId} storage={storage}>
-              <PlanContent host={host} t={t} client={client} plan={plan} viewsSource={viewsSource} />
-            </TimelinePresentationProvider>
-          </HostStorageProvider>
-        ) : null}
-        {(!plan || !storage) && !error ? <PlanLoading t={t} /> : null}
-      </Box>
-    </Stack>
+    <HostStorageProvider storage={storage}>
+      <TimelinePresentationProvider key={plan.projectId} projectId={plan.projectId} storage={storage}>
+        <PlanContent host={host} t={t} client={client} plan={plan} viewsSource={viewsSource} />
+      </TimelinePresentationProvider>
+    </HostStorageProvider>
   );
 }
 

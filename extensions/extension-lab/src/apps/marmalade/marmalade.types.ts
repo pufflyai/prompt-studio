@@ -68,7 +68,6 @@ export type MarmaladeAction =
   | { type: "reorder"; source: string; target?: string; position: "before" | "after" | "inside" }
   | {
       type: "create";
-      id?: string;
       kind: "text" | "rectangle" | "ellipse" | "brush";
       x: number;
       y: number;

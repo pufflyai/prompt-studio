@@ -5,7 +5,7 @@ import { ticketWithAttributes } from "../data/ticket-attributes";
 import { ticketOrderChanges } from "../data/ticket-order";
 import type { Ticket } from "../data/types";
 import { withWriteGuard } from "../data/write-guard";
-import { emitPlannerTicketsChanged } from "../events";
+import { plannerTicketsChanged } from "../events";
 import { deadlineOrNone, loadPlan, writeStoredPlan } from "../timeline/commands/plan-store";
 import { moveTicket } from "../timeline/model/edit-plan";
 
@@ -41,7 +41,7 @@ export const moveTicketOnBoard = async (
           updatedAt: now,
         }));
       await savePlan?.();
-      if (changes.size || savePlan) await emitPlannerTicketsChanged(ctx, { ticketId: input.rowId });
+      if (changes.size || savePlan) await ctx.events.emit(plannerTicketsChanged, { ticketId: input.rowId });
       return { changed: changes.size };
     };
     if (milestone === undefined) return save();

@@ -4,8 +4,8 @@ import { conversationState } from "./conversation-state";
 import { draftSnapshot } from "./draft-snapshot";
 import { readDraft } from "./drafts";
 import { nativePresentation } from "./native-presentation";
+import { readQueue } from "./queue-snapshot";
 import { sessionId } from "./resource";
-import { readSnapshotInputs, type SnapshotOptions, type SnapshotReads } from "./snapshot-reads";
 import { savedWorkspaceControls, workspacePresentation } from "./workspace";
 
 export { composerControls } from "./controls";
@@ -19,6 +19,7 @@ const executionNotice = (
   if (execution.kind === "remote" && !error) return `Working on ${execution.device?.name}.`;
   return error ?? "";
 };
+type SnapshotOptions = { messages?: boolean; queue?: ReturnType<typeof readQueue> };
 export const readSnapshot = async (
   ctx: ExtensionContextBase,
   resource?: ResourceRef,
@@ -34,10 +35,28 @@ export const readSessionSnapshot = async (
   values?: ControlValueMap,
   options: SnapshotOptions = {},
 ) => {
-  const { sessionRead, executionRead, messages, reads } = await readSnapshotInputs(ctx, id, options);
-  const { session, execution, queued, harness, workspace: workspaceInfo } = reads;
+  // Own every started read immediately: an availability wait may abort before the
+  // queue result is needed, and its parallel rejection must still be observed.
+  const [execution, queued] = await Promise.all([
+    ctx.sessions.getExecutionState(id),
+    options.queue ?? readQueue(ctx, id),
+  ]);
   const remote = execution.kind === "remote";
+  const readConversation = async () => {
+    if (!remote && options.messages !== false) return ctx.sessions.getConversation(id);
+    const session = await ctx.sessions.get(id);
+    if (!session) throw new Error("Session not found.");
+    // Remote history is the public checkpoint; queue/device availability must not gate reading it.
+    const sources = remote && options.messages !== false ? await ctx.sessions.getConversationSources(id) : undefined;
+    return { session, messages: sources?.checkpoint ?? [] };
+  };
+  const [{ session, messages }, harness] = await Promise.all([
+    readConversation(),
+    remote ? undefined : ctx.sessions.getHarnessCommands(id),
+  ]);
   const workspaceId = session.workspaceId ?? undefined;
+  const workspaces = await ctx.workspaces.list();
+  const workspaceInfo = workspaces.find((workspace) => workspace.id === workspaceId);
   const savedControls = composerControls.map((control) =>
     control.type === "harness" ? { ...control, lockIdentity: Boolean(session.agent), readOnly: remote } : control,
   );
@@ -53,14 +72,11 @@ export const readSessionSnapshot = async (
     nativeLinks: true,
     nativeHarnessAccount: { controlId: "harness", remote },
     workspaceId,
-    workspace:
-      !sessionRead && !executionRead && !options.changes?.has("workspace")
-        ? options.previous?.presentation
-        : await workspacePresentation(ctx, workspaceInfo, {
-            id: workspaceId,
-            existingSession: true,
-            available: execution.available,
-          }),
+    workspace: await workspacePresentation(ctx, workspaceInfo, {
+      id: workspaceId,
+      existingSession: true,
+      available: execution.available,
+    }),
     controls: [...savedControls, ...savedWorkspaceControls(workspaceId, workspaceInfo, session.device)],
     harness,
     streaming: ["in_progress", "awaiting_input"].includes(session.status),
@@ -97,10 +113,5 @@ export const readSessionSnapshot = async (
   snapshot.notice = notice || nativeNotice;
   if (!queued.error) snapshot.queuedFollowUps = display.queuedFollowUps;
   if (options.messages !== false) snapshot.messages = display.messages;
-  return {
-    snapshot,
-    session,
-    reads: { ...reads, presentation: snapshot.workspace } satisfies SnapshotReads,
-    sessionRead,
-  };
+  return { snapshot, session };
 };

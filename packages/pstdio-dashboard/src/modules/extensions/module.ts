@@ -86,6 +86,36 @@ const hasEditableTemplateAssets = (metadata: ResolvedWorkbenchExtensionMetadata)
   return (metadata.templates ?? []).some((template) => providerExtensionIds.has(template.extensionId));
 };
 
+const createExtensionModuleCatalog = (
+  input: CreateExtensionsModuleInput,
+  queries: ScopedQueryClient,
+  owner: ReturnType<typeof getRuntimeCollections>,
+) => {
+  const namespace = input.loadMetadata || input.loadAppearance ? crypto.randomUUID() : undefined;
+  const customReads = new Set<import("@pstdio/sdk/extensions").ScopedQuery<unknown>>();
+  const catalog = (projectId: string) => {
+    const result = getProjectExtensionQueries(projectId, {
+      ...input,
+      owner,
+      namespace,
+      queries,
+    });
+    if (namespace) {
+      customReads.add(result.metadata);
+      customReads.add(result.appearance);
+      for (const query of customReads) if (query.isDisposed()) customReads.delete(query);
+    }
+    return result;
+  };
+  return {
+    query: catalog,
+    dispose() {
+      for (const query of customReads) query.dispose();
+      customReads.clear();
+    },
+  };
+};
+
 export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) =>
   ({
     id: "dashboard.extensions",
@@ -94,22 +124,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
       const owner = getRuntimeCollections();
       const executeCommand = input.executeCommand ?? executeExtensionCommand;
       const sharedQueries = getDashboardScopedQueries(owner);
-      const namespace = input.loadMetadata || input.loadAppearance ? crypto.randomUUID() : undefined;
-      const customReads = new Set<import("@pstdio/sdk/extensions").ScopedQuery<unknown>>();
-      const catalog = (projectId: string) => {
-        const result = getProjectExtensionQueries(projectId, {
-          ...input,
-          owner,
-          namespace,
-          queries: input.queries ?? sharedQueries,
-        });
-        if (namespace) {
-          customReads.add(result.metadata);
-          customReads.add(result.appearance);
-          for (const query of customReads) if (query.isDisposed()) customReads.delete(query);
-        }
-        return result;
-      };
+      const catalog = createExtensionModuleCatalog(input, input.queries ?? sharedQueries, owner);
       let projectId = getDashboardSelectedProjectId(ctx);
       let metadata: ResolvedWorkbenchExtensionMetadata | undefined;
       let appearanceDisposable: ReturnType<typeof registerExtensionAppearance> | undefined;
@@ -245,7 +260,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           clearDashboardExtensionsRegisteredProject(ctx);
         },
         fallback: () => emptyDashboardExtensionMetadata,
-        query: (id) => catalog(id).metadata,
+        query: (id) => catalog.query(id).metadata,
       });
       const appearanceRefresh = createExtensionQueryObservation<ListExtensionAppearanceResponse>({
         isAvailable: () => !owner.isDisposed() && !(input.queries ?? sharedQueries).isDisposed(),
@@ -256,7 +271,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           if (rawMetadata) applyMetadata(nextProjectId, rawMetadata);
         },
         fallback: () => undefined,
-        query: (id) => catalog(id).appearance,
+        query: (id) => catalog.query(id).appearance,
       });
 
       const refreshProject = () => {
@@ -338,8 +353,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           unsubscribeSync();
           unsubscribeViewData();
           unsubscribeResourceData();
-          for (const query of customReads) query.dispose();
-          customReads.clear();
+          catalog.dispose();
         },
       };
     },

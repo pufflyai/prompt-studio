@@ -419,7 +419,6 @@ test("a saved read-only queue checkpoint yields to the next editable online owne
   let reads = 0;
   let checkpoint = false;
   let closed = 0;
-  let changed: (() => void) | undefined;
   const ctx = makeCommandContext({
     storage: createMemoryStorage({ indexes: [nativeSubmissionIndex] }),
     params: {},
@@ -434,10 +433,6 @@ test("a saved read-only queue checkpoint yields to the next editable online owne
         },
       },
       sessions: {
-        observeMetadata: async (_id, notify) => {
-          changed = () => notify("session");
-          return { close() {} };
-        },
         get: async () => ({ ...session, status: "in_progress" }),
         getExecutionState: async () => ({
           kind: "remote",
@@ -455,7 +450,6 @@ test("a saved read-only queue checkpoint yields to the next editable online owne
         }),
         stream: async (_id, onEvent) => {
           await onEvent({ event: "queued_messages", data: { messages: [], queue: { ...queue, readOnly: true } } });
-          changed!();
           await new Promise<void>((resolve) => {
             if (controller.signal.aborted) resolve();
             else controller.signal.addEventListener("abort", () => resolve(), { once: true });
@@ -519,7 +513,6 @@ test("a late queue refresh cannot overwrite a newer stream steering capability",
   let onQueue: (() => Promise<void>) | undefined;
   let reads = 0;
   let closed = 0;
-  let changed: (() => void) | undefined;
   const ctx = makeCommandContext({
     storage: createMemoryStorage({ indexes: [nativeSubmissionIndex] }),
     params: {},
@@ -532,10 +525,6 @@ test("a late queue refresh cannot overwrite a newer stream steering capability",
         },
       },
       sessions: {
-        observeMetadata: async (_id, notify) => {
-          changed = () => notify("session");
-          return { close() {} };
-        },
         get: async () => session,
         getExecutionState: async () => {
           if (++reads === 2) {
@@ -569,12 +558,9 @@ test("a late queue refresh cannot overwrite a newer stream steering capability",
   const watching = watchConversation(ctx, { type: "session", id: "s" });
   try {
     await connected.promise;
-    changed!();
     await refreshing.promise;
     await onQueue!();
     releaseRefresh.resolve();
-    await Bun.sleep(0);
-    controller.abort();
     await watching;
     expect(
       events.flatMap((event) =>

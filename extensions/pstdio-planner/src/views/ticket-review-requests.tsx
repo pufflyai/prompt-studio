@@ -2,7 +2,6 @@ import "@pstdio/ui/style.css";
 import { Stack, Text } from "@chakra-ui/react";
 import {
   createWebviewClient,
-  createWebviewQueryClient,
   defineExtensionView,
   type GuestHost,
   type PropsStore,
@@ -14,8 +13,7 @@ import { createRoot } from "react-dom/client";
 import type { listReviewRequestsCommand, openReviewRequestCommand, reviewCommand } from "../commands/review-requests";
 import { plannerTicketsChanged } from "../events";
 import { RequestsPanel } from "../timeline/view/requests-panel";
-import { usePlannerQuery } from "../timeline/view/use-planner-query";
-import { PlannerReadError } from "./planner-read-error";
+import { useLiveValue } from "../timeline/view/use-live-value";
 
 type Commands = {
   "review-requests.list": typeof listReviewRequestsCommand;
@@ -32,11 +30,10 @@ interface HostProps {
 function TicketRequests(props: { host: GuestHost; resource: ResourceRef }) {
   const { host, resource } = props;
   const [client] = useState(() => createWebviewClient<Commands>(host));
-  const { value, error, retry } = usePlannerQuery(client, "ticket-requests", read, events, resource.id);
+  const { value } = useLiveValue(client, read, events, resource.id);
   return (
     <ScrollArea h="full">
       <Stack p="md" gap="md" w="full" maxW="2xl" mx="auto">
-        <PlannerReadError error={error} retry={retry} />
         <Text textStyle="label/L/medium">{resource.label ?? resource.shorthand}</Text>
         {value ? (
           <RequestsPanel
@@ -45,7 +42,7 @@ function TicketRequests(props: { host: GuestHost; resource: ResourceRef }) {
             onOpenChat={(requestId) => client.commands["review-requests.open"]({ requestId })}
           />
         ) : null}
-        {!value && !error ? <Text>Loading requests…</Text> : null}
+        {!value ? <Text>Loading requests…</Text> : null}
       </Stack>
     </ScrollArea>
   );
@@ -66,9 +63,6 @@ export default defineExtensionView<HostProps>({
         <TicketRequestsRoot host={host} propsStore={propsStore} />
       </ChakraProvider>,
     );
-    return () => {
-      root.unmount();
-      createWebviewQueryClient(host).dispose();
-    };
+    return () => root.unmount();
   },
 });

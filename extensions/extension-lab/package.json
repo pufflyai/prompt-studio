@@ -6,8 +6,7 @@
   "publisher": "pstdio",
   "main": "./extension.ts",
   "exports": {
-    "./contracts": "./src/contracts.ts",
-    "./testing": "./src/testing.ts"
+    "./contracts": "./src/contracts.ts"
   },
   "engines": {
     "pstdio": "^0.4.0"
@@ -24,20 +23,17 @@
     "@emotion/react": "^11.0.0",
     "@pstdio/sdk": "0.47.0-preview.sha-32f3947e89f98a0abcb3ee8ddba2efe30061a893",
     "@pstdio/ui": "0.47.0-preview.sha-32f3947e89f98a0abcb3ee8ddba2efe30061a893",
-    "lucide-react": "^0.556.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "three": "^0.185.1",
-    "zustand": "^5.0.8"
+    "lucide-react": "^0.556.0"
   },
   "devDependencies": {
     "@types/bun": "1.4.4",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@types/react-test-renderer": "^19.1.0",
-    "@types/three": "^0.185.4",
-    "react-test-renderer": "19.2.4",
-    "typescript": "6.0.2"
+    "typescript": "6.0.2",
+    "@types/three": "^0.185.4"
   },
   "icon": "FlaskConical"
 }

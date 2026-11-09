@@ -11,7 +11,6 @@ import type { Turn } from "./protocol/v2/Turn";
 import type { ResumeSpawnInput, StartSpawnInput } from "./session-input";
 import { stopNativeThread } from "./stop-native-thread";
 import { codexTurnRequest } from "./turn-request";
-import { createCodexWorkerRequest } from "./worker-request";
 
 const needsNativeTurn = (command?: NativeOperation) => !command || command.method === "thread/compact/start";
 const knownNotStarted = (deliveryAttempted: boolean, error: unknown) =>
@@ -53,7 +52,6 @@ export const createCodexWorker = (
   input: StartSpawnInput,
   rpc: ReturnType<typeof createAppServerTransport>,
   identity: string,
-  commandStateChanged?: () => void,
 ) => {
   let closed = false;
   const disposal = new AbortController();
@@ -63,20 +61,11 @@ export const createCodexWorker = (
     receive: (message: import("./app-server-rpc").RpcMessage) => {
       thread.receive(message);
       active?.receive(message);
-      if (
-        message.method?.startsWith("thread/goal/") ||
-        message.method === "turn/completed" ||
-        message.method === "thread/settings/updated" ||
-        (message.method === "item/completed" &&
-          (message.params?.item as { type?: string } | undefined)?.type === "plan")
-      )
-        commandStateChanged?.();
     },
     disconnect: () => {
       closed = true;
       thread.disconnect();
       active?.finish({ status: "disconnected" });
-      commandStateChanged?.();
     },
   };
   rpc.retain(owner);
@@ -84,10 +73,7 @@ export const createCodexWorker = (
   const load = (run: StartSpawnInput & Partial<ResumeSpawnInput>) => {
     if (closed) throw new Error("Codex owner disposed.");
     const signal = run.signal ? AbortSignal.any([run.signal, disposal.signal]) : disposal.signal;
-    return thread.load({ ...run, signal }).then((id) => {
-      commandStateChanged?.();
-      return id;
-    });
+    return thread.load({ ...run, signal });
   };
   const ready = rpc.ready;
   const lost = () => {
@@ -202,27 +188,36 @@ export const createCodexWorker = (
     readModel: async (id: string) => {
       if (thread.id() === id && thread.model()) return thread.model();
       await ready;
-      const result = (await rpc.request(
-        "thread/read",
-        { threadId: id, includeTurns: false },
-        undefined,
-        disposal.signal,
-      )) as {
-        thread: { model?: string | null };
-      };
-      return result.thread.model ?? undefined;
+      // Resume exposes native configuration; omit overrides so discovery cannot apply next-turn settings.
+      await load({ ...input, agentSessionId: id, model: undefined, params: undefined });
+      return thread.model();
     },
-    request: createCodexWorkerRequest({
-      rpc,
-      initial: input,
-      pending,
-      track,
-      load,
-      closed: () => closed,
-      signal: disposal.signal,
-      threadId: thread.id,
-      nativeTurn: thread.nativeTurn,
-    }),
+    request: (method: string, params: Record<string, unknown>, signal?: AbortSignal) => {
+      const previous = [...pending];
+      return track(
+        (async () => {
+          signal?.throwIfAborted();
+          await ready;
+          const readOnly = ["thread/read", "thread/goal/get", "config/read"].includes(method);
+          if (!readOnly) await Promise.allSettled(previous);
+          if (!readOnly && params.threadId)
+            await load({
+              ...input,
+              signal,
+              agentSessionId: String(params.threadId),
+              model: undefined,
+              params: undefined,
+            });
+          signal?.throwIfAborted();
+          if (closed) throw new Error("Codex owner disposed.");
+          const readSignal = signal ? AbortSignal.any([signal, disposal.signal]) : disposal.signal;
+          const result = await rpc.request(method, params, undefined, readOnly ? readSignal : undefined);
+          if (!readOnly && signal?.aborted && thread.id()) await stopNativeThread(rpc, thread.id()!, thread.nativeTurn);
+          signal?.throwIfAborted();
+          return result;
+        })(),
+      );
+    },
     readMessages: async (id: string) => {
       await ready;
       const result = (await rpc.request("thread/read", { threadId: id, includeTurns: true })) as {
@@ -243,7 +238,6 @@ export const createCodexWorker = (
           try {
             await rpc.release(owner);
             disposal.abort();
-            commandStateChanged?.();
             return true;
           } catch (error) {
             closed = rpc.isClosed();

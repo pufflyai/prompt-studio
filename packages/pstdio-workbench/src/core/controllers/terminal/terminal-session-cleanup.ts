@@ -1,5 +1,15 @@
 import type { WorkbenchTerminalSessionAdapter, WorkbenchTerminalSessionModel } from "./terminal-controller-types";
 
+const collectCleanupFailures = (errors: unknown[], effects: (() => void)[]) => {
+  for (const effect of effects) {
+    try {
+      effect();
+    } catch (error) {
+      errors.push(error);
+    }
+  }
+};
+
 /** Coalesce reentrant kills and release every subscription/binding even when a host adapter fails. */
 export const createTerminalSessionCleanup = (input: {
   adapters: Map<string, WorkbenchTerminalSessionAdapter>;
@@ -26,16 +36,10 @@ export const createTerminalSessionCleanup = (input: {
         if (!disposal) throw error;
         errors.push(error);
       }
-      try {
-        input.patchKilled(request.sessionId);
-      } catch (error) {
-        errors.push(error);
-      }
-      try {
-        input.cleanup(request.sessionId);
-      } catch (error) {
-        errors.push(error);
-      }
+      collectCleanupFailures(errors, [
+        () => input.patchKilled(request.sessionId),
+        () => input.cleanup(request.sessionId),
+      ]);
       if (errors.length === 1) throw errors[0];
       if (errors.length) throw new AggregateError(errors, "Terminal cleanup failed");
     };

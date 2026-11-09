@@ -6,14 +6,14 @@ import type { MarmaladeTool } from "./marmalade.types";
 import { marmaladeStore, useMarmalade } from "./marmalade-store";
 
 export const MarmaladeNav = () => {
-  const title = useMarmalade((projection) => projection.state.document.title);
+  const { state } = useMarmalade();
   return (
     <HStack h="full" px="sm" gap="sm">
       <BackToProject />
       <ExampleIcon name="Image" />
       <Text textStyle="label/M/medium">Marmalade</Text>
       <Text textStyle="label/S/regular" color="fg.muted" truncate>
-        {title}
+        {state.document.title}
       </Text>
       <Box flex="1" />
       <Button size="xs" variant="ghost" onClick={() => void marmaladeStore.dispatch({ type: "empty" })}>
@@ -35,7 +35,7 @@ const tools: { id: MarmaladeTool; label: string; icon: string }[] = [
   { id: "zoom", label: "Zoom tool", icon: "ZoomIn" },
 ];
 export const MarmaladeRail = () => {
-  const selectedTool = useMarmalade((projection) => projection.state.tool);
+  const { state } = useMarmalade();
   return (
     <ScrollArea h="full">
       <Stack align="center" gap="xs" py="sm" role="toolbar" aria-label="Marmalade tools">
@@ -43,8 +43,8 @@ export const MarmaladeRail = () => {
           <Tooltip key={tool.id} content={tool.label}>
             <IconButton
               aria-label={tool.label}
-              aria-pressed={selectedTool === tool.id}
-              variant={selectedTool === tool.id ? "subtle" : "ghost"}
+              aria-pressed={state.tool === tool.id}
+              variant={state.tool === tool.id ? "subtle" : "ghost"}
               size="xs"
               onClick={() => void marmaladeStore.dispatch({ type: "tool", tool: tool.id })}
             >
@@ -57,19 +57,15 @@ export const MarmaladeRail = () => {
   );
 };
 export const MarmaladeStatus = () => {
-  const zoom = useMarmalade((projection) => Math.round(projection.state.zoom * 100));
-  const width = useMarmalade((projection) => projection.state.document.width);
-  const height = useMarmalade((projection) => projection.state.document.height);
-  const layers = useMarmalade((projection) => projection.state.document.layers.length);
-  const selected = useMarmalade((projection) => projection.state.selectedIds.length);
+  const { state } = useMarmalade();
   return (
     <HStack h="full" px="sm" gap="md" aria-label="Marmalade status">
-      <Text textStyle="label/XS">{zoom}%</Text>
+      <Text textStyle="label/XS">{Math.round(state.zoom * 100)}%</Text>
       <Text textStyle="label/XS" color="fg.muted">
-        {width} × {height} · RGB/8
+        {state.document.width} × {state.document.height} · RGB/8
       </Text>
       <Text textStyle="label/XS" color="fg.muted">
-        {layers} layers · {selected} selected
+        {state.document.layers.length} layers · {state.selectedIds.length} selected
       </Text>
     </HStack>
   );

@@ -13,7 +13,7 @@ import type { TicketContext } from "../data/ticket-identity";
 import { withTicketTagIds } from "../data/ticket-tags";
 import type { Ticket } from "../data/types";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "../data/workflow-statuses";
-import { emitPlannerTicketsChanged } from "../events";
+import { plannerTicketsChanged } from "../events";
 import { notifyBlocked, resolveBlockedNotification } from "../planner-notifications";
 import { deriveTitle } from "../utils/derive-title";
 
@@ -78,7 +78,7 @@ export const updateTicketCommand = defineCommand({
       updatedAt: new Date().toISOString(),
     };
     const next = await updateTicket(ctx, draft);
-    await emitPlannerTicketsChanged(ctx, { ticketId: existing.id });
+    await ctx.events.emit(plannerTicketsChanged, { ticketId: existing.id });
     await syncBlockedNotificationSafely(ctx, existing, next);
     return withTicketTagIds(next);
   },

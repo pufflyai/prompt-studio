@@ -48,8 +48,7 @@ const layerNodes = (state: MarmaladeState, dispatch: (action: MarmaladeAction) =
 };
 
 export const MarmaladeInspector = () => {
-  const state = useMarmalade((projection) => projection.state);
-  const error = useMarmalade((projection) => projection.error);
+  const { state, error } = useMarmalade();
   const buttonRecipe = useRecipe({ recipe: psTheme.getRecipe("button") });
   const layer = state.document.layers.find((item) => item.id === state.selectedIds[0]);
   const dispatch = (action: MarmaladeAction) => {

@@ -2,7 +2,7 @@ import { defineCommand, type ExtensionContextBase, params } from "@pstdio/sdk/ex
 import { putTicket, ticketsCollection } from "../data/collections";
 import { ticketWithAttributes } from "../data/ticket-attributes";
 import { withTicketTagIds } from "../data/ticket-tags";
-import { emitPlannerTicketsChanged } from "../events";
+import { plannerTicketsChanged } from "../events";
 import { moveTicketInPlan } from "../timeline/commands/move-ticket";
 
 export const setTicketAttribute = async (
@@ -21,7 +21,7 @@ export const setTicketAttribute = async (
   const next = await ticketWithAttributes(ctx.storage, existing, { [input.attributeId]: input.value });
   if (next === existing) return existing;
   const ticket = await putTicket(ctx, { ...next, updatedAt: new Date().toISOString() });
-  await emitPlannerTicketsChanged(ctx, { ticketId: ticket.id });
+  await ctx.events.emit(plannerTicketsChanged, { ticketId: ticket.id });
   return ticket;
 };
 

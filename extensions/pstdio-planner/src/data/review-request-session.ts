@@ -1,6 +1,6 @@
 // Start a request conversation only after the person opens it.
 import type { CommandContext, ResourceAnchor } from "@pstdio/sdk/extensions";
-import { emitPlannerTicketsChanged } from "../events";
+import { plannerTicketsChanged } from "../events";
 import { readAttempt } from "./attempt-storage";
 import type { AttemptRecord } from "./attempt-types";
 import { findTicket } from "./resolve";
@@ -106,7 +106,7 @@ const startReviewRequestSession = async (ctx: CommandContext, requestId: string)
     ...request,
     context: { ...request.context, sessionId: session.id },
   });
-  await emitPlannerTicketsChanged(ctx, { ticketId: request.ticketId });
+  await ctx.events.emit(plannerTicketsChanged, { ticketId: request.ticketId });
   return session;
 };
 

@@ -2,37 +2,6 @@ import { expect, test } from "bun:test";
 import { createMemoryRepoFiles, createMemoryStorage, makeCommandArgs } from "@pstdio/sdk/testing";
 import { commands } from "./commands";
 
-test("artifact mutations identify their changed resource for scoped query invalidation", async () => {
-  const storage = createMemoryStorage();
-  const projectFiles = createMemoryRepoFiles();
-  const snapshots = createMemoryRepoFiles();
-  const changes: unknown[] = [];
-  await projectFiles.writeText("page.html", "<title>Scoped artifact</title>");
-  const [ctx] = makeCommandArgs({
-    storage,
-    params: {},
-    overrides: {
-      projectFiles,
-      artifacts: { mount: () => snapshots },
-      events: {
-        emit: async (_event, _payload, options) => {
-          changes.push(options?.refresh);
-          return { delivered: 0 };
-        },
-      },
-    },
-  });
-  const published = await commands.publish.run(ctx, { file_path: "page.html" });
-  await commands.rename.run(ctx, { url: published.url, name: "Renamed" });
-  await commands.delete.run(ctx, { url: published.url });
-  expect(changes).toEqual(
-    Array.from({ length: 3 }, () => ({
-      extensionId: "pstdio.pstdio-artifacts",
-      resourceIds: [published.artifactId],
-    })),
-  );
-});
-
 test("publishing allocates artifact and revision identities through core", async () => {
   const storage = createMemoryStorage();
   const allocate = storage.ids.create;

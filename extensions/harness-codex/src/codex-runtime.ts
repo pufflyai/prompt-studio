@@ -1,7 +1,6 @@
 import { createAppServerTransport, serverEnvironment } from "./app-server-transport";
 import { createCodexWorker } from "./app-server-worker";
 import { defaultSpawnProcess, resolveCodexCommand, type SpawnDeps } from "./codex-process";
-import { createCodexCommandObservers, readCodexCommandFingerprint } from "./command-observation";
 import { nativeThreadMessages } from "./native-history";
 import type { Turn } from "./protocol/v2/Turn";
 import type { ResumeSpawnInput, StartSpawnInput } from "./session-input";
@@ -39,23 +38,12 @@ export const createCodexRuntime = (deps: SpawnDeps = { spawnProcess: defaultSpaw
     JSON.stringify([input.env?.PSTDIO_PROJECT_ID, input.env?.PSTDIO_SESSION_ID ?? input.agentSessionId]);
   const keyOf = (input: Pick<StartSpawnInput & Partial<ResumeSpawnInput>, "env" | "agentSessionId" | "cwd">) =>
     JSON.stringify([serverKey(input.env), identity(input)]);
-  const commandObservers = createCodexCommandObservers<Parameters<typeof keyOf>[0]>({
-    key: keyOf,
-    covered: (input) =>
-      !input.agentSessionId ||
-      (workers.get(keyOf(input))?.worker.threadId() === input.agentSessionId &&
-        !workers.get(keyOf(input))?.worker.isClosed()),
-    read: async (input, signal) => {
-      const current = worker({ ...input, prompt: "", events: { getMessages: () => [], push: () => {} } });
-      return readCodexCommandFingerprint(current.request, input.agentSessionId!, signal);
-    },
-  });
   const worker = (input: StartSpawnInput & Partial<ResumeSpawnInput>) => {
     input.signal?.throwIfAborted();
     const key = keyOf(input);
     let owned = workers.get(key)?.worker;
     if (!owned || owned.isClosed()) {
-      owned = createCodexWorker(input, server(input.env), identity(input), () => commandObservers.changed(key));
+      owned = createCodexWorker(input, server(input.env), identity(input));
       workers.set(key, {
         projectId: input.env?.PSTDIO_PROJECT_ID,
         sessionId: input.env?.PSTDIO_SESSION_ID,
@@ -90,7 +78,6 @@ export const createCodexRuntime = (deps: SpawnDeps = { spawnProcess: defaultSpaw
     }
   };
   return {
-    observeCommands: commandObservers.observe,
     worker,
     refreshAuthentication: async () => {
       authenticationGeneration++;
@@ -193,7 +180,6 @@ export const createCodexRuntime = (deps: SpawnDeps = { spawnProcess: defaultSpaw
       })();
     },
     dispose: async () => {
-      commandObservers.close(undefined, true);
       // Shutdown ends the entire provider generation, including any unanswered native requests.
       const owned = [...workers.values()];
       workers.clear();
@@ -204,7 +190,6 @@ export const createCodexRuntime = (deps: SpawnDeps = { spawnProcess: defaultSpaw
       servers.clear();
     },
     disposeScope: async (projectId?: string) => {
-      commandObservers.close(projectId);
       const selected = [...workers.entries()].filter(([, value]) => value.projectId === projectId);
       await disposeReaders(projectId);
       await Promise.all(

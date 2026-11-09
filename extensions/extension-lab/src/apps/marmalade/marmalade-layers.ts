@@ -1,10 +1,5 @@
 import type { MarmaladeLayer, MarmaladeState } from "./marmalade.types";
 
-export const setMarmaladeParent = (layer: MarmaladeLayer, parentId: string | undefined) => {
-  if (parentId === undefined) delete layer.parentId;
-  else layer.parentId = parentId;
-};
-
 export const findLayer = (state: MarmaladeState, id: string) => {
   const layer = state.document.layers.find((item) => item.id === id);
   if (!layer) throw new Error(`Unknown layer: ${id}`);

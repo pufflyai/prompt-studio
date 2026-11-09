@@ -3,7 +3,7 @@ import { ticketsCollection } from "../data/collections";
 import { selectedDocumentFromResource, TICKET_BODY_DOCUMENT } from "../data/document-selection";
 import { updateTicketFile } from "../data/file-operations";
 import { findTicket } from "../data/resolve";
-import { emitPlannerTicketsChanged } from "../events";
+import { plannerTicketsChanged } from "../events";
 import { deriveTitle } from "../utils/derive-title";
 
 export const saveTicketContent = async (
@@ -26,7 +26,7 @@ export const saveTicketContent = async (
       fileId: documentId,
       content: input.content,
     });
-    await emitPlannerTicketsChanged(ctx, { ticketId: existing.id });
+    await ctx.events.emit(plannerTicketsChanged, { ticketId: existing.id });
     return ticket ? { revision: ticket.updatedAt } : null;
   }
 
@@ -37,7 +37,7 @@ export const saveTicketContent = async (
     updatedAt: new Date().toISOString(),
   };
   await ticketsCollection(ctx).update(existing.id, next);
-  await emitPlannerTicketsChanged(ctx, { ticketId: existing.id });
+  await ctx.events.emit(plannerTicketsChanged, { ticketId: existing.id });
   return { revision: next.updatedAt };
 };
 

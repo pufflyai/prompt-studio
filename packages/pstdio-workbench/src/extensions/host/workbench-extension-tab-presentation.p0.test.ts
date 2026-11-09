@@ -82,6 +82,7 @@ test("a reused viewer queries its new resource and rejects an old resource's lat
 
 test("keeps the loaded tab title and actions while an autosave refresh is pending", async () => {
   const requests: Array<ReturnType<typeof Promise.withResolvers<unknown>>> = [];
+  const refreshedRead = Promise.withResolvers<void>();
   let refresh!: (event: { id: string }) => void;
   const input: RegisterWorkbenchExtensionContributionsInput = {
     workbench: createWorkbench(),
@@ -90,6 +91,7 @@ test("keeps the loaded tab title and actions while an autosave refresh is pendin
     executeCommand: () => {
       const request = Promise.withResolvers<unknown>();
       requests.push(request);
+      if (requests.length === 2) refreshedRead.resolve();
       return request.promise;
     },
     subscribeRefreshEvents: (listener: typeof refresh) => {
@@ -120,6 +122,7 @@ test("keeps the loaded tab title and actions while an autosave refresh is pendin
   const saved = tab.getSnapshot(instance);
   refresh({ id: "notes.changed" });
   expect(tab.getSnapshot(instance)).toBe(saved);
+  await refreshedRead.promise;
   requests[1].resolve({ label: "Renamed note", menu: [{ id: "note", rows: [{ id: "delete", label: "Delete" }] }] });
   await new Promise<void>((resolve) => setImmediate(resolve));
   expect(tab.getSnapshot(instance)).toBe(saved);

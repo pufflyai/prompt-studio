@@ -17,11 +17,10 @@ interface FieldProps {
   disabled?: boolean;
   min?: number;
   max?: number;
-  required?: boolean;
-  action(value: string): MarmaladeAction | undefined;
+  onEdit(value: string): void | Promise<void>;
 }
 const Field = (props: FieldProps) => {
-  const { label, value, numeric, disabled, min, max, required, action } = props;
+  const { label, value, numeric, disabled, min, max, onEdit } = props;
   const id = `marmalade-${label.toLowerCase().replaceAll(" ", "-")}`;
   return (
     <Stack gap="2xs" minW="0">
@@ -36,13 +35,7 @@ const Field = (props: FieldProps) => {
         disabled={disabled}
         min={min}
         max={max}
-        required={required}
-        onPreview={(value) => {
-          const next = action(value);
-          if (next) return marmaladeStore.preview(next, "defocus");
-        }}
-        onEdit={() => marmaladeStore.commitPreview()}
-        onCancel={() => marmaladeStore.cancelPreview()}
+        onEdit={onEdit}
       />
     </Stack>
   );
@@ -51,19 +44,22 @@ export const MarmaladeProperties = (props: { state: MarmaladeState; layer: Marma
   const { state, layer } = props;
   const disabled = marmaladeLocked(state, layer);
   const dispatch = (action: MarmaladeAction) => marmaladeStore.dispatch(action);
-  const properties = (changes: Partial<LayerProperties>) => ({
-    type: "properties" as const,
-    id: layer.id,
-    changes,
-  });
-  const property = (changes: Partial<LayerProperties>) => dispatch(properties(changes));
-  const number = (raw: string, change: (value: number) => MarmaladeAction) =>
-    raw && Number.isFinite(Number(raw)) ? change(Number(raw)) : undefined;
+  const property = (changes: Partial<LayerProperties>) => dispatch({ type: "properties", id: layer.id, changes });
+  const number = (raw: string, change: (value: number) => void | Promise<void>) => {
+    if (raw && Number.isFinite(Number(raw))) return change(Number(raw));
+  };
   const adjustment = { ...defaultAdjustments, ...layer.adjustments };
   return (
     <Stack gap="sm" p="sm" borderBottomWidth="1px" borderColor="border.subtle">
       <Text textStyle="label/S/medium">Properties</Text>
-      <Field label="Name" value={layer.name} disabled={disabled} required action={(name) => properties({ name })} />
+      <Field
+        label="Name"
+        value={layer.name}
+        disabled={disabled}
+        onEdit={(name) => {
+          if (name.trim()) return property({ name });
+        }}
+      />
       <SimpleGrid columns={2} gap="sm">
         {(["x", "y"] as const).map((axis) => (
           <Field
@@ -72,7 +68,7 @@ export const MarmaladeProperties = (props: { state: MarmaladeState; layer: Marma
             value={layer[axis]}
             numeric
             disabled={disabled}
-            action={(raw) => number(raw, (value) => ({ type: "position", id: layer.id, [axis]: value }))}
+            onEdit={(raw) => number(raw, (value) => dispatch({ type: "position", id: layer.id, [axis]: value }))}
           />
         ))}
         {(["width", "height"] as const).map((key) => (
@@ -83,7 +79,11 @@ export const MarmaladeProperties = (props: { state: MarmaladeState; layer: Marma
             numeric
             min={1}
             disabled={disabled || layer.kind === "group"}
-            action={(raw) => number(raw, (value) => properties({ [key]: value }))}
+            onEdit={(raw) =>
+              number(raw, (value) => {
+                if (value > 0) return property({ [key]: value });
+              })
+            }
           />
         ))}
         <Field
@@ -93,7 +93,7 @@ export const MarmaladeProperties = (props: { state: MarmaladeState; layer: Marma
           min={-360}
           max={360}
           disabled={disabled || layer.kind === "group"}
-          action={(raw) => number(raw, (rotation) => properties({ rotation }))}
+          onEdit={(raw) => number(raw, (rotation) => property({ rotation }))}
         />
         <Field
           label="Opacity"
@@ -102,7 +102,7 @@ export const MarmaladeProperties = (props: { state: MarmaladeState; layer: Marma
           min={0}
           max={100}
           disabled={disabled}
-          action={(raw) => number(raw, (value) => ({ type: "opacity", id: layer.id, opacity: value / 100 }))}
+          onEdit={(raw) => number(raw, (value) => dispatch({ type: "opacity", id: layer.id, opacity: value / 100 }))}
         />
       </SimpleGrid>
       {layer.kind === "text" ? (
@@ -111,7 +111,7 @@ export const MarmaladeProperties = (props: { state: MarmaladeState; layer: Marma
             label="Text"
             value={layer.text ?? ""}
             disabled={disabled}
-            action={(text) => ({ type: "text", id: layer.id, text })}
+            onEdit={(text) => dispatch({ type: "text", id: layer.id, text })}
           />
           <SimpleGrid columns={2} gap="sm">
             <Field
@@ -121,7 +121,11 @@ export const MarmaladeProperties = (props: { state: MarmaladeState; layer: Marma
               min={1}
               max={500}
               disabled={disabled}
-              action={(raw) => number(raw, (fontSize) => properties({ fontSize }))}
+              onEdit={(raw) =>
+                number(raw, (fontSize) => {
+                  if (fontSize > 0) return property({ fontSize });
+                })
+              }
             />
             <ParamEditor
               variant="small"
@@ -190,7 +194,11 @@ export const MarmaladeProperties = (props: { state: MarmaladeState; layer: Marma
           disabled={disabled}
           min={1}
           max={100}
-          action={(raw) => number(raw, (strokeWidth) => properties({ strokeWidth }))}
+          onEdit={(raw) =>
+            number(raw, (strokeWidth) => {
+              if (strokeWidth > 0) return property({ strokeWidth });
+            })
+          }
         />
       ) : null}
       {layer.kind === "text" || layer.kind === "shape" || layer.kind === "brush" ? (
@@ -220,8 +228,8 @@ export const MarmaladeProperties = (props: { state: MarmaladeState; layer: Marma
               min={0}
               max={key === "blur" ? 30 : 200}
               disabled={disabled}
-              action={(raw) =>
-                number(raw, (value) => ({ type: "adjustments", id: layer.id, changes: { [key]: value } }))
+              onEdit={(raw) =>
+                number(raw, (value) => dispatch({ type: "adjustments", id: layer.id, changes: { [key]: value } }))
               }
             />
           ))}

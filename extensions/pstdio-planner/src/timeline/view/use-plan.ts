@@ -10,7 +10,7 @@ import type { setTicketAttributeCommand } from "../../commands/set-ticket-attrib
 import type { commands } from "../commands/index";
 import { planChanged } from "../contracts";
 import { plannerTicketsChanged } from "../planner";
-import { usePlannerQuery } from "./use-planner-query";
+import { useLiveValue } from "./use-live-value";
 
 // The timeline answers Planner review requests through the same commands as the CLI.
 type PlanCommands = typeof commands & {
@@ -40,6 +40,6 @@ const planEvents = [
 
 export function usePlan(host: GuestHost) {
   const [client] = useState(() => createWebviewClient<PlanCommands>(host));
-  const { value: plan, error, retry } = usePlannerQuery(client, "timeline", readPlan, planEvents);
-  return { client, plan, error, retry };
+  const { value: plan } = useLiveValue(client, readPlan, planEvents);
+  return { client, plan };
 }

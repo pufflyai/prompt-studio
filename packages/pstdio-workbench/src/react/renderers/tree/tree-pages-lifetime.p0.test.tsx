@@ -159,7 +159,8 @@ test("returning while a cancelled later-page child drains resumes its shared rea
           nextPage: async () => ({ nodes: [{ id: "folder", label: "Folder", collapsible: true }] }),
         },
       ],
-      getChildren: async (_node, ctx) => {
+      getChildren: async (node, ctx) => {
+        expect(node.children).toBeUndefined();
         signal = ctx.signal!;
         return ++childReads === 1 ? held.promise : [{ id: "fresh", label: "Fresh" }];
       },
@@ -187,6 +188,10 @@ test("returning while a cancelled later-page child drains resumes its shared rea
     await act(async () => {
       getWorkbenchRenderers(workbench).setNodeExpanded("history", "folder", true);
     });
+    // An optimistic move's partial child projection cannot masquerade as authoritative folder contents.
+    await act(async () =>
+      values.one.loadChildren({ id: "folder", label: "Folder", children: [{ id: "partial", label: "Partial" }] }),
+    );
     expect(childReads).toBe(1);
     await act(async () => renderer!.update(content(false)));
     expect(signal.aborted).toBe(true);
