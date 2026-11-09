@@ -1,4 +1,4 @@
-import type { BrowserWindow, Session, WebContents } from "electron";
+import type { BrowserWindow, Session, WebContents, WindowOpenHandlerResponse } from "electron";
 import { canGrantSessionPermission } from "./session-permissions";
 import { CONTENT_SECURITY_POLICY, decideNavigation } from "./window-security";
 
@@ -6,6 +6,8 @@ type WindowSecurityOptions = {
   lifecycleUrl: string;
   runtimeOrigin: () => string | null;
   openExternal: (url: string) => Promise<void>;
+  /** PS-1128 prototype: lets the workbench open another app window. Undefined keeps denying. */
+  openAppWindow?: (url: string) => WindowOpenHandlerResponse | undefined;
 };
 
 export const secureSession = (session: Session, runtimeOrigin: () => string | null) => {
@@ -53,6 +55,8 @@ export const secureWebContents = (webContents: WebContents, options: WindowSecur
   });
   webContents.on("will-attach-webview", (event) => event.preventDefault());
   webContents.setWindowOpenHandler(({ url }) => {
+    const appWindow = options.openAppWindow?.(url);
+    if (appWindow) return appWindow;
     if (decide(url) === "external") void options.openExternal(url);
     return { action: "deny" };
   });

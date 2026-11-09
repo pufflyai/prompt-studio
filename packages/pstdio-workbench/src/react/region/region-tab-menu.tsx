@@ -1,8 +1,9 @@
 import { type UseMenuReturn, VisuallyHidden } from "@chakra-ui/react";
 import { ScopedMenu as Menu, Portal, type ResourceContextAction, ResourceMenuItems, useUiScope } from "@pstdio/ui";
-import { useId, useRef } from "react";
+import { useId, useRef, useSyncExternalStore } from "react";
 import type { WorkbenchCore, WorkbenchTabMenuGroup, WorkbenchWidgetPlacement } from "../../core";
 import { findPlacementByWidgetId } from "../../core/registries/layout/layout-operations";
+import { createTabWindowTarget, type WorkbenchWindowHost } from "../../core/windows/workbench-windows";
 import { useWorkbenchResourceActionResolver } from "../menus/resource-actions";
 import { createWorkbenchResourceMenu } from "../menus/resource-menu";
 import { WorkbenchIcon } from "../shared/icon";
@@ -15,6 +16,13 @@ interface RegionTabMenuProps {
   placement: WorkbenchWidgetPlacement;
   workbench: WorkbenchCore;
 }
+const noWindows: readonly never[] = [];
+const noSubscription = () => () => {};
+
+// PS-1128 prototype: other windows the tab can move to. Empty when the host has one window.
+const useWindowTargets = (host: WorkbenchWindowHost | undefined) =>
+  useSyncExternalStore(host?.subscribe ?? noSubscription, () => host?.getTargets() ?? noWindows);
+
 export const RegionTabMenu = (props: RegionTabMenuProps) => {
   const { menu, label, groups, placement, workbench } = props;
   const labelId = useId();
@@ -32,6 +40,14 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
     if (placement.placementIdentity) workbench.closePlacement(placement.placementIdentity);
     else workbench.layout.closePanel(placement.widgetId);
   };
+  const windowHost = workbench.windows;
+  const windowTargets = useWindowTargets(windowHost);
+  const windowTarget = windowHost ? createTabWindowTarget(workbench, placement) : undefined;
+  // The tab leaves this window only after the other window accepted it.
+  const moveToWindow = (windowId?: string) => {
+    if (!windowHost || !windowTarget) return;
+    void windowHost.moveTab(windowTarget, windowId).then(close);
+  };
   const tabAction = (
     key: string,
     title: string,
@@ -44,7 +60,22 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
     group: { id: "tab", label: "Tab" },
     ...action,
   });
+  const windowAction = (key: string, title: string, icon: string, windowId?: string) => ({
+    key,
+    label: title,
+    icon: <WorkbenchIcon name={icon} size={14} />,
+    group: { id: "window", label: "Window" },
+    onClick: () => moveToWindow(windowId),
+  });
   const actions = [
+    ...(windowTarget
+      ? [
+          windowAction("move-new-window", "Move to new window", "AppWindow"),
+          ...windowTargets.map((target) =>
+            windowAction(`move-window-${target.id}`, `Move to ${target.label}`, "AppWindowMac", target.id),
+          ),
+        ]
+      : []),
     ...createWorkbenchResourceMenu(workbench, placement.resource, { menu: groups }, placement),
     ...(placement.tabRetention
       ? [tabAction("pin", placement.tabRetention === "preview" ? "Pin tab" : "Unpin tab", "pin", { onSelect: pin })]

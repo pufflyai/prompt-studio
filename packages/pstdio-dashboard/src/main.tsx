@@ -7,6 +7,12 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { getApiClient } from "@/lib/api";
 import { storeBrowserSession, takeBrowserLoginCode, waitForBrowserLoginLink } from "@/lib/browser-session";
+import {
+  createDashboardWindows,
+  createSecondaryWindowStorage,
+  isSecondaryWindow,
+  takeDashboardWindowLaunch,
+} from "@/lib/dashboard-windows";
 import { connectDesktopCommands } from "@/lib/desktop-commands";
 import { resolveDesktopLifecycleBridge } from "@/lib/desktop-lifecycle-bridge";
 import { createDesktopProjectTabs } from "@/lib/desktop-project-tabs-bridge";
@@ -73,18 +79,27 @@ const renderDashboard = async () => {
     return;
   }
 
-  const [storage, projectTabs] = await Promise.all([
+  // PS-1128 prototype: a secondary window shows the same project with its own layout. It reads
+  // the main window's saved state but owns no project tabs, lifecycle, or native commands.
+  const windowLaunch = takeDashboardWindowLaunch();
+  const secondary = isSecondaryWindow(windowLaunch);
+  const desktop = secondary ? undefined : window.promptStudioDesktop;
+  const [desktopStorage, projectTabs] = await Promise.all([
     createDesktopWorkbenchStorage(window.promptStudioDesktop),
-    createDesktopProjectTabs(window.promptStudioDesktop),
+    createDesktopProjectTabs(desktop),
   ]);
-  const desktopLifecycle = resolveDesktopLifecycleBridge(window.promptStudioDesktop);
+  const storage = secondary ? createSecondaryWindowStorage(desktopStorage ?? globalThis.localStorage) : desktopStorage;
+  const desktopLifecycle = resolveDesktopLifecycleBridge(desktop);
+  const windows = createDashboardWindows(windowLaunch);
   const dashboardWorkbench = createDashboardWorkbench({
     storage,
     projectTabs: projectTabs?.controller,
     // Send native layout writes before a following Quit request can close the renderer.
-    layoutDebounceMs: storage ? 0 : undefined,
+    layoutDebounceMs: desktopStorage && !secondary ? 0 : undefined,
+    windows: windows.host,
   });
-  const stopDesktopCommands = connectDesktopCommands(window.promptStudioDesktop, dashboardWorkbench);
+  windows.start(dashboardWorkbench);
+  const stopDesktopCommands = connectDesktopCommands(desktop, dashboardWorkbench);
   if (stopDesktopCommands) window.addEventListener("pagehide", stopDesktopCommands, { once: true });
   (window as unknown as Record<string, unknown>).__pstdioDashboardWorkbench = dashboardWorkbench;
   const renderParamField = createDashboardParamFieldRenderer(dashboardWorkbench);

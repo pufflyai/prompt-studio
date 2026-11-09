@@ -118,6 +118,8 @@ export interface WorkbenchCoreContributionContext {
   navigationTrees: NavigationTreeRegistry;
   notifications: NotificationRegistry;
   presence: WorkbenchPresence;
+  /** Host windows a tab can move to. Undefined when the host has a single window. */
+  windows?: import("./windows/workbench-windows").WorkbenchWindowHost;
   overlays: WorkbenchOverlayRegistry;
   placeholders: WorkbenchPlaceholderRegistry;
   pageLocations: WorkbenchPageLocationController;
@@ -218,6 +220,8 @@ export interface createWorkbenchInput {
   floatingPanels?: "visible" | "hidden";
   initialSidePanelMode?: WorkbenchSidePanelMode;
   startPage?: PageRef;
+  /** PS-1128 prototype: lets tabs move to other host windows. */
+  windows?: import("./windows/workbench-windows").WorkbenchWindowHost;
 }
 
 type WorkbenchModuleActivationResult = Disposable | readonly Disposable[] | undefined;

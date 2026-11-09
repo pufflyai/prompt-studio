@@ -1,4 +1,9 @@
-import { createWorkbench, type SettingsRegistry, type WorkbenchPageLocationBrowser } from "@pstdio/workbench";
+import {
+  createWorkbench,
+  type SettingsRegistry,
+  type WorkbenchPageLocationBrowser,
+  type WorkbenchWindowHost,
+} from "@pstdio/workbench";
 import { createWorkbenchTerminalModule, WORKBENCH_TERMINAL_PANEL_SIZE } from "@pstdio/workbench/react";
 import { createLocalStorageWorkbenchPersistence, type WorkbenchStorageLike } from "@pstdio/workbench/storage";
 import { resolveDashboardStorage } from "@/shared/app/dashboard-storage";
@@ -38,6 +43,7 @@ interface CreateDashboardWorkbenchInput {
   pageLocationBrowser?: WorkbenchPageLocationBrowser;
   storage?: WorkbenchStorageLike;
   layoutDebounceMs?: number;
+  windows?: WorkbenchWindowHost;
 }
 
 type CreateDashboardModulesInput = {
@@ -107,6 +113,7 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
     resolvePagePersistenceScope: resolveDashboardPersistenceScope,
     ...persistence,
     ...(pageLocationBrowser ? { pageLocationBrowser } : {}),
+    ...(input.windows ? { windows: input.windows } : {}),
   });
 
   workbench.preferences.registerSchema({

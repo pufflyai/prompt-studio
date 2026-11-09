@@ -16,6 +16,8 @@ export type {
   WorkbenchStoreSelectorListener,
 } from "../shared/store/workbench-store";
 export { createWorkbenchStore } from "../shared/store/workbench-store";
+export type { WorkbenchWindowHost, WorkbenchWindowTarget } from "../windows/workbench-windows";
+export { createTabWindowTarget } from "../windows/workbench-windows";
 export type { WorkbenchActivation } from "../workbench-activation";
 export type {
   createWorkbenchInput,

@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { BrowserWindow, type Session, session, shell, WebContentsView } from "electron";
+import { BrowserWindow, type Session, session, shell, WebContentsView, type WindowOpenHandlerResponse } from "electron";
 import type { RuntimeDescriptor } from "pstdio/runtime";
 import { createLogger } from "pstdio-logging";
 import { DESKTOP_CHANNELS, type DesktopStartupAppearance } from "../desktop-api";
@@ -12,6 +12,8 @@ import { LIFECYCLE_SCHEME, LIFECYCLE_URL, readLifecycleAsset } from "./lifecycle
 import type { TitleBarAppearance } from "./title-bar-appearance";
 
 const WORKBENCH_PARTITION = "pstdio-workbench";
+// PS-1128 prototype: the dashboard marks a workbench window it opens with this parameter.
+const APP_WINDOW_PARAM = "pstdio-window";
 const logger = createLogger({ component: "desktop", level: "info", service: "pstdio-desktop", sync: true });
 
 export class DesktopWindowController {
@@ -19,6 +21,7 @@ export class DesktopWindowController {
   #workbench: WebContentsView | null = null;
   #workbenchLoad: Promise<void> | undefined;
   #workbenchRuntimeId: string | undefined;
+  readonly #appWindows = new Set<BrowserWindow>();
   readonly #shown: Promise<void>;
   readonly lifecycleUrl: string;
   readonly window: BrowserWindow;
@@ -66,7 +69,10 @@ export class DesktopWindowController {
     };
     this.window.on("enter-full-screen", updateFullScreen);
     this.window.on("leave-full-screen", updateFullScreen);
-    this.window.on("closed", () => this.#workbench?.webContents.close());
+    this.window.on("closed", () => {
+      this.#workbench?.webContents.close();
+      for (const appWindow of this.#appWindows) appWindow.destroy();
+    });
   }
 
   static async create(preloadPath: string, startupAppearance: () => DesktopStartupAppearance | undefined) {
@@ -84,7 +90,53 @@ export class DesktopWindowController {
   }
 
   webContents() {
-    return [this.window.webContents, ...(this.#workbench ? [this.#workbench.webContents] : [])];
+    return [
+      this.window.webContents,
+      ...(this.#workbench ? [this.#workbench.webContents] : []),
+      ...[...this.#appWindows].map((appWindow) => appWindow.webContents),
+    ];
+  }
+
+  // A same-origin workbench URL carrying the window parameter opens as another app window on
+  // the same session, so it shares the sign-in and the dashboard's BroadcastChannel.
+  #openAppWindow(url: string): WindowOpenHandlerResponse | undefined {
+    const target = URL.parse(url);
+    if (!target || !this.#runtimeOrigin || target.origin !== this.#runtimeOrigin) return undefined;
+    if (!target.searchParams.has(APP_WINDOW_PARAM)) return undefined;
+    const secure = createSecureWindowOptions(this.preloadPath, WORKBENCH_PARTITION);
+    const [x, y] = this.window.getPosition();
+    return {
+      action: "allow",
+      outlivesOpener: true,
+      overrideBrowserWindowOptions: {
+        width: 960,
+        height: 720,
+        minWidth: 480,
+        minHeight: 360,
+        x: x + 48,
+        y: y + 48,
+        title: "Prompt Studio",
+        backgroundColor: this.window.getBackgroundColor(),
+        webPreferences: secure.webPreferences,
+      },
+    };
+  }
+
+  #adoptAppWindow(appWindow: BrowserWindow) {
+    this.#appWindows.add(appWindow);
+    this.#secureAppContents(appWindow.webContents);
+    appWindow.on("closed", () => this.#appWindows.delete(appWindow));
+    logger.info({ event: "desktop.app-window.opened", count: this.#appWindows.size }, "Opened another app window");
+  }
+
+  #secureAppContents(contents: Electron.WebContents) {
+    secureWebContents(contents, {
+      lifecycleUrl: this.lifecycleUrl,
+      runtimeOrigin: () => this.#runtimeOrigin,
+      openExternal: (url) => shell.openExternal(url),
+      openAppWindow: (url) => this.#openAppWindow(url),
+    });
+    contents.on("did-create-window", (appWindow) => this.#adoptAppWindow(appWindow));
   }
 
   // Every frame in the windows this controller owns, with the process that hosts it.
@@ -92,6 +144,7 @@ export class DesktopWindowController {
     const owners = [
       { owner: "startup" as const, contents: this.window.webContents },
       ...(this.#workbench ? [{ owner: "workbench" as const, contents: this.#workbench.webContents }] : []),
+      ...[...this.#appWindows].map((appWindow) => ({ owner: "workbench" as const, contents: appWindow.webContents })),
     ];
     return owners.flatMap(({ owner, contents }) => {
       if (contents.isDestroyed()) return [];
@@ -142,11 +195,7 @@ export class DesktopWindowController {
       webPreferences: createSecureWindowOptions(this.preloadPath, WORKBENCH_PARTITION).webPreferences,
     });
     this.#workbench = view;
-    secureWebContents(view.webContents, {
-      lifecycleUrl: this.lifecycleUrl,
-      runtimeOrigin: () => this.#runtimeOrigin,
-      openExternal: (url) => shell.openExternal(url),
-    });
+    this.#secureAppContents(view.webContents);
     view.setVisible(false);
     this.window.contentView.addChildView(view);
     this.resizeWorkbench();

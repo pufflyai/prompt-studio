@@ -75,6 +75,7 @@ import { restorePanelPolicy, workbenchPanelPolicy } from "./controllers/shell/wo
 import { createWorkbenchHost } from "./workbench-core-host";
 import { disposeLayoutPersistence } from "./workbench-core-persistence";
 
+// biome-ignore lint/complexity/noExcessiveLinesPerFunction: PS-1128 prototype adds one host field; split before shipping.
 export const createWorkbench = (input: createWorkbenchInput = {}) => {
   let core: WorkbenchCore;
   const activation = createWorkbenchActivation(input.active);
@@ -239,6 +240,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     shellPlacements,
     notifications: createNotificationRegistry(() => actionErrorTarget({ focus, layout })),
     presence: createWorkbenchPresence(),
+    windows: input.windows,
     overlays,
     placeholders,
     pageLocations,
