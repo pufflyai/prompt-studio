@@ -44,6 +44,12 @@ const checkTimelineTransport = async (props: {
   await expect(output).toContainText('"time":0');
 };
 
+const checkFrameHasNoEditor = async (surface: Frame, frame: Locator, dialog: Locator) => {
+  await frame.locator("[data-canvas-select]").click();
+  await expect(dialog).toBeHidden();
+  await expect(surface.getByRole("button", { name: "Open frame parameters", exact: true })).toHaveCount(0);
+};
+
 // Critical: host parameters must retain local input, isolate siblings and control motion precisely.
 test("frame parameters and playback stay independent across themes and movement", async ({ page }) => {
   await page.addInitScript(() =>
@@ -59,7 +65,7 @@ test("frame parameters and playback stay independent across themes and movement"
   const second = surface.locator('[data-canvas-item="Second"]');
   const document = first.frameLocator("iframe");
   const output = document.locator("[data-parameters-preview]");
-  await expect(surface.locator('iframe[data-frame-ready="true"]')).toHaveCount(3);
+  await expect(surface.locator('iframe[data-frame-ready="true"]')).toHaveCount(5);
   const menu = surface.getByRole("complementary", { name: "Frame editor" });
   await expect(menu).toBeHidden();
   await expect(surface.getByRole("button", { name: "Open frame parameters", exact: true })).toHaveCount(0);
@@ -74,6 +80,9 @@ test("frame parameters and playback stay independent across themes and movement"
   await checkTimelineTransport({ page, surface, first, second, timeline, output });
   const dialog = surface.getByRole("complementary", { name: "Frame editor" });
   await expect(dialog).toBeVisible();
+  await expect(dialog.getByText("Editable controls with motion.", { exact: true })).toBeVisible();
+  await dialog.getByText("Props JSON", { exact: true }).click();
+  await expect(dialog.getByText(/"amount":\s*2/)).toBeVisible();
   await dialog.getByRole("spinbutton").first().fill("7");
   await dialog.getByRole("spinbutton").first().press("Tab");
   await expect(output).toContainText('"amount":7');
@@ -214,7 +223,12 @@ test("frame parameters and playback stay independent across themes and movement"
   await expect(dialog).toBeVisible();
   await expect(timeline).toHaveCount(0);
   await expect(surface.getByRole("button", { name: "Open animation timeline", exact: true })).toHaveCount(0);
+  await checkFrameHasNoEditor(surface, surface.locator('[data-canvas-item="Plain"]'), dialog);
+  await checkFrameHasNoEditor(surface, surface.locator('[data-canvas-item="Motion"]'), dialog);
+  await expect(timeline).toBeVisible();
+  await expect(timeline).toHaveAttribute("aria-label", "Animations · Motion only");
   await first.locator("[data-canvas-select]").click();
+  await expect(dialog).toBeVisible();
   await expect(timeline).toHaveAttribute("aria-label", "Animations · First");
   await first.getByRole("button", { name: "Move First", exact: true }).press("ArrowRight");
   await expect(document.getByRole("textbox", { name: "Frame draft" })).toHaveValue("Keep this input");

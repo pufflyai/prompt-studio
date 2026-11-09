@@ -15,6 +15,7 @@ import { registerWorkbenchExtensionFileRenderers } from "../contributions/file-r
 import { registerWorkbenchExtensionKanbanRenderers } from "../contributions/kanban-renderer-contributions";
 import { registerWorkbenchExtensionNavigationItems } from "../contributions/navigation-item-contributions";
 import { localizeParamSchema } from "../contributions/param-schema-localization";
+import { registerWorkbenchExtensionTerminalRenderers } from "../contributions/terminal-renderer-contributions";
 import { registerWorkbenchExtensionTreeRenderers } from "../contributions/tree-renderer-contributions";
 import { registerResourceKinds } from "./resource-kind-contributions";
 import {
@@ -203,9 +204,12 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
     }),
   };
   const disposables: Disposable[] = [];
+  let terminals: ReturnType<typeof registerWorkbenchExtensionTerminalRenderers> | undefined;
   const context: WorkbenchExtensionCommandContext = input;
   try {
     disposables.push(registerWorkbenchExtensionChatRenderers(sourceInput));
+    terminals = registerWorkbenchExtensionTerminalRenderers(sourceInput);
+    disposables.push(terminals);
     disposables.push(...registerCommands(context, input.metadata));
     disposables.push(
       ...registerWorkbenchExtensionKeybindings({
@@ -261,6 +265,7 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
     disposables.push(...registerModes(input));
     disposables.push(...registerModePlacements(input));
     disposables.push(...registerPages(input));
+    terminals.commit();
     return {
       dispose() {
         disposeAll(disposables);
@@ -268,6 +273,7 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
     };
   } catch (error) {
     disposeAll(disposables);
+    terminals?.rollback();
     throw error;
   }
 };

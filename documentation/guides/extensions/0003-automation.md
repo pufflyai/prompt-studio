@@ -115,3 +115,5 @@ To check a schedule, open your extension in **Extensions** and find it under aut
 
 Use settings for project policy and storage for data that must survive a restart.
 See the [extension API](../../references/extensions/0001-api.md) for command outcomes, schedules, and context APIs.
+
+*Updated at: 2026-11-07*

@@ -248,7 +248,7 @@ describe("reconcileProviderWorkspaces lifecycle operations", () => {
   });
 });
 
-test("validates recovered provider params and persists defaults before creation", async () => {
+test("replays the defaults accepted before allocation without applying new defaults", async () => {
   const create = mock(async (_ctx: unknown, input: { params: unknown }) => {
     expect(input.params).toEqual({ image: "small" });
     return readyRemoteResult("ready");
@@ -256,12 +256,12 @@ test("validates recovered provider params and persists defaults before creation"
   const { deps, updateProviderProjection } = makeDeps(
     {
       params: {
-        image: { type: "select", required: true, defaultValue: "small", options: [{ label: "Small", value: "small" }] },
+        image: { type: "select", required: true, defaultValue: "large", options: [{ label: "Large", value: "large" }] },
       },
       create,
     },
     makeWorkspace({
-      provider_params_json: {},
+      provider_params_json: { image: "small" },
       provider_ref_json: null,
       provider_operation_id: "create-1",
       provider_operation_kind: "create",
@@ -269,11 +269,13 @@ test("validates recovered provider params and persists defaults before creation"
   );
   await reconcileProviderWorkspaces(deps, "project-1");
   expect(create).toHaveBeenCalledTimes(1);
-  expect(updateProviderProjection.mock.calls[0][1]).toMatchObject({ provider_params_json: { image: "small" } });
+  expect(updateProviderProjection.mock.calls.at(-1)?.[1]).toMatchObject({ provider_state: "ready" });
 });
 
-test("stops invalid recovered creation with an actionable error", async () => {
-  const create = mock(async () => readyRemoteResult("ready"));
+test("retains accepted operation identity when the provider rejects recovery", async () => {
+  const create = mock(async () => {
+    throw new Error("Backing resource unavailable");
+  });
   const { deps, updateProviderProjection } = makeDeps(
     { params: {}, create },
     makeWorkspace({
@@ -283,11 +285,48 @@ test("stops invalid recovered creation with an actionable error", async () => {
       provider_operation_kind: "create",
     }),
   );
-  await reconcileProviderWorkspaces(deps, "project-1", { retryUntilReadyMs: 1000 });
-  expect(create).not.toHaveBeenCalled();
+  await reconcileProviderWorkspaces(deps, "project-1");
+  expect(create).toHaveBeenCalledTimes(1);
   expect(updateProviderProjection.mock.calls.at(-1)?.[1]).toMatchObject({
     provider_state: "failed",
-    provider_operation_id: null,
-    provider_error_json: { retryable: false, message: expect.stringContaining("typo") },
+    provider_operation_id: "create-1",
+    provider_error_json: { retryable: true, code: "provider_create_failed" },
   });
+});
+
+test("recovery replays accepted create parameters even when current discovery removes the choice", async () => {
+  const create = mock(async (_ctx: unknown, input: { params: unknown; operationId: string }) => {
+    expect(input.params).toEqual({ repository: "accepted" });
+    expect(input.operationId).toBe("accepted-create");
+    return readyRemoteResult("ready");
+  });
+  const discovery = mock(async () => null);
+  const { deps } = makeDeps(
+    { discover: discovery, create },
+    makeWorkspace({
+      provider_ref_json: null,
+      provider_params_json: { repository: "accepted" },
+      provider_state: "provisioning",
+      provider_operation_kind: "create",
+      provider_operation_id: "accepted-create",
+    }),
+  );
+  await reconcileProviderWorkspaces(deps, "project-1");
+  expect(create).toHaveBeenCalledTimes(1);
+  expect(discovery).not.toHaveBeenCalled();
+});
+
+test("restart reconciliation resolves ready local provider targets", async () => {
+  const resolve = mock(async () => readyRemoteResult("failed"));
+  const { deps } = makeDeps(
+    { resolve },
+    makeWorkspace({
+      execution_kind: "local",
+      provider_state: "ready",
+      provider_operation_id: null,
+      provider_operation_kind: null,
+    }),
+  );
+  await reconcileProviderWorkspaces(deps, "project-1");
+  expect(resolve).toHaveBeenCalledTimes(1);
 });

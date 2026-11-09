@@ -1,5 +1,5 @@
 export const siteMetadata = {
-  title: "Prompt Studio | A workbench for your tools",
+  title: "Prompt Studio | A workbench for your agents",
   siteUrl: "https://prompt.studio",
   repositoryUrl: "https://github.com/pufflyai/prompt-studio",
   locale: "en_US",
@@ -15,5 +15,5 @@ export const siteMetadata = {
   // Browser chrome follows the `bg.subtle` token the workbench paints on.
   themeColor: { light: "#F9FBFA", dark: "#0E1016" },
   description:
-    "A workbench for tools built with coding agents. Connect custom editors, commands, and interfaces with shared search, notifications, and themes.",
+    "A workbench for your agents. Connect custom editors, commands, and interfaces with shared search, notifications, and themes.",
 };

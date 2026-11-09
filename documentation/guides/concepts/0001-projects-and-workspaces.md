@@ -75,3 +75,5 @@ The project folder holds only what belongs to the project: `.pstdio/config.json`
 - [Open a project](../getting-started/0002-open-a-project.md)
 - [CLI projects](../../references/cli/0004-projects.md)
 - [CLI workspaces](../../references/cli/0005-workspaces.md)
+
+*Updated at: 2026-11-06*

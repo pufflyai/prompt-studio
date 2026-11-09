@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
-import { browse, browseChildren, search } from "./browse";
+import { browse, browsePage, search } from "./browse";
 
 test("recent sessions retain Today and Yesterday groups alongside older calendar dates", async () => {
   const today = new Date();
@@ -40,7 +40,7 @@ test("recent sessions retain Today and Yesterday groups alongside older calendar
   expect(new Set(groups.map((node) => node.id)).size).toBe(3);
 });
 
-test("browsing and search use bounded public queries, workspace scope and lazy continuation", async () => {
+test("browsing and search use bounded public queries, workspace scope and cursor pages", async () => {
   const queries: unknown[] = [];
   const ctx = makeCommandContext({
     storage: createMemoryStorage(),
@@ -57,9 +57,15 @@ test("browsing and search use bounded public queries, workspace scope and lazy c
   const renderer = { rendererId: "list", resource: { type: "workspace", id: "workspace" } };
   const sections = await browse(ctx, { renderer, filter: "needle" });
   expect(queries).toEqual([{ limit: 50, orderBy: "lastActivity", workspaceId: "workspace", search: "needle" }]);
-  const more = sections[0].nodes[0]?.children?.find((node) => node.metadata?.cursor);
-  expect(more).toBeDefined();
-  await browseChildren(ctx, { renderer, filter: "needle", node: more! });
+  const group = sections[0]!.nodes[0]!;
+  expect(group.nextCursor).toBe("next");
+  const page = await browsePage(ctx, {
+    renderer,
+    filter: "needle",
+    cursor: group.nextCursor!,
+    parent: { kind: "node", node: group },
+  });
+  expect(page).toEqual({ nodes: [], nextCursor: undefined });
   expect(queries.at(-1)).toEqual({
     limit: 50,
     orderBy: "lastActivity",
@@ -93,6 +99,50 @@ test("workspace sessions keep the contextual page and open chat in shared Side p
   expect(group?.children?.find((node) => node.resource?.id === "s")).toMatchObject({
     target: { kind: "panel", open: "preview", resource: { extensionId: "pstdio", id: "s" } },
   });
+});
+
+test("project history pages preserve ordering and date identities through exhaustion", async () => {
+  const sessions = Array.from({ length: 121 }, (_, index) => ({
+    id: `s${index}`,
+    title: `Session ${index}`,
+    status: "completed",
+    updatedAt: "2026-11-09T10:00:00Z",
+  }));
+  const ctx = makeCommandContext({
+    storage: createMemoryStorage(),
+    params: {},
+    overrides: {
+      sessions: {
+        query: async (input = {}) => {
+          expect(input.limit).toBe(50);
+          const start = Number(input.cursor ?? 0);
+          return {
+            items: sessions.slice(start, start + 50) as never,
+            nextCursor: start + 50 < sessions.length ? `${start + 50}` : null,
+          };
+        },
+      },
+    },
+  });
+  const renderer = { rendererId: "list" };
+  const first = (await browse(ctx, { renderer }))[0]!;
+  expect(first.nextCursor).toBe("50");
+  const second = await browsePage(ctx, {
+    renderer,
+    cursor: first.nextCursor!,
+    parent: { kind: "section", id: first.id },
+  });
+  const third = await browsePage(ctx, {
+    renderer,
+    cursor: second.nextCursor!,
+    parent: { kind: "section", id: first.id },
+  });
+  expect(third.nextCursor).toBeUndefined();
+  expect(
+    [first, second, third].flatMap((page) => page.nodes.filter((node) => node.resource).map((node) => node.id)),
+  ).toEqual(sessions.map((session) => session.id));
+  expect(first.nodes[0]!.id).toBe(second.nodes[0]!.id);
+  expect(second.nodes[0]!.id).toBe(third.nodes[0]!.id);
 });
 
 test("session resource search follows cursors beyond the public 200-row page limit", async () => {

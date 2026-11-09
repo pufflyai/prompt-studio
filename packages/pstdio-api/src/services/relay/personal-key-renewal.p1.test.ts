@@ -10,6 +10,8 @@ const until = async (condition: () => boolean | Promise<boolean>) => {
   expect(await condition()).toBe(true);
 };
 
+// Two planned renewals each wait for a three-second access token to near expiry, so the
+// scenario takes about eight seconds. It declares that time itself instead of relying on the runner.
 test("planned access renewal refreshes personal keys while retaining the small index subscriptions", async () => {
   const app = await createTestApp();
   const peer = documentPeer();
@@ -82,4 +84,4 @@ test("planned access renewal refreshes personal keys while retaining the small i
     await peer.close();
     await app.close();
   }
-});
+}, 20_000);

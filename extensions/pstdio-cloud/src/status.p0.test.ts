@@ -17,8 +17,12 @@ describe("Cloud status", () => {
   });
 
   test("requires sign-in recovery even when the last project state was synced", () => {
-    expect(cloudStatus({ ...account, signInRequired: true }, synced).key).toBe("signInAgain");
-    expect(cloudStatus({ ...account, login: null }, synced).key).toBe("signIn");
+    const again = cloudStatus({ ...account, signInRequired: true }, synced);
+    expect(again.key).toBe("signInAgain");
+    expect(again.icon).toBe("user-round-key");
+    const signIn = cloudStatus({ ...account, login: null }, synced);
+    expect(signIn.key).toBe("signIn");
+    expect(signIn.icon).toBe("user-round-key");
   });
 
   test("keeps an account without early access signed in", () => {

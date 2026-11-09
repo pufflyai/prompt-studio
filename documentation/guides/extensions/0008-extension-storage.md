@@ -72,3 +72,5 @@ The updated extensions no longer read the old project paths. Prompt Studio 0.46 
 move them for you; each extension starts fresh in its full-ID folder. Update local scripts and saved file
 links that use an old path. Refresh installed agent skills from their updated sources.
 Published artifact URLs and saved ticket and report identities stay valid.
+
+*Updated at: 2026-10-25*

@@ -109,6 +109,7 @@ export interface RuntimePrivateHandlerRecord {
   sourcePath: string;
   rendererId: string;
   rendererKind:
+    | "terminal"
     | "chat"
     | "commandPaletteResource"
     | "controls"

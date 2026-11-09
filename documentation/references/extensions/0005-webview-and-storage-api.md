@@ -509,3 +509,5 @@ Agents use the same authenticated API:
 - Global views use `/v1/extensions/installed/{installName}/preferences/{name}`. Project, workspace, and session scopes need an explicit `scopeId` on this path.
 
 These routes store extension-owned values. Declared settings use the settings API. Theme and locale remain host appearance choices. Use `ctx.storage` for extension product data rather than view preferences.
+
+*Updated at: 2026-11-07*

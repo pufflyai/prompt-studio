@@ -81,6 +81,11 @@ export const FramePreview = (props: FramePreviewProps) => {
     if (ready || error) job.current?.finish();
   }, [ready, error, job]);
   useEffect(() => {
+    if (!parameters) return;
+    runtime.editable.set(item.id, Object.keys(parameters.controls).length > 0);
+  }, [runtime, item.id, parameters]);
+  useEffect(() => () => runtime.editable.set(item.id, false), [runtime, item.id]);
+  useEffect(() => {
     if (!ready || sentTheme.current === themeKey) return;
     sentTheme.current = themeKey;
     postFrame(frame.current, { nonce: nonce.current, type: "theme", theme });
@@ -177,19 +182,17 @@ export const FramePreview = (props: FramePreviewProps) => {
       {editorOutlet &&
         createPortal(
           <Box hidden={!frameSelected} data-frame-editor={item.id}>
-            {parameters && (Object.keys(parameters.controls).length > 0 || parameters.motion) ? (
+            {/* Motion-only frames still mount the editor so Playback can own the timeline; the panel opens only for controls. */}
+            {parameters && (Object.keys(parameters.controls).length > 0 || parameters.motion) && (
               <Suspense fallback={null}>
                 <ParameterEditor
                   active={frameSelected}
                   item={item}
                   parameters={parameters}
+                  information={information}
                   onChange={(args) => postFrame(frame.current, { nonce: nonce.current, type: "args", args })}
                 />
               </Suspense>
-            ) : (
-              <Text p="sm" color="fg.muted">
-                {ready ? "No editable parameters" : "Loading frame…"}
-              </Text>
             )}
           </Box>,
           editorOutlet,
@@ -237,18 +240,6 @@ export const FramePreview = (props: FramePreviewProps) => {
       >
         Reset frame
       </Button>
-      <Box as="details" p="sm">
-        <Box as="summary">Props and source</Box>
-        <Text textStyle="mono/XS">
-          {source}#{exportName}
-        </Text>
-        {information?.description && <Text>{information.description}</Text>}
-        {information?.args && (
-          <Box as="pre" whiteSpace="pre-wrap" overflowWrap="anywhere">
-            {information.args}
-          </Box>
-        )}
-      </Box>
     </Box>
   );
 };

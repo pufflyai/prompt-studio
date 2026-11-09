@@ -357,3 +357,5 @@ ordinary callers continue to recall from `messages` by default.
 Draft hydration consumes the journal captured when its owner opens. Edits staged
 by that same owner while provider storage loads already belong to the live draft;
 they are not replayed as saved control overrides over a newer query result.
+
+*Updated at: 2026-11-07*

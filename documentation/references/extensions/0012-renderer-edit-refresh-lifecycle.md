@@ -246,3 +246,5 @@ Moves using the individual callbacks receive the same immediate preview and orde
 `schemaRefreshEvents` declares events that change attribute fields or options. Saved-view validation and filter cleanup read on these events and on event-reset recovery. When it is omitted, the host retains the existing content-event refresh behavior. Shared-view content and order continue to arrive through live sync.
 
 Board columns measure variable-height rows and mount the visible range plus overscan. Focused and dragged rows remain mounted. Arrow keys, Home, and End move focus through the virtual range. Dragging near a column edge scrolls its viewport. Successful drops reveal their destination without changing the view's sort rules.
+
+*Updated at: 2026-11-07*

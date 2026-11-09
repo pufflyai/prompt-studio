@@ -449,6 +449,55 @@ Choice lists help discovery; they do not authorize a resource. The host still
 checks required fields, value types, fixed choices, and provider availability.
 Harness params and Kanban create-row forms require fixed options.
 
+## Local workspace providers on main
+
+These additions share API 0.4.0 on `main`, after 0.46.0. Publish the supporting
+host and SDK before a separately released extension adopts them. SDK 0.46.0 does
+not contain them.
+
+`defineWorkspaceType` accepts an optional `discover(ctx)` callback. Return
+`{ params }` to supply this project's current creation fields, choices and
+defaults. Return `null` when the provider is unavailable. Omit the callback to
+keep the static `params` schema; omit `params` from a discovery result to reuse
+that schema. Discovery runs when providers are listed and before a new create is accepted.
+The host persists validated parameters before allocation; accepted operations
+replay those parameters without rediscovering choices or applying new defaults. Do not cache project-dependent choices in module state.
+A failed discovery hides that provider from the current list and logs the error;
+other providers remain available. Creation validates the discovered schema and
+providers must still enforce their own resource ownership rules. Command-backed
+choice references are qualified to the provider and checked against installed
+commands, sibling fields and dependency cycles, just like static schemas.
+
+Use optional `validateParams(ctx, params)` for provider-specific checks, such as
+whether a revision exists. It receives schema-validated values with defaults
+applied. Throw a useful error to reject creation before the host saves a workspace.
+It runs in project context, without an allocated workspace directory. Keep it
+read-only; allocate resources in `create` after the host owns their identity.
+This preflight runs only before initial allocation. `create` and `resolve` must
+still check backing-resource invariants when the environment changes afterward.
+
+During workspace-bound provider callbacks, the optional `ctx.localDirectory()`
+allocates or reopens a host-managed local directory owned by that provider,
+project and workspace. It is available before the workspace is ready and returns
+`{ path, files, remove }`. `files` is an `ArtifactMount`; use `path` as the explicit
+`cwd` for a local process. The same workspace reopens the same directory after a
+restart. `remove()` deletes that directory, retaining the workspace record and
+history. The host rejects default workspaces, another provider's or project's
+workspace, and paths resolving outside the workspace's own managed directory.
+The method is absent in project-only discovery and ordinary command contexts.
+Feature-detect it when supporting hosts that predate this addition.
+
+Provider callbacks use invocation-owned process and file APIs. A ready local
+workspace remains the default process directory. Preparation and cleanup can run
+before target readiness, using the project's default local folder as the process
+directory, or the owned managed directory when no local project folder exists.
+An explicit `cwd` can select either source or destination. Ordinary commands
+retain their ready-local-target checks. Await every process and file operation:
+the host stops running child processes when a provider callback ends, is
+cancelled, or exceeds its existing 30-second operation limit. Retained directory
+handles reject operations after the callback ends. Explicit `spawnDetached`
+continues to mean an independently running process.
+
 ## Migrating from older API versions
 
 Before `0.1.0`, the extension API used `1.0.0-alpha.N` versions. An extension written for an older alpha needs these changes. See [API versioning](0014-api-versioning.md) for the current scheme.
@@ -637,3 +686,5 @@ Use `workbenchCommands.openWorkspaceTerminal` with a workspace resource to open 
 Installation continues in the background and survives a runtime restart. Selecting an extension again while it is pending has no effect. Selecting it again after it finished re-enables it in this project; after it failed, it runs again. Restarting the runtime does not replay finished work or retry failures on its own. Use `ctx.extensions.list()` to see which extensions the project has enabled.
 
 The call takes no project argument. Older hosts omit `ctx.extensions`; extensions that need it declare API `^0.3.1`.
+
+*Updated at: 2026-11-07*

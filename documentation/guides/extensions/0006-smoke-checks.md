@@ -79,3 +79,5 @@ On API 0.4 the helper uses the production ordered operation compiler and reducer
 Each `MemoryStorageReplacement` in the report contains `recordId`, `path`, `kept`, and `replaced`. For competing title edits, the path is `["value", "title"]`; `kept` is the value both devices now read. The later admitted ordinary value wins; this helper admits the first device before the second. A conditional group can instead report `refused`, with none of its members applied. `undefined` means a removed value; `null` is a stored value. Arrays, strings and asset references are reported as whole values.
 
 This helper tests document data without a relay. Asset bytes and deprecated file blobs stay local to each device. Test attachment transport separately.
+
+*Updated at: 2026-11-06*

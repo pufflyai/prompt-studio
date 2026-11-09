@@ -41,6 +41,7 @@
 3. Make hover feedback immediate and delay explanatory tooltips.
 4. Keep destructive actions visually distinct from close and dismiss actions.
 5. When a button opens a menu or popover, clicking the same button again while it is open must close it.
+6. Always prefer infinite scroll to pagination or “Load more” controls. Fetch the next bounded page as the person approaches the end of the visible list, preserve their position and keyboard focus, and stop at the end of the results. Extend shared renderers and public SDK APIs when needed instead of requiring another click.
 
 ## 7. Interface text
 

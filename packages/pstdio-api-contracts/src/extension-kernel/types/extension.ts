@@ -180,10 +180,20 @@ export interface ScheduleContribution<TParams extends Struct = Struct> extends C
   disabled?: boolean;
 }
 
+/** Current creation choices for a provider in the invoking project. */
+export interface WorkspaceProviderDiscovery {
+  /** Overrides the static creation schema, including current choices and defaults. */
+  params?: ParamObjectSchema;
+}
+
 export interface WorkspaceTypeProvider extends ContributionDefinition<"workspace-type"> {
   label: Localizable<string>;
   icon?: string;
   params?: ParamObjectSchema;
+  /** Return null when this project has no usable environment. Omit to keep static discovery. */
+  discover?(ctx: ExtensionContextBase): MaybePromise<WorkspaceProviderDiscovery | null>;
+  /** Project-scoped preflight before initial allocation. Keep it read-only; enforce backing-resource invariants in create. */
+  validateParams?(ctx: ExtensionContextBase, params: JsonObject): MaybePromise<void>;
   create(ctx: ExtensionContextBase, input: WorkspaceProviderCreateInput): MaybePromise<WorkspaceProviderResult>;
   resolve(ctx: ExtensionContextBase, input: WorkspaceProviderResolveInput): MaybePromise<WorkspaceProviderResult>;
   cancel?(ctx: ExtensionContextBase, input: WorkspaceProviderMutationInput): MaybePromise<WorkspaceProviderResult>;

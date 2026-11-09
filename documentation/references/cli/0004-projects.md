@@ -51,3 +51,5 @@ Run `pst projects <command> --help` for current options.
 - `capture` captures this device's folder now. `cancel` stops a running download or restore.
 
 The device must have connected to Cloud once since Prompt Studio started, so it can unlock its private copies.
+
+*Updated at: 2026-11-07*

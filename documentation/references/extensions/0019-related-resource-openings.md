@@ -130,3 +130,5 @@ Pass the source's full `ResourceRef` as `anchor` to filter by owner, kind, ID, a
 The API is additive. Follow [API versioning](0014-api-versioning.md) and publish SDK support before independently released extensions adopt it.
 
 A declared document also owns its related-opening visit and pending lookups. Leaving that document releases its temporary panel reveals, even when a retained pin remains in the panel and the next document returns no openings. Section and source-position changes stay in the same visit. Closing or pinning a different document moved into Main edits that tab’s owner without changing the current document.
+
+*Updated at: 2026-10-20*

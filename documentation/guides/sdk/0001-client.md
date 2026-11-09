@@ -273,3 +273,5 @@ and links to their current request and response types.
 A cloud project that came from another device starts without a folder. `client.projects.open(projectId)` creates a managed local folder when needed and restores downloaded notes and artifact files. It preserves project and default workspace IDs and existing folder bindings. Repeated or concurrent calls use the same folder. Calling it again retries failed setup. It does not clone a Git repository.
 
 `client.projects.folder(projectId)` returns `{ path, gitRemote }`: the folder on this device, or `null`, and the Git remote recorded for the project. Before the project has a folder, `client.projects.chooseFolder(projectId, { path, clone })` can attach a chosen checkout instead. With `clone: true` it clones `gitRemote` into a new folder; with `clone: false` it uses an existing folder and checks that it holds the same repository. The path may start with `~/`.
+
+*Updated at: 2026-10-30*

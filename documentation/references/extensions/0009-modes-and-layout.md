@@ -195,3 +195,5 @@ The host's Project mode and the workbench's [showcase examples](../../../package
 | Scribble | Custom sidebar keeps its mode size and disables drag collapse. |
 
 Host modes and extension modes use the same settings.
+
+*Updated at: 2026-10-30*

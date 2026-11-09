@@ -167,6 +167,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
   const shortcutHints = useWorkbenchStore(workbench.keyboard.store, (state) => state.active || state.preview);
   const adapterContext = {
     workbench,
+    resource,
     shortcutHints,
     onCommandError: onOpenResourceError,
     onRequestParams: actionInput.setRequest,

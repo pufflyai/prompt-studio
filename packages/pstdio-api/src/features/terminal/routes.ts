@@ -3,11 +3,13 @@ import { upgradeWebSocket } from "hono/bun";
 import type { WSContext, WSEvents } from "hono/ws";
 import type {
   TerminalSessionHandle,
+  TerminalViewOpenRequest,
   TerminalWebSocketClientMessage,
   TerminalWebSocketServerMessage,
 } from "pstdio-api-contracts";
 import type { AppBindings } from "../../types";
 import type { TerminalRouteDeps } from "./deps";
+import { nativeTerminalOpenSchema, openNativeTerminalSession } from "./native-terminal-session";
 
 interface TerminalRouteOptions {
   allowedOrigins?: string[];
@@ -25,10 +27,19 @@ const sendMessage = (socket: WSContext, message: TerminalWebSocketServerMessage)
 
 const errorMessage = (cause: unknown) => (cause instanceof Error ? cause.message : String(cause));
 
-export const createTerminalWebSocketEvents = (deps: TerminalRouteDeps): WSEvents => {
+type TerminalSocketDeps = Pick<TerminalRouteDeps, "terminal"> & {
+  openView?(request: TerminalViewOpenRequest, signal: AbortSignal): Promise<TerminalSessionHandle>;
+};
+export const createTerminalWebSocketEvents = (deps: TerminalSocketDeps): WSEvents => {
   let session: TerminalSessionHandle | undefined;
+  let accepting = true;
+  let closed = false;
+  const lifetime = new AbortController();
 
   const closeSession = async (signal?: string) => {
+    closed = true;
+    accepting = false;
+    lifetime.abort();
     const activeSession = session;
     session = undefined;
     await activeSession?.kill(signal as NodeJS.Signals | undefined);
@@ -59,11 +70,46 @@ export const createTerminalWebSocketEvents = (deps: TerminalRouteDeps): WSEvents
     }
   };
 
+  const openView = (request: TerminalViewOpenRequest, socket: WSContext) => {
+    try {
+      if (!deps.openView) throw new Error("Native terminal views are not available on this host");
+      const opening = deps.openView(nativeTerminalOpenSchema.parse(request), lifetime.signal);
+      void opening
+        .then(async (accepted) => {
+          if (closed) {
+            await accepted.kill();
+            return;
+          }
+          session = accepted;
+          sendMessage(socket, { type: "open", sessionId: accepted.id });
+          void pumpSessionEvents(accepted, socket);
+        })
+        .catch((cause) => {
+          if (closed) return;
+          sendMessage(socket, { type: "error", message: errorMessage(cause) });
+          void closeSession().finally(() => socket.close(1011, "Terminal session failed"));
+        });
+    } catch (cause) {
+      sendMessage(socket, { type: "error", message: errorMessage(cause) });
+      void closeSession().finally(() => socket.close(1011, "Terminal session failed"));
+    }
+  };
+
   return {
     onMessage(event, socket) {
       const message = JSON.parse(String(event.data)) as TerminalWebSocketClientMessage;
 
-      if (message.type === "open") {
+      if (message.type === "open" || message.type === "openView") {
+        if (!accepting) {
+          sendMessage(socket, { type: "error", message: "This terminal socket already has an owner" });
+          void closeSession().finally(() => socket.close(1008));
+          return;
+        }
+        accepting = false;
+        if (message.type === "openView") {
+          openView(message.request, socket);
+          return;
+        }
         if (!deps.terminal) {
           sendMessage(socket, { type: "error", message: "Terminal sessions are not available on this host." });
           socket.close(1011, "Terminal unavailable");
@@ -107,7 +153,12 @@ export const createTerminalRoutes = (deps: TerminalRouteDeps, options: TerminalR
   });
   routes.get(
     "/terminal",
-    upgradeWebSocket(() => createTerminalWebSocketEvents(deps)),
+    upgradeWebSocket(() =>
+      createTerminalWebSocketEvents({
+        terminal: deps.terminal,
+        openView: (request, signal) => openNativeTerminalSession(deps, request, signal),
+      }),
+    ),
   );
   return routes;
 };

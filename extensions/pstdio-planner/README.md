@@ -102,3 +102,5 @@ Existing `tags` values remain migration input when selections are first edited.
 A single/multi conversion preserves a concurrent choice as an editable list;
 a later explicit selection resolves it. Storage also fences each observed record
 lifetime, so an offline edit cannot change a deleted-and-recreated ticket.
+
+*Updated at: 2026-11-07*

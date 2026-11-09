@@ -135,6 +135,7 @@ download panel.
 
 On mobile, docs index links fill their row with a minimum 44-pixel touch target.
 Inline reading links gain padding and height so they are easier to tap.
+Published docs end with an italic updated date maintained in their source Markdown.
 
 Pages have no previous or next buttons. The sidebar, title bar tabs, and command
 palette provide navigation.
