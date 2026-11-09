@@ -59,7 +59,9 @@ test("the compiled host admits an installed SDK terminal view and reports real P
       const message = JSON.parse(String(event.data)) as TerminalWebSocketServerMessage;
       if (message.type === "open") {
         const command =
-          process.platform === "win32" ? "echo NATIVE_COMPILED & exit 0\r" : "printf 'NATIVE_COMPILED\\n'; exit 0\n";
+          process.platform === "win32"
+            ? "echo NATIVE_^COMPILED & exit 0\r"
+            : "printf 'NATIVE_%s\\n' COMPILED; exit 0\n";
         socket!.send(JSON.stringify({ type: "resize", cols: 120, rows: 40 }));
         socket!.send(JSON.stringify({ type: "write", data: Buffer.from(command).toString("base64") }));
       }
