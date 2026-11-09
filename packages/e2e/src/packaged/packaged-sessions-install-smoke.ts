@@ -36,8 +36,8 @@ export const expectPackagedSessionsInstall = async (input: {
       env,
     ),
   );
-  const installed = realpathSync(join(projectFolder, ".pstdio/extensions/pstdio-session-browser"));
-  expect(installed).toBe(resolve(realpathSync(projectFolder), ".pstdio/extensions/pstdio-session-browser"));
+  const installed = realpathSync(join(tempRoot, "extensions/pstdio-session-browser"));
+  expect(installed).toBe(resolve(realpathSync(tempRoot), "extensions/pstdio-session-browser"));
   const dependency = realpathSync(join(installed, "node_modules/@pstdio/sdk"));
   const localPath = relative(join(installed, "node_modules"), dependency);
   expect(localPath.startsWith("..")).toBe(false);
