@@ -13,6 +13,8 @@ Draft identity and persistence stay here. “New in this tab” uses the shared
 Current view shortcut and captured viewer, without changing Main from Side.
 Switch options follow public query cursors rather than truncate older history.
 
+Session history loads the next bounded page as the person scrolls toward its end, including within an expanded workspace group. Stable date headings join pages at the same level. This requires a published SDK and host supporting `view.tree.pages.v1`; updating the SDK alone does not update the running host.
+
 ## Local development and release
 
 Follow `extensions/AGENTS.md`: use CLI `extensions dev`, then production-like `extensions add --force`, without skipping installation. Local built SDK/UI packages can qualify this stacked implementation. An independent install must use fresh package-local Bun dependencies from built tarballs rather than symlinks or copied installed dependencies.
