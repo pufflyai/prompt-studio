@@ -218,7 +218,7 @@ const createChatRendererOwner = (initialInput: RegisterWorkbenchExtensionContrib
       );
       // Watches resolve nested commands against their starting runtime. Refresh that runtime
       // when optional tools change while keeping the conversation and its unsent draft.
-      if (commandsChanged) for (const { session } of sessions.values()) session.reconnect();
+      if (commandsChanged && body.stream) for (const { session } of sessions.values()) session.reconnect();
       return registration;
     },
     dispose() {
