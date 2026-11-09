@@ -10,7 +10,7 @@
     "pstdio": "^0.4.0"
   },
   "pstdio": {
-    "scope": "repo"
+    "scope": "user"
   },
   "private": true,
   "type": "module",

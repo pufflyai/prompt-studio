@@ -274,7 +274,12 @@ describe("installDefaultExtensions sources", () => {
     });
 
     expect(prepareSharedCheckout).not.toHaveBeenCalled();
-    expect(calls.map((call) => call.installName)).toEqual(["pstdio-onboarding", "pstdio-base-themes", "pstdio-skills"]);
+    expect(calls.map((call) => call.installName)).toEqual([
+      "pstdio-session-browser",
+      "pstdio-onboarding",
+      "pstdio-base-themes",
+      "pstdio-skills",
+    ]);
     expect(
       calls.every(
         (call) =>

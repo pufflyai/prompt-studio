@@ -89,8 +89,8 @@ test(
           expect.objectContaining({
             enabled: true,
             installName: "pstdio-session-browser",
-            scope: "repo",
-            sourcePath: join(realpathSync(projectFolder), ".pstdio/extensions/pstdio-session-browser"),
+            scope: "global",
+            sourcePath: join(realpathSync(tempRoot), "extensions/pstdio-session-browser"),
           }),
           expect.objectContaining({ enabled: true, installName: "harness-claude-code" }),
           expect.objectContaining({ enabled: true, installName: "harness-codex" }),
