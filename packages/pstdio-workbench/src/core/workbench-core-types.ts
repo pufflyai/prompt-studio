@@ -120,6 +120,8 @@ export interface WorkbenchCoreContributionContext {
   presence: WorkbenchPresence;
   /** Host windows a tab can move to. Undefined when the host has a single window. */
   windows?: import("./windows/workbench-windows").WorkbenchWindowHost;
+  /** PS-1128 prototype: regions this window never shows, such as the Sidenav in a secondary window. */
+  hiddenRegions?: readonly WorkbenchRegion[];
   overlays: WorkbenchOverlayRegistry;
   placeholders: WorkbenchPlaceholderRegistry;
   pageLocations: WorkbenchPageLocationController;
@@ -222,6 +224,8 @@ export interface createWorkbenchInput {
   startPage?: PageRef;
   /** PS-1128 prototype: lets tabs move to other host windows. */
   windows?: import("./windows/workbench-windows").WorkbenchWindowHost;
+  /** PS-1128 prototype: regions this window never shows. */
+  hiddenRegions?: readonly WorkbenchRegion[];
 }
 
 type WorkbenchModuleActivationResult = Disposable | readonly Disposable[] | undefined;

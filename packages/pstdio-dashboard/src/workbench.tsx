@@ -107,11 +107,12 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
   const workbench = createWorkbench({
     startPage: dashboardHomePage,
     initialSidePanelMode: "closed",
-    defaultPanelOpenByRegionId: { secondary: false, ...(input.secondaryWindow ? { sidenav: false } : {}) },
+    defaultPanelOpenByRegionId: { secondary: false },
     regionSettings: {
       secondary: { size: WORKBENCH_TERMINAL_PANEL_SIZE },
-      sidenav: { size: DASHBOARD_SIDENAV_REGION_SIZE, ...(input.secondaryWindow ? { canOpen: false } : {}) },
+      sidenav: { size: DASHBOARD_SIDENAV_REGION_SIZE },
     },
+    ...(input.secondaryWindow ? { hiddenRegions: ["sidenav" as const] } : {}),
     resolvePagePersistenceScope: resolveDashboardPersistenceScope,
     ...persistence,
     ...(pageLocationBrowser ? { pageLocationBrowser } : {}),

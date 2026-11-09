@@ -241,6 +241,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     notifications: createNotificationRegistry(() => actionErrorTarget({ focus, layout })),
     presence: createWorkbenchPresence(),
     windows: input.windows,
+    hiddenRegions: input.hiddenRegions,
     overlays,
     placeholders,
     pageLocations,

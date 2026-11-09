@@ -32,7 +32,11 @@ export const useWorkbenchRegionContent = (
   const panelAvailable =
     !modePanel || isWorkbenchModePanelAvailable(modeId ? workbench.modes.getMode(modeId) : undefined, modePanel);
 
+  // PS-1128 prototype: a host can leave a region out of this window entirely.
+  const hiddenByHost = workbench.hiddenRegions?.includes(region) ?? false;
+
   return useWorkbenchStore(workbench.layout.store, (state) => {
+    if (hiddenByHost) return false;
     if (chrome !== undefined) return chrome !== false;
     if (!panelAvailable) return false;
     if (hasPageContent) return true;

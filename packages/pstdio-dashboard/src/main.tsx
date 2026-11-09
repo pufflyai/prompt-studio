@@ -100,8 +100,7 @@ const renderDashboard = async () => {
     secondaryWindow: secondary,
   });
   if (secondary) {
-    // The main window's saved layout must not reopen its Sidenav or panels here.
-    dashboardWorkbench.shell.setRegionOpen("sidenav", false);
+    // The window starts with only the tab it was opened for; its panels stay one click away.
     dashboardWorkbench.shell.setRegionOpen("secondary", false);
     dashboardWorkbench.sidePanel.setMode("closed");
   }
