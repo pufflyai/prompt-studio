@@ -84,7 +84,9 @@ const createBlobStore = (directory?: string) => {
       return json({ ok: true });
     }
     if (path.endsWith("/read")) {
-      if (failReads(deviceId)) return Response.json({ error: "unavailable" }, { status: 503 });
+      // A simulated outage asks for an immediate retry, so clients exhaust their bounded backoff without waiting.
+      if (failReads(deviceId))
+        return Response.json({ error: "unavailable" }, { status: 503, headers: { "retry-after": "0" } });
       if (!blob?.complete) return new Response(null, { status: 404 });
       served.push({ deviceId, blobId: id });
       return new Response(bytes(blob));
@@ -176,7 +178,8 @@ export const createPackagedSyncPeer = (
         if (!route) return new Response(null, { status: 404 });
         const access = identity.access(request, route.projectId);
         if (!access) return new Response(null, { status: 403 });
-        if (blockedDevices.has(access.deviceId)) return Response.json({ error: "unavailable" }, { status: 503 });
+        if (blockedDevices.has(access.deviceId))
+          return Response.json({ error: "unavailable" }, { status: 503, headers: { "retry-after": "0" } });
         if (route.kind === "live") {
           return upgradeLive(request, server, access);
         }
