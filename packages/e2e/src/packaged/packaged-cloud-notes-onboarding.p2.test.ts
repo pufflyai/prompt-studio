@@ -25,10 +25,10 @@ const signIn = async (client: ReturnType<typeof createClient>, origin: string) =
 
 const startDevices = async (
   homes: [string, string],
-  env: Record<string, string>,
+  env: [Record<string, string>, Record<string, string>],
   retain: (host: Awaited<ReturnType<typeof startPackagedServe>>, index: number) => void,
 ) => {
-  const hosts = await Promise.allSettled(homes.map((home) => startPackagedServe(home, env)));
+  const hosts = await Promise.allSettled(homes.map((home, index) => startPackagedServe(home, env[index])));
   hosts.forEach((host, index) => {
     if (host.status === "fulfilled") retain(host.value, index);
   });
@@ -88,16 +88,21 @@ test(
       peerCleanup = peer;
       const env = {
         NODE_EXTRA_CA_CERTS: cert,
-        PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-notes", "pstdio-cloud"),
+        PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-notes"),
         PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1",
       };
       const aHome = join(root, "a");
       const bHome = join(root, "b");
       await Promise.all([mkdir(aHome), mkdir(bHome)]);
-      await startDevices([aHome, bHome], env, (host, index) => {
-        if (index === 0) firstCleanup = host;
-        else secondCleanup = host;
-      });
+      // Only B renders Cloud; A supplies the same Notes-only sync peer as before.
+      await startDevices(
+        [aHome, bHome],
+        [env, { ...env, PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-notes", "pstdio-cloud") }],
+        (host, index) => {
+          if (index === 0) firstCleanup = host;
+          else secondCleanup = host;
+        },
+      );
       const first = firstCleanup!;
       const second = secondCleanup!;
       const a = createClient({ baseUrl: first.baseUrl, token: first.descriptor.token });
@@ -108,15 +113,15 @@ test(
       const sourceFolder = join(root, "source");
       const localFolder = join(root, "local");
       await Promise.all([mkdir(sourceFolder), mkdir(localFolder)]);
-      const project = await a.projects.create(folderProjectInput({ name: "Cloud notes" }, sourceFolder));
-      const [seeded] = await Promise.all([
-        a.extensions.execute("pstdio.pstdio-notes.command.notes.create", {
-          projectId: project.id,
-          params: { title: "From device A" },
-          source: "api",
-        }),
+      const [project] = await Promise.all([
+        a.projects.create(folderProjectInput({ name: "Cloud notes" }, sourceFolder)),
         b.projects.create(folderProjectInput({ name: "Local project" }, localFolder)),
       ]);
+      const seeded = await a.extensions.execute("pstdio.pstdio-notes.command.notes.create", {
+        projectId: project.id,
+        params: { title: "From device A" },
+        source: "api",
+      });
       expect(seeded.outcome.ok).toBe(true);
       phase("both local projects created; sign in A");
       await signIn(a, peer.origin);
@@ -190,10 +195,11 @@ test(
       await status.click();
       await details.getByRole("button", { name: "Retry", exact: true }).click();
       await browserExpect(details.getByText("The sync retry failed.", { exact: false })).toBeVisible();
+      await status.click();
       phase("sync retry failure checked; release download");
       downloaded = true;
-      // A reconnect refreshes host status; preparation follows that event without polling.
-      await page.reload();
+      // A native refresh publishes the real completion event without remounting the dashboard.
+      await b.account.retryProjectSync(project.id);
       await browserExpect.poll(() => attempts).toBe(1);
       await browserExpect(status).toHaveText("Preparing project");
       phase("initial setup pending; release failure");
