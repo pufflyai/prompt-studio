@@ -24,6 +24,7 @@ interface Owner {
 interface Ownership {
   live: Map<HostEventPublisher, Owner>;
   retiring: Set<Owner>;
+  retirementJobs: Map<Owner, { promise: Promise<void>; failed: boolean }>;
   disposal?: Promise<void>;
 }
 const ownership = new WeakMap<WorkbenchCore, Ownership>();
@@ -45,18 +46,36 @@ const scopeKey = (scope: Scope) =>
 const getOwnership = (workbench: WorkbenchCore) => {
   let state = ownership.get(workbench);
   if (!state) {
-    state = { live: new Map(), retiring: new Set() };
+    state = { live: new Map(), retiring: new Set(), retirementJobs: new Map() };
     ownership.set(workbench, state);
   }
   return state;
 };
 
-const retire = async (state: Ownership, owner: Owner) => {
+const retire = (state: Ownership, owner: Owner, retryFailed = true) => {
+  const existing = state.retirementJobs.get(owner);
+  if (existing && (!existing.failed || !retryFailed)) return existing.promise;
+  const settled = Promise.withResolvers<void>();
+  const job = { promise: settled.promise, failed: false };
+  state.retirementJobs.set(owner, job);
   state.retiring.add(owner);
-  owner.detach();
-  const connection = await owner.connection.catch(() => undefined);
-  if (connection) await connection.disconnect();
-  state.retiring.delete(owner);
+  // Publish one barrier before detaching can synchronously issue another cleanup.
+  void (async () => {
+    owner.detach();
+    const connection = await owner.connection.catch(() => undefined);
+    if (connection) await connection.disconnect();
+  })().then(
+    () => {
+      state.retirementJobs.delete(owner);
+      state.retiring.delete(owner);
+      settled.resolve();
+    },
+    (error) => {
+      job.failed = true;
+      settled.reject(error);
+    },
+  );
+  return settled.promise;
 };
 
 const createOwner = (input: PlacementTextGuestInput, state: Ownership) => {
@@ -218,10 +237,19 @@ export const disposePlacementTextGuests = (workbench: WorkbenchCore) => {
   const state = getOwnership(workbench);
   state.disposal ??= Promise.resolve()
     .then(async () => {
+      const attempted = new Set(state.retiring);
       const results = await Promise.allSettled([
+        ...[...attempted].map((owner) => retire(state, owner)),
         ...[...state.live.values()].map((owner) => owner.close()),
-        ...[...state.retiring].map((owner) => retire(state, owner)),
       ]);
+      // A live close can fail after its publisher starts forced cleanup. Drain that
+      // actual work as well, retaining failures for the next explicit disposal.
+      let next = [...state.retiring].filter((owner) => !attempted.has(owner));
+      while (next.length) {
+        for (const owner of next) attempted.add(owner);
+        results.push(...(await Promise.allSettled(next.map((owner) => retire(state, owner, false)))));
+        next = [...state.retiring].filter((owner) => !attempted.has(owner));
+      }
       const errors = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
       if (errors.length === 1) throw errors[0];
       if (errors.length)

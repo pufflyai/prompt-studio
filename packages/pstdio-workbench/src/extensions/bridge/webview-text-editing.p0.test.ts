@@ -104,7 +104,7 @@ const openingReplies = () => {
 };
 
 // The remote is controlled; transport, guest multiplexing, capability gate and Workbench are real.
-const fixture = async () => {
+const fixture = async (options: { prepareSessionClose?: () => Promise<void> } = {}) => {
   const scopes: unknown[] = [];
   const disconnected: string[] = [];
   const active: boolean[] = [];
@@ -122,6 +122,7 @@ const fixture = async () => {
   let refuseConnection = false;
   let holdClose = false;
   let refuseDisconnect = false;
+  let disconnectGate: ReturnType<typeof activityGate> | undefined;
   let refuseOpen = false;
   const reply = (value?: unknown) => Response.json({ ok: true, value });
   const connect = async (input: unknown) => {
@@ -138,8 +139,12 @@ const fixture = async () => {
     if (holdConnection) await releaseConnection.promise;
     return reply({ token });
   };
-  const disconnect = (token: string) => {
+  const disconnect = async (token: string) => {
     disconnected.push(token);
+    if (disconnectGate) {
+      disconnectGate.entered.resolve();
+      await disconnectGate.release.promise;
+    }
     if (refuseDisconnect) {
       refuseDisconnect = false;
       return Response.json({
@@ -236,6 +241,7 @@ const fixture = async () => {
       textTarget: { ...target, resource: currentPlacement.resource, pageParams },
       textEditing: transport,
       hostEvents: publisher,
+      prepareSessionClose: options.prepareSessionClose,
     });
     const gate = createHostCapabilityGate({ capabilities, declaredCapabilities: ["editing.text"] });
     return (request: TextEditingRequest = { operation: "current" }) =>
@@ -289,6 +295,10 @@ const fixture = async () => {
     refuseDisconnect() {
       refuseDisconnect = true;
     },
+    holdDisconnect() {
+      disconnectGate = activityGate();
+      return disconnectGate;
+    },
     resumeConnection() {
       holdConnection = false;
       releaseConnection.resolve();
@@ -303,9 +313,13 @@ const fixture = async () => {
       for (const held of activityGates.values()) held.release.resolve();
       releaseConnection.resolve();
       releaseClose.resolve();
+      disconnectGate?.release.resolve();
       events.unbind();
-      await workbench.dispose();
-      await server.stop(true);
+      try {
+        await workbench.dispose();
+      } finally {
+        await server.stop(true);
+      }
     },
   };
   fixtures.push(value.stop);
@@ -677,6 +691,86 @@ test("an interrupted forced disconnect remains owned until disposal can finish i
   await f.workbench.dispose();
   expect(f.disconnected).toEqual(["connection-1", "connection-1"]);
   expect(released).toBe(1);
+});
+
+test("disposal drains a disconnect issued while its live session close later fails", async () => {
+  const prepare = activityGate();
+  const failed = new Error("Native session close failed");
+  const f = await fixture({
+    prepareSessionClose: async () => {
+      prepare.entered.resolve();
+      await prepare.release.promise;
+      throw failed;
+    },
+  });
+  fixtures.splice(fixtures.indexOf(f.stop), 1);
+  await f.frame()();
+  let released = 0;
+  f.workbench.registerModule({
+    id: "text-owner",
+    activate: () => ({ dispose: () => released++ }),
+  });
+  const disconnect = f.holdDisconnect();
+  const disposing = f.workbench.dispose();
+  const result = disposing.catch((error) => error);
+  try {
+    await prepare.entered.promise;
+    f.events.unbind();
+    await disconnect.entered.promise;
+    prepare.release.resolve();
+    // Let the rejected close settle while the actual transport cleanup stays held.
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(released).toBe(0);
+    disconnect.release.resolve();
+    expect(await result).toBe(failed);
+    expect(released).toBe(1);
+    expect(f.disconnected).toEqual(["connection-1"]);
+  } finally {
+    prepare.release.resolve();
+    disconnect.release.resolve();
+    await result;
+    await f.stop().catch((error) => expect(error).toBe(failed));
+  }
+});
+
+test("a failed disconnect issued during disposal waits for an explicit retry", async () => {
+  const prepare = activityGate();
+  const f = await fixture({
+    prepareSessionClose: async () => {
+      prepare.entered.resolve();
+      await prepare.release.promise;
+      throw new Error("Native session close failed");
+    },
+  });
+  await f.frame()();
+  let released = 0;
+  f.workbench.registerModule({
+    id: "text-owner",
+    activate: () => ({ dispose: () => released++ }),
+  });
+  const interrupted = Promise.withResolvers<void>();
+  const observation = f.workbench.notifications.subscribe((event) => {
+    if (event.type === "show" && event.notification.title === "Close text editor failed") interrupted.resolve();
+  });
+  const disposing = f.workbench.dispose();
+  const result = disposing.catch((error) => error);
+  try {
+    await prepare.entered.promise;
+    f.refuseDisconnect();
+    f.events.unbind();
+    await interrupted.promise;
+    prepare.release.resolve();
+    expect(await result).toMatchObject({ retryable: true });
+    expect(f.disconnected).toEqual(["connection-1"]);
+    expect(released).toBe(0);
+    await f.workbench.dispose();
+    expect(f.disconnected).toEqual(["connection-1", "connection-1"]);
+    expect(released).toBe(1);
+  } finally {
+    prepare.release.resolve();
+    observation.dispose();
+    await result;
+  }
 });
 
 test("a retained webview rebound to a new source cannot reuse its old public connection", async () => {
