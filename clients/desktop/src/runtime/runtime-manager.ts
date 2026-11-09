@@ -251,7 +251,7 @@ export class DesktopRuntimeManager {
       await terminateRuntimeProcess(child, childTerminated, this.#deps.sleep);
       const detail = child.readOutput() || (error instanceof Error ? error.message : String(error));
       const failure = classifyRuntimeFailure(detail);
-      throw new Error(`${failure.code}: ${failure.message}`);
+      throw new Error(`${failure.code}: ${failure.message}`, { cause: error });
     } finally {
       stopProgress();
     }

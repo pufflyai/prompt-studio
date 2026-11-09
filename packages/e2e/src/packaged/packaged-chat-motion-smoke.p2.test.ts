@@ -1,10 +1,10 @@
 // Includes replay chunks, cached history, file navigation through reload and Back, and panel motion.
 import { expect, test } from "bun:test";
 import type { ChildProcess } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { chromium } from "@playwright/test";
+import { basename, join } from "node:path";
+import { chromium, type Page } from "@playwright/test";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { logTestPhase } from "../scripts/log-test-phase";
@@ -31,6 +31,7 @@ for (const kind of ["streaming", "panels"] as const) {
       const root = mkdtempSync(join(tmpdir(), "pstdio-packaged-chat-motion-"));
       let child: ChildProcess | undefined;
       let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
+      let page: Page | undefined;
       try {
         const startingRuntime = startPackagedServe(root, {
           PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture", "pstdio-session-browser"),
@@ -81,7 +82,7 @@ for (const kind of ["streaming", "panels"] as const) {
         if (projectSetup.status === "rejected") throw projectSetup.reason;
         if (browserSetup.status === "rejected") throw browserSetup.reason;
         const { started, headers, folder, project, replaySessionId } = projectSetup.value;
-        const page = browserSetup.value;
+        page = browserSetup.value;
         await page.setExtraHTTPHeaders(headers);
         await page.addInitScript((projectId) => {
           localStorage.setItem("onboarding-complete", "true");
@@ -97,6 +98,52 @@ for (const kind of ["streaming", "panels"] as const) {
           await expectPackagedPanelMotion(page);
           phase("panel motion checked");
         }
+      } catch (error) {
+        console.error("Packaged chat motion failed", error);
+        if (page && !page.isClosed()) {
+          const failedPage = page;
+          let captureOpen = true;
+          let captureDeadline: ReturnType<typeof setTimeout> | undefined;
+          const capture = async () => {
+            const snapshot = await failedPage.evaluate(() => ({
+              url: location.href,
+              viewports: Array.from(document.querySelectorAll('[role="log"] [data-part="viewport"]')).map(
+                (element) => ({
+                  top: element.scrollTop,
+                  height: element.clientHeight,
+                  contentHeight: element.scrollHeight,
+                  rows: Array.from(element.querySelectorAll("[data-chat-message-list-item]")).map((row) => ({
+                    index: row.getAttribute("data-index"),
+                    text: row.textContent?.slice(0, 100),
+                    top: row.getBoundingClientRect().top,
+                    height: row.getBoundingClientRect().height,
+                  })),
+                }),
+              ),
+              text: document.body.innerText,
+            }));
+            if (!captureOpen) return;
+            const evidence = join(import.meta.dirname, "../../test-results/packaged-chat-motion");
+            mkdirSync(evidence, { recursive: true });
+            const prefix = join(evidence, basename(root));
+            writeFileSync(`${prefix}.json`, JSON.stringify(snapshot, null, 2));
+            await failedPage.screenshot({ path: `${prefix}.png`, timeout: 1_000 });
+          };
+          try {
+            await Promise.race([
+              capture().catch((captureError) =>
+                console.error("Could not capture chat failure diagnostics", captureError),
+              ),
+              new Promise<void>((resolve) => {
+                captureDeadline = setTimeout(resolve, 1_000);
+              }),
+            ]);
+          } finally {
+            captureOpen = false;
+            clearTimeout(captureDeadline);
+          }
+        }
+        throw error;
       } finally {
         await browser?.close();
         if (child) await stopProcess(child);

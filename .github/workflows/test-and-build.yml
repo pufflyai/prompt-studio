@@ -918,6 +918,13 @@ jobs:
         env:
           CI_CHECK_COMMAND: bun run --cwd packages/e2e test:cli
         shell: bash
+      - name: Preserve CLI runtime diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-runtime-diagnostics-attempt-${{ github.run_attempt }}
+          path: packages/e2e/test-results/source-runtime
+          if-no-files-found: warn
       - name: Require committed generated outputs to match their source
         if: ${{ !cancelled() }}
         run: git diff --exit-code

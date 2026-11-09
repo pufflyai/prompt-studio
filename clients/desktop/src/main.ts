@@ -188,7 +188,7 @@ const runtimeRecovery = createRuntimeRecovery({
   showFailure: async (error) => {
     if (quitFlow.isQuitting() || state.kind === "closing" || state.kind === "detached") return;
     logger.error(
-      { event: "desktop.runtime.start.failed", message: recoveryError(error).message },
+      { event: "desktop.runtime.start.failed", message: recoveryError(error).message, err: error },
       "Runtime start failed",
     );
     setState({ kind: "recovery", error: recoveryError(error) });
