@@ -94,6 +94,7 @@ export { extensionIconAssetName, readExtensionIcon } from "./runtime/extension-i
 export { mirrorNodeModules } from "./runtime/mirror-node-modules";
 export { collectIconFontAssets } from "./runtime/normalize/icon-fonts";
 export { isRuntimeNavigationTargetAvailable } from "./runtime/normalize/page-target-validation";
+export { normalizeParamOptions } from "./runtime/normalize/param-options";
 export { createReadBoundary } from "./runtime/read-boundary";
 export { workbenchIconNames } from "./runtime/workbench-icon-names";
 export type * from "./types";
