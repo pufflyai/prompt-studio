@@ -140,3 +140,39 @@ test("merged navigation sections preserve an explicitly resource-less row owner"
     await workbench.dispose();
   }
 });
+
+for (const projected of ["bound", "unbound"] as const) {
+  test(`projected ${projected} navigation actions keep their owner in a bound tree`, async () => {
+    const workbench = createWorkbench();
+    const owner = { kind: "page", extensionId: "example", id: "page" } as const;
+    const placement: ResourceRef = { type: "ticket", id: "placement" };
+    const resource: ResourceRef | undefined =
+      projected === "bound" ? { type: "workspace", id: "contribution" } : undefined;
+    const calls: unknown[] = [];
+    const action = {
+      id: "inspect",
+      label: "Inspect",
+      run: (_args: unknown, context?: { resource?: ResourceRef }) => {
+        calls.push(context?.resource);
+      },
+    };
+    workbench.navigationTrees.registerContribution({
+      id: "projected",
+      owner,
+      sourceExtensionId: "example",
+      declarationIndex: 0,
+      resolveResource: () => resource,
+      getSections: () => [{ id: "files", actions: [action], nodes: [{ id: "row", label: "Row", actions: [action] }] }],
+    });
+    try {
+      const sections = await workbench.navigationTrees.getSections(owner, "content", { resource: placement });
+      const adapted = toTreeListSection(sections[0]!, {}, { workbench, resource: placement });
+      adapted.nodes[0]?.actions?.[0]?.onAction?.({ nodeId: "row" });
+      adapted.actions[0]?.onAction?.({ sectionId: "files" });
+      await Bun.sleep(0);
+      expect(calls).toEqual([resource, resource]);
+    } finally {
+      await workbench.dispose();
+    }
+  });
+}

@@ -17,7 +17,7 @@ import {
 } from "../../../core";
 import {
   getNavigationTreeNodeSource,
-  getNavigationTreeSectionResource,
+  getNavigationTreeSectionSource,
 } from "../../../core/registries/navigation/navigation-tree-node-source";
 import { WorkbenchShortcutHint } from "../../keybindings/shortcut-hint";
 import { createWorkbenchResourceActions } from "../../menus/resource-actions";
@@ -27,7 +27,7 @@ import { createTreeActionItems, createTreeContextMenuItems, type TreeActionParam
 interface TreeNodeRenderContext {
   workbench: WorkbenchCore;
   resource?: ResourceRef;
-  sectionResource?: ResourceRef;
+  sectionSource?: { resource?: ResourceRef };
   /** Row and section actions give way to keyboard hints while shortcut mode or its preview shows them. */
   shortcutHints?: boolean;
   onCommandError?: (error: unknown) => void;
@@ -138,7 +138,7 @@ const toTreeListNode = (
   const resource = resolveTreeNodeResource(node);
   const owner = getNavigationTreeNodeSource(node);
   const commandContext = {
-    resource: resource ?? context.resource ?? (owner ? owner.resource : context.sectionResource),
+    resource: resource ?? (owner ? owner.resource : (context.resource ?? context.sectionSource?.resource)),
   };
   const customPath = node.contextMenuPath ?? node.menuPath;
   const resourcePath = resource ? resourceContextMenuPath(resource.type) : undefined;
@@ -241,7 +241,7 @@ export const toTreeListSection = (
 ) => {
   const sectionContext = {
     ...context,
-    sectionResource: getNavigationTreeSectionResource(section),
+    sectionSource: getNavigationTreeSectionSource(section),
     onRequestParams: (request: TreeActionParamsRequest) =>
       context.onRequestParams?.({ ...request, sectionId: section.id }),
   };
@@ -254,7 +254,7 @@ export const toTreeListSection = (
     actions: createTreeActionItems({
       actions: context.shortcutHints ? undefined : section.actions,
       workbench: context.workbench,
-      context: { resource: context.resource ?? sectionContext.sectionResource },
+      context: { resource: sectionContext.sectionSource ? sectionContext.sectionSource.resource : context.resource },
       onCommandError: context.onCommandError,
       onRequestParams: sectionContext.onRequestParams,
     }),
