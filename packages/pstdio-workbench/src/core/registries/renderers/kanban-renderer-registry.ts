@@ -83,6 +83,8 @@ export interface KanbanRendererContribution<
     state: KanbanRendererQueryState & { page: CollectionPageRequest },
     signal: AbortSignal,
   ): Promise<{ rows: TRow[]; page: CollectionPage }>;
+  /** Requested page size for a paged board. Defaults to 100 and is capped at 500. */
+  initialPageSize?: number;
   subscribe?: (listener: () => void) => Disposable | (() => void);
 
   /** Row activation surfaced by the renderer (mirrored from <KanbanRenderer>). */

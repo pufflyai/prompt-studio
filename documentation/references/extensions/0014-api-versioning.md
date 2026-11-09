@@ -66,6 +66,8 @@ and owned local preparation before readiness. Publish the host and SDK before
 separately released providers adopt them; SDK 0.46.0 does not include them. See
 [local workspace providers](0003-command-and-process-api.md#local-workspace-providers-on-main).
 
+Paged table and board bodies on `main`, after 0.46.0, accept optional `initialPageSize`, and paged providers may receive page limits up to 500. The `MAX_COLLECTION_PAGE_SIZE` and `DEFAULT_COLLECTION_PAGE_SIZE` constants expose the bounds. These additions share the coordinated API 0.4.0 step. Older hosts cap pages at 100 and ignore board `initialPageSize`, so existing manifests and providers keep working.
+
 ### Which version each check uses
 
 | Check | Where it runs | Extension API version it compares with |

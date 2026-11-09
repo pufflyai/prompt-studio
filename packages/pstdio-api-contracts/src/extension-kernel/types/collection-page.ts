@@ -1,5 +1,11 @@
 import type { JsonValue } from "./json";
 
+/** Largest page the host requests from a paged table or board provider. */
+export const MAX_COLLECTION_PAGE_SIZE = 500;
+
+/** Page size used when a provider does not declare an initial size. */
+export const DEFAULT_COLLECTION_PAGE_SIZE = 100;
+
 /** A bounded read after applying the view's filter, sorts, search and grouping. */
 export interface CollectionPageRequest {
   limit: number;

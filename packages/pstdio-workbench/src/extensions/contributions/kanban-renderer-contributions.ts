@@ -231,6 +231,7 @@ export const registerWorkbenchExtensionKanbanRenderers = (
           kind: record.kind === "resourceList" ? "resourceList" : "kanban",
           resourceKind: record.resourceKind,
           toolbarActions: mapViewToolbarActions(record),
+          initialPageSize: record.initialPageSize,
           listRowActions: () =>
             (record.rowActions ?? []).map((action) => ({
               commandId: action.commandId,

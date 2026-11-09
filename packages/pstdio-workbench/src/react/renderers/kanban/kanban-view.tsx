@@ -123,6 +123,7 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     identity: rendererQueryKey([storageKey, settings, filter, sorts, pageParams]),
     scope: storageKey,
     fields: kanbanPageFields(attributes, settings),
+    initialPageSize: contribution.initialPageSize,
     rowId: (row) => row.id,
   });
   const paged = Boolean(contribution.executePage);
