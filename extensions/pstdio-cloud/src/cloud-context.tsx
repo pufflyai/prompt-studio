@@ -1,7 +1,8 @@
 import type { ExtensionViewRenderContext, WebviewClient } from "@pstdio/sdk/extensions";
 import { createContext, useContext } from "react";
+import type { cloudCommands } from "./project-state";
 
-export type CloudClient = WebviewClient<Record<never, never>>;
+export type CloudClient = WebviewClient<typeof cloudCommands>;
 export const CloudContext = createContext<{
   client: CloudClient;
   t: ExtensionViewRenderContext["t"];

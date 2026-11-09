@@ -11,6 +11,14 @@ const account: AccountStatus = {
 const synced: ProjectSyncStatus = { state: "synced", offlineReady: true };
 
 describe("Cloud status", () => {
+  test("keeps folder preparation and setup failure visible after the download finishes", () => {
+    expect(cloudStatus(account, synced, { state: "preparing" }).key).toBe("preparing");
+    expect(cloudStatus(account, synced, { state: "failed", error: "Cannot prepare folder" }).key).toBe("attention");
+    expect(cloudStatus(account, synced, { state: "ready" }).key).toBe("synced");
+  });
+  test("keeps a disconnected account visible before its feature flags can be refreshed", () => {
+    expect(cloudStatus({ ...account, features: null }, { state: "offline", offlineReady: true }).key).toBe("offline");
+  });
   test("distinguishes a local project from a disconnected cloud project", () => {
     expect(cloudStatus(account, { state: "local", offlineReady: true }).key).toBe("local");
     expect(cloudStatus(account, { state: "offline", offlineReady: true }).key).toBe("offline");

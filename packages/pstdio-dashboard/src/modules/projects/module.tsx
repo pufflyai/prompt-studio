@@ -224,7 +224,7 @@ export const createProjectsModule = (input: CreateProjectsModuleInput = {}) =>
       registerProjectSelectionMode(ctx);
       registerProjects(ctx);
       registerProjectCommands(ctx, selectedProjectContext, input.projectSelectionPersistence);
-      registerProjectOpening(ctx);
+      const projectOpening = registerProjectOpening(ctx);
       const initialProjectSelection = registerInitialProjectSelection(
         ctx,
         selectedProjectContext,
@@ -240,6 +240,7 @@ export const createProjectsModule = (input: CreateProjectsModuleInput = {}) =>
         registerSelectedProjectDeletionSync(ctx, selectedProjectContext, input.projectSelectionPersistence);
 
       return [
+        projectOpening,
         ...(initialProjectSelection ? [initialProjectSelection] : []),
         ...(singleProjectSelection ? [singleProjectSelection] : []),
         selectedProjectDeletionSync,

@@ -4,6 +4,8 @@ Repository-local tool that paints grainy watercolor art from the six Prompt Stud
 
 Open **Shape Art** in the project navigation. Change the composition, background colors and paint settings on the right; the preview repaints as you go. **Save** writes the recipe to `design/art/<id>.json` and a full-size PNG to `design/art/<id>.png`. Pieces are read from and written to the default project folder. Git ignores `design/art`. To use a piece on a page, copy its PNG and recipe next to the page, for example a blog banner into `clients/landing-page/src/content/blog/images/`.
 
+Close the settings panel to give the artwork more room. The toolbar's **Settings** button reopens it with the current recipe intact.
+
 The same commands work from the CLI, so agents can make art too:
 
 ```sh

@@ -14,6 +14,7 @@ interface ResolveTreeListSelectionInput {
   activeLocation?: PageLocation;
   activeResource?: ResourceRef;
   selectedNodeId?: string;
+  resourceReferenceKey?: (resource: ResourceRef) => string;
 }
 const activeNodeIds = (ids: string[]) => {
   const uniqueIds = [...new Set(ids)];
@@ -53,7 +54,12 @@ const resolveActiveResourceNodeIds = (
 const findSectionNode = (sections: TreeViewSection[], nodeId: string, childrenByNodeId: Record<string, TreeNode[]>) =>
   listSectionNodes(sections, childrenByNodeId).find((node) => node.id === nodeId);
 const pageRefsEqual = (left: PageRef, right: PageRef) => left.id === right.id && left.extensionId === right.extensionId;
-const targetMatchesPage = (target: NavigationTarget | undefined, activePage: PageRef, activeResource?: ResourceRef) => {
+const targetMatchesPage = (
+  target: NavigationTarget | undefined,
+  activePage: PageRef,
+  activeResource?: ResourceRef,
+  referenceKey: (resource: ResourceRef) => string = resourceKey,
+) => {
   // A resource panel owns its selection; its containing page can host other open resources.
   if (!target || targetPanelResource(target)) return false;
   const targets = target.kind === "compound" ? target.targets : [target];
@@ -62,7 +68,7 @@ const targetMatchesPage = (target: NavigationTarget | undefined, activePage: Pag
       candidate.kind === "page" &&
       pageRefsEqual(candidate.page, activePage) &&
       (candidate.resource
-        ? activeResource !== undefined && resourceKey(candidate.resource) === resourceKey(activeResource)
+        ? activeResource !== undefined && referenceKey(candidate.resource) === referenceKey(activeResource)
         : activeResource === undefined),
   );
 };
@@ -71,16 +77,18 @@ const resolveActivePageNodeIds = (
   childrenByNodeId: Record<string, TreeNode[]>,
   activePage: PageRef | undefined,
   activeResource: ResourceRef | undefined,
+  referenceKey: (resource: ResourceRef) => string = resourceKey,
 ) => {
   if (!activePage) return undefined;
   return activeNodeIds(
     listSectionNodes(sections, childrenByNodeId)
-      .filter((node) => targetMatchesPage(node.target, activePage, activeResource))
+      .filter((node) => targetMatchesPage(node.target, activePage, activeResource, referenceKey))
       .map((node) => node.id),
   );
 };
 export const resolveTreeListSelection = (input: ResolveTreeListSelectionInput) => {
   const { sections, childrenByNodeId, activeNodeId, activeLocation, activeResource, selectedNodeId } = input;
+  const referenceKey = input.resourceReferenceKey ?? resourceKey;
   if (activeNodeId) return activeNodeId;
   const activeResourceKeys = getWorkbenchSelectionResourceKeys(activeResource);
   // Parent trees retain their document selection, but only the active context owns selection.
@@ -91,7 +99,9 @@ export const resolveTreeListSelection = (input: ResolveTreeListSelectionInput) =
         const nodeResourceKey = resolveTreeNodeResourceKey(node);
         if (!nodeResourceKey && !node.target) return true;
         if (nodeResourceKey && activeResourceKeys.includes(nodeResourceKey)) return true;
-        return activeLocation ? targetMatchesPage(node.target, activeLocation.page, activeResource) : !activeResource;
+        return activeLocation
+          ? targetMatchesPage(node.target, activeLocation.page, activeResource, referenceKey)
+          : !activeResource;
       })
       .map((node) => node.id),
   );
@@ -100,7 +110,7 @@ export const resolveTreeListSelection = (input: ResolveTreeListSelectionInput) =
   const selectedResourceKey = selectedNode ? resolveTreeNodeResourceKey(selectedNode) : undefined;
   if (selectedResourceKey && activeResourceKeys.includes(selectedResourceKey)) return selectedNodeId;
   // Keep the selected document when several nodes target the same page and resource.
-  if (activeLocation && targetMatchesPage(selectedNode?.target, activeLocation.page, activeResource)) {
+  if (activeLocation && targetMatchesPage(selectedNode?.target, activeLocation.page, activeResource, referenceKey)) {
     return selectedNodeId;
   }
   const activeResourceNodeId = resolveActiveResourceNodeIds(sections, childrenByNodeId, activeResourceKeys);
@@ -110,6 +120,7 @@ export const resolveTreeListSelection = (input: ResolveTreeListSelectionInput) =
     childrenByNodeId,
     activeLocation?.page,
     activeLocation?.resource,
+    referenceKey,
   );
   if (activePageNodeId) return activePageNodeId;
   if (!selectedNodeId) return undefined;
@@ -124,7 +135,10 @@ export const resolveTreeSelectionIntent = (input: ResolveTreeListSelectionInput)
   const key = resolveTreeNodeResourceKey(node);
   if (!key && !node.target) return node.id;
   if (key && getWorkbenchSelectionResourceKeys(input.activeResource).includes(key)) return node.id;
-  if (input.activeLocation && targetMatchesPage(node.target, input.activeLocation.page, input.activeResource))
+  if (
+    input.activeLocation &&
+    targetMatchesPage(node.target, input.activeLocation.page, input.activeResource, input.resourceReferenceKey)
+  )
     return node.id;
   return undefined;
 };

@@ -117,6 +117,10 @@ test("Cloud settings respect early access and manage devices and project sync th
   await expect(settings.getByRole("button", { name: "Cancel sign-in" })).toBeVisible();
   expect((await fetch(callback)).status).toBe(200);
   await expect(status).toHaveText("Signed in");
+  await context.setOffline(true);
+  await expect(status).toHaveText("Connection lost");
+  await context.setOffline(false);
+  await expect(status).toHaveText("Signed in");
   await closeSettings();
   const detailsButton = details.getByRole("button", { name: "Cloud settings" });
   if (!(await detailsButton.isVisible())) await status.click();
@@ -201,7 +205,7 @@ test("Cloud settings respect early access and manage devices and project sync th
   await settings.getByRole("button", { name: "Sync with Cloud", exact: true }).click();
   await expect(status).toHaveText("Synced");
   await fixture.peer.stop();
-  await expect(status).toHaveText("Offline");
+  await expect(status).toHaveText("Connection lost");
   await fixture.peer.restart();
   await first.client.account.retryProjectSync(project.id);
   await expect(status).toHaveText("Synced");

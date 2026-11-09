@@ -1,6 +1,6 @@
 import { Box, Button, CloseButton, HStack, Stack, Text } from "@chakra-ui/react";
 import { AlertMessage, ScopedDialog as Dialog, handleDialogAcceptShortcut, ScrollArea } from "@pstdio/ui";
-import { Fragment, useState } from "react";
+import { Fragment, useRef, useState } from "react";
 import type { Command, RegisteredMenuItem, WorkbenchCommandExecutionContext } from "../../core";
 import type { ExecuteOptionCommand } from "./command-option-resolver";
 import { CommandOptionStatus } from "./command-option-status";
@@ -82,6 +82,9 @@ const CommandParamsForm = (props: CommandParamsDialogProps & { request: CommandP
   const [submitting, setSubmitting] = useState(false);
   const [customFieldErrors, setCustomFieldErrors] = useState<Record<string, string | undefined>>({});
   const entries = listCommandParamEntries(request?.record.command.params);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const rename = request.record.command.resourceMutation;
+  const titleParam = rename?.kind === "rename" ? rename.labelParam : undefined;
 
   const close = () => {
     if (submitting) return;
@@ -152,6 +155,11 @@ const CommandParamsForm = (props: CommandParamsDialogProps & { request: CommandP
 
   return (
     <Dialog.Root
+      initialFocusEl={
+        titleParam
+          ? () => contentRef.current?.querySelector<HTMLInputElement>("input:not(:disabled)") ?? null
+          : undefined
+      }
       open={request !== null}
       size="lg"
       scrollBehavior="inside"
@@ -160,6 +168,7 @@ const CommandParamsForm = (props: CommandParamsDialogProps & { request: CommandP
       <Dialog.Backdrop />
       <Dialog.Positioner>
         <Dialog.Content
+          ref={contentRef}
           display="flex"
           flexDirection="column"
           maxH="calc(100% - 48px)"
@@ -187,6 +196,7 @@ const CommandParamsForm = (props: CommandParamsDialogProps & { request: CommandP
                   const state = options.states[entry.key];
                   const dynamic = entry.options && !Array.isArray(entry.options);
                   const fieldProps = {
+                    fullWidth: entry.key === titleParam,
                     entry: dynamic ? { ...entry, options: state?.options ?? [] } : entry,
                     value: values[entry.key],
                     disabled: submitting || Boolean(dynamic && state?.status !== "ready"),
