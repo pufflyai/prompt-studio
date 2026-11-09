@@ -10,6 +10,6 @@ export const withoutPinnedOnlyRows = (sections: TreeListSection[], ids: Readonly
   return sections.flatMap((section) => {
     const nodes = section.nodes.filter((node) => !ids.has(node.id));
     if (nodes.length === section.nodes.length) return [section];
-    return nodes.length > 0 ? [{ ...section, nodes }] : [];
+    return nodes.length > 0 || section.pagination ? [{ ...section, nodes }] : [];
   });
 };

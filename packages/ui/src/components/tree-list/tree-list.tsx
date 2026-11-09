@@ -6,6 +6,7 @@ import { TreeListBackground } from "./tree-list-background";
 import { buildVirtualRows } from "./tree-list-model";
 import { TreeListMoveSurface } from "./tree-list-move-surface";
 import { TreeListNodes } from "./tree-list-nodes";
+import { TreeListPageBoundary } from "./tree-list-page-boundary";
 import type { TreeListMovePolicy } from "./tree-list-reorder";
 import { TreeListReveal } from "./tree-list-reveal";
 import { TreeListRow } from "./tree-list-row";
@@ -160,6 +161,12 @@ const StackTreeList = (props: TreeListProps) => {
                 onMoveNode={onMoveNode}
               />
               {section.nodes.length === 0 ? section.emptyState : null}
+              {section.pagination &&
+              (section.collapsible === false ||
+                section.label === undefined ||
+                expandedSectionIds.includes(section.id)) ? (
+                <TreeListPageBoundary pagination={section.pagination} />
+              ) : null}
             </TreeListReveal>
           </Stack>
         );

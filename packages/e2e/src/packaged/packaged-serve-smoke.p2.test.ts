@@ -14,6 +14,7 @@ import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } f
 import { expectPackagedGitFreeExtensions } from "./packaged-git-free-extensions-smoke";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // Native actions cover complete Kanban moves, resource lists and independent schema dependencies.
+// The native History fixture also verifies cursor-page metadata and callbacks through the compiled host.
 // packaged-native-settings.p2.spec.ts checks the Extensions nav page, direct routes, reload, native settings and scrolling.
 // packaged-marketplace-search.p1.spec.ts finds downloads by their visible full ID.
 // Git-free installation preserves bundled extension IDs, names and icon metadata.

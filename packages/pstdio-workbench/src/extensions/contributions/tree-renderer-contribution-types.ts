@@ -58,6 +58,7 @@ export interface ExtensionTreeNode {
   disabled?: boolean;
   selected?: boolean;
   children?: ExtensionTreeNode[];
+  nextCursor?: string;
   description?: string;
   contextValue?: string;
   hiddenByDefault?: boolean;
@@ -73,6 +74,7 @@ export interface ExtensionTreeSection {
   collapsible?: boolean;
   emptyState?: ExtensionTreeSectionEmptyState;
   nodes: ExtensionTreeNode[];
+  nextCursor?: string;
   hiddenByDefault?: boolean;
   canHide?: boolean;
 }

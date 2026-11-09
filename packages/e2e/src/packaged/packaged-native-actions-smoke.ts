@@ -47,7 +47,7 @@ export default {
     resolve:(_ctx,input)=>({state:"ready",executionKind:"remote",providerRef:input.providerRef,
       capabilities:{files:"none",diff:false,merge:false,rebase:false,archive:false,delete:false}}),
   }],
-  views:[...["dataTable","kanban","resourceList"].map(kind=>({id:kind.toLowerCase(),ref:{kind:"view",id:kind.toLowerCase()},title:kind,body:{kind,...(kind==="dataTable"?{columns:[{id:"approved",type:"boolean"}]}:{schemaRefreshEvents:[],...(kind==="kanban"?{onMove:(_ctx,input)=>input}:{}),attributes:[{id:"approved",label:"Approved",type:{kind:"boolean"},filterable:true}]}),query:()=>({rows:[kind==="dataTable"?{id:"one",values:{approved:false}}:{id:"one",title:"One",attributes:{approved:false}}]}),toolbarActions:[{id:"run",label:"Run",command:run,presentation:"primary",input}]}})),
+  views:[{id:"history",ref:{kind:"view",id:"history"},title:"History",body:{kind:"tree",body:()=>[{id:"sessions",nodes:[],nextCursor:"older"}],page:(_ctx,input)=>({nodes:[{id:"older",label:input.cursor}]})}},...["dataTable","kanban","resourceList"].map(kind=>({id:kind.toLowerCase(),ref:{kind:"view",id:kind.toLowerCase()},title:kind,body:{kind,...(kind==="dataTable"?{columns:[{id:"approved",type:"boolean"}]}:{schemaRefreshEvents:[],...(kind==="kanban"?{onMove:(_ctx,input)=>input}:{}),attributes:[{id:"approved",label:"Approved",type:{kind:"boolean"},filterable:true}]}),query:()=>({rows:[kind==="dataTable"?{id:"one",values:{approved:false}}:{id:"one",title:"One",attributes:{approved:false}}]}),toolbarActions:[{id:"run",label:"Run",command:run,presentation:"primary",input}]}})),
     {id:"conversation",ref:{kind:"view",id:"conversation"},title:"Native conversation",body:{kind:"chat",draftKey:"compose",initial:{messages:[],values:{}},query:(ctx)=>({messages:[],notice:ctx.projectId}),onAction:(_ctx,input)=>({draft:{text:input.action.text,attachments:input.action.attachments,values:input.action.values}})}},
     {id:"agent",ref:{kind:"view",id:"agent"},title:"Research agent",body:{kind:"controls",query:()=>({params:[{id:"agent",name:"Model",type:"harness",defaultValue:{harnessId:"test.native-actions.harness.worker",model:"research",params:{effort:"high"}}}]}),onApply:(_ctx,input)=>input.values}}
   ],
@@ -97,6 +97,20 @@ export const expectPackagedNativeActions = async (input: {
   const metadata = await fetch(`${root}/ui`, { headers: input.headers });
   expect(metadata.status).toBe(200);
   const body = await metadata.json();
+  const history = body.views.find(
+    (entry: { extensionId: string; localId: string }) =>
+      entry.extensionId === "test.native-actions" && entry.localId === "history",
+  );
+  expect(history.body.pageHandlerId).toBeDefined();
+  const historyPage = await fetch(`${root}/commands/${history.body.pageHandlerId}/execute`, {
+    method: "POST",
+    headers: { ...input.headers, "content-type": "application/json" },
+    body: JSON.stringify({
+      params: { cursor: "older", parent: { kind: "section", id: "sessions" }, renderer: { rendererId: history.id } },
+    }),
+  });
+  expect(historyPage.status).toBe(200);
+  expect((await historyPage.json()).outcome.value).toEqual({ nodes: [{ id: "older", label: "older" }] });
   for (const kind of ["dataTable", "kanban", "resourceList"]) {
     const view = body.views.find(
       (entry: { extensionId: string; localId: string }) =>

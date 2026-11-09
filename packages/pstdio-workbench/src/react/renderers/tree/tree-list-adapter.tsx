@@ -180,6 +180,7 @@ const toTreeListNode = (
     return menuItems;
   };
   const treeNode: TreeListNode = {
+    pagination: node.pagination,
     id: node.id,
     moveScope: node.moveScope,
     label: node.label,
@@ -248,6 +249,7 @@ export const toTreeListSection = (
   const emptyNode = toTreeListSectionEmptyNode(section);
   return {
     id: section.id,
+    pagination: section.pagination,
     moveScope: section.moveScope,
     label: section.label,
     menuLabel: section.menuLabel,

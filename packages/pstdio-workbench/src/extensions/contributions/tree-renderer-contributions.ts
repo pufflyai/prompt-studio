@@ -32,9 +32,10 @@ import {
   resolveHostTreeHeaderNodes,
   treeViewsFor,
 } from "./tree-renderer-host-defaults";
+import { treePageLoader } from "./tree-renderer-pages";
 import { extensionTreeStructure } from "./tree-renderer-structure";
 export interface RegisterWorkbenchExtensionTreeRenderersInput {
-  executeCommand(commandId: string, body: CommandExecuteRequest): Promise<unknown> | unknown;
+  executeCommand(commandId: string, body: CommandExecuteRequest, signal?: AbortSignal): Promise<unknown> | unknown;
   getHostTreeFooterNodes?: HostTreeDefaultNodesResolver;
   getHostTreeHeaderNodes?: HostTreeDefaultNodesResolver;
   metadata: WorkbenchExtensionMetadata;
@@ -142,16 +143,16 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
   };
   // Each load maps fresh extension data, with new action functions. A node whose data equals its previous
   // load keeps its previous mapping, so the tree shares it and does not render that row again. Mapped actions
-  // read only the node data, the bound resource, and the tree's own refresh.
-  // A new bound resource, including a new label or metadata, starts over. The map holds one entry per node id.
+  // and continuation reads use their captured query scope, so scope changes start over.
+  // The map holds one entry per node id.
   let previousMappings = {
-    resource: undefined as ResourceRef | undefined,
+    scope: "",
     nodes: new Map<string, { node: ExtensionTreeNode; mapped: TreeNode }>(),
   };
   const mapNode = (node: ExtensionTreeNode, ctx: TreeContext): TreeNode => {
-    const resource = shareEqualValue(previousMappings.resource, ctx.resource);
-    if (resource !== previousMappings.resource || previousMappings.nodes.size > maxReusedTreeNodes) {
-      previousMappings = { resource, nodes: new Map() };
+    const scope = JSON.stringify([ctx.resource, ctx.filter, ctx.pageParams, ctx.viewId, ctx.state]);
+    if (scope !== previousMappings.scope || previousMappings.nodes.size > maxReusedTreeNodes) {
+      previousMappings = { scope, nodes: new Map() };
     }
     const previous = previousMappings.nodes.get(node.id);
     if (previous && shareEqualValue(previous.node, node) === previous.node) return previous.mapped;
@@ -174,6 +175,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       collapsible: node.collapsible,
       disabled: node.disabled,
       children: node.children?.map((child) => mapNode(child, ctx)),
+      nextPage: treePageLoader(input, record, ctx, { kind: "node", node }, mapNode, node.nextCursor),
       description: node.description,
       contextValue: node.contextValue,
       hiddenByDefault: node.hiddenByDefault,
@@ -193,6 +195,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       collapsible: section.collapsible,
       emptyState: mapEmptyState(section),
       nodes: section.nodes.map((node) => mapNode(node, ctx)),
+      nextPage: treePageLoader(input, record, ctx, { kind: "section", id: section.id }, mapNode, section.nextCursor),
       hiddenByDefault: section.hiddenByDefault,
       canHide: section.canHide,
     }));
