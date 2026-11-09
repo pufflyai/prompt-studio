@@ -30,8 +30,7 @@ export const useTreePages = (
   }, [workbench, key, snapshot !== undefined]);
   useEffect(() => {
     if (loading || current?.key !== key || !current.owner) return;
-    current.owner.accept(tree, snapshot);
-    changed((value) => value + 1);
+    if (current.owner.accept(tree, snapshot)) changed((value) => value + 1);
   }, [current, key, tree, snapshot, loading]);
   const result = current?.key === key ? current.owner?.sections() : undefined;
   const visible = result ?? {

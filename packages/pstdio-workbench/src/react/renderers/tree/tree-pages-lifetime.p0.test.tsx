@@ -210,3 +210,62 @@ test("returning while a cancelled later-page child drains resumes its shared rea
     environment.IS_REACT_ACT_ENVIRONMENT = previous;
   }
 });
+
+test.each([
+  "accepted",
+  "failed",
+] as const)("fresh opaque structure nodes remain renderable through a %s native root read", async (outcome) => {
+  const environment = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
+  const previous = environment.IS_REACT_ACT_ENVIRONMENT;
+  environment.IS_REACT_ACT_ENVIRONMENT = true;
+  const workbench = createWorkbench();
+  const held = Promise.withResolvers<TreeViewSection[]>();
+  const provenance = Symbol("provider");
+  const provider = {};
+  workbench.views.registerView({
+    id: "navigation",
+    title: "Navigation",
+    body: {
+      kind: "tree",
+      getHeaderStructure: () => [
+        {
+          id: "header",
+          nodes: [Object.defineProperty({ id: "project", label: "Project" }, provenance, { value: provider })],
+        },
+      ],
+      getHeader: () => held.promise,
+      getBody: () => held.promise,
+      getFooter: () => held.promise,
+      getChildren: () => [],
+    },
+  });
+  let value: ReturnType<typeof useTreeData> | undefined;
+  let renders = 0;
+  const Capture = () => {
+    if (++renders > 100) throw new Error("A native placeholder rendered repeatedly without an input change");
+    value = useTreeData(workbench, "navigation");
+    return null;
+  };
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    await act(async () => {
+      renderer = create(<Capture />);
+    });
+    expect(value?.header[0]?.nodes[0]?.label).toBe("Project");
+    expect(Object.getOwnPropertyDescriptor(value?.header[0]?.nodes[0], provenance)?.value).toBe(provider);
+    await act(async () => {
+      if (outcome === "accepted") held.resolve([{ id: "header", nodes: [{ id: "accepted", label: "Accepted" }] }]);
+      else held.reject(new Error("Read interrupted"));
+    });
+    if (outcome === "accepted") expect(value?.header[0]?.nodes[0]?.label).toBe("Accepted");
+    else {
+      expect(value?.error).toBe("Read interrupted");
+      expect(value?.header[0]?.nodes[0]?.label).toBe("Project");
+    }
+  } finally {
+    held.resolve([]);
+    await act(async () => renderer?.unmount());
+    await workbench.dispose();
+    environment.IS_REACT_ACT_ENVIRONMENT = previous;
+  }
+});

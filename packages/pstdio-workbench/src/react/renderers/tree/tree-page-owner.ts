@@ -61,7 +61,7 @@ const createOwner = (root: Root, parentCache: Cache, identity: TreePageIdentity)
     });
   let children = createChildren();
   const accept = (value: PagedTreeData, accepted: unknown) => {
-    if (!available() || root.query.getSnapshot().data !== accepted) return;
+    if (!available() || root.query.getSnapshot().data !== accepted) return false;
     const sameSnapshot = snapshot === accepted && !generation.signal.aborted;
     if (!sameSnapshot) {
       const retained = pages.snapshot();
@@ -74,6 +74,7 @@ const createOwner = (root: Root, parentCache: Cache, identity: TreePageIdentity)
     }
     // Absence in another placement is not an authoritative empty lazy result. Explicit [] still replaces it.
     tree = sameSnapshot && tree ? { ...value, children: { ...tree.children, ...value.children } } : value;
+    return true;
   };
   let retired = false;
   const retire = () => {
