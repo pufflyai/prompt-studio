@@ -82,16 +82,6 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
     upgrade.mutate(
       { instanceId: extension.id },
       {
-        onSuccess: (result) => {
-          toaster.create({
-            type: "success",
-            title: t(
-              result.changed
-                ? "projectSettings.extensionsPanel.upgrade.succeeded"
-                : "projectSettings.extensionsPanel.upgrade.current",
-            ),
-          });
-        },
         onError: (error) => {
           showError({
             title: t("projectSettings.extensionsPanel.upgrade.failed"),
