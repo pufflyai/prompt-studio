@@ -38,9 +38,10 @@ test("acceptance fixture drives offline shape edits, deterministic migration and
     title: "Left title",
     status: "right",
     nested: { left: 2, right: 2 },
+    // Whole arrays keep the first save to reach Cloud; declared text merges both edits.
     items: [
-      { id: "a", title: "A" },
-      { id: "b", title: "Edited B" },
+      { id: "a", title: "Edited A" },
+      { id: "b", title: "B" },
     ],
     body: "FIRST\nLAST",
   });

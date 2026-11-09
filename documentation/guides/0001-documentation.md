@@ -77,6 +77,7 @@ Every published page follows these rules. The website build fails when a page br
 - The first block after the title is a plain paragraph of one or two sentences, ideally under 160 characters. It becomes the page's description for search engines and link previews.
 - The file number sets the page order in the sidebar. The URL drops it: `references/cli/0006-sessions.md` becomes `/docs/references/cli/sessions/`. An extension's `README.md` is its overview page.
 - Use `##` headings for sections. They form the page outline.
+- End each page with `*Updated at: YYYY-MM-DD*`, separated from the content by a blank line. Use the date of the latest content change and update it when editing the page. The website renders this line in italics.
 
 Link with relative paths to `.md` files, so the same markdown works on GitHub and on the website. A link to a published page becomes a website link. A link to any other repository file, such as an ADR or a source file, becomes a link to that file on GitHub `main`. A relative link to a missing file fails the build. Anchors such as `0006-sessions.md#create-a-session` use GitHub-style heading slugs. Each heading on the website has a `#` link readers can open or copy. When linking to instructions within a page, include the section anchor, such as [CLI installation](getting-started/0001-install.md#install-only-the-command-line-tool).
 

@@ -132,7 +132,7 @@ test("preserves other Session tabs when selecting from New session", async ({ pa
   const newSession = menu.getByRole("menuitem", { name: "New session" });
   await expect(newSession).toBeVisible();
   await expect(menu.getByRole("menuitem").first()).toContainText("New session");
-  await expect(menu.getByRole("menuitem", { name: "Pin tab", exact: true })).toBeVisible();
+  await expect(menu.getByRole("menuitem", { name: "Unpin tab", exact: true })).toBeVisible();
   await expect(menu.getByRole("menuitem", { name: "Reset layout", exact: true })).toBeVisible();
   await expect(menu.getByRole("group", { name: "Sessions", exact: true })).toBeVisible();
   await expect(menu.getByRole("group", { name: "Tab", exact: true })).toBeVisible();
@@ -269,12 +269,14 @@ test("renames a moved session and restores its destination after reload", async 
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("dashboard-wb2:selected-project:global", id);
   }, project.id);
-  // Home's Main is tabless, so the move needs a page whose Main accepts tabs.
   await page.goto(`/projects/${project.id}/sessions`);
   await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
   await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
   const side = page.locator('[data-workbench-panel-header="side"]');
-  await openTabCustomMenu(side.getByRole("tab", { name: "New session", exact: true }));
+  // The Sessions page owns its Main composer; explicitly add the Side Panel instance to move.
+  await side.getByRole("button", { name: "Add panel", exact: true }).click();
+  await page.getByRole("menuitem", { name: "New session", exact: true }).click();
+  await openTabCustomMenu(side.getByRole("tab", { name: "New session", exact: true, selected: true }));
   await switchSession(page, "Session to rename");
   await openTabCustomMenu(side.getByRole("tab", { name: "Session to rename", exact: true }));
   await page.getByRole("menuitem", { name: "Move to Secondary", exact: true }).click();

@@ -3,6 +3,7 @@ import type { MouseEvent as ReactMouseEvent } from "react";
 import type { TreeListLinkComponent, TreeListNavigateEvent } from "./tree-list.types";
 import type { VirtualRow } from "./tree-list-model";
 import { TreeListNodeRow } from "./tree-list-node-row";
+import { TreeListPageBoundary } from "./tree-list-page-boundary";
 import { TreeListSectionHeader } from "./tree-list-section-header";
 
 type TreeListRowVariant = "compact" | "tree";
@@ -56,6 +57,7 @@ export const TreeListRow = (props: TreeListRowProps) => {
   }
 
   if (row.kind === "section-empty") return row.emptyState ?? null;
+  if (row.kind === "continuation") return <TreeListPageBoundary pagination={row.pagination} />;
 
   return (
     <TreeListNodeRow

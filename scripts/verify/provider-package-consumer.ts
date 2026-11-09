@@ -29,11 +29,34 @@ export const verifyProviderPackageConsumer = (root: string, sdkArchive: string, 
   );
   writeFileSync(
     join(provider, "extension.ts"),
-    `import { defineCommand, defineExtension, definePage, defineView, params, workbenchModes } from "@pstdio/sdk/extensions";
+    `import { defineCommand, defineExtension, definePage, defineView, defineWorkspaceType, params, workbenchModes, type WorkspaceProviderDirectory, type WorkspaceProviderResult } from "@pstdio/sdk/extensions";
 export const save = defineCommand({ id: "save", title: "Save", params: { text: params.text({ required: true }) }, run: async (_ctx, input) => ({ text: input.text }) });
 const view = defineView({ id: "content", title: "Content", body: { kind: "controls", query: async () => ({ params: [] }) } });
 export const page = definePage({ id: "notes", title: "Notes", path: "notes", mode: workbenchModes.project, main: { kind: "view", view: view.ref, cardinality: "one" }, slots: [{ id: "inspector", region: "side", item: { kind: "view", view: view.ref, presence: "closed" } }] });
-export default defineExtension({ commands: [save], views: [view], pages: [page] });\n`,
+const localResult = (directory: WorkspaceProviderDirectory): WorkspaceProviderResult => ({
+  state: "ready", executionKind: "local", executionTarget: { kind: "local", rootPath: directory.path },
+  providerRef: { version: 1, data: { directory: directory.path } },
+  capabilities: { files: "write", diff: false, merge: false, rebase: false, delete: true },
+});
+export const local = defineWorkspaceType({
+  id: "local", label: "Local environment",
+  async discover(ctx) {
+    return (await ctx.workspaces.getDefault()) ? { params: { revision: params.text({ defaultValue: "main" }) } } : null;
+  },
+  async validateParams(ctx, input) {
+    if (!await ctx.workspaces.getDefault() || typeof input.revision !== "string") throw new Error("Choose a revision");
+  },
+  async create(ctx, input) {
+    if (!ctx.localDirectory) throw new Error("Host does not provide local workspace directories");
+    const directory = await ctx.localDirectory();
+    await directory.files.writeText("identity.txt", input.workspaceId);
+    await ctx.process.runOrThrow({ command: ["bun", "--version"], cwd: directory.path });
+    return localResult(directory);
+  },
+  async resolve(ctx) { return localResult(await ctx.localDirectory!()); },
+  async delete(ctx) { await (await ctx.localDirectory!()).remove(); },
+});
+export default defineExtension({ commands: [save], views: [view], pages: [page], workspaceTypes: [local] });\n`,
   );
   writeFileSync(
     join(provider, "contracts.ts"),
@@ -57,13 +80,14 @@ export const saveNote = qualifyRef("verify.review-provider", save.ref);\n`,
   writeFileSync(
     join(consumer, "consumer.ts"),
     `import { notes, inspector, saveNote } from "review-provider/contracts";
-import { defineExtension, defineNavigationItem, homePages, workspacePages, workbenchModes, type CommandRef, type NavigationTarget } from "@pstdio/sdk/extensions";
+import { defineExtension, defineNavigationItem, defineView, homePages, workspacePages, workbenchModes, type CommandRef, type NavigationTarget } from "@pstdio/sdk/extensions";
+const terminal = defineView({ id: "shell", title: "Shell", body: { kind: "terminal", session: async (ctx) => ({ workspaceId: ctx.workspaceId, env: { TOOL: "provider" } }) } });
 const modal: NavigationTarget = { kind: "dialog", page: workspacePages.form };
 if (homePages.home.extensionId !== "pstdio.pstdio-home" || modal.page.extensionId !== "pstdio.pstdio-workspaces") throw new Error("Bundled provider refs are not exported as values");
 export const saved: CommandRef<{ text: string }, { text: string }> = saveNote;
 // @ts-expect-error Qualification must preserve command result types.
 export const wrong: CommandRef<{ text: string }, { revision: number }> = saveNote;
-export default defineExtension({ navigationItems: [defineNavigationItem({ id: "open", label: "Open provider", owner: workbenchModes.project, action: { kind: "compound", targets: [{ kind: "page", page: notes }, { kind: "panel", panel: inspector }] } })] });
+export default defineExtension({ views: [terminal], navigationItems: [defineNavigationItem({ id: "open", label: "Open provider", owner: workbenchModes.project, action: { kind: "compound", targets: [{ kind: "page", page: notes }, { kind: "panel", panel: inspector }] } })] });
 if (notes.extensionId !== "verify.review-provider" || inspector.page.extensionId !== notes.extensionId || saveNote.extensionId !== notes.extensionId) throw new Error("Consumer lost provider ownership");\n`,
   );
   writeFileSync(
@@ -86,5 +110,7 @@ if (notes.extensionId !== "verify.review-provider" || inspector.page.extensionId
   run(consumer, ["node_modules/typescript/bin/tsc", "--noEmit"]);
   run(consumer, ["check"]);
   run(consumer, ["consumer.ts"]);
-  console.log("Verified provider page, panel, and typed command refs through separately installed packages.");
+  console.log(
+    "Verified provider pages, typed command refs and local workspace discovery/directory contracts through separately installed packages.",
+  );
 };

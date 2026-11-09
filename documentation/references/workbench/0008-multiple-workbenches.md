@@ -41,3 +41,5 @@ Use the exported UI components. For a custom overlay, use `ScopedDialog`, `Scope
 Use `useToaster()` for surface-owned feedback. The module-level `toaster` remains the standalone queue. Workbench notifications use separate queues, so matching notification IDs in different workbenches cannot dismiss each other. System errors stay in their owner's status bar.
 
 See [the workbench API](0002-api.md), [navigation](0004-navigation.md), and [webview hosts](0005-webview-hosts.md). Desktop project tab retention is host wiring and is separate from this contract.
+
+*Updated at: 2026-10-31*

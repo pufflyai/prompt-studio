@@ -158,7 +158,7 @@ Use `resources.actions` with `{ operation: "list", resource }` to read the same 
 
 ### Cloud account and sync status
 
-On `main`, extension API 0.2.1 also adds `account.read` and `account.manage`. `client.account` has the same methods as [`ctx.account`](0003-command-and-process-api.md#cloud-account-and-sync-status). Declare `account.read` for `client.account.status`, `loginStatus`, `devices`, and `projectSyncStatus`. Declare `account.manage` for `client.account.login`, `cancelLogin`, `logout`, `renameDevice`, `removeDevice`, `syncProject`, and `stopProjectSync`. Without a project ID, a call uses the webview's project.
+On `main`, extension API 0.2.1 also adds `account.read` and `account.manage`. `client.account` has the same methods as [`ctx.account`](0003-command-and-process-api.md#cloud-account-and-sync-status). Declare `account.read` for `client.account.status`, `loginStatus`, `devices`, and `projectSyncStatus`. Declare `account.manage` for `client.account.login`, `cancelLogin`, `logout`, `renameDevice`, `removeDevice`, `syncProject`, `stopProjectSync`, and `resolveReturnedChanges`. Without a project ID, a call uses the webview's project.
 
 ```ts
 const client = createWebviewClient<typeof commands>(host);
@@ -509,3 +509,5 @@ Agents use the same authenticated API:
 - Global views use `/v1/extensions/installed/{installName}/preferences/{name}`. Project, workspace, and session scopes need an explicit `scopeId` on this path.
 
 These routes store extension-owned values. Declared settings use the settings API. Theme and locale remain host appearance choices. Use `ctx.storage` for extension product data rather than view preferences.
+
+*Updated at: 2026-11-07*

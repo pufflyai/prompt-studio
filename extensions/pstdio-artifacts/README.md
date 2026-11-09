@@ -80,3 +80,5 @@ The root element's `data-theme` attribute is `light` or `dark`, and `prefers-col
 - Commands that update or read an artifact accept only the URL that `publish` returned, not a full browser address.
 - When two agents publish to the same artifact at once, each publish becomes its own version. Versions are ordered by publish time.
 - There is no sharing, public hosting, automatic clean-up, or loading of files from outside the page. A preview's state lasts while its tab stays open.
+
+*Updated at: 2026-10-26*

@@ -6,7 +6,7 @@
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.3.1 || ^0.4.0"
+    "pstdio": "^0.4.0"
   },
   "private": true,
   "type": "module",
@@ -18,7 +18,7 @@
   "dependencies": {
     "@chakra-ui/react": "^3.0.0",
     "@emotion/react": "^11.0.0",
-    "@pstdio/sdk": "0.47.0-preview.sha-39796d3892fb176a0254332998ce50fb36ad155f",
+    "@pstdio/sdk": "0.47.0-preview.sha-8184397490cfa0fa22d136b99ac75c708878512a",
     "@pstdio/ui": "0.47.0-preview.sha-39796d3892fb176a0254332998ce50fb36ad155f",
     "@tanstack/react-query": "^5.90.21",
     "lucide-react": "^0.557.0",

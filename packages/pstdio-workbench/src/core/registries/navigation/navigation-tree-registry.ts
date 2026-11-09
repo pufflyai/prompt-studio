@@ -1,10 +1,15 @@
-import { resourceKey } from "@pstdio/sdk/extensions";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import type { TreeNode, TreeViewSection } from "../renderers/tree-renderer-registry";
 import type { ResourceRef } from "../resources/resource-registry";
 import { settleReadBatch } from "../views/settle-read-batch";
 import type { NavigationTarget } from "./navigation-registry";
-import { getNavigationTreeNodeSource, setNavigationTreeNodeSource } from "./navigation-tree-node-source";
+import { stableNavigationValue } from "./navigation-target-key";
+import {
+  getNavigationTreeNodeSource,
+  setNavigationTreeNodeSource,
+  setNavigationTreeSectionResource,
+} from "./navigation-tree-node-source";
+import { mergeNavigationTreeSection, projectNavigationTreePage } from "./navigation-tree-pages";
 import { createNavigationTreeSnapshots } from "./navigation-tree-snapshots";
 
 export interface DeclaredNavigationAction {
@@ -54,6 +59,7 @@ export interface NavigationTreeContribution {
 export interface CreateNavigationTreeRegistryInput {
   subscribeViewRefresh?(viewId: string, listener: () => void): Disposable;
   getViewDefaultExpandedSectionIds?(viewId: string): readonly string[] | undefined;
+  getViewDefaultExpandedNodeIds?(viewId: string): readonly string[] | undefined;
   getViewSections?(viewId: string, context: NavigationTreeContext): Promise<TreeViewSection[]> | TreeViewSection[];
   getViewStructure?(viewId: string, context: NavigationTreeContext): TreeViewSection[];
   getViewChildren?(viewId: string, node: TreeNode, context: NavigationTreeContext): Promise<TreeNode[]> | TreeNode[];
@@ -87,6 +93,7 @@ export interface NavigationTreeRegistry {
   getChildren(node: TreeNode, context?: NavigationTreeContext): Promise<TreeNode[]>;
   moveNode(source: TreeNode, target: TreeNode | undefined, context?: NavigationTreeMoveContext): Promise<void>;
   getDefaultExpandedSectionIds(owner: NavigationTreeOwner, slot?: NavigationTreeSlot): string[];
+  getDefaultExpandedNodeIds(owner: NavigationTreeOwner, slot?: NavigationTreeSlot): string[];
   /** Counts contributions registered and removed, unlike `onDidChange`, which also fires on refreshes. */
   getRegistrationRevision(): number;
   onDidChange(listener: () => void): Disposable;
@@ -121,16 +128,6 @@ const readContext = (contribution: NavigationTreeContribution, context: Navigati
   resource: contribution.resolveResource ? contribution.resolveResource(context.resource) : context.resource,
 });
 
-const mergeSection = (sections: TreeViewSection[], section: TreeViewSection) => {
-  const index = sections.findIndex((candidate) => candidate.id === section.id);
-  if (index < 0) {
-    sections.push(section);
-    return;
-  }
-  const current = sections[index]!;
-  sections[index] = { ...current, nodes: [...current.nodes, ...section.nodes] };
-};
-
 export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistryInput = {}): NavigationTreeRegistry => {
   const contributions = new Map<string, NavigationTreeContribution>();
   const registryToken = {};
@@ -161,6 +158,9 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
       canHide: node.canHide ?? contribution.owner.kind === "mode",
       canReorder: node.canReorder ?? contribution.owner.kind === "mode",
       children: node.children?.map((child) => projectNode(child, contribution, moveScope, resource)),
+      nextPage: projectNavigationTreePage(node.nextPage, (child) =>
+        projectNode(child, contribution, moveScope, resource),
+      ),
     };
     setNavigationTreeNodeSource(projected, { contribution, node, resource, registryToken });
     return projected;
@@ -171,17 +171,24 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
     contribution: NavigationTreeContribution,
     owner: NavigationTreeOwner,
     resource?: ResourceRef,
-  ): TreeViewSection => ({
-    ...section,
-    id:
-      contribution.sourceExtensionId !== owner.extensionId && !section.label
-        ? navigationSlotRootSectionId(contribution.slot)
-        : scopedId(contribution.idScope, section.id),
-    moveScope: ownerId(owner),
-    canHide: section.canHide ?? true,
-    canReorder: section.canReorder ?? true,
-    nodes: section.nodes.map((node) => projectNode(node, contribution, ownerId(owner), resource)),
-  });
+  ): TreeViewSection => {
+    const projected: TreeViewSection = {
+      ...section,
+      id:
+        contribution.sourceExtensionId !== owner.extensionId && !section.label
+          ? navigationSlotRootSectionId(contribution.slot)
+          : scopedId(contribution.idScope, section.id),
+      moveScope: ownerId(owner),
+      canHide: section.canHide ?? true,
+      canReorder: section.canReorder ?? true,
+      nodes: section.nodes.map((node) => projectNode(node, contribution, ownerId(owner), resource)),
+      nextPage: projectNavigationTreePage(section.nextPage, (node) =>
+        projectNode(node, contribution, ownerId(owner), resource),
+      ),
+    };
+    setNavigationTreeSectionResource(projected, resource);
+    return projected;
+  };
 
   const structureOf = (
     contribution: NavigationTreeContribution,
@@ -197,7 +204,7 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
 
   const mergeSections = (groups: TreeViewSection[][]) => {
     const sections: TreeViewSection[] = [];
-    for (const section of groups.flat()) mergeSection(sections, section);
+    for (const section of groups.flat()) mergeNavigationTreeSection(sections, section);
     return sections;
   };
 
@@ -236,11 +243,10 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
 
     getReadKey(owner, context = {}) {
       return JSON.stringify(
-        (["header", "content", "footer"] as const).flatMap((slot) =>
-          matching(owner, slot).map((contribution) => [
-            contribution.id,
-            resourceKey(readContext(contribution, context).resource),
-          ]),
+        stableNavigationValue(
+          (["header", "content", "footer"] as const).flatMap((slot) =>
+            matching(owner, slot).map((contribution) => [contribution.id, readContext(contribution, context).resource]),
+          ),
         ),
       );
     },
@@ -311,6 +317,17 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
             (contribution.viewId ? input.getViewDefaultExpandedSectionIds?.(contribution.viewId) : undefined) ??
             []
           ).map((id) => scopedId(contribution.idScope, id)),
+        ),
+      );
+    },
+
+    getDefaultExpandedNodeIds(owner, selectedSlot) {
+      const slots: readonly NavigationTreeSlot[] = selectedSlot ? [selectedSlot] : ["header", "content", "footer"];
+      return slots.flatMap((slot) =>
+        matching(owner, slot).flatMap((contribution) =>
+          (contribution.viewId ? (input.getViewDefaultExpandedNodeIds?.(contribution.viewId) ?? []) : []).map((id) =>
+            scopedId(contribution.idScope, id),
+          ),
         ),
       );
     },

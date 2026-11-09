@@ -11,18 +11,17 @@ import {
   type StorageTextDeclaration,
 } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
-import { storage_ordered_owners as owners } from "../../db/schemas.pg";
 import { createCommitQueue } from "./commit-queue";
 import { createOrderedCommitCache } from "./ordered-commit-cache";
 import { publishCommittedOrderedGroup } from "./ordered-commit-projection";
+import { ensureOrderedOwner } from "./ordered-conversion";
 import { type OrderedJournal, withOrderedOwner } from "./ordered-journal";
 import { rememberOrderedTextGeneration } from "./ordered-native-recovery";
 import { bindOrderedNativeSource, type OrderedSourceInput } from "./ordered-native-source";
 import { combineNumberEvents } from "./ordered-number-projection";
-import { initializeOrderedOwner } from "./ordered-projection";
 import { knownDependencies, rebaseOrderedProjection } from "./ordered-rebase";
 import { compileOrderedGroup } from "./ordered-record-compiler";
-import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
+import type { OrderedTransaction } from "./ordered-sql";
 import { orderedOwnerJoinedCloud, readOrderedOwner } from "./ordered-stream-state";
 import { writeOrderedTextAsset } from "./ordered-text-asset";
 import { createRecordQueries, listProjectedRecords, readProjectedRecords } from "./record-queries";
@@ -82,13 +81,7 @@ export const createOrderedResourceRecords = (
   const commitCache = createOrderedCommitCache(db, owner);
   let initialized: Promise<void> | undefined;
   const ready = () =>
-    (initialized ??= (async () => {
-      const [row] = await db.select({ id: owners.workbench_id }).from(owners).where(orderedOwnerWhere(owners, owner));
-      if (!row)
-        await withOrderedOwner(db, owner, (journal, tx, created) =>
-          initializeOrderedOwner(journal, tx, owner, created),
-        );
-    })().catch((error) => {
+    (initialized ??= ensureOrderedOwner(db, owner).catch((error) => {
       initialized = undefined;
       throw error;
     }));
@@ -178,8 +171,7 @@ export const createOrderedResourceRecords = (
   };
   const commit = async (group: StorageGroup) => {
     const owned = structuredClone(group);
-    const result = await withOrderedOwner(db, owner, async (journal, tx, created) => {
-      await initializeOrderedOwner(journal, tx, owner, created);
+    const result = await withOrderedOwner(db, owner, async (journal, tx) => {
       return commitIn(journal, tx, owned);
     });
     return notify(result);
@@ -209,8 +201,7 @@ export const createOrderedResourceRecords = (
       ),
     commit,
     bindText: async (input: OrderedSourceInput) => {
-      const result = await withOrderedOwner(db, owner, async (journal, tx, created) => {
-        await initializeOrderedOwner(journal, tx, owner, created);
+      const result = await withOrderedOwner(db, owner, async (journal, tx) => {
         return bindOrderedNativeSource(journal, tx, owner, input, deps.observer);
       });
       if (result.projected) deps.statistics.record(result.projected);
@@ -226,8 +217,7 @@ export const createOrderedResourceRecords = (
       replace: StorageGroup["edits"][number]["replace"];
     }) => {
       const group = { operationId: crypto.randomUUID(), edits: [{ recordId: input.recordId, replace: input.replace }] };
-      const saved = await withOrderedOwner(db, owner, async (journal, tx, created) => {
-        await initializeOrderedOwner(journal, tx, owner, created);
+      const saved = await withOrderedOwner(db, owner, async (journal, tx) => {
         return writeOrderedTextAsset({
           ...input,
           tx,
@@ -255,8 +245,7 @@ export const createOrderedResourceRecords = (
       return records;
     },
     outcome: (id: string) =>
-      withOrderedOwner(db, owner, async (journal, tx, created) => {
-        await initializeOrderedOwner(journal, tx, owner, created);
+      withOrderedOwner(db, owner, async (journal) => {
         return (await journal.requestIdentity(id)) ? savedOutcome(journal, id) : undefined;
       }),
     transaction: async <T>(
@@ -272,8 +261,7 @@ export const createOrderedResourceRecords = (
       const results: Awaited<ReturnType<typeof commitIn>>[] = [];
       const ownRevisions = new Map<string, string>();
       const queue = createCommitQueue();
-      const value = await withOrderedOwner(db, owner, async (journal, tx, created) => {
-        await initializeOrderedOwner(journal, tx, owner, created);
+      const value = await withOrderedOwner(db, owner, async (journal, tx) => {
         try {
           return await run(
             {

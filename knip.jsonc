@@ -145,6 +145,7 @@
         "src/perf/storage-scale-prepare.ts",
         "src/perf/storage-scale-extension.ts",
         "src/**/*.test.ts",
+        "src/**/*.test.tsx",
         "src/**/*.fixture.ts",
         "src/**/*.fixture.tsx",
         // Packaged smoke tests bundle these extension entries by path.
@@ -172,6 +173,7 @@
         "pstdio-cloud",
         "pstdio-dashboard",
         "pstdio-home",
+        "pstdio-session-browser",
         "pstdio-workspaces",
         "pstdio-notes",
         "pstdio-performance",
@@ -216,6 +218,7 @@
         "src/db/pglite-export-worker.ts",
         "src/services/sessions/session-query.p3.bench.ts",
         "src/services/extension-storage/document-storage.p3.bench.ts",
+        "src/services/extension-storage/ordered-legacy-backlog.p3.bench.ts",
         "src/services/extension-storage/document-scale.diagnostic.ts",
         "src/services/extension-storage/record-read-scale.diagnostic.ts",
         "src/services/extension-storage/ordered-log-query-plan.diagnostic.ts",
@@ -367,7 +370,7 @@
     },
     // Webview entries are referenced by path through packageAsset(), so each extension lists its own.
     "extensions/pstdio-onboarding": {
-      "entry": ["package.json", "extension.ts", "src/**/*.test.ts", "src/**/*.canvas.tsx", "src/setup-entry.tsx"],
+      "entry": ["package.json", "extension.ts", "src/**/*.test.{ts,tsx}", "src/**/*.canvas.tsx", "src/setup-entry.tsx"],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "extensions/pstdio-workspaces": {

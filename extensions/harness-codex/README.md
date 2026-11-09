@@ -59,3 +59,5 @@ OpenAI labels the Codex app-server as experimental. [ADR 0064](../../documentati
 ## What is tested
 
 The harness tests replay recorded app-server traffic from Codex 0.157.0 and 0.162.0, and use local test servers for threads, history, questions, goals, and cleanup. Tests also check private executable discovery, PATH precedence, and the sign-in request without global PATH tools. CI also starts the installed Codex CLI, at the minimum supported version and, before a release, the latest one, without signing in. These tests check detection, protocol handling, real MCP child cleanup, and resuming a saved thread with a paused goal. They do not sign in to OpenAI or prove that a real, signed-in Codex turn works on your computer. A live run needs an available Codex CLI and sign-in, as described in [Install and sign in](#install-and-sign-in).
+
+*Updated at: 2026-10-27*

@@ -162,3 +162,5 @@ Reuse the same idempotency key when retrying the same launch request. Use a new 
 | Workspace never reaches ready | Check Docker access, image build, container access to port 7080, and template setup logs. |
 | Agent cannot reach the model | The desktop gateway is running on port 8080, its key and model are valid, and the workspace has the current gateway token. |
 | Files differ from the local project | PocketCoder uses its template's filesystem. Configure repository checkout in that template. |
+
+*Updated at: 2026-10-08*

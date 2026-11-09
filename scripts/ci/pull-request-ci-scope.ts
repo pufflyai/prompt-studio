@@ -50,7 +50,7 @@ const prioritiesFor = (stage: ReturnType<typeof stageFor>): TestPriority[] => {
 const runsFileCheck = (stage: ReturnType<typeof stageFor>, touched: boolean) =>
   stage === "full" || (stage !== "main" && touched);
 
-export const resolveCiScope = (input: CiScopeInput) => {
+const resolveBaseScope = (input: CiScopeInput) => {
   const { event, changedFiles, packages, tests, profile, releaseChannel = "stable", signedCandidate = false } = input;
   for (const file of tests) priorityFromFile(file);
   const production = profile === "production" || (event === "workflow_dispatch" && profile !== "merge_queue");
@@ -117,6 +117,45 @@ export const resolveCiScope = (input: CiScopeInput) => {
     sharedBuild,
     sdkApiReport: runsFileCheck(stage, shared || publicApi),
     browserSmoke,
+  };
+};
+
+export const resolveCiScope = (input: CiScopeInput) => {
+  const windowsOnly = input.profile === "windows";
+  if (windowsOnly && input.signedCandidate)
+    throw new Error("Windows diagnostics cannot certify a signed release candidate");
+  if (windowsOnly && input.releaseChannel && input.releaseChannel !== "stable")
+    throw new Error("Windows diagnostics require the stable Windows lanes");
+  const scope = resolveBaseScope(windowsOnly ? { ...input, profile: "production" } : input);
+  if (!windowsOnly) return { ...scope, windowsOnly };
+  // Reuse complete stable Windows lanes, including their shards and quarantine evidence.
+  // This source diagnostic is separate from both the PR gate and signed release certification.
+  return {
+    ...scope,
+    windowsOnly,
+    affectedOwners: [],
+    packageChecks: false,
+    packageMatrix: [],
+    lernaFilter: "",
+    sharedBuild: "",
+    databaseTests: false,
+    databaseMatrix: [],
+    integrationMatrix: [],
+    bunContractMatrix: [],
+    componentChecks: false,
+    componentMatrix: [],
+    appMatrix: [],
+    packagedMatrix: [],
+    clientMatrix: scope.clientMatrix.filter((row) => row.platform === "win32"),
+    toolchainMatrix: scope.toolchainMatrix.filter((row) => row.platform_pkg.startsWith("cli-win-")),
+    quarantineBunOs: scope.quarantineBunOs.filter((os) => os.startsWith("windows")),
+    harnessMatrix: scope.harnessMatrix.filter(
+      (row) => "os" in row && typeof row.os === "string" && row.os.startsWith("windows"),
+    ),
+    dockerBuild: false,
+    license: false,
+    publishedExtensions: false,
+    sdkApiReport: false,
   };
 };
 

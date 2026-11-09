@@ -196,3 +196,5 @@ A native view query reads `renderer.pageParams?.range`. The host reruns it when 
 Typecheck the extension with `skipLibCheck: false`. Fix the field named by `pst extensions check`; declaration errors identify the extension, contribution, field path, and expected value. With `pst extensions dev` running, test edits, another resource, revisiting, reloading, Back and Forward, closing panels one at a time, and moving between modes.
 
 The linked examples are compiled and tested with Extension Lab, so they match the current API. To build your own host app on the workbench, see the [Workbench reference](../../references/workbench/0001-overview.md).
+
+*Updated at: 2026-10-18*

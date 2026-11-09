@@ -16,6 +16,7 @@ const REPO_ROOT = join(import.meta.dirname, "../../../..");
 const CORE_DEFAULT_EXTENSION_NAMES = [
   "pstdio-cloud",
   "pstdio-home",
+  "pstdio-session-browser",
   "pstdio-onboarding",
   "pstdio-workspaces",
   "harness-claude-code",

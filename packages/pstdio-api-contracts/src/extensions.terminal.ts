@@ -1,3 +1,5 @@
+import type { ResourceRef } from "./extension-kernel/types/resources";
+
 // Terminal session contracts shared between the host PTY supervisor (pstdio-api),
 // the extension SDK surface (ctx.terminal), and the renderer-side terminal package.
 //
@@ -48,9 +50,21 @@ export interface TerminalSessionHandle {
 // PTY chunks are base64 encoded so the protocol remains JSON serializable.
 export type TerminalWebSocketClientMessage =
   | { type: "open"; request: TerminalSessionRequest }
+  | { type: "openView"; request: TerminalViewOpenRequest }
   | { type: "write"; data: string }
   | { type: "resize"; cols: number; rows: number }
   | { type: "kill"; signal?: string };
+
+/** Host-renderer binding. Only dimensions and resource context come from the renderer. */
+export interface TerminalViewBinding {
+  projectId: string;
+  viewId: string;
+  resource?: ResourceRef;
+}
+export interface TerminalViewOpenRequest extends TerminalViewBinding {
+  cols: number;
+  rows: number;
+}
 
 export type TerminalWebSocketServerMessage =
   | { type: "open"; sessionId: string }

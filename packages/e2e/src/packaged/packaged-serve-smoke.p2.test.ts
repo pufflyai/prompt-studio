@@ -1,6 +1,5 @@
 // packaged-page-params-during-mount.p2.test.ts covers host props changed during async guest initialization.
 // packaged-session-import.p1.test.ts restores JSONL session exports through the compiled CLI and API, including the on-disk metadata index.
-// packaged-database-maintenance.p1.test.ts reclaims legacy transcript storage before serving offline projects.
 // packaged-extensions-navigation.p1.spec.ts covers fixed headers and nested extension URLs.
 // packaged-collection-view-order-smoke.p2.test.ts keeps Save view clickable beneath explanatory tooltips.
 // packaged-extension-icons.p1.spec.ts covers public SVG assets and light/dark image colors.
@@ -15,6 +14,7 @@ import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } f
 import { expectPackagedGitFreeExtensions } from "./packaged-git-free-extensions-smoke";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // Native actions cover complete Kanban moves, resource lists and independent schema dependencies.
+// The native History fixture also verifies cursor-page metadata and callbacks through the compiled host.
 // packaged-native-settings.p2.spec.ts checks the Extensions nav page, direct routes, reload, native settings and scrolling.
 // packaged-marketplace-search.p1.spec.ts finds downloads by their visible full ID.
 // Git-free installation preserves bundled extension IDs, names and icon metadata.
@@ -23,13 +23,16 @@ import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // Native actions retain failed outcomes for the UI entry point to report.
 // Includes boolean board/table rules with a stored false value.
 // Also checks native chat declarations, static composer state and scoped action callbacks.
+// packaged-core-extensions-smoke.p1.test.ts installs the production Sessions provider with local public artifacts,
+// runs CLI dev -> add --force with package-local dependencies and unavailable authoring source,
+// then checks Main/Side native declarations and durable text/files through compiled-host command handlers.
+// packaged-native-terminal.p1.test.ts opens an installed SDK native terminal through the compiled host and existing PTY transport.
 // Also checks native harness controls and their structured values in packaged command handlers.
 // packaged-claude-plan-smoke.p2.test.ts checks Claude plan review through the live question channel.
 // packaged-personal-history-smoke.p2.test.ts checks encrypted message-log blobs and complete offline history after restart.
 // packaged-tool-result-limit.p2.test.ts bounds a 76 MB failed result, including duplicate details, across restart.
 // Packaged harnesses expose scoped account state and a private interactive account channel.
 // packaged-session-fork.p1.test.ts checks independent conversation history through the compiled CLI and host.
-// packaged-shared-codex-smoke.p2.test.ts checks native conversation forks without an extra turn.
 // harness-npm-detection.p1.test.ts checks the patched Pi minimum with the maintained package's Windows layout.
 // Allocated files stay isolated for two publishers with the same package name.
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
@@ -61,6 +64,7 @@ import { expectPackagedNativeMarkdown, writeNativeMarkdownExtension } from "./pa
 // packaged-cloud-extension-set-smoke.p2.test.ts checks offline number collisions, aliases and later allocations across three compiled hosts.
 // packaged-document-sync-smoke.p1.test.ts checks verified-document progress and pending counts through the compiled host.
 // packaged-workspace-cleanup-smoke.p1.test.ts rejects unavailable providers before saving rows and bounds provider deletion concurrency.
+// packaged-local-workspace-provider.p1.test.ts checks discovery, owned directories and provider processes before readiness.
 // packaged-account-smoke.p2.test.ts checks rejected-device sign-in recovery across restarts and explicit sign-out.
 // packaged-document-sync-smoke.p1.test.ts checks encrypted large-save blobs trigger record-stream compaction.
 // packaged-two-device-sync-smoke.p2.test.ts opens a recovered cloud project in the picker and restores its managed files.

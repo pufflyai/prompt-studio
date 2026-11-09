@@ -19,3 +19,5 @@ For installation, connection setup, and launching remote sessions, see the
 8. Test local harnesses, recovery after a restart, cancellation, duplicate requests, refused scopes, and result size limits. Use a fake test credential and check that it never appears in logs, settings, or command output.
 
 Do not replace the named connection with `ctx.process`, direct requests from a webview, or a general way to read secrets. Those paths move credentials outside the host.
+
+*Updated at: 2026-10-18*

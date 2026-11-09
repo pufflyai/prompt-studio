@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, test as baseTest, expect } from "bun:test";
 import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -6,9 +6,12 @@ import { createSyncSpace } from "pstdio-sync/encryption";
 import { captureRecoveryFolder } from "./capture";
 import { createRecoveryChunkStore } from "./chunks";
 import { readRecoveryManifest } from "./manifest";
+import { nativeRecoverySupported } from "./native-recovery.fixture";
 import { pruneRecoveryStore } from "./retention";
 import { prepareRecoveryCapture } from "./transfer";
 import { verifyRecoveryCapture } from "./verify-capture";
+
+const test = baseTest.skipIf(!nativeRecoverySupported);
 
 const roots: string[] = [];
 afterEach(async () => {

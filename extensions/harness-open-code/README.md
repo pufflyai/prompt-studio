@@ -50,3 +50,5 @@ The **Thinking** option picks the model's thinking level: None, Minimal, Low, Me
 - When OpenCode asks you a question, the session waits until you answer it in Prompt Studio.
 - After Prompt Studio restarts, it can reconnect to an OpenCode session that is still running.
 - Before a session starts in a new workspace, Prompt Studio copies the project's skills into `.agents/skills` in that workspace. To add them to the project folder as well, run `pst agents setup pstdio.harness-open-code.harness.opencode`.
+
+*Updated at: 2026-11-05*

@@ -61,7 +61,7 @@ test("packaged extension SVG images preserve color and follow the embedding app 
     await page.goto(`${runtime.baseUrl}/projects/${project.id}/extensions`);
     const image = page
       .getByTestId("marketplace-extension-entry")
-      .filter({ hasText: "acme.custom-icon" })
+      .filter({ has: page.getByText("Custom icon", { exact: true }) })
       .locator("img");
     await expect(image).toBeVisible();
     await expect.poll(() => image.evaluate((node) => (node as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);

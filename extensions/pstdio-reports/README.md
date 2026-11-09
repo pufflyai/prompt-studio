@@ -64,3 +64,5 @@ pst pstdio-reports reports read --id <report-id>
 pst pstdio-reports reports save [options]
 pst pstdio-reports reports delete --name <name> [options]
 ```
+
+*Updated at: 2026-11-02*

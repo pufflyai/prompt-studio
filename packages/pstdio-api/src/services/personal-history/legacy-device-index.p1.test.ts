@@ -106,24 +106,39 @@ test("publishing one device keeps another device's pending rows in its own log",
 });
 
 test("a fresh reader starts from the device snapshot and keeps the newer tail and other devices' rows", async () => {
+  const startedAt = performance.now();
+  const trace = (phase: string, published?: number) => {
+    process.stderr.write(
+      `${JSON.stringify({ event: "personal-history.snapshot-test.phase", phase, published, elapsedMs: performance.now() - startedAt })}\n`,
+    );
+  };
+  trace("open-source");
   const source = await store("snapshot-source");
   const device = source.device;
   const peer = logRelayFixture();
+  trace("publish", 0);
   for (let index = 0; index < 1000; index++) {
     await source.patchRecords("sessions", device, [{ id: "session", title: `Edit ${index}` }]);
     await source.synchronizeIndex(device.id, true, space, peer.relay);
+    if ((index + 1) % 100 === 0) trace("publish", index + 1);
   }
+  trace("snapshot-assertion", 1000);
   expect(peer.states.size).toBe(1);
+  trace("publish-tail");
   await source.patchRecords("sessions", device, [{ id: "session", title: "After snapshot" }]);
   await source.synchronizeIndex(device.id, true, space, peer.relay);
+  trace("open-reader");
   const fresh = await store("snapshot-reader");
   await fresh.writeRecords("sessions", fresh.device, [{ id: "other", title: "Other device" }]);
+  trace("synchronize-reader");
   await fresh.synchronizeIndex(device.id, false, space, peer.relay);
+  trace("reader-assertions");
   expect((await fresh.readRecords("sessions")).map((row) => row.title).sort()).toEqual([
     "After snapshot",
     "Other device",
   ]);
   expect(peer.reads.slice(-2)).toEqual([0, 1000]);
+  trace("complete");
 });
 
 test("a local edit during an in-flight publish remains queued and survives the next publish", async () => {

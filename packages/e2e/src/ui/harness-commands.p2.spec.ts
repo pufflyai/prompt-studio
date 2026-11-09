@@ -101,7 +101,9 @@ for (const [harness, modes] of [
     }
     await editor.fill("/unknown");
     await send.click();
-    await expect(page.getByText("Command failed", { exact: true })).toBeVisible();
+    const alert = page.getByRole("alert");
+    await expect(alert.getByText("Unsupported fixture command.", { exact: true })).toBeVisible();
+    await expect(alert.getByRole("button", { name: "Retry", exact: true })).toBeEnabled();
     await expect(editor).toHaveText("/unknown");
     await editor.fill("/fail");
     await send.click();

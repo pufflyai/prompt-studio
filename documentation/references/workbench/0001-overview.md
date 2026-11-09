@@ -90,3 +90,5 @@ The hidden launcher is inert and outside the accessibility tree. Panel content s
 mounted while closed, so minimizing and reopening preserves drafts. See the
 [menu selection story](../../../packages/ui/src/components/overlays/menu-selection.canvas.tsx)
 and [Side Panel stories](../../../packages/pstdio-workbench/src/examples/side-panel/side-panel.canvas.tsx).
+
+*Updated at: 2026-10-30*

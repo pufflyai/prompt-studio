@@ -9,6 +9,7 @@ import { pendingOrderedOperations } from "./ordered-pending";
 import { prepareOrderedAdmission, rebaseOrderedProjection } from "./ordered-rebase";
 import { createOrderedReceiptResolver } from "./ordered-receipts-resolver";
 import { receiptRoots } from "./ordered-receipts-state";
+import { evaluateOrderedReturn } from "./ordered-return-review";
 import type { OrderedTransaction } from "./ordered-sql";
 import { readOrderedOwner } from "./ordered-stream-state";
 
@@ -40,8 +41,12 @@ export const nextOrderedUpload = async (
 ) => {
   const row = await readOrderedOwner(tx, owner);
   if (!row.epoch) return [];
+  // A returning device decides here, once connected, whether its changes upload or wait for review.
+  if ((await evaluateOrderedReturn(journal, tx, owner)) === "held") return [];
   const resolver = createOrderedReceiptResolver(journal, receiptRoots(row.receipt_root).root, index);
   const uploads = [];
+  // Own saves already sent in this order, or earlier in this upload, reach Cloud before later ones.
+  const ordered = new Set<string>();
   let bytes = 0;
   for await (const local of pendingOrderedOperations(journal)) {
     if (await resolver.reconcile(local, row.epoch)) {
@@ -53,7 +58,8 @@ export const nextOrderedUpload = async (
       );
       continue;
     }
-    const known = await resolver.availableDependencies(local.operation, row.epoch);
+    if (local.delivered && local.admission?.epoch === row.epoch) ordered.add(local.operation.operationId);
+    const known = await resolver.availableDependencies(local.operation, row.epoch, ordered);
     // Foreign editor context may arrive before its author uploads the parent group. A ready
     // independent save can still order, breaking that cross-device wait without publishing the child.
     if (!known) continue;
@@ -75,6 +81,7 @@ export const nextOrderedUpload = async (
     // Keep a large first save whole for the transport's existing blob fallback.
     if (uploads.length && bytes + cost > limit) break;
     uploads.push(entry);
+    ordered.add(local.operation.operationId);
     bytes += cost;
     if (bytes >= limit) break;
   }

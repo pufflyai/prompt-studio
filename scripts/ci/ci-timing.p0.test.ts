@@ -132,6 +132,11 @@ test("release timing includes publication after its nested functional gate", () 
   expect(report.runs[0]).toMatchObject({ wallMs: 480_000, initialWaitMs: 5_000, elapsedAfterStartMs: 475_000 });
 });
 
+test("Windows diagnostics report a completed first attempt through their separate gate", () => {
+  const report = summarizeCiTiming([job({ name: "windows_ci_passed", event: "workflow_dispatch" })]);
+  expect(report.runs[0]).toMatchObject({ firstAttemptSucceeded: true, wallMs: 60_000 });
+});
+
 test("a skipped job without timestamps does not hide the run duration", () => {
   const report = summarizeCiTiming([
     job({ name: "scope", id: 1, started: "2026-10-25T00:00:05Z", completed: "2026-10-25T00:00:30Z" }),

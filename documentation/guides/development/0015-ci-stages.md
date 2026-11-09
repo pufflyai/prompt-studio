@@ -72,8 +72,8 @@ The timing report keeps initial scheduling delay, elapsed time after the first j
 - Benchmarks and the service delivery smoke do not run on PRs. Edited benchmark files still run through `edited_tests`.
 - Edited tests use their registered runners and setup. PR and queue checks guard the nightly, so edited tests run on the hosts their suite uses in nightly: native desktop checks on Linux x64 and Apple Silicon, packaged CLI P0–P1 on Linux x64, Linux arm64 and Apple Silicon and P2 on Linux x64 and Apple Silicon, and packaged browser checks on Linux. An edited benchmark runs its complete registered suite once per applicable host, preserving its workload and cold-start order. Desktop and backend benchmarks use Linux and Apple Silicon; browser and relay suites use Linux. Existing test limits and performance budgets apply.
 - Each selected file runs once per applicable platform. Stable failures block the PR. Quarantined cases retain their separate execution and report requirements. Missing execution evidence fails the check. Jobs preserve selected files, results, traces and measurements as artifacts; independent edited files continue after a failure.
-- Complete P1/P2/P3 matrices run in nightly and stable validation. Run relevant integration tests locally before queueing. To get production-level results on a PR, add the `ci:full` label (see [Extra diagnostics](#extra-diagnostics)).
-- A new push cancels the PR's older run. Adding or removing labels does not rerun CI; `ci:full` requests diagnostics through its own workflow.
+- Complete P1/P2/P3 matrices run in nightly and stable validation. Run relevant integration tests locally before queueing. To get production-level results on a PR, add `ci:full` or request Windows-only diagnostics with `ci:windows` (see [Extra diagnostics](#extra-diagnostics)).
+- A new push cancels the PR's older run. Adding or removing labels does not rerun CI; `ci:full` and `ci:windows` request diagnostics through their own trusted label workflow.
 - The Version Packages PR is pushed with the workflow token, so GitHub holds its `pull_request` runs until a maintainer approves them. Approve the latest run before queueing the PR. A dispatched run does not help: a PR's check list leaves out `workflow_dispatch` runs, so their `ci_passed` does not satisfy the required check.
 
 ## Merge queue
@@ -143,7 +143,7 @@ A red `main` usually means a startup smoke failure or a cache problem. Fix it be
   - P3 performance measurements
   - container service checks
   - the packaged CLI in the toolchain job on Linux x64, Linux arm64 and Apple Silicon: P1 everywhere; P2 feature workflows on Linux x64 and Apple Silicon only, because they test OS-independent behavior. Install, native process and asset checks are P1.
-- The nightly does not run Windows or Intel macOS. Stable releases validate them, so a Windows-only regression first shows up when a release is cut.
+- The nightly does not run Windows or Intel macOS. Stable releases validate them, so add `ci:windows` to request Windows source diagnostics before cutting a release. Signed installation/update certification still belongs to the release path.
 - The shared Bun unit, API and database suites run on Linux. Apple Silicon runs the desktop app's own Bun tests, the native desktop and packaged CLI checks, and the Bun quarantine lane.
 - Source line coverage comes from the nightly's P0–P2 Bun jobs. The Coverage workflow publishes only a successful full nightly's measurement. Quarantined tests and P3 are not counted.
 
@@ -174,7 +174,8 @@ If a stable release stops halfway, re-run the `publish` job. It skips the steps 
 ## Extra diagnostics
 
 - **`ci:full` label.** Runs production functional diagnostics for a same-repository PR through the trusted base workflow. Its `production_ci_passed` result does not replace `ci_passed`. A maintainer runs this for fork PRs.
-- **Manual Test and Build.** The `merge_queue` profile repeats the queue checks without a real queue. The `production` profile runs production functional checks from source. Neither publishes anything. A newer manual run for the same branch and `source_sha` cancels the older one.
+- **`ci:windows` label.** Runs Windows-only source diagnostics for the exact same-repository PR merge commit. Includes every stable Windows unit/database shard, desktop tests, x64/ARM64 packaged CLI shards, Windows harness checks and Bun quarantine evidence, plus repository static checks. Reports `windows_ci_passed`; it does not replace either the fast PR gate or full production/release certification. The label runs once when added; remove and re-add it to test a new head. Forks require maintainer dispatch of a reviewed repository ref.
+- **Manual Test and Build.** The `merge_queue` profile repeats the queue checks without a real queue. The `production` profile runs production functional checks from source; `windows` selects the Windows lanes only. These profiles publish nothing. A newer manual run for the same branch and `source_sha` cancels the older one.
 - **Reliability branches.** Pushes to `test/ci-reliability/merge/**` run the queue checks. Other `test/ci-reliability/**` branches run production functional checks.
 
 None of these replace the real queue run or release certification.

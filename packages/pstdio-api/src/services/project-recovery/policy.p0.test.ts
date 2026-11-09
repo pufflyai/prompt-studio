@@ -1,10 +1,13 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, test as baseTest, expect } from "bun:test";
 import { mkdtemp, readFile, rm, stat, symlink, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { sourceRecoveryPolicy } from "./capture-source";
+import { nativeRecoverySupported } from "./native-recovery.fixture";
 import { createRecoveryPolicy } from "./policy";
 import { openRecoverySource } from "./source-posix";
+
+const test = baseTest.skipIf(!nativeRecoverySupported);
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -26,7 +29,7 @@ const readRecoveryPolicy = async (root: string, firstEnrollment = false) => {
   }
 };
 
-test("the starter policy excludes dependency directories at any depth and retains private project files", () => {
+baseTest("the starter policy excludes dependency directories at any depth and retains private project files", () => {
   const policy = createRecoveryPolicy("node_modules/\n");
   expect(policy.classify("node_modules/", true)).toEqual({ included: false, rule: "node_modules/" });
   expect(policy.classify("tools/node_modules/", true).included).toBe(false);
@@ -34,7 +37,7 @@ test("the starter policy excludes dependency directories at any depth and retain
     expect(policy.classify(path).included).toBe(true);
 });
 
-test("the last matching rule wins, excluded parents stay excluded and the root policy always remains", () => {
+baseTest("the last matching rule wins, excluded parents stay excluded and the root policy always remains", () => {
   const policy = createRecoveryPolicy("*\n!src/\nsrc/*\n!src/keep.txt\n\\#literal\n\\!literal\n");
   expect(policy.classify(".pstignore").included).toBe(true);
   expect(policy.classify("src/", true).included).toBe(true);
@@ -45,7 +48,7 @@ test("the last matching rule wins, excluded parents stay excluded and the root p
   expect(policy.classify("!literal").included).toBe(false);
 });
 
-test("root anchors, directory rules, globstars and nested ordinary policy files follow one root policy", () => {
+baseTest("root anchors, directory rules, globstars and nested ordinary policy files follow one root policy", () => {
   const policy = createRecoveryPolicy("/cache/\n**/*.tmp\n");
   expect(policy.classify("cache/", true).included).toBe(false);
   expect(policy.classify("nested/cache/", true).included).toBe(true);
@@ -66,7 +69,7 @@ test("only first enrollment seeds a missing policy; existing, emptied and delibe
   expect(await readFile(join(root, ".pstignore")).catch((error) => error.code)).toBe("ENOENT");
 });
 
-test("an invalid or linked policy blocks capture instead of broadening coverage", async () => {
+baseTest("an invalid or linked policy blocks capture instead of broadening coverage", async () => {
   const root = await folder();
   await writeFile(join(root, ".pstignore"), new Uint8Array([0xff]));
   await expect(readRecoveryPolicy(root)).rejects.toThrow();

@@ -37,11 +37,14 @@ export {
 export {
   applyOrderedOperation,
   type OrderedAdmission,
+  type OrderedBase,
   type OrderedDecision,
   type OrderedEdit,
   type OrderedOperation,
   type OrderedRecord,
+  type OrderedSkip,
   observeOrderedRecord,
+  orderedBase,
   prepareOrderedOperation,
   projectOrderedOperation,
 } from "./ordered-operation";

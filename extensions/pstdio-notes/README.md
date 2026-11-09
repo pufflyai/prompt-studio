@@ -60,3 +60,5 @@ Each note is a folder in the project's default workspace. The title lives in the
 An empty front matter `title` permits the first automatic rename. Existing sidecar titles are preserved and moved into front matter when that note is next saved or renamed. Named folders are stored under `documents/.folders/<folder-id>/title.txt`. Notes keep their IDs when moved. Manual note order is stored in `documents/.order.json`.
 
 Git is optional. In a Git project, commit that folder to share notes with your team, or leave it out of Git to keep them on your computer.
+
+*Updated at: 2026-11-02*

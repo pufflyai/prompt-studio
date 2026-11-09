@@ -11,6 +11,7 @@ pst projects environment          # from the release after 0.43.x
 pst projects bind <project-id> --environment <environment-id> --name <name> --path <folder>   # from the release after 0.43.x
 pst projects recovery-points <project-id>   # on main
 pst projects restore <project-id> --hours <1|12|24> --captured-at <time> [--extension-id <extension-id>]   # on main
+pst projects returned-changes <project-id> [apply|discard|dismiss]   # unreleased
 pst projects folder sources <project-id>   # unreleased
 pst projects folder status <project-id>    # unreleased
 pst projects folder capture <project-id>   # unreleased
@@ -40,6 +41,8 @@ Run `pst projects <command> --help` for current options.
 
 `recovery-points` and `restore` are on `main` and first ship in 0.46.0. `recovery-points` prints this device's recovery points for a cloud project as JSON, with each point's period, capture time and restorable extensions. `restore` writes the difference to one of those points as a normal edit, so it syncs to your other devices. Pass the exact `capturedAt` from the list. See [Restore project data](../../guides/concepts/0006-restore-project-data.md).
 
+`returned-changes` is unreleased. Without an action it lists the changes this device made while signed out of a cloud project's account, and this device's changes that Cloud replaced because another device changed them first. A large return after signing out waits on this device: `apply` uploads it, keeping fields other devices changed meanwhile, and `discard` drops it and shows Cloud's copy. `dismiss` clears the replaced list. See [ADR 0139](../../adrs/0139-devices-that-return-never-override-in-sync-devices.md).
+
 `projects folder` is unreleased and works on macOS and Linux. It recovers a cloud project's folder from a copy that one of your devices captured, without a Git host or the source device online. Each device that has the folder captures it under the root `.pstignore` and uploads an encrypted copy; your other devices download every completed copy automatically.
 
 - `sources` prints the copies as JSON: device, source, original folder, capture times, included files and bytes, the applied `.pstignore`, Git state, and whether every byte is already on this device (`available`).
@@ -48,3 +51,5 @@ Run `pst projects <command> --help` for current options.
 - `capture` captures this device's folder now. `cancel` stops a running download or restore.
 
 The device must have connected to Cloud once since Prompt Studio started, so it can unlock its private copies.
+
+*Updated at: 2026-11-07*

@@ -88,6 +88,7 @@ export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
   });
   installCatalog = createCatalogInstaller({
     extensionService,
+    extensionUpgradeService,
     installedExtensionSourcesService: input.installedExtensionSourcesDBService,
     releaseRef: extensionUpgradeService.releaseRef,
   });

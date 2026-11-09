@@ -7,4 +7,6 @@ export type {
   TerminalSessionOperation,
   TerminalSessionRequest,
   TerminalSessionResult,
+  TerminalViewBinding,
+  TerminalViewOpenRequest,
 } from "pstdio-api-contracts";

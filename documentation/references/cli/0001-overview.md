@@ -75,3 +75,5 @@ Extension commands are documented with their extensions:
 Use `pst <namespace> <command> [params] --stream` for commands that declare streaming output. Standard output contains NDJSON: one `{ "type": "data", "data": ... }` line per chunk, followed by `{ "type": "end", "outcome": ... }`.
 
 A success outcome exits with code 0. Other outcomes exit with code 1. Ctrl+C aborts the handler and exits with code 130. Without `--stream`, command output stays unchanged. A command without a stream declaration fails with `command_not_streamable`.
+
+*Updated at: 2026-10-26*

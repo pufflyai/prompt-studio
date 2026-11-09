@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { expect, test } from "@playwright/test";
+import { sessionBrowser } from "@pstdio/sdk/extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin } from "../ui-server";
 
@@ -61,7 +62,7 @@ for (const title of ["Project brief", "System diagram"]) {
       const target = result.outcome.navigationRequests[0];
       expect(target.resource.id).toBe(result.outcome.value.sessionId);
       // The command opens a Session panel target, which keeps the library as the page location.
-      expect(target).toMatchObject({ kind: "panel", panel: { id: "project-session" } });
+      expect(target).toMatchObject({ kind: "panel", panel: sessionBrowser.panels.conversation });
       const sessionTab = page
         .locator('[data-workbench-panel-header="side"]')
         .getByRole("tab", { name: target.resource.label, exact: true });
@@ -213,13 +214,13 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     await expect(preview.getByRole("heading", { name: "Second page" })).toBeVisible();
     await artifactMenu.click();
     await page.getByRole("menuitem", { name: "Delete artifact…", exact: true }).click();
-    await page.getByRole("button", { name: "Delete artifact", exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Delete artifact", exact: true }).click();
     await expect(frame.getByRole("button", { name: "Reference", exact: true })).toBeVisible();
     expect((await execute("list", {})).map((item: { url: string }) => item.url)).toEqual([reference.url]);
     await frame.getByRole("button", { name: "Reference", exact: true }).click();
     await artifactMenu.click();
     await page.getByRole("menuitem", { name: "Delete artifact…", exact: true }).click();
-    await page.getByRole("button", { name: "Delete artifact", exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Delete artifact", exact: true }).click();
     await expect(frame.getByText("Your first artifact starts with an idea", { exact: true })).toBeVisible();
     expect(await execute("list", {})).toEqual([]);
   } finally {

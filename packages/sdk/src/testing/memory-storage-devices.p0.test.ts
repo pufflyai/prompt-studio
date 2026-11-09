@@ -5,7 +5,7 @@ import { createMemoryStorageDevices } from "./index";
 const save = (storage: Awaited<ReturnType<typeof createMemoryStorageDevices>>["devices"][number], value: JsonValue) =>
   storage.records.commit({ operationId: crypto.randomUUID(), edits: [{ recordId: "note", replace: value }] });
 
-test("offline devices retain sibling fields while arrays and multiline strings follow relay order", async () => {
+test("offline devices retain sibling fields while the first device to reach Cloud keeps contested whole values", async () => {
   const pair = await createMemoryStorageDevices();
   const [first, second] = pair.devices;
   const base = {
@@ -35,12 +35,12 @@ test("offline devices retain sibling fields while arrays and multiline strings f
     body: "first\nLAST",
   });
   expect(await pair.merge()).toEqual([
-    { recordId: "note", path: ["value", "body"], kept: "first\nLAST", replaced: "FIRST\nlast" },
+    { recordId: "note", path: ["value", "body"], kept: "FIRST\nlast", replaced: "first\nLAST" },
     {
       recordId: "note",
       path: ["value", "items"],
-      kept: [base.items[0], { id: "b", title: "Edited B" }],
-      replaced: [{ id: "a", title: "Edited A" }, base.items[1]],
+      kept: [{ id: "a", title: "Edited A" }, base.items[1]],
+      replaced: [base.items[0], { id: "b", title: "Edited B" }],
     },
   ]);
   for (const storage of pair.devices)
@@ -48,8 +48,8 @@ test("offline devices retain sibling fields while arrays and multiline strings f
       title: "After",
       status: "done",
       nested: { left: 2, right: 2 },
-      items: [base.items[0], { id: "b", title: "Edited B" }],
-      body: "first\nLAST",
+      items: [{ id: "a", title: "Edited A" }, base.items[1]],
+      body: "FIRST\nlast",
     });
 });
 
@@ -165,7 +165,7 @@ test("deletion replaces a concurrent edit and null remains distinct from a remov
   ]);
 });
 
-test("concurrent arrays report the whole value that relay order replaced", async () => {
+test("concurrent arrays keep the first whole value to reach Cloud and report the other", async () => {
   const pair = await createMemoryStorageDevices();
   const [first, second] = pair.devices;
   const base = [
@@ -178,11 +178,11 @@ test("concurrent arrays report the whole value that relay order replaced", async
   const right = [{ ...base[0], title: "Right" }, base[1], { id: "d", title: "D" }];
   await save(first, left);
   await save(second, right);
-  expect(await pair.merge()).toEqual([{ recordId: "note", path: ["value"], kept: right, replaced: left }]);
-  for (const storage of pair.devices) expect((await storage.records.read("note")).value).toEqual(right);
+  expect(await pair.merge()).toEqual([{ recordId: "note", path: ["value"], kept: left, replaced: right }]);
+  for (const storage of pair.devices) expect((await storage.records.read("note")).value).toEqual(left);
 });
 
-test("a later whole-array edit replaces a concurrent removal", async () => {
+test("a whole-array edit that reaches Cloud later never replaces a concurrent removal", async () => {
   const pair = await createMemoryStorageDevices();
   const [first, second] = pair.devices;
   await save(first, [{ id: "a", title: "A" }]);
@@ -190,7 +190,7 @@ test("a later whole-array edit replaces a concurrent removal", async () => {
   await save(first, []);
   const edited = [{ id: "a", title: "Edited" }];
   await save(second, edited);
-  expect(await pair.merge()).toEqual([{ recordId: "note", path: ["value"], kept: edited, replaced: [] }]);
+  expect(await pair.merge()).toEqual([{ recordId: "note", path: ["value"], kept: [], replaced: edited }]);
 });
 
 test("collection fixtures are forked once and offline migrations agree", async () => {

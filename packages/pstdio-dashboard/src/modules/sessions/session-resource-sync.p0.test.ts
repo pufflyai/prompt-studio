@@ -37,8 +37,18 @@ test.each([
     },
   });
   const session = { type: "session", id: `same-id-${action}`, projectId, extensionId: "pstdio" };
-  for (const extensionId of ["pstdio", "foreign"])
-    w.shellPlacements.openPlacement({ placementId: "sessions", resource: { ...session, extensionId }, open: "pin" });
+  const variants = [
+    session,
+    { type: "session", id: session.id, extensionId: "pstdio" },
+    { type: "session", id: session.id, projectId },
+    { type: "session", id: session.id },
+  ];
+  const foreign = [
+    { ...session, extensionId: "foreign" },
+    { ...session, projectId: "foreign" },
+  ];
+  for (const resource of [...variants, ...foreign])
+    w.shellPlacements.openPlacement({ placementId: "sessions", resource, open: "pin" });
   const row = { id: session.id, project_id: projectId, title: "Removed", status: "completed", archived: false };
   getWriter("sessions")!.upsert(row);
   const unsubscribe = registerSessionResourceSync(w as WorkbenchModuleContext);
@@ -48,10 +58,18 @@ test.each([
     return [];
   });
   try {
+    expect(w.getOpenResources()).toHaveLength(6);
+    const version = w.resources.getRemovalVersion();
     if (action === "delete") getWriter("sessions")!.remove(session.id);
     else getWriter("sessions")!.upsert({ ...row, archived: true });
-    expect(removed).toEqual([session]);
-    expect(w.layout.listPanelInstances("side").map((panel) => panel.resource?.extensionId)).toEqual(["foreign"]);
+    const remaining = w.getOpenResources();
+    for (const resource of variants) {
+      expect(remaining).not.toContainEqual(resource);
+      expect(w.resources.wasRemovedSince(resource, version)).toBe(true);
+    }
+    for (const resource of foreign) expect(remaining).toContainEqual(resource);
+    expect(remaining).toHaveLength(2);
+    expect(removed).toEqual(variants);
   } finally {
     unsubscribe();
     getWriter("sessions")!.remove(session.id);

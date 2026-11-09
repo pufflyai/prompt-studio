@@ -83,3 +83,31 @@ describe("defaultWorkspaceProviderRuntime", () => {
     expect(handle?.context.net.findFreePort).toBeFunction();
   });
 });
+
+test("cancellation during context construction prevents provider callback side effects", async () => {
+  const { runWorkspaceProviderOperation } = await import("./workspace-provider-runtime");
+  const started = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const controller = new AbortController();
+  const call = mock(() => "side effect");
+  const running = runWorkspaceProviderOperation(
+    {
+      context: {} as never,
+      provider: {} as never,
+      contextForScope: async () => {
+        started.resolve();
+        await release.promise;
+        return {} as never;
+      },
+    },
+    call,
+    { signal: controller.signal },
+  );
+  const settled = running.catch((error) => error);
+  await started.promise;
+  controller.abort();
+  expect(await settled).toBeInstanceOf(Error);
+  release.resolve();
+  await Bun.sleep(0);
+  expect(call).not.toHaveBeenCalled();
+});

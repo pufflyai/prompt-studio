@@ -59,6 +59,10 @@ export const createOrderedReceiptResolver = (
   };
   const hydrateDependencies = async (admission: OrderedAdmission) => {
     for (const dependency of admission.dependencies) {
+      // A receipt this owner already holds was bound to its identity when it was recorded. Earlier
+      // saves of the same stream are the common case, so skip the encrypted index walk for them.
+      const held = await journal.cachedDecision(dependency.operationId, dependency.epoch);
+      if (held?.fingerprint === dependency.fingerprint) continue;
       await identity(dependency.operationId, dependency.fingerprint);
       if (!(await exact(dependency.operationId, dependency.epoch)))
         throw new Error("An ordered dependency requires its exact receipt");
@@ -70,9 +74,16 @@ export const createOrderedReceiptResolver = (
     dependency,
     probeDependency: findDependency,
     hydrateDependencies,
-    async availableDependencies(operation: OrderedOperation, epoch: string) {
+    /**
+     * A base only chooses which paths apply, so it can name this device's own earlier save that is
+     * already ahead of it in relay order (`ordered`) instead of waiting for that save's receipt.
+     */
+    async availableDependencies(operation: OrderedOperation, epoch: string, ordered = new Set<string>()) {
       const known = new Map<string, OrderedDecision>();
+      const refusing = operationDependencies(operation, { base: false });
       for (const [id, fingerprint] of operationDependencies(operation)) {
+        // An own save still ahead in this order has no receipt yet; never search the receipt index for it.
+        if (!refusing.has(id) && ordered.has(id)) continue;
         const decision = await findDependency(id, fingerprint, epoch);
         if (!decision) return;
         known.set(id, decision);

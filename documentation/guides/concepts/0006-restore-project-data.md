@@ -50,3 +50,5 @@ credentials, account access or private session history. Project resource numbers
 unchanged. Files that a restored record refers to must still be on the device. If one is missing,
 the restore stops before it changes anything. The relay keeps no recovery history. Removing an extension's data also removes it
 from the recovery points.
+
+*Updated at: 2026-10-24*

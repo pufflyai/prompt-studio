@@ -146,12 +146,8 @@ export const CloudSettings = (props: { projectId?: string }) => {
   if (account?.features === null) accessLabel = t("access.loading", "Checking Cloud access…");
   return (
     <Stack h="full" minH="0" gap="0">
-      <HStack gap="sm" p="lg" flexShrink="0">
-        <CloudIcon name="cloud" />
-        <Text textStyle="heading/S">{t("views.settings", "Cloud")}</Text>
-      </HStack>
       <ScrollArea flex="1" minH="0">
-        <Stack gap="md" px="lg" pb="lg">
+        <Stack gap="md" px="lg" pb="lg" maxW="3xl" w="full" mx="auto">
           {error && (
             <AlertMessage
               status="error"

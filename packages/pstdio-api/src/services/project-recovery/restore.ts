@@ -2,6 +2,7 @@ import { chmod, lstat, mkdtemp, realpath, stat } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join } from "node:path";
 import type { RecoveryChunk } from "./chunks";
 import { type RecoveryChunkStore, readRecoveryManifest } from "./manifest";
+import { supportsNativeRecovery } from "./platform";
 import { publishRecoveryStaging } from "./publish-posix";
 import { RecoveryRestoreError } from "./restore-error";
 import { planRecoveryRestore } from "./restore-plan";
@@ -28,7 +29,7 @@ const tooLong = (path: string | null) =>
  * must. Nothing is written when it is refused.
  */
 export const checkRecoveryDestination = async (path: string) => {
-  if (process.platform !== "darwin" && process.platform !== "linux")
+  if (!supportsNativeRecovery())
     throw new RecoveryRestoreError("unsupported", "Restoring a folder is not supported on this platform yet");
   const name = basename(path);
   if (!isAbsolute(path) || !name || name === "." || name === "..")

@@ -15,6 +15,10 @@ import {
   type TreeViewSection,
   type WorkbenchCore,
 } from "../../../core";
+import {
+  getNavigationTreeNodeSource,
+  getNavigationTreeSectionSource,
+} from "../../../core/registries/navigation/navigation-tree-node-source";
 import { WorkbenchShortcutHint } from "../../keybindings/shortcut-hint";
 import { createWorkbenchResourceActions } from "../../menus/resource-actions";
 import { WorkbenchIcon } from "../../shared/icon";
@@ -22,6 +26,8 @@ import { createTreeActionItems, createTreeContextMenuItems, type TreeActionParam
 
 interface TreeNodeRenderContext {
   workbench: WorkbenchCore;
+  resource?: ResourceRef;
+  sectionSource?: { resource?: ResourceRef };
   /** Row and section actions give way to keyboard hints while shortcut mode or its preview shows them. */
   shortcutHints?: boolean;
   onCommandError?: (error: unknown) => void;
@@ -130,7 +136,10 @@ const toTreeListNode = (
 ) => {
   const navigationIntent = resolveTreeNodeNavigationIntent(node);
   const resource = resolveTreeNodeResource(node);
-  const commandContext = resource ? { resource } : undefined;
+  const owner = getNavigationTreeNodeSource(node);
+  const commandContext = {
+    resource: resource ?? (owner ? owner.resource : (context.resource ?? context.sectionSource?.resource)),
+  };
   const customPath = node.contextMenuPath ?? node.menuPath;
   const resourcePath = resource ? resourceContextMenuPath(resource.type) : undefined;
   // Building a row menu resolves commands, context, and shortcuts. Large trees adapt every row but mount only
@@ -171,6 +180,7 @@ const toTreeListNode = (
     return menuItems;
   };
   const treeNode: TreeListNode = {
+    pagination: node.pagination,
     id: node.id,
     moveScope: node.moveScope,
     label: node.label,
@@ -232,18 +242,21 @@ export const toTreeListSection = (
 ) => {
   const sectionContext = {
     ...context,
+    sectionSource: getNavigationTreeSectionSource(section),
     onRequestParams: (request: TreeActionParamsRequest) =>
       context.onRequestParams?.({ ...request, sectionId: section.id }),
   };
   const emptyNode = toTreeListSectionEmptyNode(section);
   return {
     id: section.id,
+    pagination: section.pagination,
     moveScope: section.moveScope,
     label: section.label,
     menuLabel: section.menuLabel,
     actions: createTreeActionItems({
       actions: context.shortcutHints ? undefined : section.actions,
       workbench: context.workbench,
+      context: { resource: sectionContext.sectionSource ? sectionContext.sectionSource.resource : context.resource },
       onCommandError: context.onCommandError,
       onRequestParams: sectionContext.onRequestParams,
     }),

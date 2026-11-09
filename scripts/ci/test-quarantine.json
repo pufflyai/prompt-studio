@@ -793,5 +793,356 @@
     "reason": "The unchanged five-second functional execution allowance expired at 5029.12ms during a native get_state history RPC in full-root macOS arm64 qualification. The same Pi source previously passed full/native CI; a phase-instrumented diagnostic completed all four real CLI launches in 750ms, and the isolated original-main package passed the full scenario in 1560ms. These comparisons establish intermittent execution, not a diagnosed cause or a passing replacement for the retained full-run failure. See RP-537 evidence linked from the Pi repair PR.",
     "evidence": ["https://github.com/pufflyai/prompt-studio/pull/1850"],
     "removeWhen": "Identify and repair the native RPC stall, then qualify the original full-root scenario and applicable Linux/native CI within the unchanged five-second allowance, preserving both real turns, both history reads, all assertions and platform coverage; do not use repeated pass-seeking runs."
+  },
+  {
+    "runner": "subnav-benchmark",
+    "file": "packages/e2e/src/perf/subnav.p3.bench.ts",
+    "name": "ticket/first data",
+    "platforms": ["linux"],
+    "arch": "x64",
+    "owner": "PS-151 / workbench navigation performance",
+    "reason": "Authorized measured performance debt: the first hosted edited-test execution recorded ticket/first data at 1560.4 ms against its unchanged 1500 ms budget. Its generic sampling path used one sample per destination/visit and bypassed the ordered quarantine adapter; it is not full release qualification. Edited navigation now delegates once to the existing adapter with all thirty ordered samples. Keep the complete fixed fixture, original request/reachability assertions, sample ordering and budgets. The slowdown cause remains unresolved; this is not a flake claim.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/42434991559/job/128591888257"],
+    "removeWhen": "Diagnose and repair first-ticket data latency, then complete the entire 120-sample Linux x64 workload in one first-attempt run with all thirty ticket/first data samples below the original 1500 ms budget and every original workload, timing, request, reachability and cleanup assertion intact. Missing, skipped, cancelled or stale execution remains blocking; no retries, prewarming or raised limits.",
+    "failureKind": "performance"
+  },
+  {
+    "runner": "subnav-benchmark",
+    "file": "packages/e2e/src/perf/subnav.p3.bench.ts",
+    "name": "ticket/first editor",
+    "platforms": ["linux"],
+    "arch": "x64",
+    "owner": "PS-151 / workbench navigation performance",
+    "reason": "Authorized measured performance debt: the first hosted edited-test execution recorded ticket/first editor at 1451 ms against its unchanged 1325 ms budget. Its generic sampling path used one sample per destination/visit and bypassed the ordered quarantine adapter; it is not full release qualification. Edited navigation now delegates once to the existing adapter with all thirty ordered samples. Keep the complete fixed fixture, original request/reachability assertions, sample ordering and budgets. The slowdown cause remains unresolved; this is not a flake claim.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/42434991559/job/128591888257"],
+    "removeWhen": "Diagnose and repair first-ticket editor latency, then complete the entire 120-sample Linux x64 workload in one first-attempt run with all thirty ticket/first editor samples below the original 1325 ms budget and every original workload, timing, request, reachability and cleanup assertion intact. Missing, skipped, cancelled or stale execution remains blocking; no retries, prewarming or raised limits.",
+    "failureKind": "performance"
+  },
+  {
+    "runner": "packaged-desktop",
+    "file": "clients/desktop/src/e2e/packaged-app.p1.spec.ts",
+    "name": "starts without editors and serves both authenticated transport paths",
+    "platforms": ["linux"],
+    "arch": "x64",
+    "owner": "PS-151 / Linux desktop cold project setup",
+    "reason": "User-authorized setup debt. Hosted Linux x64 first attempt 42441508001/job128611579214 exhausted the existing 30000 ms case during its first POST /v1/projects. Runtime app readiness took 9635 ms; Onboarding dependency preparation took 9182 ms and its default install 10660 ms. Project setup reached repo-extension/default checkout without completing before cancellation. The precise slow checkout or installation cause is unproven. Retain the fresh home/cache, real defaults, both projects, editor exclusion, both transport authorization paths, version/token checks, CLI and cleanup.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/42441508001/job/128611579214",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/42441508001/artifacts/13602600439"
+    ],
+    "removeWhen": "Identify and repair cold native Linux x64 launch/default-install/project-setup latency, then complete this entire case in its first ordinary native execution within the unchanged 30000 ms allowance. Preserve every cold fixture, both projects and all transport, editor, security, CLI and cleanup assertions; no retries, prewarming, reduced defaults or raised limits. Missing, skipped, cancelled or stale execution remains blocking."
+  },
+  {
+    "runner": "subnav-benchmark",
+    "file": "packages/e2e/src/perf/subnav.p3.bench.ts",
+    "name": "sessions/repeat requests",
+    "platforms": ["linux"],
+    "arch": "x64",
+    "owner": "PS-151 / navigation snapshot read lifecycle",
+    "reason": "User-authorized functional request debt. First attempt 42443218459/job128616715673 completed all 120 original samples but retained one Sessions/repeat pagination net::ERR_ABORTED with real client AbortError proof. The same cursor previously completed 200/outcome OK, and provider snapshot replacement cancels lazy reads, but current authoritative acceptance/coverage is not proven. Do not classify the cancellation as harmless or a flake. This entry defers the entire exact request contract, including other request failures in that group; other destination/visit request contracts and global browser, reachability, setup and cleanup failures still block. Retain every raw error/timing, all 30 ordered samples per group, workload and unchanged budgets.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/42443218459/job/128616715673",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/42443218459/artifacts/13602079035"
+    ],
+    "removeWhen": "Repair or prove current authoritative snapshot coverage for disposed child reads, then execute the complete Linux x64 workload once with no unresolved request failure in all 30 Sessions/repeat samples and all original timing, reachability, history and cleanup assertions intact. Restore this exact request contract to the stable gate. Missing, skipped, cancelled or stale evidence remains blocking; no retries, prewarming, reduced workload or raised limits."
+  },
+  {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/packaged-board-views-smoke.p2.test.ts",
+    "name": "packaged collection views include native Workspaces and survive a runtime restart",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "owner": "PS-151 / deferred release qualification",
+    "reason": "The original stable Windows x64 case exhausted its existing allowance at 30014.61 ms. This is retained functional execution debt; its slow phase or convergence defect remains unresolved, not an established flake or a passing performance budget. PS-148 adds diagnostics and drains the Planner ordering continuation. Preserve the original cold setup and assertions.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/42421804580/job/128558703892"],
+    "removeWhen": "Diagnose and repair this named failure, then qualify the complete original case in a normal first-attempt execution on the affected native host within its unchanged allowance. Preserve cold setup, all assertions, workload, ordering and cleanup; no retries, prewarming, skipped execution or raised limits."
+  },
+  {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/packaged-collection-view-order-smoke.p2.test.ts",
+    "name": "packaged Kanban and data table view tabs save pointer and keyboard order",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "owner": "PS-151 / deferred release qualification",
+    "reason": "The original stable Windows x64 case exhausted its existing allowance at 30002.16 ms. This is retained functional execution debt; its slow phase or convergence defect remains unresolved, not an established flake or a passing performance budget. PS-148 adds diagnostics and drains the Planner ordering continuation. Preserve the original cold setup and assertions.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/42421804580/job/128558703892"],
+    "removeWhen": "Diagnose and repair this named failure, then qualify the complete original case in a normal first-attempt execution on the affected native host within its unchanged allowance. Preserve cold setup, all assertions, workload, ordering and cleanup; no retries, prewarming, skipped execution or raised limits."
+  },
+  {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/packaged-core-extension-features.p2.test.ts",
+    "name": "packaged core extension features preserve their settings, resources and templates",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "owner": "PS-151 / deferred release qualification",
+    "reason": "The original stable Windows x64 case exhausted its existing allowance at 120001.16 ms. This is retained functional execution debt; its slow phase or convergence defect remains unresolved, not an established flake or a passing performance budget. PS-148 adds diagnostics and drains the Planner ordering continuation. Preserve the original cold setup and assertions.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/42421804580/job/128558703892"],
+    "removeWhen": "Diagnose and repair this named failure, then qualify the complete original case in a normal first-attempt execution on the affected native host within its unchanged allowance. Preserve cold setup, all assertions, workload, ordering and cleanup; no retries, prewarming, skipped execution or raised limits."
+  },
+  {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/packaged-personal-history-smoke.p2.test.ts",
+    "name": "compiled devices read full personal conversations after the source stops and the reader restarts offline",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "owner": "PS-151 / deferred release qualification",
+    "reason": "The original stable Windows x64 case exhausted its existing allowance at 30002.69 ms. This is retained functional execution debt; its slow phase or convergence defect remains unresolved, not an established flake or a passing performance budget. PS-148 adds diagnostics and drains the Planner ordering continuation. Preserve the original cold setup and assertions.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/42421804580/job/128558703892"],
+    "removeWhen": "Diagnose and repair this named failure, then qualify the complete original case in a normal first-attempt execution on the affected native host within its unchanged allowance. Preserve cold setup, all assertions, workload, ordering and cleanup; no retries, prewarming, skipped execution or raised limits."
+  },
+  {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/packaged-planner-order.p2.test.ts",
+    "name": "packaged Planner offline moves converge and remain ordered after restarting a device",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "owner": "PS-151 / deferred release qualification",
+    "reason": "The original stable Windows x64 case exhausted its existing allowance at 30008.84 ms. This is retained functional execution debt; its slow phase or convergence defect remains unresolved, not an established flake or a passing performance budget. PS-148 adds diagnostics and drains the Planner ordering continuation. Preserve the original cold setup and assertions.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/42421804580/job/128558703892"],
+    "removeWhen": "Diagnose and repair this named failure, then qualify the complete original case in a normal first-attempt execution on the affected native host within its unchanged allowance. Preserve cold setup, all assertions, workload, ordering and cleanup; no retries, prewarming, skipped execution or raised limits."
+  },
+  {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/packaged-planner-smoke.p2.test.ts",
+    "name": "packaged Planner keeps brief supervisor wakes and resume ownership",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "owner": "PS-151 / deferred release qualification",
+    "reason": "The original stable Windows x64 case exhausted its existing allowance at 30001.41 ms. This is retained functional execution debt; its slow phase or convergence defect remains unresolved, not an established flake or a passing performance budget. PS-148 adds diagnostics and drains the Planner ordering continuation. Preserve the original cold setup and assertions.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/42421804580/job/128558703892"],
+    "removeWhen": "Diagnose and repair this named failure, then qualify the complete original case in a normal first-attempt execution on the affected native host within its unchanged allowance. Preserve cold setup, all assertions, workload, ordering and cleanup; no retries, prewarming, skipped execution or raised limits."
+  },
+  {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/packaged-planner-smoke.p2.test.ts",
+    "name": "packaged Planner reconciles dependency stacks and Git conflicts",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "owner": "PS-151 / deferred release qualification",
+    "reason": "The original stable Windows x64 case exhausted its existing allowance at 30002.16 ms. This is retained functional execution debt; its slow phase or convergence defect remains unresolved, not an established flake or a passing performance budget. PS-148 adds diagnostics and drains the Planner ordering continuation. Preserve the original cold setup and assertions.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/42421804580/job/128558703892"],
+    "removeWhen": "Diagnose and repair this named failure, then qualify the complete original case in a normal first-attempt execution on the affected native host within its unchanged allowance. Preserve cold setup, all assertions, workload, ordering and cleanup; no retries, prewarming, skipped execution or raised limits."
+  },
+  {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/packaged-planner-smoke.p2.test.ts",
+    "name": "packaged Planner recovers missing workspaces without losing submitted work",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "owner": "PS-151 / deferred release qualification",
+    "reason": "The original stable Windows x64 case exhausted its existing allowance at 30028.03 ms. This is retained functional execution debt; its slow phase or convergence defect remains unresolved, not an established flake or a passing performance budget. PS-148 adds diagnostics and drains the Planner ordering continuation. Preserve the original cold setup and assertions.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/42421804580/job/128558703892"],
+    "removeWhen": "Diagnose and repair this named failure, then qualify the complete original case in a normal first-attempt execution on the affected native host within its unchanged allowance. Preserve cold setup, all assertions, workload, ordering and cleanup; no retries, prewarming, skipped execution or raised limits."
+  },
+  {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/packaged-planner-smoke.p2.test.ts",
+    "name": "packaged Planner adopts a feature draft without changing its Git state",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "owner": "PS-151 / deferred release qualification",
+    "reason": "The original stable Windows x64 case exhausted its existing allowance at 30002.54 ms. This is retained functional execution debt; its slow phase or convergence defect remains unresolved, not an established flake or a passing performance budget. PS-148 adds diagnostics and drains the Planner ordering continuation. Preserve the original cold setup and assertions.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/42421804580/job/128558703892"],
+    "removeWhen": "Diagnose and repair this named failure, then qualify the complete original case in a normal first-attempt execution on the affected native host within its unchanged allowance. Preserve cold setup, all assertions, workload, ordering and cleanup; no retries, prewarming, skipped execution or raised limits."
+  },
+  {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/packaged-planner-smoke.p2.test.ts",
+    "name": "packaged Planner manually resumes missing stopped work with Auto Build disabled",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "owner": "PS-151 / deferred release qualification",
+    "reason": "The original stable Windows x64 case exhausted its existing allowance at 30001.89 ms. This is retained functional execution debt; its slow phase or convergence defect remains unresolved, not an established flake or a passing performance budget. PS-148 adds diagnostics and drains the Planner ordering continuation. Preserve the original cold setup and assertions.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/42421804580/job/128558703892"],
+    "removeWhen": "Diagnose and repair this named failure, then qualify the complete original case in a normal first-attempt execution on the affected native host within its unchanged allowance. Preserve cold setup, all assertions, workload, ordering and cleanup; no retries, prewarming, skipped execution or raised limits."
+  },
+  {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/packaged.p1.test.ts",
+    "name": "packaged pstdio — project lifecycle > creates a project and lists it",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "owner": "PS-151 / deferred release qualification",
+    "reason": "The original stable Windows x64 case exhausted its existing allowance at 30017.79 ms. This is retained functional execution debt; its slow phase or convergence defect remains unresolved, not an established flake or a passing performance budget. PS-148 adds diagnostics and drains the Planner ordering continuation. Preserve the original cold setup and assertions.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/42421804580/job/128558703892"],
+    "removeWhen": "Diagnose and repair this named failure, then qualify the complete original case in a normal first-attempt execution on the affected native host within its unchanged allowance. Preserve cold setup, all assertions, workload, ordering and cleanup; no retries, prewarming, skipped execution or raised limits."
+  },
+  {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/packaged.p1.test.ts",
+    "name": "packaged pstdio — tickets > creates and lists a ticket",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "owner": "PS-151 / deferred release qualification",
+    "reason": "The original stable Windows x64 case exhausted its existing allowance at 15621.78 ms. This is retained functional execution debt; its slow phase or convergence defect remains unresolved, not an established flake or a passing performance budget. PS-148 adds diagnostics and drains the Planner ordering continuation. Preserve the original cold setup and assertions.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/42421804580/job/128558703892"],
+    "removeWhen": "Diagnose and repair this named failure, then qualify the complete original case in a normal first-attempt execution on the affected native host within its unchanged allowance. Preserve cold setup, all assertions, workload, ordering and cleanup; no retries, prewarming, skipped execution or raised limits."
+  },
+  {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/packaged-board-panning-smoke.p2.test.ts",
+    "name": "packaged Planner board pans with a mouse and keeps ticket and column actions",
+    "platforms": ["linux"],
+    "arch": "x64",
+    "owner": "PS-151 / deferred release qualification",
+    "reason": "The first stable Linux x64 packaged execution exhausted its unchanged 30000 ms allowance. This is unresolved functional execution debt, not a measured budget pass or a diagnosed flake. Preserve the full native interaction/persistence or offline/restart scenario, all assertions and teardown; PS-151 owns root-cause repair.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/42421804580"],
+    "removeWhen": "Diagnose and repair this named failure, then qualify the complete original case in a normal first-attempt execution on the affected native host within its unchanged allowance. Preserve cold setup, all assertions, workload, ordering and cleanup; no retries, prewarming, skipped execution or raised limits."
+  },
+  {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/packaged-board-views-smoke.p2.test.ts",
+    "name": "packaged collection views include native Workspaces and survive a runtime restart",
+    "platforms": ["linux"],
+    "arch": "x64",
+    "owner": "PS-151 / deferred release qualification",
+    "reason": "The first stable Linux x64 packaged execution exhausted its unchanged 30000 ms allowance. This is unresolved functional execution debt, not a measured budget pass or a diagnosed flake. Preserve the full native interaction/persistence or offline/restart scenario, all assertions and teardown; PS-151 owns root-cause repair.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/42421804580"],
+    "removeWhen": "Diagnose and repair this named failure, then qualify the complete original case in a normal first-attempt execution on the affected native host within its unchanged allowance. Preserve cold setup, all assertions, workload, ordering and cleanup; no retries, prewarming, skipped execution or raised limits."
+  },
+  {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/packaged-planner-order.p2.test.ts",
+    "name": "packaged Planner offline moves converge and remain ordered after restarting a device",
+    "platforms": ["linux"],
+    "arch": "x64",
+    "owner": "PS-151 / deferred release qualification",
+    "reason": "The first stable Linux x64 packaged execution exhausted its unchanged 30000 ms allowance. This is unresolved functional execution debt, not a measured budget pass or a diagnosed flake. Preserve the full native interaction/persistence or offline/restart scenario, all assertions and teardown; PS-151 owns root-cause repair.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/42421804580"],
+    "removeWhen": "Diagnose and repair this named failure, then qualify the complete original case in a normal first-attempt execution on the affected native host within its unchanged allowance. Preserve cold setup, all assertions, workload, ordering and cleanup; no retries, prewarming, skipped execution or raised limits."
+  },
+  {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/packaged-planner-order.p2.test.ts",
+    "name": "packaged Planner offline moves converge and remain ordered after restarting a device",
+    "platforms": ["darwin"],
+    "arch": "arm64",
+    "owner": "PS-151 / deferred release qualification",
+    "reason": "Full macOS arm64 package verification and isolated main exhausted the unchanged 30000 ms allowance during setup; original hosted convergence failed separately. A later phase-instrumented run completed in 16.5 seconds with cancellation/drain repairs. These observations do not establish a shared cause or erase either failure. Keep every encrypted-device, offline move, restart and cleanup assertion.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/42421804580",
+      "Planner change_request_105 files_105/legacy-packages.log: c5f74aa41 full packaged execution 30001.43 ms; planner-order-macos.log: main isolated execution 30004.48 ms."
+    ],
+    "removeWhen": "Diagnose and repair this named failure, then qualify the complete original case in a normal first-attempt execution on the affected native host within its unchanged allowance. Preserve cold setup, all assertions, workload, ordering and cleanup; no retries, prewarming, skipped execution or raised limits."
+  },
+  {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/packaged-core-extensions-smoke.p1.test.ts",
+    "name": "loads packaged core defaults with usable assets and safe extension storage",
+    "platforms": ["darwin"],
+    "arch": "x64",
+    "owner": "PS-151 / deferred release qualification",
+    "reason": "The first stable Intel Mac execution exhausted its existing allowance (core defaults 120001 ms; composer/project setup 60009 ms). Project creation alone took about 94 seconds in retained phase evidence. This is known cold-start execution debt; the dependency/provisioning stall remains unresolved. Keep all real extensions, fresh home/cache, composer/session assertions and original limits; coordinate with PS-75 and PS-93.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/42421804580/job/128558703918"],
+    "removeWhen": "Diagnose and repair this named failure, then qualify the complete original case in a normal first-attempt execution on the affected native host within its unchanged allowance. Preserve cold setup, all assertions, workload, ordering and cleanup; no retries, prewarming, skipped execution or raised limits."
+  },
+  {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/packaged-project-setup-smoke.p1.test.ts",
+    "name": "serves the dashboard and API, hands off composer drafts, and starts idle sessions on their first message",
+    "platforms": ["darwin"],
+    "arch": "x64",
+    "owner": "PS-151 / deferred release qualification",
+    "reason": "The first stable Intel Mac execution exhausted its existing allowance (core defaults 120001 ms; composer/project setup 60009 ms). Project creation alone took about 94 seconds in retained phase evidence. This is known cold-start execution debt; the dependency/provisioning stall remains unresolved. Keep all real extensions, fresh home/cache, composer/session assertions and original limits; coordinate with PS-75 and PS-93.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/42421804580/job/128558703918"],
+    "removeWhen": "Diagnose and repair this named failure, then qualify the complete original case in a normal first-attempt execution on the affected native host within its unchanged allowance. Preserve cold setup, all assertions, workload, ordering and cleanup; no retries, prewarming, skipped execution or raised limits."
+  },
+  {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/packaged.p1.test.ts",
+    "name": "packaged pstdio — project lifecycle > creates a project and lists it",
+    "platforms": ["win32"],
+    "arch": "arm64",
+    "owner": "PS-151 / deferred release qualification",
+    "reason": "The first stable Windows ARM run hit project creation at 30028.87 ms and ticket setup at 16328.62 ms (API readiness expires at 15000 ms). This is retained startup/readiness debt, not a proven authorization or ticket-data failure. Preserve the original project/ticket calls and allowances; PS-151 owns phase diagnosis.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/42421804580/job/128558703940"],
+    "removeWhen": "Diagnose and repair this named failure, then qualify the complete original case in a normal first-attempt execution on the affected native host within its unchanged allowance. Preserve cold setup, all assertions, workload, ordering and cleanup; no retries, prewarming, skipped execution or raised limits."
+  },
+  {
+    "runner": "packaged-bun",
+    "file": "packages/e2e/src/packaged/packaged.p1.test.ts",
+    "name": "packaged pstdio — tickets > creates and lists a ticket",
+    "platforms": ["win32"],
+    "arch": "arm64",
+    "owner": "PS-151 / deferred release qualification",
+    "reason": "The first stable Windows ARM run hit project creation at 30028.87 ms and ticket setup at 16328.62 ms (API readiness expires at 15000 ms). This is retained startup/readiness debt, not a proven authorization or ticket-data failure. Preserve the original project/ticket calls and allowances; PS-151 owns phase diagnosis.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/42421804580/job/128558703940"],
+    "removeWhen": "Diagnose and repair this named failure, then qualify the complete original case in a normal first-attempt execution on the affected native host within its unchanged allowance. Preserve cold setup, all assertions, workload, ordering and cleanup; no retries, prewarming, skipped execution or raised limits."
+  },
+  {
+    "runner": "playwright",
+    "file": "packages/e2e/src/packaged/packaged-public-text-native-sync.p2.spec.ts",
+    "name": "two encrypted hosts preserve native selection presence and table drafts through cancel save and undo",
+    "platforms": ["linux"],
+    "arch": "x64",
+    "owner": "PS-151 / deferred release qualification",
+    "reason": "The original stable Linux x64 second-device folder setup returned needs-attention instead of synced. This remains an unresolved product/setup failure, not an established flake; a local macOS arm64 pass does not qualify Linux. The test now retains both complete statuses, relay inspection and persistent logs, keeping every native selection and draft/cancel/save/undo assertion.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/42421804580"],
+    "removeWhen": "Diagnose and repair this named failure, then qualify the complete original case in a normal first-attempt execution on the affected native host within its unchanged allowance. Preserve cold setup, all assertions, workload, ordering and cleanup; no retries, prewarming, skipped execution or raised limits."
+  },
+  {
+    "runner": "bun",
+    "file": "packages/pstdio-db/src/services/extension-storage/ordered-log-sync.p1.test.ts",
+    "name": "a new device reads a compacted newest page without older or expired payloads",
+    "platforms": ["darwin"],
+    "arch": "arm64",
+    "owner": "PS-151 / deferred release qualification",
+    "reason": "Full-root macOS arm64 qualification exhausted the unchanged five-second allowance at 5324.11 ms; the identical main case passed one isolated control at 1409.14 ms. Its fresh ordered databases do not replay the legacy envelopes repaired by PS-148. Timing variation is observed; its cause remains unresolved. Preserve all peers, 160 entries, compaction, newest-page requests and assertions. This is execution debt, not a passing budget.",
+    "evidence": [
+      "Planner change_request_105 files_105/full-tests-legacy.log: c5f74aa41 first full-root execution 5324.11 ms; ordered-log-main-baseline.log: main 619dd4277 isolated control 1409.14 ms."
+    ],
+    "removeWhen": "Diagnose and repair this named failure, then qualify the complete original case in a normal first-attempt execution on the affected native host within its unchanged allowance. Preserve cold setup, all assertions, workload, ordering and cleanup; no retries, prewarming, skipped execution or raised limits."
+  },
+  {
+    "runner": "bun",
+    "file": "packages/pstdio-db/src/services/extension-storage/recovery-points.p1.test.ts",
+    "name": "restoring records that together are over one commit's size limit splits the restore",
+    "platforms": ["darwin"],
+    "arch": "arm64",
+    "owner": "PS-151 / deferred storage execution",
+    "reason": "Authorized exact-case execution debt: the first WS-133 full-root run exhausted the unchanged 5000 ms allowance at 5088.51 ms. The current main full-package control completed this identical case at 2746.56 ms, and the parallel Windows-repair branch control completed it at 2299.80 ms. WS-133 changes no storage production source. Cause remains unresolved; this is timing variation, not a repaired performance contract or a flake claim. Preserve all twenty 220 KiB records, individual create/delete commits, capture, restore and every restored-value assertion.",
+    "evidence": [
+      "Planner change_request_105 files_105/full-tests-execution.log: first WS-133 full root 5088.51/5000 ms; files_105/db-full-main-baseline.log: main619dd427 full-package control2746.56 ms; files_105/full-tests-windows.log: identical case2299.80 ms."
+    ],
+    "removeWhen": "Diagnose the named timing variation and complete the full original case in one native macOS arm64 first attempt within its unchanged 5000 ms allowance, retaining all twenty records, payload sizes, commit/capture/restore order, assertions and cleanup. Missing, skipped, cancelled or stale execution remains blocking; no retries, prewarming or raised limits."
+  },
+  {
+    "runner": "bun",
+    "file": "packages/pstdio-db/src/services/environment/environment.p1.test.ts",
+    "name": "independent runtime stores preserve their environment and shared workbench identities after restart",
+    "platforms": ["darwin"],
+    "arch": "arm64",
+    "owner": "PS-151 / deferred storage startup execution",
+    "reason": "Authorized exact-case execution debt: the first pure-main619dd427 full database-package control exhausted the unchanged5000 ms macOS allowance at5676.65 ms, after recording the second initial database_compacting phase at+4218 ms. This is a pre-existing main failure; its cause remains unresolved. Retain both independent disk stores, original cold image extraction, concurrent identity reads, project/workspace writes, both restarts, distinct-environment/shared-workbench assertions and cleanup. No storage production change or flake diagnosis is claimed.",
+    "evidence": [
+      "Planner change_request_105 files_105/db-full-main-baseline.log: main619dd427 first full-package control,530 cases before bail, environment restart5676.65/5000 ms; second initial database_compacting+4218 ms."
+    ],
+    "removeWhen": "Diagnose the slow startup/restart phase and complete the entire original two-store case in one native macOS arm64 first attempt within its unchanged5000 ms allowance. Preserve cold image extraction, concurrency, all writes/restarts/identity assertions and cleanup. Missing, skipped, cancelled or stale execution remains blocking; no retries, prewarming or raised limits."
+  },
+  {
+    "runner": "bun",
+    "file": "packages/pstdio-api/src/services/personal-history/legacy-device-index.p1.test.ts",
+    "name": "a fresh reader starts from the device snapshot and keeps the newer tail and other devices' rows",
+    "platforms": ["linux"],
+    "arch": "x64",
+    "owner": "PS-151 / personal-history snapshot execution",
+    "reason": "Authorized exact-case Linux x64 execution debt: the first recovery merge-group attempt a61d302e74ef27d0ee839d293c0807d78aaefe5e timed out at 30013.23 ms under the unchanged 30000 ms API whole-case allowance. The exact slow phase and correctness outcome were not established; this is not a flake diagnosis. The isolated main9781fda34 macOS control passed once in 5064.97 ms and does not qualify native Linux. Keep all 1000 sequential write/publish pairs, snapshot creation, newer tail, other-device rows and read-cursor assertions. Other four file cases and other platforms remain ordinary checks.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/42450763733/job/128639683508",
+      "Planner RP511 files_105/personal-history-queue-first-cases.json: 30013.228 ms failure; file incomplete with two unexecuted cases. files_105/recovery-queue-db-first.log: DB workload stopped by fail-fast with no independent failed test; the GitHub wrapper job concluded failure.",
+      "Planner RP511 files_105/personal-history-main-control.json and personal-history-main-control.log: main9781fda34 diagnostic control, one macOS case/3assertions/5064.97ms, not native Linux qualification."
+    ],
+    "removeWhen": "Identify and repair the slow phase, then complete the entire original case in one first-attempt native Linux x64 execution within its unchanged 30000 ms allowance, preserving all 1000 write/publish pairs and all three snapshot/newer-tail/other-device/read-cursor assertions. Retain phase diagnostics until resolved. Missing, skipped, cancelled, duplicate or stale execution remains blocking; no retries, prewarming, reduced workload or raised limits."
+  },
+  {
+    "runner": "bun",
+    "file": "clients/desktop/src/performance/performance-endpoint.p0.test.ts",
+    "name": "Windows grants credential access only to the current user",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "owner": "PS-151 / Windows credential inspection",
+    "reason": "Authorized release quarantine: the first stable desktop producer exceeded the unchanged 5000 ms allowance at 5001.34 ms while the PowerShell ACL inspection was pending. Incorrect permissions have not been established. Keep the current-user-only directory/file ACL assertions and valid/invalid credential checks. Added phase timings distinguish endpoint preparation, process overhead and ACL lookup; cleanup cancels and drains a pending probe before deleting its directory.",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/42421804580/job/128551796344"],
+    "removeWhen": "Fix the measured slow Windows phase, then complete the entire first-attempt native Windows x64 case within its unchanged 5000 ms allowance, with both sole-SID ACL checks, good/bad credential assertions, and clean child-process shutdown. Preserve all platforms and do not retry to obtain a pass."
   }
 ]

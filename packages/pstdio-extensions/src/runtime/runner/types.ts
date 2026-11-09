@@ -144,7 +144,7 @@ export interface HostCommandExecuteInput<TResult = unknown> extends CommandExecu
 }
 
 export interface CommandRunner {
-  buildExtensionContext(input: BuildEnvironmentInput): Promise<ExtensionContextBase>;
+  buildExtensionContext(input: BuildEnvironmentInput, scope?: InvocationScope): Promise<ExtensionContextBase>;
   execute(input: CommandExecuteInput): Promise<CommandOutcome>;
   executeHostCommand<TResult = unknown>(input: HostCommandExecuteInput<TResult>): Promise<CommandOutcome<TResult>>;
   dispatchEvent(input: ExtensionEventDispatchInput): Promise<EventDeliveryResult>;

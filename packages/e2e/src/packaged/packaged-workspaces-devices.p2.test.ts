@@ -8,6 +8,7 @@ import { createClient } from "@pstdio/sdk/client";
 import type { KanbanRendererQueryResult, ResourceListRendererRow } from "@pstdio/sdk/extensions";
 import { $ } from "bun";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { e2eExtension } from "../default-extensions";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { createDeviceCommandPeer } from "./packaged-device-commands.fixture";
 import { preparePackagedExtensionSource } from "./packaged-extension-source";
@@ -152,6 +153,7 @@ test(
       NODE_EXTRA_CA_CERTS: cert,
       PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([
         { source: extensionSource, installName: "pstdio-workspaces", skipInstall: true },
+        e2eExtension("pstdio-session-browser"),
         { source: harness, installName: "workspace-history-fixture", skipInstall: true },
       ]),
     };

@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, test as baseTest, expect } from "bun:test";
 import { appendFile, mkdir, mkdtemp, readdir, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -6,10 +6,13 @@ import { createSyncSpace } from "pstdio-sync/encryption";
 import { captureRecoveryFolder } from "./capture";
 import { createRecoveryChunkStore } from "./chunks";
 import { readRecoveryManifest } from "./manifest";
+import { nativeRecoverySupported } from "./native-recovery.fixture";
 import { createRecoveryPages } from "./pages";
 import { scanRecoveryRoot } from "./scan";
 import { prepareRecoveryCapture } from "./transfer";
 import { verifyRecoveryCapture } from "./verify-capture";
+
+const test = baseTest.skipIf(!nativeRecoverySupported);
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -171,7 +174,7 @@ test("a submodule checked out in a linked worktree recovers through that worktre
   expect(captured.git.state).toBe("functional");
 });
 
-test("a scan refuses a root that does not resolve to the validated path before reading it", async () => {
+baseTest("a scan refuses a root that does not resolve to the validated path before reading it", async () => {
   const { root, repository, chunks } = await fixture();
   const alias = join(root, "alias");
   await symlink(join(repository, ".git"), alias);

@@ -1,19 +1,15 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 import { serializePageUrl, workspacePages } from "@pstdio/sdk/extensions";
+import { isSessionChatAction } from "../helpers/session-chat-actions";
 import { verifyExtensionModeSessionRestore, verifyModePanelState } from "./packaged-mode-panel-state";
 import { verifyPageSessionTab } from "./packaged-page-session-tab";
 import { verifyClosedSidePreference, verifyGlobalBottomState } from "./packaged-related-resource-preferences";
+import { createPackagedSessionWorkspace } from "./packaged-session-workspace";
 import { verifySharedPageTab } from "./packaged-shared-page-tab";
 import { verifyRetainedTerminalDrop } from "./packaged-tab-drop-pinning";
 
 const createSessionFixture = async (baseUrl: string, projectId: string, authorization: Record<string, string>) => {
-  const workspacesResponse = await fetch(`${baseUrl}/v1/workspaces?project_id=${projectId}`, {
-    headers: authorization,
-  });
-  expect(workspacesResponse.ok).toBe(true);
-  const workspaces = (await workspacesResponse.json()) as Array<{ id: string; is_default: boolean }>;
-  const workspace = workspaces.find((workspace) => workspace.is_default)!;
-  expect(workspace).toBeDefined();
+  const workspace = await createPackagedSessionWorkspace(baseUrl, projectId, authorization);
   const response = await fetch(`${baseUrl}/v1/sessions`, {
     method: "POST",
     headers: { ...authorization, "content-type": "application/json" },
@@ -46,9 +42,11 @@ const verifyFloatingLauncher = async (page: Page) => {
   await floating.getByRole("button", { name: "Reattach Side Panel" }).click();
 };
 
-const revealThenCloseSessionViewer = async (page: Page, row: Locator, projectId: string) => {
+const revealThenCloseSessionViewer = async (page: Page, row: Locator) => {
+  const sourceUrl = page.url();
   await row.click();
-  await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/sessions/compose$`));
+  // Revealing the existing Side viewer preserves its routed page, including legacy deep links.
+  await expect(page).toHaveURL(sourceUrl);
   const selected = page.locator('[data-workbench-panel-header="side"]').getByRole("tab", {
     name: /Packaged session actions/,
   });
@@ -57,11 +55,11 @@ const revealThenCloseSessionViewer = async (page: Page, row: Locator, projectId:
   await page.getByRole("menuitem", { name: "Close tab", exact: true }).click();
   await expect(selected).toHaveCount(0);
 };
-const startNewSessionInViewer = async (page: Page, preview: Locator) => {
+const startNewSessionInViewer = async (page: Page, preview: Locator, workspaceName: string) => {
   await preview.focus();
   await page.keyboard.press("ControlOrMeta+Alt+s");
   await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("New session");
-  await expect(page.locator('[data-workbench-panel="main"]')).toContainText("Project folder");
+  await expect(page.locator('[data-workbench-panel="main"]')).toContainText(workspaceName);
   await page.goBack();
   await expect(preview).toBeVisible();
   await preview.focus();
@@ -112,19 +110,19 @@ export const verifyPackagedSessionMenus = async (
   await expect(page.locator('[data-workbench-panel="side"]:visible')).toHaveCount(0);
   await leaveWorkspace();
   await reopenWorkspace();
-  await verifyClosedSidePreference(page, preview, leaveWorkspace, reopenWorkspace);
-  await startNewSessionInViewer(page, preview);
+  await verifyClosedSidePreference(page, preview, leaveWorkspace, reopenWorkspace, workspace.workspace_shorthand);
+  await startNewSessionInViewer(page, preview, workspace.workspace_shorthand);
   const sideTabs = page.locator('[data-workbench-panel-header="side"]').getByRole("tab");
   await expect(sideTabs.filter({ hasText: "New session" })).toBeVisible();
   const sidePanel = page.locator('[data-workbench-panel="side"]').filter({ visible: true });
   const editor = sidePanel.getByTestId("content-editable").filter({ visible: true });
   await editor.fill("Packaged created session");
   await expect(sidePanel.getByRole("button", { name: "Send message", exact: true })).toBeEnabled();
-  const created = page.waitForResponse(
-    (response) => response.request().method() === "POST" && new URL(response.url()).pathname === "/v1/sessions",
-  );
+  const created = page.waitForResponse((response) => isSessionChatAction(response.request(), "submit"));
   await editor.press("Enter");
-  expect((await created).status()).toBe(201);
+  const createdResponse = await created;
+  expect(createdResponse.ok()).toBe(true);
+  expect((await createdResponse.json()).outcome.ok).toBe(true);
   await expect(sideTabs.filter({ hasText: "Packaged created session" })).toHaveAttribute("aria-selected", "true");
   expect(new URL(page.url()).pathname).toBe(new URL(workspaceUrl, baseUrl).pathname);
   await expect(sideTabs.first()).toContainText("Packaged created session");
@@ -238,7 +236,7 @@ export const verifyPackagedSessionMenus = async (
   await expect(page.getByRole("group", { name: "Sessions", exact: true })).toBeVisible();
   await expect(page.getByRole("group", { name: "Tab", exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
-  await revealThenCloseSessionViewer(page, row, projectId);
+  await revealThenCloseSessionViewer(page, row);
   await row.click();
   await expect(page).toHaveURL(new RegExp(session.id));
   await page.locator("[data-workbench-breadcrumb-resource-actions]").click();
@@ -255,8 +253,10 @@ export const verifyPackagedSessionMenus = async (
     .locator('[role="menu"][data-state="open"]')
     .getByRole("menuitem", { name: "Delete session", exact: true })
     .click();
-  await page.getByRole("button", { name: "Delete", exact: true }).click();
-  await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/sessions/compose$`));
+  await page.getByRole("button", { name: "Delete session", exact: true }).click();
+  await expect(page).toHaveURL(
+    new RegExp(`/projects/${projectId}/extensions/pstdio.pstdio-session-browser/conversations/compose$`),
+  );
   const deleted = await fetch(`${baseUrl}/v1/sessions/${session.id}`, { headers: authorization });
   expect(deleted.status).toBe(404);
   await verifyExtensionModeSessionRestore(page, projectId);

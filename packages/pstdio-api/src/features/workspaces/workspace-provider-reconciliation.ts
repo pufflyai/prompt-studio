@@ -1,7 +1,8 @@
 import type { JsonObject, WorkspaceProviderRef, WorkspaceProviderResult } from "pstdio-api-contracts/extension-kernel";
 import type { WorkspacesRouteDeps } from "./deps";
+import { getAcceptedProviderOperation } from "./workspace-provider-accepted-operation";
+import { removeInactiveWorkspaceProviderDirectory } from "./workspace-provider-directory";
 import { finalizeWorkspaceDelete } from "./workspace-provider-lifecycle";
-import { InvalidWorkspaceParamsError } from "./workspace-provider-params";
 import {
   failedOperationPatch,
   missingProviderPatch,
@@ -9,10 +10,9 @@ import {
   type WorkspaceProviderOperationKind,
   type WorkspaceRecord,
 } from "./workspace-provider-projection";
-import { persistRetryParams } from "./workspace-provider-retry-params";
 import {
   findWorkspaceProvider,
-  runWorkspaceProviderCall,
+  runWorkspaceProviderOperation,
   type WorkspaceProviderHandle,
 } from "./workspace-provider-runtime";
 import { isBuiltInProviderId, normalizeResult } from "./workspace-provider-service";
@@ -75,9 +75,10 @@ const reconcileCancellation = async (
     if (!handle.provider.delete) {
       throw new Error(`Workspace provider cannot clean up its cancelled create: ${workspace.provider_id}`);
     }
-    await runWorkspaceProviderCall(
-      () =>
-        handle.provider.delete!(handle.context, {
+    await runWorkspaceProviderOperation(
+      handle,
+      (ctx) =>
+        handle.provider.delete!(ctx, {
           operationId,
           projectId: workspace.project_id,
           workspaceId: workspace.id,
@@ -88,9 +89,10 @@ const reconcileCancellation = async (
     await settleWithoutProviderMethod(deps, workspace, "cancelled");
     return;
   }
-  const result = await runWorkspaceProviderCall(
-    () =>
-      handle.provider.cancel!(handle.context, {
+  const result = await runWorkspaceProviderOperation(
+    handle,
+    (ctx) =>
+      handle.provider.cancel!(ctx, {
         operationId,
         projectId: workspace.project_id,
         workspaceId: workspace.id,
@@ -107,18 +109,20 @@ const recoverProviderReference = async (
   handle: WorkspaceProviderHandle,
   options: ReconciliationOptions,
 ) => {
-  const current = await persistRetryParams(deps, workspace, handle);
+  const current = await getAcceptedProviderOperation(deps, workspace);
   if (!current) return;
   if (current.provider_ref_json) return current;
   const kind = current.provider_operation_kind!;
   const operationId = current.provider_operation_id!;
-  const result = await runWorkspaceProviderCall(
-    () =>
-      handle.provider.create(handle.context, {
+  const result = await runWorkspaceProviderOperation(
+    handle,
+    (ctx, signal) =>
+      handle.provider.create(ctx, {
         operationId,
         projectId: current.project_id,
         workspaceId: current.id,
         params: current.provider_params_json as JsonObject,
+        signal,
       }),
     { signal: options.signal, timeoutMs: options.providerTimeoutMs },
   );
@@ -167,9 +171,10 @@ const reconcileStoredOperation = async (
   if (!handle.provider.delete || !workspace.provider_ref_json) {
     throw new Error(`Workspace provider cannot finish remote deletion: ${workspace.provider_id}`);
   }
-  await runWorkspaceProviderCall(
-    () =>
-      handle.provider.delete!(handle.context, {
+  await runWorkspaceProviderOperation(
+    handle,
+    (ctx) =>
+      handle.provider.delete!(ctx, {
         operationId,
         projectId: workspace.project_id,
         workspaceId: workspace.id,
@@ -199,9 +204,10 @@ const reconcileWorkspace = async (
 
   if (await reconcileStoredOperation(deps, workspace, handle, options)) return;
   if (!workspace.provider_ref_json) return;
-  const result = await runWorkspaceProviderCall(
-    () =>
-      handle.provider.resolve(handle.context, {
+  const result = await runWorkspaceProviderOperation(
+    handle,
+    (ctx) =>
+      handle.provider.resolve(ctx, {
         projectId: workspace.project_id,
         workspaceId: workspace.id,
         providerRef: workspace.provider_ref_json as WorkspaceProviderRef,
@@ -242,9 +248,7 @@ const reconcileProviderWorkspacePass = async (
     (workspace) =>
       !isBuiltInProviderId(workspace.provider_id) &&
       (workspace.provider_operation_id !== null ||
-        (workspace.execution_kind === "remote" &&
-          workspace.provider_state === "ready" &&
-          workspace.provider_ref_json !== null) ||
+        (workspace.provider_state === "ready" && workspace.provider_ref_json !== null) ||
         workspace.provider_state === "provisioning" ||
         workspace.provider_state === "archiving" ||
         workspace.provider_state === "deleting" ||
@@ -258,32 +262,33 @@ const reconcileProviderWorkspacePass = async (
       try {
         await reconcileWorkspace(deps, workspace, options);
       } catch (error) {
-        if (error instanceof InvalidWorkspaceParamsError) {
-          await deps.workspaceService.updateProviderOperationProjection(workspace.id, {
-            operationId: workspace.provider_operation_id!,
-            operationKind: workspace.provider_operation_kind!,
-            patch: {
-              provider_state: "failed",
-              provider_operation_id: null,
-              provider_operation_kind: null,
-              provider_error_json: {
-                code: "invalid_provider_params",
-                message: error.message,
-                retryable: false,
-                occurred_at: new Date().toISOString(),
-              },
-            },
-          });
-          return;
-        }
+        let failure = error;
         const kind = workspace.provider_operation_kind ?? "create";
+        if (kind === "delete" && !workspace.provider_ref_json && workspace.provider_operation_id) {
+          try {
+            await removeInactiveWorkspaceProviderDirectory(
+              deps,
+              {
+                projectId: workspace.project_id,
+                providerId: workspace.provider_id,
+                workspaceId: workspace.id,
+              },
+              workspace.provider_operation_id,
+            );
+          } catch (cleanupError) {
+            failure = new AggregateError(
+              [error, cleanupError],
+              "Provider recovery and owned-directory cleanup failed.",
+            );
+          }
+        }
         await deps.workspaceService.updateProviderProjection(
           workspace.id,
           failedOperationPatch(workspace, {
             kind,
             operationId: workspace.provider_operation_id ?? crypto.randomUUID(),
             state: pendingStateFor(kind),
-            error,
+            error: failure,
           }),
         );
       }

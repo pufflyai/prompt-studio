@@ -4,6 +4,8 @@ Keep project data in sync between your computers. Cloud access is available to a
 
 ## Sign in
 
+Install **Prompt Studio Cloud** from **Extensions**.
+
 Open the Cloud status item in the status bar, then choose **Cloud settings**. Choose **Sign in** and finish signing in in the browser. You can close and reopen settings while sign-in is pending, or choose **Cancel sign-in** to cancel it.
 
 If the status says **Sign in again**, open Cloud settings and sign in again. An account without early access shows **Coming soon** and does not show device or project sync controls.
@@ -51,3 +53,5 @@ Cloud settings lists your devices when early access is enabled. Choose **Rename*
 In Cloud settings, choose **Make local** and confirm. Syncing stops on this device immediately. Other devices discover the change when they refresh account membership; an idle device may take up to a minute. Each device keeps its copy.
 
 Choose **Sync with Cloud** to enable syncing again. The copies merge. Where both copies changed the same thing, one change is kept.
+
+*Updated at: 2026-11-07*
