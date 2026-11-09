@@ -116,8 +116,9 @@ const createOwner = (input: PlacementTextGuestInput, state: Ownership) => {
     },
     async close() {
       await input.prepareSessionClose?.();
-      const guest = await owner.guest;
-      await guest.close();
+      // Admission can fail after removal retains this placement. No guest then owns a recoverable draft.
+      const guest = await owner.guest.catch(() => undefined);
+      await guest?.close();
       owner.detach();
     },
   };
