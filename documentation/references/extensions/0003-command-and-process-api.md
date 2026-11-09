@@ -459,8 +459,9 @@ not contain them.
 `{ params }` to supply this project's current creation fields, choices and
 defaults. Return `null` when the provider is unavailable. Omit the callback to
 keep the static `params` schema; omit `params` from a discovery result to reuse
-that schema. Discovery runs when providers are listed and again before creation
-or a recovered create. Do not cache project-dependent choices in module state.
+that schema. Discovery runs when providers are listed and before a new create is accepted.
+The host persists validated parameters before allocation; accepted operations
+replay those parameters without rediscovering choices or applying new defaults. Do not cache project-dependent choices in module state.
 A failed discovery hides that provider from the current list and logs the error;
 other providers remain available. Creation validates the discovered schema and
 providers must still enforce their own resource ownership rules. Command-backed

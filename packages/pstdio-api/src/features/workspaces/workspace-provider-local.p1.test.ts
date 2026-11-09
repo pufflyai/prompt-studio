@@ -36,6 +36,7 @@ export default { commands: [{ id: "ordinary", ref: { kind: "command", id: "ordin
   async create(ctx, input) {
     const directory = await ctx.localDirectory();
     await directory.files.writeText("identity.json", JSON.stringify({ id: input.workspaceId, ...input.params }));
+    if (input.params.revision === "fail-before-reference") throw new Error("Create failed after local allocation");
     const process = await ctx.process.runOrThrow({
       command: ["bun", "-e", "process.stdout.write(process.cwd())"], cwd: directory.path,
     });
@@ -398,4 +399,23 @@ test("commands invoked by a provider retain ordinary target readiness", async ()
   );
   expect(result.ok).toBe(false);
   expect(result).toMatchObject({ reason: expect.stringContaining("local process target") });
+});
+
+test("deleting a failed create releases owned files while retaining unknown external recovery", async () => {
+  const response = await post("/v1/workspaces", {
+    project_id: projectId,
+    provider_id: providerId,
+    params: { revision: "fail-before-reference" },
+  });
+  const workspace = await response.json();
+  expect(workspace.provider_state).toBe("failed");
+  const path = join(root, "home", "workspaces", workspace.id);
+  expect(existsSync(path)).toBe(true);
+  const deleted = await handle.app.request(`/v1/workspaces/${workspace.id}`, { method: "DELETE" });
+  expect(deleted.status).toBe(409);
+  expect(existsSync(path)).toBe(false);
+  const retained = await handle.deps.workspaceService.get(workspace.id);
+  expect(retained?.deleted_at).toBeNull();
+  expect(retained?.provider_operation_kind).toBe("delete");
+  expect(retained?.provider_operation_id).toBe(workspace.provider_operation_id);
 });

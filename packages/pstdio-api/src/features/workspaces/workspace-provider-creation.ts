@@ -2,7 +2,6 @@ import type { JsonObject, WorkspaceProviderRef, WorkspaceProviderResult } from "
 import { defaultLocalWorkspaceCapabilities, folderWorkspaceCapabilities } from "pstdio-db";
 import type { WorkspacesRouteDeps } from "./deps";
 import { failWorkspaceCreation } from "./workspace-provider-create-failure";
-import { requireWorkspaceProviderParams } from "./workspace-provider-discovery";
 import {
   isBuiltInProviderId,
   remoteReadOnlyCapabilities,
@@ -10,7 +9,6 @@ import {
   worktreeProviderId,
 } from "./workspace-provider-identity";
 import { handOffLateCreateProjection, updateCreateProjection } from "./workspace-provider-operation-projection";
-import { validateWorkspaceParams } from "./workspace-provider-params";
 import {
   cancelledProviderPatch,
   failedOperationPatch,
@@ -267,20 +265,6 @@ export const provisionProviderWorkspace = async (
           provider_capabilities_json: remoteReadOnlyCapabilities,
         })
       ).workspace;
-    }
-
-    if (handle) {
-      const params = validateWorkspaceParams(
-        input.providerId,
-        await requireWorkspaceProviderParams(handle, input.providerId),
-        input.params,
-      );
-      const projection = await updateCreateProjection(deps, input.workspace, input.operationId, {
-        provider_params_json: params,
-      });
-      if (!projection.applied) return projection.workspace;
-      input.params = params;
-      input.workspace = projection.workspace;
     }
 
     const result = handle

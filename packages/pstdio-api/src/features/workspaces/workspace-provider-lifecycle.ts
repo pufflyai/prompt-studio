@@ -5,6 +5,7 @@ import type {
 } from "pstdio-api-contracts/extension-kernel";
 import { cancelWorkspaceSessions } from "./cancel-workspace-sessions";
 import type { WorkspacesRouteDeps } from "./deps";
+import { removeInactiveWorkspaceProviderDirectory } from "./workspace-provider-directory";
 import {
   cancelledProviderPatch,
   failedOperationPatch,
@@ -247,6 +248,22 @@ export const cleanupProviderBackedWorkspace = async (
     throw new Error(`Workspace provider is not available: ${workspace.provider_id}`);
   }
   if (!pending.provider_ref_json) {
+    if (workspace.provider_state === "failed" && workspace.provider_operation_kind === "create") {
+      try {
+        await removeInactiveWorkspaceProviderDirectory(
+          deps,
+          {
+            projectId: pending.project_id,
+            providerId: pending.provider_id,
+            workspaceId: pending.id,
+          },
+          operationId,
+        );
+      } catch (error) {
+        await updateFailedOperation(deps, pending, { kind: "delete", operationId, state: "deleting", error });
+        throw error;
+      }
+    }
     const error = new Error(`Workspace provider create reference is not available yet: ${workspace.provider_id}`);
     await updateFailedOperation(deps, pending, { kind: "delete", operationId, state: "deleting", error });
     throw error;

@@ -60,6 +60,18 @@ export const defaultWorkspaceProviderRuntime: WorkspaceProviderRuntime = {
         }),
     });
     const buildContext = async (scope?: InvocationScope) => {
+      // Register directory ownership first so it releases after child-process cleanup.
+      const directory = input.workspaceId
+        ? createWorkspaceProviderDirectory(
+            deps,
+            {
+              projectId: input.projectId,
+              providerId: input.providerId,
+              workspaceId: input.workspaceId,
+            },
+            scope,
+          )
+        : undefined;
       const context = await runner.buildExtensionContext(
         {
           projectId: input.projectId,
@@ -73,16 +85,7 @@ export const defaultWorkspaceProviderRuntime: WorkspaceProviderRuntime = {
       // Only the direct lifecycle callback can prepare an unavailable target.
       // Commands and hooks keep the runner's ordinary readiness checks.
       context.process = createWorkspaceProviderProcess(deps, input, scope);
-      if (input.workspaceId)
-        context.localDirectory = createWorkspaceProviderDirectory(
-          deps,
-          {
-            projectId: input.projectId,
-            providerId: input.providerId,
-            workspaceId: input.workspaceId,
-          },
-          scope,
-        );
+      if (directory) context.localDirectory = directory;
       return context;
     };
     return {
@@ -164,6 +167,7 @@ export const runWorkspaceProviderOperation = async <T>(
         parent: options.resourceSignal ? AbortSignal.any([signal, options.resourceSignal]) : signal,
       });
       const context = handle.contextForScope ? await handle.contextForScope(scope) : handle.context;
+      scope.signal.throwIfAborted();
       return call(context, scope.signal);
     }, options);
   } finally {

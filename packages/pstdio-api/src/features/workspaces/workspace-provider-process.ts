@@ -25,11 +25,12 @@ export const createWorkspaceProviderProcess = (
 ) =>
   createProcessApi({
     scope,
-    resolveCwd: async () => {
+    resolveCwd: async (process) => {
       scope?.signal.throwIfAborted();
       // Preserve the selected local cwd once ready. Preparation and cleanup must
       // also work while the provider target has no usable execution directory.
       const workspace = await ownedWorkspace(deps, input);
+      if (process.cwd) return process.cwd;
       if (workspace?.execution_kind === "local" && workspace.provider_state === "ready" && workspace.root_path)
         return workspace.root_path;
       const home = await deps.workspaceService.getDefault(input.projectId);
