@@ -4,17 +4,12 @@ import { isSessionChatAction } from "../helpers/session-chat-actions";
 import { verifyExtensionModeSessionRestore, verifyModePanelState } from "./packaged-mode-panel-state";
 import { verifyPageSessionTab } from "./packaged-page-session-tab";
 import { verifyClosedSidePreference, verifyGlobalBottomState } from "./packaged-related-resource-preferences";
+import { createPackagedSessionWorkspace } from "./packaged-session-workspace";
 import { verifySharedPageTab } from "./packaged-shared-page-tab";
 import { verifyRetainedTerminalDrop } from "./packaged-tab-drop-pinning";
 
 const createSessionFixture = async (baseUrl: string, projectId: string, authorization: Record<string, string>) => {
-  const workspacesResponse = await fetch(`${baseUrl}/v1/workspaces?project_id=${projectId}`, {
-    headers: authorization,
-  });
-  expect(workspacesResponse.ok).toBe(true);
-  const workspaces = (await workspacesResponse.json()) as Array<{ id: string; is_default: boolean }>;
-  const workspace = workspaces.find((workspace) => workspace.is_default)!;
-  expect(workspace).toBeDefined();
+  const workspace = await createPackagedSessionWorkspace(baseUrl, projectId, authorization);
   const response = await fetch(`${baseUrl}/v1/sessions`, {
     method: "POST",
     headers: { ...authorization, "content-type": "application/json" },
@@ -60,11 +55,11 @@ const revealThenCloseSessionViewer = async (page: Page, row: Locator) => {
   await page.getByRole("menuitem", { name: "Close tab", exact: true }).click();
   await expect(selected).toHaveCount(0);
 };
-const startNewSessionInViewer = async (page: Page, preview: Locator) => {
+const startNewSessionInViewer = async (page: Page, preview: Locator, workspaceName: string) => {
   await preview.focus();
   await page.keyboard.press("ControlOrMeta+Alt+s");
   await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("New session");
-  await expect(page.locator('[data-workbench-panel="main"]')).toContainText("Project folder");
+  await expect(page.locator('[data-workbench-panel="main"]')).toContainText(workspaceName);
   await page.goBack();
   await expect(preview).toBeVisible();
   await preview.focus();
@@ -115,8 +110,8 @@ export const verifyPackagedSessionMenus = async (
   await expect(page.locator('[data-workbench-panel="side"]:visible')).toHaveCount(0);
   await leaveWorkspace();
   await reopenWorkspace();
-  await verifyClosedSidePreference(page, preview, leaveWorkspace, reopenWorkspace);
-  await startNewSessionInViewer(page, preview);
+  await verifyClosedSidePreference(page, preview, leaveWorkspace, reopenWorkspace, workspace.workspace_shorthand);
+  await startNewSessionInViewer(page, preview, workspace.workspace_shorthand);
   const sideTabs = page.locator('[data-workbench-panel-header="side"]').getByRole("tab");
   await expect(sideTabs.filter({ hasText: "New session" })).toBeVisible();
   const sidePanel = page.locator('[data-workbench-panel="side"]').filter({ visible: true });
