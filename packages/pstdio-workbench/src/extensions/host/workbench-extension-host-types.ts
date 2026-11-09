@@ -39,6 +39,8 @@ export interface WorkbenchExtensionHostMenuRegistration
 
 export interface RegisterWorkbenchExtensionContributionsInput extends ChatCommandTransport {
   queries?: ScopedQueryClient;
+  /** Stable requested locale and fallback hierarchy for localized tab results. */
+  presentationLocale?: string;
   terminalRendererOwners?: TerminalRendererOwners;
   createKeybindingWhenExpression?: (when: ExtensionKeybindingRecord["when"]) => string | undefined;
   createMenuWhenExpression?: WorkbenchExtensionMenuWhenBuilder;

@@ -51,16 +51,12 @@ export const createQueryOwner = <T>(
   const assertOpen = () => {
     if (disposed) throw new Error("Query owner is disposed");
   };
-  const assertActive = (signal: AbortSignal) => {
-    signal.throwIfAborted();
-    assertOpen();
-  };
   const options = createQueryReadOptions({
     client,
     queryKey,
     ledger,
     read: (signal) => signals.read(signal, descriptor.read),
-    assertActive,
+    assertOpen,
   });
   const observer = new QueryObserver<T, Error>(client, { ...options, enabled: false });
   let snapshotRevision = ledger.revision();
@@ -149,6 +145,11 @@ export const createQueryOwner = <T>(
     key: queryKey,
     getSnapshot: () => snapshot,
     read: () => read(),
+    /** Refresh visible data without giving the awaiting caller a required-read lease. */
+    async refreshObserved() {
+      invalidate();
+      if (automaticReaders) await read(true);
+    },
     invalidate,
     /** Cheap adapter notification before automatic admission; does not retain optional observation. */
     subscribeInvalidation(listener: () => void) {

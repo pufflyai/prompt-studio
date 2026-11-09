@@ -1,5 +1,11 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import { createScopedQueryClient, isNavigationTarget, resourceKey, type ScopedQuery } from "@pstdio/sdk/extensions";
+import {
+  createScopedQueryClient,
+  isNavigationTarget,
+  resourceKey,
+  type ScopedQuery,
+  viewDataEvents,
+} from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import type { Disposable, WorkbenchPanelTab, WorkbenchTabSnapshot } from "../../core";
 import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
@@ -108,7 +114,12 @@ export const createWorkbenchExtensionTabPresentation = (
       query = scoped.query({
         id: `tab:${metadata.placementId}:${metadata.queryHandlerId}`,
         resourceKey: key,
-        dependsOn: metadata.refreshEventIds,
+        params: input.presentationLocale,
+        dependsOn: [
+          viewDataEvents.extensionCatalogChanged.id,
+          viewDataEvents.extensionTranslationsChanged.id,
+          ...(metadata.refreshEventIds ?? []),
+        ],
         dependency: { resourceKey: resourceKey(resource), resourceId: resource?.id },
         read: async (signal) =>
           toWorkbenchPresentationSnapshot(
@@ -138,8 +149,7 @@ export const createWorkbenchExtensionTabPresentation = (
   const preview = input.workbench.resources.preview.subscribeRefresh(async (resource) => {
     const query = queries.get(resourceKey(resource)!);
     if (!query) return;
-    query.invalidate();
-    if (query.active()) await query.read();
+    await query.refreshObserved();
   });
   return {
     refreshEvents: metadata.refreshEventIds,

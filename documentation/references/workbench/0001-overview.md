@@ -49,6 +49,10 @@ retires. Layout restoration replaces retired providers with the current register
 contribution, preserving live per-placement overrides. Retired providers must stop
 their subscriptions and must not start new reads when an older snapshot calls them.
 Reading a snapshot prepares its identity; subscribing admits optional query work.
+Hosts pass a stable `presentationLocale` (requested locale and fallback hierarchy)
+to `registerWorkbenchExtensionContributions`. Localized tab queries retain separate
+locale results and depend on catalog and accepted translation changes. Returning
+to an unchanged project or locale reuses its accepted presentation.
 
 Hover over a tab or focus it with the keyboard to see its full title in a tooltip.
 The tooltip appears below the tab after 300 ms.

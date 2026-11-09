@@ -2,7 +2,7 @@ import type {
   WorkbenchExtensionMetadata as DashboardExtensionMetadata,
   ListExtensionAppearanceResponse,
 } from "@pstdio/sdk/api";
-import type { PageLocation, ScopedQueryClient } from "@pstdio/sdk/extensions";
+import { type PageLocation, type ScopedQueryClient, viewDataEvents } from "@pstdio/sdk/extensions";
 import {
   batchWorkbenchChanges,
   type Disposable,
@@ -24,16 +24,19 @@ import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { executeExtensionCommand } from "@/shared/extensions/api";
 import { subscribeCoreViewDataEvents } from "@/shared/extensions/core-view-data-events";
 import {
+  getExtensionPresentationLocale,
   localizeExtensionMetadata,
   type ResolvedWorkbenchExtensionMetadata,
   registerExtensionTranslationBundles,
 } from "@/shared/extensions/extension-localization";
+import { acceptExtensionPresentationTranslations } from "@/shared/extensions/extension-presentation-translations";
 import {
   clearDashboardExtensionsReadyProject,
   clearDashboardExtensionsRegisteredProject,
   setDashboardExtensionsReadyProject,
   setDashboardExtensionsRegisteredProject,
 } from "@/shared/extensions/extension-readiness";
+import { publishExtensionEvent } from "@/shared/extensions/extension-webview-broadcast";
 import { invalidateExtensionAuxiliaryQueries } from "@/shared/extensions/project-extension-cache";
 import { getProjectExtensionQueries } from "@/shared/extensions/project-extension-queries";
 import { subscribeResourceViewDataEvents } from "@/shared/extensions/resource-view-data-events";
@@ -121,6 +124,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
       const catalog = createExtensionModuleCatalog(input, input.queries ?? sharedQueries, owner);
       let projectId = getDashboardSelectedProjectId(ctx);
       let metadata: ResolvedWorkbenchExtensionMetadata | undefined;
+      let registeredLocale: string | undefined;
       let appearanceDisposable: ReturnType<typeof registerExtensionAppearance> | undefined;
       let translationDisposable: Disposable | undefined;
       let contributionDisposables: Disposable[] = [];
@@ -147,7 +151,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         appearanceDisposable = undefined;
       };
 
-      const applyAppearance = (nextAppearance: ListExtensionAppearanceResponse) => {
+      const applyAppearance = (nextProjectId: string, nextAppearance: ListExtensionAppearanceResponse) => {
         clearTranslations();
         translationDisposable = registerExtensionTranslationBundles(nextAppearance, owner);
         const preferences = resolveExtensionAppearancePreferences(nextAppearance, owner);
@@ -157,6 +161,15 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           if (appearanceDisposable) appearanceDisposable.update(preferences);
           else appearanceDisposable = registerExtensionAppearance(ctx, preferences);
         });
+        for (const extensionId of acceptExtensionPresentationTranslations(
+          catalog.query(nextProjectId).appearance,
+          nextAppearance,
+        )) {
+          publishExtensionEvent(
+            { id: viewDataEvents.extensionTranslationsChanged.id, projectId: nextProjectId, extensionId },
+            owner,
+          );
+        }
       };
 
       const registrationError = (projectId: string, error: unknown, extensionId?: string) =>
@@ -181,6 +194,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
 
       const commitMetadata = (nextProjectId: string, registeredMetadata: ResolvedWorkbenchExtensionMetadata) => {
         metadata = registeredMetadata;
+        registeredLocale = getExtensionPresentationLocale();
         setCachedDashboardExtensionMetadata(nextProjectId, registeredMetadata, owner);
         ctx.context.set(dashboardEditableTemplatesContextKey, hasEditableTemplateAssets(registeredMetadata));
         ctx.settings.refresh();
@@ -190,7 +204,11 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
       const applyMetadata = (nextProjectId: string, nextMetadata: DashboardExtensionMetadata) => {
         const nextResolvedMetadata = localizeExtensionMetadata(nextMetadata, owner);
         // `metadata` holds only what registered, so a refresh after a failure always retries.
-        if (hasSameSerializedMetadata(metadata, nextResolvedMetadata)) return;
+        if (
+          registeredLocale === getExtensionPresentationLocale() &&
+          hasSameSerializedMetadata(metadata, nextResolvedMetadata)
+        )
+          return;
         const pageLocationBeforeRefresh = displacedPageLocation ?? ctx.pages.store.getState().location;
         const refreshLayout = captureExtensionContributionRefreshLayout(ctx);
         // Observers must see the completed refresh. A temporary missing page can
@@ -217,6 +235,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         onPending: () => clearDashboardExtensionsReadyProject(ctx),
         onRetire: (id) => {
           metadata = undefined;
+          registeredLocale = undefined;
           clearContributions();
           clearTranslations();
           clearCachedDashboardExtensionMetadata(id, owner);
@@ -229,7 +248,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         isAvailable: () => !owner.isDisposed() && !(input.queries ?? sharedQueries).isDisposed(),
         apply: (nextProjectId, nextAppearance) => {
           if (!nextAppearance) return;
-          applyAppearance(nextAppearance);
+          applyAppearance(nextProjectId, nextAppearance);
           const rawMetadata = metadataRefresh.value();
           if (rawMetadata) applyMetadata(nextProjectId, rawMetadata);
         },
@@ -249,6 +268,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           metadataRefresh.clear();
           appearanceRefresh.clear();
           metadata = undefined;
+          registeredLocale = undefined;
           displacedPageLocation = undefined;
           clearCachedDashboardExtensionMetadata(previousProjectId, owner);
           clearCachedDashboardExtensionMetadata(projectId, owner);
@@ -272,8 +292,8 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
       const reapplyLocale = () => {
         const rawMetadata = metadataRefresh.value();
         const rawAppearance = appearanceRefresh.value();
-        if (!projectId || !rawMetadata || !rawAppearance) return;
-        applyAppearance(rawAppearance);
+        if (!projectId || !rawMetadata) return;
+        if (rawAppearance) applyAppearance(projectId, rawAppearance);
         applyMetadata(projectId, rawMetadata);
       };
 

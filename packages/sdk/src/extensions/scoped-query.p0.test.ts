@@ -932,3 +932,46 @@ test("an equal accepted revision notifies passive lifetime observers without rep
   stop();
   root.dispose();
 });
+
+test("refreshing observed data awaits optional work without retaining a closed view or interrupting required peers", async () => {
+  const root = createScopedQueryClient(scope);
+  const requests: Array<{ signal: AbortSignal; value: ReturnType<typeof Promise.withResolvers<string>> }> = [];
+  let reads = 0;
+  const query = root.query({
+    id: "observed-refresh",
+    read: (signal) => {
+      if (++reads === 1) return "Original";
+      const value = Promise.withResolvers<string>();
+      requests.push({ signal, value });
+      return value.promise;
+    },
+  });
+  try {
+    expect(await query.refreshObserved()).toBeUndefined();
+    expect(reads).toBe(0);
+    const first = query.subscribe(() => {});
+    const peer = query.subscribe(() => {});
+    await turn();
+    expect(query.getSnapshot().data).toBe("Original");
+    const optional = query.refreshObserved().catch(() => undefined);
+    first();
+    expect(requests[0].signal.aborted).toBe(false);
+    peer();
+    expect(requests[0].signal.aborted).toBe(true);
+    requests[0].value.resolve("Retired");
+    await optional;
+    expect(query.getSnapshot().data).toBe("Original");
+    const returning = query.subscribe(() => {});
+    await turn();
+    const required = query.read();
+    returning();
+    expect(requests[1].signal.aborted).toBe(false);
+    requests[1].value.resolve("Required");
+    expect(await required).toBe("Required");
+    expect(query.getSnapshot().data).toBe("Required");
+    expect(reads).toBe(3);
+  } finally {
+    for (const request of requests) request.value.resolve("Cleaned up");
+    root.dispose();
+  }
+});

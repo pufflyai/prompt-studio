@@ -68,6 +68,13 @@ The host binds the emitting project and extension. `QueryChangeEnvelope` carries
 
 The root routes events to matching dependencies, including retained inactive queries. Do not also attach a per-component listener that calls `refresh` for the same event. This duplicates ownership and work. Host reset/reconnect hints use the same dependency matching. A transport reconnection is not a reason to throw away all project caches.
 
+Host tabs include the requested locale and fallback hierarchy in their query identity.
+They depend on `viewDataEvents.extensionCatalogChanged` and
+`viewDataEvents.extensionTranslationsChanged` as well as their declared events.
+The latter identifies the project and extension whose accepted bundles changed,
+including removed translations. Unchanged bundles on project return leave warm
+results valid; translation freshness does not reset conversation streams or other projects.
+
 A descriptor's optional `subscribe(invalidate)` covers a custom source. The query installs it before its first read, shares it among observers and closes it after the last observer. That detached source has no retained cursor: the next observation performs one catch-up while retaining accepted content. For a clean warm return without that catch-up, route cheap scoped hints through the root, or use an existing revision/cursor that proves freshness.
 
 ## Keep project return warm
@@ -79,6 +86,10 @@ In a browser, dispose a guest's root when the view is actually destroyed, not wh
 Invalidations coalesce into the current read and one latest follow-up. Old completions cannot overwrite a newer accepted value. Pass cancellation to I/O that supports it. Cancellation fences publication but does not mean an uncooperative child stopped: its admission remains occupied until the actual work settles. Read cancellation never cancels an accepted domain write.
 
 Closing the last presentation stops optional refresh work and retains accepted data.
+Use `query.refreshObserved()` when a presentation refresh must await its current
+observed read. It invalidates inactive data without reading it; active work remains
+optional and cancels when its final observer leaves. An independent required reader
+still retains the shared operation. Awaiting refresh alone does not keep a view alive.
 An explicit `read()` caller owns its coalesced read until settlement, even when a
 presentation leaves. Explicit cancellation and authority retirement still cancel
 that work. A custom source detached without a retained cursor reconciles on the next

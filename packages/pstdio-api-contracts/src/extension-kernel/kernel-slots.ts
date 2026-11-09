@@ -111,6 +111,10 @@ export const accountEvents = {
 export const viewDataEvents = {
   projectsChanged: hostEventRef<{ projectId: string }>("view.projects.changed"),
   extensionCatalogChanged: hostEventRef<{ projectId?: string }>("view.extension-catalog.changed"),
+  /** Accepted translation bundles changed the extension's host-rendered presentation. */
+  extensionTranslationsChanged: hostEventRef<{ projectId: string; extensionId: string }>(
+    "view.extension-translations.changed",
+  ),
   recentResourcesChanged: hostEventRef<{ projectId: string }>("view.recent-resources.changed"),
   boardViewsChanged: hostEventRef<{ projectId: string }>("view.board-views.changed"),
   resourceAnchorsChanged: hostEventRef<{ projectId: string }>("view.resource-anchors.changed"),
