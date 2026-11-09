@@ -5,7 +5,7 @@ import { toTreeListSection } from "../../react/renderers/tree/tree-list-adapter"
 import { registerWorkbenchExtensionTreeRenderers } from "./tree-renderer-contributions";
 import { metadata, treeId } from "./tree-renderer-contributions.fixture";
 
-for (const subject of ["bound", "explicit", "unbound"] as const) {
+for (const subject of ["bound", "explicit", "unbound", "composed"] as const) {
   test(`retained tree actions use the ${subject} resource captured when activated`, async () => {
     const workbench = createWorkbench();
     const resource = (path: string): ResourceRef => ({
@@ -56,14 +56,25 @@ for (const subject of ["bound", "explicit", "unbound"] as const) {
           workbench: context,
         }),
     });
-    const sections = await getWorkbenchRenderers(workbench).getBody(treeId, { resource: stale });
+    const owner = { kind: "page", extensionId: "pstdio.lab", id: "ticket" } as const;
+    workbench.navigationTrees.registerContribution({
+      id: "ticket-files",
+      owner,
+      sourceExtensionId: "pstdio.lab",
+      declarationIndex: 0,
+      viewId: treeId,
+    });
+    const sections =
+      subject === "composed"
+        ? await workbench.navigationTrees.getSections(owner, "content", { resource: current })
+        : await getWorkbenchRenderers(workbench).getBody(treeId, { resource: stale });
     const requests: TreeActionParamsRequest[] = [];
     const adapted = toTreeListSection(
       sections[0]!,
       {},
       {
         workbench,
-        resource: subject === "unbound" ? undefined : current,
+        resource: subject === "unbound" || subject === "composed" ? undefined : current,
         onRequestParams: (request) => requests.push(request),
       },
     );
@@ -82,3 +93,50 @@ for (const subject of ["bound", "explicit", "unbound"] as const) {
     ]);
   });
 }
+
+test("merged navigation sections preserve an explicitly resource-less row owner", async () => {
+  const workbench = createWorkbench();
+  const owner = { kind: "page", extensionId: "example", id: "page" } as const;
+  const bound: ResourceRef = { type: "ticket", id: "bound" };
+  const calls: unknown[] = [];
+  for (const [index, resource] of [bound, undefined].entries()) {
+    workbench.navigationTrees.registerContribution({
+      id: `contribution-${index}`,
+      owner,
+      sourceExtensionId: "example",
+      declarationIndex: index,
+      resolveResource: () => resource,
+      getSections: () => [
+        {
+          id: "merged",
+          nodes: [
+            {
+              id: `row-${index}`,
+              label: `Row ${index}`,
+              actions: [
+                {
+                  id: "inspect",
+                  label: "Inspect",
+                  run: (_args, context) => {
+                    calls.push(context?.resource);
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+  }
+  try {
+    const sections = await workbench.navigationTrees.getSections(owner, "content", { resource: bound });
+    expect(sections).toHaveLength(1);
+    const adapted = toTreeListSection(sections[0]!, {}, { workbench });
+    adapted.nodes[0]?.actions?.[0]?.onAction?.({ nodeId: "row-0" });
+    adapted.nodes[1]?.actions?.[0]?.onAction?.({ nodeId: "row-1" });
+    await Bun.sleep(0);
+    expect(calls).toEqual([bound, undefined]);
+  } finally {
+    await workbench.dispose();
+  }
+});
