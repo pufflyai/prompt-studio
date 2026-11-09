@@ -1,4 +1,3 @@
-import { setTimeout as delay } from "node:timers/promises";
 import {
   blobStatusSchema,
   readResultSchema,
@@ -15,7 +14,7 @@ import {
 import type { SyncSpace } from "../encryption";
 import { DocumentBlobMissing, type DocumentRelay, DocumentUpdateTooLarge } from "./document-sync-types";
 import { readExactResponse } from "./exact-response";
-import { serviceAddress, serviceUrl } from "./http";
+import { fetchWithBackoff, serviceAddress, serviceUrl } from "./http";
 import type { SubscribeDocument } from "./live";
 
 export const createDocumentRelay = (input: {
@@ -29,25 +28,13 @@ export const createDocumentRelay = (input: {
   input.subscribe?.(input.space.spaceOwner, input.documentId);
   const address = serviceAddress(input.origin);
   const space = { projectId: input.space.projectId, spaceOwner: input.space.spaceOwner };
-  const request = async (route: SyncRoute, init: RequestInit = {}) => {
-    // The relay limits requests per device. Waiting as it asks keeps a busy device's sync going instead of failing it.
-    for (let attempt = 0; ; attempt++) {
-      const signal = input.signal;
-      signal.throwIfAborted();
+  const request = (route: SyncRoute, init: RequestInit = {}) =>
+    fetchWithBackoff(async () => {
       const headers = new Headers(init.headers);
       headers.set("authorization", `Bearer ${await input.token()}`);
       headers.set(syncProtocolHeader, String(syncProtocolVersion));
-      const response = await fetch(serviceUrl(address, syncPath(route)), { ...init, headers, signal });
-      if (response.status !== 429 || attempt >= 5) return response;
-      await response.body?.cancel();
-      const retryAfter = response.headers.get("retry-after");
-      const seconds = retryAfter === null ? 2 ** attempt : Number(retryAfter);
-      const milliseconds = Number.isFinite(seconds)
-        ? Math.max(0, seconds * 1000)
-        : Math.max(0, Date.parse(retryAfter!) - Date.now());
-      await delay(Number.isFinite(milliseconds) ? milliseconds : 1000, undefined, { signal });
-    }
-  };
+      return fetch(serviceUrl(address, syncPath(route)), { ...init, headers, signal: input.signal });
+    }, input.signal);
   const checked = async (response: Response) => {
     if (response.ok) return response;
     await response.body?.cancel();
