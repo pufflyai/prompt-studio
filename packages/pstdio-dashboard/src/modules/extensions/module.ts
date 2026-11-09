@@ -12,6 +12,7 @@ import {
 import {
   createWorkbenchExtensionChatRendererOwners,
   createWorkbenchExtensionTerminalRendererOwners,
+  reconcileBridgeWebviewHostEventPublishers,
 } from "@pstdio/workbench/extensions";
 import { logExtensionHostDiagnostic } from "pstdio-extensions/bridge/host";
 import i18n from "@/i18n";
@@ -174,11 +175,17 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           contributionDisposables = [registration.disposable];
           chatRendererOwners.reconcile(nextProjectId, registration.metadata);
           terminalRendererOwners.reconcile(nextProjectId, registration.metadata);
+          reconcileBridgeWebviewHostEventPublishers(
+            ctx,
+            nextProjectId,
+            new Set(registration.metadata.views.filter((view) => view.body.kind === "webview").map((view) => view.id)),
+          );
           return registration.metadata;
         } catch (error) {
           registrationError(nextProjectId, error);
           chatRendererOwners.dispose();
           terminalRendererOwners.reconcile(nextProjectId, emptyDashboardExtensionMetadata);
+          reconcileBridgeWebviewHostEventPublishers(ctx, nextProjectId, new Set());
           return omitExtensionMetadata(nextMetadata, new Set(nextMetadata.extensions.map((extension) => extension.id)));
         }
       };

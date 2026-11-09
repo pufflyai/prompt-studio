@@ -7,11 +7,12 @@ export const watchClosedTerminalPlacements = (
   viewId: string,
   ownerId?: string,
   projectId?: string,
+  onClose?: (instanceId: string) => void,
 ) => {
   const placements = (layout: WorkbenchLayout) =>
     Object.values(layout.regions)
       .flatMap((region) => region.widgets)
-      .filter((placement) => placement.viewId === viewId);
+      .filter((placement) => (placement.viewId ?? placement.contributionId) === viewId);
   // Scope and mode changes hide placements temporarily. Only an explicit tab
   // close should end the PTY bound to that placement.
   let previousScope = ctx.layout.getPersistenceScope();
@@ -41,15 +42,21 @@ export const watchClosedTerminalPlacements = (
     if (modeChanged || ctx.modes.isTransitioning()) return;
     const currentIds = new Set(placements(state.layout).map((placement) => placement.widgetId));
     const previousIds = placements(previousState.layout).map((placement) => placement.widgetId);
-    for (const instanceId of previousIds) {
-      if (hiddenMain.has(instanceId)) continue;
-      if (scopeChanged && !closedPreviews.has(instanceId)) continue;
-      if (!currentIds.has(instanceId)) void ctx.terminal.killBinding(instanceId, ownerId);
-    }
+    const closed = previousIds.filter(
+      (instanceId) =>
+        !hiddenMain.has(instanceId) && (!scopeChanged || closedPreviews.has(instanceId)) && !currentIds.has(instanceId),
+    );
+    const close =
+      onClose ??
+      ((instanceId: string) => {
+        void ctx.terminal.killBinding(instanceId, ownerId);
+      });
+    for (const instanceId of closed) close(instanceId);
   });
   return {
     dispose() {
       unsubscribeLayout();
+      if (onClose) return;
       if (ownerId) {
         void ctx.terminal.killOwner(ownerId);
         return;

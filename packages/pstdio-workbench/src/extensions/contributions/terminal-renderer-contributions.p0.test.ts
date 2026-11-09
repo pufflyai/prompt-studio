@@ -325,3 +325,55 @@ test("replacing an installed terminal source creates a different presentation ow
   owners.dispose();
   await workbench.dispose();
 });
+
+test("failed replacement registration preserves the original terminal owner", async () => {
+  const workbench = createWorkbench();
+  const owners = createWorkbenchExtensionTerminalRendererOwners();
+  const input = { workbench, projectId: "project", metadata, terminalRendererOwners: owners, executeCommand() {} };
+  const retained = registerWorkbenchExtensionContributions(input);
+  const original = nativeView(workbench).ownerId;
+  const replacement = {
+    ...metadata,
+    views: metadata.views.map((view) => ({
+      ...view,
+      body: { kind: "terminal" as const, sessionHandlerId: "replacement" },
+    })),
+  };
+  try {
+    expect(() => registerWorkbenchExtensionContributions({ ...input, metadata: replacement })).toThrow();
+    expect(nativeView(workbench).ownerId).toBe(original);
+  } finally {
+    retained.dispose();
+    owners.dispose();
+    await workbench.dispose();
+  }
+});
+
+test("a later contribution failure rolls back a staged replacement owner", async () => {
+  const workbench = createWorkbench();
+  const owners = createWorkbenchExtensionTerminalRendererOwners();
+  const input = { workbench, projectId: "project", metadata, terminalRendererOwners: owners, executeCommand() {} };
+  let retained = registerWorkbenchExtensionContributions(input);
+  const original = nativeView(workbench).ownerId;
+  retained.dispose();
+  const command = { id: "conflicting-command", extensionId: "example.console", localId: "conflict", title: "Conflict" };
+  const conflict = workbench.commands.registerCommand({ id: command.id, label: "Existing" }, { execute() {} });
+  const replacement = {
+    ...metadata,
+    commands: [command],
+    views: metadata.views.map((view) => ({
+      ...view,
+      body: { kind: "terminal" as const, sessionHandlerId: "replacement" },
+    })),
+  };
+  try {
+    expect(() => registerWorkbenchExtensionContributions({ ...input, metadata: replacement })).toThrow();
+    retained = registerWorkbenchExtensionContributions(input);
+    expect(nativeView(workbench).ownerId).toBe(original);
+  } finally {
+    retained.dispose();
+    conflict.dispose();
+    owners.dispose();
+    await workbench.dispose();
+  }
+});

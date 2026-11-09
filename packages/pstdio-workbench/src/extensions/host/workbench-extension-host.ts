@@ -265,6 +265,7 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
     disposables.push(...registerModes(input));
     disposables.push(...registerModePlacements(input));
     disposables.push(...registerPages(input));
+    terminals.commit();
     return {
       dispose() {
         disposeAll(disposables);

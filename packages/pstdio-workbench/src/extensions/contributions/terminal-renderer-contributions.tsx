@@ -57,13 +57,20 @@ export const createWorkbenchExtensionTerminalRendererOwners = () => {
   const owners = new Map<string, { declaration: string; owner: ReturnType<typeof createOwner> }>();
   return {
     checkpoint() {
-      const previous = new Set(owners.values());
-      return () => {
-        for (const [key, entry] of owners) {
-          if (previous.has(entry)) continue;
-          entry.owner.dispose();
-          owners.delete(key);
-        }
+      const previous = new Map(owners);
+      return {
+        rollback() {
+          for (const [key, entry] of owners) {
+            if (previous.get(key) !== entry) entry.owner.dispose();
+          }
+          owners.clear();
+          for (const [key, entry] of previous) owners.set(key, entry);
+        },
+        commit() {
+          for (const [key, entry] of previous) {
+            if (owners.get(key) !== entry) entry.owner.dispose();
+          }
+        },
       };
     },
     reconcile(projectId: string, metadata: WorkbenchExtensionMetadata) {
@@ -84,9 +91,15 @@ export const createWorkbenchExtensionTerminalRendererOwners = () => {
       const description = declaration(input.metadata, view);
       let entry = owners.get(key);
       if (entry?.declaration !== description) {
-        entry?.owner.dispose();
         entry = { declaration: description, owner: createOwner(input, view) };
-        owners.set(key, entry);
+        try {
+          const registration = entry.owner.register(input, view);
+          owners.set(key, entry);
+          return registration;
+        } catch (error) {
+          entry.owner.dispose();
+          throw error;
+        }
       }
       return entry.owner.register(input, view);
     },
@@ -101,7 +114,7 @@ export type TerminalRendererOwners = ReturnType<typeof createWorkbenchExtensionT
 export const registerWorkbenchExtensionTerminalRenderers = (input: RegisterWorkbenchExtensionContributionsInput) => {
   const local = input.terminalRendererOwners ? undefined : createWorkbenchExtensionTerminalRendererOwners();
   const owners = input.terminalRendererOwners ?? local!;
-  const rollback = owners.checkpoint();
+  const transaction = owners.checkpoint();
   const registrations: Array<{ dispose(): void }> = [];
   const dispose = () => {
     for (const registration of registrations.reverse()) registration.dispose();
@@ -111,10 +124,10 @@ export const registerWorkbenchExtensionTerminalRenderers = (input: RegisterWorkb
     for (const view of input.metadata.views) {
       if (view.body.kind === "terminal") registrations.push(owners.register(input, view));
     }
-    return { dispose, rollback };
+    return { dispose, ...transaction };
   } catch (error) {
     dispose();
-    rollback();
+    transaction.rollback();
     throw error;
   }
 };

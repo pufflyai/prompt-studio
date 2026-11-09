@@ -2,7 +2,10 @@ import { Center, Text } from "@chakra-ui/react";
 import type { ResourceRef } from "@pstdio/sdk/extensions";
 import { getThemePreferenceMode, useThemePreference, useToaster } from "@pstdio/ui";
 import type { WorkbenchCore, WorkbenchPanelInstance, WorkbenchTerminalController } from "@pstdio/workbench";
-import { createExtensionWebviewHostCapabilities } from "@pstdio/workbench/extensions";
+import {
+  createExtensionWebviewHostCapabilities,
+  getBridgeWebviewHostEventPublisher,
+} from "@pstdio/workbench/extensions";
 import type { NativeDocumentTarget } from "pstdio-api-contracts";
 import { parseExtensionWebviewPath } from "pstdio-api-contracts/extension-webview-path";
 import { createHostEventPublisher } from "pstdio-extensions/bridge/host";
@@ -61,7 +64,11 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
     if (notice.type === "error" || notice.type === "warning") showError(notice);
     else toaster.create(notice);
   });
-  const [hostEvents] = useState(createHostEventPublisher);
+  const [fallbackHostEvents] = useState(createHostEventPublisher);
+  const hostEvents =
+    props.workbench && props.placement
+      ? getBridgeWebviewHostEventPublisher(props.workbench, props.placement, projectId)
+      : fallbackHostEvents;
   const { pageLocation, pageParams } = useWebviewPageProps(props.workbench, props.placement);
   const [lastCommand, setLastCommand] = useState<ExtensionCommandEvent | null>(null);
   const [locale, setLocale] = useState(currentLocale);

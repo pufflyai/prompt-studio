@@ -8,9 +8,13 @@ import type {
   WorkbenchPanelRenderInput,
   WorkbenchRendererRegistration,
 } from "../../core";
+import { watchClosedTerminalPlacements } from "../../react/terminal/watch-terminal-placements";
 import { BridgeWebviewFrame } from "./bridge-webview-frame";
 import type { ExtensionWebviewHostAdapters } from "./extension-webview-host-adapters";
-import { createExtensionWebviewHostCapabilities } from "./extension-webview-host-capabilities";
+import {
+  createExtensionWebviewHostCapabilities,
+  disposeWebviewTerminalOwner,
+} from "./extension-webview-host-capabilities";
 import { createWorkbenchWebviewHostAdapters } from "./webview-host-capabilities";
 
 export interface BridgeWebviewRenderContext {
@@ -62,22 +66,52 @@ const createPlacementProps: CreateBridgeWebviewProps = ({ placement }) => ({
 
 const createLightTheme: CreateBridgeWebviewTheme = () => "light";
 
-const hostEventPublishersByWorkbench = new WeakMap<WorkbenchCore, Map<string, HostEventPublisher>>();
+interface WebviewPublisherOwner {
+  hostEvents: HostEventPublisher;
+  projectId?: string;
+  viewId: string;
+  dispose(): void;
+}
+const hostEventPublishersByWorkbench = new WeakMap<object, Map<string, WebviewPublisherOwner>>();
 
-export const getBridgeWebviewHostEventPublisher = (workbench: WorkbenchCore, instance: WorkbenchPanelInstance) => {
-  let hostEventsByWidget = hostEventPublishersByWorkbench.get(workbench);
-  if (!hostEventsByWidget) {
-    hostEventsByWidget = new Map();
-    hostEventPublishersByWorkbench.set(workbench, hostEventsByWidget);
+export const reconcileBridgeWebviewHostEventPublishers = (
+  workbench: { layout: Pick<WorkbenchCore["layout"], "store"> },
+  projectId: string,
+  viewIds: ReadonlySet<string>,
+) => {
+  for (const owner of hostEventPublishersByWorkbench.get(workbench.layout.store)?.values() ?? []) {
+    if (owner.projectId === projectId && !viewIds.has(owner.viewId)) owner.dispose();
   }
+};
 
-  const key = instance.instanceId;
-  let hostEvents = hostEventsByWidget.get(key);
-  if (!hostEvents) {
-    hostEvents = createHostEventPublisher();
-    hostEventsByWidget.set(key, hostEvents);
+export const getBridgeWebviewHostEventPublisher = (
+  workbench: WorkbenchCore,
+  instance: WorkbenchPanelInstance,
+  projectId = workbench.pages.store.getState().projectId ?? undefined,
+) => {
+  let owners = hostEventPublishersByWorkbench.get(workbench.layout.store);
+  if (!owners) {
+    owners = new Map();
+    hostEventPublishersByWorkbench.set(workbench.layout.store, owners);
   }
-
+  const key = JSON.stringify([projectId, instance.instanceId]);
+  const retained = owners.get(key);
+  if (retained) return retained.hostEvents;
+  const hostEvents = createHostEventPublisher();
+  const viewId = instance.viewId ?? instance.panelId;
+  let disposed = false;
+  const dispose = () => {
+    if (disposed) return;
+    disposed = true;
+    disposeWebviewTerminalOwner(hostEvents);
+    hostEvents.unbind();
+    owners.delete(key);
+    watch.dispose();
+  };
+  const watch = watchClosedTerminalPlacements(workbench, viewId, undefined, projectId, (closedId) => {
+    if (closedId === instance.instanceId) dispose();
+  });
+  owners.set(key, { hostEvents, projectId, viewId, dispose });
   return hostEvents;
 };
 

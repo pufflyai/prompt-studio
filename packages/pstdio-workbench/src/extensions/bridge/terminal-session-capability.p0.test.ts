@@ -280,3 +280,100 @@ test("removing terminal support releases the previous guest's sessions and subsc
     await workbench.dispose();
   }
 });
+
+test.each([
+  "closure",
+  "declaration removal",
+] as const)("permanent webview %s releases ownership while frame reconnects preserve it", async (removal) => {
+  const { getBridgeWebviewHostEventPublisher, reconcileBridgeWebviewHostEventPublishers } = await import(
+    "./bridge-webview-renderer"
+  );
+  const { workbench, scripted } = setupTerminal();
+  workbench.modes.registerMode({ id: "project", panels: ["main", "side", "secondary"], activate() {} });
+  workbench.pageLocations.setProject("project");
+  workbench.views.registerView({ id: "guest", title: "Guest", body: { kind: "react", render: () => null } });
+  workbench.shellPlacements.registerPlacement({
+    id: "guest-placement",
+    item: { kind: "view", view: { kind: "view", id: "guest" }, presence: "closed" },
+    region: "secondary",
+  });
+  const identity = workbench.shellPlacements.openPlacement({ placementId: "guest-placement", region: "secondary" });
+  const instance = workbench.layout.listPanelInstances().find((panel) => panel.viewId === "guest")!;
+  const hostEvents = getBridgeWebviewHostEventPublisher(workbench, instance);
+  const capability = createExtensionWebviewHostCapabilities({ terminal: workbench.terminal, hostEvents }, "guest")[
+    "terminal.session"
+  ];
+  await capability({ operation: "open", request: { cols: 80, rows: 24 } });
+  try {
+    hostEvents.unbind();
+    hostEvents.bind(() => {});
+    expect(scripted.calls).toEqual([]);
+    if (removal === "closure") workbench.closePlacement(identity);
+    else {
+      reconcileBridgeWebviewHostEventPublishers(workbench, "project", new Set(["guest"]));
+      expect(scripted.calls).toEqual([]);
+      reconcileBridgeWebviewHostEventPublishers(workbench, "project", new Set());
+      expect(workbench.layout.listPanelInstances().some((panel) => panel.instanceId === instance.instanceId)).toBe(
+        true,
+      );
+    }
+    await Bun.sleep(0);
+    expect(scripted.calls).toEqual(["kill:default"]);
+    await expect(capability({ operation: "write", sessionId: "session-1", data: "stale" })).rejects.toThrow(/disposed/);
+  } finally {
+    await workbench.dispose();
+  }
+});
+
+test("reused webview placement identities have separate project owners", async () => {
+  const { getBridgeWebviewHostEventPublisher } = await import("./bridge-webview-renderer");
+  const workbench = createWorkbench();
+  let opens = 0;
+  const kills: string[] = [];
+  workbench.terminal.setSessionOpener(async () => {
+    const id = `session-${++opens}`;
+    return {
+      id,
+      write() {},
+      resize() {},
+      kill() {
+        kills.push(id);
+      },
+      onData: () => () => {},
+      onExit: () => () => {},
+      onError: () => () => {},
+    };
+  });
+  workbench.modes.registerMode({ id: "project", panels: ["main", "side", "secondary"], activate() {} });
+  workbench.views.registerView({ id: "guest", title: "Guest", body: { kind: "react", render: () => null } });
+  workbench.shellPlacements.registerPlacement({
+    id: "shared-guest",
+    item: { kind: "view", view: { kind: "view", id: "guest" }, presence: "closed" },
+    region: "secondary",
+  });
+  const open = async (projectId: string) => {
+    workbench.pageLocations.setProject(projectId);
+    workbench.layout.setPersistenceScope(projectId);
+    const identity = workbench.shellPlacements.openPlacement({ placementId: "shared-guest", region: "secondary" });
+    const instance = workbench.layout.listPanelInstances().find((panel) => panel.viewId === "guest")!;
+    const events = getBridgeWebviewHostEventPublisher(workbench, instance, projectId);
+    const capability = createExtensionWebviewHostCapabilities(
+      { terminal: workbench.terminal, hostEvents: events },
+      projectId,
+    )["terminal.session"];
+    await capability({ operation: "open", request: { cols: 80, rows: 24 } });
+    return { identity, events, instance, capability };
+  };
+  try {
+    const a = await open("a");
+    const b = await open("b");
+    expect(a.instance.instanceId).toBe(b.instance.instanceId);
+    expect(a.events).not.toBe(b.events);
+    workbench.closePlacement(b.identity);
+    await Bun.sleep(0);
+    expect(kills).toEqual(["session-2"]);
+    await a.capability({ operation: "write", sessionId: "session-1", data: "retained" });
+  } finally {
+    await workbench.dispose();
+  }
+});

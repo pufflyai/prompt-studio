@@ -25,6 +25,10 @@ const terminalHandlers = new WeakMap<
     capability: ReturnType<typeof createTerminalSessionCapability>;
   }
 >();
+export const disposeWebviewTerminalOwner = (hostEvents: HostEventPublisher) => {
+  terminalHandlers.get(hostEvents)?.capability.dispose();
+  terminalHandlers.delete(hostEvents);
+};
 const terminalHandler = (
   terminal: ExtensionWebviewHostAdapters["terminal"],
   hostEvents: HostEventPublisher,

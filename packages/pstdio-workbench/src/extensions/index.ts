@@ -6,7 +6,11 @@ export type {
   CreateBridgeWebviewProps,
   CreateBridgeWebviewTheme,
 } from "./bridge/bridge-webview-renderer";
-export { getBridgeWebviewHostEventPublisher, renderBridgeWebviewFrame } from "./bridge/bridge-webview-renderer";
+export {
+  getBridgeWebviewHostEventPublisher,
+  reconcileBridgeWebviewHostEventPublishers,
+  renderBridgeWebviewFrame,
+} from "./bridge/bridge-webview-renderer";
 export type {
   ExtensionWebviewFilesAdapter,
   ExtensionWebviewHostAdapters,
