@@ -1,6 +1,6 @@
 import { rmSync } from "node:fs";
-import { expect, test } from "@playwright/test";
 import { createPlannerAttempt, createPlannerTicket, getPlannerTicketStatuses } from "../helpers/planner-api";
+import { expect, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 import {
   createResourceActionsProject as createProject,

@@ -6,7 +6,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "test": "bun ../../scripts/ci/run-bun-tests.ts",
+    "test": "bun ../../scripts/test.ts --scope storage-scale-fixture",
     "typecheck": "bun check",
     "lint": "bun run typecheck && biome check ."
   },

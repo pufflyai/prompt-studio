@@ -108,6 +108,7 @@ test("separates initial scheduling delay from execution and does not sum paralle
     job({ name: "scope", id: 1, started: "2026-10-25T00:10:00Z", completed: "2026-10-25T00:10:10Z" }),
     job({ name: "checks", id: 2, started: "2026-10-25T00:10:10Z", completed: "2026-10-25T00:12:50Z" }),
     job({ name: "parallel", id: 3, started: "2026-10-25T00:10:10Z", completed: "2026-10-25T00:12:40Z" }),
+    job({ id: 5, name: "unused", conclusion: "skipped", started: null, completed: null }),
     job({ id: 4, started: "2026-10-25T00:12:50Z", completed: "2026-10-25T00:13:00Z" }),
   ]);
   expect(report.runs[0]).toMatchObject({
@@ -141,6 +142,7 @@ test("a skipped job without timestamps does not hide the run duration", () => {
   const report = summarizeCiTiming([
     job({ name: "scope", id: 1, started: "2026-10-25T00:00:05Z", completed: "2026-10-25T00:00:30Z" }),
     job({ name: "build_docker", id: 3, conclusion: "skipped", started: null, completed: null }),
+    job({ id: 5, name: "unused", conclusion: "skipped", started: null, completed: null }),
     job({ id: 4, started: "2026-10-25T00:00:30Z", completed: "2026-10-25T00:01:00Z" }),
   ]);
   expect(report.runs[0]).toMatchObject({ wallMs: 60_000, elapsedAfterStartMs: 55_000 });
@@ -213,4 +215,27 @@ test("health leaves out runs whose gate did not finish", () => {
     (stage) => stage.stage === "pull_request",
   );
   expect(pull).toMatchObject({ runs: 1, measured: 1, firstAttemptFailures: 0 });
+});
+
+test("critical path follows actual reusable-workflow dependencies and excludes scheduling gaps", async () => {
+  const { bindCiWorkflowGraph } = await import("./ci-workflow-graph");
+  const jobs = [
+    job({ id: 1, name: "scope", started: "2026-10-25T00:00:00Z", completed: "2026-10-25T00:00:10Z" }),
+    job({ id: 2, name: "native / tests (linux)", started: "2026-10-25T00:01:00Z", completed: "2026-10-25T00:01:20Z" }),
+    job({ id: 3, name: "parallel", started: "2026-10-25T00:00:10Z", completed: "2026-10-25T00:00:25Z" }),
+    job({ id: 5, name: "unused", conclusion: "skipped", started: null, completed: null }),
+    job({ id: 4, started: "2026-10-25T00:01:20Z", completed: "2026-10-25T00:01:21Z" }),
+  ];
+  const workflows: Record<string, string> = {
+    ".github/workflows/test-and-build.yml":
+      "jobs:\n  scope: {}\n  native:\n    needs: scope\n    uses: ./.github/workflows/native.yml\n  parallel:\n    needs: scope\n  unused:\n    needs: scope\n    uses: ./.github/workflows/native.yml\n  ci_passed:\n    needs: [native, parallel, unused]\n",
+    ".github/workflows/native.yml": `jobs:\n  tests:\n    name: tests (\${{ matrix.os }})\n`,
+  };
+  const bound = await bindCiWorkflowGraph(jobs, "test-and-build.yml", async (path) => workflows[path]!);
+  expect(summarizeCiTiming(bound).runs[0]).toMatchObject({
+    executionCriticalPath: { durationMs: 31000, jobs: ["scope", "native / tests (linux)", "ci_passed"] },
+    gateWallMs: 81000,
+    totalRunnerMs: 46000,
+  });
+  expect(summarizeCiTiming(jobs).runs[0]!.executionCriticalPath).toBeNull();
 });

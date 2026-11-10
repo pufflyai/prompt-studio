@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import type { PGlite } from "@electric-sql/pglite";
 import { drizzle, type PgliteDatabase } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
-import { normalizeEmbeddedFileName } from "pstdio-paths";
+import { normalizeEmbeddedFileName, relativeEmbeddedFileName } from "pstdio-paths";
 import { openPglite } from "./open-pglite";
 import { canonicalDbPath, resolveDbPath } from "./paths";
 import { type PgliteRetirementPhase, prepareCurrentPgliteHome } from "./pglite-current-home";
@@ -20,7 +20,6 @@ type EmbeddedFile = Blob & { name: string };
 // without depending on full Blob behavior that unit tests do not control.
 type EmbeddedMigrationFile = Pick<EmbeddedFile, "name" | "size" | "arrayBuffer">;
 
-const DRIZZLE_PREFIX = "../../pstdio-db/drizzle/";
 const DRIZZLE_EXTRACT_DIR = "pstdio-drizzle";
 const PGLITE_WASM_SUFFIX = "/pstdio-db/vendor/pglite/pglite.wasm";
 const PGLITE_DATA_SUFFIX = "/pstdio-db/vendor/pglite/pglite.data";
@@ -38,12 +37,11 @@ const getEmbeddedFiles = (): EmbeddedFile[] => {
 };
 
 const extractEmbeddedMigrations = async (
-  embeddedFiles: readonly EmbeddedMigrationFile[],
+  embeddedFiles: readonly { file: EmbeddedMigrationFile; relativePath: string }[],
   root: string,
   logger: (message: string) => void,
 ) => {
-  for (const file of embeddedFiles) {
-    const relativePath = normalizeEmbeddedFileName(file.name).slice(DRIZZLE_PREFIX.length);
+  for (const { file, relativePath } of embeddedFiles) {
     const outPath = path.join(root, relativePath);
     fs.mkdirSync(path.dirname(outPath), { recursive: true });
     logger(`[drizzle] extracting ${relativePath} (${file.size} bytes)`);
@@ -61,9 +59,11 @@ export const resolveMigrationsFolder = async (
 ) => {
   const embeddedSource = options.embeddedFiles ?? getEmbeddedFiles();
   // Schema snapshots belong to migration generation; extracting them delays packaged startup.
-  const embedded = embeddedSource.filter((file) => {
-    const name = normalizeEmbeddedFileName(file.name);
-    return name.startsWith(DRIZZLE_PREFIX) && (name.endsWith(".sql") || name === `${DRIZZLE_PREFIX}meta/_journal.json`);
+  const embedded = embeddedSource.flatMap((file) => {
+    const relativePath = relativeEmbeddedFileName(file.name, "pstdio-db/drizzle");
+    return relativePath !== undefined && (relativePath.endsWith(".sql") || relativePath === "meta/_journal.json")
+      ? [{ file, relativePath }]
+      : [];
   });
 
   if (embedded.length > 0) {

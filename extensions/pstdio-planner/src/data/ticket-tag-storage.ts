@@ -2,7 +2,7 @@ import { tagValueIds } from "./ticket-tags";
 import type { StoredTicket, StoredTicketTags } from "./types";
 
 type TagSelection = (
-  | { type: "single"; value: string | null }
+  | { type: "single"; value: string | null; replacedOptions?: Record<string, boolean> }
   | { type: "multi"; value?: string | null; replacedValue?: string | null }
 ) & {
   options?: Record<string, boolean>;
@@ -22,8 +22,12 @@ export const readTicketTags = (stored: StoredTicketRecord) => {
     const options = selection.options ?? {};
     const previous =
       selection.type === "single" ? tagValueIds(selection.value ?? undefined) : tagValueIds(stored.tags?.[tagId]);
-    const selected = [...new Set([...previous, ...Object.keys(options)])].filter(
-      (id) => options[id] ?? previous.includes(id),
+    const visibleOptions =
+      selection.type === "single" && selection.replacedOptions
+        ? Object.fromEntries(Object.entries(options).filter(([id, value]) => selection.replacedOptions![id] !== value))
+        : options;
+    const selected = [...new Set([...previous, ...Object.keys(visibleOptions)])].filter(
+      (id) => visibleOptions[id] ?? previous.includes(id),
     );
     if (
       selection.type === "multi" &&
@@ -43,7 +47,8 @@ export const readTicketTags = (stored: StoredTicketRecord) => {
 };
 
 const multiSelection = (current: TagSelection | undefined, legacy: string[], before: string[], value: string[]) => {
-  const options = current?.type === "multi" ? { ...current.options } : {};
+  const options = { ...current?.options };
+  if (current?.type === "single") for (const id of Object.keys(options)) options[id] = value.includes(id);
   // Keep the scalar channel, recording exactly which choice this conversion consumed.
   // A concurrent scalar change then remains visible until a later edit resolves it.
   if (current?.value !== undefined) {
@@ -68,7 +73,14 @@ export const writeTicketTags = (next: StoredTicket, stored?: StoredTicketRecord)
     const value = tags[tagId];
     if (JSON.stringify(previous[tagId]) === JSON.stringify(value)) continue;
     if (!Array.isArray(value)) {
-      selections[tagId] = { type: "single", value: value ?? null };
+      const options = { ...selections[tagId]?.options };
+      // Consume observed choices without deleting their paths: a concurrent offline
+      // addition then remains independent from this scalar conversion.
+      selections[tagId] = {
+        type: "single",
+        value: value ?? null,
+        ...(Object.keys(options).length ? { options, replacedOptions: { ...options } } : {}),
+      };
       continue;
     }
     selections[tagId] = multiSelection(

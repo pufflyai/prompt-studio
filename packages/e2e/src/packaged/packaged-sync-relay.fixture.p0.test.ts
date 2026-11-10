@@ -455,3 +455,27 @@ test("relay fixture negotiates manifest references and validates immutable compl
     await stopPeer(peer);
   }
 });
+
+test("relay fixture resumes blob reads from the requested byte offset", async () => {
+  const peer = createPeer();
+  try {
+    const projectId = "resumed-blob-read";
+    const { token } = await enrolledAccess(peer.origin, "reader", projectId);
+    const relay = createDocumentRelay({
+      origin: peer.origin,
+      space: { projectId, spaceOwner: null },
+      documentId: "records_resume_0123456789",
+      token: async () => token,
+      signal: new AbortController().signal,
+    });
+    const bytes = new TextEncoder().encode("resume-check");
+    const blobId = "resume_blob_0123456789";
+    await relay.blobs.put(blobId, bytes);
+    const remaining = new Uint8Array(await new Response(await relay.blobs.read!(blobId, 4)).arrayBuffer());
+    expect(remaining).toEqual(bytes.subarray(4));
+    const complete = new Uint8Array(await new Response(await relay.blobs.read!(blobId, bytes.length)).arrayBuffer());
+    expect(complete).toHaveLength(0);
+  } finally {
+    await stopPeer(peer);
+  }
+});

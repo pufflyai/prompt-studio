@@ -7,7 +7,7 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   repeatEach: 1,
-  reporter: "list",
+  reporter: [["list"], ...(process.env.CI_PLAN_REPORTER ? [[process.env.CI_PLAN_REPORTER] as [string]] : [])],
   webServer: {
     command: "bun ../../extensions/canvas/scripts/serve-verification.ts",
     url: "http://127.0.0.1:43187",

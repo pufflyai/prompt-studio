@@ -1,9 +1,9 @@
 import { existsSync, rmSync } from "node:fs";
-import { expect, test } from "@playwright/test";
 import { defaultPageResourceCodec } from "@pstdio/sdk/extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, createPlannerTicketFile } from "../helpers/planner-api";
 import { observeTreeRows } from "../helpers/tree-continuity";
+import { expect, test } from "../scripts/session-test";
 import { uiOrigin } from "../ui-server";
 import { enableCloudWorkspaceProvider } from "./helpers/cloud-workspace-provider";
 

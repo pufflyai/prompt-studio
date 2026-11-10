@@ -1,7 +1,7 @@
-import { expect, test } from "@playwright/test";
 import { observeEventConnectionBudget } from "../helpers/event-connection-budget";
 import { getPlannerTicket } from "../helpers/planner-api";
 import { createResourceStreamFixture } from "../helpers/resource-stream-fixture";
+import { expect, test } from "../scripts/session-test";
 import { prepareDashboard } from "./helpers/workspace-files";
 
 let fixture: Awaited<ReturnType<typeof createResourceStreamFixture>>;

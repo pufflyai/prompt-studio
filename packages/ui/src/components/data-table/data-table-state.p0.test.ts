@@ -3,7 +3,7 @@ import { filterRowsByView } from "../collection-view/collection-view-filter";
 import {
   buildDataTableRendererAttributes,
   buildDataTableRendererRows,
-  getSelectedOriginalRows,
+  dataTableCellText,
   reorderDataTableColumns,
   resolveDataTableColumnOrder,
   resolveDataTableRowId,
@@ -35,12 +35,6 @@ describe("data table state helpers", () => {
   test("uses configured initial page size when valid", () => {
     expect(resolveInitialPageSize({ initialPageSize: 20 })).toBe(20);
     expect(resolveInitialPageSize({ initialPageSize: 0 })).toBe(30);
-  });
-
-  test("maps selected table rows back to original row objects", () => {
-    const selectedRows = [{ original: { id: "row-1" } }, { original: { id: "row-2" } }];
-
-    expect(getSelectedOriginalRows(selectedRows)).toEqual([{ id: "row-1" }, { id: "row-2" }]);
   });
 
   test("preserves CSV download as a selection action", () => {
@@ -174,4 +168,11 @@ test("undeclared boolean columns preserve saved text filters", () => {
       ).map((row) => row.id),
     ).toEqual(["no"]);
   }
+});
+
+test("table search uses chart labels and measurements instead of JSON keys", () => {
+  const text = dataTableCellText({ values: [4800, 5300], labels: ["Base", "Head"] }, { type: "bar-chart", unit: "ms" });
+  expect(text).toContain("Head: 5,300 ms");
+  expect(text.join(" ")).not.toContain("values");
+  expect(dataTableCellText({ values: [null] }, { type: "sparkline" })).toEqual(["No data"]);
 });

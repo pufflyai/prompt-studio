@@ -1,7 +1,7 @@
 import { rmSync } from "node:fs";
-import { expect, test } from "@playwright/test";
 import { defaultPageResourceCodec } from "@pstdio/sdk/extensions";
 import { folderProjectInput } from "../helpers/folder-project";
+import { expect, test } from "../scripts/session-test";
 import { uiOrigin } from "../ui-server";
 import { createAttemptWithSessionViaApi, createGitRepo, createTicketViaApi } from "./helpers/workspace-session-attempt";
 

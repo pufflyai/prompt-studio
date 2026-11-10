@@ -37,12 +37,14 @@ const createFixture = (initialFailure?: Error) => {
   };
 };
 interface NavigationConnectionProps {
-  initialFailure?: Error;
+  initiallyUnavailable?: boolean;
   initiallyConnected?: boolean;
 }
 const NavigationConnection = (props: NavigationConnectionProps) => {
-  const { initialFailure, initiallyConnected = true } = props;
-  const [fixture] = useState(() => createFixture(initialFailure));
+  const { initiallyUnavailable = false, initiallyConnected = true } = props;
+  const [fixture] = useState(() =>
+    createFixture(initiallyUnavailable ? new PstdioConnectionError(new TypeError("Failed to fetch")) : undefined),
+  );
   const [connected, setConnected] = useState(initiallyConnected);
   return (
     <Stack h="md" gap="md">
@@ -71,6 +73,8 @@ const NavigationConnection = (props: NavigationConnectionProps) => {
 };
 const meta = {
   title: "Product/Workbench/Navigation/Tree/Navigation connection loss",
+  description:
+    "Connection failures recover silently. Keep loaded content, wait quietly on an initial failure, and restore the response to observe automatic recovery. View errors still offer Retry.",
   component: NavigationConnection,
   decorators: [
     (Story) => (
@@ -87,7 +91,9 @@ export const RetainNavigation: Story = {
 };
 export const InitialConnectionFailure: Story = {
   id: "pstdio-workbench-guides-navigation-connection-loss--initial-connection-failure",
-  args: { initialFailure: new PstdioConnectionError(new TypeError("Failed to fetch")) },
+  description:
+    "The live connection may still be healthy when a page request drops. Never show a connection error banner.",
+  args: { initiallyUnavailable: true },
 };
 export const LocalReadDuringOutage: Story = {
   id: "pstdio-workbench-guides-navigation-connection-loss--local-read-during-outage",

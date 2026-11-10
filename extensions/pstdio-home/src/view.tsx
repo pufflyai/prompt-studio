@@ -12,6 +12,7 @@ import { AlertMessage, ChakraProvider, psTheme, ScrollArea } from "@pstdio/ui";
 import { Activity, useEffect, useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
 import type { commands } from "./commands";
+import { HomeQuotas } from "./components/home-quotas";
 import { ProjectSetupStatus } from "./components/project-setup-status";
 import { StartAboutPanel } from "./components/start-about-panel";
 import { StartActionList } from "./components/start-action-list";
@@ -139,6 +140,7 @@ const HomeApp = (props: AppProps) => {
           />
         )}
         <StartAboutPanel />
+        <HomeQuotas client={client} />
         <Stack direction={{ base: "column", md: "row" }} gap={{ base: "3xl", md: "4xl" }} align="flex-start" minW="0">
           <Box flex="1" minW="0" w="full">
             <StartActionList actions={actions} pending={pending} error={actionError} />

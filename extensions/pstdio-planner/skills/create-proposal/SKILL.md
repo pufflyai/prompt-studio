@@ -2,14 +2,14 @@
 name: create-proposal
 description: "Create a proposal ticket. Use for new features, large refactors, breaking API or schema changes, architecture changes, security changes, or when the user asks to save a plan as a proposal. Do not use for bug fixes, wording-only changes, non-breaking dependency updates, configuration changes, or tests for existing behavior."
 metadata:
-  version: 0.0.6
+  version: 0.0.7
 ---
 
 A proposal is a Planner ticket built from the `proposal` template. Use the `pst tickets` commands to create and edit it. See [Edit a ticket as a local file](https://prompt.studio/docs/extensions/planner/cli/#edit-a-ticket-as-a-local-file).
 
 A proposal ticket is not a document in the user's repository. If the repository keeps its own PRDs or ADRs, read and link them, and add a new one there only when the user asks. Prompt Studio's own product requirements describe Prompt Studio, not the user's product.
 
-A proposal lets a person check quickly that your plan matches their vision. It says what changes for users and why, through concrete scenarios. It does not say how to build it. Implementation planning happens later, in the tickets created from the proposal.
+A proposal lets a person judge the outcome and the technical approach before implementation. Explain what changes for users, why, and how it works, through concrete scenarios and a brief mechanism. Include API shapes, schemas, and design choices when they need review. Coding tasks and exhaustive implementation instructions belong to later tickets.
 
 ## UI designs
 
@@ -23,10 +23,12 @@ Before saving a proposal that adds or changes UI, read `pst pstdio-planner refin
 4. Run `pst tickets apply-template --id <shorthand> --template proposal` to apply the template.
 5. Read the relevant code and the repository's documentation. The proposal must match how the product works today.
 6. Fill in the template. Keep it short:
+   - Use concise bullets for the outcome, Why, and How. How explains the mechanism and main component or workflow changes, rather than repeating the goal.
+   - Include optional Downsides when concrete costs, limitations, or trade-offs help the decision. Omit empty sections and generic risk lists.
    - Write scenarios a person can picture: a concrete state, an action, and a visible outcome. Use the template's `### Scenario:` heading and Given/When/Then quote for each one.
    - Put at most five scenarios in `ticket.md`. Put the rest in `files/scenarios.md`.
    - Remove the template's HTML comments.
-   - Do not add implementation steps, code paths, or open questions to `ticket.md`.
+   - Keep coding steps and detailed source references in later implementation tickets or supporting files, respectively. Keep material assumptions and unresolved choices visible beside the affected design; request a decision only when it needs the person's authority.
 7. Create supporting files only as described below.
 8. Run `pst tickets save --id <shorthand>`.
 9. Create a review request only for a genuine unresolved decision, as described below.
@@ -42,9 +44,20 @@ Add a file only when the person needs it to judge the proposal:
 | `scenarios.md`             | There are more than five scenarios.                                                            |
 | `research.md`              | The proposal depends on findings a reviewer must check, such as current behavior or prior art. |
 | `adr.md`                   | The proposal makes a lasting architecture decision or chooses between real trade-offs.         |
-| `architecture-overview.md` | The proposal changes which part of the system owns what.                                       |
+| `architecture-overview.md` | The proposal introduces a subsystem or changes structure, interactions, ownership, or lifecycle. |
+| `contracts.md`             | API, SDK, CLI, event, or other interface shapes need review before implementation.              |
+| `schemas.md`               | Stored data, configuration, or message shapes need review before implementation.                |
 
-Contracts, schemas, and cookbooks belong to the implementation tickets, not the proposal.
+Keep a simple proposal in one readable ticket. Put a small example inline when enough; create a supporting file when the design needs separate review. Link every supporting file from the ticket with a relative link such as `files/contracts.md`.
+
+### Technical supporting material
+
+- Use concise bullets in architecture and research explanations, with tables, diagrams, and compact examples where useful. Distinguish inspected current behavior, proposed choices, and unverified assumptions. Keep source links beside the claims they support.
+- For substantial design changes, read the `architecture-overview` document template. For interface or data decisions, read `contracts` or `schemas` as needed. Use `research` when findings need checking. Adapt the relevant sections and omit those that do not help review.
+- Resolve document templates through Planner's template provider, which preserves project overrides and disabled templates. Its extension commands are `pstdio.pstdio-planner.command.templates.list` with `{ "type": "document" }` and `pstdio.pstdio-planner.command.templates.read` with `{ "name": "architecture-overview" }` (or another name). Execute them through the [extension command API](https://prompt.studio/docs/references/extensions/command-and-process-api/). These commands do not expose a CLI route; do not invent `pst templates read`. If the template or command interface is unavailable, write from the quality criteria here without replacing project customizations.
+- An architecture overview names real modules and marks new components as proposed. Explain the concrete execution path: inputs, outputs, interactions, state ownership, and lifecycle. Cover failure handling, compatibility, and trade-offs when they affect the decision.
+- Include meaningful Mermaid diagrams for substantial architecture changes. Show current and proposed relationships with labeled interactions; use sequence or state diagrams when ordering or lifecycle matters. Check syntax and agreement with the text. A list of responsibilities alone is not an architecture explanation.
+- Show consequential API and schema choices with request/response, interface, event, or data examples. Explain constraints, errors, compatibility, and migration implications where relevant. Put fuller shapes in `contracts.md` or `schemas.md` when needed; include all fields and relationships needed to judge the design. Proposals are where these designs get reviewed. Leave implementation cookbooks and coding tasks to later tickets.
 
 ## Review request
 

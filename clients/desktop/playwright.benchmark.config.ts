@@ -1,6 +1,6 @@
 import { defineConfig } from "@playwright/test";
 import { suites } from "pstdio-benchmarks";
-import { playwrightQuarantineSelection } from "pstdio-scripts/test-quarantine";
+import { playwrightQuarantineSelection } from "pstdio-scripts/testing";
 
 const quarantine = process.env.E2E_TEST_LANE === "quarantine";
 const ordered = process.env.E2E_TEST_LANE === "benchmark";
@@ -28,6 +28,7 @@ export default defineConfig({
     quarantineAttempt: quarantine || ordered ? process.env.CI_QUARANTINE_ATTEMPT : undefined,
   },
   reporter: [
+    ...(process.env.CI_PLAN_REPORTER ? [[process.env.CI_PLAN_REPORTER] as [string]] : []),
     ["line"],
     [
       "json",

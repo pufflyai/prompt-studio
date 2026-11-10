@@ -1,11 +1,12 @@
-import { expect } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { expect, mergeTests, test as sessionTest } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
-import { test } from "./helpers/notification-settings";
+import { test as notificationTest } from "./helpers/notification-settings";
 import { installShortcutReferenceExtension } from "./helpers/shortcut-reference-extension";
 import { showSidenavEntry } from "./helpers/sidenav-navigation";
 import { changeThemeThroughCommandPalette } from "./helpers/theme-picker";
 
+const test = mergeTests(notificationTest, sessionTest);
 test.use({ notificationsEnabled: true });
 
 test("the fullscreen shortcut toggles from editing and completes shortcut mode", async ({ page, request }) => {
@@ -182,15 +183,26 @@ test("lists every registered keyboard shortcut", async ({ page, request }, testI
   await page.getByRole("menuitem", { name: /^Keyboard shortcuts/ }).click();
 
   await expect(page.getByText("Keyboard shortcuts", { exact: true }).last()).toBeVisible();
+  const dialog = page.getByRole("dialog").last();
+  const search = dialog.getByRole("textbox", { name: "Search keyboard shortcuts" });
+  // Built-in wording can change while the registered action and its chord stay the same.
+  for (const commandId of [
+    "workbench.toggleCommandPalette",
+    "workbench.action.showCommands",
+    "workbench.action.changeTheme",
+    "workbench.action.navigateBack",
+    "workbench.action.navigateForward",
+    "workbench.toggleSideBar",
+    "dashboard.openNotifications",
+    "dashboard.openShortcuts",
+  ]) {
+    await search.fill(commandId);
+    const action = dialog.getByRole("group");
+    await expect(action).toHaveCount(1);
+    await expect(action.locator("kbd").last()).toBeVisible();
+  }
+  await search.clear();
   for (const label of [
-    "Toggle Command Palette",
-    "Run Command",
-    "Choose color theme",
-    "Go back",
-    "Go forward",
-    "Toggle Sidenav",
-    "Open notifications",
-    "Keyboard shortcuts",
     "Shortcut greeting",
     "Go to shortcut destination",
     "Shortcut inspector",
@@ -199,7 +211,6 @@ test("lists every registered keyboard shortcut", async ({ page, request }, testI
   ]) {
     await expect(page.getByText(label, { exact: true }).last()).toBeVisible();
   }
-  const dialog = page.getByRole("dialog").last();
   await testInfo.attach("shortcut-inventory", { body: await dialog.innerText(), contentType: "text/plain" });
   await dialog.getByRole("group", { name: "Go to shortcut destination", exact: true }).scrollIntoViewIfNeeded();
   await testInfo.attach("shortcut-reference", { body: await page.screenshot(), contentType: "image/png" });
@@ -301,6 +312,7 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
   });
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
+  await installShortcutReferenceExtension(request, apiBase, project.id);
   await page.goto(`/projects/${project.id}/tickets`);
   await expect(page.getByRole("option", { name: /^Notes/ }).first()).toBeVisible({ timeout: 30_000 });
   for (const [key, label, destination] of [
@@ -311,18 +323,18 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
     ["A", "Artifacts", /\/artifacts$/],
   ] as const) {
     await page.getByRole("option", { name: "Home", exact: true }).click();
-    await (await showSidenavEntry(page, "Tickets")).click();
     await showSidenavEntry(page, label);
     const row = page.getByRole("option", { name: new RegExp(`^${label}`) }).first();
     await row.focus();
+    await expect(page).not.toHaveURL(destination);
     await page.keyboard.press("Alt+Shift+Space");
     await page.keyboard.press("g");
     await page.keyboard.press(key);
     if (key === "K") {
       const choices = page.getByRole("dialog", { name: "Choose action", exact: true });
-      await expect(choices.getByRole("button", { name: "Go to kiln 1", exact: true })).toBeVisible();
-      await expect(choices.getByRole("button", { name: "Go to tickets 2", exact: true })).toBeVisible();
-      await page.keyboard.press("2");
+      await expect(choices.getByRole("button", { name: "Go to tickets 1", exact: true })).toBeVisible();
+      await expect(choices.getByRole("button", { name: "Go to shortcut destination 2", exact: true })).toBeVisible();
+      await page.keyboard.press("1");
     }
     await expect(page).toHaveURL(destination);
     await page.keyboard.press("Escape");

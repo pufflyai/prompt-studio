@@ -1,8 +1,8 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { type APIRequestContext, expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { type APIRequestContext, expect, test } from "../scripts/session-test";
 import { uiOrigin } from "../ui-server";
 
 const executeNoteCommand = async (

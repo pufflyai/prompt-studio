@@ -17,7 +17,7 @@ describe("tokenEditorPresets", () => {
       "colors.bg.hover": "#EDF2EE",
       "colors.bg.active": "#E7EEE9",
       "colors.border": "#EAF0EB",
-      "colors.border.subtle": "#EDF2EE",
+      "colors.border.subtle": "#E5EBE6",
     });
   });
 
@@ -40,7 +40,7 @@ describe("tokenEditorPresets", () => {
       ),
     ).toEqual({
       "colors.border": "#2E333F",
-      "colors.border.subtle": "#1A1E26",
+      "colors.border.subtle": "#242933",
     });
   });
 });

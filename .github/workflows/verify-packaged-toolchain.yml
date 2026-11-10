@@ -29,6 +29,14 @@ on:
         required: false
         type: string
         default: "1"
+      test_plan:
+        description: Consume the parent workflow immutable test plan
+        type: boolean
+        default: false
+      test_plan_artifact_id:
+        description: Immutable plan artifact produced by the parent scope job
+        type: string
+        default: ""
       gate_plan:
         type: string
         default: "[]"
@@ -62,7 +70,7 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version: "24.22.1"
-      - name: Install native dependencies and restore host build cache
+      - name: "[phase:install] Install native dependencies and restore host build cache"
         uses: ./.github/actions/setup-ci-cache
         with:
           install-strategy: native
@@ -80,17 +88,26 @@ jobs:
         run: |
           bun scripts/ci/production-payload.ts check
           tar -xzf release-build.tar.gz
-      - name: Build source fixtures for packaged runtime tests
+      - name: "[phase:build] Build source fixtures for packaged runtime tests"
         if: inputs.profile == 'full' && inputs.artifact_run_id == ''
         run: bun run build -- --scope e2e --include-dependencies
       - name: Install Chromium for packaged extension smoke tests
         if: inputs.profile == 'full' && runner.os != 'Windows'
         run: bunx playwright@1.60.0 install chromium --with-deps
+      - name: Download assigned test plan
+        if: inputs.test_plan
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: ${{ inputs.test_plan_artifact_id }}
+          merge-multiple: true
+          path: test-results/ci
       - name: Verify packaged Bun toolchain
         id: toolchain
         env:
           PSTDIO_VERIFY_PLATFORM_PKG: ${{ matrix.platform_pkg }}
           TEST_PRIORITIES: ${{ matrix.priorities }}
+          CI_PROFILE: production
+          CI_PLAN_JOB: ${{ inputs.test_plan && format('toolchain-{0}-{1}/{2}', matrix.platform_pkg, matrix.shard, matrix.shards) || '' }}
         # Git Bash pipelines give Windows children an inherited Ctrl+C-ignore attribute.
         # Use the native shell and direct arguments so real terminal interrupts reach the CLI.
         run: >-
@@ -98,17 +115,16 @@ jobs:
           bun run --cwd scripts verify:packages --profile "${{ inputs.profile }}"
           --shard "${{ matrix.shard }}/${{ matrix.shards }}"
           ${{ inputs.artifact_run_id != '' && '--prebuilt' || '' }}
-      - name: Run quarantined compiled CLI cases
-        if: inputs.profile == 'full' && matrix.shard == 1 && !cancelled() && steps.toolchain.outcome == 'success'
-        continue-on-error: true
-        env:
-          E2E_TEST_LANE: quarantine
-          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/${{ matrix.platform_pkg }}/bin/${{ runner.os == 'Windows' && 'pstdio.exe' || 'pstdio' }}
-        run: bun scripts/ci/run-quarantined-tests.ts packaged-bun --scope e2e --prebuilt
-      - name: Require every compiled CLI quarantine case to have executed
-        if: inputs.profile == 'full' && matrix.shard == 1 && !cancelled() && steps.toolchain.outcome == 'success'
-        run: bun scripts/ci/verify-quarantine-reports.ts packaged-bun --scope e2e
-      - name: Preserve packaged toolchain evidence
+      - name: "[phase:report-transfer] Preserve assigned test execution"
+        if: always() && inputs.test_plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-plan-results-toolchain-${{ matrix.platform_pkg }}-${{ matrix.shard }}-attempt-${{ github.run_attempt }}
+          path: |
+            test-results/ci/planned
+            !test-results/ci/planned/**/extension-fixtures-*/**
+          if-no-files-found: error
+      - name: "[phase:report-transfer] Preserve packaged toolchain evidence"
         if: always()
         uses: actions/upload-artifact@v4
         with:

@@ -12,7 +12,7 @@ pst pstdio-dev workspace stop-isolation --workspace-id <id>
 
 `open-in-vscode` opens the workspace worktree in VS Code. `open-in-isolation` starts the repository's isolated development stack and opens its dashboard. `stop-isolation` stops that stack.
 
-The extension also installs dependencies and builds a new worktree after the workspace-ready event.
+Workspace creation does not install dependencies or start a build. Run targeted setup and validation explicitly with the repository’s `bun run test:review` command.
 
 At noon each day, it starts an evidence-gated search for one high-impact issue. It creates a planner ticket only when the search reproduces a valuable, untracked problem.
 
@@ -26,6 +26,17 @@ pst pstdio-dev benchmarks start-run --commits pstdio@0.45.0 --commits main --pla
 ```
 
 The pages use your GitHub CLI login. Run `gh auth login` in this repository first.
+
+## Release pipeline health
+
+Open **Release health** from the project navigation for chronological test history. The total-tests plot stacks end-to-end, component, backend, package, harness, performance, and quarantine categories in blue shades. Separate plots show failed tests and quarantined tests, each on its own count scale so small counts stay readable beside full test totals. A line plot tracks each completed run's total duration from start to finish. Pointer or keyboard tooltips show exact counts, duration, status, commit, and evidence coverage. **Overview** holds the plots; **Runs** lists every run in a data table with its duration and a GitHub link. Select a run to read failure links, evidence coverage, and skipped or unrun tests. Publication and verification have separate statuses; a published nightly can still fail verification.
+
+The panel reads runner summaries, including quarantined cases, through your GitHub CLI login. It refreshes on opening, on demand, and daily; completed job counts are cached under this extension's project storage. Missing reports and unavailable logs remain explicit. A refresh preserves previous results if GitHub is unavailable. The initial history covers the latest ten manual, scheduled, or version-release candidates among the latest 100 workflow runs.
+
+```sh
+pst pstdio.pstdio-dev release-health sync
+pst pstdio.pstdio-dev release-health history
+```
 
 ## Merge queue repair
 

@@ -6,7 +6,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "test": "bun ../../scripts/ci/run-bun-tests.ts --silent",
+    "test": "bun ../../scripts/test.ts --scope pstdio-diagnostics",
     "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --coverage",
     "typecheck": "bun check",
     "lint": "bun run typecheck && biome check ."

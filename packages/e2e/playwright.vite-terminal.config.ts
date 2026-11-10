@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 import { PSTDIO_E2E_DEFAULT_EXTENSIONS } from "./src/default-extensions";
+import { fixtureServerReady } from "./src/scripts/server-readiness";
 import { viteOrigins } from "./src/vite-terminal-servers";
 
 const apiUrl = new URL(viteOrigins.api);
@@ -27,7 +28,11 @@ export default defineConfig({
   retries: 0,
   forbidOnly: !!process.env.CI,
   outputDir: `test-results/${runId}`,
-  reporter: [["html", { open: "never", outputFolder: `playwright-report/${runId}` }], ["list"]],
+  reporter: [
+    ...(process.env.CI_PLAN_REPORTER ? [[process.env.CI_PLAN_REPORTER] as [string]] : []),
+    ["html", { open: "never", outputFolder: `playwright-report/${runId}` }],
+    ["list"],
+  ],
   use: {
     navigationTimeout: 60_000,
     trace: "retain-on-failure",
@@ -46,9 +51,10 @@ export default defineConfig({
   webServer: [
     {
       command: `bun run src/scripts/serve-ui.ts --host ${apiUrl.hostname} --port ${apiUrl.port}`,
-      url: `${viteOrigins.api}/healthz`,
+      // Tool registration must finish before project creation can consume the test deadline.
+      wait: { stdout: fixtureServerReady },
       reuseExistingServer: false,
-      timeout: 15_000,
+      timeout: 60_000,
       env: {
         PSTDIO_DB_PATH: ":memory:",
         PSTDIO_DISABLE_EMBED_MANIFEST: "1",

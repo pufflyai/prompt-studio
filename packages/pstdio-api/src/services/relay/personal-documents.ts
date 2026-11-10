@@ -15,6 +15,7 @@ export const createPersonalDocuments = (input: {
   signal: AbortSignal;
   access: () => Promise<{ token: string; expiresAt: string }>;
   subscribe: SubscribeDocument;
+  progress?: Parameters<typeof createDocumentRelay>[0]["progress"];
 }) => {
   const { config, context } = input;
   let requestSignal = input.signal;
@@ -39,6 +40,7 @@ export const createPersonalDocuments = (input: {
         return requestSignal;
       },
       token: async () => (await input.access()).token,
+      progress: input.progress,
     });
   };
   const syncFor = (owner: StorageOwner, store: DocumentStore, space: SyncSpace, documentId: string) =>

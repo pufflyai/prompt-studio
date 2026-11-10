@@ -75,7 +75,9 @@ test("setup retry preserves a disabled provider when its default moves to user s
   expect(instances).toHaveLength(2);
   expect(instances.every(({ instance }) => !instance.enabled)).toBe(true);
   expect(instances.find(({ instance }) => instance.id === previous.instance.id)).toBeDefined();
-  const shared = instances.find(({ installedSource }) => installedSource.source_path.includes("home/extensions"))!;
+  const shared = instances.find(
+    ({ installedSource }) => installedSource.source_path === join(root, "home/extensions/shared-fixture"),
+  )!;
   expect(shared).toBeDefined();
   await handle.deps.extensionService.setProjectExtensionEnabled(shared.instance.id, true);
   expect(

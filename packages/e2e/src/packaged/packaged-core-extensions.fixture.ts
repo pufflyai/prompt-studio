@@ -7,9 +7,9 @@ import { basename, join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
 import { startLocalWorkspaceRegistry } from "../local-workspace-registry";
-import { removeTestDirectory } from "../scripts/remove-test-directory";
 import { preparePackagedExtensionSource } from "./packaged-extension-source";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+import { removeTestDirectory } from "./remove-test-directory";
 
 // Keep the existing allowance for cold core-extension installation on Intel macOS.
 export const CORE_EXTENSIONS_SMOKE_TEST_TIMEOUT = 120_000;
@@ -75,15 +75,21 @@ export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFi
     });
     closeRegistry = registry.close;
     phase("registry ready");
-    const defaultExtensions = await Promise.all(
+    const preparations = await Promise.allSettled(
       CORE_DEFAULT_EXTENSION_NAMES.map(async (installName) => ({
         installName,
         source: await preparePackagedExtensionSource(
           join(tempRoot, "sources", installName),
           join(REPO_ROOT, "extensions", installName),
+          { packageArtifacts: registry.packageArtifacts },
         ),
       })),
     );
+    // Every preparation owns a child installer that may still read the shared tarballs.
+    // Drain siblings before an error can close the registry and remove those inputs.
+    const failures = preparations.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+    if (failures.length) throw new AggregateError(failures, "Core extension source preparation failed");
+    const defaultExtensions = preparations.flatMap((result) => (result.status === "fulfilled" ? [result.value] : []));
     phase("core sources ready");
     const started = await startPackagedServe(tempRoot, {
       NPM_CONFIG_USERCONFIG: npmConfigPath,

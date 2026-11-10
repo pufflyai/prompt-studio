@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
 import { installInteractionClock, readInteraction } from "../perf/perf-helpers";
+import { expect, test } from "../scripts/session-test";
 
 // Critical risk: benchmark instrumentation must retain input work rather than report a healthy zero.
 for (const input of ["pointer", "keyboard"] as const) {

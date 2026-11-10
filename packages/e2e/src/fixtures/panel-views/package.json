@@ -1,0 +1,21 @@
+{
+  "name": "panel-views",
+  "version": "0.8.3",
+  "displayName": "Panel viewer fixture",
+  "description": "Test fixtures for extension and workbench contracts.",
+  "publisher": "test",
+  "main": "./extension.ts",
+  "engines": {
+    "pstdio": "^0.3.0 || ^0.4.0"
+  },
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@chakra-ui/react": "^3.0.0",
+    "@emotion/react": "^11.0.0",
+    "@pstdio/sdk": "0.46.0-preview.sha-2c2b2e4c6b144c418cc048219c56553afe938bf4",
+    "@pstdio/ui": "0.46.0-preview.sha-2c2b2e4c6b144c418cc048219c56553afe938bf4",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  }
+}

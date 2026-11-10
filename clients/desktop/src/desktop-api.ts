@@ -52,7 +52,7 @@ export interface PromptStudioDesktopApi {
   setProjectTabs: (state: DesktopProjectTabsState) => Promise<void>;
   setWorkbenchItem: (key: string, value: string | null) => Promise<void>;
   getPerformanceMonitoring: () => Promise<boolean>;
-  retainPerformanceCapture: (id: string) => Promise<void>;
+  retainPerformanceCapture: (id: string, monitoring?: boolean) => Promise<void>;
   releasePerformanceCapture: (id: string) => Promise<void>;
   setPerformanceMonitoring: (enabled: boolean) => Promise<void>;
   getPerformanceSnapshot: () => Promise<PerformanceSnapshot | null>;
@@ -77,6 +77,7 @@ export const DESKTOP_CHANNELS = {
   setStartupAppearance: "pstdio:desktop:set-startup-appearance",
   startupState: "pstdio:desktop:startup-state",
   startupStateChanged: "pstdio:desktop:startup-state-changed",
+  startupPainted: "pstdio:desktop:startup-painted",
   retryRuntime: "pstdio:desktop:retry-runtime",
   openLogs: "pstdio:desktop:open-logs",
   revealInFinder: "pstdio:desktop:reveal-in-finder",

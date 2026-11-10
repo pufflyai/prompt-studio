@@ -15,6 +15,7 @@ import type { PageLocation, PageParamValue } from "./pages";
 import type { ResourceRef } from "./resources";
 import type { ExtensionHarnessInput } from "./sessions";
 import type { TextEditingRequest, TextEditingResult } from "./text-editing";
+import type { WebviewCommandQueryRequest, WebviewCommandQuerySnapshot } from "./webview-command-query";
 import type { WebviewEditingSessionParams, WebviewEditingSnapshot } from "./webview-editing";
 
 export type { ExtensionBlobRef } from "./context";
@@ -25,6 +26,7 @@ export const WEBVIEW_HOST_CAPABILITY_VERSION = 1;
 export const WEBVIEW_DECLARABLE_CAPABILITIES = [
   "clipboard.write",
   "commands.execute",
+  "commands.query",
   "commands.stream",
   "editing.session",
   "editing.text",
@@ -188,6 +190,7 @@ export type WebviewAccountManageParams =
   | { op: "renameDevice"; id: string; name: string }
   | { op: "removeDevice"; id: string }
   | { op: "syncProject"; projectId?: string }
+  | { op: "retryProjectSyncSource"; sourceId: string; projectId?: string }
   | { op: "stopProjectSync"; projectId?: string }
   | { op: "resolveReturnedChanges"; action: ProjectReturnAction; projectId?: string };
 
@@ -235,6 +238,7 @@ export interface WebviewHostCapabilityParams {
     | { operation: "list"; resource: ResourceRef }
     | { operation: "execute"; resource: ResourceRef; key: string };
   "commands.execute": WebviewCommandsExecuteParams;
+  "commands.query": WebviewCommandQueryRequest;
   "commands.stream": WebviewCommandsStreamParams;
   "editing.session": WebviewEditingSessionParams;
   "editing.text": TextEditingRequest;
@@ -279,6 +283,7 @@ export interface WebviewHostCapabilityResults {
   };
   "resources.actions": WebviewResourceAction[];
   "commands.execute": { outcome: CommandOutcome };
+  "commands.query": WebviewCommandQuerySnapshot | undefined;
   "commands.stream": { operation: "start" | "cancel" | "ack"; accepted: true };
   "editing.session": WebviewEditingSnapshot | undefined;
   "editing.text": TextEditingResult;

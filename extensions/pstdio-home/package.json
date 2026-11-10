@@ -1,6 +1,6 @@
 {
   "name": "pstdio-home",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "displayName": "Home",
   "icon": "house",
   "description": "Project home, recent resources, and setup recovery.",
@@ -15,8 +15,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun ../../scripts/ci/run-bun-tests.ts",
-    "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --coverage",
+    "test": "bun test",
+    "test:coverage": "bun test --coverage",
     "typecheck": "bun check"
   },
   "dependencies": {
@@ -24,8 +24,9 @@
     "@emotion/react": "^11.0.0",
     "@pstdio/sdk": "0.47.0-preview.sha-8184397490cfa0fa22d136b99ac75c708878512a",
     "@pstdio/ui": "0.47.0-preview.sha-8184397490cfa0fa22d136b99ac75c708878512a",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "@tanstack/charts": "1.2.1",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
   },
   "devDependencies": {
     "@types/bun": "1.4.4",

@@ -109,6 +109,7 @@ const extensionKanbanRendererRowActionSchema = z.object({
 export const extensionKanbanRendererRecordSchema = extensionRendererRecordBaseSchema.extend({
   kind: z.enum(["kanban", "resourceList"]).optional(),
   queryMode: z.literal("paged").optional(),
+  initialPageSize: z.number().int().positive().optional(),
   toolbarActions: z.array(viewToolbarActionRecordSchema).optional(),
   extensionInstanceId: z.string().optional(),
   attributes: z.array(kanbanRendererAttributeSchema).optional(),

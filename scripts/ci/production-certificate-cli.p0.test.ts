@@ -16,6 +16,8 @@ for (const input of ["missing", "unparseable"] as const) {
         env: {
           ...process.env,
           CHANNEL: "stable",
+          GITHUB_RUN_ID: "123",
+          GITHUB_RUN_ATTEMPT: "1",
           GITHUB_STEP_SUMMARY: join(directory, "summary.md"),
           PRODUCTION_RESULTS: JSON.stringify({
             candidate: { result: "failure" },
@@ -49,7 +51,7 @@ for (const input of ["missing", "unparseable"] as const) {
   });
 }
 
-test("preserves complete matching certification through the CLI", () => {
+test.each([1, 2])("preserves complete matching certification through CLI attempt %s", (attempt) => {
   const directory = mkdtempSync(join(tmpdir(), "production-complete-"));
   try {
     const candidate = {
@@ -63,7 +65,19 @@ test("preserves complete matching certification through the CLI", () => {
     };
     writeFileSync(join(directory, "production-candidate.json"), JSON.stringify(candidate));
     for (const check of requiredProductionChecks("stable")) {
-      const evidence = { candidate, check, outcome: "success", runId: "123", attempt: 1, artifactMode: "published" };
+      const evidence = {
+        candidate,
+        check,
+        outcome: "success",
+        runId: "123",
+        attempt: check === "functional" ? attempt : 1,
+        artifactMode: "published",
+      };
+      if (attempt === 2 && check === "functional") {
+        const prior = join(directory, "production-evidence", "prior");
+        mkdirSync(prior, { recursive: true });
+        writeFileSync(join(prior, "functional.json"), JSON.stringify({ ...evidence, outcome: "failure", attempt: 1 }));
+      }
       const path = join(directory, "production-evidence", `${check}.json`);
       mkdirSync(join(directory, "production-evidence"), { recursive: true });
       writeFileSync(path, JSON.stringify(evidence));
@@ -76,6 +90,8 @@ test("preserves complete matching certification through the CLI", () => {
         env: {
           ...process.env,
           CHANNEL: "stable",
+          GITHUB_RUN_ID: "123",
+          GITHUB_RUN_ATTEMPT: String(attempt),
           GITHUB_STEP_SUMMARY: join(directory, "summary.md"),
           PRODUCTION_RESULTS: JSON.stringify(
             Object.fromEntries(

@@ -2,6 +2,7 @@ import { resolveDataTableFieldKind } from "pstdio-api-contracts/collections";
 import { isValidElement, type ReactNode } from "react";
 import type { AttributeDescriptor, KanbanRendererRow } from "@/components/kanban-renderer/types";
 import { isDataTableDiffValue, resolveDataTableComparableValue } from "./data-table-cell-value";
+import { dataTableChartText } from "./data-table-chart-text";
 import { formatDataTableRelativeDate } from "./data-table-date-cell";
 import { getJsonCellSummary } from "./friendly-json-display";
 import { formatDisplayValue } from "./helpers";
@@ -22,8 +23,6 @@ export const resolveInitialPageSize = (props: Pick<DataTableProps, "initialPageS
   if (typeof props.initialPageSize === "number" && props.initialPageSize > 0) return props.initialPageSize;
   return defaultPageSize;
 };
-
-export const getSelectedOriginalRows = (rows: Array<{ original: RowData }>) => rows.map((row) => row.original);
 
 export const resolveSelectionActions = (
   props: Pick<DataTableProps, "selectionActions" | "onCSVDownload" | "getRowId">,
@@ -138,6 +137,7 @@ export const dataTableCellText = (
   renderer?: NonNullable<ColumnRenderers>[string],
   now = new Date(),
 ) => {
+  if (renderer?.type === "sparkline" || renderer?.type === "bar-chart") return dataTableChartText(value, renderer);
   if (renderer?.type === "json") return [getJsonCellSummary(value)];
   if (renderer?.type === "badge" && ["string", "number", "boolean"].includes(typeof value)) return [String(value)];
   if (renderer?.type === "date") {

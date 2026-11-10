@@ -1,7 +1,7 @@
 import { rmSync } from "node:fs";
-import { expect, test } from "@playwright/test";
 import type { ListProjectExtensionsResponse } from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
+import { expect, test } from "../scripts/session-test";
 import { uiOrigin } from "../ui-server";
 import { getSidenavEntry } from "./helpers/sidenav-navigation";
 import { prepareDashboard } from "./helpers/workspace-files";

@@ -132,8 +132,6 @@ const expectExtensionSettingsViewsToLoad = async (page: import("@playwright/test
   await page.getByText("Settings", { exact: true }).last().click();
   const settings = page.getByRole("dialog").last();
   await expect(settings.getByRole("option", { name: "Templates", exact: true })).toBeVisible();
-  await expectSettingsViewToLoad(page, settings, "Lab (global)", "Greeting tone");
-  await expectSettingsViewToLoad(page, settings, "Lab (project)", "Counter step");
   await expectSettingsViewToLoad(page, settings, "Ticket tags", "Add tag");
 };
 

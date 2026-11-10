@@ -5,6 +5,45 @@ import { documentConnectionFixture } from "./document-connection.test-fixture";
 const documentId = "native_document_0123456789";
 const directoryId = "owner_directory_0123456789";
 
+test("a full pass resolving after a targeted failure preserves the retry error during backoff", async () => {
+  const f = documentConnectionFixture();
+  const entered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const reported = Promise.withResolvers<void>();
+  const drained = Promise.withResolvers<void>();
+  let released = false;
+  const owner = createDocumentRelayConnection({
+    ...f,
+    projectId: "project",
+    signal: f.controller.signal,
+    synchronize: async () => {
+      entered.resolve();
+      await release.promise;
+    },
+    synchronizeDocument: async () => {
+      throw new Error("Targeted read failed");
+    },
+    onError: () => reported.resolve(),
+    onStatusChange: () => {
+      if (released && !owner.status().busy) drained.resolve();
+    },
+  });
+  try {
+    await entered.promise;
+    owner.wakeDocument("text");
+    await reported.promise;
+    released = true;
+    release.resolve();
+    await drained.promise;
+    expect(owner.status()).toMatchObject({ busy: false, error: "Cloud source failed; retry scheduled" });
+  } finally {
+    release.resolve();
+    f.controller.abort();
+    await owner.done;
+    await f.close();
+  }
+});
+
 test("subscription admission catches up exact text while its owner directory is held", async () => {
   const f = documentConnectionFixture({ heldTopic: documentId });
   const release = Promise.withResolvers<void>();
@@ -80,7 +119,48 @@ test("subscription admission catches up exact text while its owner directory is 
   }
 });
 
-test("a shared socket renewal preserves a held owner attempt and queued retry", async () => {
+test("Retry cancels a stalled download and resumes on the same shared connection", async () => {
+  const f = documentConnectionFixture();
+  const entered = Promise.withResolvers<AbortSignal>();
+  const release = Promise.withResolvers<void>();
+  const retried = Promise.withResolvers<AbortSignal>();
+  let passes = 0;
+  let ready = 0;
+  const owner = createDocumentRelayConnection({
+    ...f,
+    projectId: "project",
+    signal: f.controller.signal,
+    onReady: () => ready++,
+    synchronize: async (signal) => {
+      if (++passes === 1) {
+        entered.resolve(signal);
+        await Promise.race([
+          release.promise,
+          new Promise<void>((_resolve, reject) =>
+            signal.addEventListener("abort", () => reject(signal.reason), { once: true }),
+          ),
+        ]);
+      } else retried.resolve(signal);
+    },
+  });
+  try {
+    const original = await entered.promise;
+    owner.retry();
+    expect(original.aborted).toBe(true);
+    const next = await retried.promise;
+    expect(next).not.toBe(original);
+    expect(next.aborted).toBe(false);
+    expect(ready).toBe(2);
+    expect(f.live.status().connected).toBe(true);
+  } finally {
+    release.resolve();
+    f.controller.abort();
+    await owner.done;
+    await f.close();
+  }
+});
+
+test("a shared socket renewal preserves a held owner attempt and queued work", async () => {
   const grant = Promise.withResolvers<{ token: string; expiresAt: string }>();
   const renewalEntered = Promise.withResolvers<void>();
   let grants = 0;
@@ -109,7 +189,7 @@ test("a shared socket renewal preserves a held owner attempt and queued retry", 
   try {
     await entered.promise;
     await renewalEntered.promise;
-    owner.retry();
+    owner.wake();
     expect(signals[0]!.aborted).toBe(false);
     grant.resolve({ token: "renewed", expiresAt: new Date(Date.now() + 60_000).toISOString() });
     await f.renewed;

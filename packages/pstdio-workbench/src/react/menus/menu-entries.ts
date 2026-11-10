@@ -94,6 +94,7 @@ export const resolveMenuEntries = (input: ResolveMenuEntriesInput) => {
         disabled: state.disabled,
         readOnly: state.readOnly,
         separatorBefore: action.separatorBefore,
+        runOnSelect: record.command.copyResultToClipboard === true,
         run: state.readOnly ? undefined : run,
       },
     ];

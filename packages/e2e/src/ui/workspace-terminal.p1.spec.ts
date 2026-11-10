@@ -1,7 +1,7 @@
 import { rmSync } from "node:fs";
-import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { homePage } from "../helpers/home-loading";
+import { expect, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 import { createGitRepo } from "./helpers/workspace-session-attempt";
 

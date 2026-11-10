@@ -1,13 +1,18 @@
-import { cpSync } from "node:fs";
-import { basename, join, resolve } from "node:path";
-import { mirrorNodeModules } from "pstdio-extensions";
-
-const repoRoot = resolve(import.meta.dirname, "../../../..");
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { createTestExtensionSource } from "../features/extensions/test-utils/create-test-extension-source";
 
 export const prepareSourceRefreshFixture = (root: string) => {
-  const original = join(repoRoot, "extensions/extension-lab");
-  const source = join(root, "extension-lab");
-  cpSync(original, source, { recursive: true, filter: (path) => basename(path) !== "node_modules" });
-  mirrorNodeModules(join(original, "node_modules"), join(source, "node_modules"));
+  const source = createTestExtensionSource({
+    root,
+    name: "startup-fixture",
+    installName: "startup-fixture",
+    displayName: "Startup fixture",
+  });
+  writeFileSync(
+    join(source, "extension.ts"),
+    `export default {commands:[{id:"ready",ref:{kind:"command",id:"ready"},title:"Ready",run:()=>"ready"}]};`,
+  );
+  writeFileSync(join(source, "README.md"), "Startup source fixture\n");
   return source;
 };

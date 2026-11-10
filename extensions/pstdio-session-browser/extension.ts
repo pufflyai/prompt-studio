@@ -18,6 +18,7 @@ import { sessionBrowser } from "./refs";
 import { act } from "./src/actions";
 import { browse, browsePage, search } from "./src/browse";
 import { connectionRefresh } from "./src/controls";
+import { copySessionId } from "./src/copy-session-id";
 import { readDraft, saveDraft } from "./src/drafts";
 import { acknowledgeNativeInputs } from "./src/native-recovery";
 import { nativeSubmissionIndex } from "./src/native-submission";
@@ -143,7 +144,20 @@ export default defineExtension({
   defaultLocale: "en",
   translations: { fr: packageAsset("./l10n/fr.json", import.meta.url) },
   storageIndexes: [nativeSubmissionIndex],
-  commands: [create, newInViewer, open, rename, archive, remove, fork, stop, switchConversation, resolve, watch],
+  commands: [
+    create,
+    newInViewer,
+    open,
+    copySessionId,
+    rename,
+    archive,
+    remove,
+    fork,
+    stop,
+    switchConversation,
+    resolve,
+    watch,
+  ],
   views: [conversation, list],
   pages: [sessions, compose, session, draft],
   placements: [viewer],

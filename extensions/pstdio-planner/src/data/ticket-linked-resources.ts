@@ -11,9 +11,15 @@ export const TICKET_LINKED_RESOURCES_ATTRIBUTE = "workspace";
 export const TICKET_LINKED_RESOURCE_ITEMS_ATTRIBUTE = "linkedResourceItems";
 export type TicketLinkedResourceLookup = Map<string, CollectionBadgeItem[]>;
 
-const badgeItem = (saved: ResourceRef, resolved: ResourceResolution | undefined) => {
+const badgeLabel = (resource: ResourceRef, saved: ResourceRef) =>
+  [resource.label, resource.shorthand, saved.label, saved.shorthand].find((label) => label?.trim());
+
+const badgeItem = (saved: ResourceRef, resolved: ResourceResolution | undefined): CollectionBadgeItem | undefined => {
   const resource = resolved?.resource ?? saved;
-  const label = resource.label ?? resource.shorthand ?? saved.label ?? saved.shorthand ?? resource.id;
+  const label = badgeLabel(resource, saved);
+  // A resource with no stored or resolved label has only an opaque id. Hiding its
+  // badge keeps raw ids out of ticket cards while labeled entries stay recognizable.
+  if (!label) return undefined;
   const available = Boolean(resolved?.target);
   return {
     id: resourceKey(saved),
@@ -36,7 +42,10 @@ const addRelatedReference = (
   linked.set(key, { ...previous, ...target, label: target.label ?? previous?.label });
 };
 
-export const loadTicketLinkedResources = async (resources: ExtensionResourcesApi, tickets: ResourceRef[]) => {
+export const loadTicketLinkedResources = async (
+  resources: ExtensionResourcesApi,
+  tickets: ResourceRef[],
+): Promise<TicketLinkedResourceLookup> => {
   const byIdentity = new Map(tickets.map((ticket) => [resourceKey(ticket), new Map<string, ResourceRef>()]));
   // Keep both directions on the same path. A workspace's ticket anchor is an incoming link.
   for (let offset = 0; offset < tickets.length; offset += 100) {
@@ -65,7 +74,9 @@ export const loadTicketLinkedResources = async (resources: ExtensionResourcesApi
   return new Map(
     tickets.map((ticket) => [
       ticket.id,
-      [...byIdentity.get(resourceKey(ticket))!.values()].map((ref) => badgeItem(ref, resolved.get(resourceKey(ref)))),
+      [...byIdentity.get(resourceKey(ticket))!.values()]
+        .map((ref) => badgeItem(ref, resolved.get(resourceKey(ref))))
+        .filter((item): item is CollectionBadgeItem => item !== undefined),
     ]),
   );
 };

@@ -103,6 +103,11 @@ const readDeviceLogin = async (
   return login?.deviceId === environmentId ? login : null;
 };
 
+const publicDevices = (payload: unknown) => {
+  const listed = devicesSchema.parse(payload);
+  return listed.devices.map((device) => ({ ...device, current: device.id === listed.deviceId }));
+};
+
 const denied = (error: unknown) => error instanceof ManagerRequestDenied && error.status === 401;
 const devicePath = (id: string) => `/v1/devices/${encodeURIComponent(identitySchema.parse(id))}`;
 const projectPath = (id: string) => `/v1/workbenches/${encodeURIComponent(identitySchema.parse(id))}`;
@@ -111,11 +116,12 @@ const retryProjectSync = async (
   projectId: string,
   projects: Pick<RouteDeps["projectService"], "get">,
   refresh: () => Promise<void>,
-  retry: (projectId: string) => Promise<void>,
+  retry: (projectId: string, sourceId?: string) => Promise<void>,
+  sourceId?: string,
 ) => {
   if (!(await projects.get(projectId))) throw new AccountRequestError("Unknown project");
   await refresh();
-  await retry(projectId);
+  await retry(projectId, sourceId);
   return { ok: true };
 };
 
@@ -151,7 +157,7 @@ export const createNativeAccount = (input: {
   const projectsFor = (login: DeviceLogin | null) =>
     login?.token === cloudProjects?.credential ? cloudProjects?.ids : undefined;
   let update: (connections: RelayWorkbench[]) => Promise<void> = async () => {};
-  let retryProject: (projectId: string) => Promise<void> = async () => {};
+  let retryProject: (projectId: string, sourceId?: string) => Promise<void> = async () => {};
   let folders: FolderRecoveryOwners = () => undefined;
   const away = createNativeCloudReturn();
   const commands = createDeviceCommandSender();
@@ -325,9 +331,10 @@ export const createNativeAccount = (input: {
       const status = await connectionSyncStatus(projectId, await readLogin(), projectsFor, projectStatus, missing);
       return { ...status, ...(await away.status(projectId)) };
     },
+    retryProjectSync: (projectId: string, sourceId?: string) =>
+      retryProjectSync(projectId, input.projects, refresh, retryProject, sourceId),
     resolveReturnedChanges: (id: string, action: ProjectReturnAction) =>
       away.resolve(id, action, input.projects, refresh),
-    retryProjectSync: (projectId: string) => retryProjectSync(projectId, input.projects, refresh, retryProject),
     /** The project's folder capture, download and restore owner on this device. */
     async folderRecovery(projectId: string) {
       if (!(await input.projects.get(projectId))) throw new AccountRequestError("Unknown project");
@@ -340,10 +347,7 @@ export const createNativeAccount = (input: {
       return owner;
     },
     logout,
-    async devices() {
-      const listed = devicesSchema.parse(await call("/v1/devices"));
-      return listed.devices.map((device) => ({ ...device, current: device.id === listed.deviceId }));
-    },
+    devices: async () => publicDevices(await call("/v1/devices")),
     renameDevice: (id: string, name: string) => call(`${devicePath(id)}/rename`, { name }).then(() => ({ ok: true })),
     async removeDevice(id: string) {
       const login = await current();

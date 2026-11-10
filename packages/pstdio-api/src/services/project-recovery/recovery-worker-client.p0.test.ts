@@ -1,5 +1,5 @@
 import { afterEach, test as baseTest, expect } from "bun:test";
-import { chmod, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSyncSpace } from "pstdio-sync/encryption";
@@ -97,8 +97,7 @@ test("verifying a copy in the worker accepts it intact and reports a damaged chu
   });
   const manifest = await readRecoveryManifest(f.chunks, candidate);
   await verifyRecoveryCaptureInWorker(f.chunks, manifest, signal);
-  const [file] = (await readdir(f.chunks.directory)).filter((name) => name.endsWith(".blob"));
-  const path = join(f.chunks.directory, file!);
+  const path = join(f.chunks.directory, `${manifest.capture.inventory.blobId}.blob`);
   const bytes = await readFile(path);
   bytes[bytes.length - 1] ^= 0xff;
   await writeFile(path, bytes);
