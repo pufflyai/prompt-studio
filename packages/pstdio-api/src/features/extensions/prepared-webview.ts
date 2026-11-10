@@ -55,9 +55,14 @@ export const prepareWebviewArtifact = async (
     signal.throwIfAborted();
     if (after.signature !== buildInputs.signature)
       throw new Error("Extension webview changed while preparing its bundle.");
-    rmSync(distDir, { recursive: true, force: true });
-    renameSync(join(stage, "dist"), distDir);
-    writeFileSync(complete, JSON.stringify({ id }));
+    withFileMutationLock(complete, () => {
+      try {
+        if (JSON.parse(readFileSync(complete, "utf8")).id === id && existsSync(join(distDir, "module.js"))) return;
+      } catch {}
+      rmSync(distDir, { recursive: true, force: true });
+      renameSync(join(stage, "dist"), distDir);
+      writeFileSync(complete, JSON.stringify({ id }));
+    });
     retainPreparedArtifacts(undefined, [id]);
     return { success: true as const, id, distDir };
   } finally {

@@ -1,6 +1,6 @@
-import { availableParallelism } from "node:os";
 import { dirname } from "node:path";
 import { isPreparationHost } from "pstdio-extensions";
+import { preparationBuildConcurrency, withPreparationBuildCommand } from "pstdio-extensions/preparation-command";
 import { isPackagedRuntime } from "pstdio-paths";
 import { runExtensionPreparation } from "./extension-preparation";
 import { runCommand } from "./install-extension-dependencies";
@@ -48,7 +48,7 @@ const buildArguments = (input: ExtensionWebviewBatchBuildInput, entryNaming: str
 
 // Builds and fresh input inspectors share these leaf slots. Never hold a slot around
 // preparation orchestration: its nested inspection/build calls need the same pool.
-const buildSlots = Math.max(1, Math.min(4, availableParallelism()));
+const buildSlots = preparationBuildConcurrency;
 let runningBuilds = 0;
 const waitingBuilds: (() => void)[] = [];
 
@@ -70,7 +70,7 @@ const releaseBuildSlot = () => {
 export const withExtensionWebviewBuildSlot = async <T>(work: () => Promise<T>): Promise<T> => {
   await acquireBuildSlot();
   try {
-    return await work();
+    return await withPreparationBuildCommand(work);
   } finally {
     releaseBuildSlot();
   }

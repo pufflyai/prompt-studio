@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { threadId, type Worker } from "node:worker_threads";
+import { isProcessAlive } from "./process-liveness";
 
 export const fileMutationWorkerMarker = (pid: number, id: number) =>
   join(tmpdir(), "pstdio-file-lock-workers", `${pid}-${id}`);
@@ -20,3 +21,9 @@ export const currentFileMutationWorker = () => {
   const path = markerPath(threadId);
   return threadId !== 0 && existsSync(path) ? path : undefined;
 };
+
+// Missing legacy markers retain work conservatively until its process exits.
+// Registered workers have a marker whose removal distinguishes retirement from
+// another live thread in the same process.
+export const isFileMutationOwnerAlive = (owner: { pid: number; worker?: string }) =>
+  isProcessAlive(owner.pid) && (owner.worker === undefined || existsSync(owner.worker));

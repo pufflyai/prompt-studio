@@ -1,8 +1,7 @@
 import { isMainThread, Worker } from "node:worker_threads";
-import { isPackagedRuntime, registerFileMutationWorker, resolvePstdioHome } from "pstdio-paths";
-
-import { ownPreparationCommands } from "./preparation-command";
-import { PreparationUnavailableError, preparationUnavailable } from "./preparation-error";
+import { isPackagedRuntime, resolvePstdioHome } from "pstdio-paths";
+import { PreparationUnavailableError } from "./preparation-error";
+import { createPreparationWorkerSlots, type PreparationWorkerSlot } from "./preparation-worker-slot";
 
 export { PreparationUnavailableError } from "./preparation-error";
 
@@ -15,6 +14,7 @@ import {
   type PreparationOptions,
   preparationJobMessage,
   preparationQueuePriority,
+  preparationResourcesOverlap,
   settlePreparationJob,
   waitForPreparation,
 } from "./preparation-queue";
@@ -25,24 +25,13 @@ export { isMainThread as isPreparationHost };
 
 import { createPreparationContinuations, preparationPriority, withContinuingPreparation } from "./preparation-priority";
 
-const preparationReplyError = (error?: { message: string }) =>
-  error ? Object.assign(new Error(error.message), error) : undefined;
-
 export interface PreparationEvent {
   kind?: string;
   [key: string]: unknown;
 }
 
-interface PreparationMessage {
-  kind?: string;
-  event: PreparationEvent;
-  id?: number;
-  error?: { message: string };
-  value?: unknown;
-}
-
-// One queue also bounds the child processes started by a preparation job. Keeping admission
-// here lets a requested tool overtake speculative work before the worker starts the next job.
+// One queue preserves priorities and coalescing across the fixed worker slots.
+// Child leaves share a host-owned cap and report dependency waits to this scheduler.
 export interface PreparationHome {
   home: string;
   env: NodeJS.ProcessEnv;
@@ -58,146 +47,150 @@ const continuePreparation =
 export const createPreparationClient = (
   createWorker: () => Worker,
   cleanup?: (homes: PreparationHome[]) => Promise<void>,
+  options: { workers?: 1 | 2 } = {},
 ) => {
-  let worker: Worker | undefined;
-  let workerFactory = createWorker;
-  let ready = false;
-  let active: Job | undefined;
-  let dispatched = false;
   let nextId = 0;
   let backgroundPump: ReturnType<typeof setTimeout> | undefined;
   let stopping: Promise<void> | undefined;
-  let restarting: Promise<void> | undefined;
   const homes = new Map<string, PreparationHome>();
-  const retirements = new WeakMap<Worker, () => Promise<void>>();
   const queued: Job[] = [];
   const jobs = new Map<string, Job>();
   const listeners = new Set<(event: PreparationEvent) => void>();
-  const continuations = createPreparationContinuations(() => {
-    if (
-      dispatched &&
-      active &&
-      queued.some((job) => queuedPriority(job) < activePreparationPriority(active!, queuedPriority))
-    )
-      replaceWorker(active);
-    pump();
-  });
+  const continuations = createPreparationContinuations(() => schedule());
   const queuedPriority = preparationQueuePriority(continuations);
   const settle = (job: Job, error: unknown, value?: unknown) => settlePreparationJob(jobs, job, error, value);
-  const settleAll = (error: unknown) => {
-    if (active) settle(active, error);
-    active = undefined;
-    dispatched = false;
-    for (const job of queued.splice(0)) settle(job, error);
+  const pool = createPreparationWorkerSlots(options.workers ?? 1, {
+    factory: () => createWorker,
+    pump: () => schedule(),
+    event: (slot, event) => {
+      // Stateful watches live on the exclusive slot. Peer replacement must not
+      // restore those watches or publish duplicate lifecycle notifications.
+      if (slot.index && (event.kind === "worker-ready" || event.kind === "worker-lost")) return;
+      for (const listener of listeners) listener(event);
+    },
+    failed: (slot, error) => {
+      if (slot.active) settle(slot.active, error);
+      // A pool failure belongs to that worker. Its peer and unassigned requests
+      // retain their ownership; a failed factory cannot leave callers stranded.
+      if (pool.slots.length === 1) for (const job of queued.splice(0)) settle(job, error);
+    },
+    completed: settle,
+  });
+  const runningOwner = (slot: PreparationWorkerSlot) => (slot.dispatched ? slot.active : slot.retiring);
+  const compatible = (job: Job, slot: PreparationWorkerSlot) => {
+    const others = pool.slots
+      .filter((other) => other !== slot)
+      .flatMap((other) => {
+        const owner = runningOwner(other);
+        return owner ? [owner] : [];
+      });
+    if (!job.resources) return slot.index === 0 && !others.length;
+    return others.every(
+      (other) =>
+        other.resources &&
+        !job.resources!.some((key) => other.resources!.some((otherKey) => preparationResourcesOverlap(key, otherKey))),
+    );
   };
-  const restart = (current: Worker) => {
-    restarting = retire(current).finally(() => {
-      restarting = undefined;
-      if (!stopping && (queued.length || active)) {
-        start();
-        pump();
-      }
+  const candidates = () => [
+    ...queued,
+    ...pool.slots.flatMap((slot) => (!slot.dispatched && slot.active ? [slot.active] : [])),
+  ];
+  const nextFor = (slot: PreparationWorkerSlot) => {
+    const pending = candidates();
+    if (!orderPreparationQueue(pending, queuedPriority, continuations)) return;
+    // An exclusive job is a barrier: later installs cannot starve a watcher,
+    // global scan or adoption by continually filling the other slot.
+    const barrier = pending.findIndex((job) => !job.resources);
+    const available = barrier < 0 ? pending : pending.slice(0, barrier + 1);
+    return available.find((job) => {
+      const owner = pool.slots.find((other) => other.active === job);
+      return (!owner || owner === slot) && compatible(job, slot);
     });
-    for (const listener of listeners) listener({ kind: "worker-lost" });
   };
-  const fail = (current: Worker, error: unknown, notify = true) => {
-    if (worker !== current) return;
-    error = preparationUnavailable(error);
-    worker = undefined;
-    ready = false;
-    settleAll(error);
-    if (notify) restart(current);
+  const reserve = (slot: PreparationWorkerSlot, job: Job) => {
+    const index = queued.indexOf(job);
+    if (index >= 0) queued.splice(index, 1);
+    if (slot.active && slot.active !== job) queued.push(slot.active);
+    slot.active = job;
   };
-  const retire = async (current: Worker) => {
-    await retirements.get(current)?.();
-    await current.terminate();
+  const startSlot = (slot: PreparationWorkerSlot, job: Job) => {
+    if (slot.worker) return;
+    // A lazy factory failure belongs to its selected owner, not its peer's queue.
+    reserve(slot, job);
+    pool.start(slot);
+    if (slot.worker) return;
+    slot.active = undefined;
+    if (queued.length) queueMicrotask(() => schedule());
   };
-  const pump = (backgroundReady = false) => {
-    if (!worker || !ready || dispatched || stopping) return;
-    if (workerFactory !== createWorker) return replaceWorker(active);
-    // An interrupted job keeps the execution slot while its worker retires. Select
-    // its replacement before returning it to the bounded pending queue.
-    const pending = active ? [...queued, active] : queued;
-    if (!orderPreparationQueue(pending, queuedPriority, continuations)) {
-      worker.unref();
+  const pumpSlot = (slot: PreparationWorkerSlot, backgroundReady: boolean) => {
+    if (slot.dispatched || slot.restarting) return;
+    if (slot.worker && slot.factory !== createWorker) return pool.replace(slot, slot.active);
+    const job = nextFor(slot);
+    if (!job) {
+      slot.worker?.unref();
       return;
     }
-    // Let foreground continuations enqueue their next step before resuming speculative
-    // work; starting it inside the response event otherwise causes repeated retirement.
-    if (pending[0] && queuedPriority(pending[0]) > 0 && !backgroundReady) {
+    if (queuedPriority(job) > 0 && !backgroundReady) {
       backgroundPump ??= setTimeout(() => {
         backgroundPump = undefined;
-        pump(true);
+        schedule(true);
       }, 0);
-      worker.unref();
+      slot.worker?.unref();
       return;
     }
-    active = pending.shift();
-    if (pending !== queued) queued.splice(0, queued.length, ...pending);
-    if (!active) {
-      worker.unref();
-      return;
-    }
-    dispatched = true;
-    worker.ref();
-    worker.postMessage(preparationJobMessage(active));
+    startSlot(slot, job);
+    if (!slot.worker || !slot.ready) return;
+    // Select before returning an interrupted owner to the waiting array.
+    reserve(slot, job);
+    slot.dispatched = true;
+    slot.worker.ref();
+    slot.worker.postMessage(preparationJobMessage(job));
   };
-  const onMessage = (current: Worker, message: PreparationMessage) => {
-    if (worker !== current) return;
-    if (message.kind === "event") {
-      for (const listener of listeners) listener(message.event);
-      return;
-    }
-    if (message.kind === "ready") {
-      ready = true;
-      for (const listener of listeners) listener({ kind: "worker-ready" });
-      pump();
-      return;
-    }
-    if (!dispatched || !active || message.id !== active.id) return;
-    const job = active;
-    active = undefined;
-    dispatched = false;
-    settle(job, preparationReplyError(message.error), message.value);
-    pump();
+  const pump = (backgroundReady = false) => {
+    if (!stopping) for (const slot of pool.slots) pumpSlot(slot, backgroundReady);
   };
-  const start = () => {
-    if (worker || restarting) return;
-    workerFactory = createWorker;
-    let current: Worker;
-    try {
-      current = workerFactory();
-    } catch (error) {
-      settleAll(preparationUnavailable(error));
-      return;
+  const preemptBuildBlockers = () => {
+    for (const waiting of pool.slots) {
+      if (!waiting.dispatched || !waiting.active || !waiting.waitingBuilds) continue;
+      for (const holder of pool.slots)
+        if (
+          holder !== waiting &&
+          holder.dispatched &&
+          holder.active &&
+          holder.activeBuilds &&
+          activePreparationPriority(waiting.active, queuedPriority) <
+            activePreparationPriority(holder.active, queuedPriority)
+        )
+          pool.replace(holder, holder.active);
     }
-    worker = current;
-    const releaseLocks = registerFileMutationWorker(current);
-    const stopCommands = ownPreparationCommands(current);
-    retirements.set(current, stopCommands);
-    current.once("exit", releaseLocks);
-    current.on("message", (message) => onMessage(current, message));
-    current.on("error", (error) => fail(current, error));
-    current.on("exit", (code) => {
-      void stopCommands();
-      fail(current, new Error(`Extension preparation worker exited (${code}).`));
-    });
   };
-  const replaceWorker = (resume?: Job) => {
-    const current = worker;
-    if (!current) return;
-    worker = undefined;
-    ready = false;
-    active = resume;
-    dispatched = false;
-    restart(current);
+  const schedule = (backgroundReady = false) => {
+    if (!stopping) preemptBuildBlockers();
+    pump(backgroundReady);
+    if (stopping) return;
+    const pending = candidates();
+    if (!orderPreparationQueue(pending, queuedPriority, continuations) || !pending[0]) return;
+    const next = pending[0];
+    // Use an eligible idle slot before retiring background work. Exclusive
+    // requests must wait for both owners, so retire each lower-priority blocker.
+    if (pool.slots.some((slot) => !slot.active && !slot.restarting && compatible(next, slot))) return;
+    const running = pool.slots.filter((slot) => slot.dispatched && slot.active);
+    const blockers = running.filter(
+      (slot) =>
+        !next.resources ||
+        !slot.active!.resources ||
+        next.resources.some((key) => slot.active!.resources!.some((other) => preparationResourcesOverlap(key, other))),
+    );
+    const targets = blockers.length ? blockers : [...running].reverse().slice(0, 1);
+    for (const slot of targets)
+      if (queuedPriority(next) < activePreparationPriority(slot.active!, queuedPriority))
+        pool.replace(slot, slot.active);
   };
   return {
     withContinuation: continuePreparation(continuations),
     configureWorker: (factory: () => Worker) => {
-      // Finish the admitted job before switching hosts; queued requests keep their owners.
       createWorker = factory;
-      pump();
+      schedule();
     },
     subscribe: (listener: (event: PreparationEvent) => void) => {
       listeners.add(listener);
@@ -211,70 +204,56 @@ export const createPreparationClient = (
       if (options.signal?.aborted) return Promise.reject(options.signal.reason);
       const home = options.home ?? resolvePstdioHome();
       homes.set(home, { home, env: { ...process.env } });
-      const key = `${home}\0${task}\0${options.key ?? JSON.stringify(input)}`;
+      const resources = options.resources && [...new Set(options.resources)].sort();
+      const key = `${home}\0${task}\0${options.key ?? JSON.stringify(input)}\0${JSON.stringify(resources)}`;
       const scope = preparationPriority.getStore();
       let job = jobs.get(key);
       if (!job) {
         if (queued.length >= 128)
           return Promise.reject(new PreparationUnavailableError("Extension preparation queue is full."));
-        job = createJob(++nextId, key, task, input, home);
+        job = createJob(++nextId, key, task, input, home, resources);
         jobs.set(key, job);
         queued.push(job);
       }
       const owned = job;
       continuations.retain(scope);
       const request = () => {
-        if (stopping || jobs.get(owned.key) !== owned) return;
-        if (
-          dispatched &&
-          active &&
-          queued.some((job) => queuedPriority(job) < activePreparationPriority(active!, queuedPriority))
-        )
-          replaceWorker(active);
-        start();
-        pump();
+        if (!stopping && jobs.get(owned.key) === owned) schedule();
       };
       const result = waitForPreparation(owned, options, scope, request, () => {
         cancelQueuedPreparation(jobs, queued, owned);
-        // An unresolved module evaluation must not outlive its last caller.
-        if (active === owned) {
-          if (dispatched && worker) replaceWorker();
-          else {
-            active = undefined;
-            pump();
-          }
+        const slot = pool.slots.find((slot) => slot.active === owned);
+        if (slot) {
+          if (slot.dispatched && slot.worker) pool.replace(slot);
+          else slot.active = undefined;
         }
+        schedule();
       });
-      if (
-        dispatched &&
-        active &&
-        active !== owned &&
-        activePreparationPriority(active, queuedPriority) > queuedPriority(owned)
-      )
-        replaceWorker(active);
-      start();
-      pump();
+      schedule();
       return result as Promise<T>;
     },
     stop: (finalCleanup = true) => {
       if (stopping) return stopping;
-      const current = worker;
       continuations.clear();
       if (backgroundPump) clearTimeout(backgroundPump);
       backgroundPump = undefined;
       const error = new PreparationUnavailableError("Extension preparation stopped.");
-      if (current) fail(current, error, false);
-      else settleAll(error);
-      stopping = (async () => {
-        if (current) await retire(current);
-        if (restarting) await restarting;
+      for (const job of jobs.values()) settle(job, error);
+      queued.length = 0;
+      // Publish stopping before retirement callbacks can admit more work.
+      const finished = Promise.withResolvers<void>();
+      stopping = finished.promise;
+      void (async () => {
+        await pool.stop();
         if (finalCleanup) {
           await cleanup?.([...homes.values()]);
           homes.clear();
         }
-      })().finally(() => {
-        stopping = undefined;
-      });
+      })()
+        .then(finished.resolve, finished.reject)
+        .finally(() => {
+          stopping = undefined;
+        });
       return stopping;
     },
   };
@@ -290,7 +269,7 @@ const defaultWorker = () =>
     ),
   );
 let cleanup: ((homes: PreparationHome[]) => Promise<void>) | undefined;
-const shared = createPreparationClient(defaultWorker, (homes) => cleanup?.(homes) ?? Promise.resolve());
+const shared = createPreparationClient(defaultWorker, (homes) => cleanup?.(homes) ?? Promise.resolve(), { workers: 2 });
 export const configureExtensionPreparationWorker = (createWorker: () => Worker, dispose?: typeof cleanup) => {
   cleanup = dispose;
   shared.configureWorker(createWorker);

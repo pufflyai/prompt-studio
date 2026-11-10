@@ -31,7 +31,7 @@ export const createExtensionInstallBatch = (count: number) => {
     >(
       "install.batch",
       requests.map((request) => request.data),
-      options,
+      { ...options, resources: undefined },
     ).then(
       (results) =>
         results.forEach((result, index) => {

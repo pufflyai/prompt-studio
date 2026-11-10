@@ -1,9 +1,12 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { threadId } from "node:worker_threads";
-import { resolvePstdioHome } from "pstdio-paths";
+import { currentFileMutationWorker, isFileMutationOwnerAlive, resolvePstdioHome } from "pstdio-paths";
+
+import { readPreparationRecord } from "./preparation-record";
 
 interface Stage {
+  worker?: string;
   pid: number;
   threadId: number;
   paths: string[];
@@ -13,7 +16,7 @@ export const trackPreparationStage = (paths: string[], id: string = crypto.rando
   const root = stageRoot();
   mkdirSync(root, { recursive: true });
   const record = join(root, `${id}.json`);
-  const stage: Stage = { pid: process.pid, threadId, paths };
+  const stage: Stage = { pid: process.pid, threadId, worker: currentFileMutationWorker(), paths };
   const save = () => {
     writeFileSync(`${record}.tmp`, JSON.stringify(stage));
     renameSync(`${record}.tmp`, record);
@@ -27,27 +30,20 @@ export const trackPreparationStage = (paths: string[], id: string = crypto.rando
     release: () => rmSync(record, { force: true }),
     handoff: () => {
       stage.threadId = 0;
+      delete stage.worker;
       save();
     },
   };
-};
-const stageOwnerAlive = (stage: Stage) => {
-  if (stage.pid === process.pid) return stage.threadId === 0 || stage.threadId === threadId;
-  try {
-    process.kill(stage.pid, 0);
-    return true;
-  } catch (error) {
-    return (error as NodeJS.ErrnoException).code !== "ESRCH";
-  }
 };
 export const recoverPreparationStages = (disposing = false) => {
   const root = stageRoot();
   if (!existsSync(root)) return;
   for (const name of readdirSync(root).filter((name) => name.endsWith(".json"))) {
     const record = join(root, name);
-    const stage: Stage = JSON.parse(readFileSync(record, "utf8"));
+    const stage = readPreparationRecord<Stage>(record);
+    if (!stage) continue;
     const ownedHere = stage.pid === process.pid;
-    if (!(disposing && ownedHere) && stageOwnerAlive(stage)) continue;
+    if (!(disposing && ownedHere) && isFileMutationOwnerAlive(stage)) continue;
     try {
       for (const path of stage.paths) rmSync(path, { recursive: true, force: true });
       rmSync(record, { force: true });

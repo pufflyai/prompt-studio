@@ -1,5 +1,5 @@
 import { withFileMutationLock } from "pstdio-paths";
-import { runPreparationCommand } from "./preparation-command";
+import { runPreparationCommand, withPreparationBuildCommand } from "./preparation-command";
 import { publishPreparationEvent, startPreparationWorker } from "./preparation-server";
 
 let sequence = 0;
@@ -22,6 +22,25 @@ startPreparationWorker(async (task, data, signal) => {
       ...(task === "stdin-child-spin" ? { stdin: JSON.stringify({ path: input.path }) } : {}),
     });
     spin();
+  }
+  if (task === "commands") {
+    return Promise.all(
+      Array.from({ length: 4 }, (_, index) =>
+        withPreparationBuildCommand(() =>
+          runPreparationCommand(
+            {
+              argv: [
+                process.execPath,
+                "-e",
+                `await fetch(${JSON.stringify(input.url)} + "?worker=" + ${JSON.stringify(input.name)} + "&index=${index}");`,
+              ],
+              cwd: process.cwd(),
+            },
+            signal,
+          ),
+        ),
+      ),
+    );
   }
   if (task === "reject") throw new Error("preparation failed");
   if (task === "exit") process.exit(9);

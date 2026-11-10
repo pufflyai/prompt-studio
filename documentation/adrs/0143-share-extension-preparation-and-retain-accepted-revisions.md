@@ -6,10 +6,21 @@ Status: Accepted for PS-169; platform and performance qualification follows the 
 
 ## Decision
 
-One lazy worker thread owns expensive extension filesystem work, discovery, watches, downloads, dependency preparation,
-candidate evaluation, and build preparation. Its queue admits at most 128 pending jobs and executes one preparation job
-at a time. An interrupted job retains the execution slot while its worker retires; the scheduler selects its
-replacement before returning the interrupted job to the pending queue, preserving the128-pending bound. One default-install job pipelines at most four active sources, filling each completed slot immediately and
+A lazy pool of at most two worker threads owns expensive extension preparation. One shared queue admits at most
+128 pending jobs, with two execution owners and shared coalescing/cancellation. Individual installs with explicit portable
+names may overlap when their reserved source and possible target paths are disjoint. Both user and repo destinations,
+including conditional Windows escaping, are reserved before manifest scope is known. Lexical and nearest-existing-real
+paths protect symlink parents; conservative case/Unicode folding and ancestor conflicts cover filesystem aliases.
+Unnamed/nonportable installs, default batches, runtime operations, discovery, watches and recovery remain exclusive on
+slot zero. This keeps stateful watchers and module caches under one owner while allowing independent requested installs
+to validate concurrently. Resource declarations are part of coalescing identity. An interrupted job retains its execution
+owner while its worker retires; a separate retiring resource owner lasts through worker and child exit. The scheduler
+selects a replacement before returning interrupted work to the waiting queue, preserving the 128-pending bound.
+Worker failure/cancellation affects its own execution owner; queued owners and a healthy peer remain available. A
+synchronous factory failure settles its selected owner and schedules a finite drain of remaining owners. Only slot-zero
+lifecycle events restore watches. Actual restoration dependencies rank ahead of unrelated speculative peer work so a
+primary loss cannot strand watches or protected inventory; ordinary background continuations retain their prior rank. Pool shutdown retires both workers and all children before final process-owned cleanup.
+This two-worker revision was explicitly requested for PS-169 in the implementation conversation on 2026-11-10. One default-install job pipelines at most four active sources, filling each completed slot immediately and
 matching the existing four-child webview build cap while overlapping dependency I/O; both share one environment and
 cancellation owner. Requested work takes priority over background checks, including retiring a stalled background
 evaluation and resuming its request on a replacement worker. Filesystem callbacks retain their background priority. A
@@ -61,7 +72,11 @@ A private restoration admission phase completes watcher lookup and dependent reg
 background continuation work on the replacement worker. After watching, attachment hashes compare current own-source
 bytes with the accepted revision’s preparer-computed hash. Caller-supplied database versions may be opaque. Offline changes enter live-edit admission immediately; unchanged sources retain
 the complete frontend checks, including dependency and compiler input inspection.
-Inspection and compilation share four leaf slots; orchestration never holds a slot across nested work. This cap does
+Inspection and compilation share at most four host-owned leaf slots across both workers (or fewer on a smaller host).
+Orchestration never holds a slot across nested work. A waiting child reports its dependency to the scheduler: a requested
+operation can retire a lower-urgency peer holding its needed permits, even after the request has entered a worker.
+Admission commits permit ownership before notifying the scheduler, and retirement is published before abort callbacks.
+Pending commands release their queue ownership on cancellation; running permits last through child exit. This cap does
 not include dependency-install or other preparation commands and is not an aggregate-memory qualification. Each guard
 collects inputs again. The host owns command children and file-captured output; structured requests use Buffer-backed
 stdin, leaving no worker-owned request file after retirement. Queued cancellation is checked again after admission.
@@ -160,7 +175,7 @@ deletes them outside the lock. Uncertain process liveness retains files conserva
 - A shared subprocess adds isolation and transport overhead that this performance scope does not require.
 - Retaining source symlinks cannot preserve accepted runtime assets or dependencies through offline edits.
 
-The shared worker can fail independently of API request handling. Pending operations receive an error, watcher owners
+A preparation worker can fail independently of API request handling. Pending operations receive an error, watcher owners
 restore their registrations, and later work can start a replacement worker. Cancellation force-terminates a worker whose
 module evaluation cannot settle. The API owns preparation subprocess admission and kills its registered process trees
 before retirement. Host-managed worker liveness markers make filesystem lock claims recoverable after termination.
@@ -190,3 +205,8 @@ Decision request `01a1c24d-1b1a-7bb2-bef3-b3080cf2fc1a` (PS-169, approve impleme
 5,300–7,600 added lines and smaller alternatives. The user directly replied “approved” in the implementation
 conversation on 2026-11-09 before code was written. The implementation report retains that request and the linked ticket
 plan; the agent has not answered its own saved request.
+
+Recovery stage and install-intent records retain the host-created worker liveness marker. Live peer threads cannot
+recover each other's work; terminated-thread markers disappear before recovery. Host handoff clears the marker. Legacy
+unmarked owners remain conservative until process exit. Concurrent record disappearance is an expected recovery race.
+Singleton and batch artifact publication both lock and recheck the completion record before replacing shared output.

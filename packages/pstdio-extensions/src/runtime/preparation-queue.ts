@@ -1,6 +1,8 @@
 import type { createPreparationContinuations, preparationPriority } from "./preparation-priority";
 
 export interface PreparationOptions {
+  /** Explicit disjoint resource paths allow parallel execution. Ancestors conflict; unknown work is exclusive. */
+  resources?: readonly string[];
   signal?: AbortSignal;
   priority?: "requested" | "background";
   key?: string;
@@ -9,6 +11,9 @@ export interface PreparationOptions {
   preserveActiveContinuation?: boolean;
 }
 export const priorityFor = (options: PreparationOptions, scope: ReturnType<typeof preparationPriority.getStore>) => {
+  // A primary-worker loss must restore watches before an unrelated speculative
+  // peer resumes. Ordinary background continuations still never gain this rank.
+  if (scope?.continuation?.continuing && scope.continuation.priority === "restoration") return 1;
   if (options.priority === "background") return 2;
   const priority = options.priority ?? scope?.priority;
   if (priority === undefined || priority === "requested") return 0;
@@ -23,6 +28,7 @@ export interface Waiter {
   scope?: ReturnType<typeof preparationPriority.getStore>;
 }
 export interface Job {
+  resources?: readonly string[];
   id: number;
   key: string;
   task: string;
@@ -31,7 +37,15 @@ export interface Job {
   env: NodeJS.ProcessEnv;
   waiters: Set<Waiter>;
 }
-export const createJob = (id: number, key: string, task: string, input: unknown, home: string) => ({
+export const createJob = (
+  id: number,
+  key: string,
+  task: string,
+  input: unknown,
+  home: string,
+  resources?: readonly string[],
+) => ({
+  resources,
   id,
   key,
   task,
@@ -135,3 +149,6 @@ export const waitForPreparation = (
   });
   return result.finally(() => scope?.jobs.delete(request));
 };
+
+export const preparationResourcesOverlap = (left: string, right: string) =>
+  left === right || left.startsWith(`${right}/`) || right.startsWith(`${left}/`);

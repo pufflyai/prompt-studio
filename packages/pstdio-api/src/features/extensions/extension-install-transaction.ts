@@ -17,8 +17,14 @@ import {
   readAcceptedRevision,
 } from "pstdio-extensions";
 import { hashExtensionSource } from "pstdio-extensions/authoring";
-import { resolvePstdioHome, withFileMutationLock } from "pstdio-paths";
+import {
+  currentFileMutationWorker,
+  isFileMutationOwnerAlive,
+  resolvePstdioHome,
+  withFileMutationLock,
+} from "pstdio-paths";
 import { runExtensionPreparation } from "./extension-preparation";
+import { readPreparationRecord } from "./preparation-record";
 import { promotePreparedSource } from "./promote-extension-source";
 
 export interface ExtensionInstallTransaction {
@@ -32,7 +38,7 @@ interface InstallationIntent {
   preserveDependencies: boolean;
   replaceExisting: boolean;
   revision?: PreparedExtensionRevision;
-  owner: { pid: number; threadId: number };
+  owner: { pid: number; threadId: number; worker?: string };
   ownership?: { ownerPath: string; token: string; previousToken: string | null };
 }
 const ownsClaim = (intent: InstallationIntent) => {
@@ -77,7 +83,7 @@ export const retainPreparedInstall = (input: Omit<InstallationIntent, "owner">):
   const root = join(resolvePstdioHome(), "cache", "extension-installations");
   mkdirSync(root, { recursive: true });
   const intentPath = join(root, `${crypto.randomUUID()}.json`);
-  writeIntent(intentPath, { ...input, owner: { pid: process.pid, threadId } });
+  writeIntent(intentPath, { ...input, owner: { pid: process.pid, threadId, worker: currentFileMutationWorker() } });
   return { intentPath };
 };
 // Claim only delivered handles. Until this synchronous host handoff, a retired worker
@@ -150,13 +156,20 @@ export const settlePreparedInstall = async (transaction: ExtensionInstallTransac
     rmSync(transaction.intentPath, { force: true });
   });
 };
-const ownerAlive = (owner: InstallationIntent["owner"]) => {
-  if (owner.pid === process.pid) return owner.threadId === 0 || owner.threadId === threadId;
+const recoverInstall = async (intentPath: string, disposing: boolean) => {
+  const transaction = { intentPath };
+  const intent = readPreparationRecord<InstallationIntent>(intentPath);
+  if (!intent) return;
+  const ownedHere = intent.owner.pid === process.pid;
+  if (!(disposing && ownedHere) && isFileMutationOwnerAlive(intent.owner)) return;
+  const accepted = await readAcceptedRevision(intent.targetPath);
+  const committed = Boolean(
+    intent.revision && preparedRevisionState(accepted) === preparedRevisionState(intent.revision),
+  );
   try {
-    process.kill(owner.pid, 0);
-    return true;
+    await settlePreparedInstall(transaction, committed && ownsTarget(intent));
   } catch (error) {
-    return (error as NodeJS.ErrnoException).code !== "ESRCH";
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT" || existsSync(intentPath)) throw error;
   }
 };
 export const recoverPreparedInstalls = async (disposing = false) => {
@@ -166,18 +179,11 @@ export const recoverPreparedInstalls = async (disposing = false) => {
   if (existsSync(completed))
     for (const name of readdirSync(completed).filter((name) => name.endsWith(".json"))) {
       const path = join(completed, name);
-      const intent: InstallationIntent = JSON.parse(readFileSync(path, "utf8"));
-      if (!ownerAlive(intent.owner) || (disposing && intent.owner.pid === process.pid)) rmSync(path, { force: true });
+      const intent = readPreparationRecord<InstallationIntent>(path);
+      if (!intent) continue;
+      if (!isFileMutationOwnerAlive(intent.owner) || (disposing && intent.owner.pid === process.pid))
+        rmSync(path, { force: true });
     }
-  for (const name of readdirSync(root).filter((name) => name.endsWith(".json"))) {
-    const transaction = { intentPath: join(root, name) };
-    const intent: InstallationIntent = JSON.parse(readFileSync(transaction.intentPath, "utf8"));
-    const ownedHere = intent.owner.pid === process.pid;
-    if (!(disposing && ownedHere) && ownerAlive(intent.owner)) continue;
-    const accepted = await readAcceptedRevision(intent.targetPath);
-    const committed = Boolean(
-      intent.revision && preparedRevisionState(accepted) === preparedRevisionState(intent.revision),
-    );
-    await settlePreparedInstall(transaction, committed && ownsTarget(intent));
-  }
+  for (const name of readdirSync(root).filter((name) => name.endsWith(".json")))
+    await recoverInstall(join(root, name), disposing);
 };
