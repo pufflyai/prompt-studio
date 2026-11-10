@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
+import { removeTestDirectory } from "../scripts/remove-test-directory";
 import { enablePackagedProjectExtension } from "./packaged-project-extensions";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
@@ -189,7 +190,7 @@ test(
       await Promise.allSettled(installs);
       if (child) await stopProcess(child);
       await gate.stop(true);
-      rmSync(root, { recursive: true, force: true });
+      await removeTestDirectory(root);
     }
   },
   PACKAGED_TEST_TIMEOUT,
