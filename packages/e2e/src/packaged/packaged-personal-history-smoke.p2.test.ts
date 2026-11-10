@@ -112,7 +112,8 @@ test(
       await waitFor(async () => (await clientA.sessions.get(session.id))?.status === "completed");
       await waitFor(async () => {
         const documents = peer.personalDocuments();
-        return documents.length >= 2 && documents.every((document) => document.state || document.updates.length > 0);
+        // Private reads can create empty optional documents; wait for actual publications.
+        return documents.filter((document) => document.state || document.updates.length > 0).length >= 2;
       });
       await clientA.sessions.rename(session.id, "Renamed private conversation");
       await waitFor(async () => (await clientA.account.projectSyncStatus(projectId)).state === "synced");
