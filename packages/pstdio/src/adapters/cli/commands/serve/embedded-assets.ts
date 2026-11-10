@@ -33,16 +33,17 @@ const getEmbeddedFiles = (): EmbeddedFile[] => {
   return [];
 };
 
-// Embedded file names are relative to the manifest at packages/pstdio/src/
-const DASHBOARD_PREFIX = "../../pstdio-dashboard/dist/";
+// Bun changes the embedded graph root when another compile entry is added.
+const DASHBOARD_DIRECTORY = "/pstdio-dashboard/dist/";
 
 export const loadEmbeddedAssets = () => {
   const assets = new Map<string, Blob>();
 
   for (const file of getEmbeddedFiles()) {
     const name = normalizeEmbeddedFileName(file.name);
-    if (name.startsWith(DASHBOARD_PREFIX)) {
-      assets.set(name.slice(DASHBOARD_PREFIX.length), file);
+    const directory = name.indexOf(DASHBOARD_DIRECTORY);
+    if (directory !== -1) {
+      assets.set(name.slice(directory + DASHBOARD_DIRECTORY.length), file);
     }
   }
 
