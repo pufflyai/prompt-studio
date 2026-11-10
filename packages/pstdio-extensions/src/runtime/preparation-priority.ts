@@ -110,7 +110,8 @@ export const createPreparationContinuations = (resume: () => void) => {
     get restoring() {
       return [...owners.keys()].some((owner) => owner.priority === "restoration");
     },
-    hasOtherThan: (owner?: PreparationPriority) => [...owners.keys()].some((current) => current !== owner),
+    hasUrgentOtherThan: (owner?: PreparationPriority) =>
+      [...owners.keys()].some((current) => current !== owner && current.priority !== "background"),
     retain: (scope?: PreparationPriority) => {
       const owner = scope?.continuation;
       if (!owner?.continuing || owners.has(owner)) return;

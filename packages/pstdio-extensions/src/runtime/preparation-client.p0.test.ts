@@ -608,8 +608,15 @@ test.each([
         }
         queued.resolve();
         try {
-          const result = await Promise.race([dependency.then(() => "ready"), Bun.sleep(100).then(() => "blocked")]);
-          expect(result).toBe(phase === "retained" ? "ready" : "blocked");
+          if (phase === "retained") {
+            // The unrelated worker gate remains closed; completion proves the loan
+            // admits its dependency without asserting scheduler wall-clock speed.
+            expect(await dependency).toMatchObject({ name: "dependency" });
+          } else {
+            expect(await Promise.race([dependency.then(() => "ready"), Bun.sleep(100).then(() => "blocked")])).toBe(
+              "blocked",
+            );
+          }
           blocked.release.resolve();
           await dependency;
         } finally {
@@ -651,5 +658,22 @@ test("a continuation does not retire an already admitted status read when its qu
   } finally {
     blocked.release.resolve();
     await Promise.allSettled([inspection, restoration]);
+  }
+});
+
+test("fresh inventory stays responsive during unchanged attachment reconciliation", async () => {
+  const client = fixture();
+  const blocked = gate();
+  const attachment = client.withContinuation(
+    () => withBackgroundPreparation(() => client.run("wait", { name: "attachment", url: blocked.url })),
+    { priority: "background" },
+  );
+  await blocked.entered.promise;
+  const inventory = client.run("value", { name: "inventory" }, { preserveActiveContinuation: true });
+  try {
+    expect(await Promise.race([inventory.then(() => "ready"), Bun.sleep(1000).then(() => "blocked")])).toBe("ready");
+  } finally {
+    blocked.release.resolve();
+    await Promise.allSettled([attachment, inventory]);
   }
 });

@@ -63,7 +63,7 @@ export const preparationQueuePriority =
   (continuations: ReturnType<typeof createPreparationContinuations>) => (job: Job) =>
     Math.min(
       ...[...job.waiters].map((waiter) =>
-        waiter.preserveActiveContinuation && continuations.hasOtherThan(waiter.scope?.continuation)
+        waiter.preserveActiveContinuation && continuations.hasUrgentOtherThan(waiter.scope?.continuation)
           ? Infinity
           : waiter.priority(),
       ),

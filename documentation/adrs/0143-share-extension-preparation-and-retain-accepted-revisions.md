@@ -39,10 +39,10 @@ Runtime candidate inspection follows frontend publication and workspace provisio
 It never accepts contributions. A later edit cancels that source's suspended inspection before starting its frontend
 refresh; successful unchanged content is not inspected again. Disposal cancels and awaits every owned candidate.
 Live background continuations overtake unreserved speculation while requested tool operations remain first.
-Inventory disk hashes are fresh status inspections. They defer throughout existing live continuations, including host
+Inventory disk hashes are fresh status inspections. They defer throughout live-edit and restoration continuations, including host
 awaits and follow-up admission, so status polling cannot repeatedly retire the validation that produces its feedback.
 An admitted status read can finish when a later continuation closes admission to queued reads; that closure cannot
-make it infinitely preemptible. They can interrupt unreserved speculation. Hashes are bound to source id/path; inventory then rereads current database
+make it infinitely preemptible. They can interrupt unchanged attachment reconciliation and unreserved speculation, keeping inventory and initial tool metadata responsive. Hashes are bound to source id/path; inventory then rereads current database
 feedback and inspects replaced sources before responding. No cross-request hash cache is introduced.
 Watcher restoration reserves its host/database admission gap before speculative work resumes. Its watch-update jobs
 keep explicit background priority and share that reservation; restoration does not retire the replacement worker.
