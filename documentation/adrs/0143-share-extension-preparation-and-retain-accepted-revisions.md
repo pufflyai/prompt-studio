@@ -37,7 +37,9 @@ preventing unrelated speculative work from filling every publication gap. Worksp
 that reservation, still awaited by the same source generation and disposal owner.
 Runtime candidate inspection follows frontend publication and workspace provisioning as separately owned speculation.
 It never accepts contributions. A later edit cancels that source's suspended inspection before starting its frontend
-refresh; successful unchanged content is not inspected again. Disposal cancels and awaits every owned candidate.
+refresh; each notification obtains a fresh full runtime key, including dependency and host inputs. A key matching the accepted
+revision or the last completed check avoids repeated evaluation. Completion records the actual checked revision identity,
+including when preparation observes a newer edit than the key lookup. Own-source hashes do not coalesce dependency-only edits. Disposal cancels and awaits every owned candidate.
 Live background continuations overtake unreserved speculation while requested tool operations remain first.
 Inventory disk hashes are fresh status inspections. They defer throughout live-edit and restoration continuations, including host
 awaits and follow-up admission, so status polling cannot repeatedly retire the validation that produces its feedback.

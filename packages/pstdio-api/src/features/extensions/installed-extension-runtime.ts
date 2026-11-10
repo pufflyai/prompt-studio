@@ -165,9 +165,7 @@ export const createInstalledExtensionRuntime = (input: {
       .catch(reportError);
   };
   const candidateInspection = createRuntimeCandidateInspection({
-    acceptedHash: async (path) =>
-      (await readAcceptedRevision(path))?.sourceHash ??
-      (await input.installedExtensionSourcesService.getBySourcePath(path))?.source_hash,
+    acceptedId: async (path) => (await readAcceptedRevision(path))?.id,
     onError: reportError,
   });
   // Provisioning can write into a watched folder, so unchanged content must not
@@ -180,7 +178,7 @@ export const createInstalledExtensionRuntime = (input: {
       await input.provisionWorkspacesUsingSource(sourcePath);
       provisionedSourceHashes.set(sourcePath, sourceHash);
     }
-    void candidateInspection.inspect(sourcePath, sourceHash);
+    void candidateInspection.inspect(sourcePath);
   };
   // Editing a watched folder rebuilds the assets of the extension the project already adopted. It
   // never re-reads contributions from disk: adopting new source is an explicit act. Skill files

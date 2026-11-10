@@ -1,57 +1,62 @@
 import { dirname } from "node:path";
 import { withBackgroundPreparation } from "pstdio-extensions";
 import { runExtensionPreparation } from "./extension-preparation";
+import type { checkExtensionSource } from "./extension-runtime";
 
 // Candidate inspection is speculation, independent of the per-source frontend
 // generation. A later edit can cancel a suspended evaluation before refreshing.
 export const createRuntimeCandidateInspection = (input: {
-  acceptedHash: (path: string) => Promise<string | null | undefined>;
+  acceptedId: (path: string) => Promise<string | null | undefined>;
   onError: (error: unknown) => void;
 }) => {
   const completed = new Map<string, string>();
-  const active = new Map<string, { hash: string; controller: AbortController; work: Promise<void> }>();
+  const active = new Map<string, AbortController>();
   const running = new Set<Promise<void>>();
   let disposed = false;
   const cancel = (path: string) => {
-    active.get(path)?.controller.abort(new Error("Runtime candidate superseded."));
+    active.get(path)?.abort(new Error("Runtime candidate superseded."));
     active.delete(path);
   };
   return {
     cancel,
-    inspect: (path: string, hash: string) => {
+    inspect: (path: string) => {
       if (disposed) return Promise.resolve();
-      const previous = active.get(path);
-      if (previous?.hash === hash) return previous.work;
       cancel(path);
       const controller = new AbortController();
-      const current = { hash, controller, work: Promise.resolve() };
-      active.set(path, current);
+      active.set(path, controller);
       const work = withBackgroundPreparation(async () => {
-        if (hash === (await input.acceptedHash(path)) || completed.get(path) === hash) return;
+        // Every notification gets a fresh full identity, including dependency and
+        // host inputs. Own-source hashes cannot coalesce dependency-only edits.
+        const key = await runExtensionPreparation<string>(
+          "runtime.key",
+          { sourcePath: path },
+          { signal: controller.signal },
+        );
+        if (key === (await input.acceptedId(path)) || completed.get(path) === key) return;
         controller.signal.throwIfAborted();
-        await runExtensionPreparation(
+        const checked = await runExtensionPreparation<Awaited<ReturnType<typeof checkExtensionSource>>>(
           "source.check",
           { sourcePath: path, extensionsRoot: dirname(path) },
           { signal: controller.signal },
         );
         controller.signal.throwIfAborted();
-        completed.set(path, hash);
+        // Preparation can observe a newer edit than the preceding key lookup.
+        const checkedId = checked.loaded?.preparedRevision?.id;
+        if (checkedId) completed.set(path, checkedId);
       })
         .catch((error) => {
           if (!controller.signal.aborted) input.onError(error);
         })
         .finally(() => {
-          if (active.get(path) === current) active.delete(path);
+          if (active.get(path) === controller) active.delete(path);
           running.delete(work);
         });
-      current.work = work;
       running.add(work);
       return work;
     },
     dispose: async () => {
       disposed = true;
-      for (const { controller } of active.values())
-        controller.abort(new Error("Runtime candidate inspection stopped."));
+      for (const controller of active.values()) controller.abort(new Error("Runtime candidate inspection stopped."));
       await Promise.allSettled(running);
       active.clear();
       completed.clear();
