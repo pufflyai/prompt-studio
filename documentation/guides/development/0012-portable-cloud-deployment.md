@@ -197,6 +197,24 @@ schema: database rollback requires a tested restore or a compatible forward fix.
 
 Keep backups of every database and test a recovery before relying on it.
 
+## Operator inspection
+
+To see what one account keeps, run the two read-only operator scripts against the service databases. They work from any machine the database admits, and make no changes.
+
+```sh
+# Manager: account state, features, devices (removed ones too) and every project it syncs or ever held keys for.
+DATABASE_URL=<manager database URL> bun services/account-manager/scripts/account-inspection.ts --email <email>
+
+# Relay: per project, documents, update and state bytes, blobs by status, unreferenced blobs and when they
+# can be retired, the largest documents, and the bytes counted against the account's quota.
+DATABASE_URL=<relay database URL> RELAY_GRACE_PERIOD_SECONDS=<deployed value> \
+  bun services/relay/scripts/account-inspection.ts --account <account id> --project <project id>...
+```
+
+Both scripts print JSON and report metadata only; relay content stays sealed. The relay keys projects by a hash of account and project ID. Pass the project IDs from the manager report with `--project`, so the relay report can label them. A project made local again leaves the manager's syncing list but keeps its keys, so the manager report still names it.
+
+Unreferenced blobs are removed by the relay's hourly cleanup once the grace period has passed since their last use. The report shows the earliest and latest of those times.
+
 ## Reference workload measurement
 
 PS-787 adds a manual [reference workload](../../../packages/e2e/src/perf/relay-reference-workload/workload.diagnostic.ts).
