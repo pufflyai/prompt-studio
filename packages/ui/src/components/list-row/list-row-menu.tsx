@@ -57,9 +57,11 @@ export const ListRowMenu = (props: ListRowMenuProps) => {
                   endContent: item.endContent,
                   isDisabled: item.disabled || item.readOnly,
                   separatorBefore: item.separatorBefore,
-                  onClick: () => onSelect(item),
+                  onSelect: item.runOnSelect ? () => onSelect(item) : undefined,
+                  onClick: item.runOnSelect ? undefined : () => onSelect(item),
                 }))}
                 onSelect={(action) => {
+                  action.onSelect?.();
                   pending.current = action;
                 }}
               />

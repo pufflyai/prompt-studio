@@ -175,6 +175,9 @@ const createTreeActionMenuItems = (input: CreateTreeContextMenuItemsInput) => {
       icon: icon ? <WorkbenchIcon name={icon} /> : undefined,
       endContent: binding ? <PaletteShortcut binding={binding} /> : undefined,
       disabled,
+      runOnSelect: Boolean(
+        action.copyText !== undefined || action.copyResultToClipboard || record?.command.copyResultToClipboard,
+      ),
       onAction: () => {
         if (disabled) return;
         if (requestParams) {

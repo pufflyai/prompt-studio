@@ -60,6 +60,7 @@ const registerCommands = (
         description: text(command.description),
         params: localizeParamSchema(command.params, text, command.extensionId),
         resourceMutation: command.resourceMutation,
+        copyResultToClipboard: command.copyResultToClipboard,
       },
       {
         prepareArgs: (args, executionContext, onArgsChange) =>
