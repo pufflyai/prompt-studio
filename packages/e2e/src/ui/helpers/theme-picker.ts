@@ -4,8 +4,6 @@ export const changeThemeThroughCommandPalette = async (page: Page) => {
   await page.mouse.move(0, 0);
   await page.keyboard.press("Alt+Shift+K");
   const palette = page.getByRole("dialog", { name: "Command palette" });
-  await palette.getByRole("textbox").fill(">Run Command");
-  await palette.getByRole("option", { name: /Run Command/ }).click();
   await expect(palette.getByRole("textbox")).toHaveValue("> ");
   await palette.getByRole("textbox").fill(">Choose color theme");
   await palette.getByRole("option", { name: /Choose color theme/ }).click();
