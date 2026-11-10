@@ -161,7 +161,9 @@ const toTreeListNode = (
           disabled: action.isDisabled,
           endContent: action.endContent,
           separatorBefore: action.separatorBefore,
+          runOnSelect: Boolean(action.onSelect),
           onAction: () => {
+            action.onSelect?.();
             void action.onClick?.();
           },
         }))

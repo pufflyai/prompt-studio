@@ -26,6 +26,7 @@ import {
   sameViewer,
 } from "./displayed-viewers";
 import { replaceMainViewerTab } from "./replace-main-viewer-tab";
+import { retainedViewerSource } from "./retained-viewer-source";
 import { createViewerCaptures } from "./viewer-captures";
 import { replaceViewerHost } from "./viewer-host-continuity";
 
@@ -276,7 +277,10 @@ const viewerInvocationCurrent = (core: WorkbenchCore, request: ViewerChange, con
 };
 
 export const createWorkbenchViewerController = (resolveCore: () => WorkbenchCore) => {
-  const captures = createViewerCaptures(resolveCore, currentViewerSource);
+  const captures = createViewerCaptures(
+    resolveCore,
+    (core, identity) => currentViewerSource(core, identity) ?? retainedViewerSource(core, identity),
+  );
   const controller: WorkbenchViewerController = {
     captureContext(identity) {
       const core = resolveCore();

@@ -2,6 +2,37 @@ import { expect, test } from "bun:test";
 import type { NavigationTarget, TreeViewSection } from "../../../core";
 import { resolveTreeListSelection } from "./tree-list-adapter";
 
+test("Files selects only the active document within its workspace, and none before opening a file", () => {
+  const page = { kind: "page", extensionId: "pstdio.pstdio-workspaces", id: "files" } as const;
+  const resource = { type: "workspace", id: "workspace" };
+  const sections = [
+    {
+      id: "files",
+      nodes: ["a.md", "b.md"].map((path) => ({
+        id: path,
+        label: path,
+        target: { kind: "page" as const, page, resource: { ...resource, metadata: { workspaceFilePath: path } } },
+      })),
+    },
+  ];
+  const input = {
+    sections,
+    childrenByNodeId: {},
+    activeLocation: { page, resource },
+    activeResource: resource,
+    resourceReferenceKey: (value: { id: string; metadata?: Record<string, unknown> }) =>
+      JSON.stringify([value.id, value.metadata?.workspaceFilePath]),
+  };
+  expect(resolveTreeListSelection(input)).toBeUndefined();
+  expect(
+    resolveTreeListSelection({
+      ...input,
+      activeResource: { ...resource, metadata: { workspaceFilePath: "b.md" } },
+      activeLocation: { page, resource: { ...resource, metadata: { workspaceFilePath: "b.md" } } },
+    }),
+  ).toBe("b.md");
+});
+
 test("preserves declared selection in a tree without navigation targets", () => {
   expect(
     resolveTreeListSelection({

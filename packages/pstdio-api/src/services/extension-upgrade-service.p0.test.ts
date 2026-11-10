@@ -69,9 +69,14 @@ describe("extension upgrade service", () => {
       stdout: `${"a".repeat(40)}\trefs/tags/pstdio@0.27.0\n${releaseCommit}\trefs/tags/pstdio@0.27.0^{}\n`,
     }));
 
-    expect(await resolveExtensionReleaseCommit("https://example.com/extensions.git", "pstdio@0.27.0", run)).toBe(
-      releaseCommit,
-    );
+    expect(
+      await resolveExtensionReleaseCommit(
+        "https://example.com/extensions.git",
+        "pstdio@0.27.0",
+        "extensions/demo",
+        run,
+      ),
+    ).toBe(releaseCommit);
     expect(run).toHaveBeenCalledWith(
       expect.stringMatching(/git(?:\.exe)?$/),
       expect.arrayContaining(["https://example.com/extensions.git"]),
@@ -82,7 +87,7 @@ describe("extension upgrade service", () => {
   test("ends git options before the remote URL and allows only https and file transport", async () => {
     const run = mock(async () => ({ exitCode: 0, stderr: "", stdout: `${"c".repeat(40)}\trefs/heads/main\n` }));
 
-    await resolveExtensionReleaseCommit("https://example.com/extensions.git", "main", run);
+    await resolveExtensionReleaseCommit("https://example.com/extensions.git", "main", "extensions/demo", run);
 
     expect(run).toHaveBeenCalledWith(
       expect.stringMatching(/git(?:\.exe)?$/),
@@ -463,7 +468,7 @@ describe("catalog extension installation and upgrades", () => {
         source_ref: `${originUrl}@${oldCommit}#extensions/recipes`,
       }),
     ).toBe(true);
-    expect(resolveReleaseCommit).toHaveBeenCalledWith(originUrl, "v2.0.0");
+    expect(resolveReleaseCommit).toHaveBeenCalledWith(originUrl, "v2.0.0", "extensions/recipes");
   });
 });
 

@@ -142,6 +142,8 @@ export interface CommandDefinition<
   cli?: true | CliContribution;
   /** Exposes this exact command and its params schema to scoped machine tokens. */
   automation?: true;
+  /** Copy the successful string result in the dashboard. CLI/API calls still return the result without copying. */
+  copyResultToClipboard?: boolean;
   /** Preview a resource rename or removal in the dashboard while this command saves. Removal asks for confirmation. */
   resourceMutation?:
     | { kind: "rename"; resourceType: string; idParam: string; labelParam: string }

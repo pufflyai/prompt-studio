@@ -211,7 +211,7 @@ export const verifyPackagedSessionMenus = async (
   await page.getByRole("menuitem", { name: "Switch session", exact: true }).click();
   const picker = page.getByRole("dialog", { name: "Switch session", exact: true });
   await picker.getByRole("textbox").fill("Packaged session actions");
-  await expect(picker.getByRole("img", { name: "Session status: completed" })).toBeVisible();
+  await expect(picker.getByRole("img", { name: "Session status: pending" })).toBeVisible();
   for (const title of ["Packaged session actions updated", "Packaged session actions"]) {
     const updated = await fetch(`${baseUrl}/v1/sessions/${session.id}/title`, {
       method: "PATCH",

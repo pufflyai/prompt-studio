@@ -14,6 +14,7 @@ import type { CommandParamFieldRenderer } from "../command-palette/command-param
 import { WorkbenchKeyboardLayer } from "../keybindings/keyboard-layer";
 import { WorkbenchKeybindingDispatcher } from "../keybindings/workbench-keybinding-dispatcher";
 import { WorkbenchNotificationHost } from "../notifications/notification-host";
+import { WorkbenchPanelMenuHosts } from "../panel-menu/panel-menu-hosts";
 import { movePanelHost } from "../region/move-panel-host";
 import { WorkbenchPanelDropFrame } from "../region/panel-drop-frame";
 import { WorkbenchPanelViewHosts } from "../region/panel-view-hosts";
@@ -259,7 +260,9 @@ export const Workbench = (props: WorkbenchProps) => {
           <UiScopeRoot>
             <WorkbenchTabDragProvider workbench={props.workbench}>
               <WorkbenchPanelViewHosts workbench={props.workbench}>
-                <WorkbenchContent {...props} />
+                <WorkbenchPanelMenuHosts workbench={props.workbench}>
+                  <WorkbenchContent {...props} />
+                </WorkbenchPanelMenuHosts>
               </WorkbenchPanelViewHosts>
             </WorkbenchTabDragProvider>
             <Toaster />

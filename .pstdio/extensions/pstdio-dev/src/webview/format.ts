@@ -62,6 +62,14 @@ export const verdictColor: Record<Verdict, string> = {
   inconclusive: "fg.muted",
 };
 
+// A single sample still has a direction, even though it cannot establish significance.
+export const differenceColor = (change: Change) => {
+  if (change.verdict !== "inconclusive") return verdictColor[change.verdict];
+  if (change.change > 0) return verdictColor.regressed;
+  if (change.change < 0) return verdictColor.improved;
+  return verdictColor.unchanged;
+};
+
 export const verdictText = (change: Change, unit: BenchmarkUnit) => {
   const word = verdictWord(change.verdict, unit);
   if (change.verdict === "unchanged") return `${verdictArrow.unchanged} ${word}`;

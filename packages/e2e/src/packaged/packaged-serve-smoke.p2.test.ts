@@ -59,6 +59,7 @@ import { expectPackagedNativeMarkdown, writeNativeMarkdownExtension } from "./pa
 // packaged-core-extensions-smoke.p1.test.ts installs Workspaces, its native resource list and file document routes through packed SDK/UI/workbench.
 // packaged-core-extensions-smoke.p1.test.ts installs Home through packed public SDK/UI packages and checks its landing declaration.
 // packaged-core-extensions-smoke.p1.test.ts checks Notes, Planner and Reports allocate record IDs through core.
+// It also checks bundled palette commands carry icons and useful groups.
 // packaged-artifact-watch-limit.p2.test.ts checks watched mounts refresh when an initial tree exceeds the folder limit.
 // packaged-core-extensions-smoke.p1.test.ts checks Reports reads by core-assigned ID and number after saving.
 // packaged-cloud-extension-set-smoke.p2.test.ts checks offline number collisions, aliases and later allocations across three compiled hosts.
@@ -89,6 +90,35 @@ beforeAll(() => {
 }, BUILD_TIMEOUT);
 
 // extension-browser-install.p1.test.ts installs the cached Playwright package and visits a smoke page.
+
+test(
+  "serves the compiled dashboard at root and project routes with its bundled script",
+  async () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-dashboard-assets-"));
+    let child: ChildProcess | undefined;
+    try {
+      const started = await startPackagedServe(tempRoot);
+      child = started.child;
+      for (const path of ["/", "/projects/dashboard-smoke/"]) {
+        const response = await fetch(`${started.baseUrl}${path}`);
+        expect(response.status).toBe(200);
+        expect(response.headers.get("content-type")).toContain("text/html");
+        const html = await response.text();
+        expect(html).toContain('id="root"');
+        const script = /<script[^>]+src="([^"]+)"/.exec(html)?.[1];
+        expect(script).toBeDefined();
+        const bundled = await fetch(new URL(script!, started.baseUrl));
+        expect(bundled.status).toBe(200);
+        expect(bundled.headers.get("content-type")).toContain("application/javascript");
+        expect((await bundled.text()).length).toBeGreaterThan(0);
+      }
+    } finally {
+      if (child) await stopProcess(child);
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  },
+  PACKAGED_TEST_TIMEOUT,
+);
 
 test(
   "exports saved performance recordings with monitoring stopped",

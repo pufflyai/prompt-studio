@@ -12,7 +12,7 @@ import {
 } from "@pstdio/sdk/extensions";
 import { repairRemovedCommand, repairRemovedSchedule } from "./merge-queue-repair";
 import { benchmarkCommands, syncCommandRef } from "./src/benchmarks/commands";
-import { navigationItems, navigationTrees, pages, views } from "./src/pages";
+import { navigationTrees, pages, viewMenus, views } from "./src/pages";
 
 const INSTALL_COMMAND = ["bun", "install", "--frozen-lockfile"];
 const BUILD_COMMAND = ["bun", "run", "build"];
@@ -174,8 +174,9 @@ export default defineExtension({
   ],
   views,
   pages,
-  navigationItems,
+  translations: { fr: packageAsset("./l10n/fr.json", import.meta.url) },
   navigationTrees,
+  viewMenus,
   keybindings: [
     ...(
       [
@@ -209,6 +210,11 @@ export default defineExtension({
       id: "write-blog-post",
       title: "Write a blog post",
       source: packageAsset("./skills/write-blog-post", import.meta.url),
+    }),
+    defineSkill({
+      id: "restore-repository",
+      title: "Restore the Prompt Studio repository",
+      source: packageAsset("./skills/restore-repository", import.meta.url),
     }),
   ],
   schedules: [

@@ -135,7 +135,10 @@ test("extension pages keep headers reachable and restore nested navigation", asy
       (await longDetail.getByTestId("available-extension-install").boundingBox())!.x,
     );
     expect(await longDetail.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
-    await longDetail.getByTestId("extension-detail-back").click();
+    await page
+      .getByRole("navigation", { name: "breadcrumb" })
+      .getByRole("button", { name: "Extensions", exact: true })
+      .click();
     await expect(page).toHaveURL(listUrl);
     await search.fill("");
     const row = page
@@ -164,7 +167,10 @@ test("extension pages keep headers reachable and restore nested navigation", asy
     await expect(page).toHaveURL(detailUrl);
     await expect(title).toBeVisible();
     await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Example tool 0");
-    await availableDetail.getByTestId("extension-detail-back").click();
+    await page
+      .getByRole("navigation", { name: "breadcrumb" })
+      .getByRole("button", { name: "Extensions", exact: true })
+      .click();
     await expect(page).toHaveURL(listUrl);
     await page.goBack();
     await expect(page).toHaveURL(detailUrl);
