@@ -19,13 +19,12 @@ export const useRendererPages = <TRow>(input: {
   rowId?: (row: TRow) => string;
   initialPageSize?: number;
 }) => {
-  const [epoch, setEpoch] = useState(0);
   const [search, setSearch] = useState("");
   const [collapse, setCollapse] = useState({ scope: input.scope, groups: [] as string[] });
   const collapsedGroups = collapse.scope === input.scope ? collapse.groups : [];
   const setCollapsedGroups = (groups: string[]) => setCollapse({ scope: input.scope, groups });
   const [limit, setLimit] = useState(Math.max(1, Math.min(100, input.initialPageSize ?? 100)));
-  const identity = JSON.stringify([input.identity, input.fields, search, collapsedGroups, limit, epoch]);
+  const identity = JSON.stringify([input.identity, input.fields, search, collapsedGroups, limit]);
   const [position, setPosition] = useState<PagePosition>({ identity, offset: 0 });
   const current = position.identity === identity ? position : { identity, offset: 0 };
   if (position.identity !== identity) setPosition(current);
@@ -35,15 +34,16 @@ export const useRendererPages = <TRow>(input: {
   const request: CollectionPageRequest = {
     limit,
     offset: current.offset,
-    cursor: current.cursor,
-    revision: current.revision,
+    cursor: current.offset ? current.cursor : undefined,
+    revision: current.offset ? current.revision : undefined,
     fields: input.fields,
     search,
     collapsedGroups,
   };
   const reset = () => {
     previous.current = undefined;
-    setEpoch((value) => value + 1);
+    if (!current.offset) return false;
+    setPosition({ identity, offset: 0 });
     return true;
   };
   const go = (index: number) => {
@@ -64,6 +64,18 @@ export const useRendererPages = <TRow>(input: {
     setLimit,
     reset,
     go,
+    accept: (result: { rows: TRow[]; page?: CollectionPage; position?: CollectionPageRequest }) => {
+      if (!result.page || !result.position) return;
+      previous.current = { identity, offset: result.position.offset ?? 0, rows: result.rows, page: result.page };
+      // Every presentation adopts a restarted continuation, including views that did not run the loader.
+      if (current.cursor !== result.position.cursor || current.revision !== result.position.revision)
+        setPosition({
+          identity,
+          offset: current.offset,
+          cursor: result.position.cursor,
+          revision: result.position.revision,
+        });
+    },
     controls: (
       result: CollectionPage | undefined,
       loading: boolean,
@@ -98,11 +110,6 @@ export const useRendererPages = <TRow>(input: {
         input.rowId && current.offset > 0 && saved?.identity === identity
           ? appendRendererRows(saved.rows.slice(0, current.offset), result.rows, input.rowId)
           : result.rows;
-      if (!signal.aborted) {
-        previous.current = { identity, offset: current.offset, rows, page: result.page };
-        // Later reloads of this position must not repeat the rejected continuation.
-        if (loaded.request !== request) setPosition({ identity, offset: current.offset });
-      }
       return { ...result, rows, position: loaded.request };
     },
   };

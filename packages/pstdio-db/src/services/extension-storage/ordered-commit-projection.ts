@@ -38,5 +38,6 @@ export const publishCommittedOrderedGroup = async (input: {
     ...((await publishOrderedSharedProjection(input)) ?? (await publishOrderedProjection(tx, owner, projected))),
     events: [] as NumberChange[],
     suppressed: new Set(projected.length ? [] : [operation.operationId]),
+    recordIds: projected.map((record) => record.recordId),
   };
 };

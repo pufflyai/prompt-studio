@@ -1,5 +1,6 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { text } from "pstdio-extensions/workbench";
+import { runUserAction } from "../../core/shared/run-user-action";
 import { watchClosedTerminalPlacements } from "../../react/terminal/watch-terminal-placements";
 import { WorkbenchTerminalPanel } from "../../react/terminal/workbench-terminal-panel";
 import type { RegisterWorkbenchExtensionContributionsInput } from "../host/workbench-extension-host-types";
@@ -17,14 +18,38 @@ const declaration = (metadata: WorkbenchExtensionMetadata, view: TerminalRecord)
   ]);
 };
 
-const createOwner = (input: RegisterWorkbenchExtensionContributionsInput, view: TerminalRecord) => {
+const createOwner = (
+  input: RegisterWorkbenchExtensionContributionsInput,
+  view: TerminalRecord,
+  onInactive: () => void,
+) => {
   const ownerId = crypto.randomUUID();
   let current = true;
-  const watch = watchClosedTerminalPlacements(input.workbench, view.id, ownerId, input.projectId);
+  let registrations = 0;
+  let watch: ReturnType<typeof watchClosedTerminalPlacements> | undefined;
+  let stopOwnership: (() => void) | undefined;
+  const hasSessions = () => input.workbench.terminal.hasOwner(ownerId);
+  const detachWatch = () => {
+    if (registrations || hasSessions()) return;
+    watch?.dispose();
+    watch = undefined;
+    stopOwnership?.();
+    stopOwnership = undefined;
+    onInactive();
+  };
+  const observe = () => {
+    stopOwnership ??= input.workbench.terminal.onDidChangeOwnership(detachWatch);
+    watch ??= watchClosedTerminalPlacements(input.workbench, view.id, ownerId, input.projectId, (instanceId) => {
+      void runUserAction(input.workbench, "Close terminal", () =>
+        input.workbench.terminal.killBinding(instanceId, ownerId),
+      ).finally(detachWatch);
+    });
+  };
   const nativeView = { ownerId, projectId: input.projectId, viewId: view.id, isCurrent: () => current };
   return {
+    active: () => registrations > 0 || hasSessions(),
     register(next: RegisterWorkbenchExtensionContributionsInput, currentView: TerminalRecord) {
-      return next.workbench.views.registerView(
+      const registration = next.workbench.views.registerView(
         {
           id: view.id,
           title: text(currentView.title, view.id),
@@ -44,10 +69,30 @@ const createOwner = (input: RegisterWorkbenchExtensionContributionsInput, view: 
         },
         { ownerId: view.extensionId, source: "extension" },
       );
+      registrations++;
+      observe();
+      let released = false;
+      return {
+        dispose() {
+          if (released) return;
+          released = true;
+          registrations--;
+          try {
+            registration.dispose();
+          } finally {
+            detachWatch();
+          }
+        },
+      };
     },
     dispose() {
+      if (!current) return;
       current = false;
-      watch.dispose();
+      stopOwnership?.();
+      stopOwnership = undefined;
+      watch?.dispose();
+      watch = undefined;
+      void runUserAction(input.workbench, "Close terminal", () => input.workbench.terminal.killOwner(ownerId));
     },
   };
 };
@@ -55,6 +100,13 @@ const createOwner = (input: RegisterWorkbenchExtensionContributionsInput, view: 
 /** Contribution refresh detaches a renderer; only a removed/changed owner or host teardown ends its PTYs. */
 export const createWorkbenchExtensionTerminalRendererOwners = () => {
   const owners = new Map<string, { declaration: string; owner: ReturnType<typeof createOwner> }>();
+  const trim = () => {
+    const inactive = [...owners].filter(([, entry]) => !entry.owner.active());
+    for (const [key, entry] of inactive.slice(0, Math.max(0, inactive.length - 128))) {
+      owners.delete(key);
+      entry.owner.dispose();
+    }
+  };
   return {
     checkpoint() {
       const previous = new Map(owners);
@@ -70,6 +122,7 @@ export const createWorkbenchExtensionTerminalRendererOwners = () => {
           for (const [key, entry] of previous) {
             if (owners.get(key) !== entry) entry.owner.dispose();
           }
+          trim();
         },
       };
     },
@@ -91,9 +144,10 @@ export const createWorkbenchExtensionTerminalRendererOwners = () => {
       const description = declaration(input.metadata, view);
       let entry = owners.get(key);
       if (entry?.declaration !== description) {
-        entry = { declaration: description, owner: createOwner(input, view) };
+        entry = { declaration: description, owner: createOwner(input, view, trim) };
         try {
           const registration = entry.owner.register(input, view);
+          owners.delete(key);
           owners.set(key, entry);
           return registration;
         } catch (error) {
@@ -101,6 +155,8 @@ export const createWorkbenchExtensionTerminalRendererOwners = () => {
           throw error;
         }
       }
+      owners.delete(key);
+      owners.set(key, entry);
       return entry.owner.register(input, view);
     },
     dispose() {

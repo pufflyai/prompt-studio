@@ -2,12 +2,11 @@ import { Avatar, Button, HStack, Text } from "@chakra-ui/react";
 import { Tooltip } from "@pstdio/ui";
 import type { WorkbenchCore } from "@pstdio/workbench";
 import { useWorkbenchStore } from "@pstdio/workbench/react";
-import { useSyncExternalStore } from "react";
+import { useCollectionSelection } from "@/lib/sync/use-collection-selection";
 import {
   dashboardSelectedProjectIdContextKey,
   dashboardSelectedProjectNameContextKey,
 } from "@/shared/app/project-context";
-import { getDashboardDataVersion, subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { findDashboardProject } from "../data/project-data";
 
 export const projectButtonInteraction = {
@@ -15,7 +14,7 @@ export const projectButtonInteraction = {
   _active: { bg: "bg.menu-item.selected" },
 };
 
-const resolveProjectName = (projectId: unknown, projectName: unknown, _dataVersion: number) => {
+const resolveProjectName = (projectId: unknown, projectName: unknown, _dataVersion: unknown) => {
   const project = typeof projectId === "string" ? findDashboardProject(projectId) : undefined;
   return project?.name ?? (typeof projectName === "string" ? projectName : "Projects");
 };
@@ -29,11 +28,10 @@ export const useDashboardProjectName = (workbench: WorkbenchCore) => {
     workbench.context.store,
     (state) => state.values[dashboardSelectedProjectNameContextKey],
   );
-  const dashboardDataVersion = useSyncExternalStore(
-    subscribeDashboardData,
-    getDashboardDataVersion,
-    getDashboardDataVersion,
-  );
+  const dashboardDataVersion = useCollectionSelection({
+    tables: ["projects"],
+    rowIds: typeof selectedProjectId === "string" ? [selectedProjectId] : [],
+  });
   return resolveProjectName(selectedProjectId, selectedProjectName, dashboardDataVersion);
 };
 

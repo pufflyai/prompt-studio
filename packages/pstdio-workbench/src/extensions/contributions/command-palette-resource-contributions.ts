@@ -90,6 +90,7 @@ export const registerWorkbenchExtensionCommandPaletteResources = (
     disposables.push(
       context.workbench.commandPaletteResources.registerProvider({
         id: record.id,
+        extensionId: record.extensionId,
         title: groupLabel,
         resourceKind: record.resourceKind,
         refreshEventIds: record.refreshEventIds,

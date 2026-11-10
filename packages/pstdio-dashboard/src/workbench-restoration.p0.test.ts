@@ -188,6 +188,7 @@ describe("createDashboardWorkbench restoration", () => {
     await first.dispose();
     const second = createDashboardWorkbench({ storage });
     await flushMicrotasks();
+    expect(second.settings.getSection("project")?.ownerId).toBe("dashboard.settings");
     expect(second.sidePanel.getMode()).toBe("closed");
     await selectProject(second, "project-2");
     expect(second.sidePanel.getMode()).toBe("attached");

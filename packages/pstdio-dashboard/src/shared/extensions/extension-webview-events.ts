@@ -6,10 +6,10 @@ import { subscribeToExtensionEventFeed, subscribeToExtensionEventReset } from ".
 export const subscribeWebviewExtensionEvents = (host: HostEventPublisher, projectId: string | undefined) => {
   const emit = (payload: WebviewExtensionEvent) => host.emit({ scope: EXTENSION_EVENTS_SCOPE, payload });
   const stopEvents = subscribeToExtensionEventFeed((event) => {
-    if (event.projectId === projectId) emit({ type: "changed", id: event.id });
+    if (event.projectId === projectId) emit({ type: "changed", ...event });
   });
   const stopReset = subscribeToExtensionEventReset((reset) => {
-    if (reset.projectId === undefined || reset.projectId === projectId) emit({ type: "reset" });
+    if (reset.projectId === undefined || reset.projectId === projectId) emit({ type: "reset", ...reset });
   });
   return () => {
     stopEvents();

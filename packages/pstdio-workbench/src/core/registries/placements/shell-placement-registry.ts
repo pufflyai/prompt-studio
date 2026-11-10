@@ -1,7 +1,5 @@
 import type { PageOpenIntent, PlacementIdentity, ViewLocation } from "@pstdio/sdk/extensions";
-import { createDisposable, type Disposable } from "../../shared/disposable";
-import { notifyWorkbenchChange } from "../../shared/store/workbench-batch";
-import { runWorkbenchEffect } from "../../shared/workbench-effect";
+import type { Disposable } from "../../shared/disposable";
 import { createPlacement } from "../layout/layout-operations";
 import type {
   RegisteredWidgetContribution,
@@ -32,6 +30,7 @@ import {
   setOwnedPlacementPreparation,
 } from "./owned-placement-preparation";
 import { restoreOwnedPlacementState } from "./owned-placement-restoration";
+import { createPlacementObservation } from "./placement-observation";
 import { validateShellPlacement, type WorkbenchShellPlacementContribution } from "./shell-placement-declarations";
 
 export type { WorkbenchShellPlacementContribution } from "./shell-placement-declarations";
@@ -66,6 +65,7 @@ export interface WorkbenchShellPlacementRegistry {
     context?: OwnedPlacementLocationContext,
   ): readonly ResolvedOwnedPlacement<WorkbenchWidgetPlacement>[];
   onDidChange(listener: () => void): Disposable;
+  dispose?(): void;
 }
 export const shellPlacementContributionId = (placementId: string) =>
   `workbench.shell-placement.${encodeURIComponent(placementId)}`;
@@ -109,39 +109,49 @@ interface CreateWorkbenchShellPlacementRegistryInput {
   onDidChangePersistenceScope(listener: () => void): Disposable;
 }
 
+const restoreShellPlacement = (
+  input: CreateWorkbenchShellPlacementRegistryInput,
+  state: ReturnType<typeof createOwnedPlacementState>,
+  placement: WorkbenchShellPlacementContribution,
+) => {
+  if (!input.enteredWithPersistedLayout()) {
+    clearOwnedPlacementState(state, placement.id);
+    return state;
+  }
+  return restoreOwnedPlacementState({
+    state,
+    declarations: [placement],
+    saved: Object.values(input.getLayout().regions).flatMap((region) => region.widgets),
+    owns: (identity) => identity.kind === "shell",
+  });
+};
+
 export const createWorkbenchShellPlacementRegistry = (
   input: CreateWorkbenchShellPlacementRegistryInput,
 ): WorkbenchShellPlacementRegistry => {
   const placements = new Map<string, WorkbenchShellPlacementContribution>();
   let state = createOwnedPlacementState();
-  const listeners = new Set<() => void>();
+  const observation = createPlacementObservation("workbench.shellPlacements");
   const label = "Shell placement";
   let runtime: ((destination?: PlacementDestination) => void) | undefined;
   const emitChange = (destination?: PlacementDestination) => {
+    if (!observation.active) return;
     runtime?.(destination);
-    for (const listener of listeners)
-      notifyWorkbenchChange(listener, () => runWorkbenchEffect("shell placement subscriber", listener));
+    observation.publish();
   };
   // A restored layout snapshot is the user's saved choice: placements present in
   // it are open, optional placements missing from it are closed. A scope without
   // a snapshot starts from each placement's declared presence.
   const restorePlacement = (placement: WorkbenchShellPlacementContribution) => {
-    if (!input.enteredWithPersistedLayout()) {
-      clearOwnedPlacementState(state, placement.id);
-      return;
-    }
-    state = restoreOwnedPlacementState({
-      state,
-      declarations: [placement],
-      saved: Object.values(input.getLayout().regions).flatMap((region) => region.widgets),
-      owns: (identity) => identity.kind === "shell",
-    });
+    state = restoreShellPlacement(input, state, placement);
   };
-  input.onDidChangePersistenceScope(() => {
-    if (input.isChangingPage?.()) return;
-    for (const placement of placements.values()) restorePlacement(placement);
-    notifyWorkbenchChange(placements, emitChange);
-  });
+  observation.own(
+    input.onDidChangePersistenceScope(() => {
+      if (!observation.active || input.isChangingPage?.()) return;
+      for (const placement of placements.values()) restorePlacement(placement);
+      emitChange();
+    }).dispose,
+  );
   const resolve = (
     placement: WorkbenchShellPlacementContribution,
     instanceKey: string,
@@ -177,7 +187,7 @@ export const createWorkbenchShellPlacementRegistry = (
   const preparation: OwnedPlacementPreparation = {
     connectRuntime(listener) {
       runtime = listener;
-      return createDisposable(() => {
+      return observation.own(() => {
         if (runtime === listener) runtime = undefined;
       });
     },
@@ -254,6 +264,7 @@ export const createWorkbenchShellPlacementRegistry = (
   };
   const registry: WorkbenchShellPlacementRegistry = {
     registerPlacement(placement) {
+      observation.assertActive();
       validateShellPlacement(placement, placements, input.views);
       const registered = { ...placement, item: placementItemForRegion(placement.item, placement.region) };
       const panel = registerWorkbenchViewPlacement(
@@ -272,7 +283,7 @@ export const createWorkbenchShellPlacementRegistry = (
       placements.set(registered.id, registered);
       if (input.enteredWithPersistedLayout()) restorePlacement(registered);
       emitChange();
-      return createDisposable(() => {
+      return observation.own(() => {
         if (placements.get(registered.id) !== registered) return;
         placements.delete(registered.id);
         clearOwnedPlacementState(state, registered.id);
@@ -283,6 +294,7 @@ export const createWorkbenchShellPlacementRegistry = (
     getPlacement: (placementId) => placements.get(placementId),
     listPlacements: () => [...placements.values()].sort((left, right) => left.id.localeCompare(right.id)),
     openPlacement(target) {
+      observation.assertActive();
       const prepared = preparation.open(target);
       input.validateOpen?.(prepared.identity, target.region ?? placements.get(target.placementId)!.region, {
         reveal: !target.relatedSource,
@@ -325,10 +337,8 @@ export const createWorkbenchShellPlacementRegistry = (
       emitChange();
     },
     resolvePlacements: (context) => preparation.resolve(undefined, context ? preparation.restore!(context) : state),
-    onDidChange(listener) {
-      listeners.add(listener);
-      return createDisposable(() => listeners.delete(listener));
-    },
+    onDidChange: observation.subscribe,
+    dispose: observation.dispose,
   };
   setOwnedPlacementPreparation(registry, preparation);
   return registry;

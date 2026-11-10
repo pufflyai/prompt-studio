@@ -12,6 +12,7 @@ import { createLayoutRegionContentMethods } from "./layout-region-content-method
 import { createLayoutRegionMethods } from "./layout-region-methods";
 import { resolveScopedLayout } from "./layout-scope";
 import { createLayoutScopeMethods } from "./layout-scope-methods";
+import { restoreLayoutPresentation } from "./layout-tab-presentation";
 import type {
   RegisteredWidgetContribution,
   WorkbenchLayout,
@@ -104,6 +105,8 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LocationA
   const getLayout = () => store.getState().layout;
   const getPlaceholders = () => store.getState().placeholders;
   const getWidgets = () => store.getState().widgets;
+  const restorePresentation = (layout: WorkbenchLayout) =>
+    restoreLayoutPresentation(layout, (id) => getWidgets()[id]?.tab);
   const getPlaceholder = (regionId: WorkbenchRegion) => getPlaceholders()[regionId];
   const regionQueries = createRegionQueries({
     getLayout,
@@ -117,7 +120,8 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LocationA
     defaultRegionVisibility: input.defaultRegionVisibility,
     getLayout,
     persistence: input.persistence,
-    setLayout: (layout, action) => store.setState({ ...store.getState(), layout }, false, action),
+    setLayout: (layout, action) =>
+      store.setState({ ...store.getState(), layout: restorePresentation(layout) }, false, action),
   });
   const persistLayout = () => scopeMethods.persistLayout();
 
@@ -125,6 +129,7 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LocationA
 
   const setLayout = (layout: WorkbenchLayout) => {
     layout = input.normalizeLayout?.(layout) ?? layout;
+    layout = restorePresentation(layout);
     const snapshot = store.getState();
     if (snapshot.layout === layout) return;
     store.setState({ ...snapshot, layout }, false, "setLayout");

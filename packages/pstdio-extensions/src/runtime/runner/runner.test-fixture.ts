@@ -58,6 +58,7 @@ export const stubEnvironment = (
       delete: async () => {},
     },
     sessions: {
+      observeMetadata: queuedRequestsRequireHost,
       getConversation: queuedRequestsRequireHost,
       getConversationSources: queuedRequestsRequireHost,
       getQueuedMessages: queuedRequestsRequireHost,

@@ -1,214 +1,100 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getRuntimeCollections } from "@/lib/sync/collections";
-import {
-  addLocalExtensionFolder,
-  type DroppedExtensionFolder,
-  deleteProjectExtensionSetting,
-  executeExtensionCommand,
-  getExtensionContributions,
-  getMarketplaceExtensionContributions,
-  getProjectExtensionMetadata,
-  installMarketplaceExtension,
-  listProjectExtensionSettings,
-  listProjectExtensions,
-  reloadProjectExtension,
-  setExtensionAutomationEnabled,
-  setProjectExtensionEnabled,
-  uninstallProjectExtension,
-  updateProjectExtensionSetting,
-  upgradeProjectExtension,
-} from "./api";
+import type { CommandExecuteRequest } from "@pstdio/sdk/api";
+import type { ScopedQuery } from "@pstdio/sdk/extensions";
+import { useScopedQuery } from "@pstdio/sdk/extensions/react";
+import { addLocalExtensionFolder, type DroppedExtensionFolder } from "./api";
 import { publishExtensionCommandEvent } from "./extension-webview-broadcast";
-import {
-  createProjectExtensionCache,
-  invalidateExtensionQueries,
-  projectExtensionMetadataQueryKey,
-  projectExtensionsQueryKey,
-} from "./project-extension-cache";
+import { getProjectExtensionQueries } from "./project-extension-queries";
+import { useExtensionMutation } from "./use-extension-mutation";
 import { surfaceWebviewCommandOutcome } from "./webview-command-outcome";
 
-export const useProjectExtensionMetadata = (projectId: string | undefined) => {
-  return useQuery({
-    queryKey: projectExtensionMetadataQueryKey(projectId),
-    queryFn: () => getProjectExtensionMetadata(projectId!),
-    enabled: Boolean(projectId),
-  });
+const useCatalogQuery = <T>(query: ScopedQuery<T>, active: boolean) => {
+  const snapshot = useScopedQuery(query, active);
+  return {
+    ...snapshot,
+    isLoading: active && snapshot.data === undefined && !snapshot.error,
+    isSuccess: snapshot.data !== undefined && !snapshot.error,
+  };
 };
+export const useProjectExtensionMetadata = (projectId: string | undefined) =>
+  useCatalogQuery(getProjectExtensionQueries(projectId).metadata, Boolean(projectId));
+export const useProjectExtensions = (projectId: string | undefined) =>
+  useCatalogQuery(getProjectExtensionQueries(projectId).extensions, Boolean(projectId));
+export const useExtensionContributions = (projectId: string | undefined, instanceId: string | undefined) =>
+  useCatalogQuery(getProjectExtensionQueries(projectId).contributions(instanceId), Boolean(projectId && instanceId));
+export const useMarketplaceExtensionContributions = (projectId: string | undefined, installName: string | undefined) =>
+  useCatalogQuery(getProjectExtensionQueries(projectId).marketplace(installName), Boolean(projectId && installName));
+export const useProjectExtensionSettings = (projectId: string | undefined, instanceId: string | undefined) =>
+  useCatalogQuery(getProjectExtensionQueries(projectId).settings(instanceId), Boolean(projectId && instanceId));
 
-export const useProjectExtensions = (projectId: string | undefined) => {
-  return useQuery({
-    queryKey: projectExtensionsQueryKey(projectId),
-    queryFn: () => listProjectExtensions(projectId!),
-    enabled: Boolean(projectId),
+export const useInstallMarketplaceExtension = (projectId: string | undefined) =>
+  useExtensionMutation(projectId, "install", {
+    run: ({ installName, force }: { installName: string; force?: boolean }, { api, projectId }) =>
+      api.extensions.install(projectId, { source: { kind: "catalog", name: installName }, force }),
+    accept: (result, _value, cache) => cache.storeExtension(result.extension),
   });
-};
-
-export const useInstallMarketplaceExtension = (projectId: string | undefined) => {
-  const queryClient = useQueryClient();
-  const cache = createProjectExtensionCache(queryClient, projectId);
-  return useMutation({
-    mutationFn: ({ installName, force }: { installName: string; force?: boolean }) => {
-      if (!projectId) throw new Error("Project id is required to install extensions.");
-      return installMarketplaceExtension(projectId, installName, force);
+export const useAddLocalExtensionFolder = (projectId: string | undefined) =>
+  useExtensionMutation(projectId, "add-folder", {
+    run: (folder: DroppedExtensionFolder, { api, projectId }) => addLocalExtensionFolder(projectId, folder, api),
+    accept: (result, _value, cache) => cache.storeExtension(result.extension),
+  });
+export const useSetProjectExtensionEnabled = (projectId: string | undefined) =>
+  useExtensionMutation(projectId, "enabled", {
+    run: ({ instanceId, enabled }: { instanceId: string; enabled: boolean }, { api, projectId }) =>
+      api.extensions.setEnabled(projectId, instanceId, enabled),
+    accept: (extension, _value, cache) => cache.storeExtension(extension),
+  });
+export const useSetExtensionAutomationEnabled = (projectId: string | undefined) =>
+  useExtensionMutation(projectId, "automation", {
+    run: (
+      { instanceId, automationId, enabled }: { instanceId: string; automationId: string; enabled: boolean },
+      { api, projectId },
+    ) => api.extensions.setAutomationEnabled(projectId, instanceId, automationId, enabled),
+    accept: (automation, variables, cache) => cache.storeAutomation(variables.instanceId, automation),
+  });
+export const useReloadProjectExtension = (projectId: string | undefined) =>
+  useExtensionMutation(projectId, "reload", {
+    run: ({ instanceId }: { instanceId: string }, { api, projectId }) => api.extensions.reload(projectId, instanceId),
+    accept: (_result, _value, cache) => cache.refresh(),
+  });
+export const useUpgradeProjectExtension = (projectId: string | undefined) =>
+  useExtensionMutation(projectId, "upgrade", {
+    run: ({ instanceId }: { instanceId: string }, { api, projectId }) =>
+      api.extensions.upgradeProject(projectId, instanceId),
+    accept: (_result, _value, cache) => cache.refresh(),
+  });
+export const useUpdateProjectExtensionSetting = (projectId: string | undefined) =>
+  useExtensionMutation(projectId, "setting", {
+    run: async (
+      { instanceId, key, value }: { instanceId: string; key: string; value: unknown },
+      { api, projectId },
+    ) => {
+      if (value === undefined) return api.extensions.projectSettings.delete(projectId, instanceId, key);
+      return api.extensions.projectSettings.set(projectId, instanceId, key, value);
     },
-    onSuccess: (result) => cache.storeExtension(result.extension),
+    accept: (_result, variables, cache) => cache.invalidateSettings(variables.instanceId),
   });
-};
-
-export const useAddLocalExtensionFolder = (projectId: string | undefined) => {
-  const queryClient = useQueryClient();
-  const cache = createProjectExtensionCache(queryClient, projectId);
-  return useMutation({
-    mutationFn: (folder: DroppedExtensionFolder) => {
-      if (!projectId) throw new Error("Project id is required to add extensions.");
-      return addLocalExtensionFolder(projectId, folder);
-    },
-    onSuccess: (result) => cache.storeExtension(result.extension),
+export const useUninstallProjectExtension = (projectId: string | undefined) =>
+  useExtensionMutation(projectId, "uninstall", {
+    run: ({ instanceId, deleteUserData }: { instanceId: string; deleteUserData?: boolean }, { api, projectId }) =>
+      api.extensions.uninstall(projectId, instanceId, deleteUserData),
+    accept: (_result, variables, cache) => cache.removeExtension(variables.instanceId),
   });
-};
-
-export const useSetProjectExtensionEnabled = (projectId: string | undefined) => {
-  const queryClient = useQueryClient();
-  const cache = createProjectExtensionCache(queryClient, projectId);
-  return useMutation({
-    mutationFn: ({ instanceId, enabled }: { instanceId: string; enabled: boolean }) => {
-      if (!projectId) throw new Error("Project id is required to update extensions.");
-      return setProjectExtensionEnabled(projectId, instanceId, enabled);
-    },
-    onSuccess: (extension) => cache.storeExtension(extension),
-  });
-};
-
-export const useSetExtensionAutomationEnabled = (projectId: string | undefined) => {
-  const queryClient = useQueryClient();
-  const cache = createProjectExtensionCache(queryClient, projectId);
-  return useMutation({
-    mutationFn: ({
-      instanceId,
-      automationId,
-      enabled,
-    }: {
-      instanceId: string;
-      automationId: string;
-      enabled: boolean;
-    }) => {
-      if (!projectId) throw new Error("Project id is required to update automations.");
-      return setExtensionAutomationEnabled(projectId, instanceId, automationId, enabled);
-    },
-    onSuccess: (automation, variables) => cache.storeAutomation(variables.instanceId, automation),
-  });
-};
-
-export const useReloadProjectExtension = (projectId: string | undefined) => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ instanceId }: { instanceId: string }) => {
-      if (!projectId) throw new Error("Project id is required to reload extensions.");
-      return reloadProjectExtension(projectId, instanceId);
-    },
-    onSuccess: () => {
-      void invalidateExtensionQueries(queryClient, projectId);
-    },
-  });
-};
-
-export const useUpgradeProjectExtension = (projectId: string | undefined) => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ instanceId }: { instanceId: string }) => {
-      if (!projectId) throw new Error("Project id is required to upgrade extensions.");
-      return upgradeProjectExtension(projectId, instanceId);
-    },
-    onSuccess: () => {
-      void invalidateExtensionQueries(queryClient, projectId);
-    },
-  });
-};
-
-// Upgrades run one at a time: each one fetches and installs a release, and one failure must not stop
-// the rest. Failures come back as messages so the caller can report them together.
-export const useExtensionContributions = (projectId: string | undefined, instanceId: string | undefined) => {
-  return useQuery({
-    queryKey: ["extension-contributions", projectId, instanceId],
-    queryFn: () => getExtensionContributions(projectId!, instanceId!),
-    enabled: Boolean(projectId && instanceId),
-  });
-};
-
-export const useMarketplaceExtensionContributions = (
-  projectId: string | undefined,
-  installName: string | undefined,
-) => {
-  return useQuery({
-    queryKey: ["marketplace-extension-contributions", projectId, installName],
-    queryFn: () => getMarketplaceExtensionContributions(projectId!, installName!),
-    enabled: Boolean(projectId && installName),
-  });
-};
-
-const projectExtensionSettingsQueryKey = (projectId: string | undefined, instanceId: string | undefined) =>
-  ["project-extension-settings", projectId, instanceId] as const;
-
-export const useProjectExtensionSettings = (projectId: string | undefined, instanceId: string | undefined) => {
-  return useQuery({
-    queryKey: projectExtensionSettingsQueryKey(projectId, instanceId),
-    queryFn: () => listProjectExtensionSettings(projectId!, instanceId!),
-    enabled: Boolean(projectId && instanceId),
-  });
-};
-
-export const useUpdateProjectExtensionSetting = (projectId: string | undefined) => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    // `undefined` removes the saved value, so the setting falls back to its default.
-    mutationFn: async ({ instanceId, key, value }: { instanceId: string; key: string; value: unknown }) => {
-      if (!projectId) throw new Error("Project id is required to update extension settings.");
-      if (value === undefined) return deleteProjectExtensionSetting(projectId, instanceId, key);
-      return updateProjectExtensionSetting(projectId, instanceId, key, value);
-    },
-    onSuccess: (_result, variables) => {
-      queryClient.invalidateQueries({ queryKey: projectExtensionSettingsQueryKey(projectId, variables.instanceId) });
-    },
-  });
-};
-
-export const useUninstallProjectExtension = (projectId: string | undefined) => {
-  const queryClient = useQueryClient();
-  const cache = createProjectExtensionCache(queryClient, projectId);
-  return useMutation({
-    mutationFn: ({ instanceId, deleteUserData }: { instanceId: string; deleteUserData?: boolean }) => {
-      if (!projectId) throw new Error("Project id is required to uninstall extensions.");
-      return uninstallProjectExtension(projectId, instanceId, deleteUserData);
-    },
-    onSuccess: (_result, variables) => cache.removeExtension(variables.instanceId),
-  });
-};
-
 export const useExecuteExtensionCommand = (
   projectId: string | undefined,
   showNotice: Parameters<typeof surfaceWebviewCommandOutcome>[1],
-) => {
-  const owner = getRuntimeCollections();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({
-      commandId,
-      body,
-      signal,
-    }: {
-      commandId: string;
-      body: Omit<import("@pstdio/sdk/api").CommandExecuteRequest, "projectId">;
-      signal?: AbortSignal;
-    }) => {
-      if (!projectId) throw new Error("Project id is required to execute extension commands.");
-      const response = await executeExtensionCommand(projectId, commandId, body, signal);
+) =>
+  useExtensionMutation(projectId, "execute", {
+    run: (
+      {
+        commandId,
+        body,
+        signal,
+      }: { commandId: string; body: Omit<CommandExecuteRequest, "projectId">; signal?: AbortSignal },
+      { api, projectId },
+    ) => api.extensions.execute(commandId, { ...body, projectId }, { signal }),
+    accept: (response, _value, cache, { projectId, owner }) => {
       publishExtensionCommandEvent(response, { projectId }, owner);
-      return response;
-    },
-    onSuccess: async (response) => {
       surfaceWebviewCommandOutcome(response, showNotice);
-      await queryClient.invalidateQueries({ queryKey: projectExtensionMetadataQueryKey(projectId) });
+      cache.invalidateMetadata();
     },
   });
-};

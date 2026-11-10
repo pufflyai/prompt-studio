@@ -154,7 +154,7 @@ test("composer state exists before delayed reads, and live data wins the snapsho
   session.accept({ revision: 1, snapshot: { messages: [message("live")] } });
   query.resolve({ messages: [message("stale")] });
   await query.promise;
-  await Promise.resolve();
+  await session.query.read();
   expect(session.getSnapshot().conversation.messages?.[0]?.parts[0]).toEqual({ type: "text", text: "live" });
   session.accept({ revision: 1, snapshot: { messages: [message("duplicate")] } });
   expect(session.getSnapshot().conversation.messages).toHaveLength(1);
@@ -215,7 +215,7 @@ test("a stream notice does not discard delayed history or controls", async () =>
   session.accept({ revision: 0, snapshot: { notice: "Connected" } });
   query.resolve({ messages: [message("hydrated")] });
   await query.promise;
-  await Promise.resolve();
+  await session.query.read();
   expect(session.getSnapshot().conversation.messages).toHaveLength(1);
   expect(session.getSnapshot().conversation.notice).toBe("Connected");
   release();
@@ -292,7 +292,7 @@ test("incremental events require a fresh stream transcript before they can super
   ).toThrow();
   query.resolve({ messages: [message("history")] });
   await query.promise;
-  await Promise.resolve();
+  await session.query.read();
   expect(session.getSnapshot().conversation.messages?.[0]?.parts[0]).toEqual({ type: "text", text: "history" });
   session.accept({ revision: 2, snapshot: { messages: [message("current")] } });
   session.accept({ revision: 3, patch: { op: "replace", path: "/messages/0", value: message("live") } });
@@ -357,7 +357,7 @@ test("an empty saved control map retains values already read from the session", 
   await Promise.resolve();
   hydration.resolve({ text: "", attachments: [], values: {} });
   await hydration.promise;
-  await Promise.resolve();
+  await session.query.read();
   expect(session.getSnapshot().draft.values).toEqual({ model: "session-model", effort: "high" });
   release();
 });
@@ -388,7 +388,7 @@ test("query values replace static defaults while locally selected controls win d
     action: async () => undefined,
   });
   const closeUntouched = untouched.retain();
-  await Promise.resolve();
+  await untouched.query.read();
   expect(untouched.getSnapshot().draft.values).toEqual({ model: "saved" });
   closeUntouched();
   const query = deferred<{ values: { model: string; effort: string } }>();
@@ -401,7 +401,7 @@ test("query values replace static defaults while locally selected controls win d
   session.changeDraft({ values: { model: "selected" } });
   query.resolve({ values: { model: "saved", effort: "high" } });
   await query.promise;
-  await Promise.resolve();
+  await session.query.read();
   expect(session.getSnapshot().draft.values).toEqual({ model: "selected", effort: "high" });
   release();
 });
@@ -541,7 +541,7 @@ test("a newer query value protects only its own key from an older action", async
   const close = session.retain();
   query.resolve({ values: { model: "B" } });
   await query.promise;
-  await Promise.resolve();
+  await session.query.read();
   response.resolve({ snapshot: { values: { model: "A", intent: "/goal" } } });
   await selecting;
   expect(session.getSnapshot().draft.values).toEqual({ model: "B", intent: "/goal" });
@@ -600,7 +600,7 @@ test("native controls wait for query and saved settings while the first-paint co
   expect(session.getSnapshot().initializing).toBe(true);
   query.resolve({ controls: [], values: { harness: { harnessId: "session-harness" } } });
   await query.promise;
-  await Promise.resolve();
+  await session.query.read();
   expect(session.getSnapshot().initializing).toBe(true);
   hydration.resolve({
     text: "",
@@ -654,7 +654,7 @@ test("restoring a draft claims its settings even when they equal untouched query
     action: async () => undefined,
   });
   const release = session.retain();
-  await Promise.resolve();
+  await session.query.read();
   session.accept({ revision: 0, recoverDraft: { text: "Recovered work", attachments: [], values: { model: "A" } } });
   session.restoreDraft(0);
   hydration.resolve({ text: "Older saved work", attachments: [], values: { model: "B" } });
@@ -812,4 +812,47 @@ test("consecutive identical submissions keep distinct pending rows and consume s
   const displayed = session.getSnapshot().messages;
   session.changeDraft({ text: "Keep typing" });
   expect(session.getSnapshot().messages).toBe(displayed);
+});
+
+test("a loaded empty conversation stays usable during a same-owner reconnect", async () => {
+  const pending = Promise.withResolvers<unknown>();
+  let reads = 0;
+  const session = createChatSession({
+    query: () => (++reads === 1 ? Promise.resolve({ messages: [] }) : pending.promise),
+    action: async () => ({}),
+  });
+  const release = session.retain();
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  session.changeDraft({ text: "Unsent work" });
+  expect(session.getSnapshot().loading).toBe(false);
+  session.reconnect();
+  expect(session.getSnapshot().loading).toBe(false);
+  expect(session.getSnapshot().messages).toEqual([]);
+  expect(session.getSnapshot().draft.text).toBe("Unsent work");
+  pending.resolve({ messages: [] });
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  release();
+  await session.dispose();
+});
+
+test("retrying a failed first read remains loading until an authoritative snapshot is accepted", async () => {
+  const pending = Promise.withResolvers<unknown>();
+  let reads = 0;
+  const session = createChatSession({
+    query: async () => {
+      if (++reads === 1) throw new Error("offline");
+      return pending.promise;
+    },
+    action: async () => ({}),
+  });
+  const release = session.retain();
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  expect(session.getSnapshot().error).toBe("offline");
+  session.reconnect();
+  expect(session.getSnapshot().loading).toBe(true);
+  pending.resolve({ messages: [] });
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  expect(session.getSnapshot().loading).toBe(false);
+  release();
+  await session.dispose();
 });

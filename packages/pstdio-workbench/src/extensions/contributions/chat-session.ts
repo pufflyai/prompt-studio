@@ -1,21 +1,29 @@
-import type { ChatDraft, ChatRendererAction, ChatRendererEvent, ChatRendererSnapshot } from "@pstdio/sdk/extensions";
-import { applySessionMessagePatch, type SessionMessage } from "@pstdio/ui/chat-ui";
+import type { ChatDraft, ChatRendererAction, ChatRendererSnapshot } from "@pstdio/sdk/extensions";
+import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import {
-  chatDraftSchema,
   chatRendererActionResultSchema,
   chatRendererActionSchema,
   chatRendererSnapshotSchema,
 } from "pstdio-api-contracts";
-import { hydrateChatDraft, recoverChatDraft, restoreChatDraft } from "./chat-draft-recovery";
-import { clearDeliveredChatRecoveries, restoreFailedChatSubmission } from "./chat-failed-submission";
+import { createWorkbenchStore } from "../../core/shared/store/workbench-store";
+import { hydrateChatDraft, recoverChatDraft } from "./chat-draft-recovery";
+import { createChatDraftRestoration } from "./chat-draft-restoration";
+import { createChatEventReader } from "./chat-event-reader";
+import { clearDeliveredChatRecoveries } from "./chat-failed-submission";
+import { type ChatQueryContext, createChatFiniteRead } from "./chat-finite-read";
 import { type ChatPendingSubmission, createChatSubmissionPresentation } from "./chat-pending-submission";
+import { createChatSessionDraft } from "./chat-session-draft";
 import { createChatSnapshot } from "./chat-snapshot";
-import { createChatStreamReader } from "./chat-stream-reader";
+import type { createChatStreamReader } from "./chat-stream-reader";
 import { createChatSubmissionRunner } from "./chat-submission";
 import { createChatSubmissionHandoff } from "./chat-submission-handoff";
 
 export interface ChatSessionInput {
   initial?: ChatRendererSnapshot;
+  queryContext?: ChatQueryContext;
+  onIdle?(): void;
+  captureSaveDraft?(): (draft: ChatDraft) => Promise<unknown>;
+  captureWork?(): <T>(run: () => Promise<T>) => Promise<T>;
   query(signal: AbortSignal): Promise<unknown>;
   action(action: ChatRendererAction): Promise<unknown>;
   watch?(signal: AbortSignal): AsyncIterable<unknown> & { result?: Promise<unknown> };
@@ -98,248 +106,229 @@ const projectChatState = (
     ? next
     : { ...next, ...present(next.conversation.messages ?? [], next.pending, next.conversation.queuedFollowUps) };
 };
-const subscribeChatState = (listeners: Set<() => void>, listener: () => void) => {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-};
 
-const stageChatDraft = (stage: ChatSessionInput["stageDraft"], draft: ChatDraft, fail: (error: unknown) => void) => {
-  try {
-    stage?.(draft);
-  } catch (error) {
-    fail(error);
-  }
-};
-
-const trackChatAction = <T extends Promise<unknown>>(actions: Set<Promise<unknown>>, running: T) => {
-  actions.add(running);
-  const settled = () => actions.delete(running);
-  void running.then(settled, settled);
-  return running;
-};
 const failChatAction = (fail: (error: unknown) => void, action: ChatRendererAction) => (error: unknown) => {
   // The per-message Fork control owns its failure; reconnecting the transcript cannot retry it.
   if (action.type !== "fork") fail(error);
   throw error;
 };
 
+const trackChatAction = <T>(
+  actions: Set<Promise<unknown>>,
+  running: Promise<T>,
+  release: () => void,
+  idle?: () => void,
+) => {
+  actions.add(running);
+  const settled = () => {
+    actions.delete(running);
+    release();
+    idle?.();
+  };
+  void running.then(settled, settled);
+  return running;
+};
+
 /** One owner per project/view/resource, shared across page/panel changes. */
 export const createChatSession = (input: ChatSessionInput) => {
   let state = initialChatState(input.initial);
-  const listeners = new Set<() => void>();
+  const projection = createWorkbenchStore({ name: "workbench.chat", initialState: state });
   const present = createChatSubmissionPresentation();
   const publish = (update: Partial<typeof state>) => {
     state = projectChatState(state, update, present);
-    for (const listener of listeners) listener();
+    if (!retired) projection.setState(state, true, "projectChat");
   };
   const fail = (error: unknown) => publish({ error: error instanceof Error ? error.message : String(error) });
   let holds = 0;
+  let observing = false;
   let controller: AbortController | undefined;
   let generation = 0;
-  let revision = -1;
-  let streamHasMessages = false;
   let clock = 0;
-  let changes = 0;
-  let localEdits = 0;
-  let hydrated = !input.loadDraft;
-  let hydrating = false;
-  let hydration = Promise.resolve();
+  let hasLoaded = false;
   const snapshots = createChatSnapshot(state.conversation);
-  let save = Promise.resolve();
   const actions = new Set<Promise<unknown>>();
-  let persistedChanges = 0;
-  let persistenceError: string | undefined;
-  const failPersistence = (error: unknown) => {
-    persistenceError = error instanceof Error ? error.message : String(error);
-    fail(error);
-  };
+  let retired = false;
+  const retiredState = initialChatState();
   let recoverableDraft: ChatDraft | undefined;
   const merge = (
     incoming: ChatRendererSnapshot,
     issued = ++clock,
     expectedValues?: Map<string, number>,
     action?: ChatRendererAction,
+    capturedSave?: ChatSessionInput["saveDraft"],
   ) => {
     const pending = state.pending;
     const merged = snapshots.merge(state, incoming, issued, expectedValues, action);
+    hasLoaded = true;
     publish({ ...merged.state, loading: false });
     const recovery = clearDeliveredChatRecoveries(state.draft, pending ?? [], state.pending);
     if (recovery.pending !== state.pending) publish({ pending: recovery.pending });
     if (recovery.recovery) changeDraft(recovery.recovery);
     if (expectedValues && merged.valuesChanged) {
-      changes++;
-      saveDraft();
+      drafts.changed(capturedSave);
     }
   };
-  const acceptEvent = (event: ChatRendererEvent, issued: number) => {
-    if (event.revision <= revision) return;
-    if ("patch" in event && !streamHasMessages)
-      throw new Error("A chat stream must send its transcript snapshot before incremental message patches.");
-    revision = event.revision;
-    if ("recoverDraft" in event) {
+  const reader = createChatEventReader({
+    reserve: () => ++clock,
+    merge,
+    messages: () => state.conversation.messages ?? [],
+    recover: (recovered) => {
       changeDraft(
         recoverChatDraft(
           state.draft,
-          event.recoverDraft,
-          (changes === 0 && emptyChatDraft(state.draft)) || state.draft === recoverableDraft,
+          recovered,
+          (drafts.changes() === 0 && emptyChatDraft(state.draft)) || state.draft === recoverableDraft,
         ),
       );
       recoverableDraft = undefined;
-    } else if ("snapshot" in event) {
-      if (event.snapshot.messages) streamHasMessages = true;
-      merge(event.snapshot, issued);
-    } else {
-      merge({ messages: applySessionMessagePatch(state.conversation.messages ?? [], event.patch) }, issued);
-    }
-  };
-  const reader = createChatStreamReader({ reserve: () => ++clock, accept: acceptEvent });
+    },
+  });
   const accept = reader.accept;
-  const saveDraft = () => {
-    if (!input.saveDraft || persistedChanges === changes) return;
-    stageChatDraft(input.stageDraft, state.draft, failPersistence);
-    save = save
-      .then(() => hydration)
-      .then(async () => {
-        if (!hydrated || persistedChanges === changes) return;
-        const savingChanges = changes;
-        stageChatDraft(input.stageDraft, state.draft, failPersistence);
-        await input.saveDraft!(state.draft);
-        persistedChanges = savingChanges;
-        if (state.error === persistenceError) publish({ error: undefined });
-        persistenceError = undefined;
-      })
-      .catch(failPersistence);
-  };
-  const changeDraft = (update: Partial<ChatDraft>) => {
-    const draft = chatDraftSchema.parse({ ...state.draft, ...update });
-    changes++;
-    localEdits++;
-    if (update.values) snapshots.values.replace(state.draft.values, draft.values);
-    publish({ draft });
-    // Saving follows edits even when the presentation unmounts. A failed save remains visible.
-    saveDraft();
-  };
+  const pin = () => (finite.query.isDisposed() ? () => {} : finite.query.subscribe(() => {}, { automatic: false }));
+  const drafts = createChatSessionDraft({
+    ...input,
+    read: () => state.draft,
+    publish: (draft) => publish({ draft }),
+    values: snapshots.values,
+    fail,
+    clearError: (error) => {
+      if (state.error === error) publish({ error: undefined });
+    },
+    pin,
+    idle: () => input.onIdle?.(),
+  });
+  const changeDraft = drafts.change;
+  const finite = createChatFiniteRead({
+    context: input.queryContext,
+    read: input.query,
+    issue: () => ++clock,
+    merge,
+    loaded: () => hasLoaded,
+    publish: (update) => publish({ ...update, ...(drafts.error() ? { error: drafts.error() } : {}) }),
+  });
   const start = () => {
+    observing = true;
     controller?.abort();
     controller = new AbortController();
-    reader.reset();
+    reader.restart();
     const current = ++generation;
     const signal = controller.signal;
-    revision = -1;
-    streamHasMessages = false;
-    const queried = ++clock;
     const active = () => current === generation && !signal.aborted;
-    publish({ loading: true, error: persistenceError });
-    const query = input
-      .query(signal)
-      .then((value) => {
-        if (!active()) return;
-        const snapshot = chatRendererSnapshotSchema.parse(value);
-        // Protect fields written since this read began, including actions and stream events.
-        merge(snapshot, queried);
-      })
-      .catch((error) => {
-        if (active()) {
-          publish({ loading: false });
-          fail(error);
-        }
-      });
-    if (!hydrated && !hydrating && input.loadDraft) {
-      hydrating = true;
-      hydration = input
-        .loadDraft()
-        .then((value) => {
-          const draft = chatDraftSchema.parse(value);
-          hydrated = true;
-          const values = snapshots.values.hydrate(state.draft.values, draft.values);
-          const hydratedDraft = changes === 0 ? draft : hydrateChatDraft(state.draft, draft);
-          publish({ draft: { ...hydratedDraft, values } });
-        })
-        .catch((error) => {
-          fail(error);
-        })
-        .finally(() => {
-          hydrating = false;
-        });
-    }
+    publish({ loading: !hasLoaded, error: drafts.error() });
+    const query = finite.observe();
+    const hydration = drafts.hydrate();
     // Control defaults can commit local ownership. Settle initial values before allowing
     // those effects, while the text composer remains usable during both reads.
     void Promise.all([query, hydration]).then(() => {
       if (active()) publish({ initializing: false });
     });
     if (input.watch) void watchChatSession(input.watch, signal, active, reader, fail);
-    saveDraft();
+    drafts.persist();
   };
-  const execute = async (action: ChatRendererAction, handler = input.action) => {
+  const execute = async (
+    action: ChatRendererAction,
+    handler = input.action,
+    capturedSave?: ChatSessionInput["saveDraft"],
+  ) => {
     const issued = ++clock;
-    const changed = localEdits;
+    const changed = drafts.edits();
     const expectedValues = snapshots.values.capture();
     const result = await executeChatAction(action, handler, state.conversation);
-    if (result.snapshot) merge(result.snapshot, issued, expectedValues, action);
-    if (result.draft) changeDraft(localEdits === changed ? result.draft : hydrateChatDraft(state.draft, result.draft));
+    if (result.snapshot) merge(result.snapshot, issued, expectedValues, action, capturedSave);
+    if (result.draft)
+      drafts.change(
+        drafts.edits() === changed ? result.draft : hydrateChatDraft(state.draft, result.draft),
+        capturedSave,
+      );
     return result;
   };
   const submit = createChatSubmissionRunner({
-    read: () => ({ ...state, edits: localEdits }),
+    read: () => ({ ...state, edits: drafts.edits() }),
     execute,
-    publish: (update) => publish({ ...update, ...(update.sending ? { error: persistenceError } : {}) }),
+    publish: (update) => publish({ ...update, ...(update.sending ? { error: drafts.error() } : {}) }),
     changeDraft,
     fail,
     markRecoverable: () => {
       recoverableDraft = state.draft;
     },
   });
-  const run = (action: ChatRendererAction, handler = input.action) =>
-    trackChatAction(
-      actions,
-      action.type === "submit" ? submit(action, handler) : execute(action, handler).catch(failChatAction(fail, action)),
+  const run = (action: ChatRendererAction, handler = input.action) => {
+    if (retired) return Promise.reject(new Error("Chat authority is closed"));
+    const work = input.captureWork?.() ?? (<T>(run: () => Promise<T>) => run());
+    const release = pin();
+    const capturedSave = input.captureSaveDraft?.();
+    const admittedChange = (update: Partial<ChatDraft>) => drafts.change(update, capturedSave);
+    const admittedExecute = (action: ChatRendererAction, handler = input.action) =>
+      execute(action, handler, capturedSave);
+    const running = work<Awaited<ReturnType<typeof execute>> | undefined>(() =>
+      action.type === "submit"
+        ? submit(action, handler, { execute: admittedExecute, changeDraft: admittedChange }).then(() => undefined)
+        : admittedExecute(action, handler).catch(failChatAction(fail, action)),
     );
+    return trackChatAction(actions, running, release, input.onIdle);
+  };
+  const stop = () => {
+    observing = false;
+    generation++;
+    controller?.abort();
+    reader.reset();
+    finite.stop();
+  };
   return {
-    getSnapshot: () => state,
-    subscribe: (listener: () => void) => subscribeChatState(listeners, listener),
-    accept,
-    changeDraft,
+    getSnapshot: () => (retired ? retiredState : state),
+    query: finite.query,
+    suspend: stop,
+    rebind: () => {
+      if (holds && observing) start();
+    },
+    active: () => holds > 0 || actions.size > 0 || drafts.saving(),
+    subscribe: projection.subscribe,
+    accept: (event: unknown) => {
+      if (!retired) accept(event);
+    },
+    changeDraft: (update: Partial<ChatDraft>) => {
+      if (!retired) changeDraft(update);
+    },
     ...createChatSubmissionHandoff(() => state.pending, publish),
-    restoreSubmission(id: string) {
-      const restored = restoreFailedChatSubmission(state.draft, state.pending, id);
-      if (!restored) return;
-      snapshots.values.claim(restored.draft.values);
-      changeDraft(restored.draft);
-      publish({ pending: restored.pending });
-    },
-    restoreDraft(index: number) {
-      const draft = restoreChatDraft(state.draft, index);
-      snapshots.values.claim(draft.values);
-      changeDraft(draft);
-    },
+    ...createChatDraftRestoration({
+      active: () => !retired,
+      read: () => state,
+      values: snapshots.values,
+      changeDraft,
+      publish,
+    }),
     run,
     reconnect() {
-      if (holds) start();
+      finite.query.invalidate();
+      if (holds && observing) start();
     },
     reportError: fail,
-    flushDraft: () => save,
+    flushDraft: drafts.flush,
     retain() {
-      if (holds++ === 0) start();
+      if (retired) throw new Error("Chat authority is closed");
+      if (holds++ === 0 || !observing) start();
       let released = false;
       return () => {
         if (released) return;
         released = true;
         if (--holds === 0) {
-          generation++;
-          controller?.abort();
-          reader.reset();
+          stop();
+          input.onIdle?.();
         }
       };
     },
+    retire() {
+      retired = true;
+      stop();
+      projection.setState(retiredState, true, "retireChat");
+      return Promise.allSettled([...actions]).then(() => (drafts.saving() ? drafts.flush() : undefined));
+    },
     dispose() {
-      generation++;
-      controller?.abort();
-      reader.reset();
-      listeners.clear();
-      // Abort presentation now; already-started actions still own their final draft save.
-      return Promise.allSettled([...actions, hydration]).then(() => save);
+      stop();
+      projection.dispose();
+      finite.dispose();
+      // Provider hydration remains optional; explicit session disposal can await its final save.
+      return Promise.allSettled([...actions]).then(drafts.dispose);
     },
   };
 };

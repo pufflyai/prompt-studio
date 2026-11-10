@@ -31,6 +31,8 @@ type TranslationRecord = ListExtensionAppearanceResponse["translations"][number]
 const translations = createRuntimeState(() => new Map<string, TranslationRecord>());
 const namespaceFor = (extensionId: string, owner = getRuntimeCollections()) => `ext:${owner.id}:${extensionId}`;
 
+export const getExtensionPresentationLocale = () => JSON.stringify([i18n.language, i18n.languages]);
+
 const isLocalizedString = (value: unknown): value is Extract<LocalizableString, { $l10n: string }> =>
   typeof value === "object" &&
   value !== null &&

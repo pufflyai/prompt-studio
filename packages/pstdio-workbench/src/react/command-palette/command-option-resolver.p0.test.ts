@@ -149,6 +149,8 @@ test("passes typed sibling values and cancels superseded requests", async () => 
     },
     async (_id, args, signal) => {
       requests.push({ args, signal });
+      // Keep the command active so the assertion covers cancellation of real work.
+      await new Promise<void>((resolve) => signal?.addEventListener("abort", () => resolve(), { once: true }));
       return [];
     },
     () => {},

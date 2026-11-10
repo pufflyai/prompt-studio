@@ -13,7 +13,7 @@ import type {
   JsonObject,
   Struct,
 } from "@pstdio/sdk/extensions";
-import { qualifyNavigationTarget } from "pstdio-api-contracts";
+import { qualifyNavigationTarget, queryChangeEnvelopeSchema } from "pstdio-api-contracts";
 import type { ExtensionRuntime } from "../../types/runtime";
 import { type EventDispatcher, refId } from "./dispatch";
 import type { NavigationScope } from "./navigation-scope";
@@ -110,7 +110,13 @@ const unavailableViewsApi: ExtensionViewsApi = {
 };
 
 const buildEventsApi = (dispatcher: EventDispatcher, origin: BuildEnvironmentInput): ExtensionEventsApi => ({
-  emit: async (event, payload) => dispatcher.dispatch(refId(event, origin.extensionId), payload as Struct, origin),
+  emit: async (event, payload, options) =>
+    dispatcher.dispatch(
+      refId(event, origin.extensionId),
+      payload as Struct,
+      origin,
+      options?.refresh ? queryChangeEnvelopeSchema.parse(options.refresh) : undefined,
+    ),
 });
 
 const buildCommandsApi = (

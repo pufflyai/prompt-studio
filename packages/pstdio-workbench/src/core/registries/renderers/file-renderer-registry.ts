@@ -1,4 +1,4 @@
-import type { TextFilePresentation } from "@pstdio/sdk/extensions";
+import type { QueryChangeEnvelope, TextFilePresentation } from "@pstdio/sdk/extensions";
 import type { NativeDocumentSource } from "pstdio-api-contracts";
 import type { NativeTextPresentation } from "../../../extensions/bridge/native-text-presentation";
 import type { NativeDocumentSession } from "../../native-documents/native-document-session";
@@ -41,7 +41,7 @@ export interface FileRendererRefreshOrigin {
   operationId: string;
 }
 
-export interface FileRendererRefreshEnvelope {
+export interface FileRendererRefreshEnvelope extends QueryChangeEnvelope {
   resourceKey?: string;
   origin?: FileRendererRefreshOrigin;
   revision?: string;

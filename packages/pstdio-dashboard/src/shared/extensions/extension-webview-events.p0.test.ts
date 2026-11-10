@@ -28,8 +28,8 @@ describe("webview extension invalidations", () => {
     );
     publishExtensionEventReset({});
     expect(received).toEqual([
-      { type: "changed", id: "notes.changed" },
-      { type: "changed", id: "notes.changed" },
+      { type: "changed", id: "notes.changed", projectId: "project-1" },
+      { type: "changed", id: "notes.changed", projectId: "project-1" },
       { type: "reset" },
     ]);
     dispose();
@@ -47,7 +47,7 @@ describe("webview extension invalidations", () => {
     expect(received).toEqual([]);
     publishExtensionEventReset({ projectId: "project-1" });
     publishExtensionEventReset({});
-    expect(received).toEqual([{ type: "reset" }, { type: "reset" }]);
+    expect(received).toEqual([{ type: "reset", projectId: "project-1" }, { type: "reset" }]);
     dispose();
   });
 

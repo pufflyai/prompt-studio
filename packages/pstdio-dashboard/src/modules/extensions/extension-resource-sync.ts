@@ -1,4 +1,9 @@
-import { isNavigationTarget, type PageLocation, type ResourceResolution } from "@pstdio/sdk/extensions";
+import {
+  isNavigationTarget,
+  matchesQueryDependency,
+  type PageLocation,
+  type ResourceResolution,
+} from "@pstdio/sdk/extensions";
 import type { Disposable, ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
 import { qualifyNavigationTarget } from "pstdio-api-contracts";
 import {
@@ -209,8 +214,10 @@ export const watchOpenExtensionResource = (
     if (isResourceRefreshEvent(event.id, resolver.extensionId)) void resolveOpenResource();
   });
   const placementResources = watchExtensionPlacementResources(ctx, input);
-  const unsubscribeReset = subscribeToExtensionEventReset(() => {
-    void resolveOpenResource();
+  const unsubscribeReset = subscribeToExtensionEventReset((event) => {
+    const resolver = resolverOf(ctx.getPrimaryResource());
+    if (resolver && matchesQueryDependency(event, { projectId: input.projectId, extensionId: resolver.extensionId }))
+      void resolveOpenResource();
   });
   return {
     dispose() {

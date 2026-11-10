@@ -1,5 +1,8 @@
 # Workbench cookbook
 
+For query ownership, scoped invalidation, shared editing and warm project return,
+follow [Share state and retain project data](0010-shared-state-and-project-lifetimes.md).
+
 Recipes for pages, inspectors, shared panels, editors, and navigation in the dashboard. Each recipe links to a working example.
 
 The recipes use the public `@pstdio/sdk/extensions` API. If you have not built an extension yet, start with [Write an extension](0001-authoring.md).
@@ -197,4 +200,4 @@ Typecheck the extension with `skipLibCheck: false`. Fix the field named by `pst 
 
 The linked examples are compiled and tested with Extension Lab, so they match the current API. To build your own host app on the workbench, see the [Workbench reference](../../references/workbench/0001-overview.md).
 
-*Updated at: 2026-10-18*
+*Updated at: 2026-11-09*

@@ -106,6 +106,8 @@ const registerRenderer = (
     icon: record.icon,
     body: {
       kind: "dataTable",
+      queryEvents: record.refreshEventIds,
+      queryScope: { projectId: context.projectId, extensionId: record.extensionId },
       queryMode: record.queryMode,
       resourceKind: record.resourceKind,
       toolbarActions: mapViewToolbarActions(record),

@@ -40,7 +40,7 @@ export const subscribeResourceViewDataEvents = (input: {
         enqueue(event.projectId);
     }, owner),
     subscribeToResourceRemovals((resource) => enqueue(resource.projectId), owner),
-    subscribeDashboardExtensionMetadata(() => enqueue(input.projectId()), owner),
+    subscribeDashboardExtensionMetadata(() => enqueue(input.projectId()), owner, input.projectId),
     owner.subscribeCollections((change) => {
       if (!change || !["workspaces", "sessions", "projects"].includes(change.table)) return;
       for (const { value, previousValue } of change.changes) {

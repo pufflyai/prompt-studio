@@ -16,9 +16,10 @@ export const createChatSubmissionRunner = (input: {
 }) => {
   let submission: Promise<void> | undefined;
   let sequence = 0;
-  return (action: Submit, handler: Handler) => {
+  return (action: Submit, handler: Handler, invocation?: Pick<typeof input, "execute" | "changeDraft">) => {
     if (submission) return submission;
-    const before = input.read();
+    const source = { ...input, ...invocation };
+    const before = source.read();
     sequence = Math.max(sequence, ...(before.pending ?? []).map((item) => item.sequence));
     const pending = !action.questionResponse
       ? createChatPendingSubmission(
@@ -28,39 +29,39 @@ export const createChatSubmissionRunner = (input: {
           ++sequence,
         )
       : undefined;
-    input.publish({ sending: true, pending: [...(before.pending ?? []), ...(pending ? [pending] : [])] });
-    submission = input
+    source.publish({ sending: true, pending: [...(before.pending ?? []), ...(pending ? [pending] : [])] });
+    submission = source
       .execute(action, handler)
       .then((result) => {
-        const current = input.read();
+        const current = source.read();
         // Submitted-input tags are an explicit alternative to a canonical user echo
         // (for example an acknowledged native operation that produces no chat message).
         const terminal =
           result.snapshot &&
           ("sentTag" in result.snapshot ||
             (!pending?.queue && result.snapshot.messages !== undefined && result.snapshot.streaming === false));
-        input.publish({
+        source.publish({
           sending: false,
           pending: current.pending?.flatMap((item) => {
             if (item.message.id !== pending?.message.id) return [item];
             return terminal ? [] : [{ ...item, accepted: true }];
           }),
         });
-        if (!action.questionResponse && input.read().edits === before.edits) {
-          input.changeDraft({ text: "", attachments: [] });
-          input.markRecoverable();
+        if (!action.questionResponse && source.read().edits === before.edits) {
+          source.changeDraft({ text: "", attachments: [] });
+          source.markRecoverable();
         }
       })
       .catch((error) => {
-        const current = input.read();
+        const current = source.read();
         const queued = current.pending?.find((item) => item.message.id === pending?.message.id && item.queue);
         if (queued && !queued.echoed) {
           const failed = { text: action.text, attachments: action.attachments, values: action.values };
           const recoveryAdded = !current.draft.recovered?.some(
             (draft) => chatDraftContentKey(draft) === chatDraftContentKey(failed),
           );
-          input.changeDraft(hydrateChatDraft(current.draft, failed));
-          input.publish({
+          source.changeDraft(hydrateChatDraft(current.draft, failed));
+          source.publish({
             sending: false,
             pending: current.pending?.map((item) =>
               item === queued
@@ -76,18 +77,18 @@ export const createChatSubmissionRunner = (input: {
         }
         if (!action.questionResponse && !queued?.echoed) {
           const failed = { text: action.text, attachments: action.attachments, values: action.values };
-          input.changeDraft(recoverChatDraft(current.draft, failed, current.edits === before.edits));
+          source.changeDraft(recoverChatDraft(current.draft, failed, current.edits === before.edits));
         }
-        input.publish({
+        source.publish({
           sending: false,
-          pending: input.read().pending?.filter((item) => item.message.id !== pending?.message.id),
+          pending: source.read().pending?.filter((item) => item.message.id !== pending?.message.id),
         });
-        input.fail(error);
+        source.fail(error);
         throw error;
       })
       .finally(() => {
         submission = undefined;
-        input.publish({ sending: false });
+        source.publish({ sending: false });
       });
     return submission;
   };

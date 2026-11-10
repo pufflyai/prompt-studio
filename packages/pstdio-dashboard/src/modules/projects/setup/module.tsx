@@ -137,18 +137,22 @@ export const createProjectOpeningModule = () => {
         else ready();
       });
       const registration = subscribeDashboardExtensionsReadyProject(ctx, ready);
-      const metadata = subscribeDashboardExtensionMetadata(() => {
-        const pending = request;
-        if (!pending) removeOrphans();
-        if (!pending?.projectId || !pending.views) return;
-        const allowed = new Set(
-          (getCachedDashboardExtensionMetadata(pending.projectId)?.projectSetups ?? []).map(
-            ({ view }) => `${view.extensionId}.view.${view.id}`,
-          ),
-        );
-        pending.views = pending.views.filter((viewId) => allowed.has(viewId));
-        if (pending.viewId && !allowed.has(pending.viewId)) next(pending);
-      });
+      const metadata = subscribeDashboardExtensionMetadata(
+        () => {
+          const pending = request;
+          if (!pending) removeOrphans();
+          if (!pending?.projectId || !pending.views) return;
+          const allowed = new Set(
+            (getCachedDashboardExtensionMetadata(pending.projectId)?.projectSetups ?? []).map(
+              ({ view }) => `${view.extensionId}.view.${view.id}`,
+            ),
+          );
+          pending.views = pending.views.filter((viewId) => allowed.has(viewId));
+          if (pending.viewId && !allowed.has(pending.viewId)) next(pending);
+        },
+        undefined,
+        () => request?.projectId ?? getDashboardSelectedProjectId(ctx),
+      );
       const layout = ctx.layout.store.subscribe(() => {
         if (!rotating && !request) removeOrphans();
         const pending = request;

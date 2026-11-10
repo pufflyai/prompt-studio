@@ -25,7 +25,6 @@ export const ResourceLinkPicker = (props: ResourceLinkPickerProps) => {
   useEffect(
     () =>
       service.subscribe(() => {
-        setSelected(undefined);
         setRevision((value) => value + 1);
       }),
     [service],
@@ -35,14 +34,18 @@ export const ResourceLinkPicker = (props: ResourceLinkPickerProps) => {
     let cancelled = false;
     const controller = new AbortController();
     setLoading(true);
-    setResults([]);
-    setSelected(undefined);
     setError(undefined);
     const timer = setTimeout(() => {
       void service
         .search(query, controller.signal)
         .then((items) => {
-          if (!cancelled) setResults(items.filter((item) => resourceKey(item.resource) !== excludeKey));
+          if (cancelled) return;
+          const next = items.filter((item) => resourceKey(item.resource) !== excludeKey);
+          setResults(next);
+          setSelected(
+            (selected) =>
+              selected && next.find((item) => resourceKey(item.resource) === resourceKey(selected.resource)),
+          );
         })
         .catch((cause: unknown) => {
           if (!cancelled) setError(cause instanceof Error ? cause.message : String(cause));
@@ -67,6 +70,7 @@ export const ResourceLinkPicker = (props: ResourceLinkPickerProps) => {
         onChange={(event) => {
           setQuery(event.target.value);
           setSelected(undefined);
+          setResults([]);
         }}
         autoFocus
       />

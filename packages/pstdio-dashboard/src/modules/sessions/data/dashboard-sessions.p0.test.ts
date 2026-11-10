@@ -1,8 +1,10 @@
 import { expect, test } from "bun:test";
 import { getCollection, getRuntimeCollections, getWriter } from "@/lib/sync/collections";
+import { subscribeCoreViewDataEvents } from "@/shared/extensions/core-view-data-events";
+import type { ExtensionRefreshEvent } from "@/shared/extensions/extension-webview-broadcast";
 import { buildDashboardSessionsFromRows, createDashboardSessions, findDashboardSession } from "./dashboard-sessions";
 
-test("ten thousand sessions reuse their snapshot during unrelated sync writes", () => {
+test("ten thousand observed sessions reuse their snapshot during unrelated sync writes", async () => {
   const writer = getWriter("sessions")!;
   const rows = Array.from({ length: 10_000 }, (_, index) => ({
     id: `cache-scale-${index}`,
@@ -10,8 +12,14 @@ test("ten thousand sessions reuse their snapshot during unrelated sync writes", 
     updated_at: new Date(index * 1000).toISOString(),
   }));
   const previous = [...getCollection("sessions").values()];
-  writer.truncateAndWrite(rows);
+  const events: ExtensionRefreshEvent[] = [];
+  const stop = subscribeCoreViewDataEvents((event) => events.push(event));
   try {
+    writer.truncateAndWrite(rows);
+    await Promise.resolve();
+    const event = events.find((event) => event.projectId === "cache-scale-project");
+    expect(event?.resourceIds).toHaveLength(10_000);
+    expect(event?.changes).toHaveLength(10_000);
     const snapshot = createDashboardSessions("cache-scale-project");
     expect(snapshot).toHaveLength(10_000);
     expect(snapshot[0].id).toBe("cache-scale-9999");
@@ -27,6 +35,7 @@ test("ten thousand sessions reuse their snapshot during unrelated sync writes", 
     writer.upsert({ ...rows[0], updated_at: "2099-01-01T00:00:00Z" });
     expect(createDashboardSessions("cache-scale-project")[0].id).toBe(rows[0].id);
   } finally {
+    stop();
     writer.truncateAndWrite(previous);
   }
 });

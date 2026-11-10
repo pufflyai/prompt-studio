@@ -53,7 +53,7 @@ export const createClient = (options: ClientOptions = {}): PstdioClient => {
     views: createBoardViewsClient(request),
     projects: createProjectClient(request),
     filesystem: createFilesystemClient(request),
-    workspaces: createWorkspaceClient(request),
+    workspaces: createWorkspaceClient(request, streams),
     sessions: createSessionClient(request, streams),
     skills: createSkillClient(request),
     agents: createAgentClient(request, options),
