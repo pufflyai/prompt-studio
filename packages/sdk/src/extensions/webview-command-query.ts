@@ -113,14 +113,20 @@ const createProjection = <T>(
   };
   const read = async (operation: "read" | "refresh", signal?: AbortSignal) => {
     if (!current()) throw new Error("Command query authority is closed");
-    return requests.read(definition, operation, signal, (next) => {
-      signal?.throwIfAborted();
-      if (!current() || !next) throw new Error("Command query authority is closed");
-      apply(next);
-      if (!current()) throw new Error("Command query authority is closed");
-      if (snapshot.error) throw snapshot.error;
-      return snapshot.data as T;
-    });
+    const issued = publication;
+    try {
+      return await requests.read(definition, operation, signal, (next) => {
+        signal?.throwIfAborted();
+        if (!current() || !next) throw new Error("Command query authority is closed");
+        apply(next);
+        if (!current()) throw new Error("Command query authority is closed");
+        if (snapshot.error) throw snapshot.error;
+        return snapshot.data as T;
+      });
+    } catch (error) {
+      if (!signal?.aborted && publication === issued) fail(error);
+      throw error;
+    }
   };
   const dispose = () => {
     if (disposed) return;

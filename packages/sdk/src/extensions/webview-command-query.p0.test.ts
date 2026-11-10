@@ -297,3 +297,27 @@ test("the supported extension override qualifies command query events before adm
     f.client.queries.dispose();
   }
 });
+
+test.each([
+  false,
+  true,
+])("finite transport errors preserve accepted content and respect newer publication=%s", async (newer) => {
+  const f = bridge();
+  const stop = f.query.subscribe(() => {});
+  const observation = f.calls[0]!;
+  observation.reply.resolve(f.snapshot(1, "Accepted"));
+  await turn();
+  const pending = f.query.refresh();
+  void pending.catch(() => {});
+  const refresh = f.calls.find((call) => call.input.operation === "refresh")!;
+  try {
+    if (newer) f.emit(observation.input.requestId, f.snapshot(2, "Newer accepted"));
+    refresh.reply.reject(new Error("Transport lost"));
+    await expect(pending).rejects.toThrow("Transport lost");
+    expect(f.query.getSnapshot().data?.title).toBe(newer ? "Newer accepted" : "Accepted");
+    expect(f.query.getSnapshot().error?.message).toBe(newer ? undefined : "Transport lost");
+  } finally {
+    stop();
+    f.client.queries.dispose();
+  }
+});

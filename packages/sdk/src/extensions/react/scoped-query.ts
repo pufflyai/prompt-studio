@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from "react";
+import { useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { ScopedQuery } from "../scoped-query";
 import type { WebviewCommandQuery } from "../webview-command-query";
 import type { createWebviewQueryClient, WebviewQueryDescriptor } from "../webview-query";
@@ -24,7 +24,23 @@ export const useScopedQuery = <T>(query: ScopedQuery<T>, active = true) => {
 /** Observe a read-only host projection; hiding the view releases its optional host membership. */
 export const useWebviewCommandQuery = <T>(query: WebviewCommandQuery<T>, active = true) => {
   const snapshot = useScopedQueries([query], active)[0]!;
-  return { ...snapshot, refresh: query.refresh };
+  const current = useRef<{ query: WebviewCommandQuery<T>; abort: AbortController } | undefined>(undefined);
+  useLayoutEffect(() => {
+    if (!active) return;
+    const owner = { query, abort: new AbortController() };
+    current.current = owner;
+    return () => {
+      if (current.current === owner) current.current = undefined;
+      owner.abort.abort();
+    };
+  }, [query, active]);
+  const refresh = () => {
+    const owner = current.current;
+    if (!owner || owner.query !== query) return;
+    // UI Retry is optional work; errors are already published in the query snapshot.
+    void query.refresh(owner.abort.signal).catch(() => {});
+  };
+  return { ...snapshot, refresh };
 };
 
 const selectQueries = <T>(queries: readonly QueryObservation<T>[]) => {
