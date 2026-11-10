@@ -17,10 +17,16 @@ export const dataTableRecipe = defineSlotRecipe({
       gap: "2xs",
       color: "fg.muted",
       focusVisibleRing: "inside",
-      "&[data-table-chart=bar-chart]": { h: "auto", minH: "var(--table-chart-height, {sizes.6})" },
+      "&[data-table-chart=bar-chart]": {
+        h: "auto",
+        minH: "var(--table-chart-height, {sizes.6})",
+        justifyContent: "center",
+        // The SVG adds 10% padding above and below the visible bar.
+        gap: "calc(var(--table-bar-height, {sizes.2.5}) * 0.2)",
+      },
     },
     sparkline: { display: "block", w: "full", h: "full", overflow: "visible" },
-    bar: { display: "flex", flexDirection: "column", justifyContent: "center", flex: "1 0 auto", minW: "0" },
+    bar: { display: "flex", flexDirection: "column", justifyContent: "center", flex: "0 0 auto", minW: "0" },
     barPlot: { display: "block", flexShrink: "0", w: "full", h: "var(--table-bar-height, {sizes.2.5})" },
   },
   variants: {
