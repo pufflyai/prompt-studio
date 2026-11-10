@@ -26,7 +26,11 @@ after registration; idle reservations do not keep a CLI alive. First-time prepar
 at requested priority. Watcher initialization and reconciliation never gate adoption, for either source-specific or
 global refresh; explicit watcher readiness remains separately observable. Identical jobs share an operation while
 callers retain independent cancellation. Source-watch registration sends only install name, source path and source hash;
-changing database feedback cannot create distinct registrations. Inventory admits one fresh source inspection per request
+changing database feedback cannot create distinct registrations. Each source/root watcher owns one running registration
+and one coalesced pending generation. Rows are read fresh when a generation starts; distinct paths or any full request
+merge into a full refresh. A caller lends its live continuation to its pending generation and running predecessor,
+and settles with its own generation. Failure still drains an already requested pending generation; disposal closes
+admission, settles pending intent and awaits the running update before removing the watch id. Inventory admits one fresh source inspection per request
 at a time and releases its waiter on HTTP or command cancellation. Queue saturation and worker transport/lifecycle failures
 remain transient host errors; loaders rethrow them instead of caching empty contributions as source import diagnostics.
 The admission bound rejects excess new jobs and never evicts accepted background checks. Webview compilation still uses the fresh child process required by ADR 0070.

@@ -5,6 +5,7 @@ import {
 } from "pstdio-extensions/authoring";
 import { withPreparationContinuation } from "pstdio-extensions/preparation-client";
 import { runExtensionPreparation } from "./extension-preparation";
+import { createPreparationWatchRefresh } from "./preparation-watch-refresh";
 
 export type { ExtensionSourceWatcher } from "pstdio-extensions/authoring";
 
@@ -113,7 +114,7 @@ export const createExtensionSourceWatcher = async (input: CreateExtensionSourceW
       }
     }
   });
-  const refresh = async (sourcePath?: string) => {
+  const refreshOwner = createPreparationWatchRefresh(async (sourcePath, signal) => {
     if (disposed) return;
     const rows = (await input.listInstalledSources()).map(({ install_name, source_path, source_hash }) => ({
       install_name,
@@ -124,9 +125,10 @@ export const createExtensionSourceWatcher = async (input: CreateExtensionSourceW
     await runExtensionPreparation(
       "watch.update",
       { id, kind: "sources", rows, sourcePath },
-      { priority: "background" },
+      { priority: "background", signal },
     );
-  };
+  });
+  const refresh = refreshOwner.refresh;
   try {
     await refresh();
     registered = true;
@@ -134,6 +136,7 @@ export const createExtensionSourceWatcher = async (input: CreateExtensionSourceW
     disposed = true;
     attachments.clear();
     unsubscribe();
+    await refreshOwner.dispose();
     await Promise.allSettled([...running.values()].map((change) => change.work));
     throw error;
   }
@@ -143,6 +146,7 @@ export const createExtensionSourceWatcher = async (input: CreateExtensionSourceW
       disposed = true;
       attachments.clear();
       unsubscribe();
+      await refreshOwner.dispose();
       await Promise.allSettled(
         [...running.values()].map((change) => change.work).concat(attaching ?? Promise.resolve()),
       );
