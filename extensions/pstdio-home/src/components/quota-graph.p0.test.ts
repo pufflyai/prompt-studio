@@ -8,6 +8,7 @@ test("Home graphs an exhausted quota with an accessible value and leaves unknown
   const html = renderToStaticMarkup(
     createElement(ChakraProvider, {
       value: psTheme,
+      // biome-ignore lint/correctness/noChildrenProp: ChakraProvider requires children in the props of this non-JSX render fixture.
       children: createElement(QuotaGraph, {
         loading: false,
         onRefresh: () => {},
