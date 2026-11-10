@@ -38,6 +38,11 @@ const writeCertificate = (root: string) => {
   return { key, cert };
 };
 
+const startSyncPeer = (root: string) => {
+  const tls = writeCertificate(root);
+  return { peer: createPackagedSyncPeer({ key: Bun.file(tls.key), cert: Bun.file(tls.cert) }), cert: tls.cert };
+};
+
 const startDevice = async (root: string, env: Record<string, string>) => {
   await mkdir(root, { recursive: true });
   const host = await startPackagedServe(root, env);
@@ -140,6 +145,15 @@ const write = (device: Awaited<ReturnType<typeof startDevice>>, projectId: strin
     }),
   );
 
+const retireDeviceHome = async (child: Parameters<typeof stopProcess>[0], home: string, failures: unknown[]) => {
+  try {
+    await stopProcess(child);
+    await rm(home, { recursive: true, force: true });
+  } catch (error) {
+    failures.push(error);
+  }
+};
+
 setupPackagedSmokeTests();
 test(
   "a new device opens its cloud project from the picker, prepares its folder, and restores shared files",
@@ -147,11 +161,11 @@ test(
     const startedAt = Date.now();
     const phase = (name: string) => logTestPhase(`Cloud project opening: ${name} (+${Date.now() - startedAt}ms)`);
     const root = await mkdtemp(join(tmpdir(), "packaged-two-device-sync-"));
-    const tls = writeCertificate(root);
-    const peer = createPackagedSyncPeer({ key: Bun.file(tls.key), cert: Bun.file(tls.cert) });
+    const { peer, cert } = startSyncPeer(root);
     let devices: Awaited<ReturnType<typeof startPickerDevices>> | undefined;
     let picker: Awaited<ReturnType<typeof openCloudProjectInPicker>> | undefined;
     const failures: unknown[] = [];
+    let firstHomeCleanup: Promise<void> | undefined;
     try {
       const source = await writeSharedNotesExtension(root);
       const env = {
@@ -160,7 +174,7 @@ test(
           e2eExtension("pstdio-cloud"),
         ]),
         PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1",
-        NODE_EXTRA_CA_CERTS: tls.cert,
+        NODE_EXTRA_CA_CERTS: cert,
       };
       const started = await startPickerDevices(root, env, prepareRepository(root), async (first, repository) => {
         phase("first device and checkout ready");
@@ -331,6 +345,8 @@ test(
       const madeLocal = history.events.indexOf("local", firstSynced);
       expect(history.events.slice(firstSynced, madeLocal)).toContain("offline");
       expect(history.events.slice(firstSynced, madeLocal)).not.toContain("first-download-incomplete");
+      // Retire the finished source while the other device restarts cold; drain removal before root cleanup.
+      firstHomeCleanup = retireDeviceHome(first.host.child, join(root, "first"), failures);
       const stopped = await Promise.allSettled([picker.close(), peer.stop(), stopProcess(second.host.child)]);
       picker = undefined;
       const stoppingFailures = stopped.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
@@ -352,7 +368,7 @@ test(
     } finally {
       const cleanup = await Promise.allSettled([
         devices?.browser.close(),
-        devices ? stopProcess(devices.first.host.child) : undefined,
+        firstHomeCleanup ?? (devices ? stopProcess(devices.first.host.child) : undefined),
         devices ? stopProcess(devices.second.host.child) : undefined,
         peer.stop(),
       ]);
