@@ -48,6 +48,11 @@ test("inventory change checks leave a live frontend continuation admitted and st
       status: "error",
       lastError: { message: "Current frontend diagnostic" },
     });
+    const cancelled = new AbortController();
+    cancelled.abort(new Error("Inventory request closed"));
+    await expect(listProjectExtensionInventory(handle.deps, id, cancelled.signal)).rejects.toThrow(
+      "Inventory request closed",
+    );
   } finally {
     release.resolve();
     await continuation;

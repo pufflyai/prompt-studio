@@ -2,17 +2,21 @@ import { isMainThread, Worker } from "node:worker_threads";
 import { isPackagedRuntime, registerFileMutationWorker, resolvePstdioHome } from "pstdio-paths";
 
 import { ownPreparationCommands } from "./preparation-command";
+import { PreparationUnavailableError, preparationUnavailable } from "./preparation-error";
+
+export { PreparationUnavailableError } from "./preparation-error";
+
 import {
   activePreparationPriority,
+  cancelQueuedPreparation,
   createJob,
   type Job,
   orderPreparationQueue,
   type PreparationOptions,
   preparationJobMessage,
   preparationQueuePriority,
-  priorityFor,
   settlePreparationJob,
-  type Waiter,
+  waitForPreparation,
 } from "./preparation-queue";
 
 export { createPreparationScope, withBackgroundPreparation, withRequestedPreparation } from "./preparation-priority";
@@ -27,6 +31,14 @@ const preparationReplyError = (error?: { message: string }) =>
 export interface PreparationEvent {
   kind?: string;
   [key: string]: unknown;
+}
+
+interface PreparationMessage {
+  kind?: string;
+  event: PreparationEvent;
+  id?: number;
+  error?: { message: string };
+  value?: unknown;
 }
 
 // One queue also bounds the child processes started by a preparation job. Keeping admission
@@ -51,6 +63,7 @@ export const createPreparationClient = (
   let workerFactory = createWorker;
   let ready = false;
   let active: Job | undefined;
+  let dispatched = false;
   let nextId = 0;
   let backgroundPump: ReturnType<typeof setTimeout> | undefined;
   let stopping: Promise<void> | undefined;
@@ -61,44 +74,57 @@ export const createPreparationClient = (
   const jobs = new Map<string, Job>();
   const listeners = new Set<(event: PreparationEvent) => void>();
   const continuations = createPreparationContinuations(() => {
-    if (active && queued.some((job) => queuedPriority(job) < activePreparationPriority(active!, queuedPriority)))
+    if (
+      dispatched &&
+      active &&
+      queued.some((job) => queuedPriority(job) < activePreparationPriority(active!, queuedPriority))
+    )
       replaceWorker(active);
     pump();
   });
   const queuedPriority = preparationQueuePriority(continuations);
   const settle = (job: Job, error: unknown, value?: unknown) => settlePreparationJob(jobs, job, error, value);
-  const fail = (current: Worker, error: unknown, notify = true) => {
-    if (worker !== current) return;
-    worker = undefined;
-    ready = false;
+  const settleAll = (error: unknown) => {
     if (active) settle(active, error);
     active = undefined;
+    dispatched = false;
     for (const job of queued.splice(0)) settle(job, error);
-    if (notify) {
-      restarting = retire(current).finally(() => {
-        restarting = undefined;
-        if (!stopping && queued.length) {
-          start();
-          pump();
-        }
-      });
-      for (const listener of listeners) listener({ kind: "worker-lost" });
-    }
+  };
+  const restart = (current: Worker) => {
+    restarting = retire(current).finally(() => {
+      restarting = undefined;
+      if (!stopping && (queued.length || active)) {
+        start();
+        pump();
+      }
+    });
+    for (const listener of listeners) listener({ kind: "worker-lost" });
+  };
+  const fail = (current: Worker, error: unknown, notify = true) => {
+    if (worker !== current) return;
+    error = preparationUnavailable(error);
+    worker = undefined;
+    ready = false;
+    settleAll(error);
+    if (notify) restart(current);
   };
   const retire = async (current: Worker) => {
     await retirements.get(current)?.();
     await current.terminate();
   };
   const pump = (backgroundReady = false) => {
-    if (!worker || !ready || active || stopping) return;
-    if (workerFactory !== createWorker) return replaceWorker();
-    if (!orderPreparationQueue(queued, queuedPriority, continuations)) {
+    if (!worker || !ready || dispatched || stopping) return;
+    if (workerFactory !== createWorker) return replaceWorker(active);
+    // An interrupted job keeps the execution slot while its worker retires. Select
+    // its replacement before returning it to the bounded pending queue.
+    const pending = active ? [...queued, active] : queued;
+    if (!orderPreparationQueue(pending, queuedPriority, continuations)) {
       worker.unref();
       return;
     }
     // Let foreground continuations enqueue their next step before resuming speculative
     // work; starting it inside the response event otherwise causes repeated retirement.
-    if (queued[0] && queuedPriority(queued[0]) > 0 && !backgroundReady) {
+    if (pending[0] && queuedPriority(pending[0]) > 0 && !backgroundReady) {
       backgroundPump ??= setTimeout(() => {
         backgroundPump = undefined;
         pump(true);
@@ -106,24 +132,17 @@ export const createPreparationClient = (
       worker.unref();
       return;
     }
-    active = queued.shift();
+    active = pending.shift();
+    if (pending !== queued) queued.splice(0, queued.length, ...pending);
     if (!active) {
       worker.unref();
       return;
     }
+    dispatched = true;
     worker.ref();
     worker.postMessage(preparationJobMessage(active));
   };
-  const onMessage = (
-    current: Worker,
-    message: {
-      kind?: string;
-      event: PreparationEvent;
-      id?: number;
-      error?: { message: string };
-      value?: unknown;
-    },
-  ) => {
+  const onMessage = (current: Worker, message: PreparationMessage) => {
     if (worker !== current) return;
     if (message.kind === "event") {
       for (const listener of listeners) listener(message.event);
@@ -135,16 +154,23 @@ export const createPreparationClient = (
       pump();
       return;
     }
-    if (!active || message.id !== active.id) return;
+    if (!dispatched || !active || message.id !== active.id) return;
     const job = active;
     active = undefined;
+    dispatched = false;
     settle(job, preparationReplyError(message.error), message.value);
     pump();
   };
   const start = () => {
     if (worker || restarting) return;
     workerFactory = createWorker;
-    const current = workerFactory();
+    let current: Worker;
+    try {
+      current = workerFactory();
+    } catch (error) {
+      settleAll(preparationUnavailable(error));
+      return;
+    }
     worker = current;
     const releaseLocks = registerFileMutationWorker(current);
     const stopCommands = ownPreparationCommands(current);
@@ -162,16 +188,9 @@ export const createPreparationClient = (
     if (!current) return;
     worker = undefined;
     ready = false;
-    active = undefined;
-    if (resume) queued.push(resume);
-    restarting = retire(current).finally(() => {
-      restarting = undefined;
-      if (!stopping && queued.length) {
-        start();
-        pump();
-      }
-    });
-    for (const listener of listeners) listener({ kind: "worker-lost" });
+    active = resume;
+    dispatched = false;
+    restart(current);
   };
   return {
     withContinuation: continuePreparation(continuations),
@@ -188,63 +207,54 @@ export const createPreparationClient = (
     },
     run: <T>(task: string, input: unknown, options: PreparationOptions = {}): Promise<T> => {
       if (!isMainThread) throw new Error("Preparation workers must execute nested preparation directly.");
-      if (stopping) return Promise.reject(new Error("Extension preparation is stopping."));
+      if (stopping) return Promise.reject(new PreparationUnavailableError("Extension preparation is stopping."));
       if (options.signal?.aborted) return Promise.reject(options.signal.reason);
       const home = options.home ?? resolvePstdioHome();
       homes.set(home, { home, env: { ...process.env } });
       const key = `${home}\0${task}\0${options.key ?? JSON.stringify(input)}`;
+      const scope = preparationPriority.getStore();
       let job = jobs.get(key);
       if (!job) {
-        if (queued.length >= 128) return Promise.reject(new Error("Extension preparation queue is full."));
+        if (queued.length >= 128)
+          return Promise.reject(new PreparationUnavailableError("Extension preparation queue is full."));
         job = createJob(++nextId, key, task, input, home);
         jobs.set(key, job);
         queued.push(job);
       }
       const owned = job;
-      const scope = preparationPriority.getStore();
       continuations.retain(scope);
       const request = () => {
         if (stopping || jobs.get(owned.key) !== owned) return;
-        if (active && queued.some((job) => queuedPriority(job) < activePreparationPriority(active!, queuedPriority)))
+        if (
+          dispatched &&
+          active &&
+          queued.some((job) => queuedPriority(job) < activePreparationPriority(active!, queuedPriority))
+        )
           replaceWorker(active);
         start();
         pump();
       };
-      scope?.jobs.add(request);
-      const result = new Promise<unknown>((resolve, reject) => {
-        const abort = () => {
-          owned.waiters.delete(waiter);
-          waiter.removeAbort();
-          reject(options.signal!.reason);
-          if (owned.waiters.size) {
-            request();
-            return;
+      const result = waitForPreparation(owned, options, scope, request, () => {
+        cancelQueuedPreparation(jobs, queued, owned);
+        // An unresolved module evaluation must not outlive its last caller.
+        if (active === owned) {
+          if (dispatched && worker) replaceWorker();
+          else {
+            active = undefined;
+            pump();
           }
-          jobs.delete(owned.key);
-          const index = queued.indexOf(owned);
-          if (index >= 0) queued.splice(index, 1);
-          if (active === owned && worker) {
-            // Evaluation can contain an unresolved top-level await. Abort children and retire
-            // this worker so the cancelled job cannot hold every later tool request hostage.
-            replaceWorker();
-          }
-        };
-        const waiter: Waiter = {
-          resolve,
-          reject,
-          scope,
-          preserveActiveContinuation: options.preserveActiveContinuation,
-          priority: () => priorityFor(options, scope),
-          removeAbort: () => options.signal?.removeEventListener("abort", abort),
-        };
-        owned.waiters.add(waiter);
-        options.signal?.addEventListener("abort", abort, { once: true });
+        }
       });
-      if (active && active !== owned && activePreparationPriority(active, queuedPriority) > queuedPriority(owned))
+      if (
+        dispatched &&
+        active &&
+        active !== owned &&
+        activePreparationPriority(active, queuedPriority) > queuedPriority(owned)
+      )
         replaceWorker(active);
       start();
       pump();
-      return result.finally(() => scope?.jobs.delete(request)) as Promise<T>;
+      return result as Promise<T>;
     },
     stop: (finalCleanup = true) => {
       if (stopping) return stopping;
@@ -252,9 +262,9 @@ export const createPreparationClient = (
       continuations.clear();
       if (backgroundPump) clearTimeout(backgroundPump);
       backgroundPump = undefined;
-      const error = new Error("Extension preparation stopped.");
+      const error = new PreparationUnavailableError("Extension preparation stopped.");
       if (current) fail(current, error, false);
-      else for (const job of queued.splice(0)) settle(job, error);
+      else settleAll(error);
       stopping = (async () => {
         if (current) await retire(current);
         if (restarting) await restarting;

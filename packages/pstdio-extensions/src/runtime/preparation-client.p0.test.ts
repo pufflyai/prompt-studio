@@ -677,3 +677,70 @@ test("fresh inventory stays responsive during unchanged attachment reconciliatio
     await Promise.allSettled([attachment, inventory]);
   }
 });
+
+test("saturation rejects new work transiently and preserves every admitted background check", async () => {
+  const client = fixture();
+  const blocked = gate();
+  const first = client.run("wait", { name: "active", url: blocked.url });
+  await blocked.entered.promise;
+  const background = Array.from({ length: 128 }, (_, index) =>
+    client.run("value", { name: `background-${index}` }, { priority: "background" }),
+  );
+  try {
+    await expect(client.run("value", { name: "overflow" })).rejects.toMatchObject({
+      code: "extension_preparation_unavailable",
+    });
+    blocked.release.resolve();
+    await first;
+    expect(await Promise.all(background)).toHaveLength(128);
+    expect(await client.run("value", { name: "requested" })).toMatchObject({ name: "requested" });
+  } finally {
+    blocked.release.resolve();
+    await Promise.allSettled([first, ...background]);
+  }
+});
+
+test("preemption at capacity preserves the interrupted check and every queued owner", async () => {
+  const client = fixture();
+  const blocked = gate();
+  const first = client.run("wait", { name: "interrupted", url: blocked.url }, { priority: "background" });
+  await blocked.entered.promise;
+  const background = Array.from({ length: 127 }, (_, index) =>
+    client.run("value", { name: `background-${index}` }, { priority: "background" }),
+  );
+  const requested = client.run("value", { name: "requested" });
+  try {
+    await expect(client.run("value", { name: "overflow" })).rejects.toMatchObject({
+      code: "extension_preparation_unavailable",
+    });
+    expect(await requested).toMatchObject({ name: "requested", sequence: 1 });
+    blocked.release.resolve();
+    expect(await first).toMatchObject({ name: "interrupted" });
+    expect(await Promise.all(background)).toHaveLength(127);
+  } finally {
+    blocked.release.resolve();
+    await Promise.allSettled([first, requested, ...background]);
+  }
+});
+
+test("cancelling an interrupted owner keeps its idle replacement worker", async () => {
+  const client = fixture();
+  const blocked = gate();
+  const controller = new AbortController();
+  let workers = 0;
+  client.subscribe((event) => {
+    if (event.kind === "worker-ready" && ++workers === 2) controller.abort(new Error("Inspection closed."));
+  });
+  const first = client
+    .run("wait", { name: "interrupted", url: blocked.url }, { priority: "background", signal: controller.signal })
+    .catch((error) => error);
+  await blocked.entered.promise;
+  try {
+    expect(await client.run("value", { name: "requested" })).toMatchObject({ name: "requested", sequence: 1 });
+    expect(await first).toMatchObject({ message: "Inspection closed." });
+    expect(workers).toBe(2);
+  } finally {
+    blocked.release.resolve();
+    await first;
+  }
+});

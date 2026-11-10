@@ -5,7 +5,12 @@ import { getExtensionCatalog } from "./extension-catalog";
 import { runExtensionPreparation } from "./extension-preparation";
 import { toProjectExtensionInstance } from "./project-extension-instance";
 
-export const listProjectExtensionInventory = async (deps: ExtensionsRouteDeps, projectId: string) => {
+export const listProjectExtensionInventory = async (
+  deps: ExtensionsRouteDeps,
+  projectId: string,
+  signal?: AbortSignal,
+) => {
+  signal?.throwIfAborted();
   const key = (source: { id: string; source_path: string }) => `${source.id}\0${source.source_path}`;
   const hashes = new Map<string, string | null>();
   let records = await deps.extensionService.listProjectExtensionInstances(projectId);
@@ -15,18 +20,18 @@ export const listProjectExtensionInventory = async (deps: ExtensionsRouteDeps, p
     if (!missing.length) break;
     // Inventory checks discover edits; polling status must not repeatedly retire a
     // live frontend validation as though every source were a requested tool.
-    await Promise.all(
-      missing.map(async ({ installedSource }) => {
-        hashes.set(
-          key(installedSource),
-          await runExtensionPreparation<string>(
-            "source.hash",
-            { sourcePath: installedSource.source_path },
-            { preserveActiveContinuation: true },
-          ),
-        );
-      }),
-    );
+    // Each request owns at most one queued inspection, including while live work
+    // holds admission. Abandoning its read releases that waiter's queue ownership.
+    for (const { installedSource } of missing) {
+      hashes.set(
+        key(installedSource),
+        await runExtensionPreparation<string>(
+          "source.hash",
+          { sourcePath: installedSource.source_path },
+          { preserveActiveContinuation: true, signal },
+        ),
+      );
+    }
     // A build or source replacement can finish while inspection waits. Read its
     // current feedback, and inspect any new source before describing its edits.
     records = await deps.extensionService.listProjectExtensionInstances(projectId);

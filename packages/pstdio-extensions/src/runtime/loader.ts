@@ -5,6 +5,7 @@ import type { ExtensionDiagnostic } from "../types/runtime";
 import { createDiagnostic } from "./diagnostics";
 import { discoverExtensionPackages } from "./discovery";
 import { type ExtensionApiProvider, type PackageManifest, readPackageManifest } from "./package-manifest";
+import { PreparationUnavailableError } from "./preparation-error";
 import { inspectRevisionInputs } from "./prepare-revision";
 import { retainPreparedRevision } from "./prepared-cache";
 import { type PreparedExtensionRevision, prepareExtensionRevision } from "./prepared-revision";
@@ -125,6 +126,7 @@ export const loadExtensionPackage = async (
       definition = mod.default as unknown as ExtensionDefinition;
     }
   } catch (error) {
+    if (error instanceof PreparationUnavailableError) throw error;
     diagnostics.push(
       createDiagnostic({
         code: "extension_import_failed",

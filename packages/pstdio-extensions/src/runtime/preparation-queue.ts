@@ -99,3 +99,39 @@ export const activePreparationPriority = (job: Job, queuedPriority: (job: Job) =
   const priority = queuedPriority(job);
   return Number.isFinite(priority) ? priority : Math.min(...[...job.waiters].map((waiter) => waiter.priority()));
 };
+
+export const cancelQueuedPreparation = (jobs: Map<string, Job>, queued: Job[], job: Job) => {
+  if (jobs.get(job.key) === job) jobs.delete(job.key);
+  const index = queued.indexOf(job);
+  if (index >= 0) queued.splice(index, 1);
+};
+
+export const waitForPreparation = (
+  job: Job,
+  options: PreparationOptions,
+  scope: ReturnType<typeof preparationPriority.getStore>,
+  request: () => void,
+  cancel: () => void,
+) => {
+  scope?.jobs.add(request);
+  const result = new Promise<unknown>((resolve, reject) => {
+    const abort = () => {
+      job.waiters.delete(waiter);
+      waiter.removeAbort();
+      reject(options.signal!.reason);
+      if (job.waiters.size) request();
+      else cancel();
+    };
+    const waiter: Waiter = {
+      resolve,
+      reject,
+      scope,
+      preserveActiveContinuation: options.preserveActiveContinuation,
+      priority: () => priorityFor(options, scope),
+      removeAbort: () => options.signal?.removeEventListener("abort", abort),
+    };
+    job.waiters.add(waiter);
+    options.signal?.addEventListener("abort", abort, { once: true });
+  });
+  return result.finally(() => scope?.jobs.delete(request));
+};

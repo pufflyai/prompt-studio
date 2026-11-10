@@ -8,7 +8,12 @@ import { runExtensionPreparation } from "./extension-preparation";
 
 export type { ExtensionSourceWatcher } from "pstdio-extensions/authoring";
 
-export type CreateExtensionSourceWatcherInput = LocalWatcherInput & {
+type InstalledSourceRegistration = Awaited<ReturnType<LocalWatcherInput["listInstalledSources"]>>[number] & {
+  source_hash?: string | null;
+};
+
+export type CreateExtensionSourceWatcherInput = Omit<LocalWatcherInput, "listInstalledSources"> & {
+  listInstalledSources: () => Promise<InstalledSourceRegistration[]>;
   afterSourceChanged?: (sourcePath: string) => Promise<unknown>;
 };
 
@@ -110,7 +115,11 @@ export const createExtensionSourceWatcher = async (input: CreateExtensionSourceW
   });
   const refresh = async (sourcePath?: string) => {
     if (disposed) return;
-    const rows = await input.listInstalledSources();
+    const rows = (await input.listInstalledSources()).map(({ install_name, source_path, source_hash }) => ({
+      install_name,
+      source_path,
+      source_hash,
+    }));
     if (disposed) return;
     await runExtensionPreparation(
       "watch.update",

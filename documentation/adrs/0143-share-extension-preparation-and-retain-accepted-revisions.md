@@ -8,7 +8,8 @@ Status: Accepted for PS-169; platform and performance qualification follows the 
 
 One lazy worker thread owns expensive extension filesystem work, discovery, watches, downloads, dependency preparation,
 candidate evaluation, and build preparation. Its queue admits at most 128 pending jobs and executes one preparation job
-at a time. One default-install job pipelines at most four active sources, filling each completed slot immediately and
+at a time. An interrupted job retains the execution slot while its worker retires; the scheduler selects its
+replacement before returning the interrupted job to the pending queue, preserving the128-pending bound. One default-install job pipelines at most four active sources, filling each completed slot immediately and
 matching the existing four-child webview build cap while overlapping dependency I/O; both share one environment and
 cancellation owner. Requested work takes priority over background checks, including retiring a stalled background
 evaluation and resuming its request on a replacement worker. Filesystem callbacks retain their background priority. A
@@ -24,7 +25,11 @@ dependencies share its continuation owner, released on success, failure or clien
 after registration; idle reservations do not keep a CLI alive. First-time preparation needed by live imports also runs
 at requested priority. Watcher initialization and reconciliation never gate adoption, for either source-specific or
 global refresh; explicit watcher readiness remains separately observable. Identical jobs share an operation while
-callers retain independent cancellation. Webview compilation still uses the fresh child process required by ADR 0070.
+callers retain independent cancellation. Source-watch registration sends only install name, source path and source hash;
+changing database feedback cannot create distinct registrations. Inventory admits one fresh source inspection per request
+at a time and releases its waiter on HTTP or command cancellation. Queue saturation and worker transport/lifecycle failures
+remain transient host errors; loaders rethrow them instead of caching empty contributions as source import diagnostics.
+The admission bound rejects excess new jobs and never evicts accepted background checks. Webview compilation still uses the fresh child process required by ADR 0070.
 Frontend input guards also use fresh children to keep independent graph inspection off the orchestration thread.
 Attachment reconciliation admits one source callback at a time. Ordinary filesystem events enter the same background
 worker queue immediately, so an edit does not wait behind every newly attached source. Pending attachment checks remain
