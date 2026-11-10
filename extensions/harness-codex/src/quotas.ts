@@ -41,6 +41,9 @@ export const normalizeCodexQuotas = (native: NativeQuotas) => {
           id: `${bucketId}.${id}`,
           label: `${bucket.limitName ?? bucketId} · ${windowLabel(window, id === "primary" ? "Current window" : "Longer window")}`,
           remainingPercent: Math.max(0, Math.min(100, 100 - window.usedPercent)),
+          ...(window.windowDurationMins && window.windowDurationMins > 0
+            ? { windowMinutes: window.windowDurationMins }
+            : {}),
           ...(resetsAt ? { resetsAt } : {}),
         },
       ];

@@ -12,6 +12,10 @@ export const HomeQuotas = (props: HomeQuotasProps) => {
   const [refresh, setRefresh] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
+  useEffect(() => {
+    const timer = setInterval(() => setRefresh((value) => value + 1), 60 * 60 * 1000);
+    return () => clearInterval(timer);
+  }, []);
   // biome-ignore lint/correctness/useExhaustiveDependencies: Refresh explicitly invalidates the quota snapshot.
   useEffect(() => {
     let active = true;

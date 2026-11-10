@@ -4,13 +4,15 @@ import { resolveOpencodeCommand } from "./cli";
 
 export const normalizeOpencodeQuotas = (native: { data: unknown }) => {
   const data = native.data as ExperimentalUsageLimitsOutput["data"];
-  const limits: { id: string; label: string; remainingPercent: number; resetsAt?: string }[] = [];
-  const add = (id: string, label: string, used: number, resetsAt: number) => {
+  const limits: { id: string; label: string; remainingPercent: number; resetsAt?: string; windowMinutes?: number }[] =
+    [];
+  const add = (id: string, label: string, used: number, resetsAt: number, windowMinutes?: number) => {
     if (!Number.isFinite(used)) return;
     limits.push({
       id,
       label,
       remainingPercent: Math.max(0, Math.min(100, 100 - used)),
+      ...(windowMinutes ? { windowMinutes } : {}),
       ...(Number.isFinite(resetsAt) ? { resetsAt: new Date(resetsAt).toISOString() } : {}),
     });
   };
@@ -21,7 +23,7 @@ export const normalizeOpencodeQuotas = (native: { data: unknown }) => {
       ["monthly", "Go monthly"],
     ] as const) {
       const meter = data.go[id];
-      if (meter) add(id, label, meter.percent, meter.resetsAt);
+      if (meter) add(id, label, meter.percent, meter.resetsAt, id === "weekly" ? 10080 : undefined);
     }
   }
   for (const budget of data?.budgets ?? []) {

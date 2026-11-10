@@ -7,6 +7,11 @@ const labels: Record<string, string> = {
   seven_day_sonnet: "Sonnet weekly",
   seven_day_opus: "Opus weekly",
 };
+const windowMinutes = (id: string) => {
+  if (id.startsWith("seven_day") || id === "model_scoped") return 10080;
+  if (id === "five_hour") return 300;
+  return undefined;
+};
 
 export const normalizeClaudeQuotas = (native: Record<string, unknown>) => {
   const windows = native.rate_limits;
@@ -27,6 +32,7 @@ export const normalizeClaudeQuotas = (native: Record<string, unknown>) => {
           id: key,
           label,
           remainingPercent: Math.max(0, Math.min(100, 100 - window.utilization)),
+          windowMinutes: windowMinutes(id),
           ...(Number.isFinite(date) ? { resetsAt: new Date(date).toISOString() } : {}),
         },
       ];

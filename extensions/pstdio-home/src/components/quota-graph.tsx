@@ -1,6 +1,7 @@
-import { Box, Button, HStack, Progress, Stack, Text } from "@chakra-ui/react";
-
+import { Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
+import { quotaSeries } from "../quota-history";
 import type { QuotaReport } from "../quotas";
+import { QuotaHistoryChart } from "./quota-history-chart";
 
 interface QuotaGraphProps {
   providers: QuotaReport[];
@@ -11,6 +12,8 @@ interface QuotaGraphProps {
 
 export const QuotaGraph = (props: QuotaGraphProps) => {
   const { providers, loading, error, onRefresh } = props;
+  const available = providers.filter((provider) => provider.status === "available" && provider.limits.length > 0);
+  if (!available.length && !error) return null;
   return (
     <Box as="figure" m="0" aria-label="Remaining agent quotas">
       <Stack gap="lg">
@@ -23,8 +26,7 @@ export const QuotaGraph = (props: QuotaGraphProps) => {
           </Button>
         </HStack>
         {error && <Text color="fg.error">{error}</Text>}
-        {!loading && !error && providers.length === 0 && <Text color="fg.muted">No quota commands available.</Text>}
-        {providers.map((provider) => (
+        {available.map((provider) => (
           <Stack key={provider.id} gap="sm">
             <HStack justify="space-between" flexWrap="wrap">
               <Text textStyle="paragraph/M/medium">{provider.label}</Text>
@@ -32,32 +34,15 @@ export const QuotaGraph = (props: QuotaGraphProps) => {
                 Checked {new Date(provider.checkedAt).toLocaleTimeString()}
               </Text>
             </HStack>
-            {provider.status !== "available" && (
-              <Text color="fg.muted">{provider.message ?? "Quota unavailable."}</Text>
-            )}
             {provider.limits.map((limit) => (
-              <Progress.Root
+              <QuotaHistoryChart
                 key={limit.id}
-                value={limit.remainingPercent}
-                max={100}
-                colorPalette="blue"
-                aria-label={`${provider.label} ${limit.label} remaining quota`}
-              >
-                <Stack gap="xs">
-                  <HStack justify="space-between">
-                    <Progress.Label>{limit.label}</Progress.Label>
-                    <Text>{Math.round(limit.remainingPercent)}% remaining</Text>
-                  </HStack>
-                  <Progress.Track h="xs">
-                    <Progress.Range />
-                  </Progress.Track>
-                  {limit.resetsAt && (
-                    <Text color="fg.muted" textStyle="paragraph/S/regular">
-                      Resets {new Date(limit.resetsAt).toLocaleString()}
-                    </Text>
-                  )}
-                </Stack>
-              </Progress.Root>
+                provider={provider.label}
+                label={limit.label}
+                remainingPercent={limit.remainingPercent}
+                resetsAt={limit.resetsAt}
+                {...quotaSeries(limit, provider.checkedAt)}
+              />
             ))}
           </Stack>
         ))}

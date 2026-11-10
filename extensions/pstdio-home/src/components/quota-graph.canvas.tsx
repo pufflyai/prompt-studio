@@ -12,8 +12,29 @@ const providers: QuotaReport[] = [
     status: "available",
     checkedAt,
     limits: [
-      { id: "short", label: "5-hour window", remainingPercent: 72 },
-      { id: "weekly", label: "Weekly", remainingPercent: 28 },
+      {
+        id: "short",
+        label: "5-hour window",
+        remainingPercent: 72,
+        windowMinutes: 300,
+        resetsAt: "2026-11-10T15:00:00Z",
+      },
+      {
+        id: "weekly",
+        label: "Weekly",
+        remainingPercent: 72,
+        windowMinutes: 10080,
+        resetsAt: "2026-11-16T00:00:00Z",
+        history: [
+          { at: "2026-11-09T00:00:00Z", usedPercent: 0 },
+          { at: "2026-11-09T06:00:00Z", usedPercent: 7 },
+          { at: "2026-11-09T12:00:00Z", usedPercent: 8 },
+          { at: "2026-11-09T18:00:00Z", usedPercent: 15 },
+          { at: "2026-11-10T00:00:00Z", usedPercent: 19 },
+          { at: "2026-11-10T06:00:00Z", usedPercent: 24 },
+          { at: checkedAt, usedPercent: 28 },
+        ],
+      },
     ],
   },
   {
@@ -23,7 +44,7 @@ const providers: QuotaReport[] = [
     checkedAt,
     limits: [
       { id: "short", label: "5-hour window", remainingPercent: 0 },
-      { id: "weekly", label: "Weekly", remainingPercent: 94 },
+      { id: "weekly", label: "Weekly", remainingPercent: 94, windowMinutes: 10080, resetsAt: "2026-11-16T00:00:00Z" },
     ],
   },
   {
@@ -65,7 +86,7 @@ const Preview = (props: PreviewProps) => {
 
 export default { title: "Extensions/Home/Agent quotas", component: Preview } satisfies CanvasMeta<typeof Preview>;
 export const Graph: CanvasFrame<typeof Preview> = {
-  name: "Quota graph",
+  name: "Quota history and weekly target",
   args: { state: "available" },
   controls: {
     state: {

@@ -1,10 +1,18 @@
 import { type CommandContext, commandRef } from "@pstdio/sdk/extensions";
 
+export interface QuotaLimit {
+  id: string;
+  label: string;
+  remainingPercent: number;
+  resetsAt?: string;
+  windowMinutes?: number;
+  history?: { at: string; usedPercent: number }[];
+}
 export interface QuotaSnapshot {
   status: "available" | "unavailable" | "unsupported";
   checkedAt: string;
   message?: string;
-  limits: { id: string; label: string; remainingPercent: number; resetsAt?: string }[];
+  limits: QuotaLimit[];
 }
 export interface QuotaReport extends QuotaSnapshot {
   id: string;
@@ -41,6 +49,7 @@ const validSnapshot = (value: QuotaSnapshot) =>
       Number.isFinite(limit.remainingPercent) &&
       limit.remainingPercent >= 0 &&
       limit.remainingPercent <= 100 &&
+      (limit.windowMinutes === undefined || (Number.isFinite(limit.windowMinutes) && limit.windowMinutes > 0)) &&
       (limit.resetsAt === undefined ||
         (typeof limit.resetsAt === "string" && Number.isFinite(Date.parse(limit.resetsAt)))),
   );

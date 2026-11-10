@@ -32,8 +32,20 @@ test("Home graphs an exhausted quota with an accessible value and leaves unknown
       }),
     }),
   );
-  expect(html).toContain('aria-valuenow="0"');
-  expect(html).toContain("Codex Weekly remaining quota");
-  expect(html.match(/role="progressbar"/g)).toHaveLength(1);
-  expect(html).toContain("Quota unavailable.");
+  expect(html).toContain("100% used");
+  expect(html).toContain("0% remaining");
+  expect(html).toContain("Codex");
+  expect(html).not.toContain("Quota unavailable.");
+  expect(html).not.toContain(">Pi<");
+});
+
+test("Home hides the quota widget when no provider has quota data", () => {
+  const html = renderToStaticMarkup(
+    createElement(ChakraProvider, {
+      value: psTheme,
+      // biome-ignore lint/correctness/noChildrenProp: Non-JSX render fixture.
+      children: createElement(QuotaGraph, { providers: [], loading: false, onRefresh: () => {} }),
+    }),
+  );
+  expect(html).not.toContain("Agent quotas");
 });

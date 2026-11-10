@@ -11,6 +11,7 @@ test("Claude reports subscription windows without treating missing utilization a
   });
   expect(result.status).toBe("available");
   expect(result.limits.map((limit) => limit.remainingPercent)).toEqual([0, 75]);
+  expect(result.limits.map((limit) => limit.windowMinutes)).toEqual([300, 10080]);
   expect(result.limits[0]?.resetsAt).toBe("2026-11-10T18:00:00.000Z");
   expect(normalizeClaudeQuotas({ rate_limits_available: false, rate_limits: null }).status).toBe("unavailable");
 });
@@ -27,4 +28,5 @@ test("Claude preserves model-specific weekly allowances", () => {
   expect(result.limits).toHaveLength(1);
   expect(result.limits[0]?.label).toBe("Fable weekly");
   expect(result.limits[0]?.remainingPercent).toBe(70);
+  expect(result.limits[0]?.windowMinutes).toBe(10080);
 });

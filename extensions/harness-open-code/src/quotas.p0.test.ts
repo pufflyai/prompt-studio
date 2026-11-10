@@ -15,6 +15,14 @@ test("OpenCode reports Go windows and account budgets", () => {
   expect(result.status).toBe("available");
   expect(result.limits.map((limit) => limit.remainingPercent)).toEqual([80, 0, 100, 75]);
   expect(result.limits[0]?.resetsAt).toBe("2027-01-15T08:00:00.000Z");
+  expect(result.limits[1]?.windowMinutes).toBe(10080);
+});
+
+test("account budget names do not imply a weekly reset period", () => {
+  const result = normalizeOpencodeQuotas({
+    data: { budgets: [{ id: "weekly", limit: 100, spent: 25, resetsAt: 1800000000000 }] },
+  });
+  expect(result.limits[0]?.windowMinutes).toBeUndefined();
 });
 
 test("OpenCode reads account limits through the standalone native API and keeps errors private", async () => {
