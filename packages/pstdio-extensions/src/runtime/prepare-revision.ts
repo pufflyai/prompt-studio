@@ -52,6 +52,15 @@ export const inspectRevisionInputsAsync = async (sourcePath: string, apiProvider
   const read = readRevisionInputs(sourcePath, apiProvider);
   return identifyRevisionInputs(sourcePath, read, await hashRevisionDependenciesAsync(read.dependencies, sourcePath));
 };
+// Discovery must reach the loader's diagnostics for an invalid manifest. Handle local
+// inspection errors here; transport failures still reject callers in the worker client.
+export const inspectRevisionLoadKeyAsync = async (sourcePath: string) => {
+  try {
+    return (await inspectRevisionInputsAsync(sourcePath)).loadKey;
+  } catch (error) {
+    return `manifest-${JSON.stringify(error instanceof Error ? error.message : error)}`;
+  }
+};
 export const prepareRevision = async (
   sourcePath: string,
   apiProvider?: ExtensionApiProvider,

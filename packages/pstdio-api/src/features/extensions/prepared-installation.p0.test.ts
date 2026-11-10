@@ -399,7 +399,7 @@ test.each([
   const results = await Promise.allSettled([
     install({ source, installName: "working", skipInstall: true }),
     install({
-      source: broken,
+      source: phase === "preparation" ? "broken-fixture" : broken,
       installName: "broken",
       skipInstall: true,
       ...(phase === "preparation"
@@ -470,6 +470,22 @@ test("cancelled paired preparation recovers successful but undelivered retained 
   await installExtensionSource({ source, installName: "replacement-worker", skipInstall: true });
   expect(existsSync(path)).toBe(false);
   expect(existsSync(stagedRoot)).toBe(false);
+});
+
+test("local installation bypasses a shared named-source checkout resolver", async () => {
+  const { source } = fixture();
+  let resolved = false;
+  const installed = await installExtensionSource({
+    source,
+    skipInstall: true,
+    prepareNamedSource: async () => {
+      resolved = true;
+      throw new Error("The shared checkout only contains named catalog sources.");
+    },
+  });
+  expect(installed.installName).toBe("source");
+  expect(installed.check.errorCount).toBe(0);
+  expect(resolved).toBe(false);
 });
 
 test("duplicate default targets adopt the last configured source once", async () => {

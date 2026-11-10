@@ -9,6 +9,7 @@ import { GitUnavailableError } from "pstdio-wt";
 import {
   ExtensionAlreadyInstalledError,
   ExtensionValidationFailedError,
+  isLocalExtensionSource,
   prepareAndInstallExtensionSource,
   RepoScopedExtensionNeedsProjectFolderError,
   resolvePstdioHome,
@@ -54,7 +55,7 @@ export const installExtensionSource = async (
   const { signal, homedir, prepareNamedSource, runCommand: _run, isPackagedRuntime: _packaged, ...data } = input;
   let callbackRoot: string | undefined;
   try {
-    if (prepareNamedSource) {
+    if (prepareNamedSource && !isLocalExtensionSource(input.source)) {
       callbackRoot = await mkdtemp(join(tmpdir(), "pstdio-extension-checkout-"));
       data.preparedSource = await prepareNamedSource(
         input.source,

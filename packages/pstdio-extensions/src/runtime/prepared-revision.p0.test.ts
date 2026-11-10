@@ -4,9 +4,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
-import { loadExtensionPackage } from "./loader";
+import { extensionLoadKey, loadExtensionPackage } from "./loader";
 import { stopExtensionPreparation } from "./preparation-client";
-import { acceptPreparedRevision, prepareExtensionRevision, readAcceptedRevision } from "./prepared-revision";
+import {
+  acceptPreparedRevision,
+  inspectExtensionLoadKey,
+  prepareExtensionRevision,
+  readAcceptedRevision,
+} from "./prepared-revision";
 
 const roots: string[] = [];
 const previousHome = process.env.PSTDIO_HOME;
@@ -409,3 +414,22 @@ for (const mode of ["paths", "baseUrl"])
     const loaded = await loadExtensionPackage({ path: source }, [], { preparedRevision: second });
     expect(await loaded!.definition.commands![0].run({} as never, {})).toBe("second");
   });
+
+test("worker load identity preserves unsupported-manifest diagnostics without rejecting discovery", async () => {
+  const source = fixture();
+  const path = join(source, "package.json");
+  const manifest = JSON.parse(readFileSync(path, "utf8"));
+  manifest.engines.pstdio = "^999.0.0";
+  writeFileSync(path, JSON.stringify(manifest));
+  const invalid = await inspectExtensionLoadKey(source);
+  expect(invalid).toBe(extensionLoadKey(source));
+  expect(invalid).toStartWith("manifest-");
+  const rejected = await prepareExtensionRevision(source).then(
+    () => null,
+    (error: Error) => error,
+  );
+  expect(rejected?.message).toContain("targets extension API");
+  manifest.engines.pstdio = `^${EXTENSION_API_VERSION}`;
+  writeFileSync(path, JSON.stringify(manifest));
+  expect(await inspectExtensionLoadKey(source)).not.toBe(invalid);
+});

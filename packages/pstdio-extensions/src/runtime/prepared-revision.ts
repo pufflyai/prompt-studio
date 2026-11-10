@@ -76,8 +76,8 @@ export const acceptPreparedRevision = async (
 };
 export const inspectExtensionLoadKey = async (sourcePath: string) => {
   if (!isPreparationHost) {
-    const { inspectRevisionInputsAsync } = await import("./prepare-revision");
-    return (await inspectRevisionInputsAsync(sourcePath)).loadKey;
+    const { inspectRevisionLoadKeyAsync } = await import("./prepare-revision");
+    return inspectRevisionLoadKeyAsync(sourcePath);
   }
   return runExtensionPreparation<string>("runtime.key", { sourcePath });
 };
