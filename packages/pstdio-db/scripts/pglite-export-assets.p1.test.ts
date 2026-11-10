@@ -8,15 +8,20 @@ import { openPglite } from "../src/db/open-pglite";
 import { resolveExportWorker } from "../src/db/pglite-export-assets";
 import { buildPgliteExportAssets } from "./pglite-export-assets";
 
-test("the vendored export worker reads homes from both engines outside the repository", async () => {
+test.each([
+  "../../pstdio-db/vendor",
+  "/$bunfs/root/../pstdio-db/vendor",
+  "B:\\~BUN\\root\\..\\pstdio-db\\vendor",
+])("the vendored export worker reads both engines outside the repository from %s", async (prefix) => {
   const root = await mkdtemp(join(tmpdir(), "pglite-export-worker-"));
   try {
     const assets = join(root, "assets");
     await buildPgliteExportAssets(assets);
     const embedded = [...new Bun.Glob("**/*").scanSync({ cwd: assets, onlyFiles: true })].map(
-      (name) => new File([Bun.file(join(assets, name))], `../../pstdio-db/vendor/${name}`),
+      (name) => new File([Bun.file(join(assets, name))], `${prefix}/${name}`),
     );
     const worker = await resolveExportWorker(embedded);
+    expect(worker.assets).toBeDefined();
     await rm(assets, { recursive: true });
     try {
       const previous = join(root, "previous");

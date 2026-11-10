@@ -19,7 +19,8 @@ export const createResourceContextActions = (
     endContent: entry.endContent,
     isDisabled: entry.disabled,
     separatorBefore: entry.separatorBefore,
-    onClick: () => entry.onAction?.(),
+    onSelect: entry.runOnSelect ? () => entry.onAction?.() : undefined,
+    onClick: entry.runOnSelect ? undefined : () => entry.onAction?.(),
   }));
 
 interface ListRowChromeProps {

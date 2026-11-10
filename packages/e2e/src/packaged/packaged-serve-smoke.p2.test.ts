@@ -92,6 +92,35 @@ beforeAll(() => {
 // extension-browser-install.p1.test.ts installs the cached Playwright package and visits a smoke page.
 
 test(
+  "serves the compiled dashboard at root and project routes with its bundled script",
+  async () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-dashboard-assets-"));
+    let child: ChildProcess | undefined;
+    try {
+      const started = await startPackagedServe(tempRoot);
+      child = started.child;
+      for (const path of ["/", "/projects/dashboard-smoke/"]) {
+        const response = await fetch(`${started.baseUrl}${path}`);
+        expect(response.status).toBe(200);
+        expect(response.headers.get("content-type")).toContain("text/html");
+        const html = await response.text();
+        expect(html).toContain('id="root"');
+        const script = /<script[^>]+src="([^"]+)"/.exec(html)?.[1];
+        expect(script).toBeDefined();
+        const bundled = await fetch(new URL(script!, started.baseUrl));
+        expect(bundled.status).toBe(200);
+        expect(bundled.headers.get("content-type")).toContain("application/javascript");
+        expect((await bundled.text()).length).toBeGreaterThan(0);
+      }
+    } finally {
+      if (child) await stopProcess(child);
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  },
+  PACKAGED_TEST_TIMEOUT,
+);
+
+test(
   "exports saved performance recordings with monitoring stopped",
   expectPackagedSavedRecordings,
   PACKAGED_TEST_TIMEOUT,

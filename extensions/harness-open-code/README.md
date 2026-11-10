@@ -51,4 +51,8 @@ The **Thinking** option picks the model's thinking level: None, Minimal, Low, Me
 - After Prompt Studio restarts, it can reconnect to an OpenCode session that is still running.
 - Before a session starts in a new workspace, Prompt Studio copies the project's skills into `.agents/skills` in that workspace. To add them to the project folder as well, run `pst agents setup pstdio.harness-open-code.harness.opencode`.
 
-*Updated at: 2026-11-05*
+## Account quotas
+
+Run `pst harness-open-code quotas` to inspect native OpenCode Go quota windows and account budgets through `api GET /api/experimental/usage/limits --standalone`. Budget IDs use a `budget.` prefix so a budget named `weekly`, `rolling`, or `monthly` keeps its own chart and history. The command starts no agent turn. Provider accounts without limits in that endpoint return `unavailable`; it does not estimate subscription quotas from local token usage.
+
+*Updated at: 2026-11-10*
