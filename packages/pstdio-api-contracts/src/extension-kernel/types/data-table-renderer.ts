@@ -65,10 +65,10 @@ export type DataTableRendererColumnStat =
   | { type: "top-values"; limit?: number };
 
 /** Inline chart data. Null entries are unmeasured gaps, never zeroes. */
-export interface DataTableRendererChartValue {
+export type DataTableRendererChartValue = {
   values: (number | null)[];
   labels?: string[];
-}
+};
 
 export interface DataTableRendererChartOptions {
   type: "sparkline" | "bar-chart";

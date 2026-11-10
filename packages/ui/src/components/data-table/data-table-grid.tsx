@@ -22,6 +22,7 @@ export interface DataTableGridProps
     | "activeRowId"
     | "columnDescriptions"
     | "columnStats"
+    | "columnRenderers"
     | "enableRowActivation"
     | "getCellContextMenuActions"
     | "page"
@@ -92,6 +93,7 @@ export const DataTableGrid = (props: DataTableGridProps) => {
                     headerGroup={headerGroup}
                     rows={data}
                     columnStats={columnStats}
+                    columnRenderers={props.columnRenderers}
                     summaries={props.page?.result?.statistics}
                     noBorder={noBorder}
                     fullWidth={fullWidth}
