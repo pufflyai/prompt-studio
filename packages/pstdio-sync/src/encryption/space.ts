@@ -39,18 +39,42 @@ export const createSyncSpace = async (input: { projectId: string; spaceOwner: st
   const naming = await deriveKey(keys[0].secret, "pstdio-sync document id v1", { name: "HMAC", hash: "SHA-256" }, [
     "sign",
   ]);
-  return {
+  return spaceFromKeys({
     projectId: input.projectId,
     spaceOwner: input.spaceOwner,
     generation: keys[keys.length - 1].generation,
+    encryption: [...encryption],
+    naming,
+  });
+};
+
+/** A space's derived, non-extractable keys, which a structured clone can carry to a worker thread. */
+export interface SyncSpaceTransfer {
+  projectId: string;
+  spaceOwner: string | null;
+  generation: number;
+  encryption: [number, CryptoKey][];
+  naming: CryptoKey;
+}
+
+const spaceFromKeys = (input: SyncSpaceTransfer) => {
+  const encryption = new Map(input.encryption);
+  return {
+    projectId: input.projectId,
+    spaceOwner: input.spaceOwner,
+    generation: input.generation,
     key: (generation: number) => encryption.get(generation),
     /** The relay document ID for a local document name. Every device of the space derives the same ID. */
     async documentId(name: string) {
-      const digest = new Uint8Array(await crypto.subtle.sign("HMAC", naming, encoder.encode(name)));
+      const digest = new Uint8Array(await crypto.subtle.sign("HMAC", input.naming, encoder.encode(name)));
       return toBase64url(digest.subarray(0, 16));
     },
+    /** For a worker in this process; the keys stay non-extractable on both sides. */
+    transfer: (): SyncSpaceTransfer => ({ ...input, encryption: [...encryption] }),
   };
 };
+
+export const restoreSyncSpace = (transfer: SyncSpaceTransfer) => spaceFromKeys(transfer);
 
 export type SyncSpace = Awaited<ReturnType<typeof createSyncSpace>>;
 
