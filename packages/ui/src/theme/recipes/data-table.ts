@@ -1,9 +1,13 @@
 import { defineSlotRecipe } from "@chakra-ui/react";
 
 export const dataTableRecipe = defineSlotRecipe({
-  slots: ["root", "chart", "sparkline", "bar", "barDetails", "barPlot", "label", "value"],
+  slots: ["root", "chart", "sparkline", "bar", "barPlot"],
   base: {
-    root: { "--table-row-height": "{sizes.10}", "--table-chart-height": "{sizes.6}", "--table-chart-labels": "none" },
+    root: {
+      "--table-row-height": "{sizes.10}",
+      "--table-chart-height": "{sizes.6}",
+      "--table-bar-height": "{sizes.2.5}",
+    },
     chart: {
       display: "flex",
       flexDirection: "column",
@@ -17,14 +21,7 @@ export const dataTableRecipe = defineSlotRecipe({
     },
     sparkline: { display: "block", w: "full", h: "full", overflow: "visible" },
     bar: { display: "flex", flexDirection: "column", justifyContent: "center", flex: "1 0 auto", minW: "0" },
-    barDetails: { display: "var(--table-chart-labels, none)", justifyContent: "space-between", gap: "xs", minW: "0" },
-    barPlot: { display: "block", flexShrink: "0", w: "full", h: "2.5" },
-    label: {
-      textStyle: "label/XS",
-      minW: "0",
-      truncate: true,
-    },
-    value: { textStyle: "mono/XS", flexShrink: "0" },
+    barPlot: { display: "block", flexShrink: "0", w: "full", h: "var(--table-bar-height, {sizes.2.5})" },
   },
   variants: {
     rowHeight: {
@@ -33,14 +30,14 @@ export const dataTableRecipe = defineSlotRecipe({
         root: {
           "--table-row-height": "{sizes.16}",
           "--table-chart-height": "{sizes.10}",
-          "--table-chart-labels": "flex",
+          "--table-bar-height": "{sizes.4}",
         },
       },
       tall: {
         root: {
           "--table-row-height": "{sizes.24}",
           "--table-chart-height": "{sizes.16}",
-          "--table-chart-labels": "flex",
+          "--table-bar-height": "{sizes.5}",
         },
       },
     },

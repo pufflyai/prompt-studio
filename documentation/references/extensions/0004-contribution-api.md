@@ -500,7 +500,7 @@ unmeasured sparkline positions.
 
 Set `defaultSettings: { rowHeight: "tall" }` to start with taller rows. The Display
 menu offers Compact, Comfortable, and Tall; the selected height belongs to the
-saved view. Compact rows hide bar labels; larger rows show labels and values.
+saved view. Bar labels and values stay in tooltips at every row height; larger rows show thicker bars.
 The default stays compact for existing views. Row wrapping remains independent.
 These additive declarations share the coordinated API 0.4.0 step on `main`.
 Publish the supporting host, SDK, and UI before an independent extension uses them.

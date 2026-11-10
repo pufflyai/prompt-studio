@@ -5,8 +5,8 @@ import { useState } from "react";
 import { Tooltip } from "@/components/primitives/tooltip";
 import { dataTableRecipe } from "@/theme/recipes/data-table";
 import psTheme from "@/theme/theme";
-import { chartGeometry } from "./data-table-chart-geometry";
-import { dataTableChartText, formatDataTableChartValue } from "./data-table-chart-text";
+import { chartBarPath, chartGeometry } from "./data-table-chart-geometry";
+import { dataTableChartText } from "./data-table-chart-text";
 
 interface DataTableChartCellProps {
   value: unknown;
@@ -26,7 +26,6 @@ export const DataTableChartCell = (props: DataTableChartCellProps) => {
         No data
       </Text>
     );
-  const format = (value: number) => formatDataTableChartValue(value, renderer.unit);
   const descriptions = dataTableChartText(value, renderer);
   const tooltipText = dataTableChartText(value, renderer, hoveredIndex);
   const summary = `${label}: ${descriptions.join(", ")}`;
@@ -98,10 +97,6 @@ export const DataTableChartCell = (props: DataTableChartCellProps) => {
             .filter((point) => point !== null)
             .map((point) => (
               <Box key={point.index} css={styles.bar} onPointerEnter={() => setHoveredIndex(point.index)}>
-                <Box css={styles.barDetails}>
-                  <Text css={styles.label}>{point.label}</Text>
-                  <Text css={styles.value}>{format(point.value)}</Text>
-                </Box>
                 <chakra.svg css={styles.barPlot} viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden="true">
                   <line
                     x1={geometry.zero}
@@ -111,13 +106,7 @@ export const DataTableChartCell = (props: DataTableChartCellProps) => {
                     stroke={chartColor("border.subtle")}
                     vectorEffect="non-scaling-stroke"
                   />
-                  <rect
-                    x={point.start}
-                    y="1"
-                    width={point.width}
-                    height="8"
-                    fill={chartColor(`vis.categorical.${(point.index % 14) + 1}`)}
-                  />
+                  <path d={chartBarPath(point)} fill={chartColor(`vis.categorical.${(point.index % 14) + 1}`)} />
                 </chakra.svg>
               </Box>
             ))

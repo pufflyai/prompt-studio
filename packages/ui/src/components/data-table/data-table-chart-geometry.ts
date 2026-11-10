@@ -36,3 +36,12 @@ export const chartGeometry = (value: DataTableChartValue, renderer: DataTableRen
   if (segment.length) segments.push(segment.join(" "));
   return { points, segments, zero: at(0) };
 };
+
+export const chartBarPath = (point: { start: number; width: number; value: number }) => {
+  const left = point.start;
+  const right = left + point.width;
+  const radius = Math.min(1, point.width / 2);
+  if (point.value < 0)
+    return `M ${right},1 H ${left + radius} Q ${left},1 ${left},3 V 7 Q ${left},9 ${left + radius},9 H ${right} Z`;
+  return `M ${left},1 H ${right - radius} Q ${right},1 ${right},3 V 7 Q ${right},9 ${right - radius},9 H ${left} Z`;
+};
