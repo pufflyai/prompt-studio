@@ -16,7 +16,6 @@ import { startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { writeSharedNotesExtension } from "./packaged-shared-notes-extension.fixture";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 import { createPackagedSyncPeer, packagedProjectKey } from "./packaged-sync-relay.fixture";
-import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
 const waitFor = async (condition: () => Promise<boolean> | boolean) => {
   while (!(await condition())) await Bun.sleep(25);
@@ -163,6 +162,8 @@ const retireDeviceHome = async (child: Parameters<typeof stopProcess>[0], home: 
     failures.push(error);
   }
 };
+
+const TWO_DEVICE_TEST_TIMEOUT = 60_000;
 
 setupPackagedSmokeTests();
 test(
@@ -380,5 +381,5 @@ test(
     }
     if (failures.length) throw new AggregateError(failures, "Cloud picker scenario or cleanup failed");
   },
-  PACKAGED_TEST_TIMEOUT,
+  TWO_DEVICE_TEST_TIMEOUT,
 );

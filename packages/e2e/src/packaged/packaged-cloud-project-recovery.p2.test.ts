@@ -20,7 +20,8 @@ test(
     });
     await withCloudProject("recovery", async ({ b, project, page, second, phase }) => {
       try {
-        const opens: number[] = [];
+        const preparationResponses: number[] = [];
+        const preparationRequests: string[] = [];
         let downloaded = false;
         await page.route(`**/v1/account/projects/${project.id}/sync`, async (route) => {
           if (downloaded) return route.continue();
@@ -36,9 +37,15 @@ test(
             body: JSON.stringify({ error: "The sync retry failed." }),
           }),
         );
-        let attempts = 0;
-        await page.route(`**/v1/projects/${project.id}/open`, async (route) => {
-          if (++attempts === 1) {
+        // A local provider operation can become attached before it has a usable folder.
+        // Keep either supported preparation retry pending, rather than assuming another /open.
+        const setupPath = new RegExp(`/v1/projects/${project.id}/(open|retry-setup)$`);
+        await page.route(setupPath, async (route) => {
+          const operation = new URL(route.request().url()).pathname.split("/").at(-1)!;
+          preparationRequests.push(operation);
+          console.info(`Cloud preparation request: ${operation}`);
+          if (preparationRequests.length === 1) {
+            expect(operation).toBe("open");
             await initialSetupHeld;
             await route.fulfill({
               status: 500,
@@ -52,7 +59,7 @@ test(
         });
         page.on("response", (response) => {
           const path = new URL(response.url()).pathname;
-          if (path === `/v1/projects/${project.id}/open`) opens.push(response.status());
+          if (setupPath.test(path)) preparationResponses.push(response.status());
           if (path.includes(project.id) && /\/(sync|retry|open|retry-setup)$/.test(path))
             console.info(`Cloud recovery response: ${response.request().method()} ${path} ${response.status()}`);
         });
@@ -71,16 +78,16 @@ test(
         downloaded = true;
         // Remount against the released status without starting another native synchronization.
         await page.reload();
-        await browserExpect.poll(() => attempts).toBe(1);
+        await browserExpect.poll(() => preparationRequests).toEqual(["open"]);
         await browserExpect(status).toHaveText("Preparing project");
         phase("initial setup pending; release failure");
         completeInitialSetup();
-        await browserExpect.poll(() => opens).toContain(500);
+        await browserExpect.poll(() => preparationResponses).toEqual([500]);
         await status.click();
         await details.getByRole("button", { name: "Retry", exact: true }).click();
         await browserExpect
-          .poll(() => attempts)
-          .toBe(2)
+          .poll(() => preparationRequests)
+          .toHaveLength(2)
           .catch(async (error: unknown) => {
             console.error("Cloud recovery retry details:", await details.locator("body").innerText());
             throw error;
@@ -88,7 +95,7 @@ test(
         await browserExpect(status).toHaveText("Preparing project");
         phase("setup retry pending; release success");
         completeRetry();
-        await browserExpect.poll(() => opens).toContain(200);
+        await browserExpect.poll(() => preparationResponses).toEqual([500, 200]);
         expect((await b.projects.folder(project.id)).path).toBeTruthy();
         await browserExpect(status).toHaveText("Synced");
         await status.click();

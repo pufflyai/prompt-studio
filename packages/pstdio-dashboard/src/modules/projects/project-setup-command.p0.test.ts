@@ -128,3 +128,62 @@ test.each([
     server.stop(true);
   }
 });
+
+test("setup retry keeps a provisioning local workspace request pending", async () => {
+  const requests: string[] = [];
+  let release = () => {};
+  let started = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const requested = new Promise<void>((resolve) => {
+    started = resolve;
+  });
+  const server = Bun.serve({
+    port: 0,
+    async fetch(request) {
+      requests.push(`${request.method} ${new URL(request.url).pathname}`);
+      if (request.method === "GET") return Response.json({ state: "synced", offlineReady: true });
+      started();
+      await held;
+      return Response.json({ id: "workspace-1", root_path: "/prepared", providerState: "ready" });
+    },
+  });
+  const runtime = globalThis as typeof globalThis & { __PSTDIO_CONFIG__?: { apiBaseUrl: string } };
+  const previous = runtime.__PSTDIO_CONFIG__;
+  runtime.__PSTDIO_CONFIG__ = { apiBaseUrl: server.url.origin };
+  let retry: Promise<unknown> | undefined;
+  let settled = false;
+  try {
+    getCollection("workspaces");
+    getWriter("workspaces")?.truncateAndWrite([
+      {
+        id: "workspace-1",
+        project_id: "project-2",
+        is_default: true,
+        root_path: null,
+        provider_operation_id: "create-pending",
+        provider_state: "provisioning",
+      },
+    ]);
+    const core = createWorkbench();
+    selectDashboardProject(core, { id: "project-2", name: "Second" });
+    registerProjectSetupCommand(core);
+    retry = core.commands.executeCommand(workbenchCommands.retryProjectSetup.id).finally(() => {
+      settled = true;
+    });
+    await requested;
+    expect(requests).toEqual(["GET /v1/account/projects/project-2/sync", "POST /v1/projects/project-2/retry-setup"]);
+    expect(settled).toBe(false);
+    release();
+    await retry;
+    expect(settled).toBe(true);
+  } finally {
+    release();
+    await Promise.allSettled(retry ? [retry] : []);
+    getWriter("workspaces")?.truncateAndWrite([]);
+    if (previous) runtime.__PSTDIO_CONFIG__ = previous;
+    else delete runtime.__PSTDIO_CONFIG__;
+    server.stop(true);
+  }
+});
