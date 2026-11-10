@@ -28,7 +28,12 @@ export const normalizeOpencodeQuotas = (native: { data: unknown }) => {
   }
   for (const budget of data?.budgets ?? []) {
     if (!Number.isFinite(budget.limit) || budget.limit < 0 || !Number.isFinite(budget.spent)) continue;
-    add(budget.id, "Account budget", budget.limit === 0 ? 100 : (budget.spent / budget.limit) * 100, budget.resetsAt);
+    add(
+      `budget.${budget.id}`,
+      "Account budget",
+      budget.limit === 0 ? 100 : (budget.spent / budget.limit) * 100,
+      budget.resetsAt,
+    );
   }
   return {
     status: limits.length ? ("available" as const) : ("unavailable" as const),

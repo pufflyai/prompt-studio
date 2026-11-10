@@ -53,6 +53,6 @@ The **Thinking** option picks the model's thinking level: None, Minimal, Low, Me
 
 ## Account quotas
 
-Run `pst harness-open-code quotas` to inspect native OpenCode Go quota windows and account budgets through `api GET /api/experimental/usage/limits --standalone`. The command starts no agent turn. Provider accounts without limits in that endpoint return `unavailable`; it does not estimate subscription quotas from local token usage.
+Run `pst harness-open-code quotas` to inspect native OpenCode Go quota windows and account budgets through `api GET /api/experimental/usage/limits --standalone`. Budget IDs use a `budget.` prefix so a budget named `weekly`, `rolling`, or `monthly` keeps its own chart and history. The command starts no agent turn. Provider accounts without limits in that endpoint return `unavailable`; it does not estimate subscription quotas from local token usage.
 
 *Updated at: 2026-11-10*

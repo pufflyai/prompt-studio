@@ -58,6 +58,6 @@ If the run has already stopped accepting input, delivery is rejected. If the con
 
 ## Account quotas
 
-Run `pst harness-claude-code quotas` to inspect the native account quota snapshot, including model-specific windows. It sends only `initialize` and `get_usage` control requests in a temporary process, with no prompt, MCP servers, or saved session. It requests that local transcript analysis be skipped; older CLIs, including the bundled 2.1.203, ignore that request and may still scan local usage history. Reads are time bounded. Claude Code may return no account quota snapshot for the current sign-in; the command then reports `unavailable` rather than estimating a balance from session tokens.
+Run `pst harness-claude-code quotas` to inspect the native account quota snapshot, including model-specific windows. It sends only `initialize` and `get_usage` control requests in a temporary process, with no prompt, MCP servers, or saved session. It requests that local transcript analysis be skipped; older CLIs, including the bundled 2.1.203, ignore that request and may still scan local usage history. Reads are time bounded, and cleanup stops the owned process tree and closes its pipes within a separate one-second allowance. Claude Code may return no account quota snapshot for the current sign-in; the command then reports `unavailable` rather than estimating a balance from session tokens.
 
 *Updated at: 2026-11-10*

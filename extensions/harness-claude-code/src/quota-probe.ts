@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { type ChildProcess, type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import { tmpdir } from "node:os";
 import { createInterface } from "node:readline";
 import { resolveClaudeCommand } from "./cli";
@@ -21,6 +21,62 @@ const quotaResponse = (line: string) => {
       return response;
   } catch {}
   return undefined;
+};
+
+const stopQuotaProcess = async (child: ChildProcessWithoutNullStreams, exited: Promise<void>) => {
+  let killer: ChildProcess | undefined;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const killTree = async (signal: NodeJS.Signals) => {
+    if (!child.pid) return;
+    if (process.platform === "win32") {
+      if (killer) return;
+      killer = spawn("taskkill", ["/PID", String(child.pid), "/T", "/F"], {
+        windowsHide: true,
+        stdio: "ignore",
+      });
+      await new Promise<void>((resolve, reject) => {
+        killer!.once("error", reject);
+        killer!.once("close", (code) => {
+          if (code === 0) resolve();
+          else reject(new Error("Could not stop Claude quota process tree."));
+        });
+      });
+      return;
+    }
+    try {
+      process.kill(-child.pid, signal);
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === "ESRCH") return;
+      // Match the owned-child fallback for Darwin's exiting-group race (ADR 0115).
+      if (process.platform === "darwin" && code === "EPERM") child.kill(signal);
+      else throw error;
+    }
+  };
+  try {
+    await Promise.race([
+      Promise.all([exited, killTree("SIGTERM")]),
+      new Promise<void>((resolve, reject) => {
+        timer = setTimeout(() => {
+          if (process.platform === "win32") reject(new Error("Claude quota process cleanup timed out."));
+          else void killTree("SIGKILL").then(resolve, reject);
+        }, 1_000);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+    try {
+      killer?.kill("SIGKILL");
+      if (process.platform === "win32") child.kill("SIGKILL");
+      // A closed launcher and closed pipes do not prove that all descendants exited.
+      else await killTree("SIGKILL");
+    } finally {
+      // Descendants retaining inherited pipes cannot extend the cleanup deadline.
+      child.stdin.destroy();
+      child.stdout.destroy();
+      child.stderr.destroy();
+    }
+  }
 };
 
 export const readClaudeUsage = async (parentSignal?: AbortSignal, command = [resolveClaudeCommand()]) => {
@@ -48,6 +104,7 @@ export const readClaudeUsage = async (parentSignal?: AbortSignal, command = [res
       env: { ...process.env, CLAUDECODE: "" },
       stdio: ["pipe", "pipe", "pipe"],
       windowsHide: true,
+      detached: process.platform !== "win32",
       shell: process.platform === "win32" && /[.](cmd|bat)$/i.test(command[0]!),
     },
   );
@@ -65,7 +122,6 @@ export const readClaudeUsage = async (parentSignal?: AbortSignal, command = [res
   child.stderr.resume();
   const abort = () => {
     failed.reject(signal.reason);
-    child.kill();
     reader.close();
   };
   signal.addEventListener("abort", abort, { once: true });
@@ -92,12 +148,6 @@ export const readClaudeUsage = async (parentSignal?: AbortSignal, command = [res
   } finally {
     signal.removeEventListener("abort", abort);
     reader.close();
-    child.kill();
-    const force = setTimeout(() => child.kill("SIGKILL"), 1_000);
-    try {
-      await exited;
-    } finally {
-      clearTimeout(force);
-    }
+    await stopQuotaProcess(child, exited);
   }
 };

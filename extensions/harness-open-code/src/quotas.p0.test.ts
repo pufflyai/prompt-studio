@@ -25,6 +25,20 @@ test("account budget names do not imply a weekly reset period", () => {
   expect(result.limits[0]?.windowMinutes).toBeUndefined();
 });
 
+test("Go windows and identically named budgets keep independent quota identities", () => {
+  const reset = 1800000000000;
+  const names = ["rolling", "weekly", "monthly"];
+  const result = normalizeOpencodeQuotas({
+    data: {
+      go: Object.fromEntries(names.map((name) => [name, { percent: 20, resetsAt: reset }])),
+      budgets: names.map((id) => ({ id, limit: 100, spent: 50, resetsAt: reset })),
+    },
+  });
+  expect(result.limits).toHaveLength(6);
+  expect(new Set(result.limits.map((limit) => limit.id)).size).toBe(6);
+  expect(result.limits.slice(3).map((limit) => limit.remainingPercent)).toEqual([50, 50, 50]);
+});
+
 test("OpenCode reads account limits through the standalone native API and keeps errors private", async () => {
   let command: string[] = [];
   const report = await readOpencodeQuotas({
