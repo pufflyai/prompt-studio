@@ -52,3 +52,7 @@ The **Thinking** option picks the model's thinking level: None, Minimal, Low, Me
 - Before a session starts in a new workspace, Prompt Studio copies the project's skills into `.agents/skills` in that workspace. To add them to the project folder as well, run `pst agents setup pstdio.harness-open-code.harness.opencode`.
 
 *Updated at: 2026-11-05*
+
+## Account quotas
+
+Run `pst harness-open-code quotas` to inspect native OpenCode Go quota windows and account budgets through `api GET /api/experimental/usage/limits --standalone`. The command starts no agent turn. Provider accounts without limits in that endpoint return `unavailable`; it does not estimate subscription quotas from local token usage.

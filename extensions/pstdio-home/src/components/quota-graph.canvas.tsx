@@ -1,7 +1,8 @@
 import { Stack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
-import { QuotaGraph, type QuotaReport } from "./quota-graph";
+import type { QuotaReport } from "../quotas";
+import { QuotaGraph } from "./quota-graph";
 
 const checkedAt = "2026-11-10T12:00:00Z";
 const providers: QuotaReport[] = [
@@ -62,9 +63,7 @@ const Preview = (props: PreviewProps) => {
   );
 };
 
-export default { title: "Proposals/PS-193 Agent quotas on Home", component: Preview } satisfies CanvasMeta<
-  typeof Preview
->;
+export default { title: "Extensions/Home/Agent quotas", component: Preview } satisfies CanvasMeta<typeof Preview>;
 export const Graph: CanvasFrame<typeof Preview> = {
   name: "Quota graph",
   args: { state: "available" },

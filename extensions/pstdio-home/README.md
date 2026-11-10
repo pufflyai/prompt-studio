@@ -13,3 +13,7 @@ Recent uses the host’s project-scoped navigation history through `workbenchCom
 The Canvas baseline is `src/components/home.canvas.tsx`: `Default`, `SetupDidNotFinish`, and `NoRecentResources`.
 
 Home pins the published SDK and UI nightly `0.47.0-nightly.20261104030253` and includes a standalone `bun.lock`. Its public API prerequisite landed in [PR #1687](https://github.com/pufflyai/prompt-studio/pull/1687). Dependency updates must use real published versions and regenerate the extension lockfile through the [supported release workflow](../../documentation/guides/development/0014-sdk-ui-previews.md).
+
+## Account quotas
+
+Home shows remaining agent quota windows as accessible percentage bars. **Refresh** checks again; quota reads run independently from project data. `pst pstdio-home quotas` returns the same reports. Home calls the four known harness extensions' `quotas` commands through the public command API and omits missing commands. Codex, Claude Code, and OpenCode report only native account data; Pi reports unsupported quota inspection. Empty provider snapshots and failures stay unavailable and never become a zero or full allowance. Quotas describe the runtime's sign-in and may include usage outside this project. The graph Canvas is `src/components/quota-graph.canvas.tsx`, frame **Quota graph**, with loading, empty, and error controls.

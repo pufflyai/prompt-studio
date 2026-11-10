@@ -39,3 +39,7 @@ Pi loads project instructions, skills, settings, and native extensions only afte
 See [Pi's documentation](https://github.com/earendil-works/pi/tree/main/packages/coding-agent) for provider setup, models, skills and tools.
 
 *Updated at: 2026-10-30*
+
+## Account quotas
+
+Run `pst harness-pi quotas` to inspect quota support. Pi's native API does not expose remaining account allowance, so this command returns `unsupported`. Use the connected provider's usage dashboard for its limits.

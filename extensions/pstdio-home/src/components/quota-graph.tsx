@@ -1,13 +1,6 @@
 import { Box, Button, HStack, Progress, Stack, Text } from "@chakra-ui/react";
 
-export interface QuotaReport {
-  id: string;
-  label: string;
-  status: "available" | "unavailable" | "unsupported";
-  message?: string;
-  checkedAt: string;
-  limits: { id: string; label: string; remainingPercent: number; resetsAt?: string }[];
-}
+import type { QuotaReport } from "../quotas";
 
 interface QuotaGraphProps {
   providers: QuotaReport[];
@@ -33,7 +26,12 @@ export const QuotaGraph = (props: QuotaGraphProps) => {
         {!loading && !error && providers.length === 0 && <Text color="fg.muted">No quota commands available.</Text>}
         {providers.map((provider) => (
           <Stack key={provider.id} gap="sm">
-            <Text textStyle="paragraph/M/medium">{provider.label}</Text>
+            <HStack justify="space-between" flexWrap="wrap">
+              <Text textStyle="paragraph/M/medium">{provider.label}</Text>
+              <Text color="fg.muted" textStyle="paragraph/S/regular">
+                Checked {new Date(provider.checkedAt).toLocaleTimeString()}
+              </Text>
+            </HStack>
             {provider.status !== "available" && (
               <Text color="fg.muted">{provider.message ?? "Quota unavailable."}</Text>
             )}

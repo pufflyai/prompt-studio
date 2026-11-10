@@ -1,4 +1,5 @@
 {
   "home.title": "Accueil",
-  "commands.read": "Lire l’accueil du projet"
+  "commands.read": "Lire l’accueil du projet",
+  "commands.quotas": "Lire les quotas des agents"
 }
