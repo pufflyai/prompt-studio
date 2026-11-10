@@ -15,6 +15,23 @@ test("loads dashboard assets with Windows-style embedded names", () => {
   }
 });
 
+test.each([
+  "/$bunfs/root/..",
+  "B:\\~BUN\\root\\..",
+])("loads dashboard HTML and nested assets from a multi-entry compiled root: %s", (root) => {
+  const previous = globalThis.Bun.embeddedFiles;
+  const html = Object.assign(new Blob(["<html></html>"]), { name: `${root}/pstdio-dashboard/dist/index.html` });
+  const script = Object.assign(new Blob(["export {}"]), { name: `${root}/pstdio-dashboard/dist/assets/main.js` });
+  (globalThis.Bun as unknown as { embeddedFiles: unknown[] }).embeddedFiles = [html, script];
+  try {
+    const assets = loadEmbeddedAssets();
+    expect(assets.get("index.html")).toBe(html);
+    expect(assets.get("assets/main.js")).toBe(script);
+  } finally {
+    (globalThis.Bun as unknown as { embeddedFiles: unknown[] }).embeddedFiles = [...previous];
+  }
+});
+
 describe("resolveMimeType", () => {
   test("resolves common web asset types", () => {
     expect(resolveMimeType("index.html")).toBe("text/html");

@@ -231,10 +231,25 @@ test("updates a New session Sub Panel in place after the first message", async (
     );
     localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
   }, project.id);
-  await page.goto(`/projects/${project.id}/`);
-  await page.getByRole("button", { name: "Open Side Panel" }).click();
-  await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
+  // Open the generic shell before the real provider catalog arrives.
+  const catalog = Promise.withResolvers<void>();
+  await page.route(`**/v1/projects/${project.id}/extensions/ui`, async (route) => {
+    await catalog.promise;
+    await route.continue();
+  });
+  try {
+    await page.goto(`/projects/${project.id}/`);
+    await page.getByRole("button", { name: "Open Side Panel" }).click();
+    await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
+  } finally {
+    catalog.resolve();
+  }
   const sideHeader = page.locator('[data-workbench-panel-header="side"]');
+  const sidePanel = page.locator('[data-workbench-panel="side"]');
+  await sidePanel
+    .getByRole("group", { name: "Available tabs" })
+    .getByRole("button", { name: "New session", exact: true })
+    .click();
   await expect(sideHeader.getByRole("tab", { name: "New session", exact: true })).toBeVisible();
   await sideHeader.getByRole("button", { name: "Add panel" }).click();
   const sessionChoice = page
@@ -247,7 +262,6 @@ test("updates a New session Sub Panel in place after the first message", async (
   await expect(activeTab).toContainText("New session");
 
   const prompt = "Continue in this session tab";
-  const sidePanel = page.locator('[data-workbench-panel="side"]');
   await sidePanel
     .locator("[data-testid='content-editable'][contenteditable='true']")
     .filter({ visible: true })

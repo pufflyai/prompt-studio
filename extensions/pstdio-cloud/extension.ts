@@ -7,6 +7,7 @@ import {
   packageAsset,
   workbenchSlots,
 } from "@pstdio/sdk/extensions";
+import { cloudCommands } from "./src/project-state";
 
 const status = defineView({
   id: "status",
@@ -15,7 +16,7 @@ const status = defineView({
   body: {
     kind: "webview",
     entry: packageAsset("./src/status-view.tsx", import.meta.url),
-    capabilities: ["account.read"],
+    capabilities: ["account.read", "commands.execute"],
   },
 });
 const details = defineView({
@@ -25,7 +26,7 @@ const details = defineView({
   body: {
     kind: "webview",
     entry: packageAsset("./src/details-view.tsx", import.meta.url),
-    capabilities: ["account.read", "navigation.open"],
+    capabilities: ["account.read", "navigation.open", "commands.execute"],
   },
 });
 const cloudSettings = defineView({
@@ -35,7 +36,7 @@ const cloudSettings = defineView({
   body: {
     kind: "webview",
     entry: packageAsset("./src/settings-view.tsx", import.meta.url),
-    capabilities: ["account.read", "account.manage", "navigation.open"],
+    capabilities: ["account.read", "account.manage", "navigation.open", "commands.execute"],
   },
 });
 
@@ -43,6 +44,7 @@ export default defineExtension({
   defaultLocale: "en",
   translations: { fr: packageAsset("./l10n/fr.json", import.meta.url) },
   views: [status, details, cloudSettings],
+  commands: Object.values(cloudCommands),
   statusBarItems: [
     defineStatusBarItem({
       id: "cloud",

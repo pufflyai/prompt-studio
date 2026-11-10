@@ -1,5 +1,5 @@
 import { extname } from "node:path";
-import { normalizeEmbeddedFileName } from "pstdio-paths";
+import { relativeEmbeddedFileName } from "pstdio-paths";
 
 type EmbeddedFile = Blob & { name: string };
 
@@ -33,17 +33,12 @@ const getEmbeddedFiles = (): EmbeddedFile[] => {
   return [];
 };
 
-// Embedded file names are relative to the manifest at packages/pstdio/src/
-const DASHBOARD_PREFIX = "../../pstdio-dashboard/dist/";
-
 export const loadEmbeddedAssets = () => {
   const assets = new Map<string, Blob>();
 
   for (const file of getEmbeddedFiles()) {
-    const name = normalizeEmbeddedFileName(file.name);
-    if (name.startsWith(DASHBOARD_PREFIX)) {
-      assets.set(name.slice(DASHBOARD_PREFIX.length), file);
-    }
+    const name = relativeEmbeddedFileName(file.name, "pstdio-dashboard/dist");
+    if (name !== undefined) assets.set(name, file);
   }
 
   return assets;

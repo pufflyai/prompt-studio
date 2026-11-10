@@ -46,7 +46,7 @@ describe("dashboard project data selectors", () => {
         type: "project",
         id: "project-1",
         label: "Prompt Studio",
-        icon: "folder-root",
+        icon: "folder",
         metadata: { favoriteScope: { scope: "project", projectId: "project-1" } },
       },
     });

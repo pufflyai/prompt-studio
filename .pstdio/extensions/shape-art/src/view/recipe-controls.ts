@@ -1,4 +1,4 @@
-import type { InputGroup, ParamValue } from "@pstdio/ui/param-editor";
+import type { ControlGroup, ControlValue } from "@pstdio/sdk/extensions";
 import { backgroundPresets, layouts, type Recipe } from "../art/recipe";
 import { type ShapeKind, shapeKinds } from "../art/shapes";
 
@@ -24,7 +24,7 @@ const unit = (id: keyof Recipe, name: string, value: number, description: string
   description,
 });
 
-export const recipeGroups = (recipe: Recipe): InputGroup[] => [
+export const recipeGroups = (recipe: Recipe): ControlGroup[] => [
   {
     id: "composition",
     title: "Composition",
@@ -124,7 +124,7 @@ export const recipeGroups = (recipe: Recipe): InputGroup[] => [
 ];
 
 /** Applies one editor change. Invalid values (such as an empty shape list) keep the previous recipe. */
-export const applyChange = (recipe: Recipe, id: string, value: ParamValue): Recipe => {
+export const applyChange = (recipe: Recipe, id: string, value: ControlValue): Recipe => {
   if (id === "kinds") {
     const kinds = (Array.isArray(value) ? value : [value]) as ShapeKind[];
     return kinds.length > 0 ? { ...recipe, kinds } : recipe;

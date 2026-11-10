@@ -13,7 +13,13 @@ const disposals: Array<() => void> = [];
 afterEach(() => {
   for (const dispose of disposals.splice(0)) dispose();
   getWriter("projects")?.truncateAndWrite([]);
+  getWriter("workspaces")?.truncateAndWrite([]);
 });
+
+const readyWorkspaces = (ids: string[]) =>
+  getWriter("workspaces")?.truncateAndWrite(
+    ids.map((id) => ({ id: `${id}-workspace`, project_id: id, is_default: true, root_path: `/projects/${id}` })),
+  );
 
 const setup = (ids = ["first", "second"], openIds: string[] = []) => {
   const workbench = createWorkbench();
@@ -22,6 +28,7 @@ const setup = (ids = ["first", "second"], openIds: string[] = []) => {
     writes.push(state.projectIds);
   });
   getWriter("projects")?.truncateAndWrite(ids.map((id) => ({ id, name: id })));
+  readyWorkspaces(ids);
   const projects = workbench.registerModule(createProjectsModule({ projectTabs: tabs }));
   disposals.push(() => projects.dispose());
   markInitialCollectionsSyncComplete();
@@ -89,6 +96,7 @@ test("reports a failed tab write and clears the error after the next saved chang
     return save;
   });
   getWriter("projects")?.truncateAndWrite([{ id: "first", name: "First" }]);
+  readyWorkspaces(["first"]);
   const projects = workbench.registerModule(createProjectsModule({ projectTabs: tabs }));
   disposals.push(() => projects.dispose());
   markInitialCollectionsSyncComplete();

@@ -21,6 +21,7 @@ import { hasCommandParameters } from "./command-palette-params";
 import { useWorkbenchCommandPaletteResourceEntries } from "./command-palette-resources";
 import type { CommandParamFieldRenderer, CommandParamsRequest } from "./command-params-dialog";
 import { PaletteParamsDialog } from "./palette-params-dialog";
+import { createPaletteShortcutHints } from "./palette-shortcuts";
 import { WorkbenchPaletteSurface } from "./palette-surface";
 import {
   COMMAND_MODE_ID,
@@ -65,8 +66,6 @@ interface WorkbenchCommandPaletteRecord {
 const getCommandSearchText = (command: Command, label: string) =>
   [label, command.id, command.description, command.category].filter(Boolean).join(" ");
 
-const createShortcutByAction = (workbench: WorkbenchCore) => workbench.keyboard.hints();
-
 const getShortcut = (binding: KeybindingSequence | undefined): ReactNode =>
   binding ? <PaletteShortcut binding={binding} /> : undefined;
 
@@ -105,18 +104,19 @@ const createEntry = (input: {
   if (!workbench.commands.isCommandVisible(record.command.id, args)) return null;
 
   const label = action?.label ?? record.command.label;
-  const icon = action?.icon ?? record.command.icon;
-  const group = action?.group ?? record.command.category;
+  const source = action?.sourceCommandId ? workbench.commands.getCommand(action.sourceCommandId)?.command : undefined;
+  const icon = action?.icon ?? record.command.icon ?? source?.icon ?? "Command";
+  const group = getRecordGroup(workbench, { record, action });
 
   return {
     id: `workbench-command:${record.command.id}`,
     commandId: record.command.id,
     mode: COMMAND_MODE_ID,
     label,
-    searchText: getCommandSearchText(record.command, label),
+    searchText: `${getCommandSearchText(record.command, label)} ${group}`,
     description: record.command.description,
     group,
-    icon: icon ? <WorkbenchIcon name={icon} /> : undefined,
+    icon: <WorkbenchIcon name={icon} />,
     shortcut: getShortcut(
       shortcutByAction.get(getNavigationTargetKey({ kind: "command", commandId: record.command.id, args })) ??
         shortcutByAction.get(
@@ -139,13 +139,22 @@ const createEntry = (input: {
   };
 };
 
-const getRecordGroup = (item: WorkbenchCommandPaletteRecord) =>
-  item.action?.group ?? item.record.command.category ?? "";
+const getRecordGroup = (workbench: WorkbenchCore, item: WorkbenchCommandPaletteRecord) =>
+  item.action?.group ??
+  item.record.command.category ??
+  (item.action?.sourceCommandId
+    ? workbench.commands.getCommand(item.action.sourceCommandId)?.command.category
+    : undefined) ??
+  "Commands";
 
 const getRecordOrder = (item: WorkbenchCommandPaletteRecord) => item.action?.order ?? 0;
 
-const byCommandPaletteGroup = (left: WorkbenchCommandPaletteRecord, right: WorkbenchCommandPaletteRecord) => {
-  const groupComparison = getRecordGroup(left).localeCompare(getRecordGroup(right));
+const byCommandPaletteGroup = (
+  workbench: WorkbenchCore,
+  left: WorkbenchCommandPaletteRecord,
+  right: WorkbenchCommandPaletteRecord,
+) => {
+  const groupComparison = getRecordGroup(workbench, left).localeCompare(getRecordGroup(workbench, right));
   if (groupComparison !== 0) return groupComparison;
 
   return getRecordOrder(left) - getRecordOrder(right);
@@ -174,10 +183,10 @@ export const createWorkbenchCommandPaletteEntries = (input: {
   shortcutByAction?: Map<string, KeybindingSequence>;
 }) => {
   const { menuPath, onClose, onRequestParams, workbench } = input;
-  const shortcutByAction = input.shortcutByAction ?? createShortcutByAction(workbench);
+  const shortcutByAction = input.shortcutByAction ?? createPaletteShortcutHints(workbench);
 
   return listCommandRecords(workbench, menuPath)
-    .sort(byCommandPaletteGroup)
+    .sort((left, right) => byCommandPaletteGroup(workbench, left, right))
     .map(({ record, action }) => createEntry({ workbench, record, action, shortcutByAction, onClose, onRequestParams }))
     .filter((entry): entry is WorkbenchCommandPaletteEntry => entry !== null);
 };
@@ -208,7 +217,8 @@ const WorkbenchMainCommandPalette = (props: WorkbenchCommandPaletteProps) => {
   const { workbench, open, menuPath = workbenchCommandPaletteMenuPath, initialQuery = "", onClose } = props;
   const { chosenThemePreference, themePreferences, setThemePreference, previewThemePreference } = useThemePreference();
   const view = useWorkbenchStore(workbench.commandPalette.store, (state) => state.view);
-  const { hints } = useShortcutCatalog(workbench);
+  const { catalog } = useShortcutCatalog(workbench);
+  const hints = createPaletteShortcutHints(workbench, catalog);
   const requestId = useWorkbenchStore(workbench.commandPalette.store, (state) => state.requestId);
   useWorkbenchStore(workbench.keybindings.store, (state) => state.keybindings);
   useWorkbenchStore(workbench.commands.store, (state) => state.commands);

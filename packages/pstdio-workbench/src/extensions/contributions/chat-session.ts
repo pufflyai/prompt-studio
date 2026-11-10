@@ -13,8 +13,8 @@ import { clearDeliveredChatRecoveries } from "./chat-failed-submission";
 import { type ChatQueryContext, createChatFiniteRead } from "./chat-finite-read";
 import { type ChatPendingSubmission, createChatSubmissionPresentation } from "./chat-pending-submission";
 import { createChatSessionDraft } from "./chat-session-draft";
+import { watchChatSession } from "./chat-session-watch";
 import { createChatSnapshot } from "./chat-snapshot";
-import type { createChatStreamReader } from "./chat-stream-reader";
 import { createChatSubmissionRunner } from "./chat-submission";
 import { createChatSubmissionHandoff } from "./chat-submission-handoff";
 
@@ -68,30 +68,6 @@ const assertChatActionAvailable = (conversation: ChatRendererSnapshot, action: C
     throw new Error("This queue is read-only. Refresh it before editing.");
 };
 
-const watchChatSession = async (
-  watch: NonNullable<ChatSessionInput["watch"]>,
-  signal: AbortSignal,
-  active: () => boolean,
-  reader: ReturnType<typeof createChatStreamReader>,
-  fail: (error: unknown) => void,
-) => {
-  try {
-    const stream = watch(signal);
-    void stream.result?.catch(() => undefined);
-    for await (const event of stream) {
-      if (signal.aborted) break;
-      if (active()) reader.accept(event);
-    }
-    if (active()) reader.finish();
-    await stream.result;
-  } catch (error) {
-    if (active()) {
-      reader.reset();
-      fail(error);
-    }
-  }
-};
-
 const projectChatState = (
   state: ReturnType<typeof initialChatState>,
   update: Partial<ReturnType<typeof initialChatState>>,
@@ -132,13 +108,22 @@ const trackChatAction = <T>(
 /** One owner per project/view/resource, shared across page/panel changes. */
 export const createChatSession = (input: ChatSessionInput) => {
   let state = initialChatState(input.initial);
+  let errorRevision = 0;
   const projection = createWorkbenchStore({ name: "workbench.chat", initialState: state });
   const present = createChatSubmissionPresentation();
   const publish = (update: Partial<typeof state>) => {
+    if (Object.hasOwn(update, "error")) errorRevision++;
     state = projectChatState(state, update, present);
     if (!retired) projection.setState(state, true, "projectChat");
   };
   const fail = (error: unknown) => publish({ error: error instanceof Error ? error.message : String(error) });
+  const failWatch = (error: unknown) => {
+    fail(error);
+    const revision = errorRevision;
+    return (cause: unknown) => {
+      if (errorRevision === revision) fail(cause);
+    };
+  };
   let holds = 0;
   let observing = false;
   let controller: AbortController | undefined;
@@ -222,7 +207,7 @@ export const createChatSession = (input: ChatSessionInput) => {
     void Promise.all([query, hydration]).then(() => {
       if (active()) publish({ initializing: false });
     });
-    if (input.watch) void watchChatSession(input.watch, signal, active, reader, fail);
+    if (input.watch) void watchChatSession(input.watch, signal, active, reader, failWatch);
     drafts.persist();
   };
   const execute = async (

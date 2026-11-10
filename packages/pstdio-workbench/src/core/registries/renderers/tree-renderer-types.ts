@@ -39,6 +39,8 @@ export interface TreeAction {
   params?: CommandParamSchema;
   inlineInput?: { field: string; placement: "replace" | "child"; nodeId?: string };
   copyText?: string;
+  /** Execute during menu selection while clipboard user activation is available. */
+  copyResultToClipboard?: boolean;
   // Confirm-button label for the action's params dialog (defaults to "Run").
   submitLabel?: string;
   when?: string;

@@ -7,6 +7,7 @@ import { createClient } from "@pstdio/sdk/client";
 import type { ProjectSyncState, StorageRecord } from "@pstdio/sdk/extensions";
 import { createSyncSpace } from "pstdio-sync/encryption";
 import { coreOwnerId, projectInfoDocumentId } from "pstdio-sync/records";
+import { e2eExtension } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { logTestPhase } from "../scripts/log-test-phase";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
@@ -15,10 +16,16 @@ import { startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { writeSharedNotesExtension } from "./packaged-shared-notes-extension.fixture";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 import { createPackagedSyncPeer, packagedProjectKey } from "./packaged-sync-relay.fixture";
-import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
 const waitFor = async (condition: () => Promise<boolean> | boolean) => {
   while (!(await condition())) await Bun.sleep(25);
+};
+
+// Settle every in-flight mutation before a failure lets the fixture stop its hosts.
+const finishMutations = async (operations: Promise<unknown>[]) => {
+  const results = await Promise.allSettled(operations);
+  const failures = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+  if (failures.length) throw new AggregateError(failures, "Could not prepare shared Cloud data");
 };
 
 const writeCertificate = (root: string) => {
@@ -28,6 +35,21 @@ const writeCertificate = (root: string) => {
   const options = ["-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", key, "-out", cert, "-days", "1"];
   expect(Bun.spawnSync(["openssl", "req", ...options, ...subject]).exitCode).toBe(0);
   return { key, cert };
+};
+
+const startSyncPeer = (root: string) => {
+  const tls = writeCertificate(root);
+  return { peer: createPackagedSyncPeer({ key: Bun.file(tls.key), cert: Bun.file(tls.cert) }), cert: tls.cert };
+};
+
+// Only the receiving device hosts the real Cloud UI; both devices run the same native sync workload.
+const deviceEnvironments = (source: string, cert: string) => {
+  const notes = { source, installName: "shared-notes" };
+  const common = { PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1", NODE_EXTRA_CA_CERTS: cert };
+  return {
+    first: { ...common, PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([notes]) },
+    second: { ...common, PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([notes, e2eExtension("pstdio-cloud")]) },
+  };
 };
 
 const startDevice = async (root: string, env: Record<string, string>) => {
@@ -56,7 +78,7 @@ const startDevice = async (root: string, env: Record<string, string>) => {
 
 const startPickerDevices = async <T>(
   root: string,
-  env: Record<string, string>,
+  env: ReturnType<typeof deviceEnvironments>,
   repository: Promise<{ remote: string; checkout: string }>,
   prepare: (
     first: Awaited<ReturnType<typeof startDevice>>,
@@ -64,10 +86,10 @@ const startPickerDevices = async <T>(
   ) => Promise<T>,
 ) => {
   // The source device can prepare its project while the other cold starts finish.
-  const startingFirst = startDevice(join(root, "first"), env);
+  const startingFirst = startDevice(join(root, "first"), env.first);
   const [first, second, browser, prepared, checkout] = await Promise.allSettled([
     startingFirst,
-    startDevice(join(root, "second"), env),
+    startDevice(join(root, "second"), env.second),
     chromium.launch(PACKAGED_DASHBOARD_BROWSER),
     Promise.all([startingFirst, repository]).then(([device, checkout]) => prepare(device, checkout)),
     repository,
@@ -132,6 +154,17 @@ const write = (device: Awaited<ReturnType<typeof startDevice>>, projectId: strin
     }),
   );
 
+const retireDeviceHome = async (child: Parameters<typeof stopProcess>[0], home: string, failures: unknown[]) => {
+  try {
+    await stopProcess(child);
+    await rm(home, { recursive: true, force: true });
+  } catch (error) {
+    failures.push(error);
+  }
+};
+
+const TWO_DEVICE_TEST_TIMEOUT = 60_000;
+
 setupPackagedSmokeTests();
 test(
   "a new device opens its cloud project from the picker, prepares its folder, and restores shared files",
@@ -139,28 +172,28 @@ test(
     const startedAt = Date.now();
     const phase = (name: string) => logTestPhase(`Cloud project opening: ${name} (+${Date.now() - startedAt}ms)`);
     const root = await mkdtemp(join(tmpdir(), "packaged-two-device-sync-"));
-    const tls = writeCertificate(root);
-    const peer = createPackagedSyncPeer({ key: Bun.file(tls.key), cert: Bun.file(tls.cert) });
+    const { peer, cert } = startSyncPeer(root);
     let devices: Awaited<ReturnType<typeof startPickerDevices>> | undefined;
     let picker: Awaited<ReturnType<typeof openCloudProjectInPicker>> | undefined;
     const failures: unknown[] = [];
+    let firstHomeCleanup: Promise<void> | undefined;
     try {
       const source = await writeSharedNotesExtension(root);
-      const env = {
-        PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([{ source, installName: "shared-notes" }]),
-        NODE_EXTRA_CA_CERTS: tls.cert,
-      };
+      const env = deviceEnvironments(source, cert);
       const started = await startPickerDevices(root, env, prepareRepository(root), async (first, repository) => {
         phase("first device and checkout ready");
         const project = await first.client.projects.create(
           folderProjectInput({ name: "Shared notes" }, repository.checkout),
         );
-        await first.command(project.id, "offline-collection", { action: "seed" });
-        await write(first, project.id, "note", "written on the first device");
-        await first.command(project.id, "write-file", { path: "note.md", content: "# Shared note" });
-        await first.command(project.id, "write-file", { path: "artifact.html", content: "<h1>Shared artifact</h1>" });
-        phase("source files saved");
-        await signIn(first, peer.origin);
+        // These independent records, files and account login can prepare together after the cold start.
+        await finishMutations([
+          first.command(project.id, "offline-collection", { action: "seed" }),
+          write(first, project.id, "note", "written on the first device"),
+          first.command(project.id, "write-file", { path: "note.md", content: "# Shared note" }),
+          first.command(project.id, "write-file", { path: "artifact.html", content: "<h1>Shared artifact</h1>" }),
+          signIn(first, peer.origin),
+        ]);
+        phase("source files saved and account signed in");
         await first.client.account.syncProject(project.id);
         await first.reach(project.id, "synced");
         phase("source project synced");
@@ -226,8 +259,7 @@ test(
       peer.restart();
       await picker.retry();
       phase("retry requested");
-      await first.reach(project.id, "synced");
-      await second.reach(project.id, "synced");
+      await Promise.all([first.reach(project.id, "synced"), second.reach(project.id, "synced")]);
       await picker.ready();
       // Folder preparation can replace a synced owner; navigation does not await its next download.
       await waitFor(async () => (await second.client.account.projectSyncStatus(project.id)).offlineReady);
@@ -266,41 +298,48 @@ test(
       // which a project change starts at once.
       await first.client.account.stopProjectSync(project.id);
       await second.client.projects.update(project.id, { name: "Shared notes (local)" });
-      await first.reach(project.id, "local");
-      await second.reach(project.id, "local");
+      await Promise.all([first.reach(project.id, "local"), second.reach(project.id, "local")]);
       phase("both devices local");
-      for (const [device, action] of [
-        [first, "left"],
-        [second, "right"],
-      ] as const)
-        expect(await device.command(project.id, "offline-collection", { action })).toMatchObject({ saved: true });
-      await write(first, project.id, "note", "edited on the first device while local");
-      await write(second, project.id, "caption", "edited on the second device while local");
+      await finishMutations([
+        ...(
+          [
+            [first, "left"],
+            [second, "right"],
+          ] as const
+        ).map(async ([device, action]) =>
+          expect(await device.command(project.id, "offline-collection", { action })).toMatchObject({ saved: true }),
+        ),
+        write(first, project.id, "note", "edited on the first device while local"),
+        write(second, project.id, "caption", "edited on the second device while local"),
+      ]);
 
       await first.client.account.syncProject(project.id);
       phase("first syncProject returned");
       await second.client.projects.update(project.id, { name: "Shared notes" });
       phase("second project refreshed");
-      await first.reach(project.id, "synced");
-      await second.reach(project.id, "synced");
+      await Promise.all([first.reach(project.id, "synced"), second.reach(project.id, "synced")]);
       phase("both devices resynced");
       const merged = async (device: typeof first) => {
         const records = await device.command<Record<string, StorageRecord>>(project.id, "read");
         return [records.note?.value, records.caption?.value];
       };
       const expected = ["edited on the first device while local", "edited on the second device while local"];
-      await waitFor(async () => Bun.deepEquals(await merged(first), expected));
-      await waitFor(async () => Bun.deepEquals(await merged(second), expected));
+      await Promise.all(
+        [first, second].map((device) => waitFor(async () => Bun.deepEquals(await merged(device), expected))),
+      );
 
-      for (const device of [first, second])
-        await waitFor(async () => {
-          const { value } = await device.command<{ value: { title: string; track: string; updatedAt: string } }>(
-            project.id,
-            "offline-collection",
-            { action: "read" },
-          );
-          return value.title === "Edited" && value.track === "ui" && ["left", "right"].includes(value.updatedAt);
-        });
+      await Promise.all(
+        [first, second].map((device) =>
+          waitFor(async () => {
+            const { value } = await device.command<{ value: { title: string; track: string; updatedAt: string } }>(
+              project.id,
+              "offline-collection",
+              { action: "read" },
+            );
+            return value.title === "Edited" && value.track === "ui" && ["left", "right"].includes(value.updatedAt);
+          }),
+        ),
+      );
 
       const history = await first.command<{ events: ProjectSyncState[]; current: unknown }>(project.id, "sync-history");
       expect(history.current).toMatchObject({ state: "synced", offlineReady: true, pendingItems: 0 });
@@ -310,13 +349,15 @@ test(
       const madeLocal = history.events.indexOf("local", firstSynced);
       expect(history.events.slice(firstSynced, madeLocal)).toContain("offline");
       expect(history.events.slice(firstSynced, madeLocal)).not.toContain("first-download-incomplete");
+      // Retire the finished source while the other device restarts cold; drain removal before root cleanup.
+      firstHomeCleanup = retireDeviceHome(first.host.child, join(root, "first"), failures);
       const stopped = await Promise.allSettled([picker.close(), peer.stop(), stopProcess(second.host.child)]);
       picker = undefined;
       const stoppingFailures = stopped.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
       if (stoppingFailures.length) throw new AggregateError(stoppingFailures, "Could not stop the online devices");
       phase("online browser and second host stopped");
       await reopenPreparedProjectOffline(async () => {
-        second = await startDevice(join(root, "second"), env);
+        second = await startDevice(join(root, "second"), env.second);
         started.second = second;
         expect((await second.client.account.projectSyncStatus(project.id)).offlineReady).toBe(false);
         return { baseUrl: second.host.baseUrl, token: second.host.descriptor.token, projectId: project.id };
@@ -331,7 +372,7 @@ test(
     } finally {
       const cleanup = await Promise.allSettled([
         devices?.browser.close(),
-        devices ? stopProcess(devices.first.host.child) : undefined,
+        firstHomeCleanup ?? (devices ? stopProcess(devices.first.host.child) : undefined),
         devices ? stopProcess(devices.second.host.child) : undefined,
         peer.stop(),
       ]);
@@ -340,5 +381,5 @@ test(
     }
     if (failures.length) throw new AggregateError(failures, "Cloud picker scenario or cleanup failed");
   },
-  PACKAGED_TEST_TIMEOUT,
+  TWO_DEVICE_TEST_TIMEOUT,
 );

@@ -34,6 +34,8 @@ export interface ListRowActionMenuItem {
   /** Trailing content rendered after the label. Use for Kbd shortcuts, counts, or badges. */
   endContent?: ReactNode;
   onAction?: () => void;
+  /** Start actions requiring a browser user gesture before the menu closes. */
+  runOnSelect?: boolean;
 }
 
 /** Inline action rendered on a row, optionally backed by a menu. */

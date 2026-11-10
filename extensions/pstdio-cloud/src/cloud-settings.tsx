@@ -105,7 +105,7 @@ const DeviceRow = (props: { device: AccountDevice; onChange: () => void }) => {
 export const CloudSettings = (props: { projectId?: string }) => {
   const { projectId } = props;
   const { client, t } = useCloudContext();
-  const { data, error, refresh } = useCloud(projectId, true);
+  const { data, online, error, refresh } = useCloud(projectId, true);
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState<string>();
   const [actionError, setActionError] = useState<ActionError>();
@@ -170,7 +170,7 @@ export const CloudSettings = (props: { projectId?: string }) => {
                       {account?.login?.email ??
                         (account?.login ? t("status.signedIn", "Signed in") : t("account.signedOut", "Not signed in"))}
                     </Text>
-                    {data?.signingIn && <CloudLabel data={data} />}
+                    {data?.signingIn && <CloudLabel data={data} online={online} />}
                   </Stack>
                   {data?.signingIn ? (
                     <Button
@@ -244,7 +244,7 @@ export const CloudSettings = (props: { projectId?: string }) => {
                       <Stack gap="sm">
                         <HStack justify="space-between">
                           <SectionTitle icon="folder">{t("project.title", "This project")}</SectionTitle>
-                          <CloudLabel data={data} />
+                          <CloudLabel data={data} online={online} />
                         </HStack>
                         {local && (
                           <>

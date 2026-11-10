@@ -100,6 +100,8 @@ export interface DataTableCellContext {
 }
 
 export interface DataTableCellContextAction {
+  /** Start actions requiring a browser user gesture before the menu closes. */
+  runOnSelect?: boolean;
   label: string;
   icon?: ReactNode;
   destructive?: boolean;

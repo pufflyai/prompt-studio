@@ -12,7 +12,7 @@ import {
 import { sessionBrowser } from "../refs";
 import { create } from "./navigation";
 import { sessionResource, sessionTarget } from "./resource";
-import { sessionIndicator } from "./session-indicator";
+import { sessionDisplayStatus, sessionIndicator } from "./session-indicator";
 
 const icons: Record<string, string> = {
   completed: "circle-check",
@@ -62,11 +62,12 @@ const sessionNodes = (
       });
     }
     const resource = sessionResource(session, ctx.projectId);
+    const status = sessionDisplayStatus(session);
     nodes.push({
       id: session.id,
       label: session.title,
-      icon: icons[session.status] ?? "circle-dashed",
-      iconColor: sessionStatusColor(session.status),
+      icon: icons[status] ?? "circle-dashed",
+      iconColor: sessionStatusColor(status),
       resource,
       target: workspaceId
         ? { kind: "panel", panel: sessionBrowser.panels.conversation, resource, open: "preview" }
@@ -160,7 +161,7 @@ export const search = defineCommandPaletteResource({
         id: session.id,
         label: session.title,
         icon: "message-circle",
-        indicator: sessionIndicator(session.status),
+        indicator: sessionIndicator(sessionDisplayStatus(session)),
         target: sessionTarget(sessionResource(session, ctx.projectId)),
       })),
     };

@@ -11,6 +11,12 @@ const regions = defineCommand({
   ],
 });
 let failed = false;
+const copy = defineCommand({
+  id: "copy",
+  title: "Copy experiment reference",
+  copyResultToClipboard: true,
+  run: () => "experiment-reference",
+});
 const locales = defineCommand({
   id: "locales",
   title: "List locales",
@@ -58,6 +64,7 @@ const run = defineCommand({
   },
 });
 const toolbarActions = [
+  { id: "copy", label: "Copy experiment reference", command: copy.ref },
   {
     id: "run",
     label: "Run experiment",
@@ -90,4 +97,4 @@ const pages = [table, board].map((view) =>
     slots: [],
   }),
 );
-export default defineExtension({ commands: [regions, locales, run], views: [table, board], pages });
+export default defineExtension({ commands: [regions, locales, run, copy], views: [table, board], pages });

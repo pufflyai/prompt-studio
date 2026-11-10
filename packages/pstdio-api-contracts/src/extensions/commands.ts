@@ -20,6 +20,7 @@ export const extensionCommandRecordSchema = z.object({
   cliAliases: z.array(z.string()).optional(),
   examples: z.array(z.string()).optional(),
   automation: z.boolean().optional(),
+  copyResultToClipboard: z.boolean().optional(),
   mutating: z.boolean().optional(),
   resourceMutation: z
     .discriminatedUnion("kind", [

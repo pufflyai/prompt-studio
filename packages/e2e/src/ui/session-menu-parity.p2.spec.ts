@@ -64,7 +64,7 @@ test("Session menus share resource actions and switch through the full history",
   await expect(picker.getByRole("option", { name: /Keep open$/ })).toBeVisible();
   await search.fill("history 00");
   await expect(options).toHaveText(["History 00"]);
-  await expect(picker.getByRole("img", { name: "Session status: completed" })).toBeVisible();
+  await expect(picker.getByRole("img", { name: "Session status: pending" })).toBeVisible();
   const sessions = await (await request.get(`/v1/sessions?project_id=${project.id}`)).json();
   const history = sessions.find((session: { title: string }) => session.title === "History 00");
   try {

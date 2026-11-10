@@ -181,7 +181,8 @@ const DataTableCellView = (props: DataTableCellViewProps) => {
       key: action.label,
       label: action.label,
       icon: action.icon,
-      onClick: () => action.onSelect(cellContext),
+      onSelect: action.runOnSelect ? () => action.onSelect(cellContext) : undefined,
+      onClick: action.runOnSelect ? undefined : () => action.onSelect(cellContext),
     })) ?? [];
   const cellElement = (
     <Table.Cell

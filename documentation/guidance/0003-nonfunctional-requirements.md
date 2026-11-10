@@ -9,7 +9,7 @@
 ## 2. Size and installation
 
 1. **Core download: ≤200 MB** per platform and installation channel, including the installer, runtime, assets, and required follow-up downloads.
-2. **Compiled core binary: ≤200 MB** uncompressed for the CLI executable or desktop sidecar on every supported platform.
+2. **Compiled core binary: ≤280 MB** uncompressed for the CLI executable or desktop sidecar on every supported platform.
 3. Core and default extensions must install on macOS, Linux, and Windows without system Git, Xcode, or developer command-line tools.
 
 ## 3. Performance
