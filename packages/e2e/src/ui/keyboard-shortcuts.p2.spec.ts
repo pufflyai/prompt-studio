@@ -182,15 +182,26 @@ test("lists every registered keyboard shortcut", async ({ page, request }, testI
   await page.getByRole("menuitem", { name: /^Keyboard shortcuts/ }).click();
 
   await expect(page.getByText("Keyboard shortcuts", { exact: true }).last()).toBeVisible();
+  const dialog = page.getByRole("dialog").last();
+  const search = dialog.getByRole("textbox", { name: "Search keyboard shortcuts" });
+  // Built-in wording can change while the registered action and its chord stay the same.
+  for (const commandId of [
+    "workbench.toggleCommandPalette",
+    "workbench.action.showCommands",
+    "workbench.action.changeTheme",
+    "workbench.action.navigateBack",
+    "workbench.action.navigateForward",
+    "workbench.toggleSideBar",
+    "dashboard.openNotifications",
+    "dashboard.openShortcuts",
+  ]) {
+    await search.fill(commandId);
+    const action = dialog.getByRole("group");
+    await expect(action).toHaveCount(1);
+    await expect(action.locator("kbd").last()).toBeVisible();
+  }
+  await search.clear();
   for (const label of [
-    "Toggle Command Palette",
-    "Run Command",
-    "Choose color theme",
-    "Go back",
-    "Go forward",
-    "Toggle Sidenav",
-    "Open notifications",
-    "Keyboard shortcuts",
     "Shortcut greeting",
     "Go to shortcut destination",
     "Shortcut inspector",
@@ -199,7 +210,6 @@ test("lists every registered keyboard shortcut", async ({ page, request }, testI
   ]) {
     await expect(page.getByText(label, { exact: true }).last()).toBeVisible();
   }
-  const dialog = page.getByRole("dialog").last();
   await testInfo.attach("shortcut-inventory", { body: await dialog.innerText(), contentType: "text/plain" });
   await dialog.getByRole("group", { name: "Go to shortcut destination", exact: true }).scrollIntoViewIfNeeded();
   await testInfo.attach("shortcut-reference", { body: await page.screenshot(), contentType: "image/png" });
