@@ -424,3 +424,71 @@ test("primary watcher restoration can overtake a gated speculative peer after ca
     await Promise.allSettled([first, peer, restoration]);
   }
 });
+
+for (const protectedRead of [false, true]) {
+  test(`a conflicting requested head cannot admit ${protectedRead ? "a protected read" : "unrelated speculation"} during a continuation`, async () => {
+    const client = fixture(),
+      held = gate(),
+      unrelated = gate();
+    await Promise.all(["warm-a", "warm-b"].map((name) => client.run("value", { name }, { resources: [name] })));
+    const running = client.withContinuation(() =>
+      client.run("wait", { name: "held", url: held.url }, { resources: ["a"] }),
+    );
+    await held.entered.promise;
+    const head = client.run("value", { name: "same-resource" }, { resources: ["a"] });
+    const deferred = client.run(
+      "wait",
+      { name: "unrelated", url: unrelated.url },
+      {
+        resources: ["b"],
+        ...(protectedRead ? { preserveActiveContinuation: true } : { priority: "background" as const }),
+      },
+    );
+    try {
+      expect(await Promise.race([unrelated.entered.promise.then(() => true), Bun.sleep(50).then(() => false)])).toBe(
+        false,
+      );
+      held.release.resolve();
+      await unrelated.entered.promise;
+    } finally {
+      held.release.resolve();
+      unrelated.release.resolve();
+      await Promise.allSettled([running, head, deferred]);
+    }
+  });
+}
+
+test("a starting worker reserves its source while its peer runs a disjoint preparation", async () => {
+  const startup = gate(),
+    first = gate(),
+    same = gate(),
+    other = gate();
+  let created = 0;
+  const client = createPreparationClient(
+    () =>
+      new Worker(new URL("./preparation-worker.fixture.ts", import.meta.url), {
+        workerData: ++created === 1 ? { startupUrl: startup.url } : undefined,
+      }),
+    undefined,
+    { workers: 2 },
+  );
+  clients.push(client);
+  const jobs = [
+    client.run("wait", { name: "first", url: first.url }, { resources: ["source"] }),
+    client.run("wait", { name: "same", url: same.url }, { resources: ["source/child"] }),
+    client.run("wait", { name: "other", url: other.url }, { resources: ["other"] }),
+  ];
+  try {
+    await startup.entered.promise;
+    expect(
+      await Promise.race([same.entered.promise.then(() => "same"), other.entered.promise.then(() => "other")]),
+    ).toBe("other");
+    startup.release.resolve();
+    await first.entered.promise;
+    first.release.resolve();
+    await same.entered.promise;
+  } finally {
+    for (const g of [startup, first, same, other]) g.release.resolve();
+    await Promise.allSettled(jobs);
+  }
+});

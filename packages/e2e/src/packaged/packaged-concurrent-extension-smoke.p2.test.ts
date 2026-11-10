@@ -9,6 +9,8 @@ import { enablePackagedProjectExtension } from "./packaged-project-extensions";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 
+import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
+
 setupPackagedSmokeTests();
 
 test("loads a shared extension across projects and reloads edited transitive imports", async () => {
@@ -102,3 +104,93 @@ test("loads a shared extension across projects and reloads edited transitive imp
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test(
+  "a compiled host validates two independent installs before either evaluation is released",
+  async () => {
+    const root = mkdtempSync(join(tmpdir(), "packaged-install-pool-"));
+    const repo = join(root, "project");
+    const entered = [Promise.withResolvers<void>(), Promise.withResolvers<void>()];
+    const release = Promise.withResolvers<void>();
+    const gate = Bun.serve({
+      hostname: "127.0.0.1",
+      port: 0,
+      fetch: async (request) => {
+        entered[Number(new URL(request.url).pathname.slice(1))]!.resolve();
+        await release.promise;
+        return new Response("ready");
+      },
+    });
+    let child: ChildProcess | undefined;
+    const installs: Promise<Response>[] = [];
+    try {
+      for (let index = 0; index < 2; index++) {
+        const source = join(repo, `source-${index}`);
+        mkdirSync(source, { recursive: true });
+        writeFileSync(
+          join(source, "package.json"),
+          JSON.stringify({
+            name: `concurrent-${index}`,
+            publisher: "test",
+            version: "1.0.0",
+            main: "./extension.ts",
+            engines: { pstdio: `^${EXTENSION_API_VERSION}` },
+          }),
+        );
+        writeFileSync(
+          join(source, "extension.ts"),
+          `await fetch(${JSON.stringify(new URL(String(index), gate.url).href)}); export default {};`,
+        );
+      }
+      const host = await startPackagedServe(root);
+      child = host.child;
+      const headers = { ...runtimeAuthorization(host.descriptor), "content-type": "application/json" };
+      const created = await fetch(`${host.baseUrl}/v1/projects`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(folderProjectInput({ name: "Concurrent installs" }, repo)),
+      });
+      expect(created.status).toBe(201);
+      const project = (await created.json()) as { id: string };
+      const path = `${host.baseUrl}/v1/projects/${project.id}/extensions`;
+      const initial = await fetch(path, { headers });
+      expect(initial.status).toBe(200);
+      for (let index = 0; index < 2; index++)
+        installs.push(
+          fetch(`${path}/install`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+              source: { kind: "project-folder", path: `source-${index}` },
+              installName: `concurrent-${index}`,
+              skipInstall: true,
+            }),
+          }),
+        );
+      // Both native worker evaluations must enter while neither can complete.
+      // The existing whole-test allowance owns failure; this is not a speed budget.
+      await Promise.all(entered.map((entry) => entry.promise));
+      const ready = await fetch(`${host.baseUrl}/runtime/ready`, { headers });
+      expect(ready.status).toBe(200);
+      release.resolve();
+      for (const response of await Promise.all(installs)) {
+        expect(response.status).toBe(201);
+        await response.json();
+      }
+      const inventory = await fetch(path, { headers });
+      expect(inventory.status).toBe(200);
+      const result = (await inventory.json()) as { extensions: { installName: string; enabled: boolean }[] };
+      for (let index = 0; index < 2; index++)
+        expect(result.extensions).toContainEqual(
+          expect.objectContaining({ installName: `concurrent-${index}`, enabled: true }),
+        );
+    } finally {
+      release.resolve();
+      await Promise.allSettled(installs);
+      if (child) await stopProcess(child);
+      await gate.stop(true);
+      rmSync(root, { recursive: true, force: true });
+    }
+  },
+  PACKAGED_TEST_TIMEOUT,
+);

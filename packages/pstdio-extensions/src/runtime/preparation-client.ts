@@ -76,7 +76,8 @@ export const createPreparationClient = (
     },
     completed: settle,
   });
-  const runningOwner = (slot: PreparationWorkerSlot) => (slot.dispatched ? slot.active : slot.retiring);
+  const runningOwner = (slot: PreparationWorkerSlot) =>
+    slot.dispatched || (slot.worker && !slot.ready) ? slot.active : slot.retiring;
   const compatible = (job: Job, slot: PreparationWorkerSlot) => {
     const others = pool.slots
       .filter((other) => other !== slot)
@@ -103,6 +104,7 @@ export const createPreparationClient = (
     const barrier = pending.findIndex((job) => !job.resources);
     const available = barrier < 0 ? pending : pending.slice(0, barrier + 1);
     return available.find((job) => {
+      if (!orderPreparationQueue([job], queuedPriority, continuations)) return false;
       const owner = pool.slots.find((other) => other.active === job);
       return (!owner || owner === slot) && compatible(job, slot);
     });

@@ -1,6 +1,9 @@
+import { workerData } from "node:worker_threads";
 import { withFileMutationLock } from "pstdio-paths";
 import { runPreparationCommand, withPreparationBuildCommand } from "./preparation-command";
 import { publishPreparationEvent, startPreparationWorker } from "./preparation-server";
+
+if (workerData?.startupUrl) await fetch(workerData.startupUrl);
 
 let sequence = 0;
 startPreparationWorker(async (task, data, signal) => {
