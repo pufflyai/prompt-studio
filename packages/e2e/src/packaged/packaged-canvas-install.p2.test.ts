@@ -7,6 +7,7 @@ import { type Browser, chromium } from "@playwright/test";
 import { packExtension } from "pstdio-extensions/distribution";
 import { folderProjectInput } from "../helpers/folder-project";
 import { runTestCommand } from "../scripts/run-test-command";
+import { deferCanvasBootstrapEffect } from "./canvas-bootstrap-ordering";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { PACKAGED_BINARY_PATH } from "./packaged-helpers";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
@@ -183,6 +184,7 @@ test(
       browser = await chromium.launch(PACKAGED_DASHBOARD_BROWSER);
       phase("browser launched");
       const page = await browser.newPage();
+      await deferCanvasBootstrapEffect(page);
       await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
       await signInBrowser(page, started.descriptor);
       phase("browser signed in");
@@ -211,6 +213,7 @@ test(
       await editor.getByRole("button", { name: "Save", exact: true }).click();
       await viewer.getByRole("menuitemradio", { name: "Archive", exact: true }).click();
       await preview.getByRole("button", { name: "Archive", exact: true }).waitFor();
+      expect(await viewer.locator("html").getAttribute("data-canvas-bootstrap-effect-deferred")).toBe("true");
     } finally {
       await browser?.close();
       if (child) await stopProcess(child);
