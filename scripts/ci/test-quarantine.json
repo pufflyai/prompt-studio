@@ -1121,7 +1121,7 @@
   },
   {
     "runner": "bun",
-    "file": "packages/pstdio-api/src/services/personal-history/legacy-device-index.p1.test.ts",
+    "file": "packages/pstdio-api/src/services/personal-history/legacy-device-index.exclusive.p1.test.ts",
     "name": "a fresh reader starts from the device snapshot and keeps the newer tail and other devices' rows",
     "platforms": ["linux"],
     "arch": "x64",

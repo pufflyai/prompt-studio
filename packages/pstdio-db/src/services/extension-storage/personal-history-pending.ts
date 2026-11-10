@@ -56,7 +56,7 @@ export const applyPendingPersonalIndex = async (
     }
     changed.push(...(await applyPersonalIndexRows(tx, owner, pending, sourceId)));
     // Reapply through the canonical precedence rule, without advancing a partially processed cursor.
-    changed.push(...(await acceptPersonalSource(tx, owner, sourceId, null, accepted)));
+    if (accepted.length) changed.push(...(await acceptPersonalSource(tx, owner, sourceId, null, accepted)));
   }
   return changed;
 };

@@ -7,6 +7,7 @@ import { basename, join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
 import { startLocalWorkspaceRegistry } from "../local-workspace-registry";
+import { removeTestDirectory } from "../scripts/remove-test-directory";
 import { preparePackagedExtensionSource } from "./packaged-extension-source";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
@@ -46,6 +47,7 @@ interface CoreExtensionsFixture {
 }
 
 const removeCoreFixture = async (root: string) => {
+  if (process.platform === "win32") return removeTestDirectory(root);
   // The installed sources, private package cache, and projects are independent
   // after shutdown. Remove their trees concurrently and await every result.
   const removals = await Promise.allSettled(
