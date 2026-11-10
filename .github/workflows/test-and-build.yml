@@ -1,29 +1,49 @@
-name: Diagnose concurrent native icon lookup
+name: Diagnose native Canvas bootstrap ordering
 on:
   workflow_dispatch:
     inputs:
       source_sha:
-        description: Exact unmodified source for the paired cold-fixture experiment
+        description: Exact main source for the controlled one-turn scheduling experiment
         required: true
         type: string
 permissions:
   contents: read
 jobs:
-  paired_main:
+  canvas_ordering:
     runs-on: windows-latest
-    # Same ceiling as the maintained native API job; no test allowance changes.
+    # This is below the maintained compiled-job ceiling; case and assertion limits are unchanged.
     timeout-minutes: 25
     env:
       NX_DAEMON: "false"
       CI_PRIORITY: P2
       GH_TOKEN: ${{ github.token }}
-      API_TEST_REPORT_DIR: ${{ github.workspace }}/test-results/ci/paired-main
-      API_FILES: '["src/features/harnesses/harness-registry-service.p1.test.ts","src/features/link-icons/routes.p1.test.ts"]'
+      E2E_REQUIRE_WEBVIEW_BROWSERS: "1"
     steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.workflow_sha }}
+      - name: Retain the reviewed observation helpers outside the main checkout
+        shell: pwsh
+        run: |
+          $saved = Join-Path $env:RUNNER_TEMP canvas-ordering-observers
+          New-Item -ItemType Directory -Force $saved | Out-Null
+          Copy-Item packages/e2e/src/packaged/native-diagnostic-emitter.ts $saved
+          Copy-Item packages/e2e/src/packaged/packaged-canvas-observation.ts $saved
+          Copy-Item packages/e2e/src/packaged/canvas-ordering-observation.ts $saved
+          Copy-Item scripts/ci/install-canvas-ordering-observation.ts $saved
       - uses: actions/checkout@v5
         with:
           ref: ${{ inputs.source_sha }}
           fetch-depth: 0
+      - name: Require the reviewed exact-main control
+        shell: pwsh
+        env:
+          CONTROL_SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          $expected = "fa160834442076ff6a731c5eca2303d337073dce"
+          if ($env:CONTROL_SOURCE_SHA -cne $expected) { throw "This experiment requires the reviewed full main SHA" }
+          $actual = (git rev-parse HEAD).Trim()
+          if ($actual -cne $expected) { throw "Checkout differs from the reviewed main source" }
       - uses: actions/setup-node@v5
         with:
           node-version: "24.22.1"
@@ -32,32 +52,38 @@ jobs:
           bun-version-file: package.json
       - name: Install dependencies and restore build cache
         uses: ./.github/actions/setup-ci-cache
-      - name: Build API dependencies
-        run: bun run build -- --scope pstdio-api --include-dependencies
-      - name: Preserve maintained Windows setup
-        run: powershell.exe -NoLogo -NoProfile -NonInteractive -Command "@{} | ConvertTo-Json | Out-Null; Add-Type -TypeDefinition 'public static class PromptStudioWarmUp {}'"
-      - name: Record exact main identity and fixture hashes
-        if: ${{ !cancelled() }}
+        with:
+          windows-dev-drive: "true"
+      - name: Build maintained packaged test dependencies
+        run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
+      - name: Compile exact-main CLI
+        run: bun run --cwd scripts build:host
+      - name: Provision the full Chromium used by packaged dashboards
+        # Browser download only; no tested home, project or extension is opened/prewarmed.
+        run: bunx playwright@1.60.0 install chromium --no-shell
+      - name: Record exact product source and install test-only ordering observer
         shell: pwsh
         run: |
-          git rev-parse HEAD
-          git status --porcelain
-          Get-FileHash packages/pstdio-api/src/features/harnesses/harness-registry-service.p1.test.ts
-          Get-FileHash packages/pstdio-api/src/features/link-icons/routes.p1.test.ts
-          Get-FileHash packages/pstdio-api/src/features/link-icons/link-icon-fetcher.ts
-      - name: Run the original concurrent pair once
-        if: ${{ !cancelled() }}
+          New-Item -ItemType Directory -Force test-results/canvas-ordering | Out-Null
+          git rev-parse HEAD | Tee-Object test-results/canvas-ordering/source.txt
+          Get-FileHash extensions/canvas/src/frames/frame.tsx,extensions/canvas/src/frames/assets.ts | Out-File test-results/canvas-ordering/product-hashes.txt
+          bun "$env:RUNNER_TEMP/canvas-ordering-observers/install-canvas-ordering-observation.ts" "$env:GITHUB_WORKSPACE" "$env:RUNNER_TEMP/canvas-ordering-observers"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          git diff -- packages/e2e/src/packaged/packaged-canvas-install.p2.test.ts | Out-File test-results/canvas-ordering/test-only.patch
+          git diff --exit-code -- extensions/canvas/src/frames/frame.tsx extensions/canvas/src/frames/assets.ts
+      - name: Run the unchanged cold Canvas installation subject once
         shell: pwsh
-        # Use the existing two-file scheduler, fresh processes and original per-case limits.
-        # This is a causal experiment, not full-suite qualification or a reliability retry.
-        run: bun run --cwd packages/pstdio-api test --files $env:API_FILES --timeout=15000
-      - name: Preserve exact file and case evidence
+        env:
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio.exe
+          PSTDIO_EXTENSION_RELEASE_REF: ${{ inputs.source_sha }}
+        run: bun run --cwd packages/e2e test:packaged:cli src/packaged/packaged-canvas-install.p2.test.ts
+      - name: Preserve source, scheduling and browser evidence even on failure
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: native-icon-paired-main
-          path: test-results/ci/paired-main
+          name: native-main-canvas-ordering
+          path: |
+            test-results/canvas-ordering
+            test-results/ci/bun
+            packages/e2e/test-results
           if-no-files-found: warn
-      - name: Confirm no source mutation
-        if: always()
-        run: git diff --exit-code
