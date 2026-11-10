@@ -2,6 +2,8 @@
 
 `pstdio.pstdio-session-browser` installs once in the host user scope and can be enabled per project. It owns session browsing and composition. Native chat renders in the workbench document in a full page or shared Side panel. Core owns session identity, execution, transcript, queue, attachments, permissions, workspace links and sync.
 
+New conversations show **Pending** until their first turn starts. Empty saved conversations use the same indicator; completed turns keep their completed status.
+
 Other tools use `sessionBrowser` from `@pstdio/sdk/extensions`. This package re-exports the same implementation-free contract from `pstdio-session-browser/refs`. Session and draft resources retain `extensionId: "pstdio"`; navigation refs belong to this provider. New navigation uses provider refs. The host retains deprecated page/panel/command definitions that target the provider renderer, without another chat implementation or persistence owner. Missing or disabled providers use normal unavailable-target feedback.
 
 Draft bodies, files and control values are stored through public project storage, with small record pointers to durable blobs. Projects without a local folder remain supported. The native host transfers legacy `session-drafts` and `session-attachments` snapshots only after a successful durable save. Removing an attachment chip releases that draft reference, not an attachment still used elsewhere.

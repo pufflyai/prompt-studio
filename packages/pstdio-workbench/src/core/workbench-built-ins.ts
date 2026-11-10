@@ -8,6 +8,7 @@ interface BuiltinCommand {
   icon: string;
   keybinding?: KeybindingSequence;
   category?: string;
+  allowInInputs?: boolean;
   execute: (workbench: WorkbenchCore) => void;
 }
 
@@ -20,6 +21,7 @@ const builtinCommands: BuiltinCommand[] = [
     label: "Toggle Command Palette",
     icon: "Command",
     keybinding: "Mod+P",
+    allowInInputs: true,
     execute: (workbench: WorkbenchCore) => workbench.commandPalette.toggle(),
   },
   {
@@ -27,6 +29,7 @@ const builtinCommands: BuiltinCommand[] = [
     label: "Run Command",
     icon: "Terminal",
     keybinding: "Alt+Shift+K",
+    allowInInputs: true,
     execute: (workbench: WorkbenchCore) => workbench.commandPalette.open({ initialQuery: "> " }),
   },
   {
@@ -66,7 +69,7 @@ export const registerWorkbenchBuiltIns = (workbench: WorkbenchCore) => {
         label: command.label,
         category: command.category ?? "Workbench",
         icon: command.icon,
-        when: "!inputFocus",
+        when: command.allowInInputs ? undefined : "!inputFocus",
       },
       { execute: () => command.execute(workbench) },
     );
@@ -74,7 +77,8 @@ export const registerWorkbenchBuiltIns = (workbench: WorkbenchCore) => {
       workbench.keybindings.registerKeybinding({
         action: { kind: "command", commandId: command.id },
         keybinding: command.keybinding,
-        when: "!inputFocus",
+        when: command.allowInInputs ? undefined : "!inputFocus",
+        allowInInputs: command.allowInInputs,
       });
     workbench.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
       commandId: command.id,

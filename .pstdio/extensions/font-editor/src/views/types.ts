@@ -6,6 +6,7 @@ export interface GlyphView {
 }
 
 export interface FontInspectionView {
+  usedGlyphNames: string[];
   family: string;
   unitsPerEm: number;
   ascent: number;

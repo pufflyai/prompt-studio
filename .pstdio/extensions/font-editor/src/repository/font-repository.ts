@@ -119,7 +119,13 @@ const applyMutation = async (
 
 export const inspectRepositoryFont = async (mount: ArtifactMount) => {
   const config = await readRepositoryConfig(mount);
-  return inspectFont(await readNormalizedSource(mount, config));
+  const inspection = await inspectFont(await readNormalizedSource(mount, config));
+  const registryPath = "packages/ui/src/components/primitives/icon-options.tsx";
+  const registry = (await mount.exists(registryPath)) ? await mount.readText(registryPath) : "";
+  const usedGlyphNames = [
+    ...new Set(Array.from(registry.matchAll(/(?:glyph|levelGlyph)\("([\w-]+)"/g), ([, name]) => name)),
+  ];
+  return { ...inspection, usedGlyphNames };
 };
 
 export const previewRepositoryFont = async (mount: ArtifactMount) => {

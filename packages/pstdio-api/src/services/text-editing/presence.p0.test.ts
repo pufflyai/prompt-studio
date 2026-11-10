@@ -101,9 +101,28 @@ test("presence excludes its own editor and hides selections from incompatible hi
       selection,
     };
     f.documents.live.receive("project-1", "other-device", { ...frame, seedId: "c".repeat(64) });
-    expect(participants()).toEqual([{ id: participantId, label: "Peer", deviceName: "Laptop", selection: null }]);
+    expect(participants()).toEqual([
+      { id: participantId, deviceId: "other-device", label: "Peer", deviceName: "Laptop", selection: null },
+    ]);
     f.documents.live.receive("project-1", "other-device", { ...frame, seedId: placement.opened.snapshot.seedId });
-    expect(participants()).toEqual([{ id: participantId, label: "Peer", deviceName: "Laptop", selection }]);
+    expect(participants()).toEqual([
+      { id: participantId, deviceId: "other-device", label: "Peer", deviceName: "Laptop", selection },
+    ]);
+    const secondParticipantId = crypto.randomUUID();
+    f.documents.live.receive("project-1", "other-device", {
+      ...frame,
+      participantId: secondParticipantId,
+      seedId: placement.opened.snapshot.seedId,
+    });
+    expect(participants().map((person) => person.id)).toEqual([participantId, secondParticipantId]);
+    f.documents.live.receive("project-1", "other-device", {
+      kind: frame.kind,
+      version: 1,
+      action: "leave",
+      extensionId: frame.extensionId,
+      documentKey,
+      participantId: secondParticipantId,
+    });
     f.documents.live.receive("project-1", "other-device", {
       kind: frame.kind,
       version: 1,

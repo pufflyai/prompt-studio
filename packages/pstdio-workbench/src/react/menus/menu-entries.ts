@@ -81,6 +81,7 @@ export const resolveMenuEntries = (input: ResolveMenuEntriesInput) => {
         group: action.resourceGroup,
         commandId: action.sourceCommandId ?? record.command.id,
         description: state.description,
+        disabledReason: state.disabledReason,
         icon: action.icon ?? record.command.icon,
         iconSrc: action.iconSrc,
         external: action.external,
