@@ -11,6 +11,10 @@ interface CloudData {
   signingIn: boolean;
   loginFailed: boolean;
 }
+interface ReadLoop {
+  dirty: boolean;
+  promise?: Promise<void>;
+}
 interface CloudSnapshot {
   data?: CloudData;
   error?: string;
@@ -37,8 +41,7 @@ const readAccount = async (client: CloudReader, projectId?: string) => {
 export const createCloudStore = (client: CloudReader, projectId: string | undefined, includeDevices: boolean) => {
   let snapshot: CloudSnapshot = {};
   let generation = 0;
-  let reading: Promise<void> | undefined;
-  let dirty = false;
+  let reading: ReadLoop | undefined;
   let deviceGeneration = 0;
   let devicesDirty = true;
   let subscriptions: (() => void)[] = [];
@@ -90,19 +93,24 @@ export const createCloudStore = (client: CloudReader, projectId: string | undefi
   };
   const read = () => {
     generation++;
-    dirty = true;
-    if (reading) return reading;
+    if (reading) {
+      reading.dirty = true;
+      return reading.promise;
+    }
+    const pending: ReadLoop = { dirty: true };
+    reading = pending;
     const run = async () => {
-      while (dirty && listeners.size) {
-        dirty = false;
+      while (reading === pending && pending.dirty && listeners.size) {
+        pending.dirty = false;
         await readSnapshot();
       }
     };
-    reading = run().finally(() => {
+    pending.promise = run().finally(() => {
+      if (reading !== pending) return;
       reading = undefined;
-      if (dirty && listeners.size) void read();
+      if (pending.dirty && listeners.size) void read();
     });
-    return reading;
+    return pending.promise;
   };
   const refresh = () => {
     devicesDirty = true;
@@ -125,6 +133,7 @@ export const createCloudStore = (client: CloudReader, projectId: string | undefi
         if (listeners.size) return;
         generation++;
         deviceGeneration++;
+        reading = undefined;
         for (const unsubscribe of subscriptions) unsubscribe();
         subscriptions = [];
       };
