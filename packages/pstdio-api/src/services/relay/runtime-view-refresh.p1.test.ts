@@ -129,8 +129,12 @@ test("finishing setup at the same folder projects artifacts downloaded from anot
   const folders = [join(root, "sender-checkout"), join(root, "receiver-checkout")];
   const synced = async (runtime: Awaited<ReturnType<typeof startRelayRuntime>>) => {
     const end = Date.now() + 3000;
-    while ((await runtime.status(owner.workbenchId)).state !== "synced" && Date.now() < end) await Bun.sleep(10);
-    expect((await runtime.status(owner.workbenchId)).state).toBe("synced");
+    let observed = await runtime.status(owner.workbenchId);
+    while (observed.state !== "synced" && Date.now() < end) {
+      await Bun.sleep(10);
+      observed = await runtime.status(owner.workbenchId);
+    }
+    expect(observed.state).toBe("synced");
   };
   try {
     for (const [index, app] of apps.entries()) {
