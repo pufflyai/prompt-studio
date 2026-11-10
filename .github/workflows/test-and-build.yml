@@ -1,9 +1,9 @@
-name: Qualify scoped Cloud fixture and separate Planner cleanup
+name: Qualify reviewed Cloud fixture corrections
 on:
   workflow_dispatch:
     inputs:
       source_sha:
-        description: Exact receiving-device Cloud fixture correction
+        description: Exact PS158 Cloud fixture corrections with approved case allowance
         required: true
         type: string
 permissions:
@@ -17,7 +17,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - case: two-device
+          - case: cloud
             source_sha: ${{ inputs.source_sha }}
             name: e2e packaged-cli source P2 1 windows-latest
             os: windows-latest
@@ -26,26 +26,11 @@ jobs:
             owner: e2e
             runner: packaged-cli
             priority: P2
-            files: '["packages/e2e/src/packaged/packaged-two-device-sync-smoke.p2.test.ts"]'
+            files: '["packages/e2e/src/packaged/packaged-cloud-project-recovery.p2.test.ts","packages/e2e/src/packaged/packaged-two-device-sync-smoke.p2.test.ts"]'
             stable: true
             quarantine: false
             suite: ""
             browser: true
-            desktop: false
-          - case: planner
-            source_sha: 95f7727b9c1a85c794029a6bdf9caaa80b35033e
-            name: e2e packaged-cli source P2 1 windows-latest
-            os: windows-latest
-            platform: win32
-            arch: x64
-            owner: e2e
-            runner: packaged-cli
-            priority: P2
-            files: '["packages/e2e/src/packaged/packaged-planner-smoke.p2.test.ts"]'
-            stable: true
-            quarantine: false
-            suite: ""
-            browser: false
             desktop: false
     env:
       GH_TOKEN: ${{ github.token }}
@@ -63,7 +48,7 @@ jobs:
         env:
           CONTROL_SOURCE_SHA: ${{ inputs.source_sha }}
         run: |
-          test "$CONTROL_SOURCE_SHA" = "89b78ea1ca99c944295873346a0e7e4a2b2d5cd0"
+          test "$CONTROL_SOURCE_SHA" = "6a4dacdad6fbff1241fc037d6e8542620fc1c534"
           test "$(git rev-parse HEAD)" = "${{ matrix.source_sha }}"
       - uses: oven-sh/setup-bun@v2
         with:
@@ -91,7 +76,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: fixture-qualification-${{ matrix.case }}
+          name: cloud-6a4-windows-qualification
           path: |
             test-results
             packages/e2e/test-results
