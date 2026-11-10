@@ -183,12 +183,12 @@ test("lists every registered keyboard shortcut", async ({ page, request }, testI
 
   await expect(page.getByText("Keyboard shortcuts", { exact: true }).last()).toBeVisible();
   for (const label of [
-    "Toggle Command Palette",
-    "Run Command",
+    "Search commands and resources",
+    "Run command",
     "Choose color theme",
     "Go back",
     "Go forward",
-    "Toggle Sidenav",
+    "Toggle navigation sidebar",
     "Open notifications",
     "Keyboard shortcuts",
     "Shortcut greeting",
