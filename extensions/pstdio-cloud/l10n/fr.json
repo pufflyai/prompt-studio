@@ -1,4 +1,6 @@
 {
+  "commands.projectState": "Lire la préparation du projet",
+  "status.preparing": "Préparation du projet",
   "views.status": "Prompt Studio Cloud",
   "views.details": "Détails Cloud",
   "popover.title": "Prompt Studio Cloud",
@@ -10,7 +12,7 @@
   "status.signInAgain": "Se reconnecter",
   "status.signedIn": "Connecté",
   "status.local": "Local",
-  "status.offline": "Hors ligne",
+  "status.offline": "Connexion perdue",
   "status.downloading": "Téléchargement",
   "status.downloadingPercent": "Téléchargement {{percent}} %",
   "status.syncing": "Synchronisation",

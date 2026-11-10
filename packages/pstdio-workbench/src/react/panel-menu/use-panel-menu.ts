@@ -95,7 +95,7 @@ const useWorkbenchPanelMenu = (
     side,
     label: getWorkbenchPanelMenuLabel(panel, side),
     title: widget?.title ?? getWorkbenchPanelMenuLabel(panel, side),
-    icon: widget?.icon ?? (side === "left" ? "PanelLeft" : "PanelRight"),
+    icon: widget?.icon ?? (side === "left" ? "PanelLeftOpen" : "PanelRightOpen"),
     has: panelAvailable && (regionState.widgets.length > 0 || Boolean(workbench.layout.getPlaceholder(region))),
     collapsed: !open && collapsible,
     collapsible,

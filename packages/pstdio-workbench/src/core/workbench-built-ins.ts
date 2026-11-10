@@ -8,6 +8,7 @@ interface BuiltinCommand {
   icon: string;
   keybinding?: KeybindingSequence;
   category?: string;
+  allowInInputs?: boolean;
   execute: (workbench: WorkbenchCore) => void;
 }
 
@@ -17,21 +18,24 @@ interface BuiltinCommand {
 const builtinCommands: BuiltinCommand[] = [
   {
     id: "workbench.toggleCommandPalette",
-    label: "Toggle Command Palette",
+    label: "Search commands and resources",
     icon: "Command",
     keybinding: "Mod+P",
+    allowInInputs: true,
     execute: (workbench: WorkbenchCore) => workbench.commandPalette.toggle(),
   },
   {
     id: "workbench.action.showCommands",
-    label: "Run Command",
+    label: "Run command",
     icon: "Terminal",
     keybinding: "Alt+Shift+K",
+    allowInInputs: true,
     execute: (workbench: WorkbenchCore) => workbench.commandPalette.open({ initialQuery: "> " }),
   },
   {
     id: "workbench.action.changeTheme",
     label: "Choose color theme",
+    category: "Appearance",
     icon: "Palette",
     keybinding: "Alt+Shift+T",
     execute: (workbench: WorkbenchCore) => workbench.commandPalette.open({ view: "theme" }),
@@ -66,7 +70,7 @@ export const registerWorkbenchBuiltIns = (workbench: WorkbenchCore) => {
         label: command.label,
         category: command.category ?? "Workbench",
         icon: command.icon,
-        when: "!inputFocus",
+        when: command.allowInInputs ? undefined : "!inputFocus",
       },
       { execute: () => command.execute(workbench) },
     );
@@ -74,11 +78,12 @@ export const registerWorkbenchBuiltIns = (workbench: WorkbenchCore) => {
       workbench.keybindings.registerKeybinding({
         action: { kind: "command", commandId: command.id },
         keybinding: command.keybinding,
-        when: "!inputFocus",
+        when: command.allowInInputs ? undefined : "!inputFocus",
+        allowInInputs: command.allowInInputs,
       });
     workbench.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
       commandId: command.id,
-      group: "Workbench",
+      group: command.category ?? "Workbench",
     });
   }
   registerModeNavigationShortcuts(workbench);

@@ -1,7 +1,16 @@
 import { describe, expect, test } from "bun:test";
-import { formatValue, verdictText } from "./format";
+import { differenceColor, formatValue, verdictText } from "./format";
 
 describe("benchmark value formatting", () => {
+  test("colors single-sample differences by direction without changing statistical verdicts", () => {
+    const change = { change: 0.12, low: 0.12, high: 0.12, verdict: "inconclusive" as const };
+    expect(differenceColor(change)).toBe("fg.error");
+    expect(differenceColor({ ...change, change: -0.12 })).toBe("fg.success");
+    expect(differenceColor({ ...change, change: 0 })).toBe("fg.muted");
+    expect(differenceColor({ ...change, change: Infinity })).toBe("fg.error");
+    expect(differenceColor({ ...change, verdict: "unchanged" })).toBe("fg.muted");
+    expect(change.verdict).toBe("inconclusive");
+  });
   test("picks a readable unit for each metric kind", () => {
     expect(formatValue(5400, "ms")).toBe("5.40 s");
     expect(formatValue(305, "ms")).toBe("305 ms");

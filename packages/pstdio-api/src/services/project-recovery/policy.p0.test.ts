@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { sourceRecoveryPolicy } from "./capture-source";
 import { nativeRecoverySupported } from "./native-recovery.fixture";
-import { createRecoveryPolicy } from "./policy";
+import { createProjectFolderPolicy, createRecoveryPolicy } from "./policy";
 import { openRecoverySource } from "./source-posix";
 
 const test = baseTest.skipIf(!nativeRecoverySupported);
@@ -55,6 +55,22 @@ baseTest("root anchors, directory rules, globstars and nested ordinary policy fi
   expect(policy.classify("nested/.pstignore").included).toBe(true);
   expect(createRecoveryPolicy(null).classify("node_modules/", true).included).toBe(true);
   expect(createRecoveryPolicy("").classify(".env").included).toBe(true);
+});
+
+baseTest("a project folder never includes extension storage, whatever its own rules say", () => {
+  for (const text of [null, "", "*\n!.pstdio/\n!.pstdio/**\n", "!.pstdio/extension-storage/\n"]) {
+    const policy = createProjectFolderPolicy(text);
+    expect(policy.text).toBe(text);
+    expect(policy.classify(".pstdio/extension-storage", true)).toEqual({
+      included: false,
+      rule: "/.pstdio/extension-storage/",
+    });
+  }
+  const policy = createProjectFolderPolicy("");
+  for (const path of [".pstdio/extensions/tool/extension.ts", ".pstdio/config.json", "src/extension-storage/notes"])
+    expect(policy.classify(path).included).toBe(true);
+  // Roots outside the project folder, such as external Git administration, keep their own policy.
+  expect(createRecoveryPolicy(null).classify(".pstdio/extension-storage", true).included).toBe(true);
 });
 
 test("a folder without .pstignore has no policy and nothing creates one; an emptied policy includes everything", async () => {

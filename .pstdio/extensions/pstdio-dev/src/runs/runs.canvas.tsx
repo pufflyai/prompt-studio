@@ -1,5 +1,6 @@
-import { Flex, Stack } from "@chakra-ui/react";
+import { Button, Stack } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { AttachedMenu, ResizableSplitLayout, ScrollArea } from "@pstdio/ui";
 import { useState } from "react";
 import { DEFAULT_PLATFORM } from "../benchmarks/platforms";
 import { storyRefs, storyRuns } from "../webview/story-runs";
@@ -15,22 +16,46 @@ const RunsStory = (props: RunsStoryProps) => {
     suites: ["storage", "runtime"],
     platforms: [DEFAULT_PLATFORM],
   });
+  const [collapsed, setCollapsed] = useState(false);
   return (
-    <Flex gap="lg" wrap="wrap" align="flex-start" p="lg">
-      <Stack flex="1 1 24rem" maxW="lg">
-        <RunForm
-          value={request}
-          refs={storyRefs}
-          pending={false}
-          error={props.error}
-          onChange={setRequest}
-          onStart={() => {}}
-        />
-      </Stack>
-      <Stack flex="999 1 32rem" minW="0">
-        <RunList runs={storyRuns} onCancel={() => {}} onOpen={() => {}} />
-      </Stack>
-    </Flex>
+    <ResizableSplitLayout
+      h="100dvh"
+      resizableSide="right"
+      collapsed={collapsed}
+      collapsible
+      defaultSizePx={280}
+      minSizePx={144}
+      maxSizePx={320}
+      contentMinSizePx={320}
+      resizeLabel="Resize New run menu"
+      onCollapsedChange={setCollapsed}
+      contentPanel={
+        <Stack p="lg" minW="0">
+          {collapsed ? (
+            <Button alignSelf="end" onClick={() => setCollapsed(false)}>
+              New run
+            </Button>
+          ) : null}
+          <RunList runs={storyRuns} onCancel={() => {}} onOpen={() => {}} />
+        </Stack>
+      }
+      resizablePanel={
+        <AttachedMenu>
+          <ScrollArea h="full">
+            <Stack p="lg">
+              <RunForm
+                value={request}
+                refs={storyRefs}
+                pending={false}
+                error={props.error}
+                onChange={setRequest}
+                onStart={() => {}}
+              />
+            </Stack>
+          </ScrollArea>
+        </AttachedMenu>
+      }
+    />
   );
 };
 const meta: CanvasMeta<typeof RunsStory> = {

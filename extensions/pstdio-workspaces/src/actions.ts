@@ -33,7 +33,7 @@ export const showCreate = defineCommand({
   id: "show-create",
   title: "New workspace",
   cli: true,
-  palette: [{ group: "Workspaces" }],
+  palette: [{ group: "Workspaces", icon: "folder-plus" }],
   params: {
     anchors: params.json({ resolvedFrom: "resource" }),
     shorthand_base: params.text({ resolvedFrom: "resource" }),

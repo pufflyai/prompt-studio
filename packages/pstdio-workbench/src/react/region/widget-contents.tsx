@@ -26,7 +26,7 @@ export const WorkbenchWidgetContents = (props: WorkbenchWidgetContentsProps) => 
   }, [mounted]);
   // Keep mounted panels intact when resources, placements, or regions change.
   if (!mounted) return null;
-  const content = renderer.render({ ...input, visible: input.visible ?? active }) as ReactNode;
+  const content = renderer.render({ ...input, visible: (input.visible ?? true) && active }) as ReactNode;
   // Webviews keep their bridge connected and receive visibility inside their document.
   return webview ? content : <Activity mode={active ? "visible" : "hidden"}>{content}</Activity>;
 };

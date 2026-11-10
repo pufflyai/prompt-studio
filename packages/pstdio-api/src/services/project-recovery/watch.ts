@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { isAbsolute, join, relative, sep } from "node:path";
 import { createDirectoryTreeWatcher } from "pstdio-extensions";
-import { createRecoveryPolicy } from "./policy";
+import { createProjectFolderPolicy } from "./policy";
 
 // Each folder costs one OS watch on Linux, and that limit is shared with every process.
 const maxFolders = 2_000;
@@ -10,7 +10,7 @@ const unwatchedRescanMs = 10 * 60_000;
 
 const policyAt = (root: string) => {
   try {
-    return createRecoveryPolicy(readFileSync(join(root, ".pstignore"), "utf8"));
+    return createProjectFolderPolicy(readFileSync(join(root, ".pstignore"), "utf8"));
   } catch {
     return null;
   }

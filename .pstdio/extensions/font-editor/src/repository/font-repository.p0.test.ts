@@ -66,6 +66,12 @@ class MemoryMount implements ArtifactMount {
 
 const createMount = async () => {
   const mount = new MemoryMount();
+  mount.files.set(
+    "packages/ui/src/components/primitives/icon-options.tsx",
+    new Uint8Array(
+      await readFile(resolve(import.meta.dir, "../../../../../packages/ui/src/components/primitives/icon-options.tsx")),
+    ),
+  );
   mount.files.set(defaultFontEditorConfig.source, new Uint8Array(await readFile(fontPath)));
   mount.files.set(
     `${defaultFontEditorConfig.outputDir}/${defaultFontEditorConfig.cssFile}`,
@@ -75,6 +81,14 @@ const createMount = async () => {
 };
 
 describe("font repository", () => {
+  test("offers the app's active custom glyphs without removing other font glyphs", async () => {
+    const result = await inspectRepositoryFont(await createMount());
+    expect(result.usedGlyphNames).toHaveLength(10);
+    expect(result.usedGlyphNames).toContain("status-progress");
+    expect(result.usedGlyphNames).toContain("level-xhigh");
+    expect(result.glyphs.length).toBeGreaterThan(result.usedGlyphNames.length);
+    expect(result.usedGlyphNames.every((name) => result.glyphs.some((glyph) => glyph.name === name))).toBe(true);
+  });
   test("reads and saves configuration in the extension storage directory", async () => {
     const mount = await createMount();
     const path = ".pstdio/extension-storage/pstdio.font-editor/config.json";

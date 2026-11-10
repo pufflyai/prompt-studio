@@ -49,6 +49,8 @@ Commands are executable operations used by the CLI, dashboard menus, command pal
 
 Set `automation: true` only on commands that a scoped machine token may run. The host validates the declared params before it creates a durable automation run. Commands without this flag cannot be added to a machine token.
 
+On `main`, a command can set `copyResultToClipboard: true` to copy its successful text result when invoked from the dashboard. Return a string from `run`; other result types show an action error. The host starts the clipboard write during menu selection, before waiting for the command. Clipboard permission failures use the action's normal error surface. CLI and API calls return the text without changing a clipboard. This additive option shares the planned extension API 0.4.0 release; publish its SDK and host before extensions adopt it.
+
 ```ts
 import { defineCommand } from "@pstdio/sdk/extensions";
 import { defineExtension, params } from "@pstdio/sdk/extensions";

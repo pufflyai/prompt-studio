@@ -8,6 +8,7 @@ import { pathToFileURL } from "node:url";
 import { chromium, expect as expectPage } from "@playwright/test";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
+import { logTestPhase } from "../scripts/log-test-phase";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { buildBinary } from "./packaged-helpers";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
@@ -116,6 +117,8 @@ const createProjectRepository = (root: string) => {
 };
 
 browserTest("updates an incompatible default extension and reinstalls it from Marketplace", async () => {
+  const startedAt = Date.now();
+  const phase = (name: string) => logTestPhase(`Marketplace upgrade: ${name} (+${Date.now() - startedAt}ms)`);
   expect(browserAvailable).toBe(true);
   const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-marketplace-upgrade-"));
   const repository = createMarketplaceRepository(tempRoot);
@@ -131,19 +134,30 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
     );
     for (const entry of catalog.extensions) entry.origin.url = pathToFileURL(repository).href;
     writeFileSync(catalogPath, JSON.stringify(catalog));
-    const started = await startPackagedServe(tempRoot, {
-      PSTDIO_EXTENSION_CATALOG: catalogPath,
-      // A nightly binary bakes a main commit that this fixture repository cannot contain,
-      // so the host release ref points at the fixture's tag for the current version.
-      PSTDIO_EXTENSION_RELEASE_REF: `pstdio@${cliPackage.version}`,
-      PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
-        defaultExtensions: [
-          { source: "pstdio-planner", ref: "pstdio@0.26.2", skipInstall: true },
-          { source: localExampleSource, installName: "local-example", skipInstall: true },
-        ],
+    const [runtime, launched] = await Promise.allSettled([
+      startPackagedServe(tempRoot, {
+        PSTDIO_EXTENSION_CATALOG: catalogPath,
+        // A nightly binary bakes a main commit that this fixture repository cannot contain,
+        // so the host release ref points at the fixture's tag for the current version.
+        PSTDIO_EXTENSION_RELEASE_REF: `pstdio@${cliPackage.version}`,
+        PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
+          defaultExtensions: [
+            { source: "pstdio-planner", ref: "pstdio@0.26.2", skipInstall: true },
+            { source: localExampleSource, installName: "local-example", skipInstall: true },
+          ],
+        }),
       }),
-    });
-    child = started.child;
+      chromium.launch(PACKAGED_DASHBOARD_BROWSER),
+    ]);
+    if (runtime.status === "fulfilled") child = runtime.value.child;
+    if (launched.status === "fulfilled") browser = launched.value;
+    if (runtime.status === "rejected" || launched.status === "rejected")
+      throw new AggregateError(
+        [runtime, launched].flatMap((result) => (result.status === "rejected" ? [result.reason] : [])),
+        "Could not start Marketplace runtime and browser",
+      );
+    const started = runtime.value;
+    phase("runtime and cold browser ready");
 
     const createResponse = await fetch(`${started.baseUrl}/v1/projects`, {
       body: JSON.stringify(folderProjectInput({ name: "Marketplace Upgrade" }, projectRepository)),
@@ -190,8 +204,8 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
       ]),
     );
 
-    browser = await chromium.launch(PACKAGED_DASHBOARD_BROWSER);
-    const page = await browser.newPage();
+    phase("project and installed extensions ready");
+    const page = await launched.value.newPage();
     await page.addInitScript((projectId: string) => {
       localStorage.setItem("onboarding-complete", "true");
       localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
@@ -200,10 +214,11 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
         JSON.stringify({ state: { sessionModalState: "closed" }, version: 0 }),
       );
     }, project.id);
-    await signInBrowser(page, started.descriptor);
-    await page.goto(`${started.baseUrl}/projects/${project.id}`, { waitUntil: "domcontentloaded" });
+    await signInBrowser(page, started.descriptor, `/projects/${project.id}`);
+    phase("browser signed in at project home");
     await page.getByRole("option", { name: "Extensions", exact: true }).click();
 
+    phase("Extensions list open");
     const detail = page.getByTestId("extension-detail").filter({ visible: true });
     const list = page.getByTestId("extensions-panel").filter({ visible: true });
     const installedRow = list.getByTestId("extension-entry").filter({ hasText: "Project Planner" });
@@ -218,11 +233,17 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
     );
     await detail.getByTestId("extension-upgrade").click();
     expect((await updateResponse).status()).toBe(200);
+    phase("planner upgrade response");
     await expectPage(detail).toContainText("v0.11.0");
     await expectPage(detail.getByTestId("extension-detail-health")).toHaveCount(0);
     await expectPage(detail.getByTestId("extension-upgrade")).toHaveCount(0);
 
-    await detail.getByTestId("extension-detail-back").click();
+    // Recovery must leave the breadcrumb return path available to pointer users.
+    const extensionsBreadcrumb = page
+      .getByRole("navigation", { name: "breadcrumb" })
+      .getByRole("button", { name: "Extensions", exact: true });
+    await extensionsBreadcrumb.click({ timeout: 5_000 });
+    phase("planner recovered and breadcrumb returned");
     const adoptedRow = list.getByTestId("extension-entry").filter({ hasText: "Prompt Studio Skills" });
     await adoptedRow.waitFor();
     await adoptedRow.click();
@@ -235,11 +256,16 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
     );
     await detail.getByTestId("extension-upgrade").click();
     expect((await adoptedUpgradeResponse).status()).toBe(200);
+    phase("adopted skills upgrade response");
     await expectPage(detail).toContainText("v0.4.0");
+    phase("adopted skills version displayed");
     await expectPage(detail.getByTestId("extension-detail-health")).toHaveCount(0);
+    phase("adopted skills health cleared");
     await expectPage(detail.getByTestId("extension-upgrade")).toHaveCount(0);
+    phase("adopted skills recovery controls cleared");
 
-    await detail.getByTestId("extension-detail-back").click();
+    await extensionsBreadcrumb.click({ timeout: 5_000 });
+    phase("skills recovered and breadcrumb returned");
     const localRow = list.getByTestId("extension-entry").filter({ hasText: "Local Example" });
     await localRow.waitFor();
     await localRow.click();
@@ -249,8 +275,9 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
     await expectPage(detail.getByTestId("extension-upgrade")).toHaveCount(0);
     await expectPage(detail.getByTestId("extension-incompatible-upgrade")).toHaveCount(0);
 
-    await detail.getByTestId("extension-detail-back").click();
+    await extensionsBreadcrumb.click({ timeout: 5_000 });
     await installedRow.click();
+    phase("local source verified; planner selected for reinstall");
 
     await detail.getByTestId("extension-delete").click();
     const dialog = page.getByRole("dialog").last();
@@ -260,6 +287,7 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
       .filter({ visible: true })
       .filter({ has: page.getByText("Project Planner", { exact: true }) });
     await marketplaceRow.waitFor();
+    phase("planner uninstalled");
 
     const reinstallResponse = page.waitForResponse(
       (response) => response.url().endsWith("/extensions/install") && response.status() === 201,
@@ -267,9 +295,11 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
     await marketplaceRow.getByTestId("marketplace-extension-install").click();
     await reinstallResponse;
     await list.getByTestId("extension-entry").filter({ hasText: "Project Planner" }).waitFor();
+    phase("planner reinstalled");
   } finally {
     await browser?.close();
     if (child) await stopProcess(child);
     rmSync(tempRoot, { recursive: true, force: true });
+    phase("cleanup complete");
   }
 });

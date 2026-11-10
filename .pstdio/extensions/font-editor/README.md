@@ -4,6 +4,8 @@ Repository-local Fontello-style editor for the icon font in `packages/ui/public/
 
 Open **Icon Set editor** in the Prompt Studio navigation to search and preview glyphs, import SVG artwork, rename or remove glyphs, move codepoints, configure outputs, and rebuild the font. The same operations are available through `pst font-editor`.
 
+The icon-set chooser switches between the full **Prompt Studio** font and **Custom icons**, the smaller set of glyphs currently used by the app's icon registry. Both views edit the same canonical font. Building from either view preserves every glyph, including those hidden by the current view or search.
+
 The extension keeps the configured TTF as its canonical source. It normalizes the three contour aliases in the supplied font from the existing CSS so all 220 semantic glyph mappings remain independently editable. Mutations generate EOT, SVG, TTF, WOFF, WOFF2, and CSS in memory and verify their mappings before writing any file.
 
 ## CLI commands

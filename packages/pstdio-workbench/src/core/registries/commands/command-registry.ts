@@ -74,6 +74,7 @@ export interface Command {
   when?: string;
   params?: CommandParamSchema;
   resourceMutation?: import("@pstdio/sdk/extensions").CommandDefinition["resourceMutation"];
+  copyResultToClipboard?: boolean;
 }
 
 export interface CommandHandler<TArgs = unknown, TResult = unknown> {
