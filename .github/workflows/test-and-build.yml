@@ -1,9 +1,9 @@
-name: Attribute Cloud offline reopen on main
+name: Diagnose Cloud Retry request settlement
 on:
   workflow_dispatch:
     inputs:
       source_sha:
-        description: Exact current main control
+        description: Exact frozen PS158 source
         required: true
         type: string
 permissions:
@@ -24,7 +24,7 @@ jobs:
             owner: e2e
             runner: packaged-cli
             priority: P2
-            files: '["packages/e2e/src/packaged/packaged-cloud-notes-onboarding.p2.test.ts","packages/e2e/src/packaged/packaged-two-device-sync-smoke.p2.test.ts"]'
+            files: '["packages/e2e/src/packaged/packaged-cloud-project-recovery.p2.test.ts"]'
             stable: true
             quarantine: false
             suite: ""
@@ -41,12 +41,12 @@ jobs:
         with:
           ref: ${{ inputs.source_sha }}
           fetch-depth: 0
-      - name: Require exact current main
+      - name: Require exact frozen source
         shell: bash
         env:
           CONTROL_SOURCE_SHA: ${{ inputs.source_sha }}
         run: |
-          test "$CONTROL_SOURCE_SHA" = "e92609e79cda954c8f95b07499ee9178b3e33d76"
+          test "$CONTROL_SOURCE_SHA" = "4bd741de85239fff34afa01d0dc37aa86e06d4ca"
           test "$(git rev-parse HEAD)" = "$CONTROL_SOURCE_SHA"
       - uses: oven-sh/setup-bun@v2
         with:
@@ -61,7 +61,24 @@ jobs:
           windows-dev-drive: "true"
       - name: Install browser engines
         run: bunx playwright@1.60.0 install --with-deps
-      - name: Run the same maintained edited-test selection on main
+      - name: Capture browser events without changing cases or limits
+        shell: bash
+        run: |
+          python3 - <<'PYTRACE'
+          from pathlib import Path
+          p = Path('packages/e2e/src/packaged/packaged-cloud-project.fixture.ts')
+          s = p.read_text()
+          begin = '    const page = await browser!.newPage();'
+          assert s.count(begin) == 1
+          s = s.replace(begin, begin + '\n    await mkdir(join(import.meta.dir, "../../test-results"), { recursive: true });\n    await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });')
+          end = '    const cleanup = await Promise.allSettled(['
+          assert s.count(end) == 1
+          s = s.replace(end, '    await browser?.contexts()[0]?.tracing.stop({ path: join(import.meta.dir, "../../test-results/cloud-retry-settlement.zip") });\n' + end)
+          p.write_text(s)
+          PYTRACE
+          git diff --check
+          git diff --stat
+      - name: Run the failed maintained case once with observational tracing
         shell: bash
         run: |
           if [[ "$RUNNER_OS" == "Linux" ]]; then
@@ -73,7 +90,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: cloud-main-control-${{ matrix.runner }}
+          name: cloud-retry-settlement-trace
           path: |
             test-results
             packages/e2e/test-results
