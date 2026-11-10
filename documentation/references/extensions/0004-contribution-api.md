@@ -494,7 +494,9 @@ Both renderers accept an optional numeric `domain: [minimum, maximum]` to compar
 cells on one scale, and a `unit` suffix such as `"ms"` or `"MB"`. Without a domain,
 each sparkline fits its data. Bar charts always expand their scale to include zero, even with an explicit domain. Chart columns sort
 and filter by the last non-null measurement. Their accessible name includes the
-labels and values.
+labels and values. Hover a bar or sparkline position to see its measurement; focus
+a chart with the keyboard to see all its labels and values. Tooltips also identify
+unmeasured sparkline positions.
 
 Set `defaultSettings: { rowHeight: "tall" }` to start with taller rows. The Display
 menu offers Compact, Comfortable, and Tall; the selected height belongs to the

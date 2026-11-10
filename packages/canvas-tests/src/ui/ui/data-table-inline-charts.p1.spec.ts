@@ -23,3 +23,32 @@ test("inline charts stay readable when table rows change height", async ({ page 
   await preview.getByRole("button", { name: "Memory", exact: true }).click();
   await expect(preview.getByRole("img", { name: "Base and head: Base: 0 MB, Head: 0 MB", exact: true })).toBeVisible();
 });
+
+// Critical: measurements hidden by compact rows remain available on hover and keyboard focus.
+test("inline chart tooltips expose individual measurements and keyboard summaries", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/data-table/data-table-charts.canvas.tsx#Performance",
+  );
+  const comparison = preview.getByRole("img", { name: "Base and head: Base: 4,800 ms, Head: 5,300 ms", exact: true });
+  const tooltip = preview.locator('[role="tooltip"][data-state="open"]');
+  await comparison.locator("rect").first().hover();
+  await expect(tooltip).toHaveText("Base: 4,800 ms");
+  await comparison.locator("rect").nth(1).hover();
+  await expect(tooltip).toHaveText("Head: 5,300 ms");
+  const sparkline = preview.getByRole("img", { name: /^History: Run 1: 5,400 ms/ });
+  const plot = sparkline.locator("svg");
+  const bounds = await plot.boundingBox();
+  if (!bounds) throw new Error("History plot is missing");
+  await plot.hover({ position: { x: bounds.width * 0.592, y: bounds.height / 2 } });
+  await expect(tooltip).toHaveText("Run 4: not measured");
+  await comparison.focus();
+  await expect(tooltip).toContainText("Base: 4,800 ms");
+  await expect(tooltip).toContainText("Head: 5,300 ms");
+  await page.keyboard.press("Escape");
+  await expect(tooltip).toBeHidden();
+  await preview.getByRole("button", { name: "Memory", exact: true }).click();
+  const zero = preview.getByRole("img", { name: "Base and head: Base: 0 MB, Head: 0 MB", exact: true });
+  await zero.locator("svg").first().hover();
+  await expect(tooltip).toHaveText("Base: 0 MB");
+});

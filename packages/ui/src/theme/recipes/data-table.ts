@@ -1,7 +1,7 @@
 import { defineSlotRecipe } from "@chakra-ui/react";
 
 export const dataTableRecipe = defineSlotRecipe({
-  slots: ["root", "chart", "sparkline", "bar", "barPlot", "label", "value"],
+  slots: ["root", "chart", "sparkline", "bar", "barDetails", "barPlot", "label", "value"],
   base: {
     root: { "--table-row-height": "{sizes.10}", "--table-chart-height": "{sizes.6}", "--table-chart-labels": "none" },
     chart: {
@@ -12,19 +12,19 @@ export const dataTableRecipe = defineSlotRecipe({
       h: "var(--table-chart-height, {sizes.6})",
       gap: "2xs",
       color: "fg.muted",
+      focusVisibleRing: "inside",
       "&[data-table-chart=bar-chart]": { h: "auto", minH: "var(--table-chart-height, {sizes.6})" },
     },
     sparkline: { display: "block", w: "full", h: "full", overflow: "visible" },
-    bar: { display: "flex", alignItems: "center", gap: "xs", minH: "0", flex: "1" },
-    barPlot: { display: "block", flex: "1", minW: "0", w: "full", h: "2.5" },
+    bar: { display: "flex", flexDirection: "column", justifyContent: "center", flex: "1 0 auto", minW: "0" },
+    barDetails: { display: "var(--table-chart-labels, none)", justifyContent: "space-between", gap: "xs", minW: "0" },
+    barPlot: { display: "block", flexShrink: "0", w: "full", h: "2.5" },
     label: {
-      display: "var(--table-chart-labels, none)",
       textStyle: "label/XS",
-      w: "12",
-      flexShrink: "0",
+      minW: "0",
       truncate: true,
     },
-    value: { display: "var(--table-chart-labels, none)", textStyle: "mono/XS", flexShrink: "0" },
+    value: { textStyle: "mono/XS", flexShrink: "0" },
   },
   variants: {
     rowHeight: {
@@ -33,14 +33,14 @@ export const dataTableRecipe = defineSlotRecipe({
         root: {
           "--table-row-height": "{sizes.16}",
           "--table-chart-height": "{sizes.10}",
-          "--table-chart-labels": "block",
+          "--table-chart-labels": "flex",
         },
       },
       tall: {
         root: {
           "--table-row-height": "{sizes.24}",
           "--table-chart-height": "{sizes.16}",
-          "--table-chart-labels": "block",
+          "--table-chart-labels": "flex",
         },
       },
     },

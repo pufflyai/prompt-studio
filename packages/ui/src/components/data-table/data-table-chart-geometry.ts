@@ -8,7 +8,9 @@ export const chartGeometry = (value: DataTableChartValue, renderer: DataTableRen
   const upper = renderer.domain?.[1] ?? Math.max(...present);
   const low = includeZero ? Math.min(0, lower) : lower;
   const high = includeZero ? Math.max(0, upper) : upper;
-  const at = (point: number) => (low === high ? 50 : 4 + Math.max(0, Math.min(1, (point - low) / (high - low))) * 92);
+  const inset = includeZero ? 0 : 4;
+  const at = (point: number) =>
+    low === high ? 50 : inset + Math.max(0, Math.min(1, (point - low) / (high - low))) * (100 - inset * 2);
   const points = value.values.map((point, index) =>
     point === null
       ? null

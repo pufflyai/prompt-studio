@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { psTheme } from "@/theme";
 import { DataTableChartCell } from "./data-table-chart-cell";
 import { chartGeometry } from "./data-table-chart-geometry";
+import { dataTableChartText } from "./data-table-chart-text";
 
 const markup = (value: unknown, type: "sparkline" | "bar-chart") =>
   renderToStaticMarkup(
@@ -46,4 +47,10 @@ test("small nonzero measurements keep their precision in chart labels", () => {
 test("explicit bar domains still include the zero baseline", () => {
   const geometry = chartGeometry({ values: [15, 20] }, { type: "bar-chart", domain: [10, 20] });
   expect(geometry.points[0]!.width / geometry.points[1]!.width).toBeCloseTo(0.75);
+});
+
+test("chart tooltip text uses current measurements when a live series shrinks", () => {
+  const renderer = { type: "sparkline", unit: "ms" } as const;
+  expect(dataTableChartText({ values: [10, 20, 30] }, renderer, 2)).toEqual(["3: 30 ms"]);
+  expect(dataTableChartText({ values: [40, 50] }, renderer, 2)).toEqual(["1: 40 ms", "2: 50 ms"]);
 });

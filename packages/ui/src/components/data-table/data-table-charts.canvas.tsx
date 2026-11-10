@@ -51,7 +51,7 @@ export default {
   title: "Design system/Components/Data display/Data table/Inline charts",
   fullscreen: true,
   description:
-    "Inline history and comparison charts. Choose Expanded or Compact, or change Row height in Display. Timing includes missing and single observations; Memory includes zeroes; Changes includes signed bars.",
+    "Inline history and full-width comparison bars with square baselines. Hover a bar or history point for its measurement; focus a chart for all measurements. Choose Expanded or Compact, or change Row height in Display. Memory includes zeroes; Changes includes signed bars.",
 };
 
 export const Performance = () => {
