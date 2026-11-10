@@ -21,3 +21,5 @@ Home shows only providers with native quota data. Each quota window has a usage 
 Home records the latest observation each hour in its project-scoped extension storage and retains eight days. An hourly extension schedule samples even when Home is closed, while the host is running. Opening Home or refreshing also records an observation. History begins with real observations; past usage is never backfilled. Reset timestamps separate periods. Native window durations define period bounds: weekly charts show an even-use target from 0% to 100%, a 100% quota limit, and a forecast from average usage since the period began. The forecast is an estimate, not an additional provider quota. Unknown or expired periods have no forecast or weekly target.
 
 Quotas describe the runtime's sign-in and may include usage outside this project. Each project records its own history. The graph Canvas is `src/components/quota-graph.canvas.tsx`, frame **Quota history and weekly target**, with loading, empty, and error controls.
+
+*Updated at: 2026-11-10*
