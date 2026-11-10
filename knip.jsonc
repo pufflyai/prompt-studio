@@ -189,6 +189,8 @@
     },
     "packages/pstdio-api": {
       "entry": [
+        // The API and compiled CLI start preparation in an isolated worker by path.
+        "src/features/extensions/extension-preparation-worker.ts",
         "package.json",
         "src/index.ts",
         "src/server.ts",
@@ -265,6 +267,8 @@
     },
     "packages/pstdio-extensions": {
       "entry": [
+        // The source runtime starts this default preparation worker by path.
+        "src/runtime/preparation-worker.ts",
         "package.json",
         "scripts/**/*.ts",
         "src/index.ts",

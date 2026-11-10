@@ -121,17 +121,6 @@ export const collectRuntimeModulePaths = (
   return modulePaths;
 };
 
-export const hashRuntimeModulePaths = (packagePath: string, modulePaths: Set<string>) => {
-  const hash = createHash("sha256");
-  for (const relativePath of [...modulePaths].sort()) {
-    hash.update(relativePath);
-    hash.update("\0");
-    hash.update(readFileSync(join(packagePath, relativePath)));
-    hash.update("\0");
-  }
-  return hash.digest("hex").slice(0, 16);
-};
-
 const containsRuntimeModule = (relativePath: string, modulePaths: Set<string>) =>
   [...modulePaths].some((modulePath) => modulePath.startsWith(`${relativePath}/`));
 
