@@ -8,12 +8,19 @@ export const visitRevisionFiles = (root: string, visit: (path: string, rel: stri
     const canonical = realpathSync(directory);
     if (directories.has(canonical)) return;
     directories.add(canonical);
-    for (const entry of readdirSync(directory, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
-      if (entry.name === "node_modules" || entry.name === ".git" || entry.name.startsWith(".pstdio-runtime-")) continue;
-      const path = join(directory, entry.name);
-      const stats = entry.isSymbolicLink() ? statSync(path, { throwIfNoEntry: false }) : entry;
-      if (stats?.isDirectory()) walk(path);
-      else if (stats?.isFile()) visit(path, relative(root, path));
+    try {
+      for (const entry of readdirSync(directory, { withFileTypes: true }).sort((a, b) =>
+        a.name.localeCompare(b.name),
+      )) {
+        if (entry.name === "node_modules" || entry.name === ".git" || entry.name.startsWith(".pstdio-runtime-"))
+          continue;
+        const path = join(directory, entry.name);
+        const stats = entry.isSymbolicLink() ? statSync(path, { throwIfNoEntry: false }) : entry;
+        if (stats?.isDirectory()) walk(path);
+        else if (stats?.isFile()) visit(path, relative(root, path));
+      }
+    } finally {
+      directories.delete(canonical);
     }
   };
   walk(root);

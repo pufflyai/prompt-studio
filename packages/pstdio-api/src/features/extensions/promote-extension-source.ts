@@ -30,6 +30,15 @@ const assertReusableDependencies = (prepared: string, target: string, preserve: 
     throw new Error("Installed extension dependencies changed while preparing the replacement");
 };
 
+const restorePreviousSource = (target: string, backup: string, promoted: boolean, backedUp: boolean) => {
+  if (promoted) {
+    try {
+      rmSync(target, { recursive: true, force: true });
+    } catch {}
+  }
+  if (backedUp) renameSync(backup, target);
+};
+
 export const promotePreparedSource = async (
   preparedPath: string,
   targetPath: string,
@@ -52,9 +61,15 @@ export const promotePreparedSource = async (
     assertReusableDependencies(preparedPath, targetPath, preserveDependencies);
     onClaim?.({ ownerPath, token, previousToken });
     writeFileSync(ownerPath, token);
+    let backedUp = false;
+    let promoted = false;
     try {
-      if (existsSync(targetPath)) renameSync(targetPath, backupPath);
+      if (existsSync(targetPath)) {
+        renameSync(targetPath, backupPath);
+        backedUp = true;
+      }
       renameSync(preparedPath, targetPath);
+      promoted = true;
       relocateNodeModules();
       const previousNodeModules = join(backupPath, "node_modules");
       if (preserveDependencies && existsSync(previousNodeModules)) {
@@ -62,10 +77,7 @@ export const promotePreparedSource = async (
       }
       return { ownerPath, token, previousToken };
     } catch (error) {
-      try {
-        rmSync(targetPath, { recursive: true, force: true });
-      } catch {}
-      if (existsSync(backupPath)) renameSync(backupPath, targetPath);
+      restorePreviousSource(targetPath, backupPath, promoted, backedUp);
       if (previousToken) writeFileSync(ownerPath, previousToken);
       else rmSync(ownerPath, { force: true });
       throw error;

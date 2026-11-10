@@ -70,8 +70,8 @@ export const uninstallProjectExtension = async (
   const installedSource = await deps.installedExtensionSourcesService.get(instance.installed_extension_id);
   if (!installedSource) return null;
 
-  removeInstalledSourceFiles(installedSource.source_path);
   await runExtensionPreparation("runtime.forget", { sourcePath: installedSource.source_path });
+  removeInstalledSourceFiles(installedSource.source_path);
 
   const instances = await deps.extensionInstancesService.list({ installed_extension_id: installedSource.id });
   let retainedData = false;
