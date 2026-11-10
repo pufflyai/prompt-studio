@@ -1,5 +1,19 @@
 [
   {
+    "runner": "bun",
+    "file": "packages/pstdio-api/src/features/workspaces/workspace-provider-local.p1.test.ts",
+    "name": "an installed local provider prepares its directory before readiness and reopens it after restart",
+    "platforms": ["linux"],
+    "arch": "x64",
+    "owner": "PS-188 / workspace provider deletion",
+    "reason": "The original Linux merge group observed the owned directory after awaited deletion; the unchanged case passed in the next independent Linux main merge group. Existing logs do not establish the cause of the post-delete directory presence. Preserve the complete restart, provider identity, deletion and source-folder protection assertions and the original 30-second allowance. The case establishes its own revision fixture when selected independently.",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/42800221867/job/129776119814",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/42801983089/job/129783049863"
+    ],
+    "removeWhen": "Prove and repair the cause of the post-delete directory presence with a controlled interleaving, then pass the complete unchanged lifecycle case once on Linux x64 within its original allowance and restore it to the stable lane. Retain first-attempt evidence without retries."
+  },
+  {
     "runner": "packaged-desktop-benchmark",
     "file": "clients/desktop/src/e2e/packaged-launch.p3.bench.ts",
     "name": "sidecar crash shows recovery within budget",
