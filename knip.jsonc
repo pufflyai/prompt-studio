@@ -148,6 +148,8 @@
         "src/**/*.test.tsx",
         "src/**/*.fixture.ts",
         "src/**/*.fixture.tsx",
+        // UI Canvas discovers public-build regression fixtures by path.
+        "src/**/*.canvas.tsx",
         // Packaged smoke tests bundle these extension entries by path.
         "src/packaged/fixtures/*-extension.ts",
         // Specs install fixture extensions by path.

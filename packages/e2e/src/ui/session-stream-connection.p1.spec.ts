@@ -6,7 +6,7 @@ const sessionPrompt = (title: string) => `${title} __fake_hold__`;
 
 const isSessionStream = (sent: Request) => new URL(sent.url()).pathname === "/v1/session-stream";
 
-test("streams every opened session over one shared connection", async ({ page, request }) => {
+test("reuses one shared connection while switching observed sessions", async ({ page, request }) => {
   const project = await (
     await request.post(`${apiBase}/v1/projects`, { data: folderProjectInput({ name: "Shared session stream" }) })
   ).json();
@@ -35,6 +35,8 @@ test("streams every opened session over one shared connection", async ({ page, r
     const perSessionStreams: string[] = [];
     const subscribed: string[] = [];
     const retained: string[] = [];
+    const watchConnections: Array<string | undefined> = [];
+    const retainConnections: Array<string | undefined> = [];
     page.on("request", (sent) => {
       const path = new URL(sent.url()).pathname;
       if (isSessionStream(sent)) {
@@ -48,9 +50,15 @@ test("streams every opened session over one shared connection", async ({ page, r
         // in the public command envelope rather than a browser transcript subscription.
         const command = subscription.command;
         const resource = command?.body.resource;
-        if (command?.command_id === "pstdio.pstdio-session-browser.command.watch" && resource?.type === "session")
+        const connection = /^\/v1\/session-stream\/([^/]+)\/subscriptions$/.exec(path)?.[1];
+        if (command?.command_id === "pstdio.pstdio-session-browser.command.watch" && resource?.type === "session") {
           subscribed.push(resource.id);
-        if (subscription.retain_session_id) retained.push(subscription.retain_session_id);
+          watchConnections.push(connection);
+        }
+        if (subscription.retain_session_id) {
+          retained.push(subscription.retain_session_id);
+          retainConnections.push(connection);
+        }
       }
     });
     const closed = (sent: Request) => {
@@ -68,13 +76,23 @@ test("streams every opened session over one shared connection", async ({ page, r
     await sidenav.getByRole("option", { name: "Session A", exact: true }).click();
     await expect.poll(() => subscribed).toEqual([sessions[0]!.id]);
     await expect.poll(() => retained).toEqual([sessions[0]!.id]);
+    const connection = watchConnections[0];
+    expect(connection).toBeTruthy();
+    expect(retainConnections).toEqual([connection]);
+    // An unobserved compose draft may have closed its earlier connection. Saved sessions
+    // must share this live ownership period without keeping that hidden draft subscribed.
+    const openedWithSessionA = opened;
     await sidenav.getByRole("option", { name: "Session B", exact: true }).click();
     await expect.poll(() => subscribed).toEqual([sessions[0]!.id, sessions[1]!.id]);
     await expect.poll(() => retained).toEqual([sessions[0]!.id, sessions[1]!.id]);
     await sidenav.getByRole("option", { name: "Session A", exact: true }).click();
     await expect(page.getByRole("log").getByText(/^Fake Agent: completed "Session A/)).toBeVisible();
+    await expect.poll(() => subscribed).toEqual([sessions[0]!.id, sessions[1]!.id, sessions[0]!.id]);
+    await expect.poll(() => retained).toEqual([sessions[0]!.id, sessions[1]!.id, sessions[0]!.id]);
 
-    expect(opened).toBe(1);
+    expect(watchConnections).toEqual([connection, connection, connection]);
+    expect(retainConnections).toEqual([connection, connection, connection]);
+    expect(opened).toBe(openedWithSessionA);
     expect(mostOpen).toBe(1);
     expect(perSessionStreams).toEqual([]);
   } finally {

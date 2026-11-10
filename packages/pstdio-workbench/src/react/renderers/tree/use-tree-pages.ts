@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import type { TreeNode, TreeRendererState, WorkbenchCore } from "../../../core";
 import { getRendererReadCache } from "../../../core/registries/views/renderer-read-registry";
 import { getTreePageOwner, type PagedTreeData, type TreePageIdentity } from "./tree-page-owner";
@@ -6,6 +6,15 @@ import { previewTreeResources } from "./tree-resource-preview";
 import type { LoadedTreeData } from "./tree-view-load";
 
 const NO_PREVIEWS = new Map();
+const NO_SUBSCRIPTION = () => () => {};
+const NO_SNAPSHOT = () => undefined;
+
+const bindOwner = (key: string, workbench: WorkbenchCore, identity: TreePageIdentity) => {
+  const cache = getRendererReadCache(workbench.views.reads);
+  const owner = getTreePageOwner(cache, identity);
+  if (!owner) return;
+  return { key, owner, subscribe: (listener: () => void) => owner.attach(listener, cache) };
+};
 
 export const useTreePages = (
   workbench: WorkbenchCore,
@@ -16,23 +25,22 @@ export const useTreePages = (
   state: TreeRendererState,
 ) => {
   const key = JSON.stringify(identity);
-  const [current, setCurrent] = useState<{ key: string; owner: ReturnType<typeof getTreePageOwner> }>();
-  const [, changed] = useState(0);
+  const [current, setCurrent] = useState<ReturnType<typeof bindOwner>>();
   // Query identity controls ownership. Tree callbacks and progressive values do not create new owners.
   // biome-ignore lint/correctness/useExhaustiveDependencies: A settled root first becomes available after useRendererRead's commit.
   useEffect(() => {
-    const cache = getRendererReadCache(workbench.views.reads);
-    const owner = getTreePageOwner(cache, identity);
-    if (!owner) return;
-    const stop = owner.attach(() => changed((value) => value + 1), cache);
-    setCurrent({ key, owner });
-    return stop;
+    setCurrent(bindOwner(key, workbench, identity));
   }, [workbench, key, snapshot !== undefined]);
+  const binding = current?.key === key ? current : undefined;
+  const result = useSyncExternalStore(
+    binding?.subscribe ?? NO_SUBSCRIPTION,
+    binding?.owner.sections ?? NO_SNAPSHOT,
+    NO_SNAPSHOT,
+  );
   useEffect(() => {
     if (loading || current?.key !== key || !current.owner) return;
-    if (current.owner.accept(tree, snapshot)) changed((value) => value + 1);
+    current.owner.accept(tree, snapshot);
   }, [current, key, tree, snapshot, loading]);
-  const result = current?.key === key ? current.owner?.sections() : undefined;
   const visible = result ?? {
     body: previewTreeResources(tree.body, tree.children, NO_PREVIEWS),
     header: previewTreeResources(tree.header, tree.children, NO_PREVIEWS),

@@ -57,6 +57,7 @@ import {
 } from "./workbench-core-connections";
 import { createCoreNavigationRegistry, revealPanelRegion } from "./workbench-core-navigation";
 import { createWorkbenchNavigationTrees } from "./workbench-core-navigation-trees";
+import { createTreePersistenceLifetime } from "./workbench-core-persistence";
 import { createCoreRenderers } from "./workbench-core-renderers";
 import { connectWorkbenchRuntime, listOpenResources } from "./workbench-core-runtime";
 import type { createWorkbenchInput, WorkbenchCore } from "./workbench-core-types";
@@ -86,7 +87,8 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   );
   const context = createContextKeyService();
   const commands = createCommandRegistry({ context, getProjectId: () => core?.pages.store.getState().projectId });
-  const renderers = createCoreRenderers(input);
+  const treePersistence = createTreePersistenceLifetime(input.treePersistence);
+  const renderers = createCoreRenderers({ ...input, treePersistence: treePersistence.adapter });
 
   const layoutCache = createCoreLayoutCache(input, () => core);
   const cachedInput = { ...input, persistence: undefined, layoutPersistence: layoutCache.layout };
@@ -293,6 +295,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const dispose = createWorkbenchDisposal(core, {
     queries: queryContext,
     renderers,
+    stopTreePersistence: treePersistence.close,
     persistence: layoutCache.layout,
     modules,
     stopRuntime: connectWorkbenchRuntime(core, input, renderers, layoutCache),

@@ -70,6 +70,15 @@ test("duplicate views share a cursor and clean returns retain loaded pages witho
   f.cache.dispose();
 });
 
+test("a presentation arriving after its root retires cannot observe the retired owner", async () => {
+  const f = await fixture(tree(async () => ({ nodes: [] })));
+  f.cache.get(f.identity)!.query.dispose();
+  expect(() => f.owner.attach(() => {})).not.toThrow();
+  expect(f.owner.sections()).toBeUndefined();
+  f.stop();
+  f.cache.dispose();
+});
+
 test("invalidation fences old cursors immediately and replacement pages drain their actual child", async () => {
   const child = Promise.withResolvers<TreeNodePage>();
   let oldCalls = 0;

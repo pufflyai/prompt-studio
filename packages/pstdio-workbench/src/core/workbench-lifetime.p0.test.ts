@@ -1,6 +1,44 @@
 import { expect, spyOn, test } from "bun:test";
 import { createMemoryWorkbenchPageLocationBrowser } from "./controllers/page-location/page-location-memory";
+import type { PersistedTreeRendererStates } from "./registries/renderers/tree-renderer-types";
 import { createWorkbench } from "./workbench-core";
+import { getWorkbenchRenderers } from "./workbench-renderers";
+
+test("recreating a disposed workbench restores accepted tree expansion and selection", async () => {
+  let saved: PersistedTreeRendererStates | undefined;
+  const treePersistence = {
+    getTreeStates: () => structuredClone(saved),
+    setTreeStates: (value: PersistedTreeRendererStates) => {
+      saved = structuredClone(value);
+    },
+  };
+  const register = (core: ReturnType<typeof createWorkbench>) =>
+    core.registerModule({
+      id: "navigation",
+      activate(context) {
+        context.views.registerView({
+          id: "history",
+          title: "History",
+          body: { kind: "tree", getBody: () => [], getChildren: () => [] },
+        });
+      },
+    });
+  const first = createWorkbench({ treePersistence });
+  register(first);
+  const trees = getWorkbenchRenderers(first);
+  trees.setSectionExpanded("history", "research", true);
+  trees.setNodeExpanded("history", "folder", true);
+  trees.setSelectedNode("history", "selected");
+  const accepted = trees.getTreeState("history");
+  await first.dispose();
+  const second = createWorkbench({ treePersistence });
+  try {
+    register(second);
+    expect(getWorkbenchRenderers(second).getTreeState("history")).toEqual(accepted);
+  } finally {
+    await second.dispose();
+  }
+});
 
 test("disposing a workbench releases modules, initialized and entered modes, and standalone placements once", async () => {
   const core = createWorkbench();

@@ -20,10 +20,16 @@ const createOwner = (root: Root, parentCache: Cache, identity: TreePageIdentity)
   const attachments = new Map<symbol, { listener(): void; cache: Cache }>();
   let tree: PagedTreeData | undefined;
   let snapshot: unknown;
+  let projection: LoadedTreeData | undefined;
   let generation = new AbortController();
   let epoch = 0;
   let pages = createTreePages(generation.signal, publish);
   function publish() {
+    projection = tree && {
+      body: pages.sections(tree.body, tree.children),
+      header: pages.sections(tree.header, tree.children),
+      footer: pages.sections(tree.footer, tree.children),
+    };
     for (const { listener } of attachments.values()) listener();
   }
   const available = () =>
@@ -74,6 +80,7 @@ const createOwner = (root: Root, parentCache: Cache, identity: TreePageIdentity)
     }
     // Absence in another placement is not an authoritative empty lazy result. Explicit [] still replaces it.
     tree = sameSnapshot && tree ? { ...value, children: { ...tree.children, ...value.children } } : value;
+    publish();
     return true;
   };
   let retired = false;
@@ -104,12 +111,11 @@ const createOwner = (root: Root, parentCache: Cache, identity: TreePageIdentity)
       (snapshot !== next.data || generation.signal.aborted)
     ) {
       accept(next.data as PagedTreeData, next.data);
-      publish();
     }
   };
   return {
     attach(listener: () => void, lifetime = parentCache) {
-      if (lifetime.isDisposed()) return () => {};
+      if (retired || root.query.isDisposed() || lifetime.isDisposed()) return () => {};
       const token = Symbol();
       attachments.set(token, { listener, cache: lifetime });
       const stopQuery = root.query.subscribe(rootChanged, { automatic: false });
@@ -134,15 +140,8 @@ const createOwner = (root: Root, parentCache: Cache, identity: TreePageIdentity)
     accept,
     loadChildren: (id: string, load: (node: TreeNode, signal: AbortSignal) => Promise<TreeNode[]>, retry?: boolean) =>
       children.load(id, load, retry),
-    sections() {
-      return (
-        tree && {
-          body: pages.sections(tree.body, tree.children),
-          header: pages.sections(tree.header, tree.children),
-          footer: pages.sections(tree.footer, tree.children),
-        }
-      );
-    },
+    // React's external-store snapshot stays immutable until a domain update publishes it.
+    sections: () => projection,
     revalidate(visible: Set<string>) {
       return available() && !generation.signal.aborted ? pages.revalidate(visible) : Promise.resolve();
     },

@@ -54,6 +54,7 @@ export const createWorkbenchDisposal = (
   core: WorkbenchCore,
   input: {
     renderers: WorkbenchRenderers;
+    stopTreePersistence(): void;
     persistence: createWorkbenchInput["layoutPersistence"];
     modules: Disposable & { close(): void };
     stopRuntime(): void;
@@ -73,6 +74,8 @@ export const createWorkbenchDisposal = (
         errors.push(error);
       }
     };
+    // Whole-core teardown removes registrations, not the user's accepted expansion and selection.
+    input.stopTreePersistence();
     input.modules.close();
     closeWorkbenchModes(core.modes);
     // Close required write admission before terminal adapters can synchronously reenter editing or preferences.
