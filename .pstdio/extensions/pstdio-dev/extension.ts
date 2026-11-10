@@ -210,6 +210,11 @@ export default defineExtension({
       title: "Write a blog post",
       source: packageAsset("./skills/write-blog-post", import.meta.url),
     }),
+    defineSkill({
+      id: "restore-repository",
+      title: "Restore the Prompt Studio repository",
+      source: packageAsset("./skills/restore-repository", import.meta.url),
+    }),
   ],
   schedules: [
     defineSchedule({
