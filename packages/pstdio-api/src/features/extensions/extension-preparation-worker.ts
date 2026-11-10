@@ -7,6 +7,7 @@ import { runtimePreparationTasks } from "pstdio-extensions/preparation-worker";
 import { traceSetupPhase } from "../../lib/setup-phase";
 import { listExtensionSourcesInWorker } from "./discover-extension-sources";
 import { inspectCandidateInWorker, validateCandidateInWorker } from "./extension-candidate";
+import { extensionInstallConcurrency } from "./extension-install-concurrency";
 import {
   activatePreparedInstall,
   assertPreparedInstallOwned,
@@ -15,7 +16,10 @@ import {
 } from "./extension-install-transaction";
 import { checkExtensionSource, checkExtensionsRoot } from "./extension-runtime";
 import { createSharedNamedSourceCheckout } from "./extension-source-checkout";
-import { inspectManagedWebviewBuildInputs, prepareManagedWebviewBuildSource } from "./extension-webview-build-source";
+import {
+  inspectManagedWebviewBuildInputsAsync,
+  prepareManagedWebviewBuildSource,
+} from "./extension-webview-build-source";
 import { buildExtensionWebview } from "./extension-webview-builder";
 import { installExtensionSource } from "./install-extension-source";
 import { disposePreparationStage, recoverPreparationStages } from "./preparation-stages";
@@ -93,7 +97,7 @@ const handle = createPreparationHandler({
     );
     let next = 0;
     await Promise.all(
-      [0, 1].map(async () => {
+      Array.from({ length: extensionInstallConcurrency }, async () => {
         while (next < inputs.length) {
           const index = next++;
           signal.throwIfAborted();
@@ -113,8 +117,7 @@ const handle = createPreparationHandler({
     JSON.parse(JSON.stringify(await installExtensionSource({ ...input, signal }))) as Awaited<
       ReturnType<typeof installExtensionSource>
     >,
-  "webview.inspect": (input: Parameters<typeof inspectManagedWebviewBuildInputs>[0]) =>
-    inspectManagedWebviewBuildInputs(input),
+  "webview.inspect": (input, signal) => inspectManagedWebviewBuildInputsAsync(input, signal),
   "webview.prepare": prepareManagedWebviewBuildSource,
   "webview.artifact": prepareWebviewArtifact,
   "webview.artifacts": prepareWebviewArtifacts,

@@ -98,7 +98,7 @@ describe("installDefaultExtensions", () => {
     });
     try {
       await firstStarted.promise;
-      expect(started).toEqual(["first", "second"]);
+      expect(started).toEqual(["first", "second", "third"]);
       releaseFirst.resolve();
       expect((await pending).map((entry) => entry.installName)).toEqual(["first", "second", "third"]);
     } finally {
@@ -219,7 +219,12 @@ describe("installDefaultExtensions cancellation", () => {
     const installReleased = Promise.withResolvers<void>();
     const controller = new AbortController();
     const result = installDefaultExtensions({
-      config: { defaultExtensions: ["first", "second", "third"].map((installName) => ({ source, installName })) },
+      config: {
+        defaultExtensions: ["first", "second", "third", "fourth", "fifth", "sixth"].map((installName) => ({
+          source,
+          installName,
+        })),
+      },
       installExtensionSource: async (input) => {
         started.push(input.installName!);
         if (started.length === 2) installStarted.resolve();
@@ -231,6 +236,7 @@ describe("installDefaultExtensions cancellation", () => {
 
     try {
       await installStarted.promise;
+      expect(started).toEqual(["first", "second", "third", "fourth"]);
       controller.abort();
       const cancelled = await Promise.race([
         result.then(
@@ -246,7 +252,7 @@ describe("installDefaultExtensions cancellation", () => {
       await installDefaultExtensions({ config: { defaultExtensions: [] } });
       rmSync(root, { recursive: true, force: true });
     }
-    expect(started).toEqual(["first", "second"]);
+    expect(started).toEqual(["first", "second", "third", "fourth"]);
   });
 });
 

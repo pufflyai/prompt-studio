@@ -1,39 +1,36 @@
-import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, realpathSync, symlinkSync } from "node:fs";
+import { mkdirSync, realpathSync, symlinkSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import type { collectRevisionDependencies } from "./revision-dependencies";
+import { hashRevisionInputs, hashRevisionInputsAsync, type RevisionHashInput } from "./revision-file-hash";
 import { copyRevisionSource, visitRevisionFiles } from "./revision-file-inputs";
 import { revisionSnapshotLocation, revisionSnapshotPath } from "./revision-snapshot-path";
 
-export const hashRevisionDependencies = (
-  packages: ReturnType<typeof collectRevisionDependencies>,
-  sourcePath: string,
-) => {
-  const hash = createHash("sha256");
+const dependencyHashInputs = (packages: ReturnType<typeof collectRevisionDependencies>, sourcePath: string) => {
+  const inputs: RevisionHashInput[] = [];
   const sourceRoot = realpathSync(sourcePath);
   const identities = new Map([...packages.keys()].map((path, index) => [path, String(index)]));
-  for (const [path, input] of packages.compilerInputs) {
-    hash.update(relative(sourceRoot, path));
-    hash.update("\0");
-    hash.update(input.contents);
-    hash.update("\0");
-  }
+  for (const [path, input] of packages.compilerInputs)
+    inputs.push({ value: relative(sourceRoot, path) }, { value: "\0" }, { value: input.contents }, { value: "\0" });
   for (const [path, entry] of packages) {
-    hash.update(identities.get(path)!);
+    inputs.push({ value: identities.get(path)! });
     for (const [name, resolved] of entry.dependencies)
-      hash.update(`${name}\0${identities.get(resolved) ?? "missing"}\0`);
-    for (const [name, resolved] of entry.moduleInputs) hash.update(`${name}\0${identities.get(resolved)}\0`);
+      inputs.push({ value: `${name}\0${identities.get(resolved) ?? "missing"}\0` });
+    for (const [name, resolved] of entry.moduleInputs) inputs.push({ value: `${name}\0${identities.get(resolved)}\0` });
     if (path === sourceRoot) continue;
-    const addFile = (file: string, rel: string) => {
-      hash.update(rel);
-      hash.update("\0");
-      hash.update(packages.contents.get(file) ?? readFileSync(file));
-    };
+    const addFile = (file: string, rel: string) => inputs.push({ value: rel }, { value: "\0" }, { file });
     if (entry.allFiles) visitRevisionFiles(path, addFile);
     else for (const rel of [...entry.files].sort()) addFile(join(path, rel), rel);
   }
-  return hash.digest("hex");
+  return inputs;
 };
+export const hashRevisionDependencies = (
+  packages: ReturnType<typeof collectRevisionDependencies>,
+  sourcePath: string,
+) => hashRevisionInputs(dependencyHashInputs(packages, sourcePath), packages.contents);
+export const hashRevisionDependenciesAsync = (
+  packages: ReturnType<typeof collectRevisionDependencies>,
+  sourcePath: string,
+) => hashRevisionInputsAsync(dependencyHashInputs(packages, sourcePath), packages.contents);
 export const copyRevisionDependencies = (
   packages: ReturnType<typeof collectRevisionDependencies>,
   sourcePath: string,

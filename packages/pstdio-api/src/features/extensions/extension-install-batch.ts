@@ -1,4 +1,5 @@
 import type { PreparationOptions } from "pstdio-extensions";
+import { extensionInstallConcurrency } from "./extension-install-concurrency";
 import { runExtensionPreparation } from "./extension-preparation";
 import {
   type InstallExtensionSourceInput,
@@ -6,7 +7,7 @@ import {
   installExtensionSource,
 } from "./install-extension-source";
 
-// A default batch keeps its existing two-install pipeline inside one worker job. The
+// A default batch keeps a bounded install pipeline inside one worker job. The
 // worker environment stays fixed while dependency installs and fresh build children overlap.
 export const createExtensionInstallBatch = (count: number) => {
   let remaining = count;
@@ -65,7 +66,7 @@ export const boundExtensionInstalls = (
 ) => {
   const active = new Set<Promise<void>>();
   return async (input: InstallExtensionSourceInput) => {
-    while (active.size >= 2) await Promise.race(active);
+    while (active.size >= extensionInstallConcurrency) await Promise.race(active);
     input.signal?.throwIfAborted();
     const result = Promise.resolve().then(() => install(input));
     const done = result

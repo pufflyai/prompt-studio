@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { basename, join } from "node:path";
-import { readPackageManifestMetadata } from "pstdio-extensions";
+import { readPackageManifestMetadata, withRequestedPreparation } from "pstdio-extensions";
 import { resolvePstdioHome } from "pstdio-paths";
 import { traceSetupPhase } from "../../lib/setup-phase";
 import {
@@ -159,21 +159,22 @@ const runDefaultExtensionInstall = async (
   }
 };
 
-const registerPreparedDefaults = async (deps: InstallDefaultExtensionsDeps, installed: InstalledExtensionSource[]) => {
-  if (!deps.registerInstalledSources) return;
-  try {
-    // Registration can ask for missing harness defaults. Nested reads must see this batch.
-    for (const source of installed) if (source.installation) await activatePreparedInstall(source.installation);
-    await deps.registerInstalledSources(installed);
-  } catch (error) {
-    await Promise.allSettled(
-      installed.map((source) =>
-        source.installation ? settlePreparedInstall(source.installation, false) : Promise.resolve(),
-      ),
-    );
-    throw error;
-  }
-};
+const registerPreparedDefaults = (deps: InstallDefaultExtensionsDeps, installed: InstalledExtensionSource[]) =>
+  withRequestedPreparation(async () => {
+    if (!deps.registerInstalledSources) return;
+    try {
+      // Registration can ask for missing harness defaults. Nested reads must see this batch.
+      for (const source of installed) if (source.installation) await activatePreparedInstall(source.installation);
+      await deps.registerInstalledSources(installed);
+    } catch (error) {
+      await Promise.allSettled(
+        installed.map((source) =>
+          source.installation ? settlePreparedInstall(source.installation, false) : Promise.resolve(),
+        ),
+      );
+      throw error;
+    }
+  });
 
 const prepareDefaultExtensions = (deps: InstallDefaultExtensionsDeps, mode: DefaultExtensionInstallMode) => {
   const env = { ...(deps.env ?? process.env) };

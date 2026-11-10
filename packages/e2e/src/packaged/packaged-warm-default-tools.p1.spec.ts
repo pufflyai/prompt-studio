@@ -3,7 +3,6 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { createServer } from "node:http";
 import { cpus, tmpdir, totalmem } from "node:os";
 import { join } from "node:path";
-import catalog from "../../../pstdio-api/files/extension-catalog.json" with { type: "json" };
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { homePage } from "../helpers/home-loading";
@@ -11,6 +10,11 @@ import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import { type Browser, chromium, expect, test } from "../scripts/playwright-test";
 import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+
+// Read the production catalog as fixture data without importing another package's internals.
+const catalog = JSON.parse(
+  readFileSync(new URL("../../../pstdio-api/files/extension-catalog.json", import.meta.url), "utf8"),
+) as { extensions: { installName: string; default?: boolean; alwaysEnabled?: boolean }[] };
 
 test.afterEach(stopPendingTestProcesses);
 test("warm default tools stay interactive while offline edits are inspected", async () => {

@@ -11,14 +11,15 @@ startPreparationWorker(async (task, data, signal) => {
   };
   if (task === "spin") spin();
   if (task === "lock-spin") withFileMutationLock(input.path, spin);
-  if (task === "child-spin") {
+  if (task === "child-spin" || task === "stdin-child-spin") {
     void runPreparationCommand({
       argv: [
         process.execPath,
         "-e",
-        `require('node:fs').writeFileSync(${JSON.stringify(input.path)}, String(process.pid)); setInterval(() => {}, 1000);`,
+        `const path = ${task === "stdin-child-spin" ? "(await Bun.stdin.json()).path" : JSON.stringify(input.path)}; require('node:fs').writeFileSync(path, String(process.pid)); setInterval(() => {}, 1000);`,
       ],
       cwd: process.cwd(),
+      ...(task === "stdin-child-spin" ? { stdin: JSON.stringify({ path: input.path }) } : {}),
     });
     spin();
   }

@@ -6,7 +6,7 @@ import { ownPreparationCommands } from "./preparation-command";
 export { createPreparationScope, withBackgroundPreparation, withRequestedPreparation } from "./preparation-priority";
 export { isMainThread as isPreparationHost };
 
-import { preparationPriority } from "./preparation-priority";
+import { createPreparationContinuations, preparationPriority } from "./preparation-priority";
 export interface PreparationOptions {
   signal?: AbortSignal;
   priority?: "requested" | "background";
@@ -20,6 +20,7 @@ interface Waiter {
   reject: (error: unknown) => void;
   removeAbort: () => void;
   priority: () => number;
+  scope?: ReturnType<typeof preparationPriority.getStore>;
 }
 interface Job {
   id: number;
@@ -44,6 +45,25 @@ const createJob = (id: number, key: string, task: string, input: unknown, home: 
   },
   waiters: new Set<Waiter>(),
 });
+const settlePreparationJob = (jobs: Map<string, Job>, job: Job, error: unknown, value?: unknown) => {
+  if (jobs.get(job.key) === job) jobs.delete(job.key);
+  for (const waiter of job.waiters) {
+    waiter.removeAbort();
+    if (error) waiter.reject(error);
+    else waiter.resolve(value);
+  }
+  job.waiters.clear();
+};
+
+const preparationJobMessage = (active: Job) => ({
+  kind: "run",
+  id: active.id,
+  task: active.task,
+  input: active.input,
+  home: active.home,
+  env: active.env,
+});
+
 export interface PreparationEvent {
   kind?: string;
   [key: string]: unknown;
@@ -71,15 +91,8 @@ export const createPreparationClient = (
   const queued: Job[] = [];
   const jobs = new Map<string, Job>();
   const listeners = new Set<(event: PreparationEvent) => void>();
-  const settle = (job: Job, error: unknown, value?: unknown) => {
-    if (jobs.get(job.key) === job) jobs.delete(job.key);
-    for (const waiter of job.waiters) {
-      waiter.removeAbort();
-      if (error) waiter.reject(error);
-      else waiter.resolve(value);
-    }
-    job.waiters.clear();
-  };
+  const continuations = createPreparationContinuations(() => pump());
+  const settle = (job: Job, error: unknown, value?: unknown) => settlePreparationJob(jobs, job, error, value);
   const fail = (current: Worker, error: unknown, notify = true) => {
     if (worker !== current) return;
     worker = undefined;
@@ -105,6 +118,18 @@ export const createPreparationClient = (
   const pump = (backgroundReady = false) => {
     if (!worker || !ready || active || stopping) return;
     queued.sort((a, b) => a.priority - b.priority || a.id - b.id);
+    // Publishing a tool includes host database/callback work between worker jobs.
+    // Starting speculation in those gaps only to retire it loses the warm worker.
+    if (queued[0]?.priority === 1 && continuations.size) {
+      const dependency = queued.findIndex((job) =>
+        [...job.waiters].some((waiter) => waiter.scope?.continuation?.continuing),
+      );
+      if (dependency < 0) {
+        worker.unref();
+        return;
+      }
+      queued.unshift(...queued.splice(dependency, 1));
+    }
     // Let foreground continuations enqueue their next step before resuming speculative
     // work; starting it inside the response event otherwise causes repeated retirement.
     if (queued[0]?.priority === 1 && !backgroundReady) {
@@ -121,14 +146,7 @@ export const createPreparationClient = (
       return;
     }
     worker.ref();
-    worker.postMessage({
-      kind: "run",
-      id: active.id,
-      task: active.task,
-      input: active.input,
-      home: active.home,
-      env: active.env,
-    });
+    worker.postMessage(preparationJobMessage(active));
   };
   const onMessage = (
     current: Worker,
@@ -217,6 +235,7 @@ export const createPreparationClient = (
       }
       const owned = job;
       const scope = preparationPriority.getStore();
+      continuations.retain(scope);
       const request = () => {
         if (stopping || jobs.get(owned.key) !== owned) return;
         if (active && queued.some((job) => job.priority < active!.priority)) replaceWorker(active);
@@ -245,6 +264,7 @@ export const createPreparationClient = (
         const waiter: Waiter = {
           resolve,
           reject,
+          scope,
           priority: () => priorityFor(options, scope),
           removeAbort: () => options.signal?.removeEventListener("abort", abort),
         };
@@ -261,6 +281,7 @@ export const createPreparationClient = (
     stop: (finalCleanup = true) => {
       if (stopping) return stopping;
       const current = worker;
+      continuations.clear();
       if (backgroundPump) clearTimeout(backgroundPump);
       backgroundPump = undefined;
       const error = new Error("Extension preparation stopped.");

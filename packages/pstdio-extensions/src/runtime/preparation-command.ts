@@ -8,6 +8,7 @@ interface CommandInput {
   argv: string[];
   cwd: string;
   env?: NodeJS.ProcessEnv;
+  stdin?: string;
   windowsVerbatimArguments?: boolean;
 }
 interface CommandResult {
@@ -60,7 +61,7 @@ export const ownPreparationCommands = (worker: Worker) => {
         const stderr = join(root, "stderr");
         const child = Bun.spawn(message.input.argv, {
           ...message.input,
-          stdin: "ignore",
+          stdin: message.input.stdin === undefined ? "ignore" : Buffer.from(message.input.stdin),
           stdout: Bun.file(stdout),
           stderr: Bun.file(stderr),
           detached: process.platform !== "win32",

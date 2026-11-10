@@ -133,7 +133,7 @@ test("cancelling uninterruptible evaluation lets the next requested tool prepare
   expect(await next).toMatchObject({ name: "next tool" });
 });
 
-for (const task of ["spin", "lock-spin", "child-spin"])
+for (const task of ["spin", "lock-spin", "child-spin", "stdin-child-spin"])
   test(`cancelling ${task} retires the worker and its owned resources`, async () => {
     const root = mkdtempSync(join(tmpdir(), "preparation-retirement-"));
     const path = join(root, "resource");
@@ -147,7 +147,7 @@ for (const task of ["spin", "lock-spin", "child-spin"])
     try {
       await entered.promise;
       let pid: number | undefined;
-      if (task === "child-spin") {
+      if (task === "child-spin" || task === "stdin-child-spin") {
         while (!pid) {
           try {
             pid = Number(readFileSync(path, "utf8"));
@@ -231,6 +231,36 @@ test("foreground follow-up work runs before speculative work resumes", async () 
   expect((await background).sequence).toBe(3);
 });
 
+test("a requested adoption retains admission between asynchronous host steps", async () => {
+  const client = fixture();
+  const hostStep = Promise.withResolvers<void>();
+  const reachedHost = Promise.withResolvers<void>();
+  const blocked = gate();
+  const adoption = withRequestedPreparation(async () => {
+    await client.run("value", { name: "publish" });
+    reachedHost.resolve();
+    await hostStep.promise;
+    return client.run<{ sequence: number }>("value", { name: "settle" });
+  });
+  await reachedHost.promise;
+  const background = client.run<{ sequence: number }>(
+    "wait",
+    { name: "scan", url: blocked.url },
+    { priority: "background" },
+  );
+  try {
+    await Bun.sleep(20);
+    hostStep.resolve();
+    expect((await adoption).sequence).toBe(2);
+    blocked.release.resolve();
+    expect((await background).sequence).toBe(3);
+  } finally {
+    hostStep.resolve();
+    blocked.release.resolve();
+    await Promise.allSettled([adoption, background]);
+  }
+});
+
 test("inherited urgency remains until every foreground owner releases it", () => {
   const scope = withBackgroundPreparation(() => createPreparationScope());
   const first = scope.request();
@@ -242,6 +272,46 @@ test("inherited urgency remains until every foreground owner releases it", () =>
   first();
   expect(scope.requested).toBe(false);
 });
+
+test("requested host work can await an explicitly background dependency", async () => {
+  const client = fixture();
+  const result = await withRequestedPreparation(async () => {
+    await client.run("value", { name: "start" });
+    return client.run<{ sequence: number }>("value", { name: "dependency" }, { priority: "background" });
+  });
+  expect(result.sequence).toBe(2);
+});
+
+test("failed host adoption releases admission to background work", async () => {
+  const client = fixture();
+  await expect(
+    withRequestedPreparation(async () => {
+      await client.run("value", { name: "start" });
+      throw new Error("host database failed");
+    }),
+  ).rejects.toThrow("host database failed");
+  expect(await client.run("value", { name: "background" }, { priority: "background" })).toMatchObject({
+    name: "background",
+  });
+});
+
+for (const nested of ["scope", "background"] as const) {
+  test(`requested adoption can await a nested ${nested} dependency`, async () => {
+    const client = fixture();
+    const result = await withRequestedPreparation(async () => {
+      await client.run("value", { name: "start" });
+      const work = () => client.run<{ sequence: number }>("value", { name: "nested" }, { priority: "background" });
+      if (nested === "background") return withBackgroundPreparation(work);
+      const child = createPreparationScope();
+      try {
+        return await child.run(work);
+      } finally {
+        child.dispose();
+      }
+    });
+    expect(result.sequence).toBe(2);
+  });
+}
 
 test("cancelling a coalesced foreground reader releases its background job's urgency", async () => {
   const client = fixture();

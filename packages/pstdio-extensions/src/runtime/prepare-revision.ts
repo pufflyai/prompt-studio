@@ -19,29 +19,44 @@ import {
   copyRevisionDependencies,
   copyRevisionSource,
   hashRevisionDependencies,
+  hashRevisionDependenciesAsync,
   hashRevisionSource,
 } from "./revision-dependencies";
 import { revisionSnapshotPath } from "./revision-snapshot-path";
 
-export const inspectRevisionInputs = (sourcePath: string, apiProvider?: ExtensionApiProvider) => {
+const readRevisionInputs = (sourcePath: string, apiProvider?: ExtensionApiProvider) => {
   const read = readPackageManifest(sourcePath, { apiProvider });
   if (!read.manifest || !read.entryPath)
     throw Object.assign(new Error(read.diagnostics.map((d) => d.message).join("; ")), {
       diagnostics: read.diagnostics,
     });
   const dependencies = collectRevisionDependencies(sourcePath);
-  const dependencyHash = hashRevisionDependencies(dependencies, sourcePath);
+  return { ...read, manifest: read.manifest, entryPath: read.entryPath, dependencies };
+};
+const identifyRevisionInputs = (
+  sourcePath: string,
+  read: ReturnType<typeof readRevisionInputs>,
+  dependencyHash: string,
+) => {
   const sourceHash = hashExtensionSource(sourcePath);
   const id = revisionDigest(`${hashRevisionSource(sourcePath)}:${dependencyHash}:${preparationHostIdentity()}`);
   // Every input that can change the accepted runtime also changes its live load identity.
   const loadKey = id;
-  return { ...read, manifest: read.manifest, entryPath: read.entryPath, dependencies, sourceHash, loadKey, id };
+  return { ...read, sourceHash, loadKey, id };
+};
+export const inspectRevisionInputs = (sourcePath: string, apiProvider?: ExtensionApiProvider) => {
+  const read = readRevisionInputs(sourcePath, apiProvider);
+  return identifyRevisionInputs(sourcePath, read, hashRevisionDependencies(read.dependencies, sourcePath));
+};
+export const inspectRevisionInputsAsync = async (sourcePath: string, apiProvider?: ExtensionApiProvider) => {
+  const read = readRevisionInputs(sourcePath, apiProvider);
+  return identifyRevisionInputs(sourcePath, read, await hashRevisionDependenciesAsync(read.dependencies, sourcePath));
 };
 export const prepareRevision = async (
   sourcePath: string,
   apiProvider?: ExtensionApiProvider,
 ): Promise<PreparedExtensionRevision> => {
-  const inputs = inspectRevisionInputs(sourcePath, apiProvider);
+  const inputs = await inspectRevisionInputsAsync(sourcePath, apiProvider);
   // The source identity is excluded: a staged install and its promoted folder must reuse
   // the very same artifacts rather than building again at the final path.
   const root = join(preparedCacheRoot(), "revisions", inputs.id);
@@ -67,7 +82,7 @@ export const prepareRevision = async (
       packagePath,
       generationRoot,
     );
-    const after = inspectRevisionInputs(sourcePath, apiProvider);
+    const after = await inspectRevisionInputsAsync(sourcePath, apiProvider);
     if (after.id !== inputs.id) throw new Error("Extension changed while preparing its revision.");
     const revision: PreparedExtensionRevision = {
       id: inputs.id,

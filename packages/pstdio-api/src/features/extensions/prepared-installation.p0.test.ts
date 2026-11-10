@@ -16,9 +16,11 @@ import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import {
   acceptPreparedRevision,
+  createPreparationScope,
   prepareExtensionRevision,
   readAcceptedRevision,
   stopExtensionPreparation,
+  withBackgroundPreparation,
 } from "pstdio-extensions";
 import { createExtensionInstallBatch } from "./extension-install-batch";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
@@ -478,23 +480,28 @@ test("duplicate default targets adopt the last configured source once", async ()
   const { installDefaultExtensions } = await import("./default-extensions");
   const { assertPreparedInstallOwned, settlePreparedInstall } = await import("./extension-install-transaction");
   const registered: string[] = [];
-  const result = await installDefaultExtensions({
-    config: {
-      defaultExtensions: [source, other].map((source) => ({
-        source,
-        installName: "same-target",
-        force: true,
-        skipInstall: true,
-      })),
-    },
-    registerInstalledSources: async (sources) => {
-      for (const installed of sources) {
-        await assertPreparedInstallOwned(installed.installation!);
-        registered.push(installed.targetPath);
-        await settlePreparedInstall(installed.installation!, true);
-      }
-    },
-  });
+  const result = await withBackgroundPreparation(() =>
+    installDefaultExtensions({
+      config: {
+        defaultExtensions: [source, other].map((source) => ({
+          source,
+          installName: "same-target",
+          force: true,
+          skipInstall: true,
+        })),
+      },
+      registerInstalledSources: async (sources) => {
+        const scope = createPreparationScope();
+        expect(scope.requested).toBe(true);
+        scope.dispose();
+        for (const installed of sources) {
+          await assertPreparedInstallOwned(installed.installation!);
+          registered.push(installed.targetPath);
+          await settlePreparedInstall(installed.installation!, true);
+        }
+      },
+    }),
+  );
   expect(result).toHaveLength(1);
   expect(registered).toHaveLength(1);
   expect(readFileSync(join(result[0]!.targetPath, "main.ts"), "utf8")).toContain("last default");

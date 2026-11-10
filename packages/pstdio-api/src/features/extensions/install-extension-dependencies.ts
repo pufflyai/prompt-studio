@@ -19,6 +19,7 @@ export type CommandOptions = {
   cwd: string;
   env?: NodeJS.ProcessEnv;
   signal?: AbortSignal;
+  stdin?: string;
 };
 
 export type DependencyInstallInput = {
@@ -40,7 +41,10 @@ export const runCommand = async (command: string, args: string[], options: Comma
     options.signal?.throwIfAborted();
     const resolved = resolveProcessCommand([command, ...args]);
     if (!isMainThread)
-      return await runPreparationCommand({ ...resolved, cwd: options.cwd, env: options.env }, options.signal);
+      return await runPreparationCommand(
+        { ...resolved, cwd: options.cwd, env: options.env, stdin: options.stdin },
+        options.signal,
+      );
     const outputRoot = mkdtempSync(join(tmpdir(), "pstdio-extension-command-"));
     try {
       const stdoutFile = Bun.file(join(outputRoot, "stdout"));
@@ -49,7 +53,7 @@ export const runCommand = async (command: string, args: string[], options: Comma
         cwd: options.cwd,
         env: options.env,
         signal: options.signal,
-        stdin: "ignore",
+        stdin: options.stdin === undefined ? "ignore" : Buffer.from(options.stdin),
         stdout: stdoutFile,
         stderr: stderrFile,
         windowsHide: true,

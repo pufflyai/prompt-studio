@@ -318,3 +318,94 @@ test("shared source records retain one physical ancestor dependency binding", as
   const loaded = await loadExtensionPackage({ path: source }, [], { preparedRevision: revision });
   expect(await loaded!.definition.commands![0].run({} as never, {})).toBe("shared:shared");
 });
+
+test("an inherited compiler config without aliases leaves unused dependencies out of runtime identity", async () => {
+  const source = fixture();
+  writeFileSync(join(source, "tsconfig.json"), JSON.stringify({ extends: "./base.json" }));
+  writeFileSync(join(source, "base.json"), JSON.stringify({ compilerOptions: { strict: true } }));
+  const manifest = JSON.parse(readFileSync(join(source, "package.json"), "utf8"));
+  manifest.dependencies = { unused: "1.0.0" };
+  writeFileSync(join(source, "package.json"), JSON.stringify(manifest));
+  const dependency = join(source, "node_modules", "unused");
+  mkdirSync(dependency, { recursive: true });
+  writeFileSync(
+    join(dependency, "package.json"),
+    JSON.stringify({ name: "unused", version: "1.0.0", main: "index.js" }),
+  );
+  writeFileSync(join(dependency, "index.js"), 'export const value = "first";');
+  const first = await prepareExtensionRevision(source);
+  writeFileSync(join(dependency, "index.js"), 'export const value = "second";');
+  expect((await prepareExtensionRevision(source)).entryPath).toBe(first.entryPath);
+});
+
+test("later preparation observes a changed dependency export without a version change", async () => {
+  const source = fixture();
+  const dependency = join(source, "node_modules", "owned-dependency");
+  mkdirSync(dependency, { recursive: true });
+  const manifest = join(dependency, "package.json");
+  const writeManifest = (entry: string) =>
+    writeFileSync(manifest, JSON.stringify({ name: "owned-dependency", version: "1.0.0", exports: `./${entry}.js` }));
+  writeManifest("first");
+  writeFileSync(join(dependency, "first.js"), 'export const value = "first";');
+  writeFileSync(join(dependency, "second.js"), 'export const value = "second";');
+  writeFileSync(
+    join(source, "extension.ts"),
+    'import { value } from "owned-dependency"; export default { commands: [{ id: "value", ref: { kind: "command", id: "value" }, title: "Value", run: async () => value }] };',
+  );
+  const first = await prepareExtensionRevision(source);
+  await acceptPreparedRevision(source, first);
+  writeManifest("second");
+  const second = await prepareExtensionRevision(source);
+  expect(second.id).not.toBe(first.id);
+  expect((await readAcceptedRevision(source))?.id).toBe(first.id);
+  const loaded = await loadExtensionPackage({ path: source }, [], { preparedRevision: second });
+  expect(await loaded!.definition.commands![0].run({} as never, {})).toBe("second");
+});
+
+test("large dependency assets include bytes beyond the hashing buffer in revision identity", async () => {
+  const source = fixture();
+  const dependency = join(source, "node_modules", "large-asset");
+  mkdirSync(dependency, { recursive: true });
+  writeFileSync(join(dependency, "package.json"), JSON.stringify({ name: "large-asset", main: "index.js" }));
+  writeFileSync(join(dependency, "index.js"), 'export const asset = new URL("./asset.bin", import.meta.url);');
+  const asset = Buffer.alloc(9 * 1024 * 1024 + 17, 1);
+  writeFileSync(join(dependency, "asset.bin"), asset);
+  writeFileSync(
+    join(source, "extension.ts"),
+    'import { asset } from "large-asset"; export default { value: asset.href };',
+  );
+  const first = await prepareExtensionRevision(source);
+  asset[asset.length - 1] = 2;
+  writeFileSync(join(dependency, "asset.bin"), asset);
+  const second = await prepareExtensionRevision(source);
+  expect(second.id).not.toBe(first.id);
+});
+
+for (const mode of ["paths", "baseUrl"])
+  test(`resolved ${mode} configuration retains used modules without unused dependencies`, async () => {
+    const source = fixture();
+    writeFileSync(
+      join(source, "tsconfig.json"),
+      JSON.stringify({ compilerOptions: mode === "paths" ? { paths: { "@local/*": ["./*"] } } : { baseUrl: "." } }),
+    );
+    const dependency = join(source, "node_modules", "unused");
+    mkdirSync(dependency, { recursive: true });
+    writeFileSync(join(dependency, "package.json"), JSON.stringify({ name: "unused", main: "index.js" }));
+    const manifest = JSON.parse(readFileSync(join(source, "package.json"), "utf8"));
+    manifest.dependencies = { unused: "1.0.0" };
+    writeFileSync(join(source, "package.json"), JSON.stringify(manifest));
+    writeFileSync(join(dependency, "index.js"), "export const unused = 1;");
+    writeFileSync(join(source, "helper.ts"), 'export const value = "first";');
+    writeFileSync(
+      join(source, "extension.ts"),
+      `import { value } from "${mode === "paths" ? "@local/helper" : "helper"}"; export default { commands: [{ id: "value", ref: { kind: "command", id: "value" }, title: "Value", run: async () => value }] };`,
+    );
+    const first = await prepareExtensionRevision(source);
+    writeFileSync(join(dependency, "index.js"), "export const unused = 2;");
+    expect((await prepareExtensionRevision(source)).id).toBe(first.id);
+    writeFileSync(join(source, "helper.ts"), 'export const value = "second";');
+    const second = await prepareExtensionRevision(source);
+    expect(second.id).not.toBe(first.id);
+    const loaded = await loadExtensionPackage({ path: source }, [], { preparedRevision: second });
+    expect(await loaded!.definition.commands![0].run({} as never, {})).toBe("second");
+  });

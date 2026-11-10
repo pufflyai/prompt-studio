@@ -40,9 +40,12 @@ const collectCompilerInput = (
   try {
     const config = Bun.JSON5.parse(input.contents.toString()) as CompilerConfig;
     const options = config.compilerOptions;
-    input.opaque = Boolean(config.extends || options?.paths || options?.baseUrl || options?.jsxImportSource);
+    // Static aliases are resolved with each importing module; their configuration
+    // and selected files already participate in the snapshot. A resolved config
+    // does not make every declared dependency an input.
     if (typeof options?.jsxImportSource === "string") input.jsxImports.push(options.jsxImportSource);
     input.references = references(config).map((reference) => compilerReference(reference, dirname(path)));
+    input.opaque ||= input.references.some((parent) => !parent);
     for (const parent of input.references)
       if (parent) {
         const inherited = collectCompilerInput(parent, inputs, readSource);
@@ -51,6 +54,7 @@ const collectCompilerInput = (
       }
   } catch {
     // The actual Bun build reports invalid compiler configuration.
+    input.opaque = true;
   }
   return input;
 };

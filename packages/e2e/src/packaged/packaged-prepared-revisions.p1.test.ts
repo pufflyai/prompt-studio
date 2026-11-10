@@ -1,10 +1,11 @@
 import { expect, test } from "bun:test";
 import type { ChildProcess } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
+import { PACKAGED_BINARY_PATH } from "./packaged-helpers";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
@@ -168,3 +169,47 @@ for (const resolution of ["conditional", "main"]) {
     PACKAGED_TEST_TIMEOUT,
   );
 }
+
+test(
+  "the compiled input inspector reads fresh inputs without starting the API",
+  async () => {
+    const root = mkdtempSync(join(tmpdir(), "packaged-input-inspector-"));
+    const home = join(root, "home");
+    const entryPath = join(root, "main.ts");
+    writeFileSync(join(root, "package.json"), JSON.stringify({ name: "inspected-view" }));
+    writeFileSync(entryPath, 'export { value } from "./used";');
+    writeFileSync(join(root, "used.ts"), "export const value = 1;");
+    const inspect = async () => {
+      const env: NodeJS.ProcessEnv = { ...process.env, PSTDIO_HOME: home };
+      delete env.BUN_BE_BUN;
+      const child = Bun.spawn([PACKAGED_BINARY_PATH, "extension-input-inspector"], {
+        cwd: root,
+        env,
+        stdin: Buffer.from(JSON.stringify({ packagePath: root, entryPaths: [entryPath] })),
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      const [exitCode, stdout, stderr] = await Promise.all([
+        child.exited,
+        new Response(child.stdout).text(),
+        new Response(child.stderr).text(),
+      ]);
+      expect(stderr).toBe("");
+      expect(exitCode).toBe(0);
+      const digest: unknown = JSON.parse(stdout);
+      expect(digest).toMatch(/^[a-f0-9]{64}$/);
+      return digest;
+    };
+    try {
+      const initial = await inspect();
+      writeFileSync(join(root, "unused.ts"), "export const value = 9;");
+      expect(await inspect()).toBe(initial);
+      writeFileSync(join(root, "used.ts"), "export const value = 2;");
+      expect(await inspect()).not.toBe(initial);
+      expect(existsSync(home)).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  },
+  PACKAGED_TEST_TIMEOUT,
+);

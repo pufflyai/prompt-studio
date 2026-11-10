@@ -5,6 +5,7 @@ import { retainPreparedArtifacts } from "pstdio-extensions/prepared-cache";
 import { resolvePstdioHome, withFileMutationLock } from "pstdio-paths";
 import {
   inspectManagedWebviewBuildInputs,
+  inspectManagedWebviewBuildInputsAsync,
   type ManagedWebviewBuildInputs,
   prepareManagedWebviewBuildSource,
 } from "./extension-webview-build-source";
@@ -13,7 +14,7 @@ import {
   buildExtensionWebviewBatch,
   extensionWebviewBuildOptions,
 } from "./extension-webview-builder";
-import { hashWebviewDependencyInputs } from "./webview-dependency-inputs";
+import { inspectWebviewDependencyInputs } from "./webview-input-inspection";
 
 export const prepareWebviewArtifact = async (
   input: {
@@ -27,7 +28,8 @@ export const prepareWebviewArtifact = async (
 ) => {
   // The manager already inspected this candidate. Reuse those bytes for its identity;
   // the fresh post-build inspection below still rejects edits before publication.
-  const buildInputs = input.buildInputs ?? inspectManagedWebviewBuildInputs(input);
+  const buildInputs = input.buildInputs ?? (await inspectManagedWebviewBuildInputsAsync(input, signal));
+  signal.throwIfAborted();
   const id = createHash("sha256")
     .update([buildInputs.signature, Bun.version, JSON.stringify(extensionWebviewBuildOptions)].join("\0"))
     .digest("hex");
@@ -49,7 +51,9 @@ export const prepareWebviewArtifact = async (
     if (!outcome.success) throw new Error(outcome.details);
     await Bun.sleep(0);
     signal.throwIfAborted();
-    if (inspectManagedWebviewBuildInputs(input).signature !== buildInputs.signature)
+    const after = await inspectManagedWebviewBuildInputsAsync(input, signal);
+    signal.throwIfAborted();
+    if (after.signature !== buildInputs.signature)
       throw new Error("Extension webview changed while preparing its bundle.");
     rmSync(distDir, { recursive: true, force: true });
     renameSync(join(stage, "dist"), distDir);
@@ -62,10 +66,11 @@ export const prepareWebviewArtifact = async (
 };
 
 type WebviewArtifactInput = Parameters<typeof prepareWebviewArtifact>[0];
-const dependencyHashForViews = (packagePath: string, inputs: WebviewArtifactInput[]) =>
-  hashWebviewDependencyInputs(
+const dependencyHashForViews = (packagePath: string, inputs: WebviewArtifactInput[], signal: AbortSignal) =>
+  inspectWebviewDependencyInputs(
     packagePath,
     inputs.map((input) => input.entryPath),
+    signal,
   );
 const artifactPaths = (id: string) => {
   const root = join(resolvePstdioHome(), "cache", "prepared-webviews", id);
@@ -88,7 +93,8 @@ export const prepareWebviewArtifacts = async (inputs: WebviewArtifactInput[], si
   const packagePath = inputs[0]!.packagePath;
   if (inputs.some((input) => input.packagePath !== packagePath))
     throw new Error("Webview batch must belong to one package.");
-  const dependencyHash = dependencyHashForViews(packagePath, inputs);
+  const dependencyHash = await dependencyHashForViews(packagePath, inputs, signal);
+  signal.throwIfAborted();
   const signatures = inputs.map((input) => inspectManagedWebviewBuildInputs(input, dependencyHash));
   const artifacts = signatures.map((signature) =>
     artifactPaths(
@@ -122,7 +128,8 @@ export const prepareWebviewArtifacts = async (inputs: WebviewArtifactInput[], si
     const outcome = await buildExtensionWebviewBatch({ entryPaths: entries, outdir: join(batch, "dist"), signal });
     if (!outcome.success) throw new Error(outcome.details);
     signal.throwIfAborted();
-    const afterHash = dependencyHashForViews(packagePath, inputs);
+    const afterHash = await dependencyHashForViews(packagePath, inputs, signal);
+    signal.throwIfAborted();
     if (
       inputs.some(
         (input, index) => inspectManagedWebviewBuildInputs(input, afterHash).signature !== signatures[index]!.signature,

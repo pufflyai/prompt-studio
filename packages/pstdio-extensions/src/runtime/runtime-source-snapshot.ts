@@ -37,12 +37,28 @@ const transpilerLoader = (filePath: string) => {
 
 const transpilers = new Map<Bun.JavaScriptLoader, Bun.Transpiler>();
 const importsByPath = new Map<string, { digest: string; imports: string[] }>();
+const importsByBytes = new WeakMap<Buffer, { digest: string; imports: Map<string, string[]> }>();
 
-export const readRuntimeModuleImports = (filePath: string, readSource: (path: string) => Buffer) => {
+export const readRuntimeModuleImports = (
+  filePath: string,
+  readSource: (path: string) => Buffer,
+  foldConstants = false,
+): string[] => {
   const contents = readSource(filePath);
-  const digest = createHash("sha256").update(contents).digest("hex");
-  const cached = importsByPath.get(filePath);
-  if (cached?.digest === digest) return cached.imports;
+  let bytes = importsByBytes.get(contents);
+  if (!bytes) {
+    bytes = { digest: createHash("sha256").update(contents).digest("hex"), imports: new Map() };
+    importsByBytes.set(contents, bytes);
+  }
+  const { digest } = bytes;
+  const cacheKey = `${filePath}\0${foldConstants}`;
+  const inspected = bytes.imports.get(cacheKey);
+  if (inspected) return inspected;
+  const cached = importsByPath.get(cacheKey);
+  if (cached?.digest === digest) {
+    bytes.imports.set(cacheKey, cached.imports);
+    return cached.imports;
+  }
 
   const loader = transpilerLoader(filePath);
   let transpiler = transpilers.get(loader);
@@ -54,11 +70,21 @@ export const readRuntimeModuleImports = (filePath: string, readSource: (path: st
   const imports =
     extname(filePath) === ".css"
       ? cssModuleInputs(contents.toString())
-      : transpiler.scanImports(contents).map(({ path }) => path);
+      : [
+          ...new Set([
+            ...(foldConstants
+              ? readRuntimeModuleImports(filePath, () => contents)
+              : transpiler.scanImports(contents).map(({ path }) => path)),
+            ...(foldConstants
+              ? transpiler.scanImports(transpiler.transformSync(contents)).map(({ path }) => path)
+              : []),
+          ]),
+        ];
   // Keep one parse per path, without retaining source bytes or previous versions. Content
   // checks catch edits even when timestamps match; import resolution below stays fresh.
   if (importsByPath.size >= 4096) importsByPath.delete(importsByPath.keys().next().value!);
-  importsByPath.set(filePath, { digest, imports });
+  importsByPath.set(cacheKey, { digest, imports });
+  bytes.imports.set(cacheKey, imports);
   return imports;
 };
 

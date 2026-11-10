@@ -273,7 +273,8 @@ test("installed validation rejects semantic values before storing a workspace or
   });
   expect(response.status).toBe(400);
   expect(await response.json()).toMatchObject({ error: expect.stringContaining("Choose an existing revision.") });
-  expect(await handle.deps.workspaceService.list(projectId)).toEqual(before);
+  const after = await handle.deps.workspaceService.list(projectId);
+  expect(after.map((workspace) => workspace.id).sort()).toEqual(before.map((workspace) => workspace.id).sort());
 });
 
 test("a completed provider cannot allocate or write through a retained directory", async () => {

@@ -6,7 +6,7 @@ const inside = (root: string, path: string) => {
   const rel = relative(root, path);
   return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
 };
-export const resolveAdditionalRevisionModule = (
+export const resolveRevisionModule = (
   specifier: string,
   from: string,
   canonical: string,
@@ -17,7 +17,7 @@ export const resolveAdditionalRevisionModule = (
     if (specifier.startsWith("file:")) specifier = fileURLToPath(specifier);
     if (specifier.includes(":") && !isAbsolute(specifier)) return null;
     const file = realpathSync(Bun.resolveSync(specifier, from));
-    if (regularDependency && inside(regularDependency, file)) return null;
+    if (regularDependency && inside(regularDependency, file)) return { owner: regularDependency, file };
     if (inside(canonical, file) && !relative(canonical, file).split(/[/\\]/).includes("node_modules"))
       return { owner: canonical, file };
     let owner = dirname(file);

@@ -79,6 +79,15 @@ API. The workbench package itself does not depend on the API host.
    contracts, and package artifacts. It must not depend on `@pstdio/workbench`;
    workbench adapters for extension metadata belong in `@pstdio/workbench`.
 
+   [Accepted preparation ownership](../../adrs/0143-share-extension-preparation-and-retain-accepted-revisions.md)
+   adds six private module contracts: `preparation-client` owns queue/lifecycle transport,
+   `preparation-server` owns worker dispatch/events, `preparation-command` owns host-spawned
+   child transport, `preparation-worker` owns runtime preparation tasks, `prepared-cache`
+   owns artifact leases/maintenance, and `revision-dependencies` owns pure input collection
+   and hashing. They support the API's worker composition without importing the whole
+   runtime or starting another worker. The pure input module is also safe in a fresh
+   compiled inspector. The package has exactly eighteen export entries.
+
    The private `pstdio-psx` service consumes the runtime's distribution subpath
    for package validation. It owns PostgreSQL release metadata and S3 package
    storage. It does not import API host packages. E2E fixtures drive its production
@@ -90,6 +99,10 @@ API. The workbench package itself does not depend on the API host.
    do not import public SDK authoring-only types. API integration tests declare
    `@pstdio/sdk` as a development dependency to verify the public HTTP client
    against the real routes. Production API code does not import the SDK.
+
+   `pstdio-api/extension-input-inspector` is the third private API export. It owns the
+   private digest-only compiled command and imports pure revision inputs. The CLI invokes
+   it before application boot; importing the app entry would load unrelated host code.
 
    Host tests use fake harnesses, such as the one from
    `writeProvisionHarnessExtension` or `workbench-fixture`. They never load the

@@ -46,8 +46,8 @@ const buildArguments = (input: ExtensionWebviewBatchBuildInput, entryNaming: str
   ];
 };
 
-// Each build process needs several hundred megabytes, and a host upgrade rebuilds every webview at
-// startup, so only a few builds run at once.
+// Builds and fresh input inspectors share these leaf slots. Never hold a slot around
+// preparation orchestration: its nested inspection/build calls need the same pool.
 const buildSlots = Math.max(1, Math.min(4, availableParallelism()));
 let runningBuilds = 0;
 const waitingBuilds: (() => void)[] = [];
@@ -67,23 +67,28 @@ const releaseBuildSlot = () => {
   else runningBuilds--;
 };
 
+export const withExtensionWebviewBuildSlot = async <T>(work: () => Promise<T>): Promise<T> => {
+  await acquireBuildSlot();
+  try {
+    return await work();
+  } finally {
+    releaseBuildSlot();
+  }
+};
+
 // A long-running Bun process keeps package resolutions it has already read, so an in-process
 // build cannot see a replaced extension folder. Each build runs in a new Bun process (ADR 0070).
 const runBuild = async (input: ExtensionWebviewBatchBuildInput, entryNaming: string) => {
   if (input.signal.aborted) return { success: false, details: "Build aborted." };
 
-  await acquireBuildSlot();
-  let result: Awaited<ReturnType<typeof runCommand>>;
-  try {
-    if (input.signal.aborted) return { success: false, details: "Build aborted." };
-    result = await runCommand(process.execPath, buildArguments(input, entryNaming), {
+  const result = await withExtensionWebviewBuildSlot(async () => {
+    if (input.signal.aborted) return { exitCode: 1, stdout: "", stderr: "Build aborted." };
+    return runCommand(process.execPath, buildArguments(input, entryNaming), {
       cwd: dirname(input.entryPaths[0]!),
       env: { ...process.env, NO_COLOR: "1", ...(isPackagedRuntime() ? { BUN_BE_BUN: "1" } : {}) },
       signal: input.signal,
     });
-  } finally {
-    releaseBuildSlot();
-  }
+  });
 
   if (input.signal.aborted) return { success: false, details: "Build aborted." };
   if (result.exitCode === 0) return { success: true, details: "" };
