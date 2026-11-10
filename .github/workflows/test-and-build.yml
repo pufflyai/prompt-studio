@@ -1,23 +1,25 @@
-name: Qualify completed-source retirement on Windows
+name: Qualify scoped Cloud fixture and separate Planner cleanup
 on:
   workflow_dispatch:
     inputs:
       source_sha:
-        description: Exact one-fixture PS158 correction
+        description: Exact receiving-device Cloud fixture correction
         required: true
         type: string
 permissions:
   contents: read
 jobs:
   cloud_control:
-    name: Two-device retirement (${{ matrix.os }})
+    name: Fixture qualification (${{ matrix.case }} ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: e2e packaged-cli source P2 1 windows-latest
+          - case: two-device
+            source_sha: ${{ inputs.source_sha }}
+            name: e2e packaged-cli source P2 1 windows-latest
             os: windows-latest
             platform: win32
             arch: x64
@@ -30,6 +32,21 @@ jobs:
             suite: ""
             browser: true
             desktop: false
+          - case: planner
+            source_sha: 95f7727b9c1a85c794029a6bdf9caaa80b35033e
+            name: e2e packaged-cli source P2 1 windows-latest
+            os: windows-latest
+            platform: win32
+            arch: x64
+            owner: e2e
+            runner: packaged-cli
+            priority: P2
+            files: '["packages/e2e/src/packaged/packaged-planner-smoke.p2.test.ts"]'
+            stable: true
+            quarantine: false
+            suite: ""
+            browser: false
+            desktop: false
     env:
       GH_TOKEN: ${{ github.token }}
       EDITED_TEST_ROW: ${{ toJSON(matrix) }}
@@ -39,15 +56,15 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.source_sha }}
+          ref: ${{ matrix.source_sha }}
           fetch-depth: 0
       - name: Require exact frozen source
         shell: bash
         env:
           CONTROL_SOURCE_SHA: ${{ inputs.source_sha }}
         run: |
-          test "$CONTROL_SOURCE_SHA" = "9f70e4215f694ed219ce6ec7504eca874c5a0d78"
-          test "$(git rev-parse HEAD)" = "$CONTROL_SOURCE_SHA"
+          test "$CONTROL_SOURCE_SHA" = "89b78ea1ca99c944295873346a0e7e4a2b2d5cd0"
+          test "$(git rev-parse HEAD)" = "${{ matrix.source_sha }}"
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
@@ -60,6 +77,7 @@ jobs:
           install-strategy: native
           windows-dev-drive: "true"
       - name: Install browser engines
+        if: matrix.browser
         run: bunx playwright@1.60.0 install --with-deps
       - name: Qualify the complete changed fixture once with its maintained runner
         shell: bash
@@ -73,7 +91,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: two-device-retirement-windows
+          name: fixture-qualification-${{ matrix.case }}
           path: |
             test-results
             packages/e2e/test-results
