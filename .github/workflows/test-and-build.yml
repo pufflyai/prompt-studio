@@ -1,40 +1,93 @@
-name: Qualify rebased packaged runtime
+name: Attribute current Cloud CI failures on main
 on:
   workflow_dispatch:
     inputs:
       source_sha:
-        description: Exact frozen PS158 source after PS157 integration
+        description: Exact current main control
         required: true
         type: string
 permissions:
   contents: read
-  actions: read
 jobs:
-  scope:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      platforms: ${{ steps.matrix.outputs.platforms }}
+  cloud_control:
+    name: Cloud main control (${{ matrix.runner }} ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: e2e packaged-browser source P2 1 ubuntu-24.04
+            os: ubuntu-24.04
+            platform: linux
+            arch: x64
+            owner: e2e
+            runner: packaged-browser
+            priority: P2
+            files: '["packages/e2e/src/packaged/packaged-cloud-ui.p2.spec.ts"]'
+            stable: true
+            quarantine: false
+            suite: ""
+            browser: true
+            desktop: false
+          - name: e2e packaged-cli source P2 1 macos-15
+            os: macos-15
+            platform: darwin
+            arch: arm64
+            owner: e2e
+            runner: packaged-cli
+            priority: P2
+            files: '["packages/e2e/src/packaged/packaged-cloud-notes-onboarding.p2.test.ts","packages/e2e/src/packaged/packaged-cloud-project-recovery.p2.test.ts","packages/e2e/src/packaged/packaged-two-device-sync-smoke.p2.test.ts"]'
+            stable: true
+            quarantine: false
+            suite: ""
+            browser: true
+            desktop: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+      EDITED_TEST_ROW: ${{ toJSON(matrix) }}
+      UI_PERF_ASSERT_BUDGETS: "1"
+      PLAYWRIGHT_TRACE: "off"
+      NX_DAEMON: "false"
     steps:
       - uses: actions/checkout@v5
         with:
           ref: ${{ inputs.source_sha }}
+          fetch-depth: 0
+      - name: Require exact current main
+        shell: bash
+        env:
+          CONTROL_SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          test "$CONTROL_SOURCE_SHA" = "e92609e79cda954c8f95b07499ee9178b3e33d76"
+          test "$(git rev-parse HEAD)" = "$CONTROL_SOURCE_SHA"
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-      - name: Require the frozen source and use its maintained platform matrix
-        id: matrix
-        env:
-          QUALIFICATION_SOURCE_SHA: ${{ inputs.source_sha }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24.22.1"
+      - name: Install native dependencies and restore host build cache
+        uses: ./.github/actions/setup-ci-cache
+        with:
+          install-strategy: native
+          windows-dev-drive: "true"
+      - name: Install browser engines
+        run: bunx playwright@1.60.0 install --with-deps
+      - name: Run the same maintained edited-test selection on main
+        shell: bash
         run: |
-          test "$QUALIFICATION_SOURCE_SHA" = "4bd741de85239fff34afa01d0dc37aa86e06d4ca"
-          test "$(git rev-parse HEAD)" = "$QUALIFICATION_SOURCE_SHA"
-          bun -e 'import { appendFileSync } from "node:fs"; import { productionToolchainPlatforms } from "./scripts/ci/production-platforms.ts"; appendFileSync(process.env.GITHUB_OUTPUT, `platforms=${JSON.stringify(productionToolchainPlatforms("stable"))}\n`);'
-  packaged_toolchain:
-    needs: scope
-    uses: pufflyai/prompt-studio/.github/workflows/verify-packaged-toolchain.yml@e92609e79cda954c8f95b07499ee9178b3e33d76
-    with:
-      ref: ${{ inputs.source_sha }}
-      profile: full
-      platforms: ${{ needs.scope.outputs.platforms }}
-      priority: P2
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            xvfb-run -a bun scripts/ci/run-edited-tests.ts
+          else
+            bun scripts/ci/run-edited-tests.ts
+          fi
+      - name: Preserve original case outcomes and failure artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloud-main-control-${{ matrix.runner }}
+          path: |
+            test-results
+            packages/e2e/test-results
+          if-no-files-found: error
