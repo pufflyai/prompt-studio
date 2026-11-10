@@ -40,6 +40,7 @@ const createProcess = (onRefresh?: (sourcePath?: string) => Promise<void>) => ({
   ensure: async () => {},
   dispose: () => {},
   refresh: onRefresh ?? (async () => {}),
+  reconcile: onRefresh ?? (async () => {}),
 });
 
 // Shared no-op deps: these tests exercise watcher wiring, not harness or catalog behavior.

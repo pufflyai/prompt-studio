@@ -1,4 +1,5 @@
 import { subscribePreparationEvents, withBackgroundPreparation } from "pstdio-extensions";
+import { withPreparationContinuation } from "pstdio-extensions/preparation-client";
 import { runExtensionPreparation } from "./extension-preparation";
 import type { CreateExtensionRootWatcherInput } from "./extension-root-watcher";
 
@@ -27,7 +28,7 @@ export const createRootWatcherClient = async (input: CreateExtensionRootWatcherI
   };
   const unsubscribe = subscribePreparationEvents((event) => {
     if (!disposed && registered && (event.kind === "worker-ready" || event.kind === "worker-lost")) {
-      void refresh().catch((error) => input.onError?.(error));
+      void withPreparationContinuation(refresh).catch((error) => input.onError?.(error));
       return;
     }
     if (disposed || event.watchId !== id) return;

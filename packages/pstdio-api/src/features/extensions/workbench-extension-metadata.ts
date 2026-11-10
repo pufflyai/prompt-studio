@@ -3,8 +3,10 @@ import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import type { PackageAssetDescriptor } from "pstdio-api-contracts/extension-kernel";
 import type { ExtensionRuntime } from "pstdio-extensions";
+import { readPublishedWebviewRevision } from "pstdio-extensions/prepared-cache";
 import { createWorkbenchExtensionMetadata, type ResolveWorkbenchExtensionWebview } from "pstdio-extensions/workbench";
 import type { ExtensionWebviewUrlIssuer } from "./extension-webview-access";
+import { readWebviewBuildSignature } from "./extension-webview-build-cache";
 import { classifyWebviewEntry, resolveManagedWebviewPaths } from "./extension-webviews";
 
 type ExtensionIdMap = Map<string, string>;
@@ -38,7 +40,15 @@ const createResolveWebview = (assets: WebviewAssets): ResolveWorkbenchExtensionW
     const installedExtensionId = assets.installedExtensionIdsByExtensionId?.get(extensionId);
     if (!installedExtensionId) return { ...webview, runtimeUrl: "", moduleUrl: "" } as ExtensionWebviewRecord;
 
-    const assetRevision = assets.assetRevisionsByExtensionId?.get(extensionId);
+    const { distDir } = resolveManagedWebviewPaths({
+      installedExtensionId,
+      webviewCacheRoot: assets.webviewCacheRoot,
+      webviewId: id,
+    });
+    const assetRevision =
+      readPublishedWebviewRevision(distDir) ??
+      readWebviewBuildSignature(distDir) ??
+      assets.assetRevisionsByExtensionId?.get(extensionId);
     const cssFiles = entryStyles(installedExtensionId, id, assets.webviewCacheRoot);
     const scope = { installedExtensionId, webviewId: id };
     return {

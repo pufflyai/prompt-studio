@@ -3,6 +3,7 @@ import {
   type CreateExtensionSourceWatcherInput,
   createExtensionSourceWatcher as createLocalWatcher,
 } from "pstdio-extensions/authoring";
+import { withPreparationContinuation } from "pstdio-extensions/preparation-client";
 import { runExtensionPreparation } from "./extension-preparation";
 
 export type { CreateExtensionSourceWatcherInput, ExtensionSourceWatcher } from "pstdio-extensions/authoring";
@@ -12,31 +13,57 @@ export const createExtensionSourceWatcher = async (input: CreateExtensionSourceW
   const id = crypto.randomUUID();
   let disposed = false;
   let registered = false;
-  const running = new Map<string, Promise<void>>();
-  const queued = new Set<string>();
+  type Change = { started: boolean; work: Promise<void> };
+  const running = new Map<string, Change>();
+  const attachments = new Set<string>();
+  let attaching: Promise<void> | undefined;
   const changed = (path: string) => {
     if (disposed) return;
-    if (running.has(path)) {
-      queued.add(path);
-      return;
-    }
-    const work = withBackgroundPreparation(() => input.onSourceChanged(path))
-      .catch((error) => input.onError?.(error))
-      .then(() => undefined)
+    const previous = running.get(path);
+    if (previous && !previous.started) return previous.work;
+    let created: Change;
+    const run = async () => {
+      if (disposed) return;
+      created.started = true;
+      await withBackgroundPreparation(async () => input.onSourceChanged(path)).catch((error) => input.onError?.(error));
+    };
+    const work = (previous ? previous.work.then(run, run) : Promise.resolve().then(run)).finally(() => {
+      if (running.get(path) === created) running.delete(path);
+    });
+    created = { started: false, work };
+    running.set(path, created);
+    return work;
+  };
+  const reconcileAttachment = () => {
+    if (disposed || attaching) return;
+    const path = attachments.values().next().value;
+    if (!path) return;
+    attachments.delete(path);
+    // Admit one offline check at a time. Ordinary edits can enqueue fresh work
+    // without waiting behind every source attached after startup/worker loss.
+    attaching = Promise.resolve()
+      .then(() => changed(path))
       .finally(() => {
-        running.delete(path);
-        if (queued.delete(path)) changed(path);
+        attaching = undefined;
+        reconcileAttachment();
       });
-    running.set(path, work);
   };
   const unsubscribe = subscribePreparationEvents((event) => {
     if (!disposed && registered && (event.kind === "worker-ready" || event.kind === "worker-lost")) {
-      void refresh().catch((error) => input.onError?.(error));
+      void withPreparationContinuation(refresh).catch((error) => input.onError?.(error));
       return;
     }
     if (disposed || event.watchId !== id) return;
     if (typeof event.error === "string") input.onError?.(new Error(event.error));
-    else if (typeof event.sourcePath === "string") changed(event.sourcePath);
+    else if (typeof event.sourcePath === "string") {
+      if (event.attachment === true) {
+        attachments.add(event.sourcePath);
+        reconcileAttachment();
+      } else {
+        attachments.delete(event.sourcePath);
+        changed(event.sourcePath);
+      }
+    }
   });
   const refresh = async (sourcePath?: string) => {
     if (disposed) return;
@@ -52,16 +79,21 @@ export const createExtensionSourceWatcher = async (input: CreateExtensionSourceW
     await refresh();
     registered = true;
   } catch (error) {
+    disposed = true;
+    attachments.clear();
     unsubscribe();
+    await Promise.allSettled([...running.values()].map((change) => change.work));
     throw error;
   }
   return {
     refresh,
     dispose: async () => {
       disposed = true;
-      queued.clear();
+      attachments.clear();
       unsubscribe();
-      await Promise.allSettled([...running.values()]);
+      await Promise.allSettled(
+        [...running.values()].map((change) => change.work).concat(attaching ?? Promise.resolve()),
+      );
       await runExtensionPreparation("watch.dispose", { id }).catch(() => {});
     },
   };

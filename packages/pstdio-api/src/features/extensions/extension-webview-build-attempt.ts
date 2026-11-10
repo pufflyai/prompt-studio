@@ -2,6 +2,7 @@ import { existsSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { cp, mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { inspectExtensionLoadKey } from "pstdio-extensions";
+import { recordPublishedWebviewRevision } from "pstdio-extensions/prepared-cache";
 import { runExtensionPreparation } from "./extension-preparation";
 import type { LoadedExtensionSnapshot } from "./extension-runtime";
 import { signatureFor } from "./extension-webview-build-backoff";
@@ -55,10 +56,18 @@ export const findCurrentBuildSource = async (
     validatedSource?: LoadedExtensionSnapshot,
   ) => ReturnType<typeof loadCurrentWebviewSource>,
   identity: ManagedWebviewBuildIdentity,
+  inspectLoadKey = inspectExtensionLoadKey,
 ) => {
   while (true) {
     const current = await loadCurrentSource(identity.row.id, identity.snapshot);
     if (!current || current.row.source_path !== identity.row.source_path) return null;
+    const runtimeId = identity.snapshot.loaded.preparedRevision?.id;
+    if (
+      runtimeId &&
+      runtimeId !== identity.snapshot.loadKey &&
+      current.snapshot.loaded.preparedRevision?.id !== runtimeId
+    )
+      return null;
     const owned = collectExtensionWebviews(current.snapshot.loaded).find((view) => view.id === identity.webview.id);
     if (
       !owned ||
@@ -81,7 +90,7 @@ export const findCurrentBuildSource = async (
       owned,
       current.snapshot.loaded.preparedRevision?.packagePath,
     );
-    if (current.snapshot.loadKey !== (await inspectExtensionLoadKey(current.row.source_path))) continue;
+    if (current.snapshot.loadKey !== (await inspectLoadKey(current.row.source_path))) continue;
     return inspected.signature === identity.signature ? current.row : null;
   }
 };
@@ -130,6 +139,7 @@ const buildRetainedWebview = async (context: BuildContext, input: BuildInput, st
     if (!isCurrent() || !(await context.findCurrentSource(input))) return { status: "unavailable" as const };
     await rm(distDir, { recursive: true, force: true });
     await rename(stageDir, distDir);
+    recordPublishedWebviewRevision(distDir, signature);
     return { status: "success" as const, artifact };
   } catch (error) {
     if (!isCurrent()) return { status: "unavailable" as const };
@@ -181,6 +191,7 @@ export const createManagedWebviewBuilder = (context: BuildContext) => async (inp
     writeFileSync(join(stageDir, "build-signature.txt"), signature);
     rmSync(paths.distDir, { recursive: true, force: true });
     renameSync(stageDir, paths.distDir);
+    recordPublishedWebviewRevision(paths.distDir, signature);
     return { ...outcome, artifact: undefined };
   } finally {
     rmSync(stageDir, { recursive: true, force: true });

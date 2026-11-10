@@ -17,17 +17,24 @@ import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import {
   acceptPreparedRevision,
   createPreparationScope,
+  loadExtensionPackage,
+  normalizeExtensionSources,
   prepareExtensionRevision,
   readAcceptedRevision,
   stopExtensionPreparation,
   withBackgroundPreparation,
 } from "pstdio-extensions";
+import { readPublishedWebviewRevision, recordPublishedWebviewRevision } from "pstdio-extensions/prepared-cache";
+import { checkCandidateSource } from "./extension-candidate";
 import { createExtensionInstallBatch } from "./extension-install-batch";
+import { loadExtensionSource } from "./extension-runtime";
+import { createExtensionWebviewAccess } from "./extension-webview-access";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
 import { inspectManagedWebviewBuildInputs } from "./extension-webview-build-source";
 import { installExtensionSource } from "./install-extension-source";
 import { prepareWebviewArtifact, prepareWebviewArtifacts } from "./prepared-webview";
 import { createExtensionSourceCache } from "./project-extension-runtime-sources";
+import { buildWorkbenchExtensionMetadata } from "./workbench-extension-metadata";
 
 const previousHome = process.env.PSTDIO_HOME;
 const roots: string[] = [];
@@ -60,6 +67,163 @@ const fixture = () => {
   writeFileSync(join(source, "main.ts"), 'console.log("prepared UI");');
   return { root, source };
 };
+
+test("a changed frontend is announced only with its published URL and bytes", async () => {
+  const { root, source } = fixture();
+  const installed = await installExtensionSource({ source, skipInstall: true });
+  await acceptPreparedRevision(source, installed.preparedRevision!);
+  const loaded = await loadExtensionPackage({ path: source, sourceKind: "local_path" }, [], {
+    preparedRevision: installed.preparedRevision,
+  });
+  if (!loaded) throw new Error("Expected installed extension");
+  const runtime = normalizeExtensionSources([loaded]);
+  const row = { id: "installed", source_path: source, install_name: installed.installName, updated_at: "initial" };
+  const viewId = "test.prepared-install.view.page";
+  const cacheRoot = join(root, "webviews");
+  const module = join(cacheRoot, row.id, viewId, "dist/module.js");
+  const revisions = new Map([["test.prepared-install", "initial"]]);
+  const metadataUrl = () => {
+    const view = buildWorkbenchExtensionMetadata({
+      runtime,
+      webviewUrlIssuer: createExtensionWebviewAccess({ signingKey: Buffer.from("publication-test") }),
+      installedExtensionIdsByExtensionId: new Map([["test.prepared-install", row.id]]),
+      assetRevisionsByExtensionId: revisions,
+      installNamesByExtensionId: new Map(),
+      webviewCacheRoot: cacheRoot,
+    }).views[0]!;
+    if (view.body.kind !== "webview") throw new Error("Expected webview");
+    return view.body.webview.moduleUrl;
+  };
+  const reporting = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const publications: { id: string; url: string; bytes: string }[] = [];
+  let pause = true;
+  const manager = createExtensionWebviewBuildManager({
+    listInstalledSources: async () => [row],
+    reportBuildSuccess: async () => {
+      revisions.set("test.prepared-install", crypto.randomUUID());
+      if (pause) {
+        pause = false;
+        reporting.resolve();
+        await release.promise;
+      }
+      return "reported";
+    },
+    reportBuildFailure: async () => "reported",
+    reportPublication: async (_id, id) => {
+      if (publications.at(-1)?.id !== id)
+        publications.push({ id, url: metadataUrl(), bytes: readFileSync(module, "utf8") });
+      return "reported";
+    },
+    webviewCacheRoot: cacheRoot,
+  });
+  let refresh: Promise<void> | undefined;
+  try {
+    await manager.adopt(source);
+    const oldUrl = metadataUrl();
+    writeFileSync(join(source, "main.ts"), 'console.log("published replacement");');
+    refresh = manager.refresh(source);
+    await reporting.promise;
+    expect(metadataUrl()).toBe(oldUrl);
+    expect(readFileSync(module, "utf8")).toContain("prepared UI");
+    release.resolve();
+    await refresh;
+    expect(publications).toHaveLength(1);
+    expect(publications[0]!.url).not.toBe(oldUrl);
+    expect(publications[0]!.bytes).toContain("published replacement");
+    await manager.refresh(source);
+    expect(publications).toHaveLength(1);
+    const acceptedUrl = metadataUrl();
+    writeFileSync(join(source, "main.ts"), "const invalid = ;");
+    await manager.refresh(source);
+    expect(metadataUrl()).toBe(acceptedUrl);
+    expect(readFileSync(module, "utf8")).toContain("published replacement");
+    expect(publications).toHaveLength(1);
+  } finally {
+    release.resolve();
+    await refresh;
+    manager.dispose();
+  }
+});
+
+test("serving repair corrects a stale publication marker even when the dist signature is current", async () => {
+  const { root, source } = fixture();
+  const installed = await installExtensionSource({ source, skipInstall: true });
+  await acceptPreparedRevision(source, installed.preparedRevision!);
+  const viewId = "test.prepared-install.view.page";
+  const dist = join(root, "webviews", "installed", viewId, "dist");
+  const manager = createExtensionWebviewBuildManager({
+    listInstalledSources: async () => [
+      { id: "installed", source_path: source, install_name: installed.installName, updated_at: "initial" },
+    ],
+    reportBuildFailure: async () => "reported",
+    reportBuildSuccess: async () => "reported",
+    webviewCacheRoot: join(root, "webviews"),
+  });
+  try {
+    await manager.adopt(source);
+    const expected = `prepared:${installed.preparedRevision!.webviews![viewId]!.id}`;
+    expect(readFileSync(join(dist, "build-signature.txt"), "utf8")).toBe(expected);
+    recordPublishedWebviewRevision(dist, "prepared:stale");
+    await manager.ensure("installed", viewId);
+    expect(readPublishedWebviewRevision(dist)).toBe(expected);
+    expect((await readAcceptedRevision(source))?.id).toBe(installed.preparedRevision!.id);
+  } finally {
+    manager.dispose();
+  }
+});
+
+test("disposing a manager retires overlapping frontend loading before it can report", async () => {
+  const { root, source } = fixture();
+  const installed = await installExtensionSource({ source, skipInstall: true });
+  await acceptPreparedRevision(source, installed.preparedRevision!);
+  const loaded = await loadExtensionSource(source, { preparedRevision: installed.preparedRevision });
+  writeFileSync(join(source, "main.ts"), 'console.log("pending frontend");');
+  const entered = Promise.withResolvers<void>();
+  const secondLoaded = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const row = { id: "installed", install_name: installed.installName, source_path: source, updated_at: "initial" };
+  const errors: unknown[] = [];
+  const work: Promise<unknown>[] = [];
+  let loads = 0;
+  let reports = 0;
+  const manager = createExtensionWebviewBuildManager({
+    listInstalledSources: async () => [row],
+    loadSource: async () => {
+      if (++loads === 2) secondLoaded.resolve();
+      return loaded;
+    },
+    reportBuildSuccess: async () => {
+      reports++;
+      entered.resolve();
+      await release.promise;
+      return "reported";
+    },
+    reportBuildFailure: async () => {
+      reports++;
+      return "reported";
+    },
+    onError: (error) => errors.push(error),
+    webviewCacheRoot: join(root, "cache"),
+  });
+  try {
+    work.push(manager.refresh(source));
+    await entered.promise;
+    work.push(manager.refresh(source));
+    await secondLoaded.promise;
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    manager.dispose();
+    release.resolve();
+    await Promise.all(work);
+    expect(reports).toBe(1);
+    expect(errors.every((error) => error instanceof Error && error.name === "AbortError")).toBe(true);
+    expect((await readAcceptedRevision(source))?.webviews).toEqual(installed.preparedRevision!.webviews);
+  } finally {
+    manager.dispose();
+    release.resolve();
+    await Promise.allSettled(work);
+  }
+});
 
 test("installation retains validated webviews and activation reuses their exact output", async () => {
   const { root, source } = fixture();
@@ -101,6 +265,152 @@ test("installation retains validated webviews and activation reuses their exact 
     const cached = await cache.load({ source_path: installed.targetPath, source_kind: "local_path" });
     expect(cached?.diagnostics).toEqual([]);
     expect(await cached!.source.definition.commands![0].run({} as never, {})).toBe("accepted");
+  } finally {
+    manager.dispose();
+  }
+});
+
+test("frontend edits persist through serving repair without adopting runtime edits", async () => {
+  const { root, source } = fixture();
+  const installed = await installExtensionSource({ source, skipInstall: true });
+  await acceptPreparedRevision(installed.targetPath, installed.preparedRevision!);
+  const row = {
+    id: "live-frontend",
+    source_path: installed.targetPath,
+    install_name: installed.installName,
+    source_hash: installed.sourceHash,
+    updated_at: "initial",
+  };
+  const viewId = "test.prepared-install.view.page";
+  const serving = join(root, "views", row.id, viewId, "dist", "module.js");
+  const manager = createExtensionWebviewBuildManager({
+    listInstalledSources: async () => [row],
+    webviewCacheRoot: join(root, "views"),
+    reportBuildFailure: async (_id, _view, error) => {
+      throw error;
+    },
+    reportBuildSuccess: async () => "reported",
+    onError: (error) => {
+      throw error;
+    },
+  });
+  try {
+    await manager.ensure(row.id);
+    let previous = installed.preparedRevision!.webviews![viewId]!.id;
+    for (const revision of [1, 2]) {
+      if (revision === 2) writeFileSync(join(row.source_path, "extension.ts"), 'throw new Error("unadopted runtime");');
+      writeFileSync(join(row.source_path, "main.ts"), `console.log("frontend revision ${revision}");`);
+      await manager.refresh(row.source_path);
+      const accepted = (await readAcceptedRevision(row.source_path))!;
+      expect(accepted.id).toBe(installed.preparedRevision!.id);
+      expect(accepted.webviews![viewId]!.id).not.toBe(previous);
+      expect(readFileSync(serving, "utf8")).toContain(`frontend revision ${revision}`);
+      rmSync(serving);
+      await manager.ensure(row.id, viewId);
+      expect(readFileSync(serving, "utf8")).toContain(`frontend revision ${revision}`);
+      previous = accepted.webviews![viewId]!.id;
+    }
+    const cache = createExtensionSourceCache({});
+    const cached = await cache.load({ source_path: row.source_path, source_kind: "local_path" });
+    expect(await cached!.source.definition.commands![0].run({} as never, {})).toBe("accepted");
+  } finally {
+    manager.dispose();
+  }
+});
+
+test("accepting a runtime retires an earlier frontend snapshot at the same mutable key", async () => {
+  const { root, source } = fixture();
+  const installed = await installExtensionSource({ source, skipInstall: true });
+  await acceptPreparedRevision(installed.targetPath, installed.preparedRevision!);
+  const row = {
+    id: "runtime-race",
+    source_path: installed.targetPath,
+    install_name: installed.installName,
+    updated_at: "initial",
+  };
+  const reporting = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const errors: unknown[] = [];
+  const manager = createExtensionWebviewBuildManager({
+    listInstalledSources: async () => [row],
+    webviewCacheRoot: join(root, "views"),
+    reportBuildSuccess: async () => {
+      reporting.resolve();
+      await release.promise;
+      return "reported";
+    },
+    reportBuildFailure: async () => "reported",
+    onError: (error) => errors.push(error),
+  });
+  let refresh: Promise<void> | undefined;
+  try {
+    await manager.ensure(row.id);
+    writeFileSync(join(row.source_path, "main.ts"), 'console.log("earlier frontend snapshot");');
+    writeFileSync(join(row.source_path, "other.ts"), 'console.log("newly accepted frontend");');
+    writeFileSync(
+      join(row.source_path, "extension.ts"),
+      readFileSync(join(row.source_path, "extension.ts"), "utf8")
+        .replace('id: "page"', 'id: "other"')
+        .replace('id: "page"', 'id: "other"')
+        .replace('"./main.ts"', '"./other.ts"'),
+    );
+    const candidate = await checkCandidateSource(row.source_path);
+    expect(candidate.check.errorCount).toBe(0);
+    const accepted = candidate.loaded!.preparedRevision!;
+    refresh = manager.refresh(row.source_path);
+    await reporting.promise;
+    await acceptPreparedRevision(row.source_path, accepted);
+    release.resolve();
+    await refresh;
+    expect(errors).toEqual([]);
+    expect((await readAcceptedRevision(row.source_path))?.id).toBe(accepted.id);
+    expect((await readAcceptedRevision(row.source_path))?.webviews).toEqual(accepted.webviews);
+    expect(
+      readFileSync(join(root, "views", row.id, "test.prepared-install.view.other", "dist", "module.js"), "utf8"),
+    ).toContain("newly accepted frontend");
+    expect(
+      readFileSync(join(root, "views", row.id, "test.prepared-install.view.page", "dist", "module.js"), "utf8"),
+    ).not.toContain("earlier frontend snapshot");
+  } finally {
+    release.resolve();
+    await refresh;
+    manager.dispose();
+  }
+});
+
+test("registration reconciliation repairs accepted output without reinspecting unchanged sources", async () => {
+  const { root, source } = fixture();
+  const installed = await installExtensionSource({ source, skipInstall: true });
+  await acceptPreparedRevision(installed.targetPath, installed.preparedRevision!);
+  const row = {
+    id: "registered",
+    source_path: installed.targetPath,
+    install_name: installed.installName,
+    updated_at: "initial",
+  };
+  const serving = join(root, "views", row.id, "test.prepared-install.view.page", "dist", "module.js");
+  const retired = join(root, "views", "uninstalled");
+  mkdirSync(retired, { recursive: true });
+  let inspections = 0;
+  const manager = createExtensionWebviewBuildManager({
+    listInstalledSources: async () => [row],
+    loadSource: async () => {
+      inspections++;
+      throw new Error("Registration repair must reuse accepted metadata");
+    },
+    webviewCacheRoot: join(root, "views"),
+    reportBuildFailure: async () => "reported",
+    reportBuildSuccess: async () => "reported",
+  });
+  try {
+    await manager.reconcile();
+    expect(inspections).toBe(0);
+    expect(readFileSync(serving, "utf8")).toContain("prepared UI");
+    expect(existsSync(retired)).toBe(false);
+    rmSync(serving);
+    await manager.reconcile();
+    expect(inspections).toBe(0);
+    expect(readFileSync(serving, "utf8")).toContain("prepared UI");
   } finally {
     manager.dispose();
   }

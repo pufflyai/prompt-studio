@@ -1,7 +1,30 @@
 import { createPreparationScope } from "pstdio-extensions";
 
-type CheckOwner = { scope: ReturnType<typeof createPreparationScope>; settled: boolean };
+export type CheckOwner = { scope: ReturnType<typeof createPreparationScope>; settled: boolean };
 type PendingCheck = { completion: Promise<void>; owners: CheckOwner[] };
+
+export const joinPreparationDependencies = <T>(
+  caller: ReturnType<typeof createPreparationScope>,
+  owners: CheckOwner[],
+  work: Promise<T>,
+) => {
+  const leases = new Map<CheckOwner, () => void>();
+  const refresh = () => {
+    for (const owner of owners) {
+      if (caller.requested && !owner.settled && !leases.has(owner)) leases.set(owner, owner.scope.request());
+      else if ((!caller.requested || owner.settled) && leases.has(owner)) {
+        leases.get(owner)!();
+        leases.delete(owner);
+      }
+    }
+  };
+  const unsubscribe = caller.subscribe(refresh);
+  refresh();
+  return work.finally(() => {
+    unsubscribe();
+    for (const release of leases.values()) release();
+  });
+};
 
 // Refresh callers await their own work. Requests depend on every overlapping check,
 // and lend urgency to all of those checks without repeating their inspection work.
@@ -34,23 +57,7 @@ export const createPendingWebviewChecks = (onChecked: (id: string, webviews: str
     const entry = pending.get(id);
     if (!entry) return undefined;
     const caller = createPreparationScope();
-    const leases = new Map<CheckOwner, () => void>();
-    const refresh = () => {
-      for (const owner of entry.owners) {
-        if (caller.requested && !owner.settled && !leases.has(owner)) leases.set(owner, owner.scope.request());
-        else if ((!caller.requested || owner.settled) && leases.has(owner)) {
-          leases.get(owner)!();
-          leases.delete(owner);
-        }
-      }
-    };
-    const unsubscribe = caller.subscribe(refresh);
-    refresh();
-    return entry.completion.finally(() => {
-      unsubscribe();
-      for (const release of leases.values()) release();
-      caller.dispose();
-    });
+    return joinPreparationDependencies(caller, entry.owners, entry.completion).finally(() => caller.dispose());
   };
   return { check, join, clear: () => pending.clear() };
 };

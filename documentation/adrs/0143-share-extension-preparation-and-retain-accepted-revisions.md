@@ -26,6 +26,12 @@ at requested priority. Watcher initialization and reconciliation never gate adop
 global refresh; explicit watcher readiness remains separately observable. Identical jobs share an operation while
 callers retain independent cancellation. Webview compilation still uses the fresh child process required by ADR 0070.
 Frontend input guards also use fresh children to keep independent graph inspection off the orchestration thread.
+Attachment reconciliation admits one source callback at a time. Ordinary filesystem events enter the same background
+worker queue immediately, so an edit does not wait behind every newly attached source. Pending attachment checks remain
+eligible after worker replacement and are cleared on disposal. Registration changes repair accepted output; attachment
+checks and source events own freshness.
+Watcher restoration reserves its host/database admission gap before speculative work resumes. Its watch-update jobs
+keep background priority and share that reservation; restoration does not retire the replacement worker.
 Inspection and compilation share four leaf slots; orchestration never holds a slot across nested work. This cap does
 not include dependency-install or other preparation commands and is not an aggregate-memory qualification. Each guard
 collects inputs again. The host owns command children and file-captured output; structured requests use Buffer-backed
@@ -76,6 +82,19 @@ overwrite either set. Frontend identities include the selected source graph and 
 sibling or lockfile-only edits do not invalidate a view. Resolved aliases and inherited JSX settings use their selected
 modules and implicit runtimes; they do not alone expand every declared dependency. Unresolved or invalid compiler
 configuration retains the conservative fallback. Manifest and physical lookup memoization lasts for one inspection only.
+
+Frontend refresh reads contribution metadata from the accepted runtime. Its freshness key combines that runtime id
+with current own-source bytes, while whole-frontend dependency and compiler guards still inspect fresh inputs. A later
+check receives a fresh serialized validation after any active check with the same key. If its effective source identity
+changes, it settles the old admission before joining the current key. Foreground owners lend and revoke urgency across
+those predecessors; disposed managers cannot start queued validation.
+
+Prepared webview URLs use the published per-view identity rather than the database revision announced during guarded
+success reporting. A sibling marker survives replacement of the serving directory and changes atomically after its
+files are published. Accepted-output repair checks both that marker and the serving signature. Legacy cache preparation
+initializes a missing marker exclusively; it cannot overwrite an established publication. Once the complete accepted
+set is published, a separate conditional notification records its deterministic state and wakes dashboard readers.
+Unchanged output and serving repair do not create new publication versions.
 Dependency hashing preserves the same byte order while prefetching at most eight files of up to eight MiB each as
 observed at admission; concurrently growing files can exceed that size. This bounds ordinary read-ahead, not total
 worker memory. Larger files stream in one-MiB chunks when consumed. Failed inspections drain outstanding reads before

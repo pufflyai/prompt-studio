@@ -3,6 +3,12 @@ import { join } from "node:path";
 import { withFileMutationLock } from "pstdio-paths";
 import { type PreparedExtensionRevision, preparedCacheRoot } from "./prepared-revision";
 
+export {
+  initializePublishedWebviewRevision,
+  readPublishedWebviewRevision,
+  recordPublishedWebviewRevision,
+} from "./published-webview-revision";
+
 const leaseId = `${process.pid}-${crypto.randomUUID()}.json`;
 const leases = new Map<string, { revisions: Set<string>; webviews: Set<string> }>();
 const locked = <T>(work: () => T) => {

@@ -7,6 +7,7 @@ import {
 import type { LoadedExtensionSnapshot } from "./extension-runtime";
 import type { createBuildReporters } from "./extension-webview-build-reporters";
 import { expectedWebviewBuildSource, type InstalledSourceWithManifest } from "./extension-webview-build-runner";
+import { type CheckOwner, joinPreparationDependencies } from "./pending-webview-checks";
 import { validateExtensionWebviews } from "./validate-extension-webviews";
 
 // Initial raw-source enablement has accepted runtime callbacks but no frontend set yet.
@@ -79,9 +80,13 @@ const complete = async (input: InitialWebviewInput) => {
   return true;
 };
 
-const isSameSource = (input: InitialWebviewInput, current: Awaited<ReturnType<InitialWebviewInput["loadCurrent"]>>) =>
+const isSameSource = (
+  input: Pick<InitialWebviewInput, "current">,
+  current: Awaited<ReturnType<InitialWebviewInput["loadCurrent"]>>,
+) =>
   current?.row.source_path === input.current.row.source_path &&
   current.row.source_hash === input.current.row.source_hash &&
+  current.snapshot.loaded.preparedRevision?.id === input.current.snapshot.loaded.preparedRevision?.id &&
   current.snapshot.loadKey === input.current.snapshot.loadKey;
 const reportViews = async (
   input: InitialWebviewInput,
@@ -116,37 +121,60 @@ export const completeInitialWebviews = async (
 };
 
 export const createInitialWebviewCompletion = (activeBuilds: Set<AbortController>) => {
-  const running = new Map<string, { scope: ReturnType<typeof createPreparationScope>; work: Promise<boolean> }>();
-  return (input: Omit<InitialWebviewInput, "signal">) => {
+  type Result = { current: InitialWebviewInput["current"] | null; handled: boolean; retry?: boolean };
+  type Job = CheckOwner & { started: boolean; owners: CheckOwner[]; work: Promise<Result> };
+  const running = new Map<string, Job>();
+  const enqueue = (input: Omit<InitialWebviewInput, "signal">) => {
     const caller = createPreparationScope();
     const key = `${input.current.row.source_path}\0${input.current.snapshot.loadKey}`;
     let job = running.get(key);
-    if (!job) {
-      const work = caller
-        .run(() => completeInitialWebviews({ ...input, activeBuilds }))
-        .finally(() => {
-          running.delete(key);
-          caller.dispose();
+    if (!job || job.started) {
+      const previous = job;
+      let created: Job;
+      const run = () =>
+        caller.run(async () => {
+          created.started = true;
+          const current = await input.loadCurrent();
+          if (!current) return { current: null, handled: false };
+          // Release the old admission before joining another key. Holding both
+          // could deadlock during A → B → A source changes.
+          if (!isSameSource(input, current)) return { current, handled: false, retry: true };
+          const handled = await completeInitialWebviews({ ...input, current, activeBuilds });
+          const latest = await input.loadCurrent();
+          return { current: latest, handled, retry: latest !== null && !isSameSource(input, latest) };
         });
-      job = { scope: caller, work };
+      // A later freshness check must run after the active validation. Callers can
+      // share an unstarted continuation, whose inputs are loaded only when it runs.
+      const work = (previous ? previous.work.then(run, run) : Promise.resolve().then(run)).finally(() => {
+        created.settled = true;
+        if (running.get(key) === created) running.delete(key);
+        caller.dispose();
+      });
+      created = {
+        scope: caller,
+        work,
+        started: false,
+        settled: false,
+        owners: previous?.owners.filter((owner) => !owner.settled) ?? [],
+      };
+      created.owners.push(created);
+      job = created;
       running.set(key, job);
     }
-    if (caller === job.scope) return job.work;
-    const shared = job;
-    let release: (() => void) | undefined;
-    const refresh = () => {
-      if (caller.requested && !release) release = shared.scope.request();
-      else if (!caller.requested && release) {
-        release();
-        release = undefined;
-      }
-    };
-    const unsubscribe = caller.subscribe(refresh);
-    refresh();
-    return job.work.finally(() => {
-      unsubscribe();
-      release?.();
-      caller.dispose();
-    });
+    if (caller === job.scope)
+      return joinPreparationDependencies(
+        caller,
+        job.owners.filter((owner) => owner !== job),
+        job.work,
+      );
+    return joinPreparationDependencies(caller, job.owners, job.work).finally(() => caller.dispose());
+  };
+  return async (input: Omit<InitialWebviewInput, "signal">) => {
+    let current = input.current;
+    while (true) {
+      const result = await enqueue({ ...input, current });
+      if (!result.retry || !result.current) return result;
+      current = result.current;
+    }
   };
 };

@@ -256,6 +256,25 @@ export const createWebviewBuildReports = (
   deps: ReloadDeps,
   mutateSource: ReturnType<typeof createExtensionSourceMutations>,
 ) => ({
+  reportWebviewPublication: (
+    installedExtensionId: string,
+    publicationId: string,
+    expectedSource: ExpectedWebviewBuildSource,
+  ) =>
+    mutateSource(expectedSource.sourcePath, async () => {
+      const existing = await deps.installedExtensionSourcesService.get(installedExtensionId);
+      if (!existing || existing.source_path !== expectedSource.sourcePath) return { status: "obsolete" as const };
+      if (existing.source_hash !== (expectedSource.sourceHash ?? null)) return { status: "source-changed" as const };
+      if (existing.loaded_revision === publicationId) return { status: "reported" as const };
+      const updated = await deps.installedExtensionSourcesService.updateLoadStateIfUnchanged(
+        existing.id,
+        expectedSource.updatedAt,
+        { loaded_revision: publicationId },
+      );
+      if (!updated) return { status: "source-changed" as const };
+      deps.emitInstalledSource(updated);
+      return { status: "reported" as const };
+    }),
   // Compilation happens outside source ownership. Its database result and reload
   // history still commit together before an uninstall can remove their source.
   reportWebviewBuildFailure: (

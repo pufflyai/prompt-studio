@@ -6,7 +6,7 @@ import {
 import { runtimePreparationTasks } from "pstdio-extensions/preparation-worker";
 import { traceSetupPhase } from "../../lib/setup-phase";
 import { listExtensionSourcesInWorker } from "./discover-extension-sources";
-import { inspectCandidateInWorker, validateCandidateInWorker } from "./extension-candidate";
+import { validateCandidateInWorker } from "./extension-candidate";
 import { extensionInstallConcurrency } from "./extension-install-concurrency";
 import {
   activatePreparedInstall,
@@ -21,6 +21,7 @@ import {
   prepareManagedWebviewBuildSource,
 } from "./extension-webview-build-source";
 import { buildExtensionWebview } from "./extension-webview-builder";
+import { inspectWebviewLoadKeyInWorker, inspectWebviewSourceInWorker } from "./extension-webview-source-inspection";
 import { installExtensionSource } from "./install-extension-source";
 import { disposePreparationStage, recoverPreparationStages } from "./preparation-stages";
 import {
@@ -77,7 +78,8 @@ const handle = createPreparationHandler({
     JSON.parse(JSON.stringify(await checkExtensionsRoot(input.extensionsRoot, input.options))) as Awaited<
       ReturnType<typeof checkExtensionsRoot>
     >,
-  "source.inspect": inspectCandidateInWorker,
+  "source.inspect": inspectWebviewSourceInWorker,
+  "source.webview-key": inspectWebviewLoadKeyInWorker,
   "source.validate": validateCandidateInWorker,
   "checkout.shared": prepareCheckout,
   "checkout.dispose": (input: { id: string }) => {

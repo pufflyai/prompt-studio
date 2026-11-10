@@ -2,6 +2,7 @@ import { cpSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } fr
 import { dirname, join } from "node:path";
 import { withFileMutationLock } from "pstdio-paths";
 import { acceptedRevisionPath, type PreparedExtensionRevision, preparedRevisionState } from "./prepared-revision";
+import { recordPublishedWebviewRevision } from "./published-webview-revision";
 
 export const publishAcceptedWebviews = (input: {
   sourcePath: string;
@@ -22,6 +23,7 @@ export const publishAcceptedWebviews = (input: {
         writeFileSync(join(stage, "build-signature.txt"), `prepared:${artifact.id}`);
         rmSync(output.distDir, { recursive: true, force: true });
         renameSync(stage, output.distDir);
+        recordPublishedWebviewRevision(output.distDir, `prepared:${artifact.id}`);
       } finally {
         rmSync(stage, { recursive: true, force: true });
       }

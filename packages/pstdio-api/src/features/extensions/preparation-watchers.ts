@@ -21,7 +21,7 @@ export const updatePreparationWatcher = async (input: WatchUpdate) => {
   const reconcileAttachments = () => {
     // An edit can precede detached registration or land while its worker is absent.
     // Reconcile after watching so a later edit is covered by ordinary notifications.
-    for (const row of addedSources) report({ sourcePath: row.source_path });
+    for (const row of addedSources) report({ sourcePath: row.source_path, attachment: true });
   };
   if (existing) {
     const previous = { sources: existing.sources, roots: existing.roots };

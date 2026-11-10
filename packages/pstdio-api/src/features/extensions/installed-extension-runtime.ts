@@ -109,6 +109,7 @@ export const createInstalledExtensionRuntime = (input: {
   const webviewBuildManager: RuntimeProcess & {
     adopt: (sourcePath: string, validatedSource?: LoadedExtensionSnapshot) => Promise<void>;
     ensure: (installedExtensionId: string, webviewId?: string) => Promise<void>;
+    reconcile: () => Promise<void>;
   } = input.webviewBuilds
     ? createWebviewBuildManager({
         listInstalledSources: listExistingInstalledSources,
@@ -128,6 +129,12 @@ export const createInstalledExtensionRuntime = (input: {
           );
           return result.status;
         },
+        reportPublication: async (installedExtensionId, publicationId, expectedSource) => {
+          input.projectRuntimeCatalog.invalidate({ sourcePath: expectedSource.sourcePath, reason: "webviews_built" });
+          return (
+            await input.extensionService.reportWebviewPublication(installedExtensionId, publicationId, expectedSource)
+          ).status;
+        },
         reportBuildSuccess: async (installedExtensionId, webviewId, expectedSource) => {
           input.projectRuntimeCatalog.invalidate({ sourcePath: expectedSource.sourcePath, reason: "webviews_built" });
           const result = await input.extensionService.reportWebviewBuildSuccess(
@@ -139,11 +146,17 @@ export const createInstalledExtensionRuntime = (input: {
         },
         onError: reportError,
       })
-    : { adopt: async () => {}, dispose: () => {}, ensure: async () => {}, refresh: async () => {} };
-  const refreshWebviewsInBackground = (sourcePath?: string) => {
+    : {
+        adopt: async () => {},
+        dispose: () => {},
+        ensure: async () => {},
+        reconcile: async () => {},
+        refresh: async () => {},
+      };
+  const reconcileWebviewsInBackground = () => {
     webviewBuildManager
-      .refresh(sourcePath)
-      .then(() => input.projectRuntimeCatalog.invalidate({ sourcePath, reason: "webviews_built" }))
+      .reconcile()
+      .then(() => input.projectRuntimeCatalog.invalidate({ reason: "webviews_built" }))
       .catch(reportError);
   };
   // Provisioning can write into a watched folder, so unchanged content must not
@@ -189,7 +202,7 @@ export const createInstalledExtensionRuntime = (input: {
     }
     input.projectRuntimeCatalog.invalidate({ reason: "runtime_refresh" });
     void refreshWatchers().catch(reportError);
-    refreshWebviewsInBackground();
+    reconcileWebviewsInBackground();
   };
   triggerRuntimeRefresh = refresh;
 
@@ -198,7 +211,7 @@ export const createInstalledExtensionRuntime = (input: {
   const ready = Promise.all([rootWatcher, sourceWatcher])
     .then(refreshWatchers)
     .then(() => {
-      refreshWebviewsInBackground();
+      reconcileWebviewsInBackground();
       void runExtensionPreparation("runtime.maintain", {}, { priority: "background" }).catch(reportError);
     });
 

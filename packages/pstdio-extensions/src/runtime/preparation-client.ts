@@ -6,7 +6,7 @@ import { ownPreparationCommands } from "./preparation-command";
 export { createPreparationScope, withBackgroundPreparation, withRequestedPreparation } from "./preparation-priority";
 export { isMainThread as isPreparationHost };
 
-import { createPreparationContinuations, preparationPriority } from "./preparation-priority";
+import { createPreparationContinuations, preparationPriority, withRequestedPreparation } from "./preparation-priority";
 export interface PreparationOptions {
   signal?: AbortSignal;
   priority?: "requested" | "background";
@@ -78,6 +78,14 @@ export interface PreparationHome {
   home: string;
   env: NodeJS.ProcessEnv;
 }
+const continuePreparation =
+  (continuations: ReturnType<typeof createPreparationContinuations>) =>
+  <T>(work: () => T) =>
+    withRequestedPreparation(() => {
+      // Reserve before host/database awaits, while no dependent job exists yet.
+      continuations.retain(preparationPriority.getStore());
+      return work();
+    });
 export const createPreparationClient = (
   createWorker: () => Worker,
   cleanup?: (homes: PreparationHome[]) => Promise<void>,
@@ -187,9 +195,7 @@ export const createPreparationClient = (
     worker = current;
     const releaseLocks = registerFileMutationWorker(current);
     const stopCommands = ownPreparationCommands(current);
-    retirements.set(current, async () => {
-      await stopCommands();
-    });
+    retirements.set(current, stopCommands);
     current.once("exit", releaseLocks);
     current.on("message", (message) => onMessage(current, message));
     current.on("error", (error) => fail(current, error));
@@ -215,6 +221,7 @@ export const createPreparationClient = (
     for (const listener of listeners) listener({ kind: "worker-lost" });
   };
   return {
+    withContinuation: continuePreparation(continuations),
     configureWorker: (factory: () => Worker) => {
       // Finish the admitted job before switching hosts; queued requests keep their owners.
       createWorker = factory;
@@ -325,6 +332,7 @@ export const configureExtensionPreparationWorker = (createWorker: () => Worker, 
   shared.configureWorker(createWorker);
 };
 export const runExtensionPreparation = shared.run;
+export const withPreparationContinuation = shared.withContinuation;
 export const stopExtensionPreparation = shared.stop;
 
 export const subscribePreparationEvents = shared.subscribe;

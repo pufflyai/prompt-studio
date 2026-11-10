@@ -84,6 +84,40 @@ test("requested tools overtake queued background inspections", async () => {
   expect((await background).sequence).toBe(3);
 });
 
+test("restoration reserves its asynchronous admission gap before background work resumes", async () => {
+  const client = fixture();
+  const active = gate();
+  const backgroundGate = gate();
+  const releaseLookup = Promise.withResolvers<void>();
+  const first = client.run("wait", { name: "first", url: active.url });
+  await active.entered.promise;
+  const background = client.run<{ sequence: number }>(
+    "wait",
+    { name: "background", url: backgroundGate.url },
+    { priority: "background" },
+  );
+  const restoration = client.withContinuation(async () => {
+    await releaseLookup.promise;
+    return client.run<{ sequence: number }>("value", { name: "restore" }, { priority: "background" });
+  });
+  try {
+    active.release.resolve();
+    await first;
+    expect(
+      await Promise.race([backgroundGate.entered.promise.then(() => "started"), Bun.sleep(50).then(() => "held")]),
+    ).toBe("held");
+    releaseLookup.resolve();
+    expect((await restoration).sequence).toBe(2);
+    backgroundGate.release.resolve();
+    expect((await background).sequence).toBe(3);
+  } finally {
+    active.release.resolve();
+    releaseLookup.resolve();
+    backgroundGate.release.resolve();
+    await Promise.allSettled([first, restoration, background]);
+  }
+});
+
 test("a requested tool can prepare while background evaluation is suspended", async () => {
   const client = fixture();
   const blocked = gate();
