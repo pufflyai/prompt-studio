@@ -1,7 +1,17 @@
 import { Box, Text } from "@chakra-ui/react";
 import { type FrameBootstrap, type FrameMessage, type FrameRequest, frameProtocol } from "@pstdio/canvas";
 import { useThemePreference } from "@pstdio/ui";
-import { lazy, type RefObject, Suspense, useContext, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import {
+  lazy,
+  type RefObject,
+  Suspense,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { createPortal } from "react-dom";
 import type { CanvasItem } from "../canvas-model";
 import { Button } from "../components/themed-primitives";
@@ -90,7 +100,9 @@ export const FramePreview = (props: FramePreviewProps) => {
     sentTheme.current = themeKey;
     postFrame(frame.current, { nonce: nonce.current, type: "theme", theme });
   }, [theme, themeKey, ready]);
-  useEffect(() => {
+  // The child can post bootstrap as soon as its srcDoc commits. Install the
+  // listener with that commit so it cannot observe the previous bootstrap state.
+  useLayoutEffect(() => {
     const receive = (event: MessageEvent<FrameMessage>) => {
       const message = event.data;
       if (!validFrameMessage(event, frame.current)) return;
