@@ -167,7 +167,8 @@ Re-scan when it changes, and verify it is unchanged before publishing the manife
 | `.git`, nested repositories and submodule files | Include unless matched by `.pstignore`, including objects, index, refs, reflogs, config and hooks. No separate Git opt-in. |
 | `.env`, key files and other credential-bearing files | Include unless explicitly matched by `.pstignore`, encrypted on the client before transfer. No secret-pattern exclusions. |
 | `node_modules`, build output, caches and Git-ignored files | Apply `.pstignore` only. Nothing is excluded until users add rules. Size or transfer failures are not exclusions. |
-| `.pstdio/config.json`, `.pstdio/extensions` and `.pstdio/extension-storage` content | Include unless matched by `.pstignore`, including local extension code, caches, drafts, reports and nested workspace files. Preserve publisher paths. |
+| `.pstdio/config.json` and `.pstdio/extensions` content | Include unless matched by `.pstignore`, including local extension code. Preserve publisher paths. |
+| `.pstdio/extension-storage` content | Never copied (PS-1130 follow-up, PS-1134): it already syncs through project records, attachments and shared mounts. Core applies this after `.pstignore`, so no rule re-includes it. |
 | Files already represented by extension records or declared mounts | Apply `.pstignore` to their on-disk capture. This does not change the separate shared-record or declared-file sync owner. The scanner is read-only. |
 | Root `.pstignore` | Always retain the exact applied policy with the capture. |
 | Included symlinks | Retain the link and its exact target text without following it. An external target does not become part of the project folder. |

@@ -1,5 +1,5 @@
 import type { BigIntStats } from "node:fs";
-import { createRecoveryPolicy } from "./policy";
+import { createProjectFolderPolicy } from "./policy";
 import type { RecoverySourceHandle } from "./source-posix";
 
 export const recoverySourceIdentity = (stat: BigIntStats) =>
@@ -20,7 +20,7 @@ const openPolicy = async (root: RecoverySourceHandle) => {
 
 export const sourceRecoveryPolicy = async (root: RecoverySourceHandle) => {
   const file = await openPolicy(root);
-  if (!file) return createRecoveryPolicy(null);
+  if (!file) return createProjectFolderPolicy(null);
   try {
     const before = await file.stat();
     if (!before.isFile() || before.size > 768n * 1024n)
@@ -34,7 +34,7 @@ export const sourceRecoveryPolicy = async (root: RecoverySourceHandle) => {
     }
     if (offset !== Number(before.size) || !unchangedRecoverySource(await file.stat(), recoverySourceIdentity(before)))
       throw new Error("The recovery policy changed during capture");
-    return createRecoveryPolicy(
+    return createProjectFolderPolicy(
       new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes.subarray(0, offset)),
     );
   } finally {

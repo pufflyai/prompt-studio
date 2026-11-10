@@ -249,7 +249,7 @@ The code lives in `packages/pstdio-api/src/services/project-recovery/`.
 
 | Part | Rule |
 | --- | --- |
-| Coverage | Only a default workspace folder with a root `.pstignore` is copied; without one there is no copy and nothing creates the file. A copied folder includes every entry except paths the `.pstignore` excludes. `.gitignore` does not apply. A restored copy keeps its policy. External Git administration and object stores are captured only inside registered repository roots. |
+| Coverage | Only a default workspace folder with a root `.pstignore` is copied; without one there is no copy and nothing creates the file. A copied folder includes every entry except paths the `.pstignore` excludes and `.pstdio/extension-storage/`, which syncs through records and is excluded after the folder's own rules. `.gitignore` does not apply. A restored copy keeps its policy. External Git administration and object stores are captured only inside registered repository roots. |
 | Chunks | Bounded 1 MiB chunks sealed with the account's private-project key. A device reuses its own sealed chunk for equal content; nothing is shared or deduplicated across accounts. Plaintext exists only in one in-memory chunk. |
 | Manifest | Pages of entries and a root manifest form a DAG of chunks. A capture records its interval, applied policy, exclusions, Git dependencies and counts. |
 | Scheduling | Startup, reconnect, a new project folder and an explicit capture scan at once; change hints wait for a quiet period and the 30-second gap after the previous scan. One process owns a source through a lock; the unacknowledged candidate is journaled across restarts. |
