@@ -1,6 +1,7 @@
 import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
 import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
+import { createDisposable } from "../../shared/disposable";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { pageContextChanged, pageLayoutContext } from "./page-main-tabs";
 import type { createWorkbenchLayoutCache } from "./workbench-layout-cache";
@@ -59,7 +60,7 @@ export const connectModeLayoutCache = (core: WorkbenchCore, cache: ReturnType<ty
     if (state.activeModeId === core.modes.getActiveModeId())
       cache.savePageMain(pageLayoutContext(state), core.layout.getLayout(), state.pages[state.activePageId ?? ""]);
   };
-  core.layout.store.subscribe(() => {
+  const stopLayout = core.layout.store.subscribe(() => {
     // The page runtime saves the outgoing mode before publishing the incoming layout.
     if (
       !core.modes.isTransitioning() &&
@@ -67,11 +68,18 @@ export const connectModeLayoutCache = (core: WorkbenchCore, cache: ReturnType<ty
     )
       save();
   });
-  core.pages.store.subscribe(() => save());
-  core.layout.onDidActivatePanel((panel) => save(panel.instanceId));
-  core.onDidResetLayout(() => {
+  const stopPages = core.pages.store.subscribe(() => save());
+  const activation = core.layout.onDidActivatePanel((panel) => save(panel.instanceId));
+  const reset = core.onDidResetLayout(() => {
     const state = core.pages.store.getState();
     if (state.activeModeId) cache.clearMode(state.projectId, state.activeModeId, core.layout.getLayout());
     save();
+  });
+  return createDisposable(() => {
+    stopLayout();
+    stopPages();
+    activation.dispose();
+    reset.dispose();
+    caches.delete(core);
   });
 };

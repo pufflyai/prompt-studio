@@ -121,7 +121,7 @@ describe("createBootstrapModule", () => {
   }
 });
 
-test("restores an extension URL from the first applied metadata while a sync change reloads it", async () => {
+test("restores an accepted extension URL while a newer catalog read is pending", async () => {
   const loads: ReturnType<typeof Promise.withResolvers<typeof metadata>>[] = [];
   const browser = browserAt("/projects/project-1/extensions/pstdio.extension-lab/lab");
   const workbench = createWorkbench({ startPage: dashboardHomePage, pageLocationBrowser: browser });
@@ -138,28 +138,35 @@ test("restores an extension URL from the first applied metadata while a sync cha
       },
     }),
   );
-  const bootstrap = workbench.registerModule(createBootstrapModule());
-  const writer = getWriter("extension_instances");
+  const writer = getWriter("extension_instances")!;
+  let bootstrap: ReturnType<typeof workbench.registerModule> | undefined;
   try {
     await flushMicrotasks();
-    // The sync stream's first snapshot arrives while the first catalog read is still loading.
-    writer?.truncateAndWrite([]);
     loads[0]!.resolve(metadata);
+    await flushMicrotasks();
+    await flushMicrotasks();
+    writer.upsert({ id: "bootstrap-warm-reload", scope_type: "project", scope_id: "project-1" });
     await flushMicrotasks();
     await flushMicrotasks();
     expect(loads).toHaveLength(2);
     expect(getDashboardExtensionsReadyProjectId(workbench)).toBeUndefined();
+    bootstrap = workbench.registerModule(createBootstrapModule());
     expect(activeViewId(workbench)).toBe("pstdio.extension-lab.view.labPage");
   } finally {
     for (const load of loads) load.resolve(metadata);
-    bootstrap.dispose();
+    bootstrap?.dispose();
     extensions.dispose();
     start.dispose();
+    writer.remove("bootstrap-warm-reload");
     clearCachedDashboardExtensionMetadata("project-1");
+    await workbench.dispose();
   }
 });
 
-test("an extension URL the first catalog read cannot serve waits for the newest read", async () => {
+test.each([
+  "success",
+  "failure",
+])("an extension URL waits for the latest catalog after a superseded initial %s", async (outcome) => {
   const loads: ReturnType<typeof Promise.withResolvers<typeof metadata>>[] = [];
   const browser = browserAt("/projects/project-1/extensions/pstdio.extension-lab/lab");
   const workbench = createWorkbench({ startPage: dashboardHomePage, pageLocationBrowser: browser });
@@ -177,13 +184,17 @@ test("an extension URL the first catalog read cannot serve waits for the newest 
     }),
   );
   const bootstrap = workbench.registerModule(createBootstrapModule());
-  const writer = getWriter("extension_instances");
+  const writer = getWriter("extension_instances")!;
   try {
     await flushMicrotasks();
-    writer?.truncateAndWrite([]);
-    loads[0]!.reject(new Error("Catalog unavailable"));
+    writer.upsert({ id: "bootstrap-initial-reload", scope_type: "project", scope_id: "project-1" });
+    await flushMicrotasks();
+    if (outcome === "success") loads[0]!.resolve(metadata);
+    else loads[0]!.reject(new Error("Catalog unavailable"));
     await flushMicrotasks();
     await flushMicrotasks();
+    expect(loads).toHaveLength(2);
+    expect(getDashboardExtensionsReadyProjectId(workbench)).toBeUndefined();
     expect(workbench.pages.store.getState().activePageId).toBeUndefined();
     loads[1]!.resolve(metadata);
     await flushMicrotasks();
@@ -194,7 +205,9 @@ test("an extension URL the first catalog read cannot serve waits for the newest 
     bootstrap.dispose();
     extensions.dispose();
     start.dispose();
+    writer.remove("bootstrap-initial-reload");
     clearCachedDashboardExtensionMetadata("project-1");
+    await workbench.dispose();
   }
 });
 

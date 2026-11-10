@@ -75,3 +75,6 @@ export const useCommandMutation = <TParams, TResult>(input: CommandMutationInput
     onSuccess: () => invalidate?.forEach((queryKey) => void queryClient.invalidateQueries({ queryKey })),
   });
 };
+
+export { useScopedQueries, useScopedQuery, useWebviewQuery, useWebviewScope } from "./scoped-query";
+export { useWebviewVisibility } from "./webview-visibility";

@@ -216,12 +216,15 @@ export interface WebviewKeyboardShortcut {
   metaKey?: boolean;
   altKey?: boolean;
   shiftKey?: boolean;
+  /** Let editable controls retain typing, native undo and their own shortcuts. */
+  ignoreInputs?: boolean;
 }
 
 export interface WebviewKeyboardShortcutRequest {
   id: string;
   repeat: boolean;
   nested?: boolean;
+  inputFocus?: boolean;
 }
 
 export interface WebviewHostCapabilityParams {

@@ -129,6 +129,7 @@ export const createBenchEnvironment = async (
       writeText: async () => {},
     },
     sessions: {
+      observeMetadata: queuedRequestsRequireHost,
       getConversation: queuedRequestsRequireHost,
       getExecutionState: queuedRequestsRequireHost,
       fork: queuedRequestsRequireHost,

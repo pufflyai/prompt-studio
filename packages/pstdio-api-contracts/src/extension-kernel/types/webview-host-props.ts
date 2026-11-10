@@ -3,6 +3,8 @@ import type { ResourceRef } from "./resources";
 
 export interface WebviewHostProps {
   projectId?: string;
+  /** Cache authorization boundary; no credentials are exposed. */
+  queryScope?: { runtimeId: string; accountId?: string; accountOrigin?: string };
   /** Present only when this view is hosted in a modal dialog. */
   presentation?: "dialog";
   themePreference: string;

@@ -58,6 +58,41 @@ const startInput: HarnessStartInput = {
   events: { push: () => {}, getMessages: () => [] },
 };
 
+it("a failing command observer cannot strand sibling watches, providers or reentrant disposal", async () => {
+  const released: string[] = [];
+  const disposed: string[] = [];
+  let reentrant: Promise<void> | undefined;
+  let number = 0;
+  const entries = ["a", "b"].map((name) =>
+    record(
+      {
+        watchCommandState: () => {
+          const id = `${name}-${++number}`;
+          return () => {
+            released.push(id);
+            if (id === "a-1") {
+              reentrant = registry.list()[0]!.dispose();
+              throw new Error("Observer release failed");
+            }
+          };
+        },
+        dispose: () => {
+          disposed.push(name);
+        },
+      },
+      name,
+    ),
+  );
+  const registry = createHarnessRegistry(entries, buildContext);
+  await registry.list()[0]!.watchCommandState!({ sessionId: "s" }, () => {});
+  await registry.list()[0]!.watchCommandState!({ sessionId: "s" }, () => {});
+  await registry.list()[1]!.watchCommandState!({ sessionId: "s" }, () => {});
+  await expect(registry.dispose()).rejects.toThrow("cleanup failed");
+  await reentrant?.catch(() => {});
+  expect(released).toEqual(["a-1", "a-2", "b-3"]);
+  expect(disposed.sort()).toEqual(["a", "b"]);
+});
+
 describe("harness detection isolation", () => {
   it("isolates a throwing detection provider from healthy harnesses", async () => {
     const registry = createHarnessRegistry(

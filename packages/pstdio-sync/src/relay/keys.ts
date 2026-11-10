@@ -1,6 +1,6 @@
 import { spaceKeysPath, spaceKeysSchema } from "pstdio-sync-contracts";
 import { createSyncSpace } from "../encryption";
-import { serviceUrl } from "./http";
+import { fetchWithBackoff, serviceUrl } from "./http";
 
 /**
  * Reads the project key and this user's personal-space key from the account manager. The keys stay
@@ -14,10 +14,15 @@ export const fetchSyncSpaces = async (input: {
   workbenchId: string;
   signal?: AbortSignal;
 }) => {
-  const response = await fetch(serviceUrl(input.managerOrigin, spaceKeysPath(input.workbenchId)), {
-    signal: input.signal,
-    headers: { authorization: `Bearer ${input.credential}` },
-  });
+  const signal = input.signal ?? new AbortController().signal;
+  const response = await fetchWithBackoff(
+    () =>
+      fetch(serviceUrl(input.managerOrigin, spaceKeysPath(input.workbenchId)), {
+        signal,
+        headers: { authorization: `Bearer ${input.credential}` },
+      }),
+    signal,
+  );
   if (!response.ok) {
     await response.body?.cancel();
     throw new Error(`Sync keys unavailable (${response.status})`);

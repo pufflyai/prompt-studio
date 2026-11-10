@@ -1,5 +1,6 @@
 import type { TerminalViewBinding } from "@pstdio/sdk/api";
 import { createWorkbenchStore } from "../../shared/store/workbench-store";
+import { runWorkbenchEffect } from "../../shared/workbench-effect";
 import type {
   WorkbenchTerminalController,
   WorkbenchTerminalSessionAdapter,
@@ -8,11 +9,36 @@ import type {
   WorkbenchTerminalSessionRequest,
   WorkbenchTerminalState,
 } from "./terminal-controller-types";
+import { createTerminalSessionCleanup } from "./terminal-session-cleanup";
 
 export type * from "./terminal-controller-types";
 
 const DEFAULT_SESSION_TITLE = "Terminal";
 const SESSION_HISTORY_LIMIT = 200;
+
+const releaseTerminalAdapter = (
+  sessionId: string,
+  adapters: Map<string, WorkbenchTerminalSessionAdapter>,
+  adapterDisposers: Map<string, Array<() => void>>,
+  dataSubscribers: Map<string, Set<(chunk: Uint8Array) => void>>,
+) => {
+  adapters.delete(sessionId);
+  dataSubscribers.delete(sessionId);
+  const disposers = adapterDisposers.get(sessionId) ?? [];
+  adapterDisposers.delete(sessionId);
+  const errors: unknown[] = [];
+  for (const dispose of disposers) {
+    try {
+      dispose();
+    } catch (error) {
+      errors.push(error);
+    }
+  }
+  if (errors.length) throw new AggregateError(errors, "Terminal subscription cleanup failed");
+};
+
+const bindingKey = (bindingId: string, ownerId?: string) =>
+  ownerId ? JSON.stringify([ownerId, bindingId]) : bindingId;
 
 export const createWorkbenchTerminalController = (): WorkbenchTerminalController => {
   const store = createWorkbenchStore<WorkbenchTerminalState>({
@@ -26,6 +52,10 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
     Promise<{ sessionId: string }>,
     { ownerId?: string; bindingId?: string; controller: AbortController }
   >();
+  const ownershipListeners = new Set<() => void>();
+  const notifyOwnership = () => {
+    for (const listener of ownershipListeners) runWorkbenchEffect("terminal ownership", listener);
+  };
   const sessionOwners = new Map<string, string>();
   const adapters = new Map<string, WorkbenchTerminalSessionAdapter>();
   const adapterDisposers = new Map<string, Array<() => void>>();
@@ -52,21 +82,19 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
     return adapter;
   };
 
-  const releaseAdapter = (sessionId: string) => {
-    adapters.delete(sessionId);
-    dataSubscribers.delete(sessionId);
-    const disposers = adapterDisposers.get(sessionId) ?? [];
-    adapterDisposers.delete(sessionId);
-    for (const dispose of disposers) dispose();
-  };
+  const releaseAdapter = (id: string) => releaseTerminalAdapter(id, adapters, adapterDisposers, dataSubscribers);
 
   const cleanupSession = (sessionId: string) => {
-    releaseAdapter(sessionId);
-    sessionOwners.delete(sessionId);
-    dataHistory.delete(sessionId);
-    const bindingId = bindingIdBySessionId.get(sessionId);
-    bindingIdBySessionId.delete(sessionId);
-    if (bindingId && sessionIdByBindingId.get(bindingId) === sessionId) sessionIdByBindingId.delete(bindingId);
+    try {
+      releaseAdapter(sessionId);
+    } finally {
+      sessionOwners.delete(sessionId);
+      dataHistory.delete(sessionId);
+      const bindingId = bindingIdBySessionId.get(sessionId);
+      bindingIdBySessionId.delete(sessionId);
+      if (bindingId && sessionIdByBindingId.get(bindingId) === sessionId) sessionIdByBindingId.delete(bindingId);
+      notifyOwnership();
+    }
   };
 
   const publishData = (sessionId: string, chunk: Uint8Array) => {
@@ -78,20 +106,13 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
     for (const subscriber of dataSubscribers.get(sessionId) ?? []) subscriber(snapshot);
   };
 
-  const kill = async (input: { sessionId: string; signal?: string }) => {
-    const adapter = adapters.get(input.sessionId);
-    if (!adapter) {
-      if (!store.getState().sessionsById[input.sessionId]) requireAdapter(input.sessionId);
-      cleanupSession(input.sessionId);
-      return;
-    }
-    await adapter.kill(input.signal);
-    patchSession(input.sessionId, { status: "killed" }, "killTerminalSession");
-    cleanupSession(input.sessionId);
-  };
-
-  const bindingKey = (bindingId: string, ownerId?: string) =>
-    ownerId ? JSON.stringify([ownerId, bindingId]) : bindingId;
+  const cleanup = createTerminalSessionCleanup({
+    adapters,
+    sessions: () => Object.values(store.getState().sessionsById),
+    patchKilled: (id) => patchSession(id, { status: "killed" }, "killTerminalSession"),
+    cleanup: cleanupSession,
+  });
+  const { kill } = cleanup;
 
   const killBinding = async (placementId: string, ownerId?: string) => {
     const bindingId = bindingKey(placementId, ownerId);
@@ -175,6 +196,7 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
 
     openings.set(openSession, { ownerId: input.ownerId, bindingId, controller });
     if (bindingId) pendingSessionByBindingId.set(bindingId, openSession);
+    notifyOwnership();
     try {
       return await openSession;
     } finally {
@@ -182,6 +204,7 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
       if (bindingId && pendingSessionByBindingId.get(bindingId) === openSession) {
         pendingSessionByBindingId.delete(bindingId);
       }
+      notifyOwnership();
     }
   };
 
@@ -210,13 +233,30 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
 
     killBinding,
 
+    onDidChangeOwnership(listener) {
+      if (disposed) return () => {};
+      ownershipListeners.add(listener);
+      return () => {
+        ownershipListeners.delete(listener);
+      };
+    },
+
+    hasOwner(ownerId) {
+      return (
+        [...sessionOwners.values()].includes(ownerId) ||
+        [...openings.values()].some((entry) => entry.ownerId === ownerId)
+      );
+    },
+
     async killOwner(ownerId) {
       for (const admission of openings.values()) {
         if (admission.ownerId === ownerId) admission.controller.abort();
       }
-      await Promise.all(
+      const results = await Promise.allSettled(
         [...sessionOwners].filter(([, owner]) => owner === ownerId).map(([sessionId]) => kill({ sessionId })),
       );
+      const errors = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+      if (errors.length) throw new AggregateError(errors, "Terminal owner cleanup failed");
     },
 
     subscribe(sessionId, sink) {
@@ -250,13 +290,10 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
       return Object.values(store.getState().sessionsById);
     },
 
-    async dispose() {
+    dispose() {
       disposed = true;
       for (const admission of openings.values()) admission.controller.abort();
-      const running = Object.values(store.getState().sessionsById).filter((session) => session.status === "running");
-      await Promise.all(running.map((session) => kill({ sessionId: session.id })));
-      for (const session of Object.values(store.getState().sessionsById)) cleanupSession(session.id);
-      adapters.clear();
+      return cleanup.dispose();
     },
   };
 };

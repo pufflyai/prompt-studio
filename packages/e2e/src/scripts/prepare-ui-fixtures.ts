@@ -6,7 +6,9 @@ const currentApiConsumers = [
   "extension-lab",
   "pstdio-session-browser",
   "pstdio-artifacts",
+  "pstdio-cloud",
   "pstdio-home",
+  "pstdio-performance",
   "pstdio-planner",
   "pstdio-workspaces",
 ];

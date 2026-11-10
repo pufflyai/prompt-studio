@@ -5,7 +5,7 @@ import type { CompareRow } from "../benchmarks/analysis";
 import { SyncFailed } from "../webview/result-notices";
 import { storyCommits, storyComparison } from "../webview/story-fixtures";
 import { storyHeadOnly, storyOnceComparison, storyPartialComparison } from "../webview/story-runs";
-import { CompareView, type ResultFilter } from "./compare-view";
+import { CompareView } from "./compare-view";
 
 interface InteractiveCompareProps {
   base?: string;
@@ -16,7 +16,6 @@ interface InteractiveCompareProps {
 const InteractiveCompare = (props: InteractiveCompareProps) => {
   const [base, setBase] = useState(props.base);
   const [head, setHead] = useState(props.head);
-  const [filter, setFilter] = useState<ResultFilter>("all");
   const [selected, setSelected] = useState<string>();
   const [platform, setPlatform] = useState("linux-x64");
   const [syncFailed, setSyncFailed] = useState(props.syncFailed);
@@ -31,7 +30,6 @@ const InteractiveCompare = (props: InteractiveCompareProps) => {
         head={head}
         platform={platform}
         rows={ready ? props.rows : []}
-        filter={filter}
         selected={selected}
         notice={
           syncFailed ? (
@@ -48,7 +46,6 @@ const InteractiveCompare = (props: InteractiveCompareProps) => {
         onBaseClear={() => setBase(undefined)}
         onHeadChange={setHead}
         onPlatformChange={setPlatform}
-        onFilterChange={setFilter}
         onSelect={setSelected}
         onMeasure={setMeasuring}
       />
@@ -65,7 +62,7 @@ export default meta;
 type Story = CanvasFrame<typeof InteractiveCompare>;
 export const RunResults: Story = {
   id: "extensions-prompt-studio-dev-compare-commits--run-results",
-  description: "CI measures each benchmark once, so changes show without an interval or verdict.",
+  description: "Compact header selectors and directional differences; single samples keep their evidence note.",
 };
 export const OneCommit: Story = {
   id: "extensions-prompt-studio-dev-compare-commits--one-commit",

@@ -1,3 +1,5 @@
+import { createScopedQueryClient, type ScopedQuery, type ScopedQueryClient } from "@pstdio/sdk/extensions";
+import { createStore } from "zustand/vanilla";
 import type { CommandParamOption, CommandParamOptionSource, CommandParamSchema } from "./command-form-types";
 import { type CommandParamValue, normalizeCommandParamValues } from "./command-param-values";
 
@@ -57,6 +59,7 @@ export function createCommandOptionResolver(
   execute: ExecuteOptionCommand,
   onChange: (key: string, value: CommandParamValue) => void,
   resolved: Record<string, unknown> = {},
+  sharedQueries?: Pick<ScopedQueryClient, "query">,
 ) {
   const referencedValue = (key: string, values: Values) =>
     schema[key]?.resolvedFrom === "resource" ? resolved[key] : values[key];
@@ -68,18 +71,18 @@ export function createCommandOptionResolver(
         valueRef(value) ? referencedValue(value.key, values) : value,
       ]),
     ]);
-  let snapshot: Record<string, CommandOptionState> = {};
+  const projection = createStore<Record<string, CommandOptionState>>(() => ({}));
+  const createQueries = () => createScopedQueryClient({ runtimeId: "command-form", extensionId: "form" });
+  let queries = sharedQueries ?? createQueries();
   let values: Values = {};
   let disposed = false;
-  const controllers = new Map<string, AbortController>();
-  const listeners = new Set<() => void>();
-  const requests = new Map<string, number>();
+  const fields = new Map<string, { query: ScopedQuery<CommandParamOption[]>; stop(): void }>();
+  const observers = new Set<() => void>();
   const sources = Object.entries(schema).flatMap(([key, param]) =>
     param.options && !Array.isArray(param.options) ? [{ key, param, source: param.options }] : [],
   );
   const publish = (key: string, state: CommandOptionState) => {
-    snapshot = { ...snapshot, [key]: state };
-    for (const listener of listeners) listener();
+    projection.setState({ ...projection.getState(), [key]: state }, true);
   };
   const clearInvalidSelection = (key: string, options: CommandParamOption[]) => {
     const offered = new Set(options.map((option) => option.value));
@@ -89,57 +92,76 @@ export function createCommandOptionResolver(
       if (next.length !== current.length) onChange(key, next);
     } else if (typeof current === "string" && current && !offered.has(current)) onChange(key, "");
   };
-  const load = async (field: (typeof sources)[number]) => {
+  const release = (key: string) => {
+    const previous = fields.get(key);
+    if (!previous) return;
+    fields.delete(key);
+    previous.stop();
+    if (!previous.query.active()) previous.query.cancel();
+  };
+  const load = (field: (typeof sources)[number], retry = false) => {
     const { key, source, param } = field;
-    controllers.get(key)?.abort();
-    const controller = new AbortController();
-    controllers.set(key, controller);
-    const version = (requests.get(key) ?? 0) + 1;
-    requests.set(key, version);
+    release(key);
     const requestKey = queryKey(source, values);
-    // Keep the visible picker mounted while choices refresh; validation rejects
-    // stale choices until this request becomes ready.
-    publish(key, { key: requestKey, status: "loading", options: snapshot[key]?.options ?? [] });
+    const previousOptions = projection.getState()[key]?.options ?? [];
+    publish(key, { key: requestKey, status: "loading", options: previousOptions });
     try {
-      const options = readOptions(
-        source,
-        await execute(source.commandId, argumentsFor(source, values, schema, resolved), controller.signal),
-      );
-      if (disposed || requests.get(key) !== version) return;
-      publish(key, { key: requestKey, status: "ready", options });
-      if (param.allowCustomValues) return;
-      clearInvalidSelection(key, options);
+      const args = argumentsFor(source, values, schema, resolved);
+      const query = queries.query({
+        id: "command.options",
+        params: { source, args },
+        read: async (signal) => readOptions(source, await execute(source.commandId, args, signal)),
+      });
+      if (retry) query.invalidate();
+      const binding = { query, stop: () => {} };
+      fields.set(key, binding);
+      const observe = () => {
+        if (disposed || fields.get(key) !== binding) return;
+        const state = query.getSnapshot();
+        const options = state.data ?? previousOptions;
+        let status: CommandOptionState["status"] = "loading";
+        if (!state.fetching && state.error) status = "error";
+        else if (!state.fetching && state.data !== undefined) status = "ready";
+        publish(key, { key: requestKey, status, options, error: state.error?.message });
+        if (status === "ready" && !param.allowCustomValues) clearInvalidSelection(key, options);
+      };
+      // The common owner installs observation before executing the command.
+      binding.stop = query.subscribe(observe);
+      observe();
     } catch (error) {
-      if (disposed || requests.get(key) !== version) return;
       publish(key, {
         key: requestKey,
         status: "error",
-        options: [],
+        options: previousOptions,
         error: error instanceof Error ? error.message : String(error),
       });
     }
   };
   return {
     subscribe(listener: () => void) {
-      listeners.add(listener);
+      const stop = projection.subscribe(listener);
+      observers.add(stop);
       return () => {
-        listeners.delete(listener);
+        stop();
+        observers.delete(stop);
       };
     },
-    getSnapshot: () => snapshot,
+    getSnapshot: projection.getState,
     update(next: Values) {
+      if (disposed && !sharedQueries) queries = createQueries();
       disposed = false;
       values = next;
-      for (const field of sources) if (snapshot[field.key]?.key !== queryKey(field.source, values)) void load(field);
+      for (const field of sources)
+        if (projection.getState()[field.key]?.key !== queryKey(field.source, values)) load(field);
     },
     retry(key: string) {
       const field = sources.find((field) => field.key === key);
-      if (field && !disposed) void load(field);
+      if (field && !disposed) load(field, true);
     },
     validate(next: Values) {
       const errors: Record<string, string> = {};
       for (const { key, param, source } of sources) {
-        const state = snapshot[key];
+        const state = projection.getState()[key];
         if (state?.status !== "ready" || state.key !== queryKey(source, next)) {
           errors[key] = "Wait for the available options to load.";
           continue;
@@ -154,10 +176,11 @@ export function createCommandOptionResolver(
     },
     dispose() {
       disposed = true;
-      for (const controller of controllers.values()) controller.abort();
-      for (const [key, version] of requests) requests.set(key, version + 1);
-      snapshot = {};
-      listeners.clear();
+      for (const key of fields.keys()) release(key);
+      if (!sharedQueries) (queries as ScopedQueryClient).dispose();
+      for (const stop of observers) stop();
+      observers.clear();
+      projection.setState({}, true);
     },
   };
 }

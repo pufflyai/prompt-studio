@@ -35,6 +35,8 @@ test("keeps a native draft owner during an unrelated extension addition while hy
   };
   let currentMetadata = nativeMetadata;
   const loaded = Promise.withResolvers<void>();
+  const refreshing = Promise.withResolvers<void>();
+  let queryRead = loaded;
   const calls: string[] = [];
   const saved: unknown[] = [];
   const signals: AbortSignal[] = [];
@@ -48,7 +50,7 @@ test("keeps a native draft owner during an unrelated extension addition while hy
         let value: unknown = {};
         if (id === "chat.query" || id === "chat.load") {
           if (signal) signals.push(signal);
-          await loaded.promise;
+          await (id === "chat.query" ? queryRead : loaded).promise;
           value = id === "chat.load" ? { text: "Earlier saved work", attachments: [], values: {} } : {};
         } else if (id === "chat.save") saved.push(body.params?.draft);
         return {
@@ -69,6 +71,7 @@ test("keeps a native draft owner during an unrelated extension addition while hy
   };
   // The session interface is intentionally accessed through the native element, as the browser does.
   type Session = {
+    query: { invalidate(): void };
     retain(): () => void;
     changeDraft(update: { text: string }): void;
     flushDraft(): Promise<void>;
@@ -106,13 +109,20 @@ test("keeps a native draft owner during an unrelated extension addition while hy
       recovered: [{ text: "Earlier saved work" }],
     });
     expect(saved.at(-1)).toMatchObject(first.getSnapshot().draft);
+    // Only unfinished reads need cancellation; completed reads keep their settled signal.
+    queryRead = refreshing;
+    first.query.invalidate();
+    await flushMicrotasks();
+    expect(signals).toHaveLength(2);
+    expect(signals[1].aborted).toBe(false);
     // Explicit removal still closes its reads, and re-enabling creates a fresh owner.
     currentMetadata = metadata;
     writer?.upsert({ id: projectId, enabled: false });
     await flushMicrotasks();
     await flushMicrotasks();
     expect(workbench.views.getView(viewId)).toBeUndefined();
-    expect(signals.every((signal) => signal.aborted)).toBe(true);
+    expect(signals[0].aborted).toBe(false);
+    expect(signals.slice(1).every((signal) => signal.aborted)).toBe(true);
     currentMetadata = nativeMetadata;
     writer?.upsert({ id: projectId, enabled: true });
     await flushMicrotasks();
@@ -134,9 +144,11 @@ test("keeps a native draft owner during an unrelated extension addition while hy
     await flushMicrotasks();
     await flushMicrotasks();
     expect(render().props.session).not.toBe(changed);
-    expect(signals.every((signal) => signal.aborted)).toBe(true);
+    expect(signals[0].aborted).toBe(false);
+    expect(signals.slice(1).every((signal) => signal.aborted)).toBe(true);
   } finally {
     loaded.resolve();
+    refreshing.resolve();
     for (const release of releases) release();
     extensions.dispose();
     writer?.remove(projectId);

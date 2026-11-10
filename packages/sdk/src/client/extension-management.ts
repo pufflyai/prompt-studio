@@ -19,12 +19,14 @@ export const createExtensionManagementClient = (request: RequestFn) => ({
       method: "POST",
       body,
     }),
-  metadata: (projectId: string) => request<WorkbenchExtensionMetadata>(`${projectPath(projectId)}/ui`),
-  contributions: (projectId: string, instanceId: string) =>
-    request<WorkbenchExtensionMetadata>(`${projectExtensionPath(projectId, instanceId)}/contributions`),
-  marketplaceContributions: (projectId: string, installName: string) =>
+  metadata: (projectId: string, options?: { signal?: AbortSignal }) =>
+    request<WorkbenchExtensionMetadata>(`${projectPath(projectId)}/ui`, options),
+  contributions: (projectId: string, instanceId: string, options?: { signal?: AbortSignal }) =>
+    request<WorkbenchExtensionMetadata>(`${projectExtensionPath(projectId, instanceId)}/contributions`, options),
+  marketplaceContributions: (projectId: string, installName: string, options?: { signal?: AbortSignal }) =>
     request<WorkbenchExtensionMetadata>(
       `${projectPath(projectId)}/marketplace/${encodeURIComponent(installName)}/contributions`,
+      options,
     ),
   setEnabled: (projectId: string, instanceId: string, enabled: boolean) =>
     request<ProjectExtensionInstance>(projectExtensionPath(projectId, instanceId), {

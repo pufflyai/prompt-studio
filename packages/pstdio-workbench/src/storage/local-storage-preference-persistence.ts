@@ -1,7 +1,16 @@
 import type { PreferencePersistenceAdapter, PreferenceValue } from "../core";
 import type { WorkbenchStorageLike } from "./local-storage-persistence-helpers";
+import {
+  observePreferenceStorage,
+  type PreferenceStorageEvents,
+  publishPreferenceStorageChange,
+} from "./preference-storage-observation";
 
-export const createLocalStoragePreferencePersistence = (storage: WorkbenchStorageLike, key: string) => {
+export const createLocalStoragePreferencePersistence = (
+  storage: WorkbenchStorageLike,
+  key: string,
+  events?: PreferenceStorageEvents,
+) => {
   let lastRaw: string | null = null;
   let values: Record<string, PreferenceValue> | undefined;
 
@@ -33,7 +42,9 @@ export const createLocalStoragePreferencePersistence = (storage: WorkbenchStorag
         key,
         JSON.stringify({ ...readValues(), [JSON.stringify([name, scope.scope, scope.scopeId])]: value }),
       );
+      publishPreferenceStorageChange(storage, key, { name, scope });
     },
+    onDidChange: (listener) => observePreferenceStorage(storage, key, listener, events),
   };
   return persistence;
 };

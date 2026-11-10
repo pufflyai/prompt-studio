@@ -222,7 +222,7 @@ export const startRelayRuntime = async (input: {
       statusChanged(owner.workbenchId);
       return;
     }
-    storageChanges.changed(owner.workbenchId);
+    storageChanges.changed(owner.workbenchId, owner);
     statusChanged(owner.workbenchId);
     // This owner's relay pass already owns these applied records. Views still
     // refresh, while genuinely local writes independently request another pass.

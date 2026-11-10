@@ -79,7 +79,7 @@ test("online remote owners keep controls and unavailable history becomes read on
   expect(await readSnapshot(fixture(true, true), resource)).toMatchObject({
     readOnly: false,
     nativeHarnessAccount: { controlId: "harness", remote: true },
-    notice: "Working on Laptop.",
+    notice: "",
   });
   expect(await readSnapshot(fixture(true, false), resource)).toMatchObject({ readOnly: true });
   expect(await readSnapshot(fixture(false, true), resource)).toMatchObject({

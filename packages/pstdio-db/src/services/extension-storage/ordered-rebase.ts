@@ -141,5 +141,5 @@ export const rebaseOrderedProjection = async (
   );
   const saved = await publishOrderedProjection(tx, owner, [...views.values()]);
   await markOrderedNumberProjectionCurrent(tx, owner);
-  return { ...saved, projected: saved.projected + removed, views, events, suppressed };
+  return { ...saved, projected: saved.projected + removed, views, events, suppressed, recordIds: ids };
 };

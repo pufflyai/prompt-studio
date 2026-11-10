@@ -2,7 +2,12 @@ import { expect, type Page } from "@playwright/test";
 import { switchSession } from "../helpers/session-side-panel";
 import { logTestPhase } from "../scripts/log-test-phase";
 
-export const expectPackagedChatHistory = async (page: Page, sessionId: string) => {
+export const expectPackagedChatHistory = async (
+  page: Page,
+  sessionId: string,
+  baseUrl: string,
+  headers: Record<string, string>,
+) => {
   logTestPhase("Packaged chat history: sticky position");
   const side = page.locator('[data-workbench-panel="side"]');
   const replayTab = page.getByRole("tab", { name: "Motion replay", exact: true });
@@ -69,9 +74,54 @@ export const expectPackagedChatHistory = async (page: Page, sessionId: string) =
     logTestPhase("Packaged chat history: show final response");
     await expect(page.getByText(/^Step 30\./).filter({ visible: true })).toBeVisible();
     expect(historyReads).toBe(0);
+    // Abort the real fetch response body at a known point. Browser offline
+    // emulation does not reliably terminate an already-open idle SSE response.
+    await page.addInitScript(() => {
+      const fetch = window.fetch.bind(window);
+      window.fetch = (input, init) => {
+        const url = new URL(input instanceof Request ? input.url : String(input), window.location.href);
+        if (url.pathname !== "/v1/session-stream") return fetch(input, init);
+        const interrupt = new AbortController();
+        Reflect.set(window, "interruptChatStream", () => interrupt.abort());
+        return fetch(input, {
+          ...init,
+          signal: init?.signal ? AbortSignal.any([init.signal, interrupt.signal]) : interrupt.signal,
+        });
+      };
+    });
     await page.reload();
     await expect(page.getByText(/^Step 30\./).filter({ visible: true })).toBeVisible();
     await expect(side.getByRole("tab")).toHaveCount(2);
+    logTestPhase("Packaged chat history: recover observation after connection loss");
+    const retry = page.getByRole("alert").getByRole("button", { name: "Retry", exact: true });
+    await page.evaluate(() => Reflect.get(window, "interruptChatStream")());
+    await expect(retry).toBeVisible();
+    await expect(page.getByText(/^Step 30\./).filter({ visible: true })).toBeVisible();
+    const refreshed = page.waitForResponse(
+      (response) =>
+        response
+          .url()
+          .includes("/extensions/commands/pstdio.pstdio-session-browser.view.conversation.chat.query/execute") &&
+        response.request().postDataJSON()?.params?.renderer?.resource?.id === sessionId,
+    );
+    await retry.click();
+    expect((await refreshed).ok()).toBe(true);
+    await expect(retry).toBeHidden();
+    await expect(page.getByText(/^Step 30\./).filter({ visible: true })).toBeVisible();
+    await expect(side.getByRole("tab")).toHaveCount(2);
+    // A new fake-harness turn proves the replacement observation is receiving
+    // canonical updates; retained DOM and clearing Retry alone cannot prove it.
+    const followup = "Reply after the connection recovered";
+    const response = await fetch(`${baseUrl}/v1/sessions/${sessionId}/follow-up`, {
+      method: "POST",
+      headers: { ...headers, "content-type": "application/json" },
+      body: JSON.stringify({ prompt: followup }),
+    });
+    expect(response.ok).toBe(true);
+    await expect(page.getByText(followup, { exact: true }).filter({ visible: true })).toBeVisible();
+    await expect(
+      page.getByText(`Fake Agent: follow-up "${followup}"`, { exact: true }).filter({ visible: true }),
+    ).toBeVisible();
   } finally {
     await page.unroute(route);
   }

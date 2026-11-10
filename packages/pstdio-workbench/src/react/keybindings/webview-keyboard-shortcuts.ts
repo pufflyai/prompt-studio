@@ -5,7 +5,7 @@ import { getKeybindingSteps } from "../../core";
 import { createWorkbenchHotkeyRegistrations } from "./workbench-hotkey-registrations";
 
 const filterKeybinding = (binding: RegisteredKeybinding) =>
-  binding.allowInInputs === true && getKeybindingSteps(binding.keybinding).length === 1;
+  !binding.layer && getKeybindingSteps(binding.keybinding).length === 1;
 
 export const createWebviewKeyboardShortcuts = (workbench: WorkbenchCore, commandIds?: readonly string[]) => {
   const registrations = createWorkbenchHotkeyRegistrations({ workbench, commandIds, filterKeybinding }).filter(
@@ -21,6 +21,7 @@ export const createWebviewKeyboardShortcuts = (workbench: WorkbenchCore, command
       metaKey: parsed.meta,
       altKey: parsed.alt,
       shiftKey: parsed.shift,
+      ignoreInputs: registration.ignoreInputs,
     };
   });
   return {
@@ -31,7 +32,7 @@ export const createWebviewKeyboardShortcuts = (workbench: WorkbenchCore, command
       const registration = createWorkbenchHotkeyRegistrations({ workbench, commandIds, filterKeybinding }).find(
         (candidate) =>
           candidate.enabled &&
-          !candidate.ignoreInputs &&
+          (!candidate.ignoreInputs || !request.inputFocus) &&
           candidate.requestId === request.id &&
           (!request.nested || candidate.entry),
       );

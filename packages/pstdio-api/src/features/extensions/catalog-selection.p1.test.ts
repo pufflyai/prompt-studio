@@ -128,7 +128,7 @@ test("explicit catalog selection again re-enables a harness after its completed 
   }
 });
 
-test("selecting Workspaces installs it in the requesting project's folder", async () => {
+test("selecting Workspaces shares its installation with project-specific enablement", async () => {
   const root = await mkdtemp(join(tmpdir(), "onboarding-workspaces-"));
   const previous = {
     home: process.env.PSTDIO_HOME,
@@ -151,7 +151,6 @@ test("selecting Workspaces installs it in the requesting project's folder", asyn
     });
     expect(created.status).toBe(201);
     const project = await created.json();
-    const workspace = await handle.deps.workspaceService.getDefault(project.id);
     await enqueueCatalogExtensions(handle.deps.extensionInstallations, ["pstdio-workspaces"], project.id);
     const job = handle.deps.extensionInstallations.list().find((job) => job.projectId === project.id)!;
     await handle.deps.extensionInstallations.wait(job.id);
@@ -160,7 +159,7 @@ test("selecting Workspaces installs it in the requesting project's folder", asyn
     );
     expect(selected).toMatchObject({
       instance: { enabled: true },
-      installedSource: { source_path: join(workspace!.root_path!, ".pstdio/extensions/pstdio-workspaces") },
+      installedSource: { source_path: join(root, "home/extensions/pstdio-workspaces") },
     });
   } finally {
     await handle.close();

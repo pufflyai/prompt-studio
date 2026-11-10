@@ -11,8 +11,9 @@ import {
 export const KeyboardShortcutsWidget = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const projectId = useWorkbenchStore(input.workbench.pages.store, (state) => state.projectId);
-  const metadata = useSyncExternalStore(subscribeDashboardExtensionMetadata, () =>
-    getCachedDashboardExtensionMetadata(projectId),
+  const metadata = useSyncExternalStore(
+    (listen) => subscribeDashboardExtensionMetadata(listen, undefined, () => projectId),
+    () => getCachedDashboardExtensionMetadata(projectId),
   );
   const ownerLabels = Object.fromEntries(
     (metadata?.extensions ?? []).map((extension) => [extension.id, extension.displayName || extension.name]),

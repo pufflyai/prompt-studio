@@ -34,12 +34,13 @@ const collect = async <T>(input: AsyncIterable<T>) => {
   return result;
 };
 
-test("folder capture includes hidden, Git, private extension, binary, executable and empty entries under the root policy", async () => {
+test("folder capture includes hidden, Git, local extension, binary, executable and empty entries but never extension storage", async () => {
   const { root, folder, chunks, pages } = await fixture();
   for (const path of [
     "empty",
     ".git/hooks",
     ".pstdio/extension-storage/example.tool",
+    ".pstdio/extensions/local-tool",
     "node_modules",
     "nested/node_modules",
   ])
@@ -48,19 +49,22 @@ test("folder capture includes hidden, Git, private extension, binary, executable
   await writeFile(join(folder, ".gitignore"), "*\n");
   await writeFile(join(folder, ".git/hooks/post-checkout"), "#!/bin/sh\nexit 99\n");
   await chmod(join(folder, ".git/hooks/post-checkout"), 0o751);
-  await writeFile(join(folder, ".pstdio/extension-storage/example.tool/draft"), "private draft");
+  await writeFile(join(folder, ".pstdio/extension-storage/example.tool/draft"), "synced as records");
+  await writeFile(join(folder, ".pstdio/extensions/local-tool/extension.ts"), "export default {};");
   await writeFile(join(folder, "binary"), new Uint8Array([0, 255, 128, 1]));
   await writeFile(join(folder, "node_modules/excluded"), "not part of capture");
   await writeFile(join(root, "outside"), "must not be followed");
   await symlink("../outside", join(folder, "external"));
-  const captured = await captureRecoveryFolder({ root: folder, chunks, firstEnrollment: true });
+  // Extension storage already syncs as records; re-including it here has no effect.
+  await writeFile(join(folder, ".pstignore"), "node_modules/\n!.pstdio/extension-storage/\n");
+  const captured = await captureRecoveryFolder({ root: folder, chunks });
   const entries = await collect(pages.entries(captured.inventory));
   expect(entries.map((entry) => entry.path)).toEqual(
     expect.arrayContaining([
       ".env",
       ".gitignore",
       ".git/hooks/post-checkout",
-      ".pstdio/extension-storage/example.tool/draft",
+      ".pstdio/extensions/local-tool/extension.ts",
       "binary",
       "empty",
       "external",
@@ -68,13 +72,15 @@ test("folder capture includes hidden, Git, private extension, binary, executable
     ]),
   );
   expect(entries.some((entry) => entry.path.startsWith("node_modules/"))).toBe(false);
+  expect(entries.some((entry) => entry.path.startsWith(".pstdio/extension-storage"))).toBe(false);
   expect(entries.find((entry) => entry.path === "external")).toMatchObject({ kind: "symlink", target: "../outside" });
   expect(entries.find((entry) => entry.path === ".git/hooks/post-checkout")).toMatchObject({ mode: 0o751 });
-  expect(captured.policy).toBe("node_modules/\n");
+  expect(captured.policy).toBe("node_modules/\n!.pstdio/extension-storage/\n");
   expect(await collect(pages.exclusions(captured.exclusions))).toEqual(
     expect.arrayContaining([
       { path: "node_modules", rule: "node_modules/" },
       { path: "nested/node_modules", rule: "node_modules/" },
+      { path: ".pstdio/extension-storage", rule: "/.pstdio/extension-storage/" },
     ]),
   );
   for (const name of await readdir(chunks.directory)) {

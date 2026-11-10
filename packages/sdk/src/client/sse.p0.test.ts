@@ -1,6 +1,33 @@
 import { expect, test } from "bun:test";
 import { readSseStream } from "./sse";
 
+test("cancellation drains the stream's actual asynchronous close before releasing its reader", async () => {
+  const abort = new AbortController();
+  const closing = Promise.withResolvers<void>();
+  let cancelled = 0;
+  let settled = false;
+  const body = new ReadableStream<Uint8Array>({
+    cancel() {
+      cancelled++;
+      return closing.promise;
+    },
+  });
+  const reading = readSseStream(body, () => {}, { signal: abort.signal }).then(() => {
+    settled = true;
+  });
+  abort.abort();
+  try {
+    await Bun.sleep(0);
+    expect(cancelled).toBe(1);
+    expect(settled).toBe(false);
+    expect(body.locked).toBe(true);
+  } finally {
+    closing.resolve();
+    await reading;
+  }
+  expect(body.locked).toBe(false);
+});
+
 test("a stream arriving after cancellation still releases its connection", async () => {
   const abort = new AbortController();
   abort.abort();

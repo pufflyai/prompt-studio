@@ -1,11 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import type { CreateWorkspaceInput } from "../api/workspaces";
 import type { RequestFn } from "./request";
+import { createSessionStreamTransport } from "./session-stream";
 import { createWorkspaceClient } from "./workspaces";
+
+const workspaceClient = (request: RequestFn) =>
+  createWorkspaceClient(request, createSessionStreamTransport(request, {}));
 
 test("forgets an orphaned workspace only when explicitly requested", async () => {
   const calls: Array<{ path: string; options?: unknown }> = [];
-  const client = createWorkspaceClient(((path, options) => {
+  const client = workspaceClient(((path, options) => {
     calls.push({ path, options });
     return Promise.resolve();
   }) as RequestFn);
@@ -21,7 +25,7 @@ test("forgets an orphaned workspace only when explicitly requested", async () =>
 
 test("creates a provider workspace with its resource anchors and shorthand prefix", async () => {
   const calls: Array<{ path: string; options?: unknown }> = [];
-  const client = createWorkspaceClient(((path, options) => {
+  const client = workspaceClient(((path, options) => {
     calls.push({ path, options });
     return Promise.resolve({ id: "cloud-workspace" });
   }) as RequestFn);
@@ -45,7 +49,7 @@ describe("workspace file client", () => {
       calls.push({ path, options });
       return Promise.resolve({ entries: [] });
     }) as RequestFn;
-    const client = createWorkspaceClient(request);
+    const client = workspaceClient(request);
 
     await client.listFiles("workspace 1", { path: "src files", query: "button/icon", limit: 25 });
 
@@ -63,7 +67,7 @@ describe("workspace file client", () => {
       calls.push({ path, options });
       return Promise.resolve({ path: "docs/read me.md" });
     }) as RequestFn;
-    const client = createWorkspaceClient(request);
+    const client = workspaceClient(request);
 
     await client.createDirectory("workspace 1", "docs/new folder");
     await client.createFile("workspace 1", "docs/read me.md", { content: "" });

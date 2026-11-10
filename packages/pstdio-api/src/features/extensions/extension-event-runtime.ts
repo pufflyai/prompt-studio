@@ -1,4 +1,4 @@
-import type { EventRef, JsonObject, Struct } from "pstdio-api-contracts/extension-kernel";
+import type { EventRef, JsonObject, QueryChangeEnvelope, Struct } from "pstdio-api-contracts/extension-kernel";
 import { createCommandRunner } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
 import { createCommandEnvironment } from "./command-environment";
@@ -51,14 +51,20 @@ export const fireExtensionEvent = async <TPayload extends Struct>(
   event: EventRef<TPayload> | string,
   payload: TPayload,
   workspaceSnapshot?: WorkspaceSnapshot,
+  refresh?: Omit<QueryChangeEnvelope, "projectId">,
+  options: { broadcast?: boolean } = {},
 ) => {
   const eventId = eventIdFor(event);
   const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
   const context = await resolveEventContext(deps, projectId, payload, workspaceSnapshot);
+  let initialDispatch = true;
   const runner = createCommandRunner(snapshot.runtime, {
     createLogger: createExtensionLogger,
-    onWillDispatchEvent: (eventId) =>
-      deps.eventBus.emit("extension_events", "set", { id: crypto.randomUUID(), projectId, eventId }),
+    onWillDispatchEvent: (eventId, refresh) => {
+      if (!initialDispatch || options.broadcast !== false)
+        deps.eventBus.emit("extension_events", "set", { ...refresh, id: crypto.randomUUID(), projectId, eventId });
+      initialDispatch = false;
+    },
     buildEnvironment: (input) =>
       createCommandEnvironment(deps, snapshot.enabledSources, {
         artifactMounts: snapshot.runtime.artifactMounts,
@@ -77,6 +83,7 @@ export const fireExtensionEvent = async <TPayload extends Struct>(
     eventId,
     projectId,
     payload: context.trustedPayload,
+    refresh,
   });
 };
 
@@ -86,9 +93,11 @@ export const fireExtensionEventAsync = <TPayload extends Struct>(
   event: EventRef<TPayload> | string,
   payload: TPayload,
   workspaceSnapshot?: WorkspaceSnapshot,
+  refresh?: Omit<QueryChangeEnvelope, "projectId">,
+  options?: { broadcast?: boolean },
 ) => {
   const eventId = eventIdFor(event);
-  void fireExtensionEvent(deps, projectId, event, payload, workspaceSnapshot).catch((err) => {
+  void fireExtensionEvent(deps, projectId, event, payload, workspaceSnapshot, refresh, options).catch((err) => {
     apiLogger.warn(
       { err, event: "extension.event.dispatch_failed", event_id: eventId, project_id: projectId },
       "Extension event dispatch failed",

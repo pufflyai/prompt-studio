@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { createWorkbench } from "../core";
 import { createLocalStorageWorkbenchPersistence } from "./local-storage-persistence";
 import { createLocalStoragePreferencePersistence } from "./local-storage-preference-persistence";
+import type { PreferenceStorageEvents } from "./preference-storage-observation";
 
 const setup = () => {
   const values = new Map<string, string>();
@@ -80,4 +81,33 @@ test("user preferences keep an explicit false value across workbench reloads", a
   expect(first.preferences.getValue("related")).toBe(true);
   await first.preferences.setValue("related", false, { scope: "user" });
   expect(create().preferences.getValue("related")).toBe(false);
+});
+
+test("window preference changes and storage clear reach observers through one released event source", async () => {
+  const { storage, values } = setup();
+  const listeners = new Set<Parameters<PreferenceStorageEvents["addEventListener"]>[1]>();
+  const events: PreferenceStorageEvents = {
+    addEventListener: (_type, listener) => void listeners.add(listener),
+    removeEventListener: (_type, listener) => void listeners.delete(listener),
+  };
+  const create = () =>
+    createWorkbench({ preferencePersistence: createLocalStoragePreferencePersistence(storage, "preferences", events) });
+  const first = create();
+  const second = create();
+  const accepted: string[] = [];
+  first.preferences.registerSchema({ properties: { size: { type: "number", scope: "user", default: 0 } } });
+  first.preferences.onDidChangeValue((name) => {
+    if (name === "size") accepted.push(`${name}:${first.preferences.getValue(name)}`);
+  });
+  expect(listeners.size).toBe(1);
+  const newValue = JSON.stringify({ [JSON.stringify(["size", "user", null])]: 2 });
+  values.set("preferences", newValue);
+  for (const listener of listeners) listener({ key: "preferences", oldValue: null, newValue, storageArea: null });
+  values.clear();
+  for (const listener of listeners) listener({ key: null, oldValue: null, newValue: null, storageArea: null });
+  expect(accepted).toEqual(["size:2", "size:0"]);
+  await first.dispose();
+  expect(listeners.size).toBe(1);
+  await second.dispose();
+  expect(listeners.size).toBe(0);
 });

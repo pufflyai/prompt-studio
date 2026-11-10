@@ -190,3 +190,31 @@ describe("createCommandRunner: hooks and nesting", () => {
     expect(JSON.stringify(outcome)).toContain("nested_depth_exceeded");
   });
 });
+
+test("event refresh metadata reaches host delivery without exposing hook payloads", async () => {
+  const { api: storage } = makeStorage();
+  const received: unknown[] = [];
+  const runner = createCommandRunner(buildRuntime({}), {
+    buildEnvironment: () => stubEnvironment(storage),
+    onWillDispatchEvent: (id, refresh) => received.push({ id, refresh }),
+  });
+  const context = await runner.buildExtensionContext({
+    projectId: "project",
+    extensionId: "example.worker",
+    name: "worker",
+  });
+  await context.events.emit(
+    "example.changed",
+    { privateDocument: "secret" },
+    {
+      refresh: {
+        resourceIds: ["document"],
+        changedFields: ["title"],
+        privateDocument: "never broadcast",
+      } as never,
+    },
+  );
+  expect(received).toEqual([
+    { id: "example.changed", refresh: { resourceIds: ["document"], changedFields: ["title"] } },
+  ]);
+});

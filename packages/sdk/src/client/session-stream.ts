@@ -18,6 +18,7 @@ export interface SessionStreamListener {
 }
 
 export type ClientStreamSubscription =
+  | { workspace_diff: { project_id: string; workspace_id: string } }
   | { native_document: { project_id: string; document_key: string; room_id: string } }
   | { text_editing: { project_id: string; token: string } }
   | { retain_session_id: string }
@@ -31,6 +32,7 @@ interface Subscription extends SessionStreamListener {
 
 interface Connection {
   controller: AbortController;
+  settled: Promise<void>;
   id?: string;
 }
 
@@ -41,6 +43,20 @@ type Envelope = { connection_id?: string; subscription_id?: string; data?: unkno
 export const createSessionStreamTransport = (request: RequestFn, clientOptions: ClientOptions) => {
   const subscriptions = new Map<string, Subscription>();
   let connection: Connection | undefined;
+  let retiring: Promise<void> | undefined;
+
+  const retire = (current: Connection) => {
+    connection = undefined;
+    const drained = current.settled;
+    // Publish the actual-read barrier before abort listeners can admit a replacement.
+    retiring = drained;
+    void drained.then(() => {
+      if (retiring !== drained) return;
+      retiring = undefined;
+      if (subscriptions.size && !connection) open();
+    });
+    current.controller.abort();
+  };
 
   const subscribe = (connectionId: string, id: string, subscription: Subscription) => {
     subscription.started = request(`/v1/session-stream/${connectionId}/subscriptions`, {
@@ -67,8 +83,7 @@ export const createSessionStreamTransport = (request: RequestFn, clientOptions: 
     subscriptions.delete(id);
     if (!connection) return;
     if (subscriptions.size === 0) {
-      connection.controller.abort();
-      connection = undefined;
+      retire(connection);
       return;
     }
     if (!notifyServer || !started) return;
@@ -100,10 +115,9 @@ export const createSessionStreamTransport = (request: RequestFn, clientOptions: 
 
   const fail = (current: Connection, error: unknown) => {
     if (connection !== current) return;
-    connection = undefined;
-    current.controller.abort();
     const failed = [...subscriptions.values()];
     subscriptions.clear();
+    retire(current);
     const failure =
       error instanceof PstdioApiError
         ? error
@@ -112,7 +126,8 @@ export const createSessionStreamTransport = (request: RequestFn, clientOptions: 
   };
 
   const open = () => {
-    const current: Connection = { controller: new AbortController() };
+    const settled = Promise.withResolvers<void>();
+    const current: Connection = { controller: new AbortController(), settled: settled.promise };
     const { signal } = current.controller;
     connection = current;
     const read = async () => {
@@ -125,9 +140,11 @@ export const createSessionStreamTransport = (request: RequestFn, clientOptions: 
       await readSseStream(response.body, ({ event, data }) => dispatch(current, event, JSON.parse(data)), { signal });
       throw new Error("Session stream closed");
     };
-    void read().catch((error: unknown) => {
-      if (!signal.aborted) fail(current, error);
-    });
+    void read()
+      .catch((error: unknown) => {
+        if (!signal.aborted) fail(current, error);
+      })
+      .finally(settled.resolve);
     return current;
   };
 
@@ -136,8 +153,8 @@ export const createSessionStreamTransport = (request: RequestFn, clientOptions: 
       const id = crypto.randomUUID();
       const subscription = { ...listener, input: typeof input === "string" ? { session_id: input } : input };
       subscriptions.set(id, subscription);
-      const current = connection ?? open();
-      if (current.id) subscribe(current.id, id, subscription);
+      const current = connection ?? (retiring ? undefined : open());
+      if (current?.id) subscribe(current.id, id, subscription);
       return {
         close: () => {
           if (subscriptions.get(id) === subscription) release(id, true);

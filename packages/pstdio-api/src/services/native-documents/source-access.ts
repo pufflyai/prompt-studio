@@ -9,7 +9,7 @@ import { type ProviderTarget, resolveTextProvider } from "./source-provider";
 export type NativeSourceAccess = Pick<
   Awaited<ReturnType<typeof resolveNativeTextAccess>>,
   "owner" | "documentKey" | "lifetime" | "generation" | "content" | "projectionTarget"
->;
+> & { backingRecordId?: string | null };
 
 const resolveProviderAccess = async (deps: ExtensionsRouteDeps, input: ProviderTarget) => {
   const { resolved, owner } = await resolveTextProvider(deps, input);

@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, spyOn, test } from "bun:test";
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { createWorkbench, getWorkbenchRenderers, type WorkbenchCore, type WorkbenchPanelRenderInput } from "../../core";
 import { createControllerTerminalBridge } from "../../react/terminal/workbench-terminal-panel";
@@ -374,6 +374,80 @@ test("a later contribution failure rolls back a staged replacement owner", async
     retained.dispose();
     conflict.dispose();
     owners.dispose();
+    await workbench.dispose();
+  }
+});
+
+test("unopened project terminal owners release observation and keep only bounded reconstructible identities", async () => {
+  const workbench = createWorkbench();
+  const owners = createWorkbenchExtensionTerminalRendererOwners();
+  const input = { workbench, metadata, terminalRendererOwners: owners, executeCommand() {} };
+  let firstRender!: () => unknown;
+  for (let index = 0; index < 132; index++) {
+    const registration = registerWorkbenchExtensionContributions({ ...input, projectId: `project-${index}` });
+    if (index === 0) {
+      const renderer = getWorkbenchRenderers(workbench).getRenderer(viewId)!;
+      firstRender = () => renderer.render({ workbench } as WorkbenchPanelRenderInput);
+    }
+    registration.dispose();
+  }
+  // An evicted, escaped renderer cannot revive the departed owner.
+  expect(firstRender()).toBeNull();
+  owners.dispose();
+  await workbench.dispose();
+});
+
+test("failed pending admissions in departed projects release watchers and restore the inactive owner bound", async () => {
+  const workbench = createWorkbench();
+  const subscribe = workbench.layout.store.subscribe;
+  let observations = 0;
+  const spy = spyOn(workbench.layout.store, "subscribe").mockImplementation((...args) => {
+    observations++;
+    const stop = subscribe(...args);
+    return () => {
+      observations--;
+      stop();
+    };
+  });
+  const owners = createWorkbenchExtensionTerminalRendererOwners();
+  const pending: ReturnType<typeof Promise.withResolvers<never>>[] = [];
+  const outcomes: Promise<unknown>[] = [];
+  workbench.terminal.setSessionOpener(() => {
+    const gate = Promise.withResolvers<never>();
+    pending.push(gate);
+    return gate.promise;
+  });
+  let firstRender!: () => unknown;
+  try {
+    for (let index = 0; index < 132; index++) {
+      const registration = registerWorkbenchExtensionContributions({
+        workbench,
+        metadata,
+        projectId: `pending-${index}`,
+        terminalRendererOwners: owners,
+        executeCommand() {},
+      });
+      if (!index) {
+        const renderer = getWorkbenchRenderers(workbench).getRenderer(viewId)!;
+        firstRender = () => renderer.render({ workbench } as WorkbenchPanelRenderInput);
+      }
+      outcomes.push(
+        workbench.terminal
+          .open({ request: { cols: 80, rows: 24 }, ownerId: nativeView(workbench).ownerId })
+          .catch((error) => error),
+      );
+      registration.dispose();
+    }
+    expect(observations).toBe(132);
+    for (const gate of pending) gate.reject(new Error("opening failed"));
+    await Promise.all(outcomes);
+    expect(observations).toBe(0);
+    expect(firstRender()).toBeNull();
+  } finally {
+    for (const gate of pending) gate.reject(new Error("cleanup"));
+    await Promise.all(outcomes);
+    owners.dispose();
+    spy.mockRestore();
     await workbench.dispose();
   }
 });

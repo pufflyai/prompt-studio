@@ -1,3 +1,4 @@
+import type { ScopedQueryClient } from "@pstdio/sdk/extensions";
 import {
   createNavigationTreeRegistry,
   type NavigationTreeMoveContext,
@@ -5,11 +6,15 @@ import {
 import type { TreeNode } from "./registries/renderers/tree-renderer-types";
 import type { createCoreRenderers } from "./workbench-core-renderers";
 
-export const createWorkbenchNavigationTrees = (renderers: ReturnType<typeof createCoreRenderers>) =>
+export const createWorkbenchNavigationTrees = (
+  renderers: ReturnType<typeof createCoreRenderers>,
+  queries?: ScopedQueryClient,
+) =>
   createNavigationTreeRegistry({
+    queries,
     subscribeViewRefresh: (viewId, listener) =>
-      renderers.onDidRefresh(({ treeId }) => {
-        if (treeId === viewId) listener();
+      renderers.onDidRefresh((event) => {
+        if (event.treeId === viewId) listener(event);
       }),
     getViewDefaultExpandedSectionIds: (viewId) => renderers.getTreeRenderer(viewId)?.defaultExpandedSectionIds,
     getViewDefaultExpandedNodeIds: (viewId) => renderers.getTreeRenderer(viewId)?.defaultExpandedNodeIds,

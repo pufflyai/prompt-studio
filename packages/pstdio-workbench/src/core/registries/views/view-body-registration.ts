@@ -1,3 +1,4 @@
+import type { QueryChangeEnvelope } from "@pstdio/sdk/extensions";
 import type { ContributionMetadata } from "../../shared/contributions/metadata";
 import type { ControlsRendererRegistry } from "../renderers/controls-renderer-registry";
 import type { DataTableRendererRegistry } from "../renderers/data-table-renderer-registry";
@@ -14,7 +15,10 @@ type ViewBodyRegistries = Pick<WorkbenchRendererRegistry, "refreshRenderer" | "r
   Pick<FileRendererRegistry, "refreshFileRenderer" | "registerFileRenderer"> &
   Pick<ControlsRendererRegistry, "refreshControlsRenderer" | "registerControlsRenderer">;
 
-const refreshable = <T extends { dispose(): void }>(registration: T, refresh: (input?: unknown) => void) => ({
+const refreshable = <T extends { dispose(): void }>(
+  registration: T,
+  refresh: (input?: QueryChangeEnvelope) => void,
+) => ({
   dispose: () => registration.dispose(),
   refresh,
 });
@@ -23,15 +27,15 @@ export const createWorkbenchViewBodyRegistration =
   (registries: ViewBodyRegistries) => (view: WorkbenchViewContribution, metadata?: ContributionMetadata) => {
     const body = view.body;
     if (body.kind === "react" || body.kind === "webview" || body.kind === "terminal") {
-      return refreshable(registries.registerRenderer({ id: view.id, render: body.render }), () =>
-        registries.refreshRenderer(view.id),
+      return refreshable(registries.registerRenderer({ id: view.id, render: body.render }), (event) =>
+        registries.refreshRenderer(view.id, event),
       );
     }
     if (body.kind === "tree") {
       const { kind: _kind, ...definition } = body;
       return refreshable(
         registries.registerTreeRenderer({ ...definition, id: view.id, title: view.title, icon: view.icon }, metadata),
-        () => registries.refresh(view.id),
+        (event) => registries.refresh(view.id, event),
       );
     }
     if (body.kind === "file") {
@@ -46,7 +50,7 @@ export const createWorkbenchViewBodyRegistration =
       const { kind: _kind, ...definition } = body;
       return refreshable(
         registries.registerControlsRenderer({ ...definition, id: view.id, title: view.title }, metadata),
-        () => registries.refreshControlsRenderer(view.id),
+        (event) => registries.refreshControlsRenderer(view.id, event),
       );
     }
     if (body.kind === "kanban" || body.kind === "resourceList") {
@@ -56,13 +60,13 @@ export const createWorkbenchViewBodyRegistration =
           { ...definition, presentation: body.kind, id: view.id, title: view.title },
           metadata,
         ),
-        () => registries.refreshKanbanRenderer(view.id),
+        (event) => registries.refreshKanbanRenderer(view.id, event),
       );
     }
 
     const { kind: _kind, ...definition } = body;
     return refreshable(
       registries.registerDataTableRenderer({ ...definition, id: view.id, title: view.title }, metadata),
-      () => registries.refreshDataTableRenderer(view.id),
+      (event) => registries.refreshDataTableRenderer(view.id, event),
     );
   };

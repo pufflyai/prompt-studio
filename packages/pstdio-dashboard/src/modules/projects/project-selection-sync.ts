@@ -9,7 +9,6 @@ import {
 import type { DashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
-import { isProjectWorkspaceReady } from "@/shared/workspaces/workspace-state";
 import { createDashboardProjects, findDashboardProject } from "./data/project-data";
 
 export type DashboardProjectSelectionContext = {
@@ -19,7 +18,6 @@ export type DashboardProjectSelectionContext = {
 const projectSelectionOverlayWidgetIds = new Set<string>([
   dashboardWidgetIds.projectPicker,
   dashboardWidgetIds.createProject,
-  dashboardWidgetIds.projectOpening,
 ]);
 
 export const closeProjectSelectionOverlays = (ctx: WorkbenchModuleContext) => {
@@ -73,8 +71,6 @@ export const selectProject = (
     if (ctx.views.getView(dashboardWidgetIds.dashboardSidenav))
       ctx.views.refreshView(dashboardWidgetIds.dashboardSidenav);
   });
-  if (!isProjectWorkspaceReady(project.id) && ctx.views.getView(dashboardWidgetIds.projectOpening))
-    ctx.overlays.openOverlay(dashboardWidgetIds.projectOpening, { title: "Opening project" });
 };
 
 export const clearSelectedProject = (

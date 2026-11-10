@@ -41,7 +41,7 @@ export const createResourceRecords = (
     /** Resolves once the owner's records no longer live in its owner document. */
     statistics: ReturnType<typeof createProjectionStatistics>;
     /** Notifies owner watchers after a commit. */
-    changed: () => void;
+    changed: (recordIds?: readonly string[]) => void;
     nativeChanged?: (keys: string[]) => void;
     numbersChanged?: (events: NumberChange[]) => void;
     observer?: StorageObserver;
@@ -155,7 +155,7 @@ export const createResourceRecords = (
     operationId: string,
   ) => {
     if (result.projected) deps.statistics.record(result.projected);
-    deps.changed();
+    if (result.records.length) deps.changed(result.records.map((record) => record.recordId));
     deps.nativeChanged?.(result.nativeKeys);
     deps.numbersChanged?.(result.events);
     const saved = outcome(operationId);
@@ -178,7 +178,7 @@ export const createResourceRecords = (
     }) {
       const result = await bindNativeRecordSource(db, owner, input, deps.observer);
       if (result.changed) {
-        deps.changed();
+        deps.changed([input.recordId]);
         deps.nativeChanged?.([result.documentKey]);
         deps.observer?.committed(owner, [result.record], { status: "saved-locally" });
       }

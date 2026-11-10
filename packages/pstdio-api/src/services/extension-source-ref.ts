@@ -18,8 +18,13 @@ export const parseExtensionSourceRef = (sourceRef: string | null) => {
   return { commit: commit.toLowerCase(), path, url };
 };
 
-export const resolveExtensionReleaseCommit = async (originUrl: string, releaseRef: string, run = runCommand) => {
-  const bundled = await resolveBundledExtensionCommit(originUrl, releaseRef);
+export const resolveExtensionReleaseCommit = async (
+  originUrl: string,
+  releaseRef: string,
+  sourcePath: string,
+  run = runCommand,
+) => {
+  const bundled = await resolveBundledExtensionCommit({ url: originUrl, path: sourcePath }, releaseRef);
   if (bundled) return bundled;
   if (gitCommitPattern.test(releaseRef)) return releaseRef.toLowerCase();
 

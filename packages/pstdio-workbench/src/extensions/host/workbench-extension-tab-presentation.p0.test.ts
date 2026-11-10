@@ -4,6 +4,36 @@ import { emptyWorkbenchExtensionMetadata } from "../contributions/extension-cont
 import type { RegisterWorkbenchExtensionContributionsInput } from "./workbench-extension-host-types";
 import { createWorkbenchExtensionTabPresentation } from "./workbench-extension-tab-presentation";
 
+test("preparing a tab snapshot starts optional work only when its presentation subscribes", async () => {
+  let reads = 0;
+  const workbench = createWorkbench();
+  const tab = createWorkbenchExtensionTabPresentation(
+    {
+      workbench,
+      projectId: "project",
+      metadata: emptyWorkbenchExtensionMetadata,
+      executeCommand: async () => ({ label: `Session ${++reads}` }),
+    },
+    { extensionId: "sessions", placementId: "conversation", queryHandlerId: "title" },
+  );
+  const instance: WorkbenchPanelInstance = { instanceId: "draft", panelId: "conversation", closable: true };
+  let subscription: ReturnType<NonNullable<typeof tab.subscribe>> | undefined;
+  try {
+    tab.getSnapshot(instance);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(reads).toBe(0);
+    subscription = tab.subscribe!(() => {}, instance);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(tab.getSnapshot(instance).label).toBe("Session 1");
+    expect(reads).toBe(1);
+  } finally {
+    if (typeof subscription === "function") subscription();
+    else subscription?.dispose();
+    tab.dispose();
+    await workbench.dispose();
+  }
+});
+
 test("a storage reset refreshes the current tab title without a named extension event", async () => {
   let label = "Original note";
   let reset: (() => void) | undefined;
@@ -69,6 +99,10 @@ test("a reused viewer queries its new resource and rejects an old resource's lat
     resource: { type: "note", id: "a" },
   };
   const second = { ...first, resource: { type: "note", id: "b" } };
+  const firstSubscription = tab.subscribe!(() => {}, first);
+  if (typeof firstSubscription === "function") firstSubscription();
+  else firstSubscription.dispose();
+  const secondSubscription = tab.subscribe!(() => {}, second);
   tab.getSnapshot(first);
   tab.getSnapshot(second);
   expect(requests).toHaveLength(2);
@@ -78,10 +112,16 @@ test("a reused viewer queries its new resource and rejects an old resource's lat
   requests[0].resolve({ label: "A" });
   await new Promise<void>((resolve) => setImmediate(resolve));
   expect(tab.getSnapshot(second).label).toBe("B");
+  for (const subscription of [firstSubscription, secondSubscription]) {
+    if (typeof subscription === "function") subscription();
+    else subscription.dispose();
+  }
+  tab.dispose();
 });
 
 test("keeps the loaded tab title and actions while an autosave refresh is pending", async () => {
   const requests: Array<ReturnType<typeof Promise.withResolvers<unknown>>> = [];
+  const refreshedRead = Promise.withResolvers<void>();
   let refresh!: (event: { id: string }) => void;
   const input: RegisterWorkbenchExtensionContributionsInput = {
     workbench: createWorkbench(),
@@ -90,6 +130,7 @@ test("keeps the loaded tab title and actions while an autosave refresh is pendin
     executeCommand: () => {
       const request = Promise.withResolvers<unknown>();
       requests.push(request);
+      if (requests.length === 2) refreshedRead.resolve();
       return request.promise;
     },
     subscribeRefreshEvents: (listener: typeof refresh) => {
@@ -120,11 +161,93 @@ test("keeps the loaded tab title and actions while an autosave refresh is pendin
   const saved = tab.getSnapshot(instance);
   refresh({ id: "notes.changed" });
   expect(tab.getSnapshot(instance)).toBe(saved);
-  const next = Promise.withResolvers<void>();
-  updates.push(next);
+  await refreshedRead.promise;
   requests[1].resolve({ label: "Renamed note", menu: [{ id: "note", rows: [{ id: "delete", label: "Delete" }] }] });
-  await next.promise;
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  expect(tab.getSnapshot(instance)).toBe(saved);
   expect(tab.getSnapshot(instance).label).toBe("Renamed note");
   if (typeof subscription === "function") subscription();
   else subscription.dispose();
+});
+
+test("tab readers share one upstream owner and only read the changed resource", async () => {
+  const workbench = createWorkbench();
+  const reads: string[] = [];
+  const tab = createWorkbenchExtensionTabPresentation(
+    {
+      workbench,
+      projectId: "project",
+      metadata: emptyWorkbenchExtensionMetadata,
+      executeCommand: async (_id, input) => {
+        const resource = input.resource!;
+        reads.push(resource.id);
+        return { label: resource.id };
+      },
+    },
+    { extensionId: "notes", placementId: "note", queryHandlerId: "title" },
+  );
+  const instance = (id: string): WorkbenchPanelInstance => ({
+    instanceId: id,
+    panelId: "note",
+    closable: true,
+    resource: { type: "note", id },
+  });
+  const a = instance("a");
+  const b = instance("b");
+  const one = tab.subscribe!(() => {});
+  const two = tab.subscribe!(() => {});
+  tab.getSnapshot(a);
+  tab.getSnapshot(b);
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  reads.length = 0;
+  await workbench.resources.preview.begin(a.resource!, { label: "Updated" }).commit();
+  expect(reads).toEqual(["a"]);
+  for (const dispose of [one, two]) {
+    if (typeof dispose === "function") dispose();
+    else dispose.dispose();
+  }
+});
+
+test("closing a tab releases its active query while the other resource remains subscribed", async () => {
+  let refresh!: (event: import("./workbench-extension-refresh").WorkbenchExtensionRefreshEvent) => void;
+  const reads: string[] = [];
+  const tab = createWorkbenchExtensionTabPresentation(
+    {
+      workbench: createWorkbench(),
+      projectId: "project",
+      metadata: emptyWorkbenchExtensionMetadata,
+      executeCommand: async (_id, body) => {
+        reads.push(body.resource!.id);
+        return { label: body.resource!.id };
+      },
+      subscribeRefreshEvents: (listener) => {
+        refresh = listener;
+        return { dispose() {} };
+      },
+    },
+    { extensionId: "notes", placementId: "note", queryHandlerId: "title", refreshEventIds: ["notes.changed"] },
+  );
+  const a: WorkbenchPanelInstance = {
+    instanceId: "a",
+    panelId: "note",
+    closable: true,
+    resource: { type: "note", id: "a" },
+  };
+  const b = { ...a, instanceId: "b", resource: { type: "note", id: "b" } };
+  const stopA = tab.subscribe!(() => {}, a);
+  const stopB = tab.subscribe!(() => {}, b);
+  tab.getSnapshot(a);
+  tab.getSnapshot(b);
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  if (typeof stopB === "function") stopB();
+  else stopB.dispose();
+  reads.length = 0;
+  refresh({ id: "notes.changed", resourceIds: ["b"] });
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  expect(reads).toEqual([]);
+  refresh({ id: "notes.changed", resourceIds: ["a"] });
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  expect(reads).toEqual(["a"]);
+  if (typeof stopA === "function") stopA();
+  else stopA.dispose();
 });

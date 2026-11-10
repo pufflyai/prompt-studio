@@ -7,10 +7,12 @@ import {
   createTestHarnessRegistry,
   testHarnessId,
 } from "../../harnesses/test-harness-registry";
+import { observeSessionCommandsChanged } from "../session-command-events";
 
 test("native controls work during a turn while exclusive commands cannot overlap it", async () => {
   const done = Promise.withResolvers<HarnessExit>();
   const inputs: string[] = [];
+  let paused = false;
   const registry = createTestHarnessRegistry([
     createTestHarnessRecord("commands", {
       provider: {
@@ -22,7 +24,7 @@ test("native controls work during a turn while exclusive commands cannot overlap
           },
         }),
         getCommandState: () => ({
-          commands: [{ name: "/compact", description: "Compact" }],
+          commands: [{ name: "/compact", description: paused ? "Paused" : "Active" }],
           modes: [],
           slashCommands: true,
         }),
@@ -30,6 +32,8 @@ test("native controls work during a turn while exclusive commands cannot overlap
           execution: op.kind === "command" && op.text === "/compact" ? "exclusive" : "control",
           invoke: async () => {
             if (op.kind === "command") inputs.push(op.text);
+            paused = !paused;
+            if (op.kind === "command" && op.text === "/goal resume") throw new Error("Changed before rejection");
             return { kind: "completed", message: "native result" };
           },
         }),
@@ -57,6 +61,10 @@ test("native controls work during a turn while exclusive commands cannot overlap
     const state = await app.app.request(`/v1/sessions/${session.id}/harness-commands`);
     expect(state.status).toBe(200);
     expect((await state.json()).commands[0].name).toBe("/compact");
+    let commandHints = 0;
+    let foreignHints = 0;
+    const closeHints = observeSessionCommandsChanged(app.deps.eventBus, session.id, () => commandHints++);
+    const closeForeign = observeSessionCommandsChanged(app.deps.eventBus, "another-session", () => foreignHints++);
     const invoke = (text: string) =>
       app.app.request(`/v1/sessions/${session.id}/harness-commands`, {
         method: "POST",
@@ -64,9 +72,23 @@ test("native controls work during a turn while exclusive commands cannot overlap
         body: JSON.stringify({ operation: { kind: "command", text } }),
       });
     expect((await invoke("/goal pause")).status).toBe(200);
+    // A native control can change its command state without returning params or a transcript patch.
+    expect(commandHints).toBe(1);
+    expect(
+      (await (await app.app.request(`/v1/sessions/${session.id}/harness-commands`)).json()).commands[0].description,
+    ).toBe("Paused");
     expect(inputs).toEqual(["/goal pause"]);
+    expect((await invoke("/goal resume")).status).toBe(400);
+    expect(commandHints).toBe(2);
+    expect(
+      (await (await app.app.request(`/v1/sessions/${session.id}/harness-commands`)).json()).commands[0].description,
+    ).toBe("Active");
     expect((await invoke("/compact")).status).toBe(409);
-    expect(inputs).toEqual(["/goal pause"]);
+    expect(commandHints).toBe(2);
+    expect(foreignHints).toBe(0);
+    expect(inputs).toEqual(["/goal pause", "/goal resume"]);
+    closeHints();
+    closeForeign();
   } finally {
     done.resolve({ status: "completed" });
     for (let i = 0; app.deps.sessionService.store.get(sessionId) && i < 50; i++) await Bun.sleep(10);

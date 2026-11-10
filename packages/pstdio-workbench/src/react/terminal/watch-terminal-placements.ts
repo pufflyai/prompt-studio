@@ -1,6 +1,7 @@
 import type { WorkbenchCoreContributionContext, WorkbenchLayout } from "../../core";
 import { pageContextChanged } from "../../core/controllers/page-runtime/page-main-tabs";
 import { departingPagePreviews } from "../../core/controllers/page-runtime/page-preview-lifetime";
+import { runUserAction } from "../../core/shared/run-user-action";
 
 export const watchClosedTerminalPlacements = (
   ctx: WorkbenchCoreContributionContext,
@@ -49,7 +50,7 @@ export const watchClosedTerminalPlacements = (
     const close =
       onClose ??
       ((instanceId: string) => {
-        void ctx.terminal.killBinding(instanceId, ownerId);
+        void runUserAction(ctx, "Close terminal", () => ctx.terminal.killBinding(instanceId, ownerId));
       });
     for (const instanceId of closed) close(instanceId);
   });
@@ -58,11 +59,11 @@ export const watchClosedTerminalPlacements = (
       unsubscribeLayout();
       if (onClose) return;
       if (ownerId) {
-        void ctx.terminal.killOwner(ownerId);
+        void runUserAction(ctx, "Close terminal", () => ctx.terminal.killOwner(ownerId));
         return;
       }
       for (const instanceId of placements(ctx.layout.getLayout()).map((placement) => placement.widgetId)) {
-        void ctx.terminal.killBinding(instanceId, ownerId);
+        void runUserAction(ctx, "Close terminal", () => ctx.terminal.killBinding(instanceId, ownerId));
       }
     },
   };

@@ -34,18 +34,18 @@ test("finds a virtual row after a contribution moves it outside the rendered win
   });
   const tree = page.getByRole("tree");
   const destination = tree.getByRole("option", { name: "Destination", exact: true });
-  const measureVisibility = destination.isVisible.bind(destination);
   let recycled = false;
-  // Keep the real visibility result, but deterministically deliver the virtualizer's update
-  // before the helper continues. All selector resolution, geometry and scrolling remain real.
-  destination.isVisible = async (options) => {
-    const visible = await measureVisibility(options);
-    if (visible && !recycled) {
-      recycled = true;
-      await tree.locator('[data-part="viewport"]').dispatchEvent("recycle");
-    }
-    return visible;
-  };
+  // Deliver the virtualizer's update before the first atomic snapshot. A missing
+  // row must return control to the viewport scanner instead of awaiting attachment.
+  destination.evaluateAll = new Proxy(destination.evaluateAll, {
+    async apply(snapshot, target, args) {
+      if (!recycled) {
+        recycled = true;
+        await tree.locator('[data-part="viewport"]').dispatchEvent("recycle");
+      }
+      return Reflect.apply(snapshot, target, args);
+    },
+  });
   await expect.poll(() => revealTreeEntry(page, tree, destination)).toBe(true);
   await expect(tree).toHaveAttribute("data-recycled", "true");
   await expect(destination).toBeVisible();

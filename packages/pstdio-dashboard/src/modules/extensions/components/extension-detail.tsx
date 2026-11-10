@@ -8,7 +8,7 @@ import type {
 import { AlertMessage, Switch, type SwitchProps } from "@pstdio/ui";
 import type { WorkbenchCore } from "@pstdio/workbench";
 import type { ExecuteOptionCommand } from "@pstdio/workbench/react";
-import { ArrowLeft, ArrowUpCircle, Blocks, RotateCw, SlidersHorizontal, Timer } from "lucide-react";
+import { ArrowUpCircle, Blocks, RotateCw, SlidersHorizontal, Timer } from "lucide-react";
 import type { AgentInfo } from "pstdio-api-contracts";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -39,7 +39,6 @@ export interface ExtensionDetailProps {
   upgrading?: boolean;
   uninstalling?: boolean;
   togglingAutomationId?: string;
-  onBack: () => void;
   onToggle: (enabled: boolean) => void;
   onToggleAutomation: (automation: WorkbenchExtensionAutomationRecord, enabled: boolean) => void;
   /** Runs the commands that load a setting's choices. */
@@ -66,7 +65,6 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
     upgrading,
     uninstalling,
     togglingAutomationId,
-    onBack,
     onToggle,
     onToggleAutomation,
     executeOptionCommand,
@@ -103,22 +101,6 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
         header={
           <Stack gap="md">
             <Stack gap="md" paddingX="lg" paddingTop="lg">
-              <HStack justifyContent="space-between">
-                <Button variant="ghost" size="2xs" onClick={onBack} data-testid="extension-detail-back">
-                  <ArrowLeft size={12} />
-                  {t("projectSettings.extensionsPanel.detail.back")}
-                </Button>
-                {unavailableHarnesses.length > 0 && (
-                  <ExtensionHealthPopover
-                    extension={extension}
-                    diagnostics={diagnostics}
-                    unavailableHarnesses={unavailableHarnesses}
-                    upgrading={upgrading}
-                    onUpgrade={onUpgrade}
-                  />
-                )}
-              </HStack>
-
               <HStack gap="md" alignItems="center">
                 <Flex
                   alignItems="center"
@@ -140,6 +122,15 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                     {t(`projectSettings.extensionsPanel.scope.${extension.scope}`)}
                   </Text>
                 </Stack>
+                {unavailableHarnesses.length > 0 && (
+                  <ExtensionHealthPopover
+                    extension={extension}
+                    diagnostics={diagnostics}
+                    unavailableHarnesses={unavailableHarnesses}
+                    upgrading={upgrading}
+                    onUpgrade={onUpgrade}
+                  />
+                )}
                 {extension.canUpgrade && (
                   <Button
                     variant="primary"

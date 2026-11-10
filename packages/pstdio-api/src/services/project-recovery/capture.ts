@@ -5,7 +5,7 @@ import {
   isRecoveryGitPath,
   isRecoveryGitPointer,
 } from "./git-dependencies";
-import { createRecoveryPolicy } from "./policy";
+import { createProjectFolderPolicy } from "./policy";
 import { type RecoveryScanInput, scanRecoveryRoot } from "./scan";
 
 export { RecoveryCaptureError } from "./scan";
@@ -31,7 +31,7 @@ export const captureRecoveryFolder = async (
       if (included && administration && kind === "other" && unsupported.length < 64) unsupported.push(path);
     },
   });
-  const policy = createRecoveryPolicy(scan.policy);
+  const policy = createProjectFolderPolicy(scan.policy);
   const git = await captureRecoveryGitDependencies({
     root: rootPath,
     scan: { rootPath, pointers, ...scan },
