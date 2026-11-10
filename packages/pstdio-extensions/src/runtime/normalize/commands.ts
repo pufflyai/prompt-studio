@@ -204,6 +204,7 @@ export const registerCommands = (
       palette: normalizeCommandPalette(command.palette),
       cli,
       automation: command.automation === true,
+      copyResultToClipboard: command.copyResultToClipboard,
       mutating: command.mutating === true,
       stream: command.stream,
       resourceMutation: command.resourceMutation,

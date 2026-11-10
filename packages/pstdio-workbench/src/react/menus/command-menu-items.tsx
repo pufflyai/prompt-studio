@@ -73,6 +73,7 @@ const toMenuItem = (
   disabled: entry.disabled,
   readOnly: entry.readOnly,
   separatorBefore: entry.separatorBefore,
+  runOnSelect: entry.runOnSelect,
   onAction: entry.run
     ? () => {
         void entry.run?.().catch((error) => {
