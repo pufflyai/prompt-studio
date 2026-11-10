@@ -5,6 +5,7 @@ import {
   type RendererEventReference,
   type Struct,
 } from "pstdio-api-contracts/extension-kernel";
+import { commandRefId } from "./contribution-reference";
 import { resolveEventReferenceId } from "./event-reference";
 import type { GuestHost } from "./guest-host";
 import { runQueryCleanup } from "./query-cleanup";
@@ -57,7 +58,7 @@ export const createWebviewQueryClient = (host: GuestHost, extensionId = host.ext
       params?: Params,
       options?: WebviewCommandQueryOptions,
     ) {
-      const commandId = command.extensionId === "pstdio" ? command.id : `${command.extensionId}.command.${command.id}`;
+      const commandId = commandRefId(command, extensionId);
       return commands.query<Result>(
         {
           commandId,

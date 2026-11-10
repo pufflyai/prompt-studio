@@ -89,6 +89,13 @@ test.each([
       await peerRead;
     });
     expect(query.getSnapshot().data).toBe("Peer accepted");
+    if (mode !== "unmount") {
+      await act(async () => renderer!.update(<Capture active />));
+      previousRetry();
+      expect(calls.filter((call) => call.operation === "refresh")).toHaveLength(1);
+      retry();
+      expect(calls.filter((call) => call.operation === "refresh")).toHaveLength(2);
+    }
   } finally {
     for (const reply of pending.values()) reply.resolve(snapshot(4));
     await act(async () => renderer?.unmount());

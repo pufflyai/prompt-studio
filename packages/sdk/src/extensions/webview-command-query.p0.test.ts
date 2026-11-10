@@ -321,3 +321,22 @@ test.each([
     f.client.queries.dispose();
   }
 });
+
+test.each([false, true])("local command references use the client owner with override=%s", async (override) => {
+  const f = bridge();
+  const client = override ? createWebviewClient(f.host, { extensionId: "override.tool" }) : f.client;
+  const command = defineCommand({ id: "local-read", title: "Local read", run: () => "Read" });
+  const query = client.queries.command(command.ref);
+  const pending = query.read();
+  const request = f.calls.find((call) => call.input.operation === "read")!;
+  try {
+    expect((request.input.command as { commandId: string }).commandId).toBe(
+      `${override ? "override.tool" : "example.tool"}.command.local-read`,
+    );
+  } finally {
+    request.reply.resolve(f.snapshot(1, "Accepted"));
+    await pending;
+    client.queries.dispose();
+    f.client.queries.dispose();
+  }
+});
