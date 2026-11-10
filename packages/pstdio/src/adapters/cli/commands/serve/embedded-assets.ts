@@ -1,5 +1,5 @@
 import { extname } from "node:path";
-import { normalizeEmbeddedFileName } from "pstdio-paths";
+import { relativeEmbeddedFileName } from "pstdio-paths";
 
 type EmbeddedFile = Blob & { name: string };
 
@@ -33,18 +33,12 @@ const getEmbeddedFiles = (): EmbeddedFile[] => {
   return [];
 };
 
-// Bun changes the embedded graph root when another compile entry is added.
-const DASHBOARD_DIRECTORY = "/pstdio-dashboard/dist/";
-
 export const loadEmbeddedAssets = () => {
   const assets = new Map<string, Blob>();
 
   for (const file of getEmbeddedFiles()) {
-    const name = normalizeEmbeddedFileName(file.name);
-    const directory = name.indexOf(DASHBOARD_DIRECTORY);
-    if (directory !== -1) {
-      assets.set(name.slice(directory + DASHBOARD_DIRECTORY.length), file);
-    }
+    const name = relativeEmbeddedFileName(file.name, "pstdio-dashboard/dist");
+    if (name !== undefined) assets.set(name, file);
   }
 
   return assets;
