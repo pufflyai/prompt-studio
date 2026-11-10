@@ -1,9 +1,14 @@
-import { existsSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
 import type { createExtensionService, SyncInstalledSourceInput } from "../../services/extension-service";
 import { AlwaysEnabledExtensionError } from "./always-on-extensions";
-import { hashExtensionSource, loadExtensionSource, readExtensionSourceMetadata } from "./extension-runtime";
+import { listExtensionSources } from "./discover-extension-sources";
+import {
+  type hashExtensionSource,
+  hashExtensionSourceAsync,
+  loadExtensionSource,
+  readExtensionSourceMetadata,
+} from "./extension-runtime";
 
 type ExtensionService = Pick<
   ReturnType<typeof createExtensionService>,
@@ -46,14 +51,6 @@ export type SyncRepoExtensionsResult = {
 };
 
 const repoExtensionsRoot = (repoPath: string) => join(repoPath, ".pstdio", "extensions");
-
-const listExtensionDirs = (root: string) => {
-  if (!existsSync(root)) return [];
-  return readdirSync(root, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .sort((left, right) => left.localeCompare(right));
-};
 
 const markMissingSources = async (
   input: SyncRepoExtensionsForProjectInput,
@@ -118,8 +115,8 @@ const sourceInputFor = (
 
 export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForProjectInput) => {
   const root = repoExtensionsRoot(input.repoPath);
-  const load = input.loadExtension ?? loadExtensionSource;
-  const hash = input.hashExtension ?? hashExtensionSource;
+  const load = input.loadExtension ?? ((path: string) => loadExtensionSource(path, { accepted: true }));
+  const hash = input.hashExtension ?? hashExtensionSourceAsync;
   const conflicting: string[] = [];
   const disabled: string[] = [];
   const enabled: string[] = [];
@@ -131,7 +128,9 @@ export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForP
     instances.filter((record) => record.instance.enabled).map((record) => record.installedSource.extension_id),
   );
 
-  for (const name of input.discover === false ? [] : listExtensionDirs(root)) {
+  const paths = input.discover === false ? [] : (await listExtensionSources(root)).paths;
+  for (const path of paths) {
+    const name = basename(path);
     const sourcePath = join(root, name);
     const existing = instancesBySourcePath.get(sourcePath);
     const register = keepsOff(input, name, existing);
@@ -144,7 +143,7 @@ export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForP
 
     presentSourcePaths.add(sourcePath);
     const synced = await input.extensionService.syncInstalledSourceForProject(
-      sourceInputFor(loaded, { name, projectId: input.projectId, sourceHash: hash(sourcePath), sourcePath }),
+      sourceInputFor(loaded, { name, projectId: input.projectId, sourceHash: await hash(sourcePath), sourcePath }),
     );
     if (!synced) continue;
     if (existing) {

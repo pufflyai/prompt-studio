@@ -55,7 +55,7 @@ const extensionReleaseRef = process.env.PSTDIO_EXTENSION_RELEASE_REF?.trim();
 const defines = extensionReleaseRef ? ["--define", `PSTDIO_BUILD_EXTENSION_RELEASE_REF=${JSON.stringify(extensionReleaseRef)}`] : [];
 
 console.log(`\nCompiling for ${target}...`);
-await $`bun build ${CLI_ENTRY} ${RECOVERY_WORKER} --compile --external playwright-core --external "chromium-bidi/*" --target=${target} --asset-naming [dir]/[name].[ext] ${defines} ${recoveryWorkerDefine} --outfile ${outfile}`;
+await $`bun build ${CLI_ENTRY} ${RECOVERY_WORKER} ./packages/pstdio-api/src/features/extensions/extension-preparation-worker.ts ./packages/pstdio-extensions/src/runtime/preparation-worker.ts --compile --splitting --root . --external playwright-core --external "chromium-bidi/*" --target=${target} --asset-naming [dir]/[name].[ext] ${defines} ${recoveryWorkerDefine} --outfile ${outfile}`;
 assertCoreBinarySize(outfile);
 
 // 4. Verify the binary works

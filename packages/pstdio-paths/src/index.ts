@@ -89,4 +89,5 @@ export const isPackagedRuntime = () => {
 };
 
 export { acquireFileMutationLock, withFileMutationLock } from "./file-mutation-lock";
+export { registerFileMutationWorker } from "./file-mutation-worker";
 export { isProcessAlive } from "./process-liveness";

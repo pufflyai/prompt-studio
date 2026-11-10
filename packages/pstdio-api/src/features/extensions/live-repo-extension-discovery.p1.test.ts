@@ -123,7 +123,12 @@ describe("live repo-local extension discovery", () => {
       const discovered = await pollUntil(
         async () => {
           const row = await handle?.deps.installedExtensionSourcesService.getBySourcePath(sourcePath);
-          return row?.status === "loaded" ? row : null;
+          if (row?.status !== "loaded") return null;
+          // Registration precedes asynchronous activation; wait for the usable project instance.
+          const instances = await handle!.deps.extensionService.listProjectExtensionInstances(project.id);
+          return instances.some((record) => record.installedSource.id === row.id && record.instance.enabled)
+            ? row
+            : null;
         },
         // Nudge the non-recursive root watcher with a fresh root entry in case the folder-create
         // event landed in the brief window before the watcher attached to the project folder root.

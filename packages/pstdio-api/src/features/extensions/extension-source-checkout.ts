@@ -2,11 +2,14 @@ import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { isPreparationHost } from "pstdio-extensions";
 import { createRegistryClient } from "pstdio-extensions/distribution";
 import { requireGitExecutable } from "pstdio-wt";
 import { prepareBundledExtensionSource } from "./bundled-extension-source";
 import { findExtensionCatalogEntry, type GitExtensionOrigin, packagedExtensionCatalog } from "./extension-catalog";
+import { runExtensionPreparation } from "./extension-preparation";
 import { type CommandOptions, type CommandResult, runCommand } from "./install-extension-dependencies";
+import { trackPreparationStage } from "./preparation-stages";
 
 // Extension sources come from https remotes, or from local repositories that a catalog file names.
 // Every other transport is refused, including `ext::`, which runs commands.
@@ -116,23 +119,55 @@ export const prepareReleaseExtensionSource = async (
   return prepareGitExtensionSource(origin, tempDir, ref, signal);
 };
 
+type SharedCheckoutOptions = {
+  leaseId?: string;
+  hostReleaseRef?: string;
+  ref?: string;
+  runCommand?: (command: string, args: string[], opts: CommandOptions) => Promise<CommandResult>;
+  signal?: AbortSignal;
+};
+const prepareSharedCheckoutInWorker = async (names: string[], options: SharedCheckoutOptions) => {
+  const { signal, ...data } = options;
+  const checkout = await runExtensionPreparation<{
+    id: string;
+    sources: Record<string, { path: string; ref: string }>;
+  }>("checkout.shared", { names, options: data, id: crypto.randomUUID() }, { signal });
+  return {
+    retain: () => {},
+    prepareNamedSource: async (name: string, _tempDir?: string, _ref?: string, signal?: AbortSignal) => {
+      signal?.throwIfAborted();
+      const prepared = checkout.sources[name];
+      if (!prepared) throw new Error(`No prepared checkout for extension: ${name}`);
+      return prepared;
+    },
+    cleanup: () => {
+      void runExtensionPreparation("checkout.dispose", { id: checkout.id }).catch(() => {});
+    },
+  };
+};
+
+const isRegistryCheckout = (options: SharedCheckoutOptions) =>
+  !options.ref && options.hostReleaseRef?.startsWith("psx:");
+
 export const createSharedNamedSourceCheckout = async (
   names: string[],
-  options: {
-    hostReleaseRef?: string;
-    ref?: string;
-    runCommand?: (command: string, args: string[], opts: CommandOptions) => Promise<CommandResult>;
-    signal?: AbortSignal;
-  } = {},
-) => {
+  options: SharedCheckoutOptions = {},
+): Promise<{ prepareNamedSource: typeof prepareNamedSource; cleanup: () => void; retain?: () => void }> => {
+  if (isPreparationHost && !options.runCommand) return prepareSharedCheckoutInWorker(names, options);
   const tempDir = mkdtempSync(join(tmpdir(), "pstdio-extension-shared-"));
-  const cleanup = () => rmSync(tempDir, { recursive: true, force: true });
+  const stage = trackPreparationStage([tempDir], options.leaseId);
+  const retain = stage.handoff;
+  const cleanup = () => {
+    rmSync(tempDir, { recursive: true, force: true });
+    stage.release();
+  };
 
-  if (names.length === 0) return { prepareNamedSource, cleanup };
-  if (!options.ref && options.hostReleaseRef?.startsWith("psx:")) {
+  if (names.length === 0) return { prepareNamedSource, cleanup, retain };
+  if (isRegistryCheckout(options)) {
     const prepared = new Map<string, ReturnType<typeof prepareNamedSource>>();
     return {
       cleanup,
+      retain,
       prepareNamedSource: (name: string, _tempDir: string, ref?: string, signal?: AbortSignal) => {
         let source = prepared.get(name);
         if (!source) {
@@ -206,5 +241,5 @@ export const createSharedNamedSourceCheckout = async (
     return prepared;
   };
 
-  return { prepareNamedSource: shared, cleanup };
+  return { prepareNamedSource: shared, cleanup, retain };
 };

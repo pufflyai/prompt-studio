@@ -6,6 +6,7 @@ import { resolveMigrationsFolder } from "./connection.pglite";
 
 test.each([
   "../../pstdio-db/drizzle",
+  "packages/pstdio-db/drizzle",
   "/$bunfs/root/../pstdio-db/drizzle",
   "B:\\~BUN\\root\\..\\pstdio-db\\drizzle",
 ])("prepares runtime migrations without schema-generation snapshots from %s", async (prefix) => {

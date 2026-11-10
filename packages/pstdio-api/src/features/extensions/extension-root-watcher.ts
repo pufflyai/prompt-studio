@@ -1,4 +1,6 @@
 import { watch as fsWatch, mkdirSync } from "node:fs";
+import { isPreparationHost } from "pstdio-extensions";
+import { createRootWatcherClient } from "./extension-root-watcher-client";
 
 type SourceWatcher = {
   close: () => void;
@@ -43,6 +45,7 @@ const defaultWatch: WatchSource = (path, listener, onError) => {
 export const createExtensionRootWatcher = async (
   input: CreateExtensionRootWatcherInput,
 ): Promise<ExtensionRootWatcher> => {
+  if (isPreparationHost && !input.watch && !input.ensureRoot) return createRootWatcherClient(input);
   const debounceMs = input.debounceMs ?? 150;
   const ensureRoot = input.ensureRoot ?? defaultEnsureRoot;
   const registrations = new Map<string, WatchedRootRegistration>();

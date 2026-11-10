@@ -1,14 +1,16 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
+import { retainExtensionPreparation, stopUnownedExtensionPreparation } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
 import type { createExtensionService } from "../../services/extension-service";
 import type { createProjectService } from "../../services/project-service";
 import type { createWorkspaceService } from "../../services/workspace-service";
 import type { HarnessRegistryService } from "../harnesses/harness-registry-service";
 import { syncInstalledExtensionsForProjects } from "./default-extensions";
+import { runExtensionPreparation } from "./extension-preparation";
 import { createExtensionRootWatcher } from "./extension-root-watcher";
-import { hashExtensionSource, type LoadedExtensionSnapshot } from "./extension-runtime";
+import { hashExtensionSourceAsync, type LoadedExtensionSnapshot } from "./extension-runtime";
 import { createExtensionSourceWatcher } from "./extension-source-watcher";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
 import { EXTENSION_INSTALLING_MARKER, resolvePstdioHome } from "./install-extension-source";
@@ -42,6 +44,7 @@ export const createInstalledExtensionRuntime = (input: {
   workspaceService: ReturnType<typeof createWorkspaceService>;
   webviewBuilds: boolean;
 }) => {
+  const stopPreparation = retainExtensionPreparation();
   const userExtensionsRoot = join(resolvePstdioHome({ env: process.env }), "extensions");
   const createRootWatcher = input.createRootWatcher ?? createExtensionRootWatcher;
   const createSourceWatcher = input.createSourceWatcher ?? createExtensionSourceWatcher;
@@ -139,7 +142,7 @@ export const createInstalledExtensionRuntime = (input: {
   const provisionWhenSourceChanged = async (sourcePath: string) => {
     // The root watcher handles a removed folder.
     if (!existsSync(sourcePath)) return;
-    const sourceHash = hashExtensionSource(sourcePath);
+    const sourceHash = await hashExtensionSourceAsync(sourcePath);
     if (provisionedSourceHashes.get(sourcePath) === sourceHash) return;
     provisionedSourceHashes.set(sourcePath, sourceHash);
     await input.provisionWorkspacesUsingSource(sourcePath);
@@ -165,7 +168,9 @@ export const createInstalledExtensionRuntime = (input: {
     if (sourcePath) {
       // A single changed source invalidates only the projects that use it.
       input.projectRuntimeCatalog.invalidate({ sourcePath, reason: "source_changed" });
-      await (await sourceWatcher).refresh(sourcePath);
+      // Watch setup is background reconciliation, independent of publishing a
+      // prepared tool. A suspended watcher must not hold adoption or its caller.
+      void sourceWatcher.then((watcher) => watcher.refresh(sourcePath)).catch(reportError);
       await webviewBuildManager.adopt(sourcePath, validatedSource);
       // A snapshot serves the module URL of each built webview bundle, so a snapshot
       // read between the source change and the finished build would cache the previous
@@ -174,7 +179,7 @@ export const createInstalledExtensionRuntime = (input: {
       return;
     }
     input.projectRuntimeCatalog.invalidate({ reason: "runtime_refresh" });
-    await refreshWatchers();
+    void refreshWatchers().catch(reportError);
     refreshWebviewsInBackground();
   };
   triggerRuntimeRefresh = refresh;
@@ -183,16 +188,22 @@ export const createInstalledExtensionRuntime = (input: {
   // must not depend on how many extensions are installed or how long their checks take.
   const ready = Promise.all([rootWatcher, sourceWatcher])
     .then(refreshWatchers)
-    .then(() => refreshWebviewsInBackground());
+    .then(() => {
+      refreshWebviewsInBackground();
+      void runExtensionPreparation("runtime.maintain", {}, { priority: "background" }).catch(reportError);
+    });
 
   return {
     ready,
+    stopPreparation,
     dispose: async () => {
+      await stopPreparation();
       webviewBuildManager.dispose();
       await ready.catch(() => {});
       for (const result of await Promise.allSettled([rootWatcher, sourceWatcher])) {
-        if (result.status === "fulfilled") result.value.dispose();
+        if (result.status === "fulfilled") await result.value.dispose();
       }
+      await stopUnownedExtensionPreparation();
     },
     ensureWebviews: webviewBuildManager.ensure,
     refresh,

@@ -27,7 +27,13 @@
     "./workbench": "./src/workbench/index.ts",
     "./bridge/diagnostics": "./src/bridge/host/host-diagnostics.ts",
     "./authoring": "./src/authoring/index.ts",
-    "./distribution": "./src/distribution/index.ts"
+    "./distribution": "./src/distribution/index.ts",
+    "./preparation-worker": "./src/runtime/preparation-tasks.ts",
+    "./preparation-server": "./src/runtime/preparation-server.ts",
+    "./prepared-cache": "./src/runtime/prepared-cache.ts",
+    "./revision-dependencies": "./src/runtime/revision-dependencies.ts",
+    "./preparation-command": "./src/runtime/preparation-command.ts",
+    "./preparation-client": "./src/runtime/preparation-client.ts"
   },
   "scripts": {
     "build": "bun run build:runtime",

@@ -66,7 +66,7 @@ for (const { target, pkg, bin } of buildTargets) {
 
   const outfile = join(outDir, bin);
   console.log(`\nCompiling for ${target}...`);
-  await $`bun build ${CLI_ENTRY} ${RECOVERY_WORKER} --compile --external playwright-core --external "chromium-bidi/*" --target=${target} --asset-naming [dir]/[name].[ext] ${defines} ${recoveryWorkerDefine} --outfile ${outfile}`;
+  await $`bun build ${CLI_ENTRY} ${RECOVERY_WORKER} ./packages/pstdio-api/src/features/extensions/extension-preparation-worker.ts ./packages/pstdio-extensions/src/runtime/preparation-worker.ts --compile --splitting --root . --external playwright-core --external "chromium-bidi/*" --target=${target} --asset-naming [dir]/[name].[ext] ${defines} ${recoveryWorkerDefine} --outfile ${outfile}`;
   assertCoreBinarySize(outfile);
   console.log(`  → ${relative(".", outfile)}`);
 }

@@ -16,7 +16,7 @@ See [manifest and installation](../extensions/0002-manifest-and-installation.md)
 
 An ordinary file edit in an installed source does not adopt a new contribution contract. The project continues using its adopted snapshot until an explicit update, reload, install, or development-loop refresh validates and publishes a replacement.
 
-Runtime startup checks every installed source's webviews in the background and does not wait. Project UI metadata waits for the checks of the project's enabled sources, because it names each bundle's revision and style files. Asset requests wait for their source's check before serving the bundle or its build error.
+Runtime startup checks installed sources in a shared preparation worker. Compatible accepted revisions serve metadata and previously published webviews before those checks finish. A source without usable prepared output waits for its own preparation; it does not delay unrelated tools. See [prepared revision ownership](../../adrs/0143-share-extension-preparation-and-retain-accepted-revisions.md).
 
 A SHA-256 digest in each bundle's `dist/build-signature.txt` records its source graph, declared dependencies, Bun version, and builder options. The host reuses matching bundles across restarts and publishes new signatures with successful build output. Starting a replacement build invalidates the old signature. If a build fails and the source is later restored, the next check rebuilds once and clears the recorded failure through the normal success path. Interrupted staging folders are cleaned before the next build, without removing active builds.
 
@@ -40,7 +40,7 @@ See [snapshot architecture](0014-project-extension-runtime-snapshots.md) and its
 
 ## Imports and dependency resolution
 
-The package loader uses temporary import contexts to obtain fresh module identities without writing cache-busting files into the source package. Package-local dependencies and ancestor resolution must match the extension's declared dependencies. Runtime-owned temporary directories have explicit cleanup ownership.
+The package loader imports immutable prepared source and dependency snapshots without writing cache-busting files into the source package. Package-local dependencies and ancestor resolution match the extension's resolved dependency closure, including export-selected packages and managed executables. Compatible accepted descriptors persist across restarts; source changes are inspected in the worker.
 
 Bun retains imported module identities for the process lifetime. The source cache therefore imports each source version once across project readers. Repeated commands on unchanged sources must not create a new module identity each time.
 
@@ -56,7 +56,9 @@ Executable detection has a short-lived cache to avoid probing the same provider 
 
 ## Watching and cleanup
 
-Watchers belong to the application runtime and are disposed on close. Source watching must exclude dependency contents, ignored directories, and recursive symlink walks. On Linux, use bounded non-recursive watches for source directories and shallow dependency-replacement watches; see [the Linux watcher lesson](../../lessons-learned/0012-linux-recursive-fs-watch-crawls-node-modules.md).
+Watchers belong to the shared preparation worker and their application subscriptions are disposed on close. Worker replacement restores subscriptions. Source watching excludes dependency contents, ignored directories, and recursive symlink walks. On Linux, use bounded non-recursive watches for source directories and shallow dependency-replacement watches; see [the Linux watcher lesson](../../lessons-learned/0012-linux-recursive-fs-watch-crawls-node-modules.md).
+
+Accepted descriptors and process-lifetime leases protect prepared files. Background maintenance removes retired artifacts after a grace period. Replacing a catalog entry does not delete files a running callback or harness may still read. Installation intents preserve the previous source through activation and let worker recovery settle incomplete swaps.
 
 During atomic install replacement, a source directory can briefly disappear. The source cache retains the last healthy value only for that bounded replacement case while the source remains enabled. Uninstall removes enablement, so it must not resurrect an uninstalled extension.
 

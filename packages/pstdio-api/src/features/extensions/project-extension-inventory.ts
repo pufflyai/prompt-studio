@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { resolveCatalogIcon } from "./catalog-icon";
 import type { ExtensionsRouteDeps } from "./deps";
 import { getExtensionCatalog } from "./extension-catalog";
-import { hashExtensionSource } from "./extension-runtime";
+import { hashExtensionSourceAsync } from "./extension-runtime";
 import { toProjectExtensionInstance } from "./project-extension-instance";
 
 export const listProjectExtensionInventory = async (deps: ExtensionsRouteDeps, projectId: string) => {
@@ -12,9 +12,14 @@ export const listProjectExtensionInventory = async (deps: ExtensionsRouteDeps, p
   const installedRecords = records.filter(({ installedSource }) => existsSync(installedSource.source_path));
   const extensions = await Promise.all(
     installedRecords.map(async ({ instance, installedSource }) =>
-      toProjectExtensionInstance(instance, installedSource, hashExtensionSource(installedSource.source_path), {
-        canUpgrade: await deps.extensionUpgradeService?.canUpgrade(installedSource),
-      }),
+      toProjectExtensionInstance(
+        instance,
+        installedSource,
+        await hashExtensionSourceAsync(installedSource.source_path),
+        {
+          canUpgrade: await deps.extensionUpgradeService?.canUpgrade(installedSource),
+        },
+      ),
     ),
   );
   const installedNames = new Set(installedRecords.map(({ installedSource }) => installedSource.install_name));

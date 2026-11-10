@@ -113,10 +113,8 @@ describe("createInstalledExtensionRuntime", () => {
     await runtime.ready;
 
     const refresh = runtime.refresh();
-    await wait();
-
+    await refresh;
     expect(webviewRefreshCount).toBe(2);
-    await expect(refresh).resolves.toBeUndefined();
 
     resolveBackgroundBuild?.();
     await wait();
@@ -191,6 +189,7 @@ describe("createInstalledExtensionRuntime", () => {
 
       repos = [{ path: repoPath }];
       await runtime.refresh();
+      while (!watchers.some((entry) => entry.path === repoRoot)) await wait();
 
       expect(watchers.some((entry) => entry.path === repoRoot)).toBe(true);
     } finally {
@@ -310,4 +309,41 @@ describe("createInstalledExtensionRuntime", () => {
       rmSync(tempRoot, { recursive: true, force: true });
     }
   });
+});
+
+test.each([
+  "/prepared-source",
+  undefined,
+])("refresh %s finishes while watcher initialization is pending", async (sourcePath) => {
+  const watcher = Promise.withResolvers<ReturnType<typeof createProcess>>();
+  let adopted = false;
+  let finished = false;
+  const runtime = createInstalledExtensionRuntime({
+    ...noopRuntimeDeps,
+    createRootWatcher: async () => createProcess(),
+    createSourceWatcher: () => watcher.promise,
+    createWebviewBuildManager: () => ({
+      ...createProcess(),
+      adopt: async () => {
+        adopted = true;
+      },
+    }),
+    extensionService: {} as never,
+    installedExtensionSourcesService: {} as never,
+    projectService: {} as never,
+    workspaceService: {} as never,
+    webviewBuilds: true,
+  });
+  const work = runtime.refresh(sourcePath).then(() => {
+    finished = true;
+  });
+  try {
+    await wait();
+    expect(finished).toBe(true);
+    if (sourcePath) expect(adopted).toBe(true);
+  } finally {
+    watcher.resolve(createProcess());
+    await work;
+    await runtime.dispose();
+  }
 });

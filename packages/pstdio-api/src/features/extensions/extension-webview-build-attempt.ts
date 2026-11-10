@@ -1,6 +1,8 @@
 import { existsSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { cp, mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { extensionLoadKey } from "pstdio-extensions";
+import { inspectExtensionLoadKey } from "pstdio-extensions";
+import { runExtensionPreparation } from "./extension-preparation";
 import type { LoadedExtensionSnapshot } from "./extension-runtime";
 import { signatureFor } from "./extension-webview-build-backoff";
 import { prepareWebviewBuildCache, publishedWebviewModule } from "./extension-webview-build-cache";
@@ -9,7 +11,10 @@ import {
   runExtensionWebviewBuild,
   webviewBuildFailure,
 } from "./extension-webview-build-runner";
-import { inspectManagedWebviewBuildInputs, prepareManagedWebviewBuildSource } from "./extension-webview-build-source";
+import {
+  inspectManagedWebviewBuildInputsAsync,
+  prepareManagedWebviewBuildSourceAsync,
+} from "./extension-webview-build-source";
 import type { ExtensionWebviewBuilder } from "./extension-webview-builder";
 import type { loadCurrentWebviewSource } from "./extension-webview-source-load";
 import {
@@ -17,16 +22,17 @@ import {
   classifyWebviewEntry,
   collectExtensionWebviews,
   resolveManagedWebviewPaths,
-  resolvePackageAssetFile,
+  resolveWebviewSourceEntry,
 } from "./extension-webviews";
 
-export const inspectWebviewBuild = (
+export const inspectWebviewBuild = async (
   row: InstalledSourceWithManifest,
   packageName: string,
   webview: CollectedExtensionWebview,
+  preparedPackagePath?: string,
 ) => {
-  const sourceEntryPath = resolvePackageAssetFile(webview.entry);
-  const buildInputs = inspectManagedWebviewBuildInputs({
+  const sourceEntryPath = resolveWebviewSourceEntry(webview.entry, row.source_path, preparedPackagePath);
+  const buildInputs = await inspectManagedWebviewBuildInputsAsync({
     entryPath: sourceEntryPath,
     installName: row.install_name,
     packageName,
@@ -57,11 +63,25 @@ export const findCurrentBuildSource = async (
     if (
       !owned ||
       classifyWebviewEntry(owned.entry).kind !== "managed" ||
-      resolvePackageAssetFile(owned.entry) !== resolvePackageAssetFile(identity.webview.entry)
+      resolveWebviewSourceEntry(
+        owned.entry,
+        current.row.source_path,
+        current.snapshot.loaded.preparedRevision?.packagePath,
+      ) !==
+        resolveWebviewSourceEntry(
+          identity.webview.entry,
+          identity.row.source_path,
+          identity.snapshot.loaded.preparedRevision?.packagePath,
+        )
     )
       return null;
-    const inspected = inspectWebviewBuild(current.row, current.snapshot.loaded.metadata.name, owned);
-    if (current.snapshot.loadKey !== extensionLoadKey(current.row.source_path)) continue;
+    const inspected = await inspectWebviewBuild(
+      current.row,
+      current.snapshot.loaded.metadata.name,
+      owned,
+      current.snapshot.loaded.preparedRevision?.packagePath,
+    );
+    if (current.snapshot.loadKey !== (await inspectExtensionLoadKey(current.row.source_path))) continue;
     return inspected.signature === identity.signature ? current.row : null;
   }
 };
@@ -77,11 +97,50 @@ interface BuildContext {
   buildWebview: ExtensionWebviewBuilder;
   findCurrentSource: (identity: ManagedWebviewBuildIdentity) => Promise<InstalledSourceWithManifest | null>;
   webviewCacheRoot: string;
+  reusePreparedArtifacts?: boolean;
 }
 
-interface BuildInput extends ReturnType<typeof inspectWebviewBuild>, ManagedWebviewBuildIdentity {
+interface BuildInput extends Awaited<ReturnType<typeof inspectWebviewBuild>>, ManagedWebviewBuildIdentity {
   isCurrent: () => boolean;
 }
+
+const buildRetainedWebview = async (context: BuildContext, input: BuildInput, stageDir: string, distDir: string) => {
+  const { row, webview, sourceEntryPath, snapshot, isCurrent, signature, buildInputs } = input;
+  const packageName = snapshot.loaded.metadata.name;
+  const controller = new AbortController();
+  context.activeBuilds.add(controller);
+  try {
+    const artifact = await runExtensionPreparation<{ id: string; distDir: string }>(
+      "webview.artifact",
+      {
+        entryPath: sourceEntryPath,
+        packagePath: row.source_path,
+        packageName,
+        installName: row.install_name,
+        buildInputs,
+      },
+      { signal: controller.signal },
+    );
+    if (!isCurrent()) return { status: "unavailable" as const };
+    const current = await context.findCurrentSource(input);
+    if (!current || !isCurrent()) return { status: "unavailable" as const };
+    await mkdir(stageDir, { recursive: true });
+    await cp(artifact.distDir, stageDir, { recursive: true });
+    await writeFile(join(stageDir, "build-signature.txt"), signature);
+    if (!isCurrent() || !(await context.findCurrentSource(input))) return { status: "unavailable" as const };
+    await rm(distDir, { recursive: true, force: true });
+    await rename(stageDir, distDir);
+    return { status: "success" as const, artifact };
+  } catch (error) {
+    if (!isCurrent()) return { status: "unavailable" as const };
+    return {
+      status: "failure" as const,
+      error: webviewBuildFailure(row.install_name, webview.id, error instanceof Error ? error.message : String(error)),
+    };
+  } finally {
+    context.activeBuilds.delete(controller);
+  }
+};
 
 export const createManagedWebviewBuilder = (context: BuildContext) => async (input: BuildInput) => {
   const { row, webview, signature, buildInputs, sourceEntryPath, snapshot, isCurrent } = input;
@@ -95,7 +154,8 @@ export const createManagedWebviewBuilder = (context: BuildContext) => async (inp
   prepareWebviewBuildCache(paths.distDir, context.activeStages);
   context.activeStages.add(stageDir);
   try {
-    const source = prepareManagedWebviewBuildSource({
+    if (context.reusePreparedArtifacts) return await buildRetainedWebview(context, input, stageDir, paths.distDir);
+    const source = await prepareManagedWebviewBuildSourceAsync({
       buildInputs,
       entryPath: sourceEntryPath,
       installName: row.install_name,
@@ -121,7 +181,7 @@ export const createManagedWebviewBuilder = (context: BuildContext) => async (inp
     writeFileSync(join(stageDir, "build-signature.txt"), signature);
     rmSync(paths.distDir, { recursive: true, force: true });
     renameSync(stageDir, paths.distDir);
-    return outcome;
+    return { ...outcome, artifact: undefined };
   } finally {
     rmSync(stageDir, { recursive: true, force: true });
     context.activeStages.delete(stageDir);

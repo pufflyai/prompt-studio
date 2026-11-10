@@ -18,9 +18,9 @@ test("retries a repaired cache's unwritten result without rebuilding", async () 
     });
     fixture.setReportingUnavailable(true);
 
-    await expect(fixture.manager.ensure(fixture.id, "pstdio.lab.view.page")).rejects.toThrow(
-      "Could not record webview build result",
-    );
+    const error = await fixture.manager.ensure(fixture.id, "pstdio.lab.view.page").catch((error: Error) => error);
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain("Could not record webview build result");
     expect(fixture.state.builds).toBe(2);
     expect((await fixture.sources.get(fixture.id))?.loaded_revision).toBe(revision);
 

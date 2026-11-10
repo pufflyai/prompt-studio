@@ -1,13 +1,20 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { folderProjectInput } from "../../../test-utils/folder-project-input";
+import { createTestExtensionSource } from "../../extensions/test-utils/create-test-extension-source";
 
+let root: string;
 let handle: Awaited<ReturnType<typeof createTestApp>>;
 beforeAll(async () => {
-  handle = await createTestApp();
+  root = await mkdtemp(join(tmpdir(), "project-recovery-"));
+  handle = await createTestApp({ storageRoot: root });
 });
 afterAll(async () => {
   await handle?.close();
+  await rm(root, { recursive: true, force: true });
 });
 
 test("the project API lists recovery points and restores a deleted ticket through the same command used by clients", async () => {
@@ -18,6 +25,12 @@ test("the project API lists recovery points and restores a deleted ticket throug
   });
   expect(res.status).toBe(201);
   const project = await res.json();
+  const sourcePath = createTestExtensionSource({
+    root,
+    name: "example",
+    installName: "example",
+    displayName: "Example",
+  });
   await handle.deps.extensionService.enableInstalledSourceForProject({
     displayName: "Example",
     extensionId: "example",
@@ -25,7 +38,7 @@ test("the project API lists recovery points and restores a deleted ticket throug
     manifest: {},
     name: "example",
     projectId: project.id,
-    sourcePath: "/builtin/example",
+    sourcePath,
   });
   const recovery = handle.deps.extensionStorageService.recovery;
   const storage = await handle.deps.extensionStorageService.open({

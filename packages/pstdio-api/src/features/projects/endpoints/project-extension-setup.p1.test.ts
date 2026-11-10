@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
@@ -57,6 +57,8 @@ test("setup retry preserves a disabled provider when its default moves to user s
   process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
   const fixture = await extension("shared-fixture");
   const project = await handle.deps.projectService.create({ name: "Existing project" });
+  const previousPath = join(root, "project/.pstdio/extensions/shared-fixture");
+  await cp(fixture.source, previousPath, { recursive: true });
   const previous = await handle.deps.extensionService.enableInstalledSourceForProject({
     displayName: "Shared fixture",
     extensionId: "example.shared-fixture",
@@ -64,7 +66,7 @@ test("setup retry preserves a disabled provider when its default moves to user s
     manifest: { id: "example.shared-fixture" },
     name: "shared-fixture",
     projectId: project.id,
-    sourcePath: join(root, "project/.pstdio/extensions/shared-fixture"),
+    sourcePath: previousPath,
   });
   await handle.deps.extensionService.setProjectExtensionEnabled(previous.instance.id, false);
   process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([fixture]);

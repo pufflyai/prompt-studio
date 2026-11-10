@@ -1,4 +1,4 @@
-import { existsSync, realpathSync, renameSync, rmSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { withFileMutationLock } from "pstdio-paths";
 import { hashExtensionDependencyInputs } from "./hash-extension-dependency-inputs";
@@ -13,12 +13,29 @@ export class ExtensionAlreadyInstalledError extends Error {
     this.targetPath = targetPath;
   }
 }
+const readPreviousOwner = (ownerPath: string) => {
+  try {
+    return readFileSync(ownerPath, "utf8");
+  } catch {
+    return null;
+  }
+};
+
+const assertReusableDependencies = (prepared: string, target: string, preserve: boolean) => {
+  if (
+    preserve &&
+    (!existsSync(join(target, "node_modules")) ||
+      hashExtensionDependencyInputs(prepared) !== hashExtensionDependencyInputs(target))
+  )
+    throw new Error("Installed extension dependencies changed while preparing the replacement");
+};
 
 export const promotePreparedSource = async (
   preparedPath: string,
   targetPath: string,
   replaceExisting: boolean,
   preserveDependencies: boolean,
+  onClaim?: (ownership: { ownerPath: string; token: string; previousToken: string | null }) => void,
 ) => {
   const backupPath = join(dirname(preparedPath), ".previous");
   const relocateNodeModules = await prepareNodeModulesRelocation(preparedPath, targetPath);
@@ -28,30 +45,29 @@ export const promotePreparedSource = async (
   const extensionsRoot = realpathSync.native(dirname(targetPath));
   const lockPath = join(dirname(extensionsRoot), ".extension-source-locks", basename(targetPath));
   return withFileMutationLock(lockPath, () => {
+    const ownerPath = `${lockPath}.owner`;
+    const previousToken = readPreviousOwner(ownerPath);
+    const token = crypto.randomUUID();
     if (existsSync(targetPath) && !replaceExisting) throw new ExtensionAlreadyInstalledError(targetPath);
-    if (
-      preserveDependencies &&
-      (!existsSync(join(targetPath, "node_modules")) ||
-        hashExtensionDependencyInputs(preparedPath) !== hashExtensionDependencyInputs(targetPath))
-    ) {
-      throw new Error("Installed extension dependencies changed while preparing the replacement");
-    }
-    if (existsSync(targetPath)) {
-      renameSync(targetPath, backupPath);
-    }
-
+    assertReusableDependencies(preparedPath, targetPath, preserveDependencies);
+    onClaim?.({ ownerPath, token, previousToken });
+    writeFileSync(ownerPath, token);
     try {
+      if (existsSync(targetPath)) renameSync(targetPath, backupPath);
       renameSync(preparedPath, targetPath);
       relocateNodeModules();
       const previousNodeModules = join(backupPath, "node_modules");
       if (preserveDependencies && existsSync(previousNodeModules)) {
         renameSync(previousNodeModules, join(targetPath, "node_modules"));
       }
+      return { ownerPath, token, previousToken };
     } catch (error) {
       try {
         rmSync(targetPath, { recursive: true, force: true });
       } catch {}
       if (existsSync(backupPath)) renameSync(backupPath, targetPath);
+      if (previousToken) writeFileSync(ownerPath, previousToken);
+      else rmSync(ownerPath, { force: true });
       throw error;
     }
   });

@@ -1,9 +1,10 @@
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
+import { cssModuleInputs } from "./css-module-inputs";
 import { mirrorPackageChild } from "./mirror-package-child";
 
-const moduleExtensions = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".json"];
+const moduleExtensions = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".json", ".css", ".mts", ".cts"];
 const executableExtensions = new Set(moduleExtensions.filter((extension) => extension !== ".json"));
 
 const packageRelativePath = (packagePath: string, filePath: string) =>
@@ -15,7 +16,7 @@ const isInside = (root: string, path: string) => {
 };
 
 const resolveLocalImport = (importerPath: string, importPath: string) => {
-  if (!importPath.startsWith(".")) return null;
+  if (!importPath.startsWith(".") && extname(importerPath) !== ".css") return null;
 
   const unresolvedPath = resolve(dirname(importerPath), importPath);
   const candidates = [
@@ -30,15 +31,15 @@ const transpilerLoader = (filePath: string) => {
   const extension = extname(filePath);
   if (extension === ".tsx") return "tsx" as const;
   if (extension === ".jsx") return "jsx" as const;
-  if (extension === ".ts") return "ts" as const;
+  if ([".ts", ".mts", ".cts"].includes(extension)) return "ts" as const;
   return "js" as const;
 };
 
 const transpilers = new Map<Bun.JavaScriptLoader, Bun.Transpiler>();
 const importsByPath = new Map<string, { digest: string; imports: string[] }>();
 
-const scanRuntimeImports = (filePath: string) => {
-  const contents = readFileSync(filePath);
+export const readRuntimeModuleImports = (filePath: string, readSource: (path: string) => Buffer) => {
+  const contents = readSource(filePath);
   const digest = createHash("sha256").update(contents).digest("hex");
   const cached = importsByPath.get(filePath);
   if (cached?.digest === digest) return cached.imports;
@@ -50,14 +51,23 @@ const scanRuntimeImports = (filePath: string) => {
     transpilers.set(loader, transpiler);
   }
 
-  const imports = transpiler.scanImports(contents).map(({ path }) => path);
+  const imports =
+    extname(filePath) === ".css"
+      ? cssModuleInputs(contents.toString())
+      : transpiler.scanImports(contents).map(({ path }) => path);
   // Keep one parse per path, without retaining source bytes or previous versions. Content
   // checks catch edits even when timestamps match; import resolution below stays fresh.
+  if (importsByPath.size >= 4096) importsByPath.delete(importsByPath.keys().next().value!);
   importsByPath.set(filePath, { digest, imports });
   return imports;
 };
 
-export const collectRuntimeModulePaths = (packagePath: string, entryPath: string) => {
+export const collectRuntimeModulePaths = (
+  packagePath: string,
+  entryPath: string,
+  readSource: (path: string) => Buffer = (path) => readFileSync(path),
+  knownPaths: ReadonlySet<string> = new Set(),
+) => {
   const pending = [entryPath];
   const modulePaths = new Set<string>();
   const packageJsonPath = join(packagePath, "package.json");
@@ -68,12 +78,12 @@ export const collectRuntimeModulePaths = (packagePath: string, entryPath: string
     if (!filePath || !isInside(packagePath, filePath)) continue;
 
     const relativePath = packageRelativePath(packagePath, filePath);
-    if (modulePaths.has(relativePath)) continue;
+    if (modulePaths.has(relativePath) || knownPaths.has(relativePath)) continue;
     modulePaths.add(relativePath);
     if (!executableExtensions.has(extname(filePath))) continue;
 
     try {
-      for (const importPath of scanRuntimeImports(filePath)) {
+      for (const importPath of readRuntimeModuleImports(filePath, readSource)) {
         const resolvedPath = resolveLocalImport(filePath, importPath);
         if (resolvedPath) pending.push(resolvedPath);
       }

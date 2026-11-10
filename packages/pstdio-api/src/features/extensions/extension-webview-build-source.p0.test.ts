@@ -167,3 +167,119 @@ describe("inspectManagedWebviewBuildInputs", () => {
     }
   });
 });
+
+for (const config of ["paths alias", "nested compiler config"]) {
+  test(`frontend identity includes ${config} inputs`, () => {
+    const packagePath = mkdtempSync(join(tmpdir(), "webview-compiler-inputs-"));
+    mkdirSync(join(packagePath, "src"));
+    writeFileSync(join(packagePath, "package.json"), JSON.stringify({ name: "compiler-inputs" }));
+    const entryPath = join(packagePath, "src", "main.tsx");
+    const configPath = join(packagePath, config === "paths alias" ? "tsconfig.json" : "src/tsconfig.json");
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        compilerOptions: config === "paths alias" ? { paths: { "@local/*": ["./src/*"] } } : { jsx: "react-jsx" },
+      }),
+    );
+    writeFileSync(
+      entryPath,
+      config === "paths alias"
+        ? 'import { value } from "@local/helper"; console.log(value);'
+        : "export default <div />;",
+    );
+    writeFileSync(join(packagePath, "src", "helper.ts"), "export const value = 1;");
+    const inspect = () =>
+      inspectManagedWebviewBuildInputs({
+        entryPath,
+        packagePath,
+        packageName: "compiler-inputs",
+        installName: "compiler-inputs",
+      }).signature;
+    try {
+      const first = inspect();
+      if (config === "paths alias") writeFileSync(join(packagePath, "src", "helper.ts"), "export const value = 2;");
+      else writeFileSync(configPath, JSON.stringify({ compilerOptions: { jsx: "react", jsxFactory: "custom" } }));
+      expect(inspect()).not.toBe(first);
+    } finally {
+      rmSync(packagePath, { recursive: true, force: true });
+    }
+  });
+}
+
+test("frontend identity follows external extended configuration and escaping aliases", () => {
+  const root = mkdtempSync(join(tmpdir(), "external-compiler-inputs-"));
+  const packagePath = join(root, "source");
+  mkdirSync(packagePath);
+  mkdirSync(join(root, "shared"));
+  writeFileSync(join(packagePath, "package.json"), JSON.stringify({ name: "external-config" }));
+  const config = join(root, "compiler.json");
+  const original = JSON.stringify({ compilerOptions: { baseUrl: ".", paths: { "@shared/*": ["./shared/*"] } } });
+  writeFileSync(config, original);
+  writeFileSync(join(packagePath, "tsconfig.json"), JSON.stringify({ extends: "../compiler.json" }));
+  writeFileSync(join(root, "shared", "helper.ts"), "export const value = 1;");
+  const entryPath = join(packagePath, "main.ts");
+  writeFileSync(entryPath, 'import { value } from "@shared/helper"; console.log(value);');
+  const inspect = () =>
+    inspectManagedWebviewBuildInputs({
+      entryPath,
+      packagePath,
+      packageName: "external-config",
+      installName: "external-config",
+    }).signature;
+  try {
+    const first = inspect();
+    writeFileSync(config, original.replace('"baseUrl":"."', '"baseUrl":".","jsx":"react"'));
+    expect(inspect()).not.toBe(first);
+    writeFileSync(config, original);
+    writeFileSync(join(root, "shared", "helper.ts"), "export const value = 2;");
+    expect(inspect()).not.toBe(first);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+for (const mode of ["tsx entry", "ts importer", "jsx pragma"])
+  test(`frontend identity retains a custom JSX runtime for ${mode}`, () => {
+    const root = mkdtempSync(join(tmpdir(), "custom-jsx-compiler-inputs-"));
+    const packagePath = join(root, "source");
+    const dependency = join(packagePath, "node_modules", "custom-jsx");
+    mkdirSync(dependency, { recursive: true });
+    writeFileSync(join(packagePath, "package.json"), JSON.stringify({ name: "custom-jsx-inputs" }));
+    writeFileSync(
+      join(root, "jsx-base.json"),
+      '{ /* inherited compiler settings */ "compilerOptions": { "jsxImportSource": "custom-jsx", }, }',
+    );
+    if (mode !== "jsx pragma")
+      writeFileSync(join(packagePath, "tsconfig.json"), JSON.stringify({ extends: "../jsx-base.json" }));
+    writeFileSync(
+      join(dependency, "package.json"),
+      JSON.stringify({
+        name: "custom-jsx",
+        exports: { "./jsx-runtime": "./index.js", "./jsx-dev-runtime": "./index.js" },
+      }),
+    );
+    const runtime = join(dependency, "index.js");
+    writeFileSync(runtime, "export const jsx = () => 1;");
+    const entryPath = join(packagePath, mode === "ts importer" ? "main.ts" : "main.tsx");
+    let content = "export default <div />;";
+    if (mode === "ts importer") {
+      writeFileSync(join(packagePath, "view.tsx"), content);
+      content = 'export { default } from "./view.tsx";';
+    }
+    if (mode === "jsx pragma") content = `/** @jsxImportSource custom-jsx */\n${content}`;
+    writeFileSync(entryPath, content);
+    const inspect = () =>
+      inspectManagedWebviewBuildInputs({
+        entryPath,
+        packagePath,
+        packageName: "custom-jsx-inputs",
+        installName: "custom-jsx-inputs",
+      }).signature;
+    try {
+      const first = inspect();
+      writeFileSync(runtime, "export const jsx = () => 2;");
+      expect(inspect()).not.toBe(first);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });

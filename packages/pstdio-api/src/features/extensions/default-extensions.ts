@@ -17,6 +17,8 @@ import {
   resolveDefaultExtensionsConfig,
 } from "./default-extensions-config";
 import { loadExtensionCatalog } from "./extension-catalog";
+import { boundExtensionInstalls, createExtensionInstallBatch } from "./extension-install-batch";
+import { activatePreparedInstall, settlePreparedInstall } from "./extension-install-transaction";
 import { shouldInstallDependencies } from "./install-extension-dependencies";
 import {
   type createSharedNamedSourceCheckout,
@@ -34,6 +36,7 @@ export { syncInstalledExtensionsForProject, syncInstalledExtensionsForProjects }
 
 type InstallDefaultExtensionsDeps = {
   config?: DefaultExtensionsConfig;
+  registerInstalledSources?: (installed: InstalledExtensionSource[]) => Promise<void>;
   env?: Record<string, string | undefined>;
   forceSourceDefaults?: boolean;
   installNames?: string[];
@@ -68,8 +71,9 @@ const runDefaultExtensionInstall = async (
     env: Record<string, string | undefined>;
   },
 ) => {
-  const install = deps.installExtensionSource ?? installExtensionSource;
   const installed: InstalledExtensionSource[] = [];
+  const pending: Promise<InstalledExtensionSource | undefined>[] = [];
+  let complete = false;
   const reportFailure = (failure: {
     entry?: DefaultExtensionEntry;
     error: unknown;
@@ -83,65 +87,92 @@ const runDefaultExtensionInstall = async (
     deps.onInstallFailure?.({ error: failure.error, installName, source: failure.source });
   };
 
-  await withResolvedDefaultEntries(
-    {
-      config: context.config,
-      onEntryFailure: deps.onInstallFailure
-        ? ({ entry, error, source }) => reportFailure({ entry, error, source })
-        : undefined,
-      prepareSharedCheckout: deps.prepareSharedCheckout,
-      forceSourceDefaults: deps.forceSourceDefaults,
-      releaseRef: deps.releaseRef,
-      signal: deps.signal,
-    },
-    async (entries, prepareNamedSource) => {
-      const pendingByName = new Map<string, Promise<InstalledExtensionSource | undefined>>();
-      const pending: Promise<InstalledExtensionSource | undefined>[] = [];
-      const active = new Set<Promise<void>>();
-      for (const resolved of entries.filter((entry) => entry.scope === "user")) {
-        // Leave capacity for the database and foreground UI while dependencies prepare.
-        if (active.size >= 2) await Promise.race(active);
-        const previous = pendingByName.get(resolved.installName);
-        const request = (async () => {
-          // Two entries for one target must not promote source trees over each other.
-          if (previous) await previous;
-          deps.signal?.throwIfAborted();
-          try {
-            return await traceSetupPhase("default_extensions.install", { extension: resolved.installName }, () =>
-              install({
-                ...toInstallInput(resolved.entry, deps.releaseRef),
-                env: context.env,
-                existsOk: true,
-                prepareNamedSource,
-                signal: deps.signal,
-              }),
-            );
-          } catch (error) {
-            if (!deps.onInstallFailure) throw error;
-            reportFailure({ error, installName: resolved.installName, source: resolved.source });
-            return undefined;
-          }
-        })();
-        pendingByName.set(resolved.installName, request);
-        pending.push(request);
-        const complete = request
-          .then(
-            () => undefined,
-            () => undefined,
-          )
-          .finally(() => active.delete(complete));
-        active.add(complete);
-      }
-      // Every install must settle before the shared checkout can be removed.
-      for (const result of await Promise.allSettled(pending)) {
-        if (result.status === "rejected") throw result.reason;
-        if (result.value) installed.push(result.value);
-      }
-    },
-  );
+  try {
+    await withResolvedDefaultEntries(
+      {
+        config: context.config,
+        onEntryFailure: deps.onInstallFailure
+          ? ({ entry, error, source }) => reportFailure({ entry, error, source })
+          : undefined,
+        prepareSharedCheckout: deps.prepareSharedCheckout,
+        forceSourceDefaults: deps.forceSourceDefaults,
+        releaseRef: deps.releaseRef,
+        signal: deps.signal,
+      },
+      async (entries, prepareNamedSource) => {
+        // A configured target has one final owner. Later entries override earlier defaults
+        // before preparation, so deferred activation cannot register a superseded intent.
+        const sources = [
+          ...new Map(
+            entries.filter((entry) => entry.scope === "user").map((entry) => [entry.installName, entry]),
+          ).values(),
+        ];
+        const install = deps.installExtensionSource
+          ? boundExtensionInstalls(deps.installExtensionSource)
+          : createExtensionInstallBatch(sources.length);
+        for (const resolved of sources) {
+          const request = (async () => {
+            deps.signal?.throwIfAborted();
+            try {
+              return await traceSetupPhase("default_extensions.install", { extension: resolved.installName }, () =>
+                install({
+                  ...toInstallInput(resolved.entry, deps.releaseRef),
+                  env: context.env,
+                  existsOk: true,
+                  retainBackup: Boolean(deps.registerInstalledSources),
+                  prepareNamedSource,
+                  signal: deps.signal,
+                }),
+              );
+            } catch (error) {
+              if (!deps.onInstallFailure) throw error;
+              reportFailure({ error, installName: resolved.installName, source: resolved.source });
+              return undefined;
+            }
+          })();
+          pending.push(request);
+        }
+        // Every install must settle before the shared checkout can be removed.
+        for (const result of await Promise.allSettled(pending)) {
+          if (result.status === "rejected") throw result.reason;
+          if (result.value) installed.push(result.value);
+        }
+      },
+    );
 
-  deps.signal?.throwIfAborted();
-  return installed;
+    deps.signal?.throwIfAborted();
+    complete = true;
+    return installed;
+  } finally {
+    if (!complete) {
+      // Some paired results may already be API-owned when a sibling fails or the
+      // default request is cancelled. They will never reach registration.
+      const results = await Promise.allSettled(pending);
+      await Promise.allSettled(
+        results.map((result) =>
+          result.status === "fulfilled" && result.value?.installation
+            ? settlePreparedInstall(result.value.installation, false)
+            : Promise.resolve(),
+        ),
+      );
+    }
+  }
+};
+
+const registerPreparedDefaults = async (deps: InstallDefaultExtensionsDeps, installed: InstalledExtensionSource[]) => {
+  if (!deps.registerInstalledSources) return;
+  try {
+    // Registration can ask for missing harness defaults. Nested reads must see this batch.
+    for (const source of installed) if (source.installation) await activatePreparedInstall(source.installation);
+    await deps.registerInstalledSources(installed);
+  } catch (error) {
+    await Promise.allSettled(
+      installed.map((source) =>
+        source.installation ? settlePreparedInstall(source.installation, false) : Promise.resolve(),
+      ),
+    );
+    throw error;
+  }
 };
 
 const prepareDefaultExtensions = (deps: InstallDefaultExtensionsDeps, mode: DefaultExtensionInstallMode) => {
@@ -174,7 +205,10 @@ const prepareDefaultExtensions = (deps: InstallDefaultExtensionsDeps, mode: Defa
           config: { defaultExtensions },
           env,
         };
-        return runDefaultExtensionInstall(deps, context);
+        const installed = await runDefaultExtensionInstall(deps, context);
+        deps.signal?.throwIfAborted();
+        await registerPreparedDefaults(deps, installed);
+        return installed;
       });
     }, deps.signal),
   );

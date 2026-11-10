@@ -1,0 +1,311 @@
+import { afterEach, expect, test } from "bun:test";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { Worker } from "node:worker_threads";
+import { withFileMutationLock } from "pstdio-paths";
+import {
+  createPreparationClient,
+  createPreparationScope,
+  withBackgroundPreparation,
+  withRequestedPreparation,
+} from "./preparation-client";
+
+const clients: ReturnType<typeof createPreparationClient>[] = [];
+const gates: ReturnType<typeof Bun.serve>[] = [];
+afterEach(async () => {
+  for (const client of clients.splice(0)) await client.stop();
+  for (const gate of gates.splice(0)) await gate.stop(true);
+});
+const fixture = () => {
+  const client = createPreparationClient(() => new Worker(new URL("./preparation-worker.fixture.ts", import.meta.url)));
+  clients.push(client);
+  return client;
+};
+const gate = () => {
+  const entered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const server = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch: async () => {
+      entered.resolve();
+      await release.promise;
+      return new Response("ready");
+    },
+  });
+  gates.push(server);
+  return { entered, release, url: server.url.href };
+};
+
+test("a busy preparation worker leaves the host event loop responsive", async () => {
+  const client = fixture();
+  const entered = Promise.withResolvers<void>();
+  client.subscribe(() => entered.resolve());
+  let finished = false;
+  const work = client.run("busy", {}).then(() => {
+    finished = true;
+  });
+  await entered.promise;
+  await Bun.sleep(0);
+  expect(finished).toBe(false);
+  await work;
+});
+
+test("requested tools overtake queued background inspections", async () => {
+  const client = fixture();
+  const blocked = gate();
+  const first = client.run("wait", { name: "first", url: blocked.url });
+  await blocked.entered.promise;
+  const background = client.run<{ sequence: number }>("value", { name: "background" }, { priority: "background" });
+  const requested = client.run<{ sequence: number }>("value", { name: "requested" });
+  blocked.release.resolve();
+  await first;
+  expect((await requested).sequence).toBe(2);
+  expect((await background).sequence).toBe(3);
+});
+
+test("a requested tool can prepare while background evaluation is suspended", async () => {
+  const client = fixture();
+  const blocked = gate();
+  const background = client.run("wait", { name: "background", url: blocked.url }, { priority: "background" });
+  await blocked.entered.promise;
+  try {
+    const requested = await client.run("value", { name: "requested" });
+    expect(requested).toMatchObject({ name: "requested" });
+  } finally {
+    blocked.release.resolve();
+    await background;
+  }
+});
+
+test("coalesced callers cancel independently and execute once", async () => {
+  const client = fixture();
+  const blocked = gate();
+  const controller = new AbortController();
+  const first = client.run("wait", { name: "shared", url: blocked.url }, { signal: controller.signal });
+  const outcome = first.catch((error) => error);
+  const second = client.run<{ sequence: number }>("wait", { name: "shared", url: blocked.url });
+  await blocked.entered.promise;
+  controller.abort(new Error("one caller cancelled"));
+  expect(((await outcome) as Error).message).toBe("one caller cancelled");
+  blocked.release.resolve();
+  expect((await second).sequence).toBe(1);
+});
+
+test("worker exit settles active and queued callers, and a new request can recover", async () => {
+  const client = fixture();
+  const failed = client.run("exit", {}).catch((error) => error);
+  const queued = client.run("value", { name: "queued" }).catch((error) => error);
+  expect(((await failed) as Error).message).toContain("exited");
+  expect(((await queued) as Error).message).toContain("exited");
+  expect(await client.run("value", { name: "recovered" })).toMatchObject({ name: "recovered" });
+});
+
+test("shutdown settles pending work even when extension evaluation never resolves", async () => {
+  const client = fixture();
+  const entered = Promise.withResolvers<void>();
+  client.subscribe(() => entered.resolve());
+  const work = client.run("hang", {}).catch((error) => error);
+  await entered.promise;
+  await client.stop();
+  expect(((await work) as Error).message).toContain("stopped");
+});
+
+test("preparation failures settle their caller and release the queue", async () => {
+  const client = fixture();
+  await expect(client.run("reject", {})).rejects.toThrow("preparation failed");
+  expect(await client.run("value", { name: "next" })).toMatchObject({ name: "next" });
+});
+
+test("cancelling uninterruptible evaluation lets the next requested tool prepare", async () => {
+  const client = fixture();
+  const entered = Promise.withResolvers<void>();
+  client.subscribe((event) => {
+    if (event.entered === "hang") entered.resolve();
+  });
+  const controller = new AbortController();
+  const work = client.run("hang", {}, { signal: controller.signal }).catch((error: Error) => error);
+  await entered.promise;
+  controller.abort(new Error("cancelled evaluation"));
+  const next = client.run("value", { name: "next tool" });
+  expect(((await work) as Error).message).toBe("cancelled evaluation");
+  expect(await next).toMatchObject({ name: "next tool" });
+});
+
+for (const task of ["spin", "lock-spin", "child-spin"])
+  test(`cancelling ${task} retires the worker and its owned resources`, async () => {
+    const root = mkdtempSync(join(tmpdir(), "preparation-retirement-"));
+    const path = join(root, "resource");
+    const client = fixture();
+    const entered = Promise.withResolvers<void>();
+    client.subscribe((event) => {
+      if (event.entered === task) entered.resolve();
+    });
+    const controller = new AbortController();
+    const work = client.run(task, { path }, { signal: controller.signal }).catch((error: Error) => error);
+    try {
+      await entered.promise;
+      let pid: number | undefined;
+      if (task === "child-spin") {
+        while (!pid) {
+          try {
+            pid = Number(readFileSync(path, "utf8"));
+          } catch {
+            await Bun.sleep(1);
+          }
+        }
+      }
+      controller.abort(new Error("cancelled synchronous evaluation"));
+      expect(await work).toBeInstanceOf(Error);
+      expect(await client.run("value", { name: "next" })).toMatchObject({ name: "next" });
+      if (task === "lock-spin") expect(withFileMutationLock(path, () => "recovered")).toBe("recovered");
+      if (pid) {
+        let alive = true;
+        try {
+          process.kill(pid, 0);
+        } catch {
+          alive = false;
+        }
+        expect(alive).toBe(false);
+      }
+    } finally {
+      await client.stop();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+test("a prepared adoption finishes before later inspection even inside startup background work", async () => {
+  const client = fixture();
+  const blocked = gate();
+  const adoption = withBackgroundPreparation(() =>
+    withRequestedPreparation(() => client.run<{ sequence: number }>("wait", { name: "adoption", url: blocked.url })),
+  );
+  await blocked.entered.promise;
+  const inspected = client.run<{ sequence: number }>("value", { name: "inspect" });
+  blocked.release.resolve();
+  expect((await adoption).sequence).toBe(1);
+  expect((await inspected).sequence).toBe(2);
+});
+
+test("foreground dependencies promote an already running background preparation", async () => {
+  const client = fixture();
+  const blocked = gate();
+  const scope = withBackgroundPreparation(() => createPreparationScope());
+  const dependency = scope.run(() =>
+    client.run<{ sequence: number }>("wait", { name: "dependency", url: blocked.url }),
+  );
+  await blocked.entered.promise;
+  scope.request();
+  const read = client.run<{ sequence: number }>("value", { name: "read" });
+  blocked.release.resolve();
+  expect((await dependency).sequence).toBe(1);
+  expect((await read).sequence).toBe(2);
+});
+
+test("a newly required queued operation overtakes unrelated background evaluation", async () => {
+  const client = fixture();
+  const blocked = gate();
+  const background = client.run("wait", { name: "unrelated", url: blocked.url }, { priority: "background" });
+  await blocked.entered.promise;
+  const scope = withBackgroundPreparation(() => createPreparationScope());
+  const dependency = scope.run(() => client.run<{ name: string }>("value", { name: "dependency" }));
+  try {
+    scope.request();
+    expect((await dependency).name).toBe("dependency");
+  } finally {
+    blocked.release.resolve();
+    await background;
+  }
+});
+
+test("foreground follow-up work runs before speculative work resumes", async () => {
+  const client = fixture();
+  const blocked = gate();
+  const first = client.run("wait", { name: "first", url: blocked.url });
+  await blocked.entered.promise;
+  const background = client.run<{ sequence: number }>("value", { name: "background" }, { priority: "background" });
+  const followUp = first.then(() => client.run<{ sequence: number }>("value", { name: "follow-up" }));
+  blocked.release.resolve();
+  expect((await followUp).sequence).toBe(2);
+  expect((await background).sequence).toBe(3);
+});
+
+test("inherited urgency remains until every foreground owner releases it", () => {
+  const scope = withBackgroundPreparation(() => createPreparationScope());
+  const first = scope.request();
+  const second = scope.request();
+  first();
+  expect(scope.requested).toBe(true);
+  second();
+  expect(scope.requested).toBe(false);
+  first();
+  expect(scope.requested).toBe(false);
+});
+
+test("cancelling a coalesced foreground reader releases its background job's urgency", async () => {
+  const client = fixture();
+  const blocked = gate();
+  const input = { name: "shared", url: blocked.url };
+  const background = client.run("wait", input, { priority: "background" });
+  await blocked.entered.promise;
+  const controller = new AbortController();
+  const foreground = client.run("wait", input, { signal: controller.signal }).catch((error: unknown) => error);
+  try {
+    controller.abort();
+    expect(await foreground).toBe(controller.signal.reason);
+    expect(await client.run("value", { name: "next" })).toMatchObject({ name: "next" });
+  } finally {
+    blocked.release.resolve();
+    await background;
+  }
+});
+
+for (const promotedAtStart of [false, true]) {
+  test(`nested preparation tracks parent urgency ${promotedAtStart ? "released" : "acquired"} after creation`, async () => {
+    const client = fixture();
+    const blocked = gate();
+    const parent = withBackgroundPreparation(() => createPreparationScope());
+    let release = promotedAtStart ? parent.request() : () => {};
+    const child = parent.run(() => createPreparationScope());
+    const dependency = child.run(() => client.run<{ sequence: number }>("wait", { name: "nested", url: blocked.url }));
+    try {
+      await blocked.entered.promise;
+      if (promotedAtStart) {
+        release();
+        expect(await client.run("value", { name: "next" })).toMatchObject({ name: "next" });
+      } else {
+        release = parent.request();
+        const read = client.run<{ sequence: number }>("value", { name: "read" });
+        blocked.release.resolve();
+        expect((await dependency).sequence).toBe(1);
+        expect((await read).sequence).toBe(2);
+      }
+    } finally {
+      release();
+      blocked.release.resolve();
+      await dependency;
+    }
+  });
+}
+
+test("an idle shared preparation worker lets a CLI process exit", async () => {
+  const entry = new URL("./preparation-client.ts", import.meta.url).href;
+  const child = Bun.spawn(
+    [
+      process.execPath,
+      "-e",
+      `import { runExtensionPreparation } from ${JSON.stringify(entry)};
+     await runExtensionPreparation("source.discover", { root: "/missing-preparation-cli-fixture" });
+     console.log(JSON.stringify({ finished: true }));`,
+    ],
+    { stdout: "pipe", stderr: "pipe", timeout: 3000 },
+  );
+  const [code, stdout, stderr] = await Promise.all([
+    child.exited,
+    new Response(child.stdout).text(),
+    new Response(child.stderr).text(),
+  ]);
+  expect(code, stderr).toBe(0);
+  expect(JSON.parse(stdout)).toEqual({ finished: true });
+});

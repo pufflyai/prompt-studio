@@ -252,6 +252,7 @@ test("cancelling a provider operation stops its child before the operation rejec
 });
 
 test("an installed provider that becomes unavailable cannot create a workspace", async () => {
+  await provisionProjectWorkspaces(handle.deps, projectId);
   await writeFile(join(sourceFolder, "revision.txt"), "unavailable");
   try {
     const response = await post("/v1/workspaces", { project_id: projectId, provider_id: providerId, params: {} });
@@ -263,6 +264,7 @@ test("an installed provider that becomes unavailable cannot create a workspace",
 });
 
 test("installed validation rejects semantic values before storing a workspace or allocating files", async () => {
+  await provisionProjectWorkspaces(handle.deps, projectId);
   const before = await handle.deps.workspaceService.list(projectId);
   const response = await post("/v1/workspaces", {
     project_id: projectId,

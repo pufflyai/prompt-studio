@@ -1,6 +1,8 @@
 import { availableParallelism } from "node:os";
 import { dirname } from "node:path";
+import { isPreparationHost } from "pstdio-extensions";
 import { isPackagedRuntime } from "pstdio-paths";
+import { runExtensionPreparation } from "./extension-preparation";
 import { runCommand } from "./install-extension-dependencies";
 
 export const extensionWebviewBuildOptions = {
@@ -88,11 +90,18 @@ const runBuild = async (input: ExtensionWebviewBatchBuildInput, entryNaming: str
   return { success: false, details: result.stderr.trim() || result.stdout.trim() || "Webview build failed." };
 };
 
-export const buildExtensionWebview: ExtensionWebviewBuilder = (input) =>
-  runBuild(
+export const buildExtensionWebview: ExtensionWebviewBuilder = (input) => {
+  if (isPreparationHost)
+    return runExtensionPreparation(
+      "webview.build",
+      { entryPath: input.entryPath, outdir: input.outdir },
+      { signal: input.signal },
+    );
+  return runBuild(
     { outdir: input.outdir, signal: input.signal, entryPaths: [input.entryPath] },
     extensionWebviewBuildOptions.naming.entry,
   );
+};
 
 /** One fresh process validates the complete replacement and shares its common module graph. */
 export const buildExtensionWebviewBatch = (input: ExtensionWebviewBatchBuildInput) =>

@@ -1,4 +1,13 @@
-import { type LoadedExtensionSnapshot, loadExtensionSource } from "./extension-runtime";
+import {
+  acceptPreparedRevision,
+  preparedRevisionState,
+  readAcceptedRevision,
+  withBackgroundPreparation,
+} from "pstdio-extensions";
+import { createInitialWebviewCompletion } from "./complete-initial-webviews";
+import { inspectCandidateSource } from "./extension-candidate";
+import { runExtensionPreparation } from "./extension-preparation";
+import type { LoadedExtensionSnapshot } from "./extension-runtime";
 import {
   createManagedWebviewBuilder,
   findCurrentBuildSource,
@@ -28,25 +37,82 @@ interface BuildAttempt extends ManagedWebviewBuildIdentity {
   users: number;
   work: Promise<ManagedWebviewBuildResult> | ManagedWebviewBuildResult;
 }
+const retireRemovedAttempts = (
+  attempts: Map<string, BuildAttempt>,
+  installedExtensionId: string,
+  webviews: CollectedExtensionWebview[],
+) => {
+  const keys = new Set(webviews.map((view) => processKey(installedExtensionId, view.id)));
+  for (const [key, attempt] of attempts)
+    if (attempt.row.id === installedExtensionId && !keys.has(key)) attempts.delete(key);
+};
 
-export const createExtensionWebviewBuildManager = (input: CreateExtensionWebviewBuildManagerInput) => {
-  const attempts = new Map<string, BuildAttempt>();
-  const checked = new Map<string, Set<string>>();
-  const pending = new Map<string, Promise<void>>();
-  const activeStages = new Set<string>();
-  const activeBuilds = new Set<AbortController>();
-  const backoff = createWebviewBuildBackoff();
-  let disposed = false;
-  const loadSource = input.loadSource ?? loadExtensionSource;
-  const webviewCacheRoot = input.webviewCacheRoot ?? defaultWebviewCacheRoot(process.env);
-  const { reportResult } = createBuildReporters(input);
-  // A refresh checks every installed source, so reading the whole list for each one costs
-  // quadratic work on the event loop as installs accumulate.
-  const getInstalledSource =
-    input.getInstalledSource ??
-    (async (installedExtensionId: string) =>
-      (await input.listInstalledSources()).find((row) => row.id === installedExtensionId) ?? null);
-  const loadCurrentSource = (installedExtensionId: string, validatedSource?: LoadedExtensionSnapshot) =>
+const recordAcceptedWebview = async (
+  attempt: ManagedWebviewBuildIdentity,
+  result: ManagedWebviewBuildResult,
+  isCurrent: () => boolean,
+) => {
+  if (result.status !== "success" || !result.artifact) return;
+  const accepted = await readAcceptedRevision(attempt.row.source_path);
+  if (!isCurrent() || !accepted || accepted.id !== attempt.snapshot.loaded.preparedRevision?.id) return;
+  if (!accepted.webviews?.[attempt.webview.id]) return;
+  const expectedState = preparedRevisionState(accepted);
+  accepted.webviews = {
+    ...accepted.webviews,
+    [attempt.webview.id]: { id: result.artifact.id, distDir: result.artifact.distDir },
+  };
+  await acceptPreparedRevision(attempt.row.source_path, accepted, { expectedState });
+};
+const hasAcceptedWebviews = async (row: InstalledSourceWithManifest | null, cacheRoot: string, webviewId?: string) => {
+  const accepted = row ? await readAcceptedRevision(row.source_path) : null;
+  if (!row || !accepted?.webviews) return false;
+  const views = accepted.webviews;
+  const ids = webviewId ? [webviewId] : Object.keys(views);
+  if (!ids.every((id) => views[id])) return false;
+  const missing = ids.filter(
+    (id) =>
+      readWebviewBuildSignature(
+        resolveManagedWebviewPaths({ installedExtensionId: row.id, webviewCacheRoot: cacheRoot, webviewId: id })
+          .distDir,
+      ) !== `prepared:${views[id]!.id}`,
+  );
+  if (!missing.length) return true;
+  return runExtensionPreparation<boolean>("runtime.publish-webviews", {
+    sourcePath: row.source_path,
+    expectedState: preparedRevisionState(accepted),
+    outputs: missing.map((id) => ({
+      id,
+      distDir: resolveManagedWebviewPaths({ installedExtensionId: row.id, webviewCacheRoot: cacheRoot, webviewId: id })
+        .distDir,
+    })),
+  });
+};
+const recordBuildOutcome = async (
+  backoff: ReturnType<typeof createWebviewBuildBackoff>,
+  key: string,
+  attempt: BuildAttempt,
+  result: ManagedWebviewBuildResult,
+  outcome: Awaited<ReturnType<ReturnType<typeof createBuildReporters>["reportResult"]>>,
+  isCurrent: () => boolean,
+) => {
+  if (outcome === "failed") throw new Error(`Could not record webview build result: ${attempt.webview.id}`);
+  if (outcome !== "reported" || !isCurrent()) return;
+  await recordAcceptedWebview(attempt, result, isCurrent);
+  if (result.status === "failure" && isCurrent()) backoff.recordFailure(key, attempt.signature);
+};
+
+// Read one source per check rather than repeatedly scanning the installed list.
+const installedSourceGetter = (input: CreateExtensionWebviewBuildManagerInput) =>
+  input.getInstalledSource ??
+  (async (id: string) => (await input.listInstalledSources()).find((row) => row.id === id) ?? null);
+const currentSourceLoader =
+  (
+    input: CreateExtensionWebviewBuildManagerInput,
+    backoff: ReturnType<typeof createWebviewBuildBackoff>,
+    loadSource: typeof inspectCandidateSource,
+    getInstalledSource: ReturnType<typeof installedSourceGetter>,
+  ) =>
+  (installedExtensionId: string, validatedSource?: LoadedExtensionSnapshot) =>
     loadCurrentWebviewSource({
       backoff,
       installedExtensionId,
@@ -55,6 +121,21 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
       onError: input.onError,
       validatedSource,
     });
+
+export const createExtensionWebviewBuildManager = (input: CreateExtensionWebviewBuildManagerInput) => {
+  const attempts = new Map<string, BuildAttempt>();
+  const checked = new Map<string, Set<string>>();
+  const pending = new Map<string, Promise<void>>();
+  const activeStages = new Set<string>();
+  const activeBuilds = new Set<AbortController>();
+  const backoff = createWebviewBuildBackoff();
+  const completeInitialWebviews = createInitialWebviewCompletion(activeBuilds);
+  let disposed = false;
+  const loadSource = input.loadSource ?? inspectCandidateSource;
+  const webviewCacheRoot = input.webviewCacheRoot ?? defaultWebviewCacheRoot(process.env);
+  const { reportResult } = createBuildReporters(input);
+  const getInstalledSource = installedSourceGetter(input);
+  const loadCurrentSource = currentSourceLoader(input, backoff, loadSource, getInstalledSource);
   const findCurrentSource = (identity: ManagedWebviewBuildIdentity) =>
     findCurrentBuildSource(loadCurrentSource, identity);
   const build = createManagedWebviewBuilder({
@@ -63,23 +144,22 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     buildWebview: input.buildWebview ?? buildExtensionWebview,
     findCurrentSource,
     webviewCacheRoot,
+    reusePreparedArtifacts: input.buildWebview === undefined,
   });
 
   const reconcileResult = async (key: string, attempt: BuildAttempt, result: ManagedWebviewBuildResult) => {
     if (result.status === "unavailable") return;
     const isCurrent = () => !disposed && attempts.get(key) === attempt;
     while (isCurrent()) {
-      const { row, signature, webview } = attempt;
+      const { row, webview } = attempt;
       const current = await findCurrentSource(attempt);
-      if (!current || !isCurrent()) return;
+      if (!current) return;
+      if (!isCurrent()) return;
       const expected = expectedWebviewBuildSource(current);
       const outcome = await reportResult(row.id, webview.id, result, expected);
       // A conditional-write conflict reuses the finished result; it never runs the build again.
       if (outcome === "source-changed") continue;
-      if (outcome === "failed") throw new Error(`Could not record webview build result: ${webview.id}`);
-      if (outcome === "reported" && result.status === "failure" && isCurrent()) {
-        backoff.recordFailure(key, signature);
-      }
+      await recordBuildOutcome(backoff, key, attempt, result, outcome, isCurrent);
       return;
     }
   };
@@ -91,7 +171,12 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     validatedSource?: LoadedExtensionSnapshot,
   ) => {
     const key = processKey(row.id, webview.id);
-    const inspected = inspectWebviewBuild(row, snapshot.loaded.metadata.name, webview);
+    const inspected = await inspectWebviewBuild(
+      row,
+      snapshot.loaded.metadata.name,
+      webview,
+      snapshot.loaded.preparedRevision?.packagePath,
+    );
     const { signature } = inspected;
     const paths = resolveManagedWebviewPaths({ installedExtensionId: row.id, webviewCacheRoot, webviewId: webview.id });
     let attempt = attempts.get(key);
@@ -138,13 +223,6 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     if (attempt.users === 0 && attempts.get(key) === attempt) attempts.delete(key);
   };
 
-  const retireRemovedViews = (installedExtensionId: string, webviews: CollectedExtensionWebview[]) => {
-    const keys = new Set(webviews.map((view) => processKey(installedExtensionId, view.id)));
-    for (const [key, attempt] of attempts) {
-      if (attempt.row.id === installedExtensionId && !keys.has(key)) attempts.delete(key);
-    }
-  };
-
   const refreshRow = async (installedExtensionId: string, validatedSource?: LoadedExtensionSnapshot) => {
     if (disposed) return null;
     const current = await loadCurrentSource(installedExtensionId, validatedSource);
@@ -153,7 +231,21 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     const webviews = collectExtensionWebviews(snapshot.loaded).filter(
       (view) => classifyWebviewEntry(view.entry).kind === "managed",
     );
-    if (validatedSource) retireRemovedViews(row.id, webviews);
+    if (validatedSource) retireRemovedAttempts(attempts, row.id, webviews);
+    if (
+      !input.buildWebview &&
+      (await completeInitialWebviews({
+        current,
+        loadCurrent: () => loadCurrentSource(row.id, current.snapshot),
+        reportResult,
+        retirePriorAttempts: () => {
+          for (const [key, attempt] of attempts) if (attempt.row.id === row.id) attempts.delete(key);
+        },
+      })) &&
+      (await hasAcceptedWebviews(current.row, webviewCacheRoot))
+    )
+      return webviews.map((view) => view.id);
+    if (disposed) return null;
     const results = await Promise.allSettled(
       webviews.map((view) => buildManagedWebview(row, snapshot, view, validatedSource)),
     );
@@ -187,7 +279,8 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     return work;
   };
 
-  const ensure = (installedExtensionId: string, webviewId?: string) => {
+  const ensure = async (installedExtensionId: string, webviewId?: string) => {
+    if (await hasAcceptedWebviews(await getInstalledSource(installedExtensionId), webviewCacheRoot, webviewId)) return;
     if (disposed) return Promise.resolve();
     const running = pending.get(installedExtensionId);
     if (running) return running;
@@ -224,7 +317,7 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
 
   const refresh = async (sourcePath?: string) => {
     try {
-      await refreshSources(sourcePath);
+      await withBackgroundPreparation(() => refreshSources(sourcePath));
     } catch (error) {
       input.onError?.(error);
     }
@@ -235,8 +328,10 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     const row = (await input.listInstalledSources()).find((row) => row.source_path === sourcePath);
     if (!row) return;
     backoff.forgetExtension(row.id);
+    if (!input.buildWebview && (await hasAcceptedWebviews(row, webviewCacheRoot))) return;
     const current = await loadCurrentSource(row.id, validatedSource);
-    if (current) await refreshSources(current.row.source_path, current.snapshot);
+    if (!current || disposed) return;
+    await refreshSources(current.row.source_path, current.snapshot);
   };
 
   const dispose = () => {

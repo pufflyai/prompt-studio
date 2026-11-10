@@ -12,7 +12,10 @@ import {
   symlinkSync,
 } from "node:fs";
 import { dirname, extname, join, relative, resolve } from "node:path";
+import { isPreparationHost } from "pstdio-extensions";
+import { runExtensionPreparation } from "./extension-preparation";
 import { collectLocalCssInputs } from "./extension-webview-css-inputs";
+import { hashWebviewDependencyInputs } from "./webview-dependency-inputs";
 
 type PackageJson = {
   dependencies?: Record<string, unknown>;
@@ -225,7 +228,10 @@ const buildInputSignature = (
   return hash.digest("hex");
 };
 
-export const inspectManagedWebviewBuildInputs = (input: ManagedWebviewBuildSourceInput): ManagedWebviewBuildInputs => {
+export const inspectManagedWebviewBuildInputs = (
+  input: ManagedWebviewBuildSourceInput,
+  dependencyHash?: string,
+): ManagedWebviewBuildInputs => {
   const manifest = readPackageJson(input.packagePath);
   const {
     missingFiles,
@@ -255,13 +261,18 @@ export const inspectManagedWebviewBuildInputs = (input: ManagedWebviewBuildSourc
     dependencyNodeModules,
     missingDependencies,
     missingFiles,
-    signature: buildInputSignature(
-      manifest,
-      dependencyNames,
-      dependencyNodeModules,
-      missingDependencies,
-      sourceGraphSignature,
-    ),
+    signature: createHash("sha256")
+      .update(dependencyHash ?? hashWebviewDependencyInputs(input.packagePath, [input.entryPath]))
+      .update(
+        buildInputSignature(
+          manifest,
+          dependencyNames,
+          dependencyNodeModules,
+          missingDependencies,
+          sourceGraphSignature,
+        ),
+      )
+      .digest("hex"),
   };
 };
 
@@ -320,4 +331,13 @@ export const prepareManagedWebviewBuildSource = (
     entryPath: join(input.shellDir, relative(input.packagePath, input.entryPath)),
     success: true,
   };
+};
+
+export const inspectManagedWebviewBuildInputsAsync = async (input: ManagedWebviewBuildSourceInput) => {
+  if (!isPreparationHost) return inspectManagedWebviewBuildInputs(input);
+  return runExtensionPreparation<ManagedWebviewBuildInputs>("webview.inspect", input);
+};
+export const prepareManagedWebviewBuildSourceAsync = async (input: PrepareManagedWebviewBuildSourceInput) => {
+  if (!isPreparationHost) return prepareManagedWebviewBuildSource(input);
+  return runExtensionPreparation<ManagedWebviewBuildSourceResult>("webview.prepare", input);
 };
