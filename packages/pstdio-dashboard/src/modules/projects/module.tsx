@@ -99,7 +99,7 @@ const registerProjectFolder = (ctx: WorkbenchModuleContext) => {
     {
       id: dashboardCommandIds.chooseProjectFolder,
       label: "Choose project folder",
-      category: "Dashboard",
+      category: "Projects",
       icon: "Folder",
     },
     { execute: () => ctx.overlays.openOverlay(dashboardWidgetIds.projectFolder, { title: "Project folder" }) },
@@ -160,7 +160,7 @@ const registerProjectCommands = (
     {
       id: dashboardCommandIds.selectProject,
       label: "Select project",
-      category: "Dashboard",
+      category: "Projects",
       icon: standardResourceIcons.project,
     },
     { execute: (selection) => selectProject(ctx, selectedProjectContext, persistence, selection) },
@@ -169,7 +169,7 @@ const registerProjectCommands = (
     {
       id: dashboardCommandIds.clearSelectedProject,
       label: "Clear selected project",
-      category: "Dashboard",
+      category: "Projects",
       icon: standardResourceIcons.project,
     },
     { execute: () => clearSelectedProject(ctx, selectedProjectContext, persistence) },
@@ -177,8 +177,8 @@ const registerProjectCommands = (
   ctx.commands.registerCommand(
     {
       id: dashboardCommandIds.openProjects,
-      label: "Projects",
-      category: "Dashboard",
+      label: "Switch project",
+      category: "Projects",
       icon: standardResourceIcons.project,
     },
     {
@@ -194,7 +194,7 @@ const registerProjectCommands = (
     },
   );
   ctx.commands.registerCommand(
-    { id: dashboardCommandIds.createProject, label: "Create project", category: "Dashboard", icon: "Plus" },
+    { id: dashboardCommandIds.createProject, label: "Create project", category: "Projects", icon: "Plus" },
     {
       execute: () => ctx.overlays.openOverlay(dashboardWidgetIds.createProject, { title: "Create project" }),
     },
@@ -224,7 +224,7 @@ export const createProjectsModule = (input: CreateProjectsModuleInput = {}) =>
       registerProjectSelectionMode(ctx);
       registerProjects(ctx);
       registerProjectCommands(ctx, selectedProjectContext, input.projectSelectionPersistence);
-      registerProjectOpening(ctx);
+      const projectOpening = registerProjectOpening(ctx);
       const initialProjectSelection = registerInitialProjectSelection(
         ctx,
         selectedProjectContext,
@@ -240,6 +240,7 @@ export const createProjectsModule = (input: CreateProjectsModuleInput = {}) =>
         registerSelectedProjectDeletionSync(ctx, selectedProjectContext, input.projectSelectionPersistence);
 
       return [
+        projectOpening,
         ...(initialProjectSelection ? [initialProjectSelection] : []),
         ...(singleProjectSelection ? [singleProjectSelection] : []),
         selectedProjectDeletionSync,

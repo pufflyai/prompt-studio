@@ -19,3 +19,11 @@ export const isProjectWorkspaceReady = (projectId: string) =>
   [...getCollection("workspaces").state.values()].some(
     (row) => row.project_id === projectId && isDefaultWorkspaceOnThisDevice(row) && workspaceState(row) === "ready",
   );
+
+export const isProjectWorkspaceAttached = (projectId: string) =>
+  [...getCollection("workspaces").state.values()].some(
+    (row) =>
+      row.project_id === projectId &&
+      isDefaultWorkspaceOnThisDevice(row) &&
+      Boolean(row.root_path || row.provider_ref_json || row.provider_operation_id),
+  );

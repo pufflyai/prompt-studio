@@ -11,6 +11,23 @@ import {
 } from "./data-table-view-model";
 
 describe("data table renderer view model", () => {
+  test("resource copy actions retain their selection callback", () => {
+    const row = { id: "one", values: { name: "API" }, resource: { type: "service", id: "one" } };
+    const model = buildDataTableRendererData([row], [{ id: "name" }]);
+    let copied = 0;
+    const actions = resolveDataTableRendererResourceActions(model.data[0]!, model.rowByData, () => [
+      {
+        key: "copy",
+        label: "Copy",
+        onSelect: () => {
+          copied++;
+        },
+      },
+    ]);
+    actions[0]?.onSelect();
+    expect(actions[0]?.runOnSelect).toBe(true);
+    expect(copied).toBe(1);
+  });
   test("starts a new read when a declared context value changes, and only then", () => {
     const table = { id: "workspaces", contextKeys: ["project.id"] };
     const key = (values: Record<string, unknown>) => resolveDataTableRendererQueryKey(table, undefined, "home", values);

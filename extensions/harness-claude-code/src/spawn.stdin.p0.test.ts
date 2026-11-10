@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import type { HarnessApprovalChannel } from "@pstdio/sdk/extensions";
 import { controlledChild, recordingSink, waitForStreamIo } from "./mocks/controlled-child";
 import { resumeClaudeCodeSession, startClaudeCodeSession } from "./spawn";
 
@@ -14,9 +15,9 @@ const assistantText = (text: string) => ({
   message: { role: "assistant", content: [{ type: "text", text }] },
 });
 
-const startWithSessionId = (child: ReturnType<typeof controlledChild>["child"]) => {
+const startWithSessionId = (child: ReturnType<typeof controlledChild>["child"], approvals?: HarnessApprovalChannel) => {
   const session = startClaudeCodeSession(
-    { prompt: "Hello", events: recordingSink().sink },
+    { prompt: "Hello", events: recordingSink().sink, approvals },
     { spawnProcess: () => child },
   );
   child.stdout.write(`${JSON.stringify({ type: "system", subtype: "init", session_id: "session-abc" })}\n`);
@@ -84,6 +85,31 @@ describe("Claude process stdin across turns", () => {
       response: { request_id: "req-1", response: { behavior: "deny", interrupt: false } },
     });
     expect(reply.response.response.message).toBe("This session cannot ask for approval, so the tool was not run.");
+    child.exit();
+    await session.done;
+  });
+
+  test("tells Claude an approval timed out instead of claiming the person refused", async () => {
+    const { child, written, emit } = controlledChild();
+    const approvals: HarnessApprovalChannel = {
+      requestApproval: async (request) => ({ id: request.id, decision: "timeout" }),
+    };
+    const session = await startWithSessionId(child, approvals);
+
+    emit({
+      type: "control_request",
+      request_id: "req-timeout",
+      request: { subtype: "can_use_tool", tool_name: "Bash", input: {}, tool_use_id: "toolu_timeout" },
+    });
+    await waitForStreamIo();
+
+    expect(written().at(-1)).toMatchObject({
+      type: "control_response",
+      response: {
+        request_id: "req-timeout",
+        response: { behavior: "deny", message: "Approval timed out.", interrupt: false },
+      },
+    });
     child.exit();
     await session.done;
   });

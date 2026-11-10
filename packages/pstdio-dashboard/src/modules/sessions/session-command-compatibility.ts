@@ -118,7 +118,7 @@ export const registerLegacySessionCommands = (ctx: WorkbenchModuleContext) => {
       },
     );
   ctx.commands.registerCommand(
-    { id: dashboardCommandIds.openSessions, label: "Go to sessions" },
+    { id: dashboardCommandIds.openSessions, label: "Go to sessions", category: "Sessions", icon: "MessagesSquare" },
     {
       execute: () => {
         openSessionsPage(ctx);

@@ -15,11 +15,7 @@ export const useWebviewQuery = <T>(client: WebviewQueries, descriptor: WebviewQu
 
 /** Observe an existing query owner without owning its cache or another event subscription. */
 export const useScopedQuery = <T>(query: ScopedQuery<T>, active = true) => {
-  const snapshot = useSyncExternalStore(
-    active ? query.subscribe : () => () => {},
-    query.getSnapshot,
-    query.getSnapshot,
-  );
+  const snapshot = useScopedQueries([query], active)[0]!;
   return { ...snapshot, refresh: query.invalidate, accept: query.accept };
 };
 
@@ -33,7 +29,8 @@ const selectQueries = <T>(queries: readonly ScopedQuery<T>[]) => {
       return snapshots;
     },
     subscribe(listener: () => void) {
-      const stops = [...new Set(queries)].map((query) => query.subscribe(listener));
+      // A layout effect or an earlier source can retire a handle before this passive subscription.
+      const stops = [...new Set(queries)].flatMap((query) => (query.isDisposed() ? [] : [query.subscribe(listener)]));
       return () => {
         for (const stop of stops) stop();
       };

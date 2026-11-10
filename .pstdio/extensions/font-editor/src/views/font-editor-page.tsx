@@ -1,4 +1,4 @@
-import { Badge, Box, Button, Flex, Grid, Heading, HStack, Input, Spinner, Text, VStack } from "@chakra-ui/react";
+import { Badge, Box, Button, Flex, Grid, HStack, Input, Spinner, Text, VStack } from "@chakra-ui/react";
 import type { GuestHost, WebviewFilesClient } from "@pstdio/sdk/extensions";
 import { AlertMessage, EmptyState, ScrollArea } from "@pstdio/ui";
 import { useEffect, useState } from "react";
@@ -6,6 +6,7 @@ import { AddGlyphDialog } from "./add-glyph-dialog";
 import { createFontEditorCommands, loadFontEditor, showError } from "./font-editor-api";
 import { GlyphCard } from "./glyph-card";
 import { GlyphInspector } from "./glyph-inspector";
+import { IconSetChooser } from "./icon-set-chooser";
 import { SettingsDialog } from "./settings-dialog";
 import type { FontConfigView, FontInspectionView, FontPreviewView, GlyphView } from "./types";
 
@@ -26,6 +27,7 @@ export const FontEditorPage = (props: FontEditorPageProps) => {
   const [success, setSuccess] = useState<string>();
   const [addOpen, setAddOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [iconSet, setIconSet] = useState("all");
 
   const reload = async () => {
     const loaded = await loadFontEditor(host);
@@ -89,9 +91,10 @@ export const FontEditorPage = (props: FontEditorPageProps) => {
   const normalizedQuery = query.trim().toLowerCase();
   const visibleGlyphs = inspection.glyphs.filter(
     (glyph) =>
-      !normalizedQuery ||
-      glyph.name.includes(normalizedQuery) ||
-      glyph.codepoint.toLowerCase().includes(normalizedQuery),
+      (iconSet !== "custom" || inspection.usedGlyphNames.includes(glyph.name)) &&
+      (!normalizedQuery ||
+        glyph.name.includes(normalizedQuery) ||
+        glyph.codepoint.toLowerCase().includes(normalizedQuery)),
   );
   const safeFamily = preview.family.replaceAll('"', "");
 
@@ -108,13 +111,18 @@ export const FontEditorPage = (props: FontEditorPageProps) => {
         borderColor="border.subtle"
         background="bg.panel"
       >
-        <Box flex="1">
-          <Heading size="lg">{inspection.family}</Heading>
+        <Box flex="1" minW="0">
+          <IconSetChooser
+            family={inspection.family}
+            value={iconSet}
+            disabled={busy}
+            onChange={(value) => {
+              setIconSet(value);
+              setSelectedName(undefined);
+            }}
+          />
           <HStack marginTop="2xs">
-            <Badge variant="subtle">{inspection.glyphs.length} glyphs</Badge>
-            <Text textStyle="xs" color="fg.muted">
-              {inspection.unitsPerEm} units per em
-            </Text>
+            <Badge variant="subtle">{visibleGlyphs.length} glyphs</Badge>
           </HStack>
         </Box>
         <Input

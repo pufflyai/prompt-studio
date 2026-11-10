@@ -352,3 +352,50 @@ test("queued account changes cannot publish an obsolete account with another acc
     unsubscribe();
   }
 });
+
+test("incomplete downloads publish without waiting for irrelevant project preparation", async () => {
+  let changed = () => {};
+  let sync: ProjectSyncStatus = { state: "first-download-incomplete", offlineReady: false };
+  let projectReads = 0;
+  const project = Promise.withResolvers<{ state: "preparing" }>();
+  const store = createCloudStore(
+    {
+      events: {
+        subscribe(event, listener) {
+          if ((typeof event === "string" ? event : event.id) === accountEvents.projectSyncChanged.id)
+            changed = listener;
+          return () => {};
+        },
+      },
+      account: {
+        status: async () => account,
+        projectSyncStatus: async () => sync,
+        devices: async () => [],
+      },
+    },
+    "project",
+    false,
+    async () => {
+      projectReads++;
+      return project.promise;
+    },
+  );
+  const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
+  const unsubscribe = store.subscribe(() => {});
+  try {
+    await tick();
+    expect(store.get().data?.sync).toEqual({ state: "first-download-incomplete", offlineReady: false });
+    expect(projectReads).toBe(0);
+    sync = { state: "synced", offlineReady: true };
+    changed();
+    await tick();
+    expect(projectReads).toBe(1);
+    project.resolve({ state: "preparing" });
+    await tick();
+    expect(store.get().data?.sync).toEqual(sync);
+    expect(store.get().data?.project).toEqual({ state: "preparing" });
+  } finally {
+    project.resolve({ state: "preparing" });
+    unsubscribe();
+  }
+});

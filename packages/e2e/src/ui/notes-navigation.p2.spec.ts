@@ -117,13 +117,13 @@ test("keeps note titles independent of the body and renames them through the con
     await row.click();
     const editor = page.getByTestId("content-editable").filter({ visible: true }).first();
     await expect(editor).toBeEmpty();
-    const mountedEditor = await editor.elementHandle();
+    let mountedEditor = await editor.elementHandle();
     const documentReads: string[] = [];
     page.on("request", (request) => {
       if (request.url().includes("pstdio.pstdio-notes.view.note-editor.file.load/execute"))
         documentReads.push(request.url());
     });
-    const body = "Body text with a different name";
+    let body = "Body text with a different name";
     await editor.fill(body);
     await expect
       .poll(() =>
@@ -136,10 +136,35 @@ test("keeps note titles independent of the body and renames them through the con
     await expect(row).toHaveAttribute("aria-selected", "true");
     await expect(page.getByRole("tab", { name: note.title, exact: true })).toHaveAttribute("aria-selected", "true");
 
+    // Critical: editing must not capture the host command-palette shortcut.
+    await editor.press("ControlOrMeta+p");
+    await expect(page.getByRole("dialog", { name: "Command palette" })).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    // Critical: a retained note keeps its edit permission when its page is temporarily hidden.
+    await page.getByRole("tab", { name: note.title, exact: true }).dblclick();
+    await sidebar.getByRole("option", { name: "Home", exact: true }).click();
+    await row.click();
+    await expect(editor).toHaveText(body);
+    body += " after returning";
+    await editor.fill(body);
+    await expect
+      .poll(() =>
+        readFileSync(
+          `${repoRoot}/.pstdio/extension-storage/pstdio.pstdio-notes/documents/${note.id}/content.md`,
+          "utf8",
+        ),
+      )
+      .toContain(body);
+
+    mountedEditor = await editor.elementHandle();
+    documentReads.length = 0;
+
     await row.click({ button: "right" });
     await page.getByRole("menuitem", { name: "Rename note", exact: true }).click();
     const dialog = page.getByRole("dialog");
     await expect(dialog.getByRole("textbox")).toHaveValue(note.title);
+    await expect(dialog.getByRole("textbox")).toBeFocused();
     await dialog.getByRole("textbox").fill("Renamed title");
     await dialog.getByRole("button", { name: "Run", exact: true }).click();
     const renamed = sidebar.getByRole("option", { name: "Renamed title", exact: true });

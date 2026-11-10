@@ -4,6 +4,7 @@ import { getCollection, getIndexedRows, getRuntimeCollections, type SyncedRow } 
 import { createDashboardSessionResource } from "@/shared/app/resources";
 import { type DashboardRows, isDashboardProjectRow, isVisibleDashboardRow } from "@/shared/sync/dashboard-rows";
 import { type DashboardResourceAnchor, listResourceAnchors } from "@/shared/sync/resource-anchors";
+import { sessionDisplayStatus } from "./session-display-status";
 export interface DashboardSession {
   device?: Session["device"];
   id: string;
@@ -34,7 +35,7 @@ const createSession = (session: SyncedRow, workspace: SyncedRow | undefined): Da
     device: session.device as Session["device"],
     id: session.id,
     title,
-    status: (session.status as string) ?? "unknown",
+    status: sessionDisplayStatus(session),
     agent: (session.agent as string | null) ?? null,
     lastSelectedModel: (session.last_selected_model as string | null) ?? null,
     params: (session.params_json as HarnessParams | null) ?? {},

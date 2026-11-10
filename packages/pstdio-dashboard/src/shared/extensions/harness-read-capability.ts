@@ -5,6 +5,7 @@ import { resolveSynchronizedModel } from "@/shared/agents/agent-model-selection"
 import {
   type RecentHarnessStorage,
   readRecentHarnessSelection,
+  readRecentHarnessSetup,
   resolveInitialHarnessSelection,
 } from "@/shared/command-params/recent-harness-param";
 
@@ -23,8 +24,10 @@ export const createHarnessReadCapability =
       api.agents.info({ project: projectId }),
       api.projects.get(projectId),
     ]);
+    // Each read is a new picker initialization, including explicit harness switches.
+    const saved = input.harnessId ? readRecentHarnessSetup(projectId, input.harnessId, options.storage) : undefined;
     const initial = resolveInitialHarnessSelection({
-      current: { harnessId: input.harnessId ?? "", model: input.model ?? "" },
+      current: { harnessId: input.harnessId ?? "", model: input.model || saved?.model || "" },
       recent: readRecentHarnessSelection(projectId, options.storage),
       defaultAgent: project.default_agent_id,
       agents: harnesses,

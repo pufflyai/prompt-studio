@@ -168,6 +168,7 @@ export const buildWorkbenchExtensionMenuRegistrations = (input: {
         label: resolveString(contribution.label, contribution.extensionId),
         category: contribution.group,
         resourceMutation: command?.resourceMutation,
+        copyResultToClipboard: command?.copyResultToClipboard,
         description: command ? resolveString(command.description, command.extensionId) : undefined,
         icon: contribution.icon,
         params: localizeParamSchema(

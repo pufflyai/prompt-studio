@@ -1,15 +1,23 @@
-import { type AccountDevice, type AccountStatus, accountEvents, type ProjectSyncStatus } from "@pstdio/sdk/extensions";
+import {
+  type AccountDevice,
+  type AccountStatus,
+  accountEvents,
+  type ProjectSyncStatus,
+  viewDataEvents,
+} from "@pstdio/sdk/extensions";
 import type { CloudClient } from "./cloud-context";
+import type { CloudProjectState } from "./project-state";
 
 const accountOwner = (account: AccountStatus) =>
   account.login ? JSON.stringify([account.login.managerOrigin, account.login.accountId]) : undefined;
 
-interface CloudData {
+export interface CloudData {
   account: AccountStatus;
   sync: ProjectSyncStatus;
   devices: AccountDevice[];
   signingIn: boolean;
   loginFailed: boolean;
+  project?: CloudProjectState;
 }
 interface ReadLoop {
   dirty: boolean;
@@ -23,22 +31,30 @@ type CloudReader = Pick<CloudClient, "events"> & {
   account: Pick<CloudClient["account"], "status" | "projectSyncStatus" | "devices">;
 };
 
-const readAccount = async (client: CloudReader, projectId?: string) => {
+const readAccount = async (client: CloudReader, projectId?: string, readProject?: () => Promise<CloudProjectState>) => {
   const [account, sync] = await Promise.all([
     client.account.status(),
     projectId
       ? client.account.projectSyncStatus(projectId)
       : Promise.resolve({ state: "local" as const, offlineReady: true }),
   ]);
+  // Folder preparation is irrelevant until the download can be opened on this device.
+  const project = sync.offlineReady ? await readProject?.() : undefined;
   return {
     account,
     sync,
     signingIn: account.loginAttempt?.status === "pending",
     loginFailed: account.loginAttempt?.status === "failed",
+    project,
   };
 };
 
-export const createCloudStore = (client: CloudReader, projectId: string | undefined, includeDevices: boolean) => {
+export const createCloudStore = (
+  client: CloudReader,
+  projectId: string | undefined,
+  includeDevices: boolean,
+  readProject?: () => Promise<CloudProjectState>,
+) => {
   let snapshot: CloudSnapshot = {};
   let generation = 0;
   let reading: ReadLoop | undefined;
@@ -75,7 +91,7 @@ export const createCloudStore = (client: CloudReader, projectId: string | undefi
     const request = ++generation;
     const current = () => listeners.size > 0 && request === generation;
     try {
-      const next = await readAccount(client, projectId);
+      const next = await readAccount(client, projectId, readProject);
       if (!current()) return;
       const nextOwner = accountOwner(next.account);
       if (owner !== nextOwner) {
@@ -125,6 +141,7 @@ export const createCloudStore = (client: CloudReader, projectId: string | undefi
         subscriptions = [
           client.events.subscribe(accountEvents.changed, refresh),
           client.events.subscribe(accountEvents.projectSyncChanged, () => void read()),
+          client.events.subscribe(viewDataEvents.workspacesChanged, () => void read()),
         ];
         refresh();
       }
