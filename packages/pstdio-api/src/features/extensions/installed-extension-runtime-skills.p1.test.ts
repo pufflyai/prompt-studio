@@ -134,6 +134,68 @@ describe("installed extension runtime skills", () => {
     }
   });
 
+  test("unchanged attachment keeps prepared workspaces ready while pre-attachment edits reconcile", async () => {
+    const response = await handle.app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(folderProjectInput({ name: "Attached Skills" })),
+    });
+    const project = (await response.json()) as { id: string };
+    const sourcePath = createTestSkillExtensionSource({
+      displayName: "Attached Skills",
+      installName: "attached-skills",
+      name: "attached-skills",
+      root: tempRoot,
+    });
+    const loaded = await loadExtensionSource(sourcePath);
+    await handle.deps.extensionService.enableInstalledSourceForProject({
+      displayName: loaded.metadata.displayName,
+      extensionId: loaded.metadata.id,
+      installName: "attached-skills",
+      manifest: loaded.manifest,
+      name: loaded.metadata.name,
+      projectId: project.id,
+      sourceHash: hashExtensionSource(sourcePath),
+      sourcePath,
+      version: loaded.metadata.version ?? null,
+    });
+    let onSourceChanged: (sourcePath: string) => Promise<unknown> = async () => {};
+    const provisioned: string[] = [];
+    const createRuntime = () =>
+      createInstalledExtensionRuntime({
+        ...handle.deps,
+        createRootWatcher: async () => ({ dispose: () => {}, refresh: async () => {} }),
+        createSourceWatcher: async (input) => {
+          await input.listInstalledSources();
+          onSourceChanged = input.onSourceChanged;
+          return { dispose: () => {}, refresh: async () => {} };
+        },
+        projectRuntimeCatalog: handle.deps.extensionRuntimeCatalog,
+        provisionWorkspacesUsingSource: async (path) => {
+          provisioned.push(path);
+        },
+        webviewBuilds: false,
+      });
+    const runtime = createRuntime();
+    await runtime.ready;
+    try {
+      await onSourceChanged(sourcePath);
+      expect(provisioned).toEqual([]);
+    } finally {
+      await runtime.dispose();
+    }
+
+    writeFileSync(join(sourcePath, "skills", "lab-skill", "SKILL.md"), "# Edited before attachment\n");
+    const reattached = createRuntime();
+    await reattached.ready;
+    try {
+      await onSourceChanged(sourcePath);
+      expect(provisioned).toEqual([sourcePath]);
+    } finally {
+      await reattached.dispose();
+    }
+  });
+
   test("a failed skill reconciliation retries the same source before recording completion", async () => {
     const sourcePath = createTestSkillExtensionSource({
       displayName: "Retried Skills",

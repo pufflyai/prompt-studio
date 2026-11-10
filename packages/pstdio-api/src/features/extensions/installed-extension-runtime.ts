@@ -94,8 +94,18 @@ export const createInstalledExtensionRuntime = (input: {
     listExtensionRoots: async () => [userExtensionRootRegistration, ...(await listRepoExtensionRootRegistrations())],
     onError: (err) => apiLogger.error({ err, event: "extensions.root_watcher.error" }, "Extension root watcher failed"),
   });
-  const listExistingInstalledSources = async () =>
-    selectExistingSources(await input.installedExtensionSourcesService.list());
+  // Project setup/adoption already provisions accepted content. An attachment
+  // reconciles from that baseline so unchanged sources cannot reopen workspace
+  // setup after creation returns; edits made before watching still differ.
+  const provisionedSourceHashes = new Map<string, string>();
+  const listExistingInstalledSources = async () => {
+    const rows = selectExistingSources(await input.installedExtensionSourcesService.list());
+    for (const row of rows) {
+      if (row.source_hash && !provisionedSourceHashes.has(row.source_path))
+        provisionedSourceHashes.set(row.source_path, row.source_hash);
+    }
+    return rows;
+  };
   const webviewBuildManager: RuntimeProcess & {
     adopt: (sourcePath: string, validatedSource?: LoadedExtensionSnapshot) => Promise<void>;
     ensure: (installedExtensionId: string, webviewId?: string) => Promise<void>;
@@ -136,9 +146,8 @@ export const createInstalledExtensionRuntime = (input: {
       .then(() => input.projectRuntimeCatalog.invalidate({ sourcePath, reason: "webviews_built" }))
       .catch(reportError);
   };
-  // The source hash each source last provisioned workspaces from. Provisioning can write into a
-  // watched folder, so a write that leaves the source unchanged must not provision again.
-  const provisionedSourceHashes = new Map<string, string>();
+  // Provisioning can write into a watched folder, so unchanged content must not
+  // provision again. A rejected callback leaves the previous baseline eligible.
   const provisionWhenSourceChanged = async (sourcePath: string) => {
     // The root watcher handles a removed folder.
     if (!existsSync(sourcePath)) return;
