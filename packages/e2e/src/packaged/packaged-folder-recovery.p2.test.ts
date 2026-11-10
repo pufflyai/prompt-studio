@@ -140,6 +140,7 @@ test.skipIf(process.platform === "win32")(
       const otherFolder = join(root, "other-project");
       await mkdir(otherFolder);
       await writeFile(join(otherFolder, ".env"), `${secondSecret}\n`);
+      await writeFile(join(otherFolder, ".pstignore"), "");
       const otherProject = await other.client.projects.create(
         folderProjectInput({ name: "Another account" }, otherFolder),
       );

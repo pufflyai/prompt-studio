@@ -275,6 +275,8 @@ const main = async () => {
     const otherFolder = join(work, "other-project");
     await mkdir(otherFolder);
     await Bun.write(join(otherFolder, "notes.md"), "another account");
+    // Only a folder with a root `.pstignore` is copied.
+    await Bun.write(join(otherFolder, ".pstignore"), "");
     const otherProject = await other!.client.projects.create(
       folderProjectInput({ name: "Another account" }, otherFolder),
     );
