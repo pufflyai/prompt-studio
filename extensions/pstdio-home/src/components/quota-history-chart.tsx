@@ -5,6 +5,7 @@ import { focusGroupX } from "@tanstack/charts/focus";
 import { decorative } from "@tanstack/charts/mark/decorative";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
+import type { ReactNode } from "react";
 
 interface Point {
   time: number;
@@ -13,8 +14,7 @@ interface Point {
 interface QuotaHistoryChartProps {
   provider: string;
   label: string;
-  showLabel: boolean;
-  remainingPercent: number;
+  header?: ReactNode;
   resetsAt?: string;
   history: Point[];
   forecast: Point[];
@@ -23,7 +23,7 @@ interface QuotaHistoryChartProps {
 }
 
 export const QuotaHistoryChart = (props: QuotaHistoryChartProps) => {
-  const { provider, label, showLabel, remainingPercent, resetsAt, history, forecast, start, end } = props;
+  const { provider, label, header, resetsAt, history, forecast, start, end } = props;
   const projected = forecast.at(-1)?.used;
   const date = (value: number) => new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric" });
   const tick = (value: number) =>
@@ -54,12 +54,7 @@ export const QuotaHistoryChart = (props: QuotaHistoryChartProps) => {
   );
   return (
     <Stack gap="sm" minW="0">
-      <HStack justify="space-between" flexWrap="wrap">
-        {showLabel && <Text textStyle="paragraph/M/medium">{label}</Text>}
-        <Text textStyle="paragraph/M/medium">
-          {Math.round(100 - remainingPercent)}% used · {Math.round(remainingPercent)}% remaining
-        </Text>
-      </HStack>
+      {header}
       <HStack gap="md" flexWrap="wrap" color="fg.muted" textStyle="paragraph/S/regular">
         {resetsAt && (
           <Text>

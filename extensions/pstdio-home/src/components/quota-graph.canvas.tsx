@@ -68,17 +68,17 @@ const providers: QuotaReport[] = [
 ];
 
 interface PreviewProps {
-  state: "single" | "multiple" | "first-point" | "loading" | "empty" | "error";
+  state: "one-window" | "single" | "multiple" | "first-point" | "loading" | "empty" | "error";
 }
 const Preview = (props: PreviewProps) => {
   const examples = props.state === "multiple" ? providers : providers.slice(0, 1);
-  const reports =
-    props.state === "first-point"
-      ? examples.map((provider) => ({
-          ...provider,
-          limits: provider.limits.slice(1).map(({ history: _history, ...limit }) => limit),
-        }))
-      : examples;
+  const reports = examples.map((provider) => {
+    const limits = ["one-window", "first-point"].includes(props.state) ? provider.limits.slice(1) : provider.limits;
+    return {
+      ...provider,
+      limits: props.state === "first-point" ? limits.map(({ history: _history, ...limit }) => limit) : limits,
+    };
+  });
   return (
     <Stack gap="xl" w="full">
       <Text textStyle="heading/M">Prompt Studio</Text>
@@ -95,12 +95,12 @@ export default { title: "Extensions/Home/Agent quotas", component: Preview } sat
 export const Graph: CanvasFrame<typeof Preview> = {
   name: "Automatic quota history",
   description:
-    "Two quota windows sit side by side in a two-column grid, stacking on narrow screens. Usage always begins at zero at the period start, including with multiple readings. Keep the Usage, Forecast and Limit legend and solid yellow forecast. Always show the selected harness name and icon; multiple harnesses use a dropdown. Icons here are synthetic; installed harness icons come from public extension metadata.",
-  args: { state: "single" },
+    "One quota graph fills the width and shows its harness name/icon on the usage summary row. Two quota windows sit side by side, stacking on narrow screens. Usage always begins at zero at the period start. Keep Usage, Forecast and Limit legends and a solid yellow forecast. Multiple harnesses use a dropdown. Icons here are synthetic; installed harness icons come from public extension metadata.",
+  args: { state: "one-window" },
   controls: {
     state: {
       type: "select",
-      options: ["single", "multiple", "first-point", "loading", "empty", "error"].map((value) => ({
+      options: ["one-window", "single", "multiple", "first-point", "loading", "empty", "error"].map((value) => ({
         value,
         label: value,
       })),
