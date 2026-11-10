@@ -220,19 +220,17 @@ The relay report runs in one read-only snapshot with a five-minute statement tim
 
 ### Clear a project
 
-To give a project a clean start, clear it from both services. Each script reports only, until `--confirm` repeats the project ID. First make the project local on every device. The manager refuses while the project still syncs, and an unregistered project gets no relay access, so no device writes to it while it is cleared.
+To give a project a clean start, clear its relay data. The script only reports, until `--confirm` repeats the project ID.
 
 ```sh
-# Manager: removes the project's keys. Its next key request creates new ones.
-DATABASE_URL=<manager database URL> \
-  bun services/account-manager/scripts/project-clear.ts --account <account id> --project <project id> --confirm <project id>
-
-# Relay: removes documents, updates and states, queues their objects, and marks every blob for deletion.
+# Removes documents, updates and states, queues their objects, and marks every blob for deletion.
 DATABASE_URL=<relay database URL> \
   bun services/relay/scripts/project-clear.ts --account <account id> --project <project id> --confirm <project id>
 ```
 
-The relay's next hourly cleanup deletes the queued objects and the marked blobs with their objects. Deleting objects one by one can take hours for a large project, and the inspection report shows the marked blobs until they are gone. The project record stays while it has blobs, because blob rows cascade from it. Run the relay clear again after cleanup to remove the record. When the project syncs again, its first device uploads it as a new project, sealed with the new keys.
+First make the project local on every device, and check with the manager inspection that it no longer syncs. The manager grants relay access only to a project that syncs, so no device writes to it while it is cleared. The project's keys stay in the manager. Devices keep data sealed with those keys and upload it again when the project syncs again, so new keys would make that data unreadable.
+
+The relay's next hourly cleanup deletes the queued objects and the marked blobs with their objects. Deleting objects one by one can take hours for a large project, and the inspection report shows the marked blobs until they are gone. The project record stays while it has blobs, because blob rows cascade from it. Run the clear again after cleanup to remove the record. Reconnect only after that: a blob still marked for deletion refuses a device's new upload of it. When the project syncs again, the relay has nothing of it, and each device rebuilds its streams from its local copy, as after the loss of relay data.
 
 ## Reference workload measurement
 
