@@ -1,68 +1,40 @@
-name: Qualify native core cleanup repair
+name: Qualify rebased packaged runtime
 on:
   workflow_dispatch:
     inputs:
       source_sha:
-        description: Exact reviewed PS175 cleanup candidate
+        description: Exact frozen PS158 source after PS157 integration
         required: true
         type: string
 permissions:
   contents: read
+  actions: read
 jobs:
-  native_cleanup:
-    runs-on: windows-11-arm
-    timeout-minutes: 30
-    env:
-      CI_PRIORITY: P2
-      GH_TOKEN: ${{ github.token }}
-      PSTDIO_VERIFY_PLATFORM_PKG: cli-win-arm64
-      TEST_PRIORITIES: P0,P1
+  scope:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      platforms: ${{ steps.matrix.outputs.platforms }}
     steps:
       - uses: actions/checkout@v5
         with:
           ref: ${{ inputs.source_sha }}
-          fetch-depth: 0
-      - name: Require the reviewed cleanup source
-        shell: pwsh
-        env:
-          CONTROL_SOURCE_SHA: ${{ inputs.source_sha }}
-        run: |
-          $expected = "c4d4412c7cdd12e00756a5b7aaa1808ac8614051"
-          if ($env:CONTROL_SOURCE_SHA -cne $expected) { throw "Expected full reviewed cleanup SHA" }
-          if ((git rev-parse HEAD).Trim() -cne $expected) { throw "Unexpected checkout" }
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-      - uses: actions/setup-node@v5
-        with:
-          node-version: "24.22.1"
-      - name: Install native dependencies and restore host build cache
-        uses: ./.github/actions/setup-ci-cache
-        with:
-          install-strategy: native
-          windows-dev-drive: "true"
-      - name: Build source fixtures for packaged runtime tests
-        run: bun run build -- --scope e2e --include-dependencies
-      - name: Run the maintained cold ARM64 packaged shard first
-        # Exact maintained profile, priorities, discovery, workload, limits and command.
-        # New filesystem safety tests run AFTER this, never to prewarm the case.
-        run: bun scripts/ci/run-ci-checks.ts --observe-peers -- bun run --cwd scripts verify:packages --profile full --shard 2/2
-      - name: Verify real filesystem safety after the cold qualification
-        if: ${{ !cancelled() }}
-        working-directory: packages/e2e
+      - name: Require the frozen source and use its maintained platform matrix
+        id: matrix
         env:
-          # Script helpers are separate maintained P1 cases, not packaged-discovery members.
-          TEST_PRIORITIES: P1
-        run: bun ../../scripts/ci/run-bun-tests.ts --preload ./src/scripts/bun-process-cleanup.ts src/scripts/remove-test-directory.p1.test.ts --timeout 30000
-      - name: Preserve actual case and native/fallback evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: native-core-cleanup-candidate
-          path: |
-            packages/e2e/test-results
-            test-results/ci/bun
-          if-no-files-found: warn
-      - name: Require unchanged generated source
-        if: ${{ !cancelled() }}
-        run: git diff --exit-code
+          QUALIFICATION_SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          test "$QUALIFICATION_SOURCE_SHA" = "4bd741de85239fff34afa01d0dc37aa86e06d4ca"
+          test "$(git rev-parse HEAD)" = "$QUALIFICATION_SOURCE_SHA"
+          bun -e 'import { appendFileSync } from "node:fs"; import { productionToolchainPlatforms } from "./scripts/ci/production-platforms.ts"; appendFileSync(process.env.GITHUB_OUTPUT, `platforms=${JSON.stringify(productionToolchainPlatforms("stable"))}\n`);'
+  packaged_toolchain:
+    needs: scope
+    uses: pufflyai/prompt-studio/.github/workflows/verify-packaged-toolchain.yml@e92609e79cda954c8f95b07499ee9178b3e33d76
+    with:
+      ref: ${{ inputs.source_sha }}
+      profile: full
+      platforms: ${{ needs.scope.outputs.platforms }}
+      priority: P2
