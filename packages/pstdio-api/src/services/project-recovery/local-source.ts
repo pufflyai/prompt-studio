@@ -1,12 +1,13 @@
 import { createHash } from "node:crypto";
 import { hostname } from "node:os";
 import type { createDocumentRelay } from "pstdio-sync/relay";
-import { captureRecoveryFolder } from "./capture";
+import type { captureRecoveryFolder } from "./capture";
 import { sourceRecoveryPolicy } from "./capture-source";
 import type { createRecoveryCatalog } from "./catalog";
 import type { RecoveryChunk } from "./chunks";
 import { openRecoveryJournal } from "./journal";
 import { type RecoveryChunkStore, readRecoveryManifest } from "./manifest";
+import { captureRecoveryFolderInWorker } from "./recovery-worker-client";
 import { pruneRecoveryStore } from "./retention";
 import { createRecoveryScheduler } from "./schedule";
 import { openRecoverySource } from "./source-posix";
@@ -117,7 +118,7 @@ export const createLocalRecoverySource = (input: {
       await current.journal.update({ candidate: null });
       return;
     }
-    const captured = await captureRecoveryFolder({
+    const captured = await captureRecoveryFolderInWorker({
       root: current.folder,
       chunks: store,
       gitRoots: await gitRoots(),

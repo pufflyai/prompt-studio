@@ -134,12 +134,14 @@ project records, and its source is expected to come from its own Git host. Remov
 `.pstignore` stops new copies; earlier copies stay restorable.
 
 Within a copied folder, the folder is the inclusion boundary. Include everything except
-paths matched by the root `.pstignore`. `.gitignore`, Git tracked/untracked state, global Git rules
+paths matched by the root `.pstignore` and `.pstdio/extension-storage/`. `.gitignore`, Git tracked/untracked state, global Git rules
 and extension cache declarations do not filter the folder capture. The same rule works
 without Git installed and for non-Git projects.
 
-There are no built-in path exclusions: a folder that opts in decides what to skip, for
-example `node_modules/`, `.cache/` or `dist/`. An empty `.pstignore` includes every
+The one built-in exclusion is `.pstdio/extension-storage/` (PS-1134), which already
+syncs through project records. Core applies it after the folder's own rules, so no rule
+re-includes it. Otherwise a folder that opts in decides what to skip, for example
+`node_modules/`, `.cache/` or `dist/`. An empty `.pstignore` includes every other
 project-folder file. `.env` and `.env.*` remain included unless the policy excludes
 them, even when `.gitignore` does. The first PS-1069 design seeded a starter
 `.pstignore` with `node_modules/`; PS-1130 removed seeding along with opt-out by
@@ -167,7 +169,8 @@ Re-scan when it changes, and verify it is unchanged before publishing the manife
 | `.git`, nested repositories and submodule files | Include unless matched by `.pstignore`, including objects, index, refs, reflogs, config and hooks. No separate Git opt-in. |
 | `.env`, key files and other credential-bearing files | Include unless explicitly matched by `.pstignore`, encrypted on the client before transfer. No secret-pattern exclusions. |
 | `node_modules`, build output, caches and Git-ignored files | Apply `.pstignore` only. Nothing is excluded until users add rules. Size or transfer failures are not exclusions. |
-| `.pstdio/config.json`, `.pstdio/extensions` and `.pstdio/extension-storage` content | Include unless matched by `.pstignore`, including local extension code, caches, drafts, reports and nested workspace files. Preserve publisher paths. |
+| `.pstdio/config.json` and `.pstdio/extensions` content | Include unless matched by `.pstignore`, including local extension code. Preserve publisher paths. |
+| `.pstdio/extension-storage` content | Never copied (PS-1130 follow-up, PS-1134): it already syncs through project records, attachments and shared mounts. Core applies this after `.pstignore`, so no rule re-includes it. |
 | Files already represented by extension records or declared mounts | Apply `.pstignore` to their on-disk capture. This does not change the separate shared-record or declared-file sync owner. The scanner is read-only. |
 | Root `.pstignore` | Always retain the exact applied policy with the capture. |
 | Included symlinks | Retain the link and its exact target text without following it. An external target does not become part of the project folder. |
