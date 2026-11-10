@@ -12,13 +12,14 @@ const policyAt = (root: string) => {
   try {
     return createRecoveryPolicy(readFileSync(join(root, ".pstignore"), "utf8"));
   } catch {
-    return createRecoveryPolicy(null);
+    return null;
   }
 };
 
 /** Change hints for one project folder. Excluded paths are not watched or reported.
  * A `.pstignore` change or watch error is a loss: the scheduler rescans and watches again
- * with the current policy. */
+ * with the current policy. A folder without `.pstignore` is not copied, so only its root is
+ * watched, for a `.pstignore` to appear. */
 export const watchRecoveryFolder = (root: string, changed: () => void, lost: () => void) => {
   const policy = policyAt(root);
   const path = (absolute: string) => {
@@ -31,7 +32,7 @@ export const watchRecoveryFolder = (root: string, changed: () => void, lost: () 
     maxDirectories: maxFolders,
     skipDirectory: (absolute) => {
       const rel = path(absolute);
-      return rel !== null && !policy.classify(rel, true).included;
+      return rel !== null && !policy?.classify(rel, true).included;
     },
     onDirectoryLimit: () => {
       rescan ??= setInterval(changed, unwatchedRescanMs);
@@ -40,7 +41,7 @@ export const watchRecoveryFolder = (root: string, changed: () => void, lost: () 
     onEvent: (_type, absolute) => {
       const rel = path(absolute);
       if (rel === ".pstignore") lost();
-      else if (rel === null || policy.classify(rel).included) changed();
+      else if (policy && (rel === null || policy.classify(rel).included)) changed();
     },
     onError: lost,
   });

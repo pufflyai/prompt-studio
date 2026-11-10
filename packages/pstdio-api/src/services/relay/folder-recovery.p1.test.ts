@@ -34,6 +34,7 @@ test("each device captures its folder automatically and downloads every complete
     await mkdir(join(folder, "node_modules/package"), { recursive: true });
     await writeFile(join(folder, ".env"), "PRIVATE_OWNER_SECRET=retained");
     await writeFile(join(folder, "node_modules/package/index.js"), "excluded");
+    await writeFile(join(folder, ".pstignore"), "node_modules/\n");
     const project = await source.deps.projectService.create({ name: "Recovered folder" });
     await source.deps.workspaceService.ensureDefault({ project_id: project.id, root_path: folder, name: "Folder" });
     await destination.deps.projectService.create({ id: project.id, name: project.name });
@@ -109,12 +110,15 @@ test("each device captures its folder automatically and downloads every complete
     await writeFile(join(folder, "created-later"), "saved without a commit");
     await until(async () => (await downloaded())?.manifest.capture.files === first.manifest.capture.files + 1);
 
-    // Deleting the policy is deliberate: a restarted owner never seeds it again.
+    // Without its `.pstignore` the folder is no longer copied: a restarted owner takes no new copy,
+    // never recreates the file, and the last copy stays downloadable.
     sourceOwner.close();
     await sourceOwner.done;
     await unlink(join(folder, ".pstignore"));
-    start(source, "laptop");
-    await until(async () => (await downloaded())?.manifest.capture.policy === null);
+    await writeFile(join(folder, "after-opt-out"), "not copied");
+    const restarted = start(source, "laptop");
+    await Bun.sleep(500);
+    expect((await restarted.status()).pending).toBe(false);
     await expect(readFile(join(folder, ".pstignore"))).rejects.toThrow();
     expect((await downloaded())!.manifest.capture.files).toBe(first.manifest.capture.files + 1);
   } finally {
@@ -144,6 +148,7 @@ test("a source this device cannot publish still downloads every other completed 
     ] as const) {
       await mkdir(join(folderRoot, name));
       await writeFile(join(folderRoot, name, "notes"), `${name} notes`);
+      await writeFile(join(folderRoot, name, ".pstignore"), "");
       await app.deps.workspaceService.ensureDefault({
         project_id: project.id,
         root_path: join(folderRoot, name),
@@ -161,7 +166,6 @@ test("a source this device cannot publish still downloads every other completed 
     ];
     const journal = await openRecoveryJournal({ root: destination.deps.projectRecovery.root, source: sourceKey });
     await journal.update({
-      enrolled: true,
       candidate: {
         blobId: "AAAAAAAAAAAAAAAAAAAAAA",
         byteLength: 10,

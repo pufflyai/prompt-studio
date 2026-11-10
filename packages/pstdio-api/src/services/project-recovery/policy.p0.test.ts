@@ -1,5 +1,5 @@
 import { afterEach, test as baseTest, expect } from "bun:test";
-import { mkdtemp, readFile, rm, stat, symlink, unlink, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, symlink, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { sourceRecoveryPolicy } from "./capture-source";
@@ -19,11 +19,10 @@ const folder = async () => {
   return root;
 };
 
-const readRecoveryPolicy = async (root: string, firstEnrollment = false) => {
-  const staging = await folder();
+const readRecoveryPolicy = async (root: string) => {
   const source = await openRecoverySource(root);
   try {
-    return await sourceRecoveryPolicy(source.root, firstEnrollment, staging);
+    return await sourceRecoveryPolicy(source.root);
   } finally {
     source.close();
   }
@@ -58,15 +57,23 @@ baseTest("root anchors, directory rules, globstars and nested ordinary policy fi
   expect(createRecoveryPolicy("").classify(".env").included).toBe(true);
 });
 
-test("only first enrollment seeds a missing policy; existing, emptied and deliberately absent policies survive", async () => {
+test("a folder without .pstignore has no policy and nothing creates one; an emptied policy includes everything", async () => {
   const root = await folder();
-  expect((await readRecoveryPolicy(root, true)).text).toBe("node_modules/\n");
-  expect((await stat(join(root, ".pstignore"))).mode & 0o777).toBe(0o600);
-  await writeFile(join(root, ".pstignore"), "");
-  expect((await readRecoveryPolicy(root, true)).text).toBe("");
-  await unlink(join(root, ".pstignore"));
+  await writeFile(join(root, ".gitignore"), "node_modules/\n");
   expect((await readRecoveryPolicy(root)).text).toBeNull();
   expect(await readFile(join(root, ".pstignore")).catch((error) => error.code)).toBe("ENOENT");
+  await writeFile(join(root, ".pstignore"), "");
+  expect((await readRecoveryPolicy(root)).text).toBe("");
+  await unlink(join(root, ".pstignore"));
+  expect((await readRecoveryPolicy(root)).text).toBeNull();
+});
+
+test("a .pstignore with a byte-order mark keeps it in the recorded text but not in its rules", async () => {
+  const root = await folder();
+  await writeFile(join(root, ".pstignore"), "\uFEFFdist/\n");
+  const policy = await readRecoveryPolicy(root);
+  expect(policy.text).toBe("\uFEFFdist/\n");
+  expect(policy.classify("dist/", true).included).toBe(false);
 });
 
 baseTest("an invalid or linked policy blocks capture instead of broadening coverage", async () => {
@@ -78,17 +85,4 @@ baseTest("an invalid or linked policy blocks capture instead of broadening cover
   await symlink("rules", join(root, ".pstignore"));
   await expect(readRecoveryPolicy(root)).rejects.toThrow();
   expect(() => createRecoveryPolicy("private\u0000data")).toThrow();
-});
-
-test("an existing policy does not require staging or permission to create a replacement", async () => {
-  const root = await folder();
-  const blockedStage = join(root, "not-a-directory");
-  await writeFile(blockedStage, "existing bytes");
-  await writeFile(join(root, ".pstignore"), "private/\n");
-  const source = await openRecoverySource(root);
-  try {
-    expect((await sourceRecoveryPolicy(source.root, true, blockedStage)).text).toBe("private/\n");
-  } finally {
-    source.close();
-  }
 });

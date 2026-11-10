@@ -7,28 +7,19 @@ export const recoverySourceIdentity = (stat: BigIntStats) =>
 export const unchangedRecoverySource = (stat: BigIntStats, identity: string[]) =>
   recoverySourceIdentity(stat).every((value, index) => value === identity[index]);
 
-const openPolicy = async (root: RecoverySourceHandle, firstEnrollment: boolean, stagingRoot?: string) => {
+// Only a folder with its own root `.pstignore` is copied, so data that already syncs as project records is
+// never uploaded twice. Without one the folder has no policy and no copy is taken.
+const openPolicy = async (root: RecoverySourceHandle) => {
   try {
     return await root.open(".pstignore", true);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    return null;
   }
-  if (!firstEnrollment) return null;
-  if (!stagingRoot) throw new Error("First enrollment needs recovery staging outside the source folder");
-  try {
-    await root.create(".pstignore", new TextEncoder().encode("node_modules/\n"), stagingRoot);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-  }
-  return root.open(".pstignore", true);
 };
 
-export const sourceRecoveryPolicy = async (
-  root: RecoverySourceHandle,
-  firstEnrollment: boolean,
-  stagingRoot?: string,
-) => {
-  const file = await openPolicy(root, firstEnrollment, stagingRoot);
+export const sourceRecoveryPolicy = async (root: RecoverySourceHandle) => {
+  const file = await openPolicy(root);
   if (!file) return createRecoveryPolicy(null);
   try {
     const before = await file.stat();
@@ -43,7 +34,9 @@ export const sourceRecoveryPolicy = async (
     }
     if (offset !== Number(before.size) || !unchangedRecoverySource(await file.stat(), recoverySourceIdentity(before)))
       throw new Error("The recovery policy changed during capture");
-    return createRecoveryPolicy(new TextDecoder("utf-8", { fatal: true }).decode(bytes.subarray(0, offset)));
+    return createRecoveryPolicy(
+      new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes.subarray(0, offset)),
+    );
   } finally {
     file.close();
   }

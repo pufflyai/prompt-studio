@@ -4,13 +4,11 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSyncSpace } from "pstdio-sync/encryption";
-import { captureRecoveryFolder } from "./capture";
 import type { createRecoveryCatalog } from "./catalog";
 import { createRecoveryChunkStore, type RecoveryChunk } from "./chunks";
 import { openRecoveryJournal } from "./journal";
 import { createLocalRecoverySource } from "./local-source";
 import { nativeRecoverySupported } from "./native-recovery.fixture";
-import { prepareRecoveryCapture } from "./transfer";
 
 const test = baseTest.skipIf(!nativeRecoverySupported);
 
@@ -31,6 +29,7 @@ const fixture = async () => {
   const folder = join(root, "project");
   await mkdir(folder);
   await writeFile(join(folder, "notes"), "saved work");
+  await writeFile(join(folder, ".pstignore"), "node_modules/\n");
   const space = await createSyncSpace({
     projectId: "project",
     spaceOwner: "account",
@@ -87,6 +86,7 @@ test("a folder that becomes the project's folder, such as a restored one, is cap
   const f = await fixture();
   const previous = join(f.root, "previous");
   await mkdir(previous);
+  await writeFile(join(previous, ".pstignore"), "");
   f.workspace.root_path = previous;
   const owner = f.start(undefined, 60_000);
   owner.local.request("startup");
@@ -135,7 +135,6 @@ test("an unreadable candidate is dropped and replaced by a fresh capture instead
   const f = await fixture();
   const owner = f.start();
   await (await f.journal()).update({
-    enrolled: true,
     candidate: {
       blobId: "AAAAAAAAAAAAAAAAAAAAAA",
       byteLength: 10,
@@ -151,35 +150,40 @@ test("an unreadable candidate is dropped and replaced by a fresh capture instead
   await owner.local.close();
 });
 
-test("a source whose catalog copy deliberately had no policy is never seeded after losing recovery storage", async () => {
+test("a folder without .pstignore is never copied and drops its pending copy until a .pstignore is added", async () => {
   const f = await fixture();
-  const capture = await captureRecoveryFolder({ root: f.folder, chunks: f.store });
-  expect(capture.policy).toBeNull();
-  const root = await prepareRecoveryCapture({
-    chunks: f.store,
-    source: { id: f.sourceId, deviceId: "laptop", name: "Laptop", folder: f.folder },
-    capture,
+  await rm(join(f.folder, ".pstignore"));
+  await (await f.journal()).update({
+    candidate: {
+      blobId: "AAAAAAAAAAAAAAAAAAAAAA",
+      byteLength: 10,
+      sha256: "a".repeat(64),
+      encryptedByteLength: 38,
+      encryptedSha256: "b".repeat(64),
+    },
   });
-  f.entries.push({ deviceId: "laptop", sourceId: f.sourceId, root });
-  const fresh = join(f.root, "replaced-recovery-storage");
-  const owner = f.start(fresh);
+  const owner = f.start();
   owner.local.request("startup");
-  await until(async () => (await (await f.journal(fresh)).read()).enrolled);
-  await owner.local.close();
+  await until(async () => (await (await f.journal()).read()).candidate === null);
+  await until(async () => !(await owner.local.status()).capturing);
+  expect(owner.captured()).toBe(0);
   await expect(readFile(join(f.folder, ".pstignore"))).rejects.toThrow();
+  await writeFile(join(f.folder, ".pstignore"), "");
+  owner.local.request("explicit");
+  await until(async () => !!(await (await f.journal()).read()).candidate);
+  expect(owner.captured()).toBe(1);
+  await owner.local.close();
 });
 
-test("a folder whose workspace is still being set up is neither enrolled nor captured until it is ready", async () => {
+test("a folder whose workspace is still being set up is not captured until it is ready", async () => {
   const f = await fixture();
   f.workspace.initializing = true;
   const owner = f.start();
   owner.local.request("startup");
   await until(async () => !(await owner.local.status()).pending && !(await owner.local.status()).capturing);
-  expect((await (await f.journal()).read()).enrolled).toBe(false);
-  await expect(readFile(join(f.folder, ".pstignore"))).rejects.toThrow();
+  expect((await (await f.journal()).read()).candidate).toBeNull();
   f.workspace.initializing = false;
   owner.local.request("explicit");
   await until(async () => !!(await (await f.journal()).read()).candidate);
-  expect(await readFile(join(f.folder, ".pstignore"), "utf8")).toBe("node_modules/\n");
   await owner.local.close();
 });

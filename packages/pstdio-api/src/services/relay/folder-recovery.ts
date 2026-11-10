@@ -91,7 +91,6 @@ export const startFolderRecovery = (input: {
     catalog,
     chunks: () => chunks,
     transport: () => (connected && !connected.signal.aborted ? connected : undefined),
-    enroll: (workspaceId, folder) => local.enroll(workspaceId, folder),
     changed: () => input.statusChanged?.(),
     signal,
   });

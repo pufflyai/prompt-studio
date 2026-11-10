@@ -62,7 +62,7 @@ const withOwner = async <T>(
  * project already has one here: that folder stays attached and the restored copy stays beside it. */
 const attachRestored =
   (deps: ProjectsRouteDeps, projectId: string): RecoveryAttach =>
-  (path, enroll) =>
+  (path) =>
     withFolderCreation(`project-folder:${projectId}`, () =>
       withFolderCreation(path, async () => {
         const home =
@@ -70,7 +70,6 @@ const attachRestored =
           (await deps.workspaceService.ensureDefault({ project_id: projectId, name: "Project folder" }));
         if (home.root_path || home.provider_ref_json || home.provider_operation_id) return false;
         if (await deps.workspaceService.findByPath(path)) return false;
-        await enroll(home.id);
         const initial = await resolveInitialWorkspace({
           initial_workspace: { provider_id: rootProviderId, params: { path } },
         });
