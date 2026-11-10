@@ -98,7 +98,6 @@ test(
             enabled: true,
             installName: "pstdio-session-browser",
             scope: "global",
-            sourcePath: join(realpathSync(tempRoot), "extensions/pstdio-session-browser"),
           }),
           expect.objectContaining({ enabled: true, installName: "harness-claude-code" }),
           expect.objectContaining({ enabled: true, installName: "harness-codex" }),
@@ -116,6 +115,9 @@ test(
           expect.objectContaining({ enabled: true, installName: "pstdio-skills" }),
         ]),
       );
+
+      const sessions = extensions.find((extension) => extension.installName === "pstdio-session-browser")!;
+      expect(realpathSync(sessions.sourcePath)).toBe(join(realpathSync(tempRoot), "extensions/pstdio-session-browser"));
 
       expect(metadata.pages).toContainEqual(
         expect.objectContaining({ extensionId: "pstdio.pstdio-home", path: "home" }),
