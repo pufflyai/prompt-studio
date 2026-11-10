@@ -23,7 +23,8 @@ export const projectFolderSourceSchema = projectFolderSourceRefSchema.extend({
   /** When the last completed capture started and finished. The folder can change while it is read. */
   startedAt: z.iso.datetime().nullable(),
   completedAt: z.iso.datetime().nullable(),
-  /** Included files and their bytes. Paths excluded by the root `.pstignore` are not counted. */
+  /** Included files and their bytes. Paths excluded by the root `.pstignore`, and `.pstdio/extension-storage`, which
+   * syncs as records, are not counted. */
   files: z.number().int().nonnegative().nullable(),
   bytes: z.number().int().nonnegative().nullable(),
   /** The applied root `.pstignore`. Only a folder with one is copied; null appears only in copies taken before

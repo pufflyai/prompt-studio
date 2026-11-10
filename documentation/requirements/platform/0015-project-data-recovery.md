@@ -134,12 +134,14 @@ project records, and its source is expected to come from its own Git host. Remov
 `.pstignore` stops new copies; earlier copies stay restorable.
 
 Within a copied folder, the folder is the inclusion boundary. Include everything except
-paths matched by the root `.pstignore`. `.gitignore`, Git tracked/untracked state, global Git rules
+paths matched by the root `.pstignore` and `.pstdio/extension-storage/`. `.gitignore`, Git tracked/untracked state, global Git rules
 and extension cache declarations do not filter the folder capture. The same rule works
 without Git installed and for non-Git projects.
 
-There are no built-in path exclusions: a folder that opts in decides what to skip, for
-example `node_modules/`, `.cache/` or `dist/`. An empty `.pstignore` includes every
+The one built-in exclusion is `.pstdio/extension-storage/` (PS-1134), which already
+syncs through project records. Core applies it after the folder's own rules, so no rule
+re-includes it. Otherwise a folder that opts in decides what to skip, for example
+`node_modules/`, `.cache/` or `dist/`. An empty `.pstignore` includes every other
 project-folder file. `.env` and `.env.*` remain included unless the policy excludes
 them, even when `.gitignore` does. The first PS-1069 design seeded a starter
 `.pstignore` with `node_modules/`; PS-1130 removed seeding along with opt-out by
