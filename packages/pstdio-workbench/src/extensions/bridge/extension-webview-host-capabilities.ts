@@ -125,6 +125,7 @@ export const createExtensionWebviewHostCapabilities = (
     "harnesses.read": capability("harnesses.read", readHarnesses),
     "resources.actions": capability("resources.actions", adapters.resourceActions),
     "commands.execute": capability("commands.execute", commandExecution(adapters)),
+    "commands.query": capability("commands.query", adapters.commandQueries?.request.bind(adapters.commandQueries)),
     "commands.stream": capability("commands.stream", commandStreaming(adapters)),
     "editing.session": capability("editing.session", editingSession(adapters)),
     "editing.text": capability("editing.text", adapters.textEditing?.request.bind(adapters.textEditing)),
