@@ -474,8 +474,9 @@ These came from the Cloud and Workspaces design review. The designs are in PR #1
 - Project-folder sync uses a separate root `.pstignore`, independent of `.gitignore`.
   The starter file excludes `node_modules/`. `.env` files remain included unless users
   add a rule. On 2026-11-10 (PS-1130) the user made the copy opt-in: only a folder with
-  a root `.pstignore` is copied, and no starter file is created. Users control further exclusions in that file. R57–R59 replace the earlier
-  working-tree exclusion and the narrower coverage proposed during PS-960 refinement.
+  a root `.pstignore` is copied, and no starter file is created. Users control further
+  exclusions in that file. R57–R59 replace the earlier working-tree exclusion and the
+  narrower coverage proposed during PS-960 refinement.
 - Whole-folder captures are private to the source user's devices because they can
   contain credentials and private workspaces. Existing shared records and declared
   files retain their shared owners.

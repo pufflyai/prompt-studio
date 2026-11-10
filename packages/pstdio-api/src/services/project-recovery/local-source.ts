@@ -60,10 +60,20 @@ export const createLocalRecoverySource = (input: {
     `${workspaceId}:${createHash("sha256").update(folder).digest("hex").slice(0, 16)}`;
   const journalFor = (id: string) =>
     openRecoveryJournal({ root: input.root, source: [input.workbenchId, input.accountId, input.deviceId, id] });
+  // Only a folder with a root `.pstignore` is copied. Capture and publication each check it, so a copy
+  // taken before the file was removed never uploads.
+  const optedIn = async (folder: string) => {
+    const opened = await openRecoverySource(folder);
+    try {
+      return (await sourceRecoveryPolicy(opened.root)).text !== null;
+    } finally {
+      opened.close();
+    }
+  };
   const source = async () => {
     const workspace = await input.workspaces.getDefault(input.workbenchId);
     if (!workspace?.root_path || workspace.execution_kind !== "local") return null;
-    // A folder still being provisioned is not the project's folder yet; never seed or read it.
+    // A folder still being provisioned is not the project's folder yet; never read it.
     if (workspace.initializing || workspace.provider_state !== "ready") return null;
     const id = sourceId(workspace.id, workspace.root_path);
     return { id, folder: workspace.root_path, journal: await journalFor(id) };
@@ -102,15 +112,8 @@ export const createLocalRecoverySource = (input: {
     scanned = current.id;
     restartWatch(current.folder);
     await own(current);
-    // Without a root `.pstignore` the folder is not copied; a capture it no longer wants is dropped.
-    const opened = await openRecoverySource(current.folder);
-    let policy: string | null;
-    try {
-      policy = (await sourceRecoveryPolicy(opened.root)).text;
-    } finally {
-      opened.close();
-    }
-    if (policy === null) {
+    // An opted-out folder skips the walk; a capture it no longer wants is dropped.
+    if (!(await optedIn(current.folder))) {
       await current.journal.update({ candidate: null });
       return;
     }
@@ -120,6 +123,11 @@ export const createLocalRecoverySource = (input: {
       gitRoots: await gitRoots(),
       signal: runSignal,
     });
+    // The scan reads the policy again: a `.pstignore` removed meanwhile means no copy, not a full one.
+    if (captured.policy === null) {
+      await current.journal.update({ candidate: null });
+      return;
+    }
     const pending = (await current.journal.read()).candidate;
     const previous = pending ?? (await ownRoot(current.id));
     const prior = previous && (await readRecoveryManifest(store, previous).catch(() => null));
@@ -187,6 +195,10 @@ export const createLocalRecoverySource = (input: {
     // A newer capture may replace the candidate during the upload.
     const clear = () =>
       current.journal.update((state) => (state.candidate?.blobId === candidate.blobId ? { candidate: null } : {}));
+    if (!(await optedIn(current.folder))) {
+      await clear();
+      return;
+    }
     let valid = await readRecoveryManifest(store, candidate).then(
       () => true,
       () => false,

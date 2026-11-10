@@ -54,4 +54,4 @@ In Cloud settings, choose **Make local** and confirm. Syncing stops on this devi
 
 Choose **Sync with Cloud** to enable syncing again. The copies merge. Where both copies changed the same thing, one change is kept.
 
-*Updated at: 2026-11-07*
+*Updated at: 2026-11-10*

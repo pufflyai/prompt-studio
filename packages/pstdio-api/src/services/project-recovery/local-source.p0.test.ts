@@ -175,6 +175,20 @@ test("a folder without .pstignore is never copied and drops its pending copy unt
   await owner.local.close();
 });
 
+test("a saved candidate is never published once its folder's .pstignore is removed", async () => {
+  const f = await fixture();
+  const first = f.start();
+  first.local.request("startup");
+  await until(async () => !!(await (await f.journal()).read()).candidate);
+  await first.local.close();
+  await rm(join(f.folder, ".pstignore"));
+  const restarted = f.start();
+  await restarted.local.publish(f.store, transport, new AbortController().signal);
+  expect(f.published).toEqual([]);
+  expect((await (await f.journal()).read()).candidate).toBeNull();
+  await restarted.local.close();
+});
+
 test("a folder whose workspace is still being set up is not captured until it is ready", async () => {
   const f = await fixture();
   f.workspace.initializing = true;

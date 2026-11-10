@@ -115,7 +115,8 @@ export const captureFolderRoute = createRoute({
   method: "post",
   path: "/projects/{id}/folder/capture",
   tags,
-  description: "Capture this device's project folder now. It uploads when Cloud is reachable.",
+  description:
+    "Capture this device's project folder now, if it has a root `.pstignore`; a folder without one is not copied. It uploads when Cloud is reachable.",
   request: { params },
   responses: { 202: status, ...errors },
 });

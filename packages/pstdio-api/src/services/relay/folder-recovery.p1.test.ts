@@ -117,8 +117,11 @@ test("each device captures its folder automatically and downloads every complete
     await unlink(join(folder, ".pstignore"));
     await writeFile(join(folder, "after-opt-out"), "not copied");
     const restarted = start(source, "laptop");
-    await Bun.sleep(500);
-    expect((await restarted.status()).pending).toBe(false);
+    // Its first pass downloads, requests a startup scan and runs it; none of that may take a copy.
+    await until(async () => {
+      const status = await restarted.status();
+      return status.downloaded && !status.pending && !status.capturing;
+    });
     await expect(readFile(join(folder, ".pstignore"))).rejects.toThrow();
     expect((await downloaded())!.manifest.capture.files).toBe(first.manifest.capture.files + 1);
   } finally {
