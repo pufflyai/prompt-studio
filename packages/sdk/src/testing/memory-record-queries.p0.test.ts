@@ -64,7 +64,8 @@ test("memory queries support typed predicates, selected fields, aggregates and s
     { value: null, count: 1 },
   ]);
   expect((await records.readMany(["a", "unknown", "a"])).map((record) => record.exists)).toEqual([true, false, true]);
-  await expect(records.query({ index: "values", limit: 101 })).rejects.toThrow("100");
+  await expect(records.query({ index: "values", limit: 501 })).rejects.toThrow("500");
+  expect((await records.query({ index: "values", limit: 500 })).records).toHaveLength(4);
   await expect(records.query({ index: "values", where: { field: "rank", op: "eq", value: "2" } })).rejects.toThrow(
     "number",
   );

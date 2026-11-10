@@ -6,6 +6,7 @@ import {
   type StoragePredicate,
   type StorageRecordIndex,
   type StorageRecordQuery,
+  storageLimits,
 } from "pstdio-sync-contracts";
 
 export const fieldValue = (value: Json, path: string[]) => {
@@ -204,9 +205,9 @@ export interface QueryCursor {
 export const encodeQueryCursor = (cursor: QueryCursor) => btoa(unescape(encodeURIComponent(JSON.stringify(cursor))));
 
 const queryWindow = (query: StorageRecordQuery, revision: string) => {
-  const limit = query.limit ?? 100;
-  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100)
-    throw new Error("Query limit must be between 1 and 100");
+  const limit = query.limit ?? storageLimits.queryDefaultLimit;
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > storageLimits.queryLimit)
+    throw new Error(`Query limit must be between 1 and ${storageLimits.queryLimit}`);
   const offset = query.offset ?? 0;
   if (!Number.isSafeInteger(offset) || offset < 0 || (offset > 0 && query.cursor))
     throw new Error("Query offset must be a nonnegative integer without a cursor");

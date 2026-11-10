@@ -37,6 +37,7 @@ export type {
 export {
   accountEvents,
   applyEditingChanges,
+  DEFAULT_COLLECTION_PAGE_SIZE,
   DEFAULT_DATA_TABLE_SETTINGS,
   defineSlot,
   diffEditingState,
@@ -54,6 +55,7 @@ export {
   l10n,
   localContributionIdGrammar,
   localContributionIdPattern,
+  MAX_COLLECTION_PAGE_SIZE,
   normalizeBooleanViewRule,
   packageAsset,
   pagePlaceholderView,

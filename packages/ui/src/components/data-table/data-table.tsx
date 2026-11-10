@@ -38,7 +38,7 @@ const DatasetDataTable = (props: DataTableProps) => {
     columnStats,
     columnRenderers,
     initialPageSize,
-    pageSizeOptions = [10, 20, 30, 50, 100],
+    pageSizeOptions = [10, 20, 30, 50, 100, 200, 500],
     rowActions = [],
     getRowActions,
     enableRowActivation = false,
