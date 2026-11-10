@@ -1,15 +1,17 @@
 import { expect, test } from "bun:test";
 import { ChakraProvider, psTheme } from "@pstdio/ui";
+import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { QuotaGraph } from "./quota-graph";
 
 test("Home graphs an exhausted quota with an accessible value and leaves unknown quotas ungraphed", () => {
   const html = renderToStaticMarkup(
-    <ChakraProvider value={psTheme}>
-      <QuotaGraph
-        loading={false}
-        onRefresh={() => {}}
-        providers={[
+    createElement(ChakraProvider, {
+      value: psTheme,
+      children: createElement(QuotaGraph, {
+        loading: false,
+        onRefresh: () => {},
+        providers: [
           {
             id: "codex",
             label: "Codex",
@@ -25,9 +27,9 @@ test("Home graphs an exhausted quota with an accessible value and leaves unknown
             limits: [],
             message: "Quota unavailable.",
           },
-        ]}
-      />
-    </ChakraProvider>,
+        ],
+      }),
+    }),
   );
   expect(html).toContain('aria-valuenow="0"');
   expect(html).toContain("Codex Weekly remaining quota");
