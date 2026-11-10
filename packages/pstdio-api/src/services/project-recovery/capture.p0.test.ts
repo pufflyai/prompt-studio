@@ -53,7 +53,8 @@ test("folder capture includes hidden, Git, private extension, binary, executable
   await writeFile(join(folder, "node_modules/excluded"), "not part of capture");
   await writeFile(join(root, "outside"), "must not be followed");
   await symlink("../outside", join(folder, "external"));
-  const captured = await captureRecoveryFolder({ root: folder, chunks, firstEnrollment: true });
+  await writeFile(join(folder, ".pstignore"), "node_modules/\n");
+  const captured = await captureRecoveryFolder({ root: folder, chunks });
   const entries = await collect(pages.entries(captured.inventory));
   expect(entries.map((entry) => entry.path)).toEqual(
     expect.arrayContaining([

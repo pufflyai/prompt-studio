@@ -139,6 +139,18 @@ test("a restore keeps the applied .pstignore and leaves excluded paths out", asy
   expect(await readFile(join(absent, "nested/node_modules/package/index.js"), "utf8")).toBe("excluded");
 });
 
+test("a .pstignore with a byte-order mark restores byte for byte and keeps its rules", async () => {
+  const { root, folder, capture, restore } = await fixture();
+  await mkdir(join(folder, "dist"));
+  await writeFile(join(folder, "dist/bundle.js"), "excluded");
+  await writeFile(join(folder, "kept.txt"), "kept");
+  await writeFile(join(folder, ".pstignore"), "\uFEFFdist/\n");
+  const destination = join(root, "restored");
+  await restore(await capture(), destination);
+  expect(await readFile(join(destination, ".pstignore"), "utf8")).toBe("\uFEFFdist/\n");
+  expect((await readdir(destination)).sort()).toEqual([".pstignore", "kept.txt"]);
+});
+
 test("an existing destination is refused without writes, even an empty folder or a link", async () => {
   const { root, folder, capture, restore } = await fixture();
   await writeFile(join(folder, "file"), "copy");

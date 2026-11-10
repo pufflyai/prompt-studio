@@ -1,7 +1,6 @@
 import { dlopen, ptr, toArrayBuffer } from "bun:ffi";
 import { type BigIntStats, constants, fstat, read } from "node:fs";
-import { open, realpath, unlink } from "node:fs/promises";
-import { join } from "node:path";
+import { realpath } from "node:fs/promises";
 import { getSystemErrorName } from "node:util";
 import { supportsNativeRecovery } from "./platform";
 
@@ -27,7 +26,6 @@ export const openRecoverySource = async (selected: string) => {
   const load = () =>
     dlopen(darwin ? "/usr/lib/libSystem.B.dylib" : "libc.so.6", {
       openat: { args: ["int", "ptr", "int"], returns: "int" },
-      linkat: { args: ["int", "ptr", "int", "ptr", "int"], returns: "int" },
       close: { args: ["int"], returns: "int" },
       fdopendir: { args: ["int"], returns: "ptr" },
       readdir: { args: ["ptr"], returns: "ptr" },
@@ -101,24 +99,6 @@ export const openRecoverySource = async (selected: string) => {
       if (ended || !handles.has(fd)) throw new Error("Recovery source handle is closed");
     };
     return {
-      async create(name: string, bytes: Uint8Array, stagingRoot: string) {
-        active();
-        const target = component(name);
-        const temporary = join(stagingRoot, `${crypto.randomUUID()}.policy-pending`);
-        const prepared = await open(temporary, "wx", 0o600);
-        try {
-          await prepared.writeFile(bytes);
-          await prepared.sync();
-          active();
-          // Linking a complete file refuses an existing destination atomically.
-          // EXDEV blocks setup; there is no direct-write fallback.
-          if (native.linkat(darwin ? -2 : -100, ptr(Buffer.from(`${temporary}\0`)), fd, ptr(target), 0) !== 0)
-            throw failure();
-        } finally {
-          await prepared.close();
-          await unlink(temporary);
-        }
-      },
       stat: async () => {
         active();
         return stat(fd);

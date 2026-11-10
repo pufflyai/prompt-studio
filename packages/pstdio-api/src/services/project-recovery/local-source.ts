@@ -34,7 +34,7 @@ const sameCapture = (
   a.rootMode === b.rootMode &&
   JSON.stringify(a.git) === JSON.stringify(b.git);
 
-/** This device's project folder: enrollment, scheduled capture, the durable candidate
+/** This device's project folder: scheduled capture, the durable candidate
  * awaiting acknowledgement and local retention. It runs without a relay connection. */
 export const createLocalRecoverySource = (input: {
   workbenchId: string;
@@ -60,10 +60,20 @@ export const createLocalRecoverySource = (input: {
     `${workspaceId}:${createHash("sha256").update(folder).digest("hex").slice(0, 16)}`;
   const journalFor = (id: string) =>
     openRecoveryJournal({ root: input.root, source: [input.workbenchId, input.accountId, input.deviceId, id] });
+  // Only a folder with a root `.pstignore` is copied. Capture and publication each check it, so a copy
+  // taken before the file was removed never uploads.
+  const optedIn = async (folder: string) => {
+    const opened = await openRecoverySource(folder);
+    try {
+      return (await sourceRecoveryPolicy(opened.root)).text !== null;
+    } finally {
+      opened.close();
+    }
+  };
   const source = async () => {
     const workspace = await input.workspaces.getDefault(input.workbenchId);
     if (!workspace?.root_path || workspace.execution_kind !== "local") return null;
-    // A folder still being provisioned is not the project's folder yet; never seed or read it.
+    // A folder still being provisioned is not the project's folder yet; never read it.
     if (workspace.initializing || workspace.provider_state !== "ready") return null;
     const id = sourceId(workspace.id, workspace.root_path);
     return { id, folder: workspace.root_path, journal: await journalFor(id) };
@@ -90,14 +100,6 @@ export const createLocalRecoverySource = (input: {
     if (!release) throw new Error("Another Prompt Studio process owns this folder's recovery");
     ownership = { id: current.id, release };
   };
-  const cataloged = async (store: RecoveryChunkStore, current: { id: string; folder: string }) => {
-    for (const entry of await input.catalog.list()) {
-      if (entry.deviceId === input.deviceId && entry.sourceId === current.id) return true;
-      const manifest = await readRecoveryManifest(store, entry.root).catch(() => null);
-      if (manifest?.source.folder === current.folder) return true;
-    }
-    return false;
-  };
   // The source the last scan read. A workspace change to another source scans at once.
   let scanned: string | undefined;
   const capture = async (runSignal: AbortSignal) => {
@@ -110,17 +112,10 @@ export const createLocalRecoverySource = (input: {
     scanned = current.id;
     restartWatch(current.folder);
     await own(current);
-    if (!(await current.journal.read()).enrolled) {
-      // A source already in the catalog keeps its applied policy, including deliberate absence.
-      if (!(await cataloged(store, current))) {
-        const opened = await openRecoverySource(current.folder);
-        try {
-          await sourceRecoveryPolicy(opened.root, true, store.directory);
-        } finally {
-          opened.close();
-        }
-      }
-      await current.journal.update({ enrolled: true });
+    // An opted-out folder skips the walk; a capture it no longer wants is dropped.
+    if (!(await optedIn(current.folder))) {
+      await current.journal.update({ candidate: null });
+      return;
     }
     const captured = await captureRecoveryFolder({
       root: current.folder,
@@ -128,6 +123,11 @@ export const createLocalRecoverySource = (input: {
       gitRoots: await gitRoots(),
       signal: runSignal,
     });
+    // The scan reads the policy again: a `.pstignore` removed meanwhile means no copy, not a full one.
+    if (captured.policy === null) {
+      await current.journal.update({ candidate: null });
+      return;
+    }
     const pending = (await current.journal.read()).candidate;
     const previous = pending ?? (await ownRoot(current.id));
     const prior = previous && (await readRecoveryManifest(store, previous).catch(() => null));
@@ -195,6 +195,10 @@ export const createLocalRecoverySource = (input: {
     // A newer capture may replace the candidate during the upload.
     const clear = () =>
       current.journal.update((state) => (state.candidate?.blobId === candidate.blobId ? { candidate: null } : {}));
+    if (!(await optedIn(current.folder))) {
+      await clear();
+      return;
+    }
     let valid = await readRecoveryManifest(store, candidate).then(
       () => true,
       () => false,
@@ -247,11 +251,6 @@ export const createLocalRecoverySource = (input: {
         needsAttention: scheduler.status().failed,
         error: scheduler.status().failed ? lastError : null,
       };
-    },
-    /** A restored folder keeps the policy of its copy, including deliberate absence: its
-     * starter decision is already made before it becomes this device's source. */
-    async enroll(workspaceId: string, folder: string) {
-      await (await journalFor(sourceId(workspaceId, folder))).update({ enrolled: true });
     },
     async close() {
       await scheduler.close();
