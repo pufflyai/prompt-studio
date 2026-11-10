@@ -20,7 +20,8 @@ test("a thousand refreshes produce one active read and one latest follow-up", as
   first.resolve(1);
   await Bun.sleep(0);
   expect(calls).toBe(2);
-  expect(values).toEqual([1, 2]);
+  // The first result became known-stale during the burst.
+  expect(values).toEqual([2]);
   binding.dispose();
   await registry.dispose();
 });

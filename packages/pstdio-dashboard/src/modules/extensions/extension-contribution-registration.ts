@@ -7,6 +7,7 @@ import {
 } from "@pstdio/workbench/extensions";
 import { createElement } from "react";
 import { buildAbsoluteApiUrl, getApiClient } from "@/lib/api";
+import { getDashboardScopedQueries } from "@/lib/scoped-queries";
 import { getRuntimeCollections } from "@/lib/sync/collections";
 import { readLegacySessionChatDraft } from "@/shared/app/legacy-session-chat-draft";
 import { createDashboardChatHost } from "@/shared/chat/native-chat-host";
@@ -14,6 +15,7 @@ import { createDashboardParamFieldRenderer } from "@/shared/command-params/dashb
 import { uploadExtensionCommandFile } from "@/shared/extensions/api";
 import { collectExtensionCommandNotifications } from "@/shared/extensions/command-outcome";
 import {
+  getExtensionPresentationLocale,
   localizeExtensionValue,
   type ResolvedLocalizable,
   type ResolvedWorkbenchExtensionMetadata,
@@ -110,12 +112,16 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
     disposables.push({
       dispose: subscribeToExtensionEventReset((reset) => {
         if (reset.projectId !== undefined && reset.projectId !== input.projectId) return;
-        for (const view of input.metadata.views) input.ctx.views.refreshView(view.id);
+        for (const view of input.metadata.views)
+          if (!reset.extensionId || reset.extensionId === view.extensionId) input.ctx.views.refreshView(view.id, reset);
       }),
     });
     disposables.push(
       registerWorkbenchExtensionContributions({
+        queries: getDashboardScopedQueries(owner),
+        presentationLocale: getExtensionPresentationLocale(),
         chatRendererOwners: input.chatRendererOwners,
+        chatDraftStorageScope: buildAbsoluteApiUrl("/"),
         terminalRendererOwners: input.terminalRendererOwners,
         readLegacySessionDraft: readLegacySessionChatDraft,
         createChatHost: createDashboardChatHost,

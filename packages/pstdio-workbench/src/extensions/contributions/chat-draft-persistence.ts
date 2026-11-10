@@ -8,6 +8,7 @@ interface ChatDraftPersistenceInput {
   key: string;
   load?(): Promise<unknown>;
   save(draft: ChatDraft): Promise<unknown>;
+  captureSave?(): (draft: ChatDraft) => Promise<unknown>;
   storage?: WorkbenchStorageLike;
 }
 
@@ -42,6 +43,18 @@ export const createChatDraftPersistence = (input: ChatDraftPersistenceInput) => 
     }
     return recovery;
   };
+  const saveDraft = async (draft: ChatDraft, execute = input.captureSave?.() ?? input.save) => {
+    const staged = JSON.stringify(draft);
+    const save = writer.saving.then(async () => {
+      if (!current()) throw new Error("The native draft owner was replaced.");
+      await execute(draft);
+      // A completed older save cannot acknowledge typing that followed it.
+      if (storage.getItem(key) === staged) storage.removeItem?.(key);
+    });
+    // Replacement owners share ordering, including writes already in flight.
+    writer.saving = save.catch(() => undefined);
+    await save;
+  };
   return {
     /** Release after the owner's final save settles, retaining no visited-resource registry. */
     dispose() {
@@ -60,17 +73,10 @@ export const createChatDraftPersistence = (input: ChatDraftPersistenceInput) => 
       const raw = JSON.stringify(draft);
       if (storage.getItem(key) !== raw) storage.setItem(key, raw);
     },
-    async saveDraft(draft: ChatDraft) {
-      const staged = JSON.stringify(draft);
-      const save = writer.saving.then(async () => {
-        if (!current()) throw new Error("The native draft owner was replaced.");
-        await input.save(draft);
-        // A completed older save cannot acknowledge typing that followed it.
-        if (storage.getItem(key) === staged) storage.removeItem?.(key);
-      });
-      // Replacement owners share ordering, including writes already in flight.
-      writer.saving = save.catch(() => undefined);
-      await save;
+    saveDraft,
+    captureSaveDraft: () => {
+      const execute = input.captureSave?.() ?? input.save;
+      return (draft: ChatDraft) => saveDraft(draft, execute);
     },
     loadDraft: input.load
       ? async () => {

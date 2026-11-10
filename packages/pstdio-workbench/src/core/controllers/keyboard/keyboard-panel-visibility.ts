@@ -3,13 +3,18 @@ import type { WorkbenchCore } from "../../workbench-core-types";
 
 export const registerKeyboardPanelVisibility = (core: WorkbenchCore) => {
   for (const [region, key, label] of [
-    ["sidenav", "S", "Toggle Sidenav"],
+    ["sidenav", "S", "Toggle navigation sidebar"],
     ["secondary", "B", "Toggle secondary panel"],
     ["side", "E", "Toggle side panel"],
   ] as const) {
     const id = region === "sidenav" ? "workbench.toggleSideBar" : `workbench.keyboard.toggle.${region}`;
     core.commands.registerCommand(
-      { id, label, category: "Panels and tabs", icon: region === "sidenav" ? "PanelLeft" : undefined },
+      {
+        id,
+        label,
+        category: "Layout",
+        icon: { sidenav: "PanelLeft", secondary: "PanelBottom", side: "PanelRight" }[region],
+      },
       {
         isEnabled: () => {
           const policy = core.shell.getPanelPolicy(region);
@@ -24,7 +29,6 @@ export const registerKeyboardPanelVisibility = (core: WorkbenchCore) => {
       keybinding: `Alt+Shift+${key}`,
       allowInInputs: true,
     });
-    if (region === "sidenav")
-      core.layout.registerMenuItem(workbenchCommandPaletteMenuPath, { commandId: id, group: "Workbench" });
+    core.layout.registerMenuItem(workbenchCommandPaletteMenuPath, { commandId: id });
   }
 };

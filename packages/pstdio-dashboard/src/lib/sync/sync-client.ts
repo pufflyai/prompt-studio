@@ -1,5 +1,6 @@
 import { createClient, parseSyncDeleteEvent as parseSdkSyncDeleteEvent, type SyncWriter } from "@pstdio/sdk/client";
 import type { ResourceAnchorChangeEvent, ResourceRemovedEvent } from "@pstdio/sdk/extensions";
+import { queryChangeEnvelopeSchema } from "pstdio-api-contracts/extension-kernel";
 import { apiClientOptions } from "@/lib/api";
 import { publishExtensionEvent, publishExtensionEventReset } from "@/shared/extensions/extension-webview-broadcast";
 import { publishResourceAnchorChange } from "@/shared/extensions/resource-anchor-feed";
@@ -25,10 +26,17 @@ export const createDashboardSyncWriterProvider = (collections = getRuntimeCollec
         const eventId = typeof row.eventId === "string" ? row.eventId : undefined;
         const projectId = typeof row.projectId === "string" ? row.projectId : undefined;
         if (eventId === "pstdio.event.storage-changed") {
-          publishExtensionEventReset({ projectId }, collections);
+          publishExtensionEventReset(
+            { ...(queryChangeEnvelopeSchema.safeParse(row).data ?? {}), projectId },
+            collections,
+          );
           return;
         }
-        if (eventId) publishExtensionEvent({ id: eventId, projectId }, collections);
+        if (eventId)
+          publishExtensionEvent(
+            { ...(queryChangeEnvelopeSchema.safeParse(row).data ?? {}), id: eventId, projectId },
+            collections,
+          );
       },
       remove: () => undefined,
     },

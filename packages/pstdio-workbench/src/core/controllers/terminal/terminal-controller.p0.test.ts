@@ -380,3 +380,56 @@ for (const scope of ["host", "owner", "binding"] as const) {
     expect(terminal.getSession("late")).toBeUndefined();
   });
 }
+
+test("a rejecting terminal kill still releases every adapter subscription, binding and history", async () => {
+  const terminal = createWorkbenchTerminalController();
+  const first = createFakeAdapter("bad");
+  const second = createFakeAdapter("good");
+  let detached = 0;
+  first.adapter.onData = () => () => {
+    detached++;
+  };
+  first.adapter.onTitle = () => () => {
+    detached++;
+  };
+  first.adapter.onExit = () => () => {
+    detached++;
+  };
+  first.adapter.kill = async () => {
+    throw new Error("kill failed");
+  };
+  const adapters = [first, second];
+  terminal.setSessionOpener(async () => adapters.shift()!.adapter);
+  await terminal.open({ request, bindingId: "first", ownerId: "owner" });
+  await terminal.open({ request, bindingId: "second", ownerId: "owner" });
+  first.emitData(new TextEncoder().encode("old"));
+  const failure = await terminal.dispose().catch((error) => error);
+  expect(failure).toBeInstanceOf(Error);
+  expect(detached).toBe(3);
+  expect(second.calls).toEqual(["kill:default"]);
+  expect(terminal.hasOwner("owner")).toBe(false);
+  expect(terminal.listSessions().every((session) => session.status === "killed")).toBe(true);
+  const replay: unknown[] = [];
+  terminal.subscribe("bad", { onData: (value) => replay.push(value) });
+  expect(replay).toEqual([]);
+});
+
+test("a failed ordinary terminal close preserves its live binding for a successful retry", async () => {
+  const terminal = createWorkbenchTerminalController();
+  const fake = createFakeAdapter("retryable");
+  let kills = 0;
+  fake.adapter.kill = async () => {
+    if (++kills === 1) throw new Error("temporary close failure");
+  };
+  terminal.setSessionOpener(async () => fake.adapter);
+  await terminal.open({ request, bindingId: "shell", ownerId: "owner" });
+  await expect(terminal.killBinding("shell", "owner")).rejects.toThrow("temporary");
+  expect(terminal.hasOwner("owner")).toBe(true);
+  expect(terminal.getSession("retryable")?.status).toBe("running");
+  expect(await terminal.open({ request, bindingId: "shell", ownerId: "owner" })).toEqual({ sessionId: "retryable" });
+  await terminal.killBinding("shell", "owner");
+  expect(kills).toBe(2);
+  expect(terminal.hasOwner("owner")).toBe(false);
+  expect(terminal.getSession("retryable")?.status).toBe("killed");
+  await terminal.dispose();
+});

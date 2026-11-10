@@ -16,7 +16,6 @@ const executionNotice = (
 ) => {
   if (execution.kind === "remote" && !execution.available)
     return `${execution.device?.name ?? "This device"} is offline. Reconnect it before sending.`;
-  if (execution.kind === "remote" && !error) return `Working on ${execution.device?.name}.`;
   return error ?? "";
 };
 type SnapshotOptions = { messages?: boolean; queue?: ReturnType<typeof readQueue> };

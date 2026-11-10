@@ -26,8 +26,15 @@ export const createAppAccount = (
     const accountEventsOwner = createStatusEvents({
       status: () => accountService.status(),
       publish: async (_id, status) => {
+        // Account identity is runtime-wide, including when there are no local projects.
+        app.deps.eventBus.emit("extension_events", "set", {
+          id: crypto.randomUUID(),
+          eventId: accountEvents.changed.id,
+        });
         for (const project of await projects.list())
-          fireExtensionEventAsync(app.deps, project.id, accountEvents.changed, status);
+          fireExtensionEventAsync(app.deps, project.id, accountEvents.changed, status, undefined, undefined, {
+            broadcast: false,
+          });
       },
     });
     const syncEvents = createProjectSyncEvents({

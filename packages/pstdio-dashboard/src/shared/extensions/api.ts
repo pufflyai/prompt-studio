@@ -1,12 +1,18 @@
 import type { CommandExecuteRequest } from "@pstdio/sdk/api";
+import type { ScopedQuery } from "@pstdio/sdk/extensions";
 import { getApiClient } from "@/lib/api";
+import { getProjectExtensionQueries } from "./project-extension-queries";
 
-export const getProjectExtensionMetadata = (projectId: string) => getApiClient().extensions.metadata(projectId);
-export const getExtensionContributions = (projectId: string, instanceId: string) =>
-  getApiClient().extensions.contributions(projectId, instanceId);
-export const getMarketplaceExtensionContributions = (projectId: string, installName: string) =>
-  getApiClient().extensions.marketplaceContributions(projectId, installName);
-export const getProjectExtensionAppearance = (projectId: string) => getApiClient().extensions.listAppearance(projectId);
+const readCatalog = async <T>(query: ScopedQuery<T>) => {
+  const stop = query.subscribe(() => {});
+  try {
+    return await query.read();
+  } finally {
+    stop();
+  }
+};
+export const getProjectExtensionMetadata = (projectId: string) =>
+  readCatalog(getProjectExtensionQueries(projectId).metadata);
 export const executeExtensionCommand = (
   projectId: string,
   commandId: string,
@@ -44,9 +50,6 @@ export const getExtensionArtifactImageUrl = (
   path: string,
   webviewId: string,
 ) => getApiClient().extensions.artifacts.imageUrl(projectId, instanceId, mountId, path, webviewId);
-export const listProjectExtensions = (projectId: string) => getApiClient().extensions.listProject(projectId);
-export const installMarketplaceExtension = (projectId: string, installName: string, force = false) =>
-  getApiClient().extensions.install(projectId, { source: { kind: "catalog", name: installName }, force });
 export interface DroppedExtensionFolder {
   name: string;
   force?: boolean;
@@ -54,29 +57,15 @@ export interface DroppedExtensionFolder {
   files: File[];
 }
 
-export const addLocalExtensionFolder = (projectId: string, folder: DroppedExtensionFolder) => {
+export const addLocalExtensionFolder = (projectId: string, folder: DroppedExtensionFolder, client = getApiClient()) => {
   const upload = new FormData();
   upload.append("kind", "upload");
   if (folder.force) upload.append("force", "true");
   upload.append("folderName", folder.name);
   upload.append("installName", folder.name);
   for (const file of folder.files) upload.append("files", file, file.name);
-  return getApiClient().extensions.install(projectId, { upload });
+  return client.extensions.install(projectId, { upload });
 };
-export const setProjectExtensionEnabled = (projectId: string, instanceId: string, enabled: boolean) =>
-  getApiClient().extensions.setEnabled(projectId, instanceId, enabled);
-export const setExtensionAutomationEnabled = (
-  projectId: string,
-  instanceId: string,
-  automationId: string,
-  enabled: boolean,
-) => getApiClient().extensions.setAutomationEnabled(projectId, instanceId, automationId, enabled);
-export const reloadProjectExtension = (projectId: string, instanceId: string) =>
-  getApiClient().extensions.reload(projectId, instanceId);
-export const upgradeProjectExtension = (projectId: string, instanceId: string) =>
-  getApiClient().extensions.upgradeProject(projectId, instanceId);
-export const uninstallProjectExtension = (projectId: string, instanceId: string, deleteUserData = false) =>
-  getApiClient().extensions.uninstall(projectId, instanceId, deleteUserData);
 export const listProjectExtensionSettings = (projectId: string, instanceId: string) =>
   getApiClient().extensions.projectSettings.all(projectId, instanceId);
 export const getProjectExtensionSetting = (projectId: string, instanceId: string, key: string) =>

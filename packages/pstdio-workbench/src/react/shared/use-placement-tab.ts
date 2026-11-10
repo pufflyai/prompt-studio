@@ -16,7 +16,10 @@ export const usePlacementTab = (placement: Placement | undefined, workbench: Wor
   }));
   useEffect(() => {
     const refresh = () => setState({ placement, snapshot: readPlacementTab(placement) });
-    const subscription = placement?.tab?.subscribe?.(refresh);
+    const subscription = placement?.tab?.subscribe?.(
+      refresh,
+      placement && ("instanceId" in placement ? placement : toPanelInstance(placement)),
+    );
     refresh();
     return () => {
       if (typeof subscription === "function") subscription();

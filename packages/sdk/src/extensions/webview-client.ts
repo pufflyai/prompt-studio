@@ -19,6 +19,7 @@ import { createWebviewEventsClient, type WebviewEventsClient } from "./webview-e
 import { createWebviewFilesClient, type WebviewFilesClient } from "./webview-files-client";
 import { createWebviewPageClient, type WebviewPageClient } from "./webview-page-client";
 import { createWebviewPerformanceClient, type WebviewPerformanceClient } from "./webview-performance-client";
+import { createWebviewQueryClient } from "./webview-query";
 import { type CommandStreamOptions, openWebviewCommandStream, type WebviewStreamsClient } from "./webview-streams";
 
 // Command types derive from a record of `defineCommand` values (the extension's
@@ -82,6 +83,7 @@ export type WebviewClient<TCommands, TSettings = undefined> = {
   commands: WebviewCommandsClient<TCommands>;
   streams: WebviewStreamsClient<TCommands>;
   events: WebviewEventsClient;
+  queries: ReturnType<typeof createWebviewQueryClient>;
   settings: WebviewSettingsClient<ClientSettingsMap<TSettings>>;
   account: WebviewAccountClient;
   performance: WebviewPerformanceClient;
@@ -177,6 +179,7 @@ export const createWebviewClient = <TCommands extends object, TSettings = undefi
   };
 
   const events = createWebviewEventsClient(host, extensionId);
+  const editing: WebviewEditingClient = createWebviewEditingClient(host);
   const hostClient: Pick<WebviewClient<TCommands, TSettings>, "navigation" | "placement" | "notify" | "preferences"> = {
     navigation: { open: (target) => host.call("navigation.open", { target }) },
     placement: { close: () => host.call("placement.close", {}) },
@@ -187,8 +190,11 @@ export const createWebviewClient = <TCommands extends object, TSettings = undefi
     },
   };
   return {
+    get queries() {
+      return createWebviewQueryClient(host, extensionId);
+    },
     ...hostClient,
-    editing: createWebviewEditingClient(host),
+    editing,
     files: createWebviewFilesClient(host),
     page: createWebviewPageClient(host),
     artifacts,

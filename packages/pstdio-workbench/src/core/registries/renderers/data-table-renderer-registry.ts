@@ -2,6 +2,7 @@ import type {
   CollectionPage,
   CollectionPageRequest,
   DataTableRendererSettings,
+  QueryChangeEnvelope,
   ViewFilterGroup,
   ViewSort,
 } from "@pstdio/sdk/extensions";
@@ -112,6 +113,9 @@ export interface DataTableRendererSelectionAction {
 
 export interface DataTableRendererContribution {
   queryMode?: "paged";
+  /** Captured host identity; never infer a hidden view's project from current selection. */
+  queryEvents?: readonly string[];
+  queryScope?: Partial<import("@pstdio/sdk/extensions").QueryScope>;
   id: string;
   title: string;
   toolbarActions?: ViewToolbarAction[];
@@ -150,7 +154,7 @@ export interface DataTableRendererStoreState {
   renderers: Record<string, RegisteredDataTableRendererContribution>;
 }
 
-export interface DataTableRendererRefreshEvent {
+export interface DataTableRendererRefreshEvent extends QueryChangeEnvelope {
   dataTableRendererId: string;
 }
 
@@ -164,7 +168,7 @@ export interface DataTableRendererRegistry {
   setDataTableRendererImplementation(implementation: DataTableRendererImplementation): void;
   getDataTableRenderer(id: string): RegisteredDataTableRendererContribution | undefined;
   listDataTableRenderers(): RegisteredDataTableRendererContribution[];
-  refreshDataTableRenderer(id: string): void;
+  refreshDataTableRenderer(id: string, event?: QueryChangeEnvelope): void;
   onDidRefreshDataTableRenderer(listener: (event: DataTableRendererRefreshEvent) => void): Disposable;
 }
 
@@ -215,9 +219,9 @@ export const createDataTableRendererRegistry = (input: {
     listDataTableRenderers() {
       return Object.values(dataTableStore.getState().renderers).sort(byContributionPriority);
     },
-    refreshDataTableRenderer(id) {
+    refreshDataTableRenderer(id, refresh) {
       if (!dataTableStore.getState().renderers[id]) throw new Error(`Data table renderer not registered: ${id}`);
-      const event = { dataTableRendererId: id };
+      const event = { ...refresh, dataTableRendererId: id };
       for (const listener of refreshListeners) listener(event);
     },
     onDidRefreshDataTableRenderer(listener) {

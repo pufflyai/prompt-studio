@@ -185,7 +185,7 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
   };
   const handleParamsChange = (overrides: HarnessParamValues) => {
     const nextParams = changedHarnessParams(overrides, effectiveParamDefaults, settingsMode);
-    if (!preserveSettings) saveRecentHarnessSelection(projectId, { harnessId, params: nextParams });
+    if (!preserveSettings) saveRecentHarnessSelection(projectId, { harnessId, model, params: nextParams });
     onChange(
       serializeParamRecord({
         harnessId,

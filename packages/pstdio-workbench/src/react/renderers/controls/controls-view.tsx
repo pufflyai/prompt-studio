@@ -12,7 +12,6 @@ import {
 import { controlValueSchema, controlValuesSchema } from "pstdio-api-contracts";
 import { useContext, useEffect, useRef, useState } from "react";
 import {
-  getWorkbenchRenderers,
   type RegisteredControlsRendererContribution,
   rendererReadKey,
   type WorkbenchCore,
@@ -25,7 +24,6 @@ import { RendererReadNotice } from "../renderer-read-notice";
 import { usePageParams } from "../use-page-params";
 import { useRendererRead } from "../use-renderer-read";
 import { mergeControlDraft } from "./control-draft";
-import { createControlSaveQueue } from "./control-save-queue";
 import { ControlsFooter, type ControlsFooterProps } from "./controls-footer";
 import { HarnessControl } from "./harness-control";
 
@@ -76,25 +74,18 @@ const WorkbenchControlsForm = (props: WorkbenchControlsViewProps) => {
   const pageParams = usePageParams(workbench, placement);
   const [state, setState] = useState<ControlsViewState>(initialState);
   const [pending, setPending] = useState(false);
-  const saves = useRef(createControlSaveQueue());
   const changes = useRef(0);
   const read = useRendererRead({
     workbench,
     ownerKey: rendererReadKey(placement),
+    sourceId: contribution.id,
+    queryEvents: contribution.queryEvents,
+    queryScope: contribution.queryScope,
+    dependency: { resourceKey: resourceKey(resource), resourceId: resource?.id },
     queryKey: JSON.stringify([contribution.id, resourceKey(resource), pageParams]),
 
     load: (signal) => contribution.executeQuery(resource, signal, pageParams),
-    subscribe: (refresh) => {
-      const subscription = contribution.subscribe?.(refresh);
-      const events = getWorkbenchRenderers(workbench).onDidRefreshControlsRenderer((event) => {
-        if (event.controlsRendererId === contribution.id) refresh();
-      });
-      return () => {
-        if (typeof subscription === "function") subscription();
-        else subscription?.dispose();
-        events.dispose();
-      };
-    },
+    subscribe: contribution.subscribe,
   });
   useEffect(() => {
     if (!read.value) {
@@ -125,19 +116,21 @@ const WorkbenchControlsForm = (props: WorkbenchControlsViewProps) => {
     const revision = ++changes.current;
     if (contribution.updateValue)
       void runUserAction(workbench, "Update value", () =>
-        saves.current(async () => {
-          try {
-            await contribution.updateValue!({ controlId: id, value, values, resource });
-          } finally {
-            setState((previous) => {
-              if (previous.changed[id] !== revision) return previous;
-              const changed = { ...previous.changed };
-              delete changed[id];
-              return { ...previous, changed };
-            });
-            await read.retry();
-          }
-        }),
+        read.mutate(
+          (current) => current,
+          async () => {
+            try {
+              await contribution.updateValue!({ controlId: id, value, values, resource });
+            } finally {
+              setState((previous) => {
+                if (previous.changed[id] !== revision) return previous;
+                const changed = { ...previous.changed };
+                delete changed[id];
+                return { ...previous, changed };
+              });
+            }
+          },
+        ),
       );
     setState((prev) => ({
       ...prev,
@@ -150,14 +143,18 @@ const WorkbenchControlsForm = (props: WorkbenchControlsViewProps) => {
     setPending(true);
     setState((previous) => ({ ...previous, error: undefined }));
     try {
-      if (reset) await contribution.reset?.({ resource });
-      else await contribution.apply?.({ values: state.values, resource });
+      await read.mutate(
+        (current) => current,
+        async () => {
+          if (reset) await contribution.reset?.({ resource });
+          else await contribution.apply?.({ values: state.values, resource });
+        },
+      );
       setState((previous) => ({
         ...previous,
         changed: {},
         values: reset ? controlsValues(contribution.defaultValues, read.value) : previous.values,
       }));
-      await read.retry();
     } catch (error) {
       setState((previous) => ({ ...previous, error: error instanceof Error ? error.message : String(error) }));
       if (settingsPage) throw error;

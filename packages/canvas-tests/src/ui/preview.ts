@@ -6,7 +6,7 @@ export const openCanvasPreview = async (page: Page, id: string, example?: string
   const panel = shell.locator(`[data-canvas-item="${id}"]`);
   await expect(panel.locator("iframe")).toHaveAttribute("data-frame-ready", "true");
   await panel.getByRole("button", { name: /^Select / }).click();
-  // Selecting a frame opens its editor through the normal split-panel motion. Fit only after
+  // Selecting a frame may open its editor through the normal split-panel motion. Fit only after
   // that layout completes; otherwise each geometry read can observe a different camera position.
   await shell.locator("[data-canvas-viewport]").evaluate(async (element) => {
     await Promise.all(

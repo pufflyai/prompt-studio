@@ -41,6 +41,7 @@ const verifyIdentities = (local: ReadonlyMap<string, string>, remote: ReadonlyMa
 export const createOrderedMemoryRecords = (
   assets: ReturnType<typeof createMemoryAssets>,
   declarations: StorageTextDeclaration[] = [],
+  changed?: (recordIds?: readonly string[]) => void,
 ) => {
   let joined = false;
   const localEpoch = `local:${crypto.randomUUID()}`;
@@ -121,6 +122,7 @@ export const createOrderedMemoryRecords = (
       }
       identities.set(operation.operationId, identity);
       await rebuild();
+      changed?.(group.edits.map((edit) => edit.recordId));
       return (await outcome(operation.operationId))!;
     },
     seed: (records: OrderedRecord[]) => {

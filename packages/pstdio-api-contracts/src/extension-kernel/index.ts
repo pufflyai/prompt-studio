@@ -69,6 +69,7 @@ export {
 export { pagePlaceholderView } from "./page-placeholder";
 export * from "./page-resource-codec";
 export * from "./page-url";
+export { type QueryDependency, queryChangeEnvelopeSchema } from "./query-change";
 export { commandRef, eventRef } from "./refs";
 export { resourceKey } from "./resource-key";
 export { serializeCommandError } from "./serialize-error";

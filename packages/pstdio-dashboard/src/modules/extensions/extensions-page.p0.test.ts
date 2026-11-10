@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { createWorkbench } from "@pstdio/workbench";
 import { getDashboardQueryClient } from "@/lib/query-client";
 import { dashboardExtensionsPage } from "@/shared/app/resources";
-import { projectExtensionsQueryKey } from "@/shared/extensions/project-extension-cache";
+import { getProjectExtensionQueries } from "@/shared/extensions/project-extension-queries";
 import { registerExtensionsPage } from "./extensions-page";
 
 const setup = () => {
@@ -82,9 +82,10 @@ test("extension labels refresh only when extension data changes, not when anothe
     expect(stop).toBeDefined();
     client.getQueryCache().build(client, { queryKey: ["unrelated-session-query"] });
     expect(notified).toBe(0);
-    client.setQueryData(projectExtensionsQueryKey("project-1"), { extensions: [], marketplace: [] });
+    const query = getProjectExtensionQueries("project-1").extensions;
+    query.accept({ extensions: [], marketplace: [] });
     expect(notified).toBe(1);
-    client.removeQueries({ queryKey: projectExtensionsQueryKey("project-1") });
+    query.dispose();
     expect(notified).toBe(2);
   } finally {
     if (typeof stop === "function") stop();

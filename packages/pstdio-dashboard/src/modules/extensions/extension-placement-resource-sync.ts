@@ -1,4 +1,4 @@
-import { resourceKey, viewDataEvents } from "@pstdio/sdk/extensions";
+import { matchesQueryDependency, resourceKey, viewDataEvents } from "@pstdio/sdk/extensions";
 import type { ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
 import {
   subscribeToExtensionEventFeed,
@@ -156,9 +156,10 @@ export const watchExtensionPlacementResources = (ctx: WorkbenchModuleContext, in
       if (resource.extensionId && isResourceRefreshEvent(event.id, resource.extensionId)) void resolve(resource);
     }
   });
-  const unsubscribeReset = subscribeToExtensionEventReset(() => {
+  const unsubscribeReset = subscribeToExtensionEventReset((event) => {
     for (const resource of new Map(resources().map((resource) => [referenceKey(resource), resource])).values())
-      void resolve(resource);
+      if (matchesQueryDependency(event, { projectId: input.projectId, extensionId: resource.extensionId }))
+        void resolve(resource);
   });
   return {
     dispose() {

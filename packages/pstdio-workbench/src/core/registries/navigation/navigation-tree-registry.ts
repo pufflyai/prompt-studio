@@ -1,111 +1,26 @@
 import { createDisposable, type Disposable } from "../../shared/disposable";
-import type { TreeNode, TreeViewSection } from "../renderers/tree-renderer-registry";
-import type { ResourceRef } from "../resources/resource-registry";
+import { createWorkbenchStore } from "../../shared/store/workbench-store";
+import { runWorkbenchEffect } from "../../shared/workbench-effect";
+import type { TreeViewSection } from "../renderers/tree-renderer-registry";
 import { settleReadBatch } from "../views/settle-read-batch";
-import type { NavigationTarget } from "./navigation-registry";
 import { stableNavigationValue } from "./navigation-target-key";
-import {
-  getNavigationTreeNodeSource,
-  setNavigationTreeNodeSource,
-  setNavigationTreeSectionResource,
-} from "./navigation-tree-node-source";
-import { mergeNavigationTreeSection, projectNavigationTreePage } from "./navigation-tree-pages";
+import { getNavigationTreeNodeSource } from "./navigation-tree-node-source";
+import { mergeNavigationTreeSection } from "./navigation-tree-pages";
+import { createNavigationTreeProjection, ownerId, scopedId } from "./navigation-tree-projection";
 import { createNavigationTreeSnapshots } from "./navigation-tree-snapshots";
 
-export interface DeclaredNavigationAction {
-  label: string;
-  action: NavigationTarget;
-  category?: string;
-}
+export type * from "./navigation-tree-types";
 
-export type NavigationTreeSlot = "header" | "content" | "footer";
+import type {
+  CreateNavigationTreeRegistryInput,
+  NavigationTreeContext,
+  NavigationTreeContribution,
+  NavigationTreeOwner,
+  NavigationTreeRegistry,
+  NavigationTreeSlot,
+} from "./navigation-tree-types";
 
-export interface NavigationTreeOwner {
-  kind: "mode" | "page";
-  id: string;
-  extensionId: string;
-}
-
-export interface NavigationTreeContext {
-  projectId?: string;
-  resource?: ResourceRef;
-  signal?: AbortSignal;
-  onProgress?(sections: TreeViewSection[]): void;
-}
-
-export interface NavigationTreeMoveContext extends NavigationTreeContext {
-  position?: "before" | "after" | "inside";
-}
-
-export interface NavigationTreeContribution {
-  id: string;
-  /** Prefix projected section and node ids when they come from an independent tree renderer. */
-  idScope?: string;
-  owner: NavigationTreeOwner;
-  sourceExtensionId: string;
-  declarationIndex: number;
-  slot?: NavigationTreeSlot;
-  viewId?: string;
-  defaultExpandedSectionIds?: string[];
-  /** Resolve the data resource independently of the selected navigation item. */
-  resolveResource?(resource: ResourceRef | undefined): ResourceRef | undefined;
-  getStructure?(context: NavigationTreeContext): TreeViewSection[];
-  getSections?(context: NavigationTreeContext): Promise<TreeViewSection[]> | TreeViewSection[];
-  getChildren?(node: TreeNode, context: NavigationTreeContext): Promise<TreeNode[]> | TreeNode[];
-  /** Authored actions for discovery, independent of tree data and visibility context. */
-  listActions?(): DeclaredNavigationAction[];
-}
-
-export interface CreateNavigationTreeRegistryInput {
-  subscribeViewRefresh?(viewId: string, listener: () => void): Disposable;
-  getViewDefaultExpandedSectionIds?(viewId: string): readonly string[] | undefined;
-  getViewDefaultExpandedNodeIds?(viewId: string): readonly string[] | undefined;
-  getViewSections?(viewId: string, context: NavigationTreeContext): Promise<TreeViewSection[]> | TreeViewSection[];
-  getViewStructure?(viewId: string, context: NavigationTreeContext): TreeViewSection[];
-  getViewChildren?(viewId: string, node: TreeNode, context: NavigationTreeContext): Promise<TreeNode[]> | TreeNode[];
-  moveViewNode?(
-    viewId: string,
-    source: TreeNode,
-    target: TreeNode | undefined,
-    context: NavigationTreeMoveContext,
-  ): Promise<void> | void;
-}
-
-export interface NavigationTreeRegistry {
-  listActions(): (DeclaredNavigationAction & { ownerId: string })[];
-  registerContribution(contribution: NavigationTreeContribution): Disposable;
-  resolveOwner(
-    kind: NavigationTreeOwner["kind"],
-    id: string,
-    slot?: NavigationTreeSlot,
-  ): NavigationTreeOwner | undefined;
-  getReadKey(owner: NavigationTreeOwner, context?: NavigationTreeContext): string;
-  getStructure(
-    owner: NavigationTreeOwner,
-    slot?: NavigationTreeSlot,
-    context?: NavigationTreeContext,
-  ): TreeViewSection[];
-  getSections(
-    owner: NavigationTreeOwner,
-    slot?: NavigationTreeSlot,
-    context?: NavigationTreeContext,
-  ): Promise<TreeViewSection[]>;
-  getChildren(node: TreeNode, context?: NavigationTreeContext): Promise<TreeNode[]>;
-  moveNode(source: TreeNode, target: TreeNode | undefined, context?: NavigationTreeMoveContext): Promise<void>;
-  getDefaultExpandedSectionIds(owner: NavigationTreeOwner, slot?: NavigationTreeSlot): string[];
-  getDefaultExpandedNodeIds(owner: NavigationTreeOwner, slot?: NavigationTreeSlot): string[];
-  /** Counts contributions registered and removed, unlike `onDidChange`, which also fires on refreshes. */
-  getRegistrationRevision(): number;
-  onDidChange(listener: () => void): Disposable;
-}
-
-// The owner's top-level section. Extensions add ungrouped entries here and use a labeled section for a named group.
-export const navigationRootSectionId = "navigation.root";
-// Each slot keeps its own root, so pinned header and footer rows never share a section id with the body.
-export const navigationSlotRootSectionId = (slot: NavigationTreeSlot = "content") =>
-  slot === "content" ? navigationRootSectionId : `navigation.${slot}`;
-
-const ownerId = (owner: NavigationTreeOwner) => `${owner.kind}:${owner.extensionId}:${owner.id}`;
+export { navigationRootSectionId, navigationSlotRootSectionId } from "./navigation-tree-projection";
 
 const ownersEqual = (left: NavigationTreeOwner, right: NavigationTreeOwner) => ownerId(left) === ownerId(right);
 
@@ -121,21 +36,26 @@ const contributionOrder =
     return left.declarationIndex - right.declarationIndex || left.id.localeCompare(right.id);
   };
 
-const scopedId = (scope: string | undefined, id: string) => (scope ? `${scope}:${id}` : id);
-
 const readContext = (contribution: NavigationTreeContribution, context: NavigationTreeContext) => ({
   ...context,
+  projectId: context.projectId ?? context.resource?.projectId,
   resource: contribution.resolveResource ? contribution.resolveResource(context.resource) : context.resource,
 });
 
 export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistryInput = {}): NavigationTreeRegistry => {
   const contributions = new Map<string, NavigationTreeContribution>();
   const registryToken = {};
-  const snapshots = createNavigationTreeSnapshots();
-  const listeners = new Set<() => void>();
+  const snapshots = createNavigationTreeSnapshots(input.queries, Boolean(input.subscribeViewRefresh));
+  const observation = createWorkbenchStore({ name: "workbench.navigationTrees", initialState: { revision: 0 } });
+  const registrations = new Map<string, Disposable>();
+  let disposed = false;
   let registrationRevision = 0;
   const emit = () => {
-    for (const listener of listeners) listener();
+    if (!disposed) observation.setState({ revision: observation.getState().revision + 1 });
+  };
+  const assertCurrent = (contribution: NavigationTreeContribution) => {
+    if (disposed || contributions.get(contribution.id) !== contribution)
+      throw new DOMException("Navigation provider is retired", "AbortError");
   };
 
   const matching = (owner: NavigationTreeOwner, slot: NavigationTreeSlot) =>
@@ -143,52 +63,7 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
       .filter((contribution) => ownersEqual(contribution.owner, owner) && (contribution.slot ?? "content") === slot)
       .sort(contributionOrder(owner));
 
-  const projectNode = (
-    node: TreeNode,
-    contribution: NavigationTreeContribution,
-    moveScope: string,
-    resource?: ResourceRef,
-  ): TreeNode => {
-    const projected: TreeNode = {
-      ...node,
-      id: scopedId(contribution.idScope, node.id),
-      moveScope,
-      // Mode rows are navigation links users may hide and arrange; page-owned level rows are data such as notes
-      // or sessions, which keep the order their owner gives them unless a row opts in.
-      canHide: node.canHide ?? contribution.owner.kind === "mode",
-      canReorder: node.canReorder ?? contribution.owner.kind === "mode",
-      children: node.children?.map((child) => projectNode(child, contribution, moveScope, resource)),
-      nextPage: projectNavigationTreePage(node.nextPage, (child) =>
-        projectNode(child, contribution, moveScope, resource),
-      ),
-    };
-    setNavigationTreeNodeSource(projected, { contribution, node, resource, registryToken });
-    return projected;
-  };
-
-  const projectSection = (
-    section: TreeViewSection,
-    contribution: NavigationTreeContribution,
-    owner: NavigationTreeOwner,
-    resource?: ResourceRef,
-  ): TreeViewSection => {
-    const projected: TreeViewSection = {
-      ...section,
-      id:
-        contribution.sourceExtensionId !== owner.extensionId && !section.label
-          ? navigationSlotRootSectionId(contribution.slot)
-          : scopedId(contribution.idScope, section.id),
-      moveScope: ownerId(owner),
-      canHide: section.canHide ?? true,
-      canReorder: section.canReorder ?? true,
-      nodes: section.nodes.map((node) => projectNode(node, contribution, ownerId(owner), resource)),
-      nextPage: projectNavigationTreePage(section.nextPage, (node) =>
-        projectNode(node, contribution, ownerId(owner), resource),
-      ),
-    };
-    setNavigationTreeSectionResource(projected, resource);
-    return projected;
-  };
+  const { projectNode, projectSection } = createNavigationTreeProjection(registryToken, assertCurrent);
 
   const structureOf = (
     contribution: NavigationTreeContribution,
@@ -197,9 +72,9 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
   ) => {
     const query = readContext(contribution, context);
     const structure =
-      snapshots.get(contribution.id, query) ??
+      snapshots.get(contribution, query) ??
       (contribution.viewId ? input.getViewStructure?.(contribution.viewId, query) : contribution.getStructure?.(query));
-    return (structure ?? []).map((section) => projectSection(section, contribution, owner, query.resource));
+    return (structure ?? []).map((section) => projectSection(section, contribution, owner, query));
   };
 
   const mergeSections = (groups: TreeViewSection[][]) => {
@@ -209,27 +84,51 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
   };
 
   return {
+    dispose() {
+      if (disposed) return;
+      disposed = true;
+      observation.dispose();
+      for (const registration of [...registrations.values()].reverse())
+        runWorkbenchEffect("navigation contribution disposal", () => registration.dispose());
+      registrations.clear();
+      snapshots.dispose();
+    },
     registerContribution(contribution) {
+      if (disposed) throw new Error("Navigation registry is disposed");
       if (contributions.has(contribution.id)) {
         throw new Error(`Navigation tree contribution already registered: ${contribution.id}`);
       }
       if (!contribution.viewId && !contribution.getSections) {
         throw new Error(`Navigation tree contribution must declare a viewId or getSections: ${contribution.id}`);
       }
+      contribution = { ...contribution };
       contributions.set(contribution.id, contribution);
       registrationRevision += 1;
-      const refreshSubscription = contribution.viewId
-        ? input.subscribeViewRefresh?.(contribution.viewId, emit)
-        : undefined;
-      emit();
-      return createDisposable(() => {
+      let refreshSubscription: Disposable | undefined;
+      const registration = createDisposable(() => {
         if (contributions.get(contribution.id) !== contribution) return;
-        refreshSubscription?.dispose();
         contributions.delete(contribution.id);
-        snapshots.delete(contribution.id);
+        registrations.delete(contribution.id);
+        snapshots.delete(contribution);
+        runWorkbenchEffect("navigation refresh subscription disposal", () => refreshSubscription?.dispose());
         registrationRevision += 1;
         emit();
       });
+      registrations.set(contribution.id, registration);
+      try {
+        if (contribution.viewId)
+          refreshSubscription = input.subscribeViewRefresh?.(contribution.viewId, (event) => {
+            if (disposed || contributions.get(contribution.id) !== contribution) return;
+            snapshots.invalidate(contribution, event);
+            emit();
+          });
+      } catch (error) {
+        registration.dispose();
+        throw error;
+      }
+      if (contributions.get(contribution.id) !== contribution) refreshSubscription?.dispose();
+      emit();
+      return registration;
     },
 
     resolveOwner(kind, id, slot) {
@@ -259,25 +158,32 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
       const selected = matching(owner, slot);
       // Each contribution shows its declared structure until its own read replaces it.
       const available = selected.map((contribution) => structureOf(contribution, owner, context));
-      const reads = selected.map((contribution) =>
-        snapshots.begin(contribution.id, readContext(contribution, context)),
-      );
       const snapshot = () => mergeSections(available);
       await settleReadBatch(
         selected.map((contribution, index) => async (signal) => {
           const query = readContext(contribution, { ...context, signal });
-          const publish = (sections: TreeViewSection[], complete = false) => {
+          assertCurrent(contribution);
+          const publish = (sections: TreeViewSection[]) => {
             signal.throwIfAborted();
-            if (!complete && reads[index]!.sections !== undefined) return;
-            if (complete) reads[index]!.complete(sections);
-            available[index] = sections.map((section) => projectSection(section, contribution, owner, query.resource));
+            assertCurrent(contribution);
+            available[index] = sections.map((section) => projectSection(section, contribution, owner, query));
             context.onProgress?.(snapshot());
           };
-          const source = { ...query, onProgress: publish };
-          const sections = contribution.viewId
-            ? await input.getViewSections?.(contribution.viewId, source)
-            : await contribution.getSections?.(source);
-          publish(sections ?? [], true);
+          const sections = await snapshots.readSections(
+            contribution,
+            query,
+            async (signal, progress) => {
+              assertCurrent(contribution);
+              const source = { ...query, signal, onProgress: progress };
+              return (
+                (contribution.viewId
+                  ? await input.getViewSections?.(contribution.viewId, source)
+                  : await contribution.getSections?.(source)) ?? []
+              );
+            },
+            publish,
+          );
+          publish(sections);
         }),
         context.signal,
       );
@@ -288,23 +194,39 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
       context.signal?.throwIfAborted();
       const source = getNavigationTreeNodeSource(node, registryToken);
       if (!source) return node.children ?? [];
+      assertCurrent(source.contribution);
+      const projectId = source.projectId ?? source.resource?.projectId ?? context.projectId;
+      if (context.projectId && projectId && context.projectId !== projectId)
+        throw new DOMException("Navigation node belongs to another project", "AbortError");
       const moveScope = node.moveScope ?? ownerId(source.contribution.owner);
-      const query = { ...context, resource: source.resource };
-      const children = source.contribution.viewId
-        ? await input.getViewChildren?.(source.contribution.viewId, source.node, query)
-        : await source.contribution.getChildren?.(source.node, query);
-      if (!children) return node.children ?? [];
-      return children.map((child) => projectNode(child, source.contribution, moveScope, source.resource));
+      const query = { ...context, resource: source.resource, projectId };
+      const children = await snapshots.readChildren(source.contribution, source.node, query, async (signal) => {
+        assertCurrent(source.contribution);
+        const context = { ...query, signal };
+        const children = source.contribution.viewId
+          ? await input.getViewChildren?.(source.contribution.viewId, source.node, context)
+          : await source.contribution.getChildren?.(source.node, context);
+        signal.throwIfAborted();
+        assertCurrent(source.contribution);
+        return children ?? source.node.children ?? [];
+      });
+      return children.map((child) => projectNode(child, source.contribution, moveScope, query));
     },
 
     async moveNode(sourceNode, targetNode, context = {}) {
       const source = getNavigationTreeNodeSource(sourceNode, registryToken);
       const target = targetNode ? getNavigationTreeNodeSource(targetNode, registryToken) : undefined;
       if (!source?.contribution.viewId || !source.node.canDrag) return;
+      assertCurrent(source.contribution);
+      if (context.projectId && source.projectId && context.projectId !== source.projectId)
+        throw new DOMException("Navigation node belongs to another project", "AbortError");
       if (targetNode && (!target || source.contribution !== target.contribution || !target.node.canDrop)) return;
+      if (target && source.projectId !== target.projectId)
+        throw new DOMException("Navigation target belongs to another project", "AbortError");
       await input.moveViewNode?.(source.contribution.viewId, source.node, target?.node, {
         ...context,
         resource: source.resource,
+        projectId: source.projectId ?? context.projectId,
       });
     },
 
@@ -334,8 +256,7 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
 
     getRegistrationRevision: () => registrationRevision,
     onDidChange(listener) {
-      listeners.add(listener);
-      return createDisposable(() => listeners.delete(listener));
+      return createDisposable(observation.subscribeSelector((state) => state.revision, listener));
     },
     listActions() {
       return [...contributions.values()].flatMap((contribution) =>

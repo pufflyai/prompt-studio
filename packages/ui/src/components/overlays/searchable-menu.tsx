@@ -74,6 +74,7 @@ interface SearchableMenuProps<T extends SearchableMenuItem> {
   portalContainer?: PortalProps["container"];
   parentList?: SearchableMenuParentList<T>;
   multiple?: boolean;
+  fixedHeight?: boolean;
 }
 
 export const filterSearchableMenuItems = <T extends SearchableMenuItem>(items: T[], query: string) => {
@@ -118,6 +119,9 @@ export const resolveActiveListConfig = <T extends SearchableMenuItem>(
   };
 };
 
+const menuSizing = (fixed: boolean, maxHeight: string) =>
+  fixed ? { content: { h: "harness-menu" }, list: { flex: "1" } } : { content: {}, list: { maxH: maxHeight } };
+
 export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMenuProps<T>) => {
   const {
     trigger,
@@ -141,6 +145,7 @@ export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMe
     portalContainer,
     parentList,
     multiple = false,
+    fixedHeight = false,
   } = props;
   const hasParentList = Boolean(parentList);
   const [internalOpen, setInternalOpen] = useState(false);
@@ -163,6 +168,7 @@ export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMe
 
   const config = resolveActiveListConfig(isShowingParent, parentList, childConfig);
   const filteredItems = config.filterItems(config.items, query);
+  const sizing = menuSizing(fixedHeight, maxListHeight);
   const previousListIdRef = useRef(config.listId);
 
   useEffect(() => {
@@ -257,12 +263,24 @@ export const SearchableMenu = <T extends SearchableMenuItem>(props: SearchableMe
 
   const menuPositioner = (
     <Menu.Positioner>
-      <Menu.Content w={width} minW="0" maxW="var(--available-width)" bg="bg" gap="0" p="0">
+      <Menu.Content
+        w={width}
+        minW="0"
+        maxW="var(--available-width)"
+        {...sizing.content}
+        maxH="var(--available-height)"
+        display="flex"
+        flexDirection="column"
+        bg="bg"
+        gap="0"
+        p="0"
+      >
         {resolvedHeader}
         {searchInput}
         {shouldShowSeparator ? <Menu.Separator margin="0" /> : null}
         <ScrollArea
-          maxH={maxListHeight}
+          {...sizing.list}
+          minH="0"
           data-testid={config.contentTestId}
           viewportProps={{ overscrollBehavior: "contain" }}
           p="0"

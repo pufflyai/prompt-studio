@@ -79,3 +79,6 @@ export const isPackagedRuntime = () => {
     return false;
   }
 };
+
+export { acquireFileMutationLock, withFileMutationLock } from "./file-mutation-lock";
+export { isProcessAlive } from "./process-liveness";

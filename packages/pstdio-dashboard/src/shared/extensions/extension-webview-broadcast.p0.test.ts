@@ -74,3 +74,19 @@ describe("extension event feed", () => {
     dispose();
   });
 });
+
+test("an explicit change scope replaces the initiating resource hint", () => {
+  const events: unknown[] = [];
+  const stop = subscribeToExtensionEventFeed((event) => events.push(event));
+  publishExtensionCommandEvent(
+    {
+      commandId: "move",
+      extensionId: "example",
+      outcome: { ok: true, status: "success", value: null },
+      events: [{ id: "changed", resourceIds: ["destination"] }],
+    },
+    { projectId: "project", resourceKey: "initiator" },
+  );
+  expect(events).toEqual([{ id: "changed", projectId: "project", resourceIds: ["destination"] }]);
+  stop();
+});

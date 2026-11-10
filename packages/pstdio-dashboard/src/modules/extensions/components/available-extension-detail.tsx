@@ -1,6 +1,6 @@
 import { Button, Flex, HStack, Spinner, Stack, Tabs, Text } from "@chakra-ui/react";
 import type { MarketplaceExtension } from "@pstdio/sdk/api";
-import { ArrowLeft, Blocks, Download } from "lucide-react";
+import { Blocks, Download } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { PageContentLayout } from "@/shared/components/page-content-layout";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
@@ -14,12 +14,11 @@ interface AvailableExtensionDetailProps {
   contributionsError?: string;
   loadingContributions: boolean;
   installing: boolean;
-  onBack: () => void;
   onInstall: () => void;
 }
 
 export const AvailableExtensionDetail = (props: AvailableExtensionDetailProps) => {
-  const { extension, metadata, contributionsError, loadingContributions, installing, onBack, onInstall } = props;
+  const { extension, metadata, contributionsError, loadingContributions, installing, onInstall } = props;
   const { t } = useTranslation("projects");
   const extensionId =
     extension.extensionId ?? metadata?.extensions[0]?.id ?? extension.registry?.extensionId ?? extension.installName;
@@ -34,13 +33,6 @@ export const AvailableExtensionDetail = (props: AvailableExtensionDetailProps) =
         header={
           <Stack gap="md">
             <Stack gap="md" paddingX="lg" paddingTop="lg">
-              <HStack>
-                <Button variant="ghost" size="2xs" onClick={onBack} data-testid="extension-detail-back">
-                  <ArrowLeft size={12} />
-                  {t("projectSettings.extensionsPanel.detail.back")}
-                </Button>
-              </HStack>
-
               <HStack gap="md" alignItems="center">
                 <Flex
                   alignItems="center"

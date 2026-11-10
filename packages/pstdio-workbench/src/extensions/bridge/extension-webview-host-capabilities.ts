@@ -92,11 +92,12 @@ const commandStreaming = (adapters: ExtensionWebviewHostAdapters) => {
 };
 
 const editingSession = (adapters: ExtensionWebviewHostAdapters) => {
-  const { editing, executeCommand } = adapters;
+  const { editing } = adapters;
+  const executeCommand = adapters.executeEditingCommand ?? adapters.executeCommand;
   if (!editing || !executeCommand) return;
   return (request: WebviewHostCapabilityParams["editing.session"]) =>
-    editing.request(request, async (input) => {
-      const response = commandResponse.parse(await executeCommand(input));
+    editing.request(request, async (input, signal) => {
+      const response = commandResponse.parse(await executeCommand(input, signal));
       return getCommandValue(response.outcome);
     });
 };

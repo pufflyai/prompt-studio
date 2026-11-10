@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { resolveSynchronizedModel } from "../agents/agent-model-selection";
 import {
   createMemoryRecentHarnessStorage,
   readRecentHarnessSelection,
@@ -8,6 +9,26 @@ import {
 } from "./recent-harness-param";
 
 describe("recent harness params", () => {
+  test("does not restore a model after the loaded catalog clears the current selection", () => {
+    const recent = { harnessId: "codex", model: "retired" };
+    let current = { harnessId: "codex", model: "retired" };
+    const changes: string[] = [];
+    for (let render = 0; render < 3; render++) {
+      const initial = resolveInitialHarnessSelection({ current, recent, defaultAgent: "codex" });
+      if (initial.model !== current.model) changes.push(initial.model);
+      const synchronized = resolveSynchronizedModel({
+        currentAgent: initial.harnessId,
+        currentModel: initial.model,
+        modelsQuery: { isPending: false, data: [] },
+        modelHistory: [],
+      });
+      if (synchronized !== undefined && synchronized !== initial.model) changes.push(synchronized);
+      current = { harnessId: initial.harnessId, model: synchronized ?? initial.model };
+    }
+    expect(current).toEqual({ harnessId: "codex", model: "" });
+    expect(changes).toEqual([""]);
+  });
+
   test("restores explicit harness parameters after reopening the project", () => {
     const storage = createMemoryRecentHarnessStorage();
     const selection = { harnessId: "codex", model: "gpt-5", params: { model_reasoning_effort: "high" } };
@@ -33,14 +54,14 @@ describe("recent harness params", () => {
 
     expect(
       resolveInitialHarnessSelection({
-        current: { harnessId: "opencode", model: "" },
-        recent,
+        current: { harnessId: "", model: "" },
+        recent: { ...recent!, harnessId: "opencode" },
         defaultAgent: "codex",
       }),
     ).toEqual({ harnessId: "opencode", model: "openai/gpt-5.5" });
   });
 
-  test("restores a saved setup for an explicitly selected harness", () => {
+  test("restores a saved setup when initializing the last-used harness", () => {
     const storage = createMemoryRecentHarnessStorage();
     saveRecentHarnessSelection(
       "project-a",
@@ -51,8 +72,8 @@ describe("recent harness params", () => {
 
     expect(
       resolveInitialHarnessSelection({
-        current: { harnessId: "opencode", model: "" },
-        recent: readRecentHarnessSelection("project-a", storage),
+        current: { harnessId: "", model: "" },
+        recent: { ...readRecentHarnessSelection("project-a", storage)!, harnessId: "opencode" },
         defaultAgent: "codex",
       }),
     ).toEqual({ harnessId: "opencode", model: "openai/gpt-5.5", params: { variant: "high" } });

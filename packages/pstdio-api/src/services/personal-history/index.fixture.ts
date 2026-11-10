@@ -1,5 +1,7 @@
 import type { PersonalIndexDelta } from "pstdio-db";
 import type { StorageOwner } from "pstdio-sync";
+import { createMemoryLogStore, type LogDirectoryEntry } from "pstdio-sync/logs";
+import type { Json, StorageLogDefinition } from "pstdio-sync-contracts";
 import type { PersonalHistoryInput } from "./store";
 
 /** Small isolated store/identity tests; SQL and encrypted transport have separate integration coverage. */
@@ -84,9 +86,34 @@ export const memoryPersonalIndexFixture = () => {
       migrated.add(key(owner));
     },
   } satisfies PersonalHistoryInput["index"];
+  const streams = new Map<string, ReturnType<typeof createMemoryLogStore>["store"]>();
+  const stream = (owner: StorageOwner, entry: LogDirectoryEntry) => {
+    const address = JSON.stringify([owner, entry.name, entry.scope, entry.stream]);
+    let store = streams.get(address);
+    if (!store) {
+      store = createMemoryLogStore({ address, writerId: "device-a", keep: entry.keep }).store;
+      streams.set(address, store);
+    }
+    return store;
+  };
   const logs = {
-    appendMany: async (_owner: StorageOwner, _definition: unknown, _scope: string, values: unknown[]) =>
-      values.map((value) => ({ id: crypto.randomUUID(), value })),
+    appendMany: async (owner: StorageOwner, definition: StorageLogDefinition, scope: string, values: Json[]) => {
+      const target = stream(owner, {
+        ...definition,
+        writer: definition.writer ?? "project",
+        scope,
+        stream: definition.writer === "device" ? "device-a" : "project",
+      });
+      return Promise.all(values.map((value) => target.append(value)));
+    },
+    stream: async (owner: StorageOwner, entry: LogDirectoryEntry) => {
+      const target = stream(owner, entry);
+      return {
+        ...target,
+        appendMany: (values: { id?: string; value: Json }[]) =>
+          Promise.all(values.map(({ id, value }) => target.append(value, { id }))),
+      };
+    },
     pending: async () => false,
     writerId: async () => "device-a",
     open: () => ({ append: async () => ({}), read: async () => ({ entries: [], cursor: "empty", more: false }) }),

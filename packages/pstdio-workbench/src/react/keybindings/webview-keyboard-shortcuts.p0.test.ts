@@ -4,7 +4,7 @@ import { createWebviewKeyboardShortcuts } from "./webview-keyboard-shortcuts";
 import { createWorkbenchHotkeyRegistrations } from "./workbench-hotkey-registrations";
 
 test.each([
-  { keybinding: "Alt+J", allowInInputs: false },
+  { keybinding: "J", layer: "current" as const },
   { keybinding: ["Alt+J", "K"] as string[], allowInInputs: true },
 ])("webview profiles do not inspect shortcuts they cannot relay: %j", (binding) => {
   const workbench = createWorkbench();
@@ -128,7 +128,7 @@ test("scoped direct bindings resolve availability against every visible target",
   expect(changed).toBe("B");
 });
 
-test("only explicitly global bindings are negotiated for editable webviews", async () => {
+test("direct webview bindings preserve editable ownership while global chords remain available", async () => {
   const workbench = createWorkbench();
   let calls = 0;
   workbench.commands.registerCommand(
@@ -141,18 +141,24 @@ test("only explicitly global bindings are negotiated for editable webviews", asy
   );
   workbench.keybindings.registerKeybinding({
     action: { kind: "command", commandId: "keyboard.open" },
-    keybinding: "Alt+Shift+K",
+    keybinding: "Alt+Shift+J",
     allowInInputs: true,
   });
   workbench.keybindings.registerKeybinding({
     action: { kind: "command", commandId: "keyboard.open" },
     keybinding: "Mod+K",
   });
-  const bridge = createWebviewKeyboardShortcuts(workbench);
-  const shortcut = bridge.shortcuts.find((shortcut) => shortcut.key === "K")!;
-  expect(shortcut).toMatchObject({ key: "K", altKey: true, shiftKey: true });
+  const bridge = createWebviewKeyboardShortcuts(workbench, ["keyboard.open"]);
+  const shortcut = bridge.shortcuts.find((shortcut) => shortcut.key === "J" && shortcut.altKey)!;
+  expect(shortcut).toMatchObject({ key: "J", altKey: true, shiftKey: true });
   await bridge.dispatch({ id: shortcut.id, repeat: false });
   expect(calls).toBe(1);
+  const local = bridge.shortcuts.find((shortcut) => shortcut.key === "K" && !shortcut.altKey)!;
+  expect(local).toMatchObject({ ignoreInputs: true });
+  await bridge.dispatch({ id: local.id, repeat: false, inputFocus: true });
+  expect(calls).toBe(1);
+  await bridge.dispatch({ id: local.id, repeat: false });
+  expect(calls).toBe(2);
 });
 
 test("disposed or rebound chords cannot execute stale requests", async () => {
@@ -198,7 +204,7 @@ test("repeat cannot enter a global shortcut twice", async () => {
   expect(calls).toBe(0);
 });
 
-test("only chords that hold Alt, Ctrl or Cmd are offered while typing", () => {
+test("a plain direct chord remains restricted to noneditable content", () => {
   const workbench = createWorkbench();
   workbench.commands.registerCommand({ id: "plain", label: "Plain" }, { execute() {} });
   workbench.keybindings.registerKeybinding({
@@ -208,5 +214,28 @@ test("only chords that hold Alt, Ctrl or Cmd are offered while typing", () => {
   });
   const { shortcuts } = createWebviewKeyboardShortcuts(workbench);
   expect(shortcuts.length).toBeGreaterThan(0);
-  expect(shortcuts.every((shortcut) => shortcut.altKey || shortcut.ctrlKey || shortcut.metaKey)).toBe(true);
+  expect(shortcuts.find((shortcut) => shortcut.key === "J")).toMatchObject({ ignoreInputs: true });
+});
+
+test("direct view shortcuts are withdrawn when focus leaves their owning view", async () => {
+  const workbench = createWorkbench();
+  let calls = 0;
+  workbench.context.set("workbench.view.id", "drawing");
+  workbench.commands.registerCommand({ id: "move", label: "Move" }, { execute: () => calls++ });
+  workbench.keybindings.registerKeybinding({
+    action: { kind: "command", commandId: "move" },
+    keybinding: "V",
+    when: "workbench.view.id == 'drawing'",
+  });
+  const bridge = createWebviewKeyboardShortcuts(workbench);
+  const shortcut = bridge.shortcuts.find((shortcut) => shortcut.key === "V")!;
+  expect(shortcut).toMatchObject({ ignoreInputs: true });
+  await bridge.dispatch({ id: shortcut.id, repeat: false });
+  expect(calls).toBe(1);
+  workbench.context.set("workbench.view.id", "notes");
+  await bridge.dispatch({ id: shortcut.id, repeat: false });
+  expect(calls).toBe(1);
+  expect(createWebviewKeyboardShortcuts(workbench).shortcuts.some((candidate) => candidate.id === shortcut.id)).toBe(
+    false,
+  );
 });

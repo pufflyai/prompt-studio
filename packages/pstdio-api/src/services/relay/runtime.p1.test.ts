@@ -42,6 +42,8 @@ test("committed writes in a synced project announce storage changes for that pro
         id: expect.any(String),
         projectId: project.id,
         eventId: "pstdio.event.storage-changed",
+        extensionId: "example.notes",
+        recordIds: expect.arrayContaining([expect.stringMatching(/^note-/)]),
       });
   } finally {
     stop();

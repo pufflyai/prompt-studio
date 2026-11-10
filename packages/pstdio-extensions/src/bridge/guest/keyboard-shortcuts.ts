@@ -1,4 +1,5 @@
 import type { WebviewKeyboardShortcut, WebviewKeyboardShortcutRequest } from "pstdio-api-contracts/extension-kernel";
+import { isEditableKeyboardTarget } from "./keyboard-owner";
 
 const normalizeKey = (key: string) => (key === " " ? "SPACE" : key.toUpperCase());
 
@@ -16,7 +17,7 @@ export const matchesKeyboardShortcut = (event: KeyboardEvent, shortcut: WebviewK
   event.altKey === Boolean(shortcut.altKey) &&
   event.shiftKey === Boolean(shortcut.shiftKey);
 
-/** Only negotiated host chords cross this boundary. Ordinary guest keys stay local. */
+/** Only negotiated host chords cross this boundary. Editable controls keep their own actions. */
 export const installKeyboardShortcuts = (
   target: EventTarget,
   shortcuts: () => readonly WebviewKeyboardShortcut[],
@@ -24,13 +25,15 @@ export const installKeyboardShortcuts = (
 ) => {
   const listener = (input: Event) => {
     const event = input as KeyboardEvent;
-    // Global chords always hold Alt, Ctrl or Cmd, so ordinary typing never pays for a lookup.
-    if (!event.altKey && !event.ctrlKey && !event.metaKey) return;
-    const shortcut = shortcuts().find((candidate) => matchesKeyboardShortcut(event, candidate));
+    const inputFocus = isEditableKeyboardTarget(event.target);
+    if (inputFocus && !event.altKey && !event.ctrlKey && !event.metaKey) return;
+    const shortcut = shortcuts().find(
+      (candidate) => (!inputFocus || !candidate.ignoreInputs) && matchesKeyboardShortcut(event, candidate),
+    );
     if (!shortcut) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    dispatch({ id: shortcut.id, repeat: event.repeat });
+    dispatch({ id: shortcut.id, repeat: event.repeat, ...(inputFocus ? { inputFocus } : {}) });
   };
   target.addEventListener("keydown", listener, true);
   return () => target.removeEventListener("keydown", listener, true);

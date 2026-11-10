@@ -91,7 +91,6 @@ export const startFolderRecovery = (input: {
     catalog,
     chunks: () => chunks,
     transport: () => (connected && !connected.signal.aborted ? connected : undefined),
-    enroll: (workspaceId, folder) => local.enroll(workspaceId, folder),
     changed: () => input.statusChanged?.(),
     signal,
   });
@@ -193,7 +192,7 @@ export const startFolderRecovery = (input: {
   return {
     wake: connection.wake,
     retry: connection.retry,
-    /** A person's "Back up now": a full scan, then publication when the relay is reachable. */
+    /** A person's "Back up now": a full scan of a folder with a `.pstignore`, then publication when the relay is reachable. */
     capture: () => local.request("explicit"),
     sources: operations.sources,
     download: operations.download,

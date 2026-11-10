@@ -26,6 +26,8 @@ export interface CommandPaletteResourceResult {
 
 export interface CommandPaletteResourceProvider {
   id: string;
+  /** Provider authority for scoped invalidation. Omitted by legacy providers with unknown ownership. */
+  extensionId?: string;
   title: string;
   resourceKind?: string;
   refreshEventIds?: string[];

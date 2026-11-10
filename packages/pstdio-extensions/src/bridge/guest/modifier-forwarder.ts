@@ -1,5 +1,5 @@
 import type { WebviewKeyboardEventParams } from "pstdio-api-contracts";
-import { hasLocalKeyboardOwner } from "./keyboard-owner";
+import { hasLocalKeyboardOwner, isEditableKeyboardTarget } from "./keyboard-owner";
 
 /** Compatibility for unclaimed direct chords; local handlers finish before forwarding. */
 export const installModifierForwarder = (
@@ -17,9 +17,8 @@ export const installModifierForwarder = (
       )
         return;
       if (!event.ctrlKey && !event.metaKey && !event.altKey) return;
-      const editable =
-        event.target instanceof Element && event.target.closest('input,textarea,select,[contenteditable="true"]');
-      if (editable && !event.shiftKey) return;
+      // Negotiated global chords already ran. Native input shortcuts stay local, including shifted redo.
+      if (isEditableKeyboardTarget(event.target)) return;
       setTimeout(() => {
         if (event.defaultPrevented) return;
         void dispatch({

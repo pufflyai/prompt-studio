@@ -4,9 +4,11 @@ import { streamSession } from "../../sessions/endpoints/stream-session";
 import { toExtensionSessionDetails } from "../../sessions/extension-session";
 import { pendingQueuedRequests } from "../../sessions/pending-queued-requests";
 import { getQueuedSessionMessages, queuedMessagesFromRequests } from "../../sessions/queued-session-messages";
+import { readObservedSessionDevices } from "../../sessions/session-availability-observation";
 import { getSessionHistory, readSessionHistorySources } from "../../sessions/session-history";
 import type { ExtensionsRouteDeps } from "../deps";
 import { createSessionAccess, type SessionApiScope } from "./session-access";
+import { observeSessionMetadata } from "./session-metadata";
 import { createRemoteSessionAccess } from "./session-remote";
 
 type Readers = Pick<
@@ -17,6 +19,7 @@ type Readers = Pick<
   | "getQueuedMessages"
   | "stream"
   | "retainResources"
+  | "observeMetadata"
 >;
 
 export const createSessionReaders = (deps: ExtensionsRouteDeps, input: SessionApiScope) => {
@@ -35,6 +38,7 @@ export const createSessionReaders = (deps: ExtensionsRouteDeps, input: SessionAp
     throw new Error(`Session not found: ${id}`);
   };
   return {
+    observeMetadata: (id, changed, options) => observeSessionMetadata(deps, input, id, changed, options?.signal),
     getExecutionState: (id) =>
       read(async () => {
         if (await getProjectSession(id)) return { kind: "local" as const, available: true };
@@ -42,7 +46,9 @@ export const createSessionReaders = (deps: ExtensionsRouteDeps, input: SessionAp
         if (!session) throw new Error(`Session not found: ${id}`);
         const status = await deps.accountService.status();
         const devices =
-          status.login?.accountId === session.device.ownerId ? await deps.accountService.devices().catch(() => []) : [];
+          status.login?.accountId === session.device.ownerId
+            ? await readObservedSessionDevices(deps.accountService, status)
+            : [];
         return {
           kind: "remote" as const,
           available: devices.some((device) => device.id === session.device.id && device.online),

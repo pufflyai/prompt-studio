@@ -88,11 +88,11 @@ test("remote edits imported by sync notify storage watchers, and a round with no
   // Imported records notify views without being mistaken for another local edit.
   await second.syncs.records.synchronize();
   expect((await second.records.read("ticket")).value).toEqual({ title: "Remote" });
-  expect(second.notified.slice(quiet)).toEqual([{ ...owner, origin: "relay" }]);
+  expect(second.notified.slice(quiet)).toEqual([{ ...owner, recordIds: ["ticket"], origin: "relay" }]);
   await second.syncs.text.synchronize();
   expect(await second.text.read()).toBe("remote text");
   expect(second.notified.slice(quiet)).toEqual([
-    { ...owner, origin: "relay" },
+    { ...owner, recordIds: ["ticket"], origin: "relay" },
     { ...owner, documentId: textName },
   ]);
 
@@ -101,4 +101,23 @@ test("remote edits imported by sync notify storage watchers, and a round with no
   const imported = second.notified.length;
   await second.synchronize();
   expect(second.notified.length).toBe(imported);
+});
+
+test("local and incremental relay presentation writes publish their authoritative record scope", async () => {
+  const first = await device();
+  const second = await device();
+  await first.synchronize();
+  await second.synchronize();
+  first.notified.length = 0;
+  second.notified.length = 0;
+  await first.records.commit({
+    operationId: crypto.randomUUID(),
+    edits: [{ recordId: "presentation", replace: { tool: "hand" } }],
+  });
+  expect(first.notified).toEqual([{ ...owner, recordIds: ["presentation"] }]);
+  await first.syncs.records.synchronize();
+  await second.syncs.records.synchronize();
+  expect(second.notified.filter((change) => change.origin === "relay")).toEqual([
+    { ...owner, recordIds: ["presentation"], origin: "relay" },
+  ]);
 });

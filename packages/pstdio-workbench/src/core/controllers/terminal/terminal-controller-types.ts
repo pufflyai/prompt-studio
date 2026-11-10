@@ -58,6 +58,10 @@ export interface WorkbenchTerminalController {
   resize(input: { sessionId: string; cols: number; rows: number }): void;
   kill(input: { sessionId: string; signal?: string }): Promise<void>;
   killBinding(bindingId: string, ownerId?: string): Promise<void>;
+  /** Observe admission/session ownership, including failed openings that publish no session row. */
+  onDidChangeOwnership(listener: () => void): () => void;
+  /** Whether a contribution still owns an admitted/pending session or retained exited presentation. */
+  hasOwner(ownerId: string): boolean;
   /** Release every live or pending session of a contribution, including hidden presentations. */
   killOwner(ownerId: string): Promise<void>;
   subscribe(sessionId: string, sink: WorkbenchTerminalSessionSink): () => void;

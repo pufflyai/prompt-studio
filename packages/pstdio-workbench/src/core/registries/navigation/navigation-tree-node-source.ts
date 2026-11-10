@@ -7,6 +7,7 @@ interface NavigationTreeNodeSource {
   registryToken: object;
   node: TreeNode;
   resource?: ResourceRef;
+  projectId?: string;
 }
 // Preview spreads retain ownership, while registry tokens still isolate independent registries.
 const nodeSource = Symbol("navigationTreeNodeSource");

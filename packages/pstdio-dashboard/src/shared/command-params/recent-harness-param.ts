@@ -174,7 +174,9 @@ export const resolveInitialHarnessSelection = (input: {
     return { harnessId, model, ...(model && setup?.params ? { params: setup.params } : {}) };
   };
 
-  if (input.current.harnessId) return input.current.model ? input.current : restore(input.current.harnessId);
+  // Existing selections belong to the live field, including a model cleared by catalog synchronization.
+  // Explicit harness switches restore their setup in the selection handler.
+  if (input.current.harnessId) return input.current;
   if (input.recent?.harnessId) return restore(input.recent.harnessId);
   if (input.defaultAgent) return restore(input.defaultAgent);
 

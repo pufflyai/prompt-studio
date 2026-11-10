@@ -25,6 +25,26 @@ const subscribeToRuntime = (listeners: Set<() => void>, listener: () => void) =>
   };
 };
 
+// Which frames advertise editable parameters. A frame publishes this after it loads, so the
+// Frame editor only opens for frames that have something to show.
+const createEditableRegistry = () => {
+  const values = new Map<string, boolean>();
+  const listeners = new Set<() => void>();
+  return {
+    get: (id: string) => values.get(id) ?? false,
+    set: (id: string, value: boolean) => {
+      if ((values.get(id) ?? false) === value) return;
+      values.set(id, value);
+      for (const listener of listeners) listener();
+    },
+    subscribe: (listener: () => void) => subscribeToRuntime(listeners, listener),
+    dispose: () => {
+      values.clear();
+      listeners.clear();
+    },
+  };
+};
+
 const selectFrame = (selection: ReturnType<typeof createFrameSelection>, raise: (id: string) => void, id?: string) => {
   selection.select(id);
   if (id) raise(id);
@@ -38,15 +58,15 @@ export const createCanvasRuntime = (
   let layout = initial;
   const startup = createFrameStartupQueue();
   const selection = createFrameSelection(canvas.items.map((item) => item.id));
-  let shell: HTMLElement | undefined;
-  let stage: HTMLElement | undefined;
-  let frame = 0;
-  let focusFrame = 0;
+  let shell: HTMLElement | undefined, stage: HTMLElement | undefined;
+  let frame = 0,
+    focusFrame = 0;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let dirty = false;
   let changes: LayoutChange = {};
   const items = new Map<string, HTMLElement>();
   const raise = createFrameForeground(items);
+  const editable = createEditableRegistry();
   const sizes = new Map<string, ItemBounds>();
   const moved = new Set<string>();
   const automatic = defaultGridItems(canvas, initial);
@@ -95,10 +115,9 @@ export const createCanvasRuntime = (
     changed();
   };
   const viewport = () => ({ width: shell?.clientWidth ?? 1, height: shell?.clientHeight ?? 1 });
-  const bounds = (id?: string) => canvasBounds(canvas, layout, sizes, id);
   const reframe = () => {
     if (!framing) return;
-    const rect = bounds(framing.kind === "item" ? framing.id : undefined);
+    const rect = canvasBounds(canvas, layout, sizes, framing.kind === "item" ? framing.id : undefined);
     const view = viewport();
     const zoom = layout.camera.zoom;
     if (framing.kind === "all" || rect.width * zoom > view.width - 48 || rect.height * zoom > view.height - 48) {
@@ -124,6 +143,7 @@ export const createCanvasRuntime = (
   return {
     startup,
     selection,
+    editable,
     select: (id?: string) => selectFrame(selection, raise, id),
     get: () => layout,
     subscribe: (listener: () => void) => subscribeToRuntime(listeners, listener),
@@ -143,7 +163,6 @@ export const createCanvasRuntime = (
       schedule();
     },
     measure: () => {
-      // Read all wrapper sizes together. Gestures use this cache without forcing layout.
       const view = viewport();
       let changed = view.width !== measuredViewport.width || view.height !== measuredViewport.height;
       measuredViewport = view;
@@ -244,6 +263,7 @@ export const createCanvasRuntime = (
       cameraDirty = true;
       listeners.clear();
       items.clear();
+      editable.dispose();
       sizes.clear();
     },
   };

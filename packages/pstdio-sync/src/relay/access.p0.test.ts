@@ -44,7 +44,7 @@ test("a rejected device credential reports denial; an unavailable manager does n
   try {
     await expect(access()).rejects.toThrow("Environment renewal unavailable");
     expect(denials).toBe(1);
-    status = 503;
+    status = 500;
     await expect(access()).rejects.toThrow("Environment renewal unavailable");
     expect(denials).toBe(1);
   } finally {

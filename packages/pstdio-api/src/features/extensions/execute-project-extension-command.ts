@@ -1,8 +1,10 @@
 import {
   type CommandExecuteBody,
   type CommandExecuteResponse,
+  type CommandOutcome,
   type JsonObject,
   type JsonValue,
+  queryChangeEnvelopeSchema,
   resolveCommandResourceParams,
 } from "pstdio-api-contracts";
 import { createCommandRunner, createReadBoundary } from "pstdio-extensions";
@@ -41,17 +43,13 @@ export const executeProjectExtensionCommand = async (
   const handler = command ?? snapshot.runtime.privateHandlers.find((candidate) => candidate.id === commandId);
   if (!handler) throw new ExtensionCommandNotFoundError(commandId);
   if (body.source === "automation" && !command?.automation) {
-    return {
-      commandId,
-      extensionId: handler.extensionId,
-      eventIds: [],
-      outcome: {
-        ok: false as const,
-        status: "rejected" as const,
-        code: "automation_scope_denied",
-        reason: "Command is no longer exposed to automation.",
-      },
+    const outcome: CommandOutcome = {
+      ok: false,
+      status: "rejected",
+      code: "automation_scope_denied",
+      reason: "Command is no longer exposed to automation.",
     };
+    return { commandId, extensionId: handler.extensionId, eventIds: [], events: [], outcome };
   }
 
   const workspace = body.workspaceId
@@ -60,9 +58,20 @@ export const executeProjectExtensionCommand = async (
   if (body.workspaceId && (!workspace || workspace.project_id !== projectId))
     throw new CommandWorkspaceNotFoundError(body.workspaceId);
   const eventIds = new Set<string>();
+  const eventKeys = new Set<string>();
+  const events: NonNullable<CommandExecuteResponse["events"]> = [];
   const runner = createCommandRunner(snapshot.runtime, {
     createLogger: createExtensionLogger,
-    onDidDispatchEvent: (eventId) => eventIds.add(eventId),
+    onDidDispatchEvent: (id, refresh) => {
+      eventIds.add(id);
+      const event = { ...queryChangeEnvelopeSchema.parse({ ...refresh, projectId }), id };
+      const key = JSON.stringify(event);
+      // Repeated hooks still run; consumers need each distinct invalidation only once.
+      if (!eventKeys.has(key)) {
+        eventKeys.add(key);
+        events.push(event);
+      }
+    },
     buildEnvironment: (environment) =>
       createCommandEnvironment(deps, snapshot.enabledSources, {
         ...environment,
@@ -101,8 +110,8 @@ export const executeProjectExtensionCommand = async (
       data: { ...outcome.data, fileStorageVersions: { ...expected, ...observed.versions } },
     };
   if (body.source !== "dashboard") {
-    for (const eventId of eventIds)
-      deps.eventBus.emit("extension_events", "set", { id: crypto.randomUUID(), projectId, eventId });
+    for (const { id: eventId, ...refresh } of events)
+      deps.eventBus.emit("extension_events", "set", { ...refresh, id: crypto.randomUUID(), projectId, eventId });
   }
-  return { commandId, extensionId: handler.extensionId, eventIds: [...eventIds], outcome };
+  return { commandId, extensionId: handler.extensionId, eventIds: [...eventIds], events, outcome };
 };

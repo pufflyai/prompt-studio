@@ -5,6 +5,7 @@ import type {
 } from "@pstdio/sdk/extensions";
 import type { WorkbenchExtensionKanbanRendererRecord } from "pstdio-api-contracts";
 import type { KanbanRendererCreateField, KanbanRendererCreateFieldType, ResourceRef } from "../../core";
+import { createWorkbenchStore } from "../../core/shared/store/workbench-store";
 import type {
   ReactAttributeDescriptor as AttributeDescriptor,
   ReactKanbanRendererContribution as KanbanRendererContribution,
@@ -79,23 +80,27 @@ export const createMutableAttributeSource = (
   reportUnknownDisplay?: UnknownDisplayReporter,
   openNote?: (target: WireNavigationTarget) => void,
 ): MutableAttributeSource => {
-  let snapshot = localizeAttributes(record, initial, localize, decorate, reportUnknownDisplay, openNote);
-  const listeners = new Set<() => void>();
+  const projection = createWorkbenchStore({
+    name: "extension.kanban-attributes",
+    initialState: {
+      attributes: localizeAttributes(record, initial, localize, decorate, reportUnknownDisplay, openNote),
+    },
+  });
   let signature = JSON.stringify(initial);
   return {
     source: {
-      getSnapshot: () => snapshot,
-      subscribe: (listener) => {
-        listeners.add(listener);
-        return () => listeners.delete(listener);
-      },
+      getSnapshot: () => projection.getState().attributes,
+      subscribe: (listener) => projection.subscribeSelector((state) => state.attributes, listener),
     },
     set(attributes) {
       const nextSignature = JSON.stringify(attributes);
       if (nextSignature === signature) return;
       signature = nextSignature;
-      snapshot = localizeAttributes(record, attributes, localize, decorate, reportUnknownDisplay, openNote);
-      for (const listener of listeners) listener();
+      projection.setState(
+        { attributes: localizeAttributes(record, attributes, localize, decorate, reportUnknownDisplay, openNote) },
+        false,
+        "setAttributes",
+      );
     },
   };
 };

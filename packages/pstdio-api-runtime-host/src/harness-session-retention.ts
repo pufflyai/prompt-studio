@@ -14,6 +14,9 @@ export const createRetainedHarnessCalls = (
     if (retired) throw new HarnessDisposedError("Harness has been disposed.");
   };
   return {
+    closeAdmission: () => {
+      retired = true;
+    },
     invoke: async <T>(
       input: { sessionId?: string },
       options: HarnessCallOptions | undefined,

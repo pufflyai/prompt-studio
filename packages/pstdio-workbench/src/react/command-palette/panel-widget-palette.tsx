@@ -16,15 +16,16 @@ export const createWorkbenchPanelWidgetPaletteEntries = (input: {
     (panelsByRegion?.[region] ?? workbench.composition.panelsFor(region)).addable.map((panel): PaletteEntry => {
       const widget = panel.contribution;
       const panelLabel = getPanelLabel(region);
-      const label = `Open ${widget.title} in ${panelLabel} Panel`;
+      const label = /^(open|new|create|show)\b/i.test(widget.title) ? widget.title : `Open ${widget.title}`;
+      const group = `${panelLabel} panel`;
 
       return {
         id: `workbench-panel:${region}:${widget.id}`,
         mode: COMMAND_MODE_ID,
         label,
-        searchText: `${label} ${widget.id}`,
-        group: "Panels",
-        icon: widget.icon ? <WorkbenchIcon name={widget.icon} /> : undefined,
+        searchText: `${label} ${group} ${widget.id}`,
+        group,
+        icon: <WorkbenchIcon name={widget.icon ?? "PanelTop"} />,
         onActivate: () => {
           onClose();
           openPanelWidget({ workbench, widget, region, resource, pinned: panel.pinned, open: panel.open });
