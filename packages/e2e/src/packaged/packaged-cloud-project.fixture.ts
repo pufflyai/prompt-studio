@@ -121,12 +121,21 @@ export const withCloudProject = async (
       }
       return project;
     };
-    const [project] = await Promise.all([
+    // Seeding is local; account login does not depend on either project's contents.
+    const setup = await Promise.allSettled([
       createSource(),
       b.projects.create(folderProjectInput({ name: "Local project" }, localFolder)),
+      signIn(a, peer.origin),
     ]);
-    phase("both local projects created; sign in A");
-    await signIn(a, peer.origin);
+    const [source, local, signedIn] = setup;
+    if (source.status === "rejected" || local.status === "rejected" || signedIn.status === "rejected") {
+      throw new AggregateError(
+        setup.flatMap((result) => (result.status === "rejected" ? [result.reason] : [])),
+        "Cloud project setup failed",
+      );
+    }
+    const project = source.value;
+    phase("both local projects created; A signed in");
     await a.account.syncProject(project.id);
     await waitForCloud(async () => (await a.account.projectSyncStatus(project.id)).offlineReady);
     phase("A offline-ready; sign in B");
