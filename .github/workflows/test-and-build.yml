@@ -1,102 +1,68 @@
-name: Attribute Planner and shared Side setup on main
+name: Observe native chat tail and scroll ownership
 on:
   workflow_dispatch:
     inputs:
       source_sha:
-        description: Exact main for two bounded source controls
         required: true
         type: string
+        description: Frozen source for one observational streaming case
 permissions:
   contents: read
 jobs:
-  cloud_control:
-    name: Main control (${{ matrix.runner }} ${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+  observe_streaming:
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: e2e packaged-cli source P2 1 windows-latest
-            os: windows-latest
-            platform: win32
-            arch: x64
-            owner: e2e
-            runner: packaged-cli
-            priority: P2
-            files: '["packages/e2e/src/packaged/packaged-planner-smoke.p2.test.ts"]'
-            stable: true
-            quarantine: false
-            suite: ""
-            browser: false
-            desktop: false
-          - name: e2e app source P2 1 ubuntu-24.04
-            os: ubuntu-24.04
-            platform: linux
-            arch: x64
-            owner: e2e
-            runner: app
-            priority: P2
-            files: '["packages/e2e/src/ui/session-chat-links.p2.spec.ts"]'
-            stable: true
-            quarantine: false
-            suite: ""
-            browser: true
-            desktop: false
     env:
       GH_TOKEN: ${{ github.token }}
-      EDITED_TEST_ROW: ${{ toJSON(matrix) }}
+      NX_DAEMON: "false"
+      CI_PRIORITY: P2
+      TEST_PRIORITIES: P2
       UI_PERF_ASSERT_BUDGETS: "1"
       PLAYWRIGHT_TRACE: "off"
-      NX_DAEMON: "false"
+      PSTDIO_EXTENSION_RELEASE_REF: ${{ inputs.source_sha }}
     steps:
       - uses: actions/checkout@v5
         with:
           ref: ${{ inputs.source_sha }}
           fetch-depth: 0
-      - name: Require exact frozen source
+      - name: Require frozen source
         shell: bash
-        env:
-          CONTROL_SOURCE_SHA: ${{ inputs.source_sha }}
         run: |
-          test "$CONTROL_SOURCE_SHA" = "e92609e79cda954c8f95b07499ee9178b3e33d76"
-          test "$(git rev-parse HEAD)" = "$CONTROL_SOURCE_SHA"
+          test "${{ inputs.source_sha }}" = "4bd741de85239fff34afa01d0dc37aa86e06d4ca"
+          test "$(git rev-parse HEAD)" = "${{ inputs.source_sha }}"
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
       - uses: actions/setup-node@v5
         with:
           node-version: "24.22.1"
-      - name: Install native dependencies and restore host build cache
-        uses: ./.github/actions/setup-ci-cache
+      - uses: ./.github/actions/setup-ci-cache
         with:
           install-strategy: native
           windows-dev-drive: "true"
       - name: Install browser engines
-        if: matrix.browser
         run: bunx playwright@1.60.0 install --with-deps
-      - name: Hold the real provider catalog until generic Side is attached
-        if: matrix.runner == 'app'
+      - name: Retain stream data and scroll ownership if the original assertion fails
         shell: bash
         run: |
           git fetch origin ${{ github.sha }} --no-tags
-          git show ${{ github.sha }}:scripts/ci/reproduce-side-session-subject.py > "$RUNNER_TEMP/reproduce-side-session-subject.py"
-          python3 "$RUNNER_TEMP/reproduce-side-session-subject.py"
+          git show ${{ github.sha }}:scripts/ci/capture-chat-motion-failure.patch > "$RUNNER_TEMP/capture-chat-motion-failure.patch"
+          git show ${{ github.sha }}:scripts/ci/observe-chat-tail.py > "$RUNNER_TEMP/observe-chat-tail.py"
+          git apply "$RUNNER_TEMP/capture-chat-motion-failure.patch"
+          python3 "$RUNNER_TEMP/observe-chat-tail.py"
           git diff --check
           git diff --stat
-      - name: Run the maintained source control once
-        shell: bash
-        run: |
-          if [[ "$RUNNER_OS" == "Linux" ]]; then
-            xvfb-run -a bun scripts/ci/run-edited-tests.ts
-          else
-            bun scripts/ci/run-edited-tests.ts
-          fi
-      - name: Preserve original case outcomes and failure artifacts
+      - name: Build maintained packaged fixture dependencies
+        run: bun run build -- --scope e2e --scope pstdio --include-dependencies
+      - name: Execute the original complete streaming case once
+        env:
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio
+        run: xvfb-run -a bun run --cwd packages/e2e test:packaged:cli -- src/packaged/packaged-chat-motion-smoke.p2.test.ts --test-name-pattern '^retains streaming messages and cached history$'
+      - name: Preserve observation and original case outcome
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: main-control-${{ matrix.runner }}
+          name: native-stream-tail-observation
           path: |
             test-results
             packages/e2e/test-results
