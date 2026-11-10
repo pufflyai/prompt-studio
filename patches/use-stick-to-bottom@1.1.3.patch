@@ -1,0 +1,23 @@
+diff --git a/dist/useStickToBottom.js b/dist/useStickToBottom.js
+index 1a7671496f181e92462cad65a7a90966a409e3b3..1cb25ec0f4c1fd76d342f5bebe585f3f69ec552e 100644
+--- a/dist/useStickToBottom.js
++++ b/dist/useStickToBottom.js
+@@ -220,6 +220,9 @@ export const useStickToBottom = (options = {}) => {
+         if (target !== scrollRef.current) {
+             return;
+         }
++        // A resize can clamp the browser to its new bottom before its observer runs.
++        // Classify this event against its own bottom, not a later streamed layout.
++        const targetScrollTop = state.targetScrollTop;
+         const { scrollTop, ignoreScrollToTop } = state;
+         let { lastScrollTop = scrollTop } = state;
+         state.lastScrollTop = scrollTop;
+@@ -258,7 +261,7 @@ export const useStickToBottom = (options = {}) => {
+                 state.scrollTop = lastScrollTop;
+                 return;
+             }
+-            if (isScrollingUp) {
++            if (isScrollingUp && scrollTop < targetScrollTop) {
+                 setEscapedFromLock(true);
+                 setIsAtBottom(false);
+             }
