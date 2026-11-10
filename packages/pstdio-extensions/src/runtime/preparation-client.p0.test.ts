@@ -432,3 +432,224 @@ test("an idle shared preparation worker lets a CLI process exit", async () => {
   expect(code, stderr).toBe(0);
   expect(JSON.parse(stdout)).toEqual({ finished: true });
 });
+
+test("status inspection yields through an admitted continuation's worker and host steps", async () => {
+  const client = fixture();
+  const blocked = gate();
+  const host = Promise.withResolvers<void>();
+  const atHost = Promise.withResolvers<void>();
+  const continued = client.withContinuation(() =>
+    withBackgroundPreparation(async () => {
+      await client.run("wait", { name: "frontend", url: blocked.url });
+      atHost.resolve();
+      await host.promise;
+      return client.run("value", { name: "publication" });
+    }),
+  );
+  await blocked.entered.promise;
+  const inspected = client.run("value", { name: "inventory" }, { preserveActiveContinuation: true });
+  try {
+    expect(await Promise.race([inspected.then(() => "interrupted"), Bun.sleep(50).then(() => "held")])).toBe("held");
+    blocked.release.resolve();
+    await atHost.promise;
+    expect(await Promise.race([inspected.then(() => "interrupted"), Bun.sleep(50).then(() => "held")])).toBe("held");
+    host.resolve();
+    expect(await continued).toMatchObject({ name: "publication", sequence: 2 });
+    expect(await inspected).toMatchObject({ name: "inventory", sequence: 3 });
+  } finally {
+    blocked.release.resolve();
+    host.resolve();
+    await Promise.allSettled([continued, inspected]);
+  }
+});
+
+test("status inspection can interrupt an unreserved speculative evaluation", async () => {
+  const client = fixture();
+  const blocked = gate();
+  const background = client.run("wait", { name: "candidate", url: blocked.url }, { priority: "background" });
+  await blocked.entered.promise;
+  try {
+    expect(await client.run("value", { name: "inventory" }, { preserveActiveContinuation: true })).toMatchObject({
+      name: "inventory",
+    });
+  } finally {
+    blocked.release.resolve();
+    await background;
+  }
+});
+
+test("a live background continuation can overtake an unreserved speculative evaluation", async () => {
+  const client = fixture();
+  const blocked = gate();
+  const background = client.run("wait", { name: "candidate", url: blocked.url }, { priority: "background" });
+  await blocked.entered.promise;
+  const edit = client.withContinuation(() => withBackgroundPreparation(() => client.run("value", { name: "edit" })));
+  try {
+    expect(await Promise.race([edit.then(() => "ready"), Bun.sleep(1000).then(() => "blocked")])).toBe("ready");
+  } finally {
+    blocked.release.resolve();
+    await Promise.allSettled([background, edit]);
+  }
+});
+
+test.each([
+  "speculative",
+  "live",
+] as const)("a coalesced status read cannot promote ineligible %s work", async (kind) => {
+  const client = fixture();
+  const blocked = gate();
+  const input = { name: "shared", url: blocked.url };
+  const start = () => client.run("wait", input, { priority: "background" });
+  const background = kind === "live" ? client.withContinuation(() => withBackgroundPreparation(start)) : start();
+  await blocked.entered.promise;
+  const joined = client.run("wait", input, { preserveActiveContinuation: true });
+  const next =
+    kind === "live"
+      ? client.run("value", { name: "next" })
+      : client.withContinuation(() => withBackgroundPreparation(() => client.run("value", { name: "next" })));
+  try {
+    expect(await Promise.race([next.then(() => "ready"), Bun.sleep(1000).then(() => "blocked")])).toBe("ready");
+  } finally {
+    blocked.release.resolve();
+    await Promise.allSettled([background, joined, next]);
+  }
+});
+
+test("background watcher restoration reserves admission without retiring an active background job", async () => {
+  const client = fixture();
+  const blocked = gate();
+  const background = client.run("wait", { name: "attachment", url: blocked.url }, { priority: "background" });
+  await blocked.entered.promise;
+  const restoration = client.withContinuation(
+    () => client.run("value", { name: "restore" }, { priority: "background" }),
+    { priority: "background" },
+  );
+  try {
+    expect(await Promise.race([restoration.then(() => "retired"), Bun.sleep(50).then(() => "preserved")])).toBe(
+      "preserved",
+    );
+  } finally {
+    blocked.release.resolve();
+    await Promise.allSettled([background, restoration]);
+  }
+});
+
+test("restoration completes its host lookup before resuming another owned background continuation", async () => {
+  const client = fixture();
+  const blocked = gate();
+  const lookup = Promise.withResolvers<void>();
+  const resumed = Promise.withResolvers<void>();
+  let restoration: Promise<unknown> | undefined;
+  const background = client.withContinuation(
+    () => withBackgroundPreparation(() => client.run("wait", { name: "owned-background", url: blocked.url })),
+    { priority: "background" },
+  );
+  await blocked.entered.promise;
+  const unsubscribe = client.subscribe((event) => {
+    if (event.kind === "worker-ready" && !restoration) {
+      restoration = client.withContinuation(
+        async () => {
+          await lookup.promise;
+          return client.run("value", { name: "restore" }, { priority: "background" });
+        },
+        { priority: "restoration" },
+      );
+    }
+    if (event.entered === "owned-background") resumed.resolve();
+  });
+  const requested = client.run("value", { name: "requested" });
+  try {
+    expect(await requested).toMatchObject({ name: "requested", sequence: 1 });
+    expect(await Promise.race([resumed.promise.then(() => "resumed"), Bun.sleep(50).then(() => "held")])).toBe("held");
+    lookup.resolve();
+    expect(await restoration).toMatchObject({ name: "restore", sequence: 2 });
+  } finally {
+    lookup.resolve();
+    blocked.release.resolve();
+    unsubscribe();
+    await Promise.allSettled([background, requested, restoration]);
+  }
+});
+
+test.each([
+  "retained",
+  "released",
+  "finished",
+] as const)("a background predecessor borrows caller urgency with %s ownership", async (phase) => {
+  const client = fixture();
+  const blocked = gate();
+  const unrelated = client.run("wait", { name: "unrelated", url: blocked.url }, { priority: "background" });
+  await blocked.entered.promise;
+  const queued = Promise.withResolvers<void>();
+  let owner: ReturnType<typeof createPreparationScope> | undefined;
+  const dependency = client.withContinuation(
+    () =>
+      withBackgroundPreparation(async () => {
+        owner = createPreparationScope();
+        await queued.promise;
+        return owner.run(() => client.run("value", { name: "dependency" })).finally(() => owner!.dispose());
+      }),
+    { priority: "background" },
+  );
+  let releaseLoan: (() => void) | undefined;
+  try {
+    await client.withContinuation(() =>
+      withBackgroundPreparation(async () => {
+        const caller = createPreparationScope();
+        const first = owner!.request(caller);
+        releaseLoan = owner!.request(caller);
+        first();
+        expect(caller.requested).toBe(false);
+        expect(owner!.requested).toBe(false);
+        if (phase === "released") releaseLoan();
+        if (phase === "finished") {
+          caller.dispose();
+          return;
+        }
+        queued.resolve();
+        try {
+          const result = await Promise.race([dependency.then(() => "ready"), Bun.sleep(100).then(() => "blocked")]);
+          expect(result).toBe(phase === "retained" ? "ready" : "blocked");
+          blocked.release.resolve();
+          await dependency;
+        } finally {
+          releaseLoan();
+          caller.dispose();
+        }
+      }),
+    );
+    if (phase === "finished") {
+      queued.resolve();
+      expect(await Promise.race([dependency.then(() => "ready"), Bun.sleep(100).then(() => "blocked")])).toBe(
+        "blocked",
+      );
+    }
+  } finally {
+    queued.resolve();
+    blocked.release.resolve();
+    releaseLoan?.();
+    await Promise.allSettled([unrelated, dependency]);
+  }
+});
+
+test("a continuation does not retire an already admitted status read when its queued admission closes", async () => {
+  const client = fixture();
+  const blocked = gate();
+  const inspection = client.run("wait", { name: "inventory", url: blocked.url }, { preserveActiveContinuation: true });
+  await blocked.entered.promise;
+  const restoration = client.withContinuation(
+    () => withBackgroundPreparation(() => client.run("value", { name: "restore" })),
+    { priority: "background" },
+  );
+  try {
+    expect(await Promise.race([restoration.then(() => "retired"), Bun.sleep(50).then(() => "preserved")])).toBe(
+      "preserved",
+    );
+    blocked.release.resolve();
+    expect(await inspection).toMatchObject({ name: "inventory", sequence: 1 });
+    expect(await restoration).toMatchObject({ name: "restore", sequence: 2 });
+  } finally {
+    blocked.release.resolve();
+    await Promise.allSettled([inspection, restoration]);
+  }
+});

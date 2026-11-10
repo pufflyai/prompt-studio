@@ -1,9 +1,8 @@
 import { existsSync } from "node:fs";
-import { withBackgroundPreparation } from "pstdio-extensions";
 import { resolveCatalogIcon } from "./catalog-icon";
 import type { ExtensionsRouteDeps } from "./deps";
 import { getExtensionCatalog } from "./extension-catalog";
-import { hashExtensionSourceAsync } from "./extension-runtime";
+import { runExtensionPreparation } from "./extension-preparation";
 import { toProjectExtensionInstance } from "./project-extension-instance";
 
 export const listProjectExtensionInventory = async (deps: ExtensionsRouteDeps, projectId: string) => {
@@ -16,12 +15,17 @@ export const listProjectExtensionInventory = async (deps: ExtensionsRouteDeps, p
     if (!missing.length) break;
     // Inventory checks discover edits; polling status must not repeatedly retire a
     // live frontend validation as though every source were a requested tool.
-    await withBackgroundPreparation(() =>
-      Promise.all(
-        missing.map(async ({ installedSource }) => {
-          hashes.set(key(installedSource), await hashExtensionSourceAsync(installedSource.source_path));
-        }),
-      ),
+    await Promise.all(
+      missing.map(async ({ installedSource }) => {
+        hashes.set(
+          key(installedSource),
+          await runExtensionPreparation<string>(
+            "source.hash",
+            { sourcePath: installedSource.source_path },
+            { preserveActiveContinuation: true },
+          ),
+        );
+      }),
     );
     // A build or source replacement can finish while inspection waits. Read its
     // current feedback, and inspect any new source before describing its edits.

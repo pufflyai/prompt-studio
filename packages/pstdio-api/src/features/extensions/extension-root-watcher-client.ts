@@ -28,7 +28,7 @@ export const createRootWatcherClient = async (input: CreateExtensionRootWatcherI
   };
   const unsubscribe = subscribePreparationEvents((event) => {
     if (!disposed && registered && (event.kind === "worker-ready" || event.kind === "worker-lost")) {
-      void withPreparationContinuation(refresh).catch((error) => input.onError?.(error));
+      void withPreparationContinuation(refresh, { priority: "restoration" }).catch((error) => input.onError?.(error));
       return;
     }
     if (disposed || event.watchId !== id) return;

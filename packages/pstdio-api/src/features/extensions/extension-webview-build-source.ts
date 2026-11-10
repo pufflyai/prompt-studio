@@ -16,7 +16,6 @@ import { isPreparationHost } from "pstdio-extensions";
 import { runExtensionPreparation } from "./extension-preparation";
 import { collectLocalCssInputs } from "./extension-webview-css-inputs";
 import { hashWebviewDependencyInputs } from "./webview-dependency-inputs";
-import { inspectWebviewDependencyInputs } from "./webview-input-inspection";
 
 type PackageJson = {
   dependencies?: Record<string, unknown>;
@@ -339,11 +338,10 @@ export const inspectManagedWebviewBuildInputsAsync = async (
   input: ManagedWebviewBuildSourceInput,
   signal?: AbortSignal,
 ) => {
-  if (!isPreparationHost)
-    return inspectManagedWebviewBuildInputs(
-      input,
-      await inspectWebviewDependencyInputs(input.packagePath, [input.entryPath], signal),
-    );
+  if (!isPreparationHost) {
+    const { inspectSinglePreparedWebviewInputs } = await import("./prepared-webview-inputs");
+    return inspectSinglePreparedWebviewInputs(input, signal);
+  }
   return runExtensionPreparation<ManagedWebviewBuildInputs>("webview.inspect", input, { signal });
 };
 export const prepareManagedWebviewBuildSourceAsync = async (input: PrepareManagedWebviewBuildSourceInput) => {

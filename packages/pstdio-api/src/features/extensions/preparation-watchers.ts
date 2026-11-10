@@ -1,9 +1,10 @@
-import { createExtensionSourceWatcher } from "pstdio-extensions/authoring";
+import { readAcceptedRevision } from "pstdio-extensions";
+import { createExtensionSourceWatcher, hashExtensionSource } from "pstdio-extensions/authoring";
 import { publishPreparationEvent } from "pstdio-extensions/preparation-server";
 import { createExtensionRootWatcher } from "./extension-root-watcher";
 
 interface WatchState {
-  sources: { install_name: string; source_path: string }[];
+  sources: { install_name: string; source_path: string; source_hash?: string | null }[];
   roots: { path: string }[];
   watcher: { refresh(path?: string): Promise<void>; dispose(): void };
 }
@@ -18,10 +19,19 @@ export const updatePreparationWatcher = async (input: WatchUpdate) => {
   const addedSources =
     input.kind === "sources" ? input.rows.filter((row) => !previousSources.has(row.source_path)) : [];
   const report = (event: object) => publishPreparationEvent({ watchId: input.id, ...event });
-  const reconcileAttachments = () => {
+  const reconcileAttachments = async () => {
     // An edit can precede detached registration or land while its worker is absent.
     // Reconcile after watching so a later edit is covered by ordinary notifications.
-    for (const row of addedSources) report({ sourcePath: row.source_path, attachment: true });
+    for (const row of addedSources) {
+      let changed = false;
+      try {
+        const baseline = (await readAcceptedRevision(row.source_path))?.sourceHash ?? row.source_hash;
+        changed = Boolean(baseline && hashExtensionSource(row.source_path) !== baseline);
+      } catch (error) {
+        report({ error: error instanceof Error ? error.message : String(error) });
+      }
+      report({ sourcePath: row.source_path, attachment: true, changed });
+    }
   };
   if (existing) {
     const previous = { sources: existing.sources, roots: existing.roots };
@@ -33,7 +43,7 @@ export const updatePreparationWatcher = async (input: WatchUpdate) => {
       Object.assign(existing, previous);
       throw error;
     }
-    reconcileAttachments();
+    await reconcileAttachments();
     return;
   }
   const state: WatchState = {
@@ -54,7 +64,7 @@ export const updatePreparationWatcher = async (input: WatchUpdate) => {
       onError: (error) => report({ error: error instanceof Error ? error.message : String(error) }),
     });
   watchers.set(input.id, state);
-  reconcileAttachments();
+  await reconcileAttachments();
 };
 export const disposePreparationWatcher = (id: string) => {
   watchers.get(id)?.watcher.dispose();

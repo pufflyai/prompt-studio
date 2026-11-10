@@ -29,15 +29,27 @@ Frontend input guards also use fresh children to keep independent graph inspecti
 Attachment reconciliation admits one source callback at a time. Ordinary filesystem events enter the same background
 worker queue immediately, so an edit does not wait behind every newly attached source. Pending attachment checks remain
 eligible after worker replacement and are cleared on disposal. Registration changes repair accepted output; attachment
-checks and source events own freshness. A live edit retains its background continuation across frontend host awaits,
+checks and source events own freshness. Frontend callbacks enter the manager immediately, including edits during an
+older attachment; the manager owns effective-key serialization. Their provisioning tails still await every earlier
+generation, including when a newer frontend fails, so disposal owns all work. A live edit retains its background
+continuation across frontend host awaits,
 preventing unrelated speculative work from filling every publication gap. Workspace provisioning follows outside
 that reservation, still awaited by the same source generation and disposal owner.
-Inventory disk hashes are background change checks. Status polling cannot repeatedly retire the validation that
-produces its feedback. Inventory waits for fresh hashes bound to each source id and path, then reads current database
-feedback; sources replaced during the wait are inspected before the response. This can delay inventory behind
-background preparation, while requested tool operations retain their foreground priority.
+Runtime candidate inspection follows frontend publication and workspace provisioning as separately owned speculation.
+It never accepts contributions. A later edit cancels that source's suspended inspection before starting its frontend
+refresh; successful unchanged content is not inspected again. Disposal cancels and awaits every owned candidate.
+Live background continuations overtake unreserved speculation while requested tool operations remain first.
+Inventory disk hashes are fresh status inspections. They defer throughout existing live continuations, including host
+awaits and follow-up admission, so status polling cannot repeatedly retire the validation that produces its feedback.
+An admitted status read can finish when a later continuation closes admission to queued reads; that closure cannot
+make it infinitely preemptible. They can interrupt unreserved speculation. Hashes are bound to source id/path; inventory then rereads current database
+feedback and inspects replaced sources before responding. No cross-request hash cache is introduced.
 Watcher restoration reserves its host/database admission gap before speculative work resumes. Its watch-update jobs
-keep background priority and share that reservation; restoration does not retire the replacement worker.
+keep explicit background priority and share that reservation; restoration does not retire the replacement worker.
+A private restoration admission phase completes watcher lookup and dependent registration before resuming older
+background continuation work on the replacement worker. After watching, attachment hashes compare current own-source
+bytes with the accepted revision’s preparer-computed hash. Caller-supplied database versions may be opaque. Offline changes enter live-edit admission immediately; unchanged sources retain
+the complete frontend checks, including dependency and compiler input inspection.
 Inspection and compilation share four leaf slots; orchestration never holds a slot across nested work. This cap does
 not include dependency-install or other preparation commands and is not an aggregate-memory qualification. Each guard
 collects inputs again. The host owns command children and file-captured output; structured requests use Buffer-backed
@@ -92,7 +104,7 @@ configuration retains the conservative fallback. Manifest and physical lookup me
 Frontend refresh reads contribution metadata from the accepted runtime. Its freshness key combines that runtime id
 with current own-source bytes, while whole-frontend dependency and compiler guards still inspect fresh inputs. A later
 check receives a fresh serialized validation after any active check with the same key. If its effective source identity
-changes, it settles the old admission before joining the current key. Foreground owners lend and revoke urgency across
+changes, it settles the old admission before joining the current key. Foreground and live-background owners lend and revoke their respective urgency across
 those predecessors; disposed managers cannot start queued validation.
 
 Prepared webview URLs use the published per-view identity rather than the database revision announced during guarded
@@ -107,7 +119,10 @@ worker memory. Larger files stream in one-MiB chunks when consumed. Failed inspe
 staging cleanup. Runtime and frontend guards each collect fresh inputs before and after their builds. Immutable copies
 use best-effort copy-on-write with an ordinary-copy fallback. A manager build reuses its initial input inspection for
 artifact identity; the fresh post-build inspection and publication guards still reject source or dependency changes.
-Missing serving files are repaired from accepted artifacts without evaluating mutable source.
+Missing serving files are repaired from accepted artifacts without evaluating mutable source. Repository fallback
+frontend dependencies use the same prepared source context for compilation and graph fingerprinting. Batch guards
+inspect every selected context freshly before and after building; single-view guards use the same resolution rule.
+Owned temporary shells are tracked for recovery, and failed inspections drain started groups before cleanup.
 
 Managed installs retain their candidate in staging until registration starts. A durable intent precedes the filesystem
 swap; its operation token prevents an obsolete rollback from replacing a newer source with identical bytes. Failed

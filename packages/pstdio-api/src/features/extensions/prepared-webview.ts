@@ -4,10 +4,8 @@ import { join } from "node:path";
 import { retainPreparedArtifacts } from "pstdio-extensions/prepared-cache";
 import { resolvePstdioHome, withFileMutationLock } from "pstdio-paths";
 import {
-  inspectManagedWebviewBuildInputs,
   inspectManagedWebviewBuildInputsAsync,
   type ManagedWebviewBuildInputs,
-  missingWebviewDependenciesError,
   prepareManagedWebviewBuildSource,
 } from "./extension-webview-build-source";
 import {
@@ -15,7 +13,8 @@ import {
   buildExtensionWebviewBatch,
   extensionWebviewBuildOptions,
 } from "./extension-webview-builder";
-import { inspectWebviewDependencyInputs } from "./webview-input-inspection";
+import { trackPreparationStage } from "./preparation-stages";
+import { inspectPreparedWebviewInputs } from "./prepared-webview-inputs";
 
 export const prepareWebviewArtifact = async (
   input: {
@@ -67,12 +66,6 @@ export const prepareWebviewArtifact = async (
 };
 
 type WebviewArtifactInput = Parameters<typeof prepareWebviewArtifact>[0];
-const dependencyHashForViews = (packagePath: string, inputs: WebviewArtifactInput[], signal: AbortSignal) =>
-  inspectWebviewDependencyInputs(
-    packagePath,
-    inputs.map((input) => input.entryPath),
-    signal,
-  );
 const artifactPaths = (id: string) => {
   const root = join(resolvePstdioHome(), "cache", "prepared-webviews", id);
   return { id, root, distDir: join(root, "dist"), complete: join(root, "complete.json") };
@@ -94,36 +87,31 @@ export const prepareWebviewArtifacts = async (inputs: WebviewArtifactInput[], si
   const packagePath = inputs[0]!.packagePath;
   if (inputs.some((input) => input.packagePath !== packagePath))
     throw new Error("Webview batch must belong to one package.");
-  const dependencyHash = await dependencyHashForViews(packagePath, inputs, signal);
-  signal.throwIfAborted();
-  const signatures = inputs.map((input) => inspectManagedWebviewBuildInputs(input, dependencyHash));
-  for (const signature of signatures) {
-    const error = missingWebviewDependenciesError(signature, packagePath);
-    if (error) throw new Error(error);
-  }
-  const artifacts = signatures.map((signature) =>
-    artifactPaths(
-      createHash("sha256")
-        .update([signature.signature, Bun.version, JSON.stringify(extensionWebviewBuildOptions)].join("\0"))
-        .digest("hex"),
-    ),
-  );
-  const missing = artifacts
-    .map((artifact, index) => ({ artifact, index }))
-    .filter(({ artifact }) => !isCompleteArtifact(artifact));
-  if (!missing.length) {
-    retainPreparedArtifacts(
-      undefined,
-      artifacts.map((artifact) => artifact.id),
-    );
-    return artifacts;
-  }
   const batch = join(resolvePstdioHome(), "cache", "prepared-webviews", `batch-${crypto.randomUUID()}`);
+  const stage = trackPreparationStage([batch]);
   mkdirSync(batch, { recursive: true });
   try {
+    const { sources, signatures } = await inspectPreparedWebviewInputs(inputs, join(batch, "sources"), signal);
+    const artifacts = signatures.map((signature) =>
+      artifactPaths(
+        createHash("sha256")
+          .update([signature.signature, Bun.version, JSON.stringify(extensionWebviewBuildOptions)].join("\0"))
+          .digest("hex"),
+      ),
+    );
+    const missing = artifacts
+      .map((artifact, index) => ({ artifact, index }))
+      .filter(({ artifact }) => !isCompleteArtifact(artifact));
+    if (!missing.length) {
+      retainPreparedArtifacts(
+        undefined,
+        artifacts.map((artifact) => artifact.id),
+      );
+      return artifacts;
+    }
     const entries = missing.map(({ index }) => {
       const entry = join(batch, `entry-${index}.ts`);
-      const target = JSON.stringify(inputs[index]!.entryPath);
+      const target = JSON.stringify(sources[index]!.entryPath);
       writeFileSync(
         entry,
         `export * from ${target}; import * as original from ${target}; export default original["default"];`,
@@ -133,13 +121,9 @@ export const prepareWebviewArtifacts = async (inputs: WebviewArtifactInput[], si
     const outcome = await buildExtensionWebviewBatch({ entryPaths: entries, outdir: join(batch, "dist"), signal });
     if (!outcome.success) throw new Error(outcome.details);
     signal.throwIfAborted();
-    const afterHash = await dependencyHashForViews(packagePath, inputs, signal);
+    const after = await inspectPreparedWebviewInputs(inputs, join(batch, "sources"), signal);
     signal.throwIfAborted();
-    if (
-      inputs.some(
-        (input, index) => inspectManagedWebviewBuildInputs(input, afterHash).signature !== signatures[index]!.signature,
-      )
-    )
+    if (after.signatures.some((signature, index) => signature.signature !== signatures[index]!.signature))
       throw new Error("Extension webview changed while preparing its bundle.");
     for (const { artifact, index } of missing) {
       mkdirSync(artifact.root, { recursive: true });
@@ -162,5 +146,6 @@ export const prepareWebviewArtifacts = async (inputs: WebviewArtifactInput[], si
     return artifacts;
   } finally {
     rmSync(batch, { recursive: true, force: true });
+    stage.release();
   }
 };

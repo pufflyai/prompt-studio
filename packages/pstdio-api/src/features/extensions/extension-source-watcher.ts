@@ -1,4 +1,4 @@
-import { subscribePreparationEvents, withBackgroundPreparation } from "pstdio-extensions";
+import { readAcceptedRevision, subscribePreparationEvents, withBackgroundPreparation } from "pstdio-extensions";
 import {
   createExtensionSourceWatcher as createLocalWatcher,
   type CreateExtensionSourceWatcherInput as LocalWatcherInput,
@@ -28,6 +28,19 @@ export const createExtensionSourceWatcher = async (input: CreateExtensionSourceW
   const running = new Map<string, Change>();
   const attachments = new Set<string>();
   let attaching: Promise<void> | undefined;
+  const updateFrontend = async (path: string, origin: Change["origin"]) => {
+    const update = () => withBackgroundPreparation(async () => input.onSourceChanged(path));
+    try {
+      const accepted = origin === "edit" || (await readAcceptedRevision(path));
+      if (accepted)
+        await withPreparationContinuation(update, { priority: origin === "edit" ? "requested" : "background" });
+      else await update();
+      return true;
+    } catch (error) {
+      input.onError?.(error);
+      return false;
+    }
+  };
   const changed = (path: string, origin: Change["origin"] = "attachment") => {
     if (disposed) return;
     const previous = running.get(path);
@@ -37,19 +50,29 @@ export const createExtensionSourceWatcher = async (input: CreateExtensionSourceW
     }
     let created: Change;
     const run = async () => {
-      if (disposed) return;
-      created.started = true;
-      const update = () => withBackgroundPreparation(async () => input.onSourceChanged(path));
+      let updated = false;
       try {
-        await (created.origin === "edit" ? withPreparationContinuation(update) : update());
-        await withBackgroundPreparation(async () => input.afterSourceChanged?.(path));
-      } catch (error) {
-        input.onError?.(error);
+        if (disposed) return;
+        created.started = true;
+        updated = await updateFrontend(path, created.origin);
+      } finally {
+        // Frontend freshness belongs to the manager. Provisioning and disposal
+        // still own every earlier generation, even if this frontend fails.
+        await previous?.work.catch(() => {});
+      }
+      if (updated) {
+        try {
+          await withBackgroundPreparation(async () => input.afterSourceChanged?.(path));
+        } catch (error) {
+          input.onError?.(error);
+        }
       }
     };
-    const work = (previous ? previous.work.then(run, run) : Promise.resolve().then(run)).finally(() => {
-      if (running.get(path) === created) running.delete(path);
-    });
+    const work = Promise.resolve()
+      .then(run)
+      .finally(() => {
+        if (running.get(path) === created) running.delete(path);
+      });
     created = { started: false, origin, work };
     running.set(path, created);
     return work;
@@ -70,13 +93,13 @@ export const createExtensionSourceWatcher = async (input: CreateExtensionSourceW
   };
   const unsubscribe = subscribePreparationEvents((event) => {
     if (!disposed && registered && (event.kind === "worker-ready" || event.kind === "worker-lost")) {
-      void withPreparationContinuation(refresh).catch((error) => input.onError?.(error));
+      void withPreparationContinuation(refresh, { priority: "restoration" }).catch((error) => input.onError?.(error));
       return;
     }
     if (disposed || event.watchId !== id) return;
     if (typeof event.error === "string") input.onError?.(new Error(event.error));
     else if (typeof event.sourcePath === "string") {
-      if (event.attachment === true) {
+      if (event.attachment === true && event.changed !== true) {
         attachments.add(event.sourcePath);
         reconcileAttachment();
       } else {

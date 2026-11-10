@@ -8,21 +8,27 @@ export const joinPreparationDependencies = <T>(
   owners: CheckOwner[],
   work: Promise<T>,
 ) => {
-  const leases = new Map<CheckOwner, () => void>();
+  const leases = new Map<
+    CheckOwner,
+    { source: "requested" | NonNullable<typeof caller.continuation>; release: () => void }
+  >();
   const refresh = () => {
+    const source = caller.requested ? "requested" : caller.continuation;
     for (const owner of owners) {
-      if (caller.requested && !owner.settled && !leases.has(owner)) leases.set(owner, owner.scope.request());
-      else if ((!caller.requested || owner.settled) && leases.has(owner)) {
-        leases.get(owner)!();
+      const current = leases.get(owner);
+      if (current && (owner.settled || !source || current.source !== source)) {
+        current.release();
         leases.delete(owner);
       }
+      if (source && !owner.settled && !leases.has(owner))
+        leases.set(owner, { source, release: owner.scope.request(caller) });
     }
   };
   const unsubscribe = caller.subscribe(refresh);
   refresh();
   return work.finally(() => {
     unsubscribe();
-    for (const release of leases.values()) release();
+    for (const lease of leases.values()) lease.release();
   });
 };
 

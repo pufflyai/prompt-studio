@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Worker } from "node:worker_threads";
 import { createPreparationClient } from "pstdio-extensions/preparation-client";
+import { createTestSkillExtensionSource } from "./test-utils/create-test-extension-source";
 
 const cleanups: (() => Promise<unknown>)[] = [];
 afterEach(async () => {
@@ -116,5 +117,41 @@ test("an attachment failure leaves a repaired source eligible for reconciliation
   });
   await client.run("watch.update", input, options);
   expect(notifications).toContain(sourcePath);
+  await client.run("watch.dispose", { id: input.id }, options);
+});
+
+test("reattachment identifies offline source changes before slow frontend reconciliation", async () => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), "preparation-watch-offline-")));
+  cleanups.push(() => rm(root, { recursive: true, force: true }));
+  const sourcePath = createTestSkillExtensionSource({
+    root,
+    name: "source",
+    installName: "source",
+    displayName: "Source",
+  });
+  const skill = join(sourcePath, "SKILL.md");
+  await writeFile(skill, "accepted");
+  const client = createPreparationClient(
+    () => new Worker(new URL("./extension-preparation-worker.ts", import.meta.url)),
+  );
+  cleanups.push(() => client.stop());
+  const input = {
+    id: "offline",
+    kind: "sources",
+    rows: [{ install_name: "source", source_path: sourcePath, source_hash: "opaque-source-version" }],
+  };
+  const options = { home: join(root, "home") };
+  const revision = await client.run("runtime.prepare", { sourcePath }, options);
+  await client.run("runtime.accept", { sourcePath, revision }, options);
+  const events: Record<string, unknown>[] = [];
+  client.subscribe((event) => {
+    if (event.attachment) events.push(event);
+  });
+  await client.run("watch.update", input, options);
+  expect(events.at(-1)?.changed).toBe(false);
+  await client.run("watch.dispose", { id: input.id }, options);
+  await writeFile(skill, "offline edit");
+  await client.run("watch.update", input, options);
+  expect(events.at(-1)?.changed).toBe(true);
   await client.run("watch.dispose", { id: input.id }, options);
 });

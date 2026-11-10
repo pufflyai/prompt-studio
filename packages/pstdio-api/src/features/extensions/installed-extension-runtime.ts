@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
-import { retainExtensionPreparation, stopUnownedExtensionPreparation } from "pstdio-extensions";
+import { readAcceptedRevision, retainExtensionPreparation, stopUnownedExtensionPreparation } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
 import type { createExtensionService } from "../../services/extension-service";
 import type { createProjectService } from "../../services/project-service";
@@ -17,6 +17,7 @@ import { EXTENSION_INSTALLING_MARKER, resolvePstdioHome } from "./install-extens
 import type { ProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
 import { listRepoExtensionRoots } from "./repo-extension-roots";
 import { syncRepoExtensionsForProject } from "./repo-extensions";
+import { createRuntimeCandidateInspection } from "./runtime-candidate-inspection";
 
 type RuntimeProcess = {
   dispose: () => void;
@@ -100,10 +101,14 @@ export const createInstalledExtensionRuntime = (input: {
   const provisionedSourceHashes = new Map<string, string>();
   const listExistingInstalledSources = async () => {
     const rows = selectExistingSources(await input.installedExtensionSourcesService.list());
-    for (const row of rows) {
-      if (row.source_hash && !provisionedSourceHashes.has(row.source_path))
-        provisionedSourceHashes.set(row.source_path, row.source_hash);
-    }
+    await Promise.all(
+      rows.map(async (row) => {
+        if (provisionedSourceHashes.has(row.source_path)) return;
+        const baseline = (await readAcceptedRevision(row.source_path))?.sourceHash ?? row.source_hash;
+        if (baseline && !provisionedSourceHashes.has(row.source_path))
+          provisionedSourceHashes.set(row.source_path, baseline);
+      }),
+    );
     return rows;
   };
   const webviewBuildManager: RuntimeProcess & {
@@ -159,22 +164,33 @@ export const createInstalledExtensionRuntime = (input: {
       .then(() => input.projectRuntimeCatalog.invalidate({ reason: "webviews_built" }))
       .catch(reportError);
   };
+  const candidateInspection = createRuntimeCandidateInspection({
+    acceptedHash: async (path) =>
+      (await readAcceptedRevision(path))?.sourceHash ??
+      (await input.installedExtensionSourcesService.getBySourcePath(path))?.source_hash,
+    onError: reportError,
+  });
   // Provisioning can write into a watched folder, so unchanged content must not
   // provision again. A rejected callback leaves the previous baseline eligible.
   const provisionWhenSourceChanged = async (sourcePath: string) => {
     // The root watcher handles a removed folder.
     if (!existsSync(sourcePath)) return;
     const sourceHash = await hashExtensionSourceAsync(sourcePath);
-    if (provisionedSourceHashes.get(sourcePath) === sourceHash) return;
-    await input.provisionWorkspacesUsingSource(sourcePath);
-    provisionedSourceHashes.set(sourcePath, sourceHash);
+    if (provisionedSourceHashes.get(sourcePath) !== sourceHash) {
+      await input.provisionWorkspacesUsingSource(sourcePath);
+      provisionedSourceHashes.set(sourcePath, sourceHash);
+    }
+    void candidateInspection.inspect(sourcePath, sourceHash);
   };
   // Editing a watched folder rebuilds the assets of the extension the project already adopted. It
   // never re-reads contributions from disk: adopting new source is an explicit act. Skill files
   // are read from disk, so the edit also re-provisions workspaces to keep harness copies current.
   const sourceWatcher = createSourceWatcher({
     listInstalledSources: listExistingInstalledSources,
-    onSourceChanged: (sourcePath) => webviewBuildManager.refresh(sourcePath),
+    onSourceChanged: (sourcePath) => {
+      candidateInspection.cancel(sourcePath);
+      return webviewBuildManager.refresh(sourcePath);
+    },
     afterSourceChanged: provisionWhenSourceChanged,
     onError: (err) => apiLogger.error({ err, event: "extensions.source_watcher.error" }, "Extension watcher failed"),
   });
@@ -217,6 +233,7 @@ export const createInstalledExtensionRuntime = (input: {
     ready,
     stopPreparation,
     dispose: async () => {
+      await candidateInspection.dispose();
       await stopPreparation();
       webviewBuildManager.dispose();
       await ready.catch(() => {});

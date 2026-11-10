@@ -2,70 +2,27 @@ import { isMainThread, Worker } from "node:worker_threads";
 import { isPackagedRuntime, registerFileMutationWorker, resolvePstdioHome } from "pstdio-paths";
 
 import { ownPreparationCommands } from "./preparation-command";
+import {
+  activePreparationPriority,
+  createJob,
+  type Job,
+  orderPreparationQueue,
+  type PreparationOptions,
+  preparationJobMessage,
+  preparationQueuePriority,
+  priorityFor,
+  settlePreparationJob,
+  type Waiter,
+} from "./preparation-queue";
 
 export { createPreparationScope, withBackgroundPreparation, withRequestedPreparation } from "./preparation-priority";
+export type { PreparationOptions } from "./preparation-queue";
 export { isMainThread as isPreparationHost };
 
-import { createPreparationContinuations, preparationPriority, withRequestedPreparation } from "./preparation-priority";
-export interface PreparationOptions {
-  signal?: AbortSignal;
-  priority?: "requested" | "background";
-  key?: string;
-  home?: string;
-}
-const priorityFor = (options: PreparationOptions, scope: ReturnType<typeof preparationPriority.getStore>) =>
-  (options.priority ?? scope?.priority) === "background" ? 1 : 0;
-interface Waiter {
-  resolve: (value: unknown) => void;
-  reject: (error: unknown) => void;
-  removeAbort: () => void;
-  priority: () => number;
-  scope?: ReturnType<typeof preparationPriority.getStore>;
-}
-interface Job {
-  id: number;
-  key: string;
-  task: string;
-  input: unknown;
-  home: string;
-  env: NodeJS.ProcessEnv;
-  priority: number;
-  waiters: Set<Waiter>;
-}
-const createJob = (id: number, key: string, task: string, input: unknown, home: string) => ({
-  id,
-  key,
-  task,
-  input,
-  home,
-  env: { ...process.env },
-  get priority() {
-    for (const waiter of this.waiters) if (waiter.priority() === 0) return 0;
-    return 1;
-  },
-  waiters: new Set<Waiter>(),
-});
-const settlePreparationJob = (jobs: Map<string, Job>, job: Job, error: unknown, value?: unknown) => {
-  if (jobs.get(job.key) === job) jobs.delete(job.key);
-  for (const waiter of job.waiters) {
-    waiter.removeAbort();
-    if (error) waiter.reject(error);
-    else waiter.resolve(value);
-  }
-  job.waiters.clear();
-};
+import { createPreparationContinuations, preparationPriority, withContinuingPreparation } from "./preparation-priority";
 
 const preparationReplyError = (error?: { message: string }) =>
   error ? Object.assign(new Error(error.message), error) : undefined;
-
-const preparationJobMessage = (active: Job) => ({
-  kind: "run",
-  id: active.id,
-  task: active.task,
-  input: active.input,
-  home: active.home,
-  env: active.env,
-});
 
 export interface PreparationEvent {
   kind?: string;
@@ -80,12 +37,12 @@ export interface PreparationHome {
 }
 const continuePreparation =
   (continuations: ReturnType<typeof createPreparationContinuations>) =>
-  <T>(work: () => T) =>
-    withRequestedPreparation(() => {
+  <T>(work: () => T, options: { priority?: "requested" | "background" | "restoration" } = {}) =>
+    withContinuingPreparation(() => {
       // Reserve before host/database awaits, while no dependent job exists yet.
       continuations.retain(preparationPriority.getStore());
       return work();
-    });
+    }, options.priority);
 export const createPreparationClient = (
   createWorker: () => Worker,
   cleanup?: (homes: PreparationHome[]) => Promise<void>,
@@ -103,7 +60,12 @@ export const createPreparationClient = (
   const queued: Job[] = [];
   const jobs = new Map<string, Job>();
   const listeners = new Set<(event: PreparationEvent) => void>();
-  const continuations = createPreparationContinuations(() => pump());
+  const continuations = createPreparationContinuations(() => {
+    if (active && queued.some((job) => queuedPriority(job) < activePreparationPriority(active!, queuedPriority)))
+      replaceWorker(active);
+    pump();
+  });
+  const queuedPriority = preparationQueuePriority(continuations);
   const settle = (job: Job, error: unknown, value?: unknown) => settlePreparationJob(jobs, job, error, value);
   const fail = (current: Worker, error: unknown, notify = true) => {
     if (worker !== current) return;
@@ -130,22 +92,13 @@ export const createPreparationClient = (
   const pump = (backgroundReady = false) => {
     if (!worker || !ready || active || stopping) return;
     if (workerFactory !== createWorker) return replaceWorker();
-    queued.sort((a, b) => a.priority - b.priority || a.id - b.id);
-    // Publishing a tool includes host database/callback work between worker jobs.
-    // Starting speculation in those gaps only to retire it loses the warm worker.
-    if (queued[0]?.priority === 1 && continuations.size) {
-      const dependency = queued.findIndex((job) =>
-        [...job.waiters].some((waiter) => waiter.scope?.continuation?.continuing),
-      );
-      if (dependency < 0) {
-        worker.unref();
-        return;
-      }
-      queued.unshift(...queued.splice(dependency, 1));
+    if (!orderPreparationQueue(queued, queuedPriority, continuations)) {
+      worker.unref();
+      return;
     }
     // Let foreground continuations enqueue their next step before resuming speculative
     // work; starting it inside the response event otherwise causes repeated retirement.
-    if (queued[0]?.priority === 1 && !backgroundReady) {
+    if (queued[0] && queuedPriority(queued[0]) > 0 && !backgroundReady) {
       backgroundPump ??= setTimeout(() => {
         backgroundPump = undefined;
         pump(true);
@@ -252,7 +205,8 @@ export const createPreparationClient = (
       continuations.retain(scope);
       const request = () => {
         if (stopping || jobs.get(owned.key) !== owned) return;
-        if (active && queued.some((job) => job.priority < active!.priority)) replaceWorker(active);
+        if (active && queued.some((job) => queuedPriority(job) < activePreparationPriority(active!, queuedPriority)))
+          replaceWorker(active);
         start();
         pump();
       };
@@ -279,18 +233,18 @@ export const createPreparationClient = (
           resolve,
           reject,
           scope,
+          preserveActiveContinuation: options.preserveActiveContinuation,
           priority: () => priorityFor(options, scope),
           removeAbort: () => options.signal?.removeEventListener("abort", abort),
         };
         owned.waiters.add(waiter);
         options.signal?.addEventListener("abort", abort, { once: true });
       });
-      if (active && active !== owned && active.priority > owned.priority) replaceWorker(active);
+      if (active && active !== owned && activePreparationPriority(active, queuedPriority) > queuedPriority(owned))
+        replaceWorker(active);
       start();
       pump();
-      return result.finally(() => {
-        scope?.jobs.delete(request);
-      }) as Promise<T>;
+      return result.finally(() => scope?.jobs.delete(request)) as Promise<T>;
     },
     stop: (finalCleanup = true) => {
       if (stopping) return stopping;
