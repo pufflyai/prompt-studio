@@ -218,6 +218,22 @@ An orphaned blob is one no update or state lists and no parent still holds. The 
 
 The relay report runs in one read-only snapshot with a five-minute statement timeout and does not walk blob trees, so it stays within a small database's memory. On a 1 vCPU, 1 GB PostgreSQL, 2 million blobs take about 9 seconds.
 
+### Clear a project
+
+To give a project a clean start, clear its relay data. The script only reports, until `--confirm` repeats the project ID.
+
+```sh
+# Removes documents, updates and states, queues their objects, and marks every blob for deletion.
+DATABASE_URL=<relay database URL> \
+  bun services/relay/scripts/project-clear.ts --account <account id> --project <project id> --confirm <project id>
+```
+
+First make the project local on every device, and check with the manager inspection that it no longer syncs. The manager grants relay access only to a project that syncs, and a granted access token lasts `ACCESS_LIFETIME_SECONDS`. Wait longer than that after the project is made local, so that no device still writes to it. The project's keys stay in the manager. Devices keep data sealed with those keys and upload it again when the project syncs again, so new keys would make that data unreadable.
+
+The relay's next hourly cleanup deletes the queued objects and the marked blobs with their objects. Objects are deleted one by one, a few storage requests per blob, so a large project can take many hours. The inspection report shows the marked blobs until they are gone, and their bytes still count against the account's quota until then. The project record stays, because blob rows cascade from it, and the project reuses it when it syncs again.
+
+Reconnect the project only once the inspection report shows no blobs left for it. Devices upload their blobs again under the same IDs, and the relay refuses an upload of a blob still marked for deletion. When the project syncs again, the relay has nothing of it, and each device rebuilds its streams from its local copy, as after the loss of relay data. Do not run the clear again after the project syncs again: it would clear the new data too.
+
 ## Reference workload measurement
 
 PS-787 adds a manual [reference workload](../../../packages/e2e/src/perf/relay-reference-workload/workload.diagnostic.ts).
