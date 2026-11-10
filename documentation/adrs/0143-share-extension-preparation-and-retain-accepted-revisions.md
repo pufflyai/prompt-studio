@@ -72,6 +72,12 @@ A private restoration admission phase completes watcher lookup and dependent reg
 background continuation work on the replacement worker. After watching, attachment hashes compare current own-source
 bytes with the accepted revision’s preparer-computed hash. Caller-supplied database versions may be opaque. Offline changes enter live-edit admission immediately; unchanged sources retain
 the complete frontend checks, including dependency and compiler input inspection.
+Source watcher owners retain the last observed own-source hash across worker replacement. Reattaching the same edited
+bytes still performs a fresh frontend/dependency check, but uses background attachment admission rather than repeatedly
+borrowing live-edit urgency from an intentionally older accepted runtime. First unseen offline content remains a live
+edit. Ordinary filesystem/dependency notifications remain live even when the own-source hash is unchanged. This bounded
+per-registration history is pruned with removed sources; late events cannot recreate a removed registration.
+
 Inspection and compilation share at most four host-owned leaf slots across both workers (or fewer on a smaller host).
 Orchestration never holds a slot across nested work. A waiting child reports its dependency to the scheduler: a requested
 operation can retire a lower-urgency peer holding its needed permits, even after the request has entered a worker.

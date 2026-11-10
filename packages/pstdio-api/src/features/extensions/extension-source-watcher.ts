@@ -33,6 +33,9 @@ export const createExtensionSourceWatcher = async (input: CreateExtensionSourceW
   type Change = { started: boolean; origin: "attachment" | "edit"; work: Promise<void> };
   const running = new Map<string, Change>();
   const attachments = new Set<string>();
+  // Runtime acceptance intentionally retains A after an observed frontend edit B.
+  // Worker replacement must not keep promoting that same B as a new live edit.
+  const observedHashes = new Map<string, string | undefined>();
   let attaching: Promise<void> | undefined;
   const updateFrontend = async (path: string, origin: Change["origin"]) => {
     const update = () => withBackgroundPreparation(async () => input.onSourceChanged(path));
@@ -58,7 +61,7 @@ export const createExtensionSourceWatcher = async (input: CreateExtensionSourceW
     const run = async () => {
       let updated = false;
       try {
-        if (disposed) return;
+        if (disposed || !observedHashes.has(path)) return;
         created.started = true;
         updated = await updateFrontend(path, created.origin);
       } finally {
@@ -97,21 +100,31 @@ export const createExtensionSourceWatcher = async (input: CreateExtensionSourceW
         reconcileAttachment();
       });
   };
+  const observe = (path: string, hash: unknown) => {
+    if (typeof hash !== "string") return false;
+    const previous = observedHashes.get(path);
+    observedHashes.set(path, hash);
+    return hash === previous;
+  };
   const unsubscribe = subscribePreparationEvents((event) => {
-    if (!disposed && registered && (event.kind === "worker-ready" || event.kind === "worker-lost")) {
+    if (disposed) return;
+    if (registered && (event.kind === "worker-ready" || event.kind === "worker-lost")) {
       void withPreparationContinuation(refresh, { priority: "restoration" }).catch((error) => input.onError?.(error));
       return;
     }
-    if (disposed || event.watchId !== id) return;
-    if (typeof event.error === "string") input.onError?.(new Error(event.error));
-    else if (typeof event.sourcePath === "string") {
-      if (event.attachment === true && event.changed !== true) {
-        attachments.add(event.sourcePath);
-        reconcileAttachment();
-      } else {
-        attachments.delete(event.sourcePath);
-        changed(event.sourcePath, "edit");
-      }
+    if (event.watchId !== id) return;
+    if (typeof event.error === "string") {
+      input.onError?.(new Error(event.error));
+      return;
+    }
+    if (typeof event.sourcePath !== "string" || !observedHashes.has(event.sourcePath)) return;
+    const repeated = observe(event.sourcePath, event.sourceHash);
+    if (event.attachment === true && (event.changed !== true || repeated)) {
+      attachments.add(event.sourcePath);
+      reconcileAttachment();
+    } else {
+      attachments.delete(event.sourcePath);
+      changed(event.sourcePath, "edit");
     }
   });
   const refreshOwner = createPreparationWatchRefresh(async (sourcePath, signal) => {
@@ -122,6 +135,13 @@ export const createExtensionSourceWatcher = async (input: CreateExtensionSourceW
       source_hash,
     }));
     if (disposed) return;
+    const paths = new Set(rows.map((row) => row.source_path));
+    for (const path of observedHashes.keys())
+      if (!paths.has(path)) {
+        observedHashes.delete(path);
+        attachments.delete(path);
+      }
+    for (const path of paths) if (!observedHashes.has(path)) observedHashes.set(path, undefined);
     await runExtensionPreparation(
       "watch.update",
       { id, kind: "sources", rows, sourcePath },
@@ -135,6 +155,7 @@ export const createExtensionSourceWatcher = async (input: CreateExtensionSourceW
   } catch (error) {
     disposed = true;
     attachments.clear();
+    observedHashes.clear();
     unsubscribe();
     await refreshOwner.dispose();
     await Promise.allSettled([...running.values()].map((change) => change.work));
@@ -145,6 +166,7 @@ export const createExtensionSourceWatcher = async (input: CreateExtensionSourceW
     dispose: async () => {
       disposed = true;
       attachments.clear();
+      observedHashes.clear();
       unsubscribe();
       await refreshOwner.dispose();
       await Promise.allSettled(

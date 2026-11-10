@@ -19,18 +19,27 @@ export const updatePreparationWatcher = async (input: WatchUpdate) => {
   const addedSources =
     input.kind === "sources" ? input.rows.filter((row) => !previousSources.has(row.source_path)) : [];
   const report = (event: object) => publishPreparationEvent({ watchId: input.id, ...event });
+  const sourceHash = (sourcePath: string) => {
+    try {
+      return hashExtensionSource(sourcePath);
+    } catch (error) {
+      report({ error: error instanceof Error ? error.message : String(error) });
+    }
+  };
   const reconcileAttachments = async () => {
     // An edit can precede detached registration or land while its worker is absent.
     // Reconcile after watching so a later edit is covered by ordinary notifications.
     for (const row of addedSources) {
       let changed = false;
+      let observedHash: string | undefined;
       try {
         const baseline = (await readAcceptedRevision(row.source_path))?.sourceHash ?? row.source_hash;
-        changed = Boolean(baseline && hashExtensionSource(row.source_path) !== baseline);
+        observedHash = sourceHash(row.source_path);
+        changed = Boolean(baseline && observedHash && observedHash !== baseline);
       } catch (error) {
         report({ error: error instanceof Error ? error.message : String(error) });
       }
-      report({ sourcePath: row.source_path, attachment: true, changed });
+      report({ sourcePath: row.source_path, sourceHash: observedHash, attachment: true, changed });
     }
   };
   if (existing) {
@@ -54,7 +63,7 @@ export const updatePreparationWatcher = async (input: WatchUpdate) => {
   if (input.kind === "sources")
     state.watcher = await createExtensionSourceWatcher({
       listInstalledSources: async () => state.sources,
-      onSourceChanged: async (sourcePath) => report({ sourcePath }),
+      onSourceChanged: async (path) => report({ sourcePath: path, sourceHash: sourceHash(path) }),
       onError: (error) => report({ error: error instanceof Error ? error.message : String(error) }),
     });
   else
