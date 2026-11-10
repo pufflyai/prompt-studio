@@ -24,6 +24,7 @@ import { changedHarnessParams } from "./harness-settings";
 import { parseParamRecord, serializeParamRecord } from "./param-field-shared";
 import {
   readRecentHarnessSelection,
+  readRecentHarnessSetup,
   resolveInitialHarnessSelection,
   saveRecentHarnessSelection,
 } from "./recent-harness-param";
@@ -101,7 +102,13 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
       agents,
     });
     if (next.harnessId === harnessId && next.model === model) return;
-    onChange(serializeParamRecord({ harnessId: next.harnessId, ...(next.model ? { model: next.model } : {}) }));
+    onChange(
+      serializeParamRecord({
+        harnessId: next.harnessId,
+        ...(next.model ? { model: next.model } : {}),
+        ...(next.params ? { params: next.params } : {}),
+      }),
+    );
   }, [
     agents,
     defaultAgent,
@@ -155,8 +162,13 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
 
   const handleSelectAgent = (agent: string) => {
     if (lockIdentity) return;
-    const next = { harnessId: agent };
-    if (!preserveSettings) saveRecentHarnessSelection(projectId, next);
+    const saved = preserveSettings ? undefined : readRecentHarnessSetup(projectId, agent);
+    const next = {
+      harnessId: agent,
+      ...(saved?.model ? { model: saved.model } : {}),
+      ...(saved?.params ? { params: saved.params } : {}),
+    };
+    if (!preserveSettings) saveRecentHarnessSelection(projectId, { harnessId: agent });
     onChange(serializeParamRecord(next));
   };
   const handleSelectModel = (selected: string) => {
@@ -167,11 +179,13 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
       ...(selected ? { model: selected } : {}),
       ...(Object.keys(selectedParams).length ? { params: selectedParams } : {}),
     };
-    if (!preserveSettings) saveRecentHarnessSelection(projectId, next);
+    if (!preserveSettings)
+      saveRecentHarnessSelection(projectId, { harnessId, model: selected, params: selectedParams });
     onChange(serializeParamRecord(next));
   };
   const handleParamsChange = (overrides: HarnessParamValues) => {
     const nextParams = changedHarnessParams(overrides, effectiveParamDefaults, settingsMode);
+    if (!preserveSettings) saveRecentHarnessSelection(projectId, { harnessId, params: nextParams });
     onChange(
       serializeParamRecord({
         harnessId,

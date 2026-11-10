@@ -3,9 +3,20 @@ export interface RecentHarnessStorage {
   setItem: (key: string, value: string) => void;
 }
 
-export interface RecentHarnessSelection {
-  harnessId: string;
+export interface RecentHarnessSetup {
   model?: string;
+  params?: Record<string, string | boolean>;
+}
+
+export interface RecentHarnessSelection extends RecentHarnessSetup {
+  harnessId: string;
+  /** Last setup for every harness used in the project, not just the last one. */
+  harnesses?: Record<string, RecentHarnessSetup>;
+}
+
+export interface ResolvedHarnessSelection {
+  harnessId: string;
+  model: string;
   params?: Record<string, string | boolean>;
 }
 
@@ -47,6 +58,35 @@ export const createMemoryRecentHarnessStorage = () => {
 
 const resolveStorage = (storage: RecentHarnessStorage | undefined) => storage ?? readStorage();
 
+const filterParams = (value: unknown) => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const entries = Object.entries(value).filter(([, entry]) => typeof entry === "string" || typeof entry === "boolean");
+  return entries.length > 0 ? (Object.fromEntries(entries) as Record<string, string | boolean>) : undefined;
+};
+
+const parseSetup = (value: unknown): RecentHarnessSetup | undefined => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  const model = typeof record.model === "string" && record.model.length > 0 ? record.model : undefined;
+  const params = filterParams(record.params);
+  return model || params ? { ...(model ? { model } : {}), ...(params ? { params } : {}) } : undefined;
+};
+
+const setupFromSelection = (selection: RecentHarnessSelection): RecentHarnessSetup | undefined => {
+  const model = selection.model?.trim();
+  const params = filterParams(selection.params);
+  return model || params ? { ...(model ? { model } : {}), ...(params ? { params } : {}) } : undefined;
+};
+
+const parseHarnesses = (value: unknown) => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const entries = Object.entries(value).flatMap(([harnessId, setup]) => {
+    const parsed = parseSetup(setup);
+    return harnessId && parsed ? [[harnessId, parsed] as const] : [];
+  });
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+};
+
 export const readRecentHarnessSelection = (projectId: string | undefined, storage?: RecentHarnessStorage) => {
   const resolvedStorage = resolveStorage(storage);
   if (!projectId || !resolvedStorage) return undefined;
@@ -57,22 +97,29 @@ export const readRecentHarnessSelection = (projectId: string | undefined, storag
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     if (typeof parsed.harnessId !== "string" || parsed.harnessId.length === 0) return undefined;
-    const params = parsed.params;
+    const harnesses = parseHarnesses(parsed.harnesses);
     return {
       harnessId: parsed.harnessId,
-      ...(typeof parsed.model === "string" && parsed.model.length > 0 ? { model: parsed.model } : {}),
-      ...(params && typeof params === "object" && !Array.isArray(params)
-        ? {
-            params: Object.fromEntries(
-              Object.entries(params).filter(([, value]) => typeof value === "string" || typeof value === "boolean"),
-            ),
-          }
-        : {}),
-    };
+      ...(parseSetup(parsed) ?? {}),
+      ...(harnesses ? { harnesses } : {}),
+    } satisfies RecentHarnessSelection;
   } catch {
     return undefined;
   }
 };
+
+const setupFor = (recent: RecentHarnessSelection | undefined, harnessId: string) => {
+  if (!recent) return undefined;
+  const saved = recent.harnesses?.[harnessId];
+  if (saved) return saved;
+  return recent.harnessId === harnessId ? setupFromSelection(recent) : undefined;
+};
+
+export const readRecentHarnessSetup = (
+  projectId: string | undefined,
+  harnessId: string,
+  storage?: RecentHarnessStorage,
+) => setupFor(readRecentHarnessSelection(projectId, storage), harnessId);
 
 export const saveRecentHarnessSelection = (
   projectId: string | undefined,
@@ -83,8 +130,32 @@ export const saveRecentHarnessSelection = (
   if (!projectId || !resolvedStorage || !selection.harnessId) return;
 
   const recent = readRecentHarnessSelection(projectId, resolvedStorage);
-  const params = selection.params ?? (recent?.harnessId === selection.harnessId ? recent.params : undefined);
-  resolvedStorage.setItem(storageKey(projectId), JSON.stringify({ ...selection, ...(params ? { params } : {}) }));
+  const previous = setupFor(recent, selection.harnessId);
+  const hasModel = Object.hasOwn(selection, "model");
+  const hasParams = Object.hasOwn(selection, "params");
+  const next: RecentHarnessSetup = {
+    ...(previous ?? {}),
+    ...(hasModel ? { model: selection.model } : {}),
+    ...(hasParams ? { params: selection.params } : {}),
+  };
+  const setup = setupFromSelection({ harnessId: selection.harnessId, ...next });
+  const harnesses = { ...(recent?.harnesses ?? {}) };
+  // Carry a legacy single-harness entry into the per-harness map before adding another harness.
+  if (recent && !harnesses[recent.harnessId]) {
+    const legacy = setupFromSelection(recent);
+    if (legacy) harnesses[recent.harnessId] = legacy;
+  }
+  if (setup) harnesses[selection.harnessId] = setup;
+  else delete harnesses[selection.harnessId];
+
+  resolvedStorage.setItem(
+    storageKey(projectId),
+    JSON.stringify({
+      harnessId: selection.harnessId,
+      ...(setup ?? {}),
+      ...(Object.keys(harnesses).length > 0 ? { harnesses } : {}),
+    }),
+  );
 };
 
 // A harness selector always commits a value: the explicit current selection, then
@@ -95,13 +166,20 @@ export const resolveInitialHarnessSelection = (input: {
   recent: RecentHarnessSelection | undefined;
   defaultAgent: string | null | undefined;
   agents?: AvailableHarness[];
-}) => {
-  if (input.current.harnessId) return input.current;
-  if (input.recent?.harnessId) return { harnessId: input.recent.harnessId, model: input.recent.model ?? "" };
-  if (input.defaultAgent) return { harnessId: input.defaultAgent, model: "" };
+}): ResolvedHarnessSelection => {
+  const restore = (harnessId: string) => {
+    const setup = setupFor(input.recent, harnessId);
+    const model = setup?.model ?? "";
+    // Parameters only make sense with the model that was saved alongside them.
+    return { harnessId, model, ...(model && setup?.params ? { params: setup.params } : {}) };
+  };
+
+  if (input.current.harnessId) return input.current.model ? input.current : restore(input.current.harnessId);
+  if (input.recent?.harnessId) return restore(input.recent.harnessId);
+  if (input.defaultAgent) return restore(input.defaultAgent);
 
   const fallback = firstAvailableHarness(input.agents ?? []);
-  if (fallback) return { harnessId: fallback.id, model: "" };
+  if (fallback) return restore(fallback.id);
 
   return input.current;
 };
