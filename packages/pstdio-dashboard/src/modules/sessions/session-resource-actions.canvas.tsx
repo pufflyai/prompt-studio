@@ -1,5 +1,5 @@
-import { Stack, Text } from "@chakra-ui/react";
-import { Button, ResourceActionMenu } from "@pstdio/ui";
+import { Button, Stack, Text } from "@chakra-ui/react";
+import { ResourceActionMenu } from "@pstdio/ui";
 import { useState } from "react";
 
 export default {

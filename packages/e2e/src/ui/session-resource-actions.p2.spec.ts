@@ -41,6 +41,7 @@ test("drafts omit management actions and workspace session rows explain guarded 
   await prepareResourceActionsDashboard(page, project.id);
   await page.goto(`/projects/${project.id}/sessions`);
   await breadcrumbMenu(page);
+  await expect(menuItem(page, "Copy session ID")).toHaveCount(0);
   await expect(menuItem(page, "Rename session")).toHaveCount(0);
   await expect(menuItem(page, "Delete session")).toHaveCount(0);
   await page.keyboard.press("Escape");
@@ -76,6 +77,28 @@ test("drafts omit management actions and workspace session rows explain guarded 
     status: "awaiting_input",
   });
   await expect(page).toHaveURL(new RegExp(workspace.id));
+});
+
+test("copying a failed session reference uses the invoking row and preserves the open session", async ({
+  page,
+  request,
+  context,
+}) => {
+  const project = await createResourceActionsProject(request);
+  const open = await createSession(request, project.id, "Open conversation");
+  const failed = await createSession(request, project.id, "Failed conversation");
+  await request.patch(`/v1/sessions/${failed.id}/status`, { data: { status: "failed" } });
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await prepareResourceActionsDashboard(page, project.id);
+  await page.goto(`/projects/${project.id}/sessions`);
+  await row(page, open.title).click();
+  await row(page, failed.title).click({ button: "right" });
+  await menuItem(page, "Copy session ID").click();
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(failed.id);
+  await expect(page).toHaveURL(new RegExp(open.id));
+  await breadcrumbMenu(page);
+  await menuItem(page, "Copy session ID").click();
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(open.id);
 });
 
 test("shared session actions rename another row without changing the selected session", async ({ page, request }) => {

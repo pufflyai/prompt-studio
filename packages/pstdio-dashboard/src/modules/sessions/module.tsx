@@ -1,4 +1,5 @@
 import type { WorkbenchModuleContribution } from "@pstdio/workbench";
+import { registerCopySessionId } from "./copy-session-id";
 import { findDashboardSession } from "./data/dashboard-sessions";
 import { subscribeSessionListData } from "./data/session-data-subscription";
 import { registerSessionProviderCompatibility } from "./session-provider-compatibility";
@@ -18,6 +19,7 @@ export const createSessionsModule = () =>
         subscribe: subscribeSessionListData,
       });
       ctx.resources.registerKind({ kind: "session-draft", label: "Session draft", icon: "message-circle" });
+      registerCopySessionId(ctx);
       const compatibility = registerSessionProviderCompatibility(ctx);
       const stopSync = registerSessionResourceSync(ctx);
       const stopRetention = registerSessionResourceRetention(ctx);

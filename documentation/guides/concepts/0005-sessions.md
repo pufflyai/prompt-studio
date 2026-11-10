@@ -14,6 +14,10 @@ Select a session, then open the arrow beside its name in the breadcrumb. You can
 
 The menu acts on that session. Choosing another row's action keeps your current conversation open. New session drafts have no saved-session management actions.
 
+## Copy a session reference
+
+Choose **Copy session ID** to copy the full Prompt Studio session ID. Paste it into another agent's conversation to identify the session you want analyzed, including a session that failed. The action copies only the ID and keeps your current conversation open.
+
 ## Rename
 
 Choose **Rename session**. Edit the current name and choose **Run**. The name changes in navigation, the breadcrumb, and open panels. Outer spaces are trimmed. A blank name shows an inline error. Cancel or Escape keeps the current name.
