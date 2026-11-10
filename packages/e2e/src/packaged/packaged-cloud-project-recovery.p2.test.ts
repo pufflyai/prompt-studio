@@ -57,6 +57,11 @@ test(
           await retryHeld;
           await route.continue();
         });
+        page.on("request", (request) => {
+          const path = new URL(request.url()).pathname;
+          if (path.includes(project.id) && /\/(sync|retry|open|retry-setup)$/.test(path))
+            console.info(`Cloud recovery request: ${request.method()} ${path}`);
+        });
         page.on("response", (response) => {
           const path = new URL(response.url()).pathname;
           if (setupPath.test(path)) preparationResponses.push(response.status());
