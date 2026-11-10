@@ -127,8 +127,14 @@ test("Cloud settings respect early access and manage devices and project sync th
   await expect(settings.getByRole("button", { name: "Sync with Cloud" })).toHaveCount(0);
   await settings.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(status).toHaveText("Sign in");
+  // Account changes retire old private views; enter settings under the current authority.
+  await expect(settingsFrame).toBeHidden();
+  await openSettings();
   await fixture.peer.setEarlyAccess(true);
   expect((await fetch(await startSignIn())).status).toBe(200);
+  await expect(status).toHaveText("Local");
+  await expect(settingsFrame).toBeHidden();
+  await openSettings();
   await expect(settings.getByText("Early access enabled", { exact: true })).toBeVisible();
   await settings.getByRole("button", { name: "Sync with Cloud", exact: true }).click();
   await expect(status).toHaveText("Synced");
@@ -182,6 +188,9 @@ test("Cloud settings respect early access and manage devices and project sync th
   await expect(confirmation.getByText("Make this project local?", { exact: true })).toBeVisible();
   await confirmation.getByRole("button", { name: "Make local", exact: true }).click();
   await expect(status).toHaveText("Local");
+  // Removing Cloud membership also retires this project's private query scope.
+  await expect(settingsFrame).toBeHidden();
+  await openSettings();
   await expect(settings.getByRole("button", { name: "Sync with Cloud", exact: true })).toBeVisible();
   // Account membership is discovered on refresh; issued access remains valid until renewal.
   // Exercise the public explicit refresh here; native-account tests cover the idle scheduled refresh.
