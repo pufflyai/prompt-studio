@@ -38,6 +38,24 @@ process-tree check, output limit, cancellation assertion, and timeout. This
 isolates the timing measurement and does not establish contention as its only
 cause. Fresh Windows execution must still demonstrate the existing limit.
 
+## Update: private index publication isolation (2026-11-10)
+
+The private device-index fixture also uses the existing `.exclusive.p1.test.ts`
+boundary. Its two snapshot cases retain 1,000 sequential publications, fresh
+readers, lost-acknowledgement recovery and their 30,000 ms whole-case allowance.
+SQL and metadata reductions remove redundant work, but the shared Windows pool
+still exceeds that allowance before completing publication.
+
+A [standalone native Windows profile](https://github.com/pufflyai/prompt-studio/actions/runs/42726782890)
+of the same optimized 1,000-publication loop completes in 24,493 ms. It spends
+19,005 ms in transactions, including 16,240 ms inside their SQL callbacks, and
+uses 29.1 CPU seconds. This supports isolating its deadline measurement from
+another file's database work; it does not establish contention as the only cause.
+Fresh execution of the complete fixture must still demonstrate the existing
+limits. No workload, platform, assertion or execution allowance is removed.
+The existing Linux quarantine entry follows the renamed file without changing
+its case selection, evidence, owner or removal criteria.
+
 ## Removal
 
 Remove the driver when the repository's Bun version releases completed file state within the current memory budget and passes the asynchronous skill-import regression with built-in isolation. Run the complete API suite and both release gates before removing it. Do not raise timeouts or alter the fixture's import semantics to satisfy that check.
