@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
+import { removeTestDirectory } from "../scripts/remove-test-directory";
 // Covers composer drafts, rendered chat and idle sessions through the packaged host.
 import { expectPackagedChatComposer } from "./packaged-chat-composer-smoke";
 import { expectPackagedDriveDiscovery } from "./packaged-filesystem-smoke";
@@ -79,7 +80,7 @@ test(
       if (child) {
         await stopProcess(child);
       }
-      rmSync(tempRoot, { recursive: true, force: true });
+      await removeTestDirectory(tempRoot);
     }
   },
   Math.max(PACKAGED_TEST_TIMEOUT, 45_000),
