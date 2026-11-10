@@ -34,7 +34,14 @@ interface CoreExtensionsFixture {
   tempRoot: string;
   projectFolder: string;
   project: { extension_warnings?: unknown[]; id: string };
-  extensions: { canUpgrade: boolean; enabled: boolean; id: string; installName: string; name: string }[];
+  extensions: {
+    canUpgrade: boolean;
+    enabled: boolean;
+    id: string;
+    installName: string;
+    name: string;
+    sourcePath: string;
+  }[];
   metadata: WorkbenchExtensionMetadata;
 }
 
