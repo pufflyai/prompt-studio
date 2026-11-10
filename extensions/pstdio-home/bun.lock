@@ -9,6 +9,7 @@
         "@emotion/react": "^11.0.0",
         "@pstdio/sdk": "0.47.0-preview.sha-8184397490cfa0fa22d136b99ac75c708878512a",
         "@pstdio/ui": "0.47.0-preview.sha-8184397490cfa0fa22d136b99ac75c708878512a",
+        "@tanstack/charts": "1.2.1",
         "react": "^19.2.0",
         "react-dom": "^19.2.0",
       },

@@ -1,0 +1,59 @@
+import { expect, test } from "bun:test";
+import { normalizeOpencodeQuotas, readOpencodeQuotas } from "./quotas";
+
+test("OpenCode reports Go windows and account budgets", () => {
+  const result = normalizeOpencodeQuotas({
+    data: {
+      go: {
+        rolling: { percent: 20, limited: false, resetsAt: 1800000000000 },
+        weekly: { percent: 100, limited: true, resetsAt: 1800000000000 },
+        monthly: { percent: 0, limited: false, resetsAt: 1800000000000 },
+      },
+      budgets: [{ id: "team", limit: 200, spent: 50, resetsAt: 1800000000000 }],
+    },
+  });
+  expect(result.status).toBe("available");
+  expect(result.limits.map((limit) => limit.remainingPercent)).toEqual([80, 0, 100, 75]);
+  expect(result.limits[0]?.resetsAt).toBe("2027-01-15T08:00:00.000Z");
+  expect(result.limits[1]?.windowMinutes).toBe(10080);
+});
+
+test("account budget names do not imply a weekly reset period", () => {
+  const result = normalizeOpencodeQuotas({
+    data: { budgets: [{ id: "weekly", limit: 100, spent: 25, resetsAt: 1800000000000 }] },
+  });
+  expect(result.limits[0]?.windowMinutes).toBeUndefined();
+});
+
+test("Go windows and identically named budgets keep independent quota identities", () => {
+  const reset = 1800000000000;
+  const names = ["rolling", "weekly", "monthly"];
+  const result = normalizeOpencodeQuotas({
+    data: {
+      go: Object.fromEntries(names.map((name) => [name, { percent: 20, resetsAt: reset }])),
+      budgets: names.map((id) => ({ id, limit: 100, spent: 50, resetsAt: reset })),
+    },
+  });
+  expect(result.limits).toHaveLength(6);
+  expect(new Set(result.limits.map((limit) => limit.id)).size).toBe(6);
+  expect(result.limits.slice(3).map((limit) => limit.remainingPercent)).toEqual([50, 50, 50]);
+});
+
+test("OpenCode reads account limits through the standalone native API and keeps errors private", async () => {
+  let command: string[] = [];
+  const report = await readOpencodeQuotas({
+    process: {
+      run: async (input: { command: string[] }) => {
+        command = input.command;
+        return { exitCode: 0, stdout: JSON.stringify({ data: null }), stderr: "" };
+      },
+    },
+  } as never);
+  expect(command.slice(1)).toEqual(["api", "GET", "/api/experimental/usage/limits", "--standalone"]);
+  expect(report.status).toBe("unavailable");
+  const failed = await readOpencodeQuotas({
+    process: { run: async () => ({ exitCode: 1, stdout: "sensitive native output", stderr: "credential" }) },
+  } as never);
+  expect(JSON.stringify(failed)).not.toContain("credential");
+  expect(JSON.stringify(failed)).not.toContain("sensitive native output");
+});
