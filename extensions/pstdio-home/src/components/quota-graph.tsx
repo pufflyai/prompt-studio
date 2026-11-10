@@ -21,30 +21,41 @@ export const QuotaGraph = (props: QuotaGraphProps) => {
   return (
     <Box as="figure" m="0" aria-label="Agent quota usage" aria-busy={loading}>
       <Stack gap="lg">
-        {available.length > 1 && selected && (
+        {selected && (
           <HStack justify="flex-end" minW="0">
-            <Menu.Root>
-              <Menu.Trigger asChild>
-                <Button size="sm" variant="ghost" aria-label="Quota harness" maxW="full">
-                  <Text truncate>{selected.label}</Text>
-                  <HomeIcon name="chevron-down" />
-                </Button>
-              </Menu.Trigger>
-              <Menu.Positioner>
-                <Menu.Content>
-                  <Menu.RadioItemGroup value={selected.id} onValueChange={({ value }) => setSelectedId(value)}>
-                    {available.map((provider) => (
-                      <Menu.RadioItem key={provider.id} value={provider.id}>
-                        <Menu.ItemText>{provider.label}</Menu.ItemText>
-                        <Menu.ItemIndicator>
-                          <HomeIcon name="check" />
-                        </Menu.ItemIndicator>
-                      </Menu.RadioItem>
-                    ))}
-                  </Menu.RadioItemGroup>
-                </Menu.Content>
-              </Menu.Positioner>
-            </Menu.Root>
+            {available.length > 1 ? (
+              <Menu.Root>
+                <Menu.Trigger asChild>
+                  <Button size="sm" variant="ghost" aria-label={`Quota harness: ${selected.label}`} maxW="full">
+                    <HomeIcon name={selected.icon ?? "terminal"} />
+                    <Text truncate>{selected.label}</Text>
+                    <HomeIcon name="chevron-down" />
+                  </Button>
+                </Menu.Trigger>
+                <Menu.Positioner>
+                  <Menu.Content>
+                    <Menu.RadioItemGroup value={selected.id} onValueChange={({ value }) => setSelectedId(value)}>
+                      {available.map((provider) => (
+                        <Menu.RadioItem key={provider.id} value={provider.id}>
+                          <HomeIcon name={provider.icon ?? "terminal"} />
+                          <Menu.ItemText>{provider.label}</Menu.ItemText>
+                          <Menu.ItemIndicator>
+                            <HomeIcon name="check" />
+                          </Menu.ItemIndicator>
+                        </Menu.RadioItem>
+                      ))}
+                    </Menu.RadioItemGroup>
+                  </Menu.Content>
+                </Menu.Positioner>
+              </Menu.Root>
+            ) : (
+              <HStack gap="sm" minW="0">
+                <HomeIcon name={selected.icon ?? "terminal"} />
+                <Text textStyle="paragraph/M/medium" truncate>
+                  {selected.label}
+                </Text>
+              </HStack>
+            )}
           </HStack>
         )}
         {error && <Text color="fg.error">{error}</Text>}

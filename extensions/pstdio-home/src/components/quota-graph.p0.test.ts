@@ -25,6 +25,7 @@ test("Home graphs an exhausted quota with an accessible value and leaves unknown
           {
             id: "codex",
             label: "Codex",
+            icon: "data:image/svg+xml;base64,PHN2Zy8+",
             status: "available",
             checkedAt: "2026-11-10T12:00:00Z",
             limits: [{ id: "weekly", label: "Weekly", remainingPercent: 0 }],
@@ -43,10 +44,11 @@ test("Home graphs an exhausted quota with an accessible value and leaves unknown
   );
   expect(html).toContain("100% used");
   expect(html).toContain("0% remaining");
-  expect(html).toContain("Codex");
+  expect(html).toContain(">Codex<");
+  expect(html).toContain('src="data:image/svg+xml;base64,PHN2Zy8+"');
   expect(html).not.toContain("Quota unavailable.");
   expect(html).not.toContain(">Pi<");
-  expect(html.includes('aria-label="Quota harness"')).toBe(false);
+  expect(html.includes('aria-label="Quota harness:')).toBe(false);
 });
 
 test("Home hides the quota widget when no provider has quota data", () => {
@@ -71,7 +73,7 @@ test("multiple harnesses use a dropdown and display only the selected harness's 
       }),
     }),
   );
-  expect(html.includes('aria-label="Quota harness"')).toBe(true);
+  expect(html.includes('aria-label="Quota harness: Codex"')).toBe(true);
   expect(html).toContain("90% used");
   expect(html.includes("25% used")).toBe(false);
 });

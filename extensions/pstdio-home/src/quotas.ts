@@ -17,6 +17,7 @@ export interface QuotaSnapshot {
 export interface QuotaReport extends QuotaSnapshot {
   id: string;
   label: string;
+  icon?: string;
 }
 
 // These four extension commands are the complete integration for Home.
@@ -54,7 +55,26 @@ const validSnapshot = (value: QuotaSnapshot) =>
         (typeof limit.resetsAt === "string" && Number.isFinite(Date.parse(limit.resetsAt)))),
   );
 
-export const readQuotas = async (ctx: Pick<CommandContext, "commands" | "signal">) => {
+const quotaInventory = async (extensions: CommandContext["extensions"]) => {
+  if (!extensions) return undefined;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    // Optional icon metadata must not hold up native quota values.
+    return await Promise.race([
+      extensions.list(),
+      new Promise<undefined>((resolve) => {
+        timer = setTimeout(() => resolve(undefined), 1000);
+      }),
+    ]);
+  } catch {
+    return undefined;
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
+export const readQuotas = async (ctx: Pick<CommandContext, "commands" | "signal" | "extensions">) => {
+  const inventory = quotaInventory(ctx.extensions);
   const reports = await Promise.all(
     providers.map(async (provider) => {
       try {
@@ -75,5 +95,13 @@ export const readQuotas = async (ctx: Pick<CommandContext, "commands" | "signal"
       };
     }),
   );
-  return reports.filter((report) => report !== undefined);
+  const metadata = await inventory;
+  ctx.signal?.throwIfAborted();
+  const entries = [...(metadata?.extensions ?? []), ...(metadata?.marketplace ?? [])];
+  return reports
+    .filter((report) => report !== undefined)
+    .map((report) => ({
+      ...report,
+      icon: entries.find((entry) => entry.extensionId === `pstdio.${report.id}` && entry.icon)?.icon ?? undefined,
+    }));
 };

@@ -6,8 +6,9 @@ import { QuotaGraph } from "./quota-graph";
 const checkedAt = "2026-11-10T12:00:00Z";
 const providers: QuotaReport[] = [
   {
-    id: "codex",
+    id: "harness-codex",
     label: "Codex",
+    icon: "terminal",
     status: "available",
     checkedAt,
     limits: [
@@ -37,8 +38,9 @@ const providers: QuotaReport[] = [
     ],
   },
   {
-    id: "claude",
+    id: "harness-claude-code",
     label: "Claude Code",
+    icon: "sparkles",
     status: "available",
     checkedAt,
     limits: [
@@ -47,16 +49,18 @@ const providers: QuotaReport[] = [
     ],
   },
   {
-    id: "opencode",
+    id: "harness-open-code",
     label: "OpenCode",
+    icon: "square-terminal",
     status: "unavailable",
     checkedAt,
     limits: [],
     message: "No account quota is available.",
   },
   {
-    id: "pi",
+    id: "harness-pi",
     label: "Pi",
+    icon: "pi",
     status: "unsupported",
     checkedAt,
     limits: [],
@@ -92,7 +96,7 @@ export default { title: "Extensions/Home/Agent quotas", component: Preview } sat
 export const Graph: CanvasFrame<typeof Preview> = {
   name: "Automatic quota history",
   description:
-    "Solid usage and yellow forecast, without a weekly target or legend. Select the harness only when multiple harnesses have quota data. A single reading connects from zero.",
+    "Always identify the displayed harness with its name and icon, including a single harness. Multiple harnesses use the same identity in a dropdown trigger and its options. Solid usage and yellow forecast, no weekly target or legend. A single reading connects from zero. Icons here are synthetic; installed harness icons come from public extension metadata.",
   args: { state: "single" },
   controls: {
     state: {
