@@ -1,4 +1,4 @@
-name: Attribute current Cloud CI failures on main
+name: Attribute Cloud offline reopen on main
 on:
   workflow_dispatch:
     inputs:
@@ -17,19 +17,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: e2e packaged-browser source P2 1 ubuntu-24.04
-            os: ubuntu-24.04
-            platform: linux
-            arch: x64
-            owner: e2e
-            runner: packaged-browser
-            priority: P2
-            files: '["packages/e2e/src/packaged/packaged-cloud-ui.p2.spec.ts"]'
-            stable: true
-            quarantine: false
-            suite: ""
-            browser: true
-            desktop: false
           - name: e2e packaged-cli source P2 1 macos-15
             os: macos-15
             platform: darwin
@@ -37,7 +24,7 @@ jobs:
             owner: e2e
             runner: packaged-cli
             priority: P2
-            files: '["packages/e2e/src/packaged/packaged-cloud-notes-onboarding.p2.test.ts","packages/e2e/src/packaged/packaged-cloud-project-recovery.p2.test.ts","packages/e2e/src/packaged/packaged-two-device-sync-smoke.p2.test.ts"]'
+            files: '["packages/e2e/src/packaged/packaged-cloud-notes-onboarding.p2.test.ts","packages/e2e/src/packaged/packaged-two-device-sync-smoke.p2.test.ts"]'
             stable: true
             quarantine: false
             suite: ""
