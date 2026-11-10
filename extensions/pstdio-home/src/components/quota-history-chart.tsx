@@ -1,6 +1,6 @@
 import { HStack, Stack, Text } from "@chakra-ui/react";
 import { Chart, chartColor } from "@pstdio/ui/charts";
-import { colorLegend, defineChart, dot, lineY, ruleY } from "@tanstack/charts";
+import { defineChart, dot, lineY, ruleY } from "@tanstack/charts";
 import { focusGroupX } from "@tanstack/charts/focus";
 import { decorative } from "@tanstack/charts/mark/decorative";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
@@ -13,33 +13,27 @@ interface Point {
 interface QuotaHistoryChartProps {
   provider: string;
   label: string;
+  showLabel: boolean;
   remainingPercent: number;
   resetsAt?: string;
   history: Point[];
-  target: Point[];
   forecast: Point[];
   start: number;
   end: number;
 }
 
 export const QuotaHistoryChart = (props: QuotaHistoryChartProps) => {
-  const { provider, label, remainingPercent, resetsAt, history, target, forecast, start, end } = props;
+  const { provider, label, showLabel, remainingPercent, resetsAt, history, forecast, start, end } = props;
   const projected = forecast.at(-1)?.used;
   const date = (value: number) => new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric" });
   const tick = (value: number) =>
     end - start < 86400000
       ? new Date(value).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })
       : date(value);
-  const series = [
-    "Usage",
-    ...(forecast.length ? ["Forecast"] : []),
-    ...(target.length ? ["Weekly target"] : []),
-    "Quota limit",
-  ];
+  const series = ["Usage", ...(forecast.length ? ["Forecast"] : []), "Quota limit"];
   const colors = [
     chartColor("vis.categorical.3"),
-    ...(forecast.length ? [chartColor("vis.categorical.4")] : []),
-    ...(target.length ? [chartColor("vis.categorical.2")] : []),
+    ...(forecast.length ? [chartColor("vis.alert.warning")] : []),
     chartColor("vis.axis"),
   ];
   const definition = defineChart(
@@ -47,9 +41,8 @@ export const QuotaHistoryChart = (props: QuotaHistoryChartProps) => {
       marks: [
         lineY(history, { x: "time", y: "used", color: () => "Usage" }),
         dot(history.slice(-1), { x: "time", y: "used", color: () => "Usage" }),
-        lineY(forecast, { x: "time", y: "used", color: () => "Forecast", strokeDasharray: "5 4" }),
-        lineY(target, { x: "time", y: "used", color: () => "Weekly target", strokeDasharray: "2 4" }),
-        decorative(ruleY([100], { color: () => "Quota limit", strokeDasharray: "3 3" })),
+        lineY(forecast, { x: "time", y: "used", color: () => "Forecast" }),
+        decorative(ruleY([100], { color: () => "Quota limit" })),
       ],
       scales: {
         x: { scale: scaleLinear().domain([start, end]), axis: { ticks: { format: tick } } },
@@ -59,14 +52,14 @@ export const QuotaHistoryChart = (props: QuotaHistoryChartProps) => {
           axis: { ticks: { format: (value: number) => `${Math.round(value)}%` } },
         },
       },
-      color: { domain: series, range: colors, legend: colorLegend({ placement: "bottom" }) },
+      color: { domain: series, range: colors },
     },
     { keyboard: true, focus: focusGroupX, tooltip: { use: tooltip } },
   );
   return (
     <Stack gap="sm" minW="0">
       <HStack justify="space-between" flexWrap="wrap">
-        <Text textStyle="paragraph/M/medium">{label}</Text>
+        {showLabel && <Text textStyle="paragraph/M/medium">{label}</Text>}
         <Text textStyle="paragraph/M/medium">
           {Math.round(100 - remainingPercent)}% used · {Math.round(remainingPercent)}% remaining
         </Text>
@@ -103,11 +96,6 @@ export const QuotaHistoryChart = (props: QuotaHistoryChartProps) => {
           );
         }}
       />
-      {history.length === 1 && (
-        <Text color="fg.muted" textStyle="paragraph/S/regular">
-          History starts with this quota check.
-        </Text>
-      )}
     </Stack>
   );
 };

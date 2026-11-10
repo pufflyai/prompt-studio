@@ -6,4 +6,4 @@
 "pstdio-home": patch
 ---
 
-Inspect native agent quotas through extension commands and show available quotas on Home with saved usage history, forecasts, and weekly pacing targets.
+Inspect native agent quotas through extension commands and show available quotas on Home with saved usage history, automatic refresh, forecasts, and harness selection.

@@ -32,18 +32,16 @@ test("quota history survives later reads, keeps the latest hourly reading, and s
   expect((await storage.records.list()).length).toBe(2);
 });
 
-test("weekly charts use native period bounds, show a fair-use target, and forecast past the limit", () => {
+test("weekly charts use native period bounds, connect a first reading from zero, and forecast past the limit", () => {
   const current = report("2026-11-10T18:00:00Z", 50);
   const series = quotaSeries(current.limits[0]!, current.checkedAt);
   expect(series.start).toBe(Date.parse("2026-11-09T00:00:00Z"));
   expect(series.end).toBe(Date.parse(resetsAt));
-  expect(series.target).toEqual([
-    { time: series.start, used: 0 },
-    { time: series.end, used: 100 },
-  ]);
   expect(series.forecast.at(-1)?.used).toBe(200);
-  // An observed first point must never be replaced with invented earlier usage.
-  expect(series.history).toEqual([{ time: Date.parse(current.checkedAt), used: 50 }]);
+  expect(series.history).toEqual([
+    { time: series.start, used: 0 },
+    { time: Date.parse(current.checkedAt), used: 50 },
+  ]);
 });
 
 test("overlapping checks cannot replace a newer hourly observation with an older one", async () => {
@@ -66,11 +64,22 @@ test("overlapping checks cannot replace a newer hourly observation with an older
   expect(records[0]?.value).toMatchObject({ at: "2026-11-10T00:30:00Z", usedPercent: 15 });
 });
 
-test("unknown periods have only observed history; expired periods do not forecast or show weekly targets", () => {
+test("a single unknown-period reading starts at zero; expired periods do not forecast", () => {
   const unknown = quotaSeries({ id: "budget", label: "Budget", remainingPercent: 75 }, "2026-11-10T12:00:00Z");
   expect(unknown.forecast).toEqual([]);
-  expect(unknown.target).toEqual([]);
+  expect(unknown.history).toEqual([
+    { time: unknown.start, used: 0 },
+    { time: Date.parse("2026-11-10T12:00:00Z"), used: 25 },
+  ]);
   const current = report("2026-11-16T01:00:00Z", 0);
   expect(quotaSeries(current.limits[0]!, current.checkedAt).forecast).toEqual([]);
-  expect(quotaSeries(current.limits[0]!, current.checkedAt).target).toEqual([]);
+});
+
+test("multiple observed readings retain their history without a zero anchor", () => {
+  const current = report("2026-11-10T18:00:00Z", 50);
+  current.limits[0]!.history = [{ at: "2026-11-10T12:00:00Z", usedPercent: 30 }];
+  expect(quotaSeries(current.limits[0]!, current.checkedAt).history).toEqual([
+    { time: Date.parse("2026-11-10T12:00:00Z"), used: 30 },
+    { time: Date.parse(current.checkedAt), used: 50 },
+  ]);
 });

@@ -108,6 +108,8 @@ export const quotaSeries = (limit: QuotaLimit, checkedAt: string) => {
     .map((sample) => ({ time: Date.parse(sample.at), used: sample.usedPercent }))
     .sort((a, b) => a.time - b.time);
   const start = knownPeriod ? periodStart : Math.min(history[0]?.time ?? now, now - hour);
+  // A first reading connects from zero visually; the zero is never saved as an observation.
+  if (history.length === 1) history.unshift({ time: start, used: 0 });
   const end = Number.isFinite(reset) && reset > now ? reset : now;
   const elapsed = now - start;
   const used = 100 - limit.remainingPercent;
@@ -118,12 +120,5 @@ export const quotaSeries = (limit: QuotaLimit, checkedAt: string) => {
           { time: end, used: (used * duration) / elapsed },
         ]
       : [];
-  const target =
-    knownPeriod && limit.windowMinutes === 10080
-      ? [
-          { time: start, used: 0 },
-          { time: end, used: 100 },
-        ]
-      : [];
-  return { history, target, forecast, start, end };
+  return { history, forecast, start, end };
 };

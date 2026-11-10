@@ -1,6 +1,5 @@
 import { Stack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
-import { useState } from "react";
 import type { QuotaReport } from "../quotas";
 import { QuotaGraph } from "./quota-graph";
 
@@ -66,32 +65,42 @@ const providers: QuotaReport[] = [
 ];
 
 interface PreviewProps {
-  state: "available" | "loading" | "empty" | "error";
+  state: "single" | "multiple" | "first-point" | "loading" | "empty" | "error";
 }
 const Preview = (props: PreviewProps) => {
-  const [refreshes, setRefreshes] = useState(0);
+  const examples = props.state === "multiple" ? providers : providers.slice(0, 1);
+  const reports =
+    props.state === "first-point"
+      ? examples.map((provider) => ({
+          ...provider,
+          limits: provider.limits.slice(1).map(({ history: _history, ...limit }) => limit),
+        }))
+      : examples;
   return (
     <Stack gap="xl" w="full">
       <Text textStyle="heading/M">Prompt Studio</Text>
       <QuotaGraph
-        providers={props.state === "empty" || props.state === "loading" ? [] : providers}
+        providers={props.state === "empty" || props.state === "loading" ? [] : reports}
         loading={props.state === "loading"}
-        error={props.state === "error" ? "Could not check quotas. Refresh to try again." : undefined}
-        onRefresh={() => setRefreshes(refreshes + 1)}
+        error={props.state === "error" ? "Could not check quotas. Retrying automatically." : undefined}
       />
-      {refreshes > 0 && <Text color="fg.muted">Refreshed {refreshes} times</Text>}
     </Stack>
   );
 };
 
 export default { title: "Extensions/Home/Agent quotas", component: Preview } satisfies CanvasMeta<typeof Preview>;
 export const Graph: CanvasFrame<typeof Preview> = {
-  name: "Quota history and weekly target",
-  args: { state: "available" },
+  name: "Automatic quota history",
+  description:
+    "Solid usage and yellow forecast, without a weekly target or legend. Select the harness only when multiple harnesses have quota data. A single reading connects from zero.",
+  args: { state: "single" },
   controls: {
     state: {
       type: "select",
-      options: ["available", "loading", "empty", "error"].map((value) => ({ value, label: value })),
+      options: ["single", "multiple", "first-point", "loading", "empty", "error"].map((value) => ({
+        value,
+        label: value,
+      })),
     },
   },
 };
