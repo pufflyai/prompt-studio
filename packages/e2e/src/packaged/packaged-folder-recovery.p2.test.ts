@@ -3,7 +3,11 @@ import { randomBytes } from "node:crypto";
 import { chmod, lstat, mkdir, mkdtemp, readdir, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { ProjectFolderRecoveryStatus, ProjectFolderSource } from "pstdio-api-contracts";
+import {
+  type ProjectFolderRecoveryStatus,
+  type ProjectFolderSource,
+  projectFolderRecoveryStatusSchema,
+} from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
 import { logTestPhase } from "../scripts/log-test-phase";
 import { runTestCommand } from "../scripts/run-test-command";
@@ -221,9 +225,17 @@ test.skipIf(process.platform === "win32")(
         (await cli(["download", project.id, ...source])).stdout,
       ) as ProjectFolderRecoveryStatus;
       expect(downloaded.download).toMatchObject({ state: "complete", error: null });
-      expect(JSON.parse((await cli(["status", project.id])).stdout)).toEqual(
-        await desktop.client.projects.folderRecovery(project.id),
-      );
+      const cliStatus = projectFolderRecoveryStatusSchema.parse(JSON.parse((await cli(["status", project.id])).stdout));
+      const liveStatus = await desktop.client.projects.folderRecovery(project.id);
+      expect(cliStatus.download).toEqual(downloaded.download);
+      expect(cliStatus.restore).toEqual(result.restore);
+      expect(cliStatus.download).toEqual(liveStatus.download);
+      expect(cliStatus.restore).toEqual(liveStatus.restore);
+      // Attaching the restored folder schedules capture, whose live state can advance between these reads.
+      for (const status of [cliStatus, liveStatus]) {
+        expect(status.capture).toMatchObject({ folder: restored, error: null });
+        expect(["idle", "pending", "running"]).toContain(status.capture.state);
+      }
       phase("desktop restored through the CLI");
 
       // Exact bytes, permissions and link text; `.pstignore` and Git-ignored files apply as captured.
