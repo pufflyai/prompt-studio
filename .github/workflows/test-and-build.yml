@@ -1,30 +1,43 @@
-name: Observe Cloud Retry dispatch and attachment state
+name: Attribute Planner and shared Side setup on main
 on:
   workflow_dispatch:
     inputs:
       source_sha:
-        description: Exact frozen PS158 source
+        description: Exact main for two bounded source controls
         required: true
         type: string
 permissions:
   contents: read
 jobs:
   cloud_control:
-    name: Observe Cloud Retry (${{ matrix.runner }} ${{ matrix.os }})
+    name: Main control (${{ matrix.runner }} ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: e2e packaged-cli source P2 1 macos-15
-            os: macos-15
-            platform: darwin
-            arch: arm64
+          - name: e2e packaged-cli source P2 1 windows-latest
+            os: windows-latest
+            platform: win32
+            arch: x64
             owner: e2e
             runner: packaged-cli
             priority: P2
-            files: '["packages/e2e/src/packaged/packaged-cloud-project-recovery.p2.test.ts"]'
+            files: '["packages/e2e/src/packaged/packaged-planner-smoke.p2.test.ts"]'
+            stable: true
+            quarantine: false
+            suite: ""
+            browser: false
+            desktop: false
+          - name: e2e app source P2 1 ubuntu-24.04
+            os: ubuntu-24.04
+            platform: linux
+            arch: x64
+            owner: e2e
+            runner: app
+            priority: P2
+            files: '["packages/e2e/src/ui/session-chat-links.p2.spec.ts"]'
             stable: true
             quarantine: false
             suite: ""
@@ -46,7 +59,7 @@ jobs:
         env:
           CONTROL_SOURCE_SHA: ${{ inputs.source_sha }}
         run: |
-          test "$CONTROL_SOURCE_SHA" = "4bd741de85239fff34afa01d0dc37aa86e06d4ca"
+          test "$CONTROL_SOURCE_SHA" = "e92609e79cda954c8f95b07499ee9178b3e33d76"
           test "$(git rev-parse HEAD)" = "$CONTROL_SOURCE_SHA"
       - uses: oven-sh/setup-bun@v2
         with:
@@ -60,16 +73,18 @@ jobs:
           install-strategy: native
           windows-dev-drive: "true"
       - name: Install browser engines
+        if: matrix.browser
         run: bunx playwright@1.60.0 install --with-deps
-      - name: Add request and command-path telemetry without changing assertions or limits
+      - name: Hold the real provider catalog until generic Side is attached
+        if: matrix.runner == 'app'
         shell: bash
         run: |
           git fetch origin ${{ github.sha }} --no-tags
-          git show ${{ github.sha }}:scripts/ci/observe-cloud-retry.py > "$RUNNER_TEMP/observe-cloud-retry.py"
-          python3 "$RUNNER_TEMP/observe-cloud-retry.py"
+          git show ${{ github.sha }}:scripts/ci/reproduce-side-session-subject.py > "$RUNNER_TEMP/reproduce-side-session-subject.py"
+          python3 "$RUNNER_TEMP/reproduce-side-session-subject.py"
           git diff --check
           git diff --stat
-      - name: Run the maintained failed case once with request-path telemetry
+      - name: Run the maintained source control once
         shell: bash
         run: |
           if [[ "$RUNNER_OS" == "Linux" ]]; then
@@ -81,7 +96,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: cloud-retry-path-observation
+          name: main-control-${{ matrix.runner }}
           path: |
             test-results
             packages/e2e/test-results
