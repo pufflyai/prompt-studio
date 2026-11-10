@@ -46,7 +46,7 @@ const complete = async (input: InitialWebviewInput) => {
     // Initial failures use per-view feedback; a rejected update retains its complete set.
     return reportFailure(error);
   }
-  if (preparedRevisionState(previous) === preparedRevisionState(loaded.preparedRevision)) {
+  if (retained && preparedRevisionState(previous) === preparedRevisionState(loaded.preparedRevision)) {
     const current = await input.loadCurrent();
     input.signal.throwIfAborted();
     if (!isSameSource(input, current)) return retained;
