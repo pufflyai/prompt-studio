@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import { withBackgroundPreparation } from "pstdio-extensions";
 import { resolveCatalogIcon } from "./catalog-icon";
 import type { ExtensionsRouteDeps } from "./deps";
 import { getExtensionCatalog } from "./extension-catalog";
@@ -6,20 +7,33 @@ import { hashExtensionSourceAsync } from "./extension-runtime";
 import { toProjectExtensionInstance } from "./project-extension-instance";
 
 export const listProjectExtensionInventory = async (deps: ExtensionsRouteDeps, projectId: string) => {
-  const records = await deps.extensionService.listProjectExtensionInstances(projectId);
-  // Uninstall retains data-bearing rows for same-path restore. A retained row alone
-  // does not mean the package is still installed.
-  const installedRecords = records.filter(({ installedSource }) => existsSync(installedSource.source_path));
+  const key = (source: { id: string; source_path: string }) => `${source.id}\0${source.source_path}`;
+  const hashes = new Map<string, string | null>();
+  let records = await deps.extensionService.listProjectExtensionInstances(projectId);
+  let installedRecords = records.filter(({ installedSource }) => existsSync(installedSource.source_path));
+  while (true) {
+    const missing = installedRecords.filter(({ installedSource }) => !hashes.has(key(installedSource)));
+    if (!missing.length) break;
+    // Inventory checks discover edits; polling status must not repeatedly retire a
+    // live frontend validation as though every source were a requested tool.
+    await withBackgroundPreparation(() =>
+      Promise.all(
+        missing.map(async ({ installedSource }) => {
+          hashes.set(key(installedSource), await hashExtensionSourceAsync(installedSource.source_path));
+        }),
+      ),
+    );
+    // A build or source replacement can finish while inspection waits. Read its
+    // current feedback, and inspect any new source before describing its edits.
+    records = await deps.extensionService.listProjectExtensionInstances(projectId);
+    // Uninstall retains data-bearing rows for same-path restore.
+    installedRecords = records.filter(({ installedSource }) => existsSync(installedSource.source_path));
+  }
   const extensions = await Promise.all(
     installedRecords.map(async ({ instance, installedSource }) =>
-      toProjectExtensionInstance(
-        instance,
-        installedSource,
-        await hashExtensionSourceAsync(installedSource.source_path),
-        {
-          canUpgrade: await deps.extensionUpgradeService?.canUpgrade(installedSource),
-        },
-      ),
+      toProjectExtensionInstance(instance, installedSource, hashes.get(key(installedSource)), {
+        canUpgrade: await deps.extensionUpgradeService?.canUpgrade(installedSource),
+      }),
     ),
   );
   const installedNames = new Set(installedRecords.map(({ installedSource }) => installedSource.install_name));

@@ -29,7 +29,13 @@ Frontend input guards also use fresh children to keep independent graph inspecti
 Attachment reconciliation admits one source callback at a time. Ordinary filesystem events enter the same background
 worker queue immediately, so an edit does not wait behind every newly attached source. Pending attachment checks remain
 eligible after worker replacement and are cleared on disposal. Registration changes repair accepted output; attachment
-checks and source events own freshness.
+checks and source events own freshness. A live edit retains its background continuation across frontend host awaits,
+preventing unrelated speculative work from filling every publication gap. Workspace provisioning follows outside
+that reservation, still awaited by the same source generation and disposal owner.
+Inventory disk hashes are background change checks. Status polling cannot repeatedly retire the validation that
+produces its feedback. Inventory waits for fresh hashes bound to each source id and path, then reads current database
+feedback; sources replaced during the wait are inspected before the response. This can delay inventory behind
+background preparation, while requested tool operations retain their foreground priority.
 Watcher restoration reserves its host/database admission gap before speculative work resumes. Its watch-update jobs
 keep background priority and share that reservation; restoration does not retire the replacement worker.
 Inspection and compilation share four leaf slots; orchestration never holds a slot across nested work. This cap does

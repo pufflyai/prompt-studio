@@ -109,7 +109,10 @@ describe("installed extension runtime skills", () => {
       ...handle.deps,
       createRootWatcher: async () => ({ dispose: () => {}, refresh: async () => {} }),
       createSourceWatcher: async (watcherInput) => {
-        onSourceChanged = watcherInput.onSourceChanged;
+        onSourceChanged = async (path) => {
+          await watcherInput.onSourceChanged(path);
+          await watcherInput.afterSourceChanged?.(path);
+        };
         return { dispose: () => {}, refresh: async () => {} };
       },
       projectRuntimeCatalog: handle.deps.extensionRuntimeCatalog,
@@ -167,7 +170,10 @@ describe("installed extension runtime skills", () => {
         createRootWatcher: async () => ({ dispose: () => {}, refresh: async () => {} }),
         createSourceWatcher: async (input) => {
           await input.listInstalledSources();
-          onSourceChanged = input.onSourceChanged;
+          onSourceChanged = async (path) => {
+            await input.onSourceChanged(path);
+            await input.afterSourceChanged?.(path);
+          };
           return { dispose: () => {}, refresh: async () => {} };
         },
         projectRuntimeCatalog: handle.deps.extensionRuntimeCatalog,
@@ -210,7 +216,10 @@ describe("installed extension runtime skills", () => {
       ...handle.deps,
       createRootWatcher: async () => ({ dispose: () => {}, refresh: async () => {} }),
       createSourceWatcher: async (input) => {
-        onSourceChanged = input.onSourceChanged;
+        onSourceChanged = async (path) => {
+          await input.onSourceChanged(path);
+          await input.afterSourceChanged?.(path);
+        };
         return { dispose: () => {}, refresh: async () => {} };
       },
       projectRuntimeCatalog: handle.deps.extensionRuntimeCatalog,

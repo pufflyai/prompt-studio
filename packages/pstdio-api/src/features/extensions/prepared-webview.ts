@@ -7,6 +7,7 @@ import {
   inspectManagedWebviewBuildInputs,
   inspectManagedWebviewBuildInputsAsync,
   type ManagedWebviewBuildInputs,
+  missingWebviewDependenciesError,
   prepareManagedWebviewBuildSource,
 } from "./extension-webview-build-source";
 import {
@@ -96,6 +97,10 @@ export const prepareWebviewArtifacts = async (inputs: WebviewArtifactInput[], si
   const dependencyHash = await dependencyHashForViews(packagePath, inputs, signal);
   signal.throwIfAborted();
   const signatures = inputs.map((input) => inspectManagedWebviewBuildInputs(input, dependencyHash));
+  for (const signature of signatures) {
+    const error = missingWebviewDependenciesError(signature, packagePath);
+    if (error) throw new Error(error);
+  }
   const artifacts = signatures.map((signature) =>
     artifactPaths(
       createHash("sha256")

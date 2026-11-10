@@ -56,3 +56,22 @@ test("queued frontend inspection and compilation share admission and never spawn
   ]);
   expect(commands).toBe(0);
 });
+
+test("batch frontend preparation retains the actionable missing-dependency diagnostic", async () => {
+  const root = mkdtempSync(join(tmpdir(), "webview-batch-missing-dependency-"));
+  roots.push(root);
+  process.env.PSTDIO_HOME = join(root, "home");
+  writeFileSync(
+    join(root, "package.json"),
+    JSON.stringify({ name: "missing-view", dependencies: { "missing-view-dependency": "1.0.0" } }),
+  );
+  const entryPath = join(root, "main.ts");
+  writeFileSync(entryPath, 'import "missing-view-dependency"; export default true;');
+  const { prepareWebviewArtifacts } = await import("./prepared-webview");
+  await expect(
+    prepareWebviewArtifacts(
+      [{ packagePath: root, entryPath, packageName: "missing-view", installName: "missing-view" }],
+      new AbortController().signal,
+    ),
+  ).rejects.toThrow(`Missing extension webview dependencies: missing-view-dependency. Run \`bun install\` in ${root}.`);
+});

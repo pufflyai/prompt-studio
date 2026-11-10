@@ -174,10 +174,8 @@ export const createInstalledExtensionRuntime = (input: {
   // are read from disk, so the edit also re-provisions workspaces to keep harness copies current.
   const sourceWatcher = createSourceWatcher({
     listInstalledSources: listExistingInstalledSources,
-    onSourceChanged: async (sourcePath) => {
-      await webviewBuildManager.refresh(sourcePath);
-      await provisionWhenSourceChanged(sourcePath);
-    },
+    onSourceChanged: (sourcePath) => webviewBuildManager.refresh(sourcePath),
+    afterSourceChanged: provisionWhenSourceChanged,
     onError: (err) => apiLogger.error({ err, event: "extensions.source_watcher.error" }, "Extension watcher failed"),
   });
 

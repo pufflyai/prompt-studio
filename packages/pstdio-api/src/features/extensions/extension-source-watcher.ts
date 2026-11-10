@@ -1,36 +1,56 @@
 import { subscribePreparationEvents, withBackgroundPreparation } from "pstdio-extensions";
 import {
-  type CreateExtensionSourceWatcherInput,
   createExtensionSourceWatcher as createLocalWatcher,
+  type CreateExtensionSourceWatcherInput as LocalWatcherInput,
 } from "pstdio-extensions/authoring";
 import { withPreparationContinuation } from "pstdio-extensions/preparation-client";
 import { runExtensionPreparation } from "./extension-preparation";
 
-export type { CreateExtensionSourceWatcherInput, ExtensionSourceWatcher } from "pstdio-extensions/authoring";
+export type { ExtensionSourceWatcher } from "pstdio-extensions/authoring";
+
+export type CreateExtensionSourceWatcherInput = LocalWatcherInput & {
+  afterSourceChanged?: (sourcePath: string) => Promise<unknown>;
+};
 
 export const createExtensionSourceWatcher = async (input: CreateExtensionSourceWatcherInput) => {
-  if (input.watch || input.includeIgnoredPath) return createLocalWatcher(input);
+  if (input.watch || input.includeIgnoredPath)
+    return createLocalWatcher({
+      ...input,
+      onSourceChanged: async (path) => {
+        await input.onSourceChanged(path);
+        await input.afterSourceChanged?.(path);
+      },
+    });
   const id = crypto.randomUUID();
   let disposed = false;
   let registered = false;
-  type Change = { started: boolean; work: Promise<void> };
+  type Change = { started: boolean; origin: "attachment" | "edit"; work: Promise<void> };
   const running = new Map<string, Change>();
   const attachments = new Set<string>();
   let attaching: Promise<void> | undefined;
-  const changed = (path: string) => {
+  const changed = (path: string, origin: Change["origin"] = "attachment") => {
     if (disposed) return;
     const previous = running.get(path);
-    if (previous && !previous.started) return previous.work;
+    if (previous && !previous.started) {
+      if (origin === "edit") previous.origin = origin;
+      return previous.work;
+    }
     let created: Change;
     const run = async () => {
       if (disposed) return;
       created.started = true;
-      await withBackgroundPreparation(async () => input.onSourceChanged(path)).catch((error) => input.onError?.(error));
+      const update = () => withBackgroundPreparation(async () => input.onSourceChanged(path));
+      try {
+        await (created.origin === "edit" ? withPreparationContinuation(update) : update());
+        await withBackgroundPreparation(async () => input.afterSourceChanged?.(path));
+      } catch (error) {
+        input.onError?.(error);
+      }
     };
     const work = (previous ? previous.work.then(run, run) : Promise.resolve().then(run)).finally(() => {
       if (running.get(path) === created) running.delete(path);
     });
-    created = { started: false, work };
+    created = { started: false, origin, work };
     running.set(path, created);
     return work;
   };
@@ -61,7 +81,7 @@ export const createExtensionSourceWatcher = async (input: CreateExtensionSourceW
         reconcileAttachment();
       } else {
         attachments.delete(event.sourcePath);
-        changed(event.sourcePath);
+        changed(event.sourcePath, "edit");
       }
     }
   });

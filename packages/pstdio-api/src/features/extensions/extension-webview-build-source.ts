@@ -292,6 +292,11 @@ const mirrorPackageSource = (packagePath: string, shellDir: string) => {
   }
 };
 
+export const missingWebviewDependenciesError = (buildInputs: ManagedWebviewBuildInputs, packagePath: string) =>
+  buildInputs.missingDependencies.length
+    ? `Missing extension webview dependencies: ${buildInputs.missingDependencies.join(", ")}. Run \`bun install\` in ${packagePath}.`
+    : undefined;
+
 export const prepareManagedWebviewBuildSource = (
   input: PrepareManagedWebviewBuildSourceInput,
 ): ManagedWebviewBuildSourceResult => {
@@ -302,12 +307,8 @@ export const prepareManagedWebviewBuildSource = (
       success: false,
     };
   }
-  if (buildInputs.missingDependencies.length > 0) {
-    return {
-      details: `Missing extension webview dependencies: ${buildInputs.missingDependencies.join(", ")}. Run \`bun install\` in ${input.packagePath}.`,
-      success: false,
-    };
-  }
+  const missingDependencies = missingWebviewDependenciesError(buildInputs, input.packagePath);
+  if (missingDependencies) return { details: missingDependencies, success: false };
 
   const packageNodeModules = join(input.packagePath, "node_modules");
   if (buildInputs.dependencyNames.length === 0 || buildInputs.dependencyNodeModules === packageNodeModules) {

@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { stopExtensionPreparation, subscribePreparationEvents } from "pstdio-extensions";
+import { createPreparationScope, stopExtensionPreparation, subscribePreparationEvents } from "pstdio-extensions";
 import { runExtensionPreparation } from "./extension-preparation";
 import { createExtensionSourceWatcher } from "./extension-source-watcher";
 
@@ -73,7 +73,7 @@ test("disposal clears attachment checks that have not started", async () => {
   });
   try {
     await entered.promise;
-    const disposal = watcher.dispose();
+    const disposal = Promise.resolve(watcher.dispose());
     release.resolve();
     await disposal;
     expect(observed).toEqual([paths[0]!]);
@@ -175,6 +175,98 @@ test("reattachment keeps a fresh callback after an already running inspection", 
   } finally {
     released.resolve();
     unsubscribe();
+    await watcher.dispose();
+    await stopExtensionPreparation();
+    if (previousHome === undefined) delete process.env.PSTDIO_HOME;
+    else process.env.PSTDIO_HOME = previousHome;
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("a live edit retains its background continuation across asynchronous host steps", async () => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), "source-edit-continuation-")));
+  const previousHome = process.env.PSTDIO_HOME;
+  process.env.PSTDIO_HOME = join(root, "home");
+  const source = join(root, "source");
+  await mkdir(source);
+  await writeFile(join(source, "SKILL.md"), "initial");
+  const attached = Promise.withResolvers<void>();
+  const editing = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  let calls = 0;
+  let requested: boolean | undefined;
+  const watcher = await createExtensionSourceWatcher({
+    listInstalledSources: async () => [{ source_path: source, install_name: "source" }],
+    onSourceChanged: async () => {
+      if (++calls === 1) {
+        attached.resolve();
+        return;
+      }
+      const scope = createPreparationScope();
+      requested = scope.requested;
+      scope.dispose();
+      editing.resolve();
+      await release.promise;
+    },
+  });
+  let background: Promise<unknown> | undefined;
+  try {
+    await attached.promise;
+    await writeFile(join(source, "SKILL.md"), "live edit");
+    await editing.promise;
+    background = runExtensionPreparation("source.hash", { sourcePath: source }, { priority: "background" });
+    expect(await Promise.race([background.then(() => "started"), Bun.sleep(100).then(() => "held")])).toBe("held");
+    expect(requested).toBe(false);
+    release.resolve();
+    expect(typeof (await background)).toBe("string");
+  } finally {
+    release.resolve();
+    await background;
+    await watcher.dispose();
+    await stopExtensionPreparation();
+    if (previousHome === undefined) delete process.env.PSTDIO_HOME;
+    else process.env.PSTDIO_HOME = previousHome;
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("source provisioning releases the frontend continuation while remaining owned by disposal", async () => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), "source-edit-provisioning-")));
+  const previousHome = process.env.PSTDIO_HOME;
+  process.env.PSTDIO_HOME = join(root, "home");
+  const source = join(root, "source");
+  await mkdir(source);
+  await writeFile(join(source, "SKILL.md"), "initial");
+  const attached = Promise.withResolvers<void>();
+  const editing = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  let calls = 0;
+  const watcher = await createExtensionSourceWatcher({
+    listInstalledSources: async () => [{ source_path: source, install_name: "source" }],
+    onSourceChanged: async () => {},
+    afterSourceChanged: async () => {
+      if (++calls === 1) {
+        attached.resolve();
+        return;
+      }
+      editing.resolve();
+      await release.promise;
+    },
+  });
+  let background: Promise<unknown> | undefined;
+  try {
+    await attached.promise;
+    await writeFile(join(source, "SKILL.md"), "live edit");
+    await editing.promise;
+    background = runExtensionPreparation("source.hash", { sourcePath: source }, { priority: "background" });
+    expect(await Promise.race([background.then(() => "started"), Bun.sleep(1000).then(() => "held")])).toBe("started");
+    const disposal = Promise.resolve(watcher.dispose());
+    expect(await Promise.race([disposal.then(() => "disposed"), Bun.sleep(100).then(() => "owned")])).toBe("owned");
+    release.resolve();
+    await disposal;
+  } finally {
+    release.resolve();
+    await background;
     await watcher.dispose();
     await stopExtensionPreparation();
     if (previousHome === undefined) delete process.env.PSTDIO_HOME;
