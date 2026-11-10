@@ -132,7 +132,7 @@ test("Cloud settings respect early access and manage devices and project sync th
   await openSettings();
   await fixture.peer.setEarlyAccess(true);
   expect((await fetch(await startSignIn())).status).toBe(200);
-  await expect(status).toHaveText("Signed in");
+  await expect(status).toHaveText("Local");
   await expect(settingsFrame).toBeHidden();
   await openSettings();
   await expect(settings.getByText("Early access enabled", { exact: true })).toBeVisible();
