@@ -144,8 +144,8 @@ export const createInstalledExtensionRuntime = (input: {
     if (!existsSync(sourcePath)) return;
     const sourceHash = await hashExtensionSourceAsync(sourcePath);
     if (provisionedSourceHashes.get(sourcePath) === sourceHash) return;
-    provisionedSourceHashes.set(sourcePath, sourceHash);
     await input.provisionWorkspacesUsingSource(sourcePath);
+    provisionedSourceHashes.set(sourcePath, sourceHash);
   };
   // Editing a watched folder rebuilds the assets of the extension the project already adopted. It
   // never re-reads contributions from disk: adopting new source is an explicit act. Skill files

@@ -133,4 +133,40 @@ describe("installed extension runtime skills", () => {
       await runtime.dispose();
     }
   });
+
+  test("a failed skill reconciliation retries the same source before recording completion", async () => {
+    const sourcePath = createTestSkillExtensionSource({
+      displayName: "Retried Skills",
+      installName: "retried-skills",
+      name: "retried-skills",
+      root: tempRoot,
+    });
+    let onSourceChanged: (sourcePath: string) => Promise<unknown> = async () => {};
+    let fail = true;
+    const provisioned: string[] = [];
+    const runtime = createInstalledExtensionRuntime({
+      ...handle.deps,
+      createRootWatcher: async () => ({ dispose: () => {}, refresh: async () => {} }),
+      createSourceWatcher: async (input) => {
+        onSourceChanged = input.onSourceChanged;
+        return { dispose: () => {}, refresh: async () => {} };
+      },
+      projectRuntimeCatalog: handle.deps.extensionRuntimeCatalog,
+      provisionWorkspacesUsingSource: async (path) => {
+        provisioned.push(path);
+        if (fail) throw new Error("Skill reconciliation interrupted");
+      },
+      webviewBuilds: false,
+    });
+    await runtime.ready;
+    try {
+      await expect(onSourceChanged(sourcePath)).rejects.toThrow("Skill reconciliation interrupted");
+      fail = false;
+      await onSourceChanged(sourcePath);
+      await onSourceChanged(sourcePath);
+      expect(provisioned).toEqual([sourcePath, sourcePath]);
+    } finally {
+      await runtime.dispose();
+    }
+  });
 });
