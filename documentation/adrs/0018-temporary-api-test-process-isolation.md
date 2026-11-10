@@ -20,6 +20,10 @@ The original reproduction logs were recorded in the local `workbench-sdk-revisio
 
 Run each API test file in a fresh Bun process, with at most two files running at once. Retain the existing per-test timeout and normal import conditions. A file failure fails the whole command. This replaces the previous special invocation for the workspace-diff file.
 
+Whole files with native deadline-sensitive work may use the existing `.exclusive.p*.test.ts` boundary: run the complete file alone after all shared workers finish. Exclusive files run sequentially. Keep every test body, workload and limit unchanged.
+
+The web-icon routes fixture uses this boundary after a native Windows failure in the first real redirect/page/SVG lookup (run 42719629491, job 129510150452): it returns 404 after 5.543s under the existing 3-second production lookup limit. Independent import-closure review confirms the failing process executes zero PR-changed modules; the sibling's changed presence projection cannot execute in that scenario. This attributes the inherited operation to main source without claiming an exact-main branch red or identical whole-shard load. Exact-main full-shard and paired controls pass, and the original caught transport/abort error was not retained. Interference is therefore a hypothesis, not a diagnosed network fault. Classifying the complete 12-case fixture isolates its real-HTTP and subsecond assertions from unrelated database startup; fresh native qualification assesses that changed scheduling contract, not arbitrary-load product behavior. Remove its exclusive classification when the maintained native concurrent workload demonstrates the existing lookup/timing contracts without the measurement interference; do not increase limits or substitute mocked transport.
+
 The driver is limited to the API package's test command. It adds process startup cost and interleaves two files' output. It does not change the API runtime, extension loading, installed packages, or test assertions. Fixtures must still close their resources explicitly.
 
 ## Update: native process deadline isolation (2026-11-06)
