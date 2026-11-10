@@ -81,6 +81,11 @@ test(
   async () => {
     await withPackagedCoreExtensions(async ({ started, tempRoot, projectFolder, project, extensions, metadata }) => {
       expect(project.extension_warnings).toBeUndefined();
+      expect(metadata.commandPaletteContributions.length).toBeGreaterThan(0);
+      for (const command of metadata.commandPaletteContributions) {
+        expect(command.icon).toBeTruthy();
+        expect(command.group).toBeTruthy();
+      }
       expect(extensions.filter((extension) => extension.canUpgrade).map((extension) => extension.installName)).toEqual(
         [],
       );

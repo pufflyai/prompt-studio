@@ -17,14 +17,14 @@ interface BuiltinCommand {
 const builtinCommands: BuiltinCommand[] = [
   {
     id: "workbench.toggleCommandPalette",
-    label: "Toggle Command Palette",
+    label: "Search commands and resources",
     icon: "Command",
     keybinding: "Mod+P",
     execute: (workbench: WorkbenchCore) => workbench.commandPalette.toggle(),
   },
   {
     id: "workbench.action.showCommands",
-    label: "Run Command",
+    label: "Run command",
     icon: "Terminal",
     keybinding: "Alt+Shift+K",
     execute: (workbench: WorkbenchCore) => workbench.commandPalette.open({ initialQuery: "> " }),
@@ -32,6 +32,7 @@ const builtinCommands: BuiltinCommand[] = [
   {
     id: "workbench.action.changeTheme",
     label: "Choose color theme",
+    category: "Appearance",
     icon: "Palette",
     keybinding: "Alt+Shift+T",
     execute: (workbench: WorkbenchCore) => workbench.commandPalette.open({ view: "theme" }),
@@ -78,7 +79,7 @@ export const registerWorkbenchBuiltIns = (workbench: WorkbenchCore) => {
       });
     workbench.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
       commandId: command.id,
-      group: "Workbench",
+      group: command.category ?? "Workbench",
     });
   }
   registerModeNavigationShortcuts(workbench);
