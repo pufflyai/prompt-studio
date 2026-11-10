@@ -28,13 +28,14 @@ type CloudReader = Pick<CloudClient, "events"> & {
 };
 
 const readAccount = async (client: CloudReader, projectId?: string, readProject?: () => Promise<CloudProjectState>) => {
-  const [account, sync, project] = await Promise.all([
+  const [account, sync] = await Promise.all([
     client.account.status(),
     projectId
       ? client.account.projectSyncStatus(projectId)
       : Promise.resolve({ state: "local" as const, offlineReady: true }),
-    readProject?.(),
   ]);
+  // Folder preparation is irrelevant until the download can be opened on this device.
+  const project = sync.offlineReady ? await readProject?.() : undefined;
   return {
     account,
     sync,
