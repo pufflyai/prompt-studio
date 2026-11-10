@@ -27,7 +27,7 @@ jobs:
         env:
           QUALIFICATION_SOURCE_SHA: ${{ inputs.source_sha }}
         run: |
-          test "$QUALIFICATION_SOURCE_SHA" = "c77a7d595cadebcbf43ee1163c78debe29c508d9"
+          test "$QUALIFICATION_SOURCE_SHA" = "4db6c8a695249f2394a7028676731505d1a1d2da"
           test "$(git rev-parse HEAD)" = "$QUALIFICATION_SOURCE_SHA"
           bun -e 'import { appendFileSync } from "node:fs"; import { productionToolchainPlatforms } from "./scripts/ci/production-platforms.ts"; appendFileSync(process.env.GITHUB_OUTPUT, `platforms=${JSON.stringify(productionToolchainPlatforms("stable").filter(row => row.platform_pkg === "cli-win-x64"))}\n`);'
   packaged_toolchain:
