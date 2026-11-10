@@ -83,12 +83,13 @@ test("copying a failed session reference uses the invoking row and preserves the
   page,
   request,
   context,
+  browserName,
 }) => {
   const project = await createResourceActionsProject(request);
   const open = await createSession(request, project.id, "Open conversation");
   const failed = await createSession(request, project.id, "Failed conversation");
   await request.patch(`/v1/sessions/${failed.id}/status`, { data: { status: "failed" } });
-  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  if (browserName === "chromium") await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await prepareResourceActionsDashboard(page, project.id);
   await page.goto(`/projects/${project.id}/sessions`);
   await row(page, open.title).click();
