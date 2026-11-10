@@ -218,6 +218,22 @@ An orphaned blob is one no update or state lists and no parent still holds. The 
 
 The relay report runs in one read-only snapshot with a five-minute statement timeout and does not walk blob trees, so it stays within a small database's memory. On a 1 vCPU, 1 GB PostgreSQL, 2 million blobs take about 9 seconds.
 
+### Clear a project
+
+To give a project a clean start, clear it from both services. Each script reports only, until `--confirm` repeats the project ID. First make the project local on every device. The manager refuses while the project still syncs, and an unregistered project gets no relay access, so no device writes to it while it is cleared.
+
+```sh
+# Manager: removes the project's keys. Its next key request creates new ones.
+DATABASE_URL=<manager database URL> \
+  bun services/account-manager/scripts/project-clear.ts --account <account id> --project <project id> --confirm <project id>
+
+# Relay: removes documents, updates and states, queues their objects, and marks every blob for deletion.
+DATABASE_URL=<relay database URL> \
+  bun services/relay/scripts/project-clear.ts --account <account id> --project <project id> --confirm <project id>
+```
+
+The relay's next hourly cleanup deletes the queued objects and the marked blobs with their objects. Deleting objects one by one can take hours for a large project, and the inspection report shows the marked blobs until they are gone. The project record stays while it has blobs, because blob rows cascade from it. Run the relay clear again after cleanup to remove the record. When the project syncs again, its first device uploads it as a new project, sealed with the new keys.
+
 ## Reference workload measurement
 
 PS-787 adds a manual [reference workload](../../../packages/e2e/src/perf/relay-reference-workload/workload.diagnostic.ts).
