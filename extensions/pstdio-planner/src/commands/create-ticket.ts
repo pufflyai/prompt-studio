@@ -30,7 +30,7 @@ export const createTicketCommand = defineCommand({
   id: "create-ticket",
   mutating: true,
   title: "Create ticket",
-  palette: [{}],
+  palette: [{ group: "Tickets", icon: TICKET_RESOURCE_ICON }],
   cli: {
     globalAliases: [
       ["tickets", "create"],

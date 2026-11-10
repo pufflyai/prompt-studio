@@ -127,8 +127,26 @@ test("retains Side chat and the editor draft during repeated file-position navig
       })
     ).json();
     await prepareDashboard(page, project.id);
-    await page.goto(`/projects/${project.id}`);
-    await openSessionSidePanel(page, session.title);
+    // Establish the subject after the real provider catalog reaches an already-open generic Side shell.
+    const catalog = Promise.withResolvers<void>();
+    await page.route(`**/v1/projects/${project.id}/extensions/ui`, async (route) => {
+      await catalog.promise;
+      await route.continue();
+    });
+    const opening: Promise<unknown>[] = [];
+    try {
+      await page.goto(`/projects/${project.id}`);
+      opening.push(
+        openSessionSidePanel(page, session.title),
+        expect(page.getByTestId("workbench-side-panel-attached"))
+          .toBeVisible()
+          .finally(() => catalog.resolve()),
+      );
+      await Promise.all(opening);
+    } finally {
+      catalog.resolve();
+      await Promise.allSettled(opening);
+    }
     const side = page.getByTestId("workbench-side-panel-attached");
     const composer = side.locator('[data-testid="content-editable"][contenteditable="true"]').last();
     await composer.fill("Keep this reply draft");

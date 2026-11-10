@@ -159,5 +159,5 @@ export const expectPackagedStreamingMotion = async (
     )
     .toBe(0);
   await earlier?.dispose();
-  await expectPackagedChatHistory(page, sessionId);
+  await expectPackagedChatHistory(page, sessionId, baseUrl, headers);
 };
