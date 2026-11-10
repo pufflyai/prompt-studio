@@ -481,6 +481,28 @@ defineView({
 
 Data table columns can declare `type` (`"string"`, `"number"`, or `"date"`) and `groupable: true`. Without a type, a column whose values are all numbers is a number field and every other column is text. Columns are filterable by default. Declare `filterable: false` on a column to exclude it from Filter and reject saved rules for it. Query-returned columns use the same option and take precedence over declared columns. Disabling filtering keeps display, sorting, and grouping available. Only groupable columns appear under Grouping in the table's Display menu. Tables group by exact value; empty values form a last "No <column>" group.
 
+### Inline charts and row height (on main)
+
+Native table columns and the React `DataTable` support `renderer: { type: "sparkline" }`
+and `renderer: { type: "bar-chart" }`. Supply a cell value as
+`{ values: [12, null, 8], labels: ["Run 1", "Run 2", "Run 3"] }`.
+Labels are optional. A null is an unmeasured gap; zero is a measurement.
+Sparklines leave gaps and bar charts share a zero baseline, including signed values.
+Entirely unmeasured cells show “No data”.
+
+Both renderers accept an optional numeric `domain: [minimum, maximum]` to compare
+cells on one scale, and a `unit` suffix such as `"ms"` or `"MB"`. Without a domain,
+each sparkline fits its data. Bar charts always expand their scale to include zero, even with an explicit domain. Chart columns sort
+and filter by the last non-null measurement. Their accessible name includes the
+labels and values.
+
+Set `defaultSettings: { rowHeight: "tall" }` to start with taller rows. The Display
+menu offers Compact, Comfortable, and Tall; the selected height belongs to the
+saved view. Compact rows hide bar labels; larger rows show labels and values.
+The default stays compact for existing views. Row wrapping remains independent.
+These additive declarations share the coordinated API 0.4.0 step on `main`.
+Publish the supporting host, SDK, and UI before an independent extension uses them.
+
 The query receives `filter`, `sorts`, and the display `settings`. For default full-result providers, use them only to narrow what you load. The renderer applies the full filter and sorts to the returned rows, so returning more rows than the view shows is correct. Opt-in [paged providers](#paged-tables-and-boards) apply these controls before returning a bounded page.
 
 API 0.2.0 removes the fields deprecated in published package version 0.43.1. Migrate declarations and query handlers to the replacements below.

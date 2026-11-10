@@ -1,6 +1,7 @@
 import type {
   CollectionPage,
   CollectionPageRequest,
+  DataTableRendererChartOptions,
   DataTableRendererSettings,
   QueryChangeEnvelope,
   ViewFilterGroup,
@@ -39,6 +40,7 @@ export type DataTableRendererBadgePalette =
   | "pink";
 
 export type DataTableRendererColumnRenderer =
+  | DataTableRendererChartOptions
   | { type: "json" }
   | { type: "color-scale"; stops: Array<{ value: number; color: DataTableRendererThemeColor }> }
   | {

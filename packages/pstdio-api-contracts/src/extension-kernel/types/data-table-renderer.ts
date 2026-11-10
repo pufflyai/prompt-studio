@@ -16,6 +16,8 @@ export interface DataTableRendererSettings {
   grouping: string;
   rowNumbers: boolean;
   wrapRows: boolean;
+  /** Minimum row height. Omitted settings retain compact rows. */
+  rowHeight?: "compact" | "comfortable" | "tall";
   showStats: boolean;
   hiddenColumns: string[];
   /** Column ids in display order. An empty list means the declared order. */
@@ -62,7 +64,22 @@ export type DataTableRendererColumnStat =
   | { type: "histogram"; bins?: number }
   | { type: "top-values"; limit?: number };
 
+/** Inline chart data. Null entries are unmeasured gaps, never zeroes. */
+export interface DataTableRendererChartValue {
+  values: (number | null)[];
+  labels?: string[];
+}
+
+export interface DataTableRendererChartOptions {
+  type: "sparkline" | "bar-chart";
+  /** Shared numeric scale for comparable cells. Bars otherwise include zero. */
+  domain?: [number, number];
+  /** Suffix for accessible values and bar labels, such as ms or MB. */
+  unit?: string;
+}
+
 export type DataTableRendererColumnRenderer =
+  | DataTableRendererChartOptions
   | { type: "json" }
   | { type: "color-scale"; stops: Array<{ value: number; color: DataTableRendererThemeColor }> }
   | {
