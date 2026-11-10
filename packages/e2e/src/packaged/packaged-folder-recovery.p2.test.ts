@@ -47,6 +47,8 @@ const writeSourceFolder = async (folder: string, hookMarker: string) => {
   await writeFile(join(folder, "README.md"), "# Recovered without a Git host\n");
   await writeFile(join(folder, "src/app.ts"), "export const version = 1;\n");
   await writeFile(join(folder, ".gitignore"), ".env\nbuild/\n");
+  // Only a folder with a root `.pstignore` is copied, and `.gitignore` does not apply to it.
+  await writeFile(join(folder, ".pstignore"), "node_modules/\n");
   git(folder, "init", "-q", "-b", "main");
   git(folder, "config", "user.name", "Folder Owner");
   git(folder, "config", "user.email", "owner@example.test");

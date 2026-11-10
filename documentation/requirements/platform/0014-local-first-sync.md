@@ -292,12 +292,12 @@ anything.
   snapshot through the CLI and API. The app has no restore screen (decided
   2026-10-24). A restore is a normal edit, so it syncs to every device. This policy
   was decided on 2026-10-22 and replaces daily snapshots retained for 30 days.
-- R57. Everything inside a cloud project's folder is retained unless excluded by its
-  root `.pstignore`. `.gitignore` does not control sync. A new folder enrollment with
-  no inherited policy creates a missing `.pstignore` with `node_modules/`; never
-  overwrite an existing policy or recreate one the user later deletes. Restored
-  captures inherit their policy, including deliberate absence. Empty or deleted
-  policies include all files.
+- R57. A cloud project's folder is copied only when it has a root `.pstignore`
+  (decided 2026-11-10, PS-1130): project records already sync the data most tools
+  keep, so a folder without one takes no copy and nothing creates the file. Within a
+  copied folder everything is retained unless excluded by the `.pstignore`.
+  `.gitignore` does not control sync. Restored captures inherit their policy. An empty
+  policy includes all files.
   `.env`, keys, hidden and Git-ignored files, local extension code and `.pstdio` data
   are included unless users add matching rules. Always sync `.pstignore` itself.
   Show exclusions and matching rules separately from pending or blocked files.
@@ -473,7 +473,8 @@ These came from the Cloud and Workspaces design review. The designs are in PR #1
 
 - Project-folder sync uses a separate root `.pstignore`, independent of `.gitignore`.
   The starter file excludes `node_modules/`. `.env` files remain included unless users
-  add a rule. Users control further exclusions in that file. R57–R59 replace the earlier
+  add a rule. On 2026-11-10 (PS-1130) the user made the copy opt-in: only a folder with
+  a root `.pstignore` is copied, and no starter file is created. Users control further exclusions in that file. R57–R59 replace the earlier
   working-tree exclusion and the narrower coverage proposed during PS-960 refinement.
 - Whole-folder captures are private to the source user's devices because they can
   contain credentials and private workspaces. Existing shared records and declared

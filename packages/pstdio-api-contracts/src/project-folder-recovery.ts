@@ -26,7 +26,8 @@ export const projectFolderSourceSchema = projectFolderSourceRefSchema.extend({
   /** Included files and their bytes. Paths excluded by the root `.pstignore` are not counted. */
   files: z.number().int().nonnegative().nullable(),
   bytes: z.number().int().nonnegative().nullable(),
-  /** The applied root `.pstignore`. Null means the folder had none, so every file was included. */
+  /** The applied root `.pstignore`. Only a folder with one is copied; null appears only in copies taken before
+   * PS-1130, which included every file. */
   policy: z.string().nullable(),
   /** `functional` restores a working repository; `incomplete` keeps the files but not working Git. */
   git: z.enum(["none", "functional", "incomplete"]).nullable(),

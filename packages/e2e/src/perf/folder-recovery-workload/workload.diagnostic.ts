@@ -8,7 +8,7 @@
  *   bun packages/e2e/src/perf/folder-recovery-workload/workload.diagnostic.ts [output-directory]
  */
 import { randomFillSync } from "node:crypto";
-import { mkdir, mkdtemp, open, readdir, rm, statfs } from "node:fs/promises";
+import { mkdir, mkdtemp, open, readdir, rm, statfs, writeFile } from "node:fs/promises";
 import { cpus, release, tmpdir, totalmem } from "node:os";
 import { join, resolve } from "node:path";
 import type { ProjectFolderRecoveryStatus } from "pstdio-api-contracts";
@@ -120,6 +120,8 @@ const writeSource = async (folder: string) => {
     }
     digests[file.path] = hash.digest("hex");
   }
+  // Only a folder with a root `.pstignore` is copied; an empty one excludes nothing.
+  await writeFile(join(folder, ".pstignore"), "");
   return digests;
 };
 
