@@ -9,14 +9,14 @@ import { assertCoreBinarySize } from "./core-binary-size";
 process.chdir(join(import.meta.dirname, "..", ".."));
 
 const CLI_ENTRY = "./packages/pstdio/src/index.ts";
-// Folder capture runs in a worker thread, bundled as an extra entry point. Bun 1.4 roots the compiled
+// Folder recovery reads and hashes copies in a worker thread, bundled as an extra entry point. Bun 1.4 roots the compiled
 // module graph at the CLI package and names bundled entries `.js`, so the worker lives at
-// `/$bunfs/root/../pstdio-api/…/capture-worker.js`. The nightly packaged folder-recovery test runs it.
-const RECOVERY_CAPTURE_WORKER = "./packages/pstdio-api/src/services/project-recovery/capture-worker.ts";
+// `/$bunfs/root/../pstdio-api/…/recovery-worker.js` (Windows has no folder copies yet, so `B:/~BUN` is never needed). The nightly packaged folder-recovery test runs it.
+const RECOVERY_WORKER = "./packages/pstdio-api/src/services/project-recovery/recovery-worker.ts";
 const recoveryWorkerDefine = [
   "--define",
-  `PSTDIO_BUILD_RECOVERY_CAPTURE_WORKER=${JSON.stringify(
-    `/$bunfs/root/${relative("packages/pstdio", RECOVERY_CAPTURE_WORKER).replaceAll("\\", "/").replace(/\.ts$/, ".js")}`,
+  `PSTDIO_BUILD_RECOVERY_WORKER=${JSON.stringify(
+    `/$bunfs/root/${relative("packages/pstdio", RECOVERY_WORKER).replaceAll("\\", "/").replace(/\.ts$/, ".js")}`,
   )}`,
 ];
 const EMBED_MANIFEST = "./packages/pstdio/src/_embed-manifest.generated.ts";
@@ -55,7 +55,7 @@ const extensionReleaseRef = process.env.PSTDIO_EXTENSION_RELEASE_REF?.trim();
 const defines = extensionReleaseRef ? ["--define", `PSTDIO_BUILD_EXTENSION_RELEASE_REF=${JSON.stringify(extensionReleaseRef)}`] : [];
 
 console.log(`\nCompiling for ${target}...`);
-await $`bun build ${CLI_ENTRY} ${RECOVERY_CAPTURE_WORKER} --compile --external playwright-core --external "chromium-bidi/*" --target=${target} --asset-naming [dir]/[name].[ext] ${defines} ${recoveryWorkerDefine} --outfile ${outfile}`;
+await $`bun build ${CLI_ENTRY} ${RECOVERY_WORKER} --compile --external playwright-core --external "chromium-bidi/*" --target=${target} --asset-naming [dir]/[name].[ext] ${defines} ${recoveryWorkerDefine} --outfile ${outfile}`;
 assertCoreBinarySize(outfile);
 
 // 4. Verify the binary works

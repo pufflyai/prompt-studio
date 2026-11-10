@@ -1,14 +1,17 @@
 import { afterEach, test as baseTest, expect } from "bun:test";
-import { chmod, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSyncSpace } from "pstdio-sync/encryption";
 import { captureRecoveryFolder } from "./capture";
-import { captureRecoveryFolderInWorker } from "./capture-in-worker";
 import { createRecoveryChunkStore } from "./chunks";
+import { readRecoveryManifest } from "./manifest";
 import { nativeRecoverySupported } from "./native-recovery.fixture";
+import { folderRecoveryError } from "./operations";
 import { createRecoveryPages } from "./pages";
+import { captureRecoveryFolderInWorker, verifyRecoveryCaptureInWorker } from "./recovery-worker-client";
 import { RecoveryCaptureError } from "./scan";
+import { prepareRecoveryCapture } from "./transfer";
 
 const test = baseTest.skipIf(!nativeRecoverySupported);
 
@@ -80,4 +83,25 @@ test("worker failures keep the error kinds a person's status is built from", asy
   );
   expect(error).toBeInstanceOf(RecoveryCaptureError);
   expect(error.path).toBe("locked");
+  expect(error.cause).toMatchObject({ code: "EACCES" });
+});
+
+test("verifying a copy in the worker accepts it intact and reports a damaged chunk as an integrity failure", async () => {
+  const f = await fixture();
+  const signal = new AbortController().signal;
+  const captured = await captureRecoveryFolderInWorker({ root: f.folder, chunks: f.chunks, gitRoots: [], signal });
+  const candidate = await prepareRecoveryCapture({
+    chunks: f.chunks,
+    source: { id: "workspace", deviceId: "laptop", name: "Laptop", folder: f.folder },
+    capture: captured,
+  });
+  const manifest = await readRecoveryManifest(f.chunks, candidate);
+  await verifyRecoveryCaptureInWorker(f.chunks, manifest, signal);
+  const [file] = (await readdir(f.chunks.directory)).filter((name) => name.endsWith(".blob"));
+  const path = join(f.chunks.directory, file!);
+  const bytes = await readFile(path);
+  bytes[bytes.length - 1] ^= 0xff;
+  await writeFile(path, bytes);
+  const error = await verifyRecoveryCaptureInWorker(f.chunks, manifest, signal).catch((caught) => caught);
+  expect(folderRecoveryError(error).code).toBe("integrity");
 });
