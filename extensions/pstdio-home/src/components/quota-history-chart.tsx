@@ -1,6 +1,6 @@
 import { HStack, Stack, Text } from "@chakra-ui/react";
 import { Chart, chartColor } from "@pstdio/ui/charts";
-import { defineChart, dot, lineY, ruleY } from "@tanstack/charts";
+import { colorLegend, defineChart, dot, lineY, ruleY } from "@tanstack/charts";
 import { focusGroupX } from "@tanstack/charts/focus";
 import { decorative } from "@tanstack/charts/mark/decorative";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
@@ -30,19 +30,15 @@ export const QuotaHistoryChart = (props: QuotaHistoryChartProps) => {
     end - start < 86400000
       ? new Date(value).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })
       : date(value);
-  const series = ["Usage", ...(forecast.length ? ["Forecast"] : []), "Quota limit"];
-  const colors = [
-    chartColor("vis.categorical.3"),
-    ...(forecast.length ? [chartColor("vis.alert.warning")] : []),
-    chartColor("vis.axis"),
-  ];
+  const series = ["Usage", "Forecast", "Limit"];
+  const colors = [chartColor("vis.categorical.3"), chartColor("vis.alert.warning"), chartColor("vis.axis")];
   const definition = defineChart(
     {
       marks: [
         lineY(history, { x: "time", y: "used", color: () => "Usage" }),
         dot(history.slice(-1), { x: "time", y: "used", color: () => "Usage" }),
         lineY(forecast, { x: "time", y: "used", color: () => "Forecast" }),
-        decorative(ruleY([100], { color: () => "Quota limit" })),
+        decorative(ruleY([100], { color: () => "Limit" })),
       ],
       scales: {
         x: { scale: scaleLinear().domain([start, end]), axis: { ticks: { format: tick } } },
@@ -52,7 +48,7 @@ export const QuotaHistoryChart = (props: QuotaHistoryChartProps) => {
           axis: { ticks: { format: (value: number) => `${Math.round(value)}%` } },
         },
       },
-      color: { domain: series, range: colors },
+      color: { domain: series, range: colors, legend: colorLegend({ placement: "bottom" }) },
     },
     { keyboard: true, focus: focusGroupX, tooltip: { use: tooltip } },
   );

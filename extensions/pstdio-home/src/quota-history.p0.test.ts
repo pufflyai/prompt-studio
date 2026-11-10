@@ -75,10 +75,11 @@ test("a single unknown-period reading starts at zero; expired periods do not for
   expect(quotaSeries(current.limits[0]!, current.checkedAt).forecast).toEqual([]);
 });
 
-test("multiple observed readings retain their history without a zero anchor", () => {
+test("usage starts at zero at the period start even after multiple readings accumulate", () => {
   const current = report("2026-11-10T18:00:00Z", 50);
   current.limits[0]!.history = [{ at: "2026-11-10T12:00:00Z", usedPercent: 30 }];
   expect(quotaSeries(current.limits[0]!, current.checkedAt).history).toEqual([
+    { time: Date.parse("2026-11-09T00:00:00Z"), used: 0 },
     { time: Date.parse("2026-11-10T12:00:00Z"), used: 30 },
     { time: Date.parse(current.checkedAt), used: 50 },
   ]);

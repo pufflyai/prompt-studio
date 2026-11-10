@@ -1,4 +1,4 @@
-import { Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, Grid, HStack, Stack, Text } from "@chakra-ui/react";
 import { ScopedMenu as Menu } from "@pstdio/ui";
 import { useState } from "react";
 import { quotaSeries } from "../quota-history";
@@ -60,7 +60,11 @@ export const QuotaGraph = (props: QuotaGraphProps) => {
         )}
         {error && <Text color="fg.error">{error}</Text>}
         {selected && (
-          <Stack key={selected.id} gap="lg">
+          <Grid
+            key={selected.id}
+            templateColumns={{ base: "minmax(0, 1fr)", md: "repeat(2, minmax(0, 1fr))" }}
+            gap="lg"
+          >
             {selected.limits.map((limit) => (
               <QuotaHistoryChart
                 key={limit.id}
@@ -72,7 +76,7 @@ export const QuotaGraph = (props: QuotaGraphProps) => {
                 {...quotaSeries(limit, selected.checkedAt)}
               />
             ))}
-          </Stack>
+          </Grid>
         )}
       </Stack>
     </Box>

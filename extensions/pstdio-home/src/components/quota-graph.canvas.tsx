@@ -26,7 +26,6 @@ const providers: QuotaReport[] = [
         windowMinutes: 10080,
         resetsAt: "2026-11-16T00:00:00Z",
         history: [
-          { at: "2026-11-09T00:00:00Z", usedPercent: 0 },
           { at: "2026-11-09T06:00:00Z", usedPercent: 7 },
           { at: "2026-11-09T12:00:00Z", usedPercent: 8 },
           { at: "2026-11-09T18:00:00Z", usedPercent: 15 },
@@ -96,7 +95,7 @@ export default { title: "Extensions/Home/Agent quotas", component: Preview } sat
 export const Graph: CanvasFrame<typeof Preview> = {
   name: "Automatic quota history",
   description:
-    "Always identify the displayed harness with its name and icon, including a single harness. Multiple harnesses use the same identity in a dropdown trigger and its options. Solid usage and yellow forecast, no weekly target or legend. A single reading connects from zero. Icons here are synthetic; installed harness icons come from public extension metadata.",
+    "Two quota windows sit side by side in a two-column grid, stacking on narrow screens. Usage always begins at zero at the period start, including with multiple readings. Keep the Usage, Forecast and Limit legend and solid yellow forecast. Always show the selected harness name and icon; multiple harnesses use a dropdown. Icons here are synthetic; installed harness icons come from public extension metadata.",
   args: { state: "single" },
   controls: {
     state: {
