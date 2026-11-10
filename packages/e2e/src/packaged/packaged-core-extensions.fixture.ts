@@ -7,6 +7,7 @@ import { basename, join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
 import { startLocalWorkspaceRegistry } from "../local-workspace-registry";
+import { createDiagnosticEmitter } from "./native-diagnostic-emitter";
 import { preparePackagedExtensionSource } from "./packaged-extension-source";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
@@ -39,10 +40,25 @@ interface CoreExtensionsFixture {
 }
 
 const removeCoreFixture = async (root: string) => {
+  const observe = createDiagnosticEmitter();
   // The installed sources, private package cache, and projects are independent
   // after shutdown. Remove their trees concurrently and await every result.
   const removals = await Promise.allSettled(
-    (await readdir(root)).map((name) => rm(join(root, name), { recursive: true, force: true })),
+    (await readdir(root)).map(async (name) => {
+      const started = performance.now();
+      observe(() => ({ diagnostic: "core.remove.start", name, time: Date.now(), usage: process.resourceUsage() }));
+      try {
+        await rm(join(root, name), { recursive: true, force: true });
+      } finally {
+        observe(() => ({
+          diagnostic: "core.remove.end",
+          name,
+          time: Date.now(),
+          elapsedMs: performance.now() - started,
+          usage: process.resourceUsage(),
+        }));
+      }
+    }),
   );
   for (const removal of removals) if (removal.status === "rejected") throw removal.reason;
   await rm(root, { recursive: true, force: true });

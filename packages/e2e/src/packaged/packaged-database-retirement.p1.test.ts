@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { folderProjectInput } from "../helpers/folder-project";
+import { createDiagnosticEmitter } from "./native-diagnostic-emitter";
 import { buildBinary } from "./packaged-helpers";
 import { startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
@@ -32,6 +33,17 @@ const jsonLines = async (path: string) =>
 test(
   "a packaged 0.45 home is exported as JSON and moved aside, and the new release starts empty",
   async () => {
+    const began = performance.now();
+    const observe = createDiagnosticEmitter();
+    const phase = (name: string) =>
+      observe(() => ({
+        diagnostic: "retirement",
+        name,
+        time: Date.now(),
+        elapsedMs: performance.now() - began,
+        usage: process.resourceUsage(),
+      }));
+    phase("start");
     const root = await mkdtemp(join(tmpdir(), "packaged-database-retirement-"));
     const source = join(root, "source");
     let host: Awaited<ReturnType<typeof startPackagedServe>> | undefined;
@@ -60,7 +72,9 @@ test(
         }),
       );
       const env = { PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([{ source, installName: "retired-data" }]) };
+      phase("released-runtime.start");
       host = await startPackagedServe(root, env, releasedBinary);
+      phase("released-runtime.ready");
       const request = async (method: string, path: string, body?: unknown) => {
         const response = await fetch(host!.baseUrl + path, {
           method,
@@ -72,16 +86,20 @@ test(
         return value;
       };
       const project = await request("POST", "/v1/projects", folderProjectInput({ name: "Retired project" }, root));
+      phase("released-project.created");
       const seeded = await request(
         "POST",
         `/v1/projects/${project.id}/extensions/commands/example.retired-data.command.seed/execute`,
         { params: {} },
       );
       expect(seeded.outcome).toMatchObject({ ok: true });
+      phase("released-data.seeded");
       await stopProcess(host.child);
+      phase("released-runtime.stopped");
 
       const firstLog = join(root, "first.log");
       host = await startPackagedServe(root, { PSTDIO_DEFAULT_EXTENSIONS: "[]", PSTDIO_LOG_PATH: firstLog });
+      phase("current-runtime.ready");
       expect(await startupPhases(firstLog)).toEqual(["database_retiring", "database_retired"]);
       expect(await request("GET", "/v1/projects")).toEqual([]);
 
@@ -101,16 +119,20 @@ test(
       ]);
       expect(await readdir(join(root, "backups", backup, "database"))).toContain("PG_VERSION");
       await stopProcess(host.child);
+      phase("current-runtime.stopped");
 
       const restartLog = join(root, "restart.log");
       host = await startPackagedServe(root, { PSTDIO_DEFAULT_EXTENSIONS: "[]", PSTDIO_LOG_PATH: restartLog });
+      phase("restart.ready");
       expect(await startupPhases(restartLog)).toEqual([]);
       expect(await readdir(join(root, "backups"))).toEqual([backup]);
     } finally {
       try {
         if (host) await stopProcess(host.child);
       } finally {
+        phase("cleanup.start");
         await rm(root, { recursive: true, force: true });
+        phase("cleanup.end");
       }
     }
   },

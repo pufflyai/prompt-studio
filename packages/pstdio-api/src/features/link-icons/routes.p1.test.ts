@@ -8,6 +8,7 @@ import { createLinkIconRoutes } from "./routes";
 type Routes = Record<string, (request: Request) => Response | Promise<Response>>;
 
 const servers: ReturnType<typeof Bun.serve>[] = [];
+let recordRequests = true;
 afterAll(() => {
   for (const server of servers) server.stop(true);
 });
@@ -28,6 +29,13 @@ const site = (routes: Routes, hostname = "127.0.0.1") => {
     port: 0,
     fetch: (request) => {
       const path = new URL(request.url).pathname;
+      if (recordRequests) {
+        try {
+          console.log(JSON.stringify({ diagnostic: "link-icon.fixture", pid: process.pid, time: Date.now(), path }));
+        } catch {
+          recordRequests = false;
+        }
+      }
       requests.push(path);
       return routes[path]?.(request) ?? new Response("Not found", { status: 404 });
     },

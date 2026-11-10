@@ -12,6 +12,23 @@ const TIME_LIMIT_MS = 3_000;
 const CACHE_TTL_MS = 30 * 60_000;
 const CACHE_ENTRIES = 200;
 
+// Temporary diagnostic branch only: retain the swallowed lookup failure and its phase.
+let recording = true;
+const diagnostic = (phase: string, value: Record<string, unknown>) => {
+  if (!recording) return;
+  try {
+    console.log(JSON.stringify({ diagnostic: "link-icon", pid: process.pid, time: Date.now(), phase, ...value }));
+  } catch {
+    recording = false;
+  }
+};
+const failure = (error: unknown, signal: AbortSignal) => ({
+  error: String(error),
+  cause: error instanceof Error ? String(error.cause ?? "") : "",
+  aborted: signal.aborted,
+  reason: String(signal.reason ?? ""),
+});
+
 export interface LinkIconFetcherOptions {
   // Tests allow their own loopback servers. The runtime allows only public internet addresses.
   isAllowedAddress?: (address: string) => boolean;
@@ -81,6 +98,8 @@ export const createLinkIconFetcher = (options: LinkIconFetcherOptions = {}) => {
   const fetchWeb = async (start: URL, accept: string, signal: AbortSignal) => {
     let url = start;
     for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+      const began = performance.now();
+      diagnostic("hop.start", { url: url.href, hop, aborted: signal.aborted });
       if (!(await isAllowedHost(url.hostname, signal))) return null;
       const response = await fetch(url, {
         redirect: "manual",
@@ -88,6 +107,7 @@ export const createLinkIconFetcher = (options: LinkIconFetcherOptions = {}) => {
         headers: { accept, "accept-encoding": "identity" },
         signal,
       });
+      diagnostic("hop.response", { url: url.href, hop, status: response.status, elapsedMs: performance.now() - began });
       const location = response.headers.get("location");
       if (response.status < 300 || response.status > 399 || !location) return { response, url };
       await response.body?.cancel();
@@ -99,13 +119,19 @@ export const createLinkIconFetcher = (options: LinkIconFetcherOptions = {}) => {
   };
 
   const declaredIcons = async (url: URL, signal: AbortSignal) => {
-    const page = await fetchWeb(url, "text/html", signal).catch(() => null);
+    const page = await fetchWeb(url, "text/html", signal).catch((error) => {
+      diagnostic("page.error", failure(error, signal));
+      return null;
+    });
     if (!page) return { pageUrl: url, icons: [] };
     if (!page.response.ok || contentType(page.response) !== "text/html" || isCompressed(page.response)) {
       await page.response.body?.cancel();
       return { pageUrl: page.url, icons: [] };
     }
-    const html = await readHead(page.response).catch(() => "");
+    const html = await readHead(page.response).catch((error) => {
+      diagnostic("head.error", failure(error, signal));
+      return "";
+    });
     return { pageUrl: page.url, icons: findPageIcons(html, page.url).slice(0, MAX_DECLARED_ICONS) };
   };
 
@@ -122,11 +148,21 @@ export const createLinkIconFetcher = (options: LinkIconFetcherOptions = {}) => {
   };
 
   const resolve = async (url: URL) => {
+    const began = performance.now();
     const signal = AbortSignal.timeout(timeoutMs);
+    diagnostic("lookup.start", { url: url.href, timeoutMs });
+    signal.addEventListener(
+      "abort",
+      () => diagnostic("lookup.abort", { elapsedMs: performance.now() - began, ...failure(signal.reason, signal) }),
+      { once: true },
+    );
     const { pageUrl, icons } = await declaredIcons(url, signal);
     const candidates = new Set([...icons.map(String), new URL("/favicon.ico", pageUrl).href]);
     for (const candidate of candidates) {
-      const dataUrl = await iconDataUrl(new URL(candidate), signal).catch(() => null);
+      const dataUrl = await iconDataUrl(new URL(candidate), signal).catch((error) => {
+        diagnostic("icon.error", { url: candidate, elapsedMs: performance.now() - began, ...failure(error, signal) });
+        return null;
+      });
       if (dataUrl) return dataUrl;
     }
     return null;

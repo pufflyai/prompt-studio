@@ -7,6 +7,7 @@ import { type Browser, chromium } from "@playwright/test";
 import { packExtension } from "pstdio-extensions/distribution";
 import { folderProjectInput } from "../helpers/folder-project";
 import { runTestCommand } from "../scripts/run-test-command";
+import { observeCanvas } from "./packaged-canvas-observation";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { PACKAGED_BINARY_PATH } from "./packaged-helpers";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
@@ -89,6 +90,7 @@ test(
     });
     let child: ChildProcess | undefined;
     let browser: Browser | undefined;
+    let stopObservation: (() => void) | undefined;
     try {
       const started = await startPackagedServe(root, { PSTDIO_EXTENSION_RELEASE_REF: `psx:${registry.url.origin}` });
       child = started.child;
@@ -183,6 +185,7 @@ test(
       browser = await chromium.launch(PACKAGED_DASHBOARD_BROWSER);
       phase("browser launched");
       const page = await browser.newPage();
+      stopObservation = await observeCanvas(page, startedAt, root);
       await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
       await signInBrowser(page, started.descriptor);
       phase("browser signed in");
@@ -212,6 +215,7 @@ test(
       await viewer.getByRole("menuitemradio", { name: "Archive", exact: true }).click();
       await preview.getByRole("button", { name: "Archive", exact: true }).waitFor();
     } finally {
+      stopObservation?.();
       await browser?.close();
       if (child) await stopProcess(child);
       registry.stop(true);
