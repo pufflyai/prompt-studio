@@ -43,6 +43,16 @@ const startSyncPeer = (root: string) => {
   return { peer: createPackagedSyncPeer({ key: Bun.file(tls.key), cert: Bun.file(tls.cert) }), cert: tls.cert };
 };
 
+// Only the receiving device hosts the real Cloud UI; both devices run the same native sync workload.
+const deviceEnvironments = (source: string, cert: string) => {
+  const notes = { source, installName: "shared-notes" };
+  const common = { PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1", NODE_EXTRA_CA_CERTS: cert };
+  return {
+    first: { ...common, PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([notes]) },
+    second: { ...common, PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([notes, e2eExtension("pstdio-cloud")]) },
+  };
+};
+
 const startDevice = async (root: string, env: Record<string, string>) => {
   await mkdir(root, { recursive: true });
   const host = await startPackagedServe(root, env);
@@ -69,7 +79,7 @@ const startDevice = async (root: string, env: Record<string, string>) => {
 
 const startPickerDevices = async <T>(
   root: string,
-  env: Record<string, string>,
+  env: ReturnType<typeof deviceEnvironments>,
   repository: Promise<{ remote: string; checkout: string }>,
   prepare: (
     first: Awaited<ReturnType<typeof startDevice>>,
@@ -77,10 +87,10 @@ const startPickerDevices = async <T>(
   ) => Promise<T>,
 ) => {
   // The source device can prepare its project while the other cold starts finish.
-  const startingFirst = startDevice(join(root, "first"), env);
+  const startingFirst = startDevice(join(root, "first"), env.first);
   const [first, second, browser, prepared, checkout] = await Promise.allSettled([
     startingFirst,
-    startDevice(join(root, "second"), env),
+    startDevice(join(root, "second"), env.second),
     chromium.launch(PACKAGED_DASHBOARD_BROWSER),
     Promise.all([startingFirst, repository]).then(([device, checkout]) => prepare(device, checkout)),
     repository,
@@ -168,14 +178,7 @@ test(
     let firstHomeCleanup: Promise<void> | undefined;
     try {
       const source = await writeSharedNotesExtension(root);
-      const env = {
-        PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([
-          { source, installName: "shared-notes" },
-          e2eExtension("pstdio-cloud"),
-        ]),
-        PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1",
-        NODE_EXTRA_CA_CERTS: cert,
-      };
+      const env = deviceEnvironments(source, cert);
       const started = await startPickerDevices(root, env, prepareRepository(root), async (first, repository) => {
         phase("first device and checkout ready");
         const project = await first.client.projects.create(
@@ -353,7 +356,7 @@ test(
       if (stoppingFailures.length) throw new AggregateError(stoppingFailures, "Could not stop the online devices");
       phase("online browser and second host stopped");
       await reopenPreparedProjectOffline(async () => {
-        second = await startDevice(join(root, "second"), env);
+        second = await startDevice(join(root, "second"), env.second);
         started.second = second;
         expect((await second.client.account.projectSyncStatus(project.id)).offlineReady).toBe(false);
         return { baseUrl: second.host.baseUrl, token: second.host.descriptor.token, projectId: project.id };
