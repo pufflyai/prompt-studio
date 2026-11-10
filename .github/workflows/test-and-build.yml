@@ -1,89 +1,68 @@
-name: Diagnose native Canvas bootstrap ordering
+name: Qualify native core cleanup repair
 on:
   workflow_dispatch:
     inputs:
       source_sha:
-        description: Exact main source for the controlled one-turn scheduling experiment
+        description: Exact reviewed PS175 cleanup candidate
         required: true
         type: string
 permissions:
   contents: read
 jobs:
-  canvas_ordering:
-    runs-on: windows-latest
-    # This is below the maintained compiled-job ceiling; case and assertion limits are unchanged.
-    timeout-minutes: 25
+  native_cleanup:
+    runs-on: windows-11-arm
+    timeout-minutes: 30
     env:
-      NX_DAEMON: "false"
       CI_PRIORITY: P2
       GH_TOKEN: ${{ github.token }}
-      E2E_REQUIRE_WEBVIEW_BROWSERS: "1"
+      PSTDIO_VERIFY_PLATFORM_PKG: cli-win-arm64
+      TEST_PRIORITIES: P0,P1
     steps:
-      - uses: actions/checkout@v5
-        with:
-          ref: ${{ github.workflow_sha }}
-      - name: Retain the reviewed observation helpers outside the main checkout
-        shell: pwsh
-        run: |
-          $saved = Join-Path $env:RUNNER_TEMP canvas-ordering-observers
-          New-Item -ItemType Directory -Force $saved | Out-Null
-          Copy-Item packages/e2e/src/packaged/native-diagnostic-emitter.ts $saved
-          Copy-Item packages/e2e/src/packaged/packaged-canvas-observation.ts $saved
-          Copy-Item packages/e2e/src/packaged/canvas-ordering-observation.ts $saved
-          Copy-Item scripts/ci/install-canvas-ordering-observation.ts $saved
       - uses: actions/checkout@v5
         with:
           ref: ${{ inputs.source_sha }}
           fetch-depth: 0
-      - name: Require the reviewed exact-main control
+      - name: Require the reviewed cleanup source
         shell: pwsh
         env:
           CONTROL_SOURCE_SHA: ${{ inputs.source_sha }}
         run: |
-          $expected = "fa160834442076ff6a731c5eca2303d337073dce"
-          if ($env:CONTROL_SOURCE_SHA -cne $expected) { throw "This experiment requires the reviewed full main SHA" }
-          $actual = (git rev-parse HEAD).Trim()
-          if ($actual -cne $expected) { throw "Checkout differs from the reviewed main source" }
-      - uses: actions/setup-node@v5
-        with:
-          node-version: "24.22.1"
+          $expected = "c4d4412c7cdd12e00756a5b7aaa1808ac8614051"
+          if ($env:CONTROL_SOURCE_SHA -cne $expected) { throw "Expected full reviewed cleanup SHA" }
+          if ((git rev-parse HEAD).Trim() -cne $expected) { throw "Unexpected checkout" }
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-      - name: Install dependencies and restore build cache
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24.22.1"
+      - name: Install native dependencies and restore host build cache
         uses: ./.github/actions/setup-ci-cache
         with:
+          install-strategy: native
           windows-dev-drive: "true"
-      - name: Build maintained packaged test dependencies
-        run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
-      - name: Compile exact-main CLI
-        run: bun run --cwd scripts build:host
-      - name: Provision the full Chromium used by packaged dashboards
-        # Browser download only; no tested home, project or extension is opened/prewarmed.
-        run: bunx playwright@1.60.0 install chromium --no-shell
-      - name: Record exact product source and install test-only ordering observer
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force test-results/canvas-ordering | Out-Null
-          git rev-parse HEAD | Tee-Object test-results/canvas-ordering/source.txt
-          Get-FileHash extensions/canvas/src/frames/frame.tsx,extensions/canvas/src/frames/assets.ts | Out-File test-results/canvas-ordering/product-hashes.txt
-          bun "$env:RUNNER_TEMP/canvas-ordering-observers/install-canvas-ordering-observation.ts" "$env:GITHUB_WORKSPACE" "$env:RUNNER_TEMP/canvas-ordering-observers"
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          git diff -- packages/e2e/src/packaged/packaged-canvas-install.p2.test.ts | Out-File test-results/canvas-ordering/test-only.patch
-          git diff --exit-code -- extensions/canvas/src/frames/frame.tsx extensions/canvas/src/frames/assets.ts
-      - name: Run the unchanged cold Canvas installation subject once
-        shell: pwsh
+      - name: Build source fixtures for packaged runtime tests
+        run: bun run build -- --scope e2e --include-dependencies
+      - name: Run the maintained cold ARM64 packaged shard first
+        # Exact maintained profile, priorities, discovery, workload, limits and command.
+        # New filesystem safety tests run AFTER this, never to prewarm the case.
+        run: bun scripts/ci/run-ci-checks.ts --observe-peers -- bun run --cwd scripts verify:packages --profile full --shard 2/2
+      - name: Verify real filesystem safety after the cold qualification
+        if: ${{ !cancelled() }}
+        working-directory: packages/e2e
         env:
-          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio.exe
-          PSTDIO_EXTENSION_RELEASE_REF: ${{ inputs.source_sha }}
-        run: bun run --cwd packages/e2e test:packaged:cli src/packaged/packaged-canvas-install.p2.test.ts
-      - name: Preserve source, scheduling and browser evidence even on failure
+          # Script helpers are separate maintained P1 cases, not packaged-discovery members.
+          TEST_PRIORITIES: P1
+        run: bun ../../scripts/ci/run-bun-tests.ts --preload ./src/scripts/bun-process-cleanup.ts src/scripts/remove-test-directory.p1.test.ts --timeout 30000
+      - name: Preserve actual case and native/fallback evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: native-main-canvas-ordering
+          name: native-core-cleanup-candidate
           path: |
-            test-results/canvas-ordering
-            test-results/ci/bun
             packages/e2e/test-results
+            test-results/ci/bun
           if-no-files-found: warn
+      - name: Require unchanged generated source
+        if: ${{ !cancelled() }}
+        run: git diff --exit-code
