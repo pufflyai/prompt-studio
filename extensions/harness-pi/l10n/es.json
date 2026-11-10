@@ -1,4 +1,6 @@
 {
   "harness.pi": "Pi",
-  "params.thinking": "Razonamiento"
+  "params.thinking": "Razonamiento",
+  "quotas.title": "Consultar las cuotas de la cuenta",
+  "quotas.description": "Indicar si Pi proporciona información sobre las cuotas de la cuenta."
 }
