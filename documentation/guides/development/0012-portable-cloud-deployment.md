@@ -197,6 +197,27 @@ schema: database rollback requires a tested restore or a compatible forward fix.
 
 Keep backups of every database and test a recovery before relying on it.
 
+## Operator inspection
+
+To see what one account keeps, run the two read-only operator scripts against the service databases. They work from any machine the database admits, and make no changes.
+
+```sh
+# Manager: account state, features, devices (removed ones too) and every project it syncs or ever held keys for.
+DATABASE_URL=<manager database URL> bun services/account-manager/scripts/account-inspection.ts --email <email>
+
+# Relay: per project, documents, update and state bytes, blobs by status, orphaned blobs and when cleanup
+# can retire them, settled rows and when they go, the largest documents, and the bytes counted against the
+# account's quota.
+DATABASE_URL=<relay database URL> RELAY_GRACE_PERIOD_SECONDS=<deployed value> \
+  bun services/relay/scripts/account-inspection.ts --account <account id> --project <project id>...
+```
+
+Both scripts print JSON and report metadata only; relay content stays sealed. The relay keys projects by a hash of account and project ID. Pass the project IDs from the manager report with `--project`, so the relay report can label them. A project made local again leaves the manager's syncing list but keeps its keys, so the manager report still names it.
+
+An orphaned blob is one no update or state lists and no parent still holds. The relay's hourly cleanup removes it once the grace period has passed since its last use, and the report shows the earliest and latest of those times. Its children become orphans after it goes and follow in a later pass. Covered updates and replaced states go one grace period after they settle, and the blobs they listed go one grace period after that.
+
+The relay report runs in one read-only snapshot with a five-minute statement timeout and does not walk blob trees, so it stays within a small database's memory. On a 1 vCPU, 1 GB PostgreSQL, 2 million blobs take about 9 seconds.
+
 ## Reference workload measurement
 
 PS-787 adds a manual [reference workload](../../../packages/e2e/src/perf/relay-reference-workload/workload.diagnostic.ts).
