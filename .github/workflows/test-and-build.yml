@@ -1,68 +1,79 @@
-name: Observe native chat tail and scroll ownership
+name: Qualify completed-source retirement on Windows
 on:
   workflow_dispatch:
     inputs:
       source_sha:
+        description: Exact one-fixture PS158 correction
         required: true
         type: string
-        description: Frozen source for one observational streaming case
 permissions:
   contents: read
 jobs:
-  observe_streaming:
-    runs-on: ubuntu-24.04
+  cloud_control:
+    name: Two-device retirement (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: e2e packaged-cli source P2 1 windows-latest
+            os: windows-latest
+            platform: win32
+            arch: x64
+            owner: e2e
+            runner: packaged-cli
+            priority: P2
+            files: '["packages/e2e/src/packaged/packaged-two-device-sync-smoke.p2.test.ts"]'
+            stable: true
+            quarantine: false
+            suite: ""
+            browser: true
+            desktop: false
     env:
       GH_TOKEN: ${{ github.token }}
-      NX_DAEMON: "false"
-      CI_PRIORITY: P2
-      TEST_PRIORITIES: P2
+      EDITED_TEST_ROW: ${{ toJSON(matrix) }}
       UI_PERF_ASSERT_BUDGETS: "1"
       PLAYWRIGHT_TRACE: "off"
-      PSTDIO_EXTENSION_RELEASE_REF: ${{ inputs.source_sha }}
+      NX_DAEMON: "false"
     steps:
       - uses: actions/checkout@v5
         with:
           ref: ${{ inputs.source_sha }}
           fetch-depth: 0
-      - name: Require frozen source
+      - name: Require exact frozen source
         shell: bash
+        env:
+          CONTROL_SOURCE_SHA: ${{ inputs.source_sha }}
         run: |
-          test "${{ inputs.source_sha }}" = "4bd741de85239fff34afa01d0dc37aa86e06d4ca"
-          test "$(git rev-parse HEAD)" = "${{ inputs.source_sha }}"
+          test "$CONTROL_SOURCE_SHA" = "9f70e4215f694ed219ce6ec7504eca874c5a0d78"
+          test "$(git rev-parse HEAD)" = "$CONTROL_SOURCE_SHA"
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
       - uses: actions/setup-node@v5
         with:
           node-version: "24.22.1"
-      - uses: ./.github/actions/setup-ci-cache
+      - name: Install native dependencies and restore host build cache
+        uses: ./.github/actions/setup-ci-cache
         with:
           install-strategy: native
           windows-dev-drive: "true"
       - name: Install browser engines
         run: bunx playwright@1.60.0 install --with-deps
-      - name: Retain stream data and scroll ownership if the original assertion fails
+      - name: Qualify the complete changed fixture once with its maintained runner
         shell: bash
         run: |
-          git fetch origin ${{ github.sha }} --no-tags
-          git show ${{ github.sha }}:scripts/ci/capture-chat-motion-failure.patch > "$RUNNER_TEMP/capture-chat-motion-failure.patch"
-          git show ${{ github.sha }}:scripts/ci/observe-chat-tail.py > "$RUNNER_TEMP/observe-chat-tail.py"
-          git apply "$RUNNER_TEMP/capture-chat-motion-failure.patch"
-          python3 "$RUNNER_TEMP/observe-chat-tail.py"
-          git diff --check
-          git diff --stat
-      - name: Build maintained packaged fixture dependencies
-        run: bun run build -- --scope e2e --scope pstdio --include-dependencies
-      - name: Execute the original complete streaming case once
-        env:
-          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio
-        run: xvfb-run -a bun run --cwd packages/e2e test:packaged:cli -- src/packaged/packaged-chat-motion-smoke.p2.test.ts --test-name-pattern '^retains streaming messages and cached history$'
-      - name: Preserve observation and original case outcome
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            xvfb-run -a bun scripts/ci/run-edited-tests.ts
+          else
+            bun scripts/ci/run-edited-tests.ts
+          fi
+      - name: Preserve original case outcomes and failure artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: native-stream-tail-observation
+          name: two-device-retirement-windows
           path: |
             test-results
             packages/e2e/test-results
