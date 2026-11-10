@@ -38,6 +38,25 @@ const gate = () => {
   return { entered, release, url: server.url.href };
 };
 
+test.each([
+  "idle",
+  "active",
+] as const)("host configuration replaces an %s core worker without losing requests", async (phase) => {
+  const client = fixture();
+  const blocked = gate();
+  const first = client.run<{ sequence: number }>("wait", { name: "core", url: blocked.url });
+  await blocked.entered.promise;
+  if (phase === "idle") {
+    blocked.release.resolve();
+    expect((await first).sequence).toBe(1);
+  }
+  const next = phase === "active" ? client.run<{ sequence: number }>("value", { name: "queued" }) : undefined;
+  client.configureWorker(() => new Worker(new URL("./preparation-worker.fixture.ts", import.meta.url)));
+  blocked.release.resolve();
+  expect((await first).sequence).toBe(1);
+  expect((await (next ?? client.run<{ sequence: number }>("value", { name: "host" }))).sequence).toBe(1);
+});
+
 test("a busy preparation worker leaves the host event loop responsive", async () => {
   const client = fixture();
   const entered = Promise.withResolvers<void>();

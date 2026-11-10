@@ -55,6 +55,9 @@ const settlePreparationJob = (jobs: Map<string, Job>, job: Job, error: unknown, 
   job.waiters.clear();
 };
 
+const preparationReplyError = (error?: { message: string }) =>
+  error ? Object.assign(new Error(error.message), error) : undefined;
+
 const preparationJobMessage = (active: Job) => ({
   kind: "run",
   id: active.id,
@@ -80,6 +83,7 @@ export const createPreparationClient = (
   cleanup?: (homes: PreparationHome[]) => Promise<void>,
 ) => {
   let worker: Worker | undefined;
+  let workerFactory = createWorker;
   let ready = false;
   let active: Job | undefined;
   let nextId = 0;
@@ -117,6 +121,7 @@ export const createPreparationClient = (
   };
   const pump = (backgroundReady = false) => {
     if (!worker || !ready || active || stopping) return;
+    if (workerFactory !== createWorker) return replaceWorker();
     queued.sort((a, b) => a.priority - b.priority || a.id - b.id);
     // Publishing a tool includes host database/callback work between worker jobs.
     // Starting speculation in those gaps only to retire it loses the warm worker.
@@ -172,16 +177,13 @@ export const createPreparationClient = (
     if (!active || message.id !== active.id) return;
     const job = active;
     active = undefined;
-    let error: Error | undefined;
-    if (message.error) {
-      error = Object.assign(new Error(message.error.message), message.error);
-    }
-    settle(job, error, message.value);
+    settle(job, preparationReplyError(message.error), message.value);
     pump();
   };
   const start = () => {
     if (worker || restarting) return;
-    const current = createWorker();
+    workerFactory = createWorker;
+    const current = workerFactory();
     worker = current;
     const releaseLocks = registerFileMutationWorker(current);
     const stopCommands = ownPreparationCommands(current);
@@ -213,6 +215,11 @@ export const createPreparationClient = (
     for (const listener of listeners) listener({ kind: "worker-lost" });
   };
   return {
+    configureWorker: (factory: () => Worker) => {
+      // Finish the admitted job before switching hosts; queued requests keep their owners.
+      createWorker = factory;
+      pump();
+    },
     subscribe: (listener: (event: PreparationEvent) => void) => {
       listeners.add(listener);
       return () => {
@@ -302,7 +309,7 @@ export const createPreparationClient = (
   };
 };
 
-let factory = () =>
+const defaultWorker = () =>
   new Worker(
     new URL(
       isPackagedRuntime()
@@ -312,13 +319,10 @@ let factory = () =>
     ),
   );
 let cleanup: ((homes: PreparationHome[]) => Promise<void>) | undefined;
-const shared = createPreparationClient(
-  () => factory(),
-  (homes) => cleanup?.(homes) ?? Promise.resolve(),
-);
+const shared = createPreparationClient(defaultWorker, (homes) => cleanup?.(homes) ?? Promise.resolve());
 export const configureExtensionPreparationWorker = (createWorker: () => Worker, dispose?: typeof cleanup) => {
   cleanup = dispose;
-  factory = createWorker;
+  shared.configureWorker(createWorker);
 };
 export const runExtensionPreparation = shared.run;
 export const stopExtensionPreparation = shared.stop;
