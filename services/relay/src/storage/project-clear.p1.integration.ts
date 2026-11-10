@@ -42,7 +42,7 @@ test("an operator clears one project's rows and objects, leaving other projects 
       blobIds: [blob.blobId],
     });
     await sync.documents.appendUpdate(personal, caller, update());
-    return { shared, blob };
+    return { shared, blob, bytes };
   };
 
   const kept = await write(device, "beta");
@@ -72,7 +72,7 @@ test("an operator clears one project's rows and objects, leaving other projects 
   );
 
   const executed = await runRelayProjectClear([...args, "--confirm", "alpha"], fixture.databaseUrl);
-  expect(executed).toMatchObject({ executed: true, projectRemoved: false, before: dryRun.before });
+  expect(executed).toMatchObject({ executed: true, before: dryRun.before });
   // Nothing of the project is readable any more, even before cleanup runs.
   const missing = await sync.blobs.read(cleared.blob, 0).then(
     () => null,
@@ -81,21 +81,37 @@ test("an operator clears one project's rows and objects, leaving other projects 
   expect(missing).toBeInstanceOf(SyncRejection);
   expect(await sync.documents.read(cleared.shared, 0)).toMatchObject({ lastSequence: 0, updates: [] });
 
+  // A device that reconnects before cleanup has removed a blob cannot upload it again yet.
+  const reupload = () =>
+    sync.blobs.begin(cleared.blob, device, { sha256: sha256(cleared.bytes), byteLength: cleared.bytes.length });
+  const early = await reupload().then(
+    () => null,
+    (error: unknown) => error,
+  );
+  expect(early).toBeInstanceOf(SyncRejection);
+  expect((early as SyncRejection).status).toBe(400);
+
   await sync.cleanup();
   expect([...(await fixture.objects()).keys()].sort()).toEqual(keptObjects);
+  // Only the project record stays, for the project to sync again.
   expect((await rowsWith(alpha)).map((row) => row.split(" ")[0])).toEqual(["relay_sync_projects"]);
 
-  // A run after cleanup removes the project record, and a later one finds nothing.
-  expect(await runRelayProjectClear([...args, "--confirm", "alpha"], fixture.databaseUrl)).toMatchObject({
-    executed: true,
-    projectRemoved: true,
-    before: { project: true, documents: 0, blobs: { count: 0 } },
+  // After cleanup, a device that reconnects uploads the same blob and document again from its local copy.
+  await reupload();
+  await sync.blobs.writePart(cleared.blob, 1, {
+    sha256: sha256(cleared.bytes),
+    byteLength: cleared.bytes.length,
+    body: body(cleared.bytes),
   });
-  expect(await rowsWith(alpha)).toEqual([]);
-  expect(await runRelayProjectClear([...args, "--confirm", "alpha"], fixture.databaseUrl)).toMatchObject({
-    executed: false,
-    before: { project: false },
-  });
+  await sync.blobs.finish(cleared.blob);
+  expect(
+    await sync.documents.appendUpdate(cleared.shared, device, {
+      updateId: randomId("update"),
+      payload: encode(new Uint8Array([1])),
+      blobIds: [cleared.blob.blobId],
+    }),
+  ).toEqual({ sequence: 1, duplicate: false });
+  expect((await sync.blobs.read(cleared.blob, 0)).byteLength).toBe(48);
 
   // The account's other project and another account's project of the same ID still read back in full.
   for (const { shared, blob } of [kept, foreign]) {

@@ -228,9 +228,11 @@ DATABASE_URL=<relay database URL> \
   bun services/relay/scripts/project-clear.ts --account <account id> --project <project id> --confirm <project id>
 ```
 
-First make the project local on every device, and check with the manager inspection that it no longer syncs. The manager grants relay access only to a project that syncs, so no device writes to it while it is cleared. The project's keys stay in the manager. Devices keep data sealed with those keys and upload it again when the project syncs again, so new keys would make that data unreadable.
+First make the project local on every device, and check with the manager inspection that it no longer syncs. The manager grants relay access only to a project that syncs, and a granted access token lasts `ACCESS_LIFETIME_SECONDS`. Wait longer than that after the project is made local, so that no device still writes to it. The project's keys stay in the manager. Devices keep data sealed with those keys and upload it again when the project syncs again, so new keys would make that data unreadable.
 
-The relay's next hourly cleanup deletes the queued objects and the marked blobs with their objects. Deleting objects one by one can take hours for a large project, and the inspection report shows the marked blobs until they are gone. The project record stays while it has blobs, because blob rows cascade from it. Run the clear again after cleanup to remove the record. Reconnect only after that: a blob still marked for deletion refuses a device's new upload of it. When the project syncs again, the relay has nothing of it, and each device rebuilds its streams from its local copy, as after the loss of relay data.
+The relay's next hourly cleanup deletes the queued objects and the marked blobs with their objects. Objects are deleted one by one, a few storage requests per blob, so a large project can take many hours. The inspection report shows the marked blobs until they are gone, and their bytes still count against the account's quota until then. The project record stays, because blob rows cascade from it, and the project reuses it when it syncs again.
+
+Reconnect the project only once the inspection report shows no blobs left for it. Devices upload their blobs again under the same IDs, and the relay refuses an upload of a blob still marked for deletion. When the project syncs again, the relay has nothing of it, and each device rebuilds its streams from its local copy, as after the loss of relay data. Do not run the clear again after the project syncs again: it would clear the new data too.
 
 ## Reference workload measurement
 

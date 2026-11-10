@@ -14,7 +14,10 @@ const count = (value: unknown) => Number(value ?? 0);
  * - Update and state rows are removed and their objects queued for deletion.
  * - Every blob is marked `deleting`. Cleanup removes their objects and rows on its next run.
  * - Documents are removed.
- * - The project record is removed once it has no blobs left, so a run after cleanup finishes the clear.
+ *
+ * The project record stays: blob rows cascade from it, and a project that syncs again reuses it.
+ * Until cleanup has removed a marked blob, a device that uploads it again is refused, and its bytes
+ * still count against the account's quota.
  *
  * It holds the account's write lock, so no write of this account interleaves with it.
  */
@@ -59,7 +62,7 @@ export const clearRelayProject = async (
         blobs: { count: count(row.blobs), bytes: count(row.blobBytes), deleting: count(row.deleting) },
       };
       const report = { accountId: input.accountId, projectId: input.projectId, projectKey: key, before };
-      if (!input.execute || !row.project) return { ...report, executed: false, projectRemoved: false };
+      if (!input.execute || !row.project) return { ...report, executed: false };
 
       for (const table of ["relay_sync_updates", "relay_sync_states"] as const)
         await tx.execute(sql`
@@ -70,10 +73,7 @@ export const clearRelayProject = async (
       await tx.execute(sql`
         UPDATE relay_sync_blobs SET status = 'deleting' WHERE "projectKey" = ${key} AND status <> 'deleting'`);
       await tx.execute(sql`DELETE FROM relay_sync_documents WHERE "projectKey" = ${key}`);
-      // Blob rows cascade from the project record, so it stays until cleanup has removed their objects.
-      const projectRemoved = before.blobs.count === 0;
-      if (projectRemoved) await tx.execute(sql`DELETE FROM relay_sync_projects WHERE "projectKey" = ${key}`);
-      return { ...report, executed: true, projectRemoved };
+      return { ...report, executed: true };
     },
     input.execute ? undefined : { isolationLevel: "repeatable read", accessMode: "read only" },
   );
