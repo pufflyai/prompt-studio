@@ -4,7 +4,7 @@ import { libraryTarget } from "./contracts";
 export const openCreation = defineCommand({
   id: "open-creation",
   title: l10n("commands.startCreation", "Create an artifact"),
-  palette: [{}],
+  palette: [{ group: "Artifacts", icon: "app-window" }],
   run(ctx) {
     ctx.navigation.open(libraryTarget);
   },

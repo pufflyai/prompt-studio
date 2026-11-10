@@ -96,7 +96,7 @@ const fileContextMenuActions = (input: { ticketId: string; fileId: string; fileN
 export const createTicketFileCommand = defineCommand({
   id: "create-ticket-file",
   title: "Create ticket file",
-  palette: [{ group: "Tickets", when: { resourceType: [ticketResourceKind] } }],
+  palette: [{ group: "Tickets", icon: "file-plus", when: { resourceType: [ticketResourceKind] } }],
   params: {
     ticketId: params.text(),
     name: params.text({ label: "File name" }),
