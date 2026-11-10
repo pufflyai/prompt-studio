@@ -62,7 +62,7 @@ export const findAccountIdByEmail = async (db: Pick<ManagerDatabase, "selectDist
       ),
     );
   if (matches.length !== 1)
-    throw new Error("No unique account with that verified Google email. Sign in once before granting a feature.");
+    throw new Error("No unique account with that verified Google email. The person must sign in once first.");
   return matches[0].accountId;
 };
 
