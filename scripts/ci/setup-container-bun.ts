@@ -8,8 +8,7 @@ const { packageManager } = JSON.parse(readFileSync(new URL("../../package.json",
   packageManager: string;
 };
 const version = packageManager.slice("bun@".length);
-const build = process.arch === "arm64" ? "bun-linux-aarch64" : "bun-linux-x64";
-const response = await fetch(`https://registry.npmjs.org/@oven/${build}/-/${build}-${version}.tgz`);
+const response = await fetch(`https://registry.npmjs.org/@oven/bun-linux-x64/-/bun-linux-x64-${version}.tgz`);
 if (!response.ok) throw new Error(`Bun ${version} download failed: HTTP ${response.status}`);
 
 const directory = mkdtempSync(join(tmpdir(), "pstdio-ci-bun-"));

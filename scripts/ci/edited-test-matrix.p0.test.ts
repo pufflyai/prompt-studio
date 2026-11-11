@@ -11,14 +11,12 @@ test("edited CLI shutdown checks install the browser engines they exercise", () 
   expect(rows[0]).toMatchObject({ runner: "cli", browser: true, container: true });
 });
 
-test("edited browser tests use the Playwright image on Linux and installed engines on macOS", () => {
-  const rows = createEditedTestMatrix(["packages/e2e/src/packaged/boards.p2.test.ts"], scopeFixture().packages);
-  expect(rows.map(({ platform, browser, container }) => ({ platform, browser, container }))).toEqual(
-    expect.arrayContaining([
-      { platform: "linux", browser: true, container: true },
-      { platform: "darwin", browser: true, container: false },
-    ]),
-  );
+test("edited browser tests use the Playwright image on Linux where their nightly suite does", () => {
+  const packages = scopeFixture().packages;
+  const [app] = createEditedTestMatrix(["packages/e2e/src/ui/secondary-panel.p2.spec.ts"], packages);
+  expect(app).toMatchObject({ platform: "linux", browser: true, container: true });
+  const packagedCli = createEditedTestMatrix(["packages/e2e/src/packaged/boards.p2.test.ts"], packages);
+  expect(packagedCli.every((row) => row.browser && !row.container)).toBe(true);
 });
 
 test("edited desktop tests run natively without Playwright browsers", () => {

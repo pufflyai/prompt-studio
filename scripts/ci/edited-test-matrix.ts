@@ -81,8 +81,11 @@ export const createEditedTestMatrix = (files: string[], packages: Packages) => {
           browser: !["bun", "api", "integration", "desktop"].includes(group.runner),
           desktop: group.runner === "desktop",
           // The Playwright image ships browsers and their libraries, so Linux rows download no Ubuntu
-          // packages. Desktop rows stay native: they configure Electron's sandbox with sudo.
-          container: platform.platform === "linux" && !["bun", "api", "integration", "desktop"].includes(group.runner),
+          // packages. Rows stay on the native host their nightly suite uses: desktop configures
+          // Electron's sandbox with sudo, and the packaged CLI suite runs on native toolchain hosts.
+          container:
+            platform.platform === "linux" &&
+            !["bun", "api", "integration", "desktop", "packaged-cli"].includes(group.runner),
         };
       });
     });
