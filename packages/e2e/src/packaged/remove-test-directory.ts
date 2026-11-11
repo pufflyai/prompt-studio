@@ -23,8 +23,8 @@ export const removeTestDirectory = async (root: string) => {
     if (process.platform === "win32")
       await runTestCommand(
         process.env.ComSpec || "cmd.exe",
-        ["/d", "/v:off", "/c", 'rmdir /s /q "%PSTDIO_TEST_CLEANUP_ROOT%"'],
-        { env },
+        ["/d", "/v:off", "/s", "/c", 'rmdir /s /q "%PSTDIO_TEST_CLEANUP_ROOT%"'],
+        { env, windowsVerbatimArguments: true },
       );
     else await runTestCommand("/bin/rm", ["-rf", "--", root], { env });
   } catch (error) {

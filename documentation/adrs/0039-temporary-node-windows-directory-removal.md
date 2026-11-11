@@ -49,7 +49,7 @@ the existing allowance. Cleanup continues to await complete deletion and propaga
 errors on every platform.
 
 The Bun-run CLI fixtures own a platform removal utility directly: `/bin/rm -rf`
-on POSIX and `cmd.exe /d /v:off /c rmdir /s /q` on Windows. The root is a literal
+on POSIX and `cmd.exe /d /v:off /s /c rmdir /s /q` on Windows. The root is a literal
 argument on POSIX and a quoted, single-expanded environment value on Windows.
 Directory links are not traversed. Each case stops its runtime first, awaits full
 removal and propagates failure. No deletion workers or test time limits are added.
