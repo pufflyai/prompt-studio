@@ -1,4 +1,5 @@
-import { lstat, rm } from "node:fs/promises";
+import { lstat, readdir, rm } from "node:fs/promises";
+import { join } from "node:path";
 import { runTestCommand, TestCommandError } from "../scripts/run-test-command";
 
 // ADR 0039: transient Windows handles need Node's asynchronous retry contract.
@@ -8,14 +9,7 @@ require("node:fs/promises").rm(process.env.PSTDIO_TEST_CLEANUP_ROOT, {
 }).catch((error) => { console.error(error); process.exitCode = 1; });
 `;
 
-export const removeTestDirectory = async (root: string) => {
-  const info = await lstat(root).catch((error: NodeJS.ErrnoException) => {
-    if (error.code === "ENOENT") return undefined;
-    throw error;
-  });
-  if (!info) return;
-  if (!info.isDirectory() || info.isSymbolicLink()) return rm(root, { recursive: true, force: true });
-  const began = performance.now();
+const removeNativeDirectory = async (root: string) => {
   const env = { ...process.env, PSTDIO_TEST_CLEANUP_ROOT: root };
   try {
     // Own the utility directly so cancellation also stops traversal. Paths stay
@@ -33,5 +27,35 @@ export const removeTestDirectory = async (root: string) => {
     console.error("PSTDIO_CLEANUP_ASYNC_RECOVERY: native removal failed");
     await runTestCommand("node", ["-e", ASYNC_REMOVE], { env });
   }
+};
+
+export const removeTestDirectory = async (root: string) => {
+  const info = await lstat(root).catch((error: NodeJS.ErrnoException) => {
+    if (error.code === "ENOENT") return undefined;
+    throw error;
+  });
+  if (!info) return;
+  if (!info.isDirectory() || info.isSymbolicLink()) return rm(root, { recursive: true, force: true });
+  const began = performance.now();
+  if (process.platform === "win32") {
+    const extensions = join(root, "extensions");
+    const installed = await lstat(extensions).catch((error: NodeJS.ErrnoException) => {
+      if (error.code === "ENOENT") return undefined;
+      throw error;
+    });
+    if (installed?.isDirectory() && !installed.isSymbolicLink()) {
+      const names = await readdir(extensions);
+      let next = 0;
+      const drain = async () => {
+        while (next < names.length) await removeNativeDirectory(join(extensions, names[next++]!));
+      };
+      // Installed packages are independent trees. Bound deletion to two direct,
+      // case-owned utilities and settle both before deleting their parent.
+      const outcomes = await Promise.allSettled([drain(), drain()]);
+      const failures = outcomes.flatMap((outcome) => (outcome.status === "rejected" ? [outcome.reason] : []));
+      if (failures.length) throw new AggregateError(failures, "Installed extension cleanup failed");
+    }
+  }
+  await removeNativeDirectory(root);
   console.log(`Test directory removed with platform utility (${Math.round(performance.now() - began)}ms)`);
 };

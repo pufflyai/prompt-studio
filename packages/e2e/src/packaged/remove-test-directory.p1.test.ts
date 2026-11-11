@@ -17,8 +17,12 @@ test("removes its owned tree without following directory links or deleting exter
     await mkdir(external);
     const sentinel = join(external, "keep.txt");
     await writeFile(sentinel, "Keep the external target");
-    await symlink(external, join(owned, "external-directory"), process.platform === "win32" ? "junction" : "dir");
-    await link(sentinel, join(owned, "external-file"));
+    const first = join(owned, "extensions", "first");
+    const second = join(owned, "extensions", "second");
+    await mkdir(first, { recursive: true });
+    await mkdir(second);
+    await symlink(external, join(first, "external-directory"), process.platform === "win32" ? "junction" : "dir");
+    await link(sentinel, join(second, "external-file"));
     await writeFile(join(owned, "own.txt"), "Remove this owned file");
 
     await removeTestDirectory(owned);

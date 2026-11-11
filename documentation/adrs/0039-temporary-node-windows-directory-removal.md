@@ -52,7 +52,7 @@ The Bun-run CLI fixtures own a platform removal utility directly: `/bin/rm -rf`
 on POSIX and `cmd.exe /d /v:off /s /c rmdir /s /q` on Windows. The root is a literal
 argument on POSIX and a quoted, single-expanded environment value on Windows.
 Directory links are not traversed. Each case stops its runtime first, awaits full
-removal and propagates failure. No deletion workers or test time limits are added.
+removal and propagates failure. Test worker counts and execution allowances stay unchanged.
 
 [Release verification 42962479744](https://github.com/pufflyai/prompt-studio/actions/runs/42962479744)
 finished five Apple Silicon Planner scenarios' assertions in 16–23 seconds, then
@@ -67,6 +67,17 @@ utility failure admits one Node asynchronous removal with the existing five
 retries and 100ms delay. Signal termination and cancellation never start recovery.
 Native timing qualification remains necessary; local link-safety tests alone do
 not prove completion on a hosted runner.
+
+The corrected Windows utility invocation in scoped run43002988593 still reached
+cleanup at23.244seconds and exhausted30seconds before deletion completed. Partition
+only the owned home's installed `extensions` directory into independent immediate
+children and remove at most two concurrently, then remove the remaining home.
+The parent directory must be a real directory, never a junction or symbolic link.
+Do not enumerate extension targets or follow their links. Both direct child
+processes remain registered with the test's cancellation owner; await both outcomes
+before returning or removing the rest of the home. This changes deletion scheduling,
+not fresh installation, test operations, assertions or time limits. POSIX retains
+its qualified single traversal.
 
 The command-discovery fixture uses the same asynchronous removal policy after
 [Windows run 40010409328](https://github.com/pufflyai/prompt-studio/actions/runs/40010409328/job/120620966481)
