@@ -20,14 +20,10 @@ runs:
       run: |
         sudo mdutil -a -i off
         mdutil -a -s
-    - name: Use Ubuntu archive mirrors
-      if: runner.os == 'Linux'
-      shell: bash
-      # Azure can trickle archives without activating APT failover. See ADR 0134.
-      run: |
-        if [ -f /etc/apt/apt-mirrors.txt ]; then
-          sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt
-        fi
+    - name: Configure signed Ubuntu archive mirrors
+      # Playwright images already contain system dependencies and run without sudo.
+      if: inputs.profile != 'playwright'
+      uses: ./.github/actions/setup-ubuntu-mirrors
     - name: Locate the Bun download cache
       id: bun_cache
       shell: bash
@@ -57,7 +53,8 @@ runs:
       uses: actions/cache/restore@v4
       with:
         path: .cache/ci-build
-        key: nx-${{ runner.os }}-${{ runner.arch }}-${{ inputs.profile }}-${{ hashFiles('bun.lock', 'package.json', 'nx.json') }}-${{ github.sha
+        key:
+          nx-${{ runner.os }}-${{ runner.arch }}-${{ inputs.profile }}-${{ hashFiles('bun.lock', 'package.json', 'nx.json') }}-${{ github.sha
           }}-${{ github.job }}-${{ strategy.job-index }}
         restore-keys: nx-${{ runner.os }}-${{ runner.arch }}-${{ inputs.profile }}-${{ hashFiles('bun.lock', 'package.json', 'nx.json') }}-
     - name: Start the job's Nx HTTP cache

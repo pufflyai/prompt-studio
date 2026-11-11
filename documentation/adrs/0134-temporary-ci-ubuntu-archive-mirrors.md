@@ -2,7 +2,7 @@
 
 Proposed: 2026-11-04
 
-Status: Accepted as a temporary workaround; corrected-head CI qualification pending.
+Status: Temporarily superseded during the Canonical DNS outage by [ADR 0144](0144-temporary-ci-ubuntu-dns-mirrors.md). The Azure transfer limitation and its separate removal condition remain applicable after DNS recovery.
 
 ## Intended design
 
