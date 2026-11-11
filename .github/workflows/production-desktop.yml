@@ -36,7 +36,7 @@ jobs:
         run: |
           bun scripts/ci/production-payload.ts check
           tar -xzf validation-app-darwin-arm64.tar.gz -C clients/desktop
-      - name: Trace only the cold launch with bounded categories
+      - name: Trace only the cold launch and preserve its exported trace
         run: |
           bun - <<'BUN'
           const path = "clients/desktop/src/e2e/packaged-app-helpers.ts";
@@ -45,6 +45,16 @@ jobs:
           const replacement = '["--remote-debugging-port=0", ...(test.info().title.includes("cold start") ? ["--trace-startup=-*,startup,toplevel,blink,cc,gpu,loading,v8,disabled-by-default-v8.cpu_profiler", "--trace-startup-duration=5", "--trace-startup-format=json", \u0060--trace-startup-file=\u0024{join(desktopRoot, "test-results", "ps202-cold-start.json")}\u0060] : []), \u0060--user-data-dir=\u0024{join(home, "electron-user-data")}\u0060]';
           if (!text.includes(needle)) throw Error("Diagnostic driver target changed");
           text = text.replace(needle, replacement);
+          const kill = '    await stopPackagedProcess(app.child);';
+          if (!text.includes(kill)) throw Error("Diagnostic teardown target changed");
+          text = text.replace(kill, `    // Diagnostic only: preserve Chromium's trace service until it exports on exit.
+              if (test.info().title.includes("cold start") && app.child.exitCode === null && app.child.signalCode === null) {
+                const closed = new Promise<void>((resolve) => app.child.once("close", () => resolve()));
+                app.child.kill("SIGTERM");
+                await closed;
+                if (!existsSync(join(desktopRoot, "test-results", "ps202-cold-start.json"))) throw Error("Cold startup trace was not exported");
+              }
+          ${kill}`);
           await Bun.write(path, text);
           BUN
       - name: Diagnose original launch order and workload with tracing overhead
