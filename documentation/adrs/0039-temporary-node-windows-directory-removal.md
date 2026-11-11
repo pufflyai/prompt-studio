@@ -48,6 +48,27 @@ comparison motivates the change; native CI must still establish completion withi
 the existing allowance. Cleanup continues to await complete deletion and propagate
 errors on every platform.
 
+The Bun-run CLI fixtures use a runner-owned Node subprocess for native traversal.
+[Windows diagnostics on 2026-11-11](https://github.com/pufflyai/prompt-studio/actions/runs/42955622174)
+completed two Planner scenarios after 23.664s and 26.522s, then exhausted their
+unchanged 30s allowances during asynchronous removal. The ARM64 core-default
+scenario stopped its runtime after 113.084s, then exhausted its 120s allowance
+in the same phase. Local Apple Silicon checks passed, so they did not establish
+native Windows completion.
+
+For these CLI fixtures, make one opportunistic native synchronous pass without
+Windows retry options. On any Windows error, retain the asynchronous removal
+above with its existing five retries and 100ms delay. Both stages belong to one
+owned subprocess and finish inside the original test allowance. Cancellation
+terminates that owner; it must not start another traversal. External links stay
+unfollowed, and exhausted deletion still fails the test.
+
+This fast pass is under native qualification. Its successful traversal may avoid
+the asynchronous per-entry overhead; it does not repair Node's synchronous
+permission-error or delay defects. A real transient directory-handle regression
+must exercise the async recovery, alongside native timing and link-safety checks.
+Do not add a synchronous retry loop, workers, or a larger execution allowance.
+
 The command-discovery fixture uses the same asynchronous removal policy after
 [Windows run 40010409328](https://github.com/pufflyai/prompt-studio/actions/runs/40010409328/job/120620966481)
 completed its real Node shim assertions but failed synchronous cleanup with `EBUSY`

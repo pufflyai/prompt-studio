@@ -112,6 +112,11 @@ if (row.suite) {
   const prepared = setup.length ? await runCiChecks(setup, { priority, concurrency: 1 }) : { outcome: "success" };
   if (prepared.outcome !== "success") throw new Error("Edited-test dependencies did not build");
   if (process.platform === "linux" && row.desktop) {
+    // Electron materializes its native binary lazily. Configure the sandbox
+    // after that download, as the full desktop CI setup does.
+    const electronPackage = join(root, "clients/desktop/node_modules/electron");
+    if (await execute(["bun", "-e", `require(${JSON.stringify(electronPackage)})`]))
+      throw new Error("Cannot prepare the native Electron binary");
     const electron = join(root, "clients/desktop/node_modules/electron/dist/chrome-sandbox");
     const packaged = join(root, "clients/desktop/out/prompt-studio-linux-x64/chrome-sandbox");
     for (const path of [electron, packaged]) {

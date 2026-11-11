@@ -1,7 +1,11 @@
 import { expect, test } from "bun:test";
+import { spawn } from "node:child_process";
+import { once } from "node:events";
 import { chmod, link, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { stopChildProcess } from "./child-process";
+import { registerPendingTestProcess } from "./pending-test-processes";
 import { removeTestDirectory } from "./remove-test-directory";
 
 test("removes its owned tree without following directory links or deleting external hardlinks", async () => {
@@ -58,5 +62,33 @@ test("removes a linked root without enumerating its external target", async () =
     expect(await readFile(join(external, "keep.txt"), "utf8")).toBe("Keep the external target");
   } finally {
     await rm(parent, { recursive: true, force: true });
+  }
+});
+
+test("removes an owned home after a transient native directory handle is released", async () => {
+  const parent = await mkdtemp(join(tmpdir(), "transient-cleanup-"));
+  const owned = join(parent, "owned");
+  await mkdir(owned);
+  const holder = spawn(
+    "node",
+    [
+      "-e",
+      'process.on("message", () => setTimeout(() => process.chdir(require("node:os").tmpdir()), 1000)); process.send("ready");',
+    ],
+    { cwd: owned, stdio: ["ignore", "ignore", "ignore", "ipc"] },
+  );
+  const lifetime = registerPendingTestProcess(holder);
+  try {
+    await once(holder, "message", { signal: lifetime.signal });
+    holder.send("release");
+    await removeTestDirectory(owned);
+    expect(await stat(owned).catch(() => null)).toBeNull();
+  } finally {
+    try {
+      await stopChildProcess(holder);
+    } finally {
+      lifetime.finish();
+      await rm(parent, { recursive: true, force: true });
+    }
   }
 });
