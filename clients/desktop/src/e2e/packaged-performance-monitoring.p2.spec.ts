@@ -35,10 +35,11 @@ test("keeps performance measurements live when switching and closing project tab
     await openPackagedProject(app.page, second);
     await expect(performanceMeter(app.page)).toBeVisible();
     await expect.poll(async () => (await capture())?.samples.length ?? 0).toBeGreaterThan(0);
-    const captureId = (await capture())!.id;
-
     await app.page.getByRole("tab", { name: launched.project.name, exact: true }).click();
     await expect(performanceMeter(app.page)).toBeVisible();
+    // The status frame renders before its asynchronous monitoring lease arrives.
+    await expect.poll(async () => (await capture())?.samples.length ?? 0).toBeGreaterThan(0);
+    const captureId = (await capture())!.id;
     const lastSequence = (await capture())!.samples.at(-1)!.sequence;
     await app.page.getByRole("button", { name: `Close ${second.name}`, exact: true }).click();
     await expect(app.page.getByRole("tab", { name: second.name, exact: true })).toHaveCount(0);
@@ -46,6 +47,8 @@ test("keeps performance measurements live when switching and closing project tab
     await expect.poll(async () => (await capture())?.samples.at(-1)?.sequence ?? -1).toBeGreaterThan(lastSequence);
     await expect.poll(async () => (await readSnapshot(app!.page))?.frameRate.length ?? 0).toBeGreaterThan(0);
     await expect(performanceMeter(app.page)).not.toContainText("– fps");
+    await app.page.getByRole("button", { name: `Close ${launched.project.name}`, exact: true }).click();
+    await expect.poll(() => readSnapshot(app!.page)).toBeNull();
   } finally {
     await disposePackagedApp(app);
   }
