@@ -4,11 +4,16 @@ import {
   type ExtensionContextBase,
   type ExtensionSession,
   type ExtensionStorageApi,
+  eventRef,
   l10n,
   params,
   type StorageRecordIndex,
-  viewDataEvents,
 } from "@pstdio/sdk/extensions";
+
+export const sessionAttentionChanged = eventRef<{ projectId: string }>({
+  extensionId: "pstdio.pstdio-session-browser",
+  id: "attention.changed",
+});
 
 export const sessionAttentionIndex: StorageRecordIndex = {
   name: "pinned-sessions",
@@ -58,7 +63,7 @@ export const markSessionSeen = async (ctx: CommandContext, session: ExtensionSes
     operationId: storage.ids.create(),
     edits: [{ recordId, replace: { activity } }],
   });
-  await ctx.events.emit(viewDataEvents.sessionsChanged, { projectId: ctx.projectId });
+  await ctx.events.emit(sessionAttentionChanged, { projectId: ctx.projectId });
 };
 export const pinSession = defineCommand({
   id: "pin",
@@ -81,7 +86,7 @@ export const pinSession = defineCommand({
         },
       ],
     });
-    await ctx.events.emit(viewDataEvents.sessionsChanged, { projectId: ctx.projectId });
+    await ctx.events.emit(sessionAttentionChanged, { projectId: ctx.projectId });
   },
 });
 export const readPinnedSessions = async (

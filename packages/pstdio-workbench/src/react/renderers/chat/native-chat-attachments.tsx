@@ -35,9 +35,13 @@ export const NativeChatAttachmentList = (props: {
   disabled: boolean;
   remove(id: string): void;
 }) => {
-  const attachments = props.resolvedAttachments ?? props.attachments;
+  // Resolved metadata may lag behind draft edits; the draft owns membership.
+  const attachments = props.attachments.map(
+    (attachment) => props.resolvedAttachments?.find((resolved) => resolved.id === attachment.id) ?? attachment,
+  );
   const [previewId, setPreviewId] = useState<string>();
   const preview = attachments.find((attachment) => attachment.id === previewId);
+  if (!attachments.length) return null;
   return (
     <>
       <AttachmentList

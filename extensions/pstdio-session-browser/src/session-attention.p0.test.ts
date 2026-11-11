@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import type { ExtensionSession } from "@pstdio/sdk/extensions";
+import { type EventRef, type ExtensionSession, viewDataEvents } from "@pstdio/sdk/extensions";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import { browse, browsePage } from "./browse";
 import { nativeSubmissionIndex, readNativeSubmissions, saveNativeSubmission } from "./native-submission";
@@ -160,4 +160,27 @@ test("browse marks only sessions changed since opening and clears them on reopen
   expect((await browse(ctx, { renderer: { rendererId: "sessions" } }))[0].nodes.every((node) => !node.indicator)).toBe(
     true,
   );
+});
+
+test("attention changes do not announce conversation changes", async () => {
+  const session = { id: "s", title: "Session", updatedAt: "2026-11-10T10:00:00Z" } as ExtensionSession;
+  const events: EventRef[] = [];
+  const ctx = makeCommandContext({
+    storage: createMemoryStorage({ indexes: [sessionAttentionIndex] }),
+    params: {},
+    overrides: {
+      sessions: { get: async () => session },
+      events: {
+        emit: async (event) => {
+          events.push(event);
+        },
+      },
+    },
+  });
+  await pinSession.run(ctx, { sessionId: session.id, pinned: true });
+  await pinSession.run(ctx, { sessionId: session.id, pinned: false });
+  await markSessionSeen(ctx, session);
+  expect(events).toHaveLength(3);
+  expect(events).not.toContainEqual(viewDataEvents.sessionsChanged);
+  expect(events.every((event) => event.extensionId === "pstdio.pstdio-session-browser")).toBe(true);
 });

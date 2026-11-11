@@ -67,6 +67,14 @@ const SessionNavigation = () => {
       title: "Tickets",
       body: { kind: "react", render: () => <Text p="md">Ticket collection</Text> },
     });
+    const ticketsPanel = { kind: "placement" as const, extensionId: "preview", id: "tickets" };
+    w.modePlacements.registerPlacement({
+      id: "tickets",
+      ref: ticketsPanel,
+      modeId: "project",
+      region: "side",
+      item: { kind: "view", view: { kind: "view", id: "tickets" }, presence: "closed" },
+    });
     for (const id of ["sessions", "notes", "tickets"])
       w.pages.registerPage({
         id,
@@ -81,6 +89,7 @@ const SessionNavigation = () => {
               resource: { kinds: [{ kind: "resource-kind" as const, extensionId: "preview", id: "session" }] },
             }
           : {}),
+        ...(id === "tickets" ? { panelView: ticketsPanel } : {}),
         main: {
           kind: "view",
           view: { kind: "view", id: id === "sessions" ? "session" : id },
@@ -170,6 +179,7 @@ const SessionNavigation = () => {
       region: "side",
       open: "pin",
     });
+    void w.navigation.openPanel({ panel: ticketsPanel, region: "side" });
     return { workbench: w, storage };
   });
   return (

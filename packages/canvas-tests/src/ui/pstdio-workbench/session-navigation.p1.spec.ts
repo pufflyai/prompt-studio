@@ -123,3 +123,20 @@ test("Main tab headers open static and single-resource pages from navigation", a
     else await expect(main.getByTestId("session-content")).toHaveText("Review session");
   }
 });
+
+// Critical: singleton collection tabs must not become stranded outside their owning page.
+test("dropping the Tickets collection tab onto Main opens its page", async ({ page }) => {
+  const preview = await openCanvasPreview(page, source);
+  const tab = preview.locator('[data-workbench-panel="side"]').getByRole("tab", { name: /Tickets/ });
+  const from = (await tab.boundingBox())!;
+  await page.mouse.move(from.x + 25, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(from.x - 15, from.y + from.height / 2, { steps: 4 });
+  const mainDrop = preview.locator('[data-workbench-tab-drop="main"]');
+  await expect(mainDrop).toBeVisible();
+  const target = (await mainDrop.boundingBox())!;
+  await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 10 });
+  await page.mouse.up();
+  await expect(preview.locator('[data-workbench-panel="main"]')).toContainText("Ticket collection");
+  await expect(tab).toHaveCount(0);
+});

@@ -9,4 +9,4 @@
 "pstdio-cloud": patch
 ---
 
-Keep sessions and navigation within reach: show a solid trailing dot only for activity since the session was last opened, pin sessions, open sessions by dragging, reopen closed tabs, and preview complete shortcuts in open menus. Add project-tab settings actions, compact Cloud status, fix retained Home reads and editor toolbars, and show nonempty linked-resource groups with relationships discoverable from either end.
+Keep sessions and navigation within reach: show a solid trailing dot only for activity since the session was last opened, refresh session pins without waiting for unrelated resources, open resource and collection pages by dragging, reopen closed tabs, and preview complete shortcuts in open menus. Add project-tab settings actions, compact Cloud status, fix retained Home reads and editor toolbars, and show nonempty linked-resource groups with relationships discoverable from either end. Keep the link picker left aligned with resource menus, and hide empty chat attachment trays.

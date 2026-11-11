@@ -72,3 +72,36 @@ test("an invalid page drop leaves its already displayed resource open", async ()
   ).rejects.toThrow();
   expect(side()?.instanceId).toBe(id);
 });
+
+test.each([
+  "Tickets",
+  "Letter browser",
+])("dropping the %s singleton panel opens its page without a resource", async (title) => {
+  const { w } = createResourceViewerFixture();
+  const page = viewerPage(title);
+  const panel = { kind: "placement" as const, extensionId: "example.readers", id: title };
+  w.modePlacements.registerPlacement({
+    id: title,
+    ref: panel,
+    modeId: "project",
+    region: "side",
+    item: { kind: "view", view: { kind: "view", id: "browser" }, presence: "closed" },
+  });
+  w.pages.registerPage({
+    id: title,
+    ref: page,
+    title,
+    path: title,
+    modeId: "project",
+    panelView: panel,
+    main: { kind: "view", view: { kind: "view", id: "browser" }, cardinality: "one", presentation: "page" },
+    slots: [],
+  });
+  await w.navigation.openPanel({ panel, region: "side" });
+  const original = w.layout.getActivePanel("side")!;
+  expect(panelPageDropTarget(w, original.instanceId)?.page).toEqual(page);
+  await openPanelAsPage(w, original.instanceId);
+  expect(w.pages.store.getState().location?.page).toEqual(page);
+  expect(w.pages.getContent()?.viewId).toBe("browser");
+  expect(w.layout.listPanelInstances("side")).toHaveLength(0);
+});

@@ -36,7 +36,7 @@ import {
   switchConversation,
 } from "./src/navigation";
 import { sessionId } from "./src/resource";
-import { pinSession, sessionAttentionIndex } from "./src/session-attention";
+import { pinSession, sessionAttentionChanged, sessionAttentionIndex } from "./src/session-attention";
 import { composerControls, readSnapshot } from "./src/snapshot";
 import { conversationTab } from "./src/tab";
 import { watch } from "./src/watch";
@@ -137,7 +137,7 @@ const list = defineView({
     searchPlaceholder: l10n("sessions.search", "Search sessions"),
     defaultExpandedNodeIds: ["workspace-sessions"],
     structure: [{ id: "sessions", label: l10n("sessions.title", "Sessions"), collapsible: false }],
-    refreshEvents: [viewDataEvents.sessionsChanged],
+    refreshEvents: [viewDataEvents.sessionsChanged, sessionAttentionChanged],
     body: browse,
     page: browsePage,
   },

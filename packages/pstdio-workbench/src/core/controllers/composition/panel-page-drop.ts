@@ -12,10 +12,9 @@ export const panelResourcePageTarget = (
   panel: NavigationTargetPanel["panel"],
   resource?: ResourceRef,
 ) => {
-  if (!resource) return;
   if (panel.kind === "shell-placement") return;
   const page = core.pages.listPages().find((page) => {
-    if (!page.resource || !resourceMatchesConstraint(page.resource, resource)) return false;
+    if (resource ? !page.resource || !resourceMatchesConstraint(page.resource, resource) : page.resource) return false;
     if (panel.kind === "page-slot")
       return page.ref.id === panel.page.id && page.ref.extensionId === panel.page.extensionId;
     return page.panelView?.id === panel.id && page.panelView.extensionId === panel.extensionId;
@@ -27,14 +26,13 @@ export const panelPageDropTarget = (core: WorkbenchCore, instanceId: string) => 
   const found = findPlacementByWidgetId(core.layout.getLayout(), instanceId);
   const resource = found?.placement.resource;
   const identity = found?.placement.placementIdentity;
-  if (!resource || !identity || found?.regionId === "main") return;
+  if (!identity || found?.regionId === "main") return;
   const context = found.placement.pageContext;
   const page = core.pages
     .listPages()
     .find(
       (page) =>
-        page.resource &&
-        resourceMatchesConstraint(page.resource, resource) &&
+        (resource ? page.resource && resourceMatchesConstraint(page.resource, resource) : !page.resource) &&
         (context
           ? page.ref.id === context.page.id && page.ref.extensionId === context.page.extensionId
           : identity.kind === "page" && page.id === identity.pageId),
