@@ -111,6 +111,8 @@ export const installFrameNavigation = (send: (message: Omit<FrameMessage, "proto
   const suppressDragClick = (event: MouseEvent) => {
     if (!dragged) return;
     dragged = false;
+    // Keyboard activation is a new action, not the pointer click produced by the drag.
+    if (event.detail === 0) return;
     event.preventDefault();
     event.stopPropagation();
   };
