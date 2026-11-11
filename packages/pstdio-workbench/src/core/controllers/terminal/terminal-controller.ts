@@ -146,7 +146,7 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
 
     const controller = new AbortController();
     const openSession = (async () => {
-      const adapter = await opener(input.request, input.view, controller.signal);
+      const adapter = await opener(input.request, input.view, controller.signal, bindingId);
       if (disposed || controller.signal.aborted) {
         await adapter.kill();
         throw new Error("Terminal admission was cancelled");

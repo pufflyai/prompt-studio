@@ -180,17 +180,15 @@ const DatasetDataTable = (props: DataTableProps) => {
       ) : (
         <DataTableGrid
           page={props.page}
-          selectedRecords={
-            props.page
-              ? [
-                  ...retainSelectedRows(
-                    selection.rows,
-                    rowSelection,
-                    new Map(shownRows.map((row) => [row.id, row.sourceRow])),
-                  ).values(),
-                ]
-              : undefined
-          }
+          // Built from React state, so the toolbar updates on every selection change. Reading the selection
+          // from the stable table object inside the grid would let the React Compiler cache an empty list.
+          selectedRecords={[
+            ...retainSelectedRows(
+              selection.rows,
+              rowSelection,
+              new Map(shownRows.map((row) => [row.id, row.sourceRow])),
+            ).values(),
+          ]}
           table={table}
           entries={page.entries}
           collapsed={collapsed}

@@ -50,6 +50,21 @@ test(
         headers: runtimeAuthorization(started.descriptor),
         metadata,
       });
+      // Templates must survive packaging and be readable through the public command.
+      for (const name of ["proposal", "architecture-overview", "research", "contracts", "schemas"]) {
+        const response = await fetch(
+          `${started.baseUrl}/v1/projects/${project.id}/extensions/commands/pstdio.pstdio-planner.command.templates.read/execute`,
+          {
+            method: "POST",
+            headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
+            body: JSON.stringify({ params: { name } }),
+          },
+        );
+        expect(response.status).toBe(200);
+        const result = await response.json();
+        expect(result.outcome.status).toBe("success");
+        expect(result.outcome.value.content.trim().length).toBeGreaterThan(0);
+      }
       await expectPackagedRefinement({
         baseUrl: started.baseUrl,
         projectId: project.id,

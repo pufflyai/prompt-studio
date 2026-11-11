@@ -46,7 +46,7 @@
   },
   "dependencies": {
     "@tanstack/react-db": "^0.1.74",
-    "react": "^19.2.4",
+    "react": "19.2.4",
     "yargs": "^18.0.0"
   },
   "optionalDependencies": {

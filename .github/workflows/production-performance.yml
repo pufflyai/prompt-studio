@@ -91,6 +91,9 @@ jobs:
           tar -xzf release-build.tar.gz
       - name: Install browser engines
         if: matrix.family == 'browser' || matrix.family == 'navigation' || matrix.family == 'planner'
+        # Approved 2026-11-11 (PS-1164): hosted installs take up to 91 s; an unreachable Ubuntu
+        # archive otherwise stalls apt for the whole job.
+        timeout-minutes: 3
         run: bunx playwright@1.60.0 install --with-deps
       - name: Collect every fixed workload with existing budgets
         run: bun scripts/ci/production-performance.ts ${{ matrix.family }}

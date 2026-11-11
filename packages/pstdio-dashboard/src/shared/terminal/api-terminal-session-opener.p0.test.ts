@@ -107,6 +107,22 @@ describe("openDashboardTerminalSession", () => {
     session.kill();
   });
 
+  test("a keyed terminal detaches without killing its shell, and kills only when asked", async () => {
+    globalThis.WebSocket = TestWebSocket as unknown as typeof WebSocket;
+
+    const sessionPromise = openDashboardTerminalSession({ cols: 80, rows: 24 }, undefined, undefined, "p/terminal-1");
+    const socket = TestWebSocket.latest;
+    socket.emitOpen();
+    socket.emitMessage({ type: "open", sessionId: "session-1" });
+    const session = await sessionPromise;
+    session.detach?.();
+    session.kill();
+
+    expect(socket.sent.map((message) => JSON.parse(message))).toEqual([
+      { type: "open", request: { cols: 80, rows: 24 }, attachKey: "p/terminal-1" },
+    ]);
+  });
+
   test("reports an unexpected connection loss after the session opens", async () => {
     globalThis.WebSocket = TestWebSocket as unknown as typeof WebSocket;
 

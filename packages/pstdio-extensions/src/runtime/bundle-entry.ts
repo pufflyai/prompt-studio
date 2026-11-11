@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { readFileSync, realpathSync } from "node:fs";
 import { rename } from "node:fs/promises";
 import { basename, extname, isAbsolute, join, relative } from "node:path";
@@ -66,8 +67,9 @@ const buildEntry = async (entryPath: string, packagePath: string, outDir: string
     throw: false,
     outdir: outDir,
     // Bun uses entry naming for both JS and incidental CSS. Preserve their extensions
-    // while building, then move only the JS entry to our stable cached module path.
-    naming: "[name].pstdio-runtime-bundle.[ext]",
+    // while building, then move only the JS entry to our stable cached module path. Each build
+    // writes its own name, so another process building the same copy never publishes a partial file.
+    naming: `[name].${process.pid}-${randomUUID()}.pstdio-runtime-bundle.[ext]`,
     plugins: [preserveImportMetaUrlPlugin(packagePath)],
   });
 

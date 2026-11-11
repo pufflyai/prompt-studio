@@ -23,8 +23,8 @@
     "@emotion/react": "^11.0.0",
     "@pstdio/sdk": "0.47.0-preview.sha-48303bf25a64f931be76c64d8db778226d382a7d",
     "@pstdio/ui": "0.47.0-preview.sha-48303bf25a64f931be76c64d8db778226d382a7d",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
     "@tanstack/react-query": "^5.94.5"
   },
   "devDependencies": {

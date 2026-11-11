@@ -50,6 +50,22 @@ const validateProjectSelection = (input: SelectProjectInput) => {
   return project;
 };
 
+export interface DesktopProjectTabs {
+  select(projectId: string): void;
+  clear(): void;
+}
+
+// Desktop shows each project in its own workbench, so selecting one shows its tab.
+export const selectProjectTab = (
+  ctx: WorkbenchModuleContext,
+  projectTabs: DesktopProjectTabs,
+  input: SelectProjectInput,
+) => {
+  const project = validateProjectSelection(input);
+  closeProjectSelectionOverlays(ctx);
+  projectTabs.select(project.id);
+};
+
 export const selectProject = (
   ctx: WorkbenchModuleContext,
   selectedProjectContext: DashboardProjectSelectionContext,

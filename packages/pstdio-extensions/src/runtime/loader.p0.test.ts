@@ -216,7 +216,7 @@ test("keeps runtime imports in a deterministic managed cache", async () => {
   expect(existsSync(join(firstCachedPackages[0]!, "extension.ts"))).toBe(true);
 });
 
-test("uses a new runtime cache package when extension source changes", async () => {
+test("replaces the runtime cache package when extension source changes", async () => {
   const cacheRoot = isolateRuntimeCache();
   const dir = createTempDir();
   writePackage(dir);
@@ -251,7 +251,8 @@ test("uses a new runtime cache package when extension source changes", async () 
   expect(secondDiagnostics).toEqual([]);
   expect(commands?.check.title).toBe("second");
   expect(firstCachedPackages).toHaveLength(1);
-  expect(secondCachedPackages).toHaveLength(2);
+  expect(secondCachedPackages).toHaveLength(1);
+  expect(secondCachedPackages).not.toEqual(firstCachedPackages);
 });
 
 test("loads fresh transitive modules when extension source changes", async () => {
@@ -288,7 +289,7 @@ test("loads fresh transitive modules when extension source changes", async () =>
   expect(commands?.check.title).toBe("second");
 });
 
-test("adds dependencies to an existing runtime cache package when node_modules appears", async () => {
+test("uses a runtime cache package with dependencies when node_modules appears", async () => {
   const cacheRoot = isolateRuntimeCache();
   const dir = createTempDir();
   writePackage(dir);
@@ -322,8 +323,8 @@ test("adds dependencies to an existing runtime cache package when node_modules a
   expect(cachedPackages).toHaveLength(1);
   expect(secondDiagnostics).toEqual([]);
   expect(commands?.check.title).toBe("extension-owned-sdk");
-  expect(updatedCachedPackages).toHaveLength(2);
-  expect(updatedCachedPackages.some((cachedPackage) => existsSync(join(cachedPackage, "node_modules")))).toBe(true);
+  expect(updatedCachedPackages).toHaveLength(1);
+  expect(existsSync(join(updatedCachedPackages[0]!, "node_modules"))).toBe(true);
 });
 
 test("uses a new runtime cache package when node_modules contents change", async () => {
@@ -361,38 +362,6 @@ test("uses a new runtime cache package when node_modules contents change", async
   expect(firstCachedPackages).toHaveLength(1);
   expect(secondDiagnostics).toEqual([]);
   expect(commands?.check.title).toBe("extension-owned-sdk");
-  expect(secondCachedPackages).toHaveLength(2);
-});
-
-test("prunes stale runtime cache packages once for a managed cache root", async () => {
-  const cacheRoot = isolateRuntimeCache();
-  const existingPackage = join(cacheRoot, "existing-extension", "old-source", "package");
-  mkdirSync(existingPackage, { recursive: true });
-  writeFileSync(join(existingPackage, "extension.ts"), "export default {};");
-
-  const dir = createTempDir();
-  writePackage(dir);
-  writeSdkDependency(dir);
-  writeFileSync(
-    join(dir, "extension.ts"),
-    `
-      import { markerFromSdk } from "@pstdio/sdk/extensions";
-
-      export default {
-        commands: {
-          check: {
-            title: markerFromSdk,
-            run: async () => ({ markerFromSdk }),
-          },
-        },
-      };
-    `,
-  );
-
-  const diagnostics: ExtensionDiagnostic[] = [];
-  await loadExtensionPackage({ path: dir }, diagnostics);
-
-  expect(diagnostics).toEqual([]);
-  expect(existsSync(existingPackage)).toBe(false);
-  expect(listCachedRuntimePackages(cacheRoot)).toHaveLength(1);
+  expect(secondCachedPackages).toHaveLength(1);
+  expect(secondCachedPackages).not.toEqual(firstCachedPackages);
 });

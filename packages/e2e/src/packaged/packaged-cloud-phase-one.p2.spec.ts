@@ -69,8 +69,8 @@ test.beforeAll(() => {
   buildBinary();
 });
 
-const synced = (device: CloudAcceptanceDevice, projectId: string) =>
-  expect
+const synced = (device: CloudAcceptanceDevice, projectId: string, completion = expect) =>
+  completion
     .poll(() => device.client.account.projectSyncStatus(projectId), {
       message: `${device.name}: waiting for Cloud sync`,
     })
@@ -358,6 +358,7 @@ test("a packaged device catches up after eight trimmed replacements and a reset 
   resources,
 }) => {
   const { fixture, first, second, third, devices, projectId } = await setup(resources);
+  const completion = expect.configure({ timeout: 10_000 });
   const space = await createSyncSpace({ projectId, spaceOwner: null, keys: [packagedProjectKey] });
   const documentId = await space.documentId(JSON.stringify([acceptanceOwner, "record-stream-v2"]));
   const group = (round: string) =>
@@ -372,8 +373,8 @@ test("a packaged device catches up after eight trimmed replacements and a reset 
       edits: [{ recordId: "baseline", replace: "b".repeat(100_000) }, ...group("seed")],
     },
   });
-  for (const device of devices) await synced(device, projectId);
-  await expect
+  for (const device of devices) await synced(device, projectId, completion);
+  await completion
     .poll(async () => {
       const snapshot = await fixture.peer.captureSnapshot(documentId);
       return snapshot.lastSequence > 0 && snapshot.state.through === snapshot.lastSequence;
@@ -390,7 +391,7 @@ test("a packaged device catches up after eight trimmed replacements and a reset 
   await withCloudReplacementWitness(async (witness) => {
     for (let index = 0; index < 8; index++) {
       await test.step(`latest-state replacement ${index + 1}/8`, async () => {
-        await synced(first, projectId);
+        await synced(first, projectId, completion);
         // Stage a complete local batch before transport resumes. Normal 128-edit checkpoints fold
         // historical payloads; the distinct prelude makes pending bytes exceed the current state.
         await fixture.peer.blockDevice(first.environmentId, true);
@@ -423,7 +424,7 @@ test("a packaged device catches up after eight trimmed replacements and a reset 
         });
         await fixture.peer.blockDevice(first.environmentId, false);
         await first.client.account.retryProjectSync(projectId);
-        await expect
+        await completion
           .poll(async () => {
             const snapshot = await fixture.peer.captureSnapshot(documentId);
             return snapshot.state.stateId !== priorState && snapshot.state.through === snapshot.lastSequence;
@@ -445,8 +446,8 @@ test("a packaged device catches up after eight trimmed replacements and a reset 
         await fixture.peer.blockDevice(second.environmentId, false);
         witness.start(async () => {
           await second.client.account.retryProjectSync(projectId);
-          await synced(second, projectId);
-          await expect
+          await synced(second, projectId, completion);
+          await completion
             .poll(() =>
               second.command<StorageRecord[]>(projectId, acceptanceOwner, "read-acceptance-records", {
                 ids: ["large-7"],
@@ -460,13 +461,13 @@ test("a packaged device catches up after eight trimmed replacements and a reset 
   expect(replacements.size).toBe(8);
   await fixture.peer.blockDevice(third.environmentId, false);
   await third.client.account.retryProjectSync(projectId);
-  for (const device of devices) await synced(device, projectId);
+  for (const device of devices) await synced(device, projectId, completion);
   const offlineValue = async (device: CloudAcceptanceDevice) =>
     device.command<StorageRecord[]>(projectId, acceptanceOwner, "read-acceptance-records", {
       ids: ["offline-kept", "large-7"],
     });
   for (const device of devices)
-    await expect
+    await completion
       .poll(() => offlineValue(device))
       .toMatchObject([{ value: "phase-one-secret-offline" }, { value: `phase-one-secret-7${"x".repeat(200_000)}` }]);
   // Install an authenticated, incomplete earlier state. Copying old ciphertext under new headers is invalid.
@@ -485,7 +486,7 @@ test("a packaged device catches up after eight trimmed replacements and a reset 
     }),
   );
   // No new local save: existing devices must proactively republish the missing history.
-  for (const device of devices) await synced(device, projectId);
+  for (const device of devices) await synced(device, projectId, completion);
   await stopProcess(third.host.child);
   resources.children.delete(third.host.child);
   rmSync(third.home, { recursive: true, force: true });
@@ -493,10 +494,12 @@ test("a packaged device catches up after eight trimmed replacements and a reset 
   const reset = await fixture.start("third");
   expect(reset.environmentId).not.toBe(third.environmentId);
   await signInCloudAcceptanceDevice(reset, fixture.peer.origin);
-  await expect.poll(async () => (await reset.client.projects.query()).items.map((row) => row.id)).toEqual([projectId]);
+  await completion
+    .poll(async () => (await reset.client.projects.query()).items.map((row) => row.id))
+    .toEqual([projectId]);
   await reset.client.projects.chooseFolder(projectId, { path: reset.folder, clone: false });
-  await synced(reset, projectId);
-  await expect
+  await synced(reset, projectId, completion);
+  await completion
     .poll(() => offlineValue(reset))
     .toMatchObject([{ value: "phase-one-secret-offline" }, { value: `phase-one-secret-7${"x".repeat(200_000)}` }]);
   expect(await read(reset, projectId)).toEqual(await read(second, projectId));

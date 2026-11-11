@@ -97,6 +97,10 @@ test(
       const lab = app.page.frameLocator('iframe[title="Lab"]').getByRole("heading", { name: "Sandbox webview" });
       await expect(lab).toBeVisible();
       const firstPageUrl = app.page.url();
+      // A loaded project tab keeps its views: the same webview document survives a switch.
+      await lab.evaluate(() => {
+        (window as Window & { retainedAcrossTabs?: boolean }).retainedAcrossTabs = true;
+      });
 
       await openPackagedProject(app.page, second);
       await app.page.getByRole("option", { name: "Sessions", exact: true }).click();
@@ -109,6 +113,10 @@ test(
         "true",
       );
       await expect(app.page).toHaveURL(firstPageUrl);
+      await expect(lab).toBeVisible();
+      expect(await lab.evaluate(() => (window as Window & { retainedAcrossTabs?: boolean }).retainedAcrossTabs)).toBe(
+        true,
+      );
       await openPackagedProject(app.page, first);
       await expect(app.page.getByRole("tablist", { name: "Project tabs" }).getByRole("tab")).toHaveCount(2);
       await expect(lab).toBeVisible();
@@ -194,6 +202,39 @@ test("reports a failed tab write and recovers when the next tab change can be sa
     ]);
     const saved = JSON.parse(readFileSync(join(home, "electron-user-data", "project-tabs.json"), "utf8"));
     expect(saved).toEqual({ projectIds: [first.id, second.id] });
+  } finally {
+    await disposePackagedApp(app);
+    await removePackagedHome(home);
+  }
+});
+
+test("opens a project created through the folder picker in its own tab", async ({ browserName: _browserName }) => {
+  const home = createPackagedHome();
+  let app: PackagedApp | null = null;
+  try {
+    // Opening a folder needs no agent harness; default extension installs would only delay creation.
+    app = await launchPackagedApp(home, { PSTDIO_DEFAULT_EXTENSIONS: "[]" });
+    const existing = await createPackagedProject(app, "Existing project");
+    await openPackagedProject(app.page, existing);
+    const folder = join(home, "created-folders", "Created project");
+    mkdirSync(folder, { recursive: true });
+
+    await app.page.getByRole("button", { name: "Open / create project", exact: true }).click();
+    await app.page.getByRole("dialog").getByRole("button", { name: "Create project", exact: true }).click();
+    const picker = app.page.getByRole("dialog").filter({ hasText: "Open project folder" });
+    const folderPath = picker.getByRole("textbox", { name: "Folder path", exact: true });
+    await folderPath.fill(folder);
+    await folderPath.press("Enter");
+    await picker.getByRole("button", { name: "Open folder", exact: true }).click();
+
+    await expect(app.page.getByRole("tab", { name: "Created project", exact: true })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await expect(app.page.getByRole("tablist", { name: "Project tabs" }).getByRole("tab")).toHaveText([
+      existing.name,
+      "Created project",
+    ]);
   } finally {
     await disposePackagedApp(app);
     await removePackagedHome(home);
