@@ -4,16 +4,26 @@ import { steerQueuedFollowUp } from "./queued-steering";
 import type { ActiveSession } from "./session-store";
 
 const deliverHead = async (deps: SessionsRouteDeps, sessionId: string, entry: ActiveSession) => {
-  if (!entry.idleTurn || deps.sessionService.store.get(sessionId) !== entry) return;
+  const turn = entry.idleTurn;
+  const current = () => turn !== null && entry.idleTurn === turn && deps.sessionService.store.get(sessionId) === entry;
+  if (!current()) return;
   const [head] = await deps.sessionQueueEntriesService.listUndispatchedBySession(sessionId);
   const session = await deps.sessionService.get(sessionId);
-  if (!head || head.steering_delivery_json || !session?.last_request_started) return;
+  if (!current() || !head || head.steering_delivery_json || !session?.last_request_started) return;
+  // A request that could not go in is retried after it changes or the next turn ends, not in a loop.
+  const attempt = `${head.queue_position}:${head.revision}`;
+  if (entry.idleTurnSkipped === attempt) return;
   const result = await steerQueuedFollowUp(deps, sessionId, head.queue_position, {
     expectedRevision: head.revision,
     expectedRunStartedAt: session.last_request_started,
   });
-  // The provider reports busy when its next turn starts; the request is already in before that.
-  if (result.status === "accepted") entry.turns.busy();
+  if (result.status !== "accepted") {
+    if (entry.idleTurn === turn) entry.idleTurnSkipped = attempt;
+    return;
+  }
+  // The provider reports busy when its next turn starts. If it already did, and went idle again,
+  // that newer idle turn stays.
+  if (entry.idleTurn === turn) entry.turns.busy();
 };
 
 /**

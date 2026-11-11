@@ -194,6 +194,7 @@ export const invokeSessionHarnessOperation = async (
       events: conversation,
       approvals: entry.approvalService,
       questions: entry.questionService,
+      turns: entry.turns,
       signal: invocationSignal,
     });
     if (prepared.execution === "control" && result.kind !== "completed")

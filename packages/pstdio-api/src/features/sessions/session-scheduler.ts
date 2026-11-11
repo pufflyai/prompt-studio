@@ -2,7 +2,6 @@ import type { HarnessAttachment, HarnessParams, SessionAttachmentRef } from "pst
 import type { ResourceRef } from "pstdio-db";
 import { sessionLogger } from "../../lib/logger";
 import type { SessionsRouteDeps } from "./deps";
-import { deliverIdleFollowUp } from "./idle-turn";
 import { ANSWER_WITH_FILES_ERROR, hasPendingProviderQuestion, QuestionReplyRejectedError } from "./live-question-reply";
 import { prepareHostQuestionDelivery } from "./session-question-delivery";
 import { reserveQuestionDispatch } from "./session-question-dispatch";
@@ -299,11 +298,7 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
       }
     }
     const result = await withSchedulingLock(() => reserveExistingDispatch(input));
-    if (typeof result !== "function") {
-      // A turn that is already idle takes the new request now instead of after the run.
-      if (result.status === "queued") void deliverIdleFollowUp(deps, input.session.id);
-      return result;
-    }
+    if (typeof result !== "function") return result;
     await result();
     return { status: "dispatched" };
   };

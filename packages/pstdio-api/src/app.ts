@@ -158,10 +158,13 @@ const buildApp = async (
 
   const eventBus = new EventBus({ bufferSize: input.config.sync.eventBufferSize });
   const artifactMountWrites = createArtifactMountWriteLedger();
-  const sessionQueueEntriesService = createSessionQueueService(
-    sessionQueueEntriesDBService,
-    sessionQueueChanged(sessionsDBService, eventBus),
-  );
+  let deliverIdleTurn: (sessionId: string) => Promise<void> = async () => {};
+  const queueChanged = sessionQueueChanged(sessionsDBService, eventBus);
+  const sessionQueueEntriesService = createSessionQueueService(sessionQueueEntriesDBService, async (sessionId) => {
+    await queueChanged(sessionId);
+    // Not awaited: queue changes can run under the scheduling lock that delivery also takes.
+    void deliverIdleTurn(sessionId);
+  });
   const core = createCoreDomainServices({
     getCommandDeps: () => deps,
     db,
@@ -214,7 +217,6 @@ const buildApp = async (
   const sessionHooks = createSessionLifecycleCallbacks(() => deps);
 
   let drainSessionQueue: (input?: { releasedSessionId?: string }) => Promise<void> = async () => {};
-  let deliverIdleTurn: (sessionId: string) => Promise<void> = async () => {};
 
   const sessionService = createSessionService({
     sessionsDb: sessionsDBService,

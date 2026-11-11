@@ -34,6 +34,8 @@ export type ActiveSession = {
   turns: HarnessTurnChannel;
   /** Queued follow-ups go into an idle turn one at a time, in queue order. */
   idleDelivery: Promise<void>;
+  /** The queued request (position and revision) that could not go into the current idle turn. */
+  idleTurnSkipped: string | null;
 };
 
 export const cancelSessionControls = (entry: ActiveSession | null | undefined) => {
@@ -86,9 +88,11 @@ export const createSessionStore = (options: { onIdleTurn?: (sessionId: string) =
       controlInvocations: new Set(),
       idleTurn: null,
       idleDelivery: Promise.resolve(),
+      idleTurnSkipped: null,
       turns: {
         idle: ({ backgroundTasks }) => {
           entry.idleTurn = { backgroundTasks };
+          entry.idleTurnSkipped = null;
           publishIdleTurn();
           options.onIdleTurn?.(sessionId);
         },
@@ -99,11 +103,8 @@ export const createSessionStore = (options: { onIdleTurn?: (sessionId: string) =
         },
       },
     };
-    const publishIdleTurn = () => {
-      const patch = { op: "replace" as const, path: IDLE_TURN_PATH, value: entry.idleTurn };
-      eventStore.push(patch);
-      changed(sessionId, patch);
-    };
+    // Only live streams show this state; it is not conversation content to sync.
+    const publishIdleTurn = () => eventStore.push({ op: "replace", path: IDLE_TURN_PATH, value: entry.idleTurn });
     const initializeConversation = (messages: SessionMessage[]) => {
       entry.conversation = createSessionConversation(eventStore, messages, (patch) => changed(sessionId, patch));
       ready.resolve(entry.conversation);

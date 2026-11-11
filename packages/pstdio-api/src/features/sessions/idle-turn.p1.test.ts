@@ -8,7 +8,7 @@ const backgroundTasks = [{ id: "watch", description: "Watch the extension for ch
 const headers = { "content-type": "application/json" };
 
 // A run that stays open between turns, like Claude Code with a background command still running.
-const setup = async () => {
+const setup = async (options: { duringSteer?: (turns: HarnessTurnChannel) => void } = {}) => {
   const received: HarnessSteeringInput[] = [];
   const started = Promise.withResolvers<{ turns: HarnessTurnChannel; events: HarnessEventSink }>();
   const registry = createTestHarnessRegistry([
@@ -27,6 +27,7 @@ const setup = async () => {
                 path: `/messages/${input.events.getMessages().length}`,
                 value: { id: steering.deliveryId, role: "user", parts: [{ type: "text", text: steering.prompt }] },
               });
+              options.duringSteer?.(input.turns!);
               return { status: "accepted" as const };
             },
           };
@@ -45,7 +46,12 @@ const setup = async () => {
   const created = await handle.app.request("/v1/sessions", {
     method: "POST",
     headers,
-    body: JSON.stringify({ projectId: project.id, title: "Background work", prompt: "Start the watcher" }),
+    body: JSON.stringify({
+      projectId: project.id,
+      title: "Background work",
+      prompt: "Start the watcher",
+      model: "run-model",
+    }),
   });
   expect(created.status).toBe(201);
   const session = await created.json();
@@ -56,18 +62,26 @@ const setup = async () => {
     const response = await handle.app.request(`/v1/sessions/${session.id}/follow-up`, {
       method: "POST",
       headers,
-      body: JSON.stringify({ prompt, ...extra }),
+      // Later replies would otherwise inherit the last selected model.
+      body: JSON.stringify({ prompt, model: "run-model", ...extra }),
     });
     expect(response.status).toBe(200);
     await owner.idleDelivery;
   };
-  const queued = async () =>
-    (await handle.deps.sessionQueueEntriesService.listUndispatchedBySession(session.id)).map((entry) => entry.prompt);
+  const queue = () => handle.deps.sessionQueueEntriesService.listUndispatchedBySession(session.id);
+  const queued = async () => (await queue()).map((entry) => entry.prompt);
+  const remove = async (position: number) => {
+    const response = await handle.app.request(`/v1/sessions/${session.id}/queued-follow-ups/${position}`, {
+      method: "DELETE",
+    });
+    expect(response.status).toBe(200);
+    await owner.idleDelivery;
+  };
   const idle = async () => {
     turns.idle({ backgroundTasks });
     await owner.idleDelivery;
   };
-  return { handle, owner, turns, received, followUp, queued, idle };
+  return { handle, owner, turns, received, followUp, queue, queued, remove, idle };
 };
 
 test("a reply waits in the queue while the turn runs and goes in when the turn ends", async () => {
@@ -123,17 +137,60 @@ test("an idle turn keeps queue order when the oldest request needs a new run", a
   }
 });
 
-test("an open question holds queued replies", async () => {
-  const { handle, owner, received, followUp, idle } = await setup();
+test("removing the request that holds the queue lets the next one into the idle turn", async () => {
+  const { handle, received, followUp, queue, queued, remove, idle } = await setup();
   try {
+    await followUp("Use another model", { model: "other-model" });
+    await followUp("Then continue");
+    await idle();
+    expect(received).toHaveLength(0);
+
+    await remove((await queue())[0]!.queue_position);
+
+    expect(received.map((input) => input.prompt)).toEqual(["Then continue"]);
+    expect(await queued()).toEqual([]);
+  } finally {
+    await handle.close();
+  }
+});
+
+test("an open question holds queued replies until the turn after it ends", async () => {
+  const { handle, owner, received, followUp, queued, idle } = await setup();
+  try {
+    await followUp("Unrelated reply");
     const ask = owner.questionService
       .ask({ id: "question", toolUseId: "question", questions: [{ question: "Confirm?" }] })
       .catch(() => undefined);
-    await followUp("Unrelated reply");
     await idle();
     expect(received).toHaveLength(0);
-    owner.questionService.dispose();
+    expect(await queued()).toEqual(["Unrelated reply"]);
+
+    owner.questionService.answer("Yes");
     await ask;
+    await idle();
+    expect(received.map((input) => input.prompt)).toEqual(["Unrelated reply"]);
+  } finally {
+    await handle.close();
+  }
+});
+
+test("a turn that ends again before delivery finishes stays idle for the next request", async () => {
+  // The provider starts and finishes the delivered turn before the host confirms delivery.
+  const { handle, owner, received, followUp, queued, idle } = await setup({
+    duringSteer: (turns) => {
+      turns.busy();
+      turns.idle({ backgroundTasks });
+    },
+  });
+  try {
+    await followUp("First");
+    await followUp("Second");
+    await idle();
+    await owner.idleDelivery;
+
+    expect(received.map((input) => input.prompt)).toEqual(["First", "Second"]);
+    expect(await queued()).toEqual([]);
+    expect(owner.idleTurn).toEqual({ backgroundTasks });
   } finally {
     await handle.close();
   }
@@ -149,6 +206,52 @@ test("the conversation stream reports when a turn becomes idle and when the next
       { op: "replace", path: "/idle_turn", value: { backgroundTasks } },
       { op: "replace", path: "/idle_turn", value: null },
     ]);
+  } finally {
+    await handle.close();
+  }
+});
+
+test("a run that ends during an idle turn clears the idle state for open streams", async () => {
+  const exit = Promise.withResolvers<{ status: "completed" }>();
+  const registry = createTestHarnessRegistry([
+    createTestHarnessRecord("local", {
+      provider: {
+        start: (_ctx, input) => {
+          queueMicrotask(() => input.turns!.idle({ backgroundTasks }));
+          return { done: exit.promise, stop: () => {}, timeoutStrategy: "provider" as const };
+        },
+      },
+    }),
+  ]);
+  const handle = await createTestApp({ harnessRegistry: registry });
+  try {
+    const project = await (
+      await handle.app.request("/v1/projects", {
+        method: "POST",
+        headers,
+        body: JSON.stringify(folderProjectInput({ name: "Idle run end" })),
+      })
+    ).json();
+    const session = await (
+      await handle.app.request("/v1/sessions", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ projectId: project.id, title: "Ends idle", prompt: "Start" }),
+      })
+    ).json();
+    const owner = handle.deps.sessionService.store.get(session.id)!;
+    while (!owner.idleTurn) await Bun.sleep(5);
+    const start = owner.eventStore.getHistory().length;
+
+    exit.resolve({ status: "completed" });
+    while ((await handle.deps.sessionService.get(session.id))?.status !== "completed") await Bun.sleep(5);
+
+    expect(owner.idleTurn).toBeNull();
+    expect(owner.eventStore.getHistory().slice(start)).toContainEqual({
+      op: "replace",
+      path: "/idle_turn",
+      value: null,
+    });
   } finally {
     await handle.close();
   }
