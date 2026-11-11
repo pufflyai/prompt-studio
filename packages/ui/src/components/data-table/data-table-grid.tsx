@@ -1,7 +1,8 @@
-import { Box, Table } from "@chakra-ui/react";
+import { Box, Table, useSlotRecipe } from "@chakra-ui/react";
 import type { Table as TanStackTable } from "@tanstack/react-table";
 import { Fragment } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
+import { dataTableRecipe } from "@/theme/recipes/data-table";
 import { DataTableGroupRow } from "./data-table-group-row";
 import type { DataTablePageEntry } from "./data-table-grouping";
 import type { DataTableRendererRow } from "./data-table-state";
@@ -21,6 +22,7 @@ export interface DataTableGridProps
     | "activeRowId"
     | "columnDescriptions"
     | "columnStats"
+    | "columnRenderers"
     | "enableRowActivation"
     | "getCellContextMenuActions"
     | "page"
@@ -52,6 +54,7 @@ export const DataTableGrid = (props: DataTableGridProps) => {
   const { table, entries, collapsed, onToggleGroup, settings, data, fieldMenu, selectionActions } = props;
   const { noBorder, fullWidth, onRowClick, isRowInteractive, activeRowId, columnDescriptions, columnStats } = props;
   const { enableRowActivation = false, getCellContextMenuActions } = props;
+  const styles = useSlotRecipe({ recipe: dataTableRecipe })({ rowHeight: settings.rowHeight ?? "compact" });
   const tableRowsById = new Map(table.getRowModel().rows.map((row) => [row.id, row]));
   const columnSizeVars = resolveColumnSizeVars(table);
   const selectedRows = table.getSelectedRowModel().rows;
@@ -61,6 +64,7 @@ export const DataTableGrid = (props: DataTableGridProps) => {
     <Box position="relative" flex="1" minHeight="0">
       <ScrollArea height="100%" maxWidth="unset" showHorizontalScrollbar>
         <Table.Root
+          css={styles.root}
           className={`data-table${fullWidth ? " full-width" : ""}`}
           style={{ ...columnSizeVars, width: fullWidth ? "100%" : table.getTotalSize() }}
         >
@@ -89,6 +93,7 @@ export const DataTableGrid = (props: DataTableGridProps) => {
                     headerGroup={headerGroup}
                     rows={data}
                     columnStats={columnStats}
+                    columnRenderers={props.columnRenderers}
                     summaries={props.page?.result?.statistics}
                     noBorder={noBorder}
                     fullWidth={fullWidth}

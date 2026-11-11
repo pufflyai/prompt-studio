@@ -1,4 +1,10 @@
-import type { DataTableRendererSettings, ViewFilterGroup, ViewSort } from "@pstdio/sdk/extensions";
+import type {
+  DataTableRendererChartOptions,
+  DataTableRendererChartValue,
+  DataTableRendererSettings,
+  ViewFilterGroup,
+  ViewSort,
+} from "@pstdio/sdk/extensions";
 import type { ReactNode } from "react";
 import type { CollectionPageControl } from "../collection-view/collection-page";
 import type { CollectionSavedView, CollectionViewsSource } from "../collection-view/collection-view-types";
@@ -60,7 +66,10 @@ export interface DataTableDiffValue {
   deletions: number;
 }
 
+export type DataTableChartValue = DataTableRendererChartValue;
+
 export type DataTableColumnRenderer =
+  | DataTableRendererChartOptions
   | { type: "json" }
   | { type: "color-scale"; stops: DataTableColorScaleStop[] }
   | { type: "categorical-color"; categories: DataTableCategoricalColor[] }

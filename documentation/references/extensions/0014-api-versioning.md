@@ -82,6 +82,10 @@ and owned local preparation before readiness. Publish the host and SDK before
 separately released providers adopt them; SDK 0.46.0 does not include them. See
 [local workspace providers](0003-command-and-process-api.md#local-workspace-providers-on-main).
 
+Inline data-table sparkline and bar-chart renderers and the optional saved
+`rowHeight` setting also share the coordinated API 0.4.0 step. Existing columns
+and saved views keep their behavior. See [inline charts and row height](0004-contribution-api.md#inline-charts-and-row-height-on-main).
+
 ### Which version each check uses
 
 | Check | Where it runs | Extension API version it compares with |

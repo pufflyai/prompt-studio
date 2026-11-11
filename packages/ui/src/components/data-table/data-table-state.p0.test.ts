@@ -3,6 +3,7 @@ import { filterRowsByView } from "../collection-view/collection-view-filter";
 import {
   buildDataTableRendererAttributes,
   buildDataTableRendererRows,
+  dataTableCellText,
   getSelectedOriginalRows,
   reorderDataTableColumns,
   resolveDataTableColumnOrder,
@@ -174,4 +175,11 @@ test("undeclared boolean columns preserve saved text filters", () => {
       ).map((row) => row.id),
     ).toEqual(["no"]);
   }
+});
+
+test("table search uses chart labels and measurements instead of JSON keys", () => {
+  const text = dataTableCellText({ values: [4800, 5300], labels: ["Base", "Head"] }, { type: "bar-chart", unit: "ms" });
+  expect(text).toContain("Head: 5,300 ms");
+  expect(text.join(" ")).not.toContain("values");
+  expect(dataTableCellText({ values: [null] }, { type: "sparkline" })).toEqual(["No data"]);
 });
