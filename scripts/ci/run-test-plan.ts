@@ -18,7 +18,7 @@ interface Options {
   inheritProcessGroup?: boolean;
   report?: string;
 }
-const setupCommand = (step: SetupStep, directory: string) => {
+const setupCommand = (step: SetupStep, directory: string, prebuilt?: boolean) => {
   if (step.kind === "extension-fixtures")
     return [
       "bun",
@@ -39,7 +39,7 @@ const setupCommand = (step: SetupStep, directory: string) => {
     ];
   if (step.kind === "canvas")
     return ["bun", "x", "--no-install", "lerna", "run", "build:previews", "--scope", "canvas-tests"];
-  return ["bun", "run", "--cwd", "clients/desktop", "package"];
+  return ["bun", prebuilt ? "clients/desktop/scripts/verify-test-package.ts" : "scripts/ci/prepare-test-desktop.ts"];
 };
 export const executePlan = async (plan: TestPlan, options: Options) => {
   const { root } = options;
@@ -160,19 +160,22 @@ const createSetupRunner = (
         prepared.set(step.id, false);
         continue;
       }
-      if (options.prebuilt && step.kind !== "extension-fixtures") {
+      if (options.prebuilt && !["extension-fixtures", "desktop"].includes(step.kind)) {
         prepared.set(step.id, true);
         record({ kind: step.kind, id: step.id, elapsedMs: 0, outcome: "success", cacheOutcome: "prebuilt" });
         continue;
       }
       const start = performance.now();
-      const result = await runCiChecks([{ id: step.id, cwd: root, command: setupCommand(step, directory) }], {
-        priority: "P0",
-        concurrency: 1,
-        signal,
-        env: options.env,
-        inheritProcessGroup: options.inheritProcessGroup,
-      });
+      const result = await runCiChecks(
+        [{ id: step.id, cwd: root, command: setupCommand(step, directory, options.prebuilt) }],
+        {
+          priority: "P0",
+          concurrency: 1,
+          signal,
+          env: options.env,
+          inheritProcessGroup: options.inheritProcessGroup,
+        },
+      );
       record({
         kind: step.kind,
         id: step.id,

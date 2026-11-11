@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { copyCiRuntime } from "../ci/copy-ci-runtime.test-fixture";
+import { copyCiRuntime, isolateCiRuntimeEnvironment } from "../ci/copy-ci-runtime.test-fixture";
 import { runPackagedRuntimeTests } from "./packaged-runtime-tests";
 
 test("planned runtime shards execute the complete native workload exactly once", async () => {
@@ -11,6 +11,7 @@ test("planned runtime shards execute the complete native workload exactly once",
   const cwd = join(root, "packages/e2e");
   const executed = join(root, "test-results/executed");
   const binaryPath = join(cwd, "native-candidate");
+  const restoreEnvironment = isolateCiRuntimeEnvironment();
   try {
     await copyCiRuntime(root);
     mkdirSync(join(cwd, "src/packaged"), { recursive: true });
@@ -58,5 +59,6 @@ test("native case ${index}", () => {
     expect(cases()).toEqual(complete);
   } finally {
     rmSync(root, { recursive: true, force: true });
+    restoreEnvironment();
   }
 });

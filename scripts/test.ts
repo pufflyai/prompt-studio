@@ -18,6 +18,7 @@ import { readWorkspacePackages } from "./ci/workspace-packages";
 
 const root = resolve(import.meta.dir, "..");
 const { args, files: positionalFiles } = parseTestOptions(process.argv.slice(2));
+const values = (flag: string) => args.flatMap((arg, index) => (arg === flag ? [args[index + 1]!] : []));
 const value = (flag: string) => {
   const index = args.indexOf(flag);
   if (index < 0) return;
@@ -66,7 +67,7 @@ if (performanceFamily) {
     });
     plan = createCiTestPlan(scope, packages, tests, source, undefined, timingSnapshot);
   } else {
-    const requested = [...(value("--file") ? [value("--file")!] : []), ...positionalFiles].map((file) =>
+    const requested = [...values("--file"), ...positionalFiles].map((file) =>
       resolveTestFile(file, root, process.cwd(), tests),
     );
     const inferred =

@@ -1298,15 +1298,7 @@ jobs:
           "$CI_CHECK_COMMAND"
         env:
           CI_CHECK_COMMAND: >
-            set -euo pipefail
-
-            (cd clients/desktop && bun -e 'require("electron")')
-
-            for sandbox in clients/desktop/out/prompt-studio-linux-x64/chrome-sandbox
-            clients/desktop/node_modules/electron/dist/chrome-sandbox; do
-              sudo chown root:root "$sandbox"
-              sudo chmod 4755 "$sandbox"
-            done
+            bun scripts/ci/configure-linux-desktop-sandboxes.ts
         shell: bash
       - name: Set up Windows desktop tests
         if: needs.scope.outputs.production == 'true' && matrix.platform == 'win32'
@@ -1578,7 +1570,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ci-validation-attempt-${{ github.run_attempt }}
-          path: test-results/ci/gate-results.json
+          path: |
+            test-results/ci/plan.json
+            test-results/ci/plan-verification.json
+            test-results/ci/gate-results.json
           if-no-files-found: error
 permissions:
   contents: read

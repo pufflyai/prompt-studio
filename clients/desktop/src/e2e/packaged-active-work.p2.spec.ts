@@ -42,11 +42,14 @@ for (const shutdown of ["desktop confirmation", "forced CLI close"] as const) {
         .locator('[data-workbench-panel-header="secondary"]')
         .getByRole("button", { name: "Add panel" })
         .click();
-      await app.page.getByRole("menuitem", { name: "Open terminal", exact: true }).click();
+      const openTerminal = app.page.getByRole("menuitem", { name: "Open terminal", exact: true });
+      const input = app.page.getByRole("textbox", { name: "Terminal input" });
+      // A sole available panel opens directly; multiple choices open the menu.
+      await expect(openTerminal.or(input)).toBeVisible();
+      if (await openTerminal.isVisible()) await openTerminal.click();
       const socket = await socketOpened;
       expect(new URL(socket.url()).origin).toBe(app.runtime.origin.replace(/^http/, "ws"));
       const readTerminals = async () => (await readRuntimeActivity(app!.runtime)).terminals;
-      const input = app.page.getByRole("textbox", { name: "Terminal input" });
       await expect(input).toBeVisible();
       if (process.platform !== "win32") {
         await expect.poll(async () => (await readRuntimeActivity(app!.runtime)).terminals).toHaveLength(0);

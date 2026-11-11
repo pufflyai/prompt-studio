@@ -1,16 +1,17 @@
 import { expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { copyCiRuntime } from "./copy-ci-runtime.test-fixture";
+import { dirname, join, resolve } from "node:path";
+import { copyCiRuntime, isolateCiRuntimeEnvironment } from "./copy-ci-runtime.test-fixture";
 import { executePlan } from "./run-test-plan";
-import { createTestPlan } from "./test-plan";
+import { createTestPlan, sealTestPlan } from "./test-plan";
 import { testPlanSource } from "./test-plan-source";
 
 for (const independentFiles of [false, true])
   test(`a saved plan preserves ${independentFiles ? "independent-file continuation" : "P1 stopping"} and case evidence`, async () => {
     const root = await mkdtemp(join(tmpdir(), "planned-execution-"));
+    const restoreEnvironment = isolateCiRuntimeEnvironment();
     try {
       await copyCiRuntime(root);
       await writeFile(join(root, ".gitignore"), "test-results/\n");
@@ -45,11 +46,13 @@ for (const independentFiles of [false, true])
       );
     } finally {
       await rm(root, { recursive: true, force: true });
+      restoreEnvironment();
     }
   });
 
 test("interrupted preparation leaves no reusable input and does not start its consumer", async () => {
   const root = await mkdtemp(join(tmpdir(), "planned-interruption-"));
+  const restoreEnvironment = isolateCiRuntimeEnvironment();
   try {
     await copyCiRuntime(root);
     await writeFile(join(root, ".gitignore"), "test-results/\n");
@@ -92,5 +95,53 @@ test("interrupted preparation leaves no reusable input and does not start its co
     expect(await Bun.file(join(prepared.out, "partial")).exists()).toBe(false);
   } finally {
     await rm(root, { recursive: true, force: true });
+    restoreEnvironment();
+  }
+});
+
+test("a prebuilt desktop run verifies its real package before starting quarantined consumers", async () => {
+  const root = await mkdtemp(join(tmpdir(), "planned-desktop-missing-"));
+  const restoreEnvironment = isolateCiRuntimeEnvironment();
+  try {
+    await copyCiRuntime(root);
+    await writeFile(join(root, ".gitignore"), "test-results/\n");
+    for (const file of [
+      "clients/desktop/package.json",
+      "clients/desktop/scripts/verify-test-package.ts",
+      "clients/desktop/src/packaging/package-layout.ts",
+      "clients/desktop/src/runtime/sidecar-artifact.ts",
+    ]) {
+      await mkdir(dirname(join(root, file)), { recursive: true });
+      await copyFile(resolve(import.meta.dirname, "../..", file), join(root, file));
+    }
+    execFileSync("git", ["init", "--quiet"], { cwd: root });
+    execFileSync("git", ["add", "."], { cwd: root });
+    execFileSync(
+      "git",
+      ["-c", "user.name=Fixture", "-c", "user.email=fixture@example.test", "commit", "--quiet", "-m", "fixture"],
+      { cwd: root },
+    );
+    const { digest: _digest, ...plan } = createTestPlan({
+      source: testPlanSource(root),
+      target: { platform: process.platform, arch: process.arch },
+      packages: [{ name: "@pstdio/desktop", dir: "clients/desktop", dependencies: [], scripts: {} }],
+      files: ["clients/desktop/src/e2e/packaged-project-tabs.p2.spec.ts"],
+      lane: "quarantine",
+    });
+    // This synthetic checkout needs no host extensions; exercise the actual
+    // package verifier and executor's prebuilt boundary in isolation.
+    const setup = plan.setup.filter((step) => step.kind === "desktop").map((step) => ({ ...step, requires: [] }));
+    const selected = sealTestPlan({
+      ...plan,
+      setup,
+      runs: plan.runs.map((run) => ({ ...run, requires: setup.map((step) => step.id) })),
+    });
+    const result = await executePlan(selected, { root, prebuilt: true });
+    expect(result.outcome).toBe("failure");
+    expect(result.phases.find((phase) => phase.kind === "desktop")).toMatchObject({ outcome: "failure" });
+    expect(result.results[0]).toMatchObject({ outcome: "not-run", complete: false, reason: "Prerequisite failed" });
+  } finally {
+    await rm(root, { recursive: true, force: true });
+    restoreEnvironment();
   }
 });

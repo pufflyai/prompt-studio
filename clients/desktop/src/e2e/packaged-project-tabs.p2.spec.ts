@@ -87,12 +87,15 @@ test(
       await expect.poll(async () => (await readRuntimeActivity(app!.runtime)).terminals).toHaveLength(1);
       const terminal = (await readRuntimeActivity(app.runtime)).terminals[0];
       await app.page.getByRole("option", { name: "Sessions", exact: true }).click();
-      await expect(app.page.getByLabel("Main").getByText("No messages yet", { exact: true })).toBeVisible();
+      await expect(app.page).toHaveURL(/\/extensions\/pstdio\.pstdio-session-browser\/conversations\/compose$/);
+      await expect(app.page.getByLabel("Main").getByTestId("content-editable")).toBeVisible();
       await app.page.getByRole("button", { name: "Navigate back", exact: true }).click();
       await expect(homePage(app.page)).toBeVisible();
       await app.page.getByRole("option", { name: "Home", exact: true }).click();
       await expect(app.page).toHaveURL(/\/extensions\/[^/]+\/home$/);
-      const retainedHome = app.page.frameLocator('iframe[title="Home"]').getByText("Project home", { exact: true });
+      const retainedHome = app.page
+        .frameLocator('iframe[title="Home"]:visible')
+        .getByText("Project home", { exact: true });
       await expect(retainedHome).toBeVisible();
       const firstPageUrl = app.page.url();
       // A loaded project tab keeps its views: the same webview document survives a switch.

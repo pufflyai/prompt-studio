@@ -1,11 +1,12 @@
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, createPlannerTicketFile, getPlannerTicketStatuses } from "../helpers/planner-api";
 import { revealTreeEntry } from "../helpers/tree-entry";
-import { expect, type Locator, type Page } from "../scripts/session-test";
+import { expect, type Locator, mergeTests, type Page, test as sessionTest } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
-import { test } from "./helpers/notification-settings";
+import { test as notificationTest } from "./helpers/notification-settings";
 import { showSidenavEntry } from "./helpers/sidenav-navigation";
 
+const test = mergeTests(notificationTest, sessionTest);
 test.use({ notificationsEnabled: true });
 
 const allSectionRowNames = ["Home", "Search", "Notifications", "Sessions", "Tickets", "Files", "Workspaces"] as const;
@@ -245,6 +246,8 @@ test("moves rows back into an emptied header or footer", async ({ page, request 
   const project = await createProject(request);
   await waitForTicketsExtension(request, project.id);
   await prepareDashboard(page, project.id);
+  // Keep enough real overflow to scroll a content row through the held pointer.
+  await page.setViewportSize({ width: 1280, height: 480 });
   await page.goto(`/projects/${project.id}`);
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
   const option = (name: string) => sidenav.getByRole("option", { name, exact: true });

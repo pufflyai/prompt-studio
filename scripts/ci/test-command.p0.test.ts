@@ -54,6 +54,8 @@ test("source-only preview and saved execution preserve selected files, artifacts
     expect(scoped.runs.flatMap((entry: { files: string[] }) => entry.files)).toEqual([file]);
     const slower = "packages/fixture/src/z-slow.p0.test.ts";
     await writeFile(join(root, slower), "import {test} from 'bun:test';test('slow',()=>{});");
+    const multiple = JSON.parse(await run(["--file", file, "--file", slower, "--list"]));
+    expect(multiple.runs.flatMap((entry: { files: string[] }) => entry.files)).toEqual([file, slower]);
     const snapshot = {
       version: 1,
       capturedAt: "2026-11-11T00:00:00Z",

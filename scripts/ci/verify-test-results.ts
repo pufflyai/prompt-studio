@@ -143,6 +143,11 @@ if (import.meta.main) {
     result.outcome = "failure";
     result.complete = false;
   }
-  await Bun.write("test-results/ci/plan-verification.json", JSON.stringify(result, null, 2));
-  if (result.outcome !== "success") throw new Error(result.errors.join("\n") || "Planned tests failed");
+  await Bun.write("test-results/ci/plan-verification.json", JSON.stringify({ ...result, results: records }, null, 2));
+  if (result.outcome !== "success") {
+    const failures = records
+      .filter((record) => !["success", "quarantined-failure"].includes(record.outcome) || !record.complete)
+      .map((record) => `${record.runId}: ${record.outcome}${record.reason ? ` (${record.reason})` : ""}`);
+    throw new Error([...result.errors, ...failures].join("\n") || "Planned tests failed");
+  }
 }

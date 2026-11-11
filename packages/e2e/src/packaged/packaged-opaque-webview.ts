@@ -34,7 +34,7 @@ export const verifyPackagedOpaqueWebview = async (
   await verifyPackagedShortcutReference(page, baseUrl, projectId, authorization);
 
   await page.getByRole("option", { name: "Settings", exact: true }).click();
-  await page.getByRole("dialog").last().getByText("Host settings", { exact: true }).click();
+  await page.getByRole("dialog").last().getByRole("option", { name: "Host settings", exact: true }).click();
   const settings = page.frameLocator('iframe[title="Host settings"]');
   expect(await page.locator('iframe[title="Host settings"]').getAttribute("sandbox")).not.toContain(
     "allow-same-origin",

@@ -21,7 +21,7 @@ export const verifyModePanelState = async (page: Page, terminal: Locator) => {
     await expect(page.getByRole("tab", { name: "Mode content", exact: true })).toBeVisible();
     await expect(bottom).toHaveCount(0);
     await expect(terminal).toBeHidden();
-    const status = page.frameLocator('iframe[title="Mode content"]:visible');
+    const status = page.frameLocator('iframe[title="Mode status"]:visible');
     await expect(status.getByText("Mode context", { exact: true })).toBeVisible();
     await page.goBack();
     await expect(page).toHaveURL(previous);
@@ -88,7 +88,7 @@ export const verifyExtensionModeSessionRestore = async (page: Page, projectId: s
   await sessionTab.click({ button: "right" });
   const menu = page.getByRole("menu");
   await expect(menu.getByRole("menuitem", { name: "Unpin tab", exact: true })).toBeVisible();
-  await page.frameLocator('iframe[title="Mode content"]:visible').getByText("Mode context", { exact: true }).click();
+  await page.frameLocator('iframe[title="Mode status"]:visible').getByText("Mode context", { exact: true }).click();
   await expect(menu).toBeHidden();
   await page.goto(previous);
 };

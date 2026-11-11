@@ -19,6 +19,11 @@ const view = defineView({
   title: "Mode content",
   body: { kind: "webview", entry: packageAsset("./view.ts", import.meta.url) },
 });
+const status = defineView({
+  id: "status",
+  title: "Mode status",
+  body: { kind: "webview", entry: packageAsset("./view.ts", import.meta.url) },
+});
 const page = definePage({
   id: "mode",
   path: "mode",
@@ -29,12 +34,12 @@ const page = definePage({
 });
 export default defineExtension({
   modes: [mode],
-  views: [view],
+  views: [view, status],
   pages: [page],
   statusBarItems: [
     defineStatusBarItem({
       id: "status",
-      view: view.ref,
+      view: status.ref,
       slot: workbenchSlots.statusBarLeading,
       when: { mode: mode.ref },
     }),

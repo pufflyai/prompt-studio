@@ -111,37 +111,37 @@ panelTest(
   },
 );
 
-test("a reusable viewer moved into a collection stays in that collection when selected and switched", async ({
-  page,
-  request,
-}) => {
-  const created = await request.post(`${uiOrigin}/v1/projects`, {
-    data: folderProjectInput({ name: "Collection viewer" }),
-  });
-  expect(created.ok()).toBe(true);
-  const { id } = await created.json();
-  try {
-    await prepare(page);
-    await page.goto(`/projects/${id}/extensions/pstdio.pstdio-artifacts/artifacts`);
-    await expect(panel(page, "main").getByRole("tab", { name: "Artifacts", exact: true })).toBeVisible();
-    await openTool(page, "side", "New letter viewer");
-    const side = panel(page, "side");
-    const source = side.getByRole("tab", { name: /^Letter draft-/ });
-    await expect(source).toBeVisible();
-    await source.click({ button: "right" });
-    await page.getByRole("menuitem", { name: "Move to Main", exact: true }).click();
-    const main = panel(page, "main");
-    const moved = main.getByRole("tab", { name: /^Letter draft-/ });
-    await expect(moved).toBeVisible();
-    await moved.click();
-    const collectionUrl = `/projects/${id}/extensions/pstdio.pstdio-artifacts/artifacts`;
-    await expect(page).toHaveURL(collectionUrl);
-    const reader = main.frameLocator('iframe[title="Letter viewer"]:visible');
-    await reader.getByRole("button", { name: "Switch to B", exact: true }).click();
-    await expect(reader.getByText("Viewing B", { exact: true })).toBeVisible();
-    await expect(main.getByRole("tab", { name: "Letter B", exact: true })).toHaveAttribute("aria-selected", "true");
-    await expect(page).toHaveURL(collectionUrl);
-  } finally {
-    await request.delete(`${uiOrigin}/v1/projects/${id}`);
-  }
-});
+panelTest(
+  "a reusable viewer moved into a collection stays in that collection when selected and switched",
+  async ({ page, request }) => {
+    const created = await request.post(`${uiOrigin}/v1/projects`, {
+      data: folderProjectInput({ name: "Collection viewer" }),
+    });
+    expect(created.ok()).toBe(true);
+    const { id } = await created.json();
+    try {
+      await prepare(page);
+      await page.goto(`/projects/${id}/extensions/pstdio.pstdio-artifacts/artifacts`);
+      await expect(panel(page, "main").getByRole("tab", { name: "Artifacts", exact: true })).toBeVisible();
+      await openTool(page, "side", "New letter viewer");
+      const side = panel(page, "side");
+      const source = side.getByRole("tab", { name: /^Letter draft-/ });
+      await expect(source).toBeVisible();
+      await source.click({ button: "right" });
+      await page.getByRole("menuitem", { name: "Move to Main", exact: true }).click();
+      const main = panel(page, "main");
+      const moved = main.getByRole("tab", { name: /^Letter draft-/ });
+      await expect(moved).toBeVisible();
+      await moved.click();
+      const collectionUrl = `/projects/${id}/extensions/pstdio.pstdio-artifacts/artifacts`;
+      await expect(page).toHaveURL(collectionUrl);
+      const reader = main.frameLocator('iframe[title="Letter viewer"]:visible');
+      await reader.getByRole("button", { name: "Switch to B", exact: true }).click();
+      await expect(reader.getByText("Viewing B", { exact: true })).toBeVisible();
+      await expect(main.getByRole("tab", { name: "Letter B", exact: true })).toHaveAttribute("aria-selected", "true");
+      await expect(page).toHaveURL(collectionUrl);
+    } finally {
+      await request.delete(`${uiOrigin}/v1/projects/${id}`);
+    }
+  },
+);

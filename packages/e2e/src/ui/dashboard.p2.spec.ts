@@ -1,9 +1,10 @@
 import { folderProjectInput } from "../helpers/folder-project";
 import { homePage } from "../helpers/home-loading";
-import { expect } from "../scripts/session-test";
+import { expect, mergeTests, test as sessionTest } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
-import { test } from "./helpers/notification-settings";
+import { test as notificationTest } from "./helpers/notification-settings";
 
+const test = mergeTests(notificationTest, sessionTest);
 test.use({ notificationsEnabled: true });
 
 const navSwitchProjectButton = (page: import("@playwright/test").Page) =>
