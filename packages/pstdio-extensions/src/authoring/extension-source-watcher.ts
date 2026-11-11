@@ -1,5 +1,5 @@
 import { lstatSync, readdirSync } from "node:fs";
-import { join, relative, sep } from "node:path";
+import { basename, join, relative, sep } from "node:path";
 import {
   createDirectoryTreeWatcher,
   type DirectoryTreeWatcher,
@@ -17,6 +17,14 @@ type InstalledSourceRegistration = {
 
 const defaultDebounceMs = 100;
 
+const isMissingEntry = (path: string) => {
+  try {
+    return lstatSync(path, { throwIfNoEntry: false }) === undefined;
+  } catch {
+    return false;
+  }
+};
+
 // Watch registration walks the source tree itself, so it must never descend into
 // dependency or VCS trees: node_modules symlinks back into the monorepo store,
 // and recursively registering that (Linux has no native recursive fs.watch)
@@ -27,7 +35,7 @@ type WatchedRegistration = {
   dependencyHandles: Map<string, DirectoryWatchHandle>;
   identity: string;
   matcher: ExtensionIgnoreMatcher;
-  queued: boolean;
+  queued: false | "metadata" | "source";
   running: boolean;
   sourcePath: string;
   timer: ReturnType<typeof setTimeout> | null;
@@ -45,7 +53,7 @@ export type CreateExtensionSourceWatcherInput = {
   listInstalledSources: () => Promise<InstalledSourceRegistration[]>;
   onError?: (error: unknown) => void;
   /** Called when a watched source folder changes. It must not adopt the new source. */
-  onSourceChanged: (sourcePath: string) => Promise<unknown>;
+  onSourceChanged: (sourcePath: string, change?: { kind: "metadata" | "source" }) => Promise<unknown>;
   watch?: WatchDirectory;
   watchDependencies?: boolean;
 };
@@ -91,26 +99,25 @@ export const createExtensionSourceWatcher = async (
 
   const runReload = (registration: WatchedRegistration) => {
     if (disposed || registrations.get(registration.sourcePath) !== registration) return;
-    if (registration.running) {
-      registration.queued = true;
-      return;
-    }
+    if (registration.running) return;
 
+    const kind = registration.queued || "source";
+    registration.queued = false;
     registration.running = true;
     input
-      .onSourceChanged(registration.sourcePath)
+      .onSourceChanged(registration.sourcePath, { kind })
       .catch((error) => input.onError?.(error))
       .finally(() => {
         registration.running = false;
         if (disposed || registrations.get(registration.sourcePath) !== registration) return;
         if (!registration.queued) return;
 
-        registration.queued = false;
         scheduleReload(registration);
       });
   };
 
-  const scheduleReload = (registration: WatchedRegistration) => {
+  const scheduleReload = (registration: WatchedRegistration, kind?: "metadata" | "source") => {
+    if (kind) registration.queued = registration.queued === "source" ? "source" : kind;
     if (registration.timer) clearTimeout(registration.timer);
 
     registration.timer = setTimeout(() => {
@@ -151,13 +158,17 @@ export const createExtensionSourceWatcher = async (
       // Windows also reports parent directory metadata when package contents change.
       if (!watchDependencies || eventType !== "rename" || segments.length > packageDepth) return;
       watchDependencyRoot(registration);
-      scheduleReload(registration);
+      scheduleReload(registration, "source");
       return;
     }
     const includedIgnoredPath = relativePath && input.includeIgnoredPath?.(relativePath);
     if (relativePath && registration.matcher.ignores(relativePath) && !includedIgnoredPath) return;
 
-    scheduleReload(registration);
+    // Some native watches name a root metadata event like a child of itself.
+    // Keep the check, but do not turn unchanged bytes into another live edit.
+    const metadata =
+      eventType === "change" && relativePath === basename(registration.sourcePath) && isMissingEntry(eventPath);
+    scheduleReload(registration, metadata ? "metadata" : "source");
   };
 
   const addRegistration = (row: InstalledSourceRegistration) => {
@@ -206,7 +217,7 @@ export const createExtensionSourceWatcher = async (
     registrations.delete(sourcePath);
     addRegistration(next);
     try {
-      await input.onSourceChanged(sourcePath);
+      await input.onSourceChanged(sourcePath, { kind: "source" });
     } catch (error) {
       input.onError?.(error);
     }

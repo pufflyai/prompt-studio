@@ -22,8 +22,8 @@ export const createExtensionSourceWatcher = async (input: CreateExtensionSourceW
   if (input.watch || input.includeIgnoredPath)
     return createLocalWatcher({
       ...input,
-      onSourceChanged: async (path) => {
-        await input.onSourceChanged(path);
+      onSourceChanged: async (path, change) => {
+        await input.onSourceChanged(path, change);
         await input.afterSourceChanged?.(path);
       },
     });
@@ -119,7 +119,9 @@ export const createExtensionSourceWatcher = async (input: CreateExtensionSourceW
     }
     if (typeof event.sourcePath !== "string" || !observedHashes.has(event.sourcePath)) return;
     const repeated = observe(event.sourcePath, event.sourceHash);
-    if (event.attachment === true && (event.changed !== true || repeated)) {
+    const reconciliation =
+      (event.attachment === true && (event.changed !== true || repeated)) || (event.metadataOnly === true && repeated);
+    if (reconciliation) {
       attachments.add(event.sourcePath);
       reconcileAttachment();
     } else {

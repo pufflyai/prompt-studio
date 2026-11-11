@@ -75,7 +75,12 @@ the complete frontend checks, including dependency and compiler input inspection
 Source watcher owners retain the last observed own-source hash across worker replacement. Reattaching the same edited
 bytes still performs a fresh frontend/dependency check, but uses background attachment admission rather than repeatedly
 borrowing live-edit urgency from an intentionally older accepted runtime. First unseen offline content remains a live
-edit. Ordinary filesystem/dependency notifications remain live even when the own-source hash is unchanged. This bounded
+edit. Ordinary source/dependency notifications remain live even when the own-source hash is unchanged. Native directory
+metadata notifications can name a nonexistent child with the same basename as the watched root. The watcher distinguishes
+only that change-event shape using lstat; real entries, including dangling symlinks, and unknown filesystem errors remain
+source events. Pending source events win over metadata events across debounce and running checks, including failures.
+Metadata events still perform fresh frontend/dependency reconciliation; only a fresh own-source hash matching the last
+observation uses background attachment admission. Changed or unknown hashes retain live admission. This bounded
 per-registration history is pruned with removed sources; late events cannot recreate a removed registration.
 
 Inspection and compilation share at most four host-owned leaf slots across both workers (or fewer on a smaller host).

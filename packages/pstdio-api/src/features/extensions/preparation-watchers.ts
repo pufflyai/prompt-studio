@@ -63,7 +63,8 @@ export const updatePreparationWatcher = async (input: WatchUpdate) => {
   if (input.kind === "sources")
     state.watcher = await createExtensionSourceWatcher({
       listInstalledSources: async () => state.sources,
-      onSourceChanged: async (path) => report({ sourcePath: path, sourceHash: sourceHash(path) }),
+      onSourceChanged: async (path, change) =>
+        report({ sourcePath: path, sourceHash: sourceHash(path), metadataOnly: change?.kind === "metadata" }),
       onError: (error) => report({ error: error instanceof Error ? error.message : String(error) }),
     });
   else
