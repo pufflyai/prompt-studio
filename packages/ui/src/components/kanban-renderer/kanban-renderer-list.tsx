@@ -7,6 +7,7 @@ import { useVirtualizer } from "@/utils/use-virtualizer";
 import { CollectionLoadMore } from "../collection-view/collection-load-more";
 import type { AttributeBadge } from "./kanban-renderer-helpers";
 import { KanbanRendererListRow } from "./kanban-renderer-list-row";
+import { shouldVirtualizeKanban } from "./kanban-renderer-virtualization";
 
 export interface KanbanRendererListItem {
   id: string;
@@ -102,6 +103,7 @@ export const KanbanRendererList = (props: KanbanRendererListProps) => {
   const [focusedItemId, setFocusedItemId] = useState<string | null>(null);
   const expanded = expandedGroups ?? localExpandedGroups;
   const rows = flattenKanbanRendererListItems(items, expanded);
+  const virtualize = shouldVirtualizeKanban(rows.length);
 
   const handleExpandedChange = (rowId: string, isExpanded: boolean) => {
     onExpandedGroupChange?.(rowId, isExpanded);
@@ -113,6 +115,7 @@ export const KanbanRendererList = (props: KanbanRendererListProps) => {
   const viewport = useRef<HTMLDivElement>(null);
   const { virtualizer, virtualItems, totalSize } = useVirtualizer<HTMLDivElement, HTMLDivElement>({
     count: rows.length,
+    enabled: virtualize,
     onChange: (instance, scrolling) => {
       if (scrolling && instance.range && instance.range.endIndex >= rows.length - 1) props.onLoadMore?.();
     },
@@ -130,6 +133,9 @@ export const KanbanRendererList = (props: KanbanRendererListProps) => {
       return [...indexes].sort((a, b) => a - b);
     },
   });
+  const renderedRows = virtualize
+    ? virtualItems.map((virtual) => ({ row: rows[virtual.index], index: virtual.index, start: virtual.start }))
+    : rows.map((row, index) => ({ row, index, start: undefined }));
 
   return (
     <ScrollArea
@@ -138,23 +144,28 @@ export const KanbanRendererList = (props: KanbanRendererListProps) => {
       viewportRef={viewport}
       viewportProps={{
         "aria-label": "Collection list",
+        onScroll: (event) => {
+          if (virtualize) return;
+          const viewport = event.currentTarget;
+          if (viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight > 8) return;
+          if (!props.loadingMore) props.onLoadMore?.();
+        },
         onWheel: (event) => {
           const viewport = event.currentTarget;
           if (event.deltaY > 0 && viewport.scrollHeight <= viewport.clientHeight) props.onLoadMore?.();
         },
       }}
     >
-      <Box position="relative" height={`${totalSize}px`}>
-        {virtualItems.map((virtual) => {
-          const row = rows[virtual.index];
+      <Box position={virtualize ? "relative" : undefined} height={virtualize ? `${totalSize}px` : undefined}>
+        {renderedRows.map(({ row, index, start }) => {
           return (
             <Box
               key={row.id}
-              data-index={virtual.index}
-              ref={virtualizer.measureElement}
-              position="absolute"
-              top={`${virtual.start}px`}
-              left="0"
+              data-index={index}
+              ref={start === undefined ? undefined : virtualizer.measureElement}
+              position={start === undefined ? undefined : "absolute"}
+              top={start === undefined ? undefined : `${start}px`}
+              left={start === undefined ? undefined : "0"}
               width="full"
               onFocusCapture={() => setFocusedItemId(row.id)}
               onBlurCapture={(event) => {
