@@ -15,7 +15,7 @@ test("workspace badges follow stable ticket IDs even when an anchor has a shared
   ];
   ctx.resources.identity = async ({ id }) => identities.find((entry) => entry.id === id) ?? null;
   await ctx.resources.addAnchors(
-    { type: "workspace", id: "workspace", extensionId: "pstdio", projectId: ctx.projectId },
+    { type: "workspace", id: "workspace", extensionId: "pstdio", projectId: ctx.projectId, label: "Workspace" },
     [
       {
         type: "ticket",

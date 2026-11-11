@@ -700,12 +700,14 @@ Set `queryMode: "paged"` on a `dataTable` or `kanban` view body to opt in. This 
 an additive API 0.2.2 change. Existing providers keep their full-result query and
 local filtering, sorting, and search.
 
-The host passes `params.page` with a limit of at most 100, a zero-based offset,
+The host passes `params.page` with a limit of at most 500, a zero-based offset,
 optional cursor and expected revision, search text, selected field IDs, and
-collapsed table group keys. Fields include visible columns/properties and active
-grouping fields. Badge-list displays also request their companion item field.
-Apply `params.filter`, `params.sorts`, and search to the complete indexed collection
-before selecting a page. Return the requested fields and only the bounded rows.
+collapsed table group keys. Set `initialPageSize` on a paged table or board to
+request a larger page; tables can also offer `pageSizeOptions`. Fields include
+visible columns/properties and active grouping fields. Badge-list displays also
+request their companion item field. Apply `params.filter`, `params.sorts`, and
+search to the complete indexed collection before selecting a page. Return the
+requested fields and only the bounded rows.
 Do not load every record to calculate a page, group count, badge, or total.
 
 Preserve the controls' filter semantics. Scalar string `is` and `is-not` use

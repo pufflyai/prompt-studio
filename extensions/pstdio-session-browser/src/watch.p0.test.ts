@@ -576,3 +576,54 @@ test("a late queue refresh cannot overwrite a newer stream steering capability",
     await watching;
   }
 });
+
+test("an idle turn tells the person the agent is waiting and which background tasks still run", async () => {
+  const controller = new AbortController();
+  const ended = Promise.withResolvers<void>();
+  const notices: unknown[] = [];
+  const idleTurn = { backgroundTasks: [{ id: "watch", description: "Watch the extension for changes" }] };
+  const ctx = makeCommandContext({
+    storage: createMemoryStorage({ indexes: [nativeSubmissionIndex] }),
+    params: {},
+    overrides: {
+      signal: controller.signal,
+      stream: {
+        write: async (event) => {
+          const snapshot = (event as { snapshot?: { notice?: string } }).snapshot;
+          if (snapshot && "notice" in snapshot) notices.push(snapshot.notice);
+        },
+      },
+      sessions: {
+        get: async () => ({ ...session, status: "in_progress" as const }),
+        getConversation: async () => ({ session, messages: [] }),
+        getQueuedMessages: async () => ({
+          messages: [],
+          queue: { requests: [], activeRunStartedAt: null, steeringAvailable: true, steeringUnavailableReason: null },
+        }),
+        getExecutionState: async () => ({ kind: "local", available: true }),
+        getForkState: async () => ({ supported: false, disabledReason: null }),
+        getHarnessCommands: async () => ({ harnessId: "agent", commands: [], modes: [], slashCommands: true }),
+        retainResources: async () => ({ close: () => {} }),
+        stream: async (_id, onEvent) => {
+          await onEvent({ event: "patch", data: { op: "replace", path: "/messages", value: [] } });
+          notices.length = 0;
+          await onEvent({ event: "patch", data: { op: "replace", path: "/idle_turn", value: idleTurn } });
+          await onEvent({ event: "patch", data: { op: "replace", path: "/idle_turn", value: null } });
+          // A later queue error stays when the next idle turn ends.
+          await onEvent({ event: "patch", data: { op: "replace", path: "/idle_turn", value: idleTurn } });
+          await onEvent({ event: "queued_messages", data: { error: "Could not refresh queued messages" } });
+          await onEvent({ event: "patch", data: { op: "replace", path: "/idle_turn", value: null } });
+          ended.resolve();
+        },
+      },
+    },
+  });
+  const watching = watchConversation(ctx, { type: "session", id: "s" });
+  await ended.promise;
+  controller.abort();
+  await watching;
+  expect(notices).toHaveLength(4);
+  expect(notices[0]).toContain("Watch the extension for changes");
+  expect(notices[1]).toBe("");
+  expect(notices[3]).toBe("Could not refresh queued messages");
+});

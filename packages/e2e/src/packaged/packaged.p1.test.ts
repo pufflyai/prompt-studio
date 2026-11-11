@@ -6,7 +6,7 @@ import { cleanupDirs, createGitRepo } from "../cli/helpers";
 import { getFreePort } from "../cli/start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "../cli/timeouts";
 import { PSTDIO_E2E_DEFAULT_EXTENSIONS } from "../default-extensions";
-import { buildBinary, runPackagedAsync, runPackagedSafe } from "./packaged-helpers";
+import { buildBinary, PACKAGED_BINARY_PATH, runPackagedAsync, runPackagedSafe } from "./packaged-helpers";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
 const BUILD_TIMEOUT = 180_000;
@@ -18,12 +18,43 @@ beforeAll(async () => {
   buildBinary();
   homePath = mkdtempSync(join(tmpdir(), "pstdio-packaged-lifecycle-home-"));
   dirs.push(homePath);
-  api = await startPackagedServe(homePath, {
-    PSTDIO_DB_PATH: ":memory:",
-    PSTDIO_DEFAULT_EXTENSIONS: PSTDIO_E2E_DEFAULT_EXTENSIONS,
-    PSTDIO_EXTENSION_WEBVIEW_BUILDS: "0",
-    ...(process.env.E2E_BUN_CACHE_DIR ? { BUN_INSTALL_CACHE_DIR: process.env.E2E_BUN_CACHE_DIR } : {}),
-  });
+  const prepared = Promise.withResolvers<void>();
+  let output = "";
+  api = await startPackagedServe(
+    homePath,
+    {
+      PSTDIO_DB_PATH: ":memory:",
+      PSTDIO_DEFAULT_EXTENSIONS: PSTDIO_E2E_DEFAULT_EXTENSIONS,
+      PSTDIO_EXTENSION_WEBVIEW_BUILDS: "0",
+      ...(process.env.E2E_BUN_CACHE_DIR ? { BUN_INSTALL_CACHE_DIR: process.env.E2E_BUN_CACHE_DIR } : {}),
+    },
+    PACKAGED_BINARY_PATH,
+    undefined,
+    (chunk, stream) => {
+      if (stream !== "stdout") return;
+      output += chunk.toString();
+      const lines = output.split("\n");
+      output = lines.pop()!;
+      for (const line of lines) {
+        try {
+          const event = JSON.parse(line);
+          if (event.phase === "default_extensions.register" && event.state === "completed") prepared.resolve();
+        } catch {
+          // CLI readiness output is interleaved with structured setup events.
+        }
+      }
+    },
+  );
+  // Transport readiness intentionally precedes background default preparation.
+  // This shared runtime's sixteen cold installs belong to its existing setup hook;
+  // the separate auto-start case still creates its runtime inside the test.
+  const stopped = () => prepared.reject(new Error("Packaged runtime stopped before default preparation completed"));
+  api.child.once("close", stopped);
+  try {
+    await prepared.promise;
+  } finally {
+    api.child.off("close", stopped);
+  }
 }, BUILD_TIMEOUT + SETUP_TIMEOUT);
 
 afterAll(async () => {

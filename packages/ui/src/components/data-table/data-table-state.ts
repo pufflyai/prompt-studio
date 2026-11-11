@@ -24,8 +24,6 @@ export const resolveInitialPageSize = (props: Pick<DataTableProps, "initialPageS
   return defaultPageSize;
 };
 
-export const getSelectedOriginalRows = (rows: Array<{ original: RowData }>) => rows.map((row) => row.original);
-
 export const resolveSelectionActions = (
   props: Pick<DataTableProps, "selectionActions" | "onCSVDownload" | "getRowId">,
 ) => {

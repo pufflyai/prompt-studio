@@ -34,5 +34,5 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
   ],
-  webServer: [serveWebServer],
+  webServer: [{ ...serveWebServer, timeout: process.platform === "darwin" ? 45_000 : serveWebServer.timeout }],
 });

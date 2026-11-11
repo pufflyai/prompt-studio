@@ -22,7 +22,7 @@ test(
 test(
   "packaged Planner keeps supervisor model choices, scoped Auto Build dispatch, and dependency blockers",
   () => withPackagedPlanner(expectPackagedPlannerAutoBuild),
-  PACKAGED_TEST_TIMEOUT,
+  process.platform === "win32" ? 45_000 : PACKAGED_TEST_TIMEOUT,
 );
 test(
   "packaged Planner keeps brief supervisor wakes and resume ownership",

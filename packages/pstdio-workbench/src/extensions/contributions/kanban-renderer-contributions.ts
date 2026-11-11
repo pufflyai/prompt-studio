@@ -233,6 +233,7 @@ export const registerWorkbenchExtensionKanbanRenderers = (
           queryScope: { projectId: context.projectId, extensionId: record.extensionId },
           resourceKind: record.resourceKind,
           toolbarActions: mapViewToolbarActions(record),
+          initialPageSize: record.initialPageSize,
           listRowActions: () =>
             (record.rowActions ?? []).map((action) => ({
               commandId: action.commandId,

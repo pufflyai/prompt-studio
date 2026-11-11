@@ -90,16 +90,26 @@ export const createPerformanceMonitoringController = (host: PerformanceHost) => 
     // A loaded monitoring extension is the person's choice to measure, so monitoring runs exactly
     // while one holds a capture, and stops when the last one is disabled or unloaded.
     retainCapture: async () => {
-      const release = (await host.retainCapture?.()) ?? (async () => {});
+      const release = (await host.retainCapture?.(true)) ?? (async () => {});
       leases += 1;
-      if (leases === 1) await setEnabled(true);
+      // Desktop enablement belongs to the device-wide lease count. A project
+      // only starts and stops its own renderer observers.
+      if (leases === 1) {
+        if (host.kind === "desktop") apply(true);
+        else await setEnabled(true);
+      }
       let released = false;
       return async () => {
         if (released) return;
         released = true;
         leases -= 1;
         await release();
-        if (leases === 0 && !disposed) await setEnabled(false);
+        if (leases === 0 && !disposed) {
+          if (host.kind === "desktop") {
+            const active = await host.isEnabled();
+            if (leases === 0 && !disposed) apply(active);
+          } else await setEnabled(false);
+        }
       };
     },
     load: async () => {

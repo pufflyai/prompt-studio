@@ -51,6 +51,19 @@ const sessionPage = (): WorkbenchPageContribution => ({
 });
 const pages = [page("root"), page("detail", "root"), page("workspace", "root"), sessionPage(), page("sessions")];
 
+test("preserves a resource shorthand through navigation and history normalization", () => {
+  const resource = { type: "session", id: "one", shorthand: "S-1", label: "Session one" };
+  const target = normalizeWorkbenchPageTarget({
+    target: { kind: "page", page: pages[3]!.ref, resource },
+    pages,
+    resources,
+  });
+  expect(target.location.resource).toMatchObject({ ...resource, id: "ONE" });
+  expect(normalizeWorkbenchPageLocation({ location: target.location, pages, resources }).location.resource).toEqual(
+    target.location.resource,
+  );
+});
+
 test("a group opens its default child while remaining in the parent trail", () => {
   const child = page("compose", "messages");
   const group: WorkbenchPageContribution = {

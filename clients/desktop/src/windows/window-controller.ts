@@ -36,10 +36,16 @@ export class DesktopWindowController {
       // Painted before the lifecycle document, so the window never flashes another theme.
       ...(appearance ? { backgroundColor: appearance.backgroundColor } : {}),
     });
-    // The workbench covers the retained lifecycle renderer. Keep it responsive to
-    // recovery and IPC while this window owns focus; throttle it again on blur.
-    this.window.on("focus", () => this.window.webContents.setBackgroundThrottling(false));
-    this.window.on("blur", () => this.window.webContents.setBackgroundThrottling(true));
+    this.window.on("focus", () => this.syncLifecycleThrottling());
+    this.window.on("blur", () => this.syncLifecycleThrottling());
+    const visibilityChanged = () =>
+      queueMicrotask(() => {
+        if (!this.window.isDestroyed()) this.syncLifecycleThrottling();
+      });
+    this.window.on("show", visibilityChanged);
+    this.window.on("hide", visibilityChanged);
+    this.window.on("minimize", visibilityChanged);
+    this.window.on("restore", visibilityChanged);
     secureWebContents(this.window.webContents, {
       lifecycleUrl: this.lifecycleUrl,
       runtimeOrigin: () => null,
@@ -138,6 +144,16 @@ export class DesktopWindowController {
     this.#workbench?.setBounds({ x: 0, y: 0, width, height });
   }
 
+  private syncLifecycleThrottling() {
+    // A revealed startup/recovery surface must paint promptly even without focus.
+    // Hidden/minimized windows retain the normal background resource policy.
+    this.window.webContents.setBackgroundThrottling(
+      !this.window.isVisible() ||
+        this.window.isMinimized() ||
+        (Boolean(this.#workbench?.getVisible()) && !this.window.isFocused()),
+    );
+  }
+
   private createWorkbench() {
     const view = new WebContentsView({
       webPreferences: createSecureWindowOptions(this.preloadPath, WORKBENCH_PARTITION).webPreferences,
@@ -171,12 +187,14 @@ export class DesktopWindowController {
       return;
     }
     this.#workbench.setVisible(true);
+    this.syncLifecycleThrottling();
     this.#workbench.webContents.focus();
   }
 
   async showLifecycle() {
     // Recovery must not wait for a new renderer, JavaScript bundle, or theme initialization.
     this.#workbench?.setVisible(false);
+    this.syncLifecycleThrottling();
     if (this.window.webContents.getURL() !== this.lifecycleUrl) await this.window.loadURL(this.lifecycleUrl);
     const contents = this.#workbench?.getVisible() ? this.#workbench.webContents : this.window.webContents;
     contents.focus();
@@ -194,6 +212,7 @@ export class DesktopWindowController {
     try {
       await loading;
       this.#workbench!.setVisible(true);
+      this.syncLifecycleThrottling();
       this.#workbench!.webContents.focus();
     } finally {
       if (this.#workbenchLoad === loading) this.#workbenchLoad = undefined;
