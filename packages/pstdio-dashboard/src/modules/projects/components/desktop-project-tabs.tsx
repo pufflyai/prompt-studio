@@ -22,6 +22,14 @@ const resolveProjectTabs = (projectIds: readonly string[], _dataVersion: unknown
     return project ? [{ id, label: project.name, icon: <Folder aria-hidden="true" /> }] : [];
   });
 
+export const openProjectTabSettings = async (controller: DesktopProjectTabsController, projectId: string) => {
+  controller.select(projectId);
+  const workbench = controller.getActiveWorkbench();
+  if (!workbench || workbench.context.get(dashboardSelectedProjectIdContextKey) !== projectId) return;
+  const panel = workbench.settings.listPanels().find((panel) => panel.scope === "project" && !panel.parentPanelId);
+  await workbench.commands.executeCommand("workbench.settings.open", { panelId: panel?.id });
+};
+
 export const DesktopProjectTabs = (props: DesktopProjectTabsProps) => {
   const { workbench, controller, platform } = props;
   const projectIds = useSyncExternalStore(controller.subscribe, controller.getProjectIds, controller.getProjectIds);
@@ -38,16 +46,12 @@ export const DesktopProjectTabs = (props: DesktopProjectTabsProps) => {
         key: "project-settings",
         label: "Project settings",
         onClick: async () => {
-          const report = workbench.notifications.captureActionError("Open project settings");
           try {
-            await controller.select(workbench, tab.id);
-            const panel = workbench.settings
-              .listPanels()
-              .find((panel) => panel.scope === "project" && !panel.parentPanelId);
-            if (workbench.context.get(dashboardSelectedProjectIdContextKey) !== tab.id) return;
-            await workbench.commands.executeCommand("workbench.settings.open", { panelId: panel?.id });
+            await openProjectTabSettings(controller, tab.id);
           } catch (error) {
-            report(error);
+            (controller.getActiveWorkbench() ?? workbench).notifications.captureActionError("Open project settings")(
+              error,
+            );
           }
         },
       },
