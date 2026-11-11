@@ -97,6 +97,10 @@ test(
       const lab = app.page.frameLocator('iframe[title="Lab"]').getByRole("heading", { name: "Sandbox webview" });
       await expect(lab).toBeVisible();
       const firstPageUrl = app.page.url();
+      // A loaded project tab keeps its views: the same webview document survives a switch.
+      await lab.evaluate(() => {
+        (window as Window & { retainedAcrossTabs?: boolean }).retainedAcrossTabs = true;
+      });
 
       await openPackagedProject(app.page, second);
       await app.page.getByRole("option", { name: "Sessions", exact: true }).click();
@@ -109,6 +113,10 @@ test(
         "true",
       );
       await expect(app.page).toHaveURL(firstPageUrl);
+      await expect(lab).toBeVisible();
+      expect(
+        await lab.evaluate(() => (window as Window & { retainedAcrossTabs?: boolean }).retainedAcrossTabs),
+      ).toBe(true);
       await openPackagedProject(app.page, first);
       await expect(app.page.getByRole("tablist", { name: "Project tabs" }).getByRole("tab")).toHaveCount(2);
       await expect(lab).toBeVisible();
