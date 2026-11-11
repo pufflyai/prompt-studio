@@ -163,6 +163,7 @@
       // Extensions e2e installs at runtime by path, and the dashboard it builds and serves.
       // Declared so CI treats their changes as e2e changes.
       "ignoreDependencies": [
+        "github",
         "canvas",
         "extension-lab",
         "harness-claude-code",
@@ -204,6 +205,7 @@
       "ignore": ["dist/**"],
       // Tests install these extensions and fixtures from source. Declared so CI treats their changes as API changes.
       "ignoreDependencies": [
+        "github",
         "extension-lab",
         "pstdio-base-themes",
         "pstdio-planner",
