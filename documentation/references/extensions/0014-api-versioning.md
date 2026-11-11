@@ -65,6 +65,8 @@ preserve the existing query, event and editing methods. The matching SDK adds
 Publish the supporting host/SDK/UI before independent consumer releases; local
 tarballs and a widened manifest range are not published compatibility evidence.
 
+The optional `HarnessStartInput.turns` channel also shares API 0.4.0. A harness whose run stays open between turns reports idle and busy turns through it, and a supporting host delivers queued replies to idle turns. Older hosts omit the channel, so providers must treat it as optional.
+
 Read-only host-retained command queries also share API 0.4.0. A supporting host
 provides `commands.query`; the SDK exposes `client.commands.read.query(...)`,
 `client.queries.command(...)` and `useWebviewCommandQuery`. These retain finite
