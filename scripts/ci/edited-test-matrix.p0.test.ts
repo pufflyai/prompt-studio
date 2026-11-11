@@ -8,7 +8,25 @@ import { evaluateCiGate } from "./test-policy";
 test("edited CLI shutdown checks install the browser engines they exercise", () => {
   const rows = createEditedTestMatrix(["packages/e2e/src/cli/close.p1.test.ts"], scopeFixture().packages);
   expect(rows).toHaveLength(1);
-  expect(rows[0]).toMatchObject({ runner: "cli", browser: true });
+  expect(rows[0]).toMatchObject({ runner: "cli", browser: true, container: true });
+});
+
+test("edited browser tests use the Playwright image on Linux and installed engines on macOS", () => {
+  const rows = createEditedTestMatrix(["packages/e2e/src/packaged/boards.p2.test.ts"], scopeFixture().packages);
+  expect(rows.map(({ platform, browser, container }) => ({ platform, browser, container }))).toEqual(
+    expect.arrayContaining([
+      { platform: "linux", browser: true, container: true },
+      { platform: "darwin", browser: true, container: false },
+    ]),
+  );
+});
+
+test("edited desktop tests run natively without Playwright browsers", () => {
+  const rows = createEditedTestMatrix(
+    ["clients/desktop/src/e2e/packaged-recovery.p2.spec.ts"],
+    [{ name: "@pstdio/desktop", dir: "clients/desktop", dependencies: [] }],
+  );
+  expect(rows.every((row) => row.desktop && !row.browser && !row.container)).toBe(true);
 });
 
 test("edited native desktop tests run on the nightly's desktop platforms", () => {
