@@ -97,13 +97,46 @@ test(
       expect(existsSync(join(tempRoot, "extensions", "pstdio-planner", "src", "views", "workflow-settings.ts"))).toBe(
         true,
       );
-      for (const name of ["create-ticket", "refine-ticket", "implement-ticket"]) {
+      for (const name of [
+        "create-ticket",
+        "create-proposal",
+        "refine-ticket",
+        "create-sub-tickets",
+        "implement-ticket",
+      ]) {
         const path = ["extensions", "pstdio-planner", "skills", name, "SKILL.md"];
         const packagedSkill = Bun.file(join(tempRoot, ...path));
         const sourceSkill = Bun.file(join(import.meta.dirname, "../../../..", ...path));
         expect(Bun.CryptoHasher.hash("sha256", await packagedSkill.arrayBuffer(), "hex")).toBe(
           Bun.CryptoHasher.hash("sha256", await sourceSkill.arrayBuffer(), "hex"),
         );
+      }
+      for (const name of [
+        "proposal.ticket",
+        "architecture-overview.template",
+        "research.template",
+        "contracts.template",
+        "schemas.template",
+      ]) {
+        const folder = name.endsWith(".ticket") ? "tickets" : "documents";
+        const path = ["extensions", "pstdio-planner", "templates", folder, `${name}.md`];
+        const packagedTemplate = Bun.file(join(tempRoot, ...path));
+        const sourceTemplate = Bun.file(join(import.meta.dirname, "../../../..", ...path));
+        expect(Bun.CryptoHasher.hash("sha256", await packagedTemplate.arrayBuffer(), "hex")).toBe(
+          Bun.CryptoHasher.hash("sha256", await sourceTemplate.arrayBuffer(), "hex"),
+        );
+        const response = await fetch(
+          `${started.baseUrl}/v1/projects/${project.id}/extensions/commands/pstdio.pstdio-planner.command.templates.read/execute`,
+          {
+            method: "POST",
+            headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
+            body: JSON.stringify({ params: { name: name.replace(/\.(ticket|template)$/, "") } }),
+          },
+        );
+        expect(response.status).toBe(200);
+        expect(await response.json()).toMatchObject({
+          outcome: { status: "success", value: { content: await sourceTemplate.text() } },
+        });
       }
       await expectPackagedRefinement({
         baseUrl: started.baseUrl,
