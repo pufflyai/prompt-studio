@@ -3,6 +3,10 @@ title: "Prompt Studio 0.47"
 description: "Home, Sessions and Workspaces become extensions, conversations fork from any reply, projects choose their agents and tools, and extension API 0.4 adds ordered storage with shared text."
 author: aurelien-franky
 category: release
+published: 2026-11-11T00:00:00Z
+image:
+  light: ./images/blog-prompt-studio-0-47-light.png
+  dark: ./images/blog-prompt-studio-0-47.png
 ---
 
 Prompt Studio 0.47 turns Home, Sessions and Workspaces into extensions with their own pages and settings. Conversations fork from a selected reply, new projects choose their agents and tools, and extension API 0.4 adds ordered storage with shared text and native terminals.
@@ -11,17 +15,17 @@ Prompt Studio 0.47 turns Home, Sessions and Workspaces into extensions with thei
 
 Project Home shows the resources you opened most recently, existing work actions, setup recovery, and agent quota charts. Each project owns an editable copy under `.pstdio/extensions/pstdio-home/`.
 
-![Project Home with recent work and a Codex quota chart](../../../../../../documentation/images/prompt-studio-0-47-home-light.svg)
+![Project Home with recent work and a Codex quota chart](../../../../../documentation/images/prompt-studio-0-47-home-light.svg)
 
-![Project Home with recent work and a Codex quota chart](../../../../../../documentation/images/prompt-studio-0-47-home-dark.svg)
+![Project Home with recent work and a Codex quota chart](../../../../../documentation/images/prompt-studio-0-47-home-dark.svg)
 
 Project Home.
 
 Home is an extension, so you can modify it. Ask your agent to add something you'd like to see there. One thing we extended it with is usage graphs for all harnesses.
 
-![The Codex usage graph on Home](../../../../../../documentation/images/prompt-studio-0-47-codex-usage-light.svg)
+![The Codex usage graph on Home](../../../../../documentation/images/prompt-studio-0-47-codex-usage-light.svg)
 
-![The Codex usage graph on Home](../../../../../../documentation/images/prompt-studio-0-47-codex-usage-dark.svg)
+![The Codex usage graph on Home](../../../../../documentation/images/prompt-studio-0-47-codex-usage-dark.svg)
 
 The Codex usage graph on Home. It records readings hourly, keeps eight days of history, and forecasts the current period.
 
@@ -29,9 +33,9 @@ The Codex usage graph on Home. It records readings hourly, keeps eight days of h
 
 Sessions and Workspaces are extensions you can open, disable, or replace. Workspaces groups your workspaces and their sessions, and lets you change this computer's active workspace limit.
 
-![Opening a session, returning to the project, and switching the Workspaces list between compact and grouped views](../../../../../../documentation/images/prompt-studio-0-47-sessions-light.gif)
+![Opening a session, returning to the project, and switching the Workspaces list between compact and grouped views](../../../../../documentation/images/prompt-studio-0-47-sessions-light.gif)
 
-![Opening a session, returning to the project, and switching the Workspaces list between compact and grouped views](../../../../../../documentation/images/prompt-studio-0-47-sessions-dark.gif)
+![Opening a session, returning to the project, and switching the Workspaces list between compact and grouped views](../../../../../documentation/images/prompt-studio-0-47-sessions-dark.gif)
 
 Open a session, return to the project, then switch how Workspaces groups its list.
 
@@ -45,9 +49,9 @@ Sessions keeps date groups and loads older conversations as you scroll. The comp
 
 Fork a conversation from any agent reply. The new session keeps the history through that reply, then waits for your next prompt while the source conversation keeps running.
 
-![Forking a conversation from an agent reply](../../../../../../documentation/images/prompt-studio-0-47-forks-light.gif)
+![Forking a conversation from an agent reply](../../../../../documentation/images/prompt-studio-0-47-forks-light.gif)
 
-![Forking a conversation from an agent reply](../../../../../../documentation/images/prompt-studio-0-47-forks-dark.gif)
+![Forking a conversation from an agent reply](../../../../../documentation/images/prompt-studio-0-47-forks-dark.gif)
 
 Hover an agent reply, choose the fork icon, and keep the history through that reply.
 
@@ -62,9 +66,9 @@ Forking needs a harness with native fork support. Drafts do not show Fork.
 
 Extensions now sits between Help and Settings, with Tool Case, fixed page headers, detail tabs, and nested navigation. Extension-owned SVG icons appear in the list, and searching a full extension ID finds it.
 
-![The Extensions page listing installed tools with search, versions, and enable switches](../../../../../../documentation/images/prompt-studio-0-47-extensions-light.svg)
+![The Extensions page listing installed tools with search, versions, and enable switches](../../../../../documentation/images/prompt-studio-0-47-extensions-light.svg)
 
-![The Extensions page listing installed tools with search, versions, and enable switches](../../../../../../documentation/images/prompt-studio-0-47-extensions-dark.svg)
+![The Extensions page listing installed tools with search, versions, and enable switches](../../../../../documentation/images/prompt-studio-0-47-extensions-dark.svg)
 
 Search by name or full ID, then open a tool's details.
 
@@ -122,7 +126,7 @@ await ctx.storage.log("runs").append({
 });
 ```
 
-See the [API 0.4 migration guidance](../../../../../../documentation/references/extensions/0014-api-versioning.md).
+See the [API 0.4 migration guidance](../../../../../documentation/references/extensions/0014-api-versioning.md).
 
 - Native chat, terminal, and workspace view bodies render in the host without an extension UI bundle.
 - A `projectSetup` view and `ctx.extensions` let an extension choose a new project's tools.
@@ -158,10 +162,10 @@ Tickets, sessions, and saves now do less repeated work.
 
 ## Release sources
 
-See the [0.47.0 release notes](https://github.com/pufflyai/prompt-studio/releases/tag/pstdio%400.47.0) and the changelogs at the [`a51e8ca3`](https://github.com/pufflyai/prompt-studio/tree/a51e8ca3d) commit.
+See the [0.47.0 release notes](https://github.com/pufflyai/prompt-studio/releases/tag/pstdio%400.47.0) and the changelogs at the [`pstdio@0.47.0`](https://github.com/pufflyai/prompt-studio/tree/pstdio%400.47.0) tag.
 
-- Workbench and tools: [Home](https://github.com/pufflyai/prompt-studio/blob/a51e8ca3d/extensions/pstdio-home/README.md), [Sessions](https://github.com/pufflyai/prompt-studio/blob/a51e8ca3d/extensions/pstdio-session-browser/README.md), [Workspaces](https://github.com/pufflyai/prompt-studio/blob/a51e8ca3d/extensions/pstdio-workspaces/extension.ts), [Extensions page](https://github.com/pufflyai/prompt-studio/blob/a51e8ca3d/packages/pstdio/CHANGELOG.md#0470).
-- Forks: [`pst sessions fork`](https://github.com/pufflyai/prompt-studio/blob/a51e8ca3d/documentation/references/cli/0006-sessions.md), [native chat views](https://github.com/pufflyai/prompt-studio/blob/a51e8ca3d/documentation/references/extensions/0028-native-chat.md).
-- Extension API: [API versioning](https://github.com/pufflyai/prompt-studio/blob/a51e8ca3d/documentation/references/extensions/0014-api-versioning.md), [storage](https://github.com/pufflyai/prompt-studio/blob/a51e8ca3d/documentation/references/sdk/0004-storage.md), [native terminals](https://github.com/pufflyai/prompt-studio/blob/a51e8ca3d/documentation/references/extensions/0022-terminal-sessions.md).
-- UI Canvas: [project builds](https://github.com/pufflyai/prompt-studio/blob/a51e8ca3d/extensions/canvas/README.md), [`@pstdio/canvas`](https://www.npmjs.com/package/@pstdio/canvas).
-- Extension changelogs: [Project Planner](https://github.com/pufflyai/prompt-studio/blob/a51e8ca3d/extensions/pstdio-planner/CHANGELOG.md#0470), [Notes](https://github.com/pufflyai/prompt-studio/blob/a51e8ca3d/extensions/pstdio-notes/CHANGELOG.md#0461), [Home](https://github.com/pufflyai/prompt-studio/blob/a51e8ca3d/extensions/pstdio-home/CHANGELOG.md#020), [Sessions](https://github.com/pufflyai/prompt-studio/blob/a51e8ca3d/extensions/pstdio-session-browser/CHANGELOG.md#020), [Workspaces](https://github.com/pufflyai/prompt-studio/blob/a51e8ca3d/extensions/pstdio-workspaces/CHANGELOG.md#020), [UI Canvas](https://github.com/pufflyai/prompt-studio/blob/a51e8ca3d/extensions/canvas/CHANGELOG.md#010).
+- Workbench and tools: [Home](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.47.0/extensions/pstdio-home/README.md), [Sessions](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.47.0/extensions/pstdio-session-browser/README.md), [Workspaces](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.47.0/extensions/pstdio-workspaces/extension.ts), [Extensions page](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.47.0/packages/pstdio/CHANGELOG.md#0470).
+- Forks: [`pst sessions fork`](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.47.0/documentation/references/cli/0006-sessions.md), [native chat views](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.47.0/documentation/references/extensions/0028-native-chat.md).
+- Extension API: [API versioning](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.47.0/documentation/references/extensions/0014-api-versioning.md), [storage](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.47.0/documentation/references/sdk/0004-storage.md), [native terminals](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.47.0/documentation/references/extensions/0022-terminal-sessions.md).
+- UI Canvas: [project builds](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.47.0/extensions/canvas/README.md), [`@pstdio/canvas`](https://www.npmjs.com/package/@pstdio/canvas).
+- Extension changelogs: [Project Planner](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.47.0/extensions/pstdio-planner/CHANGELOG.md#0470), [Notes](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.47.0/extensions/pstdio-notes/CHANGELOG.md#0461), [Home](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.47.0/extensions/pstdio-home/CHANGELOG.md#020), [Sessions](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.47.0/extensions/pstdio-session-browser/CHANGELOG.md#020), [Workspaces](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.47.0/extensions/pstdio-workspaces/CHANGELOG.md#020), [UI Canvas](https://github.com/pufflyai/prompt-studio/blob/pstdio%400.47.0/extensions/canvas/CHANGELOG.md#010).
