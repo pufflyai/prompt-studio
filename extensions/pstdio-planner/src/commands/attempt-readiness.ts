@@ -15,7 +15,16 @@ import { isLiveSession } from "./auto-build-sessions";
 
 type ReadinessContext = Pick<
   CommandContext,
-  "process" | "workspaces" | "sessions" | "settings" | "storage" | "logger" | "resources"
+  | "commands"
+  | "extensionId"
+  | "projectId"
+  | "process"
+  | "workspaces"
+  | "sessions"
+  | "settings"
+  | "storage"
+  | "logger"
+  | "resources"
 >;
 
 interface ReadinessParams {

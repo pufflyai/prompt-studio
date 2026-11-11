@@ -49,6 +49,7 @@
     "pstdio-planner": "workspace:*",
     "pstdio-skills": "workspace:*",
     "typescript": "6.0.2",
-    "workbench-fixture": "workspace:*"
+    "workbench-fixture": "workspace:*",
+    "github": "workspace:*"
   }
 }

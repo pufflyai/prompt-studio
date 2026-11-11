@@ -6,7 +6,10 @@ import { withWriteGuard } from "../data/write-guard";
 import { plannerTicketsChanged } from "../events";
 
 export const reorderTicket = async (
-  ctx: Pick<ExtensionContextBase, "events" | "storage" | "projectId" | "extensionId" | "resources" | "files">,
+  ctx: Pick<
+    ExtensionContextBase,
+    "events" | "storage" | "projectId" | "extensionId" | "resources" | "commands" | "extensionId" | "files"
+  >,
   input: { rowId: string; beforeRowId?: string },
 ) =>
   withWriteGuard(ctx, "ticket-order", async () => {

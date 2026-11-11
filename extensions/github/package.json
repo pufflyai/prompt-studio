@@ -1,0 +1,25 @@
+{
+  "name": "github",
+  "version": "0.1.0",
+  "displayName": "GitHub",
+  "description": "Reusable GitHub pull request resources.",
+  "publisher": "pstdio",
+  "main": "./extension.ts",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "pstdio": "^0.4.0"
+  },
+  "scripts": {
+    "test": "bun ../../scripts/ci/run-bun-tests.ts",
+    "typecheck": "bun check"
+  },
+  "dependencies": {
+    "@pstdio/sdk": "0.47.0-preview.sha-8184397490cfa0fa22d136b99ac75c708878512a"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.4",
+    "typescript": "6.0.2"
+  },
+  "icon": "Github"
+}

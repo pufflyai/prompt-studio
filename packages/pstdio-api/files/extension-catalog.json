@@ -269,6 +269,20 @@
       "default": false,
       "icon": "Cloud",
       "listed": false
+    },
+    {
+      "installName": "github",
+      "extensionId": "pstdio.github",
+      "displayName": "GitHub",
+      "description": "Reusable GitHub pull request resources.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/github",
+        "ref": "{hostRelease}"
+      },
+      "default": true,
+      "icon": "Github"
     }
   ]
 }

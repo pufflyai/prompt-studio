@@ -44,3 +44,9 @@ After a real committed change the host publishes `resource_anchor_events` with `
 External storage cannot share a host transaction. A racing link can outlive deletion. Owners and views must treat unresolved endpoints as unavailable, keep the stored ref visible, and permit removal. Disabling an owner preserves its edges.
 
 Reusable dashboard link controls and their command remain available for explicit view composition. Resource identity alone does not add an action to the shared header. View-owned ticket and session placements follow in a separate PR. See [ADR 0061](../../adrs/0061-project-resource-anchors.md) and the [PRD](../../requirements/platform/0006-resource-linking.md).
+
+## GitHub pull requests
+
+The [GitHub extension](../../../extensions/github/README.md) owns PR identities and fresh remote evidence. Planner links ticket resources to PRs through this service. Context links are reference material; result links can supply implementation evidence only when the submitted head and Git delivery destination match. Legacy PR links migrate into result relationships before their old representation is removed. Unavailable or partially migrated links cannot prove a delivery.
+
+Generic links have no chronological ordering. Planner matches new result links to the submitted revision and requires compatible merge evidence. Migrated links preserve their known original order in relationship metadata. No second PR-link collection is maintained.

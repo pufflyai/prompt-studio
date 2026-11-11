@@ -19,6 +19,7 @@ describe("resolveDefaultExtensionsConfig", () => {
       "pstdio-onboarding",
       "pstdio-base-themes",
       "pstdio-skills",
+      "github",
     ]);
   });
 
@@ -279,6 +280,7 @@ describe("installDefaultExtensions sources", () => {
       "pstdio-onboarding",
       "pstdio-base-themes",
       "pstdio-skills",
+      "github",
     ]);
     expect(
       calls.every(

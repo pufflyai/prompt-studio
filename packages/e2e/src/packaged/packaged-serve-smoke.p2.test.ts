@@ -40,6 +40,7 @@ import { expectPackagedNativeMarkdown, writeNativeMarkdownExtension } from "./pa
 // The Markdown fixture resolves/projects a registered source and uses the public SDK session through authenticated agent admission, preserving front matter and one Yjs runtime. Native observations share that client event stream and cancel without stopping the editor.
 // packaged-extension-install-smoke.p1.test.ts checks every replacement webview and preserves the working install if one fails.
 // packaged-canvas-install.p2.test.ts checks optional Canvas assets, previews, themes, and the current source skill without local build fingerprints.
+// packaged-github-resources.p1.test.ts checks GitHub PR import, shared linking and opening through the compiled host.
 // packaged-showcase-smoke.p2.test.ts checks shipped proposal, refinement, and child-ticket skills and proposal design templates against source assets.
 // Catalog IDs and extension icons remain available through the compiled host.
 // Navigation metadata preserves tabless pages, panel views, slot replacements, caller-relative handoff,

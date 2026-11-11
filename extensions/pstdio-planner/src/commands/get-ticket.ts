@@ -1,4 +1,5 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
+import { migratePullRequestLinks } from "../data/pull-request-resources";
 import { findTickets } from "../data/resolve";
 import { withTicketTagIds } from "../data/ticket-tags";
 
@@ -8,6 +9,8 @@ export const getTicketCommand = defineCommand({
   cli: { globalAliases: [["tickets", "panel"]], examples: ["pstdio tickets panel --id PS-1"] },
   params: { id: params.text({ required: true }) },
   async run(ctx, commandParams) {
+    const tickets = await findTickets(ctx, commandParams.id);
+    for (const ticket of tickets) await migratePullRequestLinks(ctx, ticket);
     const matches = (await findTickets(ctx, commandParams.id)).map(withTicketTagIds);
     return matches.length > 1 ? matches : (matches[0] ?? null);
   },
