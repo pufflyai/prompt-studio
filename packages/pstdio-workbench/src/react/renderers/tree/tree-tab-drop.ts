@@ -1,17 +1,57 @@
+import type { PageRef } from "@pstdio/sdk/extensions";
 import type { TreeListNode } from "@pstdio/ui";
-import type { NavigationTarget, WorkbenchCore, WorkbenchPanelRegion } from "../../../core";
+import type { NavigationTarget, NavigationTargetPanel, WorkbenchCore, WorkbenchPanelRegion } from "../../../core";
 import { openDroppedPage, panelResourcePageTarget } from "../../../core/controllers/composition/panel-page-drop";
+import { replacedPageSlot } from "../../../core/registries/modes/placement-replacement";
+import { pageSlots } from "../../../core/registries/pages/page-main";
 import { reportUserActionError } from "../../../core/shared/run-user-action";
 
+const findPage = (workbench: WorkbenchCore, ref: PageRef) =>
+  workbench.pages.listPages().find((page) => page.ref.id === ref.id && page.ref.extensionId === ref.extensionId);
+
+const panelItem = (workbench: WorkbenchCore, panel: NavigationTargetPanel["panel"]) => {
+  if (panel.kind === "shell-placement") return workbench.shellPlacements.getPlacement(panel.id)?.item;
+  if (panel.kind === "placement") return workbench.modePlacements.getPlacement(panel)?.item;
+  const page = findPage(workbench, panel.page);
+  return (
+    replacedPageSlot(workbench.modePlacements, panel)?.item ??
+    (page && pageSlots(page).find((slot) => slot.id === panel.id)?.item)
+  );
+};
+const panelAcceptsPin = (workbench: WorkbenchCore, panel: NavigationTargetPanel["panel"]) => {
+  const item = panelItem(workbench, panel);
+  return item?.kind === "binding" && item.binding.cardinality === "many";
+};
+
 export const treeTabTarget = (workbench: WorkbenchCore, target: NavigationTarget, region: WorkbenchPanelRegion) => {
-  if (target.kind === "panel") return { ...target, region, open: "pin" as const };
+  if (target.kind === "panel") {
+    const { open: _open, ...panel } = target;
+    return {
+      ...panel,
+      region,
+      ...(target.resource && panelAcceptsPin(workbench, target.panel) ? { open: "pin" as const } : {}),
+    };
+  }
   if (target.kind !== "page") return;
-  if (region === "main") return { ...target, open: "pin" as const };
-  const page = workbench.pages
-    .listPages()
-    .find((page) => page.ref.id === target.page.id && page.ref.extensionId === target.page.extensionId);
+  const page = findPage(workbench, target.page);
+  if (region === "main") {
+    const { open: _open, ...destination } = target;
+    const acceptsPin =
+      page?.main.kind === "view"
+        ? page.main.cardinality === "many"
+        : page?.main.kind === "panels" &&
+          typeof page.main.landing === "object" &&
+          panelAcceptsPin(workbench, page.main.landing);
+    return { ...destination, ...(target.resource && acceptsPin ? { open: "pin" as const } : {}) };
+  }
   if (!page?.panelView) return;
-  return { kind: "panel" as const, panel: page.panelView, resource: target.resource, region, open: "pin" as const };
+  return {
+    kind: "panel" as const,
+    panel: page.panelView,
+    resource: target.resource,
+    region,
+    ...(target.resource && panelAcceptsPin(workbench, page.panelView) ? { open: "pin" as const } : {}),
+  };
 };
 
 export const treePageTarget = (workbench: WorkbenchCore, intent: NavigationTarget) => {
@@ -45,9 +85,9 @@ export const createTreeTabDropHandler =
     if (node.navigationIntent?.id !== "target") return true;
     const target = treeTabTarget(workbench, node.navigationIntent.payload as NavigationTarget, region);
     if (target)
-      void workbench.navigation
-        .openTarget(target)
-        .catch((error) => reportUserActionError(workbench, "Open tab", error));
+      void (
+        target.kind === "page" ? openDroppedPage(workbench, target) : workbench.navigation.openTarget(target)
+      ).catch((error) => reportUserActionError(workbench, "Open tab", error));
     else
       workbench.notifications.show({
         level: "info",

@@ -104,3 +104,22 @@ test("page and panel resource rows dropped onto tabless Main open their resource
     ).toHaveCount(0);
   }
 });
+
+// Critical: a tab strip must accept static and single-resource page entries without invalid pin intents.
+test("Main tab headers open static and single-resource pages from navigation", async ({ page }) => {
+  const preview = await openCanvasPreview(page, source);
+  for (const label of ["Notes", "Sessions"]) {
+    await preview.getByRole("option", { name: "Files", exact: true }).click();
+    const header = preview.locator('[data-workbench-panel-header="main"]');
+    await expect(header).toBeVisible();
+    const from = (await preview.getByRole("option", { name: label, exact: true }).boundingBox())!;
+    const to = (await header.boundingBox())!;
+    await page.mouse.move(from.x + 25, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 12 });
+    await page.mouse.up();
+    const main = preview.locator('[data-workbench-panel="main"]');
+    if (label === "Notes") await expect(main.locator('[contenteditable="true"]')).toBeVisible();
+    else await expect(main.getByTestId("session-content")).toHaveText("Review session");
+  }
+});

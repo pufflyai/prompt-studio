@@ -90,6 +90,21 @@ const SessionNavigation = () => {
         },
         slots: [],
       });
+    w.views.registerView({
+      id: "files",
+      title: "Files",
+      body: { kind: "react", render: () => <Text p="md">Workspace files</Text> },
+    });
+    w.pages.registerPage({
+      id: "files",
+      ref: page("files"),
+      path: "files",
+      modeId: "project",
+      parentId: "home",
+      resource: { kinds: [{ kind: "resource-kind", extensionId: "preview", id: "file" }] },
+      main: { kind: "view", view: { kind: "view", id: "files" }, cardinality: "many", presentation: "tabs" },
+      slots: [],
+    });
     w.commands.registerCommand(
       { id: "new-session", label: "New session" },
       {
@@ -123,6 +138,16 @@ const SessionNavigation = () => {
               },
               { id: "notes", label: "Notes", canHide: true, target: { kind: "page", page: page("notes") } },
               { id: "tickets", label: "Tickets", canHide: true, target: { kind: "page", page: page("tickets") } },
+              {
+                id: "files",
+                label: "Files",
+                canHide: true,
+                target: {
+                  kind: "page",
+                  page: page("files"),
+                  resource: { type: "file", id: "readme", extensionId: "preview", label: "README" },
+                },
+              },
               {
                 id: "linked-session",
                 label: "Linked session",
