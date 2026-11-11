@@ -1,5 +1,5 @@
 import { lstat, rm } from "node:fs/promises";
-import { runTestCommand } from "./run-test-command";
+import { runTestCommand } from "../scripts/run-test-command";
 
 // Reuse the desktop fixtures' Node native traversal from Bun-run packaged tests,
 // with one deletion task at a time and complete removal inside the case.

@@ -7,9 +7,9 @@ import { basename, join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
 import { startLocalWorkspaceRegistry } from "../local-workspace-registry";
-import { removeTestDirectory } from "../scripts/remove-test-directory";
 import { preparePackagedExtensionSource } from "./packaged-extension-source";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+import { removeTestDirectory } from "./remove-test-directory";
 
 // Keep the existing allowance for cold core-extension installation on Intel macOS.
 export const CORE_EXTENSIONS_SMOKE_TEST_TIMEOUT = 120_000;

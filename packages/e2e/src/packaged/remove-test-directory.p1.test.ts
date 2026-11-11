@@ -4,8 +4,8 @@ import { once } from "node:events";
 import { chmod, link, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { stopChildProcess } from "./child-process";
-import { registerPendingTestProcess } from "./pending-test-processes";
+import { stopChildProcess } from "../scripts/child-process";
+import { registerPendingTestProcess } from "../scripts/pending-test-processes";
 import { removeTestDirectory } from "./remove-test-directory";
 
 test("removes its owned tree without following directory links or deleting external hardlinks", async () => {
