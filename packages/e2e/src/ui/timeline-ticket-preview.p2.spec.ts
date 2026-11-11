@@ -83,7 +83,7 @@ test("timeline tickets keep their preview while the attention bubble opens and r
     const timelinePath = `/projects/${id}/extensions/pstdio.pstdio-planner/ticket-timeline`;
     await page.goto(timelinePath);
     const timeline = page.frameLocator('iframe[title="Project Timeline"]');
-    await timeline.locator(`[data-ticket="${ticket.id}"]`).click();
+    await timeline.locator(`[data-ticket="${ticket.id}"]`).getByText(ticket.title, { exact: true }).click();
     const side = page.locator('[data-workbench-panel="side"]');
     await expect(side.getByRole("textbox")).toContainText("Ticket awaiting input");
     const card = timeline.locator(`[data-ticket="${ticket.id}"]`);
