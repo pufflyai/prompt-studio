@@ -1190,6 +1190,9 @@
       },
     },
   },
+  "patchedDependencies": {
+    "use-stick-to-bottom@1.1.3": "patches/use-stick-to-bottom@1.1.3.patch",
+  },
   "overrides": {
     "@electron/node-gyp": "10.2.0-electron.2",
     "katex": "^0.19.0",
