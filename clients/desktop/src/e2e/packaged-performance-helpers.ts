@@ -33,7 +33,7 @@ export const launchProject = async (
   const app = await launchPackagedApp(home, {
     PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
       defaultExtensions: [
-        ...(options.harness ? [{ source: fixturePath, installName: "workbench-fixture" }] : []),
+        ...(options.harness ? [benchmarkExtension("workbench-fixture", fixturePath)] : []),
         ...(options.webview
           ? [{ source: join(fixturePath, "fixtures/webview-host"), installName: "webview-host" }]
           : []),
