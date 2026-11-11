@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { randomUUID } from "node:crypto";
-import { mkdtemp, rm } from "node:fs/promises";
+import { appendFile, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -24,6 +24,14 @@ const args = [
   "-e",
 ];
 const run = async (command: string[]) => {
+  if (command[0] === "docker" && command[1] === "run" && process.env.PSTDIO_LOCAL_REVIEW_COMPOSE_MANIFEST) {
+    let name = command[command.indexOf("--name") + 1];
+    if (!command.includes("--name")) {
+      name = `${owner}-${randomUUID()}`;
+      command = [...command.slice(0, 2), "--name", name, ...command.slice(2)];
+    }
+    await appendFile(process.env.PSTDIO_LOCAL_REVIEW_COMPOSE_MANIFEST, `${JSON.stringify({ container: name })}\n`);
+  }
   const p = Bun.spawn(command, { stdout: "pipe", stderr: "pipe" });
   const [output, error] = await Promise.all([new Response(p.stdout).text(), new Response(p.stderr).text()]);
   return { code: await p.exited, output, error };

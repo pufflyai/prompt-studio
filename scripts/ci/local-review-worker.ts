@@ -72,7 +72,7 @@ export const executeLocalReview = async (root: string, base: string, tests: stri
     // Builds finish before any consumer checks can read declarations or runtime assets.
     const built = await runSequence(plan.setup, run, controller.signal, true);
     await runSequence(existingStaticChecks(plan.staticChecks, plan.changed, root), run, controller.signal);
-    if (built) await runSequence([...plan.packageChecks, ...plan.runs], run, controller.signal);
+    if (built) await runSequence([...plan.packageChecks, ...plan.runs, ...plan.queueChecks], run, controller.signal);
     const passed = !controller.signal.aborted && built && results.every((entry) => entry.outcome === "success");
     outcome = passed ? "passed" : "failed";
     return passed ? 0 : 1;

@@ -1,6 +1,7 @@
 import { affectedPackages } from "./ci-packages";
 import { createPriorityPlan } from "./priority-plan";
 import { priorityPlanSetup } from "./priority-plan-setup";
+import { queueReviewPlan } from "./queue-review-plan";
 import { priorityFromFile, testPriorities, testRunner } from "./test-discovery";
 
 type Package = Parameters<typeof createPriorityPlan>[1][number];
@@ -14,9 +15,6 @@ interface Input {
 const documentation = (file: string) =>
   /\.(md|mdx|txt)$/.test(file) || file.startsWith("design/") || file === "LICENSE";
 const localRunners = new Set(["bun", "api", "cli", "browser-helper", "app"]);
-const startupSmoke = "packages/e2e/src/ui/startup.p1.spec.ts";
-const appComposition = (file: string) =>
-  /^packages\/(pstdio|pstdio-api|pstdio-dashboard|pstdio-extensions|pstdio-workbench)\//.test(file);
 const sharedInput = (file: string, packages: Package[]) =>
   !packages.some((pkg) => file.startsWith(`${pkg.dir}/`)) ||
   file.startsWith("scripts/build/") ||
@@ -24,10 +22,9 @@ const sharedInput = (file: string, packages: Package[]) =>
   file === "scripts/release/stage-package.ts" ||
   (file.startsWith("scripts/ci/") && !priorityFromFile(file));
 
-const selectionReason = (explicit: boolean, edited: boolean, smoke: boolean, priority: string | undefined) => {
+const selectionReason = (explicit: boolean, edited: boolean, priority: string | undefined) => {
   if (explicit) return "explicit behavior coverage";
   if (edited) return "added or edited test";
-  if (smoke) return "app composition";
   if (priority === "P0") return "affected P0";
   if (priority === "P1") return "affected P1 contract";
   return "affected extended coverage";
@@ -40,9 +37,9 @@ const deferredEvidence = (edited: boolean, priority: string | undefined) => {
 
 const selectTests = (
   { packages, tests, changed, additionalTests = [] }: Input,
-  code: string[],
   shared: boolean,
   affectedOwners: string[],
+  mandatory: Set<string>,
 ) => {
   const selected: { file: string; reason: string }[] = [];
   const deferred: { file: string; reason: string; evidence: string }[] = [];
@@ -52,16 +49,16 @@ const selectTests = (
     const priority = priorityFromFile(file);
     const edited = changed.includes(file);
     const explicit = additionalTests.includes(file);
-    const smoke = file === startupSmoke && code.some(appComposition);
-    if (!edited && !explicit && !smoke && !affected) continue;
+    if (!edited && !explicit && !affected && !mandatory.has(file)) continue;
     const runner = testRunner(file);
-    const reason = selectionReason(explicit, edited, smoke, priority);
+    const reason = mandatory.has(file) ? "merge queue minimum" : selectionReason(explicit, edited, priority);
     // Keep complete heavy workloads on isolated CI hosts; never shorten benchmarks.
     const remote =
-      priority === "P3" ||
-      (!edited && !explicit && priority === "P2") ||
-      !localRunners.has(runner) ||
-      (runner === "app" && !edited && !explicit && !smoke);
+      !mandatory.has(file) &&
+      (priority === "P3" ||
+        (!edited && !explicit && priority === "P2") ||
+        !localRunners.has(runner) ||
+        (runner === "app" && !edited && !explicit));
     if (remote) deferred.push({ file, reason, evidence: deferredEvidence(edited, priority) });
     else selected.push({ file, reason });
   }
@@ -70,23 +67,24 @@ const selectTests = (
 
 export const createLocalReviewPlan = ({ packages, tests, changed, additionalTests = [] }: Input) => {
   for (const file of additionalTests) if (!tests.includes(file)) throw new Error(`Unknown test: ${file}`);
+  const queue = queueReviewPlan(packages, tests, changed);
   const code = changed.filter((file) => !documentation(file));
   const shared = code.some((file) => sharedInput(file, packages));
   const affectedOwners = shared ? packages.map((pkg) => pkg.name) : affectedPackages(packages, code);
   const { selected, deferred } = selectTests(
     { packages, tests, changed, additionalTests },
-    code,
     shared,
     affectedOwners,
+    new Set([...queue.files, ...queue.smokeFiles]),
   );
   const runs = testPriorities.flatMap((priority) =>
     createPriorityPlan(
-      selected.map((entry) => entry.file),
+      selected.map((entry) => entry.file).filter((file) => !queue.smokeFiles.includes(file)),
       packages,
       priority,
     ),
   );
-  const checkOwners = packages.filter((pkg) => affectedOwners.includes(pkg.name));
+  const checkOwners = packages.filter((pkg) => queue.owners.includes(pkg.name) || affectedOwners.includes(pkg.name));
   const packageChecks = checkOwners.flatMap((pkg) => {
     const script = pkg.scripts.lint ? "lint" : "typecheck";
     return pkg.scripts[script] ? [{ id: `${pkg.name}:${script}`, cwd: pkg.dir, command: ["bun", "run", script] }] : [];
@@ -110,6 +108,9 @@ export const createLocalReviewPlan = ({ packages, tests, changed, additionalTest
   } else if (build) {
     for (const pkg of checkOwners) if (!build.command.includes(pkg.name)) build.command.push("--scope", pkg.name);
   }
+  const buildCheck = setup.find((check) => check.id === "build-test-dependencies");
+  for (const owner of queue.browserOwners)
+    if (buildCheck && !buildCheck.command.includes(owner)) buildCheck.command.push("--scope", owner);
   for (const check of setup) check.command.push("--concurrency", "1");
   const staticChecks = [
     {
@@ -132,5 +133,16 @@ export const createLocalReviewPlan = ({ packages, tests, changed, additionalTest
       { id: "sdk-reference", cwd: ".", command: ["bun", "run", "--cwd", "scripts", "verify:sdk-reference"] },
       { id: "extension-api-version", cwd: ".", command: ["bun", "run", "verify:extension-api-version"] },
     );
-  return { affectedOwners, changed, selected, deferred, runs, setup, packageChecks, staticChecks };
+  return {
+    affectedOwners,
+    changed,
+    selected,
+    deferred,
+    runs,
+    setup,
+    packageChecks,
+    staticChecks,
+    queueFiles: queue.files,
+    queueChecks: queue.smoke,
+  };
 };

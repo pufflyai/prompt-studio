@@ -46,6 +46,7 @@
     "pstdio-benchmarks": "workspace:*"
   },
   "exports": {
-    "./test-quarantine": "./ci/test-quarantine.ts"
+    "./test-quarantine": "./ci/test-quarantine.ts",
+    "./browser-smoke-selection": "./ci/browser-smoke-selection.ts"
   }
 }

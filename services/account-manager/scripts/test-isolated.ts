@@ -1,11 +1,12 @@
 import { statSync } from "node:fs";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { appendFile, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 const root = resolve(import.meta.dir, "../../..");
 const directory = await mkdtemp(join(tmpdir(), "manager-authority-"));
 const file = join(directory, "compose.json");
+const manifest = process.env.PSTDIO_LOCAL_REVIEW_COMPOSE_MANIFEST;
 const project = `manager-authority-${crypto.randomUUID()}`;
 const requested = process.argv.slice(2);
 const priorities = (process.env.TEST_PRIORITIES ?? "P0,P1,P2").split(",");
@@ -71,12 +72,16 @@ const config = {
     },
   },
   networks: {
-    default: { internal: true, ipam: { config: [{ subnet: process.env.MANAGER_TEST_SUBNET ?? "10.254.234.0/24" }] } },
+    default: {
+      internal: true,
+      ...(process.env.MANAGER_TEST_SUBNET ? { ipam: { config: [{ subnet: process.env.MANAGER_TEST_SUBNET }] } } : {}),
+    },
   },
 };
 console.log(`Isolated manager stack: ${project}`);
 try {
   await writeFile(file, JSON.stringify(config));
+  if (manifest) await appendFile(manifest, `${JSON.stringify({ project, file })}\n`);
   await compose("up", "-d", "database");
   await compose("run", "--rm", "tester");
   await compose("build", "smoke");
@@ -86,6 +91,6 @@ try {
   try {
     await compose("down", "--volumes", "--remove-orphans");
   } finally {
-    await rm(directory, { recursive: true, force: true });
+    if (!manifest) await rm(directory, { recursive: true, force: true });
   }
 }

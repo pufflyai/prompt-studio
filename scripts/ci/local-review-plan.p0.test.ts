@@ -5,7 +5,7 @@ const packages: Parameters<typeof createLocalReviewPlan>[0]["packages"] = [
   { name: "producer", dir: "packages/producer", dependencies: [], scripts: { lint: "bun check" } },
   { name: "consumer", dir: "extensions/consumer", dependencies: ["producer"], scripts: { typecheck: "bun check" } },
   { name: "other", dir: "packages/other", dependencies: [], scripts: {} },
-  { name: "e2e", dir: "packages/e2e", dependencies: ["producer"], scripts: {} },
+  { name: "e2e", dir: "packages/e2e", dependencies: ["producer"], scripts: { "test:smoke": "bun smoke.ts" } },
 ];
 const tests = [
   "packages/producer/src/rule.p0.test.ts",
@@ -19,11 +19,11 @@ const tests = [
 const plan = (changed: string[], additionalTests: string[] = []) =>
   createLocalReviewPlan({ packages, tests, changed, additionalTests });
 
-test("covers changed producers and dependent source contracts without unrelated owners", () => {
+test("always covers queue contracts, including unchanged owners", () => {
   const result = plan(["packages/producer/src/rule.ts"]);
-  expect(result.selected.map((entry) => entry.file)).toEqual(tests.slice(0, 3));
+  expect(result.selected.map((entry) => entry.file)).toEqual(tests.slice(0, 5));
   expect(result.packageChecks.map((check) => check.id)).toEqual(["producer:lint", "consumer:typecheck"]);
-  expect(result.deferred.some((entry) => entry.file === tests[4])).toBe(true);
+  expect(result.queueChecks[0]?.command).toEqual(["bun", "run", "test:smoke"]);
 });
 
 test("helper changes select consuming behavior tests even when no test was edited", () => {
@@ -47,11 +47,11 @@ test("benchmarks stay complete in CI and never masquerade as local passes", () =
   expect(result.deferred).toContainEqual(expect.objectContaining({ file: tests[6], evidence: "edited_tests" }));
 });
 
-test("documentation selects only documentation checks", () => {
+test("invoking review for documentation still preserves the queue baseline", () => {
   const result = plan(["documentation/guidance/0005-testing.md"]);
-  expect(result.selected).toEqual([]);
-  expect(result.packageChecks).toEqual([]);
-  expect(result.setup).toEqual([]);
+  expect(result.selected.map((entry) => entry.file)).toEqual(tests.slice(0, 5));
+  expect(result.packageChecks.map((check) => check.id)).toEqual(["producer:lint", "consumer:typecheck"]);
+  expect(result.setup.length).toBeGreaterThan(0);
   expect(result.staticChecks.map((check) => check.id)).toEqual(["docs-links"]);
 });
 
@@ -61,7 +61,10 @@ test("root inputs select all owners and deleted files still select their former 
 });
 
 test("explicit behavior selection is additive and rejects missing tests", () => {
-  expect(plan(["documentation/example.md"], [tests[5]!]).selected.map((entry) => entry.file)).toEqual([tests[5]!]);
+  expect(plan(["documentation/example.md"], [tests[5]!]).selected.map((entry) => entry.file)).toEqual([
+    ...tests.slice(0, 5),
+    tests[5]!,
+  ]);
   expect(() => plan([], ["does-not-exist.p1.test.ts"])).toThrow("Unknown test");
 });
 
@@ -85,4 +88,35 @@ test("global preload and test runners cover every consumer without manifest depe
   for (const file of ["scripts/test-setup.ts", "scripts/ci/run-bun-tests.ts", "scripts/release/stage-package.ts"]) {
     expect(plan([file]).selected.map((entry) => entry.file)).toContain(tests[3]);
   }
+});
+
+test("queue API, database, repository and service tests cannot be deferred by a narrow change", () => {
+  const queuePackages = [
+    ...packages,
+    { name: "pstdio-api", dir: "packages/pstdio-api", dependencies: [], scripts: {} },
+    { name: "pstdio-db", dir: "packages/pstdio-db", dependencies: [], scripts: {} },
+    { name: "manager", dir: "services/manager", dependencies: [], scripts: { "test:integration": "bun isolated.ts" } },
+  ];
+  const queueFiles = [
+    "root.p0.test.ts",
+    "packages/pstdio-api/src/auth.p1.test.ts",
+    "packages/pstdio-db/src/data.p1.test.ts",
+    "services/manager/src/authority.p1.integration.ts",
+  ];
+  const result = createLocalReviewPlan({
+    packages: queuePackages,
+    tests: [...tests, ...queueFiles],
+    changed: ["packages/other/src/change.ts"],
+  });
+  for (const file of queueFiles) {
+    expect(result.selected.some((entry) => entry.file === file)).toBe(true);
+    expect(result.runs.some((run) => run.files.includes(file))).toBe(true);
+    expect(result.deferred.some((entry) => entry.file === file)).toBe(false);
+  }
+  expect(result.runs.find((run) => run.runner === "integration")?.command).toEqual([
+    "bun",
+    "run",
+    "test:integration",
+    "src/authority.p1.integration.ts",
+  ]);
 });

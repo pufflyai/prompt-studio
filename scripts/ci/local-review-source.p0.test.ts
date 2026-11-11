@@ -14,6 +14,11 @@ test("selection uses the entire branch diff, including deleted files and earlier
     git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.test", "commit", "-qm", "fixture");
   };
   try {
+    mkdirSync(join(root, "packages/e2e"), { recursive: true });
+    writeFileSync(
+      join(root, "packages/e2e/package.json"),
+      JSON.stringify({ name: "e2e", scripts: { "test:smoke": "bun smoke.ts" } }),
+    );
     mkdirSync(join(root, "packages/example/src"), { recursive: true });
     writeFileSync(join(root, "package.json"), JSON.stringify({ workspaces: ["packages/*"] }));
     writeFileSync(join(root, "packages/example/package.json"), JSON.stringify({ name: "example" }));

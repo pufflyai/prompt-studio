@@ -30,9 +30,14 @@ export const localReviewEnvironment = (root: string, env: NodeJS.ProcessEnv = pr
     ...Object.fromEntries(
       Object.entries(env).map(([key, value]) => [
         key,
-        /^(PSTDIO_|E2E_|CI$|CI_|GITHUB_|GIT_|TEST_PRIORITIES$|BUN_TEST_|API_TEST_|NX_)/.test(key) ? undefined : value,
+        /^(PSTDIO_|E2E_|CI$|CI_|GITHUB_|GIT_|TEST_PRIORITIES$|BUN_TEST_|API_TEST_|MANAGER_TEST_|SYNC_TEST_|RELAY_TEST_|COMPOSE_PROJECT_NAME$|NX_)/.test(
+          key,
+        )
+          ? undefined
+          : value,
       ]),
     ),
+    PSTDIO_LOCAL_REVIEW_COMPOSE_MANIFEST: join(root, "compose-projects.jsonl"),
     PSTDIO_HOME: join(root, "runtime-home"),
     BUN_INSTALL_CACHE_DIR: join(root, "bun-cache"),
     NX_DAEMON: "false",

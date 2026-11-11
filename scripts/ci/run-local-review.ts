@@ -1,6 +1,7 @@
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
+import { cleanupReviewCompose } from "./local-review-compose";
 import { localReviewEnvironment, readReviewSource } from "./local-review-source";
 import { runCiChecks } from "./run-ci-checks";
 
@@ -34,6 +35,7 @@ export const runLocalReview = async (root: string, base: string, additionalTests
   const phases: { id: string; elapsedMs: number; outcome: string; results: unknown; command: string[] }[] = [];
   let error: string | undefined;
   let complete = false;
+  let composeCleanup: Awaited<ReturnType<typeof cleanupReviewCompose>> = [];
   const env = { ...localReviewEnvironment(directory), BUN_FEATURE_FLAG_NO_ORPHANS: "1" };
   const run = async (id: string, command: string[], cwd: string) => {
     const phaseStart = Date.now();
@@ -73,6 +75,7 @@ export const runLocalReview = async (root: string, base: string, additionalTests
           source: checkout,
           plan: source.plan,
           phases,
+          composeCleanup,
           requiredCi:
             "Latest-head ci_passed, plus evidence for every deferred check; local_passed is not review-ready by itself.",
         },
@@ -106,6 +109,17 @@ export const runLocalReview = async (root: string, base: string, additionalTests
     error = String(caught);
     console.error(error);
   } finally {
+    try {
+      composeCleanup = await cleanupReviewCompose(directory);
+      if (composeCleanup.some((entry) => entry.outcome !== "success")) {
+        complete = false;
+        error = "Owned Compose cleanup failed";
+      }
+    } catch (caught) {
+      complete = false;
+      error = String(caught);
+      console.error(error);
+    }
     clearTimeout(timer);
     process.off("SIGINT", interrupt);
     process.off("SIGTERM", interrupt);

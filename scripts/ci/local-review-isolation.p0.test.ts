@@ -32,7 +32,15 @@ const fixture = () => {
     recursive: true,
     filter: (path) => !path.endsWith(".test.ts"),
   });
-  writeFileSync(join(root, "package.json"), JSON.stringify({ workspaces: ["packages/*"] }));
+  mkdirSync(join(root, "packages/e2e"), { recursive: true });
+  writeFileSync(
+    join(root, "packages/e2e/package.json"),
+    JSON.stringify({ name: "e2e", scripts: { "test:smoke": 'bun -e "console.log(123)"' } }),
+  );
+  writeFileSync(
+    join(root, "package.json"),
+    JSON.stringify({ workspaces: ["packages/*"], scripts: { build: 'bun -e "console.log(123)"' } }),
+  );
   writeFileSync(join(root, ".gitignore"), "test-results\nnode_modules\nbun.lock\n");
   git("init", "-q");
   commit();
@@ -52,7 +60,7 @@ test("a clean workspace prints a review plan before any dependency installation"
     const plan = JSON.parse(output);
     expect(plan.changed).toEqual(["README.md"]);
     expect(plan.selected).toEqual([]);
-    expect(plan.setup).toEqual([]);
+    expect(plan.queueChecks[0].command).toEqual(["bun", "run", "test:smoke"]);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -81,7 +89,10 @@ test("two over-target review runs finish with private checkouts, dependencies, h
       benchmarkPath,
       JSON.stringify({ name: benchmark.name, type: benchmark.type, exports: benchmark.exports, main: benchmark.main }),
     );
-    writeFileSync(join(root, "package.json"), JSON.stringify({ workspaces: ["packages/*", "scripts"] }));
+    writeFileSync(
+      join(root, "package.json"),
+      JSON.stringify({ workspaces: ["packages/*", "scripts"], scripts: { build: 'bun -e "console.log(123)"' } }),
+    );
     writeFileSync(
       join(root, "scripts/package.json"),
       JSON.stringify({ name: "pstdio-scripts", scripts: { "verify:docs-links": "bun fixture-check.ts" } }),
