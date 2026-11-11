@@ -1,0 +1,30 @@
+name: Configure signed Ubuntu archive mirrors
+description: Keep Ubuntu package installs available during the Canonical DNS outage.
+runs:
+  using: composite
+  steps:
+    - name: Select the archive mirror for the runner architecture
+      if: runner.os == 'Linux'
+      shell: bash
+      # ADR 0144: change endpoints only; preserve suites, components and archive keys.
+      run: |
+        set -euo pipefail
+        archive=https://mirrors.edge.kernel.org/ubuntu/
+        ports=https://mirrors.mit.edu/ubuntu-ports/
+        if [ -f /etc/apt/apt-mirrors.txt ]; then
+          mirror="$archive"
+          if [ "$(dpkg --print-architecture)" != amd64 ]; then mirror="$ports"; fi
+          printf '%s\n' "$mirror" | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
+        fi
+        files=()
+        if [ -f /etc/apt/sources.list ]; then files+=(/etc/apt/sources.list); fi
+        while IFS= read -r -d '' file; do files+=("$file"); done < <(
+          find /etc/apt/sources.list.d -type f \( -name '*.list' -o -name '*.sources' \) -print0
+        )
+        if [ "${#files[@]}" -gt 0 ]; then
+          sudo sed -i -E \
+            -e "s@https?://([a-z0-9-]+\\.)*archive\\.ubuntu\\.com/ubuntu/?@$archive@g" \
+            -e "s@https?://security\\.ubuntu\\.com/ubuntu/?@$archive@g" \
+            -e "s@https?://ports\\.ubuntu\\.com/ubuntu-ports/?@$ports@g" \
+            "${files[@]}"
+        fi
