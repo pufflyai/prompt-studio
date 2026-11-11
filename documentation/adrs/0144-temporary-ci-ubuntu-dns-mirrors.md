@@ -20,6 +20,8 @@ Replace Ubuntu archive/security endpoints with the [Linux Kernel Archives mirror
 
 This supersedes ADR 0134's Azure-only mirror removal for ephemeral Linux CI runners. Product code and local development do not change. ARM64 mirror qualification and the actual previously blocked checks remain required; a mirror metadata probe alone is insufficient.
 
+Run mirror setup only for the host cache profile. Playwright container jobs use preinstalled system dependencies and run as user 1001 without `sudo`; they neither need nor can perform APT source changes. Merge group [43057942086](https://github.com/pufflyai/prompt-studio/actions/runs/43057942086) failed browser setup on `sudo: command not found`, which stopped the peer database and integration jobs before they completed. Running the action locally as user 1001 reproduces exit 127, including after the root-container adjustment.
+
 ## Removal
 
 Restore the Ubuntu archive/security/ports endpoints once Canonical resolves the outage and a first-attempt failing-scope prerequisite qualification succeeds through those endpoints. Restore ADR 0134's Azure exclusion in shared setup; Azure-first behavior requires that ADR's independent removal condition. Remove the DNS workaround action and all call sites together; retain the failure and recovery evidence. No repeated product tests, retries or increased allowances are authorized by this workaround.

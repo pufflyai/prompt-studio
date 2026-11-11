@@ -21,6 +21,8 @@ runs:
         sudo mdutil -a -i off
         mdutil -a -s
     - name: Configure signed Ubuntu archive mirrors
+      # Playwright images already contain system dependencies and run without sudo.
+      if: inputs.profile != 'playwright'
       uses: ./.github/actions/setup-ubuntu-mirrors
     - name: Locate the Bun download cache
       id: bun_cache
@@ -51,7 +53,8 @@ runs:
       uses: actions/cache/restore@v4
       with:
         path: .cache/ci-build
-        key: nx-${{ runner.os }}-${{ runner.arch }}-${{ inputs.profile }}-${{ hashFiles('bun.lock', 'package.json', 'nx.json') }}-${{ github.sha
+        key:
+          nx-${{ runner.os }}-${{ runner.arch }}-${{ inputs.profile }}-${{ hashFiles('bun.lock', 'package.json', 'nx.json') }}-${{ github.sha
           }}-${{ github.job }}-${{ strategy.job-index }}
         restore-keys: nx-${{ runner.os }}-${{ runner.arch }}-${{ inputs.profile }}-${{ hashFiles('bun.lock', 'package.json', 'nx.json') }}-
     - name: Start the job's Nx HTTP cache
