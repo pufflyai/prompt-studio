@@ -166,3 +166,52 @@ test("a complete 13 MiB history update crosses the real HTTP transport without t
     replay.close();
   }
 });
+
+test("a real unread SDK buffer overflow restores history through a new observation without an error alert", async () => {
+  const messages = history(192, 70 * 1024);
+  const prior = history(1).map((message) => ({ ...message, id: "prior" }));
+  const replay = createReplay({ revision: 0, snapshot: { messages } }, false);
+  let watches = 0;
+  let actions = 0;
+  const errors: string[] = [];
+  const session = createChatSession({
+    initial: { messages: prior },
+    query: async () => ({}),
+    action: async () => {
+      actions++;
+    },
+    watch: (signal) => {
+      const stream = replay.watch(signal);
+      const blocked = ++watches === 1;
+      return {
+        result: stream.result,
+        async *[Symbol.asyncIterator]() {
+          // Hold the first consumer until the real SDK queue reaches its unchanged 8 MiB limit.
+          if (blocked) await replay.outcome;
+          yield* stream;
+        },
+      };
+    },
+  });
+  session.subscribe(() => {
+    if (session.getSnapshot().error) errors.push(session.getSnapshot().error!);
+  });
+  session.changeDraft({ text: "Keep typing" });
+  const release = session.retain();
+  try {
+    expect(await replay.outcome).toMatchObject({ ok: false, code: "command_stream_overflow" });
+    await Bun.sleep(0);
+    expect(session.getSnapshot().messages).toEqual(prior);
+    expect(session.getSnapshot().error).toBeUndefined();
+    await waitForHistory(session, messages);
+    expect(session.getSnapshot().conversation.messages).toEqual(messages);
+    expect(session.getSnapshot().draft.text).toBe("Keep typing");
+    expect(errors).toEqual([]);
+    expect(replay.requests()).toBe(2);
+    expect(actions).toBe(0);
+  } finally {
+    release();
+    await session.dispose();
+    replay.close();
+  }
+});

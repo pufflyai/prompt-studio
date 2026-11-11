@@ -1,6 +1,7 @@
 import { expect, type Page } from "@playwright/test";
 import { switchSession } from "../helpers/session-side-panel";
 import { logTestPhase } from "../scripts/log-test-phase";
+import { expectPackagedChatOverflowRecovery, installChatOverflowReplay } from "./packaged-chat-overflow-smoke";
 
 export const expectPackagedChatHistory = async (
   page: Page,
@@ -89,9 +90,12 @@ export const expectPackagedChatHistory = async (
         });
       };
     });
+    await installChatOverflowReplay(page, sessionId);
     await page.reload();
     await expect(page.getByText(/^Step 30\./).filter({ visible: true })).toBeVisible();
     await expect(side.getByRole("tab")).toHaveCount(2);
+    logTestPhase("Packaged chat history: recover overflow without an error alert");
+    await expectPackagedChatOverflowRecovery(page, sessionId, baseUrl, headers);
     logTestPhase("Packaged chat history: recover observation after connection loss");
     const retry = page.getByRole("alert").getByRole("button", { name: "Retry", exact: true });
     await page.evaluate(() => Reflect.get(window, "interruptChatStream")());

@@ -105,6 +105,8 @@ const trackChatAction = <T>(
   return running;
 };
 
+const chatErrorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
+
 /** One owner per project/view/resource, shared across page/panel changes. */
 export const createChatSession = (input: ChatSessionInput) => {
   let state = initialChatState(input.initial);
@@ -116,12 +118,13 @@ export const createChatSession = (input: ChatSessionInput) => {
     state = projectChatState(state, update, present);
     if (!retired) projection.setState(state, true, "projectChat");
   };
-  const fail = (error: unknown) => publish({ error: error instanceof Error ? error.message : String(error) });
+  const fail = (error: unknown) => publish({ error: chatErrorMessage(error) });
   const failWatch = (error: unknown) => {
+    const previous = state.error;
     fail(error);
     const revision = errorRevision;
-    return (cause: unknown) => {
-      if (errorRevision === revision) fail(cause);
+    return (cause?: unknown) => {
+      if (errorRevision === revision) publish({ error: cause === undefined ? previous : chatErrorMessage(cause) });
     };
   };
   let holds = 0;
