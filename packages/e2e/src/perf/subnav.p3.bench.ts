@@ -6,6 +6,7 @@ import { join, resolve } from "node:path";
 import { type Browser, chromium, expect } from "@playwright/test";
 import { benchmarkSampleCount, isBelowBudget, subnavBudgets } from "pstdio-benchmarks";
 import { recordMeasurement } from "pstdio-benchmarks/writer";
+import { revealTreeEntry } from "../helpers/tree-entry";
 import { PROVISIONED_CHROMIUM } from "../packaged/packaged-chromium";
 import { PACKAGED_BINARY_PATH } from "../packaged/packaged-helpers";
 import { runtimeAuthorization, signInBrowser } from "../packaged/packaged-serve-helpers";
@@ -94,35 +95,16 @@ try {
         console.info(JSON.stringify({ iteration: iteration + 1, ...sessions }));
         // The extracted Sessions tree pages its children. Keep all 1,000 sessions
         // reachable after measurement without changing the timed navigation interval.
-        const sessionRows = sidenav.getByRole("option", { name: /^Benchmark session/ });
         const oldest = sidenav.getByRole("option", { name: "Benchmark session 0001", exact: true });
-        const focusLastSessionPage = async (previousMoreId?: string) => {
-          // Let virtual-row focus commit before observing readiness. Repeatedly
-          // refocusing the first row races the pending End navigation.
-          await sessionRows.first().press("End");
-          await expect
-            .poll(async () => {
-              if (await oldest.isVisible()) return true;
-              const more = sidenav.getByRole("option", { name: "More sessions", exact: true }).last();
-              return (
-                (await more.isVisible()) &&
-                (await more.getAttribute("aria-expanded")) === "false" &&
-                (await more.getAttribute("id")) !== previousMoreId
-              );
-            })
-            .toBe(true);
-        };
-        await focusLastSessionPage();
-        for (let offset = 50; offset < SUBNAV_WORKLOAD.sessions && !(await oldest.isVisible()); offset += 50) {
-          const more = sidenav.getByRole("option", { name: "More sessions", exact: true }).last();
-          const id = await more.getAttribute("id");
-          if (!id) throw new Error("Sessions pagination row has no identity");
-          const expandedSince = performance.now();
-          await more.click();
-          // Cached pages need no fresh RPC, while a new page must finish loading
-          // before End can reach its final row. This is outside the timed sample.
-          await network.settled(expandedSince);
-          await focusLastSessionPage(id);
+        for (let offset = 50; offset < SUBNAV_WORKLOAD.sessions; offset += 50) {
+          // The tree loads its next bounded page when scrolling reaches the boundary.
+          // Check each page's final row outside the measured navigation interval.
+          const number = Math.max(1, SUBNAV_WORKLOAD.sessions - offset - 49);
+          const row = sidenav.getByRole("option", {
+            name: `Benchmark session ${String(number).padStart(4, "0")}`,
+            exact: true,
+          });
+          await expect.poll(() => revealTreeEntry(page, sidenav, row)).toBe(true);
         }
         await expect(oldest).toBeVisible();
         await page.goBack();

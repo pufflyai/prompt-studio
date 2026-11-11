@@ -141,12 +141,33 @@ export const expectPackagedStreamingMotion = async (
       { timeout: 15_000 },
     )
     .toBe("completed");
-  await expect(
-    page
-      .getByText(/^Step 30\./)
-      .filter({ visible: true })
-      .first(),
-  ).toBeVisible();
+  try {
+    await expect(
+      page
+        .getByText(/^Step 30\./)
+        .filter({ visible: true })
+        .first(),
+    ).toBeVisible();
+  } catch (error) {
+    console.info(
+      "Packaged chat final layout",
+      await transcript.evaluate((element) => {
+        const viewport = element.querySelector<HTMLElement>('[data-scope="scroll-area"][data-part="viewport"]');
+        return {
+          top: viewport?.scrollTop,
+          height: viewport?.clientHeight,
+          contentHeight: viewport?.scrollHeight,
+          rows: [...element.querySelectorAll("[data-chat-message-list-item]")].map((row) => ({
+            index: row.getAttribute("data-index"),
+            top: row.getBoundingClientRect().top,
+            height: row.getBoundingClientRect().height,
+            text: row.textContent?.slice(0, 40),
+          })),
+        };
+      }),
+    );
+    throw error;
+  }
   logTestPhase("Packaged chat stream: final chunk visible");
   expect(await page.locator(".ai-message__root:visible").count()).toBeLessThan(20);
   await expect

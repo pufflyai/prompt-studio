@@ -126,7 +126,12 @@ test("switches projects once and within budget", async ({ page, request }) => {
   const projectA = await seedProject(request, "Project switch A", "a");
   const projectB = await seedProject(request, "Project switch B", "b");
   const requests: string[] = [];
-  page.on("request", (entry) => requests.push(new URL(entry.url()).pathname));
+  const catalogRequests: string[] = [];
+  page.on("request", (entry) => {
+    const path = new URL(entry.url()).pathname;
+    requests.push(path);
+    if (/\/extensions\/(ui|appearance)$/.test(path)) catalogRequests.push(path);
+  });
 
   try {
     await waitForTicketsView(request, projectA.id);
@@ -184,12 +189,13 @@ test("switches projects once and within budget", async ({ page, request }) => {
     expect(aToB).toHaveLength(10);
     expect(bToA).toHaveLength(10);
     expect(samples.filter((sample) => !Object.values(sample.stableInstances).every(Boolean))).toEqual([]);
-    const requestCount = (sample: ProjectSwitchSample, path: string) => {
-      const targetId = sample.direction === "a-to-b" ? projectB.id : projectA.id;
-      return sample.requests.filter((request) => request === `/v1/projects/${targetId}/extensions/${path}`).length;
-    };
-    expect(samples.filter((sample) => requestCount(sample, "ui") !== 1)).toEqual([]);
-    expect(samples.filter((sample) => requestCount(sample, "appearance") !== 1)).toEqual([]);
+    // Each catalog is fetched on first entry and retained through all twenty switches.
+    // Count from the initial page load so a missing cold fetch cannot look like cache reuse.
+    for (const project of [projectA, projectB])
+      for (const path of ["ui", "appearance"])
+        expect(
+          catalogRequests.filter((request) => request === `/v1/projects/${project.id}/extensions/${path}`),
+        ).toHaveLength(1);
     await reportPageMemory(page, "project-switch");
     // Set from hosted ubuntu-24.04 runs (slowest 1,533 ms; slowest long task 419 ms, on the first switch after load)
     // plus about 20%. The long-task cap was corrected on 2026-10-27: the first value missed samples.
