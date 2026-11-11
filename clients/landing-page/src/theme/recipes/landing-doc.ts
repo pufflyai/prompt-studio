@@ -83,6 +83,7 @@ export const landingDocSlotRecipe = defineSlotRecipe({
         _focusVisible: { outlineWidth: "2px", outlineStyle: "solid", outlineColor: "focusRing", outlineOffset: "2px" },
       },
       "& p": { textStyle: "paragraph/M/regular", color: "fg.muted" },
+      "& p:has(> img) + p:not(:has(> img))": { textStyle: "label/S/regular", color: "fg.muted" },
       "& em": { textStyle: "label/S/italic", color: "fg.muted" },
       "& ul": { ...list, listStyleType: "disc" },
       "& ol": { ...list, listStyleType: "decimal" },

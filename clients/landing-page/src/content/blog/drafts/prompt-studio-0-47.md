@@ -1,11 +1,11 @@
 ---
 title: "Prompt Studio 0.47"
-description: "Home, Sessions and Workspaces become bundled tools, conversations fork from any reply, projects choose their agents and tools, and extension API 0.4 adds ordered storage with shared text."
+description: "Home, Sessions and Workspaces become extensions, conversations fork from any reply, projects choose their agents and tools, and extension API 0.4 adds ordered storage with shared text."
 author: aurelien-franky
 category: release
 ---
 
-Prompt Studio 0.47 turns Home, Sessions and Workspaces into bundled tools with their own pages and settings. Conversations fork from a selected reply, new projects choose their agents and tools, and extension API 0.4 adds ordered storage with shared text and native terminals.
+Prompt Studio 0.47 turns Home, Sessions and Workspaces into extensions with their own pages and settings. Conversations fork from a selected reply, new projects choose their agents and tools, and extension API 0.4 adds ordered storage with shared text and native terminals.
 
 ## Home
 
@@ -14,6 +14,8 @@ Project Home shows the resources you opened most recently, existing work actions
 ![Project Home with recent work and a Codex quota chart](../../../../../../documentation/images/prompt-studio-0-47-home-light.svg)
 
 ![Project Home with recent work and a Codex quota chart](../../../../../../documentation/images/prompt-studio-0-47-home-dark.svg)
+
+Project Home.
 
 Home is an extension, so you can modify it. Ask your agent to add something you'd like to see there. One thing we extended it with is usage graphs for all harnesses.
 
@@ -25,7 +27,7 @@ The Codex usage graph on Home. It records readings hourly, keeps eight days of h
 
 ## Sessions and Workspaces
 
-Sessions and Workspaces are bundled tools you can open, disable, or replace. Workspaces groups your workspaces and their sessions, and lets you change this computer's active workspace limit.
+Sessions and Workspaces are extensions you can open, disable, or replace. Workspaces groups your workspaces and their sessions, and lets you change this computer's active workspace limit.
 
 ![Opening a session, returning to the project, and switching the Workspaces list between compact and grouped views](../../../../../../documentation/images/prompt-studio-0-47-sessions-light.gif)
 
