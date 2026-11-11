@@ -39,7 +39,7 @@ export const readSessionAttention = async (ctx: ExtensionContextBase, sessions: 
     sessions.map((session) => {
       const pinned = recordValue(byId.get(pinKey(storage, session.id))?.value).pinned === true;
       const seen = recordValue(byId.get(seenKey(storage, session.id))?.value).activity;
-      return [session.id, { pinned, unread: typeof seen !== "number" || seen < sessionActivity(session) }];
+      return [session.id, { pinned, unread: typeof seen === "number" && seen < sessionActivity(session) }];
     }),
   );
 };

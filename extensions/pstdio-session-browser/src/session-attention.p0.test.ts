@@ -5,7 +5,7 @@ import { browse, browsePage } from "./browse";
 import { nativeSubmissionIndex, readNativeSubmissions, saveNativeSubmission } from "./native-submission";
 import { markSessionSeen, pinSession, readSessionAttention, sessionAttentionIndex } from "./session-attention";
 
-test("new activity becomes unread again after a session was seen", async () => {
+test("only activity newer than the last opening is unread", async () => {
   const storage = createMemoryStorage({ indexes: [sessionAttentionIndex] });
   const ctx = makeCommandContext({ storage, params: {} });
   const session = {
@@ -14,11 +14,19 @@ test("new activity becomes unread again after a session was seen", async () => {
     title: "Session",
     status: "completed",
   } as ExtensionSession;
-  expect((await readSessionAttention(ctx, [session])).get("s")?.unread).toBe(true);
+  expect((await readSessionAttention(ctx, [session])).get("s")?.unread).toBe(false);
   await markSessionSeen(ctx, session);
   expect((await readSessionAttention(ctx, [session])).get("s")?.unread).toBe(false);
   expect((await readSessionAttention(ctx, [{ ...session, updatedAt: "2026-11-10T11:00:00Z" }])).get("s")?.unread).toBe(
     true,
+  );
+  const updated = { ...session, updatedAt: "2026-11-10T11:00:00Z" };
+  await markSessionSeen(ctx, updated);
+  // An older viewer cannot move the last-seen activity backwards.
+  await markSessionSeen(ctx, session);
+  expect((await readSessionAttention(ctx, [updated])).get("s")?.unread).toBe(false);
+  expect((await readSessionAttention(ctx, [{ ...updated, id: "never-opened" }])).get("never-opened")?.unread).toBe(
+    false,
   );
 });
 
@@ -126,4 +134,30 @@ test("viewing and pinning a resource update its project-wide navigation state", 
   expect((await readSessionAttention(browseContext, [session])).get(session.id)?.unread).toBe(false);
   await pinSession.run(resourceContext, { sessionId: session.id, pinned: true });
   expect((await readSessionAttention(browseContext, [session])).get(session.id)?.pinned).toBe(true);
+});
+
+test("browse marks only sessions changed since opening and clears them on reopen", async () => {
+  const sessions = ["changed", "unchanged", "never-opened"].map(
+    (id) =>
+      ({
+        id,
+        title: id,
+        status: "completed",
+        updatedAt: "2026-11-10T10:00:00Z",
+      }) as ExtensionSession,
+  );
+  const ctx = makeCommandContext({
+    storage: createMemoryStorage({ indexes: [sessionAttentionIndex] }),
+    params: {},
+    overrides: { sessions: { query: async () => ({ items: sessions as never, nextCursor: null }) } },
+  });
+  await markSessionSeen(ctx, sessions[0]);
+  await markSessionSeen(ctx, sessions[1]);
+  sessions[0].updatedAt = "2026-11-10T11:00:00Z";
+  const nodes = (await browse(ctx, { renderer: { rendererId: "sessions" } }))[0].nodes;
+  expect(nodes.filter((node) => node.indicator).map((node) => node.id)).toEqual(["changed"]);
+  await markSessionSeen(ctx, sessions[0]);
+  expect((await browse(ctx, { renderer: { rendererId: "sessions" } }))[0].nodes.every((node) => !node.indicator)).toBe(
+    true,
+  );
 });
