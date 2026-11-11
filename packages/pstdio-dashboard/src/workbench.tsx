@@ -21,6 +21,7 @@ import type { PerformanceMonitoringController } from "./modules/performance/perf
 import { createProjectsModule } from "./modules/projects/module";
 import type { DesktopProjectTabs } from "./modules/projects/project-selection-sync";
 import { createProjectOpeningModule } from "./modules/projects/setup/module";
+import type { ProjectSetupHandoff } from "./modules/projects/setup/project-setup-handoff";
 import { createRecentResourcesModule } from "./modules/recent-resources/module";
 import { createResourceLinksModule } from "./modules/resource-links/module";
 import { createSessionsModule } from "./modules/sessions/module";
@@ -41,6 +42,7 @@ interface CreateDashboardWorkbenchInput {
   /** The project of a desktop tab. In the browser, the URL or the saved selection decides it. */
   projectId?: string;
   projectTabs?: DesktopProjectTabs;
+  setupHandoff?: ProjectSetupHandoff;
   pageLocationBrowser?: WorkbenchPageLocationBrowser;
   performance?: PerformanceMonitoringController;
   storage?: WorkbenchStorageLike;
@@ -52,10 +54,11 @@ type CreateDashboardModulesInput = {
   performance?: PerformanceMonitoringController;
   projectTabs?: DesktopProjectTabs;
   projectSelectionPersistence?: DashboardProjectSelectionPersistence;
+  setupHandoff?: ProjectSetupHandoff;
 };
 
 export const createDashboardModules = (input: CreateDashboardModulesInput & { settings: SettingsRegistry }) => {
-  const projectOpening = createProjectOpeningModule();
+  const projectOpening = createProjectOpeningModule({ handoff: input.setupHandoff });
   return [
     createSidenavModule(),
     createWorkspacesModule(),
@@ -135,6 +138,7 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
     initialProjectId: input.projectTabs ? input.projectId : urlProjectId,
     performance: input.performance,
     projectTabs: input.projectTabs,
+    setupHandoff: input.setupHandoff,
     projectSelectionPersistence,
   });
   for (const module of modules) workbench.registerModule(module);

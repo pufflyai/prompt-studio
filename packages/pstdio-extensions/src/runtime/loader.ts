@@ -11,8 +11,8 @@ import { discoverExtensionPackages } from "./discovery";
 import { mirrorNodeModules } from "./mirror-node-modules";
 import { type ExtensionApiProvider, type PackageManifest, readPackageManifest } from "./package-manifest";
 import {
+  beginRuntimeLoad,
   publishRuntimePackage,
-  removeEarlierRuntimePackages,
   runtimePackageKey as runtimeCacheKey,
   runtimeCacheRoot,
 } from "./runtime-cache";
@@ -189,15 +189,21 @@ const createRuntimePackage = (packagePath: string, entryPath: string, packageNam
 
 const importFresh = async (filePath: string, packagePath: string, packageName: string) => {
   const runtimePackage = createRuntimePackage(packagePath, filePath, packageName);
-  // Extension dependencies use their published exports, independently of the host's development conditions.
-  const entryPath = await bundleEntry(
-    runtimePackage.entryPath,
-    runtimePackage.packagePath,
-    dirname(runtimePackage.entryPath),
-  );
-  const mod = await importWithCacheKey(entryPath);
-  removeEarlierRuntimePackages(runtimePackage.rootPath);
-  return remapPackageAssets(mod, runtimePackage.packagePath, packagePath);
+  const load = beginRuntimeLoad(runtimePackage.rootPath);
+  let loaded = false;
+  try {
+    // Extension dependencies use their published exports, independently of the host's development conditions.
+    const entryPath = await bundleEntry(
+      runtimePackage.entryPath,
+      runtimePackage.packagePath,
+      dirname(runtimePackage.entryPath),
+    );
+    const mod = await importWithCacheKey(entryPath);
+    loaded = true;
+    return remapPackageAssets(mod, runtimePackage.packagePath, packagePath);
+  } finally {
+    load.finish(loaded);
+  }
 };
 
 export const loadExtensionPackage = async (

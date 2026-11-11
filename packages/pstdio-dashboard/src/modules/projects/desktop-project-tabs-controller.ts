@@ -39,6 +39,7 @@ export class DesktopProjectTabsController {
   readonly #persist: (state: { projectIds: string[] }) => Promise<void>;
   #start: StartDesktopProjectTabsInput | undefined;
   #nextKey = 0;
+  #stopWaiting: (() => void) | undefined;
   // Released workbenches are disposed after React stops rendering them.
   #released: WorkbenchCore[] = [];
 
@@ -61,14 +62,42 @@ export class DesktopProjectTabsController {
   }
 
   select(projectId: string) {
-    if (!findDashboardProject(projectId)) return;
-    this.#updateTabs(openProjectTab(this.getProjectIds(), projectId));
-    this.#show(projectId);
+    this.#stopWaiting?.();
+    this.#stopWaiting = undefined;
+    if (findDashboardProject(projectId)) {
+      this.#updateTabs(openProjectTab(this.getProjectIds(), projectId));
+      this.#show(projectId);
+      return;
+    }
+    // A project created in this window is selected before its row syncs; open its tab once it arrives.
+    const selection = createCollectionSelection(getRuntimeCollections(), { tables: ["projects"] });
+    const unsubscribe = selection.subscribe(() => {
+      if (findDashboardProject(projectId)) this.select(projectId);
+    });
+    this.#stopWaiting = unsubscribe;
   }
 
   /** Shows project selection, for example after the visible project is deleted. */
   clear() {
+    this.#stopWaiting?.();
+    this.#stopWaiting = undefined;
     this.#show(undefined);
+  }
+
+  /**
+   * The tab actions of one workbench. Only the visible workbench may change the visible tab, so
+   * work that finishes in a background project never switches away from what the person sees.
+   */
+  forWorkbench(projectId: string | undefined) {
+    const visible = () => this.#store.getState().active?.projectId === projectId;
+    return {
+      select: (target: string) => {
+        if (visible()) this.select(target);
+      },
+      clear: () => {
+        if (visible()) this.clear();
+      },
+    };
   }
 
   close(projectId: string) {
@@ -119,6 +148,8 @@ export class DesktopProjectTabsController {
   }
 
   dispose() {
+    this.#stopWaiting?.();
+    this.#stopWaiting = undefined;
     this.#released.push(...this.#store.getState().workbenches.map((entry) => entry.workbench));
     this.#store.setState({ workbenches: [], active: undefined }, false, "disposeProjectTabs");
     this.disposeReleased();

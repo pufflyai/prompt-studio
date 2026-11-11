@@ -17,6 +17,7 @@ import { DesktopQuitConfirmation } from "@/modules/desktop/desktop-quit-confirma
 import { DesktopStartupAppearance } from "@/modules/desktop/desktop-startup-appearance";
 import { createPerformanceMonitoring } from "@/modules/performance/module";
 import type { DesktopProjectTabsController } from "@/modules/projects/desktop-project-tabs-controller";
+import { createProjectSetupHandoff } from "@/modules/projects/setup/project-setup-handoff";
 import { dashboardWorkbenchStorageNamespace } from "@/shared/app/dashboard-workbench-storage-keys";
 import { createDashboardPageLocationBrowser, readPageUrlProjectId } from "@/shared/app/page-location-browser";
 import { createDashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
@@ -144,6 +145,7 @@ const startDesktopProjectWorkbenches = (
     storage,
   });
   const performance = createPerformanceMonitoring();
+  const setupHandoff = createProjectSetupHandoff();
   controller.start({
     persistence,
     projectId: readPageUrlProjectId(pageLocationBrowser.current().url) ?? persistence.getSelectedProjectId(),
@@ -151,7 +153,8 @@ const startDesktopProjectWorkbenches = (
       createDashboardWorkbench({
         active,
         projectId,
-        projectTabs: controller,
+        projectTabs: controller.forWorkbench(projectId),
+        setupHandoff,
         pageLocationBrowser,
         performance,
         storage,

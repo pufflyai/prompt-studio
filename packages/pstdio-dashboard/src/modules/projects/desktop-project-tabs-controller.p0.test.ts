@@ -56,7 +56,9 @@ const setup = (input: {
         disposed.push(workbench);
         return dispose();
       };
-      workbench.registerModule(createProjectsModule({ projectTabs: tabs, initialProjectId: projectId }));
+      workbench.registerModule(
+        createProjectsModule({ projectTabs: tabs.forWorkbench(projectId), initialProjectId: projectId }),
+      );
       return workbench;
     },
   });
@@ -191,4 +193,24 @@ test("reports a failed tab write and clears the error after the next saved chang
   expect(await Bun.file(path).json()).toEqual({ projectIds: [] });
   for (const entry of tabs.getState().workbenches)
     expect(entry.workbench.notifications.listNotifications()).toEqual([]);
+});
+
+test("a project created in this window opens in its tab once its row syncs", () => {
+  const { tabs, workbenchOf } = setup({ selected: "first" });
+  tabs.select("created");
+  expect(tabs.getActiveWorkbench()).toBe(workbenchOf("first"));
+
+  writeProjects(["first", "second", "created"]);
+  expect(tabs.getActiveWorkbench()).toBe(workbenchOf("created"));
+  expect(tabs.getProjectIds()).toEqual(["first", "created"]);
+});
+
+test("a background workbench cannot change the visible tab", async () => {
+  const { tabs, workbenchOf } = setup({ selected: "first" });
+  tabs.select("second");
+  const first = workbenchOf("first")!;
+  await first.commands.executeCommand(dashboardCommandIds.clearSelectedProject);
+  await first.commands.executeCommand(dashboardCommandIds.selectProject, { project: { id: "first", name: "first" } });
+
+  expect(tabs.getActiveWorkbench()).toBe(workbenchOf("second"));
 });

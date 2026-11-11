@@ -148,9 +148,9 @@ Explicit Git refs and other repository sources use the system Git executable. Wh
   packaged hosts. Dependencies use their published exports, independently of the host's development
   import conditions. Package asset URLs still point to the installed source files. These bundles
   are reused across restarts while the extension's source, its installed dependencies, Bun, and the
-  host executable are unchanged. Loading a changed source replaces the earlier bundle of that
-  folder, and a host update discards the bundles of the previous host. An interrupted copy is never
-  reused.
+  host executable are unchanged. Once a changed source loads, earlier bundles of that folder that no
+  load still uses are removed. Bundles of another host executable are removed after a week unused.
+  An interrupted copy or a partially written bundle is never reused.
 - A webview whose entry file is missing reports a build failure that names the file. The project's
   other tools still load, and adding the file builds it again.
 - Each webview build runs in a new Bun process, so a build after an update reads the dependencies

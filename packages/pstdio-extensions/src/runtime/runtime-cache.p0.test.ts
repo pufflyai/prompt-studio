@@ -1,8 +1,10 @@
 import { afterEach, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import type { ExtensionDiagnostic } from "../types/runtime";
+import { loadExtensionPackage } from "./loader";
 import { publishRuntimePackage } from "./runtime-cache";
 
 const tempDirs: string[] = [];
@@ -58,11 +60,13 @@ const findBundles = (cacheRoot: string) =>
     .filter((entry) => entry.isFile() && entry.name.endsWith(".pstdio-runtime-bundle.mjs"))
     .map((entry) => join(entry.parentPath, entry.name));
 
-test("a restarted host reuses unchanged runtime bundles and removes other hosts' caches", () => {
+test("a restarted host reuses unchanged runtime bundles and removes caches other hosts stopped using", () => {
   const home = join(createTempDir(), "home");
   const cacheRoot = join(home, "cache", "extension-runtime");
-  const otherHostPackage = join(cacheRoot, "other-host", "runtime-cache-test", "old", "package");
-  mkdirSync(otherHostPackage, { recursive: true });
+  mkdirSync(join(cacheRoot, "replaced-host", "runtime-cache-test", "old", "package"), { recursive: true });
+  mkdirSync(join(cacheRoot, "active-host", "runtime-cache-test", "old", "package"), { recursive: true });
+  const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
+  utimesSync(join(cacheRoot, "replaced-host"), eightDaysAgo, eightDaysAgo);
   const extensionDir = createTempDir();
   writeExtension(extensionDir);
 
@@ -76,7 +80,8 @@ test("a restarted host reuses unchanged runtime bundles and removes other hosts'
   expect(findBundles(cacheRoot)).toEqual([bundle!]);
   expect(reused.ino).toBe(built.ino);
   expect(reused.mtimeMs).toBe(built.mtimeMs);
-  expect(existsSync(join(cacheRoot, "other-host"))).toBe(false);
+  expect(existsSync(join(cacheRoot, "replaced-host"))).toBe(false);
+  expect(existsSync(join(cacheRoot, "active-host"))).toBe(true);
 });
 
 test("an interrupted runtime package copy is never published", () => {
@@ -97,4 +102,31 @@ test("an interrupted runtime package copy is never published", () => {
     writeFileSync(join(stagingPath, "extension.ts"), "complete");
   });
   expect(readdirSync(runtimePackagePath)).toEqual(["extension.ts"]);
+});
+
+test("loading a newer version never removes a version that is still loading", async () => {
+  const previousHome = process.env.PSTDIO_HOME;
+  process.env.PSTDIO_HOME = join(createTempDir(), "home");
+  try {
+    const extensionDir = createTempDir();
+    writeExtension(extensionDir);
+    for (let round = 0; round < 5; round += 1) {
+      const diagnostics: ExtensionDiagnostic[] = [];
+      writeFileSync(
+        join(extensionDir, "extension.ts"),
+        `export default { commands: { check: { title: "a${round}" } } };`,
+      );
+      const first = loadExtensionPackage({ path: extensionDir }, diagnostics);
+      writeFileSync(
+        join(extensionDir, "extension.ts"),
+        `export default { commands: { check: { title: "b${round}" } } };`,
+      );
+      const second = loadExtensionPackage({ path: extensionDir }, diagnostics);
+      await Promise.all([first, second]);
+      expect(diagnostics).toEqual([]);
+    }
+  } finally {
+    if (previousHome === undefined) delete process.env.PSTDIO_HOME;
+    else process.env.PSTDIO_HOME = previousHome;
+  }
 });
