@@ -11,36 +11,6 @@ permissions:
   contents: read
   actions: read
 jobs:
-  browser:
-    name: Failed browser cases
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    container:
-      image: mcr.microsoft.com/playwright:v1.60.0-noble
-      options: --user 1001 --init --ipc=host
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: '24.22.1'
-      - run: node scripts/ci/setup-container-bun.ts
-      - uses: ./.github/actions/setup-ci-cache
-        with:
-          profile: playwright
-      - run: bun run build -- --scope e2e --include-dependencies
-      - name: Run only the two failed UI cases
-        run: >-
-          xvfb-run -a bun run --cwd packages/e2e test:ui --
-          src/ui/keyboard-shortcuts.p2.spec.ts:308
-          src/ui/workspace-terminal.p1.spec.ts:260
-          --grep 'main shortcuts navigate and open creation forms|keeps tab-menu focus when the terminal renderer finishes loading'
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: failed-browser-evidence
-          path: |
-            packages/e2e/test-results
-            packages/e2e/playwright-report
   desktop:
     name: Failed desktop case (${{ matrix.target }} ${{ matrix.kind }})
     runs-on: ${{ matrix.os }}
@@ -49,8 +19,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { target: linux-x64, os: ubuntu-24.04, kind: functional, config: playwright.packaged.config.ts, file: packaged-performance-monitoring.p2.spec.ts, grep: 'keeps performance measurements live when switching and closing project tabs' }
-          - { target: darwin-arm64, os: macos-15, kind: functional, config: playwright.packaged.config.ts, file: packaged-performance-monitoring.p2.spec.ts, grep: 'keeps performance measurements live when switching and closing project tabs' }
           - { target: linux-x64, os: ubuntu-24.04, kind: performance, config: playwright.benchmark.config.ts, file: packaged-launch.p3.bench.ts, grep: 'sidecar crash shows recovery within budget' }
     steps:
       - uses: actions/checkout@v5
@@ -81,6 +49,7 @@ jobs:
         working-directory: clients/desktop
         shell: bash
         env:
+          E2E_TEST_LANE: benchmark
           CASE_CONFIG: ${{ matrix.config }}
           CASE_FILE: ${{ matrix.file }}
           CASE_TITLE: ${{ matrix.grep }}
