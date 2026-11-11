@@ -89,8 +89,6 @@ jobs:
         run: |
           bun scripts/ci/production-payload.ts check
           tar -xzf release-build.tar.gz
-      - name: Configure signed Ubuntu archive mirrors
-        uses: ./.github/actions/setup-ubuntu-mirrors
       - name: Install browser engines
         if: matrix.family == 'browser' || matrix.family == 'navigation' || matrix.family == 'planner'
         # Approved 2026-11-11 (PS-1164): hosted installs take up to 91 s; an unreachable Ubuntu

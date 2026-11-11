@@ -31,7 +31,12 @@ export const subnavBudgets = {
   dataMs: limit(1525, "ms", "2026-10-26", `${hosted} Slowest 1,263 ms.`),
   editorMs: limit(1325, "ms", "2026-10-26", `${hosted} Slowest 1,089 ms.`),
 };
-export const plannerBudget = limit(3000, "ms", "2026-10-26", `${hosted} Slowest cold open 2,426 ms.`);
+export const plannerBudget = limit(
+  4000,
+  "ms",
+  "2026-11-11",
+  `${hosted} Temporary approved limit; hosted cold open 3,303 ms, local 1,258 ms.`,
+);
 export const collectionBudget = limit(
   1250,
   "ms",
