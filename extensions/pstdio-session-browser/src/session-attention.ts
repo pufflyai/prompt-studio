@@ -3,6 +3,7 @@ import {
   defineCommand,
   type ExtensionContextBase,
   type ExtensionSession,
+  type ExtensionStorageApi,
   l10n,
   params,
   type StorageRecordIndex,
@@ -25,34 +26,36 @@ export const sessionActivity = (session: ExtensionSession) =>
   );
 const recordValue = (value: unknown) =>
   value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
-const pinKey = (ctx: ExtensionContextBase, id: string) => ctx.storage.records.id(`pin:${id}`);
-const seenKey = (ctx: ExtensionContextBase, id: string) => ctx.storage.records.id(`seen:${id}`);
+const pinKey = (storage: ExtensionStorageApi, id: string) => storage.records.id(`pin:${id}`);
+const seenKey = (storage: ExtensionStorageApi, id: string) => storage.records.id(`seen:${id}`);
 
 export const readSessionAttention = async (ctx: ExtensionContextBase, sessions: ExtensionSession[]) => {
-  const records = await ctx.storage.records.readMany(
-    sessions.flatMap((session) => [pinKey(ctx, session.id), seenKey(ctx, session.id)]),
+  const storage = ctx.storage.scope({ type: "project" });
+  const records = await storage.records.readMany(
+    sessions.flatMap((session) => [pinKey(storage, session.id), seenKey(storage, session.id)]),
   );
   const byId = new Map(records.map((record) => [record.recordId, record]));
   return new Map(
     sessions.map((session) => {
-      const pinned = recordValue(byId.get(pinKey(ctx, session.id))?.value).pinned === true;
-      const seen = recordValue(byId.get(seenKey(ctx, session.id))?.value).activity;
+      const pinned = recordValue(byId.get(pinKey(storage, session.id))?.value).pinned === true;
+      const seen = recordValue(byId.get(seenKey(storage, session.id))?.value).activity;
       return [session.id, { pinned, unread: typeof seen !== "number" || seen < sessionActivity(session) }];
     }),
   );
 };
 export const markSessionSeen = async (ctx: CommandContext, session: ExtensionSession) => {
+  const storage = ctx.storage.scope({ type: "project" });
   if (ctx.signal.aborted) return;
-  const recordId = seenKey(ctx, session.id);
-  const previous = await ctx.storage.records.read(recordId);
+  const recordId = seenKey(storage, session.id);
+  const previous = await storage.records.read(recordId);
   const activity = sessionActivity(session);
   if (
     typeof recordValue(previous.value).activity === "number" &&
     Number(recordValue(previous.value).activity) >= activity
   )
     return;
-  await ctx.storage.records.commit({
-    operationId: ctx.storage.ids.create(),
+  await storage.records.commit({
+    operationId: storage.ids.create(),
     edits: [{ recordId, replace: { activity } }],
   });
   await ctx.events.emit(viewDataEvents.sessionsChanged, { projectId: ctx.projectId });
@@ -66,13 +69,14 @@ export const pinSession = defineCommand({
     pinned: params.boolean({ required: true }),
   },
   async run(ctx, input) {
+    const storage = ctx.storage.scope({ type: "project" });
     const session = await ctx.sessions.get(input.sessionId);
     if (!session || session.archived) throw new Error("Session not found.");
-    await ctx.storage.records.commit({
-      operationId: ctx.storage.ids.create(),
+    await storage.records.commit({
+      operationId: storage.ids.create(),
       edits: [
         {
-          recordId: pinKey(ctx, session.id),
+          recordId: pinKey(storage, session.id),
           replace: { pinnedSessionId: session.id, pinned: input.pinned },
         },
       ],
@@ -86,13 +90,14 @@ export const readPinnedSessions = async (
   filter?: string,
   cursor?: string,
 ) => {
-  const page = await ctx.storage.records.query({
+  const storage = ctx.storage.scope({ type: "project" });
+  const page = await storage.records.query({
     index: sessionAttentionIndex.name,
     where: { field: "pinned", op: "eq", value: true },
     limit: 50,
     ...(cursor ? { cursor } : {}),
   });
-  const records = await ctx.storage.records.readMany(page.records.map((record) => record.recordId));
+  const records = await storage.records.readMany(page.records.map((record) => record.recordId));
   const sessions = await Promise.all(
     records.map((record) =>
       typeof recordValue(record.value).pinnedSessionId === "string"

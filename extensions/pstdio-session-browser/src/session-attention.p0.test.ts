@@ -106,3 +106,24 @@ test("pinning a session preserves its native conversation inputs", async () => {
   await pinSession.run(ctx, { sessionId: session.id, pinned: false });
   expect((await readNativeSubmissions(ctx, session.id))[0]?.body.draft).toEqual(draft);
 });
+
+test("viewing and pinning a resource update its project-wide navigation state", async () => {
+  const storage = createMemoryStorage({ indexes: [sessionAttentionIndex] });
+  const session = {
+    id: "scoped",
+    title: "Scoped",
+    status: "completed",
+    updatedAt: "2026-11-11T18:00:00Z",
+  } as ExtensionSession;
+  const overrides = { sessions: { get: async () => session as never } };
+  const browseContext = makeCommandContext({ storage, params: {}, overrides });
+  const resourceContext = makeCommandContext({
+    storage: storage.scope({ type: "resource", resource: { type: "session", id: session.id } }),
+    params: {},
+    overrides,
+  });
+  await markSessionSeen(resourceContext, session);
+  expect((await readSessionAttention(browseContext, [session])).get(session.id)?.unread).toBe(false);
+  await pinSession.run(resourceContext, { sessionId: session.id, pinned: true });
+  expect((await readSessionAttention(browseContext, [session])).get(session.id)?.pinned).toBe(true);
+});
