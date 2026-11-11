@@ -1,5 +1,17 @@
 # pstdio-performance
 
+## 0.1.1
+
+_2026-11-11_
+
+### Patch Changes
+
+- fd5af30: Pin React and React DOM to exactly 19.2.4 in extension manifests and lockfiles.
+- 93d1e74: Declare extension IDs and official harness SVG logos with Gallery Thumbnails for UI Canvas, optional Agent Reports, Themes, and unlisted Remote Workspaces.
+- ed40a9d: Keep maintained extensions loadable across the existing and upcoming ordered-storage API hosts.
+- c3a5eb3: Prepare status details before the first click, preserve their state, and pause hidden views through shared presentation visibility.
+- b2fec01: Use the shared icon and title popover header in Performance and Auto Build, without a redundant close button.
+
 ## 0.1.0
 
 _2026-10-31_

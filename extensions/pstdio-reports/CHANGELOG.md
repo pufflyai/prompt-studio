@@ -1,5 +1,14 @@
 # pstdio-reports
 
+## 0.46.1
+
+_2026-11-11_
+
+### Patch Changes
+
+- 93d1e74: Declare extension IDs and official harness SVG logos with Gallery Thumbnails for UI Canvas, optional Agent Reports, Themes, and unlisted Remote Workspaces.
+- ed40a9d: Keep maintained extensions loadable across the existing and upcoming ordered-storage API hosts.
+
 ## 0.46.0
 
 _2026-10-31_

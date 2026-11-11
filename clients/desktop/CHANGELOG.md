@@ -1,5 +1,18 @@
 # @pstdio/desktop
 
+## 0.47.0
+
+_2026-11-11_
+
+### Patch Changes
+
+- 8de4621: Show desktop recovery promptly after a runtime crash.
+- 868cbd7: Keep extension tools available without reloading their catalog after read-only commands. Catalog changes still refresh through their declared events.
+
+  Show desktop recovery promptly when the window is not focused.
+
+  Preserve resource shorthands during navigation so retained ticket trees reuse their reads.
+
 ## 0.46.0
 
 _2026-10-31_

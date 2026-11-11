@@ -1,5 +1,124 @@
 # @pstdio/workbench
 
+## 0.47.0
+
+_2026-11-11_
+
+### Minor Changes
+
+- f917d92: Support resource-group context menus and content-sized page dialogs with shared headers and form actions.
+- 2f798b7: Let extensions offer a setup view for new projects and install catalog extensions for their project with `ctx.extensions`. New projects enable only the configured defaults.
+- e92609e: Keep loaded tools and project state stable with scoped queries, shared editing and precise refresh lifetimes.
+- 7516ff7: Let extensions display grouped resource lists with nested children and shared saved views.
+- 29f08d1: Let extensions declare native conversations with immediate composers and scoped data, draft, and action bindings.
+- e68fb45: Let extensions use public dashboard commands for conversations, tools, setup recovery, and recently opened resources, with exact update-time conversation queries.
+- 0edb970: Share declared Markdown sources live across devices with durable offline edits and transient cursors.
+- 93298a9: Terminal panels keep running when their workbench closes, such as after closing a desktop project tab or reloading the page, and reopening the panel resumes the same shell with its recent output. Workbench terminal openers receive the panel's binding key, and disposing a workbench detaches sessions whose adapter implements `detach`.
+- 403ed4c: Let installed extensions offer native terminal views with scoped workspace admission and presentation-owned PTY cleanup.
+- a44375d: Retain finite command query results across recreated webviews with scoped freshness, bounded retention and shared cancellation ownership.
+- 7552937: Signing out of Cloud now ends sync on the device, and a device that returns after signing out or going offline never overrides changes made on devices that stayed in sync. Unsent saves stay bounded, large returns wait for review, and `account.projectSyncStatus` reports changes held or replaced, with `account.resolveReturnedChanges` to apply, discard or dismiss them. `pst projects returned-changes <project> [apply|discard|dismiss]` lists and resolves them from the command line. Breaking: devices on earlier releases cannot read saves from this release. Such a device stops receiving a project's changes at the first new save, retrying it on every sync, until it updates. Update every device of an account together.
+- 3658216: Add inline sparkline and bar-chart table cells with saved row-height choices.
+- 39796d3: Let extensions browse workspace files, rename workspaces, review changes, read device capacity and retain native file, tree and terminal interactions through scoped host services.
+- ce1af65: Load tree sections and child collections automatically while scrolling through bounded cursor pages.
+- 121c013: Let extensions present single-view pages in host modals with scoped resources and parameters while preserving the current page. Numeric controls can follow an enabling boolean control without losing their value.
+
+### Patch Changes
+
+- be09ff4: Keep shared editor refreshes current when another unchanged view requests a save.
+- 8184397: Persist completed layouts once per transition while retaining every project scope.
+- 8184397: Preserve appearance data and avoid redundant Cloud sync and panel work during project changes.
+- 5c3b786: Allow extension commands to copy text results in the dashboard while preserving the browser's user gesture.
+- 8184397: Load collection renderers and the terminal engine when their views open.
+- 69a70df: Use public text sessions for legacy Markdown and retain correct editor presence across delayed lifecycle replies. Retain native and installed recovery views through resource removal and allow explicit closure after the person has recovered their text.
+
+  Stop cancelled Cloud transports locally while draining their admitted synchronization work.
+
+  Preserve each retained Markdown view’s scroll and private recovery while releasing its previous public session before a successor opens.
+
+- 34a56a5: Preserve the underlying connection failure when a large chat update is interrupted, without replacing newer errors or losing conversation history.
+- be79dba: Create notes immediately from the command palette and respect bound palette arguments.
+- 70f26ed: Open and leave Sessions faster: tree rows whose data did not change no longer render again while the sidenav loads, and each row starts its context menu only when you first open it.
+- 6df39fc: Open Tickets and other kanban pages faster: returning to an unchanged board no longer re-renders every card, and an open command palette updates when extension results change.
+- 094a099: Keep nested navigation's back button in a separate fixed group above the scrolling content.
+- d02b393: Pin React and React DOM dependencies and peer dependencies to exactly 19.2.4.
+- 8cf242e: Focus new-session chat inputs, show session skeletons during mount, narrow chat content, match user messages to workspace rounding, improve workspace and command-menu controls, and prevent sent-message entrance animations from replaying.
+- 26e2df1: Keep file actions bound to the selected document while tree data refreshes.
+- b118f4b: Keep workbench interactions responsive as saved preferences grow.
+- 8184397: Load the requested Markdown editor while its document opens.
+- 9f47beb: Keep document errors and recovery notices in a sticky footer without moving the editor's first line.
+- bc02ae4: Allow paged tables and boards to request up to 500 rows per page, expose `initialPageSize` for paged boards, and keep kanban columns and lists fully mounted below 50 entries.
+- c3a5eb3: Keep status details loaded after closing so they reopen without restarting their views.
+- 9f1605d: Close menus and popovers when their trigger is clicked again, including Auto Build activity, tab context menus, and controls with custom IDs.
+- ea8ca3f: Clarify command palette names and groups, fill missing icons, and show assigned shortcut sequences.
+
+  Raise the compiled core binary limit to 280 MB.
+
+- d55065f: Keep the navigation header inside Main and preserve embedded views when panels change sides.
+- 29f08d1: Keep failed message forks beside their Fork control without duplicating the error as a conversation Retry footer.
+- 29f08d1: Preserve native chat queue settings, session forks, optional working folders, remote device controls, authentication channels, workspace links and durable legacy draft transfer for independently installed Sessions views. Keep dependent command pickers open, focused and keyboard-accessible while their options refresh, and apply command destination-page hints only to their captured Main viewer. Preserve live, virtualized resource-argument search with accessible status and captured command context. Send large native chat events as bounded stream frames and publish them atomically without interrupting visible history or newer local work. Recover unacknowledged native drafts after immediate reload and preserve newer work across owner replacement.
+
+  Expose the existing pure session message patch reducer through the SDK so backend native-chat providers can omit UI runtime dependencies, preserving the UI export and prompt animation identity.
+
+- 29f08d1: Restore compact native chat model and inline parameter controls using shared UI components, retain empty conversation guidance, and suppress unavailable-harness feedback while draft selection is still initializing.
+- 29f08d1: Keep resolved native session controls when typing starts before draft hydration finishes.
+- 29f08d1: Keep accepted native chat input in prompt history while its queue receipt awaits canonical delivery.
+- 29f08d1: Add an optional native chat workspace hub binding for existing workspace/device selection, setup status and diff information. Reuse compact workspace menus, retain existing-session-only opening and keep global workspace creation separate. Resolve harness selection icons from their exact installed extension source and make attachment upload an accessible Paperclip action. Use messages-circle for Sessions extension/collection identity and message-circle for individual sessions and the bubble.
+
+  Keep native authentication setup exclusive with empty content while preserving history and quiet discovery. Retain message-level fork explanations for unsupported local harnesses.
+
+- 8de4621: Dismiss closed dialogs after their exit animations finish, including when WebKit misses an animation event.
+- afd5581: Organize the Canvas catalog by purpose and consolidate navigable examples into fewer frames; make in-frame navigation the default for Canvas authoring.
+- f26039d: Restore focused title editing, reliable retained notes, bounded presence avatars, Cloud connection and preparation feedback, pending conversations, and native menus that preserve drafts across floating and attached presentation.
+- 8184397: Resolve each shortcut profile from one settings snapshot and share unchanged iframe shortcut profiles.
+- 868cbd7: Keep extension tools available without reloading their catalog after read-only commands. Catalog changes still refresh through their declared events.
+
+  Show desktop recovery promptly when the window is not focused.
+
+  Preserve resource shorthands during navigation so retained ticket trees reuse their reads.
+
+- 2f798b7: Keep project setup overlays transient across reloads and open them only after an enabled setup contribution is known.
+- 6f5315d: Open notes without reloading the project sidebar on each selection, while preserving resource-dependent document navigation updates. Show a document skeleton while notes and ticket documents load.
+
+  Keep the live note editor open when its title changes, without re-reading the document.
+
+- e03b165: Reconnect ticket text editing when its viewer reopens after navigation.
+- 121c013: Keep retained tool visibility in sync when navigating between pages.
+- 8184397: Reuse page ordering during navigation while preserving independent page lists and registration updates.
+
+  Avoid recursively serializing unrelated shortcut arguments while resolving direct command hints.
+
+  Update shortcut hint components only when the displayed hint changes, while observing current command availability and shortcut preferences.
+
+  Skip numbered tab geometry and geometry-driven hint updates while shortcut mode and preview are hidden.
+
+- 8184397: Keep clean shared editor saves from invalidating another view's refresh.
+- 96415ed: Keep forking beside individual messages rather than in the session dropdown, and allow the generic Side-panel bubble to open without the Sessions provider.
+
+  Preserve Main command-palette session status colors and offer local message forks without preemptive harness capability gating; drafts and remote sessions do not expose fork.
+
+  Apply installed navigation trees' default node expansion using provider-scoped IDs, while preserving later user collapse choices.
+
+- cd4d565: Keep concurrent shared-editor refreshes responsive when content is unchanged.
+- 39796d3: Expose reusable command form fields and dynamic options through the public UI package so extensions can render provider forms without depending on Workbench. Preserve Workbench's contextual defaults and field renderer API. Keep the selected panel open when a webview updates its page parameters. Preserve the acted-on resource's owner during shared mutation confirmation, and reveal new inline inputs in long trees.
+
+  Keep sidebar drag targets inside their visible scroll viewport so virtualized rows cannot intercept moves into an empty header or footer.
+
+  Load complete lazy folder contents after optimistic moves and retain expanded branches when a provider snapshot refreshes.
+
+  Keep queued tree move previews on one provider snapshot, and report completion of startup extension registration.
+
+- 7412f68: Keep parent navigation items selected while their child pages are open.
+- 5022989: Keep document saving silent, ticket properties compact, and long dropdown values contained; hide empty review links.
+- c3a5eb3: Prepare status details before the first click, preserve their state, and pause hidden views through shared presentation visibility.
+- 6e9fa27: Paged tables and boards keep loading the next page when the data changed after the previous page, for example through sync, instead of showing "Query revision is stale".
+- 3116677: Restore error alerts with copy and retry controls in native conversations.
+- a2ee01c: Respect header and footer placement across navigation levels and align extension list status tags with location last.
+- c7a8149: Unify settings layouts, keep save and reset actions in the header, and protect unsaved settings when navigating or closing. Align Planner status and tag editors, group workflow and automation settings, and show visible loading skeletons.
+- 671e777: Provide a shared icon and title header for popovers and use it for System errors.
+- 8184397: Keep Markdown editor dependencies out of workbench startup until a document opens.
+- f7289ac: Recover overflowing conversation observations automatically without showing internal errors or losing history and drafts.
+- 8184397: Avoid starting unopened status views and redundant relay reads during project recovery.
+
 ## 0.46.0
 
 _2026-10-31_

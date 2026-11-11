@@ -1,5 +1,45 @@
 # pstdio-planner
 
+## 0.47.0
+
+_2026-11-11_
+
+### Minor Changes
+
+- 9ce305f: Keep review request text to 80 words with supporting document links and rename the creation command to request-review.
+- 429ade4: Keep ticket order consistent across offline moves using core order positions.
+
+### Patch Changes
+
+- 039ce6c: Restore useful technical proposals with reviewable API shapes, schemas, and design handoffs.
+- ee368ab: Open workspace files, linked workspaces and workspace creation through the bundled Workspaces provider while preserving contextual ticket navigation and existing host links.
+- fd5af30: Pin React and React DOM to exactly 19.2.4 in extension manifests and lockfiles.
+- 96415ed: Preserve independent offline ticket tag choices and make concurrent single/multi conversions editable.
+- 96415ed: Install the Sessions provider by default and use its public navigation refs, preserving legacy URLs and saved panels through the same native renderer.
+- dd1529d: Open timeline tickets in an unpinned side-panel preview while keeping the planner visible and the selected ticket outlined.
+- 93d1e74: Declare extension IDs and official harness SVG logos with Gallery Thumbnails for UI Canvas, optional Agent Reports, Themes, and unlisted Remote Workspaces.
+- ebdce53: Use public shared-text providers for Notes and Planner while preserving titles and stable source identity.
+- 9f1605d: Close menus and popovers when their trigger is clicked again, including Auto Build activity, tab context menus, and controls with custom IDs.
+- ea8ca3f: Clarify command palette names and groups, fill missing icons, and show assigned shortcut sequences.
+
+  Raise the compiled core binary limit to 280 MB.
+
+- afd5581: Organize the Canvas catalog by purpose and consolidate navigable examples into fewer frames; make in-frame navigation the default for Canvas authoring.
+- a24082b: Let ticket designs hand off through a proposal folder on the default branch as well as a pushed branch and commit.
+- 619dd42: Keep project files from opening a session preview and refresh the timeline immediately when returning after ticket creation.
+- 4967762: Keep concurrent offline tag additions visible when another device changes a tag between single and multiple selections.
+- ed40a9d: Keep maintained extensions loadable across the existing and upcoming ordered-storage API hosts.
+- d9b4eaa: Hide linked-resource badges that have no saved label instead of showing their opaque id.
+- 5a5d21b: Open review decisions from Auto Build and timeline attention indicators, show progress by status, defer Auto Build wakes while worker capacity is full, and let eligible blocked work be investigated.
+- 8184397: Derive ticket titles from the current shared body when reading tickets.
+- 5022989: Keep document saving silent, ticket properties compact, and long dropdown values contained; hide empty review links.
+- 8bd04d8: Resume managed work manually when its previous workspace is unavailable.
+- c7a8149: Unify settings layouts, keep save and reset actions in the header, and protect unsaved settings when navigating or closing. Align Planner status and tag editors, group workflow and automation settings, and show visible loading skeletons.
+- b2fec01: Use the shared icon and title popover header in Performance and Auto Build, without a redundant close button.
+- 2d0cff8: Keep the project timeline from pinning the CPU: each ticket card loads its context-menu actions once and reloads them only when you use the card after a change, instead of every card reloading them after every workbench change.
+- e31eb66: Auto Build skips starting an attempt when this device's workspace limit is full and checks live capacity on the next dispatch. Sessions in an already active workspace can share its slot, while Planner's ticket concurrency setting stays unchanged.
+- 3bfc96b: Show ticket-linked workspaces, artifacts, and other resources in one badge list with owner navigation and unavailable states.
+
 ## 0.46.0
 
 _2026-10-31_

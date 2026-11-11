@@ -1,5 +1,23 @@
 # pstdio-artifacts
 
+## 0.46.1
+
+_2026-11-11_
+
+### Patch Changes
+
+- 24e602d: Make the system diagram example ask for running systems, checked facts, real technology icons, a legend dialog, and a flow dropdown, so first drafts need fewer fixes.
+- fd5af30: Pin React and React DOM to exactly 19.2.4 in extension manifests and lockfiles.
+- 96415ed: Install the Sessions provider by default and use its public navigation refs, preserving legacy URLs and saved panels through the same native renderer.
+- 93d1e74: Declare extension IDs and official harness SVG logos with Gallery Thumbnails for UI Canvas, optional Agent Reports, Themes, and unlisted Remote Workspaces.
+- ea8ca3f: Clarify command palette names and groups, fill missing icons, and show assigned shortcut sequences.
+
+  Raise the compiled core binary limit to 280 MB.
+
+- afd5581: Organize the Canvas catalog by purpose and consolidate navigable examples into fewer frames; make in-frame navigation the default for Canvas authoring.
+- ed40a9d: Keep maintained extensions loadable across the existing and upcoming ordered-storage API hosts.
+- 3bfc96b: Show ticket-linked workspaces, artifacts, and other resources in one badge list with owner navigation and unavailable states.
+
 ## 0.46.0
 
 _2026-10-31_
