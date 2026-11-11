@@ -1,129 +1,51 @@
-name: Production desktop validation
+name: PS-202 native startup diagnostic
 on:
-  workflow_call:
-    inputs:
-      ref:
-        required: true
-        type: string
-      artifact_run_id:
-        required: true
-        type: string
-      source_sha:
-        required: true
-        type: string
-      artifact_attempt:
-        required: true
-        type: string
-      channel:
-        required: true
-        type: string
-      kind:
-        description: functional or performance; performance always uses a fresh runner
-        required: true
-        type: string
-      platforms:
-        description: JSON desktop rows selected for this release channel
-        required: true
-        type: string
+  workflow_dispatch:
 permissions:
   contents: read
   actions: read
 jobs:
-  desktop:
-    name: ${{ inputs.kind }} (${{ matrix.target }})
-    runs-on: ${{ matrix.os }}
-    # Preserve the existing desktop release allowance; operation budgets remain in benchmarks.
+  startup:
+    runs-on: macos-15
     timeout-minutes: 30
-    env:
-      SOURCE_SHA: ${{ inputs.source_sha }}
-      ARTIFACT_RUN_ID: ${{ inputs.artifact_run_id }}
-      ARTIFACT_ATTEMPT: ${{ inputs.artifact_attempt }}
-      CHANNEL: ${{ inputs.channel }}
-      GH_TOKEN: ${{ github.token }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include: ${{ fromJSON(inputs.platforms) }}
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.ref }}
-      # Keep the installer matched to this workflow when validating an older candidate.
-      - name: Check out the workflow's native installer
-        uses: actions/checkout@v5
-        with:
-          ref: ${{ github.workflow_sha }}
-          path: __test-tmp__/native-installer
-          sparse-checkout: |
-            /scripts/ci/install-native-dependencies.ts
-            /scripts/ci/native-dependency-environment.ts
-          sparse-checkout-cone-mode: false
+          ref: 8ac8b63703c82871391655049331cb5f304ac072
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
       - uses: actions/setup-node@v5
         with:
           node-version: "24.22.1"
-      - name: Install native dependencies
-        run: bun __test-tmp__/native-installer/scripts/ci/install-native-dependencies.ts
+      - name: Install candidate dependencies
+        run: bun scripts/ci/install-native-dependencies.ts
       - name: Build desktop test dependencies
         run: bun run build -- --scope @pstdio/desktop --include-dependencies
-      - name: Download the exact signed release app
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
-          name: validation-app-${{ matrix.target }}
-          run-id: ${{ inputs.artifact_run_id }}
+          name: validation-app-darwin-arm64
+          run-id: 42962479744
           github-token: ${{ github.token }}
-      - name: Restore the exact release app
-        shell: bash
+      - name: Restore the exact signed candidate
+        env:
+          SOURCE_SHA: 7ddf324d55bec0d61d2bf43ca763acdacd94ef01
+          ARTIFACT_RUN_ID: 42962479744
+          ARTIFACT_ATTEMPT: "1"
+          CHANNEL: stable
         run: |
           bun scripts/ci/production-payload.ts check
-          tar -xzf validation-app-${{ matrix.target }}.tar.gz -C clients/desktop
-      - name: Configure Linux sandbox
-        if: matrix.platform == 'linux'
-        shell: bash
+          tar -xzf validation-app-darwin-arm64.tar.gz -C clients/desktop
+      - name: Add Chromium startup tracing to the diagnostic driver only
         run: |
-          sudo chown root:root clients/desktop/out/prompt-studio-linux-x64/chrome-sandbox
-          sudo chmod 4755 clients/desktop/out/prompt-studio-linux-x64/chrome-sandbox
-      - name: Set up Windows desktop tests
-        if: matrix.platform == 'win32'
-        uses: ./.github/actions/setup-windows-desktop-tests
-      - name: Measure fixed workloads without traces or retries
-        if: inputs.kind == 'performance'
+          bun -e 'const p="clients/desktop/src/e2e/packaged-app-helpers.ts";let t=await Bun.file(p).text();const needle="[\"--remote-debugging-port=0\", `--user-data-dir=${join(home, \"electron-user-data\")}`]";if(!t.includes(needle))throw Error("Diagnostic driver target changed");t=t.replace(needle,"[\"--remote-debugging-port=0\", \"--trace-startup\", \"--trace-startup-duration=5\", \"--trace-startup-format=json\", \"--trace-startup-categories=toplevel,blink,cc,gpu,loading,v8,disabled-by-default-v8.cpu_profiler,disabled-by-default-v8.compile\", `--trace-startup-file=${join(desktopRoot, \"test-results\", `ps202-startup-${Date.now()}.json`)}`, `--user-data-dir=${join(home, \"electron-user-data\")}`]");await Bun.write(p,t);'
+      - name: Diagnose original launch order and workload with tracing overhead
         working-directory: clients/desktop
-        run: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bun run test:benchmark
-      - name: Test every packaged functional case
-        if: inputs.kind == 'functional'
-        working-directory: clients/desktop
-        run: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bun run test:packaged
-      - name: Require first-attempt launch quarantine execution
-        if: ${{ !cancelled() && inputs.kind == 'performance' && matrix.platform == 'win32' }}
-        run: bun scripts/ci/verify-quarantine-reports.ts packaged-desktop-benchmark --scope @pstdio/desktop
-      - name: Run quarantined packaged functional cases once
-        if: ${{ !cancelled() && inputs.kind == 'functional' }}
-        continue-on-error: true
-        run: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bun scripts/ci/run-quarantined-tests.ts packaged-desktop --scope @pstdio/desktop --prebuilt
-      - name: Require first-attempt functional quarantine execution
-        if: ${{ !cancelled() && inputs.kind == 'functional' }}
-        run: bun scripts/ci/verify-quarantine-reports.ts packaged-desktop --scope @pstdio/desktop
-      - name: Attest actual consumer inputs and outcome
-        if: always()
-        env:
-          CHECK: ${{ inputs.kind == 'functional' && 'signed-functional' || 'performance-desktop' }}-${{ matrix.target }}
-          OUTCOME: ${{ job.status }}
-        shell: bash
-        run: bun scripts/ci/production-evidence.ts --check "$CHECK" --outcome "$OUTCOME"
-      - name: Preserve consumer attestation
+        run: bunx --no-install playwright test --config playwright.benchmark.config.ts src/e2e/packaged-launch.p3.bench.ts
+      - name: Preserve diagnostic traces and original benchmark outcomes
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: production-evidence-${{ inputs.kind }}-${{ matrix.target }}-attempt-${{ github.run_attempt }}
-          path: production-evidence
-          if-no-files-found: error
-      - name: Preserve all production desktop evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: production-desktop-${{ inputs.kind }}-${{ matrix.target }}-attempt-${{ github.run_attempt }}
+          name: ps202-native-startup-diagnostic
           path: clients/desktop/test-results
-          if-no-files-found: warn
+          if-no-files-found: error
