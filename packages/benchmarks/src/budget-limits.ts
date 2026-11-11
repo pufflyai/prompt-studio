@@ -55,11 +55,26 @@ const desktopEvidence =
   "User-approved 2026-10-10 release rehearsal: Intel cold launch 23.3 s, Windows 8.2 s; about 20% headroom. See the desktop benchmark section of the testing guide.";
 export const desktopBudgets = (platform = process.platform, arch = process.arch) => {
   const intelMac = platform === "darwin" && arch === "x64";
+  const appleSilicon = platform === "darwin" && arch === "arm64";
   const cold = platform === "win32" ? 10000 : 8000;
+  const coldStart = intelMac ? 28000 : cold;
   const macWindow = intelMac ? 10000 : 1500;
+  const startupWindow = platform === "darwin" ? macWindow : 1000;
+  const isolatedLaunchEvidence =
+    "User-approved temporary Apple Silicon limits on 2026-11-11 after isolated first-launch CI 43002382892 measured 3,618.8 ms startup window and 8,905 ms cold workbench readiness. Requalify the original targets after first-launch optimization.";
   return {
-    coldStartMs: limit(intelMac ? 28000 : cold, "ms", "2026-10-10", desktopEvidence),
-    startupWindowMs: limit(platform === "darwin" ? macWindow : 1000, "ms", "2026-10-10", desktopEvidence),
+    coldStartMs: limit(
+      appleSilicon ? 11000 : coldStart,
+      "ms",
+      appleSilicon ? "2026-11-11" : "2026-10-10",
+      appleSilicon ? isolatedLaunchEvidence : desktopEvidence,
+    ),
+    startupWindowMs: limit(
+      appleSilicon ? 4500 : startupWindow,
+      "ms",
+      appleSilicon ? "2026-11-11" : "2026-10-10",
+      appleSilicon ? isolatedLaunchEvidence : desktopEvidence,
+    ),
     recoveryMs: limit(500, "ms", "2026-10-10", desktopEvidence),
   };
 };
@@ -93,8 +108,8 @@ export const relayStorageBudget = limit(
 );
 
 export const legacyConversionMacrotaskBudget = limit(
-  1000,
+  1500,
   "ms",
-  "2026-11-07",
-  "PS-1114 acceptance: a macrotask timer runs at least once per second while converting 60,000 legacy records and 80,000 pending frames.",
+  "2026-11-11",
+  "User-approved 1,500 ms after release verification 42962479744 measured 1,066.5 ms; retain the complete legacy conversion workload.",
 );

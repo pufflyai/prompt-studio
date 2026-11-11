@@ -75,6 +75,27 @@ test("loads the workbench after the startup window shows while lifecycle resourc
           return (await messages.next()).value![0];
         })
         .toEqual({ workbenchFocused: true });
+      application.send("background-recovery");
+      const [recovery] = await test.step("reveal recovery from a throttled lifecycle renderer", async () =>
+        (await messages.next()).value!);
+      expect(recovery).toEqual({ lifecycleThrottled: false });
+      for (const [action, expected] of [
+        ["hide", { visible: false, minimized: false, throttled: true }],
+        ["show", { visible: true, minimized: false, throttled: false }],
+        ["minimize", { visible: false, minimized: true, throttled: true }],
+        ["restore", { visible: true, minimized: false, throttled: false }],
+      ] as const) {
+        await test.step(`preserve recovery paint policy after ${action}`, async () => {
+          application.send(`recovery-${action}`);
+          await messages.next();
+          await expect
+            .poll(async () => {
+              application.send("recovery-state");
+              return (await messages.next()).value![0];
+            })
+            .toEqual(expected);
+        });
+      }
     } finally {
       if (application.exitCode === null && application.signalCode === null) {
         const exited = once(application, "exit");

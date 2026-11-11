@@ -45,7 +45,40 @@ void app.whenReady().then(async () => {
       visible: controller.window.isVisible(),
       workbenchVisible: controller.window.contentView.children.some((view) => view.getVisible()),
     });
-    process.on("message", async () => {
+    process.on("message", async (message) => {
+      if (message === "background-recovery") {
+        // A covered lifecycle renderer is throttled after the desktop loses focus.
+        controller.window.webContents.setBackgroundThrottling(true);
+        await controller.showLifecycle();
+        process.send!({ lifecycleThrottled: controller.window.webContents.getBackgroundThrottling() });
+        return;
+      }
+      if (typeof message === "string" && message.startsWith("recovery-")) {
+        const window = controller.window;
+        switch (message) {
+          case "recovery-hide":
+            window.hide();
+            await controller.showLifecycle();
+            break;
+          case "recovery-show":
+            window.show();
+            window.blur();
+            await controller.showLifecycle();
+            break;
+          case "recovery-minimize":
+            window.minimize();
+            break;
+          case "recovery-restore":
+            window.restore();
+            break;
+        }
+        process.send!({
+          visible: window.isVisible(),
+          minimized: window.isMinimized(),
+          throttled: window.webContents.getBackgroundThrottling(),
+        });
+        return;
+      }
       const workbenchFocused = await controller.webContents()[1]?.executeJavaScript("document.hasFocus()");
       process.send!({ workbenchFocused });
     });

@@ -6,8 +6,8 @@ import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { logTestPhase } from "../scripts/log-test-phase";
-import { removeTestDirectory } from "../scripts/remove-test-directory";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+import { removeTestDirectory } from "./remove-test-directory";
 
 export interface PackagedPlanner {
   baseUrl: string;

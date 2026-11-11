@@ -48,6 +48,41 @@ comparison motivates the change; native CI must still establish completion withi
 the existing allowance. Cleanup continues to await complete deletion and propagate
 errors on every platform.
 
+The Bun-run CLI fixtures own a platform removal utility directly: `/bin/rm -rf`
+on POSIX and `cmd.exe /d /v:off /s /c rmdir /s /q` on Windows. The root is a literal
+argument on POSIX and a quoted, single-expanded environment value on Windows.
+Directory links are not traversed. Each case stops its runtime first, awaits full
+removal and propagates failure. Test worker counts and execution allowances stay unchanged.
+
+[Release verification 42962479744](https://github.com/pufflyai/prompt-studio/actions/runs/42962479744)
+finished five Apple Silicon Planner scenarios' assertions in 16–23 seconds, then
+exhausted their unchanged 30-second allowances in Node native traversal. One
+completed removal took 14.899 seconds. Windows Auto Build stopped its runtime at
+22.333 seconds and also exhausted 30 seconds during removal. This supersedes the
+single Node synchronous fast pass introduced during the earlier qualification.
+
+The utility is the runner-owned child, rather than a grandchild hidden behind a
+synchronous Node call, so cancellation stops traversal. Only a normal Windows
+utility failure admits one Node asynchronous removal with the existing five
+retries and 100ms delay. Signal termination and cancellation never start recovery.
+Native timing qualification remains necessary; local link-safety tests alone do
+not prove completion on a hosted runner.
+
+The corrected Windows utility invocation in scoped run43002988593 still reached
+cleanup at23.244seconds and exhausted30seconds before deletion completed. Partition
+only the owned home's installed `extensions` directory into independent immediate
+children and remove at most four concurrently, then remove the remaining home.
+The parent directory must be a real directory, never a junction or symbolic link.
+Do not enumerate extension targets or follow their links. All direct child
+processes remain registered with the test's cancellation owner; await all outcomes
+before returning or removing the rest of the home. This changes deletion scheduling,
+not fresh installation, test operations, assertions or time limits. Two removals
+still exhausted30seconds in run43004628763: setup/assertions took26.547seconds
+and runtime shutdown completed at26.665seconds, leaving only3.335seconds for
+removal. Four independent tasks keep ownership bounded while reducing this last
+serial I/O phase; native qualification remains required. POSIX retains
+its qualified single traversal.
+
 The command-discovery fixture uses the same asynchronous removal policy after
 [Windows run 40010409328](https://github.com/pufflyai/prompt-studio/actions/runs/40010409328/job/120620966481)
 completed its real Node shim assertions but failed synchronous cleanup with `EBUSY`
