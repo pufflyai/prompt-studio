@@ -7,12 +7,14 @@ import { Switch } from "@/components/primitives/switch";
 import { CommentPanel } from "./comment-panel";
 import { HandoffDialog, SessionPreview } from "./handoff-dialog";
 import { MarkdownEditor } from "./markdown-editor";
+import { PlannerPreview } from "./planner-preview";
 import { reviewDocumentRecipe } from "./review-document-recipe";
 import { ReviewPlugin, selectComment } from "./review-plugin";
 import { useReviewPrototype } from "./use-review-prototype";
 
 function TicketReview() {
   const review = useReviewPrototype();
+  const [collectionOpen, setCollectionOpen] = useState(false);
   const [panelOpen, setPanelOpen] = useState(true);
   const [showMarkdown, setShowMarkdown] = useState(false);
   const editorRef = useRef<LexicalEditor | null>(null);
@@ -21,6 +23,8 @@ function TicketReview() {
     review.selectQuote(quote);
     setPanelOpen(true);
   };
+
+  if (collectionOpen) return <PlannerPreview openCount={review.openCount} onOpen={() => setCollectionOpen(false)} />;
 
   return (
     <Stack h="full" minH="0" gap="0" bg="bg" color="fg">
@@ -33,8 +37,11 @@ function TicketReview() {
         flexWrap="wrap"
       >
         <HStack gap="sm">
+          <Button variant="ghost" size="xs" onClick={() => setCollectionOpen(true)}>
+            Planner
+          </Button>
           <Text textStyle="label/S/medium" color="fg.muted">
-            Planner / PS-118
+            / PS-118
           </Text>
           <Badge variant="ticket">Proposal</Badge>
         </HStack>
