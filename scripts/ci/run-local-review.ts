@@ -1,6 +1,7 @@
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join, resolve } from "node:path";
+import { startLocalReviewBuildCache } from "./local-review-build-cache";
 import { cleanupReviewCompose } from "./local-review-compose";
 import { localReviewEnvironment, readReviewSource } from "./local-review-source";
 import { runCiChecks } from "./run-ci-checks";
@@ -35,6 +36,7 @@ export const runLocalReview = async (root: string, base: string, additionalTests
   const phases: { id: string; elapsedMs: number; outcome: string; results: unknown; command: string[] }[] = [];
   let error: string | undefined;
   let complete = false;
+  let buildCache: ReturnType<typeof startLocalReviewBuildCache> | undefined;
   let composeCleanup: Awaited<ReturnType<typeof cleanupReviewCompose>> = [];
   const env = { ...localReviewEnvironment(directory), BUN_FEATURE_FLAG_NO_ORPHANS: "1" };
   const run = async (id: string, command: string[], cwd: string) => {
@@ -76,6 +78,11 @@ export const runLocalReview = async (root: string, base: string, additionalTests
           plan: source.plan,
           phases,
           composeCleanup,
+          buildCache: buildCache && {
+            directory: buildCache.directory,
+            ...buildCache.statistics,
+            unavailable: buildCache.error,
+          },
           requiredCi:
             "Latest-head ci_passed, plus evidence for every deferred check; local_passed is not review-ready by itself.",
         },
@@ -90,6 +97,8 @@ export const runLocalReview = async (root: string, base: string, additionalTests
     await run("snapshot", ["git", "clone", "--shared", "--no-checkout", "--quiet", root, checkout], root);
     await run("checkout", ["git", "checkout", "--detach", source.head], checkout);
     await run("install", ["bun", "install", "--frozen-lockfile", "--concurrent-scripts", "1"], checkout);
+    buildCache = startLocalReviewBuildCache(root);
+    if (buildCache.error) console.warn(`Build cache unavailable; building normally: ${buildCache.error}`);
     await run(
       "validation",
       [
@@ -98,6 +107,7 @@ export const runLocalReview = async (root: string, base: string, additionalTests
         "scripts/ci/local-review-worker.ts",
         "--base",
         source.mergeBase,
+        ...(buildCache.server ? ["--build-cache", buildCache.server.url.origin] : []),
         ...additionalTests.flatMap((file) => ["--test", file]),
         "--report",
         join(directory, "checks.json"),
@@ -109,6 +119,7 @@ export const runLocalReview = async (root: string, base: string, additionalTests
     error = String(caught);
     console.error(error);
   } finally {
+    await buildCache?.server?.stop(true);
     try {
       composeCleanup = await cleanupReviewCompose(directory);
       if (composeCleanup.some((entry) => entry.outcome !== "success")) {

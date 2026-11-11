@@ -30,7 +30,13 @@ const existingStaticChecks = (checks: ReviewCheck[], changed: string[], root: st
   });
 
 // Runs only inside the disposable checkout created by run-local-review.
-export const executeLocalReview = async (root: string, base: string, tests: string[], report: string) => {
+export const executeLocalReview = async (
+  root: string,
+  base: string,
+  tests: string[],
+  report: string,
+  buildCache?: string,
+) => {
   const { head, plan } = readReviewSource(root, base, tests);
   const controller = new AbortController();
   const stop = () => controller.abort();
@@ -43,7 +49,7 @@ export const executeLocalReview = async (root: string, base: string, tests: stri
       report,
       `${JSON.stringify({ head, plan, results, outcome: controller.signal.aborted ? "interrupted" : outcome }, null, 2)}\n`,
     );
-  const run = async (check: { id: string; command: string[]; cwd: string }, priority: TestPriority = "P0") => {
+  const run = async (check: ReviewCheck, priority: TestPriority = "P0", cache?: string) => {
     const start = Date.now();
     const result = await runCiChecks([{ ...check, cwd: join(root, check.cwd) }], {
       priority,
@@ -55,7 +61,12 @@ export const executeLocalReview = async (root: string, base: string, tests: stri
         "test-results/local-review",
         `${priority}-${check.id.replaceAll(/[^a-zA-Z0-9_-]/g, "_")}`,
       ),
-      env: { TEST_PRIORITIES: priority, CI_PROFILE: "production", BUN_FEATURE_FLAG_NO_ORPHANS: undefined },
+      env: {
+        TEST_PRIORITIES: priority,
+        CI_PROFILE: "production",
+        BUN_FEATURE_FLAG_NO_ORPHANS: undefined,
+        NX_SELF_HOSTED_REMOTE_CACHE_SERVER: cache,
+      },
     });
     results.push({
       id: check.id,
@@ -70,7 +81,12 @@ export const executeLocalReview = async (root: string, base: string, tests: stri
   try {
     await save();
     // Builds finish before any consumer checks can read declarations or runtime assets.
-    const built = await runSequence(plan.setup, run, controller.signal, true);
+    const built = await runSequence(
+      plan.setup,
+      (check, priority) => run(check, priority, buildCache),
+      controller.signal,
+      true,
+    );
     await runSequence(existingStaticChecks(plan.staticChecks, plan.changed, root), run, controller.signal);
     if (built) await runSequence([...plan.packageChecks, ...plan.runs, ...plan.queueChecks], run, controller.signal);
     const passed = !controller.signal.aborted && built && results.every((entry) => entry.outcome === "success");
@@ -89,5 +105,6 @@ if (import.meta.main) {
   const report = args[args.indexOf("--report") + 1];
   const tests = args.flatMap((arg, index) => (arg === "--test" ? [args[index + 1]!] : []));
   if (!base || !report) throw new Error("Local review worker requires --base and --report");
-  process.exitCode = await executeLocalReview(resolve(import.meta.dir, "../.."), base, tests, report);
+  const buildCache = args.includes("--build-cache") ? args[args.indexOf("--build-cache") + 1] : undefined;
+  process.exitCode = await executeLocalReview(resolve(import.meta.dir, "../.."), base, tests, report, buildCache);
 }

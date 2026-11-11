@@ -112,6 +112,14 @@ export const createLocalReviewPlan = ({ packages, tests, changed, additionalTest
   for (const owner of queue.browserOwners)
     if (buildCheck && !buildCheck.command.includes(owner)) buildCheck.command.push("--scope", owner);
   for (const check of setup) check.command.push("--concurrency", "1");
+  const ui = packages.find((pkg) => pkg.name === "@pstdio/ui");
+  // Generated declarations live in this install, outside Nx's portable build outputs.
+  if (ui?.scripts["typegen:tokens"])
+    setup.unshift({
+      id: "generate-installed-theme-declarations",
+      cwd: ui.dir,
+      command: ["bun", "run", "typegen:tokens"],
+    });
   const staticChecks = [
     {
       id: "docs-links",

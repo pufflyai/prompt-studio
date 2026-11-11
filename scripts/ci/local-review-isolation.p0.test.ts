@@ -104,10 +104,34 @@ test("two over-target review runs finish with private checkouts, dependencies, h
       import {join} from 'node:path';
       const home=process.env.PSTDIO_HOME;
       mkdirSync(home,{recursive:true});
-      writeFileSync(join(home,'fixture.json'),JSON.stringify({cwd:process.cwd(),cache:process.env.BUN_INSTALL_CACHE_DIR}));
+      writeFileSync(join(home,'fixture.json'),JSON.stringify({cwd:process.cwd(),cache:process.env.BUN_INSTALL_CACHE_DIR,buildCache:process.env.NX_SELF_HOSTED_REMOTE_CACHE_SERVER}));
     `,
     );
-    writeFileSync(join(root, ".gitignore"), "test-results\nnode_modules\n");
+    mkdirSync(join(root, "packages/ui"), { recursive: true });
+    writeFileSync(
+      join(root, "packages/ui/package.json"),
+      JSON.stringify({ name: "@pstdio/ui", scripts: { "typegen:tokens": "bun typegen.ts" } }),
+    );
+    writeFileSync(
+      join(root, "packages/ui/typegen.ts"),
+      "import {writeFileSync} from 'node:fs'; writeFileSync('../../node_modules/theme-declarations','fresh');",
+    );
+    writeFileSync(
+      join(root, "build.ts"),
+      `import {mkdirSync,writeFileSync,readFileSync} from 'node:fs';
+       if(readFileSync('node_modules/theme-declarations','utf8') !== 'fresh') throw new Error('Missing installed declarations');
+       const url=process.env.NX_SELF_HOSTED_REMOTE_CACHE_SERVER;
+       if(!url) throw new Error('Build cache is unavailable');
+       const key=url+'/v1/cache/fixture';
+       const cached=await fetch(key);
+       const output=cached.ok ? await cached.text() : 'complete build';
+       if(!cached.ok) await fetch(key,{method:'PUT',body:output});
+       mkdirSync('dist',{recursive:true}); writeFileSync('dist/output.txt',output);`,
+    );
+    const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+    manifest.scripts.build = "bun build.ts";
+    writeFileSync(join(root, "package.json"), JSON.stringify(manifest));
+    writeFileSync(join(root, ".gitignore"), "test-results\nnode_modules\ndist\n");
     execFileSync(process.execPath, ["install", "--lockfile-only"], { cwd: root, stdio: "pipe" });
     commit();
     const base = git("rev-parse", "HEAD");
@@ -131,10 +155,21 @@ test("two over-target review runs finish with private checkouts, dependencies, h
       const observed = JSON.parse(readFileSync(join(report.directory, "runtime-home/fixture.json"), "utf8"));
       expect(realpathSync(observed.cwd)).toBe(realpathSync(join(report.source, "scripts")));
       expect(observed.cache).toBe(join(report.directory, "bun-cache"));
+      expect(observed.buildCache).toBeUndefined();
+      expect(readFileSync(join(report.source, "dist/output.txt"), "utf8")).toBe("complete build");
+      expect(report.buildCache.directory).toBe(reports[0].buildCache.directory);
       writeFileSync(join(report.source, "README.md"), "private mutation");
     }
     expect(readFileSync(join(root, "README.md"), "utf8")).toBe("# Changed documentation\n");
     expect(git("status", "--porcelain")).toBe("");
+    expect(await runLocalReview(root, base, [])).toBe(0);
+    const warm = readdirSync(join(root, "test-results/local-review"))
+      .map((file) => JSON.parse(readFileSync(join(root, "test-results/local-review", file), "utf8")))
+      .find((report) => !scratch.includes(report.directory));
+    expect(warm.buildCache.hits).toBe(1);
+    expect(warm.buildCache.stored).toBe(0);
+    expect(readFileSync(join(warm.source, "dist/output.txt"), "utf8")).toBe("complete build");
+    expect(readFileSync(join(warm.directory, "runtime-home/fixture.json"), "utf8")).toContain(warm.source);
   } finally {
     clock.mockRestore();
     // Failed runs also retain their report, allowing their private fixture paths to be removed.
