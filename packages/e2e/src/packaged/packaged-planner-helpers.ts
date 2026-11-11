@@ -1,11 +1,12 @@
 import { expect } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { logTestPhase } from "../scripts/log-test-phase";
+import { removeTestDirectory } from "../scripts/remove-test-directory";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
 export interface PackagedPlanner {
@@ -81,7 +82,8 @@ export async function withPackagedPlanner(check: (input: PackagedPlanner) => Pro
   } finally {
     phase("cleanup start");
     if (host) await stopProcess(host.child);
-    rmSync(root, { recursive: true, force: true });
+    phase("runtime stopped");
+    await removeTestDirectory(root);
     phase("cleanup complete");
   }
 }
