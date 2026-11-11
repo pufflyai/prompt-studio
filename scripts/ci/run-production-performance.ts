@@ -1,6 +1,7 @@
 import { cpSync, existsSync, mkdirSync } from "node:fs";
 import { cpus, platform, release, totalmem } from "node:os";
 import { join, resolve } from "node:path";
+import { captureOrderedPerformanceReport } from "./ordered-performance-reports";
 import { performanceChecks } from "./production-performance-profile";
 import { runCiChecks } from "./run-ci-checks";
 
@@ -37,9 +38,16 @@ await Bun.write(
   ),
 );
 const results = [];
+const controller = new AbortController();
+const stop = () => controller.abort();
+process.on("SIGINT", stop);
+process.on("SIGTERM", stop);
+let passed = true;
+let cleanedUp = true;
 for (const check of checks) {
   const report = await runCiChecks([check], {
     priority: "P3",
+    signal: controller.signal,
     concurrency: 1,
     inheritProcessGroup: true,
     logDirectory: join(directory, "logs"),
@@ -48,7 +56,10 @@ for (const check of checks) {
       CI_PLAN_BROWSER_EVIDENCE: join(directory, `${check.id}-cases.json`),
     },
   });
+  captureOrderedPerformanceReport(process.cwd(), directory, check.id);
   results.push(...report.results);
+  passed &&= report.outcome === "success";
+  cleanedUp &&= !report.cleanupFailures?.length;
 }
 if (family === "navigation") {
   const raw = join("__test-tmp__/subnav-benchmark/results", process.env.CI_PLAN_SOURCE_SHA!);
@@ -57,8 +68,12 @@ if (family === "navigation") {
   if (existsSync(report))
     await Bun.write(join(directory, "performance/subnav/browser-report.json"), await Bun.file(report).text());
 }
-const complete = results.length === checks.length && results.every((result) => result.exitCode !== null);
-const outcome = results.every((result) => result.outcome === "success") ? "success" : "failure";
+const complete =
+  results.length === checks.length &&
+  results.every((result) => result.exitCode !== null) &&
+  cleanedUp &&
+  !controller.signal.aborted;
+const outcome = passed ? "success" : "failure";
 await Bun.write(join(directory, "results.json"), JSON.stringify({ ...identity, complete, outcome, results }, null, 2));
 cpSync(directory, join(evidence, "production-performance"), { recursive: true });
 process.exitCode = complete && outcome === "success" ? 0 : 1;

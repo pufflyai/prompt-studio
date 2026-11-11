@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { createTestPlan } from "./test-plan";
 import { createTestRuns } from "./test-runs";
 
 const packages: Parameters<typeof createTestRuns>[1] = [
@@ -74,18 +75,18 @@ test("isolated integrations invoke one canonical owner script with the selected 
   ]);
 });
 
-test("P3 benchmark names keep browser and standalone files on their owning runners", () => {
-  const browser = "packages/e2e/src/perf/nav-chrome.p3.bench.ts";
-  const standalone = "packages/e2e/src/perf/subnav.p3.bench.ts";
-  const plan = createTestRuns([browser, standalone], packages, "P3");
-  expect(plan.find((run) => run.files.includes(browser))?.command).toEqual([
-    "bun",
-    "run",
-    "perf:frontend",
-    "src/perf/nav-chrome.p3.bench.ts",
-  ]);
-  expect(plan.find((run) => run.files.includes(standalone))?.command).toEqual(["bun", "src/perf/subnav.p3.bench.ts"]);
-  expect(plan).toHaveLength(2);
+test("P3 selections expand to complete registered workloads without dispatching package scripts", () => {
+  const plan = createTestPlan({
+    source: { sha: "candidate", tree: "tree", policy: "policy", dirty: false },
+    target: { platform: "linux", arch: "x64" },
+    packages,
+    files: ["packages/e2e/src/perf/nav-chrome.p3.bench.ts", "packages/e2e/src/perf/subnav.p3.bench.ts"],
+  });
+  expect(plan.runs.map((run) => run.benchmarkSuite)).toEqual(["subnav", "workbench"]);
+  expect(plan.runs.find((run) => run.benchmarkSuite === "workbench")!.files).toContain(
+    "packages/e2e/src/packaged/packaged-paged-collections.p3.bench.ts",
+  );
+  expect(plan.runs.every((run) => run.lane === "ordered")).toBe(true);
 });
 
 test("a Playwright file whose cases are all quarantined here may select no stable cases", () => {

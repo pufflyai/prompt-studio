@@ -17,6 +17,7 @@ export interface TestRunResult {
   quarantine?: { executed: number; failures: number };
   reason?: string;
   elapsedMs?: number;
+  nativeFailure?: boolean;
 }
 const resultErrors = (plan: TestPlan, result: TestRunResult, executionId: string) => {
   const errors: string[] = [];
@@ -26,6 +27,7 @@ const resultErrors = (plan: TestPlan, result: TestRunResult, executionId: string
     planHash(result.source) !== planHash(plan.source)
   )
     errors.push(`Stale run: ${result.runId}`);
+  if (result.nativeFailure && result.outcome === "success") errors.push(`Hidden native failure: ${result.runId}`);
   if (!result.complete) errors.push(`Incomplete run: ${result.runId}`);
   if (result.outcome === "success" && result.exitCode !== 0) errors.push(`Invalid successful exit: ${result.runId}`);
   if (

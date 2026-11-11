@@ -173,7 +173,12 @@ const createSetupRunner = (
         env: options.env,
         inheritProcessGroup: options.inheritProcessGroup,
       });
-      record({ kind: step.kind, id: step.id, elapsedMs: performance.now() - start, outcome: result.outcome });
+      record({
+        kind: step.kind,
+        id: step.id,
+        elapsedMs: performance.now() - start,
+        outcome: signal.aborted ? "cancelled" : result.outcome,
+      });
       prepared.set(step.id, result.outcome === "success");
       save();
     }

@@ -1,5 +1,4 @@
 import { relative } from "node:path";
-import { suites } from "./benchmark-registry";
 
 export interface TestPackage {
   name: string;
@@ -16,18 +15,6 @@ const bunFlags = (owner: string) => {
   if (owner === "pstdio-dashboard") flags.push("--tsconfig-override", "tsconfig.app.json");
   if (owner === "pstdio-wt") flags.push("--timeout", "30000");
   return flags;
-};
-
-const workbenchBenchmarks = new Set(suites.find((suite) => suite.id === "workbench")!.files);
-
-const performanceCommand = (paths: string[], owner: TestPackage) => {
-  if (owner.name === "@pstdio/desktop") return ["bun", "run", "test:benchmark", ...paths];
-  if (owner.name === "@pstdio/ui") return ["bun", "run", "perf:chat", ...paths];
-  if (paths.every((path) => path.startsWith("src/packaged/")))
-    return ["bun", "run", "test:packaged:benchmark", ...paths];
-  if (paths.every((path) => workbenchBenchmarks.has(`${owner.dir}/${path}`)))
-    return ["bun", "run", "perf:frontend", ...paths];
-  return ["bun", ...paths];
 };
 
 export const runnerCommand = (runner: string, files: string[], owner: TestPackage, componentOwner?: string) => {
@@ -81,7 +68,7 @@ export const runnerCommand = (runner: string, files: string[], owner: TestPackag
       ...paths,
     ];
   }
-  if (runner === "performance") return performanceCommand(paths, owner);
+  if (runner === "performance") return [];
   if (componentOwner) throw new Error("A Canvas preview owner requires the component runner");
   const wrapper = relative(owner.dir, "scripts/ci/run-bun-tests.ts").replaceAll("\\", "/");
   const preload =

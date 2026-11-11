@@ -69,6 +69,7 @@ export const runPlannedTest = async (plan: TestPlan, run: PlannedRun, result: Te
     );
   }
   Object.assign(result, collectRunEvidence(root, evidence, run, plan, executionId));
+  if (result.nativeFailure && result.outcome === "success") result.outcome = "failure";
   if (run.lane === "quarantine" && result.complete && result.exitCode === 1 && result.quarantine?.failures)
     result.outcome = "quarantined-failure";
 

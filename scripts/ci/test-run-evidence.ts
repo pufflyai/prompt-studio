@@ -24,6 +24,7 @@ export const collectRunEvidence = (
   const identity = (report: { planDigest?: string; runId?: string; executionId?: string }) =>
     report.planDigest === plan.digest && report.runId === run.id && report.executionId === executionId;
   let complete = false;
+  let nativeFailure = false;
   let reports: string[] = [];
   let reason: string | undefined;
   let quarantine: { executed: number; failures: number } | undefined;
@@ -31,24 +32,44 @@ export const collectRunEvidence = (
   let cases: ReportedCase[] = [];
   try {
     if (run.productionFamily) {
-      reports = productionPerformanceEvidence(directory, run, plan, executionId);
+      const evidence = productionPerformanceEvidence(directory, run, plan, executionId);
+      nativeFailure = evidence.nativeFailure;
+      reports = evidence.reports;
       complete = true;
-      reportedFiles = run.files;
+      reportedFiles = evidence.reportedFiles;
     } else if (run.runner === "api") {
       const report = read("api/results.json");
       reports = ["api/results.json"];
       complete =
         report.complete &&
         report.sourceSha === plan.source.sha &&
+        report.platform === run.target.platform &&
+        report.arch === run.target.arch &&
         report.files.length === run.files.length &&
         run.files.every((file) =>
           report.files.some(
             (entry: {
               file: string;
-              cases?: { complete: boolean; planDigest?: string; runId?: string; executionId?: string };
-            }) => `${run.cwd}/${entry.file}` === file && entry.cases?.complete && identity(entry.cases),
+              cases?: {
+                complete: boolean;
+                planDigest?: string;
+                runId?: string;
+                executionId?: string;
+                sourceSha: string;
+                reportedFiles: string[];
+              };
+            }) =>
+              `${run.cwd}/${entry.file}` === file &&
+              entry.cases?.complete &&
+              identity(entry.cases) &&
+              entry.cases.sourceSha === plan.source.sha &&
+              entry.cases.reportedFiles.length === 1 &&
+              entry.cases.reportedFiles[0] === file,
           ),
         );
+      nativeFailure = report.files.some(
+        (entry: { outcome: string; exitCode: number }) => entry.outcome !== "success" || entry.exitCode !== 0,
+      );
       cases = report.files.flatMap((entry: { cases?: { cases: ReportedCase[] } }) => entry.cases?.cases ?? []);
       reportedFiles = [...new Set(cases.map((entry) => entry.file))];
     } else if (["app", "component", "desktop", "packaged-browser", "vite"].includes(run.runner)) {
@@ -88,9 +109,11 @@ export const collectRunEvidence = (
       const report = read("lifecycle.json");
       reports = ["lifecycle.json"];
       complete = identity(report) && report.complete && JSON.stringify(report.files) === JSON.stringify(run.files);
+      nativeFailure = report.outcome === "failure";
       reportedFiles = report.files;
       if (run.runner === "performance") reports.push(...benchmarkPlanEvidence(directory, run, plan.source));
     }
+    nativeFailure ||= cases.some((entry) => entry.outcome === "failure");
     if (run.lane === "quarantine") {
       const expected = quarantineRegistry.filter(
         (entry) =>
@@ -109,6 +132,7 @@ export const collectRunEvidence = (
   }
   return {
     complete,
+    nativeFailure,
     reason,
     quarantine,
     reportedFiles,

@@ -1,8 +1,9 @@
 import { cpSync, mkdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 
 // Tarballs remain immutable inputs owned by the enclosing executor. Every writable
-// source and dependency tree belongs to this invocation, including symlink targets.
+// source belongs to this invocation, including symlink targets. Runtime installation
+// owns dependencies; copying prepared node_modules repeats gigabytes of disposable work.
 export const copyPreparedFixtures = (prepared: string, home: string, names: string[]) => {
   const catalog = JSON.parse(readFileSync(join(prepared, "sources.json"), "utf8")) as Record<string, string>;
   const started = performance.now();
@@ -16,6 +17,7 @@ export const copyPreparedFixtures = (prepared: string, home: string, names: stri
       recursive: true,
       dereference: true,
       filter: (path) => {
+        if (basename(path) === "node_modules") return false;
         const stat = statSync(path);
         if (stat.isFile()) bytesCopied += stat.size;
         return true;

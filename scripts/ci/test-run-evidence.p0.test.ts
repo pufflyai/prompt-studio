@@ -244,14 +244,98 @@ test("fixed release performance retains native logs and measurements bound to th
     write(native, "results.json", {
       ...identity,
       complete: true,
+      outcome: "success",
       results: [{ id: "storage", exitCode: 0, outcome: "success" }],
     });
     mkdirSync(join(native, "logs"));
     writeFileSync(join(native, "logs/0-storage.log"), `${JSON.stringify(checks[0])}\nNative measurement completed\n`);
     writeFileSync(join(native, "storage.jsonl"), JSON.stringify({ metric: "read", value: 10 }));
-    expect(collectRunEvidence(root, root, run, plan, "attempt").complete).toBe(true);
+    expect(collectRunEvidence(root, root, run, plan, "attempt")).toMatchObject({
+      complete: true,
+      nativeFailure: false,
+    });
+    write(native, "results.json", {
+      ...identity,
+      complete: true,
+      outcome: "failure",
+      results: [{ id: "storage", exitCode: 1, outcome: "failure" }],
+    });
+    expect(collectRunEvidence(root, root, run, plan, "attempt")).toMatchObject({ complete: true, nativeFailure: true });
     rmSync(join(native, "storage.jsonl"));
     expect(collectRunEvidence(root, root, run, plan, "attempt").complete).toBe(false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("signed desktop evidence requires terminal cases from every selected benchmark file", async () => {
+  const { createProductionPerformancePlan } = await import("./production-performance-plan");
+  const { performanceChecks } = await import("./production-performance-profile");
+  const root = mkdtempSync(join(tmpdir(), "desktop-performance-"));
+  try {
+    const plan = createProductionPerformancePlan("desktop", source, { platform: "darwin", arch: "arm64" });
+    const run = plan.runs[0]!;
+    const identity = { planDigest: plan.digest, runId: run.id, executionId: "attempt" };
+    const native = join(root, "production-performance");
+    const checks = performanceChecks("desktop");
+    write(native, "metadata.json", {
+      ...identity,
+      sourceSha: source.sha,
+      versionSha: source.sha,
+      platform: "darwin",
+      arch: "arm64",
+      checks,
+    });
+    write(native, "results.json", {
+      ...identity,
+      complete: true,
+      outcome: "success",
+      results: [{ id: "desktop", exitCode: 0, outcome: "success" }],
+    });
+    mkdirSync(join(native, "logs"));
+    writeFileSync(join(native, "logs/0-desktop.log"), `${JSON.stringify(checks[0])}\n`);
+    const report = {
+      ...identity,
+      complete: true,
+      selected: ["first"],
+      cases: [{ id: "first", file: run.files[0], outcome: "passed" }],
+      errors: [],
+    };
+    const ordered = {
+      config: { rootDir: "clients/desktop", metadata: { quarantineAttempt: "native" } },
+      suites: [
+        {
+          specs: run.files.map((file, index) => ({
+            file: file.replace("clients/desktop/", ""),
+            title: String(index),
+            tests: [{ results: [{ status: "passed" }] }],
+          })),
+        },
+      ],
+      errors: [],
+    };
+    write(native, "desktop-ordered.json", ordered);
+    write(native, "desktop-attempt.json", {
+      ...identity,
+      sourceSha: source.sha,
+      platform: "darwin",
+      arch: "arm64",
+      token: "native",
+    });
+    write(native, "desktop-cases.json", report);
+    expect(collectRunEvidence(root, root, run, plan, "attempt").complete).toBe(false);
+    write(native, "desktop-cases.json", {
+      ...report,
+      selected: ["first", "second"],
+      cases: [...report.cases, { id: "second", file: run.files[1], outcome: "passed" }],
+    });
+    expect(collectRunEvidence(root, root, run, plan, "attempt")).toMatchObject({
+      complete: true,
+      reportedFiles: [...run.files].sort(),
+    });
+    ordered.suites[0]!.specs[1]!.tests[0]!.results[0]!.status = "failed";
+    write(native, "desktop-ordered.json", ordered);
+    expect(collectRunEvidence(root, root, run, plan, "attempt")).toMatchObject({ complete: true, nativeFailure: true });
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
