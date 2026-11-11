@@ -65,6 +65,13 @@ preserve the existing query, event and editing methods. The matching SDK adds
 Publish the supporting host/SDK/UI before independent consumer releases; local
 tarballs and a widened manifest range are not published compatibility evidence.
 
+Read-only host-retained command queries also share API 0.4.0. A supporting host
+provides `commands.query`; the SDK exposes `client.commands.read.query(...)`,
+`client.queries.command(...)` and `useWebviewCommandQuery`. These retain finite
+accepted results across recreated webview frames. Existing guest callback queries
+remain available with their guest lifetime. Publish the supporting host and SDK
+before independent consumers adopt this addition.
+
 Infinite tree scrolling also shares API 0.4.0 on `main`. Tree sections and child collections can return
 `nextCursor`; their `page` callback returns `TreeNodePage` for automatic sibling appends. A supporting host
 advertises `view.tree.pages.v1`. Publish the SDK and host before separately releasing an extension that uses it.
@@ -74,6 +81,10 @@ share the coordinated API 0.4.0 step on `main`. They expose current project choi
 and owned local preparation before readiness. Publish the host and SDK before
 separately released providers adopt them; SDK 0.46.0 does not include them. See
 [local workspace providers](0003-command-and-process-api.md#local-workspace-providers-on-main).
+
+Inline data-table sparkline and bar-chart renderers and the optional saved
+`rowHeight` setting also share the coordinated API 0.4.0 step. Existing columns
+and saved views keep their behavior. See [inline charts and row height](0004-contribution-api.md#inline-charts-and-row-height-on-main).
 
 ### Which version each check uses
 

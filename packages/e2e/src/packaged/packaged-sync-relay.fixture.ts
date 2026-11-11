@@ -4,6 +4,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   blobManifestBeginSchema,
+  blobReadSchema,
   liveProtocolHeader,
   liveProtocolVersion,
   syncBlobReferencesFeature,
@@ -88,8 +89,17 @@ const createBlobStore = (directory?: string) => {
       if (failReads(deviceId))
         return Response.json({ error: "unavailable" }, { status: 503, headers: { "retry-after": "0" } });
       if (!blob?.complete) return new Response(null, { status: 404 });
+      const offset = blobReadSchema.safeParse(await request.json().catch(() => null));
+      const content = bytes(blob);
+      if (!offset.success || offset.data.offset > content.byteLength)
+        return Response.json({ error: "invalid-request" }, { status: 400 });
       served.push({ deviceId, blobId: id });
-      return new Response(bytes(blob));
+      return new Response(content.subarray(offset.data.offset), {
+        headers: {
+          "pstdio-offset": String(offset.data.offset),
+          "pstdio-byte-length": String(content.byteLength - offset.data.offset),
+        },
+      });
     }
     return new Response(null, { status: 404 });
   };

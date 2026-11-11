@@ -3,6 +3,7 @@ import {
   defineKeybinding,
   defineNavigationItem,
   definePage,
+  defineSchedule,
   defineView,
   l10n,
   packageAsset,
@@ -33,6 +34,14 @@ export default defineExtension({
   defaultLocale: "en",
   translations: { fr: packageAsset("./l10n/fr.json", import.meta.url) },
   commands: Object.values(commands),
+  schedules: [
+    defineSchedule({
+      id: "quota-history",
+      title: l10n("quotas.schedule", "Record quota history"),
+      schedule: "0 * * * *",
+      command: commands.quotas.ref,
+    }),
+  ],
   views: [view],
   pages: [home],
   navigationItems: [

@@ -26,6 +26,7 @@ import { usePausedExtensions } from "../paused-extensions";
 import { useExecuteExtensionCommand, useProjectExtensions } from "../use-project-extensions";
 import { useDashboardQueryScope } from "../use-query-scope";
 import { useWebviewPageProps } from "../use-webview-page-props";
+import { createDashboardWebviewCommandQueries } from "../webview-command-queries";
 import { createDashboardOwnedPreferences } from "../webview-owned-preferences";
 import {
   createDashboardWebviewNotificationsAdapter,
@@ -93,10 +94,27 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   const colorScheme = getThemePreferenceMode(themePreference, themePreferences);
   const frameTitle = webview.title ? resolveLocalizableString(webview.title, extensionId) : (title ?? "Extension view");
   const translations = getExtensionTranslationContext(extensionId, locale);
+  const commandQueries = projectId
+    ? createDashboardWebviewCommandQueries({
+        runtime: owner,
+        queryScope,
+        projectId,
+        extensionId,
+        extensionInstanceId,
+        webviewId,
+        source: [installedExtensionId, webview.runtimeUrl, webview.moduleUrl],
+        slotKind: props.slotKind,
+        resource: resource ?? props.placement?.resource,
+        workbench: props.workbench,
+        placement: props.placement,
+        events: hostEvents,
+      })
+    : undefined;
 
   const capabilities = createExtensionWebviewHostCapabilities(
     createDashboardExtensionWebviewAdapters({
       base: {
+        commandQueries,
         hostEvents,
         terminal,
         executeCommand: (commandInput, signal, invocation) => {
@@ -208,6 +226,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
         extensionProps={{
           projectId,
           queryScope,
+          commandQueries: commandQueries?.seeds(),
           presentation: props.workbench?.layout
             .getLayout()
             .regions.overlay.widgets.some((item) => item.widgetId === props.placement?.instanceId)

@@ -121,6 +121,8 @@ test("an installed provider discovers current choices through its public project
 });
 
 test("an installed local provider prepares its directory before readiness and reopens it after restart", async () => {
+  // This case also runs without the preceding discovery check in quarantine.
+  await writeFile(join(sourceFolder, "revision.txt"), "review");
   const created = await post("/v1/workspaces", { project_id: projectId, provider_id: providerId, params: {} });
   expect(created.status).toBe(201);
   const workspace = await created.json();

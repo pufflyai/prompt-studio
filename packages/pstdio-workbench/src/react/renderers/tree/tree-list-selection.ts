@@ -75,16 +75,19 @@ const targetMatchesPage = (
 const resolveActivePageNodeIds = (
   sections: TreeViewSection[],
   childrenByNodeId: Record<string, TreeNode[]>,
-  activePage: PageRef | undefined,
-  activeResource: ResourceRef | undefined,
+  activeLocation: PageLocation | undefined,
   referenceKey: (resource: ResourceRef) => string = resourceKey,
 ) => {
-  if (!activePage) return undefined;
-  return activeNodeIds(
-    listSectionNodes(sections, childrenByNodeId)
-      .filter((node) => targetMatchesPage(node.target, activePage, activeResource, referenceKey))
-      .map((node) => node.id),
-  );
+  const nodes = listSectionNodes(sections, childrenByNodeId);
+  for (let location = activeLocation; location; location = location.parent) {
+    const matches = activeNodeIds(
+      nodes
+        .filter((node) => targetMatchesPage(node.target, location.page, location.resource, referenceKey))
+        .map((node) => node.id),
+    );
+    if (matches) return matches;
+  }
+  return undefined;
 };
 export const resolveTreeListSelection = (input: ResolveTreeListSelectionInput) => {
   const { sections, childrenByNodeId, activeNodeId, activeLocation, activeResource, selectedNodeId } = input;
@@ -115,13 +118,7 @@ export const resolveTreeListSelection = (input: ResolveTreeListSelectionInput) =
   }
   const activeResourceNodeId = resolveActiveResourceNodeIds(sections, childrenByNodeId, activeResourceKeys);
   if (activeResourceNodeId) return activeResourceNodeId;
-  const activePageNodeId = resolveActivePageNodeIds(
-    sections,
-    childrenByNodeId,
-    activeLocation?.page,
-    activeLocation?.resource,
-    referenceKey,
-  );
+  const activePageNodeId = resolveActivePageNodeIds(sections, childrenByNodeId, activeLocation, referenceKey);
   if (activePageNodeId) return activePageNodeId;
   if (!selectedNodeId) return undefined;
   if (selectedResourceKey) return undefined;
@@ -140,5 +137,8 @@ export const resolveTreeSelectionIntent = (input: ResolveTreeListSelectionInput)
     targetMatchesPage(node.target, input.activeLocation.page, input.activeResource, input.resourceReferenceKey)
   )
     return node.id;
+  for (let location = input.activeLocation?.parent; location; location = location.parent) {
+    if (targetMatchesPage(node.target, location.page, location.resource, input.resourceReferenceKey)) return node.id;
+  }
   return undefined;
 };

@@ -3,12 +3,12 @@ import { SimpleCard } from "@pstdio/ui";
 import type { CompareRow } from "../benchmarks/analysis";
 import { metricId } from "../trends/trend-summary";
 import {
+  differenceColor,
   formatChangeRange,
   formatPercent,
   formatRange,
   formatValue,
   verdictArrow,
-  verdictColor,
 } from "../webview/format";
 
 export const BASE_COLOR = "vis.categorical.1";
@@ -109,7 +109,7 @@ const ChangePlot = (props: { row: CompareRow; scale: number }) => {
   const at = (share: number) => `${50 + Math.max(-50, Math.min(50, (share / scale) * 50))}%`;
   // With one sample on either side the change has no interval, so only its dot shows.
   const single = !row.change || row.change.verdict === "inconclusive";
-  const color = row.change ? verdictColor[row.change.verdict] : "fg.muted";
+  const color = row.change ? differenceColor(row.change) : "fg.muted";
   return (
     <Box position="relative" h="6" aria-hidden="true">
       <Box position="absolute" insetY="0" left="50%" borderStartWidth="1px" borderColor="border" />
@@ -150,7 +150,7 @@ const ChangeCell = (props: { row: CompareRow; baseChosen: boolean }) => {
     value = once
       ? formatPercent(row.change.change)
       : `${verdictArrow[row.change.verdict]} ${formatPercent(row.change.change)}`;
-    color = once ? "fg" : verdictColor[row.change.verdict];
+    color = differenceColor(row.change);
     detail = once
       ? `${isSingleSample(row) ? "1 sample each" : "1 sample on one side"} · too little evidence`
       : formatChangeRange(row.change);

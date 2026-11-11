@@ -14,6 +14,7 @@ import type { SettingsMap } from "./define-extension";
 import type { GuestHost } from "./define-extension-view";
 import { createWebviewAccountClient, type WebviewAccountClient } from "./webview-account-client";
 import { type ArtifactMountKey, artifactMountId } from "./webview-capabilities";
+import type { WebviewCommandQuery, WebviewCommandQueryOptions } from "./webview-command-query";
 import { createWebviewEditingClient, type WebviewEditingClient } from "./webview-editing";
 import { createWebviewEventsClient, type WebviewEventsClient } from "./webview-events";
 import { createWebviewFilesClient, type WebviewFilesClient } from "./webview-files-client";
@@ -25,7 +26,7 @@ import { type CommandStreamOptions, openWebviewCommandStream, type WebviewStream
 // Command types derive from a record of `defineCommand` values (the extension's
 // exported commands map), not from `typeof extension`: `defineExtension` cannot keep
 // per-command result types (see ADR 0012-temporary-webview-client-type-source).
-type CommandFn<TDefinition> =
+type CommandCall<TDefinition> =
   TDefinition extends CommandDefinition<infer TSchema, infer TResult, infer _TSettings, infer _TChunk>
     ? TSchema extends ParamObjectSchema
       ? Partial<ParamsOf<TSchema>> extends ParamsOf<TSchema>
@@ -33,6 +34,16 @@ type CommandFn<TDefinition> =
         : (params: ParamsOf<TSchema>) => Promise<TResult>
       : () => Promise<TResult>
     : never;
+
+type CommandQueryFn<TDefinition> =
+  TDefinition extends CommandDefinition<infer Schema, infer Result, infer _Settings, infer _Chunk>
+    ? Schema extends ParamObjectSchema
+      ? Partial<ParamsOf<Schema>> extends ParamsOf<Schema>
+        ? (params?: ParamsOf<Schema>, options?: WebviewCommandQueryOptions) => WebviewCommandQuery<Result>
+        : (params: ParamsOf<Schema>, options?: WebviewCommandQueryOptions) => WebviewCommandQuery<Result>
+      : (params?: undefined, options?: WebviewCommandQueryOptions) => WebviewCommandQuery<Result>
+    : never;
+type CommandFn<TDefinition> = CommandCall<TDefinition> & { query: CommandQueryFn<TDefinition> };
 
 export type WebviewCommandsClient<TCommands> = {
   [K in keyof TCommands & string]: CommandFn<TCommands[K]>;
@@ -136,7 +147,14 @@ export const createWebviewClient = <TCommands extends object, TSettings = undefi
     {
       get: (_target, commandKey) => {
         if (typeof commandKey !== "string") return undefined;
-        return (params?: JsonObject) => runCommand(commandKey, params);
+        return Object.assign((params?: JsonObject) => runCommand(commandKey, params), {
+          query: (params?: JsonObject, queryOptions?: WebviewCommandQueryOptions) =>
+            createWebviewQueryClient(host, extensionId).command(
+              { extensionId, kind: "command", id: commandKey },
+              params,
+              { ...queryOptions, workspaceId: queryOptions?.workspaceId ?? options?.workspaceId },
+            ),
+        });
       },
     },
   );

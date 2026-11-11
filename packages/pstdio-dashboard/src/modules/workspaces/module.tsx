@@ -167,7 +167,7 @@ export const createWorkspacesModule = () =>
       ];
       for (const alias of aliases)
         ctx.commands.registerCommand(
-          { id: alias.id, label: alias.label },
+          { id: alias.id, label: alias.label, category: "Workspaces", icon: "FolderGit2" },
           {
             execute: (args, invocation) =>
               ctx.commands.executeCommand(

@@ -24,6 +24,7 @@ test.afterEach(async ({ request }) => {
 });
 
 test("native view actions load dependent options and submit explicit values", async ({ page, request }, testInfo) => {
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
   const parent = join(repoRoot, "__test-tmp__");
   mkdirSync(parent, { recursive: true });
   const sourcePath = mkdtempSync(join(parent, "native-actions-"));
@@ -78,6 +79,8 @@ test("native view actions load dependent options and submit explicit values", as
   }, projectId);
   for (const view of ["table", "board"]) {
     await page.goto(`/projects/${projectId}/extensions/e2e.native-actions/${view}`);
+    await page.getByRole("button", { name: "Copy experiment reference", exact: true }).click();
+    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe("experiment-reference");
     const action = page.getByRole("button", { name: "Run experiment", exact: true });
     await expect(action).toBeVisible();
     await expect(page.getByRole("button", { name: "Disabled experiment" })).toBeDisabled();

@@ -1,6 +1,13 @@
+import { readDataTableChartValue } from "./data-table-chart-values";
+
 /** The value used by table filters and sorts, independent of its rendered label. */
 export const resolveDataTableComparableValue = (value: unknown, renderer?: { type: string }) => {
   if (typeof value !== "object" || value === null) return value;
+  if (renderer?.type === "sparkline" || renderer?.type === "bar-chart") {
+    const values = readDataTableChartValue(value)?.values ?? [];
+    for (let index = values.length - 1; index >= 0; index--) if (values[index] !== null) return values[index];
+    return undefined;
+  }
   if ("display" in value) return "sortValue" in value ? value.sortValue : undefined;
   if (
     renderer?.type === "diff" &&
@@ -19,6 +26,7 @@ export const resolveDataTableFieldKind = (
   column: { type?: "string" | "number" | "boolean" | "date"; renderer?: { type: string } } = {},
 ) => {
   if (column.type) return column.type;
+  if (column.renderer?.type === "sparkline" || column.renderer?.type === "bar-chart") return "number";
   if (column.renderer?.type === "date") return "date";
   const comparable = values
     .map((value) => resolveDataTableComparableValue(value, column.renderer))

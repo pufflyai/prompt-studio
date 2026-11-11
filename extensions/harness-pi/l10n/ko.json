@@ -1,4 +1,6 @@
 {
   "harness.pi": "Pi",
-  "params.thinking": "생각"
+  "params.thinking": "생각",
+  "quotas.title": "계정 할당량 확인",
+  "quotas.description": "Pi에서 계정 할당량 정보를 제공하는지 확인합니다."
 }

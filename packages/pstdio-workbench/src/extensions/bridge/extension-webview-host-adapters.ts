@@ -58,6 +58,10 @@ export interface ExtensionWebviewFilesAdapter {
 }
 
 export interface ExtensionWebviewHostAdapters {
+  commandQueries?: Pick<
+    ReturnType<typeof import("./webview-command-queries").createWebviewCommandQueryAdapter>,
+    "request"
+  >;
   textEditing?: {
     request<Request extends WebviewHostCapabilityParams["editing.text"]>(
       input: Request,

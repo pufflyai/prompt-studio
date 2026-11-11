@@ -27,7 +27,7 @@ const DENY_MESSAGES: Record<Exclude<ControlDecision, "approve">, string> = {
 const approvalReply = (decision: ControlDecision, input: unknown) =>
   decision === "approve"
     ? { behavior: "allow", updatedInput: input }
-    : { behavior: "deny", message: DENY_MESSAGES[decision], interrupt: decision === "timeout" };
+    : { behavior: "deny", message: DENY_MESSAGES[decision], interrupt: false };
 
 const controlResponse = (requestId: string, response: object) => ({
   type: "control_response",

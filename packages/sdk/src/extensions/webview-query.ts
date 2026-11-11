@@ -1,7 +1,16 @@
-import { EXTENSION_EVENTS_SCOPE, type RendererEventReference } from "pstdio-api-contracts/extension-kernel";
+import {
+  type CommandRef,
+  EXTENSION_EVENTS_SCOPE,
+  type JsonObject,
+  type RendererEventReference,
+  type Struct,
+} from "pstdio-api-contracts/extension-kernel";
+import { commandRefId } from "./contribution-reference";
 import { resolveEventReferenceId } from "./event-reference";
 import type { GuestHost } from "./guest-host";
+import { runQueryCleanup } from "./query-cleanup";
 import { createScopedQueryClient, type QueryScope, type ScopedQueryDescriptor } from "./scoped-query";
+import { createWebviewCommandQueries, type WebviewCommandQueryOptions } from "./webview-command-query";
 import type { WebviewExtensionEvent } from "./webview-events";
 
 export type WebviewQueryDescriptor<T> = ScopedQueryDescriptor<T> & {
@@ -10,6 +19,7 @@ export type WebviewQueryDescriptor<T> = ScopedQueryDescriptor<T> & {
 };
 
 const createRoot = (host: GuestHost) => {
+  const commands = createWebviewCommandQueries(host, host.extensionId ?? "");
   const root = createScopedQueryClient(
     { runtimeId: "webview", extensionId: host.extensionId ?? "" },
     {
@@ -29,7 +39,7 @@ const createRoot = (host: GuestHost) => {
       boundary = next;
     }
   });
-  return { root, stopProps };
+  return { root, stopProps, commands };
 };
 const roots = new WeakMap<GuestHost, ReturnType<typeof createRoot>>();
 
@@ -40,8 +50,26 @@ export const createWebviewQueryClient = (host: GuestHost, extensionId = host.ext
     state = createRoot(host);
     roots.set(host, state);
   }
-  const { root, stopProps } = state;
+  const { root, stopProps, commands } = state;
   return {
+    /** Host-owned finite command data survives destruction of this iframe. */
+    command<Params extends Struct, Result>(
+      command: CommandRef<Params, Result>,
+      params?: Params,
+      options?: WebviewCommandQueryOptions,
+    ) {
+      const commandId = commandRefId(command, extensionId);
+      return commands.query<Result>(
+        {
+          commandId,
+          params: params as JsonObject | undefined,
+          workspaceId: options?.workspaceId,
+          resource: options?.resource,
+        },
+        options,
+        extensionId,
+      );
+    },
     /** Selected authority/project identity; unrelated host props leave this snapshot equal. */
     getScope() {
       const props = host.propsStore?.get();
@@ -73,9 +101,8 @@ export const createWebviewQueryClient = (host: GuestHost, extensionId = host.ext
     inspect: root.inspect,
     dispose() {
       if (roots.get(host) !== state) return;
-      stopProps?.();
-      root.dispose();
       roots.delete(host);
+      runQueryCleanup([() => stopProps?.(), commands.dispose, root.dispose]);
     },
   };
 };

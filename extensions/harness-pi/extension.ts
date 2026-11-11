@@ -1,7 +1,9 @@
 import { defineExtension, defineHarness, defineHook, packageAsset, workspaceEvents } from "@pstdio/sdk/extensions";
 import { createPiHarness } from "./src/harness";
+import { quotasCommand } from "./src/quotas";
 
 export default defineExtension({
+  commands: [quotasCommand],
   translations: {
     es: packageAsset("./l10n/es.json", import.meta.url),
     fr: packageAsset("./l10n/fr.json", import.meta.url),
