@@ -5,7 +5,7 @@ import { recordMeasurement } from "pstdio-benchmarks/writer";
 import { test } from "../testing/packaged-fixture";
 import { recordBenchmark } from "./benchmark-record";
 import { disposePackagedApp, type PackagedApp } from "./packaged-app-helpers";
-import { launchProject, openLabPreview, readSnapshot } from "./packaged-performance-helpers";
+import { launchProject, openHostPreview, readSnapshot } from "./packaged-performance-helpers";
 import {
   IDLE_WINDOW_MS,
   measureRenderers,
@@ -84,11 +84,14 @@ for (const monitoring of [false, true]) {
 test("idle extension preview stays quiet", async () => {
   let app: PackagedApp | null = null;
   try {
-    ({ app } = await launchProject("Preview"));
-    await openLabPreview(app.page);
-    const lab = app.page.frames().find((frame) => frame.url().includes("/v1/extensions/webviews/"));
-    expect(lab).toBeDefined();
-    const renderers = { workbench: await openRendererSession(app.page), lab: await openRendererSession(app.page, lab) };
+    ({ app } = await launchProject("Preview", { webview: true }));
+    await openHostPreview(app.page);
+    const guest = app.page.frames().find((frame) => frame.url().includes("/v1/extensions/webviews/"));
+    expect(guest).toBeDefined();
+    const renderers = {
+      workbench: await openRendererSession(app.page),
+      guest: await openRendererSession(app.page, guest),
+    };
     await app.page.waitForTimeout(SETTLE_MS);
 
     const measured = await measureRenderers("idle-extension-preview", renderers, () =>
@@ -96,10 +99,10 @@ test("idle extension preview stays quiet", async () => {
     );
     await recordBenchmark({
       name: "idle-extension-preview",
-      scenario: "Fixture Lab webview open beside the workbench",
+      scenario: "Host contract webview open beside the workbench",
       workload: "No user input",
-      measuredProcess: "Workbench and Lab renderer main threads (CDP)",
-      start: `${SETTLE_MS} ms after the Lab heading is visible`,
+      measuredProcess: "Workbench and guest renderer main threads (CDP)",
+      start: `${SETTLE_MS} ms after the host contract heading is visible`,
       end: `${IDLE_WINDOW_MS} ms later`,
       metrics: rendererMetrics(measured, IDLE_BUDGET),
     });
@@ -111,7 +114,7 @@ test("idle extension preview stays quiet", async () => {
 test("long tool-heavy stream stays within budget", async () => {
   let app: PackagedApp | null = null;
   try {
-    const launched = await launchProject("Streaming", { monitoring: true });
+    const launched = await launchProject("Streaming", { monitoring: true, harness: true });
     app = launched.app;
     const session = await app.page.evaluate(async (projectId) => {
       const response = await fetch("/v1/sessions", {

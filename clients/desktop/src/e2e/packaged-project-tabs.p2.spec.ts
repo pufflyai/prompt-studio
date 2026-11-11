@@ -15,7 +15,6 @@ import {
 import { homePage } from "./packaged-performance-helpers";
 import { createPackagedProject, openPackagedProject } from "./packaged-project-helpers";
 
-const fixturePath = dirname(fileURLToPath(import.meta.resolve("workbench-fixture/package.json")));
 const homePath = dirname(fileURLToPath(import.meta.resolve("pstdio-home/package.json")));
 
 test(
@@ -28,7 +27,6 @@ test(
       app = await launchPackagedApp(home, {
         PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
           defaultExtensions: [
-            { source: fixturePath, installName: "workbench-fixture", skipInstall: true },
             { source: homePath, installName: "pstdio-home", skipInstall: true },
             {
               source: dirname(fileURLToPath(import.meta.resolve("pstdio-session-browser/refs"))),
@@ -92,13 +90,13 @@ test(
       await expect(app.page.getByLabel("Main").getByText("No messages yet", { exact: true })).toBeVisible();
       await app.page.getByRole("button", { name: "Navigate back", exact: true }).click();
       await expect(homePage(app.page)).toBeVisible();
-      await app.page.getByRole("option", { name: "Lab", exact: true }).click();
-      await expect(app.page).toHaveURL(/\/extensions\/[^/]+\/lab$/);
-      const lab = app.page.frameLocator('iframe[title="Lab"]').getByRole("heading", { name: "Sandbox webview" });
-      await expect(lab).toBeVisible();
+      await app.page.getByRole("option", { name: "Home", exact: true }).click();
+      await expect(app.page).toHaveURL(/\/extensions\/[^/]+\/home$/);
+      const retainedHome = app.page.frameLocator('iframe[title="Home"]').getByText("Project home", { exact: true });
+      await expect(retainedHome).toBeVisible();
       const firstPageUrl = app.page.url();
       // A loaded project tab keeps its views: the same webview document survives a switch.
-      await lab.evaluate(() => {
+      await retainedHome.evaluate(() => {
         (window as Window & { retainedAcrossTabs?: boolean }).retainedAcrossTabs = true;
       });
 
@@ -113,13 +111,13 @@ test(
         "true",
       );
       await expect(app.page).toHaveURL(firstPageUrl);
-      await expect(lab).toBeVisible();
-      expect(await lab.evaluate(() => (window as Window & { retainedAcrossTabs?: boolean }).retainedAcrossTabs)).toBe(
-        true,
-      );
+      await expect(retainedHome).toBeVisible();
+      expect(
+        await retainedHome.evaluate(() => (window as Window & { retainedAcrossTabs?: boolean }).retainedAcrossTabs),
+      ).toBe(true);
       await openPackagedProject(app.page, first);
       await expect(app.page.getByRole("tablist", { name: "Project tabs" }).getByRole("tab")).toHaveCount(2);
-      await expect(lab).toBeVisible();
+      await expect(retainedHome).toBeVisible();
 
       const screenshot = testInfo.outputPath("desktop-project-tabs.png");
       await app.page.screenshot({ path: screenshot });
@@ -145,7 +143,7 @@ test(
 
       await openPackagedProject(app.page, first);
       await expect(app.page).toHaveURL(firstPageUrl);
-      await expect(lab).toBeVisible();
+      await expect(retainedHome).toBeVisible();
       await expect(app.page.getByRole("tablist", { name: "Project tabs" }).getByRole("tab")).toHaveText([
         second.name,
         first.name,

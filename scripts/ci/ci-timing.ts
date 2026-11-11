@@ -1,4 +1,6 @@
-import { type CiJob, countedJobs, isFailedJob, passedOnRerun } from "./ci-failures";
+import { type CiJob, countedJobs, deduplicateJobs, isFailedJob, passedOnRerun } from "./ci-failures";
+
+import { executionCriticalPath } from "./ci-workflow-graph";
 
 export interface CiStepTiming {
   name: string;
@@ -36,6 +38,8 @@ const elapsed = (started?: string | null, completed?: string | null) => {
 };
 
 const phaseForStep = (name: string) => {
+  const explicit = name.match(/^\[phase:([\w-]+)\]/)?.[1];
+  if (explicit) return explicit;
   if (/cache.*save|save.*cache|post.*cache/i.test(name)) return "cache-save";
   if (/cleanup|clean up|stop isolated|post job|^Post (Setup|Set up|Run|actions\/checkout)|^Complete job/i.test(name))
     return "cleanup";
@@ -75,6 +79,17 @@ const jobTiming = (job: CiJob) => {
     runnerWaitMs: elapsed(job.created, job.started),
     executionMs: elapsed(job.started, job.completed),
     phases,
+    phaseRecords: (job.steps ?? []).map((step) => ({
+      name: step.name,
+      kind: phaseForStep(step.name),
+      sourceSha: job.sha,
+      jobId: job.id,
+      attempt: job.attempt,
+      host: job.labels ?? [],
+      durationMs: elapsed(step.started, step.completed),
+      complete: elapsed(step.started, step.completed) !== null,
+      attribution: step.name.startsWith("[phase:") ? "explicit" : "inferred",
+    })),
     cause: job.cause?.evidence.length ? job.cause : { kind: "unclassified", evidence: [] },
   };
 };
@@ -82,7 +97,8 @@ const jobTiming = (job: CiJob) => {
 export const summarizeCiTiming = (input: CiJob[], observedRuns: CiRunTiming[] = []) => {
   const metadata = new Map(observedRuns.map((run) => [`${run.workflow}/${run.id}`, run]));
   const groups = new Map<string, CiJob[]>([...metadata.keys()].map((key) => [key, []]));
-  for (const job of input) {
+  const unique = new Set(deduplicateJobs(input));
+  for (const job of input.filter((job) => unique.has(job))) {
     const key = `${job.workflow}/${job.runId}`;
     groups.set(key, [...(groups.get(key) ?? []), job]);
   }
@@ -127,6 +143,8 @@ export const summarizeCiTiming = (input: CiJob[], observedRuns: CiRunTiming[] = 
       stage: stageForRun(sample),
       gate: gate?.conclusion ?? null,
       wallMs: elapsed(sample.runCreated, final),
+      gateWallMs: elapsed(sample.runCreated, gate?.completed),
+      executionCriticalPath: executionCriticalPath(first),
       initialWaitMs: elapsed(sample.runCreated, started),
       elapsedAfterStartMs: elapsed(started, final),
       totalRunnerMs,
@@ -145,7 +163,7 @@ export const summarizeCiTiming = (input: CiJob[], observedRuns: CiRunTiming[] = 
   return {
     runs,
     limits:
-      "Aggregate runner time sums parallel work; elapsed after start excludes initial scheduling but can include later scheduling gaps. A dependency critical path needs the workflow graph. Runner wait needs a job creation timestamp. Failure causes stay unclassified without evidence. Merge-candidate creation wait is outside run wall time.",
+      "Aggregate runner time sums parallel work; elapsed after start excludes initial scheduling but can include later scheduling gaps. Execution critical path uses the workflow graph at the measured source; missing graph or timing remains unknown. Runner wait needs a job creation timestamp. Failure causes stay unclassified without evidence. Merge-candidate creation wait is outside run wall time.",
   };
 };
 

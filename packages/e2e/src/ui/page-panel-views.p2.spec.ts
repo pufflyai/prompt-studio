@@ -1,4 +1,8 @@
-import { expect, type Page, test } from "@playwright/test";
+import { fixtureTest } from "../scripts/fixture-test";
+import { expect, type Page, test } from "../scripts/playwright-test";
+
+const panelTest = fixtureTest("panels", test);
+
 import { folderProjectInput } from "../helpers/folder-project";
 import { homePage } from "../helpers/home-loading";
 import { uiOrigin } from "../ui-server";
@@ -59,53 +63,53 @@ test("tabless pages render their content without tab headers", async ({ page, re
   }
 });
 
-test("an SDK-only viewer switches locally, reuses resources, replaces drafts and closes on deletion", async ({
-  page,
-  request,
-}) => {
-  const created = await request.post(`${uiOrigin}/v1/projects`, {
-    data: folderProjectInput({ name: "Panel viewers" }),
-  });
-  expect(created.ok()).toBe(true);
-  const { id } = await created.json();
-  try {
-    await prepare(page);
-    await page.goto(`/projects/${id}/extensions/pstdio.workbench-fixture/mailbox`);
-    const main = panel(page, "main");
-    const mainReader = main.frameLocator('iframe[title="Letter viewer"]:visible');
-    await expect(mainReader.getByText("Viewing landing", { exact: true })).toBeVisible();
-    await mainReader.getByRole("button", { name: "Switch to A", exact: true }).click();
-    await expect(mainReader.getByText("Viewing A", { exact: true })).toBeVisible();
-    const mainUrl = page.url();
-    await openTool(page, "side", "New letter viewer");
-    const side = panel(page, "side");
-    const sideReader = side.frameLocator('iframe[title="Letter viewer"]:visible');
-    await sideReader.getByRole("button", { name: "Switch to B", exact: true }).click();
-    await expect(sideReader.getByText("Viewing B", { exact: true })).toBeVisible();
-    await sideReader.getByRole("button", { name: "Switch to A", exact: true }).click();
-    await expect(sideReader.getByText("Viewing B", { exact: true })).toBeVisible();
-    await expect(page).toHaveURL(mainUrl);
-    await expect(mainReader.getByText("Viewing A", { exact: true })).toBeVisible();
-    await openTool(page, "secondary", "Letter browser");
-    const browser = panel(page, "secondary").frameLocator('iframe[title="Letter browser"]:visible');
-    await browser.getByRole("button", { name: "Open B in Main", exact: true }).click();
-    await expect(page).toHaveURL(mainUrl);
-    await expect(side.getByRole("tab", { name: "Letter B", exact: true })).toHaveAttribute("aria-selected", "true");
-    await sideReader.getByRole("button", { name: "Save letter", exact: true }).click();
-    await expect(sideReader.getByText(/^Viewing saved-/)).toBeVisible();
-    await expect(page).toHaveURL(mainUrl);
-    await sideReader.getByRole("button", { name: "Delete letter", exact: true }).click();
-    await expect(side.getByRole("tab", { name: /^Letter saved-/ })).toHaveCount(0);
-    await expect(browser.getByRole("heading", { name: "Letter browser", exact: true })).toBeVisible();
-    await mainReader.getByRole("button", { name: "Delete letter", exact: true }).click();
-    await expect(mainReader.getByText("Viewing landing", { exact: true })).toBeVisible();
-    await page.reload();
-    await expect(mainReader.getByText("Viewing landing", { exact: true })).toBeVisible();
-    await expect(side.getByRole("tab", { name: /^Letter saved-/ })).toHaveCount(0);
-  } finally {
-    await request.delete(`${uiOrigin}/v1/projects/${id}`);
-  }
-});
+panelTest(
+  "an SDK-only viewer switches locally, reuses resources, replaces drafts and closes on deletion",
+  async ({ page, request }) => {
+    const created = await request.post(`${uiOrigin}/v1/projects`, {
+      data: folderProjectInput({ name: "Panel viewers" }),
+    });
+    expect(created.ok()).toBe(true);
+    const { id } = await created.json();
+    try {
+      await prepare(page);
+      await page.goto(`/projects/${id}/extensions/test.panel-views/mailbox`);
+      const main = panel(page, "main");
+      const mainReader = main.frameLocator('iframe[title="Letter viewer"]:visible');
+      await expect(mainReader.getByText("Viewing landing", { exact: true })).toBeVisible();
+      await mainReader.getByRole("button", { name: "Switch to A", exact: true }).click();
+      await expect(mainReader.getByText("Viewing A", { exact: true })).toBeVisible();
+      const mainUrl = page.url();
+      await openTool(page, "side", "New letter viewer");
+      const side = panel(page, "side");
+      const sideReader = side.frameLocator('iframe[title="Letter viewer"]:visible');
+      await sideReader.getByRole("button", { name: "Switch to B", exact: true }).click();
+      await expect(sideReader.getByText("Viewing B", { exact: true })).toBeVisible();
+      await sideReader.getByRole("button", { name: "Switch to A", exact: true }).click();
+      await expect(sideReader.getByText("Viewing B", { exact: true })).toBeVisible();
+      await expect(page).toHaveURL(mainUrl);
+      await expect(mainReader.getByText("Viewing A", { exact: true })).toBeVisible();
+      await openTool(page, "secondary", "Letter browser");
+      const browser = panel(page, "secondary").frameLocator('iframe[title="Letter browser"]:visible');
+      await browser.getByRole("button", { name: "Open B in Main", exact: true }).click();
+      await expect(page).toHaveURL(mainUrl);
+      await expect(side.getByRole("tab", { name: "Letter B", exact: true })).toHaveAttribute("aria-selected", "true");
+      await sideReader.getByRole("button", { name: "Save letter", exact: true }).click();
+      await expect(sideReader.getByText(/^Viewing saved-/)).toBeVisible();
+      await expect(page).toHaveURL(mainUrl);
+      await sideReader.getByRole("button", { name: "Delete letter", exact: true }).click();
+      await expect(side.getByRole("tab", { name: /^Letter saved-/ })).toHaveCount(0);
+      await expect(browser.getByRole("heading", { name: "Letter browser", exact: true })).toBeVisible();
+      await mainReader.getByRole("button", { name: "Delete letter", exact: true }).click();
+      await expect(mainReader.getByText("Viewing landing", { exact: true })).toBeVisible();
+      await page.reload();
+      await expect(mainReader.getByText("Viewing landing", { exact: true })).toBeVisible();
+      await expect(side.getByRole("tab", { name: /^Letter saved-/ })).toHaveCount(0);
+    } finally {
+      await request.delete(`${uiOrigin}/v1/projects/${id}`);
+    }
+  },
+);
 
 test("a reusable viewer moved into a collection stays in that collection when selected and switched", async ({
   page,

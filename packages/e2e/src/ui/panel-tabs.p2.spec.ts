@@ -1,7 +1,8 @@
-import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { homeFrame } from "../helpers/home-loading";
 import { createPlannerTicket } from "../helpers/planner-api";
+import { fixtureTest } from "../scripts/fixture-test";
+import { expect, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 
 const openTabCustomMenu = async (tab: import("@playwright/test").Locator) => {
@@ -67,36 +68,40 @@ test("opens the Session tab context menu while normal clicks only select", async
   await expect(sessionTab).toBeFocused();
 });
 
-test.describe("webview outside interactions", () => {
-  test.use({ hasTouch: true });
+const webviewTest = fixtureTest("webview", test);
+webviewTest.describe("webview outside interactions", () => {
+  webviewTest.use({ hasTouch: true });
 
-  test("dismisses tab menus on webview clicks and taps while preserving guest focus", async ({ page, request }) => {
-    await deleteAllProjects(request);
-    const project = await createProject(request);
-    await page.addInitScript((id: string) => {
-      localStorage.setItem("onboarding-complete", "true");
-      localStorage.setItem("dashboard-wb2:selected-project:global", id);
-    }, project.id);
-    await page.goto(`/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`);
-    const frame = page.frameLocator('iframe[title="Lab"]:visible');
-    const increment = frame.getByRole("button", { name: "Increment", exact: true });
-    await expect(increment).toBeVisible();
-    await page.getByRole("button", { name: "Show Side Panel", exact: true }).click();
-    const header = page.locator('[data-workbench-panel-header="side"]');
-    await header.getByRole("button", { name: "Add panel", exact: true }).click();
-    const session = page.getByRole("menuitem", { name: "New session", exact: true });
-    if (await session.isVisible()) await session.click();
-    const tab = header.getByRole("tab", { name: /New session/, selected: true });
-    const menu = page.getByRole("menu", { name: "New session context menu", exact: true });
-    for (const interaction of ["click", "tap"] as const) {
-      await tab.click({ button: "right" });
-      await expect(menu).toBeVisible();
-      await increment[interaction]();
-      await expect(menu).toBeHidden();
-      await expect(page.locator('iframe[title="Lab"]:visible')).toBeFocused();
-    }
-    await expect(frame.getByText("2", { exact: true })).toBeVisible();
-  });
+  webviewTest(
+    "dismisses tab menus on webview clicks and taps while preserving guest focus",
+    async ({ page, request }) => {
+      await deleteAllProjects(request);
+      const project = await createProject(request);
+      await page.addInitScript((id: string) => {
+        localStorage.setItem("onboarding-complete", "true");
+        localStorage.setItem("dashboard-wb2:selected-project:global", id);
+      }, project.id);
+      await page.goto(`/projects/${project.id}/extensions/test.webview-host/host`);
+      const frame = page.frameLocator('iframe[title="Host page"]:visible');
+      const increment = frame.getByRole("button", { name: "Increment", exact: true });
+      await expect(increment).toBeVisible();
+      await page.getByRole("button", { name: "Show Side Panel", exact: true }).click();
+      const header = page.locator('[data-workbench-panel-header="side"]');
+      await header.getByRole("button", { name: "Add panel", exact: true }).click();
+      const session = page.getByRole("menuitem", { name: "New session", exact: true });
+      if (await session.isVisible()) await session.click();
+      const tab = header.getByRole("tab", { name: /New session/, selected: true });
+      const menu = page.getByRole("menu", { name: "New session context menu", exact: true });
+      for (const interaction of ["click", "tap"] as const) {
+        await tab.click({ button: "right" });
+        await expect(menu).toBeVisible();
+        await increment[interaction]();
+        await expect(menu).toBeHidden();
+        await expect(page.locator('iframe[title="Host page"]:visible')).toBeFocused();
+      }
+      await expect(frame.getByText("2", { exact: true })).toBeVisible();
+    },
+  );
 });
 
 test("keeps the tab viewport unscrolled during drag and supports pointer and keyboard reorder", async ({

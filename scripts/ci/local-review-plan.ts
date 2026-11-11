@@ -1,15 +1,17 @@
 import { affectedPackages } from "./ci-packages";
-import { createPriorityPlan } from "./priority-plan";
-import { priorityPlanSetup } from "./priority-plan-setup";
 import { queueReviewPlan } from "./queue-review-plan";
 import { priorityFromFile, testPriorities, testRunner } from "./test-discovery";
+import { createTestPlan, mergeTestPlans, type SourceIdentity } from "./test-plan";
+import { testPlanSetup } from "./test-plan-setup";
+import { createTestRuns } from "./test-runs";
 
-type Package = Parameters<typeof createPriorityPlan>[1][number];
+type Package = Parameters<typeof createTestRuns>[1][number];
 interface Input {
   packages: Package[];
   tests: string[];
   changed: string[];
   additionalTests?: string[];
+  source?: SourceIdentity;
 }
 
 const documentation = (file: string) =>
@@ -65,9 +67,9 @@ const selectTests = (
   return { selected, deferred };
 };
 
-export const createLocalReviewPlan = ({ packages, tests, changed, additionalTests = [] }: Input) => {
+export const createLocalReviewPlan = ({ packages, tests, changed, additionalTests = [], source }: Input) => {
   for (const file of additionalTests) if (!tests.includes(file)) throw new Error(`Unknown test: ${file}`);
-  const queue = queueReviewPlan(packages, tests, changed);
+  const queue = queueReviewPlan(packages, tests, changed, source);
   const code = changed.filter((file) => !documentation(file));
   const shared = code.some((file) => sharedInput(file, packages));
   const affectedOwners = shared ? packages.map((pkg) => pkg.name) : affectedPackages(packages, code);
@@ -78,7 +80,7 @@ export const createLocalReviewPlan = ({ packages, tests, changed, additionalTest
     new Set([...queue.files, ...queue.smokeFiles]),
   );
   const runs = testPriorities.flatMap((priority) =>
-    createPriorityPlan(
+    createTestRuns(
       selected.map((entry) => entry.file).filter((file) => !queue.smokeFiles.includes(file)),
       packages,
       priority,
@@ -89,7 +91,7 @@ export const createLocalReviewPlan = ({ packages, tests, changed, additionalTest
     const script = pkg.scripts.lint ? "lint" : "typecheck";
     return pkg.scripts[script] ? [{ id: `${pkg.name}:${script}`, cwd: pkg.dir, command: ["bun", "run", script] }] : [];
   });
-  const setup = priorityPlanSetup(".", runs, packages);
+  const setup = testPlanSetup(".", runs, packages);
   const build = setup.find((check) => check.id === "build-test-dependencies");
   // Types can consume declarations even when a package has no selected tests.
   if (!build && checkOwners.length) {
@@ -141,16 +143,24 @@ export const createLocalReviewPlan = ({ packages, tests, changed, additionalTest
       { id: "sdk-reference", cwd: ".", command: ["bun", "run", "--cwd", "scripts", "verify:sdk-reference"] },
       { id: "extension-api-version", cwd: ".", command: ["bun", "run", "verify:extension-api-version"] },
     );
+  const additionalPlan = createTestPlan({
+    source: queue.testPlan.source,
+    target: { platform: process.platform, arch: process.arch },
+    packages,
+    files: selected
+      .map((entry) => entry.file)
+      .filter((file) => !queue.files.includes(file) && !queue.smokeFiles.includes(file)),
+    job: "local-additions",
+  });
   return {
+    testPlan: mergeTestPlans([queue.testPlan, additionalPlan], queue.testPlan.source),
     affectedOwners,
     changed,
     selected,
     deferred,
-    runs,
     setup,
     packageChecks,
     staticChecks,
     queueFiles: queue.files,
-    queueChecks: queue.smoke,
   };
 };

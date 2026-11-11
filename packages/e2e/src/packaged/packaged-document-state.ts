@@ -8,9 +8,9 @@ const selectTabAction = async (page: Page, tab: Locator, action: string) => {
 };
 
 export const verifyPackagedDocumentState = async (page: Page, origin: string, projectId: string) => {
-  const resource = `pstdio://extension-resource/glass-lab-artifact/layout?extensionId=pstdio.workbench-fixture&projectId=${projectId}`;
+  const resource = `pstdio://extension-resource/document/layout?extensionId=test.document&projectId=${projectId}`;
   const url = (document: string, route = "document-layout", section?: string) => {
-    const target = new URL(`${origin}/projects/${projectId}/extensions/pstdio.workbench-fixture/${route}`);
+    const target = new URL(`${origin}/projects/${projectId}/extensions/test.document/${route}`);
     target.searchParams.set("resource", resource);
     target.searchParams.set("document", document);
     if (section) target.searchParams.set("section", JSON.stringify({ anchors: [{ id: section, heading: section }] }));
@@ -26,16 +26,16 @@ export const verifyPackagedDocumentState = async (page: Page, origin: string, pr
     );
   await page.goto(url("a"));
   const main = page.locator('[data-workbench-panel-header="main"]');
-  const optional = main.getByRole("tab", { name: "Lab", exact: true });
+  const optional = main.getByRole("tab", { name: "Optional panel", exact: true });
   await expect(optional).toBeVisible();
-  await main.getByRole("tab", { name: "Overview", exact: true }).click();
-  const section = page.frameLocator('iframe[title="Overview"]:visible').getByLabel("Current section", { exact: true });
+  await main.getByRole("tab", { name: "Section", exact: true }).click();
+  const section = page.frameLocator('iframe[title="Section"]:visible').getByLabel("Current section", { exact: true });
   await navigate("a", "document-layout", "first");
   await expect(section).toHaveText("first");
   await navigate("a", "document-layout", "second");
   await expect(section).toHaveText("second");
   await optional.focus();
-  await optional.getByRole("button", { name: "Close Lab", exact: true }).click();
+  await optional.getByRole("button", { name: "Close Optional panel", exact: true }).click();
   await expect(optional).toHaveCount(0);
   await navigate("a", "document-layout", "first");
   await expect(section).toHaveText("first");
@@ -62,8 +62,12 @@ export const verifyPackagedDocumentState = async (page: Page, origin: string, pr
   await selectTabAction(page, optional, "Move to Side");
   const side = page
     .locator('[data-workbench-panel-header="side"]')
-    .getByRole("tab", { name: "Lab", exact: true })
-    .or(page.getByRole("dialog", { name: "Side Panel", exact: true }).getByRole("tab", { name: "Lab", exact: true }));
+    .getByRole("tab", { name: "Optional panel", exact: true })
+    .or(
+      page
+        .getByRole("dialog", { name: "Side Panel", exact: true })
+        .getByRole("tab", { name: "Optional panel", exact: true }),
+    );
   await expect(side).toBeVisible();
   await navigate("b", "document-preview");
   await expect(optional).toBeVisible();
@@ -78,7 +82,7 @@ export const verifyPackagedDocumentState = async (page: Page, origin: string, pr
   await expect(foreign).toHaveCSS("font-style", "italic");
   await selectTabAction(page, foreign, "Pin tab");
   await expect(foreign).toHaveCSS("font-style", "normal");
-  await foreign.getByRole("button", { name: "Close Lab", exact: true }).click();
+  await foreign.getByRole("button", { name: "Close Optional panel", exact: true }).click();
   await expect(foreign).toHaveCount(0);
   await expect(main.locator(`[data-workbench-tab=${JSON.stringify(b)}]`)).toBeVisible();
   await expect(page).toHaveURL(url("b", "document-preview"));
@@ -97,7 +101,7 @@ export const verifyPackagedDocumentState = async (page: Page, origin: string, pr
   await selectTabAction(page, side, "Move to Main");
   await expect(optional).toBeVisible();
   await optional.focus();
-  await optional.getByRole("button", { name: "Close Lab", exact: true }).click();
+  await optional.getByRole("button", { name: "Close Optional panel", exact: true }).click();
   await expect(optional).toHaveCount(0);
   const fallbackA = await fallback.getAttribute("data-workbench-instance");
   expect(fallbackA).not.toBeNull();

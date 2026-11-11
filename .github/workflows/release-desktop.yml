@@ -135,25 +135,26 @@ jobs:
         with:
           dev-drive: "true"
 
-      - name: Install dependencies
+      - name: "[phase:install] Install dependencies"
         run: bun __test-tmp__/native-installer/scripts/ci/install-native-dependencies.ts
 
       - name: Test device performance lifecycle and file authorization
-        working-directory: clients/desktop
-        run: bun ../../scripts/ci/run-bun-tests.ts src/performance
+        run: bun scripts/test.ts clients/desktop/src/performance --lane stable --prebuilt
 
       - name: Test native DMG attachment cleanup
         if: matrix.platform == 'darwin'
-        run: bun scripts/ci/run-priority-tests.ts p1 --scope @pstdio/desktop --runner bun --prebuilt
+        run: bun scripts/test.ts --priority p1 --scope @pstdio/desktop --runner bun --lane stable --prebuilt
 
-      - name: Run registered native Bun quarantine once
-        if: always() && !cancelled()
-        continue-on-error: true
-        run: bun scripts/ci/run-quarantined-tests.ts bun --scope @pstdio/desktop --prebuilt
+      - name: Run native quarantines once
+        run: bun scripts/test.ts --lane quarantine --scope @pstdio/desktop --runner bun --prebuilt
 
-      - name: Require native quarantine execution evidence
-        if: always() && !cancelled()
-        run: bun scripts/ci/verify-quarantine-reports.ts bun --scope @pstdio/desktop
+      - name: "[phase:report-transfer] Preserve native contract execution"
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-native-tests-${{ matrix.target }}-attempt-${{ github.run_attempt }}
+          path: test-results/ci/planned
+          if-no-files-found: error
 
       - name: Verify release version
         env:
@@ -201,7 +202,7 @@ jobs:
           account-name: ${{ vars.AZURE_SIGNING_ACCOUNT }}
           certificate-profile: ${{ vars.AZURE_SIGNING_PROFILE }}
 
-      - name: Build signed macOS distributions
+      - name: "[phase:build] Build signed macOS distributions"
         if: matrix.platform == 'darwin'
         shell: bash
         env:
@@ -228,7 +229,7 @@ jobs:
               }
             '
 
-      - name: Preserve masked macOS build output
+      - name: "[phase:report-transfer] Preserve masked macOS build output"
         if: always() && matrix.platform == 'darwin'
         uses: actions/upload-artifact@v4
         with:
@@ -236,13 +237,13 @@ jobs:
           path: clients/desktop/test-results/release-build.log
           if-no-files-found: warn
 
-      - name: Build signed Windows distributions
+      - name: "[phase:build] Build signed Windows distributions"
         if: matrix.platform == 'win32'
         env:
           PSTDIO_DESKTOP_RELEASE: "1"
         run: bun run --cwd clients/desktop make -- --arch=${{ matrix.arch }}
 
-      - name: Build Linux distributions
+      - name: "[phase:build] Build Linux distributions"
         if: matrix.platform == 'linux'
         env:
           PSTDIO_DESKTOP_RELEASE: "1"
@@ -346,7 +347,7 @@ jobs:
           bun run --cwd clients/desktop release:prepare -- --target ${{ matrix.target }}
           --notes-file "${{ runner.temp }}/desktop-release-notes.md"
 
-      - name: Upload verified native artifacts
+      - name: "[phase:report-transfer] Upload verified native artifacts"
         uses: actions/upload-artifact@v4
         with:
           name: desktop-${{ matrix.target }}
@@ -354,7 +355,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Upload signed Windows candidate for installation and update checks
+      - name: "[phase:report-transfer] Upload signed Windows candidate for installation and update checks"
         if: matrix.platform == 'win32'
         uses: actions/upload-artifact@v4
         with:

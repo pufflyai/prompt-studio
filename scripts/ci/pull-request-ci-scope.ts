@@ -2,7 +2,7 @@ import { appendFileSync } from "node:fs";
 import { basename } from "node:path";
 import { changedFiles } from "./changed-files";
 import { affectedPackages } from "./ci-packages";
-import { createEditedTestMatrix } from "./edited-test-matrix";
+import { createCiTestPlan } from "./ci-test-plan";
 import { partitionPackageChecks } from "./package-check-matrix";
 import {
   harnessCliLanes,
@@ -14,8 +14,10 @@ import {
 import { plannedCiJobs, requiredCiJobs } from "./required-ci-jobs";
 import { sourceCoverageArtifacts } from "./source-coverage-artifacts";
 import { discoverTestFiles, priorityFromFile } from "./test-discovery";
-import { createTestMatrices } from "./test-matrices";
+import { testPlanSource } from "./test-plan-source";
 import type { TestPriority } from "./test-policy";
+import { selectCiTests, selectEditedTests } from "./test-selection";
+import { compatibleTestTimings, type TestTimingSnapshot } from "./test-timing-snapshot";
 import { readWorkspacePackages } from "./workspace-packages";
 
 interface CiScopeInput {
@@ -26,6 +28,8 @@ interface CiScopeInput {
   profile?: string;
   releaseChannel?: string;
   signedCandidate?: boolean;
+  timingSnapshot?: TestTimingSnapshot;
+  coverage?: boolean;
 }
 const documentation = (file: string) =>
   /\.(md|mdx|txt)$/.test(file) || file.startsWith("design/") || file === "LICENSE";
@@ -50,6 +54,9 @@ const prioritiesFor = (stage: ReturnType<typeof stageFor>): TestPriority[] => {
 const runsFileCheck = (stage: ReturnType<typeof stageFor>, touched: boolean) =>
   stage === "full" || (stage !== "main" && touched);
 
+const coverageForScope = (input: CiScopeInput, production: boolean, channel: string) =>
+  input.coverage ?? (production && channel === "nightly");
+
 const resolveBaseScope = (input: CiScopeInput) => {
   const { event, changedFiles, packages, tests, profile, releaseChannel = "stable", signedCandidate = false } = input;
   for (const file of tests) priorityFromFile(file);
@@ -65,7 +72,8 @@ const resolveBaseScope = (input: CiScopeInput) => {
   const publishedExtensions = runsFileCheck(stage, shared || publicApi || extensions);
   // One Linux build per run feeds every host job that builds packages; each job still builds what it misses.
   const sharedBuild = affectedOwners.map((name) => `--scope ${name}`).join(" ");
-  const matrices = createTestMatrices(tests, packages, affectedOwners, prioritiesFor(stage));
+  const coverage = coverageForScope(input, production, releaseChannel);
+  const matrices = selectCiTests(tests, packages, affectedOwners, prioritiesFor(stage), input.timingSnapshot, coverage);
   const componentMatrix = stage === "merge_queue" ? [] : matrices.componentMatrix;
   const browserSmoke = stage === "main" || stage === "merge_queue";
   let clientRows = production ? productionDesktopCheckPlatforms(releaseChannel) : [];
@@ -87,7 +95,7 @@ const resolveBaseScope = (input: CiScopeInput) => {
     // the affected P0 checks here and on the complete suites in nightly and stable validation.
     editedMatrix:
       stage === "pull_request"
-        ? createEditedTestMatrix(
+        ? selectEditedTests(
             tests.filter((file) => code.includes(file)),
             packages,
           )
@@ -105,7 +113,17 @@ const resolveBaseScope = (input: CiScopeInput) => {
     componentChecks: componentMatrix.length > 0,
     databaseTests: matrices.databaseMatrix.length > 0,
     packageChecks: affectedOwners.length > 0,
-    packageMatrix: partitionPackageChecks(affectedOwners),
+    packageMatrix: partitionPackageChecks(
+      affectedOwners,
+      4,
+      compatibleTestTimings(input.timingSnapshot, {
+        kind: "package",
+        profile: "package-checks",
+        host: "linux/x64",
+        configuration: "source:stable:P0",
+        coverage,
+      }),
+    ),
     lernaFilter: affectedOwners.map((name) => `--scope ${name}`).join(" "),
     dockerBuild: production,
     harnessCli: production,
@@ -179,6 +197,9 @@ if (import.meta.main) {
     releaseChannel: process.env.RELEASE_CHANNEL || undefined,
     signedCandidate: process.env.SIGNED_CANDIDATE === "true",
   });
+  const packages = readWorkspacePackages(process.cwd()).map((pkg) => ({ ...pkg, scripts: {} }));
+  const plan = createCiTestPlan(scope, packages, discoverTestFiles(process.cwd()), testPlanSource(process.cwd()));
+  await Bun.write("test-results/ci/plan.json", JSON.stringify(plan, null, 2));
   const outputs = Object.entries({
     ...scope,
     requiredJobs: requiredCiJobs(scope),

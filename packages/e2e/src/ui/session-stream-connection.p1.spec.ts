@@ -1,5 +1,5 @@
-import { expect, type Request, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { expect, type Request, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 
 const sessionPrompt = (title: string) => `${title} __fake_hold__`;

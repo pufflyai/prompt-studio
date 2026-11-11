@@ -1,8 +1,8 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { type APIRequestContext, expect, type Page, type Request, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { switchSession } from "../helpers/session-side-panel";
+import { type APIRequestContext, expect, type Page, type Request, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 
 const commandId = "pstdio.pstdio-session-browser.view.conversation.chat.onAction";

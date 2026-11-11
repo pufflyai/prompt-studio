@@ -1,5 +1,5 @@
 import { defineConfig } from "@playwright/test";
-import { browserSmokeTestMatch } from "pstdio-scripts/browser-smoke-selection";
+import { browserSmokeTestMatch } from "pstdio-scripts/testing";
 import config from "./playwright.config";
 
 export default defineConfig(config, {

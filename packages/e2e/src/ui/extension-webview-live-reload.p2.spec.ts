@@ -1,12 +1,13 @@
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
+import { preparePackagedExtensionSource } from "../packaged/packaged-extension-source";
 import { uiOrigin as apiBase } from "../ui-server";
 
-const extensionLabPath = join(import.meta.dirname, "../../../../packages/workbench-fixture");
+const extensionLabPath = join(import.meta.dirname, "../../../../packages/workbench-fixture/fixtures/webview-host");
 const missingDependencyName = "pstdio-live-reload-dep";
 const recoveredHeading = "Recovered webview";
 
@@ -18,12 +19,9 @@ const declareMissingWebviewDependency = (extensionRoot: string) => {
   manifest.dependencies[missingDependencyName] = "1.0.0";
   writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 
-  const viewFile = join(extensionRoot, "src/views/lab-page.tsx");
+  const viewFile = join(extensionRoot, "view.ts");
   // A translation can mask a changed fallback. Mark the rebuilt module with a literal instead.
-  const source = readFileSync(viewFile, "utf8").replace(
-    't("webview.labPage.heading", "Sandbox webview")',
-    JSON.stringify(recoveredHeading),
-  );
+  const source = readFileSync(viewFile, "utf8").replace('"Host contract"', JSON.stringify(recoveredHeading));
   writeFileSync(viewFile, `import "${missingDependencyName}";\n${source}`);
 };
 
@@ -43,22 +41,7 @@ const bypassOnboarding = async (page: import("@playwright/test").Page, projectId
     ({ currentProjectId }) => {
       if (window.parent !== window) return;
       localStorage.setItem("onboarding-complete", "true");
-      localStorage.setItem("selected-agent", "pstdio.workbench-fixture.harness.fake");
       localStorage.setItem("dashboard-wb2:selected-project:global", currentProjectId);
-      localStorage.setItem(
-        `pstdio-project-settings/projects/${currentProjectId}/values`,
-        JSON.stringify({
-          state: {
-            lastSelectedAgent: "pstdio.workbench-fixture.harness.fake",
-            lastSelectedBranches: [],
-            lastSelectedModels: [],
-            lastSelectedRepo: "",
-            selectedSessionId: null,
-            sessionModalState: "closed",
-          },
-          version: 0,
-        }),
-      );
     },
     { currentProjectId: projectId },
   );
@@ -80,33 +63,20 @@ const createProject = async (request: import("@playwright/test").APIRequestConte
   return (await response.json()) as { id: string };
 };
 
-const disableDefaultExtensionLab = async (request: import("@playwright/test").APIRequestContext, projectId: string) => {
-  const response = await request.get(`${apiBase}/v1/projects/${projectId}/extensions`);
-  expect(response.ok()).toBe(true);
-  const body = (await response.json()) as { extensions: Array<{ id: string; installName: string }> };
-
-  for (const extension of body.extensions.filter((entry) => entry.installName === "workbench-fixture")) {
-    const disabled = await request.patch(`${apiBase}/v1/projects/${projectId}/extensions/${extension.id}`, {
-      data: { enabled: false },
-    });
-    expect(disabled.ok()).toBe(true);
-  }
-};
-
 const enableExtension = async (
   request: import("@playwright/test").APIRequestContext,
   projectId: string,
   sourcePath: string,
-  installName = "workbench-fixture-live-reload",
+  installName = "webview-host-live-reload",
 ) => {
   const response = await request.post(
     `${apiBase}/v1/projects/${projectId}/extensions/installed/${installName}/enable`,
     {
       data: {
-        displayName: "Extension Lab",
-        extensionId: "pstdio.workbench-fixture",
-        manifest: { id: "pstdio.workbench-fixture", name: "workbench-fixture" },
-        name: "workbench-fixture",
+        displayName: "Webview host fixture",
+        extensionId: "test.webview-host",
+        manifest: { id: "test.webview-host", name: "webview-host" },
+        name: "webview-host",
         sourceHash: `${installName}-e2e`,
         sourceKind: "local_path",
         sourcePath,
@@ -176,37 +146,33 @@ test.describe("Extension webview live reload", () => {
   });
 
   test("updates an open dashboard webview after editing its source", async ({ page, request }, testInfo) => {
-    const extensionRoot = mkdtempSync(join(tmpdir(), "pstdio-workbench-fixture-live-reload-"));
-    cpSync(extensionLabPath, extensionRoot, { recursive: true });
+    const temporaryRoot = mkdtempSync(join(tmpdir(), "pstdio-workbench-fixture-live-reload-"));
+    const extensionRoot = await preparePackagedExtensionSource(temporaryRoot, extensionLabPath, { install: true });
     let uninstall: Awaited<ReturnType<typeof enableExtension>> | undefined;
 
     try {
       const project = await createProject(request);
-      await disableDefaultExtensionLab(request, project.id);
       uninstall = await enableExtension(request, project.id, extensionRoot);
       const metadataResponse = await request.get(`${apiBase}/v1/projects/${project.id}/extensions/ui`);
       expect(metadataResponse.ok()).toBe(true);
       const metadata = (await metadataResponse.json()) as WorkbenchExtensionMetadata;
-      expectWebview(metadata, "lab-page");
-      let previousModuleUrl = await getWebviewModuleUrl(request, project.id, "lab-page");
+      expectWebview(metadata, "page");
+      let previousModuleUrl = await getWebviewModuleUrl(request, project.id, "page");
       await bypassOnboarding(page, project.id);
 
-      await page.goto(`/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`);
-      const frame = page.frameLocator('iframe[title="Lab"]');
-      await expect(frame.getByRole("heading", { name: "Sandbox webview" })).toBeVisible();
+      await page.goto(`/projects/${project.id}/extensions/test.webview-host/host`);
+      const frame = page.frameLocator('iframe[title="Host page"]');
+      await expect(frame.getByRole("heading", { name: "Host contract" })).toBeVisible();
 
-      const viewFile = join(extensionRoot, "src/views/lab-page.tsx");
+      const viewFile = join(extensionRoot, "view.ts");
       const current = readFileSync(viewFile, "utf8");
       for (let revision = 1; revision <= 2; revision += 1) {
-        const nextHeading = `Sandbox webview revision ${revision}`;
-        writeFileSync(
-          viewFile,
-          current.replace('t("webview.labPage.heading", "Sandbox webview")', JSON.stringify(nextHeading)),
-        );
+        const nextHeading = `Host contract revision ${revision}`;
+        writeFileSync(viewFile, current.replace('"Host contract"', JSON.stringify(nextHeading)));
 
         const startedAt = Date.now();
-        await expect.poll(() => getWebviewModuleUrl(request, project.id, "lab-page")).not.toBe(previousModuleUrl);
-        await expect.poll(() => getActivePageId(page)).toBe("pstdio.workbench-fixture.page.lab");
+        await expect.poll(() => getWebviewModuleUrl(request, project.id, "page")).not.toBe(previousModuleUrl);
+        await expect.poll(() => getActivePageId(page)).toBe("test.webview-host.page.host");
         await expect(frame.getByRole("heading", { name: nextHeading })).toBeVisible({ timeout: 5_000 });
         const elapsedMs = Date.now() - startedAt;
 
@@ -216,34 +182,33 @@ test.describe("Extension webview live reload", () => {
         });
         console.info(`webview live reload elapsed: ${elapsedMs}ms`);
         expect(elapsedMs).toBeLessThan(5_000);
-        previousModuleUrl = await getWebviewModuleUrl(request, project.id, "lab-page");
+        previousModuleUrl = await getWebviewModuleUrl(request, project.id, "page");
       }
     } finally {
       await uninstall?.();
-      rmSync(extensionRoot, { recursive: true, force: true });
+      rmSync(temporaryRoot, { recursive: true, force: true });
     }
   });
 
   test("recovers an open webview after its missing dependency is installed", async ({ page, request }) => {
-    const extensionRoot = mkdtempSync(join(tmpdir(), "pstdio-extension-dependency-recovery-"));
-    const installName = "workbench-fixture-dependency-recovery";
-    cpSync(extensionLabPath, extensionRoot, { recursive: true });
+    const temporaryRoot = mkdtempSync(join(tmpdir(), "pstdio-extension-dependency-recovery-"));
+    const installName = "webview-host-dependency-recovery";
+    const extensionRoot = await preparePackagedExtensionSource(temporaryRoot, extensionLabPath, { install: true });
     let uninstall: Awaited<ReturnType<typeof enableExtension>> | undefined;
 
     try {
       const project = await createProject(request);
-      await disableDefaultExtensionLab(request, project.id);
       uninstall = await enableExtension(request, project.id, extensionRoot, installName);
 
       const metadataResponse = await request.get(`${apiBase}/v1/projects/${project.id}/extensions/ui`);
       expect(metadataResponse.ok()).toBe(true);
       const metadata = (await metadataResponse.json()) as WorkbenchExtensionMetadata;
-      expectWebview(metadata, "lab-page");
+      expectWebview(metadata, "page");
       await bypassOnboarding(page, project.id);
-      await page.goto(`/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`);
+      await page.goto(`/projects/${project.id}/extensions/test.webview-host/host`);
 
-      const frame = page.frameLocator('iframe[title="Lab"]');
-      await expect(frame.getByRole("heading", { name: "Sandbox webview" })).toBeVisible();
+      const frame = page.frameLocator('iframe[title="Host page"]');
+      await expect(frame.getByRole("heading", { name: "Host contract" })).toBeVisible();
 
       declareMissingWebviewDependency(extensionRoot);
       await expect
@@ -258,11 +223,11 @@ test.describe("Extension webview live reload", () => {
           lastError: null,
           status: "loaded",
         });
-      await expect.poll(() => getActivePageId(page)).toBe("pstdio.workbench-fixture.page.lab");
+      await expect.poll(() => getActivePageId(page)).toBe("test.webview-host.page.host");
       await expect(frame.getByRole("heading", { name: recoveredHeading })).toBeVisible({ timeout: 5_000 });
     } finally {
       await uninstall?.();
-      rmSync(extensionRoot, { recursive: true, force: true });
+      rmSync(temporaryRoot, { recursive: true, force: true });
     }
   });
 });

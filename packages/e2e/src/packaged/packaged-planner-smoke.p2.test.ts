@@ -18,7 +18,7 @@ const plannerTestTimeout = process.platform === "darwin" && process.arch === "ar
 
 test(
   "packaged Planner keeps independent views, timeline status, milestones, and review requests",
-  () => withPackagedPlanner(expectPackagedPlannerTimeline),
+  () => withPackagedPlanner(expectPackagedPlannerTimeline, ["workbench-fixture"]),
   plannerTestTimeout,
 );
 test(
@@ -28,27 +28,27 @@ test(
 );
 test(
   "packaged Planner keeps brief supervisor wakes and resume ownership",
-  () => withPackagedPlanner(expectBriefSupervisorWakes),
+  () => withPackagedPlanner(expectBriefSupervisorWakes, ["workbench-fixture"]),
   plannerTestTimeout,
 );
 test(
   "packaged Planner reconciles dependency stacks and Git conflicts",
-  () => withPackagedPlanner(expectPackagedDependencyStacks),
+  () => withPackagedPlanner(expectPackagedDependencyStacks, ["workbench-fixture"]),
   plannerTestTimeout,
 );
 test(
   "packaged Planner recovers missing workspaces without losing submitted work",
-  () => withPackagedPlanner(expectPackagedWorkspaceRecovery),
+  () => withPackagedPlanner(expectPackagedWorkspaceRecovery, ["workbench-fixture"]),
   plannerTestTimeout,
 );
 test(
   "packaged Planner adopts a feature draft without changing its Git state",
-  () => withPackagedPlanner(expectPackagedDraftAdoption),
+  () => withPackagedPlanner(expectPackagedDraftAdoption, ["workbench-fixture"]),
   plannerTestTimeout,
 );
 
 test(
   "packaged Planner manually resumes missing stopped work with Auto Build disabled",
-  () => withPackagedPlanner(expectPackagedManualWorkspaceRecovery),
+  () => withPackagedPlanner(expectPackagedManualWorkspaceRecovery, ["workbench-fixture"]),
   plannerTestTimeout,
 );

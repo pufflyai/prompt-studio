@@ -42,22 +42,28 @@ bun run --cwd scripts verify:docs-snippets   # authoring guide code equals infra
 `static_checks` runs the first two on every stage. External sites are checked separately by the **Documentation links** workflow (`.github/workflows/docs-external-links.yml`) every Monday and on manual dispatch, so an outage elsewhere cannot fail a pull request. Run it locally with `bun run --cwd scripts verify:docs-external-links`.
 
 ```bash
-bun test <path-to-test> # from the owning package directory
-bun run --cwd packages/<name> test
-bun run --cwd packages/<name> lint
-bun run --cwd packages/e2e test:ui -- src/ui/<name>.spec.ts
-bun run --cwd packages/canvas-tests test:browser -- src/ui/<name>.spec.ts
-```
-
-Run a single dashboard test through the package script, because the dashboard runner needs two flags:
-
-```bash
+bun run test -- --file packages/pstdio-dashboard/src/workbench.p0.test.ts
 bun run --cwd packages/pstdio-dashboard test -- src/workbench.p0.test.ts
+bun run test -- --scope pstdio-api --priority p1
+bun run test -- --stage merge_queue --base origin/main --list
+bun run test -- --file packages/e2e/src/ui/startup.p1.spec.ts
 ```
 
-The script runs `bun test --conditions production --tsconfig-override tsconfig.app.json`. `--tsconfig-override tsconfig.app.json` loads the `@/*` path alias; a plain `bun test <file>` in the dashboard fails with `Cannot find module '@/...'`. `--conditions production` makes dependencies resolve their `production` export condition, as the built dashboard does. `test:coverage` uses the same flags. The dashboard imports `@pstdio/ui` and `@pstdio/workbench` from their `dist` folders, so build them first after changing them.
+The standard command discovers tests once, selects their runner, and prepares the dependencies they need. It applies dashboard export conditions and path aliases, API file-process isolation, browser homes, native packaging, and existing time limits. Package `test` scripts use this command with their owning scope. Low-level lifecycle commands remain available for diagnosing their native runners.
 
-Build the affected package's dependencies first when its checks load compiled exports. Changes to packaged runtime behavior, assets, or file inclusion also require the packaged checks in the [testing guidance](../../guidance/0005-testing.md#5-packaged-files). Documentation-reference-only edits do not.
+Preview a plan with `--list`, optionally saving it with `--out test-results/ci/plan.json`. Saved plans include exact files, reasons, setup dependencies, lanes, required host and artifact, source identity, and a digest. Execute that selection with `bun run test -- --plan test-results/ci/plan.json`; `--job <assignment>` selects one CI assignment. A changed checkout cannot execute a saved plan. Previewing installs or builds nothing. `--stage pull_request`, `merge_queue`, `main`, `nightly`, and `stable` preserve the existing stage policy; nightly and stable expose their functional host assignments. Dedicated performance workflows retain their fixed native workloads and budget classification.
+
+`--file` and positional paths accept repository-relative or owning-package-relative files. `--files-from <json>` selects a nonempty JSON array of discovered repository paths. `--priority p0,p1`, `--scope <workspace>`, and `--runner <kind>` narrow selection. `--artifact compiled-cli` selects packaged CLI cases, including their pure P0 helpers; `--artifact packaged-desktop` selects the packaged Electron cases. Native artifact consumers keep `E2E_PACKAGED_BINARY_PATH` when provided. `--prebuilt` skips build/package prerequisites; fixture preparation and execution evidence still run.
+
+A local selection includes applicable registered quarantine cases once in a separate lane. Use `--lane quarantine` to diagnose only those cases. Complete, verified registered assertion failures stay visible without failing the stable result. Missing cases, skipped quarantine cases, setup errors, cancellation, unexpected execution, and missing native reports fail verification. Bun files are assigned to shards before execution; Playwright retains its native case sharding. Both use the same saved plan and aggregate completeness gate.
+
+`--timings <json>` supplies a frozen version-1 snapshot. Its `capturedAt` and `observations` stay in the plan. Each observation records `kind` (`file` or `package`), repository-relative `key`, `profile` (`<owner>/<runner>` for files, `package-checks` or `contracts` for package batches), `host` (`linux/x64`), `configuration` (`source:stable:P0`), `coverage`, `durationMs`, `samples`, `observedAt`, `sourceSha`, and `provenance`. Only matching observations within thirty days of the snapshot date affect assignment. Missing observations use the shared allocator's compatible median estimate; a snapshot with no matching observations keeps deterministic round-robin assignment. Timing never changes selection or browser case sharding.
+
+Release consumers use `--performance-family storage|runtime|browser|navigation|planner|relay|desktop --prebuilt` after restoring their exact candidate. These plans retain the complete fixed family and native lifecycle, source and artifact binding, and transported native evidence. `execution.json` records setup, test, and cleanup phases with source, plan, invocation, host, duration, completeness, and known prebuilt status. Fixture-input records separate preparation reuse hits, copied bytes, and copying time. CI timing reports keep required-gate wait, end-to-end completion, unique runner time, and the source workflow's execution critical path separate; unavailable dependencies or timestamps remain unknown.
+
+The root/package default keeps integrations, packaged/native journeys, and performance workloads as explicit selections. An explicit priority, file, runner, or artifact can select these families. Production extension unit tests remain independently runnable with `bun test`, public dependencies, and their own setup. Repository-local tools and demo applications do not have automated suites. Host browser scenarios opt into small installable fixtures for harnesses, webviews, settings, modes, menus, or document layout. The separate Workbench fixture Lab UI is retired; Extension Lab and its example applications remain available.
+
+Changes to packaged runtime behavior, assets, or file inclusion also require the packaged checks in the [testing guidance](../../guidance/0005-testing.md#5-packaged-files). Documentation-reference-only edits do not.
 
 ## Targeted local review
 
@@ -131,11 +137,11 @@ For manual app validation, use `bun run dev:isolated -- --name <unique-run-id>`,
 
 Run `bun run --cwd packages/e2e test:smoke` for basic dashboard browser E2E. It runs the real dashboard with isolated runtime data, without starting Canvas. The discovered startup P1 file covers empty and selected project flows and project switching. Keyboard/theme permutations remain in their P2 suite. These tests also run in the full UI suite.
 
-API tests retain one fresh Bun process per file and at most two active files, with the existing 30-second per-test limit. Run focused API regressions with `bun run --cwd packages/pstdio-api test --files='["src/app-config.p0.test.ts"]'`. Unknown, duplicate, or empty explicit file selections fail. Without `--files`, the driver selects every API test file. `--shard=1/4` partitions that selection; optional `--timings=path.json` balances complete files from recorded durations. Timing files use Bun's `{ "version": 1, "files": { "src/example.test.ts": 120 } }` format. Missing durations use a measured fallback; no test is dropped because of elapsed time.
+API tests retain one fresh Bun process per file and at most two active files, with the existing 30-second per-test limit. Run focused API regressions with `bun run test -- --file packages/pstdio-api/src/app-config.p0.test.ts`. The API driver accepts only the exact planned files and keeps its fresh file-process pool. Its low-level `--files` and `--timings` options remain available for runner diagnosis. The API pool and shared planner reuse the same deterministic duration allocator, retaining round-robin assignment without observations and median estimates for missing durations.
 
 `scripts/ci/run-bun-tests.ts` adds `--bail=1` only for `CI_PRIORITY=P1`; other priorities collect all failures. The API scheduler also stops pending P1 files and waits for active child processes to stop. App Playwright uses `maxFailures=1` only for P1. Existing test limits, source conditions, and manual quarantine selection remain unchanged.
 
-The Bun wrapper and API driver save reports under `test-results/ci/bun` and `test-results/ci/api`. Reports include actual source revision, platform, priority, JUnit case IDs and outcomes, executed counts, and per-file timings. API reports list every selected file and distinguish failures, P1 cancellation, external cancellation signals, and missing reports. A successful child without a case report fails. Bun's bailed JUnit omits later cases, so partial reports explicitly leave the unreported selected-case count unknown. Direct `bun test` calls do not produce these wrapper manifests.
+The standard executor saves `execution.json` beside per-run native case reports under `test-results/ci/planned`. Direct lifecycle calls retain their native report folders. Reports include actual source revision, platform, priority, JUnit case IDs and outcomes, executed counts, and per-file timings. API reports list every selected file and distinguish failures, P1 cancellation, external cancellation signals, and missing reports. A successful child without a case report fails. Bun's bailed JUnit omits later cases, so partial reports explicitly leave the unreported selected-case count unknown. Direct `bun test` calls do not produce these wrapper manifests.
 
 ## Test priorities
 

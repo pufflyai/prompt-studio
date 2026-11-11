@@ -23,7 +23,7 @@ test("always covers queue contracts, including unchanged owners", () => {
   const result = plan(["packages/producer/src/rule.ts"]);
   expect(result.selected.map((entry) => entry.file)).toEqual(tests.slice(0, 5));
   expect(result.packageChecks.map((check) => check.id)).toEqual(["producer:lint", "consumer:typecheck"]);
-  expect(result.queueChecks[0]?.command).toEqual(["bun", "run", "test:smoke"]);
+  expect(result.testPlan.runs.find((run) => run.smoke)?.files).toEqual([tests[4]!]);
 });
 
 test("helper changes select consuming behavior tests even when no test was edited", () => {
@@ -33,12 +33,7 @@ test("helper changes select consuming behavior tests even when no test was edite
 test("an edited browser scenario runs through its registered runner", () => {
   const result = plan([tests[5]!]);
   expect(result.selected.map((entry) => entry.file)).toContain(tests[5]);
-  expect(result.runs.find((run) => run.files.includes(tests[5]!))?.command).toEqual([
-    "bun",
-    "run",
-    "test:ui",
-    "src/ui/feature.p2.spec.ts",
-  ]);
+  expect(result.testPlan.runs.find((run) => run.files.includes(tests[5]!))?.runner).toBe("app");
 });
 
 test("benchmarks stay complete in CI and never masquerade as local passes", () => {
@@ -110,13 +105,8 @@ test("queue API, database, repository and service tests cannot be deferred by a 
   });
   for (const file of queueFiles) {
     expect(result.selected.some((entry) => entry.file === file)).toBe(true);
-    expect(result.runs.some((run) => run.files.includes(file))).toBe(true);
+    expect(result.testPlan.runs.some((run) => run.files.includes(file))).toBe(true);
     expect(result.deferred.some((entry) => entry.file === file)).toBe(false);
   }
-  expect(result.runs.find((run) => run.runner === "integration")?.command).toEqual([
-    "bun",
-    "run",
-    "test:integration",
-    "src/authority.p1.integration.ts",
-  ]);
+  expect(result.testPlan.runs.find((run) => run.runner === "integration")?.files).toEqual([queueFiles[3]!]);
 });

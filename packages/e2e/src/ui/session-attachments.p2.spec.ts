@@ -1,6 +1,6 @@
 import { Buffer } from "node:buffer";
-import { expect, type Request, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { expect, type Request, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 
 const actionPath = "/extensions/commands/pstdio.pstdio-session-browser.view.conversation.chat.onAction/execute";

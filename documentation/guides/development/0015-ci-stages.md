@@ -192,8 +192,8 @@ None of these replace the real queue run or release certification.
 
 ### Evidence
 
-- Plan and results: `test-results/ci/gate-results.json`, uploaded as `ci-validation-attempt-<attempt>`.
-- Bun and API case reports: `test-results/ci/bun` and `test-results/ci/api`. A passing job without a case report fails. A Bun report that stopped early leaves the remaining cases unknown.
+- Scope saves one immutable `test-results/ci/plan.json`. Workers consume assigned run IDs; downloaded native reports are reconciled in `plan-verification.json`. The existing required-job result remains `gate-results.json`, uploaded as `ci-validation-attempt-<attempt>`.
+- Planned case reports: per-run directories beside `execution.json` in `test-results/ci/planned`. A passing process without matching native case evidence fails. A report that stopped early leaves remaining execution unknown.
 - App and component traces: each package's `test-results` and `playwright-report` folders.
 
 ### Quarantine
@@ -203,7 +203,7 @@ Quarantine is manual, never automatic. Entries live in `scripts/ci/test-quaranti
 - Quarantined tests run in their own jobs. Their failures do not block the queue, but each test must still run exactly once.
 - A scoped Bun file whose reported cases all belong to the platform quarantine records an unselected stable lane with zero executed cases. The separate quarantine lane must still execute and verify those cases. Empty files, missing reports and unregistered skipped cases cannot use this handoff. An edited Playwright file with quarantine entries for the platform may likewise select no stable cases; its quarantine lane must still execute and verify every registered case.
 - Retries are not allowed: no rerun flags, no per-test retries, no retries hidden in helpers.
-- Run them locally with `bun scripts/ci/run-quarantined-tests.ts bun` and check the reports with `bun scripts/ci/verify-quarantine-reports.ts bun`. The runner also accepts `packaged-bun`, `playwright-ui`, `playwright` and `packaged-desktop`, and `--scope <workspace>`. Pass the check the same runner and scope as the run, because it expects a report from every owner in that scope. A P0 test compares each workflow job's run and check steps.
+- Local selections include their applicable quarantine lane once. Use `bun run test -- --lane quarantine --scope <workspace> --runner <kind>` for a focused diagnosis. The shared executor validates every registered case and keeps its raw outcome. Dedicated ordered benchmark lifecycles retain their native budget classification and report verifier.
 - Keep the first failed attempt before a rerun. A later pass does not explain the failure.
 
 ## Builds and caches

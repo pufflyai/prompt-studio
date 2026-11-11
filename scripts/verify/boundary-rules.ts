@@ -63,6 +63,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-skills",
     "workbench-fixture",
     "pstdio-benchmarks",
+    "pstdio-scripts",
   ],
   pstdio: [
     "pstdio-api-contracts",
@@ -201,7 +202,8 @@ export const PRIVATE_EXPORT_LIMITS: Record<string, number> = {
   "pstdio-extensions": 12,
 };
 
-// These edges support conformance tests, never packaged runtime imports.
+// These edges support test infrastructure, never packaged runtime imports.
 export const DEVELOPMENT_ONLY_WORKSPACE_DEPS: Record<string, string[]> = {
   "pstdio-db": ["@pstdio/sdk"],
+  "pstdio-api": ["pstdio-scripts"],
 };

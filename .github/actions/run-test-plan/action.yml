@@ -1,0 +1,54 @@
+name: Execute selected test plan
+description: Consume the scope job's immutable selection and retain execution evidence
+inputs:
+  job:
+    description: Assigned logical job in the plan
+    required: true
+  prebuilt:
+    description: Dependencies were prepared by the enclosing native job
+    default: "true"
+  package-filter:
+    description: Run the existing lint and test group concurrently for these package scopes
+    default: ""
+  display:
+    description: Start an isolated X display on Linux
+    default: "false"
+runs:
+  using: composite
+  steps:
+    - name: Identify result bundle
+      id: bundle
+      shell: bash
+      env:
+        PLAN_JOB: ${{ inputs.job }}
+      run: bun -e 'const {createHash}=await import("node:crypto");const {appendFileSync}=await import("node:fs");appendFileSync(process.env.GITHUB_OUTPUT,`key=${createHash("sha256").update(process.env.PLAN_JOB).digest("hex").slice(0,16)}\n`);'
+    - uses: actions/download-artifact@v4
+      with:
+        name: test-plan-attempt-${{ github.run_attempt }}
+        path: test-results/ci
+    - name: "[phase:test] Execute assigned runs"
+      shell: bash
+      env:
+        LERNA_FILTER: ${{ inputs.package-filter }}
+        PLAN_JOB: ${{ inputs.job }}
+        PLAN_PREBUILT: ${{ inputs.prebuilt }}
+        PLAN_DISPLAY: ${{ inputs.display }}
+        CI_PLAN_OUTPUT_DIR: test-results/ci/planned/${{ steps.bundle.outputs.key }}
+      run: |
+        command=(bun scripts/test.ts --plan test-results/ci/plan.json --job "$PLAN_JOB")
+        if [[ -n "$LERNA_FILTER" ]]; then
+          export CI_PLAN_JOB="$PLAN_JOB"
+          command=(bun scripts/ci/run-package-group.ts)
+        fi
+        if [[ "$PLAN_PREBUILT" == 'true' && -z "$LERNA_FILTER" ]]; then command+=(--prebuilt); fi
+        if [[ "$RUNNER_OS" == 'Linux' && "$PLAN_DISPLAY" == 'true' ]]; then
+          xvfb-run -a "${command[@]}"
+        else
+          "${command[@]}"
+        fi
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-plan-results-${{ github.job }}-${{ strategy.job-index }}-${{ steps.bundle.outputs.key }}-attempt-${{ github.run_attempt }}
+        path: test-results/ci/planned/${{ steps.bundle.outputs.key }}
+        if-no-files-found: error

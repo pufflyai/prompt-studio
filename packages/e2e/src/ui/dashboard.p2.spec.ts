@@ -1,6 +1,6 @@
-import { expect } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { homePage } from "../helpers/home-loading";
+import { expect } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 import { test } from "./helpers/notification-settings";
 

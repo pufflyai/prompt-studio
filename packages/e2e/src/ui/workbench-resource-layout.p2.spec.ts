@@ -1,7 +1,7 @@
 import { rmSync } from "node:fs";
-import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerAttempt, createPlannerTicket } from "../helpers/planner-api";
+import { type APIRequestContext, expect, type Page, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 import { showSidenavEntry } from "./helpers/sidenav-navigation";
 import { createGitRepo } from "./helpers/workspace-session-attempt";

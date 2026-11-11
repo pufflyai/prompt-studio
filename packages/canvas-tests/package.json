@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun ../../scripts/ci/run-ci-checks.ts --plan checks.json",
+    "test": "bun ../../scripts/test.ts --scope canvas-tests",
     "test:browser": "bun src/scripts/run-browser.ts",
     "perf:startup": "bun x --no-install lerna run build:previews --scope canvas-tests && bun run test:browser --config playwright.startup-perf.config.ts",
     "typecheck": "bun check && bun src/scripts/typecheck-canvas-files.ts",

@@ -6,7 +6,8 @@ export const copyCiRuntime = async (root: string) => {
     recursive: true,
     filter: (path) => !path.endsWith(".test.ts"),
   });
-  // Priority planning reads the shared suite registry, including in these isolated checkouts.
+  await copyFile(join(import.meta.dirname, "../test.ts"), join(root, "scripts/test.ts"));
+  // Test planning reads the shared suite registry, including in these isolated checkouts.
   const benchmarkPackage = join(import.meta.dirname, "../../packages/benchmarks");
   const source = join(root, "packages/benchmarks");
   await mkdir(source, { recursive: true });

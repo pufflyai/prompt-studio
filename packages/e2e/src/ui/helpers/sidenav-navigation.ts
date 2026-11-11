@@ -36,10 +36,3 @@ export const showSidenavEntry = async (page: Page, label: string) => {
   await page.keyboard.press("Escape");
   return getSidenavEntry(page, label);
 };
-
-// Navigation rows may be virtualized when extensions add more groups to the sidebar.
-export const scrollSidenavToEnd = async (page: Page) => {
-  const sidenav = page.locator('[data-workbench-region="sidenav"]');
-  const lab = page.getByRole("option", { name: "Lab mode", exact: true });
-  await expect.poll(() => revealTreeEntry(page, sidenav, lab)).toBe(true);
-};

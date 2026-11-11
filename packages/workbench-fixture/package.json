@@ -1,8 +1,8 @@
 {
   "name": "workbench-fixture",
   "version": "0.8.3",
-  "displayName": "Workbench fixture",
-  "description": "Test fixtures for extension and workbench contracts.",
+  "displayName": "Session harness fixture",
+  "description": "Deterministic harness inputs for session contract tests.",
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
@@ -13,34 +13,11 @@
   "scripts": {
     "typecheck": "bun check -p ../../tsconfig.test-fixtures.json"
   },
-  "nx": {
-    "implicitDependencies": [
-      "@pstdio/sdk",
-      "@pstdio/ui"
-    ],
-    "targets": {
-      "typecheck": {
-        "inputs": [
-          "default",
-          "^production",
-          "{workspaceRoot}/tsconfig.test-fixtures.json"
-        ]
-      }
-    }
-  },
   "dependencies": {
-    "@chakra-ui/react": "^3.0.0",
-    "@emotion/react": "^11.0.0",
-    "@pstdio/sdk": "0.46.0-preview.sha-2c2b2e4c6b144c418cc048219c56553afe938bf4",
-    "@pstdio/ui": "0.46.0-preview.sha-2c2b2e4c6b144c418cc048219c56553afe938bf4",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "zustand": "^5.0.0"
+    "@pstdio/sdk": "0.46.0-preview.sha-2c2b2e4c6b144c418cc048219c56553afe938bf4"
   },
   "devDependencies": {
     "@types/bun": "1.4.4",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
     "typescript": "6.0.2"
   }
 }

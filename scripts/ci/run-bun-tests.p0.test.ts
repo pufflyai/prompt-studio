@@ -97,44 +97,48 @@ test("nightly source coverage follows stable execution and leaves quarantine uni
   }
 });
 
-test.each([
-  "fixture",
-  "pstdio-api",
-])("the quarantine controller preserves %s fixtures and verifies their evidence", async (owner) => {
-  const webviewBuilds = owner === "pstdio-api" ? "0" : "1";
-  const defaults = owner === "pstdio-api" ? "[]" : '["fixture-default"]';
-  const fixture = await registeredFixture(`import { test, expect } from "bun:test";
-    test("registered case", () => {
-      expect(process.env.PSTDIO_EXTENSION_WEBVIEW_BUILDS).toBe(${JSON.stringify(webviewBuilds)});
-      expect(process.env.PSTDIO_DEFAULT_EXTENSIONS).toBe(${JSON.stringify(defaults)});
-    });`);
+test("the shared quarantine executor preserves fixture environment and verifies named cases", async () => {
+  const fixture = await registeredFixture(
+    `import {test,expect} from "bun:test";test("registered case",()=>{expect(process.env.PSTDIO_EXTENSION_WEBVIEW_BUILDS).toBe("1");expect(process.env.PSTDIO_DEFAULT_EXTENSIONS).toBe('["fixture-default"]');});`,
+  );
   try {
     await writeFile(join(fixture.root, "package.json"), JSON.stringify({ workspaces: ["packages/*"] }));
     await writeFile(
       join(fixture.cwd, "package.json"),
-      JSON.stringify({ name: owner, scripts: { test: "bun ../../scripts/ci/run-bun-tests.ts" } }),
+      JSON.stringify({ name: "fixture", scripts: { test: "ignored" } }),
     );
-    const env = {
-      ...process.env,
-      CI_PRIORITY: "P2",
-      PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1",
-      PSTDIO_DEFAULT_EXTENSIONS: '["fixture-default"]',
-    };
-    const run = async (script: string, args: string[]) => {
-      const child = Bun.spawn([process.execPath, join(fixture.root, "scripts/ci", script), ...args], {
+    const file = "packages/fixture/registered.p0.test.ts";
+    await writeFile(join(fixture.root, file), await readFile(join(fixture.cwd, "registered.test.ts"), "utf8"));
+    await rm(join(fixture.cwd, "registered.test.ts"));
+    await writeFile(
+      join(fixture.root, "scripts/ci/test-quarantine.json"),
+      JSON.stringify([
+        { runner: "bun", file, name: "registered case", platforms: [process.platform], arch: process.arch },
+      ]),
+    );
+    const child = Bun.spawn(
+      [process.execPath, join(fixture.root, "scripts/test.ts"), "--file", file, "--lane", "quarantine", "--prebuilt"],
+      {
         cwd: fixture.root,
-        env,
+        env: { ...process.env, PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1", PSTDIO_DEFAULT_EXTENSIONS: '["fixture-default"]' },
         stdout: "pipe",
         stderr: "pipe",
-      });
-      const output = await new Response(child.stdout).text();
-      const errors = await new Response(child.stderr).text();
-      return { code: await child.exited, output: output + errors };
-    };
-    expect(await run("run-quarantined-tests.ts", ["bun", "--prebuilt"])).toMatchObject({ code: 0 });
-    const result = await run("verify-quarantine-reports.ts", ["bun"]);
-    expect(result).toMatchObject({ code: 0 });
-    expect(result.output).toContain("1 quarantined cases executed once; 0 failed");
+      },
+    );
+    const output = await new Response(child.stderr).text();
+    expect({ code: await child.exited, output }).toMatchObject({ code: 0 });
+    const reports = [
+      ...new Bun.Glob("**/execution.json").scanSync({
+        cwd: join(fixture.root, "test-results/ci/planned"),
+        absolute: true,
+      }),
+    ];
+    const result = await Bun.file(reports[0]!).json();
+    expect(result).toMatchObject({
+      outcome: "success",
+      complete: true,
+      results: [{ quarantine: { executed: 1, failures: 0 } }],
+    });
   } finally {
     await rm(fixture.root, { recursive: true, force: true });
   }

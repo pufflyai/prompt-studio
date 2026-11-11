@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { createApiTestPlan } from "./api-test-plan";
+import { createApiTestPlan } from "./api-test-plan.fixture";
 
 const files = ["src/a.test.ts", "src/b.test.ts", "src/c.test.ts", "src/d.test.ts"];
 test("explicit selected API paths are exact, normalized and checked against discovery", () => {

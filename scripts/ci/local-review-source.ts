@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createLocalReviewPlan } from "./local-review-plan";
 import { discoverTestFiles } from "./test-discovery";
+import { testPlanSource } from "./test-plan-source";
 import { readWorkspacePackages } from "./workspace-packages";
 
 export const readReviewSource = (root: string, base: string, additionalTests: string[] = []) => {
@@ -19,7 +20,13 @@ export const readReviewSource = (root: string, base: string, additionalTests: st
     head,
     mergeBase,
     dirty,
-    plan: createLocalReviewPlan({ packages, tests: discoverTestFiles(root), changed, additionalTests }),
+    plan: createLocalReviewPlan({
+      packages,
+      tests: discoverTestFiles(root),
+      changed,
+      additionalTests,
+      source: testPlanSource(root),
+    }),
   };
 };
 

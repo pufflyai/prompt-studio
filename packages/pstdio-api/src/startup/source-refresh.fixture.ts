@@ -21,13 +21,12 @@ const assertExistingProjectSourceRefresh = async (tempRoot: string, source: stri
   const pstdioHome = join(root, "home");
   const databasePath = join(root, "database");
   const storageRoot = join(root, "storage");
-  const installed = join(pstdioHome, "extensions/extension-lab");
+  const installed = join(pstdioHome, "extensions/startup-fixture");
 
   await installExtensionSource({
     source,
-    installName: "extension-lab",
+    installName: "startup-fixture",
     env: { ...process.env, PSTDIO_HOME: pstdioHome },
-    skipInstall: true,
   });
   const validation = await checkExtensionSource(installed, dirname(installed));
   assert.equal(validation.check.errorCount, 0);
@@ -38,15 +37,13 @@ const assertExistingProjectSourceRefresh = async (tempRoot: string, source: stri
   await initial.deps.projectService.create({ name: "Existing project" });
   await initial.close();
 
-  writeFileSync(join(installed, "README.md"), "stale extension lab");
+  writeFileSync(join(installed, "README.md"), "stale source fixture");
   process.env.PSTDIO_DISABLE_EMBED_MANIFEST = "1";
-  process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([
-    { source, installName: "extension-lab", force: true, skipInstall: true },
-  ]);
+  process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([{ source, installName: "startup-fixture", force: true }]);
 
   const restarted = await createTestApp({ databasePath, storageRoot });
   try {
-    await waitFor(() => readFileSync(join(installed, "README.md"), "utf8") !== "stale extension lab");
+    await waitFor(() => readFileSync(join(installed, "README.md"), "utf8") !== "stale source fixture");
     assert.equal(readFileSync(join(installed, "README.md"), "utf8"), readFileSync(join(source, "README.md"), "utf8"));
   } finally {
     await restarted.close();
@@ -62,22 +59,20 @@ try {
     await assertExistingProjectSourceRefresh(tempRoot, source);
   } else {
     const pstdioHome = join(tempRoot, "home-source-refresh");
-    const installed = join(pstdioHome, "extensions/extension-lab");
-    await installExtensionSource({ source, env: { ...process.env, PSTDIO_HOME: pstdioHome }, skipInstall: true });
-    writeFileSync(join(installed, "README.md"), "stale extension lab");
+    const installed = join(pstdioHome, "extensions/startup-fixture");
+    await installExtensionSource({ source, env: { ...process.env, PSTDIO_HOME: pstdioHome } });
+    writeFileSync(join(installed, "README.md"), "stale source fixture");
 
     process.env.PSTDIO_HOME = pstdioHome;
     process.env.PSTDIO_DISABLE_EMBED_MANIFEST = "1";
-    process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([
-      { source, installName: "extension-lab", skipInstall: true, force: true },
-    ]);
+    process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([{ source, installName: "startup-fixture", force: true }]);
 
     const { close } = await createTestApp({
       databasePath: ":memory:",
       storageRoot: join(tempRoot, "storage-source-refresh"),
     });
 
-    await waitFor(() => readFileSync(join(installed, "README.md"), "utf8") !== "stale extension lab");
+    await waitFor(() => readFileSync(join(installed, "README.md"), "utf8") !== "stale source fixture");
     await close();
 
     assert.equal(readFileSync(join(installed, "README.md"), "utf8"), readFileSync(join(source, "README.md"), "utf8"));

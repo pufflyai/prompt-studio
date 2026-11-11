@@ -1,11 +1,11 @@
 import { rmSync } from "node:fs";
-import { type APIRequestContext, expect, test } from "@playwright/test";
 import {
   createPlannerAttempt,
   createPlannerTicket,
   createPlannerTicketFile,
   getPlannerTicket,
 } from "../helpers/planner-api";
+import { type APIRequestContext, expect, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 import {
   createResourceActionsProject,

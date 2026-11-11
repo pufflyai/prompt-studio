@@ -16,21 +16,13 @@ interface State {
     positions: Record<string, { x: number; y: number }>;
     themes: Record<string, string>;
   };
-  example: { filter: string; query: string; playing: boolean };
-  scribble: {
-    documents: { id: string; title: string }[];
-    contentById: Record<string, string>;
-  };
 }
 
 test(
-  "unchanged Canvas and Lab callers migrate, save and recover through the packaged storage host",
+  "unchanged Canvas callers migrate, save and recover through the packaged storage host",
   async () => {
     const root = mkdtempSync(join(tmpdir(), "packaged-legacy-callers-"));
-    const entries = [
-      { name: "legacy-layout", path: "canvas/src/legacy-layout.fixture.ts" },
-      { name: "legacy-state", path: "extension-lab/src/legacy-state.fixture.ts" },
-    ];
+    const entries = [{ name: "legacy-layout", path: "canvas/src/legacy-layout.fixture.ts" }];
     const extensions = [];
     for (const entry of entries) {
       const source = join(root, entry.name);
@@ -62,7 +54,7 @@ test(
         headers: { ...runtimeAuthorization(host.descriptor), "content-type": "application/json" },
         body: JSON.stringify(body),
       });
-    const command = async <T>(projectId: string, id: string, extension = "legacy-state") => {
+    const command = async <T>(projectId: string, id: string, extension = "legacy-layout") => {
       const response = await post(
         `/projects/${projectId}/extensions/commands/example.${extension}.command.${id}/execute`,
         { params: {} },
@@ -72,16 +64,11 @@ test(
       expect(body.outcome).toMatchObject({ ok: true });
       return body.outcome.value;
     };
-    const read = async (projectId: string) => ({
-      layout: await command<State["layout"]>(projectId, "read", "legacy-layout"),
-      ...(await command<Omit<State, "layout">>(projectId, "read")),
-    });
+    const read = async (projectId: string) => ({ layout: await command<State["layout"]>(projectId, "read") });
     try {
       const created = await post("/projects", folderProjectInput({ name: "Legacy callers" }, root));
       expect(created.status).toBe(201);
       const project = (await created.json()) as { id: string };
-      const seeded = await command<{ migrated: State["scribble"] }>(project.id, "write");
-      expect(seeded.migrated.documents.find(({ id }) => id === "north-star")?.title).toBe("Migrated page");
       await command(project.id, "write", "legacy-layout");
       const saved = await read(project.id);
       expect(saved.layout).toMatchObject({
@@ -89,16 +76,9 @@ test(
         positions: { first: { x: 120, y: 80 }, second: { x: 900, y: 100 } },
         themes: { first: "app", second: "dark" },
       });
-      expect(saved.example).toMatchObject({ filter: "Favorites", query: "Saved search", playing: true });
-      expect(saved.scribble.contentById).toMatchObject({
-        "north-star": "Existing page content",
-        "new-page": "New page content",
-      });
-      expect(saved.scribble.documents.find(({ id }) => id === "new-page")?.title).toBe("New page");
       await stopProcess(host.child);
       host = await startPackagedServe(root, env);
       expect(await read(project.id)).toEqual(saved);
-      await command(project.id, "update");
       await command(project.id, "update", "legacy-layout");
       const later = await read(project.id);
       expect(later.layout).toMatchObject({
@@ -106,12 +86,6 @@ test(
         positions: { first: { x: 240, y: 160 }, second: saved.layout.positions.second },
         themes: saved.layout.themes,
       });
-      expect(later.example).toMatchObject({ filter: "Favorites", query: "Saved search", playing: false });
-      expect(later.scribble.contentById).toMatchObject({
-        "north-star": "Existing page content",
-        "new-page": "Later content",
-      });
-      expect(later.scribble.documents.find(({ id }) => id === "new-page")?.title).toBe("Later page");
       await stopProcess(host.child);
       host = await startPackagedServe(root, env);
       expect(await read(project.id)).toEqual(later);

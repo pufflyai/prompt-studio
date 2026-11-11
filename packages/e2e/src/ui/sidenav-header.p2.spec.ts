@@ -1,7 +1,7 @@
-import { expect, type Locator, type Page } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, createPlannerTicketFile, getPlannerTicketStatuses } from "../helpers/planner-api";
 import { revealTreeEntry } from "../helpers/tree-entry";
+import { expect, type Locator, type Page } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 import { test } from "./helpers/notification-settings";
 import { showSidenavEntry } from "./helpers/sidenav-navigation";

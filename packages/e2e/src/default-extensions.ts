@@ -20,7 +20,12 @@ export const e2eExtension = (name: string) => {
     source: prepared ?? resolve(repoRoot, extensionSource(name)),
     installName,
     // Prepared consumers install their own fresh public dependencies in the runtime.
-    ...(prepared ? {} : { skipInstall: !name.startsWith(".pstdio/extensions/") }),
+    ...(prepared
+      ? {}
+      : {
+          skipInstall:
+            name !== "workbench-fixture" && !name.includes("/fixtures/") && !name.startsWith(".pstdio/extensions/"),
+        }),
   };
 };
 
@@ -41,7 +46,6 @@ const e2eDefaultExtensions = [
   e2eExtension("harness-claude-code"),
   e2eExtension("harness-codex"),
   e2eExtension("harness-open-code"),
-  e2eExtension("workbench-fixture"),
 ];
 
 export const PSTDIO_E2E_DEFAULT_EXTENSIONS = JSON.stringify({ defaultExtensions: e2eDefaultExtensions });

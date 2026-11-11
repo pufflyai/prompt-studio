@@ -1,6 +1,6 @@
 # Production performance validation
 
-P3 runs the maintained acceptance workloads on exact candidate inputs. Manual and automatic runs use the same commands in `scripts/ci/production-performance.ts` and `.github/workflows/production-desktop.yml`. Existing operation budgets, fixed workloads, sample counts and execution allowances remain in their owners. No new release ceilings are introduced.
+P3 runs the maintained acceptance workloads on exact candidate inputs. Manual and automatic runs use the same commands in the shared `scripts/test.ts --performance-family` plan entry point and `.github/workflows/production-desktop.yml`. Existing operation budgets, fixed workloads, sample counts and execution allowances remain in their owners. No new release ceilings are introduced.
 
 ## Enabled workloads
 
@@ -16,12 +16,12 @@ P3 runs the maintained acceptance workloads on exact candidate inputs. Manual an
 Run an enabled family manually after restoring the candidate archive and installing its declared browser/native dependencies:
 
 ```sh
-bun scripts/ci/production-performance.ts storage
-bun scripts/ci/production-performance.ts runtime
-bun scripts/ci/production-performance.ts browser
-bun scripts/ci/production-performance.ts navigation
-bun scripts/ci/production-performance.ts planner
-bun scripts/ci/production-performance.ts relay
+bun scripts/test.ts --prebuilt --performance-family storage
+bun scripts/test.ts --prebuilt --performance-family runtime
+bun scripts/test.ts --prebuilt --performance-family browser
+bun scripts/test.ts --prebuilt --performance-family navigation
+bun scripts/test.ts --prebuilt --performance-family planner
+bun scripts/test.ts --prebuilt --performance-family relay
 ```
 
 Each family runs one workload at a time on its runner. It streams errors, completes independent workloads and saves the aggregate result plus CPU, memory, image, toolchain, source and artifact metadata. Setup and builds finish before accepted measurements. Desktop benchmarks use their maintained no-trace config and a fresh runner before any packaged app launch. An execution timeout is incomplete evidence, not an operation-budget regression.

@@ -3,6 +3,7 @@ import { writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { readReviewSource } from "./local-review-source";
 import { runCiChecks } from "./run-ci-checks";
+import { executePlan } from "./run-test-plan";
 import type { TestPriority } from "./test-policy";
 
 type ReviewCheck = { id: string; command: string[]; cwd: string; priority?: TestPriority };
@@ -88,8 +89,20 @@ export const executeLocalReview = async (
       true,
     );
     await runSequence(existingStaticChecks(plan.staticChecks, plan.changed, root), run, controller.signal);
-    if (built) await runSequence([...plan.packageChecks, ...plan.runs, ...plan.queueChecks], run, controller.signal);
-    const passed = !controller.signal.aborted && built && results.every((entry) => entry.outcome === "success");
+    let testsPassed = false;
+    if (built) {
+      await runSequence(plan.packageChecks, run, controller.signal);
+      const execution = await executePlan(plan.testPlan, {
+        root,
+        prebuilt: true,
+        signal: controller.signal,
+        inheritProcessGroup: true,
+        env: { CI_PROFILE: "production", BUN_FEATURE_FLAG_NO_ORPHANS: undefined },
+      });
+      testsPassed = execution.outcome === "success";
+    }
+    const passed =
+      !controller.signal.aborted && built && testsPassed && results.every((entry) => entry.outcome === "success");
     outcome = passed ? "passed" : "failed";
     return passed ? 0 : 1;
   } finally {

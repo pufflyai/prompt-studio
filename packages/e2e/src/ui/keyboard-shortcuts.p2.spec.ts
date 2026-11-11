@@ -1,5 +1,5 @@
-import { expect } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { expect } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 import { test } from "./helpers/notification-settings";
 import { installShortcutReferenceExtension } from "./helpers/shortcut-reference-extension";

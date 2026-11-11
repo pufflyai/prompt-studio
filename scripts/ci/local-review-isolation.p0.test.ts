@@ -60,7 +60,7 @@ test("a clean workspace prints a review plan before any dependency installation"
     const plan = JSON.parse(output);
     expect(plan.changed).toEqual(["README.md"]);
     expect(plan.selected).toEqual([]);
-    expect(plan.queueChecks[0].command).toEqual(["bun", "run", "test:smoke"]);
+    expect(plan.testPlan.runs).toEqual([]);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
