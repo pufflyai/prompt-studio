@@ -42,7 +42,6 @@ const e2eDefaultExtensions = [
   e2eExtension("harness-codex"),
   e2eExtension("harness-open-code"),
   e2eExtension("workbench-fixture"),
-  e2eExtension("extension-lab"),
 ];
 
 export const PSTDIO_E2E_DEFAULT_EXTENSIONS = JSON.stringify({ defaultExtensions: e2eDefaultExtensions });

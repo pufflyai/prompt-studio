@@ -52,7 +52,6 @@ import { expectPackagedNativeMarkdown, writeNativeMarkdownExtension } from "./pa
 // packaged-notes-page.p2.spec.ts checks immediate palette creation, Notes creation cards, Add actions, and page-owned Main tabs across navigation and reload.
 // packaged-planner-timeline-smoke.ts checks side-panel attention actions without leaving the board or timeline.
 // packaged-planner-smoke.p2.test.ts checks manual recovery of missing stopped work with Auto Build disabled.
-// packaged-lab-selection.p2.spec.ts checks tabless selection, retained frames, shared edits and saved transforms.
 // packaged-scribble-pages.p2.spec.ts checks native Scribble pages, drafts, favorites and group operations.
 // performance-observer.p2.test.ts checks native CPU units and memory through the compiled observer's direct startup path.
 // packaged-core-extensions-smoke.p1.test.ts checks Onboarding's setup contribution and bundled webview.

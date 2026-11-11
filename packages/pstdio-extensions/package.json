@@ -59,7 +59,6 @@
   "devDependencies": {
     "@types/bun": "1.4.4",
     "@types/react": "19.2.3",
-    "extension-lab": "workspace:*",
     "react": "19.2.4",
     "typescript": "6.0.2"
   }

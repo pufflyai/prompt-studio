@@ -32,7 +32,7 @@ test("packaged CLI file selection executes each selected test once without unrel
     ]) {
       await copyFile(resolve(import.meta.dir, "..", file), join(owner, "src", file));
     }
-    for (const name of ["extension-lab", "pstdio-planner", "pstdio-workspaces"]) {
+    for (const name of ["pstdio-planner", "pstdio-workspaces"]) {
       const extension = join(root, "extensions", name);
       await mkdir(extension, { recursive: true });
       await writeFile(join(extension, "package.json"), JSON.stringify({ name, version: "1.0.0" }));

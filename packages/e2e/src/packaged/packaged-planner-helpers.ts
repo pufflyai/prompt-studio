@@ -49,7 +49,6 @@ export async function withPackagedPlanner(check: (input: PackagedPlanner) => Pro
     host = await startPackagedServe(root, {
       PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions(
         "workbench-fixture",
-        "extension-lab",
         "pstdio-artifacts",
         "pstdio-planner",
         "pstdio-reports",

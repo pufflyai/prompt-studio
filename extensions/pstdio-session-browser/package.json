@@ -15,7 +15,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun ../../scripts/ci/run-bun-tests.ts",
+    "test": "bun test",
     "typecheck": "bun check"
   },
   "dependencies": {

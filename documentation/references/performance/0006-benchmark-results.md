@@ -38,7 +38,7 @@ recordPeakMemory("cold-start-memory", "Cold start peak memory");
 - `budget` is optional. It repeats the benchmark's existing budget; the writer never adds a new one.
 - The writer does nothing unless the runner sets `BENCHMARK_RESULTS`, so benchmarks still run on their own.
 
-A new suite needs an entry in `suites.ts` and in `SUITES` in `.pstdio/extensions/pstdio-dev/src/benchmarks/platforms.ts`, which the Runs page offers. A P0 test in the extension, `platforms.p0.test.ts`, fails when its list differs from what the package's `describe` command plans on each platform.
+A new suite needs an entry in `suites.ts` and in `SUITES` in `.pstdio/extensions/pstdio-dev/src/benchmarks/platforms.ts`, which the Runs page offers. Compare its offered platforms with the package's `describe` output when updating the list.
 
 ## Run benchmarks
 

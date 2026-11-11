@@ -11,7 +11,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun ../../scripts/ci/run-bun-tests.ts",
     "typecheck": "bun check -p ../../tsconfig.test-fixtures.json"
   },
   "nx": {

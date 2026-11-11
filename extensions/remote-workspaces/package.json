@@ -13,8 +13,8 @@
   "scripts": {
     "typecheck": "bun check",
     "lint": "bun run typecheck",
-    "test": "bun ../../scripts/ci/run-bun-tests.ts",
-    "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --coverage"
+    "test": "bun test",
+    "test:coverage": "bun test --coverage"
   },
   "dependencies": {
     "@pstdio/sdk": "0.46.0-preview.sha-2c2b2e4c6b144c418cc048219c56553afe938bf4"

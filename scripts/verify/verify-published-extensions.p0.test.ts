@@ -43,7 +43,7 @@ test("stages source and test support outside the workspace without workspace dep
   const root = await fixture();
   const destination = await fixture();
   await write(root, "tsconfig.base.json", { compilerOptions: { strict: true } });
-  await write(root, "scripts/test-setup.ts", "export {};\n");
+  await write(root, "extensions/tool/test-setup.ts", "export {};\n");
   await write(root, "extensions/tool/package.json", { dependencies: { "@pstdio/sdk": "^0.35.0" } });
   await write(root, "extensions/tool/extension.ts", "export default {};\n");
   await write(root, "extensions/tool/bun.lock", "old resolution");
@@ -53,7 +53,7 @@ test("stages source and test support outside the workspace without workspace dep
   const staged = await stageExtension(root, "extensions/tool", destination);
   expect(await Bun.file(join(staged, "extension.ts")).text()).toContain("export default");
   expect(await Bun.file(join(staged, "package.json")).json()).toEqual({ dependencies: { "@pstdio/sdk": "^0.35.0" } });
-  expect(await Bun.file(join(destination, "scripts/test-setup.ts")).exists()).toBe(true);
+  expect(await Bun.file(join(staged, "test-setup.ts")).exists()).toBe(true);
   expect(await Bun.file(join(destination, "tsconfig.base.json")).exists()).toBe(true);
   for (const path of [
     "bun.lock",

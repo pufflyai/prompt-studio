@@ -100,8 +100,7 @@ API. The workbench package itself does not depend on the API host.
    declares it as a development dependency, without importing it. Pull request
    CI then runs those tests when the loaded package changes. `pstdio-api`
    declares `extension-lab`, `pstdio-base-themes`, `pstdio-planner`,
-   `pstdio-skills` and `workbench-fixture`. `pstdio-extensions` declares
-   `extension-lab`. `pstdio-extension-testbench` declares `pstdio-base-themes`
+   `pstdio-skills` and `workbench-fixture`. `pstdio-extension-testbench` declares `pstdio-base-themes`
    and `pstdio-planner`.
 
 5. **Primitive UI**

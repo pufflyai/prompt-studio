@@ -40,9 +40,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   "pstdio-wt": ["pstdio-file-types"],
   "pstdio-storage": ["pstdio-paths", "pstdio-sync-contracts"],
   "@pstdio/sdk": ["pstdio-api-contracts", "pstdio-sync", "pstdio-sync-contracts"],
-  // pstdio-extensions also declares extension-lab, whose documented examples its tests load,
-  // so changing an example marks pstdio-extensions as affected.
-  "pstdio-extensions": ["@pstdio/sdk", "pstdio-api-contracts", "pstdio-paths", "pstdio-theme", "extension-lab"],
+  "pstdio-extensions": ["@pstdio/sdk", "pstdio-api-contracts", "pstdio-paths", "pstdio-theme"],
   "pstdio-api-runtime-host": ["pstdio-api-contracts", "pstdio-extensions", "pstdio-benchmarks"],
   // pstdio-api also declares the extensions and fixtures its tests install from source,
   // so changing one marks pstdio-api as affected.
@@ -130,7 +128,6 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-wt",
     "pstdio-relay",
     "canvas",
-    "extension-lab",
     "harness-claude-code",
     "harness-codex",
     "harness-open-code",

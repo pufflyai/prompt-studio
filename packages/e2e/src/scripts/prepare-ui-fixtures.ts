@@ -3,7 +3,6 @@ import { join } from "node:path";
 import { preparePackagedExtensionSource } from "../packaged/packaged-extension-source";
 
 const currentApiConsumers = [
-  "extension-lab",
   "pstdio-session-browser",
   "pstdio-artifacts",
   "pstdio-cloud",

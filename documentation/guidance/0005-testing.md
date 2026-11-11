@@ -52,6 +52,8 @@
 9. Do not write tests for changes that only affect configuration or documentation.
 10. Do not assert literal bundled copy or generated file wording.
 11. Do not keep tests that cover only implementation details.
+12. Demo/example extensions and repository-local tools do not carry automated test suites or app journeys. Test platform behavior with minimal fixtures, without exercising demo application features.
+13. Keep production extension suites focused on their own behavior and runnable with their declared public dependencies and extension-owned setup. Avoid installing unrelated extensions or starting the complete host for unit tests.
 
 ## 7. Test commands
 
