@@ -83,3 +83,24 @@ test("a retained editor hides its floating toolbar when navigating away", async 
   await expect(editor).toBeHidden();
   await expect(preview.getByRole("button", { name: "Bold", exact: true })).toBeHidden();
 });
+
+// Critical: dropping a resource into a tabless collection must open its page in Main.
+test("page and panel resource rows dropped onto tabless Main open their resource page", async ({ page }) => {
+  const preview = await openCanvasPreview(page, source);
+  for (const label of ["Linked session", "Sessions"]) {
+    await preview.getByRole("option", { name: "Tickets", exact: true }).click();
+    const main = preview.locator('[data-workbench-panel="main"]');
+    await expect(main).toContainText("Ticket collection");
+    const row = preview.getByRole("option", { name: label, exact: true });
+    const from = (await row.boundingBox())!;
+    const to = (await main.boundingBox())!;
+    await page.mouse.move(from.x + 25, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 12 });
+    await page.mouse.up();
+    await expect(main.getByTestId("session-content")).toHaveText("Review session");
+    await expect(
+      preview.locator('[data-workbench-panel="side"]').getByRole("tab", { name: "Review session", exact: true }),
+    ).toHaveCount(0);
+  }
+});

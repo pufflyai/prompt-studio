@@ -62,7 +62,12 @@ const SessionNavigation = () => {
       main: { kind: "panels" },
       slots: [],
     });
-    for (const id of ["sessions", "notes"])
+    w.views.registerView({
+      id: "tickets",
+      title: "Tickets",
+      body: { kind: "react", render: () => <Text p="md">Ticket collection</Text> },
+    });
+    for (const id of ["sessions", "notes", "tickets"])
       w.pages.registerPage({
         id,
         ref: page(id),
@@ -78,7 +83,7 @@ const SessionNavigation = () => {
           : {}),
         main: {
           kind: "view",
-          view: { kind: "view", id: id === "sessions" ? "session" : "notes" },
+          view: { kind: "view", id: id === "sessions" ? "session" : id },
           cardinality: "one",
           presentation: "page",
           empty: { kind: "view", id: "session" },
@@ -117,6 +122,13 @@ const SessionNavigation = () => {
                 contextMenuActions: [{ id: "new", label: "New session", commandId: "new-session", args: {} }],
               },
               { id: "notes", label: "Notes", canHide: true, target: { kind: "page", page: page("notes") } },
+              { id: "tickets", label: "Tickets", canHide: true, target: { kind: "page", page: page("tickets") } },
+              {
+                id: "linked-session",
+                label: "Linked session",
+                canHide: true,
+                target: { kind: "panel", panel, resource: session },
+              },
             ],
           },
         ],

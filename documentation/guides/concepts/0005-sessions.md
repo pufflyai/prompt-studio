@@ -44,6 +44,9 @@ Stop active or queued work before deleting. Delete is disabled for running, queu
 
 Archive and delete close only that session's views. Removing the session on the current page returns you to Sessions. A failed save restores the session and shows one inline error; you can try again.
 
-*Updated at: 2026-11-11*
 
 Opening a saved session shows its linked resources in navigation. Links appear from either end: a ticket that links a session also appears beside that session. Empty link groups stay hidden. Tickets show Parent, Depends on, and Required by alongside their other resources.
+
+Drag a resource from navigation or a side tab onto a tabless Main panel, such as Tickets, to open its resource page.
+
+*Updated at: 2026-11-11*
