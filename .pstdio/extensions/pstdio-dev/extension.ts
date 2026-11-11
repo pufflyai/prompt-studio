@@ -1,23 +1,17 @@
 import {
   defineCommand,
   defineExtension,
-  defineHook,
   defineKeybinding,
   defineSchedule,
   defineSkill,
   packageAsset,
   params,
-  workspaceEvents,
   workspaceSlots,
 } from "@pstdio/sdk/extensions";
 import { repairRemovedCommand, repairRemovedSchedule } from "./merge-queue-repair";
 import { benchmarkCommands, syncCommandRef } from "./src/benchmarks/commands";
 import { navigationTrees, pages, viewMenus, views } from "./src/pages";
 
-const INSTALL_COMMAND = ["bun", "install", "--frozen-lockfile"];
-const BUILD_COMMAND = ["bun", "run", "build"];
-// Chained via a shell because spawnDetached runs a single executable (no shell operators).
-const PROVISION_COMMAND = ["sh", "-c", `${INSTALL_COMMAND.join(" ")} && ${BUILD_COMMAND.join(" ")}`];
 const ISOLATED_COMMAND = ["bun", "run", "dev:isolated"];
 const HIGH_IMPACT_ISSUE_DISCOVERY_PROMPT = [
   "Inspect this repository for one high-impact user-facing bug, reliability failure, data-loss risk, security weakness, or material violation of its documented architecture.",
@@ -232,18 +226,5 @@ export default defineExtension({
       command: syncCommandRef,
     }),
     repairRemovedSchedule,
-  ],
-  hooks: [
-    // Install + build run in the background so session launch isn't blocked on them.
-    defineHook({
-      id: "workspace-ready",
-      event: workspaceEvents.ready,
-      async run(ctx, payload) {
-        await ctx.process.spawnDetached({
-          command: PROVISION_COMMAND,
-          cwd: payload.workspaceDir,
-        });
-      },
-    }),
   ],
 });

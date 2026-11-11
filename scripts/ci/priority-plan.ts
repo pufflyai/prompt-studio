@@ -1,5 +1,5 @@
 import { dirname, relative } from "node:path";
-import { suites } from "pstdio-benchmarks";
+import { suites } from "./benchmark-registry";
 import { canvasTestOwner } from "./canvas-test-owner";
 import { selectPriorityTests, testRunner } from "./test-discovery";
 import type { TestPriority } from "./test-policy";

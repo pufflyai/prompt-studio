@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runCiChecks } from "./run-ci-checks";
@@ -198,6 +198,153 @@ test("the CLI queries P1 peers only when explicitly requested", async () => {
     }
   } finally {
     server.stop(true);
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("an aborted local allowance starts no commands and reports them unfinished", async () => {
+  const controller = new AbortController();
+  controller.abort();
+  const result = await runCiChecks([{ id: "pending", command: [process.execPath, "-e", "process.exit(0)"] }], {
+    priority: "P0",
+    signal: controller.signal,
+  });
+  expect(result.outcome).toBe("failure");
+  expect(result.results[0]?.outcome).toBe("cancelled");
+});
+
+test("deadline cancellation stops an active child and does not launch the next check", async () => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 100);
+  try {
+    const result = await runCiChecks(
+      [
+        { id: "active", command: [process.execPath, "-e", "setInterval(() => {}, 1000)"] },
+        { id: "pending", command: [process.execPath, "-e", "process.exit(0)"] },
+      ],
+      { priority: "P0", signal: controller.signal },
+    );
+    expect(result.results.map((entry) => entry.outcome)).toEqual(["cancelled", "cancelled"]);
+  } finally {
+    clearTimeout(timer);
+  }
+});
+
+test("a local supervisor retains logs and reaps background children after a successful leader exits", async () => {
+  if (process.platform === "win32") return;
+  const directory = await mkdtemp(join(tmpdir(), "local-check-cleanup-"));
+  const marker = join(directory, "child.pid");
+  try {
+    const childCode = `process.on('SIGTERM', () => {}); console.log('retained child output'); await Bun.write(${JSON.stringify(marker)}, String(process.pid)); setInterval(() => {}, 1000);`;
+    const leaderCode = `Bun.spawn([process.execPath, '-e', ${JSON.stringify(childCode)}], {stdout:'inherit',stderr:'inherit'}); while (!(await Bun.file(${JSON.stringify(marker)}).exists())) await Bun.sleep(5); process.exit(0);`;
+    const result = await runCiChecks([{ id: "background", command: [process.execPath, "-e", leaderCode] }], {
+      priority: "P0",
+      cleanupOnExit: true,
+      logDirectory: directory,
+    });
+    expect(result.outcome).toBe("success");
+    expect(await readFile(join(directory, "0-background.log"), "utf8")).toContain("retained child output");
+    const pid = Number(await readFile(marker, "utf8"));
+    const state = spawnSync("ps", ["-o", "stat=", "-p", String(pid)], { encoding: "utf8" });
+    expect(state.status !== 0 || /^[ZX]/.test(state.stdout.trim())).toBe(true);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("a supervisor cancels an inherited worker group including TERM-resistant descendants", async () => {
+  if (process.platform === "win32") return;
+  const directory = await mkdtemp(join(tmpdir(), "local-worker-cancel-"));
+  const marker = join(directory, "descendant.pid");
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setInterval> | undefined;
+  try {
+    const descendant = `process.on('SIGTERM', () => {}); await Bun.write(${JSON.stringify(marker)}, String(process.pid)); setInterval(() => {}, 1000);`;
+    const worker = `import { runCiChecks } from ${JSON.stringify(join(import.meta.dirname, "run-ci-checks.ts"))}; await runCiChecks([{id:'inner',command:[process.execPath,'-e',${JSON.stringify(descendant)}]}],{priority:'P0',inheritProcessGroup:true});`;
+    timer = setInterval(async () => {
+      if (await Bun.file(marker).exists()) controller.abort();
+    }, 10);
+    const result = await runCiChecks([{ id: "supervisor", command: [process.execPath, "-e", worker] }], {
+      priority: "P0",
+      signal: controller.signal,
+    });
+    expect(result.results[0]?.outcome).toBe("cancelled");
+    const pid = Number(await readFile(marker, "utf8"));
+    const state = spawnSync("ps", ["-o", "stat=", "-p", String(pid)], { encoding: "utf8" });
+    expect(state.status !== 0 || /^[ZX]/.test(state.stdout.trim())).toBe(true);
+  } finally {
+    clearInterval(timer);
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("local cancellation captures detached grandchildren before their parent exits", async () => {
+  if (process.platform === "win32") return;
+  const directory = await mkdtemp(join(tmpdir(), "local-detached-cancel-"));
+  const marker = join(directory, "detached.pid");
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setInterval> | undefined;
+  try {
+    const descendant = `process.on('SIGTERM', () => {}); await Bun.write(${JSON.stringify(marker)}, String(process.pid)); setInterval(() => {}, 1000);`;
+    const leader = `import {spawn} from 'node:child_process'; spawn(process.execPath,['-e',${JSON.stringify(descendant)}],{detached:true,stdio:'ignore'}); setInterval(() => {},1000);`;
+    timer = setInterval(async () => {
+      if (await Bun.file(marker).exists()) controller.abort();
+    }, 10);
+    const result = await runCiChecks([{ id: "detached", command: [process.execPath, "-e", leader] }], {
+      priority: "P0",
+      signal: controller.signal,
+      cleanupOnExit: true,
+    });
+    expect(result.results[0]?.outcome).toBe("cancelled");
+    const pid = Number(await readFile(marker, "utf8"));
+    const state = spawnSync("ps", ["-o", "stat=", "-p", String(pid)], { encoding: "utf8" });
+    expect(state.status !== 0 || /^[ZX]/.test(state.stdout.trim())).toBe(true);
+  } finally {
+    clearInterval(timer);
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("process inspection failure cannot prevent cancellation or become a pass", async () => {
+  if (process.platform === "win32") return;
+  const directory = await mkdtemp(join(tmpdir(), "local-inspection-failure-"));
+  const originalPath = process.env.PATH;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 100);
+  try {
+    await writeFile(join(directory, "ps"), "#!/bin/sh\nexit 42\n", { mode: 0o755 });
+    process.env.PATH = directory;
+    const result = await runCiChecks(
+      [{ id: "active", command: [process.execPath, "-e", "setInterval(() => {}, 1000)"] }],
+      {
+        priority: "P0",
+        signal: controller.signal,
+        cleanupOnExit: true,
+      },
+    );
+    expect(result.outcome).toBe("failure");
+    expect(result.results[0]?.outcome).toBe("cancelled");
+    expect(result.cleanupFailures?.length).toBeGreaterThan(0);
+  } finally {
+    process.env.PATH = originalPath;
+    clearTimeout(timer);
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("a log write failure cancels owned work and cannot report success", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "local-log-failure-"));
+  try {
+    await mkdir(join(directory, "0-active.log"));
+    const result = await runCiChecks(
+      [{ id: "active", command: [process.execPath, "-e", "setInterval(() => {}, 1000)"] }],
+      {
+        priority: "P0",
+        logDirectory: directory,
+      },
+    );
+    expect(result.outcome).toBe("failure");
+  } finally {
     await rm(directory, { recursive: true, force: true });
   }
 });

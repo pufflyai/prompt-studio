@@ -59,9 +59,37 @@ The script runs `bun test --conditions production --tsconfig-override tsconfig.a
 
 Build the affected package's dependencies first when its checks load compiled exports. Changes to packaged runtime behavior, assets, or file inclusion also require the packaged checks in the [testing guidance](../../guidance/0005-testing.md#5-packaged-files). Documentation-reference-only edits do not.
 
-During implementation, run targeted tests. Before marking a draft PR ready, follow [Finishing a pull request](../../guidance/0004-ci.md#1-finishing-a-pull-request) and the [full-suite validation cycle](../../guidance/0005-testing.md#9-full-suite-validation-cycle). Settle known fixes before a full run. Integrate main only for merge conflicts or more than 10 incoming commits, following the linked CI rule. Routine copy, spacing, cosmetic and documentation changes require only relevant scoped checks, without a full command or browser runs. Explicit user-requested validation still applies. Run full validation only when explicitly requested. For that case, `bun run validate` checks changesets, the lockfile, formatting, package boundaries, extension API versions, and the extension API report, then builds before translation checks, lint, and tests. `bun run test` runs unit packages through Lerna, then the E2E script, CLI, UI, Vite terminal, and separate Canvas suites. `bun run test:e2e` runs app checks; `bun run test:canvas` runs component server checks and browser interactions. Lerna excludes both browser packages from its unit pass. Packaged and desktop tests run separately in CI.
+## Targeted local review
 
-The complete local test run schedules one workspace suite at a time. Suites such as the API already own worker pools; running several suites together multiplies those pools and can starve native CLI fixtures. Coordinate across agents on the shared machine, including separate package verifiers, builds and benchmarks. Priority and CI commands retain their own scheduling. The complete local run may take longer because workspace suites do not overlap.
+Use focused tests while developing. Before review readiness, commit the candidate and inspect its complete branch diff with:
+
+```sh
+bun run test:review --base origin/main --list
+bun run test:review --base origin/main
+# Add a critical interaction or boundary that the automatic selection does not establish:
+bun run test:review --base origin/main --test packages/e2e/src/ui/startup.p1.spec.ts
+```
+
+Fetch the base first, following [PR completion](../../guidance/0004-ci.md#1-finishing-a-pull-request). The command rejects dirty source, unknown options, and unknown extra tests. It selects from the merge base through HEAD, including changes in earlier commits and deletions. The list operation does not install or build.
+
+| Layer | Selection |
+| --- | --- |
+| Static | Documentation links; changed code formatting and boundaries; public contract checks when relevant |
+| P0 | Changed workspaces and their transitive dependents; shared root/build inputs select all owners |
+| P1 | Source/API/CLI contracts in affected workspaces, including consumers of changed helpers and fixtures |
+| Changed tests | Added or edited files at every priority, using the registered runner |
+| Browser | Existing dashboard startup smoke for host/API/dashboard/extension-runtime/workbench changes, plus edited or explicitly selected app scenarios |
+| CI evidence | Affected unedited P2/P3 suites, and complete native, packaged, service-integration, component and performance workloads; affected browser contracts beyond the local selection |
+
+Execution currently supports macOS and Linux; Windows agents can inspect the plan and use isolated CI. The command installs into a private scratch clone, builds selected prerequisites once with one build task at a time, then executes checks serially. Existing runner worker pools and per-test limits remain unchanged. It does not create a Prompt Studio implementation workspace or run workspace-ready hooks. Mutable dependencies, caches, reports and runtime state belong to that run. Browser scenarios use the existing wrapper's dynamic ports and isolated home. Install supported browser binaries beforehand; the immutable browser cache remains readable across runs. Source tests use their existing temporary fixtures.
+
+The local allowance is **15 minutes from invocation**, including source selection, clone, install, build, tests and owned-process cleanup. Cancellation starts 15 seconds before the deadline to reserve cleanup time. The allowance is a ceiling, not a promise that every broad change can pass locally. No test or benchmark is shortened to fit. Cold setup and shared-input changes may leave work unfinished; use isolated CI to complete that coverage and keep the PR in draft until required evidence passes. Do not increase limits or queue full local suites as a fallback.
+
+Reports live in `test-results/local-review/<run-id>.json`. Each report names the revision, merge base, plan, phase commands, durations, result and private evidence directory. The worker's `checks.json` and runner artifacts record individual check results. Bun’s [parent-death and descendant cleanup](https://bun.sh/blog/bun-v1.4#no-orphans-v1-3-14v1-4-0), owned process groups, and a descendant snapshot protect cancellation, including detached children. Tests keep their usual environment so daemon-lifecycle assertions retain their meaning. Scratch directories are retained for diagnosis; remove only the directory named in your report after retaining the needed evidence. Never delete another run's resources.
+
+`local_passed` means the selected local checks passed. It does not mean review-ready: require latest-head `ci_passed` and passing evidence for every deferred check. Edited tests already run in PR CI; unedited deferred functional contracts need applicable queue/production evidence or `ci:full` diagnostics on the candidate. Deferred P3 workloads need complete benchmark diagnostics; functional `ci:full` evidence alone does not cover them. Report missing coverage explicitly. The command does not dispatch CI or add labels automatically.
+
+After repairs, rerun failed or affected checks and record their inputs. A complete full-suite rerun is not required. Documentation and routine cosmetic changes retain [scoped verification](../../guidance/0005-testing.md#4-prove-it-works). Explicit full-validation requests and resource holds still apply, including holds issued before this policy changed. Existing runs keep their original commands, revisions and interrupted or completed status.
 
 ## Complete a full test run without stopping at the first failure
 
@@ -87,7 +115,7 @@ This covers the normal full-test workload without dropping later independent pha
 
 Collect all failures before repairing them as a batch. During repairs, select only failed cases/files and new regressions through the owning runner. Run blocked or unrun scopes once their prerequisites are repaired. For example, the API's `--files` option and Playwright's file selection/`--grep` avoid rerunning successful suites. Keep whole benchmark workloads and inseparable fixtures intact. Preserve the first failure; a later pass without a cause repair does not resolve it.
 
-Once the failed set is green, repeat the complete phase sequence once on the final source. New failures return to the focused repair loop. A complete green final run ends the cycle. Do not push each small repair separately or manually restart successful CI jobs; submit the consolidated fix for normal latest-head CI.
+Use this complete sequence only for explicitly requested full validation. Collect failures, repair them together, and rerun failed or affected checks. Repeat the entire sequence on final source only when the explicit validation request requires it. Submit consolidated fixes for normal latest-head CI; do not manually restart successful jobs.
 
 ## Browser and API setup
 
@@ -97,7 +125,7 @@ Install browser dependencies before running browser tests:
 bun run --cwd packages/e2e playwright install --with-deps chromium firefox webkit
 ```
 
-For manual app validation, use `bun run dev:playwright`, open the printed dashboard URL, and stop it with `bun run dev:playwright:down`. Do not start a development server directly or use the developer database.
+For manual app validation, use `bun run dev:isolated -- --name <unique-run-id>`, open the printed dashboard URL, and stop only that stack with `bun run dev:isolated -- --name <unique-run-id> --down`. The legacy `dev:playwright` shortcuts share a fixed name and must not be used concurrently. Do not start a development server directly or use the developer database.
 
 Run `bun run --cwd packages/e2e test:smoke` for basic dashboard browser E2E. It runs the real dashboard with isolated runtime data, without starting Canvas. The discovered startup P1 file covers empty and selected project flows and project switching. Keyboard/theme permutations remain in their P2 suite. These tests also run in the full UI suite.
 

@@ -1,16 +1,8 @@
-import { readFileSync } from "node:fs";
-
+import { suites } from "./benchmark-registry";
 import { productionDesktopPlatforms, productionToolchainPlatforms } from "./production-platforms";
 import { priorityFromFile, testRunner } from "./test-discovery";
 import { matchesPlatform, quarantineRegistry, quarantineRunnerForTest } from "./test-quarantine";
 import type { readWorkspacePackages } from "./workspace-packages";
-
-// Scope runs before dependency installation. Resolve the workspace's public entry directly.
-const manifestPath = new URL("../../packages/benchmarks/package.json", import.meta.url);
-const benchmarkManifest = JSON.parse(readFileSync(manifestPath, "utf8"));
-const { suites } = (await import(
-  new URL(benchmarkManifest.exports["."], manifestPath).href
-)) as typeof import("pstdio-benchmarks");
 
 type Packages = ReturnType<typeof readWorkspacePackages>;
 const linux = { os: "ubuntu-24.04", platform: "linux", arch: "x64" };

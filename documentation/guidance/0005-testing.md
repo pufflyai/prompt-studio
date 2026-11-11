@@ -12,7 +12,7 @@
 
 1. Write only the code needed to pass the test. Do not generalize beyond the requirement.
 2. Support the normal, successful case first.
-3. During development, use the smallest scope that covers the changed behavior, including affected callers or integration checks across package boundaries. After a full run reports failures, use the batched repair cycle in section 9.
+3. During development, use the smallest scope that covers the changed behavior, including affected callers or integration checks across package boundaries. After a run reports failures, use the batched repair cycle in section 9.
 
 ## 3. Refactor
 
@@ -27,7 +27,7 @@
 
 1. A task is incomplete until the relevant tests and checks pass.
 2. For code changes, run targeted tests and relevant package checks such as type checking, linting, or a build. Match checks to affected behavior and dependencies.
-3. Fix reported issues together and rerun only failed tests during the repair loop. Add the regression tests needed for those fixes. Once that set is green, complete the final full run required by section 9; do not repeat passing suites after each repair.
+3. Fix reported issues together and rerun only failed tests during the repair loop. Add the regression tests needed for those fixes. Recompute the targeted plan for changed inputs; do not repeat unrelated passing suites after each repair.
 4. For documentation-only changes, check content, links, paths, and formatting. Do not run application tests or full validation merely because a documentation path appears in a source comment, prompt, or test fixture.
 5. Require browser or visual checks only for critical risks: a blocked primary task, hidden essential content or controls, broken keyboard or focus behavior, preview isolation, or a critical regression.
 6. Use the smallest representative browser scenario. Add screenshot comparisons only when appearance is the critical contract and behavioral assertions cannot establish it.
@@ -37,7 +37,7 @@
 
 1. When bundled runtime behavior, assets, or file inclusion change, update the relevant packaged smoke test. This includes built-in templates, prompts, skills, and other packaged defaults. Documentation-reference-only edits do not require packaged tests.
 2. Keep `packages/e2e/src/packaged/packaged-serve-smoke.p2.test.ts` in sync with packaged files.
-3. For runtime or package changes, run `bun run --cwd scripts verify:packages`.
+3. For runtime or package changes, require relevant packaged verification. Run focused packaged checks on an isolated host or retain latest-commit CI evidence. The full `bun run --cwd scripts verify:packages` command is not a mandatory local review step.
 
 ## 6. Test design
 
@@ -60,23 +60,23 @@
 3. For one UI E2E spec, run `bun run --cwd packages/e2e test:ui -- src/ui/<name>.spec.ts`.
 4. Run a priority group with `bun test:p0`, `bun test:p1`, `bun test:p2`, or `bun test:p3`. Use `--scope <workspace>` and `--runner <kind>` for targeted work.
 5. Discovery owns test-group membership. Do not add filename lists to workflows.
-6. Run all tests only when the feature and known review fixes are ready. Follow section 9 and [PR completion](0004-ci.md#1-finishing-a-pull-request).
+6. Before review readiness, use `bun run test:review` and [PR completion](0004-ci.md#1-finishing-a-pull-request). Run the full local suite only when explicitly requested; it is not the default after implementation, repairs, or merging main.
 7. Do not run `bun run validate` unless the user explicitly asks for full validation.
 
 ## 8. App isolation and manual validation
 
 1. Never run the dev server directly or connect directly to the local PGlite database.
 2. Always run the Docker version with `bun run dev:isolated` to isolate the database.
-3. For manual browser validation, run `bun run dev:playwright` and open its printed dashboard URL with Playwright or another browser tool.
-4. When manual validation finishes, stop it with `bun run dev:playwright:down`.
+3. For manual browser validation, run `bun run dev:isolated -- --name <unique-run-id>` and open its printed dashboard URL with Playwright or another browser tool. Each run owns a unique stack name.
+4. When manual validation finishes, stop only that stack with `bun run dev:isolated -- --name <unique-run-id> --down`. Do not reuse or stop another agent’s stack.
 
-## 9. Full-suite validation cycle
+## 9. Targeted validation and repairs
 
-1. Finish implementation, integrate required dependencies, and settle known review fixes before starting a full run. Integrate `main` only for merge conflicts or more than 10 incoming commits, as defined by [the CI rule](0004-ci.md#1-finishing-a-pull-request). Use focused red/green checks during development. Keep the tested source and build outputs unchanged while a run uses them.
-2. Run the complete required workload even when tests fail. Disable fail-fast for this run and continue independent phases after a failure. Use the [collect-all commands](../guides/development/0002-testing.md#complete-a-full-test-run-without-stopping-at-the-first-failure); `bun run test` alone stops early on failure. A failed build can block dependent tests; record them as unrun and finish independent work. Honor an explicit stop request and report interruptions accurately.
-3. Keep one failure list with source revision, command, failed case or file, result, elapsed time and evidence. Collect every phase's result before planning the repair batch. Failed, blocked, interrupted and unrun work never counts as passing.
-4. Triage the complete list and fix all actionable failures together. Keep unrelated repairs in their own tickets/PRs under [the CI rules](0004-ci.md#1-finishing-a-pull-request), with their failures visible. Do not fix one failure, restart the full suite, and discover the next failure in another long run.
-5. Rerun only the failed tests and new regressions after their causes are repaired. Run blocked or unrun scopes once their prerequisites are repaired. Use the smallest supported case/file selection; use the whole owning scope only when it cannot be split, including fixed benchmark workloads. Keep narrowing the failed set without rerunning already passing suites. A rerun without a cause repair is a retry, not validation.
-6. When the failed set is green, run the complete required workload once on the final revision. If it exposes new failures, add them to the list and repeat the repair cycle before another full run. One complete green run on that revision ends validation; do not repeat it for reassurance.
-7. Run one heavy local validation workload at a time on the shared machine. Account for other agents' runs and runner-owned worker pools; do not overlap full suites, package verifiers, large builds or benchmarks. Reuse valid completed results during repair and interruption recovery. Repeat a passed build or separate verifier only when its inputs changed or the final workload requires it.
-8. Batch repairs before pushing so each small fix does not trigger another CI run. Let normal CI validate the new commit; do not manually rerun passing jobs or restart an entire workflow to repair one failed job. Wait for all applicable latest-head checks and retain first-failure evidence. This cycle does not authorize retries, smaller workloads, more workers or higher limits.
+1. Finish implementation and settle known fixes before review validation. Use focused red/green checks during development. Commit the candidate before `bun run test:review`; the command validates an immutable disposable checkout of that revision.
+2. Select affected P0 tests, affected source P1 contracts, added or edited tests, and the smallest additional scenarios needed to cover changed behavior. Include affected callers, permissions, persistence, lifecycle and integration boundaries. Test discovery owns membership. A changed helper, fixture or runner can affect tests whose files did not change.
+3. Inspect the plan with `bun run test:review --list`. Add relevant existing scenarios with `--test <repository-relative-file>`; additions never remove automatic coverage. Native, packaged, service-integration, component and benchmark workloads remain complete in CI. Retain evidence for deferred checks; unchanged suites may require `ci:full` diagnostics because ordinary PR CI runs only affected P0 and edited tests.
+4. Keep one failure list with revision, command, failed case or file, elapsed time and evidence. Failed, blocked, interrupted, deferred and unrun work never counts as passing. A 15-minute local deadline reports unfinished work and stops owned processes; it never truncates a benchmark or relaxes a test timeout.
+5. Repair failures together. Rerun failed tests and new regressions through their owning runners. Run blocked checks after their prerequisites are fixed. Preserve the first failure; retrying unchanged source does not resolve it. Reuse passing results only when their inputs remain unchanged, recording the original revision and scope honestly.
+6. Local runs own their checkout, installed dependencies, build output, runtime homes, ports and reports. Use bounded runner concurrency. Do not coordinate machine-wide test slots for routine review checks or use shared mutable builds, databases or fixed stack names. Heavy full suites and performance measurements belong on isolated CI hosts.
+7. Explicit user resource holds and already-running workloads retain their original admission and attribution. A new policy does not authorize overlap with a held host or relabel interrupted work as targeted validation. Do not let automatic workspace startup hooks install or build in the background.
+8. Batch repairs before pushing. Normal latest-head CI remains required; do not manually rerun passing jobs. When full local validation is explicitly requested, use the [collect-all commands](../guides/development/0002-testing.md#complete-a-full-test-run-without-stopping-at-the-first-failure), preserve all results, and honor resource holds. No final full rerun is required by default.
