@@ -50,6 +50,12 @@ const waitForRefresh = (signal: AbortSignal) =>
     else signal.addEventListener("abort", finish, { once: true });
   });
 
+const markVisibleSessionSeen = async (ctx: CommandContext, id: string) => {
+  const session = await ctx.sessions.get(id);
+  if (!session) throw new Error("Session not found.");
+  await markSessionSeen(ctx, session);
+};
+
 type IdleTurn = { backgroundTasks: { description: string }[] } | null;
 
 export const watchConversation = async (ctx: CommandContext, resource?: ResourceRef) => {
@@ -205,6 +211,9 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
   };
   try {
     while (!ctx.signal.aborted) {
+      // Visibility owns this watch. A slow workspace/queue read must not keep an
+      // opened conversation marked unread, including when a retained view reopens.
+      await markVisibleSessionSeen(ctx, id);
       const queuedAt = queueClock;
       const runAt = runClock;
       const pendingQueue = readQueue(ctx, id);

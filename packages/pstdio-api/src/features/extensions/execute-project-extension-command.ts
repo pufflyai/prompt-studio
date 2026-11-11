@@ -65,6 +65,13 @@ export const executeProjectExtensionCommand = async (
     onDidDispatchEvent: (id, refresh) => {
       eventIds.add(id);
       const event = { ...queryChangeEnvelopeSchema.parse({ ...refresh, projectId }), id };
+      // A subscription may stay open for the lifetime of a visible view. Its
+      // refresh events must reach queries now, including repeated mutations
+      // with the same envelope; response deduplication is only for finite calls.
+      if (input.onChunk) {
+        const { id: eventId, ...scope } = event;
+        deps.eventBus.emit("extension_events", "set", { ...scope, id: crypto.randomUUID(), eventId });
+      }
       const key = JSON.stringify(event);
       // Repeated hooks still run; consumers need each distinct invalidation only once.
       if (!eventKeys.has(key)) {
@@ -109,7 +116,7 @@ export const executeProjectExtensionCommand = async (
       ...outcome,
       data: { ...outcome.data, fileStorageVersions: { ...expected, ...observed.versions } },
     };
-  if (body.source !== "dashboard") {
+  if (!input.onChunk && body.source !== "dashboard") {
     for (const { id: eventId, ...refresh } of events)
       deps.eventBus.emit("extension_events", "set", { ...refresh, id: crypto.randomUUID(), projectId, eventId });
   }

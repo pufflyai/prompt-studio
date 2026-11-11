@@ -191,7 +191,12 @@ const toTreeListNode = (
     iconColor: node.iconColor,
     indicator: node.indicator
       ? {
-          icon: <WorkbenchIcon name={node.indicator.icon} />,
+          icon:
+            node.indicator.icon.toLowerCase() === "dot" ? (
+              <Box boxSize="2" borderRadius="full" bg="currentColor" aria-hidden="true" />
+            ) : (
+              <WorkbenchIcon name={node.indicator.icon} />
+            ),
           color: node.indicator.color,
           tooltip: node.indicator.label,
         }

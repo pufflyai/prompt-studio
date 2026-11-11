@@ -53,6 +53,7 @@ export const markSessionSeen = async (ctx: CommandContext, session: ExtensionSes
   if (ctx.signal.aborted) return;
   const recordId = seenKey(storage, session.id);
   const previous = await storage.records.read(recordId);
+  if (ctx.signal.aborted) return;
   const activity = sessionActivity(session);
   if (
     typeof recordValue(previous.value).activity === "number" &&

@@ -1,5 +1,9 @@
-import type { ResourceRef } from "@pstdio/sdk/extensions";
-import { type WorkbenchModuleContribution, workbenchCommandPaletteMenuPath } from "../../core";
+import { type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
+import {
+  type WorkbenchModuleContribution,
+  workbenchCommandPaletteMenuPath,
+  workbenchTopHeaderTrailingMenuPath,
+} from "../../core";
 import { registerRelatedResourcePreviews } from "./related-resource-previews";
 import { RelatedResources } from "./related-resources";
 import { closeResourceLinksOnProjectChange } from "./resource-links-project-scope";
@@ -49,13 +53,24 @@ export const createWorkbenchResourceLinksModule = (options: WorkbenchResourceLin
         { id: resourceLinksCommandId, label: "Related resources", icon: "link", category: "Resources" },
         {
           isEnabled: () => Boolean(currentResource()),
-          isVisible: () => Boolean(currentResource()),
+          isVisible: (args) =>
+            (args as { source?: string } | undefined)?.source === "session-header"
+              ? currentResource()?.type === "session"
+              : Boolean(currentResource()),
           execute: (args, context) => {
-            const fromPalette = (args as { source?: string } | undefined)?.source === "active-resource";
+            const source = (args as { source?: string } | undefined)?.source;
+            const fromActive = source === "active-resource" || source === "session-header";
             const current =
-              (fromPalette ? undefined : context?.resource) ?? ctx.getActiveResource() ?? ctx.getPrimaryResource();
+              (fromActive ? undefined : context?.resource) ?? ctx.getActiveResource() ?? ctx.getPrimaryResource();
             const resource = current && options.canonicalize(current);
-            if (resource) ctx.overlays.openOverlay(viewId, { resource, title: "Related resources" });
+            if (!resource) return;
+            const existing = ctx.layout
+              .getLayout()
+              .regions.overlay.widgets.find(
+                (widget) => widget.viewId === viewId && resourceKey(widget.resource) === resourceKey(resource),
+              );
+            if (existing && source === "session-header") ctx.overlays.closeOverlay(existing.widgetId);
+            else ctx.overlays.openOverlay(viewId, { resource, title: "Related resources" });
           },
         },
       );
@@ -63,6 +78,13 @@ export const createWorkbenchResourceLinksModule = (options: WorkbenchResourceLin
         commandId: resourceLinksCommandId,
         args: { source: "active-resource" },
         group: "Resources",
+      });
+      ctx.layout.registerMenuItem(workbenchTopHeaderTrailingMenuPath, {
+        commandId: resourceLinksCommandId,
+        args: { source: "session-header" },
+        // Keep the label visible without promoting a secondary action to the primary style.
+        icon: "",
+        group: "resources",
       });
       return [previews, closeResourceLinksOnProjectChange(ctx, viewId)];
     },
