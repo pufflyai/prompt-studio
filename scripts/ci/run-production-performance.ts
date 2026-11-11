@@ -64,9 +64,6 @@ for (const check of checks) {
 if (family === "navigation") {
   const raw = join("__test-tmp__/subnav-benchmark/results", process.env.CI_PLAN_SOURCE_SHA!);
   if (existsSync(raw)) cpSync(raw, join(directory, "performance/subnav"), { recursive: true });
-  const report = "packages/e2e/test-results/subnav-benchmarks.json";
-  if (existsSync(report))
-    await Bun.write(join(directory, "performance/subnav/browser-report.json"), await Bun.file(report).text());
 }
 const complete =
   results.length === checks.length &&

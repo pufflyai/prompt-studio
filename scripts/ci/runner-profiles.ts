@@ -21,7 +21,12 @@ export const runnerCommand = (runner: string, files: string[], owner: TestPackag
   const paths = files.map((file) => relative(owner.dir, file).replaceAll("\\", "/"));
   if (runner === "integration") {
     if (["pstdio-account-manager", "pstdio-relay", "pstdio-psx"].includes(owner.name))
-      return ["bun", relative(owner.dir, "scripts/ci/run-service-integrations.ts"), owner.name, ...paths];
+      return [
+        "bun",
+        relative(owner.dir, "scripts/ci/run-service-integrations.ts").replaceAll("\\", "/"),
+        owner.name,
+        ...paths,
+      ];
     if (paths.length !== 1) throw new Error("Standalone integrations run independently");
     return ["bun", ...paths];
   }

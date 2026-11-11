@@ -15,6 +15,11 @@ const profiles: Record<string, { report: string; runner: string; owner: string }
     runner: "packaged-desktop-benchmark",
     owner: "clients/desktop",
   },
+  "sidenav-subnav": {
+    report: "packages/e2e/test-results/subnav-benchmarks.json",
+    runner: "subnav-benchmark",
+    owner: "packages/e2e",
+  },
 };
 interface Suite {
   suites?: Suite[];
@@ -46,7 +51,7 @@ export const orderedPerformanceResult = (
   run: PlannedRun,
   plan: TestPlan,
   executionId: string,
-  selected: number,
+  selected?: number,
 ) => {
   const profile = profiles[id];
   if (!profile) return;
@@ -75,6 +80,8 @@ export const orderedPerformanceResult = (
       run.files.includes(entry.file),
   );
   const result = browserBenchmarkResults(report, expected, root);
-  if (result.selected !== selected) throw new Error("Ordered benchmark selection differs from terminal cases");
-  return { nativeFailure: result.stableFailures.length > 0, reports };
+  if (selected !== undefined && result.selected !== selected)
+    throw new Error("Ordered benchmark selection differs from terminal cases");
+  if (id === "sidenav-subnav" && result.executed !== 14) throw new Error("Incomplete ordered navigation execution");
+  return { nativeFailure: result.stableFailures.length > 0, reports, reportedFiles: result.reportedFiles };
 };

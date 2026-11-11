@@ -90,5 +90,6 @@ export const browserBenchmarkResults = (
     }),
     selected: records.length,
     executed: records.filter((entry) => entry.outcome !== "skipped").length,
+    reportedFiles: [...new Set(records.map((entry) => entry.file))].sort(),
   };
 };

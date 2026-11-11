@@ -1,5 +1,7 @@
-import { cpSync, existsSync, readFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { captureOrderedPerformanceReport } from "./ordered-performance-reports";
+import { performanceChecks } from "./production-performance-profile";
 import { runCiChecks } from "./run-ci-checks";
 
 // Native suite lifecycles own fixed workloads, cold-start ordering, and quarantine classification.
@@ -9,24 +11,25 @@ if (!suite || !directory) throw new Error("Expected benchmark suite and evidence
 const sha = process.env.CI_PLAN_SOURCE_SHA!;
 const cache = join(process.env.RUNNER_TEMP ?? directory, "benchmarks");
 const performance = join(directory, "performance");
-const command =
-  suite === "subnav"
-    ? ["bun", "packages/benchmarks/src/cli.ts", "prepare", "--suites", suite, "--sha", sha, "--cache", cache]
-    : [
-        "bun",
-        "packages/benchmarks/src/cli.ts",
-        "run",
-        "--checkout",
-        `${root}=${sha}=planned-tests`,
-        "--suites",
-        suite,
-        "--samples",
-        "1",
-        "--cache",
-        cache,
-        "--out",
-        performance,
-      ];
+mkdirSync(performance, { recursive: true });
+const fixedWorkload = suite === "subnav" || suite === "planner";
+const command = fixedWorkload
+  ? ["bun", "packages/benchmarks/src/cli.ts", "prepare", "--suites", suite, "--sha", sha, "--cache", cache]
+  : [
+      "bun",
+      "packages/benchmarks/src/cli.ts",
+      "run",
+      "--checkout",
+      `${root}=${sha}=planned-tests`,
+      "--suites",
+      suite,
+      "--samples",
+      "1",
+      "--cache",
+      cache,
+      "--out",
+      performance,
+    ];
 let result = await runCiChecks([{ id: `benchmark-${suite}`, cwd: root, command }], {
   priority: "P3",
   concurrency: 1,
@@ -45,14 +48,20 @@ if (suite === "subnav" && result.outcome === "success") {
   );
   const raw = join(root, "__test-tmp__/subnav-benchmark/results", sha);
   if (existsSync(raw)) cpSync(raw, join(performance, "subnav"), { recursive: true });
-  const report = join(root, "packages/e2e/test-results/subnav-benchmarks.json");
-  if (existsSync(report)) {
-    const execution = JSON.parse(readFileSync(report, "utf8"));
-    execution.config.rootDir = "packages/e2e";
-    await Bun.write(join(performance, "subnav/browser-report.json"), JSON.stringify(execution));
-  }
-  complete = existsSync(report) && result.results.every((entry) => entry.exitCode !== null);
-} else if (suite !== "subnav") {
+  captureOrderedPerformanceReport(root, directory, "sidenav-subnav");
+  complete = result.results.every((entry) => entry.exitCode !== null);
+} else if (suite === "planner" && result.outcome === "success") {
+  const output = join(performance, "planner.jsonl");
+  await Bun.write(output, "");
+  result = await runCiChecks([performanceChecks("planner").find((check) => check.id === "planner-cold-open")!], {
+    priority: "P3",
+    concurrency: 1,
+    inheritProcessGroup: true,
+    env: { BENCHMARK_SAMPLES: "3", BENCHMARK_RESULTS: output },
+    logDirectory: join(directory, "planner-logs"),
+  });
+  complete = result.results.every((entry) => entry.exitCode !== null);
+} else if (!fixedWorkload) {
   try {
     const report = JSON.parse(
       readFileSync(join(performance, `${sha}-${process.platform}-${process.arch}.json`), "utf8"),
@@ -64,6 +73,8 @@ if (suite === "subnav" && result.outcome === "success") {
   } catch {
     complete = false;
   }
+  if (suite === "desktop") captureOrderedPerformanceReport(root, directory, "desktop");
+  if (suite === "workbench") captureOrderedPerformanceReport(root, directory, "frontend");
 }
 await Bun.write(
   join(directory, "lifecycle.json"),

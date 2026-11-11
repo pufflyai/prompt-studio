@@ -40,8 +40,11 @@ export const productionPerformanceEvidence = (
     }
   }
   reports.push(...backendReports(base, run.productionFamily!));
-  if (run.productionFamily === "navigation")
-    reports.push(...benchmarkPlanEvidence(base, { ...run, benchmarkSuite: "subnav" }, plan.source));
+  if (run.productionFamily === "navigation") {
+    const evidence = benchmarkPlanEvidence(base, { ...run, benchmarkSuite: "subnav" }, plan, executionId);
+    reports.push(...evidence.reports);
+    nativeFailure ||= evidence.nativeFailure;
+  }
   if (
     ["browser", "desktop"].includes(run.productionFamily!) &&
     (reportedFiles.size !== run.files.length || run.files.some((file) => !reportedFiles.has(file)))

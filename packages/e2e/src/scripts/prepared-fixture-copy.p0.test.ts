@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { preparePackagedExtensionSource } from "../packaged/packaged-extension-source";
 import { copyPreparedFixtures } from "./prepared-fixture-copy";
 
 test("completed preparations yield independent sources with owned internal links", () => {
@@ -61,6 +62,50 @@ test("a private consumer installs its declared dependencies without copying the 
     expect(readFileSync(join(source, "node_modules/fixture-dependency/index.js"), "utf8")).toBe(
       "stale prepared dependency",
     );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("source-only preparation retains a lockfile that supports a fresh frozen consumer install", async () => {
+  const root = mkdtempSync(join(tmpdir(), "prepared-lockfile-"));
+  try {
+    const dependency = join(root, "dependency");
+    const input = join(root, "input");
+    mkdirSync(dependency);
+    mkdirSync(input);
+    writeFileSync(
+      join(dependency, "package.json"),
+      JSON.stringify({ name: "prepared-dependency", version: "1.0.0", main: "index.js" }),
+    );
+    writeFileSync(join(dependency, "index.js"), "export const value='fresh';");
+    expect(Bun.spawnSync([process.execPath, "pm", "pack", "--destination", root], { cwd: dependency }).exitCode).toBe(
+      0,
+    );
+    writeFileSync(
+      join(input, "package.json"),
+      JSON.stringify({
+        name: "prepared-consumer",
+        dependencies: {
+          "prepared-dependency": `file:${join(root, "prepared-dependency-1.0.0.tgz")}`,
+        },
+      }),
+    );
+    const prepared = join(root, "prepared");
+    const source = await preparePackagedExtensionSource(prepared, input);
+    expect(await Bun.file(join(source, "bun.lock")).exists()).toBe(true);
+    expect(await Bun.file(join(source, "node_modules/prepared-dependency/index.js")).exists()).toBe(false);
+    writeFileSync(join(prepared, "sources.json"), JSON.stringify({ fixture: source }));
+    const copied = copyPreparedFixtures(prepared, join(root, "consumer"), ["fixture"]);
+    expect(
+      Bun.spawnSync([process.execPath, "install", "--frozen-lockfile", "--ignore-scripts"], {
+        cwd: copied.sources.fixture!,
+      }).exitCode,
+    ).toBe(0);
+    expect(readFileSync(join(copied.sources.fixture!, "node_modules/prepared-dependency/index.js"), "utf8")).toContain(
+      "fresh",
+    );
+    expect(await Bun.file(join(source, "node_modules/prepared-dependency/index.js")).exists()).toBe(false);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

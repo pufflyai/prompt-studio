@@ -111,7 +111,12 @@ export const collectRunEvidence = (
       complete = identity(report) && report.complete && JSON.stringify(report.files) === JSON.stringify(run.files);
       nativeFailure = report.outcome === "failure";
       reportedFiles = report.files;
-      if (run.runner === "performance") reports.push(...benchmarkPlanEvidence(directory, run, plan.source));
+      if (run.runner === "performance") {
+        const evidence = benchmarkPlanEvidence(directory, run, plan, executionId);
+        reports.push(...evidence.reports);
+        nativeFailure ||= evidence.nativeFailure;
+        reportedFiles = evidence.reportedFiles;
+      }
     }
     nativeFailure ||= cases.some((entry) => entry.outcome === "failure");
     if (run.lane === "quarantine") {

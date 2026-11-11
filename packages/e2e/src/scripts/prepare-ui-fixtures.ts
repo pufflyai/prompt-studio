@@ -6,8 +6,8 @@ import { copyPreparedFixtures } from "./prepared-fixture-copy";
 
 export const preparedUiSourcesPath = (home: string) => join(home, "fixtures", "sources.json");
 
-// Install public artifacts before the browser/server allowance. Runtime provisioning
-// still performs a normal fresh install for every changed production consumer.
+// Prepare source, tarballs and a lockfile. Runtime provisioning owns the fresh
+// install; materializing dependencies here duplicates work that consumers cannot reuse.
 export const prepareUiFixtures = async (env: NodeJS.ProcessEnv, signal: AbortSignal) => {
   const installEnv = { ...env, HOME: env.E2E_HOME, BUN_INSTALL_CACHE_DIR: env.E2E_BUN_CACHE_DIR };
   const names = JSON.parse(env.E2E_FIXTURE_EXTENSIONS ?? JSON.stringify(uiFixtureExtensions)) as string[];
@@ -21,7 +21,7 @@ export const prepareUiFixtures = async (env: NodeJS.ProcessEnv, signal: AbortSig
     sources[name] = await preparePackagedExtensionSource(
       join(env.E2E_HOME!, "fixtures", name),
       join(import.meta.dirname, "../../../../extensions", name),
-      { env: installEnv, signal, install: true },
+      { env: installEnv, signal },
     );
   }
   env.E2E_EXTENSION_SOURCES = JSON.stringify(sources);

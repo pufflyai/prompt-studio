@@ -97,6 +97,8 @@ Reports live in `test-results/local-review/<run-id>.json`. Each report names the
 
 `local_passed` means the selected local checks passed. It does not mean review-ready: require latest-head `ci_passed` and passing evidence for every deferred check. Edited tests already run in PR CI; unedited deferred functional contracts need applicable queue/production evidence or `ci:full` diagnostics on the candidate. Deferred P3 workloads need complete benchmark diagnostics; functional `ci:full` evidence alone does not cover them. Report missing coverage explicitly. The command does not dispatch CI or add labels automatically.
 
+For deferred P3 qualification, dispatch `gh workflow run benchmarks.yml --ref <candidate-branch> -f commits=<exact-sha> -f qualify_source=true -f release_channel=stable`. This freezes a shared source plan with the release channel's host assignments and verifies each transported result bundle. It preserves the ordered navigation workload of thirty samples per destination and visit, planner's three cold opens, native quarantine attempts, and existing budgets. Comparative benchmark runs keep their one-sample contract when `qualify_source` is false. Source qualification does not publish or certify signed release artifacts.
+
 After repairs, rerun failed or affected checks and record their inputs. A complete full-suite rerun is not required. Documentation and routine cosmetic changes retain [scoped verification](../../guidance/0005-testing.md#4-prove-it-works). Explicit full-validation requests and resource holds still apply, including holds issued before this policy changed. Existing runs keep their original commands, revisions and interrupted or completed status.
 
 ## Complete a full test run without stopping at the first failure

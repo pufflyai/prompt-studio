@@ -27,6 +27,7 @@ runs:
         name: test-plan-attempt-${{ github.run_attempt }}
         path: test-results/ci
     - name: "[phase:test] Execute assigned runs"
+      if: runner.os != 'Windows'
       shell: bash
       env:
         LERNA_FILTER: ${{ inputs.package-filter }}
@@ -35,17 +36,22 @@ runs:
         PLAN_DISPLAY: ${{ inputs.display }}
         CI_PLAN_OUTPUT_DIR: test-results/ci/planned/${{ steps.bundle.outputs.key }}
       run: |
-        command=(bun scripts/test.ts --plan test-results/ci/plan.json --job "$PLAN_JOB")
-        if [[ -n "$LERNA_FILTER" ]]; then
-          export CI_PLAN_JOB="$PLAN_JOB"
-          command=(bun scripts/ci/run-package-group.ts)
-        fi
-        if [[ "$PLAN_PREBUILT" == 'true' && -z "$LERNA_FILTER" ]]; then command+=(--prebuilt); fi
         if [[ "$RUNNER_OS" == 'Linux' && "$PLAN_DISPLAY" == 'true' ]]; then
-          xvfb-run -a "${command[@]}"
+          xvfb-run -a bun scripts/ci/run-ci-test-job.ts
         else
-          "${command[@]}"
+          bun scripts/ci/run-ci-test-job.ts
         fi
+    - name: "[phase:test] Execute assigned Windows runs"
+      if: runner.os == 'Windows'
+      # Git Bash prepends its GNU tools; preserve the owning Windows runner's native tools.
+      shell: pwsh
+      env:
+        LERNA_FILTER: ${{ inputs.package-filter }}
+        PLAN_JOB: ${{ inputs.job }}
+        PLAN_PREBUILT: ${{ inputs.prebuilt }}
+        PLAN_DISPLAY: ${{ inputs.display }}
+        CI_PLAN_OUTPUT_DIR: test-results/ci/planned/${{ steps.bundle.outputs.key }}
+      run: bun scripts/ci/run-ci-test-job.ts
     - uses: actions/upload-artifact@v4
       if: always()
       with:
