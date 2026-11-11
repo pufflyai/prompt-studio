@@ -15,6 +15,10 @@ export const HealthPage = () => {
   });
   const refresh = useMutation({ mutationFn: () => client.commands["release-health.sync"]() });
   const requestRefresh = refresh.mutate;
+  const resetRefresh = refresh.reset;
+  useEffect(() => {
+    if (history.data?.syncedAt) resetRefresh();
+  }, [history.data?.syncedAt, resetRefresh]);
   useEffect(() => {
     const unsubscribe = client.events.subscribe(
       healthChanged,

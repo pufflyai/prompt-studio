@@ -30,27 +30,6 @@ test("sidecar crash shows recovery within budget", async () => {
   let app: PackagedApp | null = null;
   try {
     app = await launchPackagedApp(home);
-    app.lifecyclePage.on("console", (message) => {
-      if (message.text().startsWith("RECOVERY_DIAGNOSTIC")) console.log(message.text());
-    });
-    await app.lifecyclePage.evaluate(() => {
-      const snapshot = () =>
-        console.log(
-          "RECOVERY_DIAGNOSTIC",
-          JSON.stringify({
-            at: Date.now(),
-            visibility: document.visibilityState,
-            headings: [...document.querySelectorAll('[role="status"] :is(h1,h2,h3)')].map((node) => ({
-              text: node.textContent,
-              visible: node.checkVisibility({ visibilityProperty: true }),
-              bounds: node.getBoundingClientRect().toJSON(),
-            })),
-          }),
-        );
-      new MutationObserver(snapshot).observe(document.body, { childList: true, subtree: true, characterData: true });
-      document.addEventListener("visibilitychange", snapshot);
-      snapshot();
-    });
     const firstCrashAt = Date.now();
     crashPackagedRuntime(app.runtime.pid);
     const restartingAt = await waitForVisibleElement(

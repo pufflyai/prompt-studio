@@ -131,7 +131,32 @@ export const syncHealth = async (ctx: Context, changed: () => Promise<unknown>) 
         previous.reportedJobs === previous.testJobs
       )
         continue;
-      const next = await readRun(ctx, run);
+      const next = await readRun(ctx, run).catch((error: unknown) =>
+        previous
+          ? {
+              ...previous,
+              errors: [
+                `Could not refresh attempt ${run.run_attempt}; showing cached attempt ${previous.attempt}: ${String(error)}`,
+              ],
+            }
+          : {
+              id: run.id,
+              attempt: run.run_attempt,
+              createdAt: run.created_at,
+              sha: run.head_sha,
+              url: run.html_url,
+              title: run.display_title,
+              status: run.status,
+              conclusion: run.conclusion,
+              counts: { passed: 0, failed: 0, skipped: 0, reports: 0 },
+              testJobs: 0,
+              reportedJobs: 0,
+              pendingJobs: 0,
+              failedJobs: [],
+              published: false,
+              errors: [String(error)],
+            },
+      );
       if (!next) continue;
       history.runs = [...history.runs.filter((entry) => entry.id !== run.id), next].sort((a, b) =>
         a.createdAt.localeCompare(b.createdAt),

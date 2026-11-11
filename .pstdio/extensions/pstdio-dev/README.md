@@ -27,6 +27,17 @@ pst pstdio-dev benchmarks start-run --commits pstdio@0.45.0 --commits main --pla
 
 The pages use your GitHub CLI login. Run `gh auth login` in this repository first.
 
+## Release pipeline health
+
+Open **Performance → Release health** for chronological passed and failed test bars. Bars stack passed and failed counts on one count scale. Red outlines mark runs with failures, and pointer or keyboard tooltips show exact counts, status, commit, and evidence coverage. Select a run to read failure links, evidence coverage, and skipped or unrun tests. Publication and verification have separate statuses; a published nightly can still fail verification.
+
+The panel reads runner summaries, including quarantined cases, through your GitHub CLI login. It refreshes on opening, on demand, and daily; completed job counts are cached under this extension's project storage. Missing reports and unavailable logs remain explicit. A refresh preserves previous results if GitHub is unavailable. The initial history covers the latest ten manual, scheduled, or version-release candidates among the latest 100 workflow runs.
+
+```sh
+pst pstdio.pstdio-dev release-health sync
+pst pstdio.pstdio-dev release-health history
+```
+
 ## Merge queue repair
 
 Every five minutes, it repairs pull requests that GitHub removed from the merge queue. It lists open pull requests with the `removed-from-queue` label, which the Merge queue removals workflow manages. For each one, it creates a workspace from the pull request's branch and starts a session that reproduces and fixes the failure, then pushes to the same branch. A pull request gets one repair session per queue removal, identified by its latest removal event's timestamp. A repair's own push does not start another session. A later removal after requeueing can start a fresh repair. Session history includes older pages and archived sessions. If one pull request's repair cannot start, the command tries the others before reporting the failed pull requests and their errors. Pull requests from forks are skipped. The command needs an authenticated `gh` CLI.
