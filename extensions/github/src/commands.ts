@@ -1,4 +1,5 @@
 import { defineCommand, l10n, params, type ResourceRef } from "@pstdio/sdk/extensions";
+import { runGithub } from "./github-process";
 import { importPullRequest, parsePullRequest, pullRequestResource, readPullRequests } from "./pull-requests";
 export const importPr = defineCommand({
   id: "pull-requests.import",
@@ -53,7 +54,7 @@ export const findMergedPrs = defineCommand({
         while (next < branches.length) {
           const branch = branches[next++]!;
           try {
-            const result = await ctx.process.run({
+            const result = await runGithub(ctx, {
               command: ["gh", "pr", "list", "--head", branch, "--state", "merged", "--json", "url"],
               cwd: home.root_path!,
             });

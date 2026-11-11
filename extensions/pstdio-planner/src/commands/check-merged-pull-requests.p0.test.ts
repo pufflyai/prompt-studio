@@ -102,3 +102,85 @@ test("submitted workspace branch discovery remains GitHub-owned", async () => {
   expect((await ticketsCollection(f.ctx).get(f.task.id))?.statusId).toBe("done");
   expect(f.reads()).toBe(2);
 });
+
+test("an explicit context PR cannot be reintroduced by workspace discovery", async () => {
+  const f = await setup();
+  await f.link("context");
+  f.ctx.workspaces.list = async () => [{ id: f.variant.workspaceId, branch: "feature/work" }] as never;
+  await checkMergedPullRequestsCommand.run(f.ctx, {});
+  expect((await ticketsCollection(f.ctx).get(f.task.id))?.statusId).toBe(f.task.statusId);
+});
+
+test("an unrelated context PR does not suppress submitted branch delivery", async () => {
+  const f = await setup();
+  await f.link("context", "https://github.com/acme/tools/pull/99");
+  f.ctx.workspaces.list = async () => [{ id: f.variant.workspaceId, branch: "feature/work" }] as never;
+  await checkMergedPullRequestsCommand.run(f.ctx, {});
+  expect((await ticketsCollection(f.ctx).get(f.task.id))?.statusId).toBe("done");
+});
+
+test("partial legacy migration cannot fall back to an older merged workspace PR", async () => {
+  const f = await setup();
+  await ticketsCollection(f.ctx).update(f.task.id, {
+    ...f.task,
+    reviewLinks: [12, 13].map((number) => ({
+      id: String(number),
+      provider: "github",
+      kind: "pull_request",
+      externalId: String(number),
+      title: null,
+      url: `https://github.com/acme/tools/pull/${number}`,
+      createdAt: f.task.createdAt,
+      updatedAt: f.task.updatedAt,
+    })),
+  });
+  const execute = f.ctx.commands.execute;
+  f.ctx.commands.execute = (async (ref, input) => {
+    if (ref.id === "pull-requests.import" && (input?.params as { url?: string })?.url?.endsWith("/13"))
+      return { ok: false, reason: "unavailable" };
+    return execute(ref, input);
+  }) as typeof execute;
+  f.ctx.workspaces.list = async () => [{ id: f.variant.workspaceId, branch: "feature/work" }] as never;
+  await checkMergedPullRequestsCommand.run(f.ctx, {});
+  expect((await ticketsCollection(f.ctx).get(f.task.id))?.statusId).toBe(f.task.statusId);
+});
+
+test("completed and recorded submissions do not keep polling GitHub", async () => {
+  const f = await setup();
+  await f.link("result");
+  await checkMergedPullRequestsCommand.run(f.ctx, {});
+  await checkMergedPullRequestsCommand.run(f.ctx, {});
+  expect(f.reads()).toBe(1);
+});
+
+test("a shared head still records delivery for each submitted workspace", async () => {
+  const f = await setup();
+  await f.link("result");
+  await checkMergedPullRequestsCommand.run(f.ctx, {});
+  const original = (await ticketsCollection(f.ctx).get(f.task.id))!;
+  const identity = await f.ctx.resources.allocate({ kind: "ticket" });
+  await ticketsCollection(f.ctx).put(identity.id, { ...original, id: identity.id });
+  await putAttempt(f.storage, {
+    ...f.variant,
+    ticketId: identity.id,
+    workspaceId: "other-workspace",
+    revisions: [
+      {
+        revision: 1,
+        baseSha: "main-sha",
+        headSha: "head",
+        changeRequestReportId: "other-report",
+        submittedAt: original.createdAt,
+        submittedBy: { type: "agent", id: "other-owner", displayName: "Owner" },
+        reviews: [],
+      },
+    ],
+  });
+  await f.link("result", undefined, identity.id);
+  await checkMergedPullRequestsCommand.run(f.ctx, {});
+  expect(
+    (await attemptEventsCollection(f.storage).list()).filter(
+      (event) => event.type === "attempt_merged" && event.workspaceId === "other-workspace",
+    ),
+  ).toHaveLength(1);
+});

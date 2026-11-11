@@ -1,4 +1,7 @@
 import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
+import { pullRequestsChanged } from "./events";
+import { runGithub } from "./github-process";
+
 export interface PullRequestIdentity {
   id: string;
   host: string;
@@ -18,9 +21,10 @@ type Context = Pick<ExtensionContextBase, "storage" | "process" | "projectId">;
 export const parsePullRequest = (url: string) => {
   try {
     const value = new URL(url);
-    const match = /^\/([^/]+)\/([^/]+)\/pull\/([1-9]\d*)(?:\/.*)?$/.exec(value.pathname);
+    const match = /^\/([^/]+)\/([^/]+)\/pull\/(\d+)(?:\/.*)?$/.exec(value.pathname);
+    const secure = value.protocol === "https:" || (value.protocol === "http:" && value.hostname === "github.com");
     if (
-      value.protocol !== "https:" ||
+      !secure ||
       value.username ||
       value.password ||
       value.port ||
@@ -32,7 +36,7 @@ export const parsePullRequest = (url: string) => {
     const host = value.hostname.toLowerCase();
     const repository = `${match[1]}/${match[2]}`.toLowerCase();
     const number = Number(match[3]);
-    if (!Number.isSafeInteger(number)) return null;
+    if (!Number.isSafeInteger(number) || number < 1) return null;
     return { id: `https://${host}/${repository}/pull/${number}`, host, repository, number };
   } catch {
     return null;
@@ -46,10 +50,13 @@ export const pullRequestResource = (pr: PullRequestIdentity, projectId: string) 
   label: `${pr.repository} #${pr.number}`,
   icon: "git-pull-request",
 });
-export const importPullRequest = async (ctx: Context, url: string) => {
+export const importPullRequest = async (ctx: Context & Pick<ExtensionContextBase, "events">, url: string) => {
   const identity = parsePullRequest(url);
   if (!identity) throw new Error("Use a GitHub pull request URL.");
-  await ctx.storage.collection<PullRequestIdentity>("pull-requests").put(identity.id, identity);
+  const created = await ctx.storage
+    .collection<PullRequestIdentity>("pull-requests")
+    .createIfAbsent(identity.id, identity);
+  if (created) await ctx.events.emit(pullRequestsChanged, { id: identity.id });
   return pullRequestResource(identity, ctx.projectId);
 };
 // Coalesce concurrent reads only. Saved identity never supplies delivery evidence.
@@ -58,11 +65,11 @@ const readPullRequest = (ctx: Context, id: string) => {
   const key = `${ctx.projectId}:${id}`;
   const current = pending.get(key);
   if (current) return current;
-  const read = (async (): Promise<PullRequestRead> => {
+  const read: Promise<PullRequestRead> = (async () => {
     try {
       const identity = parsePullRequest(id);
       if (!identity || identity.id !== id) throw new Error("Invalid pull request identity.");
-      const result = await ctx.process.run({
+      const result = await runGithub(ctx, {
         command: [
           "gh",
           "pr",

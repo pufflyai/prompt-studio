@@ -2,7 +2,7 @@ import type { ExtensionContextBase, ResourceRef } from "@pstdio/sdk/extensions";
 import { readRetiredWorkspaceIds } from "./attempt-retirement";
 import { attemptSelectionsCollection, listAttempts } from "./attempt-storage";
 import type { AttemptRecord, TicketAttemptSelection } from "./attempt-types";
-import { linkedPullRequests, readGithubResources } from "./pull-request-resources";
+import { legacyPullRequestOrder, linkedPullRequests, readGithubResources } from "./pull-request-resources";
 import { normalizeTicketDependencies } from "./ticket-dependencies";
 import type { Ticket } from "./types";
 
@@ -29,7 +29,7 @@ const readDelivery = async (
     : links
         .toSorted(
           (left, right) =>
-            String(right.metadata?.plannerLinkedAt).localeCompare(String(left.metadata?.plannerLinkedAt)) ||
+            legacyPullRequestOrder(right).localeCompare(legacyPullRequestOrder(left)) ||
             right.id.localeCompare(left.id),
         )
         .slice(0, 1);

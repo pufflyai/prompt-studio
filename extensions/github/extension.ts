@@ -9,6 +9,7 @@ import {
   workbenchModes,
 } from "@pstdio/sdk/extensions";
 import { findMergedPrs, importPr, readPrs, resolvePrs } from "./src/commands";
+import { pullRequestsChanged } from "./src/events";
 import { type PullRequestIdentity, parsePullRequest, pullRequestResource } from "./src/pull-requests";
 
 const pullRequest = defineResourceKind({
@@ -56,6 +57,7 @@ const discovery = defineCommandPaletteResource({
   id: "pull-requests",
   title: l10n("search.pullRequests", "GitHub pull requests"),
   resourceKind: pullRequest.ref,
+  refreshEvents: [pullRequestsChanged],
   async query(ctx, input) {
     const query = input.query?.trim() ?? "";
     const url = parsePullRequest(query);

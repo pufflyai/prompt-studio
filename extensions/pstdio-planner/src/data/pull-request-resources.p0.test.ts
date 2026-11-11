@@ -94,3 +94,48 @@ test("unfinished legacy migration cannot turn a PR-backed done dependency into a
     (await readDependencyDeliveries(ctx, child, [parent, child], new Set(["done"]), "/repo")).get(parent.id),
   ).toEqual({ headSha: null, mergeSha: null });
 });
+
+test("legacy replacement chronology keeps the original link ID tie-break", async () => {
+  const { readDependencyDeliveries } = await import("./dependency-deliveries");
+  const { ctx, ticket } = await fixture();
+  const parent = {
+    ...(await ticket("Parent")),
+    statusId: "done",
+    reviewLinks: [
+      legacy("https://github.com/acme/tools/pull/9", "a-old"),
+      legacy("https://github.com/acme/tools/pull/10", "z-replacement"),
+    ],
+  };
+  const child = await ticket("Child", [parent.id]);
+  await ticketsCollection(ctx).update(parent.id, parent);
+  ctx.process.run = async ({ command }) => {
+    const replacement = command.includes("https://github.com/acme/tools/pull/10");
+    return {
+      exitCode: 0,
+      stderr: "",
+      stdout: JSON.stringify({
+        state: replacement ? "OPEN" : "MERGED",
+        baseRefName: "main",
+        headRefOid: replacement ? "new-head" : "old-head",
+        mergeCommit: replacement ? null : { oid: "old-merge" },
+      }),
+    };
+  };
+  expect(
+    (await readDependencyDeliveries(ctx, child, [parent, child], new Set(["done"]), "/repo")).get(parent.id),
+  ).toEqual({ headSha: "new-head", mergeSha: null });
+});
+
+test("a canonical context choice remains authoritative when legacy data arrives", async () => {
+  const { ctx, ticket } = await fixture();
+  const task = {
+    ...(await ticket("Reference")),
+    reviewLinks: [legacy("https://github.com/acme/tools/pull/12", "old")],
+  };
+  await ticketsCollection(ctx).update(task.id, task);
+  await ctx.resources.addAnchors(ticketReference(ctx, task.id), [
+    { type: "pull-request", extensionId: "pstdio.github", id: task.reviewLinks[0]!.url, role: "context" },
+  ]);
+  expect(await linkedPullRequests(ctx, task)).toEqual([]);
+  expect((await ticketsCollection(ctx).get(task.id))?.reviewLinks).toEqual([]);
+});

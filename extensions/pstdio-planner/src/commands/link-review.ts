@@ -22,7 +22,7 @@ export const linkReviewCommand = defineCommand({
     if (!ticket) throw new Error(`Unknown ticket "${commandParams.id}"`);
     if (inferReviewLinkTarget(commandParams.url).provider === "github")
       throw new Error(
-        "Import the PR with pst github pull-requests import, then use pst resources link with purpose result for implementation evidence or context for reference.",
+        "Import the PR with pst pstdio.github pull-requests import, then use pst resources link with purpose result for implementation evidence or context for reference.",
       );
     if (ticket.reviewLinks?.some((link) => link.url === commandParams.url)) return withTicketTagIds(ticket);
 

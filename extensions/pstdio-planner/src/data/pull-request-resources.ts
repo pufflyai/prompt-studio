@@ -1,4 +1,4 @@
-import { commandRef, type ExtensionContextBase, type ResourceRef } from "@pstdio/sdk/extensions";
+import { commandRef, type ExtensionContextBase, type ResourceAnchor, type ResourceRef } from "@pstdio/sdk/extensions";
 import { changeTicketRecord, ticketRecords } from "./ticket-records";
 import type { Ticket } from "./types";
 
@@ -27,6 +27,9 @@ export const ticketReference = (ctx: Pick<Context, "extensionId" | "projectId">,
 });
 export const isPullRequest = (ref: ResourceRef) => ref.extensionId === "pstdio.github" && ref.type === "pull-request";
 
+export const legacyPullRequestOrder = (ref: ResourceRef) =>
+  `${ref.metadata?.plannerLinkedAt ?? ""}:${ref.metadata?.plannerLinkId ?? ""}`;
+
 // Save each relationship before removing its legacy representation. A disabled provider leaves the old URLs intact.
 export const migratePullRequestLinks = async (ctx: Context, ticket: Ticket) => {
   const stored = await ticketRecords(ctx.storage).get(ticket.id);
@@ -37,7 +40,7 @@ export const migratePullRequestLinks = async (ctx: Context, ticket: Ticket) => {
       if (!outcome.ok) continue;
       const source = ticketReference(ctx, ticket.id);
       let cursor: string | undefined;
-      let existing: (ResourceRef & { role?: string }) | undefined;
+      let existing: ResourceAnchor | undefined;
       do {
         const page = await ctx.resources.queryAnchors({ resource: source, limit: 100, cursor });
         existing = page.items
@@ -45,13 +48,19 @@ export const migratePullRequestLinks = async (ctx: Context, ticket: Ticket) => {
           .find((target) => isPullRequest(target) && target.id === outcome.value.id);
         cursor = page.nextCursor ?? undefined;
       } while (!existing && cursor);
-      const linkedAt = String(existing?.metadata?.plannerLinkedAt ?? "");
-      if (!existing || existing.role !== "result" || linkedAt < link.createdAt) {
+      const order = `${link.createdAt}:${link.id}`;
+      // Existing canonical choices win over arriving legacy data. Only migrate new links or refresh their own provenance.
+      if (!existing || (existing.metadata?.plannerLinkedAt && legacyPullRequestOrder(existing) < order)) {
+        const reference = existing ?? { ...outcome.value, role: "result" as const };
         await ctx.resources.addAnchors(source, [
           {
-            ...outcome.value,
-            role: "result",
-            metadata: { plannerLinkedAt: link.createdAt > linkedAt ? link.createdAt : linkedAt },
+            ...reference,
+            metadata: {
+              ...reference.metadata,
+              plannerLinkedAt: link.createdAt,
+              plannerLinkId: link.id,
+              reviewTitle: link.title,
+            },
           },
         ]);
       }
