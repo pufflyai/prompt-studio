@@ -1,6 +1,7 @@
 import {
   defineCommandPaletteResource,
   type ExtensionContextBase,
+  type ExtensionSession,
   l10n,
   type TreeNode,
   type TreeRendererPageParams,
@@ -42,6 +43,15 @@ const sessionDayLabel = (date: Date) => {
     year: date.getFullYear() === now.getFullYear() ? undefined : "numeric",
   });
 };
+// Keep date groups aligned with the public query's lastActivity ordering.
+const sessionActivityDate = (session: ExtensionSession) =>
+  new Date(
+    Math.max(
+      ...[session.createdAt, session.updatedAt, session.lastRequestStarted, session.lastRequestEnded]
+        .filter((timestamp) => timestamp != null)
+        .map((timestamp) => Date.parse(timestamp)),
+    ),
+  );
 const sessionNodes = (
   ctx: ExtensionContextBase,
   sessions: Awaited<ReturnType<typeof ctx.sessions.query>>["items"],
@@ -50,14 +60,15 @@ const sessionNodes = (
   const nodes: TreeNode[] = [];
   let date = "";
   for (const session of sessions) {
-    const day = new Date(session.lastRequestStarted ?? session.updatedAt).toLocaleDateString(undefined, {
+    const activityDate = sessionActivityDate(session);
+    const day = activityDate.toLocaleDateString(undefined, {
       dateStyle: "medium",
     });
     if (day !== date) {
       date = day;
       nodes.push({
         id: `date:${date}`,
-        label: sessionDayLabel(new Date(session.lastRequestStarted ?? session.updatedAt)),
+        label: sessionDayLabel(activityDate),
         disabled: true,
       });
     }
