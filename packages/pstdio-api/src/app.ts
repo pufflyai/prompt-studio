@@ -25,6 +25,7 @@ import { validateLegacyAnchors } from "./features/extensions/command-environment
 import { provisionWorkspacesUsingSource } from "./features/extensions/extension-skill-cleanup";
 import { createExtensionWebviewAccess } from "./features/extensions/extension-webview-access";
 import type { RuntimeRouteDeps } from "./features/runtime/routes";
+import { deliverIdleFollowUp } from "./features/sessions/idle-turn";
 import { createSessionImportService } from "./features/sessions/imports/service";
 import { createSessionQueueLifecycle } from "./features/sessions/session-queue-lifecycle";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
@@ -213,6 +214,7 @@ const buildApp = async (
   const sessionHooks = createSessionLifecycleCallbacks(() => deps);
 
   let drainSessionQueue: (input?: { releasedSessionId?: string }) => Promise<void> = async () => {};
+  let deliverIdleTurn: (sessionId: string) => Promise<void> = async () => {};
 
   const sessionService = createSessionService({
     sessionsDb: sessionsDBService,
@@ -220,6 +222,7 @@ const buildApp = async (
     eventBus,
     ...sessionHooks,
     onCapacityAvailable: (input) => drainSessionQueue(input),
+    onIdleTurn: (sessionId) => deliverIdleTurn(sessionId),
   });
   const settingsService = await createAppSettingsService({
     eventBus,
@@ -307,6 +310,7 @@ const buildApp = async (
   });
 
   drainSessionQueue = (input) => createSessionScheduler(deps).drainQueue(input);
+  deliverIdleTurn = (sessionId) => deliverIdleFollowUp(deps, sessionId);
 
   const close = await startAppLifecycle({
     deps,
