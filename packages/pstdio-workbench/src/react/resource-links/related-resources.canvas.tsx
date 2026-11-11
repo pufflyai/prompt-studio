@@ -13,12 +13,12 @@ const ticket: ResourceRef = {
   label: "PS-490 · General resource linking",
 };
 const artifact: ResourceRef = {
-  type: "artifact",
-  id: "prototype",
-  extensionId: "artifacts",
+  type: "pull-request",
+  id: "https://github.com/pufflyai/prompt-studio/pull/1602",
+  extensionId: "pstdio.github",
   projectId: "project",
-  label: "Interaction prototype",
-  icon: "file-code",
+  label: "pufflyai/prompt-studio #1602",
+  icon: "git-pull-request",
 };
 const workspace: ResourceRef = {
   type: "workspace",
@@ -37,7 +37,7 @@ const service = (items: ResourceAnchorPage["items"], fail = false): ResourceLink
   add: async () => undefined,
   remove: async () => undefined,
   search: async () => [
-    { resource: artifact, description: "Artifacts" },
+    { resource: artifact, description: "GitHub" },
     { resource: workspace, description: "Workspaces" },
   ],
   resolve: async () => [

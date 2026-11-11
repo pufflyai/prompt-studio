@@ -4,6 +4,7 @@ import { autoBuildDispatches, autoBuildPullRequestNotifications } from "../data/
 import { pauseAutoBuildMode, readAutoBuildMode } from "../data/auto-build-mode";
 import { acknowledgeAutoBuildWake, readAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { ticketsCollection } from "../data/collections";
+import type { GithubReads } from "../data/pull-request-resources";
 import { withWriteGuard } from "../data/write-guard";
 import { readImplementationCapacity } from "./attempt-readiness";
 import { supervisorWakePrompt } from "./auto-build-prompts";
@@ -46,6 +47,7 @@ export async function checkAutoBuildProgress(ctx: CommandContext) {
       };
       const lastPromptAt = timestamp(session.lastRequestStarted);
       const dispatches = await autoBuildDispatches(ctx, session.id).list();
+      const pullRequestReads: GithubReads = new Map();
       const progress = await Promise.all(
         dispatches.map(async ({ workspaceId, dispatchedAt }) => {
           // Only workspace recovery retires an attempt, and it dispatches the replacement for the same ticket.
@@ -67,7 +69,7 @@ export async function checkAutoBuildProgress(ctx: CommandContext) {
             worker.status !== "failed" &&
             !isUnexpectedExit(worker) &&
             worker.last_exit?.cause !== "user_stop"
-              ? await readPendingPullRequestRepair(ctx, ticket, attempt)
+              ? await readPendingPullRequestRepair(ctx, ticket, attempt, pullRequestReads)
               : undefined;
           const notified = pendingRepair
             ? await autoBuildPullRequestNotifications(ctx, session.id).get(workspaceId)

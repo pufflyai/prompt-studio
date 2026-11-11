@@ -16,8 +16,13 @@ const meta = {
       remove: async () => undefined,
       search: async () => [
         {
-          resource: { type: "artifact", id: "prototype", extensionId: "artifacts", label: "Interaction prototype" },
-          description: "Artifacts",
+          resource: {
+            type: "pull-request",
+            id: "https://github.com/pufflyai/prompt-studio/pull/1602",
+            extensionId: "pstdio.github",
+            label: "pufflyai/prompt-studio #1602",
+          },
+          description: "GitHub pull request",
         },
         { resource: { type: "note", id: "notes", extensionId: "notes", label: "Project notes" }, description: "Notes" },
       ],

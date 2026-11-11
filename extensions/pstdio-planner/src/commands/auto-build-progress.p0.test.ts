@@ -272,6 +272,8 @@ test.each([
   const process = ctx.process.run;
   let changed = false;
   const evidence = () => ({
+    id: "https://github.com/example/project/pull/1",
+    baseRefName: "main",
     headRefOid: "submitted-head",
     state: "OPEN",
     mergeable: changed && change === "merge conflict" ? "CONFLICTING" : "MERGEABLE",
@@ -380,6 +382,7 @@ test("unchanged PR evidence wakes once while a review request prevents repair, t
           exitCode: 0,
           stderr: "",
           stdout: JSON.stringify({
+            baseRefName: "main",
             headRefOid: "submitted-head",
             state: "OPEN",
             mergeable: conflict ? "CONFLICTING" : "MERGEABLE",

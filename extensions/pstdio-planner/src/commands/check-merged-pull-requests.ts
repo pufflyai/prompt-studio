@@ -1,39 +1,43 @@
 import { type CommandContext, defineCommand, defineSchedule } from "@pstdio/sdk/extensions";
 import { recordSubmittedMerge } from "../data/attempt-merges";
 import { readRetiredWorkspaceIds } from "../data/attempt-retirement";
-import { attemptEventsCollection, listAttempts } from "../data/attempt-storage";
+import { listAttempts } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
 import { ticketsCollection } from "../data/collections";
-import { githubReviewLinks, readGithubMerge } from "../data/github-merges";
 import { markTicketsDone } from "../data/mark-tickets-done";
+import { findMergedGithubPrs, linkedPullRequests, readGithubResources } from "../data/pull-request-resources";
+import { pullRequestTarget } from "../data/pull-request-target";
 import { readMergeDestination } from "../data/workflow-statuses";
 
-const mergeDetails = (value: { headRefOid?: string; mergeCommit?: { oid: string } | null }) => ({
-  headSha: value.headRefOid ?? null,
-  commitSha: value.mergeCommit?.oid ?? null,
-});
-
-const recordMerge = async (
+const addWorkspacePullRequests = async (
   ctx: CommandContext,
-  ids: string[],
   attempts: AttemptRecord[],
-  merged: ReturnType<typeof mergeDetails>,
+  links: Map<string, Set<string>>,
 ) => {
-  const matched = ids.filter((id) => {
-    const submitted = attempts.filter((attempt) => attempt.ticketId === id && attempt.revisions.length);
-    return (
-      !merged.headSha ||
-      !submitted.length ||
-      submitted.some((attempt) => attempt.revisions.at(-1)?.headSha === merged.headSha)
-    );
-  });
-  if (merged.commitSha && merged.headSha) {
-    for (const attempt of attempts.filter(
-      (attempt) => matched.includes(attempt.ticketId) && attempt.revisions.at(-1)?.headSha === merged.headSha,
-    ))
-      await recordSubmittedMerge(ctx, attempt, merged.commitSha);
+  // Preserve discovery from submitted workspace branches; GitHub owns the remote lookup.
+  const workspaces = (await ctx.workspaces.list()).filter(
+    (workspace) =>
+      workspace.branch && attempts.some((attempt) => attempt.workspaceId === workspace.id && attempt.revisions.length),
+  );
+  for (let offset = 0; offset < workspaces.length; offset += 100) {
+    const batch = workspaces.slice(offset, offset + 100);
+    try {
+      const found = await ctx.commands.execute(findMergedGithubPrs, {
+        params: { branches: batch.map((workspace) => workspace.branch!) },
+      });
+      if (!found.ok) continue;
+      for (const pr of found.value) {
+        const ids = links.get(pr.id) ?? new Set<string>();
+        for (const workspace of batch.filter((workspace) => workspace.branch === pr.branch)) {
+          for (const attempt of attempts.filter((attempt) => attempt.workspaceId === workspace.id))
+            ids.add(attempt.ticketId);
+        }
+        links.set(pr.id, ids);
+      }
+    } catch {
+      /* Keep local work usable when GitHub is disabled. */
+    }
   }
-  return matched;
 };
 
 export const checkMergedPullRequestsCommand = defineCommand({
@@ -42,91 +46,50 @@ export const checkMergedPullRequestsCommand = defineCommand({
   mutating: true,
   async run(ctx) {
     if ((await ctx.settings.get("tickets.markDoneOnMerge")) === false) return;
-    // Merge evidence also proves dependency integration, so it is recorded without a merge destination.
     const destination = await readMergeDestination(ctx);
-    const [allTickets, current, events, retired] = await Promise.all([
+    const [tickets, attempts, retired] = await Promise.all([
       ticketsCollection(ctx).list(),
       listAttempts(ctx.storage),
-      attemptEventsCollection(ctx.storage).list(),
       readRetiredWorkspaceIds(ctx.storage),
     ]);
-    const attempts = current.filter(({ workspaceId }) => !retired.has(workspaceId));
-    const recordedHeads = new Set(
-      events.filter((event) => event.type === "attempt_merged").map((event) => event.metadata.headSha),
-    );
-    const unrecorded = new Set(
-      attempts
-        .filter((attempt) => {
-          const head = attempt.revisions.at(-1)?.headSha;
-          return head && !recordedHeads.has(head);
-        })
-        .map((attempt) => attempt.ticketId),
-    );
-    const tickets = allTickets.filter(
-      (ticket) => !ticket.archived && (ticket.statusId !== destination.status?.id || unrecorded.has(ticket.id)),
-    );
-    if (!tickets.length) return destination.status ? undefined : { reason: destination.reason };
-    const root = await ctx.workspaces.getDefault();
-    const cwd = root?.root_path ?? undefined;
+    const links = new Map<string, Set<string>>();
+    for (const ticket of tickets.filter((ticket) => !ticket.archived)) {
+      const resources = await linkedPullRequests(ctx, ticket);
+      if (!resources) continue;
+      for (const link of resources) {
+        const ids = links.get(link.id) ?? new Set<string>();
+        ids.add(ticket.id);
+        links.set(link.id, ids);
+      }
+    }
+    await addWorkspacePullRequests(ctx, attempts, links);
     const mergedIds = new Set<string>();
-    const checks: Array<{
-      ids: string[];
-      command: string[];
-      parse: (output: string) => ReturnType<typeof mergeDetails> | null;
-    }> = [];
-    // URLs include the repository, so linked PRs can belong to another repository.
-    for (const [url, ids] of githubReviewLinks(tickets)) {
-      checks.push({
-        ids,
-        command: ["gh", "pr", "view", url, "--json", "state,mergeCommit,headRefOid"],
-        parse: (output) => {
-          const value = JSON.parse(output);
-          return value.state === "MERGED" ? mergeDetails(value) : null;
-        },
-      });
+    const target = await pullRequestTarget(ctx);
+    if (!target) return { reason: "The Git delivery target is unavailable." };
+    for (const pr of await readGithubResources(ctx, [...links.keys()])) {
+      if (
+        "error" in pr ||
+        pr.state !== "MERGED" ||
+        !pr.mergeCommit?.oid ||
+        pr.baseRefName !== target.branch ||
+        !pr.id.startsWith(`${target.repository}/pull/`)
+      )
+        continue;
+      for (const attempt of attempts) {
+        if (
+          retired.has(attempt.workspaceId) ||
+          !links.get(pr.id)?.has(attempt.ticketId) ||
+          attempt.revisions.at(-1)?.headSha !== pr.headRefOid
+        )
+          continue;
+        await recordSubmittedMerge(ctx, attempt, pr.mergeCommit.oid);
+        mergedIds.add(attempt.ticketId);
+      }
     }
-    const activeIds = new Set(tickets.map((ticket) => ticket.id));
-    for (const workspace of await ctx.workspaces.list()) {
-      const ids = (workspace.anchors_json ?? [])
-        .filter((anchor) => anchor.type === "ticket" && activeIds.has(anchor.id))
-        .map((anchor) => anchor.id);
-      if (!cwd || !workspace.branch || !ids.length) continue;
-      checks.push({
-        ids,
-        command: [
-          "gh",
-          "pr",
-          "list",
-          "--head",
-          workspace.branch,
-          "--state",
-          "merged",
-          "--json",
-          "mergeCommit,headRefOid",
-        ],
-        parse: (output) => {
-          const [value] = JSON.parse(output);
-          return value ? mergeDetails(value) : null;
-        },
-      });
-    }
-    // Bound parallel GitHub processes so larger projects do not wait on every network round trip in sequence.
-    let next = 0;
-    await Promise.all(
-      Array.from({ length: Math.min(8, checks.length) }, async () => {
-        while (next < checks.length) {
-          const check = checks[next++]!;
-          const merged = await readGithubMerge(ctx, check.command, cwd, check.parse);
-          if (merged) {
-            for (const id of await recordMerge(ctx, check.ids, attempts, merged)) mergedIds.add(id);
-          }
-        }
-      }),
-    );
-    return markTicketsDone(ctx, [...mergedIds]);
+    await markTicketsDone(ctx, [...mergedIds]);
+    return destination.status ? undefined : { reason: destination.reason };
   },
 });
-
 export const mergedPullRequestsSchedule = defineSchedule({
   id: "check-merged-pull-requests",
   title: "Check merged pull requests",

@@ -50,7 +50,10 @@ const removeCoreFixture = async (root: string) => {
   await rm(root, { recursive: true, force: true });
 };
 
-export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFixture) => Promise<void>) => {
+export const withPackagedCoreExtensions = async (
+  run: (fixture: CoreExtensionsFixture) => Promise<void>,
+  extensionNames = CORE_DEFAULT_EXTENSION_NAMES,
+) => {
   const startedAt = Date.now();
   const phase = (name: string) => console.log(`Packaged core: ${name} (${Date.now() - startedAt}ms)`);
   const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-core-"));
@@ -69,7 +72,7 @@ export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFi
     closeRegistry = registry.close;
     phase("registry ready");
     const defaultExtensions = await Promise.all(
-      CORE_DEFAULT_EXTENSION_NAMES.map(async (installName) => ({
+      extensionNames.map(async (installName) => ({
         installName,
         source: await preparePackagedExtensionSource(
           join(tempRoot, "sources", installName),

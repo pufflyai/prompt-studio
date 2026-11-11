@@ -5,7 +5,10 @@ import { readMigratedTickets } from "../data/read-migrated-tickets";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "../data/workflow-statuses";
 
 export const queryTickets = async (
-  ctx: Pick<ExtensionContextBase, "files" | "projectId" | "storage" | "settings" | "resources">,
+  ctx: Pick<
+    ExtensionContextBase,
+    "commands" | "extensionId" | "files" | "projectId" | "storage" | "settings" | "resources"
+  >,
   input: { filter?: ViewFilterGroup },
 ) => {
   const tickets = await readMigratedTickets(ctx);
