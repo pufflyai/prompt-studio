@@ -23,6 +23,7 @@ import {
   selectProject,
 } from "./project-selection-sync";
 import { registerProjectSetupCommand } from "./project-setup-command";
+import { createProjectSetupRequests } from "./project-setup-requests";
 
 interface CreateProjectsModuleInput {
   onProjectOpening?: (project: Promise<{ id: string; created?: boolean }>) => Promise<void>;
@@ -219,12 +220,13 @@ export const createProjectsModule = (input: CreateProjectsModuleInput = {}) =>
       );
 
       registerProjectWidgets(ctx, input);
-      registerProjectSetupCommand(ctx);
+      const setupRequests = createProjectSetupRequests();
+      registerProjectSetupCommand(ctx, setupRequests);
       registerProjectFolder(ctx);
       registerProjectSelectionMode(ctx);
       registerProjects(ctx);
       registerProjectCommands(ctx, selectedProjectContext, input.projectSelectionPersistence);
-      const projectOpening = registerProjectOpening(ctx);
+      const projectOpening = registerProjectOpening(ctx, setupRequests);
       const initialProjectSelection = registerInitialProjectSelection(
         ctx,
         selectedProjectContext,

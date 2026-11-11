@@ -68,3 +68,23 @@ test("a sync update during a failed status read is read again before reporting f
   expect(opened).toEqual(["project"]);
   expect(errors).toEqual([]);
 });
+
+test("a workspace that becomes ready during its status read is not prepared again", async () => {
+  const status = Promise.withResolvers<{ state: string; offlineReady: boolean }>();
+  let ready = false;
+  const opened: string[] = [];
+  const preparation = createProjectPreparation({
+    selected: () => "project",
+    ready: () => ready,
+    status: () => status.promise,
+    open: async (id) => {
+      opened.push(id);
+    },
+    failed: () => {},
+  });
+  const reading = preparation.refresh();
+  ready = true;
+  status.resolve({ state: "synced", offlineReady: true });
+  await reading;
+  expect(opened).toEqual([]);
+});

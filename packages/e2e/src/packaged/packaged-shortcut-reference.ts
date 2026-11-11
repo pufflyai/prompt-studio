@@ -9,11 +9,11 @@ export const verifyPackagedShortcutReference = async (
   headers: Record<string, string>,
 ) => {
   const shortcuts = [
-    { label: "Go to workspaces", key: "W", layered: true },
-    { label: "Go to sessions", key: "S", layered: true },
-    { label: "New workspace", key: "W", layered: true },
-    { label: "Open settings", key: ",", layered: false },
-    { label: "Shortcut greeting", key: "g", layered: false },
+    { label: "Go to workspaces", key: "W", paletteHint: "none" },
+    { label: "Go to sessions", key: "S", paletteHint: "none" },
+    { label: "New workspace", key: "W", paletteHint: "create" },
+    { label: "Open settings", key: ",", paletteHint: "direct" },
+    { label: "Shortcut greeting", key: "g", paletteHint: "direct" },
   ];
   const api = await request.newContext({ extraHTTPHeaders: headers });
   try {
@@ -70,14 +70,20 @@ export const verifyPackagedShortcutReference = async (
   }
   await page.getByText("Search", { exact: true }).first().click();
   const palette = page.getByRole("dialog").last();
-  for (const { label, key, layered } of shortcuts) {
+  for (const { label, key, paletteHint } of shortcuts) {
     await palette.locator("input").fill(`>${label}`);
     const entry = palette.getByRole("option", { name: new RegExp(label) });
     await expect(entry).toBeVisible();
-    // Layer shortcuts appear in the reference; palette hints describe keys usable
-    // in the current mode, which is outside shortcut mode here.
-    if (layered) await expect(entry.locator("kbd")).toHaveCount(0);
-    else await expect(entry.locator("kbd").last()).toHaveText(key);
+    // Legacy navigation commands are distinct targets from the assigned page shortcuts.
+    // A command with its own assignment shows the full sequence even outside keyboard mode.
+    if (paletteHint === "none") await expect(entry.locator("kbd")).toHaveCount(0);
+    else if (paletteHint === "create") {
+      const modifier = await page.evaluate(() => (navigator.platform.includes("Mac") ? "Option" : "Alt"));
+      const keys = [modifier, "Shift", "Space", "C", "W"];
+      await expect(entry.locator("kbd")).toHaveCount(keys.length);
+      for (const [index, label] of keys.entries())
+        await expect(entry.locator("kbd").nth(index)).toHaveAttribute("aria-label", label);
+    } else await expect(entry.locator("kbd").last()).toHaveText(key);
   }
   await palette.locator("input").fill("");
   await page.keyboard.press("Escape");

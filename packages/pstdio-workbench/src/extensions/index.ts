@@ -25,6 +25,7 @@ export type {
   ExtensionWebviewArtifactCapabilities,
   ExtensionWebviewFileCapabilities,
 } from "./bridge/webview-command-capabilities";
+export { createWebviewCommandQueryAdapter } from "./bridge/webview-command-queries";
 export { withFrameSignal } from "./bridge/webview-command-streams";
 export {
   createWorkbenchWebviewHostAdapters,

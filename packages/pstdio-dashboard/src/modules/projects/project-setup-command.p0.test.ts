@@ -4,6 +4,7 @@ import { createWorkbench } from "@pstdio/workbench";
 import { getCollection, getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { registerProjectSetupCommand } from "./project-setup-command";
+import { createProjectSetupRequests } from "./project-setup-requests";
 
 const attachWorkspace = () => {
   getCollection("workspaces");
@@ -14,7 +15,7 @@ const attachWorkspace = () => {
 
 test("setup retry requires its selected project and rejects a stale webview project", async () => {
   const core = createWorkbench();
-  registerProjectSetupCommand(core);
+  registerProjectSetupCommand(core, createProjectSetupRequests());
   await expect(core.commands.executeCommand(workbenchCommands.retryProjectSetup.id)).rejects.toThrow(
     "selected project",
   );
@@ -46,7 +47,7 @@ test("setup retry uses the selected project's public API and propagates action e
     const core = createWorkbench();
     core.pageLocations.setProject("project-2");
     selectDashboardProject(core, { id: "project-2", name: "Second" });
-    registerProjectSetupCommand(core);
+    registerProjectSetupCommand(core, createProjectSetupRequests());
     await core.commands.executeCommand(workbenchCommands.retryProjectSetup.id, {}, { projectId: "project-2" });
     expect(requests).toEqual(["GET /v1/account/projects/project-2/sync", "POST /v1/projects/project-2/retry-setup"]);
     await expect(core.commands.executeCommand(workbenchCommands.retryProjectSetup.id)).rejects.toThrow(
@@ -85,7 +86,7 @@ test("setup retry reports unavailable providers even when remote setupError was 
     attachWorkspace();
     const core = createWorkbench();
     selectDashboardProject(core, { id: "project-2", name: "Second" });
-    registerProjectSetupCommand(core);
+    registerProjectSetupCommand(core, createProjectSetupRequests());
     await expect(core.commands.executeCommand(workbenchCommands.retryProjectSetup.id)).rejects.toThrow(
       "Remote provider is unavailable",
     );
@@ -119,7 +120,7 @@ test.each([
   try {
     const core = createWorkbench();
     selectDashboardProject(core, { id: "project-2", name: "Second" });
-    registerProjectSetupCommand(core);
+    registerProjectSetupCommand(core, createProjectSetupRequests());
     await core.commands.executeCommand(workbenchCommands.retryProjectSetup.id);
     expect(requests).toEqual(["GET /v1/account/projects/project-2/sync", `POST ${endpoint}`]);
   } finally {
@@ -168,7 +169,7 @@ test("setup retry keeps a provisioning local workspace request pending", async (
     ]);
     const core = createWorkbench();
     selectDashboardProject(core, { id: "project-2", name: "Second" });
-    registerProjectSetupCommand(core);
+    registerProjectSetupCommand(core, createProjectSetupRequests());
     retry = core.commands.executeCommand(workbenchCommands.retryProjectSetup.id).finally(() => {
       settled = true;
     });

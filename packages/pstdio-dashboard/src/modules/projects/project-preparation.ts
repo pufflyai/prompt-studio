@@ -27,7 +27,7 @@ export const createProjectPreparation = (input: ProjectPreparationInput) => {
             if (request.dirty && current()) return undefined;
             throw error;
           });
-          if (!current()) return;
+          if (!current() || input.ready(projectId)) return;
           if (!status) continue;
           if (status.state === "local" || status.offlineReady) {
             await input.open(projectId);

@@ -8,6 +8,7 @@ const requests = {
   "harnesses.read": {},
   "resources.actions": { operation: "list", resource: { type: "ticket", id: "one" } },
   "commands.execute": { commandId: "notes.read" },
+  "commands.query": { operation: "close", owner: "owner", requestId: "read" },
   "editing.session": { operation: "close", sessionId: "editor" },
   "editing.text": { operation: "current" },
   "commands.stream": { operation: "cancel", streamId: "stream" },
