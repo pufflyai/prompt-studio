@@ -6,7 +6,8 @@ These APIs are on `main` for extension API **0.4.0**, after 0.46. Publish the ma
 
 | State | Owner |
 | --- | --- |
-| A finite server result | `client.queries` or a runtime-owned `createScopedQueryClient` |
+| A finite command result retained across recreated frames | `client.commands.read.query(...)`, observed through `useWebviewCommandQuery` |
+| Other finite data local to a guest or runtime | `client.queries` or a runtime-owned `createScopedQueryClient` |
 | A shared editable document, gesture or save queue | Public editing session and the extension's domain commands |
 | Synced rows | Existing host collections and storage; query results are projections |
 | Selected UI values | A Zustand store scoped to the view, project or runtime that owns them |
@@ -17,25 +18,22 @@ A query cache does not become a second editable document. A mounted view observe
 
 ## Read finite data
 
-Create a typed client with `createWebviewClient<typeof commands>(host)`. Its `queries` property shares one root for that guest host. Do not create a new QueryClient or clear the root whenever the selected project changes.
+Create a typed client with `createWebviewClient<typeof commands>(host)`. For a finite, read-only command, declare the `commands.query` webview capability and prepare a host-owned command query. The command's result remains available when switching projects destroys and recreates its iframe.
 
 ```tsx
 import { createWebviewClient, type GuestHost } from "@pstdio/sdk/extensions";
-import { useWebviewQuery, useWebviewVisibility } from "@pstdio/sdk/extensions/react";
+import { useWebviewCommandQuery, useWebviewVisibility } from "@pstdio/sdk/extensions/react";
 import type { commands } from "./commands";
 import { itemChanged } from "./events";
 
 function Item({ host, id }: { host: GuestHost; id: string }) {
   const client = createWebviewClient<typeof commands>(host);
   const active = useWebviewVisibility();
-  const result = useWebviewQuery(client.queries, {
-    id: "item",
-    resourceKey: id,
-    params: { id },
+  const query = client.commands.read.query({ id }, {
     events: [itemChanged],
     dependency: { resourceId: id },
-    read: () => client.commands.read({ id }),
-  }, active);
+  });
+  const result = useWebviewCommandQuery(query, active);
   // Render result.data, result.loading, result.fetching and result.error.
   // result.refresh() explicitly retries or marks this dependency stale.
   return null;
@@ -44,7 +42,13 @@ function Item({ host, id }: { host: GuestHost; id: string }) {
 
 `commands.read` above is the author's own command. Return `null`, `[]` or another explicit empty value when nothing exists. `undefined` is not a successful query value. A loaded empty result remains loaded during refresh. A refresh error keeps accepted data; an initial error has no accepted data. Provide a visible Retry action instead of starting a retry timer.
 
-The key includes runtime, account ID, account origin, project, extension, query ID, resource key and parameters. Put every input that changes the result in the descriptor. Use stable serializable parameters. Do not place a callback, DOM node or mutable draft in a query key.
+The host key includes runtime, account ID and origin, project, extension and installed source, webview, command, parameters, workspace and resource. A fresh frame receives accepted data before its first observation; a scoped event received while inactive causes one catch-up on return. Private host commands also include the owning Workbench core. Only `workbenchCommands.recentResources` currently supports a finite built-in query. Use `client.queries.command(commandRef, params, options)` for a typed command reference from another extension or the host.
+
+Command queries expose `getSnapshot`, `subscribe`, `read`, `refresh` and `isDisposed`. They do not accept local writes. Run mutations through their domain commands and emit the declared events. Subscribe only while visible; a finite `read(signal)` or `refresh(signal)` releases its optional membership on settlement, cancellation, frame disconnection or core retirement without cancelling a surviving peer's read. A refresh error preserves accepted data. Account or installed-source retirement clears the guest projection and fences pending replies.
+
+The hook's `result.refresh()` is a fire-and-forget UI Retry. Hiding, replacing or unmounting that hook cancels its Retry demand and fences delayed replies; independent explicit readers and visible peers remain active. Use the query handle's `refresh(signal)` when a caller needs to await a finite result and owns its cancellation lifetime.
+
+For an arbitrary callback reader, `useWebviewQuery(client.queries, { id, params, events, dependency, read }, active)` remains available. That root belongs to the guest and cannot retain values after the iframe is destroyed. Use a runtime-owned query or the host command path when warm return across recreated frames is required. Put every input that changes the result in the descriptor. Use stable serializable parameters. Do not place a callback, DOM node or mutable draft in a query key.
 
 `useWebviewQuery` follows project/account props supplied by the host. `useScopedQuery` observes an already chosen query; callers choosing that query from props must also follow those props. `useWebviewScope` supplies a selected identity for non-query operations. Theme or sizing changes do not select a new data owner.
 
@@ -81,7 +85,7 @@ A descriptor's optional `subscribe(invalidate)` covers a custom source. The quer
 
 Ordinary A → B → A selection releases A's optional observations and retains its accepted values. The SDK root defaults to **128 inactive query owners**. The dashboard explicitly retains **512** because its shared root includes native renderers, catalogs and editing sources across ten projects. Active observations and entered reads are protected. Access touches normal least-recently-used retention order, including unread descriptors. After an unobserved read settles, the inactive bound applies again. Eviction removes the owner and makes the next use a real initial read. Do not keep using a disposed handle; choose the current owner again from its descriptor. Account/origin/runtime retirement purges private accepted data before notifying observers.
 
-In a browser, dispose a guest's root when the view is actually destroyed, not when its project is merely hidden. For independently mounted iframes needing one document authority, use host-owned editing sessions rather than separate iframe query caches. A query root does not share JavaScript memory across iframes or windows.
+In a browser, dispose a guest's root when the view is actually destroyed, not when its project is merely hidden. Host command queries retain finite results in the dashboard's existing bounded root; arbitrary guest callback queries do not share JavaScript memory across iframes or windows. For independently mounted iframes needing one document authority, use host-owned editing sessions.
 
 Invalidations coalesce into the current read and one latest follow-up. Old completions cannot overwrite a newer accepted value. Pass cancellation to I/O that supports it. Cancellation fences publication but does not mean an uncooperative child stopped: its admission remains occupied until the actual work settles. Read cancellation never cancels an accepted domain write.
 
