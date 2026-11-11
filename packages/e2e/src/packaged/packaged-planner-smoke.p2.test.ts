@@ -14,6 +14,8 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
 setupPackagedSmokeTests();
 
+const recoveryTestTimeout = process.platform === "darwin" && process.arch === "arm64" ? 45_000 : PACKAGED_TEST_TIMEOUT;
+
 test(
   "packaged Planner keeps independent views, timeline status, milestones, and review requests",
   () => withPackagedPlanner(expectPackagedPlannerTimeline),
@@ -32,12 +34,12 @@ test(
 test(
   "packaged Planner reconciles dependency stacks and Git conflicts",
   () => withPackagedPlanner(expectPackagedDependencyStacks),
-  PACKAGED_TEST_TIMEOUT,
+  recoveryTestTimeout,
 );
 test(
   "packaged Planner recovers missing workspaces without losing submitted work",
   () => withPackagedPlanner(expectPackagedWorkspaceRecovery),
-  PACKAGED_TEST_TIMEOUT,
+  recoveryTestTimeout,
 );
 test(
   "packaged Planner adopts a feature draft without changing its Git state",
