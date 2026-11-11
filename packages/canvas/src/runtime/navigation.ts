@@ -75,10 +75,10 @@ export const installFrameNavigation = (send: (message: Omit<FrameMessage, "proto
   document.addEventListener(
     "pointerdown",
     (event) => {
+      dragged = false;
       if (event.button !== 1 && !(space && !control(document.activeElement))) return;
       event.preventDefault();
       event.stopPropagation();
-      dragged = false;
       pan = { id: event.pointerId, x: event.screenX, y: event.screenY };
       (event.target as Element).setPointerCapture(event.pointerId);
     },

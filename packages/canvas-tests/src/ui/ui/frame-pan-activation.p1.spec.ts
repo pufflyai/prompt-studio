@@ -46,3 +46,14 @@ test("a drag-generated pointer activation is suppressed only once", async ({ pag
   await button.click();
   await expect(preview.getByRole("textbox", { name: "New folder name" })).toBeVisible();
 });
+
+// Critical: a new pointer gesture after a pan must not inherit the old drag suppression.
+test("a fresh pointer gesture after a pan activates its control", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/overlays/folder-picker-dialog.canvas.tsx#Folders",
+  );
+  await panWithoutAuxiliaryClick(page, preview);
+  await preview.getByRole("button", { name: "New folder", exact: true }).click();
+  await expect(preview.getByRole("textbox", { name: "New folder name" })).toBeVisible();
+});
