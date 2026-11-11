@@ -56,10 +56,17 @@ const desktopEvidence =
 export const desktopBudgets = (platform = process.platform, arch = process.arch) => {
   const intelMac = platform === "darwin" && arch === "x64";
   const cold = platform === "win32" ? 10000 : 8000;
-  const macWindow = intelMac ? 10000 : 1500;
+  const macWindow = intelMac ? 10000 : 1800;
   return {
     coldStartMs: limit(intelMac ? 28000 : cold, "ms", "2026-10-10", desktopEvidence),
-    startupWindowMs: limit(platform === "darwin" ? macWindow : 1000, "ms", "2026-10-10", desktopEvidence),
+    startupWindowMs: limit(
+      platform === "darwin" ? macWindow : 1000,
+      "ms",
+      platform === "darwin" && !intelMac ? "2026-11-11" : "2026-10-10",
+      platform === "darwin" && !intelMac
+        ? "User-approved 1,800 ms after release verification 42962479744 measured 1,541.6 ms on Apple Silicon."
+        : desktopEvidence,
+    ),
     recoveryMs: limit(500, "ms", "2026-10-10", desktopEvidence),
   };
 };
@@ -93,8 +100,8 @@ export const relayStorageBudget = limit(
 );
 
 export const legacyConversionMacrotaskBudget = limit(
-  1000,
+  1500,
   "ms",
-  "2026-11-07",
-  "PS-1114 acceptance: a macrotask timer runs at least once per second while converting 60,000 legacy records and 80,000 pending frames.",
+  "2026-11-11",
+  "User-approved 1,500 ms after release verification 42962479744 measured 1,066.5 ms; retain the complete legacy conversion workload.",
 );

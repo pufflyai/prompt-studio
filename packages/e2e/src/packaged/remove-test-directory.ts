@@ -1,32 +1,11 @@
 import { lstat, rm } from "node:fs/promises";
-import { runTestCommand } from "../scripts/run-test-command";
+import { runTestCommand, TestCommandError } from "../scripts/run-test-command";
 
-// Reuse the desktop fixtures' Node native traversal from Bun-run packaged tests,
-// with one deletion task at a time and complete removal inside the case.
-// Keep paths literal and let the runner own cancellation of this subprocess.
-const NATIVE_REMOVE = `
-const { rmSync, promises: { rm } } = require("node:fs");
-console.error("PSTDIO_CLEANUP_ENGINE: node " + process.version + " " + process.arch);
-const remove = async () => {
-  const options = { recursive: true, force: true, maxRetries: 5, retryDelay: 100 };
-  const root = process.env.PSTDIO_TEST_CLEANUP_ROOT;
-  if (process.platform !== "win32") {
-    rmSync(root, options);
-    return;
-  }
-  try {
-    // One native pass, without the broken Windows synchronous retry policy.
-    rmSync(root, { recursive: true, force: true });
-    console.log("PSTDIO_CLEANUP_NATIVE_SYNC: completed");
-  } catch (error) {
-    // ADR 0039: temporary handles still need the native async retry contract.
-    console.error("PSTDIO_CLEANUP_ASYNC_RECOVERY: " + error.code);
-    await rm(root, options);
-  }
-};
-remove().catch((error) => {
-  console.log("PSTDIO_CLEANUP_FALLBACK: " + error.message);
-});
+// ADR 0039: transient Windows handles need Node's asynchronous retry contract.
+const ASYNC_REMOVE = `
+require("node:fs/promises").rm(process.env.PSTDIO_TEST_CLEANUP_ROOT, {
+  recursive: true, force: true, maxRetries: 5, retryDelay: 100,
+}).catch((error) => { console.error(error); process.exitCode = 1; });
 `;
 
 export const removeTestDirectory = async (root: string) => {
@@ -37,17 +16,22 @@ export const removeTestDirectory = async (root: string) => {
   if (!info) return;
   if (!info.isDirectory() || info.isSymbolicLink()) return rm(root, { recursive: true, force: true });
   const began = performance.now();
-  const result = await runTestCommand("node", ["-e", NATIVE_REMOVE], {
-    env: { ...process.env, PSTDIO_TEST_CLEANUP_ROOT: root },
-  }).catch((error: unknown) => {
-    // Node is part of CI's toolchain; Bun-only local test runs can still clean up.
-    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") return null;
-    throw error;
-  });
-  if (result?.stdout.trim()) console.log(result.stdout.trim());
-  if (result && !result.stdout.includes("PSTDIO_CLEANUP_FALLBACK:")) {
-    console.log(`Test directory removed with Node native deletion (${Math.round(performance.now() - began)}ms)`);
-    return;
+  const env = { ...process.env, PSTDIO_TEST_CLEANUP_ROOT: root };
+  try {
+    // Own the utility directly so cancellation also stops traversal. Paths stay
+    // literal; Windows expands the quoted environment value only once.
+    if (process.platform === "win32")
+      await runTestCommand(
+        process.env.ComSpec || "cmd.exe",
+        ["/d", "/v:off", "/c", 'rmdir /s /q "%PSTDIO_TEST_CLEANUP_ROOT%"'],
+        { env },
+      );
+    else await runTestCommand("/bin/rm", ["-rf", "--", root], { env });
+  } catch (error) {
+    // Cancellation and signal termination must never start a second traversal.
+    if (!(error instanceof TestCommandError) || error.signal || process.platform !== "win32") throw error;
+    console.error("PSTDIO_CLEANUP_ASYNC_RECOVERY: native removal failed");
+    await runTestCommand("node", ["-e", ASYNC_REMOVE], { env });
   }
-  await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  console.log(`Test directory removed with platform utility (${Math.round(performance.now() - began)}ms)`);
 };
