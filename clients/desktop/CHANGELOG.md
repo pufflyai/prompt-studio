@@ -1,5 +1,13 @@
 # @pstdio/desktop
 
+## 0.47.0
+
+_2026-11-11_
+
+### Patch Changes
+
+- 8de4621: Show desktop recovery promptly after a runtime crash.
+
 ## 0.46.0
 
 _2026-10-31_

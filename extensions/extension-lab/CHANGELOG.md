@@ -1,5 +1,23 @@
 # extension-lab
 
+## 0.47.0
+
+_2026-11-11_
+
+### Minor Changes
+
+- 547e56b: Keep Canvas and Lab state in ordered record fields, migrate retained shared content, and document explicit collaborative text and paged logs.
+
+### Patch Changes
+
+- ee368ab: Open workspace files, linked workspaces and workspace creation through the bundled Workspaces provider while preserving contextual ticket navigation and existing host links.
+- 2b8f949: Keep Kiln controls responsive by drawing the latest scene once per animation frame and cancelling pending GPU work when the viewport closes.
+- 8184397: Keep Kiln controls responsive by coalescing viewport draws and retaining unchanged scene snapshots.
+- 5c1e728: Provide the existing project Home page as a default project-local extension using public navigation, recently opened resources with session status, and setup recovery. Each project owns editable Home source under `.pstdio/extensions/pstdio-home/`; setup preserves its customizations.
+- 93d1e74: Declare extension IDs and official harness SVG logos with Gallery Thumbnails for UI Canvas, optional Agent Reports, Themes, and unlisted Remote Workspaces.
+- ed40a9d: Keep maintained extensions loadable across the existing and upcoming ordered-storage API hosts.
+- 5022989: Keep document saving silent, ticket properties compact, and long dropdown values contained; hide empty review links.
+
 ## 0.46.0
 
 _2026-10-31_
