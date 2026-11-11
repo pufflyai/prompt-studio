@@ -1,4 +1,4 @@
-name: Focused Windows baseline
+name: Focused native baseline
 on:
   workflow_dispatch:
     inputs:
@@ -8,9 +8,24 @@ on:
 permissions:
   contents: read
 jobs:
-  archive:
-    runs-on: windows-latest
-    timeout-minutes: 20
+  packaged:
+    name: Packaged ${{ matrix.scope }} baseline
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - scope: notes
+            os: windows-latest
+            pkg: cli-win-x64
+            file: packaged-cloud-notes-onboarding.p2.test.ts
+            pattern: a downloaded cloud project
+          - scope: composer
+            os: windows-11-arm
+            pkg: cli-win-arm64
+            file: packaged-project-setup-smoke.p1.test.ts
+            pattern: serves the dashboard and API
     steps:
       - uses: actions/checkout@v5
         with:
@@ -22,31 +37,26 @@ jobs:
         with:
           bun-version-file: package.json
       - uses: ./.github/actions/setup-ci-cache
-      - name: Check the unchanged archive contracts once
-        working-directory: scripts
-        run: bun test verify/fresh-install.p0.test.ts verify/api-report-source.p0.test.ts verify/api-report-verification.p0.test.ts --timeout=15000
-  process:
-    runs-on: windows-latest
-    timeout-minutes: 25
-    steps:
-      - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.source_sha }}
-      - uses: actions/setup-node@v5
-        with:
-          node-version: "24.22.1"
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
-      - uses: ./.github/actions/setup-ci-cache
-      - run: bun run build -- --scope pstdio-api --include-dependencies
-      - name: Retain the owning Windows runner prerequisite
-        run: powershell.exe -NoLogo -NoProfile -NonInteractive -Command "@{} | ConvertTo-Json | Out-Null; Add-Type -TypeDefinition 'public static class PromptStudioWarmUp {}'"
-      - name: Check the unchanged process contracts once
-        working-directory: packages/pstdio-api
+          install-strategy: native
+          windows-dev-drive: "true"
+      - name: Build the original packaged prerequisites
         env:
-          CI_PRIORITY: P2
-        run: bun src/test-utils/run-api-tests.ts '--files=["src/features/extensions/process-command.windows.exclusive.p1.test.ts"]'
+          PSTDIO_BUILD_PLATFORM_PKG: ${{ matrix.pkg }}
+        run: bun run --cwd scripts build:all
+      - name: Build the owning E2E prerequisites
+        run: bun run build -- --scope e2e --include-dependencies
+      - name: Check the unchanged packaged contract once
+        working-directory: packages/e2e
+        env:
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/${{ matrix.pkg }}/bin/pstdio.exe
+        run: bun run test:packaged:cli -- src/packaged/${{ matrix.file }} --test-name-pattern '${{ matrix.pattern }}'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: focused-${{ matrix.scope }}-evidence
+          path: packages/e2e/test-results
+          if-no-files-found: warn
   pi:
     runs-on: windows-latest
     timeout-minutes: 10
@@ -65,7 +75,11 @@ jobs:
       - name: Install the original resolved CLI version
         shell: bash
         run: npm install --global --allow-scripts=@earendil-works/pi-coding-agent @earendil-works/pi-coding-agent@1.5.2
-      - name: Retain the cold installed CLI probe first
+      - name: Identify the original Bash-resolved command without warming it
+        shell: bash
+        run: bun -e 'import {resolvePiCommand} from "./extensions/harness-pi/src/cli.ts";console.log(JSON.stringify(resolvePiCommand()));'
+      - name: Retain Bash and the cold installed CLI probe first
+        shell: bash
         working-directory: extensions/harness-pi
         env:
           INSTALLED_CLI_TESTS: "1"
