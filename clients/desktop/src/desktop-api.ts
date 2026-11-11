@@ -52,7 +52,7 @@ export interface PromptStudioDesktopApi {
   setProjectTabs: (state: DesktopProjectTabsState) => Promise<void>;
   setWorkbenchItem: (key: string, value: string | null) => Promise<void>;
   getPerformanceMonitoring: () => Promise<boolean>;
-  retainPerformanceCapture: (id: string) => Promise<void>;
+  retainPerformanceCapture: (id: string, monitoring?: boolean) => Promise<void>;
   releasePerformanceCapture: (id: string) => Promise<void>;
   setPerformanceMonitoring: (enabled: boolean) => Promise<void>;
   getPerformanceSnapshot: () => Promise<PerformanceSnapshot | null>;

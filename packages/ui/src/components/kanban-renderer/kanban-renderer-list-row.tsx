@@ -122,7 +122,11 @@ const buildListRowItem = (item: KanbanRendererListItem, hasChildren: boolean): L
     disabled: action.isDisabled,
     separatorBefore: action.separatorBefore,
     endContent: action.endContent,
-    onAction: action.onClick,
+    runOnSelect: Boolean(action.onSelect),
+    onAction: () => {
+      action.onSelect?.();
+      void action.onClick?.();
+    },
   })),
 });
 

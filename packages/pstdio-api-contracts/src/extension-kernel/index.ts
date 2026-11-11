@@ -77,6 +77,7 @@ export { sessionBrowser, sessionBrowserId } from "./session-browser-refs";
 export { defineSlot } from "./slots";
 export { isFileSourcePosition } from "./source-position";
 export type * from "./types";
+export { DEFAULT_COLLECTION_PAGE_SIZE, MAX_COLLECTION_PAGE_SIZE } from "./types/collection-page";
 export { VIEW_FILTER_CONDITIONS } from "./types/collection-view";
 export { dockedWorkbenchRegions, extensionPanelRegions } from "./types/composition";
 export { DEFAULT_DATA_TABLE_SETTINGS } from "./types/data-table-renderer";

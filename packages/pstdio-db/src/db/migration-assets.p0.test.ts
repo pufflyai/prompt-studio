@@ -4,12 +4,16 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveMigrationsFolder } from "./connection.pglite";
 
-test("prepares runtime migrations without reading schema-generation snapshots", async () => {
+test.each([
+  "../../pstdio-db/drizzle",
+  "/$bunfs/root/../pstdio-db/drizzle",
+  "B:\\~BUN\\root\\..\\pstdio-db\\drizzle",
+])("prepares runtime migrations without schema-generation snapshots from %s", async (prefix) => {
   const root = mkdtempSync(join(tmpdir(), "pstdio-runtime-migrations-"));
   const migration = "SELECT 1;";
   const journal = JSON.stringify({ entries: [{ tag: "0000_initial" }] });
   const embedded = (name: string, content: string) => ({
-    name: `../../pstdio-db/drizzle/${name}`,
+    name: `${prefix}/${name}`,
     size: content.length,
     arrayBuffer: async () => new TextEncoder().encode(content).buffer,
   });

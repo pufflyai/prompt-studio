@@ -37,6 +37,7 @@ export type {
 export {
   accountEvents,
   applyEditingChanges,
+  DEFAULT_COLLECTION_PAGE_SIZE,
   DEFAULT_DATA_TABLE_SETTINGS,
   defineSlot,
   diffEditingState,
@@ -54,6 +55,7 @@ export {
   l10n,
   localContributionIdGrammar,
   localContributionIdPattern,
+  MAX_COLLECTION_PAGE_SIZE,
   normalizeBooleanViewRule,
   packageAsset,
   pagePlaceholderView,
@@ -231,6 +233,7 @@ export {
 export { createTextEditingClient } from "./text-editing-client";
 export type * from "./text-editing-types";
 export { isWebviewCapabilityError, type WebviewCapabilityError } from "./webview-capability-error";
+export type { WebviewCommandQuery, WebviewCommandQueryOptions } from "./webview-command-query";
 export type { WebviewPageClient } from "./webview-page-client";
 export type { WebviewPerformanceClient } from "./webview-performance-client";
 export { createWebviewQueryClient, type WebviewQueryDescriptor } from "./webview-query";

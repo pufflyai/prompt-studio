@@ -86,6 +86,7 @@ export interface RuntimeCommandRecord {
   palette: CommandPaletteContribution[];
   cli?: RuntimeCliContribution;
   automation: boolean;
+  copyResultToClipboard?: boolean;
   mutating: boolean;
   resourceMutation?: import("@pstdio/sdk/extensions").CommandDefinition["resourceMutation"];
   // biome-ignore lint/suspicious/noExplicitAny: handler invoked with extension-specific params

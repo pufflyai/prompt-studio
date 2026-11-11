@@ -77,8 +77,15 @@ export const createEditedTestMatrix = (files: string[], packages: Packages) => {
           stable: !covered,
           quarantine: files.some((file) => quarantined.has(file)),
           suite: "",
-          browser: !["bun", "api", "integration"].includes(group.runner),
+          // Desktop checks drive Electron, never a Playwright browser.
+          browser: !["bun", "api", "integration", "desktop"].includes(group.runner),
           desktop: group.runner === "desktop",
+          // The Playwright image ships browsers and their libraries, so Linux rows download no Ubuntu
+          // packages. Rows stay on the native host their nightly suite uses: desktop configures
+          // Electron's sandbox with sudo, and the packaged CLI suite runs on native toolchain hosts.
+          container:
+            platform.platform === "linux" &&
+            !["bun", "api", "integration", "desktop", "packaged-cli"].includes(group.runner),
         };
       });
     });
@@ -101,6 +108,8 @@ export const createEditedTestMatrix = (files: string[], packages: Packages) => {
         suite: id,
         browser: ["desktop", "workbench", "canvas", "chat", "subnav", "planner"].includes(id),
         desktop: false,
+        // Benchmarks keep the native hosts their budgets were measured on.
+        container: false,
       });
   }
   if (rows.length > 256) throw new Error("Edited tests exceed the matrix limit; split this PR");

@@ -257,8 +257,21 @@ try {
   const updatedProject = retirement
     ? await createInstalledProject(active.page, join(home, "Windows updated project"))
     : project;
+  // Sessions moved from core into a separately installed tool. Updating the host
+  // preserves existing extension choices; install its compatible viewer explicitly.
+  await active.page.evaluate(async (projectId) => {
+    const response = await fetch(`/v1/projects/${projectId}/extensions/install`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${localStorage.getItem("pstdio.browserSession")}`,
+      },
+      body: JSON.stringify({ source: { kind: "catalog", name: "pstdio-session-browser" }, force: true }),
+    });
+    if (!response.ok) throw new Error(`Sessions installation failed: ${response.status} ${await response.text()}`);
+  }, updatedProject.id);
   await openPackagedProject(active.page, updatedProject);
-  if (retirement) await active.page.getByRole("option", { name: "Sessions", exact: true }).click();
+  await active.page.getByRole("option", { name: "Sessions", exact: true }).click();
   // Installed harnesses can replace the empty-state title with account setup.
   await expect(active.page.getByLabel("Main").getByRole("log")).toBeVisible();
   assert.equal(readFileSync(join(projectPath, "persisted.txt"), "utf8"), "Signed Windows update preservation\n");

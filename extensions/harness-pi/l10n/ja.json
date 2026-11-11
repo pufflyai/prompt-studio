@@ -1,4 +1,6 @@
 {
   "harness.pi": "Pi",
-  "params.thinking": "思考"
+  "params.thinking": "思考",
+  "quotas.title": "アカウントの利用上限を確認",
+  "quotas.description": "Pi がアカウントの利用上限情報を提供するか確認します。"
 }

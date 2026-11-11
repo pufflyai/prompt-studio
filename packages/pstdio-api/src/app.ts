@@ -25,6 +25,7 @@ import { validateLegacyAnchors } from "./features/extensions/command-environment
 import { provisionWorkspacesUsingSource } from "./features/extensions/extension-skill-cleanup";
 import { createExtensionWebviewAccess } from "./features/extensions/extension-webview-access";
 import type { RuntimeRouteDeps } from "./features/runtime/routes";
+import { deliverIdleFollowUp } from "./features/sessions/idle-turn";
 import { createSessionImportService } from "./features/sessions/imports/service";
 import { createSessionQueueLifecycle } from "./features/sessions/session-queue-lifecycle";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
@@ -157,10 +158,13 @@ const buildApp = async (
 
   const eventBus = new EventBus({ bufferSize: input.config.sync.eventBufferSize });
   const artifactMountWrites = createArtifactMountWriteLedger();
-  const sessionQueueEntriesService = createSessionQueueService(
-    sessionQueueEntriesDBService,
-    sessionQueueChanged(sessionsDBService, eventBus),
-  );
+  let deliverIdleTurn: (sessionId: string) => Promise<void> = async () => {};
+  const queueChanged = sessionQueueChanged(sessionsDBService, eventBus);
+  const sessionQueueEntriesService = createSessionQueueService(sessionQueueEntriesDBService, async (sessionId) => {
+    await queueChanged(sessionId);
+    // Not awaited: queue changes can run under the scheduling lock that delivery also takes.
+    void deliverIdleTurn(sessionId);
+  });
   const core = createCoreDomainServices({
     getCommandDeps: () => deps,
     db,
@@ -220,6 +224,7 @@ const buildApp = async (
     eventBus,
     ...sessionHooks,
     onCapacityAvailable: (input) => drainSessionQueue(input),
+    onIdleTurn: (sessionId) => deliverIdleTurn(sessionId),
   });
   const settingsService = await createAppSettingsService({
     eventBus,
@@ -307,6 +312,7 @@ const buildApp = async (
   });
 
   drainSessionQueue = (input) => createSessionScheduler(deps).drainQueue(input);
+  deliverIdleTurn = (sessionId) => deliverIdleFollowUp(deps, sessionId);
 
   const close = await startAppLifecycle({
     deps,

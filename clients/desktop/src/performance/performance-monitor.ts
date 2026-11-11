@@ -65,26 +65,37 @@ export class DesktopPerformanceMonitor {
   // Changes run one at a time, so an endpoint never opens while the last one closes.
   #changes: Promise<void> = Promise.resolve();
   #owners = 0;
+  #monitoringOwners = 0;
+  // A monitoring view temporarily opts in without overwriting the saved device
+  // choice. An explicit switch change still takes effect while views are loaded.
+  #enabled: boolean;
 
   constructor(options: PerformanceMonitorOptions) {
     this.#options = options;
+    this.#enabled = options.preference.enabled;
   }
 
   get enabled() {
-    return this.#options.preference.enabled;
+    return this.#enabled;
   }
 
   recordings() {
     return this.#options.recordings?.() ?? null;
   }
 
-  async retainCapture() {
+  async retainCapture(monitoring = false) {
     await this.#change(async () => {
+      const previouslyEnabled = this.enabled;
       this.#owners++;
+      // Project renderers retain passive observers too. Only monitoring views opt
+      // the device in; their count must span every project, not one renderer.
+      if (monitoring) this.#monitoringOwners++;
       try {
+        if (monitoring && this.#monitoringOwners === 1) this.#enabled = true;
         if (this.enabled) await this.#begin();
       } catch (error) {
         this.#owners--;
+        if (monitoring && --this.#monitoringOwners === 0) this.#enabled = previouslyEnabled;
         throw error;
       }
     });
@@ -94,7 +105,10 @@ export class DesktopPerformanceMonitor {
         if (released) return;
         released = true;
         this.#owners--;
-        if (this.#owners === 0) await this.#end();
+        if (monitoring && --this.#monitoringOwners === 0) {
+          this.#enabled = this.#options.preference.enabled;
+        }
+        if (!this.enabled || this.#owners === 0) await this.#end();
       });
   }
 
@@ -107,6 +121,7 @@ export class DesktopPerformanceMonitor {
   setEnabled(enabled: boolean) {
     return this.#change(async () => {
       this.#options.preference.set(enabled);
+      this.#enabled = enabled;
       if (enabled === Boolean(this.#cancel)) return;
       if (enabled) await this.#begin();
       else await this.#end();

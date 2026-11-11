@@ -4,6 +4,30 @@ import { DiffBubble } from "@pstdio/ui/diff";
 import { createWorkbench, type ResourceRef, resourceContextMenuPath } from "../../../core";
 import { resolveTreeListSelection, toTreeListSection } from "./tree-list-adapter";
 
+test("resource rows retain gesture-dependent actions through menu adaptation", () => {
+  const workbench = createWorkbench();
+  let calls = 0;
+  workbench.commands.registerCommand(
+    { id: "note.copy", label: "Copy", copyResultToClipboard: true },
+    {
+      execute() {
+        calls++;
+      },
+    },
+  );
+  workbench.layout.registerMenuItem(resourceContextMenuPath("note"), { commandId: "note.copy" });
+  const section = toTreeListSection(
+    { id: "notes", nodes: [{ id: "a", label: "A", resource: { type: "note", id: "a" } }] },
+    {},
+    { workbench },
+  );
+  const action = section.nodes[0]?.contextMenuItems?.[0];
+  expect(action?.runOnSelect).toBe(true);
+  action?.onAction?.();
+  expect(calls).toBe(1);
+  workbench.dispose();
+});
+
 test("offscreen resource rows defer menu resolution until requested", () => {
   const workbench = createWorkbench();
   let availabilityReads = 0;

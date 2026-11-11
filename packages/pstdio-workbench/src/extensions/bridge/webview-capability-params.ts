@@ -30,6 +30,23 @@ const command = z.object({
   resource: extensionResourceRefSchema.optional(),
   metadata: jsonObjectSchema.optional(),
 });
+const commandQuery = z.object({
+  owner: identifier,
+  requestId: identifier,
+  command: command.omit({ metadata: true }).strict(),
+  dependsOn: z.array(identifier).optional(),
+  dependency: z
+    .object({
+      projectId: identifier.optional(),
+      extensionId: identifier.optional(),
+      recordId: identifier.optional(),
+      recordIds: z.array(identifier).optional(),
+      resourceKey: identifier.optional(),
+      resourceId: identifier.optional(),
+      fields: z.array(identifier).optional(),
+    })
+    .optional(),
+});
 const streamId = { streamId: identifier };
 const scope = z.object({
   scope: z.enum(["default", "user", "project", "workspace", "extension", "session"]),
@@ -73,6 +90,10 @@ const schemas = {
     z.object({ operation: z.literal("execute"), resource: extensionResourceRefSchema, key: identifier }),
   ]),
   "commands.execute": command,
+  "commands.query": z.discriminatedUnion("operation", [
+    commandQuery.extend({ operation: z.enum(["observe", "read", "refresh"]) }).strict(),
+    z.strictObject({ operation: z.literal("close"), owner: identifier, requestId: identifier }),
+  ]),
   "editing.session": webviewEditingSessionParamsSchema,
   "editing.text": textEditingRequestSchema,
   "commands.stream": z.discriminatedUnion("operation", [

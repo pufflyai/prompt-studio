@@ -59,9 +59,37 @@ The script runs `bun test --conditions production --tsconfig-override tsconfig.a
 
 Build the affected package's dependencies first when its checks load compiled exports. Changes to packaged runtime behavior, assets, or file inclusion also require the packaged checks in the [testing guidance](../../guidance/0005-testing.md#5-packaged-files). Documentation-reference-only edits do not.
 
-During implementation, run targeted tests. Before marking a draft PR ready, follow [Finishing a pull request](../../guidance/0004-ci.md#1-finishing-a-pull-request), including the full test run after integrating main for behavioral features and meaningful regressions. Routine copy, spacing, cosmetic and documentation changes require only relevant scoped checks, without a full command or browser runs. Explicit user-requested validation still applies. Run full validation only when explicitly requested. For that case, `bun run validate` checks changesets, the lockfile, formatting, package boundaries, extension API versions, and the extension API report, then builds before translation checks, lint, and tests. `bun run test` runs unit packages through Lerna, then the E2E script, CLI, UI, Vite terminal, and separate Canvas suites. `bun run test:e2e` runs app checks; `bun run test:canvas` runs component server checks and browser interactions. Lerna excludes both browser packages from its unit pass. Packaged and desktop tests run separately in CI.
+During implementation, run targeted tests. Before marking a draft PR ready, follow [Finishing a pull request](../../guidance/0004-ci.md#1-finishing-a-pull-request) and the [full-suite validation cycle](../../guidance/0005-testing.md#9-full-suite-validation-cycle). Settle known fixes before a full run. Integrate main only for merge conflicts or more than 10 incoming commits, following the linked CI rule. Routine copy, spacing, cosmetic and documentation changes require only relevant scoped checks, without a full command or browser runs. Explicit user-requested validation still applies. Run full validation only when explicitly requested. For that case, `bun run validate` checks changesets, the lockfile, formatting, package boundaries, extension API versions, and the extension API report, then builds before translation checks, lint, and tests. `bun run test` runs unit packages through Lerna, then the E2E script, CLI, UI, Vite terminal, and separate Canvas suites. `bun run test:e2e` runs app checks; `bun run test:canvas` runs component server checks and browser interactions. Lerna excludes both browser packages from its unit pass. Packaged and desktop tests run separately in CI.
 
-The complete local test run schedules one workspace suite at a time. Suites such as the API already own worker pools; running several suites together multiplies those pools and can starve native CLI fixtures. Priority and CI commands retain their own scheduling. The complete local run may take longer because workspace suites do not overlap.
+The complete local test run schedules one workspace suite at a time. Suites such as the API already own worker pools; running several suites together multiplies those pools and can starve native CLI fixtures. Coordinate across agents on the shared machine, including separate package verifiers, builds and benchmarks. Priority and CI commands retain their own scheduling. The complete local run may take longer because workspace suites do not overlap.
+
+## Complete a full test run without stopping at the first failure
+
+The shorthand `bun run test` uses Lerna's default bail and chains later phases with `&&`. A failure can therefore leave most of the required workload unrun. For full validation, run the following phases individually, in order, retaining each exit status and log. Continue after test failures; do not join the commands with `&&` or use a shell that exits after the first failed command.
+
+```sh
+CI_PRIORITY=P2 bun x --no-install lerna run test --no-bail --concurrency 1 --ignore e2e --ignore canvas-tests
+CI_PRIORITY=P2 bun run build -- --scope e2e --include-dependencies --no-bail --concurrency 1
+CI_PRIORITY=P2 bun run --cwd packages/e2e test:scripts
+CI_PRIORITY=P2 bun run --cwd packages/e2e test:cli
+CI_PRIORITY=P2 bun run --cwd packages/e2e test:ui
+CI_PRIORITY=P2 bun run --cwd packages/e2e test:vite-terminal
+CI_PRIORITY=P2 bun x --no-install lerna run build:previews --scope canvas-tests --no-bail --concurrency 1
+```
+
+Run the Canvas browser phase only after its preview build above succeeds on the current source. The `test:canvas` shorthand does not guard this dependency when collecting failures under P2.
+
+```sh
+CI_PRIORITY=P2 bun run --cwd packages/canvas-tests test:browser
+```
+
+This covers the normal full-test workload without dropping later independent phases after a failure. P2 disables the P1 fail-fast behavior inside maintained runners; it does not shorten the workload or change time limits. If a build fails, do not run dependent tests against old output. Record the blocked phases and finish any independent phases. A nonzero result or an unrun required phase means the full run did not pass, even if the last command succeeds. Required packaged, desktop and benchmark scopes remain separate and follow the same repair cycle.
+
+Collect all failures before repairing them as a batch. During repairs, select only failed cases/files and new regressions through the owning runner. Run blocked or unrun scopes once their prerequisites are repaired. For example, the API's `--files` option and Playwright's file selection/`--grep` avoid rerunning successful suites. Keep whole benchmark workloads and inseparable fixtures intact. Preserve the first failure; a later pass without a cause repair does not resolve it.
+
+Once the failed set is green, repeat the complete phase sequence once on the final source. New failures return to the focused repair loop. A complete green final run ends the cycle. Do not push each small repair separately or manually restart successful CI jobs; submit the consolidated fix for normal latest-head CI.
+
+## Browser and API setup
 
 Install browser dependencies before running browser tests:
 
@@ -242,7 +270,7 @@ Windows packaged-toolchain CI opts into a ReFS Dev Drive owned by the job and se
 
 App reports and traces are under `packages/e2e/playwright-report` and `packages/e2e/test-results`; component reports use those folder names under `packages/canvas-tests`. Desktop results are under `clients/desktop/test-results`. Each packaged test home attaches complete redacted copies of `logs.jsonl` and `desktop-runtime.log` as files before removal. Startup errors include the last 50 runtime output lines. Electron traces start before the lifecycle-page wait, after the sidecar startup wait has protected process isolation; an unavailable attachment states why a trace could not start or be saved. Missing evidence warns without replacing the original build or test failure.
 
-Linux UI, CLI, and packaged/Vite jobs use the official `mcr.microsoft.com/playwright:v1.60.0-noble` image. They run as user 1001, matching the owner of GitHub's mounted home directory; Firefox rejects a root process using that user's home. The image includes browser binaries and system libraries, so these jobs do not install Ubuntu packages or browsers during setup. Keep the image version aligned with the installed Playwright version when updating dependencies. Desktop jobs still run on their native Linux and macOS runners.
+Linux UI, CLI, and packaged/Vite jobs use the official `mcr.microsoft.com/playwright:v1.60.0-noble` image. They run as user 1001, matching the owner of GitHub's mounted home directory; Firefox rejects a root process using that user's home. The image includes browser binaries and system libraries, so these jobs do not install Ubuntu packages or browsers during setup. Keep the image version aligned with the installed Playwright version when updating dependencies. Edited-test rows on Linux for the app, CLI, packaged-browser, Vite, component and browser-helper runners use the same image, matching where their nightly suites run. Desktop jobs still run on their native Linux and macOS runners because they configure Electron's sandbox with `sudo`. They drive Electron rather than a Playwright browser, so they install no browsers. Packaged CLI rows run on the native toolchain hosts their nightly suite uses. Those rows, macOS browser rows, and browser benchmark suites install the browsers they use.
 
 The browser container installs the root manifest's Bun version with `scripts/ci/setup-container-bun.ts`. This temporary bootstrap uses Bun's official registry archive because the normal setup action requires `unzip`, which the image lacks. ADR 0026 describes when to remove it.
 

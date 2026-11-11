@@ -157,7 +157,9 @@ content `revision`, and a `fields` object; it does not include the complete body
 asset or shared content. Unset selected fields are null. Omit `fields` to select
 all declared fields. Use `readMany` when complete selected records are needed.
 
-The page limit is 1–100 and defaults to 100. SQL filters and sorts before the
+The page limit is 1–500 and defaults to 100. The host exposes these bounds as
+`storageLimits.queryLimit` and `storageLimits.queryDefaultLimit`. SQL filters
+and sorts before the
 limit and field materialization. Sorting uses the definition's order, with nulls
 last in either direction and a final ascending complete-record-ID tie breaker.
 Strings use Unicode code point order, independent of locale. Equality keys use
