@@ -4,8 +4,7 @@ import { basename, join, resolve } from "node:path";
 import { localReviewEnvironment, readReviewSource } from "./local-review-source";
 import { runCiChecks } from "./run-ci-checks";
 
-const localReviewAllowanceMs = 15 * 60 * 1000;
-const cleanupReserveMs = 15 * 1000;
+const localReviewTargetMs = 15 * 60 * 1000;
 
 export const runLocalReview = async (root: string, base: string, additionalTests: string[], list = false) => {
   const started = Date.now();
@@ -29,8 +28,8 @@ export const runLocalReview = async (root: string, base: string, additionalTests
   process.on("SIGINT", interrupt);
   process.on("SIGTERM", interrupt);
   const timer = setTimeout(
-    () => controller.abort("deadline"),
-    Math.max(0, localReviewAllowanceMs - cleanupReserveMs - (Date.now() - started)),
+    () => console.warn("Local review exceeded the 15-minute target; continuing every selected check to completion."),
+    Math.max(0, localReviewTargetMs - (Date.now() - started)),
   );
   const phases: { id: string; elapsedMs: number; outcome: string; results: unknown; command: string[] }[] = [];
   let error: string | undefined;
@@ -66,7 +65,8 @@ export const runLocalReview = async (root: string, base: string, additionalTests
           mergeBase: source.mergeBase,
           startedAt: new Date(started).toISOString(),
           elapsedMs: Date.now() - started,
-          allowanceMs: localReviewAllowanceMs,
+          targetMs: localReviewTargetMs,
+          exceededTarget: Date.now() - started > localReviewTargetMs,
           outcome: outcome(),
           reason: controller.signal.reason ?? error,
           directory,

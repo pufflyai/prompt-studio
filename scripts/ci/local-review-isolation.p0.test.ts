@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, spyOn, test } from "bun:test";
 import { execFileSync } from "node:child_process";
 import {
   cpSync,
@@ -68,10 +68,11 @@ test("dirty source is rejected before scratch setup begins", async () => {
   }
 });
 
-test("two review runs use private checkouts, dependencies, homes and evidence", async () => {
+test("two over-target review runs finish with private checkouts, dependencies, homes and evidence", async () => {
   if (process.platform === "win32") return;
   const { root, git, commit } = fixture();
   const scratch: string[] = [];
+  const clock = spyOn(Date, "now");
   try {
     // Real tiny workspace, with no downloads or application builds.
     const benchmarkPath = join(root, "packages/benchmarks/package.json");
@@ -101,7 +102,12 @@ test("two review runs use private checkouts, dependencies, homes and evidence", 
     const base = git("rev-parse", "HEAD");
     writeFileSync(join(root, "README.md"), "# Changed documentation\n");
     commit();
-    expect(await Promise.all([runLocalReview(root, base, []), runLocalReview(root, base, [])])).toEqual([0, 0]);
+    let now = Date.now();
+    clock.mockImplementation(() => now);
+    const runs = [runLocalReview(root, base, []), runLocalReview(root, base, [])];
+    // Advance elapsed time past the target while both real executions are setting up.
+    now += 16 * 60 * 1000;
+    expect(await Promise.all(runs)).toEqual([0, 0]);
     const reports = readdirSync(join(root, "test-results/local-review")).map((file) =>
       JSON.parse(readFileSync(join(root, "test-results/local-review", file), "utf8")),
     );
@@ -109,6 +115,7 @@ test("two review runs use private checkouts, dependencies, homes and evidence", 
     expect(reports).toHaveLength(2);
     expect(reports[0].source).not.toBe(reports[1].source);
     expect(reports.every((report) => report.outcome === "local_passed")).toBe(true);
+    expect(reports.every((report) => report.exceededTarget && report.elapsedMs > report.targetMs)).toBe(true);
     for (const report of reports) {
       const observed = JSON.parse(readFileSync(join(report.directory, "runtime-home/fixture.json"), "utf8"));
       expect(realpathSync(observed.cwd)).toBe(realpathSync(join(report.source, "scripts")));
@@ -118,6 +125,7 @@ test("two review runs use private checkouts, dependencies, homes and evidence", 
     expect(readFileSync(join(root, "README.md"), "utf8")).toBe("# Changed documentation\n");
     expect(git("status", "--porcelain")).toBe("");
   } finally {
+    clock.mockRestore();
     // Failed runs also retain their report, allowing their private fixture paths to be removed.
     const reportDirectory = join(root, "test-results/local-review");
     try {

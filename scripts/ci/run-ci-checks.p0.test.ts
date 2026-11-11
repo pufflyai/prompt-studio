@@ -202,7 +202,7 @@ test("the CLI queries P1 peers only when explicitly requested", async () => {
   }
 });
 
-test("an aborted local allowance starts no commands and reports them unfinished", async () => {
+test("an interrupted local run starts no commands and reports them unfinished", async () => {
   const controller = new AbortController();
   controller.abort();
   const result = await runCiChecks([{ id: "pending", command: [process.execPath, "-e", "process.exit(0)"] }], {
@@ -213,7 +213,7 @@ test("an aborted local allowance starts no commands and reports them unfinished"
   expect(result.results[0]?.outcome).toBe("cancelled");
 });
 
-test("deadline cancellation stops an active child and does not launch the next check", async () => {
+test("explicit cancellation stops an active child and does not launch the next check", async () => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 100);
   try {

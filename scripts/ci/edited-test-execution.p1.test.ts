@@ -171,6 +171,7 @@ test("edited quarantine selection executes and verifies only the requested regis
   const root = await mkdtemp(join(tmpdir(), "edited-quarantine-selection-"));
   try {
     await copyCiRuntime(root);
+    await mkdir(join(root, "node_modules"), { recursive: true });
     const typescript = import.meta.resolve("typescript");
     const typescriptFile = typescript.startsWith("file:") ? fileURLToPath(typescript) : typescript;
     await symlink(

@@ -8,10 +8,10 @@ export const copyCiRuntime = async (root: string) => {
   });
   // Priority planning reads the shared suite registry, including in these isolated checkouts.
   const benchmarkPackage = join(import.meta.dirname, "../../packages/benchmarks");
-  const installed = join(root, "node_modules/pstdio-benchmarks");
-  await mkdir(installed, { recursive: true });
-  await copyFile(join(benchmarkPackage, "package.json"), join(installed, "package.json"));
-  await cp(join(benchmarkPackage, "src"), join(installed, "src"), {
+  const source = join(root, "packages/benchmarks");
+  await mkdir(source, { recursive: true });
+  await copyFile(join(benchmarkPackage, "package.json"), join(source, "package.json"));
+  await cp(join(benchmarkPackage, "src"), join(source, "src"), {
     recursive: true,
     filter: (path) => !path.endsWith(".test.ts"),
   });

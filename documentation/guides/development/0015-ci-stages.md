@@ -31,7 +31,7 @@ Rules:
 
 ### Run tests locally
 
-For review readiness, use the [15-minute targeted local review command](0002-testing.md#targeted-local-review). It replaces the mandatory full local suite. Required PR, queue and release CI coverage remains unchanged.
+For review readiness, use the [targeted local review command](0002-testing.md#targeted-local-review). It replaces the mandatory full local suite. Required PR, queue and release CI coverage remains unchanged.
 
 From the repository root:
 
