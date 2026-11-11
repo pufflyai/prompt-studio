@@ -1,112 +1,52 @@
-name: PS-202 native bootstrap phase diagnostic
+name: PS-202 native failed scopes
 on:
   workflow_dispatch:
 permissions:
   contents: read
-  actions: read
 jobs:
-  startup:
+  failed_scopes:
     runs-on: macos-15
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: 8ac8b63703c82871391655049331cb5f304ac072
+          ref: 6d9cf4901ce08b81dd30e4210363ba149c310104
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
       - uses: actions/setup-node@v5
         with:
           node-version: "24.22.1"
-      - name: Install candidate dependencies
+      - name: Install exact repaired-source dependencies
         run: bun scripts/ci/install-native-dependencies.ts
       - name: Build desktop test dependencies
         run: bun run build -- --scope @pstdio/desktop --include-dependencies
-      - uses: actions/download-artifact@v4
-        with:
-          name: validation-app-darwin-arm64
-          run-id: 42962479744
-          github-token: ${{ github.token }}
-      - name: Restore the exact signed candidate
-        env:
-          SOURCE_SHA: 7ddf324d55bec0d61d2bf43ca763acdacd94ef01
-          ARTIFACT_RUN_ID: 42962479744
-          ARTIFACT_ATTEMPT: "1"
-          CHANNEL: stable
-        run: |
-          bun scripts/ci/production-payload.ts check
-          tar -xzf validation-app-darwin-arm64.tar.gz -C clients/desktop
-      - name: Attribute native bootstrap phases without changing monitoring
+      - name: Check the original full legacy backlog workload
+        id: storage
+        continue-on-error: true
         run: |
           mkdir -p clients/desktop/test-results
-          cat > "$RUNNER_TEMP/ps202-bootstrap-phases.ts" <<'PS202'
-          import{spawn}from'node:child_process';
-          import{mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync,cpSync,copyFileSync}from'node:fs';
-          import{join,resolve}from'node:path';
-          import{tmpdir}from'node:os';
-          import{createRequire}from'node:module';
-          const repo=resolve(process.argv[2]??process.cwd());
-          const desktop=join(repo,'clients/desktop');
-          const require=createRequire(join(desktop,'package.json'));
-          const electron=require('electron') as string;
-          const{chromium}=await import(join(desktop,'node_modules/@playwright/test/index.mjs'));
-          const{stopPackagedProcess}=await import(join(desktop,'src/testing/stop-packaged-process.ts'));
-          const{stopPackagedRuntime}=await import(join(desktop,'src/testing/stop-packaged-runtime.ts'));
-          const root=mkdtempSync(join(tmpdir(),'ps202-bootstrap-phases-'));
-          const home=join(root,'home'),userdata=join(home,'electron-user-data');mkdirSync(userdata,{recursive:true});
-          writeFileSync(join(userdata,'performance-monitoring.json'),'{"enabled":true}');
-          const resources=join(desktop,'out/Prompt Studio-darwin-arm64/Prompt Studio.app/Contents/Resources');
-          const version=JSON.parse(readFileSync(join(resources,'bin/pstdio.manifest.json'),'utf8')).version;
-          const phase=(name:string)=>`console.log(JSON.stringify({diagnostic:"ps202-bootstrap",phase:${JSON.stringify(name)},at:Date.now()}));`;
-          const patches=new Map<string,Array<[string,string]>>();
-          patches.set(join(desktop,'src/main.ts'),[
-           ['const logger =',phase('modules-ready')+'\nconst logger ='],
-           ['const bootstrap = async () => {','const bootstrap = async () => {\n'+phase('bootstrap-ready')],
-           ['  const preloadPath =',phase('menu-ready')+'\n  const preloadPath ='],
-           ['  const { window } = windowController;',phase('controller-ready')+'\n  const { window } = windowController;'],
-           ['  void performanceMonitor.start();',phase('ipc-ready')+'\n  void performanceMonitor.start();\n'+phase('monitor-start-returned')],
-          ]);
-          patches.set(join(desktop,'src/windows/window-controller.ts'),[
-           ['    const workbenchSession = session.fromPartition',phase('session-start')+'\n    const workbenchSession = session.fromPartition'],
-           ['    await workbenchSession.protocol.handle',phase('session-ready')+'\n    await workbenchSession.protocol.handle'],
-           ['    return new DesktopWindowController',phase('protocol-ready')+'\n    return new DesktopWindowController'],
-           ['    this.window.on("focus",',phase('native-window-created')+'\n    this.window.on("focus",'],
-           ['if (this.window.webContents.getURL() !== this.lifecycleUrl) await this.window.loadURL(this.lifecycleUrl);','if (this.window.webContents.getURL() !== this.lifecycleUrl) { '+phase('lifecycle-load-start')+' await this.window.loadURL(this.lifecycleUrl); '+phase('lifecycle-load-end')+' }'],
-          ]);
-          patches.set(join(desktop,'src/performance/create-desktop-performance-monitor.ts'),[
-           ['readMetrics: () => app.getAppMetrics(),','readMetrics: () => { '+phase('metrics-start')+' const metrics = app.getAppMetrics(); '+phase('metrics-end')+' return metrics; },'],
-           ['return await openPerformanceEndpoint(resolvePstdioPerformanceEndpoint(), read);','const endpoint = await openPerformanceEndpoint(resolvePstdioPerformanceEndpoint(), read); '+phase('endpoint-ready')+' return endpoint;'],
-          ]);
-          patches.set(join(desktop,'src/performance/create-performance-capture.ts'),[
-           ['  const recorder = await createPerformanceRecording(input.recordingDirectory);',phase('recording-start')+'\n  const recorder = await createPerformanceRecording(input.recordingDirectory);\n'+phase('recording-ready')],
-          ]);
-          const result=await Bun.build({entrypoints:[join(desktop,'src/main.ts')],outdir:root,target:'node',format:'esm',external:['electron'],define:{'process.resourcesPath':JSON.stringify(resources)},plugins:[{name:'diagnostic-bootstrap-phases',setup(build){build.onLoad({filter:/\.ts$/},async args=>{const replacements=patches.get(args.path);if(!replacements)return;let source=await Bun.file(args.path).text();for(const[from,to]of replacements){if(!source.includes(from))throw Error('Diagnostic target changed: '+from);source=source.replace(from,to)}if(args.path===join(desktop,'src/main.ts'))source=source.replaceAll('app.getVersion()',JSON.stringify(version));return{contents:source,loader:'ts'};});}}]});
-          if(!result.success)throw new AggregateError(result.logs,'Diagnostic build failed');
-          cpSync(join(desktop,'dist/renderer'),join(root,'renderer'),{recursive:true});copyFileSync(join(desktop,'dist/preload.cjs'),join(root,'preload.cjs'));
-          const startedAt=Date.now();console.log({diagnostic:'ps202-bootstrap',phase:'spawn',at:startedAt,root,version,monitoring:true,unsignedSourceDiagnostic:true});
-          const env={...process.env,HOME:home,PSTDIO_HOME:home,PSTDIO_LOG_PATH:join(home,'logs.jsonl')};delete env.ELECTRON_RUN_AS_NODE;
-          const child=spawn(electron,[join(root,'main.js'),'--remote-debugging-port=0','--user-data-dir='+userdata],{cwd:home,env,detached:true,stdio:['ignore','pipe','pipe']});
-          let stdout='',stderr='';const endpoint=Promise.withResolvers<string>();child.stdout.on('data',b=>{stdout+=b;process.stdout.write(b)});child.stderr.on('data',b=>{stderr+=b;const m=stderr.match(/DevTools listening on (ws:\/\/\S+)/);if(m)endpoint.resolve(m[1]!)});
-          let browser;
-          try{
-           const url=await endpoint.promise;
-           while(!existsSync(join(home,'runtime.json'))){if(Date.now()-startedAt>=30_000)throw Error('Existing 30-second diagnostic bound exhausted');await Bun.sleep(100)}
-           browser=await chromium.connectOverCDP(url);
-           const page=browser.contexts()[0].pages().find(p=>p.url().startsWith('pstdio://lifecycle/'));if(!page)throw Error('Lifecycle page missing');
-           console.log({diagnostic:'ps202-bootstrap',phase:'renderer-timings',at:Date.now(),startedAt,performance:await page.evaluate(()=>({timeOrigin:performance.timeOrigin,entries:performance.getEntries().map(e=>e.toJSON())}))});
-          }finally{
-           await stopPackagedProcess(child);await browser?.close().catch(()=>{});
-           const descriptor=join(home,'runtime.json');if(existsSync(descriptor))await stopPackagedRuntime(JSON.parse(readFileSync(descriptor,'utf8')).pid);
-           await Bun.write(join(root,'stdout.log'),stdout);await Bun.write(join(root,'stderr.log'),stderr);
-           console.log({diagnostic:'ps202-bootstrap',phase:'disposed',at:Date.now(),root});
-          }
-
-          PS202
-          bun "$RUNNER_TEMP/ps202-bootstrap-phases.ts" "$GITHUB_WORKSPACE" 2>&1 | tee clients/desktop/test-results/ps202-bootstrap-phases.log
-      - name: Preserve diagnostic traces and original benchmark outcomes
+          bun packages/pstdio-db/src/services/extension-storage/ordered-legacy-backlog.p3.bench.ts 2>&1 | tee clients/desktop/test-results/ps202-legacy-backlog.log
+      - name: Package the repaired source with normal native hooks
+        id: package
+        working-directory: clients/desktop
+        run: bun run package
+      - name: Check original startup workload and launch order without instrumentation
+        id: startup
+        working-directory: clients/desktop
+        run: bunx --no-install playwright test --config playwright.benchmark.config.ts src/e2e/packaged-launch.p3.bench.ts
+      - name: Require both repaired scopes to pass
+        if: always()
+        env:
+          STORAGE: ${{ steps.storage.outcome }}
+          PACKAGE: ${{ steps.package.outcome }}
+          STARTUP: ${{ steps.startup.outcome }}
+        run: |
+          bun -e 'for (const scope of ["STORAGE", "PACKAGE", "STARTUP"]) if (process.env[scope] !== "success") throw Error(scope + " did not pass: " + process.env[scope]);'
+      - name: Preserve all failed-scope outcomes
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ps202-native-startup-diagnostic
+          name: ps202-native-failed-scopes
           path: clients/desktop/test-results
           if-no-files-found: error
