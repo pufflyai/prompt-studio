@@ -164,15 +164,16 @@ test("browse marks only sessions changed since opening and clears them on reopen
 
 test("attention changes do not announce conversation changes", async () => {
   const session = { id: "s", title: "Session", updatedAt: "2026-11-10T10:00:00Z" } as ExtensionSession;
-  const events: EventRef[] = [];
+  const events: (string | EventRef)[] = [];
   const ctx = makeCommandContext({
     storage: createMemoryStorage({ indexes: [sessionAttentionIndex] }),
     params: {},
     overrides: {
-      sessions: { get: async () => session },
+      sessions: { get: async () => session as never },
       events: {
         emit: async (event) => {
           events.push(event);
+          return { delivered: 0 };
         },
       },
     },
@@ -182,5 +183,7 @@ test("attention changes do not announce conversation changes", async () => {
   await markSessionSeen(ctx, session);
   expect(events).toHaveLength(3);
   expect(events).not.toContainEqual(viewDataEvents.sessionsChanged);
-  expect(events.every((event) => event.extensionId === "pstdio.pstdio-session-browser")).toBe(true);
+  expect(
+    events.every((event) => typeof event !== "string" && event.extensionId === "pstdio.pstdio-session-browser"),
+  ).toBe(true);
 });
