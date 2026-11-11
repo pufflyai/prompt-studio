@@ -49,9 +49,9 @@ export const removeTestDirectory = async (root: string) => {
       const drain = async () => {
         while (next < names.length) await removeNativeDirectory(join(extensions, names[next++]!));
       };
-      // Installed packages are independent trees. Bound deletion to two direct,
-      // case-owned utilities and settle both before deleting their parent.
-      const outcomes = await Promise.allSettled([drain(), drain()]);
+      // Installed packages are independent trees. Bound deletion to four direct,
+      // case-owned utilities and settle all before deleting their parent.
+      const outcomes = await Promise.allSettled(Array.from({ length: Math.min(4, names.length) }, drain));
       const failures = outcomes.flatMap((outcome) => (outcome.status === "rejected" ? [outcome.reason] : []));
       if (failures.length) throw new AggregateError(failures, "Installed extension cleanup failed");
     }

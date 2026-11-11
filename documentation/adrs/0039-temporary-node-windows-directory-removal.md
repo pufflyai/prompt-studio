@@ -71,12 +71,16 @@ not prove completion on a hosted runner.
 The corrected Windows utility invocation in scoped run43002988593 still reached
 cleanup at23.244seconds and exhausted30seconds before deletion completed. Partition
 only the owned home's installed `extensions` directory into independent immediate
-children and remove at most two concurrently, then remove the remaining home.
+children and remove at most four concurrently, then remove the remaining home.
 The parent directory must be a real directory, never a junction or symbolic link.
-Do not enumerate extension targets or follow their links. Both direct child
-processes remain registered with the test's cancellation owner; await both outcomes
+Do not enumerate extension targets or follow their links. All direct child
+processes remain registered with the test's cancellation owner; await all outcomes
 before returning or removing the rest of the home. This changes deletion scheduling,
-not fresh installation, test operations, assertions or time limits. POSIX retains
+not fresh installation, test operations, assertions or time limits. Two removals
+still exhausted30seconds in run43004628763: setup/assertions took26.547seconds
+and runtime shutdown completed at26.665seconds, leaving only3.335seconds for
+removal. Four independent tasks keep ownership bounded while reducing this last
+serial I/O phase; native qualification remains required. POSIX retains
 its qualified single traversal.
 
 The command-discovery fixture uses the same asynchronous removal policy after
