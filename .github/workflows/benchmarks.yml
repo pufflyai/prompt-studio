@@ -1,38 +1,63 @@
-name: Benchmarks
-run-name: Benchmarks ${{ inputs.release_tag || inputs.commits }} on ${{ inputs.platforms }}
-
-# Every run measures each given commit and suite once on the same runner.
-# The Performance pages in the pstdio-dev extension start these runs and read their artifacts.
+name: Scoped final release failures
 on:
   workflow_dispatch:
-    inputs:
-      commits:
-        description: Commits, branches, or tags separated by commas. The first one is the base.
-        required: true
-      suites:
-        description: Suite ids separated by commas. Empty runs every suite.
-        default: ""
-      platforms:
-        description: Platforms separated by commas (linux-x64, darwin-arm64, darwin-x64, win32-x64).
-        default: linux-x64
-      samples:
-        description: Executions per commit and suite. Must be 1; CI never repeats tests.
-        default: "1"
-      release_tag:
-        description: Release these results belong to. The release workflow sets it after publishing; it only names the run.
-        default: ""
-
 permissions:
   contents: read
-
+  actions: read
 jobs:
-  plan:
+  cloud:
+    name: Cloud eight-replacement catch-up
     runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      include: ${{ steps.plan.outputs.include }}
-      checkouts: ${{ steps.plan.outputs.checkouts }}
-      samples: ${{ steps.plan.outputs.samples }}
+    timeout-minutes: 18
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble
+      options: --user 1001 --init --ipc=host
+    env:
+      BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+      E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+      CI_PRIORITY: P2
+      CI_PROFILE: production
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24.22.1"
+      - name: Setup Bun
+        run: node scripts/ci/setup-container-bun.ts
+      - uses: ./.github/actions/setup-ci-cache
+        with:
+          profile: playwright
+      - name: Build test dependencies
+        run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
+      - name: Run only failed Cloud scenario
+        env:
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio
+        run: bun run --cwd packages/e2e test:packaged:browser src/packaged/packaged-cloud-phase-one.p2.spec.ts --grep 'catches up after eight trimmed replacements'
+      - name: Preserve Cloud evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps1160-cloud
+          path: |
+            packages/e2e/test-results
+            packages/e2e/playwright-report
+            test-results
+          if-no-files-found: warn
+  native:
+    name: ${{ matrix.lane }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {lane: planner-cold-open, os: ubuntu-24.04}
+          - {lane: planner-recovery, os: macos-15}
+    env:
+      CI_PRIORITY: P2
+      E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio
     steps:
       - uses: actions/checkout@v5
         with:
@@ -40,142 +65,30 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-      # One job per platform and suite: suites run in parallel, and one slow or broken suite
-      # cannot hold back or fail the others.
-      - name: Resolve commits, platforms, and suites
-        id: plan
-        env:
-          COMMITS: ${{ inputs.commits }}
-          PLATFORMS: ${{ inputs.platforms || 'linux-x64' }}
-          SUITES: ${{ inputs.suites }}
-          SAMPLES: ${{ inputs.samples }}
-        run: |
-          set -euo pipefail
-          if [ "${SAMPLES:-1}" != "1" ]; then
-            echo "CI executes each benchmark once; samples must be 1" >&2
-            exit 1
-          fi
-          checkouts='[]'
-          IFS=',' read -ra refs <<< "$COMMITS"
-          for ref in "${refs[@]}"; do
-            [ -n "$ref" ] || continue
-            git fetch --quiet origin "$ref" 2>/dev/null || true
-            sha=$(git rev-parse --verify "$ref^{commit}" 2>/dev/null || git rev-parse --verify "origin/$ref^{commit}")
-            # Two names for one commit would record every sample twice.
-            checkouts=$(jq -c --arg sha "$sha" --arg ref "$ref" 'if any(.sha == $sha) then . else . + [{sha: $sha, ref: $ref}] end' <<< "$checkouts")
-          done
-          if [ "$(jq length <<< "$checkouts")" = 0 ]; then
-            echo "No commits to measure" >&2
-            exit 1
-          fi
-          RUNNERS='{"linux-x64":"ubuntu-24.04","darwin-arm64":"macos-15","darwin-x64":"macos-15-intel","win32-x64":"windows-2025"}'
-          include='[]'
-          IFS=',' read -ra platforms <<< "$PLATFORMS"
-          for platform in "${platforms[@]}"; do
-            os=$(jq -r --arg platform "$platform" '.[$platform] // empty' <<< "$RUNNERS")
-            if [ -z "$os" ]; then
-              echo "Unknown platform $platform" >&2
-              exit 1
-            fi
-            available=$(bun packages/benchmarks/src/cli.ts describe --platform "$platform")
-            # A chosen suite this platform cannot run starts no job, so the run says so instead of dropping it quietly.
-            for suite in $(jq -r --argjson available "$available" '($ENV.SUITES | split(",")) - [$available[].id] | .[] | select(. != "")' <<< 'null'); do
-              echo "::warning title=Suite skipped::$suite does not run on $platform"
-            done
-            include=$(jq -c --argjson available "$available" --arg suites "$SUITES" --arg platform "$platform" --arg os "$os" \
-              '. + [$available[] | select($suites == "" or (.id | IN($suites | split(",")[]))) | {platform: $platform, os: $os, suite: .id}]' \
-              <<< "$include")
-          done
-          {
-            echo "checkouts=$checkouts"
-            echo "include=$include"
-            echo "samples=1"
-          } >> "$GITHUB_OUTPUT"
-
-  benchmark:
-    name: ${{ matrix.platform }} · ${{ matrix.suite }}
-    needs: plan
-    runs-on: ${{ matrix.os }}
-    # Approved in PS-920 as an upper limit until the first full runs give real timings.
-    timeout-minutes: 45
-    strategy:
-      fail-fast: false
-      matrix:
-        include: ${{ fromJSON(needs.plan.outputs.include) }}
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: "24.22.1"
-
-      - name: Set up Windows desktop tests
-        if: runner.os == 'Windows'
-        uses: ./.github/actions/setup-windows-desktop-tests
-
-      - name: Install browser system dependencies
-        if: runner.os == 'Linux'
-        run: npx --yes playwright install-deps chromium
-
-      # Each commit gets its own checkout and dependencies, so it runs the code and benchmarks it shipped with.
-      # Paths use forward slashes, because Git Bash drops the backslashes of Windows paths.
-      - name: Run benchmarks
-        env:
-          CHECKOUTS: ${{ needs.plan.outputs.checkouts }}
-          SUITE: ${{ matrix.suite }}
-          SAMPLES: ${{ needs.plan.outputs.samples }}
-        run: |
-          set -euo pipefail
-          temp="$RUNNER_TEMP"
-          if command -v cygpath > /dev/null; then temp=$(cygpath -m "$RUNNER_TEMP"); fi
-          args=()
-          while IFS=$'\t' read -r sha ref; do
-            dir="$temp/checkouts/$sha"
-            git worktree add --detach "$dir" "$sha"
-            (cd "$dir" && bun scripts/ci/install-native-dependencies.ts)
-            args+=("--checkout" "$dir=$sha=$ref")
-          # jq on Windows ends lines with CRLF, and read keeps the CR in the last field.
-          done < <(jq -r '.[] | [.sha, .ref] | @tsv' <<< "$CHECKOUTS" | tr -d '\r')
-          bun packages/benchmarks/src/cli.ts run "${args[@]}" \
-            --suites "$SUITE" --samples "$SAMPLES" \
-            --cache "$temp/benchmark-cache" --out "$temp/benchmark-results"
-
-      # Failed samples keep the measurements they recorded, so the results upload either way.
-      - name: Upload results
-        if: ${{ !cancelled() }}
+      - uses: ./.github/actions/setup-ci-cache
+        with:
+          install-strategy: native
+      - name: Build test dependencies
+        run: bun run build -- --scope e2e --include-dependencies
+      - name: Install browser
+        if: matrix.lane == 'planner-cold-open'
+        run: bunx playwright@1.60.0 install --with-deps chromium
+      - name: Run full failed Planner benchmark
+        if: matrix.lane == 'planner-cold-open'
+        run: bun run --cwd packages/e2e perf:planner-board-cold-open
+      - name: Run only two failed Apple Silicon recovery cases
+        if: matrix.lane == 'planner-recovery'
+        run: bun run --cwd packages/e2e test:packaged:cli src/packaged/packaged-planner-smoke.p2.test.ts --test-name-pattern 'reconciles dependency stacks|recovers missing workspaces without losing'
+      - name: Preserve native evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: benchmark-results-${{ matrix.platform }}-${{ matrix.suite }}
-          path: ${{ runner.temp }}/benchmark-results/*.json
-          if-no-files-found: error
-
-      - name: Preserve ordered desktop benchmark quarantine evidence
-        if: ${{ !cancelled() && matrix.suite == 'desktop' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: benchmark-desktop-evidence-${{ matrix.platform }}
+          name: ps1160-${{ matrix.lane }}
           path: |
-            ${{ runner.temp }}/checkouts/*/clients/desktop/test-results/packaged-benchmarks*.json
-            ${{ runner.temp }}/checkouts/*/test-results/quarantine/packaged-desktop-benchmark
-          if-no-files-found: error
-
-      - name: Preserve ordered workbench benchmark quarantine evidence
-        if: ${{ !cancelled() && matrix.suite == 'workbench' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: benchmark-workbench-evidence-${{ matrix.platform }}
-          path: |
-            ${{ runner.temp }}/checkouts/*/packages/e2e/test-results/workbench-benchmarks*.json
-            ${{ runner.temp }}/checkouts/*/test-results/quarantine/workbench-benchmark
-          if-no-files-found: error
+            packages/e2e/test-results
+            packages/e2e/playwright-report
+            test-results
+          if-no-files-found: warn
