@@ -14,6 +14,7 @@ import {
   rendererMetrics,
   SETTLE_MS,
 } from "./performance-budget";
+import { attachStreamingReplayFailure } from "./streaming-replay-evidence";
 
 // Idle budgets catch a constant render loop. The 2026-10-10 release rehearsals measured the
 // streaming replay at up to 69% script and 99% task time; the approved budgets sit about 20%
@@ -157,7 +158,12 @@ test("long tool-heavy stream stays within budget", async () => {
       });
       expect(response.ok).toBe(true);
       await expect.poll(status, { intervals: [250], timeout: 15_000 }).toBe("completed");
-      await expect(app!.page.getByText(/^Step 30\./).first()).toBeVisible();
+      try {
+        await expect(app!.page.getByText(/^Step 30\./).first()).toBeVisible();
+      } catch (error) {
+        await attachStreamingReplayFailure(app!, session.id);
+        throw error;
+      }
     });
     await recordBenchmark({
       name: "streaming-replay",

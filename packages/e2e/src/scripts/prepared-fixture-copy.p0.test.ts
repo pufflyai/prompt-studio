@@ -110,3 +110,39 @@ test("source-only preparation retains a lockfile that supports a fresh frozen co
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("independent sources consume the same prepared public package artifact", async () => {
+  const root = mkdtempSync(join(tmpdir(), "prepared-public-artifact-"));
+  try {
+    const dependency = join(root, "sdk");
+    const input = join(root, "extension");
+    mkdirSync(dependency);
+    mkdirSync(input);
+    writeFileSync(join(dependency, "package.json"), JSON.stringify({ name: "@pstdio/sdk", version: "1.0.0" }));
+    writeFileSync(join(dependency, "value.txt"), "prepared artifact");
+    expect(Bun.spawnSync([process.execPath, "pm", "pack", "--destination", root], { cwd: dependency }).exitCode).toBe(
+      0,
+    );
+    writeFileSync(
+      join(input, "package.json"),
+      JSON.stringify({ name: "consumer", dependencies: { "@pstdio/sdk": "9.0.0" } }),
+    );
+    const artifact = join(root, "pstdio-sdk-1.0.0.tgz");
+    for (const name of ["first", "second"]) {
+      const source = await preparePackagedExtensionSource(join(root, name), input, {
+        packageArtifacts: { "@pstdio/sdk": artifact },
+      });
+      expect(JSON.parse(readFileSync(join(source, "package.json"), "utf8")).dependencies["@pstdio/sdk"]).toBe(
+        `file:${artifact}`,
+      );
+      expect(
+        Bun.spawnSync([process.execPath, "install", "--frozen-lockfile", "--ignore-scripts"], { cwd: source }).exitCode,
+      ).toBe(0);
+      expect(readFileSync(join(source, "node_modules/@pstdio/sdk/value.txt"), "utf8")).toBe("prepared artifact");
+      writeFileSync(join(source, "private-state.txt"), name);
+    }
+    expect(readFileSync(join(dependency, "value.txt"), "utf8")).toBe("prepared artifact");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

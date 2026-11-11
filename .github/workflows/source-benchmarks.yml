@@ -67,6 +67,7 @@ jobs:
           install-strategy: native
       - name: Install Chromium system dependencies
         if: runner.os == 'Linux'
+        working-directory: packages/e2e
         run: bun x --no-install playwright install-deps chromium
       - uses: ./.github/actions/run-test-plan
         with:

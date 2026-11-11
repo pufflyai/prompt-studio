@@ -30,7 +30,7 @@ export const preparePackagedConsumers = async (signal: AbortSignal) => {
       E2E_BUN_CACHE_DIR: join(root, "bun-cache"),
       NPM_CONFIG_USERCONFIG: npmConfigPath,
     };
-    await prepareUiFixtures(env, signal);
+    await prepareUiFixtures(env, signal, registry.packageArtifacts);
     signal.throwIfAborted();
     return { env, close };
   } catch (error) {
