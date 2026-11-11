@@ -189,6 +189,13 @@ const toTreeListNode = (
     description: node.description,
     icon: resolveTreeNodeIcon(node),
     iconColor: node.iconColor,
+    indicator: node.indicator
+      ? {
+          icon: <WorkbenchIcon name={node.indicator.icon} />,
+          color: node.indicator.color,
+          tooltip: node.indicator.label,
+        }
+      : undefined,
     tooltip: node.tooltip,
     disabled: node.disabled,
     rowVariant: node.rowVariant,

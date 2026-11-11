@@ -9,12 +9,38 @@ import { createWorkspacesModule } from "../workspaces/module";
 import { createSessionsModule } from "./module";
 import { registerSessionProvider } from "./session-provider.fixture";
 
-test("Sessions navigation uses the provider's project list and keeps its scope across conversation selection", async () => {
+test("Sessions navigation uses the provider's project list and scopes linked resources to the selected conversation", async () => {
   const workbench = createWorkbench();
   workbench.registerModule(createSidenavModule());
   workbench.registerModule(createWorkspacesModule());
   workbench.registerModule(createSessionsModule());
   registerSessionProvider(workbench, {
+    resources: {
+      queryAnchors: async ({ resource }) => ({
+        items: [
+          {
+            source: resource,
+            target: {
+              type: "ticket",
+              extensionId: "pstdio.pstdio-planner",
+              projectId: "project-1",
+              id: `ticket-${resource.id}`,
+              label: `Ticket for ${resource.id}`,
+            },
+          },
+        ],
+        nextCursor: null,
+      }),
+      resolveMany: async (refs) =>
+        refs.map((resource) => ({
+          resource,
+          target: {
+            kind: "page",
+            page: { kind: "page", extensionId: "pstdio.pstdio-planner", id: "ticket" },
+            resource,
+          },
+        })),
+    },
     sessions: {
       query: async () => ({
         items: [
@@ -30,14 +56,27 @@ test("Sessions navigation uses the provider's project list and keeps its scope a
   expect(
     sections
       .flatMap((section) => section.nodes)
-      .filter((node) => node.resource?.type === "session")
+      .filter((node) => node.resource?.type === "session" && !node.pinnedOnly)
       .map((node) => node.label),
   ).toEqual(["Existing session"]);
   const readKey = () => treeViewBody(workbench, dashboardWidgetIds.dashboardSidenav).getReadKey?.({});
   openSessionsPage(workbench, { type: "session", extensionId: "pstdio", id: "first" });
   const first = readKey();
+  const linkedTickets = async () =>
+    (await treeViewSections(workbench, dashboardWidgetIds.dashboardSidenav))
+      .flatMap((section) => section.nodes)
+      .filter((node) => node.resource?.type === "ticket")
+      .map((node) => node.resource?.id);
+  expect(await linkedTickets()).toEqual(["ticket-first"]);
   openSessionsPage(workbench, { type: "session", extensionId: "pstdio", id: "second" });
-  expect(readKey()).toBe(first);
+  expect(readKey()).not.toBe(first);
+  expect(await linkedTickets()).toEqual(["ticket-second"]);
+  expect(
+    (await treeViewSections(workbench, dashboardWidgetIds.dashboardSidenav))
+      .flatMap((section) => section.nodes)
+      .filter((node) => node.resource?.type === "session" && !node.pinnedOnly)
+      .map((node) => node.label),
+  ).toEqual(["Existing session"]);
   workbench.navigationTrees.registerContribution({
     id: "extension.session-actions",
     owner: { kind: "mode", id: "project", extensionId: "pstdio" },

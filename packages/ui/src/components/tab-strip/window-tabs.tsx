@@ -13,6 +13,7 @@ import {
 import { SortableContext, sortableKeyboardCoordinates, useSortable } from "@dnd-kit/sortable";
 import { X } from "lucide-react";
 import { type KeyboardEvent, type ReactNode, useEffect, useRef, useState } from "react";
+import { type ResourceContextAction, ResourceContextMenu } from "@/components/overlays/resource-context-menu";
 import { DropIndicator } from "@/components/primitives/drop-indicator";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { Tooltip } from "@/components/primitives/tooltip";
@@ -29,6 +30,8 @@ export interface WindowTab {
   id: string;
   label: string;
   icon?: ReactNode;
+  closable?: boolean;
+  contextActions?: ResourceContextAction[];
 }
 
 export interface WindowTabsProps {
@@ -59,51 +62,55 @@ const WindowTabItem = (props: WindowTabItemProps) => {
     disabled: !reorderable,
   });
   return (
-    <Tab
-      ref={setNodeRef}
-      role="presentation"
-      data-selected={selected ? "" : undefined}
-      data-dragging={isDragging ? "" : undefined}
-    >
-      <Tooltip
-        content={tab.label}
-        open={isSorting ? false : undefined}
-        overflowRef={labelRef}
-        closeDelay={150}
-        positioning={{ placement: "bottom" }}
+    <ResourceContextMenu actions={tab.contextActions ?? []}>
+      <Tab
+        ref={setNodeRef}
+        role="presentation"
+        data-selected={selected ? "" : undefined}
+        data-dragging={isDragging ? "" : undefined}
       >
-        <Trigger
-          {...(reorderable ? attributes : {})}
-          {...listeners}
-          ref={setActivatorNodeRef}
-          type="button"
-          role="tab"
-          aria-selected={selected}
-          aria-label={tab.label}
-          aria-keyshortcuts={reorderable ? "Alt+ArrowLeft Alt+ArrowRight" : undefined}
-          tabIndex={tabIndex}
-          onClick={onSelect}
-          onKeyDown={(event) => {
-            listeners?.onKeyDown?.(event);
-            if (!isSorting && !event.defaultPrevented) onKeyDown(event);
-          }}
+        <Tooltip
+          content={tab.label}
+          open={isSorting ? false : undefined}
+          overflowRef={labelRef}
+          closeDelay={150}
+          positioning={{ placement: "bottom" }}
         >
-          {tab.icon}
-          <Label ref={labelRef}>{tab.label}</Label>
-        </Trigger>
-      </Tooltip>
-      <Close type="button" aria-label={`Close ${tab.label}`} title={`Close ${tab.label}`} onClick={onClose}>
-        <X aria-hidden="true" />
-      </Close>
-      {dropEdge ? (
-        <DropIndicator
-          data-window-tab-drop={dropEdge}
-          orientation="vertical"
-          left={dropEdge === "before" ? "0" : undefined}
-          right={dropEdge === "after" ? "0" : undefined}
-        />
-      ) : null}
-    </Tab>
+          <Trigger
+            {...(reorderable ? attributes : {})}
+            {...listeners}
+            ref={setActivatorNodeRef}
+            type="button"
+            role="tab"
+            aria-selected={selected}
+            aria-label={tab.label}
+            aria-keyshortcuts={reorderable ? "Alt+ArrowLeft Alt+ArrowRight" : undefined}
+            tabIndex={tabIndex}
+            onClick={onSelect}
+            onKeyDown={(event) => {
+              listeners?.onKeyDown?.(event);
+              if (!isSorting && !event.defaultPrevented) onKeyDown(event);
+            }}
+          >
+            {tab.icon}
+            <Label ref={labelRef}>{tab.label}</Label>
+          </Trigger>
+        </Tooltip>
+        {tab.closable !== false ? (
+          <Close type="button" aria-label={`Close ${tab.label}`} title={`Close ${tab.label}`} onClick={onClose}>
+            <X aria-hidden="true" />
+          </Close>
+        ) : null}
+        {dropEdge ? (
+          <DropIndicator
+            data-window-tab-drop={dropEdge}
+            orientation="vertical"
+            left={dropEdge === "before" ? "0" : undefined}
+            right={dropEdge === "after" ? "0" : undefined}
+          />
+        ) : null}
+      </Tab>
+    </ResourceContextMenu>
   );
 };
 
@@ -150,6 +157,7 @@ export const WindowTabs = (props: WindowTabsProps) => {
   }, [selectedId, activeId]);
 
   const closeTab = (index: number) => {
+    if (tabs[index].closable === false) return;
     const triggers = listRef.current?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
     const neighbor = triggers?.[index + 1] ?? triggers?.[index - 1];
     onClose(tabs[index].id);

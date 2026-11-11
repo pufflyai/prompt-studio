@@ -20,6 +20,7 @@ import { browse, browsePage, search } from "./src/browse";
 import { connectionRefresh } from "./src/controls";
 import { copySessionId } from "./src/copy-session-id";
 import { readDraft, saveDraft } from "./src/drafts";
+import { listSessionLinks } from "./src/linked-resources";
 import { acknowledgeNativeInputs } from "./src/native-recovery";
 import { nativeSubmissionIndex } from "./src/native-submission";
 import {
@@ -35,6 +36,7 @@ import {
   switchConversation,
 } from "./src/navigation";
 import { sessionId } from "./src/resource";
+import { pinSession, sessionAttentionIndex } from "./src/session-attention";
 import { composerControls, readSnapshot } from "./src/snapshot";
 import { conversationTab } from "./src/tab";
 import { watch } from "./src/watch";
@@ -140,11 +142,28 @@ const list = defineView({
     page: browsePage,
   },
 });
+const links = defineView({
+  id: "linked-resources",
+  title: l10n("links.title", "Linked resources"),
+  icon: "link",
+  body: {
+    kind: "tree",
+    body: listSessionLinks,
+    defaultExpandedSectionIds: ["tickets", "sessions", "workspaces", "related"],
+    refreshEvents: [
+      viewDataEvents.resourceAnchorsChanged,
+      viewDataEvents.resourcesChanged,
+      viewDataEvents.sessionsChanged,
+      viewDataEvents.workspacesChanged,
+    ],
+  },
+});
 export default defineExtension({
   defaultLocale: "en",
   translations: { fr: packageAsset("./l10n/fr.json", import.meta.url) },
-  storageIndexes: [nativeSubmissionIndex],
+  storageIndexes: [nativeSubmissionIndex, sessionAttentionIndex],
   commands: [
+    pinSession,
     create,
     newInViewer,
     open,
@@ -158,7 +177,7 @@ export default defineExtension({
     resolve,
     watch,
   ],
-  views: [conversation, list],
+  views: [conversation, list, links],
   pages: [sessions, compose, session, draft],
   placements: [viewer],
   navigationItems: [
@@ -171,6 +190,8 @@ export default defineExtension({
     }),
   ],
   navigationTrees: [
+    defineNavigationTree({ id: "session-links", owner: session.ref, view: links.ref }),
+    defineNavigationTree({ id: "session-list", owner: session.ref, view: list.ref, resourceScope: "project" }),
     defineNavigationTree({ id: "sessions", owner: sessions.ref, view: list.ref, resourceScope: "project" }),
     defineNavigationTree({
       id: "workspace-sessions",

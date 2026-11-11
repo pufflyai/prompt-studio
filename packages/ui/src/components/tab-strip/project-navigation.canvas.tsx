@@ -1,11 +1,11 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
 import { Circle, MessageCircle, Pin, Settings } from "lucide-react";
 import { useState } from "react";
-import { WindowTitleBar } from "../../components/tab-strip/window-title-bar";
-import { TreeList } from "../../components/tree-list/tree-list";
+import { TreeList } from "../tree-list/tree-list";
 import { WindowTabs } from "./window-tabs";
+import { WindowTitleBar } from "./window-title-bar";
 
-export default { title: "Proposals/PS-204 Sessions and navigation", fullscreen: true };
+export default { title: "Design system/Patterns/Tabs/Project navigation", fullscreen: true };
 export const Navigation = () => {
   const [selected, setSelected] = useState("studio");
   const [pinned, setPinned] = useState(true);

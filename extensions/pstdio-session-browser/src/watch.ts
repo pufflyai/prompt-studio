@@ -19,6 +19,7 @@ import { recoverNativeInputs } from "./native-recovery";
 import { readQueue } from "./queue-snapshot";
 import { sessionId } from "./resource";
 import { selectedHarness } from "./selection";
+import { markSessionSeen } from "./session-attention";
 import { readSessionSnapshot } from "./snapshot";
 
 type ChatWatchUpdate =
@@ -229,6 +230,7 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
         delete snapshot.streamingStartedAt;
       }
       await write(snapshot);
+      await markSessionSeen(ctx, session);
       await recoverNativeInputs(ctx, id, session, (recoverDraft) => writeEvent({ recoverDraft }), emittedRecovery);
       if (ctx.signal.aborted) break;
       if (!streamActive && (!connected || retryStream || snapshot.streamingStartedAt !== lastConnectedRun))

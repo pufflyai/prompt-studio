@@ -82,6 +82,8 @@ export interface TreeNode {
   fileName?: string;
   iconColor?: string;
   badge?: { label: string; color?: string };
+  /** Small activity or status marker beside the row. */
+  indicator?: { icon: string; color?: string; label?: string };
   iconTooltip?: string;
   tooltip?: string;
   endContent?: unknown;

@@ -30,7 +30,29 @@ export const DesktopProjectTabs = (props: DesktopProjectTabsProps) => {
     workbench.context.store,
     (state) => state.values[dashboardSelectedProjectIdContextKey],
   );
-  const tabs = resolveProjectTabs(projectIds, dataVersion);
+  const tabs = resolveProjectTabs(projectIds, dataVersion).map((tab) => ({
+    ...tab,
+    closable: tab.id === selected,
+    contextActions: [
+      {
+        key: "project-settings",
+        label: "Project settings",
+        onClick: async () => {
+          const report = workbench.notifications.captureActionError("Open project settings");
+          try {
+            await controller.select(workbench, tab.id);
+            const panel = workbench.settings
+              .listPanels()
+              .find((panel) => panel.scope === "project" && !panel.parentPanelId);
+            if (workbench.context.get(dashboardSelectedProjectIdContextKey) !== tab.id) return;
+            await workbench.commands.executeCommand("workbench.settings.open", { panelId: panel?.id });
+          } catch (error) {
+            report(error);
+          }
+        },
+      },
+    ],
+  }));
   // Clicking the tab of the project the user is already in leaves the open Sidenav level instead.
   const selectTab = (id: string) => {
     if (id === selected) workbench.pageLocations.navigateToRootLevel();
