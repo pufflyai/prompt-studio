@@ -25,6 +25,7 @@ jobs:
         id: storage
         continue-on-error: true
         run: |
+          set -o pipefail
           mkdir -p clients/desktop/test-results
           bun packages/pstdio-db/src/services/extension-storage/ordered-legacy-backlog.p3.bench.ts 2>&1 | tee clients/desktop/test-results/ps202-legacy-backlog.log
       - name: Package the repaired source with normal native hooks
