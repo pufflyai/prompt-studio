@@ -29,8 +29,9 @@ It adds no OS package installation, install retries, or timeout increases.
 
 ## Isolation
 
-Keep this code in `scripts/ci/setup-container-bun.ts` and call it only from the three
-browser job definitions. Do not turn it into a general package installer.
+Keep this code in `scripts/ci/setup-container-bun.ts` and call it only from jobs and
+matrix rows that run in the Playwright image, including Linux edited-test rows (PS-1167).
+Do not turn it into a general package installer.
 
 ## Removal
 

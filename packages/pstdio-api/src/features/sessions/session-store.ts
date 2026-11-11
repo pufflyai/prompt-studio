@@ -1,4 +1,12 @@
-import type { ApprovalRequest, HarnessSession, JsonPatch, QuestionService, SessionMessage } from "pstdio-api-contracts";
+import type {
+  ApprovalRequest,
+  HarnessBackgroundTask,
+  HarnessSession,
+  HarnessTurnChannel,
+  JsonPatch,
+  QuestionService,
+  SessionMessage,
+} from "pstdio-api-contracts";
 import { createApprovalService, createEventStore, createQuestionService } from "pstdio-api-runtime-host";
 import { createSessionConversation, type SessionConversation } from "./session-conversation";
 
@@ -21,6 +29,13 @@ export type ActiveSession = {
   controlInvocations: Set<{ done: Promise<void>; abort: AbortController }>;
   executionSettings?: { model: string | null; params: Record<string, string | boolean> };
   checkpointPromise?: Promise<SessionMessage[] | null>;
+  /** Set while the provider's turn has ended but its run stays open for background tasks. */
+  idleTurn: { backgroundTasks: HarnessBackgroundTask[] } | null;
+  turns: HarnessTurnChannel;
+  /** Queued follow-ups go into an idle turn one at a time, in queue order. */
+  idleDelivery: Promise<void>;
+  /** The queued request (position and revision) that could not go into the current idle turn. */
+  idleTurnSkipped: string | null;
 };
 
 export const cancelSessionControls = (entry: ActiveSession | null | undefined) => {
@@ -30,8 +45,10 @@ export const cancelSessionControls = (entry: ActiveSession | null | undefined) =
   entry.questionService.dispose();
 };
 
+export const IDLE_TURN_PATH = "/idle_turn";
+
 // In-memory registry of active sessions (EventStore + channels + harness session per session)
-export const createSessionStore = () => {
+export const createSessionStore = (options: { onIdleTurn?: (sessionId: string) => unknown } = {}) => {
   const sessions = new Map<string, ActiveSession>();
   const listeners = new Set<(id: string, patch?: JsonPatch) => void>();
   const changed = (id: string, patch?: JsonPatch) => {
@@ -69,7 +86,25 @@ export const createSessionStore = () => {
       submittedAttachmentFileIds: new Set(),
       conversationReady: ready.promise,
       controlInvocations: new Set(),
+      idleTurn: null,
+      idleDelivery: Promise.resolve(),
+      idleTurnSkipped: null,
+      turns: {
+        idle: ({ backgroundTasks }) => {
+          entry.idleTurn = { backgroundTasks };
+          entry.idleTurnSkipped = null;
+          publishIdleTurn();
+          options.onIdleTurn?.(sessionId);
+        },
+        busy: () => {
+          if (!entry.idleTurn) return;
+          entry.idleTurn = null;
+          publishIdleTurn();
+        },
+      },
     };
+    // Only live streams show this state; it is not conversation content to sync.
+    const publishIdleTurn = () => eventStore.push({ op: "replace", path: IDLE_TURN_PATH, value: entry.idleTurn });
     const initializeConversation = (messages: SessionMessage[]) => {
       entry.conversation = createSessionConversation(eventStore, messages, (patch) => changed(sessionId, patch));
       ready.resolve(entry.conversation);

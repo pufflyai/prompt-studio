@@ -187,6 +187,7 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
         env: sessionEnv(ctx, input.sessionId),
         events: input.events,
         questions: input.questions,
+        turns: input.turns,
       }),
 
     resume: (ctx, input) =>
@@ -202,6 +203,7 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
         messageOffset: input.messageOffset,
         questions: input.questions,
         approvals: input.approvals,
+        turns: input.turns,
       }),
 
     getMessages: async (_ctx, input) => {
