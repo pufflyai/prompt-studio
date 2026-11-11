@@ -14,7 +14,7 @@ Planner cold open measured 3303/3200/2989 ms on hosted Ubuntu against 3000 ms. T
 
 - Give completion waits in only the eight-replacement Cloud scenario 10,000 ms. Preserve its 120,000 ms whole-case allowance and all eight replacements, large values and repaired reset assertions. Other Cloud scenarios keep their existing waits.
 - Temporarily set the Planner cold-open product budget to 4000 ms, about 20% above the slowest hosted sample. Keep 1000 tickets, three edits each and three cold samples.
-- Give only dependency-stack/conflict and missing-workspace recovery cases 45,000 ms on Darwin arm64. Other platforms and Planner cases retain their existing allowances.
+- Give all seven functional cases sharing the packaged Planner fixture 45,000 ms on Darwin arm64. The user approved 45,000 ms and instructed increasing all limits. PR CI then exposed the same deletion bottleneck in supervisor-wake and draft-adoption cases, so the common fixture allowance is applied consistently. Other platforms retain their existing allowances.
 
 ## External limitation
 
@@ -26,4 +26,4 @@ The failed Cloud runs stopped before completion beyond five seconds could be obs
 
 ## Removal
 
-Restore five-second Cloud waits and the 3000 ms Planner target after a causal improvement and representative native evidence on the same workload. Restore 30-second Apple Silicon case allowances when setup plus cleanup consistently fits them. Keep workloads, platforms and execution reports intact.
+Restore five-second Cloud waits and the 3000 ms Planner target after a causal improvement and representative native evidence on the same workload. Restore 30-second Apple Silicon fixture allowances when setup plus cleanup consistently fits them. Keep workloads, platforms and execution reports intact.
