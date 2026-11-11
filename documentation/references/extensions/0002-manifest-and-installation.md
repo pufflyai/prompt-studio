@@ -146,7 +146,13 @@ Explicit Git refs and other repository sources use the system Git executable. Wh
   loads it again. A restart is not needed.
 - Extension contribution modules are bundled in the managed runtime cache in development and
   packaged hosts. Dependencies use their published exports, independently of the host's development
-  import conditions. Package asset URLs still point to the installed source files.
+  import conditions. Package asset URLs still point to the installed source files. These bundles
+  are reused across restarts while the extension's source, its installed dependencies, Bun, and the
+  host executable are unchanged. Loading a changed source replaces the earlier bundle of that
+  folder, and a host update discards the bundles of the previous host. An interrupted copy is never
+  reused.
+- A webview whose entry file is missing reports a build failure that names the file. The project's
+  other tools still load, and adding the file builds it again.
 - Each webview build runs in a new Bun process, so a build after an update reads the dependencies
   that the update installed ([ADR 0070](../../adrs/0070-temporary-build-extension-webviews-in-a-child-process.md)).
   A webview request also rebuilds a bundle whose published module is missing, for example after its
