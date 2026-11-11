@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import type { ExtensionSession } from "@pstdio/sdk/extensions";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import { browse, browsePage } from "./browse";
+import { nativeSubmissionIndex, readNativeSubmissions, saveNativeSubmission } from "./native-submission";
 import { markSessionSeen, pinSession, readSessionAttention, sessionAttentionIndex } from "./session-attention";
 
 test("new activity becomes unread again after a session was seen", async () => {
@@ -82,4 +83,26 @@ test("pinned sessions paginate, respect workspace search, and keep seen state wh
     pinned: false,
     unread: false,
   });
+});
+
+test("pinning a session preserves its native conversation inputs", async () => {
+  const session = { id: "s", title: "Session", status: "completed" } as ExtensionSession;
+  const ctx = makeCommandContext({
+    storage: createMemoryStorage({ indexes: [sessionAttentionIndex, nativeSubmissionIndex] }),
+    params: {},
+    overrides: { sessions: { get: async () => session as never } },
+  });
+  await pinSession.run(ctx, { sessionId: session.id, pinned: true });
+  expect(await readNativeSubmissions(ctx, session.id)).toEqual([]);
+  const draft = { text: "Keep this input", attachments: [], values: {} };
+  await saveNativeSubmission(
+    ctx,
+    session.id,
+    { draft, operation: { kind: "command", text: `/compact ${draft.text}` } },
+    null,
+    false,
+  );
+  expect((await readNativeSubmissions(ctx, session.id))[0]?.body.draft).toEqual(draft);
+  await pinSession.run(ctx, { sessionId: session.id, pinned: false });
+  expect((await readNativeSubmissions(ctx, session.id))[0]?.body.draft).toEqual(draft);
 });

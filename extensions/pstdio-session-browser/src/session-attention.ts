@@ -11,7 +11,7 @@ import {
 
 export const sessionAttentionIndex: StorageRecordIndex = {
   name: "pinned-sessions",
-  fields: { sessionId: { path: ["sessionId"], type: "string" }, pinned: { path: ["pinned"], type: "boolean" } },
+  fields: { sessionId: { path: ["pinnedSessionId"], type: "string" }, pinned: { path: ["pinned"], type: "boolean" } },
   equality: ["pinned"],
   orderBy: [{ field: "sessionId", direction: "asc" }],
 };
@@ -73,7 +73,7 @@ export const pinSession = defineCommand({
       edits: [
         {
           recordId: pinKey(ctx, session.id),
-          replace: { sessionId: session.id, pinned: input.pinned },
+          replace: { pinnedSessionId: session.id, pinned: input.pinned },
         },
       ],
     });
@@ -95,8 +95,8 @@ export const readPinnedSessions = async (
   const records = await ctx.storage.records.readMany(page.records.map((record) => record.recordId));
   const sessions = await Promise.all(
     records.map((record) =>
-      typeof recordValue(record.value).sessionId === "string"
-        ? ctx.sessions.get(String(recordValue(record.value).sessionId))
+      typeof recordValue(record.value).pinnedSessionId === "string"
+        ? ctx.sessions.get(String(recordValue(record.value).pinnedSessionId))
         : undefined,
     ),
   );
