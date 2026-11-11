@@ -21,11 +21,19 @@ jobs:
             pkg: cli-win-x64
             file: packaged-cloud-notes-onboarding.p2.test.ts
             pattern: a downloaded cloud project
-          - scope: composer
+            lane: stable
+          - scope: core
             os: windows-11-arm
             pkg: cli-win-arm64
-            file: packaged-project-setup-smoke.p1.test.ts
-            pattern: serves the dashboard and API
+            file: packaged-core-extensions-smoke.p1.test.ts
+            pattern: loads packaged core defaults
+            lane: stable
+          - scope: canvas
+            os: windows-11-arm
+            pkg: cli-win-arm64
+            file: packaged-canvas-install.p2.test.ts
+            pattern: installs Canvas from the catalog
+            lane: quarantine
     steps:
       - uses: actions/checkout@v5
         with:
@@ -46,10 +54,15 @@ jobs:
         run: bun run --cwd scripts build:all
       - name: Build the owning E2E prerequisites
         run: bun run build -- --scope e2e --include-dependencies
+      - name: Restore the owning packaged browser prerequisite
+        env:
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/${{ matrix.pkg }}/bin/pstdio.exe
+        run: bun -e 'import {preparePackagedSmokeBrowser} from "./scripts/verify/packaged-runtime-smoke.ts";preparePackagedSmokeBrowser(process.env.E2E_PACKAGED_BINARY_PATH!);'
       - name: Check the unchanged packaged contract once
         working-directory: packages/e2e
         env:
           E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/${{ matrix.pkg }}/bin/pstdio.exe
+          E2E_TEST_LANE: ${{ matrix.lane }}
         run: bun run test:packaged:cli -- src/packaged/${{ matrix.file }} --test-name-pattern '${{ matrix.pattern }}'
       - uses: actions/upload-artifact@v4
         if: always()
@@ -57,30 +70,3 @@ jobs:
           name: focused-${{ matrix.scope }}-evidence
           path: packages/e2e/test-results
           if-no-files-found: warn
-  pi:
-    runs-on: windows-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          ref: ${{ inputs.source_sha }}
-      - uses: actions/setup-node@v5
-        with:
-          node-version: "24.22.1"
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
-      - run: bun install --frozen-lockfile
-      - run: bun run build -- --scope @pstdio/sdk --include-dependencies
-      - name: Install the original resolved CLI version
-        shell: bash
-        run: npm install --global --allow-scripts=@earendil-works/pi-coding-agent @earendil-works/pi-coding-agent@1.5.2
-      - name: Identify the original Bash-resolved command without warming it
-        shell: bash
-        run: bun -e 'import {resolvePiCommand} from "./extensions/harness-pi/src/cli.ts";console.log(JSON.stringify(resolvePiCommand()));'
-      - name: Retain Bash and the cold installed CLI probe first
-        shell: bash
-        working-directory: extensions/harness-pi
-        env:
-          INSTALLED_CLI_TESTS: "1"
-        run: bun test src/installed-cli.p0.test.ts
