@@ -1,3 +1,4 @@
+import { moveSelectedModelFirst } from "./model-option-order";
 import type { SelectionOption, SelectionParam } from "./param-editor.types";
 import { ParamEditorRow } from "./param-editor-row";
 
@@ -30,7 +31,9 @@ export const HarnessModelPicker = (props: HarnessModelPickerProps) => {
     onHarnessChange,
     onModelChange,
   } = props;
-  const options: SelectionOption[] = models.map((model) => ({ ...model, icon: "Cpu" }));
+  const options: SelectionOption[] = moveSelectedModelFirst(models, (modelOption) => modelOption.id === model).map(
+    (modelOption) => ({ ...modelOption, icon: "Cpu" }),
+  );
   if (loadingModels && options.length === 0)
     options.push({
       id: "model-loading",
