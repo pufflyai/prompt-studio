@@ -1,5 +1,5 @@
 import type { ResourceRef } from "@pstdio/sdk/extensions";
-import type { WorkbenchModuleContribution } from "../../core";
+import { type WorkbenchModuleContribution, workbenchCommandPaletteMenuPath } from "../../core";
 import { registerRelatedResourcePreviews } from "./related-resource-previews";
 import { RelatedResources } from "./related-resources";
 import { closeResourceLinksOnProjectChange } from "./resource-links-project-scope";
@@ -50,13 +50,20 @@ export const createWorkbenchResourceLinksModule = (options: WorkbenchResourceLin
         {
           isEnabled: () => Boolean(currentResource()),
           isVisible: () => Boolean(currentResource()),
-          execute: (_args, context) => {
-            const current = context?.resource ?? ctx.getActiveResource() ?? ctx.getPrimaryResource();
+          execute: (args, context) => {
+            const fromPalette = (args as { source?: string } | undefined)?.source === "active-resource";
+            const current =
+              (fromPalette ? undefined : context?.resource) ?? ctx.getActiveResource() ?? ctx.getPrimaryResource();
             const resource = current && options.canonicalize(current);
             if (resource) ctx.overlays.openOverlay(viewId, { resource, title: "Related resources" });
           },
         },
       );
+      ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
+        commandId: resourceLinksCommandId,
+        args: { source: "active-resource" },
+        group: "Resources",
+      });
       return [previews, closeResourceLinksOnProjectChange(ctx, viewId)];
     },
   }) satisfies WorkbenchModuleContribution;
