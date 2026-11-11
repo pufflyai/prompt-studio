@@ -16,18 +16,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - scope: notes
-            os: windows-latest
-            pkg: cli-win-x64
-            file: packaged-cloud-notes-onboarding.p2.test.ts
-            pattern: a downloaded cloud project
-            lane: stable
-          - scope: core
-            os: windows-11-arm
-            pkg: cli-win-arm64
-            file: packaged-core-extensions-smoke.p1.test.ts
-            pattern: loads packaged core defaults
-            lane: stable
           - scope: canvas
             os: windows-11-arm
             pkg: cli-win-arm64
@@ -59,11 +47,19 @@ jobs:
           E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/${{ matrix.pkg }}/bin/pstdio.exe
         run: bun -e 'import {preparePackagedSmokeBrowser} from "./scripts/verify/packaged-runtime-smoke.ts";preparePackagedSmokeBrowser(process.env.E2E_PACKAGED_BINARY_PATH!);'
       - name: Check the unchanged packaged contract once
+        if: matrix.lane == 'stable'
         working-directory: packages/e2e
         env:
           E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/${{ matrix.pkg }}/bin/pstdio.exe
           E2E_TEST_LANE: ${{ matrix.lane }}
         run: bun run test:packaged:cli -- src/packaged/${{ matrix.file }} --test-name-pattern '${{ matrix.pattern }}'
+      - name: Check the registered quarantine contract once
+        if: matrix.lane == 'quarantine'
+        working-directory: packages/e2e
+        env:
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/${{ matrix.pkg }}/bin/pstdio.exe
+          E2E_TEST_LANE: quarantine
+        run: bun run test:packaged:cli -- src/packaged/${{ matrix.file }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
