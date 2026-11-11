@@ -5,7 +5,6 @@ import type {
   HarnessParams,
   HarnessQuestionChannel,
   HarnessSession,
-  HarnessTurnChannel,
   HarnessWorkspaceContext,
 } from "./harness";
 
@@ -115,8 +114,6 @@ export type PreparedHarnessOperation = {
     events: HarnessEventSink;
     approvals?: HarnessApprovalChannel;
     questions?: HarnessQuestionChannel;
-    /** For work that starts a run; see `HarnessStartInput.turns`. */
-    turns?: HarnessTurnChannel;
     signal?: AbortSignal;
   }): Promise<HarnessOperationResult>;
 };
