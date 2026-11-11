@@ -38,18 +38,23 @@ export const createTerminalModule = () =>
           return [...existing, ...available];
         },
       });
-      ctx.terminal.setSessionOpener((request, view, signal) => {
+      ctx.terminal.setSessionOpener((request, view, signal, binding) => {
         if (view) return openDashboardTerminalSession(request, view, signal);
-        if (request.cwd) return openDashboardTerminalSession(request, undefined, signal);
+        const projectId = getDashboardSelectedProjectId(ctx);
+        // A placement's terminal keeps running when its workbench closes, so reopening the
+        // project, its desktop tab, or the page resumes the same shell.
+        const attachKey = binding && projectId ? `${projectId}/${binding}` : undefined;
+        if (request.cwd) return openDashboardTerminalSession(request, undefined, signal, attachKey);
         // The host process may run from any folder (`/` for the desktop app), so a
         // terminal that names no workspace starts in the project's root checkout.
-        const projectRoot = createDashboardWorkspaceOptions(getDashboardSelectedProjectId(ctx)).find(
+        const projectRoot = createDashboardWorkspaceOptions(projectId).find(
           (workspace) => workspace.isDefault,
         )?.workspacePath;
         return openDashboardTerminalSession(
           projectRoot ? { ...request, cwd: projectRoot } : request,
           undefined,
           signal,
+          attachKey,
         );
       });
       return [{ dispose: () => ctx.terminal.setSessionOpener(null) }];

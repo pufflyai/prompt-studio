@@ -1,9 +1,8 @@
 import { createHash } from "node:crypto";
-import { existsSync, readdirSync, readFileSync, realpathSync, rmSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { ExtensionDefinition, ExtensionSourceKind } from "@pstdio/sdk/extensions";
-import { resolvePstdioHome } from "pstdio-paths";
 import { remapPackageAssets } from "../artifacts/remap-package-assets";
 import type { ExtensionDiagnostic } from "../types/runtime";
 import { bundleEntry } from "./bundle-entry";
@@ -11,6 +10,12 @@ import { createDiagnostic } from "./diagnostics";
 import { discoverExtensionPackages } from "./discovery";
 import { mirrorNodeModules } from "./mirror-node-modules";
 import { type ExtensionApiProvider, type PackageManifest, readPackageManifest } from "./package-manifest";
+import {
+  beginRuntimeLoad,
+  publishRuntimePackage,
+  runtimePackageKey as runtimeCacheKey,
+  runtimeCacheRoot,
+} from "./runtime-cache";
 import {
   collectRuntimeModulePaths,
   hashRuntimeModulePaths,
@@ -53,7 +58,6 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 let importCounter = 0;
 // The import identity already increments for real module loads; reads add no disabled work.
 export const readRuntimeImportCount = () => importCounter;
-const prunedRuntimeCacheRoots = new Set<string>();
 
 const formatImportError = (error: unknown, fallback: string) => {
   if (error instanceof Error) return error.message;
@@ -66,14 +70,6 @@ const formatImportError = (error: unknown, fallback: string) => {
 
 const importWithCacheKey = (filePath: string) =>
   import(`${pathToFileURL(filePath).href}?pstdio_cache=${process.pid}-${importCounter++}`);
-
-const runtimeCacheRoot = () => join(resolvePstdioHome(), "cache", "extension-runtime");
-
-const ensureRuntimeCachePruned = (cacheRoot: string) => {
-  if (prunedRuntimeCacheRoots.has(cacheRoot)) return;
-  rmSync(cacheRoot, { recursive: true, force: true });
-  prunedRuntimeCacheRoots.add(cacheRoot);
-};
 
 const safeCacheSegment = (value: string) => value.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 80) || "extension";
 
@@ -146,7 +142,10 @@ const dependencyCacheKey = (nodeModulesPath: string | null) => {
 };
 
 const runtimePackageKey = (packagePath: string, runtimeModulePaths: Set<string>, nodeModulesPath: string | null) =>
-  `${digest(resolve(packagePath))}-${hashRuntimeModulePaths(packagePath, runtimeModulePaths)}-${dependencyCacheKey(nodeModulesPath)}`;
+  runtimeCacheKey(
+    resolve(packagePath),
+    `${hashRuntimeModulePaths(packagePath, runtimeModulePaths)}-${dependencyCacheKey(nodeModulesPath)}`,
+  );
 
 // Names everything a load reads: the manifest, the modules the entry imports, and the installed
 // dependencies. Loads with the same key import the same runtime copy with the same dependencies,
@@ -164,7 +163,6 @@ export const extensionLoadKey = (packagePath: string) => {
 
 const createRuntimePackage = (packagePath: string, entryPath: string, packageName: string) => {
   const cacheRoot = runtimeCacheRoot();
-  ensureRuntimeCachePruned(cacheRoot);
   const nodeModulesPath = resolveNodeModulesPath(packagePath);
   const runtimeModulePaths = collectRuntimeModulePaths(packagePath, entryPath);
 
@@ -176,12 +174,10 @@ const createRuntimePackage = (packagePath: string, entryPath: string, packageNam
   const runtimePackagePath = join(rootPath, "package");
   const entryRelativePath = relative(packagePath, entryPath);
 
-  if (!existsSync(runtimePackagePath)) {
-    mirrorRuntimeSourceSnapshot(packagePath, runtimePackagePath, runtimeModulePaths);
-    if (nodeModulesPath) mirrorNodeModules(nodeModulesPath, join(runtimePackagePath, "node_modules"));
-  } else if (nodeModulesPath && !existsSync(join(runtimePackagePath, "node_modules"))) {
-    mirrorNodeModules(nodeModulesPath, join(runtimePackagePath, "node_modules"));
-  }
+  publishRuntimePackage(runtimePackagePath, (stagingPath) => {
+    mirrorRuntimeSourceSnapshot(packagePath, stagingPath, runtimeModulePaths);
+    if (nodeModulesPath) mirrorNodeModules(nodeModulesPath, join(stagingPath, "node_modules"));
+  });
 
   const canonicalPackagePath = realpathSync(runtimePackagePath);
   return {
@@ -193,14 +189,21 @@ const createRuntimePackage = (packagePath: string, entryPath: string, packageNam
 
 const importFresh = async (filePath: string, packagePath: string, packageName: string) => {
   const runtimePackage = createRuntimePackage(packagePath, filePath, packageName);
-  // Extension dependencies use their published exports, independently of the host's development conditions.
-  const entryPath = await bundleEntry(
-    runtimePackage.entryPath,
-    runtimePackage.packagePath,
-    dirname(runtimePackage.entryPath),
-  );
-  const mod = await importWithCacheKey(entryPath);
-  return remapPackageAssets(mod, runtimePackage.packagePath, packagePath);
+  const load = beginRuntimeLoad(runtimePackage.rootPath);
+  let loaded = false;
+  try {
+    // Extension dependencies use their published exports, independently of the host's development conditions.
+    const entryPath = await bundleEntry(
+      runtimePackage.entryPath,
+      runtimePackage.packagePath,
+      dirname(runtimePackage.entryPath),
+    );
+    const mod = await importWithCacheKey(entryPath);
+    loaded = true;
+    return remapPackageAssets(mod, runtimePackage.packagePath, packagePath);
+  } finally {
+    load.finish(loaded);
+  }
 };
 
 export const loadExtensionPackage = async (

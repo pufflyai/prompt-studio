@@ -327,6 +327,25 @@ describe("createWorkbenchTerminalController", () => {
     expect(terminal.listSessions().every((session) => session.status !== "running")).toBe(true);
   });
 
+  test("dispose detaches sessions the host keeps running and tells the host each placement", async () => {
+    const kept = createFakeAdapter("kept");
+    const detached: string[] = [];
+    const bindings: Array<string | undefined> = [];
+    const terminal = createWorkbenchTerminalController();
+    terminal.setSessionOpener(async (_request, _view, _signal, binding) => {
+      bindings.push(binding);
+      return { ...kept.adapter, detach: () => detached.push(kept.adapter.id) };
+    });
+    await terminal.open({ bindingId: "terminal-1", ownerId: "owner", request });
+
+    await terminal.dispose();
+    await terminal.killBinding("terminal-1", "owner");
+
+    expect(bindings).toEqual([JSON.stringify(["owner", "terminal-1"])]);
+    expect(detached).toEqual(["kept"]);
+    expect(kept.calls).not.toContain("kill:default");
+  });
+
   test("store notifies on session changes", async () => {
     const fake = createFakeAdapter("s1");
     const terminal = createWorkbenchTerminalController();
