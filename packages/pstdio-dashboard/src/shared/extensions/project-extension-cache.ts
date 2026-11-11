@@ -70,9 +70,6 @@ export const createProjectExtensionCache = (
       stopSettings?.();
     },
     refresh,
-    invalidateMetadata() {
-      if (valid()) metadataQuery.invalidate();
-    },
     invalidateSettings(instanceId: string) {
       if (valid()) (instanceId === input.instanceId ? settings : catalog.settings(instanceId))?.invalidate();
     },

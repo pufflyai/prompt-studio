@@ -126,12 +126,14 @@ test("switches projects once and within budget", async ({ page, request }) => {
   const projectA = await seedProject(request, "Project switch A", "a");
   const projectB = await seedProject(request, "Project switch B", "b");
   const requests: string[] = [];
-  const catalogRequests: string[] = [];
   page.on("request", (entry) => {
     const path = new URL(entry.url()).pathname;
     requests.push(path);
-    if (/\/extensions\/(ui|appearance)$/.test(path)) catalogRequests.push(path);
   });
+  const expectCatalogRead = (project: ProjectFixture) => {
+    for (const path of ["ui", "appearance"])
+      expect(requests).toContain(`/v1/projects/${project.id}/extensions/${path}`);
+  };
 
   try {
     await waitForTicketsView(request, projectA.id);
@@ -144,9 +146,19 @@ test("switches projects once and within budget", async ({ page, request }) => {
     await expect(
       page.locator('[data-workbench-region="sidenav"]').getByRole("option", { name: "Tickets", exact: true }),
     ).toBeVisible();
+    expectCatalogRead(projectA);
 
     const samples: ProjectSwitchSample[] = [];
+    const requestWindows: number[] = [];
+    const catalogRequests = () => requests.filter((path) => /\/extensions\/(ui|appearance)$/.test(path));
+    let warmCatalogRequests: string[] | undefined;
     const samplePath = test.info().outputPath("project-switch-samples.json");
+    const saveSamples = () => {
+      samples.forEach((sample, index) => {
+        sample.requests = requests.slice(requestWindows[index], requestWindows[index + 1]);
+      });
+      writeFileSync(samplePath, JSON.stringify(samples, null, 2));
+    };
     const switchProject = async (
       target: ProjectFixture,
       cycle: number,
@@ -162,17 +174,21 @@ test("switches projects once and within budget", async ({ page, request }) => {
       );
       await resetInteraction(page);
       await prepareSwitch(page, target.name);
-      requests.length = 0;
+      requestWindows.push(requests.length);
       await targetRow.click();
       const result = await readInteraction(page);
+      if (cycle === 0 && direction === "a-to-b") {
+        expectCatalogRead(projectB);
+        warmCatalogRequests = catalogRequests();
+      }
       samples.push({
         cycle,
         direction,
         ...result,
-        requests: [...requests],
+        requests: [],
         stableInstances: await stableInstances(page),
       });
-      writeFileSync(samplePath, JSON.stringify(samples, null, 2));
+      saveSamples();
     };
 
     for (let cycle = 0; cycle < 10; cycle += 1) {
@@ -189,13 +205,17 @@ test("switches projects once and within budget", async ({ page, request }) => {
     expect(aToB).toHaveLength(10);
     expect(bToA).toHaveLength(10);
     expect(samples.filter((sample) => !Object.values(sample.stableInstances).every(Boolean))).toEqual([]);
-    // Each catalog is fetched on first entry and retained through all twenty switches.
-    // Count from the initial page load so a missing cold fetch cannot look like cache reuse.
-    for (const project of [projectA, projectB])
-      for (const path of ["ui", "appearance"])
-        expect(
-          catalogRequests.filter((request) => request === `/v1/projects/${project.id}/extensions/${path}`),
-        ).toHaveLength(1);
+    // Both catalogs are now warm. Read-only board commands must not invalidate them
+    // while the remaining nineteen switches reuse their accepted snapshots.
+    expect(catalogRequests()).toEqual(warmCatalogRequests);
+    // Warm catalogs may need no read. Bound duplicate reads for either project in each
+    // contiguous click-to-next-click window, including reads outside the measured paint interval.
+    for (const sample of samples)
+      for (const project of [projectA, projectB])
+        for (const path of ["ui", "appearance"])
+          expect(
+            sample.requests.filter((request) => request === `/v1/projects/${project.id}/extensions/${path}`).length,
+          ).toBeLessThanOrEqual(1);
     await reportPageMemory(page, "project-switch");
     // Set from hosted ubuntu-24.04 runs (slowest 1,533 ms; slowest long task 419 ms, on the first switch after load)
     // plus about 20%. The long-task cap was corrected on 2026-10-27: the first value missed samples.

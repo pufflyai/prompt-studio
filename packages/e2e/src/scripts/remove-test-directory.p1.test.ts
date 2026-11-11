@@ -44,3 +44,19 @@ test("removes readonly files and long Unicode paths, and accepts an already remo
     await rm(parent, { recursive: true, force: true });
   }
 });
+
+test("removes a linked root without enumerating its external target", async () => {
+  const parent = await mkdtemp(join(tmpdir(), "linked-root-cleanup-"));
+  try {
+    const external = join(parent, "external");
+    await mkdir(external);
+    await writeFile(join(external, "keep.txt"), "Keep the external target");
+    const owned = join(parent, "owned-link");
+    await symlink(external, owned, process.platform === "win32" ? "junction" : "dir");
+    await removeTestDirectory(owned);
+    expect(await stat(owned).catch(() => null)).toBeNull();
+    expect(await readFile(join(external, "keep.txt"), "utf8")).toBe("Keep the external target");
+  } finally {
+    await rm(parent, { recursive: true, force: true });
+  }
+});

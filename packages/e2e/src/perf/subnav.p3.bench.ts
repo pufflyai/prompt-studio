@@ -77,9 +77,41 @@ try {
         );
         samples.push(ticket);
         console.info(JSON.stringify({ iteration: iteration + 1, ...ticket }));
-        if (!ticket.requests.some((request) => request.sessionRows === 120))
+        if (visit === "first" && !ticket.requests.some((request) => request.sessionRows === 120))
           errors.push(`Iteration ${iteration + 1} ${visit}: ticket history did not contain all 120 sessions`);
         if (iteration === 0 && visit === "first") await page.screenshot({ path: join(output, "ticket.png") });
+        // A warm ticket reuses its history read. Verify all 120 retained rows through
+        // the real virtualized tree after timing, then restore the initial position.
+        const ticketViewport = sidenav.locator('[data-scope="scroll-area"][data-part="viewport"]').last();
+        const history = new Set<string>();
+        await ticketViewport.evaluate((element) => {
+          element.scrollTop = element.scrollHeight;
+        });
+        try {
+          for (;;) {
+            await page.evaluate(
+              () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
+            );
+            for (const title of await sidenav
+              .getByRole("option", { name: /^Benchmark session \d{4}$/ })
+              .allTextContents())
+              history.add(title.trim());
+            if (history.size >= 120) break;
+            const moved = await ticketViewport.evaluate((element) => {
+              const before = element.scrollTop;
+              element.scrollTop -= Math.max(1, element.clientHeight / 2);
+              return before !== element.scrollTop;
+            });
+            if (!moved) break;
+          }
+          expect([...history].sort()).toEqual(
+            Array.from({ length: 120 }, (_, index) => `Benchmark session ${String(index + 1).padStart(4, "0")}`),
+          );
+        } finally {
+          await ticketViewport.evaluate((element) => {
+            element.scrollTop = 0;
+          });
+        }
         await page.goBack();
         await expect(sidenav.getByRole("option", { name: "Sessions", exact: true })).toBeVisible();
         await network.settled(performance.now());
@@ -104,7 +136,7 @@ try {
             name: `Benchmark session ${String(number).padStart(4, "0")}`,
             exact: true,
           });
-          await expect.poll(() => revealTreeEntry(page, sidenav, row)).toBe(true);
+          await expect.poll(() => revealTreeEntry(page, sidenav, row, { fromCurrentPosition: true })).toBe(true);
         }
         await expect(oldest).toBeVisible();
         await page.goBack();
