@@ -50,10 +50,12 @@ const readRun = async (ctx: Context, run: ApiRun) => {
     .filter(Boolean)
     .map((line) => JSON.parse(line) as Job);
   // Ordinary main pushes update the version PR without building or validating a release.
+  const hasCandidate = jobs.some(
+    (job) => /^(release_build|production \/|production_unchanged \/)/.test(job.name) && job.conclusion !== "skipped",
+  );
   if (
-    !jobs.some(
-      (job) => /^(release_build|production \/|production_unchanged \/)/.test(job.name) && job.conclusion !== "skipped",
-    )
+    !hasCandidate &&
+    (run.event === "push" || !jobs.some((job) => job.name === "plan" && job.conclusion !== "skipped"))
   )
     return;
   const selected = jobs.filter((job) => isTestJob(job.name) && job.conclusion !== "skipped");
@@ -67,7 +69,20 @@ const readRun = async (ctx: Context, run: ApiRun) => {
       let result: TestCounts;
       if (await files.exists(cache)) result = JSON.parse(await files.readText(cache));
       else {
-        result = countTests(await gh(ctx, ["api", `repos/{owner}/{repo}/actions/jobs/${job.id}/logs`]));
+        // Summarize outside the host so dependency logs never fill its bounded process output.
+        const output = await ctx.process.runOrThrow({
+          command: [
+            "bun",
+            "-e",
+            `
+          const child = Bun.spawn(["gh", "api", "--allow-escape-sequences", "repos/{owner}/{repo}/actions/jobs/${job.id}/logs"], { stdout: "pipe", stderr: "pipe" });
+          const [log, error, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
+          if (code !== 0) { console.error(error); process.exit(code); }
+          console.log(JSON.stringify((${countTests.toString()})(log)));
+        `,
+          ],
+        });
+        result = JSON.parse(output.stdout);
         await files.writeText(cache, JSON.stringify(result));
       }
       if (result.reports) reportedJobs++;

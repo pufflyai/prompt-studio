@@ -1,7 +1,7 @@
 import { Box, Button, HStack } from "@chakra-ui/react";
 import { useState } from "react";
-import type { ReleaseHealth as HealthRun } from "../../releases/types";
 import { HealthView } from "./health-view";
+import type { ReleaseHealth as HealthRun } from "./types";
 
 const runs: HealthRun[] = Array.from({ length: 6 }, (_, index) => ({
   id: 43080161000 + index,
@@ -23,7 +23,7 @@ const runs: HealthRun[] = Array.from({ length: 6 }, (_, index) => ({
   published: true,
   errors: [],
 }));
-export default { title: "Proposals/PS-1169 Release pipeline health", fullscreen: true };
+export default { title: "Extensions/Prompt Studio Dev/Release pipeline health", fullscreen: true };
 export const ReleaseHealth = () => {
   const [state, setState] = useState("history");
   return (

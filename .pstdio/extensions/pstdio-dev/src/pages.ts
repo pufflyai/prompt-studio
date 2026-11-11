@@ -48,6 +48,16 @@ const runOptions = defineView({
     capabilities: ["commands.execute"],
   },
 });
+const health = defineView({
+  id: "release-health",
+  title: "Release health",
+  icon: "chart-line",
+  body: {
+    kind: "webview",
+    entry: packageAsset("./releases/main.tsx", import.meta.url),
+    capabilities: ["commands.execute", "navigation.open"],
+  },
+});
 const performancePage = definePage({
   id: "performance",
   title: "Performance",
@@ -106,6 +116,12 @@ const performanceTree = defineView({
                 target: { kind: "page", page: comparePage.ref },
               },
               { id: "runs", label: runs.title, icon: runs.icon, target: { kind: "page", page: runsPage.ref } },
+              {
+                id: "release-health",
+                label: health.title,
+                icon: health.icon,
+                target: { kind: "page", page: healthPage.ref },
+              },
             ],
           },
         ],
@@ -113,8 +129,18 @@ const performanceTree = defineView({
     ],
   },
 });
-export const pages = [performancePage, comparePage, runsPage];
-export const views = [trends, compare, runs, runOptions, performanceTree];
+const healthPage = definePage({
+  id: "release-health",
+  title: health.title,
+  icon: health.icon,
+  path: "release-health",
+  mode: workbenchModes.project,
+  parent: performancePage.ref,
+  main: { kind: "view", view: health.ref, cardinality: "one", presentation: "page" },
+  slots: [],
+});
+export const pages = [performancePage, comparePage, runsPage, healthPage];
+export const views = [trends, compare, runs, runOptions, performanceTree, health];
 export const navigationTrees = [
   defineNavigationTree({
     id: "performance",

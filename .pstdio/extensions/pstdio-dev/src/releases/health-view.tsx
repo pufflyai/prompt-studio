@@ -1,12 +1,12 @@
 import { Box, Button, HStack, Stack, Table, Text } from "@chakra-ui/react";
 import { AlertMessage, EmptyState, psTheme } from "@pstdio/ui";
-import { barY, defineChart, stack } from "@tanstack/charts";
+import { barY, defineChart } from "@tanstack/charts";
 import { Chart } from "@tanstack/charts/react";
 import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { useState } from "react";
-import type { HealthHistory } from "../../releases/types";
-import { PageFrame } from "../../webview/page-frame";
+import { PageFrame } from "../webview/page-frame";
+import type { HealthHistory } from "./types";
 
 export interface HealthViewProps extends HealthHistory {
   refreshing: boolean;
@@ -15,40 +15,62 @@ export interface HealthViewProps extends HealthHistory {
 }
 const color = (value: string) => psTheme.token.var(`colors.${value}`);
 
+const OutcomeChart = (props: {
+  runs: HealthHistory["runs"];
+  outcome: "passed" | "failed";
+  onChoose: (id: number) => void;
+}) => {
+  const { runs, outcome, onChoose } = props;
+  const bars = runs.map((run) => ({ run: String(run.id), count: run.counts[outcome] }));
+  const label = outcome === "passed" ? "Passed tests" : "Failed tests";
+  const definition = defineChart({
+    marks: [barY(bars, { x: "run", y: "count", fill: color(outcome === "passed" ? "fg.success" : "fg.error") })],
+    scales: {
+      x: {
+        scale: () =>
+          scaleBand<string>()
+            .domain(bars.map((bar) => bar.run))
+            .padding(0.2),
+        axis: {
+          ticks: {
+            format: (id: string) =>
+              new Date(runs.find((run) => String(run.id) === id)!.createdAt).toLocaleString(undefined, {
+                month: "short",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
+          },
+        },
+      },
+      y: {
+        scale: () => scaleLinear().domain([0, Math.max(1, ...bars.map((bar) => bar.count))]),
+        nice: true,
+        grid: true,
+      },
+    },
+  });
+  return (
+    <Box color="fg.muted" textStyle="label/XS">
+      <Text textStyle="label/S/regular">{label}</Text>
+      <Chart
+        definition={definition}
+        height={180}
+        ariaLabel={`${label} by release run, oldest first; independent count scale`}
+        onFocusChange={(focused) => {
+          const point = focused?.datum as { run?: string } | undefined;
+          if (point?.run) onChoose(Number(point.run));
+        }}
+      />
+    </Box>
+  );
+};
+
 export const HealthView = (props: HealthViewProps) => {
   const { runs, syncedAt, error, refreshing, onRefresh, onOpen } = props;
   const [chosen, setChosen] = useState<number>();
   const selected = runs.find((run) => run.id === chosen) ?? runs.at(-1);
   const measured = runs.filter((run) => run.counts.reports > 0);
-  const bars = measured.flatMap((run) => [
-    { run: String(run.id), outcome: "Passed", count: run.counts.passed },
-    { run: String(run.id), outcome: "Failed", count: run.counts.failed },
-  ]);
-  const definition = defineChart({
-    marks: [
-      barY(bars, {
-        x: "run",
-        y: "count",
-        z: "outcome",
-        layout: stack(),
-        fill: (item) => color(item.outcome === "Passed" ? "fg.success" : "fg.error"),
-      }),
-    ],
-    scales: {
-      x: {
-        scale: () =>
-          scaleBand<string>()
-            .domain(measured.map((run) => String(run.id)))
-            .padding(0.2),
-        axis: {
-          ticks: {
-            format: (id: string) => new Date(runs.find((run) => String(run.id) === id)!.createdAt).toLocaleDateString(),
-          },
-        },
-      },
-      y: { scale: scaleLinear, nice: true, grid: true },
-    },
-  });
   return (
     <PageFrame
       toolbar={
@@ -77,17 +99,11 @@ export const HealthView = (props: HealthViewProps) => {
       ) : (
         <>
           {measured.length ? (
-            <Box color="fg.muted" textStyle="label/XS">
-              <Chart
-                definition={definition}
-                height={280}
-                ariaLabel="Reported passed and failed tests by release run, oldest first"
-                onFocusChange={(focused) => {
-                  const point = focused?.datum as { run?: string } | undefined;
-                  if (point?.run) setChosen(Number(point.run));
-                }}
-              />
-            </Box>
+            <Stack gap="sm">
+              {(["passed", "failed"] as const).map((outcome) => (
+                <OutcomeChart key={outcome} runs={measured} outcome={outcome} onChoose={setChosen} />
+              ))}
+            </Stack>
           ) : null}
           <Text textStyle="label/S/regular" color="fg.muted">
             Counts come from runner summaries. Missing reports and unfinished jobs are shown below.
