@@ -18,8 +18,38 @@ import {
   readSnapshot,
   stopMonitoring,
 } from "./packaged-performance-helpers";
+import { createPackagedProject, openPackagedProject } from "./packaged-project-helpers";
 
 // Renderer CPU budgets are benchmarks in packaged-renderer.p3.bench.ts.
+
+test("keeps performance measurements live when switching and closing project tabs", async () => {
+  let app: PackagedApp | null = null;
+  try {
+    const launched = await launchProject("First monitored project", { monitoring: true });
+    app = launched.app;
+    const capture = async () => {
+      const snapshot = await readSnapshot(app!.page);
+      return snapshot?.version === 2 ? snapshot.capture : undefined;
+    };
+    const second = await createPackagedProject(app, "Second monitored project");
+    await openPackagedProject(app.page, second);
+    await expect(performanceMeter(app.page)).toBeVisible();
+    await expect.poll(async () => (await capture())?.samples.length ?? 0).toBeGreaterThan(0);
+    const captureId = (await capture())!.id;
+
+    await app.page.getByRole("tab", { name: launched.project.name, exact: true }).click();
+    await expect(performanceMeter(app.page)).toBeVisible();
+    const lastSequence = (await capture())!.samples.at(-1)!.sequence;
+    await app.page.getByRole("button", { name: `Close ${second.name}`, exact: true }).click();
+    await expect(app.page.getByRole("tab", { name: second.name, exact: true })).toHaveCount(0);
+    await expect.poll(async () => (await capture())?.id).toBe(captureId);
+    await expect.poll(async () => (await capture())?.samples.at(-1)?.sequence ?? -1).toBeGreaterThan(lastSequence);
+    await expect.poll(async () => (await readSnapshot(app!.page))?.frameRate.length ?? 0).toBeGreaterThan(0);
+    await expect(performanceMeter(app.page)).not.toContainText("– fps");
+  } finally {
+    await disposePackagedApp(app);
+  }
+});
 
 test("Windows diagnostics work independently of PATH", async () => {
   test.skip(process.platform !== "win32", "Windows permission tools");
