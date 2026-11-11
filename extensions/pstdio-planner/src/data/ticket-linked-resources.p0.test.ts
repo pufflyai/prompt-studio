@@ -88,6 +88,23 @@ test("unavailable resources retain saved labels without an activation fallback; 
   expect(lookup.get("empty")).toEqual([]);
 });
 
+test("resources without a saved or resolved label are hidden instead of showing their id", async () => {
+  const ctx = makeCommandContext({
+    storage: createMemoryStorage(),
+    params: {},
+    overrides: { extensionId: "pstdio.pstdio-planner" },
+  });
+  const unlabeled: ResourceRef = {
+    type: "artifact",
+    id: "8d4a6a4e-3f0e-4f5a-9d55-2f8f4b1f0a11",
+    extensionId: "example.artifacts",
+    projectId: "proj-1",
+  };
+  await ctx.resources.addAnchors(ticket("one"), [unlabeled]);
+  const lookup = await loadTicketLinkedResources(ctx.resources, [ticket("one")]);
+  expect(lookup.get("one")).toEqual([]);
+});
+
 test("relationships include every page and owner resolution uses bounded batches across cards", async () => {
   const ctx = makeCommandContext({
     storage: createMemoryStorage(),
