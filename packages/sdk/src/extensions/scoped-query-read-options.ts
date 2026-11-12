@@ -1,5 +1,4 @@
 import type { QueryClient, QueryKey } from "@tanstack/query-core";
-import { PstdioConnectionError } from "../client/request";
 import type { createQueryLedger } from "./scoped-query-ledger";
 import { shareQueryValue } from "./share-query-value";
 
@@ -17,12 +16,9 @@ export const createQueryReadOptions = <T>(input: {
   assertOpen(): void;
 }) => {
   const { client, queryKey, ledger } = input;
-  // A connection failure belongs to the retryer, without replacing the accepted snapshot.
-  const rejectFailure = (issued: number, error: unknown) =>
-    error instanceof PstdioConnectionError || ledger.fail(issued, client.getQueryData<T>(queryKey), error);
   return {
     queryKey,
-    retry: (_failureCount: number, error: Error) => error instanceof PstdioConnectionError,
+    retry: false as const,
     staleTime: Infinity,
     gcTime: Infinity,
     // Fence at Query.setData itself: cancelling an already-resolved retryer is too late.
@@ -38,7 +34,7 @@ export const createQueryReadOptions = <T>(input: {
           value = requireValue(await input.read(signal));
         } catch (error) {
           signal.throwIfAborted();
-          if (rejectFailure(issued, error)) throw error;
+          if (ledger.fail(issued, client.getQueryData<T>(queryKey), error)) throw error;
           if (!ledger.dirty()) return client.getQueryData<T>(queryKey)!;
           continue;
         }

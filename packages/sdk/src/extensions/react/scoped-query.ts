@@ -1,4 +1,5 @@
-import { useLayoutEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useLayoutEffect, useState, useSyncExternalStore } from "react";
+import { PstdioConnectionError } from "../../client/request";
 import type { ScopedQuery } from "../scoped-query";
 import type { WebviewCommandQuery } from "../webview-command-query";
 import type { createWebviewQueryClient, WebviewQueryDescriptor } from "../webview-query";
@@ -18,7 +19,22 @@ export const useWebviewQuery = <T>(client: WebviewQueries, descriptor: WebviewQu
 /** Observe an existing query owner without owning its cache or another event subscription. */
 export const useScopedQuery = <T>(query: ScopedQuery<T>, active = true) => {
   const snapshot = useScopedQueries([query], active)[0]!;
-  return { ...snapshot, refresh: query.invalidate, accept: query.accept };
+  const connectionLost = snapshot.error instanceof PstdioConnectionError;
+  // Recovery belongs to the displayed page; registration and imperative reads must still settle.
+  useEffect(() => {
+    if (!active || !connectionLost || snapshot.fetching || query.isDisposed()) return;
+    const timer = setTimeout(() => {
+      if (!query.isDisposed()) query.invalidate();
+    }, 1_000);
+    return () => clearTimeout(timer);
+  }, [active, connectionLost, snapshot.fetching, query]);
+  return {
+    ...snapshot,
+    error: connectionLost ? undefined : snapshot.error,
+    loading: snapshot.loading || (connectionLost && snapshot.data === undefined),
+    refresh: query.invalidate,
+    accept: query.accept,
+  };
 };
 
 /** Observe a read-only host projection; hiding the view releases its optional host membership. */

@@ -75,28 +75,36 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
     readBinding.current = binding;
     const owner = mutationBinding.bind(ownerKey, identity);
     mutations.current = owner;
+    let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+    const clearReconnectTimer = () => {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = undefined;
+    };
     if (warm?.data !== undefined && owner.accept(warm.data, owner.revision())) callbacks.current.onAccept?.(warm.data);
     const handlers = {
       onValue: (value: T, request: symbol) => {
+        clearReconnectTimer();
         // Loaded contents may render many rows. Navigation structure and input keep priority.
         startTransition(() => setState({ queryKey: identity, request, value: owner.value() ?? value, loading: false }));
       },
       onError: (error: unknown) => {
+        clearReconnectTimer();
         const connectionLost = error instanceof PstdioConnectionError;
         const readError = error instanceof Error ? error : new Error(String(error));
         setState((previous) => ({
           queryKey: identity,
           request: previous.queryKey === identity ? previous.request : undefined,
           value: previous.queryKey === identity ? previous.value : undefined,
-          loading: false,
-          // Retain a loaded snapshot after a dropped response. An initial failure
-          // still needs Retry if the host's sync connection has not been lost.
-          error:
-            connectionLost && previous.queryKey === identity && previous.value !== undefined ? undefined : readError,
+          loading: connectionLost && (previous.queryKey !== identity || previous.value === undefined),
+          error: connectionLost ? undefined : readError,
         }));
+        if (connectionLost) {
+          reconnectTimer = setTimeout(() => void refresh(), 1_000);
+        }
       },
     };
     const refresh = (reason?: "retry" | "observe") => {
+      clearReconnectTimer();
       if (owner.pending()) return Promise.resolve();
       setState((previous) =>
         previous.queryKey === identity
@@ -159,6 +167,7 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
     };
     refresh();
     return () => {
+      clearReconnectTimer();
       retryRef.current = undefined;
       refreshRef.current = undefined;
       readBinding.current = undefined;
@@ -174,7 +183,7 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
     state.queryKey === identity
       ? state
       : { queryKey: identity, value: warm?.data, loading: warm?.data === undefined, error: warm?.error };
-  const connectionLost = current.error instanceof PstdioConnectionError && !connected;
+  const connectionLost = current.error instanceof PstdioConnectionError;
   return {
     ...current,
     error: connectionLost ? undefined : current.error?.message,

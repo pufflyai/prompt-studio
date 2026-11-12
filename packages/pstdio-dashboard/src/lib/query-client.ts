@@ -1,18 +1,10 @@
-import { PstdioConnectionError } from "@pstdio/sdk/client";
 import { QueryClient } from "@tanstack/react-query";
 import { API_FILE_URL_QUERY_KEY } from "./api-file-url";
 import { createRuntimeState } from "./sync/runtime-state";
 
 export const getDashboardQueryClient = createRuntimeState(
   () => {
-    const client = new QueryClient({
-      defaultOptions: {
-        queries: {
-          // A page request can drop while the separate live connection stays healthy.
-          retry: (failureCount, error) => error instanceof PstdioConnectionError || failureCount < 3,
-        },
-      },
-    });
+    const client = new QueryClient();
     // A blob URL keeps its file in memory until its owning runtime cache releases it.
     client.getQueryCache().subscribe((event) => {
       const data = event.query.state.data;
