@@ -4,7 +4,7 @@ import type {
   ExtensionWorkspace,
   ResourceIdentity,
 } from "@pstdio/sdk/extensions";
-import { createMemoryStorage } from "@pstdio/sdk/testing";
+import { createMemoryActivity, createMemoryStorage } from "@pstdio/sdk/testing";
 import type { CommandRunnerEnvironment } from "pstdio-extensions";
 import { createBenchResources } from "./testbench-resources";
 
@@ -221,7 +221,7 @@ export const createBenchEnvironment = async (
       removeWorktree: async () => ({ removed: true }),
       resolve: async () => ({}) as never,
     },
-    activity: { record: async () => ({ id: crypto.randomUUID() }) },
+    activity: createMemoryActivity(),
     notify: {
       setStatus: async () => null,
       setStatusByKey: async () => [],
