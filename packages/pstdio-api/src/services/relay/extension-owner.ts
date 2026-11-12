@@ -74,6 +74,7 @@ export const startRelayExtension = async (input: {
     subscribe: (space, id) => connection?.subscribe(space, id),
     discoveryNeeded: () => connection?.wake(),
     statusChanged: input.statusChanged,
+    beforeDownload: () => traceRelayOwnerPhase(owner, "files-before", refreshFiles),
   });
   const snapshot = input.snapshot;
   const repoRoot = await resolveWorkspaceFilesPath(deps, { projectId: owner.workbenchId }, "read").catch(() => null);
@@ -162,8 +163,6 @@ export const startRelayExtension = async (input: {
         for (const name of deps.nativeDocuments.sources.current(owner)) wakeDocument(name);
       },
       synchronize: async (attemptSignal) => {
-        await documents.prepare(attemptSignal);
-        await traceRelayOwnerPhase(owner, "files-before", refreshFiles);
         await traceRelayOwnerPhase(owner, "documents", () => documents.synchronize(attemptSignal));
         await traceRelayOwnerPhase(owner, "files-after", refreshFiles);
       },

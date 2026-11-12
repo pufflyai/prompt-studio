@@ -4,7 +4,11 @@ import { type ExtensionDocumentSyncInput, initializeDocumentPass } from "./docum
 import { documentProgress } from "./document-progress";
 import { createSourceActivity } from "./source-activity";
 
-export const createExtensionDocumentSync = (input: ExtensionDocumentSyncInput) => {
+interface SyncInput extends ExtensionDocumentSyncInput {
+  beforeDownload?: () => Promise<void>;
+}
+
+export const createExtensionDocumentSync = (input: SyncInput) => {
   const activity = createSourceActivity(input.statusChanged);
   let current: Awaited<ReturnType<typeof initializeDocumentPass>> | undefined;
   const stop = input.deps.extensionStorageService.watch((owner) => {
@@ -120,7 +124,12 @@ export const createExtensionDocumentSync = (input: ExtensionDocumentSyncInput) =
       return name ? synchronizeDocument(name, signal) : Promise.resolve(true);
     },
     async synchronize(signal: AbortSignal) {
-      const active = await prepare(signal);
+      let active = await prepare(signal);
+      // File projection belongs to this prepared pass. Preparing a second time
+      // afterward needlessly fetches and decrypts the same key generation again.
+      await input.beforeDownload?.();
+      signal.throwIfAborted();
+      if (current !== active) active = await prepare(signal);
       await active.synchronize();
       if (current === active && (await active.status()).downloaded) firstDownloaded = true;
     },

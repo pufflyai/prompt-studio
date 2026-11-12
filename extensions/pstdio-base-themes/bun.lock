@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "pstdio-base-themes",
+      "name": "base-themes",
       "dependencies": {
         "@pstdio/sdk": "^0.35.0",
       },

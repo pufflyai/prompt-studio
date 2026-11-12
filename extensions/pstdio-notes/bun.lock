@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "pstdio-notes",
+      "name": "notes",
       "dependencies": {
         "@pstdio/sdk": "0.47.0-nightly.20261102222512",
       },

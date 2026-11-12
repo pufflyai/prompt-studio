@@ -6,7 +6,6 @@ import { join } from "node:path";
 import { chromium, expect as expectUI } from "@playwright/test";
 import { createClient } from "@pstdio/sdk/client";
 import type { KanbanRendererQueryResult, ResourceListRendererRow } from "@pstdio/sdk/extensions";
-import { $ } from "bun";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { e2eExtension } from "../default-extensions";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
@@ -15,6 +14,7 @@ import { preparePackagedExtensionSource } from "./packaged-extension-source";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
+import { removeTestDirectory } from "./remove-test-directory";
 
 type ResourceListRendererQueryResult = Omit<KanbanRendererQueryResult, "rows"> & { rows: ResourceListRendererRow[] };
 let root: string;
@@ -335,7 +335,7 @@ test(
       await peer.close();
       progress("device peer closed");
       progress("remove fixture directory");
-      await $`rm -rf ${root}`;
+      await removeTestDirectory(root);
       expect(existsSync(root)).toBe(false);
       progress("cleanup complete");
     }

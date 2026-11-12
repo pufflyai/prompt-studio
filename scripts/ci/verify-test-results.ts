@@ -19,11 +19,30 @@ export interface TestRunResult {
   elapsedMs?: number;
   nativeFailure?: boolean;
 }
+// A rerun may retain successful jobs, but never evidence from another workflow or the future.
+const workflowAttempt = (actual: string, expected: string) => {
+  if (actual === expected) return Number(/\/(\d+)$/.exec(actual)?.[1] ?? 0);
+  const candidate = /^(\d+)\/([1-9]\d*)$/.exec(actual);
+  const current = /^(\d+)\/([1-9]\d*)$/.exec(expected);
+  if (!candidate || !current || candidate[1] !== current[1] || Number(candidate[2]) >= Number(current[2]))
+    throw new Error(`Stale execution: ${actual}; expected ${expected}`);
+  return Number(candidate[2]);
+};
+
+const validResultExecution = (result: TestRunResult, executionId: string) => {
+  try {
+    workflowAttempt(result.executionId, executionId);
+    return result.executionId === executionId || ["success", "quarantined-failure"].includes(result.outcome);
+  } catch {
+    return false;
+  }
+};
+
 const resultErrors = (plan: TestPlan, result: TestRunResult, executionId: string) => {
   const errors: string[] = [];
   if (
     result.planDigest !== plan.digest ||
-    result.executionId !== executionId ||
+    !validResultExecution(result, executionId) ||
     planHash(result.source) !== planHash(plan.source)
   )
     errors.push(`Stale run: ${result.runId}`);
@@ -94,6 +113,12 @@ const readBundle = (plan: TestPlan, file: string, directory: string, executionId
       !(result.exitCode === null || Number.isInteger(result.exitCode))
     )
       throw new Error(`Invalid run record: ${result?.runId}`);
+    if (
+      result.planDigest !== plan.digest ||
+      result.executionId !== executionId ||
+      planHash(source) !== planHash(plan.source)
+    )
+      throw new Error(`Stale run identity: ${result.runId}`);
     const run = plan.runs.find((candidate) => candidate.id === result.runId);
     if (!run) throw new Error(`Unexpected run: ${result.runId}`);
     const native = collectRunEvidence(directory, join(dirname(file), run.id), run, plan, executionId);
@@ -107,15 +132,41 @@ const readBundle = (plan: TestPlan, file: string, directory: string, executionId
   return records;
 };
 export const collectResultBundles = (plan: TestPlan, directory: string, executionId: string) => {
-  const records: TestRunResult[] = [];
   const errors: string[] = [];
+  const invocations: Array<{
+    file: string;
+    executionId: string;
+    attempt: number;
+    assigned: string[];
+    records: TestRunResult[];
+    errors: string[];
+  }> = [];
+  const readInvocation = (file: string) => {
+    const bundle = JSON.parse(readFileSync(file, "utf8"));
+    const attempt = workflowAttempt(bundle.executionId, executionId);
+    const assigned: string[] = bundle.runIds ?? bundle.results.map((result: TestRunResult) => result.runId);
+    if (new Set(assigned).size !== assigned.length || assigned.some((id) => !plan.runs.some((run) => run.id === id)))
+      throw new Error("Invalid run assignment");
+    if (bundle.results.some((result: TestRunResult) => !assigned.includes(result.runId)))
+      throw new Error("Result outside its invocation assignment");
+    const invocationErrors: string[] = [];
+    const records = readBundle(plan, file, directory, bundle.executionId, invocationErrors);
+    return {
+      file,
+      executionId: bundle.executionId,
+      attempt,
+      assigned,
+      records,
+      errors: invocationErrors,
+    };
+  };
   const visit = (path: string) => {
     for (const entry of readdirSync(path, { withFileTypes: true })) {
       const file = join(path, entry.name);
       if (entry.isDirectory()) visit(file);
       else if (entry.name === "execution.json") {
         try {
-          records.push(...readBundle(plan, file, directory, executionId, errors));
+          invocations.push(readInvocation(file));
         } catch (error) {
           errors.push(`Invalid result bundle ${file}: ${error}`);
         }
@@ -127,7 +178,22 @@ export const collectResultBundles = (plan: TestPlan, directory: string, executio
   } catch (error) {
     errors.push(`Cannot read result bundles ${directory}: ${error}`);
   }
-  return { records, errors };
+  const latest = new Map<string, number>();
+  for (const invocation of invocations)
+    for (const id of invocation.assigned) latest.set(id, Math.max(latest.get(id) ?? -1, invocation.attempt));
+  const records: TestRunResult[] = [];
+  const assignments = new Set<string>();
+  for (const invocation of invocations) {
+    const selected = invocation.assigned.filter((id) => latest.get(id) === invocation.attempt);
+    if (!selected.length) continue;
+    for (const id of selected) {
+      if (assignments.has(id)) errors.push(`Duplicate newest assignment: ${id}`);
+      assignments.add(id);
+    }
+    errors.push(...invocation.errors);
+    records.push(...invocation.records.filter((record) => selected.includes(record.runId)));
+  }
+  return { records, errors, observations: invocations.flatMap((invocation) => invocation.records), invocations };
 };
 export const browserCoverageErrors = (plan: TestPlan, results: TestRunResult[]) => {
   const groups = new Map<string, typeof plan.runs>();
@@ -160,14 +226,17 @@ if (import.meta.main) {
   if (!planPath || !directory) throw new Error("Expected plan and result bundle directory");
   const plan = JSON.parse(readFileSync(planPath, "utf8")) as TestPlan;
   const executionId = testExecutionId();
-  const { records, errors } = collectResultBundles(plan, directory, executionId);
+  const { records, errors, observations, invocations } = collectResultBundles(plan, directory, executionId);
   const result = reconcileTestResults(plan, records, executionId);
   result.errors.push(...errors, ...browserCoverageErrors(plan, records));
   if (result.errors.length) {
     result.outcome = "failure";
     result.complete = false;
   }
-  await Bun.write("test-results/ci/plan-verification.json", JSON.stringify({ ...result, results: records }, null, 2));
+  await Bun.write(
+    "test-results/ci/plan-verification.json",
+    JSON.stringify({ ...result, results: records, observations, invocations }, null, 2),
+  );
   if (result.outcome !== "success") {
     const failures = records
       .filter((record) => !["success", "quarantined-failure"].includes(record.outcome) || !record.complete)
