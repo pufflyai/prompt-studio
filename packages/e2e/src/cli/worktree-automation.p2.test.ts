@@ -51,7 +51,7 @@ describe("workspace provisioning", () => {
       const extensionsByName = new Map(
         projectExtensions.extensions.map((extension) => [extension.installName, extension]),
       );
-      expect(realpathSync(extensionsByName.get("pstdio-planner")!.sourcePath)).toBe(
+      expect(realpathSync(extensionsByName.get("planner")!.sourcePath)).toBe(
         realpathSync(join(api.homePath, "extensions", "pstdio-planner")),
       );
 
