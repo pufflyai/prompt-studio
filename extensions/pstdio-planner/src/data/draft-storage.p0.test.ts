@@ -43,3 +43,12 @@ test.each([
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("writing drafts preserves an existing canonical owned ignore rule", async () => {
+  const files = createMemoryRepoFiles();
+  const existing = "config.json\n/extension-storage/pstdio.planner/\n!extension-storage/shared.txt\n";
+  await files.writeText(".pstdio/.gitignore", existing);
+  await ensureTicketDraftsIgnored(files);
+  await ensureTicketDraftsIgnored(files);
+  expect(await files.readText(".pstdio/.gitignore")).toBe(existing);
+});

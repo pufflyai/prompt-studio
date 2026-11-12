@@ -1,7 +1,7 @@
 import { defineCommand, l10n, params, type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
-import { serviceFor } from "./artifact-context";
+import { artifactOwnerFor, serviceFor } from "./artifact-context";
 import { removeArtifact, renameArtifact } from "./artifact-mutations";
-import { artifactUrl, extensionId } from "./contracts";
+import { artifactUrl } from "./contracts";
 import { sitesPath } from "./mounts";
 import { artifactActionsSlot } from "./resource-kinds";
 
@@ -22,7 +22,10 @@ export const resolveResources = defineCommand({
     if (requested.length > 100) throw new Error("Resolve at most 100 artifacts.");
     const refs = new Map(
       requested
-        .filter((ref) => ref.type === "artifact" && ref.extensionId === extensionId && ref.projectId === ctx.projectId)
+        .filter(
+          (ref) =>
+            ref.type === "artifact" && ref.extensionId === artifactOwnerFor(ctx) && ref.projectId === ctx.projectId,
+        )
         .map((ref) => [resourceKey(ref), ref]),
     );
     if (!refs.size) return [];
