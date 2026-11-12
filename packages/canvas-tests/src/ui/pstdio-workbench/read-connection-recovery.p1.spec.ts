@@ -5,11 +5,15 @@ const canvas = "packages/pstdio-workbench/src/react/renderers/tree/tree-connecti
 
 // Critical: an initial dropped page response must recover without blocking navigation on a Retry banner.
 test("an initial connection failure stays quiet and recovers automatically", async ({ page }) => {
-  const preview = await openCanvasPreview(page, `${canvas}#InitialConnectionFailure`);
+  const preview = await openCanvasPreview(
+    page,
+    "packages/pstdio-workbench/src/react/renderers/renderer-connection-recovery.canvas.tsx#InitialConnectionFailure",
+  );
+  await expect(preview.getByText(/^Read attempts [1-9]/)).toBeVisible();
   await expect(preview.getByText("Could not connect to the backend.", { exact: true })).toHaveCount(0);
   await expect(preview.getByRole("button", { name: "Retry", exact: true })).toHaveCount(0);
   await preview.getByRole("button", { name: "Restore response", exact: true }).click();
-  await expect(preview.getByRole("option", { name: "Notes", exact: true })).toBeVisible();
+  await expect(preview.getByText("Loaded content", { exact: true })).toBeVisible();
 });
 
 // Critical: a background connection failure must preserve loaded navigation and keep real view errors actionable.
