@@ -7,6 +7,14 @@ export const registerResourceKinds = (input: InternalRegisterWorkbenchExtensionC
   input.metadata.resourceKinds.map((kind) =>
     input.workbench.resources.registerKind({
       kind: kind.id,
+      activity:
+        kind.activity && Object.values(kind.activity).some(Boolean) && input.resourceActivity
+          ? {
+              ...input.resourceActivity,
+              capabilities: kind.activity,
+              targets: kind.activityHandoff ? input.resourceActivity.targets : undefined,
+            }
+          : undefined,
       extensionId: kind.extensionId,
       label: text(kind.label, kind.id),
       icon: kind.icon ?? "FileText",

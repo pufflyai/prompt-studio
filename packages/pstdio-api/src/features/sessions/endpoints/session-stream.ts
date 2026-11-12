@@ -1,9 +1,10 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { Context } from "hono";
 import { streamSSE } from "hono/streaming";
-import { commandExecuteBodySchema } from "pstdio-api-contracts";
+import { commandExecuteBodySchema, resourceLinkRefSchema } from "pstdio-api-contracts";
 import { sessionLogger } from "../../../lib/logger";
 import type { AppBindings, AppRouteHandler } from "../../../types";
+import { streamResourceActivity } from "../../activity/resource-activity-stream";
 import type { RouteDeps } from "../../deps";
 import { prepareCommandSubscription } from "../../extensions/command-stream-subscription";
 import type { ExtensionsRouteDeps } from "../../extensions/deps";
@@ -47,6 +48,14 @@ export const subscribeSessionStreamRoute = createRoute({
               .object({
                 subscription_id: z.string().min(1),
                 workspace_files: z.object({ project_id: z.string().min(1), workspace_id: z.string().min(1) }).strict(),
+              })
+              .strict(),
+            z
+              .object({
+                subscription_id: z.string().min(1),
+                resource_activity: z
+                  .object({ project_id: z.string().min(1), resource: resourceLinkRefSchema })
+                  .strict(),
               })
               .strict(),
             z
@@ -133,6 +142,12 @@ export const subscribeSessionStreamHandler = (
     if ("workspace_files" in input) {
       const started = connections.subscribe(connectionId, input.subscription_id, (sink) =>
         streamWorkspaceChanges(deps, input.workspace_files, sink, "files"),
+      );
+      return subscriptionResponse(c, connectionId, started);
+    }
+    if ("resource_activity" in input) {
+      const started = connections.subscribe(connectionId, input.subscription_id, (sink) =>
+        streamResourceActivity(deps, input.resource_activity, sink),
       );
       return subscriptionResponse(c, connectionId, started);
     }

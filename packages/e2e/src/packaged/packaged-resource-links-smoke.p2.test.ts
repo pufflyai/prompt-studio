@@ -11,7 +11,7 @@ import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 
 setupPackagedSmokeTests();
 
-test("independent extension resources share durable links through the packaged SDK, HTTP and CLI", async () => {
+test("independent extension resources share durable links and resource Activity through the packaged SDK, HTTP and CLI", async () => {
   const root = mkdtempSync(join(tmpdir(), "packaged-resource-links-"));
   let child: ChildProcess | undefined;
   try {
@@ -45,7 +45,7 @@ test("independent extension resources share durable links through the packaged S
       writeFileSync(
         join(sourcePath, "extension.ts"),
         `export default {
-          resourceKinds: [{id:"item", ref:{kind:"resource-kind",id:"item"}, resolveMany:{kind:"command",id:"resolve-many"}, relatedOpenings:{kind:"command",id:"related"}, paths:[{prefix:"items/",resolve:{kind:"command",id:"resolve-path"}}]}],
+          resourceKinds: [{activity:{comments:true},id:"item", ref:{kind:"resource-kind",id:"item"}, resolveMany:{kind:"command",id:"resolve-many"}, relatedOpenings:{kind:"command",id:"related"}, paths:[{prefix:"items/",resolve:{kind:"command",id:"resolve-path"}}]}],
           commandPaletteResources: [{id:"items", ref:{kind:"command-palette-resource",id:"items"}, title:"Items", resourceKind:{kind:"resource-kind",id:"item"}, refreshEvents:["view.resource-anchors.changed"], query:async () => ({items:[]})}],
           commands: [
             {id:"link-host",ref:{kind:"command",id:"link-host"},title:"Link host source",async run(ctx,params){
@@ -150,11 +150,23 @@ test("independent extension resources share durable links through the packaged S
       return JSON.parse(result.stdout);
     };
     expect(cli("links", "--resource", to, "--direction", "incoming").items).toHaveLength(1);
+    const activityResource = { projectId: project.id, extensionId: "test.art", type: "item", id: "two" };
+    const published = await request(`/v1/projects/${project.id}/activity/publish`, {
+      resource: activityResource,
+      entry: { key: "comment", kind: "comment", body: "Preserved discussion" },
+    });
+    expect(cli("activity", "list", "--resource", JSON.stringify(activityResource)).items).toMatchObject([
+      { id: published.id, body: "Preserved discussion" },
+    ]);
+
     await stopProcess(child);
     child = undefined;
     runtime = await startPackagedServe(root);
     child = runtime.child;
     expect(cli("links", "--resource", from).items).toHaveLength(1);
+    expect(cli("activity", "read", "--resource", JSON.stringify(activityResource), "--id", published.id).body).toBe(
+      "Preserved discussion",
+    );
     cli("unlink", "--from", from, "--to", to);
     expect(cli("links", "--resource", to, "--direction", "both").items).toEqual([]);
     cli("link", "--from", from, "--to", to, "--role", "source");

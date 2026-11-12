@@ -41,10 +41,11 @@ const guard = { id: "guard", ref: { kind: "middleware", id: "guard" }, command: 
   notices: [{ type: "warning", message: "Reload" }], diagnostics: [{ code: "conflict", message: "Changed", severity: "warning" }]
 }) };
 const plain = defineCommand({ id: "plain", title: "Plain", run: wait });
+const resources = defineCommand({id:"resolve-resources",title:"Resolve resources",run:(_ctx,input)=>input.resources.map(resource=>({resource}))});
 const state = defineCommand({ id: "state", title: "State", run: () => ({ active, cancelled }) });
 const view = defineView({ id: "live", title: "Stream fixture", body: { kind: "webview", entry: packageAsset("./view.ts", import.meta.url), capabilities: ["commands.stream", "commands.execute"] } });
 const page = definePage({ id: "live", title: "Live", path: "live", mode: workbenchModes.project, main: { kind: "view", view: view.ref, cardinality: "one" }, slots: [] });
-export default defineExtension({ commands: [tail, progress, reject, plain, state], middlewares: [guard], views: [view], pages: [page] });
+export default defineExtension({ resourceKinds:[{id:"item",ref:{kind:"resource-kind",id:"item"},activity:{comments:true},resolveMany:resources.ref}], commands: [tail, progress, reject, plain, state, resources], middlewares: [guard], views: [view], pages: [page] });
 `,
   );
   writeFileSync(

@@ -1,10 +1,10 @@
 import type { HTMLChakraProps } from "@chakra-ui/react";
-import { Box, chakra, HStack, Icon, IconButton, Spacer, Textarea } from "@chakra-ui/react";
+import { Box, chakra, HStack, Icon, IconButton, Input, Spacer, Textarea, useSlotRecipe } from "@chakra-ui/react";
 import { ArrowUp, Paperclip } from "lucide-react";
 import type { FormEvent, ReactNode } from "react";
 import { useState } from "react";
-
 import { Tooltip } from "@/components/primitives/tooltip";
+import { activityComposerSlotRecipe } from "@/theme/recipes/activity-composer";
 import type { ActivityActor } from "./activity.types";
 import { ActivityAvatar } from "./activity-avatar";
 
@@ -13,7 +13,7 @@ export interface ActivityComposerProps extends Omit<HTMLChakraProps<"form">, "on
   value?: string;
   defaultValue?: string;
   placeholder?: string;
-  variant?: "standalone" | "inline";
+  variant?: "standalone" | "inline" | "compact";
   minRows?: number;
   attachLabel?: string;
   submitLabel?: string;
@@ -39,6 +39,8 @@ export const ActivityComposer = (props: ActivityComposerProps) => {
     onSubmit,
     ...rootProps
   } = props;
+  const recipe = useSlotRecipe({ recipe: activityComposerSlotRecipe });
+  const styles = recipe({ variant });
   const [internalValue, setInternalValue] = useState(defaultValue);
   const currentValue = value ?? internalValue;
   const isInline = variant === "inline";
@@ -62,6 +64,33 @@ export const ActivityComposer = (props: ActivityComposerProps) => {
       setInternalValue("");
     }
   };
+
+  if (variant === "compact")
+    return (
+      <chakra.form css={styles.root} onSubmit={handleSubmit} {...rootProps}>
+        <Box css={styles.row}>
+          {actor ? <ActivityAvatar actor={actor} /> : null}
+          <Input
+            css={styles.input}
+            aria-label={placeholder}
+            placeholder={placeholder}
+            value={currentValue}
+            onChange={(event) => handleChange(event.currentTarget.value)}
+          />
+          <Box css={styles.actions}>
+            {actions}
+            {onAttach && (
+              <IconButton type="button" size="2xs" variant="ghost" aria-label={attachLabel} onClick={onAttach}>
+                <Paperclip />
+              </IconButton>
+            )}
+            <IconButton type="submit" size="2xs" variant="subtle" aria-label={submitLabel} disabled={!canSubmit}>
+              <ArrowUp />
+            </IconButton>
+          </Box>
+        </Box>
+      </chakra.form>
+    );
 
   return (
     <chakra.form
