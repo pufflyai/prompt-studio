@@ -2,7 +2,7 @@ import { defineCommand, l10n, params, type ResourceRef, resourceKey } from "@pst
 import { artifactOwnerFor, serviceFor } from "./artifact-context";
 import { removeArtifact, renameArtifact } from "./artifact-mutations";
 import { artifactUrl } from "./contracts";
-import { sitesPath } from "./mounts";
+import { sitePaths } from "./mounts";
 import { artifactActionsSlot } from "./resource-kinds";
 
 const artifactParam = params.text({ required: true, resolvedFrom: "resource" });
@@ -42,7 +42,8 @@ export const resolvePath = defineCommand({
   title: l10n("commands.resolvePath", "Resolve artifact path"),
   params: { path: params.text({ required: true }), workspaceId: params.text({ required: true }) },
   async run(ctx, input) {
-    const name = input.path.startsWith(sitesPath) ? input.path.slice(sitesPath.length) : "";
+    const prefix = sitePaths.find((prefix) => input.path.startsWith(prefix));
+    const name = prefix ? input.path.slice(prefix.length) : "";
     const revisionId = /^([^/]+)\.html$/.exec(name)?.[1];
     return revisionId ? serviceFor(ctx).resolveRevision(revisionId) : null;
   },

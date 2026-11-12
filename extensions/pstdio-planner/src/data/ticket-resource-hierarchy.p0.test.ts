@@ -192,3 +192,15 @@ describe("tickets browse root", () => {
     });
   });
 });
+
+test("a current host's owner qualifies every ancestor in a newly created ticket reference", () => {
+  const ticket = { id: "ticket", shorthand: "T-1", title: "Ticket" } as never;
+  expect(ticketResourceReference(ticket, new Map(), "pstdio.planner").metadata.resourceParent).toEqual({
+    type: "view",
+    viewId: "pstdio.planner.view.tickets",
+  });
+  expect(ticketResourceIdentity(ticket, new Map(), "pstdio.pstdio-planner").metadata.resourceParent).toEqual({
+    type: "view",
+    viewId: "pstdio.pstdio-planner.view.tickets",
+  });
+});

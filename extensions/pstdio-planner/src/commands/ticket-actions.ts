@@ -12,7 +12,7 @@ import {
 import { ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
 import { renderOwnedTemplate } from "../data/template-store";
-import { ticketResourceIdentity } from "../data/ticket-resource-hierarchy";
+import { plannerOwnerFor, ticketResourceIdentity } from "../data/ticket-resource-hierarchy";
 import { withTicketTagIds } from "../data/ticket-tags";
 import type { Ticket } from "../data/types";
 import { notifyProposalRefined, resolveProposalRefinedNotification } from "../planner-notifications";
@@ -77,13 +77,13 @@ export const resolveTicketIdentity = async (
 };
 
 const ticketHierarchyMetadata = async (
-  ctx: Pick<CommandContext<{ ticket?: string; rowId?: string }>, "storage" | "resources">,
+  ctx: Pick<CommandContext<{ ticket?: string; rowId?: string }>, "extensionId" | "storage" | "resources">,
   ticket: Ticket | undefined,
 ) => {
   if (!ticket) return undefined;
   const tickets = await ticketsCollection(ctx).list();
   const parentLookup = new Map(tickets.map((candidate) => [candidate.id, candidate]));
-  return ticketResourceIdentity(ticket, parentLookup).metadata;
+  return ticketResourceIdentity(ticket, parentLookup, plannerOwnerFor(ctx)).metadata;
 };
 
 export const resolveTicketAnchor = async (

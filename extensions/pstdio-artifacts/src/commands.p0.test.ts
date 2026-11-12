@@ -157,3 +157,26 @@ test("publishing notifies historical artifact subscribers once", async () => {
   );
   expect(received).toEqual([{ artifactId: published.artifactId }]);
 });
+
+test("canonical and historical allocated snapshots resolve the same artifact", async () => {
+  const storage = createMemoryStorage();
+  const snapshots = createMemoryRepoFiles();
+  const projectFiles = createMemoryRepoFiles();
+  await projectFiles.writeText("page.html", "<title>Allocated paths</title>");
+  const [ctx, input] = makeCommandArgs({
+    storage,
+    params: { file_path: "page.html" },
+    overrides: { extensionId: "pstdio.artifacts", projectFiles, artifacts: { mount: () => snapshots } },
+  });
+  const published = await commands.publish.run(ctx, input);
+  const resolutions = await Promise.all(
+    ["pstdio.pstdio-artifacts", "pstdio.artifacts"].map((owner) =>
+      commands["resolve-path"].run(ctx, {
+        path: `.pstdio/extension-storage/${owner}/sites/${published.revisionId}.html`,
+        workspaceId: "workspace",
+      }),
+    ),
+  );
+  expect(resolutions[0]).not.toBeNull();
+  expect(resolutions[0]).toEqual(resolutions[1]);
+});

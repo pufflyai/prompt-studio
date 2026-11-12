@@ -4,3 +4,5 @@ export const sites = defineArtifactMount({ id: "sites", path: "sites", label: l1
 
 // The SDK does not expose a mount's workspace path. Extension files live under the full extension ID.
 export const sitesPath = `.pstdio/extension-storage/pstdio.artifacts/${sites.path}/`;
+
+export const sitePaths = [sitesPath, `.pstdio/extension-storage/pstdio.pstdio-artifacts/${sites.path}/`];
