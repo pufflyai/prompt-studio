@@ -3,4 +3,4 @@
 "@pstdio/ui": patch
 ---
 
-Add shared dashboard grid styling with panel drop highlights and resize handles.
+Add dashboard grid styling with subtle guides, panel drop highlights, and react-resizable handles.

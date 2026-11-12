@@ -72,7 +72,13 @@ export const dashboardRecipe = defineSlotRecipe({
       gap: "inherit",
       pointerEvents: "none",
     },
-    guideCell: { borderWidth: "1px", borderColor: "border.subtle", borderRadius: "compact" },
+    guideCell: {
+      boxSize: "dashboard-guide",
+      bg: "border.subtle",
+      borderRadius: "full",
+      alignSelf: "start",
+      justifySelf: "start",
+    },
     card: {
       position: "relative",
       gridColumn: "var(--dashboard-x) / span var(--dashboard-w)",

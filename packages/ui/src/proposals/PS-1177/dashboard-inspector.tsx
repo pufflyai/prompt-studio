@@ -18,17 +18,6 @@ export function WidgetInspector(props: WidgetInspectorProps) {
   useEffect(() => {
     input.current?.focus();
   }, []);
-  const widths = [
-    { id: "3", name: "Quarter" },
-    { id: "4", name: "One third" },
-    { id: "6", name: "Half" },
-    { id: "12", name: "Full" },
-  ];
-  const heights = [
-    { id: "3", name: "Compact" },
-    { id: "8", name: "Standard" },
-    { id: "10", name: "Tall" },
-  ];
   return (
     <Stack h="full" minH="0" gap="0">
       <HStack p="sm" justify="space-between">
@@ -81,32 +70,6 @@ export function WidgetInspector(props: WidgetInspectorProps) {
               multiSelect={false}
               fullWidth
               onToggle={(source) => onChange({ ...widget, source: source as DashboardWidget["source"] })}
-            />
-          </Stack>
-          <Stack gap="xs" role="group" aria-label="Widget width">
-            <Text textStyle="label/S/regular">Width</Text>
-            <SelectionMenu
-              triggerAriaLabel="Widget width"
-              triggerLabel={
-                widths.find(({ id }) => id === String(widget.layout.w))?.name ?? `${widget.layout.w} columns`
-              }
-              options={widths}
-              selectedIds={[String(widget.layout.w)]}
-              multiSelect={false}
-              fullWidth
-              onToggle={(width) => onChange({ ...widget, layout: { ...widget.layout, w: Number(width) } })}
-            />
-          </Stack>
-          <Stack gap="xs" role="group" aria-label="Widget height">
-            <Text textStyle="label/S/regular">Height</Text>
-            <SelectionMenu
-              triggerAriaLabel="Widget height"
-              triggerLabel={heights.find(({ id }) => id === String(widget.layout.h))?.name ?? `${widget.layout.h} rows`}
-              options={heights}
-              selectedIds={[String(widget.layout.h)]}
-              multiSelect={false}
-              fullWidth
-              onToggle={(height) => onChange({ ...widget, layout: { ...widget.layout, h: Number(height) } })}
             />
           </Stack>
         </Stack>

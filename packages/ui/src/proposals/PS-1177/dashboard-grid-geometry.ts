@@ -15,5 +15,15 @@ export function measureGrid(element: HTMLDivElement, columns: number) {
   const gap = Number.parseFloat(style.columnGap);
   const width = element.clientWidth - Number.parseFloat(style.paddingLeft) - Number.parseFloat(style.paddingRight);
   const scale = element.getBoundingClientRect().width / element.offsetWidth;
-  return { column: ((width + gap) / columns) * scale, row: (Number.parseFloat(style.gridAutoRows) + gap) * scale };
+  return {
+    column: ((width + gap) / columns) * scale,
+    row: (Number.parseFloat(style.gridAutoRows) + gap) * scale,
+    gap: gap * scale,
+    scale,
+  };
 }
+
+export const placementSize = (layout: Pick<GridPlacement, "w" | "h">, metrics: ReturnType<typeof measureGrid>) => ({
+  width: (layout.w * metrics.column - metrics.gap) / metrics.scale,
+  height: (layout.h * metrics.row - metrics.gap) / metrics.scale,
+});

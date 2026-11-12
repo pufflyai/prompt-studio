@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { DashboardWidget } from "./dashboard-fixtures";
-import { dashboardColumns, moveWidget, projectWidgets, resizeWidget } from "./dashboard-layout";
+import { compactWidgets, dashboardColumns, moveWidget, projectWidgets, resizeWidget } from "./dashboard-layout";
 
 const fixtures: DashboardWidget[] = [
   { id: "first", title: "First", kind: "metric", source: "users", layout: { x: 0, y: 0, w: 4, h: 3 } },
@@ -9,8 +9,8 @@ const fixtures: DashboardWidget[] = [
 ];
 
 describe("dashboard grid editing", () => {
-  test("a drop keeps its chosen grid position and pushes overlapping widgets below it", () => {
-    const result = moveWidget(fixtures, "first", { x: 4, y: 3, w: 4, h: 3 }, 12);
+  test("free placement keeps its chosen position and pushes overlapping widgets below it", () => {
+    const result = moveWidget(fixtures, "first", { x: 4, y: 3, w: 4, h: 3 }, 12, "free");
     expect(result.find(({ id }) => id === "first")?.layout).toEqual({ x: 4, y: 3, w: 4, h: 3 });
     expect(result.find(({ id }) => id === "chart")?.layout.y).toBe(6);
     expect(result.find(({ id }) => id === "second")?.layout).toEqual(fixtures[1].layout);
@@ -53,5 +53,29 @@ describe("dashboard grid editing", () => {
   test("picking up a widget on a phone keeps its position until it moves", () => {
     const origin = projectWidgets(fixtures, 1)[0].layout;
     expect(moveWidget(fixtures, "first", origin, 1)).toEqual(fixtures);
+  });
+
+  test("cards flow to the top by default after a drop into empty space", () => {
+    const moved = moveWidget(fixtures, "first", { x: 8, y: 12, w: 4, h: 3 }, 12);
+    expect(moved.find(({ id }) => id === "first")?.layout).toEqual({ x: 8, y: 0, w: 4, h: 3 });
+  });
+
+  test("vertical compaction closes holes left by removing a card", () => {
+    const lower = { ...fixtures[0], id: "lower", layout: { x: 0, y: 12, w: 4, h: 3 } };
+    expect(compactWidgets([lower])[0].layout.y).toBe(0);
+    expect(compactWidgets([fixtures[0], lower])[1].layout.y).toBe(3);
+  });
+
+  test("horizontal mode closes gaps to the left while free mode preserves placement", () => {
+    const spaced = [
+      { ...fixtures[0], layout: { x: 4, y: 6, w: 3, h: 3 } },
+      { ...fixtures[1], layout: { x: 8, y: 6, w: 3, h: 3 } },
+    ];
+    expect(compactWidgets(spaced, "horizontal").map(({ layout }) => [layout.x, layout.y])).toEqual([
+      [0, 6],
+      [3, 6],
+    ]);
+    expect(compactWidgets(spaced, "free")).toEqual(spaced);
+    expect(spaced[0].layout).toEqual({ x: 4, y: 6, w: 3, h: 3 });
   });
 });

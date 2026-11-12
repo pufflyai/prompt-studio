@@ -1,12 +1,11 @@
 import { Box, HStack, IconButton, Text, useSlotRecipe } from "@chakra-ui/react";
-import { GripVertical, MoveDiagonal2, Settings2 } from "lucide-react";
+import { GripVertical, Settings2 } from "lucide-react";
 import type { ComponentProps } from "react";
 import { DataTable } from "@/components/data-table/data-table";
 import { SimpleCard } from "@/components/primitives/simple-card";
 import { dashboardRecipe } from "@/theme/recipes/dashboard";
 import { DashboardChart } from "./dashboard-chart";
 import { changes, type DashboardWidget, recentTotals, sourceTables, totals } from "./dashboard-fixtures";
-import type { useDashboardResize } from "./use-dashboard-resize";
 
 interface WidgetCardProps {
   widget: DashboardWidget;
@@ -14,12 +13,11 @@ interface WidgetCardProps {
   selected: boolean;
   days: number;
   dragHandle: ComponentProps<typeof IconButton>;
-  resizeHandlers: ReturnType<ReturnType<typeof useDashboardResize>["handlers"]>;
   onConfigure: () => void;
 }
 
 export function WidgetCard(props: WidgetCardProps) {
-  const { widget, editing, selected, days, dragHandle, resizeHandlers, onConfigure } = props;
+  const { widget, editing, selected, days, dragHandle, onConfigure } = props;
   const styles = useSlotRecipe({ recipe: dashboardRecipe })();
   const total = days === 7 ? totals[widget.source] : recentTotals[widget.source];
   return (
@@ -93,18 +91,6 @@ export function WidgetCard(props: WidgetCardProps) {
             columnTypes={{ Warnings: "number", Conversations: "number" }}
           />
         </Box>
-      )}
-      {editing && (
-        <IconButton
-          {...resizeHandlers}
-          aria-label={`Resize ${widget.title}`}
-          title="Drag to resize. Arrow keys adjust width and height."
-          size="xs"
-          variant="ghost"
-          css={styles.resizeHandle}
-        >
-          <MoveDiagonal2 />
-        </IconButton>
       )}
     </SimpleCard>
   );

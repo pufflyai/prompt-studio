@@ -1,5 +1,15 @@
 export type WidgetKind = "metric" | "line" | "bar" | "table";
 export type WidgetSource = "conversations" | "users" | "warnings";
+export type DashboardLayoutMode = "vertical" | "horizontal" | "free";
+export interface DashboardDefinition {
+  mode: DashboardLayoutMode;
+  widgets: DashboardWidget[];
+}
+export const layoutModes = [
+  { id: "vertical", name: "Compact up" },
+  { id: "horizontal", name: "Compact left" },
+  { id: "free", name: "Free placement" },
+];
 export interface GridPlacement {
   x: number;
   y: number;
