@@ -40,10 +40,6 @@ export interface ActivityReplyProps extends Omit<HTMLChakraProps<"div">, "title"
   children: ReactNode;
 }
 
-const TimestampSeparator = () => (
-  <Box as="span" boxSize="3px" borderRadius="full" background="fg.subtle" flexShrink={0} />
-);
-
 const ActivityCommentHeader = (props: ActivityCommentHeaderProps) => {
   const { actor, icon, iconColor, iconBackground, timestamp, actions } = props;
 
@@ -54,12 +50,9 @@ const ActivityCommentHeader = (props: ActivityCommentHeaderProps) => {
         {actor.name}
       </Text>
       {timestamp ? (
-        <>
-          <TimestampSeparator />
-          <Text textStyle="label/S/regular" color="fg.muted" flexShrink={0}>
-            {timestamp}
-          </Text>
-        </>
+        <Text textStyle="label/S/regular" color="fg.muted" flexShrink={0}>
+          {timestamp}
+        </Text>
       ) : null}
       <Box marginLeft="auto" flexShrink={0}>
         {actions}

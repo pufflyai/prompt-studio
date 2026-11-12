@@ -4,6 +4,14 @@ Resources explicitly opt into core discussion, meaningful changes, or structured
 
 Use a complete resource reference containing `projectId`, `extensionId`, `type` and stable `id`. The owner authorizes access. Activity never changes ticket Markdown. Large bodies and attachments use core-owned assets and sync through the core Activity record owner, independently of extension enablement. The SDK shares the existing client event transport; no per-resource physical SSE connection is opened.
 
+## Workbench
+
+Activity shares the document editor's width and starts after a separator. Comments use the session message color and compact input controls. Domain changes appear as timeline events with their actor and preserved value labels. Retrieval errors stay beside the feed with retry and dismissal controls.
+
+Attach files to see their names before sending. Files can be removed or sent without text. Uploads remain associated with their resource across navigation, and sending waits for the selected upload batch. A failed batch keeps completed files and identifies the failed file.
+
+Reply, resolution and handoff operations remain available through the API and CLI.
+
 ## Commands
 
 ```sh
@@ -16,7 +24,7 @@ pst resources activity download --resource '<ResourceRef JSON>' --id <attachment
 pst resources activity handoff --resource '<ResourceRef JSON>' --id <comment-id>
 ```
 
-Publication JSON contains a stable retry `key`, `kind`, and `body`; optional `quote`, `replyToId`, and `attachmentIds` add context. Outcomes include `revision` with workspace ID, source session ID, exact head and base SHAs, and revision number. Reviews name `implementationId`, a `verdict`, and optional structured `findings`. Validation, unfinished work, shortcuts and blockers remain addressable on the entry. A later revision cannot inherit an earlier approval. See the shipped `use-resource-activity` skill for complete examples.
+Publication JSON contains a stable retry `key`, `kind`, and `body`; comments may use an empty body when they include an attachment. Optional `quote`, `replyToId`, and `attachmentIds` add context. Outcomes include `revision` with workspace ID, source session ID, exact head and base SHAs, and revision number. Reviews name `implementationId`, a `verdict`, and optional structured `findings`. Validation, unfinished work, shortcuts and blockers remain addressable on the entry. A later revision cannot inherit an earlier approval. See the shipped `use-resource-activity` skill for complete examples.
 
 Handoffs require one canonical installed harness/model target on a root comment and a separate explicit confirmation. Cancellation starts no session. Failures preserve the comment. Retries reuse the entry's linked session and execute only on the comment's original device.
 

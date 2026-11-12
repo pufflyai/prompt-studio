@@ -28,6 +28,7 @@ export const activityCommentSlotRecipe = defineSlotRecipe({
           borderColor: "border.subtle",
         },
       },
+      sent: { root: { background: "bg.subtle", borderColor: "border.subtle" } },
       attention: {
         root: {
           background: "bg.warning",

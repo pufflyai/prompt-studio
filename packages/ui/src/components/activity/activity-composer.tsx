@@ -5,6 +5,7 @@ import type { FormEvent, ReactNode } from "react";
 import { useState } from "react";
 import { Tooltip } from "@/components/primitives/tooltip";
 import { activityComposerSlotRecipe } from "@/theme/recipes/activity-composer";
+import { SendButton } from "../chat-ui/components/send-button";
 import type { ActivityActor } from "./activity.types";
 import { ActivityAvatar } from "./activity-avatar";
 
@@ -18,6 +19,9 @@ export interface ActivityComposerProps extends Omit<HTMLChakraProps<"form">, "on
   attachLabel?: string;
   submitLabel?: string;
   actions?: ReactNode;
+  attachmentList?: ReactNode;
+  hasAttachments?: boolean;
+  disabled?: boolean;
   onAttach?: () => void;
   onChange?: (value: string) => void;
   onSubmit?: (value: string) => void;
@@ -34,6 +38,9 @@ export const ActivityComposer = (props: ActivityComposerProps) => {
     attachLabel = "Attach file",
     submitLabel = "Submit comment",
     actions,
+    attachmentList,
+    hasAttachments = false,
+    disabled = false,
     onAttach,
     onChange,
     onSubmit,
@@ -44,7 +51,7 @@ export const ActivityComposer = (props: ActivityComposerProps) => {
   const [internalValue, setInternalValue] = useState(defaultValue);
   const currentValue = value ?? internalValue;
   const isInline = variant === "inline";
-  const canSubmit = currentValue.trim().length > 0;
+  const canSubmit = !disabled && (currentValue.trim().length > 0 || hasAttachments);
 
   const handleChange = (nextValue: string) => {
     if (value === undefined) {
@@ -68,9 +75,12 @@ export const ActivityComposer = (props: ActivityComposerProps) => {
   if (variant === "compact")
     return (
       <chakra.form css={styles.root} onSubmit={handleSubmit} {...rootProps}>
+        {attachmentList}
         <Box css={styles.row}>
           {actor ? <ActivityAvatar actor={actor} /> : null}
           <Input
+            variant="borderless"
+            disabled={disabled}
             css={styles.input}
             aria-label={placeholder}
             placeholder={placeholder}
@@ -80,13 +90,18 @@ export const ActivityComposer = (props: ActivityComposerProps) => {
           <Box css={styles.actions}>
             {actions}
             {onAttach && (
-              <IconButton type="button" size="2xs" variant="ghost" aria-label={attachLabel} onClick={onAttach}>
+              <IconButton
+                type="button"
+                size="xs"
+                variant="ghost"
+                aria-label={attachLabel}
+                onClick={onAttach}
+                disabled={disabled}
+              >
                 <Paperclip />
               </IconButton>
             )}
-            <IconButton type="submit" size="2xs" variant="subtle" aria-label={submitLabel} disabled={!canSubmit}>
-              <ArrowUp />
-            </IconButton>
+            <SendButton type="submit" title={submitLabel} canInterrupt={false} disabled={!canSubmit} />
           </Box>
         </Box>
       </chakra.form>
@@ -109,6 +124,7 @@ export const ActivityComposer = (props: ActivityComposerProps) => {
         {actor ? <ActivityAvatar actor={actor} /> : null}
         <Box flex="1" minW="0">
           <Textarea
+            disabled={disabled}
             value={currentValue}
             rows={minRows}
             resize="none"
