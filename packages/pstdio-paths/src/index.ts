@@ -28,6 +28,14 @@ export const expandHomePath = (value: string, homePath = resolveUserHome()) => {
 
 export const normalizeEmbeddedFileName = (value: string) => value.replaceAll("\\", "/");
 
+/** Bundled package directories stay stable when Bun's compile entry graph changes roots. */
+export const relativeEmbeddedFileName = (value: string, directory: string) => {
+  const name = normalizeEmbeddedFileName(value);
+  const marker = `/${directory}/`;
+  const start = name.indexOf(marker);
+  return start === -1 ? undefined : name.slice(start + marker.length);
+};
+
 export const resolvePstdioHome = (input: ResolvePstdioHomeInput = {}) => {
   const env = input.env ?? process.env;
   const homePath = resolveUserHome({ ...input, env });
@@ -79,3 +87,6 @@ export const isPackagedRuntime = () => {
     return false;
   }
 };
+
+export { acquireFileMutationLock, withFileMutationLock } from "./file-mutation-lock";
+export { isProcessAlive } from "./process-liveness";

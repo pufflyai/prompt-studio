@@ -8,6 +8,7 @@ import {
 import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
 import { isPageContent, isSingleViewPage } from "../../registries/pages/page-main";
 import type { WorkbenchPageContribution } from "../../registries/pages/page-registry-types";
+import { layoutScopeIdentity } from "./layout-scope-identity";
 
 export type MigratePagePanelView = (
   page: WorkbenchPageContribution,
@@ -46,8 +47,7 @@ export const prunePageContentLayout = (
   pages: readonly WorkbenchPageContribution[],
   migrate?: MigratePagePanelView,
 ) => {
-  const prefix = ["workbench-main:", "workbench-collection-main:"].find((prefix) => scope?.startsWith(prefix));
-  const ownerId = prefix ? JSON.parse(scope!.slice(prefix.length))[2] : undefined;
+  const ownerId = layoutScopeIdentity(scope)?.pageId;
   const pageScope = isSingleViewPage(pages.find((page) => page.id === ownerId));
   const mapped = mapContentTabs(layout, pages, pageScope, migrate);
   const chosen = new Map<string, (typeof mapped)[number]>();

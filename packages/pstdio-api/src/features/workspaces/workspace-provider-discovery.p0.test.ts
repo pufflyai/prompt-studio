@@ -126,3 +126,53 @@ test("cancelling a paused provider validation prevents late workspace allocation
   await expect(creating).rejects.toThrow(/abort/i);
   expect(createStandalone).not.toHaveBeenCalled();
 });
+
+test("independent provider discoveries start concurrently and retain declaration order", async () => {
+  const fixture = discoveryFixture();
+  const firstStarted = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  let secondStarted = false;
+  const first = {
+    label: "First",
+    discover: async () => {
+      firstStarted.resolve();
+      await release.promise;
+      return {};
+    },
+  };
+  const second = {
+    label: "Second",
+    discover: async () => {
+      secondStarted = true;
+      return {};
+    },
+  };
+  const deps = {
+    ...fixture.deps,
+    extensionRuntimeCatalog: {
+      get: async () => ({
+        runtime: {
+          workspaceTypes: [
+            { id: "first", provider: first },
+            { id: "second", provider: second },
+          ],
+        },
+      }),
+    },
+    workspaceProviderRuntime: {
+      find: async (_deps: unknown, input: { providerId: string }) => ({
+        context: {} as never,
+        provider: input.providerId === "first" ? first : second,
+      }),
+    },
+  } as unknown as WorkspacesRouteDeps;
+  const listing = listWorkspaceProviders(deps, "project");
+  await firstStarted.promise;
+  await Bun.sleep(0);
+  try {
+    expect(secondStarted).toBe(true);
+  } finally {
+    release.resolve();
+  }
+  expect((await listing).map((provider) => provider.id)).toEqual(["first", "second"]);
+});

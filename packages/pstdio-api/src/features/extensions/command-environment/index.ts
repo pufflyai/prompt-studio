@@ -107,6 +107,7 @@ export const createCommandEnvironment = (
     const resolveProjectPath = (access: FileAccess) =>
       resolveWorkspaceFilesPath(deps, { projectId: input.projectId, provisioningWorkspaceId }, access);
     const storage = createStorageApi(deps, {
+      scope,
       extensionId: input.extensionId,
       extensionInstanceId: enabledSource.instance.id,
       source: enabledSource.installedSource,

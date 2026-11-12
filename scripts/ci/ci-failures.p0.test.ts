@@ -97,6 +97,7 @@ test("a failed gate counts only when nothing else in its attempt failed", () => 
     job({ runId: 1, failures: ["test failure"] }),
     gate(1, "production / functional / validation_results"),
     gate(1, "production_ci_passed"),
+    gate(1, "windows_ci_passed"),
     gate(2, "validation_results"),
   ]);
   expect(summary.steps.map((step) => step.signature)).toEqual([

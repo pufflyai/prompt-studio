@@ -10,6 +10,8 @@ export interface Room {
   editable: boolean;
   owner: StorageOwner;
   documentKey: string;
+  /** Captured before the source can be deleted; null denotes a workspace file, absent is legacy/unknown. */
+  backingRecordId?: string | null;
   generation?: string;
   syncDocument?: string;
   recordField?: boolean;

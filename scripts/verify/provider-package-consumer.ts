@@ -80,13 +80,14 @@ export const saveNote = qualifyRef("verify.review-provider", save.ref);\n`,
   writeFileSync(
     join(consumer, "consumer.ts"),
     `import { notes, inspector, saveNote } from "review-provider/contracts";
-import { defineExtension, defineNavigationItem, homePages, workspacePages, workbenchModes, type CommandRef, type NavigationTarget } from "@pstdio/sdk/extensions";
+import { defineExtension, defineNavigationItem, defineView, homePages, workspacePages, workbenchModes, type CommandRef, type NavigationTarget } from "@pstdio/sdk/extensions";
+const terminal = defineView({ id: "shell", title: "Shell", body: { kind: "terminal", session: async (ctx) => ({ workspaceId: ctx.workspaceId, env: { TOOL: "provider" } }) } });
 const modal: NavigationTarget = { kind: "dialog", page: workspacePages.form };
 if (homePages.home.extensionId !== "pstdio.pstdio-home" || modal.page.extensionId !== "pstdio.pstdio-workspaces") throw new Error("Bundled provider refs are not exported as values");
 export const saved: CommandRef<{ text: string }, { text: string }> = saveNote;
 // @ts-expect-error Qualification must preserve command result types.
 export const wrong: CommandRef<{ text: string }, { revision: number }> = saveNote;
-export default defineExtension({ navigationItems: [defineNavigationItem({ id: "open", label: "Open provider", owner: workbenchModes.project, action: { kind: "compound", targets: [{ kind: "page", page: notes }, { kind: "panel", panel: inspector }] } })] });
+export default defineExtension({ views: [terminal], navigationItems: [defineNavigationItem({ id: "open", label: "Open provider", owner: workbenchModes.project, action: { kind: "compound", targets: [{ kind: "page", page: notes }, { kind: "panel", panel: inspector }] } })] });
 if (notes.extensionId !== "verify.review-provider" || inspector.page.extensionId !== notes.extensionId || saveNote.extensionId !== notes.extensionId) throw new Error("Consumer lost provider ownership");\n`,
   );
   writeFileSync(

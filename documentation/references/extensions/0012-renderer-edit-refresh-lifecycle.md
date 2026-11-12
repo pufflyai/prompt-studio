@@ -178,6 +178,13 @@ Debounce, save completion, self invalidation, and unchanged clean reloads keep t
 
 ## Read ownership and cancellation
 
+Native finite/progressive reads, tab metadata, navigation and command options use
+the common scoped query authority on `main`. The progressive adapter retains its
+placement admission, section publication and mutation barriers. A runtime-owned
+root survives ordinary project selection, keeps at most 128 inactive finite owners
+by default, and purges the old account/origin authority before notifying consumers.
+See [shared state and project lifetimes](../../guides/extensions/0010-shared-state-and-project-lifetimes.md).
+
 The workbench owns read slots by stable placement, resource, and read lane. Each slot permits one active load and one latest pending refresh. Repeated events coalesce. Replacing a query, retrying, or unmounting aborts the active signal. The slot remains occupied until the actual load and its children settle, including across remounts and reopening the same placement.
 
 Reads have no time limit. A slow read keeps its loading state until it settles or is aborted. Workbench disposal aborts all reads and drains them.
@@ -246,3 +253,5 @@ Moves using the individual callbacks receive the same immediate preview and orde
 `schemaRefreshEvents` declares events that change attribute fields or options. Saved-view validation and filter cleanup read on these events and on event-reset recovery. When it is omitted, the host retains the existing content-event refresh behavior. Shared-view content and order continue to arrive through live sync.
 
 Board columns measure variable-height rows and mount the visible range plus overscan. Focused and dragged rows remain mounted. Arrow keys, Home, and End move focus through the virtual range. Dragging near a column edge scrolls its viewport. Successful drops reveal their destination without changing the view's sort rules.
+
+*Updated at: 2026-11-09*

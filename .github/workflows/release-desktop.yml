@@ -139,19 +139,20 @@ jobs:
         run: bun __test-tmp__/native-installer/scripts/ci/install-native-dependencies.ts
 
       - name: Test device performance lifecycle and file authorization
-        run: bun test clients/desktop/src/performance
+        working-directory: clients/desktop
+        run: bun ../../scripts/ci/run-bun-tests.ts src/performance
 
       - name: Test native DMG attachment cleanup
         if: matrix.platform == 'darwin'
         run: bun scripts/ci/run-priority-tests.ts p1 --scope @pstdio/desktop --runner bun --prebuilt
 
       - name: Run registered native Bun quarantine once
-        if: matrix.platform == 'darwin'
+        if: always() && !cancelled()
         continue-on-error: true
         run: bun scripts/ci/run-quarantined-tests.ts bun --scope @pstdio/desktop --prebuilt
 
       - name: Require native quarantine execution evidence
-        if: matrix.platform == 'darwin' && !cancelled()
+        if: always() && !cancelled()
         run: bun scripts/ci/verify-quarantine-reports.ts bun --scope @pstdio/desktop
 
       - name: Verify release version

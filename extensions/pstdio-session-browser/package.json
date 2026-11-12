@@ -10,7 +10,7 @@
     "pstdio": "^0.4.0"
   },
   "pstdio": {
-    "scope": "repo"
+    "scope": "user"
   },
   "private": true,
   "type": "module",
@@ -19,7 +19,7 @@
     "typecheck": "bun check"
   },
   "dependencies": {
-    "@pstdio/sdk": "0.47.0-preview.sha-8184397490cfa0fa22d136b99ac75c708878512a"
+    "@pstdio/sdk": "0.47.0-preview.sha-ce1af652bbf51fce0b29b5e74f4e7f0a16d60ab4"
   },
   "devDependencies": {
     "@types/bun": "1.4.4",

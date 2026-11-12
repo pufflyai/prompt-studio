@@ -198,6 +198,33 @@ test("production runs packaged CLI tests only in the toolchain job, which includ
   expect(production.toolchainMatrix.map((row) => row.platform_pkg)).toContain("cli-linux-x64");
 });
 
+test("Windows diagnostics keep every stable Windows lane without scheduling other platform suites", () => {
+  const input = { ...scopeFixture(), event: "workflow_dispatch" };
+  const full = resolveCiScope({ ...input, profile: "production" });
+  const windows = resolveCiScope({ ...input, profile: "windows" });
+  expect(windows).toMatchObject({
+    production: true,
+    windowsOnly: true,
+    windows: true,
+    sourceCoverage: false,
+    packageChecks: false,
+    databaseTests: false,
+    dockerBuild: false,
+    sharedBuild: "",
+  });
+  expect(windows.clientMatrix).toEqual(full.clientMatrix.filter((row) => row.platform === "win32"));
+  expect(windows.toolchainMatrix).toEqual(
+    full.toolchainMatrix.filter((row) => row.platform_pkg.startsWith("cli-win-")),
+  );
+  expect(windows.harnessMatrix).toEqual(
+    full.harnessMatrix.filter((row) => "os" in row && typeof row.os === "string" && row.os.startsWith("windows")),
+  );
+  expect(windows.quarantineBunOs).toEqual(["windows-latest"]);
+  for (const matrix of [windows.appMatrix, windows.packagedMatrix, windows.componentMatrix, windows.databaseMatrix])
+    expect(matrix).toEqual([]);
+  expect(() => resolveCiScope({ ...input, profile: "windows", signedCandidate: true })).toThrow("signed");
+});
+
 test("one shared build per run covers every package the Linux host jobs build", () => {
   const input = scopeFixture();
   const pr = resolveCiScope(input);

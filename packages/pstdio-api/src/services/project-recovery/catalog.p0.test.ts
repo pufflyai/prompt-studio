@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, test as baseTest, expect } from "bun:test";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -9,7 +9,10 @@ import type { StateEnvelope, StateInfo, StoredUpdate, UpdateEnvelope } from "pst
 import { captureRecoveryFolder } from "./capture";
 import { createRecoveryCatalog } from "./catalog";
 import { createRecoveryChunkStore } from "./chunks";
+import { nativeRecoverySupported } from "./native-recovery.fixture";
 import { prepareRecoveryCapture } from "./transfer";
+
+const test = baseTest.skipIf(!nativeRecoverySupported);
 
 const roots: string[] = [];
 afterEach(async () => {

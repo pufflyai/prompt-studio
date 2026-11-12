@@ -30,7 +30,7 @@ export const refreshWorkbenchExtensionRenderer = (
   target: RendererRefreshTarget,
   envelope: FileRendererRefreshEnvelope = {},
 ) => {
-  workbench.views.refreshView(target.id, target.kind === "file" ? envelope : undefined);
+  workbench.views.refreshView(target.id, Object.keys(envelope).length ? envelope : undefined);
 };
 
 const rendererRefreshTargets = (metadata: WorkbenchExtensionMetadata) => {
@@ -46,7 +46,7 @@ const rendererRefreshTargets = (metadata: WorkbenchExtensionMetadata) => {
   };
 
   for (const view of metadata.views) {
-    if (view.body.kind === "webview") continue;
+    if (view.body.kind === "webview" || view.body.kind === "chat" || view.body.kind === "terminal") continue;
     add(view.body.kind, { id: view.id, refreshEventIds: view.body.refreshEventIds });
   }
   return targets;

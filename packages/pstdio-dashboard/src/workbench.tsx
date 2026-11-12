@@ -1,6 +1,7 @@
 import { createWorkbench, type SettingsRegistry, type WorkbenchPageLocationBrowser } from "@pstdio/workbench";
 import { createWorkbenchTerminalModule, WORKBENCH_TERMINAL_PANEL_SIZE } from "@pstdio/workbench/react";
 import { createLocalStorageWorkbenchPersistence, type WorkbenchStorageLike } from "@pstdio/workbench/storage";
+import { getDashboardScopedQueries } from "@/lib/scoped-queries";
 import { resolveDashboardStorage } from "@/shared/app/dashboard-storage";
 import { dashboardWorkbenchStorageNamespace } from "@/shared/app/dashboard-workbench-storage-keys";
 import { createDashboardPageLocationBrowser, readPageUrlProjectId } from "@/shared/app/page-location-browser";
@@ -51,6 +52,8 @@ export const createDashboardModules = (input: CreateDashboardModulesInput & { se
   return [
     createSidenavModule(),
     createWorkspacesModule(),
+    // Warm catalogs can register synchronously; host settings sections must already have their owner.
+    createSettingsModule(),
     createExtensionsModule(),
     createResourceLinksModule(),
     createRecentResourcesModule(),
@@ -66,7 +69,6 @@ export const createDashboardModules = (input: CreateDashboardModulesInput & { se
     createCommandPaletteModule(),
     createSessionsModule(),
     createNotificationsModule(),
-    createSettingsModule(),
     createPerformanceModule(input.settings),
     createUpdatesModule(),
     createWorkbenchTerminalModule(),
@@ -97,6 +99,7 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
   const urlProjectId = pageLocationBrowser && readPageUrlProjectId(pageLocationBrowser.current().url);
   if (urlProjectId) projectSelectionPersistence.setSelectedProjectId(urlProjectId);
   const workbench = createWorkbench({
+    queries: getDashboardScopedQueries(),
     startPage: dashboardHomePage,
     initialSidePanelMode: "closed",
     defaultPanelOpenByRegionId: { secondary: false },

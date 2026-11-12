@@ -1,6 +1,7 @@
 import type { Disposable, TreeNode, WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
 import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
-import { subscribeCollections } from "@/lib/sync/collections";
+import { createCollectionSelection } from "@/lib/sync/collection-selection";
+import { getRuntimeCollections, subscribeCollections } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -81,7 +82,7 @@ export const createNotificationsModule = () =>
               {
                 id: dashboardCommandIds.openNotifications,
                 label: "Open notifications",
-                category: "Dashboard",
+                category: "Notifications",
                 icon: "Inbox",
               },
               {
@@ -106,10 +107,29 @@ export const createNotificationsModule = () =>
         refreshSidenavs(ctx);
       };
       const unsubscribe = subscribeCollections((change) => {
-        if (!change || change.table === "settings" || change.table === "notifications") refresh();
+        if (!change || change.table === "settings") refresh();
       });
-      const unsubscribeProject = subscribeDashboardSelectedProject(ctx, () => refreshSidenavs(ctx));
+      let stopNotifications = () => {};
+      const observeNotifications = () => {
+        stopNotifications();
+        const projectId = getDashboardSelectedProjectId(ctx);
+        stopNotifications = createCollectionSelection(getRuntimeCollections(), {
+          tables: projectId ? ["notifications"] : [],
+          projectId,
+          fields: ["status"],
+        }).subscribe(() => refreshSidenavs(ctx));
+      };
+      const unsubscribeProject = subscribeDashboardSelectedProject(ctx, () => {
+        observeNotifications();
+        refreshSidenavs(ctx);
+      });
+      observeNotifications();
       refresh();
-      return [{ dispose: unsubscribe }, { dispose: unsubscribeProject }, { dispose: disable }];
+      return [
+        { dispose: unsubscribe },
+        { dispose: unsubscribeProject },
+        { dispose: () => stopNotifications() },
+        { dispose: disable },
+      ];
     },
   }) satisfies WorkbenchModuleContribution;

@@ -1,4 +1,4 @@
-name: Full PR diagnostics
+name: PR diagnostics
 on:
   pull_request_target:
     types:
@@ -7,11 +7,11 @@ permissions:
   contents: read
   actions: write
 concurrency:
-  group: full-diagnostics-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+  group: full-diagnostics-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}-${{ github.event.label.name }}
   cancel-in-progress: false
 jobs:
   request:
-    if: github.event.label.name == 'ci:full'
+    if: github.event.label.name == 'ci:full' || github.event.label.name == 'ci:windows'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

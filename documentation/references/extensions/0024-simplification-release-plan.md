@@ -82,3 +82,5 @@ Acceptance checks:
 - `pst --help`, the HTTP route list and the bridge capability list match the inventory table.
 
 Delete tests for removed paths. Repeat the prototype tasks against real adapters before adoption.
+
+*Updated at: 2026-10-18*

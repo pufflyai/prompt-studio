@@ -9,12 +9,12 @@ afterEach(async () => {
   for (const root of roots.splice(0)) await rm(root, { recursive: true, force: true });
 });
 
-test("source enrollment and an unacknowledged candidate survive a restart without plaintext identities", async () => {
+test("an unacknowledged candidate survives a restart without plaintext identities", async () => {
   const root = await mkdtemp(join(tmpdir(), "recovery-journal-"));
   roots.push(root);
   const source = ["project", "account", "/private/folder/.env-project"];
   const journal = await openRecoveryJournal({ root, source });
-  expect(await journal.read()).toEqual({ version: 1, enrolled: false, candidate: null });
+  expect(await journal.read()).toEqual({ version: 1, candidate: null });
   const candidate = {
     blobId: "AAAAAAAAAAAAAAAAAAAAAA",
     byteLength: 10,
@@ -22,10 +22,9 @@ test("source enrollment and an unacknowledged candidate survive a restart withou
     encryptedByteLength: 38,
     encryptedSha256: "b".repeat(64),
   };
-  await journal.update({ enrolled: true });
   await journal.update({ candidate });
   const reopened = await openRecoveryJournal({ root, source });
-  expect(await reopened.read()).toEqual({ version: 1, enrolled: true, candidate });
+  expect(await reopened.read()).toEqual({ version: 1, candidate });
   expect(JSON.stringify(await readdir(join(root, "sources")))).not.toContain("private");
 });
 
@@ -38,7 +37,8 @@ test("one live process owns a source operation and an exited owner's lock is tak
   expect(await journal.acquire()).toBeNull();
   const [lock] = (await readdir(join(root, "sources"))).filter((name) => name.endsWith(".lock"));
   await release!();
-  expect(await readdir(join(root, "sources"))).toEqual([]);
+  // The OS lease file stays on the same inode between owners.
+  expect(await readdir(join(root, "sources"))).toEqual([`${lock}.sqlite`]);
   await writeFile(join(root, "sources", lock!), String(Bun.spawnSync(["true"]).pid));
   const takeover = await journal.acquire();
   expect(takeover).not.toBeNull();

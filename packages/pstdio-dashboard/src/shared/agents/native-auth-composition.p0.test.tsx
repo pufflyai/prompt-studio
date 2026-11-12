@@ -131,6 +131,7 @@ test("setup stays alongside existing history and errors keep Retry; signed-in em
   const error = await renderAccount("error");
   expect(error.html.includes("Could not check harness authentication.")).toBe(true);
   expect(error.html.includes(">Retry<")).toBe(true);
+  expect(error.html.includes('aria-label="Copy error message"')).toBe(true);
   expect(error.html.includes("No messages yet")).toBe(false);
   const ready = await renderAccount("signed_in");
   expect(ready.html.includes("No messages yet")).toBe(true);

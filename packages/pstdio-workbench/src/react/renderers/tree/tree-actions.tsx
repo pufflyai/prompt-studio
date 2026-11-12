@@ -75,7 +75,7 @@ const executeTreeAction = async (input: {
   const resolvedArgs = args ?? action.args;
   await (record
     ? workbench.commands.executeCommand(record.command.id, resolvedArgs, context)
-    : action.run?.(resolvedArgs));
+    : action.run?.(resolvedArgs, context));
 };
 
 const runTreeAction = async (input: {
@@ -175,6 +175,9 @@ const createTreeActionMenuItems = (input: CreateTreeContextMenuItemsInput) => {
       icon: icon ? <WorkbenchIcon name={icon} /> : undefined,
       endContent: binding ? <PaletteShortcut binding={binding} /> : undefined,
       disabled,
+      runOnSelect: Boolean(
+        action.copyText !== undefined || action.copyResultToClipboard || record?.command.copyResultToClipboard,
+      ),
       onAction: () => {
         if (disabled) return;
         if (requestParams) {

@@ -23,9 +23,13 @@ export const entries = {
 };
 
 const packageJson = JSON.parse(readFileSync(path.resolve(import.meta.dirname, "package.json"), "utf8"));
-const externalPackages = [...Object.keys(packageJson.dependencies), ...Object.keys(packageJson.peerDependencies)];
+// Bundle the repaired scroll controller for published consumers; see ADR 0142.
+const externalPackages = [
+  ...Object.keys(packageJson.dependencies),
+  ...Object.keys(packageJson.peerDependencies),
+].filter((name) => name !== "use-stick-to-bottom");
 
-// Consumers install ui's dependencies themselves, and the prebuilt Monaco files stay separate so
-// apps copy them instead of bundling Monaco again.
+// Other dependencies remain external. The prebuilt Monaco files stay separate so apps copy them
+// instead of bundling Monaco again.
 export const isExternal = (id: string) =>
   id.startsWith("@pstdio/ui/monaco/") || externalPackages.some((name) => id === name || id.startsWith(`${name}/`));

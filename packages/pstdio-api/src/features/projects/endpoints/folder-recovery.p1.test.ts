@@ -1,15 +1,18 @@
-import { expect, test } from "bun:test";
-import { lstat, mkdir, mkdtemp, readFile, realpath, rm, unlink, writeFile } from "node:fs/promises";
+import { test as baseTest, expect } from "bun:test";
+import { lstat, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { ProjectFolderRecoveryStatus, ProjectFolderSource } from "pstdio-api-contracts";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { nativeRecoverySupported } from "../../../services/project-recovery/native-recovery.fixture";
 import { startFolderRecovery } from "../../../services/relay/folder-recovery";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import type { AppBindings } from "../../../types";
 import { documentPeer } from "../../extensions/publication/document-peer.fixture";
 import { createProjectRoutes } from "../routes";
+
+const test = baseTest.skipIf(!nativeRecoverySupported);
 
 const until = async (condition: () => boolean | Promise<boolean>) => {
   const end = Date.now() + 15_000;
@@ -29,6 +32,8 @@ test("a new device restores another device's folder copy while that device is of
     await mkdir(join(folder, "src"), { recursive: true });
     await writeFile(join(folder, "src/notes.md"), "saved without a commit");
     await writeFile(join(folder, ".env"), "TOKEN=private");
+    // Only a folder with a root `.pstignore` is copied; an empty one includes everything.
+    await writeFile(join(folder, ".pstignore"), "");
     // Local extension code travels with the folder but must not run until the person enables it.
     const marker = join(root, "extension-code-ran");
     await mkdir(join(folder, ".pstdio/extensions/local-tool"), { recursive: true });
@@ -85,20 +90,16 @@ test("a new device restores another device's folder copy while that device is of
     const laptopCopy = async () =>
       (await call<ProjectFolderSource[]>("sources")).body.find((copy) => copy.deviceId === "laptop");
 
-    // The first enrollment seeded a policy; deleting it is deliberate and the next copy records its absence.
-    await until(async () => (await laptopCopy())?.policy === "node_modules/\n");
-    await unlink(join(folder, ".pstignore"));
-    laptop.capture();
     await until(async () => {
       const copy = await laptopCopy();
-      return copy?.policy === null && copy.available;
+      return copy?.policy === "" && copy.available;
     });
     laptop.close();
     await laptop.done;
 
     const listed = (await laptopCopy())!;
     const copy = { deviceId: listed.deviceId, sourceId: listed.sourceId };
-    expect(listed).toMatchObject({ current: false, name: expect.any(String), folder, git: "none", files: 4 });
+    expect(listed).toMatchObject({ current: false, name: expect.any(String), folder, git: "none", files: 5 });
     const restored = join(root, "desktop");
     const started = await call<ProjectFolderRecoveryStatus>("restore", { ...copy, path: restored });
     expect(started.status).toBe(202);
@@ -111,7 +112,7 @@ test("a new device restores another device's folder copy while that device is of
     expect(progress.restore).toMatchObject({
       state: "complete",
       error: null,
-      files: { completed: 4, total: 4 },
+      files: { completed: 5, total: 5 },
       result: { path: restored, attached: true, git: "none", rewritten: [] },
     });
     expect(progress.download.state).toBe("complete");
@@ -124,9 +125,9 @@ test("a new device restores another device's folder copy while that device is of
     expect(restoredExtension?.instance.enabled ?? false).toBe(false);
     await expect(lstat(marker)).rejects.toThrow();
 
-    // The restored folder is now this device's source; its capture keeps the copy's absent policy.
+    // The restored folder is now this device's source and keeps the copy's policy.
     await until(async () => (await call<ProjectFolderSource[]>("sources")).body.some((item) => item.current));
-    await expect(lstat(join(restored, ".pstignore"))).rejects.toThrow();
+    expect(await readFile(join(restored, ".pstignore"), "utf8")).toBe("");
 
     // A project that already has its folder here keeps it; another restore stays beside it.
     const beside = join(root, "beside");

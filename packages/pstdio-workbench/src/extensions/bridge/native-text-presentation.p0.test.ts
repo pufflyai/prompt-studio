@@ -11,8 +11,10 @@ const fixture = () => {
   document.getText("content").insert(0, "source");
   const calls: string[] = [];
   const entered = Promise.withResolvers<void>();
+  const connectionEntered = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();
   let holdOpen = false;
+  let holdConnection = false;
   let refuseConnection = false;
   let refuseSubmit = false;
   let revision = 1;
@@ -67,6 +69,8 @@ const fixture = () => {
       };
       if (path.endsWith("/text-editing")) {
         calls.push("connect");
+        connectionEntered.resolve();
+        if (holdConnection) await release.promise;
         if (refuseConnection) {
           refuseConnection = false;
           return Response.json({
@@ -113,6 +117,10 @@ const fixture = () => {
     calls,
     document,
     entered: entered.promise,
+    connectionEntered: connectionEntered.promise,
+    holdConnection() {
+      holdConnection = true;
+    },
     holdOpen() {
       holdOpen = true;
     },
@@ -165,6 +173,22 @@ test("native Markdown uses the selected public session and drains its close hand
     expect(f.calls.indexOf("close")).toBeLessThan(f.calls.indexOf("disconnect"));
     await f.presentation.close();
     await expect(f.presentation.open()).rejects.toMatchObject({ code: "session_closed" });
+  } finally {
+    await f.stop();
+  }
+});
+
+test("a pinned text presentation remains editable after leaving and returning to its page", async () => {
+  const f = fixture();
+  try {
+    const session = await f.presentation.open();
+    f.workbench.pinPlacement(f.placement.placementIdentity!, true);
+    await f.workbench.navigation.openTarget(navigate("other-workspace"));
+    await f.workbench.navigation.openTarget(navigate("workspace"));
+    expect(f.workbench.layout.getActivePanel("main")?.instanceId).toBe(f.placement.instanceId);
+    session.transact((text) => text.insert(text.length, " moved"));
+    await session.flush();
+    expect(f.document.getText("content").toString()).toBe("source moved");
   } finally {
     await f.stop();
   }
@@ -248,6 +272,34 @@ test("resource removal retains a public editor through its close finalizers", as
     stop();
   } finally {
     release.resolve();
+    removal.dispose();
+    await f.stop();
+  }
+});
+
+test("removing a view during failed admission closes it without inventing a recovery draft", async () => {
+  const f = fixture();
+  const settled = Promise.withResolvers<void>();
+  const notification = f.workbench.notifications.subscribe((event) => {
+    if (event.type === "show") settled.resolve();
+  });
+  const removal = f.workbench.resources.onDidRemove(() => {
+    if (!f.workbench.host.getOpenPlacementIds().has(f.placement.instanceId)) settled.resolve();
+  });
+  try {
+    f.holdConnection();
+    f.refuseConnection();
+    const opening = f.presentation.open().catch((error: unknown) => error);
+    await f.connectionEntered;
+    f.workbench.resources.removed(f.placement.resource!);
+    expect(f.workbench.host.getOpenPlacementIds().has(f.placement.instanceId)).toBe(true);
+    f.resume();
+    expect(await opening).toMatchObject({ code: "source_unavailable" });
+    await settled.promise;
+    expect(f.workbench.host.getOpenPlacementIds().has(f.placement.instanceId)).toBe(false);
+    expect(f.workbench.notifications.listNotifications()).toEqual([]);
+  } finally {
+    notification.dispose();
     removal.dispose();
     await f.stop();
   }

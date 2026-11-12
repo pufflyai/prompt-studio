@@ -4,9 +4,9 @@ import type { WorkbenchCore } from "@pstdio/workbench";
 import { useWorkbenchStore, WorkbenchFullscreenToggle, WorkbenchPanelToggles } from "@pstdio/workbench/react";
 import { Folder, Plus } from "lucide-react";
 import { useSyncExternalStore } from "react";
+import { useCollectionSelection } from "@/lib/sync/use-collection-selection";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
-import { getDashboardDataVersion, subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { findDashboardProject } from "../data/project-data";
 import type { DesktopProjectTabsController } from "../desktop-project-tabs-controller";
 
@@ -16,7 +16,7 @@ interface DesktopProjectTabsProps {
   platform: string;
 }
 
-const resolveProjectTabs = (projectIds: readonly string[], _dataVersion: number) =>
+const resolveProjectTabs = (projectIds: readonly string[], _dataVersion: unknown) =>
   projectIds.flatMap((id) => {
     const project = findDashboardProject(id);
     return project ? [{ id, label: project.name, icon: <Folder aria-hidden="true" /> }] : [];
@@ -25,7 +25,7 @@ const resolveProjectTabs = (projectIds: readonly string[], _dataVersion: number)
 export const DesktopProjectTabs = (props: DesktopProjectTabsProps) => {
   const { workbench, controller, platform } = props;
   const projectIds = useSyncExternalStore(controller.subscribe, controller.getProjectIds, controller.getProjectIds);
-  const dataVersion = useSyncExternalStore(subscribeDashboardData, getDashboardDataVersion, getDashboardDataVersion);
+  const dataVersion = useCollectionSelection({ tables: ["projects"], rowIds: projectIds });
   const selected = useWorkbenchStore(
     workbench.context.store,
     (state) => state.values[dashboardSelectedProjectIdContextKey],

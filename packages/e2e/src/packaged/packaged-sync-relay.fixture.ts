@@ -4,6 +4,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   blobManifestBeginSchema,
+  blobReadSchema,
   liveProtocolHeader,
   liveProtocolVersion,
   syncBlobReferencesFeature,
@@ -84,10 +85,21 @@ const createBlobStore = (directory?: string) => {
       return json({ ok: true });
     }
     if (path.endsWith("/read")) {
-      if (failReads(deviceId)) return Response.json({ error: "unavailable" }, { status: 503 });
+      // A simulated outage asks for an immediate retry, so clients exhaust their bounded backoff without waiting.
+      if (failReads(deviceId))
+        return Response.json({ error: "unavailable" }, { status: 503, headers: { "retry-after": "0" } });
       if (!blob?.complete) return new Response(null, { status: 404 });
+      const offset = blobReadSchema.safeParse(await request.json().catch(() => null));
+      const content = bytes(blob);
+      if (!offset.success || offset.data.offset > content.byteLength)
+        return Response.json({ error: "invalid-request" }, { status: 400 });
       served.push({ deviceId, blobId: id });
-      return new Response(bytes(blob));
+      return new Response(content.subarray(offset.data.offset), {
+        headers: {
+          "pstdio-offset": String(offset.data.offset),
+          "pstdio-byte-length": String(content.byteLength - offset.data.offset),
+        },
+      });
     }
     return new Response(null, { status: 404 });
   };
@@ -176,7 +188,8 @@ export const createPackagedSyncPeer = (
         if (!route) return new Response(null, { status: 404 });
         const access = identity.access(request, route.projectId);
         if (!access) return new Response(null, { status: 403 });
-        if (blockedDevices.has(access.deviceId)) return Response.json({ error: "unavailable" }, { status: 503 });
+        if (blockedDevices.has(access.deviceId))
+          return Response.json({ error: "unavailable" }, { status: 503, headers: { "retry-after": "0" } });
         if (route.kind === "live") {
           return upgradeLive(request, server, access);
         }

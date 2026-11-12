@@ -90,21 +90,11 @@ const legacyMainOwner = (input: {
   };
 };
 
-/** Main tabs and header choices belong to a page. Auxiliary tabs and geometry belong to its project/mode. */
-export const createWorkbenchLayoutCache = (
+const createLayoutAdapter = (
   input: createWorkbenchInput,
-  getActiveMode: () => string | undefined = () => undefined,
-  getTab: (contributionId: string) => WorkbenchWidgetPlacement["tab"] = () => undefined,
-  getPages: () => readonly WorkbenchPageContribution[] = () => [],
-  migratePanelView?: MigratePagePanelView,
-  registeredModePlacements?: (modeId: string) => ReadonlySet<string>,
-) => {
-  const { pageMainOwner, pageMainScope } = createPageMainScopes(getPages);
-  const memory = new Map<string | undefined, WorkbenchLayout>();
-  const inventory = createOpenPlacementInventory();
-  let restored = false;
-  let knownPages = getPages();
-  const adapter: LayoutPersistenceAdapter = input.persistence
+  memory: Map<string | undefined, WorkbenchLayout>,
+): LayoutPersistenceAdapter => {
+  return input.persistence
     ? {
         getLayout: (scope) => input.persistence?.getSnapshot(scope)?.layout,
         setLayout: (layout, scope) => input.persistence?.setSnapshot({ layout }, scope),
@@ -123,7 +113,26 @@ export const createWorkbenchLayoutCache = (
           memory.delete(scope);
         },
       });
+};
+
+/** Main tabs and header choices belong to a page. Auxiliary tabs and geometry belong to its project/mode. */
+export const createWorkbenchLayoutCache = (
+  input: createWorkbenchInput,
+  getActiveMode: () => string | undefined = () => undefined,
+  getTab: (contributionId: string) => WorkbenchWidgetPlacement["tab"] = () => undefined,
+  getPages: () => readonly WorkbenchPageContribution[] = () => [],
+  migratePanelView?: MigratePagePanelView,
+  registeredModePlacements?: (modeId: string) => ReadonlySet<string>,
+) => {
+  const { pageMainOwner, pageMainScope } = createPageMainScopes(getPages);
+  const memory = new Map<string | undefined, WorkbenchLayout>();
+  const inventory = createOpenPlacementInventory();
+  let restored = false;
+  let disposed = false;
+  let knownPages = getPages();
+  const adapter = createLayoutAdapter(input, memory);
   const remember = (scope: string | undefined, layout: WorkbenchLayout | undefined) => {
+    if (disposed) return undefined;
     const normalized = layout ? prunePageContentLayout(scope, layout, getPages(), migratePanelView) : undefined;
     if (normalized && normalized !== layout)
       runWorkbenchEffect("page content layout migration", () => adapter.setLayout(normalized, scope));
@@ -132,11 +141,13 @@ export const createWorkbenchLayoutCache = (
   };
   const stopInventory = adapter.onDidChangeLayout?.((scope, layout) => remember(scope, layout));
   const read = (scope?: string) => {
+    if (disposed) return undefined;
     const saved = runWorkbenchEffect(`layout cache read for ${scope ?? "unscoped"}`, () => adapter.getLayout(scope));
     const layout = remember(scope, saved);
     return layout ? restoreLayoutPresentation(layout, getTab) : undefined;
   };
   const write = (layout: WorkbenchLayout, scope?: string) => {
+    if (disposed) return false;
     return runWorkbenchEffect(`layout cache write for ${scope ?? "unscoped"}`, () => {
       const normalized = prunePageContentLayout(scope, layout, getPages(), migratePanelView);
       adapter.setLayout(normalized, scope);
@@ -145,6 +156,7 @@ export const createWorkbenchLayoutCache = (
     });
   };
   const clear = (scope: string, fallback: WorkbenchLayout) => {
+    if (disposed) return;
     runWorkbenchEffect(`remove default page layout for ${scope}`, () => {
       if (adapter.removeLayout) adapter.removeLayout(scope);
       else if (adapter.getLayout(scope)) adapter.setLayout(fallback, scope);
@@ -281,8 +293,17 @@ export const createWorkbenchLayoutCache = (
     layout: {
       ...adapter,
       dispose() {
-        stopInventory?.();
-        adapter.dispose?.();
+        if (disposed) return;
+        disposed = true;
+        try {
+          stopInventory?.();
+        } finally {
+          try {
+            adapter.dispose?.();
+          } finally {
+            memory.clear();
+          }
+        }
       },
       getLayout: read,
       setLayout: (layout: WorkbenchLayout, scope?: string) => {

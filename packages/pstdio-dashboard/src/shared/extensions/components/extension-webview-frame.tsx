@@ -2,7 +2,10 @@ import { Center, Text } from "@chakra-ui/react";
 import type { ResourceRef } from "@pstdio/sdk/extensions";
 import { getThemePreferenceMode, useThemePreference, useToaster } from "@pstdio/ui";
 import type { WorkbenchCore, WorkbenchPanelInstance, WorkbenchTerminalController } from "@pstdio/workbench";
-import { createExtensionWebviewHostCapabilities } from "@pstdio/workbench/extensions";
+import {
+  createExtensionWebviewHostCapabilities,
+  getBridgeWebviewHostEventPublisher,
+} from "@pstdio/workbench/extensions";
 import type { NativeDocumentTarget } from "pstdio-api-contracts";
 import { parseExtensionWebviewPath } from "pstdio-api-contracts/extension-webview-path";
 import { createHostEventPublisher } from "pstdio-extensions/bridge/host";
@@ -21,7 +24,9 @@ import { createDashboardExtensionWebviewAdapters } from "../extension-webview-ca
 import { subscribeWebviewExtensionEvents } from "../extension-webview-events";
 import { usePausedExtensions } from "../paused-extensions";
 import { useExecuteExtensionCommand, useProjectExtensions } from "../use-project-extensions";
+import { useDashboardQueryScope } from "../use-query-scope";
 import { useWebviewPageProps } from "../use-webview-page-props";
+import { createDashboardWebviewCommandQueries } from "../webview-command-queries";
 import { createDashboardOwnedPreferences } from "../webview-owned-preferences";
 import {
   createDashboardWebviewNotificationsAdapter,
@@ -53,6 +58,7 @@ const currentLocale = () => i18n.resolvedLanguage ?? i18n.language ?? "en";
 export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   const toaster = useToaster();
   const owner = getRuntimeCollections();
+  const queryScope = useDashboardQueryScope();
   const { extensionId, extensionInstanceId, installName, projectId, resource, terminal, title, webview, webviewId } =
     props;
   const { themePreference, themePreferences } = useThemePreference();
@@ -61,7 +67,11 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
     if (notice.type === "error" || notice.type === "warning") showError(notice);
     else toaster.create(notice);
   });
-  const [hostEvents] = useState(createHostEventPublisher);
+  const [fallbackHostEvents] = useState(createHostEventPublisher);
+  const hostEvents =
+    props.workbench && props.placement
+      ? getBridgeWebviewHostEventPublisher(props.workbench, props.placement, projectId)
+      : fallbackHostEvents;
   const { pageLocation, pageParams } = useWebviewPageProps(props.workbench, props.placement);
   const [lastCommand, setLastCommand] = useState<ExtensionCommandEvent | null>(null);
   const [locale, setLocale] = useState(currentLocale);
@@ -84,10 +94,27 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   const colorScheme = getThemePreferenceMode(themePreference, themePreferences);
   const frameTitle = webview.title ? resolveLocalizableString(webview.title, extensionId) : (title ?? "Extension view");
   const translations = getExtensionTranslationContext(extensionId, locale);
+  const commandQueries = projectId
+    ? createDashboardWebviewCommandQueries({
+        runtime: owner,
+        queryScope,
+        projectId,
+        extensionId,
+        extensionInstanceId,
+        webviewId,
+        source: [installedExtensionId, webview.runtimeUrl, webview.moduleUrl],
+        slotKind: props.slotKind,
+        resource: resource ?? props.placement?.resource,
+        workbench: props.workbench,
+        placement: props.placement,
+        events: hostEvents,
+      })
+    : undefined;
 
   const capabilities = createExtensionWebviewHostCapabilities(
     createDashboardExtensionWebviewAdapters({
       base: {
+        commandQueries,
         hostEvents,
         terminal,
         executeCommand: (commandInput, signal, invocation) => {
@@ -144,6 +171,15 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
       textTarget: props.textTarget,
       ownedPreferences: createDashboardOwnedPreferences({ projectId, instanceId: extensionInstanceId, installName }),
     }),
+    JSON.stringify([
+      projectId,
+      extensionId,
+      extensionInstanceId,
+      installedExtensionId,
+      webviewId,
+      webview.runtimeUrl,
+      webview.moduleUrl,
+    ]),
   );
 
   if (!webview.runtimeUrl || !webview.moduleUrl) {
@@ -189,6 +225,8 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
         view={view}
         extensionProps={{
           projectId,
+          queryScope,
+          commandQueries: commandQueries?.seeds(),
           presentation: props.workbench?.layout
             .getLayout()
             .regions.overlay.widgets.some((item) => item.widgetId === props.placement?.instanceId)

@@ -109,6 +109,10 @@ fragments arrive. This also supports a single large message or tool result witho
 truncating it. No query refresh, transcript polling or execution service is added.
 Malformed/interleaved or naturally incomplete events report a stream error;
 disposal/reconnect discards unfinished fragments without stopping work.
+When a command ends with unfinished fragments, its failed result takes precedence
+in the reported error. An unsettled result does not delay reporting incomplete
+assembly; a later rejection supplies the underlying failure while that watch
+still owns the presentation. Failures from retired watches cannot replace current state.
 Live fields take precedence over a delayed query; a notice-only event does not
 displace history. Reconnect keeps displayed state. Connection errors offer Retry.
 Refresh events follow the normal native renderer path. A versioned `recoverDraft`
@@ -357,3 +361,5 @@ ordinary callers continue to recall from `messages` by default.
 Draft hydration consumes the journal captured when its owner opens. Edits staged
 by that same owner while provider storage loads already belong to the live draft;
 they are not replayed as saved control overrides over a newer query result.
+
+*Updated at: 2026-11-07*

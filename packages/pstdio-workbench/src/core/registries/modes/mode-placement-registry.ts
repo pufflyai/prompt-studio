@@ -6,9 +6,7 @@ import type {
   PlacementRef,
   ViewLocation,
 } from "@pstdio/sdk/extensions";
-import { createDisposable, type Disposable } from "../../shared/disposable";
-import { notifyWorkbenchChange } from "../../shared/store/workbench-batch";
-import { runWorkbenchEffect } from "../../shared/workbench-effect";
+import type { Disposable } from "../../shared/disposable";
 import { createPlacement } from "../layout/layout-operations";
 import type {
   RegisteredWidgetContribution,
@@ -34,6 +32,7 @@ import {
   setOwnedPlacementPreparation,
 } from "../placements/owned-placement-preparation";
 import { restoreOwnedPlacementState } from "../placements/owned-placement-restoration";
+import { createPlacementObservation } from "../placements/placement-observation";
 import type { ResourceRef } from "../resources/resource-registry";
 import type { WorkbenchViewMenuRegistry } from "../view-menus/view-menu-registry";
 import {
@@ -83,6 +82,7 @@ export interface WorkbenchModePlacementRegistry {
     context?: OwnedPlacementLocationContext,
   ): readonly ResolvedOwnedPlacement<WorkbenchWidgetPlacement>[];
   onDidChange(listener: () => void): Disposable;
+  dispose?(): void;
 }
 
 const identityFor = (placement: WorkbenchModePlacementContribution, instanceKey: string): PlacementIdentity => ({
@@ -115,7 +115,7 @@ export const createWorkbenchModePlacementRegistry = (input: {
   const placements = new Map<string, WorkbenchModePlacementContribution>();
   const refs = new Map<string, WorkbenchModePlacementContribution>();
   let state = createOwnedPlacementState();
-  const listeners = new Set<() => void>();
+  const observation = createPlacementObservation("workbench.modePlacements");
   const label = "Mode placement";
 
   const listPlacements = (modeId?: string) =>
@@ -125,9 +125,9 @@ export const createWorkbenchModePlacementRegistry = (input: {
 
   let runtime: ((destination?: PlacementDestination) => void) | undefined;
   const emitChange = (destination?: PlacementDestination) => {
+    if (!observation.active) return;
     runtime?.(destination);
-    for (const listener of listeners)
-      notifyWorkbenchChange(listener, () => runWorkbenchEffect("mode placement subscriber", listener));
+    observation.publish();
   };
 
   const resolve = (
@@ -174,7 +174,7 @@ export const createWorkbenchModePlacementRegistry = (input: {
   const preparation: OwnedPlacementPreparation = {
     connectRuntime(listener) {
       runtime = listener;
-      return createDisposable(() => {
+      return observation.own(() => {
         if (runtime === listener) runtime = undefined;
       });
     },
@@ -242,6 +242,7 @@ export const createWorkbenchModePlacementRegistry = (input: {
   };
   const registry: WorkbenchModePlacementRegistry = {
     registerPlacement(placement) {
+      observation.assertActive();
       const refKey = validatePlacement({ placement, placements, refs, views: input.views });
       const registered = copyPlacement(placement);
       const panel = registerWorkbenchViewPlacement(
@@ -263,7 +264,7 @@ export const createWorkbenchModePlacementRegistry = (input: {
       if (registered.item.kind === "binding")
         state = preparation.restore!({ modeId: registered.modeId, projectId: input.getProjectId?.() });
       emitChange();
-      return createDisposable(() => {
+      return observation.own(() => {
         if (placements.get(registered.id) !== registered) return;
         placements.delete(registered.id);
         refs.delete(refKey);
@@ -280,6 +281,7 @@ export const createWorkbenchModePlacementRegistry = (input: {
     listPlacements,
 
     openPlacement(target) {
+      observation.assertActive();
       const placement = refs.get(placementRefKey(target.panel));
       if (!placement) throw new Error(`Unknown mode panel: ${target.panel.extensionId}.${target.panel.id}`);
       const prepared = preparation.open({ ...target, placementId: placement.id });
@@ -325,10 +327,8 @@ export const createWorkbenchModePlacementRegistry = (input: {
 
     resolvePlacements: (modeId, context) =>
       preparation.resolve(modeId, context ? preparation.restore!(context) : state),
-    onDidChange(listener) {
-      listeners.add(listener);
-      return createDisposable(() => listeners.delete(listener));
-    },
+    onDidChange: observation.subscribe,
+    dispose: observation.dispose,
   };
 
   setOwnedPlacementPreparation(registry, preparation);

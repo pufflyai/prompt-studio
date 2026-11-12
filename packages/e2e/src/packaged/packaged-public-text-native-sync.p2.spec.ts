@@ -1,5 +1,5 @@
 import type { ChildProcess } from "node:child_process";
-import { mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { folderProjectInput } from "../helpers/folder-project";
@@ -15,7 +15,7 @@ import {
   seedPublicTextDevice,
   signInPublicTextDevice,
 } from "./packaged-public-text-sync.fixture";
-import { signInBrowser, stopProcess } from "./packaged-serve-helpers";
+import { runtimeAuthorization, signInBrowser, stopProcess } from "./packaged-serve-helpers";
 
 interface Resources {
   root: string;
@@ -65,7 +65,7 @@ test.beforeAll(() => {
 
 test("two encrypted hosts preserve native selection presence and table drafts through cancel save and undo", async ({
   resources,
-}) => {
+}, testInfo) => {
   // Concurrent native input, lost selection and publishing a tentative cell can destroy a person's ongoing work.
   const { root } = resources;
   const fixture = await publicTextSyncFixture(root);
@@ -92,7 +92,29 @@ test("two encrypted hosts preserve native selection presence and table drafts th
     .poll(async () => (await second.client.projects.query()).items.some((item) => item.id === project.id))
     .toBe(true);
   await second.client.projects.chooseFolder(project.id, { path: folders[1]!, clone: false });
-  await expect.poll(async () => (await second.client.account.projectSyncStatus(project.id)).state).toBe("synced");
+  try {
+    await expect.poll(() => second.client.account.projectSyncStatus(project.id)).toMatchObject({ state: "synced" });
+  } catch (error) {
+    const signal = AbortSignal.timeout(1_000);
+    const diagnostics = await Promise.allSettled([
+      ...[first, second].map(async (device) => {
+        const response = await fetch(`${device.host.baseUrl}/v1/account/projects/${project.id}/sync`, {
+          headers: runtimeAuthorization(device.host.descriptor),
+          signal,
+        });
+        return { device: device.home, httpStatus: response.status, status: await response.json() };
+      }),
+      fixture.peer.inspect(signal),
+      ...[first, second].map(async (device) => readFileSync(device.logPath, "utf8")),
+    ]);
+    await testInfo
+      .attach("sync-setup", {
+        body: JSON.stringify(diagnostics, (_key, value) => (value instanceof Error ? String(value) : value), 2),
+        contentType: "application/json",
+      })
+      .catch((attachmentError) => console.error("Could not attach sync diagnostics", attachmentError));
+    throw error;
+  }
   const projected = async (value: string) => {
     for (const folder of folders)
       await expect.poll(() => readPublicTextCopy(folder, "paper.public-text-source", "selected.md")).toBe(value);

@@ -61,3 +61,5 @@ Timeline writes and attempt launches use guards owned by the running Planner run
 A slow active writer keeps its guard until it finishes. If another write is still running, retry after it finishes. If the runtime has stopped responding, restart Prompt Studio and retry. A partially saved ticket keeps its identity so placement can be retried without creating another ticket. See [the runtime write-guard decision](../../../documentation/adrs/0083-temporary-runtime-planner-write-guards.md).
 
 Milestone progress bars show proportional segments for each configured ticket status, using its status color. The tooltip and accessible progress text include each status name and count; tickets without a status have a neutral segment. The completion count still follows the configured completed statuses.
+
+*Updated at: 2026-11-04*

@@ -2,38 +2,43 @@ import type {
   WorkbenchExtensionMetadata as DashboardExtensionMetadata,
   ListExtensionAppearanceResponse,
 } from "@pstdio/sdk/api";
-import type { PageLocation } from "@pstdio/sdk/extensions";
+import { type PageLocation, type ScopedQueryClient, viewDataEvents } from "@pstdio/sdk/extensions";
 import {
   batchWorkbenchChanges,
   type Disposable,
   type WorkbenchModuleContext,
   type WorkbenchModuleContribution,
 } from "@pstdio/workbench";
-import { createWorkbenchExtensionChatRendererOwners } from "@pstdio/workbench/extensions";
+import {
+  createWorkbenchExtensionChatRendererOwners,
+  createWorkbenchExtensionTerminalRendererOwners,
+} from "@pstdio/workbench/extensions";
 import { logExtensionHostDiagnostic } from "pstdio-extensions/bridge/host";
 import i18n from "@/i18n";
+import { catalogChangeScopes } from "@/lib/extension-catalog-events";
 import { getDashboardQueryClient } from "@/lib/query-client";
+import { getDashboardScopedQueries } from "@/lib/scoped-queries";
 import { type CollectionChange, getRuntimeCollections, subscribeCollections } from "@/lib/sync/collections";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import {
-  executeExtensionCommand,
-  getProjectExtensionAppearance,
-  getProjectExtensionMetadata,
-} from "@/shared/extensions/api";
+import { executeExtensionCommand } from "@/shared/extensions/api";
 import { subscribeCoreViewDataEvents } from "@/shared/extensions/core-view-data-events";
 import {
+  getExtensionPresentationLocale,
   localizeExtensionMetadata,
   type ResolvedWorkbenchExtensionMetadata,
   registerExtensionTranslationBundles,
 } from "@/shared/extensions/extension-localization";
+import { acceptExtensionPresentationTranslations } from "@/shared/extensions/extension-presentation-translations";
 import {
   clearDashboardExtensionsReadyProject,
   clearDashboardExtensionsRegisteredProject,
   setDashboardExtensionsReadyProject,
   setDashboardExtensionsRegisteredProject,
 } from "@/shared/extensions/extension-readiness";
-import { invalidateExtensionQueries } from "@/shared/extensions/project-extension-cache";
+import { publishExtensionEvent } from "@/shared/extensions/extension-webview-broadcast";
+import { invalidateExtensionAuxiliaryQueries } from "@/shared/extensions/project-extension-cache";
+import { getProjectExtensionQueries } from "@/shared/extensions/project-extension-queries";
 import { subscribeResourceViewDataEvents } from "@/shared/extensions/resource-view-data-events";
 import {
   clearCachedDashboardExtensionMetadata,
@@ -45,41 +50,67 @@ import { syncActiveResourceContext } from "./active-resource-context";
 import { registerDashboardActivityRail } from "./extension-activity-rail";
 import { registerExtensionAppearance, resolveExtensionAppearancePreferences } from "./extension-appearance";
 import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
-import { omitExtensionMetadata, registerHealthyExtensions } from "./extension-contribution-isolation";
 import {
   captureExtensionContributionRefreshLayout,
   restoreExtensionContributionRefreshLayout,
 } from "./extension-contribution-refresh-layout";
-import {
-  disposeExtensionContributions,
-  notifyUnresolvedExtensionMenus,
-  registerExtensionContributions,
-} from "./extension-contribution-registration";
-import { createExtensionRefreshQueue } from "./extension-refresh-queue";
+import { disposeExtensionContributions, notifyUnresolvedExtensionMenus } from "./extension-contribution-registration";
+import { createExtensionContributionReplacement } from "./extension-contribution-replacement";
+import { createExtensionQueryObservation } from "./extension-query-observation";
 import { registerExtensionsPage } from "./extensions-page";
 
 type LoadDashboardExtensionMetadata = (projectId: string) => Promise<DashboardExtensionMetadata>;
 type LoadDashboardExtensionAppearance = (projectId: string) => Promise<ListExtensionAppearanceResponse>;
 
 interface CreateExtensionsModuleInput {
+  queries?: ScopedQueryClient;
   executeCommand?: ExecuteDashboardExtensionCommand;
   loadAppearance?: LoadDashboardExtensionAppearance;
   loadMetadata?: LoadDashboardExtensionMetadata;
 }
 
 const extensionSyncTables = new Set<CollectionChange["table"]>(["installed_extension_sources", "extension_instances"]);
-const extensionContributionModuleId = "dashboard.extensions.contributions";
 
 const hasSameSerializedMetadata = (
   current: ResolvedWorkbenchExtensionMetadata | undefined,
   next: ResolvedWorkbenchExtensionMetadata,
-) => Boolean(current && JSON.stringify(current) === JSON.stringify(next));
+) => current === next || Boolean(current && JSON.stringify(current) === JSON.stringify(next));
 
 const hasEditableTemplateAssets = (metadata: ResolvedWorkbenchExtensionMetadata) => {
   const providerExtensionIds = new Set(
     (metadata.templateTypes ?? []).filter((type) => Boolean(type.commands)).map((type) => type.extensionId),
   );
   return (metadata.templates ?? []).some((template) => providerExtensionIds.has(template.extensionId));
+};
+
+const createExtensionModuleCatalog = (
+  input: CreateExtensionsModuleInput,
+  queries: ScopedQueryClient,
+  owner: ReturnType<typeof getRuntimeCollections>,
+) => {
+  const namespace = input.loadMetadata || input.loadAppearance ? crypto.randomUUID() : undefined;
+  const customReads = new Set<import("@pstdio/sdk/extensions").ScopedQuery<unknown>>();
+  const catalog = (projectId: string) => {
+    const result = getProjectExtensionQueries(projectId, {
+      ...input,
+      owner,
+      namespace,
+      queries,
+    });
+    if (namespace) {
+      customReads.add(result.metadata);
+      customReads.add(result.appearance);
+      for (const query of customReads) if (query.isDisposed()) customReads.delete(query);
+    }
+    return result;
+  };
+  return {
+    query: catalog,
+    dispose() {
+      for (const query of customReads) query.dispose();
+      customReads.clear();
+    },
+  };
 };
 
 export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) =>
@@ -89,23 +120,24 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
       registerExtensionsPage(ctx);
       const owner = getRuntimeCollections();
       const executeCommand = input.executeCommand ?? executeExtensionCommand;
-      const loadAppearance = input.loadAppearance ?? getProjectExtensionAppearance;
-      const loadMetadata = input.loadMetadata ?? getProjectExtensionMetadata;
+      const sharedQueries = getDashboardScopedQueries(owner);
+      const catalog = createExtensionModuleCatalog(input, input.queries ?? sharedQueries, owner);
       let projectId = getDashboardSelectedProjectId(ctx);
-      let rawAppearance: ListExtensionAppearanceResponse | undefined;
-      let rawMetadata: DashboardExtensionMetadata | undefined;
       let metadata: ResolvedWorkbenchExtensionMetadata | undefined;
-      let projectGeneration = 0;
+      let registeredLocale: string | undefined;
       let appearanceDisposable: ReturnType<typeof registerExtensionAppearance> | undefined;
       let translationDisposable: Disposable | undefined;
       let contributionDisposables: Disposable[] = [];
       const chatRendererOwners = createWorkbenchExtensionChatRendererOwners();
+      const terminalRendererOwners = createWorkbenchExtensionTerminalRendererOwners();
       let displacedPageLocation: PageLocation | undefined;
 
       const clearContributions = (preserveChatOwners = false) => {
         disposeExtensionContributions(contributionDisposables);
         contributionDisposables = [];
-        if (!preserveChatOwners) chatRendererOwners.dispose();
+        if (!preserveChatOwners) {
+          chatRendererOwners.dispose();
+        }
       };
 
       const clearTranslations = () => {
@@ -119,10 +151,9 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         appearanceDisposable = undefined;
       };
 
-      const applyAppearance = (nextAppearance: ListExtensionAppearanceResponse) => {
+      const applyAppearance = (nextProjectId: string, nextAppearance: ListExtensionAppearanceResponse) => {
         clearTranslations();
         translationDisposable = registerExtensionTranslationBundles(nextAppearance, owner);
-        rawAppearance = nextAppearance;
         const preferences = resolveExtensionAppearancePreferences(nextAppearance, owner);
         // Theme sources can move between projects while their resolved visuals stay
         // identical. Retain that catalog so every theme consumer need not rerender.
@@ -130,6 +161,15 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           if (appearanceDisposable) appearanceDisposable.update(preferences);
           else appearanceDisposable = registerExtensionAppearance(ctx, preferences);
         });
+        for (const extensionId of acceptExtensionPresentationTranslations(
+          catalog.query(nextProjectId).appearance,
+          nextAppearance,
+        )) {
+          publishExtensionEvent(
+            { id: viewDataEvents.extensionTranslationsChanged.id, projectId: nextProjectId, extensionId },
+            owner,
+          );
+        }
       };
 
       const registrationError = (projectId: string, error: unknown, extensionId?: string) =>
@@ -140,41 +180,21 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           message: error instanceof Error ? error.message : String(error),
         });
 
-      // Returns what is registered now; a failed extension is left out so the next refresh retries it.
-      const replaceContributions = (nextProjectId: string, nextMetadata: ResolvedWorkbenchExtensionMetadata) => {
-        chatRendererOwners.reconcile(nextProjectId, nextMetadata);
-        clearContributions(true);
-        try {
-          const registration = registerHealthyExtensions({
-            metadata: nextMetadata,
-            register: (metadata) =>
-              ctx.registerChildModule({
-                id: extensionContributionModuleId,
-                ownerId: "dashboard.extensions",
-                source: "extension",
-                activate: (contributionCtx) =>
-                  registerExtensionContributions({
-                    ctx: contributionCtx,
-                    chatRendererOwners,
-                    executeCommand,
-                    metadata,
-                    projectId: nextProjectId,
-                  }),
-              }),
-            onFailure: (extensionId, error) => registrationError(nextProjectId, error, extensionId),
-          });
-          contributionDisposables = [registration.disposable];
-          chatRendererOwners.reconcile(nextProjectId, registration.metadata);
-          return registration.metadata;
-        } catch (error) {
-          registrationError(nextProjectId, error);
-          chatRendererOwners.dispose();
-          return omitExtensionMetadata(nextMetadata, new Set(nextMetadata.extensions.map((extension) => extension.id)));
-        }
-      };
+      const replaceContributions = createExtensionContributionReplacement({
+        ctx,
+        chatRendererOwners,
+        terminalRendererOwners,
+        executeCommand,
+        clear: () => clearContributions(true),
+        accept: (disposable) => {
+          contributionDisposables = [disposable];
+        },
+        registrationError,
+      });
 
       const commitMetadata = (nextProjectId: string, registeredMetadata: ResolvedWorkbenchExtensionMetadata) => {
         metadata = registeredMetadata;
+        registeredLocale = getExtensionPresentationLocale();
         setCachedDashboardExtensionMetadata(nextProjectId, registeredMetadata, owner);
         ctx.context.set(dashboardEditableTemplatesContextKey, hasEditableTemplateAssets(registeredMetadata));
         ctx.settings.refresh();
@@ -183,9 +203,12 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
 
       const applyMetadata = (nextProjectId: string, nextMetadata: DashboardExtensionMetadata) => {
         const nextResolvedMetadata = localizeExtensionMetadata(nextMetadata, owner);
-        rawMetadata = nextMetadata;
         // `metadata` holds only what registered, so a refresh after a failure always retries.
-        if (hasSameSerializedMetadata(metadata, nextResolvedMetadata)) return;
+        if (
+          registeredLocale === getExtensionPresentationLocale() &&
+          hasSameSerializedMetadata(metadata, nextResolvedMetadata)
+        )
+          return;
         const pageLocationBeforeRefresh = displacedPageLocation ?? ctx.pages.store.getState().location;
         const refreshLayout = captureExtensionContributionRefreshLayout(ctx);
         // Observers must see the completed refresh. A temporary missing page can
@@ -205,24 +228,32 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         activityRail.sync();
       };
 
-      const metadataRefresh = createExtensionRefreshQueue({
+      const metadataRefresh = createExtensionQueryObservation({
+        isAvailable: () => !owner.isDisposed() && !(input.queries ?? sharedQueries).isDisposed(),
         apply: applyMetadata,
         onComplete: (id) => setDashboardExtensionsReadyProject(ctx, id),
+        onPending: () => clearDashboardExtensionsReadyProject(ctx),
+        onRetire: (id) => {
+          metadata = undefined;
+          registeredLocale = undefined;
+          clearContributions();
+          clearTranslations();
+          clearCachedDashboardExtensionMetadata(id, owner);
+          clearDashboardExtensionsRegisteredProject(ctx);
+        },
         fallback: () => emptyDashboardExtensionMetadata,
-        getGeneration: () => projectGeneration,
-        getProjectId: () => projectId,
-        load: loadMetadata,
+        query: (id) => catalog.query(id).metadata,
       });
-      const appearanceRefresh = createExtensionRefreshQueue<ListExtensionAppearanceResponse | undefined>({
+      const appearanceRefresh = createExtensionQueryObservation<ListExtensionAppearanceResponse>({
+        isAvailable: () => !owner.isDisposed() && !(input.queries ?? sharedQueries).isDisposed(),
         apply: (nextProjectId, nextAppearance) => {
           if (!nextAppearance) return;
-          applyAppearance(nextAppearance);
+          applyAppearance(nextProjectId, nextAppearance);
+          const rawMetadata = metadataRefresh.value();
           if (rawMetadata) applyMetadata(nextProjectId, rawMetadata);
         },
         fallback: () => undefined,
-        getGeneration: () => projectGeneration,
-        getProjectId: () => projectId,
-        load: loadAppearance,
+        query: (id) => catalog.query(id).appearance,
       });
 
       const refreshProject = () => {
@@ -234,19 +265,17 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         // until fresh metadata arrives — applyMetadata swaps contributions
         // synchronously, so the sidenav never renders entries whose presenters are gone.
         if (projectId !== previousProjectId || !projectId) {
-          projectGeneration += 1;
           metadataRefresh.clear();
           appearanceRefresh.clear();
-          rawMetadata = undefined;
-          rawAppearance = undefined;
           metadata = undefined;
+          registeredLocale = undefined;
           displacedPageLocation = undefined;
           clearCachedDashboardExtensionMetadata(previousProjectId, owner);
           clearCachedDashboardExtensionMetadata(projectId, owner);
           ctx.context.delete(dashboardEditableTemplatesContextKey);
           clearDashboardExtensionsReadyProject(ctx);
           clearDashboardExtensionsRegisteredProject(ctx);
-          clearContributions();
+          clearContributions(true);
           // Labels belong to this project; resolved visual themes can survive its loading gap.
           clearTranslations();
           // Appearance stays live until the destination catalog settles. Unlike tools,
@@ -261,8 +290,10 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
       };
 
       const reapplyLocale = () => {
-        if (!projectId || !rawMetadata || !rawAppearance) return;
-        applyAppearance(rawAppearance);
+        const rawMetadata = metadataRefresh.value();
+        const rawAppearance = appearanceRefresh.value();
+        if (!projectId || !rawMetadata) return;
+        if (rawAppearance) applyAppearance(projectId, rawAppearance);
         applyMetadata(projectId, rawMetadata);
       };
 
@@ -281,15 +312,14 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
       const unsubscribeSync = subscribeCollections((change) => {
         if (!change) return;
         if (extensionSyncTables.has(change.table)) {
-          void invalidateExtensionQueries(getDashboardQueryClient(owner), projectId);
-          refreshProject();
-          return;
+          const scopes = catalogChangeScopes(change);
+          if (!scopes.has(undefined) && !scopes.has(projectId)) return;
+          void invalidateExtensionAuxiliaryQueries(getDashboardQueryClient(owner), projectId);
         }
       });
 
       return {
         dispose() {
-          projectGeneration += 1;
           metadataRefresh.clear();
           appearanceRefresh.clear();
           activeResourceContext.dispose();
@@ -298,6 +328,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           clearDashboardExtensionsReadyProject(ctx);
           clearDashboardExtensionsRegisteredProject(ctx);
           clearContributions();
+          terminalRendererOwners.dispose();
           clearAppearance();
           i18n.off("languageChanged", reapplyLocale);
           activityRail.dispose();
@@ -305,6 +336,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           unsubscribeSync();
           unsubscribeViewData();
           unsubscribeResourceData();
+          catalog.dispose();
         },
       };
     },

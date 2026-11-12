@@ -2,6 +2,7 @@ import { dlopen, ptr, toArrayBuffer } from "bun:ffi";
 import { constants } from "node:fs";
 import { open } from "node:fs/promises";
 import { getSystemErrorName } from "node:util";
+import { supportsNativeRecovery } from "./platform";
 
 const component = (name: string) => {
   if (!name || name === "." || name === ".." || name.includes("/") || name.includes("\0"))
@@ -28,7 +29,7 @@ export const publishRecoveryStaging = async (input: {
   from: string;
   to: string;
 }) => {
-  if (process.platform !== "darwin" && process.platform !== "linux")
+  if (!supportsNativeRecovery())
     throw Object.assign(new Error("Restoring a folder is not supported on this platform yet"), {
       code: "ENOTSUP",
     });

@@ -81,6 +81,14 @@ test(
   async () => {
     await withPackagedCoreExtensions(async ({ started, tempRoot, projectFolder, project, extensions, metadata }) => {
       expect(project.extension_warnings).toBeUndefined();
+      expect(metadata.commandPaletteContributions.length).toBeGreaterThan(0);
+      for (const command of metadata.commandPaletteContributions) {
+        expect(command.icon).toBeTruthy();
+        expect(command.group).toBeTruthy();
+      }
+      expect(extensions.filter((extension) => extension.canUpgrade).map((extension) => extension.installName)).toEqual(
+        [],
+      );
       const body = { extensions };
       expect(body.extensions).toEqual(
         expect.arrayContaining([
@@ -89,8 +97,7 @@ test(
           expect.objectContaining({
             enabled: true,
             installName: "pstdio-session-browser",
-            scope: "repo",
-            sourcePath: join(realpathSync(projectFolder), ".pstdio/extensions/pstdio-session-browser"),
+            scope: "global",
           }),
           expect.objectContaining({ enabled: true, installName: "harness-claude-code" }),
           expect.objectContaining({ enabled: true, installName: "harness-codex" }),
@@ -108,6 +115,9 @@ test(
           expect.objectContaining({ enabled: true, installName: "pstdio-skills" }),
         ]),
       );
+
+      const sessions = extensions.find((extension) => extension.installName === "pstdio-session-browser")!;
+      expect(realpathSync(sessions.sourcePath)).toBe(join(realpathSync(tempRoot), "extensions/pstdio-session-browser"));
 
       expect(metadata.pages).toContainEqual(
         expect.objectContaining({ extensionId: "pstdio.pstdio-home", path: "home" }),

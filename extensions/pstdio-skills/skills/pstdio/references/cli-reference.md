@@ -40,7 +40,7 @@ pst agents install-skills <agent-id> [--global-skills] [--force]
 pst sessions create --prompt <text> [--title <title>] [--workspace-id <id>] [--project-id <id>] [--agent <agent>] [--model <model>] [--attach <path>...] [--original-session-id <id>]
 pst sessions list [--project-id <id>] [--status <status>] [--agent <agent>] [--workspace-id <id>] [--archived]
 pst sessions view --id <id>
-pst sessions follow-up --id <id> [--prompt <text> | --summary-of <id>] [--summary-format <brief|detailed>] [--summary-role <assistant|all>] [--agent <agent>] [--model <model>] [--attach <path>...]
+pst sessions follow-up --id <id> [--prompt <text> | --summary-of <id>] [--steer] [--summary-format <brief|detailed>] [--summary-role <assistant|all>] [--agent <agent>] [--model <model>] [--attach <path>...]
 pst sessions stream --id <id>
 pst sessions approve --id <id> --approval-id <id>
 pst sessions deny --id <id> --approval-id <id>

@@ -121,6 +121,8 @@ export type {
   TerminalSessionOperation,
   TerminalSessionRequest,
   TerminalSessionResult,
+  TerminalViewBinding,
+  TerminalViewOpenRequest,
 } from "./terminal";
 export type {
   CreateWorkspaceInput,

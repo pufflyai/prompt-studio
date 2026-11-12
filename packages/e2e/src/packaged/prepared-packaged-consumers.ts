@@ -24,7 +24,7 @@ export const preparePackagedConsumers = async (signal: AbortSignal) => {
       outputRoot: join(root, "registry"),
       packagePaths: [join(repoRoot, "packages/sdk"), join(repoRoot, "packages/ui")],
     });
-    const env = {
+    const env: NodeJS.ProcessEnv = {
       ...process.env,
       E2E_HOME: join(root, "home"),
       E2E_BUN_CACHE_DIR: join(root, "bun-cache"),

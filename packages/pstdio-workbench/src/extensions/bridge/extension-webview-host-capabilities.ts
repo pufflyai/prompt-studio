@@ -17,6 +17,36 @@ import { createWebviewCommandStreamHandler, withFrameSignal } from "./webview-co
 
 const commandResponse = z.object({ outcome: validatedCommandOutcomeSchema }).passthrough();
 const streamHandlers = new WeakMap<HostEventPublisher, ReturnType<typeof createWebviewCommandStreamHandler>>();
+const terminalHandlers = new WeakMap<
+  HostEventPublisher,
+  {
+    terminal: NonNullable<ExtensionWebviewHostAdapters["terminal"]>;
+    ownerId?: string;
+    capability: ReturnType<typeof createTerminalSessionCapability>;
+  }
+>();
+export const disposeWebviewTerminalOwner = (hostEvents: HostEventPublisher) => {
+  terminalHandlers.get(hostEvents)?.capability.dispose();
+  terminalHandlers.delete(hostEvents);
+};
+const terminalHandler = (
+  terminal: ExtensionWebviewHostAdapters["terminal"],
+  hostEvents: HostEventPublisher,
+  ownerId?: string,
+) => {
+  let entry = terminalHandlers.get(hostEvents);
+  if (!terminal) {
+    entry?.capability.dispose();
+    terminalHandlers.delete(hostEvents);
+    return;
+  }
+  if (entry?.terminal !== terminal || entry.ownerId !== ownerId) {
+    entry?.capability.dispose();
+    entry = { terminal, ownerId, capability: createTerminalSessionCapability({ terminal, hostEvents }) };
+    terminalHandlers.set(hostEvents, entry);
+  }
+  return entry.capability;
+};
 const streamHandler = (events: HostEventPublisher) => {
   let handler = streamHandlers.get(events);
   if (!handler) {
@@ -62,16 +92,20 @@ const commandStreaming = (adapters: ExtensionWebviewHostAdapters) => {
 };
 
 const editingSession = (adapters: ExtensionWebviewHostAdapters) => {
-  const { editing, executeCommand } = adapters;
+  const { editing } = adapters;
+  const executeCommand = adapters.executeEditingCommand ?? adapters.executeCommand;
   if (!editing || !executeCommand) return;
   return (request: WebviewHostCapabilityParams["editing.session"]) =>
-    editing.request(request, async (input) => {
-      const response = commandResponse.parse(await executeCommand(input));
+    editing.request(request, async (input, signal) => {
+      const response = commandResponse.parse(await executeCommand(input, signal));
       return getCommandValue(response.outcome);
     });
 };
 
-export const createExtensionWebviewHostCapabilities = (adapters: ExtensionWebviewHostAdapters) => {
+export const createExtensionWebviewHostCapabilities = (
+  adapters: ExtensionWebviewHostAdapters,
+  terminalOwnerId?: string,
+) => {
   const {
     hostEvents,
     navigation,
@@ -84,14 +118,14 @@ export const createExtensionWebviewHostCapabilities = (adapters: ExtensionWebvie
     artifacts,
     terminal,
   } = adapters;
-  const terminalCapability =
-    terminal && hostEvents ? createTerminalSessionCapability({ terminal, hostEvents }) : undefined;
+  const terminalCapability = hostEvents ? terminalHandler(terminal, hostEvents, terminalOwnerId) : undefined;
   const readHarnesses = adapters.harnesses?.read.bind(adapters.harnesses);
   const account = createAccountCapability(adapters.account);
   return {
     "harnesses.read": capability("harnesses.read", readHarnesses),
     "resources.actions": capability("resources.actions", adapters.resourceActions),
     "commands.execute": capability("commands.execute", commandExecution(adapters)),
+    "commands.query": capability("commands.query", adapters.commandQueries?.request.bind(adapters.commandQueries)),
     "commands.stream": capability("commands.stream", commandStreaming(adapters)),
     "editing.session": capability("editing.session", editingSession(adapters)),
     "editing.text": capability("editing.text", adapters.textEditing?.request.bind(adapters.textEditing)),

@@ -122,7 +122,6 @@ const meta: CanvasMeta<typeof ExtensionDetail> = {
     automations,
     diagnostics: [],
     settings,
-    onBack: noop,
     onToggle: noop,
     onToggleAutomation: noop,
     executeOptionCommand: async () => [],

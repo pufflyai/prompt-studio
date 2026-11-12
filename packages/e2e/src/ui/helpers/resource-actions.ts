@@ -3,12 +3,17 @@ import { folderProjectInput } from "../../helpers/folder-project";
 import { switchSession } from "../../helpers/session-side-panel";
 import { uiOrigin as apiBase } from "../../ui-server";
 
-export const createResourceActionsProject = async (request: APIRequestContext, folderPath?: string) => {
+export const createResourceActionsProject = async (
+  request: APIRequestContext,
+  folderPath?: string,
+  onCreated?: (project: { id: string }) => void,
+) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
     data: folderProjectInput({ name: "Resource Actions" }, folderPath),
   });
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
+  onCreated?.(project);
   const configured = await request.patch(`${apiBase}/v1/projects/${project.id}`, {
     data: { default_agent_id: "pstdio.workbench-fixture.harness.fake", default_agent_model: null },
   });
@@ -50,10 +55,11 @@ export const expectResourceMenuItems = async (page: Page, labels: string[]) => {
 export const openSessionSidePanel = async (page: Page, title: string) => {
   await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
   await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
-  await page
-    .locator('[data-workbench-panel-header="side"]')
-    .getByRole("tab", { selected: true })
-    .click({ button: "right" });
+  const header = page.locator('[data-workbench-panel-header="side"]');
+  const chooser = page.locator('[data-workbench-panel="side"]').getByRole("group", { name: "Available tabs" });
+  await expect(header.getByRole("tab", { selected: true }).or(chooser)).toBeVisible();
+  if (await chooser.isVisible()) await chooser.getByRole("button", { name: "New session", exact: true }).click();
+  await header.getByRole("tab", { selected: true }).click({ button: "right" });
   await switchSession(page, title);
   const tab = page.locator('[data-workbench-panel-header="side"]').getByRole("tab", { name: title, exact: true });
   await tab.click({ button: "right" });

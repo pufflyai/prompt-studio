@@ -1,12 +1,15 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, test as baseTest, expect } from "bun:test";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSyncSpace } from "pstdio-sync/encryption";
 import { captureRecoveryFolder } from "./capture";
 import { createRecoveryChunkStore, type RecoveryChunk, recoveryChunkBytes } from "./chunks";
+import { nativeRecoverySupported } from "./native-recovery.fixture";
 import { createRecoveryPages } from "./pages";
 import { downloadRecoveryCapture, prepareRecoveryCapture, publishRecoveryCapture } from "./transfer";
+
+const test = baseTest.skipIf(!nativeRecoverySupported);
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -104,6 +107,27 @@ test("publication waits for every acknowledged child, reuses a retained candidat
     for await (const reference of pages.parts(entry.content)) bytes.push(await receiver.read(reference));
   }
   expect(new Uint8Array(Buffer.concat(bytes))).toEqual(f.contents);
+});
+
+test("a .pstignore with a byte-order mark publishes and downloads", async () => {
+  const f = await fixture();
+  await mkdir(join(f.folder, "dist"));
+  await writeFile(join(f.folder, "dist/bundle.js"), "built");
+  await writeFile(join(f.folder, ".pstignore"), "\uFEFFdist/\n");
+  const capture = await captureRecoveryFolder({ root: f.folder, chunks: f.chunks });
+  expect(capture.policy).toBe("\uFEFFdist/\n");
+  const candidate = await prepareRecoveryCapture({ chunks: f.chunks, source: f.source, capture });
+  const published: RecoveryChunk[] = [];
+  const complete = async (reference: RecoveryChunk) => {
+    published.push(reference);
+  };
+  await publishRecoveryCapture({ chunks: f.chunks, candidate, transport: f.transport, complete });
+  expect(published).toEqual([candidate]);
+  const receiver = await createRecoveryChunkStore({ root: join(f.root, "receiver"), space: f.chunks.space });
+  const downloaded = await downloadRecoveryCapture({ chunks: receiver, candidate, transport: f.transport });
+  const paths: string[] = [];
+  for await (const entry of createRecoveryPages(receiver).entries(downloaded.capture.inventory)) paths.push(entry.path);
+  expect(paths.sort()).toEqual([".env-secret", ".pstignore"]);
 });
 
 test("download rejects corrupted encrypted bytes and cancellation never publishes a completed source", async () => {

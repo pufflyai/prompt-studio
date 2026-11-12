@@ -59,7 +59,7 @@ describe("POST /v1/projects/:projectId/extensions/:instanceId/upgrade", () => {
       source: {
         kind: "named" as const,
         name: "pstdio-planner",
-        ref: `https://github.com/pufflyai/prompt-studio@${"b".repeat(40)}#extensions/pstdio-planner`,
+        ref: `https://github.com/pufflyai/prompt-studio@${"f".repeat(40)}#extensions/pstdio-planner`,
       },
       sourceHash: "new-hash",
       targetPath: sourcePath,

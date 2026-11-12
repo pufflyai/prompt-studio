@@ -12,9 +12,3 @@ export const discoverWorkspaceProvider = async (
   const params = discovery.params ?? handle.provider.params ?? {};
   return { params: handle.normalizeParams ? handle.normalizeParams(params) : params };
 };
-
-export const requireWorkspaceProviderParams = async (handle: WorkspaceProviderHandle, providerId: string) => {
-  const discovery = await discoverWorkspaceProvider(handle);
-  if (!discovery) throw new Error(`Workspace provider is unavailable: ${providerId}`);
-  return discovery.params;
-};

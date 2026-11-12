@@ -31,14 +31,15 @@ export const createAccountClient = (request: RequestFn) => {
     /** Cancels a pending sign-in. A sign-in that already completed stays complete. */
     cancelLogin: (id: string) =>
       request<Ok & { status: Exclude<AccountLoginStatus, "pending"> }>(login(id), { method: "DELETE" }),
-    projectSyncStatus: (projectId: string) => request<ProjectSyncStatus>(`${project(projectId)}/sync`),
+    projectSyncStatus: (projectId: string, options?: { signal?: AbortSignal }) =>
+      request<ProjectSyncStatus>(`${project(projectId)}/sync`, options),
     /** Retries project discovery, downloads, and activation of its synced extensions immediately. */
     retryProjectSync: (projectId: string) => request<Ok>(`${project(projectId)}/retry`, { method: "POST" }),
     /** Includes account feature grants. `features` is null until discovery or when signed out. */
-    status: () => request<AccountStatus>("/v1/account"),
+    status: (options?: { signal?: AbortSignal }) => request<AccountStatus>("/v1/account", options),
     /** `removed` is false when the account service could not be reached; remove the device from another one. */
     logout: () => request<Ok & { removed: boolean }>("/v1/account/logout", { method: "POST" }),
-    devices: () => request<AccountDevice[]>("/v1/account/devices"),
+    devices: (options?: { signal?: AbortSignal }) => request<AccountDevice[]>("/v1/account/devices", options),
     renameDevice: (id: string, name: string) => request<Ok>(`${device(id)}/rename`, { method: "POST", body: { name } }),
     removeDevice: (id: string) => request<Ok>(`${device(id)}/remove`, { method: "POST" }),
     /** Makes a local project a cloud project of the logged-in account. */

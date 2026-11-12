@@ -104,3 +104,5 @@ The installed skill folders are copies. To change a skill, edit its source in th
 To learn what the host and the harness each do, read [Agents and harnesses](../concepts/0003-agents.md). For every session command, see [CLI sessions](../../references/cli/0006-sessions.md).
 
 If an agent does not start, see [Troubleshooting](0005-troubleshooting.md).
+
+*Updated at: 2026-11-05*

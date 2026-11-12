@@ -7,11 +7,28 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin } from "../ui-server";
 
 const repoRoot = resolve(import.meta.dirname, "../../../..");
+let cleanup: { sourcePath: string; projectId?: string } | undefined;
+
+test.afterEach(async ({ request }) => {
+  const owned = cleanup;
+  cleanup = undefined;
+  if (!owned) return;
+  try {
+    if (owned.projectId) {
+      const response = await request.delete(`${uiOrigin}/v1/projects/${owned.projectId}`);
+      expect(response.ok()).toBe(true);
+    }
+  } finally {
+    rmSync(owned.sourcePath, { force: true, recursive: true });
+  }
+});
 
 test("native view actions load dependent options and submit explicit values", async ({ page, request }, testInfo) => {
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
   const parent = join(repoRoot, "__test-tmp__");
   mkdirSync(parent, { recursive: true });
   const sourcePath = mkdtempSync(join(parent, "native-actions-"));
+  cleanup = { sourcePath };
   execFileSync("bun", [
     "build",
     join(import.meta.dirname, "../fixtures/native-view-actions/extension.ts"),
@@ -33,109 +50,108 @@ test("native view actions load dependent options and submit explicit values", as
   const projectPath = join(sourcePath, "project");
   mkdirSync(projectPath);
   let projectId: string | undefined;
-  try {
-    const project = await request.post(`${uiOrigin}/v1/projects`, {
-      data: folderProjectInput({ name: "Native view actions" }, projectPath),
-    });
-    expect(project.ok(), await project.text()).toBe(true);
-    projectId = (await project.json()).id;
-    const enabled = await request.post(
-      `${uiOrigin}/v1/projects/${projectId}/extensions/installed/native-actions/enable`,
-      {
-        data: {
-          displayName: "Native actions",
-          extensionId: "e2e.native-actions",
-          manifest: { id: "e2e.native-actions", name: "native-actions" },
-          name: "native-actions",
-          sourceHash: "native-actions",
-          sourceKind: "local_path",
-          sourcePath,
-          sourceRef: null,
-          version: "0.1.0",
-        },
+  const project = await request.post(`${uiOrigin}/v1/projects`, {
+    data: folderProjectInput({ name: "Native view actions" }, projectPath),
+  });
+  expect(project.ok(), await project.text()).toBe(true);
+  projectId = (await project.json()).id;
+  cleanup.projectId = projectId;
+  const enabled = await request.post(
+    `${uiOrigin}/v1/projects/${projectId}/extensions/installed/native-actions/enable`,
+    {
+      data: {
+        displayName: "Native actions",
+        extensionId: "e2e.native-actions",
+        manifest: { id: "e2e.native-actions", name: "native-actions" },
+        name: "native-actions",
+        sourceHash: "native-actions",
+        sourceKind: "local_path",
+        sourcePath,
+        sourceRef: null,
+        version: "0.1.0",
       },
-    );
-    expect(enabled.ok()).toBe(true);
-    await page.addInitScript((id) => {
-      localStorage.setItem("onboarding-complete", "true");
-      localStorage.setItem("dashboard-wb2:selected-project:global", id!);
-    }, projectId);
-    for (const view of ["table", "board"]) {
-      await page.goto(`/projects/${projectId}/extensions/e2e.native-actions/${view}`);
-      const action = page.getByRole("button", { name: "Run experiment", exact: true });
-      await expect(action).toBeVisible();
-      await expect(page.getByRole("button", { name: "Disabled experiment" })).toBeDisabled();
-      await expect(page.getByRole("button", { name: "Hidden experiment" })).toHaveCount(0);
-      await action.click();
-      const dialog = page.getByRole("dialog");
-      await dialog.getByRole("button", { name: "a,b", exact: true }).click();
-      await expect(page.getByText("Known tag", { exact: true })).toBeVisible();
-      await page.getByPlaceholder("Search options…").fill("new,tag");
-      await page.getByText('Use "new,tag"', { exact: true }).click();
-      await page.keyboard.press("Escape");
-      if (view === "table") {
-        await dialog.getByRole("button", { name: "Select region", exact: true }).click();
-        await page.getByRole("menuitemradio", { name: "Error", exact: true }).click();
-        await expect(dialog.getByText("Options unavailable", { exact: true })).toBeVisible();
-        await dialog.getByRole("button", { name: "Retry", exact: true }).click();
-        await expect(dialog.getByText("Options unavailable", { exact: true })).toHaveCount(0);
-        await dialog.getByRole("button", { name: "Error", exact: true }).click();
-        await page.getByRole("menuitemradio", { name: "Empty", exact: true }).click();
-        await expect(dialog.getByText("No options available.", { exact: true })).toBeVisible();
-        await expect(dialog.getByRole("button", { name: "Start experiment" })).toBeDisabled();
-      }
-      await dialog.getByRole("button", { name: /Select region|Europe|America|Empty/ }).click();
-      await page.getByRole("menuitemradio", { name: "Europe", exact: true }).click();
-      await expect(dialog.getByRole("button", { name: /Select locale|German|English/ })).toBeVisible();
-      // Blurring a dependent search into its picker must not destroy the popup during refresh.
-      let releaseChoices!: () => void;
-      let choicesRequested!: () => void;
-      const heldChoices = new Promise<void>((resolve) => {
-        releaseChoices = resolve;
-      });
-      const requestedChoices = new Promise<void>((resolve) => {
-        choicesRequested = resolve;
-      });
-      const choicesRoute = "**/commands/e2e.native-actions.command.locales/execute";
-      await page.route(choicesRoute, async (route) => {
-        choicesRequested();
-        await heldChoices;
-        await route.continue();
-      });
-      try {
-        await dialog.getByRole("textbox", { name: "Search locales", exact: true }).fill("Ger");
-        await dialog.getByRole("button", { name: /Select locale|German|English/ }).click();
-        await requestedChoices;
-        const popup = page.getByRole("menu");
-        await expect(popup).toBeVisible();
-        await expect(page.getByRole("menuitemradio", { name: "German", exact: true })).toBeDisabled();
-        await expect(dialog.getByRole("button", { name: "Start experiment" })).toBeDisabled();
-        releaseChoices();
-        await expect(page.getByRole("menuitemradio", { name: "German", exact: true })).toBeEnabled();
-        await expect(popup).toBeVisible();
-        await page.keyboard.press("ArrowDown");
-        // This composite uses virtual item focus; DOM focus stays on the menu.
-        const german = page.getByRole("menuitemradio", { name: "German", exact: true });
-        await expect(popup).toBeFocused();
-        await expect(popup).toHaveAttribute("aria-activedescendant", (await german.getAttribute("id"))!);
-        await page.keyboard.press("Enter");
-      } finally {
-        releaseChoices();
-        await page.unroute(choicesRoute);
-      }
-      await expect(dialog.getByRole("button", { name: "Start experiment" })).toBeEnabled();
-      await dialog.getByRole("button", { name: /Select region|Europe|America|Empty/ }).click();
-      await page.getByRole("menuitemradio", { name: "America", exact: true }).click();
+    },
+  );
+  expect(enabled.ok()).toBe(true);
+  await page.addInitScript((id) => {
+    localStorage.setItem("onboarding-complete", "true");
+    localStorage.setItem("dashboard-wb2:selected-project:global", id!);
+  }, projectId);
+  for (const view of ["table", "board"]) {
+    await page.goto(`/projects/${projectId}/extensions/e2e.native-actions/${view}`);
+    await page.getByRole("button", { name: "Copy experiment reference", exact: true }).click();
+    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe("experiment-reference");
+    const action = page.getByRole("button", { name: "Run experiment", exact: true });
+    await expect(action).toBeVisible();
+    await expect(page.getByRole("button", { name: "Disabled experiment" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Hidden experiment" })).toHaveCount(0);
+    await action.click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByRole("button", { name: "a,b", exact: true }).click();
+    await expect(page.getByText("Known tag", { exact: true })).toBeVisible();
+    await page.getByPlaceholder("Search options…").fill("new,tag");
+    await page.getByText('Use "new,tag"', { exact: true }).click();
+    await page.keyboard.press("Escape");
+    if (view === "table") {
+      await dialog.getByRole("button", { name: "Select region", exact: true }).click();
+      await page.getByRole("menuitemradio", { name: "Error", exact: true }).click();
+      await expect(dialog.getByText("Options unavailable", { exact: true })).toBeVisible();
+      await dialog.getByRole("button", { name: "Retry", exact: true }).click();
+      await expect(dialog.getByText("Options unavailable", { exact: true })).toHaveCount(0);
+      await dialog.getByRole("button", { name: "Error", exact: true }).click();
+      await page.getByRole("menuitemradio", { name: "Empty", exact: true }).click();
+      await expect(dialog.getByText("No options available.", { exact: true })).toBeVisible();
       await expect(dialog.getByRole("button", { name: "Start experiment" })).toBeDisabled();
-      await dialog.getByRole("button", { name: /Select locale|German|English/ }).click();
-      await page.getByRole("menuitemradio", { name: "English", exact: true }).click();
-      await dialog.getByRole("button", { name: "Start experiment" }).click();
-      await expect(dialog).toHaveCount(0);
-      await expect(page.getByText('toolbar: us/en ["a,b","new,tag"]', { exact: true }).last()).toBeVisible();
-      await testInfo.attach(`${view}-action`, { body: await page.screenshot(), contentType: "image/png" });
     }
-  } finally {
-    if (projectId) await request.delete(`${uiOrigin}/v1/projects/${projectId}`);
-    rmSync(sourcePath, { force: true, recursive: true });
+    await dialog.getByRole("button", { name: /Select region|Europe|America|Empty/ }).click();
+    await page.getByRole("menuitemradio", { name: "Europe", exact: true }).click();
+    // The initial dependent choices must finish before holding the next refresh.
+    await expect(dialog.getByRole("button", { name: /Select locale|German|English/ })).toBeEnabled();
+    // Blurring a dependent search into its picker must not destroy the popup during refresh.
+    let releaseChoices!: () => void;
+    let choicesRequested!: () => void;
+    const heldChoices = new Promise<void>((resolve) => {
+      releaseChoices = resolve;
+    });
+    const requestedChoices = new Promise<void>((resolve) => {
+      choicesRequested = resolve;
+    });
+    const choicesRoute = "**/commands/e2e.native-actions.command.locales/execute";
+    await page.route(choicesRoute, async (route) => {
+      choicesRequested();
+      await heldChoices;
+      await route.continue();
+    });
+    try {
+      await dialog.getByRole("textbox", { name: "Search locales", exact: true }).fill("Ger");
+      await dialog.getByRole("button", { name: /Select locale|German|English/ }).click();
+      await requestedChoices;
+      const popup = page.getByRole("menu");
+      await expect(popup).toBeVisible();
+      await expect(page.getByRole("menuitemradio", { name: "German", exact: true })).toBeDisabled();
+      await expect(dialog.getByRole("button", { name: "Start experiment" })).toBeDisabled();
+      releaseChoices();
+      await expect(page.getByRole("menuitemradio", { name: "German", exact: true })).toBeEnabled();
+      await expect(popup).toBeVisible();
+      await page.keyboard.press("ArrowDown");
+      // This composite uses virtual item focus; DOM focus stays on the menu.
+      const german = page.getByRole("menuitemradio", { name: "German", exact: true });
+      await expect(popup).toBeFocused();
+      await expect(popup).toHaveAttribute("aria-activedescendant", (await german.getAttribute("id"))!);
+      await page.keyboard.press("Enter");
+    } finally {
+      releaseChoices();
+      await page.unrouteAll({ behavior: "wait" });
+    }
+    await expect(dialog.getByRole("button", { name: "Start experiment" })).toBeEnabled();
+    await dialog.getByRole("button", { name: /Select region|Europe|America|Empty/ }).click();
+    await page.getByRole("menuitemradio", { name: "America", exact: true }).click();
+    await expect(dialog.getByRole("button", { name: "Start experiment" })).toBeDisabled();
+    await dialog.getByRole("button", { name: /Select locale|German|English/ }).click();
+    await page.getByRole("menuitemradio", { name: "English", exact: true }).click();
+    await dialog.getByRole("button", { name: "Start experiment" }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(page.getByText('toolbar: us/en ["a,b","new,tag"]', { exact: true }).last()).toBeVisible();
+    await testInfo.attach(`${view}-action`, { body: await page.screenshot(), contentType: "image/png" });
   }
 });

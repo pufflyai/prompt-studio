@@ -499,3 +499,33 @@ describe("normalizeResult", () => {
     ).toMatchObject({ provider_state: "failed", provider_error_json: { code: "provider_result_invalid" } });
   });
 });
+
+test("accepted creation keeps its pre-allocation discovery decision", async () => {
+  const create = mock(async () => ({
+    providerRef: { version: 1, data: {} },
+    state: "ready",
+    executionKind: "remote",
+    capabilities: remoteWorkspaceCapabilities,
+  }));
+  let allocated = false;
+  const discovery = mock(async () =>
+    allocated ? null : { params: { repository: { type: "text", defaultValue: "accepted" } } },
+  );
+  const fixture = makeCreateDeps({ discover: discovery, create });
+  const service = (fixture.deps as unknown as { workspaceService: unknown }).workspaceService as {
+    createStandalone(input: Record<string, unknown>): Promise<unknown>;
+  };
+  const allocate = service.createStandalone;
+  service.createStandalone = async (input) => {
+    allocated = true;
+    return allocate(input);
+  };
+  const workspace = await createProviderBackedWorkspace(fixture.deps, {
+    projectId: "project-1",
+    providerId: "pocketcoder.remote",
+    standalone: true,
+  });
+  expect(workspace.provider_state).toBe("ready");
+  expect(create).toHaveBeenCalledTimes(1);
+  expect(discovery).toHaveBeenCalledTimes(1);
+});

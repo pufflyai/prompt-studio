@@ -15,7 +15,7 @@ test("the fullscreen shortcut toggles from editing and completes shortcut mode",
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
   await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
-  await page.goto(`/projects/${project.id}/sessions/compose`);
+  await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-session-browser/conversations/compose`);
   const draft = page.locator('[data-workbench-region="main"]').getByRole("textbox").last();
   await draft.fill("Keep fullscreen draft");
   await page.keyboard.press("Alt+Shift+Z");
@@ -86,7 +86,7 @@ test("direct panel shortcuts open, focus, move and close tabs without entering s
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
   await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
-  await page.goto(`/projects/${project.id}/sessions`);
+  await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-session-browser/conversations`);
   await expect(page.getByRole("button", { name: "Help", exact: true })).toBeVisible();
   const secondary = page.locator('[data-workbench-region="secondary"]');
   const before = await secondary.getByRole("tab").count();
@@ -182,15 +182,26 @@ test("lists every registered keyboard shortcut", async ({ page, request }, testI
   await page.getByRole("menuitem", { name: /^Keyboard shortcuts/ }).click();
 
   await expect(page.getByText("Keyboard shortcuts", { exact: true }).last()).toBeVisible();
+  const dialog = page.getByRole("dialog").last();
+  const search = dialog.getByRole("textbox", { name: "Search keyboard shortcuts" });
+  // Built-in wording can change while the registered action and its chord stay the same.
+  for (const commandId of [
+    "workbench.toggleCommandPalette",
+    "workbench.action.showCommands",
+    "workbench.action.changeTheme",
+    "workbench.action.navigateBack",
+    "workbench.action.navigateForward",
+    "workbench.toggleSideBar",
+    "dashboard.openNotifications",
+    "dashboard.openShortcuts",
+  ]) {
+    await search.fill(commandId);
+    const action = dialog.getByRole("group");
+    await expect(action).toHaveCount(1);
+    await expect(action.locator("kbd").last()).toBeVisible();
+  }
+  await search.clear();
   for (const label of [
-    "Toggle Command Palette",
-    "Run Command",
-    "Choose color theme",
-    "Go back",
-    "Go forward",
-    "Toggle Sidenav",
-    "Open notifications",
-    "Keyboard shortcuts",
     "Shortcut greeting",
     "Go to shortcut destination",
     "Shortcut inspector",
@@ -199,7 +210,6 @@ test("lists every registered keyboard shortcut", async ({ page, request }, testI
   ]) {
     await expect(page.getByText(label, { exact: true }).last()).toBeVisible();
   }
-  const dialog = page.getByRole("dialog").last();
   await testInfo.attach("shortcut-inventory", { body: await dialog.innerText(), contentType: "text/plain" });
   await dialog.getByRole("group", { name: "Go to shortcut destination", exact: true }).scrollIntoViewIfNeeded();
   await testInfo.attach("shortcut-reference", { body: await page.screenshot(), contentType: "image/png" });

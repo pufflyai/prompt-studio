@@ -7,6 +7,7 @@ import type {
   ListRowNavigationIntent,
   ListRowVariant,
 } from "../list-row/list-row.types";
+import type { TreeListPagination } from "./tree-list-page-boundary";
 
 export type TreeListNavigationIntent = ListRowNavigationIntent;
 export type TreeListActionContext = ListRowActionContext;
@@ -28,6 +29,8 @@ export type TreeListNode = ListRowItem & {
   /** Opaque host scope passed to a configurable move policy. */
   moveScope?: string;
   children?: TreeListNode[];
+  /** Automatically fetch more children when their visible end is reached. */
+  pagination?: TreeListPagination;
   /** Per-node visual row variant. Used for non-interactive placeholder rows. */
   rowVariant?: TreeListNodeRowVariant;
   inlineInput?: TreeListInlineInput;
@@ -58,6 +61,8 @@ export interface TreeListSection {
   inlineInput?: TreeListInlineInput;
   emptyState?: ReactNode;
   nodes: TreeListNode[];
+  /** Automatically fetch more siblings when this section's visible end is reached. */
+  pagination?: TreeListPagination;
   hiddenByDefault?: boolean;
   /** Opt in to the tree-customization (hide/show) menu. Sections are non-hideable unless this is true. */
   canHide?: boolean;

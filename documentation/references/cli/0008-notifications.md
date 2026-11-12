@@ -30,3 +30,5 @@ pst notifications snooze <id> --until <time> [--project-id <id>]
 Commands without `--project-id` use the project linked in `.pstdio/config.json`.
 
 Run `pst notifications <command> --help` for current options.
+
+*Updated at: 2026-10-06*

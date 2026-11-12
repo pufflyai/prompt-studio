@@ -20,7 +20,16 @@ export type ExtensionSessionStreamEvent =
   | { event: "queued_messages"; data: SessionQueuedMessagesResponse | { error: string } }
   | { event: "end"; data: { status: string } };
 
+export type SessionMetadataChange = "session" | "workspace" | "harness" | "execution";
+
 export interface ExtensionSessionControlsApi {
+  /** Observe exact session/link, workspace/diff, command-state and availability hints before reading.
+   * Shared by the host; close or abort detaches optional work. Contains no transcript or queue snapshot. */
+  observeMetadata(
+    sessionId: string,
+    changed: (change: SessionMetadataChange) => void,
+    options?: { signal?: AbortSignal },
+  ): Promise<{ close(): void }>;
   /** Local sessions remain usable when signed out. Remote control requires the owning account device online. */
   getExecutionState(
     sessionId: string,

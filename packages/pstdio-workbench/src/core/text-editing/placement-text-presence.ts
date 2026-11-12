@@ -19,7 +19,9 @@ export const createPlacementTextPresence = (workbench: Pick<WorkbenchCore, "pres
       workbench.activation.isActive()
         ? [...members.values()].flatMap((member) =>
             member.handle
-              ? (member.events.get(member.handle)?.participants.map(({ id, label }) => ({ id, label })) ?? [])
+              ? (member.events
+                  .get(member.handle)
+                  ?.participants.map(({ id, deviceId, label }) => ({ id: deviceId ?? id, label })) ?? [])
               : [],
           )
         : [],

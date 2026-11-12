@@ -1,7 +1,12 @@
 import type { ContributionMetadata } from "../../shared/contributions/metadata";
 import { createDisposable, type Disposable } from "../../shared/disposable";
-import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
+import {
+  createWorkbenchStore,
+  observeWorkbenchStoreTransitions,
+  type WorkbenchStore,
+} from "../../shared/store/workbench-store";
 import { runWorkbenchEffect } from "../../shared/workbench-effect";
+import { createPreferenceWrites } from "./preference-writes";
 
 export type PreferenceScope = "default" | "user" | "project" | "repo" | "workspace" | "extension" | "session";
 export type PreferenceValue = boolean | number | string | string[] | number[] | boolean[] | Record<string, unknown>;
@@ -26,6 +31,14 @@ export interface PreferenceScopeRef {
 export interface PreferencePersistenceAdapter {
   getValue(name: string, scope: PreferenceScopeRef): PreferenceValue | undefined;
   setValue(name: string, value: PreferenceValue, scope: PreferenceScopeRef): void | Promise<void>;
+  /** Publish accepted writes, including writes made through other adapters or windows. */
+  onDidChange?(listener: (change: PreferenceValueChange) => void): () => void;
+}
+
+export interface PreferenceValueChange {
+  /** Omitted when the source cannot identify the affected values. */
+  name?: string;
+  scope?: PreferenceScopeRef;
 }
 
 export interface CreatePreferenceRegistryInput {
@@ -36,14 +49,18 @@ type RegisteredPreferenceSchema = PreferencePropertySchema & { ownerId: string; 
 
 export interface PreferenceRegistryStoreState {
   schemas: Record<string, RegisteredPreferenceSchema>;
+  valueChange?: PreferenceValueChange;
 }
 
 export interface PreferenceValueAdapter {
   get(): PreferenceValue | undefined;
   set(value: PreferenceValue): void | Promise<void>;
+  /** Publish accepted source changes, including writes made through this adapter. */
+  onDidChange?(listener: () => void): () => void;
 }
 
 export interface PreferenceRegistry {
+  dispose?(): Promise<void>;
   onDidChangeValue(listener: (name: string) => void): Disposable;
   registerValueAdapter(name: string, adapter: PreferenceValueAdapter): Disposable;
   store: WorkbenchStore<PreferenceRegistryStoreState>;
@@ -55,7 +72,8 @@ export interface PreferenceRegistry {
   getValue(name: string, scope?: PreferenceScopeRef): PreferenceValue | undefined;
 }
 
-const valueKey = (name: string, scope: PreferenceScopeRef) => `${name}:${scope.scope}:${scope.scopeId ?? ""}`;
+const valueKey = (name: string, scope: PreferenceScopeRef) =>
+  JSON.stringify([name, scope.scope, scope.scopeId ?? null]);
 
 const createMemoryPreferencePersistence = () => {
   const values = new Map<string, PreferenceValue>();
@@ -76,31 +94,66 @@ export const createPreferenceRegistry = (input: CreatePreferenceRegistryInput = 
     name: "workbench.preferences",
     initialState: { schemas: {} },
   });
-  const adapters = new Map<string, PreferenceValueAdapter>();
-  const persistence = input.persistence ?? createMemoryPreferencePersistence();
-  const listeners = new Set<(name: string) => void>();
-  const notify = (name: string, result: void | Promise<void>) => {
-    const emit = () => {
-      for (const listener of listeners) runWorkbenchEffect("preference change", () => listener(name));
-    };
-    if (result instanceof Promise) return result.then(emit);
-    emit();
+  const adapters = new Map<string, { adapter: PreferenceValueAdapter; stop?: () => void }>();
+  const persistence: PreferencePersistenceAdapter = input.persistence ?? createMemoryPreferencePersistence();
+  const writes = createPreferenceWrites();
+  let disposed = false;
+  const assertActive = () => {
+    if (disposed) throw new Error("Preference registry is disposed");
   };
+  const publish = (change: PreferenceValueChange) => {
+    if (!disposed) store.setState({ ...store.getState(), valueChange: change }, false, "preferenceValueChanged");
+  };
+  const stopPersistence = persistence.onDidChange?.(publish);
+  let disposal: Promise<void> | undefined;
 
   return {
     store,
+    dispose() {
+      if (disposal) return disposal;
+      disposed = true;
+      store.dispose();
+      disposal = writes.close().finally(() => {
+        runWorkbenchEffect("preference persistence observation", () => stopPersistence?.());
+        for (const record of adapters.values())
+          runWorkbenchEffect("preference adapter observation", () => record.stop?.());
+        adapters.clear();
+      });
+      return disposal;
+    },
     onDidChangeValue(listener) {
-      listeners.add(listener);
-      return createDisposable(() => listeners.delete(listener));
+      let previous = store.getState().valueChange;
+      return createDisposable(
+        observeWorkbenchStoreTransitions(store, () => {
+          const { valueChange, schemas } = store.getState();
+          if (!valueChange || valueChange === previous) return;
+          previous = valueChange;
+          const names = valueChange.name
+            ? [valueChange.name]
+            : [...new Set([...Object.keys(schemas), ...adapters.keys()])];
+          for (const name of names) runWorkbenchEffect("preference change", () => listener(name));
+        }),
+      );
     },
     registerValueAdapter(name, adapter) {
-      adapters.set(name, adapter);
+      assertActive();
+      adapters.get(name)?.stop?.();
+      const record: { adapter: PreferenceValueAdapter; stop?: () => void } = { adapter };
+      adapters.set(name, record);
+      record.stop = adapter.onDidChange?.(() => {
+        if (adapters.get(name) === record) publish({ name });
+      });
+      publish({ name });
       return createDisposable(() => {
-        if (adapters.get(name) === adapter) adapters.delete(name);
+        if (adapters.get(name) !== record) return;
+        record.stop?.();
+        adapters.delete(name);
+        publish({ name });
       });
     },
 
     registerSchema(schema, metadata) {
+      assertActive();
       const registeredNames = Object.keys(schema.properties);
       const snapshot = store.getState();
 
@@ -137,9 +190,17 @@ export const createPreferenceRegistry = (input: CreatePreferenceRegistryInput = 
       return scoped ?? persistence.getValue(key, { scope: "user" });
     },
     setOwnedValue(ownerId, name, value, scope) {
+      scope = { ...scope };
       if (scope.scope === "default") throw new Error("preference_scope_read_only");
       const key = JSON.stringify([ownerId, name]);
-      return notify(key, persistence.setValue(key, value, scope));
+      const accepted = structuredClone(value);
+      return writes.write(
+        valueKey(key, scope),
+        () => persistence.setValue(key, accepted, scope),
+        () => {
+          if (!persistence.onDidChange) publish({ name: key, scope });
+        },
+      );
     },
     getSchema(name) {
       const schemas = store.getState().schemas;
@@ -147,14 +208,21 @@ export const createPreferenceRegistry = (input: CreatePreferenceRegistryInput = 
     },
 
     setValue(name, value, scope) {
+      scope = { ...scope };
       if (!Object.hasOwn(store.getState().schemas, name)) throw new Error(`Preference schema not registered: ${name}`);
-      const adapter = adapters.get(name);
-      if (adapter) return notify(name, adapter.set(value));
-      return notify(name, persistence.setValue(name, value, scope));
+      const adapter = adapters.get(name)?.adapter;
+      const accepted = structuredClone(value);
+      return writes.write(
+        valueKey(name, adapter ? { scope: "user" } : scope),
+        () => (adapter ? adapter.set(accepted) : persistence.setValue(name, accepted, scope)),
+        () => {
+          if (!(adapter ? adapter.onDidChange : persistence.onDidChange)) publish({ name, scope });
+        },
+      );
     },
 
     getValue(name, scope) {
-      const adapter = adapters.get(name);
+      const adapter = adapters.get(name)?.adapter;
       if (adapter) return adapter.get();
       if (scope) {
         const scoped = persistence.getValue(name, scope);

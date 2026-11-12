@@ -49,6 +49,8 @@ Commands are executable operations used by the CLI, dashboard menus, command pal
 
 Set `automation: true` only on commands that a scoped machine token may run. The host validates the declared params before it creates a durable automation run. Commands without this flag cannot be added to a machine token.
 
+On `main`, a command can set `copyResultToClipboard: true` to copy its successful text result when invoked from the dashboard. Return a string from `run`; other result types show an action error. The host starts the clipboard write during menu selection, before waiting for the command. Clipboard permission failures use the action's normal error surface. CLI and API calls return the text without changing a clipboard. This additive option shares the planned extension API 0.4.0 release; publish its SDK and host before extensions adopt it.
+
 ```ts
 import { defineCommand } from "@pstdio/sdk/extensions";
 import { defineExtension, params } from "@pstdio/sdk/extensions";
@@ -459,8 +461,9 @@ not contain them.
 `{ params }` to supply this project's current creation fields, choices and
 defaults. Return `null` when the provider is unavailable. Omit the callback to
 keep the static `params` schema; omit `params` from a discovery result to reuse
-that schema. Discovery runs when providers are listed and again before creation
-or a recovered create. Do not cache project-dependent choices in module state.
+that schema. Discovery runs when providers are listed and before a new create is accepted.
+The host persists validated parameters before allocation; accepted operations
+replay those parameters without rediscovering choices or applying new defaults. Do not cache project-dependent choices in module state.
 A failed discovery hides that provider from the current list and logs the error;
 other providers remain available. Creation validates the discovered schema and
 providers must still enforce their own resource ownership rules. Command-backed
@@ -692,3 +695,5 @@ Use `workbenchCommands.openWorkspaceTerminal` with a workspace resource to open 
 Installation continues in the background and survives a runtime restart. Selecting an extension again while it is pending has no effect. Selecting it again after it finished re-enables it in this project; after it failed, it runs again. Restarting the runtime does not replay finished work or retry failures on its own. Use `ctx.extensions.list()` to see which extensions the project has enabled.
 
 The call takes no project argument. Older hosts omit `ctx.extensions`; extensions that need it declare API `^0.3.1`.
+
+*Updated at: 2026-11-07*

@@ -1,6 +1,7 @@
 import { describe, expect, mock, test } from "bun:test";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import type { BundledExtensionSources } from "pstdio-extensions/distribution";
 import { packagedExtensionCatalog } from "../features/extensions/extension-catalog";
 import { namedSourceRef } from "../features/extensions/install-extension-source";
 import { parseExtensionSourceRef, resolveExtensionReleaseCommit } from "./extension-source-ref";
@@ -68,9 +69,14 @@ describe("extension upgrade service", () => {
       stdout: `${"a".repeat(40)}\trefs/tags/pstdio@0.27.0\n${releaseCommit}\trefs/tags/pstdio@0.27.0^{}\n`,
     }));
 
-    expect(await resolveExtensionReleaseCommit("https://example.com/extensions.git", "pstdio@0.27.0", run)).toBe(
-      releaseCommit,
-    );
+    expect(
+      await resolveExtensionReleaseCommit(
+        "https://example.com/extensions.git",
+        "pstdio@0.27.0",
+        "extensions/demo",
+        run,
+      ),
+    ).toBe(releaseCommit);
     expect(run).toHaveBeenCalledWith(
       expect.stringMatching(/git(?:\.exe)?$/),
       expect.arrayContaining(["https://example.com/extensions.git"]),
@@ -81,7 +87,7 @@ describe("extension upgrade service", () => {
   test("ends git options before the remote URL and allows only https and file transport", async () => {
     const run = mock(async () => ({ exitCode: 0, stderr: "", stdout: `${"c".repeat(40)}\trefs/heads/main\n` }));
 
-    await resolveExtensionReleaseCommit("https://example.com/extensions.git", "main", run);
+    await resolveExtensionReleaseCommit("https://example.com/extensions.git", "main", "extensions/demo", run);
 
     expect(run).toHaveBeenCalledWith(
       expect.stringMatching(/git(?:\.exe)?$/),
@@ -117,9 +123,11 @@ describe("extension upgrade service", () => {
 
   test("does not offer an upgrade when the installed source matches the host release", async () => {
     const releaseCommit = "a".repeat(40);
+    const resolveReleaseCommit = mock(async () => releaseCommit);
     const service = createExtensionUpgradeService({
       extensionService: idleExtensionService,
       release: { source: "git", ref: releaseCommit },
+      resolveReleaseCommit,
       workspaceService: emptyWorkspaceService,
     });
 
@@ -129,6 +137,40 @@ describe("extension upgrade service", () => {
     });
 
     expect(result).toBe(false);
+    expect(resolveReleaseCommit).not.toHaveBeenCalled();
+  });
+
+  test("offers the bundled source update when a full host ref maps to another commit", async () => {
+    const ref = "a".repeat(40);
+    const origin = packagedExtensionCatalog.extensions.find((entry) => entry.installName === "pstdio-planner")!.origin;
+    const manifest: BundledExtensionSources = {
+      ref,
+      commit: "b".repeat(40),
+      sources: [
+        {
+          ...origin,
+          installName: "pstdio-planner",
+          id: "pstdio.pstdio-planner",
+          version: "1.0.0",
+          sha256: "c".repeat(64),
+        },
+      ],
+    };
+    const file = new File([JSON.stringify(manifest)], "extension-sources/manifest.json");
+    const files = Bun.embeddedFiles as Blob[];
+    files.unshift(file);
+    try {
+      const service = createExtensionUpgradeService({
+        extensionService: idleExtensionService,
+        release: { source: "git", ref },
+        workspaceService: emptyWorkspaceService,
+      });
+      expect(await service.canUpgrade({ ...installedSource, source_ref: namedSourceRef(ref, "pstdio-planner") })).toBe(
+        true,
+      );
+    } finally {
+      files.splice(files.indexOf(file), 1);
+    }
   });
 
   test("compares the installed commit with a symbolic host release once", async () => {
@@ -426,7 +468,7 @@ describe("catalog extension installation and upgrades", () => {
         source_ref: `${originUrl}@${oldCommit}#extensions/recipes`,
       }),
     ).toBe(true);
-    expect(resolveReleaseCommit).toHaveBeenCalledWith(originUrl, "v2.0.0");
+    expect(resolveReleaseCommit).toHaveBeenCalledWith(originUrl, "v2.0.0", "extensions/recipes");
   });
 });
 

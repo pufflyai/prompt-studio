@@ -1,55 +1,20 @@
-import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { createClient } from "@pstdio/sdk/client";
 import { writePublicTextExtensions } from "../helpers/public-text-extension";
-import { startPublicTextPeer } from "./packaged-public-text-peer.fixture";
-import { runtimeAuthorization, startPackagedServe } from "./packaged-serve-helpers";
+import { projectSyncFixture } from "./packaged-project-sync.fixture";
+import { runtimeAuthorization } from "./packaged-serve-helpers";
 
-/** Independent compiled hosts use their normal encrypted account-sync transport. */
-export const publicTextSyncFixture = async (root: string) => {
-  const key = join(root, "peer-key.pem");
-  const cert = join(root, "peer-cert.pem");
-  execFileSync(
-    "openssl",
-    [
-      "req",
-      "-x509",
-      "-newkey",
-      "rsa:2048",
-      "-nodes",
-      "-keyout",
-      key,
-      "-out",
-      cert,
-      "-days",
-      "1",
-      "-subj",
-      "/CN=localhost",
-      "-addext",
-      "subjectAltName=IP:127.0.0.1,DNS:localhost",
-    ],
-    { stdio: "ignore" },
-  );
+export const publicTextSyncFixture = (root: string) => {
   const sources = writePublicTextExtensions(root);
-  const peer = await startPublicTextPeer(root);
-  const env = {
-    NODE_EXTRA_CA_CERTS: cert,
-    PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
+  return projectSyncFixture(
+    root,
+    JSON.stringify({
       defaultExtensions: [
         { source: sources.editor, installName: "public-text-editor" },
         { source: sources.source, installName: "public-text-source" },
       ],
     }),
-  };
-  const startDevice = async (name: string) => {
-    const home = join(root, name);
-    mkdirSync(home, { recursive: true });
-    const host = await startPackagedServe(home, env);
-    const client = createClient({ baseUrl: host.baseUrl, token: host.descriptor.token });
-    return { home, host, client };
-  };
-  return { peer, startDevice };
+  );
 };
 
 export type PublicTextDevice = Awaited<ReturnType<Awaited<ReturnType<typeof publicTextSyncFixture>>["startDevice"]>>;

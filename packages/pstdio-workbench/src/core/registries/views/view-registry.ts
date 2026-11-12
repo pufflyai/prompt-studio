@@ -1,3 +1,4 @@
+import type { ScopedQueryClient } from "@pstdio/sdk/extensions";
 import {
   type ContributionMetadata,
   normalizeContributionMetadata,
@@ -28,9 +29,15 @@ export interface WorkbenchWebviewBody extends Omit<WorkbenchReactViewBody, "kind
   kind: "webview";
 }
 
+/** The host supplies the shared terminal renderer; extensions declare serializable native views. */
+export interface WorkbenchTerminalViewBody extends Omit<WorkbenchReactViewBody, "kind"> {
+  kind: "terminal";
+}
+
 export type WorkbenchViewBody =
   | WorkbenchReactViewBody
   | WorkbenchWebviewBody
+  | WorkbenchTerminalViewBody
   | NativeViewBody<"tree", TreeRendererContribution>
   | NativeViewBody<"file", FileRendererContribution>
   | NativeViewBody<"controls", ControlsRendererContribution>
@@ -61,6 +68,8 @@ export interface WorkbenchViewRegistry {
 }
 
 export interface CreateWorkbenchViewRegistryInput {
+  queries?: ScopedQueryClient;
+  subscribeRefresh?(invalidate: RendererReadRegistry["invalidate"]): () => void;
   registerBody(
     view: WorkbenchViewContribution,
     metadata?: ContributionMetadata,
@@ -75,10 +84,11 @@ export const createViewRegistry = (input: CreateWorkbenchViewRegistryInput): Wor
     name: "workbench.views",
     initialState: { views: {} },
   });
+  const reads = createRendererReadRegistry({ queries: input.queries, subscribeRefresh: input.subscribeRefresh });
   const bodies = new Map<string, Disposable & { refresh?(input?: unknown): void }>();
 
   return {
-    reads: createRendererReadRegistry(),
+    reads,
     store,
 
     registerView(view, metadata) {

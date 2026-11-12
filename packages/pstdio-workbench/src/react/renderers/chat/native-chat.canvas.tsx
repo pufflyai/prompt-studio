@@ -1,5 +1,5 @@
-import { Button, Stack, Text } from "@chakra-ui/react";
-import { EmptyState } from "@pstdio/ui";
+import { Button, Text } from "@chakra-ui/react";
+import { AlertMessage, EmptyState } from "@pstdio/ui";
 import { ChatPanel } from "@pstdio/ui/chat-ui";
 import { useState } from "react";
 import { createChatSession } from "../../../extensions/contributions/chat-session";
@@ -52,10 +52,12 @@ const PreviewAccountSetup = ({ state }: { state: AccountPreviewState }) => {
   if (state === "checking") return null;
   if (state === "error")
     return (
-      <Stack>
-        <Text role="alert">Could not check harness authentication.</Text>
-        <Button>Retry</Button>
-      </Stack>
+      <AlertMessage
+        role="alert"
+        status="error"
+        title="Could not check harness authentication."
+        endElement={<Button>Retry</Button>}
+      />
     );
   return (
     <EmptyState
@@ -116,3 +118,20 @@ export const SignedOutHistory = () => <NativeAccountPreview state="history" />;
 export const ForkableReply = () => <NativeAccountPreview state="fork" />;
 export const ForkFailure = () => <NativeAccountPreview state="fork-failure" />;
 export const ReadOnlyFork = () => <NativeAccountPreview state="read-only" />;
+
+export const ConversationFailure = () => {
+  const [session] = useState(() => {
+    let attempts = 0;
+    return createChatSession({
+      initial: {
+        messages: [{ id: "saved", role: "assistant", parts: [{ type: "text", text: "Earlier saved reply." }] }],
+      },
+      query: async () => {
+        if (attempts++ === 0) throw new Error("The conversation connection was lost. Retry to reconnect.");
+        return {};
+      },
+      action: async () => ({}),
+    });
+  });
+  return <NativeChatView session={session} conversationKey="connection-failure" action={undefined} />;
+};

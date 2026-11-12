@@ -16,13 +16,14 @@ on:
         type: choice
         options:
           - production
+          - windows
           - merge_queue
         default: production
-        description: Validation profile
+        description: Production, Windows-only source diagnostics, or merge queue checks
       source_sha:
         type: string
         default: ""
-        description: Optional exact merged source for full diagnostics
+        description: Optional exact merged source for diagnostics
       release_channel:
         type: choice
         options: [stable, nightly]
@@ -33,7 +34,7 @@ on:
       profile:
         type: string
         default: production
-        description: Production functional validation or merge_queue diagnostics
+        description: Production functional validation, Windows-only source diagnostics, or merge_queue diagnostics
       source_sha:
         type: string
         default: ""
@@ -55,13 +56,13 @@ on:
         default: stable
         description: Candidate release channel
 # A newer push to a PR, or a newer manual run for the same branch and source, replaces the older run.
-# ci:full diagnostics dispatch on the base branch with the PR's source_sha, so each PR keeps its own group.
+# ci:full and ci:windows diagnostics dispatch on the base branch with the PR's source_sha, so each PR keeps its own group.
 # Release Packages calls this workflow under its own name and keeps one group per commit.
 concurrency:
   group: >-
     ${{ github.workflow }}-${{ github.ref }}-${{
     github.event_name == 'pull_request' && 'latest' ||
-    github.event_name == 'workflow_dispatch' && github.workflow == 'Test and Build' && format('dispatch-{0}', inputs.source_sha) ||
+    github.event_name == 'workflow_dispatch' && github.workflow == 'Test and Build' && format('dispatch-{0}-{1}', inputs.profile, inputs.source_sha) ||
     github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.workflow == 'Test and Build') }}
 env:
@@ -95,6 +96,7 @@ jobs:
       client_matrix: ${{ steps.scope.outputs.clientMatrix }}
       toolchain_matrix: ${{ steps.scope.outputs.toolchainMatrix }}
       windows: ${{ steps.scope.outputs.windows }}
+      windows_only: ${{ steps.scope.outputs.windowsOnly }}
       quarantine_bun_os: ${{ steps.scope.outputs.quarantineBunOs }}
       harness_matrix: ${{ steps.scope.outputs.harnessMatrix }}
       shared_build: ${{ steps.scope.outputs.sharedBuild }}
@@ -811,7 +813,7 @@ jobs:
   e2e:
     name: e2e_${{ matrix.priority }} (${{ matrix.shard }}/${{ matrix.total }})
     needs: scope
-    if: needs.scope.outputs.production == 'true'
+    if: needs.scope.outputs.production == 'true' && needs.scope.outputs.windows_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 18
     container:
@@ -877,7 +879,7 @@ jobs:
         run: git diff --exit-code
   e2e_cli:
     needs: scope
-    if: needs.scope.outputs.production == 'true'
+    if: needs.scope.outputs.production == 'true' && needs.scope.outputs.windows_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 18
     container:
@@ -922,7 +924,7 @@ jobs:
   packaged_and_vite_e2e:
     name: packaged_and_vite_e2e_${{ matrix.priority }} (${{ matrix.suite }} ${{ matrix.shard }})
     needs: scope
-    if: needs.scope.outputs.production == 'true'
+    if: needs.scope.outputs.production == 'true' && needs.scope.outputs.windows_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 18
     strategy:
@@ -1055,7 +1057,7 @@ jobs:
     name: quarantined_bun_tests (${{ matrix.os }})
   quarantined_native_ui_tests:
     needs: scope
-    if: needs.scope.outputs.production == 'true'
+    if: needs.scope.outputs.production == 'true' && needs.scope.outputs.windows_only != 'true'
     runs-on: macos-15
     timeout-minutes: 18
     env:
@@ -1100,7 +1102,7 @@ jobs:
         run: git diff --exit-code
   quarantined_browser_tests:
     needs: scope
-    if: needs.scope.outputs.production == 'true'
+    if: needs.scope.outputs.production == 'true' && needs.scope.outputs.windows_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 18
     container:
@@ -1491,7 +1493,7 @@ jobs:
       CI_PRIORITY: P1
       GH_TOKEN: ${{ github.token }}
       CI_GATE_PLAN: ${{ needs.scope.outputs.gate_plan }}
-    name: ${{ needs.scope.outputs.production == 'true' && 'production_ci_passed' || 'ci_passed' }}
+    name: ${{ needs.scope.outputs.windows_only == 'true' && 'windows_ci_passed' || needs.scope.outputs.production == 'true' && 'production_ci_passed' || 'ci_passed' }}
   sdk_api_report:
     needs: scope
     if: needs.scope.outputs.sdk_api_report == 'true'

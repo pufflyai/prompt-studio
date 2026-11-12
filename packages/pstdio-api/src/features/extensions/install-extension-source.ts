@@ -247,6 +247,47 @@ const resolveInstallName = (input: InstallExtensionSourceInput, source: Awaited<
   return source.kind === "named" ? source.name : basename(source.path);
 };
 
+const canReuseConcurrentInstall = (input: InstallExtensionSourceInput, error: unknown) =>
+  !input.force && input.existsOk === true && error instanceof ExtensionAlreadyInstalledError;
+
+const finishPreparedInstall = async (
+  input: InstallExtensionSourceInput,
+  prepared: Awaited<ReturnType<typeof validatePreparedInstall>> & {
+    installPath: string;
+    targetPath: string;
+    extensionsRoot: string;
+    linkedInstalledDependencies: boolean;
+    sourceHash: string;
+  },
+) => {
+  let { check, loaded, sourceHash } = prepared;
+  const { installPath, targetPath, extensionsRoot, linkedInstalledDependencies } = prepared;
+  let snapshot = { check, manifest: loaded.manifest };
+  if (installPath !== targetPath) {
+    // Resolve asset bases while staging still exists, before its folder is promoted.
+    snapshot = remapPackageAssets(snapshot, installPath, targetPath) as typeof snapshot;
+    const preserveDependencies = linkedInstalledDependencies;
+    if (linkedInstalledDependencies) unlinkSync(join(installPath, "node_modules"));
+    try {
+      await promotePreparedSource(installPath, targetPath, Boolean(input.force), preserveDependencies);
+      for (const extension of snapshot.check.extensions)
+        extension.sourcePath = join(targetPath, relative(installPath, extension.sourcePath));
+    } catch (error) {
+      if (!canReuseConcurrentInstall(input, error)) throw error;
+      // Another missing-only install won the target. Return its validated contents,
+      // rather than reporting a setup warning or claiming the losing staged version.
+      ({ check, loaded } = await validatePreparedInstall(
+        targetPath,
+        extensionsRoot,
+        input.allowUnsupportedApiVersion === true,
+      ));
+      sourceHash = hashExtensionSource(targetPath);
+      snapshot = { check, manifest: loaded.manifest };
+    }
+  }
+  return { snapshot, loaded, sourceHash };
+};
+
 export const installExtensionSource = async (input: InstallExtensionSourceInput) => {
   const pstdioHome = resolvePstdioHome(input);
   const tempDir = mkdtempSync(join(tmpdir(), "pstdio-extension-source-"));
@@ -310,26 +351,29 @@ export const installExtensionSource = async (input: InstallExtensionSourceInput)
     const sourceHash = await traceSetupPhase("extension.source_hash", { extension: installName }, async () =>
       hashExtensionSource(installPath),
     );
-    let snapshot = { check, manifest: loaded.manifest };
-    if (installPath !== targetPath) {
-      // Resolve asset bases while staging still exists, before its folder is promoted.
-      snapshot = remapPackageAssets(snapshot, installPath, targetPath) as typeof snapshot;
-      const preserveDependencies = linkedInstalledDependencies;
-      if (linkedInstalledDependencies) unlinkSync(join(installPath, "node_modules"));
-      await promotePreparedSource(installPath, targetPath, Boolean(input.force), preserveDependencies);
-      for (const extension of snapshot.check.extensions)
-        extension.sourcePath = join(targetPath, relative(installPath, extension.sourcePath));
-    }
+    const {
+      snapshot,
+      loaded: installedSource,
+      sourceHash: installedHash,
+    } = await finishPreparedInstall(input, {
+      check,
+      loaded,
+      sourceHash,
+      installPath,
+      targetPath,
+      extensionsRoot,
+      linkedInstalledDependencies,
+    });
 
     return {
       ...snapshot,
       installName,
-      metadata: loaded.metadata,
+      metadata: installedSource.metadata,
       source:
         resolvedSource.kind === "named"
           ? { kind: "named" as const, name: resolvedSource.name, ref: resolvedSource.ref }
           : { kind: "local" as const, path: resolvedSource.path, ref: resolvedSource.ref },
-      sourceHash,
+      sourceHash: installedHash,
       targetPath,
     };
   } finally {

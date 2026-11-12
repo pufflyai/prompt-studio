@@ -13,9 +13,12 @@ import { createGitRepo } from "./helpers/workspace-session-attempt";
 test("shows the same ticket and workspace actions on rows and breadcrumbs", async ({ page, request }) => {
   test.slow();
   const repoRoot = createGitRepo("pstdio-resource-actions-", "resource actions e2e");
-  const project = await createProject(request, repoRoot);
+  let projectId: string | undefined;
 
   try {
+    const project = await createProject(request, repoRoot, (created) => {
+      projectId = created.id;
+    });
     const statuses = await getPlannerTicketStatuses(request, apiBase, project.id);
     const statusId = (statuses.find((status) => status.isDefault) ?? statuses[0])?.id;
     const ticket = await createPlannerTicket(request, apiBase, project.id, {
@@ -119,6 +122,11 @@ test("shows the same ticket and workspace actions on rows and breadcrumbs", asyn
     await breadcrumbAction.click();
     await expect(page.getByRole("menuitem", { name: "Open terminal", exact: true })).toBeHidden();
   } finally {
+    await page.close();
+    if (projectId) {
+      const response = await request.delete(`${apiBase}/v1/projects/${projectId}`);
+      expect(response.ok()).toBe(true);
+    }
     rmSync(repoRoot, { recursive: true, force: true });
   }
 });

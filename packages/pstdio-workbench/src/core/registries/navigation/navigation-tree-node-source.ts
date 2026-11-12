@@ -1,4 +1,4 @@
-import type { TreeNode } from "../renderers/tree-renderer-types";
+import type { TreeNode, TreeViewSection } from "../renderers/tree-renderer-types";
 import type { ResourceRef } from "../resources/resource-registry";
 import type { NavigationTreeContribution } from "./navigation-tree-registry";
 
@@ -7,9 +7,16 @@ interface NavigationTreeNodeSource {
   registryToken: object;
   node: TreeNode;
   resource?: ResourceRef;
+  projectId?: string;
 }
 // Preview spreads retain ownership, while registry tokens still isolate independent registries.
 const nodeSource = Symbol("navigationTreeNodeSource");
+const sectionSource = Symbol("navigationTreeSectionSource");
+export const setNavigationTreeSectionResource = (section: TreeViewSection, resource: ResourceRef | undefined) => {
+  Object.assign(section, { [sectionSource]: { resource } });
+};
+export const getNavigationTreeSectionSource = (section: TreeViewSection) =>
+  (section as TreeViewSection & { [sectionSource]?: { resource?: ResourceRef } })[sectionSource];
 export const setNavigationTreeNodeSource = (node: TreeNode, source: NavigationTreeNodeSource) => {
   Object.assign(node, { [nodeSource]: source });
 };

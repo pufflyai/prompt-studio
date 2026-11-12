@@ -17,7 +17,7 @@ import { walkRecoveryGraph } from "./transfer-graph";
 type Transport = Awaited<ReturnType<ReturnType<typeof createDocumentRelay>["manifestBlobs"]>>;
 type Status = ProjectFolderRecoveryStatus;
 /** Attaches a published folder; returns whether it became the project's folder. */
-export type RecoveryAttach = (path: string, enroll: (workspaceId: string) => Promise<void>) => Promise<boolean>;
+export type RecoveryAttach = (path: string) => Promise<boolean>;
 
 const idle = { state: "idle" as const, source: null, bytes: { completed: 0, total: null }, error: null };
 const progressMs = 250;
@@ -59,8 +59,6 @@ export const createRecoveryOperations = (input: {
   chunks: () => RecoveryChunkStore | undefined;
   /** The current relay pass's blob transport, when connected. */
   transport: () => { transport: Transport; signal: AbortSignal } | undefined;
-  /** Records the restored folder's capture policy as already decided, so it is never seeded. */
-  enroll: (workspaceId: string, folder: string) => Promise<void>;
   changed: () => void;
   signal: AbortSignal;
 }) => {
@@ -238,7 +236,7 @@ export const createRecoveryOperations = (input: {
           restore = { ...restore, result: { ...restored, attached: false } };
           let attached: boolean;
           try {
-            attached = await attach(restored.path, (workspaceId) => input.enroll(workspaceId, restored.path));
+            attached = await attach(restored.path);
           } catch (error) {
             // The verified folder stays where it was published; only binding it failed.
             throw new RecoveryRestoreError(

@@ -8,6 +8,14 @@ import { createPackagedProject, openPackagedProject } from "./packaged-project-h
 const fixturePath = dirname(fileURLToPath(import.meta.resolve("workbench-fixture/package.json")));
 const homePath = dirname(fileURLToPath(import.meta.resolve("pstdio-home/package.json")));
 const performancePath = dirname(fileURLToPath(import.meta.resolve("pstdio-performance/package.json")));
+const sessionsPath = dirname(fileURLToPath(import.meta.resolve("pstdio-session-browser/refs")));
+const preparedSources = JSON.parse(process.env.E2E_EXTENSION_SOURCES ?? "{}") as Record<string, string>;
+const benchmarkExtension = (installName: string, fallback: string) => ({
+  installName,
+  source: preparedSources[installName] ?? fallback,
+  // Installed public fixture profiles take the same normal provisioning path as real extensions.
+  ...(preparedSources[installName] ? {} : { skipInstall: true }),
+});
 
 export type { PerformanceSnapshot } from "pstdio-api-contracts/performance-diagnostics";
 
@@ -22,11 +30,10 @@ export const launchProject = async (name: string, options: { monitoring?: boolea
   const app = await launchPackagedApp(home, {
     PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
       defaultExtensions: [
-        { source: fixturePath, installName: "workbench-fixture", skipInstall: true },
-        { source: homePath, installName: "pstdio-home", skipInstall: true },
-        ...(options.monitoring
-          ? [{ source: performancePath, installName: "pstdio-performance", skipInstall: true }]
-          : []),
+        benchmarkExtension("workbench-fixture", fixturePath),
+        benchmarkExtension("pstdio-home", homePath),
+        benchmarkExtension("pstdio-session-browser", sessionsPath),
+        ...(options.monitoring ? [benchmarkExtension("pstdio-performance", performancePath)] : []),
       ],
     }),
   });

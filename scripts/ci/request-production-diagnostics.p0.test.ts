@@ -1,7 +1,10 @@
 import { expect, test } from "bun:test";
 import { requestProductionDiagnostics } from "./request-production-diagnostics";
 
-test("an internal full diagnostic request dispatches the exact merged source separately", async () => {
+test.each([
+  ["ci:full", "production"],
+  ["ci:windows", "windows"],
+])("%s dispatches the exact merged source separately", async (label, profile) => {
   const requests: unknown[] = [];
   const server = Bun.serve({
     port: 0,
@@ -18,12 +21,12 @@ test("an internal full diagnostic request dispatches the exact merged source sep
       headRepository: "owner/repo",
       ref: "feature/example",
       sha: "a".repeat(40),
-      label: "ci:full",
+      label,
       token: "fixture",
       apiUrl: server.url.origin,
     };
     expect((await requestProductionDiagnostics(input)).requested).toBe(true);
-    expect(requests).toEqual([{ ref: input.ref, inputs: { profile: "production", source_sha: input.sha } }]);
+    expect(requests).toEqual([{ ref: input.ref, inputs: { profile, source_sha: input.sha } }]);
     expect((await requestProductionDiagnostics({ ...input, headRepository: "fork/repo" })).requested).toBe(false);
     expect((await requestProductionDiagnostics({ ...input, label: "other" })).requested).toBe(false);
     expect(requests).toHaveLength(1);

@@ -31,6 +31,62 @@ const waitFor = async (condition: () => boolean) => {
 };
 
 describe("terminal WebSocket", () => {
+  test("disconnect during native admission releases a late session", async () => {
+    let release!: (session: TerminalSessionHandle) => void;
+    let killed = 0;
+    const events = createTerminalWebSocketEvents({
+      openView: () =>
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+    });
+    const { socket, messages } = createSocket();
+    send(events, socket, {
+      type: "openView",
+      request: { projectId: "project", viewId: "owner.view.shell", cols: 80, rows: 24 },
+    });
+    events.onClose?.({} as CloseEvent, socket);
+    release({
+      id: "late",
+      write() {},
+      resize() {},
+      async kill() {
+        killed += 1;
+      },
+      events: async function* () {},
+    });
+    await waitFor(() => killed === 1);
+    expect(messages).toEqual([]);
+  });
+
+  test("one socket cannot replace its terminal with a second open", async () => {
+    let opened = 0;
+    let killed = 0;
+    const events = createTerminalWebSocketEvents({
+      terminal: {
+        openSession: () => {
+          opened += 1;
+          return {
+            id: "single",
+            write() {},
+            resize() {},
+            async kill() {
+              killed += 1;
+            },
+            events: async function* () {
+              await new Promise(() => {});
+            },
+          };
+        },
+      },
+    });
+    const { socket, closes } = createSocket();
+    send(events, socket, { type: "open", request: { cols: 80, rows: 24 } });
+    send(events, socket, { type: "open", request: { cols: 80, rows: 24 } });
+    await waitFor(() => closes.length > 0);
+    expect(opened).toBe(1);
+    expect(killed).toBe(1);
+  });
   test("allows only same-origin or explicitly trusted browser handshakes", () => {
     const request = (origin?: string) =>
       new Request("http://localhost:19841/v1/terminal", {

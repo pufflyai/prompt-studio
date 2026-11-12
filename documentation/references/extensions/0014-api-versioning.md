@@ -30,6 +30,14 @@ The host decides what loads. It compares its own extension API version with `eng
 
 Pages that describe APIs from `main` say so and name the first release that has them.
 
+The [native terminal view body](0022-terminal-sessions.md#native-terminal-views)
+shares the coordinated API 0.4.0 step on `main`. It requires a published SDK exporting
+`TerminalViewBody` and a compatible host advertising `view.terminal.v1` (planned
+for the release after 0.46.0). A packed candidate SDK proves development
+compatibility; it does not satisfy the publication gate for a production
+extension. Qualify the installed consumer against the delivered host and record
+both released versions before adopting the surface.
+
 Status bar items on `main` can also declare a `popover` view through the additive
 `status-bar-item.popover.v1` host capability. This shares the planned API 0.3.0 release.
 
@@ -48,11 +56,35 @@ The [native chat view body](0028-native-chat.md) also shares the coordinated API
 step. Released extensions must use a published SDK containing that declaration
 and a host that supports it before adopting it.
 
+Scoped query ownership and invalidation metadata, host-supplied webview query scope,
+command-backed shared editing, storage/session metadata observation and optional
+`HarnessProvider.watchCommandState` also share this API 0.4.0 step. These additions
+preserve the existing query, event and editing methods. The matching SDK adds
+`createQueryLifecycleFixture` under `/testing`. See the
+[state and project lifetime guide](../../guides/extensions/0010-shared-state-and-project-lifetimes.md).
+Publish the supporting host/SDK/UI before independent consumer releases; local
+tarballs and a widened manifest range are not published compatibility evidence.
+
+Read-only host-retained command queries also share API 0.4.0. A supporting host
+provides `commands.query`; the SDK exposes `client.commands.read.query(...)`,
+`client.queries.command(...)` and `useWebviewCommandQuery`. These retain finite
+accepted results across recreated webview frames. Existing guest callback queries
+remain available with their guest lifetime. Publish the supporting host and SDK
+before independent consumers adopt this addition.
+
+Infinite tree scrolling also shares API 0.4.0 on `main`. Tree sections and child collections can return
+`nextCursor`; their `page` callback returns `TreeNodePage` for automatic sibling appends. A supporting host
+advertises `view.tree.pages.v1`. Publish the SDK and host before separately releasing an extension that uses it.
+
 Optional workspace provider discovery and provider-bound `ctx.localDirectory()`
 share the coordinated API 0.4.0 step on `main`. They expose current project choices
 and owned local preparation before readiness. Publish the host and SDK before
 separately released providers adopt them; SDK 0.46.0 does not include them. See
 [local workspace providers](0003-command-and-process-api.md#local-workspace-providers-on-main).
+
+Inline data-table sparkline and bar-chart renderers and the optional saved
+`rowHeight` setting also share the coordinated API 0.4.0 step. Existing columns
+and saved views keep their behavior. See [inline charts and row height](0004-contribution-api.md#inline-charts-and-row-height-on-main).
 
 ### Which version each check uses
 
@@ -395,3 +427,5 @@ project/global settings, extension detail panels, and published custom global
 slots keep working. Device settings use `ctx.settings` and the existing typed
 webview settings capabilities. Publish the SDK and host before extensions adopt
 them. See [app-wide settings](0004-contribution-api.md#app-wide-settings).
+
+*Updated at: 2026-11-09*

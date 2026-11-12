@@ -8,7 +8,7 @@ Shared React UI package for Prompt Studio apps. This package owns:
 
 ## Work with the live catalog
 
-Browse Design System in the Canvas extension. Open a component canvas and use Theme and Props and source to inspect its states and public API.
+Browse Design System in the Canvas extension. Use Theme on a frame, and open the Frame editor's Props JSON on frames that declare `controls` to inspect their states and public API.
 
 ```sh
 bun run --cwd packages/ui build

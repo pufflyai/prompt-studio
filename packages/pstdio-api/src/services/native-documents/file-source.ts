@@ -123,6 +123,7 @@ export const loadNativeMarkdownFile = async (deps: ExtensionsRouteDeps, input: F
   });
   return {
     documentKey: binding.documentKey,
+    backingRecordId: binding.backingRecordId,
     lifetime: binding.lifetime,
     generation: binding.generation,
     owner,

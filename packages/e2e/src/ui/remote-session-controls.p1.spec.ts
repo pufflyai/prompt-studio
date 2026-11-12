@@ -218,11 +218,14 @@ test("remote workspaces open synced history; offline sessions stay readable and 
     main.getByRole("button", { name: "Edit queued message: Readable offline queue", exact: true }),
   ).toBeVisible();
   await expect(main.getByText(/Laptop is offline/).filter({ visible: true })).toHaveCount(0);
-  await page.goto(`${fixture.origin}/projects/${fixture.projectId}/sessions/compose`);
+  await page.goto(
+    `${fixture.origin}/projects/${fixture.projectId}/extensions/pstdio.pstdio-session-browser/conversations/compose`,
+  );
   // Drafts expose the shared device selector only when this account has multiple devices.
   await expect(main.getByRole("button", { name: "Open workspace", exact: true })).toHaveCount(0);
   await main.getByRole("button", { name: "Select device", exact: true }).click();
   await page.getByRole("menuitem", { name: "Laptop", exact: true }).click();
+  await expect(main.getByRole("button", { name: "Select workspace", exact: true })).toContainText("Laptop workspace");
   const editor = main.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true });
   await editor.fill("New session on Laptop");
   await page.reload();

@@ -148,6 +148,8 @@
         "src/**/*.test.tsx",
         "src/**/*.fixture.ts",
         "src/**/*.fixture.tsx",
+        // UI Canvas discovers public-build regression fixtures by path.
+        "src/**/*.canvas.tsx",
         // Packaged smoke tests bundle these extension entries by path.
         "src/packaged/fixtures/*-extension.ts",
         // Specs install fixture extensions by path.
@@ -282,10 +284,10 @@
         "package.json",
         "rolldown.*.config.ts",
         "src/{api,client,extensions,extensions/keyboard,extensions/react,prompts,hooks,resources,testing,data}/index.ts",
-        "src/**/*.test.ts",
+        "src/**/*.test.{ts,tsx}",
         "src/**/*.typecheck.ts"
       ],
-      "project": ["src/**/*.ts"],
+      "project": ["src/**/*.{ts,tsx}"],
       "ignore": ["dist/**"],
       // Public declarations inline private contracts, including their Zod types.
       "ignoreDependencies": ["pstdio-sync-contracts", "zod"]

@@ -11,7 +11,7 @@ Contributions are what an extension adds to Prompt Studio. This page lists every
 | `middlewares`                                     | Pre-command checks that may continue, patch params, replace invocation data, or reject.           |
 | `hooks`                                           | Event observers that run after a product event is emitted.                                        |
 | `schedules`                                       | Cron-driven command invocation.                                                                   |
-| `views`                                           | Reusable webview, tree, file, controls, chat, table, and Kanban bodies.                                  |
+| `views`                                           | Reusable webview, tree, file, controls, chat, terminal, table, and Kanban bodies.                                  |
 | `viewMenus`                                       | View bodies attached as menus owned by another view.                                               |
 | `pages`                                           | Routed screens with resource constraints, Main presentation, and extra panel slots.                                 |
 | `placements`                                      | Mode-wide static views or resource bindings.                                                        |
@@ -36,6 +36,10 @@ UI contributions attach to targets that the host owns. [Workbench composition](0
 
 [Native chat](0028-native-chat.md) provides immediate composers and canonical
 conversations with scoped callbacks to the existing session services.
+
+[Native terminal views](0022-terminal-sessions.md#native-terminal-views) bind an
+interactive PTY to a view through a serializable launch callback. The host owns
+the renderer, workspace validation, transport, and process lifetime.
 
 ## Kanban create results
 
@@ -205,6 +209,16 @@ export default defineExtension({
 `body` and optional `footer` return `TreeViewSection[]`. Optional `children` returns `TreeNode[]` for lazy child
 content. Renderer callbacks receive the active project, resource, renderer id, tree state, filter text, and selected
 node context.
+
+For long collections, set `nextCursor` on a section or on a node with its first `children` page, and provide
+`page(ctx, input)`. It receives the cursor, the same renderer/filter scope, and either
+`parent: { kind: "section", id }` or `parent: { kind: "node", node }`. Return `{ nodes, nextCursor? }`.
+The host appends these nodes as siblings when the collection's end enters the viewport. Omit the cursor when
+exhausted. Keep node IDs stable across pages, including date headings. Collapsed collections do not load pages.
+The host preserves existing rows and focus, prevents concurrent duplicate reads, cancels pages after query/resource
+changes or refresh, and shows failures with inline Retry. Do not add a synthetic “More” node or a pagination button.
+This additive API shares the coordinated API 0.4.0 step on `main` and requires a supporting published SDK and
+host capability `view.tree.pages.v1`.
 
 Optional `structure` declares body section IDs, labels, and collapse and visibility settings in view metadata. The host renders this layout synchronously, then starts content reads after that render commits. Pending sections show a spinner rather than an empty result. The callback's final sections replace the structure, including sections that turn out to be empty or absent. Use the same IDs in both declarations so expansion and customization stay attached to the section. A structure section can include `resourceNode: { id, icon }` to show the bound resource using its already-known label without a callback.
 
@@ -466,6 +480,30 @@ defineView({
 ```
 
 Data table columns can declare `type` (`"string"`, `"number"`, or `"date"`) and `groupable: true`. Without a type, a column whose values are all numbers is a number field and every other column is text. Columns are filterable by default. Declare `filterable: false` on a column to exclude it from Filter and reject saved rules for it. Query-returned columns use the same option and take precedence over declared columns. Disabling filtering keeps display, sorting, and grouping available. Only groupable columns appear under Grouping in the table's Display menu. Tables group by exact value; empty values form a last "No <column>" group.
+
+### Inline charts and row height (on main)
+
+Native table columns and the React `DataTable` support `renderer: { type: "sparkline" }`
+and `renderer: { type: "bar-chart" }`. Supply a cell value as
+`{ values: [12, null, 8], labels: ["Run 1", "Run 2", "Run 3"] }`.
+Labels are optional. A null is an unmeasured gap; zero is a measurement.
+Sparklines leave gaps and bar charts share a zero baseline, including signed values.
+Entirely unmeasured cells show “No data”.
+
+Both renderers accept an optional numeric `domain: [minimum, maximum]` to compare
+cells on one scale, and a `unit` suffix such as `"ms"` or `"MB"`. Without a domain,
+each sparkline fits its data. Bar charts always expand their scale to include zero, even with an explicit domain. Chart columns sort
+and filter by the last non-null measurement. Their accessible name includes the
+labels and values. Hover a bar or sparkline position to see its measurement; focus
+a chart with the keyboard to see all its labels and values. Tooltips also identify
+unmeasured sparkline positions.
+
+Set `defaultSettings: { rowHeight: "tall" }` to start with taller rows. The Display
+menu offers Compact, Comfortable, and Tall; the selected height belongs to the
+saved view. Bar labels and values stay in tooltips at every row height; larger rows show thicker bars.
+The default stays compact for existing views. Row wrapping remains independent.
+These additive declarations share the coordinated API 0.4.0 step on `main`.
+Publish the supporting host, SDK, and UI before an independent extension uses them.
 
 The query receives `filter`, `sorts`, and the display `settings`. For default full-result providers, use them only to narrow what you load. The renderer applies the full filter and sorts to the returned rows, so returning more rows than the view shows is correct. Opt-in [paged providers](#paged-tables-and-boards) apply these controls before returning a bounded page.
 
@@ -758,3 +796,5 @@ Dashboard webviews with `commands.execute` can use public `workbenchCommands` re
 The old `workbenchPages.sessions`, `session`, `newSession`, `sessionComposer`, `workbenchPanels.projectSession`, and `workbenchCommands.newConversation` refs remain at their original identities and are deprecated in favor of these provider refs. The adoption stage supplies thin legacy definitions; remove deprecated public refs only together in a breaking release.
 
 Resource mutation commands can act on another provider's canonical resource. When the invoking resource matches the declared mutation type and resolved ID in the selected project, native optimistic previews and write serialization preserve that resource's identity. Without a matching subject, the command's own extension identity remains the default. This changes presentation ownership only; the command service still enforces its normal permissions and scope.
+
+*Updated at: 2026-11-07*

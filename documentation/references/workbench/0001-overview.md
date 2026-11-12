@@ -44,6 +44,16 @@ A resource binding with an Add command uses the command's label and icon in the
 **+** menu and default placeholder cards. The opened resource keeps the view's
 own tab presentation.
 
+A host tab provider can expose `WorkbenchWidgetTab.isDisposed()` when its owner
+retires. Layout restoration replaces retired providers with the current registered
+contribution, preserving live per-placement overrides. Retired providers must stop
+their subscriptions and must not start new reads when an older snapshot calls them.
+Reading a snapshot prepares its identity; subscribing admits optional query work.
+Hosts pass a stable `presentationLocale` (requested locale and fallback hierarchy)
+to `registerWorkbenchExtensionContributions`. Localized tab queries retain separate
+locale results and depend on catalog and accepted translation changes. Returning
+to an unchanged project or locale reuses its accepted presentation.
+
 Hover over a tab or focus it with the keyboard to see its full title in a tooltip.
 The tooltip appears below the tab after 300 ms.
 
@@ -90,3 +100,5 @@ The hidden launcher is inert and outside the accessibility tree. Panel content s
 mounted while closed, so minimizing and reopening preserves drafts. See the
 [menu selection story](../../../packages/ui/src/components/overlays/menu-selection.canvas.tsx)
 and [Side Panel stories](../../../packages/pstdio-workbench/src/examples/side-panel/side-panel.canvas.tsx).
+
+*Updated at: 2026-11-09*

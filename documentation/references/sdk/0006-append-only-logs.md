@@ -37,3 +37,5 @@ Following uses local and relay notifications. Abort the signal when the reader c
 `keep.days` must be positive and finite. Retention filters old entries on each device, and authenticated page metadata lets a new reader skip expired payloads without downloading them. Retention applies to a log's entries rather than changing record or asset budgets.
 
 For SDK tests, pass the same declaration to `createMemoryStorage({ logs: extension.storage.logs })` or `createMemoryStorageDevices({ logs: extension.storage.logs })`. The two-device helper preserves project relay order and independent device writers.
+
+*Updated at: 2026-11-06*

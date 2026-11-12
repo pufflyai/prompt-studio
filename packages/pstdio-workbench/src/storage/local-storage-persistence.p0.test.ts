@@ -304,8 +304,8 @@ describe("local storage workbench persistence recovery", () => {
     persistence.flush?.();
 
     expect(JSON.parse(storage.getItem(indexKey)!)).toEqual({
-      version: 1,
-      scopes: [secondScope],
+      version: 2,
+      scopes: [firstScope, secondScope],
     });
     expect(persistence.getLayout(firstScope)).toEqual(layout);
     expect(persistence.getLayout(secondScope)).toEqual(layout);

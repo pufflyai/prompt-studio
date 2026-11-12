@@ -1,7 +1,8 @@
 import type { JsonObject, WorkspaceProviderRef, WorkspaceProviderResult } from "pstdio-api-contracts/extension-kernel";
 import type { WorkspacesRouteDeps } from "./deps";
+import { getAcceptedProviderOperation } from "./workspace-provider-accepted-operation";
+import { removeInactiveWorkspaceProviderDirectory } from "./workspace-provider-directory";
 import { finalizeWorkspaceDelete } from "./workspace-provider-lifecycle";
-import { InvalidWorkspaceParamsError } from "./workspace-provider-params";
 import {
   failedOperationPatch,
   missingProviderPatch,
@@ -9,7 +10,6 @@ import {
   type WorkspaceProviderOperationKind,
   type WorkspaceRecord,
 } from "./workspace-provider-projection";
-import { persistRetryParams } from "./workspace-provider-retry-params";
 import {
   findWorkspaceProvider,
   runWorkspaceProviderOperation,
@@ -120,7 +120,7 @@ const recoverProviderReference = async (
   handle: WorkspaceProviderHandle,
   options: ReconciliationOptions,
 ) => {
-  const current = await persistRetryParams(deps, workspace, handle);
+  const current = await getAcceptedProviderOperation(deps, workspace);
   if (!current) return;
   if (current.provider_ref_json) return current;
   const kind = current.provider_operation_kind!;
@@ -285,25 +285,26 @@ const reconcileProviderWorkspacePass = async (
       try {
         await reconcileWorkspace(deps, workspace, options);
       } catch (error) {
-        if (error instanceof InvalidWorkspaceParamsError) {
-          await deps.workspaceService.updateProviderOperationProjection(workspace.id, {
-            operationId: workspace.provider_operation_id!,
-            operationKind: workspace.provider_operation_kind!,
-            patch: {
-              provider_state: "failed",
-              provider_operation_id: null,
-              provider_operation_kind: null,
-              provider_error_json: {
-                code: "invalid_provider_params",
-                message: error.message,
-                retryable: false,
-                occurred_at: new Date().toISOString(),
-              },
-            },
-          });
-          return;
-        }
+        let failure = error;
         const kind = workspace.provider_operation_kind ?? "create";
+        if (kind === "delete" && !workspace.provider_ref_json && workspace.provider_operation_id) {
+          try {
+            await removeInactiveWorkspaceProviderDirectory(
+              deps,
+              {
+                projectId: workspace.project_id,
+                providerId: workspace.provider_id,
+                workspaceId: workspace.id,
+              },
+              workspace.provider_operation_id,
+            );
+          } catch (cleanupError) {
+            failure = new AggregateError(
+              [error, cleanupError],
+              "Provider recovery and owned-directory cleanup failed.",
+            );
+          }
+        }
         await updateReconciledProjection(
           deps,
           workspace,
@@ -311,7 +312,7 @@ const reconcileProviderWorkspacePass = async (
             kind,
             operationId: workspace.provider_operation_id ?? crypto.randomUUID(),
             state: pendingStateFor(kind),
-            error,
+            error: failure,
           }),
         );
       }

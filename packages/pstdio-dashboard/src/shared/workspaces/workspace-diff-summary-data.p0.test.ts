@@ -5,6 +5,11 @@ import {
   requestDashboardWorkspaceDiffSummaries,
 } from "./workspace-diff-summary-data";
 
+const accountResponse = (request: Request) =>
+  new URL(request.url).pathname.endsWith("/v1/account")
+    ? Response.json({ login: null, features: null, cloudProjects: [], cloudProjectsLoaded: true })
+    : undefined;
+
 const RUNTIME_CONFIG_KEY = "__PSTDIO_CONFIG__";
 
 type RuntimeConfigWindow = {
@@ -19,6 +24,7 @@ test("derived diff data and late responses stay in their originating runtime", a
   const server = Bun.serve({
     port: 0,
     fetch: (request) =>
+      accountResponse(request) ??
       Response.json({
         workspace_id: "same",
         additions: new URL(request.url).pathname.startsWith("/first/") ? 1 : 2,
@@ -51,6 +57,80 @@ test("derived diff data and late responses stay in their originating runtime", a
   }
 });
 
+test("remote summary reads do not open a permanently unsupported local file watch", async () => {
+  let watches = 0;
+  const server = Bun.serve({
+    port: 0,
+    fetch(request) {
+      const account = accountResponse(request);
+      if (account) return account;
+      if (new URL(request.url).pathname === "/v1/session-stream") watches++;
+      return Response.json({ workspace_id: "remote", additions: 3, deletions: 1, file_count: 1 });
+    },
+  });
+  const owner = createRuntimeCollections({ baseUrl: server.url.origin, token: "" });
+  owner.getWriter("workspaces")!.upsert({
+    id: "remote",
+    project_id: "project",
+    execution_kind: "remote",
+    provider_state: "ready",
+    provider_capabilities_json: { diff: true },
+  });
+  try {
+    expect((await requestDashboardWorkspaceDiffSummaries(["remote"], undefined, owner)).get("remote")?.additions).toBe(
+      3,
+    );
+    expect(watches).toBe(0);
+  } finally {
+    await owner.dispose();
+    await server.stop(true);
+  }
+});
+
+test("overlapping summary batches share one four-read runtime admission limit", async () => {
+  const release = Promise.withResolvers<void>();
+  const started = Promise.withResolvers<void>();
+  let active = 0;
+  let maximum = 0;
+  const before = globalThis.fetch;
+  globalThis.fetch = Object.assign(
+    async (request: URL | RequestInfo) => {
+      const url = new URL(toUrl(request));
+      if (url.origin !== "http://diff-admission.test") return before(request);
+      if (url.pathname === "/v1/account")
+        return Response.json({ login: null, features: null, cloudProjects: [], cloudProjectsLoaded: true });
+      maximum = Math.max(maximum, ++active);
+      if (active >= 4) started.resolve();
+      await release.promise;
+      active--;
+      return Response.json({ workspace_id: url.pathname.split("/")[3], additions: 1, deletions: 0, file_count: 1 });
+    },
+    { preconnect: before.preconnect },
+  ) as typeof fetch;
+  const owner = createRuntimeCollections({ baseUrl: "http://diff-admission.test", token: "" });
+  const ids = Array.from({ length: 12 }, (_, index) => `bounded-${index}`);
+  for (const id of ids)
+    owner
+      .getWriter("workspaces")!
+      .upsert({ id, provider_state: "ready", root_path: "/project", provider_capabilities_json: { diff: true } });
+  const reads = Promise.all([
+    requestDashboardWorkspaceDiffSummaries(ids.slice(0, 6), undefined, owner),
+    requestDashboardWorkspaceDiffSummaries(ids.slice(6), undefined, owner),
+  ]);
+  try {
+    await started.promise;
+    await Promise.resolve();
+    release.resolve();
+    await reads;
+    expect(maximum).toBe(4);
+  } finally {
+    release.resolve();
+    await reads;
+    await owner.dispose();
+    globalThis.fetch = before;
+  }
+});
+
 const toUrl = (input: URL | RequestInfo) => {
   if (typeof input === "string") return input;
   if (input instanceof URL) return input.toString();
@@ -65,43 +145,36 @@ describe("workspace diff summary data", () => {
   });
 
   test("resolves requested summaries for initial render updates", async () => {
-    (globalThis as RuntimeConfigWindow)[RUNTIME_CONFIG_KEY] = { apiBaseUrl: "http://localhost:19840" };
-    getWriter("workspaces")!.upsert({
+    const calls: string[] = [];
+    const server = Bun.serve({
+      port: 0,
+      fetch(request) {
+        const account = accountResponse(request);
+        if (account) return account;
+        calls.push(request.url);
+        return Response.json({ workspace_id: "workspace-first-load", additions: 12, deletions: 3, file_count: 2 });
+      },
+    });
+    const owner = createRuntimeCollections({ baseUrl: server.url.origin, token: "" });
+    owner.getWriter("workspaces")!.upsert({
       id: "workspace-first-load",
       provider_state: "ready",
       root_path: "/project",
       provider_capabilities_json: { diff: true },
     });
-
-    const calls: string[] = [];
-    const fetchMock = Object.assign(
-      async (input: URL | RequestInfo) => {
-        calls.push(toUrl(input));
-        await Promise.resolve();
-
-        return new Response(
-          JSON.stringify({
-            workspace_id: "workspace-first-load",
-            additions: 12,
-            deletions: 3,
-            file_count: 2,
-          }),
-          { status: 200, headers: { "content-type": "application/json" } },
-        );
-      },
-      { preconnect: originalFetch.preconnect?.bind(originalFetch) },
-    ) as typeof fetch;
-    globalThis.fetch = fetchMock;
-
-    const summaries = await requestDashboardWorkspaceDiffSummaries(["workspace-first-load"]);
-
-    expect(calls).toEqual(["http://localhost:19840/v1/workspaces/workspace-first-load/diff-summary?mode=fork_point"]);
-    expect(summaries.get("workspace-first-load")).toMatchObject({ additions: 12, deletions: 3, fileCount: 2 });
-    expect(getDashboardWorkspaceDiffSummary("workspace-first-load")).toMatchObject({
-      additions: 12,
-      deletions: 3,
-      fileCount: 2,
-    });
+    try {
+      const summaries = await requestDashboardWorkspaceDiffSummaries(["workspace-first-load"], undefined, owner);
+      expect(calls).toEqual([`${server.url.origin}/v1/workspaces/workspace-first-load/diff-summary?mode=fork_point`]);
+      expect(summaries.get("workspace-first-load")).toMatchObject({ additions: 12, deletions: 3, fileCount: 2 });
+      expect(getDashboardWorkspaceDiffSummary("workspace-first-load", owner)).toMatchObject({
+        additions: 12,
+        deletions: 3,
+        fileCount: 2,
+      });
+    } finally {
+      await owner.dispose();
+      server.stop(true);
+    }
   });
 
   test("requests summaries only while a workspace declares diff support", async () => {
@@ -110,6 +183,8 @@ describe("workspace diff summary data", () => {
     const server = Bun.serve({
       port: 0,
       fetch: (request) => {
+        const account = accountResponse(request);
+        if (account) return account;
         requests.push(new URL(request.url).pathname);
         return Response.json({ workspace_id: workspaceId, additions: 1, deletions: 0, file_count: 1 });
       },
@@ -162,6 +237,8 @@ test("defers background diff requests until the synced workspace is ready", asyn
   const server = Bun.serve({
     port: 0,
     fetch: (request) => {
+      const account = accountResponse(request);
+      if (account) return account;
       requests.push(new URL(request.url).pathname);
       return Response.json({ workspace_id: workspaceId, additions: 1, deletions: 0, file_count: 1 });
     },
@@ -213,6 +290,8 @@ test("does not request a summary when workspace diff support is explicitly disab
   const server = Bun.serve({
     port: 0,
     fetch: (request) => {
+      const account = accountResponse(request);
+      if (account) return account;
       requests.push(new URL(request.url).pathname);
       return Response.json({ workspace_id: workspaceId, additions: 1, deletions: 0, file_count: 1 });
     },
@@ -235,6 +314,8 @@ test("one unavailable diff summary does not hide other workspaces", async () => 
   const server = Bun.serve({
     port: 0,
     fetch: (request) => {
+      const account = accountResponse(request);
+      if (account) return account;
       if (new URL(request.url).pathname.includes(ids[0])) return new Response("Diff unavailable", { status: 500 });
       return Response.json({ workspace_id: ids[1], additions: 2, deletions: 1, file_count: 1 });
     },

@@ -212,6 +212,7 @@ const DatasetDataTable = (props: DataTableProps) => {
           activeRowId={activeRowId}
           columnDescriptions={columnDescriptions}
           columnStats={columnStats}
+          columnRenderers={columnRenderers}
           enableRowActivation={enableRowActivation}
           getCellContextMenuActions={getCellContextMenuActions}
         />

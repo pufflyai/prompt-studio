@@ -71,7 +71,7 @@ export const isFailedJob = (job: CiJob) => job.conclusion === "failure" || job.c
 
 const bookkeepingJobs = new Set(["version_pr", "nightly_prune", "desktop / targets"]);
 // Nested workflows prefix job names, e.g. "production / functional / validation_results".
-const gateJobs = new Set(["ci_passed", "production_ci_passed", "validation_results", "certify"]);
+const gateJobs = new Set(["ci_passed", "production_ci_passed", "windows_ci_passed", "validation_results", "certify"]);
 const isGate = (job: CiJob) => gateJobs.has(job.name.split(" / ").at(-1)!);
 const attemptOf = (job: CiJob) => `${job.workflow}/${job.runId}/${job.attempt}`;
 // A gate fails whenever a job it checks fails, so it counts only when nothing else in its attempt failed.

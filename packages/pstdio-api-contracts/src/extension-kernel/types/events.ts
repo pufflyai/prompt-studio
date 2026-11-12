@@ -24,3 +24,17 @@ export interface ArtifactChangedPayload {
    */
   paths: string[];
 }
+
+export interface QueryChangeEnvelope {
+  projectId?: string;
+  extensionId?: string;
+  /** Opaque structured-storage identities, distinct from public resource IDs. At most 128 per hint. */
+  recordIds?: readonly string[];
+  resourceKey?: string;
+  resourceKeys?: readonly string[];
+  resourceIds?: readonly string[];
+  changedFields?: readonly string[];
+  changes?: readonly { resourceId: string; changedFields: readonly string[]; membership?: boolean }[];
+  /** List membership may change after inserts, deletes, moves or filter-field edits. */
+  membership?: boolean;
+}

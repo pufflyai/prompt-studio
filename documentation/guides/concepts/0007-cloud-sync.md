@@ -25,13 +25,13 @@ The status describes this project's current state:
 | Synced | This device has finished its current sync work. |
 | Needs attention | Open Cloud settings to check the account and project state. |
 
-Cloud synchronizes project data used by your tools. Each computer also uploads an encrypted copy of its project folder, which another of your computers can restore; see [restore a project folder](#restore-a-project-folder-on-another-computer). See [restore project data](0006-restore-project-data.md) for local recovery points of project data.
+Cloud synchronizes project data used by your tools. If the project folder has a `.pstignore` file at its root, each computer also uploads an encrypted copy of that folder, which another of your computers can restore; see [restore a project folder](#restore-a-project-folder-on-another-computer). See [restore project data](0006-restore-project-data.md) for local recovery points of project data.
 
 ## Restore a project folder on another computer
 
-On macOS and Linux, each computer that has a synced project's folder captures it and uploads an encrypted copy. Only your own computers can read it; other members of a shared project cannot. Your other computers download every completed copy automatically, so a copy can be restored while the computer that made it is off. You do not need a Git host, a commit or a push.
+On macOS and Linux, each computer whose synced project folder has a `.pstignore` file at its root captures it and uploads an encrypted copy. A folder without one is not copied: its tools' data already syncs, and its code can come from its Git host. Add an empty `.pstignore` to copy everything except `.pstdio/extension-storage`. Only your own computers can read it; other members of a shared project cannot. Your other computers download every completed copy automatically, so a copy can be restored while the computer that made it is off. You do not need a Git host, a commit or a push.
 
-A copy includes every file and folder in the project folder, including hidden files, `.env` files, build output and the whole `.git` folder with unpushed commits, staged changes, branches, reflogs and local Git settings. `.gitignore` does not apply. Only the root `.pstignore` file excludes paths. The first time a folder is captured without a copy in Cloud, Prompt Studio creates `.pstignore` with `node_modules/`; it never overwrites or recreates the file. It uses `.gitignore` patterns: `#` comments, `*`, `?` and `**`, a leading `/` for paths from the root, a trailing `/` for folders, and `!` to include a path again. Symlinks are saved as links with their target text and are never followed. A file that keeps changing or cannot be read is never skipped: the new copy stays pending and the previous copy stays restorable.
+A copy includes every file and folder in the project folder, including hidden files, `.env` files, build output and the whole `.git` folder with unpushed commits, staged changes, branches, reflogs and local Git settings. `.gitignore` does not apply. The root `.pstignore` file decides what else to skip; add `node_modules/` to skip dependencies. `.pstdio/extension-storage` is never copied, because your tools' data there already syncs. Deleting `.pstignore` stops new copies, and earlier copies stay restorable. It uses `.gitignore` patterns: `#` comments, `*`, `?` and `**`, a leading `/` for paths from the root, a trailing `/` for folders, and `!` to include a path again. Symlinks are saved as links with their target text and are never followed. A file that keeps changing or cannot be read is never skipped: the new copy stays pending and the previous copy stays restorable.
 
 Restore with the CLI. The app has no restore screen yet.
 
@@ -53,3 +53,5 @@ Cloud settings lists your devices when early access is enabled. Choose **Rename*
 In Cloud settings, choose **Make local** and confirm. Syncing stops on this device immediately. Other devices discover the change when they refresh account membership; an idle device may take up to a minute. Each device keeps its copy.
 
 Choose **Sync with Cloud** to enable syncing again. The copies merge. Where both copies changed the same thing, one change is kept.
+
+*Updated at: 2026-11-10*

@@ -119,7 +119,10 @@ test("disables and enables an extension automation", async ({ page, request }) =
   await automationSwitch.click();
   expect((await disableAutomationResponse).status()).toBe(200);
   await expect(automationCheckbox).not.toBeChecked();
-  await page.getByTestId("extension-detail-back").click();
+  await page
+    .getByRole("navigation", { name: "breadcrumb" })
+    .getByRole("button", { name: "Extensions", exact: true })
+    .click();
   await expect(installedRow.getByTestId("extension-automation-status")).toContainText("0/1");
   await disableAutomationReads.wait();
   await disableAutomationReads.release();
@@ -137,7 +140,10 @@ test("disables and enables an extension automation", async ({ page, request }) =
   await enabledAutomationSwitch.click();
   expect((await enableAutomationResponse).status()).toBe(200);
   await expect(enabledAutomationCheckbox).toBeChecked();
-  await page.getByTestId("extension-detail-back").click();
+  await page
+    .getByRole("navigation", { name: "breadcrumb" })
+    .getByRole("button", { name: "Extensions", exact: true })
+    .click();
   await expect(installedRow.getByTestId("extension-automation-status")).toContainText("1/1");
   await enableAutomationReads.wait();
   await enableAutomationReads.release();

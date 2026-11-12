@@ -47,6 +47,12 @@ export interface ExtensionStorageTextApi {
 }
 
 export interface ExtensionStorageApi {
+  /** Observe committed structured records in this project and extension, including local signed-out writes.
+   * IDs are opaque records.id() identities. Missing scope is conservative. Subscribe before a finite read. */
+  observe(
+    changed: (change: { recordIds?: readonly string[] }) => void,
+    options?: { recordIds?: readonly string[]; signal?: AbortSignal },
+  ): { close(): void };
   /** Whether this source may run data upgrades now; false when the synced extension owns migrations. */
   canMigrate(): Promise<boolean>;
   /** Upgrade this storage scope once. Saves the version after success; failed work must be safe to retry. */

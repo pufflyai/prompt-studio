@@ -231,10 +231,25 @@ test("updates a New session Sub Panel in place after the first message", async (
     );
     localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
   }, project.id);
-  await page.goto(`/projects/${project.id}/`);
-  await page.getByRole("button", { name: "Open Side Panel" }).click();
-  await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
+  // Open the generic shell before the real provider catalog arrives.
+  const catalog = Promise.withResolvers<void>();
+  await page.route(`**/v1/projects/${project.id}/extensions/ui`, async (route) => {
+    await catalog.promise;
+    await route.continue();
+  });
+  try {
+    await page.goto(`/projects/${project.id}/`);
+    await page.getByRole("button", { name: "Open Side Panel" }).click();
+    await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
+  } finally {
+    catalog.resolve();
+  }
   const sideHeader = page.locator('[data-workbench-panel-header="side"]');
+  const sidePanel = page.locator('[data-workbench-panel="side"]');
+  await sidePanel
+    .getByRole("group", { name: "Available tabs" })
+    .getByRole("button", { name: "New session", exact: true })
+    .click();
   await expect(sideHeader.getByRole("tab", { name: "New session", exact: true })).toBeVisible();
   await sideHeader.getByRole("button", { name: "Add panel" }).click();
   const sessionChoice = page
@@ -247,7 +262,6 @@ test("updates a New session Sub Panel in place after the first message", async (
   await expect(activeTab).toContainText("New session");
 
   const prompt = "Continue in this session tab";
-  const sidePanel = page.locator('[data-workbench-panel="side"]');
   await sidePanel
     .locator("[data-testid='content-editable'][contenteditable='true']")
     .filter({ visible: true })
@@ -269,12 +283,14 @@ test("renames a moved session and restores its destination after reload", async 
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("dashboard-wb2:selected-project:global", id);
   }, project.id);
-  // Home's Main is tabless, so the move needs a page whose Main accepts tabs.
   await page.goto(`/projects/${project.id}/sessions`);
   await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
   await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
   const side = page.locator('[data-workbench-panel-header="side"]');
-  await openTabCustomMenu(side.getByRole("tab", { name: "New session", exact: true }));
+  // The Sessions page owns its Main composer; explicitly add the Side Panel instance to move.
+  await side.getByRole("button", { name: "Add panel", exact: true }).click();
+  await page.getByRole("menuitem", { name: "New session", exact: true }).click();
+  await openTabCustomMenu(side.getByRole("tab", { name: "New session", exact: true, selected: true }));
   await switchSession(page, "Session to rename");
   await openTabCustomMenu(side.getByRole("tab", { name: "Session to rename", exact: true }));
   await page.getByRole("menuitem", { name: "Move to Secondary", exact: true }).click();

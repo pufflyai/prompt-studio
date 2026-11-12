@@ -14,6 +14,7 @@ import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } f
 import { expectPackagedGitFreeExtensions } from "./packaged-git-free-extensions-smoke";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // Native actions cover complete Kanban moves, resource lists and independent schema dependencies.
+// The native History fixture also verifies cursor-page metadata and callbacks through the compiled host.
 // packaged-native-settings.p2.spec.ts checks the Extensions nav page, direct routes, reload, native settings and scrolling.
 // packaged-marketplace-search.p1.spec.ts finds downloads by their visible full ID.
 // Git-free installation preserves bundled extension IDs, names and icon metadata.
@@ -25,6 +26,7 @@ import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // packaged-core-extensions-smoke.p1.test.ts installs the production Sessions provider with local public artifacts,
 // runs CLI dev -> add --force with package-local dependencies and unavailable authoring source,
 // then checks Main/Side native declarations and durable text/files through compiled-host command handlers.
+// packaged-native-terminal.p1.test.ts opens an installed SDK native terminal through the compiled host and existing PTY transport.
 // Also checks native harness controls and their structured values in packaged command handlers.
 // packaged-claude-plan-smoke.p2.test.ts checks Claude plan review through the live question channel.
 // packaged-personal-history-smoke.p2.test.ts checks encrypted message-log blobs and complete offline history after restart.
@@ -57,6 +59,7 @@ import { expectPackagedNativeMarkdown, writeNativeMarkdownExtension } from "./pa
 // packaged-core-extensions-smoke.p1.test.ts installs Workspaces, its native resource list and file document routes through packed SDK/UI/workbench.
 // packaged-core-extensions-smoke.p1.test.ts installs Home through packed public SDK/UI packages and checks its landing declaration.
 // packaged-core-extensions-smoke.p1.test.ts checks Notes, Planner and Reports allocate record IDs through core.
+// It also checks bundled palette commands carry icons and useful groups.
 // packaged-artifact-watch-limit.p2.test.ts checks watched mounts refresh when an initial tree exceeds the folder limit.
 // packaged-core-extensions-smoke.p1.test.ts checks Reports reads by core-assigned ID and number after saving.
 // packaged-cloud-extension-set-smoke.p2.test.ts checks offline number collisions, aliases and later allocations across three compiled hosts.
@@ -88,6 +91,35 @@ beforeAll(() => {
 }, BUILD_TIMEOUT);
 
 // extension-browser-install.p1.test.ts installs the cached Playwright package and visits a smoke page.
+
+test(
+  "serves the compiled dashboard at root and project routes with its bundled script",
+  async () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-dashboard-assets-"));
+    let child: ChildProcess | undefined;
+    try {
+      const started = await startPackagedServe(tempRoot);
+      child = started.child;
+      for (const path of ["/", "/projects/dashboard-smoke/"]) {
+        const response = await fetch(`${started.baseUrl}${path}`);
+        expect(response.status).toBe(200);
+        expect(response.headers.get("content-type")).toContain("text/html");
+        const html = await response.text();
+        expect(html).toContain('id="root"');
+        const script = /<script[^>]+src="([^"]+)"/.exec(html)?.[1];
+        expect(script).toBeDefined();
+        const bundled = await fetch(new URL(script!, started.baseUrl));
+        expect(bundled.status).toBe(200);
+        expect(bundled.headers.get("content-type")).toContain("application/javascript");
+        expect((await bundled.text()).length).toBeGreaterThan(0);
+      }
+    } finally {
+      if (child) await stopProcess(child);
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  },
+  PACKAGED_TEST_TIMEOUT,
+);
 
 test(
   "exports saved performance recordings with monitoring stopped",

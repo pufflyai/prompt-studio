@@ -44,12 +44,12 @@ export const NativeChatNotices = ({ host, state, session }: NativeChatNoticesPro
         ))}
       {notice ? <Text>{notice}</Text> : null}
       {error ? (
-        <Flex direction="column" gap="xs">
-          <Text role="alert">{error}</Text>
-          <Button size="xs" variant="ghost" onClick={session.reconnect}>
-            Retry
-          </Button>
-        </Flex>
+        <AlertMessage
+          role="alert"
+          status="error"
+          title={error}
+          endElement={<Button onClick={session.reconnect}>Retry</Button>}
+        />
       ) : null}
     </>
   );

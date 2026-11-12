@@ -1,6 +1,8 @@
 # Sessions
 
-`pstdio.pstdio-session-browser` owns session browsing and composition. Native chat renders in the workbench document in a full page or shared Side panel. Core owns session identity, execution, transcript, queue, attachments, permissions, workspace links and sync.
+`pstdio.pstdio-session-browser` installs once in the host user scope and can be enabled per project. It owns session browsing and composition. Native chat renders in the workbench document in a full page or shared Side panel. Core owns session identity, execution, transcript, queue, attachments, permissions, workspace links and sync.
+
+New conversations show **Pending** until their first turn starts. Empty saved conversations use the same indicator; completed turns keep their completed status.
 
 Other tools use `sessionBrowser` from `@pstdio/sdk/extensions`. This package re-exports the same implementation-free contract from `pstdio-session-browser/refs`. Session and draft resources retain `extensionId: "pstdio"`; navigation refs belong to this provider. New navigation uses provider refs. The host retains deprecated page/panel/command definitions that target the provider renderer, without another chat implementation or persistence owner. Missing or disabled providers use normal unavailable-target feedback.
 
@@ -12,6 +14,8 @@ legacy non-Project mode); otherwise the provider uses its Project Side placement
 Draft identity and persistence stay here. “New in this tab” uses the shared
 Current view shortcut and captured viewer, without changing Main from Side.
 Switch options follow public query cursors rather than truncate older history.
+
+Session history loads the next bounded page as the person scrolls toward its end, including within an expanded workspace group. Stable date headings join pages at the same level. This requires a published SDK and host supporting `view.tree.pages.v1`; updating the SDK alone does not update the running host.
 
 ## Local development and release
 

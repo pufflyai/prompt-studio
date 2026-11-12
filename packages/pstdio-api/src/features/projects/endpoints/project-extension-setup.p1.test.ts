@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { installDefaultExtensions, syncInstalledExtensionsForProject } from "../../extensions/default-extensions";
-import { setupProjectExtensions } from "../project-extension-setup";
+import { retryProjectExtensions, setupProjectExtensions } from "../project-extension-setup";
 import { initializeProjectWorkspace } from "../project-folder";
 
 let root: string;
@@ -52,6 +52,38 @@ const open = (initial_workspace: { provider_id: string; params: Record<string, u
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ initial_workspace }),
   });
+
+test("setup retry preserves a disabled provider when its default moves to user scope", async () => {
+  process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
+  const fixture = await extension("shared-fixture");
+  const project = await handle.deps.projectService.create({ name: "Existing project" });
+  const previous = await handle.deps.extensionService.enableInstalledSourceForProject({
+    displayName: "Shared fixture",
+    extensionId: "example.shared-fixture",
+    installName: "shared-fixture",
+    manifest: { id: "example.shared-fixture" },
+    name: "shared-fixture",
+    projectId: project.id,
+    sourcePath: join(root, "project/.pstdio/extensions/shared-fixture"),
+  });
+  await handle.deps.extensionService.setProjectExtensionEnabled(previous.instance.id, false);
+  process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([fixture]);
+
+  expect(await retryProjectExtensions(handle.deps, project.id)).toEqual([]);
+
+  const instances = await handle.deps.extensionService.listProjectExtensionInstances(project.id);
+  expect(instances).toHaveLength(2);
+  expect(instances.every(({ instance }) => !instance.enabled)).toBe(true);
+  expect(instances.find(({ instance }) => instance.id === previous.instance.id)).toBeDefined();
+  const shared = instances.find(
+    ({ installedSource }) => installedSource.source_path === join(root, "home/extensions/shared-fixture"),
+  )!;
+  expect(shared).toBeDefined();
+  await handle.deps.extensionService.setProjectExtensionEnabled(shared.instance.id, true);
+  expect(
+    (await handle.deps.extensionService.getProjectExtensionInstance(project.id, shared.instance.id))?.instance.enabled,
+  ).toBe(true);
+});
 
 test.each([
   "skipped",

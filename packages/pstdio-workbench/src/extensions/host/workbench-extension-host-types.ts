@@ -1,5 +1,6 @@
 import type { CommandExecuteRequest, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import type { NativeDocumentsClient, TextEditingTransportClient } from "@pstdio/sdk/client";
+import type { QueryChangeEnvelope, ScopedQueryClient } from "@pstdio/sdk/extensions";
 import type { ExtensionKeybindingRecord } from "pstdio-api-contracts";
 import type {
   Disposable,
@@ -26,6 +27,7 @@ import type {
   WorkbenchExtensionMenuWhenBuilder,
 } from "../contributions/extension-contributions";
 import type { WorkbenchExtensionKanbanRendererAdapter } from "../contributions/kanban-renderer-adapter";
+import type { TerminalRendererOwners } from "../contributions/terminal-renderer-contributions";
 import type { RegisterWorkbenchExtensionTreeRenderersInput } from "../contributions/tree-renderer-contributions";
 import type { InternalWorkbenchExtensionMetadata } from "./internal-workbench-extension-metadata";
 import type { WorkbenchExtensionRefreshEvent } from "./workbench-extension-refresh";
@@ -36,6 +38,10 @@ export interface WorkbenchExtensionHostMenuRegistration
 }
 
 export interface RegisterWorkbenchExtensionContributionsInput extends ChatCommandTransport {
+  queries?: ScopedQueryClient;
+  /** Stable requested locale and fallback hierarchy for localized tab results. */
+  presentationLocale?: string;
+  terminalRendererOwners?: TerminalRendererOwners;
   createKeybindingWhenExpression?: (when: ExtensionKeybindingRecord["when"]) => string | undefined;
   createMenuWhenExpression?: WorkbenchExtensionMenuWhenBuilder;
   createNavigationWhenExpression?: (
@@ -66,7 +72,7 @@ export interface RegisterWorkbenchExtensionContributionsInput extends ChatComman
   settingsSectionId?: string;
   settingsSectionTitle?: string;
   subscribeRefreshEvents?: (listener: (event: WorkbenchExtensionRefreshEvent) => void) => Disposable;
-  subscribeRefreshReset?: (listener: () => void) => Disposable;
+  subscribeRefreshReset?: (listener: (event?: QueryChangeEnvelope) => void) => Disposable;
   webviewArtifacts?: ExtensionWebviewArtifactCapabilities;
   webviewFiles?: ExtensionWebviewFileCapabilities;
   workbench: WorkbenchModuleContext;

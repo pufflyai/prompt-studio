@@ -5,15 +5,42 @@ import { createFileMount, type InvocationScope } from "pstdio-extensions";
 import type { WorkspacesRouteDeps } from "./deps";
 import { canonicalWorkspacePath, managedWorkspacesRoot } from "./workspace-directory-paths";
 
+const directoryOwners = new Map<string, { active: Set<InvocationScope>; removing: boolean }>();
+const directoryOwner = (workspaceId: string) => {
+  let owner = directoryOwners.get(workspaceId);
+  if (!owner) {
+    owner = { active: new Set(), removing: false };
+    directoryOwners.set(workspaceId, owner);
+  }
+  return owner;
+};
+const releaseDirectoryOwner = (workspaceId: string, owner: ReturnType<typeof directoryOwner>) => {
+  if (!owner.removing && !owner.active.size) directoryOwners.delete(workspaceId);
+};
+
 export const createWorkspaceProviderDirectory = (
   deps: Pick<WorkspacesRouteDeps, "workspaceService">,
   input: { projectId: string; providerId: string; workspaceId: string },
   scope?: InvocationScope,
 ) => {
   let closed = false;
-  scope?.register(() => {
-    closed = true;
-  });
+  if (scope) {
+    scope.signal.throwIfAborted();
+    const owner = directoryOwner(input.workspaceId);
+    if (owner.removing) throw new Error("Workspace directory cleanup is active.");
+    if (owner.active.has(scope))
+      scope.register(() => {
+        closed = true;
+      });
+    else {
+      owner.active.add(scope);
+      scope.register(() => {
+        closed = true;
+        owner.active.delete(scope);
+        releaseDirectoryOwner(input.workspaceId, owner);
+      });
+    }
+  }
   const signal = scope?.signal;
   const ensureActive = () => {
     signal?.throwIfAborted();
@@ -74,4 +101,28 @@ export const createWorkspaceProviderDirectory = (
       },
     };
   };
+};
+
+export const removeInactiveWorkspaceProviderDirectory = async (
+  deps: Pick<WorkspacesRouteDeps, "workspaceService">,
+  input: { projectId: string; providerId: string; workspaceId: string },
+  operationId: string,
+) => {
+  const owner = directoryOwner(input.workspaceId);
+  if (owner.removing || owner.active.size) throw new Error("Workspace directory has active provider ownership.");
+  owner.removing = true;
+  try {
+    const current = await deps.workspaceService.get(input.workspaceId);
+    if (
+      !current ||
+      current.provider_operation_id !== operationId ||
+      current.provider_operation_kind !== "delete" ||
+      current.provider_ref_json
+    )
+      throw new Error("Workspace cleanup operation changed before directory removal.");
+    await (await createWorkspaceProviderDirectory(deps, input)()).remove();
+  } finally {
+    owner.removing = false;
+    releaseDirectoryOwner(input.workspaceId, owner);
+  }
 };

@@ -1,7 +1,8 @@
+import type { QueryChangeEnvelope } from "@pstdio/sdk/extensions";
 import type { ContributionMetadata, RegisteredContributionMetadata } from "../../shared/contributions/metadata";
 import type { Disposable } from "../../shared/disposable";
 import type { WorkbenchStore } from "../../shared/store/workbench-store";
-import type { CommandParamSchema } from "../commands/command-registry";
+import type { CommandParamSchema, WorkbenchCommandExecutionContext } from "../commands/command-registry";
 import type { MenuPath } from "../menus/menu-registry";
 import type { NavigationTarget } from "../navigation/navigation-registry";
 import type { ResourceRef } from "../resources/resource-registry";
@@ -38,14 +39,29 @@ export interface TreeAction {
   params?: CommandParamSchema;
   inlineInput?: { field: string; placement: "replace" | "child"; nodeId?: string };
   copyText?: string;
+  /** Execute during menu selection while clipboard user activation is available. */
+  copyResultToClipboard?: boolean;
   // Confirm-button label for the action's params dialog (defaults to "Run").
   submitLabel?: string;
   when?: string;
   disabled?: boolean;
-  run?(args?: unknown): Promise<void> | void;
+  run?(args?: unknown, context?: WorkbenchCommandExecutionContext): Promise<void> | void;
 }
 
 export type TreeNodeRowVariant = "empty-state" | "file";
+
+export interface TreeNodePage {
+  nodes: TreeNode[];
+  nextPage?: TreePageLoader;
+}
+
+export type TreePageLoader = (signal: AbortSignal) => Promise<TreeNodePage>;
+
+export interface TreePageStatus {
+  loading?: boolean;
+  error?: string;
+  loadMore(): Promise<void> | void;
+}
 
 export interface TreeNodeInlineInput {
   ariaLabel: string;
@@ -84,6 +100,10 @@ export interface TreeNode {
   collapsible?: boolean;
   disabled?: boolean;
   children?: TreeNode[];
+  /** Read the next bounded page of children. */
+  nextPage?: TreePageLoader;
+  /** Owned by the current tree read; passed to the shared list. */
+  pagination?: TreePageStatus;
   description?: string;
   contextValue?: string;
   hiddenByDefault?: boolean;
@@ -118,6 +138,8 @@ export interface TreeViewSection {
   collapsible?: boolean;
   emptyState?: TreeSectionEmptyState;
   nodes: TreeNode[];
+  nextPage?: TreePageLoader;
+  pagination?: TreePageStatus;
   hiddenByDefault?: boolean;
   /** When true, the section (category) opts in to the tree's hide/show customization menu. */
   canHide?: boolean;
@@ -135,6 +157,9 @@ export interface TreeMoveEndpoint {
 export type TreeMovePolicy = (move: { source: TreeMoveEndpoint; destination: TreeMoveEndpoint }) => boolean;
 
 export interface TreeRendererContribution {
+  /** Captured host identity; never infer a hidden view's project from current selection. */
+  queryEvents?: readonly string[];
+  queryScope?: Partial<import("@pstdio/sdk/extensions").QueryScope>;
   id: string;
   title: string;
   icon?: string;
@@ -166,7 +191,7 @@ export interface TreeRendererState {
   loading?: boolean;
 }
 
-export interface TreeRendererRefreshEvent {
+export interface TreeRendererRefreshEvent extends QueryChangeEnvelope {
   treeId: string;
 }
 
@@ -212,6 +237,6 @@ export interface TreeRendererRegistry {
   setSectionExpanded(id: string, sectionId: string, expanded: boolean): void;
   setSelectedNode(id: string, nodeId: string | undefined): void;
   setLoading(id: string, loading: boolean): void;
-  refresh(id: string): void;
+  refresh(id: string, event?: QueryChangeEnvelope): void;
   onDidRefresh(listener: TreeRendererRefreshListener): Disposable;
 }

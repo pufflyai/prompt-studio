@@ -151,3 +151,5 @@ pst sessions list --anchor-type ticket --anchor-id <ticket-id>
 ```
 
 The HTTP `GET /sessions` endpoint accepts `created_from`, `created_to`, `updated_from`, `anchor_type` and `anchor_id`. It still returns an array, now ordered newest first. Items include `workspace_id` and nullable `usage_json` token totals. Extension commands use the same database filters through `ctx.sessions.query()`.
+
+*Updated at: 2026-11-05*

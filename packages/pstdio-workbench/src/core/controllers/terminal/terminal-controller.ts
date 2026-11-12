@@ -1,67 +1,44 @@
+import type { TerminalViewBinding } from "@pstdio/sdk/api";
+import { createWorkbenchStore } from "../../shared/store/workbench-store";
+import { runWorkbenchEffect } from "../../shared/workbench-effect";
 import type {
-  TerminalSessionAdapter,
-  TerminalSessionError,
-  TerminalSessionExit,
-  TerminalSessionRequest,
-} from "@pstdio/sdk/api";
-import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
+  WorkbenchTerminalController,
+  WorkbenchTerminalSessionAdapter,
+  WorkbenchTerminalSessionModel,
+  WorkbenchTerminalSessionOpener,
+  WorkbenchTerminalSessionRequest,
+  WorkbenchTerminalState,
+} from "./terminal-controller-types";
+import { createTerminalSessionCleanup } from "./terminal-session-cleanup";
 
-// The renderer-side terminal contract is shared through the public SDK. Core keeps its
-// Workbench* names as aliases so its API does not depend on @pstdio/ui.
-export type WorkbenchTerminalSessionRequest = TerminalSessionRequest;
-export type WorkbenchTerminalSessionExit = TerminalSessionExit;
-export type WorkbenchTerminalSessionError = TerminalSessionError;
-export type WorkbenchTerminalSessionAdapter = TerminalSessionAdapter;
-
-// Host-injected session factory. Production hosts back this with a PTY transport;
-// the testbench and stories inject a deterministic scripted opener.
-export type WorkbenchTerminalSessionOpener = (
-  request: WorkbenchTerminalSessionRequest,
-) => Promise<WorkbenchTerminalSessionAdapter>;
-
-export type WorkbenchTerminalSessionStatus = "running" | "exited" | "killed";
-
-export interface WorkbenchTerminalSessionModel {
-  id: string;
-  title: string;
-  status: WorkbenchTerminalSessionStatus;
-  exit?: WorkbenchTerminalSessionExit;
-}
-
-export interface WorkbenchTerminalState {
-  sessionsById: Record<string, WorkbenchTerminalSessionModel>;
-}
-
-export interface WorkbenchTerminalSessionSink {
-  onData?(chunk: Uint8Array): void;
-  onExit?(exit: WorkbenchTerminalSessionExit): void;
-  onError?(error: WorkbenchTerminalSessionError): void;
-}
-
-export interface WorkbenchTerminalController {
-  store: WorkbenchStore<WorkbenchTerminalState>;
-  /** True once the host injected a session opener. */
-  isAvailable(): boolean;
-  setSessionOpener(opener: WorkbenchTerminalSessionOpener | null): void;
-  /** Opens a session; the live adapter stays host-side and only the id is returned. */
-  open(input: {
-    bindingId?: string;
-    request: WorkbenchTerminalSessionRequest;
-    title?: string;
-  }): Promise<{ sessionId: string }>;
-  write(input: { sessionId: string; data: string | Uint8Array }): void;
-  resize(input: { sessionId: string; cols: number; rows: number }): void;
-  kill(input: { sessionId: string; signal?: string }): Promise<void>;
-  killBinding(bindingId: string): Promise<void>;
-  subscribe(sessionId: string, sink: WorkbenchTerminalSessionSink): () => void;
-  getSession(sessionId: string): WorkbenchTerminalSessionModel | undefined;
-  listSessions(): WorkbenchTerminalSessionModel[];
-  /** Kills every live session. Called when the owning workbench is torn down. */
-  dispose(): Promise<void>;
-}
+export type * from "./terminal-controller-types";
 
 const DEFAULT_SESSION_TITLE = "Terminal";
 const SESSION_HISTORY_LIMIT = 200;
+
+const releaseTerminalAdapter = (
+  sessionId: string,
+  adapters: Map<string, WorkbenchTerminalSessionAdapter>,
+  adapterDisposers: Map<string, Array<() => void>>,
+  dataSubscribers: Map<string, Set<(chunk: Uint8Array) => void>>,
+) => {
+  adapters.delete(sessionId);
+  dataSubscribers.delete(sessionId);
+  const disposers = adapterDisposers.get(sessionId) ?? [];
+  adapterDisposers.delete(sessionId);
+  const errors: unknown[] = [];
+  for (const dispose of disposers) {
+    try {
+      dispose();
+    } catch (error) {
+      errors.push(error);
+    }
+  }
+  if (errors.length) throw new AggregateError(errors, "Terminal subscription cleanup failed");
+};
+
+const bindingKey = (bindingId: string, ownerId?: string) =>
+  ownerId ? JSON.stringify([ownerId, bindingId]) : bindingId;
 
 export const createWorkbenchTerminalController = (): WorkbenchTerminalController => {
   const store = createWorkbenchStore<WorkbenchTerminalState>({
@@ -70,6 +47,16 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
   });
 
   let opener: WorkbenchTerminalSessionOpener | null = null;
+  let disposed = false;
+  const openings = new Map<
+    Promise<{ sessionId: string }>,
+    { ownerId?: string; bindingId?: string; controller: AbortController }
+  >();
+  const ownershipListeners = new Set<() => void>();
+  const notifyOwnership = () => {
+    for (const listener of ownershipListeners) runWorkbenchEffect("terminal ownership", listener);
+  };
+  const sessionOwners = new Map<string, string>();
   const adapters = new Map<string, WorkbenchTerminalSessionAdapter>();
   const adapterDisposers = new Map<string, Array<() => void>>();
   const dataHistory = new Map<string, Uint8Array[]>();
@@ -95,16 +82,19 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
     return adapter;
   };
 
+  const releaseAdapter = (id: string) => releaseTerminalAdapter(id, adapters, adapterDisposers, dataSubscribers);
+
   const cleanupSession = (sessionId: string) => {
-    adapters.delete(sessionId);
-    dataHistory.delete(sessionId);
-    dataSubscribers.delete(sessionId);
-    const bindingId = bindingIdBySessionId.get(sessionId);
-    bindingIdBySessionId.delete(sessionId);
-    if (bindingId && sessionIdByBindingId.get(bindingId) === sessionId) sessionIdByBindingId.delete(bindingId);
-    const disposers = adapterDisposers.get(sessionId) ?? [];
-    adapterDisposers.delete(sessionId);
-    for (const dispose of disposers) dispose();
+    try {
+      releaseAdapter(sessionId);
+    } finally {
+      sessionOwners.delete(sessionId);
+      dataHistory.delete(sessionId);
+      const bindingId = bindingIdBySessionId.get(sessionId);
+      bindingIdBySessionId.delete(sessionId);
+      if (bindingId && sessionIdByBindingId.get(bindingId) === sessionId) sessionIdByBindingId.delete(bindingId);
+      notifyOwnership();
+    }
   };
 
   const publishData = (sessionId: string, chunk: Uint8Array) => {
@@ -116,61 +106,59 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
     for (const subscriber of dataSubscribers.get(sessionId) ?? []) subscriber(snapshot);
   };
 
-  const kill = async (input: { sessionId: string; signal?: string }) => {
-    const adapter = requireAdapter(input.sessionId);
-    await adapter.kill(input.signal);
-    patchSession(input.sessionId, { status: "killed" }, "killTerminalSession");
-    cleanupSession(input.sessionId);
-  };
+  const cleanup = createTerminalSessionCleanup({
+    adapters,
+    sessions: () => Object.values(store.getState().sessionsById),
+    patchKilled: (id) => patchSession(id, { status: "killed" }, "killTerminalSession"),
+    cleanup: cleanupSession,
+  });
+  const { kill } = cleanup;
 
-  const killBinding = async (bindingId: string) => {
+  const killBinding = async (placementId: string, ownerId?: string) => {
+    const bindingId = bindingKey(placementId, ownerId);
+    for (const admission of openings.values()) {
+      if (admission.bindingId === bindingId) admission.controller.abort();
+    }
+    pendingSessionByBindingId.delete(bindingId);
     const sessionId = sessionIdByBindingId.get(bindingId);
-    if (sessionId && adapters.has(sessionId)) {
+    if (sessionId) {
       await kill({ sessionId });
       return;
     }
-
-    const pending = pendingSessionByBindingId.get(bindingId);
-    if (!pending) return;
-    const opened = await pending.catch(() => undefined);
-    if (opened && adapters.has(opened.sessionId)) await kill({ sessionId: opened.sessionId });
   };
 
-  const open = async (input: { bindingId?: string; request: WorkbenchTerminalSessionRequest; title?: string }) => {
-    if (!opener) throw new Error("Terminal sessions are not available in this workbench host.");
+  const open = async (input: {
+    bindingId?: string;
+    ownerId?: string;
+    view?: TerminalViewBinding;
+    request: WorkbenchTerminalSessionRequest;
+    title?: string;
+  }) => {
+    if (disposed || !opener) throw new Error("Terminal sessions are not available in this workbench host.");
 
-    if (input.bindingId) {
-      const sessionId = sessionIdByBindingId.get(input.bindingId);
-      if (sessionId && adapters.has(sessionId)) return { sessionId };
-      const pending = pendingSessionByBindingId.get(input.bindingId);
+    const bindingId = input.bindingId ? bindingKey(input.bindingId, input.ownerId) : undefined;
+    if (bindingId) {
+      const sessionId = sessionIdByBindingId.get(bindingId);
+      if (sessionId) return { sessionId };
+      const pending = pendingSessionByBindingId.get(bindingId);
       if (pending) return await pending;
     }
 
+    const controller = new AbortController();
     const openSession = (async () => {
-      const adapter = await opener(input.request);
+      const adapter = await opener(input.request, input.view, controller.signal);
+      if (disposed || controller.signal.aborted) {
+        await adapter.kill();
+        throw new Error("Terminal admission was cancelled");
+      }
+      if (input.ownerId) sessionOwners.set(adapter.id, input.ownerId);
       adapters.set(adapter.id, adapter);
       dataHistory.set(adapter.id, []);
       dataSubscribers.set(adapter.id, new Set());
-      if (input.bindingId) {
-        sessionIdByBindingId.set(input.bindingId, adapter.id);
-        bindingIdBySessionId.set(adapter.id, input.bindingId);
+      if (bindingId) {
+        sessionIdByBindingId.set(bindingId, adapter.id);
+        bindingIdBySessionId.set(adapter.id, bindingId);
       }
-
-      const disposers = [adapter.onData((chunk) => publishData(adapter.id, chunk))];
-      const unsubscribeTitle = adapter.onTitle?.((title) =>
-        patchSession(adapter.id, { title }, "terminalSessionTitleChanged"),
-      );
-      if (unsubscribeTitle) disposers.push(unsubscribeTitle);
-      disposers.push(
-        adapter.onExit((exit) => {
-          const session = store.getState().sessionsById[adapter.id];
-          if (session?.status === "running") {
-            patchSession(adapter.id, { status: "exited", exit }, "terminalSessionExited");
-          }
-          cleanupSession(adapter.id);
-        }),
-      );
-      adapterDisposers.set(adapter.id, disposers);
 
       const snapshot = store.getState();
       store.setState(
@@ -184,23 +172,46 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
         "openTerminalSession",
       );
 
+      // Session state must exist before any transport subscription replays queued data or exit.
+      const disposers: Array<() => void> = [];
+      adapterDisposers.set(adapter.id, disposers);
+      const retain = (unsubscribe: (() => void) | undefined) => {
+        if (!unsubscribe) return;
+        if (adapters.get(adapter.id) === adapter) disposers.push(unsubscribe);
+        else unsubscribe();
+      };
+      retain(adapter.onData((chunk) => publishData(adapter.id, chunk)));
+      retain(adapter.onTitle?.((title) => patchSession(adapter.id, { title }, "terminalSessionTitleChanged")));
+      retain(
+        adapter.onExit((exit) => {
+          patchSession(adapter.id, { status: "exited", exit }, "terminalSessionExited");
+          // The presentation retains its bounded history and exit; the live adapter is finished.
+          if (bindingId) releaseAdapter(adapter.id);
+          else cleanupSession(adapter.id);
+        }),
+      );
+
       return { sessionId: adapter.id };
     })();
 
-    if (input.bindingId) pendingSessionByBindingId.set(input.bindingId, openSession);
+    openings.set(openSession, { ownerId: input.ownerId, bindingId, controller });
+    if (bindingId) pendingSessionByBindingId.set(bindingId, openSession);
+    notifyOwnership();
     try {
       return await openSession;
     } finally {
-      if (input.bindingId && pendingSessionByBindingId.get(input.bindingId) === openSession) {
-        pendingSessionByBindingId.delete(input.bindingId);
+      openings.delete(openSession);
+      if (bindingId && pendingSessionByBindingId.get(bindingId) === openSession) {
+        pendingSessionByBindingId.delete(bindingId);
       }
+      notifyOwnership();
     }
   };
 
   return {
     store,
 
-    isAvailable: () => opener !== null,
+    isAvailable: () => !disposed && opener !== null,
 
     setSessionOpener(next) {
       opener = next;
@@ -209,19 +220,49 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
     open,
 
     write(input) {
-      requireAdapter(input.sessionId).write(input.data);
+      if (adapters.has(input.sessionId) || !store.getState().sessionsById[input.sessionId])
+        requireAdapter(input.sessionId).write(input.data);
     },
 
     resize(input) {
-      requireAdapter(input.sessionId).resize(input.cols, input.rows);
+      if (adapters.has(input.sessionId) || !store.getState().sessionsById[input.sessionId])
+        requireAdapter(input.sessionId).resize(input.cols, input.rows);
     },
 
     kill,
 
     killBinding,
 
+    onDidChangeOwnership(listener) {
+      if (disposed) return () => {};
+      ownershipListeners.add(listener);
+      return () => {
+        ownershipListeners.delete(listener);
+      };
+    },
+
+    hasOwner(ownerId) {
+      return (
+        [...sessionOwners.values()].includes(ownerId) ||
+        [...openings.values()].some((entry) => entry.ownerId === ownerId)
+      );
+    },
+
+    async killOwner(ownerId) {
+      for (const admission of openings.values()) {
+        if (admission.ownerId === ownerId) admission.controller.abort();
+      }
+      const results = await Promise.allSettled(
+        [...sessionOwners].filter(([, owner]) => owner === ownerId).map(([sessionId]) => kill({ sessionId })),
+      );
+      const errors = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+      if (errors.length) throw new AggregateError(errors, "Terminal owner cleanup failed");
+    },
+
     subscribe(sessionId, sink) {
-      const adapter = requireAdapter(sessionId);
+      const adapter = adapters.get(sessionId);
+      const session = store.getState().sessionsById[sessionId];
+      if (!session) requireAdapter(sessionId);
       const unsubscribes: Array<(() => void) | undefined> = [];
       if (sink.onData) {
         const onData = sink.onData;
@@ -230,10 +271,12 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
         unsubscribes.push(() => subscribers?.delete(onData));
         for (const chunk of dataHistory.get(sessionId) ?? []) onData(chunk);
       }
-      unsubscribes.push(
-        sink.onExit ? adapter.onExit(sink.onExit) : undefined,
-        sink.onError ? adapter.onError(sink.onError) : undefined,
-      );
+      if (adapter) {
+        unsubscribes.push(
+          sink.onExit ? adapter.onExit(sink.onExit) : undefined,
+          sink.onError ? adapter.onError(sink.onError) : undefined,
+        );
+      } else if (session?.exit) sink.onExit?.(session.exit);
       return () => {
         for (const unsubscribe of unsubscribes) unsubscribe?.();
       };
@@ -247,11 +290,10 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
       return Object.values(store.getState().sessionsById);
     },
 
-    async dispose() {
-      const running = Object.values(store.getState().sessionsById).filter((session) => session.status === "running");
-      await Promise.all(running.map((session) => kill({ sessionId: session.id })));
-      for (const session of Object.values(store.getState().sessionsById)) cleanupSession(session.id);
-      adapters.clear();
+    dispose() {
+      disposed = true;
+      for (const admission of openings.values()) admission.controller.abort();
+      return cleanup.dispose();
     },
   };
 };

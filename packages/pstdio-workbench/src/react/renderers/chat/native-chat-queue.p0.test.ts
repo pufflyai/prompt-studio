@@ -27,7 +27,7 @@ test("queued control echoes update presentation without replacing query-derived 
   const queued = { provider: { harnessId: "test.agent", model: "B", params: { thinking: "low" } } };
   const session = createChatSession({ query: async () => ({ values: base }), action: async () => undefined });
   const release = session.retain();
-  await Promise.resolve();
+  await session.query.read();
   expect(session.getSnapshot().draft.values).toEqual(base);
   const act = async () => ({ snapshot: { values: queued, notice: "Queue settings checked" } });
   await runNativeChatAction(session, { type: "control", id: "provider", values: queued }, act, true);

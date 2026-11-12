@@ -42,3 +42,5 @@ These are gaps in the published API, not choices of the Performance Monitoring e
 - An extension cannot open its own status popover from a command, and its commands run in the runtime, which cannot read device measurements. Device actions such as copying a snapshot belong in the extension's views.
 - `extensionFrames` identify an extension only by its install id and webview id. Consumers cannot show the extension's display name.
 - Extension contributions load with a project. With no project open, no extension control or meter exists, although the device switch may still be on.
+
+*Updated at: 2026-11-04*

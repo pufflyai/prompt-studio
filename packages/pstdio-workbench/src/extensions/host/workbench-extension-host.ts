@@ -15,6 +15,7 @@ import { registerWorkbenchExtensionFileRenderers } from "../contributions/file-r
 import { registerWorkbenchExtensionKanbanRenderers } from "../contributions/kanban-renderer-contributions";
 import { registerWorkbenchExtensionNavigationItems } from "../contributions/navigation-item-contributions";
 import { localizeParamSchema } from "../contributions/param-schema-localization";
+import { registerWorkbenchExtensionTerminalRenderers } from "../contributions/terminal-renderer-contributions";
 import { registerWorkbenchExtensionTreeRenderers } from "../contributions/tree-renderer-contributions";
 import { registerResourceKinds } from "./resource-kind-contributions";
 import {
@@ -59,6 +60,7 @@ const registerCommands = (
         description: text(command.description),
         params: localizeParamSchema(command.params, text, command.extensionId),
         resourceMutation: command.resourceMutation,
+        copyResultToClipboard: command.copyResultToClipboard,
       },
       {
         prepareArgs: (args, executionContext, onArgsChange) =>
@@ -195,17 +197,24 @@ const registerModes = (input: InternalRegisterWorkbenchExtensionContributionsInp
 const registerModePlacements = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>
   input.metadata.placements.map((placement) => input.workbench.modePlacements.registerPlacement(placement));
 export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWorkbenchExtensionContributionsInput) => {
+  const disposables: Disposable[] = [];
   const input: InternalRegisterWorkbenchExtensionContributionsInput = {
     ...sourceInput,
     metadata: toInternalWorkbenchExtensionMetadata(sourceInput.metadata, {
       projectId: sourceInput.projectId,
-      createTab: (metadata) => createWorkbenchExtensionTabPresentation(sourceInput, metadata),
+      createTab: (metadata) => {
+        const tab = createWorkbenchExtensionTabPresentation(sourceInput, metadata);
+        disposables.push(tab);
+        return tab;
+      },
     }),
   };
-  const disposables: Disposable[] = [];
+  let terminals: ReturnType<typeof registerWorkbenchExtensionTerminalRenderers> | undefined;
   const context: WorkbenchExtensionCommandContext = input;
   try {
     disposables.push(registerWorkbenchExtensionChatRenderers(sourceInput));
+    terminals = registerWorkbenchExtensionTerminalRenderers(sourceInput);
+    disposables.push(terminals);
     disposables.push(...registerCommands(context, input.metadata));
     disposables.push(
       ...registerWorkbenchExtensionKeybindings({
@@ -261,6 +270,7 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
     disposables.push(...registerModes(input));
     disposables.push(...registerModePlacements(input));
     disposables.push(...registerPages(input));
+    terminals.commit();
     return {
       dispose() {
         disposeAll(disposables);
@@ -268,6 +278,7 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
     };
   } catch (error) {
     disposeAll(disposables);
+    terminals?.rollback();
     throw error;
   }
 };

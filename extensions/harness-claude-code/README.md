@@ -55,3 +55,9 @@ Claude receives the correction at its next supported input boundary, usually aft
 Prompt Studio confirms delivery after Claude acknowledges the message. Each submission appears once in the conversation, including identical messages, and keeps its identity when history is reopened. Claude saves corrections received during a tool as queued-command entries; the harness reads those as user messages.
 
 If the run has already stopped accepting input, delivery is rejected. If the connection fails after a possible send, delivery remains uncertain and is never resent automatically. A run completes after its pending input and background work finish.
+
+## Account quotas
+
+Run `pst harness-claude-code quotas` to inspect the native account quota snapshot, including model-specific windows. It sends only `initialize` and `get_usage` control requests in a temporary process, with no prompt, MCP servers, or saved session. It requests that local transcript analysis be skipped; older CLIs, including the bundled 2.1.203, ignore that request and may still scan local usage history. Reads are time bounded, and cleanup stops the owned process tree and closes its pipes within a separate one-second allowance. Claude Code may return no account quota snapshot for the current sign-in; the command then reports `unavailable` rather than estimating a balance from session tokens.
+
+*Updated at: 2026-11-10*

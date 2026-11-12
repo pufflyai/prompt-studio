@@ -1,4 +1,5 @@
 import type { SettingsRegistry } from "../../core";
+import { createWorkbenchStore } from "../../core/shared/store/workbench-store";
 
 export interface SettingsDraft {
   title: string;
@@ -15,7 +16,10 @@ interface Warning {
 }
 export const createSettingsLeaveGuard = () => {
   const drafts = new Set<SettingsDraft>();
-  const listeners = new Set<() => void>();
+  const projection = createWorkbenchStore<{ warning: Warning | null; actions?: SettingsDraft }>({
+    name: "workbench.settings-leave",
+    initialState: { warning: null },
+  });
   let warning: Warning | null = null;
   let actions: SettingsDraft | undefined;
   const changed = () => {
@@ -34,12 +38,12 @@ export const createSettingsLeaveGuard = () => {
           },
         }
       : undefined;
-    for (const listener of listeners) listener();
+    projection.setState({ warning, actions }, false, "updateSettingsLeave");
   };
   let resolve: ((leave: boolean) => void) | undefined;
   const publish = (next: Warning | null) => {
     warning = next;
-    for (const listener of listeners) listener();
+    projection.setState({ warning, actions }, false, "updateSettingsLeave");
   };
   const finish = (leave: boolean) => {
     const complete = resolve;
@@ -51,12 +55,7 @@ export const createSettingsLeaveGuard = () => {
     getSnapshot: () => warning,
     getActions: () => actions,
     changed,
-    subscribe(listener: () => void) {
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
-    },
+    subscribe: (listener: () => void) => projection.subscribe(listener),
     register(draft: SettingsDraft) {
       drafts.add(draft);
       changed();

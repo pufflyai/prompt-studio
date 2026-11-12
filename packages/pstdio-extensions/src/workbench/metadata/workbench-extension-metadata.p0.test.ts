@@ -34,6 +34,17 @@ const source = (definition: LoadedExtensionSource["definition"]): LoadedExtensio
   },
   definition,
 });
+test("preserves clipboard command declarations through normalization and public metadata", () => {
+  const command = defineCommand({
+    id: "copy-reference",
+    title: "Copy reference",
+    copyResultToClipboard: true,
+    run: () => "reference",
+  });
+  const runtime = normalizeExtensionSources([source(defineExtension({ commands: [command] }))]);
+  const metadata = createWorkbenchExtensionMetadata({ runtime });
+  expect(metadata.commands[0]?.copyResultToClipboard).toBe(true);
+});
 test("keeps status detail views qualified through runtime normalization and public metadata", () => {
   const view = defineView({
     id: "details",

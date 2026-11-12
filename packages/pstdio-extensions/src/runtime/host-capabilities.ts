@@ -15,10 +15,12 @@ export const dashboardExtensionHostCapabilities = {
     "page.v1": { version: 1, since: "0.27.0" },
     "view.webview.v1": { version: 1, since: "0.26.0" },
     "view.tree.v1": { version: 1, since: "0.26.0" },
+    "view.tree.pages.v1": { version: 1, since: "0.47.0" },
     "view.file.v1": { version: 1, since: "0.26.0" },
     "view.controls.v1": { version: 1, since: "0.26.0" },
     "view.resourceList.v1": { version: 1, since: "0.46.0" },
     "view.chat.v1": { version: 1, since: "0.47.0" },
+    "view.terminal.v1": { version: 1, since: "0.47.0" },
     "view.kanban.v1": { version: 1, since: "0.26.0" },
     "view.data-table.v1": { version: 1, since: "0.26.0" },
     "placement.v1": { version: 1, since: "0.26.0" },
@@ -81,6 +83,9 @@ const runtimeRequirements = (runtime: ExtensionRuntime) => [
     ),
   ),
   ...runtime.placements.map((record) => requirement(record, record.id, "placement", "placement.v1")),
+  ...runtime.views
+    .filter((record) => record.contribution.body.kind === "tree" && record.contribution.body.page)
+    .map((record) => requirement(record, record.id, "view.tree.page", "view.tree.pages.v1")),
   ...runtime.navigationItems.map((record) => requirement(record, record.id, "navigationItem", "navigation-item.v1")),
   ...runtime.navigationTrees.map((record) => requirement(record, record.id, "navigationTree", "navigation-tree.v1")),
   ...runtime.statusBarItems.map((record) => requirement(record, record.id, "statusBarItem", "status-bar-item.v1")),

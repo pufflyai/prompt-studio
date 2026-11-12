@@ -102,3 +102,5 @@ Use `pst pstdio-planner auto-build pause`, `resume`, and `stop` for the same lif
 Automatic progress wakes, discovery checks, failed-supervisor recovery, and hourly reminders wait while shared implementation capacity is full. A final capacity check runs before starting the supervisor turn. Deferred wake state and new PR failure or conflict evidence remain pending until a slot is available. Worker completion triggers the existing event check without requiring a ticket edit. Scheduled checks inspect owned dispatches and shared implementation capacity, without scanning the board, workspace list, or session history.
 
 Answer the run’s pending decisions inline below Supervisor. Previous and Next preserve drafts and show one request at a time. Saving advances to the next request; failures keep the answer with an inline error. This reuses the Needs attention form, overlapping the request-answering portion of PS-691; broader blocker navigation remains separate.
+
+*Updated at: 2026-11-05*

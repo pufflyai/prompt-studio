@@ -185,11 +185,10 @@ export const createDocumentRelayConnection = (input: {
     wakeDocument: (name: string) =>
       input.synchronizeDocument ? target((signal) => input.synchronizeDocument!(name, signal)) : wake(),
     retry() {
+      // An explicit retry must release a held transfer before another pass can run.
+      resetAttempt();
+      input.onReady?.();
       live.retry();
-      if (attempt.signal.aborted) {
-        resetAttempt();
-        input.onReady?.();
-      }
       wake();
     },
     done: done.promise.finally(() => input.signal.removeEventListener("abort", close)),

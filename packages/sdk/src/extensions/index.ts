@@ -164,8 +164,11 @@ export {
   type WebviewSettingsClient,
 } from "./webview-client";
 export type {
+  EditingCommandOptions,
+  EditingCommandSessionOptions,
   EditingSessionOptions,
   EditingSnapshot,
+  WebviewCommandEditingSession,
   WebviewEditingClient,
   WebviewEditingSession,
 } from "./webview-editing";
@@ -199,6 +202,7 @@ export {
   WEBVIEW_HOST_CAPABILITY_VERSION,
   WEBVIEW_SCOPED_DECLARABLE_CAPABILITIES,
 } from "./host-compat";
+export { matchesQueryDependency, type QueryChangeEnvelope, type QueryDependency } from "./query-dependency";
 export type {
   AssetReference,
   AssetTransfer,
@@ -214,9 +218,21 @@ export type {
   NotificationStatus,
   UpdateNotificationInput,
 } from "./resource-compat";
+export type { ScopedQueryClient } from "./scoped-query";
+export {
+  createScopedQueryClient,
+  isScopedQueryCancellation,
+  type QueryScope,
+  type ScopedQuery,
+  type ScopedQueryDescriptor,
+  type ScopedQuerySnapshot,
+  scopedQueryKey,
+} from "./scoped-query";
 export { createTextEditingClient } from "./text-editing-client";
 export type * from "./text-editing-types";
 export { isWebviewCapabilityError, type WebviewCapabilityError } from "./webview-capability-error";
+export type { WebviewCommandQuery, WebviewCommandQueryOptions } from "./webview-command-query";
 export type { WebviewPageClient } from "./webview-page-client";
 export type { WebviewPerformanceClient } from "./webview-performance-client";
+export { createWebviewQueryClient, type WebviewQueryDescriptor } from "./webview-query";
 export type { CommandStream, CommandStreamOptions, WebviewStreamsClient } from "./webview-streams";

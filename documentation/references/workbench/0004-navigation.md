@@ -150,3 +150,5 @@ An application sets its default page with `createWorkbench({ startPage })`. Prom
 Use the Workspaces provider's public `workspacePages` refs for the grouped list, project Files, workspace, overview and synced history destinations. Files are documents in `workspaceFilePath` on the routed host-owned workspace resource. The default project folder uses `workspacePages.files` and has no Changes tab. Foreign resources use `workspacePages.history`; local file and execution actions require the host's current provider permissions.
 
 The legacy host `workbenchPages.workspace` and `workbenchPages.workspaces` refs are deprecated. Their saved URLs remain available through compatibility declarations while the provider views are installed. An ordinary extension can declare workspace page names under its own namespace; this does not grant ownership of the host's resource kind or file services.
+
+*Updated at: 2026-11-07*

@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { homeFrame } from "../helpers/home-loading";
+import { attachTerminalFocus, recordTerminalFocus } from "../helpers/terminal-focus-evidence";
 import { uiOrigin as apiBase } from "../ui-server";
 
 const deleteAllProjects = async (request: import("@playwright/test").APIRequestContext) => {
@@ -200,12 +201,13 @@ test("restores terminal tabs and opens a unique tab after refresh", async ({ pag
   await expect(terminalTabs.nth(3)).toHaveAttribute("aria-selected", "true");
 });
 
-test("accepts input after rapidly opening five terminal sessions", async ({ page, request }) => {
+test("accepts input after rapidly opening five terminal sessions", async ({ page, request }, info) => {
   await deleteAllProjects(request);
   const project = await createProject(request);
   await bypassOnboarding(page, project.id);
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
+  await recordTerminalFocus(page);
 
   await page.goto(`/projects/${project.id}`);
   await addTerminal(page);
@@ -214,7 +216,14 @@ test("accepts input after rapidly opening five terminal sessions", async ({ page
   for (let index = 0; index < 4; index += 1) await addTerminal(page);
 
   const terminalInput = page.getByRole("textbox", { name: "Terminal input" });
-  await expect(terminalInput).toBeFocused();
+  try {
+    await expect(terminalInput).toBeFocused();
+  } catch (error) {
+    await attachTerminalFocus(page, info).catch((failure) =>
+      console.error("Could not preserve terminal focus", failure),
+    );
+    throw error;
+  }
   await terminalInput.pressSequentially("echo __ps165_startup_input__");
   await terminalInput.press("Enter");
 

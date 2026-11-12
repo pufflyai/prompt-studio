@@ -5,10 +5,11 @@ import type {
   EventDeliveryResult,
   EventRef,
   ExtensionLoggerApi,
+  QueryChangeEnvelope,
   Struct,
 } from "@pstdio/sdk/extensions";
 import { commandRefId } from "@pstdio/sdk/extensions";
-import { resolveEventReferenceId } from "pstdio-api-contracts";
+import { queryChangeEnvelopeSchema, resolveEventReferenceId } from "pstdio-api-contracts";
 import type { ExtensionRuntime, NormalizedExtension } from "../../types/runtime";
 import { createInvocationScope, type InvocationScope } from "./scope";
 import type { BuildEnvironmentInput, CommandRunnerHostDeps } from "./types";
@@ -22,7 +23,12 @@ export const refId = (ref: CommandRef | EventRef | string, ownerExtensionId?: st
 export const lifecycleEventId = (phase: CommandLifecyclePhase, commandId: string) => `command.${phase}:${commandId}`;
 
 export interface EventDispatcher {
-  dispatch(eventId: string, payload: Struct, origin: EventOrigin): Promise<EventDeliveryResult>;
+  dispatch(
+    eventId: string,
+    payload: Struct,
+    origin: EventOrigin,
+    refresh?: QueryChangeEnvelope,
+  ): Promise<EventDeliveryResult>;
 }
 
 type EventOrigin = Pick<BuildEnvironmentInput, "projectId" | "workspaceDir" | "workspaceId">;
@@ -44,8 +50,14 @@ const findExtension = (runtime: ExtensionRuntime, id: string): NormalizedExtensi
   runtime.extensions.find((ext) => ext.id === id);
 
 export const createEventDispatcher = (input: DispatcherDeps): EventDispatcher => {
-  const dispatch = async (eventId: string, payload: Struct, origin: EventOrigin): Promise<EventDeliveryResult> => {
-    input.deps.onWillDispatchEvent?.(eventId);
+  const dispatch = async (
+    eventId: string,
+    payload: Struct,
+    origin: EventOrigin,
+    refresh?: QueryChangeEnvelope,
+  ): Promise<EventDeliveryResult> => {
+    refresh = refresh ? queryChangeEnvelopeSchema.parse(refresh) : undefined;
+    input.deps.onWillDispatchEvent?.(eventId, refresh);
     const subs = input.runtime.hooks.filter((h) => h.eventId === eventId);
     let delivered = 0;
     const diagnostics: NonNullable<EventDeliveryResult["diagnostics"]> = [];
@@ -86,7 +98,7 @@ export const createEventDispatcher = (input: DispatcherDeps): EventDispatcher =>
       }
     }
 
-    input.deps.onDidDispatchEvent?.(eventId);
+    input.deps.onDidDispatchEvent?.(eventId, refresh);
 
     return diagnostics.length > 0 ? { delivered, diagnostics } : { delivered };
   };

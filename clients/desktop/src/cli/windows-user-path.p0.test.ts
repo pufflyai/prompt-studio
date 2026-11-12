@@ -5,6 +5,16 @@ import { quotePowerShell, runWindowsPowerShell, updateWindowsUserPath } from "./
 const directory = "C:\\Users\\Person's Å & %test% !\\PromptStudio\\bin";
 const original = `%USERPROFILE%\\bin;${Array.from({ length: 700 }, (_, i) => `C:\\Tool ${i}`).join(";")}`;
 
+test.skipIf(process.platform !== "win32")(
+  "a cancelled PowerShell command exits before its caller cleans up",
+  async () => {
+    const controller = new AbortController();
+    const command = runWindowsPowerShell("Start-Sleep -Seconds 60", undefined, controller.signal);
+    controller.abort();
+    await expect(command).rejects.toMatchObject({ name: "AbortError" });
+  },
+);
+
 for (const action of ["install", "uninstall"] as const) {
   test.skipIf(process.platform !== "win32")(
     `Windows PATH ${action} preserves long values and environment references`,

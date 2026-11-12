@@ -26,7 +26,9 @@ test("adding a tool keeps the other empty panel open", async () => {
   let browser: Browser | null = null;
   try {
     const started = await test.step("Start the packaged runtime", () =>
-      startPackagedServe(root, { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-home", "pstdio-artifacts") }));
+      startPackagedServe(root, {
+        PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-home", "pstdio-artifacts", "pstdio-session-browser"),
+      }));
     child = started.child;
     phase("runtime ready; create project");
     const folder = join(root, "project");

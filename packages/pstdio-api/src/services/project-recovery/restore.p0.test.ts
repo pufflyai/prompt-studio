@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, test as baseTest, expect } from "bun:test";
 import { createHash } from "node:crypto";
 import {
   chmod,
@@ -19,10 +19,13 @@ import { join } from "node:path";
 import { createSyncSpace } from "pstdio-sync/encryption";
 import { captureRecoveryFolder } from "./capture";
 import { createRecoveryChunkStore, recoveryChunkBytes } from "./chunks";
+import { nativeRecoverySupported } from "./native-recovery.fixture";
 import { createRecoveryPages, type RecoveryEntry } from "./pages";
 import { restoreRecoveryCapture } from "./restore";
 import { createRecoveryStagingJournal } from "./restore-staging";
 import { prepareRecoveryCapture } from "./transfer";
+
+const test = baseTest.skipIf(!nativeRecoverySupported);
 
 const roots: string[] = [];
 afterEach(async () => {
@@ -134,6 +137,18 @@ test("a restore keeps the applied .pstignore and leaves excluded paths out", asy
   await restore(await capture(), absent);
   await expect(lstat(join(absent, ".pstignore"))).rejects.toThrow();
   expect(await readFile(join(absent, "nested/node_modules/package/index.js"), "utf8")).toBe("excluded");
+});
+
+test("a .pstignore with a byte-order mark restores byte for byte and keeps its rules", async () => {
+  const { root, folder, capture, restore } = await fixture();
+  await mkdir(join(folder, "dist"));
+  await writeFile(join(folder, "dist/bundle.js"), "excluded");
+  await writeFile(join(folder, "kept.txt"), "kept");
+  await writeFile(join(folder, ".pstignore"), "\uFEFFdist/\n");
+  const destination = join(root, "restored");
+  await restore(await capture(), destination);
+  expect(await readFile(join(destination, ".pstignore"), "utf8")).toBe("\uFEFFdist/\n");
+  expect((await readdir(destination)).sort()).toEqual([".pstignore", "kept.txt"]);
 });
 
 test("an existing destination is refused without writes, even an empty folder or a link", async () => {

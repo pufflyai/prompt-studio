@@ -29,8 +29,8 @@ test("Session menus share resource actions and switch through the full history",
   await nav.locator('[data-scope="scroll-area"][data-part="viewport"]').evaluateAll((elements) => {
     for (const element of elements) element.scrollTop = element.scrollHeight;
   });
-  // Native tree pagination exposes the next history page through its expandable branch.
-  await nav.getByRole("option", { name: "More sessions", exact: true }).press("ArrowRight");
+  // Reaching the visible end fetches the next page without an expansion or another click.
+  await expect(nav.getByRole("option", { name: "History 14", exact: true })).toBeAttached();
   await nav.locator('[data-scope="scroll-area"][data-part="viewport"]').evaluateAll((elements) => {
     for (const element of elements) element.scrollTop = element.scrollHeight;
   });
@@ -64,7 +64,7 @@ test("Session menus share resource actions and switch through the full history",
   await expect(picker.getByRole("option", { name: /Keep open$/ })).toBeVisible();
   await search.fill("history 00");
   await expect(options).toHaveText(["History 00"]);
-  await expect(picker.getByRole("img", { name: "Session status: completed" })).toBeVisible();
+  await expect(picker.getByRole("img", { name: "Session status: pending" })).toBeVisible();
   const sessions = await (await request.get(`/v1/sessions?project_id=${project.id}`)).json();
   const history = sessions.find((session: { title: string }) => session.title === "History 00");
   try {

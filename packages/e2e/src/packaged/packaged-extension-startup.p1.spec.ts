@@ -25,7 +25,7 @@ for (const destination of ["start", "extension", "navigate-away"] as const) {
     let browser: Browser | undefined;
     try {
       const runtime = await startPackagedServe(root, {
-        PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture", "pstdio-home"),
+        PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture", "pstdio-home", "pstdio-session-browser"),
       });
       child = runtime.child;
       const folder = join(root, "project");
@@ -51,14 +51,16 @@ for (const destination of ["start", "extension", "navigate-away"] as const) {
         destination === "start" ? projectUrl : `${projectUrl}/extensions/pstdio.workbench-fixture/lab`;
       await page.goto(destinationUrl);
       await requested.promise;
-      await expect(page.getByRole("option", { name: "Sessions", exact: true })).toBeVisible();
+      await expect(page.getByRole("option", { name: "Extensions", exact: true })).toBeVisible();
+      await expect(page.getByRole("option", { name: "Settings", exact: true })).toBeVisible();
+      await expect(page.getByRole("option", { name: "Sessions", exact: true })).toHaveCount(0);
       if (destination === "start") {
         await expect(page.locator('iframe[title="Home"]')).toHaveCount(0);
       } else {
         await expect(page).toHaveURL(destinationUrl);
       }
       await expect(page.getByRole("option", { name: "Lab mode", exact: true })).toHaveCount(0);
-      if (destination === "navigate-away") await page.getByRole("option", { name: "Sessions", exact: true }).click();
+      if (destination === "navigate-away") await page.getByRole("option", { name: "Extensions", exact: true }).click();
       const registered = page.waitForEvent("console", {
         predicate: (message) =>
           message.text().includes('"event":"registration-ready"') && message.text().includes(project.id),
@@ -67,10 +69,11 @@ for (const destination of ["start", "extension", "navigate-away"] as const) {
       await registered;
       if (destination === "extension") await expect(page.locator('iframe[title="Lab"]')).toBeVisible();
       if (destination === "start") await expect(homePage(page)).toBeVisible();
-      if (destination === "navigate-away") await expect(page).toHaveURL(`${projectUrl}/sessions/compose`);
+      if (destination === "navigate-away") await expect(page).toHaveURL(`${projectUrl}/extensions`);
       // A page with its own navigation replaces the project rows. Return to Start
       // after proving restoration so the extension's root entry is visible again.
       if (destination !== "start") await page.goto(projectUrl);
+      await expect(page.getByRole("option", { name: "Sessions", exact: true })).toBeVisible();
       await expect(page.getByRole("option", { name: "Lab mode", exact: true })).toBeVisible();
       await page.getByRole("option", { name: "Lab mode", exact: true }).click();
       await expect(page.getByRole("tab", { name: "Artifacts", exact: true })).toBeVisible();

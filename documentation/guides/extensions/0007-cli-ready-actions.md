@@ -92,3 +92,5 @@ You do not need to write the command declarations yourself. Include CLI access i
 > Build a reading-list extension. Let me add a link, list the items, and mark an item as read from its page. Make those operations CLI-ready through pst, with useful help and returned IDs. Show that an item created through the CLI appears in the page, and that a change in the page is visible through the list command.
 
 The result is a tool you and your agents can use through the same operations. See [Add tools](../getting-started/0003-add-tools.md#ask-an-agent-to-build-your-tool) to set up the agent and install its extension-writing skill.
+
+*Updated at: 2026-10-18*

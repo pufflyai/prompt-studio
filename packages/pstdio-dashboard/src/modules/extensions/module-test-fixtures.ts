@@ -160,6 +160,5 @@ export const metadataWithResourceExtension = {
   ],
 } satisfies DashboardExtensionMetadata;
 export const flushMicrotasks = async () => {
-  await Promise.resolve();
-  await Promise.resolve();
+  await new Promise<void>((resolve) => setImmediate(resolve));
 };

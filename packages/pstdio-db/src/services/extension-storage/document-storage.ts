@@ -20,7 +20,9 @@ import { resourceDocumentId } from "./resource-document-persistence";
 import type { NumberChange } from "./resource-number-repair";
 import type { StorageDiagnostics } from "./storage-diagnostics";
 
-const notifyNativeRecords = (listeners: Map<string, Set<() => void>>, owner: StorageOwner, keys: string[]) => {
+type NativeChange = { recordIds?: readonly string[] };
+type NativeListener = (change?: NativeChange) => void;
+const notifyNativeRecords = (listeners: Map<string, Set<NativeListener>>, owner: StorageOwner, keys: string[]) => {
   for (const documentKey of keys) {
     const key = JSON.stringify({
       workbench_id: owner.workbenchId,
@@ -53,7 +55,7 @@ const hasProjectedRecords = async (db: DbClient, owner: StorageOwner) => {
     .limit(1);
   return !!record;
 };
-export type StorageChange = StorageOwner & { documentId?: string };
+export type StorageChange = StorageOwner & { documentId?: string; recordIds?: readonly string[] };
 
 const documentRevision = (db: DbClient, documentId: string) => async (owner: StorageOwner) => {
   const [row] = await db
@@ -95,9 +97,9 @@ export const createDocumentStorageDBService = (
 ) => {
   const cache = createDocumentCache();
   const listeners = new Set<(owner: StorageChange, origin?: "relay") => void>();
-  const documentListeners = new Map<string, Set<() => void>>();
+  const documentListeners = new Map<string, Set<NativeListener>>();
   const numberListeners = new Set<(event: NumberChange) => void>();
-  const notifyOwnerNative = (owner: StorageOwner) => {
+  const notifyOwnerNative = (owner: StorageOwner, recordIds?: readonly string[]) => {
     for (const [key, callbacks] of documentListeners) {
       const address = JSON.parse(key) as { workbench_id: string; extension_id: string; document_id: string };
       if (
@@ -105,7 +107,7 @@ export const createDocumentStorageDBService = (
         address.extension_id === owner.extensionId &&
         address.document_id.startsWith('["native-markdown",')
       )
-        for (const listener of callbacks) listener();
+        for (const listener of callbacks) listener({ recordIds });
     }
   };
   const numbersChanged = (events: NumberChange[]) => notifyNumbers(numberListeners, events);
@@ -181,9 +183,9 @@ export const createDocumentStorageDBService = (
           statistics,
           numbersChanged,
           metadata: transaction,
-          changed: () => {
-            notifyOwnerNative(owner);
-            for (const listener of listeners) listener(owner, "relay");
+          changed: (recordIds) => {
+            notifyOwnerNative(owner, recordIds);
+            for (const listener of listeners) listener({ ...owner, ...(recordIds && { recordIds }) }, "relay");
           },
         }),
       list: (owner: StorageOwner) => directory.list(owner),
@@ -230,9 +232,9 @@ export const createDocumentStorageDBService = (
               for (const listener of listeners)
                 listener({ ...input.owner, documentId: JSON.stringify(["native-markdown", key]) });
           },
-          changed: () => {
-            notifyOwnerNative(input.owner);
-            for (const listener of listeners) listener(input.owner);
+          changed: (recordIds) => {
+            notifyOwnerNative(input.owner, recordIds);
+            for (const listener of listeners) listener({ ...input.owner, ...(recordIds && { recordIds }) });
           },
         }),
       };

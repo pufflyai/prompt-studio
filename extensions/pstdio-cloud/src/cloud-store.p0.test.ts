@@ -8,6 +8,85 @@ import {
 } from "@pstdio/sdk/extensions";
 import { createCloudStore } from "./cloud-store";
 
+test("a visible Cloud subscription does not wait for a retired account read", async () => {
+  const retired = Promise.withResolvers<AccountStatus>();
+  let reads = 0;
+  const store = createCloudStore(
+    {
+      events: { subscribe: () => () => {} },
+      account: {
+        status: () => (++reads === 1 ? retired.promise : Promise.resolve(account)),
+        projectSyncStatus: async () => ({ state: "first-download-incomplete", offlineReady: false }),
+        devices: async () => [],
+      },
+    },
+    "project",
+    false,
+  );
+  const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
+  const hide = store.subscribe(() => {});
+  await tick();
+  hide();
+  const close = store.subscribe(() => {});
+  try {
+    await tick();
+    expect(reads).toBe(2);
+    expect(store.get().data?.sync.state).toBe("first-download-incomplete");
+    retired.resolve({ ...account, login: null });
+    await tick();
+    expect(store.get().data?.account).toEqual(account);
+  } finally {
+    retired.resolve(account);
+    close();
+  }
+});
+
+test("a retired Cloud read cannot release a newer pending read or consume its refresh", async () => {
+  const retired = Promise.withResolvers<AccountStatus>();
+  const current = Promise.withResolvers<AccountStatus>();
+  let reads = 0;
+  const store = createCloudStore(
+    {
+      events: { subscribe: () => () => {} },
+      account: {
+        status: () => {
+          reads++;
+          if (reads === 1) return retired.promise;
+          if (reads === 2) return current.promise;
+          return Promise.resolve(account);
+        },
+        projectSyncStatus: async () => ({ state: "first-download-incomplete", offlineReady: false }),
+        devices: async () => [],
+      },
+    },
+    "project",
+    false,
+  );
+  const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
+  const hide = store.subscribe(() => {});
+  await tick();
+  hide();
+  const close = store.subscribe(() => {});
+  try {
+    await tick();
+    expect(reads).toBe(2);
+    retired.resolve({ ...account, login: null });
+    await tick();
+    store.refresh();
+    await tick();
+    expect(reads).toBe(2);
+    expect(store.get().data).toBeUndefined();
+    current.resolve({ ...account, login: null });
+    await tick();
+    expect(reads).toBe(3);
+    expect(store.get().data?.account).toEqual(account);
+  } finally {
+    retired.resolve(account);
+    current.resolve(account);
+    close();
+  }
+});
+
 const account: AccountStatus = {
   login: { managerOrigin: "https://account.test", relayOrigin: "https://relay.test", accountId: "a", deviceId: "d" },
   features: { relay: true },
@@ -270,6 +349,53 @@ test("queued account changes cannot publish an obsolete account with another acc
   } finally {
     stale.resolve(account);
     current.resolve(nextAccount);
+    unsubscribe();
+  }
+});
+
+test("incomplete downloads publish without waiting for irrelevant project preparation", async () => {
+  let changed = () => {};
+  let sync: ProjectSyncStatus = { state: "first-download-incomplete", offlineReady: false };
+  let projectReads = 0;
+  const project = Promise.withResolvers<{ state: "preparing" }>();
+  const store = createCloudStore(
+    {
+      events: {
+        subscribe(event, listener) {
+          if ((typeof event === "string" ? event : event.id) === accountEvents.projectSyncChanged.id)
+            changed = listener;
+          return () => {};
+        },
+      },
+      account: {
+        status: async () => account,
+        projectSyncStatus: async () => sync,
+        devices: async () => [],
+      },
+    },
+    "project",
+    false,
+    async () => {
+      projectReads++;
+      return project.promise;
+    },
+  );
+  const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
+  const unsubscribe = store.subscribe(() => {});
+  try {
+    await tick();
+    expect(store.get().data?.sync).toEqual({ state: "first-download-incomplete", offlineReady: false });
+    expect(projectReads).toBe(0);
+    sync = { state: "synced", offlineReady: true };
+    changed();
+    await tick();
+    expect(projectReads).toBe(1);
+    project.resolve({ state: "preparing" });
+    await tick();
+    expect(store.get().data?.sync).toEqual(sync);
+    expect(store.get().data?.project).toEqual({ state: "preparing" });
+  } finally {
+    project.resolve({ state: "preparing" });
     unsubscribe();
   }
 });

@@ -11,14 +11,34 @@ const account: AccountStatus = {
 const synced: ProjectSyncStatus = { state: "synced", offlineReady: true };
 
 describe("Cloud status", () => {
+  test("shows connection loss before sign-in and account loading", () => {
+    const offline: ProjectSyncStatus = { state: "offline", offlineReady: true };
+    expect(cloudStatus({ ...account, login: null }, offline).key).toBe("offline");
+    expect(cloudStatus({ ...account, signInRequired: true }, offline).key).toBe("offline");
+    expect(cloudStatus(undefined, undefined, undefined, false).key).toBe("offline");
+    expect(cloudStatus({ ...account, login: null }, synced, undefined, false).key).toBe("offline");
+    expect(cloudStatus({ ...account, login: null }, synced).key).toBe("signIn");
+  });
+  test("keeps folder preparation and setup failure visible after the download finishes", () => {
+    expect(cloudStatus(account, synced, { state: "preparing" }).key).toBe("preparing");
+    expect(cloudStatus(account, synced, { state: "failed", error: "Cannot prepare folder" }).key).toBe("attention");
+    expect(cloudStatus(account, synced, { state: "ready" }).key).toBe("synced");
+  });
+  test("keeps a disconnected account visible before its feature flags can be refreshed", () => {
+    expect(cloudStatus({ ...account, features: null }, { state: "offline", offlineReady: true }).key).toBe("offline");
+  });
   test("distinguishes a local project from a disconnected cloud project", () => {
     expect(cloudStatus(account, { state: "local", offlineReady: true }).key).toBe("local");
     expect(cloudStatus(account, { state: "offline", offlineReady: true }).key).toBe("offline");
   });
 
   test("requires sign-in recovery even when the last project state was synced", () => {
-    expect(cloudStatus({ ...account, signInRequired: true }, synced).key).toBe("signInAgain");
-    expect(cloudStatus({ ...account, login: null }, synced).key).toBe("signIn");
+    const again = cloudStatus({ ...account, signInRequired: true }, synced);
+    expect(again.key).toBe("signInAgain");
+    expect(again.icon).toBe("user-round-key");
+    const signIn = cloudStatus({ ...account, login: null }, synced);
+    expect(signIn.key).toBe("signIn");
+    expect(signIn.icon).toBe("user-round-key");
   });
 
   test("keeps an account without early access signed in", () => {
