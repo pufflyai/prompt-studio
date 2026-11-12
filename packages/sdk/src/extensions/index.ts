@@ -237,4 +237,5 @@ export type { WebviewCommandQuery, WebviewCommandQueryOptions } from "./webview-
 export type { WebviewPageClient } from "./webview-page-client";
 export type { WebviewPerformanceClient } from "./webview-performance-client";
 export { createWebviewQueryClient, type WebviewQueryDescriptor } from "./webview-query";
+export type { WebviewServiceQuery } from "./webview-service-query";
 export type { CommandStream, CommandStreamOptions, WebviewStreamsClient } from "./webview-streams";

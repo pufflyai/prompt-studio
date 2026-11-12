@@ -16,6 +16,8 @@ export interface DiffViewerProps {
   diffs: Diff[];
   changedFilePaths?: string[];
   defaultSelectedPath?: string | null;
+  selectedPath?: string | null;
+  onSelectedPathChange?: (path: string | null) => void;
   loading?: boolean;
   onLoadDiff?: (path: string) => Promise<void>;
   resolveFileIcon?: (path: string, options?: { isFolder?: boolean; isExpanded?: boolean }) => FileIconInfo | undefined;
@@ -76,19 +78,24 @@ export const DiffViewer = (props: DiffViewerProps) => {
     viewMode,
     diffViewMode,
     searchQuery,
-    selectedPath,
+    selectedPath: localSelectedPath,
     expandedFolderIds,
     setTreePanelOpen,
     setViewMode,
     setDiffViewMode,
     setSearchQuery,
-    setSelectedPath,
+    setSelectedPath: setLocalSelectedPath,
     setExpandedFolderIds,
     toggleFolder,
     expandAll,
     collapseAll,
   } = useDiffViewerStore();
 
+  const selectedPath = props.selectedPath === undefined ? localSelectedPath : props.selectedPath;
+  const setSelectedPath = (path: string | null) => {
+    if (props.selectedPath === undefined) setLocalSelectedPath(path);
+    props.onSelectedPathChange?.(path);
+  };
   const diffPaths = diffs.map(getDiffPath);
   const filePaths = changedFilePaths ?? diffPaths;
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
@@ -123,11 +130,22 @@ export const DiffViewer = (props: DiffViewerProps) => {
   }, [filteredFilePathKey, setExpandedFolderIds, viewMode]);
 
   useEffect(() => {
+    if (loading) return;
     const diffPaths = filteredDiffPathKey ? filteredDiffPathKey.split("\0") : [];
     const filePaths = filteredFilePathKey ? filteredFilePathKey.split("\0") : [];
-    if (resolvedSelectedPath && diffPaths.includes(resolvedSelectedPath)) return;
-    setSelectedPath(resolveSelectedPath(diffPaths, filePaths));
-  }, [filteredDiffPathKey, filteredFilePathKey, resolvedSelectedPath, setSelectedPath]);
+    if (resolvedSelectedPath && filePaths.includes(resolvedSelectedPath)) return;
+    const next = resolveSelectedPath(diffPaths, filePaths);
+    if (props.selectedPath === undefined) setLocalSelectedPath(next);
+    props.onSelectedPathChange?.(next);
+  }, [
+    loading,
+    filteredDiffPathKey,
+    filteredFilePathKey,
+    resolvedSelectedPath,
+    setLocalSelectedPath,
+    props.selectedPath,
+    props.onSelectedPathChange,
+  ]);
 
   const expandAllFilesAndDiffs = () => {
     expandAll(folderIds);

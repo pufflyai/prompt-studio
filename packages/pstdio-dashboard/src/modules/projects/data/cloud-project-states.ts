@@ -1,9 +1,8 @@
 import type { ProjectSyncStatus } from "@pstdio/sdk/client";
-import { accountEvents } from "@pstdio/sdk/extensions";
 import { useScopedQueries, useScopedQuery } from "@pstdio/sdk/extensions/react";
-import { getRuntimeApiClient } from "@/lib/api";
-import { getDashboardAccountStatusQuery, getDashboardScopedQueries } from "@/lib/scoped-queries";
+import { getDashboardAccountStatusQuery } from "@/lib/scoped-queries";
 import { getRuntimeCollections } from "@/lib/sync/collections";
+import { getAccountQuerySources } from "@/shared/extensions/account-queries";
 
 export interface ProjectCloudState {
   /** This device is signed in to a Cloud account. */
@@ -21,15 +20,7 @@ export const useCloudProjectStates = (projectIds: string[]) => {
   const cloudProjects = new Set(account.data?.cloudProjects ?? []);
   const cloudIds = projectIds.filter((id) => cloudProjects.has(id));
   const statuses = useScopedQueries(
-    cloudIds.map((projectId) =>
-      getDashboardScopedQueries(owner)
-        .forScope({ projectId })
-        .query({
-          id: "project.syncStatus",
-          dependsOn: [accountEvents.projectSyncChanged.id, accountEvents.changed.id],
-          read: (signal) => getRuntimeApiClient(owner).account.projectSyncStatus(projectId, { signal }),
-        }),
-    ),
+    cloudIds.map((projectId) => getAccountQuerySources(owner).source({ service: "projectSyncStatus", projectId })),
   );
   const signedIn = Boolean(account.data?.login);
   return (projectId: string) => {

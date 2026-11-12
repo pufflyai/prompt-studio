@@ -59,6 +59,7 @@ export type ScopedHostApis = Pick<
   | "skills"
   | "settings"
   | "extensions"
+  | "account"
 >;
 
 export interface CommandRunnerEnvironment {
