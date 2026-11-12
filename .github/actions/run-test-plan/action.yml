@@ -39,12 +39,7 @@ runs:
         PLAN_PREBUILT: ${{ inputs.prebuilt }}
         PLAN_DISPLAY: ${{ inputs.display }}
         CI_PLAN_OUTPUT_DIR: test-results/ci/planned/${{ steps.bundle.outputs.key }}
-      run: |
-        if [[ "$RUNNER_OS" == 'Linux' && "$PLAN_DISPLAY" == 'true' ]]; then
-          xvfb-run -a bun scripts/ci/run-ci-test-job.ts
-        else
-          bun scripts/ci/run-ci-test-job.ts
-        fi
+      run: bun scripts/ci/run-ci-test-job.ts
     - name: "[phase:test] Execute assigned Windows runs"
       if: runner.os == 'Windows'
       # Git Bash prepends its GNU tools; preserve the owning Windows runner's native tools.

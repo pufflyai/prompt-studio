@@ -21,33 +21,20 @@ jobs:
           install-strategy: native
       - run: bun run build -- --scope @pstdio/desktop --scope e2e --include-dependencies
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends openbox x11-utils xvfb
-      - name: Prepare the source Electron sandbox and matching browser
-        working-directory: clients/desktop
-        shell: bash
-        run: |
-          sandbox=$(bun -e 'const p=require("node:path");console.log(p.join(p.dirname(require("electron")),"chrome-sandbox"))')
-          sudo chown root:root "$sandbox"
-          sudo chmod 4755 "$sandbox"
-      - name: Install the dashboard browser for its owning Playwright version
+      - name: Prepare the native desktop package and source sandbox
+        run: bun scripts/ci/prepare-test-desktop.ts
+      - name: Install the matching browser
         working-directory: packages/e2e
         run: bunx --no-install playwright install chromium --with-deps
-      - name: Observe both source Electron phases on the original shared display
-        working-directory: clients/desktop
+      - name: Validate each source Electron invocation on its own display
+        env:
+          CI_PROFILE: production
+          PLAN_DISPLAY: 'true'
         shell: bash
         run: |
-          xvfb-run -a -e "$RUNNER_TEMP/release-xvfb.log" bash -c '
-            set +e
-            TEST_PRIORITIES=P1 bunx --no-install playwright test --config playwright.config.ts
-            first=$?
-            echo "Display state between P1 and P2"
-            ps -C Xvfb -o pid,ppid,args
-            ls -l /tmp/.X11-unix
-            test -f "$XAUTHORITY" && echo "Xauthority exists"
-            xprop -root _NET_SUPPORTING_WM_CHECK
-            TEST_PRIORITIES=P2 bunx --no-install playwright test --config playwright.config.ts
-            second=$?
-            exit $((first | second))
-          '
+          args=()
+          while IFS= read -r file; do args+=(--file "$file"); done < <(rg --files clients/desktop/src/e2e | rg '/desktop-.*\.(p1|p2)\.spec.ts$')
+          bun scripts/test.ts --runner desktop --priority P1,P2 --prebuilt "${args[@]}"
       - name: Check the previously failed streaming case
         if: ${{ !cancelled() }}
         run: bun run --cwd packages/e2e test:packaged:cli -- src/packaged/packaged-chat-motion-smoke.p2.test.ts -t 'retains streaming messages and cached history'
@@ -58,9 +45,9 @@ jobs:
           path: |
             clients/desktop/test-results
             packages/e2e/test-results
-            ${{ runner.temp }}/release-xvfb.log
-  browser_profile:
-    runs-on: ubuntu-24.04
+            test-results/ci
+  windows_cloud:
+    runs-on: windows-2025
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -71,17 +58,37 @@ jobs:
         with:
           bun-version-file: package.json
       - uses: ./.github/actions/setup-ci-cache
-      - run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
-      - working-directory: packages/e2e
-        run: bunx --no-install playwright install chromium --with-deps
-      - name: Profile only the failed hierarchy and Secondary Panel workloads
+        with:
+          install-strategy: native
+          windows-dev-drive: 'true'
+      - run: bun run build -- --scope e2e --include-dependencies
+      - name: Install the matching browser
+        working-directory: packages/e2e
+        run: bunx --no-install playwright install chromium
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-build-attempt-1
+          run-id: 43214095816
+          github-token: ${{ github.token }}
+      - shell: bash
+        run: |
+          bun scripts/ci/production-payload.ts check
+          tar -xzf release-build.tar.gz
+      - name: Observe cloud picker authentication on the original compiled application
         env:
-          UI_PERF_ASSERT_BUDGETS: '1'
-        run: bun scripts/ci/run-workbench-benchmarks.ts src/perf/resource-hierarchy.p3.bench.ts src/perf/workbench-interactions.p3.bench.ts
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/cli-win-x64/bin/pstdio.exe
+        run: bun run --cwd packages/e2e test:packaged:cli -- src/packaged/packaged-two-device-sync-smoke.p2.test.ts -t 'a new device opens its cloud project from the picker'
+      - name: Observe the failed native Cloud resumption contract
+        if: ${{ !cancelled() }}
+        working-directory: packages/pstdio-api
+        env:
+          PSTDIO_DEFAULT_EXTENSIONS: '[]'
+          PSTDIO_EXTENSION_WEBVIEW_BUILDS: '0'
+        run: bun src/test-utils/run-api-tests.ts --files='["src/services/relay/runtime-resumption.p1.test.ts"]'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: release-browser-profile-diagnostic
+          name: release-windows-cloud-diagnostic
           path: |
             packages/e2e/test-results
-            test-results/quarantine
+            packages/pstdio-api/test-results

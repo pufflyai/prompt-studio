@@ -35,6 +35,8 @@ jobs:
     # Preserve the existing desktop release allowance; operation budgets remain in benchmarks.
     timeout-minutes: 30
     env:
+      CI_PROFILE: production
+      PLAN_DISPLAY: ${{ matrix.platform == 'linux' && 'true' || 'false' }}
       SOURCE_SHA: ${{ inputs.source_sha }}
       ARTIFACT_RUN_ID: ${{ inputs.artifact_run_id }}
       ARTIFACT_ATTEMPT: ${{ inputs.artifact_attempt }}
@@ -90,10 +92,10 @@ jobs:
         uses: ./.github/actions/setup-windows-desktop-tests
       - name: "[phase:test] Measure fixed workloads without traces or retries"
         if: inputs.kind == 'performance'
-        run: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bun scripts/test.ts --performance-family desktop --prebuilt
+        run: bun scripts/test.ts --performance-family desktop --prebuilt
       - name: "[phase:test] Test every packaged functional case"
         if: inputs.kind == 'functional'
-        run: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bun scripts/test.ts --artifact packaged-desktop --prebuilt
+        run: bun scripts/test.ts --artifact packaged-desktop --prebuilt
       - name: Require first-attempt launch quarantine execution
         if: ${{ !cancelled() && inputs.kind == 'performance' && matrix.platform == 'win32' }}
         run: bun scripts/ci/verify-quarantine-reports.ts packaged-desktop-benchmark --scope @pstdio/desktop
