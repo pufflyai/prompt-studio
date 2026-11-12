@@ -14,7 +14,9 @@ const SessionComposer = () => {
   const [sent, setSent] = useState("");
   return (
     <>
-      <Text role="status">{sent}</Text>
+      <Text role="status" aria-label="Submitted follow-up">
+        {sent}
+      </Text>
       <ChatPanel
         messages={[]}
         emptyStateTitle="Review session"
@@ -226,7 +228,10 @@ const SessionNavigation = ({ composer = false }: { composer?: boolean }) => {
       open: "pin",
     });
     void w.navigation.openPanel({ panel: ticketsPanel, region: "side" });
-    if (composer) w.shell.setRegionOpen("side", false);
+    if (composer) {
+      w.pageLocations.navigate({ kind: "page", page: page("sessions"), resource: { ...session, id: "composer" } });
+      w.shell.setRegionOpen("side", false);
+    }
     return { workbench: w, storage };
   });
   return (

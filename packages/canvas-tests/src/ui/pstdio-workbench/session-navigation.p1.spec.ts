@@ -162,10 +162,10 @@ test("session resources use their panel menu and toggle from its opener", async 
 // Critical: adding the left resource menu must leave ordinary message submission reachable.
 test("the Side launcher leaves the session composer operable beside its resources", async ({ page }) => {
   const preview = await openCanvasPreview(page, source.replace("#Interactive", "#ComposerWithResources"));
-  await expect(preview.getByRole("option", { name: "Relationship test", exact: true })).toBeVisible();
-  await preview.getByTestId("send-message-button").click();
-  await expect(preview.getByRole("status")).toHaveText("Check related resources");
   const main = preview.locator('[data-workbench-panel="main"]');
+  await expect(main.getByRole("option", { name: "Relationship test", exact: true })).toBeVisible();
+  await main.getByTestId("send-message-button").click();
+  await expect(main.getByRole("status", { name: "Submitted follow-up" })).toHaveText("Check related resources");
   const before = (await main.boundingBox())!;
   await preview.getByRole("button", { name: "Open Side Panel", exact: true }).click();
   await expect(preview.getByTestId("workbench-side-panel-floating")).toBeVisible();
