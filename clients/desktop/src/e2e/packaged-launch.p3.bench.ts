@@ -10,7 +10,7 @@ import {
   type PackagedApp,
 } from "./packaged-app-helpers";
 import { crashPackagedRuntime, waitForAutomaticRecovery } from "./packaged-runtime-recovery";
-import { waitForVisibleElement } from "./visible-element-timing";
+import { timeVisibleChange } from "./visible-element-timing";
 
 const isIntelMac = process.platform === "darwin" && process.arch === "x64";
 const limits = desktopBudgets();
@@ -30,20 +30,24 @@ test("sidecar crash shows recovery within budget", async () => {
   let app: PackagedApp | null = null;
   try {
     app = await launchPackagedApp(home);
-    const firstCrashAt = Date.now();
-    crashPackagedRuntime(app.runtime.pid);
-    const restartingAt = await waitForVisibleElement(
+    const initialPid = app.runtime.pid;
+    const automaticRecovery = await timeVisibleChange(
       app.lifecyclePage,
       '[role="status"] :is(h1, h2, h3)',
       "Opening Prompt Studio",
+      () => {
+        crashPackagedRuntime(initialPid);
+      },
     );
     await waitForAutomaticRecovery(app);
-    const crashedAt = Date.now();
-    process.kill(app.runtime.pid, process.platform === "win32" ? undefined : "SIGKILL");
-    const visibleAt = await waitForVisibleElement(
+    const replacementPid = app.runtime.pid;
+    const recovery = await timeVisibleChange(
       app.lifecyclePage,
       '[role="alert"] :is(h1, h2, h3)',
       "Prompt Studio needs attention",
+      () => {
+        crashPackagedRuntime(replacementPid);
+      },
     );
     await recordBenchmark({
       name: "sidecar-crash-recovery",
@@ -53,8 +57,13 @@ test("sidecar crash shows recovery within budget", async () => {
       start: "Runtime process kill signal",
       end: "Visible recovery heading in the lifecycle window",
       metrics: [
-        { name: "automatic-recovery-ui", unit: "ms", value: restartingAt - firstCrashAt, budget: recoveryBudgetMs },
-        { name: "recovery-ui", unit: "ms", value: visibleAt - crashedAt, budget: recoveryBudgetMs },
+        {
+          name: "automatic-recovery-ui",
+          unit: "ms",
+          value: automaticRecovery.visibleAt - automaticRecovery.startedAt,
+          budget: recoveryBudgetMs,
+        },
+        { name: "recovery-ui", unit: "ms", value: recovery.visibleAt - recovery.startedAt, budget: recoveryBudgetMs },
       ],
     });
   } finally {

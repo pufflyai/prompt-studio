@@ -1,6 +1,6 @@
 {
   "name": "extension-lab",
-  "version": "0.46.0",
+  "version": "0.47.0",
   "displayName": "Extension Lab",
   "description": "Six complete example tools built with public extension pages, resources, modes, and themes.",
   "publisher": "pstdio",
@@ -9,7 +9,7 @@
     "./contracts": "./src/contracts.ts"
   },
   "engines": {
-    "pstdio": "^0.4.0"
+    "pstdio": "^0.4.0 || ^0.5.0"
   },
   "private": true,
   "type": "module",

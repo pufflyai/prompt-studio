@@ -90,9 +90,9 @@ Inline data-table sparkline and bar-chart renderers and the optional saved
 `rowHeight` setting also share the coordinated API 0.4.0 step. Existing columns
 and saved views keep their behavior. See [inline charts and row height](0004-contribution-api.md#inline-charts-and-row-height-on-main).
 
-Command, settings panel, settings section and appearance records on `main` include optional `localId` metadata so clients can resolve historical references from structured identity without parsing runtime IDs. Registered UI theme options can supply historical choices through optional `aliases`; pickers still expose one canonical option. These additions share API 0.4.0.
+Command, settings panel, settings section and appearance records on `main` include optional `localId` metadata so clients can resolve historical references from structured identity without parsing runtime IDs. Registered UI theme options can supply historical choices through optional `aliases`; pickers still expose one canonical option. These additions share API 0.5.0.
 
-The shorter first-party extension identities also share API 0.4.0. Canonical discovery and output use names such as `pstdio.notes`; historical invocations remain deprecated aliases. Ship the migration-capable host before renamed packages. See [identity upgrades](../../guides/extensions/0011-identity-upgrades.md).
+The shorter first-party extension identities also share API 0.5.0. Canonical discovery and output use names such as `pstdio.notes`; historical invocations remain deprecated aliases. Ship the migration-capable host before renamed packages. See [identity upgrades](../../guides/extensions/0011-identity-upgrades.md).
 
 ### Which version each check uses
 

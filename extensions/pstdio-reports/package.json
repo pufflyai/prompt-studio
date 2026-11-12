@@ -1,13 +1,13 @@
 {
   "name": "pstdio-reports",
-  "version": "0.46.0",
+  "version": "0.46.1",
   "displayName": "Agent Reports",
   "icon": "FileChartColumn",
   "description": "Built-in pstdio workspace reports for agent handoffs.",
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.2.1 || ^0.3.0 || ^0.4.0"
+    "pstdio": "^0.2.1 || ^0.3.0 || ^0.4.0 || ^0.5.0"
   },
   "pstdio": {
     "scope": "user"

@@ -18,7 +18,7 @@ A transactional startup migration moves complete database owner coordinates befo
 
 Encrypted transport names and opaque persisted derivations continue to use historical owners for both upgraded and new projects. This is permanent decoding metadata for supported persisted data, independent of the invocation deprecation period. No manifest alias fields, alias database or per-project stream flag are introduced.
 
-The host support ships first in the coordinated extension API 0.4.0 release. Renamed extension packages follow in a separate release-dependent PR with `engines.pstdio` requiring 0.4.0. Old published coordinates retain their release history; catalog installation resolves their canonical replacement without a registry redirect.
+The host support ships first in the coordinated extension API 0.5.0 release. Renamed extension packages follow in a separate release-dependent PR with `engines.pstdio` requiring 0.5.0. Old published coordinates retain their release history; catalog installation resolves their canonical replacement without a registry redirect.
 
 POSIX migrations flush the destination tree and parent directory entries before removing the historical source. Windows retains the verified original under `.extension-identity-original` inside the canonical allocation, using a same-volume rename and native journal semantics. The host excludes this evidence from artifact discovery and ordinary file operations; it does not claim a stronger hardware power-loss guarantee. Cleanup of retained Windows evidence is a separate explicit action.
 

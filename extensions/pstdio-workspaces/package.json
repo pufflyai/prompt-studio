@@ -1,6 +1,6 @@
 {
   "name": "pstdio-workspaces",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "displayName": "Workspaces",
   "publisher": "pstdio",
   "description": "Browse project files and workspaces across devices.",
@@ -9,7 +9,7 @@
   "type": "module",
   "private": true,
   "engines": {
-    "pstdio": "^0.3.1 || ^0.4.0"
+    "pstdio": "^0.3.1 || ^0.4.0 || ^0.5.0"
   },
   "pstdio": {
     "scope": "user"

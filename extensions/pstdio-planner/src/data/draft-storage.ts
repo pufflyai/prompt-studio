@@ -20,7 +20,13 @@ export const ensureTicketDraftsIgnored = async (projectFiles: ArtifactMount) => 
   const existing = (await projectFiles.exists(path)) ? await projectFiles.readText(path) : "";
   const lines = existing.split("\n").filter(Boolean);
   const entry = "/extension-storage/pstdio.pstdio-planner/";
-  if (lines.includes("/extension-storage") || lines.includes("/extension-storage/") || lines.includes(entry)) return;
+  if (
+    lines.includes("/extension-storage") ||
+    lines.includes("/extension-storage/") ||
+    lines.includes(entry) ||
+    lines.includes("/extension-storage/pstdio.planner/")
+  )
+    return;
   await projectFiles.writeText(path, `${[...lines, entry].join("\n")}\n`);
 };
 

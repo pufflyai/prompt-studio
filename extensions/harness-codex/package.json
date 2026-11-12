@@ -1,12 +1,12 @@
 {
   "name": "harness-codex",
-  "version": "0.46.0",
+  "version": "0.47.0",
   "displayName": "Codex",
   "description": "Contributes the Codex agent harness.",
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.3.1 || ^0.4.0"
+    "pstdio": "^0.3.1 || ^0.4.0 || ^0.5.0"
   },
   "pstdio": {
     "scope": "user"

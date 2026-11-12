@@ -1,13 +1,13 @@
 {
   "name": "pstdio-home",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "displayName": "Home",
   "icon": "house",
   "description": "Project home, recent resources, and setup recovery.",
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.4.0"
+    "pstdio": "^0.4.0 || ^0.5.0"
   },
   "pstdio": {
     "scope": "repo"
