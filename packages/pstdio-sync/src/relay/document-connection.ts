@@ -118,8 +118,8 @@ export const createDocumentRelayConnection = (input: DocumentRelayConnectionInpu
     try {
       while (dirty && live.status().connected && !stopped && current === attempt && !current.signal.aborted) {
         dirty = false;
-        const signal = attemptSignal;
-        await input.synchronize(signal, subscribe);
+        await input.synchronize(attemptSignal, subscribe);
+        if (current.signal.aborted) break;
         failures = 0;
         errorMessage = undefined;
       }

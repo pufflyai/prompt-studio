@@ -41,9 +41,17 @@ test("Sessions initial sync resumes its saved draft files and finishes without l
       "draft-file",
       new Blob([data], { type: "application/json" }),
     );
+    const nextAsset = await apps[0]!.deps.assetTransferService.stage(
+      owner,
+      "next-draft-file",
+      new Blob([`${data}\n`], { type: "application/json" }),
+    );
     await storage.records.commit({
       operationId: "saved-draft",
-      edits: [{ recordId: "draft:draft", replace: { name: "draft-draft.json" }, asset }],
+      edits: [
+        { recordId: "draft:draft", replace: { name: "draft-draft.json" }, asset },
+        { recordId: "draft:next", replace: { name: "draft-next.json" }, asset: nextAsset },
+      ],
     });
     await syncs[0]!.synchronize(controller.signal);
     pause();
@@ -69,8 +77,14 @@ test("Sessions initial sync resumes its saved draft files and finishes without l
     expect(stalled.files).toContainEqual(
       expect.objectContaining({ name: "draft-draft.json", direction: "download", status: "active" }),
     );
+    expect(stalled.files).toContainEqual(
+      expect.objectContaining({ name: "draft-next.json", direction: "download", status: "queued" }),
+    );
     controller.abort(new Error("Retry this source"));
     expect(await failure).toBe(controller.signal.reason);
+    const stopped = await syncs[1]!.status();
+    expect(stopped.files.some((file) => file.status === "queued" || file.status === "active")).toBe(false);
+    expect(stopped.files).toContainEqual(expect.objectContaining({ name: "draft-draft.json", status: "failed" }));
     const peer = await apps[1]!.deps.extensionStorageService.open({ owner });
     await peer.records.commit({
       operationId: "local-edit",

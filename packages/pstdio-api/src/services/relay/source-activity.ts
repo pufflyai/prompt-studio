@@ -36,11 +36,12 @@ export const createSourceActivity = (changed?: () => void) => {
     lastProgressAt = new Date().toISOString();
     announce();
   };
+  const resetPending = () => {
+    for (const [id, transfer] of files)
+      if (transfer.status === "active" || transfer.status === "queued") files.delete(id);
+  };
   return {
-    resetPending() {
-      for (const [id, transfer] of files)
-        if (transfer.status === "active" || transfer.status === "queued") files.delete(id);
-    },
+    resetPending,
     start() {
       startedAt = new Date().toISOString();
       completedAt = undefined;
@@ -54,7 +55,7 @@ export const createSourceActivity = (changed?: () => void) => {
     pending,
     progress,
     network(event: { phase: string; bytes?: number }) {
-      pending(event.phase);
+      if (spans.size) pending(event.phase);
       if (event.bytes) progress();
     },
     async run<T>(next: string, work: () => Promise<T>, signal?: AbortSignal) {
@@ -68,10 +69,12 @@ export const createSourceActivity = (changed?: () => void) => {
         progress();
         return result;
       } catch (error) {
-        failedPhase = phase;
+        failedPhase = next;
         throw error;
       } finally {
         spans.delete(span);
+        // Once all operations drain, no abandoned transfer is still queued or active.
+        if (!spans.size) resetPending();
         pending([...spans.values()].at(-1) ?? failedPhase ?? "ready");
       }
     },

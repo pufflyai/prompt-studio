@@ -13,7 +13,7 @@ export const createProjectSyncRetry =
   }) =>
   async (projectId: string, sourceId?: string) => {
     await input.refresh();
-    if (sourceId) {
+    if (sourceId !== undefined) {
       const builtIn = Object.hasOwn(input.owners, sourceId) ? input.owners[sourceId] : undefined;
       const owner = builtIn?.get(projectId) ?? input.extensions.get(JSON.stringify([projectId, sourceId]));
       if (!owner) throw new AccountRequestError("Unknown Cloud sync source");
