@@ -28,7 +28,9 @@ mock.module("@chakra-ui/react", () => ({
   ),
 }));
 let editor: ReturnType<typeof useParamEditorValues>;
+const paramEditor = await import("@pstdio/ui/param-editor");
 mock.module("@pstdio/ui/param-editor", () => ({
+  ...paramEditor,
   ParamEditor: (props: ParamEditorProps) => {
     editor = useParamEditorValues(props.params ?? [], props.groups ?? [], props.defaultValues ?? {}, props.onChange);
     return null;
