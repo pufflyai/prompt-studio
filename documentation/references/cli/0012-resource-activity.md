@@ -29,3 +29,5 @@ Declare `activity: { comments: true, changes: true, outcomes: true }` on a resou
 ## Reports compatibility
 
 New Planner submissions use `--change-request-activity-id` and reviews use `--review-activity-id`. Existing report parameters remain deprecated compatibility inputs. `pst pstdio-planner migrate-ticket-outcomes --id PS-12` preserves historical bodies, files, authors, timestamps and exact revision associations, then replaces Reports bodies with verified Activity references. RP identities and aliases remain owned by the compatibility extension. Migration can resume after interruption; reports without an unambiguous owner remain in compatibility storage. New workflows do not require Reports installed.
+
+*Updated at: 2026-11-12*
