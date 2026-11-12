@@ -1,9 +1,51 @@
 import { dashboardGeometry } from "@/theme/primitives/dashboard";
-import type { DashboardWidget } from "./dashboard-fixtures";
+import type { DashboardWidget, GridPlacement } from "./dashboard-fixtures";
 
 export interface DropProbe {
   position: { x: number; y: number };
   gapRatio: number;
+}
+
+export function fitWidgetInRow(
+  widgets: DashboardWidget[],
+  id: string,
+  y: number,
+  width: number,
+  pointerX: number,
+  desiredX: number,
+  columns: number,
+) {
+  const occupied = widgets
+    .filter((widget) => widget.id !== id && widget.layout.y <= y && widget.layout.y + widget.layout.h > y)
+    .map(({ layout }) => layout)
+    .sort((a, b) => a.x - b.x);
+  let start = 0;
+  for (const layout of [...occupied, { x: columns, w: 0 }]) {
+    const end = layout.x;
+    if (end - start >= width && pointerX >= start && pointerX <= end)
+      return Math.max(start, Math.min(end - width, Math.round(desiredX)));
+    start = Math.max(start, end + layout.w);
+  }
+}
+
+export function findRowVacancy(
+  widgets: DashboardWidget[],
+  id: string,
+  candidate: GridPlacement,
+  columns: number,
+  probe: DropProbe,
+) {
+  if (probe.position.x < 0 || probe.position.x > columns) return;
+  for (const widget of widgets) {
+    if (
+      widget.id === id ||
+      probe.position.y < widget.layout.y ||
+      probe.position.y > widget.layout.y + widget.layout.h - probe.gapRatio
+    )
+      continue;
+    const x = fitWidgetInRow(widgets, id, widget.layout.y, candidate.w, probe.position.x, candidate.x, columns);
+    if (x !== undefined) return { id: widget.id, x };
+  }
 }
 
 export function findRowGap(widgets: DashboardWidget[], probe: DropProbe) {

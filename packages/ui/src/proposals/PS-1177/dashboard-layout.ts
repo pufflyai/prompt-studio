@@ -1,5 +1,5 @@
 import { dashboardGeometry } from "@/theme/primitives/dashboard";
-import { type DropProbe, findRowGap } from "./dashboard-drop-target";
+import { type DropProbe, findRowGap, findRowVacancy, fitWidgetInRow } from "./dashboard-drop-target";
 import type { DashboardLayoutMode, DashboardResizeHandle, DashboardWidget, GridPlacement } from "./dashboard-fixtures";
 import { insertWidgetRow, swapWithinRow } from "./dashboard-rows";
 
@@ -111,7 +111,28 @@ export function previewWidgetMove(
   const gap =
     vertical && probe.position.x >= 0 && probe.position.x <= columns ? findRowGap(projected, probe) : undefined;
   if (gap)
-    return { type: "row" as const, widgets: readingOrder(insertWidgetRow(widgets, active, gap.beforeId, mode)), gap };
+    return {
+      type: "row" as const,
+      widgets: compactWidgets(insertWidgetRow(widgets, active, gap.beforeId, mode), mode),
+      gap,
+    };
+  const vacancy = vertical ? findRowVacancy(projected, id, layout, columns, probe) : undefined;
+  const row = widgets.find((widget) => widget.id === vacancy?.id);
+  if (vacancy && row) {
+    const savedX = fitWidgetInRow(
+      widgets,
+      id,
+      row.layout.y,
+      active.layout.w,
+      (probe.position.x * dashboardGeometry.columns) / columns,
+      (vacancy.x * dashboardGeometry.columns) / columns,
+      dashboardGeometry.columns,
+    );
+    if (savedX !== undefined) {
+      const joined = placeWidget(widgets, id, { ...active.layout, x: savedX, y: row.layout.y });
+      return { type: "widget" as const, widgets: compactWidgets(joined, mode) };
+    }
+  }
   if (vertical && mode !== "free") return unchanged;
   const collisions = projected.filter((widget) => widget.id !== id && intersects(layout, widget.layout));
   if (vertical && collisions.length) return unchanged;
@@ -123,7 +144,7 @@ export function previewWidgetMove(
     })[0];
   const target = widgets.find((widget) => widget.id === over?.id);
   if (target && active.layout.y === target.layout.y) {
-    return { type: "widget" as const, widgets: readingOrder(swapWithinRow(widgets, active, target)) };
+    return { type: "widget" as const, widgets: compactWidgets(swapWithinRow(widgets, active, target), mode) };
   }
   if (columns === dashboardGeometry.columns && !collisions.length) {
     return { type: "widget" as const, widgets: compactWidgets(placeWidget(widgets, id, candidate), mode) };

@@ -8,6 +8,15 @@ const fixtures: DashboardWidget[] = [
   { id: "chart", title: "Chart", kind: "line", source: "users", layout: { x: 0, y: 3, w: 6, h: 8 } },
 ];
 
+const rowFixtures: DashboardWidget[] = [
+  fixtures[0],
+  fixtures[1],
+  { ...fixtures[0], id: "third", layout: { x: 8, y: 0, w: 4, h: 3 } },
+  { ...fixtures[2], id: "left-chart", layout: { x: 0, y: 3, w: 6, h: 8 } },
+  { ...fixtures[2], id: "right-chart", layout: { x: 6, y: 3, w: 6, h: 8 } },
+  { ...fixtures[2], id: "table", kind: "table", layout: { x: 0, y: 11, w: 12, h: 4 } },
+];
+
 const probe = (y: number, x = 2) => ({ position: { x, y }, gapRatio: 1 / 3 });
 
 describe("dashboard grid editing", () => {
@@ -51,21 +60,81 @@ describe("dashboard grid editing", () => {
 
   test("phone row gaps insert only the dragged widget into reading order", () => {
     const metrics = [fixtures[0], fixtures[1], { ...fixtures[0], id: "third", layout: { x: 8, y: 0, w: 4, h: 3 } }];
-    const result = moveWidget(metrics, "first", { x: 0, y: 4, w: 1, h: 3 }, 1, "vertical", probe(5.8, 0.5));
+    const result = moveWidget(metrics, "first", { x: 0, y: 4, w: 1, h: 3 }, 1, "free", probe(5.8, 0.5));
     expect(projectWidgets(result, 1).map(({ id }) => id)).toEqual(["second", "first", "third"]);
   });
 
-  const rowFixtures: DashboardWidget[] = [
-    fixtures[0],
-    fixtures[1],
-    { ...fixtures[0], id: "third", layout: { x: 8, y: 0, w: 4, h: 3 } },
-    { ...fixtures[2], id: "left-chart", layout: { x: 0, y: 3, w: 6, h: 8 } },
-    { ...fixtures[2], id: "right-chart", layout: { x: 6, y: 3, w: 6, h: 8 } },
-    { ...fixtures[2], id: "table", kind: "table", layout: { x: 0, y: 11, w: 12, h: 4 } },
-  ];
+  test("a widget can rejoin the empty slot in an earlier row and compact the space it leaves", () => {
+    const separated = rowFixtures.map((widget) => {
+      if (widget.id === "first") return { ...widget, layout: { ...widget.layout, y: 3 } };
+      if (widget.id.endsWith("chart") || widget.id === "table")
+        return { ...widget, layout: { ...widget.layout, y: widget.layout.y + 3 } };
+      return widget;
+    });
+    const result = moveWidget(separated, "first", { x: 0, y: 1, w: 4, h: 3 }, 12, "vertical", probe(1.5));
+    expect(result.find(({ id }) => id === "first")?.layout).toEqual({ x: 0, y: 0, w: 4, h: 3 });
+    expect(result.find(({ id }) => id === "left-chart")?.layout.y).toBe(3);
+    expect(result.find(({ id }) => id === "table")?.layout.y).toBe(11);
+  });
 
+  test("a vertical drag can join a vacant slot between widgets without swapping them", () => {
+    const spaced = [
+      fixtures[0],
+      { ...fixtures[1], layout: { x: 8, y: 0, w: 4, h: 3 } },
+      { ...fixtures[0], id: "moved", layout: { x: 0, y: 3, w: 4, h: 3 } },
+    ];
+    const result = moveWidget(spaced, "moved", { x: 3, y: 1, w: 4, h: 3 }, 12, "vertical", probe(1.5, 6));
+    expect(result.find(({ id }) => id === "moved")?.layout).toEqual({ x: 4, y: 0, w: 4, h: 3 });
+    expect(result.find(({ id }) => id === "first")?.layout).toEqual(spaced[0].layout);
+    expect(result.find(({ id }) => id === "second")?.layout).toEqual(spaced[1].layout);
+  });
+
+  test("a widget wider than the vacant row slot cannot join it", () => {
+    const spaced = [
+      fixtures[0],
+      { ...fixtures[1], layout: { x: 8, y: 0, w: 4, h: 3 } },
+      { ...fixtures[2], layout: { x: 0, y: 3, w: 6, h: 8 } },
+    ];
+    expect(moveWidget(spaced, "chart", { x: 4, y: 1, w: 6, h: 8 }, 12, "vertical", probe(1.5, 6))).toEqual(spaced);
+  });
+
+  test("free placement can rejoin a row while retaining deliberate vertical gaps elsewhere", () => {
+    const spaced = [
+      fixtures[0],
+      { ...fixtures[1], layout: { x: 8, y: 0, w: 4, h: 3 } },
+      { ...fixtures[2], layout: { x: 0, y: 9, w: 6, h: 8 } },
+      { ...fixtures[0], id: "moved", layout: { x: 0, y: 3, w: 4, h: 3 } },
+    ];
+    const result = moveWidget(spaced, "moved", { x: 3, y: 1, w: 4, h: 3 }, 12, "free", probe(1.5, 6));
+    expect(result.find(({ id }) => id === "moved")?.layout).toEqual({ x: 4, y: 0, w: 4, h: 3 });
+    expect(result.find(({ id }) => id === "chart")?.layout.y).toBe(9);
+  });
+
+  test("horizontal swaps honor Compact up while Free placement retains vertical spacing", () => {
+    const spaced = [
+      fixtures[0],
+      { ...fixtures[1], layout: { x: 4, y: 5, w: 4, h: 3 } },
+      { ...fixtures[1], id: "third", layout: { x: 8, y: 5, w: 4, h: 3 } },
+    ];
+    const compacted = moveWidget(spaced, "second", { x: 8, y: 5, w: 4, h: 3 }, 12);
+    expect(compacted.map(({ layout }) => layout.y)).toEqual([0, 0, 0]);
+    const free = moveWidget(spaced, "second", { x: 8, y: 5, w: 4, h: 3 }, 12, "free");
+    expect(free.find(({ id }) => id === "second")?.layout.y).toBe(5);
+  });
+
+  test("Compact up fills the hole above after row insertion while Free placement keeps the new row", () => {
+    const candidate = { x: 0, y: 10, w: 4, h: 3 };
+    const compacted = moveWidget(rowFixtures, "first", candidate, 12, "vertical", probe(10.8));
+    expect(compacted).toEqual(rowFixtures);
+    const free = moveWidget(rowFixtures, "first", candidate, 12, "free", probe(10.8));
+    expect(free.find(({ id }) => id === "first")?.layout.y).toBe(11);
+    expect(free.find(({ id }) => id === "table")?.layout.y).toBe(14);
+  });
+});
+
+describe("dashboard row insertion", () => {
   test("a vertical drop inserts only the dragged widget after the destination row", () => {
-    const result = moveWidget(rowFixtures, "first", { x: 8, y: 10, w: 4, h: 3 }, 12, "vertical", probe(10.7));
+    const result = moveWidget(rowFixtures, "first", { x: 8, y: 10, w: 4, h: 3 }, 12, "free", probe(10.7));
     expect(result.find(({ id }) => id === "first")?.layout).toEqual({ x: 0, y: 11, w: 4, h: 3 });
     for (const id of ["second", "third", "left-chart", "right-chart"]) {
       expect(result.find((widget) => widget.id === id)?.layout).toEqual(
@@ -76,7 +145,7 @@ describe("dashboard grid editing", () => {
   });
 
   test("an upward drop inserts one widget before the target row and retains its former row-mates", () => {
-    const result = moveWidget(rowFixtures, "right-chart", { x: 6, y: 0, w: 6, h: 8 }, 12, "vertical", probe(0));
+    const result = moveWidget(rowFixtures, "right-chart", { x: 6, y: 0, w: 6, h: 8 }, 12, "free", probe(0));
     expect(result.find(({ id }) => id === "right-chart")?.layout).toEqual({ x: 6, y: 0, w: 6, h: 8 });
     expect(result.filter(({ kind }) => kind === "metric").map(({ layout }) => layout.y)).toEqual([8, 8, 8]);
     expect(result.find(({ id }) => id === "left-chart")?.layout).toEqual({ x: 0, y: 11, w: 6, h: 8 });
@@ -84,7 +153,7 @@ describe("dashboard grid editing", () => {
   });
 
   test("a nonadjacent downward drop leaves the intervening and source rows together", () => {
-    const result = moveWidget(rowFixtures, "first", { x: 0, y: 14, w: 4, h: 3 }, 12, "vertical", probe(14.8));
+    const result = moveWidget(rowFixtures, "first", { x: 0, y: 14, w: 4, h: 3 }, 12, "free", probe(14.8));
     expect(result.map(({ id }) => id)).toEqual(["second", "third", "left-chart", "right-chart", "table", "first"]);
     expect(result.find(({ id }) => id === "first")?.layout).toEqual({ x: 0, y: 15, w: 4, h: 3 });
     for (const widget of rowFixtures.filter(({ id }) => id !== "first")) {
@@ -94,7 +163,7 @@ describe("dashboard grid editing", () => {
   });
 
   test("a phone drop across logical rows moves only the dragged widget", () => {
-    const result = moveWidget(rowFixtures, "first", { x: 0, y: 23, w: 1, h: 3 }, 1, "vertical", probe(24.8, 0.5));
+    const result = moveWidget(rowFixtures, "first", { x: 0, y: 23, w: 1, h: 3 }, 1, "free", probe(24.8, 0.5));
     expect(projectWidgets(result, 1).map(({ id }) => id)).toEqual([
       "second",
       "third",
@@ -137,13 +206,15 @@ describe("dashboard grid editing", () => {
   });
 
   test("free placement keeps empty-space positions without moving other widgets", () => {
-    const result = moveWidget(fixtures, "first", { x: 8, y: 4, w: 4, h: 3 }, 12, "free");
-    expect(result.find(({ id }) => id === "first")?.layout).toEqual({ x: 8, y: 4, w: 4, h: 3 });
+    const result = moveWidget(fixtures, "first", { x: 8, y: 15, w: 4, h: 3 }, 12, "free");
+    expect(result.find(({ id }) => id === "first")?.layout).toEqual({ x: 8, y: 15, w: 4, h: 3 });
     expect(result.find(({ id }) => id === "chart")?.layout).toEqual(fixtures[2].layout);
     expect(result.find(({ id }) => id === "second")?.layout).toEqual(fixtures[1].layout);
     expect(fixtures[0].layout).toEqual({ x: 0, y: 0, w: 4, h: 3 });
   });
+});
 
+describe("dashboard sizing and compaction", () => {
   test("resizing spans grid columns and rows without overlapping the neighboring widget", () => {
     const result = resizeWidget(fixtures, "first", { w: 7, h: 5 }, 12);
     expect(result.find(({ id }) => id === "first")?.layout).toEqual({ x: 0, y: 0, w: 7, h: 5 });
@@ -209,8 +280,8 @@ describe("dashboard grid editing", () => {
   });
 
   test("a row target activates close to a gap before the pointer reaches it", () => {
-    const far = moveWidget(rowFixtures, "first", { x: 0, y: 2, w: 4, h: 3 }, 12, "vertical", probe(2.4));
-    const near = moveWidget(rowFixtures, "first", { x: 0, y: 2, w: 4, h: 3 }, 12, "vertical", probe(2.6));
+    const far = moveWidget(rowFixtures, "first", { x: 0, y: 2, w: 4, h: 3 }, 12, "free", probe(2.4));
+    const near = moveWidget(rowFixtures, "first", { x: 0, y: 2, w: 4, h: 3 }, 12, "free", probe(2.6));
     expect(far).toEqual(rowFixtures);
     expect(near.find(({ id }) => id === "first")?.layout).toEqual({ x: 0, y: 3, w: 4, h: 3 });
     expect(near.find(({ id }) => id === "second")?.layout.y).toBe(0);
@@ -228,7 +299,7 @@ describe("dashboard grid editing", () => {
   });
 
   test("the gap above its own row can separate the first widget from its row-mates", () => {
-    const result = moveWidget(rowFixtures, "left-chart", { x: 0, y: 2, w: 6, h: 8 }, 12, "vertical", probe(2.8));
+    const result = moveWidget(rowFixtures, "left-chart", { x: 0, y: 2, w: 6, h: 8 }, 12, "free", probe(2.8));
     expect(result.find(({ id }) => id === "left-chart")?.layout).toEqual({ x: 0, y: 3, w: 6, h: 8 });
     expect(result.find(({ id }) => id === "right-chart")?.layout).toEqual({ x: 6, y: 11, w: 6, h: 8 });
     expect(result.filter(({ kind }) => kind === "metric").map(({ layout }) => layout.y)).toEqual([0, 0, 0]);
