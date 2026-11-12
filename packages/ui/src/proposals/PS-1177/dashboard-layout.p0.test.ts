@@ -1,13 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { DashboardWidget } from "./dashboard-fixtures";
-import {
-  compactWidgets,
-  dashboardColumns,
-  moveWidget,
-  previewWidgetMove,
-  projectWidgets,
-  resizeWidget,
-} from "./dashboard-layout";
+import { compactWidgets, dashboardColumns, moveWidget, projectWidgets, resizeWidget } from "./dashboard-layout";
 
 const fixtures: DashboardWidget[] = [
   { id: "first", title: "First", kind: "metric", source: "users", layout: { x: 0, y: 0, w: 4, h: 3 } },
@@ -69,57 +62,64 @@ describe("dashboard grid editing", () => {
     { ...fixtures[2], id: "table", kind: "table", layout: { x: 0, y: 11, w: 12, h: 4 } },
   ];
 
-  test("a diagonal drop across rows swaps entire rows while preserving columns and sizes", () => {
+  test("a vertical drop inserts only the dragged widget after the destination row", () => {
     const result = moveWidget(rowFixtures, "first", { x: 8, y: 3, w: 4, h: 3 }, 12);
-    for (const widget of rowFixtures) {
-      const y = new Map([
-        [0, 8],
-        [3, 0],
-        [11, 11],
-      ]).get(widget.layout.y);
-      expect(result.find(({ id }) => id === widget.id)?.layout).toEqual({ ...widget.layout, y });
+    expect(result.find(({ id }) => id === "first")?.layout).toEqual({ x: 0, y: 11, w: 4, h: 3 });
+    for (const id of ["second", "third", "left-chart", "right-chart"]) {
+      expect(result.find((widget) => widget.id === id)?.layout).toEqual(
+        rowFixtures.find((widget) => widget.id === id)?.layout,
+      );
     }
+    expect(result.find(({ id }) => id === "table")?.layout.y).toBe(14);
   });
 
-  test("nonadjacent row swaps keep the intervening row together and account for row heights", () => {
+  test("an upward drop inserts one widget before the target row and retains its former row-mates", () => {
+    const result = moveWidget(rowFixtures, "right-chart", { x: 6, y: 0, w: 6, h: 8 }, 12);
+    expect(result.find(({ id }) => id === "right-chart")?.layout).toEqual({ x: 6, y: 0, w: 6, h: 8 });
+    expect(result.filter(({ kind }) => kind === "metric").map(({ layout }) => layout.y)).toEqual([8, 8, 8]);
+    expect(result.find(({ id }) => id === "left-chart")?.layout).toEqual({ x: 0, y: 11, w: 6, h: 8 });
+    expect(result.find(({ id }) => id === "table")?.layout.y).toBe(19);
+  });
+
+  test("a nonadjacent downward drop leaves the intervening and source rows together", () => {
     const result = moveWidget(rowFixtures, "first", { x: 0, y: 11, w: 4, h: 3 }, 12);
-    expect(result.find(({ id }) => id === "table")?.layout.y).toBe(0);
-    expect(result.filter(({ id }) => id.endsWith("chart")).map(({ layout }) => layout.y)).toEqual([4, 4]);
-    expect(result.filter(({ kind }) => kind === "metric").map(({ layout }) => layout.y)).toEqual([12, 12, 12]);
-    expect(result.map(({ id }) => id)).toEqual(["table", "left-chart", "right-chart", "first", "second", "third"]);
+    expect(result.map(({ id }) => id)).toEqual(["second", "third", "left-chart", "right-chart", "table", "first"]);
+    expect(result.find(({ id }) => id === "first")?.layout).toEqual({ x: 0, y: 15, w: 4, h: 3 });
+    for (const widget of rowFixtures.filter(({ id }) => id !== "first")) {
+      expect(result.find(({ id }) => id === widget.id)?.layout).toEqual(widget.layout);
+    }
+    expect(rowFixtures[0].layout).toEqual({ x: 0, y: 0, w: 4, h: 3 });
   });
 
-  test("a phone drop across logical rows keeps those rows grouped in the saved definition", () => {
+  test("a phone drop across logical rows moves only the dragged widget", () => {
     const result = moveWidget(rowFixtures, "first", { x: 0, y: 9, w: 1, h: 3 }, 1);
     expect(projectWidgets(result, 1).map(({ id }) => id)).toEqual([
+      "second",
+      "third",
       "left-chart",
       "right-chart",
       "first",
-      "second",
-      "third",
       "table",
     ]);
+    expect(result.find(({ id }) => id === "first")?.layout).toEqual({ x: 0, y: 11, w: 4, h: 3 });
   });
 
-  test("vertical previews move every source-row widget and preserve gaps in free and horizontal modes", () => {
+  test("row insertion preserves deliberate vertical gaps in free and horizontal modes", () => {
+    const positions = new Map([
+      [0, 2],
+      [3, 7],
+      [11, 17],
+    ]);
     const spaced = rowFixtures.map((widget) => ({
       ...widget,
-      layout: {
-        ...widget.layout,
-        y:
-          new Map([
-            [0, 2],
-            [3, 7],
-            [11, 17],
-          ]).get(widget.layout.y) ?? 0,
-      },
+      layout: { ...widget.layout, y: positions.get(widget.layout.y) ?? 0 },
     }));
     for (const mode of ["free", "horizontal"] as const) {
-      const preview = previewWidgetMove(spaced, "first", { x: 0, y: 7, w: 4, h: 3 }, 12, mode);
-      expect(preview.movingIds).toEqual(["first", "second", "third"]);
-      expect(preview.widgets.find(({ id }) => id === "left-chart")?.layout).toEqual({ x: 0, y: 2, w: 6, h: 8 });
-      expect(preview.widgets.find(({ id }) => id === "first")?.layout).toEqual({ x: 0, y: 12, w: 4, h: 3 });
-      expect(preview.widgets.find(({ id }) => id === "table")?.layout.y).toBe(17);
+      const result = moveWidget(spaced, "first", { x: 0, y: 7, w: 4, h: 3 }, 12, mode);
+      expect(result.find(({ id }) => id === "second")?.layout.y).toBe(2);
+      expect(result.find(({ id }) => id === "left-chart")?.layout.y).toBe(7);
+      expect(result.find(({ id }) => id === "first")?.layout).toEqual({ x: 0, y: 15, w: 4, h: 3 });
+      expect(result.find(({ id }) => id === "table")?.layout.y).toBe(20);
     }
   });
 

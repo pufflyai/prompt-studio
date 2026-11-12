@@ -16,7 +16,7 @@ import { dashboardRecipe } from "@/theme/recipes/dashboard";
 import { type DashboardLayoutMode, type DashboardWidget, type GridPlacement, widgetLabel } from "./dashboard-fixtures";
 import { measureGrid } from "./dashboard-grid-geometry";
 import { GridWidget } from "./dashboard-grid-widget";
-import { dashboardColumns, previewWidgetMove, projectWidgets, resizeWidget } from "./dashboard-layout";
+import { dashboardColumns, moveWidget, projectWidgets, resizeWidget } from "./dashboard-layout";
 import { WidgetIcon } from "./dashboard-widget-icon";
 import { useDashboardResize } from "./use-dashboard-resize";
 
@@ -86,8 +86,7 @@ export function DashboardGrid(props: GridProps) {
   const [drag, setDrag] = useState<DragSession | null>(null);
   const projected = projectWidgets(widgets, columns);
   const resizing = useDashboardResize({ widgets, projected, columns, mode, grid, onChange, onGestureStart });
-  const move = drag ? previewWidgetMove(widgets, drag.id, drag.candidate, columns, mode) : null;
-  const preview = move?.widgets ?? widgets;
+  const preview = drag ? moveWidget(widgets, drag.id, drag.candidate, columns, mode) : widgets;
   const sized = resizing.resize
     ? resizeWidget(preview, resizing.resize.id, resizing.resize.size, columns, mode, resizing.resize.handle)
     : preview;
@@ -184,7 +183,7 @@ export function DashboardGrid(props: GridProps) {
             key={widget.id}
             {...props}
             widget={widget}
-            moving={move?.movingIds.includes(widget.id) ?? false}
+            moving={drag?.id === widget.id}
             resizing={resizing.resize?.id === widget.id}
             resizeController={resizing}
             columns={columns}

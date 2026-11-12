@@ -20,13 +20,13 @@ export function swapWithinRow(widgets: DashboardWidget[], active: DashboardWidge
   });
 }
 
-export function swapRows(
+export function insertWidgetRow(
   widgets: DashboardWidget[],
   active: DashboardWidget,
   target: DashboardWidget,
   mode: DashboardLayoutMode,
 ) {
-  // Use saved rows so responsive projections keep the same widgets together during a swap.
+  // Keep row-mates together while the dragged widget gets its own row.
   const groups = new Map<number, DashboardWidget[]>();
   for (const widget of widgets) {
     const row = groups.get(widget.layout.y) ?? [];
@@ -40,16 +40,20 @@ export function swapRows(
       widgets,
       height: Math.max(...widgets.map(({ layout }) => layout.h)),
     }));
-  const gaps = rows.map((row, index) => Math.max(0, (rows[index + 1]?.y ?? 0) - row.y - row.height));
-  const from = rows.findIndex(({ y }) => y === active.layout.y);
-  const to = rows.findIndex(({ y }) => y === target.layout.y);
-  const movingIds = rows[from].widgets.map(({ id }) => id);
-  let y = mode === "vertical" ? 0 : rows[0].y;
-  [rows[from], rows[to]] = [rows[to], rows[from]];
-  const result = rows.flatMap((row, index) => {
+  const remaining = rows
+    .map((row, index) => ({
+      widgets: row.widgets.filter(({ id }) => id !== active.id),
+      gap: index === 0 ? row.y : Math.max(0, row.y - rows[index - 1].y - rows[index - 1].height),
+    }))
+    .filter(({ widgets }) => widgets.length > 0);
+  const targetIndex = remaining.findIndex(({ widgets }) => widgets.some(({ id }) => id === target.id));
+  const insertionIndex = targetIndex + (active.layout.y < target.layout.y ? 1 : 0);
+  remaining.splice(insertionIndex, 0, { widgets: [active], gap: 0 });
+  let y = 0;
+  return remaining.flatMap((row) => {
+    if (mode !== "vertical") y += row.gap;
     const next = row.widgets.map((widget) => ({ ...widget, layout: { ...widget.layout, y } }));
-    y += row.height + (mode === "vertical" ? 0 : gaps[index]);
+    y += Math.max(...row.widgets.map(({ layout }) => layout.h));
     return next;
   });
-  return { widgets: result, movingIds };
 }

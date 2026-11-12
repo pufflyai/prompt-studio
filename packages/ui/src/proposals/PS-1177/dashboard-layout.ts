@@ -1,6 +1,6 @@
 import { dashboardGeometry } from "@/theme/primitives/dashboard";
 import type { DashboardLayoutMode, DashboardResizeHandle, DashboardWidget, GridPlacement } from "./dashboard-fixtures";
-import { swapRows, swapWithinRow } from "./dashboard-rows";
+import { insertWidgetRow, swapWithinRow } from "./dashboard-rows";
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, Math.round(value)));
 const intersects = (a: GridPlacement, b: GridPlacement) =>
@@ -88,7 +88,7 @@ function placeWidget(widgets: DashboardWidget[], id: string, candidate: GridPlac
   return settleWidgets([{ ...widget, layout }, ...readingOrder(widgets).filter((item) => item.id !== id)]);
 }
 
-export function previewWidgetMove(
+export function moveWidget(
   widgets: DashboardWidget[],
   id: string,
   candidate: GridPlacement,
@@ -97,7 +97,7 @@ export function previewWidgetMove(
 ) {
   const projected = projectWidgets(widgets, columns);
   const origin = projected.find((widget) => widget.id === id)?.layout;
-  if (origin?.x === candidate.x && origin.y === candidate.y) return { widgets, movingIds: [id] };
+  if (origin?.x === candidate.x && origin.y === candidate.y) return widgets;
   const x = clamp(candidate.x, 0, columns - candidate.w);
   const y = Math.max(0, candidate.y);
   let over: DashboardWidget | undefined;
@@ -116,18 +116,17 @@ export function previewWidgetMove(
   const target = widgets.find((widget) => widget.id === over?.id);
   if (active && target) {
     if (active.layout.y === target.layout.y) {
-      return { widgets: readingOrder(swapWithinRow(widgets, active, target)), movingIds: [id] };
+      return readingOrder(swapWithinRow(widgets, active, target));
     }
-    const swapped = swapRows(widgets, active, target, mode);
-    return { ...swapped, widgets: readingOrder(swapped.widgets) };
+    return readingOrder(insertWidgetRow(widgets, active, target, mode));
   }
   if (columns === dashboardGeometry.columns) {
-    return { widgets: compactWidgets(placeWidget(widgets, id, candidate), mode), movingIds: [id] };
+    return compactWidgets(placeWidget(widgets, id, candidate), mode);
   }
   // Narrow empty-space drops change reading order without storing a second layout.
   const ordered = readingOrder(widgets);
   const from = ordered.findIndex((widget) => widget.id === id);
-  if (from < 0) return { widgets, movingIds: [id] };
+  if (from < 0) return widgets;
   const center = candidate.y + candidate.h / 2;
   const targets = projected.filter((widget) => widget.id !== id);
   const nearest = targets.reduce<DashboardWidget | undefined>((closest, widget) => {
@@ -135,21 +134,11 @@ export function previewWidgetMove(
     if (!closest || distance < Math.abs(closest.layout.y + closest.layout.h / 2 - center)) return widget;
     return closest;
   }, undefined);
-  if (!nearest) return { widgets, movingIds: [id] };
+  if (!nearest) return widgets;
   const to = ordered.findIndex((widget) => widget.id === nearest.id);
   const [moved] = ordered.splice(from, 1);
   ordered.splice(to, 0, moved);
-  return { widgets: compactWidgets(packWidgets(ordered, dashboardGeometry.columns), mode), movingIds: [id] };
-}
-
-export function moveWidget(
-  widgets: DashboardWidget[],
-  id: string,
-  candidate: GridPlacement,
-  columns: number,
-  mode: DashboardLayoutMode = "vertical",
-) {
-  return previewWidgetMove(widgets, id, candidate, columns, mode).widgets;
+  return compactWidgets(packWidgets(ordered, dashboardGeometry.columns), mode);
 }
 
 export function resizeWidget(
