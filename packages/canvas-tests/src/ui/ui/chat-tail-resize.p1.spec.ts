@@ -152,3 +152,86 @@ test("chat restores hidden history and a hidden following tail independently", a
     .toBeLessThanOrEqual(2);
   await expect(latest).toBeHidden();
 });
+
+// Critical regression: hiding at the tail must preserve an explicit stop independently of its current pixels.
+test("chat preserves stopped following at the tail across hidden arrivals", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/chat-ui/components/chat-panel-resize.canvas.tsx#StreamingResize",
+  );
+  const viewport = preview.getByRole("log").locator(':scope > [data-scope="scroll-area"] > [data-part="viewport"]');
+  const batch = preview.getByRole("button", { name: "Append response batch", exact: true });
+  await batch.click();
+  await expect
+    .poll(() => viewport.evaluate((element) => element.scrollHeight - element.clientHeight - element.scrollTop))
+    .toBeLessThanOrEqual(2);
+  await preview.getByRole("button", { name: "Stop following", exact: true }).click();
+  const readingTop = await viewport.evaluate((element) => element.scrollTop);
+  await preview.getByRole("button", { name: "Hide conversation" }).click();
+  await batch.click();
+  await expect(preview.getByRole("status")).toHaveText("Responses: 58");
+  await preview.getByRole("button", { name: "Show conversation" }).click();
+  await expect.poll(() => viewport.evaluate((element) => element.scrollTop)).toBe(readingTop);
+  await expect(preview.getByText(/^Step 58\./)).not.toBeInViewport();
+  await preview.getByRole("button", { name: "Scroll to latest message" }).click();
+  await expect(preview.getByText(/^Step 58\./)).toBeInViewport();
+});
+
+// Restoring pixels must not turn a deliberate stop into a fresh tail-follow request.
+test("chat stays stopped after a hidden round trip without arrivals", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/chat-ui/components/chat-panel-resize.canvas.tsx#StreamingResize",
+  );
+  const viewport = preview.getByRole("log").locator(':scope > [data-scope="scroll-area"] > [data-part="viewport"]');
+  const batch = preview.getByRole("button", { name: "Append response batch", exact: true });
+  await batch.click();
+  await expect
+    .poll(() => viewport.evaluate((element) => element.scrollHeight - element.clientHeight - element.scrollTop))
+    .toBeLessThanOrEqual(2);
+  await preview.getByRole("button", { name: "Stop following", exact: true }).click();
+  const readingTop = await viewport.evaluate((element) => element.scrollTop);
+  await preview.getByRole("button", { name: "Hide conversation" }).click();
+  await preview.getByRole("button", { name: "Show conversation" }).click();
+  await expect.poll(() => viewport.evaluate((element) => element.scrollTop)).toBe(readingTop);
+  // Let the native restoration scroll event reach the follower before the next arrival.
+  await viewport.evaluate(
+    () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
+  );
+  await batch.click();
+  await expect(preview.getByRole("status")).toHaveText("Responses: 58");
+  await expect.poll(() => viewport.evaluate((element) => element.scrollTop)).toBe(readingTop);
+  await expect(preview.getByText(/^Step 58\./)).not.toBeInViewport();
+});
+
+// A requested follow may not have moved pixels when the retained conversation becomes hidden.
+test("chat resumes a follow requested immediately before hiding", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/chat-ui/components/chat-panel-resize.canvas.tsx#StreamingResize",
+  );
+  const viewport = preview.getByRole("log").locator(':scope > [data-scope="scroll-area"] > [data-part="viewport"]');
+  const batch = preview.getByRole("button", { name: "Append response batch", exact: true });
+  const latest = preview.getByRole("button", { name: "Scroll to latest message" });
+  await batch.click();
+  await expect(preview.getByText(/^Step 30\./)).toBeInViewport();
+  await viewport.press("PageUp");
+  await expect(latest).toBeVisible();
+  const gapBeforeFollowing = await preview
+    .getByRole("button", { name: "Follow latest and hide", exact: true })
+    .evaluate((element) => {
+      const viewport = element
+        .closest('[role="log"]')!
+        .querySelector<HTMLElement>('[data-scope="scroll-area"][data-part="viewport"]')!;
+      const gap = viewport.scrollHeight - viewport.clientHeight - viewport.scrollTop;
+      // Invoke the public action in one task, preserving the established reader position.
+      (element as HTMLButtonElement).click();
+      return gap;
+    });
+  expect(gapBeforeFollowing).toBeGreaterThan(70);
+  await expect(preview.getByRole("button", { name: "Show conversation" })).toBeVisible();
+  await batch.click();
+  await preview.getByRole("button", { name: "Show conversation" }).click();
+  await expect(preview.getByText(/^Step 58\./)).toBeInViewport();
+  await expect(latest).toBeHidden();
+});

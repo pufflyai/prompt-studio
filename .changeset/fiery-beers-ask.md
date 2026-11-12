@@ -3,4 +3,4 @@
 "@pstdio/ui": patch
 ---
 
-Keep conversation tail following separate from virtual row measurement corrections.
+Preserve conversation following intent through virtual row measurements and hidden panels.

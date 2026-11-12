@@ -16,9 +16,11 @@ Changing virtual row measurements cannot prevent this: the scroll controller obs
 
 ## Temporary workaround
 
-The conversation viewport records its last visible position and whether it was following the tail. Its own resize observer stops automatic scrolling while the viewport is hidden. On return it restores that position, or resumes tail following. The state belongs to the viewport and disappears when the conversation changes or unmounts.
+The version-bound Bun patch ignores a zero-height content observation only when the content has no layout rectangles. A visible empty content element still follows the normal resize path. This prevents hidden layout from overwriting the library's live follow intent before the viewport can save it.
 
-The workaround uses only the library's public `stopScroll` and `scrollToBottom` methods. It stays in one hook beside the conversation viewport. Virtualization does not own or duplicate this state.
+The conversation viewport records its last visible pixel position. When it becomes hidden, its own resize observer snapshots the library's live `state.isAtBottom` before calling `stopScroll`. On return it restores that position, or resumes tail following with `scrollToBottom`. Pixel proximity does not define intent: an explicit stop at the tail stays stopped, and a following panel may still be catching up with growing content. The snapshot belongs to the viewport and disappears when the conversation changes or unmounts.
+
+The integration uses the library's public live state and methods. It stays in one hook beside the conversation viewport; virtualization does not own or duplicate this state. The existing UI build bundles the patched dependency, as described in [ADR0142](0142-temporary-conversation-resize-scroll-classification.md).
 
 ## Limitations
 
@@ -26,4 +28,4 @@ This adds a resize observer and one visible-position snapshot per mounted conver
 
 ## Removal
 
-Remove the hook when the scroll library preserves position and tail-follow state for ancestors hidden with `display: none`. Keep the long-turn Storybook scenario as the behavior check. Verify middle-of-turn recovery and tail-follow recovery, including updates received while hidden, before removing the hook.
+Remove the hidden-content patch and hook when the upstream library preserves position and follow intent for ancestors hidden with `display: none`. Review both when changing library version1.1.3. Keep the real Canvas resize/hidden conversation checks, including explicit stop at the tail, returning to follow without pixel movement, history reading and arrivals while hidden. Do not infer the cause of native streaming failures without an observed visibility transition.

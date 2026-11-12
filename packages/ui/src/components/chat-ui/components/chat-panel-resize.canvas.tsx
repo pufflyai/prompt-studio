@@ -5,12 +5,21 @@ import { useStickToBottomContext } from "use-stick-to-bottom";
 import { ChatPanel } from "./chat-panel";
 import type { SessionMessage } from "./message-types";
 
-function FollowingControls() {
+function FollowingControls(props: { onHide: () => void }) {
+  const { onHide } = props;
   const { stopScroll, scrollToBottom } = useStickToBottomContext();
   return (
     <HStack>
       <Button onClick={stopScroll}>Stop following</Button>
       <Button onClick={() => void scrollToBottom("instant")}>Follow latest</Button>
+      <Button
+        onClick={() => {
+          void scrollToBottom("instant");
+          onHide();
+        }}
+      >
+        Follow latest and hide
+      </Button>
     </HStack>
   );
 }
@@ -82,7 +91,7 @@ function ResizingConversation() {
           messages={messages}
           streaming={streaming || count < 30}
           hideComposer
-          conversationNotices={<FollowingControls />}
+          conversationNotices={<FollowingControls onHide={() => setHidden(true)} />}
           emptyStateTitle="No messages"
           emptyStateDescription="Send a message."
           chatInputPlaceholder="Reply to the review..."
@@ -99,4 +108,7 @@ const meta = {
 } satisfies CanvasMeta<typeof ResizingConversation>;
 export default meta;
 type Story = CanvasFrame<typeof meta>;
-export const StreamingResize: Story = { id: "patterns-chat-chat-panel-resize--streaming-resize" };
+export const StreamingResize: Story = {
+  id: "patterns-chat-chat-panel-resize--streaming-resize",
+  description: "Follow arrivals through resizing and hiding, or explicitly stop at any position before hiding.",
+};

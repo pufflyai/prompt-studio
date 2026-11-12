@@ -1,5 +1,5 @@
 diff --git a/dist/useStickToBottom.js b/dist/useStickToBottom.js
-index 1a7671496f181e92462cad65a7a90966a409e3b3..1cb25ec0f4c1fd76d342f5bebe585f3f69ec552e 100644
+index 1a7671496f181e92462cad65a7a90966a409e3b3..5fe7660cd97e867a0c67a3c29ee5df056b09d3b2 100644
 --- a/dist/useStickToBottom.js
 +++ b/dist/useStickToBottom.js
 @@ -220,6 +220,9 @@ export const useStickToBottom = (options = {}) => {
@@ -21,3 +21,14 @@ index 1a7671496f181e92462cad65a7a90966a409e3b3..1cb25ec0f4c1fd76d342f5bebe585f3f
                  setEscapedFromLock(true);
                  setIsAtBottom(false);
              }
+@@ -305,6 +308,10 @@ export const useStickToBottom = (options = {}) => {
+         let previousHeight;
+         state.resizeObserver = new ResizeObserver(([entry]) => {
+             const { height } = entry.contentRect;
++            // Hidden retained panels have no layout; preserve their live follow intent.
++            if (height === 0 && content.getClientRects().length === 0) {
++                return;
++            }
+             const difference = height - (previousHeight ?? height);
+             state.resizeDifference = difference;
+             /**
