@@ -36,6 +36,15 @@ export function findRowVacancy(
   probe: DropProbe,
 ) {
   if (probe.position.x < 0 || probe.position.x > columns) return;
+  const occupied = widgets.some(
+    ({ id: otherId, layout }) =>
+      otherId !== id &&
+      probe.position.x >= layout.x &&
+      probe.position.x < layout.x + layout.w &&
+      probe.position.y >= layout.y &&
+      probe.position.y < layout.y + layout.h - probe.gapRatio,
+  );
+  if (occupied) return;
   for (const widget of widgets) {
     if (
       widget.id === id ||

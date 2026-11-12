@@ -98,6 +98,16 @@ describe("dashboard grid editing", () => {
     expect(moveWidget(spaced, "chart", { x: 4, y: 1, w: 6, h: 8 }, 12, "vertical", probe(1.5, 6))).toEqual(spaced);
   });
 
+  test("occupied content below a tall row does not target a vacancy above the pointer", () => {
+    const staggered = [
+      { ...fixtures[0], layout: { x: 0, y: 0, w: 4, h: 8 } },
+      fixtures[1],
+      { ...fixtures[2], layout: { x: 6, y: 3, w: 6, h: 8 } },
+      { ...fixtures[0], id: "moved", layout: { x: 0, y: 11, w: 4, h: 3 } },
+    ];
+    expect(moveWidget(staggered, "moved", { x: 8, y: 4, w: 4, h: 3 }, 12, "vertical", probe(5, 10))).toEqual(staggered);
+  });
+
   test("free placement can rejoin a row while retaining deliberate vertical gaps elsewhere", () => {
     const spaced = [
       fixtures[0],
