@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { createSyncSpace } from "pstdio-sync/encryption";
 import { createDocumentRelayConnection } from "pstdio-sync/relay";
 import {
   liveClientMessageSchema,
@@ -50,8 +51,15 @@ const documentResponse = async (request: Request, relay: ReturnType<typeof numbe
   return Response.json({ state: (await readDocument(relay, route.documentId, 0)).state });
 };
 
-for (const order of ["full only", "targeted first", "full first", "targeted only"] as const)
-  test(`a cold download with ${order} finishes in one owner sweep`, async () => {
+for (const { order, extensionId, transportOwner } of [
+  ...["full only", "targeted first", "full first", "targeted only"].map((order) => ({
+    order,
+    extensionId: "example.notes",
+    transportOwner: "example.notes",
+  })),
+  { order: "targeted first", extensionId: "pstdio.notes", transportOwner: "pstdio.pstdio-notes" },
+])
+  test(`a cold ${extensionId} download with ${order} finishes in one owner sweep`, async () => {
     const app = await createTestApp();
     const controller = new AbortController();
     const keyRequested = Promise.withResolvers<void>();
@@ -95,7 +103,7 @@ for (const order of ["full only", "targeted first", "full first", "targeted only
       },
     });
     const project = await app.deps.projectService.create({ name: "Cold discovery" });
-    const owner = { workbenchId: project.id, extensionId: "example.notes" };
+    const owner = { workbenchId: project.id, extensionId };
     await app.deps.extensionStorageService.openNativeTextDocument({ owner, fileId: "open" }).seed("Open editor");
     const access = async () => ({ token: "access", expiresAt: new Date(Date.now() + 60_000).toISOString() });
     const sync = createExtensionDocumentSync({
@@ -115,6 +123,11 @@ for (const order of ["full only", "targeted first", "full first", "targeted only
     let sweeps = 0;
     let drains = 0;
     const document = JSON.stringify(["native-markdown", "open"]);
+    const space = await createSyncSpace({
+      projectId: project.id,
+      spaceOwner: null,
+      keys: [{ generation: 1, secret: "A".repeat(43) }],
+    });
     const settled = Promise.withResolvers<void>();
     const connection = createDocumentRelayConnection({
       origin: peer.url.origin,
@@ -141,8 +154,15 @@ for (const order of ["full only", "targeted first", "full first", "targeted only
         // The extension owner prepares keys before projecting files, then downloads.
         const preparing = sync.prepare(signal);
         fullEntered.resolve();
-        await preparing;
+        const prepared = await preparing;
+        expect(prepared.ownerId).toBe(await space.documentId(JSON.stringify([transportOwner, "owner"])));
+        expect(prepared.recordStreamId).toBe(
+          await space.documentId(JSON.stringify([transportOwner, "record-stream-v2"])),
+        );
         await sync.synchronize(signal);
+        expect(prepared.jobs.nameFor(await space.documentId(JSON.stringify([transportOwner, document])))).toBe(
+          document,
+        );
       },
       onError: (error) => settled.reject(error),
       onStatusChange: () => {

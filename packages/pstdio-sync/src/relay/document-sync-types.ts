@@ -15,7 +15,7 @@ export interface DocumentRelay {
     get(blobId: string, byteLength: number): Promise<Uint8Array>;
   }>;
   blobs?: {
-    put(blobId: string, bytes: Uint8Array): Promise<void>;
+    put(blobId: string, bytes: Uint8Array, progress?: (completedBytes: number) => void): Promise<void>;
     get(blobId: string): Promise<Uint8Array>;
     read?(blobId: string, offset: number): Promise<ReadableStream<Uint8Array>>;
   };
