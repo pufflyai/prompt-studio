@@ -1,5 +1,5 @@
 import { extensionResourceRefSchema } from "pstdio-api-contracts";
-import { canonicalExtensionId, canonicalNavigationOwners } from "pstdio-api-contracts/extension-host";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import {
   isNavigationTarget,
   qualifyNavigationTarget,
@@ -9,7 +9,11 @@ import {
   workbenchPages,
   workspacePages,
 } from "pstdio-api-contracts/extension-kernel";
-import { type ExtensionRuntime, isRuntimeNavigationTargetAvailable } from "pstdio-extensions";
+import {
+  canonicalNavigationOwners,
+  type ExtensionRuntime,
+  isRuntimeNavigationTargetAvailable,
+} from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
 import { executeProjectExtensionCommand } from "../execute-project-extension-command";
 import { canonicalResource } from "./resource-link-policy";

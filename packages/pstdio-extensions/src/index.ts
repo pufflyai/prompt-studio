@@ -90,6 +90,7 @@ export {
   toSettingDefinitionRecord,
   validateCommandParams,
 } from "./runtime";
+export { canonicalNavigationOwners } from "./runtime/canonical-navigation-owners";
 export { canonicalRuntimeId, contributionAliases } from "./runtime/contribution-aliases";
 export { collectConventionDiagnostics } from "./runtime/conventions";
 export { extensionIconAssetName, readExtensionIcon } from "./runtime/extension-icon";
