@@ -95,6 +95,18 @@ const withMigrationsFolder = async (run: (folder: string) => Promise<void>) => {
   }
 };
 
+// PGlite caches code after instantiation. Concurrent cold opens otherwise compile it separately.
+// Share only immutable code; each database still creates its own engine, memory and filesystem.
+let sourceEngineModule: Promise<WebAssembly.Module> | undefined;
+const resolveSourceEngineModule = (wasmPath: string) =>
+  (sourceEngineModule ??= Bun.file(wasmPath)
+    .arrayBuffer()
+    .then((bytes) => WebAssembly.compile(bytes))
+    .catch((error) => {
+      sourceEngineModule = undefined;
+      throw error;
+    }));
+
 export const resolvePgliteOptions = async (embeddedFiles: readonly EmbeddedFile[] = getEmbeddedFiles()) => {
   const wasmFile = embeddedFiles.find((file) => normalizeEmbeddedFileName(file.name).endsWith(PGLITE_WASM_SUFFIX));
   const dataFile = embeddedFiles.find((file) => normalizeEmbeddedFileName(file.name).endsWith(PGLITE_DATA_SUFFIX));
@@ -105,8 +117,13 @@ export const resolvePgliteOptions = async (embeddedFiles: readonly EmbeddedFile[
   if (!wasmFile && !dataFile && !initialDatabase && !icu) {
     const require = createRequire(import.meta.url);
     const icuPath = path.join(path.dirname(require.resolve("@electric-sql/pglite-icu-full")), "icu.76.tgz");
+    const enginePath = path.join(
+      path.dirname(require.resolve("@electric-sql/pglite/package.json")),
+      "dist/pglite.wasm",
+    );
     return {
       ...pgliteIdentity,
+      pgliteWasmModule: await resolveSourceEngineModule(enginePath),
       icuDataDir: Bun.file(icuPath),
       loadDataDir: Bun.file(path.join(import.meta.dirname, "../../vendor/pglite/empty-database.tar.gz")),
     };
