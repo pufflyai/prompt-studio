@@ -152,6 +152,8 @@ const runScenario = async (signal: AbortSignal, setClose: (close: () => Promise<
       if (process.platform === "win32") await rm(root, options);
       else rmSync(root, options);
       phase("fixture files removed");
+      // A native traversal must finish inside the same wall-clock budget even while JS timers are blocked.
+      expect(performance.now() - started).toBeLessThan(PACKAGED_TEST_TIMEOUT);
     } catch (cause) {
       failures.push(cause);
     }
