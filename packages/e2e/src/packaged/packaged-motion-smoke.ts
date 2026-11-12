@@ -119,39 +119,6 @@ export const expectPackagedStreamingMotion = async (
     .first();
   await expect(text).toBeVisible();
   logTestPhase("Packaged chat stream: first chunk visible");
-
-  await page.evaluate(() => {
-    const entries: unknown[] = [];
-    const record = () => {
-      const log = [...document.querySelectorAll<HTMLElement>('[role="log"]')].find((element) =>
-        element.checkVisibility(),
-      );
-      const viewport = log?.querySelector<HTMLElement>('[data-scope="scroll-area"][data-part="viewport"]');
-      const rows = [...(log?.querySelectorAll<HTMLElement>("[data-chat-message-list-item]") ?? [])];
-      const last = rows.at(-1);
-      const sample = {
-        at: Date.now(),
-        visibility: document.visibilityState,
-        focused: document.hasFocus(),
-        rows: rows.length,
-        last: last?.textContent?.slice(0, 24),
-        top: viewport?.scrollTop,
-        height: viewport?.scrollHeight,
-        following: !log?.querySelector('[aria-label="Scroll to latest message"]'),
-      };
-      entries.push(sample);
-      if (entries.length > 256) entries.shift();
-    };
-    (window as unknown as { releaseFrameTrace: unknown[] }).releaseFrameTrace = entries;
-    new MutationObserver(record).observe(document.getElementById("root")!, {
-      subtree: true,
-      childList: true,
-      characterData: true,
-    });
-    document.addEventListener("visibilitychange", record);
-    record();
-  });
-
   const earlier = await text.elementHandle();
   // Release the remaining chunks only after the first visible response is observed.
   writeFileSync(join(projectRoot, ".fake-hold-release-1"), "release");
@@ -183,8 +150,6 @@ export const expectPackagedStreamingMotion = async (
     ).toBeVisible();
   } catch (error) {
     console.info(
-      "Diagnostic release frame trace",
-      await page.evaluate(() => (window as unknown as { releaseFrameTrace: unknown[] }).releaseFrameTrace),
       "Packaged chat final layout",
       await transcript.evaluate((element) => {
         const viewport = element.querySelector<HTMLElement>('[data-scope="scroll-area"][data-part="viewport"]');
