@@ -168,8 +168,9 @@ export const migrateExtensionIdentities = async (
           await tx.execute(sql`UPDATE ${table} SET ${ownerColumn} = ${to} WHERE ${ownerColumn} = ${from}`);
         for (const table of [...parents].reverse())
           await tx.execute(sql`DELETE FROM ${table} WHERE ${ownerColumn} = ${from}`);
-        await tx.execute(sql`UPDATE ${s.installed_extension_sources} SET extension_id = ${to}, install_name = ${canonical.name},
-        manifest_json = jsonb_set(manifest_json, '{name}', to_jsonb(${canonical.name}::text)) WHERE extension_id = ${from}`);
+        await tx.execute(sql`UPDATE ${s.installed_extension_sources} SET extension_id = ${to},
+        install_name = CASE WHEN install_name IN (${previous.name}, ${from}, ${canonical.name}, ${to}) THEN ${canonical.name} ELSE install_name END,
+        manifest_json = CASE WHEN manifest_json->>'name' = ${previous.name} THEN jsonb_set(manifest_json, '{name}', to_jsonb(${canonical.name}::text)) ELSE manifest_json END WHERE extension_id = ${from}`);
         await tx.execute(
           sql`UPDATE ${s.notifications} SET source_extension_id = ${to} WHERE source_extension_id = ${from}`,
         );

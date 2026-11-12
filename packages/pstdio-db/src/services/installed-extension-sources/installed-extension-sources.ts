@@ -108,7 +108,15 @@ export const createInstalledExtensionSourcesDBService = (db: DbClient) => {
         )
           ? canonicalInstallName(extension_id)
           : input.install_name,
-        manifest_json: { ...input.manifest_json, name: canonicalInstallName(input.extension_id) },
+        manifest_json:
+          input.manifest_json &&
+          typeof input.manifest_json.name === "string" &&
+          matchesExtensionInstallName(
+            { extensionId: extension_id, installName: canonicalInstallName(extension_id) },
+            input.manifest_json.name,
+          )
+            ? { ...input.manifest_json, name: canonicalInstallName(input.extension_id) }
+            : input.manifest_json,
       };
     const timestamp = nowTimestamp();
     const row: InstalledSourceInsert = {
@@ -143,7 +151,15 @@ export const createInstalledExtensionSourcesDBService = (db: DbClient) => {
     if (owner) {
       const extension_id = canonicalExtensionId(owner);
       input = { ...input, extension_id };
-      if (input.manifest_json && extension_id !== owner)
+      if (
+        input.manifest_json &&
+        typeof input.manifest_json.name === "string" &&
+        historicalExtensionId(extension_id) !== extension_id &&
+        matchesExtensionInstallName(
+          { extensionId: extension_id, installName: canonicalInstallName(extension_id) },
+          input.manifest_json.name,
+        )
+      )
         input.manifest_json = { ...input.manifest_json, name: canonicalInstallName(owner) };
     }
     const timestamp = nowTimestamp();

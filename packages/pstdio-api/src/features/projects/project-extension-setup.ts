@@ -1,5 +1,6 @@
 import { basename } from "node:path";
 import type { ExtensionSetupWarning } from "pstdio-api-contracts";
+import { matchesExtensionInstallName } from "pstdio-api-contracts/extension-host";
 import { apiLogger } from "../../lib/logger";
 import { traceSetupPhase } from "../../lib/setup-phase";
 import { AlwaysEnabledExtensionError } from "../extensions/always-on-extensions";
@@ -27,7 +28,12 @@ const enableDefaultProjectExtensions = async (
     if (
       instance.enabled ||
       existingExtensionIds.has(installedSource.extension_id) ||
-      !names.has(installedSource.install_name)
+      ![...names].some((name) =>
+        matchesExtensionInstallName(
+          { extensionId: installedSource.extension_id, installName: installedSource.install_name },
+          name,
+        ),
+      )
     )
       continue;
     try {

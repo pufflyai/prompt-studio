@@ -62,10 +62,10 @@ test("new projects reuse installed tools without inheriting another project's ch
       );
     };
     await choose(first, ["harness-codex"]);
-    expect(await enabled(first)).toEqual(["pstdio.harness-codex", ...foundation]);
+    expect(await enabled(first)).toEqual(["pstdio.harness-codex", ...foundation].sort());
     expect(await enabled(second)).toEqual(foundation);
     await choose(first, []);
-    expect(await enabled(first)).toEqual(["pstdio.harness-codex", ...foundation]);
+    expect(await enabled(first)).toEqual(["pstdio.harness-codex", ...foundation].sort());
     await choose(second, ["pstdio-planner", "pstdio-notes", "pstdio-reports"]);
     expect(await enabled(second)).toEqual([
       "pstdio.base-themes",
@@ -74,7 +74,7 @@ test("new projects reuse installed tools without inheriting another project's ch
       "pstdio.reports",
       "pstdio.skills",
     ]);
-    expect(await enabled(first)).toEqual(["pstdio.harness-codex", ...foundation]);
+    expect(await enabled(first)).toEqual(["pstdio.harness-codex", ...foundation].sort());
   } finally {
     await handle?.close();
     if (previous.home === undefined) delete process.env.PSTDIO_HOME;

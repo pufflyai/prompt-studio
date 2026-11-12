@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import type { EventContext } from "pstdio-api-contracts/extension-kernel";
+import { normalizeExtensionSources } from "pstdio-extensions";
 import { EventBus } from "../sync/event-bus";
 import { fireExtensionEvent } from "./extension-event-runtime";
 
@@ -22,7 +23,8 @@ test.each([true, false])("publishes nested refresh events while initial broadcas
           ],
           project: { id: "project", name: "Project", shorthand: "P" },
           runtime: {
-            extensions: [{ id: "example.worker" }],
+            ...normalizeExtensionSources([]),
+            extensions: [{ id: "example.worker", definition: {} }],
             hooks: [
               {
                 id: "hook",

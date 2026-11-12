@@ -104,7 +104,8 @@ test(
       expect(phases.indexOf("database_cleaning")).toBeGreaterThan(phases.indexOf("database_opened"));
       expect(phases.indexOf("database_compacting")).toBeLessThan(phases.indexOf("database_migrated"));
       const remaining = await client.pglite.query<{ extension_id: string }>(
-        "SELECT extension_id FROM storage_documents ORDER BY extension_id",
+        "SELECT extension_id FROM storage_documents WHERE NOT (extension_id = 'pstdio' AND document_id = $1) ORDER BY extension_id",
+        [JSON.stringify(["host-local-migration", "first-party-identities-v1"])],
       );
       expect(remaining.rows.map((row) => row.extension_id)).toEqual([...current].sort());
       for (const table of ["storage_document_updates", "storage_document_operations"])

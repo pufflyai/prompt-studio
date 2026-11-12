@@ -29,6 +29,17 @@ test("migration retains complete owner history, immutable bytes, sequence positi
       created_at: now,
       updated_at: now,
     });
+    await db.insert(s.installed_extension_sources).values({
+      id: "custom-source",
+      install_name: "my-notes",
+      extension_id: old,
+      display_name: "Notes",
+      source_path: "/installed/custom-notes",
+      source_kind: "local_path",
+      manifest_json: { version: "1.0.0" },
+      created_at: now,
+      updated_at: now,
+    });
     await db.insert(s.extension_instances).values({
       id: "instance",
       installed_extension_id: "source",
@@ -104,12 +115,15 @@ test("migration retains complete owner history, immutable bytes, sequence positi
       installed_extension_id: "source",
       enabled: false,
     });
-    expect((await db.select().from(s.installed_extension_sources))[0]).toMatchObject({
+    expect((await db.select().from(s.installed_extension_sources)).find((row) => row.id === "source")).toMatchObject({
       id: "source",
       extension_id: next,
       install_name: "notes",
       source_path: "/installed/pstdio-notes",
     });
+    expect(
+      (await db.select().from(s.installed_extension_sources)).find((row) => row.id === "custom-source"),
+    ).toMatchObject({ install_name: "my-notes", extension_id: next, manifest_json: { version: "1.0.0" } });
     expect((await db.select().from(s.extension_settings))[0]?.value_json).toEqual({ text: old });
     const before = await db.select().from(s.storage_ordered_operations);
     await migrateExtensionIdentities(db);

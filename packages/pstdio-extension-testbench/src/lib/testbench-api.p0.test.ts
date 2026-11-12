@@ -1,10 +1,13 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { ExtensionBenchCommandResponse, ExtensionBenchLoadResponse } from "./api-contract";
 import { createExtensionTestbenchApi } from "./testbench-api";
 
 const apiPrefix = "/__extension-testbench";
 const repoRoot = resolve(import.meta.dirname, "../../../..");
+const plannerManifest = JSON.parse(readFileSync(resolve(repoRoot, "extensions/pstdio-planner/package.json"), "utf8"));
+const authoredTicketsView = `${plannerManifest.publisher}.${plannerManifest.name}.view.tickets`;
 
 const readJson = async <T>(response: Response | undefined) => {
   expect(response).toBeDefined();
@@ -76,7 +79,7 @@ describe("createExtensionTestbenchApi", () => {
               metadata: {
                 resourceParent: {
                   type: "view",
-                  viewId: "pstdio.planner.view.tickets",
+                  viewId: authoredTicketsView,
                 },
               },
             },

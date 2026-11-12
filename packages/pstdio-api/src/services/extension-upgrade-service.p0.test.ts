@@ -142,7 +142,7 @@ describe("extension upgrade service", () => {
 
   test("offers the bundled source update when a full host ref maps to another commit", async () => {
     const ref = "a".repeat(40);
-    const origin = packagedExtensionCatalog.extensions.find((entry) => entry.installName === "pstdio-planner")!.origin;
+    const origin = packagedExtensionCatalog.extensions.find((entry) => entry.installName === "planner")!.origin;
     const manifest: BundledExtensionSources = {
       ref,
       commit: "b".repeat(40),

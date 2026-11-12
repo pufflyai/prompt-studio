@@ -149,9 +149,7 @@ test("two upgraded devices, an offline return and a clean join share encrypted s
     await migrateExtensionIdentities(db);
     return connect(db);
   };
-  const first = await upgraded();
-  const second = await upgraded();
-  const returning = await upgraded();
+  const [first, second, returning] = await Promise.all([upgraded(), upgraded(), upgraded()]);
   await first.synchronize();
   await second.synchronize();
   await first.records.commit({

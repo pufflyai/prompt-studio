@@ -21,7 +21,7 @@ const completeProjectionFences = (job: Job) => {
 
 /** Coalesce file work without making durable editor traffic wait for extension handlers. */
 export const createNativeProjectionQueue = (input: {
-  reconcile: (address: Address) => Promise<number | void>;
+  reconcile: (address: Address) => Promise<number> | Promise<void>;
   failed: (address: Address, error: unknown) => void;
 }) => {
   const jobs = new Map<string, Job>();
