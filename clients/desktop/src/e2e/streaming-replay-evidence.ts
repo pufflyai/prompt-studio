@@ -3,18 +3,30 @@ import type { PackagedApp } from "./packaged-app-helpers";
 
 // Read only after the visibility assertion fails, outside successful measurement windows.
 export const attachStreamingReplayFailure = async (app: PackagedApp, sessionId: string) => {
+  const assertionFailedAtUtc = new Date().toISOString();
   const captures = await Promise.allSettled([
     (async () => {
       const response = await fetch(`${app.runtime.origin}/v1/sessions/${sessionId}/conversation`, {
         headers: { authorization: `Bearer ${app.runtime.token}` },
         signal: AbortSignal.timeout(1000),
       });
+      const conversation = await response.json();
       await test.info().attach("streaming-authoritative-conversation.json", {
         contentType: "application/json",
-        body: JSON.stringify({ status: response.status, conversation: await response.json() }, null, 2),
+        body: JSON.stringify(
+          {
+            assertionFailedAtUtc,
+            capturedAtUtc: new Date().toISOString(),
+            status: response.status,
+            conversation,
+          },
+          null,
+          2,
+        ),
       });
     })(),
     (async () => {
+      const captureRequestedAtUtc = new Date().toISOString();
       const geometry = await app.page.locator('[aria-label="Main"]:visible').evaluate((main) => {
         const rectangle = (element: Element) => {
           const { x, y, width, height } = element.getBoundingClientRect();
@@ -22,6 +34,7 @@ export const attachStreamingReplayFailure = async (app: PackagedApp, sessionId: 
         };
         return {
           url: location.href,
+          browserCapturedAtUtc: new Date().toISOString(),
           // A retained conversation can keep a hidden log before the visible one.
           logs: Array.from(main.querySelectorAll<HTMLElement>('[role="log"]')).map((log) => ({
             visible: log.checkVisibility(),
@@ -49,7 +62,11 @@ export const attachStreamingReplayFailure = async (app: PackagedApp, sessionId: 
       });
       await test.info().attach("streaming-rendered-conversation.json", {
         contentType: "application/json",
-        body: JSON.stringify(geometry, null, 2),
+        body: JSON.stringify(
+          { assertionFailedAtUtc, captureRequestedAtUtc, capturedAtUtc: new Date().toISOString(), ...geometry },
+          null,
+          2,
+        ),
       });
     })(),
     (async () => {

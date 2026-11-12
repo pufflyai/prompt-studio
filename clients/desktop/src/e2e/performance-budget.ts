@@ -32,39 +32,60 @@ export const measureRenderers = async (
   const entries = Object.entries(renderers);
   const before = await Promise.all(entries.map(([, session]) => readMetrics(session)));
   const startedAt = performance.now();
-  await during();
+  const startedAtUtc = new Date().toISOString();
+  let failed = false;
+  let failure: unknown;
+  try {
+    await during();
+  } catch (error) {
+    failed = true;
+    failure = error;
+  }
   const elapsedSeconds = (performance.now() - startedAt) / 1000;
-  const after = await Promise.all(entries.map(([, session]) => readMetrics(session)));
-  const counters = Object.fromEntries(
-    entries.map(([name], index) => [
-      name,
-      {
-        scriptSeconds: (after[index]?.ScriptDuration ?? Number.NaN) - (before[index]?.ScriptDuration ?? Number.NaN),
-        taskSeconds: (after[index]?.TaskDuration ?? Number.NaN) - (before[index]?.TaskDuration ?? Number.NaN),
-      },
-    ]),
-  );
-  // The heap each renderer holds at the end of the window, beside its CPU share.
-  entries.forEach(([name], index) => {
-    const heap = after[index]?.JSHeapUsedSize;
-    if (heap === undefined) return;
-    recordMeasurement({
-      metric: `${label}/${name}-js-heap`,
-      label: `${label}, ${name} heap`,
-      unit: "bytes",
-      value: heap,
+  try {
+    const after = await Promise.all(entries.map(([, session]) => readMetrics(session)));
+    const counters = Object.fromEntries(
+      entries.map(([name], index) => [
+        name,
+        {
+          scriptSeconds: (after[index]?.ScriptDuration ?? Number.NaN) - (before[index]?.ScriptDuration ?? Number.NaN),
+          taskSeconds: (after[index]?.TaskDuration ?? Number.NaN) - (before[index]?.TaskDuration ?? Number.NaN),
+        },
+      ]),
+    );
+    const finishedAtUtc = new Date().toISOString();
+    await test.info().attach(`${label}-counters.json`, {
+      contentType: "application/json",
+      body: JSON.stringify(
+        { label, outcome: failed ? "failed" : "passed", startedAtUtc, finishedAtUtc, elapsedSeconds, counters },
+        null,
+        2,
+      ),
     });
-  });
-  await test.info().attach(`${label}-counters.json`, {
-    contentType: "application/json",
-    body: JSON.stringify({ label, elapsedSeconds, counters }, null, 2),
-  });
-  return Object.fromEntries(
-    Object.entries(counters).map(([name, { scriptSeconds, taskSeconds }]) => [
-      name,
-      { scriptShare: scriptSeconds / elapsedSeconds, taskShare: taskSeconds / elapsedSeconds },
-    ]),
-  );
+    // Failed windows retain diagnostic counters, but never publish benchmark measurements.
+    if (failed) throw failure;
+    // The heap each renderer holds at the end of the window, beside its CPU share.
+    entries.forEach(([name], index) => {
+      const heap = after[index]?.JSHeapUsedSize;
+      if (heap === undefined) return;
+      recordMeasurement({
+        metric: `${label}/${name}-js-heap`,
+        label: `${label}, ${name} heap`,
+        unit: "bytes",
+        value: heap,
+      });
+    });
+    return Object.fromEntries(
+      Object.entries(counters).map(([name, { scriptSeconds, taskSeconds }]) => [
+        name,
+        { scriptShare: scriptSeconds / elapsedSeconds, taskShare: taskSeconds / elapsedSeconds },
+      ]),
+    );
+  } catch (error) {
+    if (!failed) throw error;
+    if (error !== failure) console.error("Renderer failure counters:", error);
+    throw failure;
+  }
 };
 
 export const rendererMetrics = (measured: Record<string, RendererBudget>, budget: RendererBudget) =>

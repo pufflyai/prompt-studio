@@ -45,6 +45,9 @@ export const removeTestDirectory = async (root: string) => {
     });
     if (installed?.isDirectory() && !installed.isSymbolicLink()) {
       const names = await readdir(extensions);
+      console.log(
+        `Test directory cleanup: ${names.length} installed trees started (${Math.round(performance.now() - began)}ms)`,
+      );
       let next = 0;
       const drain = async () => {
         while (next < names.length) await removeNativeDirectory(join(extensions, names[next++]!));
@@ -54,8 +57,10 @@ export const removeTestDirectory = async (root: string) => {
       const outcomes = await Promise.allSettled(Array.from({ length: Math.min(4, names.length) }, drain));
       const failures = outcomes.flatMap((outcome) => (outcome.status === "rejected" ? [outcome.reason] : []));
       if (failures.length) throw new AggregateError(failures, "Installed extension cleanup failed");
+      console.log(`Test directory cleanup: installed trees removed (${Math.round(performance.now() - began)}ms)`);
     }
   }
+  console.log(`Test directory cleanup: remaining root started (${Math.round(performance.now() - began)}ms)`);
   await removeNativeDirectory(root);
   console.log(`Test directory removed with platform utility (${Math.round(performance.now() - began)}ms)`);
 };
