@@ -7,7 +7,9 @@ import { prepareUiFixtures } from "../scripts/prepare-ui-fixtures";
 
 /** CLI, browser and benchmark fixtures use the same fresh public dependency profile. */
 export const preparePackagedConsumers = async (signal: AbortSignal) => {
-  const root = mkdtempSync(join(tmpdir(), "pstdio-packaged-consumers-"));
+  // Forced process-tree termination can bypass this child's finally on Windows.
+  // The executor must still own every prepared consumer's temporary files.
+  const root = mkdtempSync(join(process.env.E2E_PREPARED_FIXTURES ?? tmpdir(), "pstdio-packaged-consumers-"));
   let registry: Awaited<ReturnType<typeof startLocalWorkspaceRegistry>> | undefined;
   const close = async () => {
     const started = performance.now();

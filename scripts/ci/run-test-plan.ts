@@ -1,4 +1,5 @@
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { runCiChecks } from "./run-ci-checks";
 import { runPlannedTest } from "./run-planned-test";
@@ -51,6 +52,9 @@ export const executePlan = async (plan: TestPlan, options: Options) => {
     ? join(root, process.env.CI_PLAN_OUTPUT_DIR)
     : join(root, "test-results/ci/planned", `${process.pid}-${Date.now()}`);
   mkdirSync(directory, { recursive: true });
+  // Scratch follows the host's temp storage (including CI's Windows Dev Drive).
+  // Reports stay in the checkout; their placement must not choose install storage.
+  const fixtureDirectory = mkdtempSync(join(tmpdir(), "pstdio-test-fixtures-"));
   const results: TestRunResult[] = [];
   let cleanupFailed = false;
   const phases: TestPhase[] = [];
@@ -81,10 +85,10 @@ export const executePlan = async (plan: TestPlan, options: Options) => {
   const signal = options.signal ? AbortSignal.any([options.signal, controller.signal]) : controller.signal;
   process.on("SIGINT", interrupt);
   process.on("SIGTERM", interrupt);
-  const prepare = createSetupRunner(plan, options, signal, directory, record, save);
+  const prepare = createSetupRunner(plan, options, signal, fixtureDirectory, record, save);
   let p1Failed = false;
-  save();
   try {
+    save();
     for (const run of runs) {
       const result: TestRunResult = {
         runId: run.id,
@@ -117,7 +121,7 @@ export const executePlan = async (plan: TestPlan, options: Options) => {
         directory,
         executionId,
         signal,
-        env: { ...options.env, E2E_PREPARED_FIXTURES: fixtures ? join(directory, fixtures) : undefined },
+        env: { ...options.env, E2E_PREPARED_FIXTURES: fixtures ? join(fixtureDirectory, fixtures) : undefined },
         inheritProcessGroup: options.inheritProcessGroup,
       });
       if (result.outcome !== "success" || !result.complete)
@@ -128,7 +132,7 @@ export const executePlan = async (plan: TestPlan, options: Options) => {
   } finally {
     process.off("SIGINT", interrupt);
     process.off("SIGTERM", interrupt);
-    cleanupFailed = !cleanupPreparedFixtures(plan, directory, record);
+    cleanupFailed = !cleanupPreparedFixtures(fixtureDirectory, record);
     save();
   }
   const verification = reconcileTestResults(plan, results, executionId, runIds);
@@ -205,16 +209,11 @@ const cancellationReason = (run: TestPlan["runs"][number], signal: AbortSignal, 
   if (p1Failed && run.priority === "P1" && !run.continueIndependentFiles) return "Stopped after a P1 failure";
 };
 
-const cleanupPreparedFixtures = (
-  plan: TestPlan,
-  directory: string,
-  record: (values: Parameters<typeof testPhase>[1]) => void,
-) => {
+const cleanupPreparedFixtures = (directory: string, record: (values: Parameters<typeof testPhase>[1]) => void) => {
   const started = performance.now();
   let outcome = "success";
   try {
-    for (const step of plan.setup.filter((step) => step.kind === "extension-fixtures"))
-      rmSync(join(directory, step.id), { recursive: true, force: true });
+    rmSync(directory, { recursive: true, force: true });
   } catch (error) {
     outcome = "failure";
     console.error("Prepared fixture cleanup failed", error);

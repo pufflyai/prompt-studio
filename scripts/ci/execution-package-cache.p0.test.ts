@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
 import { copyFile, cp, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, resolve, sep } from "node:path";
 import { copyCiRuntime, isolateCiRuntimeEnvironment } from "./copy-ci-runtime.test-fixture";
 import { executePlan } from "./run-test-plan";
 import { createTestPlan, sealTestPlan } from "./test-plan";
@@ -158,6 +158,8 @@ for (const interrupted of [false, true])
       expect(downloads).toBe(1);
       expect(consumers[0].home).not.toBe(consumers[1].home);
       expect(consumers[0].cache).toBe(consumers[1].cache);
+      // Payload writes must use the host's temporary storage, independently of report placement.
+      expect(consumers[0].cache.startsWith(root + sep)).toBe(false);
       for (const consumer of consumers) {
         expect(await Bun.file(join(consumer.cache, "payload")).exists()).toBe(false);
         expect(await Bun.file(join(consumer.home, "fixtures/sources.json")).exists()).toBe(false);

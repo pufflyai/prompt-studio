@@ -64,7 +64,7 @@ export const runPlaywright = async (
     stdio: "inherit",
   },
 ) => {
-  const runFolder = mkdtempSync(join(tmpdir(), "pstdio-e2e-run-"));
+  const runFolder = mkdtempSync(join(env.E2E_PREPARED_FIXTURES ?? tmpdir(), "pstdio-e2e-run-"));
   let child: ChildProcess | undefined;
   const preparation = new AbortController();
   // A child can announce readiness before spawn returns. Own interruption before starting it.
