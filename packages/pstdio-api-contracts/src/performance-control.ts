@@ -1,3 +1,8 @@
+import type { WebviewCommandQuerySnapshot } from "./extension-kernel/types/webview-command-query";
+import type {
+  WebviewPerformanceQuery,
+  WebviewServiceQueryRequest,
+} from "./extension-kernel/types/webview-service-query";
 import type { PerformanceSnapshot } from "./performance-diagnostics";
 
 export interface PerformanceMonitoringState {
@@ -10,13 +15,16 @@ export interface PerformanceRecordingExport {
   files: { name: string; content: string }[];
 }
 
-export type PerformanceReadRequest = {
-  operation: "state" | "snapshot" | "subscribe" | "unsubscribe" | "recordings" | "retain" | "dispose";
-};
+export type PerformanceReadRequest =
+  | { operation: "query"; query: WebviewServiceQueryRequest<WebviewPerformanceQuery> }
+  | {
+      operation: "state" | "snapshot" | "subscribe" | "unsubscribe" | "recordings" | "retain" | "dispose";
+    };
 export type PerformanceControlRequest =
   | { operation: "set-enabled"; enabled: boolean }
   | { operation: "pause-extension" | "resume-extension"; installedExtensionId: string };
 export type PerformanceReadResult =
+  | WebviewCommandQuerySnapshot
   | PerformanceMonitoringState
   | PerformanceSnapshot
   | PerformanceRecordingExport

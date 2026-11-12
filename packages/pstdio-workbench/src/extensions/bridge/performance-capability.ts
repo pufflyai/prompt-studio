@@ -31,12 +31,29 @@ const retainCapture = async (adapter: PerformanceDiagnosticsAdapter, events: Hos
   }
 };
 
+const subscribePerformance = (adapter: PerformanceDiagnosticsAdapter, events: HostEventPublisher) => {
+  if (subscriptions.has(events)) return;
+  const stop = adapter.subscribe((snapshot) => events.emit({ scope: "performance.read", payload: snapshot }));
+  const disconnect = events.onDisconnect(() => dispose());
+  const dispose = () => {
+    stop();
+    disconnect();
+    subscriptions.delete(events);
+  };
+  subscriptions.set(events, dispose);
+};
+
 export const createPerformanceReadCapability = (
   adapter: PerformanceDiagnosticsAdapter | undefined,
   events?: HostEventPublisher,
+  queries?: import("./extension-webview-host-adapters").ExtensionWebviewHostAdapters["performanceQueries"],
 ) => {
   if (!adapter) return undefined;
   return async (request: PerformanceReadRequest) => {
+    if (request.operation === "query") {
+      if (!queries) throw new Error("Retained performance queries are unavailable");
+      return queries.request(request.query);
+    }
     if (request.operation === "state") return adapter.state();
     if (request.operation === "recordings") return adapter.recordings();
     if (request.operation === "snapshot") return adapter.snapshot();
@@ -53,14 +70,6 @@ export const createPerformanceReadCapability = (
       subscriptions.get(events)?.();
       return;
     }
-    if (subscriptions.has(events)) return;
-    const stop = adapter.subscribe((snapshot) => events.emit({ scope: "performance.read", payload: snapshot }));
-    const disconnect = events.onDisconnect(() => dispose());
-    const dispose = () => {
-      stop();
-      disconnect();
-      subscriptions.delete(events);
-    };
-    subscriptions.set(events, dispose);
+    subscribePerformance(adapter, events);
   };
 };

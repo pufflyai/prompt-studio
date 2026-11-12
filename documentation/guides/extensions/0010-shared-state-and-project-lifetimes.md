@@ -2,6 +2,8 @@
 
 These APIs are on `main` for extension API **0.4.0**, after 0.46. Publish the matching host, SDK and UI before releasing an extension that uses them. A local packed-package test proves the candidate contract; it does not make the dependency available to installed users.
 
+The retained account, Performance and preference service additions described below are candidate API 0.4.1 contracts. Their source and local checks do not establish published compatibility.
+
 ## Choose the owner
 
 | State | Owner |
@@ -53,6 +55,18 @@ For an arbitrary callback reader, `useWebviewQuery(client.queries, { id, params,
 `useWebviewQuery` follows project/account props supplied by the host. `useScopedQuery` observes an already chosen query; callers choosing that query from props must also follow those props. `useWebviewScope` supplies a selected identity for non-query operations. Theme or sizing changes do not select a new data owner.
 
 The React entry has optional peer dependencies on **both** `react` and `@tanstack/react-query`. Declare both in an extension importing that entry, including when using the scoped hooks. Framework-neutral code can use `createWebviewClient`, `query.subscribe`, `getSnapshot` and `read` without React. The legacy `useCommandQuery` remains available with its existing QueryClientProvider contract.
+
+## Read retained services and presentation
+
+Service queries use the same readonly snapshots and optional membership contract as finite command queries. Declare `account.read`, `performance.read` or `preferences.get` for the service being read. Initial props carry only values covered by the calling view's grants and installed source. Service ownership is explicit: account status belongs to the runtime identity guard; project sync is project/account/server scoped; device lists require the expected account and server; Performance samples belong to their window controller. Hiding a view releases its optional members without cancelling the mandatory identity guard, another visible view, an explicit required operation or the collector's supported domain lifetime.
+
+A preference query returns `{ value }`, including a loaded empty object when no value exists. This keeps an absent preference distinct from an unread snapshot. The key includes its runtime/account authority, calling extension, actual installation/source, project, preference name and explicit scope. Registering a native preference still routes through the existing registry; undeclared extension preferences still use the captured installed/project preference store. `client.preferences.set` admits the choice to the host owner immediately and retains its ordered persistence after a guest closes. A recreated guest receives the accepted choice before another preference GET. Older or failed reads cannot overwrite a newer choice; failed persistence remains an error with the choice visible. Retry the supported operation explicitly. Cross-window server preference events invalidate only the matching extension/name and known project on the existing shared connection.
+
+Use `useWebviewCommandQuery(query, useWebviewVisibility())` for all readonly service projections. Do not create another guest query around an account read or Performance subscription. Do not use `accept` or `invalidate` on the readonly projection. Mutations go through their existing public APIs. The host's accepted state, not a cached local snapshot from a returning project, supplies the new view.
+
+`DiffViewer` from `@pstdio/ui` also accepts a controlled `selectedPath` and `onSelectedPathChange`. Keep the selection in its presentation owner and pass it back to the component. The existing uncontrolled `defaultSelectedPath` behavior remains available. An unloaded diff body or a pending summary does not replace a valid controlled choice.
+
+These service and controlled-selection additions require the supporting host, SDK and UI. Publish them before independently released extensions adopt the new APIs. Existing account, performance and preference methods remain supported for unchanged consumers.
 
 ## Declare changes once
 

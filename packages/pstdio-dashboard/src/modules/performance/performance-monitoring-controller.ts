@@ -1,3 +1,4 @@
+import { createScopedQueryClient } from "@pstdio/sdk/extensions";
 import type { PerformanceSnapshot } from "pstdio-api-contracts/performance-diagnostics";
 import { pausedExtensions } from "@/shared/extensions/paused-extensions";
 import { createFrameRateCounter } from "./frame-rate";
@@ -13,29 +14,36 @@ export const createPerformanceMonitoringController = (host: PerformanceHost) => 
   let stopStateReports: (() => void) | undefined;
   let disposed = false;
   let releaseCapture: (() => Promise<void>) | undefined;
-  const snapshotListeners = new Set<(snapshot: PerformanceSnapshot | null) => void>();
+  let observingSnapshots = false;
   let stopSnapshots: (() => void) | undefined;
+  const snapshots = createScopedQueryClient(
+    { runtimeId: crypto.randomUUID(), extensionId: "pstdio.performance" },
+    { maxInactive: 1 },
+  );
+  const snapshotQuery = snapshots.query<PerformanceSnapshot | null>({
+    id: "performance.snapshot",
+    async read(signal) {
+      signal.throwIfAborted();
+      if (!enabled) return null;
+      const value = await host.snapshot();
+      signal.throwIfAborted();
+      return value;
+    },
+    subscribe(invalidate) {
+      invalidate();
+      observingSnapshots = true;
+      if (enabled && !disposed) stopSnapshots ??= startSnapshots();
+      return () => {
+        observingSnapshots = false;
+        stopSnapshots?.();
+        stopSnapshots = undefined;
+      };
+    },
+  });
+  // Keep the established host cadence. Reading the source joins this owner, never another collector.
   const startSnapshots = () => {
-    let active = true;
-    let pending = false;
-    const poll = async () => {
-      if (pending) return;
-      pending = true;
-      try {
-        const snapshot = await host.snapshot();
-        if (active) for (const listener of snapshotListeners) listener(snapshot);
-      } finally {
-        pending = false;
-      }
-    };
-    const timer = setInterval(() => {
-      void poll().catch(() => {});
-    }, 2000);
-    void poll().catch(() => {});
-    return () => {
-      active = false;
-      clearInterval(timer);
-    };
+    const timer = setInterval(() => snapshotQuery.invalidate(), 2000);
+    return () => clearInterval(timer);
   };
 
   // The snapshot that people copy and agents read includes this window's state.
@@ -59,7 +67,8 @@ export const createPerformanceMonitoringController = (host: PerformanceHost) => 
     if (next) {
       stopObserver ??= observeSlowFrames(host.reportFrames);
       stopStateReports ??= reportStateChanges();
-      if (snapshotListeners.size) stopSnapshots ??= startSnapshots();
+      if (observingSnapshots) stopSnapshots ??= startSnapshots();
+      void snapshotQuery.refreshObserved().catch(() => {});
     } else {
       stopObserver?.();
       stopObserver = undefined;
@@ -67,7 +76,7 @@ export const createPerformanceMonitoringController = (host: PerformanceHost) => 
       stopStateReports = undefined;
       stopSnapshots?.();
       stopSnapshots = undefined;
-      for (const listener of snapshotListeners) listener(null);
+      snapshotQuery.accept(null);
     }
   };
 
@@ -87,6 +96,7 @@ export const createPerformanceMonitoringController = (host: PerformanceHost) => 
 
   return {
     host,
+    snapshotQuery,
     // A loaded monitoring extension is the person's choice to measure, so monitoring runs exactly
     // while one holds a capture, and stops when the last one is disabled or unloaded.
     retainCapture: async () => {
@@ -125,15 +135,16 @@ export const createPerformanceMonitoringController = (host: PerformanceHost) => 
     getEnabled: () => enabled,
     setEnabled,
     subscribeSnapshots: (listener: (snapshot: PerformanceSnapshot | null) => void) => {
-      snapshotListeners.add(listener);
-      if (enabled && !disposed) stopSnapshots ??= startSnapshots();
-      return () => {
-        snapshotListeners.delete(listener);
-        if (!snapshotListeners.size) {
-          stopSnapshots?.();
-          stopSnapshots = undefined;
-        }
+      let previous: PerformanceSnapshot | null | undefined;
+      const changed = () => {
+        const data = snapshotQuery.getSnapshot().data;
+        if (data === undefined || data === previous) return;
+        previous = data;
+        listener(data);
       };
+      const stop = snapshotQuery.subscribe(changed);
+      changed();
+      return stop;
     },
     dispose: () => {
       disposed = true;
@@ -144,7 +155,7 @@ export const createPerformanceMonitoringController = (host: PerformanceHost) => 
       stopObserver?.();
       stopObserver = undefined;
       stopSnapshots?.();
-      snapshotListeners.clear();
+      snapshots.dispose();
     },
   };
 };

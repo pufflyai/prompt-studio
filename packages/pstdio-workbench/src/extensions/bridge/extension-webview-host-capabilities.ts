@@ -173,7 +173,12 @@ export const createExtensionWebviewHostCapabilities = (
     ),
     "preferences.get": capability(
       "preferences.get",
-      preferences && ((request) => preferences.get(request.name, request.scope)),
+      preferences &&
+        ((request) =>
+          "op" in request
+            ? (adapters.preferenceQueries?.request(request.query) ??
+              Promise.reject(new Error("Retained preference queries are unavailable")))
+            : preferences.get(request.name, request.scope)),
     ),
     "preferences.set": capability(
       "preferences.set",
@@ -216,10 +221,15 @@ export const createExtensionWebviewHostCapabilities = (
     "artifacts.read": capability("artifacts.read", artifacts && ((request) => artifacts.read(request))),
     "performance.read": capability(
       "performance.read",
-      createPerformanceReadCapability(adapters.performance, hostEvents),
+      createPerformanceReadCapability(adapters.performance, hostEvents, adapters.performanceQueries),
     ),
     "performance.control": capability("performance.control", adapters.performance?.control),
-    "account.read": capability("account.read", account),
+    "account.read": capability("account.read", (request) =>
+      request.op === "query"
+        ? (adapters.accountQueries?.request(request.query) ??
+          Promise.reject(new Error("Retained account queries are unavailable")))
+        : account?.(request),
+    ),
     "account.manage": capability("account.manage", account),
   } satisfies Record<WebviewHostCapability, HostCapability>;
 };
