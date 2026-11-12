@@ -6,26 +6,35 @@ export interface DropProbe {
   gapRatio: number;
 }
 
+function vacantRowSpans(widgets: DashboardWidget[], id: string, y: number, columns: number) {
+  const occupied = widgets
+    .filter((widget) => widget.id !== id && widget.layout.y <= y && widget.layout.y + widget.layout.h > y)
+    .map(({ layout }) => layout)
+    .sort((a, b) => a.x - b.x);
+  const spans: { start: number; end: number }[] = [];
+  let start = 0;
+  for (const layout of [...occupied, { x: columns, w: 0 }]) {
+    if (layout.x > start) spans.push({ start, end: layout.x });
+    start = Math.max(start, layout.x + layout.w);
+  }
+  return spans;
+}
+
+const fitSpan = (span: { start: number; end: number }, width: number, desiredX: number) =>
+  Math.max(span.start, Math.min(span.end - width, Math.round(desiredX)));
+
 export function fitWidgetInRow(
   widgets: DashboardWidget[],
   id: string,
   y: number,
   width: number,
-  pointerX: number,
   desiredX: number,
   columns: number,
 ) {
-  const occupied = widgets
-    .filter((widget) => widget.id !== id && widget.layout.y <= y && widget.layout.y + widget.layout.h > y)
-    .map(({ layout }) => layout)
-    .sort((a, b) => a.x - b.x);
-  let start = 0;
-  for (const layout of [...occupied, { x: columns, w: 0 }]) {
-    const end = layout.x;
-    if (end - start >= width && pointerX >= start && pointerX <= end)
-      return Math.max(start, Math.min(end - width, Math.round(desiredX)));
-    start = Math.max(start, end + layout.w);
-  }
+  return vacantRowSpans(widgets, id, y, columns)
+    .filter(({ start, end }) => end - start >= width)
+    .map((span) => fitSpan(span, width, desiredX))
+    .sort((a, b) => Math.abs(a - desiredX) - Math.abs(b - desiredX))[0];
 }
 
 export function findRowVacancy(
@@ -45,15 +54,17 @@ export function findRowVacancy(
       probe.position.y < layout.y + layout.h - probe.gapRatio,
   );
   if (occupied) return;
-  for (const widget of widgets) {
+  for (const widget of [...widgets].sort((a, b) => b.layout.y - a.layout.y)) {
     if (
       widget.id === id ||
       probe.position.y < widget.layout.y ||
       probe.position.y > widget.layout.y + widget.layout.h - probe.gapRatio
     )
       continue;
-    const x = fitWidgetInRow(widgets, id, widget.layout.y, candidate.w, probe.position.x, candidate.x, columns);
-    if (x !== undefined) return { id: widget.id, x };
+    const span = vacantRowSpans(widgets, id, widget.layout.y, columns).find(
+      ({ start, end }) => end - start >= candidate.w && probe.position.x >= start && probe.position.x <= end,
+    );
+    if (span) return { id: widget.id, x: fitSpan(span, candidate.w, candidate.x) };
   }
 }
 

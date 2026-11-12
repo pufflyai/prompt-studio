@@ -108,6 +108,34 @@ describe("dashboard grid editing", () => {
     expect(moveWidget(staggered, "moved", { x: 8, y: 4, w: 4, h: 3 }, 12, "vertical", probe(5, 10))).toEqual(staggered);
   });
 
+  test("tablet rejoining fits saved row capacity even when responsive packing moved its columns", () => {
+    const separated = [
+      fixtures[1],
+      { ...fixtures[0], id: "third", layout: { x: 8, y: 0, w: 4, h: 3 } },
+      { ...fixtures[2], id: "left-chart", layout: { x: 0, y: 3, w: 6, h: 8 } },
+      { ...fixtures[2], id: "right-chart", layout: { x: 6, y: 3, w: 6, h: 8 } },
+      { ...fixtures[0], layout: { x: 0, y: 11, w: 4, h: 8 } },
+    ];
+    const result = moveWidget(separated, "first", { x: 4, y: 1, w: 2, h: 8 }, 6, "free", probe(1.5, 5));
+    expect(result.find(({ id }) => id === "first")?.layout).toEqual({ x: 0, y: 0, w: 4, h: 8 });
+    expect(
+      projectWidgets(result, 6)
+        .filter(({ layout }) => layout.y === 0)
+        .map(({ id }) => id),
+    ).toEqual(["first", "second", "third"]);
+  });
+
+  test("a vacancy in a staggered layout joins the nearest row under the pointer", () => {
+    const staggered = [
+      { ...fixtures[0], layout: { x: 0, y: 0, w: 4, h: 8 } },
+      fixtures[1],
+      { ...fixtures[2], layout: { x: 4, y: 3, w: 3, h: 8 } },
+      { ...fixtures[0], id: "moved", layout: { x: 0, y: 11, w: 4, h: 3 } },
+    ];
+    const result = moveWidget(staggered, "moved", { x: 8, y: 4, w: 4, h: 3 }, 12, "free", probe(5, 10));
+    expect(result.find(({ id }) => id === "moved")?.layout).toEqual({ x: 8, y: 3, w: 4, h: 3 });
+  });
+
   test("free placement can rejoin a row while retaining deliberate vertical gaps elsewhere", () => {
     const spaced = [
       fixtures[0],

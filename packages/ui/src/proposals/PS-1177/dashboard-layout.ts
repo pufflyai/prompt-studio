@@ -119,12 +119,12 @@ export function previewWidgetMove(
   const vacancy = vertical ? findRowVacancy(projected, id, layout, columns, probe) : undefined;
   const row = widgets.find((widget) => widget.id === vacancy?.id);
   if (vacancy && row) {
+    // Responsive packing can move columns; the saved row still needs enough contiguous width.
     const savedX = fitWidgetInRow(
       widgets,
       id,
       row.layout.y,
       active.layout.w,
-      (probe.position.x * dashboardGeometry.columns) / columns,
       (vacancy.x * dashboardGeometry.columns) / columns,
       dashboardGeometry.columns,
     );
