@@ -215,7 +215,7 @@ export default defineExtension({
       layer: "current",
       key: "N",
       targetScope: "panel",
-      when: { resourceType: [workbenchResourceKinds.session, draftKind] },
+      when: { resourceType: [workbenchResourceKinds.session, draftKind], view: conversation.ref },
       action: { kind: "command", target: { command: newInViewer.ref } },
     }),
     defineKeybinding({

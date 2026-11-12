@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { contributionRefId, sessionBrowser } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -61,16 +62,16 @@ test("Sessions navigation uses the provider's project list and scopes linked res
   ).toEqual(["Existing session"]);
   const readKey = () => treeViewBody(workbench, dashboardWidgetIds.dashboardSidenav).getReadKey?.({});
   openSessionsPage(workbench, { type: "session", extensionId: "pstdio", id: "first" });
-  const first = readKey();
-  const linkedTickets = async () =>
-    (await treeViewSections(workbench, dashboardWidgetIds.dashboardSidenav))
+  const menu = workbench.viewMenus.getViewMenu("pstdio.pstdio-session-browser.view-menu.session.resources")!;
+  expect(menu).toMatchObject({ ownerViewId: contributionRefId(sessionBrowser.views.conversation), side: "left" });
+  const linkedTickets = async (id: string) =>
+    (await treeViewSections(workbench, menu.viewId, { resource: { type: "session", extensionId: "pstdio", id } }))
       .flatMap((section) => section.nodes)
       .filter((node) => node.resource?.type === "ticket")
       .map((node) => node.resource?.id);
-  expect(await linkedTickets()).toEqual(["ticket-first"]);
+  expect(await linkedTickets("first")).toEqual(["ticket-first"]);
   openSessionsPage(workbench, { type: "session", extensionId: "pstdio", id: "second" });
-  expect(readKey()).not.toBe(first);
-  expect(await linkedTickets()).toEqual(["ticket-second"]);
+  expect(await linkedTickets("second")).toEqual(["ticket-second"]);
   expect(
     (await treeViewSections(workbench, dashboardWidgetIds.dashboardSidenav))
       .flatMap((section) => section.nodes)
