@@ -1,4 +1,4 @@
-name: Packaged consumer cleanup qualification
+name: Execution-owned package cache qualification
 on:
   workflow_dispatch:
     inputs:
@@ -9,7 +9,7 @@ permissions:
   contents: read
 jobs:
   cleanup:
-    name: Same seven-extension cleanup on Apple Silicon
+    name: Same three private profiles on Apple Silicon
     runs-on: macos-15
     timeout-minutes: 30
     env:
@@ -30,45 +30,52 @@ jobs:
           install-strategy: native
       - name: Build original public artifacts
         run: bun run build -- --scope @pstdio/sdk --scope @pstdio/ui --include-dependencies
-      - name: Compare complete owned cleanup once
+      - name: Compare complete setup and cleanup once
         run: |
           mkdir -p test-results
-          cat > "$RUNNER_TEMP/consumer-cleanup-qualification.ts" <<'QUALIFICATION'
-          import {mkdtempSync,writeFileSync,readdirSync,lstatSync} from 'node:fs';
+          cat > "$RUNNER_TEMP/execution-cache-qualification.ts" <<'QUALIFICATION'
+          import {mkdtempSync,writeFileSync} from 'node:fs';
           import {rm} from 'node:fs/promises';
           import {tmpdir} from 'node:os';
-          import {join} from 'node:path';
+          import {join,dirname} from 'node:path';
           const root=process.env.GITHUB_WORKSPACE!;
-          const {startLocalWorkspaceRegistry}=await import(join(root,'packages/e2e/src/local-workspace-registry.ts'));
-          const {prepareUiFixtureSources,prepareUiFixtures}=await import(join(root,'packages/e2e/src/scripts/prepare-ui-fixtures.ts'));
-          const {removeTestDirectory}=await import(join(root,'packages/e2e/src/packaged/remove-test-directory.ts'));
-          const directory=mkdtempSync(join(tmpdir(),'ps206-consumer-cleanup-'));
+          // Diagnostic checkout: apply the exact one-line cache-input repair to the baseline adapter.
+          const adapterPath=join(root,'packages/e2e/src/packaged/prepared-packaged-consumers.ts');
+          const adapter=await Bun.file(adapterPath).text();
+          await Bun.write(adapterPath,adapter.replace('E2E_BUN_CACHE_DIR: join(root, "bun-cache"),','E2E_BUN_CACHE_DIR: process.env.E2E_BUN_CACHE_DIR ?? join(root, "bun-cache"),'));
+          const {preparePackagedConsumers}=await import(join(root,'packages/e2e/src/packaged/prepared-packaged-consumers.ts'));
+          const {prepareUiFixtureSources}=await import(join(root,'packages/e2e/src/scripts/prepare-ui-fixtures.ts'));
+          const directory=mkdtempSync(join(tmpdir(),'ps206-execution-cache-'));
           const signal=new AbortController().signal;
           const prepared=join(directory,'prepared');
           const preparedEnv={...process.env,E2E_HOME:prepared,E2E_BUN_CACHE_DIR:join(prepared,'bun-cache'),E2E_PREPARED_FIXTURES:undefined};
-          const count=(path:string)=>{let files=0,bytes=0,dirs=0,links=0;for(const entry of readdirSync(path,{withFileTypes:true})){const full=join(path,entry.name);if(entry.isSymbolicLink())links++;else if(entry.isDirectory()){dirs++;const c=count(full);files+=c.files;bytes+=c.bytes;dirs+=c.dirs;links+=c.links;}else{files++;bytes+=lstatSync(full).size;}}return{files,bytes,dirs,links};};
+          const previous={E2E_BUN_CACHE_DIR:process.env.E2E_BUN_CACHE_DIR,E2E_PREPARED_FIXTURES:process.env.E2E_PREPARED_FIXTURES};
           try{
            await prepareUiFixtureSources(preparedEnv,signal);writeFileSync(join(prepared,'sources.json'),preparedEnv.E2E_EXTENSION_SOURCES!);
+           process.env.E2E_PREPARED_FIXTURES=prepared;
            const results=[];
-           for(const mode of ['node','native']){
-            const consumer=join(directory,mode);const configPath=join(consumer,'.npmrc');const began=performance.now();
-            const registry=await startLocalWorkspaceRegistry({configPath,outputRoot:join(consumer,'registry'),packagePaths:[join(root,'packages/sdk'),join(root,'packages/ui')]});
-            const env={...process.env,E2E_HOME:join(consumer,'home'),E2E_BUN_CACHE_DIR:join(consumer,'bun-cache'),E2E_PREPARED_FIXTURES:prepared,NPM_CONFIG_USERCONFIG:configPath};
-            await prepareUiFixtures(env,signal,registry.packageArtifacts);const prepareMs=performance.now()-began;
-            const inventory=count(consumer);const sourceInventory=count(env.E2E_HOME);const cacheInventory=count(env.E2E_BUN_CACHE_DIR);
-            const closeStart=performance.now();await registry.close();const registryCloseMs=performance.now()-closeStart;
-            const removeStart=performance.now();if(mode==='node')await rm(consumer,{recursive:true,force:true});else await removeTestDirectory(consumer);
-            const removeMs=performance.now()-removeStart;
-            const result={mode,prepareMs,registryCloseMs,removeMs,totalMs:prepareMs+registryCloseMs+removeMs,inventory,sourceInventory,cacheInventory};results.push(result);console.log(JSON.stringify(result));
+           for(const mode of ['independent','execution-owned']){
+            const runs=[]; const cache=join(directory,'consumer-cache',mode);
+            for(let i=0;i<3;i++){
+             if(mode==='independent')delete process.env.E2E_BUN_CACHE_DIR;else process.env.E2E_BUN_CACHE_DIR=cache;
+             const began=performance.now();const profile=await preparePackagedConsumers(signal);const setupMs=performance.now()-began;
+             const consumer=dirname(profile.env.E2E_HOME!);const usedCache=profile.env.E2E_BUN_CACHE_DIR!;
+             const closeStart=performance.now();await profile.close();const cleanupMs=performance.now()-closeStart;
+             const result={setupMs,cleanupMs,totalMs:setupMs+cleanupMs,consumer};runs.push(result);console.log(JSON.stringify({mode,index:i,...result}));
+            }
+            const cleanupStart=performance.now();await rm(cache,{recursive:true,force:true});const executorCleanupMs=performance.now()-cleanupStart;
+            results.push({mode,runs,executorCleanupMs,totalMs:executorCleanupMs+runs.reduce((n,r)=>n+r.totalMs,0)});
            }
-           const result={revision:'0af9691eeffa5acdb4d6a802b0abe102feaa670a',host:`${process.platform}/${process.arch}`,bun:Bun.version,samples:1,conditions:'Same seven fixture extensions and immutable source producer; separate initially empty invocation-owned package caches; normal frozen installs before cleanup. Node baseline first; native utility second. One sequential sample on a shared host. Counts exclude following symlinks. No application runtime or assertions; setup/cleanup qualification only.',results};
-           writeFileSync(join(root,'test-results/consumer-cleanup-qualification.json'),JSON.stringify(result,null,2));
-          }finally{await removeTestDirectory(directory);}
+           const result={revision:'0af9691 + execution-owned cache repair',host:`${process.platform}/${process.arch}`,bun:Bun.version,samples:1,conditions:'Same seven-extension immutable source producer, same built SDK/UI. Three sequential fresh profiles in each arm, normal frozen installs each time; separate empty caches in baseline vs one empty execution-owned cache in candidate; all cleanup included. No application runtimes/assertions. Shared host; baseline first. No end-to-end CI speedup claim.',results};writeFileSync(join(root,'test-results/execution-cache-qualification.json'),JSON.stringify(result,null,2));
+          }finally{
+           for(const [key,value]of Object.entries(previous)){if(value===undefined)delete process.env[key];else process.env[key]=value;}
+           await rm(directory,{recursive:true,force:true});
+          }
           QUALIFICATION
-          bun "$RUNNER_TEMP/consumer-cleanup-qualification.ts" 2>&1 | tee test-results/consumer-cleanup-qualification.log
+          bun "$RUNNER_TEMP/execution-cache-qualification.ts" 2>&1 | tee test-results/execution-cache-qualification.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: consumer-cleanup-qualification
-          path: test-results/consumer-cleanup-qualification.*
+          name: execution-cache-qualification
+          path: test-results/execution-cache-qualification.*
           if-no-files-found: error
