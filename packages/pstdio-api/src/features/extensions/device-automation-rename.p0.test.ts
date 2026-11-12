@@ -26,7 +26,7 @@ const fixture = () => {
         name: "notes",
         version: "1.0.0",
         main: "extension.ts",
-        enginesPstdio: "^0.4.0",
+        enginesPstdio: "^0.4.0 || ^0.5.0",
       },
       definition: {
         commands: [{ id: "tick", ref: { kind: "command", id: "tick" }, title: "Tick", run() {} }],

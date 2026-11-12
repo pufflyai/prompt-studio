@@ -75,7 +75,7 @@ beforeAll(async () => {
     publisher: "fixture",
     version: "0.0.1",
     main: "extension.ts",
-    engines: { pstdio: "^0.4.0" },
+    engines: { pstdio: "^0.4.0 || ^0.5.0" },
   };
   await writeFile(join(extensionPath, "package.json"), JSON.stringify(manifest));
   await writeFile(join(extensionPath, "extension.ts"), fixtureSource);

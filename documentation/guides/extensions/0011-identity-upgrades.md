@@ -1,6 +1,6 @@
 # First-party extension identity upgrades
 
-On `main`, after 0.46.0, the coordinated extension API 0.5.0 release introduces shorter first-party owners such as `pstdio.notes`, `pstdio.planner` and `pstdio.reports`. The host must ship before separately released extensions adopt these names. See [ADR 0144](../../adrs/0144-first-party-extension-identities.md).
+On `main`, after 0.47.0, the coordinated extension API 0.5.0 release introduces shorter first-party owners such as `pstdio.notes`, `pstdio.planner` and `pstdio.reports`. The host must ship before separately released extensions adopt these names. See [ADR 0144](../../adrs/0144-first-party-extension-identities.md).
 
 ## Commands and refs
 

@@ -36,7 +36,7 @@ describe("collectExtensionWebviews", () => {
         name: "pstdio-home",
         displayName: "Home",
         version: "1.0.0",
-        enginesPstdio: "^0.4.0",
+        enginesPstdio: "^0.4.0 || ^0.5.0",
       },
       definition: {
         views: [{ id: "home", title: "Home", body: { kind: "webview", entry: asset("./home.tsx") } }],
