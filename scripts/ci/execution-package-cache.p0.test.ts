@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
 import { copyFile, cp, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve, sep } from "node:path";
+import { basename, dirname, join, resolve, sep } from "node:path";
 import { copyCiRuntime, isolateCiRuntimeEnvironment } from "./copy-ci-runtime.test-fixture";
 import { executePlan } from "./run-test-plan";
 import { createTestPlan, sealTestPlan } from "./test-plan";
@@ -42,7 +42,7 @@ for (const interrupted of [false, true])
         await mkdir(pkg, { recursive: true });
         await writeFile(join(pkg, "package.json"), JSON.stringify({ name: `@pstdio/${name}`, version: "1.0.0" }));
       }
-      const dependencyName = "fixture-completed-cache-dependency";
+      const dependencyName = `fixture-completed-${basename(root)}`;
       const dependency = join(root, "dependency");
       await mkdir(dependency);
       await writeFile(join(dependency, "package.json"), JSON.stringify({ name: dependencyName, version: "1.0.0" }));
@@ -98,6 +98,13 @@ for (const interrupted of [false, true])
             writeFileSync(payload,'retained');
             const source=JSON.parse(process.env.E2E_EXTENSION_SOURCES!).fixture;
             expect(existsSync(join(source,'node_modules'))).toBe(false);
+            // Ordinary extension installers inherit the adapter environment without a runtime override.
+            const standalone=join(process.env.E2E_HOME!,'standalone');
+            cpSync(source,standalone,{recursive:true});
+            const inheritedInstall=Bun.spawnSync([process.execPath,'install','--offline','--frozen-lockfile','--ignore-scripts'],{
+              cwd:standalone,env:process.env,
+            });
+            expect(inheritedInstall.exitCode,inheritedInstall.stderr.toString()).toBe(0);
             const runtime=join(process.env.E2E_HOME!,'runtime');
             const installedSource=join(runtime,'extension');
             cpSync(source,installedSource,{recursive:true,filter:path=>basename(path)!=='node_modules'});

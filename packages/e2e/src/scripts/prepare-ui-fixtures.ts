@@ -22,7 +22,9 @@ const prepareFixtures = async (
     : undefined;
   if (reused) env.E2E_BUN_CACHE_DIR = reused.packageCache;
   await mkdir(env.E2E_BUN_CACHE_DIR!, { recursive: true });
-  const installEnv = { ...env, HOME: env.E2E_HOME, BUN_INSTALL_CACHE_DIR: env.E2E_BUN_CACHE_DIR };
+  // Ordinary child installers must use the same owner as runtime and fixture installs.
+  env.BUN_INSTALL_CACHE_DIR = env.E2E_BUN_CACHE_DIR;
+  const installEnv = { ...env, HOME: env.E2E_HOME };
   const sources: Record<string, string> = reused?.sources ?? {};
   const artifacts =
     packageArtifacts ??
