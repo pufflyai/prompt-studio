@@ -29,7 +29,7 @@ export const resolveNoteCommand = defineCommand({
 export const createNoteCommand = defineCommand({
   id: "notes.create",
   title: l10n("commands.createNote", "New note"),
-  cli: true,
+  cli: { path: ["create"] },
   palette: [{ group: "Notes", icon: "sticky-note", params: {} }],
   mutating: true,
   params: {
@@ -51,7 +51,7 @@ export const deleteNoteCommand = defineCommand({
   id: "notes.delete",
   resourceMutation: { kind: "remove", resourceType: "note", idParam: "noteId" },
   title: l10n("commands.deleteNote", "Delete note"),
-  cli: true,
+  cli: { path: ["delete"] },
   mutating: true,
   menus: [{ ...noteMenu, label: l10n("tree.actions.deleteNote", "Delete"), icon: "trash" }],
   params: {
@@ -72,7 +72,7 @@ export const renameNoteCommand = defineCommand({
   id: "notes.rename",
   resourceMutation: { kind: "rename", resourceType: "note", idParam: "noteId", labelParam: "title" },
   title: l10n("commands.renameNote", "Rename note"),
-  cli: true,
+  cli: { path: ["rename"] },
   mutating: true,
   menus: [{ ...noteMenu, placement: "first", label: l10n("tree.actions.renameNote", "Rename note"), icon: "pencil" }],
   params: {

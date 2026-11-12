@@ -32,7 +32,7 @@ export const ticketContext = (storage: ExtensionStorageApi) => {
     storage,
     params: {},
     resourcePrefixes: { ticket: "T" },
-    overrides: { extensionId: "pstdio-planner" },
+    overrides: { extensionId: "planner" },
   });
   const core = ctx.resources;
   ctx.resources = {

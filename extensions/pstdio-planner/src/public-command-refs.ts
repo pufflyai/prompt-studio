@@ -73,7 +73,7 @@ export interface TicketWorkspaceRow {
   active: boolean;
 }
 
-const plannerCommand = commandRef.forExtension({ publisher: "pstdio", name: "pstdio-planner" });
+const plannerCommand = commandRef.forExtension({ publisher: "pstdio", name: "planner" });
 
 // This module owns the planner's public command contract. Consumers import these
 // references instead of repeating the planner identity or command ids.

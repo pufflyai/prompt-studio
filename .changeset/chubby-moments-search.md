@@ -1,6 +1,6 @@
 ---
 "pstdio": patch
-"pstdio-planner": patch
+"planner": patch
 "extension-lab": patch
 ---
 

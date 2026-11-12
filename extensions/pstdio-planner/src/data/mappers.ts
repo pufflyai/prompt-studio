@@ -76,7 +76,7 @@ const ticketToRowWithTags = (
       ...item,
       action: {
         ...item.action,
-        parent: ticketPageTarget({ ...hierarchy.identity, projectId, extensionId: "pstdio.pstdio-planner" }),
+        parent: ticketPageTarget({ ...hierarchy.identity, projectId, extensionId: "pstdio.planner" }),
       },
     };
   });

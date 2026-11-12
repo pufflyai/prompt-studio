@@ -90,7 +90,7 @@ pst notifications snooze <id> --until <time> [--project-id <id>]
 
 ## Planner tickets
 
-These aliases are available when the `pstdio-planner` extension is enabled.
+These aliases are available when the `planner` extension is enabled.
 
 ```sh
 pst tickets list [--status <status>] [--tags <tag>...] [--parent <id>] [--archived] [--draft]
@@ -138,7 +138,7 @@ pst tags delete --tag <tag>
 
 ## Reports
 
-These aliases are available when the `pstdio-reports` extension is enabled.
+These aliases are available when the `reports` extension is enabled.
 
 ```sh
 pst reports write [--workspace <id>] [--kind <kind>] [--name <name>] --template <template> [--source <source>]

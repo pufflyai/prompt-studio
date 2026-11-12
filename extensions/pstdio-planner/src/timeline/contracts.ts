@@ -6,7 +6,7 @@ import type { StoredStatus, StoredTag } from "../data/types";
 import type { TicketState } from "./model/state";
 
 export const planChanged = eventRef<{ reason: string }>({
-  extensionId: "pstdio.pstdio-planner",
+  extensionId: "pstdio.planner",
   id: "timeline.plan.changed",
 });
 

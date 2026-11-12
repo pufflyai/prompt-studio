@@ -54,12 +54,12 @@ describe("createWorkspaceCommand", () => {
             type: "ticket",
             id: ticket.id,
             projectId: "proj-1",
-            extensionId: "pstdio-planner",
+            extensionId: "planner",
             label: "T-1",
             role: "primary",
             shorthand: "T-1",
             metadata: {
-              resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
+              resourceParent: { type: "view", viewId: "pstdio.planner.view.tickets" },
             },
           },
         ],
@@ -108,7 +108,7 @@ describe("createWorkspaceCommand", () => {
                 label: `${parent.shorthand} Parent`,
                 shorthand: parent.shorthand,
                 metadata: {
-                  resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
+                  resourceParent: { type: "view", viewId: "pstdio.planner.view.tickets" },
                 },
               },
             },
@@ -167,7 +167,7 @@ describe("proposal notifications", () => {
     expect(notifications).toEqual([
       expect.objectContaining({
         actions: expect.arrayContaining([
-          expect.objectContaining({ command: "pstdio.pstdio-planner.command.approve-proposal", label: "Approve" }),
+          expect.objectContaining({ command: "pstdio.planner.command.approve-proposal", label: "Approve" }),
         ]),
         dedupeKey: `pstdio-planner:ticket:${ticket.id}:proposal-refined`,
         kind: "needs_review",
@@ -230,7 +230,7 @@ describe("breakIntoSubTicketsCommand", () => {
             type: "ticket",
             id: "ticket-1",
             projectId: "proj-1",
-            extensionId: "pstdio-planner",
+            extensionId: "planner",
             label: "ticket-1",
             role: "primary",
             shorthand: "ticket-1",

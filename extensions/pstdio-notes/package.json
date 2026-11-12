@@ -1,12 +1,12 @@
 {
-  "name": "pstdio-notes",
+  "name": "notes",
   "version": "0.46.0",
   "displayName": "Notes",
   "description": "Write Markdown notes that live in the project repository.",
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.3.1 || ^0.4.0"
+    "pstdio": "^0.4.0"
   },
   "pstdio": {
     "scope": "user"

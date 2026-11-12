@@ -11,13 +11,13 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>(inpu
     ...input,
     resourcePrefixes: { ticket: input.overrides?.project?.shorthand ?? "T", report: "RP" },
     overrides: {
-      extensionId: "pstdio-planner",
+      extensionId: "planner",
       resources: {
         ...ticketContext(input.storage).resources,
         allocate: makeContext({
           ...input,
           resourcePrefixes: { ticket: input.overrides?.project?.shorthand ?? "T", report: "RP" },
-          overrides: { ...input.overrides, extensionId: "pstdio-planner" },
+          overrides: { ...input.overrides, extensionId: "planner" },
         }).resources.allocate,
       },
       process: {

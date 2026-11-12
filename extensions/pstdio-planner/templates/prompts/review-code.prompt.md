@@ -16,7 +16,7 @@ Submit a verdict before finishing. Do not change the ticket status.
 
 - If there are no critical or minor findings, run:
 
-  `pst pstdio-planner submit-review --workspace-id {{workspaceId}} --review-id {{reviewId}} --reviewed-head-sha {{headSha}} --review-report-id <report-id> --verdict passed --expected-revision {{revision}} --threads '[]'`
+  `pst pstdio.planner submit-review --workspace-id {{workspaceId}} --review-id {{reviewId}} --reviewed-head-sha {{headSha}} --review-report-id <report-id> --verdict passed --expected-revision {{revision}} --threads '[]'`
 
 - If there are critical or minor findings, pass `--verdict changes_requested`. Set `--threads` to a JSON array. Each item must contain `severity`, `body`, and, when the finding is inline, `path`, `startLine`, `endLine`, and `side` (`base` or `head`). Suggestions may also be included.
 

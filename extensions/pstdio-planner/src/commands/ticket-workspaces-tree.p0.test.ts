@@ -7,7 +7,7 @@ import { listTicketFilesTreeCommand } from "./ticket-files";
 
 const ticketRendererParams = (ticket: { id: string; shorthand: string }, documentId?: string) => ({
   renderer: {
-    rendererId: "pstdio.pstdio-planner.view.ticket-files",
+    rendererId: "pstdio.planner.view.ticket-files",
     resource: {
       type: "ticket",
       id: ticket.id,
@@ -42,7 +42,7 @@ describe("ticket files tree workspace commands", () => {
           label: "PS-999",
           shorthand: "PS-999",
           metadata: {
-            resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
+            resourceParent: { type: "view", viewId: "pstdio.planner.view.tickets" },
           },
         },
       ],
@@ -81,17 +81,17 @@ describe("ticket files tree workspace commands", () => {
             page: workspacePages.workspace,
             parent: {
               kind: "page",
-              page: { kind: "page", id: "ticket", extensionId: "pstdio.pstdio-planner" },
+              page: { kind: "page", id: "ticket", extensionId: "pstdio.planner" },
               resource: {
                 type: "ticket",
                 id: ticket.id,
                 label: `${ticket.shorthand} ${ticket.title}`,
                 shorthand: ticket.shorthand,
                 metadata: {
-                  resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
+                  resourceParent: { type: "view", viewId: "pstdio.planner.view.tickets" },
                 },
               },
-              parent: { kind: "page", page: { kind: "page", id: "tickets", extensionId: "pstdio.pstdio-planner" } },
+              parent: { kind: "page", page: { kind: "page", id: "tickets", extensionId: "pstdio.planner" } },
             },
             resource: {
               type: "workspace",
@@ -105,7 +105,7 @@ describe("ticket files tree workspace commands", () => {
                   label: `${ticket.shorthand} ${ticket.title}`,
                   shorthand: ticket.shorthand,
                   metadata: {
-                    resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
+                    resourceParent: { type: "view", viewId: "pstdio.planner.view.tickets" },
                   },
                 },
                 workspaceId: "ws-1",
@@ -175,7 +175,7 @@ describe("ticket files tree workspace commands", () => {
                     label: "PS-999",
                     shorthand: "PS-999",
                     metadata: {
-                      resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
+                      resourceParent: { type: "view", viewId: "pstdio.planner.view.tickets" },
                     },
                   },
                 ],

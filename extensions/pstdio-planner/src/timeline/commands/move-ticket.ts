@@ -37,9 +37,9 @@ export const moveTicketCommand = defineCommand({
   cli: {
     description: "Move a ticket to a deadline, and optionally before another ticket in that deadline.",
     examples: [
-      "pst pstdio-planner timeline plan move --ticket PS-32 --deadline 2026-10-15",
-      "pst pstdio-planner timeline plan move --ticket PS-32 --before PS-33",
-      "pst pstdio-planner timeline plan move --ticket PS-32 --deadline none",
+      "pst pstdio.planner timeline plan move --ticket PS-32 --deadline 2026-10-15",
+      "pst pstdio.planner timeline plan move --ticket PS-32 --before PS-33",
+      "pst pstdio.planner timeline plan move --ticket PS-32 --deadline none",
     ],
   },
   params: {

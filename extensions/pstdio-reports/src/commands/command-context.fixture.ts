@@ -8,7 +8,7 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>(inpu
     ...input,
     resourcePrefixes: { ticket: input.overrides?.project?.shorthand ?? "T", report: "RP" },
     overrides: {
-      extensionId: "pstdio-reports",
+      extensionId: "reports",
       packageFiles: { readText: async () => "## Confidence Score\n" },
       ...input.overrides,
       workspaces: {

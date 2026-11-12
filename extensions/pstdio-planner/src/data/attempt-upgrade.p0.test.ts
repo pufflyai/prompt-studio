@@ -6,7 +6,7 @@ import { upgradeAttemptStorage } from "./attempt-upgrade";
 const timestamp = "2026-10-13T08:00:00.000Z";
 
 test("an already-migrated device and an offline source copy keep one retirement event", async () => {
-  const owner = { workbenchId: "shared-project", extensionId: "pstdio.pstdio-planner" };
+  const owner = { workbenchId: "shared-project", extensionId: "pstdio.planner" };
   const pair = await createMemoryStorageDevices({
     ...owner,
     collections: {

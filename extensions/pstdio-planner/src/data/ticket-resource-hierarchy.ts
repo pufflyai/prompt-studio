@@ -46,7 +46,7 @@ export const ticketDisplayTitle = (ticket: TicketSummary) =>
 
 const ticketsBrowseRootReference = (): JsonObject => ({
   type: "view",
-  viewId: "pstdio.pstdio-planner.view.tickets",
+  viewId: "pstdio.planner.view.tickets",
 });
 
 const createTicketResourceIdentity = (lineage: TicketSummary[], index: number): TicketResourceReference => {

@@ -72,7 +72,7 @@ To change a skill for good, edit its source, not the installed copy. See [Agents
 
 ### Tickets
 
-Tickets belong to the Planner extension (`pstdio-planner`). Each ticket has a shorthand such as `PS-12`, a status, and a separate draft flag. `pst tickets write` or `pst tickets pull` writes a local copy under `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/<shorthand>/` in the project folder. Use the absolute `path` the command returns, even from another workspace, then run `pst tickets save`. See [Planner](https://prompt.studio/docs/extensions/planner/).
+Tickets belong to the Planner extension (`planner`). Each ticket has a shorthand such as `PS-12`, a status, and a separate draft flag. `pst tickets write` or `pst tickets pull` writes a local copy under `.pstdio/extension-storage/pstdio.planner/tickets/<shorthand>/` in the project folder. Use the absolute `path` the command returns, even from another workspace, then run `pst tickets save`. See [Planner](https://prompt.studio/docs/extensions/planner/).
 
 ## Project files
 
@@ -81,9 +81,9 @@ Tickets belong to the Planner extension (`pstdio-planner`). Each ticket has a sh
 ├── config.json                  # Link to the project
 ├── extensions/                  # Repo-scoped extension source
 └── extension-storage/           # All extension-owned project files
-    ├── pstdio.pstdio-planner/tickets/  # Ticket copies and planning files
-    ├── pstdio.pstdio-reports/reports/  # Reports and evidence
-    └── pstdio.pstdio-artifacts/        # Artifact drafts and prototypes
+    ├── pstdio.planner/tickets/  # Ticket copies and planning files
+    ├── pstdio.reports/reports/  # Reports and evidence
+    └── pstdio.artifacts/        # Artifact drafts and prototypes
 ```
 
 Each extension keeps its configuration, caches, drafts, and evidence in its own folder under `extension-storage/`. Use the paths that extension commands return.

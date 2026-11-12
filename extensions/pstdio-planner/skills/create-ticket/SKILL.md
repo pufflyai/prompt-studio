@@ -22,7 +22,7 @@ Name what gets better for the person, not the code change. Someone should unders
 
 ## UI designs
 
-Before saving a new ticket that adds or changes UI, read `pst pstdio-planner refinement-policy`. When `updateCanvasDesign` is enabled, follow the project's canvas skill and update the relevant live design first. Preserve existing previews and add named variations when comparing alternatives. Link the canvas page, exact preview names, source paths, and a short walkthrough in the ticket. Complete the canvas skill's source handoff before saving: record where the implementation workspace finds the reviewed design sources, either a proposal folder merged to the default branch or, in Git projects, a pushed branch and commit SHA. Canvas designs replace artifact prototypes. If Canvas is unavailable, use the project's existing design workflow and record why no canvas was linked. Do not install extensions automatically. If the option is off, record why the design step was skipped. Resolve policy-read failures before finishing.
+Before saving a new ticket that adds or changes UI, read `pst pstdio.planner refinement-policy`. When `updateCanvasDesign` is enabled, follow the project's canvas skill and update the relevant live design first. Preserve existing previews and add named variations when comparing alternatives. Link the canvas page, exact preview names, source paths, and a short walkthrough in the ticket. Complete the canvas skill's source handoff before saving: record where the implementation workspace finds the reviewed design sources, either a proposal folder merged to the default branch or, in Git projects, a pushed branch and commit SHA. Canvas designs replace artifact prototypes. If Canvas is unavailable, use the project's existing design workflow and record why no canvas was linked. Do not install extensions automatically. If the option is off, record why the design step was skipped. Resolve policy-read failures before finishing.
 
 ## Workflow
 
@@ -75,7 +75,7 @@ Use descriptive Markdown links to relevant documents or exact sections, such as 
 This example assumes the ticket has an attached `files/release-plan.md` and no agreed first-release audience.
 
 ```bash
-pst pstdio-planner request-review --ticket PS-12 \
+pst pstdio.planner request-review --ticket PS-12 \
   --title "PS-12 · Choose the first release audience" \
   --instructions "**Problem:** The export is ready, but its first release audience is undecided.
 
@@ -87,4 +87,4 @@ pst pstdio-planner request-review --ticket PS-12 \
   --request '{"kind":"decision","questions":[{"id":"audience","label":"Who should receive the first release?","required":true,"input":{"kind":"single-choice","options":[{"id":"internal","label":"Internal project first (recommended)"},{"id":"everyone","label":"Everyone now"}]}}]}'
 ```
 
-Read saved answers with `pst pstdio-planner review-requests read --request-id <request-id>` before continuing. Never answer your own request.
+Read saved answers with `pst pstdio.planner review-requests read --request-id <request-id>` before continuing. Never answer your own request.

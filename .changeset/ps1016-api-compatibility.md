@@ -5,15 +5,15 @@
 "harness-codex": patch
 "harness-open-code": patch
 "harness-pi": patch
-"pstdio-artifacts": patch
-"pstdio-base-themes": patch
-"pstdio-home": patch
-"pstdio-notes": patch
-"pstdio-onboarding": patch
-"pstdio-performance": patch
-"pstdio-planner": patch
-"pstdio-reports": patch
-"pstdio-skills": patch
+"artifacts": patch
+"base-themes": patch
+"home": patch
+"notes": patch
+"onboarding": patch
+"performance": patch
+"planner": patch
+"reports": patch
+"skills": patch
 "remote-workspaces": patch
 ---
 

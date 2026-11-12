@@ -15,7 +15,7 @@ Sub-tickets are planner tickets linked to a parent. Create them like any ticket 
    - Independently testable.
    - Limited to one system. Split work that crosses systems or has a large scope.
 3. Create each sub-ticket with `pst tickets write --title "<title>" --parent <parent-shorthand>`.
-4. Fill `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/<shorthand>/ticket.md`, using the absolute `path` the command returns. Follow the `create-ticket` standard. Name the files or modules involved, the validation commands, assumptions, and `depends_on`. Link the relevant parent design and identify which flows, contracts, schema choices, and compatibility requirements each child implements. Add actionable coding tasks at this stage, without silently changing the design or hiding unresolved choices.
+4. Fill `.pstdio/extension-storage/pstdio.planner/tickets/<shorthand>/ticket.md`, using the absolute `path` the command returns. Follow the `create-ticket` standard. Name the files or modules involved, the validation commands, assumptions, and `depends_on`. Link the relevant parent design and identify which flows, contracts, schema choices, and compatibility requirements each child implements. Add actionable coding tasks at this stage, without silently changing the design or hiding unresolved choices.
 5. Apply a template when it helps. List templates with `pst tickets templates`, then run `pst tickets apply-template --id <shorthand> --template <template>`. Priority and type belong in tags from `pst tags list`, not in body sections.
 6. Check unfinished tickets with `pst tickets list`. If a child needs another ticket to finish first, add that ticket to the child's `depends_on`. Do not set a Blocked status or a blocked reason only because the child is waiting; Planner derives readiness from `depends_on`. See [Dependencies](https://prompt.studio/docs/extensions/planner/cli/#dependencies).
 7. Save each child with `pst tickets save --id <shorthand>`.
@@ -45,7 +45,7 @@ Use descriptive Markdown links to relevant documents or exact sections, such as 
 This example assumes the ticket has an attached `files/release-plan.md` and no agreed first-release audience.
 
 ```bash
-pst pstdio-planner request-review --ticket PS-12 \
+pst pstdio.planner request-review --ticket PS-12 \
   --title "PS-12 · Choose the first release audience" \
   --instructions "**Problem:** The export is ready, but its first release audience is undecided.
 
@@ -57,4 +57,4 @@ pst pstdio-planner request-review --ticket PS-12 \
   --request '{"kind":"decision","questions":[{"id":"audience","label":"Who should receive the first release?","required":true,"input":{"kind":"single-choice","options":[{"id":"internal","label":"Internal project first (recommended)"},{"id":"everyone","label":"Everyone now"}]}}]}'
 ```
 
-Read saved answers with `pst pstdio-planner review-requests read --request-id <request-id>` before continuing. Never answer your own request.
+Read saved answers with `pst pstdio.planner review-requests read --request-id <request-id>` before continuing. Never answer your own request.

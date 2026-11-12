@@ -87,7 +87,7 @@ describe("ticket resource hierarchy", () => {
             label: "PS-1 Root",
             shorthand: "PS-1",
             metadata: {
-              resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
+              resourceParent: { type: "view", viewId: "pstdio.planner.view.tickets" },
             },
           },
         },
@@ -116,7 +116,7 @@ describe("ticket resource hierarchy", () => {
           label: "PS-1 Ticket",
           shorthand: "PS-1",
           metadata: {
-            resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
+            resourceParent: { type: "view", viewId: "pstdio.planner.view.tickets" },
           },
         },
       },
@@ -142,7 +142,7 @@ describe("ticket resource hierarchy", () => {
     const ticket = storedTicket({ id: "archived", shorthand: "PS-4", archived: true });
 
     expect(ticketResourceIdentity(ticket).metadata).toEqual({
-      resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
+      resourceParent: { type: "view", viewId: "pstdio.planner.view.tickets" },
     });
   });
 
@@ -158,7 +158,7 @@ describe("ticket resource hierarchy", () => {
         label: "PS-2 Child",
         shorthand: "PS-2",
         metadata: {
-          resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
+          resourceParent: { type: "view", viewId: "pstdio.planner.view.tickets" },
         },
       },
     });
@@ -179,7 +179,7 @@ describe("tickets browse root", () => {
 
     expect(rootReference.metadata.resourceParent).toEqual({
       type: "view",
-      viewId: "pstdio.pstdio-planner.view.tickets",
+      viewId: "pstdio.planner.view.tickets",
     });
   });
 
@@ -188,7 +188,7 @@ describe("tickets browse root", () => {
 
     expect(ticketResourceReference(ticket).metadata.resourceParent).toEqual({
       type: "view",
-      viewId: "pstdio.pstdio-planner.view.tickets",
+      viewId: "pstdio.planner.view.tickets",
     });
   });
 });

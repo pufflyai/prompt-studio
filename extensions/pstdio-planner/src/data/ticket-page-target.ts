@@ -1,7 +1,7 @@
 import type { NavigationTargetPage, ResourceRef } from "@pstdio/sdk/extensions";
 import { ticketDocumentDeclaration } from "./document-selection";
 
-const plannerPage = (id: string) => ({ kind: "page" as const, id, extensionId: "pstdio.pstdio-planner" });
+const plannerPage = (id: string) => ({ kind: "page" as const, id, extensionId: "pstdio.planner" });
 export const ticketDocumentPage = {
   id: "ticket",
   ref: plannerPage("ticket"),

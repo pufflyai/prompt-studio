@@ -21,7 +21,7 @@ export const CloudDetails = (props: { projectId?: string }) => {
     try {
       await client.navigation.open({
         kind: "command",
-        target: { command: openSettings, params: { panelId: "pstdio.pstdio-cloud.settings-panel.cloud" } },
+        target: { command: openSettings, params: { panelId: "pstdio.cloud.settings-panel.cloud" } },
       });
     } catch (cause) {
       setNavigationError(String(cause));

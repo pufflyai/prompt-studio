@@ -13,7 +13,7 @@ A proposal lets a person judge the outcome and the technical approach before imp
 
 ## UI designs
 
-Before saving a proposal that adds or changes UI, read `pst pstdio-planner refinement-policy`. When `updateCanvasDesign` is enabled, follow the project's canvas skill and update the relevant live design first. Preserve existing previews and name alternatives clearly. Link the canvas page, exact preview names, source paths, and a short walkthrough in the ticket. Canvas designs replace artifact prototypes. If Canvas is unavailable, use the project's existing design workflow and record why no canvas was linked. Do not install extensions automatically. If the option is off, record why the design step was skipped. Resolve policy-read failures before finishing.
+Before saving a proposal that adds or changes UI, read `pst pstdio.planner refinement-policy`. When `updateCanvasDesign` is enabled, follow the project's canvas skill and update the relevant live design first. Preserve existing previews and name alternatives clearly. Link the canvas page, exact preview names, source paths, and a short walkthrough in the ticket. Canvas designs replace artifact prototypes. If Canvas is unavailable, use the project's existing design workflow and record why no canvas was linked. Do not install extensions automatically. If the option is off, record why the design step was skipped. Resolve policy-read failures before finishing.
 
 ## Workflow
 
@@ -35,7 +35,7 @@ Before saving a proposal that adds or changes UI, read `pst pstdio-planner refin
 
 ## Ticket files
 
-Put planning material in `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/<shorthand>/files/<name>`. The next `pst tickets save` attaches the file to the ticket. Put implementation, test, validation, and review evidence in reports instead; see [Reports](https://prompt.studio/docs/extensions/reports/#write-a-report).
+Put planning material in `.pstdio/extension-storage/pstdio.planner/tickets/<shorthand>/files/<name>`. The next `pst tickets save` attaches the file to the ticket. Put implementation, test, validation, and review evidence in reports instead; see [Reports](https://prompt.studio/docs/extensions/reports/#write-a-report).
 
 Add a file only when the person needs it to judge the proposal:
 
@@ -54,7 +54,7 @@ Keep a simple proposal in one readable ticket. Put a small example inline when e
 
 - Use concise bullets in architecture and research explanations, with tables, diagrams, and compact examples where useful. Distinguish inspected current behavior, proposed choices, and unverified assumptions. Keep source links beside the claims they support.
 - For substantial design changes, read the `architecture-overview` document template. For interface or data decisions, read `contracts` or `schemas` as needed. Use `research` when findings need checking. Adapt the relevant sections and omit those that do not help review.
-- Resolve document templates through Planner's template provider, which preserves project overrides and disabled templates. Its extension commands are `pstdio.pstdio-planner.command.templates.list` with `{ "type": "document" }` and `pstdio.pstdio-planner.command.templates.read` with `{ "name": "architecture-overview" }` (or another name). Execute them through the [extension command API](https://prompt.studio/docs/references/extensions/command-and-process-api/). These commands do not expose a CLI route; do not invent `pst templates read`. If the template or command interface is unavailable, write from the quality criteria here without replacing project customizations.
+- Resolve document templates through Planner's template provider, which preserves project overrides and disabled templates. Its extension commands are `pstdio.planner.command.templates.list` with `{ "type": "document" }` and `pstdio.planner.command.templates.read` with `{ "name": "architecture-overview" }` (or another name). Execute them through the [extension command API](https://prompt.studio/docs/references/extensions/command-and-process-api/). These commands do not expose a CLI route; do not invent `pst templates read`. If the template or command interface is unavailable, write from the quality criteria here without replacing project customizations.
 - An architecture overview names real modules and marks new components as proposed. Explain the concrete execution path: inputs, outputs, interactions, state ownership, and lifecycle. Cover failure handling, compatibility, and trade-offs when they affect the decision.
 - Include meaningful Mermaid diagrams for substantial architecture changes. Show current and proposed relationships with labeled interactions; use sequence or state diagrams when ordering or lifecycle matters. Check syntax and agreement with the text. A list of responsibilities alone is not an architecture explanation.
 - Show consequential API and schema choices with request/response, interface, event, or data examples. Explain constraints, errors, compatibility, and migration implications where relevant. Put fuller shapes in `contracts.md` or `schemas.md` when needed; include all fields and relationships needed to judge the design. Proposals are where these designs get reviewed. Leave implementation cookbooks and coding tasks to later tickets.
@@ -72,7 +72,7 @@ Use descriptive Markdown links to relevant documents or exact sections, such as 
 This example assumes the ticket has an attached `files/release-plan.md` and no agreed first-release audience.
 
 ```bash
-pst pstdio-planner request-review --ticket PS-12 \
+pst pstdio.planner request-review --ticket PS-12 \
   --title "PS-12 · Choose the first release audience" \
   --instructions "**Problem:** The export is ready, but its first release audience is undecided.
 
@@ -84,7 +84,7 @@ pst pstdio-planner request-review --ticket PS-12 \
   --request '{"kind":"decision","questions":[{"id":"audience","label":"Who should receive the first release?","required":true,"input":{"kind":"single-choice","options":[{"id":"internal","label":"Internal project first (recommended)"},{"id":"everyone","label":"Everyone now"}]}}]}'
 ```
 
-Read saved answers with `pst pstdio-planner review-requests read --request-id <request-id>` before continuing. Never answer your own request.
+Read saved answers with `pst pstdio.planner review-requests read --request-id <request-id>` before continuing. Never answer your own request.
 
 ## Finish condition
 

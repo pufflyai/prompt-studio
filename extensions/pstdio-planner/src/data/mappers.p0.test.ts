@@ -31,7 +31,7 @@ describe("ticketToRow", () => {
       shorthand: "T-1",
       metadata: {
         archived: false,
-        resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
+        resourceParent: { type: "view", viewId: "pstdio.planner.view.tickets" },
       },
     });
     expect(row.attributes).toEqual({
@@ -69,7 +69,7 @@ describe("ticketToRow", () => {
         label: "T-1 Fix the thing",
         shorthand: "T-1",
         metadata: {
-          resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
+          resourceParent: { type: "view", viewId: "pstdio.planner.view.tickets" },
         },
       },
     });
@@ -139,8 +139,8 @@ test("linked workspace navigation retains its ticket context without changing an
     page: { kind: "page", id: "workspace", extensionId: "pstdio" },
     parent: {
       kind: "page",
-      page: { id: "ticket", extensionId: "pstdio.pstdio-planner" },
-      resource: { type: "ticket", id: ticket.id, projectId: "proj-1", extensionId: "pstdio.pstdio-planner" },
+      page: { id: "ticket", extensionId: "pstdio.planner" },
+      resource: { type: "ticket", id: ticket.id, projectId: "proj-1", extensionId: "pstdio.planner" },
     },
   });
   expect(row.attributes.linkedResourceItems[1]?.action).toEqual(artifact.action);

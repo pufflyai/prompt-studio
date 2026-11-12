@@ -1,6 +1,6 @@
 # Sessions
 
-`pstdio.pstdio-session-browser` installs once in the host user scope and can be enabled per project. It owns session browsing and composition. Native chat renders in the workbench document in a full page or shared Side panel. Core owns session identity, execution, transcript, queue, attachments, permissions, workspace links and sync.
+`pstdio.session-browser` installs once in the host user scope and can be enabled per project. It owns session browsing and composition. Native chat renders in the workbench document in a full page or shared Side panel. Core owns session identity, execution, transcript, queue, attachments, permissions, workspace links and sync.
 
 New conversations show **Pending** until their first turn starts. Empty saved conversations use the same indicator; completed turns keep their completed status.
 

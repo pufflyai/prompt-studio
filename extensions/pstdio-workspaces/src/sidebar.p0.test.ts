@@ -44,7 +44,7 @@ test("Workspaces offers the shared creation flow in its menu", async () => {
     expect.objectContaining({
       id: "create-workspace",
       icon: "plus",
-      command: { kind: "command", extensionId: "pstdio.pstdio-workspaces", id: "show-create" },
+      command: { kind: "command", extensionId: "pstdio.workspaces", id: "show-create" },
     }),
   );
 });

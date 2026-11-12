@@ -2,7 +2,7 @@
 "pstdio": patch
 "@pstdio/ui": patch
 "@pstdio/workbench": patch
-"pstdio-planner": patch
+"planner": patch
 "extension-lab": patch
 ---
 

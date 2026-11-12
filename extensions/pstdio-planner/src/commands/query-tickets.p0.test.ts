@@ -71,7 +71,7 @@ describe("queryTicketsCommand", () => {
     const storage = createMemoryStorage();
     await putTicket(storage, makeTicket({}));
     const ctx = makeCommandContext({ storage, params: {} });
-    const ticket = { type: "ticket", id: "ticket-1", extensionId: "pstdio.pstdio-planner", projectId: ctx.projectId };
+    const ticket = { type: "ticket", id: "ticket-1", extensionId: "pstdio.planner", projectId: ctx.projectId };
     const workspace = {
       type: "workspace",
       id: "workspace",

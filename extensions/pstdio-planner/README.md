@@ -40,9 +40,9 @@ Local ticket folders follow the current number. Planner preserves unsaved text a
 
 Open Settings → Project Planner → Workflow & automation. **Update canvas designs for UI changes** is enabled by default. It applies to tickets that add or change UI, including changes to existing features.
 
-The ticket skills read the project option with `pst pstdio-planner refinement-policy`. The result contains `updateCanvasDesign`. When enabled, the agent follows the project's canvas skill and updates the live design before completing the ticket or changing production UI. The ticket links the canvas page, exact preview names, source paths, and a short walkthrough. This replaces the artifact prototype requirement. If the option is off, the agent records why it skipped the design step. If Canvas is unavailable, the agent uses the project's existing design workflow and records why no canvas was linked. Tickets without UI changes do not require one.
+The ticket skills read the project option with `pst pstdio.planner refinement-policy`. The result contains `updateCanvasDesign`. When enabled, the agent follows the project's canvas skill and updates the live design before completing the ticket or changing production UI. The ticket links the canvas page, exact preview names, source paths, and a short walkthrough. This replaces the artifact prototype requirement. If the option is off, the agent records why it skipped the design step. If Canvas is unavailable, the agent uses the project's existing design workflow and records why no canvas was linked. Tickets without UI changes do not require one.
 
-Install the optional **Artifacts** extension from Extensions to use prototypes. Its package name is `pstdio-artifacts`. Refinement does not install it automatically. Shared ticket workflow options belong to Planner alongside its refinement and implementation skills.
+Install the optional **Artifacts** extension from Extensions to use prototypes. Its package name is `artifacts`. Refinement does not install it automatically. Shared ticket workflow options belong to Planner alongside its refinement and implementation skills.
 
 ## Implementation options
 
@@ -61,11 +61,11 @@ Auto build leaves gates, blocked work, open review requests, and existing attemp
 
 The options apply only to the current project. Adversarial review and Open PR are on by default. Projects without a local Git folder can still set the review and pull request options. Turning off Adversarial review does not change the optional managed reviews described in [Attempts](docs/0002-attempts.md).
 
-The skill reads these options with `pst pstdio-planner implementation-policy` and follows them without asking. Instructions you give for a specific task take precedence.
+The skill reads these options with `pst pstdio.planner implementation-policy` and follows them without asking. Instructions you give for a specific task take precedence.
 
 Ticket tags have their own panel in **Settings → Project**.
 
-From a terminal, list the branch choices with `pst pstdio-planner implementation-targets`. Set one with `pst pstdio-planner set-implementation-target --branch origin/main`. Leave out `--branch` to clear it.
+From a terminal, list the branch choices with `pst pstdio.planner implementation-targets`. Set one with `pst pstdio.planner set-implementation-target --branch origin/main`. Leave out `--branch` to clear it.
 
 ## Manual ticket order
 

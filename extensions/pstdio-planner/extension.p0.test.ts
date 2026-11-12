@@ -88,8 +88,8 @@ describe("pstdio planner extension contributions", () => {
     });
   });
   test("declares each native ticket view's data dependencies", () => {
-    const tickets = { extensionId: "pstdio.pstdio-planner", id: "tickets.changed", kind: "event" };
-    const plan = { extensionId: "pstdio.pstdio-planner", id: "timeline.plan.changed", kind: "event" };
+    const tickets = { extensionId: "pstdio.planner", id: "tickets.changed", kind: "event" };
+    const plan = { extensionId: "pstdio.planner", id: "timeline.plan.changed", kind: "event" };
     const linkedResources = [viewDataEvents.sessionsChanged, viewDataEvents.workspacesChanged];
     const dependencies = {
       "ticket-editor": [tickets],
@@ -228,7 +228,7 @@ describe("pstdio planner workspace contributions", () => {
     const worktreePath = mkdtempSync(join(tmpdir(), "planner-worktree-"));
     const repoTicketPath = join(repoPath, ticketMarkdownPath(ticket.shorthand));
     const localContent = "# Local ticket edits\n";
-    mkdirSync(join(repoPath, ".pstdio", "extension-storage", "pstdio.pstdio-planner", "tickets", ticket.shorthand), {
+    mkdirSync(join(repoPath, ".pstdio", "extension-storage", "pstdio.planner", "tickets", ticket.shorthand), {
       recursive: true,
     });
     writeFileSync(repoTicketPath, localContent);
@@ -335,8 +335,8 @@ describe("pstdio planner workspace contributions", () => {
     );
     expect(detailTarget).toEqual({
       kind: "page",
-      page: { kind: "page", id: "ticket", extensionId: "pstdio.pstdio-planner" },
-      parent: { kind: "page", page: { kind: "page", id: "tickets", extensionId: "pstdio.pstdio-planner" } },
+      page: { kind: "page", id: "ticket", extensionId: "pstdio.planner" },
+      parent: { kind: "page", page: { kind: "page", id: "tickets", extensionId: "pstdio.planner" } },
       resource: { type: "ticket", id: "ticket-1", label: "PS-1 Ticket one" },
     });
     expect(extension.navigationItems?.find((item) => item.id === "tickets")).toMatchObject({

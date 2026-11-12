@@ -1,9 +1,9 @@
 ---
 "pstdio": patch
 "@pstdio/workbench": patch
-"pstdio-workspaces": patch
-"pstdio-planner": patch
-"pstdio-artifacts": patch
+"workspaces": patch
+"planner": patch
+"artifacts": patch
 "remote-workspaces": patch
 ---
 

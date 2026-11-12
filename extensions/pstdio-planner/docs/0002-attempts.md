@@ -33,7 +33,7 @@ To link an existing workspace or session to a ticket, use [`pst tickets link`](0
 Open a ticket and choose **Run attempt** from its actions menu. Pick the agent and the branch to start from. From a terminal, run:
 
 ```sh
-pst pstdio-planner run-attempt --ticket PS-12
+pst pstdio.planner run-attempt --ticket PS-12
 ```
 
 Planner then does the following:
@@ -43,7 +43,7 @@ Planner then does the following:
 3. Otherwise it creates a Git worktree from the chosen commit, links it to the ticket, and starts an implementation session there.
 4. The implementation agent updates the ticket status as it starts, blocks, resumes, and hands off its work. It finds the current status IDs with `pst statuses list` and `implementation-policy`. A person can change the status at any time.
 5. When the agent finishes, it runs the configured adversarial review, saves a change request report, and records the commit with `submit-revision`. Planner checks that the report and the latest commit belong to this workspace, then records a new revision.
-6. An extra review is optional. It starts when someone chooses **Run review** from the workspace's actions menu, or runs `pst pstdio-planner run-review --workspace-id <workspace> --expected-revision <number>`. The reviewer saves a review report and submits a verdict. A verdict is evidence about that commit. It does not change the ticket status, resume the implementation, or ask for a merge.
+6. An extra review is optional. It starts when someone chooses **Run review** from the workspace's actions menu, or runs `pst pstdio.planner run-review --workspace-id <workspace> --expected-revision <number>`. The reviewer saves a review report and submits a verdict. A verdict is evidence about that commit. It does not change the ticket status, resume the implementation, or ask for a merge.
 
 Planner does not merge work. Merging, delivering, and moving the ticket to a completed status are your decisions, or the implementation agent's when its task requires it.
 
@@ -85,7 +85,7 @@ An upstream revision can change after a child starts. The child must contain the
 Use the same implementation owner and workspace:
 
 ```sh
-pst pstdio-planner update-stack --workspace-id <workspace> --implementation-session-id <owner> --expected-head-sha <head>
+pst pstdio.planner update-stack --workspace-id <workspace> --implementation-session-id <owner> --expected-head-sha <head>
 ```
 
 The command requires committed changes and no other live workspace session. It integrates the current dependency base with a Git merge so existing published history remains intact. If the merge conflicts, resolve and commit it, then retry. Run the affected checks, save a fresh change request report, and submit the exact resulting HEAD with `--expected-revision <last-revision-number>`. Updating the base does not submit or validate a revision by itself.
@@ -112,11 +112,11 @@ Planner's workflow settings choose which statuses count as completed, blocked, a
 
 If an implementation session disconnects or its run is lost, Planner resumes it once in the same conversation. If a review session disconnects, Planner starts one new review. If a session disconnects a second time, Planner blocks only that attempt and asks a person for input. A session that a person stopped stays stopped.
 
-Planner checks for disconnects when someone runs `pst pstdio-planner reconcile-attempt --workspace-id <workspace>`. Use `pst pstdio-planner repair-attempt` to ask the current owner to continue a correction. It checks the workspace HEAD and owner. A live owner receives a queued follow-up; queueing does not move the branch to another writer.
+Planner checks for disconnects when someone runs `pst pstdio.planner reconcile-attempt --workspace-id <workspace>`. Use `pst pstdio.planner repair-attempt` to ask the current owner to continue a correction. It checks the workspace HEAD and owner. A live owner receives a queued follow-up; queueing does not move the branch to another writer.
 
 ## Use attempts from another extension
 
-Extensions and agents drive attempts through Planner's commands. Each ID below is short for `pstdio.pstdio-planner.command.<id>`. All of them except `workspace-activity` also run from the CLI. Run `pst pstdio-planner <id> --help` to see their parameters.
+Extensions and agents drive attempts through Planner's commands. Each ID below is short for `pstdio.planner.command.<id>`. All of them except `workspace-activity` also run from the CLI. Run `pst pstdio.planner <id> --help` to see their parameters.
 
 | Command                 | What it does                                                                     |
 | ----------------------- | -------------------------------------------------------------------------------- |

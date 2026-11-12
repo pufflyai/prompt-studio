@@ -1,6 +1,6 @@
 ---
 "@pstdio/workbench": patch
-"pstdio-notes": patch
+"notes": patch
 "pstdio": patch
 ---
 

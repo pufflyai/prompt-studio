@@ -1,5 +1,5 @@
 ---
-"pstdio-cloud": minor
+"cloud": minor
 "pstdio": minor
 ---
 

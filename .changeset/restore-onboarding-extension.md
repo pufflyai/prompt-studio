@@ -1,5 +1,5 @@
 ---
-"pstdio-onboarding": minor
+"onboarding": minor
 "pstdio": patch
 ---
 

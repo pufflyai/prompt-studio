@@ -1,7 +1,7 @@
 ---
 "pstdio": patch
-"pstdio-onboarding": patch
-"pstdio-cloud": patch
+"onboarding": patch
+"cloud": patch
 "canvas": patch
 ---
 

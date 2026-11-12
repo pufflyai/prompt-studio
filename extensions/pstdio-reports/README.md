@@ -39,7 +39,7 @@ A report starts as a local Markdown file. The agent fills it in, then saves it:
 
 There is no default template. If you leave out `--template`, the command fails and lists the templates you can use: `change-request` and `review`. Edit the templates in **Settings → Project → Templates**.
 
-Writing a report never overwrites an existing one. When a name is taken, the next report gets a number. For example, a second `review` report is named `review_01`. Its file is `.pstdio/extension-storage/pstdio.pstdio-reports/reports/review/report_01.md`, and its supporting files go in `.pstdio/extension-storage/pstdio.pstdio-reports/reports/review/files_01/`.
+Writing a report never overwrites an existing one. When a name is taken, the next report gets a number. For example, a second `review` report is named `review_01`. Its file is `.pstdio/extension-storage/pstdio.reports/reports/review/report_01.md`, and its supporting files go in `.pstdio/extension-storage/pstdio.reports/reports/review/files_01/`.
 
 ## Commands
 
@@ -59,10 +59,10 @@ Core assigns report numbers such as `RP-12`. Reports reads the current number fr
 The same commands are also available under the extension's own name:
 
 ```sh
-pst pstdio-reports reports write [options]
-pst pstdio-reports reports read --id <report-id>
-pst pstdio-reports reports save [options]
-pst pstdio-reports reports delete --name <name> [options]
+pst pstdio.reports reports write [options]
+pst pstdio.reports reports read --id <report-id>
+pst pstdio.reports reports save [options]
+pst pstdio.reports reports delete --name <name> [options]
 ```
 
 *Updated at: 2026-11-02*

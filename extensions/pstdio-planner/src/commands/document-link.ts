@@ -39,7 +39,7 @@ export const documentLinkCommand = defineCommand({
               type: "ticket",
               id: ticket.id,
               projectId: ctx.projectId,
-              extensionId: "pstdio.pstdio-planner",
+              extensionId: "pstdio.planner",
               ...(document ? { metadata: { documentId: document.id } } : {}),
             },
           }),

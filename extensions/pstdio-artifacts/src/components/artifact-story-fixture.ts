@@ -12,6 +12,6 @@ export const exampleArtifact: ArtifactSummary = {
   size: 1200,
   hash: "example",
   url: "/example",
-  resource: { type: "artifact", id: "artifact-1", projectId: "project-1", extensionId: "pstdio.pstdio-artifacts" },
+  resource: { type: "artifact", id: "artifact-1", projectId: "project-1", extensionId: "pstdio.artifacts" },
   target: artifactTarget("project-1", "artifact-1", "Release overview"),
 };

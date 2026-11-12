@@ -14,7 +14,7 @@ const StatusSettingsStory = () => {
   const [host] = useState(() => {
     let state: WebviewEditingSnapshot = { value: {}, version: 0, revision: 0, savedRevision: 0 };
     const host: GuestHost = {
-      extensionId: "pstdio.pstdio-planner",
+      extensionId: "pstdio.planner",
       call: (async (method, input) => {
         if (method === "commands.execute")
           return {

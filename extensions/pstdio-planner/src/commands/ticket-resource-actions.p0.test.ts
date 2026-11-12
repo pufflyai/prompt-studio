@@ -18,7 +18,7 @@ test("ticket tree rows identify their action resource independently of file navi
       storage,
       params: {
         renderer: {
-          rendererId: "pstdio.pstdio-planner.view.ticket-files",
+          rendererId: "pstdio.planner.view.ticket-files",
           resource: { type: "ticket", id: ticket.id, metadata: { documentId: file.id } },
         },
       },

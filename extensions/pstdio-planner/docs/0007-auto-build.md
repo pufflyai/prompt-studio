@@ -79,16 +79,16 @@ If nothing starts, check the eligibility filters, prerequisites, default agent, 
 The supervisor uses public Planner commands:
 
 ```sh
-pst pstdio-planner auto-build read
-pst pstdio-planner auto-build scope --revision <mode-revision> --queries '[{"track":"Workbench"}]'
+pst pstdio.planner auto-build read
+pst pstdio.planner auto-build scope --revision <mode-revision> --queries '[{"track":"Workbench"}]'
 pst tickets next --track Workbench
 pst tickets panel --id PS-123
-pst pstdio-planner auto-build dispatch --ticket PS-123 --revision <mode-revision>
+pst pstdio.planner auto-build dispatch --ticket PS-123 --revision <mode-revision>
 ```
 
 The scope command saves the work selection for the current mode revision and returns fresh matching work. Use `[{}]` for the whole project. Scope fields combine within each query; the queries combine as alternatives. Set eligibility filters here, rather than temporary priorities. Wait for the supervisor to start before manual dispatch. A `supervisor-not-ready` result starts no work. The `next` query reports the current mode revision, launchable `tickets`, `waiting` tickets with reasons and dependency IDs, and capacity. It is read-only and works while Auto Build is off. While Auto Build is on, its filters narrow the saved scope. Prerequisites in other tracks still apply. Unless **Require merged dependencies** is on, submitted dependency revisions remain valid stack bases. Actively running implementation owners still block new children. The query exposes repair in an existing workspace instead of leaving the track with no actionable work. The implementation owner reconciles conflicting dependency code through `update-stack`.
 
-Dispatch rechecks the mode, eligibility filters, assignments, prerequisites, exact heads, and capacity before launching, resuming, or repairing work. Use the revision from the latest query. An earlier revision cannot dispatch work after Auto Build is stopped or restarted. The old `pst pstdio-planner auto-build candidates` command is deprecated in favor of `pst tickets next` and remains available through 0.44. Its CLI help names the replacement; it is removed in 0.45.
+Dispatch rechecks the mode, eligibility filters, assignments, prerequisites, exact heads, and capacity before launching, resuming, or repairing work. Use the revision from the latest query. An earlier revision cannot dispatch work after Auto Build is stopped or restarted. The old `pst pstdio.planner auto-build candidates` command is deprecated in favor of `pst tickets next` and remains available through 0.44. Its CLI help names the replacement; it is removed in 0.45.
 
 For work that must build on a feature branch, pass the same `--base <branch>` to `tickets next` and `auto-build dispatch`. This selects the root dependency base for that launch without changing project settings. To continue a linked manual draft, also pass `--workspace-id <id>` to dispatch. Planner preserves its branch and files, requires no managed attempt or active session in that workspace, and tells its new owner to commit the draft and integrate the required base before continuing. Submission still verifies actual Git ancestry. Existing managed attempts keep their owner, workspace, and recorded base; dispatch them without overrides and use `update-stack --base <branch>` in that owner session when the required target changes.
 
@@ -97,7 +97,7 @@ For work that must build on a feature branch, pass the same `--base <branch>` to
 
 The Timeline **Display settings** menu includes **Show passed milestones** and **Show completed milestones**, both on by default. Passed means the milestone date is before today. Completed means every ticket in a nonempty milestone has a configured completed status. Search and ticket filters do not change that decision. Undated work stays visible. Milestone visibility and collapsed tracks and milestones are remembered for the project across reloads and saved-view changes.
 
-Use `pst pstdio-planner auto-build pause`, `resume`, and `stop` for the same lifecycle controls from the CLI. Stop requires a paused run.
+Use `pst pstdio.planner auto-build pause`, `resume`, and `stop` for the same lifecycle controls from the CLI. Stop requires a paused run.
 
 Automatic progress wakes, discovery checks, failed-supervisor recovery, and hourly reminders wait while shared implementation capacity is full. A final capacity check runs before starting the supervisor turn. Deferred wake state and new PR failure or conflict evidence remain pending until a slot is available. Worker completion triggers the existing event check without requiring a ticket edit. Scheduled checks inspect owned dispatches and shared implementation capacity, without scanning the board, workspace list, or session history.
 

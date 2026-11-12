@@ -89,7 +89,7 @@ export const runTicketsQuery = async ({
       visibleTickets.map((ticket) => ({
         type: "ticket",
         id: ticket.id,
-        extensionId: "pstdio.pstdio-planner",
+        extensionId: "pstdio.planner",
         projectId,
       })),
     ),

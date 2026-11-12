@@ -6,7 +6,7 @@ The extension only displays what the host measures. It uses the public `performa
 
 ## Install
 
-Prompt Studio Performance Monitoring is installed by default. Its install name is `pstdio-performance`. To add it again:
+Prompt Studio Performance Monitoring is installed by default. Its install name is `performance`. To add it again:
 
 ```sh
 pst extensions add pstdio-performance
