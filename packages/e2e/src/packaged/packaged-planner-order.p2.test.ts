@@ -1,5 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import type { ChildProcess } from "node:child_process";
+import { rmSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -143,7 +144,18 @@ const runScenario = async (signal: AbortSignal, setClose: (close: () => Promise<
   }
   await close();
   phase("cleanup complete");
-  if (failures.length === 0) await rm(root, { recursive: true, force: true }).catch((cause) => failures.push(cause));
+  if (failures.length === 0) {
+    try {
+      const options = { recursive: true, force: true, maxRetries: 5, retryDelay: 100 };
+      // Match desktop test cleanup: POSIX native traversal avoids a JS callback per dependency file.
+      // ADR 0039 keeps asynchronous removal on Windows, where synchronous retries are not honored.
+      if (process.platform === "win32") await rm(root, options);
+      else rmSync(root, options);
+      phase("fixture files removed");
+    } catch (cause) {
+      failures.push(cause);
+    }
+  }
   if (failures.length) {
     console.error(`Planner ordering failure evidence retained at ${root}`);
     throw new AggregateError(failures, `Planner ordering scenario or cleanup failed: ${root}`);
