@@ -14,6 +14,9 @@ on:
       artifact_attempt:
         required: true
         type: string
+      candidate_artifact_id:
+        required: true
+        type: string
       channel:
         required: true
         type: string
@@ -99,6 +102,12 @@ jobs:
       - name: Require first-attempt launch quarantine execution
         if: ${{ !cancelled() && inputs.kind == 'performance' && matrix.platform == 'win32' }}
         run: bun scripts/ci/verify-quarantine-reports.ts packaged-desktop-benchmark --scope @pstdio/desktop
+      - name: Download the immutable candidate identity
+        uses: actions/download-artifact@v4
+        if: always()
+        with:
+          artifact-ids: ${{ inputs.candidate_artifact_id }}
+          merge-multiple: true
       - name: Attest actual consumer inputs and outcome
         if: always()
         env:

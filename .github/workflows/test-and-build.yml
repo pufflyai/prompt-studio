@@ -51,6 +51,10 @@ on:
         type: string
         default: "1"
         description: Attempt that produced immutable release artifacts
+      candidate_artifact_id:
+        type: string
+        default: ""
+        description: Immutable candidate identity from the production selector
       release_channel:
         type: string
         default: stable
@@ -1479,6 +1483,12 @@ jobs:
           name: release-build-attempt-${{ inputs.artifact_attempt }}
           run-id: ${{ inputs.artifact_run_id }}
           github-token: ${{ github.token }}
+      - name: Download selected production candidate identity
+        if: ${{ !cancelled() && needs.scope.outputs.production == 'true' && inputs.artifact_run_id != '' }}
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: ${{ inputs.candidate_artifact_id }}
+          merge-multiple: true
       - name: Attest functional candidate consumption
         if: ${{ !cancelled() && needs.scope.outputs.production == 'true' && inputs.artifact_run_id != '' }}
         env:

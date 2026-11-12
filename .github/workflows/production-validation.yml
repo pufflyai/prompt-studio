@@ -108,6 +108,7 @@ jobs:
             production-artifacts.json
           if-no-files-found: error
   functional:
+    needs: candidate
     uses: ./.github/workflows/test-and-build.yml
     with:
       profile: production
@@ -116,6 +117,7 @@ jobs:
       original_source_sha: ${{ inputs.source_sha }}
       artifact_run_id: ${{ inputs.artifact_run_id }}
       artifact_attempt: ${{ inputs.artifact_attempt }}
+      candidate_artifact_id: ${{ needs.candidate.outputs.artifact_id }}
   signed_functional:
     needs: candidate
     uses: ./.github/workflows/production-desktop.yml
@@ -125,6 +127,7 @@ jobs:
       channel: ${{ inputs.channel }}
       source_sha: ${{ inputs.source_sha }}
       artifact_attempt: ${{ inputs.artifact_attempt }}
+      candidate_artifact_id: ${{ needs.candidate.outputs.artifact_id }}
       kind: functional
       platforms: ${{ needs.candidate.outputs.desktop_matrix }}
   performance:
@@ -135,6 +138,7 @@ jobs:
       source_sha: ${{ inputs.source_sha }}
       artifact_run_id: ${{ inputs.artifact_run_id }}
       artifact_attempt: ${{ inputs.artifact_attempt }}
+      candidate_artifact_id: ${{ needs.candidate.outputs.artifact_id }}
       channel: ${{ inputs.channel }}
       desktop_platforms: ${{ needs.candidate.outputs.desktop_matrix }}
       workloads: ${{ needs.candidate.outputs.performance_matrix }}
