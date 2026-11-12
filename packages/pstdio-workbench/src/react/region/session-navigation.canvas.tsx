@@ -5,7 +5,6 @@ import { LazyMarkdownEditor } from "@pstdio/ui/rich-text";
 import { useState } from "react";
 import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
-import { createWorkbenchResourceLinksModule } from "../resource-links/resource-links-module";
 
 const page = (id: string) => ({ kind: "page" as const, extensionId: "preview", id });
 const panel = { kind: "placement" as const, extensionId: "preview", id: "session" };
@@ -20,26 +19,6 @@ const SessionNavigation = () => {
       },
     };
     const w = createWorkbench({ startPage: page("sessions"), initialSidePanelMode: "attached" });
-    w.registerModule(
-      createWorkbenchResourceLinksModule({
-        canonicalize: (resource) => resource,
-        createService: () => ({
-          list: async () => ({
-            items: [
-              {
-                source: session,
-                target: { type: "ticket", id: "P3", label: "Relationship test", extensionId: "preview" },
-              },
-            ],
-          }),
-          add: async () => undefined,
-          remove: async () => undefined,
-          search: async () => [],
-          resolve: async () => [],
-          subscribe: () => () => undefined,
-        }),
-      }),
-    );
     w.modes.registerMode({ id: "project", chrome: { sidenav: "navigation" }, activate() {} });
     w.views.registerView({
       id: "session",
@@ -52,6 +31,31 @@ const SessionNavigation = () => {
           </Text>
         ),
       },
+    });
+    w.views.registerView({
+      id: "session-resources",
+      title: "Related resources",
+      icon: "link",
+      body: {
+        kind: "tree",
+        defaultExpandedSectionIds: ["tickets"],
+        getChildren: () => [],
+        getBody: () => [
+          {
+            id: "tickets",
+            label: "Tickets",
+            nodes: [
+              { id: "P3", label: "Relationship test", icon: "ticket", target: { kind: "page", page: page("tickets") } },
+            ],
+          },
+        ],
+      },
+    });
+    w.viewMenus.registerViewMenu({
+      id: "session.resources",
+      ownerViewId: "session",
+      viewId: "session-resources",
+      side: "left",
     });
     w.views.registerView({
       id: "notes",

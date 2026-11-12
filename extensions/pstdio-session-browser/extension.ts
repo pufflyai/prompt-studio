@@ -6,6 +6,7 @@ import {
   definePage,
   definePlacement,
   defineView,
+  defineViewMenu,
   l10n,
   packageAsset,
   viewDataEvents,
@@ -144,7 +145,7 @@ const list = defineView({
 });
 const links = defineView({
   id: "linked-resources",
-  title: l10n("links.title", "Linked resources"),
+  title: l10n("links.related", "Related resources"),
   icon: "link",
   body: {
     kind: "tree",
@@ -180,6 +181,7 @@ export default defineExtension({
   views: [conversation, list, links],
   pages: [sessions, compose, session, draft],
   placements: [viewer],
+  viewMenus: [defineViewMenu({ id: "session.resources", owner: conversation.ref, view: links.ref, side: "left" })],
   navigationItems: [
     defineNavigationItem({
       id: "sessions",

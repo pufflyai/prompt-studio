@@ -140,3 +140,21 @@ test("dropping the Tickets collection tab onto Main opens its page", async ({ pa
   await expect(preview.locator('[data-workbench-panel="main"]')).toContainText("Ticket collection");
   await expect(tab).toHaveCount(0);
 });
+
+// Critical: the session's resources must remain reachable through its own panel menu.
+test("session resources use their panel menu and toggle from its opener", async ({ page }) => {
+  const preview = await openCanvasPreview(page, source);
+  await preview
+    .locator('[data-workbench-panel="side"]')
+    .getByRole("tab", { name: "Review session", exact: true })
+    .click();
+  const opener = preview.getByRole("button", { name: "Open Side left menu", exact: true });
+  await opener.click();
+  const menu = preview.locator('[data-workbench-panel-menu-controls="side-left-menu"]');
+  await expect(menu.getByRole("option", { name: "Relationship test", exact: true })).toBeVisible();
+  await test.info().attach("Session resources panel menu", { body: await page.screenshot(), contentType: "image/png" });
+  await opener.click();
+  await expect(menu).not.toBeVisible();
+  await opener.click();
+  await expect(menu.getByRole("option", { name: "Relationship test", exact: true })).toBeVisible();
+});
