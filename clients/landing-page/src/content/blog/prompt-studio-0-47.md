@@ -3,7 +3,7 @@ title: "Prompt Studio 0.47"
 description: "Home, Sessions and Workspaces become extensions, conversations fork from any reply, projects choose their agents and tools, and extension API 0.4 adds ordered storage with shared text."
 author: aurelien-franky
 category: release
-published: 2026-11-11T00:00:00Z
+published: 2026-11-12T22:21:28Z
 image:
   light: ./images/blog-prompt-studio-0-47-light.png
   dark: ./images/blog-prompt-studio-0-47.png
