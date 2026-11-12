@@ -1,11 +1,12 @@
 import { Box, HStack, IconButton, Text, useSlotRecipe } from "@chakra-ui/react";
-import { GripVertical, Settings2 } from "lucide-react";
+import { GripVertical } from "lucide-react";
 import type { ComponentProps } from "react";
 import { DataTable } from "@/components/data-table/data-table";
 import { SimpleCard } from "@/components/primitives/simple-card";
 import { dashboardRecipe } from "@/theme/recipes/dashboard";
 import { DashboardChart } from "./dashboard-chart";
 import { changes, type DashboardWidget, recentTotals, sourceTables, totals } from "./dashboard-fixtures";
+import { WidgetSettings } from "./dashboard-widget-settings";
 
 interface WidgetCardProps {
   widget: DashboardWidget;
@@ -13,11 +14,13 @@ interface WidgetCardProps {
   selected: boolean;
   days: number;
   dragHandle: ComponentProps<typeof IconButton>;
-  onConfigure: () => void;
+  onConfigure: (open: boolean) => void;
+  onWidgetChange: (widget: DashboardWidget) => void;
+  onRemove: () => void;
 }
 
 export function WidgetCard(props: WidgetCardProps) {
-  const { widget, editing, selected, days, dragHandle, onConfigure } = props;
+  const { widget, editing, selected, days, dragHandle, onConfigure, onWidgetChange, onRemove } = props;
   const styles = useSlotRecipe({ recipe: dashboardRecipe })();
   const total = days === 7 ? totals[widget.source] : recentTotals[widget.source];
   return (
@@ -48,16 +51,13 @@ export function WidgetCard(props: WidgetCardProps) {
           {widget.title}
         </Text>
         {editing && (
-          <IconButton
-            aria-label={`Configure ${widget.title}`}
-            data-configure-widget={widget.id}
-            aria-pressed={selected}
-            size="xs"
-            variant="ghost"
-            onClick={onConfigure}
-          >
-            <Settings2 />
-          </IconButton>
+          <WidgetSettings
+            widget={widget}
+            open={selected}
+            onOpenChange={onConfigure}
+            onChange={onWidgetChange}
+            onRemove={onRemove}
+          />
         )}
       </HStack>
       {widget.kind === "metric" && (

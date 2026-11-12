@@ -5,16 +5,9 @@ import { SelectionMenu } from "@/components/param-editor/inputs/selection-menu";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { SegmentedControl } from "@/components/primitives/segmented-control";
 import { dashboardRecipe } from "@/theme/recipes/dashboard";
-import {
-  type DashboardDefinition,
-  type DashboardLayoutMode,
-  type DashboardWidget,
-  initialWidgets,
-  layoutModes,
-  widgetKinds,
-} from "./dashboard-fixtures";
+import { DashboardDisplaySettings } from "./dashboard-display-settings";
+import { type DashboardDefinition, type DashboardWidget, initialWidgets, widgetKinds } from "./dashboard-fixtures";
 import { DashboardGrid } from "./dashboard-grid";
-import { WidgetInspector } from "./dashboard-inspector";
 import { appendWidget, compactWidgets } from "./dashboard-layout";
 
 export function DashboardPrototype() {
@@ -33,7 +26,6 @@ export function DashboardPrototype() {
   const [announcement, setAnnouncement] = useState("");
   const definition = draft ?? saved;
   const { widgets, mode } = definition;
-  const selected = widgets.find(({ id }) => id === selectedId);
   const editing = draft !== null;
   const periods = [
     { id: "7", name: "Last 7 days" },
@@ -58,7 +50,11 @@ export function DashboardPrototype() {
       layout: { x: 0, y: 0, w: 6, h: kind === "metric" ? 3 : 8 },
     };
     setDraft({ ...definition, widgets: appendWidget(widgets, widget, mode) });
-    setSelectedId(widget.id);
+    setSelectedId(null);
+    requestAnimationFrame(() => {
+      widgetButton(widget.id)?.scrollIntoView({ block: "nearest" });
+      setSelectedId(widget.id);
+    });
     setAnnouncement(`${widget.title} added.`);
   };
 
@@ -91,7 +87,7 @@ export function DashboardPrototype() {
                 </Text>
               )}
             </HStack>
-            <Box css={styles.actions}>
+            <Box css={styles.actions} role="group" aria-label="Dashboard controls">
               <SelectionMenu
                 triggerAriaLabel="Date range"
                 triggerLabel={periods.find(({ id }) => id === String(days))?.name}
@@ -102,18 +98,6 @@ export function DashboardPrototype() {
               />
               {editing ? (
                 <>
-                  <Box role="group" aria-label="Layout mode">
-                    <SelectionMenu
-                      triggerLabel={`Layout: ${layoutModes.find(({ id }) => id === mode)?.name}`}
-                      options={layoutModes}
-                      selectedIds={[mode]}
-                      multiSelect={false}
-                      onToggle={(value) => {
-                        const nextMode = value as DashboardLayoutMode;
-                        setDraft({ mode: nextMode, widgets: compactWidgets(widgets, nextMode) });
-                      }}
-                    />
-                  </Box>
                   <SelectionMenu
                     triggerAriaLabel="Add widget"
                     triggerLabel={
@@ -136,6 +120,13 @@ export function DashboardPrototype() {
                   >
                     Apply
                   </Button>
+                  <DashboardDisplaySettings
+                    mode={mode}
+                    onModeChange={(nextMode) => {
+                      setSelectedId(null);
+                      setDraft({ mode: nextMode, widgets: compactWidgets(widgets, nextMode) });
+                    }}
+                  />
                 </>
               ) : (
                 <Button ref={editButton} onClick={() => setDraft(saved)}>
@@ -158,7 +149,29 @@ export function DashboardPrototype() {
                     setDraft({ ...definition, widgets: next });
                     setAnnouncement("Dashboard layout updated.");
                   }}
-                  onConfigure={(id) => setSelectedId(selectedId === id ? null : id)}
+                  onConfigure={setSelectedId}
+                  onWidgetChange={(updated) => {
+                    setDraft({
+                      ...definition,
+                      widgets: widgets.map((widget) =>
+                        widget.id === updated.id ? { ...updated, layout: widget.layout } : widget,
+                      ),
+                    });
+                  }}
+                  onRemove={(id) => {
+                    const index = widgets.findIndex((widget) => widget.id === id);
+                    const next = widgets[index + 1] ?? widgets[index - 1];
+                    setDraft({
+                      ...definition,
+                      widgets: compactWidgets(
+                        widgets.filter((widget) => widget.id !== id),
+                        mode,
+                      ),
+                    });
+                    setSelectedId(null);
+                    setAnnouncement(`${widgets[index].title} removed.`);
+                    requestAnimationFrame(() => (next ? widgetButton(next.id) : applyButton.current)?.focus());
+                  }}
                   onGestureStart={() => setSelectedId(null)}
                 />
               ) : (
@@ -171,38 +184,6 @@ export function DashboardPrototype() {
                 </Stack>
               )}
             </ScrollArea>
-            {editing && selected && (
-              <Box as="aside" aria-label="Widget settings" css={styles.inspector}>
-                <WidgetInspector
-                  key={selected.id}
-                  widget={selected}
-                  onChange={(updated) => {
-                    setDraft({
-                      ...definition,
-                      widgets: widgets.map((widget) => (widget.id === updated.id ? updated : widget)),
-                    });
-                  }}
-                  onRemove={() => {
-                    const index = widgets.findIndex(({ id }) => id === selected.id);
-                    const next = widgets[index + 1] ?? widgets[index - 1];
-                    setDraft({
-                      ...definition,
-                      widgets: compactWidgets(
-                        widgets.filter(({ id }) => id !== selected.id),
-                        mode,
-                      ),
-                    });
-                    setSelectedId(null);
-                    setAnnouncement(`${selected.title} removed.`);
-                    requestAnimationFrame(() => (next ? widgetButton(next.id) : applyButton.current)?.focus());
-                  }}
-                  onClose={() => {
-                    setSelectedId(null);
-                    widgetButton(selected.id)?.focus();
-                  }}
-                />
-              </Box>
-            )}
           </Box>
           <VisuallyHidden role="status" aria-live="polite">
             {announcement}

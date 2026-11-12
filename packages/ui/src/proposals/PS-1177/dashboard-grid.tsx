@@ -29,7 +29,9 @@ interface GridProps {
   selectedId: string | null;
   days: number;
   onChange: (widgets: DashboardWidget[]) => void;
-  onConfigure: (id: string) => void;
+  onConfigure: (id: string | null) => void;
+  onWidgetChange: (widget: DashboardWidget) => void;
+  onRemove: (id: string) => void;
   onGestureStart: () => void;
 }
 interface DragSession {
@@ -48,8 +50,20 @@ interface GridWidgetProps extends GridProps {
   resizeController: ReturnType<typeof useDashboardResize>;
 }
 function GridWidget(props: GridWidgetProps) {
-  const { widget, editing, selectedId, days, moving, resizing, onConfigure, resizeController, columns, metrics } =
-    props;
+  const {
+    widget,
+    editing,
+    selectedId,
+    days,
+    moving,
+    resizing,
+    onConfigure,
+    onWidgetChange,
+    onRemove,
+    resizeController,
+    columns,
+    metrics,
+  } = props;
   const styles = useSlotRecipe({ recipe: dashboardRecipe })();
   const draggable = useDraggable({ id: widget.id, disabled: !editing });
   const content = (
@@ -66,7 +80,9 @@ function GridWidget(props: GridWidgetProps) {
         selected={widget.id === selectedId}
         days={days}
         dragHandle={{ ...draggable.attributes, ...draggable.listeners, ref: draggable.setActivatorNodeRef }}
-        onConfigure={() => onConfigure(widget.id)}
+        onConfigure={(open) => onConfigure(open ? widget.id : null)}
+        onWidgetChange={onWidgetChange}
+        onRemove={() => onRemove(widget.id)}
       />
       {(moving || resizing || selectedId === widget.id) && (
         <Box
