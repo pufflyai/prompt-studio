@@ -15,7 +15,7 @@ import {
 import { homePage } from "./packaged-performance-helpers";
 import { createPackagedProject, openPackagedProject } from "./packaged-project-helpers";
 
-const homePath = dirname(fileURLToPath(import.meta.resolve("pstdio-home/package.json")));
+const homePath = dirname(fileURLToPath(import.meta.resolve("home/package.json")));
 
 test(
   "opens and closes project tabs while preserving pages and terminals",
@@ -29,7 +29,7 @@ test(
           defaultExtensions: [
             { source: homePath, installName: "pstdio-home", skipInstall: true },
             {
-              source: dirname(fileURLToPath(import.meta.resolve("pstdio-session-browser/refs"))),
+              source: dirname(fileURLToPath(import.meta.resolve("session-browser/refs"))),
               installName: "pstdio-session-browser",
               skipInstall: true,
             },

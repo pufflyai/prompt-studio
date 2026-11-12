@@ -13,8 +13,8 @@ import {
 } from "./packaged-app-helpers";
 import { createPackagedProject, openPackagedProject } from "./packaged-project-helpers";
 
-const homePath = dirname(fileURLToPath(import.meta.resolve("pstdio-home/package.json")));
-const sessionsPath = dirname(fileURLToPath(import.meta.resolve("pstdio-session-browser/refs")));
+const homePath = dirname(fileURLToPath(import.meta.resolve("home/package.json")));
+const sessionsPath = dirname(fileURLToPath(import.meta.resolve("session-browser/refs")));
 const fixtureExtensions = {
   PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
     defaultExtensions: [
