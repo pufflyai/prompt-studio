@@ -111,8 +111,13 @@ for (const order of ["full only", "targeted first", "full first", "targeted only
       },
       access,
       discoveryNeeded: () => connection.wake(),
+      beforeDownload: async () => {
+        expect(keysReleased).toBe(true);
+        projections++;
+      },
     });
     let sweeps = 0;
+    let projections = 0;
     let drains = 0;
     const document = JSON.stringify(["native-markdown", "open"]);
     const settled = Promise.withResolvers<void>();
@@ -138,11 +143,9 @@ for (const order of ["full only", "targeted first", "full first", "targeted only
           return;
         }
         sweeps++;
-        // The extension owner prepares keys before projecting files, then downloads.
-        const preparing = sync.prepare(signal);
+        const downloading = sync.synchronize(signal);
         fullEntered.resolve();
-        await preparing;
-        await sync.synchronize(signal);
+        await downloading;
       },
       onError: (error) => settled.reject(error),
       onStatusChange: () => {
@@ -161,6 +164,13 @@ for (const order of ["full only", "targeted first", "full first", "targeted only
       await settled.promise;
       expect(await sync.status()).toMatchObject({ firstDownloaded: true, downloaded: true, pendingItems: 0 });
       expect(sweeps).toBe(1);
+      expect(projections).toBe(1);
+      // A completed targeted-only drain precedes discovery's separate full pass.
+      expect(keyRequests).toBe(order === "targeted only" ? 2 : 1);
+      if (order === "full only") {
+        await sync.synchronize(controller.signal);
+        expect(keyRequests).toBe(2);
+      }
     } finally {
       releaseKeys.resolve();
       controller.abort();

@@ -77,6 +77,7 @@ export const DESKTOP_CHANNELS = {
   setStartupAppearance: "pstdio:desktop:set-startup-appearance",
   startupState: "pstdio:desktop:startup-state",
   startupStateChanged: "pstdio:desktop:startup-state-changed",
+  startupPainted: "pstdio:desktop:startup-painted",
   retryRuntime: "pstdio:desktop:retry-runtime",
   openLogs: "pstdio:desktop:open-logs",
   revealInFinder: "pstdio:desktop:reveal-in-finder",

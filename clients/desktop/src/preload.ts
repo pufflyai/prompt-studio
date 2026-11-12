@@ -8,7 +8,13 @@ import {
 } from "./desktop-api";
 import type { DesktopState } from "./lifecycle/lifecycle-machine";
 import { installTitleBarGeometry } from "./windows/install-title-bar-geometry";
+import { observeStartupPaint } from "./windows/observe-startup-paint";
 import { observeTitleBarAppearance } from "./windows/observe-title-bar-appearance";
+
+if (window.location.protocol === "pstdio:" && window.location.hostname === "lifecycle") {
+  const stopPaint = observeStartupPaint(() => ipcRenderer.send(DESKTOP_CHANNELS.startupPainted));
+  window.addEventListener("unload", stopPaint, { once: true });
+}
 
 if (process.platform === "darwin") {
   const applyFullScreen = (fullScreen: boolean) => {
