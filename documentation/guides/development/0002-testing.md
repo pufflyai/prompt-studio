@@ -428,3 +428,5 @@ Require browser or visual checks only for critical risks: a blocked primary task
 Keep Canvas examples for design exploration without a corresponding test per example. Identify the critical risk in each retained browser test. Avoid exhaustive variant, viewport, and theme matrices; remove duplicate checks already covered by owning-package tests. Ordinary relevant unit, type, and build checks still apply. Fixed performance workloads and budgets remain unchanged.
 
 Run `bun run test:canvas` for the native Canvas fixture harness and critical browser checks. It uses the live preview renderer and sandbox. Test failures retain Playwright reports, traces, and screenshots.
+
+The cross-container database ownership check keeps its SQLite lease on a unique Docker-owned volume. Docker Desktop host bind mounts do not provide the Linux file-lock semantics this check exercises. Only readiness signals and the source checkout use host mounts. The fixture retains its Compose configuration for interrupted local-review cleanup and removes its containers and volume when complete.
