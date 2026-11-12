@@ -23,4 +23,10 @@ production adoption requires its actual compatible published host and SDK.
 
 Design: `extensions/canvas/src/canvases/cloud.canvas.tsx`.
 
+Source/file details: `src/sync-activity.canvas.tsx` → `DownloadDetails`.
+It uses synthetic data and the production activity component. Details separate file
+transfers from internal records and allow retrying one source after cancellation drains.
+PS-214 requires an SDK preview containing `ProjectSyncStatus.sources` and
+`account.retryProjectSyncSource`; update the published dependency before release.
+
 Network loss shows **Connection lost** before sign-in or account-loading status, including signed-out clients. Reconnecting restores the current account and project status.

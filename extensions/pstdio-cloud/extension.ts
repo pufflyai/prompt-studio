@@ -26,7 +26,7 @@ const details = defineView({
   body: {
     kind: "webview",
     entry: packageAsset("./src/details-view.tsx", import.meta.url),
-    capabilities: ["account.read", "navigation.open", "commands.execute"],
+    capabilities: ["account.read", "account.manage", "navigation.open", "commands.execute"],
   },
 });
 const cloudSettings = defineView({

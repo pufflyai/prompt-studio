@@ -55,6 +55,15 @@ export const CloudLabel = (props: { data: ReturnType<typeof useCloud>["data"]; o
             ? t("status.downloading", "Downloading")
             : t("status.downloadingPercent", "Downloading {{percent}}%", { percent: status.percent });
         break;
+      case "uploading":
+        label = t("status.uploading", "Uploading");
+        break;
+      case "checking":
+        label = t("status.checking", "Syncing project data");
+        break;
+      case "waiting":
+        label = t("status.waiting", "Waiting to sync");
+        break;
       case "syncing":
         label =
           status.count === undefined
