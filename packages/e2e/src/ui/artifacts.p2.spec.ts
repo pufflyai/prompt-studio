@@ -1,9 +1,9 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { expect, test } from "@playwright/test";
 import { sessionBrowser } from "@pstdio/sdk/extensions";
 import { folderProjectInput } from "../helpers/folder-project";
+import { expect, test } from "../scripts/session-test";
 import { uiOrigin } from "../ui-server";
 
 const extensionId = "pstdio.pstdio-artifacts";

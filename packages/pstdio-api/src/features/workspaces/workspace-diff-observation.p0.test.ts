@@ -115,7 +115,6 @@ test("startup reconciliation covers dropped native hints and is cancelled with i
   }
 });
 
-
 test("provider diff observations retain a project subdirectory until its location changes", async () => {
   const repository = await mkdtemp(join(tmpdir(), "pstdio-provider-diff-watch-"));
   const project = join(repository, "project");
@@ -136,8 +135,9 @@ test("provider diff observations retain a project subdirectory until its locatio
   const eventBus = new EventBus();
   const deps = { workspaceService: { get: async () => workspace }, eventBus } as never;
   const events: string[] = [];
-  const observation = await observeWorkspaceDiff(deps, { project_id: "project", workspace_id: "workspace" },
-    (event) => events.push(event));
+  const observation = await observeWorkspaceDiff(deps, { project_id: "project", workspace_id: "workspace" }, (event) =>
+    events.push(event),
+  );
   try {
     eventBus.emit("workspaces", "set", { ...workspace, name: "Renamed" });
     expect(events).not.toContain("closed");

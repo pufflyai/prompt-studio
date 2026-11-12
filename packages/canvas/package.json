@@ -1,6 +1,6 @@
 {
   "name": "@pstdio/canvas",
-  "version": "0.46.0",
+  "version": "0.47.0",
   "description": "Build and watch a project's .canvas.tsx files for UI Canvas.",
   "repository": {
     "type": "git",
@@ -24,7 +24,7 @@
   },
   "scripts": {
     "build": "bun ../../scripts/release/stage-package.ts . && bun scripts/prune-tests.ts",
-    "test": "bun ../../scripts/ci/run-bun-tests.ts --silent",
+    "test": "bun ../../scripts/test.ts --scope @pstdio/canvas",
     "typecheck": "bun check",
     "lint": "bun run typecheck && biome check ."
   },
@@ -32,8 +32,8 @@
     "typescript": "6.0.2"
   },
   "peerDependencies": {
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
   },
   "devDependencies": {
     "@types/bun": "1.4.4",

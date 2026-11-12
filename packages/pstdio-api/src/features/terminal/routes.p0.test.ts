@@ -1,10 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import type { WSContext, WSEvents } from "hono/ws";
 import type {
+  TerminalEvent,
   TerminalSessionHandle,
   TerminalWebSocketClientMessage,
   TerminalWebSocketServerMessage,
 } from "pstdio-api-contracts";
+import { createRetainedTerminals } from "./retained-terminals";
 import { createTerminalWebSocketEvents, isTerminalWebSocketOriginAllowed } from "./routes";
 
 const createSocket = () => {
@@ -23,6 +25,40 @@ const createSocket = () => {
 
 const send = (events: WSEvents, socket: WSContext, message: TerminalWebSocketClientMessage) => {
   events.onMessage?.({ data: JSON.stringify(message) } as MessageEvent<string>, socket);
+};
+
+// A PTY whose output the test pushes; it runs until killed.
+const createLiveHandle = (id: string) => {
+  const pending: TerminalEvent[] = [];
+  let wake: (() => void) | undefined;
+  const kills: Array<string | undefined> = [];
+  const push = (event: TerminalEvent) => {
+    pending.push(event);
+    wake?.();
+  };
+  const handle: TerminalSessionHandle = {
+    id,
+    write() {},
+    resize() {},
+    async kill(signal) {
+      kills.push(signal);
+      push({ kind: "exit", code: null, signal: signal ?? "SIGHUP" });
+    },
+    events: async function* () {
+      while (true) {
+        const event = pending.shift();
+        if (!event) {
+          await new Promise<void>((resolve) => {
+            wake = resolve;
+          });
+          continue;
+        }
+        yield event;
+        if (event.kind === "exit") return;
+      }
+    },
+  };
+  return { handle, kills, output: (text: string) => push({ kind: "data", chunk: new TextEncoder().encode(text) }) };
 };
 
 const waitFor = async (condition: () => boolean) => {
@@ -186,6 +222,55 @@ describe("terminal WebSocket", () => {
     await waitFor(() => killed === 1);
 
     expect(killed).toBe(1);
+  });
+
+  test("keeps a keyed PTY running after its socket disconnects and reattaches it with recent output", async () => {
+    const live = createLiveHandle("kept");
+    let opened = 0;
+    const retained = createRetainedTerminals();
+    const terminal = {
+      openSession: () => {
+        opened += 1;
+        return live.handle;
+      },
+    };
+    const first = createSocket();
+    const firstEvents = createTerminalWebSocketEvents({ terminal, retained });
+    send(firstEvents, first.socket, { type: "open", request: { cols: 80, rows: 24 }, attachKey: "project/panel" });
+    live.output("before ");
+    await waitFor(() => first.messages.length === 2);
+    firstEvents.onClose?.({} as CloseEvent, first.socket);
+    live.output("while away");
+    await Bun.sleep(5);
+
+    const second = createSocket();
+    const secondEvents = createTerminalWebSocketEvents({ terminal, retained });
+    send(secondEvents, second.socket, { type: "open", request: { cols: 80, rows: 24 }, attachKey: "project/panel" });
+
+    expect(opened).toBe(1);
+    expect(live.kills).toEqual([]);
+    expect(second.messages).toEqual([
+      { type: "open", sessionId: "kept" },
+      { type: "data", chunk: Buffer.from("before while away").toString("base64") },
+    ]);
+    send(secondEvents, second.socket, { type: "kill" });
+    await waitFor(() => live.kills.length === 1);
+  });
+
+  test("starts a separate keyed PTY while the existing one is attached elsewhere", () => {
+    const handles = [createLiveHandle("first"), createLiveHandle("second")];
+    const retained = createRetainedTerminals();
+    const terminal = { openSession: () => handles.shift()!.handle };
+    const windows = [createSocket(), createSocket()];
+    for (const window of windows) {
+      const events = createTerminalWebSocketEvents({ terminal, retained });
+      send(events, window.socket, { type: "open", request: { cols: 80, rows: 24 }, attachKey: "project/panel" });
+    }
+
+    expect(windows.map((window) => window.messages[0])).toEqual([
+      { type: "open", sessionId: "first" },
+      { type: "open", sessionId: "second" },
+    ]);
   });
 
   test("reports hosts where terminal sessions are unavailable", () => {

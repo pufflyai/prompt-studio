@@ -209,3 +209,53 @@ test("reads snapshots only while at least one subscriber needs them", async () =
     controller.dispose();
   }
 });
+
+test("desktop projects leave shared monitoring enablement to the device capture owner", async () => {
+  const captures: boolean[] = [];
+  const switches: boolean[] = [];
+  let released = 0;
+  const controller = createPerformanceMonitoringController({
+    kind: "desktop",
+    isEnabled: async () => false,
+    setEnabled: async (enabled) => {
+      switches.push(enabled);
+    },
+    snapshot: async () => null,
+    retainCapture: async (monitoring = false) => {
+      captures.push(monitoring);
+      return async () => {
+        released++;
+      };
+    },
+    reportFrames: () => {},
+    reportState: () => {},
+  });
+  await controller.load();
+  const release = await controller.retainCapture();
+  expect(controller.getEnabled()).toBe(true);
+  expect(captures).toEqual([false, true]);
+  expect(switches).toEqual([]);
+  await release();
+  expect(controller.getEnabled()).toBe(false);
+  expect(switches).toEqual([]);
+  controller.dispose();
+  await Promise.resolve();
+  expect(released).toBe(2);
+});
+
+test("a desktop renderer keeps reporting when device monitoring outlives its monitoring view", async () => {
+  const controller = createPerformanceMonitoringController({
+    kind: "desktop",
+    isEnabled: async () => true,
+    setEnabled: async () => {},
+    snapshot: async () => null,
+    retainCapture: async () => async () => {},
+    reportFrames: () => {},
+    reportState: () => {},
+  });
+  await controller.load();
+  const release = await controller.retainCapture();
+  await release();
+  expect(controller.getEnabled()).toBe(true);
+  controller.dispose();
+});

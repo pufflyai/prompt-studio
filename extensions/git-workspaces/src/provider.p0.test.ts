@@ -294,3 +294,15 @@ test("managed directories with quoted Git porcelain characters retain their chec
   await gitWorkspace.delete!(f.ctx, { ...f.input, providerRef: ready.providerRef! });
   expect(existsSync(f.target)).toBe(false);
 });
+
+test("a resolver captured before cancellation cannot recreate its removed checkout", async () => {
+  const f = await fixture();
+  const prepared = await gitWorkspace.create(f.ctx, f.input);
+  await gitWorkspace.cancel!(f.ctx, { ...f.input, providerRef: prepared.providerRef! });
+  f.workspace.providerState = "cancelled";
+  await gitWorkspace.resolve(f.ctx, { ...f.input, providerRef: prepared.providerRef! });
+  expect(existsSync(f.target)).toBe(false);
+  expect(await f.git("worktree", "list", "--porcelain")).not.toContain(f.target);
+  expect(await f.git("branch", "--list", `workspace/WS-1-${f.workspace.id}`)).toBe("");
+  expect(existsSync(join(f.root, "README.md"))).toBe(true);
+});

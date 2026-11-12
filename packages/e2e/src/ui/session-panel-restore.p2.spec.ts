@@ -1,6 +1,6 @@
-import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, executePlannerCommand, getPlannerTicketStatuses } from "../helpers/planner-api";
+import { type APIRequestContext, expect, type Page, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 import { openProjectHome } from "./helpers/sidenav-navigation";
 

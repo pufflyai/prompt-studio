@@ -1,0 +1,119 @@
+name: Source benchmark qualification
+on:
+  workflow_call:
+    inputs:
+      source_sha:
+        required: true
+        type: string
+      release_channel:
+        type: string
+        default: stable
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Exact source revision to qualify
+        required: true
+        type: string
+      release_channel:
+        type: choice
+        options: [stable, nightly]
+        default: stable
+permissions:
+  contents: read
+  actions: read
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      plan_artifact_id: ${{ steps.test_plan.outputs.artifact-id }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.source_sha }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - id: plan
+        run: bun scripts/ci/benchmark-ci-plan.ts "${{ inputs.release_channel }}"
+      - uses: actions/upload-artifact@v4
+        id: test_plan
+        with:
+          name: test-plan-attempt-${{ github.run_attempt }}
+          path: test-results/ci/plan.json
+          if-no-files-found: error
+  benchmark:
+    name: P3 ${{ matrix.suite }} (${{ matrix.target }})
+    needs: plan
+    runs-on: ${{ matrix.os }}
+    # Keep the existing source benchmark execution allowance.
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.source_sha }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24.22.1"
+      - uses: ./.github/actions/setup-windows-desktop-tests
+        if: runner.os == 'Windows'
+      - uses: ./.github/actions/setup-ci-cache
+        with:
+          install-strategy: native
+      - name: Install Chromium system dependencies
+        if: runner.os == 'Linux'
+        working-directory: packages/e2e
+        run: bun x --no-install playwright install-deps chromium
+      - uses: ./.github/actions/run-test-plan
+        with:
+          plan-artifact-id: ${{ needs.plan.outputs.plan_artifact_id }}
+          job: ${{ matrix.job }}
+          prebuilt: "false"
+          display: "true"
+      - name: Preserve native reports and ordered quarantine evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-native-${{ matrix.target }}-${{ matrix.suite }}-attempt-${{ github.run_attempt }}
+          path: |
+            test-results
+            packages/e2e/test-results
+            clients/desktop/test-results
+            __test-tmp__/subnav-benchmark/results
+          if-no-files-found: error
+  results:
+    if: always()
+    needs: [plan, benchmark]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.source_sha }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/download-artifact@v4
+        with:
+          artifact-ids: ${{ needs.plan.outputs.plan_artifact_id }}
+          merge-multiple: true
+          path: test-results/ci
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: test-plan-results-*-attempt-*
+          path: test-results/ci/bundles
+      - run: bun scripts/ci/verify-test-results.ts test-results/ci/plan.json test-results/ci/bundles
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: source-benchmark-verification-attempt-${{ github.run_attempt }}
+          path: |
+            test-results/ci/plan.json
+            test-results/ci/plan-verification.json
+          if-no-files-found: error

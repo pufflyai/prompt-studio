@@ -1,6 +1,17 @@
 import { type SpawnOptionsWithoutStdio, spawn } from "node:child_process";
 import { registerPendingTestProcess } from "./pending-test-processes";
 
+export class TestCommandError extends Error {
+  constructor(
+    readonly status: number | null,
+    readonly signal: NodeJS.Signals | null,
+    stdout: string,
+    stderr: string,
+  ) {
+    super(`Test command exited with code ${status}, signal ${signal}\n${stdout}\n${stderr}`);
+  }
+}
+
 export const runTestCommand = async (
   command: string,
   args: string[],
@@ -26,7 +37,7 @@ export const runTestCommand = async (
   const onError = (error: Error) => done.reject(error);
   const onExit = (status: number | null, signal: NodeJS.Signals | null) => {
     if (status !== expectedStatus || signal) {
-      done.reject(new Error(`Test command exited with code ${status}, signal ${signal}\n${stdout}\n${stderr}`));
+      done.reject(new TestCommandError(status, signal, stdout, stderr));
     }
   };
   const onClose = (status: number | null, signal: NodeJS.Signals | null) => done.resolve({ status, signal });

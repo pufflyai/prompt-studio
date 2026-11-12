@@ -37,7 +37,7 @@ const quarantinePath = "scripts/ci/test-quarantine.json";
 const quarantineLines = (await Bun.file(quarantinePath).text()).split("\n");
 const quarantine = JSON.parse(quarantineLines.join("\n")) as Array<{ file: string; name: string; owner: string }>;
 const entryStarts = quarantineLines.flatMap((line, index) => (line === "  {" ? [index + 1] : []));
-const entryEnds = quarantineLines.flatMap((line, index) => (/^  },?$/.test(line) ? [index + 1] : []));
+const entryEnds = quarantineLines.flatMap((line, index) => (/^ {2}},?$/.test(line) ? [index + 1] : []));
 if (entryStarts.length !== quarantine.length || entryEnds.length !== quarantine.length)
   throw new Error(`${quarantinePath} must keep one entry object per indented block to date its entries.`);
 const quarantineAges = quarantine.map((entry, index) => {
@@ -87,7 +87,7 @@ const markdown = [
     (entry) => `- ${cell(entry.file)}: ${cell(entry.name)} (${cell(entry.owner)}, added ${entry.added!.slice(0, 10)})`,
   ),
   "",
-  "Cancelled, skipped, incomplete and missing first attempts are not successful. Timing data is in timing.json: initial scheduling delay, elapsed after the first job starts, aggregate runner execution, and per-job phases are separate. Elapsed after start can include later scheduling gaps. Failure causes remain unclassified.",
+  "Cancelled, skipped, incomplete and missing first attempts are not successful. Timing data is in timing.json: initial scheduling delay, elapsed after the first job starts, aggregate runner execution, execution critical path from the source workflow graph, and per-job phases are separate. Required-gate wait is distinct from end-to-end release completion. Elapsed after start can include later scheduling gaps. Failure causes remain unclassified.",
   "",
   "A later passing job on the same commit is evidence to investigate, not proof that the failed check is safe to retry.",
   "",

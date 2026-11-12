@@ -49,6 +49,8 @@ const waitForRefresh = (signal: AbortSignal) =>
     else signal.addEventListener("abort", finish, { once: true });
   });
 
+type IdleTurn = { backgroundTasks: { description: string }[] } | null;
+
 export const watchConversation = async (ctx: CommandContext, resource?: ResourceRef) => {
   const id = sessionId(resource);
   if (!id) {
@@ -72,6 +74,8 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
   let remote = false;
   let hasTranscript = false;
   let canonicalDisplay = false;
+  let notice: string | undefined;
+  let idleNotice: string | undefined;
   let queueClock = 0;
   let runClock = 0;
   let streamActive = false;
@@ -82,6 +86,7 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
   let writes = Promise.resolve();
   const emittedRecovery = new Set<string>();
   const writeEvent = (event: ChatWatchUpdate) => {
+    if ("snapshot" in event && event.snapshot && "notice" in event.snapshot) notice = event.snapshot.notice;
     writes = writes.then(async () => {
       for (const frame of chatRendererStreamFrames({ revision: revision++, ...event })) {
         if (ctx.signal.aborted) return;
@@ -103,12 +108,24 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
     const state = conversationState(id, [...messages, ...queueMessages], queue, harnessId, remote);
     return { ...state, messages: hasTranscript ? state.messages : undefined };
   };
+  // The run stays open during an idle turn, so Stop remains; it also ends these tasks.
+  const idleTurn = async (idle: IdleTurn) => {
+    const tasks = idle?.backgroundTasks.map((task) => task.description).join("; ");
+    if (tasks) {
+      idleNotice = `The agent finished its turn and is waiting for your reply. Still running in the background: ${tasks}. Stop also ends these.`;
+      await write({ notice: idleNotice });
+    } else if (idleNotice !== undefined && notice === idleNotice) {
+      // Clear only this notice; queue or execution feedback shown since then stays.
+      await write({ notice: "" });
+    }
+  };
   const patch = async (data: Extract<ExtensionSessionStreamEvent, { event: "patch" }>["data"]) => {
     if (data.path === "/approval_requests") {
       approvals = Array.isArray(data.value) ? (data.value as ApprovalRequest[]) : [];
       await write({ approval: approvalSnapshot(approvals[0]) });
       return;
     }
+    if (data.path === "/idle_turn") return idleTurn(data.value as IdleTurn);
     const next = applySessionMessagePatch(messages, data);
     if (next === messages) return;
     messages = next;

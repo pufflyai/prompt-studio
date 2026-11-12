@@ -42,6 +42,7 @@ export const startAutomationSync = (input: {
   return {
     wake: connection.wake,
     retry: connection.retry,
+    restart: connection.restart,
     done: connection.done.finally(() => {
       stop();
       return documents.close();

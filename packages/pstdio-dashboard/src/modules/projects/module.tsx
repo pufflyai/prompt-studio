@@ -12,15 +12,17 @@ import { CreateProjectWidget } from "./components/create-project-widget";
 import { ProjectFolderWidget } from "./components/project-folder-widget";
 import { ProjectPickerWidget } from "./components/project-picker-widget";
 import { createDashboardProjects } from "./data/project-data";
-import type { DesktopProjectTabsController } from "./desktop-project-tabs-controller";
 import { registerProjectOpening } from "./project-opening";
 import {
   clearSelectedProject,
+  closeProjectSelectionOverlays,
   type DashboardProjectSelectionContext,
+  type DesktopProjectTabs,
   registerInitialProjectSelection,
   registerSelectedProjectDeletionSync,
   registerSingleProjectSelectionSync,
   selectProject,
+  selectProjectTab,
 } from "./project-selection-sync";
 import { registerProjectSetupCommand } from "./project-setup-command";
 import { createProjectSetupRequests } from "./project-setup-requests";
@@ -29,7 +31,7 @@ interface CreateProjectsModuleInput {
   onProjectOpening?: (project: Promise<{ id: string; created?: boolean }>) => Promise<void>;
   initialProjectId?: string;
   projectSelectionPersistence?: DashboardProjectSelectionPersistence;
-  projectTabs?: DesktopProjectTabsController;
+  projectTabs?: DesktopProjectTabs;
 }
 
 const requiredProjectPickerOverlay = "dashboard-workbench.required-project-picker";
@@ -156,6 +158,7 @@ const registerProjectCommands = (
   ctx: WorkbenchModuleContext,
   selectedProjectContext: DashboardProjectSelectionContext,
   persistence: DashboardProjectSelectionPersistence | undefined,
+  projectTabs: DesktopProjectTabs | undefined,
 ) => {
   ctx.commands.registerCommand<SelectProjectInput, void>(
     {
@@ -164,7 +167,12 @@ const registerProjectCommands = (
       category: "Projects",
       icon: standardResourceIcons.project,
     },
-    { execute: (selection) => selectProject(ctx, selectedProjectContext, persistence, selection) },
+    {
+      execute: (selection) =>
+        projectTabs
+          ? selectProjectTab(ctx, projectTabs, selection)
+          : selectProject(ctx, selectedProjectContext, persistence, selection),
+    },
   );
   ctx.commands.registerCommand(
     {
@@ -173,7 +181,13 @@ const registerProjectCommands = (
       category: "Projects",
       icon: standardResourceIcons.project,
     },
-    { execute: () => clearSelectedProject(ctx, selectedProjectContext, persistence) },
+    {
+      execute: () => {
+        if (!projectTabs) return clearSelectedProject(ctx, selectedProjectContext, persistence);
+        closeProjectSelectionOverlays(ctx);
+        projectTabs.clear();
+      },
+    },
   );
   ctx.commands.registerCommand(
     {
@@ -225,7 +239,7 @@ export const createProjectsModule = (input: CreateProjectsModuleInput = {}) =>
       registerProjectFolder(ctx);
       registerProjectSelectionMode(ctx);
       registerProjects(ctx);
-      registerProjectCommands(ctx, selectedProjectContext, input.projectSelectionPersistence);
+      registerProjectCommands(ctx, selectedProjectContext, input.projectSelectionPersistence, input.projectTabs);
       const projectOpening = registerProjectOpening(ctx, setupRequests);
       const initialProjectSelection = registerInitialProjectSelection(
         ctx,
@@ -237,15 +251,16 @@ export const createProjectsModule = (input: CreateProjectsModuleInput = {}) =>
         startedWithProject || input.projectTabs
           ? undefined
           : registerSingleProjectSelectionSync(ctx, selectedProjectContext, input.projectSelectionPersistence);
-      const selectedProjectDeletionSync =
-        input.projectTabs?.connect(ctx) ??
-        registerSelectedProjectDeletionSync(ctx, selectedProjectContext, input.projectSelectionPersistence);
+      // Desktop project tabs release a deleted project's workbench themselves.
+      const selectedProjectDeletionSync = input.projectTabs
+        ? undefined
+        : registerSelectedProjectDeletionSync(ctx, selectedProjectContext, input.projectSelectionPersistence);
 
       return [
         projectOpening,
         ...(initialProjectSelection ? [initialProjectSelection] : []),
         ...(singleProjectSelection ? [singleProjectSelection] : []),
-        selectedProjectDeletionSync,
+        ...(selectedProjectDeletionSync ? [selectedProjectDeletionSync] : []),
       ];
     },
   }) satisfies WorkbenchModuleContribution;

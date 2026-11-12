@@ -14,6 +14,9 @@ on:
       artifact_attempt:
         required: true
         type: string
+      candidate_artifact_id:
+        required: true
+        type: string
       channel:
         required: true
         type: string
@@ -35,6 +38,8 @@ jobs:
     # Preserve the existing desktop release allowance; operation budgets remain in benchmarks.
     timeout-minutes: 30
     env:
+      CI_PROFILE: production
+      PLAN_DISPLAY: ${{ matrix.platform == 'linux' && 'true' || 'false' }}
       SOURCE_SHA: ${{ inputs.source_sha }}
       ARTIFACT_RUN_ID: ${{ inputs.artifact_run_id }}
       ARTIFACT_ATTEMPT: ${{ inputs.artifact_attempt }}
@@ -64,9 +69,9 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: "24.22.1"
-      - name: Install native dependencies
+      - name: "[phase:install] Install native dependencies"
         run: bun __test-tmp__/native-installer/scripts/ci/install-native-dependencies.ts
-      - name: Build desktop test dependencies
+      - name: "[phase:build] Build desktop test dependencies"
         run: bun run build -- --scope @pstdio/desktop --include-dependencies
       - name: Download the exact signed release app
         uses: actions/download-artifact@v4
@@ -88,24 +93,21 @@ jobs:
       - name: Set up Windows desktop tests
         if: matrix.platform == 'win32'
         uses: ./.github/actions/setup-windows-desktop-tests
-      - name: Measure fixed workloads without traces or retries
+      - name: "[phase:test] Measure fixed workloads without traces or retries"
         if: inputs.kind == 'performance'
-        working-directory: clients/desktop
-        run: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bun run test:benchmark
-      - name: Test every packaged functional case
+        run: bun scripts/test.ts --performance-family desktop --prebuilt
+      - name: "[phase:test] Test every packaged functional case"
         if: inputs.kind == 'functional'
-        working-directory: clients/desktop
-        run: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bun run test:packaged
+        run: bun scripts/test.ts --artifact packaged-desktop --prebuilt
       - name: Require first-attempt launch quarantine execution
         if: ${{ !cancelled() && inputs.kind == 'performance' && matrix.platform == 'win32' }}
         run: bun scripts/ci/verify-quarantine-reports.ts packaged-desktop-benchmark --scope @pstdio/desktop
-      - name: Run quarantined packaged functional cases once
-        if: ${{ !cancelled() && inputs.kind == 'functional' }}
-        continue-on-error: true
-        run: ${{ matrix.platform == 'linux' && 'xvfb-run -a ' || '' }}bun scripts/ci/run-quarantined-tests.ts packaged-desktop --scope @pstdio/desktop --prebuilt
-      - name: Require first-attempt functional quarantine execution
-        if: ${{ !cancelled() && inputs.kind == 'functional' }}
-        run: bun scripts/ci/verify-quarantine-reports.ts packaged-desktop --scope @pstdio/desktop
+      - name: Download the immutable candidate identity
+        uses: actions/download-artifact@v4
+        if: always()
+        with:
+          artifact-ids: ${{ inputs.candidate_artifact_id }}
+          merge-multiple: true
       - name: Attest actual consumer inputs and outcome
         if: always()
         env:
@@ -113,17 +115,20 @@ jobs:
           OUTCOME: ${{ job.status }}
         shell: bash
         run: bun scripts/ci/production-evidence.ts --check "$CHECK" --outcome "$OUTCOME"
-      - name: Preserve consumer attestation
+      - name: "[phase:report-transfer] Preserve consumer attestation"
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: production-evidence-${{ inputs.kind }}-${{ matrix.target }}-attempt-${{ github.run_attempt }}
           path: production-evidence
           if-no-files-found: error
-      - name: Preserve all production desktop evidence
+      - name: "[phase:report-transfer] Preserve all production desktop evidence"
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: production-desktop-${{ inputs.kind }}-${{ matrix.target }}-attempt-${{ github.run_attempt }}
-          path: clients/desktop/test-results
+          path: |
+            clients/desktop/test-results
+            test-results/ci/planned
+            !test-results/ci/planned/**/extension-fixtures-*/**
           if-no-files-found: warn

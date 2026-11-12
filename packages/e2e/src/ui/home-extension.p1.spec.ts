@@ -1,6 +1,6 @@
-import { expect, type Page, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { homeFrame, homePage } from "../helpers/home-loading";
+import { expect, type Page, test } from "../scripts/session-test";
 
 const emptyMain = (page: Page) => {
   const main = page.locator('[data-workbench-panel="main"]');

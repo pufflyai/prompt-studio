@@ -34,7 +34,7 @@ export interface StorageRecordQuery {
   index: string;
   where?: StoragePredicate;
   fields?: string[];
-  /** Between 1 and 100. Defaults to 100. */
+  /** Between 1 and 500. Defaults to 100. */
   limit?: number;
   /** Opaque. A changed owner revision rejects the cursor; restart from the first page. */
   cursor?: string;

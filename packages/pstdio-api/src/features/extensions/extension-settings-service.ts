@@ -20,6 +20,7 @@ export class ExtensionSettingError extends Error {
 
 type ExtensionSettingsServiceDeps = {
   extensionSettingsDBService: ReturnType<typeof createExtensionSettingsDBService>;
+  onChanged?: (context: ExtensionSettingsContext, definition: ExtensionSettingDefinitionRecord) => void | Promise<void>;
 };
 
 const hasOwn = (value: object, key: string) => Object.hasOwn(value, key);
@@ -151,6 +152,7 @@ export const createExtensionSettingsService = (deps: ExtensionSettingsServiceDep
       key,
       value_json: value,
     });
+    await deps.onChanged?.(context, definition);
     return toValueRecord(definition, stored);
   };
 
@@ -161,7 +163,8 @@ export const createExtensionSettingsService = (deps: ExtensionSettingsServiceDep
   ) => {
     const definition = definitionFor(context, key);
     validateScope(definition, key, scope);
-    await deps.extensionSettingsDBService.deleteValue({ ...ownerFor(context, definition), key });
+    const deleted = await deps.extensionSettingsDBService.deleteValue({ ...ownerFor(context, definition), key });
+    if (deleted) await deps.onChanged?.(context, definition);
   };
 
   return { list, get, set, delete: deleteSetting };

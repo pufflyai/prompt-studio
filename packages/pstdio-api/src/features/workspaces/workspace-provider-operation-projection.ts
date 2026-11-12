@@ -13,34 +13,43 @@ export const updateCreateProjection = async (
   operationId: string,
   patch: ProviderProjectionPatch,
 ) => {
-  if (
-    !isBuiltInProviderId(workspace.provider_id) &&
-    !(await findWorkspaceProvider(deps, {
-      projectId: workspace.project_id,
-      providerId: workspace.provider_id,
-      workspaceId: workspace.id,
-    }))
+  let observed = workspace;
+  while (
+    !observed.deleted_at &&
+    observed.provider_operation_id === operationId &&
+    observed.provider_operation_kind === "create"
   ) {
-    patch = {
-      ...patch,
-      ...missingProviderPatch({
-        ...workspace,
-        ...patch,
-        provider_operation_id: patch.provider_operation_id ?? operationId,
-        provider_operation_kind: patch.provider_operation_kind ?? workspace.provider_operation_kind ?? "create",
-      }),
-    };
+    const missing =
+      !isBuiltInProviderId(observed.provider_id) &&
+      !(await findWorkspaceProvider(deps, {
+        projectId: observed.project_id,
+        providerId: observed.provider_id,
+        workspaceId: observed.id,
+      }));
+    const next = missing
+      ? {
+          ...patch,
+          ...missingProviderPatch({
+            ...observed,
+            ...patch,
+            provider_operation_id: operationId,
+            provider_operation_kind: "create",
+          }),
+        }
+      : patch;
+    const updated = await deps.workspaceService.updateProviderOperationProjection(observed.id, {
+      operationId,
+      operationKind: "create",
+      expectedState: observed.provider_state,
+      patch: next,
+    });
+    if (updated) return { applied: true, workspace: updated };
+    const current = await deps.workspaceService.get(observed.id);
+    if (!current) return { applied: false, workspace: observed };
+    // Only a state race within this accepted create may be re-admitted. Cancellation/deletion owns its successor.
+    observed = current;
   }
-  const updated = await deps.workspaceService.updateProviderOperationProjection(workspace.id, {
-    operationId,
-    operationKind: "create",
-    patch,
-  });
-  if (updated) return { applied: true, workspace: updated };
-  return {
-    applied: false,
-    workspace: (await deps.workspaceService.get(workspace.id)) ?? workspace,
-  };
+  return { applied: false, workspace: observed };
 };
 
 export const handOffLateCreateProjection = async (

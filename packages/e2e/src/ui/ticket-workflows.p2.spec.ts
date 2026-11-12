@@ -1,9 +1,9 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { type APIRequestContext, test as base, expect, type Page } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, executePlannerCommand } from "../helpers/planner-api";
+import { type APIRequestContext, test as base, expect, type Page } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 
 const repoRoot = resolve(import.meta.dirname, "../../../..");

@@ -1,6 +1,6 @@
 {
   "name": "pstdio-base-themes",
-  "version": "0.45.1",
+  "version": "0.45.2",
   "displayName": "Themes",
   "icon": "Palette",
   "description": "Bundled color themes (Monokai, Solarized, Dracula) and the Seti file icon theme.",
@@ -17,7 +17,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun ../../scripts/ci/run-bun-tests.ts --pass-with-no-tests",
+    "test": "bun test --pass-with-no-tests",
     "typecheck": "bun check && bun check -p tsconfig.canvas.json"
   },
   "dependencies": {

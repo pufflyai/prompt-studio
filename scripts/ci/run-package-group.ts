@@ -3,7 +3,18 @@ import { runCiChecks } from "./run-ci-checks";
 
 const checks = ["lint", "unit"].map((mode) => ({
   id: mode,
-  command: [process.execPath, join(import.meta.dir, "run-package-checks.ts"), mode],
+  command:
+    mode === "unit"
+      ? [
+          process.execPath,
+          "scripts/test.ts",
+          "--plan",
+          "test-results/ci/plan.json",
+          "--job",
+          process.env.CI_PLAN_JOB!,
+          "--prebuilt",
+        ]
+      : [process.execPath, join(import.meta.dir, "run-package-checks.ts"), "lint"],
 }));
 // Instrumented source tests must not compete with lint's own workers on the
 // same runner. PR and queue checks keep their existing parallel execution.

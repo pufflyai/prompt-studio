@@ -252,7 +252,7 @@ A trial is one validation run, for example a fresh-agent walkthrough or a reprod
 | Runtime home | `bun run dev:isolated -- --name <trial>` uses `__test-tmp__/dev-isolated/<trial>/pstdio-home`. Packaged tests and `pst extensions test` take a temporary `PSTDIO_HOME`. Never use `~/.pstdio`. |
 | Docker stack | The name is the Compose project name. Its containers, network, and volumes start with `<trial>`. Relay and account fixtures print their own run names, `pstdio-relay-test-<uuid>` and `manager-authority-<uuid>`. |
 | Ports | The launcher reserves free loopback ports for each start and writes them to `__test-tmp__/dev-isolated/<trial>/connection.json`. Fixtures publish no host ports. |
-| Fixture networks | Fixtures use fixed subnets: `SYNC_TEST_SUBNET` (default `10.254.236.0/24`), `RELAY_TEST_SUBNET` (`10.254.237.0/24`), and `MANAGER_TEST_SUBNET` (`10.254.234.0/24`). Run one fixture at a time, or give parallel trials different subnets after checking `docker network inspect` for unused ones. |
+| Fixture networks | Docker allocates a separate network for each unique Compose project. Parallel trials need no subnet reservation or shared-host slot. Explicit `SYNC_TEST_SUBNET` and `MANAGER_TEST_SUBNET` overrides are available for manual diagnostics; local review clears inherited overrides. |
 | Projects | Each stack seeds its own `project` folder in a volume. Create further projects inside the trial's stack, not in your own folders. |
 | Browsers | Set `PLAYWRIGHT_BROWSERS_PATH` to a new folder to prove a clean browser install. See [Tests](0002-testing.md#extension-smoke-checks). |
 | Agent logins | Mounted from the host only when they exist. Never copy credentials into evidence. |

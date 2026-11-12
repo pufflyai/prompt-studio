@@ -26,7 +26,8 @@ export const monitorCiGates = async (
     const run = (await request(base)) as { run_attempt: number; head_sha: string };
     const jobs: Job[] = [];
     for (let page = 1; ; page++) {
-      const body = (await request(`${base}/attempts/${attempt}/jobs?per_page=100&page=${page}`)) as {
+      // GitHub answers every 100-job page of a large re-run attempt with 502 Bad Gateway; 50-job pages load.
+      const body = (await request(`${base}/attempts/${attempt}/jobs?per_page=50&page=${page}`)) as {
         jobs: Job[];
         total_count: number;
       };

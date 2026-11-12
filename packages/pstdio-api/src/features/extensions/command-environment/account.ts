@@ -27,6 +27,9 @@ export const createAccountApi = (account: ExtensionsRouteDeps["accountService"],
       await safe(() => account.removeDevice(id));
     },
     projectSyncStatus: (id = projectId) => safe(() => account.projectSyncStatus(id)),
+    retryProjectSyncSource: async (sourceId, id = projectId) => {
+      await safe(() => account.retryProjectSync(id, sourceId));
+    },
     syncProject: async (id = projectId) => {
       await safe(() => account.syncProject(id));
     },

@@ -22,6 +22,9 @@ export interface CiJob {
   labels?: string[];
   steps?: CiStepTiming[];
   cause?: CiFailureCause;
+  needs?: number[];
+  workflowJob?: string;
+  graphSource?: string;
 }
 
 export const parseFailedTests = (log: string) => {

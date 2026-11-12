@@ -17,6 +17,7 @@ export default defineConfig({
   outputDir: `test-results/perf-${e2eRunId}`,
   metadata: { quarantineAttempt: process.env.CI_QUARANTINE_ATTEMPT },
   reporter: [
+    ...(process.env.CI_PLAN_REPORTER ? [[process.env.CI_PLAN_REPORTER] as [string]] : []),
     ["html", { open: "never", outputFolder: `playwright-report/perf-${e2eRunId}` }],
     ["list"],
     ["json", { outputFile: "test-results/workbench-benchmarks.json" }],

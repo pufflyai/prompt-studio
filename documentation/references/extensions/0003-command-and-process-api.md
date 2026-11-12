@@ -359,7 +359,8 @@ On `main`, `ctx.account` reads this device's Cloud account, the account's device
 | `ctx.account.devices()` | Lists the account's devices with `name`, `platform`, `lastSeenAt`, `online`, and `current` for this device. |
 | `ctx.account.renameDevice(id, name)` | Renames a device. |
 | `ctx.account.removeDevice(id)` | Stops a device from renewing Cloud access. Removing the current device signs it out. |
-| `ctx.account.projectSyncStatus(projectId?)` | Returns `{ state, offlineReady, pendingItems?, download?, away?, replaced? }` for a project. `away` lists changes made while signed out or held for review; `replaced` lists this device's changes Cloud did not apply because another device changed them first. |
+| `ctx.account.projectSyncStatus(projectId?)` | Returns `{ state, offlineReady, pendingItems?, download?, sources?, away?, replaced? }` for a project. |
+| `ctx.account.retryProjectSyncSource(sourceId, projectId?)` | Cancels and drains one source, then retries it without restarting other sources. |
 | `ctx.account.syncProject(projectId?)` | Syncs the project on every device of the account that has it. |
 | `ctx.account.stopProjectSync(projectId?)` | Makes the project local on every device. |
 | `ctx.account.resolveReturnedChanges(action, projectId?)` | `apply` uploads changes held for review on this device, `discard` drops them and takes Cloud's copy, `dismiss` clears the replaced-changes list in `projectSyncStatus().replaced`. |
@@ -373,7 +374,7 @@ On `main`, `ctx.account` reads this device's Cloud account, the account's device
 | `synced` | Every known document and required file is on this device, and saved changes have reached Cloud. |
 | `offline` | The Cloud connection is lost, or the account service has not confirmed which projects sync. Work continues locally. |
 | `first-download-incomplete` | The first download since the relay connection started has not finished, so some documents or files may not be on this device yet. |
-| `needs-attention` | Some encrypted data could not be read. Healthy updates continue. |
+| `needs-attention` | Some encrypted data could not be read or a source requires manual attention. Healthy sources continue. |
 
 `offlineReady` is `true` only when every known document and required file was verified on this device. The host never reports `synced` or `offlineReady` while content is missing. An incomplete first download stays `first-download-incomplete` when the connection drops. Later downloads, such as catching up after a reconnect, report `waiting-to-sync` with `offlineReady` set to `false` until they finish. The first download starts again when the runtime restarts or a project starts syncing again.
 
@@ -384,6 +385,24 @@ Stopping and restarting sync are account-wide. Stopping keeps the project keys, 
 `download` reports `{ completed, total }` in the same document units. A document counts as completed only after its required files are verified too. `total` is `null` while any owner directory is unknown. Once known, `Math.floor(100 * completed / total)` gives the percentage for a nonzero total. Newly discovered documents can increase the total, and reconnects can restart verification. This is verified-document progress, not bytes transferred. The fields are optional additions to API 0.3.1; older hosts omit them. Status reads use document revision metadata and indexed outbox presence, without loading owner or record content or listing every record.
 
 Listen to `accountEvents.projectSyncChanged` from `@pstdio/sdk/extensions` for changes. The host sends it for one project only when any derived status field changes, including progress while the state stays the same. Read the status once when the extension starts; the first value is not announced. The payload contains `projectId` and the status fields. Webviews receive only the event ID, so read the status again.
+
+On `main`, `sources` adds independent source IDs, display names, connection and busy flags,
+the real pending `phase`, `phaseStartedAt`, `lastProgressAt`, completed document counts,
+and recent `files`. `startedAt` and `completedAt` retain elapsed time after a pass.
+Files expose available metadata names, direction, queued/active/completed/failed status,
+original `byteLength` and encrypted `completedBytes`/`totalBytes`. Internal records have
+no invented file names. Recent terminal file entries are bounded to 50 per source;
+active and queued entries are retained. This is transient local activity, not a durable history.
+Retryable request failures appear in each source's `error`; they do not replace the
+aggregate initial-download or connection state.
+
+When `canRetry` is true, call `retryProjectSyncSource(source.id, projectId)` to cancel
+that source and await its running work before retry. Durable cursors, operation IDs,
+local edits and staged file bytes are preserved. No shared socket is restarted.
+The webview operation uses `account.manage`. HTTP clients use
+`POST /v1/account/projects/{id}/sync/sources/{sourceId}/retry`, or
+`client.account.retryProjectSyncSource(projectId, sourceId)`. Unknown sources fail.
+These additive API 0.4.1 changes require a matching published SDK and host.
 
 `signInRequired` distinguishes a rejected device credential from an ordinary sign-out. It survives a host restart and clears after successful sign-in or explicit sign-out. Network loss, scheduled relay-token renewal, a removed project, and lack of early access do not set it. Local project data stays on this device. Listen to `accountEvents.changed` for changes to the public account status, even when project sync state stays the same. Its payload is `AccountStatus`; webviews receive the event ID and read `account.status()` again. Read once on startup because the first value is not announced.
 
@@ -696,4 +715,4 @@ Installation continues in the background and survives a runtime restart. Selecti
 
 The call takes no project argument. Older hosts omit `ctx.extensions`; extensions that need it declare API `^0.3.1`.
 
-*Updated at: 2026-11-07*
+*Updated at: 2026-11-12*

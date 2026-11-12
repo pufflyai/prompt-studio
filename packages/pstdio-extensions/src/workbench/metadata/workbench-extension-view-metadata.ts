@@ -144,6 +144,7 @@ const toNativeViewBody = (
   return {
     kind: body.kind,
     queryMode: body.queryMode,
+    initialPageSize: body.initialPageSize,
     ...common,
     attributes: body.attributes?.map((attribute) => ({
       ...attribute,

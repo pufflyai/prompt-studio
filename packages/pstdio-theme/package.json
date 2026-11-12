@@ -13,7 +13,7 @@
     "build": "bun x --no-install tsc -p tsconfig.build.json",
     "typecheck": "bun check",
     "lint": "bun run typecheck && biome check .",
-    "test": "bun ../../scripts/ci/run-bun-tests.ts --silent",
+    "test": "bun ../../scripts/test.ts --scope pstdio-theme",
     "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --coverage"
   },
   "nx": {

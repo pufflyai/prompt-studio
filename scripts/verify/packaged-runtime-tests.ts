@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { resolve } from "node:path";
 
 interface PackagedRuntimeTestInput {
   cwd: string;
@@ -7,7 +8,22 @@ interface PackagedRuntimeTestInput {
 }
 
 export const runPackagedRuntimeTests = (input: PackagedRuntimeTestInput) => {
-  const args = ["run", "test:packaged:cli", ...(input.shard === undefined ? [] : [`--shard=${input.shard}`])];
+  const args = process.env.CI_PLAN_JOB
+    ? [
+        resolve(import.meta.dirname, "../test.ts"),
+        "--plan",
+        resolve("test-results/ci/plan.json"),
+        "--job",
+        process.env.CI_PLAN_JOB,
+        "--prebuilt",
+      ]
+    : [
+        resolve(input.cwd, "../../scripts/test.ts"),
+        "--artifact",
+        "compiled-cli",
+        "--prebuilt",
+        ...(input.shard === undefined ? [] : ["--shard", input.shard]),
+      ];
   const result = spawnSync("bun", args, {
     cwd: input.cwd,
     stdio: "inherit",

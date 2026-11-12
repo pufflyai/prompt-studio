@@ -53,15 +53,7 @@ export const exercisePagedCollections = async (
   }
   await page.getByRole("option", { name: "paged-owner-0 table", exact: true }).click();
   await expect(page.getByRole("cell", { name: "paged-owner-0 row 0000", exact: true })).toBeVisible();
-  const continuation = nextResult(0, "table", 100);
-  await page.getByRole("button", { name: "Go to next page", exact: true }).click();
-  const continued = await (await continuation).json();
-  expectedSelection.push(continued.outcome.value.rows[0].id);
-  expect(continued.outcome.value.rows[0].values.title).toBe("paged-owner-0 row 0100");
-  await expect(page.getByRole("cell", { name: "paged-owner-0 row 0100", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Go to first page", exact: true }).click();
-  await expect(page.getByRole("cell", { name: "paged-owner-0 row 0000", exact: true })).toBeVisible();
-
+  // Exercise rapid navigation before page two enters the retained query cache.
   // Hold transport so a second click sees the still-displayed first-page cursor.
   const gate = Promise.withResolvers<void>();
   await page.route("**/commands/*/execute", async (route) => {
@@ -89,6 +81,17 @@ export const exercisePagedCollections = async (
     await page.unroute("**/commands/*/execute");
   }
 
+  await page.getByRole("button", { name: "Go to first page", exact: true }).click();
+  await expect(page.getByRole("cell", { name: "paged-owner-0 row 0000", exact: true })).toBeVisible();
+  const continuation = nextResult(0, "table", 100);
+  await page.getByRole("button", { name: "Go to next page", exact: true }).click();
+  const continued = await (await continuation).json();
+  expectedSelection.push(continued.outcome.value.rows[0].id);
+  expect(continued.outcome.value.rows[0].values.title).toBe("paged-owner-0 row 0100");
+  await expect(page.getByRole("cell", { name: "paged-owner-0 row 0100", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Go to first page", exact: true }).click();
+  await expect(page.getByRole("cell", { name: "paged-owner-0 row 0000", exact: true })).toBeVisible();
+
   const boardResult = nextResult(0, "board");
   const readiness = await observeCollectionReadiness(page, "board", 0);
   await page.getByRole("option", { name: "paged-owner-0 board", exact: true }).click();
@@ -100,9 +103,9 @@ export const exercisePagedCollections = async (
     { field: "status", value: "done", count: 125 },
     { field: "status", value: "todo", count: 125 },
   ]);
-  await expect(page.getByText("paged-owner-0 row 0001", { exact: true })).toBeVisible();
-  evidence.push({ view: "owner-0-board", elapsedMs, rows: 100, responseBytes: JSON.stringify(board).length });
   const renderer = page.getByTestId("kanban-renderer");
+  await expect(renderer.getByText("paged-owner-0 row 0001", { exact: true })).toBeVisible();
+  evidence.push({ view: "owner-0-board", elapsedMs, rows: 100, responseBytes: JSON.stringify(board).length });
   await expect(renderer.getByText("125", { exact: true })).toHaveCount(2);
   expect(board.outcome.value.rows[0].title).toBe("paged-owner-0 row 0001");
   expect(board.outcome.value.rows[99].title).toBe("paged-owner-0 row 0199");

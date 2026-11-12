@@ -33,6 +33,8 @@ export const createAccountClient = (request: RequestFn) => {
       request<Ok & { status: Exclude<AccountLoginStatus, "pending"> }>(login(id), { method: "DELETE" }),
     projectSyncStatus: (projectId: string, options?: { signal?: AbortSignal }) =>
       request<ProjectSyncStatus>(`${project(projectId)}/sync`, options),
+    retryProjectSyncSource: (projectId: string, sourceId: string) =>
+      request<Ok>(`${project(projectId)}/sync/sources/${encodeURIComponent(sourceId)}/retry`, { method: "POST" }),
     /** Retries project discovery, downloads, and activation of its synced extensions immediately. */
     retryProjectSync: (projectId: string) => request<Ok>(`${project(projectId)}/retry`, { method: "POST" }),
     /** Includes account feature grants. `features` is null until discovery or when signed out. */

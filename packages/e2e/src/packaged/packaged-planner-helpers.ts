@@ -6,8 +6,8 @@ import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { logTestPhase } from "../scripts/log-test-phase";
-import { removeTestDirectory } from "../scripts/remove-test-directory";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+import { removeTestDirectory } from "./remove-test-directory";
 
 export interface PackagedPlanner {
   baseUrl: string;
@@ -39,7 +39,7 @@ export const commandRunner =
     return body.outcome.value;
   };
 
-export async function withPackagedPlanner(check: (input: PackagedPlanner) => Promise<void>) {
+export async function withPackagedPlanner(check: (input: PackagedPlanner) => Promise<void>, fixtures: string[] = []) {
   const root = mkdtempSync(join(tmpdir(), "pstdio-packaged-planner-"));
   let host: Awaited<ReturnType<typeof startPackagedServe>> | undefined;
   const started = Date.now();
@@ -48,9 +48,8 @@ export async function withPackagedPlanner(check: (input: PackagedPlanner) => Pro
     phase("runtime start");
     host = await startPackagedServe(root, {
       PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions(
-        "workbench-fixture",
+        ...fixtures,
         "git-workspaces",
-        "extension-lab",
         "pstdio-artifacts",
         "pstdio-planner",
         "pstdio-reports",

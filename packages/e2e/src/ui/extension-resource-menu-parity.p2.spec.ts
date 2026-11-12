@@ -1,8 +1,8 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { type APIRequestContext, expect, type Page, test } from "../scripts/session-test";
 import { prepareResourceActionsDashboard } from "./helpers/resource-actions";
 
 const execute = async (

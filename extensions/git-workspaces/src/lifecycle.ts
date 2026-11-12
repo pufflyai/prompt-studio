@@ -44,9 +44,12 @@ export const prepareWorktree = async (ctx: ExtensionContextBase, input: Workspac
 };
 
 export const resolveWorktree = async (ctx: ExtensionContextBase, input: WorkspaceProviderResolveInput) => {
+  const workspace = await ctx.workspaces.get(input.workspaceId);
+  // A captured resolver can wait behind cancellation or a runtime refresh. Do not reopen backing it removed.
+  if (!workspace || !["provisioning", "ready", "failed", "provider_missing"].includes(workspace.providerState ?? ""))
+    return localResult(input.providerRef, "cancelled");
   const paths = await ownedDirectory(ctx, input.providerRef);
   let entries = await registeredWorktrees(ctx, paths.sourceRoot);
-  const workspace = await ctx.workspaces.get(input.workspaceId);
   const branch = typeof input.providerRef.data.branch === "string" ? input.providerRef.data.branch : workspace?.branch;
   const target = entries.find((entry) => entry.path === normalize(paths.worktreeRoot) && !entry.prunable);
   if (target) {

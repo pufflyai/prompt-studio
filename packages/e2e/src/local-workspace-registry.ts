@@ -161,6 +161,9 @@ export const startLocalWorkspaceRegistry = async (input: {
 
   return {
     origin,
+    packageArtifacts: Object.freeze(
+      Object.fromEntries(packages.map((pkg) => [pkg.manifest.name, join(registryRoot, pkg.tarballName)])),
+    ),
     close: async () => {
       await new Promise<void>((resolve, reject) => {
         server.close((error) => (error ? reject(error) : resolve()));

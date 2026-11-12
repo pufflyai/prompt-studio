@@ -13,7 +13,11 @@ export default defineConfig({
   retries: 0,
   repeatEach: 1,
   outputDir: `test-results/${runId}`,
-  reporter: [["html", { open: "never", outputFolder: `playwright-report/${runId}` }], ["list"]],
+  reporter: [
+    ...(process.env.CI_PLAN_REPORTER ? [[process.env.CI_PLAN_REPORTER] as [string]] : []),
+    ["html", { open: "never", outputFolder: `playwright-report/${runId}` }],
+    ["list"],
+  ],
   use: {
     baseURL: `http://127.0.0.1:${port}`,
     trace: process.env.PLAYWRIGHT_TRACE === "on" ? "on" : "off",

@@ -29,6 +29,8 @@ export type SessionServiceDeps = {
   onSessionStatusChanged?: (session: HookSessionRecord) => void;
   onSessionResumed?: (session: HookSessionRecord) => void;
   onCapacityAvailable?: (input: CapacityAvailableInput) => Promise<void>;
+  /** A running session's turn ended while its run stays open, so queued follow-ups can go in. */
+  onIdleTurn?: (sessionId: string) => Promise<void>;
 };
 
 type CreateSessionOptions = {
@@ -77,7 +79,7 @@ const createSessionAnchorMethods = (
 
 export const createSessionService = (deps: SessionServiceDeps) => {
   const raw = deps.sessionsDb;
-  const store = createSessionStore();
+  const store = createSessionStore({ onIdleTurn: deps.onIdleTurn });
 
   // Transition-seam contract: log when a DB write was a no-op so a missing sync
   // event or hook fan-out is never invisible. The seam owns the trio of DB

@@ -12,17 +12,17 @@ export const verifyModePanelState = async (page: Page, terminal: Locator) => {
   const modeRoundTrip = async () => {
     const previous = page.url();
     const destination = new URL(previous);
-    destination.pathname = `/projects/${destination.pathname.split("/")[2]}/extensions/pstdio.workbench-fixture/lab-mode`;
+    destination.pathname = `/projects/${destination.pathname.split("/")[2]}/extensions/test.mode/mode`;
     destination.search = "";
     await page.evaluate((url) => {
       window.history.pushState(null, "", url);
       window.dispatchEvent(new PopStateEvent("popstate"));
     }, destination.href);
-    await expect(page.getByRole("tab", { name: "Overview", exact: true })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Mode content", exact: true })).toBeVisible();
     await expect(bottom).toHaveCount(0);
     await expect(terminal).toBeHidden();
-    const status = page.frameLocator('iframe[title="Lab status"]:visible');
-    await expect(status.getByText("Extension Lab", { exact: true })).toBeVisible();
+    const status = page.frameLocator('iframe[title="Mode status"]:visible');
+    await expect(status.getByText("Mode context", { exact: true })).toBeVisible();
     await page.goBack();
     await expect(page).toHaveURL(previous);
   };
@@ -58,8 +58,8 @@ export const verifyModePanelState = async (page: Page, terminal: Locator) => {
 
 export const verifyExtensionModeSessionRestore = async (page: Page, projectId: string) => {
   const previous = page.url();
-  await page.goto(new URL(`/projects/${projectId}/extensions/pstdio.workbench-fixture/lab-mode`, previous).href);
-  await expect(page.getByRole("tab", { name: "Overview", exact: true })).toBeVisible();
+  await page.goto(new URL(`/projects/${projectId}/extensions/test.mode/mode`, previous).href);
+  await expect(page.getByRole("tab", { name: "Mode content", exact: true })).toBeVisible();
   const hideSide = page
     .getByRole("group", { name: "Panel controls" })
     .getByRole("button", { name: "Hide Side Panel", exact: true });
@@ -88,7 +88,7 @@ export const verifyExtensionModeSessionRestore = async (page: Page, projectId: s
   await sessionTab.click({ button: "right" });
   const menu = page.getByRole("menu");
   await expect(menu.getByRole("menuitem", { name: "Unpin tab", exact: true })).toBeVisible();
-  await page.frameLocator('iframe[title="Lab status"]:visible').getByText("Extension Lab", { exact: true }).click();
+  await page.frameLocator('iframe[title="Mode status"]:visible').getByText("Mode context", { exact: true }).click();
   await expect(menu).toBeHidden();
   await page.goto(previous);
 };

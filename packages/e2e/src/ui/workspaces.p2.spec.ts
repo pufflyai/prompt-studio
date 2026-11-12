@@ -2,9 +2,9 @@ import { execSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerAttempt, createPlannerTicket } from "../helpers/planner-api";
+import { expect, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 
 const createGitRepo = () => {

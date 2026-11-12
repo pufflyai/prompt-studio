@@ -39,6 +39,8 @@ export interface ProjectSyncStatus {
    * ready while folder bytes are still pending. Absent until this project connects to Cloud.
    */
   folder?: ProjectFolderRecoveryStatus;
+  /** Independent data owners, pending internal work and recent file transfers. */
+  sources?: ProjectSyncSource[];
   /**
    * Changes this device made while signed out, or a return held for review. Signed-out changes upload
    * when the device signs in again; held changes upload only after someone applies them here.
@@ -52,4 +54,32 @@ export interface ProjectSyncStatus {
   };
   /** This device's changes that Cloud did not apply because another device changed them first. */
   replaced?: { total: number; records: (ProjectReturnRecord & { whole: boolean; replacedAt: number })[] };
+}
+
+export interface ProjectSyncFile {
+  id: string;
+  name?: string;
+  direction: "upload" | "download";
+  status: "queued" | "active" | "completed" | "failed";
+  byteLength: number;
+  /** Encrypted bytes received, or acknowledged by Cloud for uploads. Includes resumed bytes. */
+  completedBytes: number;
+  totalBytes: number;
+}
+
+export interface ProjectSyncSource {
+  id: string;
+  name?: string;
+  canRetry?: boolean;
+  phase: string;
+  lastProgressAt?: string;
+  phaseStartedAt?: string;
+  startedAt?: string;
+  completedAt?: string;
+  connected: boolean;
+  busy: boolean;
+  downloaded: boolean;
+  download?: { completed: number; total: number | null };
+  error?: string;
+  files: ProjectSyncFile[];
 }
