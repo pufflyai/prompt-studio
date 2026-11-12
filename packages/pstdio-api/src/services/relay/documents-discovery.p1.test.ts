@@ -119,8 +119,13 @@ for (const { order, extensionId, transportOwner } of [
       },
       access,
       discoveryNeeded: () => connection.wake(),
+      beforeDownload: async () => {
+        expect(keysReleased).toBe(true);
+        projections++;
+      },
     });
     let sweeps = 0;
+    let projections = 0;
     let drains = 0;
     const document = JSON.stringify(["native-markdown", "open"]);
     const space = await createSyncSpace({
@@ -151,7 +156,8 @@ for (const { order, extensionId, transportOwner } of [
           return;
         }
         sweeps++;
-        // The extension owner prepares keys before projecting files, then downloads.
+        const downloading = sync.synchronize(signal);
+        // Inspect the same in-flight preparation without starting a second key request.
         const preparing = sync.prepare(signal);
         fullEntered.resolve();
         const prepared = await preparing;
@@ -159,7 +165,7 @@ for (const { order, extensionId, transportOwner } of [
         expect(prepared.recordStreamId).toBe(
           await space.documentId(JSON.stringify([transportOwner, "record-stream-v2"])),
         );
-        await sync.synchronize(signal);
+        await downloading;
         expect(prepared.jobs.nameFor(await space.documentId(JSON.stringify([transportOwner, document])))).toBe(
           document,
         );
@@ -181,6 +187,13 @@ for (const { order, extensionId, transportOwner } of [
       await settled.promise;
       expect(await sync.status()).toMatchObject({ firstDownloaded: true, downloaded: true, pendingItems: 0 });
       expect(sweeps).toBe(1);
+      expect(projections).toBe(1);
+      // A completed targeted-only drain precedes discovery's separate full pass.
+      expect(keyRequests).toBe(order === "targeted only" ? 2 : 1);
+      if (order === "full only") {
+        await sync.synchronize(controller.signal);
+        expect(keyRequests).toBe(2);
+      }
     } finally {
       releaseKeys.resolve();
       controller.abort();

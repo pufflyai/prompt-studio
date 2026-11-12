@@ -53,6 +53,10 @@ on:
         description: Consume the parent workflow immutable test plan
         type: boolean
         default: false
+      test_plan_artifact_id:
+        description: Immutable plan artifact produced by the parent scope job
+        type: string
+        default: ""
       gate_plan:
         type: string
         default: "[]"
@@ -114,7 +118,8 @@ jobs:
         if: inputs.test_plan
         uses: actions/download-artifact@v4
         with:
-          name: test-plan-attempt-${{ github.run_attempt }}
+          artifact-ids: ${{ inputs.test_plan_artifact_id }}
+          merge-multiple: true
           path: test-results/ci
       - name: Verify packaged Bun toolchain
         id: toolchain

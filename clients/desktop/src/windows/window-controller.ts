@@ -9,6 +9,7 @@ import { secureSession, secureWebContents } from "../security/apply-window-secur
 import { createRuntimeLoginUrl } from "../security/runtime-session";
 import { createSecureWindowOptions } from "../security/window-security";
 import { LIFECYCLE_SCHEME, LIFECYCLE_URL, readLifecycleAsset } from "./lifecycle-protocol";
+import { createStartupDocument } from "./startup-paint";
 import type { TitleBarAppearance } from "./title-bar-appearance";
 import { prepareWorkbenchDocument } from "./workbench-loading";
 
@@ -21,6 +22,7 @@ export class DesktopWindowController {
   #workbenchLoad: Promise<void> | undefined;
   #workbenchRuntimeId: string | undefined;
   readonly #shown: Promise<void>;
+  #lifecycle: ReturnType<typeof createStartupDocument>;
   readonly lifecycleUrl: string;
   readonly window: BrowserWindow;
 
@@ -36,6 +38,7 @@ export class DesktopWindowController {
       // Painted before the lifecycle document, so the window never flashes another theme.
       ...(appearance ? { backgroundColor: appearance.backgroundColor } : {}),
     });
+    this.#lifecycle = createStartupDocument(this.window.webContents);
     this.window.on("focus", () => this.syncLifecycleThrottling());
     this.window.on("blur", () => this.syncLifecycleThrottling());
     const visibilityChanged = () =>
@@ -195,7 +198,13 @@ export class DesktopWindowController {
     // Recovery must not wait for a new renderer, JavaScript bundle, or theme initialization.
     this.#workbench?.setVisible(false);
     this.syncLifecycleThrottling();
-    if (this.window.webContents.getURL() !== this.lifecycleUrl) await this.window.loadURL(this.lifecycleUrl);
+    if (
+      this.window.webContents.getURL() !== this.lifecycleUrl ||
+      this.window.webContents.isCrashed() ||
+      this.#lifecycle.failed
+    ) {
+      await this.loadLifecycle();
+    } else await this.#lifecycle.load;
     const contents = this.#workbench?.getVisible() ? this.#workbench.webContents : this.window.webContents;
     contents.focus();
   }
@@ -232,7 +241,11 @@ export class DesktopWindowController {
 
   async #loadWorkbench(descriptor: RuntimeDescriptor) {
     this.#runtimeOrigin = descriptor.origin;
-    const [loginUrl] = await Promise.all([createRuntimeLoginUrl(fetch, descriptor), this.#shown]);
+    const [loginUrl] = await Promise.all([
+      createRuntimeLoginUrl(fetch, descriptor),
+      this.#shown,
+      this.#lifecycle.painted,
+    ]);
     const view = this.#workbench ?? this.createWorkbench();
     await view.webContents.loadURL(loginUrl);
   }
@@ -240,9 +253,25 @@ export class DesktopWindowController {
   async #prepareWorkbenchAssets(descriptor: RuntimeDescriptor) {
     this.#runtimeOrigin = descriptor.origin;
     // Show the startup window before a second renderer competes with its first paint.
-    await this.#shown;
+    await Promise.all([this.#shown, this.#lifecycle.painted]);
     const view = this.#workbench ?? this.createWorkbench();
     // The dashboard waits for this fragment during native bootstrap; it redeems it without reloading.
     await prepareWorkbenchDocument(view.webContents, descriptor);
+  }
+
+  private loadLifecycle() {
+    const previous = this.#lifecycle;
+    if (previous.load && !previous.failed && this.window.webContents.isLoadingMainFrame()) return previous.load;
+    if (previous.load || previous.failed) {
+      previous.close();
+      this.#lifecycle = createStartupDocument(this.window.webContents);
+    }
+    const document = this.#lifecycle;
+    document.load = this.window.loadURL(this.lifecycleUrl);
+    void document.load.catch(() => {
+      document.failed = true;
+      document.close();
+    });
+    return document.load;
   }
 }
