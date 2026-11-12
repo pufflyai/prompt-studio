@@ -1,4 +1,4 @@
-name: Focused Cloud repair qualification
+name: Packaged consumer cleanup qualification
 on:
   workflow_dispatch:
     inputs:
@@ -8,61 +8,11 @@ on:
 permissions:
   contents: read
 jobs:
-  workspace-files:
-    if: false
-    name: Original Linux workspace files case
-    runs-on: ubuntu-latest
-    timeout-minutes: 18
-    container:
-      image: mcr.microsoft.com/playwright:v1.60.0-noble
-      options: --user 1001 --init --ipc=host
-    env:
-      BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
-      E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
-      CI_PRIORITY: P2
-      TEST_PRIORITIES: P2
-      CI_PROFILE: production
-      GH_TOKEN: ${{ github.token }}
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          ref: ${{ inputs.source_sha }}
-      - uses: actions/setup-node@v5
-        with:
-          node-version: "24.22.1"
-      - name: Setup Bun
-        run: node scripts/ci/setup-container-bun.ts
-      - uses: ./.github/actions/setup-ci-cache
-        with:
-          profile: playwright
-      - name: Build original browser prerequisites
-        run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
-      - name: Execute unchanged workspace files case once
-        run: bun run --cwd packages/e2e test:ui -- src/ui/workspace-files.p2.spec.ts --grep 'browses and edits workspace files'
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: focused-workspace-files-evidence
-          path: |
-            packages/e2e/test-results
-            packages/e2e/playwright-report
-          if-no-files-found: warn
-  native:
-    if: false
-    name: Original native ${{ matrix.case }}
-    runs-on: ${{ matrix.os }}
+  cleanup:
+    name: Same seven-extension cleanup on Apple Silicon
+    runs-on: macos-15
     timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-24.04
-            case: Linux streaming motion
-            file: src/packaged/packaged-chat-motion-smoke.p2.test.ts
-            pattern: retains streaming messages and cached history
     env:
-      CI_PRIORITY: P2
-      TEST_PRIORITIES: P2
       CI_PROFILE: production
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -78,65 +28,47 @@ jobs:
       - uses: ./.github/actions/setup-ci-cache
         with:
           install-strategy: native
-      - name: Build original native prerequisites
-        run: bun run build -- --scope e2e --include-dependencies
-      - name: Install original browser prerequisite
-        if: runner.os == 'Linux'
-        run: bunx playwright@1.60.0 install chromium --with-deps
-      - name: Compile original packaged host
-        run: bun run --cwd scripts build:host
-      - name: Execute unchanged native workload once
-        env:
-          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio
-        run: bun run --cwd packages/e2e test:packaged:cli -- '${{ matrix.file }}' --test-name-pattern '${{ matrix.pattern }}'
+      - name: Build original public artifacts
+        run: bun run build -- --scope @pstdio/sdk --scope @pstdio/ui --include-dependencies
+      - name: Compare complete owned cleanup once
+        run: |
+          mkdir -p test-results
+          cat > "$RUNNER_TEMP/consumer-cleanup-qualification.ts" <<'QUALIFICATION'
+          import {mkdtempSync,writeFileSync,readdirSync,lstatSync} from 'node:fs';
+          import {rm} from 'node:fs/promises';
+          import {tmpdir} from 'node:os';
+          import {join} from 'node:path';
+          const root=process.env.GITHUB_WORKSPACE!;
+          const {startLocalWorkspaceRegistry}=await import(join(root,'packages/e2e/src/local-workspace-registry.ts'));
+          const {prepareUiFixtureSources,prepareUiFixtures}=await import(join(root,'packages/e2e/src/scripts/prepare-ui-fixtures.ts'));
+          const {removeTestDirectory}=await import(join(root,'packages/e2e/src/packaged/remove-test-directory.ts'));
+          const directory=mkdtempSync(join(tmpdir(),'ps206-consumer-cleanup-'));
+          const signal=new AbortController().signal;
+          const prepared=join(directory,'prepared');
+          const preparedEnv={...process.env,E2E_HOME:prepared,E2E_BUN_CACHE_DIR:join(prepared,'bun-cache'),E2E_PREPARED_FIXTURES:undefined};
+          const count=(path:string)=>{let files=0,bytes=0,dirs=0,links=0;for(const entry of readdirSync(path,{withFileTypes:true})){const full=join(path,entry.name);if(entry.isSymbolicLink())links++;else if(entry.isDirectory()){dirs++;const c=count(full);files+=c.files;bytes+=c.bytes;dirs+=c.dirs;links+=c.links;}else{files++;bytes+=lstatSync(full).size;}}return{files,bytes,dirs,links};};
+          try{
+           await prepareUiFixtureSources(preparedEnv,signal);writeFileSync(join(prepared,'sources.json'),preparedEnv.E2E_EXTENSION_SOURCES!);
+           const results=[];
+           for(const mode of ['node','native']){
+            const consumer=join(directory,mode);const configPath=join(consumer,'.npmrc');const began=performance.now();
+            const registry=await startLocalWorkspaceRegistry({configPath,outputRoot:join(consumer,'registry'),packagePaths:[join(root,'packages/sdk'),join(root,'packages/ui')]});
+            const env={...process.env,E2E_HOME:join(consumer,'home'),E2E_BUN_CACHE_DIR:join(consumer,'bun-cache'),E2E_PREPARED_FIXTURES:prepared,NPM_CONFIG_USERCONFIG:configPath};
+            await prepareUiFixtures(env,signal,registry.packageArtifacts);const prepareMs=performance.now()-began;
+            const inventory=count(consumer);const sourceInventory=count(env.E2E_HOME);const cacheInventory=count(env.E2E_BUN_CACHE_DIR);
+            const closeStart=performance.now();await registry.close();const registryCloseMs=performance.now()-closeStart;
+            const removeStart=performance.now();if(mode==='node')await rm(consumer,{recursive:true,force:true});else await removeTestDirectory(consumer);
+            const removeMs=performance.now()-removeStart;
+            const result={mode,prepareMs,registryCloseMs,removeMs,totalMs:prepareMs+registryCloseMs+removeMs,inventory,sourceInventory,cacheInventory};results.push(result);console.log(JSON.stringify(result));
+           }
+           const result={revision:'0af9691eeffa5acdb4d6a802b0abe102feaa670a',host:`${process.platform}/${process.arch}`,bun:Bun.version,samples:1,conditions:'Same seven fixture extensions and immutable source producer; separate initially empty invocation-owned package caches; normal frozen installs before cleanup. Node baseline first; native utility second. One sequential sample on a shared host. Counts exclude following symlinks. No application runtime or assertions; setup/cleanup qualification only.',results};
+           writeFileSync(join(root,'test-results/consumer-cleanup-qualification.json'),JSON.stringify(result,null,2));
+          }finally{await removeTestDirectory(directory);}
+          QUALIFICATION
+          bun "$RUNNER_TEMP/consumer-cleanup-qualification.ts" 2>&1 | tee test-results/consumer-cleanup-qualification.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: focused-native-${{ runner.os }}-evidence
-          path: |
-            packages/e2e/test-results
-            packages/e2e/playwright-report
-          if-no-files-found: warn
-  cloud:
-    name: Original three-device Cloud case
-    runs-on: ubuntu-latest
-    timeout-minutes: 18
-    container:
-      image: mcr.microsoft.com/playwright:v1.60.0-noble
-      options: --user 1001 --init --ipc=host
-    env:
-      BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
-      E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
-      CI_PRIORITY: P2
-      TEST_PRIORITIES: P2
-      CI_PROFILE: production
-      GH_TOKEN: ${{ github.token }}
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          ref: ${{ inputs.source_sha }}
-      - uses: actions/setup-node@v5
-        with:
-          node-version: "24.22.1"
-      - name: Setup Bun
-        run: node scripts/ci/setup-container-bun.ts
-      - uses: ./.github/actions/setup-ci-cache
-        with:
-          profile: playwright
-      - name: Build original browser prerequisites
-        run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
-      - name: Compile original packaged host
-        run: bun run --cwd scripts build:host
-      - name: Execute original three-device workload once
-        env:
-          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio
-          E2E_REQUIRE_WEBVIEW_BROWSERS: "1"
-        run: bun run --cwd packages/e2e test:packaged:browser -- src/packaged/packaged-cloud-phase-one.p2.spec.ts --grep 'three independent packaged devices'
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: focused-cloud-repair-evidence
-          path: |
-            packages/e2e/test-results
-            packages/e2e/playwright-report
-          if-no-files-found: warn
+          name: consumer-cleanup-qualification
+          path: test-results/consumer-cleanup-qualification.*
+          if-no-files-found: error
