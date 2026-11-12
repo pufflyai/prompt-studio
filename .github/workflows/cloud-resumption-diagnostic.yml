@@ -1,0 +1,33 @@
+name: Cloud resumption diagnostic
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Exact revision to check
+        required: true
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.source_sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24.22.1"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: ./.github/actions/setup-ci-cache
+      - name: Check Cloud resumption with the registered runner
+        run: bun run test -- --file packages/pstdio-api/src/services/relay/runtime-resumption.p1.test.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cloud-resumption-windows
+          path: test-results
+          if-no-files-found: warn
