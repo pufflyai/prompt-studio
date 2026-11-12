@@ -3,6 +3,8 @@ import type {
   WebviewAccountManageParams,
   WebviewAccountReadParams,
 } from "pstdio-api-contracts/extension-kernel";
+import type { ExtensionWebviewHostAdapters } from "./extension-webview-host-adapters";
+import { WebviewHostCapabilityError } from "./webview-capability-params";
 
 // One bridge method per permission. The operation names the `ctx.account` method to run.
 const runAccountOperation = (
@@ -42,3 +44,24 @@ const runAccountOperation = (
 export const createAccountCapability = (account: ExtensionAccountApi | undefined) =>
   account &&
   ((request: WebviewAccountReadParams | WebviewAccountManageParams) => runAccountOperation(account, request));
+
+export const createAccountReadCapability = (
+  legacy: ReturnType<typeof createAccountCapability>,
+  queries: ExtensionWebviewHostAdapters["accountQueries"],
+) => {
+  if (!legacy && !queries) return;
+  return (request: WebviewAccountReadParams) => {
+    if (request.op === "query") {
+      if (!queries)
+        throw new WebviewHostCapabilityError("unsupported", "Retained account queries are unavailable.", {
+          capability: "account.read",
+        });
+      return queries.request(request.query);
+    }
+    if (!legacy)
+      throw new WebviewHostCapabilityError("unsupported", "Legacy account operations are unavailable.", {
+        capability: "account.read",
+      });
+    return legacy(request);
+  };
+};

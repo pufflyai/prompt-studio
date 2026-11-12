@@ -2,9 +2,12 @@ import { expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createClient } from "@pstdio/sdk/client";
+import { Hono } from "hono";
 import { createNativeAccount } from "../../services/account/native-account";
 import type { CloudReturn } from "../../services/account/native-cloud-return";
 import { createNativeStore } from "../../services/account/native-store";
+import { createAccountRoutes } from "./routes";
 
 const fixture = async () => {
   const root = await mkdtemp(join(tmpdir(), "pstdio-sync-authority-"));
@@ -129,6 +132,33 @@ test("project sync distinguishes expected local identity from omitted authority"
       }),
     ).rejects.toThrow();
   } finally {
+    await f.close();
+  }
+});
+
+test("the SDK project-sync route validates local and account expectations before native admission", async () => {
+  const f = await fixture();
+  const app = new Hono().route("/v1", createAccountRoutes(f.account));
+  const server = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: app.fetch });
+  const client = createClient({ baseUrl: server.url.origin, token: "" });
+  try {
+    const invalid = await app.request(
+      "/v1/account/projects/project/sync?local=true&accountId=account&managerOrigin=" +
+        encodeURIComponent(f.login.managerOrigin),
+    );
+    expect(invalid.status).toBe(400);
+    expect(f.state.syncReads).toBe(0);
+    await expect(client.account.projectSyncStatus("project", { expected: null })).rejects.toThrow();
+    expect(f.state.syncReads).toBe(0);
+    expect(
+      await client.account.projectSyncStatus("project", {
+        expected: { accountId: f.login.accountId, managerOrigin: f.login.managerOrigin },
+      }),
+    ).toMatchObject({ state: "synced" });
+    await f.store.forget(f.login.token);
+    expect(await client.account.projectSyncStatus("project", { expected: null })).toMatchObject({ state: "local" });
+  } finally {
+    await server.stop(true);
     await f.close();
   }
 });

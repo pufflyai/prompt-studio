@@ -382,6 +382,10 @@ equal ranks from different offline source lists. It produces a position compatib
 ordinary `storage.positions.between` moves. It has no device or random suffix;
 use it only to migrate an order derived from stable source data.
 
+## Retained service queries in API 0.4.2
+
+On `main`, after the API 0.4.1 release, the additive 0.4.2 step adds readonly retained account, Performance and preference queries and optional cancellation on scoped reads. Existing methods and payloads remain supported. The accompanying UI supports controlled DiffViewer selection. Publish compatible host/SDK/UI support before independent extensions adopt these methods or raise their declared minimum to 0.4.2. See [shared state and project lifetimes](../../guides/extensions/0010-shared-state-and-project-lifetimes.md).
+
 ## Personal device references in API 0.2.1
 
 Workspace/session read results and resource references may include `device: { ownerId, id, name }`. A synced record is readable on its owner's other devices. Execution stays on its source device. Shared personal references contain only owner and device details; another user cannot open the underlying record. This additive field ships in the release after 0.44.0.

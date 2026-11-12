@@ -2,7 +2,7 @@
 
 These APIs are on `main` for extension API **0.4.0**, after 0.46. Publish the matching host, SDK and UI before releasing an extension that uses them. A local packed-package test proves the candidate contract; it does not make the dependency available to installed users.
 
-The retained account, Performance and preference service additions described below are candidate API 0.4.1 contracts. Their source and local checks do not establish published compatibility.
+The retained account, Performance and preference service additions described below are candidate API 0.4.2 contracts. Their source and local checks do not establish published compatibility.
 
 ## Choose the owner
 

@@ -16,10 +16,12 @@ export const expectedAccountQuery = z
     (value) => Boolean(value.accountId) === Boolean(value.managerOrigin),
     "An expected account needs its manager origin",
   );
-export const expectedProjectAccountQuery = z.union([
-  expectedAccountQuery,
-  z.object({ local: z.literal("true") }).strict(),
-]);
+export const expectedProjectAccountQuery = expectedAccountQuery
+  .safeExtend({ local: z.literal("true").optional() })
+  .refine(
+    (value) => !value.local || (!value.accountId && !value.managerOrigin),
+    "A local expectation cannot include an account",
+  );
 export const readExpectedAccount = (query: z.infer<typeof expectedAccountQuery>) =>
   query.accountId && query.managerOrigin
     ? { accountId: query.accountId, managerOrigin: query.managerOrigin }

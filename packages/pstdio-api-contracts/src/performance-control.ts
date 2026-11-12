@@ -1,4 +1,3 @@
-import type { WebviewCommandQuerySnapshot } from "./extension-kernel/types/webview-command-query";
 import type {
   WebviewPerformanceQuery,
   WebviewServiceQueryRequest,
@@ -24,7 +23,6 @@ export type PerformanceControlRequest =
   | { operation: "set-enabled"; enabled: boolean }
   | { operation: "pause-extension" | "resume-extension"; installedExtensionId: string };
 export type PerformanceReadResult =
-  | WebviewCommandQuerySnapshot
   | PerformanceMonitoringState
   | PerformanceSnapshot
   | PerformanceRecordingExport
