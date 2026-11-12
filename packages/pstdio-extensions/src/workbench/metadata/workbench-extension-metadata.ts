@@ -192,6 +192,8 @@ export const createWorkbenchExtensionMetadata = (
   })),
   placements: toPlacementRecords(input.runtime),
   resourceKinds: input.runtime.resourceKinds.map((record) => ({
+    activity: record.contribution.activity,
+    activityHandoff: Boolean(record.contribution.activityContext),
     id: record.id,
     localId: record.localId,
     extensionId: record.extensionId,

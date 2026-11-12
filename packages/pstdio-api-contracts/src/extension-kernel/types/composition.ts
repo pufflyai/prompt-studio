@@ -25,6 +25,12 @@ export interface ResourceMenuSlotDefinition {
 }
 
 export interface ResourceKindDefinition extends ContributionDefinition<"resource-kind"> {
+  /** Core resource Activity is absent unless the owner explicitly opts in. */
+  readonly activity?: import("../../resource-activity").ResourceActivityCapabilities;
+  /** Owner permission check for Activity operations. A false result denies access. */
+  readonly authorizeActivity?: CommandRef;
+  /** Return { text: string } with the current resource snapshot for an agent handoff. */
+  readonly activityContext?: CommandRef;
   readonly prefix?: string | { readonly $prefix: "project" };
   readonly label?: Localizable<string>;
   readonly icon?: string;

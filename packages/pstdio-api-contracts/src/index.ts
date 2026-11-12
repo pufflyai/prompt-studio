@@ -40,6 +40,7 @@ export * from "./project-folder-recovery";
 export * from "./project-recovery";
 export * from "./projects";
 export * from "./queued-follow-ups";
+export * from "./resource-activity";
 export * from "./resource-anchors";
 export * from "./result-recovery";
 export * from "./runtime-auth";

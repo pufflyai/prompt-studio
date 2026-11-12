@@ -40,9 +40,13 @@ test("mixed resources share two HTTP/1.1 connections through admission cancellat
   });
   expect(content).toHaveLength(8);
   expect(content[7]).toContain("Retained file 2");
+  await page.evaluate((id) => Reflect.get(window, "resourceClient").publishActivity(id), projectId);
+  await expect
+    .poll(() => page.evaluate(() => Reflect.get(window, "resourceClient").state().activityEvents))
+    .toBeGreaterThan(0);
   await expect
     .poll(() => page.evaluate(() => Reflect.get(window, "resourceClient").state()))
-    .toMatchObject({ sync: true, chunks: 1, connected: true, sessionEvents: expect.any(Number) });
+    .toMatchObject({ activityReadies: 1, sync: true, chunks: 1, connected: true, sessionEvents: expect.any(Number) });
   expect(await page.evaluate(() => Reflect.get(window, "resourceClient").state().sessionEvents)).toBeGreaterThan(0);
   // Hold admission, cancel its logical owner, then allow the acknowledgement to arrive late.
   const admission = Promise.withResolvers<void>();
@@ -93,7 +97,7 @@ test("mixed resources share two HTTP/1.1 connections through admission cancellat
   await page.evaluate(() => Reflect.get(window, "resourceClient").drop());
   await expect
     .poll(() => page.evaluate(() => Reflect.get(window, "resourceClient").state()))
-    .toMatchObject({ connected: true, resets: 8 });
+    .toMatchObject({ connected: true, resets: 8, activityReadies: 2 });
   await expect
     .poll(() => page.evaluate(() => Reflect.get(window, "resourceClient").state().snapshots))
     .toBeGreaterThan(beforeRecovery);
