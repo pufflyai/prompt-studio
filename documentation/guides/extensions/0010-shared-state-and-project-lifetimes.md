@@ -1,14 +1,15 @@
 # Share state and retain project data
 
-These APIs are on `main` for extension API **0.4.0**, after 0.46. Publish the matching host, SDK and UI before releasing an extension that uses them. A local packed-package test proves the candidate contract; it does not make the dependency available to installed users.
-
-The retained account, Performance and preference service additions described below are candidate API 0.4.2 contracts. Their source and local checks do not establish published compatibility.
+The retained finite-command query contract is published for extension API **0.4.0**, after 0.46. Additional retained service and controlled presentation contracts are candidate API **0.4.2** additions in [support PR #2036](https://github.com/pufflyai/prompt-studio/pull/2036). Publish the matching host, SDK and UI before releasing an extension that uses them. A local packed-package test proves the candidate contract; it does not make the dependency available to installed users.
 
 ## Choose the owner
 
 | State | Owner |
 | --- | --- |
 | A finite command result retained across recreated frames | `client.commands.read.query(...)`, observed through `useWebviewCommandQuery` |
+| Account status, project sync or devices | `client.account.query(source)`, observed through the readonly hook |
+| A window monitoring snapshot | `client.performance.query()`, sharing the existing host collector |
+| An accepted presentation preference | `client.preferences.query(name, scope)` with `client.preferences.set` for ordered durable writes |
 | Other finite data local to a guest or runtime | `client.queries` or a runtime-owned `createScopedQueryClient` |
 | A shared editable document, gesture or save queue | Public editing session and the extension's domain commands |
 | Synced rows | Existing host collections and storage; query results are projections |
@@ -26,10 +27,11 @@ Create a typed client with `createWebviewClient<typeof commands>(host)`. For a f
 import { createWebviewClient, type GuestHost } from "@pstdio/sdk/extensions";
 import { useWebviewCommandQuery, useWebviewVisibility } from "@pstdio/sdk/extensions/react";
 import type { commands } from "./commands";
+import { useState } from "react";
 import { itemChanged } from "./events";
 
 function Item({ host, id }: { host: GuestHost; id: string }) {
-  const client = createWebviewClient<typeof commands>(host);
+  const [client] = useState(() => createWebviewClient<typeof commands>(host));
   const active = useWebviewVisibility();
   const query = client.commands.read.query({ id }, {
     events: [itemChanged],
@@ -54,6 +56,8 @@ For an arbitrary callback reader, `useWebviewQuery(client.queries, { id, params,
 
 `useWebviewQuery` follows project/account props supplied by the host. `useScopedQuery` observes an already chosen query; callers choosing that query from props must also follow those props. `useWebviewScope` supplies a selected identity for non-query operations. Theme or sizing changes do not select a new data owner.
 
+When choosing several owners manually, observe `useWebviewScope(client.queries)` before choosing their handles. Use that identity to reset local presentation when its project or account authority changes. Observe the host fields the view needs; subscribing to the entire props object also renders for unrelated command results and page metadata.
+
 The React entry has optional peer dependencies on **both** `react` and `@tanstack/react-query`. Declare both in an extension importing that entry, including when using the scoped hooks. Framework-neutral code can use `createWebviewClient`, `query.subscribe`, `getSnapshot` and `read` without React. The legacy `useCommandQuery` remains available with its existing QueryClientProvider contract.
 
 ## Read retained services and presentation
@@ -64,9 +68,7 @@ A preference query returns `{ value }`, including a loaded empty object when no 
 
 Use `useWebviewCommandQuery(query, useWebviewVisibility())` for all readonly service projections. Do not create another guest query around an account read or Performance subscription. Do not use `accept` or `invalidate` on the readonly projection. Mutations go through their existing public APIs. The host's accepted state, not a cached local snapshot from a returning project, supplies the new view.
 
-`DiffViewer` from `@pstdio/ui` also accepts a controlled `selectedPath` and `onSelectedPathChange`. Keep the selection in its presentation owner and pass it back to the component. The existing uncontrolled `defaultSelectedPath` behavior remains available. An unloaded diff body or a pending summary does not replace a valid controlled choice.
-
-These service and controlled-selection additions require the supporting host, SDK and UI. Publish them before independently released extensions adopt the new APIs. Existing account, performance and preference methods remain supported for unchanged consumers.
+`DiffViewer` accepts controlled `selectedPath` and `onSelectedPathChange`. Keep the selection in its presentation owner; pending summaries and unloaded bodies preserve the accepted choice. Existing uncontrolled defaults remain supported. Publish the supporting UI before independently releasing this adoption.
 
 ## Declare changes once
 
@@ -114,7 +116,13 @@ that work. A custom source detached without a retained cursor reconciles on the 
 observation or explicit read; repeated unobserved reads cannot assume that source
 stayed current.
 
+An optional parent awaiting another query should await its automatic subscription's settled snapshot and release that subscription on cancellation. Calling `read()` promotes the shared operation to required work, which can survive the parent's cancellation and start I/O after a held source becomes ready. Preserve subscriptions and required reads belonging to surviving peers.
+
 Never acquire subscriptions or retention leases in a React render. Abandoned Suspense renders do not have a cleanup phase. Acquire them at commit and keep the committed placement identity stable when a cache handle is replaced.
+
+Keep a live row's observation for its mounted lifetime. A one-shot decoration read releases its source after acceptance and leaves copied metadata stale. Native hosts can supply `renderTreeNodeEndContent(resource)` when registering extension contributions. Return a component that observes the canonical query with captured runtime/project authority; root, lazy and continuation rows share that mapper. An authored badge keeps precedence. Activity and virtualization release hidden cells independently, while visible peers keep their shared source. Treat initial, unreconciled and refreshing totals as pending; accepted empty totals are ready. Performance checks must include visible totals reaching that accepted state.
+
+Nonvirtual tree rows stay mounted during collapse animations. Pass `useTreeListRowVisibility()` from `@pstdio/ui` as the observation's active flag so collapsed sections and ancestors stop optional work without removing that DOM. Gate query preparation when a captured runtime has retired; a disposed owner must not recreate collections during a later render or read finalizer. Keep accepted totals through refresh failures and show recovery beside the row.
 
 ## Share editing across views
 
@@ -145,11 +153,15 @@ The initial read declares a source with ID `presentation` and its small read com
 
 Read `hasDrafts`, `pendingCommands`, acknowledgement revisions, channel/source errors and terminal `retired` state. Do not label a preview or failed operation saved. Never prune a required command merely because a later snapshot looks like its optimistic result. Keep undo in the domain command authority.
 
-Marmalade is the maintained example in `extensions/extension-lab/src/apps/marmalade/`. Its presentation identity is **project + extension + document**. Tool, selection, expansion, zoom and pan are shared between authorized participants and persist across reopen/reload/restart. Focus and unfinished pointer mechanics remain local. Pure presentation actions write only the small presentation record; document edits atomically save document, history and affected selection/expansion. Undo restores selection/expansion alongside document edits while keeping tool and viewport. The legacy record is imported once into versioned records; new code does not keep writing both formats.
+Marmalade is the maintained example in `extensions/extension-lab/src/apps/marmalade/`. Its presentation identity is **project + extension + document**. Tool, selection, expansion, zoom and pan are shared between authorized participants and persist across reopen/reload/restart. Focus and unfinished pointer mechanics remain local. Pure presentation actions write only the small presentation record; document edits atomically save document, history and affected selection/expansion. Undo restores selection/expansion alongside document edits while keeping tool and viewport. Missing records read the bundled initial scene without writing storage; commands persist authored document or presentation fields.
+
+Explicit undo/redo advances a domain history boundary, cancelling unfinished document gestures. Completed gestures carry their starting boundary so a delayed pointer-up cannot resurrect a cancelled edit; an already accepted operation still uses its stored outcome on retry. Compatible peer edits retain the boundary and rebase drafts normally. Keep accepted-command admission synchronous so closing or switching a view cannot move required work to another owner.
 
 ## Observe command-side metadata
 
 `ctx.storage.observe(changed, { recordIds?, signal? })` observes committed records in the caller's project and extension, including local signed-out writes and received project-sync changes. Subscribe before reading and close the handle in `finally`; the command invocation also retires it. A hint contains opaque identities, not values. Scope narrowing follows `storage.scope(...)` automatically.
+
+Observe only records the projection uses. For a collection whose future record IDs are unknown, change one small owner record in the same commit group as each collection mutation and observe that record. Sessions uses one native-input anchor per conversation, retained with its recoverable input history; another conversation's draft or submission does not refresh it. Keep the anchor outside the collection's index.
 
 `ctx.sessions.observeMetadata(sessionId, changed, { signal? })` returns a shared handle for exact session/link, workspace/diff, harness command and execution-availability changes. The callback names the affected group: `session`, `workspace`, `harness` or `execution`. Read only that group. Transcript, queue and approval updates remain on `ctx.sessions.stream` and keep their own revision rules.
 
@@ -163,4 +175,4 @@ Use it to check duplicate readers, loaded-empty values, a 100-hint burst during 
 
 Record topology and actual counts in qualification evidence. Two iframes are not two users, a page reload is not an app restart, and JavaScript heap is not process physical footprint.
 
-*Updated at: 2026-11-09*
+*Updated at: 2026-11-10*

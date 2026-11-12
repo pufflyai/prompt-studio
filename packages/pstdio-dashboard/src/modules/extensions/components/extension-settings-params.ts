@@ -20,12 +20,13 @@ const choicesWithSavedValue = (options: CommandParamOption[], saved: string) => 
 export const settingsToParams = (
   settings: ExtensionSettingValueRecord[],
   optionStates: Record<string, CommandOptionState> = {},
+  resolveString: typeof resolveLocalizableString = resolveLocalizableString,
 ) =>
   settings.flatMap<Param>((record) => {
     const base = {
       id: record.key,
-      name: resolveLocalizableString(record.title, record.extensionId) || record.key,
-      description: resolveLocalizableString(record.description, record.extensionId) || undefined,
+      name: resolveString(record.title, record.extensionId) || record.key,
+      description: resolveString(record.description, record.extensionId) || undefined,
     };
     const value = settingValue(record);
 

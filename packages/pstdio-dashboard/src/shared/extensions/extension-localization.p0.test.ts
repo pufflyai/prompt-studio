@@ -9,6 +9,28 @@ import {
   resolveLocalizableString,
 } from "./extension-localization";
 
+test("retained projects keep distinct translation bundles for the same extension", () => {
+  const owner = createRuntimeCollections();
+  const appearance = (label: string) => ({
+    themes: [],
+    fileIconThemes: [],
+    diagnostics: [],
+    translations: [{ extensionId: "retained.same", defaultLocale: "en", bundles: { en: { label } } }],
+  });
+  const a = registerExtensionTranslationBundles(appearance("Project A"), owner, "a");
+  const b = registerExtensionTranslationBundles(appearance("Project B"), owner, "b");
+  try {
+    expect(getExtensionTranslationContext("retained.same", "en", owner, "a").bundle).toEqual({ label: "Project A" });
+    expect(getExtensionTranslationContext("retained.same", "en", owner, "b").bundle).toEqual({ label: "Project B" });
+    expect(resolveLocalizableString({ $l10n: "label" }, "retained.same", undefined, owner, "a")).toBe("Project A");
+    expect(resolveLocalizableString({ $l10n: "label" }, "retained.same", undefined, owner, "b")).toBe("Project B");
+  } finally {
+    a.dispose();
+    b.dispose();
+    owner.dispose();
+  }
+});
+
 test("localizing a label retains unchanged payloads and leaves the source intact", () => {
   const tokens = { colors: { background: "#123456" }, rules: [{ token: "comment", color: "#abcdef" }] };
   const source = { title: { $l10n: "missing", default: "Title" }, tokens, entries: [tokens] };

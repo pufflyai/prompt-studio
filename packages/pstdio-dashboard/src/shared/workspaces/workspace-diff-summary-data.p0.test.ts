@@ -1,6 +1,8 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import { getDashboardScopedQueries } from "@/lib/scoped-queries";
 import { createRuntimeCollections, getWriter } from "@/lib/sync/collections";
 import {
+  getDashboardWorkspaceDiffQuery,
   getDashboardWorkspaceDiffSummary,
   requestDashboardWorkspaceDiffSummaries,
 } from "./workspace-diff-summary-data";
@@ -19,6 +21,115 @@ type RuntimeConfigWindow = {
 };
 
 const originalFetch = globalThis.fetch;
+
+test("workspace labels do not reread diff totals while location and readiness changes do", async () => {
+  let reads = 0;
+  const server = Bun.serve({
+    port: 0,
+    fetch(request) {
+      const account = accountResponse(request);
+      if (account) return account;
+      reads++;
+      return Response.json({ workspace_id: "selected", additions: reads, deletions: 0, file_count: 1 });
+    },
+  });
+  const owner = createRuntimeCollections({ baseUrl: server.url.origin, token: "" });
+  const writer = owner.getWriter("workspaces")!;
+  const row = {
+    id: "selected",
+    project_id: "project",
+    execution_kind: "remote",
+    provider_state: "ready",
+    root_path: "/first",
+    provider_capabilities_json: { diff: true },
+  };
+  writer.upsert(row);
+  const query = getDashboardWorkspaceDiffQuery(row.id, owner, row.project_id);
+  const stop = query.subscribe(() => {});
+  try {
+    await requestDashboardWorkspaceDiffSummaries([row.id], undefined, owner);
+    expect(reads).toBe(1);
+    writer.upsert({ ...row, title: "Renamed workspace" });
+    await requestDashboardWorkspaceDiffSummaries([row.id], undefined, owner);
+    expect(reads).toBe(1);
+    writer.upsert({ ...row, root_path: "/second" });
+    await requestDashboardWorkspaceDiffSummaries([row.id], undefined, owner);
+    expect(reads).toBe(2);
+    writer.upsert({ ...row, provider_capabilities_json: { diff: false } });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(query.getSnapshot().data).toBeNull();
+    expect(reads).toBe(2);
+  } finally {
+    stop();
+    await owner.dispose();
+    server.stop(true);
+  }
+});
+
+test.each([
+  "remote",
+  "unknown",
+] as const)("an unwatched %s workspace refreshes diff totals when its revision changes", async (executionKind) => {
+  let reads = 0;
+  const server = Bun.serve({
+    port: 0,
+    fetch(request) {
+      const account = accountResponse(request);
+      if (account) return account;
+      reads++;
+      return Response.json({ workspace_id: "unwatched", additions: reads, deletions: 0, file_count: 1 });
+    },
+  });
+  const owner = createRuntimeCollections({ baseUrl: server.url.origin, token: "" });
+  const writer = owner.getWriter("workspaces")!;
+  const row = {
+    id: "unwatched",
+    project_id: "project",
+    execution_kind: executionKind === "unknown" ? undefined : executionKind,
+    provider_state: "ready",
+    root_path: "/workspace",
+    provider_capabilities_json: { diff: true },
+    updated_at: "first revision",
+  };
+  writer.upsert(row);
+  const query = getDashboardWorkspaceDiffQuery(row.id, owner, row.project_id);
+  const stop = query.subscribe(() => {});
+  try {
+    await requestDashboardWorkspaceDiffSummaries([row.id], undefined, owner);
+    expect(reads).toBe(1);
+    writer.upsert({ ...row, title: "Renamed workspace" });
+    await requestDashboardWorkspaceDiffSummaries([row.id], undefined, owner);
+    expect(reads).toBe(1);
+    writer.upsert({ ...row, updated_at: "next revision" });
+    const summaries = await requestDashboardWorkspaceDiffSummaries([row.id], undefined, owner);
+    expect(summaries.get(row.id)?.additions).toBe(2);
+    expect(reads).toBe(2);
+  } finally {
+    stop();
+    await owner.dispose();
+    server.stop(true);
+  }
+});
+
+test("a repeated workspace query lookup neither visits unrelated handles nor resolves its scope again", async () => {
+  const owner = createRuntimeCollections({ baseUrl: "http://query-lookup.test", token: "" });
+  const unrelated = getDashboardWorkspaceDiffQuery("other", owner, "project");
+  const selected = getDashboardWorkspaceDiffQuery("selected", owner, "project");
+  const inspectUnrelated = spyOn(unrelated, "isDisposed");
+  const resolveScope = spyOn(getDashboardScopedQueries(owner), "forScope");
+  try {
+    for (let render = 0; render < 20; render++)
+      expect(getDashboardWorkspaceDiffQuery("selected", owner, "project")).toBe(selected);
+    expect(inspectUnrelated).not.toHaveBeenCalled();
+    expect(resolveScope).not.toHaveBeenCalled();
+    selected.dispose();
+    expect(getDashboardWorkspaceDiffQuery("selected", owner, "project")).not.toBe(selected);
+  } finally {
+    inspectUnrelated.mockRestore();
+    resolveScope.mockRestore();
+    await owner.dispose();
+  }
+});
 
 test("derived diff data and late responses stay in their originating runtime", async () => {
   const server = Bun.serve({
@@ -87,7 +198,7 @@ test("remote summary reads do not open a permanently unsupported local file watc
   }
 });
 
-test("overlapping summary batches share one four-read runtime admission limit", async () => {
+test("overlapping summary batches share one three-read runtime admission limit", async () => {
   const release = Promise.withResolvers<void>();
   const started = Promise.withResolvers<void>();
   let active = 0;
@@ -100,7 +211,7 @@ test("overlapping summary batches share one four-read runtime admission limit", 
       if (url.pathname === "/v1/account")
         return Response.json({ login: null, features: null, cloudProjects: [], cloudProjectsLoaded: true });
       maximum = Math.max(maximum, ++active);
-      if (active >= 4) started.resolve();
+      if (active >= 3) started.resolve();
       await release.promise;
       active--;
       return Response.json({ workspace_id: url.pathname.split("/")[3], additions: 1, deletions: 0, file_count: 1 });
@@ -122,7 +233,7 @@ test("overlapping summary batches share one four-read runtime admission limit", 
     await Promise.resolve();
     release.resolve();
     await reads;
-    expect(maximum).toBe(4);
+    expect(maximum).toBe(3);
   } finally {
     release.resolve();
     await reads;

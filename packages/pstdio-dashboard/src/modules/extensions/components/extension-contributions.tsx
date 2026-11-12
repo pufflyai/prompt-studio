@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
+import { type ExtensionStringResolver, resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
 import { ExtensionShortcutContributions } from "./extension-shortcut-contributions";
 
@@ -42,9 +42,6 @@ interface ContributionGroup {
 
 type MetadataRecord = { extensionId?: string; id?: string; [key: string]: unknown };
 
-const text = (value: unknown, extensionId: string) =>
-  value === undefined ? "" : resolveLocalizableString(value as never, extensionId);
-
 const forExtension = (records: MetadataRecord[] | undefined, extensionId: string) =>
   (records ?? []).filter((record) => record.extensionId === extensionId);
 
@@ -52,7 +49,13 @@ const row = (id: string, title: string, meta?: string) => ({ id, title: title ||
 
 // Flattens the workbench metadata into the design's grouped record list: one
 // group per contribution kind, one row per record (title · id · placement meta).
-export const buildContributionGroups = (metadata: DashboardExtensionMetadata | undefined, extensionId: string) => {
+export const buildContributionGroups = (
+  metadata: DashboardExtensionMetadata | undefined,
+  extensionId: string,
+  resolveString: ExtensionStringResolver = resolveLocalizableString,
+) => {
+  const text = (value: unknown, extensionId: string) =>
+    value === undefined ? "" : resolveString(value as never, extensionId);
   const groups: ContributionGroup[] = [
     {
       key: "harnesses",
@@ -241,6 +244,7 @@ const RecordRow = (props: { record: ContributionRecordRow; endContent?: React.Re
 
 export interface ExtensionContributionsProps {
   workbench?: WorkbenchCore;
+  resolveString?: ExtensionStringResolver;
   metadata: DashboardExtensionMetadata | undefined;
   extensionId: string;
   automations: WorkbenchExtensionAutomationRecord[];
@@ -251,7 +255,8 @@ export interface ExtensionContributionsProps {
 export const ExtensionContributions = (props: ExtensionContributionsProps) => {
   const { metadata, extensionId, automations } = props;
   const { t } = useTranslation("projects");
-  const groups = buildContributionGroups(metadata, extensionId);
+  const resolveString = props.resolveString ?? resolveLocalizableString;
+  const groups = buildContributionGroups(metadata, extensionId, resolveString);
 
   return (
     <Stack gap="0">
@@ -268,7 +273,7 @@ export const ExtensionContributions = (props: ExtensionContributionsProps) => {
               key={automation.id}
               record={{
                 id: automation.commandId,
-                title: resolveLocalizableString(automation.title, automation.extensionId),
+                title: resolveString(automation.title, automation.extensionId),
                 meta: t("projectSettings.extensionsPanel.automations.cron", { cron: automation.cron }),
               }}
             />

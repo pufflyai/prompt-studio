@@ -1,14 +1,14 @@
 import "@pstdio/ui/style.css";
-import { createWebviewClient, defineExtensionView } from "@pstdio/sdk/extensions";
-import { useSyncExternalStore } from "react";
+import { createWebviewClient, defineExtensionView, type WebviewClient } from "@pstdio/sdk/extensions";
+import { useWebviewCommandQuery, useWebviewVisibility } from "@pstdio/sdk/extensions/react";
 import { createRoot } from "react-dom/client";
 import { PerformanceMeter, PerformanceMeterOff } from "./components/performance-meter";
 import { PerformanceRoot } from "./components/performance-root";
-import { createSnapshotStore, type SnapshotStore } from "./snapshot-store";
+import { createSnapshotQuery } from "./snapshot-query";
 
-const Meter = (props: { store: SnapshotStore }) => {
-  const { store } = props;
-  const snapshot = useSyncExternalStore(store.subscribe, store.get);
+const Meter = (props: { client: WebviewClient<object> }) => {
+  const { client } = props;
+  const { data: snapshot } = useWebviewCommandQuery(createSnapshotQuery(client), useWebviewVisibility());
   // The meter always draws something: a status webview with no width is never laid out again.
   return snapshot ? <PerformanceMeter snapshot={snapshot} /> : <PerformanceMeterOff />;
 };
@@ -22,11 +22,12 @@ export default defineExtensionView({
     const root = createRoot(context.mount);
     root.render(
       <PerformanceRoot context={context}>
-        <Meter store={createSnapshotStore(client.performance)} />
+        <Meter client={client} />
       </PerformanceRoot>,
     );
     return () => {
       root.unmount();
+      client.queries.dispose();
       void lease.then((release) => release?.()).catch(() => {});
     };
   },

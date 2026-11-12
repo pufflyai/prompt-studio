@@ -240,14 +240,17 @@ const resourceMenuRegistrations = (
     menuItem: { ...registration.menuItem },
   }));
 
-export const buildDashboardExtensionMenuRegistrations = (metadata: DashboardExtensionMetadata) => {
+export const buildDashboardExtensionMenuRegistrations = (
+  metadata: DashboardExtensionMetadata,
+  resolveString: typeof resolveLocalizableString = resolveLocalizableString,
+) => {
   const { menuSlotsById, resourceKindsBySlotId, resourceOwnersBySlotId } = buildDashboardMenuSlotRegistry(metadata);
   const result = buildWorkbenchExtensionMenuRegistrations({
     metadata,
     menuSlotsById,
     menuTargetsById: dashboardMenuTargetsById,
     createCommandId: createWorkbenchExtensionCommandId,
-    resolveString: resolveLocalizableString,
+    resolveString,
     createWhenExpression: (contribution) => {
       const resourceKind = contribution.target ? undefined : resourceKindsBySlotId.get(contribution.slotId);
       const defaultWhen =

@@ -7,7 +7,7 @@ import type { createChatSnapshot } from "./chat-snapshot";
 export const createChatSessionDraft = (
   input: ChatSessionInput & {
     read: () => ChatDraft;
-    publish: (draft: ChatDraft) => void;
+    publish: (draft: ChatDraft, hydration?: boolean) => void;
     values: ReturnType<typeof createChatSnapshot>["values"];
     fail: (error: unknown) => void;
     clearError: (error: string | undefined) => void;
@@ -121,7 +121,7 @@ export const createChatSessionDraft = (
             hydrated = true;
             const current = input.read();
             const values = input.values.hydrate(current.values, draft.values);
-            input.publish({ ...(changes === 0 ? draft : hydrateChatDraft(current, draft)), values });
+            input.publish({ ...(changes === 0 ? draft : hydrateChatDraft(current, draft)), values }, true);
           })
           .catch(input.fail)
           .finally(() => {

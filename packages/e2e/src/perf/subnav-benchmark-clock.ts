@@ -9,9 +9,17 @@ export interface SubnavSample {
   structureMs: number;
   dataMs: number;
   editorMs?: number;
-  editorResources?: { path: string; startMs: number; durationMs: number; bytes: number }[];
+  editorResources?: {
+    path: string;
+    startMs: number;
+    durationMs: number;
+    bytes: number;
+    requestStartMs?: number;
+    responseStartMs?: number;
+  }[];
   lastRequestMs: number;
   mountedRows: number;
+  workspaceDiffs?: { id: string; state: string | null }[];
   requests: SubnavObservedRequest[];
   longTasks: { startTime: number; duration: number }[];
 }
@@ -182,6 +190,7 @@ export const measureSubnav = async (
   visit: SubnavSample["visit"],
   title: string,
   editorTitle = "",
+  workspaceIds: string[] = [],
 ) => {
   await trigger.evaluate((element) => element.setAttribute("data-subnav-benchmark-trigger", ""));
   await page.evaluate(
@@ -203,6 +212,25 @@ export const measureSubnav = async (
   await trigger.click();
   await page.waitForFunction(() => window.__subnavBenchmark.structure > 0);
   if (destination === "ticket") await page.waitForFunction(() => window.__subnavBenchmark.editor > 0);
+  // Live row decorations are part of data readiness, including accepted empty totals and warm catch-up.
+  if (destination === "ticket")
+    await page.waitForFunction(
+      (ids) => {
+        const cells = [
+          ...document.querySelectorAll<HTMLElement>('[data-workbench-region="sidenav"] [data-workspace-diff-id]'),
+        ];
+        return ids.every((id) =>
+          cells.some(
+            (cell) =>
+              cell.dataset.workspaceDiffId === id &&
+              cell.checkVisibility() &&
+              cell.dataset.workspaceDiffState === "ready",
+          ),
+        );
+      },
+      workspaceIds,
+      { timeout: 10_000 },
+    );
   await recorder.settled(since);
   // Waiting for quiescence verifies completion, but the quiet interval is excluded from the sample.
   await page.waitForFunction(() => performance.now() - window.__subnavBenchmark.lastMutation >= 200);
@@ -259,6 +287,12 @@ export const measureSubnav = async (
                 startMs: entry.startTime - started,
                 durationMs: entry.duration,
                 bytes: (entry as PerformanceResourceTiming).transferSize,
+                ...((entry as PerformanceResourceTiming).requestStart > 0
+                  ? { requestStartMs: (entry as PerformanceResourceTiming).requestStart - started }
+                  : {}),
+                ...((entry as PerformanceResourceTiming).responseStart > 0
+                  ? { responseStartMs: (entry as PerformanceResourceTiming).responseStart - started }
+                  : {}),
               })),
           state.started,
         )
@@ -271,6 +305,20 @@ export const measureSubnav = async (
     ...(destination === "ticket" ? { editorMs: state.editor - state.started, editorResources } : {}),
     lastRequestMs,
     mountedRows: await page.locator('[data-workbench-region="sidenav"] [role="option"]').count(),
+    ...(destination === "ticket"
+      ? {
+          workspaceDiffs: await page
+            .locator('[data-workbench-region="sidenav"] [data-workspace-diff-id]')
+            .evaluateAll((cells) =>
+              cells
+                .filter((cell) => cell.checkVisibility())
+                .map((cell) => ({
+                  id: cell.getAttribute("data-workspace-diff-id")!,
+                  state: cell.getAttribute("data-workspace-diff-state"),
+                })),
+            ),
+        }
+      : {}),
     requests: requestRows,
     longTasks: state.longTasks.filter(
       (task) => task.startTime >= state.started && task.startTime <= state.started + dataMs,

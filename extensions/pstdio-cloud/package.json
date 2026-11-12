@@ -1,12 +1,12 @@
 {
   "name": "pstdio-cloud",
-  "version": "0.2.0",
+  "version": "0.1.0",
   "displayName": "Prompt Studio Cloud",
   "description": "Sync projects across your computers and manage your Cloud account and devices.",
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.4.0"
+    "pstdio": "^0.4.2"
   },
   "pstdio": {
     "scope": "user"
@@ -14,8 +14,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun test",
-    "test:coverage": "bun test --coverage",
+    "test": "bun ../../scripts/ci/run-bun-tests.ts",
+    "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --coverage",
     "typecheck": "bun check"
   },
   "dependencies": {
@@ -24,7 +24,8 @@
     "@pstdio/sdk": "0.47.0-preview.sha-ce1af652bbf51fce0b29b5e74f4e7f0a16d60ab4",
     "@pstdio/ui": "0.47.0-preview.sha-ce1af652bbf51fce0b29b5e74f4e7f0a16d60ab4",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "@tanstack/react-query": "^5.90.21"
   },
   "devDependencies": {
     "@types/bun": "1.4.4",

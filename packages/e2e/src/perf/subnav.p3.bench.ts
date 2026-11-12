@@ -20,6 +20,7 @@ import { SUBNAV_WORKLOAD, startSubnavBenchmarkFixture, subnavFixtureRoot } from 
 import { subnavBenchmarkResults } from "./subnav-benchmark-results";
 import { classifySubnavRequests } from "./subnav-request-outcomes";
 import { installSubnavRequestSignals } from "./subnav-request-signals";
+import { readSubnavTicketHistory } from "./subnav-ticket-history";
 
 // Set on 2026-10-26 from four hosted ubuntu-24.04 runs (slowest 293 / 1,263 / 1,089 ms) plus about 20%.
 const SUBNAV_BUDGETS = {
@@ -74,11 +75,18 @@ try {
           visit,
           `${fixture.ticket.shorthand} ${fixture.ticket.title}`,
           fixture.ticket.title,
+          fixture.linked.map((workspace) => workspace.id),
         );
         samples.push(ticket);
         console.info(JSON.stringify({ iteration: iteration + 1, ...ticket }));
         if (visit === "first" && !ticket.requests.some((request) => request.sessionRows === 120))
           errors.push(`Iteration ${iteration + 1} ${visit}: ticket history did not contain all 120 sessions`);
+        // The timer is complete. Verify cached as well as newly read history without requiring a redundant RPC.
+        try {
+          await readSubnavTicketHistory(page, sidenav);
+        } catch (error) {
+          errors.push(`Iteration ${iteration + 1} ${visit}: ${String(error)}`);
+        }
         if (iteration === 0 && visit === "first") await page.screenshot({ path: join(output, "ticket.png") });
         // A warm ticket reuses its history read. Verify all 120 retained rows through
         // the real virtualized tree after timing, then restore the initial position.

@@ -106,8 +106,10 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   if (!webview) return null;
 
   const colorScheme = getThemePreferenceMode(themePreference, themePreferences);
-  const frameTitle = webview.title ? resolveLocalizableString(webview.title, extensionId) : (title ?? "Extension view");
-  const translations = getExtensionTranslationContext(extensionId, locale);
+  const frameTitle = webview.title
+    ? resolveLocalizableString(webview.title, extensionId, undefined, owner, projectId)
+    : (title ?? "Extension view");
+  const translations = getExtensionTranslationContext(extensionId, locale, owner, projectId);
   const commandQueries = projectId
     ? createDashboardWebviewCommandQueries({
         runtime: owner,

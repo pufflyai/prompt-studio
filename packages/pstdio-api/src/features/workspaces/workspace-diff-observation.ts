@@ -16,8 +16,11 @@ export const observeWorkspaceDiff = async (
   deps: Deps,
   input: { project_id: string; workspace_id: string },
   changed: (event: "changed" | "closed") => void,
+  signal?: AbortSignal,
 ) => {
+  signal?.throwIfAborted();
   const target = await resolveWorkspaceExecutionTarget(deps, input.workspace_id, "diff");
+  signal?.throwIfAborted();
   if (!target || target.workspace.project_id !== input.project_id) throw new Error("Workspace diff is not available.");
   let entries = owners.get(deps.workspaceService);
   if (!entries) {
@@ -28,9 +31,16 @@ export const observeWorkspaceDiff = async (
   let entry = entries.get(key);
   if (!entry) {
     const listeners = new Set<(event: "changed" | "closed") => void>();
-    const ready = watchWorkspaceDiffFiles(target.root, () => {
-      for (const notify of listeners) notify("changed");
-    });
+    const abort = new AbortController();
+    const ready = watchWorkspaceDiffFiles(
+      target.root,
+      () => {
+        for (const notify of listeners) notify("changed");
+      },
+      undefined,
+      undefined,
+      abort.signal,
+    );
     const stopRows = deps.eventBus.subscribe((event) => {
       if (event.table !== "workspaces" || (event.data as { id?: string }).id !== input.workspace_id) return;
       const row = event.data as typeof target.workspace;
@@ -56,6 +66,7 @@ export const observeWorkspaceDiff = async (
         closed = true;
         entries.delete(key);
         stopRows();
+        abort.abort();
         void ready.then(
           (watch) => watch.close(),
           () => {},
@@ -68,11 +79,15 @@ export const observeWorkspaceDiff = async (
   const token = (event: "changed" | "closed") => changed(event);
   held.listeners.add(token);
   const close = () => {
+    signal?.removeEventListener("abort", close);
     held.listeners.delete(token);
     if (!held.listeners.size) held.close();
   };
+  signal?.addEventListener("abort", close, { once: true });
+  if (signal?.aborted) close();
   try {
     await held.ready;
+    signal?.throwIfAborted();
     return { identity: held, close };
   } catch (error) {
     close();

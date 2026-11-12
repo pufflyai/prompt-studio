@@ -23,9 +23,14 @@ export const createExtensionQueryObservation = <T>(input: {
     current?.stop();
     current = undefined;
   };
-  const refresh = (projectId: string) => {
+  const observe = (projectId: string, invalidate: boolean) => {
+    if (!input.isAvailable()) {
+      clear();
+      if (invalidate) input.query(projectId).invalidate();
+      return;
+    }
     if (current?.projectId === projectId && !current.query.isDisposed()) {
-      current.query.invalidate();
+      if (invalidate) current.query.invalidate();
       return;
     }
     clear();
@@ -54,7 +59,7 @@ export const createExtensionQueryObservation = <T>(input: {
       if (query.isDisposed()) {
         clear();
         input.onRetire?.(projectId);
-        refresh(projectId);
+        observe(projectId, false);
         return;
       }
       applySnapshot(query.getSnapshot());
@@ -73,5 +78,10 @@ export const createExtensionQueryObservation = <T>(input: {
     if (!active) stop();
     else update();
   };
-  return { clear, refresh, value: () => current?.query.getSnapshot().data };
+  return {
+    clear,
+    refresh: (projectId: string) => observe(projectId, true),
+    resume: (projectId: string) => observe(projectId, false),
+    value: () => current?.query.getSnapshot().data,
+  };
 };

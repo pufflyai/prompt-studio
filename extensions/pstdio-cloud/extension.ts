@@ -16,7 +16,7 @@ const status = defineView({
   body: {
     kind: "webview",
     entry: packageAsset("./src/status-view.tsx", import.meta.url),
-    capabilities: ["account.read", "commands.execute"],
+    capabilities: ["account.read", "commands.execute", "commands.query"],
   },
 });
 const details = defineView({
@@ -26,7 +26,7 @@ const details = defineView({
   body: {
     kind: "webview",
     entry: packageAsset("./src/details-view.tsx", import.meta.url),
-    capabilities: ["account.read", "navigation.open", "commands.execute"],
+    capabilities: ["account.read", "navigation.open", "commands.execute", "commands.query"],
   },
 });
 const cloudSettings = defineView({
@@ -36,7 +36,7 @@ const cloudSettings = defineView({
   body: {
     kind: "webview",
     entry: packageAsset("./src/settings-view.tsx", import.meta.url),
-    capabilities: ["account.read", "account.manage", "navigation.open", "commands.execute"],
+    capabilities: ["account.read", "account.manage", "navigation.open", "commands.execute", "commands.query"],
   },
 });
 

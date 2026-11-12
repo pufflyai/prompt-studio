@@ -138,7 +138,23 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
             setState({ queryKey: identity, loading: true });
             setScopeRevision((revision) => revision + 1);
           },
-          load: current.load,
+          load: (signal, publish) => {
+            const latest = callbacks.current;
+            const latestScope = JSON.stringify([
+              latest.queryScope,
+              latest.sourceId,
+              latest.dependency,
+              latest.queryEvents,
+            ]);
+            // Presentation enrichment can update the loader without changing its query.
+            // A surviving peer must still use the original scope after this presenter leaves it.
+            const sameQuery =
+              latest.workbench === workbench &&
+              latest.queryKey === queryKey &&
+              latest.refreshKey === current.refreshKey &&
+              latestScope === scopeKey;
+            return (sameQuery ? latest : current).load(signal, publish);
+          },
           onProgress: (value: T) => {
             // A replacement keeps even a partial snapshot. Progress within its original read still grows.
             startTransition(() =>

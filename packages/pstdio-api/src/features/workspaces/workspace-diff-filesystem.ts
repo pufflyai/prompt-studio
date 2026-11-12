@@ -13,14 +13,22 @@ export const watchWorkspaceDiffFiles = async (
   changed: () => void,
   watch?: WatchDirectory,
   startupGap = process.platform === "darwin",
+  signal?: AbortSignal,
 ) => {
-  const gitDirectory = resolve(root, await git(root, ["rev-parse", "--git-dir"]));
-  const commonDirectory = resolve(root, await git(root, ["rev-parse", "--git-common-dir"]));
+  signal?.throwIfAborted();
+  const [gitPath, commonPath] = await Promise.all([
+    git(root, ["rev-parse", "--git-dir"]),
+    git(root, ["rev-parse", "--git-common-dir"]),
+  ]);
+  const gitDirectory = resolve(root, gitPath);
+  const commonDirectory = resolve(root, commonPath);
+  signal?.throwIfAborted();
   let closed = false;
+  let admitted = !startupGap;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let recovery: ReturnType<typeof setInterval> | undefined;
   const hint = () => {
-    if (closed || timer) return;
+    if (closed || !admitted || timer) return;
     timer = setTimeout(() => {
       timer = undefined;
       if (!closed) changed();
@@ -56,17 +64,29 @@ export const watchWorkspaceDiffFiles = async (
       onDirectoryLimit: gap,
     }),
   );
-  // FSEvents has no public readiness barrier. Reconcile once after its startup grace.
-  const startup = startupGap ? setTimeout(hint, 100) : undefined;
+  const admission = Promise.withResolvers<void>();
+  // Keep the existing 100 ms startup grace + 100 ms reconciliation window before the first read.
+  const startup = startupGap
+    ? setTimeout(() => {
+        admitted = true;
+        admission.resolve();
+      }, 200)
+    : undefined;
   startup?.unref?.();
-  return {
-    close() {
-      if (closed) return;
-      closed = true;
-      clearTimeout(timer);
-      clearTimeout(startup);
-      clearInterval(recovery);
-      for (const watch of watches) watch.close();
-    },
+  if (!startupGap) admission.resolve();
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    clearTimeout(timer);
+    clearTimeout(startup);
+    clearInterval(recovery);
+    signal?.removeEventListener("abort", close);
+    for (const watch of watches) watch.close();
+    admission.resolve();
   };
+  signal?.addEventListener("abort", close, { once: true });
+  if (signal?.aborted) close();
+  await admission.promise;
+  signal?.throwIfAborted();
+  return { close };
 };
