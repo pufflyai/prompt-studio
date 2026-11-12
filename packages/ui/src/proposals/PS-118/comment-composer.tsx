@@ -1,8 +1,8 @@
 import { Badge, Button, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
 import { AtSign, Bot, X } from "lucide-react";
 import { useState } from "react";
-import { Activity } from "@/components/activity";
 import { SearchableMenu } from "@/components/overlays/searchable-menu";
+import { ActivityComposer } from "./activity-composer";
 import { agents, author, type ReviewDraft } from "./review-fixtures";
 
 interface CommentComposerProps {
@@ -30,9 +30,9 @@ export function CommentComposer({ draft, onChange, onSubmit }: CommentComposerPr
           </IconButton>
         </HStack>
       )}
-      <Activity.Composer
+      <ActivityComposer
         actor={author}
-        variant={draft.threadId ? "inline" : "standalone"}
+        variant="compact"
         value={draft.text}
         placeholder={draft.threadId ? "Leave a reply…" : "Leave a comment, @ to ask an agent…"}
         submitLabel={draft.target ? "Review and send" : "Submit comment"}
@@ -41,7 +41,7 @@ export function CommentComposer({ draft, onChange, onSubmit }: CommentComposerPr
           if (text.endsWith("@")) setPickerOpen(true);
         }}
         onSubmit={onSubmit}
-        onAttach={() => onChange({ ...draft, text: `${draft.text}\nAttached review-notes.md (sample)`.trim() })}
+        onAttach={() => onChange({ ...draft, text: `${draft.text} Attached review-notes.md (sample)`.trim() })}
         actions={
           <>
             <SearchableMenu

@@ -14,7 +14,7 @@ export function HandoffDialog({ controller }: ControllerProps) {
     <Dialog.Root
       size="md"
       open={controller.confirmation}
-      finalFocusEl={() => document.querySelector<HTMLElement>("[data-activity-composer] textarea")}
+      finalFocusEl={() => document.querySelector<HTMLElement>("[data-activity-composer] input")}
       onOpenChange={({ open }) => controller.setConfirmation(open)}
     >
       <Portal>

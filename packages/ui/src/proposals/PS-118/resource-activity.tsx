@@ -1,6 +1,6 @@
 import { Badge, Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
 import { Check, ExternalLink, FilePenLine, History, RotateCcw } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Activity } from "@/components/activity";
 import { AlertMessage } from "@/components/primitives/alert";
 import { CommentComposer } from "./comment-composer";
@@ -67,7 +67,7 @@ function ActivityThread({ thread, controller }: ThreadProps) {
   useEffect(() => {
     if (!controller.focusRequest || controller.activeId !== thread.id) return;
     root.current?.scrollIntoView({ block: "center" });
-    if (isReplying) root.current?.querySelector("textarea")?.focus();
+    if (isReplying) root.current?.querySelector<HTMLInputElement>("input")?.focus();
     else root.current?.focus({ preventScroll: true });
   }, [controller.activeId, controller.focusRequest, isReplying, thread.id]);
   return (
@@ -142,54 +142,28 @@ function ChangeEvent({ event, controller }: { event: ResourceEvent; controller: 
 }
 
 export function ResourceActivity({ controller }: ResourceActivityProps) {
-  const [filter, setFilter] = useState("all");
   const composer = useRef<HTMLDivElement>(null);
   const state = controller.activity;
   const draft = controller.draft;
   useEffect(() => {
     if (!controller.focusRequest) return;
-    setFilter("all");
     if (controller.activeId) return;
     composer.current?.scrollIntoView({ block: "center" });
-    composer.current?.querySelector("textarea")?.focus();
+    composer.current?.querySelector<HTMLInputElement>("input")?.focus();
   }, [controller.focusRequest, controller.activeId]);
   if (!state) return null;
-  const items = state.items.filter(
-    (item) => filter === "all" || (filter === "comments" ? item.kind === "comment" : item.kind === "event"),
-  );
   return (
     <Activity.Root aria-label="Resource activity">
-      <Activity.Header
-        actions={
-          state.trackChanges && (
-            <HStack gap="xs">
-              {[
-                ["all", "All activity"],
-                ["comments", "Comments"],
-                ["changes", "Changes"],
-              ].map(([value, label]) => (
-                <Button
-                  key={value}
-                  size="xs"
-                  variant={filter === value ? "subtle" : "ghost"}
-                  onClick={() => setFilter(value)}
-                >
-                  {label}
-                </Button>
-              ))}
-            </HStack>
-          )
-        }
-      />
+      <Activity.Header />
       <Activity.Feed>
-        {items.map((item) =>
+        {state.items.map((item) =>
           item.kind === "event" ? (
             <ChangeEvent key={item.id} event={item} controller={controller} />
           ) : (
             <ActivityThread key={item.id} thread={item} controller={controller} />
           ),
         )}
-        {items.length === 0 && (
+        {state.items.length === 0 && (
           <Text color="fg.muted" textStyle="paragraph/S/regular">
             No activity yet
           </Text>
