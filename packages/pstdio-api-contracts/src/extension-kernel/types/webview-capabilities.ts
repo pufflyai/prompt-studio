@@ -256,7 +256,7 @@ export interface WebviewHostCapabilityParams {
 }
 
 export interface WebviewHostCapabilityResults {
-  "performance.read": PerformanceReadResult;
+  "performance.read": PerformanceReadResult | WebviewCommandQuerySnapshot;
   "performance.control": void;
   "harnesses.read": {
     harnesses: AgentInfo[];
@@ -324,7 +324,7 @@ export type WebviewHostCapabilityResult<
 > = Capability extends "performance.read"
   ? Params extends { operation: "query" }
     ? WebviewCommandQuerySnapshot | undefined
-    : WebviewHostCapabilityResults[Capability]
+    : PerformanceReadResult
   : Capability extends "preferences.get"
     ? Params extends { op: "query" }
       ? WebviewCommandQuerySnapshot | undefined

@@ -8,7 +8,7 @@ import type {
 import type { HostCapability } from "pstdio-extensions/bridge/contract";
 import type { HostEventPublisher } from "pstdio-extensions/bridge/host";
 import { z } from "zod";
-import { createAccountCapability } from "./account-capability";
+import { createAccountCapability, createAccountReadCapability } from "./account-capability";
 import type { ExtensionWebviewHostAdapters } from "./extension-webview-host-adapters";
 import { createPerformanceReadCapability } from "./performance-capability";
 import { createTerminalSessionCapability } from "./terminal-session-capability";
@@ -224,12 +224,7 @@ export const createExtensionWebviewHostCapabilities = (
       createPerformanceReadCapability(adapters.performance, hostEvents, adapters.performanceQueries),
     ),
     "performance.control": capability("performance.control", adapters.performance?.control),
-    "account.read": capability("account.read", (request) =>
-      request.op === "query"
-        ? (adapters.accountQueries?.request(request.query) ??
-          Promise.reject(new Error("Retained account queries are unavailable")))
-        : account?.(request),
-    ),
+    "account.read": capability("account.read", createAccountReadCapability(account, adapters.accountQueries)),
     "account.manage": capability("account.manage", account),
   } satisfies Record<WebviewHostCapability, HostCapability>;
 };

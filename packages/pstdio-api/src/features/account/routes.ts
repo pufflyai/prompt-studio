@@ -90,7 +90,7 @@ export const createAccountRoutes = (service: ReturnType<typeof createNativeAccou
         await service.projectSyncStatus(
           c.req.valid("param").id,
           c.req.raw.signal,
-          "local" in query ? null : readExpectedAccount(query),
+          query.local === "true" ? null : readExpectedAccount(query),
         ),
         200,
       );

@@ -69,7 +69,7 @@ for (const entry of ["extension", "HTTP"] as const)
             () => "completed",
             () => "cancelled",
           )
-        : routes.request(new Request("http://runtime/account/devices", { signal: abort.signal })).then(
+        : Promise.resolve(routes.request(new Request("http://runtime/account/devices", { signal: abort.signal }))).then(
             (response) => (response.ok ? "completed" : "cancelled"),
             () => "cancelled",
           );
