@@ -146,6 +146,7 @@ jobs:
       source_sha: ${{ inputs.source_sha }}
       artifact_run_id: ${{ inputs.artifact_run_id }}
       artifact_attempt: ${{ inputs.artifact_attempt }}
+      candidate_artifact_id: ${{ needs.candidate.outputs.artifact_id }}
       channel: ${{ inputs.channel }}
   certify:
     if: always()
