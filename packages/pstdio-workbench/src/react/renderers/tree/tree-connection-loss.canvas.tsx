@@ -91,7 +91,8 @@ export const RetainNavigation: Story = {
 };
 export const InitialConnectionFailure: Story = {
   id: "pstdio-workbench-guides-navigation-connection-loss--initial-connection-failure",
-  description: "The live connection may still be healthy when a page request drops. Never show a connection error banner.",
+  description:
+    "The live connection may still be healthy when a page request drops. Never show a connection error banner.",
   args: { initiallyUnavailable: true },
 };
 export const LocalReadDuringOutage: Story = {
