@@ -9,6 +9,8 @@ import {
   COMMAND_PRIORITY_HIGH,
   KEY_DOWN_COMMAND,
   type LexicalEditor,
+  SKIP_DOM_SELECTION_TAG,
+  SKIP_SCROLL_INTO_VIEW_TAG,
 } from "lexical";
 import { useEffect } from "react";
 import type { ReviewThread } from "./review-fixtures";
@@ -33,7 +35,8 @@ export function selectComment(editor: LexicalEditor, onSelect: (quote: string) =
   });
 }
 
-function markThread(thread: ReviewThread) {
+function markThread(thread: Pick<ReviewThread, "id" | "quote" | "resolved">) {
+  if (!thread.quote) return;
   const nodes = $getRoot().getAllTextNodes();
   const content = $getRoot().getTextContent();
   const match = findQuote(content, thread.quote);
@@ -55,6 +58,7 @@ function markThread(thread: ReviewThread) {
 export function ReviewPlugin(props: ReviewPluginProps) {
   const { threads, showResolved, onSelect, onOpen, onReady, onTextChange } = props;
   const [editor] = useLexicalComposerContext();
+  const markers = JSON.stringify(threads.map(({ id, quote, resolved }) => ({ id, quote, resolved })));
 
   useEffect(() => {
     onReady(editor);
@@ -91,12 +95,13 @@ export function ReviewPlugin(props: ReviewPluginProps) {
           const parent = node.getParent();
           if ($isMarkNode(parent)) $unwrapMarkNode(parent);
         }
-        for (const thread of threads.filter((item) => !item.resolved || showResolved)) markThread(thread);
+        const values: Pick<ReviewThread, "id" | "quote" | "resolved">[] = JSON.parse(markers);
+        for (const thread of values.filter((item) => !item.resolved || showResolved)) markThread(thread);
         $setSelection(saved);
       },
-      { tag: "review-markers" },
+      { tag: ["review-markers", SKIP_DOM_SELECTION_TAG, SKIP_SCROLL_INTO_VIEW_TAG] },
     );
-  }, [editor, threads, showResolved]);
+  }, [editor, markers, showResolved]);
 
   useEffect(() => {
     const decorate = () => {
