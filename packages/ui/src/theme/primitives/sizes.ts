@@ -1,3 +1,5 @@
+import { dashboardGeometry } from "./dashboard";
+
 export const sp = {
   0: "0rem", // 0px
   25: "0.125rem", // 2px
@@ -47,6 +49,7 @@ export const spacing = {
 };
 
 export const sizes = {
+  "dashboard-grid-row": { value: `${dashboardGeometry.row}px` },
   "alert-max-height": { value: "min(24rem, 50dvh)" },
   "kanban-create-editor-min": { value: "min(9rem, 40dvh)" },
   "kanban-create-editor-max": { value: "min(20rem, 40dvh)" },

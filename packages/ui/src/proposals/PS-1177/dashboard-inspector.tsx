@@ -19,14 +19,15 @@ export function WidgetInspector(props: WidgetInspectorProps) {
     input.current?.focus();
   }, []);
   const widths = [
-    { id: "third", name: "One third" },
-    { id: "half", name: "Half" },
-    { id: "full", name: "Full" },
+    { id: "3", name: "Quarter" },
+    { id: "4", name: "One third" },
+    { id: "6", name: "Half" },
+    { id: "12", name: "Full" },
   ];
   const heights = [
-    { id: "compact", name: "Compact" },
-    { id: "standard", name: "Standard" },
-    { id: "tall", name: "Tall" },
+    { id: "3", name: "Compact" },
+    { id: "8", name: "Standard" },
+    { id: "10", name: "Tall" },
   ];
   return (
     <Stack h="full" minH="0" gap="0">
@@ -86,28 +87,28 @@ export function WidgetInspector(props: WidgetInspectorProps) {
             <Text textStyle="label/S/regular">Width</Text>
             <SelectionMenu
               triggerAriaLabel="Widget width"
-              triggerLabel={widths.find(({ id }) => id === widget.width)?.name}
+              triggerLabel={
+                widths.find(({ id }) => id === String(widget.layout.w))?.name ?? `${widget.layout.w} columns`
+              }
               options={widths}
-              selectedIds={[widget.width]}
+              selectedIds={[String(widget.layout.w)]}
               multiSelect={false}
               fullWidth
-              onToggle={(width) => onChange({ ...widget, width: width as DashboardWidget["width"] })}
+              onToggle={(width) => onChange({ ...widget, layout: { ...widget.layout, w: Number(width) } })}
             />
           </Stack>
-          {widget.kind !== "metric" && (
-            <Stack gap="xs" role="group" aria-label="Widget height">
-              <Text textStyle="label/S/regular">Height</Text>
-              <SelectionMenu
-                triggerAriaLabel="Widget height"
-                triggerLabel={heights.find(({ id }) => id === widget.height)?.name}
-                options={heights}
-                selectedIds={[widget.height]}
-                multiSelect={false}
-                fullWidth
-                onToggle={(height) => onChange({ ...widget, height: height as DashboardWidget["height"] })}
-              />
-            </Stack>
-          )}
+          <Stack gap="xs" role="group" aria-label="Widget height">
+            <Text textStyle="label/S/regular">Height</Text>
+            <SelectionMenu
+              triggerAriaLabel="Widget height"
+              triggerLabel={heights.find(({ id }) => id === String(widget.layout.h))?.name ?? `${widget.layout.h} rows`}
+              options={heights}
+              selectedIds={[String(widget.layout.h)]}
+              multiSelect={false}
+              fullWidth
+              onToggle={(height) => onChange({ ...widget, layout: { ...widget.layout, h: Number(height) } })}
+            />
+          </Stack>
         </Stack>
       </ScrollArea>
       <Box p="sm" borderTopWidth="1px" borderColor="border.subtle">

@@ -1,12 +1,17 @@
 export type WidgetKind = "metric" | "line" | "bar" | "table";
 export type WidgetSource = "conversations" | "users" | "warnings";
+export interface GridPlacement {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
 export interface DashboardWidget {
   id: string;
   title: string;
   kind: WidgetKind;
   source: WidgetSource;
-  width: "third" | "half" | "full";
-  height: "compact" | "standard" | "tall";
+  layout: GridPlacement;
 }
 
 export const widgetKinds = [
@@ -26,27 +31,24 @@ export const initialWidgets: DashboardWidget[] = [
     title: "Agent conversations",
     kind: "metric",
     source: "conversations",
-    width: "third",
-    height: "compact",
+    layout: { x: 0, y: 0, w: 4, h: 3 },
   },
-  { id: "users", title: "Active users", kind: "metric", source: "users", width: "third", height: "compact" },
-  { id: "warnings", title: "Warnings", kind: "metric", source: "warnings", width: "third", height: "compact" },
+  { id: "users", title: "Active users", kind: "metric", source: "users", layout: { x: 4, y: 0, w: 4, h: 3 } },
+  { id: "warnings", title: "Warnings", kind: "metric", source: "warnings", layout: { x: 8, y: 0, w: 4, h: 3 } },
   {
     id: "volume",
     title: "Conversation volume",
     kind: "bar",
     source: "conversations",
-    width: "half",
-    height: "standard",
+    layout: { x: 0, y: 3, w: 6, h: 8 },
   },
-  { id: "trend", title: "Active users over time", kind: "line", source: "users", width: "half", height: "standard" },
+  { id: "trend", title: "Active users over time", kind: "line", source: "users", layout: { x: 6, y: 3, w: 6, h: 8 } },
   {
     id: "recent",
     title: "Recent conversations",
     kind: "table",
     source: "conversations",
-    width: "full",
-    height: "standard",
+    layout: { x: 0, y: 11, w: 12, h: 8 },
   },
 ];
 

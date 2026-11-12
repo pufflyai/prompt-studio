@@ -6,8 +6,9 @@ import { ScrollArea } from "@/components/primitives/scroll-area";
 import { SegmentedControl } from "@/components/primitives/segmented-control";
 import { dashboardRecipe } from "@/theme/recipes/dashboard";
 import { type DashboardWidget, initialWidgets, widgetKinds } from "./dashboard-fixtures";
+import { DashboardGrid } from "./dashboard-grid";
 import { WidgetInspector } from "./dashboard-inspector";
-import { WidgetCard } from "./dashboard-widget";
+import { appendWidget, resizeWidget } from "./dashboard-layout";
 
 export function DashboardPrototype() {
   const styles = useSlotRecipe({ recipe: dashboardRecipe })();
@@ -36,17 +37,6 @@ export function DashboardPrototype() {
     requestAnimationFrame(() => editButton.current?.focus());
   };
 
-  const move = (fromId: string, toId: string) => {
-    if (!draft || fromId === toId) return;
-    const from = draft.findIndex(({ id }) => id === fromId);
-    const to = draft.findIndex(({ id }) => id === toId);
-    if (from < 0 || to < 0) return;
-    const next = [...draft];
-    const [widget] = next.splice(from, 1);
-    next.splice(to, 0, widget);
-    setDraft(next);
-    setAnnouncement(`${widget.title} moved to position ${to + 1} of ${next.length}.`);
-  };
   const add = (kind: string) => {
     if (!draft) return;
     const widget: DashboardWidget = {
@@ -54,10 +44,9 @@ export function DashboardPrototype() {
       title: `New ${widgetKinds.find(({ id }) => id === kind)?.name.toLowerCase()}`,
       kind: kind as DashboardWidget["kind"],
       source: "conversations",
-      width: "half",
-      height: "standard",
+      layout: { x: 0, y: 0, w: 6, h: kind === "metric" ? 3 : 8 },
     };
-    setDraft([...draft, widget]);
+    setDraft(appendWidget(draft, widget));
     setSelectedId(widget.id);
     setAnnouncement(`${widget.title} added.`);
   };
@@ -136,25 +125,18 @@ export function DashboardPrototype() {
           <Box css={styles.body}>
             <ScrollArea flex="1" minH="0" minW="0">
               {widgets.length ? (
-                <Box css={styles.grid}>
-                  {widgets.map((widget, index) => (
-                    <WidgetCard
-                      key={widget.id}
-                      widget={widget}
-                      editing={editing}
-                      selected={widget.id === selectedId}
-                      first={index === 0}
-                      last={index === widgets.length - 1}
-                      days={days}
-                      onConfigure={() => setSelectedId(selectedId === widget.id ? null : widget.id)}
-                      onMove={(offset) => {
-                        const target = widgets[index + offset];
-                        if (target) move(widget.id, target.id);
-                      }}
-                      onDrop={(id) => move(id, widget.id)}
-                    />
-                  ))}
-                </Box>
+                <DashboardGrid
+                  widgets={widgets}
+                  editing={editing}
+                  selectedId={selectedId}
+                  days={days}
+                  onChange={(next) => {
+                    setDraft(next);
+                    setAnnouncement("Dashboard layout updated.");
+                  }}
+                  onConfigure={(id) => setSelectedId(selectedId === id ? null : id)}
+                  onGestureStart={() => setSelectedId(null)}
+                />
               ) : (
                 <Stack p="xl" align="center">
                   <Text textStyle="heading/S">No widgets</Text>
@@ -170,9 +152,14 @@ export function DashboardPrototype() {
                 <WidgetInspector
                   key={selected.id}
                   widget={selected}
-                  onChange={(updated) =>
-                    setDraft(widgets.map((widget) => (widget.id === updated.id ? updated : widget)))
-                  }
+                  onChange={(updated) => {
+                    const resized = resizeWidget(widgets, updated.id, updated.layout, 12);
+                    setDraft(
+                      resized.map((widget) =>
+                        widget.id === updated.id ? { ...updated, layout: widget.layout } : widget,
+                      ),
+                    );
+                  }}
                   onRemove={() => {
                     const index = widgets.findIndex(({ id }) => id === selected.id);
                     const next = widgets[index + 1] ?? widgets[index - 1];

@@ -6,7 +6,7 @@ export default {
   component: DashboardPrototype,
   fullscreen: true,
   description:
-    "A responsive dashboard using shared charts, tables, cards, and menus. Switch preview size, enter Edit dashboard, add widgets, configure type/data/title/size, reorder with a drag handle or move buttons, then Apply or Cancel. The synthetic data and layout stay in this frame’s memory; no project records are changed.",
+    "An editable dashboard with a visible snapping grid, live panel drop highlights, and corner resize handles. Drag cards into grid positions or use Space/arrow keys on the grip. Resize directly from a corner, configure data and charts, and Apply or Cancel. Preview Desktop, Tablet, and Phone in the same frame. Synthetic data and layout stay in frame memory.",
 } satisfies CanvasMeta<typeof DashboardPrototype>;
 
 export const Dashboard: CanvasFrame<typeof DashboardPrototype> = {
