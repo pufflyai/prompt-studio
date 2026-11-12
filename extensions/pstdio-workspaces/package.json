@@ -1,6 +1,6 @@
 {
   "name": "pstdio-workspaces",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "displayName": "Workspaces",
   "publisher": "pstdio",
   "description": "Browse project files and workspaces across devices.",
