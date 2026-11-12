@@ -1,4 +1,4 @@
-name: Focused Cloud baseline
+name: Focused main failure controls
 on:
   workflow_dispatch:
     inputs:
@@ -8,8 +8,8 @@ on:
 permissions:
   contents: read
 jobs:
-  cloud:
-    name: Original three-device Cloud case
+  workspace-files:
+    name: Original Linux workspace files case
     runs-on: ubuntu-latest
     timeout-minutes: 18
     container:
@@ -36,17 +36,65 @@ jobs:
           profile: playwright
       - name: Build original browser prerequisites
         run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
-      - name: Compile original packaged host
-        run: bun run --cwd scripts build:host
-      - name: Execute unchanged three-device workload once
-        env:
-          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio
-          E2E_REQUIRE_WEBVIEW_BROWSERS: "1"
-        run: bun run --cwd packages/e2e test:packaged:browser -- src/packaged/packaged-cloud-phase-one.p2.spec.ts --grep 'three independent packaged devices'
+      - name: Execute unchanged workspace files case once
+        run: bun run --cwd packages/e2e test:ui -- src/ui/workspace-files.p2.spec.ts --grep 'browses and edits workspace files'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: focused-cloud-phase-one-evidence
+          name: focused-workspace-files-evidence
+          path: |
+            packages/e2e/test-results
+            packages/e2e/playwright-report
+          if-no-files-found: warn
+  native:
+    name: Original native ${{ matrix.case }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            case: Linux streaming motion
+            file: src/packaged/packaged-chat-motion-smoke.p2.test.ts
+            pattern: retains streaming messages and cached history
+          - os: macos-15
+            case: Apple Silicon Planner
+            file: src/packaged/packaged-planner-smoke.p2.test.ts
+            pattern: packaged Planner
+    env:
+      CI_PRIORITY: P2
+      TEST_PRIORITIES: P2
+      CI_PROFILE: production
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.source_sha }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24.22.1"
+      - uses: ./.github/actions/setup-ci-cache
+        with:
+          install-strategy: native
+      - name: Build original native prerequisites
+        run: bun run build -- --scope e2e --include-dependencies
+      - name: Install original browser prerequisite
+        if: runner.os == 'Linux'
+        run: bunx playwright@1.60.0 install chromium --with-deps
+      - name: Compile original packaged host
+        run: bun run --cwd scripts build:host
+      - name: Execute unchanged native workload once
+        env:
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio
+        run: bun run --cwd packages/e2e test:packaged:cli -- '${{ matrix.file }}' --test-name-pattern '${{ matrix.pattern }}'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: focused-native-${{ runner.os }}-evidence
           path: |
             packages/e2e/test-results
             packages/e2e/playwright-report
