@@ -1,11 +1,13 @@
 import { Box, Button, HStack, IconButton, Separator, Stack, Text } from "@chakra-ui/react";
 import type { ResourceActivityEntry, ResourceRef } from "@pstdio/sdk/extensions";
 import { Activity, AlertMessage } from "@pstdio/ui";
+import { RichMessage } from "@pstdio/ui/rich-text";
 import { X } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import type { WorkbenchCore } from "../../core";
 import type { ResourceActivityBinding } from "../../core/registries/resources/resource-activity";
 import { activityActorName, activityChangeSummary, activityTime } from "./activity-presentation";
+import { useActivityHistory } from "./use-activity-history";
 import { useResourceActivity } from "./use-resource-activity";
 
 const EntryBody = (props: {
@@ -29,11 +31,7 @@ const EntryBody = (props: {
           }
         </Text>
       )}
-      {entry.body && (
-        <Text whiteSpace="pre-wrap" overflowWrap="anywhere">
-          {entry.body}
-        </Text>
-      )}
+      {entry.body && <RichMessage defaultState={entry.body} fullWidth />}
       {entry.revision && (
         <Text color="fg.muted">
           Revision {entry.revision.revision} · {entry.revision.headSha.slice(0, 8)}
@@ -128,40 +126,50 @@ export const WorkbenchResourceActivity = (props: {
 }) => {
   const { workbench, binding, resource, visible } = props;
   const controller = useResourceActivity(workbench, binding, resource, visible);
-  const sentinel = useRef<HTMLDivElement>(null);
+  const history = useActivityHistory(controller.items, Boolean(controller.cursor), visible, () =>
+    controller.refresh(true),
+  );
+  const error = controller.error ?? (history.failed ? "Cannot retrieve earlier activity." : undefined);
   const upload = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    if (!controller.cursor || !sentinel.current || !visible) return;
-    const observer = new IntersectionObserver((entries) => {
-      if (entries.some((entry) => entry.isIntersecting)) void controller.refresh(true);
-    });
-    observer.observe(sentinel.current);
-    return () => observer.disconnect();
-  }, [controller.cursor, visible, controller.refresh]);
   return (
     <Box layerStyle="markdownEditorInset" flexShrink="0">
-      <Activity.Root aria-label="Resource activity" layerStyle="documentContent">
+      <Activity.Root aria-label="Resource activity" layerStyle="documentContent" overflowAnchor="none">
         <Separator />
         <Activity.Header />
-        {controller.error && (
+        {error && (
           <HStack role="status" layerStyle="resourceActivityNotice">
-            <Text flex="1" minW="0" lineClamp={2} title={controller.error}>
-              {controller.error}
+            <Text flex="1" minW="0" lineClamp={2} title={error}>
+              {error}
             </Text>
             {!controller.actionError && (
-              <Button variant="ghost" size="xs" onClick={() => void controller.refresh()}>
+              <Button
+                variant="ghost"
+                size="xs"
+                onClick={() => void (history.failed ? history.retry() : controller.refresh())}
+              >
                 Retry
               </Button>
             )}
-            <IconButton variant="ghost" size="xs" aria-label="Dismiss Activity error" onClick={controller.clearError}>
+            <IconButton
+              variant="ghost"
+              size="xs"
+              aria-label="Dismiss Activity error"
+              onClick={() => {
+                history.clearError();
+                controller.clearError();
+              }}
+            >
               <X />
             </IconButton>
           </HStack>
         )}
+        {controller.cursor && (
+          <Box ref={history.boundary} role="status" aria-label="Loading earlier activity" minH="px" />
+        )}
         <Activity.Feed>
           {controller.items.map((entry) =>
             entry.kind === "change" ? (
-              <Activity.Timeline key={entry.id}>
+              <Activity.Timeline key={entry.id} data-activity-entry={entry.id}>
                 <Activity.Event actor={{ name: activityActorName(entry) }} timestamp={activityTime(entry.createdAt)}>
                   {activityChangeSummary(entry)}
                 </Activity.Event>
@@ -169,6 +177,7 @@ export const WorkbenchResourceActivity = (props: {
             ) : (
               <Activity.Comment
                 key={entry.id}
+                data-activity-entry={entry.id}
                 actor={{ name: activityActorName(entry) }}
                 timestamp={activityTime(entry.createdAt)}
                 tone={entry.author.type === "user" ? "sent" : "default"}
@@ -179,7 +188,6 @@ export const WorkbenchResourceActivity = (props: {
           )}
           {!controller.items.length && !controller.error && <Text color="fg.muted">No activity yet</Text>}
         </Activity.Feed>
-        {controller.cursor && <Box ref={sentinel} role="status" aria-label="Loading earlier activity" />}
         {controller.capabilities.comments && (
           <Activity.Composer
             variant="compact"

@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/primitives/scroll-area";
 const StyledEditable = chakra(LexicalContentEditable);
 
 interface ContentEditableProps {
+  ariaLabel?: string;
   onRef?: (elem: HTMLDivElement) => void;
   fullWidth?: boolean;
   padding?: string;
@@ -14,6 +15,7 @@ interface ContentEditableProps {
 }
 
 export function ContentEditable({
+  ariaLabel,
   onRef,
   fullWidth = false,
   padding,
@@ -24,6 +26,7 @@ export function ContentEditable({
   const editor = (
     <Box ref={onRef} width="100%" minH="100%" layerStyle={layerStyle} padding={padding}>
       <StyledEditable
+        aria-label={ariaLabel}
         data-testid="content-editable"
         height="fit-content"
         minH="100%"

@@ -1,16 +1,19 @@
 import { Button, HStack, Separator, Stack, Text } from "@chakra-ui/react";
 import { useState } from "react";
 import { Activity } from "../activity";
+import { RichMessage } from "../rich-text";
 export default {
   title: "Components/Resource Activity",
-  description: "Document-width discussion, subtle retrieval feedback and compact change events.",
+  description: "Chronological discussion with rich text comments, subtle retrieval feedback and compact change events.",
 };
 export const ResourceActivity = () => {
   const [session, setSession] = useState(false);
   const [error, setError] = useState(false);
   const [attached, setAttached] = useState(false);
   const [body, setBody] = useState("");
-  const [comments, setComments] = useState(["Please check the implementation."]);
+  const [comments, setComments] = useState([
+    "Please check the **implementation**.\n\n- Keep the original evidence\n- Verify `status` updates",
+  ]);
   return (
     <Stack layerStyle="markdownEditorInset" gap="md">
       <HStack>
@@ -39,7 +42,7 @@ export const ResourceActivity = () => {
               </Activity.Timeline>
               {comments.map((comment, index) => (
                 <Activity.Comment key={index} actor={{ name: "Aurelien" }} timestamp="2 min ago" tone="sent">
-                  {comment}
+                  <RichMessage defaultState={comment} fullWidth />
                 </Activity.Comment>
               ))}
             </Activity.Feed>
