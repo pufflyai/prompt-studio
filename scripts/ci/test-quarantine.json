@@ -787,15 +787,18 @@
     "runner": "bun",
     "file": "packages/pstdio-api/src/services/relay/runtime-resumption.p1.test.ts",
     "name": "resuming Cloud after local edits replaces every owner of the retired project socket",
-    "platforms": ["linux"],
+    "platforms": ["linux", "win32"],
     "owner": "PS-1018 / Cloud relay synchronization",
-    "reason": "Initial Cloud convergence intermittently leaves both devices waiting-to-sync at the existing 3000 ms wait, before the pause/resume steps. The exact same source tree 7a6aae8d4ab89a130b38f811dff20e81bf041dcd passed its first merge-group run and failed a fresh queue run after GitHub's service incident. One isolated main execution, one PR execution, and the main CI file pairing all passed; the timing cause remains unidentified. Preserve both real apps, shared relay, artifact transfer, offline edits, all four assertions, and existing allowances.",
+    "reason": "Initial Cloud convergence intermittently leaves both devices waiting-to-sync at the existing 3000 ms wait, before the pause/resume steps. The exact same source tree 7a6aae8d4ab89a130b38f811dff20e81bf041dcd passed its first merge-group run and failed a fresh queue run after GitHub's service incident. One isolated main execution, one PR execution, and the main CI file pairing all passed; the timing cause remains unidentified. Windows release runs on 447cd2abc, 69efa8850 and a2e8cbbbb failed the same initial wait while one device was still downloading; the same case passed on Windows earlier that day at 07dc2248f. Preserve both real apps, shared relay, artifact transfer, offline edits, all four assertions, and existing allowances.",
     "evidence": [
       "https://github.com/pufflyai/prompt-studio/actions/runs/41816033820/job/126528043968",
       "https://github.com/pufflyai/prompt-studio/actions/runs/41822508167/job/126549862619",
-      "https://github.com/pufflyai/prompt-studio/pull/1729"
+      "https://github.com/pufflyai/prompt-studio/pull/1729",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/43223768966/job/131220807781",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/43240403888/job/131268616626",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/43260219783/job/131339747440"
     ],
-    "removeWhen": "Identify and fix intermittent initial Cloud convergence, then restore this exact Linux case after a complete first-attempt normal execution within its unchanged 3000 ms sync wait and 30000 ms case allowance. Preserve the two-device pause/resume and artifact workload, all assertions, cleanup, and separate quarantine execution evidence; do not retry, prewarm, or run reliability loops."
+    "removeWhen": "Identify and fix intermittent initial Cloud convergence, then restore this exact case on Linux and Windows after a complete first-attempt normal execution within its unchanged 3000 ms sync wait and 30000 ms case allowance. Preserve the two-device pause/resume and artifact workload, all assertions, cleanup, and separate quarantine execution evidence; do not retry, prewarm, or run reliability loops."
   },
   {
     "runner": "bun",
