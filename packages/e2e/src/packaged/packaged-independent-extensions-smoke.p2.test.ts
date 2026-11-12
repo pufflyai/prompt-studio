@@ -112,11 +112,9 @@ test("a packaged host packs, installs and upgrades an independently published ex
     const portablePackage = (
       await runPackagedAsync(["extensions", "pack", source, "--out-dir", root], root, env)
     ).trim();
-    expect(portablePackage).toBe(join(root, "_con.pstdio-notes-0.45.2.tgz"));
+    expect(portablePackage).toBe(join(root, "_con.notes-0.45.2.tgz"));
     await runPackagedAsync(["extensions", "add", portablePackage], repo, env);
-    expect(await runPackagedAsync(["con.pstdio-notes", "version", "--project-id", project.id], repo, env)).toContain(
-      "0.45.2",
-    );
+    expect(await runPackagedAsync(["con.notes", "version", "--project-id", project.id], repo, env)).toContain("0.45.2");
   } finally {
     if (host) await stopProcess(host.child);
     await closeFixtureRuntime(root, home);

@@ -50,13 +50,13 @@ test("opens note and artifact paths from chat in their own pages", async ({ page
     await page.goto(sessionUrl);
     await expect(message.getByText("Launch plan", { exact: true })).toBeVisible();
     await message.getByText("Launch plan", { exact: true }).click();
-    await expect(page).toHaveURL(/pstdio-notes/);
+    await expect(page).toHaveURL(/\/extensions\/pstdio\.notes\//);
     await expect(page.getByRole("tab", { name: "Launch plan" })).toBeVisible();
 
     await page.goto(sessionUrl);
     await expect(message.getByText("Launch report", { exact: true })).toBeVisible();
     await message.getByText("Launch report", { exact: true }).click();
-    await expect(page).toHaveURL(/pstdio-artifacts/);
+    await expect(page).toHaveURL(/\/extensions\/pstdio\.artifacts\//);
     await expect(page.getByRole("tab", { name: "Launch report" })).toBeVisible();
   } finally {
     await request.delete(`${apiBase}/v1/projects/${project.id}`);
