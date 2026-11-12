@@ -57,5 +57,7 @@ test("a restarted fake harness resumes from the saved conversation without spars
     events: sink,
   });
   await resumed.done;
-  expect(await restarted.getMessages(ctx, { agentSessionId: started.agentSessionId! })).toEqual(sink.getMessages());
+  expect(await restarted.getMessages(ctx, { agentSessionId: started.agentSessionId! })).toEqual([
+    ...sink.getMessages(),
+  ]);
 });

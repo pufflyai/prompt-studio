@@ -27,7 +27,11 @@ import { installWorkbenchKanbanRenderer } from "../renderers/kanban/install-kanb
 import { installWorkbenchTreeRenderer } from "../renderers/tree/install-tree-renderer";
 import { usePanelPolicy } from "../shared/use-panel-policy";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
-import { WorkbenchFloatingSidePanel } from "../side-panel/side-panel";
+import {
+  SIDE_PANEL_LAUNCHER_CLEARANCE,
+  useSidePanelLauncherVisible,
+  WorkbenchFloatingSidePanel,
+} from "../side-panel/side-panel";
 import { useWorkbenchFileIconThemePreferences } from "../theme/use-workbench-file-icon-theme-preferences";
 import { useWorkbenchThemePreferences } from "../theme/use-workbench-theme-preferences";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
@@ -125,6 +129,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     hasSideWidgets ||
     hasSidePanelHeader ||
     hasSideMenus;
+  const launcherVisible = useSidePanelLauncherVisible(workbench, hasSidePanel);
   const showSidenav = hasSidenavWidgets;
   const sidenavCollapsible = resolvePanelCollapsible(workbench, "sidenav");
   const persistedSidenavSize = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.sidenav.size);
@@ -149,7 +154,9 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   }, [sidePanelHost, presentedSideMode, attachedSidePanelSlot, floatingSidePanelSlot]);
 
   const contentWithMainPanel = (
-    <WorkbenchBody workbench={workbench} hasNav={hasNavWidgets} panelControls={panelControlsPlacement !== "host"} />
+    <Flex flex="1" minH="0" minW="0" direction="column" pb={launcherVisible ? SIDE_PANEL_LAUNCHER_CLEARANCE : "0"}>
+      <WorkbenchBody workbench={workbench} hasNav={hasNavWidgets} panelControls={panelControlsPlacement !== "host"} />
+    </Flex>
   );
 
   const contentWithSidenav = (

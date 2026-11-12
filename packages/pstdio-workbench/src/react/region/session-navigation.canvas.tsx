@@ -1,6 +1,7 @@
 import { Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { HostStorageProvider } from "@pstdio/ui";
+import { ChatPanel } from "@pstdio/ui/chat-ui";
 import { LazyMarkdownEditor } from "@pstdio/ui/rich-text";
 import { useState } from "react";
 import { createWorkbench } from "../../core";
@@ -9,7 +10,23 @@ import { WorkbenchStory } from "../../examples/workbench-story";
 const page = (id: string) => ({ kind: "page" as const, extensionId: "preview", id });
 const panel = { kind: "placement" as const, extensionId: "preview", id: "session" };
 const session = { type: "session", id: "review", extensionId: "preview", label: "Review session" };
-const SessionNavigation = () => {
+const SessionComposer = () => {
+  const [sent, setSent] = useState("");
+  return (
+    <>
+      <Text role="status">{sent}</Text>
+      <ChatPanel
+        messages={[]}
+        emptyStateTitle="Review session"
+        emptyStateDescription="Send a follow-up with resources attached."
+        chatInputPlaceholder="Reply"
+        chatInputDefaultValue="Check related resources"
+        onSubmitMessage={(text) => setSent(text)}
+      />
+    </>
+  );
+};
+const SessionNavigation = ({ composer = false }: { composer?: boolean }) => {
   const [fixture] = useState(() => {
     const values = new Map<string, string>();
     const storage = {
@@ -25,11 +42,14 @@ const SessionNavigation = () => {
       title: "Session",
       body: {
         kind: "react",
-        render: (input) => (
-          <Text p="md" data-testid="session-content">
-            {input.instance.resource?.label ?? "Choose a session"}
-          </Text>
-        ),
+        render: (input) =>
+          composer ? (
+            <SessionComposer />
+          ) : (
+            <Text p="md" data-testid="session-content">
+              {input.instance.resource?.label ?? "Choose a session"}
+            </Text>
+          ),
       },
     });
     w.views.registerView({
@@ -206,6 +226,7 @@ const SessionNavigation = () => {
       open: "pin",
     });
     void w.navigation.openPanel({ panel: ticketsPanel, region: "side" });
+    if (composer) w.shell.setRegionOpen("side", false);
     return { workbench: w, storage };
   });
   return (
@@ -220,3 +241,5 @@ export default {
   fullscreen: true,
 } satisfies CanvasMeta;
 export const Interactive: CanvasFrame = {};
+
+export const ComposerWithResources: CanvasFrame = { render: () => <SessionNavigation composer /> };

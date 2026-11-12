@@ -96,6 +96,16 @@ interface WorkbenchFloatingSidePanelProps extends WorkbenchSidePanelProps {
   available?: boolean;
 }
 
+// The launcher sits outside the panels; reserve its footprint in the underlying content.
+export const SIDE_PANEL_LAUNCHER_CLEARANCE = "calc(1.5rem + 3rem + 0.5rem)";
+export const useSidePanelLauncherVisible = (workbench: WorkbenchCore, available: boolean) => {
+  const mode = useWorkbenchStore(workbench.layout.store, () => workbench.sidePanel.getMode());
+  const fullscreen = useWorkbenchStore(workbench.fullscreen.store, (state) => state);
+  const canFloat = useWorkbenchStore(workbench.modes.store, () => workbench.sidePanel.canFloat());
+  const policy = usePanelPolicy(workbench, "side");
+  return available && canFloat && policy.canOpen && (fullscreen.active ? !fullscreen.sideOpen : mode === "closed");
+};
+
 export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProps) => {
   const { workbench, contentSlotRef, bottomOffset, header, bubbleIcon, onOpen, available = true } = props;
   const mode = useWorkbenchStore(workbench.layout.store, () => workbench.sidePanel.getMode());
@@ -103,6 +113,7 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
   const canFloat = useWorkbenchStore(workbench.modes.store, () => workbench.sidePanel.canFloat());
   const policy = usePanelPolicy(workbench, "side");
   const visible = available && canFloat && (fullscreen.active ? fullscreen.sideOpen : mode === "floating");
+  const launcherVisible = useSidePanelLauncherVisible(workbench, available);
   const bubbleRef = useRef<HTMLButtonElement>(null);
   const previousFullscreen = useRef(fullscreen);
   useLayoutEffect(() => {
@@ -115,7 +126,7 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
 
   return (
     <>
-      {available && canFloat && policy.canOpen && (fullscreen.active || mode !== "attached") ? (
+      {launcherVisible || visible ? (
         <BubbleButton
           ref={bubbleRef}
           isOpen={visible}
