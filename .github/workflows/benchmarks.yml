@@ -1,34 +1,21 @@
-name: Native conversation measurement ownership qualification
+name: Original main Linux streaming control
 on:
   workflow_dispatch:
-    inputs:
-      source_sha:
-        required: true
-        type: string
 permissions:
   contents: read
-  actions: read
 jobs:
   linux:
-    uses: ./.github/workflows/verify-packaged-toolchain.yml
-    with:
-      ref: ${{ inputs.source_sha }}
-      profile: full
-      priority: P2
-      platforms: '[{"os":"ubuntu-24.04","platform_pkg":"cli-linux-x64","shard":1,"shards":1,"priorities":"P0,P1,P2"}]'
-  desktop:
-    name: Original six Intel desktop cases with conversation ownership repair
-    runs-on: macos-15-intel
+    name: Uninstrumented main original packaged motion file
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
-      CI_PRIORITY: P3
-      TEST_PRIORITIES: P3
+      CI_PRIORITY: P2
+      TEST_PRIORITIES: P2
       CI_PROFILE: production
-      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.source_sha }}
+          ref: f7289ac43b84e64bac4f6e13fda715517a118909
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
@@ -38,17 +25,19 @@ jobs:
       - uses: ./.github/actions/setup-ci-cache
         with:
           install-strategy: native
-      - name: Build original desktop prerequisites
-        run: bun run build -- --scope @pstdio/desktop --include-dependencies
-      - name: Package original desktop
-        run: bun run --cwd clients/desktop package
-      - name: Execute all six original desktop cases once
-        run: bun run --cwd clients/desktop test:benchmark
+      - name: Build original native prerequisites
+        run: bun run build -- --scope e2e --include-dependencies
+      - name: Install original Chromium
+        run: bunx playwright@1.60.0 install chromium --with-deps
+      - name: Compile unchanged main host
+        run: bun run --cwd scripts build:host
+      - name: Execute original complete motion file once
+        env:
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio
+        run: bun run --cwd packages/e2e test:packaged:cli -- src/packaged/packaged-chat-motion-smoke.p2.test.ts
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ps211-original-intel-desktop
-          path: |
-            clients/desktop/test-results
-            test-results/quarantine
+          name: ps211-main-linux-motion-control
+          path: packages/e2e/test-results
           if-no-files-found: warn
