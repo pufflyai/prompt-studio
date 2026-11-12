@@ -181,6 +181,7 @@ export const startRelayExtension = async (input: {
       wake: connection.wake,
       wakeDocument,
       retry: connection.retry,
+      restart: connection.restart,
       done: connection.done.finally(async () => {
         stopProjection();
         await projections.drain();

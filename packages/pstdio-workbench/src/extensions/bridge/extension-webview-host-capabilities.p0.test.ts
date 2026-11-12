@@ -351,6 +351,7 @@ test("account capabilities route reads and changes to the host account and valid
       removeDevice: record("removeDevice"),
       resolveReturnedChanges: record("resolveReturnedChanges"),
       projectSyncStatus: record("projectSyncStatus", { state: "synced", offlineReady: true }),
+      retryProjectSyncSource: record("retryProjectSyncSource", undefined),
       syncProject: record("syncProject"),
       stopProjectSync: record("stopProjectSync"),
     },
@@ -364,12 +365,14 @@ test("account capabilities route reads and changes to the host account and valid
   await capabilities["account.manage"]({ op: "stopProjectSync", projectId: "project-2" });
   await capabilities["account.manage"]({ op: "login" });
   await capabilities["account.manage"]({ op: "login", managerOrigin: "https://accounts.example.test" });
+  await capabilities["account.manage"]({ op: "retryProjectSyncSource", sourceId: "sessions", projectId: "project-2" });
   expect(calls).toEqual([
     ["projectSyncStatus", undefined],
     ["renameDevice", "device-2", "Studio Mac"],
     ["stopProjectSync", "project-2"],
     ["login", undefined],
     ["login", "https://accounts.example.test"],
+    ["retryProjectSyncSource", "sessions", "project-2"],
   ]);
   // Reads cannot change the account, and changes need their own capability.
   await expect(Promise.resolve().then(() => capabilities["account.read"]({ op: "logout" }))).rejects.toMatchObject({
@@ -378,7 +381,7 @@ test("account capabilities route reads and changes to the host account and valid
   await expect(Promise.resolve().then(() => capabilities["account.manage"]({ op: "devices" }))).rejects.toMatchObject({
     code: "invalid_params",
   });
-  expect(calls).toHaveLength(5);
+  expect(calls).toHaveLength(6);
 });
 
 test("text editing validates scoped operations before passing them to the host adapter", async () => {

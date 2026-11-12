@@ -20,6 +20,7 @@ export const createPersonalPublication = (input: {
   statusChanged?: () => void;
   history: PersonalHistoryStore;
   documents: ReturnType<typeof createPersonalDocuments>;
+  admit: <T>(work: () => Promise<T>) => Promise<T>;
 }) => {
   const publications = createPersonalPublications({
     history: input.history,
@@ -40,7 +41,9 @@ export const createPersonalPublication = (input: {
         return;
       }
       publisher.live(id, space, send);
-      void publisher.publish([id], space, input.documents.relayFor(space)).catch(() => input.failed(id));
+      void input
+        .admit(() => publisher.publish([id], space, input.documents.relayFor(space)))
+        .catch(() => input.failed(id));
     },
     async synchronizeIndex(full: boolean, captured: boolean, remoteChanged: boolean) {
       const writeHeads = await publications.flush(full, captured);
