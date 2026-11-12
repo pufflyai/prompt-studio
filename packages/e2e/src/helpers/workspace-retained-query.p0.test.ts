@@ -1,7 +1,6 @@
 import { expect, test } from "bun:test";
 import { createWebviewClient } from "@pstdio/sdk/extensions";
-import { createChangesQueries } from "../../../../extensions/pstdio-workspaces/src/changes-queries";
-import { changed } from "../../../../extensions/pstdio-workspaces/src/events";
+import { changed, createChangesQueries } from "pstdio-workspaces/testing";
 import { createRetainedExtensionQueryFixture } from "./retained-extension-query.fixture";
 
 const turn = () => new Promise<void>((resolve) => setImmediate(resolve));

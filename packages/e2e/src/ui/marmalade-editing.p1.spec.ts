@@ -1,5 +1,30 @@
-import { expect, test } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { type APIRequestContext, expect, test } from "@playwright/test";
+import { e2eExtension } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
+
+// This optional pilot is not a core default. Enable the fixture explicitly instead
+// of changing every dashboard/benchmark workload to include the demo extension.
+const enableMarmalade = async (request: APIRequestContext, projectId: string) => {
+  const source = e2eExtension("extension-lab");
+  const manifest = JSON.parse(readFileSync(join(source.source, "package.json"), "utf8"));
+  const extensionId = `${manifest.publisher}.${manifest.name}`;
+  const enabled = await request.post(`/v1/projects/${projectId}/extensions/installed/extension-lab/enable`, {
+    data: {
+      displayName: manifest.displayName,
+      extensionId,
+      manifest: { id: extensionId, name: manifest.name },
+      name: manifest.name,
+      sourceHash: "marmalade-platform-pilot",
+      sourceKind: "local_path",
+      sourcePath: source.source,
+      sourceRef: null,
+      version: manifest.version,
+    },
+  });
+  expect(enabled.ok(), await enabled.text()).toBe(true);
+};
 
 test("Marmalade shares property drafts while keeping native input undo and focused view shortcuts", async ({
   page,
@@ -18,6 +43,7 @@ test("Marmalade shares property drafts while keeping native input undo and focus
   });
   const reads = () => commands.get("pstdio.extension-lab.command.marmalade.session.read") ?? 0;
   try {
+    await enableMarmalade(request, projectId);
     await page.addInitScript(() => {
       if (window === window.top) localStorage.setItem("onboarding-complete", "true");
     });
@@ -134,6 +160,7 @@ test("Marmalade undo and redo during a pointer drag discard the preview and igno
       completedDrags++;
   });
   try {
+    await enableMarmalade(request, projectId);
     await page.addInitScript(() => {
       if (window === window.top) localStorage.setItem("onboarding-complete", "true");
     });

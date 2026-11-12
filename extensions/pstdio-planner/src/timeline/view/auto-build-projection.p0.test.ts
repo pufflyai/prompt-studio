@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { createScopedQueryClient } from "@pstdio/sdk/extensions";
+import type { AutoBuildMode } from "../../data/auto-build-mode";
 import { createAutoBuildProjection } from "./auto-build-projection";
 import type { PlanClient } from "./use-plan";
 
@@ -13,8 +14,41 @@ const mode = (revision = "first", prompt = "Original") => ({
   requireMergedDependencies: true,
   eligible: { conjunction: "and" as const, rules: [] },
 });
-const value = (config = mode(), sessions = ["old"]) =>
-  ({ ...config, sessions, capacity: { running: 0, limit: 1 } }) as unknown as Value;
+const value = (config: AutoBuildMode = mode(), ids = ["old"]) =>
+  ({
+    ...config,
+    state: config.state ?? "stopped",
+    supervisorModel: config.supervisorModel,
+    reviewRequests: [],
+    requestErrors: [],
+    observations: [],
+    waitingTickets: [],
+    configurationError: null,
+    supervisor: null,
+    sessions: ids.map((id) => ({
+      id,
+      title: id,
+      status: "in_progress" as const,
+      archived: false,
+      agent: null,
+      last_selected_model: null,
+      workspace_id: null,
+      original_session_id: null,
+      created_at: "2026-11-12T00:00:00Z",
+      updated_at: "2026-11-12T00:00:00Z",
+      last_request_started: null,
+      last_request_ended: null,
+      anchors_json: [],
+      usage: null,
+    })),
+    capacity: { running: 0, limit: 1 },
+    completed: false,
+    matchingTicketCount: undefined,
+    readyTicketCount: undefined,
+    stuck: false,
+    running: false,
+    error: undefined,
+  }) satisfies Value;
 const fixture = () => {
   const root = createScopedQueryClient({ runtimeId: "planner-ack", extensionId: "pstdio.pstdio-planner" });
   const source = root.query({ id: "mode", read: async () => value() });
@@ -51,7 +85,7 @@ test("an acknowledged configuration keeps canonical live fields without writing 
     expect(f.projection.getSnapshot()).toBe(projected);
     f.source.accept(value(mode(), ["fresh"]));
     expect(f.projection.getSnapshot().data?.prompt).toBe("Accepted");
-    expect(f.projection.getSnapshot().data?.sessions).toEqual(["fresh"]);
+    expect(f.projection.getSnapshot().data?.sessions.map((session) => session.id)).toEqual(["fresh"]);
     f.projection.complete(action);
     expect(f.projection.getSnapshot().data?.prompt).toBe("Original");
   } finally {
@@ -94,7 +128,7 @@ test("a failed catch-up retains its acknowledged configuration until canonical a
     expect(f.projection.getSnapshot().data?.prompt).toBe("Accepted");
     expect(f.projection.getSnapshot().error?.message).toBe("Catch-up unavailable");
     f.source.accept(value(mode("saved", "Accepted"), ["latest"]));
-    expect(f.projection.getSnapshot().data?.sessions).toEqual(["latest"]);
+    expect(f.projection.getSnapshot().data?.sessions.map((session) => session.id)).toEqual(["latest"]);
     expect(f.projection.getSnapshot().error).toBeUndefined();
   } finally {
     f.dispose();

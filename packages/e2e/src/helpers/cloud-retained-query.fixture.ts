@@ -8,9 +8,9 @@ import {
   type ProjectSyncStatus,
   type WebviewCommandQuery,
 } from "@pstdio/sdk/extensions";
-import { createCloudQueries } from "../../../../extensions/pstdio-cloud/src/cloud-queries";
-import type { CloudProjectState, cloudCommands } from "../../../../extensions/pstdio-cloud/src/project-state";
-import { createAccountQuerySources } from "../../../pstdio-dashboard/src/shared/extensions/account-query-sources";
+import type { CloudProjectState, cloudCommands } from "pstdio-cloud/testing";
+import { createCloudQueries } from "pstdio-cloud/testing";
+import { createAccountQuerySources } from "pstdio-dashboard/testing";
 import { createRetainedExtensionQueryFixture } from "./retained-extension-query.fixture";
 export const cloudAccount: AccountStatus = {
   login: { managerOrigin: "https://account.test", relayOrigin: "https://relay.test", accountId: "a", deviceId: "d" },

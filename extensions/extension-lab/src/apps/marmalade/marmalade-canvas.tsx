@@ -1,6 +1,6 @@
 import { Box, Button, HStack, IconButton, Stack } from "@chakra-ui/react";
 import { EmptyState, Tooltip } from "@pstdio/ui";
-import { type PointerEvent, useRef, useState } from "react";
+import { type PointerEvent, useEffect, useRef, useState } from "react";
 import { EditingError } from "../../editing-error";
 import { ExampleIcon } from "../../icon";
 import { MarmaladeCanvasLayer } from "./marmalade-canvas-layer";
@@ -9,14 +9,24 @@ import { useMarmaladeGesture } from "./marmalade-gesture";
 import { marmaladeLayers } from "./marmalade-layers";
 import { marmaladeStore, useMarmalade } from "./marmalade-store";
 
+type DrawingGesture = MarmaladeDrawing & { boundary: ReturnType<typeof marmaladeStore.getGestureBoundary> };
+
 export const MarmaladeCanvas = () => {
   const state = useMarmalade((projection) => projection.state);
   const error = useMarmalade((projection) => projection.error);
   const gesture = useMarmaladeGesture();
   const svg = useRef<SVGSVGElement>(null);
   const documentGroup = useRef<SVGGElement>(null);
-  const drawing = useRef<MarmaladeDrawing | null>(null);
-  const [draft, setDraft] = useState<MarmaladeDrawing>();
+  const drawing = useRef<DrawingGesture | null>(null);
+  const [draft, setDraft] = useState<DrawingGesture>();
+  const boundary = marmaladeStore.getGestureBoundary();
+  useEffect(() => {
+    const current = drawing.current;
+    if (current && (current.boundary.owner !== boundary.owner || current.boundary.history !== boundary.history)) {
+      drawing.current = null;
+      setDraft(undefined);
+    }
+  }, [boundary.owner, boundary.history]);
   const [pan, setPan] = useState<{ startX: number; startY: number; x: number; y: number; dx: number; dy: number }>();
   const point = (event: PointerEvent, target: SVGSVGElement | SVGGElement | null) => {
     const matrix = target?.getScreenCTM();
@@ -98,7 +108,11 @@ export const MarmaladeCanvas = () => {
             } else if (state.tool === "rectangle" || state.tool === "ellipse" || state.tool === "brush") {
               const next = point(event, documentGroup.current);
               event.currentTarget.setPointerCapture(event.pointerId);
-              drawing.current = { tool: state.tool, points: [[next.x, next.y]] };
+              drawing.current = {
+                tool: state.tool,
+                points: [[next.x, next.y]],
+                boundary: marmaladeStore.getGestureBoundary(),
+              };
               setDraft(drawing.current);
             }
           }}
@@ -133,7 +147,7 @@ export const MarmaladeCanvas = () => {
             if (!current) return;
             const next = point(event, documentGroup.current);
             const points: [number, number][] = [...current.points, [next.x, next.y]];
-            void marmaladeStore.dispatch(marmaladeDrawingAction({ tool: current.tool, points }));
+            void marmaladeStore.dispatch(marmaladeDrawingAction({ tool: current.tool, points }), current.boundary);
             drawing.current = null;
             setDraft(undefined);
           }}

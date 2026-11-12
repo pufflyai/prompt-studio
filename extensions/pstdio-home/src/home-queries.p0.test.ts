@@ -4,7 +4,7 @@ import type { commands } from "./commands";
 import { createHomeQueries } from "./home-queries";
 
 test("a recreated Home frame restores its accepted project before admitting another read", () => {
-  const home = { project: { name: "Accepted Home" }, setupError: null };
+  const home = { project: { id: "selected", shorthand: "ACCEPTED", name: "Accepted Home" }, setupError: null };
   const host = {
     extensionId: "pstdio.pstdio-home",
     propsStore: {

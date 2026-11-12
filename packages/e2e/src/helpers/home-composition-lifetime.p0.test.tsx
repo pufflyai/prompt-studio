@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
 import { createWebviewClient, viewDataEvents } from "@pstdio/sdk/extensions";
 import { ChakraProvider, psTheme } from "@pstdio/ui";
+import { HomeApp } from "pstdio-home/testing";
 import { createElement } from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
-import { HomeApp } from "../../../../extensions/pstdio-home/src/view";
 import { createRetainedExtensionQueryFixture } from "./retained-extension-query.fixture";
 
 test("Home snapshot updates preserve the quota owner while its actual command is held", async () => {

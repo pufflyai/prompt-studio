@@ -2,8 +2,8 @@ import { expect, test } from "bun:test";
 import { createWebviewClient } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
 import { createWorkbenchWebviewHostAdapters } from "@pstdio/workbench/extensions";
-import { createArtifactRevisionSelection } from "../../../../extensions/pstdio-artifacts/src/artifact-queries";
-import { createChangesSelection } from "../../../../extensions/pstdio-workspaces/src/changes-queries";
+import { createArtifactRevisionSelection } from "pstdio-artifacts/testing";
+import { createChangesSelection } from "pstdio-workspaces/testing";
 import { createRetainedExtensionQueryFixture } from "./retained-extension-query.fixture";
 
 test.each([

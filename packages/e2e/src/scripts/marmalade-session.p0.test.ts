@@ -414,3 +414,77 @@ test("a late retry failure cannot repopulate a retired UI projection", async () 
     await fixture.dispose();
   }
 });
+
+for (const history of ["undo", "redo"] as const) {
+  test(`a shape started before ${history} cannot create a layer or replace the redo branch`, async () => {
+    const fixture = marmaladeSessionFixture();
+    try {
+      const frame = await fixture.window("drawing").frame();
+      await frame.store.dispatch({ type: "text", id: "title", text: "Accepted" });
+      if (history === "redo") await frame.store.dispatch({ type: "undo" });
+      const boundary = frame.store.getGestureBoundary();
+      await marmaladeCommands["marmalade.session.execute"].run(fixture.context("drawing").ctx, {
+        action: { type: history },
+      });
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      const before = frame.store.getSnapshot().state;
+      const commits = fixture.context("drawing").commits.length;
+      for (const kind of ["rectangle", "ellipse", "brush"] as const)
+        await frame.store.dispatch(
+          {
+            type: "create",
+            kind,
+            x: 10,
+            y: 20,
+            width: 30,
+            height: 40,
+            ...(kind === "brush" && {
+              points: [
+                [0, 0],
+                [30, 40],
+              ],
+            }),
+          },
+          boundary,
+        );
+      expect(fixture.context("drawing").commits).toHaveLength(commits);
+      expect(frame.store.getSnapshot().state.document).toEqual(before.document);
+      expect(frame.store.getSnapshot().state.history).toEqual(before.history);
+    } finally {
+      await fixture.dispose();
+    }
+  });
+}
+
+test("a drawing completion keeps its captured history fence while its command is in flight", async () => {
+  const fixture = marmaladeSessionFixture();
+  const entered = Promise.withResolvers<void>(),
+    release = Promise.withResolvers<void>();
+  let hold = false;
+  try {
+    const frame = await fixture.window("drawing-race").frame(async (params) => {
+      const input = params as { operation?: string; params?: { action?: { type?: string } } };
+      if (hold && input.operation === "execute" && input.params?.action?.type === "create") {
+        entered.resolve();
+        await release.promise;
+      }
+    });
+    await frame.store.dispatch({ type: "text", id: "title", text: "Accepted" });
+    const boundary = frame.store.getGestureBoundary();
+    hold = true;
+    const completion = frame.store.dispatch({ type: "create", kind: "rectangle", x: 10, y: 20 }, boundary);
+    await entered.promise;
+    await marmaladeCommands["marmalade.session.execute"].run(fixture.context("drawing-race").ctx, {
+      action: { type: "undo" },
+    });
+    const commits = fixture.context("drawing-race").commits.length;
+    release.resolve();
+    await completion;
+    expect(fixture.context("drawing-race").commits).toHaveLength(commits);
+    expect(frame.store.getSnapshot().state.history.redo).toBe(1);
+    expect(frame.store.getSnapshot().state.document.layers).toHaveLength(6);
+  } finally {
+    release.resolve();
+    await fixture.dispose();
+  }
+});

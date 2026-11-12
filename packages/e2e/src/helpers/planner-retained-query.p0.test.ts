@@ -1,7 +1,6 @@
 import { expect, test } from "bun:test";
 import { createWebviewClient } from "@pstdio/sdk/extensions";
-import { publishRequestChange } from "../../../../extensions/pstdio-planner/src/data/review-request-service";
-import { plannerTicketsChanged } from "../../../../extensions/pstdio-planner/src/events";
+import { plannerTicketsChanged, publishRequestChange } from "pstdio-planner/testing";
 import { createRetainedExtensionQueryFixture } from "./retained-extension-query.fixture";
 
 const turn = () => new Promise<void>((resolve) => setImmediate(resolve));

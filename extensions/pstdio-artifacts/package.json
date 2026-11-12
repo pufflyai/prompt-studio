@@ -34,5 +34,8 @@
     "@types/react-dom": "^19.0.0",
     "typescript": "6.0.2"
   },
-  "icon": "AppWindow"
+  "icon": "AppWindow",
+  "exports": {
+    "./testing": "./src/testing.ts"
+  }
 }

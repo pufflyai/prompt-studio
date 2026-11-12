@@ -1,10 +1,8 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { accountEvents } from "@pstdio/sdk/extensions";
+import { CloudContext, cloudStatus, useCloud } from "pstdio-cloud/testing";
 import { Activity, createElement } from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
-import { CloudContext } from "../../../../extensions/pstdio-cloud/src/cloud-context";
-import { cloudStatus } from "../../../../extensions/pstdio-cloud/src/status";
-import { useCloud } from "../../../../extensions/pstdio-cloud/src/use-cloud";
 import { cloudAccount, cloudDevice, cloudQueryFixture } from "./cloud-retained-query.fixture";
 
 const turn = () => new Promise<void>((resolve) => setImmediate(resolve));

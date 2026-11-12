@@ -8,31 +8,25 @@ import {
   type PropsStore,
   type ResourceRef,
 } from "@pstdio/sdk/extensions";
+import { useWebviewScope } from "@pstdio/sdk/extensions/react";
 import { ChakraProvider, psTheme, ScrollArea } from "@pstdio/ui";
 import { useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
-import type { listReviewRequestsCommand, openReviewRequestCommand, reviewCommand } from "../commands/review-requests";
-import { plannerTicketsChanged } from "../events";
 import { RequestsPanel } from "../timeline/view/requests-panel";
-import { usePlannerQuery } from "../timeline/view/use-planner-query";
 import { PlannerReadError } from "./planner-read-error";
+import {
+  type TicketRequestsClient,
+  type TicketRequestsCommands,
+  useTicketRequests,
+} from "./use-ticket-review-requests";
 
-type Commands = {
-  "review-requests.list": typeof listReviewRequestsCommand;
-  review: typeof reviewCommand;
-  "review-requests.open": typeof openReviewRequestCommand;
-};
-type Client = ReturnType<typeof createWebviewClient<Commands>>;
-const read = (client: Client, ticket = "") => client.commands["review-requests.list"]({ ticket });
-const events = [plannerTicketsChanged];
 interface HostProps {
   resource?: ResourceRef;
 }
 
-function TicketRequests(props: { host: GuestHost; resource: ResourceRef }) {
-  const { host, resource } = props;
-  const [client] = useState(() => createWebviewClient<Commands>(host));
-  const { value, error, retry } = usePlannerQuery(client, "ticket-requests", read, events, resource.id);
+function TicketRequests(props: { client: TicketRequestsClient; resource: ResourceRef }) {
+  const { client, resource } = props;
+  const { value, error, retry, answer, openChat } = useTicketRequests(client, resource);
   return (
     <ScrollArea h="full">
       <Stack p="md" gap="md" w="full" maxW="2xl" mx="auto">
@@ -41,8 +35,8 @@ function TicketRequests(props: { host: GuestHost; resource: ResourceRef }) {
         {value ? (
           <RequestsPanel
             row={{ requests: value.requests, requestErrors: value.errors }}
-            onAnswer={(requestId, response) => client.commands.review({ requestId, response })}
-            onOpenChat={(requestId) => client.commands["review-requests.open"]({ requestId })}
+            onAnswer={answer}
+            onOpenChat={openChat}
           />
         ) : null}
         {!value && !error ? <Text>Loading requests…</Text> : null}
@@ -53,9 +47,13 @@ function TicketRequests(props: { host: GuestHost; resource: ResourceRef }) {
 
 function TicketRequestsRoot(props: { host: GuestHost; propsStore: PropsStore<HostProps> }) {
   const { host, propsStore } = props;
+  const [client] = useState(() => createWebviewClient<TicketRequestsCommands>(host));
+  const scope = useWebviewScope(client.queries);
   const { resource } = useSyncExternalStore(propsStore.subscribe, propsStore.get);
   if (!resource) return <Text p="md">Open a ticket to read its requests.</Text>;
-  return <TicketRequests key={resource.id} host={host} resource={resource} />;
+  return (
+    <TicketRequests key={JSON.stringify([scope, resource.type, resource.id])} client={client} resource={resource} />
+  );
 }
 
 export default defineExtensionView<HostProps>({

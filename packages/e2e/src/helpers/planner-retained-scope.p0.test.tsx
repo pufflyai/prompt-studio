@@ -1,9 +1,14 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { createWebviewClient } from "@pstdio/sdk/extensions";
+import {
+  type PlanClient,
+  type TicketRequestsClient,
+  useAutoBuild,
+  usePlan,
+  useTicketRequests,
+} from "pstdio-planner/testing";
 import { Activity, createElement } from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
-import { useAutoBuild } from "../../../../extensions/pstdio-planner/src/timeline/view/use-auto-build";
-import { type PlanClient, usePlan } from "../../../../extensions/pstdio-planner/src/timeline/view/use-plan";
 import { createRetainedExtensionQueryFixture } from "./retained-extension-query.fixture";
 
 const previousDocument = Object.getOwnPropertyDescriptor(globalThis, "document");
@@ -218,6 +223,77 @@ test("an acknowledged auto-build configuration survives Activity hide and return
       tree?.unmount();
     });
     client.queries.dispose();
+    transport.dispose();
+    environment.IS_REACT_ACT_ENVIRONMENT = previous;
+  }
+});
+
+test("ticket review requests use a retained resource query and retire callbacks with project and visibility", async () => {
+  const environment = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
+  const previous = environment.IS_REACT_ACT_ENVIRONMENT;
+  environment.IS_REACT_ACT_ENVIRONMENT = true;
+  const calls: { id: string; project: string; ticket?: unknown }[] = [];
+  const transport = createRetainedExtensionQueryFixture({
+    extensionId: "pstdio.pstdio-planner",
+    execute: async (command, _signal, project) => {
+      calls.push({ id: command.commandId, project, ticket: command.params?.ticket });
+      return { requests: [], errors: [] };
+    },
+  });
+  const frame = transport.frame("first");
+  frame.props.resource = { type: "ticket", id: "shared-id" };
+  const client = createWebviewClient(frame.host) as TicketRequestsClient;
+  let latest: ReturnType<typeof useTicketRequests>;
+  const Probe = () => {
+    latest = useTicketRequests(client, frame.props.resource!);
+    return null;
+  };
+  const content = (mode: "visible" | "hidden") => (
+    <Activity mode={mode}>
+      <Probe />
+    </Activity>
+  );
+  let tree: ReactTestRenderer | undefined;
+  try {
+    await act(async () => {
+      tree = create(content("visible"));
+    });
+    const first = latest!.openChat;
+    expect(calls).toEqual([
+      { id: "pstdio.pstdio-planner.command.review-requests.list", project: "first", ticket: "shared-id" },
+    ]);
+    await act(async () => {
+      frame.project("second");
+    });
+    expect(calls.at(-1)).toEqual({
+      id: "pstdio.pstdio-planner.command.review-requests.list",
+      project: "second",
+      ticket: "shared-id",
+    });
+    const count = calls.length;
+    await first("old-request");
+    expect(calls).toHaveLength(count);
+    const second = latest!.openChat;
+    await second("current-request");
+    expect(calls.at(-1)?.project).toBe("second");
+    expect(calls.at(-1)?.id).toBe("pstdio.pstdio-planner.command.review-requests.open");
+    await act(async () => {
+      tree!.update(content("hidden"));
+    });
+    const hiddenCount = calls.length;
+    await second("hidden-request");
+    expect(calls).toHaveLength(hiddenCount);
+    await act(async () => {
+      tree!.update(content("visible"));
+    });
+    const current = latest!.openChat;
+    await current("returned-request");
+    expect(calls.at(-1)?.id).toBe("pstdio.pstdio-planner.command.review-requests.open");
+  } finally {
+    await act(async () => {
+      tree?.unmount();
+    });
+    createWebviewClient(frame.host).queries.dispose();
     transport.dispose();
     environment.IS_REACT_ACT_ENVIRONMENT = previous;
   }

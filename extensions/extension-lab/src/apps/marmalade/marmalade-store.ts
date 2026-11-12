@@ -90,14 +90,16 @@ export const createMarmaladeStore = () => {
     getSnapshot: projection.getState,
     subscribe: projection.subscribe,
     getGestureBoundary: () => ({ owner: session, history: projection.getState().state.history.boundary }),
-    async dispatch(input: MarmaladeAction) {
+    async dispatch(input: MarmaladeAction, boundary?: { owner: unknown; history: string }) {
+      if (boundary && (boundary.owner !== session || boundary.history !== projection.getState().state.history.boundary))
+        return;
       const history = input.type === "undo" || input.type === "redo";
       const documentGesture = gesture && !isMarmaladePresentationAction(gesture.action);
       const completedGesture = history && documentGesture ? cancelPreview() : commitPreview();
       const action = prepare(input);
       try {
         // Cancelling clears local preview intent synchronously; admit required work before a view can retire.
-        const submitted = execute(action, optimistic(projection.getState().state, action));
+        const submitted = execute(action, optimistic(projection.getState().state, action), boundary?.history);
         await Promise.all([completedGesture, submitted]);
       } catch (error) {
         failure(error);

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { accountEvents } from "@pstdio/sdk/extensions";
-import { createCloudQueries } from "../../../../extensions/pstdio-cloud/src/cloud-queries";
+import { createCloudQueries } from "pstdio-cloud/testing";
 import { cloudAccount, cloudDevice, cloudQueryFixture } from "./cloud-retained-query.fixture";
 
 const turn = () => new Promise<void>((resolve) => setImmediate(resolve));

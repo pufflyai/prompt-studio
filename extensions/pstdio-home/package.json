@@ -22,8 +22,8 @@
   "dependencies": {
     "@chakra-ui/react": "^3.0.0",
     "@emotion/react": "^11.0.0",
-    "@pstdio/sdk": "0.47.0-nightly.20261111030243",
-    "@pstdio/ui": "0.47.0-nightly.20261111030243",
+    "@pstdio/sdk": "0.47.0-nightly.20261112030231",
+    "@pstdio/ui": "0.47.0-nightly.20261112030231",
     "@tanstack/charts": "1.2.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -34,5 +34,8 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "typescript": "6.0.2"
+  },
+  "exports": {
+    "./testing": "./src/testing.ts"
   }
 }

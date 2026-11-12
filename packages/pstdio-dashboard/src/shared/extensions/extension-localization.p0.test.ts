@@ -87,7 +87,7 @@ test("bulk labels retain their namespace, fallback and current locale", async ()
 
 test("disposing the runtime owner removes its translation resources", async () => {
   const owner = createRuntimeCollections();
-  const namespace = `ext:${owner.id}:same`;
+  const namespace = `ext:${JSON.stringify([owner.id, null, "same"])}`;
   const registration = registerExtensionTranslationBundles(
     {
       themes: [],

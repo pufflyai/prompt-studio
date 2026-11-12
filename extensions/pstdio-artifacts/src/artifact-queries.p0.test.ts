@@ -3,7 +3,7 @@ import { createWebviewClient, type GuestHost } from "@pstdio/sdk/extensions";
 import { createArtifactQueries } from "./artifact-queries";
 import type { ArtifactSummary } from "./artifacts";
 import type { commands } from "./commands";
-import { artifactResource, artifactUrl } from "./contracts";
+import { artifactResource, artifactTarget, artifactUrl } from "./contracts";
 import { extensionId } from "./events";
 
 const turn = () => new Promise<void>((resolve) => setImmediate(resolve));
@@ -42,7 +42,19 @@ test("removing a lazy artifact preview releases its finite read membership", asy
 });
 
 test("a recreated artifact frame restores the chosen immutable revision without reading another body", () => {
-  const content = { html: "<p>Chosen revision</p>", revisionId: "chosen" };
+  const content = {
+    id: "chosen",
+    artifactId: "item",
+    title: "Chosen revision",
+    publishedAt: "2026-11-12T00:00:00Z",
+    size: 22,
+    hash: "chosen-html",
+    url: artifactUrl("selected", "item"),
+    resource: artifactResource("selected", "item", "Chosen revision"),
+    target: artifactTarget("selected", "item", "Chosen revision"),
+    html: "<p>Chosen revision</p>",
+    revisionId: "chosen",
+  };
   const host = {
     extensionId,
     propsStore: {

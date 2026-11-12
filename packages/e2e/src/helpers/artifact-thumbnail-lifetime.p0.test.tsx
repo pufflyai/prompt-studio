@@ -1,11 +1,9 @@
 import { expect, test } from "bun:test";
 import { createWebviewClient } from "@pstdio/sdk/extensions";
 import { ChakraProvider, psTheme } from "@pstdio/ui";
+import { ArtifactThumbnail, ArtifactTranslations, createArtifactQueries } from "pstdio-artifacts/testing";
 import { createElement } from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
-import { createArtifactQueries } from "../../../../extensions/pstdio-artifacts/src/artifact-queries";
-import { ArtifactThumbnail } from "../../../../extensions/pstdio-artifacts/src/components/artifact-thumbnail";
-import { ArtifactTranslations } from "../../../../extensions/pstdio-artifacts/src/translations";
 import { createRetainedExtensionQueryFixture } from "./retained-extension-query.fixture";
 
 test("hiding an Artifact thumbnail cancels its actual optional HTML read and rejects a late intersection callback", async () => {
