@@ -1,16 +1,14 @@
-import { createDocumentRelayConnection, createLiveConnection, type LiveConnection } from "pstdio-sync/relay";
-import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
+import { createDocumentRelayConnection, createLiveConnection } from "pstdio-sync/relay";
 import { apiLogger } from "../../lib/logger";
-import { createLogProgress, personalHistoryProgress } from "../personal-history/log-progress";
+import { personalHistoryProgress } from "../personal-history/log-progress";
 import { createPersonalAnnouncements } from "./personal-announcements";
-import { createPersonalContext, createPersonalReaders, personalLiveReceiver } from "./personal-context";
-import { createPersonalDocuments } from "./personal-documents";
+import { personalLiveReceiver } from "./personal-context";
 import { createPersonalIndex } from "./personal-index";
 import { createPersonalLive } from "./personal-live";
 import { createPersonalPreviews } from "./personal-previews";
-import { createPersonalPublication } from "./personal-publication";
+import { createPersonalSource, type RelayPersonalInput } from "./personal-source";
 import { watchPersonalHistory } from "./personal-watches";
-import type { RelayWorkbench } from "./runtime";
+import { createSourceActivity } from "./source-activity";
 
 const personalSyncFailed = (workbenchId: string) =>
   apiLogger.warn({ event: "relay.personal.reconnecting", workbenchId }, "Personal history sync will retry");
@@ -31,14 +29,6 @@ const closePersonalResources = (resources: { close(): unknown }[]) => {
  * history here. Each device publishes index changes as an append-only log. Each conversation is a log of
  * completed messages, and streaming text goes over the live channel, which stores nothing.
  */
-interface RelayPersonalInput {
-  config: RelayWorkbench;
-  deps: ExtensionsRouteDeps;
-  signal: AbortSignal;
-  access: () => Promise<{ token: string; expiresAt: string }>;
-  live?: LiveConnection;
-  statusChanged?: () => void;
-}
 
 const personalConnection = (input: RelayPersonalInput, signal: AbortSignal) =>
   input.live ??
@@ -51,45 +41,26 @@ const personalConnection = (input: RelayPersonalInput, signal: AbortSignal) =>
 
 export const startRelayPersonalHistory = (input: RelayPersonalInput) => {
   const { config, deps } = input;
+  const activity = createSourceActivity(input.statusChanged);
   const controller = new AbortController();
   const signal = AbortSignal.any([controller.signal, input.signal]);
   const live = personalConnection(input, signal);
-  const context = createPersonalContext(config, deps);
-  const { history, namespace } = context;
-  const documents = createPersonalDocuments({
-    config,
-    context,
+  const { context, documents, publishingSessions, publisher, progress, readers } = createPersonalSource({
+    ...input,
     signal,
-    access: input.access,
+    activity,
     subscribe: (spaceOwner, id) => connection.subscribe(spaceOwner, id),
-  });
-  const progress = createLogProgress();
-  const publishingSessions = new Set<string>();
-  let firstDownloaded = false;
-  const publisher = createPersonalPublication({
-    files: deps.personalHistoryService.logs,
-    namespace,
-    deviceId: config.environmentId,
-    streams: context.streams,
-    deps,
     interested: (id) => channel.watching(id),
-    published: (sessionId) => publishingSessions.delete(sessionId),
     failed: (id) => {
       changedSessions.add(id);
       connection.retry();
     },
     wake: () => connection.wake(),
-    statusChanged: input.statusChanged,
-    history,
-    documents,
+    admit: (work) => connection.admit(work),
   });
-  const { liveReceiver, readLogs, catchUp, requestLog } = createPersonalReaders(
-    deps,
-    deps.personalHistoryService.logs,
-    namespace,
-    config.environmentId,
-    context,
-  );
+  const { history } = context;
+  let firstDownloaded = false;
+  const { liveReceiver, readLogs, catchUp, requestLog } = readers;
 
   // Sync state lasts as long as the key generation. An access renewal keeps it; only a lost connection makes the
   // next run check everything again.
@@ -113,7 +84,7 @@ export const startRelayPersonalHistory = (input: RelayPersonalInput) => {
   });
   const announcements = createPersonalAnnouncements(deps, config.workbenchId, signal);
   const prepare = async (attemptSignal: AbortSignal) => {
-    const prepared = await documents.prepare(attemptSignal);
+    const prepared = await activity.run("loading-keys", () => documents.prepare(attemptSignal), attemptSignal);
     await channel.prepare(prepared.personal, index.streaming);
     publisher.prepare(prepared.personal, channel.send);
     if (prepared.renewed || prepared.recreated) {
@@ -152,6 +123,7 @@ export const startRelayPersonalHistory = (input: RelayPersonalInput) => {
       input.statusChanged?.();
     },
     synchronize: async (attemptSignal) => {
+      activity.start();
       const { personal } = await prepare(attemptSignal);
       const full = publishAll || readAll;
       const captured = full || localIndexChanged;
@@ -165,25 +137,38 @@ export const startRelayPersonalHistory = (input: RelayPersonalInput) => {
         const local = captured || own.length > 0 || publisher.hasPendingHeads();
         lastRun = await waitForPersonalRun(lastRun, publishing.read, local);
         if (captured) {
-          const previous = await index.capture(full);
+          const previous = await activity.run("personal-index", () => index.capture(full), attemptSignal);
           await channel.prepare(personal, index.streaming);
           previews.admitted(previous);
         }
         attemptSignal.throwIfAborted();
         const sessions = publishing.all ? [...index.owned] : own.filter((id) => index.owned.has(id));
         for (const id of sessions) publishingSessions.add(id);
-        await publisher.publish(sessions, personal, documents.relayFor(personal), { skipUnchanged: publishing.all });
+        await activity.run(
+          "publishing-history",
+          () => publisher.publish(sessions, personal, documents.relayFor(personal), { skipUnchanged: publishing.all }),
+          attemptSignal,
+        );
         attemptSignal.throwIfAborted();
         previews.flush();
         const remote = remoteIndexChanged;
         remoteIndexChanged = false;
-        const indexSynced = await publisher.synchronizeIndex(full, captured, remote);
+        const indexSynced = await activity.run(
+          "personal-index",
+          () => publisher.synchronizeIndex(full, captured, remote),
+          attemptSignal,
+        );
         attemptSignal.throwIfAborted();
         if (indexSynced) await channel.prepare(personal, index.streaming);
         if (publishing.read || indexSynced || captured)
-          await readLogs(personal, documents.relayFor(personal), history, index.owned, progress, input.statusChanged);
+          await activity.run(
+            "receiving-history",
+            () => readLogs(personal, documents.relayFor(personal), history, index.owned, progress, input.statusChanged),
+            attemptSignal,
+          );
         if (indexSynced) await announcements.announce();
         firstDownloaded ||= progress.status(new Set()).downloaded && (await documents.status()).downloaded;
+        activity.complete();
       } catch (error) {
         interrupted(publishing, own);
         throw error;
@@ -206,10 +191,13 @@ export const startRelayPersonalHistory = (input: RelayPersonalInput) => {
     logChanged: (id, format) => {
       requestLog(id, format);
       if (!documents.space) return;
-      void catchUp(id, documents.space, documents.relayFor(documents.space), format).catch(() => {
-        readAll = true;
-        connection.retry();
-      });
+      const space = documents.space;
+      void connection
+        .admit(() => activity.run("receiving-history", () => catchUp(id, space, documents.relayFor(space), format)))
+        .catch(() => {
+          readAll = true;
+          connection.retry();
+        });
     },
     received: personalLiveReceiver(liveReceiver, () => documents.space),
     owns: documents.owns,
@@ -246,15 +234,19 @@ export const startRelayPersonalHistory = (input: RelayPersonalInput) => {
   });
   return {
     retry: connection.retry,
+    restart: connection.restart,
     async status() {
       const indexStatus = await documents.status(publisher.hasPendingHeads());
       const pending = new Set([...changedSessions, ...publishingSessions].filter((id) => index.owned.has(id)));
       const logs = progress.status(pending);
-      return personalHistoryProgress(indexStatus, logs, firstDownloaded, connection.status());
+      return {
+        ...personalHistoryProgress(indexStatus, logs, firstDownloaded, connection.status()),
+        ...activity.status(),
+      };
     },
     done: connection.done.finally(async () => {
       await stopWatching();
-      closePersonalResources([channel, documents, publisher, liveReceiver]);
+      closePersonalResources([channel, documents, publisher, liveReceiver, activity]);
     }),
     close() {
       void stopWatching();
