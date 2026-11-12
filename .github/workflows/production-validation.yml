@@ -56,6 +56,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
+      artifact_id: ${{ steps.identity.outputs.artifact-id }}
       desktop_matrix: ${{ steps.platforms.outputs.desktop_matrix }}
       performance_matrix: ${{ steps.platforms.outputs.performance_matrix }}
     steps:
@@ -97,6 +98,7 @@ jobs:
           bun scripts/ci/production-payload.ts check
           bun scripts/ci/production-artifacts.ts production-artifacts.json
       - name: Preserve candidate identity
+        id: identity
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -161,11 +163,12 @@ jobs:
           bun-version-file: package.json
       - uses: actions/download-artifact@v4
         with:
-          name: production-candidate-attempt-${{ github.run_attempt }}
+          artifact-ids: ${{ needs.candidate.outputs.artifact_id }}
+          merge-multiple: true
       - name: Download actual consumer attestations
         uses: actions/download-artifact@v4
         with:
-          pattern: production-evidence-*-attempt-${{ github.run_attempt }}
+          pattern: production-evidence-*-attempt-*
           path: production-evidence
       - name: Require complete matching candidate certification
         if: always()

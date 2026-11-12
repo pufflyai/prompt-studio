@@ -24,11 +24,17 @@ test("resuming Cloud after local edits replaces every owner of the retired proje
   const reachSynced = async () => {
     const end = Date.now() + 3000;
     let statuses: ProjectSyncStatus[] = [];
+    const trace: unknown[] = [];
     do {
       statuses = await Promise.all(runtimes.map((runtime) => runtime.status(owner.workbenchId)));
-      if (statuses.every((status) => status.state === "synced")) return;
+      trace.push({ at: Date.now(), statuses });
+      if (statuses.every((status) => status.state === "synced")) {
+        console.info("Diagnostic cloud convergence", trace);
+        return;
+      }
       await Bun.sleep(10);
     } while (Date.now() < end);
+    console.info("Diagnostic cloud convergence failed", trace);
     expect(statuses).toMatchObject([{ state: "synced" }, { state: "synced" }]);
   };
   try {

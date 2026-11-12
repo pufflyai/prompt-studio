@@ -103,3 +103,36 @@ test("resizes, closes, and reopens the Secondary Panel within the interaction bu
   );
   expect(misses).toEqual([]);
 });
+
+let diagnosticProfile: Awaited<ReturnType<import("@playwright/test").BrowserContext["newCDPSession"]>> | undefined;
+test.beforeEach(async ({ page }) => {
+  diagnosticProfile = await page.context().newCDPSession(page);
+  await diagnosticProfile.send("Profiler.enable");
+  await diagnosticProfile.send("Profiler.start");
+  page.on("pageerror", (error) => console.info("Diagnostic page error", error.message));
+  page.on("requestfailed", (request) =>
+    console.info("Diagnostic failed request", new URL(request.url()).pathname, request.failure()?.errorText),
+  );
+});
+test.afterEach(async ({ page }, info) => {
+  if (diagnosticProfile)
+    await info.attach("release-cpu-profile.json", {
+      contentType: "application/json",
+      body: JSON.stringify(await diagnosticProfile.send("Profiler.stop").catch(() => null)),
+    });
+  if (info.status !== "passed")
+    await info.attach("release-page-state.json", {
+      contentType: "application/json",
+      body: JSON.stringify(
+        await page
+          .evaluate(() => ({
+            url: location.pathname,
+            frames: [...document.querySelectorAll("iframe")].map((frame) => ({
+              title: frame.title,
+              src: frame.getAttribute("src"),
+            })),
+          }))
+          .catch(() => null),
+      ),
+    });
+});

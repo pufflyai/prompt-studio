@@ -26,6 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
+      plan_artifact_id: ${{ steps.test_plan.outputs.artifact-id }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -36,6 +37,7 @@ jobs:
       - id: plan
         run: bun scripts/ci/benchmark-ci-plan.ts "${{ inputs.release_channel }}"
       - uses: actions/upload-artifact@v4
+        id: test_plan
         with:
           name: test-plan-attempt-${{ github.run_attempt }}
           path: test-results/ci/plan.json
@@ -71,6 +73,7 @@ jobs:
         run: bun x --no-install playwright install-deps chromium
       - uses: ./.github/actions/run-test-plan
         with:
+          plan-artifact-id: ${{ needs.plan.outputs.plan_artifact_id }}
           job: ${{ matrix.job }}
           prebuilt: "false"
           display: "true"
@@ -98,11 +101,12 @@ jobs:
           bun-version-file: package.json
       - uses: actions/download-artifact@v4
         with:
-          name: test-plan-attempt-${{ github.run_attempt }}
+          artifact-ids: ${{ needs.plan.outputs.plan_artifact_id }}
+          merge-multiple: true
           path: test-results/ci
       - uses: actions/download-artifact@v4
         with:
-          pattern: test-plan-results-*-attempt-${{ github.run_attempt }}
+          pattern: test-plan-results-*-attempt-*
           path: test-results/ci/bundles
       - run: bun scripts/ci/verify-test-results.ts test-results/ci/plan.json test-results/ci/bundles
       - uses: actions/upload-artifact@v4

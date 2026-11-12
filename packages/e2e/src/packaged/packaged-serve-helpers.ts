@@ -40,6 +40,15 @@ export const signInBrowser = async (
     headers: { ...runtimeAuthorization(descriptor), connection: "close" },
   });
   if (!response.ok) throw new Error(`Browser login failed with HTTP ${response.status}`);
+  page.on("requestfailed", (request) =>
+    console.info("Diagnostic browser request failed", new URL(request.url()).pathname, request.failure()?.errorText),
+  );
+  page.on("pageerror", (error) => console.info("Diagnostic browser error", error.message));
+  page.on("response", (response) => {
+    const path = new URL(response.url()).pathname;
+    if (path.startsWith("/runtime/")) console.info("Diagnostic runtime response", path, response.status(), Date.now());
+  });
+  console.info("Diagnostic browser navigation", Date.now());
   const redeemed = page.waitForResponse((reply) => new URL(reply.url()).pathname === "/runtime/browser-session");
   const ready = page.waitForResponse((reply) => new URL(reply.url()).pathname === "/runtime/ready");
   const url = new URL(((await response.json()) as { url: string }).url);

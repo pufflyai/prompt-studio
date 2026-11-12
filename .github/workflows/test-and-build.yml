@@ -75,6 +75,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
+      plan_artifact_id: ${{ steps.test_plan.outputs.artifact-id }}
       stage: ${{ steps.scope.outputs.stage }}
       docker_build: ${{ steps.scope.outputs.dockerBuild }}
       lerna_filter: ${{ steps.scope.outputs.lernaFilter }}
@@ -129,6 +130,7 @@ jobs:
           SIGNED_CANDIDATE: ${{ inputs.artifact_run_id != '' }}
         run: bun scripts/ci/pull-request-ci-scope.ts
       - uses: actions/upload-artifact@v4
+        id: test_plan
         with:
           name: test-plan-attempt-${{ github.run_attempt }}
           path: test-results/ci/plan.json
@@ -242,6 +244,7 @@ jobs:
       - name: Check edited tests with their registered runners
         uses: ./.github/actions/run-test-plan
         with:
+          plan-artifact-id: ${{ needs.scope.outputs.plan_artifact_id }}
           job: edited-${{ strategy.job-index }}
           prebuilt: "false"
           display: "${{ matrix.browser || matrix.desktop }}"
@@ -287,6 +290,7 @@ jobs:
         if: ${{ !cancelled() }}
         uses: ./.github/actions/run-test-plan
         with:
+          plan-artifact-id: ${{ needs.scope.outputs.plan_artifact_id }}
           job: repository
       - name: Verify tested merge content and inputs
         if: needs.scope.outputs.stage == 'main'
@@ -356,6 +360,7 @@ jobs:
         if: ${{ !cancelled() }}
         uses: ./.github/actions/run-test-plan
         with:
+          plan-artifact-id: ${{ needs.scope.outputs.plan_artifact_id }}
           job: package-${{ matrix.shard }}
           package-filter: ${{ matrix.lernaFilter }}
           prebuilt: "true"
@@ -423,6 +428,7 @@ jobs:
       - name: Test selected isolated integration contracts
         uses: ./.github/actions/run-test-plan
         with:
+          plan-artifact-id: ${{ needs.scope.outputs.plan_artifact_id }}
           job: integrations-${{ matrix.priority }}-${{ matrix.shard }}
           prebuilt: "true"
           display: "false"
@@ -476,6 +482,7 @@ jobs:
       - name: Test selected Bun contracts
         uses: ./.github/actions/run-test-plan
         with:
+          plan-artifact-id: ${{ needs.scope.outputs.plan_artifact_id }}
           job: contracts-${{ matrix.priority }}-${{ matrix.shard }}
           prebuilt: "true"
           display: "false"
@@ -525,6 +532,7 @@ jobs:
       - name: Test selected priority files
         uses: ./.github/actions/run-test-plan
         with:
+          plan-artifact-id: ${{ needs.scope.outputs.plan_artifact_id }}
           job: database-${{ matrix.package }}-${{ matrix.priority }}-${{ matrix.shard }}
           prebuilt: "true"
           display: "false"
@@ -633,6 +641,7 @@ jobs:
         if: ${{ !cancelled() && (matrix.lane == 'unit') }}
         uses: ./.github/actions/run-test-plan
         with:
+          plan-artifact-id: ${{ needs.scope.outputs.plan_artifact_id }}
           job: windows-unit-${{ matrix.shard }}
           prebuilt: "true"
           display: "false"
@@ -711,6 +720,7 @@ jobs:
         if: ${{ !cancelled() }}
         uses: ./.github/actions/run-test-plan
         with:
+          plan-artifact-id: ${{ needs.scope.outputs.plan_artifact_id }}
           job: windows-database-${{ matrix.package }}-${{ matrix.shard }}
           prebuilt: "true"
           display: "false"
@@ -770,6 +780,7 @@ jobs:
       - name: Test selected component contracts
         uses: ./.github/actions/run-test-plan
         with:
+          plan-artifact-id: ${{ needs.scope.outputs.plan_artifact_id }}
           job: component-${{ matrix.package }}-${{ matrix.priority }}
       - name: "[phase:report-transfer] Preserve component evidence"
         if: always()
@@ -832,6 +843,7 @@ jobs:
       - name: Test basic dashboard flows
         uses: ./.github/actions/run-test-plan
         with:
+          plan-artifact-id: ${{ needs.scope.outputs.plan_artifact_id }}
           job: smoke
       - name: "[phase:report-transfer] Preserve browser smoke reports and failure traces"
         if: always()
@@ -905,6 +917,7 @@ jobs:
       - name: Test UI e2e
         uses: ./.github/actions/run-test-plan
         with:
+          plan-artifact-id: ${{ needs.scope.outputs.plan_artifact_id }}
           job: app-${{ matrix.priority }}-${{ matrix.shard }}
           prebuilt: "true"
           display: "false"
@@ -958,6 +971,7 @@ jobs:
       - name: Test CLI e2e
         uses: ./.github/actions/run-test-plan
         with:
+          plan-artifact-id: ${{ needs.scope.outputs.plan_artifact_id }}
           job: cli
           prebuilt: "true"
           display: "false"
@@ -1010,6 +1024,7 @@ jobs:
         if: matrix.suite == 'vite'
         uses: ./.github/actions/run-test-plan
         with:
+          plan-artifact-id: ${{ needs.scope.outputs.plan_artifact_id }}
           job: packaged-${{ matrix.suite }}-${{ matrix.priority }}-${{ matrix.shard }}
           prebuilt: "true"
           display: "false"
@@ -1029,6 +1044,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         uses: ./.github/actions/run-test-plan
         with:
+          plan-artifact-id: ${{ needs.scope.outputs.plan_artifact_id }}
           job: packaged-${{ matrix.suite }}-${{ matrix.priority }}-${{ matrix.shard }}
           prebuilt: "true"
           display: "false"
@@ -1072,6 +1088,7 @@ jobs:
       - name: Run every registered Bun owner with its existing limits
         uses: ./.github/actions/run-test-plan
         with:
+          plan-artifact-id: ${{ needs.scope.outputs.plan_artifact_id }}
           job: quarantine-bun-${{ matrix.os }}
           prebuilt: "false"
           display: "false"
@@ -1116,6 +1133,7 @@ jobs:
       - name: Run every registered native UI case without retries
         uses: ./.github/actions/run-test-plan
         with:
+          plan-artifact-id: ${{ needs.scope.outputs.plan_artifact_id }}
           job: quarantine-ui-native
           prebuilt: "true"
           display: "false"
@@ -1168,6 +1186,7 @@ jobs:
           E2E_REQUIRE_WEBVIEW_BROWSERS: "1"
         uses: ./.github/actions/run-test-plan
         with:
+          plan-artifact-id: ${{ needs.scope.outputs.plan_artifact_id }}
           job: quarantine-browser
           prebuilt: "true"
           display: "false"
@@ -1257,6 +1276,7 @@ jobs:
         if: needs.scope.outputs.production == 'true' && matrix.platform == 'darwin' && matrix.shard == 1
         uses: ./.github/actions/run-test-plan
         with:
+          plan-artifact-id: ${{ needs.scope.outputs.plan_artifact_id }}
           job: dmg-${{ matrix.target }}
           prebuilt: "true"
           display: "false"
@@ -1307,6 +1327,7 @@ jobs:
         if: needs.scope.outputs.production == 'true' && matrix.tests && matrix.shard == 1
         uses: ./.github/actions/run-test-plan
         with:
+          plan-artifact-id: ${{ needs.scope.outputs.plan_artifact_id }}
           job: electron-${{ matrix.target }}
           prebuilt: "true"
           display: "true"
@@ -1324,6 +1345,7 @@ jobs:
           DEBUG: pw:api,pw:browser
         uses: ./.github/actions/run-test-plan
         with:
+          plan-artifact-id: ${{ needs.scope.outputs.plan_artifact_id }}
           job: desktop-${{ matrix.target }}-${{ matrix.shard }}/${{ matrix.shards }}
           prebuilt: "true"
           display: "true"
@@ -1331,6 +1353,7 @@ jobs:
         if: needs.scope.outputs.production == 'true' && matrix.packaged && matrix.shard == 1 && !cancelled() && steps.desktop.outcome == 'success'
         uses: ./.github/actions/run-test-plan
         with:
+          plan-artifact-id: ${{ needs.scope.outputs.plan_artifact_id }}
           job: desktop-quarantine-${{ matrix.target }}
           prebuilt: "true"
           display: "true"
@@ -1395,6 +1418,7 @@ jobs:
       artifact_attempt: ${{ inputs.artifact_attempt || '1' }}
       profile: full
       test_plan: true
+      test_plan_artifact_id: ${{ needs.scope.outputs.plan_artifact_id }}
       platforms: ${{ needs.scope.outputs.toolchain_matrix }}
       priority: P2
       gate_plan: ${{ needs.scope.outputs.gate_plan }}
@@ -1555,11 +1579,12 @@ jobs:
       - *a1
       - uses: actions/download-artifact@v4
         with:
-          name: test-plan-attempt-${{ github.run_attempt }}
+          artifact-ids: ${{ needs.scope.outputs.plan_artifact_id }}
+          merge-multiple: true
           path: test-results/ci
       - uses: actions/download-artifact@v4
         with:
-          pattern: test-plan-results-*-attempt-${{ github.run_attempt }}
+          pattern: test-plan-results-*-attempt-*
           path: test-results/ci/bundles
       - name: Require complete planned test evidence
         run: bun scripts/ci/verify-test-results.ts test-results/ci/plan.json test-results/ci/bundles

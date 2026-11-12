@@ -108,6 +108,15 @@ test("idle extension preview stays quiet", async () => {
       metrics: rendererMetrics(measured, IDLE_BUDGET),
     });
   } finally {
+    if (app)
+      await test.info().attach("release-frame-trace.json", {
+        contentType: "application/json",
+        body: JSON.stringify(
+          await app.page
+            .evaluate(() => (window as unknown as { releaseFrameTrace?: unknown[] }).releaseFrameTrace)
+            .catch(() => null),
+        ),
+      });
     await disposePackagedApp(app);
   }
 });
@@ -139,6 +148,39 @@ test("long tool-heavy stream stays within budget", async () => {
     await expect(
       app.page.getByLabel("Main").getByRole("heading", { name: "No messages yet", exact: true }),
     ).toBeVisible();
+    const page = app.page;
+
+    await page.evaluate(() => {
+      const entries: unknown[] = [];
+      const record = () => {
+        const log = [...document.querySelectorAll<HTMLElement>('[role="log"]')].find((element) =>
+          element.checkVisibility(),
+        );
+        const viewport = log?.querySelector<HTMLElement>('[data-scope="scroll-area"][data-part="viewport"]');
+        const rows = [...(log?.querySelectorAll<HTMLElement>("[data-chat-message-list-item]") ?? [])];
+        const last = rows.at(-1);
+        const sample = {
+          at: Date.now(),
+          visibility: document.visibilityState,
+          focused: document.hasFocus(),
+          rows: rows.length,
+          last: last?.textContent?.slice(0, 24),
+          top: viewport?.scrollTop,
+          height: viewport?.scrollHeight,
+          following: !log?.querySelector('[aria-label="Scroll to latest message"]'),
+        };
+        entries.push(sample);
+        if (entries.length > 256) entries.shift();
+      };
+      (window as unknown as { releaseFrameTrace: unknown[] }).releaseFrameTrace = entries;
+      new MutationObserver(record).observe(document.getElementById("root")!, {
+        subtree: true,
+        childList: true,
+        characterData: true,
+      });
+      document.addEventListener("visibilitychange", record);
+      record();
+    });
     const workbench = await openRendererSession(app.page);
 
     const status = async () => {
@@ -146,7 +188,9 @@ test("long tool-heavy stream stays within budget", async () => {
         headers: { authorization: `Bearer ${app!.runtime.token}` },
       });
       expect(response.ok).toBe(true);
-      return ((await response.json()) as { status: string }).status;
+      const value = ((await response.json()) as { status: string }).status;
+      if (value === "completed") console.info("Diagnostic backend completed", Date.now());
+      return value;
     };
     // Start only after the session is open. Auto-follow can hide Step 1 before a
     // locator sees it, so measure the entire replay rather than racing that row.
@@ -175,6 +219,15 @@ test("long tool-heavy stream stays within budget", async () => {
       metrics: rendererMetrics(measured, STREAMING_BUDGET),
     });
   } finally {
+    if (app)
+      await test.info().attach("release-frame-trace.json", {
+        contentType: "application/json",
+        body: JSON.stringify(
+          await app.page
+            .evaluate(() => (window as unknown as { releaseFrameTrace?: unknown[] }).releaseFrameTrace)
+            .catch(() => null),
+        ),
+      });
     await disposePackagedApp(app);
   }
 });

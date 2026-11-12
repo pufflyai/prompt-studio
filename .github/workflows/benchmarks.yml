@@ -1,197 +1,154 @@
-name: Benchmarks
-run-name: Benchmarks ${{ inputs.release_tag || inputs.commits }} on ${{ inputs.platforms }}
-
-# Every run measures each given commit and suite once on the same runner.
-# The Performance pages in the pstdio-dev extension start these runs and read their artifacts.
+name: Release failure diagnostics
 on:
   workflow_dispatch:
-    inputs:
-      commits:
-        description: Commits, branches, or tags separated by commas. The first one is the base.
-        required: true
-      suites:
-        description: Suite ids separated by commas. Empty runs every suite.
-        default: ""
-      platforms:
-        description: Platforms separated by commas (linux-x64, darwin-arm64, darwin-x64, win32-x64).
-        default: linux-x64
-      samples:
-        description: Executions per commit and suite. Must be 1; CI never repeats tests.
-        default: "1"
-      release_tag:
-        description: Release these results belong to. The release workflow sets it after publishing; it only names the run.
-        default: ""
-      qualify_source:
-        description: Qualify one exact commit with full production benchmark workloads instead of comparative samples
-        type: boolean
-        default: false
-      release_channel:
-        type: choice
-        options: [stable, nightly]
-        default: stable
-
 permissions:
   contents: read
   actions: read
-
 jobs:
-  qualification:
-    if: inputs.qualify_source
-    uses: ./.github/workflows/source-benchmarks.yml
-    with:
-      source_sha: ${{ inputs.commits }}
-      release_channel: ${{ inputs.release_channel }}
-  plan:
-    if: ${{ !inputs.qualify_source }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      include: ${{ steps.plan.outputs.include }}
-      checkouts: ${{ steps.plan.outputs.checkouts }}
-      samples: ${{ steps.plan.outputs.samples }}
+  source_display:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          fetch-depth: 0
+          node-version: '24.22.1'
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-      # One job per platform and suite: suites run in parallel, and one slow or broken suite
-      # cannot hold back or fail the others.
-      - name: Resolve commits, platforms, and suites
-        id: plan
-        env:
-          COMMITS: ${{ inputs.commits }}
-          PLATFORMS: ${{ inputs.platforms || 'linux-x64' }}
-          SUITES: ${{ inputs.suites }}
-          SAMPLES: ${{ inputs.samples }}
-        run: |
-          set -euo pipefail
-          if [ "${SAMPLES:-1}" != "1" ]; then
-            echo "CI executes each benchmark once; samples must be 1" >&2
-            exit 1
-          fi
-          checkouts='[]'
-          IFS=',' read -ra refs <<< "$COMMITS"
-          for ref in "${refs[@]}"; do
-            [ -n "$ref" ] || continue
-            git fetch --quiet origin "$ref" 2>/dev/null || true
-            sha=$(git rev-parse --verify "$ref^{commit}" 2>/dev/null || git rev-parse --verify "origin/$ref^{commit}")
-            # Two names for one commit would record every sample twice.
-            checkouts=$(jq -c --arg sha "$sha" --arg ref "$ref" 'if any(.sha == $sha) then . else . + [{sha: $sha, ref: $ref}] end' <<< "$checkouts")
-          done
-          if [ "$(jq length <<< "$checkouts")" = 0 ]; then
-            echo "No commits to measure" >&2
-            exit 1
-          fi
-          RUNNERS='{"linux-x64":"ubuntu-24.04","darwin-arm64":"macos-15","darwin-x64":"macos-15-intel","win32-x64":"windows-2025"}'
-          include='[]'
-          IFS=',' read -ra platforms <<< "$PLATFORMS"
-          for platform in "${platforms[@]}"; do
-            os=$(jq -r --arg platform "$platform" '.[$platform] // empty' <<< "$RUNNERS")
-            if [ -z "$os" ]; then
-              echo "Unknown platform $platform" >&2
-              exit 1
-            fi
-            available=$(bun packages/benchmarks/src/cli.ts describe --platform "$platform")
-            # A chosen suite this platform cannot run starts no job, so the run says so instead of dropping it quietly.
-            for suite in $(jq -r --argjson available "$available" '($ENV.SUITES | split(",")) - [$available[].id] | .[] | select(. != "")' <<< 'null'); do
-              echo "::warning title=Suite skipped::$suite does not run on $platform"
-            done
-            include=$(jq -c --argjson available "$available" --arg suites "$SUITES" --arg platform "$platform" --arg os "$os" \
-              '. + [$available[] | select($suites == "" or (.id | IN($suites | split(",")[]))) | {platform: $platform, os: $os, suite: .id}]' \
-              <<< "$include")
-          done
-          {
-            echo "checkouts=$checkouts"
-            echo "include=$include"
-            echo "samples=1"
-          } >> "$GITHUB_OUTPUT"
-
-  benchmark:
-    name: ${{ matrix.platform }} · ${{ matrix.suite }}
-    needs: plan
-    runs-on: ${{ matrix.os }}
-    # Approved in PS-920 as an upper limit until the first full runs give real timings.
-    timeout-minutes: 45
-    strategy:
-      fail-fast: false
-      matrix:
-        include: ${{ fromJSON(needs.plan.outputs.include) }}
-    defaults:
-      run:
+      - uses: ./.github/actions/setup-ci-cache
+        with:
+          install-strategy: native
+      - run: bun run build -- --scope @pstdio/desktop --scope e2e --include-dependencies
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends openbox x11-utils xvfb
+      - name: Observe both source Electron phases on the original shared display
+        working-directory: clients/desktop
         shell: bash
+        run: |
+          xvfb-run -a -e "$RUNNER_TEMP/release-xvfb.log" bash -c '
+            set +e
+            TEST_PRIORITIES=P1 bunx --no-install playwright test --config playwright.config.ts
+            first=$?
+            echo "Display state between P1 and P2"
+            ps -C Xvfb -o pid,ppid,args
+            ls -l /tmp/.X11-unix
+            test -f "$XAUTHORITY" && echo "Xauthority exists"
+            xprop -root _NET_SUPPORTING_WM_CHECK
+            TEST_PRIORITIES=P2 bunx --no-install playwright test --config playwright.config.ts
+            second=$?
+            exit $((first | second))
+          '
+      - name: Check the previously failed streaming case
+        if: ${{ !cancelled() }}
+        run: bun run --cwd packages/e2e test:packaged:cli -- src/packaged/packaged-chat-motion-smoke.p2.test.ts -t 'retains streaming messages and cached history'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-linux-diagnostic
+          path: |
+            clients/desktop/test-results
+            packages/e2e/test-results
+            ${{ runner.temp }}/release-xvfb.log
+  windows_cloud:
+    runs-on: windows-2025
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          fetch-depth: 0
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+          node-version: '24.22.1'
+      - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
+      - uses: ./.github/actions/setup-ci-cache
         with:
-          node-version: "24.22.1"
-
-      - name: Set up Windows desktop tests
-        if: runner.os == 'Windows'
-        uses: ./.github/actions/setup-windows-desktop-tests
-
-      - name: Install browser system dependencies
-        if: runner.os == 'Linux'
-        run: npx --yes playwright install-deps chromium
-
-      # Each commit gets its own checkout and dependencies, so it runs the code and benchmarks it shipped with.
-      # Paths use forward slashes, because Git Bash drops the backslashes of Windows paths.
-      - name: Run benchmarks
-        env:
-          CHECKOUTS: ${{ needs.plan.outputs.checkouts }}
-          SUITE: ${{ matrix.suite }}
-          SAMPLES: ${{ needs.plan.outputs.samples }}
+          install-strategy: native
+          windows-dev-drive: 'true'
+      - run: bun run build -- --scope e2e --include-dependencies
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-build-attempt-1
+          run-id: 43214095816
+          github-token: ${{ github.token }}
+      - shell: bash
         run: |
-          set -euo pipefail
-          temp="$RUNNER_TEMP"
-          if command -v cygpath > /dev/null; then temp=$(cygpath -m "$RUNNER_TEMP"); fi
-          args=()
-          while IFS=$'\t' read -r sha ref; do
-            dir="$temp/checkouts/$sha"
-            git worktree add --detach "$dir" "$sha"
-            (cd "$dir" && bun scripts/ci/install-native-dependencies.ts)
-            args+=("--checkout" "$dir=$sha=$ref")
-          # jq on Windows ends lines with CRLF, and read keeps the CR in the last field.
-          done < <(jq -r '.[] | [.sha, .ref] | @tsv' <<< "$CHECKOUTS" | tr -d '\r')
-          bun packages/benchmarks/src/cli.ts run "${args[@]}" \
-            --suites "$SUITE" --samples "$SAMPLES" \
-            --cache "$temp/benchmark-cache" --out "$temp/benchmark-results"
-
-      # Failed samples keep the measurements they recorded, so the results upload either way.
-      - name: Upload results
+          bun scripts/ci/production-payload.ts check
+          tar -xzf release-build.tar.gz
+      - name: Observe cloud picker authentication on the original compiled application
+        env:
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/cli-win-x64/bin/pstdio.exe
+        run: bun run --cwd packages/e2e test:packaged:cli -- src/packaged/packaged-two-device-sync-smoke.p2.test.ts -t 'a new device opens its cloud project from the picker'
+      - name: Observe the failed native Cloud resumption contract
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
+        working-directory: packages/pstdio-api
+        env:
+          PSTDIO_DEFAULT_EXTENSIONS: '[]'
+          PSTDIO_EXTENSION_WEBVIEW_BUILDS: '0'
+        run: bun src/test-utils/run-api-tests.ts --files='["src/services/relay/runtime-resumption.p1.test.ts"]'
+      - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: benchmark-results-${{ matrix.platform }}-${{ matrix.suite }}
-          path: ${{ runner.temp }}/benchmark-results/*.json
-          if-no-files-found: error
-
-      - name: Preserve ordered desktop benchmark quarantine evidence
-        if: ${{ !cancelled() && matrix.suite == 'desktop' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: benchmark-desktop-evidence-${{ matrix.platform }}
+          name: release-windows-cloud-diagnostic
           path: |
-            ${{ runner.temp }}/checkouts/*/clients/desktop/test-results/packaged-benchmarks*.json
-            ${{ runner.temp }}/checkouts/*/test-results/quarantine/packaged-desktop-benchmark
-          if-no-files-found: error
-
-      - name: Preserve ordered workbench benchmark quarantine evidence
-        if: ${{ !cancelled() && matrix.suite == 'workbench' }}
-        uses: actions/upload-artifact@v4
+            packages/e2e/test-results
+            packages/pstdio-api/test-results
+  intel_streaming:
+    runs-on: macos-15-intel
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          name: benchmark-workbench-evidence-${{ matrix.platform }}
+          node-version: '24.22.1'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: ./.github/actions/setup-ci-cache
+        with:
+          install-strategy: native
+      - run: bun run build -- --scope @pstdio/desktop --include-dependencies
+      - uses: actions/download-artifact@v4
+        with:
+          name: validation-app-darwin-x64
+          run-id: 43223768966
+          github-token: ${{ github.token }}
+      - shell: bash
+        run: |
+          bun scripts/ci/production-payload.ts check
+          tar -xzf validation-app-darwin-x64.tar.gz -C clients/desktop
+      - name: Observe the complete original streaming workload without changing limits
+        working-directory: clients/desktop
+        env:
+          E2E_TEST_LANE: benchmark
+          CI_QUARANTINE_ATTEMPT: '1'
+        run: bunx --no-install playwright test --config playwright.benchmark.config.ts src/e2e/packaged-renderer.p3.bench.ts --grep 'long tool-heavy stream stays within budget$'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-intel-streaming-diagnostic
+          path: clients/desktop/test-results
+  browser_profile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24.22.1'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: ./.github/actions/setup-ci-cache
+      - run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
+      - run: bunx playwright install chromium --with-deps
+      - name: Profile only the failed hierarchy and Secondary Panel workloads
+        env:
+          UI_PERF_ASSERT_BUDGETS: '1'
+        run: bun scripts/ci/run-workbench-benchmarks.ts src/perf/resource-hierarchy.p3.bench.ts src/perf/workbench-interactions.p3.bench.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-browser-profile-diagnostic
           path: |
-            ${{ runner.temp }}/checkouts/*/packages/e2e/test-results/workbench-benchmarks*.json
-            ${{ runner.temp }}/checkouts/*/test-results/quarantine/workbench-benchmark
-          if-no-files-found: error
+            packages/e2e/test-results
+            test-results/quarantine
