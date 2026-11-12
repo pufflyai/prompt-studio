@@ -1,7 +1,7 @@
 import type { ListExtensionAppearanceResponse } from "@pstdio/sdk/api";
 import type { FileIconThemePreferenceOption, ThemePreferenceOption } from "@pstdio/ui";
 import type { Disposable, WorkbenchModuleContext } from "@pstdio/workbench";
-import { historicalContributionId } from "pstdio-api-contracts/extension-identity";
+import { historicalContributionId } from "pstdio-api-contracts/extension-host";
 import { getRuntimeCollections } from "@/lib/sync/collections";
 import {
   localizeExtensionAppearance,

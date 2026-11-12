@@ -1,7 +1,7 @@
 import { constants } from "node:fs";
 import { copyFile, link, lstat, mkdir, open, readdir, readFile, rename, rm, unlink, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import { canonicalExtensionId, extensionIdentityRenames } from "pstdio-api-contracts/extension-identity";
+import { canonicalExtensionId, extensionIdentityRenames } from "pstdio-api-contracts/extension-host";
 import { extensionIdentityBackupName } from "./extension-identity-backup";
 
 const pending = new Map<string, Promise<void>>();

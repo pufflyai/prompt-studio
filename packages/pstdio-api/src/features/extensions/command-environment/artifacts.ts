@@ -1,4 +1,4 @@
-import { historicalContributionId } from "pstdio-api-contracts/extension-identity";
+import { historicalContributionId } from "pstdio-api-contracts/extension-host";
 import type { CommandRunnerEnvironment, RuntimeArtifactMount } from "pstdio-extensions";
 import { createReadBoundary, migrateExtensionFiles } from "pstdio-extensions";
 import { createSharedArtifactMount } from "../../../services/shared-files/artifact-mount";

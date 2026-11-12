@@ -73,4 +73,4 @@ move them for you; each extension starts fresh in its full-ID folder. Update loc
 links that use an old path. Refresh installed agent skills from their updated sources.
 Published artifact URLs and saved ticket and report identities stay valid.
 
-*Updated at: 2026-10-25*
+*Updated at: 2026-11-12*

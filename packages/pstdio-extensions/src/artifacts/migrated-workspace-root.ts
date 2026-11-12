@@ -1,4 +1,4 @@
-import { canonicalStoragePath, renamedStoragePathOwner } from "pstdio-api-contracts/extension-identity";
+import { canonicalStoragePath, renamedStoragePathOwner } from "pstdio-api-contracts/extension-host";
 import { migrateExtensionFiles } from "./extension-file-migration";
 import { createSafeFileRoot, normalizeMountRelativePath } from "./safe-file-root";
 

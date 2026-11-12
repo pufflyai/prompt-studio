@@ -151,4 +151,4 @@ Use the Workspaces provider's public `workspacePages` refs for the grouped list,
 
 The legacy host `workbenchPages.workspace` and `workbenchPages.workspaces` refs are deprecated. Their saved URLs remain available through compatibility declarations while the provider views are installed. An ordinary extension can declare workspace page names under its own namespace; this does not grant ownership of the host's resource kind or file services.
 
-*Updated at: 2026-11-07*
+*Updated at: 2026-11-12*

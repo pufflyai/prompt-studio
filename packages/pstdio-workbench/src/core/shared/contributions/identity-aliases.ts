@@ -1,4 +1,4 @@
-import { historicalContributionId } from "pstdio-api-contracts/extension-identity";
+import { historicalContributionId } from "pstdio-api-contracts/extension-host";
 
 const indexes = new WeakMap<object, ReadonlyMap<string, string>>();
 export const canonicalRegistryId = (registry: object, id: string) => indexes.get(registry)?.get(id) ?? id;

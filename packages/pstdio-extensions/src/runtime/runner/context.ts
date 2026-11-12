@@ -14,7 +14,7 @@ import type {
   Struct,
 } from "@pstdio/sdk/extensions";
 import { qualifyNavigationTarget, queryChangeEnvelopeSchema } from "pstdio-api-contracts";
-import { canonicalExtensionId, canonicalNavigationOwners } from "pstdio-api-contracts/extension-identity";
+import { canonicalExtensionId, canonicalNavigationOwners } from "pstdio-api-contracts/extension-host";
 import type { ExtensionRuntime } from "../../types/runtime";
 import { type EventDispatcher, refId } from "./dispatch";
 import type { NavigationScope } from "./navigation-scope";

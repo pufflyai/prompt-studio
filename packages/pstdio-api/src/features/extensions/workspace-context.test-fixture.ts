@@ -1,7 +1,7 @@
-import { canonicalExtensionId } from "pstdio-api-contracts/extension-identity";
 import { mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createMemoryDocumentStore, type StorageOwner } from "pstdio-sync";
 import { createDocumentStorage } from "pstdio-sync/records";

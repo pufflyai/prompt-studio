@@ -1,4 +1,4 @@
-import { canonicalStoragePath } from "pstdio-api-contracts/extension-identity";
+import { canonicalStoragePath } from "pstdio-api-contracts/extension-host";
 import type { ArtifactMount } from "pstdio-api-contracts/extension-kernel";
 import { createReadBoundary, createWorkspaceFilesMount } from "pstdio-extensions";
 import { createObservedFileMount } from "../../../services/shared-files/observed-file-mount";

@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { basename, join } from "node:path";
-import { canonicalExtensionId, extensionIdentityRenames } from "pstdio-api-contracts/extension-identity";
+import { canonicalExtensionId, extensionIdentityRenames } from "pstdio-api-contracts/extension-host";
 import { readPackageManifestMetadata } from "pstdio-extensions";
 import { resolvePstdioHome } from "pstdio-paths";
 import { traceSetupPhase } from "../../lib/setup-phase";

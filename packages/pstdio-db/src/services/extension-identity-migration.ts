@@ -1,6 +1,6 @@
 import { getTableColumns, sql } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
-import { extensionIdentityRenames } from "pstdio-api-contracts/extension-identity";
+import { extensionIdentityRenames } from "pstdio-api-contracts/extension-host";
 import * as Y from "yjs";
 import type { DbClient } from "../db/connection.pglite";
 import * as s from "../db/schemas.pg";

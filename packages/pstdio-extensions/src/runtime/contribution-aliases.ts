@@ -3,7 +3,7 @@ import {
   canonicalExtensionId,
   historicalContributionId,
   historicalExtensionId,
-} from "pstdio-api-contracts/extension-identity";
+} from "pstdio-api-contracts/extension-host";
 import { resolveEventReferenceId } from "pstdio-api-contracts/extension-kernel";
 import type { ExtensionRuntime } from "../types/runtime";
 import { privateHandlerId } from "./normalize/private-handlers";

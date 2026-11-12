@@ -1,5 +1,5 @@
 import type { ExtensionCommandRecord } from "@pstdio/sdk/api";
-import { historicalExtensionId } from "pstdio-api-contracts/extension-identity";
+import { historicalExtensionId } from "pstdio-api-contracts/extension-host";
 
 export const isHistoricalCliAlias = (command: ExtensionCommandRecord, path: string) => {
   const old = historicalExtensionId(command.extensionId);

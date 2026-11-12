@@ -53,4 +53,4 @@ export const copyPlacement = (placement: WorkbenchModePlacementContribution) => 
   ...(placement.movableTo ? { movableTo: [...placement.movableTo] } : {}),
 });
 
-import { canonicalExtensionId } from "pstdio-api-contracts/extension-identity";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";

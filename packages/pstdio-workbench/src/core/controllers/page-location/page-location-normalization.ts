@@ -9,7 +9,7 @@ import type {
 } from "@pstdio/sdk/extensions";
 import { isFileSourcePosition } from "@pstdio/sdk/extensions";
 import { normalizePageParams } from "pstdio-api-contracts";
-import { canonicalExtensionId } from "pstdio-api-contracts/extension-identity";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { WorkbenchPageContribution, WorkbenchPageResourceCodec } from "../../registries/pages/page-registry";
 import { resolvePageGroupDefault } from "./page-group-default";
 

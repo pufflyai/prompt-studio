@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { canonicalExtensionId } from "pstdio-api-contracts/extension-identity";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { Asset } from "pstdio-sync-contracts";
 import type { ExtensionsRouteDeps } from "../deps";
 import { resolvePstdioHome } from "../install-extension-source";

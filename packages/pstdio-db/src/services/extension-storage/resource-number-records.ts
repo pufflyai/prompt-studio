@@ -1,5 +1,5 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
-import { canonicalExtensionId } from "pstdio-api-contracts/extension-identity";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { StorageOwner } from "pstdio-sync";
 import { coreOwnerId, type NumberedResource, retainedResourceValue } from "pstdio-sync/records";
 import type { StorageRecord } from "pstdio-sync-contracts";

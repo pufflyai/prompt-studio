@@ -18,4 +18,4 @@ export const extensionFilesPath = (owner: ExtensionStorageOwner) => {
   return `${ARTIFACT_MOUNT_ROOT}/${extensionStorageDirectory(owner.extensionId)}`;
 };
 
-import { canonicalExtensionId } from "pstdio-api-contracts/extension-identity";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";

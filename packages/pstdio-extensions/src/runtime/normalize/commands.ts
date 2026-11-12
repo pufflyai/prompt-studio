@@ -1,5 +1,5 @@
 import { type CommandDefinition, contributionRefId } from "@pstdio/sdk/extensions";
-import { canonicalCliPath, historicalCliPaths } from "pstdio-api-contracts/extension-identity";
+import { canonicalCliPath, historicalCliPaths } from "pstdio-api-contracts/extension-host";
 import { normalizeCliPath } from "../../artifacts/path-normalization";
 import type { NormalizedExtension, RuntimeCliContribution, RuntimeCommandRecord } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";

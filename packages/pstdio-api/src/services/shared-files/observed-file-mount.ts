@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { resolve } from "node:path";
-import { historicalStoragePath } from "pstdio-api-contracts/extension-identity";
+import { historicalStoragePath } from "pstdio-api-contracts/extension-host";
 import type { ArtifactMount } from "pstdio-api-contracts/extension-kernel";
 import { normalizeMountRelativePath } from "pstdio-extensions";
 import { prepareNativeFileWrite } from "../native-documents/file-write-context";

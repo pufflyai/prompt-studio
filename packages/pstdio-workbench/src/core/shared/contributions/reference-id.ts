@@ -1,6 +1,6 @@
 import type { ResourceConstraint, ResourceRef } from "@pstdio/sdk/extensions";
 
-import { canonicalExtensionId } from "pstdio-api-contracts/extension-identity";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 
 export const resourceMatchesConstraint = (constraint: ResourceConstraint, resource: ResourceRef) =>
   constraint.kinds.some(

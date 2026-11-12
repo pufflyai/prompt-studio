@@ -1,5 +1,5 @@
 import type { ResourceRef } from "@pstdio/sdk/extensions";
-import { canonicalExtensionId, historicalExtensionId } from "pstdio-api-contracts/extension-identity";
+import { canonicalExtensionId, historicalExtensionId } from "pstdio-api-contracts/extension-host";
 
 export const canonicalResourceRef = (resource: ResourceRef): ResourceRef =>
   resource.extensionId && canonicalExtensionId(resource.extensionId) !== resource.extensionId

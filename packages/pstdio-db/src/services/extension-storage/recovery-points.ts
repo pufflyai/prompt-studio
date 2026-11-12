@@ -1,6 +1,6 @@
 import { statfs } from "node:fs/promises";
 import { and, asc, eq, inArray, isNull } from "drizzle-orm";
-import { canonicalExtensionId } from "pstdio-api-contracts/extension-identity";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { AssetStore, StorageOwner } from "pstdio-sync";
 import type { DbClient } from "../../db/connection.pglite";
 import { projects, recovery_point_owners, recovery_points } from "../../db/schemas.pg";

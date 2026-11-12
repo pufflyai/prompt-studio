@@ -1,5 +1,5 @@
 import type { ExtensionCommandRecord } from "@pstdio/sdk/api";
-import { historicalExtensionId } from "pstdio-api-contracts/extension-identity";
+import { historicalExtensionId } from "pstdio-api-contracts/extension-host";
 import { isHistoricalCliAlias } from "./deprecated-extension-command";
 
 export type ExtensionCommandCollision = { path: string; commands: ExtensionCommandRecord[] };

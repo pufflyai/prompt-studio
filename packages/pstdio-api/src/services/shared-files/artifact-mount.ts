@@ -1,5 +1,5 @@
 import { dirname, join, posix, resolve } from "node:path";
-import { historicalExtensionId } from "pstdio-api-contracts/extension-identity";
+import { historicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { ArtifactMount } from "pstdio-api-contracts/extension-kernel";
 import {
   createFileMount,

@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { join, resolve } from "node:path";
 import { type ArtifactFileProjection, artifactFileProjectionSchema } from "pstdio-api-contracts";
-import { historicalExtensionId } from "pstdio-api-contracts/extension-identity";
+import { historicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { createExtensionStorageDBService } from "pstdio-db";
 import { resolvePstdioHome } from "pstdio-paths";
 import type { StorageOwner } from "pstdio-sync";

@@ -436,4 +436,4 @@ slots keep working. Device settings use `ctx.settings` and the existing typed
 webview settings capabilities. Publish the SDK and host before extensions adopt
 them. See [app-wide settings](0004-contribution-api.md#app-wide-settings).
 
-*Updated at: 2026-11-09*
+*Updated at: 2026-11-12*

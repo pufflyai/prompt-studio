@@ -7,7 +7,7 @@ import type {
   RendererEventReference,
 } from "@pstdio/sdk/extensions";
 import { resolveEventReferenceId } from "pstdio-api-contracts";
-import { canonicalExtensionId } from "pstdio-api-contracts/extension-identity";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 
 export const normalizedRef = <Kind extends ContributionKind>(
   ref: ContributionRef<Kind>,

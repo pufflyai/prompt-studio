@@ -4,7 +4,7 @@ import {
   canonicalExtensionId,
   extensionIdentityRenames,
   historicalExtensionId,
-} from "pstdio-api-contracts/extension-identity";
+} from "pstdio-api-contracts/extension-host";
 import { readPackageManifestMetadata } from "pstdio-extensions";
 
 /** Preserve an existing installation's origin path while its visible owner changes. */

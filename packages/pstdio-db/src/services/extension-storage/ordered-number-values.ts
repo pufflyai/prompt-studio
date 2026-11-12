@@ -1,4 +1,4 @@
-import { canonicalExtensionId } from "pstdio-api-contracts/extension-identity";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import { type OrderedOperation, type OrderedRecord, orderedBody } from "pstdio-sync/records";
 import type { Json } from "pstdio-sync-contracts";
 import { isNumberRecord, type NumberRecord, numberIndexString } from "./resource-number-records";

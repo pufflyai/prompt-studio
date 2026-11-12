@@ -1,4 +1,4 @@
-import { canonicalExtensionId } from "pstdio-api-contracts/extension-identity";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { ResourceAnchor, ResourceRef } from "pstdio-api-contracts/extension-kernel";
 import { legacyResourceOwner } from "pstdio-db";
 import type { ExtensionsRouteDeps } from "../deps";

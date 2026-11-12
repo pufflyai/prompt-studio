@@ -81,4 +81,4 @@ Some limits still apply. A webview, which is a custom web page inside the dashbo
 - [Make actions CLI-ready](../extensions/0007-cli-ready-actions.md)
 - [Extension API reference](../../references/extensions/0001-api.md)
 
-*Updated at: 2026-10-18*
+*Updated at: 2026-11-12*

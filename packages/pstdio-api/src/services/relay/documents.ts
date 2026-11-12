@@ -1,4 +1,4 @@
-import { extensionTransportName } from "pstdio-api-contracts/extension-identity";
+import { extensionTransportName } from "pstdio-api-contracts/extension-host";
 import type { SubscribeDocument } from "pstdio-sync/relay";
 import { createDocumentRelay, createDocumentSync, createRecordStreamSync, fetchSyncSpaces } from "pstdio-sync/relay";
 import type { LiveServerMessage } from "pstdio-sync-contracts";

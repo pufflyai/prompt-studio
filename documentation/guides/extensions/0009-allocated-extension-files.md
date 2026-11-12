@@ -51,4 +51,4 @@ reads and writes only the new root. Package source files stay in their source or
 installation directories. Deliberate project outputs, such as icon fonts, stay at
 their configured project paths.
 
-*Updated at: 2026-10-25*
+*Updated at: 2026-11-12*

@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { canonicalOwner } from "pstdio-api-contracts/extension-identity";
+import { canonicalOwner } from "pstdio-api-contracts/extension-host";
 import { type AssetStore, hasDocumentUserData, type StorageObserver, type StorageOwner } from "pstdio-sync";
 import { createDocumentStorage } from "pstdio-sync/records";
 import { createTextDocumentStorage } from "pstdio-sync/text";

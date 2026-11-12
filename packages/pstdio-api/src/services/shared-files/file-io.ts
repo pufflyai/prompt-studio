@@ -1,7 +1,7 @@
 import { mkdir, rename, rm, rmdir, stat } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 import type { AssetOwner, AssetReference } from "pstdio-api-contracts";
-import { historicalExtensionId } from "pstdio-api-contracts/extension-identity";
+import { historicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { ArtifactMount } from "pstdio-api-contracts/extension-kernel";
 import { createSafeFileRoot } from "pstdio-extensions";
 import type { createAssetTransferService } from "../asset-transfer-service";

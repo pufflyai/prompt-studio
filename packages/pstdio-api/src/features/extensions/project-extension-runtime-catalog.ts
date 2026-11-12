@@ -1,4 +1,4 @@
-import { canonicalExtensionId } from "pstdio-api-contracts/extension-identity";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import { type loadExtensionSources, normalizeExtensionSources } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
 import type { createExtensionService } from "../../services/extension-service";

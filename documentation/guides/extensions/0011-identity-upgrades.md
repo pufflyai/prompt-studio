@@ -27,3 +27,5 @@ Encrypted owner catalogs, records, text and logs continue using the same histori
 Source folders such as `extensions/pstdio-notes` stay unchanged. Install names and public package names become `notes`, `planner` and the other canonical names. Historical catalog arguments resolve to the canonical entry. Published historical versions are immutable and remain pinned to their final historical release unless the registry supports a redirect. The packaged catalog supplies the replacement without depending on that redirect.
 
 Invocation aliases can retire only in a later breaking API release. Historical storage and transport decoding remains for the lifetime of supported persisted data.
+
+*Updated at: 2026-11-12*

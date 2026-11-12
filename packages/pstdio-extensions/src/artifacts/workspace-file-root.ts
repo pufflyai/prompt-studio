@@ -1,5 +1,5 @@
 import { posix, relative } from "node:path";
-import { canonicalStoragePath } from "pstdio-api-contracts/extension-identity";
+import { canonicalStoragePath } from "pstdio-api-contracts/extension-host";
 import { normalizeMountRelativePath, type SafeFileRoot, type SafeResolvedPath } from "./safe-file-root";
 import { WorkspaceFileAccessError } from "./workspace-file-access-error";
 

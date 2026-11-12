@@ -1,4 +1,4 @@
-import { canonicalExtensionId } from "pstdio-api-contracts/extension-identity";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { ExtensionConnectionsApi } from "pstdio-api-contracts/extension-kernel";
 import type { ConnectionSecretStore } from "./connection-secret-store";
 import { createExtensionConnectionRequestService } from "./extension-connection-request-service";

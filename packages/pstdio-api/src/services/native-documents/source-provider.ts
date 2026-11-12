@@ -1,5 +1,5 @@
 import { nativeDocumentSourceSchema, type TextSourceTarget } from "pstdio-api-contracts";
-import { canonicalExtensionId } from "pstdio-api-contracts/extension-identity";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import { z } from "zod";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { resolveNativeLoadedSource } from "./source-binding";

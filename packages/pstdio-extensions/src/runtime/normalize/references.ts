@@ -1,7 +1,7 @@
 import type { CommandRef, ContributionKind, ContributionRef, EventRef, WhenExpression } from "@pstdio/sdk/extensions";
 import { contributionRefId } from "@pstdio/sdk/extensions";
 import { resolveEventReferenceId } from "pstdio-api-contracts";
-import { canonicalExtensionId } from "pstdio-api-contracts/extension-identity";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { NormalizedExtension } from "../../types/runtime";
 
 export const contributionId = (ext: NormalizedExtension, localId: string) => `${ext.name}.${localId}`;

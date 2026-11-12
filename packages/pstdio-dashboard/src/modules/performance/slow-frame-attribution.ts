@@ -1,4 +1,4 @@
-import { EXTENSION_WEBVIEW_PATH_PREFIX } from "pstdio-api-contracts/extension-webview-path";
+import { EXTENSION_WEBVIEW_PATH_PREFIX } from "pstdio-api-contracts/extension-host";
 import { PERFORMANCE_LIMITS, type SlowFrame } from "pstdio-api-contracts/performance-diagnostics";
 
 // The subset of PerformanceLongAnimationFrameTiming and PerformanceScriptTiming this

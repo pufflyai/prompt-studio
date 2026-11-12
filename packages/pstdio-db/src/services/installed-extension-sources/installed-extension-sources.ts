@@ -5,7 +5,7 @@ import {
   canonicalInstallName,
   historicalExtensionId,
   matchesExtensionInstallName,
-} from "pstdio-api-contracts/extension-identity";
+} from "pstdio-api-contracts/extension-host";
 import type { DbClient } from "../../db/connection.pglite";
 import { extension_reload_events, installed_extension_sources } from "../../db/schemas.pg";
 import { migrateExtensionIdentities } from "../extension-identity-migration";

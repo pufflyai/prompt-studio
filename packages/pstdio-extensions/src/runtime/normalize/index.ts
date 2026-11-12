@@ -1,5 +1,5 @@
 import { join, resolve, sep } from "node:path";
-import { canonicalExtensionId, canonicalInstallName } from "pstdio-api-contracts/extension-identity";
+import { canonicalExtensionId, canonicalInstallName } from "pstdio-api-contracts/extension-host";
 import type { ExtensionDiagnostic, ExtensionRuntime, NormalizedExtension } from "../../types/runtime";
 import type { LoadedExtensionSource } from "../loader";
 import { createAccumulator, createRegistryIndex } from "./accumulator";

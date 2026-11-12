@@ -1,6 +1,6 @@
 import { extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { canonicalExtensionId } from "pstdio-api-contracts/extension-identity";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { PackageAssetDescriptor } from "pstdio-api-contracts/extension-kernel";
 import { isWindowsDeviceName } from "pstdio-extensions";
 import type { LoadedExtension } from "./extension-runtime";

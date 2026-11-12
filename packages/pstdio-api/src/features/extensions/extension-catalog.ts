@@ -6,7 +6,7 @@ import {
   canonicalExtensionId,
   canonicalInstallName,
   matchesExtensionInstallName,
-} from "pstdio-api-contracts/extension-identity";
+} from "pstdio-api-contracts/extension-host";
 import { expandHomePath, resolvePstdioHome } from "pstdio-paths";
 import packagedCatalogData from "../../../files/extension-catalog.json";
 

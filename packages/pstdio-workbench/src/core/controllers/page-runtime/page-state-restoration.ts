@@ -1,6 +1,6 @@
 import type { PageLocation, ResourceRef } from "@pstdio/sdk/extensions";
 import { defaultPageResourceCodec } from "pstdio-api-contracts";
-import { historicalContributionId } from "pstdio-api-contracts/extension-identity";
+import { historicalContributionId } from "pstdio-api-contracts/extension-host";
 import type { LayoutModel } from "../../registries/layout/layout-model-types";
 import { carryWorkbenchRegionState } from "../../registries/layout/layout-scope";
 import { createDefaultWorkbenchLayout, type WorkbenchLayout } from "../../registries/layout/layout-types";

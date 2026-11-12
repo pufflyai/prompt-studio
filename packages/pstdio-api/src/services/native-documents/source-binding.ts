@@ -5,7 +5,7 @@ import {
   canonicalStoragePath,
   historicalContributionId,
   historicalStoragePath,
-} from "pstdio-api-contracts/extension-identity";
+} from "pstdio-api-contracts/extension-host";
 import { canonicalRuntimeId, createWorkspaceFilesMount, normalizeMountRelativePath } from "pstdio-extensions";
 import { type StorageOwner, StorageRevisionChangedError } from "pstdio-sync";
 import { storageRecordId } from "pstdio-sync/records";

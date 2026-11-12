@@ -1,5 +1,5 @@
 import { basename, dirname } from "node:path";
-import { extensionIdentityRenames } from "pstdio-api-contracts/extension-identity";
+import { extensionIdentityRenames } from "pstdio-api-contracts/extension-host";
 
 export const extensionIdentityBackupName = ".extension-identity-original";
 const owners = new Set(extensionIdentityRenames.map(({ to }) => `${to.publisher}.${to.name}`));

@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { canonicalExtensionId, historicalExtensionId } from "pstdio-api-contracts/extension-identity";
+import { canonicalExtensionId, historicalExtensionId } from "pstdio-api-contracts/extension-host";
 import { migrateExtensionFiles } from "pstdio-extensions";
 import type { createWorkspaceService } from "../../services/workspace-service";
 

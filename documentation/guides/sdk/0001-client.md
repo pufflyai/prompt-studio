@@ -274,4 +274,4 @@ A cloud project that came from another device starts without a folder. `client.p
 
 `client.projects.folder(projectId)` returns `{ path, gitRemote }`: the folder on this device, or `null`, and the Git remote recorded for the project. Before the project has a folder, `client.projects.chooseFolder(projectId, { path, clone })` can attach a chosen checkout instead. With `clone: true` it clones `gitRemote` into a new folder; with `clone: false` it uses an existing folder and checks that it holds the same repository. The path may start with `~/`.
 
-*Updated at: 2026-10-30*
+*Updated at: 2026-11-12*

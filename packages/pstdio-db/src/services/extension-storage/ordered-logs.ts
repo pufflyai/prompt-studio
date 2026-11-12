@@ -1,4 +1,4 @@
-import { canonicalExtensionId, canonicalOwner, historicalExtensionId } from "pstdio-api-contracts/extension-identity";
+import { canonicalExtensionId, canonicalOwner, historicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { DocumentStore, StorageOwner } from "pstdio-sync";
 import type { SyncSpace } from "pstdio-sync/encryption";
 import { createLogCollection, type LogDirectoryEntry, type LogRemote, type LogStreamStore } from "pstdio-sync/logs";

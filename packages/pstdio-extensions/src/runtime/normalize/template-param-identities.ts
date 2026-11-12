@@ -1,4 +1,4 @@
-import { historicalContributionId } from "pstdio-api-contracts/extension-identity";
+import { historicalContributionId } from "pstdio-api-contracts/extension-host";
 import type { ExtensionRuntime } from "../../types/runtime";
 import { isRecord } from "./accumulator";
 

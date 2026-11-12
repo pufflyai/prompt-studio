@@ -1,4 +1,4 @@
-import { canonicalExtensionId } from "pstdio-api-contracts/extension-identity";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { ExtensionResourcesApi } from "pstdio-api-contracts/extension-kernel";
 import type { ExtensionsRouteDeps } from "../deps";
 import { createResourceLinksApi } from "./resource-links";

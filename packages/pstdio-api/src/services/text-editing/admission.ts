@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { nativeFileContentSchema } from "pstdio-api-contracts";
-import { canonicalExtensionId } from "pstdio-api-contracts/extension-identity";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import { canonicalRuntimeId } from "pstdio-extensions";
 import { textFailure } from "./errors";
 import type { TextConnection, TextEditingDeps, TextGrant } from "./types";

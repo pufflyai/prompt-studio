@@ -1,7 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
 import { eq, getTableColumns } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
-import { extensionTransportName } from "pstdio-api-contracts/extension-identity";
+import { extensionTransportName } from "pstdio-api-contracts/extension-host";
 import { createSyncSpace } from "pstdio-sync/encryption";
 import { createLogStreamSync } from "pstdio-sync/logs";
 import { createDocumentSync, createRecordStreamSync } from "pstdio-sync/relay";

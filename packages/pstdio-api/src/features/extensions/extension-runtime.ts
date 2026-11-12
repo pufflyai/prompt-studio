@@ -1,7 +1,7 @@
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { ExtensionDiagnostic, ExtensionHostCapabilities, ExtensionsCheckResponse } from "pstdio-api-contracts";
-import { canonicalExtensionId, canonicalInstallName } from "pstdio-api-contracts/extension-identity";
+import { canonicalExtensionId, canonicalInstallName } from "pstdio-api-contracts/extension-host";
 import {
   checkExtensionHostCompatibility,
   collectConventionDiagnostics,

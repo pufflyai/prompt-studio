@@ -1,4 +1,4 @@
-import { historicalContributionId } from "pstdio-api-contracts/extension-identity";
+import { historicalContributionId } from "pstdio-api-contracts/extension-host";
 import { canonicalRuntimeId } from "pstdio-extensions";
 import { z } from "zod";
 import type { ExtensionsRouteDeps } from "./deps";

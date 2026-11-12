@@ -1,4 +1,4 @@
-import { extensionTransportName } from "pstdio-api-contracts/extension-identity";
+import { extensionTransportName } from "pstdio-api-contracts/extension-host";
 import type { StorageOwner } from "pstdio-sync";
 import type { SyncSpace } from "pstdio-sync/encryption";
 import { createLogStreamSync, type LogDirectoryEntry, type LogRemote, type LogStreamStore } from "pstdio-sync/logs";

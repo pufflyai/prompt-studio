@@ -1,5 +1,5 @@
 import type { ResourceRef } from "@pstdio/sdk/extensions";
-import { canonicalExtensionId } from "pstdio-api-contracts/extension-identity";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { NavigationTarget } from "../../registries/navigation/navigation-registry";
 
 const owned = <T extends { extensionId?: string }>(ref: T): T =>

@@ -1,4 +1,4 @@
-import { historicalContributionId } from "pstdio-api-contracts/extension-identity";
+import { historicalContributionId } from "pstdio-api-contracts/extension-host";
 import type { RuntimeScheduleRecord } from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "./deps";
 import { listDeviceAutomations } from "./device-automations";

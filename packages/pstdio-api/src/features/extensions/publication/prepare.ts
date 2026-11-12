@@ -1,6 +1,6 @@
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { canonicalExtensionId } from "pstdio-api-contracts/extension-identity";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import { checkExtensionSource } from "../extension-runtime";
 import { buildExtensionWebview } from "../extension-webview-builder";
 import { collectExtensionWebviews, resolvePackageAssetFile } from "../extension-webviews";

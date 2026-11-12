@@ -1,6 +1,6 @@
 import type { IncomingMessage, Server } from "node:http";
 import type { Duplex } from "node:stream";
-import { EXTENSION_WEBVIEW_PATH_PREFIX } from "pstdio-api-contracts/extension-webview-path";
+import { EXTENSION_WEBVIEW_PATH_PREFIX } from "pstdio-api-contracts/extension-host";
 import type { Plugin, ProxyOptions } from "vite";
 import { type RawData, WebSocketServer } from "ws";
 

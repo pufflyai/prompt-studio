@@ -799,4 +799,4 @@ The old `workbenchPages.sessions`, `session`, `newSession`, `sessionComposer`, `
 
 Resource mutation commands can act on another provider's canonical resource. When the invoking resource matches the declared mutation type and resolved ID in the selected project, native optimistic previews and write serialization preserve that resource's identity. Without a matching subject, the command's own extension identity remains the default. This changes presentation ownership only; the command service still enforces its normal permissions and scope.
 
-*Updated at: 2026-11-07*
+*Updated at: 2026-11-12*

@@ -1,4 +1,4 @@
-import { canonicalOwner } from "pstdio-api-contracts/extension-identity";
+import { canonicalOwner } from "pstdio-api-contracts/extension-host";
 import type { DocumentState, DocumentStore, StorageOwner } from "pstdio-sync";
 import type * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";

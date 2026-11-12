@@ -422,4 +422,4 @@ Agents and clients use the same API: `GET` and `POST
 `kind: "rollback"` with `extensionId`, package `revision` and `expectedRevision`;
 or `kind: "enabled"` with `extensionId`, `enabled` and `expectedRevision`.
 
-*Updated at: 2026-11-03*
+*Updated at: 2026-11-12*

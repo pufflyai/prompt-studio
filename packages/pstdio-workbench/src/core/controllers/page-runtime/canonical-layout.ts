@@ -1,5 +1,5 @@
 import type { PageLocation, ViewLocation } from "@pstdio/sdk/extensions";
-import { canonicalExtensionId } from "pstdio-api-contracts/extension-identity";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { WorkbenchLayout, WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import { canonicalResourceRef } from "../../shared/contributions/resource-identity";
 

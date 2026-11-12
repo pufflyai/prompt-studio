@@ -1,4 +1,4 @@
-import { canonicalExtensionId, historicalExtensionId } from "pstdio-api-contracts/extension-identity";
+import { canonicalExtensionId, historicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { GroupCommit } from "pstdio-sync/records";
 import type { StorageRecord } from "pstdio-sync-contracts";
 import type { CatalogRecords } from "./catalog-store";
