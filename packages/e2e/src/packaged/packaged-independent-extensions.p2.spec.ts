@@ -61,9 +61,9 @@ test("Upgrade installs an independently published Notes version while the packag
     const detail = page.getByTestId("extension-detail").filter({ visible: true });
     await expect(detail).toHaveCount(1);
     await expect(detail.getByTestId("extension-upgrade")).toBeVisible();
-    await expect(detail.getByText(/pstdio\.pstdio-notes.*v0\.45\.1/)).toBeVisible();
+    await expect(detail.getByText(/pstdio\.notes.*v0\.45\.1/)).toBeVisible();
     await detail.getByTestId("extension-upgrade").click();
-    await expect(detail.getByText(/pstdio\.pstdio-notes.*v0\.45\.2/)).toBeVisible();
+    await expect(detail.getByText(/pstdio\.notes.*v0\.45\.2/)).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath("independent-upgrade.png") });
     expect(await runPackagedAsync(["pstdio.notes", "version", "--project-id", project.id], repo, env)).toContain(
       "0.45.2",

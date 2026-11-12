@@ -81,7 +81,7 @@ test.describe("Session bubble workspace selection", () => {
     await page.goto(`/projects/${projectId}`);
     await page.getByRole("option", { name: "Tickets", exact: true }).click();
     await page.getByText(ticket.content, { exact: true }).click();
-    await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-planner\/ticket\?resource=/);
+    await expect(page).toHaveURL(/\/extensions\/pstdio\.planner\/ticket\?resource=/);
     const ticketUrl = page.url();
 
     await page.getByRole("group", { name: "Panel controls" }).getByRole("button", { name: "Show Side Panel" }).click();

@@ -72,7 +72,7 @@ test("disabling Home exposes the existing empty panel and enabling it restores o
   const listed = (await (await request.get(`/v1/projects/${project.id}/extensions`)).json()) as {
     extensions: { id: string; installName: string }[];
   };
-  const instance = listed.extensions.find((entry) => entry.installName === "pstdio-home")!;
+  const instance = listed.extensions.find((entry) => entry.installName === "home")!;
   expect(instance).toBeTruthy();
   const enable = (enabled: boolean) =>
     request.patch(`/v1/projects/${project.id}/extensions/${instance.id}`, { data: { enabled } });
@@ -109,7 +109,7 @@ test("uninstalled Home leaves the project root on the existing empty panel", asy
   const listed = (await (await request.get(`/v1/projects/${project.id}/extensions`)).json()) as {
     extensions: { id: string; installName: string }[];
   };
-  const instance = listed.extensions.find((entry) => entry.installName === "pstdio-home")!;
+  const instance = listed.extensions.find((entry) => entry.installName === "home")!;
   expect(instance).toBeTruthy();
   expect((await request.delete(`/v1/projects/${project.id}/extensions/${instance.id}?deleteUserData=true`)).ok()).toBe(
     true,

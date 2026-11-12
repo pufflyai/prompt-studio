@@ -256,12 +256,14 @@ export const createWorkbenchExtensionMetadata = (
   })),
   settingsSections: input.runtime.settingsSections.map((section) => ({
     id: section.id,
+    localId: section.localId,
     extensionId: section.extensionId,
     title: section.contribution.title,
     order: section.contribution.order,
   })),
   settingsPanels: input.runtime.settingsPanels.map((panel) => ({
     id: panel.id,
+    localId: panel.localId,
     extensionId: panel.extensionId,
     view: normalizedRef(panel.contribution.view, panel.extensionId),
     slot: panel.contribution.slot,

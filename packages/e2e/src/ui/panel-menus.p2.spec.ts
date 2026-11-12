@@ -41,14 +41,14 @@ test("preserves browser Forward history between extension pages after refresh", 
 
   await page.getByRole("option", { name: "Tickets", exact: true }).click();
   await page.getByText(ticket.content, { exact: true }).click();
-  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-planner\/ticket\?resource=/);
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.planner\/ticket\?resource=/);
 
   await page.goBack();
   await expect(page).toHaveURL(`/projects/${project.id}/extensions/pstdio.planner/tickets`);
 
   await page.reload();
   await page.goForward();
-  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-planner\/ticket\?resource=/);
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.planner\/ticket\?resource=/);
   await expect(page.getByRole("region", { name: "Main", exact: true }).getByRole("textbox")).toHaveText(ticket.content);
 });
 
@@ -240,7 +240,7 @@ test("updates a New session Sub Panel in place after the first message", async (
 
   await expect(sessionTabs).toHaveCount(2);
   await expect(activeTab).toContainText(prompt);
-  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/extensions/pstdio\\.pstdio-home/home$`));
+  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/extensions/pstdio\\.home/home$`));
 });
 
 test("renames a moved session and restores its destination after reload", async ({ page, request }) => {

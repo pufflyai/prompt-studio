@@ -66,8 +66,9 @@ const ticketToRowWithTags = (
   tagOptions: TagOptionsLookup,
   linkedResources: TicketLinkedResourceLookup,
   parentLookup: TicketParentLookup,
+  extensionId: string,
 ) => {
-  const hierarchy = resolveTicketHierarchy(ticket, parentLookup);
+  const hierarchy = resolveTicketHierarchy(ticket, parentLookup, extensionId);
   const linkedResourceItems = (linkedResources.get(ticket.id) ?? []).map((item) => {
     if (item.resource?.type !== "workspace" || item.resource.extensionId !== "pstdio" || item.action?.kind !== "page")
       return item;
@@ -117,16 +118,19 @@ export const ticketToRow = (
   tags: StoredTag[] = [],
   linkedResources: TicketLinkedResourceLookup = new Map(),
   parentLookup: TicketParentLookup = new Map(),
-) => ticketToRowWithTags(ticket, projectId, createTagOptionsLookup(tags), linkedResources, parentLookup);
+  extensionId = "pstdio.pstdio-planner",
+) => ticketToRowWithTags(ticket, projectId, createTagOptionsLookup(tags), linkedResources, parentLookup, extensionId);
 
 export const createTicketRowMapper = (
   projectId: string,
   tags: StoredTag[] = [],
   linkedResources: TicketLinkedResourceLookup = new Map(),
   parentLookup: TicketParentLookup = new Map(),
+  extensionId = "pstdio.pstdio-planner",
 ) => {
   const tagOptions = createTagOptionsLookup(tags);
-  return (ticket: TicketSummary) => ticketToRowWithTags(ticket, projectId, tagOptions, linkedResources, parentLookup);
+  return (ticket: TicketSummary) =>
+    ticketToRowWithTags(ticket, projectId, tagOptions, linkedResources, parentLookup, extensionId);
 };
 
 const statusToOption = (status: StoredStatus): KanbanRendererEnumOption => ({

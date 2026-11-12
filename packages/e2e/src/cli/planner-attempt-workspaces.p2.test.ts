@@ -200,7 +200,7 @@ describe("planner attempt workspaces", () => {
         ),
       ).toBe(true);
 
-      const extensionInstanceId = await getExtensionInstanceId(projectId, "pstdio-planner");
+      const extensionInstanceId = await getExtensionInstanceId(projectId, "planner");
       const imageBytes = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
       const uploaded = await uploadPlannerFile(projectId, extensionInstanceId, {
         name: "diagram.png",

@@ -34,12 +34,19 @@ export const documentLinkCommand = defineCommand({
           shorthand: ticket.shorthand,
           href: serializePageUrl({
             projectId: ctx.projectId,
-            page: ticketDocumentPage,
+            page: {
+              ...ticketDocumentPage,
+              ref: {
+                ...ticketDocumentPage.ref,
+                extensionId:
+                  ctx.extensionId === "pstdio.planner" ? ctx.extensionId : ticketDocumentPage.ref.extensionId,
+              },
+            },
             resource: {
               type: "ticket",
               id: ticket.id,
               projectId: ctx.projectId,
-              extensionId: "pstdio.pstdio-planner",
+              extensionId: ctx.extensionId === "pstdio.planner" ? ctx.extensionId : ticketDocumentPage.ref.extensionId,
               ...(document ? { metadata: { documentId: document.id } } : {}),
             },
           }),

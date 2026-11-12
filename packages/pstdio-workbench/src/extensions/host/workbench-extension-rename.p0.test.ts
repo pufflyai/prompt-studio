@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test";
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
+import { defaultPageResourceCodec } from "pstdio-api-contracts/extension-kernel";
 import { createWorkbench } from "../../core";
+import { createPageUrlResolver } from "../../core/controllers/page-location/page-url-resolver";
 import { createLocalStorageWorkbenchPersistence } from "../../storage/local-storage-persistence";
 import { emptyWorkbenchExtensionMetadata } from "../contributions/extension-contributions";
 import { registerWorkbenchExtensionContributions } from "./workbench-extension-host";
@@ -115,6 +117,15 @@ test("historical page links and view IDs resolve to one canonical enabled contri
     expect(workbench.views.getView("pstdio.pstdio-notes.view.reader")?.id).toBe("pstdio.notes.view.reader");
     expect(workbench.views.listViews()).toHaveLength(1);
     expect(
+      createPageUrlResolver({
+        pages: () => workbench.pages.listPages(),
+        resources: defaultPageResourceCodec,
+        normalize: () => {
+          throw new Error("Unexpected history");
+        },
+      })("project", { url: "/projects/project/extensions/pstdio.pstdio-notes/notes" })?.location.page,
+    ).toEqual({ kind: "page", id: "notes", extensionId: "pstdio.notes" });
+    expect(
       workbench.pageLocations.navigate({
         kind: "page",
         page: { kind: "page", extensionId: "pstdio.pstdio-notes", id: "notes" },
@@ -194,4 +205,61 @@ test("reselecting an active historical mode does not enter it a second time", as
     for (const alias of aliases) alias.dispose();
     await workbench.dispose();
   }
+});
+
+test("historical settings actions share one enabled panel and collection item cache", async () => {
+  const workbench = createWorkbench();
+  const owner = "pstdio.cloud";
+  const panelId = `${owner}.settings-panel.cloud`;
+  const sectionId = `${owner}.settings-section.account`;
+  const oldPanel = "pstdio.pstdio-cloud.settings-panel.cloud";
+  const oldSection = "pstdio.pstdio-cloud.settings-section.account";
+  const item = { id: "stable-item", label: "Device" };
+  const view = workbench.views.registerView({
+    id: "devices",
+    title: "Devices",
+    body: { kind: "react", render: () => null },
+  });
+  const section = workbench.settings.registerSection({ id: sectionId, title: "Account" });
+  const panel = workbench.settings.registerPanel({
+    id: panelId,
+    title: "Cloud",
+    kind: "collection",
+    viewId: "devices",
+    items: () => [item],
+    itemId: (value) => value.id,
+    itemLabel: (value) => value.label,
+  });
+  const aliases = registerWorkbenchIdentityAliases({
+    workbench,
+    projectId: "project",
+    executeCommand: () => undefined,
+    metadata: {
+      ...metadata(owner),
+      settingsSections: [{ id: sectionId, extensionId: owner, localId: "account", title: "Account" }],
+      settingsPanels: [
+        {
+          id: panelId,
+          extensionId: owner,
+          localId: "cloud",
+          view: { kind: "view", id: "devices", extensionId: owner },
+          slot: { id: "cloud" },
+        },
+      ],
+    },
+  });
+  try {
+    expect(workbench.settings.getPanel(oldPanel)?.id).toBe(panelId);
+    expect(workbench.settings.getSection(oldSection)?.id).toBe(sectionId);
+    expect(await workbench.settings.resolveCollectionItem(oldPanel, item.id)).toEqual(item);
+    expect(workbench.settings.getCollectionItem(panelId, item.id)).toEqual(item);
+    expect(workbench.settings.listPanels().filter((value) => value.id === panelId)).toHaveLength(1);
+  } finally {
+    for (const alias of aliases) alias.dispose();
+    panel.dispose();
+    section.dispose();
+    view.dispose();
+    await workbench.dispose();
+  }
+  expect(workbench.settings.getPanel(oldPanel)).toBeUndefined();
 });
