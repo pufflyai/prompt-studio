@@ -51,7 +51,7 @@ export const readSnapshot = (page: Page) =>
 
 // The Performance extension's status meter and the details view it opens.
 export const performanceMeter = (page: Page) =>
-  page.frameLocator('iframe[title="Performance"]').getByTestId("performance-status-item");
+  page.frameLocator('iframe[title="Performance"]:visible').getByTestId("performance-status-item");
 export const performanceDetails = (page: Page) =>
   page.frameLocator('iframe[title="Performance details"]').getByTestId("performance-popover");
 

@@ -13,6 +13,7 @@ import {
 import { repairRemovedCommand, repairRemovedSchedule } from "./merge-queue-repair";
 import { benchmarkCommands, syncCommandRef } from "./src/benchmarks/commands";
 import { navigationTrees, pages, viewMenus, views } from "./src/pages";
+import { healthSync, releaseCommands } from "./src/releases/commands";
 
 const INSTALL_COMMAND = ["bun", "install", "--frozen-lockfile"];
 const BUILD_COMMAND = ["bun", "run", "build"];
@@ -170,6 +171,7 @@ export default defineExtension({
     openInIsolationCommand,
     stopIsolationCommand,
     ...Object.values(benchmarkCommands),
+    ...Object.values(releaseCommands),
     repairRemovedCommand,
   ],
   views,
@@ -218,6 +220,12 @@ export default defineExtension({
     }),
   ],
   schedules: [
+    defineSchedule({
+      id: "daily-release-health",
+      title: "Sync release pipeline health",
+      schedule: "0 7 * * *",
+      command: healthSync.ref,
+    }),
     defineSchedule({
       id: "daily-issue-discovery",
       title: "Daily high-impact issue discovery",
