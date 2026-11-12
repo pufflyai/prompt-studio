@@ -40,6 +40,9 @@ const tables: PgTable[] = [
 ];
 
 test("two upgraded devices, an offline return and a clean join share encrypted streams without rewriting queued history", async () => {
+  const started = performance.now();
+  const phase = (name: string) =>
+    console.info(`Extension rename sync: ${name} +${Math.round(performance.now() - started)}ms`);
   const projectId = crypto.randomUUID();
   const owner = { workbenchId: projectId, extensionId: current };
   const space = await createSyncSpace({
@@ -62,6 +65,7 @@ test("two upgraded devices, an offline return and a clean join share encrypted s
       return connection.db;
     }),
   );
+  phase("five fresh databases ready");
   const database = async () => {
     const db = databases.shift();
     if (!db) throw new Error("All five device databases have already been allocated");
@@ -147,6 +151,7 @@ test("two upgraded devices, an offline return and a clean join share encrypted s
         .where(eq(getTableColumns(table).extension_id!, current)),
     })),
   );
+  phase("authored seed and offline snapshot ready");
   const upgraded = async () => {
     const db = await database();
     // One atomic fixture import avoids a separate durable transaction per copied table.
@@ -162,6 +167,7 @@ test("two upgraded devices, an offline return and a clean join share encrypted s
     return connect(db);
   };
   const [first, second, returning] = await Promise.all([upgraded(), upgraded(), upgraded()]);
+  phase("three copied devices migrated");
   await first.synchronize();
   await second.synchronize();
   await first.records.commit({
@@ -177,8 +183,10 @@ test("two upgraded devices, an offline return and a clean join share encrypted s
   await returning.synchronize();
   await first.synchronize();
   await second.synchronize();
+  phase("upgraded and returning devices synchronized");
   const joined = connect(await database());
   await joined.synchronize();
+  phase("clean join synchronized");
   await Promise.all(
     [first, second, returning, joined].map(async (device) => {
       expect(device.failures).toEqual([]);
@@ -194,6 +202,7 @@ test("two upgraded devices, an offline return and a clean join share encrypted s
       ).toEqual([]);
     }),
   );
+  phase("convergence assertions complete");
   expect([...relays.keys()].every((key) => JSON.parse(key)[0] === historical)).toBe(true);
   expect([...relays.keys()]).toContain(JSON.stringify([historical, "owner"]));
   expect([...relays.keys()]).toContain(JSON.stringify([historical, "record-stream-v2"]));

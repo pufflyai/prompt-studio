@@ -3,6 +3,11 @@ import { createRequest } from "@pstdio/sdk/client";
 import type { Arguments, Argv } from "yargs";
 import { apiClient } from "@/features/api-client";
 import { resolveApiUrl } from "@/features/api-url";
+import {
+  deprecatedProjectExtensionSelector,
+  findExtensionPublication,
+  selectProjectExtensions,
+} from "@/features/extensions/project-extension-selectors";
 import { resolveProjectId } from "@/features/projects/resolve-project-id";
 
 export const command = "publication <action> [name]";
@@ -30,7 +35,7 @@ interface Args {
 
 // Older disabled copies can share an extension ID. The enabled copy is the code this device runs.
 export const findPublicationSource = (extensions: ProjectExtensionInstance[], name: string) => {
-  const matches = extensions.filter((extension) => extension.installName === name || extension.extensionId === name);
+  const matches = selectProjectExtensions(extensions, name);
   return matches.find((extension) => extension.enabled) ?? matches[0];
 };
 
@@ -47,8 +52,10 @@ export const handler = async (argv: Arguments<Args>) => {
   const { extensions } = await apiClient().extensions.listProject(projectId);
   const source = findPublicationSource(extensions, argv.name);
   const extensionId = source?.extensionId ?? argv.name;
-  const record = records.find((record) => record.recordId === extensionId);
+  const record = findExtensionPublication(records, extensionId);
   if (!record) throw new Error("Extension is not installed or published in this workbench.");
+  const notice = source && deprecatedProjectExtensionSelector(source, argv.name);
+  if (notice) console.error(notice);
   const expectedRevision = argv["expected-revision"] ?? record.revision;
   let body: unknown;
   switch (argv.action) {
@@ -57,15 +64,15 @@ export const handler = async (argv: Arguments<Args>) => {
       body = { kind: "publish", instanceId: source.id, expectedRevision };
       break;
     case "adopt":
-      body = { kind: "adopt", extensionId };
+      body = { kind: "adopt", extensionId: record.recordId };
       break;
     case "rollback":
       if (!argv.revision) throw new Error("Choose a previously published package with --revision.");
-      body = { kind: "rollback", extensionId, revision: argv.revision, expectedRevision };
+      body = { kind: "rollback", extensionId: record.recordId, revision: argv.revision, expectedRevision };
       break;
     case "enable":
     case "disable":
-      body = { kind: "enabled", extensionId, enabled: argv.action === "enable", expectedRevision };
+      body = { kind: "enabled", extensionId: record.recordId, enabled: argv.action === "enable", expectedRevision };
       break;
   }
   console.log(JSON.stringify(await request(path, { method: "POST", body }), null, 2));
