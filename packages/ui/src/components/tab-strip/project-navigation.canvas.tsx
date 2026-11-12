@@ -1,5 +1,5 @@
-import { Box, Button, Stack, Text } from "@chakra-ui/react";
-import { Dot, MessageCircle, Pin, Settings } from "lucide-react";
+import { Box, Stack, Text } from "@chakra-ui/react";
+import { MessageCircle, Pin, Settings } from "lucide-react";
 import { useState } from "react";
 import { TreeList } from "../tree-list/tree-list";
 import { WindowTabs } from "./window-tabs";
@@ -9,7 +9,6 @@ export default { title: "Design system/Patterns/Tabs/Project navigation", fullsc
 export const Navigation = () => {
   const [selected, setSelected] = useState("studio");
   const [pinned, setPinned] = useState(true);
-  const [unread, setUnread] = useState(false);
   const [settings, setSettings] = useState<string>();
   const nodes = [
     {
@@ -17,7 +16,6 @@ export const Navigation = () => {
       isNavigable: true,
       label: "Review the release",
       icon: <MessageCircle />,
-      indicator: unread ? { icon: <Dot />, color: "fg.info", tooltip: "New activity" } : undefined,
       contextMenuItems: [
         { id: "pin", label: pinned ? "Unpin session" : "Pin session", icon: Pin, onAction: () => setPinned(!pinned) },
       ],
@@ -61,11 +59,7 @@ export const Navigation = () => {
                 ]
               : [{ id: "recent", label: "Today", nodes }]
           }
-          onNavigate={({ node }) => {
-            if (node.id === "review") setUnread(false);
-          }}
         />
-        <Button onClick={() => setUnread(true)}>Simulate new activity</Button>
       </Box>
     </Stack>
   );
