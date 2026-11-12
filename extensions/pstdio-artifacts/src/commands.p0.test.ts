@@ -98,3 +98,28 @@ test("reports artifact removal after its records and snapshots are deleted", asy
 
   expect(removed).toEqual([{ type: "artifact", id: published.artifactId }]);
 });
+
+// Existing consumers subscribe to this exported raw key independently of package names.
+test("publishing notifies historical artifact subscribers once", async () => {
+  const files = createMemoryRepoFiles();
+  await files.writeText("page.html", "<title>Retained event</title>");
+  const received: unknown[] = [];
+  const published = await commands.publish.run(
+    ...makeCommandArgs({
+      storage: createMemoryStorage(),
+      params: { file_path: "page.html" },
+      overrides: {
+        extensionId: "pstdio.artifacts",
+        projectFiles: files,
+        artifacts: { mount: () => createMemoryRepoFiles() },
+        events: {
+          emit: async (event, payload) => {
+            if (event === "pstdio.pstdio-artifacts.artifacts.changed") received.push(payload);
+            return { delivered: received.length };
+          },
+        },
+      },
+    }),
+  );
+  expect(received).toEqual([{ artifactId: published.artifactId }]);
+});
