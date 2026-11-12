@@ -118,6 +118,7 @@ jobs:
           name: production-performance-${{ matrix.family }}-${{ matrix.os }}-attempt-${{ github.run_attempt }}
           path: |
             test-results/ci/planned
+            !test-results/ci/planned/**/extension-fixtures-*/**
             test-results/production-performance
             test-results/quarantine/workbench-benchmark
             test-results/quarantine/subnav-benchmark

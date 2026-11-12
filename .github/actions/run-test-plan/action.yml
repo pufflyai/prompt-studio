@@ -56,5 +56,7 @@ runs:
       if: always()
       with:
         name: test-plan-results-${{ github.job }}-${{ strategy.job-index }}-${{ steps.bundle.outputs.key }}-attempt-${{ github.run_attempt }}
-        path: test-results/ci/planned/${{ steps.bundle.outputs.key }}
+        path: |
+          test-results/ci/planned/${{ steps.bundle.outputs.key }}
+          !test-results/ci/planned/${{ steps.bundle.outputs.key }}/**/extension-fixtures-*/**
         if-no-files-found: error

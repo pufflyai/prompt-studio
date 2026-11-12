@@ -8,11 +8,15 @@ import { copyPreparedFixtures } from "./prepared-fixture-copy";
 test("completed preparations yield independent sources with owned internal links", () => {
   const root = mkdtempSync(join(tmpdir(), "prepared-fixtures-"));
   try {
+    mkdirSync(join(root, "cache"));
     const source = join(root, "prepared/source");
     mkdirSync(join(source, "assets", "actual"), { recursive: true });
     writeFileSync(join(source, "assets/actual/value"), "original");
     symlinkSync("actual", join(source, "assets/linked"), process.platform === "win32" ? "junction" : "dir");
-    writeFileSync(join(root, "prepared/sources.json"), JSON.stringify({ fixture: source, unselected: "never-read" }));
+    writeFileSync(
+      join(root, "prepared/sources.json"),
+      JSON.stringify({ sources: { fixture: source, unselected: "never-read" }, packageCache: join(root, "cache") }),
+    );
     const a = copyPreparedFixtures(join(root, "prepared"), join(root, "a"), ["fixture"]);
     const b = copyPreparedFixtures(join(root, "prepared"), join(root, "b"), ["fixture"]);
     writeFileSync(join(a.sources.fixture!, "assets/linked/value"), "changed");
@@ -22,6 +26,8 @@ test("completed preparations yield independent sources with owned internal links
     expect(a.reuseHits).toBe(1);
     expect(Object.keys(a.sources)).toEqual(["fixture"]);
     expect(() => copyPreparedFixtures(join(root, "prepared"), join(root, "c"), ["missing"])).toThrow("missing");
+    rmSync(join(root, "cache"), { recursive: true });
+    expect(() => copyPreparedFixtures(join(root, "prepared"), join(root, "d"), ["fixture"])).toThrow("cache missing");
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -30,6 +36,7 @@ test("completed preparations yield independent sources with owned internal links
 test("a private consumer installs its declared dependencies without copying the prepared install", async () => {
   const root = mkdtempSync(join(tmpdir(), "prepared-install-"));
   try {
+    mkdirSync(join(root, "cache"));
     const dependency = join(root, "dependency");
     const prepared = join(root, "prepared");
     const source = join(prepared, "source");
@@ -50,7 +57,10 @@ test("a private consumer installs its declared dependencies without copying the 
         dependencies: { "fixture-dependency": `file:${join(root, "fixture-dependency-1.0.0.tgz")}` },
       }),
     );
-    writeFileSync(join(prepared, "sources.json"), JSON.stringify({ fixture: source }));
+    writeFileSync(
+      join(prepared, "sources.json"),
+      JSON.stringify({ sources: { fixture: source }, packageCache: join(root, "cache") }),
+    );
     const copied = copyPreparedFixtures(prepared, join(root, "consumer"), ["fixture"]);
     const installed = Bun.spawnSync([process.execPath, "install", "--ignore-scripts"], {
       cwd: copied.sources.fixture!,
@@ -70,6 +80,7 @@ test("a private consumer installs its declared dependencies without copying the 
 test("source-only preparation retains a lockfile that supports a fresh frozen consumer install", async () => {
   const root = mkdtempSync(join(tmpdir(), "prepared-lockfile-"));
   try {
+    mkdirSync(join(root, "cache"));
     const dependency = join(root, "dependency");
     const input = join(root, "input");
     mkdirSync(dependency);
@@ -95,7 +106,10 @@ test("source-only preparation retains a lockfile that supports a fresh frozen co
     const source = await preparePackagedExtensionSource(prepared, input);
     expect(await Bun.file(join(source, "bun.lock")).exists()).toBe(true);
     expect(await Bun.file(join(source, "node_modules/prepared-dependency/index.js")).exists()).toBe(false);
-    writeFileSync(join(prepared, "sources.json"), JSON.stringify({ fixture: source }));
+    writeFileSync(
+      join(prepared, "sources.json"),
+      JSON.stringify({ sources: { fixture: source }, packageCache: join(root, "cache") }),
+    );
     const copied = copyPreparedFixtures(prepared, join(root, "consumer"), ["fixture"]);
     expect(
       Bun.spawnSync([process.execPath, "install", "--frozen-lockfile", "--ignore-scripts"], {
@@ -114,6 +128,7 @@ test("source-only preparation retains a lockfile that supports a fresh frozen co
 test("independent sources consume the same prepared public package artifact", async () => {
   const root = mkdtempSync(join(tmpdir(), "prepared-public-artifact-"));
   try {
+    mkdirSync(join(root, "cache"));
     const dependency = join(root, "sdk");
     const input = join(root, "extension");
     mkdirSync(dependency);

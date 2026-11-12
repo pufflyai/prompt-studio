@@ -119,4 +119,5 @@ jobs:
           path: |
             clients/desktop/test-results
             test-results/ci/planned
+            !test-results/ci/planned/**/extension-fixtures-*/**
           if-no-files-found: warn

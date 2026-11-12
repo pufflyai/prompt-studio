@@ -108,7 +108,7 @@ const runSetup = (run: Parameters<typeof testPlanSetup>[1][number], input: PlanI
     } satisfies SetupStep;
     if (!steps.some((step) => step.id === build.id)) steps.push(build);
     steps.push({
-      id: `extension-fixtures-${planHash({ owners: fixtureOwners, source: input.source, target: input.target, bun: Bun.version }).slice(0, 16)}`,
+      id: `extension-fixtures-${planHash({ owners: fixtureOwners, source: input.source, target: input.target, runner: run.runner, lane: input.lane ?? "stable", bun: Bun.version }).slice(0, 16)}`,
       kind: "extension-fixtures",
       owners: fixtureOwners,
       requires: [build.id],

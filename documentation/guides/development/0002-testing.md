@@ -63,6 +63,8 @@ Release consumers use `--performance-family storage|runtime|browser|navigation|p
 
 The root/package default keeps integrations, packaged/native journeys, and performance workloads as explicit selections. An explicit priority, file, runner, or artifact can select these families. Production extension unit tests remain independently runnable with `bun test`, public dependencies, and their own setup. Repository-local tools and demo applications do not have automated suites. Host browser scenarios opt into small installable fixtures for harnesses, webviews, settings, modes, menus, or document layout. The separate Workbench fixture Lab UI is retired; Extension Lab and its example applications remain available.
 
+Compatible priority runs share one completed extension preparation per runner and lane. The producer performs the normal frozen prerequisite installs, retains the package payload cache and immutable public tarballs, removes disposable setup dependencies, and publishes its source/cache catalog only after preparation finishes. Consumers copy source without dependencies and borrow that cache until executor cleanup; every runtime still performs its own fresh install. Stable and quarantine lanes keep separate preparations. Result uploads exclude producer payloads, including after interruption; execution and native reports remain retained.
+
 Changes to packaged runtime behavior, assets, or file inclusion also require the packaged checks in the [testing guidance](../../guidance/0005-testing.md#5-packaged-files). Documentation-reference-only edits do not.
 
 ## Targeted local review

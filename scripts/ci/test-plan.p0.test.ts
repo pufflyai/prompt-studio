@@ -65,17 +65,33 @@ test("shard and lane identities cannot share results", () => {
   expect(stable.runs.some((run) => other.runs.some((candidate) => candidate.id === run.id))).toBe(false);
 });
 
-test("compatible browser inputs share preparation without depending on native compilation", () => {
-  const plan = createTestPlan({
+test("compatible priorities share fixture preparation while runners and lanes keep separate caches", () => {
+  const input = {
     ...context,
     packages: [...packages, { name: "e2e", dir: "packages/e2e", dependencies: [], scripts: {} }],
-    files: ["packages/e2e/src/ui/source.p1.spec.ts", "packages/e2e/src/packaged/native.p1.test.ts"],
-  });
+    files: [
+      "packages/e2e/src/ui/source.p0.spec.ts",
+      "packages/e2e/src/ui/source.p1.spec.ts",
+      "packages/e2e/src/packaged/native.p1.test.ts",
+    ],
+  };
+  const plan = createTestPlan(input);
   const fixtures = plan.setup.filter((step) => step.kind === "extension-fixtures");
-  expect(fixtures).toHaveLength(1);
-  expect(fixtures[0]!.requires.flatMap((id) => plan.setup.find((step) => step.id === id)!.owners)).toEqual([
-    "@pstdio/sdk",
-    "@pstdio/ui",
-  ]);
-  expect(plan.runs.every((run) => run.requires.includes(fixtures[0]!.id))).toBe(true);
+  expect(fixtures).toHaveLength(2);
+  for (const fixture of fixtures)
+    expect(fixture.requires.flatMap((id) => plan.setup.find((step) => step.id === id)!.owners)).toEqual([
+      "@pstdio/sdk",
+      "@pstdio/ui",
+    ]);
+  const browser = plan.runs.filter((run) => run.runner === "app");
+  const fixtureIds = (run: (typeof plan.runs)[number]) =>
+    run.requires.filter((id) => fixtures.some((step) => step.id === id));
+  expect(fixtureIds(browser[0]!)).toEqual(fixtureIds(browser[1]!));
+  expect(fixtureIds(browser[0]!)).not.toEqual(fixtureIds(plan.runs.find((run) => run.runner !== "app")!));
+  const quarantine = createTestPlan({ ...input, lane: "quarantine" });
+  expect(
+    quarantine.setup
+      .filter((step) => step.kind === "extension-fixtures")
+      .some((step) => fixtures.some((stable) => stable.id === step.id)),
+  ).toBe(false);
 });

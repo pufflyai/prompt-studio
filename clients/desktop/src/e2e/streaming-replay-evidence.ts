@@ -16,35 +16,35 @@ export const attachStreamingReplayFailure = async (app: PackagedApp, sessionId: 
     })(),
     (async () => {
       const geometry = await app.page.locator('[aria-label="Main"]:visible').evaluate((main) => {
-        const log = main.querySelector('[role="log"]');
         const rectangle = (element: Element) => {
           const { x, y, width, height } = element.getBoundingClientRect();
           return { x, y, width, height };
         };
         return {
           url: location.href,
-          viewports: Array.from(log?.querySelectorAll('[data-scope="scroll-area"][data-part="viewport"]') ?? []).map(
-            (element) => ({
-              scrollTop: element.scrollTop,
-              scrollHeight: element.scrollHeight,
-              clientHeight: element.clientHeight,
-              rectangle: rectangle(element),
-            }),
-          ),
-          content: Array.from(log?.querySelectorAll('[data-scope="scroll-area"][data-part="content"]') ?? []).map(
-            rectangle,
-          ),
-          rows: Array.from(log?.querySelectorAll<HTMLElement>("[data-chat-message-list-item]") ?? []).map(
-            (element) => ({
+          // A retained conversation can keep a hidden log before the visible one.
+          logs: Array.from(main.querySelectorAll<HTMLElement>('[role="log"]')).map((log) => ({
+            visible: log.checkVisibility(),
+            rectangle: rectangle(log),
+            viewports: Array.from(log.querySelectorAll('[data-scope="scroll-area"][data-part="viewport"]')).map(
+              (element) => ({
+                scrollTop: element.scrollTop,
+                scrollHeight: element.scrollHeight,
+                clientHeight: element.clientHeight,
+                rectangle: rectangle(element),
+              }),
+            ),
+            content: Array.from(log.querySelectorAll('[data-scope="scroll-area"][data-part="content"]')).map(rectangle),
+            rows: Array.from(log.querySelectorAll<HTMLElement>("[data-chat-message-list-item]")).map((element) => ({
               id: element.dataset.chatMessageId,
               index: element.dataset.index,
               top: element.style.top,
               text: element.textContent?.slice(0, 160),
               rectangle: rectangle(element),
               virtualListHeight: element.parentElement?.style.height,
-            }),
-          ),
-          scrollButtonPresent: Boolean(main.querySelector('[aria-label="Scroll to latest message"]')),
+            })),
+            scrollButtonPresent: Boolean(log.querySelector('[aria-label="Scroll to latest message"]')),
+          })),
         };
       });
       await test.info().attach("streaming-rendered-conversation.json", {

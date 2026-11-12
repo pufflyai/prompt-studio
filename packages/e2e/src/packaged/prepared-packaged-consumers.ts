@@ -10,13 +10,17 @@ export const preparePackagedConsumers = async (signal: AbortSignal) => {
   const root = mkdtempSync(join(tmpdir(), "pstdio-packaged-consumers-"));
   let registry: Awaited<ReturnType<typeof startLocalWorkspaceRegistry>> | undefined;
   const close = async () => {
+    const started = performance.now();
+    console.log("Packaged consumer cleanup started");
     try {
       await registry?.close();
     } finally {
       await rm(root, { recursive: true, force: true });
     }
+    console.log(`Packaged consumer cleanup completed (${Math.round(performance.now() - started)}ms)`);
   };
   try {
+    const started = performance.now();
     const repoRoot = join(import.meta.dirname, "../../../..");
     const npmConfigPath = join(root, ".npmrc");
     registry = await startLocalWorkspaceRegistry({
@@ -32,6 +36,7 @@ export const preparePackagedConsumers = async (signal: AbortSignal) => {
     };
     await prepareUiFixtures(env, signal, registry.packageArtifacts);
     signal.throwIfAborted();
+    console.log(`Packaged consumer preparation completed (${Math.round(performance.now() - started)}ms)`);
     return { env, close };
   } catch (error) {
     await close();
