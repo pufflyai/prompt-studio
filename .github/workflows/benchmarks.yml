@@ -1,4 +1,4 @@
-name: Focused native baseline
+name: Focused Cloud baseline
 on:
   workflow_dispatch:
     inputs:
@@ -8,20 +8,20 @@ on:
 permissions:
   contents: read
 jobs:
-  packaged:
-    name: Packaged ${{ matrix.scope }} baseline
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - scope: canvas
-            os: windows-11-arm
-            pkg: cli-win-arm64
-            file: packaged-canvas-install.p2.test.ts
-            pattern: installs Canvas from the catalog
-            lane: quarantine
+  cloud:
+    name: Original three-device Cloud case
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble
+      options: --user 1001 --init --ipc=host
+    env:
+      BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+      E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+      CI_PRIORITY: P2
+      TEST_PRIORITIES: P2
+      CI_PROFILE: production
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -29,40 +29,25 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: "24.22.1"
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
+      - name: Setup Bun
+        run: node scripts/ci/setup-container-bun.ts
       - uses: ./.github/actions/setup-ci-cache
         with:
-          install-strategy: native
-          windows-dev-drive: "true"
-      - name: Build the original packaged prerequisites
+          profile: playwright
+      - name: Build original browser prerequisites
+        run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
+      - name: Compile original packaged host
+        run: bun run --cwd scripts build:host
+      - name: Execute unchanged three-device workload once
         env:
-          PSTDIO_BUILD_PLATFORM_PKG: ${{ matrix.pkg }}
-        run: bun run --cwd scripts build:all
-      - name: Build the owning E2E prerequisites
-        run: bun run build -- --scope e2e --include-dependencies
-      - name: Restore the owning packaged browser prerequisite
-        env:
-          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/${{ matrix.pkg }}/bin/pstdio.exe
-        run: bun -e 'import {preparePackagedSmokeBrowser} from "./scripts/verify/packaged-runtime-smoke.ts";preparePackagedSmokeBrowser(process.env.E2E_PACKAGED_BINARY_PATH!);'
-      - name: Check the unchanged packaged contract once
-        if: matrix.lane == 'stable'
-        working-directory: packages/e2e
-        env:
-          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/${{ matrix.pkg }}/bin/pstdio.exe
-          E2E_TEST_LANE: ${{ matrix.lane }}
-        run: bun run test:packaged:cli -- src/packaged/${{ matrix.file }} --test-name-pattern '${{ matrix.pattern }}'
-      - name: Check the registered quarantine contract once
-        if: matrix.lane == 'quarantine'
-        working-directory: packages/e2e
-        env:
-          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/${{ matrix.pkg }}/bin/pstdio.exe
-          E2E_TEST_LANE: quarantine
-        run: bun run test:packaged:cli -- src/packaged/${{ matrix.file }}
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio
+          E2E_REQUIRE_WEBVIEW_BROWSERS: "1"
+        run: bun run --cwd packages/e2e test:packaged:browser -- src/packaged/packaged-cloud-phase-one.p2.spec.ts --grep 'three independent packaged devices'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: focused-${{ matrix.scope }}-evidence
-          path: packages/e2e/test-results
+          name: focused-cloud-phase-one-evidence
+          path: |
+            packages/e2e/test-results
+            packages/e2e/playwright-report
           if-no-files-found: warn
