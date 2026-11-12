@@ -8,19 +8,45 @@ export const timeVisibleChange = async (
 ) => {
   // Arm inside the renderer before the signal. A complete visible transition can
   // happen before the driver receives control again or installs an assertion.
+  page.on("console", (message) => {
+    if (message.text().startsWith("Release observer trace")) console.info(message.text());
+  });
   const observer = await page.evaluateHandle(
     ({ selector, text }) => {
       const samples: number[] = [];
+      let frames = 0;
+      const trace = (event: string) =>
+        console.info(
+          "Release observer trace",
+          JSON.stringify({
+            at: Date.now(),
+            event,
+            visibility: document.visibilityState,
+            focus: document.hasFocus(),
+            headings: [...document.querySelectorAll(selector)].map((element) => ({
+              text: element.textContent,
+              visible: element.checkVisibility({ visibilityProperty: true }),
+            })),
+            frames,
+          }),
+        );
+      const mutations = new MutationObserver(() => trace("mutation"));
+      mutations.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true });
+      document.addEventListener("visibilitychange", () => trace("visibility"));
+      trace("armed");
       let frame = 0;
       let stopped = false;
       let record = (timestamp: number) => {
         samples.push(timestamp);
       };
       const stop = () => {
+        mutations.disconnect();
+        trace("stop");
         stopped = true;
         cancelAnimationFrame(frame);
       };
       const check = () => {
+        frames++;
         const element = document.querySelector<HTMLElement>(selector);
         if (
           document.visibilityState === "visible" &&
