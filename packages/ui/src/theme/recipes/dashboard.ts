@@ -88,6 +88,7 @@ export const dashboardRecipe = defineSlotRecipe({
     },
     card: {
       position: "relative",
+      borderRadius: "xs",
       gridColumn: "var(--dashboard-x) / span var(--dashboard-w)",
       gridRow: "var(--dashboard-y) / span var(--dashboard-h)",
       minW: "0",
@@ -122,7 +123,7 @@ export const dashboardRecipe = defineSlotRecipe({
       inset: "0",
       borderWidth: "1px",
       borderColor: "border.accent",
-      borderRadius: "2xs",
+      borderRadius: "inherit",
       opacity: "0",
       pointerEvents: "none",
     },
@@ -155,7 +156,15 @@ export const dashboardRecipe = defineSlotRecipe({
       bg: "bg",
       pointerEvents: "none",
     },
-    highlight: { position: "absolute", inset: "0", pointerEvents: "none", zIndex: "2" },
+    highlight: {
+      layerStyle: "panelDropZone",
+      position: "absolute",
+      inset: "0",
+      borderRadius: "inherit",
+      _after: { borderRadius: "inherit" },
+      pointerEvents: "none",
+      zIndex: "2",
+    },
     sizeLabel: { position: "absolute", top: "xs", right: "xs", textStyle: "label/XS/medium" },
     plot: { flex: "1", minH: "0", minW: "0", px: "sm", pb: "sm" },
     settingsPopover: {

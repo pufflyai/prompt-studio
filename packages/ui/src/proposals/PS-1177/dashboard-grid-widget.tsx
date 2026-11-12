@@ -4,7 +4,7 @@ import { GripVertical } from "lucide-react";
 import type { Ref } from "react";
 import { Resizable } from "react-resizable";
 import { dashboardRecipe } from "@/theme/recipes/dashboard";
-import type { DashboardResizeHandle, DashboardWidget } from "./dashboard-fixtures";
+import { type DashboardResizeHandle, type DashboardWidget, widgetLabel } from "./dashboard-fixtures";
 import { type measureGrid, placementStyle } from "./dashboard-grid-geometry";
 import { WidgetCard } from "./dashboard-widget";
 import { WidgetSettings } from "./dashboard-widget-settings";
@@ -46,13 +46,14 @@ export function GridWidget(props: GridWidgetProps) {
   const styles = useSlotRecipe({ recipe: dashboardRecipe })();
   const draggable = useDraggable({ id: widget.id, disabled: !editing });
   const selected = selectedId === widget.id;
+  const label = widgetLabel(widget);
   const content = (
     <Box
       ref={draggable.setNodeRef}
       css={styles.card}
       style={placementStyle(widget.layout)}
       role={editing ? "group" : undefined}
-      aria-label={editing ? `Edit ${widget.title}` : undefined}
+      aria-label={editing ? `Edit ${label}` : undefined}
       tabIndex={editing ? 0 : undefined}
       data-widget-id={widget.id}
       data-moving={moving}
@@ -63,12 +64,12 @@ export function GridWidget(props: GridWidgetProps) {
       {editing && (
         <>
           <Box aria-hidden css={styles.selectionOutline} data-dashboard-selection="" />
-          <HStack css={styles.widgetToolbar} data-dashboard-controls="" aria-label={`${widget.title} controls`}>
+          <HStack css={styles.widgetToolbar} data-dashboard-controls="" aria-label={`${label} controls`}>
             <IconButton
               {...draggable.attributes}
               {...draggable.listeners}
               ref={draggable.setActivatorNodeRef}
-              aria-label={`Drag ${widget.title}`}
+              aria-label={`Drag ${label}`}
               title="Drag to move. Space to pick up, arrow keys to move, Enter to drop."
               size="2xs"
               variant="ghost"
@@ -87,13 +88,7 @@ export function GridWidget(props: GridWidgetProps) {
         </>
       )}
       {(moving || resizing) && (
-        <Box
-          aria-hidden
-          css={styles.highlight}
-          layerStyle="panelDropZone"
-          data-drop-active
-          data-dashboard-drop-preview=""
-        >
+        <Box aria-hidden css={styles.highlight} data-drop-active data-dashboard-drop-preview="">
           <Box css={styles.sizeLabel} layerStyle="floatingBar">
             {widget.layout.w} × {widget.layout.h}
           </Box>
@@ -110,7 +105,7 @@ export function GridWidget(props: GridWidgetProps) {
       handle={(axis, ref) => (
         <IconButton
           ref={ref as Ref<HTMLButtonElement>}
-          aria-label={`Resize ${widget.title} from ${handleNames[axis as DashboardResizeHandle]}`}
+          aria-label={`Resize ${label} from ${handleNames[axis as DashboardResizeHandle]}`}
           title="Drag to resize. Arrow keys move this edge."
           data-dashboard-controls=""
           data-resize-axis={axis}

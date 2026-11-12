@@ -7,7 +7,7 @@ import { Tooltip } from "@/components/primitives/tooltip";
 import { dashboardRecipe } from "@/theme/recipes/dashboard";
 import { ScopedPopover as Popover } from "@/utils/scoped-overlays";
 import { Portal } from "@/utils/ui-scope";
-import { type DashboardWidget, sources, widgetKinds } from "./dashboard-fixtures";
+import { type DashboardWidget, sources, widgetKinds, widgetLabel } from "./dashboard-fixtures";
 
 interface WidgetSettingsProps {
   widget: DashboardWidget;
@@ -33,7 +33,7 @@ export function WidgetSettings(props: WidgetSettingsProps) {
       <Tooltip content="Widget settings">
         <Popover.Trigger asChild>
           <IconButton
-            aria-label={`Configure ${widget.title}`}
+            aria-label={`Configure ${widgetLabel(widget)}`}
             data-configure-widget={widget.id}
             size="2xs"
             variant="ghost"
@@ -65,15 +65,8 @@ export function WidgetSettings(props: WidgetSettingsProps) {
                     ref={input}
                     id={`widget-title-${widget.id}`}
                     value={widget.title}
-                    aria-invalid={!widget.title.trim()}
-                    aria-describedby={!widget.title.trim() ? `widget-error-${widget.id}` : undefined}
                     onChange={(event) => onChange({ ...widget, title: event.target.value })}
                   />
-                  {!widget.title.trim() && (
-                    <Text id={`widget-error-${widget.id}`} textStyle="label/XS/regular" color="fg.error">
-                      Enter a title.
-                    </Text>
-                  )}
                 </Stack>
                 <Stack gap="2xs">
                   <DisplayMenuSelect

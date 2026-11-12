@@ -14,7 +14,7 @@ import {
 import { GripVertical } from "lucide-react";
 import { type CSSProperties, type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 import { dashboardRecipe } from "@/theme/recipes/dashboard";
-import type { DashboardLayoutMode, DashboardWidget, GridPlacement } from "./dashboard-fixtures";
+import { type DashboardLayoutMode, type DashboardWidget, type GridPlacement, widgetLabel } from "./dashboard-fixtures";
 import { measureGrid } from "./dashboard-grid-geometry";
 import { GridWidget } from "./dashboard-grid-widget";
 import { dashboardColumns, moveWidget, projectWidgets, resizeWidget } from "./dashboard-layout";
@@ -195,7 +195,7 @@ export function DashboardGrid(props: GridProps) {
         {active && (
           <HStack layerStyle="floatingBar" pointerEvents="none">
             <GripVertical />
-            <Text textStyle="label/S/medium">{active.title}</Text>
+            <Text textStyle="label/S/medium">{widgetLabel(active)}</Text>
           </HStack>
         )}
       </DragOverlay>

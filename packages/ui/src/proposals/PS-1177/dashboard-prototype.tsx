@@ -6,7 +6,13 @@ import { ScrollArea } from "@/components/primitives/scroll-area";
 import { SegmentedControl } from "@/components/primitives/segmented-control";
 import { dashboardRecipe } from "@/theme/recipes/dashboard";
 import { DashboardDisplaySettings } from "./dashboard-display-settings";
-import { type DashboardDefinition, type DashboardWidget, initialWidgets, widgetKinds } from "./dashboard-fixtures";
+import {
+  type DashboardDefinition,
+  type DashboardWidget,
+  initialWidgets,
+  widgetKinds,
+  widgetLabel,
+} from "./dashboard-fixtures";
 import { DashboardGrid } from "./dashboard-grid";
 import { appendWidget, compactWidgets } from "./dashboard-layout";
 
@@ -112,12 +118,7 @@ export function DashboardPrototype() {
                     onToggle={add}
                   />
                   <Button onClick={() => finishEditing(saved)}>Cancel</Button>
-                  <Button
-                    ref={applyButton}
-                    variant="primary"
-                    disabled={widgets.some(({ title }) => !title.trim())}
-                    onClick={() => finishEditing(definition)}
-                  >
+                  <Button ref={applyButton} variant="primary" onClick={() => finishEditing(definition)}>
                     Apply
                   </Button>
                   <DashboardDisplaySettings
@@ -169,7 +170,7 @@ export function DashboardPrototype() {
                       ),
                     });
                     setSelectedId(null);
-                    setAnnouncement(`${widgets[index].title} removed.`);
+                    setAnnouncement(`${widgetLabel(widgets[index])} removed.`);
                     requestAnimationFrame(() => (next ? widgetButton(next.id) : applyButton.current)?.focus());
                   }}
                   onGestureStart={() => setSelectedId(null)}

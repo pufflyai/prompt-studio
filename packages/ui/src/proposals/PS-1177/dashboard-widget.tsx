@@ -3,7 +3,7 @@ import { DataTable } from "@/components/data-table/data-table";
 import { SimpleCard } from "@/components/primitives/simple-card";
 import { dashboardRecipe } from "@/theme/recipes/dashboard";
 import { DashboardChart } from "./dashboard-chart";
-import { changes, type DashboardWidget, recentTotals, sourceTables, totals } from "./dashboard-fixtures";
+import { changes, type DashboardWidget, recentTotals, sourceTables, totals, widgetLabel } from "./dashboard-fixtures";
 
 interface WidgetCardProps {
   widget: DashboardWidget;
@@ -17,19 +17,22 @@ export function WidgetCard(props: WidgetCardProps) {
   return (
     <SimpleCard
       as="article"
-      aria-label={widget.title}
+      aria-label={widgetLabel(widget)}
       h="full"
       minH="0"
       display="flex"
       flexDirection="column"
       position="relative"
+      borderRadius="inherit"
       data-dashboard-widget-body=""
     >
-      <HStack css={styles.cardHeader}>
-        <Text as="h2" textStyle="label/S/medium" flex="1" minW="0" overflowWrap="anywhere">
-          {widget.title}
-        </Text>
-      </HStack>
+      {widget.title.trim() && (
+        <HStack css={styles.cardHeader}>
+          <Text as="h2" textStyle="label/S/medium" flex="1" minW="0" overflowWrap="anywhere">
+            {widget.title}
+          </Text>
+        </HStack>
+      )}
       {widget.kind === "metric" && (
         <Box px="md" pb="md" flex="1" minH="0" display="flex" flexDirection="column" justifyContent="center">
           <HStack align="center" justify="space-between" gap="md">

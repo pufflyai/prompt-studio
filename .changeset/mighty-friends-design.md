@@ -3,4 +3,4 @@
 "@pstdio/ui": patch
 ---
 
-Add dashboard grid styling with subtle guides, panel drop highlights, floating widget toolbars, square edge resize handles, and anchored settings popovers.
+Add editable dashboard styling with optional titles, matching drop corners, floating toolbars, square edge resize handles, and settings popovers.

@@ -4,7 +4,7 @@ import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
 import { Chart, chartColor } from "@/components/charts/chart";
 import { chartGeometry } from "@/theme/primitives/chart";
-import { activity, type DashboardWidget, trends } from "./dashboard-fixtures";
+import { activity, type DashboardWidget, trends, widgetLabel } from "./dashboard-fixtures";
 
 export function DashboardChart(props: { widget: DashboardWidget; days: number; sparkline?: boolean }) {
   const { widget, days, sparkline } = props;
@@ -34,7 +34,7 @@ export function DashboardChart(props: { widget: DashboardWidget; days: number; s
       : [mark];
   return (
     <Chart
-      ariaLabel={`${widget.title}${sparkline ? " trend" : ""}`}
+      ariaLabel={`${widgetLabel(widget)}${sparkline ? " trend" : ""}`}
       definition={defineChart(
         {
           marks,

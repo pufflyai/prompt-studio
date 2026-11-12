@@ -31,6 +31,8 @@ export const widgetKinds = [
   { id: "bar", name: "Bar chart" },
   { id: "table", name: "Table" },
 ];
+export const widgetLabel = (widget: DashboardWidget) =>
+  widget.title.trim() || widgetKinds.find(({ id }) => id === widget.kind)?.name || "Widget";
 export const sources = [
   { id: "conversations", name: "Conversations" },
   { id: "users", name: "Active users" },
