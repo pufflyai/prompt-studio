@@ -14,9 +14,9 @@ import {
 import { type CSSProperties, type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 import { dashboardRecipe } from "@/theme/recipes/dashboard";
 import { type DashboardLayoutMode, type DashboardWidget, type GridPlacement, widgetLabel } from "./dashboard-fixtures";
-import { measureGrid } from "./dashboard-grid-geometry";
+import { dragAnchor, measureGrid } from "./dashboard-grid-geometry";
 import { GridWidget } from "./dashboard-grid-widget";
-import { dashboardColumns, moveWidget, projectWidgets, resizeWidget } from "./dashboard-layout";
+import { dashboardColumns, previewWidgetMove, projectWidgets, resizeWidget } from "./dashboard-layout";
 import { WidgetIcon } from "./dashboard-widget-icon";
 import { useDashboardResize } from "./use-dashboard-resize";
 
@@ -35,8 +35,9 @@ interface GridProps {
 interface DragSession {
   id: string;
   origin: GridPlacement;
-  candidate: GridPlacement;
-  metrics: { column: number; row: number };
+  anchor: { x: number; y: number };
+  delta: { x: number; y: number };
+  metrics: ReturnType<typeof measureGrid>;
 }
 
 interface GridSurfaceProps {
@@ -80,17 +81,33 @@ function GridSurface(props: GridSurfaceProps) {
 
 export function DashboardGrid(props: GridProps) {
   const { widgets, editing, mode, onChange, onGestureStart } = props;
+  const styles = useSlotRecipe({ recipe: dashboardRecipe })();
   const grid = useRef<HTMLDivElement>(null);
   const [columns, setColumns] = useState(12);
   const [metrics, setMetrics] = useState<ReturnType<typeof measureGrid> | null>(null);
   const [drag, setDrag] = useState<DragSession | null>(null);
   const projected = projectWidgets(widgets, columns);
   const resizing = useDashboardResize({ widgets, projected, columns, mode, grid, onChange, onGestureStart });
-  const preview = drag ? moveWidget(widgets, drag.id, drag.candidate, columns, mode) : widgets;
+  const candidate = drag && {
+    ...drag.origin,
+    x: Math.max(0, Math.min(columns - drag.origin.w, drag.origin.x + Math.round(drag.delta.x / drag.metrics.column))),
+    y: Math.max(0, drag.origin.y + Math.round(drag.delta.y / drag.metrics.row)),
+  };
+  const move =
+    drag && candidate
+      ? previewWidgetMove(widgets, drag.id, candidate, columns, mode, {
+          position: {
+            x: drag.anchor.x + drag.delta.x / drag.metrics.column,
+            y: drag.anchor.y + drag.delta.y / drag.metrics.row,
+          },
+          gapRatio: drag.metrics.gap / drag.metrics.row,
+        })
+      : null;
+  const preview = move?.widgets ?? widgets;
   const sized = resizing.resize
     ? resizeWidget(preview, resizing.resize.id, resizing.resize.size, columns, mode, resizing.resize.handle)
     : preview;
-  const visible = projectWidgets(sized, columns);
+  const visible = projectWidgets(move?.type === "row" ? widgets : sized, columns);
   useEffect(() => {
     if (!grid.current) return;
     const element = grid.current;
@@ -141,14 +158,15 @@ export function DashboardGrid(props: GridProps) {
           draggable: "Press Space to pick up a widget, arrow keys to move it, Enter to drop, or Escape to cancel.",
         },
       }}
-      onDragStart={({ active }) => {
+      onDragStart={({ active, activatorEvent }) => {
         const widget = projected.find((item) => item.id === active.id);
         if (!widget || !grid.current) return;
         onGestureStart();
         setDrag({
           id: widget.id,
           origin: widget.layout,
-          candidate: widget.layout,
+          anchor: dragAnchor(grid.current, widget.layout, activatorEvent, columns),
+          delta: { x: 0, y: 0 },
           metrics: measureGrid(grid.current, columns),
         });
       }}
@@ -157,22 +175,12 @@ export function DashboardGrid(props: GridProps) {
           (previous) =>
             previous && {
               ...previous,
-              candidate: {
-                ...previous.origin,
-                x: Math.max(
-                  0,
-                  Math.min(
-                    columns - previous.origin.w,
-                    previous.origin.x + Math.round(delta.x / previous.metrics.column),
-                  ),
-                ),
-                y: Math.max(0, previous.origin.y + Math.round(delta.y / previous.metrics.row)),
-              },
+              delta,
             },
         )
       }
       onDragEnd={({ over }) => {
-        if (drag && over) onChange(preview);
+        if (move && move.type !== "none" && over) onChange(preview);
         setDrag(null);
       }}
       onDragCancel={() => setDrag(null)}
@@ -184,12 +192,27 @@ export function DashboardGrid(props: GridProps) {
             {...props}
             widget={widget}
             moving={drag?.id === widget.id}
+            showDropPreview={move?.type === "widget" && drag?.id === widget.id}
             resizing={resizing.resize?.id === widget.id}
             resizeController={resizing}
             columns={columns}
             metrics={metrics}
           />
         ))}
+        {drag && move?.type === "row" && (
+          <Box
+            aria-hidden
+            css={styles.rowDropIndicator}
+            data-drop-active
+            data-dashboard-row-drop=""
+            data-before-widget={move.gap.beforeId ?? ""}
+            style={
+              {
+                "--dashboard-drop-top": `${(move.gap.y * drag.metrics.row - drag.metrics.gap / 2) / drag.metrics.scale}px`,
+              } as CSSProperties
+            }
+          />
+        )}
       </GridSurface>
       <DragOverlay dropAnimation={null}>
         {active && (

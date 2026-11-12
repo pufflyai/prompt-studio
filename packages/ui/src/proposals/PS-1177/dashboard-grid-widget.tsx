@@ -16,6 +16,7 @@ interface GridWidgetProps {
   selectedId: string | null;
   days: number;
   moving: boolean;
+  showDropPreview: boolean;
   resizing: boolean;
   columns: number;
   metrics: ReturnType<typeof measureGrid> | null;
@@ -35,6 +36,7 @@ export function GridWidget(props: GridWidgetProps) {
     selectedId,
     days,
     moving,
+    showDropPreview,
     resizing,
     onConfigure,
     onWidgetChange,
@@ -90,7 +92,7 @@ export function GridWidget(props: GridWidgetProps) {
         }
       />
       {editing && <Box aria-hidden css={styles.selectionOutline} data-dashboard-selection="" />}
-      {moving && (
+      {showDropPreview && (
         <Box aria-hidden css={styles.highlight} data-drop-active data-dashboard-drop-preview="">
           <Box css={styles.sizeLabel} layerStyle="floatingBar">
             {widget.layout.w} × {widget.layout.h}

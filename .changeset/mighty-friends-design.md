@@ -3,4 +3,4 @@
 "@pstdio/ui": patch
 ---
 
-Add editable dashboard styling with blue hover and resize selection, panel drop highlights, horizontal swaps and single-widget row insertion, in-widget controls, and settings popovers.
+Add editable dashboard styling with clear metric tooltips, row insertion near gaps, horizontal swaps, blue selection, in-widget controls, and popover settings.

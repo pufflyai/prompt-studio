@@ -23,10 +23,10 @@ export function swapWithinRow(widgets: DashboardWidget[], active: DashboardWidge
 export function insertWidgetRow(
   widgets: DashboardWidget[],
   active: DashboardWidget,
-  target: DashboardWidget,
+  beforeId: string | null,
   mode: DashboardLayoutMode,
 ) {
-  // Keep row-mates together while the dragged widget gets its own row.
+  // Remove only the active widget; a narrow-layout gap may split its saved row.
   const groups = new Map<number, DashboardWidget[]>();
   for (const widget of widgets) {
     const row = groups.get(widget.layout.y) ?? [];
@@ -37,7 +37,7 @@ export function insertWidgetRow(
     .sort(([a], [b]) => a - b)
     .map(([y, widgets]) => ({
       y,
-      widgets,
+      widgets: widgets.sort((a, b) => a.layout.x - b.layout.x),
       height: Math.max(...widgets.map(({ layout }) => layout.h)),
     }));
   const remaining = rows
@@ -46,9 +46,24 @@ export function insertWidgetRow(
       gap: index === 0 ? row.y : Math.max(0, row.y - rows[index - 1].y - rows[index - 1].height),
     }))
     .filter(({ widgets }) => widgets.length > 0);
-  const targetIndex = remaining.findIndex(({ widgets }) => widgets.some(({ id }) => id === target.id));
-  const insertionIndex = targetIndex + (active.layout.y < target.layout.y ? 1 : 0);
-  remaining.splice(insertionIndex, 0, { widgets: [active], gap: 0 });
+  if (beforeId === active.id) {
+    const ordered = rows.flatMap(({ widgets }) => widgets);
+    beforeId = ordered[ordered.findIndex(({ id }) => id === active.id) + 1]?.id ?? null;
+  }
+  const targetIndex = remaining.findIndex(({ widgets }) => widgets.some(({ id }) => id === beforeId));
+  if (targetIndex < 0) remaining.push({ widgets: [active], gap: 0 });
+  else {
+    const target = remaining[targetIndex];
+    const split = target.widgets.findIndex(({ id }) => id === beforeId);
+    const before = target.widgets.slice(0, split);
+    const after = target.widgets.slice(split);
+    const insertion = [
+      { widgets: [active], gap: before.length ? 0 : target.gap },
+      { widgets: after, gap: 0 },
+    ];
+    if (before.length) insertion.unshift({ widgets: before, gap: target.gap });
+    remaining.splice(targetIndex, 1, ...insertion);
+  }
   let y = 0;
   return remaining.flatMap((row) => {
     if (mode !== "vertical") y += row.gap;

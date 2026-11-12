@@ -1,4 +1,5 @@
 import { dashboardGeometry } from "@/theme/primitives/dashboard";
+import { type DropProbe, findRowGap } from "./dashboard-drop-target";
 import type { DashboardLayoutMode, DashboardResizeHandle, DashboardWidget, GridPlacement } from "./dashboard-fixtures";
 import { insertWidgetRow, swapWithinRow } from "./dashboard-rows";
 
@@ -88,57 +89,57 @@ function placeWidget(widgets: DashboardWidget[], id: string, candidate: GridPlac
   return settleWidgets([{ ...widget, layout }, ...readingOrder(widgets).filter((item) => item.id !== id)]);
 }
 
+export function previewWidgetMove(
+  widgets: DashboardWidget[],
+  id: string,
+  candidate: GridPlacement,
+  columns: number,
+  mode: DashboardLayoutMode = "vertical",
+  probe: DropProbe = {
+    position: { x: candidate.x + candidate.w / 2, y: candidate.y + candidate.h / 2 },
+    gapRatio: 1 / 3,
+  },
+) {
+  const projected = projectWidgets(widgets, columns);
+  const active = widgets.find((widget) => widget.id === id);
+  const origin = projected.find((widget) => widget.id === id)?.layout;
+  const unchanged = { type: "none" as const, widgets };
+  if (!active || !origin || (origin.x === candidate.x && origin.y === candidate.y)) return unchanged;
+  const x = clamp(candidate.x, 0, columns - candidate.w);
+  const layout = { ...candidate, x, y: Math.max(0, candidate.y) };
+  const vertical = origin.y !== layout.y;
+  const gap =
+    vertical && probe.position.x >= 0 && probe.position.x <= columns ? findRowGap(projected, probe) : undefined;
+  if (gap)
+    return { type: "row" as const, widgets: readingOrder(insertWidgetRow(widgets, active, gap.beforeId, mode)), gap };
+  if (vertical && mode !== "free") return unchanged;
+  const collisions = projected.filter((widget) => widget.id !== id && intersects(layout, widget.layout));
+  if (vertical && collisions.length) return unchanged;
+  const over = collisions
+    .filter((widget) => widget.layout.y === origin.y)
+    .sort((a, b) => {
+      const overlap = (other: GridPlacement) => Math.min(x + candidate.w, other.x + other.w) - Math.max(x, other.x);
+      return overlap(b.layout) - overlap(a.layout);
+    })[0];
+  const target = widgets.find((widget) => widget.id === over?.id);
+  if (target && active.layout.y === target.layout.y) {
+    return { type: "widget" as const, widgets: readingOrder(swapWithinRow(widgets, active, target)) };
+  }
+  if (columns === dashboardGeometry.columns && !collisions.length) {
+    return { type: "widget" as const, widgets: compactWidgets(placeWidget(widgets, id, candidate), mode) };
+  }
+  return unchanged;
+}
+
 export function moveWidget(
   widgets: DashboardWidget[],
   id: string,
   candidate: GridPlacement,
   columns: number,
   mode: DashboardLayoutMode = "vertical",
+  probe?: DropProbe,
 ) {
-  const projected = projectWidgets(widgets, columns);
-  const origin = projected.find((widget) => widget.id === id)?.layout;
-  if (origin?.x === candidate.x && origin.y === candidate.y) return widgets;
-  const x = clamp(candidate.x, 0, columns - candidate.w);
-  const y = Math.max(0, candidate.y);
-  let over: DashboardWidget | undefined;
-  let largestOverlap = 0;
-  for (const widget of projected) {
-    if (widget.id === id) continue;
-    const { layout } = widget;
-    const width = Math.max(0, Math.min(x + candidate.w, layout.x + layout.w) - Math.max(x, layout.x));
-    const height = Math.max(0, Math.min(y + candidate.h, layout.y + layout.h) - Math.max(y, layout.y));
-    if (width * height > largestOverlap) {
-      largestOverlap = width * height;
-      over = widget;
-    }
-  }
-  const active = widgets.find((widget) => widget.id === id);
-  const target = widgets.find((widget) => widget.id === over?.id);
-  if (active && target) {
-    if (active.layout.y === target.layout.y) {
-      return readingOrder(swapWithinRow(widgets, active, target));
-    }
-    return readingOrder(insertWidgetRow(widgets, active, target, mode));
-  }
-  if (columns === dashboardGeometry.columns) {
-    return compactWidgets(placeWidget(widgets, id, candidate), mode);
-  }
-  // Narrow empty-space drops change reading order without storing a second layout.
-  const ordered = readingOrder(widgets);
-  const from = ordered.findIndex((widget) => widget.id === id);
-  if (from < 0) return widgets;
-  const center = candidate.y + candidate.h / 2;
-  const targets = projected.filter((widget) => widget.id !== id);
-  const nearest = targets.reduce<DashboardWidget | undefined>((closest, widget) => {
-    const distance = Math.abs(widget.layout.y + widget.layout.h / 2 - center);
-    if (!closest || distance < Math.abs(closest.layout.y + closest.layout.h / 2 - center)) return widget;
-    return closest;
-  }, undefined);
-  if (!nearest) return widgets;
-  const to = ordered.findIndex((widget) => widget.id === nearest.id);
-  const [moved] = ordered.splice(from, 1);
-  ordered.splice(to, 0, moved);
-  return compactWidgets(packWidgets(ordered, dashboardGeometry.columns), mode);
+  return previewWidgetMove(widgets, id, candidate, columns, mode, probe).widgets;
 }
 
 export function resizeWidget(

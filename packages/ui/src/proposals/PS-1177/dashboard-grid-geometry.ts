@@ -23,6 +23,17 @@ export function measureGrid(element: HTMLDivElement, columns: number) {
   };
 }
 
+export function dragAnchor(element: HTMLDivElement, origin: GridPlacement, event: Event, columns: number) {
+  if (!("clientX" in event && "clientY" in event)) return { x: origin.x + origin.w / 2, y: origin.y + origin.h / 2 };
+  const metrics = measureGrid(element, columns);
+  const bounds = element.getBoundingClientRect();
+  const style = getComputedStyle(element);
+  return {
+    x: (Number(event.clientX) - bounds.left - Number.parseFloat(style.paddingLeft) * metrics.scale) / metrics.column,
+    y: (Number(event.clientY) - bounds.top - Number.parseFloat(style.paddingTop) * metrics.scale) / metrics.row,
+  };
+}
+
 export const placementSize = (layout: Pick<GridPlacement, "w" | "h">, metrics: ReturnType<typeof measureGrid>) => ({
   width: (layout.w * metrics.column - metrics.gap) / metrics.scale,
   height: (layout.h * metrics.row - metrics.gap) / metrics.scale,
