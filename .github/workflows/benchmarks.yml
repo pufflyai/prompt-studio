@@ -1,4 +1,4 @@
-name: Windows fixture ownership qualification
+name: Focused remaining failure controls
 on:
   workflow_dispatch:
     inputs:
@@ -8,12 +8,94 @@ on:
 permissions:
   contents: read
 jobs:
-  ownership:
-    name: Windows interrupted consumer cleanup
-    runs-on: windows-2025
+  app:
+    name: Main Linux draft workspace control
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble
+      options: --user 1001 --init --ipc=host
+    env:
+      BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+      E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+      CI_PRIORITY: P2
+      TEST_PRIORITIES: P2
+      CI_PROFILE: production
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: f7289ac43b84e64bac4f6e13fda715517a118909
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24.22.1"
+      - name: Setup Bun
+        run: node scripts/ci/setup-container-bun.ts
+      - uses: ./.github/actions/setup-ci-cache
+        with:
+          profile: playwright
+      - name: Build browser prerequisites
+        run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
+      - name: Execute unchanged workspace selection case once
+        run: bun run --cwd packages/e2e test:ui -- src/ui/session-bubble-workspaces.p2.spec.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: main-workspace-selection
+          path: packages/e2e/test-results
+          if-no-files-found: warn
+  desktop:
+    name: Main Linux original desktop benchmarks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      CI_PRIORITY: P3
+      TEST_PRIORITIES: P3
+      CI_PROFILE: production
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: f7289ac43b84e64bac4f6e13fda715517a118909
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24.22.1"
+      - uses: ./.github/actions/setup-ci-cache
+        with:
+          install-strategy: native
+      - name: Install Chromium system prerequisites
+        working-directory: packages/e2e
+        run: bun x --no-install playwright install-deps chromium
+      - name: Build original desktop prerequisites
+        run: bun run build -- --scope @pstdio/desktop --include-dependencies
+      - name: Package original desktop
+        run: bun run --cwd clients/desktop package
+      - name: Configure Linux sandbox
+        run: |
+          sudo chown root:root clients/desktop/out/prompt-studio-linux-x64/chrome-sandbox
+          sudo chmod 4755 clients/desktop/out/prompt-studio-linux-x64/chrome-sandbox
+      - name: Execute original complete benchmark workload once
+        run: xvfb-run -a bun run --cwd clients/desktop test:benchmark
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: main-linux-desktop-benchmarks
+          path: |
+            clients/desktop/test-results
+            test-results/quarantine
+          if-no-files-found: warn
+  composer:
+    name: Windows ARM composer install diagnostics
+    runs-on: windows-11-arm
     timeout-minutes: 30
     env:
+      CI_PRIORITY: P1
+      TEST_PRIORITIES: P1
       CI_PROFILE: production
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -27,23 +109,27 @@ jobs:
       - uses: ./.github/actions/setup-ci-cache
         with:
           install-strategy: native
-      - name: Apply consumer ownership repair
+          windows-dev-drive: "true"
+      - name: Record dependency installer output and effective cache
         env:
-          OWNERSHIP_PATCH: "ZGlmZiAtLWdpdCBhL3BhY2thZ2VzL2UyZS9zcmMvcGFja2FnZWQvcHJlcGFyZWQtcGFja2FnZWQtY29uc3VtZXJzLnRzIGIvcGFja2FnZXMvZTJlL3NyYy9wYWNrYWdlZC9wcmVwYXJlZC1wYWNrYWdlZC1jb25zdW1lcnMudHMKaW5kZXggOGFlMmY0OGJmLi43ZWI4NDU0YzIgMTAwNjQ0Ci0tLSBhL3BhY2thZ2VzL2UyZS9zcmMvcGFja2FnZWQvcHJlcGFyZWQtcGFja2FnZWQtY29uc3VtZXJzLnRzCisrKyBiL3BhY2thZ2VzL2UyZS9zcmMvcGFja2FnZWQvcHJlcGFyZWQtcGFja2FnZWQtY29uc3VtZXJzLnRzCkBAIC03LDcgKzcsOSBAQCBpbXBvcnQgeyBwcmVwYXJlVWlGaXh0dXJlcyB9IGZyb20gIi4uL3NjcmlwdHMvcHJlcGFyZS11aS1maXh0dXJlcyI7CiAKIC8qKiBDTEksIGJyb3dzZXIgYW5kIGJlbmNobWFyayBmaXh0dXJlcyB1c2UgdGhlIHNhbWUgZnJlc2ggcHVibGljIGRlcGVuZGVuY3kgcHJvZmlsZS4gKi8KIGV4cG9ydCBjb25zdCBwcmVwYXJlUGFja2FnZWRDb25zdW1lcnMgPSBhc3luYyAoc2lnbmFsOiBBYm9ydFNpZ25hbCkgPT4gewotICBjb25zdCByb290ID0gbWtkdGVtcFN5bmMoam9pbih0bXBkaXIoKSwgInBzdGRpby1wYWNrYWdlZC1jb25zdW1lcnMtIikpOworICAvLyBGb3JjZWQgcHJvY2Vzcy10cmVlIHRlcm1pbmF0aW9uIGNhbiBieXBhc3MgdGhpcyBjaGlsZCdzIGZpbmFsbHkgb24gV2luZG93cy4KKyAgLy8gVGhlIGV4ZWN1dG9yIG11c3Qgc3RpbGwgb3duIGV2ZXJ5IHByZXBhcmVkIGNvbnN1bWVyJ3MgdGVtcG9yYXJ5IGZpbGVzLgorICBjb25zdCByb290ID0gbWtkdGVtcFN5bmMoam9pbihwcm9jZXNzLmVudi5FMkVfUFJFUEFSRURfRklYVFVSRVMgPz8gdG1wZGlyKCksICJwc3RkaW8tcGFja2FnZWQtY29uc3VtZXJzLSIpKTsKICAgbGV0IHJlZ2lzdHJ5OiBBd2FpdGVkPFJldHVyblR5cGU8dHlwZW9mIHN0YXJ0TG9jYWxXb3Jrc3BhY2VSZWdpc3RyeT4+IHwgdW5kZWZpbmVkOwogICBjb25zdCBjbG9zZSA9IGFzeW5jICgpID0+IHsKICAgICBjb25zdCBzdGFydGVkID0gcGVyZm9ybWFuY2Uubm93KCk7Cg=="
+          DIAGNOSTIC_SCRIPT: "Y29uc3QgcGF0aD0icGFja2FnZXMvcHN0ZGlvLWFwaS9zcmMvZmVhdHVyZXMvZXh0ZW5zaW9ucy9pbnN0YWxsLWV4dGVuc2lvbi1kZXBlbmRlbmNpZXMudHMiOwpsZXQgc291cmNlPWF3YWl0IEJ1bi5maWxlKHBhdGgpLnRleHQoKTsKY29uc3QgYmVmb3JlPSIgICAgaWYgKHJlc3VsdC5leGl0Q29kZSAhPT0gMCkgeyI7CmlmKCFzb3VyY2UuaW5jbHVkZXMoYmVmb3JlKSl0aHJvdyBuZXcgRXJyb3IoIk1pc3NpbmcgZGVwZW5kZW5jeSBpbnN0YWxsZXIgZGlhZ25vc3RpYyBib3VuZGFyeSIpOwpjb25zdCBpbnNlcnRlZD0nICAgIGNvbnNvbGUubG9nKEpTT04uc3RyaW5naWZ5KHtkaWFnbm9zdGljOiJkZXBlbmRlbmN5LWluc3RhbGwiLHRhcmdldFBhdGgsZmlsZTpjb21tYW5kLmZpbGUsYXJnczpjb21tYW5kLmFyZ3MsY2FjaGU6Y29tbWFuZC5lbnY/LkJVTl9JTlNUQUxMX0NBQ0hFX0RJUixyZWFsQ2FjaGU6Y29tbWFuZC5lbnY/LkJVTl9JTlNUQUxMX0NBQ0hFX0RJUj9yZXF1aXJlKCJub2RlOmZzIikucmVhbHBhdGhTeW5jKGNvbW1hbmQuZW52LkJVTl9JTlNUQUxMX0NBQ0hFX0RJUik6dW5kZWZpbmVkLHN0ZG91dDpyZXN1bHQuc3Rkb3V0LHN0ZGVycjpyZXN1bHQuc3RkZXJyfSkpO1xuJzsKc291cmNlPXNvdXJjZS5yZXBsYWNlKGJlZm9yZSxpbnNlcnRlZCtiZWZvcmUpOwphd2FpdCBCdW4ud3JpdGUocGF0aCxzb3VyY2UpOwo="
         run: |
-          New-Item -ItemType Directory -Force test-results | Out-Null
-          bun -e 'await Bun.write("test-results/consumer-root-ownership.patch", Buffer.from(process.env.OWNERSHIP_PATCH, "base64"));'
-          git apply test-results/consumer-root-ownership.patch
+          bun -e 'await Bun.write("dependency-install-diagnostic.ts", Buffer.from(process.env.DIAGNOSTIC_SCRIPT,"base64"));'
+          bun dependency-install-diagnostic.ts
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Verify complete and interrupted execution ownership
-        run: |
-          bun test scripts/ci/execution-package-cache.p0.test.ts 2>&1 | Tee-Object -FilePath test-results/consumer-root-ownership.log
-          exit $LASTEXITCODE
+      - name: Build native prerequisites
+        run: bun run build -- --scope e2e --include-dependencies
+      - name: Compile instrumented packaged host
+        run: bun run --cwd scripts build:host
+      - name: Run original composer case with installer diagnostics
+        env:
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio.exe
+        run: bun run --cwd packages/e2e test:packaged:cli -- src/packaged/packaged-project-setup-smoke.p1.test.ts --test-name-pattern 'serves the dashboard and API'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: windows-consumer-root-ownership
+          name: windows-arm-composer-install-diagnostics
           path: |
-            test-results/consumer-root-ownership.*
-            test-results/ci/planned/**/execution.json
-          if-no-files-found: error
+            packages/e2e/test-results
+            packages/e2e/playwright-report
+          if-no-files-found: warn
