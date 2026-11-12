@@ -39,7 +39,7 @@ jobs:
       - name: Build original desktop prerequisites
         run: bun run build -- --scope @pstdio/desktop --include-dependencies
       - name: Package original desktop
-        run: bun run --cwd clients/desktop package
+        run: bun scripts/ci/prepare-test-desktop.ts
       - name: Execute all original desktop cases once
         run: xvfb-run --auto-servernum bun run --cwd clients/desktop test:benchmark
       - uses: actions/upload-artifact@v4
