@@ -1,4 +1,4 @@
-name: Focused Linux streaming control
+name: Focused Cloud repair qualification
 on:
   workflow_dispatch:
     inputs:
@@ -48,6 +48,7 @@ jobs:
             packages/e2e/playwright-report
           if-no-files-found: warn
   native:
+    if: false
     name: Original native ${{ matrix.case }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
@@ -92,6 +93,49 @@ jobs:
         if: always()
         with:
           name: focused-native-${{ runner.os }}-evidence
+          path: |
+            packages/e2e/test-results
+            packages/e2e/playwright-report
+          if-no-files-found: warn
+  cloud:
+    name: Original three-device Cloud case
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble
+      options: --user 1001 --init --ipc=host
+    env:
+      BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+      E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+      CI_PRIORITY: P2
+      TEST_PRIORITIES: P2
+      CI_PROFILE: production
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.source_sha }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24.22.1"
+      - name: Setup Bun
+        run: node scripts/ci/setup-container-bun.ts
+      - uses: ./.github/actions/setup-ci-cache
+        with:
+          profile: playwright
+      - name: Build original browser prerequisites
+        run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
+      - name: Compile original packaged host
+        run: bun run --cwd scripts build:host
+      - name: Execute original three-device workload once
+        env:
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio
+          E2E_REQUIRE_WEBVIEW_BROWSERS: "1"
+        run: bun run --cwd packages/e2e test:packaged:browser -- src/packaged/packaged-cloud-phase-one.p2.spec.ts --grep 'three independent packaged devices'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: focused-cloud-repair-evidence
           path: |
             packages/e2e/test-results
             packages/e2e/playwright-report
