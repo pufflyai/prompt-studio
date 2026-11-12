@@ -13,3 +13,5 @@ Migration copies and verifies each body and attachment, preserves original autho
 `pst reports read --id <stable-id-or-RP-number>` continues resolving historical reports, including migrated evidence. A shared alias can return several matches; use a stable report ID to select one. Migrated file metadata includes `activityAttachmentId` and the owning resource reference.
 
 Existing `reports write`, `save`, and `delete` commands remain compatibility APIs through their deprecation period. Do not use them to create a second copy of a new Activity outcome. Migrated reports cannot be edited; publish a new Activity entry for later work.
+
+*Updated at: 2026-11-12*

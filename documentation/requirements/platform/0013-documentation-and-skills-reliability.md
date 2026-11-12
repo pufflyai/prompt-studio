@@ -159,7 +159,7 @@ Internal targets: [requirements](..), [architecture references](../../references
 - Distinguish composer goal/plan/state/confirmation fixture coverage from rich metrics, complete UI composition, and live provider proof. Preserve unresolved bare CLI-group help as a requirement.
 - Keep [backend isolation](../../adrs/0058-isolate-extension-backends.md), [repository trust](../../adrs/0059-trust-step-for-repo-extensions.md), and dynamic page titles proposed unless new implementation and evidence justify a status change.
 
-Skill targets: [pstdio-skills](../../../extensions/pstdio-skills/skills), [Planner skills](../../../extensions/pstdio-planner/skills), [Reports skill](../../../extensions/pstdio-reports/skills), and [Artifacts skill](../../../extensions/pstdio-artifacts/skills).
+Skill targets: [pstdio-skills](../../../extensions/pstdio-skills/skills), [Planner skills](../../../extensions/pstdio-planner/skills), [Resource Activity skill](../../../extensions/pstdio-skills/skills/use-resource-activity), and [Artifacts skill](../../../extensions/pstdio-artifacts/skills).
 
 - Route `create-pstdio-extension` to the working walkthrough first, then link the relevant contract at each decision: version preflight, scope/source location, storage, native actions, navigation, webviews, and validation. Use public URLs/anchors from exported skills; repository-relative links cannot assume an application checkout.
 - Keep focused offline instructions and bundled relative assets usable after export. Explain `rowId`/`rowIds` versus `onRowActivate`'s `row`, plain-array collection results, update-only operations, persistence before events, and real project separation.

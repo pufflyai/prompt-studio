@@ -146,8 +146,9 @@ Archiving or deleting a ticket deletes linked workspaces once no active ticket u
 
 The project setting **Mark done on merge** (`tickets.markDoneOnMerge`) is also on by default. Local merges move linked tickets to the **Status after merge** chosen in Planner's workflow settings. Without that choice, tickets stay unchanged. Planner checks GitHub pull request links and linked workspace branches every five minutes with up to eight parallel checks. Install and authenticate GitHub CLI (`gh`) on the host for these checks. Failed GitHub checks leave tickets unchanged and log the failure. Merges do not archive tickets or delete workspaces.
 
-*Updated at: 2026-11-05*
 
 ## Historical outcomes
 
 Run `pst pstdio-planner migrate-ticket-outcomes --id PS-12` with Reports compatibility installed to preserve report bodies, files, authorship, timestamps and exact reviewed revisions in ticket Activity. Stable RP references redirect only after the copy is verified. New submissions use `changeRequestActivityId`; reviews use `activityId`. Historical report parameters and stored references remain deprecated compatibility inputs.
+
+*Updated at: 2026-11-12*
