@@ -323,10 +323,10 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
     ["A", "Artifacts", /\/artifacts$/],
   ] as const) {
     await page.getByRole("option", { name: "Home", exact: true }).click();
-    await (await showSidenavEntry(page, "Tickets")).click();
     await showSidenavEntry(page, label);
     const row = page.getByRole("option", { name: new RegExp(`^${label}`) }).first();
     await row.focus();
+    await expect(page).not.toHaveURL(destination);
     await page.keyboard.press("Alt+Shift+Space");
     await page.keyboard.press("g");
     await page.keyboard.press(key);
