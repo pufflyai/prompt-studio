@@ -94,6 +94,7 @@ const unavailableAccount: ExtensionAccountApi = {
   renameDevice: unavailableAccountCall,
   removeDevice: unavailableAccountCall,
   projectSyncStatus: unavailableAccountCall,
+  retryProjectSyncSource: unavailableAccountCall,
   syncProject: unavailableAccountCall,
   stopProjectSync: unavailableAccountCall,
   resolveReturnedChanges: unavailableAccountCall,

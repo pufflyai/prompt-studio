@@ -1,4 +1,3 @@
-import type { ProjectFolderRecoveryStatus } from "pstdio-api-contracts";
 import { createLiveConnection, createRelayAccess, type LiveConnection } from "pstdio-sync/relay";
 import { canonicalJson } from "pstdio-sync-contracts";
 import { publishedExtensionsId } from "../../features/extensions/publication/catalog";
@@ -13,7 +12,8 @@ import { startDeviceCommands } from "./device-commands";
 import { extensionOwnerContextKey, startRelayExtension } from "./extension-owner";
 import { startFolderRecovery } from "./folder-recovery";
 import { startRelayPersonalHistory } from "./personal";
-import { projectSyncStatus } from "./project-status";
+import { projectOwnerProgress, readOwnerStatus } from "./project-owner-progress";
+import { createProjectSyncRetry } from "./project-sync-retry";
 import { startPublishedExtensions } from "./publications";
 import { createStorageChangeAnnouncer } from "./storage-changes";
 import { createWorkbenchConnections } from "./workbench-connections";
@@ -52,33 +52,6 @@ const watchRuntimeChanges = (deps: RelayDeps, refresh: () => Promise<void>) =>
       void refresh();
   });
 
-const missingOwnerStatus = {
-  firstDownloaded: false,
-  downloaded: false,
-  pending: false,
-  needsAttention: false,
-  connected: false,
-  busy: false,
-};
-const projectOwnerProgress = (
-  workbenchId: string,
-  statuses: Parameters<typeof projectSyncStatus>[0],
-  extensionIds: string[],
-  /** Folder progress sits beside records and never makes them unready. */
-  folder?: ProjectFolderRecoveryStatus,
-) => {
-  const names = ["core", "publications", "automations", "personal", ...extensionIds];
-  apiLogger.debug(
-    {
-      event: "relay.project.status",
-      workbenchId,
-      owners: statuses.map((status, index) => ({ owner: names[index], ...status })),
-    },
-    "Project data owner progress",
-  );
-  return { ...projectSyncStatus(statuses), ...(folder ? { folder } : {}) };
-};
-
 /** What other services call on one project: online device commands and its folder recovery owner. */
 const projectEntryPoints = (
   commands: Parameters<typeof createDeviceCommandCaller>[0],
@@ -105,11 +78,13 @@ const stopRelayConnection = async (
 
 // `denied` runs when the manager rejects a device credential, for example after another device removed this one.
 // `statusChanged` runs when a project's sync status may have changed. Read `status` to get the new value.
-export const startRelayRuntime = async (input: {
+interface RelayRuntimeInput {
   deps: RelayDeps;
   denied?: () => void;
   statusChanged?: (workbenchId: string) => void;
-}) => {
+}
+
+export const startRelayRuntime = async (input: RelayRuntimeInput) => {
   const workbenches = new Map<string, RelayWorkbench>();
   const access = new Map<string, ReturnType<typeof createRelayAccess>>();
   const controller = new AbortController();
@@ -239,16 +214,12 @@ export const startRelayRuntime = async (input: {
   await refresh();
   return {
     ...projectEntryPoints(commands.get, recovery.get),
-    async retry(workbenchId: string) {
-      await refresh();
-      personal.get(workbenchId)?.retry();
-      publications.get(workbenchId)?.retry();
-      automations.get(workbenchId)?.retry();
-      coreDocuments.get(workbenchId)?.retry();
-      recovery.get(workbenchId)?.retry();
-      for (const connection of connections.values())
-        if (connection.owner.workbenchId === workbenchId) connection.retry();
-    },
+    retry: createProjectSyncRetry({
+      refresh,
+      owners: { core: coreDocuments, publications, automations, personal },
+      folders: recovery,
+      extensions: connections,
+    }),
     // Every owner of project data reports: core resource numbers and each enabled extension.
     // An owner that has not started yet counts as not downloaded.
     async status(workbenchId: string) {
@@ -265,8 +236,9 @@ export const startRelayRuntime = async (input: {
       ];
       return projectOwnerProgress(
         workbenchId,
-        await Promise.all(owners.map((owner) => owner?.status() ?? missingOwnerStatus)),
+        await Promise.all(owners.map(readOwnerStatus)),
         snapshot.enabledSources.map(({ installedSource }) => installedSource.extension_id),
+        snapshot.enabledSources.map(({ installedSource }) => installedSource.display_name),
         await recovery.get(workbenchId)?.folder(),
       );
     },

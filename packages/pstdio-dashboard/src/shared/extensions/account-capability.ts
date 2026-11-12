@@ -18,6 +18,9 @@ export const createAccountAdapter = (projectId: string, client: Pick<PstdioClien
       await client.account.removeDevice(id);
     },
     projectSyncStatus: (id = projectId) => client.account.projectSyncStatus(id),
+    retryProjectSyncSource: async (sourceId, id = projectId) => {
+      await client.account.retryProjectSyncSource(id, sourceId);
+    },
     syncProject: async (id = projectId) => {
       await client.account.syncProject(id);
     },
