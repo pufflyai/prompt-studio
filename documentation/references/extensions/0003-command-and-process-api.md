@@ -402,7 +402,7 @@ local edits and staged file bytes are preserved. No shared socket is restarted.
 The webview operation uses `account.manage`. HTTP clients use
 `POST /v1/account/projects/{id}/sync/sources/{sourceId}/retry`, or
 `client.account.retryProjectSyncSource(projectId, sourceId)`. Unknown sources fail.
-These additive API 0.4.0 changes require a matching published SDK and host.
+These additive API 0.4.1 changes require a matching published SDK and host.
 
 `signInRequired` distinguishes a rejected device credential from an ordinary sign-out. It survives a host restart and clears after successful sign-in or explicit sign-out. Network loss, scheduled relay-token renewal, a removed project, and lack of early access do not set it. Local project data stays on this device. Listen to `accountEvents.changed` for changes to the public account status, even when project sync state stays the same. Its payload is `AccountStatus`; webviews receive the event ID and read `account.status()` again. Read once on startup because the first value is not announced.
 
@@ -708,4 +708,4 @@ Installation continues in the background and survives a runtime restart. Selecti
 
 The call takes no project argument. Older hosts omit `ctx.extensions`; extensions that need it declare API `^0.3.1`.
 
-*Updated at: 2026-11-07*
+*Updated at: 2026-11-12*
