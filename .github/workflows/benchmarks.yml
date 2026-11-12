@@ -1,4 +1,4 @@
-name: Completed fixture profile qualification
+name: Windows fixture ownership qualification
 on:
   workflow_dispatch:
     inputs:
@@ -8,13 +8,12 @@ on:
 permissions:
   contents: read
 jobs:
-  cleanup:
-    name: One completed fixture profile on Apple Silicon
-    runs-on: macos-15
+  ownership:
+    name: Windows interrupted consumer cleanup
+    runs-on: windows-2025
     timeout-minutes: 30
     env:
       CI_PROFILE: production
-      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -28,79 +27,23 @@ jobs:
       - uses: ./.github/actions/setup-ci-cache
         with:
           install-strategy: native
-      - name: Build original public artifacts
-        run: bun run build -- --scope @pstdio/sdk --scope @pstdio/ui --include-dependencies
-      - name: Compare complete setup and cleanup once
+      - name: Apply consumer ownership repair
+        env:
+          OWNERSHIP_PATCH: "ZGlmZiAtLWdpdCBhL3BhY2thZ2VzL2UyZS9zcmMvcGFja2FnZWQvcHJlcGFyZWQtcGFja2FnZWQtY29uc3VtZXJzLnRzIGIvcGFja2FnZXMvZTJlL3NyYy9wYWNrYWdlZC9wcmVwYXJlZC1wYWNrYWdlZC1jb25zdW1lcnMudHMKaW5kZXggOGFlMmY0OGJmLi43ZWI4NDU0YzIgMTAwNjQ0Ci0tLSBhL3BhY2thZ2VzL2UyZS9zcmMvcGFja2FnZWQvcHJlcGFyZWQtcGFja2FnZWQtY29uc3VtZXJzLnRzCisrKyBiL3BhY2thZ2VzL2UyZS9zcmMvcGFja2FnZWQvcHJlcGFyZWQtcGFja2FnZWQtY29uc3VtZXJzLnRzCkBAIC03LDcgKzcsOSBAQCBpbXBvcnQgeyBwcmVwYXJlVWlGaXh0dXJlcyB9IGZyb20gIi4uL3NjcmlwdHMvcHJlcGFyZS11aS1maXh0dXJlcyI7CiAKIC8qKiBDTEksIGJyb3dzZXIgYW5kIGJlbmNobWFyayBmaXh0dXJlcyB1c2UgdGhlIHNhbWUgZnJlc2ggcHVibGljIGRlcGVuZGVuY3kgcHJvZmlsZS4gKi8KIGV4cG9ydCBjb25zdCBwcmVwYXJlUGFja2FnZWRDb25zdW1lcnMgPSBhc3luYyAoc2lnbmFsOiBBYm9ydFNpZ25hbCkgPT4gewotICBjb25zdCByb290ID0gbWtkdGVtcFN5bmMoam9pbih0bXBkaXIoKSwgInBzdGRpby1wYWNrYWdlZC1jb25zdW1lcnMtIikpOworICAvLyBGb3JjZWQgcHJvY2Vzcy10cmVlIHRlcm1pbmF0aW9uIGNhbiBieXBhc3MgdGhpcyBjaGlsZCdzIGZpbmFsbHkgb24gV2luZG93cy4KKyAgLy8gVGhlIGV4ZWN1dG9yIG11c3Qgc3RpbGwgb3duIGV2ZXJ5IHByZXBhcmVkIGNvbnN1bWVyJ3MgdGVtcG9yYXJ5IGZpbGVzLgorICBjb25zdCByb290ID0gbWtkdGVtcFN5bmMoam9pbihwcm9jZXNzLmVudi5FMkVfUFJFUEFSRURfRklYVFVSRVMgPz8gdG1wZGlyKCksICJwc3RkaW8tcGFja2FnZWQtY29uc3VtZXJzLSIpKTsKICAgbGV0IHJlZ2lzdHJ5OiBBd2FpdGVkPFJldHVyblR5cGU8dHlwZW9mIHN0YXJ0TG9jYWxXb3Jrc3BhY2VSZWdpc3RyeT4+IHwgdW5kZWZpbmVkOwogICBjb25zdCBjbG9zZSA9IGFzeW5jICgpID0+IHsKICAgICBjb25zdCBzdGFydGVkID0gcGVyZm9ybWFuY2Uubm93KCk7Cg=="
         run: |
-          mkdir -p test-results
-          bun -e 'await Bun.write("test-results/completed-profile-candidate.patch", Buffer.from("ZGlmZiAtLWdpdCBhL3BhY2thZ2VzL2UyZS9zcmMvc2NyaXB0cy9wcmVwYXJlLXVpLWZpeHR1cmVzLnRzIGIvcGFja2FnZXMvZTJlL3NyYy9zY3JpcHRzL3ByZXBhcmUtdWktZml4dHVyZXMudHMKaW5kZXggMDkzZWIyYWI4Li4zMmU3MzA5YjYgMTAwNjQ0Ci0tLSBhL3BhY2thZ2VzL2UyZS9zcmMvc2NyaXB0cy9wcmVwYXJlLXVpLWZpeHR1cmVzLnRzCisrKyBiL3BhY2thZ2VzL2UyZS9zcmMvc2NyaXB0cy9wcmVwYXJlLXVpLWZpeHR1cmVzLnRzCkBAIC0xLDUgKzEsNSBAQAogaW1wb3J0IHsgZXhlY0ZpbGUgfSBmcm9tICJub2RlOmNoaWxkX3Byb2Nlc3MiOwotaW1wb3J0IHsgbWtkaXIsIHdyaXRlRmlsZSB9IGZyb20gIm5vZGU6ZnMvcHJvbWlzZXMiOworaW1wb3J0IHsgbWtkaXIsIHJtLCB3cml0ZUZpbGUgfSBmcm9tICJub2RlOmZzL3Byb21pc2VzIjsKIGltcG9ydCB7IGpvaW4gfSBmcm9tICJub2RlOnBhdGgiOwogaW1wb3J0IHsgcHJvbWlzaWZ5IH0gZnJvbSAibm9kZTp1dGlsIjsKIGltcG9ydCB7IHVpRml4dHVyZUV4dGVuc2lvbnMgfSBmcm9tICJwc3RkaW8tc2NyaXB0cy90ZXN0aW5nIjsKQEAgLTgsMjAgKzgsMjEgQEAgaW1wb3J0IHsgY29weVByZXBhcmVkRml4dHVyZXMgfSBmcm9tICIuL3ByZXBhcmVkLWZpeHR1cmUtY29weSI7CiAKIGV4cG9ydCBjb25zdCBwcmVwYXJlZFVpU291cmNlc1BhdGggPSAoaG9tZTogc3RyaW5nKSA9PiBqb2luKGhvbWUsICJmaXh0dXJlcyIsICJzb3VyY2VzLmpzb24iKTsKIAotLy8gUHJvZHVjZXJzIHJldGFpbiBpbW11dGFibGUgc291cmNlIGFuZCB0YXJiYWxscy4gQ29uc3VtZXJzIGFsc28gcHJlcGFyZSB0aGVpciBwcml2YXRlCi0vLyBwYWNrYWdlIGNhY2hlLCB3aGljaCB0aW1lZCBydW50aW1lIGluc3RhbGxzIGFscmVhZHkgdXNlZCBiZWZvcmUgc291cmNlIHJldXNlLgorLy8gT25lIGV4ZWN1dGlvbiBwcmVwYXJlcyBzb3VyY2VzLCBwdWJsaWMgdGFyYmFsbHMgYW5kIHBhY2thZ2UgcGF5bG9hZHMuIEJvcnJvd2VycworLy8gY29weSBvbmx5IHNvdXJjZTsgZWFjaCB0aW1lZCBydW50aW1lIHN0aWxsIGluc3RhbGxzIGl0cyBvd24gZGVwZW5kZW5jaWVzLgogY29uc3QgcHJlcGFyZUZpeHR1cmVzID0gYXN5bmMgKAogICBlbnY6IE5vZGVKUy5Qcm9jZXNzRW52LAogICBzaWduYWw6IEFib3J0U2lnbmFsLAotICBpbnN0YWxsOiBib29sZWFuLAogICBwYWNrYWdlQXJ0aWZhY3RzPzogUmVhZG9ubHk8UmVjb3JkPHN0cmluZywgc3RyaW5nPj4sCiApID0+IHsKLSAgY29uc3QgaW5zdGFsbEVudiA9IHsgLi4uZW52LCBIT01FOiBlbnYuRTJFX0hPTUUsIEJVTl9JTlNUQUxMX0NBQ0hFX0RJUjogZW52LkUyRV9CVU5fQ0FDSEVfRElSIH07CiAgIGNvbnN0IG5hbWVzID0gSlNPTi5wYXJzZShlbnYuRTJFX0ZJWFRVUkVfRVhURU5TSU9OUyA/PyBKU09OLnN0cmluZ2lmeSh1aUZpeHR1cmVFeHRlbnNpb25zKSkgYXMgc3RyaW5nW107CiAgIGNvbnN0IHN0YXJ0ZWQgPSBwZXJmb3JtYW5jZS5ub3coKTsKICAgY29uc3QgcmV1c2VkID0gZW52LkUyRV9QUkVQQVJFRF9GSVhUVVJFUwogICAgID8gY29weVByZXBhcmVkRml4dHVyZXMoZW52LkUyRV9QUkVQQVJFRF9GSVhUVVJFUywgZW52LkUyRV9IT01FISwgbmFtZXMpCiAgICAgOiB1bmRlZmluZWQ7CisgIGlmIChyZXVzZWQpIGVudi5FMkVfQlVOX0NBQ0hFX0RJUiA9IHJldXNlZC5wYWNrYWdlQ2FjaGU7CisgIGF3YWl0IG1rZGlyKGVudi5FMkVfQlVOX0NBQ0hFX0RJUiEsIHsgcmVjdXJzaXZlOiB0cnVlIH0pOworICBjb25zdCBpbnN0YWxsRW52ID0geyAuLi5lbnYsIEhPTUU6IGVudi5FMkVfSE9NRSwgQlVOX0lOU1RBTExfQ0FDSEVfRElSOiBlbnYuRTJFX0JVTl9DQUNIRV9ESVIgfTsKICAgY29uc3Qgc291cmNlczogUmVjb3JkPHN0cmluZywgc3RyaW5nPiA9IHJldXNlZD8uc291cmNlcyA/PyB7fTsKICAgY29uc3QgYXJ0aWZhY3RzID0KICAgICBwYWNrYWdlQXJ0aWZhY3RzID8/CkBAIC0zNiw3ICszNyw3IEBAIGNvbnN0IHByZXBhcmVGaXh0dXJlcyA9IGFzeW5jICgKICAgICAgICAgam9pbihpbXBvcnQubWV0YS5kaXJuYW1lLCAiLi4vLi4vLi4vLi4vZXh0ZW5zaW9ucyIsIG5hbWUpLAogICAgICAgICB7IGVudjogaW5zdGFsbEVudiwgc2lnbmFsLCBwYWNrYWdlQXJ0aWZhY3RzOiBhcnRpZmFjdHMgfSwKICAgICAgICk7Ci0gICAgaWYgKGluc3RhbGwpCisgICAgaWYgKCFyZXVzZWQpCiAgICAgICBhd2FpdCBwcm9taXNpZnkoZXhlY0ZpbGUpKCJidW4iLCBbImluc3RhbGwiLCAiLS1mcm96ZW4tbG9ja2ZpbGUiLCAiLS1pZ25vcmUtc2NyaXB0cyJdLCB7CiAgICAgICAgIGN3ZDogc291cmNlc1tuYW1lXSwKICAgICAgICAgZW52OiBpbnN0YWxsRW52LApAQCAtNjgsMTAgKzY5LDcgQEAgZXhwb3J0IGNvbnN0IHByZXBhcmVVaUZpeHR1cmVzID0gKAogICBlbnY6IE5vZGVKUy5Qcm9jZXNzRW52LAogICBzaWduYWw6IEFib3J0U2lnbmFsLAogICBwYWNrYWdlQXJ0aWZhY3RzPzogUmVhZG9ubHk8UmVjb3JkPHN0cmluZywgc3RyaW5nPj4sCi0pID0+IHByZXBhcmVGaXh0dXJlcyhlbnYsIHNpZ25hbCwgdHJ1ZSwgcGFja2FnZUFydGlmYWN0cyk7Ci0KLWV4cG9ydCBjb25zdCBwcmVwYXJlVWlGaXh0dXJlU291cmNlcyA9IChlbnY6IE5vZGVKUy5Qcm9jZXNzRW52LCBzaWduYWw6IEFib3J0U2lnbmFsKSA9PgotICBwcmVwYXJlRml4dHVyZXMoZW52LCBzaWduYWwsIGZhbHNlKTsKKykgPT4gcHJlcGFyZUZpeHR1cmVzKGVudiwgc2lnbmFsLCBwYWNrYWdlQXJ0aWZhY3RzKTsKIAogaWYgKGltcG9ydC5tZXRhLm1haW4pIHsKICAgY29uc3QgZGlyZWN0b3J5ID0gcHJvY2Vzcy5hcmd2W3Byb2Nlc3MuYXJndi5pbmRleE9mKCItLW91dCIpICsgMV07CkBAIC04Miw2ICs4MCw3IEBAIGlmIChpbXBvcnQubWV0YS5tYWluKSB7CiAgIHByb2Nlc3Mub24oIlNJR0lOVCIsIHN0b3ApOwogICBwcm9jZXNzLm9uKCJTSUdURVJNIiwgc3RvcCk7CiAgIHRyeSB7CisgICAgYXdhaXQgcm0oam9pbihkaXJlY3RvcnksICJzb3VyY2VzLmpzb24iKSwgeyBmb3JjZTogdHJ1ZSB9KTsKICAgICBjb25zdCBlbnY6IE5vZGVKUy5Qcm9jZXNzRW52ID0gewogICAgICAgLi4ucHJvY2Vzcy5lbnYsCiAgICAgICBFMkVfUFJFUEFSRURfRklYVFVSRVM6IHVuZGVmaW5lZCwKQEAgLTg5LDggKzg4LDE0IEBAIGlmIChpbXBvcnQubWV0YS5tYWluKSB7CiAgICAgICBFMkVfRklYVFVSRV9FWFRFTlNJT05TOiBuYW1lcywKICAgICAgIEUyRV9CVU5fQ0FDSEVfRElSOiBqb2luKGRpcmVjdG9yeSwgImJ1bi1jYWNoZSIpLAogICAgIH07Ci0gICAgYXdhaXQgcHJlcGFyZVVpRml4dHVyZVNvdXJjZXMoZW52LCBjb250cm9sbGVyLnNpZ25hbCk7Ci0gICAgYXdhaXQgd3JpdGVGaWxlKGpvaW4oZGlyZWN0b3J5LCAic291cmNlcy5qc29uIiksIGVudi5FMkVfRVhURU5TSU9OX1NPVVJDRVMhKTsKKyAgICBhd2FpdCBwcmVwYXJlVWlGaXh0dXJlcyhlbnYsIGNvbnRyb2xsZXIuc2lnbmFsKTsKKyAgICBjb25zdCBzb3VyY2VzID0gSlNPTi5wYXJzZShlbnYuRTJFX0VYVEVOU0lPTl9TT1VSQ0VTISkgYXMgUmVjb3JkPHN0cmluZywgc3RyaW5nPjsKKyAgICAvLyBPbmx5IHBhY2thZ2UgcGF5bG9hZHMgYXJlIGJvcnJvd2VkLiBEaXNjYXJkIGRpc3Bvc2FibGUgc2V0dXAgaW5zdGFsbHMgYmVmb3JlCisgICAgLy8gcHVibGlzaGluZyB0aGUgaGFuZG9mZiwgc28gcGFydGlhbCBwcmVwYXJhdGlvbiBpcyBuZXZlciByZXVzYWJsZS4KKyAgICBmb3IgKGNvbnN0IHNvdXJjZSBvZiBPYmplY3QudmFsdWVzKHNvdXJjZXMpKQorICAgICAgYXdhaXQgcm0oam9pbihzb3VyY2UsICJub2RlX21vZHVsZXMiKSwgeyByZWN1cnNpdmU6IHRydWUsIGZvcmNlOiB0cnVlIH0pOworICAgIGNvbnRyb2xsZXIuc2lnbmFsLnRocm93SWZBYm9ydGVkKCk7CisgICAgYXdhaXQgd3JpdGVGaWxlKGpvaW4oZGlyZWN0b3J5LCAic291cmNlcy5qc29uIiksIEpTT04uc3RyaW5naWZ5KHsgc291cmNlcywgcGFja2FnZUNhY2hlOiBlbnYuRTJFX0JVTl9DQUNIRV9ESVIgfSkpOwogICB9IGZpbmFsbHkgewogICAgIHByb2Nlc3Mub2ZmKCJTSUdJTlQiLCBzdG9wKTsKICAgICBwcm9jZXNzLm9mZigiU0lHVEVSTSIsIHN0b3ApOwpkaWZmIC0tZ2l0IGEvcGFja2FnZXMvZTJlL3NyYy9zY3JpcHRzL3ByZXBhcmVkLWZpeHR1cmUtY29weS50cyBiL3BhY2thZ2VzL2UyZS9zcmMvc2NyaXB0cy9wcmVwYXJlZC1maXh0dXJlLWNvcHkudHMKaW5kZXggOTJkZmM2ZWRmLi40ZTI2MDhkZDggMTAwNjQ0Ci0tLSBhL3BhY2thZ2VzL2UyZS9zcmMvc2NyaXB0cy9wcmVwYXJlZC1maXh0dXJlLWNvcHkudHMKKysrIGIvcGFja2FnZXMvZTJlL3NyYy9zY3JpcHRzL3ByZXBhcmVkLWZpeHR1cmUtY29weS50cwpAQCAtNSwxNSArNSwyMCBAQCBpbXBvcnQgeyBiYXNlbmFtZSwgam9pbiB9IGZyb20gIm5vZGU6cGF0aCI7CiAvLyBzb3VyY2UgYmVsb25ncyB0byB0aGlzIGludm9jYXRpb24sIGluY2x1ZGluZyBzeW1saW5rIHRhcmdldHMuIFJ1bnRpbWUgaW5zdGFsbGF0aW9uCiAvLyBvd25zIGRlcGVuZGVuY2llczsgY29weWluZyBwcmVwYXJlZCBub2RlX21vZHVsZXMgcmVwZWF0cyBnaWdhYnl0ZXMgb2YgZGlzcG9zYWJsZSB3b3JrLgogZXhwb3J0IGNvbnN0IGNvcHlQcmVwYXJlZEZpeHR1cmVzID0gKHByZXBhcmVkOiBzdHJpbmcsIGhvbWU6IHN0cmluZywgbmFtZXM6IHN0cmluZ1tdKSA9PiB7Ci0gIGNvbnN0IGNhdGFsb2cgPSBKU09OLnBhcnNlKHJlYWRGaWxlU3luYyhqb2luKHByZXBhcmVkLCAic291cmNlcy5qc29uIiksICJ1dGY4IikpIGFzIFJlY29yZDxzdHJpbmcsIHN0cmluZz47CisgIGNvbnN0IGNhdGFsb2cgPSBKU09OLnBhcnNlKHJlYWRGaWxlU3luYyhqb2luKHByZXBhcmVkLCAic291cmNlcy5qc29uIiksICJ1dGY4IikpIGFzIHsKKyAgICBzb3VyY2VzOiBSZWNvcmQ8c3RyaW5nLCBzdHJpbmc+OworICAgIHBhY2thZ2VDYWNoZTogc3RyaW5nOworICB9OworICBpZiAoIWNhdGFsb2cucGFja2FnZUNhY2hlIHx8ICFzdGF0U3luYyhjYXRhbG9nLnBhY2thZ2VDYWNoZSwgeyB0aHJvd0lmTm9FbnRyeTogZmFsc2UgfSk/LmlzRGlyZWN0b3J5KCkpCisgICAgdGhyb3cgbmV3IEVycm9yKCJDb21wbGV0ZWQgZml4dHVyZSBwYWNrYWdlIGNhY2hlIG1pc3NpbmciKTsKICAgY29uc3Qgc3RhcnRlZCA9IHBlcmZvcm1hbmNlLm5vdygpOwogICBsZXQgYnl0ZXNDb3BpZWQgPSAwOwogICBjb25zdCBzb3VyY2VzOiBSZWNvcmQ8c3RyaW5nLCBzdHJpbmc+ID0ge307CiAgIGZvciAoY29uc3QgbmFtZSBvZiBuYW1lcykgewotICAgIGlmICghY2F0YWxvZ1tuYW1lXSkgdGhyb3cgbmV3IEVycm9yKGBQcmVwYXJlZCBmaXh0dXJlIG1pc3Npbmc6ICR7bmFtZX1gKTsKKyAgICBpZiAoIWNhdGFsb2cuc291cmNlc1tuYW1lXSkgdGhyb3cgbmV3IEVycm9yKGBQcmVwYXJlZCBmaXh0dXJlIG1pc3Npbmc6ICR7bmFtZX1gKTsKICAgICBjb25zdCBkZXN0aW5hdGlvbiA9IGpvaW4oaG9tZSwgImZpeHR1cmVzIiwgbmFtZSwgImV4dGVuc2lvbi1zb3VyY2UiKTsKICAgICBta2RpclN5bmMoam9pbihob21lLCAiZml4dHVyZXMiLCBuYW1lKSwgeyByZWN1cnNpdmU6IHRydWUgfSk7Ci0gICAgY3BTeW5jKGNhdGFsb2dbbmFtZV0hLCBkZXN0aW5hdGlvbiwgeworICAgIGNwU3luYyhjYXRhbG9nLnNvdXJjZXNbbmFtZV0hLCBkZXN0aW5hdGlvbiwgewogICAgICAgcmVjdXJzaXZlOiB0cnVlLAogICAgICAgZGVyZWZlcmVuY2U6IHRydWUsCiAgICAgICBmaWx0ZXI6IChwYXRoKSA9PiB7CkBAIC0yNSw1ICszMCwxMSBAQCBleHBvcnQgY29uc3QgY29weVByZXBhcmVkRml4dHVyZXMgPSAocHJlcGFyZWQ6IHN0cmluZywgaG9tZTogc3RyaW5nLCBuYW1lczogc3RyaQogICAgIH0pOwogICAgIHNvdXJjZXNbbmFtZV0gPSBkZXN0aW5hdGlvbjsKICAgfQotICByZXR1cm4geyBzb3VyY2VzLCBieXRlc0NvcGllZCwgY29weU1zOiBwZXJmb3JtYW5jZS5ub3coKSAtIHN0YXJ0ZWQsIHJldXNlSGl0czogbmFtZXMubGVuZ3RoIH07CisgIHJldHVybiB7CisgICAgc291cmNlcywKKyAgICBwYWNrYWdlQ2FjaGU6IGNhdGFsb2cucGFja2FnZUNhY2hlLAorICAgIGJ5dGVzQ29waWVkLAorICAgIGNvcHlNczogcGVyZm9ybWFuY2Uubm93KCkgLSBzdGFydGVkLAorICAgIHJldXNlSGl0czogbmFtZXMubGVuZ3RoLAorICB9OwogfTsK", "base64"));'
-          git apply test-results/completed-profile-candidate.patch
-          cat > "$RUNNER_TEMP/completed-profile-qualification.ts" <<'QUALIFICATION'
-          import {execFileSync} from 'node:child_process';
-          import {mkdirSync,mkdtempSync,writeFileSync} from 'node:fs';
-          import {rm} from 'node:fs/promises';
-          import {tmpdir} from 'node:os';
-          import {join} from 'node:path';
-          const root=process.env.GITHUB_WORKSPACE ?? '/Users/aurelienfranky/.pstdio/workspaces/1ab91e31-365c-4c54-a8a8-f5e2e0f3e817';
-          const directory=mkdtempSync(join(tmpdir(),'ps206-completed-profile-'));
-          const baseline=join(directory,'baseline-code');mkdirSync(baseline);
-          const original=(path:string)=>execFileSync('git',['show',`0af9691eeffa5acdb4d6a802b0abe102feaa670a:${path}`],{cwd:root,encoding:'utf8'});
-          let prepare=original('packages/e2e/src/scripts/prepare-ui-fixtures.ts')
-           .replace('"pstdio-scripts/testing"',JSON.stringify(join(root,'scripts/ci/testing.ts')))
-           .replace('"../packaged/packaged-extension-source"',JSON.stringify(join(root,'packages/e2e/src/packaged/packaged-extension-source.ts')))
-           .replace('"./prepared-fixture-copy"',JSON.stringify(join(baseline,'prepared-fixture-copy.ts')))
-           .replace('join(import.meta.dirname, "../../../../extensions", name)',`join(${JSON.stringify(root)},"extensions",name)`);
-          writeFileSync(join(baseline,'prepare-ui-fixtures.ts'),prepare);
-          writeFileSync(join(baseline,'prepared-fixture-copy.ts'),original('packages/e2e/src/scripts/prepared-fixture-copy.ts'));
-          let consumers=original('packages/e2e/src/packaged/prepared-packaged-consumers.ts')
-           .replace('"../local-workspace-registry"',JSON.stringify(join(root,'packages/e2e/src/local-workspace-registry.ts')))
-           .replace('"../scripts/prepare-ui-fixtures"',JSON.stringify(join(baseline,'prepare-ui-fixtures.ts')))
-           .replace('join(import.meta.dirname, "../../../..")',JSON.stringify(root));
-          writeFileSync(join(baseline,'prepared-packaged-consumers.ts'),consumers);
-          const oldPreparation=await import(join(baseline,'prepare-ui-fixtures.ts'));
-          const oldConsumer=await import(join(baseline,'prepared-packaged-consumers.ts'));
-          const current=await import(join(root,'packages/e2e/src/packaged/prepared-packaged-consumers.ts'));
-          const {uiFixtureExtensions:names}=await import(join(root,'scripts/ci/test-fixture-profiles.ts'));
-          const prior=process.env.E2E_PREPARED_FIXTURES;
-          const signal=new AbortController().signal;
-          try{
-           const results=[];
-           for(const mode of ['0af-source-only','completed-profile']){
-            const prepared=join(directory,mode);
-            const producerStart=performance.now();
-            if(mode==='0af-source-only'){
-             const env={...process.env,E2E_HOME:prepared,E2E_BUN_CACHE_DIR:join(prepared,'bun-cache'),E2E_PREPARED_FIXTURES:undefined};
-             await oldPreparation.prepareUiFixtureSources(env,signal);writeFileSync(join(prepared,'sources.json'),env.E2E_EXTENSION_SOURCES!);
-            }else{
-             const producer=Bun.spawn([process.execPath,'packages/e2e/src/scripts/prepare-ui-fixtures.ts','--out',prepared,'--extensions',JSON.stringify(names)],{cwd:root,stdout:'inherit',stderr:'inherit'});
-             if(await producer.exited!==0)throw new Error('Completed fixture producer failed');
-            }
-            const producerMs=performance.now()-producerStart;
-            process.env.E2E_PREPARED_FIXTURES=prepared;
-            const runs=[];
-            for(let index=0;index<3;index++){
-             const consumerStart=performance.now();
-             const profile=await (mode==='0af-source-only'?oldConsumer:current).preparePackagedConsumers(signal);
-             const setupMs=performance.now()-consumerStart;
-             const cleanupStart=performance.now();await profile.close();const cleanupMs=performance.now()-cleanupStart;
-             const run={setupMs,cleanupMs,totalMs:setupMs+cleanupMs};runs.push(run);console.log(JSON.stringify({mode,index,...run}));
-            }
-            const cleanupStart=performance.now();await rm(prepared,{recursive:true,force:true});const executorCleanupMs=performance.now()-cleanupStart;
-            results.push({mode,producerMs,runs,executorCleanupMs,totalMs:producerMs+executorCleanupMs+runs.reduce((sum,run)=>sum+run.totalMs,0)});
-           }
-           const result={baseline:'0af9691eeffa5acdb4d6a802b0abe102feaa670a',candidate:'same source plus completed-profile preparation patch',host:`${process.platform}/${process.arch}`,bun:Bun.version,samples:1,selection:names,conditions:'Same seven production extensions, same built public SDK/UI, three fresh private consumers per arm, separate initially empty producer/package caches. Baseline uses original 0af producer/consumer modules, candidate uses actual current CLI producer and consumer. All preparation, private consumer closure and final executor cleanup included. Normal runtime installations remain outside this setup-only measurement. Sequential arms on one host; baseline first. No application runtimes or assertions and no end-to-end CI speedup claim.',results};
-           const output=process.env.GITHUB_WORKSPACE?join(root,'test-results/completed-profile-qualification.json'):'/tmp/ps206-completed-profile-qualification.json';writeFileSync(output,JSON.stringify(result,null,2));console.log(JSON.stringify(result));
-          }finally{
-           if(prior===undefined)delete process.env.E2E_PREPARED_FIXTURES;else process.env.E2E_PREPARED_FIXTURES=prior;
-           await rm(directory,{recursive:true,force:true});
-          }
-          QUALIFICATION
-          bun "$RUNNER_TEMP/completed-profile-qualification.ts" 2>&1 | tee test-results/completed-profile-qualification.log
+          New-Item -ItemType Directory -Force test-results | Out-Null
+          bun -e 'await Bun.write("test-results/consumer-root-ownership.patch", Buffer.from(process.env.OWNERSHIP_PATCH, "base64"));'
+          git apply test-results/consumer-root-ownership.patch
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify complete and interrupted execution ownership
+        run: |
+          bun test scripts/ci/execution-package-cache.p0.test.ts 2>&1 | Tee-Object -FilePath test-results/consumer-root-ownership.log
+          exit $LASTEXITCODE
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: completed-profile-qualification
+          name: windows-consumer-root-ownership
           path: |
-            test-results/completed-profile-qualification.*
-            test-results/completed-profile-candidate.patch
+            test-results/consumer-root-ownership.*
+            test-results/ci/planned/**/execution.json
           if-no-files-found: error
