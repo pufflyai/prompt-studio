@@ -24,6 +24,12 @@ test("removes its owned tree without following directory links or deleting exter
     await symlink(external, join(first, "external-directory"), process.platform === "win32" ? "junction" : "dir");
     await link(sentinel, join(second, "external-file"));
     await writeFile(join(owned, "own.txt"), "Remove this owned file");
+    for (const name of ["project", "cache"]) {
+      const directory = join(owned, name);
+      await mkdir(directory);
+      await link(sentinel, join(directory, "external-hardlink"));
+      await symlink(external, join(directory, "external-directory"), process.platform === "win32" ? "junction" : "dir");
+    }
 
     await removeTestDirectory(owned);
 
@@ -94,5 +100,25 @@ test("removes an owned home after a transient native directory handle is release
       lifetime.finish();
       await rm(parent, { recursive: true, force: true });
     }
+  }
+});
+
+test("removes a home with a linked extensions directory without enumerating the external packages", async () => {
+  const parent = await mkdtemp(join(tmpdir(), "linked-extensions-cleanup-"));
+  try {
+    const owned = join(parent, "owned");
+    const external = join(parent, "external");
+    await mkdir(join(owned, "project"), { recursive: true });
+    await mkdir(join(external, "package"), { recursive: true });
+    const sentinel = join(external, "package", "keep.txt");
+    await writeFile(sentinel, "Keep the external package");
+    await symlink(external, join(owned, "extensions"), process.platform === "win32" ? "junction" : "dir");
+
+    await removeTestDirectory(owned);
+
+    expect(await stat(owned).catch(() => null)).toBeNull();
+    expect(await readFile(sentinel, "utf8")).toBe("Keep the external package");
+  } finally {
+    await rm(parent, { recursive: true, force: true });
   }
 });

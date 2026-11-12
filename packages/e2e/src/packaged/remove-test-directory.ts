@@ -37,29 +37,36 @@ export const removeTestDirectory = async (root: string) => {
   if (!info) return;
   if (!info.isDirectory() || info.isSymbolicLink()) return rm(root, { recursive: true, force: true });
   const began = performance.now();
-  if (process.platform === "win32") {
-    const extensions = join(root, "extensions");
-    const installed = await lstat(extensions).catch((error: NodeJS.ErrnoException) => {
-      if (error.code === "ENOENT") return undefined;
-      throw error;
-    });
-    if (installed?.isDirectory() && !installed.isSymbolicLink()) {
-      const names = await readdir(extensions);
-      console.log(
-        `Test directory cleanup: ${names.length} installed trees started (${Math.round(performance.now() - began)}ms)`,
-      );
-      let next = 0;
-      const drain = async () => {
-        while (next < names.length) await removeNativeDirectory(join(extensions, names[next++]!));
-      };
-      // Installed packages are independent trees. Bound deletion to four direct,
-      // case-owned utilities and settle all before deleting their parent.
-      const outcomes = await Promise.allSettled(Array.from({ length: Math.min(4, names.length) }, drain));
-      const failures = outcomes.flatMap((outcome) => (outcome.status === "rejected" ? [outcome.reason] : []));
-      if (failures.length) throw new AggregateError(failures, "Installed extension cleanup failed");
-      console.log(`Test directory cleanup: installed trees removed (${Math.round(performance.now() - began)}ms)`);
-    }
+  const entries = await readdir(root, { withFileTypes: true });
+  const trees: string[] = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory() || entry.isSymbolicLink()) continue;
+    const directory = join(root, entry.name);
+    if (process.platform === "win32" && entry.name === "extensions") {
+      // Installed packages are independent; never enumerate a linked directory.
+      for (const installed of await readdir(directory, { withFileTypes: true }))
+        if (installed.isDirectory() && !installed.isSymbolicLink()) trees.push(join(directory, installed.name));
+    } else trees.push(directory);
   }
+  console.log(
+    `Test directory cleanup: ${trees.length} independent trees started (${Math.round(performance.now() - began)}ms)`,
+  );
+  let next = 0;
+  const drain = async () => {
+    while (next < trees.length) {
+      const directory = trees[next++]!;
+      const started = performance.now();
+      await removeNativeDirectory(directory);
+      console.log(
+        `Test directory cleanup: ${directory.slice(root.length + 1)} removed (${Math.round(performance.now() - started)}ms)`,
+      );
+    }
+  };
+  // Bound this owned removal to four direct utilities across all independent trees.
+  // Settle every sibling before removing the parent or propagating an error.
+  const outcomes = await Promise.allSettled(Array.from({ length: Math.min(4, trees.length) }, drain));
+  const failures = outcomes.flatMap((outcome) => (outcome.status === "rejected" ? [outcome.reason] : []));
+  if (failures.length) throw new AggregateError(failures, "Test directory cleanup failed");
   console.log(`Test directory cleanup: remaining root started (${Math.round(performance.now() - began)}ms)`);
   await removeNativeDirectory(root);
   console.log(`Test directory removed with platform utility (${Math.round(performance.now() - began)}ms)`);
