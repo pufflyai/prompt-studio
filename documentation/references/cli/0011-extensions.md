@@ -5,7 +5,7 @@ Install extensions, share package files and request compatible updates from a li
 ## Install and update
 
 ~~~bash
-pst extensions add pstdio.pstdio-notes
+pst extensions add pstdio.notes
 pst extensions update pstdio-notes
 pst extensions check
 ~~~

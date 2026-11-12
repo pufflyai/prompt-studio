@@ -12,7 +12,7 @@ const installedExtensions: ProjectExtensionInstance[] = [
   {
     id: "planner-instance",
     projectId: "project-1",
-    extensionId: "pstdio.pstdio-planner",
+    extensionId: "pstdio.planner",
     icon: "Kanban",
     installedExtensionId: "installed-planner",
     installName: "pstdio-planner",
@@ -77,7 +77,7 @@ const automations: WorkbenchExtensionAutomationRecord[] = [
   {
     id: "pstdio-planner.refine-tickets",
     localId: "refine-tickets",
-    extensionId: "pstdio.pstdio-planner",
+    extensionId: "pstdio.planner",
     extensionInstanceId: "planner-instance",
     title: "Refine open tickets",
     cron: "0 6 * * *",
@@ -87,7 +87,7 @@ const automations: WorkbenchExtensionAutomationRecord[] = [
   {
     id: "pstdio-planner.stuck-work-sweep",
     localId: "stuck-work-sweep",
-    extensionId: "pstdio.pstdio-planner",
+    extensionId: "pstdio.planner",
     extensionInstanceId: "planner-instance",
     title: "Sweep stuck work",
     cron: "*/30 * * * *",
@@ -100,14 +100,14 @@ const diagnostics: ExtensionDiagnostic[] = [
     code: "stale-template",
     severity: "warning",
     message: "Bundled template is older than the installed copy.",
-    extensionId: "pstdio.pstdio-planner",
+    extensionId: "pstdio.planner",
     sourcePath: "templates/ticket.md",
   },
 ];
 const marketplace = [
   {
     installName: "pstdio-reports",
-    extensionId: "pstdio.pstdio-reports",
+    extensionId: "pstdio.reports",
     icon: "FileChartColumn",
     displayName: "Agent Reports",
     description: "Workspace reports for agent handoffs.",
@@ -122,7 +122,7 @@ const marketplace = [
   },
   {
     installName: "pstdio-planner",
-    extensionId: "pstdio.pstdio-planner",
+    extensionId: "pstdio.planner",
     icon: "Kanban",
     displayName: "Project Planner",
     description: "Tickets, managed attempts, reviews, and templates.",

@@ -163,7 +163,7 @@ describe("extension CLI router", () => {
   test("parses structured params from JSON flags", () => {
     const command: ExtensionCommandRecord = {
       id: "planner.run",
-      extensionId: "pstdio.pstdio-planner",
+      extensionId: "pstdio.planner",
       title: "Run attempt",
       cliPath: "planner run",
       params: { workspace: { type: "workspace" }, agent: { type: "harness" } },
@@ -416,7 +416,7 @@ describe("extension CLI router dispatch", () => {
     const requiredCommands = [
       {
         id: "pstdio-planner.ticketStatus.create",
-        extensionId: "pstdio.pstdio-planner",
+        extensionId: "pstdio.planner",
         title: "Create ticket status",
         cliPath: "pstdio-planner ticketStatus create",
         cliAliases: ["statuses create"],

@@ -115,8 +115,8 @@ for (const kind of ["rename", "remove"] as const) {
     const pending = runResourceMutation(
       context,
       {
-        id: `pstdio.pstdio-session-browser.command.${kind}`,
-        extensionId: "pstdio.pstdio-session-browser",
+        id: `pstdio.session-browser.command.${kind}`,
+        extensionId: "pstdio.session-browser",
         title: `${kind} session`,
         resourceMutation: mutation,
       },

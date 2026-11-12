@@ -9,7 +9,7 @@ export const expectPlannerCommands = async (
   headers: Record<string, string>,
   metadata: WorkbenchExtensionMetadata,
 ) => {
-  const commandId = "pstdio.pstdio-planner.command.open-tickets";
+  const commandId = "pstdio.planner.command.open-tickets";
   expect(metadata.commands).toContainEqual(expect.objectContaining({ id: commandId }));
   expect(metadata.commandPaletteContributions).toContainEqual(expect.objectContaining({ commandId }));
   const refineTicket = metadata.commands.find((command) => command.id.endsWith(".command.refine-ticket"));
@@ -17,7 +17,7 @@ export const expectPlannerCommands = async (
     type: "template",
     label: "Ticket template",
     required: false,
-    templateType: "pstdio.pstdio-planner.template-type.ticket",
+    templateType: "pstdio.planner.template-type.ticket",
   });
   const response = await fetch(`${baseUrl}/v1/projects/${projectId}/extensions/commands/${commandId}/execute`, {
     method: "POST",
@@ -28,9 +28,7 @@ export const expectPlannerCommands = async (
   expect(await response.json()).toMatchObject({
     outcome: {
       status: "success",
-      navigationRequests: [
-        { kind: "page", page: { kind: "page", id: "tickets", extensionId: "pstdio.pstdio-planner" } },
-      ],
+      navigationRequests: [{ kind: "page", page: { kind: "page", id: "tickets", extensionId: "pstdio.planner" } }],
     },
   });
   await expectPlannerArchiveFilters(baseUrl, projectId, headers);

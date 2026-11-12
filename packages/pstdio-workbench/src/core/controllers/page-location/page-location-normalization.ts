@@ -9,10 +9,11 @@ import type {
 } from "@pstdio/sdk/extensions";
 import { isFileSourcePosition } from "@pstdio/sdk/extensions";
 import { normalizePageParams } from "pstdio-api-contracts";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-identity";
 import type { WorkbenchPageContribution, WorkbenchPageResourceCodec } from "../../registries/pages/page-registry";
 import { resolvePageGroupDefault } from "./page-group-default";
 
-export const workbenchPageRefKey = (ref: PageRef) => `${ref.extensionId ?? ""}:page:${ref.id}`;
+export const workbenchPageRefKey = (ref: PageRef) => `${canonicalExtensionId(ref.extensionId ?? "")}:page:${ref.id}`;
 
 const pageForRef = (pages: readonly WorkbenchPageContribution[], ref: PageRef) =>
   pages.find((page) => workbenchPageRefKey(page.ref) === workbenchPageRefKey(ref));
@@ -39,7 +40,9 @@ const cloneMetadata = (metadata: ResourceRef["metadata"]) => {
 
 const canonicalResource = (resource: ResourceRef | undefined, resources: WorkbenchPageResourceCodec) => {
   if (!resource) return undefined;
-  const normalized = resources.normalize(resource);
+  const normalized = resources.normalize(
+    resource.extensionId ? { ...resource, extensionId: canonicalExtensionId(resource.extensionId) } : resource,
+  );
   if (!normalized.type || !normalized.id) throw new Error("Page resource has no canonical type or id");
   const canonical = {
     type: normalized.type,
@@ -61,7 +64,15 @@ const canonicalPageRef = (page: WorkbenchPageContribution) =>
 const sectionKey = (section: FileRendererSectionTarget | undefined) => (section ? JSON.stringify(section) : "");
 
 const resourceKey = (location: PageLocation, resources: WorkbenchPageResourceCodec) =>
-  location.resource ? resources.toUri(resources.normalize(location.resource)) : "";
+  location.resource
+    ? resources.toUri(
+        resources.normalize(
+          location.resource.extensionId
+            ? { ...location.resource, extensionId: canonicalExtensionId(location.resource.extensionId) }
+            : location.resource,
+        ),
+      )
+    : "";
 
 // Same page and resource identity. The section is a position inside that resource.
 const sharesPageResource = (left: PageLocation, right: PageLocation, resources: WorkbenchPageResourceCodec) =>

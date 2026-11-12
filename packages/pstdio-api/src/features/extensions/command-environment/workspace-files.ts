@@ -1,5 +1,6 @@
+import { canonicalStoragePath } from "pstdio-api-contracts/extension-identity";
 import type { ArtifactMount } from "pstdio-api-contracts/extension-kernel";
-import { createFileMount, createReadBoundary } from "pstdio-extensions";
+import { createReadBoundary, createWorkspaceFilesMount } from "pstdio-extensions";
 import { createObservedFileMount } from "../../../services/shared-files/observed-file-mount";
 import type { ExtensionsRouteDeps } from "../deps";
 import {
@@ -29,17 +30,17 @@ export const createWorkspaceFileMount = (
   const mount = async (access: FileAccess) => {
     const root =
       access === "read" ? await createReadBoundary(signal)(() => resolvePath(access)) : await resolvePath(access);
-    return createObservedFileMount(root, createFileMount(root, signal));
+    return createObservedFileMount(root, createWorkspaceFilesMount(root, { signal }));
   };
   return {
-    exists: async (path) => (await mount("read")).exists(path),
-    readText: async (path) => (await mount("read")).readText(path),
-    readBytes: async (path) => (await mount("read")).readBytes(path),
-    list: async (path) => (await mount("read")).list(path),
-    listDirs: async (path) => (await mount("read")).listDirs(path),
-    writeText: async (path, value) => (await mount("write")).writeText(path, value),
-    updateText: async (path, value) => (await mount("write")).updateText(path, value),
-    writeBytes: async (path, value) => (await mount("write")).writeBytes(path, value),
-    delete: async (path) => (await mount("write")).delete(path),
+    exists: async (path) => (await mount("read")).exists(canonicalStoragePath(path ?? "")),
+    readText: async (path) => (await mount("read")).readText(canonicalStoragePath(path ?? "")),
+    readBytes: async (path) => (await mount("read")).readBytes(canonicalStoragePath(path ?? "")),
+    list: async (path) => (await mount("read")).list(canonicalStoragePath(path ?? "")),
+    listDirs: async (path) => (await mount("read")).listDirs(canonicalStoragePath(path ?? "")),
+    writeText: async (path, value) => (await mount("write")).writeText(canonicalStoragePath(path), value),
+    updateText: async (path, value) => (await mount("write")).updateText(canonicalStoragePath(path), value),
+    writeBytes: async (path, value) => (await mount("write")).writeBytes(canonicalStoragePath(path), value),
+    delete: async (path) => (await mount("write")).delete(canonicalStoragePath(path ?? "")),
   };
 };

@@ -8,7 +8,7 @@ export const expectPackagedWorkspaceSelection = async (descriptor: RuntimeDescri
   const baseUrl = descriptor.origin;
   const headers = runtimeAuthorization(descriptor);
   const response = await fetch(
-    `${baseUrl}/v1/projects/${projectId}/extensions/commands/pstdio.pstdio-planner.command.create-ticket/execute`,
+    `${baseUrl}/v1/projects/${projectId}/extensions/commands/pstdio.planner.command.create-ticket/execute`,
     {
       method: "POST",
       headers: { ...headers, "content-type": "application/json" },
@@ -25,7 +25,7 @@ export const expectPackagedWorkspaceSelection = async (descriptor: RuntimeDescri
       localStorage.setItem("onboarding-complete", "true");
       localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
     }, projectId);
-    await signInBrowser(page, descriptor, `/projects/${projectId}/extensions/pstdio.pstdio-planner/tickets`);
+    await signInBrowser(page, descriptor, `/projects/${projectId}/extensions/pstdio.planner/tickets`);
     await page.getByTestId("renderer-card").getByText("Packaged workspace selection", { exact: true }).click();
     const sidenav = page.locator('[data-workbench-region="sidenav"]');
     const ticket = sidenav.getByRole("option", {

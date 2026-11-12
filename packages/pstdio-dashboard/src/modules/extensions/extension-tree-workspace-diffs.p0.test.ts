@@ -4,7 +4,7 @@ import { withWorkspaceDiffMetadata } from "./extension-tree-workspace-diffs";
 
 const response = {
   commandId: "pstdio-planner.list-ticket-files-tree",
-  extensionId: "pstdio.pstdio-planner",
+  extensionId: "pstdio.planner",
   outcome: {
     ok: true,
     status: "success",

@@ -119,7 +119,7 @@ const connectDevice = async (
   progress(`device ${name} connected`);
   const command = async (id: string, params: object = {}, resource?: object) => {
     const response = await fetch(
-      `${host.baseUrl}/v1/projects/${projectId}/extensions/commands/pstdio.pstdio-workspaces.${id}/execute`,
+      `${host.baseUrl}/v1/projects/${projectId}/extensions/commands/pstdio.workspaces.${id}/execute`,
       {
         method: "POST",
         headers: { ...runtimeAuthorization(host.descriptor), "content-type": "application/json" },
@@ -132,7 +132,7 @@ const connectDevice = async (
   const query = async () => {
     const result = await command("view.workspaces.resourceList.query", {
       renderer: {
-        rendererId: "pstdio.pstdio-workspaces.view.workspaces",
+        rendererId: "pstdio.workspaces.view.workspaces",
         projectId,
         invocation: { placement: "visible" },
       },
@@ -245,7 +245,7 @@ test(
             id: "create",
             action: {
               kind: "command",
-              target: { command: { kind: "command", extensionId: "pstdio.pstdio-workspaces", id: "show-create" } },
+              target: { command: { kind: "command", extensionId: "pstdio.workspaces", id: "show-create" } },
             },
           }),
         );
@@ -253,7 +253,7 @@ test(
         expect(foreign.target).toMatchObject({ kind: "page", page: { id: "history" } });
         const history = await second.command("view.history.resourceList.query", {
           renderer: {
-            rendererId: "pstdio.pstdio-workspaces.view.history",
+            rendererId: "pstdio.workspaces.view.history",
             projectId,
             invocation: { placement: "visible" },
             resource: foreign.resource,
@@ -288,11 +288,7 @@ test(
         localStorage.setItem("onboarding-complete", "true");
         localStorage.setItem("dashboard-wb2:selected-project:global", id);
       }, projectId);
-      await signInBrowser(
-        page,
-        runtime.descriptor,
-        `/projects/${projectId}/extensions/pstdio.pstdio-workspaces/workspaces`,
-      );
+      await signInBrowser(page, runtime.descriptor, `/projects/${projectId}/extensions/pstdio.workspaces/workspaces`);
       progress("browser signed in");
       await expectUI(page.getByTestId("resource-list-renderer")).toBeVisible();
       progress("workspaces collection visible");

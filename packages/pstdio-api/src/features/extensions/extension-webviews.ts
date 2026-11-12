@@ -1,5 +1,6 @@
 import { extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-identity";
 import type { PackageAssetDescriptor } from "pstdio-api-contracts/extension-kernel";
 import { isWindowsDeviceName } from "pstdio-extensions";
 import type { LoadedExtension } from "./extension-runtime";
@@ -40,7 +41,7 @@ export const collectExtensionWebviews = (loaded: Pick<LoadedExtension, "definiti
   if (!Array.isArray(views)) return webviews;
   for (const view of views) {
     if (!isRecord(view) || typeof view.id !== "string" || !isRecord(view.body)) continue;
-    collectWebview(webviews, `${loaded.metadata.id}.view.${view.id}`, view.body);
+    collectWebview(webviews, `${canonicalExtensionId(loaded.metadata.id)}.view.${view.id}`, view.body);
   }
 
   return webviews;

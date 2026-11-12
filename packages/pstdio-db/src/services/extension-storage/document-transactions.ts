@@ -1,3 +1,4 @@
+import { canonicalOwner } from "pstdio-api-contracts/extension-identity";
 import type { DocumentState, DocumentStore, StorageOwner } from "pstdio-sync";
 import type * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
@@ -50,6 +51,7 @@ export const createDocumentTransactions = (
     admission?: { external?: boolean; generation?: string },
   ) => {
     const transaction: DocumentStore["transaction"] = async (owner, action) => {
+      owner = canonicalOwner(owner);
       const address = { workbench_id: owner.workbenchId, extension_id: owner.extensionId, document_id: documentId };
       const key = JSON.stringify(address);
       try {

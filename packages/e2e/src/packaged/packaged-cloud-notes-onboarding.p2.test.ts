@@ -35,12 +35,12 @@ test(
       await browserExpect(editor).toContainText("Created on device B");
       await waitForCloud(async () => {
         const files = new Bun.Glob("*/content.md").scan({
-          cwd: join(sourceFolder, ".pstdio/extension-storage/pstdio.pstdio-notes/documents"),
+          cwd: join(sourceFolder, ".pstdio/extension-storage/pstdio.notes/documents"),
         });
         for await (const file of files)
           if (
             (
-              await Bun.file(join(sourceFolder, ".pstdio/extension-storage/pstdio.pstdio-notes/documents", file)).text()
+              await Bun.file(join(sourceFolder, ".pstdio/extension-storage/pstdio.notes/documents", file)).text()
             ).includes("Created on device B")
           )
             return true;

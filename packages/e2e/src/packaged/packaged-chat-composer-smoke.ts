@@ -45,7 +45,7 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     const destinationRead = new Promise<void>((resolve) => {
       releaseDestinationRead = resolve;
     });
-    const queryRoute = `**/v1/projects/${project.id}/extensions/commands/pstdio.pstdio-session-browser.view.conversation.chat.query/execute`;
+    const queryRoute = `**/v1/projects/${project.id}/extensions/commands/pstdio.session-browser.view.conversation.chat.query/execute`;
     await page.route(queryRoute, async (route) => {
       const body = route.request().postDataJSON();
       if (!destinationReadStarted && body?.params?.renderer?.resource?.type === "session") {

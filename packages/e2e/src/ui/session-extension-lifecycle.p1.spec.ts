@@ -43,7 +43,7 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
       if (path.endsWith("/subscriptions") && sent.method() === "POST") {
         const body = sent.postDataJSON();
         if (
-          body.command?.command_id === "pstdio.pstdio-session-browser.command.watch" &&
+          body.command?.command_id === "pstdio.session-browser.command.watch" &&
           body.command.body.resource?.id === sessionId
         )
           watches.push(body.subscription_id);
@@ -53,7 +53,7 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
       if (path.endsWith("chat.onAction/execute") && sent.postDataJSON()?.params?.action?.type === "stop") stops++;
     });
     await prepareResourceActionsDashboard(page, project.id);
-    const target = `/projects/${project.id}/extensions/pstdio.pstdio-session-browser/conversation?resource=${encodeURIComponent(`pstdio://extension-resource/session/${sessionId}`)}`;
+    const target = `/projects/${project.id}/extensions/pstdio.session-browser/conversation?resource=${encodeURIComponent(`pstdio://extension-resource/session/${sessionId}`)}`;
     await page.goto(target);
     const main = page.locator('[data-workbench-region="main"]');
     const side = page.locator('[data-workbench-region="side"]');

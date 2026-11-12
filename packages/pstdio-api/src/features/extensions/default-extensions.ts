@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { basename, join } from "node:path";
+import { canonicalExtensionId, extensionIdentityRenames } from "pstdio-api-contracts/extension-identity";
 import { readPackageManifestMetadata } from "pstdio-extensions";
 import { resolvePstdioHome } from "pstdio-paths";
 import { traceSetupPhase } from "../../lib/setup-phase";
@@ -23,7 +24,9 @@ import {
   type InstallExtensionSourceInput,
   type InstalledExtensionSource,
   installExtensionSource,
+  isLocalExtensionSource,
 } from "./install-extension-source";
+import { installedIdentityPath } from "./installed-identity-path";
 
 export {
   type DefaultExtensionEntry,
@@ -54,7 +57,7 @@ const needsDefaultExtensionInstall = (
   if (mode === "refresh" && typeof entry !== "string" && entry.force) return true;
   if (!isInstalledUserExtension(entry, extensionsRoot)) return true;
   const installName = typeof entry === "string" ? entry : (entry.installName ?? basename(entry.source));
-  const targetPath = join(extensionsRoot, installName);
+  const targetPath = defaultInstalledPath(entry, extensionsRoot, installName);
   const { manifest } = readPackageManifestMetadata(targetPath);
   if (!manifest || manifest.pstdio?.scope === "repo") return true;
   if (typeof entry !== "string" && entry.skipInstall) return false;
@@ -197,12 +200,22 @@ type InstallRepoDefaultExtensionsInput = {
   prepareSharedCheckout?: typeof createSharedNamedSourceCheckout;
 };
 
+const defaultInstalledPath = (entry: DefaultExtensionEntry, root: string, name: string) => {
+  const rename = extensionIdentityRenames.find(({ from, to }) =>
+    [from.name, to.name, `${from.publisher}.${from.name}`, `${to.publisher}.${to.name}`].includes(name),
+  );
+  let owner: string | undefined;
+  if (typeof entry === "string") owner = rename && `${rename.to.publisher}.${rename.to.name}`;
+  else if (isLocalExtensionSource(entry.source)) owner = readPackageManifestMetadata(entry.source).manifest?.id;
+  return installedIdentityPath(root, name, owner ? canonicalExtensionId(owner) : undefined);
+};
+
 // A user install refuses repo-scoped sources, so an installed user copy proves the default is
 // not repo-scoped. Skipping it keeps project folders from fetching sources they never install.
 const isInstalledUserExtension = (entry: DefaultExtensionEntry, extensionsRoot: string) => {
   const installName = typeof entry === "string" ? entry : (entry.installName ?? basename(entry.source));
   if (!installName || installName === "." || installName === ".." || /[\\/:]/.test(installName)) return false;
-  return existsSync(join(extensionsRoot, installName, "package.json"));
+  return existsSync(join(defaultInstalledPath(entry, extensionsRoot, installName), "package.json"));
 };
 
 export const installRepoDefaultExtensions = async (input: InstallRepoDefaultExtensionsInput) => {

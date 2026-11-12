@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { join, resolve } from "node:path";
 import { type ArtifactFileProjection, artifactFileProjectionSchema } from "pstdio-api-contracts";
+import { historicalExtensionId } from "pstdio-api-contracts/extension-identity";
 import type { createExtensionStorageDBService } from "pstdio-db";
 import { resolvePstdioHome } from "pstdio-paths";
 import type { StorageOwner } from "pstdio-sync";
@@ -18,8 +19,8 @@ export const serializeFiles = <T>(key: string, action: () => Promise<T>) => {
 };
 export const artifactProjectionKey = (owner: StorageOwner, repoRoot: string) =>
   JSON.stringify([
-    { workbenchId: owner.workbenchId, extensionId: owner.extensionId },
-    resolve(repoRoot, ".pstdio/extension-storage", owner.extensionId),
+    { workbenchId: owner.workbenchId, extensionId: historicalExtensionId(owner.extensionId) },
+    resolve(repoRoot, ".pstdio/extension-storage", historicalExtensionId(owner.extensionId)),
   ]);
 export const projectionAddress = (key: string) => {
   const hash = createHash("sha256").update(key).digest("hex");

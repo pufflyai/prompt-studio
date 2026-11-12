@@ -6,7 +6,7 @@ The Workspaces extension composes the shared native file renderer and public dif
 
 Covers the workspace screen and diff summary badges:
 
-- Page: the resource page declared by the ordinary `pstdio.pstdio-workspaces` extension; ticket navigation supplies context without owning its route.
+- Page: the resource page declared by the ordinary `pstdio.workspaces` extension; ticket navigation supplies context without owning its route.
 - Diff source: `GET /v1/workspaces/:id/diff-files` plus on-demand `GET /v1/workspaces/:id/diff-file`; both accept `mode=current|fork_point`
 - File source: workspace file, directory, and entry endpoints under `GET`, `POST`, `PUT`, `PATCH`, and `DELETE`
 - Renderers: workspace-owned `Files` and `Changes` Main sub-panels
@@ -173,7 +173,7 @@ One card per changed file:
 ## Artifact Source Of Truth
 
 Ticket attachments are planner-owned. Agent-produced validation, review, test,
-and implementation evidence is report-owned and lives under `.pstdio/extension-storage/pstdio.pstdio-reports/reports/`.
+and implementation evidence is report-owned and lives under `.pstdio/extension-storage/pstdio.reports/reports/`.
 The dashboard loads planner ticket file metadata/content through planner
 commands and should not treat ticket folders as the source of truth for result
 artifacts.
@@ -185,10 +185,10 @@ planner file query so re-saved artifact content updates in place.
 
 `pst tickets save --id <ticket>` uploads planning/support files from:
 
-- `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/<ticket>/files/` as regular ticket attachments
+- `.pstdio/extension-storage/pstdio.planner/tickets/<ticket>/files/` as regular ticket attachments
 
 `pst reports save --name <name>` uploads report evidence from
-`.pstdio/extension-storage/pstdio.pstdio-reports/reports/<name>/files/` into report-owned blob storage.
+`.pstdio/extension-storage/pstdio.reports/reports/<name>/files/` into report-owned blob storage.
 
 ## Errors and Empty States
 

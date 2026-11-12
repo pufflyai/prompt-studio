@@ -1,7 +1,12 @@
 import { createHash } from "node:crypto";
 import { posix } from "node:path";
 import { createNativeSourceKey, type NativeDocumentSource } from "pstdio-api-contracts";
-import { createFileMount, normalizeMountRelativePath } from "pstdio-extensions";
+import {
+  canonicalStoragePath,
+  historicalContributionId,
+  historicalStoragePath,
+} from "pstdio-api-contracts/extension-identity";
+import { canonicalRuntimeId, createWorkspaceFilesMount, normalizeMountRelativePath } from "pstdio-extensions";
 import { type StorageOwner, StorageRevisionChangedError } from "pstdio-sync";
 import { storageRecordId } from "pstdio-sync/records";
 import { hasTextSourceImport, importTextSource, readTextDocumentSeed } from "pstdio-sync/text";
@@ -28,7 +33,7 @@ const workspaceRoot = async (deps: ExtensionsRouteDeps, projectId: string, works
 };
 const readWorkspaceSource = async (root: string, path: string) => {
   try {
-    return await createFileMount(root).readBytes(path);
+    return await createWorkspaceFilesMount(root).readBytes(canonicalStoragePath(path));
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
     if (code === "ENOENT" || code === "ENOTDIR" || code === "EISDIR" || code === "EACCES")
@@ -59,7 +64,7 @@ const resolveNativeDeclaration = async (
       recordId: storageRecordId(["blob-file"], source.id),
     };
   if (source.kind === "workspace") {
-    const path = normalizeMountRelativePath(source.path);
+    const path = historicalStoragePath(normalizeMountRelativePath(source.path));
     return {
       documentKey: createNativeSourceKey(
         source.workspaceId ? ["workspace", source.workspaceId, path] : ["workspace", path],
@@ -68,11 +73,21 @@ const resolveNativeDeclaration = async (
   }
   const snapshot = await deps.extensionRuntimeCatalog.get(owner.workbenchId);
   const mount = snapshot.runtime.artifactMounts.find(
-    (mount) => mount.extensionId === owner.extensionId && (mount.id === source.mount || mount.localId === source.mount),
+    (mount) =>
+      mount.extensionId === owner.extensionId &&
+      (mount.id === canonicalRuntimeId(snapshot.runtime, source.mount) || mount.localId === source.mount),
   );
   if (!mount) throw unavailable("The declared text source mount is unavailable");
   const path = posix.join(mount.relativePath, normalizeMountRelativePath(source.path));
-  return { documentKey: createNativeSourceKey(["artifact", mount.id, source.identity]), recordId: fileRecordId(path) };
+  return {
+    documentKey: createNativeSourceKey([
+      "artifact",
+      historicalContributionId({ extensionId: mount.extensionId, kind: "artifact-mount", id: mount.localId }) ??
+        mount.id,
+      source.identity,
+    ]),
+    recordId: fileRecordId(path),
+  };
 };
 
 export const resolveNativeSource = async (

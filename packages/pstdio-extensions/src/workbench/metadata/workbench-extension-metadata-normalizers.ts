@@ -7,16 +7,31 @@ import type {
   RendererEventReference,
 } from "@pstdio/sdk/extensions";
 import { resolveEventReferenceId } from "pstdio-api-contracts";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-identity";
 
 export const normalizedRef = <Kind extends ContributionKind>(
   ref: ContributionRef<Kind>,
   extensionId: string,
-): ContributionRef<Kind> & { extensionId: string } => ({ ...ref, extensionId: ref.extensionId ?? extensionId });
+): ContributionRef<Kind> & { extensionId: string } => ({
+  ...ref,
+  extensionId: canonicalExtensionId(ref.extensionId ?? extensionId),
+});
 
 export const commandRef = (ref: CommandRef, extensionId: string) => normalizedRef(ref, extensionId);
 
 export const refreshEventIds = (events: readonly RendererEventReference[] | undefined, extensionId: string) => {
-  const ids = [...new Set((events ?? []).map((event) => resolveEventReferenceId(event, extensionId)))];
+  const ids = [
+    ...new Set(
+      (events ?? []).map((event) =>
+        resolveEventReferenceId(
+          typeof event === "string"
+            ? event
+            : { ...event, extensionId: canonicalExtensionId(event.extensionId ?? extensionId) },
+          extensionId,
+        ),
+      ),
+    ),
+  ];
   return ids.length > 0 ? ids : undefined;
 };
 

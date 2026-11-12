@@ -44,7 +44,7 @@ test("preserves browser Forward history between extension pages after refresh", 
   await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-planner\/ticket\?resource=/);
 
   await page.goBack();
-  await expect(page).toHaveURL(`/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
+  await expect(page).toHaveURL(`/projects/${project.id}/extensions/pstdio.planner/tickets`);
 
   await page.reload();
   await page.goForward();

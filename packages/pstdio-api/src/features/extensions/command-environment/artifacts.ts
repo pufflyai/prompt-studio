@@ -1,5 +1,6 @@
+import { historicalContributionId } from "pstdio-api-contracts/extension-identity";
 import type { CommandRunnerEnvironment, RuntimeArtifactMount } from "pstdio-extensions";
-import { createReadBoundary } from "pstdio-extensions";
+import { createReadBoundary, migrateExtensionFiles } from "pstdio-extensions";
 import { createSharedArtifactMount } from "../../../services/shared-files/artifact-mount";
 import type { ExtensionsRouteDeps } from "../deps";
 import type { FileAccess } from "./workspace-files";
@@ -19,7 +20,15 @@ export const createArtifactsApi = (
 ): CommandRunnerEnvironment["artifacts"] => {
   const resolveMount = (key: string) => {
     const mount = (input.artifactMounts ?? []).find(
-      (candidate) => candidate.extensionId === input.extensionId && (candidate.localId === key || candidate.id === key),
+      (candidate) =>
+        candidate.extensionId === input.extensionId &&
+        (candidate.localId === key ||
+          candidate.id === key ||
+          historicalContributionId({
+            extensionId: candidate.extensionId,
+            kind: "artifact-mount",
+            id: candidate.localId,
+          }) === key),
     );
     if (!mount) throw new Error(`Artifact mount not found: ${key}`);
     return mount;
@@ -30,6 +39,7 @@ export const createArtifactsApi = (
       access === "read"
         ? await createReadBoundary(input.signal)(() => resolveProjectPath(access))
         : await resolveProjectPath(access);
+    await migrateExtensionFiles(root, input.extensionId);
     return createSharedArtifactMount(deps, {
       assertWritable: input.assertWritable,
       projectId: input.projectId,

@@ -90,13 +90,13 @@ describe("planner attempt workspaces", () => {
       const repo = createInitializedRepo(ctx, "planner-attempt-workspaces");
       const projectId = getProjectId(repo);
 
-      const template = await executePlannerCommand(projectId, "pstdio.pstdio-planner.command.templates.read", {
+      const template = await executePlannerCommand(projectId, "pstdio.planner.command.templates.read", {
         source: "api",
         params: { name: "implement-ticket" },
       });
       expect(template.outcome.ok).toBe(true);
       const prompt = template.outcome.value as { name: string; title: string; type: string; content: string };
-      const saved = await executePlannerCommand(projectId, "pstdio.pstdio-planner.command.templates.save", {
+      const saved = await executePlannerCommand(projectId, "pstdio.planner.command.templates.save", {
         source: "api",
         params: { ...prompt, content: `${prompt.content}\n__fake_hold__` },
       });
@@ -107,7 +107,7 @@ describe("planner attempt workspaces", () => {
         shorthand: string;
       };
 
-      const result = await executePlannerCommand(projectId, "pstdio.pstdio-planner.command.run-attempt", {
+      const result = await executePlannerCommand(projectId, "pstdio.planner.command.run-attempt", {
         source: "api",
         params: {
           agent: { harnessId: "pstdio.workbench-fixture.harness.fake" },
@@ -118,7 +118,7 @@ describe("planner attempt workspaces", () => {
           id: ticket.id,
           projectId,
           label: ticket.shorthand,
-          extensionId: "pstdio.pstdio-planner",
+          extensionId: "pstdio.planner",
         },
       });
 
@@ -132,7 +132,7 @@ describe("planner attempt workspaces", () => {
       expect(value.session?.id).toBeString();
 
       const readActivity = async () => {
-        const activity = await executePlannerCommand(projectId, "pstdio.pstdio-planner.command.workspace-activity", {
+        const activity = await executePlannerCommand(projectId, "pstdio.planner.command.workspace-activity", {
           source: "api",
           params: { workspaceId: value.workspace.id },
         });
@@ -157,7 +157,7 @@ describe("planner attempt workspaces", () => {
       });
       expect(settled).toBe(true);
 
-      const workspaces = await executePlannerCommand(projectId, "pstdio.pstdio-planner.command.ticket-workspaces", {
+      const workspaces = await executePlannerCommand(projectId, "pstdio.planner.command.ticket-workspaces", {
         source: "api",
         params: { id: ticket.shorthand },
       });
@@ -181,7 +181,7 @@ describe("planner attempt workspaces", () => {
         shorthand: string;
       };
 
-      const workspaceResult = await executePlannerCommand(projectId, "pstdio.pstdio-planner.command.create-workspace", {
+      const workspaceResult = await executePlannerCommand(projectId, "pstdio.planner.command.create-workspace", {
         source: "api",
         params: {
           rowId: ticket.id,
@@ -208,17 +208,17 @@ describe("planner attempt workspaces", () => {
         data: imageBytes,
       });
 
-      const attached = await executePlannerCommand(projectId, "pstdio.pstdio-planner.command.attach-file", {
+      const attached = await executePlannerCommand(projectId, "pstdio.planner.command.attach-file", {
         source: "api",
         params: { ticketId: ticket.id, ref: uploaded },
       });
       expect(attached.outcome.ok).toBe(true);
 
-      const tree = await executePlannerCommand(projectId, "pstdio.pstdio-planner.command.ticket-files.tree.body", {
+      const tree = await executePlannerCommand(projectId, "pstdio.planner.command.ticket-files.tree.body", {
         source: "api",
         params: {
           renderer: {
-            rendererId: "pstdio.pstdio-planner.view.ticket-files",
+            rendererId: "pstdio.planner.view.ticket-files",
             resource: { type: "ticket", id: ticket.id, label: ticket.shorthand },
           },
         },
@@ -229,7 +229,7 @@ describe("planner attempt workspaces", () => {
         expect.objectContaining({ id: uploaded.id, label: "diagram.png" }),
       );
 
-      const preview = await executePlannerCommand(projectId, "pstdio.pstdio-planner.command.read-ticket-attachment", {
+      const preview = await executePlannerCommand(projectId, "pstdio.planner.command.read-ticket-attachment", {
         source: "api",
         params: { ticketId: ticket.id, attachmentId: uploaded.id },
       });

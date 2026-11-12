@@ -8,7 +8,7 @@ import type {
 import type { ExtensionClient } from "@pstdio/sdk/client";
 import { apiClient } from "../api-client";
 import { resolveProjectId as defaultResolveProjectId } from "../projects/resolve-project-id";
-import { warnDeprecatedExtensionCommand } from "./deprecated-extension-command";
+import { isHistoricalCliAlias, warnDeprecatedExtensionCommand } from "./deprecated-extension-command";
 import { describeParamValue, formatParamName, parseExtensionCommandArgs } from "./extension-cli-args";
 import { printExtensionCommandStream } from "./extension-cli-stream";
 import {
@@ -157,7 +157,7 @@ export const renderNamespaceHelp = (namespace: string, table: ExtensionCommandTa
   const routes = (table.byNamespace.get(namespace) ?? [])
     .flatMap((command) =>
       commandCliPaths(command)
-        .filter((path) => path.split(" ")[0] === namespace)
+        .filter((path) => path.split(" ")[0] === namespace && !isHistoricalCliAlias(command, path))
         .map((path) => ({ command, path })),
     )
     .sort((a, b) => a.path.localeCompare(b.path));
@@ -187,7 +187,11 @@ export const renderCommandHelp = (command: ExtensionCommandRecord) => {
   lines.push(`Provider: ${command.extensionId}`);
 
   if (command.cliAliases?.length) {
-    lines.push("", "Aliases:", ...command.cliAliases.map((alias) => `  ${alias}`));
+    lines.push(
+      "",
+      "Aliases:",
+      ...command.cliAliases.map((alias) => `  ${alias}${isHistoricalCliAlias(command, alias) ? " (deprecated)" : ""}`),
+    );
   }
 
   lines.push("", "  --stream  Stream command chunks as NDJSON");

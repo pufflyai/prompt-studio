@@ -74,7 +74,7 @@ test(
           }),
         ]).then(() => phase("tickets created")),
         (async () => {
-          await signInBrowser(page, runtime.descriptor, `/projects/${id}/extensions/pstdio.pstdio-planner/tickets`);
+          await signInBrowser(page, runtime.descriptor, `/projects/${id}/extensions/pstdio.planner/tickets`);
           phase("browser signed in");
           await page.getByRole("option", { name: "Tickets", exact: true }).click();
         })(),

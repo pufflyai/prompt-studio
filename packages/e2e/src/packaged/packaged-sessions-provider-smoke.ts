@@ -11,7 +11,7 @@ export const expectPackagedSessionsProvider = async (input: {
 }) => {
   const { baseUrl, projectId, headers, metadata } = input;
   const chat = metadata.views.find(
-    (view) => view.extensionId === "pstdio.pstdio-session-browser" && view.localId === "conversation",
+    (view) => view.extensionId === "pstdio.session-browser" && view.localId === "conversation",
   );
   expect(chat?.body).toMatchObject({ kind: "chat", initial: { messages: [] } });
   if (chat?.body.kind !== "chat") throw new Error("Installed Sessions must expose its native chat renderer.");
@@ -36,15 +36,15 @@ export const expectPackagedSessionsProvider = async (input: {
   };
   const before = await list();
   for (const side of [false, true]) {
-    const outcome = await execute("pstdio.pstdio-session-browser.command.new", { side });
+    const outcome = await execute("pstdio.session-browser.command.new", { side });
     expect(outcome.navigationRequests).toHaveLength(1);
     const target = outcome.navigationRequests[0];
     expect(target).toMatchObject({
       kind: side ? "panel" : "page",
       resource: { type: "session-draft", extensionId: "pstdio", projectId },
     });
-    if (side) expect(target.panel).toMatchObject({ extensionId: "pstdio.pstdio-session-browser", id: "conversation" });
-    else expect(target.page).toMatchObject({ extensionId: "pstdio.pstdio-session-browser", id: "draft" });
+    if (side) expect(target.panel).toMatchObject({ extensionId: "pstdio.session-browser", id: "conversation" });
+    else expect(target.page).toMatchObject({ extensionId: "pstdio.session-browser", id: "draft" });
     const resource = target.resource as ResourceRef;
     const renderer = { rendererId: chat.id, resource };
     const binding = { renderer, draftKey: resource.id };

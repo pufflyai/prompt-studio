@@ -5,7 +5,7 @@ const noop = () => undefined;
 const metadata = {
   extensions: [
     {
-      id: "pstdio.pstdio-reports",
+      id: "pstdio.reports",
       name: "pstdio-reports",
       displayName: "Agent Reports",
       sourcePath: "",
@@ -14,7 +14,7 @@ const metadata = {
   commands: [
     {
       id: "pstdio-reports.write",
-      extensionId: "pstdio.pstdio-reports",
+      extensionId: "pstdio.reports",
       title: "Write report",
       cliPath: "reports write",
     },
@@ -35,7 +35,7 @@ const metadata = {
     {
       id: "pstdio-reports.use-reports",
       localId: "use-reports",
-      extensionId: "pstdio.pstdio-reports",
+      extensionId: "pstdio.reports",
       title: "Use reports",
     },
   ],
@@ -43,22 +43,22 @@ const metadata = {
     {
       id: "pstdio-reports.change-request",
       localId: "change-request",
-      extensionId: "pstdio.pstdio-reports",
+      extensionId: "pstdio.reports",
       title: "Change request",
     },
   ],
   templateTypes: [
     {
-      id: "pstdio.pstdio-reports.template-type.report",
+      id: "pstdio.reports.template-type.report",
       localId: "report",
-      extensionId: "pstdio.pstdio-reports",
+      extensionId: "pstdio.reports",
       label: "Report",
       order: 40,
       commands: {
-        list: "pstdio.pstdio-reports.command.templates.list",
-        read: "pstdio.pstdio-reports.command.templates.read",
-        save: "pstdio.pstdio-reports.command.templates.save",
-        delete: "pstdio.pstdio-reports.command.templates.delete",
+        list: "pstdio.reports.command.templates.list",
+        read: "pstdio.reports.command.templates.read",
+        save: "pstdio.reports.command.templates.save",
+        delete: "pstdio.reports.command.templates.delete",
       },
     },
   ],
@@ -71,7 +71,7 @@ const meta: CanvasMeta<typeof AvailableExtensionDetail> = {
   args: {
     extension: {
       installName: "pstdio-reports",
-      extensionId: "pstdio.pstdio-reports",
+      extensionId: "pstdio.reports",
       icon: "FileChartColumn",
       displayName: "Agent Reports",
       description: "Workspace reports for agent handoffs.",
@@ -83,7 +83,7 @@ const meta: CanvasMeta<typeof AvailableExtensionDetail> = {
         ref: "pstdio@0.28.0",
       },
       publisher: "pstdio",
-      registry: { url: "https://base.prompt.studio/psx", extensionId: "pstdio.pstdio-reports" },
+      registry: { url: "https://base.prompt.studio/psx", extensionId: "pstdio.reports" },
     },
     metadata,
     loadingContributions: false,

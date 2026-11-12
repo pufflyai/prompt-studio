@@ -186,7 +186,7 @@ Programmatic callers can execute planner commands through the extension command
 API when they need direct command results:
 
 ```ts
-const response = await client.extensions.execute("pstdio.pstdio-planner.command.list-tickets", {
+const response = await client.extensions.execute("pstdio.planner.command.list-tickets", {
   projectId,
   params: {},
 });

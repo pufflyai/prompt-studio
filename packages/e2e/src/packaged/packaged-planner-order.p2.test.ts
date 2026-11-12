@@ -15,7 +15,7 @@ interface Ticket {
   title: string;
   position: string;
 }
-const owner = "pstdio.pstdio-planner";
+const owner = "pstdio.planner";
 const waitFor = async <T>(signal: AbortSignal, read: () => Promise<T>, matches: (value: T) => boolean) => {
   for (;;) {
     signal.throwIfAborted();

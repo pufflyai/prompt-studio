@@ -219,7 +219,7 @@ test("remote workspaces open synced history; offline sessions stay readable and 
   ).toBeVisible();
   await expect(main.getByText(/Laptop is offline/).filter({ visible: true })).toHaveCount(0);
   await page.goto(
-    `${fixture.origin}/projects/${fixture.projectId}/extensions/pstdio.pstdio-session-browser/conversations/compose`,
+    `${fixture.origin}/projects/${fixture.projectId}/extensions/pstdio.session-browser/conversations/compose`,
   );
   // Drafts expose the shared device selector only when this account has multiple devices.
   await expect(main.getByRole("button", { name: "Open workspace", exact: true })).toHaveCount(0);

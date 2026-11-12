@@ -22,7 +22,7 @@ test("Session menus share resource actions and switch through the full history",
     ).toBe(true);
   }
   await prepareResourceActionsDashboard(page, project.id);
-  await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-session-browser/conversations`);
+  await page.goto(`/projects/${project.id}/extensions/pstdio.session-browser/conversations`);
   const nav = page.locator('[data-workbench-region="sidenav"]');
   await expect(nav.getByRole("option", { name: "History 64", exact: true })).toBeVisible();
   // The oldest sessions are outside the virtualized viewport until it is scrolled.

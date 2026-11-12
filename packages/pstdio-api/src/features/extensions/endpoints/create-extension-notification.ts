@@ -1,5 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { CreateNotificationInput } from "pstdio-api-contracts";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-identity";
 import { ProjectNotFoundError } from "../../../services/extension-service";
 import type { AppRouteHandler } from "../../../types";
 import { createNotificationBodySchema, notificationResponseSchema } from "../../notifications/dto";
@@ -41,7 +42,7 @@ export const createExtensionNotificationHandler = (
     try {
       const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
       const enabledSource = snapshot.enabledSources.find(
-        (source) => source.installedSource.extension_id === extensionId,
+        (source) => source.installedSource.extension_id === canonicalExtensionId(extensionId),
       );
       if (!enabledSource) return context.json({ error: `Extension "${extensionId}" is not enabled`, extensionId }, 404);
 

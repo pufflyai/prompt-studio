@@ -6,7 +6,7 @@ describe("commandRef", () => {
     const plannerCommand = commandRef.forExtension({ publisher: "pstdio", name: "pstdio-planner" });
 
     expect(plannerCommand("automation-policy")).toEqual({
-      extensionId: "pstdio.pstdio-planner",
+      extensionId: "pstdio.planner",
       kind: "command",
       id: "automation-policy",
     });

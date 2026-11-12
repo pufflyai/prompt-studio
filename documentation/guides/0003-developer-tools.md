@@ -2,7 +2,7 @@
 
 Developer tools helps you find out which part of Prompt Studio is using your computer's CPU and memory, and whether the backend still answers. Use it when the app feels slow, a fan spins up, or an extension seems to do too much work.
 
-The **Prompt Studio Performance Monitoring** extension (`pstdio.pstdio-performance`) provides the status bar meter and its details. It is installed by default and uses only the public extension API. The host keeps the measurements: process sampling, the frame counter, the slow-frame observer, recordings and `pst performance`. Monitoring runs while the extension is loaded, so enabling the extension turns it on and disabling or removing it turns it off. There is no separate switch.
+The **Prompt Studio Performance Monitoring** extension (`pstdio.performance`) provides the status bar meter and its details. It is installed by default and uses only the public extension API. The host keeps the measurements: process sampling, the frame counter, the slow-frame observer, recordings and `pst performance`. Monitoring runs while the extension is loaded, so enabling the extension turns it on and disabling or removing it turns it off. There is no separate switch.
 
 ## Reorder status bar items
 

@@ -255,7 +255,7 @@ export const verifyPackagedSessionMenus = async (
     .click();
   await page.getByRole("button", { name: "Delete session", exact: true }).click();
   await expect(page).toHaveURL(
-    new RegExp(`/projects/${projectId}/extensions/pstdio.pstdio-session-browser/conversations/compose$`),
+    new RegExp(`/projects/${projectId}/extensions/pstdio.session-browser/conversations/compose$`),
   );
   const deleted = await fetch(`${baseUrl}/v1/sessions/${session.id}`, { headers: authorization });
   expect(deleted.status).toBe(404);

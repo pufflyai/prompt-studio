@@ -112,7 +112,7 @@ export const withCloudProject = async (
     const createSource = async () => {
       const project = await a.projects.create(folderProjectInput({ name: `Cloud ${kind}` }, sourceFolder));
       if (kind === "notes") {
-        const seeded = await a.extensions.execute("pstdio.pstdio-notes.command.notes.create", {
+        const seeded = await a.extensions.execute("pstdio.notes.command.notes.create", {
           projectId: project.id,
           params: { title: "From device A" },
           source: "api",

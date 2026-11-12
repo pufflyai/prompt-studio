@@ -7,7 +7,7 @@ import {
   queryChangeEnvelopeSchema,
   resolveCommandResourceParams,
 } from "pstdio-api-contracts";
-import { createCommandRunner, createReadBoundary } from "pstdio-extensions";
+import { canonicalRuntimeId, createCommandRunner, createReadBoundary } from "pstdio-extensions";
 import { z } from "zod";
 import { withStorageObservation } from "../../services/shared-files/storage-observation";
 import { createCommandEnvironment } from "./command-environment";
@@ -37,8 +37,9 @@ export const executeProjectExtensionCommand = async (
     onChunk?: (chunk: JsonValue) => Promise<void>;
   },
 ) => {
-  const { body, commandId, projectId } = input;
+  const { body, projectId } = input;
   const snapshot = await createReadBoundary(input.signal)(() => deps.extensionRuntimeCatalog.get(projectId));
+  const commandId = canonicalRuntimeId(snapshot.runtime, input.commandId);
   const command = snapshot.runtime.commands.find((candidate) => candidate.id === commandId);
   const handler = command ?? snapshot.runtime.privateHandlers.find((candidate) => candidate.id === commandId);
   if (!handler) throw new ExtensionCommandNotFoundError(commandId);

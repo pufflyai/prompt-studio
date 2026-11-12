@@ -23,7 +23,7 @@ export const expectNotesResources = async (input: {
     return result.outcome.value;
   };
   expect(
-    metadata.commands.find((command) => command.id === "pstdio.pstdio-notes.command.notes.rename")?.resourceMutation,
+    metadata.commands.find((command) => command.id === "pstdio.notes.command.notes.rename")?.resourceMutation,
   ).toEqual({
     kind: "rename",
     resourceType: "note",
@@ -31,22 +31,22 @@ export const expectNotesResources = async (input: {
     labelParam: "title",
   });
   expect(
-    metadata.commands.find((command) => command.id === "pstdio.pstdio-notes.command.notes.delete")?.resourceMutation,
+    metadata.commands.find((command) => command.id === "pstdio.notes.command.notes.delete")?.resourceMutation,
   ).toEqual({
     kind: "remove",
     resourceType: "note",
     idParam: "noteId",
   });
-  const provider = metadata.commandPaletteResources.find((entry) => entry.extensionId === "pstdio.pstdio-notes");
+  const provider = metadata.commandPaletteResources.find((entry) => entry.extensionId === "pstdio.notes");
   expect(provider).toBeDefined();
-  const tree = metadata.views.find((entry) => entry.id === "pstdio.pstdio-notes.view.note-list")!;
+  const tree = metadata.views.find((entry) => entry.id === "pstdio.notes.view.note-list")!;
   if (tree.body.kind !== "tree") throw new Error("Missing Notes tree");
   expect(tree.body.moveHandlerId).toBeDefined();
-  const note = (await execute("pstdio.pstdio-notes.command.notes.create", { title: "Packaged note search" })) as {
+  const note = (await execute("pstdio.notes.command.notes.create", { title: "Packaged note search" })) as {
     id: string;
     title: string;
   };
-  const folder = (await execute("pstdio.pstdio-notes.command.folders.create", { title: "Packaged folder" })) as {
+  const folder = (await execute("pstdio.notes.command.folders.create", { title: "Packaged folder" })) as {
     id: string;
   };
   for (const [command, params] of [
@@ -54,10 +54,10 @@ export const expectNotesResources = async (input: {
     ["folders.rename", { folderId: folder.id, title: "Existing folder" }],
   ] as const) {
     if (command === "folders.rename") {
-      await execute("pstdio.pstdio-notes.command.folders.create", { title: "Existing folder" });
+      await execute("pstdio.notes.command.folders.create", { title: "Existing folder" });
     }
     const response = await fetch(
-      `${baseUrl}/v1/projects/${projectId}/extensions/commands/pstdio.pstdio-notes.command.${command}/execute`,
+      `${baseUrl}/v1/projects/${projectId}/extensions/commands/pstdio.notes.command.${command}/execute`,
       {
         method: "POST",
         headers: { ...headers, "content-type": "application/json" },
@@ -67,7 +67,7 @@ export const expectNotesResources = async (input: {
     expect(response.status).toBe(200);
     expect((await response.json()).outcome.ok).toBe(false);
   }
-  await execute("pstdio.pstdio-notes.command.folders.rename", { folderId: folder.id, title: "PACKAGED FOLDER" });
+  await execute("pstdio.notes.command.folders.rename", { folderId: folder.id, title: "PACKAGED FOLDER" });
   const results = await execute(provider!.queryHandlerId, { query: "packaged note", limit: 5 });
   expect(results).toMatchObject({
     items: [
@@ -89,10 +89,10 @@ export const expectNotesResources = async (input: {
   });
   const sections = (await execute(tree.body.bodyHandlerId, { renderer })) as TreeViewSection[];
   expect(sections[0]!.nodes[0]!.children!.find((child) => child.id === `folder:${folder.id}`)?.children).toMatchObject([
-    { id: note.id, resource: { type: "note", id: note.id, extensionId: "pstdio.pstdio-notes", projectId } },
+    { id: note.id, resource: { type: "note", id: note.id, extensionId: "pstdio.notes", projectId } },
   ]);
-  const next = (await execute("pstdio.pstdio-notes.command.notes.create", {})) as { id: string };
-  const editor = metadata.views.find((entry) => entry.id === "pstdio.pstdio-notes.view.note-editor")!;
+  const next = (await execute("pstdio.notes.command.notes.create", {})) as { id: string };
+  const editor = metadata.views.find((entry) => entry.id === "pstdio.notes.view.note-editor")!;
   if (editor.body.kind !== "file") throw new Error("Missing Notes editor");
   const editorRenderer = { rendererId: editor.id, projectId, resource: { type: "note", id: next.id } };
   const connection = await input.client.textEditing.connect({
@@ -120,12 +120,12 @@ export const expectNotesResources = async (input: {
   } finally {
     await guest.close();
   }
-  const page = metadata.pages.find((entry) => entry.id === "pstdio.pstdio-notes.page.notes")!;
+  const page = metadata.pages.find((entry) => entry.id === "pstdio.notes.page.notes")!;
   const tab = page.slots[0]!.tab!;
   expect(await execute(tab.queryHandlerId, { renderer: editorRenderer })).toMatchObject({
     label: "First title",
   });
-  expect(await execute("pstdio.pstdio-notes.command.notes.resolve", { noteId: next.id })).toMatchObject({
+  expect(await execute("pstdio.notes.command.notes.resolve", { noteId: next.id })).toMatchObject({
     type: "note",
     id: next.id,
     label: "First title",

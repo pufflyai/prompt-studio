@@ -1,9 +1,11 @@
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-identity";
 import { type loadExtensionSources, normalizeExtensionSources } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
 import type { createExtensionService } from "../../services/extension-service";
 import type { createProjectService } from "../../services/project-service";
 import type { createWorkspaceService } from "../../services/workspace-service";
 import { type ExtensionStorageIndexService, installExtensionStorageIndexes } from "./extension-storage-indexes";
+import { migrateRuntimeExtensionFiles } from "./migrate-runtime-extension-files";
 import {
   ExtensionRuntimeGenerationStaleError,
   ExtensionRuntimeLoadFailedError,
@@ -11,7 +13,6 @@ import {
   freezeSnapshot,
   type ProjectExtensionRuntimeSnapshot,
   type RuntimeInvalidationInput,
-  type RuntimeInvalidationReason,
 } from "./project-extension-runtime-snapshot";
 import {
   canonicalSourcePath,
@@ -19,6 +20,7 @@ import {
   type LoadableExtensionSource,
 } from "./project-extension-runtime-sources";
 import { createProjectRuntimeActivation } from "./project-runtime-activation";
+import { markDirty, type ProjectState, projectRuntimeState } from "./project-runtime-state";
 
 const assertResourcePrefixes = (
   loaded: Awaited<ReturnType<ReturnType<typeof createExtensionSourceCache>["collect"]>>,
@@ -29,43 +31,6 @@ const assertResourcePrefixes = (
   );
   if (errors.length)
     throw Object.assign(new Error(errors.map((error) => error.message).join("\n")), { diagnostics: errors });
-};
-
-type ProjectState = {
-  /** Bumped on every invalidation; a read waits for a snapshot loaded at its starting revision or later. */
-  revision: number;
-  /** Bumped by invalidations that can change contributions; a load may publish only if it still matches. */
-  contributionRevision: number;
-  /** Revision the current snapshot was built from; differing from revision means dirty. */
-  loadedRevision: number;
-  dirtyReason: RuntimeInvalidationReason | null;
-  current: ProjectExtensionRuntimeSnapshot | null;
-  /** Last healthy snapshot re-published with a stale marker after a whole-load failure. */
-  staleView: ProjectExtensionRuntimeSnapshot | null;
-  loading: Promise<ProjectExtensionRuntimeSnapshot> | null;
-  /** Source paths from the last read of enabled sources; drives reverse lookup. */
-  knownSourcePaths: Set<string>;
-  loadCount: number;
-};
-
-const createProjectState = (): ProjectState => ({
-  revision: 0,
-  contributionRevision: 0,
-  loadedRevision: -1,
-  dirtyReason: null,
-  current: null,
-  staleView: null,
-  loading: null,
-  knownSourcePaths: new Set(),
-  loadCount: 0,
-});
-
-const markDirty = (state: ProjectState, reason: RuntimeInvalidationReason) => {
-  state.revision += 1;
-  // A webview build only refreshes later reads: the load in flight still serves the reads that
-  // started before the build, and the next read loads again and rechecks the source.
-  if (reason !== "webviews_built") state.contributionRevision += 1;
-  state.dirtyReason = reason;
 };
 
 type LoadContext = {
@@ -105,13 +70,7 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
   const invalidationListeners = new Set<(input: RuntimeInvalidationInput) => void>();
   let generation = 0;
 
-  const stateFor = (projectId: string) => {
-    const existing = states.get(projectId);
-    if (existing) return existing;
-    const created = createProjectState();
-    states.set(projectId, created);
-    return created;
-  };
+  const stateFor = (projectId: string) => projectRuntimeState(states, projectId);
 
   const buildRuntime = async (projectId: string, state: ProjectState, validate: () => void) => {
     const project = await deps.projectService.get(projectId);
@@ -122,10 +81,21 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
       enabledSources.map((source) => canonicalSourcePath(source.installedSource.source_path)),
     );
     const workspace = await deps.workspaceService.getDefault(projectId);
+    const conflicts = await migrateRuntimeExtensionFiles(deps.workspaceService, projectId, enabledSources);
     const cachedSources = await sources.collect(enabledSources);
     const runtime = normalizeExtensionSources(
-      cachedSources.map((cached) => cached.source),
-      cachedSources.flatMap((cached) => cached.diagnostics),
+      cachedSources
+        .filter((cached) => !conflicts.has(canonicalExtensionId(cached.source.manifest.id)))
+        .map((cached) => cached.source),
+      [
+        ...cachedSources.flatMap((cached) => cached.diagnostics),
+        ...[...conflicts].map(([extensionId, message]) => ({
+          code: "extension_file_migration_conflict",
+          severity: "error" as const,
+          extensionId,
+          message,
+        })),
+      ],
       { projectFolder: workspace?.root_path ?? undefined },
     );
 

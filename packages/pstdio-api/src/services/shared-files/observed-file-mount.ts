@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { resolve } from "node:path";
+import { historicalStoragePath } from "pstdio-api-contracts/extension-identity";
 import type { ArtifactMount } from "pstdio-api-contracts/extension-kernel";
 import { normalizeMountRelativePath } from "pstdio-extensions";
 import { prepareNativeFileWrite } from "../native-documents/file-write-context";
@@ -13,7 +14,7 @@ import {
 
 const bytesRevision = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
 export const workspaceFileObservationKey = (root: string, path: string) =>
-  JSON.stringify(["workspace-file", resolve(root), normalizeMountRelativePath(path)]);
+  JSON.stringify(["workspace-file", resolve(root), historicalStoragePath(normalizeMountRelativePath(path))]);
 export const observeWorkspaceFileBytes = (root: string, path: string, bytes: Uint8Array) => {
   if (isObservingStorage()) observeStorageVersion(workspaceFileObservationKey(root, path), bytesRevision(bytes));
 };

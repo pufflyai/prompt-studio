@@ -80,7 +80,7 @@ const test = base.extend<{ fixture: Awaited<ReturnType<typeof createFixture>> }>
 });
 
 const openTicket = async (page: Page, projectId: string) => {
-  await page.goto(`/projects/${projectId}/extensions/pstdio.pstdio-planner/tickets`);
+  await page.goto(`/projects/${projectId}/extensions/pstdio.planner/tickets`);
   await page
     .getByTestId("renderer-card")
     .filter({ hasText: "Ticket workflow" })

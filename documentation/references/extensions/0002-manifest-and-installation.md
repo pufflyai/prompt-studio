@@ -320,8 +320,8 @@ host's registered id without owner prefixing, for every contribution kind; runti
 are the one implementation of this rule; a ref without `extensionId` belongs to the owner, or to the host when there is none.
 
 This manifest is illustrative. The built-in Planner package is named `pstdio-planner`,
-so its extension ID is `pstdio.pstdio-planner`. Its `list-tickets` command resolves
-to `pstdio.pstdio-planner.command.list-tickets`.
+so its extension ID is `pstdio.planner`. Its `list-tickets` command resolves
+to `pstdio.planner.command.list-tickets`.
 
 When another extension needs a public command, the provider owns and exports that contract from one module:
 

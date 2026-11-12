@@ -132,9 +132,8 @@ export const waitForTicketsView = (request: APIRequestContext, projectId: string
         if (!response.ok()) return false;
         const metadata = (await response.json()) as { views?: Array<{ id: string; body?: { kind?: string } }> };
         return (
-          metadata.views?.some(
-            (view) => view.id === "pstdio.pstdio-planner.view.tickets" && view.body?.kind === "kanban",
-          ) ?? false
+          metadata.views?.some((view) => view.id === "pstdio.planner.view.tickets" && view.body?.kind === "kanban") ??
+          false
         );
       },
       { timeout: 30_000 },

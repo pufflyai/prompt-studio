@@ -28,7 +28,7 @@ const withBundledPlanner = async (run: () => Promise<void>) => {
         url: "https://github.com/pufflyai/prompt-studio",
         path: "extensions/pstdio-planner",
         installName: "pstdio-planner",
-        id: "pstdio.pstdio-planner",
+        id: "pstdio.planner",
         version: "1.0.0",
         sha256: "c".repeat(64),
       },

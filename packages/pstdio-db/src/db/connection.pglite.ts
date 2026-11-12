@@ -4,9 +4,11 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { PGlite } from "@electric-sql/pglite";
+import { inArray } from "drizzle-orm";
 import { drizzle, type PgliteDatabase } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { normalizeEmbeddedFileName, relativeEmbeddedFileName } from "pstdio-paths";
+import { migrateExtensionIdentities } from "../services/extension-identity-migration";
 import { openPglite } from "./open-pglite";
 import { canonicalDbPath, resolveDbPath } from "./paths";
 import { type PgliteRetirementPhase, prepareCurrentPgliteHome } from "./pglite-current-home";
@@ -183,6 +185,14 @@ export const createDb = async (options?: {
       }
     });
     onPhase("database_migrated");
+    await migrateExtensionIdentities(db, {
+      onConflict: async (error) => {
+        await db
+          .update(schema.installed_extension_sources)
+          .set({ status: "error", last_error_json: { code: error.code, message: error.message } })
+          .where(inArray(schema.installed_extension_sources.extension_id, [error.from, error.to]));
+      },
+    });
 
     let closed = false;
     const close = async () => {

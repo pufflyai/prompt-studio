@@ -6,7 +6,7 @@ export const expectPackagedRefinement = async (input: {
   headers: Record<string, string>;
 }) => {
   const { baseUrl, projectId, headers } = input;
-  const policyUrl = `${baseUrl}/v1/projects/${projectId}/extensions/commands/pstdio.pstdio-planner.command.refinement-policy/execute`;
+  const policyUrl = `${baseUrl}/v1/projects/${projectId}/extensions/commands/pstdio.planner.command.refinement-policy/execute`;
   const readPolicy = async () => {
     const response = await fetch(policyUrl, {
       method: "POST",

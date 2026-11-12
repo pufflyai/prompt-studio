@@ -119,9 +119,7 @@ test(
       const sessions = extensions.find((extension) => extension.installName === "pstdio-session-browser")!;
       expect(realpathSync(sessions.sourcePath)).toBe(join(realpathSync(tempRoot), "extensions/pstdio-session-browser"));
 
-      expect(metadata.pages).toContainEqual(
-        expect.objectContaining({ extensionId: "pstdio.pstdio-home", path: "home" }),
-      );
+      expect(metadata.pages).toContainEqual(expect.objectContaining({ extensionId: "pstdio.home", path: "home" }));
       const installedSessionsMetadata = await expectPackagedSessionsInstall({
         started,
         tempRoot,
@@ -134,10 +132,8 @@ test(
         headers: runtimeAuthorization(started.descriptor),
         metadata: installedSessionsMetadata,
       });
-      expect(metadata.projectSetups).toContainEqual(
-        expect.objectContaining({ extensionId: "pstdio.pstdio-onboarding" }),
-      );
-      const setupView = metadata.views.find((view) => view.extensionId === "pstdio.pstdio-onboarding");
+      expect(metadata.projectSetups).toContainEqual(expect.objectContaining({ extensionId: "pstdio.onboarding" }));
+      const setupView = metadata.views.find((view) => view.extensionId === "pstdio.onboarding");
       expect(setupView?.body.kind).toBe("webview");
       if (setupView?.body.kind === "webview") {
         const setupRuntime = await fetch(`${started.baseUrl}${setupView.body.webview.runtimeUrl}`, {
@@ -147,26 +143,26 @@ test(
       }
       expect(metadata.pages).toContainEqual(
         expect.objectContaining({
-          extensionId: "pstdio.pstdio-workspaces",
+          extensionId: "pstdio.workspaces",
           path: "files",
           document: { metadataKey: "workspaceFilePath" },
         }),
       );
       expect(metadata.views).toContainEqual(
         expect.objectContaining({
-          extensionId: "pstdio.pstdio-workspaces",
+          extensionId: "pstdio.workspaces",
           body: expect.objectContaining({ kind: "resourceList" }),
         }),
       );
       expect(metadata.statusBarItems).toContainEqual(
         expect.objectContaining({
-          extensionId: "pstdio.pstdio-cloud",
+          extensionId: "pstdio.cloud",
           popover: expect.objectContaining({ id: "details" }),
         }),
       );
       expect(metadata.settingsPanels).toContainEqual(
         expect.objectContaining({
-          extensionId: "pstdio.pstdio-cloud",
+          extensionId: "pstdio.cloud",
           slot: expect.objectContaining({ id: "global.settings" }),
         }),
       );

@@ -1,3 +1,4 @@
+import { extensionTransportName } from "pstdio-api-contracts/extension-identity";
 import type { SubscribeDocument } from "pstdio-sync/relay";
 import { createDocumentRelay, createDocumentSync, createRecordStreamSync, fetchSyncSpaces } from "pstdio-sync/relay";
 import type { LiveServerMessage } from "pstdio-sync-contracts";
@@ -39,8 +40,8 @@ const initializeDocuments = async (
     });
   const quarantine = (documentId: string) =>
     createSyncQuarantine({ accountId: config.accountId, projectId: config.workbenchId, documentId });
-  const ownerId = await space.documentId(JSON.stringify([owner.extensionId, "owner"]));
-  const recordStreamId = await space.documentId(JSON.stringify([owner.extensionId, "record-stream-v2"]));
+  const ownerId = await space.documentId(extensionTransportName(owner.extensionId, "owner"));
+  const recordStreamId = await space.documentId(extensionTransportName(owner.extensionId, "record-stream-v2"));
   let observation: Promise<ReturnType<typeof documentProgress>> | undefined;
   const statusChanged = () => {
     observation = undefined;
@@ -59,7 +60,7 @@ const initializeDocuments = async (
     signal: workSignal,
     create: async (name) => {
       const documentId =
-        name === "records" ? ownerId : await space.documentId(JSON.stringify([owner.extensionId, name]));
+        name === "records" ? ownerId : await space.documentId(extensionTransportName(owner.extensionId, name));
       const sync = createDocumentSync({
         owner,
         space,

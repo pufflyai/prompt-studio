@@ -13,7 +13,7 @@ An extension is a TypeScript package: a folder with a `package.json` and an entr
 - templates, skills, and themes
 - agent harnesses and workspace providers
 
-The package's `publisher` and `name` form the extension ID, such as `pstdio.pstdio-notes`. The entry file never repeats them.
+The package's `publisher` and `name` form the extension ID, such as `pstdio.notes`. The entry file never repeats them.
 
 ## Who does what
 

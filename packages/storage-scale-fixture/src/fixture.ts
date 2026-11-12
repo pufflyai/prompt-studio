@@ -19,7 +19,7 @@ export type WorkloadSpec = ReturnType<typeof workload>;
 export const owners = (spec: WorkloadSpec) =>
   Array.from({ length: spec.ownerCount }, (_, index) => ({
     index,
-    id: index === 9 ? "pstdio.pstdio-planner" : `scale.scale-owner-${index}`,
+    id: index === 9 ? "pstdio.planner" : `scale.scale-owner-${index}`,
     rows: spec.kind === "rich" || index === 0 ? spec.rows : spec.backgroundRows,
   }));
 

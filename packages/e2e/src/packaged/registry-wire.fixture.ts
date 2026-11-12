@@ -34,11 +34,11 @@ export const startRegistryWireFixture = async () => {
       await closed;
     },
     publish: async (path: string) => {
-      const version = /^pstdio\.pstdio-notes-(\d+\.\d+\.\d+)\.tgz$/.exec(basename(path))?.[1];
+      const version = /^pstdio\.notes-(\d+\.\d+\.\d+)\.tgz$/.exec(basename(path))?.[1];
       if (!version) throw new Error("Unexpected Notes fixture package name");
       const bytes = await readFile(path);
       versions.push({
-        id: "pstdio.pstdio-notes",
+        id: "pstdio.notes",
         version,
         enginesPstdio: registryNotesEngines,
         sha256: createHash("sha256").update(bytes).digest("hex"),

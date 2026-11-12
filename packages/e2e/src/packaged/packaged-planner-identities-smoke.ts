@@ -8,7 +8,7 @@ export const expectPlannerIdentities = async (input: {
   const identities = await Promise.all(
     Array.from({ length: 3 }, async (_, index) => {
       const response = await fetch(
-        `${input.baseUrl}/v1/projects/${input.projectId}/extensions/commands/pstdio.pstdio-planner.command.create-ticket/execute`,
+        `${input.baseUrl}/v1/projects/${input.projectId}/extensions/commands/pstdio.planner.command.create-ticket/execute`,
         {
           method: "POST",
           headers: { ...input.headers, "content-type": "application/json" },
@@ -27,7 +27,7 @@ export const expectPlannerIdentities = async (input: {
   expect(new Set(identities.map((identity) => identity.shorthand)).size).toBe(3);
   const execute = async (command: string, params: unknown) => {
     const response = await fetch(
-      `${input.baseUrl}/v1/projects/${input.projectId}/extensions/commands/pstdio.pstdio-planner.command.${command}/execute`,
+      `${input.baseUrl}/v1/projects/${input.projectId}/extensions/commands/pstdio.planner.command.${command}/execute`,
       {
         method: "POST",
         headers: { ...input.headers, "content-type": "application/json" },
@@ -54,12 +54,12 @@ export const expectPlannerIdentities = async (input: {
   expect(sharedWorkspaces).toEqual([expect.objectContaining({ is_default: true, anchors_json: [] })]);
   expect(
     await execute("resolve-ticket-path", {
-      path: `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/${identities[0]!.shorthand}/ticket.md`,
+      path: `.pstdio/extension-storage/pstdio.planner/tickets/${identities[0]!.shorthand}/ticket.md`,
       workspaceId: sharedWorkspaces[0]!.id,
     }),
   ).toMatchObject({ resource: { id: identities[0]!.id, shorthand: identities[0]!.shorthand } });
   const treeResponse = await fetch(
-    `${input.baseUrl}/v1/projects/${input.projectId}/extensions/commands/pstdio.pstdio-planner.command.ticket-files.tree.body/execute`,
+    `${input.baseUrl}/v1/projects/${input.projectId}/extensions/commands/pstdio.planner.command.ticket-files.tree.body/execute`,
     {
       method: "POST",
       headers: { ...input.headers, "content-type": "application/json" },
@@ -67,7 +67,7 @@ export const expectPlannerIdentities = async (input: {
         source: "api",
         params: {
           renderer: {
-            rendererId: "pstdio.pstdio-planner.view.ticket-files",
+            rendererId: "pstdio.planner.view.ticket-files",
             resource: { type: "ticket", id: identities[0].id },
           },
         },
@@ -93,7 +93,7 @@ export const expectPlannerIdentities = async (input: {
   });
   expect(files.status).toBe(200);
   const updateRes = await fetch(
-    `${input.baseUrl}/v1/projects/${input.projectId}/extensions/commands/pstdio.pstdio-planner.command.update-ticket/execute`,
+    `${input.baseUrl}/v1/projects/${input.projectId}/extensions/commands/pstdio.planner.command.update-ticket/execute`,
     {
       method: "POST",
       headers: { ...input.headers, "content-type": "application/json" },
@@ -102,7 +102,7 @@ export const expectPlannerIdentities = async (input: {
   );
   expect(updateRes.status).toBe(200);
   expect(await updateRes.json()).toMatchObject({
-    eventIds: expect.arrayContaining(["pstdio.pstdio-planner.event.tickets.changed"]),
+    eventIds: expect.arrayContaining(["pstdio.planner.event.tickets.changed"]),
     outcome: { ok: true, value: { id: identities[0].id, title: "Updated identity" } },
   });
 };

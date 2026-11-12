@@ -1,4 +1,5 @@
 import { posix, relative } from "node:path";
+import { canonicalStoragePath } from "pstdio-api-contracts/extension-identity";
 import { normalizeMountRelativePath, type SafeFileRoot, type SafeResolvedPath } from "./safe-file-root";
 import { WorkspaceFileAccessError } from "./workspace-file-access-error";
 
@@ -13,7 +14,7 @@ const assertOutsideGit = (path: string) => {
 /** Browsing and entry actions exclude Git metadata, including aliases that resolve into it. */
 export const protectWorkspaceFileRoot = (root: SafeFileRoot) => {
   const normalizedPath = (path: string) => {
-    const normalized = normalizeMountRelativePath(path);
+    const normalized = canonicalStoragePath(normalizeMountRelativePath(path));
     assertOutsideGit(normalized);
     return normalized;
   };

@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
 import { nativeFileContentSchema } from "pstdio-api-contracts";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-identity";
+import { canonicalRuntimeId } from "pstdio-extensions";
 import { textFailure } from "./errors";
 import type { TextConnection, TextEditingDeps, TextGrant } from "./types";
 
@@ -7,7 +9,8 @@ export const validateTextPresentation = async (deps: TextEditingDeps, connection
   if (connection.disposed) throw textFailure("session_closed", "This text placement is closed");
   if (connection.input.kind !== "placement" || !connection.input.viewId) return;
   const catalog = await deps.catalog.get(connection.projectId);
-  const viewId = connection.input.viewId;
+  const viewId = canonicalRuntimeId(catalog.runtime, connection.input.viewId);
+  connection.input = { ...connection.input, viewId };
   const view = catalog.runtime.views.find((view) => view.id === viewId);
   if (
     catalog.stale ||
@@ -25,7 +28,7 @@ const selectedPresentation = (
   if (content.textEditor && !content.textDocument)
     throw textFailure("grant_invalid", "A custom text editor needs a declared text source");
   return content.textEditor
-    ? `${content.textEditor.extensionId ?? loaded.owner.extensionId}.view.${content.textEditor.id}`
+    ? `${canonicalExtensionId(content.textEditor.extensionId ?? loaded.owner.extensionId)}.view.${content.textEditor.id}`
     : undefined;
 };
 export const validateTextSelection = (

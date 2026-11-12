@@ -79,7 +79,7 @@ test("the global workspace action uses declared cloud parameters without a repos
     const dialog = page.frameLocator('iframe[title="Workspace action"]');
     await dialog.getByRole("textbox", { name: "Environment image" }).fill("documents");
     await dialog.getByRole("button", { name: "Create workspace", exact: true }).click();
-    await expect(page).toHaveURL(/extensions\/pstdio.pstdio-workspaces\/overview/);
+    await expect(page).toHaveURL(/extensions\/pstdio.workspaces\/overview/);
     const workspaces = await (await request.get(`${uiOrigin}/v1/workspaces?project_id=${projectId}`)).json();
     expect(workspaces).toContainEqual(
       expect.objectContaining({

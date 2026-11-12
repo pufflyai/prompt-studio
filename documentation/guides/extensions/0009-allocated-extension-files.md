@@ -7,7 +7,7 @@ Extension files belong to their full publisher and name. Use the context file me
 Prompt Studio 0.46 roots allocated files and artifact mounts at
 `.pstdio/extension-storage/<publisher>.<name>/`.
 For example, Planner tickets live in
-`.pstdio/extension-storage/pstdio.pstdio-planner/tickets/` instead of
+`.pstdio/extension-storage/pstdio.planner/tickets/` instead of
 `.pstdio/extension-storage/pstdio-planner/tickets/`.
 
 0.46 starts every device with an empty database and does not move project files.

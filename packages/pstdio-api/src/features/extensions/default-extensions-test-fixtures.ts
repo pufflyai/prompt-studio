@@ -7,13 +7,13 @@ export const installed = {
   targetPath: "/home/user/.pstdio/extensions/pstdio-planner",
   source: { kind: "named" as const, name: "pstdio-planner", ref: "repo#main:extensions/pstdio-planner" },
   metadata: {
-    id: "pstdio.pstdio-planner",
+    id: "pstdio.planner",
     name: "pstdio-planner",
     displayName: "Project Planner",
     version: "0.1.0",
     enginesPstdio: "^1.0.0",
   },
-  manifest: { id: "pstdio.pstdio-planner" },
+  manifest: { id: "pstdio.planner" },
   sourceHash: "hash",
   check: {
     extensionsRoot: "/home/user/.pstdio/extensions",

@@ -46,7 +46,7 @@ describe("registerWorkbenchExtensionKanbanRenderers create forms", () => {
     const calls: Array<{ commandId: string; rowId?: unknown }> = [];
     const record = {
       id: "tickets",
-      extensionId: "pstdio.pstdio-planner",
+      extensionId: "pstdio.planner",
       title: "Tickets",
       queryHandlerId: "pstdio-planner.tickets.query",
       rowActivationHandlerId: "pstdio-planner.tickets.onRowActivate",
@@ -94,7 +94,7 @@ describe("registerWorkbenchExtensionKanbanRenderers create forms", () => {
     const afterCreate: unknown[] = [];
     const record = {
       id: "tickets",
-      extensionId: "pstdio.pstdio-planner",
+      extensionId: "pstdio.planner",
       title: "Tickets",
       queryHandlerId: "pstdio-planner.tickets.query",
       createRow: {

@@ -1,15 +1,23 @@
 import type { ListExtensionAppearanceResponse } from "@pstdio/sdk/api";
 import type { FileIconThemePreferenceOption, ThemePreferenceOption } from "@pstdio/ui";
 import type { Disposable, WorkbenchModuleContext } from "@pstdio/workbench";
+import { historicalContributionId } from "pstdio-api-contracts/extension-identity";
 import { getRuntimeCollections } from "@/lib/sync/collections";
 import {
   localizeExtensionAppearance,
   type ResolvedWorkbenchExtensionAppearance,
 } from "@/shared/extensions/extension-localization";
 
+const appearanceAliases = (record: { extensionId: string; localId?: string }, kind: string) => {
+  const previous =
+    record.localId && historicalContributionId({ extensionId: record.extensionId, kind, id: record.localId });
+  return previous ? { aliases: [previous] } : {};
+};
+
 const toThemePreference = (theme: ResolvedWorkbenchExtensionAppearance["themes"][number]) =>
   ({
     id: theme.id,
+    ...appearanceAliases(theme, "theme"),
     title: theme.title,
     mode: theme.mode,
     tokens: theme.tokens,
@@ -19,6 +27,7 @@ const toThemePreference = (theme: ResolvedWorkbenchExtensionAppearance["themes"]
 const toFileIconThemePreference = (theme: ResolvedWorkbenchExtensionAppearance["fileIconThemes"][number]) =>
   ({
     id: theme.id,
+    ...appearanceAliases(theme, "file-icon-theme"),
     title: theme.title,
     definitions: theme.definitions,
     fileExtensions: theme.fileExtensions,

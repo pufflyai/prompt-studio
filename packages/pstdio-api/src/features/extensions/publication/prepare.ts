@@ -1,5 +1,6 @@
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-identity";
 import { checkExtensionSource } from "../extension-runtime";
 import { buildExtensionWebview } from "../extension-webview-builder";
 import { collectExtensionWebviews, resolvePackageAssetFile } from "../extension-webviews";
@@ -28,7 +29,8 @@ export const preparePublishedExtension = async (input: {
       throw new Error(
         check.diagnostics.find((diagnostic) => diagnostic.severity === "error")?.message ?? "Invalid extension",
       );
-    if (loaded.metadata.id !== input.extensionId) throw new Error("Published package identity mismatch");
+    if (canonicalExtensionId(loaded.metadata.id) !== canonicalExtensionId(input.extensionId))
+      throw new Error("Published package identity mismatch");
     for (const [index, webview] of collectExtensionWebviews(loaded).entries()) {
       const result = await buildExtensionWebview({
         entryPath: resolvePackageAssetFile(webview.entry),

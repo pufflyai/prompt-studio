@@ -1,4 +1,6 @@
 import type { ExtensionCommandRecord } from "@pstdio/sdk/api";
+import { historicalExtensionId } from "pstdio-api-contracts/extension-identity";
+import { isHistoricalCliAlias } from "./deprecated-extension-command";
 
 export type ExtensionCommandCollision = { path: string; commands: ExtensionCommandRecord[] };
 export type ExtensionCommandTable = {
@@ -25,6 +27,11 @@ export const buildExtensionCommandTable = (
   for (const id of extensionIds) {
     const name = id.split(".")[1]!;
     owners.set(name, new Set([...(owners.get(name) ?? []), id]));
+    const historical = historicalExtensionId(id);
+    if (historical !== id) {
+      const oldName = historical.slice(historical.indexOf(".") + 1);
+      owners.set(oldName, new Set([...(owners.get(oldName) ?? []), id]));
+    }
   }
   for (const [name, providers] of owners) {
     if (providers.size > 1)
@@ -36,7 +43,12 @@ export const buildExtensionCommandTable = (
   const addPath = (path: string, command: ExtensionCommandRecord) => {
     const namespace = path.split(" ")[0]!;
     const providers = owners.get(namespace);
-    if (providers && providers.size > 1 && path !== command.cliPath && !command.cliAliases?.includes(path)) {
+    if (
+      providers &&
+      providers.size > 1 &&
+      path !== command.cliPath &&
+      (!command.cliAliases?.includes(path) || isHistoricalCliAlias(command, path))
+    ) {
       collisionsByPath.set(
         path,
         commands.filter((candidate) => providers.has(candidate.extensionId)),

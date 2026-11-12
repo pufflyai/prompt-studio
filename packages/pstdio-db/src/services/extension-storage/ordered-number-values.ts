@@ -1,3 +1,4 @@
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-identity";
 import { type OrderedOperation, type OrderedRecord, orderedBody } from "pstdio-sync/records";
 import type { Json } from "pstdio-sync-contracts";
 import { isNumberRecord, type NumberRecord, numberIndexString } from "./resource-number-records";
@@ -32,7 +33,7 @@ export const orderedNumber = (record: OrderedRecord | undefined, retained = fals
   // Other core JSON remains valid; only ordinary resource identifiers enter SQL text indexes.
   if ([number.id, number.extensionId, number.kind, number.prefix, ...number.aliases].some((key) => key.includes("\0")))
     return;
-  return number;
+  return { ...number, extensionId: canonicalExtensionId(number.extensionId) };
 };
 export const numberHistory = (record: OrderedRecord | undefined) => {
   const value = bodyObject(record).numberHistory;

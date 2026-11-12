@@ -41,7 +41,7 @@ export const createWorkspaceInRepo = async (ctx: HookTestContext, repo: string) 
   };
 
   const attemptRes = await fetch(
-    `${ctx.api.url}/v1/projects/${encodeURIComponent(projectId)}/extensions/commands/pstdio.pstdio-planner.command.run-attempt/execute`,
+    `${ctx.api.url}/v1/projects/${encodeURIComponent(projectId)}/extensions/commands/pstdio.planner.command.run-attempt/execute`,
     {
       method: "POST",
       headers: { "content-type": "application/json" },

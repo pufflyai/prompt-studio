@@ -75,7 +75,7 @@ interface PlannerTagsResult {
 }
 
 const plannerCommandId = (command: string) =>
-  command.startsWith("pstdio.pstdio-planner.command.") ? command : `pstdio.pstdio-planner.command.${command}`;
+  command.startsWith("pstdio.planner.command.") ? command : `pstdio.planner.command.${command}`;
 
 export const executePlannerCommand = async <TValue>(
   request: APIRequestContext,

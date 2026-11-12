@@ -40,6 +40,7 @@ const toExtensionRecord = (extension: ExtensionRuntime["extensions"][number]) =>
 
 const toCommandRecord = (command: ExtensionRuntime["commands"][number]) => ({
   id: command.id,
+  localId: command.localId,
   extensionId: command.extensionId,
   title: command.title,
   description: command.description,

@@ -2,6 +2,11 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { z } from "@hono/zod-openapi";
+import {
+  canonicalExtensionId,
+  canonicalInstallName,
+  matchesExtensionInstallName,
+} from "pstdio-api-contracts/extension-identity";
 import { expandHomePath, resolvePstdioHome } from "pstdio-paths";
 import packagedCatalogData from "../../../files/extension-catalog.json";
 
@@ -45,6 +50,10 @@ export const parseExtensionCatalog = (value: unknown) => {
   const catalog = extensionCatalogSchema.parse(value);
   const names = new Set<string>();
   for (const entry of catalog.extensions) {
+    if (entry.publisher === "pstdio" || entry.extensionId?.startsWith("pstdio.")) {
+      entry.installName = canonicalInstallName(entry.installName);
+      if (entry.extensionId) entry.extensionId = canonicalExtensionId(entry.extensionId);
+    }
     if (names.has(entry.installName)) {
       throw new Error(`Duplicate extension catalog install name: ${entry.installName}`);
     }
@@ -131,7 +140,20 @@ export class ExtensionNotInCatalogError extends Error {
   }
 }
 
-export const findExtensionCatalogEntry = async (installName: string) =>
-  (await getExtensionCatalog()).extensions.find(
-    (entry) => entry.installName === installName || entry.extensionId === installName,
+export const selectExtensionCatalogEntry = (catalog: ExtensionCatalog, installName: string) => {
+  const matches = catalog.extensions.filter((entry) =>
+    matchesExtensionInstallName(
+      {
+        ...entry,
+        extensionId: entry.extensionId ?? `${entry.publisher}.${entry.installName}`,
+      },
+      installName,
+    ),
   );
+  if (matches.length > 1)
+    throw new Error(`Extension install name is ambiguous: ${installName}. Use its publisher-qualified ID.`);
+  return matches[0];
+};
+
+export const findExtensionCatalogEntry = async (installName: string) =>
+  selectExtensionCatalogEntry(await getExtensionCatalog(), installName);

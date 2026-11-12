@@ -65,6 +65,6 @@ const login = await fetch(`${apiUrl}/runtime/browser-login`, {
 });
 assert(login.ok, `Browser login failed: ${login.status}`);
 const board = new URL(((await login.json()) as { url: string }).url);
-board.pathname = `/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`;
+board.pathname = `/projects/${project.id}/extensions/pstdio.planner/tickets`;
 console.info(`Board: ${board.href}`);
 console.info("Stop and remove the demo with bun run dev:playwright:down after inspection.");

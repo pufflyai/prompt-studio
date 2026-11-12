@@ -2,17 +2,19 @@ import { createDefaultWorkbenchLayout, type WorkbenchLayout } from "../../regist
 import type { WorkbenchPagePersistenceScopeInput } from "../../workbench-core-types";
 
 const panelRegions = ["main", "side", "secondary"] as const;
-const headerScope = (context: WorkbenchPagePersistenceScopeInput) =>
-  `workbench-page-headers:${JSON.stringify([context.projectId, context.pageId])}`;
+const headerScope = (context: WorkbenchPagePersistenceScopeInput, identityId: (id: string) => string) =>
+  `workbench-page-headers:${JSON.stringify([context.projectId, context.pageId && identityId(context.pageId)])}`;
 
 export const createPageHeaderCache = (input: {
+  identityId?: (id: string) => string;
   read(scope: string): WorkbenchLayout | undefined;
   write(layout: WorkbenchLayout, scope: string): unknown;
   clear(scope: string, fallback: WorkbenchLayout): void;
 }) => ({
-  load: (context: WorkbenchPagePersistenceScopeInput) => input.read(headerScope(context)),
+  load: (context: WorkbenchPagePersistenceScopeInput) =>
+    input.read(headerScope(context, input.identityId ?? ((id) => id))),
   save(context: WorkbenchPagePersistenceScopeInput, layout: WorkbenchLayout) {
-    const scope = headerScope(context);
+    const scope = headerScope(context, input.identityId ?? ((id) => id));
     const previous = input.read(scope);
     if (panelRegions.every((id) => previous?.regions[id].headerVisible === layout.regions[id].headerVisible)) return;
     // Header preferences must not become another owner of the page's open tabs.

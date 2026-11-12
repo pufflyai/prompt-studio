@@ -5,14 +5,14 @@ import { extensionNamespaceSummaries, loadExtensionNamespaces } from "./root-hel
 const commands: ExtensionCommandRecord[] = [
   {
     id: "pstdio-planner.create-ticket",
-    extensionId: "pstdio.pstdio-planner",
+    extensionId: "pstdio.planner",
     title: "Create ticket",
     cliPath: "pstdio-planner create-ticket",
     cliAliases: ["tickets create", "tickets add"],
   },
   {
     id: "pstdio-planner.ticketStatus.read",
-    extensionId: "pstdio.pstdio-planner",
+    extensionId: "pstdio.planner",
     title: "List statuses",
     cliPath: "pstdio-planner ticketStatus read",
     cliAliases: ["statuses list"],
@@ -116,4 +116,26 @@ describe("loadExtensionNamespaces", () => {
 
     expect(summaries).toEqual([]);
   });
+});
+
+test("root discovery leads with canonical namespaces while retaining deliberate shortcuts", () => {
+  expect(
+    extensionNamespaceSummaries([
+      {
+        id: "pstdio.notes.command.notes.create",
+        extensionId: "pstdio.notes",
+        title: "New note",
+        cliPath: "pstdio.notes create",
+        cliAliases: [
+          "pstdio.pstdio-notes notes create",
+          "pstdio-notes notes create",
+          "pstdio.notes notes create",
+          "notes-new",
+        ],
+      },
+    ]),
+  ).toEqual([
+    { namespace: "notes-new", description: "pstdio.notes" },
+    { namespace: "pstdio.notes", description: "pstdio.notes" },
+  ]);
 });

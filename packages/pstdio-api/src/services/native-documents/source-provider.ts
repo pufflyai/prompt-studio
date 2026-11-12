@@ -1,4 +1,5 @@
 import { nativeDocumentSourceSchema, type TextSourceTarget } from "pstdio-api-contracts";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-identity";
 import { z } from "zod";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { resolveNativeLoadedSource } from "./source-binding";
@@ -15,6 +16,7 @@ const invoke = async (
   metadata: Record<string, string>,
   content?: string,
 ) => {
+  input = { ...input, extensionId: canonicalExtensionId(input.extensionId) };
   const id = `${input.extensionId}.text-source.${input.textDocument.sourceId}`;
   const snapshot = await deps.extensionRuntimeCatalog.get(input.projectId);
   const handler = snapshot.runtime.privateHandlers.find(
@@ -59,6 +61,7 @@ const invoke = async (
 };
 
 export const resolveTextProvider = async (deps: ExtensionsRouteDeps, input: ProviderTarget) => {
+  input = { ...input, extensionId: canonicalExtensionId(input.extensionId) };
   const result = await invoke(deps, input, "resolve", {});
   return {
     resolved: resolution.parse(result.value),
@@ -68,6 +71,7 @@ export const resolveTextProvider = async (deps: ExtensionsRouteDeps, input: Prov
 };
 
 export const loadTextSource = async (deps: ExtensionsRouteDeps, input: ProviderTarget) => {
+  input = { ...input, extensionId: canonicalExtensionId(input.extensionId) };
   const { resolved, owner, fileStorageVersions } = await resolveTextProvider(deps, input);
   const binding = await resolveNativeLoadedSource(deps, {
     owner,

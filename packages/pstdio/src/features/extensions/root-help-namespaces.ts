@@ -3,6 +3,8 @@ import { isHealthy as defaultIsHealthy } from "@/adapters/cli/dashboard/health-c
 import { apiClient } from "../api-client";
 import { resolveProjectId as defaultResolveProjectId } from "../projects/resolve-project-id";
 
+import { isHistoricalCliAlias } from "./deprecated-extension-command";
+
 const stripExtensionScope = (extensionId: string) => extensionId.replace(/^[^.]+\./, "");
 
 const aliasNamespace = (alias: string) => alias.split(/\s+/).filter(Boolean)[0] ?? "";
@@ -34,7 +36,7 @@ export const extensionNamespaceSummaries = (
 
     for (const alias of command.cliAliases ?? []) {
       const namespace = aliasNamespace(alias);
-      if (!namespace || exclude.has(namespace)) continue;
+      if (!namespace || exclude.has(namespace) || isHistoricalCliAlias(command, alias)) continue;
       addNamespaceProvider(providers, namespace, provider);
     }
   }

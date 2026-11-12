@@ -80,3 +80,38 @@ test("a handler returning after cancellation still reports a cancelled outcome",
   await pending;
   expect(events).toMatchObject([{ event: "end", data: { outcome: { ok: false, code: "command_stream_cancelled" } } }]);
 });
+
+test("a historical stream command subscribes once through its canonical enabled provider", async () => {
+  const legacy = await createWorkspaceContextFixture({ publisher: "pstdio", name: "pstdio-notes" });
+  try {
+    const snapshot = await legacy.deps.extensionRuntimeCatalog.get("project-1");
+    const command = snapshot.runtime.commands.find((entry) => entry.localId === "inspect")!;
+    command.stream = { kind: "stream" };
+    let calls = 0;
+    command.run = async (ctx) => {
+      calls++;
+      await ctx.stream.write("same");
+    };
+    const prepared = await prepareCommandSubscription(legacy.deps, {
+      ...input,
+      command_id: "pstdio.pstdio-notes.command.inspect",
+    });
+    if ("error" in prepared) throw new Error(prepared.error);
+    const events: { event: string; data: unknown }[] = [];
+    await prepared.run({
+      aborted: false,
+      onAbort() {},
+      sleep: async () => {},
+      write: async (event, data) => {
+        events.push({ event, data });
+      },
+    });
+    expect(calls).toBe(1);
+    expect(events).toMatchObject([
+      { event: "chunk", data: "same" },
+      { event: "end", data: { commandId: "pstdio.notes.command.inspect", extensionId: "pstdio.notes" } },
+    ]);
+  } finally {
+    await legacy.cleanup();
+  }
+});
