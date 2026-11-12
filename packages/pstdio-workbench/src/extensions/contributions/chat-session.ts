@@ -6,7 +6,7 @@ import {
   chatRendererSnapshotSchema,
 } from "pstdio-api-contracts";
 import { createWorkbenchStore } from "../../core/shared/store/workbench-store";
-import { hydrateChatDraft, recoverChatDraft } from "./chat-draft-recovery";
+import { chatDraftContentKey, hydrateChatDraft, recoverChatDraft } from "./chat-draft-recovery";
 import { createChatDraftRestoration } from "./chat-draft-restoration";
 import { createChatEventReader } from "./chat-event-reader";
 import { clearDeliveredChatRecoveries } from "./chat-failed-submission";
@@ -137,7 +137,8 @@ export const createChatSession = (input: ChatSessionInput) => {
   const actions = new Set<Promise<unknown>>();
   let retired = false;
   const retiredState = initialChatState();
-  let recoverableDraft: ChatDraft | undefined;
+  // Unchanged composer writes may replace the object without creating newer work.
+  let recoverableDraft: string | undefined;
   const merge = (
     incoming: ChatRendererSnapshot,
     issued = ++clock,
@@ -165,7 +166,8 @@ export const createChatSession = (input: ChatSessionInput) => {
         recoverChatDraft(
           state.draft,
           recovered,
-          (drafts.changes() === 0 && emptyChatDraft(state.draft)) || state.draft === recoverableDraft,
+          (drafts.changes() === 0 && emptyChatDraft(state.draft)) ||
+            chatDraftContentKey(state.draft) === recoverableDraft,
         ),
       );
       recoverableDraft = undefined;
@@ -237,7 +239,7 @@ export const createChatSession = (input: ChatSessionInput) => {
     changeDraft,
     fail,
     markRecoverable: () => {
-      recoverableDraft = state.draft;
+      recoverableDraft = chatDraftContentKey(state.draft);
     },
   });
   const run = (action: ChatRendererAction, handler = input.action) => {
