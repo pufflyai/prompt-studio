@@ -1,4 +1,4 @@
-name: Focused main failure controls
+name: Focused Linux streaming control
 on:
   workflow_dispatch:
     inputs:
@@ -9,6 +9,7 @@ permissions:
   contents: read
 jobs:
   workspace-files:
+    if: false
     name: Original Linux workspace files case
     runs-on: ubuntu-latest
     timeout-minutes: 18
@@ -54,14 +55,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             case: Linux streaming motion
             file: src/packaged/packaged-chat-motion-smoke.p2.test.ts
             pattern: retains streaming messages and cached history
-          - os: macos-15
-            case: Apple Silicon Planner
-            file: src/packaged/packaged-planner-smoke.p2.test.ts
-            pattern: packaged Planner
     env:
       CI_PRIORITY: P2
       TEST_PRIORITIES: P2
