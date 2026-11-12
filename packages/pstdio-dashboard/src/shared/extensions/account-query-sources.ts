@@ -42,6 +42,9 @@ export const createAccountQuerySources = (input: {
       id: "account." + definition.service,
       params: definition,
       dependsOn: [accountEvents.changed.id, ...(projectId ? [accountEvents.projectSyncChanged.id] : [])],
+      // Remote device presence has no complete push stream. Its observation window
+      // must catch up after detachment, without polling or retaining an optional read.
+      subscribe: definition.service === "devices" ? () => () => {} : undefined,
       async read(signal) {
         if (definition.service === "projectSyncStatus")
           return client.account.projectSyncStatus(definition.projectId, { signal, expected });
