@@ -200,3 +200,46 @@ test("a permanent results API refusal fails the gate", async () => {
     await server.stop(true);
   }
 });
+
+test("a large re-run attempt settles when GitHub refuses 100-job pages", async () => {
+  const jobs = [
+    ...Array.from({ length: 60 }, (_, index) => ({
+      id: index + 1,
+      name: `package_checks (${index + 1}/60)`,
+      status: "completed",
+      conclusion: "success",
+    })),
+    { id: 61, name: "validation_results", status: "in_progress", conclusion: null },
+  ];
+  const server = Bun.serve({
+    port: 0,
+    fetch(request) {
+      const url = new URL(request.url);
+      if (!url.pathname.endsWith("/jobs")) return Response.json({ run_attempt: 2, head_sha: "a".repeat(40) });
+      const size = Number(url.searchParams.get("per_page"));
+      if (size > 50) return Response.json({ message: "Server Error" }, { status: 502 });
+      const page = Number(url.searchParams.get("page"));
+      return Response.json({ total_count: jobs.length, jobs: jobs.slice((page - 1) * size, page * size) });
+    },
+  });
+  let waits = 0;
+  try {
+    const result = await monitorCiGates(
+      {
+        GITHUB_REPOSITORY: "owner/repo",
+        GITHUB_RUN_ID: "42",
+        GITHUB_RUN_ATTEMPT: "2",
+        GH_TOKEN: "fixture",
+        GITHUB_API_URL: server.url.origin,
+      },
+      [{ id: "package_checks", count: 60 }],
+      async () => {
+        if (++waits > 3) throw new Error("The monitor kept waiting on refused job pages");
+      },
+    );
+    expect(result.outcome).toBe("success");
+    expect(result.jobs).toHaveLength(61);
+  } finally {
+    await server.stop(true);
+  }
+});

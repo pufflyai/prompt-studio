@@ -19,13 +19,14 @@ export const createP1Observer = (env: NodeJS.ProcessEnv) => {
     if (!env.GITHUB_RUN_ID || !env.GITHUB_RUN_ATTEMPT || !env.GITHUB_REPOSITORY || !env.GH_TOKEN) return;
     const url = `${env.GITHUB_API_URL ?? "https://api.github.com"}/repos/${env.GITHUB_REPOSITORY}/actions/runs/${env.GITHUB_RUN_ID}/attempts/${env.GITHUB_RUN_ATTEMPT}/jobs`;
     for (let page = 1; ; page++) {
-      const body = (await request(`${url}?per_page=100&page=${page}`)) as {
+      // GitHub answers every 100-job page of a large re-run attempt with 502 Bad Gateway; 50-job pages load.
+      const body = (await request(`${url}?per_page=50&page=${page}`)) as {
         jobs: ObservedJob[];
         total_count: number;
       };
       const failed = failedP1Job(body.jobs, JSON.parse(env.CI_GATE_PLAN ?? "[]"));
       if (failed) return failed;
-      if (page * 100 >= body.total_count || !body.jobs.length) return;
+      if (page * 50 >= body.total_count || !body.jobs.length) return;
     }
   };
 };
