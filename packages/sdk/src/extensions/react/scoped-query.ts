@@ -28,13 +28,12 @@ export const useScopedQuery = <T>(query: ScopedQuery<T>, active = true) => {
     }, 1_000);
     return () => clearTimeout(timer);
   }, [active, connectionLost, snapshot.fetching, query]);
-  return {
-    ...snapshot,
-    error: connectionLost ? undefined : snapshot.error,
-    loading: snapshot.loading || (connectionLost && snapshot.data === undefined),
-    refresh: query.invalidate,
-    accept: query.accept,
-  };
+  const presentation = { ...snapshot, refresh: query.invalidate, accept: query.accept };
+  if (connectionLost) {
+    presentation.error = undefined;
+    presentation.loading ||= snapshot.data === undefined;
+  }
+  return presentation;
 };
 
 /** Observe a read-only host projection; hiding the view releases its optional host membership. */
