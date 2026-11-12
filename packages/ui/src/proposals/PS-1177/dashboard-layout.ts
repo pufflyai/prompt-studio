@@ -60,6 +60,20 @@ function packWidgets(widgets: DashboardWidget[], columns: number) {
 export const projectWidgets = (widgets: DashboardWidget[], columns: number) =>
   columns === dashboardGeometry.columns ? readingOrder(widgets) : packWidgets(readingOrder(widgets), columns);
 
+function settleWidgets(widgets: DashboardWidget[]) {
+  const placed: DashboardWidget[] = [];
+  for (const widget of widgets) {
+    const next = { ...widget.layout };
+    let collisions = placed.filter((item) => intersects(next, item.layout));
+    while (collisions.length) {
+      next.y = Math.max(...collisions.map((item) => item.layout.y + item.layout.h));
+      collisions = placed.filter((item) => intersects(next, item.layout));
+    }
+    placed.push({ ...widget, layout: next });
+  }
+  return readingOrder(placed);
+}
+
 function placeWidget(widgets: DashboardWidget[], id: string, candidate: GridPlacement) {
   const widget = widgets.find((item) => item.id === id);
   if (!widget) return widgets;
@@ -70,17 +84,30 @@ function placeWidget(widgets: DashboardWidget[], id: string, candidate: GridPlac
     w,
     h: Math.max(dashboardGeometry.minRows, Math.round(candidate.h)),
   };
-  const placed = [{ ...widget, layout }];
-  for (const other of readingOrder(widgets).filter((item) => item.id !== id)) {
-    const next = { ...other.layout };
-    let collisions = placed.filter((item) => intersects(next, item.layout));
-    while (collisions.length) {
-      next.y = Math.max(...collisions.map((item) => item.layout.y + item.layout.h));
-      collisions = placed.filter((item) => intersects(next, item.layout));
-    }
-    placed.push({ ...other, layout: next });
+  return settleWidgets([{ ...widget, layout }, ...readingOrder(widgets).filter((item) => item.id !== id)]);
+}
+
+function swapWidgets(widgets: DashboardWidget[], active: DashboardWidget, target: DashboardWidget) {
+  const a = { ...active.layout, x: target.layout.x, y: target.layout.y };
+  const b = { ...target.layout, x: active.layout.x, y: active.layout.y };
+  // Keep unequal-size neighbors in their original row/column without resizing either widget.
+  if (active.layout.y === target.layout.y) {
+    if (active.layout.x < target.layout.x) a.x += target.layout.w - active.layout.w;
+    else b.x += active.layout.w - target.layout.w;
+  } else if (active.layout.x === target.layout.x) {
+    if (active.layout.y < target.layout.y) a.y += target.layout.h - active.layout.h;
+    else b.y += active.layout.h - target.layout.h;
   }
-  return readingOrder(placed);
+  a.x = clamp(a.x, 0, dashboardGeometry.columns - a.w);
+  b.x = clamp(b.x, 0, dashboardGeometry.columns - b.w);
+  const pair = readingOrder([
+    { ...active, layout: a },
+    { ...target, layout: b },
+  ]);
+  return settleWidgets([
+    ...pair,
+    ...readingOrder(widgets).filter((widget) => widget.id !== active.id && widget.id !== target.id),
+  ]);
 }
 
 export function moveWidget(
@@ -90,25 +117,42 @@ export function moveWidget(
   columns: number,
   mode: DashboardLayoutMode = "vertical",
 ) {
-  if (columns === dashboardGeometry.columns) return compactWidgets(placeWidget(widgets, id, candidate), mode);
-  // Narrow views reflow one saved layout. Moving there changes reading order without storing a second layout.
   const projected = projectWidgets(widgets, columns);
   const origin = projected.find((widget) => widget.id === id)?.layout;
   if (origin?.x === candidate.x && origin.y === candidate.y) return widgets;
+  const x = clamp(candidate.x, 0, columns - candidate.w);
+  const y = Math.max(0, candidate.y);
+  let over: DashboardWidget | undefined;
+  let largestOverlap = 0;
+  for (const widget of projected) {
+    if (widget.id === id) continue;
+    const { layout } = widget;
+    const width = Math.max(0, Math.min(x + candidate.w, layout.x + layout.w) - Math.max(x, layout.x));
+    const height = Math.max(0, Math.min(y + candidate.h, layout.y + layout.h) - Math.max(y, layout.y));
+    if (width * height > largestOverlap) {
+      largestOverlap = width * height;
+      over = widget;
+    }
+  }
+  const active = widgets.find((widget) => widget.id === id);
+  const target = widgets.find((widget) => widget.id === over?.id);
+  if (active && target) return compactWidgets(swapWidgets(widgets, active, target), mode);
+  if (columns === dashboardGeometry.columns) return compactWidgets(placeWidget(widgets, id, candidate), mode);
+  // Narrow empty-space drops change reading order without storing a second layout.
   const ordered = readingOrder(widgets);
   const from = ordered.findIndex((widget) => widget.id === id);
   if (from < 0) return widgets;
   const center = candidate.y + candidate.h / 2;
   const targets = projected.filter((widget) => widget.id !== id);
-  const over = targets.reduce<DashboardWidget | undefined>((closest, widget) => {
+  const nearest = targets.reduce<DashboardWidget | undefined>((closest, widget) => {
     const distance = Math.abs(widget.layout.y + widget.layout.h / 2 - center);
     if (!closest || distance < Math.abs(closest.layout.y + closest.layout.h / 2 - center)) return widget;
     return closest;
   }, undefined);
-  if (!over) return widgets;
-  const to = ordered.findIndex((widget) => widget.id === over.id);
-  const [active] = ordered.splice(from, 1);
-  ordered.splice(to, 0, active);
+  if (!nearest) return widgets;
+  const to = ordered.findIndex((widget) => widget.id === nearest.id);
+  const [moved] = ordered.splice(from, 1);
+  ordered.splice(to, 0, moved);
   return compactWidgets(packWidgets(ordered, dashboardGeometry.columns), mode);
 }
 

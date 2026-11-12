@@ -1,4 +1,5 @@
 import { Box, HStack, Text, useSlotRecipe } from "@chakra-ui/react";
+import type { ReactNode } from "react";
 import { DataTable } from "@/components/data-table/data-table";
 import { SimpleCard } from "@/components/primitives/simple-card";
 import { dashboardRecipe } from "@/theme/recipes/dashboard";
@@ -8,12 +9,14 @@ import { changes, type DashboardWidget, recentTotals, sourceTables, totals, widg
 interface WidgetCardProps {
   widget: DashboardWidget;
   days: number;
+  controls?: ReactNode;
 }
 
 export function WidgetCard(props: WidgetCardProps) {
-  const { widget, days } = props;
+  const { widget, days, controls } = props;
   const styles = useSlotRecipe({ recipe: dashboardRecipe })();
   const total = days === 7 ? totals[widget.source] : recentTotals[widget.source];
+  const titled = Boolean(widget.title.trim());
   return (
     <SimpleCard
       as="article"
@@ -26,11 +29,14 @@ export function WidgetCard(props: WidgetCardProps) {
       borderRadius="inherit"
       data-dashboard-widget-body=""
     >
-      {widget.title.trim() && (
+      {(titled || controls) && (
         <HStack css={styles.cardHeader}>
-          <Text as="h2" textStyle="label/S/medium" flex="1" minW="0" overflowWrap="anywhere">
-            {widget.title}
-          </Text>
+          {titled && (
+            <Text as="h2" textStyle="label/S/medium" flex="1" minW="0" overflowWrap="anywhere">
+              {widget.title}
+            </Text>
+          )}
+          {controls}
         </HStack>
       )}
       {widget.kind === "metric" && (

@@ -60,33 +60,36 @@ export function GridWidget(props: GridWidgetProps) {
       data-selected={selected}
       data-resizing={resizing}
     >
-      <WidgetCard widget={widget} days={days} />
-      {editing && (
-        <>
-          <Box aria-hidden css={styles.selectionOutline} data-dashboard-selection="" />
-          <HStack css={styles.widgetToolbar} data-dashboard-controls="" aria-label={`${label} controls`}>
-            <IconButton
-              {...draggable.attributes}
-              {...draggable.listeners}
-              ref={draggable.setActivatorNodeRef}
-              aria-label={`Drag ${label}`}
-              title="Drag to move. Space to pick up, arrow keys to move, Enter to drop."
-              size="2xs"
-              variant="ghost"
-              css={styles.dragHandle}
-            >
-              <GripVertical />
-            </IconButton>
-            <WidgetSettings
-              widget={widget}
-              open={selected}
-              onOpenChange={(open) => onConfigure(open ? widget.id : null)}
-              onChange={onWidgetChange}
-              onRemove={() => onRemove(widget.id)}
-            />
-          </HStack>
-        </>
-      )}
+      <WidgetCard
+        widget={widget}
+        days={days}
+        controls={
+          editing ? (
+            <HStack css={styles.widgetToolbar} data-dashboard-controls="" aria-label={`${label} controls`}>
+              <IconButton
+                {...draggable.attributes}
+                {...draggable.listeners}
+                ref={draggable.setActivatorNodeRef}
+                aria-label={`Drag ${label}`}
+                title="Drag to move. Space to pick up, arrow keys to move, Enter to drop."
+                size="2xs"
+                variant="ghost"
+                css={styles.dragHandle}
+              >
+                <GripVertical />
+              </IconButton>
+              <WidgetSettings
+                widget={widget}
+                open={selected}
+                onOpenChange={(open) => onConfigure(open ? widget.id : null)}
+                onChange={onWidgetChange}
+                onRemove={() => onRemove(widget.id)}
+              />
+            </HStack>
+          ) : undefined
+        }
+      />
+      {editing && <Box aria-hidden css={styles.selectionOutline} data-dashboard-selection="" />}
       {(moving || resizing) && (
         <Box aria-hidden css={styles.highlight} data-drop-active data-dashboard-drop-preview="">
           <Box css={styles.sizeLabel} layerStyle="floatingBar">

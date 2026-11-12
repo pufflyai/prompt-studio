@@ -9,10 +9,54 @@ const fixtures: DashboardWidget[] = [
 ];
 
 describe("dashboard grid editing", () => {
-  test("free placement keeps its chosen position and pushes overlapping widgets below it", () => {
-    const result = moveWidget(fixtures, "first", { x: 4, y: 3, w: 4, h: 3 }, 12, "free");
-    expect(result.find(({ id }) => id === "first")?.layout).toEqual({ x: 4, y: 3, w: 4, h: 3 });
-    expect(result.find(({ id }) => id === "chart")?.layout.y).toBe(6);
+  test("dragging onto a horizontal neighbor swaps places without pushing it into another row", () => {
+    const result = moveWidget(fixtures, "first", { x: 4, y: 0, w: 4, h: 3 }, 12);
+    expect(result.find(({ id }) => id === "first")?.layout).toEqual(fixtures[1].layout);
+    expect(result.find(({ id }) => id === "second")?.layout).toEqual(fixtures[0].layout);
+    expect(result.find(({ id }) => id === "chart")?.layout).toEqual(fixtures[2].layout);
+    expect(moveWidget(fixtures, "first", { x: 4, y: 0, w: 4, h: 3 }, 12)).toEqual(result);
+    expect(fixtures[0].layout).toEqual({ x: 0, y: 0, w: 4, h: 3 });
+  });
+
+  test("overlapping a neighbor swaps it even before the dragged center reaches it", () => {
+    const result = moveWidget(fixtures, "first", { x: 1, y: 0, w: 4, h: 3 }, 12);
+    expect(result.find(({ id }) => id === "first")?.layout).toEqual(fixtures[1].layout);
+    expect(result.find(({ id }) => id === "second")?.layout).toEqual(fixtures[0].layout);
+  });
+
+  test("vertical neighbors exchange their positions", () => {
+    const vertical = [fixtures[0], { ...fixtures[1], layout: { x: 0, y: 3, w: 4, h: 3 } }];
+    const result = moveWidget(vertical, "first", vertical[1].layout, 12);
+    expect(result.find(({ id }) => id === "second")?.layout).toEqual(vertical[0].layout);
+    expect(result.find(({ id }) => id === "first")?.layout).toEqual(vertical[1].layout);
+    const taller = [vertical[0], { ...vertical[1], layout: { ...vertical[1].layout, h: 8 } }];
+    const resized = moveWidget(taller, "first", vertical[1].layout, 12);
+    expect(resized.find(({ id }) => id === "second")?.layout).toEqual({ x: 0, y: 0, w: 4, h: 8 });
+    expect(resized.find(({ id }) => id === "first")?.layout).toEqual({ x: 0, y: 8, w: 4, h: 3 });
+  });
+
+  test("horizontal swaps preserve different widget sizes and the occupied row", () => {
+    const sized = [
+      { ...fixtures[0], layout: { x: 0, y: 0, w: 3, h: 3 } },
+      { ...fixtures[1], layout: { x: 3, y: 0, w: 6, h: 3 } },
+      { ...fixtures[0], id: "third", layout: { x: 9, y: 0, w: 3, h: 3 } },
+    ];
+    const result = moveWidget(sized, "first", { x: 3, y: 0, w: 3, h: 3 }, 12);
+    expect(result.find(({ id }) => id === "first")?.layout).toEqual({ x: 6, y: 0, w: 3, h: 3 });
+    expect(result.find(({ id }) => id === "second")?.layout).toEqual({ x: 0, y: 0, w: 6, h: 3 });
+    expect(result.find(({ id }) => id === "third")?.layout).toEqual(sized[2].layout);
+  });
+
+  test("phone swaps exchange the two widgets instead of inserting between them", () => {
+    const metrics = [fixtures[0], fixtures[1], { ...fixtures[0], id: "third", layout: { x: 8, y: 0, w: 4, h: 3 } }];
+    const result = moveWidget(metrics, "first", { x: 0, y: 6, w: 1, h: 3 }, 1);
+    expect(projectWidgets(result, 1).map(({ id }) => id)).toEqual(["third", "second", "first"]);
+  });
+
+  test("free placement keeps empty-space positions without moving other widgets", () => {
+    const result = moveWidget(fixtures, "first", { x: 8, y: 4, w: 4, h: 3 }, 12, "free");
+    expect(result.find(({ id }) => id === "first")?.layout).toEqual({ x: 8, y: 4, w: 4, h: 3 });
+    expect(result.find(({ id }) => id === "chart")?.layout).toEqual(fixtures[2].layout);
     expect(result.find(({ id }) => id === "second")?.layout).toEqual(fixtures[1].layout);
     expect(fixtures[0].layout).toEqual({ x: 0, y: 0, w: 4, h: 3 });
   });
