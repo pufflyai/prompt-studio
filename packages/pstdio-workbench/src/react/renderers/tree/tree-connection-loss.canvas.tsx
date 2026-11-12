@@ -71,6 +71,8 @@ const NavigationConnection = (props: NavigationConnectionProps) => {
 };
 const meta = {
   title: "Product/Workbench/Navigation/Tree/Navigation connection loss",
+  description:
+    "Connection failures recover silently. Keep loaded content, wait quietly on an initial failure, and restore the response to observe automatic recovery. View errors still offer Retry.",
   component: NavigationConnection,
   decorators: [
     (Story) => (
@@ -87,6 +89,7 @@ export const RetainNavigation: Story = {
 };
 export const InitialConnectionFailure: Story = {
   id: "pstdio-workbench-guides-navigation-connection-loss--initial-connection-failure",
+  description: "The live connection may still be healthy when a page request drops. Never show a connection error banner.",
   args: { initialFailure: new PstdioConnectionError(new TypeError("Failed to fetch")) },
 };
 export const LocalReadDuringOutage: Story = {
