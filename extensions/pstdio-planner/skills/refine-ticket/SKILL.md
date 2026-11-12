@@ -2,7 +2,7 @@
 name: refine-ticket
 description: "Provide additional information to a ticket by researching the codebase and documentation, and/or format a ticket given a template. Use when asked to refine, improve, expand, or format an existing ticket."
 metadata:
-  version: 0.0.6
+  version: 0.0.7
 ---
 
 Refine a Planner ticket by adding researched detail and applying a template when useful.
@@ -10,10 +10,10 @@ Refine a Planner ticket by adding researched detail and applying a template when
 ## Workflow
 
 1. Identify the ticket. Pass its shorthand, such as `PS-12`, to `--id`.
-2. Run `pst tickets pull --id <shorthand>`. This writes `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/<shorthand>/ticket.md`. Without `--force`, it preserves existing local edits. Read the current body before changing it. See [Edit a ticket as a local file](https://prompt.studio/docs/extensions/planner/cli/#edit-a-ticket-as-a-local-file).
+2. Run `pst tickets pull --id <shorthand>`. This writes `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/<shorthand>/ticket.md`. Without `--force`, it preserves existing local edits. Read the current body and relevant linked files, including architecture, contracts, schemas, and research, before changing it. See [Edit a ticket as a local file](https://prompt.studio/docs/extensions/planner/cli/#edit-a-ticket-as-a-local-file).
 3. If the user requested a template, confirm it exists with `pst tickets templates`, then run `pst tickets apply-template --id <shorthand> --template <template>`. Keep useful existing content and remove placeholders that do not apply.
 4. Research the code and the repository's own documentation, such as its PRDs, ADRs, and contributor rules. Prompt Studio's product requirements are not this repository's requirements unless the repository is Prompt Studio. Keep the ticket short, and remove text that does not help a reader decide or implement. Add the missing detail for the kind of ticket:
-   - Proposal: concrete scenarios and the reason for the change, as the `create-proposal` skill describes. Do not add implementation steps.
+   - Proposal: concise bullets for the outcome, Why, and a brief How, concrete scenarios, and optional Downsides, as the `create-proposal` skill describes. Preserve useful technical design, API shapes, schemas, diagrams, and source references. Update affected explanations, diagrams, and assumptions together when the design changes; correct unsupported claims. Keep material uncertainty visible. Do not replace the design with an outcome summary or add coding tasks.
    - Bug: reproduction, proof, cause, and fix, as the Bug reports section of the `create-ticket` skill describes. For an unreproduced bug, record the missing reproduction details with the configured Blocked status and a specific blocked reason; do not create a request just to collect them.
    - Other tickets: scope, the real files or modules to touch, and the tests that prove the work.
    - `depends_on` in frontmatter for tickets that must finish first. Do not express waiting with a Blocked status. See [Dependencies](https://prompt.studio/docs/extensions/planner/cli/#dependencies). Priority and type stay in tags.

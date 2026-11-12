@@ -11,7 +11,7 @@ import {
 import {
   homePage,
   launchProject,
-  openLabPreview,
+  openHostPreview,
   type PerformanceSnapshot,
   performanceDetails,
   performanceMeter,
@@ -147,16 +147,16 @@ test("keeps reporting slow frames after the workbench reloads", async () => {
 test("names the process that hosts an extension and ends its frames when paused", async () => {
   let app: PackagedApp | null = null;
   try {
-    ({ app } = await launchProject("Extension processes", { monitoring: true }));
+    ({ app } = await launchProject("Extension processes", { monitoring: true, webview: true }));
     const processes = async () => (await readSnapshot(app!.page))?.processes ?? [];
     const extensionProcesses = async () =>
       (await processes()).filter((process) => process.role === "extension-frames" && process.extensionFrames.length);
     const hostedIds = (process: PerformanceSnapshot["processes"][number]) =>
       new Set(process.extensionFrames.map((frame) => frame.installedExtensionId));
 
-    await openLabPreview(app.page);
+    await openHostPreview(app.page);
     const source = await app.page
-      .frameLocator('iframe[title="Lab"]')
+      .frameLocator('iframe[title="Host page"]')
       .locator("html")
       .evaluate(() => location.pathname);
     const scope = parseExtensionWebviewPath(source)?.scope;
@@ -169,12 +169,10 @@ test("names the process that hosts an extension and ends its frames when paused"
     const workbench = (await processes()).find((process) => process.role === "workbench");
     expect(fixtureProcess.pid).not.toBe(workbench?.pid);
 
-    await expect(app.page.locator('iframe[title="Lab"]')).toHaveCount(1);
+    await expect(app.page.locator('iframe[title="Host page"]')).toHaveCount(1);
     await performanceMeter(app.page).click();
     // Each extension has its own row, named from its webview ids, even in a shared process.
-    const row = performanceDetails(app.page)
-      .getByTestId("performance-cpu-row")
-      .filter({ hasText: "workbench-fixture" });
+    const row = performanceDetails(app.page).getByTestId("performance-cpu-row").filter({ hasText: "webview-host" });
     await expect(row).toBeVisible();
     // Closing the popover must retain its loaded webview for the next opening.
     const detailsFrame = app.page.locator('iframe[title="Performance details"]');
@@ -185,7 +183,7 @@ test("names the process that hosts an extension and ends its frames when paused"
     await performanceMeter(app.page).click();
     await expect(row).toBeVisible();
     expect(await detailsFrame.evaluate((frame, original) => frame === original, loadedFrame)).toBe(true);
-    const pause = row.getByRole("button", { name: "Pause workbench-fixture", exact: true });
+    const pause = row.getByRole("button", { name: "Pause webview-host", exact: true });
     // Enter the live CPU list before clicking: pointer entry freezes its order,
     // which can otherwise move the target between Playwright's stability check and input.
     await pause.hover();
@@ -193,17 +191,17 @@ test("names the process that hosts an extension and ends its frames when paused"
     let rows = rowCountsWhile(app.page, fixtureId, 4_000);
     await pause.click();
     expect(await rows).toEqual([1]);
-    await expect(app.page.locator('iframe[title="Lab"]')).toHaveCount(0);
+    await expect(app.page.locator('iframe[title="Host page"]')).toHaveCount(0);
     await expect.poll(async () => (await readSnapshot(app!.page))?.pausedExtensionIds).toEqual([fixtureId]);
     await expect.poll(async () => (await processes()).some((process) => hostedIds(process).has(fixtureId))).toBe(false);
 
     // A paused row keeps the name it had while its views ran.
-    const resume = row.getByRole("button", { name: "Resume workbench-fixture", exact: true });
+    const resume = row.getByRole("button", { name: "Resume webview-host", exact: true });
     await resume.hover();
     rows = rowCountsWhile(app.page, fixtureId, 4_000);
     await resume.click();
     expect(await rows).toEqual([1]);
-    await expect(app.page.locator('iframe[title="Lab"]')).toHaveCount(1);
+    await expect(app.page.locator('iframe[title="Host page"]')).toHaveCount(1);
   } finally {
     await disposePackagedApp(app);
   }

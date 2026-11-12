@@ -21,12 +21,28 @@ on:
       release_tag:
         description: Release these results belong to. The release workflow sets it after publishing; it only names the run.
         default: ""
+      qualify_source:
+        description: Qualify one exact commit with full production benchmark workloads instead of comparative samples
+        type: boolean
+        default: false
+      release_channel:
+        type: choice
+        options: [stable, nightly]
+        default: stable
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
+  qualification:
+    if: inputs.qualify_source
+    uses: ./.github/workflows/source-benchmarks.yml
+    with:
+      source_sha: ${{ inputs.commits }}
+      release_channel: ${{ inputs.release_channel }}
   plan:
+    if: ${{ !inputs.qualify_source }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:

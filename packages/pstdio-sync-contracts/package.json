@@ -7,7 +7,7 @@
   },
   "sideEffects": false,
   "scripts": {
-    "test": "bun ../../scripts/ci/run-bun-tests.ts",
+    "test": "bun ../../scripts/test.ts --scope pstdio-sync-contracts",
     "typecheck": "bun check",
     "lint": "bun run typecheck && biome check ."
   },

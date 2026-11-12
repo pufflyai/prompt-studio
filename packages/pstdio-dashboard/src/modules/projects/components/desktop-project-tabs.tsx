@@ -34,7 +34,7 @@ export const DesktopProjectTabs = (props: DesktopProjectTabsProps) => {
   // Clicking the tab of the project the user is already in leaves the open Sidenav level instead.
   const selectTab = (id: string) => {
     if (id === selected) workbench.pageLocations.navigateToRootLevel();
-    else void controller.select(workbench, id);
+    else controller.select(id);
   };
   if (typeof selected !== "string") return <WindowTitleBar platform={platform} />;
 
@@ -53,8 +53,8 @@ export const DesktopProjectTabs = (props: DesktopProjectTabsProps) => {
         selectedId={typeof selected === "string" ? selected : undefined}
         aria-label="Project tabs"
         onSelect={selectTab}
-        onClose={(id) => void controller.close(workbench, id)}
-        onReorder={(id, targetId) => controller.reorder(workbench, id, targetId)}
+        onClose={(id) => controller.close(id)}
+        onReorder={(id, targetId) => controller.reorder(id, targetId)}
       />
       <Tooltip content="Open / create project" positioning={{ placement: "bottom" }}>
         <IconButton

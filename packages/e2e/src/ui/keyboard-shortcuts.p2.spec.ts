@@ -1,11 +1,12 @@
-import { expect } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { expect, mergeTests, test as sessionTest } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
-import { test } from "./helpers/notification-settings";
+import { test as notificationTest } from "./helpers/notification-settings";
 import { installShortcutReferenceExtension } from "./helpers/shortcut-reference-extension";
 import { showSidenavEntry } from "./helpers/sidenav-navigation";
 import { changeThemeThroughCommandPalette } from "./helpers/theme-picker";
 
+const test = mergeTests(notificationTest, sessionTest);
 test.use({ notificationsEnabled: true });
 
 test("the fullscreen shortcut toggles from editing and completes shortcut mode", async ({ page, request }) => {
@@ -311,6 +312,7 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
   });
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
+  await installShortcutReferenceExtension(request, apiBase, project.id);
   await page.goto(`/projects/${project.id}/tickets`);
   await expect(page.getByRole("option", { name: /^Notes/ }).first()).toBeVisible({ timeout: 30_000 });
   for (const [key, label, destination] of [
@@ -321,18 +323,18 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
     ["A", "Artifacts", /\/artifacts$/],
   ] as const) {
     await page.getByRole("option", { name: "Home", exact: true }).click();
-    await (await showSidenavEntry(page, "Tickets")).click();
     await showSidenavEntry(page, label);
     const row = page.getByRole("option", { name: new RegExp(`^${label}`) }).first();
     await row.focus();
+    await expect(page).not.toHaveURL(destination);
     await page.keyboard.press("Alt+Shift+Space");
     await page.keyboard.press("g");
     await page.keyboard.press(key);
     if (key === "K") {
       const choices = page.getByRole("dialog", { name: "Choose action", exact: true });
-      await expect(choices.getByRole("button", { name: "Go to kiln 1", exact: true })).toBeVisible();
-      await expect(choices.getByRole("button", { name: "Go to tickets 2", exact: true })).toBeVisible();
-      await page.keyboard.press("2");
+      await expect(choices.getByRole("button", { name: "Go to tickets 1", exact: true })).toBeVisible();
+      await expect(choices.getByRole("button", { name: "Go to shortcut destination 2", exact: true })).toBeVisible();
+      await page.keyboard.press("1");
     }
     await expect(page).toHaveURL(destination);
     await page.keyboard.press("Escape");

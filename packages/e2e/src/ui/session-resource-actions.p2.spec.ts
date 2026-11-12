@@ -1,4 +1,4 @@
-import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
+import { type APIRequestContext, expect, type Page, test } from "../scripts/session-test";
 import {
   createResourceActionsProject,
   openSessionSidePanel,

@@ -1,27 +1,32 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
+import { hostFixtureSources } from "../fixtures/host-fixtures";
+import { preparePackagedExtensionSource } from "../packaged/packaged-extension-source";
 import { cleanupDirs, createGitRepo, runPstdio } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
 
 let api: ApiInstance;
+const fixtureRoot = mkdtempSync(join(tmpdir(), "webview-cli-fixture-"));
+let fixturePath: string;
 const dirs: string[] = [];
 
 beforeAll(async () => {
+  fixturePath = await preparePackagedExtensionSource(fixtureRoot, hostFixtureSources.webview, { install: true });
   api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: "[]", PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1" } });
 }, SETUP_TIMEOUT);
 
 afterAll(async () => {
   await api?.stop();
+  rmSync(fixtureRoot, { recursive: true, force: true });
 });
 
 afterEach(() => {
   cleanupDirs(dirs);
 });
-
-const extensionLabPath = join(import.meta.dirname, "../../../../packages/workbench-fixture");
 
 const run = (args: string, cwd: string) =>
   runPstdio(args, cwd, { PSTDIO_API_URL: api.url, PSTDIO_DEFAULT_EXTENSIONS: "[]" });
@@ -31,18 +36,18 @@ const readProjectId = (repo: string) => {
   return config.project_id;
 };
 
-const enableExtensionLab = async (projectId: string) => {
-  const response = await fetch(`${api.url}/v1/projects/${projectId}/extensions/installed/workbench-fixture/enable`, {
+const enableWebviewFixture = async (projectId: string) => {
+  const response = await fetch(`${api.url}/v1/projects/${projectId}/extensions/installed/webview-host/enable`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      displayName: "Extension Lab",
-      extensionId: "pstdio.workbench-fixture",
-      manifest: { id: "pstdio.workbench-fixture", name: "workbench-fixture" },
-      name: "workbench-fixture",
-      sourceHash: "e2e-workbench-fixture",
+      displayName: "Webview host fixture",
+      extensionId: "test.webview-host",
+      manifest: { id: "test.webview-host", name: "webview-host" },
+      name: "webview-host",
+      sourceHash: "e2e-webview-host",
       sourceKind: "local_path",
-      sourcePath: extensionLabPath,
+      sourcePath: fixturePath,
       sourceRef: null,
       version: "0.1.0",
     }),
@@ -85,29 +90,29 @@ describe("extension webview setup", () => {
 
       run("projects create extension-webviews-e2e", repo);
       const projectId = readProjectId(repo);
-      await enableExtensionLab(projectId);
+      await enableWebviewFixture(projectId);
 
       const metadata = await fetchMetadata(projectId);
-      const labView = metadata.views.find((view) => view.localId === "lab-page");
-      expect(labView?.body.kind).toBe("webview");
-      if (labView?.body.kind !== "webview") throw new Error("Extension Lab view is not a webview.");
+      const hostView = metadata.views.find((view) => view.localId === "page");
+      expect(hostView?.body.kind).toBe("webview");
+      if (hostView?.body.kind !== "webview") throw new Error("Host view is not a webview.");
 
       const installedExtensionId = metadata.extensions.find(
-        (extension) => extension.id === labView.extensionId,
+        (extension) => extension.id === hostView.extensionId,
       )?.installedExtensionId;
       expect(installedExtensionId).toBeString();
-      const scopePath = `${installedExtensionId}/pstdio.workbench-fixture.view.lab-page`;
-      expect(labView.body.webview.runtimeUrl).toMatch(
+      const scopePath = `${installedExtensionId}/test.webview-host.view.page`;
+      expect(hostView.body.webview.runtimeUrl).toMatch(
         new RegExp(`^/v1/extensions/webviews/[A-Za-z0-9_-]+/${scopePath}/runtime$`),
       );
-      expect(labView.body.webview.moduleUrl).toMatch(
+      expect(hostView.body.webview.moduleUrl).toMatch(
         new RegExp(`^/v1/extensions/webviews/[A-Za-z0-9_-]+/${scopePath}/assets/module\\.js\\?h=.+$`),
       );
 
-      const module = await waitForOk(`${api.url}${labView.body.webview.moduleUrl}`);
+      const module = await waitForOk(`${api.url}${hostView.body.webview.moduleUrl}`);
       expect(module.headers.get("content-type")).toContain("application/javascript");
 
-      const runtimeHtml = await waitForOk(`${api.url}${labView.body.webview.runtimeUrl}`);
+      const runtimeHtml = await waitForOk(`${api.url}${hostView.body.webview.runtimeUrl}`);
       expect(runtimeHtml.headers.get("content-type")).toContain("text/html");
       const runtimeContent = await runtimeHtml.text();
       const runtimeScripts = [...runtimeContent.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)];

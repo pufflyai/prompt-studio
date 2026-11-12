@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { playwrightQuarantineSelection } from "pstdio-scripts/test-quarantine";
+import { playwrightQuarantineSelection } from "pstdio-scripts/testing";
 import { buildPlaywrightEnv, runPlaywright } from "./run-playwright";
 
 describe("buildPlaywrightEnv", () => {
@@ -107,6 +107,42 @@ test("keeps a Bun cache the caller provides", async () => {
     expect(existsSync(home)).toBe(false);
   } finally {
     rmSync(cache, { recursive: true, force: true });
+  }
+});
+
+test("the executor can remove an app preparation after forced launcher termination", async () => {
+  const owner = mkdtempSync(join(tmpdir(), "app-preparation-owner-"));
+  const launcher = Bun.spawn(
+    [
+      process.execPath,
+      "-e",
+      `const { runPlaywright } = await import(${JSON.stringify(new URL("./run-playwright.ts", import.meta.url).href)});
+      await runPlaywright({cmd:process.execPath,args:["-e","process.exit(5)"]},
+        {PATH:process.env.PATH,E2E_PREPARED_FIXTURES:${JSON.stringify(owner)}},
+        {stdio:"pipe",prepare:async(env)=>{
+          require("node:fs").mkdirSync(env.E2E_HOME,{recursive:true});
+          console.log(JSON.stringify(env.E2E_HOME));
+          await Bun.sleep(10000);
+        }});
+      `,
+    ],
+    { stdout: "pipe" },
+  );
+  let home: string | undefined;
+  try {
+    const { value } = await launcher.stdout.getReader().read();
+    home = JSON.parse(new TextDecoder().decode(value).trim());
+    launcher.kill("SIGKILL");
+    await launcher.exited;
+    expect(dirname(dirname(home!))).toBe(owner);
+    expect(existsSync(home!)).toBe(true);
+    rmSync(owner, { recursive: true, force: true });
+    expect(existsSync(home!)).toBe(false);
+  } finally {
+    launcher.kill("SIGKILL");
+    await launcher.exited;
+    if (home) rmSync(dirname(home), { recursive: true, force: true });
+    rmSync(owner, { recursive: true, force: true });
   }
 });
 

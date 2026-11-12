@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../scripts/session-test";
 import { createResourceActionsProject, prepareResourceActionsDashboard } from "./helpers/resource-actions";
 
 // A fork from the wrong reply silently includes context the user meant to leave behind.

@@ -124,4 +124,4 @@ The Linux isolated infrastructure CI job runs the source suite and built image e
 
 Each run prints `manager-authority-<uuid>`. Its PostgreSQL data, containers and internal network belong to that run and are removed in cleanup. It publishes no host ports and mounts source read-only only in the source tester. The built smoke has no source mount. Fixture credentials are test-only. The developer application's database and unrelated Docker projects are never opened or changed.
 
-The default fixture subnet is `10.254.234.0/24`. Run these fixtures sequentially, or set `MANAGER_TEST_SUBNET` to a separately inspected unused subnet. Role-denial success proves this fixture's permissions; live hosting must configure and validate its own manager/relay separation.
+Docker allocates the fixture network automatically, so independent runs need no shared slot or subnet coordination. `MANAGER_TEST_SUBNET` remains an explicit diagnostic override; local review clears inherited overrides. Role-denial success proves this fixture's permissions; live hosting must configure and validate its own manager/relay separation.

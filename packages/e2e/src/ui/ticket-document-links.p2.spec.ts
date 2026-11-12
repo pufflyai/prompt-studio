@@ -1,8 +1,8 @@
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, executePlannerCommand } from "../helpers/planner-api";
+import { expect, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 import { prepareDashboard } from "./helpers/workspace-files";
 import { createGitRepo } from "./helpers/workspace-session-attempt";

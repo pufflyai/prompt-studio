@@ -27,8 +27,9 @@ export type ResolvedWorkbenchExtensionAppearance = Omit<
 };
 
 type TranslationRecord = ListExtensionAppearanceResponse["translations"][number];
+// Every loaded project workbench registers its own revision; the latest live one supplies the bundles.
 // Registration disposers need their revisions intact when the owner is disposed.
-const translations = createRuntimeState(() => new Map<string, TranslationRecord>());
+const translations = createRuntimeState(() => new Map<string, TranslationRecord[]>());
 const namespaceFor = (extensionId: string, owner = getRuntimeCollections()) => `ext:${owner.id}:${extensionId}`;
 
 export const getExtensionPresentationLocale = () => JSON.stringify([i18n.language, i18n.languages]);
@@ -145,6 +146,16 @@ export const localizeExtensionAppearance = (
   fileIconThemes: appearance.fileIconThemes.map((record) => localizeAppearanceRecord(record, owner)),
 });
 
+const removeBundles = (namespace: string, revision: TranslationRecord | undefined) => {
+  for (const locale of Object.keys(revision?.bundles ?? {})) i18n.removeResourceBundle(locale, namespace);
+};
+
+const addBundles = (namespace: string, revision: TranslationRecord | undefined) => {
+  for (const [locale, bundle] of Object.entries(revision?.bundles ?? {})) {
+    i18n.addResourceBundle(locale, namespace, bundle, true, true);
+  }
+};
+
 export const registerExtensionTranslationBundles = (
   appearance: ListExtensionAppearanceResponse,
   owner = getRuntimeCollections(),
@@ -154,23 +165,27 @@ export const registerExtensionTranslationBundles = (
 
   for (const record of appearance.translations ?? []) {
     const namespace = namespaceFor(record.extensionId, owner);
-    const previous = translationRecords.get(record.extensionId);
-    for (const locale of Object.keys(previous?.bundles ?? {})) i18n.removeResourceBundle(locale, namespace);
+    const revisions = translationRecords.get(record.extensionId) ?? [];
+    removeBundles(namespace, revisions.at(-1));
     // Each registration owns its revision, even when locale refresh reuses the input object.
     const revision = { ...record };
-    translationRecords.set(record.extensionId, revision);
+    translationRecords.set(record.extensionId, [...revisions, revision]);
     registered.set(record.extensionId, revision);
-    for (const [locale, bundle] of Object.entries(record.bundles)) {
-      i18n.addResourceBundle(locale, namespace, bundle, true, true);
-    }
+    addBundles(namespace, revision);
   }
 
   const dispose = () => {
     for (const [extensionId, revision] of registered) {
-      if (translationRecords.get(extensionId) !== revision) continue;
-      const namespace = namespaceFor(extensionId, owner);
-      for (const locale of Object.keys(revision.bundles)) i18n.removeResourceBundle(locale, namespace);
-      translationRecords.delete(extensionId);
+      const revisions = translationRecords.get(extensionId) ?? [];
+      if (!revisions.includes(revision)) continue;
+      const remaining = revisions.filter((candidate) => candidate !== revision);
+      if (revisions.at(-1) === revision) {
+        const namespace = namespaceFor(extensionId, owner);
+        removeBundles(namespace, revision);
+        addBundles(namespace, remaining.at(-1));
+      }
+      if (remaining.length > 0) translationRecords.set(extensionId, remaining);
+      else translationRecords.delete(extensionId);
     }
   };
   const unsubscribe = owner.onDispose(dispose);
@@ -187,7 +202,7 @@ export const getExtensionTranslationContext = (
   locale: string,
   owner = getRuntimeCollections(),
 ) => {
-  const record = translations(owner).get(extensionId);
+  const record = translations(owner).get(extensionId)?.at(-1);
   if (!record) return { locale, defaultLocale: locale, bundle: {}, defaultBundle: {} };
 
   return {

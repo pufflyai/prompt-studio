@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, executePlannerCommand } from "../helpers/planner-api";
+import { expect, test } from "../scripts/session-test";
 import { uiOrigin } from "../ui-server";
 
 test("timeline ticket selection keeps the planner visible and replaces the unpinned side preview", async ({

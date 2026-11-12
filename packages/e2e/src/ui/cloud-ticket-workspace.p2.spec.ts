@@ -1,7 +1,7 @@
 import { existsSync, rmSync } from "node:fs";
-import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket } from "../helpers/planner-api";
+import { expect, test } from "../scripts/session-test";
 import { uiOrigin } from "../ui-server";
 import { enableCloudWorkspaceProvider } from "./helpers/cloud-workspace-provider";
 import { showSidenavEntry } from "./helpers/sidenav-navigation";

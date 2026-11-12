@@ -30,6 +30,8 @@ const runAccountOperation = (
       return account.removeDevice(request.id);
     case "syncProject":
       return account.syncProject(request.projectId);
+    case "retryProjectSyncSource":
+      return account.retryProjectSyncSource(request.sourceId, request.projectId);
     case "stopProjectSync":
       return account.stopProjectSync(request.projectId);
     case "resolveReturnedChanges":

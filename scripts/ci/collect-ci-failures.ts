@@ -2,6 +2,8 @@ import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { type CiJob, countedJobs, deduplicateJobs, isFailedJob, parseFailedTests } from "./ci-failures";
 
+import { bindCiWorkflowGraph } from "./ci-workflow-graph";
+
 interface WorkflowRun {
   id: number;
   run_attempt: number;
@@ -123,6 +125,7 @@ export const collectCiFailures = async (repository: string, since: Date, until: 
     }),
   );
   const unique = deduplicateJobs(jobs);
+  await bindWorkflowSources(repository, requests, unique);
   // PR failures are mostly the change under review, and their logs would exceed the request budget.
   const failures = countedJobs(unique).filter((job) => isFailedJob(job) && job.event !== "pull_request");
   next = 0;
@@ -140,4 +143,34 @@ export const collectCiFailures = async (repository: string, since: Date, until: 
   );
   await Bun.write(join(output, "jobs.json"), JSON.stringify(unique, null, 2));
   return unique;
+};
+
+const bindWorkflowSources = async (
+  repository: string,
+  requests: { run: WorkflowRun & { workflow: string }; attempt: number }[],
+  unique: CiJob[],
+) => {
+  const workflowSources = new Map<string, Promise<string>>();
+  for (const request of requests) {
+    const selected = unique.filter(
+      (job) => job.workflow === request.run.workflow && job.runId === request.run.id && job.attempt === request.attempt,
+    );
+    try {
+      const bound = await bindCiWorkflowGraph(selected, request.run.workflow, (path) => {
+        const key = `${request.run.head_sha}/${path}`;
+        if (!workflowSources.has(key))
+          workflowSources.set(
+            key,
+            githubText(`repos/${repository}/contents/${path}?ref=${request.run.head_sha}`).then((text) =>
+              Buffer.from(JSON.parse(text).content, "base64").toString("utf8"),
+            ),
+          );
+        return workflowSources.get(key)!;
+      });
+      for (const job of bound)
+        Object.assign(unique.find((entry) => entry.id === job.id && entry.attempt === job.attempt)!, job);
+    } catch {
+      /* Missing historical workflow graphs remain unknown. */
+    }
+  }
 };

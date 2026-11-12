@@ -1,16 +1,16 @@
 import { expect, type Page } from "@playwright/test";
 
 export const verifyPackagedPanelMenuTabs = async (page: Page, origin: string, projectId: string) => {
-  await page.goto(`${origin}/projects/${projectId}/extensions/pstdio.workbench-fixture/cameras`);
+  await page.goto(`${origin}/projects/${projectId}/extensions/test.menu/menu`);
   const header = page.locator('[data-workbench-panel-header="main"]');
   const attachedMenu = page.locator('[data-workbench-panel-menu="main-left"]');
   await expect(attachedMenu).toBeVisible();
   await expect(header).toBeVisible();
   await page.getByRole("separator", { name: "Resize Main left menu", exact: true }).dblclick();
-  const tab = header.getByRole("tab", { name: "Cams", exact: true });
+  const tab = header.getByRole("tab", { name: "Menu content", exact: true });
   await expect(tab).toBeVisible();
   await expect(header.getByRole("tab")).toHaveCount(1);
-  await expect(tab.getByRole("button", { name: "Close Cams", exact: true })).toBeVisible();
+  await expect(tab.getByRole("button", { name: "Close Menu content", exact: true })).toBeVisible();
   await header.getByRole("button", { name: "Open Main left menu", exact: true }).click();
   await expect(attachedMenu).toBeVisible();
   await expect(header).toBeVisible();

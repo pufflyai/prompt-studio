@@ -2,7 +2,7 @@
 name: create-sub-tickets
 description: "Break a parent ticket into actionable sub-tickets. Use when asked to create child or sub-tickets for a ticket."
 metadata:
-  version: 0.0.4
+  version: 0.0.5
 ---
 
 Sub-tickets are planner tickets linked to a parent. Create them like any ticket (see create-ticket) with `--parent` set.
@@ -10,12 +10,12 @@ Sub-tickets are planner tickets linked to a parent. Create them like any ticket 
 ## Workflow
 
 1. Identify the parent ticket. Pass its shorthand, such as `PS-12`, to `--id` or `--parent`.
-2. Read it with `pst tickets panel --id <parent>`. Split the work into sub-tickets that are:
+2. Read it with `pst tickets panel --id <parent>`. Pull it with `pst tickets pull --id <parent>` and read relevant linked architecture, contracts, schemas, research, and design files. Preserve the proposed behavior and technical decisions when splitting the work into sub-tickets that are:
    - Small enough to implement in one sitting.
    - Independently testable.
    - Limited to one system. Split work that crosses systems or has a large scope.
 3. Create each sub-ticket with `pst tickets write --title "<title>" --parent <parent-shorthand>`.
-4. Fill `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/<shorthand>/ticket.md`, using the absolute `path` the command returns. Follow the `create-ticket` standard. Name the files or modules involved, the validation commands, assumptions, and `depends_on`.
+4. Fill `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/<shorthand>/ticket.md`, using the absolute `path` the command returns. Follow the `create-ticket` standard. Name the files or modules involved, the validation commands, assumptions, and `depends_on`. Link the relevant parent design and identify which flows, contracts, schema choices, and compatibility requirements each child implements. Add actionable coding tasks at this stage, without silently changing the design or hiding unresolved choices.
 5. Apply a template when it helps. List templates with `pst tickets templates`, then run `pst tickets apply-template --id <shorthand> --template <template>`. Priority and type belong in tags from `pst tags list`, not in body sections.
 6. Check unfinished tickets with `pst tickets list`. If a child needs another ticket to finish first, add that ticket to the child's `depends_on`. Do not set a Blocked status or a blocked reason only because the child is waiting; Planner derives readiness from `depends_on`. See [Dependencies](https://prompt.studio/docs/extensions/planner/cli/#dependencies).
 7. Save each child with `pst tickets save --id <shorthand>`.

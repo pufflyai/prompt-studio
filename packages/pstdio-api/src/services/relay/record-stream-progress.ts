@@ -2,6 +2,7 @@ import type { StorageOwner } from "pstdio-sync";
 import type { createDocumentSync, RecordStreamStore } from "pstdio-sync/relay";
 import { apiLogger } from "../../lib/logger";
 import type { documentProgress } from "./document-progress";
+import type { createSourceActivity } from "./source-activity";
 
 export const traceRelayOwnerPhase = async <T>(owner: StorageOwner, phase: string, work: () => Promise<T>) => {
   const started = performance.now();
@@ -51,7 +52,12 @@ export const traceDocumentProgress = (
 };
 
 /** Report the slow storage phase without logging record IDs, paths or content. */
-export const traceRecordStreamStore = (owner: StorageOwner, store: RecordStreamStore) => {
+export const traceRecordStreamStore = (
+  owner: StorageOwner,
+  store: RecordStreamStore,
+  activity?: ReturnType<typeof createSourceActivity>,
+  signal?: AbortSignal,
+) => {
   const finished = (phase: string, started: number) =>
     apiLogger.debug(
       { event: "relay.record-stream.phase", ...owner, phase, elapsedMs: performance.now() - started },
@@ -62,21 +68,25 @@ export const traceRecordStreamStore = (owner: StorageOwner, store: RecordStreamS
     async (...args: A) => {
       const started = performance.now();
       try {
-        return await run(...args);
+        return await (activity ? activity.run(`record-stream:${phase}`, () => run(...args), signal) : run(...args));
       } finally {
         finished(phase, started);
       }
     };
   return {
     ...store,
+    ...(store.connect ? { connect: trace("connect", store.connect) } : {}),
+    ...(store.coversReceipts ? { coversReceipts: trace("receipts", store.coversReceipts) } : {}),
+    ...(store.checkpointPending ? { checkpointPending: trace("checkpoint", store.checkpointPending) } : {}),
     open: trace("open", store.open),
     apply: trace("apply", store.apply),
     merge: trace("merge", store.merge),
     outbox: trace("outbox", store.outbox),
     snapshot: trace("snapshot", store.snapshot),
-    published: (...args: Parameters<RecordStreamStore["published"]>) => {
-      const started = performance.now();
-      return store.published(...args).finally(() => finished("published", started));
-    },
+    published: trace("published", async (...args: Parameters<RecordStreamStore["published"]>) =>
+      store.published(...args),
+    ) as RecordStreamStore["published"],
+    sent: trace("sent", store.sent),
+    hasRecords: trace("has-records", store.hasRecords),
   };
 };

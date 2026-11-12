@@ -1,11 +1,12 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { appendFile, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 
 const root = resolve(import.meta.dir, "../../..");
 const dir = await mkdtemp(join(tmpdir(), "sync-contracts-compose-"));
 const file = join(dir, "compose.json");
-const project = `sync-contracts-${process.pid}`;
+const project = `sync-contracts-${crypto.randomUUID()}`;
+const manifest = process.env.PSTDIO_LOCAL_REVIEW_COMPOSE_MANIFEST;
 const requested = process.argv.slice(2);
 const targets = (requested.length ? requested : ["src"]).map(
   (path) => `/repo/${relative(root, resolve(path)).replaceAll("\\", "/")}`,
@@ -51,7 +52,9 @@ const config = {
     },
   },
   volumes: { objects: {} },
-  networks: { default: { ipam: { config: [{ subnet: process.env.SYNC_TEST_SUBNET ?? "10.254.236.0/24" }] } } },
+  networks: {
+    default: process.env.SYNC_TEST_SUBNET ? { ipam: { config: [{ subnet: process.env.SYNC_TEST_SUBNET }] } } : {},
+  },
 };
 async function compose(...args: string[]) {
   const process = Bun.spawn(["docker", "compose", "-f", file, "-p", project, ...args], {
@@ -63,12 +66,13 @@ async function compose(...args: string[]) {
 }
 try {
   await writeFile(file, JSON.stringify(config));
+  if (manifest) await appendFile(manifest, `${JSON.stringify({ project, file })}\n`);
   await compose("up", "-d", "database", "objects");
   await compose("run", "--rm", "tester");
 } finally {
   try {
     await compose("down", "--volumes", "--remove-orphans");
   } finally {
-    await rm(dir, { recursive: true, force: true });
+    if (!manifest) await rm(dir, { recursive: true, force: true });
   }
 }

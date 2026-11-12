@@ -5,7 +5,7 @@ import { ChakraProvider, psTheme } from "@pstdio/ui";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Activity, type ComponentType, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
-import type { benchmarkCommands } from "../benchmarks/commands";
+import type { devCommands } from "../commands";
 import { BenchmarksContext } from "./client";
 
 const subscribeVisibility = (listener: () => void) => {
@@ -18,7 +18,7 @@ export const createView = (Component: ComponentType) =>
   defineExtensionView({
     render({ mount, host }) {
       const queryClient = new QueryClient();
-      const client = createWebviewClient<typeof benchmarkCommands>(host);
+      const client = createWebviewClient<typeof devCommands>(host);
       const root = createRoot(mount);
       const Content = () => {
         const visible = useSyncExternalStore(subscribeVisibility, isVisible);

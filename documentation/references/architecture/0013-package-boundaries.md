@@ -100,8 +100,7 @@ API. The workbench package itself does not depend on the API host.
    declares it as a development dependency, without importing it. Pull request
    CI then runs those tests when the loaded package changes. `pstdio-api`
    declares `extension-lab`, `pstdio-base-themes`, `pstdio-planner`,
-   `pstdio-skills` and `workbench-fixture`. `pstdio-extensions` declares
-   `extension-lab`. `pstdio-extension-testbench` declares `pstdio-base-themes`
+   `pstdio-skills` and `workbench-fixture`. `pstdio-extension-testbench` declares `pstdio-base-themes`
    and `pstdio-planner`.
 
 5. **Primitive UI**
@@ -259,3 +258,5 @@ The database uses the contract-layer `ResourceRef` type for persisted resource v
 ## Canvas authoring tooling
 
 The published `@pstdio/canvas` package owns the canvas file format, preview composition, source indexing, and the `pstdio-canvas` command that builds and watches a project's canvases. It has no application-layer dependencies; React is a peer dependency. Projects, UI packages and repository preview builds use it as development tooling. The UI Canvas extension depends on its released version for the build manifest, frame messages and the nested-frame loader; it never runs the build itself. Published extensions may use its type-only imports inside colocated `.canvas.tsx` examples without declaring a runtime dependency. Runtime imports still require a declared, allowed dependency. Published extension type checks exclude `.canvas.tsx` examples; `bun run --cwd packages/canvas-tests typecheck` checks them through each owner’s `tsconfig.canvas.json` (or the UI examples configuration). This keeps repository examples independent of extension installation and published SDK/UI versions.
+
+The repository-owned `pstdio-scripts/testing` entry groups source-only test policy, fixture selection, and file sharding. API test workers consume its shared allocator as a development dependency; packaged runtime code does not import this test surface.

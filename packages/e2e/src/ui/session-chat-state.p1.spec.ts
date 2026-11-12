@@ -1,6 +1,6 @@
 import { Buffer } from "node:buffer";
-import { expect, type Request, test } from "@playwright/test";
 import { openSessionsInOneSidePanelTab } from "../helpers/session-side-panel";
+import { expect, type Request, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 
 // Session writes now cross the public provider command boundary in the browser.

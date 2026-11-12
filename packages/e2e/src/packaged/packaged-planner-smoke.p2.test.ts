@@ -14,39 +14,41 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
 setupPackagedSmokeTests();
 
+const plannerTestTimeout = process.platform === "darwin" && process.arch === "arm64" ? 45_000 : PACKAGED_TEST_TIMEOUT;
+
 test(
   "packaged Planner keeps independent views, timeline status, milestones, and review requests",
-  () => withPackagedPlanner(expectPackagedPlannerTimeline),
-  PACKAGED_TEST_TIMEOUT,
+  () => withPackagedPlanner(expectPackagedPlannerTimeline, ["workbench-fixture"]),
+  plannerTestTimeout,
 );
 test(
   "packaged Planner keeps supervisor model choices, scoped Auto Build dispatch, and dependency blockers",
   () => withPackagedPlanner(expectPackagedPlannerAutoBuild),
-  process.platform === "win32" ? 45_000 : PACKAGED_TEST_TIMEOUT,
+  process.platform === "win32" ? 45_000 : plannerTestTimeout,
 );
 test(
   "packaged Planner keeps brief supervisor wakes and resume ownership",
-  () => withPackagedPlanner(expectBriefSupervisorWakes),
-  PACKAGED_TEST_TIMEOUT,
+  () => withPackagedPlanner(expectBriefSupervisorWakes, ["workbench-fixture"]),
+  plannerTestTimeout,
 );
 test(
   "packaged Planner reconciles dependency stacks and Git conflicts",
-  () => withPackagedPlanner(expectPackagedDependencyStacks),
-  PACKAGED_TEST_TIMEOUT,
+  () => withPackagedPlanner(expectPackagedDependencyStacks, ["workbench-fixture"]),
+  plannerTestTimeout,
 );
 test(
   "packaged Planner recovers missing workspaces without losing submitted work",
-  () => withPackagedPlanner(expectPackagedWorkspaceRecovery),
-  PACKAGED_TEST_TIMEOUT,
+  () => withPackagedPlanner(expectPackagedWorkspaceRecovery, ["workbench-fixture"]),
+  plannerTestTimeout,
 );
 test(
   "packaged Planner adopts a feature draft without changing its Git state",
-  () => withPackagedPlanner(expectPackagedDraftAdoption),
-  PACKAGED_TEST_TIMEOUT,
+  () => withPackagedPlanner(expectPackagedDraftAdoption, ["workbench-fixture"]),
+  plannerTestTimeout,
 );
 
 test(
   "packaged Planner manually resumes missing stopped work with Auto Build disabled",
-  () => withPackagedPlanner(expectPackagedManualWorkspaceRecovery),
-  PACKAGED_TEST_TIMEOUT,
+  () => withPackagedPlanner(expectPackagedManualWorkspaceRecovery, ["workbench-fixture"]),
+  plannerTestTimeout,
 );

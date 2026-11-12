@@ -14,5 +14,9 @@ export default defineConfig({
     .map((file) => `**/${file.replace("packages/e2e/src/packaged/", "")}`),
   use: { ...packaged.use, trace: "off" },
   outputDir: "test-results/packaged-benchmark",
-  reporter: [["line"], ["json", { outputFile: "test-results/packaged-benchmarks.json" }]],
+  reporter: [
+    ...(process.env.CI_PLAN_REPORTER ? [[process.env.CI_PLAN_REPORTER] as [string]] : []),
+    ["line"],
+    ["json", { outputFile: "test-results/packaged-benchmarks.json" }],
+  ],
 });

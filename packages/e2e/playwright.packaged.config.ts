@@ -1,5 +1,5 @@
 import { defineConfig } from "@playwright/test";
-import { playwrightQuarantineSelection } from "pstdio-scripts/test-quarantine";
+import { playwrightQuarantineSelection } from "pstdio-scripts/testing";
 
 const quarantine = process.env.E2E_TEST_LANE === "quarantine";
 const reportName = quarantine ? "packaged-browser-quarantine" : "packaged-browser";
@@ -18,6 +18,7 @@ export default defineConfig({
   use: { trace: "retain-on-failure" },
   outputDir: `test-results/${reportName}`,
   reporter: [
+    ...(process.env.CI_PLAN_REPORTER ? [[process.env.CI_PLAN_REPORTER] as [string]] : []),
     ["line"],
     ["html", { open: "never", outputFolder: `playwright-report/${reportName}` }],
     ["json", { outputFile: `test-results/${reportName}/results.json` }],

@@ -1,0 +1,11 @@
+{
+  "name": "automation",
+  "version": "1.0.0",
+  "publisher": "test",
+  "displayName": "Automation fixture",
+  "main": "./extension.ts",
+  "type": "module",
+  "engines": {
+    "pstdio": "^0.4.0"
+  }
+}

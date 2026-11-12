@@ -88,6 +88,8 @@ export const browserBenchmarkResults = (
       const quarantine = expected.find((test) => test.file === entry.file && test.name === entry.title);
       return !quarantine || (quarantine.failureKind === "performance" && !entry.performanceFailure);
     }),
+    selected: records.length,
     executed: records.filter((entry) => entry.outcome !== "skipped").length,
+    reportedFiles: [...new Set(records.map((entry) => entry.file))].sort(),
   };
 };

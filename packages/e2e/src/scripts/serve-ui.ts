@@ -14,8 +14,7 @@ for (const entry of defaults.defaultExtensions) {
   const source = sources[entry.installName];
   if (!source) continue;
   entry.source = source;
-  if (entry.installName === "extension-lab") entry.skipInstall = true;
-  else delete entry.skipInstall;
+  delete entry.skipInstall;
 }
 const npmConfigPath = join(process.env.E2E_HOME!, ".npmrc");
 const registry = await startLocalWorkspaceRegistry({

@@ -12,7 +12,13 @@ import type { WorkbenchStore } from "../../shared/store/workbench-store";
 export type WorkbenchTerminalSessionRequest = TerminalSessionRequest;
 export type WorkbenchTerminalSessionExit = TerminalSessionExit;
 export type WorkbenchTerminalSessionError = TerminalSessionError;
-export type WorkbenchTerminalSessionAdapter = TerminalSessionAdapter;
+export type WorkbenchTerminalSessionAdapter = TerminalSessionAdapter & {
+  /**
+   * Releases the adapter without ending its session. Hosts whose sessions outlive the workbench
+   * implement it; disposing the workbench then detaches the session instead of killing it.
+   */
+  detach?(): void;
+};
 
 // Host-injected session factory. Production hosts back this with a PTY transport;
 // the testbench and stories inject a deterministic scripted opener.
@@ -20,6 +26,8 @@ export type WorkbenchTerminalSessionOpener = (
   request: WorkbenchTerminalSessionRequest,
   view?: TerminalViewBinding,
   signal?: AbortSignal,
+  /** Stable key of the placement that shows the session; a recreated workbench passes the same key. */
+  binding?: string,
 ) => Promise<WorkbenchTerminalSessionAdapter>;
 
 export type WorkbenchTerminalSessionStatus = "running" | "exited" | "killed";
@@ -67,6 +75,6 @@ export interface WorkbenchTerminalController {
   subscribe(sessionId: string, sink: WorkbenchTerminalSessionSink): () => void;
   getSession(sessionId: string): WorkbenchTerminalSessionModel | undefined;
   listSessions(): WorkbenchTerminalSessionModel[];
-  /** Kills every live session. Called when the owning workbench is torn down. */
+  /** Detaches or kills every live session. Called when the owning workbench is torn down. */
   dispose(): Promise<void>;
 }

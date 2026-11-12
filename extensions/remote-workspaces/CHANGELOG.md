@@ -1,5 +1,18 @@
 # remote-workspaces
 
+## 0.46.1
+
+_2026-11-12_
+
+### Patch Changes
+
+- 93d1e74: Declare extension IDs and official harness SVG logos with Gallery Thumbnails for UI Canvas, optional Agent Reports, Themes, and unlisted Remote Workspaces.
+- ea8ca3f: Clarify command palette names and groups, fill missing icons, and show assigned shortcut sequences.
+
+  Raise the compiled core binary limit to 280 MB.
+
+- ed40a9d: Keep maintained extensions loadable across the existing and upcoming ordered-storage API hosts.
+
 ## 0.46.0
 
 _2026-10-31_

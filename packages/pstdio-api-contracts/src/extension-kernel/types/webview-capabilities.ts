@@ -190,6 +190,7 @@ export type WebviewAccountManageParams =
   | { op: "renameDevice"; id: string; name: string }
   | { op: "removeDevice"; id: string }
   | { op: "syncProject"; projectId?: string }
+  | { op: "retryProjectSyncSource"; sourceId: string; projectId?: string }
   | { op: "stopProjectSync"; projectId?: string }
   | { op: "resolveReturnedChanges"; action: ProjectReturnAction; projectId?: string };
 

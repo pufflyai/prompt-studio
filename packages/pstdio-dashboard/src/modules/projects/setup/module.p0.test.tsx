@@ -7,12 +7,13 @@ import {
   setCachedDashboardExtensionMetadata,
 } from "@/shared/extensions/workbench-extension-contributions";
 import { createProjectOpeningModule } from "./module";
+import { createProjectSetupHandoff, type ProjectSetupHandoff } from "./project-setup-handoff";
 
-const fixture = (layoutPersistence?: LayoutPersistenceAdapter) => {
+const fixture = (layoutPersistence?: LayoutPersistenceAdapter, handoff?: ProjectSetupHandoff) => {
   const workbench = createWorkbench({ layoutPersistence });
   workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
   workbench.modes.setActiveMode("project");
-  const opening = createProjectOpeningModule();
+  const opening = createProjectOpeningModule({ handoff });
   const registration = workbench.registerModule(opening.module);
   const ready = (ids: string[] = ["example.setup"]) => {
     for (const id of ids)
@@ -46,6 +47,26 @@ test("waits for project creation and authoritative enabled setup before showing 
     expect(workbench.layout.getActivePanel("overlay")?.viewId).toBe("example.setup.view.setup");
   } finally {
     registration.dispose();
+  }
+});
+
+test("a desktop tab shows the setup of the project another tab created", async () => {
+  const handoff = createProjectSetupHandoff();
+  const creator = fixture(undefined, handoff);
+  try {
+    await creator.opening.open(Promise.resolve({ id: "created", created: true }));
+    const created = fixture(undefined, handoff);
+    try {
+      selectDashboardProject(created.workbench, { id: "created", name: "Created" });
+      created.ready();
+      await Bun.sleep(0);
+      expect(created.workbench.layout.getActivePanel("overlay")?.viewId).toBe("example.setup.view.setup");
+      expect(creator.workbench.layout.getActivePanel("overlay")).toBeUndefined();
+    } finally {
+      created.registration.dispose();
+    }
+  } finally {
+    creator.registration.dispose();
   }
 });
 

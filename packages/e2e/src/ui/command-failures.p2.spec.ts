@@ -1,8 +1,8 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 import { createPlannerTicket } from "../helpers/planner-api";
+import { type APIRequestContext, expect, type Page, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 import { createResourceActionsProject, prepareResourceActionsDashboard } from "./helpers/resource-actions";
 

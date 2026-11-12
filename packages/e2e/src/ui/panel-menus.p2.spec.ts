@@ -1,29 +1,12 @@
-import { expect, type Locator, type Page, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket } from "../helpers/planner-api";
 import { switchSession } from "../helpers/session-side-panel";
+import { expect, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 
 const openTabCustomMenu = async (tab: import("@playwright/test").Locator) => {
   await tab.click({ button: "right" });
 };
-interface MenuCase {
-  panel: "Main" | "Secondary" | "Side";
-  side: "left" | "right";
-  contentRegion: "main" | "secondary" | "side";
-}
-
-const _testedMenus: MenuCase[] = [
-  { panel: "Main", side: "left", contentRegion: "main" },
-  { panel: "Secondary", side: "right", contentRegion: "secondary" },
-  { panel: "Side", side: "left", contentRegion: "side" },
-];
-
-const panelId = (panel: MenuCase["panel"]) => panel.toLowerCase();
-const _menuName = (entry: MenuCase) => `${entry.panel} ${entry.side} menu`;
-const _menuRegion = (page: Page, entry: MenuCase) =>
-  page.locator(`[data-workbench-panel-menu="${panelId(entry.panel)}-${entry.side}"]`);
-
 const createSession = async (
   request: import("@playwright/test").APIRequestContext,
   projectId: string,
@@ -38,19 +21,6 @@ const createSession = async (
     },
   });
   expect(response.ok()).toBe(true);
-};
-
-const _dragMenuClosed = async (page: Page, menu: Locator, separator: Locator, side: MenuCase["side"]) => {
-  const [menuBox, separatorBox] = await Promise.all([menu.boundingBox(), separator.boundingBox()]);
-  expect(menuBox).not.toBeNull();
-  expect(separatorBox).not.toBeNull();
-  const startX = separatorBox!.x + separatorBox!.width / 2;
-  const y = separatorBox!.y + separatorBox!.height / 2;
-  const targetX = side === "left" ? menuBox!.x + 40 : menuBox!.x + menuBox!.width - 40;
-  await page.mouse.move(startX, y);
-  await page.mouse.down();
-  await page.mouse.move(targetX, y);
-  await page.mouse.up();
 };
 
 test("preserves browser Forward history between extension pages after refresh", async ({ page, request }) => {

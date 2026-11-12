@@ -1,12 +1,11 @@
 import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { createTestApp } from "../test-utils/create-test-app";
 import { runBunScenario } from "../test-utils/run-bun-scenario";
 import { runStartupTasks } from ".";
-
-const REPO_ROOT = resolve(import.meta.dir, "../../../..");
+import { prepareSourceRefreshFixture } from "./source-refresh-source.fixture";
 
 const waitFor = async (predicate: () => boolean) => {
   const deadline = Date.now() + 10_000;
@@ -52,26 +51,18 @@ describe("startup default extensions", () => {
   test("installs configured default extensions during startup", async () => {
     const pstdioHome = join(tempRoot, "home-defaults");
     process.env.PSTDIO_HOME = pstdioHome;
-    process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([
-      { source: resolve(REPO_ROOT, "extensions/extension-lab"), installName: "extension-lab", skipInstall: true },
-      {
-        source: resolve(REPO_ROOT, "extensions/pstdio-base-themes"),
-        installName: "pstdio-base-themes",
-        skipInstall: true,
-      },
-    ]);
+    const source = prepareSourceRefreshFixture(join(tempRoot, "default-source"));
+    process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([{ source, installName: "startup-fixture" }]);
 
     const { close } = await createTestApp({
       databasePath: ":memory:",
       storageRoot: join(tempRoot, "storage-defaults"),
     });
 
-    await waitFor(() => existsSync(join(pstdioHome, "extensions/extension-lab")));
-    await waitFor(() => existsSync(join(pstdioHome, "extensions/pstdio-base-themes")));
+    await waitFor(() => existsSync(join(pstdioHome, "extensions/startup-fixture")));
     await close();
 
-    expect(existsSync(join(pstdioHome, "extensions/extension-lab"))).toBe(true);
-    expect(existsSync(join(pstdioHome, "extensions/pstdio-base-themes"))).toBe(true);
+    expect(existsSync(join(pstdioHome, "extensions/startup-fixture"))).toBe(true);
   }, 40_000);
 
   test("refreshes local default extensions when running from source", async () => {

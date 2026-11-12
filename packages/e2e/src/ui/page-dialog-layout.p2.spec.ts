@@ -1,8 +1,8 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { expect, test } from "@playwright/test";
 import type { WorkbenchCore } from "@pstdio/workbench";
+import { expect, test } from "../scripts/session-test";
 import { createResourceActionsProject, prepareResourceActionsDashboard } from "./helpers/resource-actions";
 
 test("native table dialogs keep their rows visible and reachable by pointer", async ({ page, request }) => {

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../scripts/session-test";
 import { createResourceActionsProject, prepareResourceActionsDashboard } from "./helpers/resource-actions";
 
 // Authentication must not duplicate the empty surface or hide saved history in either placement.

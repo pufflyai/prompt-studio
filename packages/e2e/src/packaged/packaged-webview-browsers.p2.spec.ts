@@ -4,7 +4,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
-import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { verifyTreeGroups } from "../helpers/tree-groups";
 import { browserLaunchOptions } from "../scripts/browser-launch-options";
@@ -24,6 +23,7 @@ import { verifyPackagedTerminal } from "./packaged-browser-terminal";
 import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { verifyPackagedCollectionBreadcrumb } from "./packaged-collection-breadcrumb";
 import { verifyPackagedDocumentState } from "./packaged-document-state";
+import { packagedFixtureExtensions } from "./packaged-fixture-extensions";
 import { buildBinary } from "./packaged-helpers";
 import { verifyPackagedNoteHeadings } from "./packaged-note-headings";
 import { verifyPackagedOpaqueWebview } from "./packaged-opaque-webview";
@@ -49,10 +49,10 @@ const webviewBrowsers: { launchOptions?: LaunchOptions; name: string; type: Brow
   { name: "WebKit (Safari engine)", type: webkit },
 ];
 
-const findLabWebview = (metadata: WorkbenchExtensionMetadata) => {
-  const labPage = metadata.pages.find((page) => page.path === "lab");
-  if (labPage?.main.kind !== "view") return undefined;
-  const ref = labPage.main.view;
+const findHostWebview = (metadata: WorkbenchExtensionMetadata) => {
+  const hostPage = metadata.pages.find((page) => page.path === "host");
+  if (hostPage?.main.kind !== "view") return undefined;
+  const ref = hostPage.main.view;
   const view = metadata.views.find((view) => view.localId === ref.id && view.extensionId === ref.extensionId);
   return view?.body.kind === "webview" ? view.body : undefined;
 };
@@ -61,15 +61,15 @@ test.beforeAll(() => {
   if (!process.env.E2E_PACKAGED_BINARY_PATH) buildBinary();
 });
 
+const behaviorFixtures = (behavior: string) => {
+  const fixtures: Parameters<typeof packagedFixtureExtensions>[2] = [];
+  if (behavior === "commands and settings") fixtures.push("webview", "settings");
+  if (behavior === "workspace panels and session tabs") fixtures.push("webview", "mode", "harness");
+  if (behavior === "documents, collections and preview") fixtures.push("menu", "harness", "document");
+  return fixtures;
+};
 const verifyPackagedBehavior = async (browserCase: (typeof webviewBrowsers)[number], behavior: string) => {
   const browserAvailable = existsSync(browserCase.type.executablePath());
-  const defaultExtensions = e2eExtensions(
-    "pstdio-home",
-    "pstdio-session-browser",
-    "pstdio-workspaces",
-    "workbench-fixture",
-    ...(browserCase.name === "Chromium" ? ["pstdio-artifacts", "pstdio-notes"] : []),
-  );
   const startedAt = Date.now();
   const phase = (name: string) => logTestPhase(`Packaged ${browserCase.name} ${name} (${Date.now() - startedAt}ms)`);
   phase("runtime start");
@@ -79,6 +79,17 @@ const verifyPackagedBehavior = async (browserCase: (typeof webviewBrowsers)[numb
 
   try {
     expect(browserAvailable).toBe(true);
+    const fixtures = behaviorFixtures(behavior);
+    const defaultExtensions = await packagedFixtureExtensions(
+      tempRoot,
+      [
+        "pstdio-home",
+        "pstdio-session-browser",
+        "pstdio-workspaces",
+        ...(behavior === "documents, collections and preview" ? ["pstdio-artifacts", "pstdio-notes"] : []),
+      ],
+      fixtures,
+    );
     const started = await startPackagedServe(tempRoot, {
       PSTDIO_DEFAULT_EXTENSIONS: defaultExtensions,
       PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1",
@@ -112,24 +123,26 @@ const verifyPackagedBehavior = async (browserCase: (typeof webviewBrowsers)[numb
     expect(createRes.status).toBe(201);
     const project = (await createRes.json()) as { id: string };
 
-    let labWebview: Extract<WorkbenchExtensionMetadata["views"][number]["body"], { kind: "webview" }> | undefined;
-    const deadline = Date.now() + 30_000;
-    while (Date.now() < deadline) {
-      const metadataRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions/ui`, {
-        headers: runtimeAuthorization(started.descriptor),
-      });
-      expect(metadataRes.status).toBe(200);
-      const metadata = (await metadataRes.json()) as WorkbenchExtensionMetadata;
-      labWebview = findLabWebview(metadata);
-      if (labWebview?.webview.moduleUrl) {
-        const moduleRes = await fetch(`${started.baseUrl}${labWebview.webview.moduleUrl}`, {
+    let hostWebview: Extract<WorkbenchExtensionMetadata["views"][number]["body"], { kind: "webview" }> | undefined;
+    if (behavior === "commands and settings") {
+      const deadline = Date.now() + 30_000;
+      while (Date.now() < deadline) {
+        const metadataRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions/ui`, {
           headers: runtimeAuthorization(started.descriptor),
         });
-        if (moduleRes.ok) break;
+        expect(metadataRes.status).toBe(200);
+        const metadata = (await metadataRes.json()) as WorkbenchExtensionMetadata;
+        hostWebview = findHostWebview(metadata);
+        if (hostWebview?.webview.moduleUrl) {
+          const moduleRes = await fetch(`${started.baseUrl}${hostWebview.webview.moduleUrl}`, {
+            headers: runtimeAuthorization(started.descriptor),
+          });
+          if (moduleRes.ok) break;
+        }
+        await sleep(250);
       }
-      await sleep(250);
+      expect(hostWebview?.webview.moduleUrl).toBeTruthy();
     }
-    expect(labWebview?.webview.moduleUrl).toBeTruthy();
     phase("runtime ready");
 
     browser = await browserCase.type.launch(
@@ -164,7 +177,7 @@ const verifyPackagedBehavior = async (browserCase: (typeof webviewBrowsers)[numb
         page,
         started.baseUrl,
         project.id,
-        labWebview!.webview.runtimeUrl,
+        hostWebview!.webview.runtimeUrl,
         runtimeAuthorization(started.descriptor),
       );
     }

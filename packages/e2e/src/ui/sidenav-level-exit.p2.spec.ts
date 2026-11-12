@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket } from "../helpers/planner-api";
+import { expect, test } from "../scripts/session-test";
 import { uiOrigin } from "../ui-server";
 
 test("the project crumb leaves a Sidenav level for the last root-level page", async ({ page, request }) => {

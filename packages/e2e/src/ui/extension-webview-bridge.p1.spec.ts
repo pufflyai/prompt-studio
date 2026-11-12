@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { expect, test } from "../scripts/webview-test";
 import { uiOrigin } from "../ui-server";
 import { deleteAllProjects } from "./helpers/session-follow-up";
 
@@ -50,8 +50,8 @@ test("host messages to a webview leave no listeners on the host window", async (
     await page.addInitScript((projectId: string) => {
       localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
     }, project.id);
-    await page.goto(`/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`);
-    const lab = page.frameLocator('iframe[title="Lab"]');
+    await page.goto(`/projects/${project.id}/extensions/test.webview-host/host`);
+    const lab = page.frameLocator('iframe[title="Host page"]');
     const increment = lab.getByRole("button", { name: "Increment" });
     await expect(lab.getByText("0", { exact: true })).toBeVisible();
 
@@ -85,9 +85,9 @@ test("a webview ignores bridge messages from frames other than its host", async 
     await page.addInitScript((projectId: string) => {
       localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
     }, project.id);
-    await page.goto(`/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`);
-    const lab = page.frameLocator('iframe[title="Lab"]');
-    await expect(lab.getByRole("heading", { name: "Sandbox webview" })).toBeVisible();
+    await page.goto(`/projects/${project.id}/extensions/test.webview-host/host`);
+    const lab = page.frameLocator('iframe[title="Host page"]');
+    await expect(lab.getByRole("heading", { name: "Host contract" })).toBeVisible();
 
     await page.evaluate((script) => {
       const sent = new Promise<void>((resolve) => {
@@ -105,7 +105,7 @@ test("a webview ignores bridge messages from frames other than its host", async 
     await page.waitForTimeout(500);
 
     await expect(lab.locator("body")).not.toHaveAttribute("data-forged", "mounted");
-    await expect(lab.getByRole("heading", { name: "Sandbox webview" })).toBeVisible();
+    await expect(lab.getByRole("heading", { name: "Host contract" })).toBeVisible();
   } finally {
     await request.delete(`${uiOrigin}/v1/projects/${project.id}`);
   }

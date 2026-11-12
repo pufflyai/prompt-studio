@@ -35,7 +35,7 @@
     "typecheck": "bun check",
     "lint": "bun run typecheck && biome check .",
     "format": "biome check --write .",
-    "test": "bun ../../scripts/ci/run-bun-tests.ts --conditions=source --silent",
+    "test": "bun ../../scripts/test.ts --scope pstdio-extensions",
     "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --conditions=source --coverage"
   },
   "dependencies": {
@@ -49,7 +49,7 @@
     "pstdio-theme": "workspace:*"
   },
   "peerDependencies": {
-    "react": "^19.0.0"
+    "react": "19.2.4"
   },
   "peerDependenciesMeta": {
     "react": {
@@ -59,7 +59,6 @@
   "devDependencies": {
     "@types/bun": "1.4.4",
     "@types/react": "19.2.3",
-    "extension-lab": "workspace:*",
     "react": "19.2.4",
     "typescript": "6.0.2"
   }
