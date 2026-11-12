@@ -157,7 +157,7 @@ const loadExtensionBench = async (input: LoadExtensionBenchInput) => {
   });
   const runtime = normalizeExtensionSources(loaded.sources, loaded.diagnostics);
   // Preview data follows the source package being authored, including an older published identity.
-  const storage = input.storage ?? createPreviewStorage(loaded.sources[0]?.manifest.id);
+  const storage = input.storage ?? createPreviewStorage(runtime.extensions[0]?.id);
   if (input.prepareWebviews) {
     const webviews: ResolveWorkbenchExtensionWebviewInput[] = [];
     createWorkbenchExtensionMetadata({

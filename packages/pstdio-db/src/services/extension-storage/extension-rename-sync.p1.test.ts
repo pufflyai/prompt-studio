@@ -53,14 +53,23 @@ test("two upgraded devices, an offline return and a clean join share encrypted s
     relays.set(name, relay);
     return relay.relay;
   };
+  // All five real, uncached database startups remain inside this test's unchanged allowance.
+  // The clean join stays empty and disconnected until its original join point below.
+  const databases = await Promise.all(
+    Array.from({ length: 5 }, async () => {
+      const connection = await createDb({ path: ":memory:" });
+      cleanup.push(connection.close);
+      return connection.db;
+    }),
+  );
   const database = async () => {
-    const connection = await createDb({ path: ":memory:" });
-    cleanup.push(connection.close);
+    const db = databases.shift();
+    if (!db) throw new Error("All five device databases have already been allocated");
     const now = new Date().toISOString();
-    await connection.db
+    await db
       .insert(s.projects)
       .values({ id: projectId, name: "Upgrade", shorthand: "U", created_at: now, updated_at: now });
-    return connection.db;
+    return db;
   };
   const connect = (db: Awaited<ReturnType<typeof database>>) => {
     const service = createDocumentStorageDBService(db);

@@ -1,12 +1,12 @@
 {
   "name": "harness-pi",
-  "version": "0.45.0",
+  "version": "0.46.0",
   "displayName": "Pi",
   "description": "Contributes the optional Pi coding agent harness.",
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.3.1 || ^0.4.0"
+    "pstdio": "^0.3.1 || ^0.4.0 || ^0.5.0"
   },
   "pstdio": {
     "scope": "user"

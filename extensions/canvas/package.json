@@ -1,6 +1,6 @@
 {
   "name": "canvas",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "displayName": "UI Canvas",
   "description": "Designs, component states, and interactive examples in one UI workspace.",
   "publisher": "pstdio",
@@ -8,7 +8,7 @@
   "type": "module",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.4.0"
+    "pstdio": "^0.4.0 || ^0.5.0"
   },
   "scripts": {
     "test": "bun test ./src",
