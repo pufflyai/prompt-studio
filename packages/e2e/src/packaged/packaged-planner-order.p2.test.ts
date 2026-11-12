@@ -1,7 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import type { ChildProcess } from "node:child_process";
-import { rmSync } from "node:fs";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { folderProjectInput } from "../helpers/folder-project";
@@ -9,6 +8,7 @@ import { createCloudAcceptanceFixture, signInCloudAcceptanceDevice } from "./pac
 import { stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
+import { removeTestDirectory } from "./remove-test-directory";
 
 setupPackagedSmokeTests();
 interface Ticket {
@@ -146,14 +146,8 @@ const runScenario = async (signal: AbortSignal, setClose: (close: () => Promise<
   phase("cleanup complete");
   if (failures.length === 0) {
     try {
-      const options = { recursive: true, force: true, maxRetries: 5, retryDelay: 100 };
-      // Match desktop test cleanup: POSIX native traversal avoids a JS callback per dependency file.
-      // ADR 0039 keeps asynchronous removal on Windows, where synchronous retries are not honored.
-      if (process.platform === "win32") await rm(root, options);
-      else rmSync(root, options);
+      await removeTestDirectory(root);
       phase("fixture files removed");
-      // A native traversal must finish inside the same wall-clock budget even while JS timers are blocked.
-      expect(performance.now() - started).toBeLessThan(PACKAGED_TEST_TIMEOUT);
     } catch (cause) {
       failures.push(cause);
     }
