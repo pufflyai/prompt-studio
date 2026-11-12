@@ -19,7 +19,7 @@ export const readReportCommand = defineCommand({
   },
   async run(ctx, commandParams) {
     const value = commandParams.id;
-    const report = await readReportWithBody(ctx.storage, value);
+    const report = await readReportWithBody(ctx.storage, value, ctx.activity);
     if (report) {
       const identity = await ctx.resources.identity({ kind: "report", id: report.id });
       if (!identity) throw new Error(`Core identity is missing for report "${report.id}"`);
@@ -29,7 +29,7 @@ export const readReportCommand = defineCommand({
     const identities = await ctx.resources.findByShorthand({ kind: "report", shorthand: value.trim().toUpperCase() });
     const matches = await Promise.all(
       identities.map(async (identity) => {
-        const report = await readReportWithBody(ctx.storage, identity.id);
+        const report = await readReportWithBody(ctx.storage, identity.id, ctx.activity);
         return report ? withIdentity(report, identity) : undefined;
       }),
     );

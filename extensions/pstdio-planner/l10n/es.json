@@ -65,5 +65,7 @@
   "settings.workflow.statuses.title": "Selección de estados del flujo de trabajo",
   "settings.workflow.statuses.description": "Elige los estados del flujo de trabajo en la pestaña Ajustes de esta extensión. Los nombres no determinan el comportamiento.",
   "commands.requestReview.title": "Solicitar revisión",
-  "commands.requestReview.description": "Crea una solicitud de revisión y marca el ticket como pendiente de atención."
+  "commands.requestReview.description": "Crea una solicitud de revisión y marca el ticket como pendiente de atención.",
+  "activity.context": "Leer el contexto de actividad",
+  "activity.migrate": "Mover los resultados históricos a la actividad de la tarea"
 }

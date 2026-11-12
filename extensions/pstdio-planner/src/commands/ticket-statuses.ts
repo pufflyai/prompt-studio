@@ -37,8 +37,7 @@ export const createTicketStatusCommand = defineCommand({
   },
   async run(ctx, commandParams) {
     const status = await createTicketStatus({
-      storage: ctx.storage,
-      resources: ctx.resources,
+      ...ctx,
       name: commandParams.label,
       color: commandParams.color,
       icon: commandParams.icon,
@@ -69,8 +68,7 @@ export const updateTicketStatusCommand = defineCommand({
   },
   async run(ctx, commandParams) {
     const status = await updateTicketStatus({
-      storage: ctx.storage,
-      resources: ctx.resources,
+      ...ctx,
       statusId: commandParams.statusId,
       name: commandParams.label,
       color: commandParams.color,
@@ -96,7 +94,7 @@ export const deleteTicketStatusCommand = defineCommand({
   },
   async run(ctx, commandParams) {
     const statusId = commandParams.statusId ?? (await resolveStatusId(ctx.storage, commandParams.status ?? ""));
-    const result = await deleteTicketStatus({ storage: ctx.storage, resources: ctx.resources, statusId });
+    const result = await deleteTicketStatus({ ...ctx, statusId });
     await ctx.events.emit(plannerTicketsChanged, {});
     await ctx.events.emit(plannerSchemaChanged, {});
     return result;
@@ -113,7 +111,7 @@ export const setDefaultTicketStatusCommand = defineCommand({
   },
   async run(ctx, commandParams) {
     const statusId = await resolveStatusId(ctx.storage, commandParams.status);
-    const result = await setDefaultStatus({ storage: ctx.storage, resources: ctx.resources, statusId });
+    const result = await setDefaultStatus({ ...ctx, statusId });
     await ctx.events.emit(plannerTicketsChanged, {});
     await ctx.events.emit(plannerSchemaChanged, {});
     return result;
@@ -133,8 +131,7 @@ export const reorderTicketStatusesCommand = defineCommand({
   },
   async run(ctx, commandParams) {
     const result = await reorderTicketStatuses({
-      storage: ctx.storage,
-      resources: ctx.resources,
+      ...ctx,
       statusIds: commandParams.statusIds ?? [],
     });
     await ctx.events.emit(plannerTicketsChanged, {});

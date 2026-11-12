@@ -5,7 +5,7 @@ metadata:
   version: 0.0.21
 ---
 
-Implement Planner tickets in a Prompt Studio workspace. Produce a committed revision and a change request report, then follow the configured review and pull request steps.
+Implement Planner tickets in a Prompt Studio workspace. Produce a committed revision and an implementation Activity entry, then follow the configured review and pull request steps.
 
 ## Workspace
 
@@ -21,7 +21,7 @@ Always work in a Prompt Studio workspace. Never use `git worktree add` or your a
 
 Create another workspace only when no suitable linked workspace exists, for a useful implementation alternative, or for an explicit request. Workspaces identify variants; they do not own ticket progress. The responsible implementation agent coordinates variant evidence and updates the ticket. Reviewers and variant agents report evidence to it.
 
-Only a workspace started by `pst pstdio-planner run-attempt --ticket <shorthand>` has a managed attempt. You own its ticket status; Planner does not set it for you. In any other workspace, skip revision submission in step 5 and include the workspace ID, commit SHA, and report ID in the handoff. See [Attempts](https://prompt.studio/docs/extensions/planner/attempts/#run-an-attempt) and [Who sets the ticket status](https://prompt.studio/docs/extensions/planner/attempts/#who-sets-the-ticket-status).
+Only a workspace started by `pst pstdio-planner run-attempt --ticket <shorthand>` has a managed attempt. You own its ticket status; Planner does not set it for you. In any other workspace, skip revision submission in step 5 and include the workspace ID, commit SHA, and Activity entry ID in the handoff. See [Attempts](https://prompt.studio/docs/extensions/planner/attempts/#run-an-attempt) and [Who sets the ticket status](https://prompt.studio/docs/extensions/planner/attempts/#who-sets-the-ticket-status).
 
 ### Branches and dependency code
 
@@ -44,9 +44,9 @@ Dependency integration is part of implementing this ticket. This assignment auth
    - Update the ticket by its discovered status ID when starting, blocking, resuming, handing off, and meeting the actual completion criteria. Use `pst tickets update --id <ticket> --status-id <status-id>`. Labels are presentation; do not assume English names or seeded IDs. An unconfigured optional convenience does not require repeated review requests. Clarify an unclear required project workflow through the existing review request mechanism.
 2. Implement only the ticket's scope. Follow the repository's contributor rules and its own requirements documents. Prompt Studio's product requirements apply only when the repository is Prompt Studio. Before adding or changing UI, read `pst pstdio-planner refinement-policy`. When `updateCanvasDesign` is enabled and Canvas is available, follow the project's canvas skill and update the linked design first. Preserve unrelated designs and link exact preview names and source paths in the ticket. Before production UI work, retrieve the design source recorded in the ticket. For a recorded branch and commit, fetch the branch and include the commit, or verify that the reviewed source is already present in this workspace. For a proposal folder, move its changes into production as the canvas skill describes and delete the folder in the same change. For other workspace providers, apply the recorded source snapshot through the project's supported transfer workflow. Verify the exact preview sources; a URL or completed ticket status does not prove that their changes reached this workspace. Resolve a missing source handoff before implementation. Canvas designs replace artifact prototypes. If Canvas is unavailable, use the project's existing design workflow and record why no canvas was linked. If the option is off, record why the design step was skipped. Resolve policy-read failures before implementation.
 3. Run the required validation, follow the adversarial review step below, and commit the finished change in the managed workspace.
-4. Create the change request report described below.
-5. Keep the `reportId` returned by `pst reports save`. Read the commit SHA with `git rev-parse HEAD`, then run:
-   - `pst pstdio-planner submit-revision --workspace-id <workspace-id> --implementation-session-id <owner-session-id> --head-sha <head-sha> --change-request-report-id <report-id> --expected-revision <last-revision-number>`
+4. Publish the implementation Activity entry described below.
+5. Keep the entry `id` returned by Activity publication. Read the commit SHA with `git rev-parse HEAD`, then run:
+   - `pst pstdio-planner submit-revision --workspace-id <workspace-id> --implementation-session-id <owner-session-id> --head-sha <head-sha> --change-request-activity-id <entry-id> --expected-revision <last-revision-number>`
    - Read the owner session ID and last revision number with `pst pstdio-planner read-attempt-history --workspace-id <workspace-id>`. Use revision 0 before the first submission. Later corrections append revisions in the same workspace. Previous verdicts remain on their original commits; do not reopen or dismiss them to unlock submission.
    - Update the appropriate ticket handoff status. A handoff status does not request another managed reviewer. A completed status requires the task's actual delivery or acceptance, including latest-head CI and merge when required.
 6. Follow the completion steps below.
@@ -97,37 +97,17 @@ Read `pst pstdio-planner implementation-policy` again before handoff so changes 
 - Read the ticket's `reviewLinks` with `pst tickets panel --id <shorthand>`. If the PR URL is not already linked, run `pst tickets link-review --id <shorthand> --url <pr-url>`. Include the PR URL in the handoff. If pushing, creating, or linking the PR fails, report the blocker without claiming that step succeeded.
 - When `openPr` is disabled, skip PR creation and linking unless the user requested them.
 
-## Change request report
+## Implementation Activity
 
-The report must explain the change and include outputs that a reviewer can inspect. See [Write a report](https://prompt.studio/docs/extensions/reports/#write-a-report).
+Use the shipped `use-resource-activity` skill. Publish on the ticket, using the complete ResourceRef from `pst tickets panel` and the project ID. Read relevant prior entries before implementation. The source session/workspace are context; sessions have no Activity destination.
 
-1. Run `pst reports write --kind change_request --name change_request --template change-request` and keep the returned `name`, `path`, and `filesPath`. The paths are absolute locations in the default project folder on the host, not the active worktree or remote environment.
-2. Explain why the change is needed and why you chose the implementation.
-3. Link the ticket, relevant code, documentation, ADRs, designs, and other useful resources.
-4. Always state anything left undone, any shortcuts taken, and any blockers encountered. Write `None` when a section has nothing to report.
-5. Explain how to validate the change. Add command outputs, screenshots, logs, or traces under the returned `filesPath`.
-6. Complete the report at the returned `path`.
-7. Run `pst reports save --name <returned-name>` and keep its `reportId` for revision submission.
+After validation, review and the final commit, publish one `implementation` entry with the concrete problem and resulting behavior, the implementation choice, useful code/documentation links, validation evidence and attachments, and explicit unfinished work, shortcuts, and blockers (`None` when absent). Its revision must include the owner implementation session, workspace, exact HEAD, dependency base SHA, and next attempt revision number. Attach concrete logs/screenshots through `pst resources activity attach`, then use `pst resources activity publish --resource '<ResourceRef JSON>' --file <outcome.json>`. Keep the returned entry ID for `submit-change-request`.
 
-Report creation never overwrites an existing report. When the base file exists, the command returns a numbered report such as `change_request_01` at `.pstdio/extension-storage/pstdio.pstdio-reports/reports/change_request/report_01.md`.
-
-Only an independent reviewer creates a review report. The implementation agent uses a change request report.
-
-Report evidence includes:
-
-- Test, build, and run outputs
-- Walkthroughs of the change
-- Design documents or architecture diagrams
-- Screenshots or screen recordings (UI / E2E)
-- `curl` responses
-- Any file needed to prove the ticket is implemented correctly
-
-Use concrete artifacts that another person or agent can inspect and reproduce.
-
+Only the independent reviewer publishes a `review` entry. Do not create a duplicate Reports outcome. Historical Reports evidence remains readable and can be migrated with `pst pstdio-planner migrate-ticket-outcomes --id <ticket>`; new submissions do not need Reports installed.
 
 ### Repair a changed dependency base
 
-For a `tickets next` action of `update-stack`, reuse the listed workspace and its implementation session. See [Updating a dependency stack](https://prompt.studio/docs/extensions/planner/attempts/#updating-a-dependency-stack). Read the ticket and existing review findings. Run `pst pstdio-planner update-stack` with the exact workspace HEAD and owner session; resolve any merge conflicts, commit, and retry. Preserve the ticket's branch and PR target rules. Validate the result, run the configured adversarial review, save a fresh report, and submit the exact HEAD with `--expected-revision`. A passed review stays on its old revision; do not fabricate a rejection or reopen it to permit a correction. Complete required CI on the latest pushed PR commit.
+For a `tickets next` action of `update-stack`, reuse the listed workspace and its implementation session. See [Updating a dependency stack](https://prompt.studio/docs/extensions/planner/attempts/#updating-a-dependency-stack). Read the ticket and existing review findings. Run `pst pstdio-planner update-stack` with the exact workspace HEAD and owner session; resolve any merge conflicts, commit, and retry. Preserve the ticket's branch and PR target rules. Validate the result, run the configured adversarial review, publish a fresh implementation entry, and submit the exact HEAD with `--expected-revision`. A passed review stays on its old revision; do not fabricate a rejection or reopen it to permit a correction. Complete required CI on the latest pushed PR commit.
 
 ### Recover a missing workspace
 

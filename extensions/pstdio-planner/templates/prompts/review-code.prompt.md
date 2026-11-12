@@ -8,16 +8,14 @@ For each finding:
 - Classify it as critical, minor, or a suggestion.
 - Explain the behavior and the required change.
 
-Create the report with `pst reports write --kind review --name review --template review --source review-changes`. Read the returned JSON. Fill its `path` with the review scope, confidence, validation evidence, prioritized findings, useful links, and follow-up work. Save it with `pst reports save --name <returned-name>` and keep the returned `reportId`.
-
-Repeated reviews get numbered names and files, so earlier reviews remain unchanged. This is an independent code review. Create a `review` report, not a `change_request` report.
+Use the shipped `use-resource-activity` skill. Read the ticket's prior Activity and the implementation entry referenced by `read-attempt-history`. Publish one independent `review` entry on that ticket with the scope, confidence, validation evidence, prioritized findings, useful links and unfinished work. Include the exact implementation entry ID, workspace {{workspaceId}}, head {{headSha}}, revision {{revision}}, and your review session ID. Preserve the implementation base SHA. Set `verdict` to `passed` or `changes_requested`; keep the returned entry ID. Attach concrete evidence through Activity. Do not create a Reports outcome.
 
 Submit a verdict before finishing. Do not change the ticket status.
 
 - If there are no critical or minor findings, run:
 
-  `pst pstdio-planner submit-review --workspace-id {{workspaceId}} --review-id {{reviewId}} --reviewed-head-sha {{headSha}} --review-report-id <report-id> --verdict passed --expected-revision {{revision}} --threads '[]'`
+  `pst pstdio-planner submit-review --workspace-id {{workspaceId}} --review-id {{reviewId}} --reviewed-head-sha {{headSha}} --review-activity-id <entry-id> --verdict passed --expected-revision {{revision}} --threads '[]'`
 
-- If there are critical or minor findings, pass `--verdict changes_requested`. Set `--threads` to a JSON array. Each item must contain `severity`, `body`, and, when the finding is inline, `path`, `startLine`, `endLine`, and `side` (`base` or `head`). Suggestions may also be included.
+- If there are critical or minor findings, pass `--verdict changes_requested`. Publish the findings in the review Activity entry. If passing `--threads`, it must match those findings exactly. Each item must contain `severity`, `body`, and, when the finding is inline, `path`, `startLine`, `endLine`, and `side` (`base` or `head`). Suggestions may also be included.
 
-The Planner validates the session, revision, commit, and report before it records the verdict.
+The Planner validates the session, revision, commit, and Activity entry before it records the verdict.

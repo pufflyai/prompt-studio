@@ -5,7 +5,7 @@ import {
   type ExtensionStorageApi,
   params,
 } from "@pstdio/sdk/extensions";
-import { putReport, reportsCollection } from "../data/collections";
+import { reportsCollection } from "../data/collections";
 import {
   fileNameFromPath,
   readReportMarkdown,
@@ -16,6 +16,7 @@ import {
 } from "../data/draft-storage";
 import { parseReportFrontmatter, stripFrontmatter } from "../data/frontmatter";
 import { reportBodyFile } from "../data/report-body";
+import { replaceReport, withReportWrite } from "../data/report-write";
 import { findReport, resolveWorkspace } from "../data/resolve";
 import type { StoredReport, StoredReportFile } from "../data/types";
 import { assertSafeReportFileName, assertSafeReportName } from "../data/validation";
@@ -90,57 +91,64 @@ export const saveReportCommand = defineCommand({
     }
 
     assertSafeReportName(name);
-    const report = await findReport(ctx.storage, workspaceShorthand, name);
-    if (!report) throw new Error(`Unknown report "${name}" in workspace "${workspaceShorthand}"`);
+    const found = await findReport(ctx.storage, workspaceShorthand, name);
+    if (!found) throw new Error(`Unknown report "${name}" in workspace "${workspaceShorthand}"`);
+    return withReportWrite(ctx, found.id, async () => {
+      const snapshot = await reportsCollection(ctx.storage).read(found.id);
+      if (!snapshot) throw new Error("Report was deleted before saving.");
+      const report = snapshot.value;
+      if (report.activityRefs?.length)
+        throw new Error("This report has moved to resource Activity. Publish a new Activity entry instead.");
 
-    const raw = await readReportMarkdown(projectFiles, report);
-    if (raw === null) throw new Error(`No local report file for ${name}`);
-    const frontmatter = parseReportFrontmatter(raw);
-    const body = stripFrontmatter(raw).replace(/^\n+/, "");
-    const fileInputs = await readReportFiles(projectFiles, report, ctx.storage.ids);
-    const blobs = reportsCollection(ctx.storage).attachments(report.id);
-    const uploaded: string[] = [];
-    const upload = async (input: ExtensionBlobInput) => {
-      const blob = await blobs.put(input);
-      uploaded.push(blob.id);
-      return blob.id;
-    };
-    let next: StoredReport;
-    try {
-      const nextFiles: StoredReportFile[] = [];
-      for (const { bytes, file } of fileInputs)
-        nextFiles.push({
-          ...file,
-          blobId: await upload({ name: file.name, data: bytes, mimeType: file.mimeType ?? undefined }),
+      const raw = await readReportMarkdown(projectFiles, report);
+      if (raw === null) throw new Error(`No local report file for ${name}`);
+      const frontmatter = parseReportFrontmatter(raw);
+      const body = stripFrontmatter(raw).replace(/^\n+/, "");
+      const fileInputs = await readReportFiles(projectFiles, report, ctx.storage.ids);
+      const blobs = reportsCollection(ctx.storage).attachments(report.id);
+      const uploaded: string[] = [];
+      const upload = async (input: ExtensionBlobInput) => {
+        const blob = await blobs.put(input);
+        uploaded.push(blob.id);
+        return blob.id;
+      };
+      let next: StoredReport;
+      try {
+        const nextFiles: StoredReportFile[] = [];
+        for (const { bytes, file } of fileInputs)
+          nextFiles.push({
+            ...file,
+            blobId: await upload({ name: file.name, data: bytes, mimeType: file.mimeType ?? undefined }),
+          });
+        next = await replaceReport(ctx.storage, snapshot.revision, {
+          ...report,
+          kind: frontmatter.kind ?? report.kind,
+          source: frontmatter.source ?? report.source,
+          bodyBlobId: await upload(reportBodyFile(body)),
+          files: nextFiles,
+          draft: false,
+          updatedAt: new Date().toISOString(),
         });
-      next = await putReport(ctx.storage, {
-        ...report,
-        kind: frontmatter.kind ?? report.kind,
-        source: frontmatter.source ?? report.source,
-        bodyBlobId: await upload(reportBodyFile(body)),
-        files: nextFiles,
-        draft: false,
-        updatedAt: new Date().toISOString(),
+      } catch (error) {
+        await Promise.allSettled(uploaded.map((blobId) => blobs.delete(blobId)));
+        throw error;
+      }
+      const nextFiles = next.files;
+      const oldBlobIds = new Set([report.bodyBlobId, ...report.files.map((file) => file.blobId)]);
+      await Promise.allSettled([...oldBlobIds].map((blobId) => blobs.delete(blobId)));
+      await projectFiles.writeText(reportMarkdownPathFor(next), reportToMarkdown(next, body));
+
+      await ctx.events.emit("pstdio-reports.report.saved", {
+        projectId: ctx.projectId,
+        reportId: report.id,
+        workspaceShorthand,
+        workspaceId: workspace?.id ?? null,
+        name,
+        kind: next.kind,
+        files: nextFiles.length,
       });
-    } catch (error) {
-      await Promise.allSettled(uploaded.map((blobId) => blobs.delete(blobId)));
-      throw error;
-    }
-    const nextFiles = next.files;
-    const oldBlobIds = new Set([report.bodyBlobId, ...report.files.map((file) => file.blobId)]);
-    await Promise.allSettled([...oldBlobIds].map((blobId) => blobs.delete(blobId)));
-    await projectFiles.writeText(reportMarkdownPathFor(next), reportToMarkdown(next, body));
 
-    await ctx.events.emit("pstdio-reports.report.saved", {
-      projectId: ctx.projectId,
-      reportId: report.id,
-      workspaceShorthand,
-      workspaceId: workspace?.id ?? null,
-      name,
-      kind: next.kind,
-      files: nextFiles.length,
+      return { reportId: report.id, workspace: workspaceShorthand, name, files: nextFiles.length };
     });
-
-    return { reportId: report.id, workspace: workspaceShorthand, name, files: nextFiles.length };
   },
 });

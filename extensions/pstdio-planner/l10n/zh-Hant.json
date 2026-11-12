@@ -65,5 +65,7 @@
   "settings.workflow.statuses.title": "工作流程狀態選擇",
   "settings.workflow.statuses.description": "在此擴充功能的設定分頁中選擇工作流程狀態。顯示名稱不決定行為。",
   "commands.requestReview.title": "請求審核",
-  "commands.requestReview.description": "建立審核請求，並將工單標記為需要關注。"
+  "commands.requestReview.description": "建立審核請求，並將工單標記為需要關注。",
+  "activity.context": "讀取活動上下文",
+  "activity.migrate": "將歷史結果移至工單活動"
 }

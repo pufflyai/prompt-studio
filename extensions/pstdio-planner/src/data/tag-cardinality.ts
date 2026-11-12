@@ -3,6 +3,7 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "./collections";
 import { seedDefaultTags } from "./seed";
+import { publishTicketChanges } from "./ticket-activity";
 import type { TicketContext } from "./ticket-identity";
 import { ticketRecords } from "./ticket-records";
 import { assertOneTagValue, tagValue, tagValueIds, ticketTagsFromIds, withTagValue } from "./ticket-tags";
@@ -33,11 +34,12 @@ type TagValue = StoredTicketTags[string];
 // listed tickets whole would undo an edit or sync that landed while the change ran. Each edit runs
 // in the ticket's write queue, so it never writes back a file list that changeTicketFiles replaced.
 export const editTicketTagValues = async (
-  storage: ExtensionStorageApi,
+  ctx: TicketContext,
   tagId: string,
   edit: (value: TagValue) => TagValue | undefined,
+  preservedTags: StoredTag[] = [],
 ) => {
-  const records = ticketRecords(storage);
+  const records = ticketRecords(ctx.storage);
   for (const listed of await records.list()) {
     if (listed.tags?.[tagId] === undefined) continue;
     await queueTicketWrite(listed.id, async () => {
@@ -46,14 +48,16 @@ export const editTicketTagValues = async (
       if (!ticket || value === undefined) return;
       const next = edit(value);
       if (JSON.stringify(next) === JSON.stringify(value)) return;
-      await records.put(ticket.id, { ...ticket, tags: withTagValue(ticket.tags, tagId, next) });
+      const changed = { ...ticket, tags: withTagValue(ticket.tags, tagId, next), updatedAt: new Date().toISOString() };
+      await records.put(ticket.id, changed);
+      await publishTicketChanges(ctx, ticket, changed, preservedTags);
     });
   }
 };
 
 // Stores each ticket's value in the shape of the tag's current type.
-export const convertTicketTagValues = (storage: ExtensionStorageApi, tag: StoredTag) =>
-  editTicketTagValues(storage, tag.id, (value) => tagValue(tag, tagValueIds(value), value));
+export const convertTicketTagValues = (ctx: TicketContext, tag: StoredTag) =>
+  editTicketTagValues(ctx, tag.id, (value) => tagValue(tag, tagValueIds(value), value));
 
 /** Validate the flat `tagIds` a command received and translate them to the stored object. */
 export const ticketTagsForIds = async (

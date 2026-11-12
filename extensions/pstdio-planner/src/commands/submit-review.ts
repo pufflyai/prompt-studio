@@ -10,7 +10,8 @@ import {
 } from "../data/attempt-storage";
 import type { AttemptReview, ReviewComment, ReviewThread } from "../data/attempt-types";
 import { withWriteGuard } from "../data/write-guard";
-import { readReport, workspaceHead } from "./change-requests";
+import { readReviewEvidence } from "./activity-evidence";
+import { workspaceHead } from "./change-requests";
 
 export interface ReviewFinding {
   path?: string;
@@ -122,7 +123,9 @@ export const submitReviewCommand = defineCommand({
     reviewSessionId: params.text(),
     sessionId: params.text(),
     reviewedHeadSha: params.text({ required: true }),
-    reviewReportId: params.text({ required: true }),
+    reviewActivityId: params.text(),
+    /** @deprecated Publish a review Activity entry and pass reviewActivityId. */
+    reviewReportId: params.text(),
     verdict: params.select({
       required: true,
       options: [
@@ -153,16 +156,19 @@ export const submitReviewCommand = defineCommand({
       if (head !== revision.headSha || head !== commandParams.reviewedHeadSha) {
         throw new Error("Workspace HEAD changed before review submission.");
       }
-      const report = await readReport(ctx, commandParams.reviewReportId);
-      if (report.id !== commandParams.reviewReportId || report.workspaceId !== attempt.workspaceId || report.draft) {
-        throw new Error("The saved review report does not belong to this workspace.");
-      }
+      const evidenceFindings = await readReviewEvidence(ctx, attempt, revision, reviewSessionId, commandParams);
+      reviewFindings.splice(
+        0,
+        reviewFindings.length,
+        ...validateReviewFindings(evidenceFindings, commandParams.verdict as "passed" | "changes_requested"),
+      );
 
       const completedAt = new Date().toISOString();
       const submitted: AttemptReview = {
         ...review,
         state: "submitted" as const,
-        reportId: commandParams.reviewReportId,
+        reportId: commandParams.reviewReportId ?? null,
+        activityId: commandParams.reviewActivityId,
         verdict: commandParams.verdict as "passed" | "changes_requested",
         completedAt,
       };
@@ -195,6 +201,7 @@ export const submitReviewCommand = defineCommand({
         actor: submitted.reviewer,
         sessionId: submitted.sessionId,
         reportId: submitted.reportId,
+        activityId: submitted.activityId,
         reviewId: submitted.id,
         threadId: null,
         commitSha: revision.headSha,

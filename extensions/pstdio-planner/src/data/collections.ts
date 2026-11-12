@@ -1,6 +1,7 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { dependencyBlockerRefs, withIndependentBlockers } from "./dependency-blockers";
 import { readTicketReviewRequests } from "./review-request-storage";
+import { publishTicketChanges } from "./ticket-activity";
 import { deleteTicketBlobs, deleteTicketFileContent, deleteTicketScopedBlobs } from "./ticket-file-content";
 import { queueTicketWrite } from "./ticket-write-queue";
 import type { StoredStatus, StoredTag, StoredTicket, Ticket } from "./types";
@@ -51,17 +52,35 @@ export const ticketsCollection = (ctx: TicketContext) => {
     put: (id: string, ticket: StoredTicket) =>
       queueTicketWrite(id, async () => {
         if (await records.createIfAbsent(id, ticketRecord(ticket))) return;
-        const saved = await changeTicketRecord(ctx.storage, id, (current) => withStoredBlobRefs(current, ticket));
+        let before: StoredTicket | undefined;
+        const saved = await changeTicketRecord(ctx.storage, id, (current) => {
+          before = current;
+          return withStoredBlobRefs(current, ticket);
+        });
+        if (saved && before) await publishTicketChanges(ctx, before, saved);
         if (!saved) throw new Error(`Item not found: ${id}`);
       }),
     update: (id: string, ticket: StoredTicket) =>
       queueTicketWrite(id, async () => {
-        const saved = await changeTicketRecord(ctx.storage, id, (current) => withStoredBlobRefs(current, ticket));
+        let before: StoredTicket | undefined;
+        const saved = await changeTicketRecord(ctx.storage, id, (current) => {
+          before = current;
+          return withStoredBlobRefs(current, ticket);
+        });
+        if (saved && before) await publishTicketChanges(ctx, before, saved);
         if (!saved) throw new Error(`Item not found: ${id}`);
       }),
     change: (id: string, change: (current: Ticket) => Promise<StoredTicket>) =>
       queueTicketWrite(id, () =>
-        changeTicketRecord(ctx.storage, id, async (current) => change(await withTicketIdentity(ctx, current))),
+        (async () => {
+          let before: StoredTicket | undefined;
+          const saved = await changeTicketRecord(ctx.storage, id, async (current) => {
+            before = current;
+            return change(await withTicketIdentity(ctx, current));
+          });
+          if (saved && before) await publishTicketChanges(ctx, before, saved);
+          return saved;
+        })(),
       ),
     // The ticket's blobs, file bodies and images alike, have no other owner.
     delete: (id: string) =>
