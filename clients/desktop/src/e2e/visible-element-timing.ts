@@ -19,8 +19,11 @@ export const timeVisibleChange = async (
       const stop = () => {
         stopped = true;
         cancelAnimationFrame(frame);
+        mutations.disconnect();
+        document.removeEventListener("visibilitychange", check);
       };
       const check = () => {
+        if (stopped) return;
         const element = document.querySelector<HTMLElement>(selector);
         if (
           document.visibilityState === "visible" &&
@@ -30,9 +33,22 @@ export const timeVisibleChange = async (
           const bounds = element.getBoundingClientRect();
           if (bounds.width > 0 && bounds.height > 0) record(Date.now());
         }
-        if (!stopped) frame = requestAnimationFrame(check);
       };
-      frame = requestAnimationFrame(check);
+      const tick = () => {
+        check();
+        if (!stopped) frame = requestAnimationFrame(tick);
+      };
+      // A retained lifecycle renderer can stop receiving animation callbacks.
+      // Observe DOM/visibility changes too, with the same text, CSS and bounds checks.
+      const mutations = new MutationObserver(check);
+      mutations.observe(document.documentElement, {
+        attributes: true,
+        childList: true,
+        characterData: true,
+        subtree: true,
+      });
+      document.addEventListener("visibilitychange", check);
+      frame = requestAnimationFrame(tick);
       return {
         after: (startedAt: number) =>
           new Promise<number>((resolve) => {
