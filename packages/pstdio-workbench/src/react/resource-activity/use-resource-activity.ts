@@ -22,9 +22,7 @@ export const useResourceActivity = (
   const [cursor, setCursor] = useState<string | null>(null);
   const [unresolved, setUnresolved] = useState(0);
   const [error, setError] = useState<string>();
-  const [busy, setBusy] = useState(false);
   const alive = useRef(false);
-  const busyNow = useRef(false);
   const loading = useRef(false);
   const sequence = useRef(0);
   const refresh = async (more = false) => {
@@ -78,47 +76,52 @@ export const useResourceActivity = (
     };
   }, [binding, visible, resource]);
   const changeDraft = (next: ActivityDraft) => draftStore.set(next);
-  const action = async <T>(run: () => Promise<T>) => {
-    if (busyNow.current) return;
-    busyNow.current = true;
-    setBusy(true);
+  const action = async <T>(run: () => Promise<T>, upload?: string) => {
+    const lease = draftStore.begin(upload);
+    if (!lease) return;
+    draftStore.setError(undefined);
     setError(undefined);
     try {
       return await run();
     } catch (error) {
-      if (alive.current) setError(errorText(error));
+      draftStore.setError(errorText(error));
     } finally {
-      busyNow.current = false;
-      if (alive.current) setBusy(false);
+      draftStore.finish(lease);
     }
   };
-  const attach = async (file: File) =>
-    action(async () => {
-      const attachment = await binding.api.attach(resource, {
-        name: file.name,
-        mimeType: file.type || "application/octet-stream",
-        data: new Uint8Array(await file.arrayBuffer()),
-      });
-      const current = draftStore.get();
-      changeDraft({ ...current, attachmentIds: [...current.attachmentIds, attachment.id], key: crypto.randomUUID() });
-    });
-  const publish = async (replyToId?: string) =>
+  const attach = async (input: File | File[]) => {
+    const files = Array.isArray(input) ? input : [input];
+    if (!files.length) return;
+    return action(
+      async () => {
+        for (const file of files) {
+          try {
+            const attachment = await binding.api.attach(resource, {
+              name: file.name,
+              mimeType: file.type || "application/octet-stream",
+              data: new Uint8Array(await file.arrayBuffer()),
+            });
+            const current = draftStore.get();
+            changeDraft({ ...current, attachments: [...current.attachments, attachment], key: crypto.randomUUID() });
+          } catch (error) {
+            throw new Error(`Could not attach ${file.name}: ${errorText(error)}`);
+          }
+        }
+      },
+      files.length === 1 ? files[0]!.name : `${files.length} files`,
+    );
+  };
+  const publish = async () =>
     action(async () => {
       const input: PublishResourceActivity = {
         key: draft.key,
         kind: "comment",
         body: draft.body,
-        attachmentIds: draft.attachmentIds,
-        replyToId,
-        target: replyToId ? undefined : draft.target,
+        attachmentIds: draft.attachments.map((file) => file.id),
       };
       const entry = await binding.api.publish(resource, input);
       if (draftStore.get().key === input.key) draftStore.set(emptyActivityDraft());
-      try {
-        if (entry.target) await binding.api.handoff(resource, entry.id);
-      } finally {
-        await refresh();
-      }
+      await refresh();
       return entry;
     });
   return {
@@ -129,8 +132,14 @@ export const useResourceActivity = (
     items,
     cursor,
     unresolved,
-    error,
-    busy,
+    error: draftStore.error() ?? error,
+    actionError: draftStore.error(),
+    clearError: () => {
+      draftStore.setError(undefined);
+      setError(undefined);
+    },
+    busy: draftStore.busy(),
+    uploading: draftStore.uploading(),
     refresh,
     action,
     publish,

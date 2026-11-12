@@ -1,18 +1,44 @@
+import type { ResourceActivityAttachment } from "@pstdio/sdk/extensions";
 import type { WorkbenchCore } from "../../core";
 
 export interface ActivityDraft {
   body: string;
   key: string;
-  attachmentIds: string[];
-  target?: { harnessId: string; modelId: string };
+  attachments: ResourceActivityAttachment[];
 }
-export const emptyActivityDraft = (): ActivityDraft => ({ body: "", key: crypto.randomUUID(), attachmentIds: [] });
+export const emptyActivityDraft = (): ActivityDraft => ({ body: "", key: crypto.randomUUID(), attachments: [] });
 const caches = new WeakMap<WorkbenchCore, Map<string, ReturnType<typeof createDraft>>>();
 const createDraft = () => {
   let value = emptyActivityDraft();
   const listeners = new Set<() => void>();
+  let pending: { id: string; upload?: string } | undefined;
+  let error: string | undefined;
+  const notify = () => {
+    value = { ...value };
+    for (const listener of listeners) listener();
+  };
   return {
     get: () => value,
+    busy: () => Boolean(pending),
+    uploading: () => pending?.upload,
+    error: () => error,
+    setError: (next?: string) => {
+      if (error === next) return;
+      error = next;
+      notify();
+    },
+    begin: (upload?: string) => {
+      if (pending) return;
+      pending = { id: crypto.randomUUID(), upload };
+      notify();
+      return pending.id;
+    },
+    finish: (id: string) => {
+      if (pending?.id === id) {
+        pending = undefined;
+        notify();
+      }
+    },
     set: (next: ActivityDraft) => {
       value = next;
       for (const listener of listeners) listener();

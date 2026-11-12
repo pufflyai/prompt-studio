@@ -83,8 +83,8 @@ export const historicalResourceActivitySchema = z
       issue("A passed review cannot contain unresolved findings.");
   });
 export const publishResourceActivitySchema = historicalResourceActivitySchema.refine(
-  (value) => value.body.trim().length > 0,
-  { message: "Activity requires a nonempty body." },
+  (value) => value.body.trim().length > 0 || (value.kind === "comment" && Boolean(value.attachmentIds?.length)),
+  { message: "Activity requires text or a comment attachment." },
 );
 export const resourceActivityEntrySchema = z.object({
   id: z.string(),

@@ -20,7 +20,7 @@ import { createResourceActivityStore, resourceActivityOwnerId } from "./resource
 
 export const createResourceActivityApi = (
   deps: ExtensionsRouteDeps,
-  input: { projectId: string; extensionId?: string; sessionId?: string },
+  input: { projectId: string; extensionId?: string; sessionId?: string; userInitiated?: boolean },
 ) => {
   const operations = { comment: "comment", change: "change", implementation: "outcome", review: "outcome" } as const;
   const bodyOwner = { workbenchId: input.projectId, extensionId: resourceActivityOwnerId };
@@ -46,7 +46,7 @@ export const createResourceActivityApi = (
         extensionId: input.extensionId,
       } satisfies ActivityAuthor;
     }
-    if (input.extensionId)
+    if (input.extensionId && !input.userInitiated)
       return {
         type: "system",
         id: input.extensionId,

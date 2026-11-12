@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { observeEventConnectionBudget } from "../helpers/event-connection-budget";
 import { getPlannerTicket } from "../helpers/planner-api";
 import { createResourceStreamFixture } from "../helpers/resource-stream-fixture";
@@ -169,4 +170,34 @@ test("retained tickets and files keep tools responsive while switching projects 
     body: JSON.stringify(budget.state(), null, 2),
     contentType: "application/json",
   });
+});
+
+// Critical: a selected file must be sendable without text and remain downloadable after reload.
+test("resource discussion sends file-only comments and retains the original attachment", async ({ page }, testInfo) => {
+  const uri = `pstdio://extension-resource/item/attachment?extensionId=test.stream-fixture&projectId=${fixture.projectId}`;
+  await prepareDashboard(page, fixture.projectId);
+  await page.goto(
+    `/projects/${fixture.projectId}/extensions/test.stream-fixture/discussion?resource=${encodeURIComponent(uri)}`,
+  );
+  const activity = page.locator('[aria-label="Resource activity"]');
+  const file = { name: "trace.txt", mimeType: "text/plain", buffer: Buffer.from("Original Activity evidence\n") };
+  const upload = activity.locator('input[type="file"]');
+  const send = activity.getByRole("button", { name: "Submit comment", exact: true });
+  await expect(send).toBeDisabled();
+  await upload.setInputFiles(file);
+  await expect(activity.getByRole("button", { name: "Remove trace.txt" })).toBeVisible();
+  await expect(send).toBeEnabled();
+  await activity.getByRole("button", { name: "Remove trace.txt" }).click();
+  await expect(send).toBeDisabled();
+  await upload.setInputFiles(file);
+  await expect(send).toBeEnabled();
+  await send.click();
+  await expect(activity.getByRole("button", { name: "trace.txt", exact: true })).toBeVisible();
+  await page.reload();
+  const downloadEvent = page.waitForEvent("download");
+  await activity.getByRole("button", { name: "trace.txt", exact: true }).click();
+  const download = await downloadEvent;
+  const saved = testInfo.outputPath("trace.txt");
+  await download.saveAs(saved);
+  expect(await readFile(saved)).toEqual(file.buffer);
 });

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { createActivityApi } from "../extensions/command-environment/activity";
 import { createResourceActivityApi } from "./resource-activity-api";
 import { createResourceActivityStore } from "./resource-activity-store";
 import { streamResourceActivity } from "./resource-activity-stream";
@@ -58,6 +59,21 @@ beforeAll(async () => {
   });
   ref = { projectId: project.id, extensionId: "example.activity-test", type: "ticket", id: "one" };
 });
+test("command changes preserve human UI authors without misattributing CLI and automation", async () => {
+  const sources = await app.deps.extensionService.listEnabledSourcesForProject(project.id);
+  const enabledSource = sources.find((source) => source.installedSource.extension_id === ref.extensionId)!;
+  for (const [source, type] of [
+    ["dashboard", "user"],
+    ["command-panel", "user"],
+    ["cli", "system"],
+    ["automation", "system"],
+  ] as const) {
+    const api = createActivityApi(app.deps, { projectId: project.id, enabledSource, source });
+    const entry = await api.publish({ ...ref, id: "authors" }, { key: source, kind: "change", body: "changed status" });
+    expect(entry.author.type).toBe(type);
+  }
+});
+
 test("Activity checks owner capabilities and permissions, preserves evidence, and excludes sessions", async () => {
   const api = createResourceActivityApi(app.deps, { projectId: project.id });
   const owner = createResourceActivityApi(app.deps, { projectId: project.id, extensionId: ref.extensionId });
@@ -93,6 +109,15 @@ test("Activity checks owner capabilities and permissions, preserves evidence, an
     body: "Status changed",
     changes: [{ field: "status", before: "ready", after: "in-progress" }],
   });
+  const userChange = await createResourceActivityApi(app.deps, {
+    projectId: project.id,
+    extensionId: ref.extensionId,
+    userInitiated: true,
+  }).publish(ref, { key: "user-change", kind: "change", body: "changed status" });
+  expect(userChange.author.type).toBe("user");
+  expect(userChange.author.id).not.toBe(ref.extensionId);
+  const fileOnly = await api.publish(ref, { key: "file-only", kind: "comment", body: "", attachmentIds: [file.id] });
+  expect((await api.get(ref, fileOnly.id)).attachments.map((item) => item.name)).toEqual([file.name]);
   const longBody = "Evidence ".repeat(40000);
   const long = await api.publish(ref, { key: "large-comment", kind: "comment", body: longBody });
   expect((await api.resolve(ref, long.id, true)).body).toBe(longBody);
@@ -178,7 +203,7 @@ test("Activity checks owner capabilities and permissions, preserves evidence, an
     body: JSON.stringify({ resource: ref }),
   });
   expect(response.status).toBe(200);
-  expect((await response.json()).items).toHaveLength(6);
+  expect((await response.json()).items).toHaveLength(8);
   const ready = Promise.withResolvers<void>();
   const updated = Promise.withResolvers<void>();
   let close = () => {};

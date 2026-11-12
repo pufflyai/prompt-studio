@@ -271,6 +271,7 @@ const executePrivateHandler = async (
       scope,
       input.navigationScope,
     );
+    ctx.activity = env.activityForInvocation?.(input.source) ?? ctx.activity;
     const value = await handler.handler(ctx, params);
     const elapsedMs = Date.now() - start;
     await state.dispatcher.dispatch(

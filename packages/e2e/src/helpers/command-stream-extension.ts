@@ -45,7 +45,9 @@ const resources = defineCommand({id:"resolve-resources",title:"Resolve resources
 const state = defineCommand({ id: "state", title: "State", run: () => ({ active, cancelled }) });
 const view = defineView({ id: "live", title: "Stream fixture", body: { kind: "webview", entry: packageAsset("./view.ts", import.meta.url), capabilities: ["commands.stream", "commands.execute"] } });
 const page = definePage({ id: "live", title: "Live", path: "live", mode: workbenchModes.project, main: { kind: "view", view: view.ref, cardinality: "one" }, slots: [] });
-export default defineExtension({ resourceKinds:[{id:"item",ref:{kind:"resource-kind",id:"item"},activity:{comments:true},resolveMany:resources.ref}], commands: [tail, progress, reject, plain, state, resources], middlewares: [guard], views: [view], pages: [page] });
+const discussionView = defineView({id:"discussion",title:"Discussion",body:{kind:"file",load:()=>({fileName:"discussion.md",mimeType:"text/markdown",content:"# Resource discussion",editable:false})}});
+const discussionPage = definePage({id:"discussion",title:"Discussion",path:"discussion",mode:workbenchModes.project,parent:page.ref,resource:{kinds:[{kind:"resource-kind",id:"item"}]},main:{kind:"view",view:discussionView.ref,cardinality:"one"},slots:[]});
+export default defineExtension({ resourceKinds:[{id:"item",ref:{kind:"resource-kind",id:"item"},activity:{comments:true},resolveMany:resources.ref}], commands: [tail, progress, reject, plain, state, resources], middlewares: [guard], views: [view,discussionView], pages: [page,discussionPage] });
 `,
   );
   writeFileSync(
