@@ -109,23 +109,29 @@ export const migrateExtensionIdentities = async (
   db: DbClient,
   options: { extensionId?: string; onConflict?: (error: ExtensionIdentityConflictError) => Promise<void> } = {},
 ) => {
-  if (
-    options.extensionId &&
-    !extensionIdentityRenames.some(({ from, to }) =>
-      [`${from.publisher}.${from.name}`, `${to.publisher}.${to.name}`].includes(options.extensionId!),
-    )
-  )
-    return;
+  const renames = extensionIdentityRenames.filter(
+    ({ from, to }) =>
+      !options.extensionId ||
+      [`${from.publisher}.${from.name}`, `${to.publisher}.${to.name}`].includes(options.extensionId),
+  );
+  if (!renames.length) return;
   const projects = await db.execute(sql`SELECT id FROM ${s.projects} p WHERE NOT EXISTS
     (SELECT 1 FROM ${s.storage_documents} d WHERE d.workbench_id = p.id AND d.extension_id = 'pstdio' AND d.document_id = ${markerId})`);
   const pending = projects.rows.map((row) => String(row.id));
-  const oldIds = extensionIdentityRenames.map(({ from }) => `${from.publisher}.${from.name}`);
+  const oldIds = renames.map(({ from }) => `${from.publisher}.${from.name}`);
+  const oldOwners = sql.join(
+    oldIds.map((id) => sql`${id}`),
+    sql`, `,
+  );
   const candidates = await db.execute(
     sql`SELECT DISTINCT extension_id FROM (${sql.join(
       [
-        ...projectTables.map(
+        ...(pending.length ? projectTables : []).map(
           (table) =>
-            sql`SELECT extension_id FROM ${table} WHERE workbench_id IN (${sql.join(pending.length ? pending.map((id) => sql`${id}`) : [sql`NULL`], sql`, `)}) AND ${ownerColumn} IN (${sql.join(
+            sql`SELECT extension_id FROM ${table} WHERE workbench_id IN (${sql.join(
+              pending.map((id) => sql`${id}`),
+              sql`, `,
+            )}) AND ${ownerColumn} IN (${sql.join(
               oldIds.map((id) => sql`${id}`),
               sql`, `,
             )})`,
@@ -141,8 +147,9 @@ export const migrateExtensionIdentities = async (
           oldIds.map((id) => sql`${id}`),
           sql`, `,
         )})`,
-        sql`SELECT source_owner AS extension_id FROM ${s.resource_anchors} UNION SELECT target_owner FROM ${s.resource_anchors}`,
-        sql`SELECT name AS extension_id FROM ${s.automation_principals} WHERE created_by = 'extension'`,
+        sql`SELECT source_owner AS extension_id FROM ${s.resource_anchors} WHERE source_owner IN (${oldOwners})
+          UNION SELECT target_owner FROM ${s.resource_anchors} WHERE target_owner IN (${oldOwners})`,
+        sql`SELECT name AS extension_id FROM ${s.automation_principals} WHERE created_by = 'extension' AND name IN (${oldOwners})`,
       ],
       sql` UNION ALL `,
     )}) candidates`,
@@ -152,10 +159,9 @@ export const migrateExtensionIdentities = async (
     WHERE last_error_json->>'code' = 'extension_identity_conflict'`);
   const gatedOwners = new Set(gated.rows.map((row) => String(row.extension_id)));
   let conflicted = false;
-  for (const { from: previous, to: canonical } of extensionIdentityRenames) {
+  for (const { from: previous, to: canonical } of renames) {
     const from = `${previous.publisher}.${previous.name}`;
     const to = `${canonical.publisher}.${canonical.name}`;
-    if (options.extensionId && options.extensionId !== from && options.extensionId !== to) continue;
     if (!presentOwners.has(from) && !gatedOwners.has(from) && !gatedOwners.has(to)) continue;
     try {
       await db.transaction(async (tx) => {
