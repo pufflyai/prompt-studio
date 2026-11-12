@@ -80,6 +80,7 @@ export function WidgetCard(props: WidgetCardProps) {
               </IconButton>
               <IconButton
                 aria-label={`Configure ${widget.title}`}
+                data-configure-widget={widget.id}
                 aria-pressed={selected}
                 size="xs"
                 variant="ghost"

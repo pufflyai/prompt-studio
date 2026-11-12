@@ -1,6 +1,6 @@
 import { Box, Button, HStack, Stack, Text, useSlotRecipe, VisuallyHidden } from "@chakra-ui/react";
 import { LayoutDashboard, Pencil, Plus } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { SelectionMenu } from "@/components/param-editor/inputs/selection-menu";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { SegmentedControl } from "@/components/primitives/segmented-control";
@@ -11,6 +11,9 @@ import { WidgetCard } from "./dashboard-widget";
 
 export function DashboardPrototype() {
   const styles = useSlotRecipe({ recipe: dashboardRecipe })();
+  const container = useRef<HTMLDivElement>(null);
+  const editButton = useRef<HTMLButtonElement>(null);
+  const applyButton = useRef<HTMLButtonElement>(null);
   const [size, setSize] = useState("desktop");
   const [saved, setSaved] = useState(initialWidgets);
   const [draft, setDraft] = useState<DashboardWidget[] | null>(null);
@@ -24,6 +27,14 @@ export function DashboardPrototype() {
     { id: "7", name: "Last 7 days" },
     { id: "3", name: "Last 3 days" },
   ];
+  const widgetButton = (id: string) =>
+    container.current?.querySelector<HTMLButtonElement>(`[data-configure-widget="${CSS.escape(id)}"]`);
+  const finishEditing = (next: DashboardWidget[]) => {
+    setSaved(next);
+    setDraft(null);
+    setSelectedId(null);
+    requestAnimationFrame(() => editButton.current?.focus());
+  };
 
   const move = (fromId: string, toId: string) => {
     if (!draft || fromId === toId) return;
@@ -67,7 +78,7 @@ export function DashboardPrototype() {
         />
       </HStack>
       <Box css={styles.preview} data-size={size} borderWidth="1px" borderColor="border.subtle">
-        <Box css={styles.root}>
+        <Box ref={container} css={styles.root}>
           <Box css={styles.toolbar}>
             <HStack gap="sm" minW="0">
               <LayoutDashboard aria-hidden />
@@ -104,28 +115,18 @@ export function DashboardPrototype() {
                     multiSelect={false}
                     onToggle={add}
                   />
+                  <Button onClick={() => finishEditing(saved)}>Cancel</Button>
                   <Button
-                    onClick={() => {
-                      setDraft(null);
-                      setSelectedId(null);
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
+                    ref={applyButton}
                     variant="primary"
                     disabled={widgets.some(({ title }) => !title.trim())}
-                    onClick={() => {
-                      setSaved(widgets);
-                      setDraft(null);
-                      setSelectedId(null);
-                    }}
+                    onClick={() => finishEditing(widgets)}
                   >
                     Apply
                   </Button>
                 </>
               ) : (
-                <Button onClick={() => setDraft(saved)}>
+                <Button ref={editButton} onClick={() => setDraft(saved)}>
                   <Pencil />
                   Edit dashboard
                 </Button>
@@ -173,11 +174,17 @@ export function DashboardPrototype() {
                     setDraft(widgets.map((widget) => (widget.id === updated.id ? updated : widget)))
                   }
                   onRemove={() => {
+                    const index = widgets.findIndex(({ id }) => id === selected.id);
+                    const next = widgets[index + 1] ?? widgets[index - 1];
                     setDraft(widgets.filter(({ id }) => id !== selected.id));
                     setSelectedId(null);
                     setAnnouncement(`${selected.title} removed.`);
+                    requestAnimationFrame(() => (next ? widgetButton(next.id) : applyButton.current)?.focus());
                   }}
-                  onClose={() => setSelectedId(null)}
+                  onClose={() => {
+                    setSelectedId(null);
+                    widgetButton(selected.id)?.focus();
+                  }}
                 />
               </Box>
             )}
