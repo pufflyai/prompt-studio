@@ -1,18 +1,18 @@
 import { resolve } from "node:path";
 
 const WORKING_TREE_EXTENSIONS = [
-  ["pstdio-cloud", "extensions/pstdio-cloud"],
-  ["pstdio-home", "extensions/pstdio-home"],
-  ["pstdio-session-browser", "extensions/pstdio-session-browser"],
-  ["pstdio-workspaces", "extensions/pstdio-workspaces"],
+  ["cloud", "extensions/pstdio-cloud"],
+  ["home", "extensions/pstdio-home"],
+  ["session-browser", "extensions/pstdio-session-browser"],
+  ["workspaces", "extensions/pstdio-workspaces"],
   ["harness-claude-code", "extensions/harness-claude-code"],
   ["harness-codex", "extensions/harness-codex"],
   ["harness-open-code", "extensions/harness-open-code"],
-  ["pstdio-base-themes", "extensions/pstdio-base-themes"],
-  ["pstdio-notes", "extensions/pstdio-notes"],
-  ["pstdio-performance", "extensions/pstdio-performance"],
-  ["pstdio-planner", "extensions/pstdio-planner"],
-  ["pstdio-skills", "extensions/pstdio-skills"],
+  ["base-themes", "extensions/pstdio-base-themes"],
+  ["notes", "extensions/pstdio-notes"],
+  ["performance", "extensions/pstdio-performance"],
+  ["planner", "extensions/pstdio-planner"],
+  ["skills", "extensions/pstdio-skills"],
   ["extension-lab", "extensions/extension-lab"],
   ["local-example", "infra/local/extensions/local-example"],
 ] as const;
