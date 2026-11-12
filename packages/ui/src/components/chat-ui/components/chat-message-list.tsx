@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import { defaultRangeExtractor } from "@tanstack/react-virtual";
+import { defaultRangeExtractor, measureElement } from "@tanstack/react-virtual";
 import { useStickToBottomContext } from "use-stick-to-bottom";
 import { useVirtualizer } from "@/utils/use-virtualizer";
 import { useMessageAnimationKeys } from "./chat-message-animation";
@@ -24,6 +24,7 @@ interface ChatMessageListProps {
 const ESTIMATED_MESSAGE_HEIGHT = 360;
 const VIRTUAL_LIST_OVERSCAN = 4;
 const VIRTUAL_LIST_GAP = 8;
+const retainTailOffset = () => false;
 
 export const ChatMessageList = (props: ChatMessageListProps) => {
   const {
@@ -37,7 +38,7 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
     onForkMessage,
     forkDisabledReason,
   } = props;
-  const { scrollRef } = useStickToBottomContext();
+  const { scrollRef, state } = useStickToBottomContext();
   const rows = buildChatMessageRows(leadingResponses, groups);
   const animatedKeys = useMessageAnimationKeys(rows.map((row) => row.message.animationKey ?? row.key));
   const initialHeight = scrollRef.current?.clientHeight || 1;
@@ -46,6 +47,12 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
     count: rows.length,
     getScrollElement: () => scrollRef.current as HTMLDivElement | null,
     estimateSize: (index) => ESTIMATED_MESSAGE_HEIGHT + (hasChatRowGap(rows, index) ? VIRTUAL_LIST_GAP : 0),
+    measureElement: (element, entry, instance) => {
+      // Read the live follower at measurement time; lock changes need not render this component.
+      // The virtualizer retains its normal reader anchoring when the conversation stops following.
+      instance.shouldAdjustScrollPositionOnItemSizeChange = state.isAtBottom ? retainTailOffset : undefined;
+      return measureElement(element, entry, instance);
+    },
     getItemKey: (index) => rows[index].message.animationKey ?? rows[index].key,
     overscan: VIRTUAL_LIST_OVERSCAN,
     initialRect: { width: 0, height: initialHeight },
