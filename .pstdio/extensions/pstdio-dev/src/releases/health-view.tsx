@@ -1,204 +1,226 @@
-import { Box, Button, HStack, Stack, Table, Text } from "@chakra-ui/react";
-import { AlertMessage, EmptyState, psTheme } from "@pstdio/ui";
-import { barY, defineChart, stack } from "@tanstack/charts";
-import { Chart } from "@tanstack/charts/react";
-import { scaleBand } from "@tanstack/charts/scales/band";
-import { scaleLinear } from "@tanstack/charts/scales/linear";
-import { tooltip } from "@tanstack/charts/tooltip";
+import { Box, Button, HStack, Icon, IconButton, Stack, Tabs, Text } from "@chakra-ui/react";
+import { AlertMessage, EmptyState } from "@pstdio/ui";
+import { DataTable, type RowData } from "@pstdio/ui/data-table";
+import { Github } from "lucide-react";
 import { useState } from "react";
 import { PageFrame } from "../webview/page-frame";
-import type { HealthHistory } from "./types";
+import {
+  CategoryBreakdown,
+  DurationPlot,
+  formatDuration,
+  HealthPlot,
+  hasCategories,
+  quarantinedTests,
+  TotalTestsPlot,
+} from "./health-charts";
+import type { HealthHistory, ReleaseHealth } from "./types";
 
 export interface HealthViewProps extends HealthHistory {
   refreshing: boolean;
   onRefresh: () => void;
   onOpen: (url: string) => void;
 }
-const color = (value: string) => psTheme.token.var(`colors.${value}`);
 
-const HealthChart = (props: { runs: HealthHistory["runs"]; onChoose: (id: number) => void }) => {
-  const { runs, onChoose } = props;
-  const bars = runs.flatMap((entry) => [
-    { run: String(entry.id), entry, outcome: "Passed", count: entry.counts.passed },
-    { run: String(entry.id), entry, outcome: "Failed", count: entry.counts.failed },
-  ]);
-  const definition = defineChart({
-    marks: [
-      barY(bars, {
-        x: "run",
-        y: "count",
-        z: "outcome",
-        layout: stack(),
-        maxThickness: 64,
-        fill: (item) => color(item.outcome === "Passed" ? "fg.success" : "fg.error"),
-        stroke: (item) => color(item.entry.counts.failed ? "fg.error" : "transparent"),
-        strokeWidth: 1,
-      }),
-    ],
-    scales: {
-      x: {
-        scale: () =>
-          scaleBand<string>()
-            .domain(runs.map((run) => String(run.id)))
-            .padding(0.2),
-        axis: {
-          ticks: {
-            format: (id: string) =>
-              new Date(runs.find((run) => String(run.id) === id)!.createdAt).toLocaleString(undefined, {
-                month: "short",
-                day: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              }),
-          },
-        },
-      },
-      y: { scale: scaleLinear, nice: true, grid: true },
-    },
-    focus: "group-x",
-    tooltip: {
-      use: tooltip,
-      anchor: "group-center",
-      content: (points) => {
-        const run = points[0]!.datum.entry;
-        return {
-          title: `${new Date(run.createdAt).toLocaleString()} · ${run.sha.slice(0, 7)}`,
-          rows: [
-            { label: "Passed", value: run.counts.passed.toLocaleString(), color: color("fg.success") },
-            { label: "Failed", value: run.counts.failed.toLocaleString(), color: color("fg.error") },
-            { label: "Skipped / unrun", value: run.counts.skipped.toLocaleString() },
-            { label: "Verification", value: run.conclusion ?? run.status },
-            { label: "Publication", value: run.published ? "Published" : "Unpublished" },
-            { label: "Reported test jobs", value: `${run.reportedJobs}/${run.testJobs}` },
-          ],
-        };
-      },
-    },
-  });
-  return (
-    <Box color="fg.muted" textStyle="label/XS">
-      <Chart
-        definition={definition}
-        height={280}
-        ariaLabel="Stacked passed and failed tests by release run, oldest first; red outlines mark runs with failures"
-        onFocusChange={(focused) => {
-          if (focused) onChoose(Number(focused.datum.run));
+const RunsTable = (props: {
+  runs: ReleaseHealth[];
+  selected?: ReleaseHealth;
+  onChoose: (id: number) => void;
+  onOpen: (url: string) => void;
+}) => {
+  const { runs, selected, onChoose, onOpen } = props;
+  const rows: RowData[] = runs.map((run) => ({
+    id: run.id,
+    run: `${new Date(run.createdAt).toLocaleString()} · ${run.sha.slice(0, 7)}`,
+    verification: run.status === "completed" ? (run.conclusion ?? "—") : run.status.replaceAll("_", " "),
+    passed: run.counts.reports ? run.counts.passed.toLocaleString() : "—",
+    failed: run.counts.reports ? run.counts.failed.toLocaleString() : "—",
+    duration: run.runDurationSeconds === undefined ? "—" : formatDuration(run.runDurationSeconds),
+    evidence: `${run.reportedJobs}/${run.testJobs} test jobs${run.pendingJobs ? ` · ${run.pendingJobs} pending` : ""}`,
+    publication: run.published ? "Published" : "Unpublished",
+    github: (
+      <IconButton
+        aria-label={`Open run ${run.id} on GitHub`}
+        size="2xs"
+        variant="ghost"
+        onClick={(event) => {
+          event.stopPropagation();
+          onOpen(run.url);
         }}
-      />
-    </Box>
+      >
+        <Icon as={Github} boxSize="14px" />
+      </IconButton>
+    ),
+  }));
+  return (
+    <DataTable
+      data={rows}
+      hiddenColumns={["id"]}
+      getRowId={(row) => String(row.id)}
+      initialPageSize={10}
+      defaultSettings={{ rowNumbers: false }}
+      compactHeaders={{
+        run: "Run",
+        verification: "Verification",
+        passed: "Passed",
+        failed: "Failed",
+        duration: "Duration",
+        evidence: "Evidence",
+        publication: "Publication",
+        github: "",
+      }}
+      columnIcons={{ github: <Icon as={Github} boxSize="14px" /> }}
+      filterableColumns={["run", "verification", "publication"]}
+      activeRowId={selected ? String(selected.id) : null}
+      enableRowActivation
+      onRowClick={(row) => onChoose(Number(row.id))}
+      toolbarStorageKey="release-health-runs"
+      itemLabel="run"
+    />
+  );
+};
+
+const RunDetail = (props: { run: ReleaseHealth; onOpen: (url: string) => void }) => {
+  const { run, onOpen } = props;
+  return (
+    <Stack gap="sm">
+      <HStack>
+        <Text textStyle="label/M/medium">
+          Run {run.id}, attempt {run.attempt}
+        </Text>
+        <Button size="xs" variant="ghost" onClick={() => onOpen(run.url)}>
+          Open on GitHub
+        </Button>
+      </HStack>
+      <CategoryBreakdown run={run} />
+      {run.failedJobs.map((job) => (
+        <Button
+          key={job.url}
+          size="xs"
+          variant="ghost"
+          justifyContent="flex-start"
+          color="fg.error"
+          onClick={() => onOpen(job.url)}
+        >
+          {job.name}
+        </Button>
+      ))}
+      {run.errors.length ? (
+        <AlertMessage status="warning" title="Some test evidence is unavailable">
+          {run.errors.join("\n")}
+        </AlertMessage>
+      ) : null}
+      <Text textStyle="label/S/regular" color="fg.muted">
+        {run.counts.skipped.toLocaleString()} skipped or unrun tests.{" "}
+        {run.testJobs - run.reportedJobs - run.pendingJobs} finished test jobs without summaries.
+      </Text>
+    </Stack>
   );
 };
 
 export const HealthView = (props: HealthViewProps) => {
-  const { runs, syncedAt, error, refreshing, onRefresh, onOpen } = props;
+  const { runs, error, refreshing, onRefresh, onOpen } = props;
+  const [tab, setTab] = useState("overview");
   const [chosen, setChosen] = useState<number>();
   const selected = runs.find((run) => run.id === chosen) ?? runs.at(-1);
   const measured = runs.filter((run) => run.counts.reports > 0);
+  const uncategorized = measured.filter((run) => !hasCategories(run)).length;
+  const empty = (
+    <EmptyState
+      title={refreshing ? "Collecting release results" : "No release results yet"}
+      description="Refresh to read release verification results from GitHub."
+    />
+  );
   return (
-    <PageFrame
-      toolbar={
-        <>
-          <HStack gap="md" flex="1" textStyle="label/S/regular">
-            <Text color="fg.success">Passed tests</Text>
-            <Text color="fg.error">Failed tests</Text>
-            {syncedAt ? <Text color="fg.muted">Updated {new Date(syncedAt).toLocaleString()}</Text> : null}
-          </HStack>
-          <Button size="xs" variant="ghost" loading={refreshing} onClick={onRefresh}>
-            Refresh
-          </Button>
-        </>
-      }
+    <Tabs.Root
+      value={tab}
+      onValueChange={(details) => setTab(details.value)}
+      size="sm"
+      h="full"
+      minH="0"
+      display="flex"
+      flexDirection="column"
     >
-      {error ? (
-        <AlertMessage status="error" title="Release results could not be refreshed">
-          {error}
-        </AlertMessage>
-      ) : null}
-      {!runs.length ? (
-        <EmptyState
-          title={refreshing ? "Collecting release results" : "No release results yet"}
-          description="Refresh to read release verification results from GitHub."
-        />
-      ) : (
-        <>
-          {measured.length ? <HealthChart runs={measured} onChoose={setChosen} /> : null}
-          <Text textStyle="label/S/regular" color="fg.muted">
-            Counts include quarantined cases. Missing reports and unfinished jobs are shown below.
-          </Text>
-          <Table.Root size="sm">
-            <Table.Header>
-              <Table.Row>
-                <Table.ColumnHeader>Run</Table.ColumnHeader>
-                <Table.ColumnHeader>Verification</Table.ColumnHeader>
-                <Table.ColumnHeader>Passed</Table.ColumnHeader>
-                <Table.ColumnHeader>Failed</Table.ColumnHeader>
-                <Table.ColumnHeader>Evidence</Table.ColumnHeader>
-                <Table.ColumnHeader>Publication</Table.ColumnHeader>
-              </Table.Row>
-            </Table.Header>
-            <Table.Body>
-              {[...runs].reverse().map((run) => (
-                <Table.Row key={run.id}>
-                  <Table.Cell>
-                    <Button
-                      size="xs"
-                      variant="ghost"
-                      aria-pressed={selected?.id === run.id}
-                      onClick={() => setChosen(run.id)}
-                    >
-                      {new Date(run.createdAt).toLocaleString()} · {run.sha.slice(0, 7)}
-                    </Button>
-                  </Table.Cell>
-                  <Table.Cell>
-                    {run.status === "completed" ? run.conclusion : run.status.replaceAll("_", " ")}
-                  </Table.Cell>
-                  <Table.Cell>{run.counts.reports ? run.counts.passed.toLocaleString() : "—"}</Table.Cell>
-                  <Table.Cell color={run.counts.failed ? "fg.error" : undefined}>
-                    {run.counts.reports ? run.counts.failed.toLocaleString() : "—"}
-                  </Table.Cell>
-                  <Table.Cell>
-                    {run.reportedJobs}/{run.testJobs} test jobs{run.pendingJobs ? ` · ${run.pendingJobs} pending` : ""}
-                  </Table.Cell>
-                  <Table.Cell>{run.published ? "Published" : "Unpublished"}</Table.Cell>
-                </Table.Row>
-              ))}
-            </Table.Body>
-          </Table.Root>
-          {selected ? (
-            <Stack gap="sm">
-              <HStack>
-                <Text textStyle="label/M/medium">
-                  Run {selected.id}, attempt {selected.attempt}
-                </Text>
-                <Button size="xs" variant="ghost" onClick={() => onOpen(selected.url)}>
-                  Open on GitHub
-                </Button>
-              </HStack>
-              {selected.failedJobs.map((job) => (
-                <Button
-                  key={job.url}
-                  size="xs"
-                  variant="ghost"
-                  justifyContent="flex-start"
-                  color="fg.error"
-                  onClick={() => onOpen(job.url)}
-                >
-                  {job.name}
-                </Button>
-              ))}
-              {selected.errors.length ? (
-                <AlertMessage status="warning" title="Some test evidence is unavailable">
-                  {selected.errors.join("\n")}
-                </AlertMessage>
+      <PageFrame
+        headerPadding="xs"
+        contentPadding={tab === "runs" ? "none" : "lg"}
+        toolbar={
+          <>
+            <Tabs.List>
+              <Tabs.Trigger value="overview">Overview</Tabs.Trigger>
+              <Tabs.Trigger value="runs">Runs</Tabs.Trigger>
+            </Tabs.List>
+            <Button size="xs" variant="ghost" loading={refreshing} onClick={onRefresh} ml="auto">
+              Refresh
+            </Button>
+          </>
+        }
+      >
+        {error ? (
+          <AlertMessage status="error" title="Release results could not be refreshed">
+            {error}
+          </AlertMessage>
+        ) : null}
+        <Tabs.Content value="overview">
+          {!runs.length ? (
+            empty
+          ) : (
+            <Stack gap="lg">
+              {measured.length ? (
+                <Stack gap="lg">
+                  <Stack gap="2xs">
+                    <TotalTestsPlot runs={measured} onChoose={setChosen} />
+                    {uncategorized ? (
+                      <Text textStyle="label/XS" color="fg.muted">
+                        {uncategorized === 1
+                          ? "1 run shows only its total in gray because its category split has not refreshed yet."
+                          : `${uncategorized} runs show only their totals in gray because their category splits have not refreshed yet.`}
+                      </Text>
+                    ) : null}
+                  </Stack>
+                  <HealthPlot
+                    runs={measured}
+                    title="Failed tests"
+                    fill="fg.error"
+                    value={(run) => run.counts.failed}
+                    ariaLabel="Failed tests by release run, oldest first"
+                    onChoose={setChosen}
+                  />
+                  <HealthPlot
+                    runs={measured}
+                    title="Quarantined tests"
+                    fill="fg.warning"
+                    value={quarantinedTests}
+                    ariaLabel="Quarantined tests by release run, oldest first"
+                    onChoose={setChosen}
+                  />
+                  {measured.some((run) => run.runDurationSeconds !== undefined) ? (
+                    <DurationPlot runs={measured} onChoose={setChosen} />
+                  ) : null}
+                </Stack>
               ) : null}
               <Text textStyle="label/S/regular" color="fg.muted">
-                {selected.counts.skipped.toLocaleString()} skipped or unrun tests.{" "}
-                {selected.testJobs - selected.reportedJobs - selected.pendingJobs} finished test jobs without summaries.
+                Counts include quarantined cases. Missing reports and unfinished jobs are listed in Runs.
               </Text>
             </Stack>
-          ) : null}
-        </>
-      )}
-    </PageFrame>
+          )}
+        </Tabs.Content>
+        <Tabs.Content value="runs">
+          {!runs.length ? (
+            empty
+          ) : (
+            <Stack gap="lg">
+              <Box h="32rem" minW="0" overflow="hidden">
+                <RunsTable runs={runs} selected={selected} onChoose={setChosen} onOpen={onOpen} />
+              </Box>
+              {selected ? (
+                <Box px="lg" pb="lg">
+                  <RunDetail run={selected} onOpen={onOpen} />
+                </Box>
+              ) : null}
+            </Stack>
+          )}
+        </Tabs.Content>
+      </PageFrame>
+    </Tabs.Root>
   );
 };

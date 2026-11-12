@@ -116,13 +116,13 @@ const performanceTree = defineView({
                 target: { kind: "page", page: comparePage.ref },
               },
               { id: "runs", label: runs.title, icon: runs.icon, target: { kind: "page", page: runsPage.ref } },
-              {
-                id: "release-health",
-                label: health.title,
-                icon: health.icon,
-                target: { kind: "page", page: healthPage.ref },
-              },
             ],
+          },
+          {
+            id: "release-health",
+            label: health.title,
+            icon: health.icon,
+            target: { kind: "page", page: healthPage.ref },
           },
         ],
       },
@@ -135,7 +135,6 @@ const healthPage = definePage({
   icon: health.icon,
   path: "release-health",
   mode: workbenchModes.project,
-  parent: performancePage.ref,
   main: { kind: "view", view: health.ref, cardinality: "one", presentation: "page" },
   slots: [],
 });

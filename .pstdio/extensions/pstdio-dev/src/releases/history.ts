@@ -1,6 +1,14 @@
 import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
 import { gh, ghJson } from "../benchmarks/github";
-import { countTests, isTestJob, type TestCounts } from "./test-counts";
+import {
+  countTests,
+  emptyCounts,
+  isQuarantineJob,
+  isTestJob,
+  type TestCategoryCounts,
+  type TestCounts,
+  testJobCategory,
+} from "./test-counts";
 import type { HealthHistory } from "./types";
 
 type Context = Pick<ExtensionContextBase, "process" | "extensionFiles">;
@@ -22,6 +30,8 @@ interface ApiRun {
   id: number;
   run_attempt: number;
   created_at: string;
+  run_started_at: string;
+  updated_at: string;
   head_sha: string;
   html_url: string;
   display_title: string;
@@ -59,7 +69,8 @@ const readRun = async (ctx: Context, run: ApiRun) => {
   )
     return;
   const selected = jobs.filter((job) => isTestJob(job.name) && job.conclusion !== "skipped");
-  const counts: TestCounts = { passed: 0, failed: 0, skipped: 0, reports: 0 };
+  const counts = emptyCounts();
+  const categories: TestCategoryCounts = {};
   const errors: string[] = [];
   let reportedJobs = 0;
   for (const job of selected.filter((entry) => entry.status === "completed")) {
@@ -87,10 +98,15 @@ const readRun = async (ctx: Context, run: ApiRun) => {
       }
       if (result.reports) reportedJobs++;
       for (const key of ["passed", "failed", "skipped", "reports"] as const) counts[key] += result[key];
+      if (isQuarantineJob(job.name)) counts.quarantined = (counts.quarantined ?? 0) + result.passed + result.failed;
+      const category = testJobCategory(job.name);
+      categories[category] = (categories[category] ?? 0) + result.passed + result.failed + result.skipped;
     } catch (error) {
       errors.push(`${job.name}: ${String(error)}`);
     }
   }
+  const started = Date.parse(run.run_started_at || run.created_at);
+  const finished = Date.parse(run.updated_at);
   return {
     id: run.id,
     attempt: run.run_attempt,
@@ -101,6 +117,11 @@ const readRun = async (ctx: Context, run: ApiRun) => {
     status: run.status,
     conclusion: run.conclusion,
     counts,
+    categories,
+    runDurationSeconds:
+      run.status === "completed" && Number.isFinite(started) && Number.isFinite(finished) && finished > started
+        ? Math.round((finished - started) / 1000)
+        : undefined,
     testJobs: selected.length,
     reportedJobs,
     pendingJobs: selected.filter((job) => job.status !== "completed").length,
@@ -128,7 +149,10 @@ export const syncHealth = async (ctx: Context, changed: () => Promise<unknown>) 
         previous?.status === "completed" &&
         previous.attempt === run.run_attempt &&
         !previous.errors.length &&
-        previous.reportedJobs === previous.testJobs
+        previous.reportedJobs === previous.testJobs &&
+        previous.counts.quarantined !== undefined &&
+        previous.categories !== undefined &&
+        previous.runDurationSeconds !== undefined
       )
         continue;
       const next = await readRun(ctx, run).catch((error: unknown) =>
@@ -148,7 +172,8 @@ export const syncHealth = async (ctx: Context, changed: () => Promise<unknown>) 
               title: run.display_title,
               status: run.status,
               conclusion: run.conclusion,
-              counts: { passed: 0, failed: 0, skipped: 0, reports: 0 },
+              counts: emptyCounts(),
+              categories: {},
               testJobs: 0,
               reportedJobs: 0,
               pendingJobs: 0,
