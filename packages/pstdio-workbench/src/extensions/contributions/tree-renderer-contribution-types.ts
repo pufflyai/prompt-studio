@@ -46,7 +46,6 @@ export interface ExtensionTreeNode {
   iconColor?: string;
   fileName?: string;
   showContextMenuTrigger?: boolean;
-  indicator?: import("@pstdio/sdk/extensions").TreeNode["indicator"];
   badge?: import("@pstdio/sdk/extensions").TreeNode["badge"];
   iconTooltip?: string;
   tooltip?: string;

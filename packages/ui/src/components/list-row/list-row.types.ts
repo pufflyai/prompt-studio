@@ -77,7 +77,6 @@ export interface ListRowItem {
   description?: ReactNode;
   icon?: ReactNode;
   iconColor?: IconProps["color"];
-  /** Persistent marker at the trailing edge, separate from the leading resource icon. */
   indicator?: {
     icon: ReactNode;
     color?: IconProps["color"];

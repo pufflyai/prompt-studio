@@ -1,5 +1,4 @@
 import {
-  type CommandContext,
   defineCommand,
   type ExtensionContextBase,
   type ExtensionSession,
@@ -10,61 +9,27 @@ import {
   type StorageRecordIndex,
 } from "@pstdio/sdk/extensions";
 
-export const sessionAttentionChanged = eventRef<{ projectId: string }>({
+export const sessionPinsChanged = eventRef<{ projectId: string }>({
   extensionId: "pstdio.pstdio-session-browser",
-  id: "attention.changed",
+  id: "pins.changed",
 });
 
-export const sessionAttentionIndex: StorageRecordIndex = {
+export const sessionPinsIndex: StorageRecordIndex = {
   name: "pinned-sessions",
   fields: { sessionId: { path: ["pinnedSessionId"], type: "string" }, pinned: { path: ["pinned"], type: "boolean" } },
   equality: ["pinned"],
   orderBy: [{ field: "sessionId", direction: "asc" }],
 };
-export const sessionActivity = (session: ExtensionSession) =>
-  Math.max(
-    0,
-    ...[session.createdAt, session.updatedAt, session.lastRequestStarted, session.lastRequestEnded]
-      .filter((value): value is string => typeof value === "string")
-      .map((value) => Date.parse(value))
-      .filter(Number.isFinite),
-  );
 const recordValue = (value: unknown) =>
   value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 const pinKey = (storage: ExtensionStorageApi, id: string) => storage.records.id(`pin:${id}`);
-const seenKey = (storage: ExtensionStorageApi, id: string) => storage.records.id(`seen:${id}`);
-
-export const readSessionAttention = async (ctx: ExtensionContextBase, sessions: ExtensionSession[]) => {
+export const readSessionPins = async (ctx: ExtensionContextBase, sessions: ExtensionSession[]) => {
   const storage = ctx.storage.scope({ type: "project" });
-  const records = await storage.records.readMany(
-    sessions.flatMap((session) => [pinKey(storage, session.id), seenKey(storage, session.id)]),
-  );
+  const records = await storage.records.readMany(sessions.map((session) => pinKey(storage, session.id)));
   const byId = new Map(records.map((record) => [record.recordId, record]));
   return new Map(
-    sessions.map((session) => {
-      const pinned = recordValue(byId.get(pinKey(storage, session.id))?.value).pinned === true;
-      const seen = recordValue(byId.get(seenKey(storage, session.id))?.value).activity;
-      return [session.id, { pinned, unread: typeof seen === "number" && seen < sessionActivity(session) }];
-    }),
+    sessions.map((session) => [session.id, recordValue(byId.get(pinKey(storage, session.id))?.value).pinned === true]),
   );
-};
-export const markSessionSeen = async (ctx: CommandContext, session: ExtensionSession) => {
-  const storage = ctx.storage.scope({ type: "project" });
-  if (ctx.signal.aborted) return;
-  const recordId = seenKey(storage, session.id);
-  const previous = await storage.records.read(recordId);
-  if (ctx.signal.aborted) return;
-  const activity = sessionActivity(session);
-  if (
-    typeof recordValue(previous.value).activity === "number" &&
-    Number(recordValue(previous.value).activity) >= activity
-  )
-    return;
-  await storage.records.commit({
-    operationId: storage.ids.create(),
-    edits: [{ recordId, replace: { activity } }],
-  });
-  await ctx.events.emit(sessionAttentionChanged, { projectId: ctx.projectId });
 };
 export const pinSession = defineCommand({
   id: "pin",
@@ -87,7 +52,7 @@ export const pinSession = defineCommand({
         },
       ],
     });
-    await ctx.events.emit(sessionAttentionChanged, { projectId: ctx.projectId });
+    await ctx.events.emit(sessionPinsChanged, { projectId: ctx.projectId });
   },
 });
 export const readPinnedSessions = async (
@@ -98,7 +63,7 @@ export const readPinnedSessions = async (
 ) => {
   const storage = ctx.storage.scope({ type: "project" });
   const page = await storage.records.query({
-    index: sessionAttentionIndex.name,
+    index: sessionPinsIndex.name,
     where: { field: "pinned", op: "eq", value: true },
     limit: 50,
     ...(cursor ? { cursor } : {}),

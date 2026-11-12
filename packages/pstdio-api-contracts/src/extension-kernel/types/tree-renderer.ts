@@ -87,8 +87,6 @@ export interface TreeNode {
   showContextMenuTrigger?: boolean;
   /** Trailing count, using the same badge as notification counts. */
   badge?: { label: string; color?: string };
-  /** Small activity or status marker beside the row. */
-  indicator?: { icon: string; color?: string; label?: Localizable<string>; hideWhenVisible?: boolean };
   iconTooltip?: string;
   /** Shown while the pointer rests on the row or the row has keyboard focus. `iconTooltip` covers only the icon. */
   tooltip?: string;

@@ -393,7 +393,6 @@ test("cancelling while presence and queue reads are pending owns both rejections
     overrides: {
       signal: controller.signal,
       sessions: {
-        get: async () => session,
         retainResources: async () => ({
           close: () => {
             closed++;

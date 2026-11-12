@@ -19,7 +19,6 @@ import { recoverNativeInputs } from "./native-recovery";
 import { readQueue } from "./queue-snapshot";
 import { sessionId } from "./resource";
 import { selectedHarness } from "./selection";
-import { markSessionSeen } from "./session-attention";
 import { readSessionSnapshot } from "./snapshot";
 
 type ChatWatchUpdate =
@@ -49,12 +48,6 @@ const waitForRefresh = (signal: AbortSignal) =>
     if (signal.aborted) finish();
     else signal.addEventListener("abort", finish, { once: true });
   });
-
-const markVisibleSessionSeen = async (ctx: CommandContext, id: string) => {
-  const session = await ctx.sessions.get(id);
-  if (!session) throw new Error("Session not found.");
-  await markSessionSeen(ctx, session);
-};
 
 type IdleTurn = { backgroundTasks: { description: string }[] } | null;
 
@@ -211,9 +204,6 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
   };
   try {
     while (!ctx.signal.aborted) {
-      // Visibility owns this watch. A slow workspace/queue read must not keep an
-      // opened conversation marked unread, including when a retained view reopens.
-      await markVisibleSessionSeen(ctx, id);
       const queuedAt = queueClock;
       const runAt = runClock;
       const pendingQueue = readQueue(ctx, id);
@@ -239,7 +229,6 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
         delete snapshot.streamingStartedAt;
       }
       await write(snapshot);
-      await markSessionSeen(ctx, session);
       await recoverNativeInputs(ctx, id, session, (recoverDraft) => writeEvent({ recoverDraft }), emittedRecovery);
       if (ctx.signal.aborted) break;
       if (!streamActive && (!connected || retryStream || snapshot.streamingStartedAt !== lastConnectedRun))

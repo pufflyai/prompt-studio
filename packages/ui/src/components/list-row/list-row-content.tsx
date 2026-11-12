@@ -174,6 +174,13 @@ const RowContent = (props: RowContentProps & { labelId: string; onToggleExpand?:
               {item.icon}
             </Box>
           ) : null}
+          {item.indicator ? (
+            <Tooltip content={item.indicator.tooltip} disabled={!item.indicator.tooltip}>
+              <Box color={item.indicator.color ?? "fg.muted"} flexShrink={0}>
+                {item.indicator.icon}
+              </Box>
+            </Tooltip>
+          ) : null}
           <RowLabel labelId={labelId} label={item.label} textStyle={labelTextStyle} color={labelColor} />
         </HStack>
         <RowDescription
@@ -237,13 +244,6 @@ export const ListRowContent = (props: {
             item.actionsVisibility === "always" || (showContextMenuTrigger && (item.contextMenuItems?.length ?? 0) > 0)
           }
         />
-      ) : null}
-      {item.indicator ? (
-        <Tooltip content={item.indicator.tooltip} disabled={!item.indicator.tooltip}>
-          <Box color={item.indicator.color ?? "fg.muted"} flexShrink={0} display="flex" alignItems="center">
-            {item.indicator.icon}
-          </Box>
-        </Tooltip>
       ) : null}
     </>
   );

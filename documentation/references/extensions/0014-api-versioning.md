@@ -90,8 +90,6 @@ Inline data-table sparkline and bar-chart renderers and the optional saved
 `rowHeight` setting also share the coordinated API 0.4.0 step. Existing columns
 and saved views keep their behavior. See [inline charts and row height](0004-contribution-api.md#inline-charts-and-row-height-on-main).
 
-Optional `TreeNode.indicator` activity icons and labels share API 0.4.0 on `main`. Older hosts ignore this presentation field. Publish the supporting SDK before separately released extensions adopt it.
-
 ### Which version each check uses
 
 | Check | Where it runs | Extension API version it compares with |

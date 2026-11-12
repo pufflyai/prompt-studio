@@ -1,10 +1,5 @@
 import { expect, test } from "bun:test";
-import type {
-  HarnessContext,
-  HarnessEventSink,
-  JsonPatch,
-  SessionMessage,
-} from "@pstdio/sdk/extensions";
+import type { HarnessContext, HarnessEventSink, JsonPatch, SessionMessage } from "@pstdio/sdk/extensions";
 import { createFakeHarness } from "./fake-harness";
 
 const ctx: HarnessContext = {

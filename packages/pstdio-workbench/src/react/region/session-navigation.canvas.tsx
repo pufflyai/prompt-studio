@@ -260,7 +260,6 @@ const SessionNavigation = ({ composer = false }: { composer?: boolean }) => {
                 id: "linked-session",
                 label: "Linked session",
                 resource: session,
-                indicator: { icon: "dot", color: "fg.info", label: "New activity", hideWhenVisible: true },
                 canHide: true,
                 target: { kind: "panel", panel, resource: session },
               },

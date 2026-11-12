@@ -1,7 +1,6 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import { nativeSubmissionIndex } from "./native-submission";
-import { markSessionSeen, readSessionAttention } from "./session-attention";
 import { watchConversation } from "./watch";
 
 const session = {
@@ -81,43 +80,5 @@ test("a failed refresh cancels its live subscription and releases retained resou
   } finally {
     controller.abort();
     await watching;
-  }
-});
-
-test("opening and reopening a visible session clears new activity before slow chat details load", async () => {
-  const storage = createMemoryStorage({ indexes: [nativeSubmissionIndex] });
-  for (const updatedAt of ["2026-11-11T10:00:00Z", "2026-11-11T11:00:00Z"]) {
-    const controller = new AbortController();
-    const entered = Promise.withResolvers<void>();
-    const pending = Promise.withResolvers<void>();
-    const current = { ...session, updatedAt };
-    const ctx = makeCommandContext({
-      storage,
-      params: {},
-      overrides: {
-        signal: controller.signal,
-        sessions: {
-          get: async () => current,
-          retainResources: async () => ({ close() {} }),
-          getQueuedMessages: async () => ({ messages: [] }),
-          getExecutionState: async () => {
-            entered.resolve();
-            await pending.promise;
-            throw new Error("Closed test view");
-          },
-        },
-      },
-    });
-    await markSessionSeen(ctx, { ...current, updatedAt: "2026-11-11T09:00:00Z" });
-    expect((await readSessionAttention(ctx, [current])).get("s")?.unread).toBe(true);
-    const watching = watchConversation(ctx, { type: "session", id: "s" }).catch(() => undefined);
-    try {
-      await entered.promise;
-      expect((await readSessionAttention(ctx, [current])).get("s")?.unread).toBe(false);
-    } finally {
-      controller.abort();
-      pending.resolve();
-      await watching;
-    }
   }
 });

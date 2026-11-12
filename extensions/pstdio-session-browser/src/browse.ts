@@ -13,8 +13,8 @@ import {
 import { sessionBrowser } from "../refs";
 import { create } from "./navigation";
 import { sessionResource, sessionTarget } from "./resource";
-import { pinSession, readPinnedSessions, readSessionAttention } from "./session-attention";
 import { sessionDisplayStatus, sessionIndicator } from "./session-indicator";
+import { pinSession, readPinnedSessions, readSessionPins } from "./session-pins";
 
 const icons: Record<string, string> = {
   completed: "circle-check",
@@ -59,12 +59,11 @@ const sessionNodes = async (
   workspaceId?: string,
   pinned = false,
 ) => {
-  const attention = await readSessionAttention(ctx, sessions);
+  const pins = await readSessionPins(ctx, sessions);
   const nodes: TreeNode[] = [];
   let date = "";
   for (const session of sessions) {
-    const state = attention.get(session.id)!;
-    if (state.pinned !== pinned) continue;
+    if (pins.get(session.id) !== pinned) continue;
     const activityDate = sessionActivityDate(session);
     const day = activityDate.toLocaleDateString(undefined, {
       dateStyle: "medium",
@@ -85,16 +84,13 @@ const sessionNodes = async (
       icon: icons[status] ?? "circle-dashed",
       iconColor: sessionStatusColor(status),
       resource,
-      indicator: state.unread
-        ? { icon: "dot", color: "fg.info", label: l10n("sessions.newActivity", "New activity"), hideWhenVisible: true }
-        : undefined,
       contextMenuActions: [
         {
           id: "pin",
-          label: state.pinned ? l10n("commands.unpin", "Unpin session") : l10n("commands.pin", "Pin session"),
-          icon: state.pinned ? "pin-off" : "pin",
+          label: pinned ? l10n("commands.unpin", "Unpin session") : l10n("commands.pin", "Pin session"),
+          icon: pinned ? "pin-off" : "pin",
           command: pinSession.ref,
-          params: { sessionId: session.id, pinned: !state.pinned },
+          params: { sessionId: session.id, pinned: !pinned },
         },
       ],
       target: workspaceId

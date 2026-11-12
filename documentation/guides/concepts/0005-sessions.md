@@ -6,9 +6,9 @@ This page describes the session menu from the release after 0.43.x. In 0.43.x, y
 
 Choosing **New session** opens its composer. Opening a ticket or workspace previews its latest related session as an unpinned tab. This follows the shared **Open related resources** setting in Appearance, which is on by default. Turn it off to open related sessions only when you choose them. Creating a session from the UI opens it in either setting.
 
-## Find recent activity and keep sessions nearby
+## Keep sessions nearby
 
-A dot beside a session means it has changed since it was last viewed. Opening the conversation clears the dot; later activity makes it appear again. Choose **Pin session** from a navigation row's menu to keep it in the **Pinned** section above recent sessions. **Unpin session** returns it to its date group.
+Choose **Pin session** from a navigation row's menu to keep it in the **Pinned** section above recent sessions. **Unpin session** returns it to its date group.
 
 Drag a session from Side onto Main to open its full session page. Drag a navigation resource onto a compatible panel's tab bar to keep it as a tab. **Reopen latest tab** in command search restores the most recently closed tab in the current project; its default shortcut is Alt+Shift+R (Option+Shift+R on macOS).
 

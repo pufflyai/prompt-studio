@@ -37,7 +37,7 @@ import {
   switchConversation,
 } from "./src/navigation";
 import { sessionId } from "./src/resource";
-import { pinSession, sessionAttentionChanged, sessionAttentionIndex } from "./src/session-attention";
+import { pinSession, sessionPinsChanged, sessionPinsIndex } from "./src/session-pins";
 import { composerControls, readSnapshot } from "./src/snapshot";
 import { conversationTab } from "./src/tab";
 import { watch } from "./src/watch";
@@ -138,7 +138,7 @@ const list = defineView({
     searchPlaceholder: l10n("sessions.search", "Search sessions"),
     defaultExpandedNodeIds: ["workspace-sessions"],
     structure: [{ id: "sessions", label: l10n("sessions.title", "Sessions"), collapsible: false }],
-    refreshEvents: [viewDataEvents.sessionsChanged, sessionAttentionChanged],
+    refreshEvents: [viewDataEvents.sessionsChanged, sessionPinsChanged],
     body: browse,
     page: browsePage,
   },
@@ -162,7 +162,7 @@ const links = defineView({
 export default defineExtension({
   defaultLocale: "en",
   translations: { fr: packageAsset("./l10n/fr.json", import.meta.url) },
-  storageIndexes: [nativeSubmissionIndex, sessionAttentionIndex],
+  storageIndexes: [nativeSubmissionIndex, sessionPinsIndex],
   commands: [
     pinSession,
     create,
