@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-Avoid fetching and decrypting the same keys twice during a Cloud synchronization pass.
+Paint the startup window before loading the workbench and avoid preparing Cloud keys twice per synchronization pass.
