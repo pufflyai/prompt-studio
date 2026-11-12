@@ -1,5 +1,5 @@
 import type { HTMLChakraProps } from "@chakra-ui/react";
-import { Box, chakra, HStack, Icon, IconButton, Input, Spacer, Textarea, useSlotRecipe } from "@chakra-ui/react";
+import { Box, chakra, HStack, Icon, IconButton, Spacer, useSlotRecipe } from "@chakra-ui/react";
 import { ArrowUp, Paperclip } from "lucide-react";
 import type { FormEvent, ReactNode } from "react";
 import { useState } from "react";
@@ -8,6 +8,7 @@ import { activityComposerSlotRecipe } from "@/theme/recipes/activity-composer";
 import { SendButton } from "../chat-ui/components/send-button";
 import type { ActivityActor } from "./activity.types";
 import { ActivityAvatar } from "./activity-avatar";
+import { ActivityRichInput } from "./activity-rich-input";
 
 export interface ActivityComposerProps extends Omit<HTMLChakraProps<"form">, "onChange" | "onSubmit"> {
   actor?: ActivityActor;
@@ -78,15 +79,14 @@ export const ActivityComposer = (props: ActivityComposerProps) => {
         {attachmentList}
         <Box css={styles.row}>
           {actor ? <ActivityAvatar actor={actor} /> : null}
-          <Input
-            variant="borderless"
-            disabled={disabled}
-            css={styles.input}
-            aria-label={placeholder}
-            placeholder={placeholder}
-            value={currentValue}
-            onChange={(event) => handleChange(event.currentTarget.value)}
-          />
+          <Box css={styles.input} minH={`${minRows}lh`}>
+            <ActivityRichInput
+              value={currentValue}
+              disabled={disabled}
+              placeholder={placeholder}
+              onChange={handleChange}
+            />
+          </Box>
           <Box css={styles.actions}>
             {actions}
             {onAttach && (
@@ -123,21 +123,14 @@ export const ActivityComposer = (props: ActivityComposerProps) => {
       <HStack alignItems="flex-start" gap="xs" padding={isInline ? "sm" : "md"}>
         {actor ? <ActivityAvatar actor={actor} /> : null}
         <Box flex="1" minW="0">
-          <Textarea
-            disabled={disabled}
-            value={currentValue}
-            rows={minRows}
-            resize="none"
-            border="0"
-            padding="0"
-            minH={isInline ? "1.5rem" : "4rem"}
-            background="transparent"
-            color="fg"
-            textStyle="label/S/regular"
-            placeholder={placeholder}
-            _placeholder={{ color: "fg.subtle" }}
-            onChange={(event) => handleChange(event.currentTarget.value)}
-          />
+          <Box minH={`${minRows}lh`}>
+            <ActivityRichInput
+              value={currentValue}
+              disabled={disabled}
+              placeholder={placeholder}
+              onChange={handleChange}
+            />
+          </Box>
           <HStack gap="2xs" marginTop={isInline ? "0" : "sm"}>
             {actions}
             <Spacer />

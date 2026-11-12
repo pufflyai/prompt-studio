@@ -200,4 +200,98 @@ test("resource discussion sends file-only comments and retains the original atta
   const saved = testInfo.outputPath("trace.txt");
   await download.saveAs(saved);
   expect(await readFile(saved)).toEqual(file.buffer);
+
+  // Critical: formatting and multiple paragraphs must survive sending and reload,
+  // while the controlled editor clears without losing a subsequent draft.
+  const input = activity.locator('[contenteditable="true"]');
+  await input.fill("Important");
+  await input.press("ControlOrMeta+a");
+  await input.press("ControlOrMeta+b");
+  await input.press("ArrowRight");
+  await input.press("Enter");
+  await input.press("ControlOrMeta+b");
+  await page.keyboard.type("Next paragraph");
+  await send.click();
+  const comments = activity.locator("article");
+  await expect(comments.last().locator("strong, b")).toHaveText("Important");
+  await expect(input).toHaveText("");
+  await input.fill("Later comment");
+  await send.click();
+  await expect(comments.last()).toContainText("Later comment");
+  await page.reload();
+  await expect(comments).toHaveCount(3);
+  await expect(comments.nth(0).getByRole("button", { name: "trace.txt", exact: true })).toBeVisible();
+  await expect(comments.nth(1).locator("strong, b")).toHaveText("Important");
+  await expect(comments.nth(1)).toContainText("Next paragraph");
+  await expect(comments.nth(2)).toContainText("Later comment");
+});
+
+// Critical: prepending history must keep the reading position and editor focus,
+// and must not drain all remaining cursor pages while the boundary stays visible.
+test("earlier discussion retries at the top without moving the reader or focus", async ({ page, request }) => {
+  const resource = { projectId: fixture.projectId, extensionId: "test.stream-fixture", type: "item", id: "history" };
+  for (let index = 0; index < 120; index++) {
+    const response = await request.post(`/v1/projects/${fixture.projectId}/activity/publish`, {
+      data: { resource, entry: { key: String(index), kind: "comment", body: `History ${index}` } },
+    });
+    expect(response.ok()).toBe(true);
+  }
+  const earlier = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const retryStarted = Promise.withResolvers<void>();
+  const retryRelease = Promise.withResolvers<void>();
+  let held = false;
+  let retried = false;
+  await page.route("**/activity/query", async (route) => {
+    if (route.request().postDataJSON().cursor) {
+      if (!held) {
+        held = true;
+        earlier.resolve();
+        await release.promise;
+        await route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"History unavailable"}' });
+        return;
+      }
+      if (!retried) {
+        retried = true;
+        retryStarted.resolve();
+        await retryRelease.promise;
+      }
+    }
+    await route.continue();
+  });
+  try {
+    await prepareDashboard(page, fixture.projectId);
+    const uri = `pstdio://extension-resource/item/history?extensionId=test.stream-fixture&projectId=${fixture.projectId}`;
+    await page.goto(
+      `/projects/${fixture.projectId}/extensions/test.stream-fixture/discussion?resource=${encodeURIComponent(uri)}`,
+    );
+    await earlier.promise;
+    const activity = page.locator('[aria-label="Resource activity"]');
+    const entries = activity.locator("[data-activity-entry]");
+    await expect(entries).toHaveCount(50);
+    const firstId = await entries.first().getAttribute("data-activity-entry");
+    const anchor = activity.locator(`[data-activity-entry="${firstId}"]`);
+    release.resolve();
+    await activity.getByRole("button", { name: "Retry", exact: true }).click();
+    await retryStarted.promise;
+    const top = (await anchor.boundingBox())!.y;
+    const input = activity.getByRole("textbox", { name: "Leave a comment…" });
+    await input.evaluate((element) => element.focus({ preventScroll: true }));
+    retryRelease.resolve();
+    await expect(entries).toHaveCount(100);
+    await expect.poll(async () => (await anchor.boundingBox())!.y).toBeCloseTo(top, 0);
+    await expect(input).toBeFocused();
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await expect(entries).toHaveCount(100);
+    await activity.evaluate((element) => {
+      element.closest('[data-scope="scroll-area"][data-part="viewport"]')!.scrollTop = 0;
+    });
+    await expect(entries).toHaveCount(120);
+    await expect(entries.first()).toContainText("History 0");
+    await expect(entries.last()).toContainText("History 119");
+    await expect(input).toBeFocused();
+  } finally {
+    release.resolve();
+    retryRelease.resolve();
+  }
 });
