@@ -1,5 +1,6 @@
 import type { WorkbenchCore } from "../../../core";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
+import { visibleResourceKeys } from "../../shared/visible-resources";
 import { resolveTreeActiveResource } from "./tree-active-resource";
 
 export const useTreeNavigationState = (workbench: WorkbenchCore) => {
@@ -11,5 +12,7 @@ export const useTreeNavigationState = (workbench: WorkbenchCore) => {
   const activeResource = useWorkbenchStore(workbench.layout.store, (state) =>
     resolveTreeActiveResource(state.layout, activePage, activeLocation?.resource),
   );
-  return { projectId, activeLocation, activeResource };
+  useWorkbenchStore(workbench.fullscreen.store, (state) => state);
+  const visible = useWorkbenchStore(workbench.layout.store, () => visibleResourceKeys(workbench).join("\0"));
+  return { projectId, activeLocation, activeResource, visibleResources: new Set(visible ? visible.split("\0") : []) };
 };

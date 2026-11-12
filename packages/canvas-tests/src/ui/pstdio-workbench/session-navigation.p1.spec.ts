@@ -144,22 +144,41 @@ test("dropping the Tickets collection tab onto Main opens its page", async ({ pa
 // Critical: the session's resources must remain reachable through its own panel menu.
 test("session resources use their panel menu and toggle from its opener", async ({ page }) => {
   const preview = await openCanvasPreview(page, source);
+  const activity = preview
+    .getByRole("option", { name: "Linked session", exact: true })
+    .locator('div[aria-hidden="true"]');
+  await expect(activity).toHaveCount(1);
   await preview
     .locator('[data-workbench-panel="side"]')
     .getByRole("tab", { name: "Review session", exact: true })
     .click();
-  const opener = preview.getByRole("button", { name: "Open Side left menu", exact: true });
+  await expect(activity).toHaveCount(0);
+  const opener = preview.getByRole("button", { name: "Open Side right menu", exact: true });
   await opener.click();
-  const menu = preview.locator('[data-workbench-panel-menu-controls="side-left-menu"]');
+  const menu = preview.locator('[data-workbench-panel-menu-controls="side-right-menu"]');
   await expect(menu.getByRole("option", { name: "Relationship test", exact: true })).toBeVisible();
   await test.info().attach("Session resources panel menu", { body: await page.screenshot(), contentType: "image/png" });
   await opener.click();
   await expect(menu).not.toBeVisible();
   await opener.click();
   await expect(menu.getByRole("option", { name: "Relationship test", exact: true })).toBeVisible();
+  await opener.click();
+  await preview
+    .locator('[data-workbench-panel="side"]')
+    .getByRole("tab", { name: "Another session", exact: true })
+    .click();
+  await expect(opener).toHaveCount(0);
+  await expect(activity).toHaveCount(1);
+  await preview
+    .locator('[data-workbench-panel="side"]')
+    .getByRole("tab", { name: "Review session", exact: true })
+    .click();
+  await opener.click();
+  await menu.getByRole("option", { name: "Relationship test", exact: true }).click();
+  await expect(preview.locator('[data-workbench-panel="main"]')).toContainText("Ticket collection");
 });
 
-// Critical: adding the left resource menu must leave ordinary message submission reachable.
+// Critical: adding a resource menu must leave ordinary message submission reachable.
 test("the Side launcher leaves the session composer operable beside its resources", async ({ page }) => {
   const preview = await openCanvasPreview(page, source.replace("#Interactive", "#ComposerWithResources"));
   const main = preview.locator('[data-workbench-panel="main"]');
@@ -168,8 +187,35 @@ test("the Side launcher leaves the session composer operable beside its resource
   await expect(main.getByRole("status", { name: "Submitted follow-up" })).toHaveText("Check related resources");
   const before = (await main.boundingBox())!;
   await preview.getByRole("button", { name: "Open Side Panel", exact: true }).click();
-  await expect(preview.getByTestId("workbench-side-panel-floating")).toBeVisible();
-  await preview.getByRole("button", { name: "Reattach Side Panel", exact: true }).click();
+  const floating = preview.getByTestId("workbench-side-panel-floating");
+  await expect(floating).toBeVisible();
+  expect((await main.boundingBox())!.height).toBe(before.height);
+  await floating.getByRole("tab", { name: "Review session", exact: true }).click();
+  await floating.getByRole("button", { name: "Open Side right menu", exact: true }).click();
+  await preview
+    .locator('[data-workbench-panel-menu-controls="side-right-menu"]')
+    .getByRole("option", { name: "Relationship test", exact: true })
+    .click();
+  await expect(main).toContainText("Ticket collection");
+  await floating.getByRole("button", { name: "Reattach Side Panel", exact: true }).click();
   await expect(preview.getByTestId("workbench-side-panel-attached")).toBeVisible();
-  await expect.poll(async () => (await main.boundingBox())!.height).toBeGreaterThan(before.height);
+  await expect.poll(async () => (await main.boundingBox())!.height).toBe(before.height);
+});
+
+// Critical: compound resource destinations must remain usable from either Main layout.
+test("notes dropped onto Main open their collection and note", async ({ page }) => {
+  const preview = await openCanvasPreview(page, source);
+  for (const destination of ["Tickets", "Files"]) {
+    await preview.getByRole("option", { name: destination, exact: true }).click();
+    const row = preview.getByRole("option", { name: "Sample note", exact: true });
+    const main = preview.locator('[data-workbench-panel="main"]');
+    const from = (await row.boundingBox())!;
+    const to = (await main.boundingBox())!;
+    await page.mouse.move(from.x + 25, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 12 });
+    await page.mouse.up();
+    await expect(main.locator('[contenteditable="true"]')).toBeVisible();
+    await expect(main.getByRole("tab", { name: "Sample note", exact: true })).toBeVisible();
+  }
 });

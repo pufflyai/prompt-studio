@@ -28,15 +28,41 @@ const SessionComposer = () => {
     </>
   );
 };
+const createStoryStorage = () => {
+  const values = new Map<string, string>();
+  return {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      values.set(key, value);
+    },
+  };
+};
+const registerDocuments = (w: ReturnType<typeof createWorkbench>) => {
+  w.pages.registerPage({
+    id: "documents",
+    ref: page("documents"),
+    path: "documents",
+    modeId: "project",
+    main: { kind: "panels" },
+    slots: [
+      {
+        id: "note",
+        region: "main",
+        item: {
+          kind: "binding",
+          binding: {
+            kinds: [{ kind: "resource-kind", extensionId: "preview", id: "note" }],
+            view: { kind: "view", id: "notes" },
+            cardinality: "many",
+          },
+        },
+      },
+    ],
+  });
+};
 const SessionNavigation = ({ composer = false }: { composer?: boolean }) => {
   const [fixture] = useState(() => {
-    const values = new Map<string, string>();
-    const storage = {
-      getItem: (key: string) => values.get(key) ?? null,
-      setItem: (key: string, value: string) => {
-        values.set(key, value);
-      },
-    };
+    const storage = createStoryStorage();
     const w = createWorkbench({ startPage: page("sessions"), initialSidePanelMode: "attached" });
     w.modes.registerMode({ id: "project", chrome: { sidenav: "navigation" }, activate() {} });
     w.views.registerView({
@@ -62,22 +88,30 @@ const SessionNavigation = ({ composer = false }: { composer?: boolean }) => {
         kind: "tree",
         defaultExpandedSectionIds: ["tickets"],
         getChildren: () => [],
-        getBody: () => [
-          {
-            id: "tickets",
-            label: "Tickets",
-            nodes: [
-              { id: "P3", label: "Relationship test", icon: "ticket", target: { kind: "page", page: page("tickets") } },
-            ],
-          },
-        ],
+        getBody: ({ resource }) =>
+          resource?.id === "other"
+            ? []
+            : [
+                {
+                  id: "tickets",
+                  label: "Tickets",
+                  nodes: [
+                    {
+                      id: "P3",
+                      label: "Relationship test",
+                      icon: "ticket",
+                      target: { kind: "page", page: page("tickets") },
+                    },
+                  ],
+                },
+              ],
       },
     });
     w.viewMenus.registerViewMenu({
       id: "session.resources",
       ownerViewId: "session",
       viewId: "session-resources",
-      side: "left",
+      side: "right",
     });
     w.views.registerView({
       id: "notes",
@@ -146,6 +180,7 @@ const SessionNavigation = ({ composer = false }: { composer?: boolean }) => {
         },
         slots: [],
       });
+    registerDocuments(w);
     w.views.registerView({
       id: "files",
       title: "Files",
@@ -193,6 +228,23 @@ const SessionNavigation = ({ composer = false }: { composer?: boolean }) => {
                 contextMenuActions: [{ id: "new", label: "New session", commandId: "new-session", args: {} }],
               },
               { id: "notes", label: "Notes", canHide: true, target: { kind: "page", page: page("notes") } },
+              {
+                id: "sample-note",
+                label: "Sample note",
+                resource: { type: "note", id: "sample", extensionId: "preview", label: "Sample note" },
+                target: {
+                  kind: "compound",
+                  targets: [
+                    { kind: "page", page: page("documents") },
+                    {
+                      kind: "panel",
+                      panel: { kind: "page-slot", page: page("documents"), id: "note" },
+                      resource: { type: "note", id: "sample", extensionId: "preview", label: "Sample note" },
+                      open: "pin",
+                    },
+                  ],
+                },
+              },
               { id: "tickets", label: "Tickets", canHide: true, target: { kind: "page", page: page("tickets") } },
               {
                 id: "files",
@@ -207,7 +259,8 @@ const SessionNavigation = ({ composer = false }: { composer?: boolean }) => {
               {
                 id: "linked-session",
                 label: "Linked session",
-                indicator: { icon: "dot", color: "fg.info", label: "New activity" },
+                resource: session,
+                indicator: { icon: "dot", color: "fg.info", label: "New activity", hideWhenVisible: true },
                 canHide: true,
                 target: { kind: "panel", panel, resource: session },
               },

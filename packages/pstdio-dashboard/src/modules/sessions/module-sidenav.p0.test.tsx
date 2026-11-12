@@ -63,7 +63,7 @@ test("Sessions navigation uses the provider's project list and scopes linked res
   const readKey = () => treeViewBody(workbench, dashboardWidgetIds.dashboardSidenav).getReadKey?.({});
   openSessionsPage(workbench, { type: "session", extensionId: "pstdio", id: "first" });
   const menu = workbench.viewMenus.getViewMenu("pstdio.pstdio-session-browser.view-menu.session.resources")!;
-  expect(menu).toMatchObject({ ownerViewId: contributionRefId(sessionBrowser.views.conversation), side: "left" });
+  expect(menu).toMatchObject({ ownerViewId: contributionRefId(sessionBrowser.views.conversation), side: "right" });
   const linkedTickets = async (id: string) =>
     (await treeViewSections(workbench, menu.viewId, { resource: { type: "session", extensionId: "pstdio", id } }))
       .flatMap((section) => section.nodes)

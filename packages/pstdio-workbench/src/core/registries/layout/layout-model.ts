@@ -23,7 +23,7 @@ import type {
 } from "./layout-types";
 import { createWidgetOpeners } from "./layout-widget-openers";
 import { createPanelLayoutMethods } from "./panel-layout-methods";
-import { createOwnedMenuMethods } from "./panel-menu-ownership";
+import { createOwnedMenuMethods, reconcilePanelMenuOwnership } from "./panel-menu-ownership";
 import { createPanelRegistrations } from "./panel-registration";
 
 export type {
@@ -130,6 +130,7 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LocationA
   const setLayout = (layout: WorkbenchLayout) => {
     layout = input.normalizeLayout?.(layout) ?? layout;
     layout = restorePresentation(layout);
+    layout = reconcilePanelMenuOwnership(layout, (id) => getWidgets()[id], input.getDetachedOwners);
     const snapshot = store.getState();
     if (snapshot.layout === layout) return;
     store.setState({ ...snapshot, layout }, false, "setLayout");

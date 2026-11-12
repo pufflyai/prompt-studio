@@ -380,3 +380,43 @@ describe("toTreeListSection end content", () => {
     expect(section.nodes[0]?.endContent).toMatchObject({ props: { children: explicitEndContent } });
   });
 });
+
+test("unseen activity is shown only while its resource is not visible", async () => {
+  const { createResourceViewerFixture, viewerPage, viewerResource } = await import(
+    "../../../core/controllers/resource-viewers/resource-viewer-test-fixture"
+  );
+  const { w } = createResourceViewerFixture();
+  const resource = viewerResource("active");
+  const adapt = () =>
+    toTreeListSection(
+      {
+        id: "resources",
+        nodes: [{ id: "active", label: "Active", resource, indicator: { icon: "dot", hideWhenVisible: true } }],
+      },
+      {},
+      { workbench: w },
+    ).nodes[0];
+  expect(adapt()?.indicator).toBeDefined();
+  await w.navigation.openPage({ page: viewerPage("reader"), resource });
+  expect(adapt()?.indicator).toBeUndefined();
+  await w.navigation.openPage({ page: viewerPage("home") });
+  expect(adapt()?.indicator).toBeDefined();
+});
+
+test("activity indicators follow fullscreen Side visibility even when attached Side is closed", async () => {
+  const { createResourceViewerFixture, viewerPage, viewerResource } = await import(
+    "../../../core/controllers/resource-viewers/resource-viewer-test-fixture"
+  );
+  const { w, openSide } = createResourceViewerFixture();
+  const { visibleResourceKeys } = await import("../../shared/visible-resources");
+  await w.navigation.openPage({ page: viewerPage("home") });
+  await openSide("active");
+  w.layout.setRegionVisible("side", false);
+  w.fullscreen.enter();
+  const key = w.pages.resourceReferenceKey(viewerResource("active"));
+  expect(visibleResourceKeys(w)).not.toContain(key);
+  w.fullscreen.showSide();
+  expect(visibleResourceKeys(w)).toContain(key);
+  w.fullscreen.hideSide();
+  expect(visibleResourceKeys(w)).not.toContain(key);
+});

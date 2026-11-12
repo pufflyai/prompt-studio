@@ -86,7 +86,7 @@ const sessionNodes = async (
       iconColor: sessionStatusColor(status),
       resource,
       indicator: state.unread
-        ? { icon: "dot", color: "fg.info", label: l10n("sessions.newActivity", "New activity") }
+        ? { icon: "dot", color: "fg.info", label: l10n("sessions.newActivity", "New activity"), hideWhenVisible: true }
         : undefined,
       contextMenuActions: [
         {

@@ -23,7 +23,11 @@ const panelAcceptsPin = (workbench: WorkbenchCore, panel: NavigationTargetPanel[
   return item?.kind === "binding" && item.binding.cardinality === "many";
 };
 
-export const treeTabTarget = (workbench: WorkbenchCore, target: NavigationTarget, region: WorkbenchPanelRegion) => {
+const treeTabItemTarget = (
+  workbench: WorkbenchCore,
+  target: Exclude<NavigationTarget, { kind: "compound" }>,
+  region: WorkbenchPanelRegion,
+) => {
   if (target.kind === "panel") {
     const { open: _open, ...panel } = target;
     return {
@@ -54,7 +58,19 @@ export const treeTabTarget = (workbench: WorkbenchCore, target: NavigationTarget
   };
 };
 
+export const treeTabTarget = (workbench: WorkbenchCore, target: NavigationTarget, region: WorkbenchPanelRegion) => {
+  if (target.kind !== "compound") return treeTabItemTarget(workbench, target, region);
+  if (region !== "main") return;
+  const targets = target.targets.map((item) => treeTabItemTarget(workbench, item, region));
+  if (targets.some((item) => !item)) return;
+  return { kind: "compound" as const, targets: targets.filter((item) => item !== undefined) };
+};
+
 export const treePageTarget = (workbench: WorkbenchCore, intent: NavigationTarget) => {
+  if (intent.kind === "compound") {
+    const target = treeTabTarget(workbench, intent, "main");
+    return target?.kind === "compound" ? target : undefined;
+  }
   if (intent.kind === "panel") return panelResourcePageTarget(workbench, intent.panel, intent.resource);
   if (intent.kind !== "page") return;
   const { open: _open, ...page } = intent;
@@ -73,11 +89,7 @@ export const createTreeTabDropHandler =
     const element = document.elementFromPoint(point.x, point.y);
     if (element?.closest("[inert]")) return false;
     const header = element?.closest("[data-workbench-panel-header]");
-    if (
-      !header &&
-      element?.closest('[data-workbench-panel="main"]') &&
-      !workbench.shell.getPanelPolicy("main").acceptsTabs
-    ) {
+    if (!header && element?.closest('[data-workbench-panel="main"]')) {
       return openTreePage(workbench, node);
     }
     const region = header?.getAttribute("data-workbench-panel-header");
@@ -86,7 +98,9 @@ export const createTreeTabDropHandler =
     const target = treeTabTarget(workbench, node.navigationIntent.payload as NavigationTarget, region);
     if (target)
       void (
-        target.kind === "page" ? openDroppedPage(workbench, target) : workbench.navigation.openTarget(target)
+        target.kind === "page" || target.kind === "compound"
+          ? openDroppedPage(workbench, target)
+          : workbench.navigation.openTarget(target)
       ).catch((error) => reportUserActionError(workbench, "Open tab", error));
     else
       workbench.notifications.show({

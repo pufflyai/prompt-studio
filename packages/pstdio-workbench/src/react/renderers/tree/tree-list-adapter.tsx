@@ -22,17 +22,25 @@ import {
 import { WorkbenchShortcutHint } from "../../keybindings/shortcut-hint";
 import { createWorkbenchResourceActions } from "../../menus/resource-actions";
 import { WorkbenchIcon } from "../../shared/icon";
+import { visibleResourceKeys } from "../../shared/visible-resources";
 import { createTreeActionItems, createTreeContextMenuItems, type TreeActionParamsRequest } from "./tree-actions";
 
 interface TreeNodeRenderContext {
   workbench: WorkbenchCore;
   resource?: ResourceRef;
+  visibleResources?: ReadonlySet<string>;
   sectionSource?: { resource?: ResourceRef };
   /** Row and section actions give way to keyboard hints while shortcut mode or its preview shows them. */
   shortcutHints?: boolean;
   onCommandError?: (error: unknown) => void;
   onRequestParams?: (request: TreeActionParamsRequest) => void;
 }
+const resolveTreeIndicator = (node: TreeNode, context: TreeNodeRenderContext) => {
+  if (!node.indicator?.hideWhenVisible || !node.resource) return node.indicator;
+  const visible = context.visibleResources ?? new Set(visibleResourceKeys(context.workbench));
+  return visible.has(context.workbench.pages.resourceReferenceKey(node.resource)) ? undefined : node.indicator;
+};
+
 export const resolveTreeListActiveNodeId = (activeNodeId: string | null | undefined, selectedNodeId?: string) => {
   if (!activeNodeId) return selectedNodeId;
   return activeNodeId;
@@ -181,6 +189,7 @@ const toTreeListNode = (
     ];
     return menuItems;
   };
+  const indicator = resolveTreeIndicator(node, context);
   const treeNode: TreeListNode = {
     pagination: node.pagination,
     id: node.id,
@@ -189,16 +198,16 @@ const toTreeListNode = (
     description: node.description,
     icon: resolveTreeNodeIcon(node),
     iconColor: node.iconColor,
-    indicator: node.indicator
+    indicator: indicator
       ? {
           icon:
-            node.indicator.icon.toLowerCase() === "dot" ? (
+            indicator.icon.toLowerCase() === "dot" ? (
               <Box boxSize="2" borderRadius="full" bg="currentColor" aria-hidden="true" />
             ) : (
-              <WorkbenchIcon name={node.indicator.icon} />
+              <WorkbenchIcon name={indicator.icon} />
             ),
-          color: node.indicator.color,
-          tooltip: node.indicator.label,
+          color: indicator.color,
+          tooltip: indicator.label,
         }
       : undefined,
     tooltip: node.tooltip,

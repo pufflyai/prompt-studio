@@ -4,7 +4,7 @@ import { MessageCircle, Minimize2, Minus, SquareArrowOutUpRight } from "lucide-r
 import { type ReactNode, useLayoutEffect, useRef } from "react";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
-import { WorkbenchPanelMenuLayout, WorkbenchPanelMenuOpeners } from "../panel-menu/panel-menu";
+import { WorkbenchPanelMenuOpeners } from "../panel-menu/panel-menu";
 import { PanelHeader } from "../region/panel-header";
 import { WorkbenchTabDropTarget } from "../region/tab-drag-context";
 import { usePanelPolicy } from "../shared/use-panel-policy";
@@ -81,11 +81,9 @@ export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
           ) : undefined
         }
       >
-        <WorkbenchPanelMenuLayout workbench={workbench} panel="side">
-          <Flex position="relative" flex="1" minH={0} direction="column">
-            <Flex ref={contentSlotRef} flex="1" minH={0} direction="column" />
-          </Flex>
-        </WorkbenchPanelMenuLayout>
+        <Flex position="relative" flex="1" minH={0} direction="column">
+          <Flex ref={contentSlotRef} flex="1" minH={0} direction="column" />
+        </Flex>
         <WorkbenchTabDropTarget region="side" visible={attached} />
       </AttachedPanel>
     </WorkbenchFocusRegion>
@@ -96,8 +94,6 @@ interface WorkbenchFloatingSidePanelProps extends WorkbenchSidePanelProps {
   available?: boolean;
 }
 
-// The launcher sits outside the panels; reserve its footprint in the underlying content.
-export const SIDE_PANEL_LAUNCHER_CLEARANCE = "calc(1.5rem + 3rem + 0.5rem)";
 export const useSidePanelLauncherVisible = (workbench: WorkbenchCore, available: boolean) => {
   const mode = useWorkbenchStore(workbench.layout.store, () => workbench.sidePanel.getMode());
   const fullscreen = useWorkbenchStore(workbench.fullscreen.store, (state) => state);
@@ -158,6 +154,7 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
           visible ? (
             <PanelHeader workbench={workbench} region="side" variant="main" gap="sm">
               <WorkbenchSidePanelHeader header={header} />
+              <WorkbenchPanelMenuOpeners workbench={workbench} panel="side" />
               {!fullscreen.active ? (
                 <Tooltip content="Reattach Side Panel">
                   <IconButton

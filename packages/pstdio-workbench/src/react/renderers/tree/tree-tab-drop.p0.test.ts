@@ -78,3 +78,46 @@ for (const collection of [false, true]) {
     ).toEqual(["first", "second"]);
   });
 }
+
+test("dropping a compound note target opens its collection and note in Main", async () => {
+  const { w } = createResourceViewerFixture({ tabs: true, collection: true });
+  w.pages.registerPage({
+    id: "notes",
+    ref: viewerPage("notes"),
+    path: "notes",
+    modeId: "project",
+    main: { kind: "panels" },
+    slots: [
+      {
+        id: "note",
+        region: "main",
+        item: {
+          kind: "binding",
+          binding: {
+            kinds: [{ kind: "resource-kind", extensionId: "example.readers", id: "record" }],
+            view: { kind: "view", id: "reader" },
+            cardinality: "many",
+          },
+        },
+      },
+    ],
+  });
+  const note = viewerResource("note");
+  const target = {
+    kind: "compound" as const,
+    targets: [
+      { kind: "page" as const, page: viewerPage("notes") },
+      {
+        kind: "panel" as const,
+        panel: { kind: "page-slot" as const, page: viewerPage("notes"), id: "note" },
+        resource: note,
+        open: "pin" as const,
+      },
+    ],
+  };
+  const dropped = treeTabTarget(w, target, "main");
+  expect(dropped).toBeDefined();
+  await w.navigation.openTarget(dropped!);
+  expect(w.pages.store.getState().location?.page).toEqual(viewerPage("notes"));
+  expect(w.layout.listPanelInstances("main").some((tab) => tab.resource?.id === "note")).toBe(true);
+});

@@ -153,7 +153,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
   const treeState =
     useWorkbenchStore(getWorkbenchRenderers(workbench).treeStore, (state) => state.statesByTreeId[treeViewId]) ??
     EMPTY_TREE_STATE;
-  const { projectId, activeLocation, activeResource } = useTreeNavigationState(workbench);
+  const { projectId, activeLocation, activeResource, visibleResources } = useTreeNavigationState(workbench);
   const { body, childrenByNodeId, moveNode, error, footer, header, loadChildren, loading, retry } = useTreeData(
     workbench,
     treeViewId,
@@ -169,6 +169,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
   const adapterContext = {
     workbench,
     resource,
+    visibleResources,
     shortcutHints,
     onCommandError: onOpenResourceError,
     onRequestParams: actionInput.setRequest,

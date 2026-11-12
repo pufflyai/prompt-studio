@@ -11,7 +11,7 @@ test("dropping a side conversation onto its page opens Main and removes the side
   w.pageLocations.navigate({ kind: "page", page: viewerPage("reader") });
   await openSide("conversation");
   const original = side();
-  expect(panelPageDropTarget(w, original.instanceId)?.page).toEqual(viewerPage("reader"));
+  expect(panelPageDropTarget(w, original.instanceId)).toMatchObject({ page: viewerPage("reader") });
   await openPanelAsPage(w, original.instanceId);
   expect(w.pages.getContent()?.resource?.id).toBe("conversation");
   expect(w.layout.listPanelInstances("side")).toHaveLength(0);
@@ -42,7 +42,7 @@ test("a related-resource shell tab returns to its owning page with document cont
     },
   });
   const id = side().instanceId;
-  expect(panelPageDropTarget(w, id)?.resource).toEqual(resource);
+  expect(panelPageDropTarget(w, id)).toMatchObject({ resource });
   await openPanelAsPage(w, id);
   expect(w.pages.store.getState().location).toMatchObject({
     page: viewerPage("reader"),
@@ -99,9 +99,66 @@ test.each([
   });
   await w.navigation.openPanel({ panel, region: "side" });
   const original = w.layout.getActivePanel("side")!;
-  expect(panelPageDropTarget(w, original.instanceId)?.page).toEqual(page);
+  expect(panelPageDropTarget(w, original.instanceId)).toMatchObject({ page });
   await openPanelAsPage(w, original.instanceId);
   expect(w.pages.store.getState().location?.page).toEqual(page);
   expect(w.pages.getContent()?.viewId).toBe("browser");
   expect(w.layout.listPanelInstances("side")).toHaveLength(0);
 });
+
+test("dropping a collection note from Side moves its editor into Main", async () => {
+  const { w } = createResourceViewerFixture();
+  const page = viewerPage("notes");
+  const panel = { kind: "page-slot" as const, page, id: "note" };
+  w.pages.registerPage({
+    id: "notes",
+    ref: page,
+    path: "notes",
+    modeId: "project",
+    main: { kind: "panels" },
+    slots: [
+      {
+        id: "note",
+        region: "main",
+        item: {
+          kind: "binding",
+          binding: {
+            kinds: [{ kind: "resource-kind", extensionId: "example.readers", id: "record" }],
+            view: { kind: "view", id: "reader" },
+            cardinality: "many",
+          },
+        },
+      },
+    ],
+  });
+  await w.navigation.openPage({ page });
+  await w.navigation.openPanel({ panel, resource: viewerResource("note"), region: "side", open: "pin" });
+  const source = w.layout.getActivePanel("side")!;
+  expect(panelPageDropTarget(w, source.instanceId)).toBeDefined();
+  await openPanelAsPage(w, source.instanceId);
+  expect(w.pages.store.getState().location?.page).toEqual(page);
+  expect(w.layout.listPanelInstances("main").map((item) => item.resource?.id)).toEqual(["note"]);
+  expect(w.layout.listPanelInstances("side")).toHaveLength(0);
+});
+
+for (const destination of ["unregistered-slot", "tabless-main"]) {
+  test(`a rejected compound drop preserves its Side resource (${destination})`, async () => {
+    const { w, openSide, side } = createResourceViewerFixture();
+    await openSide("draft");
+    const original = side().instanceId;
+    const target =
+      destination === "unregistered-slot"
+        ? { kind: "page-slot" as const, page: viewerPage("reader"), id: "$main" }
+        : { kind: "placement" as const, extensionId: "example.readers", id: "reader" };
+    await expect(
+      openDroppedPage(w, {
+        kind: "compound",
+        targets: [
+          { kind: "page", page: viewerPage(destination === "unregistered-slot" ? "reader" : "other") },
+          { kind: "panel", panel: target, resource: viewerResource("draft"), region: "main" },
+        ],
+      }),
+    ).rejects.toThrow();
+    expect(side()?.instanceId).toBe(original);
+  });
+}

@@ -181,7 +181,7 @@ export default defineExtension({
   views: [conversation, list, links],
   pages: [sessions, compose, session, draft],
   placements: [viewer],
-  viewMenus: [defineViewMenu({ id: "session.resources", owner: conversation.ref, view: links.ref, side: "left" })],
+  viewMenus: [defineViewMenu({ id: "session.resources", owner: conversation.ref, view: links.ref, side: "right" })],
   navigationItems: [
     defineNavigationItem({
       id: "sessions",
