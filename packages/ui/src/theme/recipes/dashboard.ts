@@ -1,0 +1,81 @@
+import { defineSlotRecipe } from "@chakra-ui/react";
+
+export const dashboardRecipe = defineSlotRecipe({
+  slots: ["preview", "root", "toolbar", "actions", "body", "grid", "card", "cardHeader", "plot", "inspector"],
+  base: {
+    preview: {
+      w: "full",
+      mx: "auto",
+      h: "3xl",
+      minW: "0",
+      "&[data-size=tablet]": { maxW: "3xl" },
+      "&[data-size=phone]": { maxW: "sm" },
+    },
+    root: {
+      display: "flex",
+      flexDirection: "column",
+      h: "full",
+      minH: "0",
+      bg: "bg",
+      color: "fg",
+      containerType: "inline-size",
+    },
+    toolbar: {
+      display: "flex",
+      flexWrap: "wrap",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: "sm",
+      p: "md",
+      borderBottomWidth: "1px",
+      borderColor: "border.subtle",
+    },
+    actions: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: "xs", minW: "0" },
+    body: {
+      display: "flex",
+      flex: "1",
+      minH: "0",
+      flexDirection: "column",
+      "@container (min-width: 64rem)": { flexDirection: "row" },
+    },
+    grid: {
+      display: "grid",
+      gridTemplateColumns: "repeat(12, minmax(0, 1fr))",
+      alignItems: "start",
+      gap: "md",
+      p: "md",
+    },
+    card: {
+      gridColumn: "span 12",
+      minW: "0",
+      display: "flex",
+      flexDirection: "column",
+      "&[data-selected=true]": { outline: "2px solid", outlineColor: "border.accent", outlineOffset: "2px" },
+      "&[data-dragging=true]": { opacity: "0.5" },
+      "@container (min-width: 40rem)": {
+        "&[data-width=third], &[data-width=half]": { gridColumn: "span 6" },
+      },
+      "@container (min-width: 64rem)": {
+        "&[data-width=third]": { gridColumn: "span 4" },
+        "&[data-width=half]": { gridColumn: "span 6" },
+      },
+    },
+    cardHeader: { display: "flex", alignItems: "center", gap: "xs", p: "sm", minW: "0", flexWrap: "wrap" },
+    plot: {
+      h: "xs",
+      minW: "0",
+      px: "sm",
+      pb: "sm",
+      "&[data-height=compact]": { h: "40" },
+      "&[data-height=tall]": { h: "sm" },
+    },
+    inspector: {
+      flexShrink: "0",
+      minW: "0",
+      borderTopWidth: "1px",
+      borderColor: "border.subtle",
+      maxH: "sm",
+      "@container (min-width: 64rem)": { w: "xs", maxH: "none", borderTopWidth: "0", borderLeftWidth: "1px" },
+    },
+  },
+});
