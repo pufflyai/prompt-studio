@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestPlan } from "./test-plan";
@@ -120,7 +120,7 @@ test("relocated bundles must contain matching native reports", () => {
       complete: true,
       results: [result],
     });
-    expect(collectResultBundles(plan, root, "attempt")[0]?.complete).toBe(false);
+    expect(collectResultBundles(plan, root, "attempt").records[0]?.complete).toBe(false);
     write(join(root, run.id), "cases.json", {
       planDigest: plan.digest,
       runId: run.id,
@@ -130,7 +130,7 @@ test("relocated bundles must contain matching native reports", () => {
       reportedFiles: [file],
       cases: [{ file, title: "retained", outcome: "success" }],
     });
-    expect(collectResultBundles(plan, root, "attempt")[0]?.complete).toBe(true);
+    expect(collectResultBundles(plan, root, "attempt").records[0]?.complete).toBe(true);
     write(root, "execution.json", {
       planDigest: plan.digest,
       executionId: "attempt",
@@ -138,7 +138,17 @@ test("relocated bundles must contain matching native reports", () => {
       results: [result],
       phases: [{ kind: "cleanup", complete: true, outcome: "failure" }],
     });
-    expect(() => collectResultBundles(plan, root, "attempt")).toThrow("cleanup");
+    const incomplete = collectResultBundles(plan, root, "attempt");
+    expect(incomplete.errors).toContain(`Incomplete invocation or cleanup: ${join(root, "execution.json")}`);
+    expect(incomplete.records).toHaveLength(1);
+    write(root, "execution.json", { planDigest: "stale", executionId: "attempt", complete: true, results: [result] });
+    const stale = collectResultBundles(plan, root, "attempt");
+    expect(stale.errors[0]).toContain("Stale result bundle");
+    expect(stale.records).toHaveLength(0);
+    writeFileSync(join(root, "execution.json"), "unfinished {");
+    const malformed = collectResultBundles(plan, root, "attempt");
+    expect(malformed.errors[0]).toContain("Invalid result bundle");
+    expect(malformed.records).toHaveLength(0);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -336,6 +346,140 @@ test("signed desktop evidence requires terminal cases from every selected benchm
     ordered.suites[0]!.specs[1]!.tests[0]!.results[0]!.status = "failed";
     write(native, "desktop-ordered.json", ordered);
     expect(collectRunEvidence(root, root, run, plan, "attempt")).toMatchObject({ complete: true, nativeFailure: true });
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// An interrupted host must leave an inspectable failure report without discarding completed sibling hosts.
+test("CI verification retains cancelled, failed, missing and completed assignments after interruption", async () => {
+  const root = mkdtempSync(join(tmpdir(), "interrupted-plan-verification-"));
+  try {
+    const owners = ["cancelled", "completed", "failed", "missing"].map((name) => ({
+      name,
+      dir: `packages/${name}`,
+      dependencies: [],
+      scripts: {},
+    }));
+    const plan = createTestPlan({
+      source,
+      target: { platform: "linux", arch: "x64" },
+      packages: owners,
+      files: owners.map((owner) => `${owner.dir}/behavior.p0.test.ts`),
+    });
+    write(root, "plan.json", plan);
+    for (const owner of owners.slice(0, 3)) {
+      const run = plan.runs.find((run) => run.owner === owner.name)!;
+      const directory = join(root, "bundles", owner.name);
+      const cancelled = owner.name === "cancelled";
+      const failed = owner.name === "failed";
+      let outcome = "success";
+      let exitCode: number | null = 0;
+      if (cancelled) {
+        outcome = "cancelled";
+        exitCode = null;
+      } else if (failed) {
+        outcome = "failure";
+        exitCode = 1;
+      }
+      write(directory, "execution.json", {
+        planDigest: plan.digest,
+        executionId: "attempt",
+        complete: !cancelled,
+        results: [
+          {
+            runId: run.id,
+            planDigest: plan.digest,
+            source,
+            executionId: "attempt",
+            outcome,
+            complete: !cancelled,
+            exitCode,
+            reports: [],
+            ...(cancelled ? { reason: "Host interrupted" } : {}),
+          },
+        ],
+      });
+      if (!cancelled)
+        write(join(directory, run.id), "cases.json", {
+          planDigest: plan.digest,
+          runId: run.id,
+          executionId: "attempt",
+          sourceSha: source.sha,
+          complete: true,
+          reportedFiles: run.files,
+          cases: [{ file: run.files[0], title: "retained contract", outcome: failed ? "failure" : "success" }],
+        });
+    }
+    const completed = plan.runs.find((run) => run.owner === "completed")!;
+    for (const [name, invalid] of Object.entries({
+      "missing-source": { source: undefined, complete: true },
+      "invalid-completeness": { source, complete: "false" },
+    })) {
+      const directory = join(root, "bundles", name);
+      write(directory, "execution.json", {
+        planDigest: plan.digest,
+        executionId: "attempt",
+        complete: true,
+        results: [
+          {
+            runId: completed.id,
+            planDigest: plan.digest,
+            executionId: "attempt",
+            outcome: "success",
+            exitCode: 0,
+            reports: [],
+            ...invalid,
+          },
+        ],
+      });
+      write(join(directory, completed.id), "cases.json", {
+        planDigest: plan.digest,
+        runId: completed.id,
+        executionId: "attempt",
+        sourceSha: source.sha,
+        complete: true,
+        reportedFiles: completed.files,
+        cases: [{ file: completed.files[0], title: "retained contract", outcome: "success" }],
+      });
+    }
+    const child = Bun.spawn(
+      [
+        process.execPath,
+        join(import.meta.dir, "verify-test-results.ts"),
+        join(root, "plan.json"),
+        join(root, "bundles"),
+      ],
+      {
+        cwd: root,
+        env: { ...process.env, CI_TEST_EXECUTION_ID: "attempt" },
+        stdout: "pipe",
+        stderr: "pipe",
+      },
+    );
+    const [exitCode, output] = await Promise.all([child.exited, new Response(child.stderr).text()]);
+    expect(exitCode).toBe(1);
+    const report = join(root, "test-results/ci/plan-verification.json");
+    expect(existsSync(report), output).toBe(true);
+    const evidence = JSON.parse(readFileSync(report, "utf8"));
+    expect(evidence).toMatchObject({ outcome: "failure", complete: false });
+    expect(evidence.errors.filter((error: string) => error.includes("Invalid run record"))).toHaveLength(2);
+    expect(evidence.results).toHaveLength(3);
+    expect(evidence.errors.some((error: string) => error.includes("Incomplete invocation"))).toBe(true);
+    expect(evidence.errors).toContain(`Missing run: ${plan.runs.find((run) => run.owner === "missing")!.id}`);
+    expect(evidence.results.find((result: { outcome: string }) => result.outcome === "cancelled")).toMatchObject({
+      complete: false,
+      reason: expect.stringContaining("Host interrupted"),
+    });
+    expect(evidence.results.find((result: { outcome: string }) => result.outcome === "failure")).toMatchObject({
+      complete: true,
+      exitCode: 1,
+      nativeFailure: true,
+    });
+    expect(evidence.results.find((result: { outcome: string }) => result.outcome === "success")).toMatchObject({
+      complete: true,
+      exitCode: 0,
+    });
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

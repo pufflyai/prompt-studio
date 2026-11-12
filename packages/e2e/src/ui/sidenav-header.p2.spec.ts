@@ -267,10 +267,14 @@ test("moves rows back into an emptied header or footer", async ({ page, request 
   const drag = async (source: Locator, targetY: () => Promise<number>, scrollingTarget?: Locator) => {
     if (scrollingTarget) {
       // Leave room for the target to move while the pointer is held down.
-      await scrollingTarget.evaluate((element) => {
+      const scrollReserve = 20;
+      const maxScroll = await scrollingTarget.evaluate((element, reserve) => {
         const viewport = element.closest('[data-scope="scroll-area"][data-part="viewport"]')!;
-        viewport.scrollTop = Math.max(0, viewport.scrollHeight - viewport.clientHeight - 30);
-      });
+        const max = viewport.scrollHeight - viewport.clientHeight;
+        viewport.scrollTop = max - reserve;
+        return max;
+      }, scrollReserve);
+      expect(maxScroll).toBeGreaterThan(scrollReserve);
     }
     await revealTreeEntry(page, sidenav, source);
     await expect
@@ -286,6 +290,16 @@ test("moves rows back into an emptied header or footer", async ({ page, request 
         }),
       )
       .toBe(true);
+    if (scrollingTarget) {
+      const geometry = await scrollingTarget.evaluate((element) => {
+        const viewport = element.closest('[data-scope="scroll-area"][data-part="viewport"]')!;
+        const bounds = viewport.getBoundingClientRect();
+        const row = element.getBoundingClientRect();
+        return { y: row.y + row.height * 0.75, top: bounds.top, bottom: bounds.bottom, height: bounds.height };
+      });
+      expect(geometry.y).toBeGreaterThan(geometry.top + geometry.height * 0.2 + 2);
+      expect(geometry.y).toBeLessThan(geometry.bottom - geometry.height * 0.2 - 2);
+    }
     const from = (await source.boundingBox())!;
     await page.mouse.move(from.x + 40, from.y + from.height / 2);
     await page.mouse.down();
@@ -297,17 +311,31 @@ test("moves rows back into an emptied header or footer", async ({ page, request 
       const boundary = await scrollingTarget.evaluate((element, pointerY) => {
         const viewport = element.closest('[data-scope="scroll-area"][data-part="viewport"]')!;
         const delta = element.getBoundingClientRect().bottom - pointerY;
+        const before = viewport.scrollTop;
         viewport.scrollTop += delta;
-        return element.getBoundingClientRect().bottom;
+        return { bottom: element.getBoundingClientRect().bottom, before, after: viewport.scrollTop };
       }, destinationY);
-      expect(boundary).toBe(destinationY);
+      expect(boundary.after).not.toBe(boundary.before);
+      expect(boundary.bottom).toBe(destinationY);
       await page.evaluate(
         () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
       );
       await page.mouse.move(from.x + 41, destinationY);
     }
     // Scrolling during traversal can move the row away from the sampled point.
-    await page.mouse.move(from.x + 40, await targetY());
+    const finalY = await targetY();
+    await page.mouse.move(from.x + 40, finalY);
+    if (scrollingTarget) {
+      expect(
+        await scrollingTarget.evaluate(
+          (element, point) => {
+            const hit = document.elementFromPoint(point.x, point.y)?.closest("[data-tree-list-node-id]");
+            return hit?.getAttribute("data-tree-list-node-id") === element.getAttribute("data-tree-list-node-id");
+          },
+          { x: from.x + 40, y: finalY },
+        ),
+      ).toBe(true);
+    }
     await expect(sidenav.locator("[data-tree-list-drop-indicator]")).toHaveCount(1);
     await page.mouse.up();
     // dnd-kit swallows clicks for 50ms after a drop so the drop is not also a click.
@@ -321,12 +349,13 @@ test("moves rows back into an emptied header or footer", async ({ page, request 
     "search",
   );
   await expect(zone).toHaveCount(0);
+  // Keep three content rows below Workspaces so the held-pointer scroll stays outside auto-scroll's edge band.
+  await drag(sidenav.getByRole("button", { name: "Help", exact: true }), lowerHalfOf(option("Workspaces")));
+  await drag(option("Extensions"), lowerHalfOf(option("Workspaces")));
   await drag(option("Search"), middleOf(zone));
   await expect(sidenav.locator("[data-tree-list-node-id]").first()).toHaveAttribute("data-tree-list-node-id", "search");
 
   await drag(option("Settings"), lowerHalfOf(option("Workspaces")), option("Workspaces"));
-  await drag(sidenav.getByRole("button", { name: "Help", exact: true }), lowerHalfOf(option("Workspaces")));
-  await drag(option("Extensions"), lowerHalfOf(option("Workspaces")));
   const contentListbox = await option("Workspaces").evaluateHandle((element) => element.closest('[role="listbox"]'));
   expect(
     await option("Settings").evaluate(

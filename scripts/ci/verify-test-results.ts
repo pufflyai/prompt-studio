@@ -70,7 +70,7 @@ export const reconcileTestResults = (
   };
 };
 
-const readBundle = (plan: TestPlan, file: string, directory: string, executionId: string) => {
+const readBundle = (plan: TestPlan, file: string, directory: string, executionId: string, errors: string[]) => {
   const records: TestRunResult[] = [];
   const bundle = JSON.parse(readFileSync(file, "utf8"));
   if (bundle.planDigest !== plan.digest || bundle.executionId !== executionId)
@@ -82,28 +82,52 @@ const readBundle = (plan: TestPlan, file: string, directory: string, executionId
         phase.kind === "cleanup" && (!phase.complete || phase.outcome !== "success"),
     )
   )
-    throw new Error(`Incomplete invocation or cleanup: ${file}`);
+    errors.push(`Incomplete invocation or cleanup: ${file}`);
   for (const result of bundle.results as TestRunResult[]) {
+    const source = result?.source;
+    if (
+      !source ||
+      ![source.sha, source.tree, source.policy].every((value) => typeof value === "string") ||
+      typeof source.dirty !== "boolean" ||
+      typeof result.complete !== "boolean" ||
+      !["success", "failure", "cancelled", "not-run", "quarantined-failure"].includes(result.outcome) ||
+      !(result.exitCode === null || Number.isInteger(result.exitCode))
+    )
+      throw new Error(`Invalid run record: ${result?.runId}`);
     const run = plan.runs.find((candidate) => candidate.id === result.runId);
     if (!run) throw new Error(`Unexpected run: ${result.runId}`);
     const native = collectRunEvidence(directory, join(dirname(file), run.id), run, plan, executionId);
-    records.push({ ...result, ...native, complete: result.complete && native.complete });
+    records.push({
+      ...result,
+      ...native,
+      complete: result.complete && native.complete,
+      reason: [result.reason, native.reason].filter(Boolean).join("; ") || undefined,
+    });
   }
   return records;
 };
 export const collectResultBundles = (plan: TestPlan, directory: string, executionId: string) => {
   const records: TestRunResult[] = [];
+  const errors: string[] = [];
   const visit = (path: string) => {
     for (const entry of readdirSync(path, { withFileTypes: true })) {
       const file = join(path, entry.name);
       if (entry.isDirectory()) visit(file);
       else if (entry.name === "execution.json") {
-        records.push(...readBundle(plan, file, directory, executionId));
+        try {
+          records.push(...readBundle(plan, file, directory, executionId, errors));
+        } catch (error) {
+          errors.push(`Invalid result bundle ${file}: ${error}`);
+        }
       }
     }
   };
-  visit(resolve(directory));
-  return records;
+  try {
+    visit(resolve(directory));
+  } catch (error) {
+    errors.push(`Cannot read result bundles ${directory}: ${error}`);
+  }
+  return { records, errors };
 };
 export const browserCoverageErrors = (plan: TestPlan, results: TestRunResult[]) => {
   const groups = new Map<string, typeof plan.runs>();
@@ -136,9 +160,9 @@ if (import.meta.main) {
   if (!planPath || !directory) throw new Error("Expected plan and result bundle directory");
   const plan = JSON.parse(readFileSync(planPath, "utf8")) as TestPlan;
   const executionId = testExecutionId();
-  const records = collectResultBundles(plan, directory, executionId);
+  const { records, errors } = collectResultBundles(plan, directory, executionId);
   const result = reconcileTestResults(plan, records, executionId);
-  result.errors.push(...browserCoverageErrors(plan, records));
+  result.errors.push(...errors, ...browserCoverageErrors(plan, records));
   if (result.errors.length) {
     result.outcome = "failure";
     result.complete = false;
