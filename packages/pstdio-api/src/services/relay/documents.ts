@@ -164,7 +164,9 @@ export const createExtensionDocumentSync = (input: ExtensionDocumentSyncInput) =
     else input.statusChanged?.();
   });
   let firstDownloaded = false;
-  let preparing: { signal: AbortSignal; work: Promise<Awaited<ReturnType<typeof initializeDocuments>>> } | undefined;
+  let preparing:
+    | { signal: AbortSignal; work: Promise<Awaited<ReturnType<typeof initializeDocuments>>>; initialized?: () => void }
+    | undefined;
   const starting = new Map<string, { signal: AbortSignal; work: Promise<boolean>; dirty: boolean }>();
   const close = async () => {
     const previous = current;
@@ -183,7 +185,7 @@ export const createExtensionDocumentSync = (input: ExtensionDocumentSyncInput) =
       try {
         while (request.dirty) {
           request.dirty = false;
-          const active = await prepare(signal);
+          const active = await prepare(signal, input.discoveryNeeded);
           await active.synchronizeDocument(name);
           if (current !== active) request.dirty = true;
         }
@@ -196,20 +198,27 @@ export const createExtensionDocumentSync = (input: ExtensionDocumentSyncInput) =
     starting.set(name, request);
     return work;
   };
-  const prepare = (signal: AbortSignal) => {
-    if (preparing?.signal === signal) return preparing.work;
-    const work = (async () => {
+  const prepare = (signal: AbortSignal, initialized?: () => void) => {
+    if (preparing?.signal === signal) {
+      if (!initialized) preparing.initialized = undefined;
+      return preparing.work;
+    }
+    let request: NonNullable<typeof preparing>;
+    const work = Promise.resolve().then(async () => {
       const { config } = input;
       const { project: space } = await fetchSyncSpaces({ ...config, credential: config.renewalGrant, signal });
       if (!current || current.signal !== signal || current.generation !== space.generation) {
         await close();
         signal.throwIfAborted();
         current = await initializeDocuments(input, signal, space);
-        input.discoveryNeeded?.();
+        // A targeted download needs the owner's directory too. A full pass already
+        // owns discovery, so its preparation must not schedule another sweep.
+        request.initialized?.();
       }
       return current;
-    })();
-    preparing = { signal, work };
+    });
+    request = { signal, work, initialized };
+    preparing = request;
     void work
       .finally(() => {
         if (preparing?.work === work) preparing = undefined;
@@ -227,7 +236,7 @@ export const createExtensionDocumentSync = (input: ExtensionDocumentSyncInput) =
       ...((await current?.status()) ?? documentProgress([undefined, undefined], false)),
     }),
     synchronizeDocument,
-    prepare,
+    prepare: (signal: AbortSignal) => prepare(signal),
     hasDocument: (name: string) => !!current?.jobs.has(name),
     acceptsChange(change: Extract<LiveServerMessage, { type: "changed" | "discovered" }>) {
       const active = current;
