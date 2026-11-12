@@ -1,4 +1,5 @@
 import { strict as assert } from "node:assert";
+import { appendFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 const project = `pstdio-relay-test-${crypto.randomUUID()}`;
@@ -34,6 +35,11 @@ async function step(args: string[]) {
 }
 
 try {
+  if (process.env.PSTDIO_LOCAL_REVIEW_COMPOSE_MANIFEST)
+    await appendFile(
+      process.env.PSTDIO_LOCAL_REVIEW_COMPOSE_MANIFEST,
+      `${JSON.stringify({ project, file: composeFile })}\n`,
+    );
   await step(["build", "relay", "smoke", "initialize", "authority", "tls"]);
   await step(["run", "--rm", "--no-deps", "tls"]);
   await step(["run", "--rm", "--no-deps", "tls", "bun", "test", "tls-validity.p0.test.ts"]);

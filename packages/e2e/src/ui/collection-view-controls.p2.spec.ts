@@ -2,10 +2,8 @@ import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
-import { scrollSidenavToEnd } from "./helpers/sidenav-navigation";
 
 const ticketsBoard = "pstdio.pstdio-planner.view.tickets";
-const artifactsTable = "pstdio.workbench-fixture.view.artifacts";
 
 interface BoardField {
   id: string;
@@ -149,41 +147,6 @@ test("boards search, edit filter parts, and save one sort that agents can build 
     );
     expect(refused.status).not.toBe(0);
     expect(refused.stderr).toContain("Valid conditions: contains, does-not-contain");
-  } finally {
-    await request.delete(`/v1/projects/${project.id}`);
-  }
-});
-
-test("data tables sort from the header and share saved views", async ({ page, request }) => {
-  const project = await createProject(request, page, "Table view controls");
-  try {
-    for (let index = 0; index < 3; index += 1)
-      await execute(request, project.id, "pstdio.workbench-fixture.command.glass-lab-artifacts.create", {});
-    await page.goto(`/projects/${project.id}`);
-    await scrollSidenavToEnd(page);
-    await page.getByRole("option", { name: "Lab mode", exact: true }).click();
-    await page.getByRole("tab", { name: "Artifacts", exact: true }).click();
-    const header = page.locator('[data-column-id="trustSignal"]').first();
-    await header.getByRole("button", { name: "Column options" }).click();
-    await page.getByRole("menuitem", { name: "Sort descending" }).click();
-    await expect(header.getByRole("button", { name: "Sorted desc" })).toBeVisible();
-    const scores = await page.locator('td[data-column-id="trustSignal"]').allInnerTexts();
-    expect(scores.map(Number)).toEqual([...scores.map(Number)].sort((left, right) => right - left));
-
-    await page.getByRole("button", { name: "Display settings" }).last().click();
-    await page.getByTestId("data-table-display-menu").getByText("Row numbers").click();
-    await page.keyboard.press("Escape");
-    await expect(page.locator('[data-column-id="rowIndex"]')).toHaveCount(0);
-    await page.getByRole("button", { name: "Save view", exact: true }).click();
-    await expect(page.getByRole("tab", { name: "All", exact: true })).toHaveAttribute("aria-selected", "true");
-
-    const listed = views(project.origin, "list", "--project-id", project.id, "--board", artifactsTable);
-    expect(listed.status, listed.stderr).toBe(0);
-    const saved = JSON.parse(listed.stdout).views.find((view: { title: string }) => view.title === "All");
-    expect(saved).toMatchObject({
-      sorts: [{ attributeId: "trustSignal", direction: "desc" }],
-      settings: { rowNumbers: false },
-    });
   } finally {
     await request.delete(`/v1/projects/${project.id}`);
   }

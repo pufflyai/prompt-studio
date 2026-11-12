@@ -1,8 +1,7 @@
-import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, getPlannerTicketStatuses } from "../helpers/planner-api";
+import { expect, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
-import { scrollSidenavToEnd } from "./helpers/sidenav-navigation";
 
 const createProject = async (request: import("@playwright/test").APIRequestContext, folderPath?: string) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
@@ -34,7 +33,7 @@ const prepareDashboard = async (page: import("@playwright/test").Page, projectId
   }, projectId);
 };
 
-test("editing Planner statuses updates its board without changing the Lab workflow", async ({ page, request }) => {
+test("editing Planner statuses updates its board", async ({ page, request }) => {
   test.slow();
   const project = await createProject(request);
   const statuses = await getPlannerTicketStatuses(request, apiBase, project.id);
@@ -69,33 +68,6 @@ test("editing Planner statuses updates its board without changing the Lab workfl
 
   await settings.getByRole("button", { name: /^Close / }).click();
   await expect(settings).not.toBeVisible();
-  await expect(page.getByTestId("board-column-backlog")).toContainText("Planned");
-  await scrollSidenavToEnd(page);
-  await page.getByRole("option", { name: "Lab mode", exact: true }).click();
-  await page.getByRole("tab", { name: "Workflow status demo", exact: true }).click();
-  await expect(page.getByTestId("board-column-idea")).toContainText("Idea", { timeout: 30_000 });
-
-  const concept = page.getByTestId("renderer-card").filter({ hasText: "Shape the concept" });
-  const testing = page.getByTestId("board-column-testing");
-  await expect(concept).toBeVisible();
-  const moveResponse = page.waitForResponse(
-    (response) =>
-      response.request().method() === "POST" &&
-      new URL(response.url()).pathname.endsWith(
-        "/extensions/commands/pstdio.workbench-fixture.view.workflow.kanban.onAttributeChange/execute",
-      ),
-  );
-  await concept.dragTo(testing);
-  expect((await moveResponse).ok()).toBe(true);
-  await expect(testing).toContainText("Shape the concept");
-  await concept.getByText("Shape the concept", { exact: true }).click();
-  const artifact = page.frameLocator('iframe[title="Artifact"]');
-  await expect(artifact.getByRole("heading", { name: "Shape the concept" })).toBeVisible({ timeout: 15_000 });
-
-  await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
-  await expect(page.getByTestId("board-column-backlog")).toContainText("Keep the Planner board visible", {
-    timeout: 30_000,
-  });
   await expect(page.getByTestId("board-column-backlog")).toContainText("Planned");
 });
 

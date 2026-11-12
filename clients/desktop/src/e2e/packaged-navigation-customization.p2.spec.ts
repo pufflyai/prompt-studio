@@ -13,10 +13,14 @@ import {
 } from "./packaged-app-helpers";
 import { createPackagedProject, openPackagedProject } from "./packaged-project-helpers";
 
-const fixturePath = dirname(fileURLToPath(import.meta.resolve("workbench-fixture/package.json")));
+const homePath = dirname(fileURLToPath(import.meta.resolve("pstdio-home/package.json")));
+const sessionsPath = dirname(fileURLToPath(import.meta.resolve("pstdio-session-browser/refs")));
 const fixtureExtensions = {
   PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
-    defaultExtensions: [{ source: fixturePath, installName: "workbench-fixture", skipInstall: true }],
+    defaultExtensions: [
+      { source: homePath, installName: "pstdio-home", skipInstall: true },
+      { source: sessionsPath, installName: "pstdio-session-browser", skipInstall: true },
+    ],
   }),
 };
 
@@ -28,7 +32,7 @@ const expectAbove = (page: Page, upper: string, lower: string) =>
 
 // The Sidenav's hide/show submenu lists every hideable row.
 const toggleRow = async (page: Page, name: string) => {
-  await row(page, "Lab").click({ button: "right" });
+  await row(page, "Sessions").click({ button: "right" });
   await page.getByRole("menuitem", { name: "Hide/show items", exact: true }).hover();
   await page
     .locator('[role="menuitem"][data-value^="node:"]')
@@ -39,15 +43,15 @@ const toggleRow = async (page: Page, name: string) => {
 };
 
 const resetSidenav = async (page: Page) => {
-  await row(page, "Lab").click({ button: "right" });
+  await row(page, "Sessions").click({ button: "right" });
   await page.getByRole("menuitem", { name: "Hide/show items", exact: true }).hover();
   await page.getByRole("menuitem", { name: "Reset to default", exact: true }).click();
 };
 
-// Moving the pinned Search row below Lab changes both its section order and its slot.
-const moveSearchBelowLab = async (page: Page) => {
+// Moving the pinned Search row below Sessions changes both its section order and its slot.
+const moveSearchBelowSessions = async (page: Page) => {
   const from = (await row(page, "Search").boundingBox())!;
-  const to = (await row(page, "Lab").boundingBox())!;
+  const to = (await row(page, "Sessions").boundingBox())!;
   await page.mouse.move(from.x + 40, from.y + from.height / 2);
   await page.mouse.down();
   await page.mouse.move(from.x + 40, from.y + from.height / 2 + 8, { steps: 4 });
@@ -56,7 +60,7 @@ const moveSearchBelowLab = async (page: Page) => {
   await page.mouse.up();
   // dnd-kit swallows clicks for 50ms after a drop so the drop is not also a click.
   await page.waitForTimeout(100);
-  await expectAbove(page, "Lab", "Search");
+  await expectAbove(page, "Sessions", "Search");
 };
 
 const relaunch = async (app: PackagedApp) => {
@@ -78,29 +82,29 @@ test("restores each project's navigation order, placement, and visibility after 
     const alpha = await createPackagedProject(app, "Alpha");
     const beta = await createPackagedProject(app, "Beta");
 
-    // Lab mode is visible by default, so toggling it hides the row.
+    // Home is visible by default, so toggling it hides the row.
     await openPackagedProject(app.page, alpha);
-    await expect(row(app.page, "Lab")).toBeVisible({ timeout: 15_000 });
-    await toggleRow(app.page, "Lab mode");
-    await expect(row(app.page, "Lab mode")).toHaveCount(0);
-    await moveSearchBelowLab(app.page);
+    await expect(row(app.page, "Home")).toBeVisible({ timeout: 15_000 });
+    await toggleRow(app.page, "Home");
+    await expect(row(app.page, "Home")).toHaveCount(0);
+    await moveSearchBelowSessions(app.page);
 
     await openPackagedProject(app.page, beta);
-    await expect(row(app.page, "Lab")).toBeVisible({ timeout: 15_000 });
+    await expect(row(app.page, "Home")).toBeVisible({ timeout: 15_000 });
     await toggleRow(app.page, "Search");
     await expect(row(app.page, "Search")).toHaveCount(0);
 
     app = await relaunch(app);
 
     await openPackagedProject(app.page, beta);
-    await expect(row(app.page, "Lab")).toBeVisible({ timeout: 15_000 });
+    await expect(row(app.page, "Home")).toBeVisible({ timeout: 15_000 });
     await expect(row(app.page, "Search")).toHaveCount(0);
-    await expect(row(app.page, "Lab mode")).toBeVisible();
+    await expect(row(app.page, "Home")).toBeVisible();
 
     await openPackagedProject(app.page, alpha);
-    await expect(row(app.page, "Lab")).toBeVisible({ timeout: 15_000 });
-    await expect(row(app.page, "Lab mode")).toHaveCount(0);
-    await expectAbove(app.page, "Lab", "Search");
+    await expect(row(app.page, "Sessions")).toBeVisible({ timeout: 15_000 });
+    await expect(row(app.page, "Home")).toHaveCount(0);
+    await expectAbove(app.page, "Sessions", "Search");
   } finally {
     await disposePackagedApp(app);
     await removePackagedHome(home);
@@ -118,27 +122,27 @@ test("keeps a navigation reset after relaunch without changing another project",
     const beta = await createPackagedProject(app, "Beta");
 
     await openPackagedProject(app.page, beta);
-    await expect(row(app.page, "Lab")).toBeVisible({ timeout: 15_000 });
+    await expect(row(app.page, "Home")).toBeVisible({ timeout: 15_000 });
     await toggleRow(app.page, "Search");
     await expect(row(app.page, "Search")).toHaveCount(0);
 
     await openPackagedProject(app.page, alpha);
-    await expect(row(app.page, "Lab")).toBeVisible({ timeout: 15_000 });
-    await toggleRow(app.page, "Lab mode");
-    await expect(row(app.page, "Lab mode")).toHaveCount(0);
-    await moveSearchBelowLab(app.page);
+    await expect(row(app.page, "Home")).toBeVisible({ timeout: 15_000 });
+    await toggleRow(app.page, "Home");
+    await expect(row(app.page, "Home")).toHaveCount(0);
+    await moveSearchBelowSessions(app.page);
     await resetSidenav(app.page);
-    await expect(row(app.page, "Lab mode")).toBeVisible();
+    await expect(row(app.page, "Home")).toBeVisible();
 
     app = await relaunch(app);
 
     await openPackagedProject(app.page, alpha);
-    await expect(row(app.page, "Lab")).toBeVisible({ timeout: 15_000 });
-    await expect(row(app.page, "Lab mode")).toBeVisible();
-    await expectAbove(app.page, "Search", "Lab");
+    await expect(row(app.page, "Home")).toBeVisible({ timeout: 15_000 });
+    await expect(row(app.page, "Home")).toBeVisible();
+    await expectAbove(app.page, "Search", "Sessions");
 
     await openPackagedProject(app.page, beta);
-    await expect(row(app.page, "Lab")).toBeVisible({ timeout: 15_000 });
+    await expect(row(app.page, "Home")).toBeVisible({ timeout: 15_000 });
     await expect(row(app.page, "Search")).toHaveCount(0);
   } finally {
     await disposePackagedApp(app);

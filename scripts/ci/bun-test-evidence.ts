@@ -87,6 +87,9 @@ export const registeredUnselectedScope = (
 };
 
 export const bunRunIdentity = (root: string) => ({
+  planDigest: process.env.CI_PLAN_DIGEST,
+  runId: process.env.CI_PLAN_RUN_ID,
+  executionId: process.env.CI_TEST_EXECUTION_ID,
   sourceSha: execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim(),
   policyDigest: createHash("sha256")
     .update(readFileSync(`${root}/scripts/ci/test-policy.ts`))

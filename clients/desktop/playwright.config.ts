@@ -13,5 +13,9 @@ export default defineConfig({
   workers: 1,
   forbidOnly: !!process.env.CI,
   fullyParallel: false,
-  reporter: [["line"], ["json", { outputFile: "test-results/electron-readiness.json" }]],
+  reporter: [
+    ...(process.env.CI_PLAN_REPORTER ? [[process.env.CI_PLAN_REPORTER] as [string]] : []),
+    ["line"],
+    ["json", { outputFile: "test-results/electron-readiness.json" }],
+  ],
 });

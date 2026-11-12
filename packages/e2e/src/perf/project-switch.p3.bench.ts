@@ -1,7 +1,8 @@
 import { rmSync, writeFileSync } from "node:fs";
-import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
+import type { APIRequestContext, Page } from "@playwright/test";
 import { workbenchBudgets } from "pstdio-benchmarks";
 import { createPlannerAttempt, createPlannerTicket, executePlannerCommand } from "../helpers/planner-api";
+import { expect, test } from "../scripts/session-test";
 import { createProjectViaApi, deleteAllProjects } from "../ui/helpers/session-follow-up";
 import { createGitRepo } from "../ui/helpers/workspace-session-attempt";
 import { uiOrigin } from "../ui-server";

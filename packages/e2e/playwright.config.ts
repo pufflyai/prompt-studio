@@ -1,5 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
-import { playwrightQuarantineSelection } from "pstdio-scripts/test-quarantine";
+import { playwrightQuarantineSelection } from "pstdio-scripts/testing";
 import { e2eRunId, serveWebServer } from "./src/serve-web-server";
 import { uiOrigin } from "./src/ui-server";
 
@@ -18,6 +18,7 @@ export default defineConfig({
   outputDir: `test-results/${e2eRunId}`,
   globalSetup: "./src/scripts/global-setup.ts",
   reporter: [
+    ...(process.env.CI_PLAN_REPORTER ? [[process.env.CI_PLAN_REPORTER] as [string]] : []),
     ["html", { open: "never", outputFolder: `playwright-report/${e2eRunId}` }],
     ["list"],
     ...(quarantine ? [["json", { outputFile: "test-results/ui-quarantine/results.json" }] as const] : []),

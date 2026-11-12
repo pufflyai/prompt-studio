@@ -24,7 +24,7 @@
   },
   "scripts": {
     "build": "bun ../../scripts/release/stage-package.ts . && bun scripts/prune-tests.ts",
-    "test": "bun ../../scripts/ci/run-bun-tests.ts --silent",
+    "test": "bun ../../scripts/test.ts --scope @pstdio/canvas",
     "typecheck": "bun check",
     "lint": "bun run typecheck && biome check ."
   },

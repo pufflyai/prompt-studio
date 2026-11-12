@@ -75,15 +75,21 @@ export const withPackagedCoreExtensions = async (run: (fixture: CoreExtensionsFi
     });
     closeRegistry = registry.close;
     phase("registry ready");
-    const defaultExtensions = await Promise.all(
+    const preparations = await Promise.allSettled(
       CORE_DEFAULT_EXTENSION_NAMES.map(async (installName) => ({
         installName,
         source: await preparePackagedExtensionSource(
           join(tempRoot, "sources", installName),
           join(REPO_ROOT, "extensions", installName),
+          { packageArtifacts: registry.packageArtifacts },
         ),
       })),
     );
+    // Every preparation owns a child installer that may still read the shared tarballs.
+    // Drain siblings before an error can close the registry and remove those inputs.
+    const failures = preparations.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+    if (failures.length) throw new AggregateError(failures, "Core extension source preparation failed");
+    const defaultExtensions = preparations.flatMap((result) => (result.status === "fulfilled" ? [result.value] : []));
     phase("core sources ready");
     const started = await startPackagedServe(tempRoot, {
       NPM_CONFIG_USERCONFIG: npmConfigPath,

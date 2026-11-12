@@ -76,9 +76,9 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: "24.22.1"
-      - name: Install native dependencies
+      - name: "[phase:install] Install native dependencies"
         run: bun __test-tmp__/native-installer/scripts/ci/install-native-dependencies.ts
-      - name: Download the immutable compiled candidate
+      - name: "[phase:report-transfer] Download the immutable compiled candidate"
         uses: actions/download-artifact@v4
         with:
           name: release-build-attempt-${{ inputs.artifact_attempt }}
@@ -95,8 +95,8 @@ jobs:
         # archive otherwise stalls apt for the whole job.
         timeout-minutes: 3
         run: bunx playwright@1.60.0 install --with-deps
-      - name: Collect every fixed workload with existing budgets
-        run: bun scripts/ci/production-performance.ts ${{ matrix.family }}
+      - name: "[phase:test] Collect every fixed workload with existing budgets"
+        run: bun scripts/test.ts --performance-family ${{ matrix.family }} --prebuilt
       - name: Attest actual consumer inputs and outcome
         if: always()
         env:
@@ -104,19 +104,21 @@ jobs:
           CHECK: performance-${{ matrix.family }}-${{ matrix.os }}
         shell: bash
         run: bun scripts/ci/production-evidence.ts --check "$CHECK" --outcome "$OUTCOME"
-      - name: Preserve consumer attestation
+      - name: "[phase:report-transfer] Preserve consumer attestation"
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: production-evidence-${{ matrix.family }}-${{ matrix.os }}-attempt-${{ github.run_attempt }}
           path: production-evidence
           if-no-files-found: error
-      - name: Preserve all measurements and machine metadata
+      - name: "[phase:report-transfer] Preserve all measurements and machine metadata"
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: production-performance-${{ matrix.family }}-${{ matrix.os }}-attempt-${{ github.run_attempt }}
           path: |
+            test-results/ci/planned
+            !test-results/ci/planned/**/extension-fixtures-*/**
             test-results/production-performance
             test-results/quarantine/workbench-benchmark
             test-results/quarantine/subnav-benchmark

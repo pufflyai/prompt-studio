@@ -155,7 +155,8 @@
         // Specs install fixture extensions by path.
         "src/fixtures/**/extension.ts",
         // Extension manifests load this webview entry by packageAsset path.
-        "src/fixtures/editing-session/view.ts",
+        "src/fixtures/{editing-session,document,mode,settings}/view.ts",
+        "src/fixtures/panel-views/letter-{browser,reader}.tsx",
         "src/fixtures/public-text-editor/view.tsx"
       ],
       "project": ["playwright*.config.ts", "src/**/*.{ts,tsx}"],
@@ -359,6 +360,7 @@
       // Tests launch fixture scripts by path.
       "entry": [
         "package.json",
+        "test-setup.ts",
         "extension.ts",
         "*.test.ts",
         "src/**/*.test.ts",
@@ -440,6 +442,7 @@
       // The skill's example extensions are typechecked source.
       "entry": [
         "extension.ts",
+        "test-setup.ts",
         "src/**/*.canvas.tsx",
         "*.test.ts",
         "skills/create-pstdio-extension/references/examples/**/*.{ts,tsx}"

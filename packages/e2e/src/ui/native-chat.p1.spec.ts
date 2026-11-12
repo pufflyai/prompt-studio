@@ -1,9 +1,9 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { expect, test } from "@playwright/test";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
+import { expect, test } from "../scripts/session-test";
 
 // Critical risk: a delayed extension command must never gate the native composer or lose a typed draft.
 test("independent native chat paints and accepts input before history, then retains its draft across reload", async ({

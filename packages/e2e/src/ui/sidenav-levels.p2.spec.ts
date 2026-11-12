@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket } from "../helpers/planner-api";
+import { expect, test } from "../scripts/session-test";
 import { uiOrigin } from "../ui-server";
 
 test("Notes and Sidenav levels keep rows users pinned to the header", async ({ page, request }) => {

@@ -8,7 +8,7 @@
     "prebuild": "bun run typegen:tokens",
     "typecheck": "bun check -b",
     "lint": "bun run typecheck && biome check . && bun scripts/check-module-isolation.ts",
-    "test": "bun ../../scripts/ci/run-bun-tests.ts --conditions production --silent --tsconfig-override tsconfig.app.json",
+    "test": "bun ../../scripts/test.ts --scope pstdio-dashboard",
     "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --conditions production --coverage --tsconfig-override tsconfig.app.json",
     "preview": "vite preview",
     "typegen:tokens": "chakra typegen ../ui/src/theme/theme.ts",

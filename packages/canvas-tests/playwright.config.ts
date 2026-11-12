@@ -18,7 +18,11 @@ export default defineConfig({
     url: previewUrl,
     timeout: 60_000,
   },
-  reporter: [["html", { open: "never", outputFolder: "playwright-report" }], ["list"]],
+  reporter: [
+    ...(process.env.CI_PLAN_REPORTER ? [[process.env.CI_PLAN_REPORTER] as [string]] : []),
+    ["html", { open: "never", outputFolder: "playwright-report" }],
+    ["list"],
+  ],
   use: {
     baseURL: previewUrl,
     navigationTimeout: 60_000,

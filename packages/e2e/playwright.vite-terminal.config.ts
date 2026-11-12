@@ -28,7 +28,11 @@ export default defineConfig({
   retries: 0,
   forbidOnly: !!process.env.CI,
   outputDir: `test-results/${runId}`,
-  reporter: [["html", { open: "never", outputFolder: `playwright-report/${runId}` }], ["list"]],
+  reporter: [
+    ...(process.env.CI_PLAN_REPORTER ? [[process.env.CI_PLAN_REPORTER] as [string]] : []),
+    ["html", { open: "never", outputFolder: `playwright-report/${runId}` }],
+    ["list"],
+  ],
   use: {
     navigationTimeout: 60_000,
     trace: "retain-on-failure",

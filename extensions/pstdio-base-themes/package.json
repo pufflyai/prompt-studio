@@ -17,7 +17,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun ../../scripts/ci/run-bun-tests.ts --pass-with-no-tests",
+    "test": "bun test --pass-with-no-tests",
     "typecheck": "bun check && bun check -p tsconfig.canvas.json"
   },
   "dependencies": {

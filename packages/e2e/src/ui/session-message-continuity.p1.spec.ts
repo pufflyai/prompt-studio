@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { expect, type Request, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { expect, type Request, test } from "../scripts/session-test";
 import { uiOrigin } from "../ui-server";
 
 const actionPath = "/extensions/commands/pstdio.pstdio-session-browser.view.conversation.chat.onAction/execute";

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../scripts/session-test";
 import {
   createResourceActionsProject,
   openSessionSidePanel,

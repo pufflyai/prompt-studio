@@ -41,7 +41,7 @@
     "typecheck": "bun check",
     "lint": "bun run typecheck && biome lint .",
     "format": "biome format --write .",
-    "test": "bun ../../scripts/ci/run-bun-tests.ts --conditions=production --silent",
+    "test": "bun ../../scripts/test.ts --scope pstdio",
     "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --conditions=production --coverage"
   },
   "dependencies": {

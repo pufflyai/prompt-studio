@@ -1,7 +1,7 @@
-import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { homeFrame } from "../helpers/home-loading";
 import { attachTerminalFocus, recordTerminalFocus } from "../helpers/terminal-focus-evidence";
+import { expect, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 
 const deleteAllProjects = async (request: import("@playwright/test").APIRequestContext) => {

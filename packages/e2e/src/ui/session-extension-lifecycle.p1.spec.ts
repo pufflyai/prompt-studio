@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { expect, test } from "@playwright/test";
 import { observeEventConnectionBudget } from "../helpers/event-connection-budget";
+import { expect, test } from "../scripts/session-test";
 import {
   createResourceActionsProject,
   openSessionSidePanel,

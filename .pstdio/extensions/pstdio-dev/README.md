@@ -12,7 +12,7 @@ pst pstdio-dev workspace stop-isolation --workspace-id <id>
 
 `open-in-vscode` opens the workspace worktree in VS Code. `open-in-isolation` starts the repository's isolated development stack and opens its dashboard. `stop-isolation` stops that stack.
 
-The extension also installs dependencies and builds a new worktree after the workspace-ready event.
+Workspace creation does not install dependencies or start a build. Run targeted setup and validation explicitly with the repository’s `bun run test:review` command.
 
 At noon each day, it starts an evidence-gated search for one high-impact issue. It creates a planner ticket only when the search reproduces a valuable, untracked problem.
 

@@ -1,4 +1,4 @@
-import { dirname } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, type Page } from "@playwright/test";
 import type { PerformanceSnapshot } from "pstdio-api-contracts/performance-diagnostics";
@@ -25,12 +25,18 @@ type MonitoringBridge = {
 
 // Prompt Studio Performance Monitoring measures exactly while it is loaded, so a test that
 // measures with monitoring off launches without it.
-export const launchProject = async (name: string, options: { monitoring?: boolean } = {}) => {
+export const launchProject = async (
+  name: string,
+  options: { monitoring?: boolean; webview?: boolean; harness?: boolean } = {},
+) => {
   const home = createPackagedHome();
   const app = await launchPackagedApp(home, {
     PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
       defaultExtensions: [
-        benchmarkExtension("workbench-fixture", fixturePath),
+        ...(options.harness ? [benchmarkExtension("workbench-fixture", fixturePath)] : []),
+        ...(options.webview
+          ? [{ source: join(fixturePath, "fixtures/webview-host"), installName: "webview-host" }]
+          : []),
         benchmarkExtension("pstdio-home", homePath),
         benchmarkExtension("pstdio-session-browser", sessionsPath),
         ...(options.monitoring ? [benchmarkExtension("pstdio-performance", performancePath)] : []),
@@ -65,9 +71,11 @@ export const stopMonitoring = async (page: Page) => {
   await expect.poll(async () => readSnapshot(page)).toBeNull();
 };
 
-export const openLabPreview = async (page: Page) => {
-  await page.getByRole("option", { name: "Lab", exact: true }).click();
+export const openHostPreview = async (page: Page) => {
+  const destination = new URL(page.url());
+  destination.pathname = `/projects/${destination.pathname.split("/")[2]}/extensions/test.webview-host/host`;
+  await page.goto(destination.href);
   await expect(
-    page.frameLocator('iframe[title="Lab"]').getByRole("heading", { name: "Sandbox webview" }),
+    page.frameLocator('iframe[title="Host page"]').getByRole("heading", { name: "Host contract" }),
   ).toBeVisible();
 };

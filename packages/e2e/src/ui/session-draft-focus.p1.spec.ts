@@ -1,6 +1,6 @@
 import { rmSync } from "node:fs";
-import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { expect, test } from "../scripts/session-test";
 import { uiOrigin } from "../ui-server";
 import { createGitRepo } from "./helpers/workspace-session-attempt";
 

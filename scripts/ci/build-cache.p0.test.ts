@@ -95,3 +95,32 @@ test("portable task archives survive a cache server restart", async () => {
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test("concurrent cache servers publish only complete archives without replacing another run's output", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "ci-build-cache-race-"));
+  const first = createBuildCache(directory);
+  const second = createBuildCache(directory);
+  let finish!: () => void;
+  const body = new ReadableStream({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode("partial"));
+      finish = () => {
+        controller.enqueue(new TextEncoder().encode(" remainder"));
+        controller.close();
+      };
+    },
+  });
+  const path = "/v1/cache/same-build";
+  const pending = fetch(new URL(path, first.url), { method: "PUT", body });
+  try {
+    expect((await fetch(new URL(path, second.url))).status).toBe(404);
+    expect((await fetch(new URL(path, second.url), { method: "PUT", body: "complete winner" })).status).toBe(200);
+    finish();
+    expect((await pending).status).toBe(409);
+    expect(await (await fetch(new URL(path, first.url))).text()).toBe("complete winner");
+  } finally {
+    await first.stop(true);
+    await second.stop(true);
+    await rm(directory, { recursive: true, force: true });
+  }
+});
