@@ -75,15 +75,16 @@ export const saveStatusSettings = defineCommand({
     const removed = stored.filter((status) => !nextIds.has(status.id));
     const fallbackId = (next.find((status) => status.isDefault) ?? next[0])?.id ?? null;
 
-    await Promise.all([
-      ...next.map((status) => putStatus(ctx.storage, status)),
-      ...removed.map((status) => statusesCollection(ctx.storage).delete(status.id)),
-      ...(await ticketsCollection(ctx).list()).map((ticket) =>
+    await Promise.all(next.map((status) => putStatus(ctx.storage, status)));
+    // Keep removed definitions readable until reassignment has saved its historical labels.
+    await Promise.all(
+      (await ticketsCollection(ctx).list()).map((ticket) =>
         removed.some((status) => status.id === ticket.statusId)
           ? putTicket(ctx, { ...ticket, statusId: fallbackId })
           : undefined,
       ),
-    ]);
+    );
+    await Promise.all(removed.map((status) => statusesCollection(ctx.storage).delete(status.id)));
     await ctx.events.emit(plannerTicketsChanged, {});
     await ctx.events.emit(plannerSchemaChanged, {});
 
