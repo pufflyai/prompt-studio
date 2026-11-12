@@ -33,7 +33,13 @@ test(
         phase("editor visible; fill note");
         await editor.fill("Created on device B");
         phase("editor filled; await sidebar title");
-        await browserExpect(sidebar.getByRole("option", { name: "Created on device B", exact: true })).toBeVisible();
+        // Coarse retry intervals can miss a title painted just before the same deadline.
+        await browserExpect
+          .poll(() => sidebar.getByRole("option", { name: "Created on device B", exact: true }).isVisible(), {
+            intervals: [50],
+            timeout: 5_000,
+          })
+          .toBe(true);
         phase("note authored; reload");
         await page.reload();
         await browserExpect(editor).toContainText("Created on device B");
