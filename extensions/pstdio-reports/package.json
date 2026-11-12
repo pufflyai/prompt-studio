@@ -7,7 +7,7 @@
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.4.1"
+    "pstdio": "^0.4.2"
   },
   "pstdio": {
     "scope": "user"

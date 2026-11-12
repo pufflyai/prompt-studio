@@ -5,6 +5,8 @@ description: Read resource discussion and publish implementation or independent 
 
 # Resource Activity
 
+Requires the host and SDK providing extension API 0.4.2.
+
 Publish on the resource being worked on. A session is context for the work, not an Activity destination. Resource owners opt into discussion, changes, and outcomes; sessions retain their conversation without Activity.
 
 Use the complete resource reference: projectId, extensionId, type, and stable id. Labels and shorthands are not identity. For Planner, read the ticket with `pst tickets panel --id PS-12` and use its stable `id`, the project ID, and `pstdio.pstdio-planner` as the owner.
