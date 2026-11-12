@@ -11,13 +11,13 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { GripVertical } from "lucide-react";
 import { type CSSProperties, type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 import { dashboardRecipe } from "@/theme/recipes/dashboard";
 import { type DashboardLayoutMode, type DashboardWidget, type GridPlacement, widgetLabel } from "./dashboard-fixtures";
 import { measureGrid } from "./dashboard-grid-geometry";
 import { GridWidget } from "./dashboard-grid-widget";
-import { dashboardColumns, moveWidget, projectWidgets, resizeWidget } from "./dashboard-layout";
+import { dashboardColumns, previewWidgetMove, projectWidgets, resizeWidget } from "./dashboard-layout";
+import { WidgetIcon } from "./dashboard-widget-icon";
 import { useDashboardResize } from "./use-dashboard-resize";
 
 interface GridProps {
@@ -86,7 +86,8 @@ export function DashboardGrid(props: GridProps) {
   const [drag, setDrag] = useState<DragSession | null>(null);
   const projected = projectWidgets(widgets, columns);
   const resizing = useDashboardResize({ widgets, projected, columns, mode, grid, onChange, onGestureStart });
-  const preview = drag ? moveWidget(widgets, drag.id, drag.candidate, columns, mode) : widgets;
+  const move = drag ? previewWidgetMove(widgets, drag.id, drag.candidate, columns, mode) : null;
+  const preview = move?.widgets ?? widgets;
   const sized = resizing.resize
     ? resizeWidget(preview, resizing.resize.id, resizing.resize.size, columns, mode, resizing.resize.handle)
     : preview;
@@ -183,7 +184,7 @@ export function DashboardGrid(props: GridProps) {
             key={widget.id}
             {...props}
             widget={widget}
-            moving={drag?.id === widget.id}
+            moving={move?.movingIds.includes(widget.id) ?? false}
             resizing={resizing.resize?.id === widget.id}
             resizeController={resizing}
             columns={columns}
@@ -193,8 +194,8 @@ export function DashboardGrid(props: GridProps) {
       </GridSurface>
       <DragOverlay dropAnimation={null}>
         {active && (
-          <HStack layerStyle="floatingBar" pointerEvents="none">
-            <GripVertical />
+          <HStack layerStyle="floatingBar" pointerEvents="none" data-dashboard-drag-bubble="">
+            <WidgetIcon kind={active.kind} />
             <Text textStyle="label/S/medium">{widgetLabel(active)}</Text>
           </HStack>
         )}

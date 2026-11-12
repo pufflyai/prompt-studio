@@ -90,11 +90,16 @@ export function GridWidget(props: GridWidgetProps) {
         }
       />
       {editing && <Box aria-hidden css={styles.selectionOutline} data-dashboard-selection="" />}
-      {(moving || resizing) && (
+      {moving && (
         <Box aria-hidden css={styles.highlight} data-drop-active data-dashboard-drop-preview="">
           <Box css={styles.sizeLabel} layerStyle="floatingBar">
             {widget.layout.w} × {widget.layout.h}
           </Box>
+        </Box>
+      )}
+      {resizing && (
+        <Box aria-hidden css={styles.sizeLabel} layerStyle="floatingBar" data-dashboard-resize-preview="">
+          {widget.layout.w} × {widget.layout.h}
         </Box>
       )}
     </Box>

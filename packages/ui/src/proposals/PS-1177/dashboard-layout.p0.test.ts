@@ -1,6 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import type { DashboardWidget } from "./dashboard-fixtures";
-import { compactWidgets, dashboardColumns, moveWidget, projectWidgets, resizeWidget } from "./dashboard-layout";
+import {
+  compactWidgets,
+  dashboardColumns,
+  moveWidget,
+  previewWidgetMove,
+  projectWidgets,
+  resizeWidget,
+} from "./dashboard-layout";
 
 const fixtures: DashboardWidget[] = [
   { id: "first", title: "First", kind: "metric", source: "users", layout: { x: 0, y: 0, w: 4, h: 3 } },
@@ -51,6 +58,80 @@ describe("dashboard grid editing", () => {
     const metrics = [fixtures[0], fixtures[1], { ...fixtures[0], id: "third", layout: { x: 8, y: 0, w: 4, h: 3 } }];
     const result = moveWidget(metrics, "first", { x: 0, y: 6, w: 1, h: 3 }, 1);
     expect(projectWidgets(result, 1).map(({ id }) => id)).toEqual(["third", "second", "first"]);
+  });
+
+  const rowFixtures: DashboardWidget[] = [
+    fixtures[0],
+    fixtures[1],
+    { ...fixtures[0], id: "third", layout: { x: 8, y: 0, w: 4, h: 3 } },
+    { ...fixtures[2], id: "left-chart", layout: { x: 0, y: 3, w: 6, h: 8 } },
+    { ...fixtures[2], id: "right-chart", layout: { x: 6, y: 3, w: 6, h: 8 } },
+    { ...fixtures[2], id: "table", kind: "table", layout: { x: 0, y: 11, w: 12, h: 4 } },
+  ];
+
+  test("a diagonal drop across rows swaps entire rows while preserving columns and sizes", () => {
+    const result = moveWidget(rowFixtures, "first", { x: 8, y: 3, w: 4, h: 3 }, 12);
+    for (const widget of rowFixtures) {
+      const y = new Map([
+        [0, 8],
+        [3, 0],
+        [11, 11],
+      ]).get(widget.layout.y);
+      expect(result.find(({ id }) => id === widget.id)?.layout).toEqual({ ...widget.layout, y });
+    }
+  });
+
+  test("nonadjacent row swaps keep the intervening row together and account for row heights", () => {
+    const result = moveWidget(rowFixtures, "first", { x: 0, y: 11, w: 4, h: 3 }, 12);
+    expect(result.find(({ id }) => id === "table")?.layout.y).toBe(0);
+    expect(result.filter(({ id }) => id.endsWith("chart")).map(({ layout }) => layout.y)).toEqual([4, 4]);
+    expect(result.filter(({ kind }) => kind === "metric").map(({ layout }) => layout.y)).toEqual([12, 12, 12]);
+    expect(result.map(({ id }) => id)).toEqual(["table", "left-chart", "right-chart", "first", "second", "third"]);
+  });
+
+  test("a phone drop across logical rows keeps those rows grouped in the saved definition", () => {
+    const result = moveWidget(rowFixtures, "first", { x: 0, y: 9, w: 1, h: 3 }, 1);
+    expect(projectWidgets(result, 1).map(({ id }) => id)).toEqual([
+      "left-chart",
+      "right-chart",
+      "first",
+      "second",
+      "third",
+      "table",
+    ]);
+  });
+
+  test("vertical previews move every source-row widget and preserve gaps in free and horizontal modes", () => {
+    const spaced = rowFixtures.map((widget) => ({
+      ...widget,
+      layout: {
+        ...widget.layout,
+        y:
+          new Map([
+            [0, 2],
+            [3, 7],
+            [11, 17],
+          ]).get(widget.layout.y) ?? 0,
+      },
+    }));
+    for (const mode of ["free", "horizontal"] as const) {
+      const preview = previewWidgetMove(spaced, "first", { x: 0, y: 7, w: 4, h: 3 }, 12, mode);
+      expect(preview.movingIds).toEqual(["first", "second", "third"]);
+      expect(preview.widgets.find(({ id }) => id === "left-chart")?.layout).toEqual({ x: 0, y: 2, w: 6, h: 8 });
+      expect(preview.widgets.find(({ id }) => id === "first")?.layout).toEqual({ x: 0, y: 12, w: 4, h: 3 });
+      expect(preview.widgets.find(({ id }) => id === "table")?.layout.y).toBe(17);
+    }
+  });
+
+  test("horizontal swaps keep differently sized widgets and their row at the same vertical positions", () => {
+    const uneven = rowFixtures.map((widget) =>
+      widget.id === "first" ? { ...widget, layout: { ...widget.layout, h: 2 } } : widget,
+    );
+    const result = moveWidget(uneven, "first", { x: 8, y: 0, w: 4, h: 2 }, 12);
+    expect(result.find(({ id }) => id === "first")?.layout).toEqual({ x: 8, y: 0, w: 4, h: 2 });
+    for (const widget of uneven) {
+      expect(result.find(({ id }) => id === widget.id)?.layout.y).toBe(widget.layout.y);
+    }
   });
 
   test("free placement keeps empty-space positions without moving other widgets", () => {

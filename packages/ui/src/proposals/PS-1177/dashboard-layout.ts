@@ -1,5 +1,6 @@
 import { dashboardGeometry } from "@/theme/primitives/dashboard";
 import type { DashboardLayoutMode, DashboardResizeHandle, DashboardWidget, GridPlacement } from "./dashboard-fixtures";
+import { swapRows, swapWithinRow } from "./dashboard-rows";
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, Math.round(value)));
 const intersects = (a: GridPlacement, b: GridPlacement) =>
@@ -87,30 +88,7 @@ function placeWidget(widgets: DashboardWidget[], id: string, candidate: GridPlac
   return settleWidgets([{ ...widget, layout }, ...readingOrder(widgets).filter((item) => item.id !== id)]);
 }
 
-function swapWidgets(widgets: DashboardWidget[], active: DashboardWidget, target: DashboardWidget) {
-  const a = { ...active.layout, x: target.layout.x, y: target.layout.y };
-  const b = { ...target.layout, x: active.layout.x, y: active.layout.y };
-  // Keep unequal-size neighbors in their original row/column without resizing either widget.
-  if (active.layout.y === target.layout.y) {
-    if (active.layout.x < target.layout.x) a.x += target.layout.w - active.layout.w;
-    else b.x += active.layout.w - target.layout.w;
-  } else if (active.layout.x === target.layout.x) {
-    if (active.layout.y < target.layout.y) a.y += target.layout.h - active.layout.h;
-    else b.y += active.layout.h - target.layout.h;
-  }
-  a.x = clamp(a.x, 0, dashboardGeometry.columns - a.w);
-  b.x = clamp(b.x, 0, dashboardGeometry.columns - b.w);
-  const pair = readingOrder([
-    { ...active, layout: a },
-    { ...target, layout: b },
-  ]);
-  return settleWidgets([
-    ...pair,
-    ...readingOrder(widgets).filter((widget) => widget.id !== active.id && widget.id !== target.id),
-  ]);
-}
-
-export function moveWidget(
+export function previewWidgetMove(
   widgets: DashboardWidget[],
   id: string,
   candidate: GridPlacement,
@@ -119,7 +97,7 @@ export function moveWidget(
 ) {
   const projected = projectWidgets(widgets, columns);
   const origin = projected.find((widget) => widget.id === id)?.layout;
-  if (origin?.x === candidate.x && origin.y === candidate.y) return widgets;
+  if (origin?.x === candidate.x && origin.y === candidate.y) return { widgets, movingIds: [id] };
   const x = clamp(candidate.x, 0, columns - candidate.w);
   const y = Math.max(0, candidate.y);
   let over: DashboardWidget | undefined;
@@ -136,12 +114,20 @@ export function moveWidget(
   }
   const active = widgets.find((widget) => widget.id === id);
   const target = widgets.find((widget) => widget.id === over?.id);
-  if (active && target) return compactWidgets(swapWidgets(widgets, active, target), mode);
-  if (columns === dashboardGeometry.columns) return compactWidgets(placeWidget(widgets, id, candidate), mode);
+  if (active && target) {
+    if (active.layout.y === target.layout.y) {
+      return { widgets: readingOrder(swapWithinRow(widgets, active, target)), movingIds: [id] };
+    }
+    const swapped = swapRows(widgets, active, target, mode);
+    return { ...swapped, widgets: readingOrder(swapped.widgets) };
+  }
+  if (columns === dashboardGeometry.columns) {
+    return { widgets: compactWidgets(placeWidget(widgets, id, candidate), mode), movingIds: [id] };
+  }
   // Narrow empty-space drops change reading order without storing a second layout.
   const ordered = readingOrder(widgets);
   const from = ordered.findIndex((widget) => widget.id === id);
-  if (from < 0) return widgets;
+  if (from < 0) return { widgets, movingIds: [id] };
   const center = candidate.y + candidate.h / 2;
   const targets = projected.filter((widget) => widget.id !== id);
   const nearest = targets.reduce<DashboardWidget | undefined>((closest, widget) => {
@@ -149,11 +135,21 @@ export function moveWidget(
     if (!closest || distance < Math.abs(closest.layout.y + closest.layout.h / 2 - center)) return widget;
     return closest;
   }, undefined);
-  if (!nearest) return widgets;
+  if (!nearest) return { widgets, movingIds: [id] };
   const to = ordered.findIndex((widget) => widget.id === nearest.id);
   const [moved] = ordered.splice(from, 1);
   ordered.splice(to, 0, moved);
-  return compactWidgets(packWidgets(ordered, dashboardGeometry.columns), mode);
+  return { widgets: compactWidgets(packWidgets(ordered, dashboardGeometry.columns), mode), movingIds: [id] };
+}
+
+export function moveWidget(
+  widgets: DashboardWidget[],
+  id: string,
+  candidate: GridPlacement,
+  columns: number,
+  mode: DashboardLayoutMode = "vertical",
+) {
+  return previewWidgetMove(widgets, id, candidate, columns, mode).widgets;
 }
 
 export function resizeWidget(
