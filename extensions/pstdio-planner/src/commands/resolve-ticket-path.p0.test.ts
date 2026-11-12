@@ -129,3 +129,20 @@ test("ticket draft paths open the ticket and saved file paths select the documen
   expect(await resolve(`${ticketFilesDir("T-1")}/missing.md`)).toBeNull();
   expect(await resolve(ticketMarkdownPath("T-1").replace("ticket.md", "notes.md"))).toBeNull();
 });
+
+test("canonical and historical allocated ticket paths resolve the same ticket and file", async () => {
+  const storage = createMemoryStorage();
+  await putTicket(
+    storage,
+    storedTicket("same-ticket", "T-1", {
+      files: [{ id: "notes", name: "notes.md", blobId: "unused", createdAt: "2026-10-16", updatedAt: "2026-10-16" }],
+    }),
+  );
+  const resolve = resolver(storage, "renamed-path-project");
+  for (const suffix of ["ticket.md", "files/notes.md"]) {
+    const historical = `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/T-1/${suffix}`;
+    const canonical = `.pstdio/extension-storage/pstdio.planner/tickets/T-1/${suffix}`;
+    expect(await resolve(canonical)).toEqual(await resolve(historical));
+    expect(await resolve(canonical)).toMatchObject({ resource: { id: "same-ticket" } });
+  }
+});

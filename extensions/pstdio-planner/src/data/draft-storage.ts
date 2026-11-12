@@ -9,6 +9,7 @@ import { ticketTagIds } from "./ticket-tags";
 import type { Ticket } from "./types";
 
 export const TICKETS_DIR = ".pstdio/extension-storage/pstdio.pstdio-planner/tickets";
+export const ticketPathPrefixes = [`${TICKETS_DIR}/`, ".pstdio/extension-storage/pstdio.planner/tickets/"];
 
 const layout = createDraftLayout(TICKETS_DIR, "ticket");
 export const ticketMarkdownPath = layout.markdown;

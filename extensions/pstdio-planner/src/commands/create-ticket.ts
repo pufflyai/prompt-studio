@@ -7,7 +7,7 @@ import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
 import { ticketTagsForIds } from "../data/tag-cardinality";
 import { allocateTicketIdentity } from "../data/ticket-identity";
 import { appendTicketPosition, withTicketOrder } from "../data/ticket-order";
-import { ticketResourceReference } from "../data/ticket-resource-hierarchy";
+import { plannerOwnerFor, ticketResourceReference } from "../data/ticket-resource-hierarchy";
 import { withTicketTagIds } from "../data/ticket-tags";
 import type { StoredTicketAttachment } from "../data/types";
 import { plannerTicketsChanged } from "../events";
@@ -107,7 +107,7 @@ export const createTicketCommand = defineCommand({
     return {
       ...withTicketTagIds(ticket),
       resource: {
-        ...ticketResourceReference(ticket, createTicketParentLookup([...existing, ticket])),
+        ...ticketResourceReference(ticket, createTicketParentLookup([...existing, ticket]), plannerOwnerFor(ctx)),
         projectId: ctx.projectId,
         icon: TICKET_RESOURCE_ICON,
       },
