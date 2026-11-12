@@ -50,6 +50,25 @@ describe("dashboard grid editing", () => {
     expect(projectWidgets(resized, 1).find(({ id }) => id === "first")?.layout.h).toBe(6);
   });
 
+  test("the left resize handle keeps the opposite edge fixed and only changes width", () => {
+    const resized = resizeWidget(fixtures, "second", { w: 6, h: 20 }, 12, "free", "w");
+    expect(resized.find(({ id }) => id === "second")?.layout).toEqual({ x: 2, y: 0, w: 6, h: 3 });
+    const bounded = resizeWidget(fixtures, "second", { w: 30, h: 3 }, 12, "free", "w");
+    expect(bounded.find(({ id }) => id === "second")?.layout).toEqual({ x: 0, y: 0, w: 8, h: 3 });
+  });
+
+  test("right resizing stays anchored and inside the grid", () => {
+    const resized = resizeWidget(fixtures, "second", { w: 12, h: 20 }, 12, "free", "e");
+    expect(resized.find(({ id }) => id === "second")?.layout).toEqual({ x: 4, y: 0, w: 8, h: 3 });
+  });
+
+  test("bottom resizing preserves width while the bottom-left corner changes both dimensions", () => {
+    const bottom = resizeWidget(fixtures, "second", { w: 12, h: 5 }, 12, "free", "s");
+    expect(bottom.find(({ id }) => id === "second")?.layout).toEqual({ x: 4, y: 0, w: 4, h: 5 });
+    const corner = resizeWidget(fixtures, "second", { w: 3, h: 5 }, 12, "free", "sw");
+    expect(corner.find(({ id }) => id === "second")?.layout).toEqual({ x: 5, y: 0, w: 3, h: 5 });
+  });
+
   test("picking up a widget on a phone keeps its position until it moves", () => {
     const origin = projectWidgets(fixtures, 1)[0].layout;
     expect(moveWidget(fixtures, "first", origin, 1)).toEqual(fixtures);

@@ -1,4 +1,4 @@
-import { Box, HStack, IconButton, Text, useSlotRecipe } from "@chakra-ui/react";
+import { Box, HStack, Text, useSlotRecipe } from "@chakra-ui/react";
 import {
   DndContext,
   DragOverlay,
@@ -7,19 +7,17 @@ import {
   PointerSensor,
   pointerWithin,
   rectIntersection,
-  useDraggable,
   useDroppable,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { GripVertical, MoveDiagonal2 } from "lucide-react";
-import { type CSSProperties, type ReactNode, type Ref, type RefObject, useEffect, useRef, useState } from "react";
-import { Resizable } from "react-resizable";
+import { GripVertical } from "lucide-react";
+import { type CSSProperties, type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 import { dashboardRecipe } from "@/theme/recipes/dashboard";
 import type { DashboardLayoutMode, DashboardWidget, GridPlacement } from "./dashboard-fixtures";
-import { measureGrid, placementStyle } from "./dashboard-grid-geometry";
+import { measureGrid } from "./dashboard-grid-geometry";
+import { GridWidget } from "./dashboard-grid-widget";
 import { dashboardColumns, moveWidget, projectWidgets, resizeWidget } from "./dashboard-layout";
-import { WidgetCard } from "./dashboard-widget";
 import { useDashboardResize } from "./use-dashboard-resize";
 
 interface GridProps {
@@ -39,93 +37,6 @@ interface DragSession {
   origin: GridPlacement;
   candidate: GridPlacement;
   metrics: { column: number; row: number };
-}
-
-interface GridWidgetProps extends GridProps {
-  widget: DashboardWidget;
-  moving: boolean;
-  resizing: boolean;
-  columns: number;
-  metrics: ReturnType<typeof measureGrid> | null;
-  resizeController: ReturnType<typeof useDashboardResize>;
-}
-function GridWidget(props: GridWidgetProps) {
-  const {
-    widget,
-    editing,
-    selectedId,
-    days,
-    moving,
-    resizing,
-    onConfigure,
-    onWidgetChange,
-    onRemove,
-    resizeController,
-    columns,
-    metrics,
-  } = props;
-  const styles = useSlotRecipe({ recipe: dashboardRecipe })();
-  const draggable = useDraggable({ id: widget.id, disabled: !editing });
-  const content = (
-    <Box
-      ref={draggable.setNodeRef}
-      css={styles.card}
-      style={placementStyle(widget.layout)}
-      data-widget-id={widget.id}
-      data-moving={moving}
-    >
-      <WidgetCard
-        widget={widget}
-        editing={editing}
-        selected={widget.id === selectedId}
-        days={days}
-        dragHandle={{ ...draggable.attributes, ...draggable.listeners, ref: draggable.setActivatorNodeRef }}
-        onConfigure={(open) => onConfigure(open ? widget.id : null)}
-        onWidgetChange={onWidgetChange}
-        onRemove={() => onRemove(widget.id)}
-      />
-      {(moving || resizing || selectedId === widget.id) && (
-        <Box
-          aria-hidden
-          css={styles.highlight}
-          layerStyle={moving || resizing ? "panelDropZone" : "tabDropZone"}
-          data-drop-active={moving || resizing || undefined}
-          data-dashboard-drop-preview={moving || resizing ? "" : undefined}
-        >
-          {(moving || resizing) && (
-            <Box css={styles.sizeLabel} layerStyle="floatingBar">
-              <Text textStyle="label/XS/medium">
-                {widget.layout.w} × {widget.layout.h}
-              </Text>
-            </Box>
-          )}
-        </Box>
-      )}
-    </Box>
-  );
-  if (!editing || !metrics) return content;
-  return (
-    <Resizable
-      {...resizeController.resizableProps(widget, metrics)}
-      axis={columns === 1 ? "y" : "both"}
-      resizeHandles={["se"]}
-      handle={(_axis, ref) => (
-        <IconButton
-          ref={ref as Ref<HTMLButtonElement>}
-          aria-label={`Resize ${widget.title}`}
-          title="Drag to resize. Arrow keys adjust width and height."
-          size="xs"
-          variant="ghost"
-          css={styles.resizeHandle}
-          onKeyDown={(event) => resizeController.onHandleKeyDown(widget.id, event)}
-        >
-          <MoveDiagonal2 />
-        </IconButton>
-      )}
-    >
-      {content}
-    </Resizable>
-  );
 }
 
 interface GridSurfaceProps {
@@ -177,7 +88,7 @@ export function DashboardGrid(props: GridProps) {
   const resizing = useDashboardResize({ widgets, projected, columns, mode, grid, onChange, onGestureStart });
   const preview = drag ? moveWidget(widgets, drag.id, drag.candidate, columns, mode) : widgets;
   const sized = resizing.resize
-    ? resizeWidget(preview, resizing.resize.id, resizing.resize.size, columns, mode)
+    ? resizeWidget(preview, resizing.resize.id, resizing.resize.size, columns, mode, resizing.resize.handle)
     : preview;
   const visible = projectWidgets(sized, columns);
   useEffect(() => {

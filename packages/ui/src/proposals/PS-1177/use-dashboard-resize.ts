@@ -1,7 +1,7 @@
 import { type KeyboardEvent, type RefObject, type SyntheticEvent, useState } from "react";
 import type { ResizeCallbackData } from "react-resizable";
 import { dashboardGeometry } from "@/theme/primitives/dashboard";
-import type { DashboardLayoutMode, DashboardWidget } from "./dashboard-fixtures";
+import type { DashboardLayoutMode, DashboardResizeHandle, DashboardWidget, GridPlacement } from "./dashboard-fixtures";
 import { measureGrid, placementSize } from "./dashboard-grid-geometry";
 import { resizeWidget } from "./dashboard-layout";
 
@@ -10,6 +10,8 @@ interface ResizeSession {
   id: string;
   metrics: GridMetrics;
   size: { w: number; h: number };
+  origin: GridPlacement;
+  handle: DashboardResizeHandle;
 }
 interface ResizeOptions {
   widgets: DashboardWidget[];
@@ -30,7 +32,8 @@ export function useDashboardResize(options: ResizeOptions) {
   const { widgets, projected, columns, mode, grid, onChange, onGestureStart } = options;
   const [resize, setResize] = useState<ResizeSession | null>(null);
   const resizableProps = (widget: DashboardWidget, geometry: GridMetrics) => {
-    const metrics = resize?.id === widget.id ? resize.metrics : geometry;
+    const session = resize?.id === widget.id ? resize : null;
+    const metrics = session?.metrics ?? geometry;
     const min = placementSize(
       {
         w: Math.max(1, Math.round((dashboardGeometry.minColumns * columns) / dashboardGeometry.columns)),
@@ -38,13 +41,17 @@ export function useDashboardResize(options: ResizeOptions) {
       },
       metrics,
     );
-    const max = placementSize({ w: columns - widget.layout.x, h: Infinity }, metrics);
+    let maxColumns = columns;
+    if (session) {
+      maxColumns = session.handle.endsWith("w") ? session.origin.x + session.origin.w : columns - session.origin.x;
+    }
+    const max = placementSize({ w: maxColumns, h: Infinity }, metrics);
     return {
       ...placementSize(widget.layout, metrics),
       transformScale: metrics.scale,
       minConstraints: [min.width, min.height] as [number, number],
       maxConstraints: [max.width, max.height] as [number, number],
-      onResizeStart: (event: SyntheticEvent) => {
+      onResizeStart: (event: SyntheticEvent, data: ResizeCallbackData) => {
         if (!grid.current) return;
         event.stopPropagation();
         onGestureStart();
@@ -52,6 +59,8 @@ export function useDashboardResize(options: ResizeOptions) {
           id: widget.id,
           metrics: measureGrid(grid.current, columns),
           size: { w: widget.layout.w, h: widget.layout.h },
+          origin: widget.layout,
+          handle: data.handle as DashboardResizeHandle,
         });
       },
       onResize: (_event: SyntheticEvent, data: ResizeCallbackData) => {
@@ -59,12 +68,12 @@ export function useDashboardResize(options: ResizeOptions) {
       },
       onResizeStop: (_event: SyntheticEvent, data: ResizeCallbackData) => {
         if (resize?.id !== widget.id) return;
-        onChange(resizeWidget(widgets, widget.id, gridSize(data.size, resize.metrics), columns, mode));
+        onChange(resizeWidget(widgets, widget.id, gridSize(data.size, resize.metrics), columns, mode, resize.handle));
         setResize(null);
       },
     };
   };
-  const onHandleKeyDown = (id: string, event: KeyboardEvent<HTMLButtonElement>) => {
+  const onHandleKeyDown = (id: string, handle: DashboardResizeHandle, event: KeyboardEvent<HTMLButtonElement>) => {
     if (event.key === "Escape") {
       setResize(null);
       return;
@@ -80,7 +89,17 @@ export function useDashboardResize(options: ResizeOptions) {
     if (!delta || !widget) return;
     event.preventDefault();
     event.stopPropagation();
-    onChange(resizeWidget(widgets, id, { w: widget.layout.w + delta.w, h: widget.layout.h + delta.h }, columns, mode));
+    const widthDelta = handle.endsWith("w") ? -delta.w : delta.w;
+    onChange(
+      resizeWidget(
+        widgets,
+        id,
+        { w: widget.layout.w + widthDelta, h: widget.layout.h + delta.h },
+        columns,
+        mode,
+        handle,
+      ),
+    );
   };
   return { resize, resizableProps, onHandleKeyDown, cancel: () => setResize(null) };
 }

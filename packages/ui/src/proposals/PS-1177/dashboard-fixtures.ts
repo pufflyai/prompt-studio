@@ -1,6 +1,7 @@
 export type WidgetKind = "metric" | "line" | "bar" | "table";
 export type WidgetSource = "conversations" | "users" | "warnings";
 export type DashboardLayoutMode = "vertical" | "horizontal" | "free";
+export type DashboardResizeHandle = "w" | "e" | "s" | "sw" | "se";
 export interface DashboardDefinition {
   mode: DashboardLayoutMode;
   widgets: DashboardWidget[];

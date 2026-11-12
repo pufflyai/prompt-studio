@@ -1,26 +1,17 @@
-import { Box, HStack, IconButton, Text, useSlotRecipe } from "@chakra-ui/react";
-import { GripVertical } from "lucide-react";
-import type { ComponentProps } from "react";
+import { Box, HStack, Text, useSlotRecipe } from "@chakra-ui/react";
 import { DataTable } from "@/components/data-table/data-table";
 import { SimpleCard } from "@/components/primitives/simple-card";
 import { dashboardRecipe } from "@/theme/recipes/dashboard";
 import { DashboardChart } from "./dashboard-chart";
 import { changes, type DashboardWidget, recentTotals, sourceTables, totals } from "./dashboard-fixtures";
-import { WidgetSettings } from "./dashboard-widget-settings";
 
 interface WidgetCardProps {
   widget: DashboardWidget;
-  editing: boolean;
-  selected: boolean;
   days: number;
-  dragHandle: ComponentProps<typeof IconButton>;
-  onConfigure: (open: boolean) => void;
-  onWidgetChange: (widget: DashboardWidget) => void;
-  onRemove: () => void;
 }
 
 export function WidgetCard(props: WidgetCardProps) {
-  const { widget, editing, selected, days, dragHandle, onConfigure, onWidgetChange, onRemove } = props;
+  const { widget, days } = props;
   const styles = useSlotRecipe({ recipe: dashboardRecipe })();
   const total = days === 7 ? totals[widget.source] : recentTotals[widget.source];
   return (
@@ -35,30 +26,9 @@ export function WidgetCard(props: WidgetCardProps) {
       data-dashboard-widget-body=""
     >
       <HStack css={styles.cardHeader}>
-        {editing && (
-          <IconButton
-            {...dragHandle}
-            aria-label={`Drag ${widget.title}`}
-            title="Drag to move. Space to pick up, arrow keys to move, Enter to drop."
-            size="xs"
-            variant="ghost"
-            css={styles.dragHandle}
-          >
-            <GripVertical />
-          </IconButton>
-        )}
         <Text as="h2" textStyle="label/S/medium" flex="1" minW="0" overflowWrap="anywhere">
           {widget.title}
         </Text>
-        {editing && (
-          <WidgetSettings
-            widget={widget}
-            open={selected}
-            onOpenChange={onConfigure}
-            onChange={onWidgetChange}
-            onRemove={onRemove}
-          />
-        )}
       </HStack>
       {widget.kind === "metric" && (
         <Box px="md" pb="md" flex="1" minH="0" display="flex" flexDirection="column" justifyContent="center">

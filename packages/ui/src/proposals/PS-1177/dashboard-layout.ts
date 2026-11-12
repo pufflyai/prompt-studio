@@ -1,5 +1,5 @@
 import { dashboardGeometry } from "@/theme/primitives/dashboard";
-import type { DashboardLayoutMode, DashboardWidget, GridPlacement } from "./dashboard-fixtures";
+import type { DashboardLayoutMode, DashboardResizeHandle, DashboardWidget, GridPlacement } from "./dashboard-fixtures";
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, Math.round(value)));
 const intersects = (a: GridPlacement, b: GridPlacement) =>
@@ -118,11 +118,18 @@ export function resizeWidget(
   size: { w: number; h: number },
   columns: number,
   mode: DashboardLayoutMode = "vertical",
+  handle: DashboardResizeHandle = "se",
 ) {
   const widget = widgets.find((item) => item.id === id);
   if (!widget) return widgets;
-  const w = columns === 1 ? widget.layout.w : Math.round((size.w * dashboardGeometry.columns) / columns);
-  return compactWidgets(placeWidget(widgets, id, { ...widget.layout, w, h: size.h }), mode);
+  const { layout } = widget;
+  const fromLeft = handle.endsWith("w") && columns > 1;
+  const maxWidth = fromLeft ? layout.x + layout.w : dashboardGeometry.columns - layout.x;
+  const requestedWidth = Math.round((size.w * dashboardGeometry.columns) / columns);
+  const w = columns === 1 || handle === "s" ? layout.w : clamp(requestedWidth, dashboardGeometry.minColumns, maxWidth);
+  const x = fromLeft ? layout.x + layout.w - w : layout.x;
+  const h = handle === "e" || handle === "w" ? layout.h : size.h;
+  return compactWidgets(placeWidget(widgets, id, { ...layout, x, w, h }), mode);
 }
 
 export const appendWidget = (
