@@ -21,6 +21,16 @@ jobs:
           install-strategy: native
       - run: bun run build -- --scope @pstdio/desktop --scope e2e --include-dependencies
       - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends openbox x11-utils xvfb
+      - name: Prepare the source Electron sandbox and matching browser
+        working-directory: clients/desktop
+        shell: bash
+        run: |
+          sandbox=$(bun -e 'const p=require("node:path");console.log(p.join(p.dirname(require("electron")),"chrome-sandbox"))')
+          sudo chown root:root "$sandbox"
+          sudo chmod 4755 "$sandbox"
+      - name: Install the dashboard browser for its owning Playwright version
+        working-directory: packages/e2e
+        run: bunx --no-install playwright install chromium --with-deps
       - name: Observe both source Electron phases on the original shared display
         working-directory: clients/desktop
         shell: bash
@@ -49,84 +59,6 @@ jobs:
             clients/desktop/test-results
             packages/e2e/test-results
             ${{ runner.temp }}/release-xvfb.log
-  windows_cloud:
-    runs-on: windows-2025
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: '24.22.1'
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
-      - uses: ./.github/actions/setup-ci-cache
-        with:
-          install-strategy: native
-          windows-dev-drive: 'true'
-      - run: bun run build -- --scope e2e --include-dependencies
-      - uses: actions/download-artifact@v4
-        with:
-          name: release-build-attempt-1
-          run-id: 43214095816
-          github-token: ${{ github.token }}
-      - shell: bash
-        run: |
-          bun scripts/ci/production-payload.ts check
-          tar -xzf release-build.tar.gz
-      - name: Observe cloud picker authentication on the original compiled application
-        env:
-          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/cli-win-x64/bin/pstdio.exe
-        run: bun run --cwd packages/e2e test:packaged:cli -- src/packaged/packaged-two-device-sync-smoke.p2.test.ts -t 'a new device opens its cloud project from the picker'
-      - name: Observe the failed native Cloud resumption contract
-        if: ${{ !cancelled() }}
-        working-directory: packages/pstdio-api
-        env:
-          PSTDIO_DEFAULT_EXTENSIONS: '[]'
-          PSTDIO_EXTENSION_WEBVIEW_BUILDS: '0'
-        run: bun src/test-utils/run-api-tests.ts --files='["src/services/relay/runtime-resumption.p1.test.ts"]'
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: release-windows-cloud-diagnostic
-          path: |
-            packages/e2e/test-results
-            packages/pstdio-api/test-results
-  intel_streaming:
-    runs-on: macos-15-intel
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with:
-          node-version: '24.22.1'
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
-      - uses: ./.github/actions/setup-ci-cache
-        with:
-          install-strategy: native
-      - run: bun run build -- --scope @pstdio/desktop --include-dependencies
-      - uses: actions/download-artifact@v4
-        with:
-          name: validation-app-darwin-x64
-          run-id: 43223768966
-          github-token: ${{ github.token }}
-      - shell: bash
-        run: |
-          bun scripts/ci/production-payload.ts check
-          tar -xzf validation-app-darwin-x64.tar.gz -C clients/desktop
-      - name: Observe the complete original streaming workload without changing limits
-        working-directory: clients/desktop
-        env:
-          E2E_TEST_LANE: benchmark
-          CI_QUARANTINE_ATTEMPT: '1'
-        run: bunx --no-install playwright test --config playwright.benchmark.config.ts src/e2e/packaged-renderer.p3.bench.ts --grep 'long tool-heavy stream stays within budget$'
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: release-intel-streaming-diagnostic
-          path: clients/desktop/test-results
   browser_profile:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -140,7 +72,8 @@ jobs:
           bun-version-file: package.json
       - uses: ./.github/actions/setup-ci-cache
       - run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
-      - run: bunx playwright install chromium --with-deps
+      - working-directory: packages/e2e
+        run: bunx --no-install playwright install chromium --with-deps
       - name: Profile only the failed hierarchy and Secondary Panel workloads
         env:
           UI_PERF_ASSERT_BUDGETS: '1'
