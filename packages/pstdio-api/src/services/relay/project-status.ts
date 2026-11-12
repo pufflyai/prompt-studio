@@ -12,12 +12,13 @@ interface OwnerSyncStatus {
   busy: boolean;
   pendingItems?: number;
   download?: { completed: number; total: number | null };
+  error?: string;
 }
 
 export const projectSyncStatus = (owners: OwnerSyncStatus[]) => {
   const offlineReady = owners.every((owner) => owner.downloaded && !owner.needsAttention);
   let state: ProjectSyncStatus["state"] = "synced";
-  if (owners.some((owner) => owner.needsAttention)) state = "needs-attention";
+  if (owners.some((owner) => owner.needsAttention || owner.error)) state = "needs-attention";
   else if (owners.some((owner) => !owner.firstDownloaded)) state = "first-download-incomplete";
   else if (owners.some((owner) => !owner.connected)) state = "offline";
   else if (owners.some((owner) => owner.pending || owner.busy || !owner.downloaded)) state = "waiting-to-sync";

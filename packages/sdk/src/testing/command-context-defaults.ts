@@ -163,6 +163,7 @@ export const createCommandContextDefaults = (input: {
       renameDevice: unavailable,
       removeDevice: unavailable,
       projectSyncStatus: async () => ({ state: "local", offlineReady: false }),
+      retryProjectSyncSource: unavailable,
       syncProject: unavailable,
       stopProjectSync: unavailable,
       resolveReturnedChanges: unavailable,

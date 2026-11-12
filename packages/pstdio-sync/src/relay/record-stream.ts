@@ -7,6 +7,7 @@ import { checkRecordStreamPage, createRecordStreamDownload } from "./record-stre
 import { createRecordStreamReader } from "./record-stream-reader";
 import type { RecordBytes, RecordStreamCursor, RecordStreamInput, RecordStreamStore } from "./record-stream-types";
 import { retainRecordSourceFrames, retainRecordSourceMap, withSourceRecovery } from "./source-recovery";
+import { recordAssetNames } from "./transfer-progress";
 
 // Room for the frame header and encryption under the relay's 1 MiB update limit.
 export const recordFrameLimit = 768 * 1024;
@@ -85,16 +86,24 @@ const withState = async (
 const updateBytes = (cursor: RecordStreamCursor, updates: StoredUpdate[], byteLengths: number[]) =>
   updates.reduce((sum, update, index) => (update.sequence > cursor.through ? sum + byteLengths[index]! : sum), 0);
 
+const recordFiles = (input: RecordStreamInput) =>
+  createRecordAssets({
+    space: input.space,
+    assets: input.assets,
+    blobs: input.relay.blobs,
+    references: input.store.references,
+    progress: input.fileProgress,
+  });
+
 /**
  * Syncs every record of one owner through one encrypted relay document (ADR 0102). Each relay
  * update is one local save. Every changed latest state is merged once, so retained local records
  * repair missing edits even when the state claims to cover updates this device already read.
  */
 export const createRecordStreamSync = (input: RecordStreamInput) => {
-  const { space, documentId, relay, store } = input;
+  const { space, documentId, relay, store, limits = latestStateLimits } = input;
   const format = store.recordFormat;
-  const limits = input.limits ?? latestStateLimits;
-  const files = createRecordAssets({ space, assets: input.assets, blobs: relay.blobs, references: store.references });
+  const files = recordFiles(input);
   let incomplete = false;
   let downloaded = false;
   const rejected = new Set<string>();
@@ -208,7 +217,7 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
     for (const records of splitRecords(snapshot.records, chunkLimit)) {
       const current = records.flatMap((record) => snapshot.assets.get(record.recordId) ?? []);
       // A compaction only lists files that earlier updates already uploaded.
-      const assets = await files.upload(current, !found);
+      const assets = await files.upload(current, !found, recordAssetNames(records, format));
       for (const reference of assets) assetBlobs.add(reference.blobId);
       const sealed = await sealBlob(space, encodeRecordFrame({ records, assets, format }));
       await relay.blobs!.put(sealed.blobId, sealed.bytes);
@@ -241,7 +250,11 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
     const entries = await store.outbox(recordFrameLimit);
     if (!entries.length) return false;
     const records = entries.flatMap((entry) => entry.records);
-    const assets = await files.upload(entries.flatMap((entry) => entry.assets));
+    const assets = await files.upload(
+      entries.flatMap((entry) => entry.assets),
+      false,
+      recordAssetNames(records, format),
+    );
     let frame = encodeRecordFrame({ records, assets, format });
     const blobIds = assets.map((reference) => reference.blobId);
     // One save larger than an update travels as a blob, so it still arrives as one unit (R4). The

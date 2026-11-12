@@ -55,6 +55,19 @@ export const createAccountRoutes = (service: ReturnType<typeof createNativeAccou
     async (c) => c.json(await service.login(c.req.valid("json").managerOrigin), 200),
   );
   routes.openapi(
+    createRoute({
+      method: "post",
+      path: "/account/projects/{id}/sync/sources/{sourceId}/retry",
+      tags,
+      request: { params: params.extend({ sourceId: z.string().min(1) }) },
+      responses,
+    }),
+    async (c) => {
+      const { id, sourceId } = c.req.valid("param");
+      return c.json(await service.retryProjectSync(id, sourceId), 200);
+    },
+  );
+  routes.openapi(
     createRoute({ method: "get", path: "/account/login/{id}", tags, request: { params }, responses }),
     (c) => c.json(service.loginStatus(c.req.valid("param").id), 200),
   );

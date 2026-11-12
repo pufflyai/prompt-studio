@@ -2,6 +2,7 @@ import type { Asset, AssetReference } from "pstdio-sync-contracts";
 import { openBlob, type SyncSpace, sealBlob, UnreadableSyncData } from "../encryption";
 import type { AssetStore } from "../shared";
 import type { DocumentRelay } from "./document-sync-types";
+import type { FileProgress, SyncFileTransfer } from "./transfer-progress";
 
 /** Local memory of which relay blob holds each asset's ciphertext, so retries reuse the same bytes. */
 export interface AssetReferences {
@@ -20,6 +21,7 @@ export const createRecordAssets = (input: {
   assets?: AssetStore;
   blobs?: DocumentRelay["blobs"];
   references: AssetReferences;
+  progress?: FileProgress;
 }) => {
   const require = () => {
     if (!input.assets || !input.blobs) throw new Error("Record asset transport is unavailable");
@@ -52,12 +54,40 @@ export const createRecordAssets = (input: {
     await input.references.set(reference);
     return reference;
   };
+  const receiveCiphertext = async (reference: AssetReference, transfer: SyncFileTransfer) => {
+    if (await complete(reference.encrypted)) return;
+    {
+      const { assets, blobs } = require();
+      // A ranged read lets an interrupted download continue from the bytes already stored. The
+      // asset store checks those bytes itself and rejects a mismatch as unreadable.
+      const read = blobs.read;
+      if (read)
+        await assets.receive(reference.encrypted, async (offset) => {
+          transfer.completedBytes = offset;
+          const body = await read(reference.blobId, offset);
+          return body.pipeThrough(
+            new TransformStream<Uint8Array, Uint8Array>({
+              transform(bytes, controller) {
+                transfer.completedBytes += bytes.byteLength;
+                input.progress?.({ ...transfer });
+                controller.enqueue(bytes);
+              },
+            }),
+          );
+        });
+      else {
+        const bytes = await blobs.get(reference.blobId);
+        if ((await sha256(bytes)) !== reference.encrypted.sha256) throw new UnreadableSyncData();
+        await save(reference.encrypted, bytes);
+      }
+    }
+  };
   return {
     /**
      * Uploads each asset's ciphertext and returns where other devices find it. With `reuse`, a file
      * already known to be on the relay is not read or uploaded again.
      */
-    async upload(assets: Asset[], reuse = false) {
+    async upload(assets: Asset[], reuse = false, names = new Map<string, string>()) {
       const references: AssetReference[] = [];
       for (const asset of new Map(assets.map((asset) => [asset.sha256, asset])).values()) {
         const known = await input.references.get(asset.sha256);
@@ -66,7 +96,27 @@ export const createRecordAssets = (input: {
           continue;
         }
         const reference = known && (await complete(known.encrypted)) ? known : await encrypt(asset);
-        await require().blobs.put(reference.blobId, await read(reference.encrypted));
+        const transfer: SyncFileTransfer = {
+          id: asset.sha256,
+          name: names.get(asset.sha256),
+          direction: "upload",
+          status: "active",
+          byteLength: asset.byteLength,
+          completedBytes: 0,
+          totalBytes: reference.encrypted.byteLength,
+        };
+        input.progress?.({ ...transfer, status: "queued" });
+        input.progress?.(transfer);
+        try {
+          await require().blobs.put(reference.blobId, await read(reference.encrypted), (completedBytes) => {
+            transfer.completedBytes = completedBytes;
+            input.progress?.({ ...transfer });
+          });
+          input.progress?.({ ...transfer, status: "completed", completedBytes: transfer.totalBytes });
+        } catch (error) {
+          input.progress?.({ ...transfer, status: "failed" });
+          throw error;
+        }
         references.push(reference);
       }
       return references;
@@ -75,25 +125,36 @@ export const createRecordAssets = (input: {
      * Downloads and decrypts every referenced asset this device does not have yet. Bytes that do not
      * decrypt or do not match their reference throw `UnreadableSyncData`.
      */
-    async download(references: AssetReference[]) {
+    async download(references: AssetReference[], names = new Map<string, string>()) {
+      const pending = [];
       for (const reference of references) {
         if (await complete(reference.asset)) continue;
-        if (!(await complete(reference.encrypted))) {
-          const { assets, blobs } = require();
-          // A ranged read lets an interrupted download continue from the bytes already stored. The
-          // asset store checks those bytes itself and rejects a mismatch as unreadable.
-          const read = blobs.read;
-          if (read) await assets.receive(reference.encrypted, (offset) => read(reference.blobId, offset));
-          else {
-            const bytes = await blobs.get(reference.blobId);
-            if ((await sha256(bytes)) !== reference.encrypted.sha256) throw new UnreadableSyncData();
-            await save(reference.encrypted, bytes);
-          }
+        const transfer: SyncFileTransfer = {
+          id: reference.asset.sha256,
+          name: names.get(reference.asset.sha256),
+          direction: "download",
+          status: "queued",
+          byteLength: reference.asset.byteLength,
+          completedBytes: 0,
+          totalBytes: reference.encrypted.byteLength,
+        };
+        input.progress?.(transfer);
+        pending.push({ reference, transfer });
+      }
+      for (const { reference, transfer } of pending) {
+        transfer.status = "active";
+        input.progress?.({ ...transfer });
+        try {
+          await receiveCiphertext(reference, transfer);
+          const plain = await openBlob(input.space, reference.blobId, await read(reference.encrypted));
+          if ((await sha256(plain)) !== reference.asset.sha256) throw new UnreadableSyncData();
+          await save(reference.asset, plain);
+          await input.references.set(reference);
+          input.progress?.({ ...transfer, status: "completed", completedBytes: transfer.totalBytes });
+        } catch (error) {
+          input.progress?.({ ...transfer, status: "failed" });
+          throw error;
         }
-        const plain = await openBlob(input.space, reference.blobId, await read(reference.encrypted));
-        if ((await sha256(plain)) !== reference.asset.sha256) throw new UnreadableSyncData();
-        await save(reference.asset, plain);
-        await input.references.set(reference);
       }
     },
   };

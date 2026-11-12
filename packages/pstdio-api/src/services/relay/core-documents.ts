@@ -15,6 +15,7 @@ import { reconcileProjectInfo } from "./project-info-owner";
 import { createSyncQuarantine } from "./quarantine";
 import { createResourceNumberSync } from "./resource-number-sync";
 import type { RelayWorkbench } from "./runtime";
+import { createSourceActivity } from "./source-activity";
 
 /**
  * Core documents sync even when no extension is enabled: resource numbers, and the project info
@@ -29,6 +30,7 @@ export const startCoreDocumentSync = (input: {
   statusChanged?: () => void;
 }) => {
   const { config, deps } = input;
+  const activity = createSourceActivity(input.statusChanged);
   const owner = { workbenchId: config.workbenchId, extensionId: coreOwnerId };
   // Project info first: a new device needs the project's name and git remote before its data.
   const controller = new AbortController();
@@ -74,11 +76,17 @@ export const startCoreDocumentSync = (input: {
     signal,
     acceptsChange: (change) => change.spaceOwner === null && documentIds.has(change.documentId),
     synchronize: async (attemptSignal, subscribe) => {
-      const { project: space } = await fetchSyncSpaces({
-        ...config,
-        credential: config.renewalGrant,
-        signal: attemptSignal,
-      });
+      activity.start();
+      const { project: space } = await activity.run(
+        "loading-keys",
+        () =>
+          fetchSyncSpaces({
+            ...config,
+            credential: config.renewalGrant,
+            signal: attemptSignal,
+          }),
+        attemptSignal,
+      );
       live.setSpace(space);
       const relay = (documentId: string) => {
         documentIds.add(documentId);
@@ -89,6 +97,7 @@ export const startCoreDocumentSync = (input: {
           documentId,
           signal: attemptSignal,
           token: async () => (await access()).token,
+          progress: activity.network,
         });
       };
       const quarantine = (documentId: string) =>
@@ -110,7 +119,7 @@ export const startCoreDocumentSync = (input: {
         generation = space.generation;
       }
       for (const sync of syncs) {
-        await sync.synchronize();
+        await activity.run("project-information", () => sync.synchronize(), attemptSignal);
         input.statusChanged?.();
       }
       numbers ??= await createResourceNumberSync({
@@ -120,11 +129,16 @@ export const startCoreDocumentSync = (input: {
         relay,
         quarantine,
       });
-      await numbers!.synchronize();
+      await activity.run("resource-numbers", () => numbers!.synchronize(), attemptSignal);
       const statuses = await Promise.all([...syncs, numbers!].map((sync) => sync.status()));
       if (!statuses.every((status) => status.downloaded)) return;
       firstDownloaded = true;
-      await reconcileProjectInfo(deps, config.workbenchId, checkedFolders);
+      await activity.run(
+        "project-folder",
+        () => reconcileProjectInfo(deps, config.workbenchId, checkedFolders),
+        attemptSignal,
+      );
+      activity.complete();
     },
     onError: () =>
       apiLogger.warn(
@@ -145,9 +159,11 @@ export const startCoreDocumentSync = (input: {
   return {
     wake: connection.wake,
     retry: connection.retry,
+    restart: connection.restart,
     done: connection.done.finally(async () => {
       for (const stop of stops) stop();
       close();
+      activity.close();
       await live.close();
       if (!input.live) {
         channel.close();
@@ -160,6 +176,7 @@ export const startCoreDocumentSync = (input: {
         firstDownloaded,
         ...documentProgress(statuses, true),
         ...connection.status(),
+        ...activity.status(),
       };
     },
     close: () => controller.abort(),
