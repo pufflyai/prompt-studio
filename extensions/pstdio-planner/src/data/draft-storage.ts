@@ -81,12 +81,24 @@ export const readTicketMarkdown = async (projectFiles: ArtifactMount, shorthand:
   return projectFiles.readText(path);
 };
 
-export const requireTicketDraftFiles = async (ctx: Pick<ExtensionContextBase, "projectFiles" | "workspaces">) => {
+export const requireTicketDraftFiles = async (
+  ctx: Pick<ExtensionContextBase, "projectFiles" | "workspaces" | "extensionId">,
+) => {
   const projectFiles = requireRepoFiles(ctx.projectFiles);
   const home = await ctx.workspaces.getDefault();
   if (home?.execution_kind !== "local" || !home.root_path) {
     throw new Error("Ticket drafts require a local project folder.");
   }
   const root = home.root_path;
-  return { projectFiles, resolvePath: (path: string) => resolve(root, path) };
+  // Existing hosts keep their historical root; a migration-capable host supplies the canonical owner.
+  const previous = ".pstdio/extension-storage/pstdio.pstdio-planner";
+  const allocated = ctx.extensionId === "pstdio.planner" ? `.pstdio/extension-storage/${ctx.extensionId}` : previous;
+  return {
+    projectFiles,
+    resolvePath: (path: string) =>
+      resolve(
+        root,
+        path === previous || path.startsWith(`${previous}/`) ? `${allocated}${path.slice(previous.length)}` : path,
+      ),
+  };
 };

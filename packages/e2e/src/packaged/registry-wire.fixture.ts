@@ -11,12 +11,12 @@ export const startRegistryWireFixture = async () => {
     [];
   const packages = new Map<string, Buffer>();
   const server = createServer((request, response) => {
-    if (request.url === "/api/pstdio/pstdio-notes/versions") {
+    if (request.url === "/api/pstdio/notes/versions") {
       response.setHeader("content-type", "application/json");
       response.end(JSON.stringify({ versions }));
       return;
     }
-    const version = /^\/api\/pstdio\/pstdio-notes\/([^/]+)\/file$/.exec(request.url ?? "")?.[1];
+    const version = /^\/api\/pstdio\/notes\/([^/]+)\/file$/.exec(request.url ?? "")?.[1];
     const bytes = version ? packages.get(version) : null;
     response.statusCode = bytes ? 200 : 404;
     response.end(bytes ?? "Not found");

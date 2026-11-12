@@ -30,7 +30,7 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
     const before = await readSession();
     const listed = await (await request.get(`/v1/projects/${project.id}/extensions`)).json();
     const provider = listed.extensions.find(
-      (entry: { installName: string }) => entry.installName === "pstdio-session-browser",
+      (entry: { installName: string }) => entry.installName === "session-browser",
     );
     expect(provider).toBeTruthy();
     const watches: string[] = [];

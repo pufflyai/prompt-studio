@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { createWebviewClient, type GuestHost } from "@pstdio/sdk/extensions";
 import { createHostEventPublisher } from "pstdio-extensions/bridge/host";
 import {
   publishExtensionCommandEvent,
@@ -61,4 +62,41 @@ describe("webview extension invalidations", () => {
     expect(received).toEqual([{ type: "changed", id: "settings.changed" }]);
     dispose();
   });
+});
+
+test("one renamed-owner reset refreshes old and current typed guests once", () => {
+  const publisher = createHostEventPublisher();
+  const listeners = new Set<(payload: unknown) => void>();
+  publisher.bind((message) => {
+    for (const listener of listeners) listener(message.payload);
+  });
+  const host: GuestHost = {
+    extensionId: "example.consumer",
+    call: async () => {
+      throw new Error("No request expected");
+    },
+    onEvent: (_scope, listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
+  const guest = createWebviewClient<Record<never, never>>(host);
+  let oldCalls = 0;
+  let currentCalls = 0;
+  const old = guest.events.subscribe(
+    { kind: "event", extensionId: "pstdio.pstdio-planner", id: "changed" },
+    () => oldCalls++,
+  );
+  const current = guest.events.subscribe(
+    { kind: "event", extensionId: "pstdio.planner", id: "changed" },
+    () => currentCalls++,
+  );
+  const stop = subscribeWebviewExtensionEvents(publisher, "project-1");
+  publishExtensionEventReset({ projectId: "project-2", extensionId: "pstdio.planner" });
+  expect([oldCalls, currentCalls]).toEqual([0, 0]);
+  publishExtensionEventReset({ projectId: "project-1", extensionId: "pstdio.planner" });
+  expect([oldCalls, currentCalls]).toEqual([1, 1]);
+  old();
+  current();
+  stop();
 });

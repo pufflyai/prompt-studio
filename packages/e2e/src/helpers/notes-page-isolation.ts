@@ -17,7 +17,7 @@ export const verifyNotesPageIsolation = async (page: Page) => {
     await expect(main.getByRole("tab", { name: title, exact: true })).toHaveAttribute("aria-selected", "true");
   };
   // Closing the created note leaves the Notes page open; the Notes row itself only expands its list.
-  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-notes\/notes$/);
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.notes\/notes$/);
   const cards = main.getByRole("group", { name: "Available tabs" });
   await expect(cards.getByRole("button", { name: "New note", exact: true })).toBeVisible();
   await expect(cards.getByRole("button", { name: "New session", exact: true })).toBeVisible();
@@ -30,7 +30,7 @@ export const verifyNotesPageIsolation = async (page: Page) => {
   await expect(page.getByRole("menuitem", { name: "Tickets", exact: true })).toHaveCount(0);
   await page.keyboard.press("Escape");
   await cards.getByRole("button", { name: "New session", exact: true }).click();
-  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-notes\/notes$/);
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.notes\/notes$/);
   await expect(main.getByRole("tab", { name: "New session", exact: true })).toBeVisible();
   await main.getByRole("button", { name: "Close New session", exact: true }).click();
   await cards.getByRole("button", { name: "New note", exact: true }).click();
@@ -60,7 +60,7 @@ export const verifyNotesPageIsolation = async (page: Page) => {
   await page.keyboard.press("Escape");
   await expect(page.getByRole("menu")).toHaveCount(0);
   await cards.getByRole("button", { name: "New session", exact: true }).click();
-  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-artifacts\/artifacts$/);
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.artifacts\/artifacts$/);
   await expect(main.getByRole("tab", { name: "New session", exact: true })).toBeVisible();
   await main.getByRole("button", { name: "Close New session", exact: true }).click();
   await cards.getByRole("button", { name: "Artifacts", exact: true }).click();

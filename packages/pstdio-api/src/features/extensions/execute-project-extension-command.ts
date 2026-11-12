@@ -12,6 +12,7 @@ import { z } from "zod";
 import { withStorageObservation } from "../../services/shared-files/storage-observation";
 import { createCommandEnvironment } from "./command-environment";
 import type { ExtensionsRouteDeps } from "./deps";
+import { publishExtensionEventNotifications } from "./extension-event-notifications";
 import { createExtensionLogger } from "./extension-logger";
 
 export class ExtensionCommandNotFoundError extends Error {
@@ -110,9 +111,7 @@ export const executeProjectExtensionCommand = async (
       ...outcome,
       data: { ...outcome.data, fileStorageVersions: { ...expected, ...observed.versions } },
     };
-  if (body.source !== "dashboard") {
-    for (const { id: eventId, ...refresh } of events)
-      deps.eventBus.emit("extension_events", "set", { ...refresh, id: crypto.randomUUID(), projectId, eventId });
-  }
+  for (const { id: eventId, ...refresh } of events)
+    publishExtensionEventNotifications(deps.eventBus, snapshot.runtime, eventId, refresh, body.source !== "dashboard");
   return { commandId, extensionId: handler.extensionId, eventIds: [...eventIds], events, outcome };
 };

@@ -44,15 +44,22 @@ export interface TicketResourceReference extends JsonObject {
 export const ticketDisplayTitle = (ticket: TicketSummary) =>
   ticket.title ? `${ticket.shorthand} ${ticket.title}` : ticket.shorthand;
 
-const ticketsBrowseRootReference = (): JsonObject => ({
+const ticketsBrowseRootReference = (extensionId: string): JsonObject => ({
   type: "view",
-  viewId: "pstdio.planner.view.tickets",
+  viewId: `${extensionId}.view.tickets`,
 });
 
-const createTicketResourceIdentity = (lineage: TicketSummary[], index: number): TicketResourceReference => {
+const createTicketResourceIdentity = (
+  lineage: TicketSummary[],
+  index: number,
+  extensionId: string,
+): TicketResourceReference => {
   const ticket = lineage[index];
   const metadata: JsonObject = {
-    resourceParent: index > 0 ? createTicketResourceIdentity(lineage, index - 1) : ticketsBrowseRootReference(),
+    resourceParent:
+      index > 0
+        ? createTicketResourceIdentity(lineage, index - 1, extensionId)
+        : ticketsBrowseRootReference(extensionId),
   };
 
   return {
@@ -64,7 +71,11 @@ const createTicketResourceIdentity = (lineage: TicketSummary[], index: number): 
   };
 };
 
-export const resolveTicketHierarchy = (ticket: TicketSummary, parentLookup: TicketParentLookup = new Map()) => {
+export const resolveTicketHierarchy = (
+  ticket: TicketSummary,
+  parentLookup: TicketParentLookup = new Map(),
+  extensionId = "pstdio.planner",
+) => {
   const lineage = [];
   const visitedTicketIds = new Set<string>();
   let current: TicketSummary | undefined = ticket;
@@ -76,7 +87,7 @@ export const resolveTicketHierarchy = (ticket: TicketSummary, parentLookup: Tick
   }
 
   lineage.reverse();
-  const identity = createTicketResourceIdentity(lineage, lineage.length - 1);
+  const identity = createTicketResourceIdentity(lineage, lineage.length - 1, extensionId);
   // Menus read the state of the open or clicked ticket. When expressions only match
   // equal values, so the state is always present.
   const resourceReference: TicketResourceReference = {

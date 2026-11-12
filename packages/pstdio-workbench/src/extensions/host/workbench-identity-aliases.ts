@@ -8,8 +8,18 @@ export const registerWorkbenchIdentityAliases = (input: RegisterWorkbenchExtensi
     for (const record of input.metadata[group as keyof typeof groups]) addContributionAlias(aliases, record, kind);
   for (const record of input.metadata.commands)
     if (record.localId) addContributionAlias(aliases, { ...record, localId: record.localId }, "command");
+  for (const [group, kind] of Object.entries({
+    settingsPanels: "settings-panel",
+    settingsSections: "settings-section",
+  }))
+    for (const record of input.metadata[group as "settingsPanels" | "settingsSections"] ?? [])
+      if (record.localId) addContributionAlias(aliases, { ...record, localId: record.localId }, kind);
   const { workbench } = input;
-  return [workbench.views.store, workbench.pages.store, workbench.modes.store, workbench.commands.store].map((store) =>
-    registerRegistryAliases(store, aliases),
-  );
+  return [
+    workbench.views.store,
+    workbench.pages.store,
+    workbench.modes.store,
+    workbench.commands.store,
+    workbench.settings.store,
+  ].map((store) => registerRegistryAliases(store, aliases));
 };

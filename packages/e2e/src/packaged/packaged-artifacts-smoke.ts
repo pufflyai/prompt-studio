@@ -48,7 +48,7 @@ export const expectPackagedArtifacts = async (input: {
         localId: "artifact",
         tab: expect.objectContaining({
           queryHandlerId: expect.any(String),
-          refreshEventIds: ["pstdio.artifacts.artifacts.changed"],
+          refreshEventIds: ["pstdio.pstdio-artifacts.artifacts.changed"],
         }),
       }),
     ]),
@@ -77,7 +77,7 @@ export const expectPackagedArtifacts = async (input: {
     expect.objectContaining({
       extensionId: "pstdio.artifacts",
       resourceKind: "artifact",
-      refreshEventIds: ["pstdio.artifacts.artifacts.changed"],
+      refreshEventIds: ["pstdio.pstdio-artifacts.artifacts.changed"],
     }),
   );
   const skillsRes = await fetch(`${baseUrl}/v1/projects/${projectId}/skills`, {

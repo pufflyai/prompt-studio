@@ -18,7 +18,7 @@ test(
   async () => {
     const phase = (name: string) => console.log(`Packaged core features: ${name} (${Date.now()})`);
     await withPackagedCoreExtensions(async ({ started, tempRoot, project, extensions, metadata }) => {
-      const planner = extensions.find((extension) => extension.installName === "pstdio-planner");
+      const planner = extensions.find((extension) => extension.installName === "planner");
       expect(planner).toBeDefined();
       await expectPlannerWorkflow(
         started.baseUrl,

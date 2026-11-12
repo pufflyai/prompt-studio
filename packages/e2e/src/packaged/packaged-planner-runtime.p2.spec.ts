@@ -86,7 +86,7 @@ const plannerInstance = async (host: Host, projectId: string) => {
     headers: runtimeAuthorization(host.descriptor),
   });
   const { extensions } = (await response.json()) as { extensions: { id: string; installName: string }[] };
-  return extensions.find((instance) => instance.installName === "pstdio-planner");
+  return extensions.find((instance) => instance.installName === "planner");
 };
 
 // Installing from one project enables Planner there. Other projects receive a disabled instance

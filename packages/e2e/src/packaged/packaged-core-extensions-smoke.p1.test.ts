@@ -92,31 +92,31 @@ test(
       const body = { extensions };
       expect(body.extensions).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ enabled: true, installName: "pstdio-cloud" }),
-          expect.objectContaining({ enabled: true, installName: "pstdio-onboarding" }),
+          expect.objectContaining({ enabled: true, installName: "cloud" }),
+          expect.objectContaining({ enabled: true, installName: "onboarding" }),
           expect.objectContaining({
             enabled: true,
-            installName: "pstdio-session-browser",
+            installName: "session-browser",
             scope: "global",
           }),
           expect.objectContaining({ enabled: true, installName: "harness-claude-code" }),
           expect.objectContaining({ enabled: true, installName: "harness-codex" }),
           expect.objectContaining({ enabled: true, installName: "harness-open-code" }),
-          expect.objectContaining({ enabled: true, installName: "pstdio-base-themes" }),
+          expect.objectContaining({ enabled: true, installName: "base-themes" }),
           expect.objectContaining({
             enabled: true,
-            installName: "pstdio-home",
+            installName: "home",
             scope: "repo",
             sourcePath: join(realpathSync(projectFolder), ".pstdio/extensions/pstdio-home"),
           }),
-          expect.objectContaining({ enabled: true, installName: "pstdio-workspaces" }),
-          expect.objectContaining({ canUpgrade: false, enabled: true, installName: "pstdio-planner" }),
-          expect.objectContaining({ enabled: true, installName: "pstdio-reports" }),
-          expect.objectContaining({ enabled: true, installName: "pstdio-skills" }),
+          expect.objectContaining({ enabled: true, installName: "workspaces" }),
+          expect.objectContaining({ canUpgrade: false, enabled: true, installName: "planner" }),
+          expect.objectContaining({ enabled: true, installName: "reports" }),
+          expect.objectContaining({ enabled: true, installName: "skills" }),
         ]),
       );
 
-      const sessions = extensions.find((extension) => extension.installName === "pstdio-session-browser")!;
+      const sessions = extensions.find((extension) => extension.installName === "session-browser")!;
       expect(realpathSync(sessions.sourcePath)).toBe(join(realpathSync(tempRoot), "extensions/pstdio-session-browser"));
 
       expect(metadata.pages).toContainEqual(expect.objectContaining({ extensionId: "pstdio.home", path: "home" }));
@@ -166,7 +166,7 @@ test(
           slot: expect.objectContaining({ id: "global.settings" }),
         }),
       );
-      const planner = extensions.find((extension) => extension.installName === "pstdio-planner");
+      const planner = extensions.find((extension) => extension.installName === "planner");
       expect(planner).toBeDefined();
       await expectPlannerIdentities({
         baseUrl: started.baseUrl,

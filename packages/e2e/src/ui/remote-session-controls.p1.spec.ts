@@ -143,7 +143,7 @@ test("remote workspaces open synced history; offline sessions stay readable and 
       fileRequests.push(request.url());
   });
   await main.getByRole("button", { name: "Open workspace", exact: true }).click();
-  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-workspaces\/history\?/);
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.workspaces\/history\?/);
   await expect(
     page
       .getByRole("region", { name: "Main", exact: true })

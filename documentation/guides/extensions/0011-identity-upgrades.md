@@ -26,6 +26,10 @@ Encrypted owner catalogs, records, text and logs continue using the same histori
 
 Source folders such as `extensions/pstdio-notes` stay unchanged. Install names and public package names become `notes`, `planner` and the other canonical names. Historical catalog arguments resolve to the canonical entry. Published historical versions are immutable and remain pinned to their final historical release unless the registry supports a redirect. The packaged catalog supplies the replacement without depending on that redirect.
 
+The host-support release also prepares the historical Planner, Reports and Artifacts packages to use the host-provided owner for returned draft paths, document links and artifact URLs. Deploy those compatible helper versions with the host before renaming their manifests. Immutable older packages can still generate historical absolute filesystem strings; service those packages rather than creating symlinks or rewriting arbitrary command results. Old application links resolve through the authorized host path and page resolvers.
+
+Existing typed event subscribers receive one matching refresh notice under their historical identity. Commands, hooks and command-response events retain one canonical dispatch. Exported opaque string event keys, including the Artifacts change event, keep their historical value.
+
 Invocation aliases can retire only in a later breaking API release. Historical storage and transport decoding remains for the lifetime of supported persisted data.
 
 *Updated at: 2026-11-12*

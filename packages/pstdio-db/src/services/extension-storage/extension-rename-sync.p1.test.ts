@@ -93,7 +93,7 @@ test("two upgraded devices, an offline return and a clean join share encrypted s
       };
       await syncDocument("records");
       await stream.synchronize();
-      for (const id of await service.documents.list(owner)) if (id !== "records") await syncDocument(id);
+      await Promise.all((await service.documents.list(owner)).filter((id) => id !== "records").map(syncDocument));
       await service.logs.publish(owner);
     };
     service.logs.attach(owner, async (entry, store) => {
@@ -140,8 +140,11 @@ test("two upgraded devices, an offline return and a clean join share encrypted s
   );
   const upgraded = async () => {
     const db = await database();
-    for (const { table, rows } of snapshot)
-      if (rows.length) await db.insert(table).values(rows.map((row) => ({ ...row, extension_id: historical })));
+    // One atomic fixture import avoids a separate durable transaction per copied table.
+    await db.transaction(async (tx) => {
+      for (const { table, rows } of snapshot)
+        if (rows.length) await tx.insert(table).values(rows.map((row) => ({ ...row, extension_id: historical })));
+    });
     const before = await db.select().from(s.storage_ordered_operations);
     await migrateExtensionIdentities(db);
     const after = await db.select().from(s.storage_ordered_operations);
@@ -167,19 +170,21 @@ test("two upgraded devices, an offline return and a clean join share encrypted s
   await second.synchronize();
   const joined = connect(await database());
   await joined.synchronize();
-  for (const device of [first, second, returning, joined]) {
-    expect(device.failures).toEqual([]);
-    expect((await device.records.read("note:stable")).value).toMatchObject({ title: "Original" });
-    expect((await device.records.read("note:offline")).value).toEqual({ title: "Offline" });
-    expect((await device.records.read("note:new")).value).toEqual({ title: "New" });
-    expect((await device.records.read("note:returning")).value).toEqual({ title: "Returning" });
-    expect(await device.native.read()).toBe("Retained");
-    expect(await device.text.read()).toBe("Draft before upgrade");
-    expect((await device.log.read({ after: 0, limit: 10 })).entries.map((e) => e.id)).toEqual(["log-stable"]);
-    expect(
-      await device.db.select().from(s.storage_documents).where(eq(s.storage_documents.extension_id, historical)),
-    ).toEqual([]);
-  }
+  await Promise.all(
+    [first, second, returning, joined].map(async (device) => {
+      expect(device.failures).toEqual([]);
+      expect((await device.records.read("note:stable")).value).toMatchObject({ title: "Original" });
+      expect((await device.records.read("note:offline")).value).toEqual({ title: "Offline" });
+      expect((await device.records.read("note:new")).value).toEqual({ title: "New" });
+      expect((await device.records.read("note:returning")).value).toEqual({ title: "Returning" });
+      expect(await device.native.read()).toBe("Retained");
+      expect(await device.text.read()).toBe("Draft before upgrade");
+      expect((await device.log.read({ after: 0, limit: 10 })).entries.map((e) => e.id)).toEqual(["log-stable"]);
+      expect(
+        await device.db.select().from(s.storage_documents).where(eq(s.storage_documents.extension_id, historical)),
+      ).toEqual([]);
+    }),
+  );
   expect([...relays.keys()].every((key) => JSON.parse(key)[0] === historical)).toBe(true);
   expect([...relays.keys()]).toContain(JSON.stringify([historical, "owner"]));
   expect([...relays.keys()]).toContain(JSON.stringify([historical, "record-stream-v2"]));

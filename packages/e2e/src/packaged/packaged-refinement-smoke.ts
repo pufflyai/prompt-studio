@@ -21,9 +21,7 @@ export const expectPackagedRefinement = async (input: {
   });
   const settingsRes = await fetch(`${baseUrl}/v1/projects/${projectId}/extensions`, { headers });
   const { extensions } = await settingsRes.json();
-  const plannerExtension = extensions.find(
-    (extension: { installName: string }) => extension.installName === "pstdio-planner",
-  );
+  const plannerExtension = extensions.find((extension: { installName: string }) => extension.installName === "planner");
   expect(plannerExtension).toBeDefined();
   const settingUrl = `${baseUrl}/v1/projects/${projectId}/extensions/${plannerExtension.id}/settings/refinement.updateCanvasDesign`;
   const disabled = await fetch(settingUrl, {
