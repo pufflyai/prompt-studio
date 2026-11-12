@@ -374,7 +374,7 @@ On `main`, `ctx.account` reads this device's Cloud account, the account's device
 | `synced` | Every known document and required file is on this device, and saved changes have reached Cloud. |
 | `offline` | The Cloud connection is lost, or the account service has not confirmed which projects sync. Work continues locally. |
 | `first-download-incomplete` | The first download since the relay connection started has not finished, so some documents or files may not be on this device yet. |
-| `needs-attention` | A source failed or some encrypted data could not be read. Healthy sources continue. |
+| `needs-attention` | Some encrypted data could not be read or a source requires manual attention. Healthy sources continue. |
 
 `offlineReady` is `true` only when every known document and required file was verified on this device. The host never reports `synced` or `offlineReady` while content is missing. An incomplete first download stays `first-download-incomplete` when the connection drops. Later downloads, such as catching up after a reconnect, report `waiting-to-sync` with `offlineReady` set to `false` until they finish. The first download starts again when the runtime restarts or a project starts syncing again.
 
@@ -393,6 +393,8 @@ Files expose available metadata names, direction, queued/active/completed/failed
 original `byteLength` and encrypted `completedBytes`/`totalBytes`. Internal records have
 no invented file names. Recent terminal file entries are bounded to 50 per source;
 active and queued entries are retained. This is transient local activity, not a durable history.
+Retryable request failures appear in each source's `error`; they do not replace the
+aggregate initial-download or connection state.
 
 When `canRetry` is true, call `retryProjectSyncSource(source.id, projectId)` to cancel
 that source and await its running work before retry. Durable cursors, operation IDs,
