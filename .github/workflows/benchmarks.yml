@@ -1,4 +1,4 @@
-name: Native inherited installer cache and recovery qualification
+name: Native conversation measurement ownership qualification
 on:
   workflow_dispatch:
     inputs:
@@ -7,15 +7,24 @@ on:
         type: string
 permissions:
   contents: read
+  actions: read
 jobs:
-  windows:
-    name: Windows inherited cache and original Bookmarks contract
-    runs-on: windows-2025
+  linux:
+    uses: ./.github/workflows/verify-packaged-toolchain.yml
+    with:
+      ref: ${{ inputs.source_sha }}
+      profile: full
+      priority: P2
+      platforms: '[{"os":"ubuntu-24.04","platform_pkg":"cli-linux-x64","shard":1,"shards":1,"priorities":"P0,P1,P2"}]'
+  desktop:
+    name: Original six Intel desktop cases with conversation ownership repair
+    runs-on: macos-15-intel
     timeout-minutes: 30
     env:
-      CI_PRIORITY: P2
-      TEST_PRIORITIES: P0,P1,P2
+      CI_PRIORITY: P3
+      TEST_PRIORITIES: P3
       CI_PROFILE: production
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -29,73 +38,17 @@ jobs:
       - uses: ./.github/actions/setup-ci-cache
         with:
           install-strategy: native
-          windows-dev-drive: "true"
-      - name: Apply exact inherited cache repair and phase probe
-        env:
-          CACHE_PATCH: "ZGlmZiAtLWdpdCBhL3BhY2thZ2VzL2UyZS9zcmMvcGFja2FnZWQvcGFja2FnZWQtcGxheXdyaWdodC1zZXR1cC50cyBiL3BhY2thZ2VzL2UyZS9zcmMvcGFja2FnZWQvcGFja2FnZWQtcGxheXdyaWdodC1zZXR1cC50cwppbmRleCA4OWZlODI0MzIuLmUyMDliMjQ2YiAxMDA2NDQKLS0tIGEvcGFja2FnZXMvZTJlL3NyYy9wYWNrYWdlZC9wYWNrYWdlZC1wbGF5d3JpZ2h0LXNldHVwLnRzCisrKyBiL3BhY2thZ2VzL2UyZS9zcmMvcGFja2FnZWQvcGFja2FnZWQtcGxheXdyaWdodC1zZXR1cC50cwpAQCAtMTAsNiArMTAsNyBAQCBleHBvcnQgZGVmYXVsdCBhc3luYyAoKSA9PiB7CiAgICAgcHJvY2Vzcy5lbnYuRTJFX0VYVEVOU0lPTl9TT1VSQ0VTID0gcHJvZmlsZS5lbnYuRTJFX0VYVEVOU0lPTl9TT1VSQ0VTOwogICAgIHByb2Nlc3MuZW52LkUyRV9IT01FID0gcHJvZmlsZS5lbnYuRTJFX0hPTUU7CiAgICAgcHJvY2Vzcy5lbnYuRTJFX0JVTl9DQUNIRV9ESVIgPSBwcm9maWxlLmVudi5FMkVfQlVOX0NBQ0hFX0RJUjsKKyAgICBwcm9jZXNzLmVudi5CVU5fSU5TVEFMTF9DQUNIRV9ESVIgPSBwcm9maWxlLmVudi5CVU5fSU5TVEFMTF9DQUNIRV9ESVI7CiAgICAgcHJvY2Vzcy5lbnYuTlBNX0NPTkZJR19VU0VSQ09ORklHID0gcHJvZmlsZS5lbnYuTlBNX0NPTkZJR19VU0VSQ09ORklHOwogICAgIHJldHVybiBwcm9maWxlLmNsb3NlOwogICB9IGZpbmFsbHkgewpkaWZmIC0tZ2l0IGEvcGFja2FnZXMvZTJlL3NyYy9zY3JpcHRzL3ByZXBhcmUtdWktZml4dHVyZXMudHMgYi9wYWNrYWdlcy9lMmUvc3JjL3NjcmlwdHMvcHJlcGFyZS11aS1maXh0dXJlcy50cwppbmRleCAzMmU3MzA5YjYuLmVmNzgwMjFhMSAxMDA2NDQKLS0tIGEvcGFja2FnZXMvZTJlL3NyYy9zY3JpcHRzL3ByZXBhcmUtdWktZml4dHVyZXMudHMKKysrIGIvcGFja2FnZXMvZTJlL3NyYy9zY3JpcHRzL3ByZXBhcmUtdWktZml4dHVyZXMudHMKQEAgLTIyLDcgKzIyLDkgQEAgY29uc3QgcHJlcGFyZUZpeHR1cmVzID0gYXN5bmMgKAogICAgIDogdW5kZWZpbmVkOwogICBpZiAocmV1c2VkKSBlbnYuRTJFX0JVTl9DQUNIRV9ESVIgPSByZXVzZWQucGFja2FnZUNhY2hlOwogICBhd2FpdCBta2RpcihlbnYuRTJFX0JVTl9DQUNIRV9ESVIhLCB7IHJlY3Vyc2l2ZTogdHJ1ZSB9KTsKLSAgY29uc3QgaW5zdGFsbEVudiA9IHsgLi4uZW52LCBIT01FOiBlbnYuRTJFX0hPTUUsIEJVTl9JTlNUQUxMX0NBQ0hFX0RJUjogZW52LkUyRV9CVU5fQ0FDSEVfRElSIH07CisgIC8vIE9yZGluYXJ5IGNoaWxkIGluc3RhbGxlcnMgbXVzdCB1c2UgdGhlIHNhbWUgb3duZXIgYXMgcnVudGltZSBhbmQgZml4dHVyZSBpbnN0YWxscy4KKyAgZW52LkJVTl9JTlNUQUxMX0NBQ0hFX0RJUiA9IGVudi5FMkVfQlVOX0NBQ0hFX0RJUjsKKyAgY29uc3QgaW5zdGFsbEVudiA9IHsgLi4uZW52LCBIT01FOiBlbnYuRTJFX0hPTUUgfTsKICAgY29uc3Qgc291cmNlczogUmVjb3JkPHN0cmluZywgc3RyaW5nPiA9IHJldXNlZD8uc291cmNlcyA/PyB7fTsKICAgY29uc3QgYXJ0aWZhY3RzID0KICAgICBwYWNrYWdlQXJ0aWZhY3RzID8/CmRpZmYgLS1naXQgYS9zY3JpcHRzL2NpL2V4ZWN1dGlvbi1wYWNrYWdlLWNhY2hlLnAwLnRlc3QudHMgYi9zY3JpcHRzL2NpL2V4ZWN1dGlvbi1wYWNrYWdlLWNhY2hlLnAwLnRlc3QudHMKaW5kZXggMzUzY2VhNTg0Li44YzU0ZTU0MTEgMTAwNjQ0Ci0tLSBhL3NjcmlwdHMvY2kvZXhlY3V0aW9uLXBhY2thZ2UtY2FjaGUucDAudGVzdC50cworKysgYi9zY3JpcHRzL2NpL2V4ZWN1dGlvbi1wYWNrYWdlLWNhY2hlLnAwLnRlc3QudHMKQEAgLTIsNyArMiw3IEBAIGltcG9ydCB7IGV4cGVjdCwgdGVzdCB9IGZyb20gImJ1bjp0ZXN0IjsKIGltcG9ydCB7IGV4ZWNGaWxlU3luYyB9IGZyb20gIm5vZGU6Y2hpbGRfcHJvY2VzcyI7CiBpbXBvcnQgeyBjb3B5RmlsZSwgY3AsIG1rZGlyLCBta2R0ZW1wLCByZWFkRmlsZSwgcm0sIHN5bWxpbmssIHdyaXRlRmlsZSB9IGZyb20gIm5vZGU6ZnMvcHJvbWlzZXMiOwogaW1wb3J0IHsgdG1wZGlyIH0gZnJvbSAibm9kZTpvcyI7Ci1pbXBvcnQgeyBkaXJuYW1lLCBqb2luLCByZXNvbHZlLCBzZXAgfSBmcm9tICJub2RlOnBhdGgiOworaW1wb3J0IHsgYmFzZW5hbWUsIGRpcm5hbWUsIGpvaW4sIHJlc29sdmUsIHNlcCB9IGZyb20gIm5vZGU6cGF0aCI7CiBpbXBvcnQgeyBjb3B5Q2lSdW50aW1lLCBpc29sYXRlQ2lSdW50aW1lRW52aXJvbm1lbnQgfSBmcm9tICIuL2NvcHktY2ktcnVudGltZS50ZXN0LWZpeHR1cmUiOwogaW1wb3J0IHsgZXhlY3V0ZVBsYW4gfSBmcm9tICIuL3J1bi10ZXN0LXBsYW4iOwogaW1wb3J0IHsgY3JlYXRlVGVzdFBsYW4sIHNlYWxUZXN0UGxhbiB9IGZyb20gIi4vdGVzdC1wbGFuIjsKQEAgLTQyLDcgKzQyLDcgQEAgZm9yIChjb25zdCBpbnRlcnJ1cHRlZCBvZiBbZmFsc2UsIHRydWVdKQogICAgICAgICBhd2FpdCBta2Rpcihwa2csIHsgcmVjdXJzaXZlOiB0cnVlIH0pOwogICAgICAgICBhd2FpdCB3cml0ZUZpbGUoam9pbihwa2csICJwYWNrYWdlLmpzb24iKSwgSlNPTi5zdHJpbmdpZnkoeyBuYW1lOiBgQHBzdGRpby8ke25hbWV9YCwgdmVyc2lvbjogIjEuMC4wIiB9KSk7CiAgICAgICB9Ci0gICAgICBjb25zdCBkZXBlbmRlbmN5TmFtZSA9ICJmaXh0dXJlLWNvbXBsZXRlZC1jYWNoZS1kZXBlbmRlbmN5IjsKKyAgICAgIGNvbnN0IGRlcGVuZGVuY3lOYW1lID0gYGZpeHR1cmUtY29tcGxldGVkLSR7YmFzZW5hbWUocm9vdCl9YDsKICAgICAgIGNvbnN0IGRlcGVuZGVuY3kgPSBqb2luKHJvb3QsICJkZXBlbmRlbmN5Iik7CiAgICAgICBhd2FpdCBta2RpcihkZXBlbmRlbmN5KTsKICAgICAgIGF3YWl0IHdyaXRlRmlsZShqb2luKGRlcGVuZGVuY3ksICJwYWNrYWdlLmpzb24iKSwgSlNPTi5zdHJpbmdpZnkoeyBuYW1lOiBkZXBlbmRlbmN5TmFtZSwgdmVyc2lvbjogIjEuMC4wIiB9KSk7CkBAIC05OCw2ICs5OCwxMyBAQCBmb3IgKGNvbnN0IGludGVycnVwdGVkIG9mIFtmYWxzZSwgdHJ1ZV0pCiAgICAgICAgICAgICB3cml0ZUZpbGVTeW5jKHBheWxvYWQsJ3JldGFpbmVkJyk7CiAgICAgICAgICAgICBjb25zdCBzb3VyY2U9SlNPTi5wYXJzZShwcm9jZXNzLmVudi5FMkVfRVhURU5TSU9OX1NPVVJDRVMhKS5maXh0dXJlOwogICAgICAgICAgICAgZXhwZWN0KGV4aXN0c1N5bmMoam9pbihzb3VyY2UsJ25vZGVfbW9kdWxlcycpKSkudG9CZShmYWxzZSk7CisgICAgICAgICAgICAvLyBPcmRpbmFyeSBleHRlbnNpb24gaW5zdGFsbGVycyBpbmhlcml0IHRoZSBhZGFwdGVyIGVudmlyb25tZW50IHdpdGhvdXQgYSBydW50aW1lIG92ZXJyaWRlLgorICAgICAgICAgICAgY29uc3Qgc3RhbmRhbG9uZT1qb2luKHByb2Nlc3MuZW52LkUyRV9IT01FISwnc3RhbmRhbG9uZScpOworICAgICAgICAgICAgY3BTeW5jKHNvdXJjZSxzdGFuZGFsb25lLHtyZWN1cnNpdmU6dHJ1ZX0pOworICAgICAgICAgICAgY29uc3QgaW5oZXJpdGVkSW5zdGFsbD1CdW4uc3Bhd25TeW5jKFtwcm9jZXNzLmV4ZWNQYXRoLCdpbnN0YWxsJywnLS1vZmZsaW5lJywnLS1mcm96ZW4tbG9ja2ZpbGUnLCctLWlnbm9yZS1zY3JpcHRzJ10seworICAgICAgICAgICAgICBjd2Q6c3RhbmRhbG9uZSxlbnY6cHJvY2Vzcy5lbnYsCisgICAgICAgICAgICB9KTsKKyAgICAgICAgICAgIGV4cGVjdChpbmhlcml0ZWRJbnN0YWxsLmV4aXRDb2RlLGluaGVyaXRlZEluc3RhbGwuc3RkZXJyLnRvU3RyaW5nKCkpLnRvQmUoMCk7CiAgICAgICAgICAgICBjb25zdCBydW50aW1lPWpvaW4ocHJvY2Vzcy5lbnYuRTJFX0hPTUUhLCdydW50aW1lJyk7CiAgICAgICAgICAgICBjb25zdCBpbnN0YWxsZWRTb3VyY2U9am9pbihydW50aW1lLCdleHRlbnNpb24nKTsKICAgICAgICAgICAgIGNwU3luYyhzb3VyY2UsaW5zdGFsbGVkU291cmNlLHtyZWN1cnNpdmU6dHJ1ZSxmaWx0ZXI6cGF0aD0+YmFzZW5hbWUocGF0aCkhPT0nbm9kZV9tb2R1bGVzJ30pOwo="
-          CACHE_PROBE: "aW1wb3J0IHtyZWFkRmlsZVN5bmMsd3JpdGVGaWxlU3luY30gZnJvbSAibm9kZTpmcyI7CmNvbnN0IHBhdGg9InBhY2thZ2VzL2UyZS9zcmMvaGVscGVycy9pbnN0YWxsZWQtc2RrLnRzIjsKbGV0IHM9cmVhZEZpbGVTeW5jKHBhdGgsInV0ZjgiKTsKY29uc3QgYmVmb3JlPScgICAgZXhlY0ZpbGVTeW5jKHByb2Nlc3MudmVyc2lvbnMuYnVuID8gcHJvY2Vzcy5leGVjUGF0aCA6ICJidW4iLCBhcmdzLCB7IGN3ZCwgc3RkaW86ICJwaXBlIiB9KTsnOwppZighcy5pbmNsdWRlcyhiZWZvcmUpKXRocm93IG5ldyBFcnJvcigiTWlzc2luZyBTREsgaW5zdGFsbGVyIHBoYXNlIGJvdW5kYXJ5Iik7CnM9cy5yZXBsYWNlKGJlZm9yZSxgICAgIGNvbnN0IHN0YXJ0ZWQ9cGVyZm9ybWFuY2Uubm93KCk7CiAgICB0cnkgeyR7YmVmb3JlLnRyaW0oKX19CiAgICBmaW5hbGx5IHtjb25zb2xlLmxvZyhKU09OLnN0cmluZ2lmeSh7c2RrSW5zdGFsbFBoYXNlOmFyZ3Muc2xpY2UoMCwyKSxjb25maWd1cmVkQ2FjaGU6cHJvY2Vzcy5lbnYuQlVOX0lOU1RBTExfQ0FDSEVfRElSLGZpeHR1cmVDYWNoZTpwcm9jZXNzLmVudi5FMkVfQlVOX0NBQ0hFX0RJUixlbGFwc2VkTXM6cGVyZm9ybWFuY2Uubm93KCktc3RhcnRlZH0pKTt9YCk7CndyaXRlRmlsZVN5bmMocGF0aCxzKTsK"
-        run: |
-          New-Item -ItemType Directory -Force test-results | Out-Null
-          bun -e 'await Bun.write("test-results/cache-repair.patch",Buffer.from(process.env.CACHE_PATCH,"base64"));await Bun.write("test-results/cache-probe.ts",Buffer.from(process.env.CACHE_PROBE,"base64"));'
-          git apply test-results/cache-repair.patch
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          bun test-results/cache-probe.ts
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Execute actual producer and inherited offline install regression
-        run: bun test scripts/ci/execution-package-cache.p0.test.ts
-      - name: Build original native prerequisites
-        run: bun run build -- --scope e2e --include-dependencies
-      - name: Compile original packaged host
-        run: bun run --cwd scripts build:host
-      - name: Execute original complete Bookmarks file through repaired owning plan
-        env:
-          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio.exe
-        run: |
-          bun scripts/test.ts --artifact compiled-cli --file packages/e2e/src/packaged/packaged-bookmarks-compatibility.p2.test.ts --out test-results/bookmarks-plan.json --prebuilt 2>&1 | Tee-Object -FilePath test-results/bookmarks.log
-          exit $LASTEXITCODE
+      - name: Build original desktop prerequisites
+        run: bun run build -- --scope @pstdio/desktop --include-dependencies
+      - name: Package original desktop
+        run: bun run --cwd clients/desktop package
+      - name: Execute all six original desktop cases once
+        run: bun run --cwd clients/desktop test:benchmark
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: native-inherited-installer-cache
+          name: ps211-original-intel-desktop
           path: |
-            test-results/cache-*
-            test-results/bookmarks*
-            test-results/ci/planned
-            packages/e2e/test-results
-          if-no-files-found: error
-  recovery:
-    name: Original harness commands with separate recovery repair
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    container:
-      image: mcr.microsoft.com/playwright:v1.60.0-noble
-      options: --user 1001 --init --ipc=host
-    env:
-      BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
-      E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
-      CI_PRIORITY: P2
-      TEST_PRIORITIES: P2
-      CI_PROFILE: production
-      GH_TOKEN: ${{ github.token }}
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          ref: 0c18772dcf7c454ae428bcea239d9dc2d6d12a1d
-      - uses: actions/setup-node@v5
-        with:
-          node-version: "24.22.1"
-      - name: Setup Bun
-        run: node scripts/ci/setup-container-bun.ts
-      - uses: ./.github/actions/setup-ci-cache
-        with:
-          profile: playwright
-      - name: Build original browser prerequisites
-        run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
-      - name: Execute both original harness command cases once
-        run: bun run --cwd packages/e2e test:ui -- src/ui/harness-commands.p2.spec.ts
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: native-failed-command-recovery
-          path: packages/e2e/test-results
+            clients/desktop/test-results
+            test-results/quarantine
           if-no-files-found: warn
