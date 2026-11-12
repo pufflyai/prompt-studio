@@ -8,6 +8,7 @@
   "commands.switch": "Changer de conversation",
   "commands.open": "Ouvrir la conversation",
   "commands.rename": "Renommer la conversation",
+  "commands.copyId": "Copier l’identifiant de la conversation",
   "commands.archive": "Archiver la conversation",
   "actions.stopBeforeDelete": "Arrêtez le travail actif ou en attente avant de supprimer.",
   "commands.delete": "Supprimer la conversation",
