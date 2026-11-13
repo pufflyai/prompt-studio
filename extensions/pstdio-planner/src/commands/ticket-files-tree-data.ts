@@ -3,11 +3,12 @@ import { statusesCollection, ticketsCollection } from "../data/collections";
 import { listTicketReviewRequests } from "../data/review-request-storage";
 import { readSessionHistory } from "../data/session-history";
 import { loadTicketLinkedResources } from "../data/ticket-linked-resources";
+import { plannerOwnerFor } from "../data/ticket-resource-hierarchy";
 import type { Ticket } from "../data/types";
 import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
 
 export const readTicketTreeData = async (
-  ctx: Pick<ExtensionContextBase, "storage" | "sessions" | "workspaces" | "resources" | "projectId">,
+  ctx: Pick<ExtensionContextBase, "storage" | "sessions" | "workspaces" | "resources" | "projectId" | "extensionId">,
   ticket: Ticket,
 ) => {
   const workspaceData = ctx.workspaces.list().then(async (workspaces) => {
@@ -25,7 +26,7 @@ export const readTicketTreeData = async (
     readSessionHistory(ctx.sessions, { anchor: { type: "ticket", id: ticket.id } }),
     workspaceData,
     loadTicketLinkedResources(ctx.resources, [
-      { type: "ticket", extensionId: "pstdio.pstdio-planner", projectId: ctx.projectId, id: ticket.id },
+      { type: "ticket", extensionId: plannerOwnerFor(ctx), projectId: ctx.projectId, id: ticket.id },
     ]),
   ]);
   return {
