@@ -2,7 +2,7 @@ import type { GuestHost } from "./guest-host";
 import type { TextEditingClient } from "./text-editing-types";
 
 /** Text/Yjs code loads only when an editor requests a text session. */
-export const createTextEditingClient = (host: GuestHost) =>
+export const createTextEditingClient = (host: GuestHost, loadSession = () => import("./text-editing-session")) =>
   ({
     current: () => host.call("editing.text", { operation: "current" }),
     open: async (input) => {
@@ -27,8 +27,15 @@ export const createTextEditingClient = (host: GuestHost) =>
         },
       };
       try {
-        await host.call("editing.text", { operation: "register", memberId });
-        return await (await import("./text-editing-session")).openTextEditingSession(buffered, input, memberId);
+        // Both belong to this admitted open. Observe either rejection immediately,
+        // and drain registration before cleanup so a late ACK cannot leak a member.
+        const [registered, module] = await Promise.allSettled([
+          Promise.resolve().then(() => host.call("editing.text", { operation: "register", memberId })),
+          Promise.resolve().then(loadSession),
+        ]);
+        if (registered.status === "rejected") throw registered.reason;
+        if (module.status === "rejected") throw module.reason;
+        return await module.value.openTextEditingSession(buffered, input, memberId);
       } catch (error) {
         stop();
         await host.call("editing.text", { operation: "abandon", memberId }).catch(() => {});

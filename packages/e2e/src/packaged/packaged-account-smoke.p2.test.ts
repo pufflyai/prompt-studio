@@ -20,7 +20,7 @@ test(
       const loggedOut = { login: null, cloudProjects: [], cloudProjectsLoaded: true, features: null };
       expect(await client.account.status()).toEqual(loggedOut);
       const project = await client.projects.create(folderProjectInput({ name: "Local without owner" }, root));
-      expect(await client.account.projectSyncStatus(project.id)).toEqual({
+      expect(await client.account.projectSyncStatus(project.id, { expected: null })).toEqual({
         state: "local",
         offlineReady: false,
       });
@@ -114,11 +114,16 @@ test(
       client = createClient({ baseUrl: host.baseUrl, token: host.descriptor.token });
       await heartbeat.promise;
       expect(observedCredentials).toContain("Bearer fixture-device-credential");
-      expect(await client.account.devices()).toMatchObject([{ id: deviceId, current: true, online: true }]);
+      const expected = { accountId: "packaged-account", managerOrigin: manager.url.origin };
+      expect(await client.account.devices({ expected })).toMatchObject([{ id: deviceId, current: true, online: true }]);
+      await expect(
+        client.account.devices({ expected: { ...expected, accountId: "another-account" } }),
+      ).rejects.toThrow();
       expect((await client.account.status()).cloudProjects).toEqual([]);
       expect(await client.account.status()).toMatchObject({ features: { relay: false }, login: { deviceId } });
       const project = await client.projects.create(folderProjectInput({ name: "Local during early access" }, root));
       expect(await client.account.projectSyncStatus(project.id)).toEqual({ state: "local", offlineReady: false });
+      await expect(client.account.projectSyncStatus(project.id, { expected: null })).rejects.toThrow();
       rejected = true;
       await expect(client.account.devices()).rejects.toThrow();
       expect(await client.account.status()).toMatchObject({ login: null, signInRequired: true });

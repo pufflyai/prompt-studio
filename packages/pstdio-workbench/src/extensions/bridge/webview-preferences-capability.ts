@@ -1,6 +1,8 @@
 import type { PreferenceScopeRef, PreferenceValue, WorkbenchCore } from "../../core";
+import { persistWorkbenchWebviewPreference } from "./webview-preference-writes";
 
 export interface WebviewOwnedPreferences {
+  identity?: readonly unknown[];
   get(name: string, scope?: PreferenceScopeRef): Promise<PreferenceValue | undefined> | PreferenceValue | undefined;
   set(name: string, value: PreferenceValue, scope: PreferenceScopeRef): Promise<void> | void;
 }
@@ -36,9 +38,13 @@ export const createWebviewPreferencesAdapter = (input: {
         return registry.setValue(name, value, scope);
       }
       owner();
-      return input.ownedPreferences
-        ? input.ownedPreferences.set(name, value, scope)
-        : registry.setOwnedValue(owner(), name, value, scope);
+      if (!input.ownedPreferences) return registry.setOwnedValue(owner(), name, value, scope);
+      const accepted = structuredClone(value);
+      const capturedScope = { ...scope };
+      const persistence = input.ownedPreferences;
+      return persistWorkbenchWebviewPreference(input.workbench, [owner(), name, capturedScope], () =>
+        persistence.set(name, accepted, capturedScope),
+      );
     },
   };
 };

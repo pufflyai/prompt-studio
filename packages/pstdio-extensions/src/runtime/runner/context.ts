@@ -208,7 +208,7 @@ export const createContextFactory = (
       terminal: hostApis.terminal,
       logger: createLogger(ids.extensionId),
       settings: hostApis.settings,
-      account: env.account ?? unavailableAccount,
+      account: hostApis.account ?? unavailableAccount,
     };
   },
 

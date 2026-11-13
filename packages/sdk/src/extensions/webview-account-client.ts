@@ -1,14 +1,24 @@
-import type { ExtensionAccountApi } from "pstdio-api-contracts/extension-kernel";
+import type {
+  ExtensionAccountApi,
+  WebviewAccountQuery,
+  WebviewAccountQueryValue,
+} from "pstdio-api-contracts/extension-kernel";
 import type { GuestHost } from "./guest-host";
+import { getWebviewServiceQueries, type WebviewServiceQuery } from "./webview-service-query";
 
 /**
  * Same methods as `ctx.account`. Reads need the `account.read` capability and changes need
  * `account.manage`. Methods without a project id use the webview's project.
  */
-export type WebviewAccountClient = ExtensionAccountApi;
+export interface WebviewAccountClient extends ExtensionAccountApi {
+  query<Definition extends WebviewAccountQuery>(
+    source: Definition,
+  ): WebviewServiceQuery<WebviewAccountQueryValue<Definition>>;
+}
 
 export const createWebviewAccountClient = (host: GuestHost) =>
   ({
+    query: (source) => getWebviewServiceQueries(host, "account").query(source),
     status: () => host.call("account.read", { op: "status" }),
     loginStatus: (id) => host.call("account.read", { op: "loginStatus", id }),
     devices: () => host.call("account.read", { op: "devices" }),

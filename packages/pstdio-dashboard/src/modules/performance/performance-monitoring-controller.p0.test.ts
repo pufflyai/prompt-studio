@@ -152,6 +152,7 @@ describe("browser performance monitoring", () => {
 
 test("shares enabled snapshot reads and drops in-flight delivery after disabling", async () => {
   let reads = 0;
+  const entered = Promise.withResolvers<void>();
   const pending = Promise.withResolvers<null>();
   const controller = createPerformanceMonitoringController({
     kind: "desktop",
@@ -159,6 +160,7 @@ test("shares enabled snapshot reads and drops in-flight delivery after disabling
     setEnabled: async () => {},
     snapshot: () => {
       reads++;
+      entered.resolve();
       return pending.promise;
     },
     reportFrames: () => {},
@@ -170,6 +172,7 @@ test("shares enabled snapshot reads and drops in-flight delivery after disabling
   await controller.load();
   expect(reads).toBe(0);
   await controller.setEnabled(true);
+  await entered.promise;
   expect(reads).toBe(1);
   await controller.setEnabled(false);
   const count = values.length;
@@ -203,6 +206,7 @@ test("reads snapshots only while at least one subscriber needs them", async () =
     first();
     second();
     const reopened = controller.subscribeSnapshots(() => {});
+    await new Promise<void>((resolve) => setImmediate(resolve));
     expect(reads).toBe(2);
     reopened();
   } finally {
@@ -258,4 +262,44 @@ test("a desktop renderer keeps reporting when device monitoring outlives its mon
   await release();
   expect(controller.getEnabled()).toBe(true);
   controller.dispose();
+});
+
+test("retains one accepted snapshot for recreated views and coalesces optional and explicit readers", async () => {
+  let reads = 0;
+  const pending = Promise.withResolvers<null>();
+  const entered = Promise.withResolvers<void>();
+  const controller = createPerformanceMonitoringController({
+    kind: "desktop",
+    isEnabled: async () => true,
+    setEnabled: async () => {},
+    snapshot: () => {
+      reads++;
+      entered.resolve();
+      return pending.promise;
+    },
+    reportFrames: () => {},
+    reportState: () => {},
+  });
+  try {
+    await controller.load();
+    expect(controller.snapshotQuery).toBeDefined();
+    const stop = controller.snapshotQuery.subscribe(() => {});
+    const explicit = controller.snapshotQuery.read();
+    await entered.promise;
+    expect(reads).toBe(1);
+    stop();
+    pending.resolve(null);
+    expect(await explicit).toBeNull();
+    expect(controller.snapshotQuery.getSnapshot().data).toBeNull();
+    const reopened = controller.snapshotQuery.subscribe(() => {});
+    expect(controller.snapshotQuery.getSnapshot().data).toBeNull();
+    expect(reads).toBe(2); // The measurement cursor was detached; retained content remains visible during catch-up.
+    reopened();
+    expect(controller.snapshotQuery.inspect().automaticObservers).toBe(0);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(controller.snapshotQuery.active()).toBe(false);
+  } finally {
+    pending.resolve(null);
+    controller.dispose();
+  }
 });

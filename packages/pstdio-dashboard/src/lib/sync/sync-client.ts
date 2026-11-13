@@ -20,6 +20,22 @@ export const parseSyncDeleteEvent = parseSdkSyncDeleteEvent;
 
 export const createDashboardSyncWriterProvider = (collections = getRuntimeCollections()) => {
   const events: Record<string, SyncWriter> = {
+    webview_preferences: {
+      truncateAndWrite: () => undefined,
+      upsert: (row) => {
+        if (typeof row.name !== "string" || typeof row.extension_id !== "string") return;
+        publishExtensionEvent(
+          {
+            id: "preferences.changed",
+            extensionId: row.extension_id,
+            resourceIds: [row.name],
+            ...(row.scope_type === "project" && typeof row.scope_id === "string" ? { projectId: row.scope_id } : {}),
+          },
+          collections,
+        );
+      },
+      remove: () => publishExtensionEventReset({}, collections),
+    },
     extension_events: {
       truncateAndWrite: () => undefined,
       upsert: (row) => {

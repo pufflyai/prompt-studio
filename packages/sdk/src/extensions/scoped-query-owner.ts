@@ -2,8 +2,9 @@ import { isCancelledError, type QueryClient, type QueryKey, QueryObserver } from
 import { runQueryCleanup } from "./query-cleanup";
 import { createQueryReadScheduler } from "./query-read-scheduler";
 import { createQueryReadSignals } from "./query-read-signals";
-import type { ScopedQueryDescriptor, ScopedQuerySnapshot } from "./scoped-query";
+import type { ScopedQuery, ScopedQueryDescriptor, ScopedQuerySnapshot } from "./scoped-query";
 import { createQueryLedger } from "./scoped-query-ledger";
+import { readScopedQueryMembership } from "./scoped-query-read-membership";
 import { createQueryReadOptions } from "./scoped-query-read-options";
 import { shareQueryValue } from "./share-query-value";
 
@@ -25,6 +26,17 @@ const restoreQueryError = (
       status: expected ? "error" : "success",
       fetchStatus: "idle",
     });
+};
+
+const refreshMembership = <T>(owner: Pick<ScopedQuery<T>, "read" | "invalidate">, signal?: AbortSignal) => {
+  if (signal?.aborted) return Promise.reject(signal.reason);
+  owner.invalidate();
+  return owner.read(signal);
+};
+
+const cancelQueryRequest = (client: QueryClient, queryKey: QueryKey) => {
+  void client.cancelQueries({ queryKey, exact: true }, { revert: false, silent: true });
+  client.getQueryCache().find({ queryKey, exact: true })?.setState({ fetchStatus: "idle" });
 };
 
 export const createQueryOwner = <T>(
@@ -61,10 +73,7 @@ export const createQueryOwner = <T>(
   const observer = new QueryObserver<T, Error>(client, { ...options, enabled: false });
   let snapshotRevision = ledger.revision();
   let snapshot: ScopedQuerySnapshot<T> = { data: client.getQueryData<T>(queryKey), loading: false, fetching: false };
-  const cancelRequest = () => {
-    void client.cancelQueries({ queryKey, exact: true }, { revert: false, silent: true });
-    client.getQueryCache().find({ queryKey, exact: true })?.setState({ fetchStatus: "idle" });
-  };
+  const cancelRequest = () => cancelQueryRequest(client, queryKey);
 
   const publish = () => {
     if (disposed) return;
@@ -141,10 +150,11 @@ export const createQueryOwner = <T>(
       },
     ]);
   };
-  return {
+  const owner = {
     key: queryKey,
     getSnapshot: () => snapshot,
-    read: () => read(),
+    read: (signal?: AbortSignal): Promise<T> => (signal ? readScopedQueryMembership(owner, signal) : read()),
+    refresh: (signal?: AbortSignal): Promise<T> => refreshMembership(owner, signal),
     /** Refresh visible data without giving the awaiting caller a required-read lease. */
     async refreshObserved() {
       invalidate();
@@ -256,4 +266,5 @@ export const createQueryOwner = <T>(
       ]);
     },
   };
+  return owner;
 };
