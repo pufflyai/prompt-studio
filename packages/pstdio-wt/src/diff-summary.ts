@@ -1,7 +1,10 @@
 import { gitBytes } from "./git";
 
-export const readTrackedDiffSummary = async (worktreePath: string, base: string) => {
-  const output = await gitBytes(worktreePath, ["diff", "--numstat", "-z", base, "--"]).catch(() => Buffer.alloc(0));
+export const readTrackedDiffSummary = async (worktreePath: string, base: string, signal?: AbortSignal) => {
+  const output = await gitBytes(worktreePath, ["diff", "--numstat", "-z", base, "--"], signal).catch(() => {
+    signal?.throwIfAborted();
+    return Buffer.alloc(0);
+  });
   const records = output.toString().split("\0");
   const paths = new Set<string>();
   let additions = 0;

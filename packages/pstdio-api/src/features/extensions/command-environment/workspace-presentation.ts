@@ -169,7 +169,7 @@ export const createWorkspacePresentationApi = (
         const { root, base } = await diff(id, mode);
         return {
           workspace_id: id,
-          ...(await read(() => getWorktreeDiffSummary({ worktreePath: root, base: base.sha }))),
+          ...(await read(() => getWorktreeDiffSummary({ worktreePath: root, base: base.sha, signal: input.signal }))),
         };
       }),
   } satisfies PresentationApi;

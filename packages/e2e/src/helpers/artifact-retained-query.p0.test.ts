@@ -1,9 +1,7 @@
 import { expect, test } from "bun:test";
 import { createWebviewClient, type QueryChangeEnvelope } from "@pstdio/sdk/extensions";
 import { createMemoryRepoFiles, createMemoryStorage, makeCommandArgs } from "@pstdio/sdk/testing";
-import { createArtifactQueries } from "pstdio-artifacts/src/artifact-queries";
-import { commands } from "pstdio-artifacts/src/commands";
-import { changedEvent, extensionId } from "pstdio-artifacts/src/events";
+import { changedEvent, commands, createArtifactQueries, extensionId } from "pstdio-artifacts/testing";
 import { createRetainedExtensionQueryFixture } from "./retained-extension-query.fixture";
 
 const turn = () => new Promise<void>((resolve) => setImmediate(resolve));

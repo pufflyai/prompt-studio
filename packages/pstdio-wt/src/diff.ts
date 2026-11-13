@@ -224,15 +224,31 @@ const buildTotals = (files: Array<Pick<FileDiff, "additions" | "deletions">>) =>
     { additions: 0, deletions: 0, file_count: 0 },
   );
 
-export const getWorktreeDiffSummary = async (opts: { worktreePath: string; base: string }): Promise<DiffSummary> => {
-  const { worktreePath, base } = opts;
-  const [tracked, untracked] = await Promise.all([
-    readTrackedDiffSummary(worktreePath, base),
-    gitBytes(worktreePath, ["ls-files", "--others", "--exclude-standard", "-z"]).catch(() => Buffer.alloc(0)),
+export const getWorktreeDiffSummary = async (opts: {
+  worktreePath: string;
+  base: string;
+  signal?: AbortSignal;
+}): Promise<DiffSummary> => {
+  const { worktreePath, base, signal } = opts;
+  signal?.throwIfAborted();
+  // Cancellation releases this finite read only after both admitted children drain.
+  const [trackedResult, untrackedResult] = await Promise.allSettled([
+    readTrackedDiffSummary(worktreePath, base, signal),
+    gitBytes(worktreePath, ["ls-files", "--others", "--exclude-standard", "-z"], signal).catch(() => {
+      signal?.throwIfAborted();
+      return Buffer.alloc(0);
+    }),
   ]);
+  signal?.throwIfAborted();
+  if (trackedResult.status === "rejected") throw trackedResult.reason;
+  if (untrackedResult.status === "rejected") throw untrackedResult.reason;
+  const tracked = trackedResult.value;
+  const untracked = untrackedResult.value;
   const untrackedPaths = untracked.toString().split("\0").filter(Boolean);
+  const untrackedAdditions = await countUntrackedLines(worktreePath, untrackedPaths);
+  signal?.throwIfAborted();
   return {
-    additions: tracked.additions + (await countUntrackedLines(worktreePath, untrackedPaths)),
+    additions: tracked.additions + untrackedAdditions,
     deletions: tracked.deletions,
     file_count: new Set([...tracked.paths, ...untrackedPaths]).size,
   };
