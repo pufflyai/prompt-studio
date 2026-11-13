@@ -352,6 +352,8 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
     // Reload, not the file watcher, decides when the repaired version is adopted.
     const entry = join(home, "extensions", "pstdio-planner", "src", "timeline", "view", "entry.tsx");
     const original = readFileSync(entry, "utf8");
+    const acceptedView = await plannerWebview(host, valid.id, "timeline");
+    const acceptedModule = await (await fetch(`${host.baseUrl}${acceptedView!.moduleUrl}`)).text();
     writeFileSync(entry, `${original}\nexport const broken = ;\n`);
     expect(await reloadPlanner(host, valid.id)).toMatchObject({
       status: "error",
@@ -360,7 +362,7 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
     const webview = await plannerWebview(host, valid.id, "timeline");
     const workingModule = await fetch(`${host.baseUrl}${webview!.moduleUrl}`);
     expect(workingModule.status).toBe(200);
-    expect(await workingModule.text()).not.toContain("Extension webview build failed");
+    expect(await workingModule.text()).toBe(acceptedModule);
     timeline = await openTimeline(page, host, valid.id);
     await expect(timeline.getByText("Seeded ticket 0", { exact: true })).toBeVisible({ timeout: 30_000 });
     writeFileSync(entry, original);
