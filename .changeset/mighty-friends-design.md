@@ -3,4 +3,4 @@
 "@pstdio/ui": patch
 ---
 
-Add editable dashboard styling with row joining, consistent compaction, clear metric tooltips, row insertion near gaps, horizontal swaps, and popover settings.
+Export a controlled DashboardRenderer from @pstdio/ui/dashboard-renderer with caller-owned metric, chart, and table data, responsive drag and resize editing, layout modes, and popover settings.

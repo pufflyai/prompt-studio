@@ -1,9 +1,9 @@
 import { type KeyboardEvent, type RefObject, type SyntheticEvent, useState } from "react";
 import type { ResizeCallbackData } from "react-resizable";
 import { dashboardGeometry } from "@/theme/primitives/dashboard";
-import type { DashboardLayoutMode, DashboardResizeHandle, DashboardWidget, GridPlacement } from "./dashboard-fixtures";
 import { measureGrid, placementSize } from "./dashboard-grid-geometry";
 import { resizeWidget } from "./dashboard-layout";
+import type { DashboardLayoutMode, DashboardResizeHandle, DashboardWidget, GridPlacement } from "./dashboard-types";
 
 type GridMetrics = ReturnType<typeof measureGrid>;
 interface ResizeSession {

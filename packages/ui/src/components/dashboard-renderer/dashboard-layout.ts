@@ -1,7 +1,7 @@
 import { dashboardGeometry } from "@/theme/primitives/dashboard";
 import { type DropProbe, findRowGap, findRowVacancy, fitWidgetInRow } from "./dashboard-drop-target";
-import type { DashboardLayoutMode, DashboardResizeHandle, DashboardWidget, GridPlacement } from "./dashboard-fixtures";
 import { insertWidgetRow, swapWithinRow } from "./dashboard-rows";
+import type { DashboardLayoutMode, DashboardResizeHandle, DashboardWidget, GridPlacement } from "./dashboard-types";
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, Math.round(value)));
 const intersects = (a: GridPlacement, b: GridPlacement) =>

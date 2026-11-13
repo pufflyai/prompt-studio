@@ -13,10 +13,16 @@ import {
 } from "@dnd-kit/core";
 import { type CSSProperties, type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 import { dashboardRecipe } from "@/theme/recipes/dashboard";
-import { type DashboardLayoutMode, type DashboardWidget, type GridPlacement, widgetLabel } from "./dashboard-fixtures";
 import { dragAnchor, measureGrid } from "./dashboard-grid-geometry";
 import { GridWidget } from "./dashboard-grid-widget";
 import { dashboardColumns, previewWidgetMove, projectWidgets, resizeWidget } from "./dashboard-layout";
+import {
+  type DashboardDataSource,
+  type DashboardLayoutMode,
+  type DashboardWidget,
+  type GridPlacement,
+  widgetLabel,
+} from "./dashboard-types";
 import { WidgetIcon } from "./dashboard-widget-icon";
 import { useDashboardResize } from "./use-dashboard-resize";
 
@@ -25,7 +31,7 @@ interface GridProps {
   editing: boolean;
   mode: DashboardLayoutMode;
   selectedId: string | null;
-  days: number;
+  sources: DashboardDataSource[];
   onChange: (widgets: DashboardWidget[]) => void;
   onConfigure: (id: string | null) => void;
   onWidgetChange: (widget: DashboardWidget) => void;

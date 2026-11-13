@@ -1,5 +1,5 @@
 import { dashboardGeometry } from "@/theme/primitives/dashboard";
-import type { DashboardWidget, GridPlacement } from "./dashboard-fixtures";
+import type { DashboardWidget, GridPlacement } from "./dashboard-types";
 
 export interface DropProbe {
   position: { x: number; y: number };

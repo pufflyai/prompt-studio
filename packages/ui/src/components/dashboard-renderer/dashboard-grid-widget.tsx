@@ -4,8 +4,13 @@ import { GripVertical } from "lucide-react";
 import type { Ref } from "react";
 import { Resizable } from "react-resizable";
 import { dashboardRecipe } from "@/theme/recipes/dashboard";
-import { type DashboardResizeHandle, type DashboardWidget, widgetLabel } from "./dashboard-fixtures";
 import { type measureGrid, placementStyle } from "./dashboard-grid-geometry";
+import {
+  type DashboardDataSource,
+  type DashboardResizeHandle,
+  type DashboardWidget,
+  widgetLabel,
+} from "./dashboard-types";
 import { WidgetCard } from "./dashboard-widget";
 import { WidgetSettings } from "./dashboard-widget-settings";
 import type { useDashboardResize } from "./use-dashboard-resize";
@@ -14,7 +19,7 @@ interface GridWidgetProps {
   widget: DashboardWidget;
   editing: boolean;
   selectedId: string | null;
-  days: number;
+  sources: DashboardDataSource[];
   moving: boolean;
   showDropPreview: boolean;
   resizing: boolean;
@@ -34,7 +39,7 @@ export function GridWidget(props: GridWidgetProps) {
     widget,
     editing,
     selectedId,
-    days,
+    sources,
     moving,
     showDropPreview,
     resizing,
@@ -64,7 +69,7 @@ export function GridWidget(props: GridWidgetProps) {
     >
       <WidgetCard
         widget={widget}
-        days={days}
+        source={sources.find(({ id }) => id === widget.source)}
         controls={
           editing ? (
             <HStack css={styles.widgetToolbar} data-dashboard-controls="" aria-label={`${label} controls`}>
@@ -82,6 +87,7 @@ export function GridWidget(props: GridWidgetProps) {
               </IconButton>
               <WidgetSettings
                 widget={widget}
+                sources={sources}
                 open={selected}
                 onOpenChange={(open) => onConfigure(open ? widget.id : null)}
                 onChange={onWidgetChange}

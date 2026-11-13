@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import type { DashboardWidget } from "./dashboard-fixtures";
 import { compactWidgets, dashboardColumns, moveWidget, projectWidgets, resizeWidget } from "./dashboard-layout";
+import type { DashboardWidget } from "./dashboard-types";
 
 const fixtures: DashboardWidget[] = [
   { id: "first", title: "First", kind: "metric", source: "users", layout: { x: 0, y: 0, w: 4, h: 3 } },

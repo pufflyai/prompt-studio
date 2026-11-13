@@ -1,16 +1,17 @@
 import { Box, Button, HStack, Icon, IconButton, Input, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
 import { Settings2, Trash2, X } from "lucide-react";
-import { useRef } from "react";
+import { useId, useRef } from "react";
 import { DisplayMenuSelect } from "@/components/kanban-renderer/display-menu";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { Tooltip } from "@/components/primitives/tooltip";
 import { dashboardRecipe } from "@/theme/recipes/dashboard";
 import { ScopedPopover as Popover } from "@/utils/scoped-overlays";
 import { Portal } from "@/utils/ui-scope";
-import { type DashboardWidget, sources, widgetKinds, widgetLabel } from "./dashboard-fixtures";
+import { type DashboardDataSource, type DashboardWidget, widgetKinds, widgetLabel } from "./dashboard-types";
 
 interface WidgetSettingsProps {
   widget: DashboardWidget;
+  sources: DashboardDataSource[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onChange: (widget: DashboardWidget) => void;
@@ -18,7 +19,8 @@ interface WidgetSettingsProps {
 }
 
 export function WidgetSettings(props: WidgetSettingsProps) {
-  const { widget, open, onOpenChange, onChange, onRemove } = props;
+  const { widget, sources, open, onOpenChange, onChange, onRemove } = props;
+  const titleId = useId();
   const styles = useSlotRecipe({ recipe: dashboardRecipe })();
   const input = useRef<HTMLInputElement>(null);
   return (
@@ -59,11 +61,11 @@ export function WidgetSettings(props: WidgetSettingsProps) {
               <Stack p="md" gap="md">
                 <Stack gap="xs">
                   <Text asChild textStyle="label/S/regular">
-                    <label htmlFor={`widget-title-${widget.id}`}>Title</label>
+                    <label htmlFor={titleId}>Title</label>
                   </Text>
                   <Input
                     ref={input}
-                    id={`widget-title-${widget.id}`}
+                    id={titleId}
                     value={widget.title}
                     onChange={(event) => onChange({ ...widget, title: event.target.value })}
                   />

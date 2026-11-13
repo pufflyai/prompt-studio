@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import type { GridPlacement } from "./dashboard-fixtures";
+import type { GridPlacement } from "./dashboard-types";
 
 // These values are measured placement geometry; appearance stays in the shared theme recipe.
 export const placementStyle = (layout: GridPlacement) =>

@@ -35,6 +35,7 @@ export const dashboardRecipe = defineSlotRecipe({
     root: {
       display: "flex",
       flexDirection: "column",
+      w: "full",
       h: "full",
       minH: "0",
       bg: "bg",

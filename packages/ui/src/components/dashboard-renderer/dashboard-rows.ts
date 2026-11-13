@@ -1,4 +1,4 @@
-import type { DashboardLayoutMode, DashboardWidget } from "./dashboard-fixtures";
+import type { DashboardLayoutMode, DashboardWidget } from "./dashboard-types";
 
 export function swapWithinRow(widgets: DashboardWidget[], active: DashboardWidget, target: DashboardWidget) {
   const row = widgets.filter(({ layout }) => layout.y === active.layout.y).sort((a, b) => a.layout.x - b.layout.x);

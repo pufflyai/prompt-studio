@@ -16,12 +16,12 @@ import { portal } from "@tanstack/charts/tooltip/portal";
 import { useRef } from "react";
 import { Chart, chartColor } from "@/components/charts/chart";
 import { chartGeometry } from "@/theme/primitives/chart";
-import { activity, type DashboardWidget, sources, trends, widgetLabel } from "./dashboard-fixtures";
+import { type DashboardDataSource, type DashboardWidget, widgetLabel } from "./dashboard-types";
 
-export function DashboardChart(props: { widget: DashboardWidget; days: number; sparkline?: boolean }) {
-  const { widget, days, sparkline } = props;
+export function DashboardChart(props: { widget: DashboardWidget; source: DashboardDataSource; sparkline?: boolean }) {
+  const { widget, source, sparkline } = props;
   const container = useRef<HTMLDivElement>(null);
-  const sourceLabel = sources.find(({ id }) => id === widget.source)?.name ?? widget.source;
+  const sourceLabel = source.name;
   const number = new Intl.NumberFormat("en-US");
   const anchor: ChartTooltipAnchor = sparkline
     ? (_, { surface }) => {
@@ -31,25 +31,27 @@ export function DashboardChart(props: { widget: DashboardWidget; days: number; s
         return { x: surface.width / 2, y: ((card.bottom - bounds.top) / bounds.height) * surface.height };
       }
     : "point";
-  const points = trends[widget.source]
-    .slice(-days)
-    .map((count, index) => ({ day: `Nov ${13 - Math.min(days, 7) + index}`, count }));
-  const stacked = widget.kind === "bar" && widget.source === "conversations" && !sparkline;
+  const series = source.series ?? [];
+  const points = Array.from(new Set(series.map((point) => point.label)), (label) => ({
+    label,
+    value: series.filter((point) => point.label === label).reduce((sum, point) => sum + point.value, 0),
+  }));
+  const stacked = widget.kind === "bar" && series.some((point) => point.group != null) && !sparkline;
   const mark = stacked
-    ? barY(activity.slice(-days * 3), {
-        x: "day",
-        y: "count",
-        color: "agent",
+    ? barY(series, {
+        x: "label",
+        y: "value",
+        color: "group",
         layout: stack(),
         radius: { end: chartGeometry.barRadius },
       })
-    : lineY(points, { x: "day", y: "count", stroke: chartColor("vis.categorical.1") });
+    : lineY(points, { x: "label", y: "value", stroke: chartColor("vis.categorical.1") });
   const marks =
     widget.kind === "bar" && !stacked && !sparkline
       ? [
           barY(points, {
-            x: "day",
-            y: "count",
+            x: "label",
+            y: "value",
             fill: chartColor("vis.categorical.1"),
             radius: { end: chartGeometry.barRadius },
           }),
@@ -79,16 +81,16 @@ export function DashboardChart(props: { widget: DashboardWidget; days: number; s
               content: (focused) => {
                 const rows: ChartTooltipRow[] = focused.map((point) => ({
                   label: point.group == null ? sourceLabel : String(point.group),
-                  value: number.format(point.datum.count),
+                  value: number.format(point.datum.value),
                   color: point.color,
                 }));
                 if (stacked)
                   rows.push({
-                    label: "Total conversations",
-                    value: number.format(focused.reduce((sum, point) => sum + point.datum.count, 0)),
+                    label: `Total ${sourceLabel.toLowerCase()}`,
+                    value: number.format(focused.reduce((sum, point) => sum + point.datum.value, 0)),
                     active: true,
                   });
-                return { title: focused[0]?.datum.day, rows };
+                return { title: focused[0]?.datum.label, rows };
               },
             },
           },

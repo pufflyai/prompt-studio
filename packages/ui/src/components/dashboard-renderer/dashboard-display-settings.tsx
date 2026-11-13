@@ -5,15 +5,16 @@ import { Tooltip } from "@/components/primitives/tooltip";
 import { dashboardRecipe } from "@/theme/recipes/dashboard";
 import { ScopedPopover as Popover } from "@/utils/scoped-overlays";
 import { Portal } from "@/utils/ui-scope";
-import { type DashboardLayoutMode, layoutModes } from "./dashboard-fixtures";
+import { type DashboardLayoutMode, layoutModes } from "./dashboard-types";
 
 interface DashboardDisplaySettingsProps {
   mode: DashboardLayoutMode;
   onModeChange: (mode: DashboardLayoutMode) => void;
+  disabled?: boolean;
 }
 
 export function DashboardDisplaySettings(props: DashboardDisplaySettingsProps) {
-  const { mode, onModeChange } = props;
+  const { mode, onModeChange, disabled } = props;
   const styles = useSlotRecipe({ recipe: dashboardRecipe })();
   return (
     <Popover.Root
@@ -23,7 +24,7 @@ export function DashboardDisplaySettings(props: DashboardDisplaySettingsProps) {
     >
       <Tooltip content="Display">
         <Popover.Trigger asChild>
-          <IconButton aria-label="Display settings" variant="ghost" size="2xs">
+          <IconButton aria-label="Display settings" variant="ghost" size="2xs" disabled={disabled}>
             <Icon as={Settings2} />
           </IconButton>
         </Popover.Trigger>

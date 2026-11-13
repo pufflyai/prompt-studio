@@ -1,43 +1,5 @@
-export type WidgetKind = "metric" | "line" | "bar" | "table";
-export type WidgetSource = "conversations" | "users" | "warnings";
-export type DashboardLayoutMode = "vertical" | "horizontal" | "free";
-export type DashboardResizeHandle = "w" | "e" | "s" | "sw" | "se";
-export interface DashboardDefinition {
-  mode: DashboardLayoutMode;
-  widgets: DashboardWidget[];
-}
-export const layoutModes = [
-  { id: "vertical", name: "Compact up" },
-  { id: "horizontal", name: "Compact left" },
-  { id: "free", name: "Free placement" },
-];
-export interface GridPlacement {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
-export interface DashboardWidget {
-  id: string;
-  title: string;
-  kind: WidgetKind;
-  source: WidgetSource;
-  layout: GridPlacement;
-}
+import type { DashboardDataSource, DashboardWidget } from "./dashboard-types";
 
-export const widgetKinds = [
-  { id: "metric", name: "Metric" },
-  { id: "line", name: "Line chart" },
-  { id: "bar", name: "Bar chart" },
-  { id: "table", name: "Table" },
-];
-export const widgetLabel = (widget: DashboardWidget) =>
-  widget.title.trim() || widgetKinds.find(({ id }) => id === widget.kind)?.name || "Widget";
-export const sources = [
-  { id: "conversations", name: "Conversations" },
-  { id: "users", name: "Active users" },
-  { id: "warnings", name: "Warnings" },
-];
 export const initialWidgets: DashboardWidget[] = [
   {
     id: "conversations",
@@ -132,3 +94,40 @@ export const sourceTables = {
   ],
   warnings: conversations.filter((row) => row.Warnings > 0),
 };
+
+export const exampleSources = (days: number): DashboardDataSource[] => [
+  {
+    id: "conversations",
+    name: "Conversations",
+    metric: {
+      value: days === 7 ? totals.conversations : recentTotals.conversations,
+      description: days === 7 ? `${changes.conversations} from last week` : undefined,
+    },
+    series: activity.slice(-days * 3).map((point) => ({ label: point.day, value: point.count, group: point.agent })),
+    table: { data: sourceTables.conversations, columnTypes: { Warnings: "number", Conversations: "number" } },
+  },
+  {
+    id: "users",
+    name: "Active users",
+    metric: {
+      value: days === 7 ? totals.users : recentTotals.users,
+      description: days === 7 ? `${changes.users} from last week` : undefined,
+    },
+    series: trends.users
+      .slice(-days)
+      .map((value, index) => ({ label: `Nov ${13 - Math.min(days, 7) + index}`, value })),
+    table: { data: sourceTables.users, columnTypes: { Warnings: "number", Conversations: "number" } },
+  },
+  {
+    id: "warnings",
+    name: "Warnings",
+    metric: {
+      value: days === 7 ? totals.warnings : recentTotals.warnings,
+      description: days === 7 ? `${changes.warnings} from last week` : undefined,
+    },
+    series: trends.warnings
+      .slice(-days)
+      .map((value, index) => ({ label: `Nov ${13 - Math.min(days, 7) + index}`, value })),
+    table: { data: sourceTables.warnings, columnTypes: { Warnings: "number", Conversations: "number" } },
+  },
+];
