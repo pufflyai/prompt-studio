@@ -209,7 +209,11 @@ test("resource discussion sends file-only comments and retains the original atta
   await input.press("ControlOrMeta+b");
   await input.press("ArrowRight");
   await input.press("Enter");
-  await input.press("ControlOrMeta+b");
+  const bold = page
+    .locator(".floating-text-format-toolbar")
+    .getByRole("button", { name: "Bold", exact: true, includeHidden: true });
+  if ((await bold.getAttribute("data-active")) === "true") await input.press("ControlOrMeta+b");
+  await expect(bold).not.toHaveAttribute("data-active", "true");
   await page.keyboard.type("Next paragraph");
   await send.click();
   const comments = activity.locator("article");

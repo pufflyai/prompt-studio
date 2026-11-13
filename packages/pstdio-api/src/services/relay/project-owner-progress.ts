@@ -26,7 +26,7 @@ export const projectOwnerProgress = (
     "Project information",
     "Extensions",
     "Automations",
-    "Activity",
+    "Resource Activity",
     "Sessions and history",
     ...extensionNames,
   ];
