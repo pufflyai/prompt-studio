@@ -12,6 +12,7 @@ import {
 } from "@dnd-kit/core";
 import { createContext, type ReactNode, useContext, useId, useRef, useState } from "react";
 import type { WorkbenchCore, WorkbenchPanelRegion, WorkbenchTabPosition } from "../../core";
+import { openPanelAsPage, panelPageDropTarget } from "../../core/controllers/composition/panel-page-drop";
 import { findPlacementByWidgetId } from "../../core/registries/layout/layout-operations";
 import {
   resolvePanelPosition,
@@ -19,6 +20,7 @@ import {
   type WorkbenchPositionedRegion,
 } from "../../core/registries/layout/panel-positions";
 import { planTrayDrop } from "../../core/registries/layout/tray-tabs";
+import { reportUserActionError } from "../../core/shared/run-user-action";
 import { batchWorkbenchChanges } from "../../core/shared/store/workbench-batch";
 import { panelDropCollision } from "./panel-drop-collision";
 import { tabEdgeDropCollisions, tabHeaderDropCollisions } from "./tab-edge-drop-collision";
@@ -50,6 +52,10 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
     useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { distance: 5 } }),
   );
+  const destinationsFor = (id: string) => {
+    const regions = workbench.getPanelDestinations(id);
+    return panelPageDropTarget(workbench, id) && !regions.includes("main") ? [...regions, "main" as const] : regions;
+  };
   const finish = () => {
     origin.current = undefined;
     setActiveId(undefined);
@@ -62,7 +68,7 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
     if (
       !data?.region ||
       event.over?.id === event.active.id ||
-      !workbench.getPanelDestinations(String(event.active.id)).includes(data.region)
+      !destinationsFor(String(event.active.id)).includes(data.region)
     )
       return undefined;
     const layout = workbench.layout.getLayout();
@@ -95,14 +101,14 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
         drop,
         activePanel,
         panelDrop,
-        destinations: activeId ? workbench.getPanelDestinations(activeId) : [],
+        destinations: activeId ? destinationsFor(activeId) : [],
       }}
     >
       <DndContext
         sensors={sensors}
         collisionDetection={(args) => {
           if (args.active.data.current?.panelRegion) return panelDropCollision(args, origin.current);
-          const destinations = workbench.getPanelDestinations(String(args.active.id));
+          const destinations = destinationsFor(String(args.active.id));
           const tabs = tabHeaderDropCollisions(args).filter((collision) =>
             destinations.includes(collision.data?.droppableContainer.data.current?.region),
           );
@@ -153,6 +159,12 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
           }
           const target = resolveDrop(event);
           finish();
+          if (target?.region === "main" && panelPageDropTarget(workbench, String(event.active.id))) {
+            void openPanelAsPage(workbench, String(event.active.id)).catch((error) =>
+              reportUserActionError(workbench, "Open page", error),
+            );
+            return;
+          }
           if (target)
             batchWorkbenchChanges(() => {
               if (

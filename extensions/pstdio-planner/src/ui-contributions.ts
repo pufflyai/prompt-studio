@@ -49,6 +49,35 @@ const createTagSettingsView = (baseUrl: string) =>
       capabilities: ["commands.execute", "editing.session"],
     },
   });
+const createTicketFilesView = () =>
+  defineView({
+    id: "ticket-files",
+    title: l10n("panels.ticketFiles.title", "Files"),
+    icon: "Files",
+    body: {
+      kind: "tree",
+      structure: ticketNavigationStructure,
+      body: listTicketFilesTree,
+      refreshEvents: [
+        plannerTicketsChanged,
+        viewDataEvents.sessionsChanged,
+        viewDataEvents.workspacesChanged,
+        viewDataEvents.resourceAnchorsChanged,
+        viewDataEvents.resourcesChanged,
+      ],
+      defaultExpandedSectionIds: [
+        "files",
+        "parent",
+        "depends-on",
+        "required-by",
+        "related",
+        "sub-tickets",
+        "workspaces",
+        "sessions",
+      ],
+    },
+  });
+
 export const createPlannerUi = (baseUrl: string) => {
   const tagSettings = createTagSettingsView(baseUrl);
   const settingsSection = defineSettingsSection({ id: "planner", title: "Project Planner", order: 25 });
@@ -164,18 +193,7 @@ export const createPlannerUi = (baseUrl: string) => {
       save: (ctx, input) => saveTicketContent(ctx, { content: input.content, resource: input.renderer.resource }),
     },
   });
-  const files = defineView({
-    id: "ticket-files",
-    title: l10n("panels.ticketFiles.title", "Files"),
-    icon: "Files",
-    body: {
-      kind: "tree",
-      structure: ticketNavigationStructure,
-      body: listTicketFilesTree,
-      refreshEvents: [plannerTicketsChanged, viewDataEvents.sessionsChanged, viewDataEvents.workspacesChanged],
-      defaultExpandedSectionIds: ["files", "sub-tickets", "workspaces", "sessions"],
-    },
-  });
+  const files = createTicketFilesView();
   const properties = defineView({
     id: "ticket-properties",
     title: l10n("controls.ticketProperties.title", "Properties"),

@@ -110,7 +110,7 @@ describe("ticket files tree commands", () => {
       }),
     );
 
-    expect(body.map((section) => section.id)).toEqual(["ticket", "files", "workspaces", "sessions"]);
+    expect(body.map((section) => section.id)).toEqual(["ticket", "files"]);
 
     // The ticket body is its own header-less entry, selected by default.
     expect(body[0]).toMatchObject({
@@ -159,18 +159,6 @@ describe("ticket files tree commands", () => {
         ],
       },
     ]);
-    expect(body[3]).toMatchObject({
-      id: "sessions",
-      nodes: [
-        {
-          id: "sessions-empty",
-          label: "No sessions",
-          icon: "MessageCircle",
-          disabled: true,
-          rowVariant: "empty-state",
-        },
-      ],
-    });
   });
 
   test("deleting the open file re-targets the page to the ticket body", async () => {

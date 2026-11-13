@@ -15,6 +15,7 @@ import type { ResolvedPageLocation } from "../page-location/page-location-types"
 import { preparePageLanding } from "../page-runtime/page-panel-view";
 import { reusableNavigationViewer } from "../resource-viewers/reusable-navigation-viewer";
 import { requirePanelOpen } from "../shell/panel-open-policy";
+import { requireCorePanelTargets } from "./panel-target";
 import { isReusedViewerPin, prepareReusedViewerPin, retainOutgoingViewerPins } from "./reused-viewer-pin";
 
 type NavigationOperation = NavigationTargetPage | NavigationTargetPanel;
@@ -165,7 +166,12 @@ const applyViewerReferences = (
   else if (last?.kind === "page" && core.pages.getContent()) core.focus.setActiveRegion("main");
 };
 
-export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonly NavigationOperation[]) => {
+export const prepareWorkbenchNavigation = (
+  core: WorkbenchCore,
+  targets: readonly NavigationOperation[],
+  options: { reuseViewers?: boolean } = {},
+) => {
+  requireCorePanelTargets(core, targets);
   targets = targets.map((target) => {
     const replacement =
       target.kind === "panel" && target.panel.kind === "page-slot"
@@ -198,7 +204,7 @@ export const prepareWorkbenchNavigation = (core: WorkbenchCore, targets: readonl
   for (const target of targets) {
     const beforeOpen = proposed;
     resourceToFocus = undefined;
-    const reusable = reusableNavigationViewer(core, target, proposed);
+    const reusable = reusableNavigationViewer(core, target, proposed, options.reuseViewers);
     if (reusable) {
       activate.set(reusable.region, reusable.identity);
       resourceToFocus = referenceForTarget(target, locations.resolve);
