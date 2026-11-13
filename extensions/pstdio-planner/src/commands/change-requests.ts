@@ -1,5 +1,5 @@
 import type { ParamsOf } from "@pstdio/sdk/extensions";
-import { type CommandContext, commandRef, defineCommand, l10n, params } from "@pstdio/sdk/extensions";
+import { type CommandContext, defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
 import { legacyAttemptOutput } from "../data/attempt-compatibility";
 import { appendRevision } from "../data/attempt-state";
@@ -10,18 +10,8 @@ import { listTicketReviewRequests } from "../data/review-request-storage";
 import { readSessionHistory } from "../data/session-history";
 import { inlineThreadIsOutdated } from "../data/thread-mapping";
 import { withWriteGuard } from "../data/write-guard";
+import { validateImplementationEvidence } from "./activity-evidence";
 import { validateSubmittedStack } from "./stack-validation";
-
-const reportsCommand = commandRef.forExtension({ publisher: "pstdio", name: "pstdio-reports" });
-const readReportCommand = reportsCommand<{ id: string }, { id?: string; workspaceId?: string | null; draft?: boolean }>(
-  "reports.read",
-);
-
-export const readReport = async (ctx: Pick<CommandContext, "commands">, reportId: string) => {
-  const outcome = await ctx.commands.execute(readReportCommand, { params: { id: reportId } });
-  if (!outcome.ok) throw new Error(`Unknown report "${reportId}": ${outcome.reason}`);
-  return outcome.value;
-};
 
 export class WorkspaceUnavailableError extends Error {}
 
@@ -87,7 +77,9 @@ const submissionParams = {
   implementationSessionId: params.text(),
   sessionId: params.text(),
   headSha: params.text({ required: true }),
-  changeRequestReportId: params.text({ required: true }),
+  changeRequestActivityId: params.text(),
+  /** @deprecated Publish an implementation Activity entry and pass changeRequestActivityId. */
+  changeRequestReportId: params.text(),
   /** @deprecated Ownership and expectedRevision replace the attempt-state gate. */
   expectedAttemptState: params.select({
     description: l10n(
@@ -125,21 +117,25 @@ async function submitRevision(ctx: CommandContext, commandParams: ParamsOf<typeo
   if (
     previous?.headSha === currentHead &&
     previous.baseSha === base.headSha &&
-    previous.changeRequestReportId === commandParams.changeRequestReportId
+    previous.changeRequestActivityId === commandParams.changeRequestActivityId &&
+    (previous.changeRequestReportId ?? null) === (commandParams.changeRequestReportId ?? null)
   )
     return attempt;
   if (commandParams.expectedRevision !== undefined && commandParams.expectedRevision !== (previous?.revision ?? 0))
     throw new Error("Attempt revision changed before submission.");
-  const report = await readReport(ctx, commandParams.changeRequestReportId);
-  if (report.id !== commandParams.changeRequestReportId || report.workspaceId !== attempt.workspaceId || report.draft) {
-    throw new Error("The saved change request report does not belong to this workspace.");
-  }
+  await validateImplementationEvidence(ctx, attempt, commandParams, {
+    sessionId: implementationSessionId,
+    headSha: currentHead,
+    baseSha: base.headSha,
+    revision: (previous?.revision ?? 0) + 1,
+  });
 
   const timestamp = new Date().toISOString();
   const revisions = appendRevision(attempt.revisions, {
     baseSha: base.headSha,
     headSha: currentHead,
-    changeRequestReportId: commandParams.changeRequestReportId,
+    changeRequestReportId: commandParams.changeRequestReportId ?? null,
+    changeRequestActivityId: commandParams.changeRequestActivityId,
     submittedAt: timestamp,
     submittedBy: actorFromSource(ctx.source, ctx.invocationId),
   });
@@ -165,6 +161,7 @@ async function submitRevision(ctx: CommandContext, commandParams: ParamsOf<typeo
     actor: revision.submittedBy,
     sessionId: attempt.implementationSessionId,
     reportId: revision.changeRequestReportId,
+    activityId: revision.changeRequestActivityId,
     reviewId: null,
     threadId: null,
     commitSha: revision.headSha,

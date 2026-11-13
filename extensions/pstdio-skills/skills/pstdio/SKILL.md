@@ -82,7 +82,7 @@ Tickets belong to the Planner extension (`pstdio-planner`). Each ticket has a sh
 ├── extensions/                  # Repo-scoped extension source
 └── extension-storage/           # All extension-owned project files
     ├── pstdio.pstdio-planner/tickets/  # Ticket copies and planning files
-    ├── pstdio.pstdio-reports/reports/  # Reports and evidence
+    ├── pstdio.pstdio-reports/reports/  # Historical report checkouts
     └── pstdio.pstdio-artifacts/        # Artifact drafts and prototypes
 ```
 
@@ -124,3 +124,7 @@ See [Add tools](https://prompt.studio/docs/guides/getting-started/add-tools/).
 
 - [CLI reference and troubleshooting](references/cli-reference.md), including what to do when the shell cannot find `pst`
 - [Troubleshooting](https://prompt.studio/docs/guides/getting-started/troubleshooting/)
+
+### Resource Activity
+
+Opted-in resources keep discussion, meaningful changes, and implementation/review outcomes together. Sessions keep their own conversation and have no Activity feed. Use `use-resource-activity` to read context, attach evidence, and publish an immutable outcome on the worked-on resource. `pst resources activity --help` lists the commands. Planner owns ticket status and exact revision checks. New handoffs do not require Reports; historical RP references remain readable through compatibility links.

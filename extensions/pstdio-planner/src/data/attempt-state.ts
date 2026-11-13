@@ -3,7 +3,8 @@ import type { ActorRef, AttemptRevision, AttemptTimelineEvent } from "./attempt-
 type RevisionInput = {
   baseSha: string;
   headSha: string;
-  changeRequestReportId: string;
+  changeRequestReportId?: string | null;
+  changeRequestActivityId?: string;
   submittedAt: string;
   submittedBy: ActorRef;
 };
@@ -18,7 +19,11 @@ export const deriveRevisionVerdict = (revision: AttemptRevision) => {
 export const appendRevision = (revisions: AttemptRevision[], input: RevisionInput) => {
   const previous = revisions.at(-1);
   if (previous?.headSha === input.headSha && previous.baseSha === input.baseSha) {
-    if (previous.changeRequestReportId === input.changeRequestReportId) return revisions;
+    if (
+      previous.changeRequestActivityId === input.changeRequestActivityId &&
+      (previous.changeRequestReportId ?? null) === (input.changeRequestReportId ?? null)
+    )
+      return revisions;
     throw new Error("A new revision requires a different HEAD");
   }
 
@@ -27,6 +32,7 @@ export const appendRevision = (revisions: AttemptRevision[], input: RevisionInpu
     {
       revision: (previous?.revision ?? 0) + 1,
       ...input,
+      changeRequestReportId: input.changeRequestReportId ?? null,
       reviews: [],
     },
   ];

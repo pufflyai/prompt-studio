@@ -16,7 +16,7 @@ A managed attempt needs:
 
 - A project opened from a local folder that is a Git repository with at least one commit.
 - An agent, such as [Claude Code](../../harness-claude-code/README.md), [Codex](../../harness-codex/README.md), or [OpenCode](../../harness-open-code/README.md).
-- The [Reports](../../pstdio-reports/README.md) extension. Agents hand in their work and their reviews as reports.
+- Core resource Activity stores implementation and independent review outcomes on the ticket. Reports is needed only to read or migrate historical report evidence.
 
 Planner refuses to start an attempt in a folder that is not a Git repository. You can still use tickets, tools, and ordinary agent sessions there.
 
@@ -42,8 +42,8 @@ Planner then does the following:
 2. If the ticket already has one attempt, or a selected one, Planner asks that implementation owner to continue in its workspace and conversation. Choose **Explore another implementation variant** (`--new-variant`) only when another approach is useful.
 3. Otherwise it creates a Git worktree from the chosen commit, links it to the ticket, and starts an implementation session there.
 4. The implementation agent updates the ticket status as it starts, blocks, resumes, and hands off its work. It finds the current status IDs with `pst statuses list` and `implementation-policy`. A person can change the status at any time.
-5. When the agent finishes, it runs the configured adversarial review, saves a change request report, and records the commit with `submit-revision`. Planner checks that the report and the latest commit belong to this workspace, then records a new revision.
-6. An extra review is optional. It starts when someone chooses **Run review** from the workspace's actions menu, or runs `pst pstdio-planner run-review --workspace-id <workspace> --expected-revision <number>`. The reviewer saves a review report and submits a verdict. A verdict is evidence about that commit. It does not change the ticket status, resume the implementation, or ask for a merge.
+5. When the agent finishes, it runs the configured adversarial review, publishes an implementation Activity entry, and records the commit with `submit-revision`. Planner checks that the Activity entry and the latest commit belong to this workspace, then records a new revision.
+6. An extra review is optional. It starts when someone chooses **Run review** from the workspace's actions menu, or runs `pst pstdio-planner run-review --workspace-id <workspace> --expected-revision <number>`. The reviewer publishes a review Activity entry and submits a verdict. A verdict is evidence about that commit. It does not change the ticket status, resume the implementation, or ask for a merge.
 
 Planner does not merge work. Merging, delivering, and moving the ticket to a completed status are your decisions, or the implementation agent's when its task requires it.
 
@@ -53,7 +53,7 @@ If two implementation sessions are already running in the project, Run attempt d
 
 ## Recover a missing workspace
 
-Run the same `run-attempt --ticket <ticket>` command after explicitly deciding to resume. When the selected attempt's workspace is unavailable, Planner creates a managed continuation from its surviving branch, submitted commit, saved event commit, or available base. Its new owner receives the previous session, revisions, reports and linked PRs. Historical revisions and review verdicts stay on the old attempt; they do not approve the continuation. The new owner validates recovered code and submits a fresh revision.
+Run the same `run-attempt --ticket <ticket>` command after explicitly deciding to resume. When the selected attempt's workspace is unavailable, Planner creates a managed continuation from its surviving branch, submitted commit, saved event commit, or available base. Its new owner receives the previous session, revisions, Activity evidence, historical report references and linked PRs. Historical revisions and review verdicts stay on the old attempt; they do not approve the continuation. The new owner validates recovered code and submits a fresh revision.
 
 This manual command works with Auto Build disabled. It can resume work that was previously stopped, but a new stop or a running owner prevents recovery. Planner rechecks capacity, dependencies, pending input and workspace availability before launching. An intact workspace keeps its original owner and conversation. A linked audit workspace with a live session is not adopted or reassigned by recovery.
 
@@ -88,9 +88,9 @@ Use the same implementation owner and workspace:
 pst pstdio-planner update-stack --workspace-id <workspace> --implementation-session-id <owner> --expected-head-sha <head>
 ```
 
-The command requires committed changes and no other live workspace session. It integrates the current dependency base with a Git merge so existing published history remains intact. If the merge conflicts, resolve and commit it, then retry. Run the affected checks, save a fresh change request report, and submit the exact resulting HEAD with `--expected-revision <last-revision-number>`. Updating the base does not submit or validate a revision by itself.
+The command requires committed changes and no other live workspace session. It integrates the current dependency base with a Git merge so existing published history remains intact. If the merge conflicts, resolve and commit it, then retry. Run the affected checks, publish a fresh implementation Activity entry, and submit the exact resulting HEAD with `--expected-revision <last-revision-number>`. Updating the base does not submit or validate a revision by itself.
 
-Git conflicts are the implementation owner's work. It must preserve the required behavior from both sides, reconcile the files, commit the resolution, and validate. Planner does not create a review request for conflicting code. Ask for review input only when features, concepts, requirements, plans, or architecture conflict and the existing instructions cannot decide the intended behavior. When dependency branches need reconciliation, the recorded base stays on the original clean commit and the submitted revision includes the dependency integration and resolution. Submission checks that its HEAD contains every required dependency commit. Describe those prerequisite changes in the change request report.
+Git conflicts are the implementation owner's work. It must preserve the required behavior from both sides, reconcile the files, commit the resolution, and validate. Planner does not create a review request for conflicting code. Ask for review input only when features, concepts, requirements, plans, or architecture conflict and the existing instructions cannot decide the intended behavior. When dependency branches need reconciliation, the recorded base stays on the original clean commit and the submitted revision includes the dependency integration and resolution. Submission checks that its HEAD contains every required dependency commit. Describe those prerequisite changes in the implementation entry.
 
 An attempt with no submitted revision can also need this repair. Keep its existing workspace and implementation owner, commit any work in progress, and run `update-stack`. This is authorized dependency integration; it does not approve work, merge into the delivery target, or mark prerequisites Done. The assigned branch is where the agent edits. The dependency base supplies prerequisite code. The delivery target is the branch where reviewed work will eventually be merged.
 
@@ -122,7 +122,7 @@ Extensions and agents drive attempts through Planner's commands. Each ID below i
 | ----------------------- | -------------------------------------------------------------------------------- |
 | `attempt-readiness`     | Checks whether a ticket can start and which commit it would start from.          |
 | `run-attempt`           | Creates the worktree and starts the implementation session.                      |
-| `submit-revision`       | Records a committed revision with its change request report.                     |
+| `submit-revision`       | Records a committed revision with its implementation Activity entry.                     |
 | `submit-change-request` | Deprecated. Use `submit-revision`. Its result includes an evidence-only state.   |
 | `run-review`            | Starts a review of the latest revision.                                          |
 | `submit-review`         | Records the reviewer's verdict and review threads.                               |
@@ -146,4 +146,9 @@ Archiving or deleting a ticket deletes linked workspaces once no active ticket u
 
 The project setting **Mark done on merge** (`tickets.markDoneOnMerge`) is also on by default. Local merges move linked tickets to the **Status after merge** chosen in Planner's workflow settings. Without that choice, tickets stay unchanged. Planner checks GitHub pull request links and linked workspace branches every five minutes with up to eight parallel checks. Install and authenticate GitHub CLI (`gh`) on the host for these checks. Failed GitHub checks leave tickets unchanged and log the failure. Merges do not archive tickets or delete workspaces.
 
-*Updated at: 2026-11-05*
+
+## Historical outcomes
+
+Run `pst pstdio-planner migrate-ticket-outcomes --id PS-12` with Reports compatibility installed to preserve report bodies, files, authorship, timestamps and exact reviewed revisions in ticket Activity. Stable RP references redirect only after the copy is verified. New submissions use `changeRequestActivityId`; reviews use `activityId`. Historical report parameters and stored references remain deprecated compatibility inputs.
+
+*Updated at: 2026-11-12*

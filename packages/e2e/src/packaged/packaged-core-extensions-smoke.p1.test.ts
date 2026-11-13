@@ -33,6 +33,7 @@ const expectCoreSkills = async (baseUrl: string, projectId: string, headers: Rec
     "refine-ticket",
     "create-sub-tickets",
     "implement-ticket",
+    "use-resource-activity",
     "pstdio",
   ]) {
     expect(skills).toContainEqual(

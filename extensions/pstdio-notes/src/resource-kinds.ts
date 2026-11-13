@@ -3,6 +3,9 @@ import { documentsPath } from "./mounts";
 
 export const note = defineResourceKind({
   id: "note",
+  activity: { comments: true },
+  resolveMany: { kind: "command", id: "notes.resolve-many" },
+  authorizeActivity: { kind: "command", id: "notes.authorize-activity" },
   label: l10n("resources.note", "Note"),
   icon: "file-text",
   resolve: { kind: "command", id: "notes.resolve" },

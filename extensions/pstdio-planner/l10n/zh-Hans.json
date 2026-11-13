@@ -65,5 +65,7 @@
   "settings.workflow.statuses.title": "工作流状态选择",
   "settings.workflow.statuses.description": "在此扩展的设置选项卡中选择工作流状态。显示名称不决定行为。",
   "commands.requestReview.title": "请求审核",
-  "commands.requestReview.description": "创建审核请求，并将工单标记为需要关注。"
+  "commands.requestReview.description": "创建审核请求，并将工单标记为需要关注。",
+  "activity.context": "读取活动上下文",
+  "activity.migrate": "将历史结果移至工单活动"
 }

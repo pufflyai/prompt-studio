@@ -186,6 +186,7 @@ export const dismissReviewCommand = defineCommand({
         actor: actorFromSource(ctx.source, ctx.invocationId),
         sessionId: review.sessionId,
         reportId: review.reportId,
+        activityId: review.activityId,
         reviewId: review.id,
         threadId: null,
         commitSha: review.reviewedHeadSha,

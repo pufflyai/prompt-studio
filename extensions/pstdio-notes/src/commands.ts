@@ -86,3 +86,33 @@ export const renameNoteCommand = defineCommand({
     return note;
   },
 });
+
+export const resolveNotesCommand = defineCommand({
+  id: "notes.resolve-many",
+  title: l10n("activity.resolve", "Resolve notes"),
+  params: { resources: params.json<import("@pstdio/sdk/extensions").ResourceRef[]>() },
+  async run(ctx, input) {
+    const access = await notesFileAccess(ctx);
+    if (!access.readable) return [];
+    const results = [];
+    for (const resource of input.resources ?? []) {
+      if (await noteExists(notesMount(ctx), resource.id))
+        results.push({
+          resource: noteResource(resource.id, await readNoteTitle(notesMount(ctx), resource.id), ctx, access.writable),
+        });
+    }
+    return results;
+  },
+});
+export const authorizeNoteActivityCommand = defineCommand({
+  id: "notes.authorize-activity",
+  title: l10n("activity.authorize", "Check discussion access"),
+  params: { operation: params.text() },
+  async run(ctx, input) {
+    const access = await notesFileAccess(ctx);
+    return {
+      allowed: input.operation === "read" ? access.readable : access.writable,
+      reason: "Notes are read-only or unavailable.",
+    };
+  },
+});

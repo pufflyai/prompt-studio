@@ -2,12 +2,12 @@ import {
   defineExtension,
   defineKeybinding,
   defineResourceKind,
-  defineSkill,
   defineTemplateType,
   packageAsset,
 } from "@pstdio/sdk/extensions";
 import { reportTemplates } from "./report-templates";
 import { deleteReportCommand } from "./src/commands/delete-report";
+import { exportReportCommand, redirectReportCommand } from "./src/commands/export-report";
 import { readReportCommand } from "./src/commands/read-report";
 import { saveReportCommand } from "./src/commands/save-report";
 import { reportTemplateCommands } from "./src/commands/template-commands";
@@ -21,8 +21,11 @@ const reportTemplateCommandRefs = {
 };
 
 export default defineExtension({
+  translations: { fr: packageAsset("./l10n/fr.json", import.meta.url) },
   resourceKinds: [defineResourceKind({ id: "report", prefix: "RP" })],
   commands: [
+    exportReportCommand,
+    redirectReportCommand,
     writeReportCommand,
     readReportCommand,
     saveReportCommand,
@@ -61,11 +64,4 @@ export default defineExtension({
     }),
   ],
   templates: reportTemplates,
-  skills: [
-    defineSkill({
-      id: "use-reports",
-      title: "Use reports",
-      source: packageAsset("./skills/use-reports", import.meta.url),
-    }),
-  ],
 });
