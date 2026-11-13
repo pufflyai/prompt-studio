@@ -103,15 +103,15 @@ test("opening a deeply nested file preserves the expanded tree and scroll positi
     const before = (await target.boundingBox())!.y;
     const scrollTop = await viewport.evaluate((element) => element.scrollTop);
     expect(scrollTop).toBeGreaterThan(0);
-    await tree.evaluate((element, documentPath) => {
+    await tree.evaluate((_element, documentPath) => {
       const positions: (number | null)[] = [];
       const sample = () => {
-        const row = element.querySelector(`[data-tree-list-node-id="${documentPath}"]`);
+        const row = document.querySelector(`section[aria-label="Files"] [data-tree-list-node-id="${documentPath}"]`);
         positions.push(row?.getBoundingClientRect().y ?? null);
       };
       sample();
       const observer = new MutationObserver(sample);
-      observer.observe(element, { childList: true, subtree: true, attributes: true });
+      observer.observe(document.body, { childList: true, subtree: true, attributes: true });
       Object.assign(window, { explorerPositions: positions, stopExplorerObservation: () => observer.disconnect() });
     }, path);
     await target.click();
