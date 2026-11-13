@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 // Covers composer drafts, rendered chat and idle sessions through the packaged host.
+import { createComposerObservation } from "./composer-observation";
 import { expectPackagedChatComposer } from "./packaged-chat-composer-smoke";
 import { expectPackagedDriveDiscovery } from "./packaged-filesystem-smoke";
 import { expectPackagedFolderOwnership } from "./packaged-folder-ownership";
@@ -44,13 +45,18 @@ test(
   "serves the dashboard and API, hands off composer drafts, and starts idle sessions on their first message",
   async () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));
+    const observe = createComposerObservation(tempRoot);
+    observe("case.begin", { allowanceMs: Math.max(PACKAGED_TEST_TIMEOUT, 45_000) });
     let child: ChildProcess | null = null;
 
     try {
+      observe("runtime.start.begin");
       const started = await startPackagedServe(tempRoot, {
         PSTDIO_DEFAULT_EXTENSIONS: composerDefaults,
       });
       child = started.child;
+      observe("runtime.start.end");
+      observe("outer.api-smoke.begin");
 
       const dashboardRes = await fetch(started.baseUrl);
       expect(dashboardRes.status).toBe(200);
@@ -74,13 +80,20 @@ test(
         body: JSON.stringify({ title: " " }),
       });
       expect(renameRes.status).toBe(400);
-      await expectPackagedChatComposer(started.baseUrl, runtimeAuthorization(started.descriptor), tempRoot);
+      observe("outer.api-smoke.end");
+      await expectPackagedChatComposer(started.baseUrl, runtimeAuthorization(started.descriptor), tempRoot, observe);
+      observe("composer.end");
     } finally {
+      observe("runtime.stop.begin", { hasChild: child !== null });
       if (child) {
         await stopProcess(child);
       }
+      observe("runtime.stop.end");
+      observe("home.remove.begin");
       rmSync(tempRoot, { recursive: true, force: true });
+      observe("home.remove.end");
     }
+    observe("case.end");
   },
   Math.max(PACKAGED_TEST_TIMEOUT, 45_000),
 );

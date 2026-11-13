@@ -4,6 +4,7 @@ import { chromium, expect, type Page } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { isSessionChatAction, sessionChatActionRoute } from "../helpers/session-chat-actions";
 import { logTestPhase } from "../scripts/log-test-phase";
+import type { ComposerObservation } from "./composer-observation";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { expectPackagedCollapsedMessage } from "./packaged-collapsed-message-smoke";
 
@@ -18,7 +19,12 @@ const preserveComposerFailure = async (page: Page) => {
   console.error(`Packaged composer failure evidence: ${evidence}`);
 };
 
-export const expectPackagedChatComposer = async (baseUrl: string, headers: Record<string, string>, root: string) => {
+export const expectPackagedChatComposer = async (
+  baseUrl: string,
+  headers: Record<string, string>,
+  root: string,
+  observe: ComposerObservation,
+) => {
   const startedAt = Date.now();
   const phase = (name: string) => logTestPhase(`Packaged composer: ${name} (${Date.now() - startedAt}ms)`);
   const folder = join(root, "chat-project");
@@ -26,6 +32,7 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
   mkdirSync(join(folder, "src", "app", "(dashboard)"), { recursive: true });
   writeFileSync(join(folder, "src", "app.ts"), "export {};\n");
   writeFileSync(join(folder, "src", "app", "(dashboard)", "page.ts"), "export {};\n");
+  observe("project.request.begin");
   const response = await fetch(`${baseUrl}/v1/projects`, {
     method: "POST",
     headers: { ...headers, "Content-Type": "application/json" },
@@ -33,14 +40,24 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
       folderProjectInput({ name: "Chat composer", agents: ["pstdio.workbench-fixture.harness.fake"] }, folder),
     ),
   });
+  observe("project.request.end", { status: response.status });
   expect(response.ok).toBe(true);
+  observe("project.body.begin");
   const project = (await response.json()) as { id: string };
+  observe("project.body.end", { projectId: project.id });
+  observe("browser.launch.begin");
   const browser = await chromium.launch(PACKAGED_DASHBOARD_BROWSER);
+  observe("browser.launch.end");
   let page: Page | undefined;
   let releaseDestinationRead = () => {};
   try {
+    observe("browser.page.begin");
     page = await browser.newPage({ extraHTTPHeaders: headers });
+    observe("browser.page.end");
+    observe("browser.trace.begin");
     await page.context().tracing.start({ screenshots: true, snapshots: true, sources: true });
+    observe("browser.trace.end");
+    observe("browser.configure.begin");
     let destinationReadStarted = false;
     const destinationRead = new Promise<void>((resolve) => {
       releaseDestinationRead = resolve;
@@ -58,7 +75,10 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
       localStorage.setItem("onboarding-complete", "true");
       localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
     }, project.id);
+    observe("browser.configure.end");
+    observe("navigation.initial.begin");
     await page.goto(`${baseUrl}/projects/${project.id}/sessions`);
+    observe("navigation.initial.end");
     phase("dashboard opened");
     const editor = page.getByTestId("content-editable").filter({ visible: true }).last();
     const send = page.getByTestId("send-message-button").filter({ visible: true }).last();
@@ -71,7 +91,9 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
       await route.continue();
     });
     const prompt = "Packaged composer first message";
+    observe("editor.first-fill.begin");
     await editor.fill(prompt);
+    observe("editor.first-fill.end");
     // Sending stays blocked until the project's agents and models load.
     await expect(send).toBeEnabled();
     await editor.press("Enter");
@@ -139,8 +161,11 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
 
     const equations =
       "Packaged equations: $x^2$\n\n$$\n\\frac{1}{2}\n$$\n\nRead src/app.ts and src/app/(dashboard)/page.ts, not src/missing.ts. Open {{link('https://example.com')}}. End equations.";
+    observe("equations.submit.begin");
     await editor.fill(equations);
     await editor.press("Enter");
+    observe("equations.submit.end");
+    observe("equations.render-and-links.begin");
     const reply = page.locator(".ai-message__root").filter({ hasText: "Fake Agent: follow-up" }).last();
     await expect(reply).toContainText("Packaged equations:");
     await expect(reply.locator(".katex")).toHaveCount(2);
@@ -159,14 +184,25 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     await expect(webReference).toHaveAttribute("target", "_blank");
     await expect(webReference.locator('[data-scope="tooltip"]')).toHaveCount(0);
 
+    observe("equations.render-and-links.end");
+    observe("file.open.begin");
     await plainPath.click();
+    observe("file.open.click.end");
     await expect(page.locator(".monaco-editor .view-lines")).toContainText("export");
+    observe("file.open.content.end");
+    observe("navigation.reload.begin");
     await page.reload();
+    observe("navigation.reload.load.end");
     await expect(page.locator(".monaco-editor .view-lines")).toContainText("export");
+    observe("navigation.reload.content.end");
+    observe("navigation.back.begin");
     await page.goBack();
+    observe("navigation.back.load.end");
     await expect(plainPath).toBeVisible();
+    observe("navigation.back.content.end");
     phase("conversation restored through file navigation, reload and Back");
 
+    observe("rich-table.begin");
     await editor.fill(
       "| Task | Details |\n| --- | --- |\n| Review | Read the changes and confirm that shared tools work together for people who never read code. |",
     );
@@ -189,7 +225,9 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     await page.getByText("Wrap rows", { exact: true }).click();
     await page.keyboard.press("Escape");
     phase("rich messages checked");
+    observe("rich-table.end");
 
+    observe("idle.create.begin");
     const idleResponse = await fetch(`${baseUrl}/v1/sessions`, {
       method: "POST",
       headers: { ...headers, "Content-Type": "application/json" },
@@ -199,24 +237,41 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
         agent: "pstdio.workbench-fixture.harness.fake",
       }),
     });
+    observe("idle.create.response", { status: idleResponse.status });
     expect(idleResponse.status).toBe(201);
     const idle = (await idleResponse.json()) as { id: string };
+    observe("idle.create.body.end");
     expect(idle).toMatchObject({
       status: "completed",
       agent_session_id: null,
       last_request_started: null,
       last_request_ended: null,
     });
+    observe("idle.navigation.begin");
     await page.goto(`${baseUrl}/projects/${project.id}/sessions`);
+    observe("idle.navigation.end");
+    observe("idle.select.begin");
     await page.getByRole("option", { name: "Idle connection", exact: true }).click();
+    observe("idle.select.end");
     await expect(page.locator(".ai-message__root")).toHaveCount(0);
+    observe("idle.fill.begin");
     await editor.fill("First idle-session message");
+    observe("idle.fill.end");
+    observe("idle.send-ready.begin");
     await expect(send).toBeEnabled();
+    observe("idle.send-ready.end");
+    observe("idle.submit.begin");
     await editor.press("Enter");
+    observe("idle.submit.end");
+    observe("idle.reply.begin");
     await expect(page.getByText('Fake Agent: completed "First idle-session message"').first()).toBeVisible();
+    observe("idle.reply.end");
+    observe("idle.collapsed.begin");
     await expectPackagedCollapsedMessage(page, editor);
+    observe("idle.collapsed.end");
     phase("idle session and collapsed message checked");
   } catch (error) {
+    observe("composer.failure");
     if (page)
       await preserveComposerFailure(page).catch((failure) =>
         console.error("Could not preserve composer failure", failure),
@@ -224,6 +279,8 @@ export const expectPackagedChatComposer = async (baseUrl: string, headers: Recor
     throw error;
   } finally {
     releaseDestinationRead();
+    observe("browser.close.begin");
     await browser.close();
+    observe("browser.close.end");
   }
 };
