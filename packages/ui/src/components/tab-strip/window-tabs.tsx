@@ -118,6 +118,7 @@ export const WindowTabs = (props: WindowTabsProps) => {
   const { tabs, selectedId, onSelect, onClose, onReorder, "aria-label": label } = props;
   const listRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
+  const pointerX = useRef<number | undefined>(undefined);
   const [activeId, setActiveId] = useState<string>();
   const [drop, setDrop] = useState<{ id: string; targetId: string; edge: "before" | "after" }>();
   const sensors = useSensors(
@@ -130,13 +131,11 @@ export const WindowTabs = (props: WindowTabsProps) => {
     const targetId = String(event.over.id);
     const from = tabs.findIndex((tab) => tab.id === id);
     const remaining = tabs.filter((tab) => tab.id !== id);
-    const rect = event.active.rect.current.translated;
     let before = tabs.findIndex((tab) => tab.id === targetId) < from;
-    if (rect && event.activatorEvent.type !== "keydown") {
-      const center = rect.left + rect.width / 2;
+    if (pointerX.current !== undefined && event.activatorEvent.type !== "keydown") {
       const targetCenter = event.over.rect.left + event.over.rect.width / 2;
-      // A center drop keeps the original sortable behavior in either direction.
-      if (center !== targetCenter) before = center < targetCenter;
+      // Controls can make the dragged tab wider than its trigger. The pointer owns the insertion edge.
+      if (pointerX.current !== targetCenter) before = pointerX.current < targetCenter;
     }
     const index = remaining.findIndex((tab) => tab.id === targetId) + (before ? 0 : 1);
     if (index === from) return;
@@ -148,6 +147,7 @@ export const WindowTabs = (props: WindowTabsProps) => {
     };
   };
   const finishDrag = () => {
+    pointerX.current = undefined;
     setActiveId(undefined);
     setDrop(undefined);
   };
@@ -193,6 +193,7 @@ export const WindowTabs = (props: WindowTabsProps) => {
       sensors={sensors}
       collisionDetection={(args) => {
         const pointer = args.pointerCoordinates;
+        pointerX.current = pointer?.x;
         if (!pointer) return closestCenter(args);
         const viewport = viewportRef.current?.getBoundingClientRect();
         if (
