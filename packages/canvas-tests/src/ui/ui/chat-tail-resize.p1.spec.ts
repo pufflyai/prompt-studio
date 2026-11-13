@@ -1,6 +1,25 @@
 import { expect, test } from "@playwright/test";
 import { openCanvasPreview } from "../preview";
 
+test.afterEach(async ({ page }, testInfo) => {
+  if (testInfo.status === testInfo.expectedStatus) return;
+  const frames = [];
+  for (const frame of page.frames()) {
+    const evidence = await frame
+      .evaluate(() =>
+        Array.from(document.querySelectorAll('[data-scope="scroll-area"][data-part="viewport"]')).flatMap(
+          (element) => Reflect.get(element, "__chatResizeEvidence") ?? [],
+        ),
+      )
+      .catch((error: Error) => [{ unavailable: error.message }]);
+    if (evidence.length) frames.push({ url: frame.url(), evidence });
+  }
+  await testInfo.attach("chat-resize-follow-evidence", {
+    body: JSON.stringify(frames, null, 2),
+    contentType: "application/json",
+  });
+});
+
 // Critical regression: layout-driven scroll clamping must not hide new messages or seize history reading.
 test("chat follows a resizing stream and respects deliberate history reading", async ({ page }) => {
   const preview = await openCanvasPreview(
@@ -234,4 +253,49 @@ test("chat resumes a follow requested immediately before hiding", async ({ page 
   await preview.getByRole("button", { name: "Show conversation" }).click();
   await expect(preview.getByText(/^Step 58\./)).toBeInViewport();
   await expect(latest).toBeHidden();
+});
+
+// Critical risk: a visible shrink may clamp pixels, but must not cancel an explicit stop.
+test("chat stays stopped when a visible content shrink brings the tail near the reader", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/chat-ui/components/chat-panel-resize.canvas.tsx#StreamingResize",
+  );
+  const viewport = preview.getByRole("log").locator(':scope > [data-scope="scroll-area"] > [data-part="viewport"]');
+  const latest = preview.getByRole("button", { name: "Scroll to latest message" });
+  const batch = preview.getByRole("button", { name: "Append response batch", exact: true });
+  await batch.click();
+  await expect(preview.getByText(/^Step 30\./)).toBeInViewport();
+  await expect
+    .poll(() => viewport.evaluate((element) => element.scrollHeight - element.clientHeight - element.scrollTop))
+    .toBeLessThanOrEqual(2);
+  await preview.getByRole("button", { name: "Stop following", exact: true }).click();
+  const previousHeight = await viewport.evaluate((element) => element.scrollHeight);
+  await preview.getByRole("button", { name: "Resize panel", exact: true }).click();
+  await expect.poll(() => viewport.evaluate((element) => element.scrollHeight)).toBeLessThan(previousHeight);
+  const readingTop = await viewport.evaluate(async (element) => {
+    // This arm isolates a completed shrink from the existing concurrent resize/arrival case.
+    await Promise.all(
+      element.ownerDocument
+        .getAnimations()
+        .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+        .map((animation) => animation.finished.catch(() => {})),
+    );
+    let previous = "";
+    let stableFrames = 0;
+    while (stableFrames < 3) {
+      await new Promise(requestAnimationFrame);
+      const current = [element.scrollTop, element.scrollHeight, element.clientHeight, element.clientWidth].join();
+      stableFrames = current === previous ? stableFrames + 1 : 0;
+      previous = current;
+    }
+    return element.scrollTop;
+  });
+  await batch.click();
+  await expect(preview.getByRole("status")).toHaveText("Responses: 58");
+  await expect.poll(() => viewport.evaluate((element) => element.scrollTop)).toBe(readingTop);
+  await expect(latest).toBeVisible();
+  await expect(preview.getByText(/^Step 58\./)).not.toBeInViewport();
+  await latest.click();
+  await expect(preview.getByText(/^Step 58\./)).toBeInViewport();
 });
