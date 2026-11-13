@@ -54,6 +54,7 @@ runs:
           bun install --frozen-lockfile
         fi
     - name: "[phase:cache-restore] Restore portable Nx task archives"
+      if: runner.os != 'Windows'
       uses: actions/cache/restore@v4
       with:
         path: .cache/ci-build
@@ -61,8 +62,14 @@ runs:
           }}-${{ github.job }}-${{ strategy.job-index }}
         restore-keys: nx-${{ runner.os }}-${{ runner.arch }}-${{ inputs.profile }}-${{ hashFiles('bun.lock', 'package.json', 'nx.json') }}-
     - name: Start the job's Nx HTTP cache
+      if: runner.os != 'Windows'
       shell: bash
       run: bun scripts/ci/build-cache.ts
+    - name: Keep Windows builds independent of the HTTP cache
+      if: runner.os == 'Windows'
+      shell: bash
+      # Nx can fail completed builds when its cache request fails. See ADR 0148.
+      run: echo "NX_SKIP_REMOTE_CACHE=true" >> "$GITHUB_ENV"
     # The only CI writer of these shared declarations. Parallel checks only read them:
     # a package script that regenerates them can expose a half-written file to another typecheck.
     - name: Generate installed Chakra theme declarations
