@@ -53,13 +53,15 @@ test("file explorer updates externally and creates and confirms deletion over it
       await page.getByRole("menuitem", { name: "Delete file", exact: true }).click();
       await expect(page.getByRole("dialog")).toBeVisible();
       await expect(page.locator('iframe[title="Workspace action"]')).toHaveCount(0);
-      await expect(page.getByRole("dialog").getByRole("button", { name: "Close", exact: true })).toBeVisible();
+      await expect(
+        page.getByRole("dialog").getByRole("button", { name: "Close", exact: true }).filter({ hasText: "Close" }),
+      ).toBeVisible();
       await expect(page).toHaveURL(documentUrl);
       await expect(page.locator(".monaco-editor").filter({ visible: true })).toBeVisible();
     };
     const confirmation = page.getByRole("dialog");
     await openDelete();
-    await confirmation.getByRole("button", { name: "Close", exact: true }).click();
+    await confirmation.getByRole("button", { name: "Close", exact: true }).filter({ hasText: "Close" }).click();
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expectWorkspaceDocument(page, "new-file.md");
     expect(existsSync(join(root, "new-file.md"))).toBe(true);
