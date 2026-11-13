@@ -4,15 +4,20 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
 import { PerformancePopoverContent } from "./components/performance-popover-content";
 import { PerformanceRoot } from "./components/performance-root";
+import { RuntimeDiagnostics } from "./components/runtime-diagnostics";
+import type { diagnosticCommands } from "./diagnostics/commands";
+import { createDiagnosticsStore, type DiagnosticsStore } from "./diagnostics/store";
 import { createSnapshotStore, type SnapshotStore } from "./snapshot-store";
 
 interface DetailsProps {
   store: SnapshotStore;
   performance: WebviewPerformanceClient;
+  diagnostics: DiagnosticsStore;
 }
 
 const Details = (props: DetailsProps) => {
-  const { store, performance } = props;
+  const { store, performance, diagnostics } = props;
+  const captures = useSyncExternalStore(diagnostics.subscribe, diagnostics.get);
   const snapshot = useSyncExternalStore(store.subscribe, store.get);
   const readError = useSyncExternalStore(store.subscribe, store.getError);
   const [copied, setCopied] = useState(false);
@@ -45,17 +50,31 @@ const Details = (props: DetailsProps) => {
       onDismissActionError={() => setError(undefined)}
       onPause={(installedExtensionId) => run(performance.pauseExtension(installedExtensionId))}
       onResume={(installedExtensionId) => run(performance.resumeExtension(installedExtensionId))}
+      diagnostics={
+        <RuntimeDiagnostics
+          {...captures}
+          onStart={(kind, seconds) => void diagnostics.start(kind, seconds)}
+          onCancel={(id) => void diagnostics.cancel(id)}
+          onExport={(id) =>
+            run(diagnostics.export(id).then((result) => navigator.clipboard.writeText(JSON.stringify(result, null, 2))))
+          }
+        />
+      }
     />
   );
 };
 
 export default defineExtensionView({
   render(context) {
-    const client = createWebviewClient(context.host);
+    const client = createWebviewClient<typeof diagnosticCommands>(context.host);
     const root = createRoot(context.mount);
     root.render(
       <PerformanceRoot context={context}>
-        <Details store={createSnapshotStore(client.performance)} performance={client.performance} />
+        <Details
+          store={createSnapshotStore(client.performance)}
+          performance={client.performance}
+          diagnostics={createDiagnosticsStore(client)}
+        />
       </PerformanceRoot>,
     );
     return () => root.unmount();
