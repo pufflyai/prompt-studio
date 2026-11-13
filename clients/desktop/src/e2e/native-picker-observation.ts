@@ -117,6 +117,7 @@ export const observeNativeProjectPicker = async (
   let cleanupDeadline: number | undefined;
   let cleanup: Promise<boolean> | undefined;
   const finish = () => {
+    if (restorationAcknowledged && handleReleased) return Promise.resolve(true);
     // Rejected restoration can be retried by the fixture while the SAME deadline remains.
     if (cleanup) return cleanup;
     if (cleanupAttempts >= 2) return Promise.resolve(restorationAcknowledged && handleReleased);
@@ -303,7 +304,7 @@ export const observeNativeProjectPicker = async (
         const fiberKey = Object.keys(row).find((key) => key.startsWith("__reactFiber$"));
         let fiber = fiberKey ? (row as unknown as Record<string, Fiber>)[fiberKey] : undefined;
         const ancestors: unknown[] = [];
-        for (let depth = 0; fiber && depth < 64; depth++, fiber = fiber.return) {
+        for (let depth = 0; fiber && depth < 256; depth++, fiber = fiber.return) {
           const props = fiber.memoizedProps;
           const input = object(props?.input);
           const candidate = object(input?.workbench) ?? object(props?.workbench);
@@ -312,7 +313,7 @@ export const observeNativeProjectPicker = async (
           if (typeof candidateController?.getState === "function" && typeof candidateController?.select === "function") controller = candidateController;
           const scopes: unknown[] = [];
           let context = fiber.dependencies?.firstContext;
-          for (let index = 0; context && index < 8; index++, context = context.next) {
+          for (let index = 0; context && index < 64; index++, context = context.next) {
             const value = object(context.memoizedValue);
             const root = object(value?.root)?.current;
             if (typeof value?.active === "boolean" && root instanceof Element)
