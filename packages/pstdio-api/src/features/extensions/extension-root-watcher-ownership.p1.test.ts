@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, realpath, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Worker } from "node:worker_threads";
@@ -50,5 +50,17 @@ test.each([
   await client.run("watch.update", input, { home });
   expect(existsSync(homeExtensions)).toBe(true);
   expect(existsSync(project)).toBe(false);
+  const notified = Promise.withResolvers<void>();
+  const unsubscribe = client.subscribe((event) => {
+    if (event.watchId === input.id && event.sourcePath === homeExtensions) notified.resolve();
+  });
+  try {
+    await writeFile(join(homeExtensions, "new-tool.txt"), "live owner");
+    await notified.promise;
+    await client.run("watch.update", input, { home });
+    expect(existsSync(project)).toBe(false);
+  } finally {
+    unsubscribe();
+  }
   await client.run("watch.dispose", { id: input.id }, { home });
 });
