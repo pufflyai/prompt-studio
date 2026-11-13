@@ -30,9 +30,15 @@ const metadata = Object.fromEntries(
 
 export const registerSessionProvider = (
   workbench: WorkbenchCore,
-  input: { projectId?: string; sessions?: Partial<ExtensionContextBase["sessions"]> } = {},
+  input: {
+    projectId?: string;
+    sessions?: Partial<ExtensionContextBase["sessions"]>;
+    resources?: Partial<ExtensionContextBase["resources"]>;
+  } = {},
 ) => {
-  const storage = createMemoryStorage();
+  const storage = createMemoryStorage({
+    indexes: runtime.extensions.find((extension) => extension.id === sessionBrowserId)?.definition.storageIndexes,
+  });
   return registerWorkbenchExtensionContributions({
     workbench,
     projectId: input.projectId ?? "project-1",
@@ -48,6 +54,7 @@ export const registerSessionProvider = (
           projectId: input.projectId ?? "project-1",
           resource: body.resource,
           sessions: input.sessions,
+          resources: input.resources,
           navigation: {
             open: (target) => {
               navigationRequests.push(target);

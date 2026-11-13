@@ -140,9 +140,7 @@ describe("ticket work in shared folders", () => {
         }),
       }),
     ]);
-    expect(sections.find((section) => section.id === "sessions")?.nodes).toEqual([
-      expect.objectContaining({ id: "sessions-empty" }),
-    ]);
+    expect(sections.find((section) => section.id === "sessions")).toBeUndefined();
     expect(query).toHaveBeenCalled();
   });
 });

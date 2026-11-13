@@ -1,4 +1,4 @@
-import { Button, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
+import { Button, HStack, Stack, Text } from "@chakra-ui/react";
 import { type ResourceAnchorPage, type ResourceRef, type ResourceRole, resourceKey } from "@pstdio/sdk/extensions";
 import { AlertMessage, ScopedDialog as Dialog, ListRow, ScrollArea } from "@pstdio/ui";
 import { useEffect, useState } from "react";
@@ -97,14 +97,36 @@ export const RelatedResources = (props: RelatedResourcesProps) => {
   };
   return (
     <>
-      <Dialog.Header>
+      <Dialog.Header textAlign="start">
         <Dialog.Title>{picker ? "Link resource" : "Related resources"}</Dialog.Title>
       </Dialog.Header>
-      <Dialog.Body>
+      <Dialog.Body textAlign="start">
         <Stack gap="3">
-          <Text color="fg.muted" textStyle="sm">
-            {resource.label ?? resource.shorthand ?? resource.id}
-          </Text>
+          <ListRow
+            label={resource.label ?? resource.shorthand ?? resource.id}
+            icon={<WorkbenchIcon name={resource.icon ?? "link"} />}
+            actionsVisibility="always"
+            actions={
+              picker
+                ? []
+                : [
+                    {
+                      id: "links",
+                      label: "Related resource actions",
+                      icon: <WorkbenchIcon name="ellipsis" />,
+                      disabled: busy,
+                      menuItems: [
+                        {
+                          id: "link",
+                          label: "Link resource",
+                          icon: <WorkbenchIcon name="link" />,
+                          onAction: () => setPicker(true),
+                        },
+                      ],
+                    },
+                  ]
+            }
+          />
           {error ? <AlertMessage status="error" title={error} /> : null}
           {picker ? (
             <ResourceLinkPicker
@@ -145,40 +167,47 @@ export const RelatedResources = (props: RelatedResourcesProps) => {
                           }
                         : undefined
                     }
-                    endContent={
-                      <IconButton
-                        aria-label="Remove link"
-                        variant="ghost"
-                        size="2xs"
-                        disabled={busy}
-                        onKeyDown={(event) => event.stopPropagation()}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          void mutate(() => service.remove(edge.source, [edge.target]));
-                        }}
-                      >
-                        <WorkbenchIcon name="unlink" />
-                      </IconButton>
-                    }
+                    actionsVisibility="always"
+                    actions={[
+                      {
+                        id: "resource-actions",
+                        label: "Link actions",
+                        icon: <WorkbenchIcon name="ellipsis" />,
+                        disabled: busy,
+                        menuItems: [
+                          {
+                            id: "open",
+                            label: "Open resource",
+                            icon: <WorkbenchIcon name="arrow-up-right" />,
+                            disabled: !candidate.open,
+                            onAction: () => void open(candidate),
+                          },
+                          {
+                            id: "remove",
+                            label: "Remove link",
+                            icon: <WorkbenchIcon name="unlink" />,
+                            onAction: () => void mutate(() => service.remove(edge.source, [edge.target])),
+                          },
+                        ],
+                      },
+                    ]}
                   />
                 ))}
               </ScrollArea>
-              <HStack>
-                <Button variant="outline" onClick={() => setPicker(true)} disabled={busy}>
-                  <WorkbenchIcon name="link" />
-                  Link resource
-                </Button>
-                {cursor ? (
-                  <Button variant="ghost" onClick={() => setCursor(undefined)} disabled={loading}>
-                    First page
-                  </Button>
-                ) : null}
-                {nextCursor ? (
-                  <Button variant="ghost" onClick={() => setCursor(nextCursor)} disabled={loading}>
-                    More resources
-                  </Button>
-                ) : null}
-              </HStack>
+              {cursor || nextCursor ? (
+                <HStack>
+                  {cursor ? (
+                    <Button variant="ghost" onClick={() => setCursor(undefined)} disabled={loading}>
+                      First page
+                    </Button>
+                  ) : null}
+                  {nextCursor ? (
+                    <Button variant="ghost" onClick={() => setCursor(nextCursor)} disabled={loading}>
+                      More resources
+                    </Button>
+                  ) : null}
+                </HStack>
+              ) : null}
             </>
           )}
         </Stack>

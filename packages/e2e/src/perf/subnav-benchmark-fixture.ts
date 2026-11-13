@@ -38,6 +38,7 @@ interface FixtureTicket {
   id: string;
   shorthand: string;
   title: string;
+  files?: { name: string }[];
 }
 const seedTickets = async (execute: (command: string, params?: Record<string, unknown>) => Promise<unknown>) => {
   const tickets = (await execute("read-tickets")) as FixtureTicket[];
@@ -176,6 +177,9 @@ export const startSubnavBenchmarkFixture = async () => {
     };
     const tickets = await seedTickets(execute);
     const ticket = tickets.find((row) => row.title === "Benchmark ticket 0001")!;
+    // Empty groups are hidden. Seed a real file so the timed Files heading remains meaningful.
+    if (!ticket.files?.some((file) => file.name === "Benchmark notes.md"))
+      await execute("create-ticket-file", { ticketId: ticket.id, name: "Benchmark notes.md" });
     // Keep the benchmark ticket in the visible portion of the unfiltered 1,000-ticket board.
     const { views } = await request(`/projects/${project.id}/boards/pstdio.planner.view.tickets/views`);
     await request(

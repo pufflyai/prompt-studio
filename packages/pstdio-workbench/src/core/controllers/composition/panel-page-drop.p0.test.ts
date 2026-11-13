@@ -1,0 +1,164 @@
+import { expect, test } from "bun:test";
+import {
+  createResourceViewerFixture,
+  viewerPage,
+  viewerResource,
+} from "../resource-viewers/resource-viewer-test-fixture";
+import { openDroppedPage, openPanelAsPage, panelPageDropTarget } from "./panel-page-drop";
+
+test("dropping a side conversation onto its page opens Main and removes the side tab", async () => {
+  const { w, openSide, side } = createResourceViewerFixture();
+  w.pageLocations.navigate({ kind: "page", page: viewerPage("reader") });
+  await openSide("conversation");
+  const original = side();
+  expect(panelPageDropTarget(w, original.instanceId)).toMatchObject({ page: viewerPage("reader") });
+  await openPanelAsPage(w, original.instanceId);
+  expect(w.pages.getContent()?.resource?.id).toBe("conversation");
+  expect(w.layout.listPanelInstances("side")).toHaveLength(0);
+});
+
+test("a related-resource shell tab returns to its owning page with document context", async () => {
+  const { w, side } = createResourceViewerFixture({ document: true });
+  const resource = { ...viewerResource("note"), metadata: { document: "notes.md" } };
+  w.shellPlacements.registerPlacement({
+    id: "related",
+    region: "side",
+    item: {
+      kind: "binding",
+      binding: {
+        kinds: [{ kind: "resource-kind", extensionId: "example.readers", id: "record" }],
+        view: { kind: "view", id: "reader" },
+        cardinality: "many",
+      },
+    },
+  });
+  w.shellPlacements.openPlacement({
+    placementId: "related",
+    resource,
+    open: "pin",
+    location: {
+      pageContext: { page: viewerPage("reader"), parent: { page: viewerPage("home") } },
+      position: { line: 8, column: 3 },
+    },
+  });
+  const id = side().instanceId;
+  expect(panelPageDropTarget(w, id)).toMatchObject({ resource });
+  await openPanelAsPage(w, id);
+  expect(w.pages.store.getState().location).toMatchObject({
+    page: viewerPage("reader"),
+    resource,
+    parent: { page: viewerPage("home") },
+    position: { line: 8, column: 3 },
+  });
+  expect(w.layout.listPanelInstances("side")).toHaveLength(0);
+});
+
+test("an unsupported side resource is preserved when it has no page destination", async () => {
+  const { w, openSide, side } = createResourceViewerFixture();
+  await openSide("orphan");
+  w.pages.getPage("reader")!.resource = undefined;
+  const id = side().instanceId;
+  expect(panelPageDropTarget(w, id)).toBeUndefined();
+  await openPanelAsPage(w, id);
+  expect(side().instanceId).toBe(id);
+});
+
+test("an invalid page drop leaves its already displayed resource open", async () => {
+  const { w, openSide, side } = createResourceViewerFixture();
+  await openSide("draft");
+  const id = side().instanceId;
+  await expect(
+    openDroppedPage(w, { kind: "page", page: viewerPage("missing"), resource: viewerResource("draft") }),
+  ).rejects.toThrow();
+  expect(side()?.instanceId).toBe(id);
+});
+
+test.each([
+  "Tickets",
+  "Letter browser",
+])("dropping the %s singleton panel opens its page without a resource", async (title) => {
+  const { w } = createResourceViewerFixture();
+  const page = viewerPage(title);
+  const panel = { kind: "placement" as const, extensionId: "example.readers", id: title };
+  w.modePlacements.registerPlacement({
+    id: title,
+    ref: panel,
+    modeId: "project",
+    region: "side",
+    item: { kind: "view", view: { kind: "view", id: "browser" }, presence: "closed" },
+  });
+  w.pages.registerPage({
+    id: title,
+    ref: page,
+    title,
+    path: title,
+    modeId: "project",
+    panelView: panel,
+    main: { kind: "view", view: { kind: "view", id: "browser" }, cardinality: "one", presentation: "page" },
+    slots: [],
+  });
+  await w.navigation.openPanel({ panel, region: "side" });
+  const original = w.layout.getActivePanel("side")!;
+  expect(panelPageDropTarget(w, original.instanceId)).toMatchObject({ page });
+  await openPanelAsPage(w, original.instanceId);
+  expect(w.pages.store.getState().location?.page).toEqual(page);
+  expect(w.pages.getContent()?.viewId).toBe("browser");
+  expect(w.layout.listPanelInstances("side")).toHaveLength(0);
+});
+
+test("dropping a collection note from Side moves its editor into Main", async () => {
+  const { w } = createResourceViewerFixture();
+  const page = viewerPage("notes");
+  const panel = { kind: "page-slot" as const, page, id: "note" };
+  w.pages.registerPage({
+    id: "notes",
+    ref: page,
+    path: "notes",
+    modeId: "project",
+    main: { kind: "panels" },
+    slots: [
+      {
+        id: "note",
+        region: "main",
+        item: {
+          kind: "binding",
+          binding: {
+            kinds: [{ kind: "resource-kind", extensionId: "example.readers", id: "record" }],
+            view: { kind: "view", id: "reader" },
+            cardinality: "many",
+          },
+        },
+      },
+    ],
+  });
+  await w.navigation.openPage({ page });
+  await w.navigation.openPanel({ panel, resource: viewerResource("note"), region: "side", open: "pin" });
+  const source = w.layout.getActivePanel("side")!;
+  expect(panelPageDropTarget(w, source.instanceId)).toBeDefined();
+  await openPanelAsPage(w, source.instanceId);
+  expect(w.pages.store.getState().location?.page).toEqual(page);
+  expect(w.layout.listPanelInstances("main").map((item) => item.resource?.id)).toEqual(["note"]);
+  expect(w.layout.listPanelInstances("side")).toHaveLength(0);
+});
+
+for (const destination of ["unregistered-slot", "tabless-main"]) {
+  test(`a rejected compound drop preserves its Side resource (${destination})`, async () => {
+    const { w, openSide, side } = createResourceViewerFixture();
+    await openSide("draft");
+    const original = side().instanceId;
+    const target =
+      destination === "unregistered-slot"
+        ? { kind: "page-slot" as const, page: viewerPage("reader"), id: "$main" }
+        : { kind: "placement" as const, extensionId: "example.readers", id: "reader" };
+    await expect(
+      openDroppedPage(w, {
+        kind: "compound",
+        targets: [
+          { kind: "page", page: viewerPage(destination === "unregistered-slot" ? "reader" : "other") },
+          { kind: "panel", panel: target, resource: viewerResource("draft"), region: "main" },
+        ],
+      }),
+    ).rejects.toThrow();
+    expect(side()?.instanceId).toBe(original);
+  });
+}

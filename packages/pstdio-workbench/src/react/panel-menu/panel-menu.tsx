@@ -142,7 +142,7 @@ const WorkbenchPanelMenuOpener = (props: WorkbenchPanelMenuOpenerProps) => {
                 {view.title}
               </Text>
             </Header>
-            <Box flex="1" minH="0" minW="0" overflowY="auto">
+            <Box flex="1" minH="0" minW="0" display="flex" flexDirection="column" overflowY="auto">
               <WorkbenchPanelMenuSlot key={view.region} region={view.region} presentation="floating" active={open} />
             </Box>
           </Menu.Content>

@@ -27,6 +27,7 @@ import {
 import { plannerTicketsChanged } from "../events";
 import { isImageAttachment } from "../utils/is-image-attachment";
 import { readTicketTreeData } from "./ticket-files-tree-data";
+import { mergeTicketLinkSections, ticketRelationshipSections } from "./ticket-link-sections";
 import { buildSessionsSection } from "./ticket-sessions-tree";
 import { buildSubTicketsSection } from "./ticket-sub-tickets-tree";
 import { buildWorkspacesSection } from "./ticket-workspaces-tree";
@@ -211,6 +212,7 @@ export const listTicketFilesTree = async (
     statusesById,
     sessions,
     workspaceSessions,
+    resourceLinks,
   } = await readTicketTreeData(ctx, ticket);
 
   const parentLookup = createTicketParentLookup(tickets);
@@ -309,13 +311,19 @@ export const listTicketFilesTree = async (
     workspaceSessions,
   });
 
-  return [
-    ticketSection,
-    filesSection,
-    ...(maybeSubTicketsSection ? [maybeSubTicketsSection] : []),
-    linkedWorkspacesSection,
-    sessionsSection,
-  ];
+  return mergeTicketLinkSections(
+    [
+      ticketSection,
+      ...ticketRelationshipSections(ticket, tickets, plannerOwnerFor(ctx)),
+      filesSection,
+      ...(maybeSubTicketsSection ? [maybeSubTicketsSection] : []),
+      linkedWorkspacesSection,
+      sessionsSection,
+    ],
+    resourceLinks,
+    ctx.projectId,
+    plannerOwnerFor(ctx),
+  );
 };
 
 export const listTicketFilesTreeCommand = defineCommand({

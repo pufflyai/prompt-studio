@@ -12,17 +12,10 @@ import type { StoredStatus, StoredTag, Ticket } from "../../data/types";
 import type { StoredPlan } from "../../timeline/contracts";
 import { reviewLinkLabel, reviewLinkTooltip } from "../../views/review-link-values";
 
-export interface TicketRef {
-  id: string;
-  label: string;
-}
-
 export interface TicketPropertiesInput {
   ticket: Ticket;
   statuses: StoredStatus[];
   tags: StoredTag[];
-  dependencies: TicketRef[];
-  parent: TicketRef | null;
   plan?: StoredPlan;
 }
 
@@ -122,26 +115,11 @@ const reviewLinksParam = (ticket: Ticket): WireResource => {
   };
 };
 
-const ticketRefParam = (
-  id: string,
-  name: Localizable,
-  refs: TicketRef[],
-  options: { multiSelect: boolean },
-): WireResource => ({
-  id,
-  name,
-  type: "resource",
-  multiSelect: options.multiSelect,
-  emptyText: l10n("ticketDetail.none", "None"),
-  defaultValue: options.multiSelect ? refs.map((ref) => ref.id) : (refs[0]?.id ?? ""),
-  options: refs.map((ref) => ({ id: ref.id, name: ref.label, icon: "circle", ref: { type: "ticket", id: ref.id } })),
-});
-
 // Maps a ticket into the controls renderer's rows: read-only text, the copyable ID
 // chip, editable status/tag resource dropdowns, and
 // panel-only ticket/review resource chips (which open via href or the host).
 export const buildTicketPropertiesControls = (input: TicketPropertiesInput) => {
-  const { ticket, statuses, tags, dependencies, parent, plan } = input;
+  const { ticket, statuses, tags, plan } = input;
 
   const params: WireParam[] = [
     idParam(ticket),
@@ -173,8 +151,6 @@ export const buildTicketPropertiesControls = (input: TicketPropertiesInput) => {
     ...(ticket.blockedReason
       ? [readOnlyControl("blocked-reason", l10n("ticketDetail.blockedReason", "Blocked reason"), ticket.blockedReason)]
       : []),
-    ticketRefParam("depends-on", l10n("ticketDetail.dependsOn", "Depends on"), dependencies, { multiSelect: true }),
-    ticketRefParam("parent", l10n("ticketDetail.parent", "Parent"), parent ? [parent] : [], { multiSelect: false }),
     ...tags.map((tag) => tagParam(ticket, tag)),
   ];
 

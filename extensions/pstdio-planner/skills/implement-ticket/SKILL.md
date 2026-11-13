@@ -2,24 +2,28 @@
 name: implement-ticket
 description: "Implement a ticket end-to-end. Use when asked to implement or complete a ticket."
 metadata:
-  version: 0.0.21
+  version: 0.0.22
 ---
 
 Implement Planner tickets in a Prompt Studio workspace. Produce a committed revision and a change request report, then follow the configured review and pull request steps.
+
+Own your assigned work through repairs, validation, PR updates, CI and ticket status. Send updates only when work is complete or a roadblock needs to be escalated to the user. Keep interim details in the ticket or report instead of sending routine progress messages, acknowledgements or repeated status requests to other agents.
 
 ## Workspace
 
 Always work in a Prompt Studio workspace. Never use `git worktree add` or your agent's own worktree tool. Prompt Studio does not track those, so the ticket, reports, reviews and merges cannot find the work.
 
 - If you run inside a workspace from `pst pstdio.planner run-attempt`, work there.
-- Before creating a workspace, read the ticket's linked workspaces with `pst pstdio.planner ticket-workspaces --id <ticket>` and their implementation owners with `pst pstdio.planner list-variants`.
-- For a linked workspace without a managed variant, list its conversations with `pst sessions list --workspace-id <workspace-id>`. Read the relevant conversation and ticket to find the existing implementation session. Reuse that session for corrections. If ownership is unclear, clarify it before starting another writer.
-- Corrections, review fixes, dependency repairs, and resumed work continue in the existing implementation conversation and workspace, including after submission or a passing review. The user does not need to request reuse. If another implementation session owns the workspace, send the task to that session with `pst sessions follow-up` instead of starting a competing writer. A queued follow-up does not transfer ownership.
+- Before creating a workspace, inspect the ticket's linked workspaces with `pst pstdio.planner ticket-workspaces --id <ticket>` and managed variants with `pst pstdio.planner list-variants`.
+- When the user asks you to resume a ticket, continue the implementation yourself in its existing workspace unless the user specifies otherwise. Inspect the current branch, uncommitted changes, reports and PR before editing. A previous implementation session alone is not a reason to delegate the work back or create another workspace.
+- Check sessions in the ticket's linked workspaces with `pst sessions list --workspace-id <workspace-id>`. Coordinate before editing only when another session is actively implementing the same ticket. A historical owner or an unrelated running session does not require a handoff.
+- You may read those sessions or ask one for a concise summary of completed work, current source, pending work and blockers. Make a summary-only request explicit so it does not restart implementation. If no other session is working on the ticket, continue without waiting for the previous session to resume or acknowledge a handoff.
+- Reuse the workspace for corrections, review fixes and dependency repairs. Preserve existing changes. Managed-attempt ownership and submission checks still apply; never impersonate another session or fabricate a revision.
 - When a new workspace is needed, run `pst workspaces create --provider pstdio.worktree --params '{"base":"main"}'`. It prints the workspace shorthand and path. Link each ticket with `pst pstdio.planner link --id <ticket> --workspace <workspace>`, then work at the printed path. Other workspace types use their own provider ID and declared parameters. See [Workspaces](https://prompt.studio/docs/references/cli/workspaces/).
 - For several tickets in one workspace, create one workspace and link every ticket to it.
 - For one workspace per ticket, create and link a workspace for each ticket.
 
-Create another workspace only when no suitable linked workspace exists, for a useful implementation alternative, or for an explicit request. Workspaces identify variants; they do not own ticket progress. The responsible implementation agent coordinates variant evidence and updates the ticket. Reviewers and variant agents report evidence to it.
+Create another workspace only when no suitable linked workspace exists, for a useful implementation alternative, or for an explicit request. Workspaces identify variants; they do not own ticket progress. You are responsible for your implementation evidence and ticket updates.
 
 Only a workspace started by `pst pstdio.planner run-attempt --ticket <shorthand>` has a managed attempt. You own its ticket status; Planner does not set it for you. In any other workspace, skip revision submission in step 5 and include the workspace ID, commit SHA, and report ID in the handoff. See [Attempts](https://prompt.studio/docs/extensions/planner/attempts/#run-an-attempt) and [Who sets the ticket status](https://prompt.studio/docs/extensions/planner/attempts/#who-sets-the-ticket-status).
 
@@ -109,7 +113,7 @@ The report must explain the change and include outputs that a reviewer can inspe
 6. Complete the report at the returned `path`.
 7. Run `pst pstdio.reports reports save --name <returned-name>` and keep its `reportId` for revision submission.
 
-Report creation never overwrites an existing report. When the base file exists, the command returns a numbered report such as `change_request_01` at `.pstdio/extension-storage/pstdio.reports/reports/change_request/report_01.md`.
+Report creation never overwrites an existing report. When the base file exists, the command returns a numbered report such as `change_request_01` at `.pstdio/extension-storage/pstdio.pstdio-reports/reports/change_request/report_01.md`.
 
 Only an independent reviewer creates a review report. The implementation agent uses a change request report.
 
@@ -127,7 +131,7 @@ Use concrete artifacts that another person or agent can inspect and reproduce.
 
 ### Repair a changed dependency base
 
-For a `tickets next` action of `update-stack`, reuse the listed workspace and its implementation session. See [Updating a dependency stack](https://prompt.studio/docs/extensions/planner/attempts/#updating-a-dependency-stack). Read the ticket and existing review findings. Run `pst pstdio.planner update-stack` with the exact workspace HEAD and owner session; resolve any merge conflicts, commit, and retry. Preserve the ticket's branch and PR target rules. Validate the result, run the configured adversarial review, save a fresh report, and submit the exact HEAD with `--expected-revision`. A passed review stays on its old revision; do not fabricate a rejection or reopen it to permit a correction. Complete required CI on the latest pushed PR commit.
+For a `tickets next` action of `update-stack`, reuse the listed workspace and follow the resumption rules above. See [Updating a dependency stack](https://prompt.studio/docs/extensions/planner/attempts/#updating-a-dependency-stack). Read the ticket and existing review findings. Run `pst pstdio.planner update-stack` with the exact workspace HEAD and recorded managed-attempt owner; resolve any merge conflicts, commit, and retry. Preserve the ticket's branch and PR target rules. Validate the result, run the configured adversarial review, save a fresh report, and submit the exact HEAD with `--expected-revision`. A passed review stays on its old revision; do not fabricate a rejection or reopen it to permit a correction. Complete required CI on the latest pushed PR commit.
 
 ### Recover a missing workspace
 

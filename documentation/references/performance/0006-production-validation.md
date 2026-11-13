@@ -35,7 +35,7 @@ The full rich/small storage-scale track is explicitly diagnostic under [the main
 - `packages/pstdio-db/src/services/extension-storage/record-read-scale.diagnostic.ts`
 - `packages/e2e/src/perf/storage-scale.diagnostic.ts`, its preparation, sample and constrained-runtime controllers
 
-Acquire the acknowledged exclusive timing window described in that contract, build the compiled runtime before timing, then use the maintained supervisor for **every** frozen layer workload: rich 1,000 and 10,000 rows; small 1,000, 10,000 and 100,000 rows; sync and database layers; the contract's distinct churn variants. Do not reduce rows or sample counts. For each combination:
+Use the isolated measurement setup described in that contract, build the compiled runtime before timing, then use the maintained supervisor for **every** frozen layer workload: rich 1,000 and 10,000 rows; small 1,000, 10,000 and 100,000 rows; sync and database layers; the contract's distinct churn variants. Do not reduce rows or sample counts. For each combination:
 
 ```sh
 bun packages/e2e/src/perf/storage-scale.diagnostic.ts --fixture rich --output /absolute/evidence/rich-1000-sync --layer sync --rows 1000 --timing-owner /absolute/owner.json

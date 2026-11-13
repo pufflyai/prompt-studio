@@ -26,6 +26,8 @@ test("the Workspaces extension saves shared views and isolates each project's se
         localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
     }, first!.id);
     await page.goto(`/projects/${first!.id}/workspaces`);
+    // Saved-view controls follow the extension's initial collection and shared-view reads.
+    await expect(page.getByRole("tab", { name: "By device", exact: true })).toHaveAttribute("aria-selected", "true");
     await expect(page.getByRole("button", { name: "Add view", exact: true })).toBeEnabled();
     await page.getByRole("button", { name: "Add view", exact: true }).click();
     const savedTab = page.getByRole("tab", { name: "View 3", exact: true });

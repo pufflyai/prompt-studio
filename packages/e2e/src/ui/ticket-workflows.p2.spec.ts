@@ -94,12 +94,17 @@ const openTicket = async (page: Page, projectId: string) => {
 test("refreshes ticket files after creating a file", async ({ page, fixture }) => {
   await openTicket(page, fixture.project.id);
   await expect(page.getByRole("tab", { name: "Ticket", exact: true })).toHaveCount(0);
-  await page.getByText("Files", { exact: true }).hover();
+  await page
+    .locator('[data-workbench-region="sidenav"]')
+    .getByRole("option", {
+      name: new RegExp(fixture.ticket.shorthand),
+    })
+    .click({ button: "right" });
   const fileResponse = page.waitForResponse(
     (response) =>
       response.url().includes("command.create-ticket-file/execute") && response.request().method() === "POST",
   );
-  await page.getByRole("button", { name: "New file", exact: true }).click();
+  await page.getByRole("menuitem", { name: "New file", exact: true }).click();
   const file = (await (await fileResponse).json()).outcome.value as { name: string };
   await expect(page.getByRole("option", { name: file.name, exact: true })).toBeVisible();
   await page.getByRole("option", { name: file.name, exact: true }).click();
