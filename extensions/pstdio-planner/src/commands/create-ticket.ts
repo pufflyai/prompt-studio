@@ -23,7 +23,7 @@ const attributeTagIds = (attributes: Record<string, unknown>) =>
     return typeof value === "string" && value ? [value] : [];
   });
 
-// Backs the board's "new ticket" and the `pst pstdio.planner create-ticket`/`add` CLI path. The
+// Backs the board's "new ticket" and the `pst pstdio.planner create-ticket` CLI path. The
 // board passes ids; the CLI passes display names/shorthands, so status, tags,
 // parent, and dependencies are resolved server-side (Decision 3).
 export const createTicketCommand = defineCommand({

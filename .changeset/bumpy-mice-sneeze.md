@@ -12,4 +12,4 @@
 "skills": minor
 "workspaces": minor
 ---
-Use canonical first-party package names and concise Notes commands on migration-capable API 0.4 hosts.
+Use canonical first-party package names and concise Notes commands on migration-capable API 0.5 hosts. Remove declared global CLI shortcuts and use publisher-qualified Planner and Reports commands.
