@@ -112,7 +112,9 @@ Import/require calls also scan Bun-normalized constant and conditional expressio
 transitive Node execution context for [build-time macros](https://bun.com/docs/bundler/macros), including local and
 escaping helpers. Failed normalization keeps the conservative fallback. Opaque resolution retains the declared closure.
 It retains reachable modules and complete packages for asset readers or opaque dynamic resolution. Identity includes
-those source and dependency bytes, preparation format, extension API, Bun version, platform, and architecture.
+those source and dependency bytes, preparation format, extension API, platform, architecture, and the runtime cache
+host key. That single host key binds the Bun version and revision, executable path, and executable build stamp.
+An unchanged host reuses acceptance after restart; a replaced executable cannot accept artifacts prepared by its predecessor.
 Acceptance compares the complete runtime/webview state. A concurrent runtime-only acceptance can be completed with
 validated webviews of the same revision; a conflicting or older webview state cannot replace it.
 

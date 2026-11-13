@@ -197,10 +197,10 @@ export const PRIVATE_EXPORT_LIMITS: Record<string, number> = {
   // These are ownership boundaries, not file-level escape hatches.
   // Root, records, text, relay, encryption, presence and append-only logs.
   "pstdio-sync": 7,
-  // ADR0143 adds the pure compiled input inspector alongside app and runtime routes.
+  // ADR0147 adds the pure compiled input inspector alongside app and runtime routes.
   "pstdio-api": 3,
   "pstdio-api-contracts": 7,
-  // ADR0143 owns six preparation transport, worker, cache and pure revision-input modules.
+  // ADR0147 owns six preparation transport, worker, cache and pure revision-input modules.
   "pstdio-extensions": 18,
 };
 

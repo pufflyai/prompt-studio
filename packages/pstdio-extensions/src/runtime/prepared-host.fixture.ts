@@ -1,11 +1,7 @@
 import { statSync } from "node:fs";
 import { loadExtensionPackage } from "./loader";
 import { stopExtensionPreparation } from "./preparation-client";
-import {
-  acceptPreparedRevision,
-  prepareExtensionRevision,
-  readAcceptedRevision,
-} from "./prepared-revision";
+import { acceptPreparedRevision, prepareExtensionRevision, readAcceptedRevision } from "./prepared-revision";
 
 export interface PreparedHostObservation {
   host: { executable: string; executableMtimeMs: number; bunVersion: string; bunRevision: string };

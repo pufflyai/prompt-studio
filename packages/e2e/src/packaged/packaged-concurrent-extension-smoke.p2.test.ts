@@ -8,9 +8,8 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { enablePackagedProjectExtension } from "./packaged-project-extensions";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
-import { removeTestDirectory } from "./remove-test-directory";
-
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
+import { removeTestDirectory } from "./remove-test-directory";
 
 setupPackagedSmokeTests();
 

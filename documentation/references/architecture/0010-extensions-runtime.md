@@ -16,7 +16,7 @@ See [manifest and installation](../extensions/0002-manifest-and-installation.md)
 
 An ordinary file edit in an installed source does not adopt a new contribution contract. The project continues using its adopted snapshot until an explicit update, reload, install, or development-loop refresh validates and publishes a replacement.
 
-Runtime startup checks installed sources in a shared preparation worker. Compatible accepted revisions serve metadata and previously published webviews before those checks finish. A source without usable prepared output waits for its own preparation; it does not delay unrelated tools. See [prepared revision ownership](../../adrs/0143-share-extension-preparation-and-retain-accepted-revisions.md).
+Runtime startup checks installed sources in a shared preparation worker. Compatible accepted revisions serve metadata and previously published webviews before those checks finish. A source without usable prepared output waits for its own preparation; it does not delay unrelated tools. See [prepared revision ownership](../../adrs/0147-share-extension-preparation-and-retain-accepted-revisions.md).
 
 A SHA-256 digest in each bundle's `dist/build-signature.txt` records its source graph, declared dependencies, Bun version, and builder options. The host reuses matching bundles across restarts and publishes new signatures with successful build output. Starting a replacement build invalidates the old signature. If a build fails and the source is later restored, the next check rebuilds once and clears the recorded failure through the normal success path. Interrupted staging folders are cleaned before the next build, without removing active builds.
 

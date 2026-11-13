@@ -31,7 +31,8 @@ const prepareCacheRoot = (cacheRoot: string, hostRoot: string) => {
     utimesSync(hostRoot, now, now);
     for (const entry of readdirSync(cacheRoot)) {
       const path = join(cacheRoot, entry);
-      if (entry !== runtimeHostKey && now.getTime() - statSync(path).mtimeMs > UNUSED_HOST_CACHE_MS) removeQuietly(path);
+      if (entry !== runtimeHostKey && now.getTime() - statSync(path).mtimeMs > UNUSED_HOST_CACHE_MS)
+        removeQuietly(path);
     }
   } catch (error) {
     console.warn(`[pstdio-extensions] Could not prepare runtime cache ${cacheRoot}`, error);

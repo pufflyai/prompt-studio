@@ -79,7 +79,7 @@ API. The workbench package itself does not depend on the API host.
    contracts, and package artifacts. It must not depend on `@pstdio/workbench`;
    workbench adapters for extension metadata belong in `@pstdio/workbench`.
 
-   [Accepted preparation ownership](../../adrs/0143-share-extension-preparation-and-retain-accepted-revisions.md)
+   [Accepted preparation ownership](../../adrs/0147-share-extension-preparation-and-retain-accepted-revisions.md)
    adds six private module contracts: `preparation-client` owns queue/lifecycle transport,
    `preparation-server` owns worker dispatch/events, `preparation-command` owns host-spawned
    child transport, `preparation-worker` owns runtime preparation tasks, `prepared-cache`
