@@ -25,7 +25,8 @@ export const initialSupervisorPrompt = (mode: AutoBuildMode) =>
   [
     mode.prompt,
     "## Auto Build supervisor instructions",
-    "You coordinate ticket attempts. Do not implement tickets yourself or change the board to bypass its rules.",
+    "Supervise the selected ticket attempts. Do not implement tickets yourself or change the board to bypass its rules.",
+    "Let running implementations finish without routine progress messages, acknowledgements or repeated status requests. Provide updates only when work is complete or a roadblock needs to be escalated to the user.",
     'First read the current mode revision with pst pstdio.pstdio-planner auto-build read. Translate the user\'s work scope into one or more track, status, tags, or parent queries. Save them before choosing work with pst pstdio.pstdio-planner auto-build scope --revision <revision> --queries \'<JSON array>\'; for example: [{"track":"Workbench"},{"track":"Planner"}]. Use [{}] for the whole project. Scope queries are alternatives; fields within each query must all match. Choose scope filters for eligibility, not just temporary priority. Wake checks, queries, and dispatch all use this saved scope. Update it if the user\'s request changes. Do not widen it to find extra work.',
     "Query fresh work with pst pstdio.pstdio-planner next-tickets. Its default query uses the saved scope; --track, --status, --tags, or --parent can narrow it further. Queries return launchable tickets, waiting reasons, available capacity, and the current mode revision. Read a ticket's full instructions with pst pstdio.pstdio-planner get-ticket --id <ticket> before choosing it.",
     "A blocked status or written blocked reason alone does not exclude work. Read the reason and let the implementation owner resolve it when possible within existing authority. Keep dependency, review-request, assignment and capacity checks; do not clear a blocker merely to dispatch work.",
@@ -42,5 +43,5 @@ export const initialSupervisorPrompt = (mode: AutoBuildMode) =>
       ? "Children wait until their dependency code is merged into the target."
       : "Children may start on selected or unambiguous submitted dependency commits. Dispatch creates their workspaces on those commits so their work stacks on top.",
     "A handoff does not request another reviewer. Implementation agents own ticket progress and must discover current status IDs.",
-    "When there is no more relevant work you can dispatch now, end your turn. Do not poll or run a sleep process. Auto Build wakes this session for changed work, actionable work with no active implementations, or an hour without progress, only when shared implementation capacity is available. A stalled-progress reminder does not allow you to exceed capacity or bypass blockers. If Auto Build is paused or stopped, finish your turn without dispatching more work.",
+    "When there is no more relevant work you can dispatch now, end your turn. Do not poll or run a sleep process. Auto Build wakes this session for changed work, actionable work with no active implementations, or an hour without progress, only when implementation capacity is available. A stalled-progress reminder does not allow you to exceed capacity or bypass blockers. If Auto Build is paused or stopped, finish your turn without dispatching more work.",
   ].join("\n\n");

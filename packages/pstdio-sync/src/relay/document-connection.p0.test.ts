@@ -5,6 +5,45 @@ import { documentConnectionFixture } from "./document-connection.test-fixture";
 const documentId = "native_document_0123456789";
 const directoryId = "owner_directory_0123456789";
 
+test("a full pass resolving after a targeted failure preserves the retry error during backoff", async () => {
+  const f = documentConnectionFixture();
+  const entered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const reported = Promise.withResolvers<void>();
+  const drained = Promise.withResolvers<void>();
+  let released = false;
+  const owner = createDocumentRelayConnection({
+    ...f,
+    projectId: "project",
+    signal: f.controller.signal,
+    synchronize: async () => {
+      entered.resolve();
+      await release.promise;
+    },
+    synchronizeDocument: async () => {
+      throw new Error("Targeted read failed");
+    },
+    onError: () => reported.resolve(),
+    onStatusChange: () => {
+      if (released && !owner.status().busy) drained.resolve();
+    },
+  });
+  try {
+    await entered.promise;
+    owner.wakeDocument("text");
+    await reported.promise;
+    released = true;
+    release.resolve();
+    await drained.promise;
+    expect(owner.status()).toMatchObject({ busy: false, error: "Cloud source failed; retry scheduled" });
+  } finally {
+    release.resolve();
+    f.controller.abort();
+    await owner.done;
+    await f.close();
+  }
+});
+
 test("subscription admission catches up exact text while its owner directory is held", async () => {
   const f = documentConnectionFixture({ heldTopic: documentId });
   const release = Promise.withResolvers<void>();

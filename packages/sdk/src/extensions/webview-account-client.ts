@@ -14,6 +14,8 @@ export const createWebviewAccountClient = (host: GuestHost) =>
     devices: () => host.call("account.read", { op: "devices" }),
     projectSyncStatus: (projectId) =>
       host.call("account.read", { op: "projectSyncStatus", ...(projectId ? { projectId } : {}) }),
+    retryProjectSyncSource: (sourceId, projectId) =>
+      host.call("account.manage", { op: "retryProjectSyncSource", sourceId, ...(projectId ? { projectId } : {}) }),
     login: (managerOrigin) => host.call("account.manage", { op: "login", managerOrigin }),
     cancelLogin: (id) => host.call("account.manage", { op: "cancelLogin", id }),
     logout: () => host.call("account.manage", { op: "logout" }),

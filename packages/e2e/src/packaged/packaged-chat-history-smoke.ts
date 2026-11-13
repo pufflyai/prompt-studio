@@ -79,7 +79,7 @@ export const expectPackagedChatHistory = async (
     // emulation does not reliably terminate an already-open idle SSE response.
     await page.addInitScript(() => {
       const fetch = window.fetch.bind(window);
-      window.fetch = (input, init) => {
+      window.fetch = Object.assign((input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
         const url = new URL(input instanceof Request ? input.url : String(input), window.location.href);
         if (url.pathname !== "/v1/session-stream") return fetch(input, init);
         const interrupt = new AbortController();
@@ -88,7 +88,7 @@ export const expectPackagedChatHistory = async (
           ...init,
           signal: init?.signal ? AbortSignal.any([init.signal, interrupt.signal]) : interrupt.signal,
         });
-      };
+      }, window.fetch);
     });
     await installChatOverflowReplay(page, sessionId);
     await page.reload();

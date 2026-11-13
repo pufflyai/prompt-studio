@@ -423,6 +423,12 @@ Counts and progress use verified sync documents, including their files; unknown 
 leave the count absent and the download total null. Publish the SDK and matching host before
 extensions consume these fields. See [Cloud account and sync status](0003-command-and-process-api.md#cloud-account-and-sync-status).
 
+On `main`, after 0.47.0, API 0.4.1 adds optional source/file activity in `ProjectSyncStatus.sources`,
+the source/file types, and `retryProjectSyncSource` through `ctx.account`, the typed webview
+client and `/client`. Existing methods and aggregate state values remain supported.
+These additive changes use the post-0.47.0 patch step. Publish a matching SDK and
+host before Cloud or other separately released extensions consume these additions.
+
 ## App-wide and device settings in API 0.3.0
 
 `workbenchSlots.globalSettings` and the `"device"` extension setting scope are
@@ -432,4 +438,4 @@ slots keep working. Device settings use `ctx.settings` and the existing typed
 webview settings capabilities. Publish the SDK and host before extensions adopt
 them. See [app-wide settings](0004-contribution-api.md#app-wide-settings).
 
-*Updated at: 2026-11-09*
+*Updated at: 2026-11-12*

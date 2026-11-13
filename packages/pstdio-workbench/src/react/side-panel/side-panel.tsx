@@ -4,7 +4,7 @@ import { MessageCircle, Minimize2, Minus, SquareArrowOutUpRight } from "lucide-r
 import { type ReactNode, useLayoutEffect, useRef } from "react";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
-import { WorkbenchPanelMenuLayout, WorkbenchPanelMenuOpeners } from "../panel-menu/panel-menu";
+import { WorkbenchPanelMenuOpeners } from "../panel-menu/panel-menu";
 import { PanelHeader } from "../region/panel-header";
 import { WorkbenchTabDropTarget } from "../region/tab-drag-context";
 import { usePanelPolicy } from "../shared/use-panel-policy";
@@ -81,11 +81,9 @@ export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
           ) : undefined
         }
       >
-        <WorkbenchPanelMenuLayout workbench={workbench} panel="side">
-          <Flex position="relative" flex="1" minH={0} direction="column">
-            <Flex ref={contentSlotRef} flex="1" minH={0} direction="column" />
-          </Flex>
-        </WorkbenchPanelMenuLayout>
+        <Flex position="relative" flex="1" minH={0} direction="column">
+          <Flex ref={contentSlotRef} flex="1" minH={0} direction="column" />
+        </Flex>
         <WorkbenchTabDropTarget region="side" visible={attached} />
       </AttachedPanel>
     </WorkbenchFocusRegion>
@@ -96,6 +94,14 @@ interface WorkbenchFloatingSidePanelProps extends WorkbenchSidePanelProps {
   available?: boolean;
 }
 
+export const useSidePanelLauncherVisible = (workbench: WorkbenchCore, available: boolean) => {
+  const mode = useWorkbenchStore(workbench.layout.store, () => workbench.sidePanel.getMode());
+  const fullscreen = useWorkbenchStore(workbench.fullscreen.store, (state) => state);
+  const canFloat = useWorkbenchStore(workbench.modes.store, () => workbench.sidePanel.canFloat());
+  const policy = usePanelPolicy(workbench, "side");
+  return available && canFloat && policy.canOpen && (fullscreen.active ? !fullscreen.sideOpen : mode === "closed");
+};
+
 export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProps) => {
   const { workbench, contentSlotRef, bottomOffset, header, bubbleIcon, onOpen, available = true } = props;
   const mode = useWorkbenchStore(workbench.layout.store, () => workbench.sidePanel.getMode());
@@ -103,6 +109,7 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
   const canFloat = useWorkbenchStore(workbench.modes.store, () => workbench.sidePanel.canFloat());
   const policy = usePanelPolicy(workbench, "side");
   const visible = available && canFloat && (fullscreen.active ? fullscreen.sideOpen : mode === "floating");
+  const launcherVisible = useSidePanelLauncherVisible(workbench, available);
   const bubbleRef = useRef<HTMLButtonElement>(null);
   const previousFullscreen = useRef(fullscreen);
   useLayoutEffect(() => {
@@ -115,7 +122,7 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
 
   return (
     <>
-      {available && canFloat && policy.canOpen && (fullscreen.active || mode !== "attached") ? (
+      {launcherVisible || visible ? (
         <BubbleButton
           ref={bubbleRef}
           isOpen={visible}
@@ -147,6 +154,7 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
           visible ? (
             <PanelHeader workbench={workbench} region="side" variant="main" gap="sm">
               <WorkbenchSidePanelHeader header={header} />
+              <WorkbenchPanelMenuOpeners workbench={workbench} panel="side" />
               {!fullscreen.active ? (
                 <Tooltip content="Reattach Side Panel">
                   <IconButton

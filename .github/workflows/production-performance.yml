@@ -14,6 +14,9 @@ on:
       artifact_attempt:
         required: true
         type: string
+      candidate_artifact_id:
+        required: true
+        type: string
       channel:
         required: true
         type: string
@@ -36,6 +39,7 @@ jobs:
       channel: ${{ inputs.channel }}
       source_sha: ${{ inputs.source_sha }}
       artifact_attempt: ${{ inputs.artifact_attempt }}
+      candidate_artifact_id: ${{ inputs.candidate_artifact_id }}
       kind: performance
       platforms: ${{ inputs.desktop_platforms }}
   workloads:
@@ -97,6 +101,12 @@ jobs:
         run: bunx playwright@1.60.0 install --with-deps
       - name: "[phase:test] Collect every fixed workload with existing budgets"
         run: bun scripts/test.ts --performance-family ${{ matrix.family }} --prebuilt
+      - name: Download the immutable candidate identity
+        uses: actions/download-artifact@v4
+        if: always()
+        with:
+          artifact-ids: ${{ inputs.candidate_artifact_id }}
+          merge-multiple: true
       - name: Attest actual consumer inputs and outcome
         if: always()
         env:

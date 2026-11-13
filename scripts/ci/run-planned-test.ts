@@ -18,7 +18,11 @@ export const runPlannedTest = async (plan: TestPlan, run: PlannedRun, result: Te
   const { root, directory, executionId, signal } = options;
   const evidence = join(directory, run.id);
   mkdirSync(evidence, { recursive: true });
-  const command = plannedTestCommand(run, root, evidence);
+  const selected = plannedTestCommand(run, root, evidence);
+  // A display belongs to one invocation, like its runtime home and process group.
+  // Closing every Electron client in one suite must not reset the next suite's server.
+  const command =
+    run.target.platform === "linux" && process.env.PLAN_DISPLAY === "true" ? ["xvfb-run", "-a", ...selected] : selected;
   const start = performance.now();
   const outcome = await runCiChecks([{ id: run.id, cwd: join(root, run.cwd), command }], {
     priority: run.lane === "quarantine" ? "P2" : run.priority,

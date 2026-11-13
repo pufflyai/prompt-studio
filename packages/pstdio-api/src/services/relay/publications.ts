@@ -96,6 +96,11 @@ export const startPublishedExtensions = (input: {
   });
   return {
     owner,
+    restart() {
+      if (failed) failed.waiting = false;
+      clearTimeout(retry);
+      return connection.restart();
+    },
     retry() {
       if (failed) failed.waiting = false;
       clearTimeout(retry);

@@ -47,8 +47,9 @@ export const reusableNavigationViewer = (
   core: WorkbenchCore,
   target: NavigationTargetPage | NavigationTargetPanel,
   state: State,
+  allowReuse = true,
 ) => {
-  if (!target.resource || (target.kind === "page" && target.intent === "restore")) return undefined;
+  if (!allowReuse || !target.resource || (target.kind === "page" && target.intent === "restore")) return undefined;
   const binding = targetBinding(core, target, state);
   if (!binding) return undefined;
   if (!resourceMatchesConstraint(binding, target.resource))

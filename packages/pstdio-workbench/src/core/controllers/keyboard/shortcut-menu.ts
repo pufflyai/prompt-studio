@@ -79,9 +79,11 @@ export const shortcutHints = (catalog: ResolvedShortcut[], state: KeyboardState)
     .filter((shortcut) => !shortcut.disabled && getKeybindingSteps(shortcut.binding.keybinding).length > 0)
     .sort((a, b) => Number(Boolean(a.binding.layer)) - Number(Boolean(b.binding.layer)));
   for (const shortcut of sorted) {
-    if (shortcut.binding.layer && !state.active) continue;
+    if (shortcut.binding.layer && !state.active && !state.preview) continue;
     let hint = getKeybindingSteps(shortcut.binding.keybinding).join(" ");
-    if (shortcut.binding.layer) {
+    if (shortcut.binding.layer && !state.active && state.preview) {
+      hint = shortcutDisplayKeys(shortcut, shortcutOpeningChord(catalog), catalog).join(" → ");
+    } else if (shortcut.binding.layer) {
       const within = shortcut.keys.slice(0, state.path.length).every((key, index) => key === state.path[index]);
       if (!within) continue;
       const number = actionChoiceNumber(shortcut, catalog);
