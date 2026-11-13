@@ -65,6 +65,8 @@ function RenderingBenchmark() {
 }
 export const RenderingWorkloads: Story = {
   id: "patterns-chat-chat-panel-rendering--rendering-workloads",
+  description:
+    "Only changed message content and row geometry need fresh rendering during a stream. Completed visible rows retain their layout, sticky behavior, animations and actions while another response changes.",
   render: () => <RenderingBenchmark />,
 };
 export const LongTurnScrolling: Story = {
