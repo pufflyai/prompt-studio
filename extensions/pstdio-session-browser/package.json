@@ -1,6 +1,6 @@
 {
   "name": "pstdio-session-browser",
-  "version": "0.2.0",
+  "version": "0.2.1-nightly.20261113030235",
   "displayName": "Sessions",
   "icon": "messages-circle",
   "description": "Browse conversations and compose with native chat in Main and Side.",

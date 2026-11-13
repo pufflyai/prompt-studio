@@ -1,5 +1,13 @@
 # pstdio-session-browser
 
+## 0.2.1-nightly.20261113030235
+
+_2026-11-13_
+
+### Patch Changes
+
+- 0f351e0: Add Copy session ID to session actions so session references can be shared with other agents.
+
 ## 0.2.0
 
 _2026-11-12_

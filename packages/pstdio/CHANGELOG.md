@@ -1,5 +1,17 @@
 # pstdio
 
+## 0.47.1-nightly.20261113030235
+
+_2026-11-13_
+
+### Patch Changes
+
+- 69efa88: Recover stalled Cloud sources safely and show source phases and named file transfer activity.
+- Nightly build of main.
+- 447cd2a: Sort installed and available extensions alphabetically in the extensions list.
+- 0eb8f3a: Paint the startup window before loading the workbench and avoid preparing Cloud keys twice per synchronization pass.
+- a2e8cbb: Recover dropped page requests silently while retaining loaded content.
+
 ## 0.47.0
 
 _2026-11-12_
