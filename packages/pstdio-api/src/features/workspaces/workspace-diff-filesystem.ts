@@ -4,7 +4,8 @@ import { git } from "pstdio-wt";
 
 const ignored = (path: string) => {
   const first = path.split(sep)[0];
-  return first === "objects" || first === "logs";
+  // Git publishes accepted metadata by renaming its lock; the unfinished lock is not a new state.
+  return first === "objects" || first === "logs" || path.endsWith(".lock");
 };
 
 /** A change hint, never a second Git/document reader. See ADR 0140 for gap-only recovery. */
