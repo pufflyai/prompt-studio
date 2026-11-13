@@ -4,7 +4,8 @@ import { Activity } from "../activity";
 import { RichMessage } from "../rich-text";
 export default {
   title: "Components/Resource Activity",
-  description: "Chronological discussion with rich text comments, subtle retrieval feedback and compact change events.",
+  description:
+    "Chronological discussion with centered comment input text and bottom-aligned controls for multiline drafts.",
 };
 export const ResourceActivity = () => {
   const [session, setSession] = useState(false);
@@ -19,6 +20,9 @@ export const ResourceActivity = () => {
       <HStack>
         <Button onClick={() => setSession(!session)}>{session ? "Open ticket" : "Open session"}</Button>
         <Button onClick={() => setError(!error)}>Toggle retrieval error</Button>
+        <Button onClick={() => setBody(body ? "" : "First paragraph\n\nSecond paragraph")}>
+          Toggle multiline draft
+        </Button>
       </HStack>
       <Stack layerStyle="documentContent" gap="lg">
         <Text>{session ? "Session conversation" : "Ticket content"}</Text>
