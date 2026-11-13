@@ -13,6 +13,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { folderWorkspaceCapabilities } from "pstdio-db";
+import { git } from "pstdio-wt";
 import type { AppBindings } from "../../../types";
 import type { WorkspacesRouteDeps } from "../deps";
 import { resolveWorkspaceEntryHandler, resolveWorkspaceEntryRoute } from "./resolve-workspace-entry";
@@ -92,6 +93,41 @@ afterEach(() => {
 });
 
 describe("GET /workspaces/:id/files", () => {
+  test("reports Git-ignored entries, honoring tracked files, nested rules and plain folders", async () => {
+    writeFileSync(join(root, ".gitignore"), "*.log\n.cache/\n!keep.log\n");
+    for (const name of ["debug.log", "tracked.log", "keep.log", "line\nbreak.log"])
+      writeFileSync(join(root, name), "text");
+    mkdirSync(join(root, ".cache"));
+    writeFileSync(join(root, ".cache/data.json"), "{}");
+    const list = async (path = "", query?: string) => {
+      const params = new URLSearchParams({ path, ...(query ? { query } : {}) });
+      const response = await app.request(`/workspaces/workspace-1/files?${params}`);
+      expect(response.status).toBe(200);
+      return (await response.json()).entries as { path: string; git_ignored?: boolean }[];
+    };
+    expect((await list()).some((entry) => entry.git_ignored)).toBe(false);
+    await git(root, ["init"]);
+    await git(root, ["add", "--force", "tracked.log"]);
+    const entries = new Map((await list()).map((entry) => [entry.path, entry.git_ignored]));
+    expect(entries.get("debug.log")).toBe(true);
+    expect(entries.get("line\nbreak.log")).toBe(true);
+    expect(entries.get(".cache")).toBe(true);
+    expect(entries.get("tracked.log")).not.toBe(true);
+    expect(entries.get("keep.log")).not.toBe(true);
+    expect((await list(".cache"))[0]?.git_ignored).toBe(true);
+    expect((await list("", "debug"))[0]?.git_ignored).toBe(true);
+    await git(outside, ["init"]);
+    writeFileSync(join(outside, ".gitignore"), "*.tmp\n");
+    await git(outside, ["add", ".gitignore"]);
+    await git(outside, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "Initial"]);
+    await git(root, ["-c", "protocol.file.allow=always", "submodule", "add", outside, "module"]);
+    writeFileSync(join(root, "module/debug.tmp"), "Submodule ignored file");
+    const matches = new Map((await list("", "debug")).map((entry) => [entry.path, entry.git_ignored]));
+    expect(matches.get("debug.log")).toBe(true);
+    expect(matches.get("module/debug.tmp")).toBe(true);
+    expect((await list("module")).find((entry) => entry.path === "module/debug.tmp")?.git_ignored).toBe(true);
+  });
+
   test("lists direct children and searches files and directories without .git", async () => {
     mkdirSync(join(root, ".git"), { recursive: true });
     mkdirSync(join(root, "docs"), { recursive: true });
