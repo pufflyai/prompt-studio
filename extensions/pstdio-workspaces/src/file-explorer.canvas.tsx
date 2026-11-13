@@ -1,7 +1,10 @@
 import { Box, Button, CloseButton, Flex, Stack, Text } from "@chakra-ui/react";
-import { ScopedDialog as Dialog, Portal, TreeList } from "@pstdio/ui";
+import { ScopedDialog as Dialog, getIconComponent, Portal, TreeList } from "@pstdio/ui";
 import { CodeEditor } from "@pstdio/ui/diff";
 import { useState } from "react";
+
+const File = getIconComponent("file");
+const Folder = getIconComponent("folder");
 
 export default {
   title: "Product/Workspaces/File explorer",
@@ -97,5 +100,50 @@ export const FileOperations = () => {
         </Portal>
       </Dialog.Root>
     </Flex>
+  );
+};
+
+export const GitIgnoredEntries = () => {
+  const [selected, setSelected] = useState("readme");
+  return (
+    <TreeList
+      sections={[
+        {
+          id: "files",
+          label: "Files",
+          collapsible: false,
+          nodes: [
+            { id: "readme", label: "README.md", icon: <File />, isNavigable: true, rowVariant: "file" },
+            {
+              id: "cache",
+              label: <Text color="fg.subtle">.cache</Text>,
+              icon: <Folder />,
+              iconColor: "fg.subtle",
+              rowVariant: "file",
+              children: [
+                {
+                  id: "cache/data",
+                  label: <Text color="fg.subtle">data.json</Text>,
+                  icon: <File />,
+                  iconColor: "fg.subtle",
+                  isNavigable: true,
+                  rowVariant: "file",
+                },
+              ],
+            },
+            {
+              id: "log",
+              label: <Text color="fg.subtle">debug.log</Text>,
+              icon: <File />,
+              iconColor: "fg.subtle",
+              isNavigable: true,
+              rowVariant: "file",
+            },
+          ],
+        },
+      ]}
+      activeNodeId={selected}
+      onNavigate={({ nodeId }) => setSelected(nodeId)}
+    />
   );
 };
