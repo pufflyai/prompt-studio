@@ -66,6 +66,8 @@ awaits and follow-up admission, so status polling cannot repeatedly retire the v
 An admitted status read can finish when a later continuation closes admission to queued reads; that closure cannot
 make it infinitely preemptible. They can interrupt unchanged attachment reconciliation and unreserved speculation, keeping inventory and initial tool metadata responsive. Hashes are bound to source id/path; inventory then rereads current database
 feedback and inspects replaced sources before responding. No cross-request hash cache is introduced.
+Root registrations carry their existing app-home or project-directory owner to the worker. The watcher creates missing child directories one level at a time and never recreates the owner; a queued attachment or worker restoration cannot resurrect a deleted project. Missing-owner failure leaves other live roots watched.
+
 Watcher restoration reserves its host/database admission gap before speculative work resumes. Its watch-update jobs
 keep explicit background priority and share that reservation; restoration does not retire the replacement worker.
 A private restoration admission phase completes watcher lookup and dependent registration before resuming older

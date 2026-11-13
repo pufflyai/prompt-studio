@@ -69,7 +69,7 @@ test.each([
     expect(await Promise.all(refreshes)).toEqual(Array(130).fill(undefined));
     expect(observed.slice(initial)).toEqual(
       changes === "root registrations"
-        ? [[{ path: "/root-130" }]]
+        ? [[{ path: "/root-130", ownerRoot: "/" }]]
         : [
             [
               {
