@@ -4,7 +4,6 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import type {
   NavigationTarget,
   ResourceRef,
-  TreeNode,
   TreeRendererState,
   TreeViewSection,
   WorkbenchCore,
@@ -18,13 +17,18 @@ import type { SidenavContextActionsChange } from "../../shared/sidenav-context-a
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../../theme/workbench-theme-background";
 import { RendererReadNotice } from "../renderer-read-notice";
+import { createTreeBackgroundActions } from "./tree-background-actions";
 import { useTreeActionInput } from "./tree-inline-input";
-import { findNodeInSections, toTreeListSection } from "./tree-list-adapter";
+import { toTreeListSection } from "./tree-list-adapter";
 import { TreeModeReturn } from "./tree-mode-return";
 import { TreeParamsDialog } from "./tree-params-dialog";
 import { pinnedOnlyNodeIds } from "./tree-pinned-only";
 import { TreeViewBody } from "./tree-view-body";
-import { createToggleTreeSection, shouldSelectTreeNodeForNavigationTarget } from "./tree-view-navigation";
+import {
+  createToggleTreeNode,
+  createToggleTreeSection,
+  shouldSelectTreeNodeForNavigationTarget,
+} from "./tree-view-navigation";
 import { TreeViewSearch } from "./tree-view-search";
 import { useTreeData } from "./use-tree-data";
 import { useTreeNavigationState } from "./use-tree-navigation-state";
@@ -107,32 +111,6 @@ const navigateTreeNode = (
 const createTreeNavigator =
   (context: TreeNavigationContext) => (event: { nodeId: string; intent?: { id?: string; payload?: unknown } }) =>
     navigateTreeNode(context, event.nodeId, event.intent);
-
-interface ToggleTreeNodeContext {
-  workbench: WorkbenchCore;
-  treeViewId: string;
-  resource?: ResourceRef;
-  viewId?: string;
-  body: TreeViewSection[];
-  header: TreeViewSection[];
-  footer: TreeViewSection[];
-  childrenByNodeId: Record<string, TreeNode[]>;
-  expandedNodeIds: string[];
-  loadChildren(node: TreeNode): void;
-}
-
-const createToggleTreeNode = (context: ToggleTreeNodeContext) => (nodeId: string) => {
-  const node =
-    findNodeInSections(context.body, nodeId, context.childrenByNodeId) ??
-    findNodeInSections([...context.header, ...context.footer], nodeId, context.childrenByNodeId);
-  if (!node) return;
-
-  const expanded = context.expandedNodeIds.includes(nodeId);
-  getWorkbenchRenderers(context.workbench).setNodeExpanded(context.treeViewId, nodeId, !expanded);
-  if (expanded) return;
-
-  context.loadChildren(node);
-};
 
 export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
   const {
@@ -226,8 +204,6 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
   const toggleNode = createToggleTreeNode({
     workbench,
     treeViewId,
-    resource,
-    viewId,
     body,
     header,
     footer,
@@ -305,7 +281,9 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
               loading={loading}
               moduleLoading={treeState.loading}
               sections={visibleSections}
-              backgroundContextActions={isSidenav ? undefined : backgroundContextActions}
+              backgroundContextActions={
+                isSidenav ? undefined : createTreeBackgroundActions(visibleSections, backgroundContextActions)
+              }
               draggable={isSidenav}
               customizationAvailable={isSidenav}
               activeNodeId={activeNodeSelection}

@@ -108,6 +108,13 @@ export const useTreeData = (
     queryEvents: getWorkbenchRenderers(workbench).getTreeRenderer(treeViewId)?.queryEvents,
     queryKey,
     refreshKey,
+    subscribe: getWorkbenchRenderers(workbench).getTreeRenderer(treeViewId)?.subscribe
+      ? (invalidate) =>
+          getWorkbenchRenderers(workbench).getTreeRenderer(treeViewId)!.subscribe!(
+            { resource, viewId, filter, pageParams },
+            invalidate,
+          )
+      : undefined,
     load: async (signal, publish) => {
       const ctx = { resource, viewId, filter, signal, pageParams };
       const trees = getWorkbenchRenderers(workbench);

@@ -1,7 +1,25 @@
 import { expect, test } from "bun:test";
 import type { NavigationTarget } from "@pstdio/sdk/extensions";
-import { remove, showCreate, showDelete } from "./actions";
+import { remove, showCreate, showDelete, showDeleteEntry } from "./actions";
 import { workspacePages } from "./refs";
+
+test("deleting a file opens a confirmation dialog over the selected document", async () => {
+  const targets: NavigationTarget[] = [];
+  const context = {
+    project: { id: "project" },
+    resource: { type: "workspace", id: "workspace", metadata: { workspaceFilePath: "selected.md" } },
+    workspaces: { get: async () => ({ id: "workspace", projectId: "project" }) },
+    navigation: { open: (target: NavigationTarget) => targets.push(target) },
+  } as unknown as Parameters<typeof showDeleteEntry.run>[0];
+  await showDeleteEntry.run(context, { path: "other.md" });
+  expect(targets).toEqual([
+    {
+      kind: "dialog",
+      page: workspacePages.form,
+      params: { operation: "delete-entry", "workspace-id": "workspace", path: "other.md", selected: "selected.md" },
+    },
+  ]);
+});
 
 test("folderless projects can choose an installed remote workspace provider", async () => {
   const targets: NavigationTarget[] = [];

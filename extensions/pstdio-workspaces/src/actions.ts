@@ -16,7 +16,7 @@ import { workspacePages } from "./refs";
 
 const showForm = (ctx: CommandContext, operation: string, workspaceId?: string, path?: string) =>
   ctx.navigation.open({
-    kind: "page",
+    kind: "dialog",
     page: workspacePages.form,
     params: {
       operation,
