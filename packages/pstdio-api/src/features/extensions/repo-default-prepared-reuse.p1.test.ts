@@ -7,7 +7,7 @@ import { createTestApp } from "../../test-utils/create-test-app";
 import { writeExtension } from "./default-extensions-test-fixtures";
 
 test("project setup adopts the frontend output its repo default already validated", async () => {
-  const root = mkdtempSync(join(tmpdir(), "repo-default-prepared-"));
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "repo-default-prepared-")));
   const previous = { home: process.env.PSTDIO_HOME, defaults: process.env.PSTDIO_DEFAULT_EXTENSIONS };
   const home = join(root, "home");
   const repo = join(root, "project");
