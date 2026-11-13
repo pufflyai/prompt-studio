@@ -25,11 +25,20 @@ test("a rejected webview reload reports its build error while retaining the acce
   });
   const source = join(root, "source");
   mkdirSync(source);
-  writeFileSync(join(source, "package.json"), JSON.stringify({
-    name: "reload-view", publisher: "test", version: "1.0.0", main: "./extension.ts",
-    engines: { pstdio: `^${EXTENSION_API_VERSION}` },
-  }));
-  writeFileSync(join(source, "extension.ts"), `export default { views: [{ id: "page", ref: { kind: "view", id: "page" }, title: "Page", body: { kind: "webview", entry: { kind: "package-asset", path: "./view.ts", baseUrl: import.meta.url } } }] };`);
+  writeFileSync(
+    join(source, "package.json"),
+    JSON.stringify({
+      name: "reload-view",
+      publisher: "test",
+      version: "1.0.0",
+      main: "./extension.ts",
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
+    }),
+  );
+  writeFileSync(
+    join(source, "extension.ts"),
+    `export default { views: [{ id: "page", ref: { kind: "view", id: "page" }, title: "Page", body: { kind: "webview", entry: { kind: "package-asset", path: "./view.ts", baseUrl: import.meta.url } } }] };`,
+  );
   const view = join(source, "view.ts");
   writeFileSync(view, 'document.body.textContent = "Accepted view";');
   const initial = await checkCandidateSource(source);
@@ -42,17 +51,39 @@ test("a rejected webview reload reports its build error while retaining the acce
   const database = await createDb({ path: ":memory:" });
   cleanup.push(database.close);
   const sources = createInstalledExtensionSourcesDBService(database.db);
-  const row = await sources.register({ display_name: "Reload view", extension_id: "test.reload-view",
-    install_name: "reload-view", manifest_json: initial.loaded!.manifest, source_hash: accepted.sourceHash,
-    source_kind: "local_path", source_path: source, source_ref: null, status: "loaded",
-    loaded_revision: "working-revision", version: "1.0.0" });
-  const reload = () => reloadInstalledSourceBySourcePath({ installedExtensionSourcesService: sources,
-    emitInstalledSource: () => {}, notifyInstalledSourcesChanged: async () => {} }, source);
+  const row = await sources.register({
+    display_name: "Reload view",
+    extension_id: "test.reload-view",
+    install_name: "reload-view",
+    manifest_json: initial.loaded!.manifest,
+    source_hash: accepted.sourceHash,
+    source_kind: "local_path",
+    source_path: source,
+    source_ref: null,
+    status: "loaded",
+    loaded_revision: "working-revision",
+    version: "1.0.0",
+  });
+  const reload = () =>
+    reloadInstalledSourceBySourcePath(
+      {
+        installedExtensionSourcesService: sources,
+        emitInstalledSource: () => {},
+        notifyInstalledSourcesChanged: async () => {},
+      },
+      source,
+    );
   writeFileSync(view, "export const broken = ;");
   const rejected = await reload();
-  expect(rejected.installedSource).toMatchObject({ status: "error", source_hash: accepted.sourceHash,
-    loaded_revision: "working-revision", last_error_json: { code: "extension_webview_build_failed" } });
-  expect((await sources.listReloadEvents(row.id)).at(-1)?.error_json).toMatchObject({ code: "extension_webview_build_failed" });
+  expect(rejected.installedSource).toMatchObject({
+    status: "error",
+    source_hash: accepted.sourceHash,
+    loaded_revision: "working-revision",
+    last_error_json: { code: "extension_webview_build_failed" },
+  });
+  expect((await sources.listReloadEvents(row.id)).at(-1)?.error_json).toMatchObject({
+    code: "extension_webview_build_failed",
+  });
   expect((await readAcceptedRevision(source))?.id).toBe(accepted.id);
   expect(readFileSync(oldModule, "utf8")).toContain("Accepted view");
   writeFileSync(view, 'document.body.textContent = "Repaired view";');
@@ -61,5 +92,7 @@ test("a rejected webview reload reports its build error while retaining the acce
   expect(repaired.installedSource.loaded_revision).not.toBe("working-revision");
   const current = await readAcceptedRevision(source);
   expect(current?.id).not.toBe(accepted.id);
-  expect(readFileSync(join(Object.values(current!.webviews!)[0]!.distDir, "module.js"), "utf8")).toContain("Repaired view");
+  expect(readFileSync(join(Object.values(current!.webviews!)[0]!.distDir, "module.js"), "utf8")).toContain(
+    "Repaired view",
+  );
 });
