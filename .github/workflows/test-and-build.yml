@@ -46,9 +46,13 @@ jobs:
           windows-dev-drive: "true"
       - name: Build maintained packaged fixture dependencies
         run: bun run build -- --scope e2e --include-dependencies
+      - name: Build the maintained native host binary
+        run: bun run --cwd scripts build:host
       - name: Install the maintained full Chromium channel
         run: bunx playwright@1.60.0 install chromium --with-deps
       - name: Observe the original complete composer case once
+        env:
+          E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/dist/pstdio.exe
         run: >-
           bun run --cwd packages/e2e test:packaged:cli
           src/packaged/packaged-project-setup-smoke.p1.test.ts
