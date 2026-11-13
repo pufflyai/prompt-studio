@@ -6,11 +6,12 @@ import { resolvePstdioHome } from "pstdio-paths";
 import type { ExtensionDiagnostic } from "../types/runtime";
 import type { ExtensionApiProvider, PackageManifest } from "./package-manifest";
 import { isPreparationHost, type PreparationOptions, runExtensionPreparation } from "./preparation-client";
+import { runtimeHostKey } from "./runtime-cache";
 
 // Bump when snapshotting, runtime bundling, or revision/webview formats change.
 export const PREPARATION_FORMAT = 2;
 export const preparationHostIdentity = () =>
-  `${PREPARATION_FORMAT}:${EXTENSION_API_VERSION}:${Bun.version}:${process.platform}:${process.arch}`;
+  `${PREPARATION_FORMAT}:${EXTENSION_API_VERSION}:${runtimeHostKey}:${process.platform}:${process.arch}`;
 export const revisionDigest = (value: string) => createHash("sha256").update(value).digest("hex");
 export const preparedCacheRoot = () => join(resolvePstdioHome(), "cache", "extension-revisions");
 export const acceptedRevisionPath = (sourcePath: string) =>

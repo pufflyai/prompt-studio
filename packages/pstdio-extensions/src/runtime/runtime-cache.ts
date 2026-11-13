@@ -7,7 +7,9 @@ const digest = (value: string) => createHash("sha256").update(value).digest("hex
 
 // Bundles depend on the Bun bundler and on the host's bundling plugins, which ship inside its
 // executable. Another Bun or another executable build never reuses them.
-const hostKey = digest([Bun.version, Bun.revision, process.execPath, statSync(process.execPath).mtimeMs].join("\0"));
+export const runtimeHostKey = digest(
+  [Bun.version, Bun.revision, process.execPath, statSync(process.execPath).mtimeMs].join("\0"),
+);
 // Another host, such as the CLI next to the desktop app, may still use its cache; only a cache
 // left unused this long belongs to a replaced host.
 const UNUSED_HOST_CACHE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -29,7 +31,7 @@ const prepareCacheRoot = (cacheRoot: string, hostRoot: string) => {
     utimesSync(hostRoot, now, now);
     for (const entry of readdirSync(cacheRoot)) {
       const path = join(cacheRoot, entry);
-      if (entry !== hostKey && now.getTime() - statSync(path).mtimeMs > UNUSED_HOST_CACHE_MS) removeQuietly(path);
+      if (entry !== runtimeHostKey && now.getTime() - statSync(path).mtimeMs > UNUSED_HOST_CACHE_MS) removeQuietly(path);
     }
   } catch (error) {
     console.warn(`[pstdio-extensions] Could not prepare runtime cache ${cacheRoot}`, error);
@@ -39,7 +41,7 @@ const prepareCacheRoot = (cacheRoot: string, hostRoot: string) => {
 /** The runtime cache of the running host. Caches of hosts unused for a week are removed. */
 export const runtimeCacheRoot = () => {
   const cacheRoot = join(resolvePstdioHome(), "cache", "extension-runtime");
-  const hostRoot = join(cacheRoot, hostKey);
+  const hostRoot = join(cacheRoot, runtimeHostKey);
   if (!preparedCacheRoots.has(cacheRoot)) {
     preparedCacheRoots.add(cacheRoot);
     prepareCacheRoot(cacheRoot, hostRoot);
