@@ -20,7 +20,7 @@ Open **Artifacts** and click the **Project brief** or **System diagram** button 
 
 ## Publish a page
 
-Agents publish pages with the `pst pstdio-artifacts` commands. Artifacts gives agents a `publish-artifact` skill that explains the steps, so you can simply ask an agent to publish a page.
+Agents publish pages with the `pst pstdio.artifacts` commands. Artifacts gives agents a `publish-artifact` skill that explains the steps, so you can simply ask an agent to publish a page.
 
 ```sh
 pst pstdio.artifacts publish --file_path ./dist/index.html --favicon '📦' --label 'First draft' --json
