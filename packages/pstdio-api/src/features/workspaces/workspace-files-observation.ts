@@ -1,5 +1,6 @@
 import { relative, sep } from "node:path";
 import { createDirectoryTreeWatcher, type WatchDirectory } from "pstdio-extensions";
+import { watchWorkspaceDiffFiles } from "./workspace-diff-filesystem";
 
 /** Change hints only; finite tree reads remain the authority. Coverage recovery follows ADR 0140. */
 export const watchWorkspaceFiles = async (
@@ -8,6 +9,12 @@ export const watchWorkspaceFiles = async (
   watch?: WatchDirectory,
   startupGap = process.platform === "darwin",
 ) => {
+  try {
+    // Ignore decorations depend on the index and excludes, including linked-worktree metadata.
+    return await watchWorkspaceDiffFiles(root, changed, watch, startupGap);
+  } catch {
+    // Plain folders and machines without Git still observe working files.
+  }
   let closed = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let recovery: ReturnType<typeof setInterval> | undefined;

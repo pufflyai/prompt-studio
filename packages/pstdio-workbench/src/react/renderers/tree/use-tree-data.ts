@@ -156,6 +156,7 @@ export const useTreeData = (
       queryKey: JSON.stringify([queryKey, refreshKey]),
       queryEvents: getWorkbenchRenderers(workbench).getTreeRenderer(treeViewId)?.queryEvents,
     },
+    queryKey,
     tree,
     read.value,
     read.loading,

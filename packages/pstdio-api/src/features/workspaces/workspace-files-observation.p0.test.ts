@@ -3,7 +3,42 @@ import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { WatchDirectory } from "pstdio-extensions";
+import { git } from "pstdio-wt";
 import { watchWorkspaceFiles } from "./workspace-files-observation";
+
+test("Git ignore decorations refresh on index and exclude changes without watching object storage", async () => {
+  const root = await mkdtemp(join(tmpdir(), "pstdio-files-git-watch-"));
+  await git(root, ["init"]);
+  const listeners = new Map<string, Parameters<WatchDirectory>[1]>();
+  let hint = Promise.withResolvers<void>();
+  const closed = new Set<string>();
+  const observation = await watchWorkspaceFiles(
+    root,
+    () => hint.resolve(),
+    (path, listener) => {
+      listeners.set(path, listener);
+      return {
+        close: () => {
+          closed.add(path);
+        },
+      };
+    },
+    false,
+  );
+  try {
+    expect(listeners.has(join(root, ".git"))).toBe(true);
+    expect(listeners.has(join(root, ".git/objects"))).toBe(false);
+    listeners.get(join(root, ".git"))!("rename", "index");
+    await hint.promise;
+    hint = Promise.withResolvers<void>();
+    listeners.get(join(root, ".git/info"))!("change", "exclude");
+    await hint.promise;
+  } finally {
+    observation.close();
+    expect(closed.size).toBe(listeners.size);
+    await rm(root, { recursive: true, force: true });
+  }
+});
 
 test.each([
   false,

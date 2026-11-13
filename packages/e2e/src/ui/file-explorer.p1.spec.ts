@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
@@ -70,6 +70,65 @@ test("file explorer updates externally and creates and confirms deletion over it
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect.poll(() => existsSync(join(root, "new-file.md"))).toBe(false);
     await expect(row).toHaveCount(0);
+  } finally {
+    await request.delete(`/v1/projects/${project.id}`);
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// Critical: refreshing selection must not remove expanded rows and clamp the explorer's scroll position.
+test("opening a deeply nested file preserves the expanded tree and scroll position", async ({ page, request }) => {
+  const root = mkdtempSync(join(tmpdir(), "pstdio-deep-file-"));
+  const path = "src/one/two/three/target.md";
+  mkdirSync(join(root, "src/one/two/three"), { recursive: true });
+  mkdirSync(join(root, "before"));
+  for (let index = 0; index < 40; index++) writeFileSync(join(root, `before/file-${index}.txt`), "Sibling\n");
+  writeFileSync(join(root, path), "# Deep file\n");
+  const response = await request.post("/v1/projects", { data: folderProjectInput({ name: "Deep explorer" }, root) });
+  expect(response.ok()).toBe(true);
+  const project = await response.json();
+  try {
+    await prepareDashboard(page, project.id);
+    await page.goto(`/projects/${project.id}`);
+    await page.getByRole("option", { name: "Files", exact: true }).click();
+    const tree = page.getByRole("region", { name: "Files", exact: true });
+    await tree.locator('[data-tree-list-node-id="before"]').click();
+    const viewport = tree.locator('[data-scope="scroll-area"][data-part="viewport"]');
+    await expect.poll(() => viewport.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
+    await viewport.evaluate((element) => element.scrollTo(0, element.scrollHeight));
+    for (const folder of ["src", "src/one", "src/one/two", "src/one/two/three"])
+      await tree.locator(`[data-tree-list-node-id="${folder}"]`).click();
+    const target = tree.locator(`[data-tree-list-node-id="${path}"]`);
+    await target.scrollIntoViewIfNeeded();
+    const before = (await target.boundingBox())!.y;
+    const scrollTop = await viewport.evaluate((element) => element.scrollTop);
+    expect(scrollTop).toBeGreaterThan(0);
+    await tree.evaluate((element, documentPath) => {
+      const positions: (number | null)[] = [];
+      const sample = () => {
+        const row = element.querySelector(`[data-tree-list-node-id="${documentPath}"]`);
+        positions.push(row?.getBoundingClientRect().y ?? null);
+      };
+      sample();
+      const observer = new MutationObserver(sample);
+      observer.observe(element, { childList: true, subtree: true, attributes: true });
+      Object.assign(window, { explorerPositions: positions, stopExplorerObservation: () => observer.disconnect() });
+    }, path);
+    await target.click();
+    await expectWorkspaceDocument(page, path);
+    await expect(tree).toHaveAttribute("aria-busy", "false");
+    const positions = await page.evaluate(() => {
+      const observation = window as typeof window & {
+        explorerPositions: (number | null)[];
+        stopExplorerObservation(): void;
+      };
+      observation.stopExplorerObservation();
+      return observation.explorerPositions;
+    });
+    expect(positions.length).toBeGreaterThan(0);
+    expect(positions.every((position) => position !== null && Math.abs(position - before) < 2)).toBe(true);
+    expect((await target.boundingBox())!.y).toBeCloseTo(before, 0);
+    expect(await viewport.evaluate((element) => element.scrollTop)).toBeCloseTo(scrollTop, 0);
   } finally {
     await request.delete(`/v1/projects/${project.id}`);
     rmSync(root, { recursive: true, force: true });

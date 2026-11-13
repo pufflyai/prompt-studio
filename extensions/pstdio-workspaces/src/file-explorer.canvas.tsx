@@ -116,16 +116,16 @@ export const GitIgnoredEntries = () => {
             { id: "readme", label: "README.md", icon: <File />, isNavigable: true, rowVariant: "file" },
             {
               id: "cache",
-              label: <Text color="fg.subtle">.cache</Text>,
+              label: ".cache",
               icon: <Folder />,
-              iconColor: "fg.subtle",
+              tone: "muted",
               rowVariant: "file",
               children: [
                 {
                   id: "cache/data",
-                  label: <Text color="fg.subtle">data.json</Text>,
+                  label: "data.json",
                   icon: <File />,
-                  iconColor: "fg.subtle",
+                  tone: "muted",
                   isNavigable: true,
                   rowVariant: "file",
                 },
@@ -133,9 +133,9 @@ export const GitIgnoredEntries = () => {
             },
             {
               id: "log",
-              label: <Text color="fg.subtle">debug.log</Text>,
+              label: "debug.log",
               icon: <File />,
-              iconColor: "fg.subtle",
+              tone: "muted",
               isNavigable: true,
               rowVariant: "file",
             },

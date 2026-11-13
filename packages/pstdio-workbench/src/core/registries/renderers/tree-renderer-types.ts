@@ -81,6 +81,8 @@ export interface TreeNode {
   iconElement?: unknown;
   fileName?: string;
   iconColor?: string;
+  /** Subdued foreground without disabling row actions or navigation. */
+  tone?: "default" | "muted";
   badge?: { label: string; color?: string };
   iconTooltip?: string;
   tooltip?: string;

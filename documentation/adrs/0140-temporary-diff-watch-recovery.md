@@ -17,7 +17,7 @@ macOS FSEvents can drop writes immediately after `fs.watch` returns, and its pub
 
 ## File explorer observations
 
-The same operating-system limits apply to a presented workspace file explorer, including non-Git project folders. Its host-owned observation uses the existing shared client stream and at most 2,000 directory handles, excluding `.git`. It coalesces change hints, owns the same native-startup reconciliation and gap-only 30-second recovery hint, and cancels all handles and timers when the last observer leaves. These hints invalidate tree reads; they do not read files or replace editor content.
+The same operating-system limits apply to a presented workspace file explorer, including non-Git project folders. Its host-owned observation uses the existing shared client stream and at most 2,000 directory handles. Git repositories reuse the working-directory and Git-metadata observations above so index and exclude changes refresh ignore decorations; plain folders exclude `.git`. It coalesces change hints, owns the same native-startup reconciliation and gap-only 30-second recovery hint, and cancels all handles and timers when the last observer leaves. These hints invalidate tree reads; they do not read files or replace editor content.
 
 ## Owner and removal
 

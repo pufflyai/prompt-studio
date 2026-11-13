@@ -189,6 +189,7 @@ const toTreeListNode = (
     description: node.description,
     icon: resolveTreeNodeIcon(node),
     iconColor: node.iconColor,
+    tone: node.tone,
     tooltip: node.tooltip,
     disabled: node.disabled,
     rowVariant: node.rowVariant,

@@ -165,6 +165,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       label: text(node.label),
       icon: node.icon,
       iconColor: node.iconColor,
+      tone: node.tone,
       fileName: node.fileName,
       showContextMenuTrigger: node.showContextMenuTrigger,
       badge: node.badge,
