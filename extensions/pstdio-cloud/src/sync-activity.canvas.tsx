@@ -3,6 +3,7 @@ import { createWebviewClient, type ProjectSyncStatus } from "@pstdio/sdk/extensi
 import { useState } from "react";
 import { Button } from "./button";
 import { CloudContext } from "./cloud-context";
+import type { cloudCommands } from "./project-state";
 import { SyncActivity } from "./sync-activity";
 
 export default { title: "Cloud/Sync activity", description: "Synthetic sources; retry never changes a project." };
@@ -41,7 +42,7 @@ export const DownloadDetails = () => {
       },
     ],
   };
-  const client = createWebviewClient<Record<never, never>>({
+  const client = createWebviewClient<typeof cloudCommands>({
     extensionId: "pstdio.pstdio-cloud",
     call: async <T,>() => {
       setMode("Downloading");
