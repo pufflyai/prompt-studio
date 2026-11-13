@@ -20,17 +20,17 @@ Open **Artifacts** and click the **Project brief** or **System diagram** button 
 
 ## Publish a page
 
-Agents publish pages with the `pst pstdio-artifacts` commands. Artifacts gives agents a `publish-artifact` skill that explains the steps, so you can simply ask an agent to publish a page.
+Agents publish pages with the `pst pstdio.pstdio-artifacts` commands. Artifacts gives agents a `publish-artifact` skill that explains the steps, so you can simply ask an agent to publish a page.
 
 ```sh
-pst pstdio.artifacts publish --file_path ./dist/index.html --favicon '📦' --label 'First draft' --json
-pst pstdio.artifacts publish --file_path ./dist/index.html --url '<returned url>' --label 'Updated' --json
-pst pstdio.artifacts list --json
-pst pstdio.artifacts read --url '<returned url>' --json
-pst pstdio.artifacts revisions --url '<returned url>' --json
-pst pstdio.artifacts open --url '<returned url>' --json
-pst pstdio.artifacts rename --url '<returned url>' --name 'New name' --json
-pst pstdio.artifacts delete --url '<returned url>' --json
+pst pstdio.pstdio-artifacts publish --file_path ./dist/index.html --favicon '📦' --label 'First draft' --json
+pst pstdio.pstdio-artifacts publish --file_path ./dist/index.html --url '<returned url>' --label 'Updated' --json
+pst pstdio.pstdio-artifacts list --json
+pst pstdio.pstdio-artifacts read --url '<returned url>' --json
+pst pstdio.pstdio-artifacts revisions --url '<returned url>' --json
+pst pstdio.pstdio-artifacts open --url '<returned url>' --json
+pst pstdio.pstdio-artifacts rename --url '<returned url>' --name 'New name' --json
+pst pstdio.pstdio-artifacts delete --url '<returned url>' --json
 ```
 
 `publish` takes the HTML file in `--file_path`, an optional `--favicon` emoji, and an optional `--label` for the version. Leave out `--url` to create a new artifact. Pass the `url` that an earlier publish returned to add a new version to that artifact. The option names match Anthropic's artifact publishing tool.
