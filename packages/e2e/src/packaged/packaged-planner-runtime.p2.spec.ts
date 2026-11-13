@@ -348,8 +348,8 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
     rmSync(join(timelineCache(host), ".."), { recursive: true });
     expect(await moduleStatus(host, valid.id, "timeline")).toEqual({ status: 200, body: "" });
 
-    // Reload repairs a view whose import failed in the open browser session. Reload, not the file
-    // watcher, decides when each version builds.
+    // A failed candidate reports its build error while the accepted view remains usable.
+    // Reload, not the file watcher, decides when the repaired version is adopted.
     const entry = join(home, "extensions", "pstdio-planner", "src", "timeline", "view", "entry.tsx");
     const original = readFileSync(entry, "utf8");
     writeFileSync(entry, `${original}\nexport const broken = ;\n`);
@@ -358,11 +358,11 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
       lastError: { code: "extension_webview_build_failed" },
     });
     const webview = await plannerWebview(host, valid.id, "timeline");
-    expect(await (await fetch(`${host.baseUrl}${webview!.moduleUrl}`)).text()).toContain(
-      "Extension webview build failed",
-    );
+    const workingModule = await fetch(`${host.baseUrl}${webview!.moduleUrl}`);
+    expect(workingModule.status).toBe(200);
+    expect(await workingModule.text()).not.toContain("Extension webview build failed");
     timeline = await openTimeline(page, host, valid.id);
-    await expect(page.getByText(/Extension view failed to load/)).toBeVisible({ timeout: 30_000 });
+    await expect(timeline.getByText("Seeded ticket 0", { exact: true })).toBeVisible({ timeout: 30_000 });
     writeFileSync(entry, original);
     expect(await reloadPlanner(host, valid.id)).toMatchObject({ status: "loaded", lastError: null });
     await expect(timeline.getByText("Seeded ticket 0", { exact: true })).toBeVisible({ timeout: 30_000 });
