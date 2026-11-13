@@ -28,7 +28,8 @@ test("builds installed source when descriptive manifest assets still name a stag
         ],
       },
     });
-    await expect(fixture.manager.ensure(fixture.id)).resolves.toBeUndefined();
+    const ensured = await fixture.manager.ensure(fixture.id);
+    expect(ensured).toBeUndefined();
     expect(fixture.module()).toContain("original bundle");
     expect(await fixture.error()).toBeNull();
   } finally {
