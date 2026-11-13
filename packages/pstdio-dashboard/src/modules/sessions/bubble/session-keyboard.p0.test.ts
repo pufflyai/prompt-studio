@@ -24,6 +24,7 @@ test("new session in an open tab targets the chosen presentation without adding 
   const before = core.layout
     .listPanelInstances("side")
     .find((tab) => tab.viewId === contributionRefId(sessionBrowser.views.conversation))!;
+  core.focus.setActiveRegion("side");
   core.keyboard.open();
   await core.keyboard.press("a");
   await core.keyboard.press("n");

@@ -43,6 +43,19 @@ const defaultModelByAgent: Record<string, string> = {
   opencode: "openai/gpt-5.5",
   codex: "o3",
 };
+// A long provider list: the selected model is not first in the harness response.
+const longModelList: WorkspacePanelMenuOption[] = [
+  { label: "anthropic/claude-sonnet-4", value: "anthropic/claude-sonnet-4" },
+  { label: "anthropic/claude-opus-4", value: "anthropic/claude-opus-4" },
+  { label: "openai/gpt-5.5", value: "openai/gpt-5.5" },
+  { label: "openai/gpt-5.5-mini", value: "openai/gpt-5.5-mini" },
+  { label: "google/gemini-2.5-pro", value: "google/gemini-2.5-pro" },
+  { label: "google/gemini-2.5-flash", value: "google/gemini-2.5-flash" },
+  { label: "xai/grok-4", value: "xai/grok-4" },
+  { label: "deepseek/deepseek-v3.2", value: "deepseek/deepseek-v3.2" },
+  { label: "meta/llama-4-maverick", value: "meta/llama-4-maverick" },
+  { label: "mistral/mistral-large", value: "mistral/mistral-large" },
+];
 export const Default: Story = {
   id: "shared-workspaceagentmenu--default",
   render: () => {
@@ -74,6 +87,22 @@ export const SingleAgent: Story = {
         selectedAgent="claude-code"
         onSelectAgent={() => undefined}
         modelOptions={modelsByAgent["claude-code"]}
+        selectedModel={selectedModel}
+        onSelectModel={setSelectedModel}
+      />
+    );
+  },
+};
+export const LongModelList: Story = {
+  id: "shared-workspaceagentmenu--long-model-list",
+  render: () => {
+    const [selectedModel, setSelectedModel] = useState("google/gemini-2.5-flash");
+    return (
+      <WorkspaceAgentMenu
+        agentOptions={[agentOptions[1]]}
+        selectedAgent="opencode"
+        onSelectAgent={() => undefined}
+        modelOptions={longModelList}
         selectedModel={selectedModel}
         onSelectModel={setSelectedModel}
       />

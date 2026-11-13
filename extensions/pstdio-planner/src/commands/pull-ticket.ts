@@ -1,6 +1,12 @@
 import { type ArtifactMount, defineCommand, type ExtensionStorageApi, params } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
-import { requireTicketDraftFiles, ticketFilesDir, ticketMarkdownPath, ticketToMarkdown } from "../data/draft-storage";
+import {
+  ensureTicketDraftsIgnored,
+  requireTicketDraftFiles,
+  ticketFilesDir,
+  ticketMarkdownPath,
+  ticketToMarkdown,
+} from "../data/draft-storage";
 import { findTicket } from "../data/resolve";
 import { refreshTicketCheckout } from "../data/ticket-checkout";
 import { readTicketFileContent } from "../data/ticket-file-content";
@@ -15,6 +21,7 @@ const pullTicket = async (input: {
   projectFiles: ArtifactMount;
   ticket: Ticket;
   force: boolean;
+  extensionId: string;
 }) => {
   const { projectFiles, ticket } = input;
   await refreshTicketCheckout(projectFiles, ticket);
@@ -24,6 +31,7 @@ const pullTicket = async (input: {
   if (!input.force && (await projectFiles.exists(markdownPath))) return { shorthand: ticket.shorthand, skipped: true };
 
   for (const file of ticket.files ?? []) validateTicketFileName(file.name);
+  await ensureTicketDraftsIgnored(projectFiles, input.extensionId);
   await projectFiles.writeText(markdownPath, await ticketToMarkdown(input, ticket));
   for (const file of ticket.files ?? []) {
     await projectFiles.writeText(
@@ -36,7 +44,7 @@ const pullTicket = async (input: {
   return { shorthand: ticket.shorthand, skipped: false, files: (ticket.files ?? []).length };
 };
 
-// `pst tickets pull`: materialize a ticket (or every non-archived ticket) from
+// `pst pstdio.pstdio-planner pull-ticket`: materialize a ticket (or every non-archived ticket) from
 // extension storage into the local `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/<shorthand>/` tree.
 export const pullTicketCommand = defineCommand({
   id: "pull-ticket",
@@ -44,7 +52,10 @@ export const pullTicketCommand = defineCommand({
   title: "Pull ticket",
   cli: {
     globalAliases: [["tickets", "pull"]],
-    examples: ["pstdio tickets pull --id PS-1", "pstdio tickets pull --force"],
+    examples: [
+      "pstdio pstdio.pstdio-planner pull-ticket --id PS-1",
+      "pstdio pstdio.pstdio-planner pull-ticket --force",
+    ],
   },
   params: {
     id: params.text(),
@@ -58,7 +69,14 @@ export const pullTicketCommand = defineCommand({
       const ticket = await findTicket(ctx, commandParams.id);
       if (!ticket) throw new Error(`Unknown ticket "${commandParams.id}"`);
       return {
-        ...(await pullTicket({ storage: ctx.storage, resources: ctx.resources, projectFiles, ticket, force })),
+        ...(await pullTicket({
+          storage: ctx.storage,
+          resources: ctx.resources,
+          projectFiles,
+          ticket,
+          force,
+          extensionId: ctx.extensionId,
+        })),
         path: resolvePath(ticketMarkdownPath(ticket.shorthand)),
       };
     }
@@ -66,7 +84,16 @@ export const pullTicketCommand = defineCommand({
     const tickets = (await ticketsCollection(ctx).list()).filter((ticket) => !ticket.archived);
     const results = [];
     for (const ticket of tickets) {
-      results.push(await pullTicket({ storage: ctx.storage, resources: ctx.resources, projectFiles, ticket, force }));
+      results.push(
+        await pullTicket({
+          storage: ctx.storage,
+          resources: ctx.resources,
+          projectFiles,
+          ticket,
+          force,
+          extensionId: ctx.extensionId,
+        }),
+      );
     }
     return { pulled: results.filter((result) => !result.skipped).length, total: tickets.length };
   },

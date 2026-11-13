@@ -175,38 +175,6 @@ describe("draft workflow", () => {
     expect(saved.blockedReason).toBeNull();
   });
 
-  test("pull materializes a stored ticket and its files into the working tree", async () => {
-    const { storage, projectFiles } = await setup();
-    const { shorthand } = await writeTicketCommand.run(
-      ...makeCommandArgs({ storage, params: { title: "Seeded" }, overrides: { projectFiles } }),
-    );
-    const [stored] = await ticketsCollection(storage).list();
-    await changeTicketFiles(ticketContext(storage), stored.id, async (ticket) => ({
-      ...ticket,
-      files: [
-        {
-          id: "f1",
-          name: "spec.md",
-          blobId: await storeTicketFileContent(storage, stored.id, "spec.md", "spec body"),
-          createdAt: "x",
-          updatedAt: "x",
-        },
-      ],
-    }));
-
-    // Clear the working tree so pull has to recreate everything.
-    projectFiles.files.clear();
-    const result = (await pullTicketCommand.run(
-      ...makeCommandArgs({ storage, params: { id: shorthand }, overrides: { projectFiles } }),
-    )) as { skipped: boolean };
-
-    expect(result.skipped).toBe(false);
-    const pulled = await projectFiles.readText(ticketMarkdownPath(shorthand))!;
-    expect(pulled).toBeDefined();
-    expect(stripFrontmatter(pulled)).toContain(`# ${stored.title}`);
-    expect(await projectFiles.readText(`${ticketFilesDir(shorthand)}/spec.md`)).toBe("spec body");
-  });
-
   test("pull without force does not clobber local edits", async () => {
     const { storage, projectFiles } = await setup();
     const { shorthand } = await writeTicketCommand.run(
@@ -253,4 +221,44 @@ describe("draft workflow", () => {
       },
     ]);
   });
+});
+
+test.each([
+  true,
+  false,
+])("pull materializes a stored ticket and its files into the working tree (single: %s)", async (single) => {
+  const { storage, projectFiles } = await setup();
+  const { shorthand } = await writeTicketCommand.run(
+    ...makeCommandArgs({ storage, params: { title: "Seeded" }, overrides: { projectFiles } }),
+  );
+  const [stored] = await ticketsCollection(storage).list();
+  await changeTicketFiles(ticketContext(storage), stored.id, async (ticket) => ({
+    ...ticket,
+    files: [
+      {
+        id: "f1",
+        name: "spec.md",
+        blobId: await storeTicketFileContent(storage, stored.id, "spec.md", "spec body"),
+        createdAt: "x",
+        updatedAt: "x",
+      },
+    ],
+  }));
+
+  // Clear the working tree so pull has to recreate everything.
+  projectFiles.files.clear();
+  const result = (await pullTicketCommand.run(
+    ...makeCommandArgs({
+      storage,
+      params: single ? { id: shorthand } : {},
+      overrides: { projectFiles, extensionId: "pstdio.planner" },
+    }),
+  )) as { skipped: boolean };
+
+  if (single) expect(result.skipped).toBe(false);
+  expect(await projectFiles.readText(".pstdio/.gitignore")).toContain("/extension-storage/pstdio.planner/");
+  const pulled = await projectFiles.readText(ticketMarkdownPath(shorthand))!;
+  expect(pulled).toBeDefined();
+  expect(stripFrontmatter(pulled)).toContain(`# ${stored.title}`);
+  expect(await projectFiles.readText(`${ticketFilesDir(shorthand)}/spec.md`)).toBe("spec body");
 });

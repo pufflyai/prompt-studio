@@ -31,7 +31,10 @@ test.each(["local", "remote"])("ticket-linked %s provisioning without file mount
   else await expect(result).rejects.toThrow("Workspace file mounts are unavailable");
 });
 
-test("workspace provisioning ignores Planner ticket drafts before copying one", async () => {
+test.each([
+  "pstdio.pstdio-planner",
+  "pstdio.planner",
+])("workspace provisioning ignores %s ticket drafts before copying one", async (extensionId) => {
   const repo = memoryMount({ ".pstdio/extension-storage/pstdio.pstdio-planner/tickets/PS-1/ticket.md": "# Ticket" });
   const workspace = memoryMount({ ".pstdio/.gitignore": "config.json\n" });
   const ticket = { shorthand: "PS-1", createdAt: "2026-10-15T00:00:00.000Z", content: "# Ticket" } as Ticket;
@@ -41,9 +44,10 @@ test("workspace provisioning ignores Planner ticket drafts before copying one", 
     workspaceFiles: workspace.mount as WorkspaceFilesMount,
     ...ticketContext(createMemoryStorage()),
     ticket,
+    extensionId,
   });
 
-  expect(workspace.files.get(".pstdio/.gitignore")).toBe("config.json\n/extension-storage/pstdio.pstdio-planner/\n");
+  expect(workspace.files.get(".pstdio/.gitignore")).toBe(`config.json\n/extension-storage/${extensionId}/\n`);
   expect(workspace.files.get(".pstdio/extension-storage/pstdio.pstdio-planner/tickets/PS-1/ticket.md")).toBe(
     "# Ticket",
   );

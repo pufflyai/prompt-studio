@@ -65,6 +65,7 @@ export const readPlanCommand = defineCommand({
         })),
       ),
       createTicketParentLookup(tickets),
+      ctx.extensionId,
     );
     const ticketRows = active.map((ticket) => {
       const row = toRow(ticket);

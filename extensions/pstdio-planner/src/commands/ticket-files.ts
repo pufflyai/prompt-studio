@@ -19,10 +19,15 @@ import {
   ticketPageTarget,
   ticketRequestsTarget,
 } from "../data/ticket-page-target";
-import { linkedResourceParentMetadata, ticketResourceReference } from "../data/ticket-resource-hierarchy";
+import {
+  linkedResourceParentMetadata,
+  plannerOwnerFor,
+  ticketResourceReference,
+} from "../data/ticket-resource-hierarchy";
 import { plannerTicketsChanged } from "../events";
 import { isImageAttachment } from "../utils/is-image-attachment";
 import { readTicketTreeData } from "./ticket-files-tree-data";
+import { mergeTicketLinkSections, ticketRelationshipSections } from "./ticket-link-sections";
 import { buildSessionsSection } from "./ticket-sessions-tree";
 import { buildSubTicketsSection } from "./ticket-sub-tickets-tree";
 import { buildWorkspacesSection } from "./ticket-workspaces-tree";
@@ -178,7 +183,9 @@ export const deleteTicketFileCommand = defineCommand({
     const tickets = await ticketsCollection(ctx).list();
     const ticket = tickets.find((entry) => entry.id === ticketId);
     if (!ticket) return { ticketId, fileId };
-    ctx.navigation.open(ticketPageTarget(ticketResourceReference(ticket, createTicketParentLookup(tickets))));
+    ctx.navigation.open(
+      ticketPageTarget(ticketResourceReference(ticket, createTicketParentLookup(tickets), plannerOwnerFor(ctx))),
+    );
     return { ticketId, fileId };
   },
 });
@@ -205,12 +212,13 @@ export const listTicketFilesTree = async (
     statusesById,
     sessions,
     workspaceSessions,
+    resourceLinks,
   } = await readTicketTreeData(ctx, ticket);
 
   const parentLookup = createTicketParentLookup(tickets);
-  const ticketMeta = linkedResourceParentMetadata(ticket, parentLookup);
+  const ticketMeta = linkedResourceParentMetadata(ticket, parentLookup, plannerOwnerFor(ctx));
 
-  const ticketResource = ticketResourceReference(ticket, parentLookup);
+  const ticketResource = ticketResourceReference(ticket, parentLookup, plannerOwnerFor(ctx));
 
   const summary = reviewRequestSummary(reviewRequests);
   const reviewRequestsNode: TreeNode = {
@@ -303,13 +311,19 @@ export const listTicketFilesTree = async (
     workspaceSessions,
   });
 
-  return [
-    ticketSection,
-    filesSection,
-    ...(maybeSubTicketsSection ? [maybeSubTicketsSection] : []),
-    linkedWorkspacesSection,
-    sessionsSection,
-  ];
+  return mergeTicketLinkSections(
+    [
+      ticketSection,
+      ...ticketRelationshipSections(ticket, tickets, plannerOwnerFor(ctx)),
+      filesSection,
+      ...(maybeSubTicketsSection ? [maybeSubTicketsSection] : []),
+      linkedWorkspacesSection,
+      sessionsSection,
+    ],
+    resourceLinks,
+    ctx.projectId,
+    plannerOwnerFor(ctx),
+  );
 };
 
 export const listTicketFilesTreeCommand = defineCommand({

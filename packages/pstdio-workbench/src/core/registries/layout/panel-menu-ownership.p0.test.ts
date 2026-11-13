@@ -66,3 +66,22 @@ describe("panel menu ownership", () => {
     expect(menus[0]?.ownerResourceKey).toBe(resourceKey({ type: "ticket", id: "PS-1" }));
   });
 });
+
+test("a resource menu follows the active owner tab instead of the first tab", () => {
+  const layout = createLayoutModel();
+  layout.registerPanel({
+    id: "sessions",
+    title: "Sessions",
+    region: "side",
+    rendererId: "sessions",
+    singleton: false,
+    panelMenus: [{ id: "links", title: "Links", side: "right", rendererId: "links" }],
+  });
+  const first = layout.openWidget("sessions", { resource: { type: "session", id: "first" }, pinned: true });
+  layout.openWidget("sessions", { resource: { type: "session", id: "second" }, pinned: true });
+  const menu = () => layout.getLayout().regions["side-right-menu"].widgets[0];
+  expect(layout.getLayout().regions.side.widgets).toHaveLength(2);
+  expect(menu()?.resource?.id).toBe("second");
+  layout.activateWidget(first.widgetId);
+  expect(menu()?.resource?.id).toBe("first");
+});

@@ -5,7 +5,7 @@ import { requireTickets, resolveStatusId, resolveTagOptionIds } from "../data/re
 import { ticketTagIds } from "../data/ticket-tags";
 import { sortedByTicketOrder } from "../utils/sort";
 
-// Backs `pst tickets list`. Status/tag/parent filters accept display names
+// Backs `pst pstdio.pstdio-planner list-tickets`. Status/tag/parent filters accept display names
 // (Decision 3); the result is curated display rows so the router renders a tidy
 // table. `--parent` doubles as the "sub-tickets of X" query.
 export const listTicketsCommand = defineCommand({
@@ -13,7 +13,7 @@ export const listTicketsCommand = defineCommand({
   title: "List tickets",
   cli: {
     globalAliases: [["tickets", "list"]],
-    examples: ["pstdio tickets list --status 'In Progress' --tags High"],
+    examples: ["pstdio pstdio.pstdio-planner list-tickets --status 'In Progress' --tags High"],
   },
   params: {
     status: params.text(),

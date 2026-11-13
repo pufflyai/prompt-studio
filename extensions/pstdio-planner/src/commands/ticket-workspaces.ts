@@ -15,12 +15,15 @@ const workspacesForTickets = async (
   return { tickets, workspaces };
 };
 
-// `pst tickets workspaces`: list the workspaces linked to a ticket with their live
+// `pst pstdio.pstdio-planner ticket-workspaces`: list the workspaces linked to a ticket with their live
 // activity, derived from anchored sessions.
 export const ticketWorkspacesCommand = defineCommand({
   id: "ticket-workspaces",
   title: "List ticket workspaces",
-  cli: { globalAliases: [["tickets", "workspaces"]], examples: ["pstdio tickets workspaces --id PS-1"] },
+  cli: {
+    globalAliases: [["tickets", "workspaces"]],
+    examples: ["pstdio pstdio.pstdio-planner ticket-workspaces --id PS-1"],
+  },
   params: { id: params.text({ required: true }) },
   async run(ctx, commandParams) {
     const { workspaces } = await workspacesForTickets(ctx, commandParams.id);
@@ -42,11 +45,14 @@ export const ticketWorkspacesCommand = defineCommand({
 const isGitWorktree = (workspace: ExtensionWorkspace) =>
   workspace.execution_kind === "local" && workspace.provider_id === "pstdio.worktree" && Boolean(workspace.root_path);
 
-// `pst tickets worktrees list`: list Git worktrees linked to a ticket.
+// `pst pstdio.pstdio-planner ticket-worktrees-list`: list Git worktrees linked to a ticket.
 export const ticketWorktreesListCommand = defineCommand({
   id: "ticket-worktrees-list",
   title: "List ticket worktrees",
-  cli: { globalAliases: [["tickets", "worktrees", "list"]], examples: ["pstdio tickets worktrees list --id PS-1"] },
+  cli: {
+    globalAliases: [["tickets", "worktrees", "list"]],
+    examples: ["pstdio pstdio.pstdio-planner ticket-worktrees-list --id PS-1"],
+  },
   params: { id: params.text({ required: true }) },
   async run(ctx, commandParams) {
     const { workspaces } = await workspacesForTickets(ctx, commandParams.id);
@@ -58,7 +64,7 @@ export const ticketWorktreesListCommand = defineCommand({
   },
 });
 
-// `pst tickets worktrees remove-all`: remove every worktree (and its branch) linked
+// `pst pstdio.pstdio-planner ticket-worktrees-remove-all`: remove every worktree (and its branch) linked
 // to a ticket through the workspace lifecycle API.
 export const ticketWorktreesRemoveAllCommand = defineCommand({
   id: "ticket-worktrees-remove-all",
@@ -66,7 +72,7 @@ export const ticketWorktreesRemoveAllCommand = defineCommand({
   title: "Remove ticket worktrees",
   cli: {
     globalAliases: [["tickets", "worktrees", "remove-all"]],
-    examples: ["pstdio tickets worktrees remove-all --id PS-1"],
+    examples: ["pstdio pstdio.pstdio-planner ticket-worktrees-remove-all --id PS-1"],
   },
   params: { id: params.text({ required: true }) },
   async run(ctx, commandParams) {

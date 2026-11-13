@@ -5,7 +5,7 @@ import { readMigratedTickets } from "../data/read-migrated-tickets";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "../data/workflow-statuses";
 
 export const queryTickets = async (
-  ctx: Pick<ExtensionContextBase, "files" | "projectId" | "storage" | "settings" | "resources">,
+  ctx: Pick<ExtensionContextBase, "files" | "projectId" | "storage" | "settings" | "resources" | "extensionId">,
   input: { filter?: ViewFilterGroup },
 ) => {
   const tickets = await readMigratedTickets(ctx);
@@ -15,6 +15,7 @@ export const queryTickets = async (
     storage: ctx.storage,
     resources: ctx.resources,
     projectId: ctx.projectId,
+    extensionId: ctx.extensionId === "pstdio.planner" ? ctx.extensionId : "pstdio.pstdio-planner",
     workflow: usableWorkflowStatuses(await readWorkflowStatuses(ctx)),
     filter: input.filter,
   });

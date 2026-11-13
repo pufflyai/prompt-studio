@@ -13,7 +13,10 @@ const withIdentity = (
 export const readReportCommand = defineCommand({
   id: "reports.read",
   title: "Read report",
-  cli: { globalAliases: [["reports", "read"]], examples: ["pstdio reports read --id <report-id>"] },
+  cli: {
+    globalAliases: [["reports", "read"]],
+    examples: ["pstdio pstdio.pstdio-reports reports read --id <report-id>"],
+  },
   params: {
     id: params.text({ label: l10n("reports.read.id.label", "Report ID or number"), required: true }),
   },

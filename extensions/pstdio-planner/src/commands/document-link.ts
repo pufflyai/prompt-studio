@@ -8,7 +8,10 @@ export const documentLinkCommand = defineCommand({
   title: "Get ticket document link",
   cli: {
     globalAliases: [["tickets", "document-link"]],
-    examples: ["pstdio tickets document-link --id PS-1", "pstdio tickets document-link --id PS-1 --file research.md"],
+    examples: [
+      "pstdio pstdio.pstdio-planner document-link --id PS-1",
+      "pstdio pstdio.pstdio-planner document-link --id PS-1 --file research.md",
+    ],
   },
   params: {
     id: params.text({ label: "Ticket shorthand or UUID", resolvedFrom: "resource" }),
@@ -34,12 +37,19 @@ export const documentLinkCommand = defineCommand({
           shorthand: ticket.shorthand,
           href: serializePageUrl({
             projectId: ctx.projectId,
-            page: ticketDocumentPage,
+            page: {
+              ...ticketDocumentPage,
+              ref: {
+                ...ticketDocumentPage.ref,
+                extensionId:
+                  ctx.extensionId === "pstdio.planner" ? ctx.extensionId : ticketDocumentPage.ref.extensionId,
+              },
+            },
             resource: {
               type: "ticket",
               id: ticket.id,
               projectId: ctx.projectId,
-              extensionId: "pstdio.pstdio-planner",
+              extensionId: ctx.extensionId === "pstdio.planner" ? ctx.extensionId : ticketDocumentPage.ref.extensionId,
               ...(document ? { metadata: { documentId: document.id } } : {}),
             },
           }),

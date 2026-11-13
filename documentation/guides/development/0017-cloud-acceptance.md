@@ -42,152 +42,6 @@ its presence alone did not establish delivery or deployment. PS-776 PRs #1718 an
 Inspect current branches again before final acceptance. Leave other workspaces,
 tickets and managed attempts alone.
 
-## Shared-machine lease
-
-Broad builds, package installs and consumers, and full browser suites share
-`/tmp/pstdio-cloud-heavy-validation.lock`. Acquire it with atomic `mkdir`; record
-session ID, PID and purpose. Small focused tests may run independently. Never steal
-a live lease or infer abandonment from its age. If acquisition fails, inspect the
-owner and coordinate with that session. An unexplained or ownerless lease needs
-reconciliation before use.
-
-Use a wrapper with `try/finally`, for example save this as `heavy-command.ts` under
-the report's evidence directory. `CLOUD_SESSION_ID` must identify the owning session.
-
-```ts
-import { spawn } from "node:child_process";
-import {
-  mkdir,
-  open,
-  readFile,
-  readdir,
-  rmdir,
-  stat,
-  unlink,
-} from "node:fs/promises";
-import { join } from "node:path";
-import { constants } from "node:os";
-
-const lock = "/tmp/pstdio-cloud-heavy-validation.lock";
-const session = process.env.CLOUD_SESSION_ID;
-const command = process.argv.slice(2);
-if (!session || command.length === 0)
-  throw new Error("Provide session and command");
-await mkdir(lock); // Outside finally: failed acquisition never owns a predecessor's lease.
-const directory = await stat(lock);
-const path = join(lock, "owner.json");
-const owner = {
-  session,
-  pid: process.pid,
-  token: crypto.randomUUID(),
-  purpose: command,
-  acquiredAt: new Date().toISOString(),
-};
-let ownerFile: Awaited<ReturnType<typeof stat>> | undefined;
-let group: number | undefined;
-let interrupted: NodeJS.Signals | undefined;
-const signalGroup = (signal: NodeJS.Signals) => {
-  if (!group) return;
-  try {
-    process.kill(-group, signal);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error;
-  }
-};
-const interrupt = (signal: NodeJS.Signals) => {
-  const force = interrupted !== undefined;
-  interrupted ??= signal;
-  process.exitCode = 128 + constants.signals[interrupted];
-  console.log(JSON.stringify({ interrupt: signal, force }));
-  signalGroup(force ? "SIGKILL" : signal);
-};
-const onInt = () => interrupt("SIGINT");
-const onTerm = () => interrupt("SIGTERM");
-process.on("SIGINT", onInt);
-process.on("SIGTERM", onTerm);
-try {
-  const file = await open(path, "wx");
-  try {
-    ownerFile = await file.stat();
-    await file.writeFile(
-      JSON.stringify({ ...owner, inode: directory.ino, device: directory.dev }),
-    );
-  } finally {
-    await file.close();
-  }
-  if (interrupted) throw new Error(`Interrupted before launch: ${interrupted}`);
-  const child = spawn(command[0]!, command.slice(1), {
-    detached: true,
-    stdio: "inherit",
-  });
-  group = child.pid;
-  const result = await new Promise<{
-    code: number | null;
-    signal: NodeJS.Signals | null;
-  }>((resolve, reject) => {
-    child.on("error", reject);
-    child.on("close", (code, signal) => resolve({ code, signal }));
-  });
-  console.log(JSON.stringify({ childResult: result, interrupted }));
-  process.exitCode = interrupted
-    ? 128 + constants.signals[interrupted]
-    : (result.code ?? 128 + constants.signals[result.signal!]);
-} finally {
-  // Drain this command's process group before releasing the shared resource.
-  signalGroup("SIGTERM");
-  while (group) {
-    try {
-      process.kill(-group, 0);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ESRCH") {
-        group = undefined;
-        break;
-      }
-      throw error;
-    }
-    signalGroup("SIGKILL");
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-  process.off("SIGINT", onInt);
-  process.off("SIGTERM", onTerm);
-  const currentDirectory = await stat(lock);
-  if (
-    currentDirectory.ino !== directory.ino ||
-    currentDirectory.dev !== directory.dev
-  )
-    throw new Error("Lease directory changed; refusing removal");
-  if (ownerFile) {
-    const currentFile = await stat(path);
-    const current = JSON.parse(await readFile(path, "utf8"));
-    if (
-      currentFile.ino !== ownerFile.ino ||
-      currentFile.dev !== ownerFile.dev ||
-      current.pid !== owner.pid ||
-      current.token !== owner.token
-    )
-      throw new Error("Lease owner changed; refusing removal");
-    await unlink(path);
-  } else if ((await readdir(lock)).length) {
-    throw new Error(
-      "Unexpected file in acquisition directory; refusing removal",
-    );
-  }
-  await rmdir(lock);
-}
-```
-
-Run one heavy command per wrapper invocation. Do not launch a second wrapper while
-the first owns the lease. A forced kill can leave the lease and child processes
-behind: preserve their metadata and reconcile them with the owner. If a command
-ignores the first interrupt, send a second interrupt to this wrapper to force its
-owned group; killing the wrapper itself with SIGKILL skips finally. Do not remove
-an active directory to make another command start.
-
-This lease is not the separate acknowledged exclusive machine timing window
-required for PS-903 performance measurements. Follow the
-[storage-scale timing protocol](../../references/performance/0005-storage-scale-diagnostic.md#exclusive-machine-timing-window)
-for those measurements; a lease alone does not pause other sessions.
-
 ## Maintained coverage and remaining evidence
 
 Paths below are relative to the repository root. The new phase 1 scenario is
@@ -298,9 +152,9 @@ Do not drop either test or reclassify the original 403/timeouts as passes.
 ## Focused preparation and final candidate commands
 
 Run from the repository root, except where a subshell changes to the owning package.
-Use absolute paths for `EVIDENCE`, `E2E_PACKAGED_BINARY_PATH` and the wrapper. The
-commands below assume `EVIDENCE` is the report's returned `filesPath`, and
-`CLOUD_SESSION_ID` is already set. Preserve original output before correcting a run.
+Use absolute paths for `EVIDENCE` and `E2E_PACKAGED_BINARY_PATH`. The commands below
+assume `EVIDENCE` is the report's returned `filesPath`. Preserve original output
+before correcting a run.
 
 ```sh
 (cd packages/e2e && bun test src/packaged/fixtures/cloud-acceptance-extension.p0.test.ts src/packaged/packaged-sync-relay.fixture.p0.test.ts src/packaged/packaged-cloud-repair.fixture.p0.test.ts src/packaged/packaged-cloud-peer.fixture.p0.test.ts)
@@ -328,11 +182,11 @@ tests of an older `dist/pstdio`, and your own shell stays open:
 ```sh
 (
   set -eu
-  bun "$EVIDENCE/heavy-command.ts" bun run --cwd scripts build:host
+  bun run --cwd scripts build:host
   export E2E_PACKAGED_BINARY_PATH="$PWD/dist/pstdio"
-  bun "$EVIDENCE/heavy-command.ts" bun run --cwd packages/e2e test:packaged:browser -- src/packaged/packaged-cloud-phase-one.p2.spec.ts
-  bun "$EVIDENCE/heavy-command.ts" bun run --cwd packages/e2e test:packaged:cli -- src/packaged/packaged-document-sync-smoke.p1.test.ts src/packaged/packaged-two-device-sync-smoke.p2.test.ts src/packaged/packaged-cloud-extension-set-smoke.p2.test.ts src/packaged/packaged-account-smoke.p2.test.ts
-  bun "$EVIDENCE/heavy-command.ts" bun run --cwd packages/e2e test:packaged:browser -- src/packaged/packaged-public-text-sync.p2.spec.ts src/packaged/packaged-public-text-native-sync.p2.spec.ts
+  bun run --cwd packages/e2e test:packaged:browser -- src/packaged/packaged-cloud-phase-one.p2.spec.ts
+  bun run --cwd packages/e2e test:packaged:cli -- src/packaged/packaged-document-sync-smoke.p1.test.ts src/packaged/packaged-two-device-sync-smoke.p2.test.ts src/packaged/packaged-cloud-extension-set-smoke.p2.test.ts src/packaged/packaged-account-smoke.p2.test.ts
+  bun run --cwd packages/e2e test:packaged:browser -- src/packaged/packaged-public-text-sync.p2.spec.ts src/packaged/packaged-public-text-native-sync.p2.spec.ts
 )
 ```
 
@@ -386,11 +240,11 @@ caller limit; setup must follow the documented boundary.
 
 Use the maintained [scale procedure](../../references/performance/0005-storage-scale-diagnostic.md)
 and [production validation reference](../../references/performance/0006-production-validation.md).
-Build before measurement under the heavy lease. Arrange an acknowledged exclusive
-timing window before using the following example shard:
+Build before measurement on an isolated runner, following the scale procedure's
+measurement setup before using the following example shard:
 
 ```sh
-bun "$EVIDENCE/heavy-command.ts" bun run --cwd packages/e2e perf:storage-scale:build
+bun run --cwd packages/e2e perf:storage-scale:build
 bun packages/e2e/src/perf/storage-scale.diagnostic.ts --fixture rich --output "$EVIDENCE/scale-rich" --home /absolute/disposable-rich-home --seed --timing-owner /absolute/owner.json
 bun packages/e2e/src/perf/storage-scale.diagnostic.ts --fixture rich --output "$EVIDENCE/scale-rich-incoming-board" --home /absolute/disposable-rich-home --measure --profile native --operation board --background incoming --sync --timing-owner /absolute/owner.json
 ```
@@ -404,14 +258,13 @@ full acceptance claim. Do not start a new hourly CPU experiment for this prepara
 The separate [relay reference workload](0012-portable-cloud-deployment.md#reference-workload-measurement)
 uses disposable Compose PostgreSQL and RustFS with real production relay clients.
 It is the maintained path for retention, physical object reconciliation and bulk
-transfer, not a wire-peer substitute. It needs about 30 GiB of free disk. Under the
-heavy lease, when ready to collect that separate evidence:
+transfer, not a wire-peer substitute. It needs about 30 GiB of free disk. When ready to collect that separate evidence:
 
 ```sh
 (
   set -eu
-  bun "$EVIDENCE/heavy-command.ts" docker build -f infra/relay/Dockerfile --target runtime -t pstdio-relay:acceptance .
-  bun "$EVIDENCE/heavy-command.ts" bun packages/e2e/src/perf/relay-reference-workload/workload.diagnostic.ts "$EVIDENCE/relay-reference" pstdio-relay:acceptance
+  docker build -f infra/relay/Dockerfile --target runtime -t pstdio-relay:acceptance .
+  bun packages/e2e/src/perf/relay-reference-workload/workload.diagnostic.ts "$EVIDENCE/relay-reference" pstdio-relay:acceptance
 )
 ```
 

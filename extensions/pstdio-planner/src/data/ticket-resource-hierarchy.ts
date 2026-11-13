@@ -44,15 +44,22 @@ export interface TicketResourceReference extends JsonObject {
 export const ticketDisplayTitle = (ticket: TicketSummary) =>
   ticket.title ? `${ticket.shorthand} ${ticket.title}` : ticket.shorthand;
 
-const ticketsBrowseRootReference = (): JsonObject => ({
+const ticketsBrowseRootReference = (extensionId: string): JsonObject => ({
   type: "view",
-  viewId: "pstdio.pstdio-planner.view.tickets",
+  viewId: `${extensionId}.view.tickets`,
 });
 
-const createTicketResourceIdentity = (lineage: TicketSummary[], index: number): TicketResourceReference => {
+const createTicketResourceIdentity = (
+  lineage: TicketSummary[],
+  index: number,
+  extensionId: string,
+): TicketResourceReference => {
   const ticket = lineage[index];
   const metadata: JsonObject = {
-    resourceParent: index > 0 ? createTicketResourceIdentity(lineage, index - 1) : ticketsBrowseRootReference(),
+    resourceParent:
+      index > 0
+        ? createTicketResourceIdentity(lineage, index - 1, extensionId)
+        : ticketsBrowseRootReference(extensionId),
   };
 
   return {
@@ -64,7 +71,11 @@ const createTicketResourceIdentity = (lineage: TicketSummary[], index: number): 
   };
 };
 
-export const resolveTicketHierarchy = (ticket: TicketSummary, parentLookup: TicketParentLookup = new Map()) => {
+export const resolveTicketHierarchy = (
+  ticket: TicketSummary,
+  parentLookup: TicketParentLookup = new Map(),
+  extensionId = "pstdio.pstdio-planner",
+) => {
   const lineage = [];
   const visitedTicketIds = new Set<string>();
   let current: TicketSummary | undefined = ticket;
@@ -76,7 +87,7 @@ export const resolveTicketHierarchy = (ticket: TicketSummary, parentLookup: Tick
   }
 
   lineage.reverse();
-  const identity = createTicketResourceIdentity(lineage, lineage.length - 1);
+  const identity = createTicketResourceIdentity(lineage, lineage.length - 1, extensionId);
   // Menus read the state of the open or clicked ticket. When expressions only match
   // equal values, so the state is always present.
   const resourceReference: TicketResourceReference = {
@@ -93,14 +104,25 @@ export const resolveTicketHierarchy = (ticket: TicketSummary, parentLookup: Tick
   };
 };
 
-export const ticketResourceReference = (ticket: TicketSummary, parentLookup: TicketParentLookup = new Map()) =>
-  resolveTicketHierarchy(ticket, parentLookup).resourceReference;
+export const plannerOwnerFor = (ctx: { extensionId?: string }) =>
+  ctx.extensionId === "pstdio.planner" ? ctx.extensionId : "pstdio.pstdio-planner";
+
+export const ticketResourceReference = (
+  ticket: TicketSummary,
+  parentLookup: TicketParentLookup = new Map(),
+  extensionId?: string,
+) => resolveTicketHierarchy(ticket, parentLookup, extensionId).resourceReference;
 
 // Stored links (session and workspace anchors) keep only the ticket's identity and
 // ancestry. Its state would go stale in the copy.
-export const ticketResourceIdentity = (ticket: TicketSummary, parentLookup: TicketParentLookup = new Map()) =>
-  resolveTicketHierarchy(ticket, parentLookup).identity;
+export const ticketResourceIdentity = (
+  ticket: TicketSummary,
+  parentLookup: TicketParentLookup = new Map(),
+  extensionId?: string,
+) => resolveTicketHierarchy(ticket, parentLookup, extensionId).identity;
 
-export const linkedResourceParentMetadata = (ticket: TicketSummary, parentLookup: TicketParentLookup = new Map()) => ({
-  resourceParent: ticketResourceIdentity(ticket, parentLookup),
-});
+export const linkedResourceParentMetadata = (
+  ticket: TicketSummary,
+  parentLookup: TicketParentLookup = new Map(),
+  extensionId?: string,
+) => ({ resourceParent: ticketResourceIdentity(ticket, parentLookup, extensionId) });

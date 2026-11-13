@@ -4,7 +4,7 @@
 
 New conversations show **Pending** until their first turn starts. Empty saved conversations use the same indicator; completed turns keep their completed status.
 
-Choose **Copy session ID** from a saved session's menu to share its full Prompt Studio ID with another agent. This includes failed sessions. `pst pstdio-session-browser copy-id --session-id <id>` returns the same reference for agent callers. The pinned SDK `0.47.0-nightly.20261111030243` includes `copyResultToClipboard`; the running host must also include PS-189's clipboard support.
+Choose **Copy session ID** from a saved session's menu to share its full Prompt Studio ID with another agent. This includes failed sessions. `pst pstdio.pstdio-session-browser copy-id --session-id <id>` returns the same reference for agent callers. The pinned SDK `0.47.0-nightly.20261111030243` includes `copyResultToClipboard`; the running host must also include PS-189's clipboard support.
 
 Other tools use `sessionBrowser` from `@pstdio/sdk/extensions`. This package re-exports the same implementation-free contract from `pstdio-session-browser/refs`. Session and draft resources retain `extensionId: "pstdio"`; navigation refs belong to this provider. New navigation uses provider refs. The host retains deprecated page/panel/command definitions that target the provider renderer, without another chat implementation or persistence owner. Missing or disabled providers use normal unavailable-target feedback.
 
@@ -16,6 +16,8 @@ legacy non-Project mode); otherwise the provider uses its Project Side placement
 Draft identity and persistence stay here. “New in this tab” uses the shared
 Current view shortcut and captured viewer, without changing Main from Side.
 Switch options follow public query cursors rather than truncate older history.
+
+Pin and Unpin actions keep chosen sessions in a separate leading section, including sessions beyond the first history page. Pins use small project-scoped storage records.
 
 Session history loads the next bounded page as the person scrolls toward its end, including within an expanded workspace group. Stable date headings join pages at the same level. This requires a published SDK and host supporting `view.tree.pages.v1`; updating the SDK alone does not update the running host.
 

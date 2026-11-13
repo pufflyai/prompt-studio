@@ -68,51 +68,36 @@ The `all-owner-edit-burst` shard also submits one durable write per owner togeth
 records each acknowledgement and fairness, then kills/reopens, retries each
 acknowledged write with its operation ID and restores them.
 
-## Exclusive machine timing window
+## Isolated measurements
 
-Use this protocol for PS-903 and later PS-904 through PS-909 evidence. A lock file
-alone does not pause another session.
+Collect accepted timings on an isolated runner. Finish builds and fixture
+preparation before measurement, run one diagnostic shard at a time, and retain
+machine/process inventories with the evidence. Preparation is not an accepted
+timing sample. Keep interrupted or contaminated results with an explicit
+exclusion reason instead of blending them into accepted summaries.
 
-1. List active sessions on the machine. Ask every owner to pause benchmarks,
-   builds and tests, including child processes and Docker jobs. Obtain explicit
-   acknowledgements, or a person's explicit confirmation that those sessions are
-   paused. No reply or elapsed time is not acknowledgement.
-2. Save an input JSON file with `sessionId`, `requiredPeers`,
-   `acknowledgements: [{sessionId, evidence}]` and `purpose`. A dedicated runner
-   with no peers must provide `isolatedRunnerEvidence`.
-3. Acquire the shared atomic lock and save its returned owner credential:
+The existing diagnostic requires a per-run `--timing-owner` credential. On the
+isolated runner, save an input file with its session ID, purpose and actual
+runner isolation evidence; the legacy peer arrays remain empty:
 
-   ```sh
-   bun packages/e2e/src/perf/storage-timing-window.ts acquire /path/ack.json > /path/owner.json
-   ```
+```json
+{
+  "sessionId": "<current-session-id>",
+  "purpose": "<diagnostic-shard>",
+  "requiredPeers": [],
+  "acknowledgements": [],
+  "isolatedRunnerEvidence": "<runner/job identity and isolation evidence>"
+}
+```
 
-   The default lock is the machine-wide temporary directory
-   `pstdio-exclusive-timing.lock`, shared across worktrees. Acquisition fails if
-   another owner holds it. Never steal a lock because its timestamp is old.
-4. Inspect host processes and Docker processes. Check leftover jobs as well as
-   agent status. Record the inventory and machine load. Stop only your own jobs
-   or jobs whose owner authorized stopping. Resolve unexplained benchmark,
-   build or test activity before collecting accepted timings.
-5. Finish fixture preparation, builds and tests before the measured window.
-   Run one diagnostic shard at a time. Pass `--timing-owner /path/owner.json`.
-   The driver checks machine, session and token and records entry/exit inventories.
-   Direct layer workers require the same credential through the driver's
-   environment. The lock coordinates participants; it cannot detect every
-   external workload. If another session resumes heavy work, invalidate the
-   affected samples, record the cause and arrange a new exclusive window.
-6. Save raw output and the acknowledgements with the report. Verify the lock is
-   still owned at completion. Release it explicitly, then tell peer owners the
-   window ended:
+Create the credential before invoking the diagnostic, then release it after its
+owned processes have ended:
 
-   ```sh
-   bun packages/e2e/src/perf/storage-timing-window.ts release /path/owner.json
-   ```
-
-Do not run tests or builds beside accepted benchmarks, even in another worktree.
-Fixture setup can overlap other setup owned by this session, but those periods
-are preparation and must not be reported as accepted timings. Keep interrupted
-or contaminated results with an explicit exclusion reason; never blend them into
-accepted summaries.
+```sh
+bun packages/e2e/src/perf/storage-timing-window.ts acquire /path/isolated-runner.json > /path/owner.json
+# Run the diagnostic with --timing-owner /path/owner.json.
+bun packages/e2e/src/perf/storage-timing-window.ts release /path/owner.json
+```
 
 ## Preparation and reproducible commands
 
@@ -205,7 +190,7 @@ At expiry the supervisor freezes its owned POSIX process group, finds descendant
 completion IPC handshake keeps a normally finishing worker alive until its tree
 can be inspected and terminated; an unexpected exit cannot pass. SIGINT/SIGTERM
 to the supervisor also terminate its active case. SIGKILL of the supervisor itself
-cannot run cleanup; reconcile its processes and timing lease before another run.
+cannot run cleanup; verify its owned processes have ended before another run.
 
 Tree inspection, Docker control calls and reaping each have independent
 one-second administrative limits. OS scheduling and termination delivery may
@@ -368,7 +353,7 @@ and that each rebuilt record matches the generator and its projection row. It ru
 in preparation; the first resource access in a sample remains its measured write.
 
 `record-read-scale.diagnostic.ts` measures indexed reads on the same fixtures. It is a
-diagnostic and does not take the timing window. `PSTDIO_SCALE_READ_COLD` selects the first
+diagnostic and does not use the timing-owner credential. `PSTDIO_SCALE_READ_COLD` selects the first
 read in the fresh process: `view`, `second-page`, `point`, `aggregate` or `all-owner-burst`.
 A view is one 100-row page plus its selected and total counts. Each sample then records ten
 warm runs of every read, cursor navigation, the all-owner burst, views while another owner
@@ -438,7 +423,7 @@ coverage failures instead of fabricated memory values. Observation and cleanup
 still fit within the existing case cap.
 
 Save commands, environment, exact commit, fixture manifests, full compressed input
-files, stored-shape verification, raw JSONL, stderr, screenshots, pause evidence,
+files, stored-shape verification, raw JSONL, stderr, screenshots, runner isolation evidence,
 control calibration and coverage ledger under the change-request report's
 `filesPath`. Record p50/p95/max and every individual failed sample. Keep native and
 constrained evidence separate. State which scenario matrix entries were not run,

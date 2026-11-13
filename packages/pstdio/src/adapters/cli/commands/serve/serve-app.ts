@@ -104,7 +104,11 @@ const defaultDeps: ServeAppDeps = {
 };
 
 const isApiPath = (pathname: string) =>
-  pathname.startsWith("/v1") || pathname.startsWith("/runtime/") || pathname === "/healthz" || pathname === "/readyz";
+  pathname.startsWith("/v1") ||
+  pathname.startsWith("/runtime/") ||
+  pathname === "/diagnostics/performance" ||
+  pathname === "/healthz" ||
+  pathname === "/readyz";
 
 // Page loads never sign a browser in: anything that can reach the port could load a page. Browsers
 // get their session from `pst` or the desktop shell, which hold the runtime token (ADR 0054).

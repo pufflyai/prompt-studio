@@ -25,17 +25,22 @@ test("Session menus share resource actions and switch through the full history",
   await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-session-browser/conversations`);
   const nav = page.locator('[data-workbench-region="sidenav"]');
   await expect(nav.getByRole("option", { name: "History 64", exact: true })).toBeVisible();
-  // The oldest sessions are outside the virtualized viewport until it is scrolled.
-  await nav.locator('[data-scope="scroll-area"][data-part="viewport"]').evaluateAll((elements) => {
-    for (const element of elements) element.scrollTop = element.scrollHeight;
-  });
-  // Reaching the visible end fetches the next page without an expansion or another click.
-  await expect(nav.getByRole("option", { name: "History 14", exact: true })).toBeAttached();
-  await nav.locator('[data-scope="scroll-area"][data-part="viewport"]').evaluateAll((elements) => {
-    for (const element of elements) element.scrollTop = element.scrollHeight;
-  });
+  const revealOldestSessions = async () => {
+    // Reaching the visible end fetches the next page before scrolling its rows into view.
+    await nav.locator('[data-scope="scroll-area"][data-part="viewport"]').evaluateAll((elements) => {
+      for (const element of elements) element.scrollTop = element.scrollHeight;
+    });
+    await expect(nav.getByRole("option", { name: "History 14", exact: true })).toBeAttached();
+    await nav.locator('[data-scope="scroll-area"][data-part="viewport"]').evaluateAll((elements) => {
+      for (const element of elements) element.scrollTop = element.scrollHeight;
+    });
+  };
+  await revealOldestSessions();
   await nav.getByRole("option", { name: "Keep open", exact: true }).click();
+  await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Keep open");
   const route = page.url();
+  // Conversations own their linked resources and a fresh, paginated session list.
+  await revealOldestSessions();
   await nav.getByRole("option", { name: "Inspect this session", exact: true }).click({ button: "right" });
   const resourceGroup = () => page.getByRole("group", { name: "Session", exact: true });
   const expected = await resourceGroup().getByRole("menuitem").allTextContents();

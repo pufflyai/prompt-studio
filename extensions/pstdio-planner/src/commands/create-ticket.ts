@@ -7,7 +7,7 @@ import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
 import { ticketTagsForIds } from "../data/tag-cardinality";
 import { allocateTicketIdentity } from "../data/ticket-identity";
 import { appendTicketPosition, withTicketOrder } from "../data/ticket-order";
-import { ticketResourceReference } from "../data/ticket-resource-hierarchy";
+import { plannerOwnerFor, ticketResourceReference } from "../data/ticket-resource-hierarchy";
 import { withTicketTagIds } from "../data/ticket-tags";
 import type { StoredTicketAttachment } from "../data/types";
 import { plannerTicketsChanged } from "../events";
@@ -23,7 +23,7 @@ const attributeTagIds = (attributes: Record<string, unknown>) =>
     return typeof value === "string" && value ? [value] : [];
   });
 
-// Backs the board's "new ticket" and the `pst tickets create`/`add` CLI path. The
+// Backs the board's "new ticket" and the `pst pstdio.pstdio-planner create-ticket`/`add` CLI path. The
 // board passes ids; the CLI passes display names/shorthands, so status, tags,
 // parent, and dependencies are resolved server-side (Decision 3).
 export const createTicketCommand = defineCommand({
@@ -36,7 +36,7 @@ export const createTicketCommand = defineCommand({
       ["tickets", "create"],
       ["tickets", "add"],
     ],
-    examples: ["pstdio tickets create --content '# Title' --status TODO --tags High"],
+    examples: ["pstdio pstdio.pstdio-planner create-ticket --content '# Title' --status TODO --tags High"],
   },
   params: {
     title: params.text(),
@@ -107,7 +107,7 @@ export const createTicketCommand = defineCommand({
     return {
       ...withTicketTagIds(ticket),
       resource: {
-        ...ticketResourceReference(ticket, createTicketParentLookup([...existing, ticket])),
+        ...ticketResourceReference(ticket, createTicketParentLookup([...existing, ticket]), plannerOwnerFor(ctx)),
         projectId: ctx.projectId,
         icon: TICKET_RESOURCE_ICON,
       },
