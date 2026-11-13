@@ -1,6 +1,7 @@
 import { expect } from "@playwright/test";
 import { test } from "../testing/packaged-fixture";
 import { allowPageClose } from "./lifecycle-actions";
+import { observeNativeProjectPicker } from "./native-picker-observation";
 import {
   createPackagedHome,
   disposePackagedApp,
@@ -20,14 +21,14 @@ import {
 
 test("reorders project tabs with mouse and keyboard and restores their order after restart", async ({
   browserName: _browserName,
-}) => {
+}, info) => {
   const home = createPackagedHome();
   let app: PackagedApp | null = null;
   try {
     app = await launchPackagedApp(home, { PSTDIO_DEFAULT_EXTENSIONS: "[]" });
     const first = await createPackagedProject(app, "Docs");
     const second = await createPackagedProject(app, "Agentic design");
-    await openPackagedProject(app.page, second);
+    await observeNativeProjectPicker(app.page, second, info, () => openPackagedProject(app!.page, second));
     await openPackagedProject(app.page, first);
     await app.page.getByRole("option", { name: "Extensions", exact: true }).click();
     await expect(app.page).toHaveURL(/\/extensions$/);
