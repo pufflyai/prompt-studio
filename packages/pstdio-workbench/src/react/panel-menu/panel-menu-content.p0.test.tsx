@@ -12,11 +12,14 @@ afterEach(async () => {
   environment.IS_REACT_ACT_ENVIRONMENT = previousEnvironment;
 });
 
-test("absent panel menus own no view reads or navigation subscriptions", async () => {
+test("absent panel menus own no view reads or unrelated context subscriptions", async () => {
   environment.IS_REACT_ACT_ENVIRONMENT = true;
   const workbench = createWorkbench();
   const reads = spyOn(workbench.views.reads, "bind");
   const navigation = spyOn(workbench.navigationTrees, "onDidChange");
+  const pages = spyOn(workbench.pages.store, "subscribe");
+  const modes = spyOn(workbench.modes.store, "subscribe");
+  const previews = spyOn(workbench.resources.preview.store, "subscribe");
   const Probe = () => {
     usePanelMenuContent(workbench);
     return null;
@@ -27,11 +30,17 @@ test("absent panel menus own no view reads or navigation subscriptions", async (
     });
     expect(reads).not.toHaveBeenCalled();
     expect(navigation).not.toHaveBeenCalled();
+    expect(pages).not.toHaveBeenCalled();
+    expect(modes).not.toHaveBeenCalled();
+    expect(previews).not.toHaveBeenCalled();
   } finally {
     await act(async () => renderer?.unmount());
     renderer = undefined;
     reads.mockRestore();
     navigation.mockRestore();
+    pages.mockRestore();
+    modes.mockRestore();
+    previews.mockRestore();
     await workbench.dispose();
   }
 });

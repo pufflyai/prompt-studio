@@ -8,13 +8,15 @@ import {
   type WorkbenchPanelInstance,
 } from "../../../core";
 import { resolveNavigationLevels } from "../../../core/controllers/page-location/navigation-level";
-import { useWorkbenchStore } from "../../shared/use-workbench-store";
+import { useOptionalWorkbenchStore } from "../../shared/use-workbench-store";
 import { usePageParams } from "../use-page-params";
 import { useRendererRead } from "../use-renderer-read";
 import { type LoadedTreeData, loadExpandedTreeChildren, loadTreeData, treeStructure } from "./tree-view-load";
 
 const treeQueryScope = (workbench: WorkbenchCore, id: string, projectId: string | undefined) =>
   getWorkbenchRenderers(workbench).getTreeRenderer(id)?.queryScope ?? { projectId };
+
+const emptyChanges: ReturnType<WorkbenchCore["resources"]["preview"]["store"]["getState"]>["changes"] = {};
 
 export const useTreeRead = (
   workbench: WorkbenchCore,
@@ -26,14 +28,19 @@ export const useTreeRead = (
   placement?: WorkbenchPanelInstance,
   enabled = true,
 ) => {
-  const pageParams = usePageParams(workbench, placement);
+  const pageParams = usePageParams(workbench, placement, enabled);
   // Look the renderers up where they are used: React Compiler treats a held call result as mutable until its
   // last use, and cannot cache anything whose inputs stay mutable across the hooks below.
-  const changes = useWorkbenchStore(workbench.resources.preview.store, (state) => state.changes);
-  useWorkbenchStore(getWorkbenchRenderers(workbench).treeStore, (state) => state.refreshKeysByTreeId[treeViewId]);
-  const mode = useWorkbenchStore(workbench.modes.store, (state) => (enabled ? state.activeModeId : undefined));
-  const location = useWorkbenchStore(workbench.pages.store, (state) => (enabled ? state.location : undefined));
-  const project = useWorkbenchStore(workbench.pages.store, (state) => state.projectId);
+  const changes =
+    useOptionalWorkbenchStore(enabled ? workbench.resources.preview.store : undefined, (state) => state.changes) ??
+    emptyChanges;
+  useOptionalWorkbenchStore(
+    enabled ? getWorkbenchRenderers(workbench).treeStore : undefined,
+    (state) => state.refreshKeysByTreeId[treeViewId],
+  );
+  const mode = useOptionalWorkbenchStore(enabled ? workbench.modes.store : undefined, (state) => state.activeModeId);
+  const location = useOptionalWorkbenchStore(enabled ? workbench.pages.store : undefined, (state) => state.location);
+  const project = useOptionalWorkbenchStore(enabled ? workbench.pages.store : undefined, (state) => state.projectId);
   const getPageOwner = () =>
     enabled
       ? JSON.stringify(
