@@ -120,7 +120,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       label: text(action.label),
       icon: action.icon,
       args: toRecordParams(action.params),
-      params: localizeParamSchema(action.input, text, record.extensionId),
+      params: localizeParamSchema(action.input, text, record.extensionId, command?.confirmation?.confirmedParam),
       submitLabel: action.submitLabel,
       copyText: action.copyText,
       inlineInput: action.inputPresentation ? { ...action.inputPresentation, nodeId: node?.id } : undefined,

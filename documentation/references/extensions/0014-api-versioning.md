@@ -447,3 +447,15 @@ Existing workspace methods and observers remain supported. Publish the matching
 SDK and host before separately released clients adopt this method.
 
 *Updated at: 2026-11-13*
+
+
+### Host delete confirmation on main
+
+Optional command `confirmation` declarations share the coordinated API 0.4.2 step.
+`kind: "delete"` uses the host's standard destructive confirmation, including pending,
+error and retry behavior. `subjectParam` names the parameter displayed beside the
+command title; `description` and `buttonLabel` customize its message and action.
+After confirmation, the dashboard sets the declared `confirmedParam` to `true`.
+CLI and API invocations remain unchanged: commands must keep their explicit consent
+validation or existing presentation path when that parameter is absent. Older hosts
+omit this optional declaration and never synthesize consent.
