@@ -1,4 +1,3 @@
-import { Box } from "@chakra-ui/react";
 import { ChatMessageListResponse } from "./chat-message-list-items";
 import type { ChatMessageRow } from "./chat-message-rows";
 import type { SessionMessage } from "./message-types";
@@ -45,17 +44,15 @@ export const ChatMessageRowLayout = (props: ChatMessageRowLayoutProps) => {
   } = props;
   if (rowType === "user") {
     return (
-      <Box position="absolute" left="0" width="100%" zIndex={1} pointerEvents="none" style={{ top: start, height }}>
+      <div className="ps-chat-user-row-layout" style={{ top: start, height }}>
         {/* Native sticky layout follows every scroll frame, including within one response. */}
-        <Box
+        <div
+          className="ps-chat-sticky-row-layout"
           ref={measureElement}
           data-index={index}
           data-chat-message-list-item="user"
           data-chat-message-id={rowId}
-          position="sticky"
-          top="0"
-          pointerEvents="auto"
-          pb={hasGap ? "xs" : undefined}
+          data-chat-row-gap={hasGap ? "" : undefined}
         >
           <StickyUserMessage
             message={message}
@@ -63,20 +60,18 @@ export const ChatMessageRowLayout = (props: ChatMessageRowLayoutProps) => {
             animatedKeys={animatedKeys}
             onToggle={onToggleStickyMessage}
           />
-        </Box>
-      </Box>
+        </div>
+      </div>
     );
   }
   return (
-    <Box
+    <div
+      className="ps-chat-response-row-layout"
       ref={measureElement}
       data-index={index}
       data-chat-message-list-item={rowType}
       data-chat-message-id={rowId}
-      position="absolute"
-      left="0"
-      width="100%"
-      pb={hasGap ? "xs" : undefined}
+      data-chat-row-gap={hasGap ? "" : undefined}
       style={{ top: start }}
     >
       <ChatMessageListResponse
@@ -88,6 +83,6 @@ export const ChatMessageRowLayout = (props: ChatMessageRowLayoutProps) => {
         onForkMessage={onForkMessage}
         forkDisabledReason={forkDisabledReason}
       />
-    </Box>
+    </div>
   );
 };
