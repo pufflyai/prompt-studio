@@ -11,6 +11,32 @@ const peer = (options: Parameters<typeof createPeer>[0] = {}) => {
   runtimes.push(p.runtime);
   return p;
 };
+test("native command notifications follow only their session and detach without stopping execution", async () => {
+  const { runtime, children } = peer();
+  const input = { prompt: "hello", events: sink(), env: { PSTDIO_PROJECT_ID: "p", PSTDIO_SESSION_ID: "one" } };
+  const first = await runtime.run(input);
+  const second = await runtime.run({ ...input, env: { ...input.env, PSTDIO_SESSION_ID: "two" } });
+  let changes = 0;
+  const close = runtime.observeCommands(input, () => changes++);
+  children[0].emit({
+    method: "thread/goal/updated",
+    params: { threadId: second.agentSessionId, goal: { status: "active" } },
+  });
+  await Bun.sleep(0);
+  expect(changes).toBe(0);
+  children[0].emit({
+    method: "thread/goal/updated",
+    params: { threadId: first.agentSessionId, goal: { status: "active" } },
+  });
+  await Bun.sleep(0);
+  expect(changes).toBe(1);
+  close();
+  children[0].emit({ method: "thread/goal/cleared", params: { threadId: first.agentSessionId } });
+  await Bun.sleep(0);
+  expect(changes).toBe(1);
+  await first.stop();
+  await second.stop();
+});
 test("rediscovers a thread's native default without passing host model or parameter overrides", async () => {
   const { runtime, calls } = peer();
   const worker = runtime.worker({
@@ -20,12 +46,34 @@ test("rediscovers a thread's native default without passing host model or parame
     params: { model_reasoning_effort: "high", service_tier: "fast" },
   });
   expect(await worker.readModel("existing-thread")).toBe("native-default");
-  const resume = calls.find((call) => call.method === "thread/resume")?.params;
-  expect(resume?.threadId).toBe("existing-thread");
-  expect(resume?.model).toBeUndefined();
-  expect(resume?.serviceTier).toBeUndefined();
-  expect((resume?.config as Record<string, unknown>)?.model_reasoning_effort).toBeUndefined();
+  const read = calls.find((call) => call.method === "thread/read")?.params;
+  expect(read).toEqual({ threadId: "existing-thread", includeTurns: false });
+  expect(calls.some((call) => call.method === "thread/resume")).toBe(false);
   expect(calls.some((call) => call.method === "turn/start")).toBe(false);
+});
+
+test("fresh saved-thread observation reads metadata without resuming execution or hydrating history", async () => {
+  const { runtime, calls } = peer();
+  const input = { prompt: "", events: sink(), agentSessionId: "saved-thread", env: { PSTDIO_SESSION_ID: "saved" } };
+  let first = 0;
+  let second = 0;
+  const close = runtime.observeCommands(input, () => first++);
+  const closeSecond = runtime.observeCommands(input, () => second++);
+  await Bun.sleep(0);
+  expect({ first, second }).toEqual({ first: 1, second: 1 });
+  expect(calls.filter((call) => call.method === "thread/read").map((call) => call.params)).toEqual([
+    { threadId: "saved-thread", includeTurns: false },
+  ]);
+  expect(calls.find((call) => call.method === "thread/turns/list")?.params).toEqual({
+    threadId: "saved-thread",
+    limit: 1,
+    sortDirection: "desc",
+    itemsView: "notLoaded",
+  });
+  expect(calls.some((call) => ["thread/resume", "thread/start", "turn/start"].includes(call.method))).toBe(false);
+  expect(runtime.worker(input).threadId()).toBeUndefined();
+  close();
+  closeSecond();
 });
 test("reads the native model without applying the next-turn selection and tracks acknowledged turns", async () => {
   const { runtime, children, calls } = peer();

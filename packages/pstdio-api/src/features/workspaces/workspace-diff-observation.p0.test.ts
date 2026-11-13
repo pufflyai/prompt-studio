@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { git } from "pstdio-wt";
@@ -77,40 +77,82 @@ test.each([
   }
 });
 
-test("startup reconciliation covers dropped native hints and is cancelled with its observation", async () => {
+test("the first diff read covers silent edits during watcher startup without a duplicate read", async () => {
   const { watchWorkspaceDiffFiles } = await import("./workspace-diff-filesystem");
   const root = await mkdtemp(join(tmpdir(), "pstdio-diff-startup-"));
   await git(root, ["init"]);
-  let changes = 0;
-  const changed = Promise.withResolvers<void>();
-  const watch = () => ({ close() {} });
-  const first = await watchWorkspaceDiffFiles(
+  const path = join(root, "unreported.txt");
+  await writeFile(path, "Before registration");
+  const registered = Promise.withResolvers<void>();
+  const reading = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  let reads = 0;
+  const read = async () => {
+    reads++;
+    const value = await readFile(path, "utf8");
+    reading.resolve();
+    await release.promise;
+    return value;
+  };
+  const pending = watchWorkspaceDiffFiles(
     root,
     () => {
-      changes++;
-      changed.resolve();
+      void read();
     },
-    watch,
+    () => {
+      registered.resolve();
+      return { close() {} };
+    },
     true,
   );
+  const initial = pending.then(read);
   try {
-    await writeFile(join(root, "unreported.txt"), "No native hint");
-    await changed.promise;
-    expect(changes).toBe(1);
-    first.close();
-    const second = await watchWorkspaceDiffFiles(
-      root,
-      () => {
-        changes++;
-      },
-      watch,
-      true,
-    );
-    second.close();
+    await registered.promise;
+    // Cover the later half of the previous 100 ms grace + 100 ms reconciliation batch.
+    await Bun.sleep(150);
+    await writeFile(path, "Silent startup edit");
+    await reading.promise;
+    // Keep the finite read pending beyond the reconciliation deadline.
     await Bun.sleep(250);
-    expect(changes).toBe(1);
+    release.resolve();
+    expect(await initial).toBe("Silent startup edit");
+    expect(reads).toBe(1);
   } finally {
-    first.close();
+    release.resolve();
+    (await pending).close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("cancelling diff watch admission releases its native observations without a late read", async () => {
+  const { watchWorkspaceDiffFiles } = await import("./workspace-diff-filesystem");
+  const root = await mkdtemp(join(tmpdir(), "pstdio-diff-startup-abort-"));
+  await git(root, ["init"]);
+  const registered = Promise.withResolvers<void>();
+  const abort = new AbortController();
+  let watches = 0;
+  let closed = 0;
+  let changes = 0;
+  const pending = watchWorkspaceDiffFiles(
+    root,
+    () => changes++,
+    () => {
+      watches++;
+      registered.resolve();
+      return { close: () => closed++ };
+    },
+    true,
+    abort.signal,
+  );
+  try {
+    await registered.promise;
+    abort.abort();
+    await expect(pending).rejects.toHaveProperty("name", "AbortError");
+    expect(closed).toBe(watches);
+    await Bun.sleep(250);
+    expect(changes).toBe(0);
+  } finally {
+    (await pending.catch(() => undefined))?.close();
     await rm(root, { recursive: true, force: true });
   }
 });

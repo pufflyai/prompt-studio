@@ -53,36 +53,6 @@ export const exercisePagedCollections = async (
   }
   await page.getByRole("option", { name: "paged-owner-0 table", exact: true }).click();
   await expect(page.getByRole("cell", { name: "paged-owner-0 row 0000", exact: true })).toBeVisible();
-  // Exercise rapid navigation before page two enters the retained query cache.
-  // Hold transport so a second click sees the still-displayed first-page cursor.
-  const gate = Promise.withResolvers<void>();
-  await page.route("**/commands/*/execute", async (route) => {
-    if (isQuery(route.request().url(), 0, "table") && route.request().postDataJSON()?.params?.page?.offset > 0)
-      await gate.promise;
-    await route.continue().catch(() => {});
-  });
-  try {
-    const finalPage = nextResult(0, "table", 200);
-    await page.getByRole("button", { name: "Go to next page", exact: true }).click();
-    await expect(page.getByRole("spinbutton")).toHaveValue("1");
-    const firstRow = page
-      .getByRole("row")
-      .filter({ has: page.getByRole("cell", { name: "paged-owner-0 row 0000", exact: true }) });
-    await expect(firstRow.getByRole("cell", { name: "1", exact: true })).toBeVisible();
-    await expect(page.getByRole("status").filter({ hasText: "Loading page 2" })).toBeVisible();
-    await page.getByRole("button", { name: "Go to next page", exact: true }).click();
-    gate.resolve();
-    const response = await finalPage;
-    expect(response.request().postDataJSON().params.page.cursor).toBeUndefined();
-    expect((await response.json()).outcome.value.rows[0].values.title).toBe("paged-owner-0 row 0200");
-    await expect(page.getByRole("cell", { name: "paged-owner-0 row 0200", exact: true })).toBeVisible();
-  } finally {
-    gate.resolve();
-    await page.unroute("**/commands/*/execute");
-  }
-
-  await page.getByRole("button", { name: "Go to first page", exact: true }).click();
-  await expect(page.getByRole("cell", { name: "paged-owner-0 row 0000", exact: true })).toBeVisible();
   const continuation = nextResult(0, "table", 100);
   await page.getByRole("button", { name: "Go to next page", exact: true }).click();
   const continued = await (await continuation).json();
@@ -90,6 +60,43 @@ export const exercisePagedCollections = async (
   expect(continued.outcome.value.rows[0].values.title).toBe("paged-owner-0 row 0100");
   await expect(page.getByRole("cell", { name: "paged-owner-0 row 0100", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Go to first page", exact: true }).click();
+  await expect(page.getByRole("cell", { name: "paged-owner-0 row 0000", exact: true })).toBeVisible();
+
+  // Owner 0's second page is already cached. Use owner 1's unvisited page so a
+  // transport hold actually keeps the first-page cursor displayed until the jump.
+  await page.getByRole("option", { name: "paged-owner-1 table", exact: true }).click();
+  await expect(page.getByRole("cell", { name: "paged-owner-1 row 0000", exact: true })).toBeVisible();
+  const gate = Promise.withResolvers<void>();
+  const held = Promise.withResolvers<void>();
+  await page.route("**/commands/*/execute", async (route) => {
+    if (isQuery(route.request().url(), 1, "table") && route.request().postDataJSON()?.params?.page?.offset > 0) {
+      held.resolve();
+      await gate.promise;
+    }
+    await route.continue().catch(() => {});
+  });
+  try {
+    const finalPage = nextResult(1, "table", 200);
+    await page.getByRole("button", { name: "Go to next page", exact: true }).click();
+    await held.promise;
+    await expect(page.getByRole("spinbutton")).toHaveValue("1");
+    const firstRow = page
+      .getByRole("row")
+      .filter({ has: page.getByRole("cell", { name: "paged-owner-1 row 0000", exact: true }) });
+    await expect(firstRow.getByRole("cell", { name: "1", exact: true })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Loading page 2" })).toBeVisible();
+    await page.getByRole("button", { name: "Go to next page", exact: true }).click();
+    gate.resolve();
+    const response = await finalPage;
+    expect(response.request().postDataJSON().params.page.cursor).toBeUndefined();
+    expect((await response.json()).outcome.value.rows[0].values.title).toBe("paged-owner-1 row 0200");
+    await expect(page.getByRole("cell", { name: "paged-owner-1 row 0200", exact: true })).toBeVisible();
+  } finally {
+    gate.resolve();
+    await page.unroute("**/commands/*/execute");
+  }
+
+  await page.getByRole("option", { name: "paged-owner-0 table", exact: true }).click();
   await expect(page.getByRole("cell", { name: "paged-owner-0 row 0000", exact: true })).toBeVisible();
 
   const boardResult = nextResult(0, "board");

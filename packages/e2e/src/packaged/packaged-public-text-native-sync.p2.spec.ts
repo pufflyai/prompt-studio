@@ -143,10 +143,11 @@ test("two encrypted hosts preserve native selection presence and table drafts th
   await secondPage.goto(`${route(second.host.baseUrl)}/native`);
   const right = await verifyNativePublicTextEditor(secondPage, "Shared source");
   const people = nativePage.getByRole("list", { name: "Other editors" }).getByRole("listitem");
-  await expect(people).toHaveText(["owner@example.test"]);
-  await expect(secondPage.getByRole("list", { name: "Other editors" }).getByRole("listitem")).toHaveText([
-    "owner@example.test",
-  ]);
+  await expect(people).toHaveCount(1);
+  await expect(people).toHaveAttribute("aria-label", "owner@example.test");
+  const secondPeople = secondPage.getByRole("list", { name: "Other editors" }).getByRole("listitem");
+  await expect(secondPeople).toHaveCount(1);
+  await expect(secondPeople).toHaveAttribute("aria-label", "owner@example.test");
   const gate = Promise.withResolvers<void>();
   const held = new Set<string>();
   const admit = (name: string) => async (route: Route) => {
@@ -194,7 +195,8 @@ test("two encrypted hosts preserve native selection presence and table drafts th
   const initial = "| A | B |\n| --- | --- |\n| left | right |\n\nOutside marker\n";
   await peer.fill(initial);
   await projected(initial);
-  await expect(people).toHaveText(["owner@example.test"]);
+  await expect(people).toHaveCount(1);
+  await expect(people).toHaveAttribute("aria-label", "owner@example.test");
   const table = nativePage.getByTestId("markdown-table-node");
   await expect(table.getByRole("cell", { name: "left", exact: true })).toBeVisible();
   await expect.poll(() => observed.submissions().length).toBeGreaterThan(0);

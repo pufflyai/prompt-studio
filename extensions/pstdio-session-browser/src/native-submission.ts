@@ -1,5 +1,13 @@
 import type { ChatDraft, ExtensionContextBase, HarnessOperation, StorageRecordIndex } from "@pstdio/sdk/extensions";
 
+export const nativeSubmissionObservationId = (ctx: ExtensionContextBase, id: string) =>
+  ctx.storage.records.id(`native-inputs:${id}`);
+// Future submissions have new record IDs. One session anchor changes atomically with their history.
+const nativeSubmissionChange = (ctx: ExtensionContextBase, id: string, operationId: string) => ({
+  recordId: nativeSubmissionObservationId(ctx, id),
+  set: { "/operationId": operationId },
+});
+
 export const nativeSubmissionIndex: StorageRecordIndex = {
   name: "native-inputs",
   fields: {
@@ -48,9 +56,10 @@ export const saveNativeSubmission = async (
     state: started ? "pending" : "confirmed",
   };
   const recordId = ctx.storage.records.id(`native-input:${ctx.storage.ids.create()}`);
+  const operationId = ctx.storage.ids.create();
   await ctx.storage.records.commit({
-    operationId: ctx.storage.ids.create(),
-    edits: [{ recordId, replace: { ...submission } }],
+    operationId,
+    edits: [{ recordId, replace: { ...submission } }, nativeSubmissionChange(ctx, id, operationId)],
   });
   return recordId;
 };
@@ -100,13 +109,15 @@ export const updateNativeSubmission = async (
   const value = { ...(record.value as unknown as NativeSubmission), ...update };
   if (sessionId && value.sessionId !== sessionId)
     throw new Error("This submitted input does not belong to this conversation.");
+  const operationId = ctx.storage.ids.create();
+  const changed = nativeSubmissionChange(ctx, value.sessionId, operationId);
   if (value.hidden && (value.state === "confirmed" || value.state === "recovered")) {
-    await ctx.storage.records.commit({ operationId: ctx.storage.ids.create(), edits: [{ recordId, deleted: true }] });
+    await ctx.storage.records.commit({ operationId, edits: [{ recordId, deleted: true }, changed] });
     await ctx.storage.files.delete(value.fileId);
     return;
   }
   await ctx.storage.records.commit({
-    operationId: ctx.storage.ids.create(),
-    edits: [{ recordId, replace: { ...value } }],
+    operationId,
+    edits: [{ recordId, replace: { ...value } }, changed],
   });
 };

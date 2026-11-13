@@ -1,4 +1,4 @@
-/** The runtime owns four actual requests, including reads issued by separate trees or batches. */
+/** Three optional reads leave one finite HTTP/1.1 slot beside the two event streams. */
 export const createWorkspaceDiffAdmission = () => {
   let active = 0;
   const waiting = new Set<() => void>();
@@ -10,7 +10,7 @@ export const createWorkspaceDiffAdmission = () => {
       };
       const enter = () => {
         if (signal.aborted) return aborted();
-        if (active >= 4) {
+        if (active >= 3) {
           waiting.add(enter);
           return;
         }

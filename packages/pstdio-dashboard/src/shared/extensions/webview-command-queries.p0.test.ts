@@ -182,7 +182,9 @@ test("account changes retire an in-flight dashboard read and reject its captured
   try {
     await f.entered;
     await f.changeAccount();
-    expect(await pending).toMatchObject({ retired: true, data: undefined });
+    const retired = await pending;
+    expect(retired).toMatchObject({ retired: true });
+    expect(retired?.data).toBeUndefined();
     await expect(frame.request()).rejects.toThrow("closed");
     held.resolve(
       Response.json({

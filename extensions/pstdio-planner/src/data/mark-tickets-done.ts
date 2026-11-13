@@ -1,5 +1,5 @@
 import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
-import { plannerTicketsChanged } from "../events";
+import { emitPlannerTicketsChanged } from "../events";
 import { ticketsCollection } from "./collections";
 import { reconcileDependencyBlockers } from "./reconcile-dependency-blockers";
 import { readMergeDestination } from "./workflow-statuses";
@@ -20,7 +20,7 @@ export const markTicketsDone = async (
       blockedReason: null,
       updatedAt: new Date().toISOString(),
     });
-    await ctx.events.emit(plannerTicketsChanged, { ticketId: id });
+    await emitPlannerTicketsChanged(ctx, { ticketId: id });
   }
   await reconcileDependencyBlockers(ctx);
 };

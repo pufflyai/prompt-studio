@@ -378,11 +378,25 @@
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "extensions/pstdio-workspaces": {
-      "entry": ["package.json", "extension.ts", "src/**/*.test.ts", "src/**/*.canvas.tsx", "src/*-view.tsx"],
+      "entry": [
+        "package.json",
+        "test-setup.ts",
+        "extension.ts",
+        "src/**/*.test.ts",
+        "src/**/*.canvas.tsx",
+        "src/*-view.tsx"
+      ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "extensions/pstdio-home": {
-      "entry": ["package.json", "extension.ts", "src/**/*.test.ts", "src/**/*.canvas.tsx", "src/view.tsx"],
+      "entry": [
+        "package.json",
+        "test-setup.ts",
+        "extension.ts",
+        "src/**/*.test.ts",
+        "src/**/*.canvas.tsx",
+        "src/view.tsx"
+      ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "extensions/extension-lab": {
@@ -391,6 +405,8 @@
         "extension.ts",
         "*.test.ts",
         "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+        "src/**/*.canvas.tsx",
         // The packaged host compatibility test bundles this entry by path.
         "src/legacy-state.fixture.ts",
         "src/views/*.tsx"
@@ -409,7 +425,13 @@
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "extensions/pstdio-cloud": {
-      "entry": ["package.json", "extension.ts", "src/**/*.test.ts", "src/{status,details,settings}-view.tsx"],
+      "entry": [
+        "package.json",
+        "test-setup.ts",
+        "extension.ts",
+        "src/**/*.test.{ts,tsx}",
+        "src/{status,details,settings}-view.tsx"
+      ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "extensions/pstdio-performance": {

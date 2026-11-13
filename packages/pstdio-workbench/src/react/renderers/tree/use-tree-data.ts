@@ -5,6 +5,7 @@ import { getWorkbenchRenderers, type ResourceRef, type TreeNode, type WorkbenchC
 import { resolveNavigationLevels } from "../../../core/controllers/page-location/navigation-level";
 import { reportUserActionError } from "../../../core/shared/run-user-action";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
+import { rendererQueryKey } from "../renderer-query-key";
 import { useSharedEqualValue } from "../share-equal-value";
 import { usePageParams } from "../use-page-params";
 import { useRendererRead } from "../use-renderer-read";
@@ -76,7 +77,7 @@ export const useTreeData = (
     ?.getReadKey?.({ resource, viewId, filter, pageParams });
   const queryScope = treeQueryScope(workbench, treeViewId, resource?.projectId ?? project);
   const refreshKey = JSON.stringify(scope ?? [resourceKey(resource), resourceKey(location?.resource), mode, pageOwner]);
-  const queryKey = JSON.stringify([
+  const queryKey = rendererQueryKey([
     treeViewId,
     viewId,
     project,

@@ -52,7 +52,7 @@ export interface MarmaladeState {
   pan: { x: number; y: number };
 }
 export interface MarmaladeViewState extends MarmaladeState {
-  history: { undo: number; redo: number };
+  history: { undo: number; redo: number; boundary: string };
 }
 export type MarmaladeAction =
   | { type: "select"; ids: string[] }
@@ -68,6 +68,7 @@ export type MarmaladeAction =
   | { type: "reorder"; source: string; target?: string; position: "before" | "after" | "inside" }
   | {
       type: "create";
+      id?: string;
       kind: "text" | "rectangle" | "ellipse" | "brush";
       x: number;
       y: number;

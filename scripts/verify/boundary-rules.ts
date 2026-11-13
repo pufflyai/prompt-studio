@@ -129,6 +129,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-wt",
     "pstdio-relay",
     "canvas",
+    "extension-lab",
     "harness-claude-code",
     "harness-codex",
     "harness-open-code",
