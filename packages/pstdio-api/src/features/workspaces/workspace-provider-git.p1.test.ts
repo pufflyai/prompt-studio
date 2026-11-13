@@ -44,6 +44,7 @@ beforeAll(async () => {
   await git("init", "-b", "main");
   await git("config", "user.email", "fixture@example.test");
   await git("config", "user.name", "Fixture");
+  await git("config", "core.autocrlf", "false");
   await writeFile(join(sourceFolder, "README.md"), "Original project\n");
   await git("add", ".");
   await git("commit", "-m", "Initial project");

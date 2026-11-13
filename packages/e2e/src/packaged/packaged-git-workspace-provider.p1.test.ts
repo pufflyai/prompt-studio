@@ -39,6 +39,7 @@ test(
       git("init", "-b", "main");
       git("config", "user.name", "Fixture");
       git("config", "user.email", "fixture@example.test");
+      git("config", "core.autocrlf", "false");
       writeFileSync(join(projectFolder, "notes.txt"), "Retain the source project\n");
       git("add", ".");
       git("commit", "-m", "Initial project");
