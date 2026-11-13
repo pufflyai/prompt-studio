@@ -83,7 +83,16 @@ describe("pstdio planner extension contributions", () => {
       body: {
         kind: "tree",
         body: expect.any(Function),
-        defaultExpandedSectionIds: ["files", "sub-tickets", "workspaces", "sessions"],
+        defaultExpandedSectionIds: [
+          "files",
+          "parent",
+          "depends-on",
+          "required-by",
+          "related",
+          "sub-tickets",
+          "workspaces",
+          "sessions",
+        ],
       },
     });
   });
@@ -94,7 +103,12 @@ describe("pstdio planner extension contributions", () => {
     const dependencies = {
       "ticket-editor": [tickets],
       "ticket-properties": [tickets, plan],
-      "ticket-files": [tickets, ...linkedResources],
+      "ticket-files": [
+        tickets,
+        ...linkedResources,
+        viewDataEvents.resourceAnchorsChanged,
+        viewDataEvents.resourcesChanged,
+      ],
       tickets: [
         tickets,
         plan,

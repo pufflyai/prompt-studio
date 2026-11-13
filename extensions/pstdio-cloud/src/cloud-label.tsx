@@ -4,9 +4,9 @@ import { useCloudContext } from "./cloud-context";
 import { cloudStatus } from "./status";
 import type { useCloud } from "./use-cloud";
 
-export const CloudIcon = (props: { name: string }) => {
+export const CloudIcon = (props: { name: string; compact?: boolean }) => {
   const { name } = props;
-  return <Icon as={resolveIconComponent(name)} boxSize="4" aria-hidden="true" />;
+  return <Icon as={resolveIconComponent(name)} boxSize={props.compact ? "3" : "4"} aria-hidden="true" />;
 };
 
 const CloudStatusIcon = (props: { status?: ReturnType<typeof cloudStatus>; active?: boolean; error?: string }) => {
@@ -15,7 +15,7 @@ const CloudStatusIcon = (props: { status?: ReturnType<typeof cloudStatus>; activ
   let icon = status?.icon ?? "cloud";
   if (error) icon = "triangle-alert";
   if (status?.key === "offline") icon = "wifi-off";
-  return <CloudIcon name={icon} />;
+  return <CloudIcon name={icon} compact />;
 };
 
 export const CloudLabel = (props: { data: ReturnType<typeof useCloud>["data"]; online: boolean; error?: string }) => {
@@ -73,7 +73,7 @@ export const CloudLabel = (props: { data: ReturnType<typeof useCloud>["data"]; o
   return (
     <HStack gap="xs" color={color}>
       <CloudStatusIcon status={status} active={data?.signingIn || status?.active} error={error} />
-      <Text textStyle="paragraph/S/regular" whiteSpace="nowrap">
+      <Text textStyle="label/XS/regular" whiteSpace="nowrap">
         {label}
       </Text>
     </HStack>
