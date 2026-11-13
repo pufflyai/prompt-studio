@@ -2,24 +2,25 @@
 name: implement-ticket
 description: "Implement a ticket end-to-end. Use when asked to implement or complete a ticket."
 metadata:
-  version: 0.0.21
+  version: 0.0.22
 ---
 
 Implement Planner tickets in a Prompt Studio workspace. Produce a committed revision and a change request report, then follow the configured review and pull request steps.
+
+Complete your assigned work independently, including repairs, validation, PR updates, CI and ticket status. Do not introduce a coordinator, cross-agent handoffs or execution grants unless the user explicitly requests them.
 
 ## Workspace
 
 Always work in a Prompt Studio workspace. Never use `git worktree add` or your agent's own worktree tool. Prompt Studio does not track those, so the ticket, reports, reviews and merges cannot find the work.
 
 - If you run inside a workspace from `pst pstdio-planner run-attempt`, work there.
-- Before creating a workspace, read the ticket's linked workspaces with `pst tickets workspaces --id <ticket>` and their implementation owners with `pst pstdio-planner list-variants`.
-- For a linked workspace without a managed variant, list its conversations with `pst sessions list --workspace-id <workspace-id>`. Read the relevant conversation and ticket to find the existing implementation session. Reuse that session for corrections. If ownership is unclear, clarify it before starting another writer.
-- Corrections, review fixes, dependency repairs, and resumed work continue in the existing implementation conversation and workspace, including after submission or a passing review. The user does not need to request reuse. If another implementation session owns the workspace, send the task to that session with `pst sessions follow-up` instead of starting a competing writer. A queued follow-up does not transfer ownership.
+- Before creating a workspace, inspect the ticket's linked workspaces with `pst tickets workspaces --id <ticket>` and managed variants with `pst pstdio-planner list-variants`.
+- Reuse your assigned workspace for corrections, review fixes, dependency repairs and resumed work. Preserve existing changes. Do not edit another active agent's workspace; use a separate workspace when needed to complete your assignment.
 - When a new workspace is needed, run `pst workspaces create --provider pstdio.worktree --params '{"base":"main"}'`. It prints the workspace shorthand and path. Link each ticket with `pst tickets link --id <ticket> --workspace <workspace>`, then work at the printed path. Other workspace types use their own provider ID and declared parameters. See [Workspaces](https://prompt.studio/docs/references/cli/workspaces/).
 - For several tickets in one workspace, create one workspace and link every ticket to it.
 - For one workspace per ticket, create and link a workspace for each ticket.
 
-Create another workspace only when no suitable linked workspace exists, for a useful implementation alternative, or for an explicit request. Workspaces identify variants; they do not own ticket progress. The responsible implementation agent coordinates variant evidence and updates the ticket. Reviewers and variant agents report evidence to it.
+Create another workspace only when no suitable linked workspace exists, for a useful implementation alternative, or for an explicit request. Workspaces identify variants; they do not own ticket progress. You are responsible for your implementation evidence and ticket updates.
 
 Only a workspace started by `pst pstdio-planner run-attempt --ticket <shorthand>` has a managed attempt. You own its ticket status; Planner does not set it for you. In any other workspace, skip revision submission in step 5 and include the workspace ID, commit SHA, and report ID in the handoff. See [Attempts](https://prompt.studio/docs/extensions/planner/attempts/#run-an-attempt) and [Who sets the ticket status](https://prompt.studio/docs/extensions/planner/attempts/#who-sets-the-ticket-status).
 
@@ -86,7 +87,7 @@ Keep the returned request ID. Stop work that depends on the answer. After the pe
 
 Read `pst pstdio-planner implementation-policy` again after implementation and validation. When `adversarialReview` is enabled, run an adversarial review automatically before the final commit and handoff. The setting controls this step; do not ask for confirmation. When disabled, skip the review unless the user explicitly requested it.
 
-Use an independent reviewer when available. Fix relevant findings before handoff. This is the normal review step. Do not launch `run-review` again merely to finish a Planner phase; use it only for an explicit additional review task. Review evidence never moves ticket progress.
+Review the final diff and validation evidence critically. Fix relevant findings before handoff. This is the normal review step. Do not launch `run-review` again merely to finish a Planner phase; use it only for an explicit additional review task. Review evidence never moves ticket progress.
 
 ## Completion
 
