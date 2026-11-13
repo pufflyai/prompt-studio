@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useRef } from "react";
 import { useStickToBottomContext } from "use-stick-to-bottom";
 
 // Canvas-only evidence. Observe the follower's live state without owning or changing its intent.
@@ -22,6 +22,7 @@ export const useResizeFollowEvidence = () => {
     });
     if (events.current.length > 512) events.current.shift();
   };
+  const recordObservation = useEffectEvent(record);
   useEffect(() => {
     const viewport = scrollRef.current;
     const content = contentRef.current;
@@ -30,12 +31,12 @@ export const useResizeFollowEvidence = () => {
     Reflect.set(viewport, "__chatResizeEvidence", evidence);
     let frame = 0;
     const observe = (event: string) => {
-      record(event);
+      recordObservation(event);
       // Sample after the same event's follower/virtualizer callbacks, without delaying actions.
       if (!frame) {
         frame = requestAnimationFrame(() => {
           frame = 0;
-          record("animation-frame");
+          recordObservation("animation-frame");
         });
       }
     };
@@ -59,7 +60,7 @@ export const useResizeFollowEvidence = () => {
     observer.observe(content);
     viewport.addEventListener("scroll", scroll, { passive: true });
     fixture?.addEventListener("click", action, { capture: true });
-    record("mounted");
+    recordObservation("mounted");
     return () => {
       cancelAnimationFrame(frame);
       observer.disconnect();
@@ -69,6 +70,6 @@ export const useResizeFollowEvidence = () => {
         Reflect.deleteProperty(viewport, "__chatResizeEvidence");
       }
     };
-  }, [scrollRef, contentRef, state, record]);
+  }, [scrollRef, contentRef]);
   return record;
 };
