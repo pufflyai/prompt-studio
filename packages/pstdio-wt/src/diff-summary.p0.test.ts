@@ -107,3 +107,23 @@ test("untracked filenames preserve spaces and Unicode when counting content", as
     file_count: 1,
   });
 });
+
+test.each(["staged modification", "staged addition"])("current totals omit a reverted %s", async (kind) => {
+  if (kind === "staged modification") {
+    const path = join(repo.dir, "README.md");
+    const original = await Bun.file(path).text();
+    await writeFile(path, "staged replacement\n");
+    await git(repo.dir, ["add", "README.md"]);
+    await writeFile(path, original);
+  } else {
+    const path = join(repo.dir, "added.txt");
+    await writeFile(path, "staged addition\n");
+    await git(repo.dir, ["add", "added.txt"]);
+    await rm(path);
+  }
+  expect(await getWorktreeDiffSummary({ worktreePath: repo.dir, base: "HEAD" })).toEqual({
+    additions: 0,
+    deletions: 0,
+    file_count: 0,
+  });
+});
