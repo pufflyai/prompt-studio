@@ -3,7 +3,7 @@ import { Box, createSlotRecipeContext, HStack, Stack, Text } from "@chakra-ui/re
 import { Children, type ReactNode } from "react";
 
 import { activityCommentSlotRecipe as recipe } from "@/theme/recipes/activity-comment";
-import { RichMessage } from "../rich-text/rich-message/rich-message";
+import { LazyRichMessage } from "../rich-text/lazy-rich-message";
 import type { ActivityActor } from "./activity.types";
 import { ActivityAvatar } from "./activity-avatar";
 
@@ -75,7 +75,7 @@ export const ActivityReply = (props: ActivityReplyProps) => {
         <ActivityCommentHeader actor={actor} timestamp={timestamp} actions={actions} />
         <Box paddingLeft="32px">
           <Text as="div" textStyle="label/S/regular" color="fg" overflowWrap="anywhere">
-            {typeof children === "string" ? <RichMessage defaultState={children} fullWidth /> : children}
+            {typeof children === "string" ? <LazyRichMessage defaultState={children} fullWidth /> : children}
           </Text>
         </Box>
       </Stack>
@@ -100,7 +100,7 @@ export const ActivityComment = (props: ActivityCommentProps) => {
           actions={actions}
         />
         <ActivityCommentContent>
-          {typeof children === "string" ? <RichMessage defaultState={children} fullWidth /> : children}
+          {typeof children === "string" ? <LazyRichMessage defaultState={children} fullWidth /> : children}
         </ActivityCommentContent>
       </ActivityCommentBody>
       {hasReplies ? (

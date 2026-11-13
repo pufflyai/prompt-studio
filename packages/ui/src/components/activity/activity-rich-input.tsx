@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MarkdownEditor } from "../rich-text/markdown-editor/markdown-editor";
+import { LazyMarkdownEditor } from "../rich-text/lazy-markdown-editor";
 
 interface ActivityRichInputProps {
   value: string;
@@ -14,7 +14,7 @@ export const ActivityRichInput = ({ value, disabled, placeholder, onChange }: Ac
   // draft replacement (for example, clearing a successfully submitted comment).
   if (value !== editor.value) setEditor({ value, key: editor.key + 1 });
   return (
-    <MarkdownEditor
+    <LazyMarkdownEditor
       ariaLabel={placeholder}
       key={editor.key}
       defaultState={value}

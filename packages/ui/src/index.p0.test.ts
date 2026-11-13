@@ -47,6 +47,9 @@ test("the UI entry point supports server rendering", () => {
 });
 
 test.each([
+  { entry: "index", exported: "ActivityComposer" },
+  { entry: "index", exported: "ActivityComment" },
+  { entry: "index", exported: "LazyRichMessage" },
   { entry: "chat-skeleton", exported: "ChatSkeleton" },
   { entry: "lazy-markdown-editor", exported: "LazyMarkdownEditor" },
   { entry: "lazy-markdown-editor", exported: "preloadMarkdownEditor" },
