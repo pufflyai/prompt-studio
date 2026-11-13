@@ -34,7 +34,11 @@ export const getBoards = async (deps: BoardViewsDeps, projectId: string) => {
     const body = view.body;
     if (body.kind !== "kanban" && body.kind !== "dataTable" && body.kind !== "resourceList") return [];
     const record = snapshot.runtime.views.find((record) => record.id === view.id)!;
-    const source = resolveEnabledSourceForRecord(record.sourcePath, snapshot.enabledSources);
+    const source = resolveEnabledSourceForRecord(
+      record.sourcePath,
+      snapshot.enabledSources,
+      snapshot.runtime.extensions,
+    );
     if (!source) return [];
     const common = {
       id: view.id,

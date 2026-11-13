@@ -1,30 +1,19 @@
-import { createHash } from "node:crypto";
-import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { join } from "node:path";
 import type { ExtensionDefinition, ExtensionSourceKind } from "@pstdio/sdk/extensions";
 import { remapPackageAssets } from "../artifacts/remap-package-assets";
 import type { ExtensionDiagnostic } from "../types/runtime";
-import { bundleEntry } from "./bundle-entry";
 import { createDiagnostic } from "./diagnostics";
 import { discoverExtensionPackages } from "./discovery";
-import { mirrorNodeModules } from "./mirror-node-modules";
 import { type ExtensionApiProvider, type PackageManifest, readPackageManifest } from "./package-manifest";
-import {
-  beginRuntimeLoad,
-  publishRuntimePackage,
-  runtimePackageKey as runtimeCacheKey,
-  runtimeCacheRoot,
-} from "./runtime-cache";
-import {
-  collectRuntimeModulePaths,
-  hashRuntimeModulePaths,
-  mirrorRuntimeSourceSnapshot,
-} from "./runtime-source-snapshot";
+import { PreparationUnavailableError } from "./preparation-error";
+import { inspectRevisionInputs } from "./prepare-revision";
+import { retainPreparedRevision } from "./prepared-cache";
+import { type PreparedExtensionRevision, prepareExtensionRevision } from "./prepared-revision";
 
 export type LoadedExtensionSource = {
   /** Path to the extension's package.json directory. */
   packagePath: string;
+  originalPackagePath?: string;
   /** Resolved entry path (from manifest.main). */
   sourcePath: string;
   sourceKind: ExtensionSourceKind;
@@ -35,6 +24,7 @@ export type LoadedExtensionSource = {
    * broken extension instead of dropping it.
    */
   definition: ExtensionDefinition;
+  preparedRevision?: PreparedExtensionRevision;
 };
 
 export type ExtensionPackageRef = {
@@ -50,6 +40,8 @@ export type LoadExtensionSourcesOptions = {
   extensionPackages?: ExtensionPackageRef[];
   /** Who compares `engines.pstdio` with this extension API version. Defaults to the host. */
   apiProvider?: ExtensionApiProvider;
+  preparedRevision?: PreparedExtensionRevision;
+  immutableAssets?: boolean;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -68,150 +60,39 @@ const formatImportError = (error: unknown, fallback: string) => {
   return message === "[object Object]" ? fallback : message;
 };
 
-const importWithCacheKey = (filePath: string) =>
-  import(`${pathToFileURL(filePath).href}?pstdio_cache=${process.pid}-${importCounter++}`);
+// Bun 1.4.4 retains failed evaluation for file-URL queries. Absolute-path imports
+// preserve the per-load identity without rebuilding immutable output (ADR 0144).
+const importWithCacheKey = (filePath: string) => import(`${filePath}?pstdio_cache=${process.pid}-${importCounter++}`);
 
-const safeCacheSegment = (value: string) => value.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 80) || "extension";
-
-const digest = (value: string) => createHash("sha256").update(value).digest("hex").slice(0, 16);
-
-const resolveNodeModulesPath = (packagePath: string) => {
-  let currentPath = packagePath;
-
-  while (true) {
-    const nodeModulesPath = join(currentPath, "node_modules");
-    if (existsSync(nodeModulesPath)) return nodeModulesPath;
-
-    const parentPath = dirname(currentPath);
-    if (parentPath === currentPath) return null;
-    currentPath = parentPath;
-  }
-};
-
-const collectDependencyPackageEntries = (nodeModulesPath: string) => {
-  const entries: Array<{ name: string; path: string }> = [];
-
-  for (const dirent of readdirSync(nodeModulesPath, { withFileTypes: true }).sort((a, b) =>
-    a.name.localeCompare(b.name),
-  )) {
-    if (dirent.name.startsWith(".") || (!dirent.isDirectory() && !dirent.isSymbolicLink())) continue;
-
-    const packagePath = join(nodeModulesPath, dirent.name);
-    if (!dirent.name.startsWith("@")) {
-      entries.push({ name: dirent.name, path: packagePath });
-      continue;
-    }
-
-    if (!existsSync(packagePath)) continue;
-    for (const scoped of readdirSync(packagePath, { withFileTypes: true }).sort((a, b) =>
-      a.name.localeCompare(b.name),
-    )) {
-      if (scoped.name.startsWith(".") || (!scoped.isDirectory() && !scoped.isSymbolicLink())) continue;
-      entries.push({ name: `${dirent.name}/${scoped.name}`, path: join(packagePath, scoped.name) });
-    }
-  }
-
-  return entries;
-};
-
-const dependencyPackageState = (nodeModulesPath: string) => {
-  const hash = createHash("sha256");
-  hash.update(realpathSync(nodeModulesPath));
-
-  for (const entry of collectDependencyPackageEntries(nodeModulesPath)) {
-    hash.update("\0");
-    hash.update(entry.name);
-    hash.update("\0");
-
-    try {
-      hash.update(realpathSync(entry.path));
-    } catch {
-      hash.update("missing");
-    }
-
-    const packageJsonPath = join(entry.path, "package.json");
-    if (existsSync(packageJsonPath)) hash.update(readFileSync(packageJsonPath));
-  }
-
-  return hash.digest("hex").slice(0, 16);
-};
-
-const dependencyCacheKey = (nodeModulesPath: string | null) => {
-  if (!nodeModulesPath) return "no-node-modules";
-  return `node-modules-${dependencyPackageState(nodeModulesPath)}`;
-};
-
-const runtimePackageKey = (packagePath: string, runtimeModulePaths: Set<string>, nodeModulesPath: string | null) =>
-  runtimeCacheKey(
-    resolve(packagePath),
-    `${hashRuntimeModulePaths(packagePath, runtimeModulePaths)}-${dependencyCacheKey(nodeModulesPath)}`,
-  );
-
-// Names everything a load reads: the manifest, the modules the entry imports, and the installed
-// dependencies. Loads with the same key import the same runtime copy with the same dependencies,
-// and Bun keeps a module that failed to evaluate, so a failed load can only end differently once
-// the key changes.
+// Synchronous authoring API. The running host uses inspectExtensionLoadKey in its worker.
 export const extensionLoadKey = (packagePath: string) => {
-  const { entryPath, diagnostics } = readPackageManifest(packagePath);
-  if (!entryPath) return `manifest-${digest(JSON.stringify(diagnostics))}`;
-  return runtimePackageKey(
-    packagePath,
-    collectRuntimeModulePaths(packagePath, entryPath),
-    resolveNodeModulesPath(packagePath),
-  );
-};
-
-const createRuntimePackage = (packagePath: string, entryPath: string, packageName: string) => {
-  const cacheRoot = runtimeCacheRoot();
-  const nodeModulesPath = resolveNodeModulesPath(packagePath);
-  const runtimeModulePaths = collectRuntimeModulePaths(packagePath, entryPath);
-
-  const rootPath = join(
-    cacheRoot,
-    safeCacheSegment(packageName),
-    runtimePackageKey(packagePath, runtimeModulePaths, nodeModulesPath),
-  );
-  const runtimePackagePath = join(rootPath, "package");
-  const entryRelativePath = relative(packagePath, entryPath);
-
-  publishRuntimePackage(runtimePackagePath, (stagingPath) => {
-    mirrorRuntimeSourceSnapshot(packagePath, stagingPath, runtimeModulePaths);
-    if (nodeModulesPath) mirrorNodeModules(nodeModulesPath, join(stagingPath, "node_modules"));
-  });
-
-  const canonicalPackagePath = realpathSync(runtimePackagePath);
-  return {
-    rootPath,
-    entryPath: join(canonicalPackagePath, entryRelativePath),
-    packagePath: canonicalPackagePath,
-  };
-};
-
-const importFresh = async (filePath: string, packagePath: string, packageName: string) => {
-  const runtimePackage = createRuntimePackage(packagePath, filePath, packageName);
-  const load = beginRuntimeLoad(runtimePackage.rootPath);
-  let loaded = false;
   try {
-    // Extension dependencies use their published exports, independently of the host's development conditions.
-    const entryPath = await bundleEntry(
-      runtimePackage.entryPath,
-      runtimePackage.packagePath,
-      dirname(runtimePackage.entryPath),
-    );
-    const mod = await importWithCacheKey(entryPath);
-    loaded = true;
-    return remapPackageAssets(mod, runtimePackage.packagePath, packagePath);
-  } finally {
-    load.finish(loaded);
+    return inspectRevisionInputs(packagePath).loadKey;
+  } catch (error) {
+    return `manifest-${JSON.stringify(error instanceof Error ? error.message : error)}`;
   }
 };
 
 export const loadExtensionPackage = async (
   pkg: ExtensionPackageRef,
   diagnostics: ExtensionDiagnostic[],
-  options: { apiProvider?: ExtensionApiProvider } = {},
+  options: {
+    apiProvider?: ExtensionApiProvider;
+    preparedRevision?: PreparedExtensionRevision;
+    immutableAssets?: boolean;
+  } = {},
 ): Promise<LoadedExtensionSource | null> => {
-  const { manifest, entryPath, diagnostics: manifestDiagnostics } = readPackageManifest(pkg.path, options);
+  const {
+    manifest,
+    entryPath,
+    diagnostics: manifestDiagnostics,
+  } = options.preparedRevision
+    ? {
+        manifest: options.preparedRevision.manifest,
+        entryPath: join(pkg.path, options.preparedRevision.manifest.main),
+        diagnostics: options.preparedRevision.diagnostics,
+      }
+    : readPackageManifest(pkg.path, options);
   diagnostics.push(...manifestDiagnostics);
 
   if (!manifest || !entryPath) return null;
@@ -219,8 +100,19 @@ export const loadExtensionPackage = async (
   const sourceKind = pkg.sourceKind ?? "local_path";
   let definition: ExtensionDefinition = {};
 
+  let preparedRevision = options.preparedRevision;
   try {
-    const mod = (await importFresh(entryPath, pkg.path, manifest.name)) as Record<string, unknown>;
+    // This preparation supplies live callbacks, even when a background registry
+    // initiated the load. Readers must not repeatedly retire the import they await.
+    preparedRevision ??= await prepareExtensionRevision(pkg.path, {
+      apiProvider: options.apiProvider,
+      priority: "requested",
+    });
+    retainPreparedRevision(preparedRevision);
+    const imported = await importWithCacheKey(preparedRevision.entryPath);
+    const mod = (
+      options.immutableAssets ? imported : remapPackageAssets(imported, preparedRevision.packagePath, pkg.path)
+    ) as Record<string, unknown>;
     if (!("default" in mod) || mod.default === undefined || !isRecord(mod.default)) {
       diagnostics.push(
         createDiagnostic({
@@ -234,6 +126,7 @@ export const loadExtensionPackage = async (
       definition = mod.default as unknown as ExtensionDefinition;
     }
   } catch (error) {
+    if (error instanceof PreparationUnavailableError) throw error;
     diagnostics.push(
       createDiagnostic({
         code: "extension_import_failed",
@@ -245,11 +138,14 @@ export const loadExtensionPackage = async (
   }
 
   return {
-    packagePath: pkg.path,
-    sourcePath: entryPath,
+    packagePath: options.immutableAssets && preparedRevision ? preparedRevision.packagePath : pkg.path,
+    originalPackagePath: pkg.path,
+    sourcePath:
+      options.immutableAssets && preparedRevision ? join(preparedRevision.packagePath, manifest.main) : entryPath,
     sourceKind,
     manifest,
     definition,
+    preparedRevision,
   };
 };
 
@@ -265,7 +161,11 @@ export const loadExtensionSources = async (options: LoadExtensionSourcesOptions 
   const explicitPackages = options.extensionPackages ?? [];
 
   for (const pkg of [...rootPackages, ...explicitPackages]) {
-    const loaded = await loadExtensionPackage(pkg, diagnostics, { apiProvider: options.apiProvider });
+    const loaded = await loadExtensionPackage(pkg, diagnostics, {
+      apiProvider: options.apiProvider,
+      preparedRevision: options.preparedRevision,
+      immutableAssets: options.immutableAssets,
+    });
     if (loaded) sources.push(loaded);
   }
 

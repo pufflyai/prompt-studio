@@ -2,6 +2,7 @@
   "name": "pstdio-api",
   "private": true,
   "exports": {
+    "./extension-input-inspector": "./src/features/extensions/webview-input-inspector.ts",
     "./app": "./src/app.ts",
     "./runtime": "./src/features/runtime/routes.ts"
   },

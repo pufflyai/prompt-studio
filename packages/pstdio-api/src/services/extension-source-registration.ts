@@ -1,5 +1,12 @@
 import { isAbsolute } from "node:path";
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
+import { acceptPreparedRevision, preparedRevisionState, readAcceptedRevision } from "pstdio-extensions";
+import {
+  activatePreparedInstall,
+  assertPreparedInstallOwned,
+  settlePreparedInstall,
+} from "../features/extensions/extension-install-transaction";
+import { runExtensionPreparation } from "../features/extensions/extension-preparation";
 import { publishedExtensionsId } from "../features/extensions/publication/types";
 import type { RegisterInstalledSourceInput } from "./extension-service";
 
@@ -106,42 +113,104 @@ export const registrationValues = (
   last_error_json: null,
 });
 
-export const createInstalledSourceRegistrar = (deps: {
+type RegistrarDeps = {
   sources: ReturnType<typeof createInstalledExtensionSourcesDBService>;
   emitInstalledSource: (source: unknown) => void;
-}) => {
-  const { emitInstalledSource } = deps;
-  return async (input: RegisterInstalledSourceInput, notify: (sourcePath?: string) => Promise<void>) => {
+};
+const registerRow = async (
+  deps: RegistrarDeps,
+  input: RegisterInstalledSourceInput,
+  existing: Awaited<ReturnType<typeof findInstalledSourceForRegistration>>,
+  values: ReturnType<typeof registrationValues>,
+) => {
+  if (existing && hasUnchangedInstalledSourceRegistration(existing, values)) return existing;
+  if (existing) return deps.sources.updateRegistration(existing.id, values);
+  try {
+    return await deps.sources.register({ install_name: input.installName, ...values });
+  } catch (error) {
+    const raced = await deps.sources.getBySourcePath(input.sourcePath);
+    if (!raced) throw error;
+    return deps.sources.updateRegistration(raced.id, values);
+  }
+};
+const rollbackRegistration = async (
+  deps: RegistrarDeps,
+  input: RegisterInstalledSourceInput,
+  state: {
+    existing: Awaited<ReturnType<typeof findInstalledSourceForRegistration>>;
+    registered: Awaited<ReturnType<typeof findInstalledSourceForRegistration>>;
+    previousRevision: Awaited<ReturnType<typeof readAcceptedRevision>>;
+    published: boolean;
+    values: ReturnType<typeof registrationValues>;
+  },
+  notify: (sourcePath?: string) => Promise<void>,
+) => {
+  let owns = true;
+  if (input.installation) {
+    owns = await assertPreparedInstallOwned(input.installation).then(
+      () => true,
+      () => false,
+    );
+    await settlePreparedInstall(input.installation, false);
+  }
+  const current = await deps.sources.getBySourcePath(input.sourcePath);
+  const accepted = await readAcceptedRevision(input.sourcePath);
+  if (
+    !owns ||
+    (state.published && accepted?.id !== input.preparedRevision?.id) ||
+    current?.source_hash !== state.values.source_hash
+  )
+    return;
+  if (state.published && state.previousRevision)
+    await acceptPreparedRevision(input.sourcePath, state.previousRevision, {
+      expectedState: preparedRevisionState(input.preparedRevision!),
+    });
+  else if (state.published) await runExtensionPreparation("runtime.forget", { sourcePath: input.sourcePath });
+  if (state.existing) {
+    const restored = await deps.sources.updateRegistration(state.existing.id, { ...state.existing });
+    if (restored) deps.emitInstalledSource(restored);
+  } else if (state.registered) await deps.sources.remove(state.registered.id);
+  await notify(input.sourcePath).catch(() => {});
+};
+const publishPreparedRegistration = async (
+  input: RegisterInstalledSourceInput,
+  previous: Awaited<ReturnType<typeof readAcceptedRevision>>,
+) => {
+  if (input.installation) await assertPreparedInstallOwned(input.installation);
+  if (!input.preparedRevision) return false;
+  await acceptPreparedRevision(input.sourcePath, input.preparedRevision, {
+    expectedState: preparedRevisionState(previous),
+  });
+  return true;
+};
+const registrationNotification = (
+  input: RegisterInstalledSourceInput,
+  existing: Awaited<ReturnType<typeof findInstalledSourceForRegistration>>,
+  values: ReturnType<typeof registrationValues>,
+) => ({
+  changed: !existing || !hasUnchangedInstalledSourceRegistration(existing, values),
+  path: existing ? refreshPathForRegistration(existing.source_path, input) : input.sourcePath,
+});
+export const createInstalledSourceRegistrar =
+  (deps: RegistrarDeps) =>
+  async (input: RegisterInstalledSourceInput, notify: (sourcePath?: string) => Promise<void>) => {
     if (input.extensionId === publishedExtensionsId) throw new Error("Reserved platform extension identity");
     const existing = await findInstalledSourceForRegistration(deps.sources, input);
     const values = registrationValues(input, existing);
-
-    if (existing) {
-      if (hasUnchangedInstalledSourceRegistration(existing, values)) return existing;
-
-      const updated = await deps.sources.updateRegistration(existing.id, values);
-      if (!updated) throw new Error(`Installed extension not found: ${input.installName}`);
-      emitInstalledSource(updated);
-      await notify(refreshPathForRegistration(existing.source_path, input));
-      return updated;
-    }
-
+    const previousRevision = input.preparedRevision ? await readAcceptedRevision(input.sourcePath) : null;
+    const state = { existing, values, previousRevision, registered: null as typeof existing, published: false };
     try {
-      const registered = await deps.sources.register({
-        install_name: input.installName,
-        ...values,
-      });
-      emitInstalledSource(registered);
-      await notify(input.sourcePath);
-      return registered;
+      if (input.installation) await activatePreparedInstall(input.installation);
+      state.registered = await registerRow(deps, input, existing, values);
+      if (!state.registered) throw new Error(`Installed extension not found: ${input.installName}`);
+      state.published = await publishPreparedRegistration(input, previousRevision);
+      const notification = registrationNotification(input, existing, values);
+      if (notification.changed) await notify(notification.path);
+      if (input.installation) await settlePreparedInstall(input.installation, true);
+      deps.emitInstalledSource(state.registered);
+      return state.registered;
     } catch (error) {
-      const raced = await deps.sources.getBySourcePath(input.sourcePath);
-      if (!raced) throw error;
-      const updated = await deps.sources.updateRegistration(raced.id, values);
-      if (!updated) throw error;
-      emitInstalledSource(updated);
-      await notify(input.sourcePath);
-      return updated;
+      await rollbackRegistration(deps, input, state, notify);
+      throw error;
     }
   };
-};

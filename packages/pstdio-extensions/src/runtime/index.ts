@@ -46,6 +46,28 @@ export {
   readPackageManifest,
   readPackageManifestMetadata,
 } from "./package-manifest";
+export {
+  configureExtensionPreparationWorker,
+  createPreparationClient,
+  createPreparationScope,
+  isPreparationHost,
+  type PreparationOptions,
+  retainExtensionPreparation,
+  runExtensionPreparation,
+  stopExtensionPreparation,
+  stopUnownedExtensionPreparation,
+  subscribePreparationEvents,
+  withBackgroundPreparation,
+  withRequestedPreparation,
+} from "./preparation-client";
+export {
+  acceptPreparedRevision,
+  inspectExtensionLoadKey,
+  type PreparedExtensionRevision,
+  preparedRevisionState,
+  prepareExtensionRevision,
+  readAcceptedRevision,
+} from "./prepared-revision";
 export { createExtensionInstallEnvironment, createExtensionProcessEnvironment } from "./process-environment";
 export {
   type BuildEnvironmentInput,

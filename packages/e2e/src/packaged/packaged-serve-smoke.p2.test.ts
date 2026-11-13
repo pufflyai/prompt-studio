@@ -1,3 +1,5 @@
+// Independent native install evaluations are covered in packaged-concurrent-extension-smoke.p2.test.ts.
+// packaged-prepared-revisions.p1.test.ts checks compiled preparation workers and accepted tool reuse during blocked reconciliation.
 // packaged-page-params-during-mount.p2.test.ts covers host props changed during async guest initialization.
 // packaged-session-import.p1.test.ts restores JSONL session exports through the compiled CLI and API, including the on-disk metadata index.
 // packaged-extensions-navigation.p1.spec.ts covers fixed headers and nested extension URLs.

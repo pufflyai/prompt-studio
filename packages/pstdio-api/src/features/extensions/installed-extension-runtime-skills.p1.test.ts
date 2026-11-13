@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { readAcceptedRevision } from "pstdio-extensions";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { folderProjectInput } from "../../test-utils/folder-project-input";
 import { writeProvisionHarnessExtension } from "../../test-utils/write-provision-harness-extension";
@@ -109,7 +110,10 @@ describe("installed extension runtime skills", () => {
       ...handle.deps,
       createRootWatcher: async () => ({ dispose: () => {}, refresh: async () => {} }),
       createSourceWatcher: async (watcherInput) => {
-        onSourceChanged = watcherInput.onSourceChanged;
+        onSourceChanged = async (path) => {
+          await watcherInput.onSourceChanged(path);
+          await watcherInput.afterSourceChanged?.(path);
+        };
         return { dispose: () => {}, refresh: async () => {} };
       },
       projectRuntimeCatalog: handle.deps.extensionRuntimeCatalog,
@@ -133,4 +137,181 @@ describe("installed extension runtime skills", () => {
       await runtime.dispose();
     }
   });
+
+  test("unchanged attachment keeps prepared workspaces ready while pre-attachment edits reconcile", async () => {
+    const response = await handle.app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(folderProjectInput({ name: "Attached Skills" })),
+    });
+    const project = (await response.json()) as { id: string };
+    const sourcePath = createTestSkillExtensionSource({
+      displayName: "Attached Skills",
+      installName: "attached-skills",
+      name: "attached-skills",
+      root: tempRoot,
+    });
+    const loaded = await loadExtensionSource(sourcePath);
+    await handle.deps.extensionService.enableInstalledSourceForProject({
+      displayName: loaded.metadata.displayName,
+      extensionId: loaded.metadata.id,
+      installName: "attached-skills",
+      manifest: loaded.manifest,
+      name: loaded.metadata.name,
+      projectId: project.id,
+      sourceHash: hashExtensionSource(sourcePath),
+      sourcePath,
+      version: loaded.metadata.version ?? null,
+    });
+    let onSourceChanged: (sourcePath: string) => Promise<unknown> = async () => {};
+    const provisioned: string[] = [];
+    const createRuntime = () =>
+      createInstalledExtensionRuntime({
+        ...handle.deps,
+        createRootWatcher: async () => ({ dispose: () => {}, refresh: async () => {} }),
+        createSourceWatcher: async (input) => {
+          await input.listInstalledSources();
+          onSourceChanged = async (path) => {
+            await input.onSourceChanged(path);
+            await input.afterSourceChanged?.(path);
+          };
+          return { dispose: () => {}, refresh: async () => {} };
+        },
+        projectRuntimeCatalog: handle.deps.extensionRuntimeCatalog,
+        provisionWorkspacesUsingSource: async (path) => {
+          provisioned.push(path);
+        },
+        webviewBuilds: false,
+      });
+    const runtime = createRuntime();
+    await runtime.ready;
+    try {
+      await onSourceChanged(sourcePath);
+      expect(provisioned).toEqual([]);
+    } finally {
+      await runtime.dispose();
+    }
+
+    writeFileSync(join(sourcePath, "skills", "lab-skill", "SKILL.md"), "# Edited before attachment\n");
+    const reattached = createRuntime();
+    await reattached.ready;
+    try {
+      await onSourceChanged(sourcePath);
+      expect(provisioned).toEqual([sourcePath]);
+    } finally {
+      await reattached.dispose();
+    }
+  });
+
+  test("a failed skill reconciliation retries the same source before recording completion", async () => {
+    const sourcePath = createTestSkillExtensionSource({
+      displayName: "Retried Skills",
+      installName: "retried-skills",
+      name: "retried-skills",
+      root: tempRoot,
+    });
+    let onSourceChanged: (sourcePath: string) => Promise<unknown> = async () => {};
+    let fail = true;
+    const provisioned: string[] = [];
+    const runtime = createInstalledExtensionRuntime({
+      ...handle.deps,
+      createRootWatcher: async () => ({ dispose: () => {}, refresh: async () => {} }),
+      createSourceWatcher: async (input) => {
+        onSourceChanged = async (path) => {
+          await input.onSourceChanged(path);
+          await input.afterSourceChanged?.(path);
+        };
+        return { dispose: () => {}, refresh: async () => {} };
+      },
+      projectRuntimeCatalog: handle.deps.extensionRuntimeCatalog,
+      provisionWorkspacesUsingSource: async (path) => {
+        provisioned.push(path);
+        if (fail) throw new Error("Skill reconciliation interrupted");
+      },
+      webviewBuilds: false,
+    });
+    await runtime.ready;
+    try {
+      await expect(onSourceChanged(sourcePath)).rejects.toThrow("Skill reconciliation interrupted");
+      fail = false;
+      await onSourceChanged(sourcePath);
+      await onSourceChanged(sourcePath);
+      expect(provisioned).toEqual([sourcePath, sourcePath]);
+    } finally {
+      await runtime.dispose();
+    }
+  });
+});
+
+test("offline runtime edits are inspected without replacing the accepted tool", async () => {
+  const sourcePath = createTestSkillExtensionSource({
+    displayName: "Background Candidate",
+    installName: "background-candidate",
+    name: "background-candidate",
+    root: tempRoot,
+  });
+  const loaded = await loadExtensionSource(sourcePath, { accepted: true });
+  await handle.deps.extensionService.registerInstalledSource({
+    installName: "background-candidate",
+    displayName: loaded.metadata.displayName,
+    extensionId: loaded.metadata.id,
+    manifest: loaded.manifest,
+    name: loaded.metadata.name,
+    sourceHash: "opaque-source-version",
+    sourcePath,
+    sourceKind: "local_path",
+  });
+  const entered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  let evaluations = 0;
+  const gate = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch: async () => {
+      evaluations++;
+      entered.resolve();
+      await release.promise;
+      return new Response("continue");
+    },
+  });
+  let provisions = 0;
+  let changed: (path: string) => Promise<void> = async () => {};
+  const runtime = createInstalledExtensionRuntime({
+    ...handle.deps,
+    createRootWatcher: async () => ({ dispose: () => {}, refresh: async () => {} }),
+    createSourceWatcher: async (input) => {
+      await input.listInstalledSources();
+      changed = async (path) => {
+        await input.onSourceChanged(path);
+        await input.afterSourceChanged?.(path);
+      };
+      return { dispose: () => {}, refresh: async () => {} };
+    },
+    projectRuntimeCatalog: handle.deps.extensionRuntimeCatalog,
+    provisionWorkspacesUsingSource: async () => {
+      provisions++;
+    },
+    webviewBuilds: false,
+  });
+  let inspection: Promise<void> | undefined;
+  try {
+    await runtime.ready;
+    await changed(sourcePath);
+    expect(provisions).toBe(0);
+    const entry = join(sourcePath, "extension.ts");
+    writeFileSync(entry, `await fetch(${JSON.stringify(gate.url.href)});\n${readFileSync(entry, "utf8")}`);
+    inspection = changed(sourcePath);
+    expect(await Promise.race([entered.promise.then(() => "inspected"), Bun.sleep(1000).then(() => "missing")])).toBe(
+      "inspected",
+    );
+    expect((await readAcceptedRevision(sourcePath))?.id).toBe(loaded.preparedRevision!.id);
+    release.resolve();
+    await inspection;
+    expect(evaluations).toBe(1);
+  } finally {
+    release.resolve();
+    await inspection;
+    await runtime.dispose();
+    await gate.stop(true);
+  }
 });

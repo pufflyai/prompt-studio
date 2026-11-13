@@ -166,7 +166,7 @@ export const createCommandEnvironment = (
       skills: { list: () => createReadBoundary(signal)(() => deps.skillService.list(input.projectId)) },
       settings,
       extensions: {
-        list: () => createReadBoundary(signal)(() => listProjectExtensionInventory(deps, input.projectId)),
+        list: () => createReadBoundary(signal)(() => listProjectExtensionInventory(deps, input.projectId, signal)),
         // Accepted selections continue after the command ends, so cancellation applies only before acceptance.
         install: async (names: string[]) => {
           signal?.throwIfAborted();

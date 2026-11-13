@@ -34,7 +34,9 @@ type NormalizeExtensionSourcesOptions = {
 
 const isRepoLocalSource = (source: LoadedExtensionSource, projectFolder: string | undefined) =>
   projectFolder !== undefined &&
-  resolve(source.packagePath).startsWith(`${resolve(join(projectFolder, ".pstdio", "extensions"))}${sep}`);
+  resolve(source.originalPackagePath ?? source.packagePath).startsWith(
+    `${resolve(join(projectFolder, ".pstdio", "extensions"))}${sep}`,
+  );
 
 const createOverrideDiagnostic = (source: LoadedExtensionSource, override: LoadedExtensionSource) => ({
   code: "extension_overridden_by_local",

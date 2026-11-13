@@ -89,7 +89,10 @@ export type ProjectExtensionRuntimeCatalogObserver = {
 
 export type ProjectExtensionRuntimeCatalog = ReturnType<typeof createProjectExtensionRuntimeCatalog>;
 
-type CandidateExtensionSource = LoadableExtensionSource & { extension_id: string };
+type CandidateExtensionSource = LoadableExtensionSource & {
+  extension_id: string;
+  preparedRevision?: import("pstdio-extensions").PreparedExtensionRevision;
+};
 
 export const createProjectExtensionRuntimeCatalog = (deps: {
   extensionService: ReturnType<typeof createExtensionService>;
@@ -294,7 +297,9 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
       (record) => record.installedSource.extension_id !== installedSource.extension_id,
     );
     const loaded = await sources.collect(enabled);
-    const candidate = await sources.load(installedSource);
+    const candidate = installedSource.preparedRevision
+      ? await sources.inspectCandidate(installedSource, installedSource.preparedRevision)
+      : await sources.load(installedSource);
     if (candidate) loaded.push(candidate);
     assertResourcePrefixes(loaded);
   };

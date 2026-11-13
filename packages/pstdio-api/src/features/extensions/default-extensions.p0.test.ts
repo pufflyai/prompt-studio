@@ -98,7 +98,7 @@ describe("installDefaultExtensions", () => {
     });
     try {
       await firstStarted.promise;
-      expect(started).toEqual(["first", "second"]);
+      expect(started).toEqual(["first", "second", "third"]);
       releaseFirst.resolve();
       expect((await pending).map((entry) => entry.installName)).toEqual(["first", "second", "third"]);
     } finally {
@@ -108,41 +108,30 @@ describe("installDefaultExtensions", () => {
     }
   });
 
-  test("keeps defaults for the same install target in configuration order", async () => {
+  test("uses the last configured default for a shared install target", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-default-target-order-"));
     const first = join(root, "first");
     const second = join(root, "second");
     writeExtension(first, "first");
     writeExtension(second, "second");
-    const releaseFirst = Promise.withResolvers<void>();
-    const firstStarted = Promise.withResolvers<void>();
     const started: string[] = [];
-    const pending = installDefaultExtensions({
-      config: {
-        defaultExtensions: [
-          { source: first, installName: "shared" },
-          { source: second, installName: "shared" },
-        ],
-      },
-      env: { PSTDIO_HOME: join(root, "home") },
-      installExtensionSource: async (input) => {
-        const name = input.source === first ? "first" : "second";
-        started.push(name);
-        if (name === "first") {
-          firstStarted.resolve();
-          await releaseFirst.promise;
-        }
-        return { ...installed, sourceHash: name };
-      },
-    });
     try {
-      await firstStarted.promise;
-      expect(started).toEqual(["first"]);
-      releaseFirst.resolve();
-      expect((await pending).map((entry) => entry.sourceHash)).toEqual(["first", "second"]);
+      const result = await installDefaultExtensions({
+        config: {
+          defaultExtensions: [
+            { source: first, installName: "shared" },
+            { source: second, installName: "shared" },
+          ],
+        },
+        env: { PSTDIO_HOME: join(root, "home") },
+        installExtensionSource: async (input) => {
+          started.push(input.source);
+          return { ...installed, sourceHash: input.source };
+        },
+      });
+      expect(started).toEqual([second]);
+      expect(result.map((entry) => entry.sourceHash)).toEqual([second]);
     } finally {
-      releaseFirst.resolve();
-      await pending;
       rmSync(root, { recursive: true, force: true });
     }
   });
@@ -221,17 +210,24 @@ describe("installDefaultExtensions", () => {
 });
 
 describe("installDefaultExtensions cancellation", () => {
-  test("settles cancellation while an active installer is stopping", async () => {
+  test("settles cancellation and leaves queued defaults unstarted while active installers stop", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-default-cancel-"));
     const source = join(root, "pstdio-planner");
     writeExtension(source, "pstdio-planner");
     const installStarted = Promise.withResolvers<void>();
+    const started: string[] = [];
     const installReleased = Promise.withResolvers<void>();
     const controller = new AbortController();
     const result = installDefaultExtensions({
-      config: { defaultExtensions: [{ source }] },
-      installExtensionSource: async () => {
-        installStarted.resolve();
+      config: {
+        defaultExtensions: ["first", "second", "third", "fourth", "fifth", "sixth"].map((installName) => ({
+          source,
+          installName,
+        })),
+      },
+      installExtensionSource: async (input) => {
+        started.push(input.installName!);
+        if (started.length === 2) installStarted.resolve();
         await installReleased.promise;
         return installed;
       },
@@ -240,6 +236,7 @@ describe("installDefaultExtensions cancellation", () => {
 
     try {
       await installStarted.promise;
+      expect(started).toEqual(["first", "second", "third", "fourth"]);
       controller.abort();
       const cancelled = await Promise.race([
         result.then(
@@ -255,6 +252,7 @@ describe("installDefaultExtensions cancellation", () => {
       await installDefaultExtensions({ config: { defaultExtensions: [] } });
       rmSync(root, { recursive: true, force: true });
     }
+    expect(started).toEqual(["first", "second", "third", "fourth"]);
   });
 });
 

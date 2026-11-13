@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
-import { loadExtensionSources } from "pstdio-extensions";
+import { acceptPreparedRevision, loadExtensionSources, prepareExtensionRevision } from "pstdio-extensions";
 import { createProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
 
 const tempDirs: string[] = [];
@@ -118,7 +118,7 @@ describe("project extension runtime catalog with real sources", () => {
     expect(imports).toBe(1);
   });
 
-  test("an edited source is imported once more on the next read", async () => {
+  test("an adopted source is imported once more on the next read", async () => {
     const path = join(createTempDir(), "counter");
     writeRuntimeExtension(path, "count");
     let imports = 0;
@@ -131,6 +131,7 @@ describe("project extension runtime catalog with real sources", () => {
 
     await catalog.get("p1");
     writeRuntimeExtension(path, "recount");
+    await acceptPreparedRevision(path, await prepareExtensionRevision(path));
     catalog.invalidate({ sourcePath: path, reason: "source_changed" });
     const second = await catalog.get("p1");
     const third = await catalog.get("p1");
@@ -231,10 +232,15 @@ describe("project extension runtime catalog with real sources", () => {
     expect((await catalog.get("p1")).runtime.commands.map((command) => command.id)).toEqual([
       "pstdio.hello.command.healthy",
     ]);
+    const restarted = createCatalog({
+      sources: () => [sourceRow({ id: "reloading-source", extensionId: "pstdio.hello", path })],
+    });
+    expect((await restarted.get("p1")).runtime.commands.map((command) => command.id)).toEqual([
+      "pstdio.hello.command.healthy",
+    ]);
   });
 
-  // A source whose last refresh failed still has exactly one version on disk. Serving the
-  // commands it used to declare made the runtime and the repository disagree.
+  // An adopted revision remains authoritative even if a later status write reports failure.
   test("serves the commands a source declares now, not the ones a failed refresh recorded", async () => {
     const root = createTempDir();
     const path = join(root, "renamed-command");
@@ -250,6 +256,7 @@ describe("project extension runtime catalog with real sources", () => {
     ]);
 
     writeRuntimeExtension(path, "config.get");
+    await acceptPreparedRevision(path, await prepareExtensionRevision(path));
     status = "error";
     catalog.invalidate({ sourcePath: path, reason: "source_changed" });
 

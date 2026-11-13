@@ -33,7 +33,7 @@ export const listProjectExtensionsHandler = (
   return async (c) => {
     const { projectId } = c.req.valid("param");
     try {
-      return c.json(await listProjectExtensionInventory(deps, projectId), 200);
+      return c.json(await listProjectExtensionInventory(deps, projectId, c.req.raw.signal), 200);
     } catch (error) {
       if (error instanceof ProjectNotFoundError) return c.json({ error: error.message }, 404);
       throw error;

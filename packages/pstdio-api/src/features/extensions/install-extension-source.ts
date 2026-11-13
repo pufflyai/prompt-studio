@@ -1,35 +1,37 @@
-import { existsSync, mkdirSync, mkdtempSync, realpathSync, statSync, unlinkSync } from "node:fs";
-import { rm } from "node:fs/promises";
-import { homedir as osHomedir, tmpdir } from "node:os";
-import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { runExtensionPreparation } from "./extension-preparation";
+import "./extension-preparation";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { isPreparationHost, type PreparationOptions } from "pstdio-extensions";
+import { ExtensionRegistryError } from "pstdio-extensions/distribution";
+import { GitUnavailableError } from "pstdio-wt";
 import {
-  extensionStorageDirectory,
-  readPackageManifest,
-  readPackageManifestMetadata,
-  remapPackageAssets,
-} from "pstdio-extensions";
-import { parseRegistrySourceRef, unpackExtension } from "pstdio-extensions/distribution";
-import { expandHomePath, resolvePstdioHome as resolveRuntimePstdioHome } from "pstdio-paths";
-import { traceSetupPhase } from "../../lib/setup-phase";
-import { copyExtensionSource } from "./copy-extension-source";
-import {
-  checkExtensionSource,
-  checkExtensionsRoot,
-  formatExtensionsCheck,
-  hashExtensionSource,
-  readExtensionSourceMetadata,
-} from "./extension-runtime";
-import { prepareNamedSource } from "./extension-source-checkout";
-import type {
-  ExtensionEnableInput,
-  InstallExtensionSourceInput,
-  InstalledExtensionSource,
-} from "./install-extension-source-types";
-import { prepareInstallDependencies } from "./prepare-extension-dependencies";
-import { ExtensionAlreadyInstalledError, promotePreparedSource } from "./promote-extension-source";
-import { validateExtensionWebviews } from "./validate-extension-webviews";
+  ExtensionAlreadyInstalledError,
+  ExtensionValidationFailedError,
+  isLocalExtensionSource,
+  prepareAndInstallExtensionSource,
+  RepoScopedExtensionNeedsProjectFolderError,
+  resolvePstdioHome,
+} from "./extension-install-preparation";
+import { extensionInstallResources } from "./extension-install-resources";
+import { claimPreparedInstall } from "./extension-install-transaction";
+import type { InstallExtensionSourceInput, InstalledExtensionSource } from "./install-extension-source-types";
 
-export { dashboardExtensionHostCapabilities } from "pstdio-extensions";
+export {
+  checkExtensionsRoot,
+  dashboardExtensionHostCapabilities,
+  EXTENSION_INSTALLING_MARKER,
+  ExtensionAlreadyInstalledError,
+  ExtensionValidationFailedError,
+  formatAlreadyInstalledMessage,
+  formatExtensionsCheck,
+  isLocalExtensionSource,
+  RepoScopedExtensionNeedsProjectFolderError,
+  removePathBestEffort,
+  resolvePstdioHome,
+  toExtensionEnableInput,
+} from "./extension-install-preparation";
 export {
   createSharedNamedSourceCheckout,
   namedSourceRef,
@@ -41,343 +43,49 @@ export type {
   InstallExtensionSourceInput,
   InstalledExtensionSource,
 } from "./install-extension-source-types";
-export { checkExtensionsRoot, formatExtensionsCheck };
 
-export const EXTENSION_INSTALLING_MARKER = ".pstdio-installing";
-
-export { ExtensionAlreadyInstalledError } from "./promote-extension-source";
-
-export class RepoScopedExtensionNeedsProjectFolderError extends Error {
-  constructor(extensionId: string) {
-    super(
-      `Extension "${extensionId}" declares pstdio.scope "repo". Install it from a project opened from a local folder.`,
-    );
-    this.name = "RepoScopedExtensionNeedsProjectFolderError";
-  }
-}
-
-type ExtensionsCheck = Awaited<ReturnType<typeof checkExtensionSource>>["check"];
-
-/** The message can be a full check report for the CLI; callers that show one line use `firstError`. */
-export class ExtensionValidationFailedError extends Error {
-  firstError: string;
-  diagnostics?: ExtensionsCheck["diagnostics"];
-
-  constructor(message: string, firstError = message, diagnostics?: ExtensionsCheck["diagnostics"]) {
-    super(message);
-    this.name = "ExtensionValidationFailedError";
-    this.firstError = firstError;
-    this.diagnostics = diagnostics;
-  }
-}
-
-const checkFailed = (check: ExtensionsCheck) => {
-  const report = `Extension validation failed:\n${formatExtensionsCheck(check)}`;
-  const first = check.diagnostics.find((diagnostic) => diagnostic.severity === "error");
-  return new ExtensionValidationFailedError(report, first?.message ?? report, check.diagnostics);
-};
-
-const installedSourceKind = (installed: InstalledExtensionSource) => {
-  if (parseRegistrySourceRef(installed.source.ref)) return "registry" as const;
-  return installed.source.kind === "named" ? ("git" as const) : ("local_path" as const);
-};
-
-export const toExtensionEnableInput = (installed: InstalledExtensionSource): ExtensionEnableInput => ({
-  displayName: installed.metadata.displayName,
-  extensionId: installed.metadata.id,
-  manifest: installed.manifest,
-  name: installed.metadata.name,
-  sourceHash: installed.sourceHash,
-  sourceKind: installedSourceKind(installed),
-  sourcePath: installed.targetPath,
-  sourceRef: installed.source.ref ?? null,
-  version: installed.metadata.version,
-});
-
-export const resolvePstdioHome = (input: {
-  env?: NodeJS.ProcessEnv | Record<string, string | undefined>;
-  homedir?: () => string;
-}) => resolveRuntimePstdioHome(input);
-
-const expandsHome = (path: string, homedir: () => string) => {
-  if (path.startsWith("~\\")) return join(homedir(), path.slice(2));
-  return expandHomePath(path, homedir());
-};
-
-const isLocalSource = (source: string) =>
-  source.startsWith("./") ||
-  source.startsWith(".\\") ||
-  source.startsWith("../") ||
-  source.startsWith("..\\") ||
-  source.startsWith("~/") ||
-  source.startsWith("~\\") ||
-  isAbsolute(source);
-
-const validateInstallName = (installName: string) => {
-  if (
-    !installName.trim() ||
-    installName === "." ||
-    installName === ".." ||
-    /[\\/:]/.test(installName) ||
-    basename(installName) !== installName
-  ) {
-    throw new Error(`Invalid extension install name: ${installName}`);
-  }
-};
-
-// A repo-scoped source can already occupy its canonical install directory. Nothing has to move,
-// so that directory is validated where the developer keeps it instead of being staged and swapped.
-const isSameDirectory = (left: string, right: string) => realpathSync(left) === realpathSync(right);
-
-const assertCanCopy = (sourcePath: string, targetPath: string) => {
-  const source = resolve(sourcePath);
-  const target = resolve(targetPath);
-  const sourceToTarget = relative(source, target);
-  const targetToSource = relative(target, source);
-  const nested = (value: string) => value === "" || (!value.startsWith("..") && !isAbsolute(value));
-
-  if (nested(sourceToTarget) || nested(targetToSource)) {
-    throw new Error("Refusing to copy an extension into itself");
-  }
-};
-
-const removeDirectory = (path: string) => rm(path, { recursive: true, force: true });
-
-// Cleanup must not replace a completed install or the error that caused an install to fail.
-export const removePathBestEffort = async (
-  path: string,
-  remove: (path: string) => void | Promise<void> = removeDirectory,
-) => {
-  try {
-    await remove(path);
-  } catch {}
-};
-
-export const isLocalExtensionSource = (source: string) => isLocalSource(source);
-
-export const formatAlreadyInstalledMessage = (error: ExtensionAlreadyInstalledError) =>
-  `An extension is already installed at ${error.targetPath}.\n` +
-  `Re-run with --force to replace it, or pick a different --name.`;
-
-const resolveSource = async (input: InstallExtensionSourceInput, tempDir: string) => {
-  const homedir = input.homedir ?? osHomedir;
-  if (isLocalSource(input.source)) {
-    const path = resolve(expandsHome(input.source, homedir));
-    if (path.endsWith(".tgz")) {
-      const target = join(tempDir, "package");
-      await unpackExtension(await Bun.file(path).bytes(), target);
-      return { kind: "local" as const, path: target, ref: path };
-    }
-    return { kind: "local" as const, path, ref: undefined };
-  }
-
-  const named = await (input.prepareNamedSource ?? prepareNamedSource)(
-    input.source,
-    tempDir,
-    input.ref,
-    input.signal,
-    input.hostReleaseRef,
-  );
-  return { kind: "named" as const, name: input.source, path: named.path, ref: named.ref };
-};
-
-const failIfInvalidSource = (sourcePath: string) => {
-  if (!existsSync(sourcePath) || !statSync(sourcePath).isDirectory()) {
-    throw new Error(`Extension source folder not found: ${sourcePath}`);
-  }
-  if (!existsSync(join(sourcePath, "package.json"))) {
-    throw new Error(`Extension source is missing package.json: ${sourcePath}`);
-  }
-};
-
-const sourceScope = (sourcePath: string, allowUnsupportedApiVersion: boolean) => {
-  const readManifest = allowUnsupportedApiVersion ? readPackageManifestMetadata : readPackageManifest;
-  const { manifest, diagnostics } = readManifest(sourcePath);
-  if (!manifest) {
-    const first = diagnostics[0];
-    throw new ExtensionValidationFailedError(first?.message ?? `Extension validation failed: ${sourcePath}`);
-  }
-  return { manifest, scope: manifest.pstdio?.scope ?? "user" };
-};
-
-const resolveExtensionsRoot = (input: InstallExtensionSourceInput, pstdioHome: string, sourcePath: string) => {
-  const { manifest, scope } = sourceScope(sourcePath, input.allowUnsupportedApiVersion === true);
-  if ((input.scope ?? scope) === "repo") {
-    if (!input.repoPath) throw new RepoScopedExtensionNeedsProjectFolderError(manifest.id);
-    return join(input.repoPath, ".pstdio", "extensions");
-  }
-
-  return join(pstdioHome, "extensions");
-};
-
-const validatePreparedInstall = async (
-  installPath: string,
-  extensionsRoot: string,
-  allowUnsupportedApiVersion: boolean,
-) => {
-  const { check, loaded: compatibleSource } = await checkExtensionSource(installPath, extensionsRoot);
-  const unsupportedApiOnly =
-    check.errorCount > 0 &&
-    check.diagnostics
-      .filter((diagnostic) => diagnostic.severity === "error")
-      .every((diagnostic) => diagnostic.code === "extension_manifest_unsupported_api_version");
-  const keepForRecovery = allowUnsupportedApiVersion && unsupportedApiOnly;
-  if (check.errorCount > 0 && !keepForRecovery) throw checkFailed(check);
-
-  const loaded = compatibleSource ?? (keepForRecovery ? readExtensionSourceMetadata(installPath) : null);
-  if (!loaded) throw checkFailed(check);
-
-  if (keepForRecovery && check.extensions.length === 0) {
-    check.extensions.push({
-      id: loaded.metadata.id,
-      name: loaded.metadata.name,
-      displayName: loaded.metadata.displayName,
-      sourcePath: installPath,
-      version: loaded.metadata.version,
-      description: loaded.metadata.description,
-    });
-  }
-
-  return { check, loaded };
-};
-
-const resolveInstallName = (input: InstallExtensionSourceInput, source: Awaited<ReturnType<typeof resolveSource>>) => {
-  if (input.installName !== undefined) return input.installName;
-  if (source.ref?.endsWith(".tgz")) return sourceScope(source.path, false).manifest.id;
-  return source.kind === "named" ? source.name : basename(source.path);
-};
-
-const canReuseConcurrentInstall = (input: InstallExtensionSourceInput, error: unknown) =>
-  !input.force && input.existsOk === true && error instanceof ExtensionAlreadyInstalledError;
-
-const finishPreparedInstall = async (
+type InstallTransport = (data: unknown, options: PreparationOptions) => Promise<InstalledExtensionSource>;
+const prepareInstall: InstallTransport = (data, options) => runExtensionPreparation("install", data, options);
+export const installExtensionSource = async (
   input: InstallExtensionSourceInput,
-  prepared: Awaited<ReturnType<typeof validatePreparedInstall>> & {
-    installPath: string;
-    targetPath: string;
-    extensionsRoot: string;
-    linkedInstalledDependencies: boolean;
-    sourceHash: string;
-  },
-) => {
-  let { check, loaded, sourceHash } = prepared;
-  const { installPath, targetPath, extensionsRoot, linkedInstalledDependencies } = prepared;
-  let snapshot = { check, manifest: loaded.manifest };
-  if (installPath !== targetPath) {
-    // Resolve asset bases while staging still exists, before its folder is promoted.
-    snapshot = remapPackageAssets(snapshot, installPath, targetPath) as typeof snapshot;
-    const preserveDependencies = linkedInstalledDependencies;
-    if (linkedInstalledDependencies) unlinkSync(join(installPath, "node_modules"));
-    try {
-      await promotePreparedSource(installPath, targetPath, Boolean(input.force), preserveDependencies);
-      for (const extension of snapshot.check.extensions)
-        extension.sourcePath = join(targetPath, relative(installPath, extension.sourcePath));
-    } catch (error) {
-      if (!canReuseConcurrentInstall(input, error)) throw error;
-      // Another missing-only install won the target. Return its validated contents,
-      // rather than reporting a setup warning or claiming the losing staged version.
-      ({ check, loaded } = await validatePreparedInstall(
-        targetPath,
-        extensionsRoot,
-        input.allowUnsupportedApiVersion === true,
-      ));
-      sourceHash = hashExtensionSource(targetPath);
-      snapshot = { check, manifest: loaded.manifest };
-    }
-  }
-  return { snapshot, loaded, sourceHash };
-};
-
-export const installExtensionSource = async (input: InstallExtensionSourceInput) => {
-  const pstdioHome = resolvePstdioHome(input);
-  const tempDir = mkdtempSync(join(tmpdir(), "pstdio-extension-source-"));
-  let stagingRoot: string | null = null;
-
+  transport: InstallTransport = prepareInstall,
+): Promise<InstalledExtensionSource> => {
+  // Function injection is an authoring/test seam. All production source specifications are data
+  // and use the shared preparation worker, including CLI callers that do not create an API app.
+  if (!isPreparationHost || input.runCommand || input.isPackagedRuntime) return prepareAndInstallExtensionSource(input);
+  const { signal, homedir, prepareNamedSource, runCommand: _run, isPackagedRuntime: _packaged, ...data } = input;
+  let callbackRoot: string | undefined;
   try {
-    input.signal?.throwIfAborted();
-    const resolvedSource = await resolveSource(input, tempDir);
-    input.signal?.throwIfAborted();
-    failIfInvalidSource(resolvedSource.path);
-    const extensionsRoot = resolveExtensionsRoot(input, pstdioHome, resolvedSource.path);
-
-    const installName = resolveInstallName(input, resolvedSource);
-    validateInstallName(installName);
-
-    const directoryName =
-      installName === sourceScope(resolvedSource.path, input.allowUnsupportedApiVersion === true).manifest.id
-        ? extensionStorageDirectory(installName)
-        : installName;
-    const targetPath = join(extensionsRoot, directoryName);
-    const targetExists = existsSync(targetPath);
-    const inPlace = targetExists && isSameDirectory(resolvedSource.path, targetPath);
-    if (!inPlace) assertCanCopy(resolvedSource.path, targetPath);
-
-    const reuseExisting = inPlace || (targetExists && input.existsOk === true && !input.force);
-
-    if (!inPlace && targetExists && !input.force && !input.existsOk) {
-      throw new ExtensionAlreadyInstalledError(targetPath);
-    }
-
-    let installPath = targetPath;
-    if (!reuseExisting) {
-      mkdirSync(extensionsRoot, { recursive: true });
-      stagingRoot = mkdtempSync(join(dirname(extensionsRoot), ".extension-install-"));
-      installPath = join(stagingRoot, directoryName);
-      await traceSetupPhase("extension.source_copy", { extension: installName }, () =>
-        copyExtensionSource(resolvedSource.path, installPath),
+    if (prepareNamedSource && !isLocalExtensionSource(input.source)) {
+      callbackRoot = await mkdtemp(join(tmpdir(), "pstdio-extension-checkout-"));
+      data.preparedSource = await prepareNamedSource(
+        input.source,
+        callbackRoot,
+        input.ref,
+        signal,
+        input.hostReleaseRef,
       );
     }
-
-    const linkedInstalledDependencies = await traceSetupPhase(
-      "extension.prepare_dependencies",
-      { extension: installName },
-      () =>
-        prepareInstallDependencies({
-          installInput: input,
-          installPath,
-          source: resolvedSource,
-          targetPath,
-        }),
+    signal?.throwIfAborted();
+    const installed = await transport(
+      { ...data, env: { ...(input.env ?? process.env), PSTDIO_HOME: resolvePstdioHome(input) } },
+      { signal, home: resolvePstdioHome(input), resources: extensionInstallResources(input) },
     );
-    input.signal?.throwIfAborted();
-
-    const { check, loaded } = await traceSetupPhase("extension.validate", { extension: installName }, () =>
-      validatePreparedInstall(installPath, extensionsRoot, input.allowUnsupportedApiVersion === true),
-    );
-    input.signal?.throwIfAborted();
-
-    // A replacement must activate every managed view before the working source is replaced.
-    if (targetExists && !reuseExisting) await validateExtensionWebviews(loaded, installPath, installName, input.signal);
-    const sourceHash = await traceSetupPhase("extension.source_hash", { extension: installName }, async () =>
-      hashExtensionSource(installPath),
-    );
-    const {
-      snapshot,
-      loaded: installedSource,
-      sourceHash: installedHash,
-    } = await finishPreparedInstall(input, {
-      check,
-      loaded,
-      sourceHash,
-      installPath,
-      targetPath,
-      extensionsRoot,
-      linkedInstalledDependencies,
-    });
-
-    return {
-      ...snapshot,
-      installName,
-      metadata: installedSource.metadata,
-      source:
-        resolvedSource.kind === "named"
-          ? { kind: "named" as const, name: resolvedSource.name, ref: resolvedSource.ref }
-          : { kind: "local" as const, path: resolvedSource.path, ref: resolvedSource.ref },
-      sourceHash: installedHash,
-      targetPath,
-    };
+    if (installed.installation) claimPreparedInstall(installed.installation);
+    return installed;
+  } catch (error) {
+    if (error instanceof Error) {
+      const type = [
+        ExtensionAlreadyInstalledError,
+        ExtensionValidationFailedError,
+        RepoScopedExtensionNeedsProjectFolderError,
+        ExtensionRegistryError,
+        GitUnavailableError,
+      ].find((type) => type.name === error.name);
+      if (type) Object.setPrototypeOf(error, type.prototype);
+    }
+    throw error;
   } finally {
-    if (stagingRoot) await removePathBestEffort(stagingRoot);
-    await removePathBestEffort(tempDir);
+    if (callbackRoot) await rm(callbackRoot, { recursive: true, force: true });
   }
 };

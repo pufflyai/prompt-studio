@@ -66,6 +66,7 @@ export const createNativeDocumentSessionFixture = async () => {
   const previousExtensions = process.env.PSTDIO_DEFAULT_EXTENSIONS;
   process.env.PSTDIO_HOME = join(root, "home");
   process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
+  const extensionPath = join(root, "extension");
   const manifest = {
     publisher: "example",
     name: "native-session",
@@ -73,9 +74,9 @@ export const createNativeDocumentSessionFixture = async () => {
     main: "./extension.ts",
     engines: { pstdio: `^${EXTENSION_API_VERSION}` },
   };
-  await Bun.write(join(root, "package.json"), JSON.stringify(manifest));
+  await Bun.write(join(extensionPath, "package.json"), JSON.stringify(manifest));
   await Bun.write(
-    join(root, "extension.ts"),
+    join(extensionPath, "extension.ts"),
     `export default { views: [{
     id: "document", ref: { kind: "view", id: "document" }, title: "Document",
     body: { kind: "file", load: async (ctx) => ({ documentSource: { kind: "workspace", path: "notes.md" }, fileName: "notes.md", content: await ctx.workspaceFiles.readText("notes.md") }),
@@ -102,7 +103,7 @@ export const createNativeDocumentSessionFixture = async () => {
     installName: "native-session",
     name: "native-session",
     sourceKind: "local_path",
-    sourcePath: root,
+    sourcePath: extensionPath,
     displayName: "Native session",
     manifest,
   });

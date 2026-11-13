@@ -67,14 +67,15 @@ export const prepareDefaultProjectExtensions = async (deps: ProjectsRouteDeps) =
   };
 
   try {
-    const installed = await installMissingDefaultExtensions({
+    await installMissingDefaultExtensions({
+      registerInstalledSources: (installed) =>
+        traceSetupPhase("project.extension_register", {}, () =>
+          registerInstalledExtensionSources(deps.extensionService, installed),
+        ),
       forceSourceDefaults: process.env.PSTDIO_DISABLE_EMBED_MANIFEST === "1",
       onInstallFailure: ({ error, installName }) => addWarning(createExtensionWarning(installName, error)),
       releaseRef: deps.extensionUpgradeService?.releaseRef,
     });
-    await traceSetupPhase("project.extension_register", {}, () =>
-      registerInstalledExtensionSources(deps.extensionService, installed),
-    );
   } catch (error) {
     addWarning(createExtensionWarning("default extensions", error));
   }

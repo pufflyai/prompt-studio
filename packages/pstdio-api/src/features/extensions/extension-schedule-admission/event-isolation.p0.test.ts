@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { join } from "node:path";
+import { join, relative } from "node:path";
+import { acceptPreparedRevision, prepareExtensionRevision } from "pstdio-extensions";
 import { createTestCronDriver } from "pstdio-scheduler/testing";
 import { assignDeviceAutomation, openDeviceAutomations } from "../device-automations";
 import { createDeviceAutomationFixture } from "../device-automations.fixture";
@@ -88,7 +89,13 @@ for (const assigned of [false, true]) {
   }
 }
 
-for (const change of ["source-disable", "workspace-location", "source-edit", "source-noop"] as const) {
+for (const change of [
+  "source-disable",
+  "workspace-location",
+  "source-adoption",
+  "source-unadopted",
+  "source-noop",
+] as const) {
   test(`an assigned schedule rejects its own ${change} change during preparation`, async () => {
     const fixture = await createDeviceAutomationFixture();
     const { deps } = await fixture.device();
@@ -136,27 +143,35 @@ for (const change of ["source-disable", "workspace-location", "source-edit", "so
       if (change === "source-disable") {
         deps.extensionService.listEnabledSourcesForProject = async () => [];
         deps.extensionRuntimeCatalog.invalidate({ projectId: fixture.projectId, reason: "enablement_changed" });
-      } else if (change === "source-edit" || change === "source-noop") {
+      } else if (change === "source-adoption" || change === "source-unadopted" || change === "source-noop") {
         const snapshot = await deps.extensionRuntimeCatalog.get(fixture.projectId);
         const extension = snapshot.runtime.extensions[0]!;
-        if (change === "source-edit") {
-          const code = await Bun.file(extension.sourcePath).text();
-          await Bun.write(
-            extension.sourcePath,
-            code.replace("await globalThis", "await Promise.resolve(); await globalThis"),
-          );
+        if (change !== "source-noop") {
+          const entry = join(extension.originalPackagePath!, relative(extension.packagePath!, extension.sourcePath!));
+          const code = await Bun.file(entry).text();
+          await Bun.write(entry, code.replace("await globalThis", "await Promise.resolve(); await globalThis"));
+          if (change === "source-adoption")
+            await acceptPreparedRevision(
+              extension.originalPackagePath!,
+              await prepareExtensionRevision(extension.originalPackagePath!),
+            );
         }
-        deps.extensionRuntimeCatalog.invalidate({ sourcePath: extension.packagePath, reason: "source_changed" });
+        deps.extensionRuntimeCatalog.invalidate({
+          sourcePath: extension.originalPackagePath,
+          reason: "source_changed",
+        });
       } else {
         workspace = { ...workspace, root_path: join(fixture.root, "other-location") };
         deps.eventBus.emit("workspaces", "set", workspace);
       }
       gate.resolve();
       await running;
-      expect(calls).toHaveLength(change === "source-noop" ? 1 : 0);
+      expect(calls).toHaveLength(change === "source-noop" || change === "source-unadopted" ? 1 : 0);
       const runs = await (await openAutomationRuns(deps, fixture.projectId)).records.list("run:");
       expect(runs.map((r) => r.value)).toEqual([
-        expect.objectContaining({ status: change === "source-noop" ? "completed" : "skipped" }),
+        expect.objectContaining({
+          status: change === "source-noop" || change === "source-unadopted" ? "completed" : "skipped",
+        }),
       ]);
     } finally {
       gate.resolve();
