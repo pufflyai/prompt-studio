@@ -228,7 +228,7 @@ export const proposalRefinedCommand = defineCommand({
   title: "Mark proposal refined",
   cli: {
     globalAliases: [["tickets", "proposal-refined"]],
-    examples: ["pstdio tickets proposal-refined --id PS-1"],
+    examples: ["pstdio pstdio.pstdio-planner proposal-refined --id PS-1"],
   },
   params: {
     id: params.text({ label: "Ticket", required: true }),

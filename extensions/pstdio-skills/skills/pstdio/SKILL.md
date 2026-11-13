@@ -72,7 +72,7 @@ To change a skill for good, edit its source, not the installed copy. See [Agents
 
 ### Tickets
 
-Tickets belong to the Planner extension (`pstdio-planner`). Each ticket has a shorthand such as `PS-12`, a status, and a separate draft flag. `pst tickets write` or `pst tickets pull` writes a local copy under `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/<shorthand>/` in the project folder. Use the absolute `path` the command returns, even from another workspace, then run `pst tickets save`. See [Planner](https://prompt.studio/docs/extensions/planner/).
+Tickets belong to the Planner extension (`pstdio-planner`). Each ticket has a shorthand such as `PS-12`, a status, and a separate draft flag. `pst pstdio.pstdio-planner write-ticket` or `pst pstdio.pstdio-planner pull-ticket` writes a local copy under `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/<shorthand>/` in the project folder. Use the absolute `path` the command returns, even from another workspace, then run `pst pstdio.pstdio-planner save-ticket`. See [Planner](https://prompt.studio/docs/extensions/planner/).
 
 ## Project files
 

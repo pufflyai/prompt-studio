@@ -27,7 +27,7 @@ export const applyTicketTemplateCommand = defineCommand({
   mutating: true,
   cli: {
     globalAliases: [["tickets", "apply-template"]],
-    examples: ["pstdio tickets apply-template --id PS-1 --template proposal"],
+    examples: ["pstdio pstdio.pstdio-planner apply-ticket-template --id PS-1 --template proposal"],
   },
   params: {
     id: params.text({ required: true }),
