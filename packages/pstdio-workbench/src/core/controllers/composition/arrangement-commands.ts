@@ -2,11 +2,12 @@ import type { WorkbenchPanelRegion, WorkbenchTabPosition } from "../../registrie
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { getPageContentRecovery } from "../page-runtime/page-content-recovery";
 import { registerPanelCommands } from "../shell/panel-commands";
-
 import { registerPositionCommands } from "../shell/position-commands";
+import { registerReopenTab } from "./reopen-tab";
 
 export const registerArrangementCommands = (core: WorkbenchCore) => {
   registerPanelCommands(core);
+  registerReopenTab(core);
   registerPositionCommands(core);
   core.commands.registerCommand(
     { id: "workbench.reopenPageContent", label: "Restore page content to Main", category: "Workbench" },

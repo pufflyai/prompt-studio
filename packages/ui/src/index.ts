@@ -143,4 +143,4 @@ export {
 } from "./components/settings/settings-page";
 export { HostStorageScope } from "./utils/host-storage";
 export { ScopedDialog, ScopedMenu, ScopedPopover, ScopedTooltip, useScopedMenu } from "./utils/scoped-overlays";
-export { Portal, UiScopeProvider, UiScopeRoot, useUiScope } from "./utils/ui-scope";
+export { Portal, UiScopeActivity, UiScopeProvider, UiScopeRoot, useUiScope } from "./utils/ui-scope";

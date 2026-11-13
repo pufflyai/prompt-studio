@@ -46,8 +46,6 @@ describe("buildTicketPropertiesControls", () => {
       ticket: baseTicket({ shorthand: "PS-42" }),
       statuses,
       tags,
-      dependencies: [],
-      parent: null,
     });
 
     const id = resourceParam(params, "id");
@@ -65,8 +63,6 @@ describe("buildTicketPropertiesControls", () => {
       ticket,
       statuses,
       tags,
-      dependencies: [],
-      parent: null,
     });
 
     const status = resourceParam(params, "status");
@@ -83,38 +79,12 @@ describe("buildTicketPropertiesControls", () => {
     const high = priority.options.find((option) => option.id === "default-priority-high")!;
     const ticket = baseTicket({ tags: { [priority.id]: high.id } });
 
-    const { params } = buildTicketPropertiesControls({ ticket, statuses, tags, dependencies: [], parent: null });
+    const { params } = buildTicketPropertiesControls({ ticket, statuses, tags });
 
     const tagParam = resourceParam(params, "priority");
     expect(tagParam.editable).toBe(true);
     expect(tagParam.multiSelect).toBe(false);
     expect(tagParam.defaultValue).toBe(high.id);
-  });
-
-  test("renders parent and dependencies as panel-only chips that open their ticket", async () => {
-    const { statuses, tags } = await seed();
-    const ticket = baseTicket({ parentId: "p1", dependsOn: ["d1", "d2"] });
-
-    const { params } = buildTicketPropertiesControls({
-      ticket,
-      statuses,
-      tags,
-      dependencies: [
-        { id: "d1", label: "PS-2" },
-        { id: "d2", label: "PS-3" },
-      ],
-      parent: { id: "p1", label: "PS-9" },
-    });
-
-    const dependsOn = resourceParam(params, "depends-on");
-    expect(dependsOn.editable).toBeFalsy();
-    expect(dependsOn.multiSelect).toBe(true);
-    expect(dependsOn.defaultValue).toEqual(["d1", "d2"]);
-    expect(dependsOn.options[0].ref).toEqual({ type: "ticket", id: "d1" });
-
-    const parent = resourceParam(params, "parent");
-    expect(parent.defaultValue).toBe("p1");
-    expect(parent.options[0].ref).toEqual({ type: "ticket", id: "p1" });
   });
 
   test("omits review links until a ticket has links to open", async () => {
@@ -124,8 +94,6 @@ describe("buildTicketPropertiesControls", () => {
         ticket: baseTicket({ reviewLinks }),
         statuses,
         tags,
-        dependencies: [],
-        parent: null,
       });
       expect(params.some((param) => param.id === "review-links")).toBe(false);
     }
@@ -148,7 +116,7 @@ describe("buildTicketPropertiesControls", () => {
       ],
     });
 
-    const { params } = buildTicketPropertiesControls({ ticket, statuses, tags, dependencies: [], parent: null });
+    const { params } = buildTicketPropertiesControls({ ticket, statuses, tags });
 
     const reviewLinks = resourceParam(params, "review-links");
     expect(reviewLinks.editable).toBeFalsy();
@@ -163,7 +131,7 @@ describe("buildTicketPropertiesControls", () => {
       updatedAt: "2024-07-08T00:00:00.000Z",
     });
 
-    const { params } = buildTicketPropertiesControls({ ticket, statuses, tags, dependencies: [], parent: null });
+    const { params } = buildTicketPropertiesControls({ ticket, statuses, tags });
 
     expect(params.find((entry) => entry.id === "created")).toEqual({
       id: "created",
@@ -186,8 +154,6 @@ describe("buildTicketPropertiesControls", () => {
       ticket: baseTicket({}),
       statuses,
       tags,
-      dependencies: [],
-      parent: null,
     });
     expect(withoutFlags.params.find((param) => param.id === "archived")).toBeUndefined();
     expect(withoutFlags.params.find((param) => param.id === "blocked-reason")).toBeUndefined();
@@ -196,8 +162,6 @@ describe("buildTicketPropertiesControls", () => {
       ticket: baseTicket({ archived: true, blockedReason: "waiting on review" }),
       statuses,
       tags,
-      dependencies: [],
-      parent: null,
     });
     expect(propertyParam(withFlags.params, "archived").value).toEqual(l10n("ticketDetail.yes", "Yes"));
     expect(propertyParam(withFlags.params, "blocked-reason").value).toBe("waiting on review");
