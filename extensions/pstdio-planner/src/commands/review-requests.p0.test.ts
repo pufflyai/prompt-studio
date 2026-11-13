@@ -285,7 +285,7 @@ describe("review request conversations", () => {
       id: "session-1",
     });
     expect(created).toHaveLength(1);
-    expect(created[0]?.prompt).toContain(`pst pstdio-planner review --request-id ${request.id}`);
+    expect(created[0]?.prompt).toContain(`pst pstdio.pstdio-planner review --request-id ${request.id}`);
     expect(created[0]?.anchors).toContainEqual(
       expect.objectContaining({ type: "planner-review-request", id: request.id, extensionId: "pstdio-planner" }),
     );

@@ -44,9 +44,9 @@ const sessionPrompt = (shorthand: string, input: Pick<ReviewRequest, "title" | "
     `Review requested for ${shorthand}: ${input.title}`,
     input.instructions,
     `Request: ${requestId}`,
-    `Help the person complete this request. Read it, including question and choice IDs, with: pst pstdio-planner review-requests read --request-id ${requestId}`,
+    `Help the person complete this request. Read it, including question and choice IDs, with: pst pstdio.pstdio-planner review-requests read --request-id ${requestId}`,
     "Ask the person for any decision or confirmation it needs. Do not ask for secret values in chat.",
-    `Save their response only after they give it: pst pstdio-planner review --request-id ${requestId} --response '<JSON>'. Tasks use {"confirmed":true}; decisions use {"answers":{"<question-id>":"<answer>"}}.`,
+    `Save their response only after they give it: pst pstdio.pstdio-planner review --request-id ${requestId} --response '<JSON>'. Tasks use {"confirmed":true}; decisions use {"answers":{"<question-id>":"<answer>"}}.`,
     "Saving a response does not perform the requested action. Use the matching Planner command for that.",
   ].join("\n\n");
 

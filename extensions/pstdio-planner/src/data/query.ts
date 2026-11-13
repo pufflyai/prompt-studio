@@ -25,6 +25,7 @@ import type { Ticket } from "./types";
 import { emptyWorkflowStatuses, type WorkflowStatusSelections } from "./workflow-statuses";
 
 interface TicketsQueryInput {
+  extensionId?: string;
   tickets?: Ticket[];
   storage: ExtensionStorageApi;
   resources: TicketContext["resources"];
@@ -40,6 +41,7 @@ export const runTicketsQuery = async ({
   storage,
   resources,
   projectId,
+  extensionId = "pstdio.pstdio-planner",
   filter,
   workflow = emptyWorkflowStatuses(),
 }: TicketsQueryInput): Promise<KanbanRendererQueryResult> => {
@@ -89,11 +91,12 @@ export const runTicketsQuery = async ({
       visibleTickets.map((ticket) => ({
         type: "ticket",
         id: ticket.id,
-        extensionId: "pstdio.pstdio-planner",
+        extensionId,
         projectId,
       })),
     ),
     createTicketParentLookup(tickets),
+    extensionId,
   );
   const rows = visibleTickets.map((ticket) => {
     const row = toTicketRow(ticket);

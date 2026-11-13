@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { createMemoryRepoFiles, createMemoryStorage, makeCommandArgs } from "@pstdio/sdk/testing";
+import { resolveResources } from "./artifact-actions";
 import { commands } from "./commands";
 
 test("publishing allocates artifact and revision identities through core", async () => {
@@ -97,4 +98,60 @@ test("reports artifact removal after its records and snapshots are deleted", asy
   await commands.delete.run(...makeCommandArgs({ storage, params: { url: published.url }, overrides }));
 
   expect(removed).toEqual([{ type: "artifact", id: published.artifactId }]);
+});
+
+test("publishing returns a usable URL for the host-provided owner", async () => {
+  const storage = createMemoryStorage();
+  const files = createMemoryRepoFiles();
+  const snapshots = createMemoryRepoFiles();
+  await files.writeText("page.html", "<title>Current owner</title>");
+  const opened: unknown[] = [];
+  const overrides = {
+    extensionId: "pstdio.artifacts",
+    projectFiles: files,
+    artifacts: { mount: () => snapshots },
+    navigation: {
+      open: (target: unknown) => {
+        opened.push(target);
+      },
+    },
+  };
+  const first = await commands.publish.run(
+    ...makeCommandArgs({ storage, params: { file_path: "page.html" }, overrides }),
+  );
+  expect(first.url).toContain("/extensions/pstdio.artifacts/");
+  const updated = await commands.publish.run(
+    ...makeCommandArgs({ storage, params: { file_path: "page.html", url: first.url }, overrides }),
+  );
+  expect(updated.artifactId).toBe(first.artifactId);
+  expect(updated.url).toBe(first.url);
+  await commands.open.run(...makeCommandArgs({ storage, params: { url: first.url }, overrides }));
+  expect(opened).toEqual([updated.target]);
+  const resolved = await resolveResources.run(
+    ...makeCommandArgs({ storage, params: { resources: [first.resource] }, overrides }),
+  );
+  expect(resolved).toMatchObject([{ resource: { extensionId: "pstdio.artifacts", id: first.artifactId } }]);
+});
+
+test("canonical and historical allocated snapshots resolve the same artifact", async () => {
+  const storage = createMemoryStorage();
+  const snapshots = createMemoryRepoFiles();
+  const projectFiles = createMemoryRepoFiles();
+  await projectFiles.writeText("page.html", "<title>Allocated paths</title>");
+  const [ctx, input] = makeCommandArgs({
+    storage,
+    params: { file_path: "page.html" },
+    overrides: { extensionId: "pstdio.artifacts", projectFiles, artifacts: { mount: () => snapshots } },
+  });
+  const published = await commands.publish.run(ctx, input);
+  const resolutions = await Promise.all(
+    ["pstdio.pstdio-artifacts", "pstdio.artifacts"].map((owner) =>
+      commands["resolve-path"].run(ctx, {
+        path: `.pstdio/extension-storage/${owner}/sites/${published.revisionId}.html`,
+        workspaceId: "workspace",
+      }),
+    ),
+  );
+  expect(resolutions[0]).not.toBeNull();
+  expect(resolutions[0]).toEqual(resolutions[1]);
 });

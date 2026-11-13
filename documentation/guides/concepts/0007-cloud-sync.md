@@ -20,7 +20,10 @@ The status describes this project's current state:
 | --- | --- |
 | Local | This project is not syncing. |
 | Offline | The connection is lost. Local work remains available. |
-| Downloading | The first download is in progress. A percentage appears when known. |
+| Downloading | A file is arriving from Cloud. |
+| Uploading | A file is being sent to Cloud. |
+| Syncing project data | Internal records or project discovery are in progress. |
+| Waiting to sync | Work remains, with no active transfer. |
 | Syncing | Changes are waiting to sync. |
 | Synced | This device has finished its current sync work. |
 | Needs attention | Open Cloud settings to check the account and project state. |
@@ -43,6 +46,21 @@ pst projects folder restore <project-id> --device <device-id> --source <source-i
 `sources` lists each computer's copy with its capture time, size, `.pstignore`, Git state and whether every byte is already on this computer. Restore into a folder that does not exist yet. Its parent folder must exist. The folder appears only after every file has been verified. If the project has no folder on this computer yet, the restored folder becomes its folder; otherwise it stays beside the current one. Restore a copy before you open the project, because opening it creates an empty project folder. A restored folder's hooks, scripts and automations do not run, and extensions in its `.pstdio/extensions` folder stay disabled until you enable them. Restored files keep their permission bits but not setuid, setgid or sticky bits.
 
 Cloud keeps each computer's latest complete copy, plus the previous one during the relay's grace period. Folder copies are not part of recovery points. Windows and musl-based Linux cannot capture or restore folders yet.
+
+Open Cloud details for **Files** and **Project data**. Files shows recent queued, active,
+completed and failed transfers, their direction, available names and encrypted byte counts.
+An unnamed file is labeled as such. Internal sync documents are counted separately; an
+unknown total stays unknown. “No files are downloading” can appear while records are syncing.
+
+Project data identifies each source, its pending action and last progress. Choose **Retry**
+beside the waiting source to cancel its old attempt and wait for cleanup before starting
+again. Other sources keep working. Local edits, received bytes and saved checkpoints stay.
+Download requests with no progress for 30 seconds cancel and retry automatically. Receiving
+bytes resets that interval; it is not a limit on the whole transfer's duration. Upload
+counters advance when Cloud acknowledges each part. While an upload is still awaiting its
+response headers, use the source's **Retry** control to recover a silent wait. It has no
+automatic duration limit because the client cannot observe progress after bytes enter
+the network buffer. Response bodies still have the same inactivity recovery.
 
 ## Manage devices
 

@@ -41,13 +41,18 @@ test("keeps performance measurements live when switching and closing project tab
     await expect.poll(async () => (await capture())?.samples.length ?? 0).toBeGreaterThan(0);
     const captureId = (await capture())!.id;
     const lastSequence = (await capture())!.samples.at(-1)!.sequence;
-    await app.page.getByRole("button", { name: `Close ${second.name}`, exact: true }).click();
-    await expect(app.page.getByRole("tab", { name: second.name, exact: true })).toHaveCount(0);
+    // Only the active project has a close control. Closing it returns to the other monitored project.
+    await app.page.getByRole("button", { name: `Close ${launched.project.name}`, exact: true }).click();
+    await expect(app.page.getByRole("tab", { name: launched.project.name, exact: true })).toHaveCount(0);
+    await expect(app.page.getByRole("tab", { name: second.name, exact: true })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
     await expect.poll(async () => (await capture())?.id).toBe(captureId);
     await expect.poll(async () => (await capture())?.samples.at(-1)?.sequence ?? -1).toBeGreaterThan(lastSequence);
     await expect.poll(async () => (await readSnapshot(app!.page))?.frameRate.length ?? 0).toBeGreaterThan(0);
     await expect(performanceMeter(app.page)).not.toContainText("– fps");
-    await app.page.getByRole("button", { name: `Close ${launched.project.name}`, exact: true }).click();
+    await app.page.getByRole("button", { name: `Close ${second.name}`, exact: true }).click();
     await expect.poll(() => readSnapshot(app!.page)).toBeNull();
   } finally {
     await disposePackagedApp(app);

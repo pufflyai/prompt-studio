@@ -120,7 +120,11 @@ describe("ticketToRow", () => {
   });
 });
 
-test("linked workspace navigation retains its ticket context without changing another owner's target", () => {
+test.each([
+  "pstdio.pstdio-planner",
+  "pstdio.planner",
+  "example.planner",
+])("linked workspace navigation retains its %s ticket context without changing another owner's target", (extensionId) => {
   const workspace: CollectionBadgeItem = {
     id: "workspace",
     label: "Workspace",
@@ -133,14 +137,14 @@ test("linked workspace navigation retains its ticket context without changing an
     resource: { type: "artifact", id: "a-1", extensionId: "example.artifacts" },
     action: { kind: "page", page: { kind: "page", id: "artifact", extensionId: "example.artifacts" } },
   };
-  const row = ticketToRow(ticket, "proj-1", [], new Map([[ticket.id, [workspace, artifact]]]));
+  const row = ticketToRow(ticket, "proj-1", [], new Map([[ticket.id, [workspace, artifact]]]), new Map(), extensionId);
   expect(row.attributes.linkedResourceItems[0]?.action).toMatchObject({
     kind: "page",
     page: { kind: "page", id: "workspace", extensionId: "pstdio" },
     parent: {
       kind: "page",
-      page: { id: "ticket", extensionId: "pstdio.pstdio-planner" },
-      resource: { type: "ticket", id: ticket.id, projectId: "proj-1", extensionId: "pstdio.pstdio-planner" },
+      page: { id: "ticket", extensionId },
+      resource: { type: "ticket", id: ticket.id, projectId: "proj-1", extensionId },
     },
   });
   expect(row.attributes.linkedResourceItems[1]?.action).toEqual(artifact.action);

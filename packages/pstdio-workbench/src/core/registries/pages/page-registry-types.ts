@@ -65,6 +65,7 @@ export interface WorkbenchPageResourceCodec {
 }
 
 export interface WorkbenchPagePlacementInput {
+  pageOwnerLocation?: PageLocation;
   pageContext?: ViewLocation["pageContext"];
   identity: PlacementIdentity;
   pageId: string;

@@ -6,7 +6,7 @@ import { readDraft } from "./drafts";
 import { nativePresentation } from "./native-presentation";
 import { readQueue } from "./queue-snapshot";
 import { sessionId } from "./resource";
-import { savedWorkspaceControls, workspacePresentation } from "./workspace";
+import { savedWorkspaceControls, workspaceSnapshot } from "./workspace";
 
 export { composerControls } from "./controls";
 
@@ -71,12 +71,11 @@ export const readSessionSnapshot = async (
     nativeLinks: true,
     nativeHarnessAccount: { controlId: "harness", remote },
     workspaceId,
-    workspace: await workspacePresentation(ctx, workspaceInfo, {
-      id: workspaceId,
-      existingSession: true,
-      available: execution.available,
-    }),
-    controls: [...savedControls, ...savedWorkspaceControls(workspaceId, workspaceInfo, session.device)],
+    ...(await workspaceSnapshot(
+      ctx,
+      [...savedControls, ...savedWorkspaceControls(workspaceId, workspaceInfo, session.device)],
+      { id: workspaceId, existingSession: true, available: execution.available },
+    )),
     harness,
     streaming: ["in_progress", "awaiting_input"].includes(session.status),
     ...(session.lastRequestStarted ? { streamingStartedAt: new Date(session.lastRequestStarted).getTime() } : {}),

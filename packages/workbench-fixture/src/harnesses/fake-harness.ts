@@ -244,7 +244,7 @@ export const createFakeHarness = (longStream: LongStreamShape = DEFAULT_LONG_STR
     },
 
     resume: (_ctx, input) => {
-      const existing = sessions.get(input.agentSessionId);
+      const existing = sessions.get(input.agentSessionId) ?? input.events.getMessages();
       const startIndex = input.messageOffset ?? existing?.length ?? 0;
       const newMessages = buildResumeMessages(input, startIndex);
       const nextMessages = [...(existing ?? [])];

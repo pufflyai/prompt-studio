@@ -19,6 +19,7 @@ export interface ArtifactRevision {
 }
 
 interface ArtifactServiceInput {
+  extensionId?: string;
   projectId: string;
   ids: ExtensionStorageApi["ids"];
   artifacts: Pick<ExtensionStorageCollectionApi<{ id: string }>, "get" | "createIfAbsent" | "delete">;
@@ -64,9 +65,9 @@ export const createArtifactService = (input: ArtifactServiceInput) => {
       ...revision,
       title,
       revisionId: revision.id,
-      url: artifactUrl(projectId, revision.artifactId),
-      resource: artifactResource(projectId, revision.artifactId, title),
-      target: artifactTarget(projectId, revision.artifactId, title),
+      url: artifactUrl(projectId, revision.artifactId, input.extensionId),
+      resource: artifactResource(projectId, revision.artifactId, title, input.extensionId),
+      target: artifactTarget(projectId, revision.artifactId, title, input.extensionId),
     };
   };
 
@@ -76,7 +77,7 @@ export const createArtifactService = (input: ArtifactServiceInput) => {
   };
 
   const revisions = async (url: string) => {
-    const items = await findRevisions(artifactIdFromUrl(projectId, url));
+    const items = await findRevisions(artifactIdFromUrl(projectId, url, input.extensionId));
     if (!items.length) throw new Error("Artifact not found.");
     return Promise.all(items.map(summary));
   };
@@ -90,7 +91,9 @@ export const createArtifactService = (input: ArtifactServiceInput) => {
   const resolveRevision = async (revisionId: string) => {
     const revision = await records.get(revisionId);
     const resource = revision ? await resolve(revision.artifactId) : null;
-    return resource ? { resource, target: artifactTarget(projectId, resource.id, resource.label) } : null;
+    return resource
+      ? { resource, target: artifactTarget(projectId, resource.id, resource.label, input.extensionId) }
+      : null;
   };
 
   const read = async (url: string, revisionId?: string) => {
@@ -158,7 +161,7 @@ export const createArtifactService = (input: ArtifactServiceInput) => {
   };
 
   const remove = async (url: string) => {
-    const id = artifactIdFromUrl(projectId, url);
+    const id = artifactIdFromUrl(projectId, url, input.extensionId);
     if (!(await artifacts.get(id))) throw new Error("Artifact not found.");
     await artifacts.delete(id);
     const items = (await records.list()).filter((item) => item.artifactId === id);

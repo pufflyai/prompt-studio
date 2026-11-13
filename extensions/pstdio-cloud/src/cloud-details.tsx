@@ -6,6 +6,7 @@ import { Button } from "./button";
 import { useCloudContext } from "./cloud-context";
 import { CloudIcon, CloudLabel } from "./cloud-label";
 import { CloudProjectRecovery } from "./cloud-project-recovery";
+import { SyncActivity } from "./sync-activity";
 import { useCloud } from "./use-cloud";
 
 // The workbench's public settings command opens the registered panel in the shared settings surface.
@@ -37,6 +38,7 @@ export const CloudDetails = (props: { projectId?: string }) => {
         <CloudLabel data={data} online={online} error={error} />
         {data?.project?.error && <AlertMessage status="error">{data.project.error}</AlertMessage>}
         {error && <AlertMessage status="error">{error}</AlertMessage>}
+        {data && <SyncActivity sync={data.sync} projectId={projectId} />}
         {projectId && data && earlyAccess && <CloudProjectRecovery data={data} refresh={refresh} />}
         {connected && (
           <Stack gap="xs">

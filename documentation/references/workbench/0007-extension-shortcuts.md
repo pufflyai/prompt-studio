@@ -2,6 +2,8 @@
 
 PS-894 gives extensions the same keyboard catalog as the core. Press Alt+Shift+Space to open keyboard mode. G opens a page, C creates a resource, and A collects actions from visible presentations and project tools. Extensions use these shared groups; there is no extension-name step.
 
+Holding Option/Alt previews shortcuts in navigation and open menus. Layered actions show the complete entry chord followed by their sequence; entering shortcut mode shows the remaining keys.
+
 Each action has one default shortcut. The Keyboard shortcuts reference groups assigned actions by resource without row subtitles. Personal overrides also update navigation, menu, command palette, and extension inspection hints. Unassigned public actions remain available through command search. An extension does not have to contribute a page to contribute actions.
 
 ## Defaults
@@ -28,6 +30,7 @@ The host derives setup actions from public metadata:
 - C S lists new session drafts with the exact harness provider. Select its numbered choice directly; no arrow navigation is required. Creating a draft does not start an agent.
 - G E opens Extensions; Mod+, opens agent defaults; S S opens skill setup; S I opens appearance and icon settings.
 - Alt+Shift+T is the single color-theme action, regardless of the number of theme providers.
+- Alt+Shift+R reopens the most recently closed tab in the current project.
 
 These actions do not depend on provider names. Disabled extensions contribute no active shortcuts. Destination navigation uses its G sequence, and creation uses its C sequence, each without duplicate direct chords. Direct Option+Shift chords control panels and tabs and also work inside shortcut mode. Installed external extensions, including Pencil, keep their public actions available for search and personal assignment; their source is outside this repository, so this change does not add provider-specific defaults to them.
 
@@ -47,4 +50,4 @@ Managed webviews negotiate entry chords with the host. Artifacts installs the pu
 
 Extension adoption uses the keyboard API from [SDK/core PR #1377](https://github.com/pufflyai/prompt-studio/pull/1377) and pins the published SDK/UI preview pair from main commit `2c2b2e4c6b144c418cc048219c56553afe938bf4`. It requires a host providing extension API 0.3.0. Future adoption changes that need an unpublished SDK or UI must keep the waiting-for-release label until compatible packages are published; then update dependency ranges and rerun published-extension validation. Do not bypass the published dependency check.
 
-*Updated at: 2026-11-03*
+*Updated at: 2026-11-11*
