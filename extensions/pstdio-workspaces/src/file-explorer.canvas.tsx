@@ -105,45 +105,40 @@ export const FileOperations = () => {
 
 export const GitIgnoredEntries = () => {
   const [selected, setSelected] = useState("readme");
-  return (
-    <TreeList
-      sections={[
+  const sections = [
+    {
+      id: "files",
+      label: "Files",
+      collapsible: false,
+      nodes: [
+        { id: "readme", label: "README.md", icon: <File />, isNavigable: true, rowVariant: "file" as const },
         {
-          id: "files",
-          label: "Files",
-          collapsible: false,
-          nodes: [
-            { id: "readme", label: "README.md", icon: <File />, isNavigable: true, rowVariant: "file" },
+          id: "cache",
+          label: ".cache",
+          icon: <Folder />,
+          tone: "muted" as const,
+          rowVariant: "file" as const,
+          children: [
             {
-              id: "cache",
-              label: ".cache",
-              icon: <Folder />,
-              tone: "muted",
-              rowVariant: "file",
-              children: [
-                {
-                  id: "cache/data",
-                  label: "data.json",
-                  icon: <File />,
-                  tone: "muted",
-                  isNavigable: true,
-                  rowVariant: "file",
-                },
-              ],
-            },
-            {
-              id: "log",
-              label: "debug.log",
+              id: "cache/data",
+              label: "data.json",
               icon: <File />,
-              tone: "muted",
+              tone: "muted" as const,
               isNavigable: true,
-              rowVariant: "file",
+              rowVariant: "file" as const,
             },
           ],
         },
-      ]}
-      activeNodeId={selected}
-      onNavigate={({ nodeId }) => setSelected(nodeId)}
-    />
-  );
+        {
+          id: "log",
+          label: "debug.log",
+          icon: <File />,
+          tone: "muted" as const,
+          isNavigable: true,
+          rowVariant: "file" as const,
+        },
+      ],
+    },
+  ];
+  return <TreeList sections={sections} activeNodeId={selected} onNavigate={({ nodeId }) => setSelected(nodeId)} />;
 };
