@@ -58,4 +58,30 @@ describe("Cloud status", () => {
     expect(cloudStatus(account, { ...downloading, download: { completed: 4, total: 10 } }).percent).toBe(40);
     expect(cloudStatus(account, { ...downloading, download: { completed: 10, total: 10 } }).percent).toBeUndefined();
   });
+  test("distinguishes internal work, waiting, uploads and downloads from actual source activity", () => {
+    const source = {
+      id: "sessions",
+      phase: "record-stream:merge",
+      connected: true,
+      busy: true,
+      downloaded: false,
+      files: [],
+    };
+    const initial: ProjectSyncStatus = { state: "first-download-incomplete", offlineReady: false, sources: [source] };
+    expect(cloudStatus(account, initial).key).toBe("checking");
+    expect(cloudStatus(account, { ...initial, sources: [{ ...source, busy: false }] }).key).toBe("waiting");
+    expect(cloudStatus(account, { ...initial, sources: [{ ...source, connected: false }] }).key).toBe("offline");
+    const file = {
+      id: "file",
+      direction: "upload" as const,
+      status: "active" as const,
+      byteLength: 12,
+      totalBytes: 40,
+      completedBytes: 10,
+    };
+    expect(cloudStatus(account, { ...initial, sources: [{ ...source, files: [file] }] }).key).toBe("uploading");
+    expect(
+      cloudStatus(account, { ...initial, sources: [{ ...source, files: [{ ...file, direction: "download" }] }] }).key,
+    ).toBe("downloading");
+  });
 });
