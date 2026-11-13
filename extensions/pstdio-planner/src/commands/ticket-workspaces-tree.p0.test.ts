@@ -56,8 +56,8 @@ describe("ticket files tree workspace commands", () => {
       }),
     );
 
-    expect(sections.map((section) => section.id)).toEqual(["ticket", "files", "workspaces", "sessions"]);
-    expect(sections[2]).toMatchObject({
+    expect(sections.map((section) => section.id)).toEqual(["ticket", "workspaces"]);
+    expect(sections.find((section) => section.id === "workspaces")).toMatchObject({
       id: "workspaces",
       label: expect.anything(),
       collapsible: true,
@@ -152,66 +152,29 @@ describe("ticket files tree workspace commands", () => {
       }),
     );
 
-    expect(sections[2]?.nodes.map((node) => node.id)).toEqual(["workspace-ws-new", "workspace-ws-old"]);
+    expect(sections.find((section) => section.id === "workspaces")?.nodes.map((node) => node.id)).toEqual([
+      "workspace-ws-new",
+      "workspace-ws-old",
+    ]);
   });
 
-  test("keeps the Workspaces section action and empty row when no workspace is linked to the ticket", async () => {
+  test("keeps workspace creation on the ticket when its empty group is hidden", async () => {
     const storage = createMemoryStorage();
     const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));
-
     const sections = await listTicketFilesTreeCommand.run(
       ...makeCommandArgs({
         storage,
         params: ticketRendererParams(ticket),
-        overrides: {
-          workspaces: {
-            list: async () => [
-              {
-                id: "ws-2",
-                anchors_json: [
-                  {
-                    type: "ticket",
-                    id: "PS-999",
-                    label: "PS-999",
-                    shorthand: "PS-999",
-                    metadata: {
-                      resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
-                    },
-                  },
-                ],
-              },
-            ],
-          },
-        },
+        overrides: { workspaces: { list: async () => [] } },
       }),
     );
-
-    expect(sections.map((section) => section.id)).toEqual(["ticket", "files", "workspaces", "sessions"]);
-    expect(sections[2]).toMatchObject({
-      id: "workspaces",
-      label: expect.anything(),
-      collapsible: true,
-      actions: [
-        expect.objectContaining({
-          id: "create-workspace",
-          command: workspaceCommands.create,
-          params: {
-            shorthand_base: ticket.shorthand,
-            anchors: [expect.objectContaining({ type: "ticket", id: ticket.id, role: "primary" })],
-          },
-        }),
-      ],
-      nodes: [
-        {
-          id: "workspaces-empty",
-          label: "No workspaces",
-          icon: "GitBranch",
-          disabled: true,
-          rowVariant: "empty-state",
-        },
-      ],
-    });
-    expect(sections[2]).not.toHaveProperty("canHide");
-    expect(sections[2]).not.toHaveProperty("emptyState");
+    expect(sections.map((section) => section.id)).toEqual(["ticket"]);
+    expect(sections[0].nodes[0].contextMenuActions).toContainEqual(
+      expect.objectContaining({
+        id: "create-workspace",
+        command: workspaceCommands.create,
+        params: expect.objectContaining({ anchors: [expect.objectContaining({ type: "ticket", id: ticket.id })] }),
+      }),
+    );
   });
 });

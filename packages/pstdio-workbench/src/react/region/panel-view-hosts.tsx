@@ -1,4 +1,5 @@
 import { Box } from "@chakra-ui/react";
+import { UiScopeActivity } from "@pstdio/ui";
 import {
   Activity,
   createContext,
@@ -123,12 +124,14 @@ const PanelViewPortal = (props: {
       }}
     >
       {/* The retained view owns its viewport, so another tab cannot reset its scroll position. */}
-      <RegionScrollArea>
-        {/* Preserve collection state while deferring updates and reads for hidden pages. */}
-        <Activity mode={active || !collection ? "visible" : "hidden"}>
-          <WorkbenchWidgetHost workbench={workbench} placement={placement} region={region} visible={active} />
-        </Activity>
-      </RegionScrollArea>
+      <UiScopeActivity active={active}>
+        <RegionScrollArea>
+          {/* Preserve collection state while deferring updates and reads for hidden pages. */}
+          <Activity mode={active || !collection ? "visible" : "hidden"}>
+            <WorkbenchWidgetHost workbench={workbench} placement={placement} region={region} visible={active} />
+          </Activity>
+        </RegionScrollArea>
+      </UiScopeActivity>
     </Box>,
     host,
   );
