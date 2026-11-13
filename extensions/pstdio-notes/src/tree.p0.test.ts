@@ -31,6 +31,7 @@ test("lists notes from a local project workspace without repository context", as
   ]);
   expect(groups[0].nodes[0].actions[0].disabled).toBe(false);
   const opened = groups[0].nodes[0].children[0];
+  if (!("target" in opened)) throw new Error("Expected a note navigation target");
   expect(opened.target.targets.find((target) => target.kind === "panel")?.resource).toEqual(opened.resource);
 });
 
@@ -72,9 +73,9 @@ test("read-only files remain readable without offering note mutations", async ()
   expect(tree.children).toMatchObject([{ id: note.id }]);
   expect(tree.actions[0].disabled).toBe(true);
   expect(tree.children[0]).toMatchObject({ resource: { metadata: { writable: false } } });
-  expect(tree.children[0].target.targets.find((target) => target.kind === "panel")?.resource).toEqual(
-    tree.children[0].resource,
-  );
+  const opened = tree.children[0];
+  if (!("target" in opened)) throw new Error("Expected a note navigation target");
+  expect(opened.target.targets.find((target) => target.kind === "panel")?.resource).toEqual(opened.resource);
 });
 
 test("remote-only projects do not read local note files", async () => {
