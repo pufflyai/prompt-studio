@@ -61,7 +61,7 @@ export const ResourceLinkPicker = (props: ResourceLinkPickerProps) => {
     };
   }, [service, query, excludeKey, revision]);
   return (
-    <Stack gap="3">
+    <Stack gap="3" textAlign="start">
       <Input
         size="sm"
         aria-label="Search resources"
@@ -101,7 +101,7 @@ export const ResourceLinkPicker = (props: ResourceLinkPickerProps) => {
       </ScrollArea>
       <Menu.Root>
         <Menu.Trigger asChild>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" alignSelf="start">
             Purpose: {role}
             <WorkbenchIcon name="chevron-down" />
           </Button>
@@ -116,7 +116,7 @@ export const ResourceLinkPicker = (props: ResourceLinkPickerProps) => {
           </Menu.Content>
         </Menu.Positioner>
       </Menu.Root>
-      <HStack justify="flex-end">
+      <HStack justify="flex-start">
         <Button variant="ghost" onClick={onCancel} disabled={busy}>
           Cancel
         </Button>

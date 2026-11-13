@@ -381,7 +381,7 @@ test("hints match typed arguments and show the remaining layer path", async () =
   expect(core.keyboard.hint({ kind: "command", commandId: "open", args: { id: "one" } })).toBe("P");
 });
 
-test("the preview hints only chords that work outside shortcut mode", () => {
+test("Option preview includes the complete entry chord for layered shortcuts", () => {
   const { core } = setup();
   for (const id of ["sequence", "chord"]) core.commands.registerCommand({ id, label: id }, { execute() {} });
   core.keybindings.registerKeybinding({
@@ -392,7 +392,7 @@ test("the preview hints only chords that work outside shortcut mode", () => {
   core.keybindings.registerKeybinding({ action: { kind: "command", commandId: "chord" }, keybinding: "Alt+Shift+J" });
   core.keyboard.setPreview(true);
   expect(core.keyboard.hint({ kind: "command", commandId: "chord" })).toBe("Alt+Shift+J");
-  expect(core.keyboard.hint({ kind: "command", commandId: "sequence" })).toBeUndefined();
+  expect(core.keyboard.hint({ kind: "command", commandId: "sequence" })).toBe("Alt+Shift+Space → G → P");
   expect(core.keyboard.store.getState().active).toBe(false);
   core.keyboard.open();
   expect(core.keyboard.hint({ kind: "command", commandId: "sequence" })).toBe("G → P");

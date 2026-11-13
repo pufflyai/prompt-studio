@@ -26,7 +26,9 @@ const ownerContributionId = (getWidget: GetWidget, contributionId: string) =>
 
 const ownerPlacement = (layout: WorkbenchLayout, contributionId: string, detached: GetDetachedOwners) => {
   for (const region of workbenchPanelRegions) {
-    const placement = layout.regions[region].widgets.find((candidate) => candidate.contributionId === contributionId);
+    const current = layout.regions[region];
+    const candidates = current.widgets.filter((candidate) => candidate.contributionId === contributionId);
+    const placement = candidates.find((candidate) => candidate.widgetId === current.activeWidgetId) ?? candidates[0];
     if (placement) return { region, placement };
   }
   const placement = detached().find((candidate) => candidate.contributionId === contributionId);
@@ -73,9 +75,14 @@ const resolveMenuPlacements = (
     }
 
     const bound =
-      placement.ownerResourceKey === found.placement.resourceKey
+      placement.ownerResourceKey === found.placement.resourceKey && placement.resource === found.placement.resource
         ? placement
-        : { ...placement, ownerResourceKey: found.placement.resourceKey };
+        : {
+            ...placement,
+            ownerResourceKey: found.placement.resourceKey,
+            resource: found.placement.resource,
+            resourceKey: found.placement.resourceKey,
+          };
     if (bound !== placement) changed = true;
 
     const target = workbenchPanelMenuRegions[found.region as WorkbenchPanelRegion][menuSide(region)];

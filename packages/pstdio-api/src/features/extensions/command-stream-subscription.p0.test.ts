@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
+import { EventBus } from "../sync/event-bus";
 import { prepareCommandSubscription } from "./command-stream-subscription";
 import { createWorkspaceContextFixture } from "./workspace-context.test-fixture";
 
@@ -79,4 +80,60 @@ test("a handler returning after cancellation still reports a cancelled outcome",
   cancel();
   await pending;
   expect(events).toMatchObject([{ event: "end", data: { outcome: { ok: false, code: "command_stream_cancelled" } } }]);
+});
+
+test.each([
+  "dashboard",
+  "cli",
+] as const)("%s streams publish each scoped refresh while the command remains open", async (source) => {
+  const eventBus = new EventBus();
+  const snapshot = await fixture.deps.extensionRuntimeCatalog.get("project-1");
+  const command = snapshot.runtime.commands[0]!;
+  command.stream = { kind: "stream" };
+  const ready = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  command.run = async (ctx) => {
+    for (let i = 0; i < 2; i++) {
+      await ctx.events.emit({ kind: "event", id: "attention.changed" }, {}, { refresh: { resourceIds: ["session"] } });
+    }
+    ready.resolve();
+    await release.promise;
+  };
+  const prepared = await prepareCommandSubscription(
+    { ...fixture.deps, eventBus },
+    {
+      ...input,
+      body: { source },
+    },
+  );
+  if ("error" in prepared) throw new Error(prepared.error);
+  const frames: string[] = [];
+  const pending = prepared.run({
+    aborted: false,
+    onAbort: () => {},
+    sleep: async () => {},
+    write: async (event) => {
+      frames.push(event);
+    },
+  });
+  const refreshes = () =>
+    eventBus
+      .getSince(0)
+      .filter(
+        (event) =>
+          event.table === "extension_events" &&
+          (event.data as { eventId?: string }).eventId === "example.context.event.attention.changed",
+      );
+  try {
+    await ready.promise;
+    expect(frames).not.toContain("end");
+    expect(refreshes().map((event) => event.data)).toMatchObject([
+      { projectId: "project-1", resourceIds: ["session"] },
+      { projectId: "project-1", resourceIds: ["session"] },
+    ]);
+  } finally {
+    release.resolve();
+    await pending;
+  }
+  expect(refreshes()).toHaveLength(2);
 });

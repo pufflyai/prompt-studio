@@ -23,6 +23,7 @@ import { findNodeInSections, toTreeListSection } from "./tree-list-adapter";
 import { TreeModeReturn } from "./tree-mode-return";
 import { TreeParamsDialog } from "./tree-params-dialog";
 import { pinnedOnlyNodeIds } from "./tree-pinned-only";
+import { createTreeTabDropHandler } from "./tree-tab-drop";
 import { TreeViewBody } from "./tree-view-body";
 import { createToggleTreeSection, shouldSelectTreeNodeForNavigationTarget } from "./tree-view-navigation";
 import { TreeViewSearch } from "./tree-view-search";
@@ -215,13 +216,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     selectedNodeId: treeState.selectedNodeId,
   });
 
-  if (!treeRenderer) {
-    return (
-      <Text textStyle="paragraph/S/regular" color="fg.muted" p="sm">
-        Tree renderer is no longer registered.
-      </Text>
-    );
-  }
+  if (!treeRenderer) return <MissingTreeRenderer />;
 
   const toggleNode = createToggleTreeNode({
     workbench,
@@ -242,6 +237,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
 
   return (
     <TreeListDragProvider
+      onDropOutside={isSidenav ? createTreeTabDropHandler(workbench) : undefined}
       sections={[...visibleHeaderSections, ...visibleSections, ...visibleFooterSections]}
       canMove={treeRenderer.canMove}
       onReorderSections={onMoveSection}
@@ -354,3 +350,9 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     </TreeListDragProvider>
   );
 };
+
+const MissingTreeRenderer = () => (
+  <Text textStyle="paragraph/S/regular" color="fg.muted" p="sm">
+    Tree renderer is no longer registered.
+  </Text>
+);
