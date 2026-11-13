@@ -16,18 +16,17 @@ export const ticketMarkdownPath = layout.markdown;
 export const ticketFilesDir = layout.files;
 export const ticketFilesPattern = (shorthand: string) => `${ticketFilesDir(shorthand)}/**`;
 
-export const ensureTicketDraftsIgnored = async (projectFiles: ArtifactMount) => {
+const ticketRootFor = (extensionId?: string) =>
+  extensionId === "pstdio.planner"
+    ? ".pstdio/extension-storage/pstdio.planner"
+    : TICKETS_DIR.slice(0, -"/tickets".length);
+
+export const ensureTicketDraftsIgnored = async (projectFiles: ArtifactMount, extensionId?: string) => {
   const path = ".pstdio/.gitignore";
   const existing = (await projectFiles.exists(path)) ? await projectFiles.readText(path) : "";
   const lines = existing.split("\n").filter(Boolean);
-  const entry = "/extension-storage/pstdio.pstdio-planner/";
-  if (
-    lines.includes("/extension-storage") ||
-    lines.includes("/extension-storage/") ||
-    lines.includes(entry) ||
-    lines.includes("/extension-storage/pstdio.planner/")
-  )
-    return;
+  const entry = `/${ticketRootFor(extensionId).slice(".pstdio/".length)}/`;
+  if (lines.includes("/extension-storage") || lines.includes("/extension-storage/") || lines.includes(entry)) return;
   await projectFiles.writeText(path, `${[...lines, entry].join("\n")}\n`);
 };
 
@@ -74,13 +73,22 @@ export const ticketToMarkdown = async (ctx: TicketContext, ticket: Ticket) => {
   return applyFrontmatter(frontmatter, ticket.content);
 };
 
-export const writeTicketText = async (projectFiles: ArtifactMount, shorthand: string, content: string) => {
-  await ensureTicketDraftsIgnored(projectFiles);
+export const writeTicketText = async (
+  projectFiles: ArtifactMount,
+  shorthand: string,
+  content: string,
+  extensionId?: string,
+) => {
+  await ensureTicketDraftsIgnored(projectFiles, extensionId);
   await projectFiles.writeText(ticketMarkdownPath(shorthand), content);
 };
 
-export const writeTicketMarkdown = (projectFiles: ArtifactMount, ticket: Ticket, content: string) =>
-  writeTicketText(projectFiles, ticket.shorthand, withTicketCheckoutIdentity(content, ticket));
+export const writeTicketMarkdown = (
+  projectFiles: ArtifactMount,
+  ticket: Ticket,
+  content: string,
+  extensionId?: string,
+) => writeTicketText(projectFiles, ticket.shorthand, withTicketCheckoutIdentity(content, ticket), extensionId);
 
 export const readTicketMarkdown = async (projectFiles: ArtifactMount, shorthand: string) => {
   const path = ticketMarkdownPath(shorthand);
@@ -99,7 +107,7 @@ export const requireTicketDraftFiles = async (
   const root = home.root_path;
   // Existing hosts keep their historical root; a migration-capable host supplies the canonical owner.
   const previous = ".pstdio/extension-storage/pstdio.pstdio-planner";
-  const allocated = ctx.extensionId === "pstdio.planner" ? `.pstdio/extension-storage/${ctx.extensionId}` : previous;
+  const allocated = ticketRootFor(ctx.extensionId);
   return {
     projectFiles,
     resolvePath: (path: string) =>
