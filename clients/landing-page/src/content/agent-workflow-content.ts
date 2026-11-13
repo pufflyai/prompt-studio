@@ -7,17 +7,17 @@ export const AGENT_WORKFLOW_EXAMPLES = [
       {
         title: "Create a ticket",
         detail: "Add a title, describe the work, and choose an initial status.",
-        code: 'pst tickets create --content "# Add a color picker" --status "Queued"',
+        code: 'pst pstdio.planner create-ticket --content "# Add a color picker" --status "Queued"',
       },
       {
         title: "Update ticket status",
         detail: "Move a ticket to In progress when work starts, then Ready for review when the change is ready.",
-        code: 'pst tickets update --id TOOL-16 --status "Ready for review"',
+        code: 'pst pstdio.planner update-ticket --id TOOL-16 --status "Ready for review"',
       },
       {
         title: "List tickets",
         detail: "Find the next ticket to work on or see which changes need review.",
-        code: 'pst tickets list --status "Queued"',
+        code: 'pst pstdio.planner list-tickets --status "Queued"',
       },
     ],
   },

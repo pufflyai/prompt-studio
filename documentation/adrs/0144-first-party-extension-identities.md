@@ -12,7 +12,7 @@ Repeating the publisher in names such as `pstdio.pstdio-notes` makes commands, l
 
 Keep the existing `publisher.name` identity rule. First-party manifest names omit the repeated `pstdio-` prefix: artifacts, base-themes, cloud, home, notes, onboarding, performance, planner, reports, session-browser, skills, workspaces and dev. Source directory and immutable source-origin paths stay unchanged. Other valid names and publishers retain their identities.
 
-The host owns one explicit historical mapping. It normalizes loaded source metadata before source selection and builds invocation aliases from loaded structured contributions. It retains historical qualified and unqualified CLI routes during deprecation. Notes declares concise create, rename and delete paths while retaining its existing local command IDs. Discovery and new output use canonical identities.
+The host owns one explicit historical mapping. It normalizes loaded source metadata before source selection and builds invocation aliases from loaded structured contributions. It retains historical qualified and unqualified CLI routes during deprecation. Notes declares concise create, rename and delete paths while retaining its existing local command IDs. The same API 0.5.0 release removes extension-defined global shortcuts; CLI commands remain owned by their publisher-qualified namespace. Historical namespace aliases are separate from removed root shortcuts. Discovery and new output use canonical identities.
 
 A transactional startup migration moves complete database owner coordinates before extension activation. It retains source and instance IDs, enabled states, operation bytes, revisions, receipts, resource numbers and content. Typed platform references decode at their boundaries; arbitrary extension content remains unchanged. Allocated files migrate through verified, resumable copies before activation or the next authorized workspace access. Conflicting histories or files retain both versions and stop activation for the affected rename.
 
@@ -24,6 +24,6 @@ POSIX migrations flush the destination tree and parent directory entries before 
 
 ## Consequences
 
-Users gain shorter commands without a second data owner or stream. A conflict requires resolving the two existing histories before activation can resume. The host retains historical identity facts as long as it supports old stored data. Removing invocation aliases requires a later coordinated breaking release with named replacements.
+Users gain shorter commands without a second data owner or stream. A conflict requires resolving the two existing histories before activation can resume. The host retains historical identity facts as long as it supports old stored data. Removing the retained namespace migration aliases requires a later coordinated breaking release with named replacements. Root shortcuts such as `pst tickets write` are removed in the current API 0.5.0 release, using `pst pstdio.planner write-ticket` as the replacement.
 
 See the [upgrade guide](../guides/extensions/0011-identity-upgrades.md) and [API versioning](../references/extensions/0014-api-versioning.md).

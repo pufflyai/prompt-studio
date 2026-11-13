@@ -35,7 +35,7 @@ type WorkspaceRecord = {
 export const createWorkspaceInRepo = async (ctx: HookTestContext, repo: string) => {
   const run = createRun(ctx);
   const projectId = getProjectId(repo);
-  const ticket = JSON.parse(run('tickets create --content "Hook test ticket"', repo)) as {
+  const ticket = JSON.parse(run('pstdio.planner create-ticket --content "Hook test ticket"', repo)) as {
     id: string;
     shorthand: string;
   };

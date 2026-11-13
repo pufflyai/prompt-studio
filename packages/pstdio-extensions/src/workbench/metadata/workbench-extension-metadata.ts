@@ -45,7 +45,7 @@ const toCommandRecord = (command: ExtensionRuntime["commands"][number]) => ({
   title: command.title,
   description: command.description,
   cliPath: command.cli?.pathKey,
-  cliAliases: command.cli?.globalAliases?.map((alias) => alias.join(" ")),
+  cliAliases: command.cli?.deprecatedPaths?.map((alias) => alias.join(" ")),
   examples: command.cli?.examples,
   automation: command.automation,
   copyResultToClipboard: command.copyResultToClipboard,

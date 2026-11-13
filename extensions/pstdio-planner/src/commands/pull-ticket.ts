@@ -36,15 +36,14 @@ const pullTicket = async (input: {
   return { shorthand: ticket.shorthand, skipped: false, files: (ticket.files ?? []).length };
 };
 
-// `pst tickets pull`: materialize a ticket (or every non-archived ticket) from
+// `pst pstdio.planner pull-ticket`: materialize a ticket (or every non-archived ticket) from
 // extension storage into the local `.pstdio/extension-storage/pstdio.planner/tickets/<shorthand>/` tree.
 export const pullTicketCommand = defineCommand({
   id: "pull-ticket",
   mutating: true,
   title: "Pull ticket",
   cli: {
-    globalAliases: [["tickets", "pull"]],
-    examples: ["pstdio tickets pull --id PS-1", "pstdio tickets pull --force"],
+    examples: ["pstdio pstdio.planner pull-ticket --id PS-1", "pstdio pstdio.planner pull-ticket --force"],
   },
   params: {
     id: params.text(),

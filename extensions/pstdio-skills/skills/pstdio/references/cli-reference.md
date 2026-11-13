@@ -59,7 +59,7 @@ pst workspaces merge --id <id> [--delete-workspace]
 pst workspaces delete --id <id>
 ```
 
-Run these inside a linked project. `--id` takes a workspace short name such as `default`, `WS-1`, or `PS-12_A1`. Core workspace creation is standalone and gets a `WS-<n>` name. Link it to one or more tickets with `pst tickets link --id <ticket> --workspace <workspace>`. Planner also creates linked workspaces through managed attempts.
+Run these inside a linked project. `--id` takes a workspace short name such as `default`, `WS-1`, or `PS-12_A1`. Core workspace creation is standalone and gets a `WS-<n>` name. Link it to one or more tickets with `pst pstdio.planner link --id <ticket> --workspace <workspace>`. Planner also creates linked workspaces through managed attempts.
 
 `delete` removes the workspace. For a Git worktree it also removes the branch and any uncommitted changes. There is no archive that keeps a workspace readable. See [Workspaces](https://prompt.studio/docs/references/cli/workspaces/).
 
@@ -93,26 +93,26 @@ pst notifications snooze <id> --until <time> [--project-id <id>]
 These aliases are available when the `planner` extension is enabled.
 
 ```sh
-pst tickets list [--status <status>] [--tags <tag>...] [--parent <id>] [--archived] [--draft]
-pst tickets create [--title <title>] [--content <markdown>] [--status <status>] [--tags <tag>...] [--parent <id>] [--depends-on <id>...]
-pst tickets add [same options as create]
-pst tickets panel --id <id>
-pst tickets update --id <id> [--content <markdown>] [--status <status>] [--tags <tag>...] [--parent <id>] [--unlink-parent] [--depends-on <id>...] [--clear-depends-on] [--blocked-reason <text>]
-pst tickets link-review --id <id> --url <url> [--title <title>]
-pst tickets archive --id <id>
-pst tickets unarchive --id <id>
-pst tickets delete --id <id>
-pst tickets write --title <title> [--status <status>] [--tags <tag>...] [--user-prompt <text>] [--parent <id>]
-pst tickets save --id <id> [--status <status>]
-pst tickets pull [--id <id>] [--force]
-pst tickets files --id <id>
-pst tickets implement --id <id> [--agent '{"harnessId":"<harness>"}']
-pst tickets link --id <id> (--workspace <workspace> | --session <session-id>)
-pst tickets unlink --id <id> (--workspace <workspace> | --session <session-id>)
-pst tickets workspaces --id <id>
-pst tickets worktrees list --id <id>
-pst tickets worktrees remove-all --id <id>
-pst tickets proposal-refined --id <id>
+pst pstdio.planner list-tickets [--status <status>] [--tags <tag>...] [--parent <id>] [--archived] [--draft]
+pst pstdio.planner create-ticket [--title <title>] [--content <markdown>] [--status <status>] [--tags <tag>...] [--parent <id>] [--depends-on <id>...]
+pst pstdio.planner create-ticket [same options as create]
+pst pstdio.planner get-ticket --id <id>
+pst pstdio.planner update-ticket --id <id> [--content <markdown>] [--status <status>] [--tags <tag>...] [--parent <id>] [--unlink-parent] [--depends-on <id>...] [--clear-depends-on] [--blocked-reason <text>]
+pst pstdio.planner link-review --id <id> --url <url> [--title <title>]
+pst pstdio.planner archive-ticket --id <id>
+pst pstdio.planner unarchive-ticket --id <id>
+pst pstdio.planner delete-ticket --id <id>
+pst pstdio.planner write-ticket --title <title> [--status <status>] [--tags <tag>...] [--user-prompt <text>] [--parent <id>]
+pst pstdio.planner save-ticket --id <id> [--status <status>]
+pst pstdio.planner pull-ticket [--id <id>] [--force]
+pst pstdio.planner list-ticket-files --id <id>
+pst pstdio.planner implement-ticket --id <id> [--agent '{"harnessId":"<harness>"}']
+pst pstdio.planner link --id <id> (--workspace <workspace> | --session <session-id>)
+pst pstdio.planner unlink --id <id> (--workspace <workspace> | --session <session-id>)
+pst pstdio.planner ticket-workspaces --id <id>
+pst pstdio.planner ticket-worktrees-list --id <id>
+pst pstdio.planner ticket-worktrees-remove-all --id <id>
+pst pstdio.planner proposal-refined --id <id>
 ```
 
 `tickets save` reads the body, tags, parent, dependencies, and files from the local ticket tree. In the ticket file's front matter, `depends_on` lists prerequisite tickets. On `update`, `--depends-on` replaces every dependency; omit it to keep them.
@@ -124,16 +124,16 @@ Archiving or deleting a ticket also deletes its linked workspaces, with their un
 ## Planner statuses and tags
 
 ```sh
-pst statuses list
-pst statuses create --label <label> [--color <color>] [--icon <icon>] [--can-create] [--column-actions <json>]
-pst statuses update --status-id <status-id> [options]
-pst statuses reorder --status-ids <json>
-pst statuses set-default --status <status>
-pst statuses delete --status <status>
+pst pstdio.planner ticket-status read
+pst pstdio.planner ticket-status create --label <label> [--color <color>] [--icon <icon>] [--can-create] [--column-actions <json>]
+pst pstdio.planner ticket-status update --status-id <status-id> [options]
+pst pstdio.planner ticket-status reorder --status-ids <json>
+pst pstdio.planner ticket-status set-default --status <status>
+pst pstdio.planner ticket-status delete --status <status>
 
-pst tags list
-pst tags create --name <name> [--type <single_select|multi_select>]
-pst tags delete --tag <tag>
+pst pstdio.planner ticket-tag read
+pst pstdio.planner ticket-tag create --name <name> [--type <single_select|multi_select>]
+pst pstdio.planner ticket-tag delete --tag <tag>
 ```
 
 ## Reports
@@ -141,10 +141,10 @@ pst tags delete --tag <tag>
 These aliases are available when the `reports` extension is enabled.
 
 ```sh
-pst reports write [--workspace <id>] [--kind <kind>] [--name <name>] --template <template> [--source <source>]
-pst reports read --id <report-id>
-pst reports save [--workspace <id>] [--name <name>]
-pst reports delete [--workspace <id>] [--name <name>]
+pst pstdio.reports reports write [--workspace <id>] [--kind <kind>] [--name <name>] --template <template> [--source <source>]
+pst pstdio.reports reports read --id <report-id>
+pst pstdio.reports reports save [--workspace <id>] [--name <name>]
+pst pstdio.reports reports delete [--workspace <id>] [--name <name>]
 ```
 
 `reports write` returns absolute host paths in the default project folder for the report and its evidence files. Edit those paths, then use `reports save`. These paths do not refer to a remote workspace filesystem.

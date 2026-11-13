@@ -41,13 +41,13 @@ const createInitializedRepo = (name: string) => {
   return repo;
 };
 
-describe("pstdio tickets create", () => {
+describe("pstdio pstdio.planner create-ticket", () => {
   test(
     "creates a ticket and shows shorthand",
     () => {
       const repo = createInitializedRepo("tk-create");
 
-      const ticket = JSON.parse(run('tickets create --content "My first ticket"', repo));
+      const ticket = JSON.parse(run('pstdio.planner create-ticket --content "My first ticket"', repo));
 
       expect(ticket.shorthand).toBe("TC-1");
       expect(ticket.title).toBe("My first ticket");
@@ -62,20 +62,20 @@ describe("pstdio tickets create", () => {
       const repo = createGitRepo();
       dirs.push(repo);
 
-      const result = runSafe('tickets create --content "Fail"', repo);
+      const result = runSafe('pstdio.planner create-ticket --content "Fail"', repo);
       expect(result.exitCode).not.toBe(0);
     },
     TEST_TIMEOUT,
   );
 });
 
-describe("pstdio tickets list", () => {
+describe("pstdio pstdio.planner list-tickets", () => {
   test(
     "returns an empty array when there are no tickets",
     () => {
       const repo = createInitializedRepo("tk-list-empty");
 
-      const tickets = JSON.parse(run("tickets list", repo));
+      const tickets = JSON.parse(run("pstdio.planner list-tickets", repo));
 
       expect(tickets).toEqual([]);
     },
@@ -87,10 +87,10 @@ describe("pstdio tickets list", () => {
     () => {
       const repo = createInitializedRepo("tk-list");
 
-      run('tickets create --content "Ticket A"', repo);
-      run('tickets create --content "Ticket B"', repo);
+      run('pstdio.planner create-ticket --content "Ticket A"', repo);
+      run('pstdio.planner create-ticket --content "Ticket B"', repo);
 
-      const tickets = JSON.parse(run("tickets list", repo));
+      const tickets = JSON.parse(run("pstdio.planner list-tickets", repo));
 
       const titles = tickets.map((ticket: { title: string }) => ticket.title);
       expect(titles).toContain("Ticket A");
@@ -105,28 +105,28 @@ describe("pstdio tickets list", () => {
     () => {
       const repo = createInitializedRepo("tk-list-draft");
 
-      run('tickets create --content "Saved ticket"', repo);
-      run('tickets write --title "Draft only"', repo);
+      run('pstdio.planner create-ticket --content "Saved ticket"', repo);
+      run('pstdio.planner write-ticket --title "Draft only"', repo);
 
-      const byDefault = JSON.parse(run("tickets list", repo));
+      const byDefault = JSON.parse(run("pstdio.planner list-tickets", repo));
       const defaultTitles = byDefault.map((ticket: { title: string }) => ticket.title);
       expect(defaultTitles).toContain("Saved ticket");
       expect(defaultTitles).not.toContain("Draft only");
 
-      const draftTickets = JSON.parse(run("tickets list --draft", repo));
+      const draftTickets = JSON.parse(run("pstdio.planner list-tickets --draft", repo));
       expect(draftTickets.map((ticket: { title: string }) => ticket.title)).toEqual(["Draft only"]);
     },
     TEST_TIMEOUT,
   );
 });
 
-describe("pstdio tickets write", () => {
+describe("pstdio pstdio.planner write-ticket", () => {
   test(
     "creates draft ticket and writes local file",
     () => {
       const repo = createInitializedRepo("tk-write");
 
-      const result = JSON.parse(run('tickets write --title "Draft ticket"', repo));
+      const result = JSON.parse(run('pstdio.planner write-ticket --title "Draft ticket"', repo));
 
       expect(result.shorthand).toBe("TW-1");
       expect(isAbsolute(result.path)).toBe(true);
@@ -153,21 +153,21 @@ describe("pstdio tickets write", () => {
   );
 });
 
-describe("pstdio tickets save", () => {
+describe("pstdio pstdio.planner save-ticket", () => {
   test(
     "pushes draft ticket to database and sets draft=false",
     () => {
       const repo = createInitializedRepo("tk-save");
 
-      const { shorthand } = JSON.parse(run('tickets write --title "Save me"', repo));
+      const { shorthand } = JSON.parse(run('pstdio.planner write-ticket --title "Save me"', repo));
 
-      const saveResult = JSON.parse(run(`tickets save --id ${shorthand}`, repo));
+      const saveResult = JSON.parse(run(`pstdio.planner save-ticket --id ${shorthand}`, repo));
       expect(saveResult.shorthand).toBe(shorthand);
 
-      const tickets = JSON.parse(run("tickets list", repo));
+      const tickets = JSON.parse(run("pstdio.planner list-tickets", repo));
       expect(tickets.map((ticket: { title: string }) => ticket.title)).toContain("Save me");
 
-      const draftTickets = JSON.parse(run("tickets list --draft", repo));
+      const draftTickets = JSON.parse(run("pstdio.planner list-tickets --draft", repo));
       expect(draftTickets).toEqual([]);
     },
     TEST_TIMEOUT,
@@ -178,9 +178,11 @@ describe("pstdio tickets save", () => {
     () => {
       const repo = createInitializedRepo("tk-save-parent");
 
-      const { shorthand: parentShorthand } = JSON.parse(run('tickets create --content "Parent ticket"', repo));
+      const { shorthand: parentShorthand } = JSON.parse(
+        run('pstdio.planner create-ticket --content "Parent ticket"', repo),
+      );
 
-      const { shorthand: childShorthand } = JSON.parse(run('tickets write --title "Child ticket"', repo));
+      const { shorthand: childShorthand } = JSON.parse(run('pstdio.planner write-ticket --title "Child ticket"', repo));
 
       const ticketFile = join(findTicketDir(repo, childShorthand), "ticket.md");
       const content = readFileSync(ticketFile, "utf8");
@@ -190,10 +192,10 @@ describe("pstdio tickets save", () => {
       );
       writeFileSync(ticketFile, updatedContent);
 
-      const saveResult = JSON.parse(run(`tickets save --id ${childShorthand}`, repo));
+      const saveResult = JSON.parse(run(`pstdio.planner save-ticket --id ${childShorthand}`, repo));
       expect(saveResult.shorthand).toBe(childShorthand);
 
-      const children = JSON.parse(run(`tickets list --parent ${parentShorthand}`, repo));
+      const children = JSON.parse(run(`pstdio.planner list-tickets --parent ${parentShorthand}`, repo));
       expect(children.map((ticket: { shorthand: string }) => ticket.shorthand)).toContain(childShorthand);
       expect(children.map((ticket: { title: string }) => ticket.title)).toContain("Child ticket");
     },
@@ -205,19 +207,19 @@ describe("pstdio tickets save", () => {
     () => {
       const repo = createInitializedRepo("tk-save-missing");
 
-      const result = runSafe("tickets save --id MISSING-99", repo);
+      const result = runSafe("pstdio.planner save-ticket --id MISSING-99", repo);
       expect(result.exitCode).not.toBe(0);
     },
     TEST_TIMEOUT,
   );
 });
 
-describe("pstdio tickets files", () => {
+describe("pstdio pstdio.planner list-ticket-files", () => {
   test(
     "shows local and db status for ticket files",
     () => {
       const repo = createInitializedRepo("tk-files");
-      const { shorthand } = JSON.parse(run('tickets write --title "File statuses"', repo));
+      const { shorthand } = JSON.parse(run('pstdio.planner write-ticket --title "File statuses"', repo));
 
       const ticketDir = findTicketDir(repo, shorthand);
       const attachmentDir = join(ticketDir, "files");
@@ -225,17 +227,17 @@ describe("pstdio tickets files", () => {
       mkdirSync(attachmentDir, { recursive: true });
       writeFileSync(attachmentPath, "hello attachment");
 
-      const saveResult = JSON.parse(run(`tickets save --id ${shorthand}`, repo));
+      const saveResult = JSON.parse(run(`pstdio.planner save-ticket --id ${shorthand}`, repo));
       expect(saveResult.shorthand).toBe(shorthand);
       expect(saveResult.files).toBe(1);
 
-      const filesBoth = JSON.parse(run(`tickets files --id ${shorthand}`, repo));
+      const filesBoth = JSON.parse(run(`pstdio.planner list-ticket-files --id ${shorthand}`, repo));
       const notesBoth = filesBoth.find((entry: { file: string }) => entry.file === "notes.txt");
       expect(notesBoth).toMatchObject({ storage: "yes", local: "yes" });
 
       rmSync(attachmentPath);
 
-      const filesDbOnly = JSON.parse(run(`tickets files --id ${shorthand}`, repo));
+      const filesDbOnly = JSON.parse(run(`pstdio.planner list-ticket-files --id ${shorthand}`, repo));
       const notesDbOnly = filesDbOnly.find((entry: { file: string }) => entry.file === "notes.txt");
       expect(notesDbOnly).toMatchObject({ storage: "yes", local: "no" });
     },
@@ -243,12 +245,12 @@ describe("pstdio tickets files", () => {
   );
 });
 
-describe("pstdio tickets pull", () => {
+describe("pstdio pstdio.planner pull-ticket", () => {
   test(
     "pulls ticket markdown and attachments from db when local files are missing",
     () => {
       const repo = createInitializedRepo("tk-pull");
-      const { shorthand } = JSON.parse(run('tickets write --title "Pull ticket"', repo));
+      const { shorthand } = JSON.parse(run('pstdio.planner write-ticket --title "Pull ticket"', repo));
 
       const ticketDir = findTicketDir(repo, shorthand);
       const attachmentDir = join(ticketDir, "files");
@@ -256,10 +258,10 @@ describe("pstdio tickets pull", () => {
       mkdirSync(attachmentDir, { recursive: true });
       writeFileSync(attachmentPath, "sync me");
 
-      run(`tickets save --id ${shorthand}`, repo);
+      run(`pstdio.planner save-ticket --id ${shorthand}`, repo);
       rmSync(ticketDir, { recursive: true, force: true });
 
-      const pullResult = JSON.parse(run(`tickets pull --id ${shorthand}`, repo));
+      const pullResult = JSON.parse(run(`pstdio.planner pull-ticket --id ${shorthand}`, repo));
       expect(pullResult.shorthand).toBe(shorthand);
       expect(pullResult.skipped).toBe(false);
       expect(pullResult.files).toBe(1);
@@ -275,18 +277,18 @@ describe("pstdio tickets pull", () => {
     "requires --force to overwrite local ticket files",
     () => {
       const repo = createInitializedRepo("tk-pull-force");
-      const { shorthand } = JSON.parse(run('tickets write --title "Pull force ticket"', repo));
+      const { shorthand } = JSON.parse(run('pstdio.planner write-ticket --title "Pull force ticket"', repo));
       const ticketDir = findTicketDir(repo, shorthand);
       const ticketPath = join(ticketDir, "ticket.md");
 
-      run(`tickets save --id ${shorthand}`, repo);
+      run(`pstdio.planner save-ticket --id ${shorthand}`, repo);
       writeFileSync(ticketPath, "local changes");
 
-      const withoutForce = JSON.parse(run(`tickets pull --id ${shorthand}`, repo));
+      const withoutForce = JSON.parse(run(`pstdio.planner pull-ticket --id ${shorthand}`, repo));
       expect(withoutForce.skipped).toBe(true);
       expect(readFileSync(ticketPath, "utf8")).toBe("local changes");
 
-      const withForce = JSON.parse(run(`tickets pull --id ${shorthand} --force`, repo));
+      const withForce = JSON.parse(run(`pstdio.planner pull-ticket --id ${shorthand} --force`, repo));
       expect(withForce.shorthand).toBe(shorthand);
       expect(withForce.skipped).toBe(false);
       expect(readFileSync(ticketPath, "utf8")).toContain("# Pull force ticket");
@@ -295,13 +297,13 @@ describe("pstdio tickets pull", () => {
   );
 });
 
-describe("pstdio tickets update", () => {
+describe("pstdio pstdio.planner update-ticket", () => {
   test(
     "fails for nonexistent ticket",
     () => {
       const repo = createInitializedRepo("tk-update-missing");
 
-      const result = runSafe("tickets update --id MISSING-99 --status wip", repo, FLOW_TIMEOUT);
+      const result = runSafe("pstdio.planner update-ticket --id MISSING-99 --status wip", repo, FLOW_TIMEOUT);
       expect(result.exitCode).not.toBe(0);
       expect(result.stderr).toContain('Unknown ticket "MISSING-99"');
     },
@@ -309,25 +311,31 @@ describe("pstdio tickets update", () => {
   );
 });
 
-describe("pstdio tickets full flow", () => {
+describe("pstdio pstdio.planner full flow", () => {
   test(
     "write → save → list → update lifecycle",
     () => {
       const repo = createInitializedRepo("tk-flow");
 
-      const { shorthand } = JSON.parse(run('tickets write --title "Lifecycle ticket"', repo, FLOW_TIMEOUT));
+      const { shorthand } = JSON.parse(
+        run('pstdio.planner write-ticket --title "Lifecycle ticket"', repo, FLOW_TIMEOUT),
+      );
 
-      expect(JSON.parse(run("tickets list", repo, FLOW_TIMEOUT))).toEqual([]);
+      expect(JSON.parse(run("pstdio.planner list-tickets", repo, FLOW_TIMEOUT))).toEqual([]);
 
-      run(`tickets save --id ${shorthand}`, repo, FLOW_TIMEOUT);
+      run(`pstdio.planner save-ticket --id ${shorthand}`, repo, FLOW_TIMEOUT);
 
-      const tickets = JSON.parse(run("tickets list", repo, FLOW_TIMEOUT));
+      const tickets = JSON.parse(run("pstdio.planner list-tickets", repo, FLOW_TIMEOUT));
       expect(tickets).toContainEqual(expect.objectContaining({ shorthand, title: "Lifecycle ticket" }));
 
-      const updated = JSON.parse(run(`tickets update --id ${shorthand} --status "In Progress"`, repo, FLOW_TIMEOUT));
+      const updated = JSON.parse(
+        run(`pstdio.planner update-ticket --id ${shorthand} --status "In Progress"`, repo, FLOW_TIMEOUT),
+      );
       expect(updated).toMatchObject({ shorthand, statusId: "in-progress" });
 
-      const inProgressTickets = JSON.parse(run('tickets list --status "In Progress"', repo, FLOW_TIMEOUT));
+      const inProgressTickets = JSON.parse(
+        run('pstdio.planner list-tickets --status "In Progress"', repo, FLOW_TIMEOUT),
+      );
       expect(inProgressTickets).toContainEqual(expect.objectContaining({ shorthand, status: "In Progress" }));
     },
     FLOW_TIMEOUT,

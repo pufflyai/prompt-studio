@@ -13,7 +13,6 @@ import { describeParamValue, formatParamName, parseExtensionCommandArgs } from "
 import { printExtensionCommandStream } from "./extension-cli-stream";
 import {
   buildExtensionCommandTable,
-  commandCliPaths,
   type ExtensionCommandCollision,
   type ExtensionCommandTable,
 } from "./extension-command-table";
@@ -155,11 +154,7 @@ const defaultDeps = (): DispatchDeps => ({
 // core group like `pstdio projects --help`.
 export const renderNamespaceHelp = (namespace: string, table: ExtensionCommandTable) => {
   const routes = (table.byNamespace.get(namespace) ?? [])
-    .flatMap((command) =>
-      commandCliPaths(command)
-        .filter((path) => path.split(" ")[0] === namespace && !isHistoricalCliAlias(command, path))
-        .map((path) => ({ command, path })),
-    )
+    .flatMap((command) => (command.cliPath ? [{ command, path: command.cliPath }] : []))
     .sort((a, b) => a.path.localeCompare(b.path));
 
   if (routes.length === 0) return `No extension commands are enabled for namespace "${namespace}".`;
@@ -186,12 +181,9 @@ export const renderCommandHelp = (command: ExtensionCommandRecord) => {
   ];
   lines.push(`Provider: ${command.extensionId}`);
 
-  if (command.cliAliases?.length) {
-    lines.push(
-      "",
-      "Aliases:",
-      ...command.cliAliases.map((alias) => `  ${alias}${isHistoricalCliAlias(command, alias) ? " (deprecated)" : ""}`),
-    );
+  const deprecatedPaths = command.cliAliases?.filter((path) => isHistoricalCliAlias(command, path));
+  if (deprecatedPaths?.length) {
+    lines.push("", "Aliases:", ...deprecatedPaths.map((path) => `  ${path} (deprecated)`));
   }
 
   lines.push("", "  --stream  Stream command chunks as NDJSON");
@@ -231,6 +223,23 @@ const hasExtensionCommandRoute = (parts: string[], table: ExtensionCommandTable)
   return Boolean(namespace && table.byNamespace.has(namespace));
 };
 
+const showNamespaceHelp = (parts: string[], table: ExtensionCommandTable, deps: DispatchDeps, json: boolean) => {
+  const path = parts.join(" ");
+  const help = renderNamespaceHelp(parts[0]!, table);
+  const group = !parts[1] || [...table.byPath.keys()].some((candidate) => candidate.startsWith(`${path} `));
+  if (!group) {
+    (deps.error ?? deps.log)(`Unknown command "pstdio ${path}".\n\n${help}`);
+    return 1;
+  }
+  const commands = table.byNamespace.get(parts[0]!) ?? [];
+  const owners = new Set(commands.map((command) => command.extensionId));
+  const canonicalGroup = commands.some((command) => command.cliPath?.startsWith(`${path} `));
+  if (!canonicalGroup && owners.size === 1 && !json)
+    (deps.error ?? deps.log)(`Deprecated: pst ${path} --help is replaced by pst ${[...owners][0]} --help.`);
+  deps.log(help);
+  return 0;
+};
+
 export const dispatchExtensionCliCommand = async (input: {
   rawArgs: string[];
   deps?: Partial<DispatchDeps>;
@@ -254,15 +263,7 @@ export const dispatchExtensionCliCommand = async (input: {
   }
 
   const command = table.byPath.get(commandPath);
-  if (!command) {
-    // A namespace or command group lists the namespace's commands, matching how yargs
-    // command groups respond. A mistyped command must fail so scripts and agents notice.
-    const help = renderNamespaceHelp(commandPathParts[0]!, table);
-    const group = !commandPathParts[1] || [...table.byPath.keys()].some((p) => p.startsWith(`${commandPath} `));
-    if (!group) (deps.error ?? deps.log)(`Unknown command "pstdio ${commandPath}".\n\n${help}`);
-    else deps.log(help);
-    return group ? 0 : 1;
-  }
+  if (!command) return showNamespaceHelp(commandPathParts, table, deps, global.json);
 
   input.onCommandResolved?.(command);
   warnDeprecatedExtensionCommand(command, commandPath, deps.error ?? deps.log, !global.json);

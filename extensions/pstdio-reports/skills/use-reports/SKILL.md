@@ -11,13 +11,13 @@ Reports are handover artifacts between agents. The public guide is [Reports](htt
 
 After implementing a change, create a change request report with:
 
-`pst reports write --kind change_request --name change_request --template change-request`
+`pst pstdio.reports reports write --kind change_request --name change_request --template change-request`
 
 Fill every section. Link the user's own requirements, such as the repository's PRDs, ADRs, or ticket, not Prompt Studio's product documents. Explain why the change is needed, motivate concrete implementation decisions, link relevant resources, and explain how to validate the work. Always state anything left undone, any shortcuts taken, and any blockers encountered. Write `None` when a required disclosure has nothing to report.
 
 When reviewing code, create a review report for the independent review of the change request:
 
-`pst reports write --kind review --name review --template review`
+`pst pstdio.reports reports write --kind review --name review --template review`
 
 Do not create a review report for your own implementation. Do not create a change request report for a code review.
 
@@ -27,8 +27,8 @@ Read the JSON returned by `reports write`. Edit its `path` and place supporting 
 
 When done, persist your edits with the returned `name`:
 
-`pst reports save --name <name>`
+`pst pstdio.reports reports save --name <name>`
 
 To read another agent's report, open the `path` returned when that report was created.
 
-Use `pst reports delete --name <name>` to discard a draft created by mistake.
+Use `pst pstdio.reports reports delete --name <name>` to discard a draft created by mistake.

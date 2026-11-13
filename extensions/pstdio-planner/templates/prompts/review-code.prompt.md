@@ -8,7 +8,7 @@ For each finding:
 - Classify it as critical, minor, or a suggestion.
 - Explain the behavior and the required change.
 
-Create the report with `pst reports write --kind review --name review --template review --source review-changes`. Read the returned JSON. Fill its `path` with the review scope, confidence, validation evidence, prioritized findings, useful links, and follow-up work. Save it with `pst reports save --name <returned-name>` and keep the returned `reportId`.
+Create the report with `pst pstdio.reports reports write --kind review --name review --template review --source review-changes`. Read the returned JSON. Fill its `path` with the review scope, confidence, validation evidence, prioritized findings, useful links, and follow-up work. Save it with `pst pstdio.reports reports save --name <returned-name>` and keep the returned `reportId`.
 
 Repeated reviews get numbered names and files, so earlier reviews remain unchanged. This is an independent code review. Create a `review` report, not a `change_request` report.
 

@@ -8,8 +8,7 @@ export const deleteReportCommand = defineCommand({
   id: "reports.delete",
   title: "Delete report",
   cli: {
-    globalAliases: [["reports", "delete"]],
-    examples: ["pstdio reports delete --name review"],
+    examples: ["pstdio pstdio.reports reports delete --name review"],
   },
   params: {
     workspace: params.text(),

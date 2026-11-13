@@ -165,12 +165,14 @@ describe("packaged pstdio — tickets", () => {
       phase("create project");
       const repo = await createInitializedRepo("pkg-tickets");
       phase("project created; create ticket");
-      const created = JSON.parse(await run(["tickets", "create", "--content", "Packaged test ticket"], repo));
+      const created = JSON.parse(
+        await run(["pstdio.planner", "create-ticket", "--content", "Packaged test ticket"], repo),
+      );
       phase("ticket created; list tickets");
       expect(created.shorthand).toMatch(/^PT-\d+$/);
       expect(created.title).toBe("Packaged test ticket");
 
-      const tickets = JSON.parse(await run(["tickets", "list"], repo));
+      const tickets = JSON.parse(await run(["pstdio.planner", "list-tickets"], repo));
       expect(tickets.map((ticket: { title: string }) => ticket.title)).toContain("Packaged test ticket");
       phase("tickets listed");
     },
@@ -185,7 +187,7 @@ describe("packaged pstdio — error cases", () => {
       const repo = createGitRepo();
       dirs.push(repo);
 
-      const result = runSafe("tickets list", repo);
+      const result = runSafe("pstdio.planner list-tickets", repo);
       expect(result.exitCode).not.toBe(0);
     },
     TEST_TIMEOUT,

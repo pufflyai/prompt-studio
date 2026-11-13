@@ -52,7 +52,7 @@ const validateCliExamples = (
   const routes = [
     [ext.id, ...contribution.path],
     [ext.name, ...contribution.path],
-    ...(contribution.globalAliases ?? []),
+    ...(contribution.deprecatedPaths ?? []),
   ];
   for (const example of contribution.examples ?? []) {
     if (exampleUsesCommandPath(example, routes)) continue;
@@ -108,16 +108,14 @@ const normalizeCommandCli = (
       ? options.examples.filter((example): example is string => typeof example === "string")
       : undefined,
     hidden: typeof options.hidden === "boolean" ? options.hidden : undefined,
-    globalAliases: [
-      ...(Array.isArray(options.globalAliases) ? (options.globalAliases as string[][]).filter(Array.isArray) : []),
-      ...historicalCliPaths(ext.id, localId, normalized.segments),
-    ],
+    deprecatedPaths: historicalCliPaths(ext.id, localId, normalized.segments),
   };
-  contribution.examples = canonicalExamples(
-    contribution.examples,
-    pathKey,
-    historicalCliPaths(ext.id, localId, normalized.segments),
-  );
+  contribution.examples = canonicalExamples(contribution.examples, pathKey, [
+    ...(contribution.deprecatedPaths ?? []),
+    // Older SDKs authored examples with root shortcuts. Rewrite that help text
+    // without registering those declarations as routes or rejecting the source.
+    ...(Array.isArray(options.globalAliases) ? options.globalAliases.filter(Array.isArray) : []),
+  ]);
   validateCliExamples(ext, source, commandId, contribution, runtime);
 
   const existing = cliKeys.get(pathKey);

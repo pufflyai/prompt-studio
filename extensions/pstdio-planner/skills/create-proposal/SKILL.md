@@ -5,7 +5,7 @@ metadata:
   version: 0.0.7
 ---
 
-A proposal is a Planner ticket built from the `proposal` template. Use the `pst tickets` commands to create and edit it. See [Edit a ticket as a local file](https://prompt.studio/docs/extensions/planner/cli/#edit-a-ticket-as-a-local-file).
+A proposal is a Planner ticket built from the `proposal` template. Use the `pst pstdio.planner` commands to create and edit it. See [Edit a ticket as a local file](https://prompt.studio/docs/extensions/planner/cli/#edit-a-ticket-as-a-local-file).
 
 A proposal ticket is not a document in the user's repository. If the repository keeps its own PRDs or ADRs, read and link them, and add a new one there only when the user asks. Prompt Studio's own product requirements describe Prompt Studio, not the user's product.
 
@@ -18,9 +18,9 @@ Before saving a proposal that adds or changes UI, read `pst pstdio.planner refin
 ## Workflow
 
 1. Derive a short, verb-led title from the request, such as `add-`, `update-`, `remove-`, `refactor-`, or `fix-`.
-2. Confirm the `proposal` template exists with `pst tickets templates`.
-3. Run `pst tickets write --title "<title>"`. This returns the absolute `path` of the draft in the default project folder. Edit that file.
-4. Run `pst tickets apply-template --id <shorthand> --template proposal` to apply the template.
+2. Confirm the `proposal` template exists with `pst pstdio.planner list-ticket-templates`.
+3. Run `pst pstdio.planner write-ticket --title "<title>"`. This returns the absolute `path` of the draft in the default project folder. Edit that file.
+4. Run `pst pstdio.planner apply-ticket-template --id <shorthand> --template proposal` to apply the template.
 5. Read the relevant code and the repository's documentation. The proposal must match how the product works today.
 6. Fill in the template. Keep it short:
    - Use concise bullets for the outcome, Why, and How. How explains the mechanism and main component or workflow changes, rather than repeating the goal.
@@ -30,12 +30,12 @@ Before saving a proposal that adds or changes UI, read `pst pstdio.planner refin
    - Remove the template's HTML comments.
    - Keep coding steps and detailed source references in later implementation tickets or supporting files, respectively. Keep material assumptions and unresolved choices visible beside the affected design; request a decision only when it needs the person's authority.
 7. Create supporting files only as described below.
-8. Run `pst tickets save --id <shorthand>`.
+8. Run `pst pstdio.planner save-ticket --id <shorthand>`.
 9. Create a review request only for a genuine unresolved decision, as described below.
 
 ## Ticket files
 
-Put planning material in `.pstdio/extension-storage/pstdio.planner/tickets/<shorthand>/files/<name>`. The next `pst tickets save` attaches the file to the ticket. Put implementation, test, validation, and review evidence in reports instead; see [Reports](https://prompt.studio/docs/extensions/reports/#write-a-report).
+Put planning material in `.pstdio/extension-storage/pstdio.planner/tickets/<shorthand>/files/<name>`. The next `pst pstdio.planner save-ticket` attaches the file to the ticket. Put implementation, test, validation, and review evidence in reports instead; see [Reports](https://prompt.studio/docs/extensions/reports/#write-a-report).
 
 Add a file only when the person needs it to judge the proposal:
 
@@ -63,7 +63,7 @@ Keep a simple proposal in one readable ticket. Put a small example inline when e
 
 Create a review request only for a genuine unresolved decision that the existing instructions and your authority cannot settle. Do not ask for routine assumptions, blanket risk acceptance, handoff acknowledgement, missing credentials, access, resources, reproduction details, or a non-decision action.
 
-For an independent non-decision blocker, discover the configured Blocked status with `pst statuses list`, then use `pst tickets update --id <ticket> --status <blocked-status> --blocked-reason "<what is missing and what allows work to continue>"`. Clear the reason when resolved and resume the appropriate status. Keep dependency waiting in `depends_on`, without an independent blocked reason.
+For an independent non-decision blocker, discover the configured Blocked status with `pst pstdio.planner ticket-status read`, then use `pst pstdio.planner update-ticket --id <ticket> --status <blocked-status> --blocked-reason "<what is missing and what allows work to continue>"`. Clear the reason when resolved and resume the appropriate status. Keep dependency waiting in `depends_on`, without an independent blocked reason.
 
 Keep request text to at most 80 words, excluding document links. Identify the ticket in the title. Prefer **Problem**, **Solution**, and **Downside**, with one short sentence per part; use another structure when it makes the decision clearer. State the decision, mark the recommended choice, and name the main cost of each option. Keep question and option labels short; do not repeat the summary in them. Use a required choice question; add optional notes only when useful. Do not add confirmation or risk checklists that contain no decision.
 

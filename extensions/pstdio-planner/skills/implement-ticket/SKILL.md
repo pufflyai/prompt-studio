@@ -12,10 +12,10 @@ Implement Planner tickets in a Prompt Studio workspace. Produce a committed revi
 Always work in a Prompt Studio workspace. Never use `git worktree add` or your agent's own worktree tool. Prompt Studio does not track those, so the ticket, reports, reviews and merges cannot find the work.
 
 - If you run inside a workspace from `pst pstdio.planner run-attempt`, work there.
-- Before creating a workspace, read the ticket's linked workspaces with `pst tickets workspaces --id <ticket>` and their implementation owners with `pst pstdio.planner list-variants`.
+- Before creating a workspace, read the ticket's linked workspaces with `pst pstdio.planner ticket-workspaces --id <ticket>` and their implementation owners with `pst pstdio.planner list-variants`.
 - For a linked workspace without a managed variant, list its conversations with `pst sessions list --workspace-id <workspace-id>`. Read the relevant conversation and ticket to find the existing implementation session. Reuse that session for corrections. If ownership is unclear, clarify it before starting another writer.
 - Corrections, review fixes, dependency repairs, and resumed work continue in the existing implementation conversation and workspace, including after submission or a passing review. The user does not need to request reuse. If another implementation session owns the workspace, send the task to that session with `pst sessions follow-up` instead of starting a competing writer. A queued follow-up does not transfer ownership.
-- When a new workspace is needed, run `pst workspaces create --provider pstdio.worktree --params '{"base":"main"}'`. It prints the workspace shorthand and path. Link each ticket with `pst tickets link --id <ticket> --workspace <workspace>`, then work at the printed path. Other workspace types use their own provider ID and declared parameters. See [Workspaces](https://prompt.studio/docs/references/cli/workspaces/).
+- When a new workspace is needed, run `pst workspaces create --provider pstdio.worktree --params '{"base":"main"}'`. It prints the workspace shorthand and path. Link each ticket with `pst pstdio.planner link --id <ticket> --workspace <workspace>`, then work at the printed path. Other workspace types use their own provider ID and declared parameters. See [Workspaces](https://prompt.studio/docs/references/cli/workspaces/).
 - For several tickets in one workspace, create one workspace and link every ticket to it.
 - For one workspace per ticket, create and link a workspace for each ticket.
 
@@ -38,14 +38,14 @@ Dependency integration is part of implementing this ticket. This assignment auth
 ## Workflow
 
 1. Identify the ticket. Pass its shorthand, such as `PS-12`, to `--id`. If it is missing or ambiguous, ask the user to confirm it.
-   - For "implement the next ticket", list tickets in the project's ready status with `pst tickets list --status <ready-status>`. Use `pst statuses list` and the workflow selections in `implementation-policy` to discover current status IDs and labels.
-   - Read the full body with `pst tickets panel --id <shorthand>` before changing code.
+   - For "implement the next ticket", list tickets in the project's ready status with `pst pstdio.planner list-tickets --status <ready-status>`. Use `pst pstdio.planner ticket-status read` and the workflow selections in `implementation-policy` to discover current status IDs and labels.
+   - Read the full body with `pst pstdio.planner get-ticket --id <shorthand>` before changing code.
    - Read the workflow options with `pst pstdio.planner implementation-policy`. `adversarialReview` and `openPr` are enabled by default and can be toggled in the current project's Planner settings; see [Implementation options](https://prompt.studio/docs/extensions/planner/#implementation-options). Explicit user instructions for this task take precedence.
-   - Update the ticket by its discovered status ID when starting, blocking, resuming, handing off, and meeting the actual completion criteria. Use `pst tickets update --id <ticket> --status-id <status-id>`. Labels are presentation; do not assume English names or seeded IDs. An unconfigured optional convenience does not require repeated review requests. Clarify an unclear required project workflow through the existing review request mechanism.
+   - Update the ticket by its discovered status ID when starting, blocking, resuming, handing off, and meeting the actual completion criteria. Use `pst pstdio.planner update-ticket --id <ticket> --status-id <status-id>`. Labels are presentation; do not assume English names or seeded IDs. An unconfigured optional convenience does not require repeated review requests. Clarify an unclear required project workflow through the existing review request mechanism.
 2. Implement only the ticket's scope. Follow the repository's contributor rules and its own requirements documents. Prompt Studio's product requirements apply only when the repository is Prompt Studio. Before adding or changing UI, read `pst pstdio.planner refinement-policy`. When `updateCanvasDesign` is enabled and Canvas is available, follow the project's canvas skill and update the linked design first. Preserve unrelated designs and link exact preview names and source paths in the ticket. Before production UI work, retrieve the design source recorded in the ticket. For a recorded branch and commit, fetch the branch and include the commit, or verify that the reviewed source is already present in this workspace. For a proposal folder, move its changes into production as the canvas skill describes and delete the folder in the same change. For other workspace providers, apply the recorded source snapshot through the project's supported transfer workflow. Verify the exact preview sources; a URL or completed ticket status does not prove that their changes reached this workspace. Resolve a missing source handoff before implementation. Canvas designs replace artifact prototypes. If Canvas is unavailable, use the project's existing design workflow and record why no canvas was linked. If the option is off, record why the design step was skipped. Resolve policy-read failures before implementation.
 3. Run the required validation, follow the adversarial review step below, and commit the finished change in the managed workspace.
 4. Create the change request report described below.
-5. Keep the `reportId` returned by `pst reports save`. Read the commit SHA with `git rev-parse HEAD`, then run:
+5. Keep the `reportId` returned by `pst pstdio.reports reports save`. Read the commit SHA with `git rev-parse HEAD`, then run:
    - `pst pstdio.planner submit-revision --workspace-id <workspace-id> --implementation-session-id <owner-session-id> --head-sha <head-sha> --change-request-report-id <report-id> --expected-revision <last-revision-number>`
    - Read the owner session ID and last revision number with `pst pstdio.planner read-attempt-history --workspace-id <workspace-id>`. Use revision 0 before the first submission. Later corrections append revisions in the same workspace. Previous verdicts remain on their original commits; do not reopen or dismiss them to unlock submission.
    - Update the appropriate ticket handoff status. A handoff status does not request another managed reviewer. A completed status requires the task's actual delivery or acceptance, including latest-head CI and merge when required.
@@ -55,7 +55,7 @@ Dependency integration is part of implementing this ticket. This assignment auth
 
 Create a review request only for a genuine unresolved decision that the existing instructions and your authority cannot settle. Do not ask for routine assumptions, blanket risk acceptance, handoff acknowledgement, missing credentials, access, resources, reproduction details, or a non-decision action.
 
-For an independent non-decision blocker, discover the configured Blocked status with `pst statuses list`, then use `pst tickets update --id <ticket> --status <blocked-status> --blocked-reason "<what is missing and what allows work to continue>"`. Clear the reason when resolved and resume the appropriate status. Keep dependency waiting in `depends_on`, without an independent blocked reason.
+For an independent non-decision blocker, discover the configured Blocked status with `pst pstdio.planner ticket-status read`, then use `pst pstdio.planner update-ticket --id <ticket> --status <blocked-status> --blocked-reason "<what is missing and what allows work to continue>"`. Clear the reason when resolved and resume the appropriate status. Keep dependency waiting in `depends_on`, without an independent blocked reason.
 
 Keep request text to at most 80 words, excluding document links. Identify the ticket in the title. Prefer **Problem**, **Solution**, and **Downside**, with one short sentence per part; use another structure when it makes the decision clearer. State the decision, mark the recommended choice, and name the main cost of each option. Keep question and option labels short; do not repeat the summary in them. Use a required choice question; add optional notes only when useful. Do not add confirmation or risk checklists that contain no decision.
 
@@ -94,20 +94,20 @@ Read `pst pstdio.planner implementation-policy` again before handoff so changes 
 
 - When `openPr` is enabled and validation has passed, push the implementation branch and open a draft PR against `defaultTargetBranch` from the policy, or the repository's default branch when unset. A value such as `origin/main` selects `main` on `origin`. Reuse an existing PR for that branch. Follow the repository's PR title rules. Like a ticket title, the PR title names what gets better for the person, not the code change. Write the description with the sections of the repository's PR template, such as `.github/pull_request_template.md`, in the same order, and include the ticket shorthand. Without a template, include the ticket shorthand, a summary, and validation results. With GitHub CLI, use `gh pr create --draft --base <target-branch> --title <title> --body-file <path>`. The body file replaces the template, so copy its headings into the file.
   - Inspect the diff against that target. A stacked branch can include prerequisite changes that have not reached the target yet. Name those dependencies and their PRs in the description. Do not claim they are merged or change a configured PR target to hide them.
-- Read the ticket's `reviewLinks` with `pst tickets panel --id <shorthand>`. If the PR URL is not already linked, run `pst tickets link-review --id <shorthand> --url <pr-url>`. Include the PR URL in the handoff. If pushing, creating, or linking the PR fails, report the blocker without claiming that step succeeded.
+- Read the ticket's `reviewLinks` with `pst pstdio.planner get-ticket --id <shorthand>`. If the PR URL is not already linked, run `pst pstdio.planner link-review --id <shorthand> --url <pr-url>`. Include the PR URL in the handoff. If pushing, creating, or linking the PR fails, report the blocker without claiming that step succeeded.
 - When `openPr` is disabled, skip PR creation and linking unless the user requested them.
 
 ## Change request report
 
 The report must explain the change and include outputs that a reviewer can inspect. See [Write a report](https://prompt.studio/docs/extensions/reports/#write-a-report).
 
-1. Run `pst reports write --kind change_request --name change_request --template change-request` and keep the returned `name`, `path`, and `filesPath`. The paths are absolute locations in the default project folder on the host, not the active worktree or remote environment.
+1. Run `pst pstdio.reports reports write --kind change_request --name change_request --template change-request` and keep the returned `name`, `path`, and `filesPath`. The paths are absolute locations in the default project folder on the host, not the active worktree or remote environment.
 2. Explain why the change is needed and why you chose the implementation.
 3. Link the ticket, relevant code, documentation, ADRs, designs, and other useful resources.
 4. Always state anything left undone, any shortcuts taken, and any blockers encountered. Write `None` when a section has nothing to report.
 5. Explain how to validate the change. Add command outputs, screenshots, logs, or traces under the returned `filesPath`.
 6. Complete the report at the returned `path`.
-7. Run `pst reports save --name <returned-name>` and keep its `reportId` for revision submission.
+7. Run `pst pstdio.reports reports save --name <returned-name>` and keep its `reportId` for revision submission.
 
 Report creation never overwrites an existing report. When the base file exists, the command returns a numbered report such as `change_request_01` at `.pstdio/extension-storage/pstdio.reports/reports/change_request/report_01.md`.
 

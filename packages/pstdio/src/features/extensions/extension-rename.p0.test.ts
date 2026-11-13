@@ -72,6 +72,44 @@ test("canonical namespace help lists concise commands and labels deprecated alia
   expect(renderCommandHelp(command)).toContain("deprecated");
 });
 
+test.each([
+  { path: ["pstdio.pstdio-notes"] },
+  { path: ["pstdio.pstdio-notes", "notes"] },
+  { path: ["pstdio-notes", "notes"] },
+  { path: ["pstdio.notes", "notes"] },
+])("historical namespace and group help show canonical commands at %j", async ({ path }) => {
+  const output: string[] = [];
+  const errors: string[] = [];
+  const status = await dispatchExtensionCliCommand({
+    rawArgs: [...path, "--help"],
+    deps: {
+      cwd: () => "/project",
+      resolveProjectId: () => ({ projectId: "project", root: null }),
+      listCommands: async () => ({ commands: [command], diagnostics: [] }),
+      log: (line) => output.push(line),
+      error: (line) => errors.push(line),
+    },
+  });
+  expect(status).toBe(0);
+  expect(output.join("\n")).toContain("pstdio.notes create");
+  expect(errors).toEqual([expect.stringContaining("pstdio.notes --help")]);
+});
+
+test("historical command paths retain the exact canonical command tail", () => {
+  const metadata = {
+    id: "opaque-command-id",
+    localId: "list-tickets",
+    extensionId: "pstdio.planner",
+    title: "List tickets",
+    cliPath: "pstdio.planner list-tickets",
+    cliAliases: ["pstdio-planner list-tickets", "pstdio-planner arbitrary"],
+  };
+  const table = buildExtensionCommandTable([metadata]);
+  expect(table.byPath.get("pstdio.planner list-tickets")).toBe(metadata);
+  expect(table.byPath.get("pstdio-planner list-tickets")).toBe(metadata);
+  expect(table.byPath.get("pstdio-planner arbitrary")).toBeUndefined();
+});
+
 test("a different publisher cannot win a historical short namespace by installation order", () => {
   const other = {
     ...command,

@@ -9,7 +9,10 @@ export type ExtensionCommandTable = {
   collisions: ExtensionCommandCollision[];
 };
 export const commandCliPaths = (command: ExtensionCommandRecord) => {
-  const paths = [command.cliPath, ...(command.cliAliases ?? [])].filter((path): path is string => Boolean(path));
+  const paths = [
+    command.cliPath,
+    ...(command.cliAliases ?? []).filter((path) => isHistoricalCliAlias(command, path)),
+  ].filter((path): path is string => Boolean(path));
   if (command.cliPath?.startsWith(`${command.extensionId} `)) {
     paths.push(command.cliPath.slice(command.extensionId.indexOf(".") + 1));
   }
@@ -43,12 +46,7 @@ export const buildExtensionCommandTable = (
   const addPath = (path: string, command: ExtensionCommandRecord) => {
     const namespace = path.split(" ")[0]!;
     const providers = owners.get(namespace);
-    if (
-      providers &&
-      providers.size > 1 &&
-      path !== command.cliPath &&
-      (!command.cliAliases?.includes(path) || isHistoricalCliAlias(command, path))
-    ) {
+    if (providers && providers.size > 1 && path !== command.cliPath) {
       collisionsByPath.set(
         path,
         commands.filter((candidate) => providers.has(candidate.extensionId)),

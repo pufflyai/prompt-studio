@@ -9,8 +9,7 @@ export const linkReviewCommand = defineCommand({
   id: "link-review",
   title: "Link review",
   cli: {
-    globalAliases: [["tickets", "link-review"]],
-    examples: ["pst tickets link-review --id PS-1 --url https://github.com/org/repo/pull/456"],
+    examples: ["pst pstdio.planner link-review --id PS-1 --url https://github.com/org/repo/pull/456"],
   },
   params: {
     id: params.text({ required: true }),

@@ -14,8 +14,8 @@ function reviewPrompt(row: PlanRow) {
     "Use the findings to update the plan and relevant Planner tickets. Add or refine work when needed, correct dependencies and milestone placement, and preserve unrelated work. Explain the changes and their evidence on the gate ticket. If the gate cannot be satisfied yet, keep it open and identify the missing work. Mark it done only after verifying the outcome. Follow the project's instructions and any explicit approval requirements.",
     `Ticket ID: ${row.id}`,
     "Read the timeline with: pst pstdio.planner timeline plan read",
-    `Read the gate with: pst tickets panel --id ${row.shorthand}`,
-    "Use pst tickets and pst pstdio.planner timeline commands to save changes. Run their --help for supported operations.",
+    `Read the gate with: pst pstdio.planner get-ticket --id ${row.shorthand}`,
+    "Use pst pstdio.planner and pst pstdio.planner timeline commands to save changes. Run their --help for supported operations.",
   ].join("\n\n");
 }
 

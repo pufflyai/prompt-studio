@@ -3,8 +3,6 @@ import { isHealthy as defaultIsHealthy } from "@/adapters/cli/dashboard/health-c
 import { apiClient } from "../api-client";
 import { resolveProjectId as defaultResolveProjectId } from "../projects/resolve-project-id";
 
-import { isHistoricalCliAlias } from "./deprecated-extension-command";
-
 const stripExtensionScope = (extensionId: string) => extensionId.replace(/^[^.]+\./, "");
 
 const aliasNamespace = (alias: string) => alias.split(/\s+/).filter(Boolean)[0] ?? "";
@@ -15,8 +13,8 @@ const addNamespaceProvider = (providers: Map<string, Set<string>>, namespace: st
   providers.set(namespace, seen);
 };
 
-// Root help lists every first segment that can route to an extension command:
-// canonical namespaces (`extension-lab`) and user-facing aliases (`tickets`).
+// Root help advertises canonical extension namespaces. Deprecated namespace
+// migration paths remain invocable without appearing as additional providers.
 // Callers pass the static command names to exclude so core groups keep their
 // single listing.
 export const extensionNamespaceSummaries = (
@@ -32,12 +30,6 @@ export const extensionNamespaceSummaries = (
 
     if (cliNamespace && !exclude.has(cliNamespace)) {
       addNamespaceProvider(providers, cliNamespace, provider);
-    }
-
-    for (const alias of command.cliAliases ?? []) {
-      const namespace = aliasNamespace(alias);
-      if (!namespace || exclude.has(namespace) || isHistoricalCliAlias(command, alias)) continue;
-      addNamespaceProvider(providers, namespace, provider);
     }
   }
 

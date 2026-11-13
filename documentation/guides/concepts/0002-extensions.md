@@ -36,9 +36,9 @@ A CLI-ready action is an operation you can run from a terminal with explicit inp
 For example, with Notes installed and enabled, run these commands from your project folder:
 
 ```sh
-pst pstdio-notes --help
-pst pstdio-notes notes create --help
-pst pstdio-notes notes create --title "Meeting notes"
+pst pstdio.notes --help
+pst pstdio.notes notes create --help
+pst pstdio.notes notes create --title "Meeting notes"
 ```
 
 The last line runs Notes' **New note** command. The sidebar action and CLI command use the same handler; you can open the resulting note in the workbench.

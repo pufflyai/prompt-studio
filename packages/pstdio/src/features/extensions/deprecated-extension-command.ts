@@ -1,21 +1,22 @@
 import type { ExtensionCommandRecord } from "@pstdio/sdk/api";
-import { historicalExtensionId } from "pstdio-api-contracts/extension-host";
+import { historicalCliPaths } from "pstdio-api-contracts/extension-host";
 
 export const isHistoricalCliAlias = (command: ExtensionCommandRecord, path: string) => {
-  const old = historicalExtensionId(command.extensionId);
-  if (old === command.extensionId || !command.cliAliases?.includes(path)) return false;
-  const namespace = path.split(" ")[0];
-  return (
-    namespace === old ||
-    namespace === old.slice(old.indexOf(".") + 1) ||
-    (command.extensionId === "pstdio.notes" && /^pstdio\.notes notes (create|rename|delete)$/.test(path))
-  );
+  if (!command.cliPath?.startsWith(`${command.extensionId} `) || !command.cliAliases?.includes(path)) return false;
+  const relativePath = command.cliPath.slice(command.extensionId.length + 1).split(" ");
+  // Older command metadata omitted localId. Only Notes' three known concise
+  // verbs need a different historical tail; never parse the opaque command ID.
+  const localId =
+    command.localId ??
+    (command.extensionId === "pstdio.notes" && relativePath.length === 1
+      ? `notes.${relativePath[0]}`
+      : relativePath.join("."));
+  return historicalCliPaths(command.extensionId, localId, relativePath).some((parts) => parts.join(" ") === path);
 };
 
 export const deprecatedExtensionCommandMessage = (command: ExtensionCommandRecord, path: string) => {
   if (!command.cliPath?.startsWith(`${command.extensionId} `)) return null;
   if (isHistoricalCliAlias(command, path)) return `Deprecated: pst ${path} is replaced by pst ${command.cliPath}.`;
-  if (command.cliAliases?.includes(path)) return null;
   const shortName = command.extensionId.split(".")[1];
   if (path.split(" ")[0] !== shortName) return null;
   return `Deprecated: pst ${shortName} is replaced by pst ${command.extensionId}.`;
