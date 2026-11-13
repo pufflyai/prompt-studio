@@ -166,7 +166,7 @@ Omit `onChange` for read-only use. With it, Edit dashboard opens a draft; Apply 
 the complete definition and Cancel emits nothing. The caller owns the saved value,
 persistence, permissions, and undo. An async `onChange` can reject to retain the
 draft and display its error with Retry. Use stable unique widget IDs. Titles may
-be empty. Layout coordinates use a 12-column grid with widths from 2 to 12 and
+be empty. Layout coordinates use a 12-column grid with widths from 3 to 12 and
 heights of at least 3 rows. Narrow presentation preserves those saved widths.
 Modes are `vertical` (Compact up), `horizontal` (Compact left), and `free`.
 
