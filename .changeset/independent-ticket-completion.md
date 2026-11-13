@@ -2,4 +2,4 @@
 "pstdio-planner": patch
 ---
 
-Let agents complete assigned tickets independently without mandatory session handoffs or coordinator grants.
+Keep implementation updates limited to completed work and roadblocks needing the user, and let supervisors resume previous implementation sessions.
