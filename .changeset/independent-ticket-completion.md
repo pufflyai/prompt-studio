@@ -2,4 +2,4 @@
 "pstdio-planner": patch
 ---
 
-Keep implementation updates limited to completed work and roadblocks needing the user, and let supervisors resume previous implementation sessions.
+Let the session asked to resume a ticket continue in its existing workspace, consulting another implementer only when that ticket is already active elsewhere.
