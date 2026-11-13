@@ -1,5 +1,6 @@
 import { lstat, readlink } from "node:fs/promises";
 import { getImagePreviewMimeType, isImagePreviewPath } from "pstdio-file-types";
+import { readTrackedDiffSummary } from "./diff-summary";
 import { git, gitBytes } from "./git";
 
 type FileChange = "added" | "deleted" | "modified" | "renamed" | "copied" | "permissionChange";
@@ -233,26 +234,16 @@ const buildTotals = (files: Array<Pick<FileDiff, "additions" | "deletions">>) =>
 
 export const getWorktreeDiffSummary = async (opts: { worktreePath: string; base: string }): Promise<DiffSummary> => {
   const { worktreePath, base } = opts;
-  const { fileMap, untrackedPaths } = await discoverChangedFiles(worktreePath, base);
-
-  const file_count = fileMap.size;
-  if (file_count === 0) return { additions: 0, deletions: 0, file_count: 0 };
-
-  let additions = 0;
-  let deletions = 0;
-
-  // Keep both rename paths and staged deletions whose working file is now untracked.
-  const numstatRaw = await git(worktreePath, ["diff", "--numstat", base, "--"]).catch(() => "");
-  for (const line of numstatRaw.split("\n").filter(Boolean)) {
-    const [addStr, delStr] = line.split("\t");
-    if (addStr !== "-") additions += Number.parseInt(addStr, 10) || 0;
-    if (delStr !== "-") deletions += Number.parseInt(delStr, 10) || 0;
-  }
-
-  // Count lines in untracked files (same as full diff)
-  additions += await countUntrackedLines(worktreePath, untrackedPaths);
-
-  return { additions, deletions, file_count };
+  const [tracked, untracked] = await Promise.all([
+    readTrackedDiffSummary(worktreePath, base),
+    gitBytes(worktreePath, ["ls-files", "--others", "--exclude-standard", "-z"]).catch(() => Buffer.alloc(0)),
+  ]);
+  const untrackedPaths = untracked.toString().split("\0").filter(Boolean);
+  return {
+    additions: tracked.additions + (await countUntrackedLines(worktreePath, untrackedPaths)),
+    deletions: tracked.deletions,
+    file_count: new Set([...tracked.paths, ...untrackedPaths]).size,
+  };
 };
 
 export const getWorktreeDiffSummaryFiles = async (opts: {

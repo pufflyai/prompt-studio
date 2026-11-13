@@ -84,3 +84,26 @@ test("fork-point totals still read committed changes when the current index is c
     file_count: 2,
   });
 });
+
+test("fork-point totals count the final workspace instead of changes already reverted", async () => {
+  const base = await git(repo.dir, ["rev-parse", "HEAD"]);
+  const original = await Bun.file(join(repo.dir, "README.md")).text();
+  await writeFile(join(repo.dir, "README.md"), "committed replacement\n");
+  await git(repo.dir, ["add", "README.md"]);
+  await git(repo.dir, ["commit", "-m", "replace tracked content"]);
+  await writeFile(join(repo.dir, "README.md"), original);
+  expect(await getWorktreeDiffSummary({ worktreePath: repo.dir, base })).toEqual({
+    additions: 0,
+    deletions: 0,
+    file_count: 0,
+  });
+});
+
+test("untracked filenames preserve spaces and Unicode when counting content", async () => {
+  await writeFile(join(repo.dir, "é working file.txt"), "first\nsecond\n");
+  expect(await getWorktreeDiffSummary({ worktreePath: repo.dir, base: "HEAD" })).toEqual({
+    additions: 2,
+    deletions: 0,
+    file_count: 1,
+  });
+});
