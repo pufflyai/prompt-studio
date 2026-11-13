@@ -11,9 +11,12 @@ test("API readiness reports child failure while a health request stalls", async 
   );
   try {
     const failure = await waitForReady(server.url.origin, child).catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(Error);
     expect(failure).toMatchObject({
-      message: expect.stringMatching(/exited.*9[\s\S]*initializing database[\s\S]*startup failed/),
+      message: expect.stringContaining("API exited before readiness (code 9,"),
     });
+    expect(failure).toMatchObject({ message: expect.stringContaining("initializing database") });
+    expect(failure).toMatchObject({ message: expect.stringContaining("startup failed") });
   } finally {
     child.kill();
     await server.stop(true);
