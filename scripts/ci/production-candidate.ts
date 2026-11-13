@@ -82,6 +82,35 @@ export const requiredProductionChecks = (channel: string) => {
   ];
 };
 
+export const selectProductionEvidence = (
+  candidate: ProductionCandidate,
+  observations: ProductionEvidence[],
+  runId: string,
+  attempt: number,
+) => {
+  const errors: string[] = [];
+  const latest = new Map<string, ProductionEvidence>();
+  for (const observation of observations) {
+    if (
+      observation.runId !== runId ||
+      !Number.isInteger(observation.attempt) ||
+      observation.attempt < 1 ||
+      observation.attempt > attempt
+    ) {
+      errors.push(`${observation.check}: foreign or future workflow evidence`);
+      continue;
+    }
+    if (identity(observation.candidate) !== identity(candidate)) {
+      errors.push(`${observation.check}: candidate mismatch`);
+      continue;
+    }
+    const previous = latest.get(observation.check);
+    if (!previous || observation.attempt > previous.attempt) latest.set(observation.check, observation);
+    else if (observation.attempt === previous.attempt) errors.push(`${observation.check}: ambiguous attempt evidence`);
+  }
+  return { evidence: [...latest.values()], errors };
+};
+
 if (import.meta.main) {
   let candidate: ProductionCandidate | null = null;
   const errors: string[] = [];
@@ -92,16 +121,27 @@ if (import.meta.main) {
   }
   const results: Record<string, { result: string }> = JSON.parse(process.env.PRODUCTION_RESULTS ?? "{}");
   const required = requiredProductionChecks(process.env.CHANNEL ?? "stable");
-  const evidence: ProductionEvidence[] = [];
+  const observations: ProductionEvidence[] = [];
   for await (const path of new Bun.Glob("production-evidence/**/*.json").scan(".")) {
     try {
-      evidence.push(JSON.parse(readFileSync(path, "utf8")));
+      observations.push(JSON.parse(readFileSync(path, "utf8")));
     } catch {
       errors.push(`${path}: invalid evidence`);
     }
   }
+  let evidence = observations;
   if (candidate) {
     try {
+      if (process.env.GITHUB_RUN_ID && process.env.GITHUB_RUN_ATTEMPT) {
+        const selection = selectProductionEvidence(
+          candidate,
+          observations,
+          process.env.GITHUB_RUN_ID,
+          Number(process.env.GITHUB_RUN_ATTEMPT),
+        );
+        evidence = selection.evidence;
+        errors.push(...selection.errors);
+      }
       errors.push(...certifyProduction(candidate, required, evidence));
     } catch {
       candidate = null;
@@ -116,7 +156,7 @@ if (import.meta.main) {
     candidate !== null &&
     evidence.every((entry) => entry.artifactMode !== "source-diagnostic") &&
     candidate.artifacts.some((artifact) => artifact.name === "desktop-win32-x64");
-  const certificate = { candidate, evidence, complete: errors.length === 0, releaseEligible, errors };
+  const certificate = { candidate, evidence, observations, complete: errors.length === 0, releaseEligible, errors };
   await Bun.write("production-certificate.json", `${JSON.stringify(certificate, null, 2)}\n`);
   if (process.env.GITHUB_STEP_SUMMARY)
     appendFileSync(

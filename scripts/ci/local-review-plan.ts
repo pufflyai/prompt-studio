@@ -33,8 +33,8 @@ const selectionReason = (explicit: boolean, edited: boolean, priority: string | 
 };
 const deferredEvidence = (edited: boolean, priority: string | undefined) => {
   if (edited) return "edited_tests";
-  if (priority === "P3") return "complete benchmark diagnostics required";
-  return "ci:full diagnostics required";
+  if (priority === "P3") return "nightly/release benchmarks; exceptional diagnostics only";
+  return "nightly/release coverage; exceptional diagnostics only";
 };
 
 const selectTests = (

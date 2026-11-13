@@ -93,6 +93,7 @@
     "katex": "^0.19.0"
   },
   "patchedDependencies": {
-    "use-stick-to-bottom@1.1.3": "patches/use-stick-to-bottom@1.1.3.patch"
+    "use-stick-to-bottom@1.1.3": "patches/use-stick-to-bottom@1.1.3.patch",
+    "@zag-js/menu@1.35.3": "patches/zag-menu@1.35.3.patch"
   }
 }

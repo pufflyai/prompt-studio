@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import { browse, browsePage, search } from "./browse";
+import { sessionPinsIndex } from "./session-pins";
 
 test("activity-ordered sessions keep date headings unique when older requests finish or change today", async () => {
   const today = new Date();
@@ -23,7 +24,7 @@ test("activity-ordered sessions keep date headings unique when older requests fi
     ...session,
   }));
   const ctx = makeCommandContext({
-    storage: createMemoryStorage(),
+    storage: createMemoryStorage({ indexes: [sessionPinsIndex] }),
     params: {},
     overrides: { sessions: { query: async () => ({ items: items as never, nextCursor: null }) } },
   });
@@ -48,7 +49,7 @@ test("recent sessions retain Today and Yesterday groups alongside older calendar
   const earlier = new Date(today);
   earlier.setDate(earlier.getDate() - 5);
   const ctx = makeCommandContext({
-    storage: createMemoryStorage(),
+    storage: createMemoryStorage({ indexes: [sessionPinsIndex] }),
     params: {},
     overrides: {
       sessions: {
@@ -81,7 +82,7 @@ test("recent sessions retain Today and Yesterday groups alongside older calendar
 test("browsing and search use bounded public queries, workspace scope and cursor pages", async () => {
   const queries: unknown[] = [];
   const ctx = makeCommandContext({
-    storage: createMemoryStorage(),
+    storage: createMemoryStorage({ indexes: [sessionPinsIndex] }),
     params: {},
     overrides: {
       sessions: {
@@ -118,7 +119,7 @@ test("browsing and search use bounded public queries, workspace scope and cursor
 
 test("workspace sessions keep the contextual page and open chat in shared Side preview", async () => {
   const ctx = makeCommandContext({
-    storage: createMemoryStorage(),
+    storage: createMemoryStorage({ indexes: [sessionPinsIndex] }),
     params: {},
     overrides: {
       sessions: {
@@ -147,7 +148,7 @@ test("project history pages preserve ordering and date identities through exhaus
     updatedAt: "2026-11-09T10:00:00Z",
   }));
   const ctx = makeCommandContext({
-    storage: createMemoryStorage(),
+    storage: createMemoryStorage({ indexes: [sessionPinsIndex] }),
     params: {},
     overrides: {
       sessions: {
@@ -192,7 +193,7 @@ test("session resource search follows cursors beyond the public 200-row page lim
     updatedAt: "2026-11-06T00:00:00Z",
   }));
   const ctx = makeCommandContext({
-    storage: createMemoryStorage(),
+    storage: createMemoryStorage({ indexes: [sessionPinsIndex] }),
     params: {},
     overrides: {
       sessions: {
@@ -222,7 +223,7 @@ test("session resource search follows cursors beyond the public 200-row page lim
 test("session rows preserve status colors and singular resource identity alongside the Sessions collection", async () => {
   const statuses = ["completed", "failed", "cancelled", "disconnected", "queued", "in_progress", "awaiting_input"];
   const ctx = makeCommandContext({
-    storage: createMemoryStorage(),
+    storage: createMemoryStorage({ indexes: [sessionPinsIndex] }),
     params: {},
     overrides: {
       sessions: {

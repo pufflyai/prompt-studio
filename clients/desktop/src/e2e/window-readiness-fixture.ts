@@ -1,3 +1,4 @@
+import { once } from "node:events";
 import { join } from "node:path";
 import { app, protocol } from "electron";
 import type { RuntimeDescriptor } from "pstdio/runtime";
@@ -10,6 +11,12 @@ protocol.registerSchemesAsPrivileged([
 
 void app.whenReady().then(async () => {
   const controller = await DesktopWindowController.create(join(import.meta.dirname, "preload.cjs"), () => undefined);
+  controller.window.webContents.on("ipc-message", (_event, channel) => {
+    if (channel === "fixture:paint-ready") process.send!({ paintReady: true });
+  });
+  process.on("message", (message) => {
+    if (message === "release-paint") controller.window.webContents.send("fixture:release-paint");
+  });
   const descriptor: RuntimeDescriptor = {
     schemaVersion: 1,
     protocolVersion: 1,
@@ -46,6 +53,17 @@ void app.whenReady().then(async () => {
       workbenchVisible: controller.window.contentView.children.some((view) => view.getVisible()),
     });
     process.on("message", async (message) => {
+      if (message === "release-paint") return;
+      if (message === "reload-lifecycle") {
+        const gone = once(controller.window.webContents, "render-process-gone");
+        controller.window.webContents.forcefullyCrashRenderer();
+        await gone;
+        const lifecycle = controller.showLifecycle();
+        const workbench = controller.showWorkbench({ ...descriptor, instanceId: "reloaded-lifecycle" });
+        await Promise.all([lifecycle, workbench]);
+        process.send!({ lifecycleReloaded: true });
+        return;
+      }
       if (message === "background-recovery") {
         // A covered lifecycle renderer is throttled after the desktop loses focus.
         controller.window.webContents.setBackgroundThrottling(true);

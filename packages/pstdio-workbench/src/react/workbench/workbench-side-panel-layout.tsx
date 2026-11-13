@@ -3,6 +3,7 @@ import { ResizableSplitLayout } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { WorkbenchCore } from "../../core";
+import { WorkbenchPanelMenuLayout } from "../panel-menu/panel-menu";
 import { WorkbenchPanelDropFrame } from "../region/panel-drop-frame";
 import { WorkbenchRegion } from "../region/region";
 import { WorkbenchRegionTabs } from "../region/region-tabs";
@@ -25,7 +26,9 @@ export const WorkbenchSidePanelRegionPortal = (props: WorkbenchSidePanelRegionPo
   if (!sidePanelHost) return null;
 
   return createPortal(
-    <WorkbenchRegion workbench={workbench} region="side" title="Side Panel" transparent />,
+    <WorkbenchPanelMenuLayout workbench={workbench} panel="side">
+      <WorkbenchRegion workbench={workbench} region="side" title="Side Panel" transparent />
+    </WorkbenchPanelMenuLayout>,
     sidePanelHost,
   );
 };

@@ -1,5 +1,10 @@
 import { expect, test } from "bun:test";
-import { certifyProduction, type ProductionCandidate, requiredProductionChecks } from "./production-candidate";
+import {
+  certifyProduction,
+  type ProductionCandidate,
+  requiredProductionChecks,
+  selectProductionEvidence,
+} from "./production-candidate";
 
 const candidate: ProductionCandidate = {
   artifactRunId: "789",
@@ -83,4 +88,31 @@ test("stable releases certify every published host while the nightly certifies L
   expect(nightly.filter((check) => /win32|windows|darwin-x64/.test(check))).toEqual([]);
   expect(nightly).toContain("performance-storage-macos-15");
   expect(nightly).toContain("signed-functional-darwin-arm64");
+});
+
+test("production reruns retain matching successful attestations and the newest failed result remains blocking", () => {
+  const observations = [report("functional"), report("browser", "failure"), { ...report("browser"), attempt: 2 }];
+  const selected = selectProductionEvidence(candidate, observations, "123", 2);
+  expect(selected.errors).toEqual([]);
+  expect(certifyProduction(candidate, ["functional", "browser"], selected.evidence)).toEqual([]);
+  expect(selected.evidence.find((entry) => entry.check === "functional")?.attempt).toBe(1);
+  const failed = selectProductionEvidence(
+    candidate,
+    [report("browser"), { ...report("browser", "failure"), attempt: 2 }],
+    "123",
+    2,
+  );
+  expect(certifyProduction(candidate, ["browser"], failed.evidence)).toEqual(["browser: failure"]);
+});
+
+test("production reruns reject cross-run, future, mixed-candidate and duplicate-attempt attestations", () => {
+  for (const extra of [
+    { ...report("functional"), runId: "other" },
+    { ...report("functional"), attempt: 3 },
+    { ...report("functional"), candidate: { ...candidate, versionSha: "e".repeat(40) } },
+    report("functional"),
+  ])
+    expect(selectProductionEvidence(candidate, [report("functional"), extra], "123", 2).errors.length).toBeGreaterThan(
+      0,
+    );
 });

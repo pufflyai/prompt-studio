@@ -3,17 +3,8 @@ import { migratePlannerStorage } from "../../data/migrate-storage";
 import { findTicket } from "../../data/resolve";
 import { readTicketStatuses } from "../../data/status-operations";
 import { readTicketTags } from "../../data/tag-operations";
-import { normalizeTicketDependencies } from "../../data/ticket-dependencies";
-import type { TicketContext } from "../../data/ticket-identity";
 import { readStoredPlan } from "../../timeline/commands/plan-store";
-import { buildTicketPropertiesControls, type TicketRef } from "./params";
-
-// Resolve a dependency/parent reference to the real ticket id (so its chip opens the
-// right tab) plus its shorthand for display; a deleted ticket falls back to the raw value.
-const resolveTicketRef = async (ctx: TicketContext, value: string): Promise<TicketRef> => {
-  const ticket = await findTicket(ctx, value);
-  return { id: ticket?.id ?? value, label: ticket?.shorthand ?? value };
-};
+import { buildTicketPropertiesControls } from "./params";
 
 export const queryTicketProperties = async (
   ctx: Pick<ExtensionContextBase, "storage" | "files" | "resources">,
@@ -32,17 +23,10 @@ export const queryTicketProperties = async (
     readStoredPlan(ctx.storage),
   ]);
 
-  const dependencies = await Promise.all(
-    normalizeTicketDependencies(ticket.dependsOn).map((value) => resolveTicketRef(ctx, value)),
-  );
-  const parent = ticket.parentId ? await resolveTicketRef(ctx, ticket.parentId) : null;
-
   return buildTicketPropertiesControls({
     ticket,
     statuses,
     tags,
-    dependencies,
-    parent,
     plan: plan ?? { deadlines: [], order: [] },
   });
 };

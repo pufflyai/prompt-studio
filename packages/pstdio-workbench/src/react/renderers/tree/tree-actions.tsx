@@ -16,6 +16,7 @@ import { matchesContextExpression, scopeWorkbenchResourceContextValues } from ".
 import { reportUserActionError } from "../../../core/shared/run-user-action";
 import { hasCommandParameters } from "../../command-palette/command-palette-params";
 import type { CommandParamsRequest } from "../../command-palette/command-params-dialog";
+import { WorkbenchShortcutHint } from "../../keybindings/shortcut-hint";
 import { WorkbenchIcon } from "../../shared/icon";
 
 export interface TreeActionParamsRequest {
@@ -145,7 +146,6 @@ const createTreeActionMenuItems = (input: CreateTreeContextMenuItemsInput) => {
 
     const icon = action.icon ?? record?.command.icon;
     const disabled = !isTreeActionEnabled(workbench, action, context);
-    const binding = treeActionHint(workbench, action);
     const requestParams =
       hasCommandParameters(action.params) && onRequestParams
         ? () =>
@@ -173,7 +173,12 @@ const createTreeActionMenuItems = (input: CreateTreeContextMenuItemsInput) => {
       label,
       commandId: record?.command.id ?? action.commandId,
       icon: icon ? <WorkbenchIcon name={icon} /> : undefined,
-      endContent: binding ? <PaletteShortcut binding={binding} /> : undefined,
+      endContent: action.commandId ? (
+        <WorkbenchShortcutHint
+          workbench={workbench}
+          action={{ kind: "command", commandId: action.commandId, args: action.args }}
+        />
+      ) : undefined,
       disabled,
       runOnSelect: Boolean(
         action.copyText !== undefined || action.copyResultToClipboard || record?.command.copyResultToClipboard,
