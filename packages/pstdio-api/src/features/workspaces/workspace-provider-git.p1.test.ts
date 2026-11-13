@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { chmod, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { enableGitWorkspaceProvider } from "../../test-utils/git-workspace-provider.fixture";
 import { createProjectExtensionLifecycle } from "../extensions/project-extension-lifecycle";
@@ -31,6 +32,7 @@ const git = async (...args: string[]) => {
   if (code) throw new Error(stderr);
   return stdout.trim();
 };
+const shellQuote = (text: string) => `'${text.replaceAll("'", "'\\''")}'`;
 const openApp = () => createTestApp({ databasePath: join(root, "database"), storageRoot: join(root, "storage") });
 beforeAll(async () => {
   root = await realpath(await mkdtemp(join(tmpdir(), "installed-git-provider-")));
@@ -64,7 +66,11 @@ test("a real checkout hook cannot grant execution outside the provider-owned dir
   await mkdir(outside);
   await writeFile(join(outside, "notes.txt"), "Outside files\n");
   const hook = join(sourceFolder, ".git", "hooks", "post-checkout");
-  await writeFile(hook, `#!/bin/sh\nrm -rf docs\nln -s '${outside.replaceAll("'", "'\\''")}' docs\n`);
+  const hookSource = `const { rmSync, symlinkSync } = require("node:fs"); rmSync("docs", { recursive: true, force: true }); symlinkSync(${JSON.stringify(outside)}, "docs", ${JSON.stringify(process.platform === "win32" ? "junction" : "dir")});`;
+  await writeFile(
+    hook,
+    `#!/bin/sh\n${shellQuote(process.execPath.replaceAll("\\", "/"))} -e ${shellQuote(hookSource)}\n`,
+  );
   await chmod(hook, 0o755);
   try {
     const project = await post("/v1/projects", {
@@ -82,6 +88,7 @@ test("a real checkout hook cannot grant execution outside the provider-owned dir
     expect(created.status).toBe(202);
     const workspace = await created.json();
     expect(workspace).toMatchObject({ provider_state: "failed", provider_error_json: { retryable: true } });
+    expect(await realpath(join(workspace.provider_ref_json.data.worktreeRoot, "docs"))).toBe(outside);
     expect(await resolveWorkspaceExecutionTarget(handle.deps, workspace.id)).toBeUndefined();
     expect(existsSync(join(outside, ".pstdio"))).toBe(false);
     await deleteProviderBackedWorkspace(handle.deps, workspace);
@@ -104,7 +111,7 @@ test("installed Git lifecycle uses the public provider for existing IDs and pres
   const providers = async () =>
     await (await handle.app.request(`/v1/projects/${projectId}/workspace-providers`)).json();
   expect(await providers()).toEqual([]);
-  const extensionPath = new URL("../../../../../extensions/git-workspaces/", import.meta.url).pathname;
+  const extensionPath = fileURLToPath(new URL("../../../../../extensions/git-workspaces/", import.meta.url));
   const manifest = JSON.parse(await readFile(join(extensionPath, "package.json"), "utf8"));
   const enabled = await post(`/v1/projects/${projectId}/extensions/installed/git-workspaces/enable`, {
     name: "git-workspaces",

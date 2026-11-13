@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { execSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -137,14 +137,14 @@ describe("POST /v1/workspaces/:id/remove-worktree", () => {
   test("recovers a failed backing removal without deleting its record or retaining removed paths", async () => {
     const repoRoot = createGitRepo("recover-remove-worktree-repo");
     const { workspace } = await createWorkspaceAttempt(repoRoot);
-    execSync(`git worktree lock '${workspace.root_path}'`, { cwd: repoRoot, stdio: "pipe" });
+    execFileSync("git", ["worktree", "lock", workspace.root_path!], { cwd: repoRoot, stdio: "pipe" });
     const removed = await app.request(`/v1/workspaces/${workspace.id}/remove-worktree`, { method: "POST" });
     expect(removed.status).toBe(500);
     expect(existsSync(workspace.root_path!)).toBe(true);
     expect(await appHandle.deps.workspaceService.get(workspace.id)).toMatchObject({
       provider_operation_kind: "cancel",
     });
-    execSync(`git worktree unlock '${workspace.root_path}'`, { cwd: repoRoot, stdio: "pipe" });
+    execFileSync("git", ["worktree", "unlock", workspace.root_path!], { cwd: repoRoot, stdio: "pipe" });
     await reconcileProviderWorkspaces(appHandle.deps, projectId, { workspaceId: workspace.id });
     expect(await appHandle.deps.workspaceService.list(projectId)).toContainEqual(
       expect.objectContaining({
