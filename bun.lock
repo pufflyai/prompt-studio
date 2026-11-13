@@ -232,6 +232,17 @@
         "typescript": "6.0.2",
       },
     },
+    "extensions/git-workspaces": {
+      "name": "git-workspaces",
+      "version": "0.1.0",
+      "dependencies": {
+        "@pstdio/sdk": "0.47.0-nightly.20261112030231",
+      },
+      "devDependencies": {
+        "@types/bun": "1.4.4",
+        "typescript": "6.0.2",
+      },
+    },
     "extensions/harness-claude-code": {
       "name": "harness-claude-code",
       "version": "0.47.0",
@@ -582,6 +593,7 @@
         "@types/react-dom": "19.2.3",
         "canvas": "workspace:*",
         "cmd-shim": "7.0.0",
+        "git-workspaces": "workspace:*",
         "harness-claude-code": "workspace:*",
         "harness-codex": "workspace:*",
         "harness-open-code": "workspace:*",
@@ -687,6 +699,7 @@
         "@types/cmd-shim": "5.0.2",
         "cmd-shim": "7.0.0",
         "extension-lab": "workspace:*",
+        "git-workspaces": "workspace:*",
         "pstdio-base-themes": "workspace:*",
         "pstdio-benchmarks": "workspace:*",
         "pstdio-planner": "workspace:*",
@@ -3495,6 +3508,8 @@
 
     "git-url-parse": ["git-url-parse@14.0.0", "", { "dependencies": { "git-up": "^7.0.0" } }, "sha512-NnLweV+2A4nCvn4U/m2AoYu0pPKlsmhK9cknG7IMwsjFY1S2jxM+mAhsDxyxfCIGfGaD+dozsyX4b6vkYc83yQ=="],
 
+    "git-workspaces": ["git-workspaces@workspace:extensions/git-workspaces"],
+
     "gitconfiglocal": ["gitconfiglocal@1.0.0", "", { "dependencies": { "ini": "^1.3.2" } }, "sha512-spLUXeTAVHxDtKsJc8FkFVgFtMdEN9qPGpL23VfSHx4fP4+Ds097IXLvymbnDH8FnmxX5Nr9bPw3A+AQ6mWEaQ=="],
 
     "github-slugger": ["github-slugger@2.0.0", "", {}, "sha512-IaOQ9puYtjrkq7Y0Ygl9KDZnrf/aiUJYUpVf89y8kyaxbRG7Y1SrX/jaumrv81vc61+kiMempujsM3Yw7w5qcw=="],
@@ -5438,6 +5453,8 @@
     "git-raw-commits/split2": ["split2@3.2.2", "", { "dependencies": { "readable-stream": "^3.0.0" } }, "sha512-9NThjpgZnifTkJpzTZ7Eue85S49QwpNhZTq6GRJwObb6jnLFNGB7Qm73V5HewTROPyxD0C29xqmaI68bQtV+hg=="],
 
     "git-remote-origin-url/pify": ["pify@2.3.0", "", {}, "sha512-udgsAY+fTnvv7kI7aaxbqwWNb0AHiB0qBO89PZKPkoTmGOgdbrHDKD+0B2X4uTfJ/FT1R09r9gTsjUjNJotuog=="],
+
+    "git-workspaces/@pstdio/sdk": ["@pstdio/sdk@0.47.0-nightly.20261112030231", "", { "dependencies": { "@noble/hashes": "^2.4.0", "@tanstack/query-core": "5.90.20", "mustache": "^4.2.0", "yjs": "^13.6.29", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "19.2.4" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-B8JqGUf6uSrnG26oOal6wgadYzoNky/F3P4l692MfAhadwR/prYMTbSosFBnU+jQyAwiwMBu2r7h/4R0wfDAlw=="],
 
     "glob/minimatch": ["minimatch@10.2.4", "", { "dependencies": { "brace-expansion": "^5.0.2" } }, "sha512-oRjTw/97aTBN0RHbYCdtF1MQfvusSIBQM0IZEgzl6426+8jSC0nF1a/GmnVLpfB9yyr6g6FTqWqiZVbxrtaCIg=="],
 

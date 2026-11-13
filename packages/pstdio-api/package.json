@@ -50,6 +50,7 @@
     "pstdio-skills": "workspace:*",
     "typescript": "6.0.2",
     "workbench-fixture": "workspace:*",
+    "git-workspaces": "workspace:*",
     "pstdio-scripts": "workspace:*"
   }
 }

@@ -108,6 +108,7 @@ export const startSubnavBenchmarkFixture = async () => {
       { source: fixtureSource, installName: "subnav-fixture" },
       e2eExtension("pstdio-session-browser"),
       e2eExtension("pstdio-workspaces"),
+      e2eExtension("git-workspaces"),
     ]),
     PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1",
     BUN_INSTALL_CACHE_DIR: cache,

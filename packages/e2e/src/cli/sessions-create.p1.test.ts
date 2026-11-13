@@ -10,7 +10,7 @@ import { FLOW_TIMEOUT, SETUP_TIMEOUT } from "./timeouts";
 let api: ApiInstance;
 
 beforeAll(async () => {
-  api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture") } });
+  api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture", "git-workspaces") } });
 }, SETUP_TIMEOUT);
 
 afterAll(async () => {

@@ -16,7 +16,6 @@ import {
   createProviderBackedWorkspace,
   resolveWorkspaceExecutionTarget,
 } from "../../workspaces/workspace-provider-service";
-import { cleanupWorkspaceWorktree } from "../../workspaces/worktree-cleanup";
 import type { ExtensionsRouteDeps } from "../deps";
 import { fireExtensionEventAsync } from "../extension-event-runtime";
 import { validateLegacyAnchors } from "./resource-link-policy";
@@ -82,7 +81,6 @@ export const createExtensionWorkspace = async (
     providerId: workspaceInput.providerId,
     params: workspaceInput.params,
     standalone: !shorthandBase,
-    setupWorktree: runtimeDeps.setupWorkspaceWorktree,
     provision: (workspace, repoPath) => runtimeDeps.runWorkspaceProvisioning(deps, { projectId, workspace, repoPath }),
     signal: input.signal,
   });
@@ -198,7 +196,7 @@ export const createWorkspacesApi = (
     removeWorktree: async (id) => {
       const workspace = await requireScopedWorkspace(id);
       const removed = await removeWorkspaceWorktree(deps, workspace, {
-        cleanup: runtimeDeps.cleanupWorkspaceWorktree ?? cleanupWorkspaceWorktree,
+        cleanup: runtimeDeps.deleteProviderBackedWorkspace,
         fireEvent: runtimeDeps.fireExtensionEventAsync ?? fireExtensionEventAsync,
       });
       return { removed };

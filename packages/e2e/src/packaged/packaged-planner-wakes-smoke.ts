@@ -42,7 +42,7 @@ export async function expectBriefSupervisorWakes(input: { baseUrl: string; heade
       "POST",
       { params },
     );
-    expect(result.outcome.status).toBe("success");
+    expect(result.outcome.status, JSON.stringify({ command: name, outcome: result.outcome })).toBe("success");
     return result.outcome.value;
   };
   const completedSupervisor = async (previousStart?: string) => {

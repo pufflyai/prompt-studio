@@ -47,7 +47,13 @@ export async function withPackagedPlanner(check: (input: PackagedPlanner) => Pro
   try {
     phase("runtime start");
     host = await startPackagedServe(root, {
-      PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions(...fixtures, "pstdio-artifacts", "pstdio-planner", "pstdio-reports"),
+      PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions(
+        ...fixtures,
+        "git-workspaces",
+        "pstdio-artifacts",
+        "pstdio-planner",
+        "pstdio-reports",
+      ),
       PSTDIO_EXTENSION_WEBVIEW_BUILDS: "0",
     });
     phase("runtime ready");

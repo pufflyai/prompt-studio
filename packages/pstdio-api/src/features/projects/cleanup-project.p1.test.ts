@@ -61,7 +61,7 @@ describe("cleanupProjectArtifacts", () => {
     ];
     const deleteProviderWorkspace = mock(async (_deps: unknown, workspace: { id: string }) => {
       order.push(`provider:${workspace.id}`);
-      return workspace.id === "local-1";
+      return true;
     });
 
     await cleanupProjectArtifacts(
@@ -83,7 +83,7 @@ describe("cleanupProjectArtifacts", () => {
     expect(order).toEqual(["provider:remote-1", "deleted:remote-1", "provider:local-1", "deleted:local-1", "storage"]);
   });
 
-  test("stops project deletion when a local worktree cannot be removed", async () => {
+  test("stops project deletion when a provider backing resource cannot be removed", async () => {
     const removeProjectStorage = mock(() => {});
     const softDelete = mock(async () => {});
 
@@ -109,13 +109,13 @@ describe("cleanupProjectArtifacts", () => {
           removeProjectStorage,
         },
       ),
-    ).rejects.toThrow("Workspace worktree could not be removed: local-1");
+    ).rejects.toThrow("Workspace backing resource could not be removed: local-1");
     expect(softDelete).not.toHaveBeenCalled();
     expect(removeProjectStorage).not.toHaveBeenCalled();
   });
 
   test("skips provider cleanup already persisted by an earlier attempt", async () => {
-    const deleteProviderWorkspace = mock(async () => false);
+    const deleteProviderWorkspace = mock(async () => true);
     const softDelete = mock(async () => {});
     const listForProviderReconciliation = mock()
       .mockResolvedValueOnce([

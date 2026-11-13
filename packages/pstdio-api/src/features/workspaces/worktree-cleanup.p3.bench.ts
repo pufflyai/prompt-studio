@@ -4,7 +4,9 @@ import { join, resolve } from "node:path";
 import { benchmarkSampleCount } from "pstdio-benchmarks";
 import { recordMeasurement } from "pstdio-benchmarks/writer";
 import { git } from "pstdio-wt";
-import { cleanupWorkspaceWorktree } from "./worktree-cleanup";
+import { createTestApp } from "../../test-utils/create-test-app";
+import { enableGitWorkspaceProvider } from "../../test-utils/git-workspace-provider.fixture";
+import { deleteProviderBackedWorkspace } from "./workspace-provider-lifecycle";
 
 // Run manually on a disposable filesystem, never against existing workspaces.
 // BENCH_ROOT selects the filesystem; /tmp can be a RAM disk and is not the default.
@@ -19,6 +21,7 @@ const base = resolve(process.env.BENCH_ROOT ?? ".bench-worktree-cleanup");
 mkdirSync(base, { recursive: true });
 const root = mkdtempSync(join(base, "run-"));
 const previousHome = process.env.PSTDIO_HOME;
+const previousDefaults = process.env.PSTDIO_DEFAULT_EXTENSIONS;
 process.env.PSTDIO_HOME = join(root, "home");
 
 const percentile = (values: number[], fraction: number) => {
@@ -60,129 +63,159 @@ const processRss = () => {
   return rss / 1024 / 1024;
 };
 
-const repo = join(root, "repo");
-mkdirSync(repo);
-await git(repo, ["init", "-q"]);
-await git(repo, ["config", "user.email", "benchmark@example.invalid"]);
-await git(repo, ["config", "user.name", "Cleanup benchmark"]);
-writeFileSync(join(repo, "README.md"), "Workspace cleanup fixture\n");
-await git(repo, ["add", "."]);
-await git(repo, ["commit", "-qm", "Fixture"]);
-
-const prepare = async (run: string) => {
-  const workspaces = [];
-  for (let index = 0; index < count; index++) {
-    const branch = `bench-${run}-${index}`;
-    const worktreeRoot = join(root, "home", "workspaces", branch);
-    await git(repo, ["worktree", "add", "-qb", branch, worktreeRoot]);
-    for (let file = 0; file < filesPerWorkspace; file++) {
-      const folder = join(worktreeRoot, "node_modules", `package-${Math.floor(file / 50)}`);
-      if (file % 50 === 0) mkdirSync(folder, { recursive: true });
-      writeFileSync(join(folder, `${file}.js`), "x".repeat(1024));
-    }
-    workspaces.push({
-      provider_id: "pstdio.worktree",
-      provider_ref_json: { data: { sourceRoot: repo, worktreeRoot } },
-      branch,
-    });
-  }
-  return workspaces;
-};
-
-const measure = async (workspaces: Awaited<ReturnType<typeof prepare>>, concurrency: number) => {
-  let cursor = 0;
-  let active = 0;
-  let peakActive = 0;
-  let peakRssMiB = processRss();
-  let previousCpu = cpuMicros();
-  const cpuStart = previousCpu;
-  let previousTime = performance.now();
-  const cpuPercent: number[] = [];
-  const delays: number[] = [];
-  const readLatency: number[] = [];
-  const started = performance.now();
-  let pendingRead: Promise<void> | undefined;
-  const probe = setInterval(() => {
-    const time = performance.now();
-    const cpu = cpuMicros();
-    if (cpu !== null && previousCpu !== null) {
-      cpuPercent.push((cpu - previousCpu) / (time - previousTime) / 10);
-    }
-    delays.push(Math.max(0, time - previousTime - 50));
-    previousCpu = cpu;
-    previousTime = time;
-    peakRssMiB = Math.max(peakRssMiB, processRss());
-    if (!pendingRead) {
-      const readStart = performance.now();
-      pendingRead = readFile(join(repo, "README.md"))
-        .then(() => {
-          readLatency.push(performance.now() - readStart);
-        })
-        .finally(() => {
-          pendingRead = undefined;
-        });
-    }
-  }, 50);
-  try {
-    await Promise.all(
-      Array.from({ length: concurrency }, async () => {
-        while (cursor < workspaces.length) {
-          const workspace = workspaces[cursor++];
-          active++;
-          peakActive = Math.max(peakActive, active);
-          try {
-            await cleanupWorkspaceWorktree({} as never, workspace);
-          } finally {
-            active--;
-          }
-        }
-      }),
-    );
-  } finally {
-    clearInterval(probe);
-    await pendingRead;
-  }
-  const cpuEnd = cpuMicros();
-  return {
-    concurrency,
-    elapsedMs: Math.round(performance.now() - started),
-    cpuMs: cpuEnd !== null && cpuStart !== null ? Math.round((cpuEnd - cpuStart) / 1000) : null,
-    cpuP95Percent: cpuPercent.length ? Math.round(percentile(cpuPercent, 0.95)) : null,
-    peakRssMiB: Math.round(peakRssMiB),
-    loopDelayP95Ms: Number(percentile(delays, 0.95).toFixed(1)),
-    readLatencyP95Ms: Number(percentile(readLatency, 0.95).toFixed(1)),
-    peakActive,
-  };
-};
-
 try {
-  console.log(JSON.stringify({ platform: process.platform, count, filesPerWorkspace, repeats, root }));
-  for (let repeat = 0; repeat < repeats; repeat++) {
-    // Rotate order to reduce bias from which concurrency runs first.
-    const ordered = [...limits.slice(repeat % limits.length), ...limits.slice(0, repeat % limits.length)];
-    for (const limit of ordered) {
-      const workspaces = await prepare(`${repeat}-${limit}`);
-      const result = await measure(workspaces, limit);
-      if (workspaces.some((workspace) => existsSync(workspace.provider_ref_json.data.worktreeRoot))) {
-        throw new Error("Cleanup left a benchmark worktree on disk.");
+  const repo = join(root, "repo");
+  mkdirSync(repo);
+  await git(repo, ["init", "-q"]);
+  await git(repo, ["config", "user.email", "benchmark@example.invalid"]);
+  await git(repo, ["config", "user.name", "Cleanup benchmark"]);
+  writeFileSync(join(repo, "README.md"), "Workspace cleanup fixture\n");
+  await git(repo, ["add", "."]);
+  await git(repo, ["commit", "-qm", "Fixture"]);
+
+  process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
+  const app = await createTestApp({ storageRoot: join(root, "storage") });
+  try {
+    const projectResponse = await app.app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        name: "Cleanup benchmark",
+        initial_workspace: { provider_id: "pstdio.root", params: { path: repo } },
+      }),
+    });
+    if (projectResponse.status !== 201) throw new Error(await projectResponse.text());
+    const project = await projectResponse.json();
+    await enableGitWorkspaceProvider(app, project.id);
+
+    const prepare = async (run: string) => {
+      const workspaces = [];
+      for (let index = 0; index < count; index++) {
+        const workspace = await app.deps.workspaceService.createStandalone({
+          project_id: project.id,
+          name: `bench-${run}-${index}`,
+          provider_id: "pstdio.worktree",
+          provider_state: "ready",
+        });
+        const branch = `workspace/${workspace.workspace_shorthand}-${workspace.id}`;
+        const worktreeRoot = join(root, "home", "workspaces", workspace.id);
+        await git(repo, ["worktree", "add", "-qb", branch, worktreeRoot]);
+        for (let file = 0; file < filesPerWorkspace; file++) {
+          const folder = join(worktreeRoot, "node_modules", `package-${Math.floor(file / 50)}`);
+          if (file % 50 === 0) mkdirSync(folder, { recursive: true });
+          writeFileSync(join(folder, `${file}.js`), "x".repeat(1024));
+        }
+        workspaces.push(
+          (await app.deps.workspaceService.updateProviderProjection(workspace.id, {
+            branch,
+            root_path: worktreeRoot,
+            execution_kind: "local",
+            provider_state: "ready",
+            provider_ref_json: { version: 1, data: { sourceRoot: repo, worktreeRoot, relativePath: "" } },
+          }))!,
+        );
       }
-      console.log(JSON.stringify({ repeat, ...result }));
-      const workers = `${count} workspaces, ${limit} at a time`;
-      recordMeasurement({
-        metric: `cleanup-${limit}`,
-        label: `Clean up ${workers}`,
-        unit: "ms",
-        value: result.elapsedMs,
-      });
-      recordMeasurement({
-        metric: `cleanup-${limit}-memory`,
-        label: `Cleanup peak memory, ${workers}`,
-        unit: "bytes",
-        value: result.peakRssMiB * 1024 * 1024,
-      });
+      return workspaces;
+    };
+
+    const measure = async (workspaces: Awaited<ReturnType<typeof prepare>>, concurrency: number) => {
+      let cursor = 0;
+      let active = 0;
+      let peakActive = 0;
+      let peakRssMiB = processRss();
+      let previousCpu = cpuMicros();
+      const cpuStart = previousCpu;
+      let previousTime = performance.now();
+      const cpuPercent: number[] = [];
+      const delays: number[] = [];
+      const readLatency: number[] = [];
+      const started = performance.now();
+      let pendingRead: Promise<void> | undefined;
+      const probe = setInterval(() => {
+        const time = performance.now();
+        const cpu = cpuMicros();
+        if (cpu !== null && previousCpu !== null) {
+          cpuPercent.push((cpu - previousCpu) / (time - previousTime) / 10);
+        }
+        delays.push(Math.max(0, time - previousTime - 50));
+        previousCpu = cpu;
+        previousTime = time;
+        peakRssMiB = Math.max(peakRssMiB, processRss());
+        if (!pendingRead) {
+          const readStart = performance.now();
+          pendingRead = readFile(join(repo, "README.md"))
+            .then(() => {
+              readLatency.push(performance.now() - readStart);
+            })
+            .finally(() => {
+              pendingRead = undefined;
+            });
+        }
+      }, 50);
+      try {
+        await Promise.all(
+          Array.from({ length: concurrency }, async () => {
+            while (cursor < workspaces.length) {
+              const workspace = workspaces[cursor++];
+              active++;
+              peakActive = Math.max(peakActive, active);
+              try {
+                await deleteProviderBackedWorkspace(app.deps, workspace);
+              } finally {
+                active--;
+              }
+            }
+          }),
+        );
+      } finally {
+        clearInterval(probe);
+        await pendingRead;
+      }
+      const cpuEnd = cpuMicros();
+      return {
+        concurrency,
+        elapsedMs: Math.round(performance.now() - started),
+        cpuMs: cpuEnd !== null && cpuStart !== null ? Math.round((cpuEnd - cpuStart) / 1000) : null,
+        cpuP95Percent: cpuPercent.length ? Math.round(percentile(cpuPercent, 0.95)) : null,
+        peakRssMiB: Math.round(peakRssMiB),
+        loopDelayP95Ms: Number(percentile(delays, 0.95).toFixed(1)),
+        readLatencyP95Ms: Number(percentile(readLatency, 0.95).toFixed(1)),
+        peakActive,
+      };
+    };
+
+    console.log(JSON.stringify({ platform: process.platform, count, filesPerWorkspace, repeats, root }));
+    for (let repeat = 0; repeat < repeats; repeat++) {
+      // Rotate order to reduce bias from which concurrency runs first.
+      const ordered = [...limits.slice(repeat % limits.length), ...limits.slice(0, repeat % limits.length)];
+      for (const limit of ordered) {
+        const workspaces = await prepare(`${repeat}-${limit}`);
+        const result = await measure(workspaces, limit);
+        if (workspaces.some((workspace) => existsSync(workspace.root_path!))) {
+          throw new Error("Cleanup left a benchmark worktree on disk.");
+        }
+        console.log(JSON.stringify({ repeat, ...result }));
+        const workers = `${count} workspaces, ${limit} at a time`;
+        recordMeasurement({
+          metric: `cleanup-${limit}`,
+          label: `Clean up ${workers}`,
+          unit: "ms",
+          value: result.elapsedMs,
+        });
+        recordMeasurement({
+          metric: `cleanup-${limit}-memory`,
+          label: `Cleanup peak memory, ${workers}`,
+          unit: "bytes",
+          value: result.peakRssMiB * 1024 * 1024,
+        });
+      }
     }
+  } finally {
+    await app.close();
   }
 } finally {
+  if (previousDefaults === undefined) delete process.env.PSTDIO_DEFAULT_EXTENSIONS;
+  else process.env.PSTDIO_DEFAULT_EXTENSIONS = previousDefaults;
   if (previousHome === undefined) delete process.env.PSTDIO_HOME;
   else process.env.PSTDIO_HOME = previousHome;
   rmSync(root, { recursive: true, force: true });

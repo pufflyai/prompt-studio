@@ -6,7 +6,6 @@ import { defaultLocalWorkspaceCapabilities } from "pstdio-db";
 import { git } from "pstdio-wt";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { runWorkspaceProvisioning } from "../../workspaces/provision-coordinator";
-import { setupWorkspaceWorktree } from "../../workspaces/worktree-setup";
 import { createWorkspacesApi } from "./workspaces";
 
 let handle: Awaited<ReturnType<typeof createTestApp>>;
@@ -32,11 +31,7 @@ const fixture = async () => {
     provider_state: "ready",
   });
   const api = (signal?: AbortSignal) =>
-    createWorkspacesApi(
-      handle.deps,
-      { projectId: project.id, signal },
-      { setupWorkspaceWorktree, runWorkspaceProvisioning },
-    );
+    createWorkspacesApi(handle.deps, { projectId: project.id, signal }, { runWorkspaceProvisioning });
   return { project, workspace, path, api };
 };
 

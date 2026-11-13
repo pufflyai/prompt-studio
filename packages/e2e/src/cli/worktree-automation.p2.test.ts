@@ -11,7 +11,9 @@ let api: ApiInstance;
 const ctx: HookTestContext = { api: null!, dirs: [] };
 
 beforeAll(async () => {
-  api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-planner", "workbench-fixture") } });
+  api = await startApi({
+    env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-planner", "workbench-fixture", "git-workspaces") },
+  });
   ctx.api = api;
 }, SETUP_TIMEOUT);
 

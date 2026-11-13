@@ -20,6 +20,7 @@ const CORE_DEFAULT_EXTENSION_NAMES = [
   "pstdio-session-browser",
   "pstdio-onboarding",
   "pstdio-workspaces",
+  "git-workspaces",
   "harness-claude-code",
   "harness-codex",
   "harness-open-code",

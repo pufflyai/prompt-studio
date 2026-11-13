@@ -1,5 +1,5 @@
 import { afterAll, expect, test } from "bun:test";
-import { PSTDIO_E2E_PLANNER_EXTENSION } from "../default-extensions";
+import { e2eExtensions } from "../default-extensions";
 import { cleanupDirs, createInitializedRepo, runPstdio } from "./helpers";
 import { startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
@@ -10,7 +10,9 @@ afterAll(() => cleanupDirs(dirs));
 test(
   "links two tickets to a standalone workspace and removes only the selected link",
   async () => {
-    const api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: PSTDIO_E2E_PLANNER_EXTENSION } });
+    const api = await startApi({
+      env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-planner", "git-workspaces") },
+    });
     try {
       const run = (args: string, cwd: string) => runPstdio(args, cwd, { PSTDIO_API_URL: api.url });
       const repo = createInitializedRepo({ name: "shared-workspace", dirs, run, withInitialCommit: true });

@@ -1,5 +1,6 @@
 // These production consumers exercise the current public SDK and UI artifacts.
 export const uiFixtureExtensions = [
+  "git-workspaces",
   "pstdio-session-browser",
   "pstdio-artifacts",
   "pstdio-cloud",

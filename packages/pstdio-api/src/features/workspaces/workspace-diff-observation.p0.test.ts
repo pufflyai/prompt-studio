@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { git } from "pstdio-wt";
@@ -112,5 +112,39 @@ test("startup reconciliation covers dropped native hints and is cancelled with i
   } finally {
     first.close();
     await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("provider diff observations retain a project subdirectory until its location changes", async () => {
+  const repository = await mkdtemp(join(tmpdir(), "pstdio-provider-diff-watch-"));
+  const project = join(repository, "project");
+  await mkdir(project);
+  await git(repository, ["init"]);
+  const workspace = {
+    id: "workspace",
+    project_id: "project",
+    root_path: project,
+    execution_kind: "local",
+    provider_id: "fixture.local.workspace-type.sandbox",
+    provider_state: "ready",
+    initializing: false,
+    provider_capabilities_json: { diff: true },
+    deleted_at: null,
+    setup_error: null,
+  };
+  const eventBus = new EventBus();
+  const deps = { workspaceService: { get: async () => workspace }, eventBus } as never;
+  const events: string[] = [];
+  const observation = await observeWorkspaceDiff(deps, { project_id: "project", workspace_id: "workspace" }, (event) =>
+    events.push(event),
+  );
+  try {
+    eventBus.emit("workspaces", "set", { ...workspace, name: "Renamed" });
+    expect(events).not.toContain("closed");
+    eventBus.emit("workspaces", "set", { ...workspace, root_path: repository });
+    expect(events.filter((event) => event === "closed")).toHaveLength(1);
+  } finally {
+    observation.close();
+    await rm(repository, { recursive: true, force: true });
   }
 });

@@ -1,7 +1,6 @@
 import type { WorkspacesRouteDeps } from "./deps";
 import { watchWorkspaceDiffFiles } from "./workspace-diff-filesystem";
 import { resolveWorkspaceExecutionTarget } from "./workspace-provider-execution-target";
-import { workspaceGitPaths } from "./worktree-cleanup";
 
 type Deps = Pick<WorkspacesRouteDeps, "workspaceService" | "eventBus">;
 type Watch = Awaited<ReturnType<typeof watchWorkspaceDiffFiles>>;
@@ -34,11 +33,10 @@ export const observeWorkspaceDiff = async (
     const stopRows = deps.eventBus.subscribe((event) => {
       if (event.table !== "workspaces" || (event.data as { id?: string }).id !== input.workspace_id) return;
       const row = event.data as typeof target.workspace;
-      const root = workspaceGitPaths(row)?.worktreeRoot ?? row.root_path;
       if (
         event.op === "delete" ||
         row.project_id !== input.project_id ||
-        root !== target.root ||
+        row.root_path !== target.workspace.root_path ||
         row.execution_kind !== "local" ||
         row.provider_state !== "ready" ||
         row.initializing ||

@@ -1,0 +1,5 @@
+{
+  "workspace.git": "Arbre de travail Git",
+  "params.base": "Branche de départ",
+  "params.detached-base": "HEAD sélectionne la révision actuelle (sans branche)."
+}

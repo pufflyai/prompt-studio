@@ -497,6 +497,13 @@ read-only; allocate resources in `create` after the host owns their identity.
 This preflight runs only before initial allocation. `create` and `resolve` must
 still check backing-resource invariants when the environment changes afterward.
 
+The default Git Workspaces extension uses these public provider callbacks and
+`ctx.process` for Git operations. The host's existing `pstdio.worktree` identity
+routes to its installed workspace type, including stored legacy references.
+Backing references remain provider-owned JSON. Disabling the extension retains
+the workspace and files; enabling it again resolves that same reference. Core
+continues to protect the default folder and cancel sessions before deletion.
+
 During workspace-bound provider callbacks, the optional `ctx.localDirectory()`
 allocates or reopens a host-managed local directory owned by that provider,
 project and workspace. It is available before the workspace is ready and returns
