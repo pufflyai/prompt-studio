@@ -1,5 +1,5 @@
-import { Box, Button, CloseButton, Flex, Stack, Text } from "@chakra-ui/react";
-import { ScopedDialog as Dialog, getIconComponent, Portal, TreeList } from "@pstdio/ui";
+import { Box, Flex, Stack, Text } from "@chakra-ui/react";
+import { DeleteConfirmationModal, getIconComponent, TreeList } from "@pstdio/ui";
 import { CodeEditor } from "@pstdio/ui/diff";
 import { useState } from "react";
 
@@ -67,38 +67,14 @@ export const FileOperations = () => {
           />
         </Box>
       </Stack>
-      <Dialog.Root open={Boolean(deleting)} onOpenChange={({ open }) => !open && setDeleting(undefined)}>
-        <Portal>
-          <Dialog.Backdrop />
-          <Dialog.Positioner>
-            <Dialog.Content>
-              <Dialog.Header>
-                <Dialog.Title>Delete entry</Dialog.Title>
-                <Dialog.CloseTrigger asChild>
-                  <CloseButton size="sm" />
-                </Dialog.CloseTrigger>
-              </Dialog.Header>
-              <Dialog.Body>
-                <Text>Delete {deleting}? The entry and its contents will be permanently removed.</Text>
-              </Dialog.Body>
-              <Dialog.Footer>
-                <Button variant="ghost" onClick={() => setDeleting(undefined)}>
-                  Cancel
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={() => {
-                    setFiles((files) => files.filter((file) => file !== deleting));
-                    setDeleting(undefined);
-                  }}
-                >
-                  Delete
-                </Button>
-              </Dialog.Footer>
-            </Dialog.Content>
-          </Dialog.Positioner>
-        </Portal>
-      </Dialog.Root>
+      <DeleteConfirmationModal
+        open={Boolean(deleting)}
+        headline={`Delete entry: ${deleting}?`}
+        notificationText="The entry and its contents will be permanently removed."
+        buttonText="Delete"
+        onClose={() => setDeleting(undefined)}
+        onDelete={() => setFiles((files) => files.filter((file) => file !== deleting))}
+      />
     </Flex>
   );
 };

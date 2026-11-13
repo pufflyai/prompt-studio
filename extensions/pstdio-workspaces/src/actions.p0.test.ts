@@ -21,6 +21,29 @@ test("deleting a file opens a confirmation dialog over the selected document", a
   ]);
 });
 
+test("file deletion uses host confirmation and deletes only after explicit consent", async () => {
+  expect(showDeleteEntry).toMatchObject({
+    confirmation: { kind: "delete", confirmedParam: "confirmed", subjectParam: "path" },
+  });
+  const deleted: string[] = [];
+  const targets: NavigationTarget[] = [];
+  const context = {
+    project: { id: "project" },
+    resource: { type: "workspace", id: "workspace", metadata: { workspaceFilePath: "selected.md" } },
+    workspaces: {
+      get: async () => ({ id: "workspace", projectId: "project" }),
+      deleteEntry: async (_id: string, path: string) => {
+        deleted.push(path);
+      },
+    },
+    events: { emit: async () => {} },
+    navigation: { open: (target: NavigationTarget) => targets.push(target) },
+  } as unknown as Parameters<typeof showDeleteEntry.run>[0];
+  await showDeleteEntry.run(context, { path: "other.md", confirmed: true });
+  expect(deleted).toEqual(["other.md"]);
+  expect(targets).toMatchObject([{ kind: "page", resource: { metadata: { workspaceFilePath: "selected.md" } } }]);
+});
+
 test("folderless projects can choose an installed remote workspace provider", async () => {
   const targets: NavigationTarget[] = [];
   const context = {

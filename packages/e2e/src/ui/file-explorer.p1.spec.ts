@@ -52,12 +52,14 @@ test("file explorer updates externally and creates and confirms deletion over it
       await row.click({ button: "right" });
       await page.getByRole("menuitem", { name: "Delete file", exact: true }).click();
       await expect(page.getByRole("dialog")).toBeVisible();
+      await expect(page.locator('iframe[title="Workspace action"]')).toHaveCount(0);
+      await expect(page.getByRole("dialog").getByRole("button", { name: "Close", exact: true })).toBeVisible();
       await expect(page).toHaveURL(documentUrl);
       await expect(page.locator(".monaco-editor").filter({ visible: true })).toBeVisible();
     };
-    const action = page.frameLocator('iframe[title="Workspace action"]');
+    const confirmation = page.getByRole("dialog");
     await openDelete();
-    await action.getByRole("button", { name: "Cancel", exact: true }).click();
+    await confirmation.getByRole("button", { name: "Close", exact: true }).click();
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expectWorkspaceDocument(page, "new-file.md");
     expect(existsSync(join(root, "new-file.md"))).toBe(true);
@@ -66,7 +68,7 @@ test("file explorer updates externally and creates and confirms deletion over it
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expectWorkspaceDocument(page, "new-file.md");
     await openDelete();
-    await action.getByRole("button", { name: "Delete", exact: true }).click();
+    await confirmation.getByRole("button", { name: "Delete", exact: true }).click();
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect.poll(() => existsSync(join(root, "new-file.md"))).toBe(false);
     await expect(row).toHaveCount(0);
