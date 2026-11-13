@@ -1,46 +1,29 @@
 import { Button, SkeletonText } from "@chakra-ui/react";
-import { type ComponentType, useEffect, useState } from "react";
+import { lazy, Suspense } from "react";
 import { AlertMessage } from "@/components/primitives/alert";
+import { ErrorBoundary } from "@/components/primitives/error-boundary";
 import { installPrismGlobal } from "@/utils/prism";
 import type { RichMessageProps } from "./rich-message/rich-message";
 
-type MessageLoadState =
-  | { kind: "loading" }
-  | { kind: "ready"; Message: ComponentType<RichMessageProps> }
-  | { kind: "failed" };
-
 // Keep the UI entry lightweight and initialize Prism before Lexical evaluates.
-export const LazyRichMessage = (props: RichMessageProps) => {
-  const [state, setState] = useState<MessageLoadState>({ kind: "loading" });
+// A shared lazy type also renders later history rows without a loading-height change.
+const Message = lazy(async () => {
+  await installPrismGlobal();
+  return { default: (await import("./rich-message/rich-message")).RichMessage };
+});
 
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        await installPrismGlobal();
-        const module = await import("./rich-message/rich-message");
-        if (!cancelled) setState({ kind: "ready", Message: module.RichMessage });
-      } catch {
-        if (!cancelled) setState({ kind: "failed" });
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (state.kind === "ready") {
-    const { Message } = state;
-    return <Message {...props} />;
-  }
-  if (state.kind === "failed") {
-    return (
+export const LazyRichMessage = (props: RichMessageProps) => (
+  <ErrorBoundary
+    fallback={
       <AlertMessage
         status="error"
         title="Could not load the message"
         endElement={<Button onClick={() => window.location.reload()}>Reload</Button>}
       />
-    );
-  }
-  return <SkeletonText variant="none" noOfLines={2} role="status" aria-label="Loading message" />;
-};
+    }
+  >
+    <Suspense fallback={<SkeletonText variant="none" noOfLines={2} role="status" aria-label="Loading message" />}>
+      <Message {...props} />
+    </Suspense>
+  </ErrorBoundary>
+);
