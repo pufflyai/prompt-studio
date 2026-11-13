@@ -10,11 +10,7 @@ const projects = [
   { id: "kanban", label: "Agentic kanban", icon: <Columns3 /> },
   { id: "design", label: "Agentic design", icon: <PenTool /> },
 ];
-const Example = (props: {
-  initialTabs?: WindowTab[];
-  platform?: string;
-  activeOnlyClose?: boolean;
-}) => {
+const Example = (props: { initialTabs?: WindowTab[]; platform?: string; activeOnlyClose?: boolean }) => {
   const { initialTabs = projects, platform = "darwin", activeOnlyClose = false } = props;
   const [tabs, setTabs] = useState(initialTabs);
   const [selectedId, setSelectedId] = useState(tabs[0]?.id);
