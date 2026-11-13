@@ -46,16 +46,21 @@ test("starts project cleanup with the selected model and editable prompt, withou
   ]);
 });
 
-test("offers project cleanup from the Tickets toolbar without requiring a selected ticket", () => {
-  const tickets = createPlannerUi(import.meta.url).views.find(({ id }) => id === "tickets");
-  expect(tickets?.body).toMatchObject({
-    kind: "kanban",
-    toolbarActions: [
-      expect.objectContaining({
-        id: "cleanup-board",
-        command: cleanupBoardCommand.ref,
-        input: { agent: expect.objectContaining({ type: "harness" }) },
-      }),
+test("offers project cleanup in the Tickets breadcrumb menu", async () => {
+  const page = createPlannerUi(import.meta.url).pages.find(({ id }) => id === "tickets");
+  if (page?.main.kind !== "view" || !("tab" in page.main)) throw new Error("Expected Tickets page presentation");
+  const snapshot = await page.main.tab.query();
+  expect(snapshot).toMatchObject({
+    menu: [
+      {
+        id: "tickets",
+        rows: [
+          {
+            id: "cleanup-board",
+            action: { kind: "command", target: { command: cleanupBoardCommand.ref } },
+          },
+        ],
+      },
     ],
   });
 });

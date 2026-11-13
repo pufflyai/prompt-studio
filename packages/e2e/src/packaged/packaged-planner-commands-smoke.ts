@@ -16,6 +16,23 @@ export const expectPlannerCommands = async (
   expect(metadata.commands).toContainEqual(
     expect.objectContaining({ id: "pstdio.pstdio-planner.command.cleanup-board" }),
   );
+  const tickets = metadata.pages.find(({ localId }) => localId === "tickets");
+  if (tickets?.main.kind !== "view" || !tickets.main.tab) throw new Error("Missing Tickets breadcrumb menu");
+  const menu = await fetch(
+    `${baseUrl}/v1/projects/${projectId}/extensions/commands/${tickets.main.tab.queryHandlerId}/execute`,
+    {
+      method: "POST",
+      headers: { ...headers, "content-type": "application/json" },
+      body: JSON.stringify({ params: { renderer: { rendererId: "pstdio.pstdio-planner.view.tickets", projectId } } }),
+    },
+  );
+  expect(menu.status).toBe(200);
+  expect(await menu.json()).toMatchObject({
+    outcome: {
+      status: "success",
+      value: { menu: [{ id: "tickets", rows: [{ id: "cleanup-board", action: { kind: "command" } }] }] },
+    },
+  });
   const cleanup = await commandRunner({ baseUrl, projectId, headers })("templates.read", { name: "cleanup-board" });
   expect(cleanup).toMatchObject({
     name: "cleanup-board",

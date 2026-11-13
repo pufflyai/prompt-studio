@@ -26,7 +26,7 @@ pst extensions add pstdio-reports
 - Needs attention: the place for ticket actions that need a person. It currently contains review requests for tasks and decisions. See [Needs attention](docs/0006-review-requests.md).
 - The `pst pstdio.pstdio-planner`, `pst pstdio.pstdio-planner ticket-status`, and `pst pstdio.pstdio-planner ticket-tag` commands. See [CLI](docs/0004-cli.md).
 - Skills that teach agents to work with tickets: `create-ticket`, `create-proposal`, `create-sub-tickets`, `refine-ticket`, and `implement-ticket`.
-- **Cleanup board** in the Tickets toolbar starts an agent session to reconcile stale statuses and blocked reasons across unfinished tickets. Its editable `cleanup-board` prompt requires evidence for changes and leaves tickets with ongoing or unverifiable sessions untouched. It reviews the whole project, regardless of view filters.
+- **Cleanup board** in the Tickets breadcrumb dropdown starts an agent session to reconcile stale statuses and blocked reasons across unfinished tickets. Its editable `cleanup-board` prompt requires evidence for changes and leaves tickets with ongoing or unverifiable sessions untouched. It reviews the whole project, regardless of view filters.
 - Ticket, prompt, and document templates. Edit them in **Settings → Project → Templates**.
 
 Use **Open tickets** in the dashboard command palette to open the current project's Tickets board.

@@ -14,7 +14,6 @@ import {
 import { attentionPanelTarget } from "./attention-panel";
 import { archiveTicketColumnAction } from "./commands/archive-ticket";
 import { attachTicketFileCommand } from "./commands/attach-ticket-file";
-import { cleanupBoardCommand } from "./commands/cleanup-board";
 import { createTicketCommand } from "./commands/create-ticket";
 import { moveTicketOnBoard } from "./commands/move-ticket-on-board";
 import { queryTickets } from "./commands/query-tickets";
@@ -119,15 +118,6 @@ export const createPlannerUi = (baseUrl: string) => {
     icon: "square-kanban",
     body: {
       kind: "kanban",
-      toolbarActions: [
-        {
-          id: "cleanup-board",
-          label: l10n("commands.cleanupBoard.title", "Cleanup board"),
-          icon: "sparkles",
-          command: cleanupBoardCommand.ref,
-          input: cleanupBoardCommand.params,
-        },
-      ],
       attributes: buildTicketAttributes([]),
       query: queryTickets,
       schemaRefreshEvents: [plannerSchemaChanged],

@@ -57,7 +57,3 @@ export const HiddenActions: Story = {
   id: "pstdio-workbench-reference-core-api-native-toolbar-actions--hidden-actions",
   args: { actions: actions.map((action) => ({ ...action, when: "false" })) },
 };
-export const PlannerCleanupBoard: Story = {
-  args: { actions: [{ id: "cleanup-board", label: "Cleanup board", icon: "sparkles" }] },
-  description: "Tickets toolbar: Cleanup board opens an agent session to review stale tickets across the project.",
-};
