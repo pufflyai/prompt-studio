@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { type Page, type Request, test as base } from "@playwright/test";
+import { test as base, type Page, type Request } from "@playwright/test";
 
 const relevant = (url: string) => {
   const path = new URL(url).pathname;
