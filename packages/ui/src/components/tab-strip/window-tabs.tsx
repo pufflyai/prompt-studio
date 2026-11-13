@@ -133,9 +133,10 @@ export const WindowTabs = (props: WindowTabsProps) => {
     const remaining = tabs.filter((tab) => tab.id !== id);
     let before = tabs.findIndex((tab) => tab.id === targetId) < from;
     if (pointerX.current !== undefined && event.activatorEvent.type !== "keydown") {
-      const targetCenter = event.over.rect.left + event.over.rect.width / 2;
-      // Controls can make the dragged tab wider than its trigger. The pointer owns the insertion edge.
-      if (pointerX.current !== targetCenter) before = pointerX.current < targetCenter;
+      const pointer = Math.round(pointerX.current);
+      const targetCenter = Math.round(event.over.rect.left + event.over.rect.width / 2);
+      // Controls change the dragged tab's center. Compare pointer pixels; scaled surfaces can round a center drop.
+      if (pointer !== targetCenter) before = pointer < targetCenter;
     }
     const index = remaining.findIndex((tab) => tab.id === targetId) + (before ? 0 : 1);
     if (index === from) return;
