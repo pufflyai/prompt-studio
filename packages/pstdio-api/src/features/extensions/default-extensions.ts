@@ -230,6 +230,7 @@ type InstallRepoDefaultExtensionsInput = {
   env?: Record<string, string | undefined>;
   releaseRef?: string;
   prepareSharedCheckout?: typeof createSharedNamedSourceCheckout;
+  registerInstalledSources?: InstallDefaultExtensionsDeps["registerInstalledSources"];
 };
 
 // A user install refuses repo-scoped sources, so an installed user copy proves the default is
@@ -243,11 +244,14 @@ const isInstalledUserExtension = (entry: DefaultExtensionEntry, extensionsRoot: 
 export const installRepoDefaultExtensions = async (input: InstallRepoDefaultExtensionsInput) => {
   const materialized: string[] = [];
   const skipped: string[] = [];
+  const prepared: InstalledExtensionSource[] = [];
 
   const rollback = async () => {
     const results = await Promise.allSettled(
-      materialized.map((name) =>
-        rm(join(input.repoPath, ".pstdio", "extensions", name), { recursive: true, force: true }),
+      prepared.map((source) =>
+        source.installation
+          ? settlePreparedInstall(source.installation, false)
+          : rm(source.targetPath, { recursive: true, force: true }),
       ),
     );
     for (const result of results) {
@@ -279,13 +283,16 @@ export const installRepoDefaultExtensions = async (input: InstallRepoDefaultExte
           }
 
           const installInput = toInstallInput(resolved.entry, input.releaseRef);
-          await installExtensionSource({
+          const installed = await installExtensionSource({
             ...installInput,
             existsOk: false,
             force: false,
             prepareNamedSource,
             repoPath: input.repoPath,
+            retainBackup: Boolean(input.registerInstalledSources),
           });
+          prepared.push(installed);
+          if (installed.installation) await activatePreparedInstall(installed.installation);
           materialized.push(resolved.installName);
         }
       },
@@ -294,5 +301,9 @@ export const installRepoDefaultExtensions = async (input: InstallRepoDefaultExte
     await rollback();
     throw error;
   }
+  // Carry the validated output through the existing registration owner before discovery
+  // imports the promoted folder. Otherwise discovery accepts a runtime-only revision and
+  // the first metadata request repeats the already completed frontend preparation.
+  await registerPreparedDefaults(input, prepared);
   return { materialized, skipped, rollback };
 };
