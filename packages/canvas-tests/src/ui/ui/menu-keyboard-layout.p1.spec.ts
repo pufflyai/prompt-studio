@@ -61,3 +61,22 @@ test("menu layout keeps the newer keyboard selection when an old hovered item mo
   await expect(menu).toBeFocused();
   await expect(last).toHaveAttribute("data-highlighted", "");
 });
+
+// Pointer selection and exit must keep their ordinary behavior after a keyboard ownership repair.
+test("menu pointer movement still selects actions and clears its own highlight on exit", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/overlays/resource-context-menu.canvas.tsx#Default",
+  );
+  const target = preview.getByText("Right-click here", { exact: true });
+  await target.click({ button: "right" });
+  const first = preview.getByRole("menuitem", { name: "Sidenav entry 1", exact: true });
+  const last = preview.getByRole("menuitem", { name: "Sidenav entry 4", exact: true });
+  await first.hover();
+  await expect(first).toHaveAttribute("data-highlighted", "");
+  await last.hover();
+  await expect(last).toHaveAttribute("data-highlighted", "");
+  await target.hover();
+  await expect(last).not.toHaveAttribute("data-highlighted", "");
+  await expect(preview.getByRole("menu")).toBeVisible();
+});
