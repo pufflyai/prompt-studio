@@ -314,7 +314,7 @@ export const listTicketFilesTree = async (
   return mergeTicketLinkSections(
     [
       ticketSection,
-      ...ticketRelationshipSections(ticket, tickets),
+      ...ticketRelationshipSections(ticket, tickets, plannerOwnerFor(ctx)),
       filesSection,
       ...(maybeSubTicketsSection ? [maybeSubTicketsSection] : []),
       linkedWorkspacesSection,
@@ -322,6 +322,7 @@ export const listTicketFilesTree = async (
     ],
     resourceLinks,
     ctx.projectId,
+    plannerOwnerFor(ctx),
   );
 };
 
