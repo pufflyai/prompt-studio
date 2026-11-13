@@ -123,7 +123,7 @@ describe("createInstalledExtensionRuntime", () => {
   });
 
   test("watches the user extension root and every project folder extension root", async () => {
-    let listExtensionRoots: (() => Promise<Array<{ path: string }>>) | undefined;
+    let listExtensionRoots: (() => Promise<Array<{ path: string; ownerRoot: string }>>) | undefined;
 
     const runtime = createInstalledExtensionRuntime({
       ...noopRuntimeDeps,
@@ -154,6 +154,7 @@ describe("createInstalledExtensionRuntime", () => {
       join(resolvePstdioHome({ env: process.env }), "extensions"),
       join("/repos/alpha", ".pstdio", "extensions"),
     ]);
+    expect(roots.map((root) => root.ownerRoot)).toEqual([resolvePstdioHome({ env: process.env }), "/repos/alpha"]);
 
     await runtime.dispose();
   });
@@ -224,6 +225,7 @@ describe("createInstalledExtensionRuntime", () => {
 
       const project = await projectService.create({ name: "Live Repo" });
       const repoPath = join(tempRoot, "repo");
+      mkdirSync(repoPath);
       const repoRoot = join(repoPath, ".pstdio", "extensions");
       const sourcePath = join(repoRoot, "repo-tool");
       const watchers: Array<{ path: string; watcher: FakeWatcher }> = [];

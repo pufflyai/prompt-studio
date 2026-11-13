@@ -40,7 +40,7 @@ test.each([
     watcher =
       changes === "root registrations"
         ? await createRootWatcherClient({
-            listExtensionRoots: async () => [{ path: `/root-${revision}`, sync: async () => {} }],
+            listExtensionRoots: async () => [{ path: `/root-${revision}`, ownerRoot: "/", sync: async () => {} }],
           })
         : await createExtensionSourceWatcher({
             listInstalledSources: async () => [

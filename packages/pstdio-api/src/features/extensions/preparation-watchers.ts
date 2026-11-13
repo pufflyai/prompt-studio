@@ -5,7 +5,7 @@ import { createExtensionRootWatcher } from "./extension-root-watcher";
 
 interface WatchState {
   sources: { install_name: string; source_path: string; source_hash?: string | null }[];
-  roots: { path: string }[];
+  roots: { path: string; ownerRoot: string }[];
   watcher: { refresh(path?: string): Promise<void>; dispose(): void };
 }
 const watchers = new Map<string, WatchState>();
@@ -70,7 +70,7 @@ export const updatePreparationWatcher = async (input: WatchUpdate) => {
   else
     state.watcher = await createExtensionRootWatcher({
       listExtensionRoots: async () =>
-        state.roots.map((row) => ({ path: row.path, sync: async () => report({ sourcePath: row.path }) })),
+        state.roots.map((row) => ({ ...row, sync: async () => report({ sourcePath: row.path }) })),
       onError: (error) => report({ error: error instanceof Error ? error.message : String(error) }),
     });
   watchers.set(input.id, state);

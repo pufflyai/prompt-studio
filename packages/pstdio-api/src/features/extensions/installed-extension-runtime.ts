@@ -46,7 +46,8 @@ export const createInstalledExtensionRuntime = (input: {
   webviewBuilds: boolean;
 }) => {
   const stopPreparation = retainExtensionPreparation();
-  const userExtensionsRoot = join(resolvePstdioHome({ env: process.env }), "extensions");
+  const userHome = resolvePstdioHome({ env: process.env });
+  const userExtensionsRoot = join(userHome, "extensions");
   const createRootWatcher = input.createRootWatcher ?? createExtensionRootWatcher;
   const createSourceWatcher = input.createSourceWatcher ?? createExtensionSourceWatcher;
   const createWebviewBuildManager = input.createWebviewBuildManager ?? createExtensionWebviewBuildManager;
@@ -57,6 +58,7 @@ export const createInstalledExtensionRuntime = (input: {
   let triggerRuntimeRefresh: () => Promise<void> = async () => {};
   const userExtensionRootRegistration = {
     path: userExtensionsRoot,
+    ownerRoot: userHome,
     sync: () =>
       syncInstalledExtensionsForProjects({
         extensionService: input.extensionService,
@@ -73,6 +75,7 @@ export const createInstalledExtensionRuntime = (input: {
 
     return roots.map((root) => ({
       path: root.rootPath,
+      ownerRoot: root.projects[0]!.repoPath,
       sync: async () => {
         let markedMissing = false;
         for (const project of root.projects) {

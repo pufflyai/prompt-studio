@@ -42,7 +42,7 @@ export const createRootWatcherClient = async (input: CreateExtensionRootWatcherI
     if (disposed) return;
     await runExtensionPreparation(
       "watch.update",
-      { id, kind: "roots", rows: roots.map(({ path }) => ({ path })) },
+      { id, kind: "roots", rows: roots.map(({ path, ownerRoot }) => ({ path, ownerRoot })) },
       { priority: "background", signal },
     );
   });
