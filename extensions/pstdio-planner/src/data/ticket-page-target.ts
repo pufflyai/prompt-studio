@@ -1,7 +1,7 @@
 import type { NavigationTargetPage, ResourceRef } from "@pstdio/sdk/extensions";
 import { ticketDocumentDeclaration } from "./document-selection";
 
-const plannerPage = (id: string) => ({ kind: "page" as const, id, extensionId: "pstdio.planner" });
+const plannerPage = (id: string, extensionId = "pstdio.planner") => ({ kind: "page" as const, id, extensionId });
 export const ticketDocumentPage = {
   id: "ticket",
   ref: plannerPage("ticket"),
@@ -15,7 +15,10 @@ export const ticketsPageTarget = { kind: "page", page: plannerPage("tickets") } 
 
 // Planner owns this resource hierarchy and chooses its pages. The host must not
 // infer a destination from whichever page happens to accept a resource kind.
-export const ticketPageTarget = (resource: ResourceRef): NavigationTargetPage => {
+export const ticketPageTarget = (
+  resource: ResourceRef,
+  extensionId = resource.extensionId ?? "pstdio.planner",
+): NavigationTargetPage => {
   const parent = resource.metadata?.resourceParent;
   const metadata = parent && typeof parent === "object" && "metadata" in parent ? parent.metadata : undefined;
   const ticketParent =
@@ -37,23 +40,25 @@ export const ticketPageTarget = (resource: ResourceRef): NavigationTargetPage =>
       : undefined;
   return {
     kind: "page",
-    page: plannerPage("ticket"),
+    page: plannerPage("ticket", extensionId),
     resource,
-    parent: ticketParent ? ticketPageTarget(ticketParent) : ticketsPageTarget,
+    parent: ticketParent
+      ? ticketPageTarget(ticketParent, ticketParent.extensionId ?? extensionId)
+      : { ...ticketsPageTarget, page: plannerPage("tickets", extensionId) },
   };
 };
 
 // The requests page keeps the ticket as its parent, so the ticket navigation stays beside the forms.
 export const ticketRequestsTarget = (resource: ResourceRef): NavigationTargetPage => ({
   kind: "page",
-  page: ticketRequestsPage.ref,
+  page: plannerPage(ticketRequestsPage.id, resource.extensionId),
   resource: { ...resource, metadata: { ...resource.metadata, documentId: REVIEW_REQUESTS_DOCUMENT } },
   parent: ticketPageTarget(resource),
 });
 
 export const ticketFileTarget = (resource: ResourceRef, file: { id: string; name: string }, icon = "FileText") => ({
   kind: "page" as const,
-  page: ticketDocumentPage.ref,
+  page: plannerPage(ticketDocumentPage.id, resource.extensionId),
   resource: { ...resource, label: file.name, icon, metadata: { ...resource.metadata, documentId: file.id } },
   parent: ticketPageTarget(resource),
 });

@@ -69,7 +69,7 @@ export const writeTicketCommand = defineCommand({
       });
     });
 
-    await writeTicketMarkdown(projectFiles, ticket, await ticketToMarkdown(ctx, ticket));
+    await writeTicketMarkdown(projectFiles, ticket, await ticketToMarkdown(ctx, ticket), ctx.extensionId);
     return { shorthand: ticket.shorthand, path: resolvePath(ticketMarkdownPath(ticket.shorthand)) };
   },
 });

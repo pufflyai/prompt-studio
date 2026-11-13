@@ -325,3 +325,19 @@ test("answering one request keeps another open request awaiting input", async ()
   expect(await stateWith("ready")).toBe("input-received");
   expect(await stateWith("in-progress")).toBe("in-progress");
 });
+
+test("timeline child resources retain the supplied owner's hierarchy", async () => {
+  const storage = createMemoryStorage();
+  const extensionId = "pstdio.planner";
+  const [ctx] = makeCommandArgs({ storage, params: {}, overrides: { extensionId } });
+  const parent = await createTicketCommand.run(ctx, { title: "Parent", statusId: "ready" });
+  const child = await createTicketCommand.run(ctx, { title: "Child", statusId: "ready", parent: parent.id });
+  const row = (await readPlanCommand.run(ctx, {})).ticketRows.find((row) => row.id === child.id);
+  expect(row?.resource.metadata).toMatchObject({
+    resourceParent: {
+      type: "ticket",
+      id: parent.id,
+      metadata: { resourceParent: { type: "view", viewId: "pstdio.planner.view.tickets" } },
+    },
+  });
+});

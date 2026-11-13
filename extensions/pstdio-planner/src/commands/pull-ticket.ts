@@ -1,6 +1,12 @@
 import { type ArtifactMount, defineCommand, type ExtensionStorageApi, params } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
-import { requireTicketDraftFiles, ticketFilesDir, ticketMarkdownPath, ticketToMarkdown } from "../data/draft-storage";
+import {
+  ensureTicketDraftsIgnored,
+  requireTicketDraftFiles,
+  ticketFilesDir,
+  ticketMarkdownPath,
+  ticketToMarkdown,
+} from "../data/draft-storage";
 import { findTicket } from "../data/resolve";
 import { refreshTicketCheckout } from "../data/ticket-checkout";
 import { readTicketFileContent } from "../data/ticket-file-content";
@@ -15,6 +21,7 @@ const pullTicket = async (input: {
   projectFiles: ArtifactMount;
   ticket: Ticket;
   force: boolean;
+  extensionId: string;
 }) => {
   const { projectFiles, ticket } = input;
   await refreshTicketCheckout(projectFiles, ticket);
@@ -24,6 +31,7 @@ const pullTicket = async (input: {
   if (!input.force && (await projectFiles.exists(markdownPath))) return { shorthand: ticket.shorthand, skipped: true };
 
   for (const file of ticket.files ?? []) validateTicketFileName(file.name);
+  await ensureTicketDraftsIgnored(projectFiles, input.extensionId);
   await projectFiles.writeText(markdownPath, await ticketToMarkdown(input, ticket));
   for (const file of ticket.files ?? []) {
     await projectFiles.writeText(
@@ -57,7 +65,14 @@ export const pullTicketCommand = defineCommand({
       const ticket = await findTicket(ctx, commandParams.id);
       if (!ticket) throw new Error(`Unknown ticket "${commandParams.id}"`);
       return {
-        ...(await pullTicket({ storage: ctx.storage, resources: ctx.resources, projectFiles, ticket, force })),
+        ...(await pullTicket({
+          storage: ctx.storage,
+          resources: ctx.resources,
+          projectFiles,
+          ticket,
+          force,
+          extensionId: ctx.extensionId,
+        })),
         path: resolvePath(ticketMarkdownPath(ticket.shorthand)),
       };
     }
@@ -65,7 +80,16 @@ export const pullTicketCommand = defineCommand({
     const tickets = (await ticketsCollection(ctx).list()).filter((ticket) => !ticket.archived);
     const results = [];
     for (const ticket of tickets) {
-      results.push(await pullTicket({ storage: ctx.storage, resources: ctx.resources, projectFiles, ticket, force }));
+      results.push(
+        await pullTicket({
+          storage: ctx.storage,
+          resources: ctx.resources,
+          projectFiles,
+          ticket,
+          force,
+          extensionId: ctx.extensionId,
+        }),
+      );
     }
     return { pulled: results.filter((result) => !result.skipped).length, total: tickets.length };
   },

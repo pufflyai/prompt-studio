@@ -57,6 +57,7 @@ export const applyTicketTemplateCommand = defineCommand({
         TICKET_TITLE: extractTicketTitle(current) ?? commandParams.id,
         ...parseVariables(commandParams.var),
       }),
+      ctx.extensionId,
     );
     return { shorthand: ticket.shorthand, path: resolvePath(path) };
   },
