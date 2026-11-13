@@ -65,5 +65,7 @@
   "settings.workflow.statuses.title": "ワークフローのステータス選択",
   "settings.workflow.statuses.description": "この拡張機能の設定タブでワークフローのステータスを選択します。表示名によって動作は変わりません。",
   "commands.requestReview.title": "レビューを依頼",
-  "commands.requestReview.description": "レビュー依頼を作成し、チケットを要対応としてマークします。"
+  "commands.requestReview.description": "レビュー依頼を作成し、チケットを要対応としてマークします。",
+  "commands.cleanupBoard.title": "ボードを整理",
+  "commands.cleanupBoard.model": "モデル"
 }

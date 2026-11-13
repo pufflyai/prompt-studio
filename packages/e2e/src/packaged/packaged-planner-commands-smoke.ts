@@ -2,6 +2,7 @@ import { expect } from "bun:test";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { expectPlannerArchiveFilters } from "./packaged-planner-archive-filter-smoke";
 import { expectPlannerDocumentLinks } from "./packaged-planner-document-links-smoke";
+import { commandRunner } from "./packaged-planner-helpers";
 
 export const expectPlannerCommands = async (
   baseUrl: string,
@@ -12,6 +13,17 @@ export const expectPlannerCommands = async (
   const commandId = "pstdio.pstdio-planner.command.open-tickets";
   expect(metadata.commands).toContainEqual(expect.objectContaining({ id: commandId }));
   expect(metadata.commandPaletteContributions).toContainEqual(expect.objectContaining({ commandId }));
+  expect(metadata.commands).toContainEqual(
+    expect.objectContaining({ id: "pstdio.pstdio-planner.command.cleanup-board" }),
+  );
+  const cleanup = await commandRunner({ baseUrl, projectId, headers })("templates.read", { name: "cleanup-board" });
+  expect(cleanup).toMatchObject({
+    name: "cleanup-board",
+    type: "prompt",
+    content: await Bun.file(
+      new URL("../../../../extensions/pstdio-planner/templates/prompts/cleanup-board.prompt.md", import.meta.url),
+    ).text(),
+  });
   const refineTicket = metadata.commands.find((command) => command.id.endsWith(".command.refine-ticket"));
   expect(refineTicket?.params?.template).toEqual({
     type: "template",

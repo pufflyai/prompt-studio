@@ -58,6 +58,6 @@ export const HiddenActions: Story = {
   args: { actions: actions.map((action) => ({ ...action, when: "false" })) },
 };
 export const PlannerCleanupBoard: Story = {
-  args: { actions: [{ id: "cleanup-board", label: "Cleanup board", icon: "brush-cleaning" }] },
+  args: { actions: [{ id: "cleanup-board", label: "Cleanup board", icon: "sparkles" }] },
   description: "Tickets toolbar: Cleanup board opens an agent session to review stale tickets across the project.",
 };
