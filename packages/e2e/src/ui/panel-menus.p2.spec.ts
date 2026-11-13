@@ -259,12 +259,7 @@ test("renames a moved session and restores its destination after reload", async 
   const side = page.locator('[data-workbench-panel-header="side"]');
   // The Sessions page owns its Main composer; explicitly add the Side Panel instance to move.
   // Before the extension catalog arrives, + opens the sole built-in terminal directly.
-  await expect(
-    page
-      .locator('[data-workbench-panel="side"]')
-      .getByRole("group", { name: "Available tabs" })
-      .getByRole("button", { name: "New session", exact: true }),
-  ).toBeVisible();
+  await expect(side.getByRole("button", { name: "Add panel", exact: true })).toHaveAttribute("aria-haspopup", "menu");
   await side.getByRole("button", { name: "Add panel", exact: true }).click();
   await page.getByRole("menuitem", { name: "New session", exact: true }).click();
   await openTabCustomMenu(side.getByRole("tab", { name: "New session", exact: true, selected: true }));
