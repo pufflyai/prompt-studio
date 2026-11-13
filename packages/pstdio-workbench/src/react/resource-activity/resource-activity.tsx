@@ -1,7 +1,6 @@
 import { Box, Button, HStack, IconButton, Separator, Stack, Text } from "@chakra-ui/react";
 import type { ResourceActivityEntry, ResourceRef } from "@pstdio/sdk/extensions";
-import { Activity, AlertMessage } from "@pstdio/ui";
-import { RichMessage } from "@pstdio/ui/rich-text";
+import { Activity, AlertMessage, LazyRichMessage } from "@pstdio/ui";
 import { X } from "lucide-react";
 import { useRef } from "react";
 import type { WorkbenchCore } from "../../core";
@@ -31,7 +30,7 @@ const EntryBody = (props: {
           }
         </Text>
       )}
-      {entry.body && <RichMessage defaultState={entry.body} fullWidth />}
+      {entry.body && <LazyRichMessage defaultState={entry.body} fullWidth />}
       {entry.revision && (
         <Text color="fg.muted">
           Revision {entry.revision.revision} · {entry.revision.headSha.slice(0, 8)}
