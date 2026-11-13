@@ -35,10 +35,26 @@ export const observeNativeProjectPicker = async (
   let droppedEvents = 0;
   let hostCaptureStopped = false;
   let lastReceivedSequence: number | undefined;
-  let observer: JSHandle<{ finish(): { disposed: boolean; remainingWrappers: number; errors: string[] } }> | undefined;
+  interface PageReceipt {
+    disposed: boolean;
+    remainingWrappers: number;
+    remainingReleases: number;
+    expectedRowSeen: boolean;
+    incomplete: boolean;
+    truncated: boolean;
+    errors: string[];
+    droppedErrors: number;
+    droppedEvents: number;
+    droppedResources: number;
+    droppedMetadata: number;
+    emittedEvents: number;
+    emittedBytes: number;
+    lastSequence: number;
+  }
+  let observer: JSHandle<{ finish(): PageReceipt }> | undefined;
   let originalStatus = "not-started";
   let originalError: string | undefined;
-  let final: unknown;
+  let final: PageReceipt | undefined;
   let contextClosed = page.isClosed();
   let restorationAcknowledged = false;
   let handleReleased = false;
@@ -47,10 +63,17 @@ export const observeNativeProjectPicker = async (
   const lifecycle: Array<{ stage: string; sent: number; inFlight: boolean; acknowledged?: number; rejected?: number; expired?: number }> = [];
   const persist = () => {
     try {
+      const deliveryComplete = Boolean(final && hostEvents === final.emittedEvents && hostBytes === final.emittedBytes
+        && lastReceivedSequence === final.lastSequence);
+      const captureComplete = Boolean(final && final.expectedRowSeen && !final.incomplete && !final.truncated
+        && final.errors.length === 0 && final.droppedErrors === 0 && final.droppedEvents === 0
+        && final.droppedResources === 0 && final.droppedMetadata === 0 && deliveryComplete
+        && errors.length === 0 && droppedErrors === 0 && droppedEvents === 0 && droppedRoutes === 0 && !hostCaptureStopped);
+      const cleanupComplete = restorationAcknowledged && handleReleased;
       writeFileSync(receiptPath, JSON.stringify({ project, originalStatus, originalError, runnerStatus: info.status,
         routes, errors, droppedErrors, droppedRoutes, hostEvents, hostBytes, droppedEvents, lastReceivedSequence,
         restorationAcknowledged, handleReleased, contextClosed, lifecycle, final, cleanupAttempts, cleanupDeadline, cleanupEnded,
-        partial: errors.length > 0 || droppedErrors > 0 || droppedEvents > 0 || droppedRoutes > 0 || !restorationAcknowledged || !handleReleased,
+        deliveryComplete, captureComplete, cleanupComplete, partial: !captureComplete || !cleanupComplete,
         cleanupOverrunMs: cleanupEnded && cleanupDeadline ? Math.max(0, cleanupEnded - cleanupDeadline) : undefined }, null, 2));
     } catch (failure) { console.error("[ps204-native-picker] receipt persistence failed", failure); }
   };
