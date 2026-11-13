@@ -175,6 +175,8 @@ If a stable release stops halfway, re-run the `publish` job. It skips the steps 
 
 ## Extra diagnostics
 
+These expensive workflows are exceptions, not routine PR requirements. Use them only for a concrete high-risk change that focused local checks and normal PR CI cannot establish, or an explicit user request. Record the risk and smallest complete workload first. Deferred inventory entries and shared dependency changes do not automatically justify a full matrix. Nightly and release matrices remain unchanged.
+
 - **`ci:full` label.** Runs production functional diagnostics for a same-repository PR through the trusted base workflow. Its `production_ci_passed` result does not replace `ci_passed`. A maintainer runs this for fork PRs.
 - **`ci:windows` label.** Runs Windows-only source diagnostics for the exact same-repository PR merge commit. Includes every stable Windows unit/database shard, desktop tests, x64/ARM64 packaged CLI shards, Windows harness checks and Bun quarantine evidence, plus repository static checks. Reports `windows_ci_passed`; it does not replace either the fast PR gate or full production/release certification. The label runs once when added; remove and re-add it to test a new head. Forks require maintainer dispatch of a reviewed repository ref.
 - **Manual Test and Build.** The `merge_queue` profile repeats the queue checks without a real queue. The `production` profile runs production functional checks from source; `windows` selects the Windows lanes only. These profiles publish nothing. A newer manual run for the same branch and `source_sha` cancels the older one.
