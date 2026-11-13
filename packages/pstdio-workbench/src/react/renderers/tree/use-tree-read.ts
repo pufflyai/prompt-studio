@@ -16,7 +16,7 @@ import { type LoadedTreeData, loadExpandedTreeChildren, loadTreeData, treeStruct
 const treeQueryScope = (workbench: WorkbenchCore, id: string, projectId: string | undefined) =>
   getWorkbenchRenderers(workbench).getTreeRenderer(id)?.queryScope ?? { projectId };
 
-const emptyChanges: ReturnType<WorkbenchCore["resources"]["preview"]["store"]["getState"]>["changes"] = {};
+const emptyChanges: ReturnType<WorkbenchCore["resources"]["preview"]["store"]["getState"]>["changes"] = new Map();
 
 export const useTreeRead = (
   workbench: WorkbenchCore,
