@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
+import { test as harnessTest } from "../scripts/session-test";
 import { uiOrigin } from "../ui-server";
 import { showSidenavEntry } from "./helpers/sidenav-navigation";
 
@@ -99,7 +100,7 @@ test("the global workspace action uses declared cloud parameters without a repos
   }
 });
 
-test("the installed Git provider creates the chosen branch, runs a session and removes its checkout safely", async ({
+harnessTest("the installed Git provider creates the chosen branch, runs a session and removes its checkout safely", async ({
   page,
   request,
 }) => {
