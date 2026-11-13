@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { contributionRefId, sessionBrowser } from "@pstdio/sdk/extensions";
+import { contributionRefId, sessionBrowser, sessionBrowserId } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -62,7 +62,9 @@ test("Sessions navigation uses the provider's project list and scopes linked res
   ).toEqual(["Existing session"]);
   const readKey = () => treeViewBody(workbench, dashboardWidgetIds.dashboardSidenav).getReadKey?.({});
   openSessionsPage(workbench, { type: "session", extensionId: "pstdio", id: "first" });
-  const menu = workbench.viewMenus.getViewMenu("pstdio.pstdio-session-browser.view-menu.session.resources")!;
+  const menu = workbench.viewMenus.getViewMenu(
+    contributionRefId({ kind: "view-menu", extensionId: sessionBrowserId, id: "session.resources" }),
+  )!;
   expect(menu).toMatchObject({ ownerViewId: contributionRefId(sessionBrowser.views.conversation), side: "right" });
   const linkedTickets = async (id: string) =>
     (await treeViewSections(workbench, menu.viewId, { resource: { type: "session", extensionId: "pstdio", id } }))
