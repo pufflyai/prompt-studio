@@ -17,6 +17,8 @@ const sources = (
   )
 ).flat();
 if (!sources.length) throw new Error("Published UI source maps are missing");
-const optional = sources.filter((path) => /\/(canvas|dependency-timeline|charts)(\/|\.ts)/.test(path));
+const optional = sources.filter((path) =>
+  /\/(canvas|dependency-timeline|charts|dashboard-renderer)(\/|\.ts)/.test(path),
+);
 if (optional.length) throw new Error(`The UI root entry includes optional modules: ${optional.join(", ")}`);
-console.log("Verified the published UI root excludes optional Canvas, dependency timeline, and chart code and styles.");
+console.log("Verified the published UI root excludes optional Canvas, timeline, chart, and dashboard code and styles.");

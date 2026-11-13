@@ -211,6 +211,11 @@ const chartTasks: GanttTask[] = [{ id: "work", label: "Work", start: 0, end: 7 }
 const gantt = createElement(GanttChart, { tasks: chartTasks, ariaLabel: "Packed project forecast", formatValue: (value: number) => String(value) });
 if (!chartColor("vis.categorical.1")) throw new Error("Packed UI lost its chart theme");
 void gantt;
+import { DashboardRenderer, type DashboardDefinition, type DashboardDataSource } from "@pstdio/ui/dashboard-renderer";
+const dashboardValue: DashboardDefinition = { mode: "vertical", widgets: [{ id: "orders", title: "Orders", kind: "metric", source: "sales", layout: { x: 0, y: 0, w: 4, h: 3 } }] };
+const dashboardSources: DashboardDataSource[] = [{ id: "sales", name: "Sales", metric: { value: 1240 }, series: [{ label: "Monday", value: 120 }], table: { data: [{ Orders: 120 }] } }];
+const dashboard = createElement(DashboardRenderer, { value: dashboardValue, sources: dashboardSources, onChange: (next) => { void next.widgets; } });
+void dashboard;
 import { KeyframeTimeline, sampleTrack, type KeyframeTrack } from "@pstdio/ui/keyframe-timeline";
 const animationTrack: KeyframeTrack = { id: "opacity", label: "Opacity", keyframes: [{ id: "start", time: 0, value: 0 }, { id: "end", time: 2, value: 1 }] };
 if (sampleTrack(animationTrack, 1) !== 0.5) throw new Error("Animation interpolation changed");
