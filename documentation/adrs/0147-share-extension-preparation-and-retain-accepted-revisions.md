@@ -225,3 +225,5 @@ Recovery stage and install-intent records retain the host-created worker livenes
 recover each other's work; terminated-thread markers disappear before recovery. Host handoff clears the marker. Legacy
 unmarked owners remain conservative until process exit. Concurrent record disappearance is an expected recovery race.
 Singleton and batch artifact publication both lock and recheck the completion record before replacing shared output.
+
+Repo-scoped defaults retain their validated installation receipts through project setup. The existing source registrar owns publishing the complete prepared runtime/frontend revision and committing or rolling back that receipt before discovery reads the promoted folder. Discovery must not replace this complete accepted revision with a runtime-only snapshot and repeat frontend preparation on the first metadata request.
