@@ -47,45 +47,37 @@ const STATUS_TO_CHANGE: Record<string, FileChange> = {
 
 type ParsedEntry = { change: FileChange; filePath: string; oldPath?: string; newPath?: string };
 
-const parseStatusLine = (line: string): ParsedEntry => {
-  const status = line.slice(0, 1);
-  const rest = line.slice(1).trim();
-
-  if (status === "R" || status === "C") {
-    const similarity = line.slice(1).match(/^\d+/)?.[0] ?? "";
-    const pathPart = rest.slice(similarity.length).trim();
-    const paths = pathPart.split("\t");
-    return {
-      change: (status === "R" ? "renamed" : "copied") as FileChange,
-      oldPath: paths[0],
-      newPath: paths[1],
-      filePath: paths[1],
-    };
+const parseStatusRecords = (raw: string) => {
+  const records = raw.split("\0");
+  const entries: ParsedEntry[] = [];
+  for (let index = 0; index < records.length; index++) {
+    const status = records[index]?.[0];
+    const path = records[++index];
+    if (!status || !path) continue;
+    if (status === "R" || status === "C") {
+      const newPath = records[++index];
+      if (newPath)
+        entries.push({
+          change: status === "R" ? "renamed" : "copied",
+          filePath: newPath,
+          oldPath: path,
+          newPath,
+        });
+    } else entries.push({ change: STATUS_TO_CHANGE[status] ?? "modified", filePath: path });
   }
-
-  return { change: STATUS_TO_CHANGE[status] ?? "modified", filePath: rest };
+  return entries;
 };
 
-// Discover all changed files: committed + uncommitted + untracked
+// Compare the final workspace with its base once; intermediate HEAD edits may already be reverted.
 const discoverChangedFiles = async (worktreePath: string, base: string) => {
-  const [committedRaw, uncommittedRaw, untrackedRaw] = await Promise.all([
-    base === "HEAD" ? "" : git(worktreePath, ["diff", "--name-status", base, "HEAD"]).catch(() => ""),
-    git(worktreePath, ["diff", "--name-status", "HEAD"]).catch(() => ""),
-    git(worktreePath, ["ls-files", "--others", "--exclude-standard"]).catch(() => ""),
+  const [changedRaw, untrackedRaw] = await Promise.all([
+    gitBytes(worktreePath, ["diff", "--name-status", "-z", base, "--"]).catch(() => Buffer.alloc(0)),
+    gitBytes(worktreePath, ["ls-files", "--others", "--exclude-standard", "-z"]).catch(() => Buffer.alloc(0)),
   ]);
 
   const fileMap = new Map<string, ParsedEntry>();
-
-  for (const line of committedRaw.split("\n").filter(Boolean)) {
-    const parsed = parseStatusLine(line);
-    fileMap.set(parsed.filePath, parsed);
-  }
-  for (const line of uncommittedRaw.split("\n").filter(Boolean)) {
-    const parsed = parseStatusLine(line);
-    fileMap.set(parsed.filePath, parsed);
-  }
-
-  const untrackedPaths = untrackedRaw.split("\n").filter(Boolean);
+  for (const entry of parseStatusRecords(changedRaw.toString())) fileMap.set(entry.filePath, entry);
+  const untrackedPaths = untrackedRaw.toString().split("\0").filter(Boolean);
   for (const filePath of untrackedPaths) {
     fileMap.set(filePath, { change: "added", filePath });
   }

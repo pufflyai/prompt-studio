@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { getWorktreeDiffSummary, getWorktreeDiffSummaryFiles } from "./diff";
+import { getWorktreeDiff, getWorktreeDiffFile, getWorktreeDiffSummary, getWorktreeDiffSummaryFiles } from "./diff";
 import { git } from "./git";
 import { createTempRepo } from "./test-helpers";
 
@@ -126,4 +126,33 @@ test.each(["staged modification", "staged addition"])("current totals omit a rev
     deletions: 0,
     file_count: 0,
   });
+});
+
+test.each([
+  "summary files",
+  "full diff",
+  "single file",
+])("%s omits a committed edit reverted in the workspace", async (projection) => {
+  const base = await git(repo.dir, ["rev-parse", "HEAD"]);
+  const path = join(repo.dir, "README.md");
+  const original = await Bun.file(path).text();
+  await writeFile(path, "committed replacement\n");
+  await git(repo.dir, ["add", "README.md"]);
+  await git(repo.dir, ["commit", "-m", "replace tracked content"]);
+  await writeFile(path, original);
+  const options = { worktreePath: repo.dir, base };
+  if (projection === "single file") {
+    expect(await getWorktreeDiffFile({ ...options, filePath: "README.md" })).toBeNull();
+  } else {
+    const read = projection === "summary files" ? getWorktreeDiffSummaryFiles : getWorktreeDiff;
+    expect(await read(options)).toEqual({ files: [], totals: { additions: 0, deletions: 0, file_count: 0 } });
+  }
+});
+
+test("file lists preserve the same Unicode identity and totals as their aggregate", async () => {
+  await writeFile(join(repo.dir, "é working file.txt"), "first\nsecond\n");
+  const options = { worktreePath: repo.dir, base: "HEAD" };
+  const result = await getWorktreeDiffSummaryFiles(options);
+  expect(result.totals).toEqual(await getWorktreeDiffSummary(options));
+  expect(result.files.map((file) => file.filePath)).toEqual(["é working file.txt"]);
 });
