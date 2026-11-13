@@ -2,6 +2,7 @@ import {
   type CommandContext,
   defineCommand,
   type JsonObject,
+  l10n,
   params,
   type ResourceAnchor,
   workbenchCommands,
@@ -91,8 +92,8 @@ const entryConfirmation = {
     kind: "delete" as const,
     subjectParam: "path",
     confirmedParam: "confirmed",
-    description: "The entry and its contents will be permanently removed.",
-    buttonLabel: "Delete",
+    description: l10n("confirmation.deleteEntryDescription", "The entry and its contents will be permanently removed."),
+    buttonLabel: l10n("confirmation.deleteEntryButton", "Delete"),
   },
 };
 export const showDeleteEntry = defineCommand({
