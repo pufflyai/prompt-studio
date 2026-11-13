@@ -1,18 +1,36 @@
 diff --git a/dist/useStickToBottom.js b/dist/useStickToBottom.js
-index 1a7671496f181e92462cad65a7a90966a409e3b3..8916a8d0d2d9f30467c670f9fceba196b28e94cf 100644
+index 1a7671496f181e92462cad65a7a90966a409e3b3..91e0ea48fc670dcf6bcde1329b45828ffc75f3c1 100644
 --- a/dist/useStickToBottom.js
 +++ b/dist/useStickToBottom.js
-@@ -220,6 +220,9 @@ export const useStickToBottom = (options = {}) => {
+@@ -71,6 +71,7 @@
+             escapedFromLock,
+             isAtBottom,
+             resizeDifference: 0,
++            resizeGeneration: 0,
+             accumulated: 0,
+             velocity: 0,
+             listeners: new Set(),
+@@ -220,6 +221,10 @@
          if (target !== scrollRef.current) {
              return;
          }
 +        // A resize can clamp the browser to its new bottom before its observer runs.
 +        // Classify this event against its own bottom, not a later streamed layout.
 +        const targetScrollTop = state.targetScrollTop;
++        const resizeGeneration = state.resizeGeneration;
          const { scrollTop, ignoreScrollToTop } = state;
          let { lastScrollTop = scrollTop } = state;
          state.lastScrollTop = scrollTop;
-@@ -258,7 +261,7 @@ export const useStickToBottom = (options = {}) => {
+@@ -244,7 +249,7 @@
+             /**
+              * When theres a resize difference ignore the resize event.
+              */
+-            if (state.resizeDifference || scrollTop === ignoreScrollToTop) {
++            if (state.resizeGeneration !== resizeGeneration || state.resizeDifference || scrollTop === ignoreScrollToTop) {
+                 return;
+             }
+             if (isSelecting()) {
+@@ -258,7 +263,7 @@
                  state.scrollTop = lastScrollTop;
                  return;
              }
@@ -21,7 +39,32 @@ index 1a7671496f181e92462cad65a7a90966a409e3b3..8916a8d0d2d9f30467c670f9fceba196
                  setEscapedFromLock(true);
                  setIsAtBottom(false);
              }
-@@ -305,6 +308,10 @@ export const useStickToBottom = (options = {}) => {
+@@ -291,11 +296,24 @@
+             setIsAtBottom(false);
+         }
+     }, [setEscapedFromLock, setIsAtBottom, state]);
++    // Native history keys express intent before their scroll can overlap a resize observation.
++    // Text editors and nested controls retain their own keyboard behavior.
++    const handleKeyDown = useCallback((event) => {
++        if (event.target !== scrollRef.current || event.defaultPrevented || state.animation?.ignoreEscapes) {
++            return;
++        }
++        const readsHistory = ["ArrowUp", "PageUp", "Home"].includes(event.key) || (event.key === " " && event.shiftKey);
++        if (readsHistory && scrollRef.current.scrollHeight > scrollRef.current.clientHeight) {
++            stopScroll();
++        }
++    }, [stopScroll, state]);
+     const scrollRef = useRefCallback((scroll) => {
+         scrollRef.current?.removeEventListener("scroll", handleScroll);
+         scrollRef.current?.removeEventListener("wheel", handleWheel);
++        scrollRef.current?.removeEventListener("keydown", handleKeyDown);
+         scroll?.addEventListener("scroll", handleScroll, { passive: true });
+         scroll?.addEventListener("wheel", handleWheel, { passive: true });
++        scroll?.addEventListener("keydown", handleKeyDown);
+     }, []);
+     const contentRef = useRefCallback((content) => {
+         state.resizeObserver?.disconnect();
+@@ -305,6 +323,12 @@
          let previousHeight;
          state.resizeObserver = new ResizeObserver(([entry]) => {
              const { height } = entry.contentRect;
@@ -29,10 +72,12 @@ index 1a7671496f181e92462cad65a7a90966a409e3b3..8916a8d0d2d9f30467c670f9fceba196
 +            if (height === 0 && content.getClientRects().length === 0) {
 +                return;
 +            }
++            // Even a zero difference invalidates scroll classification queued before this observation.
++            state.resizeGeneration += 1;
              const difference = height - (previousHeight ?? height);
              state.resizeDifference = difference;
              /**
-@@ -336,7 +343,7 @@ export const useStickToBottom = (options = {}) => {
+@@ -336,7 +360,7 @@
                   * if we are want to un-escape from the lock, because the resize
                   * could have caused the container to be at the bottom.
                   */
