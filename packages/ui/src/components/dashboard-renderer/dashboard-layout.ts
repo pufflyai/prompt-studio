@@ -1,11 +1,10 @@
 import { dashboardGeometry } from "@/theme/primitives/dashboard";
 import { type DropProbe, findRowGap, findRowVacancy, fitWidgetInRow } from "./dashboard-drop-target";
+import { placementsIntersect as intersects } from "./dashboard-grid-geometry";
 import { insertWidgetRow, swapWithinRow } from "./dashboard-rows";
 import type { DashboardLayoutMode, DashboardResizeHandle, DashboardWidget, GridPlacement } from "./dashboard-types";
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, Math.round(value)));
-const intersects = (a: GridPlacement, b: GridPlacement) =>
-  a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 export const readingOrder = (widgets: DashboardWidget[]) =>
   [...widgets].sort((a, b) => a.layout.y - b.layout.y || a.layout.x - b.layout.x);
 
@@ -89,6 +88,18 @@ function placeWidget(widgets: DashboardWidget[], id: string, candidate: GridPlac
   return settleWidgets([{ ...widget, layout }, ...readingOrder(widgets).filter((item) => item.id !== id)]);
 }
 
+function previewRowSwap(
+  widgets: DashboardWidget[],
+  active: DashboardWidget,
+  target: DashboardWidget,
+  mode: DashboardLayoutMode,
+) {
+  const swapped = swapWithinRow(widgets, active, target);
+  return swapped === widgets
+    ? { type: "none" as const, widgets }
+    : { type: "widget" as const, widgets: compactWidgets(swapped, mode) };
+}
+
 export function previewWidgetMove(
   widgets: DashboardWidget[],
   id: string,
@@ -113,7 +124,7 @@ export function previewWidgetMove(
   if (gap)
     return {
       type: "row" as const,
-      widgets: compactWidgets(insertWidgetRow(widgets, active, gap.beforeId, mode), mode),
+      widgets: compactWidgets(insertWidgetRow(widgets, active, gap.beforeId), mode),
       gap,
     };
   const vacancy = vertical ? findRowVacancy(projected, id, layout, columns, probe) : undefined;
@@ -144,7 +155,7 @@ export function previewWidgetMove(
     })[0];
   const target = widgets.find((widget) => widget.id === over?.id);
   if (target && active.layout.y === target.layout.y) {
-    return { type: "widget" as const, widgets: compactWidgets(swapWithinRow(widgets, active, target), mode) };
+    return previewRowSwap(widgets, active, target, mode);
   }
   if (columns === dashboardGeometry.columns && !collisions.length) {
     return { type: "widget" as const, widgets: compactWidgets(placeWidget(widgets, id, candidate), mode) };
@@ -176,7 +187,8 @@ export function resizeWidget(
   const { layout } = widget;
   const fromLeft = handle.endsWith("w") && columns > 1;
   const maxWidth = fromLeft ? layout.x + layout.w : dashboardGeometry.columns - layout.x;
-  const requestedWidth = Math.round((size.w * dashboardGeometry.columns) / columns);
+  const projectedWidth = projectWidgets(widgets, columns).find((item) => item.id === id)!.layout.w;
+  const requestedWidth = layout.w + Math.round(((size.w - projectedWidth) * dashboardGeometry.columns) / columns);
   const w = columns === 1 || handle === "s" ? layout.w : clamp(requestedWidth, dashboardGeometry.minColumns, maxWidth);
   const x = fromLeft ? layout.x + layout.w - w : layout.x;
   const h = handle === "e" || handle === "w" ? layout.h : size.h;

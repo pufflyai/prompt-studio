@@ -91,9 +91,13 @@ export function DashboardGrid(props: GridProps) {
   const grid = useRef<HTMLDivElement>(null);
   const [columns, setColumns] = useState(12);
   const [metrics, setMetrics] = useState<ReturnType<typeof measureGrid> | null>(null);
-  const [drag, setDrag] = useState<DragSession | null>(null);
+  const [dragSession, setDrag] = useState<DragSession | null>(null);
+  const drag = editing ? dragSession : null;
+  useEffect(() => {
+    if (!editing) setDrag(null);
+  }, [editing]);
   const projected = projectWidgets(widgets, columns);
-  const resizing = useDashboardResize({ widgets, projected, columns, mode, grid, onChange, onGestureStart });
+  const resizing = useDashboardResize({ widgets, projected, columns, mode, editing, grid, onChange, onGestureStart });
   const candidate = drag && {
     ...drag.origin,
     x: Math.max(0, Math.min(columns - drag.origin.w, drag.origin.x + Math.round(drag.delta.x / drag.metrics.column))),
@@ -166,7 +170,7 @@ export function DashboardGrid(props: GridProps) {
       }}
       onDragStart={({ active, activatorEvent }) => {
         const widget = projected.find((item) => item.id === active.id);
-        if (!widget || !grid.current) return;
+        if (!editing || !widget || !grid.current) return;
         onGestureStart();
         setDrag({
           id: widget.id,
@@ -177,16 +181,17 @@ export function DashboardGrid(props: GridProps) {
         });
       }}
       onDragMove={({ delta }) =>
-        setDrag(
-          (previous) =>
-            previous && {
-              ...previous,
-              delta,
-            },
+        setDrag((previous) =>
+          editing && previous
+            ? {
+                ...previous,
+                delta,
+              }
+            : null,
         )
       }
       onDragEnd={({ over }) => {
-        if (move && move.type !== "none" && over) onChange(preview);
+        if (editing && move && move.type !== "none" && over) onChange(preview);
         setDrag(null);
       }}
       onDragCancel={() => setDrag(null)}

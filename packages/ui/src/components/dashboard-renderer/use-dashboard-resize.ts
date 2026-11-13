@@ -1,4 +1,4 @@
-import { type KeyboardEvent, type RefObject, type SyntheticEvent, useState } from "react";
+import { type KeyboardEvent, type RefObject, type SyntheticEvent, useEffect, useRef, useState } from "react";
 import type { ResizeCallbackData } from "react-resizable";
 import { dashboardGeometry } from "@/theme/primitives/dashboard";
 import { measureGrid, placementSize } from "./dashboard-grid-geometry";
@@ -18,6 +18,7 @@ interface ResizeOptions {
   projected: DashboardWidget[];
   columns: number;
   mode: DashboardLayoutMode;
+  editing: boolean;
   grid: RefObject<HTMLDivElement | null>;
   onChange: (widgets: DashboardWidget[]) => void;
   onGestureStart: () => void;
@@ -29,8 +30,13 @@ const gridSize = (size: ResizeCallbackData["size"], metrics: GridMetrics) => ({
 });
 
 export function useDashboardResize(options: ResizeOptions) {
-  const { widgets, projected, columns, mode, grid, onChange, onGestureStart } = options;
+  const { widgets, projected, columns, mode, editing, grid, onChange, onGestureStart } = options;
   const [resize, setResize] = useState<ResizeSession | null>(null);
+  const enabled = useRef(editing);
+  enabled.current = editing;
+  useEffect(() => {
+    if (!editing) setResize(null);
+  }, [editing]);
   const resizableProps = (widget: DashboardWidget, geometry: GridMetrics) => {
     const session = resize?.id === widget.id ? resize : null;
     const metrics = session?.metrics ?? geometry;
@@ -52,7 +58,7 @@ export function useDashboardResize(options: ResizeOptions) {
       minConstraints: [min.width, min.height] as [number, number],
       maxConstraints: [max.width, max.height] as [number, number],
       onResizeStart: (event: SyntheticEvent, data: ResizeCallbackData) => {
-        if (!grid.current) return;
+        if (!grid.current || !enabled.current) return;
         event.stopPropagation();
         onGestureStart();
         setResize({
@@ -64,16 +70,18 @@ export function useDashboardResize(options: ResizeOptions) {
         });
       },
       onResize: (_event: SyntheticEvent, data: ResizeCallbackData) => {
-        if (resize?.id === widget.id) setResize({ ...resize, size: gridSize(data.size, resize.metrics) });
+        if (enabled.current && resize?.id === widget.id)
+          setResize({ ...resize, size: gridSize(data.size, resize.metrics) });
       },
       onResizeStop: (_event: SyntheticEvent, data: ResizeCallbackData) => {
-        if (resize?.id !== widget.id) return;
+        if (!enabled.current || resize?.id !== widget.id) return;
         onChange(resizeWidget(widgets, widget.id, gridSize(data.size, resize.metrics), columns, mode, resize.handle));
         setResize(null);
       },
     };
   };
   const onHandleKeyDown = (id: string, handle: DashboardResizeHandle, event: KeyboardEvent<HTMLButtonElement>) => {
+    if (!enabled.current) return;
     if (event.key === "Escape") {
       setResize(null);
       return;
@@ -101,5 +109,5 @@ export function useDashboardResize(options: ResizeOptions) {
       ),
     );
   };
-  return { resize, resizableProps, onHandleKeyDown, cancel: () => setResize(null) };
+  return { resize: editing ? resize : null, resizableProps, onHandleKeyDown, cancel: () => setResize(null) };
 }

@@ -1,6 +1,9 @@
 import type { CSSProperties } from "react";
 import type { GridPlacement } from "./dashboard-types";
 
+export const placementsIntersect = (a: GridPlacement, b: GridPlacement) =>
+  a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+
 // These values are measured placement geometry; appearance stays in the shared theme recipe.
 export const placementStyle = (layout: GridPlacement) =>
   ({

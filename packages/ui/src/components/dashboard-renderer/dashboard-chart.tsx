@@ -1,4 +1,4 @@
-import { Box } from "@chakra-ui/react";
+import { Box, VisuallyHidden } from "@chakra-ui/react";
 import {
   barY,
   type ChartTooltipAnchor,
@@ -59,6 +59,15 @@ export function DashboardChart(props: { widget: DashboardWidget; source: Dashboa
       : [mark];
   return (
     <Box ref={container} h="full" minH="0">
+      {sparkline && (
+        <VisuallyHidden as="ul" aria-label={`${widgetLabel(widget)} daily values`}>
+          {points.map(({ label, value }) => (
+            <li key={label}>
+              {label}: {sourceLabel}, {number.format(value)}
+            </li>
+          ))}
+        </VisuallyHidden>
+      )}
       <Chart
         ariaLabel={`${widgetLabel(widget)}${sparkline ? " trend" : ""}`}
         definition={defineChart(

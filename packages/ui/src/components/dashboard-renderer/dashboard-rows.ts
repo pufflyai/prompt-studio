@@ -1,4 +1,5 @@
-import type { DashboardLayoutMode, DashboardWidget } from "./dashboard-types";
+import { placementsIntersect } from "./dashboard-grid-geometry";
+import type { DashboardWidget } from "./dashboard-types";
 
 export function swapWithinRow(widgets: DashboardWidget[], active: DashboardWidget, target: DashboardWidget) {
   const row = widgets.filter(({ layout }) => layout.y === active.layout.y).sort((a, b) => a.layout.x - b.layout.x);
@@ -14,61 +15,36 @@ export function swapWithinRow(widgets: DashboardWidget[], active: DashboardWidge
     placements.set(widget.id, x);
     x += widget.layout.w + gaps[index];
   });
-  return widgets.map((widget) => {
+  const swapped = widgets.map((widget) => {
     const nextX = placements.get(widget.id);
     return nextX === undefined ? widget : { ...widget, layout: { ...widget.layout, x: nextX } };
   });
+  const overlaps = swapped.some((widget, index) =>
+    swapped.slice(index + 1).some((other) => placementsIntersect(widget.layout, other.layout)),
+  );
+  return overlaps ? widgets : swapped;
 }
 
-export function insertWidgetRow(
-  widgets: DashboardWidget[],
-  active: DashboardWidget,
-  beforeId: string | null,
-  mode: DashboardLayoutMode,
-) {
-  // Remove only the active widget; a narrow-layout gap may split its saved row.
-  const groups = new Map<number, DashboardWidget[]>();
-  for (const widget of widgets) {
-    const row = groups.get(widget.layout.y) ?? [];
-    row.push(widget);
-    groups.set(widget.layout.y, row);
-  }
-  const rows = [...groups]
-    .sort(([a], [b]) => a - b)
-    .map(([y, widgets]) => ({
-      y,
-      widgets: widgets.sort((a, b) => a.layout.x - b.layout.x),
-      height: Math.max(...widgets.map(({ layout }) => layout.h)),
-    }));
-  const remaining = rows
-    .map((row, index) => ({
-      widgets: row.widgets.filter(({ id }) => id !== active.id),
-      gap: index === 0 ? row.y : Math.max(0, row.y - rows[index - 1].y - rows[index - 1].height),
-    }))
-    .filter(({ widgets }) => widgets.length > 0);
+export function insertWidgetRow(widgets: DashboardWidget[], active: DashboardWidget, beforeId: string | null) {
+  const ordered = [...widgets].sort((a, b) => a.layout.y - b.layout.y || a.layout.x - b.layout.x);
+  const boundary =
+    widgets.find(({ id }) => id === beforeId)?.layout.y ??
+    Math.max(0, ...widgets.map(({ layout }) => layout.y + layout.h));
   if (beforeId === active.id) {
-    const ordered = rows.flatMap(({ widgets }) => widgets);
     beforeId = ordered[ordered.findIndex(({ id }) => id === active.id) + 1]?.id ?? null;
   }
-  const targetIndex = remaining.findIndex(({ widgets }) => widgets.some(({ id }) => id === beforeId));
-  if (targetIndex < 0) remaining.push({ widgets: [active], gap: 0 });
-  else {
-    const target = remaining[targetIndex];
-    const split = target.widgets.findIndex(({ id }) => id === beforeId);
-    const before = target.widgets.slice(0, split);
-    const after = target.widgets.slice(split);
-    const insertion = [
-      { widgets: [active], gap: before.length ? 0 : target.gap },
-      { widgets: after, gap: 0 },
-    ];
-    if (before.length) insertion.unshift({ widgets: before, gap: target.gap });
-    remaining.splice(targetIndex, 1, ...insertion);
-  }
-  let y = 0;
-  return remaining.flatMap((row) => {
-    if (mode !== "vertical") y += row.gap;
-    const next = row.widgets.map((widget) => ({ ...widget, layout: { ...widget.layout, y } }));
-    y += Math.max(...row.widgets.map(({ layout }) => layout.h));
-    return next;
-  });
+  const remaining = ordered.filter(({ id }) => id !== active.id);
+  const index = remaining.findIndex(({ id }) => id === beforeId);
+  const split = index < 0 ? remaining.length : index;
+  const prefix = remaining.slice(0, split);
+  const suffix = remaining.slice(split);
+  const targetY = suffix[0]?.layout.y ?? boundary;
+  // Keep staggered offsets on either side. A narrow-layout split must clear all preceding cards.
+  const y = Math.max(targetY, 0, ...prefix.map((widget) => widget.layout.y + widget.layout.h));
+  const shift = y + active.layout.h - targetY;
+  return [
+    ...prefix,
+    { ...active, layout: { ...active.layout, y } },
+    ...suffix.map((widget) => ({ ...widget, layout: { ...widget.layout, y: widget.layout.y + shift } })),
+  ];
 }

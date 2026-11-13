@@ -1,7 +1,8 @@
-import { Box, Button, HStack, Icon, IconButton, Input, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
-import { Settings2, Trash2, X } from "lucide-react";
+import { Box, Button, Icon, IconButton, Input, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
+import { Settings2, Trash2 } from "lucide-react";
 import { useId, useRef } from "react";
 import { DisplayMenuSelect } from "@/components/kanban-renderer/display-menu";
+import { PopoverHeader } from "@/components/overlays/popover-header";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { Tooltip } from "@/components/primitives/tooltip";
 import { dashboardRecipe } from "@/theme/recipes/dashboard";
@@ -47,16 +48,7 @@ export function WidgetSettings(props: WidgetSettingsProps) {
       <Portal>
         <Popover.Positioner>
           <Popover.Content aria-label="Widget settings" css={styles.settingsPopover}>
-            <HStack p="sm" justify="space-between">
-              <Popover.Title asChild>
-                <Text textStyle="label/S/medium">Widget settings</Text>
-              </Popover.Title>
-              <Popover.CloseTrigger asChild>
-                <IconButton aria-label="Close widget settings" size="2xs" variant="ghost">
-                  <X />
-                </IconButton>
-              </Popover.CloseTrigger>
-            </HStack>
+            <PopoverHeader icon={<Icon as={Settings2} />} title={<Popover.Title>Widget settings</Popover.Title>} />
             <ScrollArea flex="1" minH="0">
               <Stack p="md" gap="md">
                 <Stack gap="xs">
