@@ -102,7 +102,7 @@ describe("planner attempt workspaces", () => {
       });
       expect(saved.outcome.ok).toBe(true);
 
-      const ticket = JSON.parse(run(`tickets create --content "# Workspace activity proof"`, repo)) as {
+      const ticket = JSON.parse(run(`pstdio.planner create-ticket --content "# Workspace activity proof"`, repo)) as {
         id: string;
         shorthand: string;
       };
@@ -176,7 +176,7 @@ describe("planner attempt workspaces", () => {
       const repo = createInitializedRepo(ctx, "planner-ticket-actions");
       const projectId = getProjectId(repo);
 
-      const ticket = JSON.parse(run(`tickets create --content "# Planner ticket actions"`, repo)) as {
+      const ticket = JSON.parse(run(`pstdio.planner create-ticket --content "# Planner ticket actions"`, repo)) as {
         id: string;
         shorthand: string;
       };

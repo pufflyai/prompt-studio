@@ -37,18 +37,18 @@ const createInitializedRepo = (name: string) => {
   return repo;
 };
 
-describe("pstdio tickets delete", () => {
+describe("pstdio pstdio.planner delete-ticket", () => {
   test(
     "deleted ticket no longer appears in list",
     () => {
       const repo = createInitializedRepo("tk-delete-list");
 
-      const { id, shorthand } = JSON.parse(run('tickets create --content "Gone ticket"', repo));
+      const { id, shorthand } = JSON.parse(run('pstdio.planner create-ticket --content "Gone ticket"', repo));
 
-      const result = JSON.parse(run(`tickets delete --id ${shorthand}`, repo));
+      const result = JSON.parse(run(`pstdio.planner delete-ticket --id ${shorthand}`, repo));
       expect(result.id).toBe(id);
 
-      const tickets = JSON.parse(run("tickets list", repo));
+      const tickets = JSON.parse(run("pstdio.planner list-tickets", repo));
       expect(tickets.map((ticket: { title: string }) => ticket.title)).not.toContain("Gone ticket");
     },
     TEST_TIMEOUT,
@@ -59,17 +59,17 @@ describe("pstdio tickets delete", () => {
     () => {
       const repo = createInitializedRepo("tk-delete-local");
 
-      const { shorthand } = JSON.parse(run('tickets write --title "Local delete"', repo));
+      const { shorthand } = JSON.parse(run('pstdio.planner write-ticket --title "Local delete"', repo));
 
-      run(`tickets save --id ${shorthand}`, repo);
+      run(`pstdio.planner save-ticket --id ${shorthand}`, repo);
 
       const ticketDir = findTicketDir(repo, shorthand);
       expect(ticketDir).not.toBeNull();
       expect(existsSync(ticketDir!)).toBe(true);
 
-      run(`tickets delete --id ${shorthand}`, repo);
+      run(`pstdio.planner delete-ticket --id ${shorthand}`, repo);
 
-      const tickets = JSON.parse(run("tickets list --draft", repo));
+      const tickets = JSON.parse(run("pstdio.planner list-tickets --draft", repo));
       expect(tickets.map((ticket: { shorthand: string }) => ticket.shorthand)).not.toContain(shorthand);
     },
     TEST_TIMEOUT,
@@ -80,7 +80,7 @@ describe("pstdio tickets delete", () => {
     () => {
       const repo = createInitializedRepo("tk-delete-missing");
 
-      const result = JSON.parse(run("tickets delete --id MISSING-99", repo));
+      const result = JSON.parse(run("pstdio.planner delete-ticket --id MISSING-99", repo));
 
       expect(result.id).toBe("MISSING-99");
     },

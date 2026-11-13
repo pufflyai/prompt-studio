@@ -21,20 +21,20 @@ A report starts as a local Markdown file. The agent fills it in, then saves it:
 1. Create the report from a template. After an implementation, run:
 
    ```sh
-   pst reports write --kind change_request --name change_request --template change-request
+   pst pstdio.pstdio-reports reports write --kind change_request --name change_request --template change-request
    ```
 
    For an independent review of a change request, run:
 
    ```sh
-   pst reports write --kind review --name review --template review
+   pst pstdio.pstdio-reports reports write --kind review --name review --template review
    ```
 
 2. Edit the file at the `path` that the command returns. Put supporting files, such as screenshots or logs, in the returned `filesPath` folder.
 3. Save the report with the returned name:
 
    ```sh
-   pst reports save --name <returned-name>
+   pst pstdio.pstdio-reports reports save --name <returned-name>
    ```
 
 There is no default template. If you leave out `--template`, the command fails and lists the templates you can use: `change-request` and `review`. Edit the templates in **Settings → Project → Templates**.
@@ -44,10 +44,10 @@ Writing a report never overwrites an existing one. When a name is taken, the nex
 ## Commands
 
 ```sh
-pst reports write [--workspace <workspace>] [--kind <kind>] [--name <name>] --template <template> [--source <source>]
-pst reports read --id <report-id-or-number>
-pst reports save [--workspace <workspace>] [--name <name>]
-pst reports delete --name <name> [--workspace <workspace>]
+pst pstdio.pstdio-reports reports write [--workspace <workspace>] [--kind <kind>] [--name <name>] --template <template> [--source <source>]
+pst pstdio.pstdio-reports reports read --id <report-id-or-number>
+pst pstdio.pstdio-reports reports save [--workspace <workspace>] [--name <name>]
+pst pstdio.pstdio-reports reports delete --name <name> [--workspace <workspace>]
 ```
 
 `--workspace` takes a workspace ID such as `WS-19`. Without it, the command uses the agent's current workspace, or the project folder.
@@ -59,10 +59,10 @@ Core assigns report numbers such as `RP-12`. Reports reads the current number fr
 The same commands are also available under the extension's own name:
 
 ```sh
-pst pstdio-reports reports write [options]
-pst pstdio-reports reports read --id <report-id>
-pst pstdio-reports reports save [options]
-pst pstdio-reports reports delete --name <name> [options]
+pst pstdio.pstdio-reports reports write [options]
+pst pstdio.pstdio-reports reports read --id <report-id>
+pst pstdio.pstdio-reports reports save [options]
+pst pstdio.pstdio-reports reports delete --name <name> [options]
 ```
 
 *Updated at: 2026-11-02*

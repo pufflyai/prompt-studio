@@ -50,7 +50,7 @@ The implementation passes empty input into `parse`, which causes the reviewed fl
 
 ## Artifacts
 
-<!-- Drop supporting files under the filesPath returned by `pst reports write` and link them here. `pst reports save` picks them up. -->
+<!-- Drop supporting files under the filesPath returned by `pst pstdio.pstdio-reports reports write` and link them here. `pst pstdio.pstdio-reports reports save` picks them up. -->
 
 ## Follow-up
 

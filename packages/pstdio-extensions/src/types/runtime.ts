@@ -69,7 +69,8 @@ export interface RuntimeCliContribution {
   description?: Localizable<string>;
   examples?: string[];
   hidden?: boolean;
-  globalAliases?: string[][];
+  /** Host-generated namespace migration paths; extensions cannot declare root shortcuts. */
+  deprecatedPaths?: string[][];
 }
 
 export interface RuntimeCommandRecord {

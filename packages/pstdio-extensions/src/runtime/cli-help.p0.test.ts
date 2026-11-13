@@ -52,4 +52,34 @@ describe("buildCliHelpTree", () => {
       "pstdio.lab.command.counter.bump",
     );
   });
+
+  test("upgraded sources keep valid qualified help for examples authored with an older SDK", () => {
+    const legacyCli = {
+      globalAliases: [["tickets", "write"]],
+      examples: ["pst tickets write --title 'Draft'"],
+    };
+    const source = wrap(
+      defineExtension({
+        commands: [
+          {
+            id: "write-ticket",
+            ref: { kind: "command", id: "write-ticket" },
+            title: "Write draft ticket",
+            cli: legacyCli,
+            run: async () => undefined,
+          },
+        ],
+      }),
+    );
+    source.manifest = {
+      ...source.manifest,
+      id: "pstdio.pstdio-planner",
+      name: "pstdio-planner",
+      enginesPstdio: "^0.4.0 || ^0.5.0",
+    };
+    const runtime = normalizeExtensionSources([source]);
+    expect(runtime.diagnostics).toEqual([]);
+    expect(runtime.cli[0]?.examples).toEqual(["pst pstdio.planner write-ticket --title 'Draft'"]);
+    expect(buildCliHelpTree(runtime).map((entry) => entry.segment)).toEqual(["pstdio.planner"]);
+  });
 });

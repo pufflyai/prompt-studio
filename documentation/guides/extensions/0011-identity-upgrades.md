@@ -4,7 +4,7 @@ On `main`, after 0.47.0, the coordinated extension API 0.5.0 release introduces 
 
 ## Commands and refs
 
-Use `pst pstdio.notes create`, `pst pstdio.notes rename` and `pst pstdio.notes delete`. Folder commands remain `pst pstdio.notes folders <verb>`. Existing deliberate shortcuts such as `pst tickets create` and `pst reports write` keep working.
+Use `pst pstdio.notes create`, `pst pstdio.notes rename` and `pst pstdio.notes delete`. Folder commands remain `pst pstdio.notes folders <verb>`. Global shortcuts such as `pst tickets create` and `pst reports write` are removed in API 0.5.0. Use `pst pstdio.planner create-ticket` and `pst pstdio.reports reports write`. Extensions cannot register new root shortcuts.
 
 Historical namespaces remain callable during deprecation, including `pst pstdio.pstdio-notes notes create`, `pst pstdio-notes notes create` and `pst pstdio.notes notes create`. Human invocations print their canonical replacement to stderr. JSON and NDJSON output retain their existing machine-readable format. Ambiguous short names fail explicitly.
 

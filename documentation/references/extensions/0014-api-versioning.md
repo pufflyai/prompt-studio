@@ -92,6 +92,8 @@ and saved views keep their behavior. See [inline charts and row height](0004-con
 
 Command, settings panel, settings section and appearance records on `main` include optional `localId` metadata so clients can resolve historical references from structured identity without parsing runtime IDs. Registered UI theme options can supply historical choices through optional `aliases`; pickers still expose one canonical option. These additions share API 0.5.0.
 
+The CLI `globalAliases` declaration is removed in API 0.5.0. Root shortcuts such as `pst tickets write` and `pst reports write` are replaced by `pst pstdio.planner write-ticket` and `pst pstdio.reports reports write`. Deprecated namespace migration paths are separate and remain available.
+
 The shorter first-party extension identities also share API 0.5.0. Canonical discovery and output use names such as `pstdio.notes`; historical invocations remain deprecated aliases. Ship the migration-capable host before renamed packages. See [identity upgrades](../../guides/extensions/0011-identity-upgrades.md).
 
 ### Which version each check uses
@@ -288,7 +290,7 @@ the same. 0.46 starts with an empty database and does not move or read earlier
 `<package-name>/` folders, so each extension starts fresh. Extensions that build
 storage paths themselves must use the full-ID folder. Name-only CLI namespaces
 and resource-kind references remain deprecated aliases when unambiguous;
-full-ID forms replace them. Declared global aliases keep their short form.
+full-ID forms replace them. API 0.5.0 removes extension-defined global shortcuts. Replace `globalAliases` with qualified command examples and use `cli.path` only for paths inside the owning extension namespace.
 
 ## Storage size limits in API 0.3
 

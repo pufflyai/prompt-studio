@@ -183,11 +183,11 @@ planner file query so re-saved artifact content updates in place.
 
 ## Artifact Persistence Flow
 
-`pst tickets save --id <ticket>` uploads planning/support files from:
+`pst pstdio.planner save-ticket --id <ticket>` uploads planning/support files from:
 
 - `.pstdio/extension-storage/pstdio.planner/tickets/<ticket>/files/` as regular ticket attachments
 
-`pst reports save --name <name>` uploads report evidence from
+`pst pstdio.reports reports save --name <name>` uploads report evidence from
 `.pstdio/extension-storage/pstdio.reports/reports/<name>/files/` into report-owned blob storage.
 
 ## Errors and Empty States

@@ -39,12 +39,12 @@ For a first check, create a note, type a heading and a short list, then close it
 Agents can manage notes too:
 
 ```sh
-pst pstdio-notes notes create
-pst pstdio-notes folders create --title "Research"
-pst pstdio-notes notes move --note-id <note-id> --folder-id <folder-id>
-pst pstdio-notes notes create --title "Meeting notes"
-pst pstdio-notes notes rename --note-id <note-id> --title "New title"
-pst pstdio-notes notes delete --note-id <note-id>
+pst pstdio.notes notes create
+pst pstdio.notes folders create --title "Research"
+pst pstdio.notes notes move --note-id <note-id> --folder-id <folder-id>
+pst pstdio.notes notes create --title "Meeting notes"
+pst pstdio.notes notes rename --note-id <note-id> --title "New title"
+pst pstdio.notes notes delete --note-id <note-id>
 ```
 
 ## Where notes are stored

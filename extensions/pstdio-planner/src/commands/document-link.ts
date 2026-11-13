@@ -8,7 +8,10 @@ export const documentLinkCommand = defineCommand({
   title: "Get ticket document link",
   cli: {
     globalAliases: [["tickets", "document-link"]],
-    examples: ["pstdio tickets document-link --id PS-1", "pstdio tickets document-link --id PS-1 --file research.md"],
+    examples: [
+      "pstdio pstdio.pstdio-planner document-link --id PS-1",
+      "pstdio pstdio.pstdio-planner document-link --id PS-1 --file research.md",
+    ],
   },
   params: {
     id: params.text({ label: "Ticket shorthand or UUID", resolvedFrom: "resource" }),

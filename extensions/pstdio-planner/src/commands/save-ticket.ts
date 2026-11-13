@@ -62,7 +62,7 @@ const resolveTags = async (storage: ExtensionStorageApi, tagNames: string[] | un
 const resolveDependencies = async (ctx: TicketContext, dependencyRefs: string[] | undefined, stored: string[]) =>
   dependencyRefs === undefined ? stored : resolveDependencyIds(ctx, dependencyRefs, stored);
 
-// `pst tickets save`: reconcile the edited local ticket.md (body + frontmatter +
+// `pst pstdio.pstdio-planner save-ticket`: reconcile the edited local ticket.md (body + frontmatter +
 // files) back into extension storage and clear the draft flag.
 export const saveTicketCommand = defineCommand({
   id: "save-ticket",
@@ -70,7 +70,7 @@ export const saveTicketCommand = defineCommand({
   title: "Save draft ticket",
   cli: {
     globalAliases: [["tickets", "save"]],
-    examples: ["pstdio tickets save --id PS-1 --status 'In Progress'"],
+    examples: ["pstdio pstdio.pstdio-planner save-ticket --id PS-1 --status 'In Progress'"],
   },
   params: {
     id: params.text({ required: true }),

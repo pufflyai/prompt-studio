@@ -5,9 +5,9 @@ This repository-local extension prepares Prompt Studio worktrees, controls isola
 ## CLI commands
 
 ```sh
-pst pstdio-dev workspace open-in-vscode --workspace-id <id>
-pst pstdio-dev workspace open-in-isolation --workspace-id <id>
-pst pstdio-dev workspace stop-isolation --workspace-id <id>
+pst pstdio.dev workspace open-in-vscode --workspace-id <id>
+pst pstdio.dev workspace open-in-isolation --workspace-id <id>
+pst pstdio.dev workspace stop-isolation --workspace-id <id>
 ```
 
 `open-in-vscode` opens the workspace worktree in VS Code. `open-in-isolation` starts the repository's isolated development stack and opens its dashboard. `stop-isolation` stops that stack.
@@ -21,8 +21,8 @@ At noon each day, it starts an evidence-gated search for one high-impact issue. 
 Expand **Performance** in the project navigation to open **Trends**, **Compare**, or **Runs**. Each destination keeps the project navigation visible. **Trends** shows every benchmark across releases, one line per platform. **Compare** compares two commits, or shows one commit's own results, and measures commits that have none. **Runs** lists benchmark runs on GitHub Actions. Its native **New run** attached menu selects commits, suites, and platforms and skips commits that already have results. Close the menu with its divider; reopening retains its draft. Results are cached in extension storage; see [Benchmark results](../../../documentation/references/performance/0006-benchmark-results.md).
 
 ```sh
-pst pstdio-dev benchmarks sync
-pst pstdio-dev benchmarks start-run --commits pstdio@0.45.0 --commits main --platforms linux-x64
+pst pstdio.dev benchmarks sync
+pst pstdio.dev benchmarks start-run --commits pstdio@0.45.0 --commits main --platforms linux-x64
 ```
 
 The pages use your GitHub CLI login. Run `gh auth login` in this repository first.
@@ -34,8 +34,8 @@ Open **Release health** from the project navigation for chronological test histo
 The panel reads runner summaries, including quarantined cases, through your GitHub CLI login. It refreshes on opening, on demand, and daily; completed job counts are cached under this extension's project storage. Missing reports and unavailable logs remain explicit. A refresh preserves previous results if GitHub is unavailable. The initial history covers the latest ten manual, scheduled, or version-release candidates among the latest 100 workflow runs.
 
 ```sh
-pst pstdio.pstdio-dev release-health sync
-pst pstdio.pstdio-dev release-health history
+pst pstdio.dev release-health sync
+pst pstdio.dev release-health history
 ```
 
 ## Merge queue repair

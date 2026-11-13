@@ -11,13 +11,13 @@ export type DemoCliCommand =
   | { tool: "formulas"; id: FormulaId; inputs: FormulaValues };
 
 export const demoCliText = (command: DemoCliCommand) => {
-  if (command.tool === "icons") return `pst icons rename --id ${command.id} --name ${command.name}`;
-  if (command.tool === "shaders") return `pst shaders update --scale ${command.scale} --speed ${command.speed}`;
-  if (command.tool === "agents") return `pst tickets update --id ${command.id} --status "In Progress"`;
+  if (command.tool === "icons") return `pst pstdio.icons rename --id ${command.id} --name ${command.name}`;
+  if (command.tool === "shaders") return `pst pstdio.shaders update --scale ${command.scale} --speed ${command.speed}`;
+  if (command.tool === "agents") return `pst pstdio.planner update-ticket --id ${command.id} --status "In Progress"`;
   const flags = Object.entries(command.inputs)
     .map(([key, value]) => `--${key} ${value}`)
     .join(" ");
-  return `pst formulas calculate --id ${command.id} ${flags}`;
+  return `pst pstdio.formulas calculate --id ${command.id} ${flags}`;
 };
 
 export const demoCliResult = (command: DemoCliCommand) => {

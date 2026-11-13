@@ -6,7 +6,7 @@ export const listTicketTemplatesCommand = defineCommand({
   title: "List ticket templates",
   cli: {
     globalAliases: [["tickets", "templates"]],
-    examples: ["pstdio tickets templates"],
+    examples: ["pstdio pstdio.pstdio-planner list-ticket-templates"],
   },
   async run(ctx) {
     return (await listOwnedTemplates(ctx, "ticket")).map((template) => template.name);

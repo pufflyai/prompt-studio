@@ -48,7 +48,7 @@ describe("planner action session anchors", () => {
       const repo = createInitializedRepo(ctx, "planner-action-anchors");
       const projectId = getProjectId(repo);
 
-      const ticket = JSON.parse(run(`tickets create --content "# Refine anchor proof"`, repo)) as {
+      const ticket = JSON.parse(run(`pstdio.planner create-ticket --content "# Refine anchor proof"`, repo)) as {
         id: string;
         shorthand: string;
       };

@@ -27,7 +27,7 @@ test("old Notes sources and commands have canonical discovery with deprecated ro
   expect(runtime.extensions.map((e) => e.id)).toEqual(["pstdio.notes"]);
   expect(runtime.commands.map((c) => c.id)).toEqual(["pstdio.notes.command.notes.create"]);
   expect(runtime.cli[0]?.pathKey).toBe("pstdio.notes create");
-  expect(runtime.cli[0]?.globalAliases).toContainEqual(["pstdio.pstdio-notes", "notes", "create"]);
+  expect(runtime.cli[0]?.deprecatedPaths).toContainEqual(["pstdio.pstdio-notes", "notes", "create"]);
 });
 
 test("historical command and lifecycle refs execute and deliver once", async () => {

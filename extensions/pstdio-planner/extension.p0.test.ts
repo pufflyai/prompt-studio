@@ -124,16 +124,16 @@ describe("pstdio planner extension contributions", () => {
   test("exposes manual planner settings commands through the CLI", () => {
     expect(command("ticket-status.update")?.cli).toEqual({
       globalAliases: [["statuses", "update"]],
-      examples: ["pstdio statuses update --status-id backlog --label Backlog"],
+      examples: ["pstdio pstdio.pstdio-planner ticket-status update --status-id backlog --label Backlog"],
     });
     expect(command("ticket-status.reorder")?.cli).toEqual({
       globalAliases: [["statuses", "reorder"]],
-      examples: ['pstdio statuses reorder --status-ids \'["backlog","ready"]\''],
+      examples: ['pstdio pstdio.pstdio-planner ticket-status reorder --status-ids \'["backlog","ready"]\''],
     });
     expect(command("ticket-tag.update")).toMatchObject({
       cli: {
         globalAliases: [["tags", "update"]],
-        examples: ["pstdio tags update --tag-id default-priority --sort-order 0"],
+        examples: ["pstdio pstdio.pstdio-planner ticket-tag update --tag-id default-priority --sort-order 0"],
       },
       params: { sortOrder: { type: "number" } },
     });
