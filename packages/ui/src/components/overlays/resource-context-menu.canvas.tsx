@@ -115,6 +115,8 @@ export default meta;
 type Story = CanvasFrame<typeof ResourceContextMenu>;
 export const Default: Story = {
   id: "components-overlays-resource-context-menu--default",
+  description:
+    "Keyboard selection belongs to the highlighted action. Layout changes under a stationary pointer must not clear a newer keyboard choice; moving the pointer to another action still selects it.",
   render: () => <ResourceContextMenu actions={createActions(4)}>{menuTarget}</ResourceContextMenu>,
 };
 export const SelectionAction: Story = {
