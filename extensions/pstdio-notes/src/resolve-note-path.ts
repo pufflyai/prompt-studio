@@ -15,6 +15,6 @@ export const resolveNotePathCommand = defineCommand({
     const { readable, writable } = await notesFileAccess(ctx);
     if (!readable || !(await noteExists(notesMount(ctx), id))) return null;
     const title = await readNoteTitle(notesMount(ctx), id);
-    return { resource: noteResource(id, title, ctx, writable), target: noteTarget(id, title, ctx) };
+    return { resource: noteResource(id, title, ctx, writable), target: noteTarget(id, title, ctx, writable) };
   },
 });
