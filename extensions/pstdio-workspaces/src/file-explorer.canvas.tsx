@@ -57,6 +57,7 @@ export const FileOperations = () => {
         </Text>
         <Box flex="1" minH="0">
           <CodeEditor
+            language="markdown"
             fileName={selected}
             defaultCode="# Project files\n\nThe editor stays open during confirmation.\n"
             isEditable
