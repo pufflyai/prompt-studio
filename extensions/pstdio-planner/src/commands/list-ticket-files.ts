@@ -5,13 +5,16 @@ import { validateTicketFileName } from "../data/ticket-file-name";
 import { readTicketImageCheckout } from "../data/ticket-image-checkout";
 import { ticketImagePaths } from "../data/ticket-image-paths";
 
-// `pst tickets files`: compare a ticket's stored files against the local
+// `pst pstdio.pstdio-planner list-ticket-files`: compare a ticket's stored files against the local
 // `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/<shorthand>/files/` directory so the user can see what is and
 // isn't synced.
 export const listTicketFilesCommand = defineCommand({
   id: "list-ticket-files",
   title: "List ticket files",
-  cli: { globalAliases: [["tickets", "files"]], examples: ["pstdio tickets files --id PS-1"] },
+  cli: {
+    globalAliases: [["tickets", "files"]],
+    examples: ["pstdio pstdio.pstdio-planner list-ticket-files --id PS-1"],
+  },
   params: { id: params.text({ required: true }) },
   async run(ctx, commandParams) {
     const { projectFiles, resolvePath } = await requireTicketDraftFiles(ctx);

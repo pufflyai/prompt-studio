@@ -84,7 +84,7 @@ Create `package.json`:
   "type": "module",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.1.6 || ^0.2.0 || ^0.3.0 || ^0.4.0"
+    "pstdio": "^0.1.6 || ^0.2.0 || ^0.3.0 || ^0.4.0 || ^0.5.0"
   },
   "scripts": {
     "lint": "bun check",
@@ -104,7 +104,7 @@ Create `package.json`:
 - `publisher` and `name` form the extension ID, here `acme.bookmarks`. You can use your own publisher name; then also change `extensionId` in `src/bookmarks.ts` in step 3. Each part starts with a lowercase letter and contains only lowercase letters, numbers, and dashes.
 - `main` is the entry file.
 - `icon` names the icon shown in Extensions.
-- `engines.pstdio` lists the extension API versions this extension works with. `^0.1.6` accepts 0.1.6 and later 0.1 releases. `^0.2.0`, `^0.3.0`, and `^0.4.0` accept the next three breaking releases. Claim a version only after you run the extension on it.
+- `engines.pstdio` lists the extension API versions this extension works with. `^0.1.6` accepts 0.1.6 and later 0.1 releases. `^0.2.0`, `^0.3.0`, `^0.4.0`, and `^0.5.0` accept the next four breaking releases. Claim a version only after you run the extension on it.
 - `@pstdio/sdk` is pinned to the SDK release that matches your Prompt Studio version.
 
 Create `tsconfig.json`, so the type checker knows the files and Bun's types:
@@ -492,7 +492,7 @@ To test the commands without Prompt Studio, copy [`extension.p0.test.ts`](../../
 This page is tested with Prompt Studio 0.43.1. The `main` branch already contains the next breaking extension API, 0.2.0, which ships in the release after 0.43.x. See [Versions in current releases](../../references/extensions/0014-api-versioning.md#versions-in-current-releases).
 
 - API 0.2.0 adds `ctx.storage.records`, which saves a group of related changes at once and refuses writes based on stale data, and `ctx.storage.assets`. Prompt Studio 0.43.1 does not have them.
-- This guide saves bookmarks with `storage.collection`, which is the right choice on 0.43.1. API 0.2.0 marks `collection` as deprecated in favor of `storage.records`. It remains supported through API 0.4, which is why this extension declares `^0.1.6 || ^0.2.0 || ^0.3.0 || ^0.4.0`. API 0.3 refuses storage records over 256 KiB; a bookmark is far smaller. Move to `storage.records` when you no longer need to support 0.43.1. See [Save related records](../sdk/0003-storage.md).
+- This guide saves bookmarks with `storage.collection`, which is the right choice on 0.43.1. API 0.2.0 marks `collection` as deprecated in favor of `storage.records`. It remains supported through API 0.5, which is why this extension declares `^0.1.6 || ^0.2.0 || ^0.3.0 || ^0.4.0 || ^0.5.0`. API 0.3 refuses storage records over 256 KiB; a bookmark is far smaller. Move to `storage.records` when you no longer need to support 0.43.1. See [Save related records](../sdk/0003-storage.md).
 
 When your Prompt Studio updates, run `pst extensions check`. If it reports `extension_manifest_unsupported_api_version`, follow the repair it prints.
 

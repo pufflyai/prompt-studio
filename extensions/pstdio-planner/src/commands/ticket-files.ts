@@ -19,7 +19,11 @@ import {
   ticketPageTarget,
   ticketRequestsTarget,
 } from "../data/ticket-page-target";
-import { linkedResourceParentMetadata, ticketResourceReference } from "../data/ticket-resource-hierarchy";
+import {
+  linkedResourceParentMetadata,
+  plannerOwnerFor,
+  ticketResourceReference,
+} from "../data/ticket-resource-hierarchy";
 import { plannerTicketsChanged } from "../events";
 import { isImageAttachment } from "../utils/is-image-attachment";
 import { readTicketTreeData } from "./ticket-files-tree-data";
@@ -179,7 +183,9 @@ export const deleteTicketFileCommand = defineCommand({
     const tickets = await ticketsCollection(ctx).list();
     const ticket = tickets.find((entry) => entry.id === ticketId);
     if (!ticket) return { ticketId, fileId };
-    ctx.navigation.open(ticketPageTarget(ticketResourceReference(ticket, createTicketParentLookup(tickets))));
+    ctx.navigation.open(
+      ticketPageTarget(ticketResourceReference(ticket, createTicketParentLookup(tickets), plannerOwnerFor(ctx))),
+    );
     return { ticketId, fileId };
   },
 });
@@ -210,9 +216,9 @@ export const listTicketFilesTree = async (
   } = await readTicketTreeData(ctx, ticket);
 
   const parentLookup = createTicketParentLookup(tickets);
-  const ticketMeta = linkedResourceParentMetadata(ticket, parentLookup);
+  const ticketMeta = linkedResourceParentMetadata(ticket, parentLookup, plannerOwnerFor(ctx));
 
-  const ticketResource = ticketResourceReference(ticket, parentLookup);
+  const ticketResource = ticketResourceReference(ticket, parentLookup, plannerOwnerFor(ctx));
 
   const summary = reviewRequestSummary(reviewRequests);
   const reviewRequestsNode: TreeNode = {
@@ -308,7 +314,7 @@ export const listTicketFilesTree = async (
   return mergeTicketLinkSections(
     [
       ticketSection,
-      ...ticketRelationshipSections(ticket, tickets),
+      ...ticketRelationshipSections(ticket, tickets, plannerOwnerFor(ctx)),
       filesSection,
       ...(maybeSubTicketsSection ? [maybeSubTicketsSection] : []),
       linkedWorkspacesSection,
@@ -316,6 +322,7 @@ export const listTicketFilesTree = async (
     ],
     resourceLinks,
     ctx.projectId,
+    plannerOwnerFor(ctx),
   );
 };
 

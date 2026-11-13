@@ -10,12 +10,12 @@ export const supervisorWakePrompt = (input: SupervisorWakeInput) => {
     ? "No relevant progress has been observed for at least an hour."
     : "Relevant work may now run.";
   const configuration = input.refreshScope
-    ? "Read the current configuration with pst pstdio-planner auto-build read. Its prompt, eligible filters, and requireMergedDependencies replace the earlier configuration. Resolve and save its work scope with pst pstdio-planner auto-build scope before choosing work."
+    ? "Read the current configuration with pst pstdio.pstdio-planner auto-build read. Its prompt, eligible filters, and requireMergedDependencies replace the earlier configuration. Resolve and save its work scope with pst pstdio.pstdio-planner auto-build scope before choosing work."
     : undefined;
   return [
     reason,
     configuration,
-    "Run pst tickets next and continue dispatching eligible work within available capacity.",
+    "Run pst pstdio.pstdio-planner next-tickets and continue dispatching eligible work within available capacity.",
   ]
     .filter(Boolean)
     .join("\n\n");
@@ -27,10 +27,10 @@ export const initialSupervisorPrompt = (mode: AutoBuildMode) =>
     "## Auto Build supervisor instructions",
     "Supervise the selected ticket attempts. Do not implement tickets yourself or change the board to bypass its rules.",
     "Let running implementations finish without routine progress messages, acknowledgements or repeated status requests. Provide updates only when work is complete or a roadblock needs to be escalated to the user.",
-    'First read the current mode revision with pst pstdio-planner auto-build read. Translate the user\'s work scope into one or more track, status, tags, or parent queries. Save them before choosing work with pst pstdio-planner auto-build scope --revision <revision> --queries \'<JSON array>\'; for example: [{"track":"Workbench"},{"track":"Planner"}]. Use [{}] for the whole project. Scope queries are alternatives; fields within each query must all match. Choose scope filters for eligibility, not just temporary priority. Wake checks, queries, and dispatch all use this saved scope. Update it if the user\'s request changes. Do not widen it to find extra work.',
-    "Query fresh work with pst tickets next. Its default query uses the saved scope; --track, --status, --tags, or --parent can narrow it further. Queries return launchable tickets, waiting reasons, available capacity, and the current mode revision. Read a ticket's full instructions with pst tickets panel --id <ticket> before choosing it.",
+    'First read the current mode revision with pst pstdio.pstdio-planner auto-build read. Translate the user\'s work scope into one or more track, status, tags, or parent queries. Save them before choosing work with pst pstdio.pstdio-planner auto-build scope --revision <revision> --queries \'<JSON array>\'; for example: [{"track":"Workbench"},{"track":"Planner"}]. Use [{}] for the whole project. Scope queries are alternatives; fields within each query must all match. Choose scope filters for eligibility, not just temporary priority. Wake checks, queries, and dispatch all use this saved scope. Update it if the user\'s request changes. Do not widen it to find extra work.',
+    "Query fresh work with pst pstdio.pstdio-planner next-tickets. Its default query uses the saved scope; --track, --status, --tags, or --parent can narrow it further. Queries return launchable tickets, waiting reasons, available capacity, and the current mode revision. Read a ticket's full instructions with pst pstdio.pstdio-planner get-ticket --id <ticket> before choosing it.",
     "A blocked status or written blocked reason alone does not exclude work. Read the reason and let the implementation owner resolve it when possible within existing authority. Keep dependency, review-request, assignment and capacity checks; do not clear a blocker merely to dispatch work.",
-    "For each relevant returned ticket, launch or resume its managed attempt with:\npst pstdio-planner auto-build dispatch --ticket <ticket> --revision <revision-from-query>",
+    "For each relevant returned ticket, launch or resume its managed attempt with:\npst pstdio.pstdio-planner auto-build dispatch --ticket <ticket> --revision <revision-from-query>",
     "A recover-workspace action means the old workspace is unavailable. Dispatch it through Auto Build: it creates an informed continuation from surviving Git code and passes the old session, PR, revision and report references. The agent fetches previous code or restarts when it cannot recover it. Missing workspace availability alone is not a blocker. Keep real dependency, review-request, assignment and capacity rules.",
     "An update-stack action means the existing owner's workspace has newer unsubmitted work or outdated dependency ancestry. Dispatch it to that same owner; it integrates the required base, validates the result, and records a new revision. Never fabricate a review rejection or create an alternative workspace just to repair a stack.",
     "A repair action means the owner's submitted work needs a correction: its PR conflicts, its CI failed, or its workspace HEAD moved past the submitted revision. Dispatch it to that same owner. It does not approve or merge work.",

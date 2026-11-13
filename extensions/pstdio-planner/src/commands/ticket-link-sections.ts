@@ -11,7 +11,11 @@ import { ticketPageTarget } from "../data/ticket-page-target";
 import { ticketResourceReference } from "../data/ticket-resource-hierarchy";
 import type { Ticket } from "../data/types";
 
-export const ticketRelationshipSections = (ticket: Ticket, tickets: Ticket[]) => {
+export const ticketRelationshipSections = (
+  ticket: Ticket,
+  tickets: Ticket[],
+  extensionId = "pstdio.pstdio-planner",
+) => {
   const lookup = createTicketParentLookup(tickets);
   const byReference = new Map(
     tickets.flatMap((item) => [
@@ -39,14 +43,14 @@ export const ticketRelationshipSections = (ticket: Ticket, tickets: Ticket[]) =>
     const nodes = refs.flatMap((ref) => {
       const related = byReference.get(ref);
       if (!related) return [];
-      const resource = ticketResourceReference(related, lookup);
+      const resource = ticketResourceReference(related, lookup, extensionId);
       return [
         {
           id: `${group.id}:${related.id}`,
           label: ticketDisplayTitle(related),
           icon: "component",
           resource,
-          target: ticketPageTarget(resource),
+          target: ticketPageTarget(resource, extensionId),
         },
       ];
     });
@@ -60,12 +64,13 @@ export const mergeTicketLinkSections = (
   sections: TreeViewSection[],
   links: CollectionBadgeItem[],
   projectId?: string,
+  extensionId = "pstdio.pstdio-planner",
 ) => {
   const key = (resource: ResourceRef) =>
     resourceKey({
       ...resource,
       projectId: resource.projectId ?? projectId,
-      extensionId: resource.extensionId ?? (resource.type === "ticket" ? "pstdio.pstdio-planner" : "pstdio"),
+      extensionId: resource.extensionId ?? (resource.type === "ticket" ? extensionId : "pstdio"),
     });
   const groups = new Map(
     sections.map((section) => [

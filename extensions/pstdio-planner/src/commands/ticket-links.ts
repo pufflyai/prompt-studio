@@ -61,7 +61,10 @@ export const linkTicketCommand = defineCommand({
   id: "link",
   title: l10n("commands.linkTicket", "Link ticket"),
   mutating: true,
-  cli: { globalAliases: [["tickets", "link"]], examples: ["pst tickets link --id PS-1 --workspace WS-19"] },
+  cli: {
+    globalAliases: [["tickets", "link"]],
+    examples: ["pst pstdio.pstdio-planner link --id PS-1 --workspace WS-19"],
+  },
   params: linkParams,
   run: (ctx, input) => changeLink(ctx, input, false),
 });
@@ -70,7 +73,10 @@ export const unlinkTicketCommand = defineCommand({
   id: "unlink",
   title: l10n("commands.unlinkTicket", "Unlink ticket"),
   mutating: true,
-  cli: { globalAliases: [["tickets", "unlink"]], examples: ["pst tickets unlink --id PS-1 --session <session-id>"] },
+  cli: {
+    globalAliases: [["tickets", "unlink"]],
+    examples: ["pst pstdio.pstdio-planner unlink --id PS-1 --session <session-id>"],
+  },
   params: linkParams,
   run: (ctx, input) => changeLink(ctx, input, true),
 });
