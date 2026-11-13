@@ -438,4 +438,24 @@ slots keep working. Device settings use `ctx.settings` and the existing typed
 webview settings capabilities. Publish the SDK and host before extensions adopt
 them. See [app-wide settings](0004-contribution-api.md#app-wide-settings).
 
-*Updated at: 2026-11-12*
+## Workspace file observations in API 0.4.2
+
+The additive `/client` method `workspaces.watchFiles` observes local file changes
+on the existing shared client transport, including project folders without Git.
+Its callbacks provide change hints; finite file listings remain authoritative.
+Existing workspace methods and observers remain supported. Publish the matching
+SDK and host before separately released clients adopt this method.
+
+*Updated at: 2026-11-13*
+
+
+### Host delete confirmation on main
+
+Optional command `confirmation` declarations share the coordinated API 0.4.2 step.
+`kind: "delete"` uses the host's standard destructive confirmation, including pending,
+error and retry behavior. `subjectParam` names the parameter displayed beside the
+command title; `description` and `buttonLabel` customize its message and action.
+After confirmation, the dashboard sets the declared `confirmedParam` to `true`.
+CLI and API invocations remain unchanged: commands must keep their explicit consent
+validation or existing presentation path when that parameter is absent. Older hosts
+omit this optional declaration and never synthesize consent.

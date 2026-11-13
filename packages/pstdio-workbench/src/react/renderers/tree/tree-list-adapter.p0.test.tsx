@@ -4,6 +4,34 @@ import { DiffBubble } from "@pstdio/ui/diff";
 import { createWorkbench, type ResourceRef, resourceContextMenuPath } from "../../../core";
 import { resolveTreeListSelection, toTreeListSection } from "./tree-list-adapter";
 
+test("section creation menus keep the inline input bound to their section and workspace", () => {
+  const workbench = createWorkbench();
+  const requests: unknown[] = [];
+  const resource = { type: "workspace", id: "folder" };
+  const section = toTreeListSection(
+    {
+      id: "files",
+      nodes: [],
+      actions: [
+        {
+          id: "create-file",
+          label: "New file",
+          params: { name: { type: "text", required: true } },
+          inlineInput: { field: "name", placement: "child" },
+          run: () => {},
+        },
+      ],
+    },
+    {},
+    { workbench, resource, onRequestParams: (request) => requests.push(request) },
+  );
+  expect(section.contextMenuItems?.map((action) => action.label)).toEqual(["New file"]);
+  section.contextMenuItems?.[0]?.onAction?.();
+  expect(requests).toMatchObject([
+    { sectionId: "files", request: { context: { resource } }, inlineInput: { field: "name" } },
+  ]);
+});
+
 test("resource rows retain gesture-dependent actions through menu adaptation", () => {
   const workbench = createWorkbench();
   let calls = 0;

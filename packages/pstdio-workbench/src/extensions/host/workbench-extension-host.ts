@@ -58,7 +58,7 @@ const registerCommands = (
         id: command.id,
         label: text(command.title, command.id),
         description: text(command.description),
-        params: localizeParamSchema(command.params, text, command.extensionId),
+        params: localizeParamSchema(command.params, text, command.extensionId, command.confirmation?.confirmedParam),
         resourceMutation: command.resourceMutation,
         copyResultToClipboard: command.copyResultToClipboard,
       },

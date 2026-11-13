@@ -32,6 +32,7 @@ import {
   buildDashboardWorkbenchWhenExpression,
   dashboardMenuTargetsById,
 } from "@/shared/extensions/workbench-extension-contributions";
+import { workspaceTreeSources } from "@/shared/workspaces/workspace-files-source";
 import { ExtensionViewWidget } from "./components/extension-view-widget";
 import { createSharedTableViews } from "./extension-board-views";
 import {
@@ -119,6 +120,7 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
     disposables.push(
       registerWorkbenchExtensionContributions({
         queries: getDashboardScopedQueries(owner),
+        treeSources: workspaceTreeSources(owner),
         presentationLocale: getExtensionPresentationLocale(),
         chatRendererOwners: input.chatRendererOwners,
         chatDraftStorageScope: buildAbsoluteApiUrl("/"),
