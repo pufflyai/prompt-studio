@@ -3,6 +3,7 @@ import { getWorkbenchRenderers, type WorkbenchCore, type WorkbenchWidgetPlacemen
 import { toPanelInstance } from "../../core/registries/layout/panel-api";
 import type { LoadedTreeData } from "../renderers/tree/tree-view-load";
 import { useTreeRead } from "../renderers/tree/use-tree-read";
+import { useWorkbenchStore } from "../shared/use-workbench-store";
 
 export const treeMenuHasContent = (data: LoadedTreeData) =>
   [...data.header, ...data.body, ...data.footer].some(
@@ -14,7 +15,7 @@ export const usePanelMenuContent = (workbench: WorkbenchCore, placement?: Workbe
   const owner = useId();
   const trees = getWorkbenchRenderers(workbench);
   const treeId = placement?.viewId ?? "";
-  const tree = trees.getTreeRenderer(treeId);
+  const tree = useWorkbenchStore(trees.treeStore, (state) => state.trees[treeId]);
   const config = placement && workbench.layout.getPanel(placement.contributionId)?.config;
   const viewId =
     config && typeof config === "object" && "viewContextId" in config && typeof config.viewContextId === "string"
@@ -28,6 +29,7 @@ export const usePanelMenuContent = (workbench: WorkbenchCore, placement?: Workbe
     undefined,
     `panel-menu-content:${owner}`,
     placement ? toPanelInstance(placement) : undefined,
+    Boolean(tree),
   );
   return !tree || Boolean(read.error) || Boolean(read.value && treeMenuHasContent(read.value));
 };

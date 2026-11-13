@@ -24,33 +24,38 @@ export const useTreeRead = (
   filter?: string,
   ownerKey = JSON.stringify(["tree", treeViewId, viewId]),
   placement?: WorkbenchPanelInstance,
+  enabled = true,
 ) => {
   const pageParams = usePageParams(workbench, placement);
   // Look the renderers up where they are used: React Compiler treats a held call result as mutable until its
   // last use, and cannot cache anything whose inputs stay mutable across the hooks below.
   const changes = useWorkbenchStore(workbench.resources.preview.store, (state) => state.changes);
   useWorkbenchStore(getWorkbenchRenderers(workbench).treeStore, (state) => state.refreshKeysByTreeId[treeViewId]);
-  const mode = useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
-  const location = useWorkbenchStore(workbench.pages.store, (state) => state.location);
+  const mode = useWorkbenchStore(workbench.modes.store, (state) => (enabled ? state.activeModeId : undefined));
+  const location = useWorkbenchStore(workbench.pages.store, (state) => (enabled ? state.location : undefined));
   const project = useWorkbenchStore(workbench.pages.store, (state) => state.projectId);
   const getPageOwner = () =>
-    JSON.stringify(
-      resolveNavigationLevels({
-        location,
-        pages: Object.values(workbench.pages.store.getState().pages),
-        navigationTrees: workbench.navigationTrees,
-      }).map(({ owner, location }) => [owner, resourceKey(location.resource)]),
-    );
+    enabled
+      ? JSON.stringify(
+          resolveNavigationLevels({
+            location,
+            pages: Object.values(workbench.pages.store.getState().pages),
+            navigationTrees: workbench.navigationTrees,
+          }).map(({ owner, location }) => [owner, resourceKey(location.resource)]),
+        )
+      : "";
   const navigationRegistrations = useSyncExternalStore(
     (listener) => {
+      if (!enabled) return () => {};
       const subscription = workbench.navigationTrees.onDidChange(listener);
       return () => subscription.dispose();
     },
-    () => workbench.navigationTrees.getRegistrationRevision(),
-    () => workbench.navigationTrees.getRegistrationRevision(),
+    () => (enabled ? workbench.navigationTrees.getRegistrationRevision() : 0),
+    () => (enabled ? workbench.navigationTrees.getRegistrationRevision() : 0),
   );
   const pageOwner = useSyncExternalStore(
     (listener) => {
+      if (!enabled) return () => {};
       const subscription = workbench.navigationTrees.onDidChange(listener);
       return () => subscription.dispose();
     },
@@ -87,6 +92,7 @@ export const useTreeRead = (
   const structure = readStructure(childrenKey);
 
   const read = useRendererRead<LoadedTreeData & { children: Record<string, TreeNode[]> }>({
+    enabled,
     workbench,
     ownerKey,
     sourceId: treeViewId,
