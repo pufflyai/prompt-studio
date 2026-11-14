@@ -1,5 +1,6 @@
 import { definePage, definePlacement, l10n, type ViewRef, workbenchModes } from "@pstdio/sdk/extensions";
 import { attentionPanel } from "./attention-panel";
+import { cleanupBoardCommand } from "./commands/cleanup-board";
 import { REVIEW_REQUEST_ICON } from "./data/review-request-summary";
 import { ticketDocumentPage, ticketRequestsPage } from "./data/ticket-page-target";
 import { ticketResourceKind } from "./resource-kinds";
@@ -18,7 +19,29 @@ export const createTicketPages = (tickets: ViewRef, editor: ViewRef, requests: V
     icon: "square-kanban",
     path: "tickets",
     mode: workbenchModes.project,
-    main: { kind: "view", presentation: "page", view: tickets, cardinality: "one" },
+    main: {
+      kind: "view",
+      presentation: "page",
+      view: tickets,
+      cardinality: "one",
+      tab: {
+        query: () => ({
+          menu: [
+            {
+              id: "tickets",
+              rows: [
+                {
+                  id: "cleanup-board",
+                  label: l10n("commands.cleanupBoard.title", "Cleanup board"),
+                  icon: "sparkles",
+                  action: { kind: "command", target: { command: cleanupBoardCommand.ref } },
+                },
+              ],
+            },
+          ],
+        }),
+      },
+    },
     panelView: ticketBoardPanel.ref,
     slots: [attentionPanel],
   });

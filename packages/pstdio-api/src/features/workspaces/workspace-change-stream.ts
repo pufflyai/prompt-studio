@@ -1,11 +1,12 @@
 import type { SessionEventSink } from "../sessions/session-stream-connections";
 import type { WorkspacesRouteDeps } from "./deps";
-import { observeWorkspaceDiff } from "./workspace-diff-observation";
+import { observeWorkspaceChanges } from "./workspace-observation";
 
-export const streamWorkspaceDiffChanges = async (
+export const streamWorkspaceChanges = async (
   deps: Pick<WorkspacesRouteDeps, "workspaceService" | "eventBus">,
   input: { project_id: string; workspace_id: string },
   sink: SessionEventSink,
+  kind: "diff" | "files",
 ) => {
   const stopped = Promise.withResolvers<void>();
   let stop: (() => void) | undefined;
@@ -26,7 +27,7 @@ export const streamWorkspaceDiffChanges = async (
     void (async () => {
       while (dirty && !ended && !sink.aborted) {
         dirty = false;
-        await sink.write("diff_changed", { workspace_id: input.workspace_id });
+        await sink.write(`${kind}_changed`, { workspace_id: input.workspace_id });
       }
     })()
       .catch(end)
@@ -35,17 +36,22 @@ export const streamWorkspaceDiffChanges = async (
         if (dirty && !ended && !sink.aborted) pump();
       });
   };
-  const observation = await observeWorkspaceDiff(deps, input, (event) => {
-    if (event === "changed") pump();
-    else {
-      void sink.write("end", {}).catch(() => {});
-      end();
-    }
-  });
+  const observation = await observeWorkspaceChanges(
+    deps,
+    input,
+    (event) => {
+      if (event === "changed") pump();
+      else {
+        void sink.write("end", {}).catch(() => {});
+        end();
+      }
+    },
+    kind,
+  );
   stop = observation.close;
   if (ended || sink.aborted) return end();
   // Do not wait for socket backpressure to release a cancelled OS observation.
-  void sink.write("diff_ready", { workspace_id: input.workspace_id }).then(() => {
+  void sink.write(`${kind}_ready`, { workspace_id: input.workspace_id }).then(() => {
     ready = true;
     if (dirty) pump();
   }, end);

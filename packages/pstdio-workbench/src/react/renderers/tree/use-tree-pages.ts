@@ -9,16 +9,24 @@ const NO_PREVIEWS = new Map();
 const NO_SUBSCRIPTION = () => () => {};
 const NO_SNAPSHOT = () => undefined;
 
-const bindOwner = (key: string, workbench: WorkbenchCore, identity: TreePageIdentity) => {
+const bindOwner = (
+  key: string,
+  presentationKey: string,
+  workbench: WorkbenchCore,
+  identity: TreePageIdentity,
+  snapshot: unknown,
+) => {
   const cache = getRendererReadCache(workbench.views.reads);
+  if (snapshot === undefined || cache.get(identity)?.query.getSnapshot().data !== snapshot) return;
   const owner = getTreePageOwner(cache, identity);
   if (!owner) return;
-  return { key, owner, subscribe: (listener: () => void) => owner.attach(listener, cache) };
+  return { key, presentationKey, owner, subscribe: (listener: () => void) => owner.attach(listener, cache) };
 };
 
 export const useTreePages = (
   workbench: WorkbenchCore,
   identity: TreePageIdentity,
+  presentationKey: string,
   tree: PagedTreeData,
   snapshot: unknown,
   loading: boolean,
@@ -29,9 +37,13 @@ export const useTreePages = (
   // Query identity controls ownership. Tree callbacks and progressive values do not create new owners.
   // biome-ignore lint/correctness/useExhaustiveDependencies: A settled root first becomes available after useRendererRead's commit.
   useEffect(() => {
-    setCurrent(bindOwner(key, workbench, identity));
-  }, [workbench, key, snapshot !== undefined]);
-  const binding = current?.key === key ? current : undefined;
+    if (loading) return;
+    const next = bindOwner(key, presentationKey, workbench, identity, snapshot);
+    if (next) setCurrent(next);
+  }, [workbench, key, presentationKey, loading, snapshot]);
+  // Refreshes retain the accepted page projection, including lazily loaded children.
+  // A different resource/filter starts clean and cannot inherit another tree's rows.
+  const binding = current?.presentationKey === presentationKey ? current : undefined;
   const result = useSyncExternalStore(
     binding?.subscribe ?? NO_SUBSCRIPTION,
     binding?.owner.sections ?? NO_SNAPSHOT,

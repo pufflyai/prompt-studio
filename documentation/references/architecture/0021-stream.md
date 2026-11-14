@@ -132,6 +132,15 @@ The native observer coalesces full document and presence states while writes are
 
 The direct native-document and text-editing HTTP stream routes remain available for existing HTTP callers and are deprecated in favor of shared subscriptions. The SDK uses shared subscriptions exclusively. Finite asset downloads are not live observations and retain their streaming response support.
 
+### Workspace file observations
+
+File explorers subscribe with `{ subscription_id, workspace_files: { project_id, workspace_id } }`
+on the same shared transport. The host validates local file access before observing, shares
+filesystem handles for the workspace, and releases them after the last logical observer leaves.
+`files_ready` admits a fresh listing; `files_changed` invalidates the observed tree query.
+These events carry hints only, not file bodies. Cancellation closes only this observation.
+Filesystem coverage recovery follows [ADR 0140](../../adrs/0140-temporary-diff-watch-recovery.md).
+
 ### Enforcement and validation
 
 `bun run verify:boundaries` runs [client event transport checks](../../../scripts/verify/client-event-transport.ts) over SDK, dashboard, workbench, UI, and extension sources. Only the sync/shared transport owners consume SSE; resource adapters use logical subscriptions.
