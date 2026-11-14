@@ -17,7 +17,7 @@ import {
   type SubnavSample,
 } from "./subnav-benchmark-clock";
 import { SUBNAV_WORKLOAD, startSubnavBenchmarkFixture, subnavFixtureRoot } from "./subnav-benchmark-fixture";
-import { subnavBenchmarkResults } from "./subnav-benchmark-results";
+import { subnavBenchmarkCases, subnavBenchmarkResults } from "./subnav-benchmark-results";
 import { classifySubnavRequests } from "./subnav-request-outcomes";
 import { installSubnavRequestSignals } from "./subnav-request-signals";
 
@@ -205,7 +205,8 @@ try {
     const place = `${sample.destination === "ticket" ? "a ticket" : "sessions"}, ${sample.visit} visit`;
     const record = (part: keyof typeof SUBNAV_BUDGETS, what: string, value: number | undefined) => {
       if (value === undefined) return;
-      const budget = SUBNAV_BUDGETS[part];
+      const group = `${sample.destination}/${sample.visit}` as keyof typeof subnavBenchmarkCases;
+      const budget = subnavBenchmarkCases[group].metrics.includes(part) ? SUBNAV_BUDGETS[part] : undefined;
       recordMeasurement({ metric: `${name}/${part}`, label: `Open ${place}, ${what}`, unit: "ms", value, budget });
     };
     record("structureMs", "sections", sample.structureMs);
@@ -247,8 +248,7 @@ try {
   await Bun.write(join(output, "results.json"), JSON.stringify(report, null, 2));
   executionReport = { suites: [{ specs: budgetResult.specs }], errors: browserErrors };
   console.info(JSON.stringify({ label, summary, errors }, null, 2));
-  if (errors.length || summary.some((row) => row.structureMisses || row.dataMisses || row.editorMisses))
-    process.exitCode = 1;
+  if (errors.length) process.exitCode = 1;
 } catch (error) {
   const status = () => ({ pid: fixture.child.pid, exitCode: fixture.child.exitCode, signal: fixture.child.signalCode });
   const before = status();

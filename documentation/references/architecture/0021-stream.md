@@ -143,6 +143,6 @@ Filesystem coverage recovery follows [ADR 0140](../../adrs/0140-temporary-diff-w
 
 ### Enforcement and validation
 
-`bun run verify:boundaries` runs [client event transport checks](../../../scripts/verify/client-event-transport.ts) over SDK, dashboard, workbench, UI, and extension sources. Only the sync/shared transport owners consume SSE; resource adapters use logical subscriptions. [Verifier regression tests](../../../scripts/verify/verify-boundaries.p0.test.ts) prove that introducing a per-resource stream fails the required boundary check.
+`bun run verify:boundaries` runs [client event transport checks](../../../scripts/verify/client-event-transport.ts) over SDK, dashboard, workbench, UI, and extension sources. Only the sync/shared transport owners consume SSE; resource adapters use logical subscriptions.
 
 Before completing a live-resource or transport change, run the [mixed-resource browser regression](../../../packages/e2e/src/ui/resource-stream-budget.p1.spec.ts). It checks actual HTTP/1.1 event responses against the overall two-connection budget with five tickets, several files, sessions, commands, late cancellation, edits at close, reconnects, and destination metadata. It also exercises retained dashboard views and project switching. See the [resource ownership lesson](../../lessons-learned/0020-resource-stream-ownership.md).

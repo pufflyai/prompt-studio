@@ -28,7 +28,6 @@ FROM oven/bun:1.4.4 AS tls-fixture
 WORKDIR /app
 COPY --chown=bun:bun services/relay/scripts/tls.fixture.ts ./tls.fixture.ts
 COPY --chown=bun:bun services/relay/scripts/tls-validity.ts ./tls-validity.ts
-COPY --chown=bun:bun services/relay/scripts/tls-validity.p0.test.ts ./tls-validity.p0.test.ts
 RUN mkdir /tls-private /tls-public /relay-tls-private && chown bun:bun /tls-private /tls-public /relay-tls-private
 USER bun
 CMD ["bun", "tls.fixture.ts"]

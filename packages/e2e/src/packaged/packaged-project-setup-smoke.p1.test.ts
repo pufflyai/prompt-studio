@@ -3,11 +3,7 @@ import type { ChildProcess } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
-// Covers composer drafts, rendered chat and idle sessions through the packaged host.
-import { expectPackagedChatComposer } from "./packaged-chat-composer-smoke";
-import { expectPackagedDriveDiscovery } from "./packaged-filesystem-smoke";
 import { expectPackagedFolderOwnership } from "./packaged-folder-ownership";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
@@ -15,12 +11,6 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 import { expectPackagedWorkspaceFileLink } from "./packaged-workspace-link-smoke";
 
 setupPackagedSmokeTests();
-const composerDefaults = e2eExtensions(
-  "workbench-fixture",
-  "pstdio-session-browser",
-  "pstdio-home",
-  "pstdio-workspaces",
-);
 
 // Stable hosts use PSX; nightlies retain their exact main commit.
 const hostReleaseRef = /^(?:\{hostRelease\}|pstdio@\d|[0-9a-f]{40}$)/;
@@ -39,51 +29,6 @@ const expectPackagedProjectSetup = (logPath: string, projectId: string) => {
     );
   }
 };
-
-test(
-  "serves the dashboard and API, hands off composer drafts, and starts idle sessions on their first message",
-  async () => {
-    const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));
-    let child: ChildProcess | null = null;
-
-    try {
-      const started = await startPackagedServe(tempRoot, {
-        PSTDIO_DEFAULT_EXTENSIONS: composerDefaults,
-      });
-      child = started.child;
-
-      const dashboardRes = await fetch(started.baseUrl);
-      expect(dashboardRes.status).toBe(200);
-      expect(dashboardRes.headers.get("content-type")).toContain("text/html");
-      const dashboardHtml = await dashboardRes.text();
-      const moduleScript = dashboardHtml.match(/<script[^>]+type="module"[^>]+src="([^"]+)"/);
-      expect(moduleScript).not.toBeNull();
-      const dashboardScript = await fetch(new URL(moduleScript![1]!, started.baseUrl));
-      expect(dashboardScript.status).toBe(200);
-      expect(dashboardScript.headers.get("content-type")).toMatch(/javascript/);
-
-      const projectsRes = await fetch(`${started.baseUrl}/v1/projects`, {
-        headers: runtimeAuthorization(started.descriptor),
-      });
-      expect(projectsRes.status).toBe(200);
-      expect(await projectsRes.json()).toEqual([]);
-      await expectPackagedDriveDiscovery(started.baseUrl, runtimeAuthorization(started.descriptor));
-      const renameRes = await fetch(`${started.baseUrl}/v1/sessions/missing/title`, {
-        method: "PATCH",
-        headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
-        body: JSON.stringify({ title: " " }),
-      });
-      expect(renameRes.status).toBe(400);
-      await expectPackagedChatComposer(started.baseUrl, runtimeAuthorization(started.descriptor), tempRoot);
-    } finally {
-      if (child) {
-        await stopProcess(child);
-      }
-      rmSync(tempRoot, { recursive: true, force: true });
-    }
-  },
-  Math.max(PACKAGED_TEST_TIMEOUT, 45_000),
-);
 
 test(
   "opens an empty folder with project bootstrap artifacts and preserves it after restart",

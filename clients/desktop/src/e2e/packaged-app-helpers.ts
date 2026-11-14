@@ -16,8 +16,6 @@ import { waitForVisibleElement } from "./visible-element-timing";
 
 const desktopRoot = resolve(import.meta.dirname, "../..");
 
-export const desktopVersion = JSON.parse(readFileSync(join(desktopRoot, "package.json"), "utf8")).version as string;
-
 const packageLayout = resolvePackagedLayout(desktopRoot, process.platform, process.arch);
 
 const packagedEnvironment = (home: string) => {
@@ -104,37 +102,6 @@ export type PackagedWindow = {
 
 export type PackagedApp = PackagedWindow & { runtime: RuntimeDescriptor; page: Page; readyInMs: number };
 
-export const attachStartupTimings = async (app: PackagedApp) => {
-  const lifecycle = await app.lifecyclePage.evaluate(() => ({
-    timeOrigin: performance.timeOrigin,
-    entries: performance.getEntries().map((entry) => entry.toJSON()),
-  }));
-  await test.info().attach("lifecycle-startup-performance", {
-    body: JSON.stringify({ startedAt: app.startedAt, ...lifecycle }),
-    contentType: "application/json",
-  });
-  const entries = await app.page.evaluate(() =>
-    performance
-      .getEntries()
-      .filter((entry) => ["navigation", "resource"].includes(entry.entryType))
-      .map((entry) => entry.toJSON()),
-  );
-  await test.info().attach("workbench-startup-performance", {
-    body: JSON.stringify({ readyInMs: app.readyInMs, entries }),
-    contentType: "application/json",
-  });
-  const windowShown = readFileSync(join(app.home, "logs.jsonl"), "utf8")
-    .trim()
-    .split("\n")
-    .map((line) => JSON.parse(line) as { event?: string; time: string; visible?: boolean })
-    .reverse()
-    .find((entry) => entry.event === "desktop.window.ready");
-  const firstContent = lifecycle.entries.find((entry) => entry.name === "first-contentful-paint");
-  // A missing event is reported as an unmeasured startup window, so the benchmark keeps its other samples.
-  if (!windowShown?.visible || !firstContent) return Number.NaN;
-  return Math.max(Date.parse(windowShown.time), lifecycle.timeOrigin + firstContent.startTime) - app.startedAt;
-};
-
 const launchPackaged = async <T>(
   home: string,
   runtimeEnvironment: Record<string, string>,
@@ -209,6 +176,27 @@ export const launchPackagedApp = async (home: string, runtimeEnvironment: Record
   try {
     const page = await waitForWorkbenchPage(app.lifecyclePage, app.runtime.origin);
     const visibleAt = await waitForVisibleElement(page, "#root");
+    // Direct exec bypasses LaunchServices activation. See ADR 0150.
+    if (process.platform === "darwin") {
+      const activation = spawnPackagedProcess(
+        "osascript",
+        [
+          "-l",
+          "JavaScript",
+          "-e",
+          `ObjC.import("AppKit"); const app = $.NSRunningApplication.runningApplicationWithProcessIdentifier(${app.child.pid}); if (app.isNil()) throw new Error("Owned desktop process is not an NSRunningApplication"); const before = app.active; const accepted = app.activateWithOptions(2); console.log(JSON.stringify({ before, accepted, after: app.active })); if (!accepted) throw new Error("Native application activation request was refused");`,
+        ],
+        { stdio: "pipe" },
+      );
+      activation.stdout.on("data", (chunk) => console.log("Native desktop activation", String(chunk).trim()));
+      activation.stderr.on("data", (chunk) => console.error(String(chunk).trim()));
+      await new Promise<void>((resolve, reject) => {
+        activation.once("error", reject);
+        activation.once("exit", (code) =>
+          code === 0 ? resolve() : reject(new Error(`Native app activation exited with ${code}`)),
+        );
+      });
+    }
     return { ...app, page, readyInMs: visibleAt - app.startedAt };
   } catch (error) {
     await disposePackagedApp(app);

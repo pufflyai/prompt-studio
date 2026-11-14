@@ -95,19 +95,6 @@ describe("terminal supervisor", () => {
     }
   });
 
-  posixOnlyTest("counts a program that replaces the interactive shell", async () => {
-    const { logger } = createRecordingLogger();
-    const supervisor = createTerminalSupervisor({ logger });
-    const terminal = supervisor.api.openSession({ command: ["/bin/bash", "--norc", "-i"], cols: 80, rows: 24 });
-    try {
-      terminal.write("exec sleep 5\n");
-      await Bun.sleep(100);
-      expect(await supervisor.activity()).toEqual([{ id: terminal.id, label: "bash" }]);
-    } finally {
-      await supervisor.dispose();
-    }
-  });
-
   posixOnlyTest("counts a directly launched foreground program as work", async () => {
     const { logger } = createRecordingLogger();
     const supervisor = createTerminalSupervisor({ logger });

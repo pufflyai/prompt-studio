@@ -2,7 +2,7 @@
 
 ## 1. Red: write a test first
 
-1. Follow the red, green, and refactor workflow for every change. Skip a test only when no useful test applies.
+1. Follow the red, green, and refactor workflow for supported product behavior. Changes to tests, test setup, runners, suite configuration, documentation, or configuration do not need tests of their own.
 2. Reproduce a bug with Playwright or another tool before fixing it.
 3. For a meaningful behavioral bug, write the smallest regression test that proves the expected behavior before changing code.
 4. Confirm the test fails for the right reason.
@@ -21,7 +21,7 @@
 3. Add or update end-to-end tests for new features, update documentation, and remove tests that cover only implementation details.
 4. Keep tests green.
 5. CI runs each test once per applicable platform. Never retry unchanged failures or run repeated reliability checks to obtain a pass. Verify cause repairs and the final revision through section 9.
-6. Quarantine confirmed flakes with evidence, an owner, and removal criteria. Run them once in a separate lane and require its execution report.
+6. Remove failing quarantined cases and their registry entries. Keep their failure evidence in the ticket or report so product coverage can be restored after the cause is fixed. Do not move known failures into the stable lane.
 
 ## 4. Prove it works
 
@@ -54,6 +54,7 @@
 11. Do not keep tests that cover only implementation details.
 12. Demo/example extensions and repository-local tools do not carry automated test suites or app journeys. Test platform behavior with minimal fixtures, without exercising demo application features.
 13. Keep production extension suites focused on their own behavior and runnable with their declared public dependencies and extension-owned setup. Avoid installing unrelated extensions or starting the complete host for unit tests.
+14. Do not test test code. Remove meta tests that assert fixture generation, test setup, runners, discovery, suite selection, reporting, or benchmark instrumentation. Exercise those helpers through product behavior tests; inspect setup changes with static checks and the affected product scenarios.
 
 ## 7. Test commands
 
@@ -75,7 +76,7 @@
 ## 9. Targeted validation and repairs
 
 1. Finish implementation and settle known fixes before review validation. Use focused red/green checks during development. Commit the candidate before `bun run test:review`; the command validates an immutable disposable checkout of that revision.
-2. Use the complete merge-queue test selection as the minimum local review workload: repository/package P0, API/database P0/P1, P1 Bun contracts, queue service integrations and the canonical dashboard smoke. Derive membership from the queue planner and owning runners, not a separate filename list. Add affected contracts, added or edited tests, and the smallest additional scenarios needed to cover changed behavior. Include affected callers, permissions, persistence, lifecycle and integration boundaries. Test discovery owns membership. A changed helper, fixture or runner can affect tests whose files did not change.
+2. Use the complete merge-queue test selection as the minimum local review workload: all fast repository/package P0, affected P1 source contracts and service integrations, the canonical dashboard smoke, packaged desktop smoke and affected packaged flows. Derive membership from the queue planner and owning runners, not a separate filename list. Add affected contracts, added or edited tests, and the smallest additional scenarios needed to cover changed behavior. Include affected callers, permissions, persistence, lifecycle and integration boundaries. Test discovery owns membership. A changed helper, fixture or runner can affect tests whose files did not change.
 3. Inspect the plan with `bun run test:review --list`. Add relevant existing scenarios with `--test <repository-relative-file>`; additions never remove automatic coverage. Queue-selected tests always run locally, including service integrations and smoke. A deferred inventory is not a request to run complete matrices. Native, packaged and benchmark workloads outside the queue minimum run only under the exceptional-check policy in [PR completion](0004-ci.md#1-finishing-a-pull-request); their normal complete coverage belongs to nightly and release validation. A missing Docker daemon or browser prerequisite fails the local run; it never shrinks the queue minimum. Retain evidence for explicitly required exceptional checks. Do not dispatch `ci:full` or benchmark diagnostics merely because ordinary PR CI omits unedited suites.
 4. Keep one failure list with revision, command, failed case or file, elapsed time and evidence. Failed, blocked, interrupted, deferred and unrun work never counts as passing. Aim for 15 minutes for routine local review. Broad changes run every selected check to completion even when they exceed that target; report the overrun and slow phases. Elapsed time alone never cancels or reduces coverage. Explicit interruption still stops owned processes and preserves partial evidence; individual test and benchmark limits remain unchanged.
 5. Repair failures together. Rerun failed tests and new regressions through their owning runners. Run blocked checks after their prerequisites are fixed. Preserve the first failure; retrying unchanged source does not resolve it. Reuse passing results only when their inputs remain unchanged, recording the original revision and scope honestly.

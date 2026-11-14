@@ -1,22 +1,24 @@
 # CI stages
 
-This guide explains how a change moves from a pull request to a stable release, and which tests run at each step. [ADR 0129](../../adrs/0129-prioritize-merge-checks-and-certify-release-candidates.md) records why CI is split this way.
+This guide explains how a change moves from a pull request to a stable release, and which tests run at each step. [ADR 0149](../../adrs/0149-share-required-checks-and-own-platform-coverage.md) records why CI is split this way.
 
 ```text
 pull request ──► merge queue ──► main ──► nightly (daily) ──► stable release (manual)
- P0 + edited     P0 + contracts smoke     P0–P3, all hosts     P0–P3, signed apps
+ shared profile  same profile   smoke     Linux + native      exact shipped artifacts
 ```
+
+The required profile has a ten-minute maximum turnaround target. Qualification is pending until representative cold and warm PR and actual merge-group runs pass. Native and release durations have separate targets.
 
 Each stage has its own purpose. A later stage never trusts a result from a different commit: the queue tests the exact merged commit, and a release tests the exact files it will publish.
 
 ## Test priorities
 
-Every test file names its priority before the runner suffix, for example `session-state.p0.test.ts` or `startup.p1.spec.ts`. The priority decides when the complete suite runs. Tests a PR adds or edits run in required PR CI at every priority. The queue does not run the `edited_tests` matrix, but its P0 and selected P1 checks can run the same files again. Test discovery reads the filename; workflows never list test files. A test filename without a priority fails CI.
+Every test file names its priority before the runner suffix, for example `session-state.p0.test.ts`. Priority describes importance; the coverage catalog separately owns platform applicability. PR and queue selection use the same policy and include affected behavior and edited tests. P3 workloads stay in dedicated nightly/release validation.
 
 | Priority | What it protects | Runs in | Examples |
 | --- | --- | --- | --- |
 | P0 | Fast rules: types, validation, permissions, state changes, focused extension logic, repository and CI rules | Pull request, queue, nightly, stable | `session-state.p0.test.ts` |
-| P1 | Essential product behavior: session, workspace and extension lifecycles, data safety, restart and upgrade, sync, a working app, native and compiled startup | Queue for source contracts and startup smoke; complete suites in nightly/stable | `session-isolation.p1.test.ts`, `startup.p1.spec.ts` |
+| P1 | Essential product behavior: session, workspace and extension lifecycles, data safety, restart and upgrade, sync, a working app, native and compiled startup | PR/queue for affected source contracts and packaged smoke; complete suites in nightly/stable | `session-isolation.p1.test.ts`, `startup.p1.spec.ts` |
 | P2 | Breadth: extension feature workflows, component variants, more browsers and platforms, full install and update matrices | Nightly, stable | `planner-board.p2.spec.ts` |
 | P3 | Performance: startup, responsiveness, throughput, resource use, scale and endurance | Nightly, stable | `startup.p3.bench.ts`, `chat-rendering.p3.bench.ts` |
 
@@ -50,15 +52,15 @@ A local run only proves your own machine. It does not prove other platforms or s
 
 | Stage | Trigger | Workflow | What runs | Success means | Target time |
 | --- | --- | --- | --- | --- | --- |
-| Pull request | Push to a PR branch | Test and Build (`pull_request`) | Affected P0, lint, types and public contracts, plus added or edited tests at every priority | The baseline and edited tests passed for this PR | under 3 min for the baseline; edited tests add their normal setup and execution |
-| Merge queue | Add to queue | Test and Build (`merge_group`) | All P0, P1 source contracts and real dashboard startup smoke | The exact merged commit passed safety contracts and starts | under 8 min |
+| Pull request | Push to a PR branch | Test and Build (`pull_request`) | All fast P0 units, affected source contracts, static/type checks, one Linux desktop package, smoke and affected packaged flows | The selected profile passed on this candidate | at most 10 min; qualification pending |
+| Merge queue | Add to queue | Test and Build (`merge_group`) | The same required profile on the actual merged tree and combined diff | The exact merged candidate passed | at most 10 min; qualification pending |
 | Main | Queue merges a commit | Test and Build (`push`) | Checks that main matches the tested queue commit, publishes the build cache, runs a startup smoke test | Main is the commit the queue tested, and it still starts | under 8 min |
-| Nightly | 03:00 UTC daily, or manual `nightly` | Release Packages → Production validation | P0–P2 on Linux, with native desktop and packaged CLI checks also on Apple Silicon; P3 performance, coverage, signed apps for Linux and Apple Silicon | Nightly published; full results recorded for that commit | 40–50 min of execution |
-| Stable release | Manual `stable` | Release Packages → Production validation | Everything nightly runs, plus Windows and Intel macOS: signed desktop apps, packaged CLI hosts, Windows unit and database checks, backend benchmarks on Windows, and the Windows update check | A complete certificate for the exact release files allows publishing | 40–50 min of execution |
+| Nightly | 03:00 UTC daily, or manual `nightly` | Release Packages → Production validation | P0–P2 on Linux, with focused native checks on Apple Silicon and Windows x64; P3 performance, coverage, signed apps for Linux and Apple Silicon | Nightly published; full results recorded for that commit | 40–50 min of execution |
+| Stable release | Manual `stable` | Release Packages → Production validation | Everything nightly runs, plus Windows and Intel macOS: signed desktop apps, packaged CLI hosts, focused Windows process/security and filesystem/storage contracts, backend benchmarks on Windows, and the Windows update check | A complete certificate for the exact release files allows publishing | 40–50 min of execution |
 
 Prioritize distinct coverage first, then minimize repeated work on frequent runs. Parallel jobs contribute their dependency critical path, not the sum of every runner minute. Report total runner work separately to expose expensive duplication.
 
-Target times count real work: install, build, artifact transfer, tests, reports and cleanup. Time spent waiting in the queue or for a runner is reported separately. A target is never a reason to remove tests or to raise a time limit. See [CI timeouts and performance budgets](../../guidance/0004-ci.md#3-ci-timeouts-and-performance-budgets).
+Target times count real work: install, build, artifact transfer, tests, reports and cleanup. PR and queue targets start at workflow creation and include runner waits, setup, builds, reports and gate cleanup. Runner waits are also reported separately. A target is never a reason to remove tests or to raise a time limit. See [CI timeouts and performance budgets](../../guidance/0004-ci.md#3-ci-timeouts-and-performance-budgets).
 
 The timing report keeps initial scheduling delay, elapsed time after the first job starts, aggregate runner execution and per-job phases separate. Elapsed-after-start can still include later runner scheduling gaps; use the dependency path and phase timings when assessing the execution targets. Release duration includes certification and publication after the functional gate.
 
@@ -66,17 +68,14 @@ The timing report keeps initial scheduling delay, elapsed time after the first j
 
 ## Pull requests
 
-- CI uses the complete diff from the PR base to the checked-out candidate, so tests edited in earlier commits remain selected after another push. It picks the changed workspaces, then adds every workspace that depends on them, including extensions that use released SDK or UI ranges.
-- Root build inputs and lockfiles select every workspace. Changes inside `scripts/ci/` select the tooling owner and its declared consumers; the queue still checks all owners.
-- A documentation-only change runs only the static checks.
-- Added or edited P1, P2 and P3 tests run immediately in required `edited_tests` jobs, alongside the affected P0 checks. P0 tests already covered by the baseline do not run twice. Deleted tests are not executed; their removal still selects affected workspace checks.
-- Only test files the PR adds or edits run beyond P0. Helpers, fixtures, runners and test configuration select their workspace's P0 checks, not its P1–P3 tests. The queue runs selected P1 source contracts; complete P1–P3 coverage runs in nightly and stable validation.
-- Benchmarks and the service delivery smoke do not run on PRs. Edited benchmark files still run through `edited_tests`.
-- Edited tests use their registered runners and setup. PR and queue checks guard the nightly, so edited tests run on the hosts their suite uses in nightly: native desktop checks on Linux x64 and Apple Silicon, packaged CLI P0–P1 on Linux x64, Linux arm64 and Apple Silicon and P2 on Linux x64 and Apple Silicon, and packaged browser checks on Linux. An edited benchmark runs its complete registered suite once per applicable host, preserving its workload and cold-start order. Desktop and backend benchmarks use Linux and Apple Silicon; browser and relay suites use Linux. Existing test limits and performance budgets apply.
-- Each selected file runs once per applicable platform. Stable failures block the PR. Quarantined cases retain their separate execution and report requirements. Missing execution evidence fails the check. Jobs preserve selected files, results, traces and measurements as artifacts; independent edited files continue after a failure.
-- Complete P1/P2/P3 matrices run in nightly and stable validation. Run relevant integration tests locally before queueing. To get production-level results on a PR, add `ci:full` or request Windows-only diagnostics with `ci:windows` (see [Extra diagnostics](#extra-diagnostics)).
-- A new push cancels the PR's older run. Adding or removing labels does not rerun CI; `ci:full` and `ci:windows` request diagnostics through their own trusted label workflow.
-- The Version Packages PR is pushed with the workflow token, so GitHub holds its `pull_request` runs until a maintainer approves them. Approve the latest run before queueing the PR. A dispatched run does not help: a PR's check list leaves out `workflow_dispatch` runs, so their `ci_passed` does not satisfy the required check.
+- PR scope compares the checked-out merge candidate with its actual first parent. Merge groups compare with `merge_group.base_sha`, covering every combined change in the group.
+- Both stages run all fast P0 units. Source P1 contracts follow production owners and their dependants. Lockfiles and shared build inputs select all owners. Static/public checks follow the files they read.
+- Both stages build one unsigned Linux desktop package, then run packaged startup and affected desktop flows. Relative helper/fixture imports select consuming flows even when no test file changed. Existing Linux compiled-runtime/browser flows remain explicit coverage owners until their Electron replacements pass; an external browser pass is not a desktop pass.
+- The compact source dashboard smoke remains a source integrity contract. Complete source app/component, native and browser-engine matrices stay outside the routine required profile.
+- Edited behavior tests use their registered Linux runners. Native-only changes can use focused diagnostics. Edited benchmarks retain their dedicated nightly/release workload and budgets.
+- A documentation-only PR has the same fast baseline and mandatory packaged smoke, without affected feature journeys. Local prose-only work can still use scoped verification without invoking the review command.
+- Scope seals the exact selected files, target, source and policy into the immutable plan. Missing execution, setup failure or a missing selected job fails the gate. Quarantine retains its case identities and separate evidence rules.
+- A new push cancels the older PR run. `ci:full` and `ci:windows` request separate diagnostics; they do not replace required candidate validation.
 
 ## Merge queue
 
@@ -90,9 +89,7 @@ The `main` ruleset controls the queue:
 | Merge method | squash, 1 to 5 entries at a time, after waiting up to 5 minutes for more entries |
 | Check timeout | 60 minutes |
 
-The queue runs all P0 checks, P1 API/database/Bun/service-integration contracts, and the existing real dashboard startup smoke on the merged commit. Bun and service-integration contracts share two jobs each, because their setup outweighs their tests. The license, published-extension and public API checks depend only on the files they read, so a queue entry runs them only when its own changes touch those files, as on PRs. Each entry is diffed against the entry ahead of it, which already checked its own changes. Nightly and stable runs always include them. Complete browser, component, CLI and native desktop matrices run in nightly and stable validation. Added or edited tests still run immediately in required PR CI.
-
-This retains fast data-safety and integration coverage before merging while reducing repeated native and browser builds. Browser/native regressions outside the smoke check may first appear after merging. Stable publishing remains blocked until complete validation certifies the exact release candidate.
+The queue applies the PR policy to its actual merged tree and the entire combined change scope. It executes fresh tests; a prior PR pass never certifies a different tree. License, published-extension and public API checks use that same combined diff. No broad Windows/macOS or browser matrix is added at the queue stage.
 
 ### When a PR leaves the queue
 
@@ -113,7 +110,7 @@ When a P1 job fails, the other P1 jobs stop themselves on purpose (see [Failure 
 
 1. Read the `validation_results` log. It lists each failed job.
 2. Sort the failures by time. The earliest failed job that is not `validation_results` or `ci_passed` is the cause.
-3. If the PR did not touch that code, the test is unreliable. Fix it, or quarantine it, in a separate PR. Do not queue the same commit again and hope it passes.
+3. If the PR did not touch that code, the test is unreliable. Fix it in a separate PR. Remove a failing quarantined case and keep the evidence for restoring coverage after a fix. Do not queue the same commit again and hope it passes.
 
 Causes of unreliable queue failures we have fixed before:
 
@@ -144,8 +141,8 @@ A red `main` usually means a startup smoke failure or a cache problem. Fix it be
   - P1 and P2 against the signed desktop apps. When the run validates signed release files, the source desktop jobs keep only the source Electron checks, so each packaged desktop case runs once.
   - P3 performance measurements
   - container service checks
-  - the packaged CLI in the toolchain job on Linux x64, Linux arm64 and Apple Silicon: P1 everywhere; P2 feature workflows on Linux x64 and Apple Silicon only, because they test OS-independent behavior. Install, native process and asset checks are P1.
-- The nightly does not run Windows or Intel macOS. Stable releases validate them, so add `ci:windows` to request Windows source diagnostics before cutting a release. Signed installation/update certification still belongs to the release path.
+  - native artifact contracts on Linux x64, Apple Silicon and Windows x64; full shared CLI behavior runs separately on Linux
+- Windows runs focused source/native contracts and an unpublished packaged desktop diagnostic. Intel macOS and the other secondary CLI architectures have weekly compatibility diagnostics and exact-artifact checks in stable releases. Signed installation/update certification belongs to the release path.
 - The shared Bun unit, API and database suites run on Linux. Apple Silicon runs the desktop app's own Bun tests, the native desktop and packaged CLI checks, and the Bun quarantine lane.
 - Source line coverage comes from the nightly's P0–P2 Bun jobs. The Coverage workflow publishes only a successful full nightly's measurement. Quarantined tests and P3 are not counted.
 
@@ -161,7 +158,7 @@ Start **Release Packages** manually with the `stable` channel.
 
 1. `plan` picks the version and places the release tag.
 2. The release files are built once: npm packages, containers, and signed desktop apps for Linux x64, macOS x64, macOS arm64 and Windows x64. The Windows installer also gets an update check.
-3. **Production validation** runs everything the nightly runs, against those exact files, and adds Windows and Intel macOS: all six native CLI hosts (P2 feature workflows on Linux x64, Windows x64 and Apple Silicon), Windows unit and database checks, and Windows backend benchmarks.
+3. **Production validation** runs everything the nightly runs, against those exact files, and adds Windows and Intel macOS: all six native CLI artifact contracts, with shared CLI journeys on Linux, focused Windows process/security and filesystem/storage contracts, and Windows backend benchmarks.
 4. `certify` writes a certificate. It ties the results to the source commit, version commit, toolchain, producing run and attempt, and the artifact IDs and digests.
 5. `publish` runs only if every job passed. It checks the certificate again before it downloads the files. Missing, expired, changed or partial results block publishing.
 
@@ -175,11 +172,11 @@ If a stable release stops halfway, re-run the `publish` job. It skips the steps 
 
 ## Extra diagnostics
 
-These expensive workflows are exceptions, not routine PR requirements. Use them only for a concrete high-risk change that focused local checks and normal PR CI cannot establish, or an explicit user request. Record the risk and smallest complete workload first. Deferred inventory entries and shared dependency changes do not automatically justify a full matrix. Nightly and release matrices remain unchanged.
+These expensive workflows are exceptions, not routine PR requirements. Use them only for a concrete high-risk change that focused local checks and normal PR CI cannot establish, or an explicit user request. Record the risk and smallest complete workload first. Deferred inventory entries and shared dependency changes do not automatically justify a full matrix. Nightly and release validation retain their declared complete coverage.
 
 - **`ci:full` label.** Runs production functional diagnostics for a same-repository PR through the trusted base workflow. Its `production_ci_passed` result does not replace `ci_passed`. A maintainer runs this for fork PRs.
-- **`ci:windows` label.** Runs Windows-only source diagnostics for the exact same-repository PR merge commit. Includes every stable Windows unit/database shard, desktop tests, x64/ARM64 packaged CLI shards, Windows harness checks and Bun quarantine evidence, plus repository static checks. Reports `windows_ci_passed`; it does not replace either the fast PR gate or full production/release certification. The label runs once when added; remove and re-add it to test a new head. Forks require maintainer dispatch of a reviewed repository ref.
-- **Manual Test and Build.** The `merge_queue` profile repeats the queue checks without a real queue. The `production` profile runs production functional checks from source; `windows` selects the Windows lanes only. These profiles publish nothing. A newer manual run for the same branch and `source_sha` cancels the older one.
+- **`ci:windows` label.** Runs Windows-only source diagnostics for the exact same-repository PR merge commit. Includes the two focused Windows source groups, native desktop contracts and x64/ARM64 CLI artifact contracts, Windows harness checks and Bun quarantine evidence, plus repository static checks. Reports `windows_ci_passed`; it does not replace either the fast PR gate or full production/release certification. The label runs once when added; remove and re-add it to test a new head. Forks require maintainer dispatch of a reviewed repository ref.
+- **Manual Test and Build.** The `merge_queue` profile repeats the queue checks without a real queue. The `production` profile runs production functional checks from source; `windows` selects the Windows lanes only, and `macos` selects Apple Silicon and Intel native desktop/CLI contracts plus Mac quarantine evidence. The Mac diagnostic excludes Linux shared journeys and Windows jobs. These profiles publish nothing. A newer manual run for the same branch and `source_sha` cancels the older one.
 - **Reliability branches.** Pushes to `test/ci-reliability/merge/**` run the queue checks. Other `test/ci-reliability/**` branches run production functional checks.
 
 None of these replace the real queue run or release certification.
@@ -200,13 +197,9 @@ None of these replace the real queue run or release certification.
 
 ### Quarantine
 
-Quarantine is manual, never automatic. Entries live in `scripts/ci/test-quarantine.json`. Each entry names the runner, file and title, platform, owner, reason, evidence and the condition for removing it.
+Remove failing quarantined cases and their matching entries from `scripts/ci/test-quarantine.json`. Preserve first-failure evidence in the ticket or report; restore product coverage after fixing the cause. Do not turn a failing quarantine into a stable test or a permanent skip.
 
-- Quarantined tests run in their own jobs. Their failures do not block the queue, but each test must still run exactly once.
-- A scoped Bun file whose reported cases all belong to the platform quarantine records an unselected stable lane with zero executed cases. The separate quarantine lane must still execute and verify those cases. Empty files, missing reports and unregistered skipped cases cannot use this handoff. An edited Playwright file with quarantine entries for the platform may likewise select no stable cases; its quarantine lane must still execute and verify every registered case.
-- Retries are not allowed: no rerun flags, no per-test retries, no retries hidden in helpers.
-- Local selections include their applicable quarantine lane once. Use `bun run test -- --lane quarantine --scope <workspace> --runner <kind>` for a focused diagnosis. The shared executor validates every registered case and keeps its raw outcome. Dedicated ordered benchmark lifecycles retain their native budget classification and report verifier.
-- Keep the first failed attempt before a rerun. A later pass does not explain the failure.
+The registry is currently empty. Quarantine execution remains available for focused diagnosis. Registered diagnostic cases must run once in their separate lane with native evidence. Setup failures, missing cases or reports, cancellation, skipped cases, and retries fail verification. A stable pass does not establish that a diagnostic case passed.
 
 ## Builds and caches
 
@@ -226,7 +219,7 @@ P0 package rows build their packages and dependencies once, then run lint and un
 
 The **Weekly CI failure report** runs every Sunday at 21:17 UTC and covers the previous seven days. Besides failing tests and steps, it reports:
 
-- p50 and p90 time per stage against the 3, 8, 8 and 40 minute targets for PRs, the queue, main and release validation. Only first attempts whose required gate passed or failed count; superseded, approval-pending and gate-less runs are left out.
+- p50 and p90 time per stage against the 10, 10, 8 and 40 minute targets for PRs, the queue, main and release validation. Only first attempts whose required gate passed or failed count; superseded, approval-pending and gate-less runs are left out.
 - runner minutes per stage, including reruns
 - queue runs per merged PR
 - the share of failed jobs that passed when rerun on the same commit. A gate job counts only when nothing else in its attempt failed.
@@ -245,3 +238,13 @@ Before treating a CI design change as done:
 5. Run the real queue-to-main path and compare first-attempt work time with the targets. Report waiting time separately.
 
 Keep `ci_passed` and ALLGREEN. Read the live ruleset before you change it. If a change makes CI worse, restore the last working workflow and scripts, remove old queue entries and test fresh ones. Never weaken protection, or reuse a green result from another commit, to make a rollback look successful.
+
+## Coverage ownership and qualification
+
+[`coverage-ownership.ts`](../../../scripts/ci/coverage-ownership.ts) owns integration applicability. Shared navigation, Planner and editing flows have one Linux owner. Native shell, drive, locking, process ownership and install behavior stays on its OS. Mixed native files retain their native assertions until a replacement is extracted and qualified. The Intel Mac desktop runs the retained startup/recovery smoke. The failing startup/persistence cases, including their Intel terminal assertion, were removed with the quarantine cleanup; their earlier validation does not certify the retained coverage.
+
+Daily native diagnostics include an unpublished Windows desktop package; nightly publication still contains only Linux and Apple Silicon apps. Stable validation consumes every shipped target's exact bytes. Certificate names distinguish `desktop-shared-linux-x64` from `desktop-native-<target>` and the policy digest includes the selection and execution code. Surviving P3 cases keep their existing workloads and budgets. Failing quarantined P3 cases were removed; their coverage gaps are recorded in [the quarantine decision](../../adrs/0101-temporary-flaky-test-quarantine.md). Installation/update verification and signature checks retain their existing contracts.
+
+Measure a completed first-attempt run with `bun scripts/ci/required-turnaround.ts <run-id> cold` or `warm`. Preserve the cache provenance with the report. The JSON records workflow creation through required-gate completion, runner waits when GitHub provides creation timestamps, and individual job/step timings. Unknown cache provenance, incomplete or failed runs, reruns and overruns cannot qualify the ten-minute target. Do not omit selected tests or raise allowances to pass it.
+
+Before accepting a migration, retain an inventory of old and new files/cases and their exact Linux/native replacements. Run representative cold and warm PR and actual merge-group candidates, plus the final published-artifact contracts. Restore a family's previous selection if its replacement fails qualification. Hosted qualification, migration of remaining browser-driven shared journeys to Electron, mixed native case extraction must remain visible until verified; local planner passes do not establish them.

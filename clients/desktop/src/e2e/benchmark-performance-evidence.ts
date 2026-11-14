@@ -1,17 +1,8 @@
-import { mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import type { PerformanceRecordingExport, PerformanceSnapshot } from "pstdio-api-contracts/performance-diagnostics";
 import { restoreRecordedCapture, summarizePerformanceEvidence } from "pstdio-diagnostics";
 import type { PackagedApp } from "./packaged-app-helpers";
 import { readSnapshot } from "./packaged-performance-helpers";
-
-/** Opt in through the real device preference before the measured process is launched. */
-export const enableBenchmarkMonitoring = (home: string) => {
-  const directory = join(home, "electron-user-data");
-  mkdirSync(directory, { recursive: true });
-  writeFileSync(join(directory, "performance-monitoring.json"), JSON.stringify({ enabled: true }));
-};
 
 export const attachBenchmarkPerformance = async (app: PackagedApp, name: string, endedAt: number) => {
   let settlingError: unknown;

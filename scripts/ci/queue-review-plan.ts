@@ -1,7 +1,7 @@
 import { createCiTestPlan } from "./ci-test-plan";
 import { resolveCiScope } from "./pull-request-ci-scope";
 import type { TestPackage } from "./runner-profiles";
-import type { SourceIdentity } from "./test-plan";
+import { createTestPlan, mergeTestPlans, type SourceIdentity } from "./test-plan";
 
 // The review worker consumes the queue's actual runs; no matrix-to-files translation lives here.
 export const queueReviewPlan = (
@@ -11,17 +11,26 @@ export const queueReviewPlan = (
   source: SourceIdentity = { sha: "preview", tree: "preview", policy: "preview", dirty: false },
 ) => {
   const scope = resolveCiScope({ event: "merge_group", changedFiles: changed, packages, tests });
-  if (
-    scope.appMatrix.length ||
-    scope.packagedMatrix.length ||
-    scope.componentMatrix.length ||
-    scope.clientMatrix.length ||
-    scope.windows ||
-    scope.harnessCli ||
-    scope.dockerBuild
-  )
-    throw new Error("Merge queue added a validation lane; extend local queue coverage before running review");
-  const testPlan = createCiTestPlan(scope, packages, tests, source, { platform: process.platform, arch: process.arch });
+  const required = createCiTestPlan(scope, packages, tests, source);
+  // Local execution proves the same selected files on its actual host. Only CI can
+  // qualify the Linux artifact and ten-minute hosted result; never label a Mac pass Linux.
+  const testPlan = mergeTestPlans(
+    required.runs.map((run) =>
+      createTestPlan({
+        source,
+        packages,
+        files: run.files,
+        target: { platform: process.platform, arch: process.arch },
+        job: run.job,
+        lane: run.lane,
+        shard: run.shard,
+        artifact: run.artifact,
+        smoke: run.smoke,
+        reason: `local ${process.platform}/${process.arch} projection of required profile`,
+      }),
+    ),
+    source,
+  );
   const smoke = testPlan.runs.filter((run) => run.smoke);
   const browser = packages.find((pkg) => pkg.name === "e2e");
   if (scope.browserSmoke && !browser?.scripts["test:smoke"])

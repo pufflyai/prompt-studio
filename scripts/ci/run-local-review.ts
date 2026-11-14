@@ -84,7 +84,7 @@ export const runLocalReview = async (root: string, base: string, additionalTests
             unavailable: buildCache.error,
           },
           requiredCi:
-            "Latest-head ci_passed, plus evidence for every deferred check; local_passed is not review-ready by itself.",
+            "Latest-head ci_passed and any explicitly required exceptional checks; deferred inventory does not request release-scale validation. Local results describe their actual host and do not certify Linux CI.",
         },
         null,
         2,
