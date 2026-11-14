@@ -85,7 +85,7 @@ Fetch the base first, following [PR completion](../../guidance/0004-ci.md#1-fini
 | Layer | Selection |
 | --- | --- |
 | Static | Documentation links; changed code formatting and boundaries; public contract checks when relevant |
-| Queue minimum | All repository/package P0; API/database P0/P1; P1 Bun contracts and queue service integrations, including unchanged owners. Membership comes from the merge-queue scope and owning runners |
+| Queue minimum | All fast repository/package P0; affected P1 API/database and Bun contracts; affected service integrations; canonical dashboard smoke; packaged desktop smoke and affected packaged flows. Membership comes from the common PR/merge-queue planner and owning runners |
 | Additional contracts | Affected source/API/CLI contracts, including consumers of changed helpers and fixtures |
 | Changed tests | Added or edited files at every priority, using the registered runner |
 | Browser | Always run the canonical `e2e test:smoke` command used by queue CI, plus edited or explicitly selected app scenarios |

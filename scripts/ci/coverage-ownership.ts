@@ -35,14 +35,7 @@ const nativeCli = new Set([
   "packaged-two-device-sync-smoke",
   "packaged-cloud-project-recovery",
 ]);
-const sharedDesktop = new Set([
-  "packaged-project-tab-order",
-  "packaged-benchmark-evidence",
-  "packaged-startup-evidence",
-  "desktop-theme",
-  "desktop-performance-capture",
-  "desktop-visible-element-timing",
-]);
+const sharedDesktop = new Set(["packaged-project-tab-order", "desktop-theme", "desktop-performance-capture"]);
 const desktopReasons: Record<string, string> = {
   "packaged-active-work": "Native quit with a live terminal and real shell signals",
   "packaged-attached-recovery": "Native backend ownership and process shutdown",

@@ -176,6 +176,27 @@ export const launchPackagedApp = async (home: string, runtimeEnvironment: Record
   try {
     const page = await waitForWorkbenchPage(app.lifecyclePage, app.runtime.origin);
     const visibleAt = await waitForVisibleElement(page, "#root");
+    // Direct exec bypasses LaunchServices activation. See ADR 0150.
+    if (process.platform === "darwin") {
+      const activation = spawnPackagedProcess(
+        "osascript",
+        [
+          "-l",
+          "JavaScript",
+          "-e",
+          `ObjC.import("AppKit"); const app = $.NSRunningApplication.runningApplicationWithProcessIdentifier(${app.child.pid}); if (app.isNil()) throw new Error("Owned desktop process is not an NSRunningApplication"); const before = app.active; const accepted = app.activateWithOptions(2); console.log(JSON.stringify({ before, accepted, after: app.active })); if (!accepted) throw new Error("Native application activation request was refused");`,
+        ],
+        { stdio: "pipe" },
+      );
+      activation.stdout.on("data", (chunk) => console.log("Native desktop activation", String(chunk).trim()));
+      activation.stderr.on("data", (chunk) => console.error(String(chunk).trim()));
+      await new Promise<void>((resolve, reject) => {
+        activation.once("error", reject);
+        activation.once("exit", (code) =>
+          code === 0 ? resolve() : reject(new Error(`Native app activation exited with ${code}`)),
+        );
+      });
+    }
     return { ...app, page, readyInMs: visibleAt - app.startedAt };
   } catch (error) {
     await disposePackagedApp(app);
