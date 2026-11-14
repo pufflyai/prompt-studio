@@ -46,11 +46,9 @@ test("PR selection resolves the public benchmark registry before dependency inst
       stdio: "pipe",
     });
     expect(existsSync(join(root, "node_modules"))).toBe(false);
-    const line = readFileSync(output, "utf8")
-      .split("\n")
-      .find((line) => line.startsWith("editedMatrix="))!;
-    expect(JSON.parse(line.slice("editedMatrix=".length))).toMatchObject([
-      { owner: "pstdio-benchmarks", priority: "P1", files: JSON.stringify([file]) },
+    const plan = JSON.parse(readFileSync(join(root, "test-results/ci/plan.json"), "utf8"));
+    expect(plan.runs.filter((run: { files: string[] }) => run.files.includes(file))).toMatchObject([
+      { owner: "pstdio-benchmarks", priority: "P1", files: [file] },
     ]);
   } finally {
     rmSync(root, { recursive: true, force: true });

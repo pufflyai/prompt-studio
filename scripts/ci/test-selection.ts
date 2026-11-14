@@ -141,7 +141,7 @@ export const selectCiTests = (
     ["packaged-cli", "packaged-browser", "vite"].flatMap((runner) => {
       const matching = selected.filter((file) => testRunner(file) === runner && priorityFromFile(file) === priority);
       let shards = 1;
-      if (priority === "P2" && runner === "packaged-cli") shards = 2;
+      if (priority === "P2" && runner === "packaged-cli") shards = 4;
       if (priority === "P2" && runner === "packaged-browser") shards = 3;
       const suite = runner.replace("packaged-", "");
       return fileRows(matching, shards, priority).map((row) => ({ ...row, suite, shard: `${row.shard}/${row.total}` }));
