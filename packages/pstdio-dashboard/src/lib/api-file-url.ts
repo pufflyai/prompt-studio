@@ -1,8 +1,10 @@
 import { PstdioApiError } from "@pstdio/sdk/client";
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import { useQueries } from "@tanstack/react-query";
+import { useState } from "react";
 import { apiClientOptions } from "./api";
 import { safeApiFileBlob } from "./api-file-blob";
+import { createApiFilePartsResolver } from "./api-file-parts";
 
 export const API_FILE_URL_QUERY_KEY = "api-file-url";
 
@@ -40,16 +42,10 @@ const apiFileUrlsIn = (messages: SessionMessage[], allowed: (url: string) => boo
 
 /** Resolves API file parts to blob URLs, so the chat can show and open them. */
 export const useApiFileParts = (messages: SessionMessage[], allowed: (url: string) => boolean = () => true) => {
+  const [resolveParts] = useState(createApiFilePartsResolver);
   const urls = apiFileUrlsIn(messages, allowed);
   const blobUrls = useApiFileUrls(urls);
-  if (urls.length === 0) return messages;
-
-  return messages.map((message) => ({
-    ...message,
-    parts: message.parts.map((part) =>
-      part.type === "file" && blobUrls.has(part.url) ? { ...part, url: blobUrls.get(part.url) ?? "" } : part,
-    ),
-  }));
+  return resolveParts(messages, blobUrls);
 };
 
 /** Resolve an already scoped set of API file URLs with the existing authenticated cache. */
