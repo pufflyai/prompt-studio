@@ -39,8 +39,16 @@ export const relatedRecordPredicateSql = (
         const joins = selection.on.map((join) => {
           const left = recordFieldSql(outer, join.sourceField, alias);
           const right = recordFieldSql(target, join.relatedField, targetAlias);
-          // Null/missing joins have no relationship. Typed JSON equality preserves encoded strings.
-          return sql`(${left} IS NOT NULL AND ${left} <> 'null'::jsonb AND ${recordEqualitySql(target, join.relatedField, sql`coalesce(${right}, 'null'::jsonb)`, sql`coalesce(${left}, 'null'::jsonb)`)})`;
+          let matches = recordEqualitySql(
+            target,
+            join.relatedField,
+            sql`coalesce(${right}, 'null'::jsonb)`,
+            sql`coalesce(${left}, 'null'::jsonb)`,
+          );
+          if (join.op === "contains") matches = sql`${left} @> jsonb_build_array(${right})`;
+          if (join.op === "containedBy") matches = sql`${right} @> jsonb_build_array(${left})`;
+          // Null/missing joins have no relationship. JSON comparisons preserve encoded strings.
+          return sql`(${left} IS NOT NULL AND ${left} <> 'null'::jsonb AND ${right} IS NOT NULL AND ${right} <> 'null'::jsonb AND ${matches})`;
         });
         return sql`EXISTS (SELECT 1 FROM storage_current_records AS ${sql.identifier(targetAlias)}
         WHERE ${recordScopeSql(owner, target, targetAlias)} AND ${sql.join(joins, sql` AND `)}

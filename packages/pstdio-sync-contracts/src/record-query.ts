@@ -38,7 +38,8 @@ export type StoragePredicate =
 export interface StorageRelatedSelection {
   /** An installed index in the same extension and workbench as the source. */
   index: string;
-  on: { sourceField: string; relatedField: string }[];
+  /** Equality by default; contains/containedBy join a string array to a string field. */
+  on: { sourceField: string; relatedField: string; op?: "eq" | "contains" | "containedBy" }[];
   where?: StoragePredicate;
 }
 

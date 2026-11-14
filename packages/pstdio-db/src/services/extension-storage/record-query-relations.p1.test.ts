@@ -125,6 +125,48 @@ test("related existence is scoped, distinct and composable with nested absence b
   }
 });
 
+test("related membership selects prerequisites and dependents before pagination", async () => {
+  const f = await fixture();
+  for (const records of [f.db, f.memory]) {
+    await records.defineIndexes(definitions);
+    await records.commit({
+      operationId: "seed",
+      edits: [
+        { recordId: "items/a", replace: { id: "a", status: "ready" } },
+        { recordId: "items/b", replace: { id: "b", status: "ready", tags: ["a", "missing"] } },
+        { recordId: "items/c", replace: { id: "c", status: "ready", tags: ["d"] } },
+        { recordId: "items/d", replace: { id: "d", status: "done", tags: [] } },
+      ],
+    });
+    const waiting = await records.query({
+      index: "items",
+      fields: ["id"],
+      limit: 1,
+      where: {
+        exists: {
+          index: "items",
+          on: [{ sourceField: "tags", relatedField: "id", op: "contains" }],
+          where: { field: "status", op: "ne", value: "done" },
+        },
+      },
+    });
+    expect(waiting.records.map((record) => record.fields.id)).toEqual(["b"]);
+    expect(waiting.cursor).toBeNull();
+    const prerequisites = await records.query({
+      index: "items",
+      fields: ["id"],
+      where: {
+        exists: {
+          index: "items",
+          on: [{ sourceField: "id", relatedField: "tags", op: "containedBy" }],
+          where: { field: "status", op: "ne", value: "done" },
+        },
+      },
+    });
+    expect(prerequisites.records.map((record) => record.fields.id)).toEqual(["a", "d"]);
+  }
+});
+
 test("numeric and grouped summaries cover the whole selection and preserve null semantics", async () => {
   const f = await fixture();
   for (const records of [f.db, f.memory]) {

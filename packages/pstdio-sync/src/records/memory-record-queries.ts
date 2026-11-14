@@ -37,7 +37,10 @@ const memoryPredicate = (document: Y.Doc, saved: StorageRecord[]) => {
         selection.on.every((join) => {
           const left = typedFieldValue(value, queryField(source, join.sourceField));
           const right = typedFieldValue(record.value, queryField(target, join.relatedField));
-          return left != null && right != null && canonicalJson(left) === canonicalJson(right);
+          if (left == null || right == null) return false;
+          if (join.op === "contains") return Array.isArray(left) && left.includes(right);
+          if (join.op === "containedBy") return Array.isArray(right) && right.includes(left);
+          return canonicalJson(left) === canonicalJson(right);
         }) &&
         matchesPredicate(target, record.value, selection.where, related),
     );

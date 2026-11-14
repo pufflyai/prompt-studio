@@ -92,8 +92,15 @@ const validateRelatedFields = (
   if (!Array.isArray(joins) || !joins.length || joins.length > 8)
     throw new Error("Related query needs 1 to 8 join fields");
   for (const join of joins) {
-    if (queryField(index, join.sourceField).type !== queryField(related, join.relatedField).type)
-      throw new Error("Related fields must have the same type");
+    const source = queryField(index, join.sourceField).type;
+    const target = queryField(related, join.relatedField).type;
+    const operation = join.op ?? "eq";
+    if (operation === "eq" && source !== target) throw new Error("Related fields must have the same type");
+    if (operation === "contains" && (source !== "array" || target !== "string"))
+      throw new Error("Related contains needs a source string array and related string");
+    if (operation === "containedBy" && (source !== "string" || target !== "array"))
+      throw new Error("Related containedBy needs a source string and related string array");
+    if (!["eq", "contains", "containedBy"].includes(operation)) throw new Error("Unsupported related join");
   }
   return related;
 };

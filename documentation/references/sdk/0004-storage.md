@@ -262,6 +262,10 @@ belong to the calling extension and workbench. The related index's prefix and ty
 fields still apply. Null or missing join keys do not match. Several matching
 related rows select the source once; no related record bodies enter the result.
 Negation and nesting can describe unanswered requests without reading all requests.
+Join fields use equality by default. `op: "contains"` joins a source string-array
+field to a related string; `op: "containedBy"` joins a source string to a related
+string-array field. These select prerequisites or dependents without reading each
+candidate. Missing/null endpoints never match, including membership joins.
 
 ```ts
 const page = await ctx.storage.records.query({
