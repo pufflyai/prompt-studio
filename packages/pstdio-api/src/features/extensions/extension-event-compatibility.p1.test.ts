@@ -6,6 +6,7 @@ import { createWebviewClient, type GuestHost } from "@pstdio/sdk/extensions";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { publishExtensionEventNotifications } from "./extension-event-notifications";
+import { fireExtensionEvent } from "./extension-event-runtime";
 
 test.each([
   "dashboard",
@@ -94,6 +95,79 @@ test.each([
     expect(oldCalls).toBe(1);
     stop();
   } finally {
+    listeners.clear();
+    await app.close();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("historical guests receive intrinsic automation notices without declared refresh events", async () => {
+  const root = mkdtempSync(join(tmpdir(), "automation-event-upgrade-"));
+  writeFileSync(
+    join(root, "package.json"),
+    JSON.stringify({
+      name: "performance",
+      publisher: "pstdio",
+      version: "1.0.0",
+      main: "extension.ts",
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
+    }),
+  );
+  writeFileSync(join(root, "extension.ts"), "export default {};");
+  const app = await createTestApp();
+  const listeners = new Set<(payload: unknown) => void>();
+  const guest = createWebviewClient<Record<never, never>>({
+    extensionId: "pstdio.performance",
+    call: async () => {
+      throw new Error("No request expected");
+    },
+    onEvent: (_scope, listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  });
+  let oldCalls = 0;
+  let currentCalls = 0;
+  guest.events.subscribe(
+    { kind: "event", extensionId: "pstdio.pstdio-performance", id: "automation-run-changed" },
+    () => oldCalls++,
+  );
+  guest.events.subscribe(
+    { kind: "event", extensionId: "pstdio.performance", id: "automation-run-changed" },
+    () => currentCalls++,
+  );
+  const stop = app.eventBus.subscribe((event) => {
+    if (event.table !== "extension_events") return;
+    const data = event.data as { eventId: string; projectId: string };
+    for (const listener of listeners) listener({ type: "changed", id: data.eventId, projectId: data.projectId });
+  });
+  try {
+    const project = await app.deps.projectService.create({ name: "Diagnostics upgrade" });
+    const enabled = await app.deps.extensionService.enableInstalledSourceForProject({
+      projectId: project.id,
+      sourcePath: root,
+      sourceKind: "local_path",
+      extensionId: "pstdio.performance",
+      installName: "performance",
+      name: "performance",
+      displayName: "Performance",
+      manifest: {},
+    });
+    await fireExtensionEvent(app.deps, project.id, "pstdio.performance.event.automation-run-changed", {
+      runId: "capture",
+      status: "succeeded",
+    });
+    expect(oldCalls).toBe(1);
+    expect(currentCalls).toBe(1);
+    await app.deps.extensionService.setProjectExtensionEnabled(enabled.instance.id, false);
+    await fireExtensionEvent(app.deps, project.id, "pstdio.performance.event.automation-run-changed", {
+      runId: "capture",
+      status: "succeeded",
+    });
+    expect(oldCalls).toBe(1);
+    expect(currentCalls).toBe(2);
+  } finally {
+    stop();
     listeners.clear();
     await app.close();
     rmSync(root, { recursive: true, force: true });

@@ -75,7 +75,7 @@ const addEventAliases = (runtime: ExtensionRuntime, aliases: Map<string, string>
   addHookEventAliases(runtime, aliases);
 };
 
-/** Aliases exist only for loaded contributions. No opaque ID is split or prefix-rewritten. */
+/** Aliases exist only for loaded extensions and contributions. No opaque ID is split or prefix-rewritten. */
 export const contributionAliases = (runtime: ExtensionRuntime) => {
   const existing = indexes.get(runtime);
   if (existing) return existing;
@@ -113,6 +113,12 @@ export const contributionAliases = (runtime: ExtensionRuntime) => {
     }
   }
   addPrivateAliases(runtime, aliases);
+  // Automation status is host-generated and may only be observed inside a webview.
+  for (const extension of runtime.extensions) {
+    const previous = historicalExtensionId(extension.id);
+    if (previous !== extension.id)
+      aliases.set(`${previous}.event.automation-run-changed`, `${extension.id}.event.automation-run-changed`);
+  }
   for (const command of runtime.commands) {
     const old = historicalContributionId({ extensionId: command.extensionId, kind: "command", id: command.localId });
     if (old)
