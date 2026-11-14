@@ -1,6 +1,7 @@
 import { mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createMemoryDocumentStore, type StorageOwner } from "pstdio-sync";
 import { createDocumentStorage } from "pstdio-sync/records";
@@ -9,13 +10,12 @@ import type { ExtensionsRouteDeps } from "./deps";
 import type { ExtensionStorageIndexService } from "./extension-storage-indexes";
 import { createProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
 
-export const createWorkspaceContextFixture = async () => {
+export const createWorkspaceContextFixture = async (identity = { name: "context", publisher: "example" }) => {
   const root = await realpath(await mkdtemp(join(tmpdir(), "workspace-context-")));
   await writeFile(
     join(root, "package.json"),
     JSON.stringify({
-      name: "context",
-      publisher: "example",
+      ...identity,
       version: "1.0.0",
       main: "./extension.ts",
       engines: { pstdio: `^${EXTENSION_API_VERSION}` },
@@ -79,7 +79,7 @@ export const createWorkspaceContextFixture = async () => {
     instance: { id: "instance" },
     installedSource: {
       id: "source",
-      extension_id: "example.context",
+      extension_id: canonicalExtensionId(`${identity.publisher}.${identity.name}`),
       source_kind: "local_path",
       source_path: root,
       status: "loaded",
@@ -100,7 +100,7 @@ export const createWorkspaceContextFixture = async () => {
     validate?.();
   };
   const deps = {
-    workspaceService: { get: async () => workspace, getDefault: async () => workspace },
+    workspaceService: { get: async () => workspace, getDefault: async () => workspace, list: async () => [workspace] },
     projectService: { get: async () => ({ id: "project-1", name: "Project", shorthand: "P" }) },
     extensionService: { listEnabledSourcesForProject: async () => [source] },
     extensionStorageService: {

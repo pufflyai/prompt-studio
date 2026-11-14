@@ -29,7 +29,7 @@ test.each([
     await writeRegistryNotes(source, version);
     const args = ["extensions", "pack", source, "--out-dir", root];
     const path = (await runPackagedAsync(args, root, { PSTDIO_HOME: home })).trim();
-    expect(path).toBe(join(root, `pstdio.pstdio-notes-${version}.tgz`));
+    expect(path).toBe(join(root, `pstdio.notes-${version}.tgz`));
     expect(existsSync(join(home, "runtime.json"))).toBe(false);
     const first = await Bun.file(path).bytes();
     const files = await new Bun.Archive(first).files();
@@ -60,7 +60,7 @@ test("a packaged host packs, installs and upgrades an independently published ex
         PSTDIO_HOME: home,
       });
       const path = output.trim();
-      expect(path).toBe(join(root, `pstdio.pstdio-notes-${version}.tgz`));
+      expect(path).toBe(join(root, `pstdio.notes-${version}.tgz`));
       await registry.publish(path);
     };
     const before = await runPackagedAsync(["--version"], root, { PSTDIO_HOME: home });
@@ -75,35 +75,35 @@ test("a packaged host packs, installs and upgrades an independently published ex
     expect(response.status).toBe(201);
     const project = (await response.json()) as { id: string };
     const env = { PSTDIO_HOME: home, PSTDIO_API_URL: host.baseUrl, PSTDIO_API_TOKEN: host.descriptor.token };
-    await runPackagedAsync(["extensions", "add", "pstdio.pstdio-notes"], repo, env);
+    await runPackagedAsync(["extensions", "add", "pstdio.notes"], repo, env);
     const reinstalled = await fetch(`${host.baseUrl}/v1/projects/${project.id}/extensions/install`, {
       method: "POST",
       headers: { ...runtimeAuthorization(host.descriptor), "content-type": "application/json" },
-      body: JSON.stringify({ source: { kind: "catalog", name: "pstdio.pstdio-notes" }, force: true }),
+      body: JSON.stringify({ source: { kind: "catalog", name: "pstdio.notes" }, force: true }),
     });
     expect(reinstalled.status).toBe(201);
     const installed = (await reinstalled.json()) as InstallExtensionResponse;
     const templates = installed.source.manifest.templates as Array<{ source: PackageAssetDescriptor }>;
     expect(resolvePackageAssetPath(templates[0]!.source)).toBe(join(installed.source.targetPath, "note.md"));
-    expect(await runPackagedAsync(["pstdio.pstdio-notes", "version", "--project-id", project.id], repo, env)).toContain(
+    expect(await runPackagedAsync(["pstdio.notes", "version", "--project-id", project.id], repo, env)).toContain(
       "0.45.1",
     );
     await publish("0.45.2");
     expect(
       await runPackagedAsync(["extensions", "update", "pstdio-notes", "--project-id", project.id], repo, env),
     ).toContain("0.45.2");
-    expect(await runPackagedAsync(["pstdio.pstdio-notes", "version", "--project-id", project.id], repo, env)).toContain(
+    expect(await runPackagedAsync(["pstdio.notes", "version", "--project-id", project.id], repo, env)).toContain(
       "0.45.2",
     );
     expect(await runPackagedAsync(["--version"], root, { PSTDIO_HOME: home })).toBe(before);
     await registry.close();
     registryClosed = true;
     await runPackagedAsync(
-      ["extensions", "add", join(root, "pstdio.pstdio-notes-0.45.1.tgz"), "--name", "pstdio-notes", "--force"],
+      ["extensions", "add", join(root, "pstdio.notes-0.45.1.tgz"), "--name", "pstdio-notes", "--force"],
       repo,
       env,
     );
-    expect(await runPackagedAsync(["pstdio.pstdio-notes", "version", "--project-id", project.id], repo, env)).toContain(
+    expect(await runPackagedAsync(["pstdio.notes", "version", "--project-id", project.id], repo, env)).toContain(
       "0.45.1",
     );
     const manifestPath = join(source, "package.json");
@@ -112,11 +112,9 @@ test("a packaged host packs, installs and upgrades an independently published ex
     const portablePackage = (
       await runPackagedAsync(["extensions", "pack", source, "--out-dir", root], root, env)
     ).trim();
-    expect(portablePackage).toBe(join(root, "_con.pstdio-notes-0.45.2.tgz"));
+    expect(portablePackage).toBe(join(root, "_con.notes-0.45.2.tgz"));
     await runPackagedAsync(["extensions", "add", portablePackage], repo, env);
-    expect(await runPackagedAsync(["con.pstdio-notes", "version", "--project-id", project.id], repo, env)).toContain(
-      "0.45.2",
-    );
+    expect(await runPackagedAsync(["con.notes", "version", "--project-id", project.id], repo, env)).toContain("0.45.2");
   } finally {
     if (host) await stopProcess(host.child);
     await closeFixtureRuntime(root, home);

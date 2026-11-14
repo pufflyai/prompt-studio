@@ -7,7 +7,7 @@ import { createResourceLinksDBService, writeResourceLinks } from "./resource-lin
 export const legacyResourceOwner = (ref: ResourceRef) => {
   if (ref.extensionId) return ref.extensionId;
   if (["workspace", "session", "project"].includes(ref.type)) return "pstdio";
-  if (["ticket", "planner-attempt", "planner-review"].includes(ref.type)) return "pstdio.pstdio-planner";
+  if (["ticket", "planner-attempt", "planner-review"].includes(ref.type)) return "pstdio.planner";
   throw new Error(`Resource owner is required for "${ref.type}".`);
 };
 

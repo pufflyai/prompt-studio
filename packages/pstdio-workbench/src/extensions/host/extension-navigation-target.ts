@@ -1,5 +1,6 @@
 import { type NavigationTarget as ExtensionNavigationTarget, isNavigationTarget } from "@pstdio/sdk/extensions";
 import { qualifyNavigationTarget } from "pstdio-api-contracts";
+import { canonicalNavigationOwners } from "pstdio-extensions/workbench";
 import type { NavigationTarget, NavigationTargetCommand, WorkbenchPanelRegion } from "../../core";
 
 export interface ToWorkbenchNavigationTargetInput {
@@ -48,6 +49,7 @@ export function toWorkbenchNavigationTarget(
 ): NavigationTarget {
   if (!isNavigationTarget(target)) throw new Error("Invalid navigation target.");
   if (input.extensionId) target = qualifyNavigationTarget(target, input.extensionId, input.projectId);
+  target = canonicalNavigationOwners(target);
   if (target.kind === "command") return toCommandTarget(target, input);
   if (target.kind === "href") return target;
   if (target.kind === "page" || target.kind === "dialog") return target;

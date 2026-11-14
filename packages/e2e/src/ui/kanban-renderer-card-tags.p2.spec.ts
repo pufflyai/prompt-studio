@@ -119,7 +119,7 @@ test("ticket card tag badges update selected values without opening the card", a
     (response) =>
       response.request().method() === "POST" &&
       new URL(response.url()).pathname.endsWith(
-        "/extensions/commands/pstdio.pstdio-planner.view.tickets.kanban.onAttributeChange/execute",
+        "/extensions/commands/pstdio.planner.view.tickets.kanban.onAttributeChange/execute",
       ) &&
       response.status() === 200,
   );
@@ -166,14 +166,14 @@ test("ticket card single-select tag badges update and clear selected values", as
     (request) =>
       request.method() === "POST" &&
       new URL(request.url()).pathname.endsWith(
-        "/extensions/commands/pstdio.pstdio-planner.view.tickets.kanban.onAttributeChange/execute",
+        "/extensions/commands/pstdio.planner.view.tickets.kanban.onAttributeChange/execute",
       ),
   );
   const selectFeatureResponse = page.waitForResponse(
     (response) =>
       response.request().method() === "POST" &&
       new URL(response.url()).pathname.endsWith(
-        "/extensions/commands/pstdio.pstdio-planner.view.tickets.kanban.onAttributeChange/execute",
+        "/extensions/commands/pstdio.planner.view.tickets.kanban.onAttributeChange/execute",
       ) &&
       response.status() === 200,
   );
@@ -197,14 +197,14 @@ test("ticket card single-select tag badges update and clear selected values", as
     (request) =>
       request.method() === "POST" &&
       new URL(request.url()).pathname.endsWith(
-        "/extensions/commands/pstdio.pstdio-planner.view.tickets.kanban.onAttributeChange/execute",
+        "/extensions/commands/pstdio.planner.view.tickets.kanban.onAttributeChange/execute",
       ),
   );
   const clearFeatureResponse = page.waitForResponse(
     (response) =>
       response.request().method() === "POST" &&
       new URL(response.url()).pathname.endsWith(
-        "/extensions/commands/pstdio.pstdio-planner.view.tickets.kanban.onAttributeChange/execute",
+        "/extensions/commands/pstdio.planner.view.tickets.kanban.onAttributeChange/execute",
       ) &&
       response.status() === 200,
   );
@@ -255,14 +255,14 @@ test("ticket list tag badges update and clear selected values", async ({ page, r
     (request) =>
       request.method() === "POST" &&
       new URL(request.url()).pathname.endsWith(
-        "/extensions/commands/pstdio.pstdio-planner.view.tickets.kanban.onAttributeChange/execute",
+        "/extensions/commands/pstdio.planner.view.tickets.kanban.onAttributeChange/execute",
       ),
   );
   const selectFeatureResponse = page.waitForResponse(
     (response) =>
       response.request().method() === "POST" &&
       new URL(response.url()).pathname.endsWith(
-        "/extensions/commands/pstdio.pstdio-planner.view.tickets.kanban.onAttributeChange/execute",
+        "/extensions/commands/pstdio.planner.view.tickets.kanban.onAttributeChange/execute",
       ) &&
       response.status() === 200,
   );
@@ -280,14 +280,14 @@ test("ticket list tag badges update and clear selected values", async ({ page, r
     (request) =>
       request.method() === "POST" &&
       new URL(request.url()).pathname.endsWith(
-        "/extensions/commands/pstdio.pstdio-planner.view.tickets.kanban.onAttributeChange/execute",
+        "/extensions/commands/pstdio.planner.view.tickets.kanban.onAttributeChange/execute",
       ),
   );
   const clearPriorityResponse = page.waitForResponse(
     (response) =>
       response.request().method() === "POST" &&
       new URL(response.url()).pathname.endsWith(
-        "/extensions/commands/pstdio.pstdio-planner.view.tickets.kanban.onAttributeChange/execute",
+        "/extensions/commands/pstdio.planner.view.tickets.kanban.onAttributeChange/execute",
       ) &&
       response.status() === 200,
   );

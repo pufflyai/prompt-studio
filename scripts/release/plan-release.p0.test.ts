@@ -77,8 +77,8 @@ test("stops when packages are on npm but the release tag is missing", () => {
 });
 
 test("rejects a public package that does not exist on npm", () => {
-  const result = plan({ packages: [...unpublished, pkg("pstdio-artifacts", "0.43.0", null)] });
-  expect(result.release && result.problems).toEqual([expect.stringContaining("pstdio-artifacts is not on npm")]);
+  const result = plan({ packages: [...unpublished, pkg("artifacts", "0.43.0", null)] });
+  expect(result.release && result.problems).toEqual([expect.stringContaining("artifacts is not on npm")]);
 });
 
 test("leaves patch candidates to manual patch runs, including verification-only candidates", () => {

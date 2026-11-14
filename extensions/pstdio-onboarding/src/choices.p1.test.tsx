@@ -8,12 +8,7 @@ test("shows preinstalled Home and Onboarding before work areas are selected", ()
     <SetupProvider>
       <WorkChoices
         selected={[]}
-        installed={[
-          "pstdio.pstdio-home",
-          "pstdio.pstdio-onboarding",
-          "pstdio.pstdio-base-themes",
-          "pstdio.pstdio-skills",
-        ]}
+        installed={["pstdio.home", "pstdio.onboarding", "pstdio.base-themes", "pstdio.skills"]}
         onChange={() => {}}
       />
     </SetupProvider>,

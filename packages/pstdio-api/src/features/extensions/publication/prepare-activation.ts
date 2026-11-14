@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { Asset } from "pstdio-sync-contracts";
 import type { ExtensionsRouteDeps } from "../deps";
 import { resolvePstdioHome } from "../install-extension-source";
@@ -29,6 +30,7 @@ export const preparePublicationActivation = async (
   adopt: boolean | string = false,
   beforeCommit?: () => Promise<void>,
 ) => {
+  publication = { ...publication, extensionId: canonicalExtensionId(publication.extensionId) };
   const adopting = adopt === true || adopt === publication.extensionId;
   if (asset.sha256 !== publication.revision) throw new Error("Published revision does not match its package");
   await deps.assetTransferService.verifyComplete(publishedOwner(projectId), [asset], signal);

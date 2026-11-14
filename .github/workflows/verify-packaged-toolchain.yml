@@ -1,5 +1,25 @@
 name: Verify packaged toolchain
 on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Exact source revision to verify
+        required: true
+        type: string
+      profile:
+        description: Full production runtime or minimum integrity
+        type: choice
+        options: [full, minimum]
+        default: full
+      priority:
+        description: P2 collects every assigned case
+        type: choice
+        options: [P2, P1]
+        default: P2
+      platforms:
+        description: JSON runner rows from the maintained production platform policy
+        required: true
+        type: string
   workflow_call:
     inputs:
       ref:
@@ -49,7 +69,7 @@ jobs:
     name: verify (${{ matrix.platform_pkg }} ${{ matrix.shard }}/${{ matrix.shards }})
     env:
       CI_PRIORITY: ${{ inputs.priority }}
-      CI_GATE_PLAN: ${{ inputs.gate_plan }}
+      CI_GATE_PLAN: ${{ inputs.gate_plan || '[]' }}
       GH_TOKEN: ${{ github.token }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
@@ -76,20 +96,20 @@ jobs:
           install-strategy: native
           windows-dev-drive: "true"
       - name: Download immutable compiled candidate
-        if: inputs.artifact_run_id != ''
+        if: (inputs.artifact_run_id || '') != ''
         uses: actions/download-artifact@v4
         with:
-          name: release-build-attempt-${{ inputs.artifact_attempt }}
+          name: release-build-attempt-${{ inputs.artifact_attempt || '1' }}
           run-id: ${{ inputs.artifact_run_id }}
           github-token: ${{ github.token }}
       - name: Restore immutable compiled candidate
-        if: inputs.artifact_run_id != ''
+        if: (inputs.artifact_run_id || '') != ''
         shell: bash
         run: |
           bun scripts/ci/production-payload.ts check
           tar -xzf release-build.tar.gz
       - name: "[phase:build] Build source fixtures for packaged runtime tests"
-        if: inputs.profile == 'full' && inputs.artifact_run_id == ''
+        if: inputs.profile == 'full' && (inputs.artifact_run_id || '') == ''
         run: bun run build -- --scope e2e --include-dependencies
       - name: Install Chromium for packaged extension smoke tests
         if: inputs.profile == 'full' && runner.os != 'Windows'
@@ -114,9 +134,9 @@ jobs:
           bun scripts/ci/run-ci-checks.ts --observe-peers --
           bun run --cwd scripts verify:packages --profile "${{ inputs.profile }}"
           --shard "${{ matrix.shard }}/${{ matrix.shards }}"
-          ${{ inputs.artifact_run_id != '' && '--prebuilt' || '' }}
+          ${{ (inputs.artifact_run_id || '') != '' && '--prebuilt' || '' }}
       - name: "[phase:report-transfer] Preserve assigned test execution"
-        if: always() && inputs.test_plan
+        if: always() && (inputs.test_plan || (github.event_name == 'workflow_dispatch' && inputs.profile == 'full'))
         uses: actions/upload-artifact@v4
         with:
           name: test-plan-results-toolchain-${{ matrix.platform_pkg }}-${{ matrix.shard }}-attempt-${{ github.run_attempt }}

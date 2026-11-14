@@ -31,7 +31,7 @@ describe("ticketToRow", () => {
       shorthand: "T-1",
       metadata: {
         archived: false,
-        resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
+        resourceParent: { type: "view", viewId: "pstdio.planner.view.tickets" },
       },
     });
     expect(row.attributes).toEqual({
@@ -69,7 +69,7 @@ describe("ticketToRow", () => {
         label: "T-1 Fix the thing",
         shorthand: "T-1",
         metadata: {
-          resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
+          resourceParent: { type: "view", viewId: "pstdio.planner.view.tickets" },
         },
       },
     });

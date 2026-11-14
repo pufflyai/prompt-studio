@@ -106,7 +106,7 @@ A routed resource page can declare `document: { metadataKey: "workspaceFilePath"
 
 `position: { line, column?, endLine?, endColumn? }` is a one-based source location. It requires a selected document and cannot be combined with a Markdown heading `section`. URLs use the same named coordinate parameters. Monaco reveals and selects the requested range after loading, and on another explicit navigation within the same file. It retains the editor draft. Images and rich Markdown show a notice when source positions are unavailable. Markdown heading navigation still uses `section`.
 
-Chat UI accepts an optional `linkHandler` with `resolveHref`, `open`, and optional `describe` methods. It passes the original destination and its origin (Markdown, inline code, reference, or tool) to the host. The session host resolves relative paths from the originating workspace root, checks rooted paths against that root, and uses registered page URLs for saved resources. A file path under `.pstdio/extension-storage/pstdio.pstdio-planner/tickets` opens those workspace bytes. It does not imply a saved Planner document. Absolute dashboard URLs must have the dashboard's origin; another project is selected before its page is restored. Raw custom schemes cannot execute commands. Uploaded attachments retain their own open behavior.
+Chat UI accepts an optional `linkHandler` with `resolveHref`, `open`, and optional `describe` methods. It passes the original destination and its origin (Markdown, inline code, reference, or tool) to the host. The session host resolves relative paths from the originating workspace root, checks rooted paths against that root, and uses registered page URLs for saved resources. A file path under `.pstdio/extension-storage/pstdio.planner/tickets` opens those workspace bytes. It does not imply a saved Planner document. Absolute dashboard URLs must have the dashboard's origin; another project is selected before its page is restored. Raw custom schemes cannot execute commands. Uploaded attachments retain their own open behavior.
 
 The legacy public `onOpenFile` callback remains available and is deprecated in favor of `linkHandler`. Existing callers without a handler retain their behavior.
 
@@ -151,4 +151,4 @@ Use the Workspaces provider's public `workspacePages` refs for the grouped list,
 
 The legacy host `workbenchPages.workspace` and `workbenchPages.workspaces` refs are deprecated. Their saved URLs remain available through compatibility declarations while the provider views are installed. An ordinary extension can declare workspace page names under its own namespace; this does not grant ownership of the host's resource kind or file services.
 
-*Updated at: 2026-11-07*
+*Updated at: 2026-11-12*

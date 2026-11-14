@@ -83,7 +83,7 @@ test("packaged collection views include native Workspaces and survive a runtime 
     });
     expect(response.status).toBe(201);
     const { id: projectId } = (await response.json()) as { id: string };
-    const board = "pstdio.pstdio-planner.view.tickets";
+    const board = "pstdio.planner.view.tickets";
     const cli = createViewsCli({ folder, root, projectId, baseUrl: () => runtime.baseUrl });
     const boards = await cli("boards");
     const initial = (await cli("list", "--board", board)).views[0];
@@ -94,7 +94,7 @@ test("packaged collection views include native Workspaces and survive a runtime 
     });
     expect(boards).toContainEqual(expect.objectContaining({ id: board, kind: "kanban" }));
     expect(boards).toContainEqual(
-      expect.objectContaining({ id: "pstdio.pstdio-workspaces.view.workspaces", kind: "resourceList" }),
+      expect.objectContaining({ id: "pstdio.workspaces.view.workspaces", kind: "resourceList" }),
     );
     expect(boards).toContainEqual(expect.objectContaining({ id: WORKSPACES_COLLECTION_ID, extensionId: null }));
     const nativeFields = boards.find((entry: { id: string }) => entry.id === WORKSPACES_COLLECTION_ID).fields;

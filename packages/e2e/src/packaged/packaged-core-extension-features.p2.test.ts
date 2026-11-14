@@ -18,7 +18,7 @@ test(
   async () => {
     const phase = (name: string) => console.log(`Packaged core features: ${name} (${Date.now()})`);
     await withPackagedCoreExtensions(async ({ started, tempRoot, project, extensions, metadata }) => {
-      const planner = extensions.find((extension) => extension.installName === "pstdio-planner");
+      const planner = extensions.find((extension) => extension.installName === "planner");
       expect(planner).toBeDefined();
       await expectPlannerWorkflow(
         started.baseUrl,
@@ -34,21 +34,21 @@ test(
 
       expect(metadata.pages).toContainEqual(
         expect.objectContaining({
-          extensionId: "pstdio.pstdio-planner",
+          extensionId: "pstdio.planner",
           localId: "tickets",
           path: "tickets",
         }),
       );
       expect(metadata.pages).toContainEqual(
         expect.objectContaining({
-          extensionId: "pstdio.pstdio-planner",
+          extensionId: "pstdio.planner",
           localId: "ticket",
           path: "ticket",
         }),
       );
       expect(metadata.navigationTrees).toContainEqual(
         expect.objectContaining({
-          id: "pstdio.pstdio-planner.navigation-tree.ticket-files",
+          id: "pstdio.planner.navigation-tree.ticket-files",
           owner: expect.objectContaining({ kind: "page", id: "ticket" }),
           slot: "content",
           view: expect.objectContaining({ kind: "view", id: "ticket-files" }),
@@ -56,25 +56,25 @@ test(
       );
       expect(metadata.navigationTrees).toContainEqual(
         expect.objectContaining({
-          id: "pstdio.pstdio-notes.navigation-tree.note-list",
+          id: "pstdio.notes.navigation-tree.note-list",
           owner: expect.objectContaining({ kind: "mode", id: "project" }),
           slot: "content",
         }),
       );
       expect(metadata.settingsSections).toContainEqual(
-        expect.objectContaining({ id: "pstdio.pstdio-planner.settings-section.planner" }),
+        expect.objectContaining({ id: "pstdio.planner.settings-section.planner" }),
       );
       for (const panel of ["ticket-status", "ticket-tags"]) {
         expect(metadata.settingsPanels).toContainEqual(
           expect.objectContaining({
-            id: `pstdio.pstdio-planner.settings-panel.${panel}`,
+            id: `pstdio.planner.settings-panel.${panel}`,
             section: expect.objectContaining({ id: "planner" }),
           }),
         );
       }
       expect(metadata.views).toContainEqual(
         expect.objectContaining({
-          id: "pstdio.pstdio-planner.view.ticket-status-settings",
+          id: "pstdio.planner.view.ticket-status-settings",
           icon: "status-progress",
         }),
       );
@@ -89,7 +89,7 @@ test(
       });
       phase("Notes resources checked");
       const tagsRes = await fetch(
-        `${started.baseUrl}/v1/projects/${project.id}/extensions/commands/pstdio.pstdio-planner.command.ticket-tag.read/execute`,
+        `${started.baseUrl}/v1/projects/${project.id}/extensions/commands/pstdio.planner.command.ticket-tag.read/execute`,
         {
           method: "POST",
           headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },

@@ -90,6 +90,12 @@ Inline data-table sparkline and bar-chart renderers and the optional saved
 `rowHeight` setting also share the coordinated API 0.4.0 step. Existing columns
 and saved views keep their behavior. See [inline charts and row height](0004-contribution-api.md#inline-charts-and-row-height-on-main).
 
+Command, settings panel, settings section and appearance records on `main` include optional `localId` metadata so clients can resolve historical references from structured identity without parsing runtime IDs. Registered UI theme options can supply historical choices through optional `aliases`; pickers still expose one canonical option. These additions share API 0.5.0.
+
+The CLI `globalAliases` declaration is removed in API 0.5.0. Root shortcuts such as `pst tickets write` and `pst reports write` are replaced by `pst pstdio.planner write-ticket` and `pst pstdio.reports reports write`. Deprecated namespace migration paths are separate and remain available.
+
+The shorter first-party extension identities also share API 0.5.0. Canonical discovery and output use names such as `pstdio.notes`; historical invocations remain deprecated aliases. Ship the migration-capable host before renamed packages. See [identity upgrades](../../guides/extensions/0011-identity-upgrades.md).
+
 ### Which version each check uses
 
 | Check | Where it runs | Extension API version it compares with |
@@ -284,7 +290,7 @@ the same. 0.46 starts with an empty database and does not move or read earlier
 `<package-name>/` folders, so each extension starts fresh. Extensions that build
 storage paths themselves must use the full-ID folder. Name-only CLI namespaces
 and resource-kind references remain deprecated aliases when unambiguous;
-full-ID forms replace them. Declared global aliases keep their short form.
+full-ID forms replace them. API 0.5.0 removes extension-defined global shortcuts. Replace `globalAliases` with qualified command examples and use `cli.path` only for paths inside the owning extension namespace.
 
 ## Storage size limits in API 0.3
 
@@ -423,11 +429,12 @@ Counts and progress use verified sync documents, including their files; unknown 
 leave the count absent and the download total null. Publish the SDK and matching host before
 extensions consume these fields. See [Cloud account and sync status](0003-command-and-process-api.md#cloud-account-and-sync-status).
 
-On `main`, after 0.47.0, API 0.4.1 adds optional source/file activity in `ProjectSyncStatus.sources`,
-the source/file types, and `retryProjectSyncSource` through `ctx.account`, the typed webview
-client and `/client`. Existing methods and aggregate state values remain supported.
-These additive changes use the post-0.47.0 patch step. Publish a matching SDK and
-host before Cloud or other separately released extensions consume these additions.
+After 0.47.0, optional source/file activity in `ProjectSyncStatus.sources`, the source/file
+types, and `retryProjectSyncSource` through `ctx.account`, the typed webview client and
+`/client` were prepared as API 0.4.1. They share the coordinated API 0.5.0 release with
+the breaking identity change above; the version advances once for that release. Existing
+methods and aggregate state values remain supported. Publish a matching SDK and host
+before Cloud or other separately released extensions consume these additions.
 
 ## App-wide and device settings in API 0.3.0
 

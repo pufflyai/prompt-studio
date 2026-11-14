@@ -137,13 +137,13 @@ test("opening a collection settings item uses its display name instead of its re
     title: "Templates",
     kind: "collection",
     viewId: "template-editor",
-    items: async () => [{ id: "pstdio.pstdio-planner.template-type.ticket:bug-fix", title: "Bug fix" }],
+    items: async () => [{ id: "pstdio.planner.template-type.ticket:bug-fix", title: "Bug fix" }],
     itemId: (item) => item.id,
     itemLabel: (item) => item.title,
   });
   await workbench.commands.executeCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID, {
     panelId: "templates",
-    itemId: "pstdio.pstdio-planner.template-type.ticket:bug-fix",
+    itemId: "pstdio.planner.template-type.ticket:bug-fix",
   });
   expect(activeOverlayResource(workbench)?.label).toBe("Bug fix");
 });

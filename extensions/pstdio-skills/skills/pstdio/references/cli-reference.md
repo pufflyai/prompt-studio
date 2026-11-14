@@ -59,7 +59,7 @@ pst workspaces merge --id <id> [--delete-workspace]
 pst workspaces delete --id <id>
 ```
 
-Run these inside a linked project. `--id` takes a workspace short name such as `default`, `WS-1`, or `PS-12_A1`. Core workspace creation is standalone and gets a `WS-<n>` name. Link it to one or more tickets with `pst pstdio.pstdio-planner link --id <ticket> --workspace <workspace>`. Planner also creates linked workspaces through managed attempts.
+Run these inside a linked project. `--id` takes a workspace short name such as `default`, `WS-1`, or `PS-12_A1`. Core workspace creation is standalone and gets a `WS-<n>` name. Link it to one or more tickets with `pst pstdio.planner link --id <ticket> --workspace <workspace>`. Planner also creates linked workspaces through managed attempts.
 
 `delete` removes the workspace. For a Git worktree it also removes the branch and any uncommitted changes. There is no archive that keeps a workspace readable. See [Workspaces](https://prompt.studio/docs/references/cli/workspaces/).
 
@@ -90,29 +90,29 @@ pst notifications snooze <id> --until <time> [--project-id <id>]
 
 ## Planner tickets
 
-These aliases are available when the `pstdio-planner` extension is enabled.
+These aliases are available when the `planner` extension is enabled.
 
 ```sh
-pst pstdio.pstdio-planner list-tickets [--status <status>] [--tags <tag>...] [--parent <id>] [--archived] [--draft]
-pst pstdio.pstdio-planner create-ticket [--title <title>] [--content <markdown>] [--status <status>] [--tags <tag>...] [--parent <id>] [--depends-on <id>...]
-pst pstdio.pstdio-planner create-ticket [same options as create]
-pst pstdio.pstdio-planner get-ticket --id <id>
-pst pstdio.pstdio-planner update-ticket --id <id> [--content <markdown>] [--status <status>] [--tags <tag>...] [--parent <id>] [--unlink-parent] [--depends-on <id>...] [--clear-depends-on] [--blocked-reason <text>]
-pst pstdio.pstdio-planner link-review --id <id> --url <url> [--title <title>]
-pst pstdio.pstdio-planner archive-ticket --id <id>
-pst pstdio.pstdio-planner unarchive-ticket --id <id>
-pst pstdio.pstdio-planner delete-ticket --id <id>
-pst pstdio.pstdio-planner write-ticket --title <title> [--status <status>] [--tags <tag>...] [--user-prompt <text>] [--parent <id>]
-pst pstdio.pstdio-planner save-ticket --id <id> [--status <status>]
-pst pstdio.pstdio-planner pull-ticket [--id <id>] [--force]
-pst pstdio.pstdio-planner list-ticket-files --id <id>
-pst pstdio.pstdio-planner implement-ticket --id <id> [--agent '{"harnessId":"<harness>"}']
-pst pstdio.pstdio-planner link --id <id> (--workspace <workspace> | --session <session-id>)
-pst pstdio.pstdio-planner unlink --id <id> (--workspace <workspace> | --session <session-id>)
-pst pstdio.pstdio-planner ticket-workspaces --id <id>
-pst pstdio.pstdio-planner ticket-worktrees-list --id <id>
-pst pstdio.pstdio-planner ticket-worktrees-remove-all --id <id>
-pst pstdio.pstdio-planner proposal-refined --id <id>
+pst pstdio.planner list-tickets [--status <status>] [--tags <tag>...] [--parent <id>] [--archived] [--draft]
+pst pstdio.planner create-ticket [--title <title>] [--content <markdown>] [--status <status>] [--tags <tag>...] [--parent <id>] [--depends-on <id>...]
+pst pstdio.planner create-ticket [same options as create]
+pst pstdio.planner get-ticket --id <id>
+pst pstdio.planner update-ticket --id <id> [--content <markdown>] [--status <status>] [--tags <tag>...] [--parent <id>] [--unlink-parent] [--depends-on <id>...] [--clear-depends-on] [--blocked-reason <text>]
+pst pstdio.planner link-review --id <id> --url <url> [--title <title>]
+pst pstdio.planner archive-ticket --id <id>
+pst pstdio.planner unarchive-ticket --id <id>
+pst pstdio.planner delete-ticket --id <id>
+pst pstdio.planner write-ticket --title <title> [--status <status>] [--tags <tag>...] [--user-prompt <text>] [--parent <id>]
+pst pstdio.planner save-ticket --id <id> [--status <status>]
+pst pstdio.planner pull-ticket [--id <id>] [--force]
+pst pstdio.planner list-ticket-files --id <id>
+pst pstdio.planner implement-ticket --id <id> [--agent '{"harnessId":"<harness>"}']
+pst pstdio.planner link --id <id> (--workspace <workspace> | --session <session-id>)
+pst pstdio.planner unlink --id <id> (--workspace <workspace> | --session <session-id>)
+pst pstdio.planner ticket-workspaces --id <id>
+pst pstdio.planner ticket-worktrees-list --id <id>
+pst pstdio.planner ticket-worktrees-remove-all --id <id>
+pst pstdio.planner proposal-refined --id <id>
 ```
 
 `tickets save` reads the body, tags, parent, dependencies, and files from the local ticket tree. In the ticket file's front matter, `depends_on` lists prerequisite tickets. On `update`, `--depends-on` replaces every dependency; omit it to keep them.
@@ -124,27 +124,27 @@ Archiving or deleting a ticket also deletes its linked workspaces, with their un
 ## Planner statuses and tags
 
 ```sh
-pst pstdio.pstdio-planner ticket-status read
-pst pstdio.pstdio-planner ticket-status create --label <label> [--color <color>] [--icon <icon>] [--can-create] [--column-actions <json>]
-pst pstdio.pstdio-planner ticket-status update --status-id <status-id> [options]
-pst pstdio.pstdio-planner ticket-status reorder --status-ids <json>
-pst pstdio.pstdio-planner ticket-status set-default --status <status>
-pst pstdio.pstdio-planner ticket-status delete --status <status>
+pst pstdio.planner ticket-status read
+pst pstdio.planner ticket-status create --label <label> [--color <color>] [--icon <icon>] [--can-create] [--column-actions <json>]
+pst pstdio.planner ticket-status update --status-id <status-id> [options]
+pst pstdio.planner ticket-status reorder --status-ids <json>
+pst pstdio.planner ticket-status set-default --status <status>
+pst pstdio.planner ticket-status delete --status <status>
 
-pst pstdio.pstdio-planner ticket-tag read
-pst pstdio.pstdio-planner ticket-tag create --name <name> [--type <single_select|multi_select>]
-pst pstdio.pstdio-planner ticket-tag delete --tag <tag>
+pst pstdio.planner ticket-tag read
+pst pstdio.planner ticket-tag create --name <name> [--type <single_select|multi_select>]
+pst pstdio.planner ticket-tag delete --tag <tag>
 ```
 
 ## Reports
 
-These aliases are available when the `pstdio-reports` extension is enabled.
+These aliases are available when the `reports` extension is enabled.
 
 ```sh
-pst pstdio.pstdio-reports reports write [--workspace <id>] [--kind <kind>] [--name <name>] --template <template> [--source <source>]
-pst pstdio.pstdio-reports reports read --id <report-id>
-pst pstdio.pstdio-reports reports save [--workspace <id>] [--name <name>]
-pst pstdio.pstdio-reports reports delete [--workspace <id>] [--name <name>]
+pst pstdio.reports reports write [--workspace <id>] [--kind <kind>] [--name <name>] --template <template> [--source <source>]
+pst pstdio.reports reports read --id <report-id>
+pst pstdio.reports reports save [--workspace <id>] [--name <name>]
+pst pstdio.reports reports delete [--workspace <id>] [--name <name>]
 ```
 
 `reports write` returns absolute host paths in the default project folder for the report and its evidence files. Edit those paths, then use `reports save`. These paths do not refer to a remote workspace filesystem.

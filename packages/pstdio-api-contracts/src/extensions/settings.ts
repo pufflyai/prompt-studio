@@ -63,6 +63,7 @@ export const workbenchExtensionSettingsPanelRecordSchema = extensionSettingsPane
 
 export const extensionSettingsSectionRecordSchema = z.object({
   id: z.string(),
+  localId: z.string().optional(),
   extensionId: z.string(),
   title: localizableStringSchema,
   scope: workbenchSettingsScopeSchema.optional(),

@@ -49,7 +49,7 @@ describe("createBootstrapModule", () => {
 
       setDashboardExtensionsRegisteredProject(workbench, "project-1");
       await flushMicrotasks();
-      expect(workbench.pages.store.getState().activePageId).toBe("pstdio.pstdio-home.page.home");
+      expect(workbench.pages.store.getState().activePageId).toBe("pstdio.home.page.home");
     } finally {
       bootstrap.dispose();
       start.dispose();
@@ -109,7 +109,7 @@ describe("createBootstrapModule", () => {
         loading.resolve(metadata);
         await flushMicrotasks();
         await flushMicrotasks();
-        if (navigateAway) expect(workbench.pages.store.getState().activePageId).toBe("pstdio.pstdio-home.page.home");
+        if (navigateAway) expect(workbench.pages.store.getState().activePageId).toBe("pstdio.home.page.home");
         else expect(activeViewId(workbench)).toBe("pstdio.extension-lab.view.labPage");
       } finally {
         bootstrap.dispose();

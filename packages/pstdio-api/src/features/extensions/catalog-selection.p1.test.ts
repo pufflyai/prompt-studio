@@ -155,7 +155,7 @@ test("selecting Workspaces shares its installation with project-specific enablem
     const job = handle.deps.extensionInstallations.list().find((job) => job.projectId === project.id)!;
     await handle.deps.extensionInstallations.wait(job.id);
     const selected = (await handle.deps.extensionService.listProjectExtensionInstances(project.id)).find(
-      ({ installedSource }) => installedSource.extension_id === "pstdio.pstdio-workspaces",
+      ({ installedSource }) => installedSource.extension_id === "pstdio.workspaces",
     );
     expect(selected).toMatchObject({
       instance: { enabled: true },

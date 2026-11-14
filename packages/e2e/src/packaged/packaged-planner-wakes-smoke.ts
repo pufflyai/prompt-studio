@@ -38,7 +38,7 @@ export async function expectBriefSupervisorWakes(input: { baseUrl: string; heade
   const project = await request("/projects", "POST", projectInput);
   const execute = async (name: string, params: unknown = {}) => {
     const result = await request(
-      `/projects/${project.id}/extensions/commands/pstdio.pstdio-planner.command.${name}/execute`,
+      `/projects/${project.id}/extensions/commands/pstdio.planner.command.${name}/execute`,
       "POST",
       { params },
     );

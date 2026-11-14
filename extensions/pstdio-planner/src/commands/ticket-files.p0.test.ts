@@ -15,7 +15,7 @@ import {
 
 const ticketRendererParams = (ticket: { id: string; shorthand: string }, documentId?: string) => ({
   renderer: {
-    rendererId: "pstdio.pstdio-planner.view.ticket-files",
+    rendererId: "pstdio.planner.view.ticket-files",
     resource: {
       type: "ticket",
       id: ticket.id,
@@ -33,10 +33,10 @@ const ticketDocumentTarget = (
 ) => {
   const body = {
     kind: "page" as const,
-    page: { kind: "page" as const, id: "ticket", extensionId: "pstdio.pstdio-planner" },
+    page: { kind: "page" as const, id: "ticket", extensionId: "pstdio.planner" },
     parent: {
       kind: "page" as const,
-      page: { kind: "page" as const, id: "tickets", extensionId: "pstdio.pstdio-planner" },
+      page: { kind: "page" as const, id: "tickets", extensionId: "pstdio.planner" },
     },
     resource: {
       type: "ticket",
@@ -45,7 +45,7 @@ const ticketDocumentTarget = (
       shorthand: ticket.shorthand,
       metadata: {
         archived: false,
-        resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
+        resourceParent: { type: "view", viewId: "pstdio.planner.view.tickets" },
       },
     },
   };

@@ -86,7 +86,7 @@ describe("buildSessionsSection", () => {
     expect(node?.resource).toEqual({ type: "session", extensionId: "pstdio", id: "a", label: "Refine ticket: PS-1" });
     expect(node?.target).toEqual({
       kind: "panel",
-      panel: { extensionId: "pstdio.pstdio-session-browser", kind: "placement", id: "conversation" },
+      panel: { extensionId: "pstdio.session-browser", kind: "placement", id: "conversation" },
       resource: { type: "session", extensionId: "pstdio", id: "a", label: "Refine ticket: PS-1" },
       open: "preview",
     });

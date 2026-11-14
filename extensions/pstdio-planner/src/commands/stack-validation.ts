@@ -28,7 +28,7 @@ export async function readRequiredStackBase(ctx: CommandContext, attempt: Attemp
   if (!readiness.baseWorkspaceId) {
     if (!(await containsDependencyHeads(ctx, readiness, head)))
       throw new Error(
-        `Workspace HEAD has outdated dependencies. Run pst pstdio.pstdio-planner update-stack --workspace-id ${attempt.workspaceId} --implementation-session-id ${attempt.implementationSessionId} --expected-head-sha ${head}, validate, then submit again.`,
+        `Workspace HEAD has outdated dependencies. Run pst pstdio.planner update-stack --workspace-id ${attempt.workspaceId} --implementation-session-id ${attempt.implementationSessionId} --expected-head-sha ${head}, validate, then submit again.`,
       );
     return attempt.base;
   }
@@ -50,7 +50,7 @@ export async function validateSubmittedStack(ctx: CommandContext, attempt: Attem
   const base = await readRequiredStackBase(ctx, attempt, head);
   if (!(await containsCommit(ctx, path, base.headSha, head))) {
     throw new Error(
-      `Workspace HEAD has outdated dependencies. Run pst pstdio.pstdio-planner update-stack --workspace-id ${attempt.workspaceId} --implementation-session-id ${attempt.implementationSessionId} --expected-head-sha ${head}, validate the result, then submit again. Required base: ${base.headSha}.`,
+      `Workspace HEAD has outdated dependencies. Run pst pstdio.planner update-stack --workspace-id ${attempt.workspaceId} --implementation-session-id ${attempt.implementationSessionId} --expected-head-sha ${head}, validate the result, then submit again. Required base: ${base.headSha}.`,
     );
   }
   return base;

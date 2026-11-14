@@ -140,7 +140,7 @@ test(
       };
       expect(extensionCatalog.marketplace).toContainEqual(
         expect.objectContaining({
-          installName: "pstdio-artifacts",
+          installName: "artifacts",
           installed: false,
           origin: {
             kind: "git",
@@ -153,7 +153,7 @@ test(
       );
       expect(extensionCatalog.marketplace).toContainEqual(
         expect.objectContaining({
-          installName: "pstdio-notes",
+          installName: "notes",
           origin: {
             kind: "git",
             path: "extensions/pstdio-notes",
@@ -165,7 +165,7 @@ test(
       );
       expect(extensionCatalog.marketplace).toContainEqual(
         expect.objectContaining({
-          installName: "pstdio-planner",
+          installName: "planner",
           origin: {
             kind: "git",
             path: "extensions/pstdio-planner",

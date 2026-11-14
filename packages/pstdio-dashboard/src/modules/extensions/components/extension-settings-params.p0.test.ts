@@ -4,13 +4,13 @@ import { settingChangeValue, settingsToParamSchema, settingsToParams } from "./e
 
 const branch: ExtensionSettingValueRecord = {
   key: "implementation.defaultTargetBranch",
-  extensionId: "pstdio.pstdio-planner",
+  extensionId: "pstdio.planner",
   type: "string",
   scope: "project",
   default: "",
   title: "Default target branch",
   options: {
-    commandId: "pstdio.pstdio-planner.command.implementation-targets",
+    commandId: "pstdio.planner.command.implementation-targets",
     valueField: "branch",
     labelField: "branch",
   },

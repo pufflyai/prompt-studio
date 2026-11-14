@@ -230,11 +230,10 @@ export const nextTicketsCommand = defineCommand({
   id: "next-tickets",
   title: "Read next tickets",
   cli: {
-    globalAliases: [["tickets", "next"]],
     description: "Query launchable tickets and waiting reasons using current Auto Build rules.",
     examples: [
-      "pst pstdio.pstdio-planner next-tickets --track Workbench",
-      "pst pstdio.pstdio-planner next-tickets --status Todo --tags High",
+      "pst pstdio.planner next-tickets --track Workbench",
+      "pst pstdio.planner next-tickets --status Todo --tags High",
     ],
   },
   params: {

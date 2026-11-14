@@ -19,7 +19,7 @@ PS-789 unfinished until its actual acceptance criteria are met. Do not create a
 competing managed attempt or change dependencies to bypass unfinished acceptance.
 
 For each run, save the following under the `filesPath` returned by
-`pst reports write --kind change_request --name <ticket-purpose-session> --template change-request`:
+`pst pstdio.reports reports write --kind change_request --name <ticket-purpose-session> --template change-request`:
 Use a unique ticket/purpose/session name in parallel work. Preserve existing names and IDs;
 verify that a returned checkout belongs to you before editing it.
 

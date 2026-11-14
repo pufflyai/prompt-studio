@@ -48,12 +48,12 @@ describe("planner action session anchors", () => {
       const repo = createInitializedRepo(ctx, "planner-action-anchors");
       const projectId = getProjectId(repo);
 
-      const ticket = JSON.parse(run(`tickets create --content "# Refine anchor proof"`, repo)) as {
+      const ticket = JSON.parse(run(`pstdio.planner create-ticket --content "# Refine anchor proof"`, repo)) as {
         id: string;
         shorthand: string;
       };
 
-      const result = await executePlannerCommand(projectId, "pstdio.pstdio-planner.command.refine-ticket", {
+      const result = await executePlannerCommand(projectId, "pstdio.planner.command.refine-ticket", {
         source: "api",
         params: { agent: { harnessId: "pstdio.workbench-fixture.harness.fake" } },
         resource: {
@@ -61,7 +61,7 @@ describe("planner action session anchors", () => {
           id: ticket.id,
           projectId,
           label: ticket.shorthand,
-          extensionId: "pstdio.pstdio-planner",
+          extensionId: "pstdio.planner",
         },
       });
 

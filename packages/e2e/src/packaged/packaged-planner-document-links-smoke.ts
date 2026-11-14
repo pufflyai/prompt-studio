@@ -7,12 +7,12 @@ export const expectPlannerDocumentLinks = async (
   headers: Record<string, string>,
   metadata: WorkbenchExtensionMetadata,
 ) => {
-  const page = metadata.pages.find((page) => page.id === "pstdio.pstdio-planner.page.ticket");
+  const page = metadata.pages.find((page) => page.id === "pstdio.planner.page.ticket");
   expect(page).toMatchObject({ document: { metadataKey: "documentId" } });
-  expect(metadata.resourceKinds.find((kind) => kind.id === "pstdio.pstdio-planner.ticket")).toMatchObject({
-    resolveManyCommand: "pstdio.pstdio-planner.command.resolve-ticket-resources",
+  expect(metadata.resourceKinds.find((kind) => kind.id === "pstdio.planner.ticket")).toMatchObject({
+    resolveManyCommand: "pstdio.planner.command.resolve-ticket-resources",
   });
-  const navigation = metadata.views.find((view) => view.id === "pstdio.pstdio-planner.view.ticket-files");
+  const navigation = metadata.views.find((view) => view.id === "pstdio.planner.view.ticket-files");
   expect(navigation?.body).toMatchObject({
     kind: "tree",
     structure: [
@@ -29,7 +29,7 @@ export const expectPlannerDocumentLinks = async (
     commandMetadata?: Record<string, unknown>,
   ) => {
     const response = await fetch(
-      `${baseUrl}/v1/projects/${projectId}/extensions/commands/pstdio.pstdio-planner.command.${name}/execute`,
+      `${baseUrl}/v1/projects/${projectId}/extensions/commands/pstdio.planner.command.${name}/execute`,
       {
         method: "POST",
         headers: { ...headers, "content-type": "application/json" },
@@ -65,11 +65,11 @@ export const expectPlannerDocumentLinks = async (
   const link = await execute("document-link", { id: ticket.outcome.value.shorthand, file: "notes.md" });
   expect(link.outcome.ok).toBe(true);
   const url = new URL(link.outcome.value.href, baseUrl);
-  expect(url.pathname).toBe(`/projects/${projectId}/extensions/pstdio.pstdio-planner/ticket`);
+  expect(url.pathname).toBe(`/projects/${projectId}/extensions/pstdio.planner/ticket`);
   expect(url.searchParams.get("document")).toBe(file.outcome.value.id);
   const tree = await execute("ticket-files.tree.body", {
     renderer: {
-      rendererId: "pstdio.pstdio-planner.view.ticket-files",
+      rendererId: "pstdio.planner.view.ticket-files",
       resource: { type: "ticket", id: ticket.outcome.value.id },
     },
   });

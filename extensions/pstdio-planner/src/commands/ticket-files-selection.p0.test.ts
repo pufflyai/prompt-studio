@@ -44,7 +44,7 @@ describe("ticket files tree selection commands", () => {
       ...makeCommandArgs({
         storage,
         params: {
-          renderer: { rendererId: "pstdio.pstdio-planner.view.ticket-files" },
+          renderer: { rendererId: "pstdio.planner.view.ticket-files" },
         },
       }),
     );

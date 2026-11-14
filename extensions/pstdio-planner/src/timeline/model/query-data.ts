@@ -32,6 +32,6 @@ export function timelineQueryData(
   return {
     rows,
     attributes: withTitleField(attributes),
-    storageKey: `pstdio.pstdio-planner.timeline-views:${plan.projectId}`,
+    storageKey: `pstdio.planner.timeline-views:${plan.projectId}`,
   };
 }

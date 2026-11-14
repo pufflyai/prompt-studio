@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "pstdio-session-browser",
+      "name": "session-browser",
       "dependencies": {
         "@pstdio/sdk": "0.47.0-nightly.20261111030243",
       },

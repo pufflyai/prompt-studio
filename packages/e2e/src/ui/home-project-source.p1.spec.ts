@@ -24,7 +24,7 @@ test("projects own editable Home sources and keep their customizations through s
       const listed = await request.get(`/v1/projects/${project.id}/extensions`);
       expect(listed.ok()).toBe(true);
       const { extensions } = (await listed.json()) as ListProjectExtensionsResponse;
-      const home = extensions.find((extension) => extension.extensionId === "pstdio.pstdio-home")!;
+      const home = extensions.find((extension) => extension.extensionId === "pstdio.home")!;
       expect(home).toBeTruthy();
       expect(home.scope).toBe("repo");
       expect(home.sourcePath).toBe(
@@ -55,7 +55,7 @@ test("projects own editable Home sources and keep their customizations through s
   expect(retried.status()).toBe(200);
   expect((await retried.json()).setup_error).toBeNull();
   expect(readFileSync(join(custom.home.sourcePath, component), "utf8")).toBe(customizedSource);
-  await page.goto(`/projects/${custom.id}/extensions/pstdio.pstdio-home/home`);
+  await page.goto(`/projects/${custom.id}/extensions/pstdio.home/home`);
   await expect(homeFrame(page).getByText("Project-specific welcome notes", { exact: true })).toBeVisible();
   await page.reload();
   await expect(homeFrame(page).getByText("Project-specific welcome notes", { exact: true })).toBeVisible();
@@ -69,7 +69,7 @@ test("projects own editable Home sources and keep their customizations through s
     ).ok(),
   ).toBe(true);
   causalEvidence.mark("final-original-home:loading");
-  await page.goto(`/projects/${original.id}/extensions/pstdio.pstdio-home/home`);
+  await page.goto(`/projects/${original.id}/extensions/pstdio.home/home`);
   await expect(homePage(page)).toBeVisible();
   causalEvidence.mark("final-original-home:visible");
   expect(readFileSync(join(original.home.sourcePath, component), "utf8")).toBe(originalSource);

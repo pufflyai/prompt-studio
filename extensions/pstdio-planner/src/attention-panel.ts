@@ -19,7 +19,7 @@ export const attentionPanelTarget = (resource: ResourceRef, page = "tickets") =>
     kind: "panel",
     panel: {
       kind: "page-slot",
-      page: { kind: "page", id: page, extensionId: "pstdio.pstdio-planner" },
+      page: { kind: "page", id: page, extensionId: "pstdio.planner" },
       id: attentionPanel.id,
     },
     resource,

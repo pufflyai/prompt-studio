@@ -1,5 +1,6 @@
 import type { PageLocation, PageParams, PageRef } from "@pstdio/sdk/extensions";
 import { parseWorkbenchPageUrl } from "pstdio-api-contracts";
+import { historicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { WorkbenchPageContribution, WorkbenchPageResourceCodec } from "../../registries/pages/page-registry";
 import {
   normalizeDirectWorkbenchPageLocation,
@@ -46,7 +47,13 @@ export const createPageUrlResolver =
     )
       return input.root();
     const pages = input.pages();
-    const parsed = parseWorkbenchPageUrl({ url: entry.url, projectId, pages, resources: input.resources });
+    const routes = pages.flatMap((page) => {
+      const previous = page.ref.extensionId && historicalExtensionId(page.ref.extensionId);
+      return previous && previous !== page.ref.extensionId
+        ? [page, { ...page, ref: { ...page.ref, extensionId: previous } }]
+        : [page];
+    });
+    const parsed = parseWorkbenchPageUrl({ url: entry.url, projectId, pages: routes, resources: input.resources });
     if (!parsed) return undefined;
     const direct = normalizeDirectWorkbenchPageLocation({ ...parsed, pages, resources: input.resources });
     if (!isPageHistoryState(entry.state) || entry.state.projectId !== projectId || !entry.state.location) return direct;

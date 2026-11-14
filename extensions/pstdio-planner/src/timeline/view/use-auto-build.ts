@@ -10,7 +10,7 @@ const modeEvents = [
   autoBuildChanged,
   plannerTicketsChanged,
   viewDataEvents.sessionsChanged,
-  eventRef({ extensionId: "pstdio.pstdio-planner", id: "automation-run-changed" }),
+  eventRef({ extensionId: "pstdio.planner", id: "automation-run-changed" }),
 ];
 
 export function useAutoBuild(client: PlanClient) {

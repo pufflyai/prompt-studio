@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { copyFileSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -13,13 +13,13 @@ export const catalogExtensionDirs = () => {
   return catalog.extensions.map((entry) => entry.origin.path).filter((dir) => dir.startsWith("extensions/"));
 };
 
-const syncExtensionLockfile = (dir: string) => {
+export const syncExtensionLockfile = (dir: string, root = ROOT) => {
   const temp = mkdtempSync(path.join(tmpdir(), "pstdio-extension-lockfile-"));
   try {
-    copyFileSync(path.join(ROOT, dir, "package.json"), path.join(temp, "package.json"));
+    copyFileSync(path.join(root, dir, "package.json"), path.join(temp, "package.json"));
     // Starting from the existing lockfile keeps resolved versions until a dependency range changes.
-    if (existsSync(path.join(ROOT, dir, "bun.lock"))) {
-      copyFileSync(path.join(ROOT, dir, "bun.lock"), path.join(temp, "bun.lock"));
+    if (existsSync(path.join(root, dir, "bun.lock"))) {
+      copyFileSync(path.join(root, dir, "bun.lock"), path.join(temp, "bun.lock"));
     }
     const result = Bun.spawnSync(["bun", "install", "--lockfile-only"], {
       cwd: temp,
@@ -27,7 +27,17 @@ const syncExtensionLockfile = (dir: string) => {
       stderr: "inherit",
     });
     if (result.exitCode !== 0) throw new Error(`Could not resolve the lockfile for ${dir}`);
-    copyFileSync(path.join(temp, "bun.lock"), path.join(ROOT, dir, "bun.lock"));
+    const lock = readFileSync(path.join(temp, "bun.lock"), "utf8");
+    const name = JSON.parse(readFileSync(path.join(temp, "package.json"), "utf8")).name;
+    if (typeof name !== "string") throw new Error(`Missing package name for ${dir}`);
+    // Bun keeps the old root name when only identity changes. Refresh that one
+    // generated field without re-resolving dependencies or reformatting the graph.
+    const rootName = /("workspaces"\s*:\s*\{\s*""\s*:\s*\{\s*"name"\s*:\s*)"(?:\\.|[^"\\])*"/;
+    if (!rootName.test(lock)) throw new Error(`Unrecognized Bun root workspace metadata for ${dir}`);
+    writeFileSync(
+      path.join(root, dir, "bun.lock"),
+      lock.replace(rootName, (_, prefix) => prefix + JSON.stringify(name)),
+    );
   } finally {
     rmSync(temp, { recursive: true, force: true });
   }

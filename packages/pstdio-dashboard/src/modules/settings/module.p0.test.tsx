@@ -117,7 +117,7 @@ describe("createSettingsModule", () => {
   test("keeps Danger zone below the panels extensions add to the Project group", () => {
     const workbench = createWorkbench();
     workbench.registerModule(createSettingsModule());
-    const extensionId = "pstdio.pstdio-planner";
+    const extensionId = "pstdio.planner";
     const metadata = {
       extensions: [],
       commands: [],

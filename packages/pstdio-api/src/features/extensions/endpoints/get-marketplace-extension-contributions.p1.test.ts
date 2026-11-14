@@ -83,9 +83,9 @@ describe("GET /v1/projects/:projectId/extensions/marketplace/:installName/contri
 
     const listed = await (await handle.app.request(`/v1/projects/${project.id}/extensions`)).json();
     expect(listed.extensions).toEqual([]);
-    expect(
-      listed.marketplace.find((entry: { installName: string }) => entry.installName === "pstdio-reports"),
-    ).toMatchObject({ installed: false });
+    expect(listed.marketplace.find((entry: { installName: string }) => entry.installName === "reports")).toMatchObject({
+      installed: false,
+    });
     expect(installExtensionSource).toHaveBeenCalledTimes(1);
   });
 });

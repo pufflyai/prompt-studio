@@ -4,8 +4,8 @@ import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
 type WriteGuardContext = Pick<ExtensionContextBase, "projectId" | "extensionId">;
 
 // Runtime reloads import new source snapshots while old handlers may still be running.
-const registryKey = Symbol.for("pstdio.pstdio-planner.write-guards");
-const waitersKey = Symbol.for("pstdio.pstdio-planner.write-waiters");
+const registryKey = Symbol.for("pstdio.planner.write-guards");
+const waitersKey = Symbol.for("pstdio.planner.write-waiters");
 const runtime = globalThis as typeof globalThis & {
   [registryKey]?: Set<string>;
   [waitersKey]?: Map<string, Set<() => void>>;

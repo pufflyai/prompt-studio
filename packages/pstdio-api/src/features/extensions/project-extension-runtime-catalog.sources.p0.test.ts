@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { loadExtensionSources } from "pstdio-extensions";
 import { createProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
+import { createExtensionSourceCache } from "./project-extension-runtime-sources";
 
 const tempDirs: string[] = [];
 let previousPstdioHome: string | undefined;
@@ -78,6 +79,7 @@ const createCatalog = (input: {
     extensionService: { listEnabledSourcesForProject: async () => input.sources() } as never,
     projectService: { get: async (id: string) => ({ id, name: "Project One", shorthand: "PO" }) } as never,
     workspaceService: {
+      list: async () => [],
       getDefault: async () => (input.repos?.[0] ? { root_path: input.repos[0].path } : null),
     } as never,
     loadSources: async (options) => {
@@ -313,4 +315,18 @@ test("a storage folder conflict does not stop the project's extensions from load
   const snapshot = await catalog.get("p1");
 
   expect(snapshot.runtime.commands.map((command) => command.id)).toEqual(["pstdio.hello.command.greet"]);
+});
+
+test("a conflict-gated source cannot fall back to retained code while its folder is unavailable", async () => {
+  const root = createTempDir();
+  writeRuntimeExtension(root, "hello");
+  const cache = createExtensionSourceCache({});
+  const source = { source_kind: "local_path", source_path: root };
+  expect(await cache.collect([{ installedSource: source }] as never)).toHaveLength(1);
+  rmSync(join(root, "package.json"));
+  expect(
+    await cache.collect([
+      { installedSource: { ...source, last_error_json: { code: "extension_identity_conflict" } } },
+    ] as never),
+  ).toEqual([]);
 });

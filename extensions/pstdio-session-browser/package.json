@@ -1,5 +1,5 @@
 {
-  "name": "pstdio-session-browser",
+  "name": "session-browser",
   "version": "0.2.0",
   "displayName": "Sessions",
   "icon": "messages-circle",
@@ -7,7 +7,7 @@
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.4.0 || ^0.5.0"
+    "pstdio": "^0.5.0"
   },
   "pstdio": {
     "scope": "user"

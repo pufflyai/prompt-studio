@@ -26,7 +26,7 @@ export const measureScaleNavigation = async (
     const queryPath = owner === 9 ? ".view.tickets.kanban.query" : `.view.records-${mode}.kanban.query`;
     url.pathname =
       owner === 9
-        ? `/projects/${fixture.projectId}/extensions/pstdio.pstdio-planner/tickets`
+        ? `/projects/${fixture.projectId}/extensions/pstdio.planner/tickets`
         : `/projects/${fixture.projectId}/extensions/scale.scale-owner-0/records-${mode}`;
     if (page.url() !== "about:blank") throw new Error("Cold sample preloaded a page");
     if (temperature === "warm") {

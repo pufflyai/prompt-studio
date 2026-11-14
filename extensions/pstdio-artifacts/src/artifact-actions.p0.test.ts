@@ -41,7 +41,7 @@ test("batch resolution supplies current labels and artifact navigation while omi
   const ref = {
     type: "artifact",
     id: artifact.artifactId,
-    extensionId: "pstdio.pstdio-artifacts",
+    extensionId: "pstdio.artifacts",
     projectId: ctx.projectId,
   };
   const result = await resolveResources.run(ctx, {
@@ -56,7 +56,7 @@ test("batch resolution supplies current labels and artifact navigation while omi
   expect(result).toHaveLength(1);
   expect(result[0]).toMatchObject({
     resource: { id: artifact.artifactId, label: "Renamed prototype", icon: "file-code" },
-    target: { kind: "page", page: { extensionId: "pstdio.pstdio-artifacts", id: "artifact" } },
+    target: { kind: "page", page: { extensionId: "pstdio.artifacts", id: "artifact" } },
   });
 });
 
@@ -87,7 +87,7 @@ test("snapshot paths open the artifact that owns the revision", async () => {
   const [claim] = artifactKind.paths ?? [];
   const resolve = (path: string) => resolvePath.run(ctx, { path: `${claim.prefix}${path}`, workspaceId: "workspace" });
 
-  expect(claim.prefix).toBe(".pstdio/extension-storage/pstdio.pstdio-artifacts/sites/");
+  expect(claim.prefix).toBe(".pstdio/extension-storage/pstdio.artifacts/sites/");
   expect(resolvePath.id).toBe(claim.resolve.id);
   expect(await resolve(`${artifact.revisionId}.html`)).toMatchObject({
     resource: { type: "artifact", id: artifact.artifactId, label: "Updated report", projectId: ctx.projectId },

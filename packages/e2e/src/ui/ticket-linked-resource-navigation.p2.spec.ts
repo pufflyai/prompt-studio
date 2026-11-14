@@ -16,7 +16,7 @@ test("ticket resource badges keep keyboard navigation after a linked session is 
     const attempt = await createAttemptWithSessionViaApi(request, uiOrigin, projectId!, ticket.id, "Run ticket");
     const session = await (await request.get(`${uiOrigin}/v1/sessions/${attempt.session.id}`)).json();
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
-    const board = `/projects/${projectId}/extensions/pstdio.pstdio-planner/tickets`;
+    const board = `/projects/${projectId}/extensions/pstdio.planner/tickets`;
     await page.goto(board);
     const card = page.getByTestId("renderer-card").filter({ hasText: "Linked resource navigation" });
     await card.getByRole("button", { name: `pstdio · ${session.title}`, exact: true }).focus();

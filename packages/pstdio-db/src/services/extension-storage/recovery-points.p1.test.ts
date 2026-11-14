@@ -331,3 +331,33 @@ test("restoring records that together are over one commit's size limit splits th
 
   for (const id of ids) expect((await tickets.read(id)).value).toBe(body);
 });
+
+test("an imported historical recovery owner restores into the canonical owner with stable record IDs", async () => {
+  const { db, svc, projectId, records } = await setup();
+  const source = await createInstalledExtensionSourcesDBService(db).register({
+    install_name: "notes",
+    extension_id: "pstdio.notes",
+    display_name: "Notes",
+    source_kind: "local_path",
+    source_path: "/notes",
+  });
+  await createExtensionInstancesDBService(db).create({
+    installed_extension_id: source.id,
+    scope_type: "project",
+    scope_id: projectId,
+  });
+  const notes = await records("pstdio.notes");
+  await notes.commit({ operationId: "original", edits: [{ recordId: "stable-note", replace: { title: "Before" } }] });
+  await svc.recovery.capture(projectId, start);
+  const [point] = await svc.recovery.list(projectId);
+  await db.update(recovery_point_owners).set({ extension_id: "pstdio.pstdio-notes" });
+  await notes.commit({ operationId: "later", edits: [{ recordId: "stable-note", replace: { title: "After" } }] });
+  expect(await svc.recovery.restore(projectId, { ...point!, extensionId: "pstdio.pstdio-notes" })).toEqual({
+    extensions: ["pstdio.notes"],
+    records: 1,
+  });
+  expect((await notes.read("stable-note")).value).toEqual({ title: "Before" });
+  expect(
+    (await svc.recovery.list(projectId)).flatMap((p) => p.extensions).filter((o) => o === "pstdio.pstdio-notes"),
+  ).toEqual([]);
+});

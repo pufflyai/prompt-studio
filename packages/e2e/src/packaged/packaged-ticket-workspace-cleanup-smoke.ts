@@ -11,7 +11,7 @@ export const expectTicketWorkspaceCleanup = async (
 ) => {
   const execute = async (command: string, params: Record<string, unknown>) => {
     const response = await fetch(
-      `${baseUrl}/v1/projects/${projectId}/extensions/commands/pstdio.pstdio-planner.command.${command}/execute`,
+      `${baseUrl}/v1/projects/${projectId}/extensions/commands/pstdio.planner.command.${command}/execute`,
       {
         method: "POST",
         headers,

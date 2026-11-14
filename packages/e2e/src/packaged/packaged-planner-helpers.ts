@@ -25,7 +25,7 @@ export const commandRunner =
     const started = Date.now();
     logTestPhase(`Planner command ${command}: start`);
     const response = await fetch(
-      `${baseUrl}/v1/projects/${projectId}/extensions/commands/pstdio.pstdio-planner.command.${command}/execute`,
+      `${baseUrl}/v1/projects/${projectId}/extensions/commands/pstdio.planner.command.${command}/execute`,
       {
         method: "POST",
         headers: { ...headers, "content-type": "application/json" },

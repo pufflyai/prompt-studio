@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "pstdio-onboarding",
+      "name": "onboarding",
       "dependencies": {
         "@chakra-ui/react": "3.32.0",
         "@emotion/react": "^11.0.0",

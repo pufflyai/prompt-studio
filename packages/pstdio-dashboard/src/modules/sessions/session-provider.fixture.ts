@@ -69,7 +69,7 @@ export const registerSessionProvider = (
         : await handler?.handler(ctx, body.params ?? {});
       return {
         commandId,
-        extensionId: "pstdio.pstdio-session-browser",
+        extensionId: "pstdio.session-browser",
         outcome: { ok: true, status: "success", value, navigationRequests },
       };
     },

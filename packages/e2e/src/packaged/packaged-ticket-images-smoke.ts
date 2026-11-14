@@ -9,7 +9,7 @@ export const expectPackagedTicketImages = async (input: {
 }) => {
   const execute = async (command: string, params: unknown) => {
     const response = await fetch(
-      `${input.baseUrl}/v1/projects/${input.projectId}/extensions/commands/pstdio.pstdio-planner.command.${command}/execute`,
+      `${input.baseUrl}/v1/projects/${input.projectId}/extensions/commands/pstdio.planner.command.${command}/execute`,
       {
         method: "POST",
         headers: { ...input.headers, "content-type": "application/json" },
@@ -26,7 +26,7 @@ export const expectPackagedTicketImages = async (input: {
   const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0xff, 0x00, 0xfe]);
   await Bun.write(path, bytes);
   const save = await execute("save-ticket", { id: draft.shorthand });
-  expect(save.eventIds).toContain("pstdio.pstdio-planner.event.tickets.changed");
+  expect(save.eventIds).toContain("pstdio.planner.event.tickets.changed");
   const saved = (await execute("get-ticket", { id: draft.shorthand })).outcome.value;
   expect(saved.files).toEqual([]);
   expect(saved.attachments).toEqual([expect.objectContaining({ name: "proof.png", mimeType: "image/png" })]);

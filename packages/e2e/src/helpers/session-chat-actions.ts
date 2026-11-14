@@ -1,6 +1,6 @@
 import type { Request } from "@playwright/test";
 
-export const sessionChatActionCommandId = "pstdio.pstdio-session-browser.view.conversation.chat.onAction";
+export const sessionChatActionCommandId = "pstdio.session-browser.view.conversation.chat.onAction";
 export const sessionChatActionPath = `/extensions/commands/${sessionChatActionCommandId}/execute`;
 export const sessionChatActionRoute = `**${sessionChatActionPath}`;
 export const isSessionChatAction = (request: Request, type: string) =>

@@ -2,13 +2,13 @@
 
 Artifacts lets agents publish self-contained HTML pages, such as reports, charts, or small tools, and lets you browse every saved version in Prompt Studio.
 
-Keep draft HTML, prototype sources, and screenshots under `.pstdio/extension-storage/pstdio.pstdio-artifacts/drafts/<name>/`. Published snapshots use this extension's storage too. See [extension file storage](../../documentation/guides/extensions/0008-extension-storage.md).
+Keep draft HTML, prototype sources, and screenshots under `.pstdio/extension-storage/pstdio.artifacts/drafts/<name>/`. Published snapshots use this extension's storage too. See [extension file storage](../../documentation/guides/extensions/0008-extension-storage.md).
 
 Install Artifacts once for your user, then turn it on in each project that should use it. Installing from a project turns it on there. Each project has its own library. Published versions are snapshots; publishing again adds a version instead of changing an old one.
 
 ## Install
 
-Artifacts is an optional extension in the extension catalog. Its install name is `pstdio-artifacts`; installing it does not make published pages public. Open **Settings → Project → Extensions**, find **Artifacts** under **Available**, and select **Install**. You can also run:
+Artifacts is an optional extension in the extension catalog. Its install name is `artifacts`; installing it does not make published pages public. Open **Settings → Project → Extensions**, find **Artifacts** under **Available**, and select **Install**. You can also run:
 
 ```sh
 pst extensions add pstdio-artifacts
@@ -20,17 +20,17 @@ Open **Artifacts** and click the **Project brief** or **System diagram** button 
 
 ## Publish a page
 
-Agents publish pages with the `pst pstdio.pstdio-artifacts` commands. Artifacts gives agents a `publish-artifact` skill that explains the steps, so you can simply ask an agent to publish a page.
+Agents publish pages with the `pst pstdio.artifacts` commands. Artifacts gives agents a `publish-artifact` skill that explains the steps, so you can simply ask an agent to publish a page.
 
 ```sh
-pst pstdio.pstdio-artifacts publish --file_path ./dist/index.html --favicon '📦' --label 'First draft' --json
-pst pstdio.pstdio-artifacts publish --file_path ./dist/index.html --url '<returned url>' --label 'Updated' --json
-pst pstdio.pstdio-artifacts list --json
-pst pstdio.pstdio-artifacts read --url '<returned url>' --json
-pst pstdio.pstdio-artifacts revisions --url '<returned url>' --json
-pst pstdio.pstdio-artifacts open --url '<returned url>' --json
-pst pstdio.pstdio-artifacts rename --url '<returned url>' --name 'New name' --json
-pst pstdio.pstdio-artifacts delete --url '<returned url>' --json
+pst pstdio.artifacts publish --file_path ./dist/index.html --favicon '📦' --label 'First draft' --json
+pst pstdio.artifacts publish --file_path ./dist/index.html --url '<returned url>' --label 'Updated' --json
+pst pstdio.artifacts list --json
+pst pstdio.artifacts read --url '<returned url>' --json
+pst pstdio.artifacts revisions --url '<returned url>' --json
+pst pstdio.artifacts open --url '<returned url>' --json
+pst pstdio.artifacts rename --url '<returned url>' --name 'New name' --json
+pst pstdio.artifacts delete --url '<returned url>' --json
 ```
 
 `publish` takes the HTML file in `--file_path`, an optional `--favicon` emoji, and an optional `--label` for the version. Leave out `--url` to create a new artifact. Pass the `url` that an earlier publish returned to add a new version to that artifact. The option names match Anthropic's artifact publishing tool.
@@ -45,7 +45,7 @@ Open **Artifacts** in the project navigation. The library shows a grid of page p
 
 Artifacts are also searchable resources. Search by their current name to open them from global search or choose them in a resource picker. Each artifact appears once, opens its latest version, and disappears from search when deleted.
 
-When an agent mentions a saved snapshot path, such as `.pstdio/extension-storage/pstdio.pstdio-artifacts/sites/<revision-id>.html`, in a conversation, the link shows the artifact's current name and opens the artifact at its latest version instead of the raw file.
+When an agent mentions a saved snapshot path, such as `.pstdio/extension-storage/pstdio.artifacts/sites/<revision-id>.html`, in a conversation, the link shows the artifact's current name and opens the artifact at its latest version instead of the raw file.
 
 The artifact list opens in a single Artifacts tab in Main. Opening an artifact adds its own tab, so you can return to the list without closing your previews. When the list is closed, Main's default placeholder and Add panel offer an Artifacts entry contributed by this page. Side and Bottom never offer the creation entry. The open list tab can move freely between Main, Side, and Bottom; while open anywhere, its singleton entry is omitted from all choices. Search can open another artifact while tabs are open. Switching tabs keeps each interactive preview's state. A link to a published URL opens the matching artifact tab.
 

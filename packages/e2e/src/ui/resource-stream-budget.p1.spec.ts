@@ -74,7 +74,7 @@ test("mixed resources share two HTTP/1.1 connections through admission cancellat
   const opened = await page.evaluate(
     ({ id, ticketId }) =>
       Reflect.get(window, "resourceClient").open(id, {
-        fileRendererId: "pstdio.pstdio-planner.view.ticket-editor",
+        fileRendererId: "pstdio.planner.view.ticket-editor",
         resource: { type: "ticket", id: ticketId },
       }),
     { id: projects[1]!.id, ticketId: destination.id },

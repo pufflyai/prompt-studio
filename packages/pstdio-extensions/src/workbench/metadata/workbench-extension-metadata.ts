@@ -40,11 +40,12 @@ const toExtensionRecord = (extension: ExtensionRuntime["extensions"][number]) =>
 
 const toCommandRecord = (command: ExtensionRuntime["commands"][number]) => ({
   id: command.id,
+  localId: command.localId,
   extensionId: command.extensionId,
   title: command.title,
   description: command.description,
   cliPath: command.cli?.pathKey,
-  cliAliases: command.cli?.globalAliases?.map((alias) => alias.join(" ")),
+  cliAliases: command.cli?.deprecatedPaths?.map((alias) => alias.join(" ")),
   examples: command.cli?.examples,
   automation: command.automation,
   copyResultToClipboard: command.copyResultToClipboard,
@@ -256,12 +257,14 @@ export const createWorkbenchExtensionMetadata = (
   })),
   settingsSections: input.runtime.settingsSections.map((section) => ({
     id: section.id,
+    localId: section.localId,
     extensionId: section.extensionId,
     title: section.contribution.title,
     order: section.contribution.order,
   })),
   settingsPanels: input.runtime.settingsPanels.map((panel) => ({
     id: panel.id,
+    localId: panel.localId,
     extensionId: panel.extensionId,
     view: normalizedRef(panel.contribution.view, panel.extensionId),
     slot: panel.contribution.slot,

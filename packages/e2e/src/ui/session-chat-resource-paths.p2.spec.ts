@@ -25,8 +25,8 @@ test("opens note and artifact paths from chat in their own pages", async ({ page
     return result.outcome.value;
   };
   try {
-    const note = await execute("pstdio.pstdio-notes.command.notes.create", { title: "Launch plan" });
-    const artifact = await execute("pstdio.pstdio-artifacts.command.publish", { file_path: "report.html" });
+    const note = await execute("pstdio.notes.command.notes.create", { title: "Launch plan" });
+    const artifact = await execute("pstdio.artifacts.command.publish", { file_path: "report.html" });
     const workspaces = await (await request.get(`${apiBase}/v1/workspaces?project_id=${project.id}`)).json();
     const response = await request.post(`${apiBase}/v1/sessions`, {
       data: {
@@ -34,8 +34,8 @@ test("opens note and artifact paths from chat in their own pages", async ({ page
         workspace_id: workspaces[0].id,
         title: "Resource path review",
         prompt: [
-          `Read .pstdio/extension-storage/pstdio.pstdio-notes/documents/${note.id}/content.md`,
-          `and .pstdio/extension-storage/pstdio.pstdio-artifacts/sites/${artifact.revisionId}.html`,
+          `Read .pstdio/extension-storage/pstdio.notes/documents/${note.id}/content.md`,
+          `and .pstdio/extension-storage/pstdio.artifacts/sites/${artifact.revisionId}.html`,
         ].join(" "),
         agent,
       },
@@ -50,13 +50,13 @@ test("opens note and artifact paths from chat in their own pages", async ({ page
     await page.goto(sessionUrl);
     await expect(message.getByText("Launch plan", { exact: true })).toBeVisible();
     await message.getByText("Launch plan", { exact: true }).click();
-    await expect(page).toHaveURL(/pstdio-notes/);
+    await expect(page).toHaveURL(/\/extensions\/pstdio\.notes\//);
     await expect(page.getByRole("tab", { name: "Launch plan" })).toBeVisible();
 
     await page.goto(sessionUrl);
     await expect(message.getByText("Launch report", { exact: true })).toBeVisible();
     await message.getByText("Launch report", { exact: true }).click();
-    await expect(page).toHaveURL(/pstdio-artifacts/);
+    await expect(page).toHaveURL(/\/extensions\/pstdio\.artifacts\//);
     await expect(page.getByRole("tab", { name: "Launch report" })).toBeVisible();
   } finally {
     await request.delete(`${apiBase}/v1/projects/${project.id}`);

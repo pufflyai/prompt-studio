@@ -41,7 +41,7 @@ export const createResourceStreamFixture = async (request: APIRequestContext, ba
     });
     tickets.push(ticket);
     targets.push({
-      fileRendererId: "pstdio.pstdio-planner.view.ticket-editor",
+      fileRendererId: "pstdio.planner.view.ticket-editor",
       resource: { type: "ticket", id: ticket.id },
     });
   }
@@ -51,7 +51,7 @@ export const createResourceStreamFixture = async (request: APIRequestContext, ba
       content: `# File ${index}\nRetained file ${index}`,
     });
     targets.push({
-      fileRendererId: "pstdio.pstdio-planner.view.ticket-editor",
+      fileRendererId: "pstdio.planner.view.ticket-editor",
       resource: { type: "ticket", id: tickets[0]!.id, metadata: { documentId: file.id } },
     });
   }

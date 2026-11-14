@@ -42,7 +42,7 @@ const openPage = async () => {
     },
     { id: project.id, secret },
   );
-  await page.goto(`${connection.dashboardUrl}projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
+  await page.goto(`${connection.dashboardUrl}projects/${project.id}/extensions/pstdio.planner/tickets`);
   await page.getByTestId("renderer-card").first().waitFor();
   return page;
 };
@@ -165,7 +165,7 @@ try {
     secondMoveSaved = resolve;
   });
   let moveCalls = 0;
-  await page.route("**/pstdio.pstdio-planner.view.tickets.kanban.onMove/execute", async (route) => {
+  await page.route("**/pstdio.planner.view.tickets.kanban.onMove/execute", async (route) => {
     moveCalls += 1;
     console.info(JSON.stringify({ move: moveCalls, payload: route.request().postDataJSON() }));
     if (moveCalls > 1) {
@@ -219,7 +219,7 @@ try {
   saved = await executePlanner<StressTicket>(api, project.id, "get-ticket", { id: tickets[0].id });
   assert.equal(saved.value.statusId, destination.id);
   // Validate flattened group headers and pinned drag/focus entries in the built app.
-  const viewPath = `/v1/projects/${project.id}/boards/pstdio.pstdio-planner.view.tickets/views`;
+  const viewPath = `/v1/projects/${project.id}/boards/pstdio.planner.view.tickets/views`;
   const { views } = await (await api.get(viewPath)).json();
   const activeView = views[0];
   const settingsPath = `/v1/projects/${project.id}/board-views/${activeView.id}`;

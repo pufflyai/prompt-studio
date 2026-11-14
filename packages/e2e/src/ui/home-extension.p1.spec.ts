@@ -31,7 +31,7 @@ test("Home resumes opened resources and public actions without prematurely creat
   }
   await page.goto(`/projects/${project.id}`);
   await expect(homePage(page)).toBeVisible();
-  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/extensions/pstdio.pstdio-home/home$`));
+  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/extensions/pstdio.home/home$`));
   await expect(homeFrame(page).getByText("Nothing opened yet", { exact: true })).toBeVisible();
   await expect(page.getByRole("option").first()).toHaveText("Home");
   const session = sessions[6];
@@ -72,7 +72,7 @@ test("disabling Home exposes the existing empty panel and enabling it restores o
   const listed = (await (await request.get(`/v1/projects/${project.id}/extensions`)).json()) as {
     extensions: { id: string; installName: string }[];
   };
-  const instance = listed.extensions.find((entry) => entry.installName === "pstdio-home")!;
+  const instance = listed.extensions.find((entry) => entry.installName === "home")!;
   expect(instance).toBeTruthy();
   const enable = (enabled: boolean) =>
     request.patch(`/v1/projects/${project.id}/extensions/${instance.id}`, { data: { enabled } });
@@ -109,7 +109,7 @@ test("uninstalled Home leaves the project root on the existing empty panel", asy
   const listed = (await (await request.get(`/v1/projects/${project.id}/extensions`)).json()) as {
     extensions: { id: string; installName: string }[];
   };
-  const instance = listed.extensions.find((entry) => entry.installName === "pstdio-home")!;
+  const instance = listed.extensions.find((entry) => entry.installName === "home")!;
   expect(instance).toBeTruthy();
   expect((await request.delete(`/v1/projects/${project.id}/extensions/${instance.id}?deleteUserData=true`)).ok()).toBe(
     true,
@@ -126,7 +126,7 @@ test("uninstalled Home leaves the project root on the existing empty panel", asy
   await page.goto(`/projects/${project.id}/workspaces`);
   await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/workspaces$`));
   await expect(
-    page.locator('[data-workbench-region="main"] [data-workbench-view="pstdio.pstdio-workspaces.view.workspaces"]'),
+    page.locator('[data-workbench-region="main"] [data-workbench-view="pstdio.workspaces.view.workspaces"]'),
   ).toBeVisible();
   await page.getByRole("option", { name: "Sessions", exact: true }).click();
   await page.getByRole("button", { name: "Back to project", exact: true }).click();
@@ -140,7 +140,7 @@ test("Home keeps setup recovery feedback beside the action", async ({ page, requ
   let setupBlocked = true;
   let retries = 0;
   // Inject supported service failures at their public HTTP boundary; retry still runs the real setup service.
-  await page.route("**/extensions/commands/pstdio.pstdio-home.command.read/execute", async (route) => {
+  await page.route("**/extensions/commands/pstdio.home.command.read/execute", async (route) => {
     const response = await route.fetch();
     const body = await response.json();
     if (setupBlocked && body.outcome?.ok) body.outcome.value.setupError = "Setup needs recovery";

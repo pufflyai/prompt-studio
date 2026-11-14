@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { createAutomationDBService, createDb, createProjectsDBService } from "pstdio-db";
+import { normalizeExtensionSources } from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "../extensions/deps";
 import { EventBus } from "../sync/event-bus";
 import { createAutomationService } from "./automation-service";
@@ -35,7 +36,7 @@ beforeEach(async () => {
         extensionRuntimeCatalog: {
           get: async () => ({
             runtime: {
-              hooks: [],
+              ...normalizeExtensionSources([]),
               commands: [
                 ...(workerAvailable ? [{ id: commandId, extensionId, automation: workerAutomation, params: {} }] : []),
                 { id: "peer.command.run", extensionId: "peer", automation: true, params: {} },

@@ -92,19 +92,18 @@ JSON on the CLI.
 
 ## CLI contributions
 
-Set `cli: true` to expose a command as `pst <package-name> <command-id>`. Dots in the local command ID become path segments: package `bookmarks` and ID `links.add` produce `pst bookmarks links add`. Installing and enabling the extension makes its CLI paths available in that project.
+Set `cli: true` to expose a command as `pst <publisher>.<name> <command-id>`. Dots in the local command ID become path segments: extension `acme.bookmarks` and ID `links.add` produce `pst acme.bookmarks links add`. Installing and enabling the extension makes its CLI paths available in that project.
 
-Use a CLI contribution object when you need a different path, a shorter global alias, or examples:
+Use a CLI contribution object to choose the path inside the owning extension namespace or add examples:
 
 ```ts
 cli: {
   path: ["links", "add"],
-  globalAliases: [["bookmarks", "add"]],
-  examples: ['pst bookmarks add --title "Prompt Studio" --url https://prompt.studio'],
+  examples: ['pst acme.bookmarks links add --title "Prompt Studio" --url https://prompt.studio'],
 },
 ```
 
-`path` is relative to the package name. `globalAliases` are complete paths after `pst`; they do not add a package prefix. Choose aliases that do not conflict with another enabled extension or a core command. `cli: true` does not by itself add a palette entry or toolbar action; declare those separately and point them to the same command.
+`path` is relative to the full extension ID. Extensions cannot register global shortcuts or claim another provider's namespace. The extension API 0.5.0 release removes `globalAliases`; remove that field and update command examples to use the qualified namespace. Host-managed deprecated namespace paths remain available during identity upgrades. `cli: true` does not by itself add a palette entry or toolbar action; declare those separately and point them to the same command.
 
 ### Help and parameter flags
 

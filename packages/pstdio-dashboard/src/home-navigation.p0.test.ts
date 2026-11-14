@@ -7,7 +7,7 @@ import { registerWorkspaceProviderViews } from "@/workspaces-provider.test-suppo
 import { registerHomePage as registerHome } from "./home-page.test-support";
 import { createDashboardWorkbench } from "./workbench";
 
-const home = { kind: "page" as const, extensionId: "pstdio.pstdio-home", id: "home" };
+const home = { kind: "page" as const, extensionId: "pstdio.home", id: "home" };
 const browserAt = (url: string): WorkbenchPageLocationBrowser => {
   let current = { url };
   return {

@@ -1,5 +1,6 @@
 import type { PageLocation, ResourceRef } from "@pstdio/sdk/extensions";
 import { defaultPageResourceCodec } from "pstdio-api-contracts";
+import { historicalContributionId } from "pstdio-api-contracts/extension-host";
 import type { LayoutModel } from "../../registries/layout/layout-model-types";
 import { carryWorkbenchRegionState } from "../../registries/layout/layout-scope";
 import { createDefaultWorkbenchLayout, type WorkbenchLayout } from "../../registries/layout/layout-types";
@@ -30,7 +31,9 @@ export const pageStateFromLayout = (
     const matching = placements.filter(
       (placement) =>
         placement.placementIdentity?.kind === "page" &&
-        placement.placementIdentity.pageId === page.id &&
+        (placement.placementIdentity.pageId === page.id ||
+          placement.placementIdentity.pageId ===
+            historicalContributionId({ ...page.ref, extensionId: page.ref.extensionId ?? "pstdio" })) &&
         placement.placementIdentity.slotId === slot.id,
     );
     if (slot.item.kind === "view") {

@@ -61,7 +61,7 @@ async function main() {
   if (!project) throw new Error("The isolated demo project is missing.");
   const execute: Execute = async <T>(command: string, params: Record<string, unknown> = {}) => {
     const response = await fetch(
-      `${baseUrl}/v1/projects/${project.id}/extensions/commands/pstdio.pstdio-planner.command.${command}/execute`,
+      `${baseUrl}/v1/projects/${project.id}/extensions/commands/pstdio.planner.command.${command}/execute`,
       { method: "POST", headers, body: JSON.stringify({ params }) },
     );
     const body = await response.json();
@@ -74,7 +74,7 @@ async function main() {
   const fixture = await seedPlannerStress(execute, (count) =>
     process.stderr.write(`Planner stress tickets: ${count}/${stressTicketCount}\n`),
   );
-  const timelineUrl = `${connection.dashboardUrl.replace(/\/$/, "")}/projects/${project.id}/extensions/pstdio.pstdio-planner/ticket-timeline`;
+  const timelineUrl = `${connection.dashboardUrl.replace(/\/$/, "")}/projects/${project.id}/extensions/pstdio.planner/ticket-timeline`;
   process.stdout.write(
     `${JSON.stringify({ ...fixture, projectId: project.id, timelineUrl, seedMs: Math.round(performance.now() - start) })}\n`,
   );

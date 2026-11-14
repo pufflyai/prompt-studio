@@ -1,7 +1,7 @@
 import type { NavigationTargetPage, ResourceRef } from "@pstdio/sdk/extensions";
 import { ticketDocumentDeclaration } from "./document-selection";
 
-const plannerPage = (id: string, extensionId = "pstdio.pstdio-planner") => ({ kind: "page" as const, id, extensionId });
+const plannerPage = (id: string, extensionId = "pstdio.planner") => ({ kind: "page" as const, id, extensionId });
 export const ticketDocumentPage = {
   id: "ticket",
   ref: plannerPage("ticket"),
@@ -17,7 +17,7 @@ export const ticketsPageTarget = { kind: "page", page: plannerPage("tickets") } 
 // infer a destination from whichever page happens to accept a resource kind.
 export const ticketPageTarget = (
   resource: ResourceRef,
-  extensionId = resource.extensionId ?? "pstdio.pstdio-planner",
+  extensionId = resource.extensionId ?? "pstdio.planner",
 ): NavigationTargetPage => {
   const parent = resource.metadata?.resourceParent;
   const metadata = parent && typeof parent === "object" && "metadata" in parent ? parent.metadata : undefined;
