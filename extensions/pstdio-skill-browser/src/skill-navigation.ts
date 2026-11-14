@@ -16,7 +16,7 @@ export const skillNavigation = (
       if (skill.source_kind === "project") section.label = l10n("skills.project", "Project");
       sections.set(owner, section);
     }
-    section.nodes.push({ id: skill.name, label: skill.title || skill.name, icon: "sparkles", ...target(skill) });
+    section.nodes.push({ id: skill.id, label: skill.title || skill.name, icon: "sparkles", ...target(skill) });
   }
   return [...sections.values()];
 };

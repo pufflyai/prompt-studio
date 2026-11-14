@@ -8,7 +8,7 @@ interface Navigation {
 
 export const useSkillSelection = (
   navigation: Navigation,
-  skill: Pick<Skill, "name" | "title" | "project_id"> | null | undefined,
+  skill: Pick<Skill, "id" | "name" | "title" | "project_id"> | null | undefined,
   active: boolean,
 ) => {
   const [error, setError] = useState<unknown>();
@@ -24,7 +24,7 @@ export const useSkillSelection = (
           page: { kind: "page", extensionId: "pstdio.pstdio-skill-browser", id: "skill" },
           resource: {
             type: "skill",
-            id: skill.name,
+            id: skill.id,
             label: skill.title || skill.name,
             projectId: skill.project_id,
             extensionId: "pstdio.pstdio-skill-browser",

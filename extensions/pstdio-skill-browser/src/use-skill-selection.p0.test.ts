@@ -7,7 +7,7 @@ import { useSkillSelection } from "./use-skill-selection";
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
 test("retries automatic selection after navigation fails with unchanged skill data", async () => {
-  const skill = { name: "review", title: "Review", project_id: "project" };
+  const skill = { id: "review-id", name: "review", title: "Review", project_id: "project" };
   const calls: NavigationTarget[] = [];
   const navigation = {
     open: async (target: NavigationTarget) => {
@@ -29,7 +29,7 @@ test("retries automatic selection after navigation fails with unchanged skill da
     selection!.retry();
   });
   expect(calls).toHaveLength(2);
-  expect(calls[1]).toMatchObject({ kind: "page", resource: { id: "review", projectId: "project" } });
+  expect(calls[1]).toMatchObject({ kind: "page", resource: { id: "review-id", projectId: "project" } });
   expect(selection!.error).toBeUndefined();
   await act(async () => {
     renderer!.unmount();

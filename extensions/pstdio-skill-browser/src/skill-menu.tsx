@@ -1,5 +1,5 @@
 import { Button, Text } from "@chakra-ui/react";
-import type { NavigationTarget, TreeNode } from "@pstdio/sdk/extensions";
+import type { ExtensionViewRenderContext, NavigationTarget, TreeNode } from "@pstdio/sdk/extensions";
 import type { Skill } from "@pstdio/sdk/resources";
 import {
   resolveFileIconElement,
@@ -16,9 +16,10 @@ interface SkillMenuProps {
   skill: Skill;
   path: unknown;
   navigation: { open(target: NavigationTarget): Promise<void> };
+  t: ExtensionViewRenderContext["t"];
 }
 export const SkillMenu = (props: SkillMenuProps) => {
-  const { skill, path, navigation } = props;
+  const { skill, path, navigation, t } = props;
   const [expandedSections, setExpandedSections] = useState(["files"]);
   const [expandedNodes, setExpandedNodes] = useState<string[]>([]);
   const [error, setError] = useState<unknown>();
@@ -29,7 +30,7 @@ export const SkillMenu = (props: SkillMenuProps) => {
     page: { kind: "page", extensionId: "pstdio.pstdio-skill-browser", id: "skill" },
     resource: {
       type: "skill",
-      id: skill.name,
+      id: skill.id,
       label: skill.title || skill.name,
       projectId: skill.project_id,
       extensionId: "pstdio.pstdio-skill-browser",
@@ -56,15 +57,21 @@ export const SkillMenu = (props: SkillMenuProps) => {
   const toggle = (ids: string[], id: string) => (ids.includes(id) ? ids.filter((value) => value !== id) : [...ids, id]);
   return (
     <ScrollArea h="full" minH="0" minW="0">
-      <ParamEditor groups={[skillInfo(skill)]} readOnly fullWidth />
+      <ParamEditor groups={[skillInfo(skill, t)]} readOnly fullWidth />
       {error ? (
         <>
           <Text role="alert">{String(error)}</Text>
-          <Button onClick={() => setError(undefined)}>Dismiss</Button>
+          <Button onClick={() => setError(undefined)}>{t("actions.dismiss", "Dismiss")}</Button>
         </>
       ) : null}
       <TreeList
-        sections={[{ id: "files", label: "Files", nodes: nodes(skillFiles(skill, selectedFile?.path, target)) }]}
+        sections={[
+          {
+            id: "files",
+            label: t("skill.files", "Files"),
+            nodes: nodes(skillFiles(skill, selectedFile?.path, target)),
+          },
+        ]}
         activeNodeId={selectedFile?.path}
         expandedSectionIds={expandedSections}
         expandedNodeIds={expandedNodes}

@@ -42,14 +42,14 @@ const SkillContent = (props: { context: ExtensionViewRenderContext<HostProps>; n
             else query.refresh();
           }}
         >
-          Retry
+          {context.t("actions.retry", "Retry")}
         </Button>
       </Flex>
     );
   if (query.data === null)
     return (
       <Text p="md" color="fg.muted">
-        No skills available.
+        {context.t("skills.empty", "No skills available.")}
       </Text>
     );
   if (query.data === undefined)
@@ -58,8 +58,8 @@ const SkillContent = (props: { context: ExtensionViewRenderContext<HostProps>; n
         <Spinner />
       </Flex>
     );
-  if (name) return <SkillMenu skill={query.data} path={selectedPath} navigation={client.navigation} />;
-  return <Spinner m="md" aria-label="Opening skill" />;
+  if (name) return <SkillMenu skill={query.data} path={selectedPath} navigation={client.navigation} t={context.t} />;
+  return <Spinner m="md" aria-label={context.t("skill.opening", "Opening skill")} />;
 };
 const App = (props: { context: ExtensionViewRenderContext<HostProps> }) => {
   const { context } = props;

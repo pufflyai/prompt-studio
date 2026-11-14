@@ -5,5 +5,13 @@
   "skills.list": "Lister les compétences",
   "skills.read": "Lire une compétence",
   "skill.details": "Détails de la compétence",
-  "skill.files": "Fichiers"
+  "skill.files": "Fichiers",
+  "skill.name": "Nom",
+  "skill.version": "Version",
+  "skill.description": "Description",
+  "skill.info": "Informations",
+  "skill.opening": "Ouverture de la compétence",
+  "skills.empty": "Aucune compétence disponible.",
+  "actions.dismiss": "Fermer",
+  "actions.retry": "Réessayer"
 }

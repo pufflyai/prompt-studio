@@ -1,12 +1,18 @@
-import type { ExtensionContextBase, NavigationTarget, TextControl, TreeNode } from "@pstdio/sdk/extensions";
+import type {
+  ExtensionContextBase,
+  ExtensionViewRenderContext,
+  NavigationTarget,
+  TextControl,
+  TreeNode,
+} from "@pstdio/sdk/extensions";
 import type { Skill } from "@pstdio/sdk/resources";
 import { parseSkillMetadata } from "./parse-skill-metadata";
 
-export const readSkill = async (ctx: ExtensionContextBase, name?: string) => {
+export const readSkill = async (ctx: ExtensionContextBase, key?: string) => {
   const skills = (await ctx.skills?.list()) ?? [];
-  if (!name) return skills[0] ?? null;
-  const skill = skills.find((skill) => skill.name === name);
-  if (!skill) throw new Error(`Skill not found: ${name}`);
+  if (!key) return skills[0] ?? null;
+  const skill = skills.find((skill) => skill.id === key) ?? skills.find((skill) => skill.name === key);
+  if (!skill) throw new Error(`Skill not found: ${key}`);
   return skill;
 };
 
@@ -45,15 +51,33 @@ export const skillFiles = (
   return roots;
 };
 
-export const skillInfo = (skill: Skill) => {
+export const skillInfo = (skill: Skill, t: ExtensionViewRenderContext["t"]) => {
   const metadata = parseSkillMetadata(skill.files.find((file) => file.path === "SKILL.md")?.content ?? "");
   const description = metadata.description || skill.description;
   const params: TextControl[] = [
-    { id: "name", name: "Name", type: "text", singleLine: true, defaultValue: metadata.name || skill.name },
+    {
+      id: "name",
+      name: t("skill.name", "Name"),
+      type: "text",
+      singleLine: true,
+      defaultValue: metadata.name || skill.name,
+    },
   ];
   if (metadata.version)
-    params.push({ id: "version", name: "Version", type: "text", singleLine: true, defaultValue: metadata.version });
+    params.push({
+      id: "version",
+      name: t("skill.version", "Version"),
+      type: "text",
+      singleLine: true,
+      defaultValue: metadata.version,
+    });
   if (description)
-    params.push({ id: "description", name: "Description", type: "text", singleLine: false, defaultValue: description });
-  return { id: "info", title: "Info", collapsible: true, params };
+    params.push({
+      id: "description",
+      name: t("skill.description", "Description"),
+      type: "text",
+      singleLine: false,
+      defaultValue: description,
+    });
+  return { id: "info", title: t("skill.info", "Info"), collapsible: true, params };
 };

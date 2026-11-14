@@ -66,7 +66,7 @@ const detail = definePage({
       query: async (ctx, { renderer }) => {
         const item = await readSkill(ctx, renderer.resource?.id);
         const file = item && selectedSkillFile(item, renderer.pageParams?.file);
-        return { label: file?.path ?? "Skill", icon: "file-text" };
+        return { label: file?.path ?? l10n("skill.title", "Skill"), icon: "file-text" };
       },
       refreshEvents: [viewDataEvents.extensionCatalogChanged, viewDataEvents.resourcesChanged],
     },
@@ -94,7 +94,7 @@ const list = defineView({
       return skillNavigation(items ?? [], catalog?.extensions ?? [], (item) => {
         const resource = {
           type: skill.id,
-          id: item.name,
+          id: item.id,
           label: item.title || item.name,
           extensionId: ctx.extensionId,
           projectId: ctx.projectId,

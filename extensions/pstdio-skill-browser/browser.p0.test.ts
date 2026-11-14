@@ -42,13 +42,40 @@ test("opens a project skill from its browser tree and reads its files through th
   if (tree?.kind !== "tree") throw new Error("Skills need a navigation tree");
   const sections = await tree.body(context());
   expect(sections[0]?.nodes[0]).toMatchObject({
+    id: "skill-id",
     label: "Review",
-    resource: { id: "review", projectId: "project" },
-    target: { kind: "page", page: { id: "skill" }, resource: { id: "review" } },
+    resource: { id: "skill-id", projectId: "project" },
+    target: { kind: "page", page: { id: "skill" }, resource: { id: "skill-id" } },
   });
   const read = extension.commands?.find((command) => command.id === "read");
   expect(read?.cli).toBe(true);
   expect(await commands.read.run(context(), { name: "review" })).toEqual(skill);
+});
+
+test("opens each extension's skill when two extensions provide the same name", async () => {
+  const duplicate = {
+    ...skill,
+    id: "other-skill-id",
+    source_kind: "extension" as const,
+    extension_id: "other.extension",
+    files: [{ path: "SKILL.md", content: "# Other review", encoding: "utf8" as const }],
+  };
+  const ctx = makeCommandContext({
+    storage: createMemoryStorage(),
+    projectId: "project",
+    params: {},
+    overrides: { skills: { list: async () => [skill, duplicate] } },
+  });
+  const tree = extension.views?.find((view) => view.id === "skill-list")?.body;
+  if (tree?.kind !== "tree") throw new Error("Skills need a navigation tree");
+  const sections = await tree.body(ctx);
+  const nodes = sections.flatMap((section) => section.nodes);
+  expect(nodes.map((node) => node.id)).toEqual([skill.id, duplicate.id]);
+  const view = extension.views?.find((view) => view.id === "skill")?.body;
+  if (view?.kind !== "file") throw new Error("Skills need a native file view");
+  const loaded = await view.load(ctx, { renderer: { rendererId: "skill", resource: nodes[1]!.resource } });
+  expect(loaded).toMatchObject({ content: "# Other review" });
+  expect(await commands.read.run(ctx, { name: "review" })).toEqual(skill);
 });
 
 test("selects the first skill when opening the browser without a selection", async () => {
@@ -69,7 +96,7 @@ test("reads a supporting file through the native file view using the page route"
 });
 
 test("renders metadata as read-only parameters in a collapsible Info section", () => {
-  expect(skillInfo(skill)).toMatchObject({
+  expect(skillInfo(skill, (_key, fallback) => fallback ?? "")).toMatchObject({
     id: "info",
     title: "Info",
     collapsible: true,
@@ -106,10 +133,22 @@ test("groups skills by source extension display name and keeps project skills se
     overrides: {
       skills: {
         list: async () => [
-          { ...skill, name: "canvas", source_kind: "extension", extension_id: "pstdio.canvas" },
+          { ...skill, id: "canvas-id", name: "canvas", source_kind: "extension", extension_id: "pstdio.canvas" },
           skill,
-          { ...skill, name: "create-ticket", source_kind: "extension", extension_id: "pstdio.pstdio-skills" },
-          { ...skill, name: "create-proposal", source_kind: "extension", extension_id: "pstdio.pstdio-skills" },
+          {
+            ...skill,
+            id: "ticket-id",
+            name: "create-ticket",
+            source_kind: "extension",
+            extension_id: "pstdio.pstdio-skills",
+          },
+          {
+            ...skill,
+            id: "proposal-id",
+            name: "create-proposal",
+            source_kind: "extension",
+            extension_id: "pstdio.pstdio-skills",
+          },
         ],
       },
       extensions: {
@@ -131,9 +170,9 @@ test("groups skills by source extension display name and keeps project skills se
       names: section.nodes.map((node) => node.resource?.id),
     })),
   ).toEqual([
-    { label: "UI Canvas", names: ["canvas"] },
-    { label: "Project", names: ["review"] },
-    { label: "Prompt Studio Skills", names: ["create-ticket", "create-proposal"] },
+    { label: "UI Canvas", names: ["canvas-id"] },
+    { label: "Project", names: ["skill-id"] },
+    { label: "Prompt Studio Skills", names: ["ticket-id", "proposal-id"] },
   ]);
 });
 
