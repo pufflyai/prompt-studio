@@ -30,6 +30,11 @@ The host decides what loads. It compares its own extension API version with `eng
 
 Pages that describe APIs from `main` say so and name the first release that has them.
 
+API 0.4.2, after 0.47.0, adds collection-scoped index declarations with item-relative
+field paths and the SDK `readCollectionRecords` helper. Extensions using these
+must require `^0.4.2` and pin a supporting published SDK. Index declarations are
+installed before commands become available. See [storage](../sdk/0004-storage.md).
+
 The [native terminal view body](0022-terminal-sessions.md#native-terminal-views)
 shares the coordinated API 0.4.0 step on `main`. It requires a published SDK exporting
 `TerminalViewBody` and a compatible host advertising `view.terminal.v1` (planned
@@ -438,4 +443,4 @@ slots keep working. Device settings use `ctx.settings` and the existing typed
 webview settings capabilities. Publish the SDK and host before extensions adopt
 them. See [app-wide settings](0004-contribution-api.md#app-wide-settings).
 
-*Updated at: 2026-11-12*
+*Updated at: 2026-11-14*

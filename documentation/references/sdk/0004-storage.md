@@ -132,15 +132,16 @@ paths are relative to the collection item. The host resolves addresses in the
 selected storage scope, keeping other collections and scopes out of the index.
 Declare these in `storageIndexes` to install them before commands become available;
 the first action must not build indexes. Do not parse opaque record addresses.
-This addition requires extension API 0.4.1 and a matching SDK build.
+This addition requires extension API 0.4.2 and a matching SDK build.
 `readCollectionRecords` reads up to 100 opaque addresses from a query page and
 returns collection values in request order, with `undefined` for missing or
 deleted rows. It requires an SDK build that exports this helper.
 
 ```ts
 import { readCollectionRecords } from "@pstdio/sdk/data";
+import type { StorageRecordIndex } from "@pstdio/sdk/extensions";
 
-const index = {
+const index: StorageRecordIndex = {
   name: "requests-by-ticket",
   collection: "requests",
   fields: { ticketId: { path: ["ticketId"], type: "string" } },
