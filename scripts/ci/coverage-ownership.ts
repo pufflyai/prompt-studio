@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import type { Target } from "./test-plan";
 
@@ -128,13 +128,13 @@ const consumesChangedInput = (
   visited = new Set<string>(),
 ): boolean => {
   if (changed.has(file)) return true;
-  if (visited.has(file) || !existsSync(join(root, file))) return false;
+  if (visited.has(file) || !statSync(join(root, file), { throwIfNoEntry: false })?.isFile()) return false;
   visited.add(file);
   const source = readFileSync(join(root, file), "utf8");
-  for (const match of source.matchAll(/(?:from\s*|import\s*\()\s*["'](\.[^"']+)["']/g)) {
+  for (const match of source.matchAll(/(?:\bfrom\s*|\bimport\s*\(?\s*)["'](\.[^"']+)["']/g)) {
     const base = join(dirname(file), match[1]!).replaceAll("\\", "/");
-    const dependency = [base, `${base}.ts`, `${base}.tsx`, `${base}/index.ts`].find((path) =>
-      existsSync(join(root, path)),
+    const dependency = [base, `${base}.ts`, `${base}.tsx`, `${base}/index.ts`, `${base}/index.tsx`].find((path) =>
+      statSync(join(root, path), { throwIfNoEntry: false })?.isFile(),
     );
     if (dependency && consumesChangedInput(dependency, changed, root, visited)) return true;
   }

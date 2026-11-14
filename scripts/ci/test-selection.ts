@@ -77,7 +77,7 @@ export const selectCiTests = (
       .filter((pkg) => ["pstdio-api", "pstdio-db"].includes(pkg.name))
       .flatMap((pkg) => {
         const matching = selected.filter(
-          (file) => file.startsWith(`${pkg.dir}/`) && file.endsWith(".test.ts") && priorityFromFile(file) === priority,
+          (file) => file.startsWith(`${pkg.dir}/`) && /\.test\.tsx?$/.test(file) && priorityFromFile(file) === priority,
         );
         const api = pkg.name === "pstdio-api";
         let maximum = 3;

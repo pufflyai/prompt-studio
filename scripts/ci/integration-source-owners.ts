@@ -25,7 +25,7 @@ export const integrationSourceOwners = (
       if (/\.p[0-3]\.|\.(test|spec|fixture|test-fixture)\.|\/(test-utils|testing|fixtures|e2e)\//.test(`/${file}`))
         continue;
       const source = readFileSync(join(root, pkg.dir, file), "utf8");
-      for (const match of source.matchAll(/(?:from\s*|import\s*\()\s*["']([^./][^"']+)["']/g)) {
+      for (const match of source.matchAll(/(?:\bfrom\s*|\bimport\s*\(?\s*)["']([^./][^"']+)["']/g)) {
         const imported = packages.find((owner) => match[1] === owner.name || match[1]!.startsWith(`${owner.name}/`));
         if (imported) imports.add(imported.name);
       }
