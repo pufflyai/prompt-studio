@@ -126,7 +126,10 @@ test("groups skills by source extension display name and keeps project skills se
   });
   const sections = await tree.body(ctx);
   expect(
-    sections.map((section) => ({ label: section.label, names: section.nodes.map((node) => node.resource?.id) })),
+    sections.map((section) => ({
+      label: typeof section.label === "string" ? section.label : section.label?.default,
+      names: section.nodes.map((node) => node.resource?.id),
+    })),
   ).toEqual([
     { label: "UI Canvas", names: ["canvas"] },
     { label: "Project", names: ["review"] },
