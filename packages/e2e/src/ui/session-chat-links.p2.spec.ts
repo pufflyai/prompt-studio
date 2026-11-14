@@ -220,15 +220,23 @@ test("opens a same-origin canonical document in another project and returns to i
     createGitRepo("pstdio-chat-project-b-", "Destination project"),
   ];
   const projects: { id: string }[] = [];
+  const failures: unknown[] = [];
   try {
-    for (const [index, root] of roots.entries())
-      projects.push(
-        await (
-          await request.post(`${apiBase}/v1/projects`, {
-            data: folderProjectInput({ name: `Chat project ${index}` }, root),
-          })
-        ).json(),
-      );
+    const created = await Promise.allSettled(
+      roots.map(async (root, index) => {
+        const response = await request.post(`${apiBase}/v1/projects`, {
+          data: folderProjectInput({ name: `Chat project ${index}` }, root),
+        });
+        expect(response.ok()).toBe(true);
+        return (await response.json()) as { id: string };
+      }),
+    );
+    const creationFailures: unknown[] = [];
+    for (const result of created) {
+      if (result.status === "fulfilled") projects.push(result.value);
+      else creationFailures.push(result.reason);
+    }
+    if (creationFailures.length) throw new AggregateError(creationFailures, "Cross-project fixture creation failed");
     const [source, destination] = projects;
     const [workspace] = await (await request.get(`${apiBase}/v1/workspaces?project_id=${destination!.id}`)).json();
     const destinationHref = `/projects/${destination!.id}/extensions/pstdio.pstdio-workspaces/files?resource=${encodeURIComponent(`pstdio://extension-resource/workspace/${workspace.id}`)}&document=README.md`;
@@ -255,8 +263,21 @@ test("opens a same-origin canonical document in another project and returns to i
     await page.getByRole("link", { name: "Source file", exact: true }).last().click();
     await expect(page.locator(".monaco-editor .view-lines:visible")).toContainText(/Source\s+project/);
     await expect(page).toHaveURL(new RegExp(`/projects/${source!.id}/extensions/pstdio.pstdio-workspaces/files`));
+  } catch (error) {
+    failures.push(error);
   } finally {
-    for (const project of projects) await request.delete(`${apiBase}/v1/projects/${project.id}`);
-    for (const root of roots) rmSync(root, { recursive: true, force: true });
+    const removed = await Promise.allSettled(
+      projects.map((project) => request.delete(`${apiBase}/v1/projects/${project.id}`)),
+    );
+    for (const result of removed) if (result.status === "rejected") failures.push(result.reason);
+    for (const root of roots) {
+      try {
+        rmSync(root, { recursive: true, force: true });
+      } catch (error) {
+        failures.push(error);
+      }
+    }
   }
+  if (failures.length === 1) throw failures[0];
+  if (failures.length) throw new AggregateError(failures, "Cross-project navigation or cleanup failed");
 });

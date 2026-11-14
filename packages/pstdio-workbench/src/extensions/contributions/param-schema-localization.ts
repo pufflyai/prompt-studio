@@ -18,21 +18,24 @@ export const localizeParamSchema = (
   params: ContributedParamSchema,
   localize: ParamLocalizer,
   ownerExtensionId?: string,
+  hiddenParam?: string,
 ) => {
   if (!params) return undefined;
 
   return Object.fromEntries(
-    Object.entries(params).map(([id, descriptor]) => [
-      id,
-      {
-        ...descriptor,
-        ...(descriptor.options && !Array.isArray(descriptor.options)
-          ? { options: localizeOptionSource(descriptor.options, ownerExtensionId) }
-          : {}),
-        label: descriptor.label === undefined ? undefined : localize(descriptor.label, id),
-        description: descriptor.description === undefined ? undefined : localize(descriptor.description),
-      },
-    ]),
+    Object.entries(params)
+      .filter(([id]) => id !== hiddenParam)
+      .map(([id, descriptor]) => [
+        id,
+        {
+          ...descriptor,
+          ...(descriptor.options && !Array.isArray(descriptor.options)
+            ? { options: localizeOptionSource(descriptor.options, ownerExtensionId) }
+            : {}),
+          label: descriptor.label === undefined ? undefined : localize(descriptor.label, id),
+          description: descriptor.description === undefined ? undefined : localize(descriptor.description),
+        },
+      ]),
   ) as CommandParamSchema;
 };
 

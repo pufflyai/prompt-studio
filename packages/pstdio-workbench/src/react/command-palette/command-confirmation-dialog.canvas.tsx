@@ -50,3 +50,15 @@ export const RetryFailure: Story = {
     },
   },
 };
+
+export const DeleteFile: Story = {
+  args: {
+    confirmation: {
+      label: "Delete entry: src/deep/example.md",
+      description: "The entry and its contents will be permanently removed.",
+      buttonLabel: "Delete",
+      resolve: () => undefined,
+      onConfirm: async () => undefined,
+    },
+  },
+};

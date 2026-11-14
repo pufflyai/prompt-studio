@@ -17,6 +17,7 @@ import {
   toApiEntry,
   UnsupportedWorkspaceFileError,
 } from "../../workspaces/workspace-file-content";
+import { decorateIgnoredWorkspaceFiles } from "../../workspaces/workspace-file-git-status";
 import { resolveWorkspaceExecutionTarget } from "../../workspaces/workspace-provider-service";
 import type { ExtensionsRouteDeps } from "../deps";
 
@@ -97,7 +98,7 @@ export const createWorkspacePresentationApi = (
     },
     listFiles: (id, value = {}) =>
       read(async () => {
-        const { mount } = await files(id, "files:read");
+        const { mount, root } = await files(id, "files:read");
         const { path = "", query, limit = 500 } = listWorkspaceFilesInputSchema.parse(value);
         const result = query
           ? await mount.searchEntries(query, limit, path)
@@ -105,7 +106,11 @@ export const createWorkspacePresentationApi = (
         return {
           workspace_id: id,
           path,
-          entries: result.entries.slice(0, limit).map(toApiEntry),
+          entries: await decorateIgnoredWorkspaceFiles(
+            root,
+            result.entries.slice(0, limit).map(toApiEntry),
+            input.signal,
+          ),
           truncated: result.truncated || result.entries.length > limit,
         };
       }),

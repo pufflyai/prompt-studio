@@ -84,5 +84,7 @@
   "commands.requestReview.title": "Demander une révision",
   "commands.requestReview.description": "Crée une demande de révision et signale que le ticket nécessite une intervention.",
   "navigation.requiredBy": "Requis par",
-  "navigation.related": "Ressources associées"
+  "navigation.related": "Ressources associées",
+  "commands.cleanupBoard.title": "Nettoyer le tableau",
+  "commands.cleanupBoard.model": "Modèle"
 }

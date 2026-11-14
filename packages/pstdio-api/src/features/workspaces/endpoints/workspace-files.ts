@@ -9,6 +9,7 @@ import {
   toApiEntry,
   UnsupportedWorkspaceFileError,
 } from "../workspace-file-content";
+import { decorateIgnoredWorkspaceFiles } from "../workspace-file-git-status";
 import { resolveWorkspaceExecutionTarget } from "../workspace-provider-service";
 import type {
   createWorkspaceDirectoryRoute,
@@ -39,7 +40,7 @@ const DEFAULT_LIST_LIMIT = 500;
 const resolveWorkspaceMount = async (deps: WorkspacesRouteDeps, id: string, access: "files:read" | "files:write") => {
   const context = await resolveWorkspaceExecutionTarget(deps, id, access);
   if (!context) return undefined;
-  return { mount: createWorkspaceFilesMount(context.root), workspace: context.workspace };
+  return { root: context.root, mount: createWorkspaceFilesMount(context.root), workspace: context.workspace };
 };
 
 const mapFileError = (error: unknown) => {
@@ -108,7 +109,11 @@ export const listWorkspaceFilesHandler = (
           {
             workspace_id: context.workspace.id,
             path,
-            entries: result.entries.map(toApiEntry),
+            entries: await decorateIgnoredWorkspaceFiles(
+              context.root,
+              result.entries.map(toApiEntry),
+              c.req.raw.signal,
+            ),
             truncated: result.truncated,
           },
           200,
@@ -120,7 +125,11 @@ export const listWorkspaceFilesHandler = (
         {
           workspace_id: context.workspace.id,
           path,
-          entries: entries.slice(0, limit).map(toApiEntry),
+          entries: await decorateIgnoredWorkspaceFiles(
+            context.root,
+            entries.slice(0, limit).map(toApiEntry),
+            c.req.raw.signal,
+          ),
           truncated: entries.length > limit,
         },
         200,

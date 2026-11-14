@@ -54,3 +54,45 @@ test("a late close acknowledgement cannot close a replacement using the same pla
   await closing;
   expect(workbench.layout.getActivePanel("main")?.instanceId).toBe(replacement.instanceId);
 });
+
+test("ordinary close drains an editor that replaces its loading predecessor before acknowledgement", async () => {
+  const { workbench, placement, identity } = fixture();
+  const first = Promise.withResolvers<void>();
+  const replacement = Promise.withResolvers<void>();
+  const replacementEntered = Promise.withResolvers<void>();
+  const releaseFirst = registerPlacementCloseGuard(workbench, identity, () => first.promise);
+  const closing = workbench.closePlacement(identity);
+  releaseFirst();
+  registerPlacementCloseGuard(workbench, identity, () => {
+    replacementEntered.resolve();
+    return replacement.promise;
+  });
+  first.resolve();
+  await Promise.race([replacementEntered.promise, closing]);
+  expect(workbench.layout.getLayout().regions.main.widgets.some((item) => item.widgetId === placement.instanceId)).toBe(
+    true,
+  );
+  replacement.resolve();
+  await closing;
+  expect(workbench.layout.getLayout().regions.main.widgets.some((item) => item.widgetId === placement.instanceId)).toBe(
+    false,
+  );
+});
+
+test("draining close guards never prepares a new viewer reusing the original identity", async () => {
+  const { workbench, identity } = fixture();
+  const acknowledged = Promise.withResolvers<void>();
+  registerPlacementCloseGuard(workbench, identity, () => acknowledged.promise);
+  const closing = workbench.closePlacement(identity);
+  workbench.pageLocations.closePlacement(identity);
+  workbench.navigation.openTarget(openFile("document"));
+  const replacement = workbench.layout.getActivePanel("main")!;
+  let prepared = false;
+  registerPlacementCloseGuard(workbench, replacement.placementIdentity!, async () => {
+    prepared = true;
+  });
+  acknowledged.resolve();
+  await closing;
+  expect(prepared).toBe(false);
+  expect(workbench.layout.getActivePanel("main")?.instanceId).toBe(replacement.instanceId);
+});

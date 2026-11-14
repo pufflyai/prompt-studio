@@ -88,6 +88,7 @@ export interface RuntimeCommandRecord {
   automation: boolean;
   copyResultToClipboard?: boolean;
   mutating: boolean;
+  confirmation?: import("@pstdio/sdk/extensions").CommandDefinition["confirmation"];
   resourceMutation?: import("@pstdio/sdk/extensions").CommandDefinition["resourceMutation"];
   // biome-ignore lint/suspicious/noExplicitAny: handler invoked with extension-specific params
   run: CommandRunHandler<any, any>;

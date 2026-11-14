@@ -189,6 +189,7 @@ const toTreeListNode = (
     description: node.description,
     icon: resolveTreeNodeIcon(node),
     iconColor: node.iconColor,
+    tone: node.tone,
     tooltip: node.tooltip,
     disabled: node.disabled,
     rowVariant: node.rowVariant,
@@ -257,6 +258,13 @@ export const toTreeListSection = (
     menuLabel: section.menuLabel,
     actions: createTreeActionItems({
       actions: context.shortcutHints ? undefined : section.actions,
+      workbench: context.workbench,
+      context: { resource: sectionContext.sectionSource ? sectionContext.sectionSource.resource : context.resource },
+      onCommandError: context.onCommandError,
+      onRequestParams: sectionContext.onRequestParams,
+    }),
+    contextMenuItems: createTreeContextMenuItems({
+      actions: section.actions,
       workbench: context.workbench,
       context: { resource: sectionContext.sectionSource ? sectionContext.sectionSource.resource : context.resource },
       onCommandError: context.onCommandError,

@@ -35,6 +35,7 @@ import {
 import { treePageLoader } from "./tree-renderer-pages";
 import { extensionTreeStructure } from "./tree-renderer-structure";
 export interface RegisterWorkbenchExtensionTreeRenderersInput {
+  treeSources?: ReadonlyMap<string, (resource: ResourceRef | undefined, invalidate: () => void) => () => void>;
   executeCommand(commandId: string, body: CommandExecuteRequest, signal?: AbortSignal): Promise<unknown> | unknown;
   getHostTreeFooterNodes?: HostTreeDefaultNodesResolver;
   getHostTreeHeaderNodes?: HostTreeDefaultNodesResolver;
@@ -119,7 +120,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       label: text(action.label),
       icon: action.icon,
       args: toRecordParams(action.params),
-      params: localizeParamSchema(action.input, text, record.extensionId),
+      params: localizeParamSchema(action.input, text, record.extensionId, command?.confirmation?.confirmedParam),
       submitLabel: action.submitLabel,
       copyText: action.copyText,
       inlineInput: action.inputPresentation ? { ...action.inputPresentation, nodeId: node?.id } : undefined,
@@ -164,6 +165,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       label: text(node.label),
       icon: node.icon,
       iconColor: node.iconColor,
+      tone: node.tone,
       fileName: node.fileName,
       showContextMenuTrigger: node.showContextMenuTrigger,
       badge: node.badge,
@@ -213,6 +215,7 @@ const hostNodeSection = (id: string, nodes: TreeNode[]): TreeViewSection[] =>
   nodes.length > 0 ? [{ id, nodes, canReorder: false }] : [];
 const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, record: ExtensionTreeRendererRecord) => {
   const mapper = createTreeMapper(input, record);
+  const subscribe = input.treeSources?.get(record.id);
   const treeViews = treeViewsFor(input.metadata, record);
   const commandDisposable = input.workbench.commands.registerCommand(
     { id: mapper.runnerCommandId, label: `${text(record.title, record.id)} tree command` },
@@ -237,6 +240,7 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
       queryScope: { projectId: input.projectId, extensionId: record.extensionId },
       // Callback results include document selection and other bound resource metadata.
       getReadKey: (ctx) => JSON.stringify([ctx.resource, ctx.pageParams]),
+      subscribe: subscribe ? (ctx, invalidate) => subscribe(ctx.resource, invalidate) : undefined,
       getStructure: record.structure ? (ctx) => extensionTreeStructure(record, ctx.resource) : undefined,
       searchable: record.searchable,
       searchPlaceholder: text(record.searchPlaceholder, "Search files"),

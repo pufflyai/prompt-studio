@@ -148,6 +148,16 @@ export interface CommandDefinition<
   resourceMutation?:
     | { kind: "rename"; resourceType: string; idParam: string; labelParam: string }
     | { kind: "remove"; resourceType: string; idParam: string };
+  /** Dashboard-only destructive confirmation, rendered by the host. CLI/API invocations are unchanged.
+   * The host sets `confirmedParam` to true only after confirmation. Keep that parameter in the command schema.
+   */
+  confirmation?: {
+    kind: "delete";
+    confirmedParam: string;
+    subjectParam?: string;
+    description?: Localizable<string>;
+    buttonLabel?: Localizable<string>;
+  };
   /** Records CLI invocations of this command as mutations. */
   mutating?: true;
   stream?: CommandStreamDeclaration<TChunk>;

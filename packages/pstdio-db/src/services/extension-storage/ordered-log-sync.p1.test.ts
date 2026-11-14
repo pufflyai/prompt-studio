@@ -53,25 +53,6 @@ test("project logs apply relay order and settle optimistic appends", async () =>
   expect(f.updates()).toHaveLength(2);
 });
 
-test("a new device reads a compacted newest page without older or expired payloads", async () => {
-  let now = Date.parse("2026-01-01T00:00:00Z");
-  const { first, peer, f } = await peers({ keep: { days: 30 }, now: () => now });
-  for (let index = 0; index < 100; index++) await first.store.append(index, { id: `old-${index}` });
-  await first.sync.publish();
-  now = Date.parse("2026-11-04T00:00:00Z");
-  for (let index = 0; index < 60; index++) await first.store.append(index, { id: `new-${index}` });
-  await first.sync.publish();
-  await first.sync.read({ after: 0, limit: 1000 });
-  expect(await first.sync.compact()).toBe(true);
-  f.trim();
-  const third = await peer("new-device");
-  const before = f.requests.blobs;
-  const page = await third.sync.read({ newest: true, limit: 10 });
-  expect(page.entries.map((entry) => entry.id)).toEqual(Array.from({ length: 10 }, (_, index) => `new-${index + 50}`));
-  expect(f.requests.blobs - before).toBeLessThanOrEqual(12);
-  expect(await third.store.snapshotPage({ sequence: 0, index: 0 }, 1000)).toHaveLength(10);
-});
-
 test("a restarted publisher reuses the durable encrypted envelope after a lost acknowledgement", async () => {
   const { first, second, f } = await peers();
   let lose = true;

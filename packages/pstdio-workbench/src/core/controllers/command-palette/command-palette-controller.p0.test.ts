@@ -168,3 +168,27 @@ describe("createWorkbenchCommandPaletteController", () => {
     expect(controller.isOpen()).toBe(true);
   });
 });
+
+test("aborted and superseded confirmation owners cannot dismiss or execute a newer prompt", async () => {
+  const controller = createWorkbenchCommandPaletteController();
+  const abort = new AbortController();
+  let writes = 0;
+  const first = controller.requestConfirmation("First", {
+    signal: abort.signal,
+    onConfirm: async () => {
+      writes++;
+    },
+  });
+  const stale = controller.store.getState().confirmation!;
+  const second = controller.requestConfirmation("Second");
+  const current = controller.store.getState().confirmation;
+  abort.abort();
+  await stale.onConfirm!();
+  expect(await first).toBe(false);
+  expect(writes).toBe(0);
+  expect(controller.store.getState().confirmation).toBe(current);
+  expect(await controller.requestConfirmation("Already aborted", { signal: abort.signal })).toBe(false);
+  expect(controller.store.getState().confirmation).toBe(current);
+  current!.resolve(false);
+  expect(await second).toBe(false);
+});

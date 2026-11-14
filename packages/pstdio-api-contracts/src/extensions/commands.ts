@@ -22,6 +22,15 @@ export const extensionCommandRecordSchema = z.object({
   automation: z.boolean().optional(),
   copyResultToClipboard: z.boolean().optional(),
   mutating: z.boolean().optional(),
+  confirmation: z
+    .object({
+      kind: z.literal("delete"),
+      confirmedParam: z.string(),
+      subjectParam: z.string().optional(),
+      description: localizableStringSchema.optional(),
+      buttonLabel: localizableStringSchema.optional(),
+    })
+    .optional(),
   resourceMutation: z
     .discriminatedUnion("kind", [
       z.object({ kind: z.literal("rename"), resourceType: z.string(), idParam: z.string(), labelParam: z.string() }),

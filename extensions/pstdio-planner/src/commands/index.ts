@@ -21,6 +21,7 @@ import { stopAutoBuildCommand } from "./auto-build-stop";
 import { automationPolicyCommand } from "./automation-policy";
 import { submitChangeRequestCommand } from "./change-requests";
 import { checkMergedPullRequestsCommand } from "./check-merged-pull-requests";
+import { cleanupBoardCommand } from "./cleanup-board";
 import { createTicketCommand } from "./create-ticket";
 import { deleteTicketCommand } from "./delete-ticket";
 import { documentLinkCommand } from "./document-link";
@@ -116,6 +117,7 @@ import { workspaceActivityCommand } from "./workspace-activity";
 import { writeTicketCommand } from "./write-ticket";
 
 export const plannerCommands = [
+  cleanupBoardCommand,
   ticketRelatedOpeningsCommand,
   resolveTicketPathCommand,
   submitRevisionCommand,

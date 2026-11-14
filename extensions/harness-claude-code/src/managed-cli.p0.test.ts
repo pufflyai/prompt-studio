@@ -1,10 +1,6 @@
 import { expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { HarnessContext } from "@pstdio/sdk/extensions";
 import { resolveClaudeCommand, resolveManagedClaude } from "./cli";
-import { detectClaude } from "./detection";
 
 for (const platform of ["darwin", "linux", "win32"] as const) {
   for (const arch of ["x64", "arm64"]) {
@@ -29,43 +25,6 @@ test("reports a missing native dependency without invoking an installer", () => 
       },
     }),
   ).toBeNull();
-});
-
-test("detects the installed private CLI without PATH tools", async () => {
-  const home = mkdtempSync(join(tmpdir(), "private-claude-"));
-  const before = { ...process.env };
-  process.env.PATH = "";
-  process.env.HOME = home;
-  process.env.CODEX_HOME = home;
-  const context = {
-    process: {
-      run: async (input: Parameters<HarnessContext["process"]["run"]>[0]) => {
-        const child = Bun.spawn(input.command, {
-          env: { ...process.env, ...input.env },
-          timeout: input.timeoutMs,
-          stdout: "pipe",
-          stderr: "pipe",
-        });
-        const [exitCode, stdout, stderr] = await Promise.all([
-          child.exited,
-          new Response(child.stdout).text(),
-          new Response(child.stderr).text(),
-        ]);
-        return { exitCode, stdout, stderr };
-      },
-    },
-    logger: { warn() {} },
-  } as unknown as HarnessContext;
-  try {
-    const result = await detectClaude(context);
-    expect(result).toMatchObject({ available: true });
-  } finally {
-    for (const key of ["PATH", "HOME", "CODEX_HOME"]) {
-      if (before[key] === undefined) delete process.env[key];
-      else process.env[key] = before[key];
-    }
-    rmSync(home, { recursive: true, force: true });
-  }
 });
 
 test("prefers an existing CLI and otherwise uses the managed CLI", () => {

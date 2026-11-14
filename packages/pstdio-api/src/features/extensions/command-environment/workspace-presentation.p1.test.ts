@@ -82,6 +82,21 @@ test("extensions browse, find, edit, move and delete workspace files through the
   await expect(files.writeFile(workspace.id, "missing.md", { content: "save" })).rejects.toThrow();
 });
 
+test("extension file listings expose Git-ignore decorations through the command environment", async () => {
+  const { workspace, path, api } = await fixture();
+  await writeFile(join(path, ".gitignore"), "*.log\n");
+  await writeFile(join(path, "debug.log"), "ignored");
+  const files = api();
+  expect(
+    (await files.listFiles(workspace.id)).entries.find((entry) => entry.path === "debug.log")?.git_ignored,
+  ).not.toBe(true);
+  await git(path, ["init"]);
+  expect((await files.listFiles(workspace.id)).entries.find((entry) => entry.path === "debug.log")?.git_ignored).toBe(
+    true,
+  );
+  expect((await files.listFiles(workspace.id, { query: "debug" })).entries[0]?.git_ignored).toBe(true);
+});
+
 test("extensions read lightweight changes and lazy file bodies in both comparison modes", async () => {
   const { workspace, path, api } = await fixture();
   await git(path, ["init", "-b", "main"]);

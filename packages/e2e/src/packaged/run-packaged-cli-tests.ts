@@ -2,6 +2,8 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 import { preparePackagedConsumers } from "./prepared-packaged-consumers";
 
 const args = process.argv.slice(2);
+if (args.some((arg) => /\.spec\.tsx?$/.test(arg)))
+  throw new Error("Packaged browser specs must run through Playwright, not the packaged CLI runner.");
 const filesSelected = args.some((arg) => !arg.startsWith("-") && /\.test\.tsx?$/.test(arg));
 
 // Bun applies `setDefaultTimeout` from a preload only to the first test file, so the platform's

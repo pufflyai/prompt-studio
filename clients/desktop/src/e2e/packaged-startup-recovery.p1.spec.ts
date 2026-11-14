@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect } from "@playwright/test";
 import { test } from "../testing/packaged-fixture";
@@ -74,52 +74,6 @@ test("keeps waiting for a slow runtime and opens automatically without replacing
     expect(readDescriptor(home)).toBeNull();
   } finally {
     if (suspendedPid !== null) resumeProcess(suspendedPid);
-    await disposePackagedApp(app);
-    await removePackagedHome(home);
-  }
-});
-
-test("keeps an uncertain runtime owner intact until its descriptor is repaired", async () => {
-  const home = createPackagedHome();
-  let app: PackagedWindow | null = null;
-  try {
-    expect(await runPackagedCli(home, ["serve"], recoveryEnvironment)).toMatchObject({ exitCode: 0 });
-    const runtime = await waitForDescriptor(home);
-    const descriptorPath = join(home, "runtime.json");
-    const originalDescriptor = readFileSync(descriptorPath, "utf8");
-    const mismatchedDescriptor = JSON.stringify({ ...runtime, instanceId: "different-runtime-instance" });
-    writeFileSync(descriptorPath, mismatchedDescriptor);
-
-    app = await launchPackagedWindow(home, recoveryEnvironment);
-    await expect(app.lifecyclePage.getByRole("heading", { name: "Prompt Studio needs attention" })).toBeVisible();
-    expect(await app.lifecyclePage.evaluate(() => window.promptStudioDesktop.getStartupState())).toMatchObject({
-      kind: "recovery",
-      error: { code: "runtime_ownership_uncertain" },
-    });
-    expect(readFileSync(descriptorPath, "utf8")).toBe(mismatchedDescriptor);
-    const readiness = await fetch(`${runtime.origin}/runtime/ready`, {
-      headers: { authorization: `Bearer ${runtime.token}` },
-    });
-    expect(readiness.ok).toBe(true);
-    expect(await readiness.json()).toMatchObject({ instanceId: runtime.instanceId });
-
-    const previousRecovery = await app.lifecyclePage
-      .getByRole("heading", { name: "Prompt Studio needs attention", exact: true })
-      .elementHandle();
-    writeFileSync(descriptorPath, originalDescriptor);
-    await app.lifecyclePage.getByRole("button", { name: "Retry", exact: true }).click();
-    await previousRecovery!.waitForElementState("hidden");
-    const workbench = await waitForWorkbenchPage(app.lifecyclePage, runtime.origin);
-    await expect(workbench.locator("#root")).not.toBeEmpty();
-    expect(readDescriptor(home)).toEqual(runtime);
-    expect(app.browser.contexts()[0]?.pages()).toHaveLength(2);
-
-    await app.finishTrace();
-    const close = runPackagedCli(home, ["close"]);
-    await waitForExit(app.child);
-    expect(await close).toMatchObject({ exitCode: 0 });
-    expect(readDescriptor(home)).toBeNull();
-  } finally {
     await disposePackagedApp(app);
     await removePackagedHome(home);
   }

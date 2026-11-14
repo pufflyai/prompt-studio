@@ -16,6 +16,8 @@ Start with the final state after this PR is merged: what users can do or how the
 system will behave, such as "Users can log in with valid credentials."
 Then explain what changes and how it fixes the cause.
 Verified: name the tests and checks run, their results, and whether regression tests fail before the fix.
+For benchmark changes, add the `benchmark` label. Agents must leave these PRs
+for human review and merge; do not merge, enable auto-merge, or enqueue them.
 Self-reviewed: summarize concerns addressed and any rejected suggestions, with reasons.
 -->
 

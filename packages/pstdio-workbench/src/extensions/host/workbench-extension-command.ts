@@ -126,10 +126,13 @@ export const executeWorkbenchExtensionCommand = async (
   input: ExecuteWorkbenchExtensionCommandInput = {},
 ) => {
   const command = context.metadata?.commands.find((candidate) => candidate.id === commandId);
-  const params = command
+  const resolved = command
     ? { ...resolveCommandResourceParams(command.params, input.params, { resource: input.resource }), ...input.params }
     : input.params;
+  const params = command?.confirmation ? { ...resolved, [command.confirmation.confirmedParam]: true } : resolved;
   const persist = async () =>
     unwrapCommandValue(await executeWorkbenchExtensionCommandResponse(context, commandId, { ...input, params }));
-  return command ? runResourceMutation(context, command, params, { resource: input.resource }, persist) : persist();
+  return command
+    ? runResourceMutation(context, command, params, { resource: input.resource, signal: input.signal }, persist)
+    : persist();
 };

@@ -1,5 +1,5 @@
 import { relative } from "node:path";
-import { suites } from "./benchmark-registry";
+import { selectIntegrationFiles } from "./coverage-ownership";
 import { partitionPackageChecks } from "./package-check-matrix";
 import { productionDesktopPlatforms, productionToolchainPlatforms } from "./production-platforms";
 import { priorityFromFile, testRunner } from "./test-discovery";
@@ -76,7 +76,7 @@ export const selectCiTests = (
       .filter((pkg) => ["pstdio-api", "pstdio-db"].includes(pkg.name))
       .flatMap((pkg) => {
         const matching = selected.filter(
-          (file) => file.startsWith(`${pkg.dir}/`) && file.endsWith(".test.ts") && priorityFromFile(file) === priority,
+          (file) => file.startsWith(`${pkg.dir}/`) && /\.test\.tsx?$/.test(file) && priorityFromFile(file) === priority,
         );
         const api = pkg.name === "pstdio-api";
         let maximum = 3;
@@ -140,7 +140,7 @@ export const selectCiTests = (
     ["packaged-cli", "packaged-browser", "vite"].flatMap((runner) => {
       const matching = selected.filter((file) => testRunner(file) === runner && priorityFromFile(file) === priority);
       let shards = 1;
-      if (priority === "P2" && runner === "packaged-cli") shards = 2;
+      if (priority === "P2" && runner === "packaged-cli") shards = 4;
       if (priority === "P2" && runner === "packaged-browser") shards = 3;
       const suite = runner.replace("packaged-", "");
       return fileRows(matching, shards, priority).map((row) => ({ ...row, suite, shard: `${row.shard}/${row.total}` }));
@@ -173,21 +173,16 @@ export const selectCiTests = (
 type Packages = ReturnType<typeof readWorkspacePackages>;
 const linux = { os: "ubuntu-24.04", platform: "linux", arch: "x64" };
 
-export const selectEditedTests = (files: string[], packages: Packages) => {
+export const selectEditedTests = (files: string[], packages: Packages, coveredFiles = new Set<string>()) => {
   const groups = new Map<
     string,
     { owner: string; runner: string; priority: string; subgroup: string; files: string[] }
   >();
-  const performance = new Map<string, string[]>();
   for (const file of files) {
     const priority = priorityFromFile(file)!;
     const runner = testRunner(file);
-    if (runner === "performance") {
-      const suite = suites.find((suite) => suite.files.includes(file));
-      if (!suite) throw new Error(`Edited benchmark has no registered suite: ${file}`);
-      performance.set(suite.id, [...(performance.get(suite.id) ?? []), file]);
-      continue;
-    }
+    // Frozen measurements stay in dedicated nightly/release qualification, even when edited.
+    if (runner === "performance") continue;
     const owner = packages.find((pkg) => file.startsWith(`${pkg.dir}/`))?.name ?? "repository";
     const subgroup = runner === "desktop" && file.includes("/packaged-") ? "packaged" : "source";
     const key = `${owner}:${runner}:${priority}:${subgroup}`;
@@ -209,10 +204,9 @@ export const selectEditedTests = (files: string[], packages: Packages) => {
         });
     return platforms.flatMap((platform) => {
       const covered =
-        group.priority === "P0" &&
         platform.platform === "linux" &&
-        ["bun", "api", "integration"].includes(group.runner) &&
-        group.owner !== "repository";
+        (group.files.every((file) => coveredFiles.has(file)) ||
+          (group.priority === "P0" && ["bun", "api", "integration"].includes(group.runner)));
       const quarantined = new Set(
         quarantineRegistry
           .filter(
@@ -222,7 +216,9 @@ export const selectEditedTests = (files: string[], packages: Packages) => {
           )
           .map((entry) => entry.file),
       );
-      const selected = covered ? group.files.filter((file) => quarantined.has(file)) : group.files;
+      let selected = covered ? group.files.filter((file) => quarantined.has(file)) : group.files;
+      if (["desktop", "packaged-cli", "packaged-browser"].includes(group.runner))
+        selected = selectIntegrationFiles(selected, platform);
       return Array.from({ length: Math.ceil(selected.length / 8) }, (_, index) => {
         const files = selected.slice(index * 8, (index + 1) * 8);
         return {
@@ -248,28 +244,6 @@ export const selectEditedTests = (files: string[], packages: Packages) => {
       });
     });
   });
-  for (const [id, files] of performance) {
-    let platforms = [linux];
-    if (["desktop", "runtime", "storage"].includes(id)) platforms = productionDesktopPlatforms("nightly");
-    for (const platform of platforms)
-      rows.push({
-        name: `${id} P3 ${platform.os}`,
-        ...platform,
-        owner: "",
-        runner: "performance",
-        priority: "P3",
-        files: JSON.stringify(files),
-        stable: true,
-        quarantine: quarantineRegistry.some(
-          (entry) => files.includes(entry.file) && matchesPlatform(entry, platform.platform, platform.arch),
-        ),
-        suite: id,
-        browser: ["desktop", "workbench", "canvas", "chat", "subnav", "planner"].includes(id),
-        desktop: false,
-        // Benchmarks keep the native hosts their budgets were measured on.
-        container: false,
-      });
-  }
   if (rows.length > 256) throw new Error("Edited tests exceed the matrix limit; split this PR");
   return rows;
 };

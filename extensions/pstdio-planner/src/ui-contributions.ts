@@ -11,7 +11,6 @@ import {
   workbenchModes,
   workbenchSlots,
 } from "@pstdio/sdk/extensions";
-import { attentionPanelTarget } from "./attention-panel";
 import { archiveTicketColumnAction } from "./commands/archive-ticket";
 import { attachTicketFileCommand } from "./commands/attach-ticket-file";
 import { createTicketCommand } from "./commands/create-ticket";
@@ -23,10 +22,9 @@ import { listTicketFilesTree } from "./commands/ticket-files";
 import { queryTicketProperties } from "./commands/ticket-properties/query";
 import { updateTicketProperty } from "./commands/ticket-properties/update";
 import { buildTicketAttributes, TICKET_ARCHIVE_STATE_ACTIVE, TICKET_ARCHIVE_STATE_ATTRIBUTE_ID } from "./data/mappers";
-import { hasPendingInput, listTicketReviewRequests } from "./data/review-request-storage";
 import { REVIEW_REQUEST_ICON } from "./data/review-request-summary";
 import { DEFAULT_TIMELINE_DISPLAY_PROPERTIES, ticketBoard, timelineBoard } from "./data/ticket-board";
-import { ticketActivationTarget } from "./data/ticket-page-target";
+import { ticketPageTarget } from "./data/ticket-page-target";
 import { plannerSchemaChanged, plannerTicketsChanged } from "./events";
 import { loadTicketText } from "./text-source";
 import { ticketCreateForm } from "./ticket-create-form";
@@ -129,10 +127,9 @@ export const createPlannerUi = (baseUrl: string) => {
         viewDataEvents.resourceAnchorsChanged,
         viewDataEvents.resourcesChanged,
       ],
-      onRowActivate: async (ctx, { row }) => {
+      onRowActivate: (ctx, { row }) => {
         if (!row.resource) return;
-        const pending = hasPendingInput(await listTicketReviewRequests(ctx.storage, row.resource.id));
-        ctx.navigation.open(pending ? attentionPanelTarget(row.resource) : ticketActivationTarget(row.resource, false));
+        ctx.navigation.open(ticketPageTarget(row.resource));
       },
       onAttributeChange: setTicketAttribute,
       onMove: moveTicketOnBoard,

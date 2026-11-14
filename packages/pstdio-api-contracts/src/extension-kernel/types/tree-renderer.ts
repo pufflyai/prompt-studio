@@ -82,6 +82,8 @@ export interface TreeNode {
   label: Localizable<string>;
   icon?: string;
   iconColor?: string;
+  /** Subdued foreground without disabling row actions or navigation. */
+  tone?: "default" | "muted";
   /** File icon theme hint for native file rows. */
   fileName?: string;
   showContextMenuTrigger?: boolean;

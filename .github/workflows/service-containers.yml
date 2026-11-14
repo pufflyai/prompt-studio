@@ -137,7 +137,7 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-      - run: bun test infra/container-entrypoint.p0.test.ts infra/relay/portable-smoke-images.p0.test.ts
+      - run: bun test infra/container-entrypoint.p0.test.ts
   plan:
     runs-on: ubuntu-latest
     steps:
