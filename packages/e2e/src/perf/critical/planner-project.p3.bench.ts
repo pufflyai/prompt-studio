@@ -2,12 +2,55 @@ import { strict as assert } from "node:assert";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { chromium, expect } from "@playwright/test";
+import { chromium, expect, type Locator, type Page } from "@playwright/test";
 import type { CollectionPage, CollectionPageRequest } from "@pstdio/sdk/extensions";
 import { runScenario } from "pstdio-benchmarks/writer";
 import { signInBrowser, stopProcess } from "../../packaged/packaged-serve-helpers";
 import { afterPaint } from "./desktop-lifecycle";
 import { seedHome, startRuntime } from "./planner-fixture";
+
+const observeQueries = (page: Page) => {
+  const requests: {
+    rows: { id: string; title?: string; values?: { title?: string } }[];
+    bytes: number;
+    path: string;
+    page?: CollectionPage;
+    request?: CollectionPageRequest;
+  }[] = [];
+  const pending = new Set<Promise<void>>();
+  const responseErrors: unknown[] = [];
+  page.on("response", (response) => {
+    if (!response.url().includes("/commands/") || !response.url().endsWith("/execute")) return;
+    const collecting = (async () => {
+      const body = await response.body();
+      const result = JSON.parse(body.toString());
+      assert(response.ok() && result.outcome?.status === "success", "Planner command failed");
+      const value = result.outcome.value;
+      requests.push({
+        rows: Array.isArray(value?.rows) ? value.rows : [],
+        bytes: body.length,
+        path: new URL(response.url()).pathname,
+        page: value?.page,
+        request: response.request().postDataJSON()?.params?.page,
+      });
+    })();
+    pending.add(collecting);
+    void collecting.catch((error) => responseErrors.push(error)).finally(() => pending.delete(collecting));
+  });
+  return { requests, pending, responseErrors };
+};
+
+const actionable = async (page: Page, rows: Locator) => {
+  await expect(rows.first()).toContainText("Planner stress");
+  await expect(
+    page.getByRole("button", { name: "Search this view" }).or(page.getByRole("textbox", { name: "Search this view" })),
+  ).toBeEnabled();
+  assert(
+    !/\bin-progress\b|default-priority-low|Unavailable field/.test(await page.locator("body").innerText()),
+    "Raw stored options reached actionable content",
+  );
+  await afterPaint(page);
+};
 
 await runScenario("B6", async (capture) => {
   const home = await mkdtemp(join(tmpdir(), "critical-planner-"));
@@ -28,33 +71,7 @@ await runScenario("B6", async (capture) => {
           Reflect.get(window, "plannerStalls").push(...list.getEntries().map((entry) => entry.duration)),
         ).observe({ type: "longtask", buffered: true });
       });
-      const requests: {
-        rows: { id: string; title?: string; values?: { title?: string } }[];
-        bytes: number;
-        path: string;
-        page?: CollectionPage;
-        request?: CollectionPageRequest;
-      }[] = [];
-      const pending = new Set<Promise<void>>();
-      const responseErrors: unknown[] = [];
-      page.on("response", (response) => {
-        if (!response.url().includes("/commands/") || !response.url().endsWith("/execute")) return;
-        const collecting = (async () => {
-          const body = await response.body();
-          const result = JSON.parse(body.toString());
-          assert(response.ok() && result.outcome?.status === "success", "Planner command failed");
-          const value = result.outcome.value;
-          requests.push({
-            rows: Array.isArray(value?.rows) ? value.rows : [],
-            bytes: body.length,
-            path: new URL(response.url()).pathname,
-            page: value?.page,
-            request: response.request().postDataJSON()?.params?.page,
-          });
-        })();
-        pending.add(collecting);
-        void collecting.catch((error) => responseErrors.push(error)).finally(() => pending.delete(collecting));
-      });
+      const { requests, pending, responseErrors } = observeQueries(page);
       const counters = async () => {
         const response = await fetch(`${runtime.baseUrl}/runtime/benchmark-counters`, { headers: runtime.headers });
         assert(response.ok, "Native Planner storage counters unavailable");
@@ -65,31 +82,25 @@ await runScenario("B6", async (capture) => {
       const before = await counters();
       const url = `${runtime.baseUrl}/projects/${fixture.projectId}/extensions/pstdio.pstdio-planner/tickets`;
       const rows = page.getByRole("option").filter({ has: page.getByTestId("row-status-icon") });
-      const actionable = async () => {
-        await expect(rows.first()).toContainText("Planner stress");
-        await expect(page.getByRole("button", { name: "Search this view" })).toBeEnabled();
-        assert(
-          !/\bin-progress\b|default-priority-low|Unavailable field/.test(await page.locator("body").innerText()),
-          "Raw stored options reached actionable content",
-        );
-        await afterPaint(page);
-      };
       const cold = performance.now();
       await signInBrowser(page, runtime.descriptor, new URL(url).pathname);
-      await actionable();
+      await actionable(page, rows);
       capture.record("actionable", performance.now() - cold);
       const pages = () =>
         requests.filter(
           (request) => request.path.endsWith("pstdio.pstdio-planner.view.tickets.kanban.query/execute") && request.page,
         );
+      await Promise.all([...pending]);
+      const paged = pages().length > 0;
       const filter = performance.now();
       await page.getByRole("button", { name: "Search this view" }).click();
       await page.getByRole("textbox", { name: "Search this view" }).fill("Planner stress background");
       await expect(rows.first()).toContainText("Planner stress background");
+      // The first row already matches before search; wait for the actual narrowed result.
+      await expect(page.getByTestId("view-search-field")).toContainText("975 of 1000");
       await afterPaint(page);
       await Promise.all([...pending]);
       capture.detail("first-pages", requests);
-      assert(pages().length > 0, "Planner did not return a bounded cursor page for continuation");
       const searched = () =>
         pages().findLast(
           (result) =>
@@ -97,10 +108,14 @@ await runScenario("B6", async (capture) => {
             result.request.offset === 0 &&
             !result.request.cursor,
         );
-      await expect.poll(() => Boolean(searched())).toBe(true);
-      const initial = searched()!;
-      assert(initial.page?.cursor, "The fixed search must have another bounded page");
-      assert.equal(initial.request?.limit, 100, "Planner must use the fixed 100-row page size");
+      if (paged) {
+        try {
+          await expect.poll(() => Boolean(searched())).toBe(true);
+        } catch (error) {
+          capture.detail("search-page-unavailable", String(error));
+        }
+      }
+      const initial = searched();
       capture.record("filter", performance.now() - filter);
       const firstIds = await rows.evaluateAll((elements) => elements.map((element) => element.textContent));
       const pageCount = pages().length;
@@ -110,6 +125,7 @@ await runScenario("B6", async (capture) => {
         element.scrollTop = element.scrollHeight;
       });
       const continuation = () =>
+        initial?.page?.cursor &&
         pages()
           .slice(pageCount)
           .find(
@@ -119,10 +135,26 @@ await runScenario("B6", async (capture) => {
               result.request.offset === initial.request!.offset + initial.request!.limit &&
               result.page!.revision === initial.page!.revision,
           );
-      await expect.poll(() => Boolean(continuation())).toBe(true);
-      await actionable();
-      const secondIds = await rows.evaluateAll((elements) => elements.map((element) => element.textContent));
-      assert.notDeepEqual(secondIds, firstIds, "Page navigation retained stale rows");
+      let observedContinuation: ReturnType<typeof continuation>;
+      if (initial?.page?.cursor) {
+        try {
+          await expect.poll(() => Boolean(continuation())).toBe(true);
+          observedContinuation = continuation();
+        } catch (error) {
+          capture.detail("continuation-unavailable", String(error));
+        }
+      }
+      await actionable(page, rows);
+      await expect
+        .poll(async () => JSON.stringify(await rows.allTextContents()) !== JSON.stringify(firstIds))
+        .toBe(true);
+      await Promise.all([...pending]);
+      const secondIds = await rows.allTextContents();
+      capture.detail("page-navigation", {
+        mode: paged ? "cursor" : "unbounded-scroll",
+        initial,
+        continuation: observedContinuation ?? null,
+      });
       capture.record("page", performance.now() - paging);
       const mounted = await rows.count();
       const title = (await rows.first().innerText()).match(
@@ -142,12 +174,13 @@ await runScenario("B6", async (capture) => {
       const firstStalls = await page.evaluate(() => Reflect.get(window, "plannerStalls") as number[]);
       const reopening = performance.now();
       await page.reload();
-      await actionable();
+      await actionable(page, rows);
       const persisted = await runtime.execute<{ statusId: string; title: string }>(fixture.projectId, "get-ticket", {
         id: ticket.id,
       });
       assert.equal(persisted.statusId, "in-progress");
-      await page.getByRole("button", { name: "Search this view" }).click();
+      if (!(await page.getByRole("textbox", { name: "Search this view" }).isVisible()))
+        await page.getByRole("button", { name: "Search this view" }).click();
       await page.getByRole("textbox", { name: "Search this view" }).fill(title);
       await expect(rows.filter({ hasText: title })).toContainText("In Progress");
       await afterPaint(page);
@@ -170,13 +203,15 @@ await runScenario("B6", async (capture) => {
       );
       capture.record("mounted", mounted);
       capture.record("writes", after.writes - before.writes);
-      // Preserve scale failures. Retirement does not fix Planner's unbounded current query.
-      assert(
+      // Complete the journey before reporting scale failures; an unbounded scroll cannot qualify as paging.
+      capture.check("bounded-search-page", Boolean(initial?.page?.cursor && initial.request?.limit === 100));
+      capture.check("cursor-continuation", Boolean(observedContinuation));
+      capture.check(
+        "bounded-query-responses",
         requests.filter((result) => result.page || result.rows.length > 0).every((result) => result.rows.length <= 100),
-        "Planner returned more than one bounded page",
       );
-      assert(mounted <= 100, "Planner mounted more than one bounded page");
-      assert.equal(after.sequentialRows - before.sequentialRows, 0, "Planner performed a full record projection scan");
+      capture.check("bounded-mounted-rows", mounted <= 100);
+      capture.check("no-full-projection-scan", after.sequentialRows - before.sequentialRows === 0);
     } catch (error) {
       capture.detail(
         "failed-browser-state",

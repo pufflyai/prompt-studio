@@ -75,6 +75,8 @@ B5 measures all owned desktop/runtime descendants, validates process generations
 
 The user-approved timing and memory decisions do not turn earlier measurements into passing evidence. Preserve failed and unrun phases, incomplete samples and unresolved B6/scan/write guards in the ledger. Do not relax workloads or execution timeouts to meet a target.
 
+B6 completes search, scrolling, move and reopen before evaluating scale guards. Its raw `finished` event lists missing metrics, failed limits and failed scale checks separately. When Planner returns an unbounded result, navigation is marked `unbounded-scroll`; the cursor guards still fail and the run remains unqualified. This allows a complete diagnostic result without treating already-loaded rows as a successful bounded page read. A broken action or missing measurement still fails execution.
+
 ## Keep a diagnostic only for unique evidence
 
 Existing manual diagnostic tools may retain unique investigation evidence while their selected replacement is unqualified. They do not run in the frozen catalog or certify acceptance. Once a chosen scenario qualifies the same operation/data size/cache/correctness boundary, delete overlapping diagnostics, commands and documentation. Temporary profiling never becomes a new scheduled suite. The migration ledger records unresolved guards; similar names do not prove equivalent coverage.

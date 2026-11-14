@@ -64,6 +64,7 @@ const createCapture = async (id: ScenarioId) => {
   const eligibility = !baseline && !identity.dirty && !pendingGuards.length;
   const measurementIdentity = { ...identity, qualificationEligible: eligibility };
   const observations = new Map<string, { value: number; unit: BenchmarkUnit; budget?: number; kind: string }>();
+  const checks: { name: string; passed: boolean }[] = [];
   const evidence =
     process.env.BENCHMARK_EVIDENCE ??
     `${process.env.BENCHMARK_EVIDENCE_DIR ?? "test-results/production-performance"}/${id}.jsonl`;
@@ -75,6 +76,11 @@ const createCapture = async (id: ScenarioId) => {
     scenario,
     identity,
     detail: (name: string, value: unknown) => write({ event: "observation", name, value }),
+    // Scale guards must not prevent the rest of a measurable journey from running.
+    check(name: string, passed: boolean) {
+      checks.push({ name, passed });
+      write({ event: "check", name, passed });
+    },
     record(name: string, value: number, supplied?: { value: number; evidence: string }) {
       const budget = retainedLimit(id, name);
       if (supplied && (!budget || supplied.value !== budget.value || supplied.evidence !== budget.evidence))
@@ -103,10 +109,13 @@ const createCapture = async (id: ScenarioId) => {
       const pending = scenario.metrics
         .filter((metric) => metric.kind === "pending-guard" && !retainedLimit(id, metric.id))
         .map((metric) => metric.id);
-      const qualification = eligibility && !missing.length && !failed.length ? "qualified" : "unqualified";
-      write({ event: "finished", missing, failed, pending, qualification });
+      const failedChecks = checks.filter((check) => !check.passed).map((check) => check.name);
+      const qualification =
+        eligibility && !missing.length && !failed.length && !failedChecks.length ? "qualified" : "unqualified";
+      write({ event: "finished", missing, failed, failedChecks, pending, qualification });
       if (missing.length) throw new Error(`${id}: missing required metrics: ${missing.join(", ")}`);
       if (failed.length) throw new Error(`${id}: failed approved limits: ${failed.map(([name]) => name).join(", ")}`);
+      if (failedChecks.length) throw new Error(`${id}: failed scale guards: ${failedChecks.join(", ")}`);
       if (qualification !== "qualified" && !baseline)
         throw new Error(`${id}: unqualified workload; clean source and human-approved limits are required`);
     },

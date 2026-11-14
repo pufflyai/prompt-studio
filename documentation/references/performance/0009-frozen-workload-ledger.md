@@ -61,7 +61,7 @@ Benchmark PRs carry the `benchmark` label. Agents must leave them for a human to
 
 ## B6 Planner failure investigation after the platform run
 
-The benchmark requested a data-table next-page button although Planner uses a native collection list with infinite scrolling. Its continuation action now scrolls `Collection list` and requires a newly measured cursor page, keeping the existing assertion allowance and all five journey actions. A missing cursor is an explicit failure; scrolling already-loaded rows cannot count as a page read.
+The benchmark requested a data-table next-page button although Planner uses a native collection list with infinite scrolling. Its continuation action now scrolls `Collection list`, keeping the existing assertion allowance and all five journey actions. The initial repaired harness still aborted on a missing cursor before move and reopen. At the user's request, scale guards now run after all actions and metrics. Missing cursors, unbounded responses, excess mounted rows and sequential scans remain explicit failures. Scrolling already-loaded rows is marked `unbounded-scroll` and cannot qualify as a bounded page read.
 
 There is also a real product limitation: `queryTickets` calls `readMigratedTickets`, which lists every ticket, then `runTicketsQuery` builds global timeline/review state and enriches every visible row. The view does not declare `queryMode: "paged"`. The old Mac result exposed 975 filtered tickets; Linux/Windows did not reach first actionable rows within five seconds. Fixing the locator does not establish bounded reads, remove sequential scans or qualify B6.
 
