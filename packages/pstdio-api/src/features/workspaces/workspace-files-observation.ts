@@ -50,13 +50,13 @@ export const watchWorkspaceFiles = async (
   const startup = startupGap ? setTimeout(hint, 100) : undefined;
   startup?.unref?.();
   const close = () => {
-      if (closed) return;
-      closed = true;
-      clearTimeout(timer);
-      clearTimeout(startup);
-      clearInterval(recovery);
-      observer.close();
-      signal?.removeEventListener("abort", close);
+    if (closed) return;
+    closed = true;
+    clearTimeout(timer);
+    clearTimeout(startup);
+    clearInterval(recovery);
+    observer.close();
+    signal?.removeEventListener("abort", close);
   };
   signal?.addEventListener("abort", close, { once: true });
   if (signal?.aborted) close();

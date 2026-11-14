@@ -42,9 +42,10 @@ export const observeWorkspaceChanges = async (
     const changed = () => {
       for (const notify of listeners) notify("changed");
     };
-    const ready = kind === "diff"
-      ? watchWorkspaceDiffFiles(target.root, changed, undefined, undefined, abort.signal)
-      : watchWorkspaceFiles(target.root, changed, undefined, undefined, abort.signal);
+    const ready =
+      kind === "diff"
+        ? watchWorkspaceDiffFiles(target.root, changed, undefined, undefined, abort.signal)
+        : watchWorkspaceFiles(target.root, changed, undefined, undefined, abort.signal);
     const stopRows = deps.eventBus.subscribe((event) => {
       if (event.table !== "workspaces" || (event.data as { id?: string }).id !== input.workspace_id) return;
       const row = event.data as typeof target.workspace;

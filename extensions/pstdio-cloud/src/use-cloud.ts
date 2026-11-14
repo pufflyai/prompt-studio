@@ -80,10 +80,7 @@ export const useCloud = (projectId: string | undefined, includeDevices: boolean)
       )
         return;
       for (const query of [queries.account, queries.projectSync, deviceQuery, projectQuery])
-        if (query) {
-          if ("refresh" in query) void query.refresh(signal).catch(() => {});
-          else query.invalidate();
-        }
+        if (query) void query.refresh(signal).catch(() => {});
     },
   };
 };
