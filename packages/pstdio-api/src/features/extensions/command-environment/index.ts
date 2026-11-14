@@ -125,6 +125,7 @@ export const createCommandEnvironment = (
 
     return {
       storage,
+      account: createAccountApi(deps.accountService, input.projectId, signal),
       artifacts: createArtifactsApi(
         resolveProjectPath,
         {
@@ -193,7 +194,6 @@ export const createCommandEnvironment = (
     net: { findFreePort: async (portInput) => findFreePort(portInput?.host) },
     connections: hostApis.connections,
     terminal: hostApis.terminal,
-    account: createAccountApi(deps.accountService, input.projectId),
     withScope: (scope) => scopedHostApis(scope),
   };
 };

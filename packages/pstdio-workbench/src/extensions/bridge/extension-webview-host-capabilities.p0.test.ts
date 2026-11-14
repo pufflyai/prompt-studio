@@ -400,3 +400,38 @@ test("text editing validates scoped operations before passing them to the host a
   ).rejects.toMatchObject({ code: "invalid_params" });
   expect(calls).toEqual([{ operation: "current" }]);
 });
+
+test("partial account services reject unavailable operations instead of resolving undefined", async () => {
+  const unexpected = async (): Promise<never> => {
+    throw new Error("Unexpected legacy account operation");
+  };
+  const legacy: NonNullable<Parameters<typeof createExtensionWebviewHostCapabilities>[0]["account"]> = {
+    status: async () => ({ login: null, features: null, cloudProjects: [], cloudProjectsLoaded: false }),
+    login: unexpected,
+    loginStatus: unexpected,
+    cancelLogin: unexpected,
+    logout: unexpected,
+    devices: unexpected,
+    renameDevice: unexpected,
+    removeDevice: unexpected,
+    resolveReturnedChanges: unexpected,
+    projectSyncStatus: unexpected,
+    retryProjectSyncSource: unexpected,
+    syncProject: unexpected,
+    stopProjectSync: unexpected,
+  };
+  const snapshot = { generation: 1, version: 1, stale: false, fetching: false, data: { login: null } };
+  const queries = { request: async () => snapshot, seeds: () => ({ owner: "owner", values: [] }) };
+  const query = { operation: "read", owner: "owner", requestId: "read", source: { service: "status" } };
+  const unsupported = { code: "unsupported", data: { capability: "account.read" } };
+  const read = (adapters: Parameters<typeof createExtensionWebviewHostCapabilities>[0], request: unknown) =>
+    Promise.resolve().then(() => createExtensionWebviewHostCapabilities(adapters)["account.read"](request));
+  await expect(read({}, { op: "status" })).rejects.toMatchObject(unsupported);
+  await expect(read({}, null)).rejects.toMatchObject(unsupported);
+  expect(await read({ accountQueries: queries }, { op: "query", query })).toEqual(snapshot);
+  await expect(read({ accountQueries: queries }, { op: "status" })).rejects.toMatchObject(unsupported);
+  expect(await read({ account: legacy }, { op: "status" })).toMatchObject({ login: null });
+  await expect(read({ account: legacy }, { op: "query", query })).rejects.toMatchObject(unsupported);
+  expect(await read({ account: legacy, accountQueries: queries }, { op: "status" })).toMatchObject({ login: null });
+  expect(await read({ account: legacy, accountQueries: queries }, { op: "query", query })).toEqual(snapshot);
+});

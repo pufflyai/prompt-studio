@@ -4,8 +4,10 @@ import type {
   PerformanceSnapshot,
 } from "pstdio-api-contracts/performance-diagnostics";
 import type { GuestHost } from "./guest-host";
+import { getWebviewServiceQueries, type WebviewServiceQuery } from "./webview-service-query";
 
 export interface WebviewPerformanceClient {
+  query(): WebviewServiceQuery<PerformanceSnapshot | null>;
   state(): Promise<PerformanceMonitoringState>;
   recordings(): Promise<PerformanceRecordingExport | null>;
   /** Keep one shared capture owner until this view releases it or disconnects. Does not enable monitoring. */
@@ -23,6 +25,7 @@ const subscribers = new WeakMap<GuestHost, { count: number; starting: Promise<un
 
 export const createWebviewPerformanceClient = (host: GuestHost) =>
   ({
+    query: () => getWebviewServiceQueries(host, "performance").query({ service: "snapshot" }),
     state: () => host.call("performance.read", { operation: "state" }) as Promise<PerformanceMonitoringState>,
     recordings: () =>
       host.call("performance.read", { operation: "recordings" }) as Promise<PerformanceRecordingExport | null>,
