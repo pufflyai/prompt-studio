@@ -172,9 +172,6 @@ number is saved locally. Use it to refresh displayed numbers and generated refer
 The host handles collision repair and alias storage; extensions need no sync code.
 Workspace numbers (`WS-`) are separate and do not use this API.
 
-*Updated at: 2026-11-03*
-
-
 ### Bounded related history (unreleased API 0.4.2)
 
 Use `ctx.resources.queryRelated({ resources, direction: "both", limit: 100 })`
@@ -196,3 +193,5 @@ related active workspaces, deduplicated before pagination. This includes private
 remote workspace memberships. Session title `search` is a literal,
 case-insensitive substring applied before the limit. Each query defaults to 50
 rows and clamps its limit to 1–200. Resource-link pages default to 100 and cap at 100.
+
+*Updated at: 2026-11-14*
