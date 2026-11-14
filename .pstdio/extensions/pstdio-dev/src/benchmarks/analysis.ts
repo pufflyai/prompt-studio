@@ -14,6 +14,7 @@ export interface MetricKey {
   label: string;
   unit: BenchmarkUnit;
   budget?: number;
+  budgetComparison?: "strict-ms-bytes";
 }
 
 export interface TrendPoint extends Summary {
@@ -30,6 +31,16 @@ export interface CompareRow extends MetricKey {
   head: (Summary & { values: number[] }) | null;
   change: Change | null;
 }
+
+// Every raw observation must meet the limit; a passing median cannot hide a failure.
+export const exceedsBudget = (metric: Pick<MetricKey, "unit" | "budget" | "budgetComparison">, values: number[]) => {
+  const budget = metric.budget;
+  if (budget === undefined) return false;
+  const strict = metric.budgetComparison === "strict-ms-bytes" && (metric.unit === "ms" || metric.unit === "bytes");
+  return (
+    !values.length || values.some((value) => !Number.isFinite(value) || (strict ? value >= budget : value > budget))
+  );
+};
 
 const keyOf = (metric: BenchmarkMetricResult) =>
   `${metric.suite}/${metric.metric}/${JSON.stringify(metric.identity ?? "historical-format-1")}`;
@@ -56,6 +67,9 @@ const metricKey = (file: BenchmarkResultFile, metric: BenchmarkMetricResult): Me
       : `${metric.label} (historical)`,
     unit: metric.unit,
     ...(metric.budget === undefined ? {} : { budget: metric.budget }),
+    ...(metric.identity?.budgetComparison === "strict-ms-bytes"
+      ? { budgetComparison: "strict-ms-bytes" as const }
+      : {}),
   };
 };
 
@@ -220,7 +234,7 @@ export const buildRunResults = (results: CachedResult[], runId: string, platform
         ...metricKey(file, metric),
         ...summarize(metric.values),
         values: metric.values,
-        ...(metric.budget === undefined ? {} : { overBudget: Math.max(...metric.values) > metric.budget }),
+        ...(metric.budget === undefined ? {} : { overBudget: exceedsBudget(metricKey(file, metric), metric.values) }),
       })),
     })),
     // Platforms the run covered without results: failed, cancelled, still running, or not downloaded yet.

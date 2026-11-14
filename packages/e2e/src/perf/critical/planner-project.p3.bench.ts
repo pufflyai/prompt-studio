@@ -3,6 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium, expect } from "@playwright/test";
+import type { CollectionPage, CollectionPageRequest } from "@pstdio/sdk/extensions";
 import { runScenario } from "pstdio-benchmarks/writer";
 import { signInBrowser, stopProcess } from "../../packaged/packaged-serve-helpers";
 import { afterPaint } from "./desktop-lifecycle";
@@ -31,6 +32,8 @@ await runScenario("B6", async (capture) => {
         rows: { id: string; title?: string; values?: { title?: string } }[];
         bytes: number;
         path: string;
+        page?: CollectionPage;
+        request?: CollectionPageRequest;
       }[] = [];
       const pending = new Set<Promise<void>>();
       const responseErrors: unknown[] = [];
@@ -45,6 +48,8 @@ await runScenario("B6", async (capture) => {
             rows: Array.isArray(value?.rows) ? value.rows : [],
             bytes: body.length,
             path: new URL(response.url()).pathname,
+            page: value?.page,
+            request: response.request().postDataJSON()?.params?.page,
           });
         })();
         pending.add(collecting);
@@ -73,15 +78,48 @@ await runScenario("B6", async (capture) => {
       await signInBrowser(page, runtime.descriptor, new URL(url).pathname);
       await actionable();
       capture.record("actionable", performance.now() - cold);
+      const pages = () =>
+        requests.filter(
+          (request) => request.path.endsWith("pstdio.pstdio-planner.view.tickets.kanban.query/execute") && request.page,
+        );
       const filter = performance.now();
       await page.getByRole("button", { name: "Search this view" }).click();
       await page.getByRole("textbox", { name: "Search this view" }).fill("Planner stress background");
       await expect(rows.first()).toContainText("Planner stress background");
       await afterPaint(page);
+      await Promise.all([...pending]);
+      capture.detail("first-pages", requests);
+      assert(pages().length > 0, "Planner did not return a bounded cursor page for continuation");
+      const searched = () =>
+        pages().findLast(
+          (result) =>
+            result.request?.search === "Planner stress background" &&
+            result.request.offset === 0 &&
+            !result.request.cursor,
+        );
+      await expect.poll(() => Boolean(searched())).toBe(true);
+      const initial = searched()!;
+      assert(initial.page?.cursor, "The fixed search must have another bounded page");
+      assert.equal(initial.request?.limit, 100, "Planner must use the fixed 100-row page size");
       capture.record("filter", performance.now() - filter);
       const firstIds = await rows.evaluateAll((elements) => elements.map((element) => element.textContent));
+      const pageCount = pages().length;
       const paging = performance.now();
-      await page.getByRole("button", { name: "Go to next page", exact: true }).click();
+      // Native collections fetch the next bounded page by scrolling, not a table-only button.
+      await page.getByLabel("Collection list", { exact: true }).evaluate((element) => {
+        element.scrollTop = element.scrollHeight;
+      });
+      const continuation = () =>
+        pages()
+          .slice(pageCount)
+          .find(
+            (result) =>
+              result.request?.cursor === initial.page!.cursor &&
+              result.request.revision === initial.page!.revision &&
+              result.request.offset === initial.request!.offset + initial.request!.limit &&
+              result.page!.revision === initial.page!.revision,
+          );
+      await expect.poll(() => Boolean(continuation())).toBe(true);
       await actionable();
       const secondIds = await rows.evaluateAll((elements) => elements.map((element) => element.textContent));
       assert.notDeepEqual(secondIds, firstIds, "Page navigation retained stale rows");
@@ -134,9 +172,7 @@ await runScenario("B6", async (capture) => {
       capture.record("writes", after.writes - before.writes);
       // Preserve scale failures. Retirement does not fix Planner's unbounded current query.
       assert(
-        requests
-          .filter((result) => result.path.endsWith(".query-tickets/execute"))
-          .every((result) => result.rows.length <= 100),
+        requests.filter((result) => result.page || result.rows.length > 0).every((result) => result.rows.length <= 100),
         "Planner returned more than one bounded page",
       );
       assert(mounted <= 100, "Planner mounted more than one bounded page");

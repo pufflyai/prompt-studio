@@ -31,7 +31,25 @@ Each scenario uses `runScenario` and emits one raw JSONL record for every declar
 
 The result writer preserves raw values and maxima in format 2. Comparison requires matching workload identity, host class, cache, throttle, units and approved limits. A new workload starts a new explicitly authorized version; unlike workloads cannot be presented as an improvement. Never use a median-only budget gate or repeat an unchanged failing measurement to obtain a pass.
 
-Metric classifications are product requirement, retained regression guard, supporting diagnostic, or **pending guard** awaiting exact-workload baseline and a human limit decision. Matching startup/recovery and renderer idle/stream guards retain their original values in [budget-limits.ts](../../../packages/benchmarks/src/budget-limits.ts). Stronger journey boundaries do not inherit an old first-card/root-visible limit. The old chat 20s/10s limits are not an approval of the new UX. Unqualified observations never become a successful production gate.
+Metric classifications are product requirement, regression guard, supporting diagnostic, or **pending guard** awaiting a human limit decision. The user approved the aligned timing and native-memory limits below on 2026-11-14 and delegated B4's foreground limits. These supersede the former hardware-specific startup exceptions. Stronger journeys do not inherit unrelated old first-card/root-visible limits. Unqualified observations never become a successful production gate.
+
+## Approved acceptance limits
+
+Timing and average-memory targets use strict **<**, including equality as a failure, on all three platforms. GB means decimal bytes. Renderer share guards retain inclusive **≤**. The executable definitions are [catalog limits](../../../packages/benchmarks/src/catalog/limits.ts) and [shared phase limits](../../../packages/benchmarks/src/budget-limits.ts).
+
+| Scenario | Targets |
+| --- | --- |
+| B1 | Window <1,200ms; shell <3,000ms; usable <5,000ms; first interaction <1,200ms |
+| B2 | Usable <5,000ms; first interaction <250ms |
+| B3 | Runtime attachment <1,800ms; usable <5,000ms; first interaction <250ms |
+| B4 | Input/history/stream-to-paint <250ms; file <1,500ms; terminal <250ms; panel <500ms; project/session switch <2,000ms; longest stall <200ms; completion <10,000ms; cancellation <500ms |
+| B5 | Average native memory <2GB on Linux/macOS, <3GB on Windows; complete ten-minute coverage, no missing samples, maximum gap ≤1,000ms |
+| B6 | Timing, total scanned entries and write-amplification ceilings remain pending. Correctness requires bounded query pages and mounted rows ≤100, zero sequential projection scans, and persisted edits. |
+| B7 | Cold read <300ms; warm read <180ms; one-record edit <120ms; read during maintenance <120ms. Correct data, zero sequential scans for indexed cold/warm pages, advancing index counters and exactly 101 writes remain required. |
+| B8 | Recovery feedback <480ms; restored usable state <6,000ms; first action <300ms |
+
+B4's chosen limits bound immediate foreground feedback, allow file/tool initialization separately, and keep the ten-second completion target above the fixed six-second replay schedule without extending that schedule. Retained renderer guards are idle script ≤2% and task ≤5%, streaming script ≤85% and task ≤120%. The last task-share guard alone does not constrain responsiveness; paint and stall targets do.
+
 
 CPU profiling, Electron traces and forced-GC heap belong in separately labelled temporary investigations outside discovery and acceptance. CDP renderer script/task counters are supporting main-thread shares, not whole-app CPU or responsiveness proof. B4 also retains the mandatory two-second settle and ten-second idle renderer guard. Never dilute a share by increasing its idle window.
 
@@ -47,15 +65,15 @@ B1 is first on every desktop host, with a new home and no owned runtime. Native 
 
 B2/B3/B4/B5/B8 share the same 100-message/file/idle-terminal fixture. Restore and check actual conversation contents, file text and usable controls. B3 verifies attachment to the same runtime PID/instance. B8 separates feedback from usable recovery and verifies old-process termination. Repeated crashes and terminal/error screens remain functional tests.
 
-## M5 and average-memory reference procedure
+## Native memory sampling procedure
 
-The [numeric targets](../../guidance/0003-nonfunctional-requirements.md) are unchanged: **2 seconds** empty-home launch through interactive workbench/API/default tools on the M5 reference configuration; and **2 GB decimal** average physical footprint over the specified ten-minute workload. Per the user's instruction, a separate 10-core/32 GiB M5 proof run is optional and is not a benchmark-suite or release qualification prerequisite. Use the applicable CI hosts, record their actual CPU/cores/RAM and keep unlike host measurements separate. Other hardware does not certify the M5-specific target.
+The [numeric targets](../../guidance/0003-nonfunctional-requirements.md) apply to the three requested platforms without an M5 hardware condition. B1 must become fully usable in <5 seconds, and B5 average native memory must remain <2GB on Linux/macOS or <3GB on Windows. Record actual CPU/cores/RAM and keep differing native memory semantics in separate series.
 
-B5 workload version 2 uses `native-average`, `native-peak` and `resident-peak` metric IDs. It records physical footprint including compression on macOS, resident set bytes on Linux, and private committed bytes on Windows. These are separate platform series; they are not interchangeable physical-memory measurements. The existing 2 GB physical-footprint guard applies on macOS. Linux/Windows native-average limits remain pending explicit human decisions. Older B5 physical-only results remain version 1 history.
+B5 workload version 2 uses `native-average`, `native-peak` and `resident-peak` metric IDs. It records physical footprint including compression on macOS, resident set bytes on Linux, and private committed bytes on Windows. These are separate platform series; they are not interchangeable physical-memory measurements. Older B5 physical-only results remain version 1 history.
 
-B5 measures all owned desktop/runtime descendants, validates process generations, clips the time-weighted average to the measured interval and retains raw process readings. Missing native memory samples, incomplete cycles, sampling gaps over one second or an incomplete ten-minute window fail. RSS, JS heap and physical footprint including compression remain distinct. Do not force GC. Available hardware, including a 16 GiB M5 or hosted Apple Silicon, is not disqualified solely for differing from the reference configuration.
+B5 measures all owned desktop/runtime descendants, validates process generations, clips the time-weighted average to the measured interval and retains raw process readings. Missing native memory samples, incomplete cycles, sampling gaps over one second or an incomplete ten-minute window fail. RSS, JS heap and physical footprint including compression remain distinct. Do not force GC.
 
-B1's default-tool/actionable boundary and all new latency guards require representative actual-host measurements before qualification. Unrun phases and unresolved legacy guards stay visible in the ledger. The absence of a 32 GiB M5 run is not a blocker. No new numeric UX limits have been approved by this implementation.
+The user-approved timing and memory decisions do not turn earlier measurements into passing evidence. Preserve failed and unrun phases, incomplete samples and unresolved B6/scan/write guards in the ledger. Do not relax workloads or execution timeouts to meet a target.
 
 ## Keep a diagnostic only for unique evidence
 

@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { meetsLimit, retainedLimit } from "./limits";
 import { catalogRevision, conversationFixture, scenarioById } from "./scenarios";
 
 export const scenarioEvidence = (
@@ -47,6 +48,7 @@ export const scenarioEvidence = (
     if (sameHost.some((key) => event[key] !== first[key])) throw new Error(`${id}: mixed workload host identity`);
     if (
       event.scenario !== id ||
+      event.budgetComparison !== "strict-ms-bytes" ||
       event.catalogRevision !== catalogRevision ||
       event.workloadVersion !== (scenario.id === "B5" ? scenario.workloadVersion : 1) ||
       (scenario.id === "B5" && event.memoryMetric !== scenario.memoryMetrics[expected.platform.split("-")[0]!]) ||
@@ -68,7 +70,8 @@ export const scenarioEvidence = (
             observed.name === metric.id &&
             observed.unit === metric.unit &&
             Number.isFinite(observed.value) &&
-            (observed.budget === undefined || observed.value <= observed.budget),
+            observed.budget === retainedLimit(id, metric.id, expected.platform.split("-")[0]!)?.value &&
+            (observed.budget === undefined || meetsLimit(observed.value, observed.budget, metric.unit)),
         ),
     )
   )

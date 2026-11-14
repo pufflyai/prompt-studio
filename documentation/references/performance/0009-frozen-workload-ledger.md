@@ -2,7 +2,7 @@
 
 Proposed: 2026-11-14. Status: implementation candidate; **not qualified**.
 
-PS-233 is the user's one-time authorization for the exact eight scenarios. [Manifest](../../../packages/benchmarks/src/catalog/scenarios.ts), [lock](../../../packages/benchmarks/catalog.lock.json), [guidance](../../guides/development/0016-writing-benchmarks.md). Benchmark changes carry the `benchmark` PR label and are left for human review and merge. No new numeric latency limit has been approved. The user explicitly selected B1–B8 on Linux x64, Apple Silicon Mac and Windows x64, with Intel Mac removed entirely from benchmarks. Nightly and stable each require all 24 combinations. B5 version 2 labels native memory by platform; its Linux/Windows limits remain pending. Older host mappings and measurements below are historical evidence.
+PS-233 is the user's one-time authorization for the exact eight scenarios. [Manifest](../../../packages/benchmarks/src/catalog/scenarios.ts), [lock](../../../packages/benchmarks/catalog.lock.json), [guidance](../../guides/development/0016-writing-benchmarks.md). Benchmark changes carry the `benchmark` PR label and are left for human review and merge. On 2026-11-14 the user approved the [aligned timing and memory targets](../../guides/development/0016-writing-benchmarks.md#approved-acceptance-limits) and delegated B4 foreground limits. The user explicitly selected B1–B8 on Linux x64, Apple Silicon Mac and Windows x64, with Intel Mac removed entirely from benchmarks. Nightly and stable each require all 24 combinations. B5 version 2 labels native memory by platform; its limits are now <2GB on Linux/macOS and <3GB on Windows. Older host mappings and measurements below are historical evidence.
 
 ## Previous catalog
 
@@ -32,11 +32,11 @@ Historical source is preserved in Git at `bd56e2c399be208edcb64eef9f0e7f6ab17eb1
 
 | Guard | Disposition and evidence needed |
 | --- | --- |
-| M5 2s empty-home interactive/API/default-tools cold start | B1; numeric target and readiness boundary retained. Exact 10-core/32 GiB M5 proof is optional, per the user's instruction, and is not a suite/release qualification blocker. Record actual hosts separately. |
-| M5 2GB average physical footprint | B5; fixed 30s settle/10min/100 messages/file/terminal, ≥1Hz whole owned tree. Exact M5 reference proof is optional; complete valid physical sampling remains required. RSS/heap cannot substitute. |
+| Empty-home interactive/API/default-tools cold start | B1; the user replaced the M5-specific target with <5,000ms on all three hosts, plus window <1,200ms, shell <3,000ms and first interaction <1,200ms. Record actual hosts; no reference machine is required. |
+| Average whole-app memory | B5; fixed 30s settle/10min/100 messages/file/terminal, ≥1Hz whole owned tree. User-approved <2GB Linux RSS/macOS physical footprint, <3GB Windows private committed bytes. Native measures stay distinct; complete sampling remains required. |
 | Idle renderer 2% script / 5% task; settle2s/sample10s | B4 retains the exact idle phase and numeric guards. Per-renderer coverage still needs actual-host review; one captured renderer cannot certify every live renderer. |
-| Hosted startup window and shell deadlines; recovery feedback500ms | B1/B8 retain matching existing budget constants. Complete usable journeys have separate unqualified clocks. B1 must retain OS first-launch checks. |
-| Streaming renderer script85% / task120% | B4 retains counters/limits; task120% provides no independent responsiveness guarantee. New foreground/paint/stall/completion/cancel guards pending human baseline decisions. |
+| Startup and recovery deadlines | B1/B8 apply the new cross-platform targets, including restored usable state <6,000ms and recovery feedback <480ms. B1 retains OS first-launch checks. Older per-host limits are superseded by this explicit decision. |
+| Streaming renderer script85% / task120% | B4 retains counters/limits; task120% provides no independent responsiveness guarantee. Foreground/paint/stall/completion/cancel targets now follow the user-authorized B4 limits. |
 | Monitoring main CPU10% | Still binding for the old monitoring-enabled workload; not replaced by B4's default renderer counters. Pending qualified replacement or explicit human retirement. |
 | Workbench project1850ms/task525ms, hierarchy675ms/task750ms, nav875ms, tabs800ms, header425ms, side panel325ms, interaction450ms/task200ms | Old exact-workload guards unresolved. B4's changed loaded/streaming actions cannot silently inherit or waive them. PS-96 remains open. |
 | Subnav structure375ms/data1525ms/editor1325ms | Changed B4 journey is not equivalent. Pending qualified replacement or explicit human disposition. |
@@ -58,3 +58,11 @@ B6 write amplification and B6/B7 scanned-entry ceilings are explicitly pending g
 ## Human review and merge
 
 Benchmark PRs carry the `benchmark` label. Agents must leave them for a human to review and merge, even when CI is green; they must not enable auto-merge, enqueue the PR, merge it directly or remove the label to bypass the rule. Human instructions still authorize semantic workload and numeric-limit changes. The catalog check validates source/manifest consistency without a deployment receipt or a separate required status. Actual-host measurements and unresolved numeric decisions remain qualification blockers.
+
+## B6 Planner failure investigation after the platform run
+
+The benchmark requested a data-table next-page button although Planner uses a native collection list with infinite scrolling. Its continuation action now scrolls `Collection list` and requires a newly measured cursor page, keeping the existing assertion allowance and all five journey actions. A missing cursor is an explicit failure; scrolling already-loaded rows cannot count as a page read.
+
+There is also a real product limitation: `queryTickets` calls `readMigratedTickets`, which lists every ticket, then `runTicketsQuery` builds global timeline/review state and enriches every visible row. The view does not declare `queryMode: "paged"`. The old Mac result exposed 975 filtered tickets; Linux/Windows did not reach first actionable rows within five seconds. Fixing the locator does not establish bounded reads, remove sequential scans or qualify B6.
+
+A product repair must preserve native-title derivation, logical tag selections, ancestor labels and global milestone/attention/review state while applying complete filters/search/order before bounded page selection. Public indexed queries, same-revision aggregates, batched identity/link reads and the existing cursor-aware native renderer provide the transport; deriving those fields from only a page would silently change results. Keep this product work and the original failures visible rather than slicing a full response or weakening the scan guard.

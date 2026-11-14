@@ -5,7 +5,7 @@ import { cpus, hostname, totalmem } from "node:os";
 import { dirname, resolve } from "node:path";
 import { type BenchmarkUnit, recordMeasurement } from "../writer";
 import { readContract } from "./contract";
-import { retainedLimit } from "./limits";
+import { meetsLimit, retainedLimit } from "./limits";
 import { catalogRevision, conversationFixture, type ScenarioId, scenarioById } from "./scenarios";
 
 export const fingerprint = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
@@ -56,6 +56,7 @@ const createCapture = async (id: ScenarioId) => {
     throttle: scenario.throttle,
     sample: Number(process.env.BENCHMARK_SAMPLE_INDEX ?? 0),
     units: "decimal bytes; monotonic milliseconds",
+    budgetComparison: "strict-ms-bytes",
   };
   const pendingGuards = scenario.metrics
     .filter((metric) => metric.kind === "pending-guard" && !retainedLimit(id, metric.id))
@@ -97,7 +98,7 @@ const createCapture = async (id: ScenarioId) => {
     finish() {
       const missing = scenario.metrics.filter((entry) => !observations.has(entry.id)).map((entry) => entry.id);
       const failed = [...observations].filter(
-        ([, metric]) => metric.budget !== undefined && metric.value > metric.budget,
+        ([, metric]) => metric.budget !== undefined && !meetsLimit(metric.value, metric.budget, metric.unit),
       );
       const pending = scenario.metrics
         .filter((metric) => metric.kind === "pending-guard" && !retainedLimit(id, metric.id))

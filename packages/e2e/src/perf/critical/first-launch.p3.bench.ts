@@ -34,7 +34,7 @@ await runScenario("B1", (capture) =>
     assert.equal(project.extension_warnings?.length ?? 0, 0, "Default tools failed to initialize");
     capture.detail(
       "boundary",
-      "Empty-home launch through authenticated API, first-project default-tool initialization, selected Home content and completed first native interaction; no prewarm. The unchanged 2s product limit applies on the actual 10-core/32GiB M5 reference host.",
+      "Empty-home launch through authenticated API, first-project default-tool initialization, selected Home content and completed first native interaction; no prewarm. The user-approved 5s usable target applies on all three benchmark platforms.",
     );
     const before = await app.page.evaluate(() => performance.now());
     await selectProject(app.page, project.name);

@@ -57,32 +57,12 @@ export const chatBudgets = {
 };
 
 const desktopEvidence =
-  "User-approved 2026-10-10 release rehearsal: Intel cold launch 23.3 s, Windows 8.2 s; about 20% headroom. See the desktop benchmark section of the testing guide.";
-export const desktopBudgets = (platform = process.platform, arch = process.arch) => {
-  const intelMac = platform === "darwin" && arch === "x64";
-  const appleSilicon = platform === "darwin" && arch === "arm64";
-  const cold = platform === "win32" ? 10000 : 8000;
-  const coldStart = intelMac ? 28000 : cold;
-  const macWindow = intelMac ? 10000 : 1500;
-  const startupWindow = platform === "darwin" ? macWindow : 1000;
-  const isolatedLaunchEvidence =
-    "User-approved temporary Apple Silicon limits on 2026-11-11 after isolated first-launch CI 43002382892 measured 3,618.8 ms startup window and 8,905 ms cold workbench readiness. Requalify the original targets after first-launch optimization.";
-  return {
-    coldStartMs: limit(
-      appleSilicon ? 11000 : coldStart,
-      "ms",
-      appleSilicon ? "2026-11-11" : "2026-10-10",
-      appleSilicon ? isolatedLaunchEvidence : desktopEvidence,
-    ),
-    startupWindowMs: limit(
-      appleSilicon ? 4500 : startupWindow,
-      "ms",
-      appleSilicon ? "2026-11-11" : "2026-10-10",
-      appleSilicon ? isolatedLaunchEvidence : desktopEvidence,
-    ),
-    recoveryMs: limit(500, "ms", "2026-10-10", desktopEvidence),
-  };
-};
+  "User-approved 2026-11-14: the same strict startup/recovery targets on Linux x64, Apple Silicon Mac and Windows x64.";
+export const desktopBudgets = () => ({
+  coldStartMs: limit(3_000, "ms", "2026-11-14", desktopEvidence),
+  startupWindowMs: limit(1_200, "ms", "2026-11-14", desktopEvidence),
+  recoveryMs: limit(480, "ms", "2026-11-14", desktopEvidence),
+});
 export const rendererBudgets = {
   idleScript: limit(0.02, "share", "2026-10-10", "Idle main-thread script budget from the desktop release rehearsal."),
   idleTask: limit(0.05, "share", "2026-10-10", "Idle main-thread task budget from the desktop release rehearsal."),
