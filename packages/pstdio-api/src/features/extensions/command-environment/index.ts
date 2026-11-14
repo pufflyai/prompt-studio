@@ -14,7 +14,6 @@ import {
 import { resolvePstdioHome } from "pstdio-paths";
 import { apiLogger } from "../../../lib/logger";
 import { runWorkspaceProvisioning } from "../../workspaces/provision-coordinator";
-import { setupWorkspaceWorktree } from "../../workspaces/worktree-setup";
 import { enqueueCatalogExtensions } from "../catalog-installation";
 import type { ExtensionsRouteDeps } from "../deps";
 import { createExtensionConnectionsApi } from "../extension-connection-service";
@@ -69,7 +68,7 @@ export const createCommandEnvironment = (
     workspaceDir?: string;
     workspaceId?: string;
   },
-  runtimeDeps: CommandEnvironmentRuntimeDeps = { setupWorkspaceWorktree, runWorkspaceProvisioning },
+  runtimeDeps: CommandEnvironmentRuntimeDeps = { runWorkspaceProvisioning },
 ): CommandRunnerEnvironment => {
   const enabledSource = findEnabledSource(enabledSources, input.extensionId);
   if (!enabledSource) throw new Error(`Enabled extension instance not found: ${input.extensionId}`);

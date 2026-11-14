@@ -7,9 +7,11 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import { workspaceSchema } from "pstdio-api-contracts";
 import type { ResourceAnchor, WorkspaceTypeProvider } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { enableGitWorkspaceProvider } from "../../../test-utils/git-workspace-provider.fixture";
 import type { AppBindings } from "../../../types";
 import { createWorkspaceRoutes } from "../routes";
 import { remoteWorkspaceCapabilities } from "../workspace-provider.test-fixture";
+import { defaultWorkspaceProviderRuntime } from "../workspace-provider-runtime";
 
 let root: string;
 let handle: Awaited<ReturnType<typeof createTestApp>>;
@@ -69,26 +71,29 @@ beforeAll(async () => {
             ...snapshot,
             runtime: {
               ...snapshot.runtime,
-              workspaceTypes: cloudAvailable
-                ? [
-                    {
-                      id: "example.cloud",
-                      extensionId: "example.environments",
-                      name: "cloud",
-                      sourcePath: root,
-                      provider: cloudProvider,
-                    },
-                  ]
-                : [],
+              workspaceTypes: [
+                ...snapshot.runtime.workspaceTypes,
+                ...(cloudAvailable
+                  ? [
+                      {
+                        id: "example.cloud",
+                        extensionId: "example.environments",
+                        name: "cloud",
+                        sourcePath: root,
+                        provider: cloudProvider,
+                      },
+                    ]
+                  : []),
+              ],
             },
           };
         },
       },
       workspaceProviderRuntime: {
-        find: async (_deps, input) =>
+        find: async (deps, input) =>
           cloudAvailable && input.providerId === "example.cloud"
             ? { context: {} as never, provider: cloudProvider }
-            : undefined,
+            : defaultWorkspaceProviderRuntime.find(deps, input),
       },
     }),
   );
@@ -111,6 +116,7 @@ const createProject = async (path?: string) => {
     provider_id: path ? "pstdio.root" : "example.cloud",
     root_path: path,
   });
+  if (path) await enableGitWorkspaceProvider(handle, project.id);
   return project;
 };
 
