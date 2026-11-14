@@ -22,4 +22,3 @@ export const withTicketOrder = async <T>(
     await new Promise((resolve) => setTimeout(resolve, ORDER_RETRY_MS));
   }
 };
-
