@@ -29,7 +29,13 @@ export type UpdateOnboarding = z.infer<typeof updateOnboardingSchema>;
 export const onboardingExtensions = (workAreas: readonly OnboardingWorkArea[]) => {
   const extensions = new Set<string>();
   if (workAreas.includes("coding")) {
-    for (const name of ["pstdio-workspaces", "pstdio-planner", "pstdio-reports", "pstdio-artifacts"])
+    for (const name of [
+      "pstdio-workspaces",
+      "pstdio-planner",
+      "pstdio-reports",
+      "pstdio-artifacts",
+      "pstdio-skill-browser",
+    ])
       extensions.add(name);
   }
   if (workAreas.includes("planning")) {

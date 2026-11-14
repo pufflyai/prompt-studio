@@ -31,6 +31,7 @@ export const extensions: Record<string, { name: string; icon?: string }> = {
   "pstdio-onboarding": { name: "Onboarding" },
   "pstdio-base-themes": { name: "Themes" },
   "pstdio-skills": { name: "Prompt Studio Skills" },
+  "pstdio-skill-browser": { name: "Skill Browser" },
   "pstdio-workspaces": { name: "Workspaces" },
   "pstdio-planner": { name: "Project Planner" },
   "pstdio-reports": { name: "Agent Reports" },

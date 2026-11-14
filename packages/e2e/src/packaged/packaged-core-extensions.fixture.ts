@@ -28,6 +28,7 @@ const CORE_DEFAULT_EXTENSION_NAMES = [
   "pstdio-notes",
   "pstdio-reports",
   "pstdio-skills",
+  "pstdio-skill-browser",
 ];
 
 interface CoreExtensionsFixture {

@@ -60,7 +60,7 @@ When actions share an initial, the host sorts the available actions by name, wit
 
 Alt+Shift+T is the single default shortcut for choosing a color theme. Theme providers contribute themes to that shared picker rather than registering another shortcut. Creation keeps C → N, C → T, and C → A without additional direct creation chords.
 
-Settings → I opens appearance and file icon themes, and S contributed skills. Mod+, opens agent runtime and skill setup. These destinations are registered once, regardless of the number of providers.
+Settings → I opens appearance and file icon themes. Go → S offers Skills and Sessions through the numbered destination chooser. Mod+, opens agent runtime settings. These destinations are registered once, regardless of the number of providers.
 
 Creation uses the same UI as the resource's existing entry point. Notes create and open directly, with bound empty parameters instead of an optional-parameter dialog. Ticket shortcuts and the palette invoke the board's `createRow.command`, so the shared creation dialog supplies markdown, attachments, editable properties, and the same submission handler. Artifact creation opens the library's existing creation choices.
 

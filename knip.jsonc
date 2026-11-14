@@ -183,6 +183,7 @@
         "pstdio-planner",
         "pstdio-reports",
         "pstdio-skills",
+        "pstdio-skill-browser",
         "remote-workspaces",
         "workbench-fixture"
       ]
@@ -455,6 +456,17 @@
         "skills/create-pstdio-extension/references/examples/**/*.{ts,tsx}"
       ],
       "project": ["*.ts", "skills/create-pstdio-extension/references/examples/**/*.{ts,tsx}"]
+    },
+    "extensions/pstdio-skill-browser": {
+      "entry": [
+        "extension.ts",
+        "src/view.tsx",
+        ".canvas/**/*.{ts,tsx}",
+        "src/**/*.canvas.tsx",
+        "src/**/*.test.ts",
+        "*.test.ts"
+      ],
+      "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "infra/local/extensions/*": {
       "entry": ["extension.ts", "src/**/*.canvas.tsx", "*.test.ts"],

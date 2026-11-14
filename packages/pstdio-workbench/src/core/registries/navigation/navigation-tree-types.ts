@@ -36,6 +36,8 @@ export interface NavigationTreeContribution {
   owner: NavigationTreeOwner;
   sourceExtensionId: string;
   declarationIndex: number;
+  /** Order contribution groups; trailing host utilities can follow extension tools. */
+  order?: number;
   slot?: NavigationTreeSlot;
   viewId?: string;
   defaultExpandedSectionIds?: string[];

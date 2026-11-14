@@ -33,7 +33,7 @@ describe("createSettingsModule", () => {
     expect(workbench.commands.getCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID)).toBeDefined();
   });
 
-  test("shared settings shortcuts cover appearance, runtime, and skills", () => {
+  test("shared settings shortcuts cover appearance and runtime", () => {
     const workbench = createWorkbench();
     const registration = workbench.registerModule(createSettingsModule());
     const destinations = workbench.keyboard
@@ -51,7 +51,6 @@ describe("createSettingsModule", () => {
       expect.arrayContaining([
         ["S I", { panelId: "appearance" }],
         ["MOD+,", { panelId: "runtime" }],
-        ["S S", { panelId: "skills" }],
       ]),
     );
     registration.dispose();
@@ -100,7 +99,7 @@ describe("createSettingsModule", () => {
     });
   });
 
-  test("registers the project-folder, skills, and danger-zone panels", () => {
+  test("registers the project-folder and danger-zone panels", () => {
     const workbench = createWorkbench();
 
     workbench.registerModule(createSettingsModule());
@@ -110,7 +109,6 @@ describe("createSettingsModule", () => {
 
     expect(byId("harnesses")).toBeUndefined();
     expect(byId("project-folder")).toMatchObject({ kind: "view", scope: "project" });
-    expect(byId("skills")).toMatchObject({ kind: "collection", scope: "project" });
     expect(byId("danger-zone")).toMatchObject({ kind: "view", scope: "project" });
   });
 

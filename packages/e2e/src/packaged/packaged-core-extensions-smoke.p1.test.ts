@@ -113,6 +113,7 @@ test(
           expect.objectContaining({ canUpgrade: false, enabled: true, installName: "pstdio-planner" }),
           expect.objectContaining({ enabled: true, installName: "pstdio-reports" }),
           expect.objectContaining({ enabled: true, installName: "pstdio-skills" }),
+          expect.objectContaining({ enabled: true, installName: "pstdio-skill-browser" }),
         ]),
       );
 
@@ -122,6 +123,24 @@ test(
       expect(metadata.pages).toContainEqual(
         expect.objectContaining({ extensionId: "pstdio.pstdio-home", path: "home" }),
       );
+      expect(metadata.navigationItems).toContainEqual(
+        expect.objectContaining({ extensionId: "pstdio.pstdio-skill-browser", slot: "footer" }),
+      );
+      const skillView = metadata.views.find(
+        (view) => view.extensionId === "pstdio.pstdio-skill-browser" && view.localId === "skill",
+      );
+      expect(skillView?.body.kind).toBe("file");
+      const skillLanding = metadata.views.find(
+        (view) => view.extensionId === "pstdio.pstdio-skill-browser" && view.localId === "skill-landing",
+      );
+      expect(skillLanding?.body.kind).toBe("webview");
+      if (skillLanding?.body.kind === "webview") {
+        const module = await fetch(`${started.baseUrl}${skillLanding.body.webview.moduleUrl}`, {
+          headers: runtimeAuthorization(started.descriptor),
+        });
+        expect(module.status).toBe(200);
+        expect(await module.text()).not.toBe("");
+      }
       const installedSessionsMetadata = await expectPackagedSessionsInstall({
         started,
         tempRoot,

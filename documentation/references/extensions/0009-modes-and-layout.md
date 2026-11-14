@@ -46,7 +46,7 @@ const mode = defineMode({
 
 During a tab drag, only the hovered valid panel shows a faint overlay across its whole container without shifting its content. The overlay covers padding and header controls in attached and floating panels. Tab insertion keeps the shared Sidenav placement indicator.
 
-Main headers follow the page's tab policy. A page with `main.presentation: "page"` has no tab header; a tabbed page has a header. When the tabless page's view has a closed view menu, a minimal, borderless header holds only that menu's opener. It is not a tab drop or panel placement target. Saved header choices do not override that rule. Until its removal, a mode's deprecated `alwaysShowTabs: false` still hides a tabbed page's Main header. There is no Show header or Hide header action. Legacy auxiliary header defaults and the programmatic setter remain accepted for existing integrations until their coordinated removal.
+Main headers follow the page's tab policy. A page with `main.presentation: "page"` has no tab header; a tabbed page has a header. A tabless page can provide its title and icon through `main.tab`; a header shows that presentation beside its view-menu toggles with the standard bottom divider. Without an explicit title, it shows only closed-menu openers and remains borderless. It is not a tab drop or panel placement target. Saved header choices do not override that rule. Until its removal, a mode's deprecated `alwaysShowTabs: false` still hides a tabbed page's Main header. There is no Show header or Hide header action. Legacy auxiliary header defaults and the programmatic setter remain accepted for existing integrations until their coordinated removal.
 
 ## User arrangement
 
@@ -174,7 +174,7 @@ These optional booleans default to true. Unavailable panels reject opening and d
 
 `floatingPanels` is deprecated in favor of `regionSettings.side.floatable`. Panel `collapsible` is deprecated in favor of `canOpen`/`canClose`; it keeps its legacy drag-collapse behavior, including explicit Show/Hide, when new permissions are omitted. Panel menus still support `collapsible`. Publish this additive SDK and host release before adopting the new fields in separately released extensions.
 
-Main headers follow `main.presentation`: tabless pages have no tab header, and tabbed pages have a header. A tabless page with a closed view menu shows only the minimal menu header described above. Header menus do not offer Show or Hide header. Auxiliary header defaults come from the mode's `regionSettings`. The same rules apply to host and extension pages.
+Main headers follow `main.presentation`: tabless pages have no tab header, and tabbed pages have a header. Tabless pages use the minimal title and menu header described above. Header menus do not offer Show or Hide header. Auxiliary header defaults come from the mode's `regionSettings`. The same rules apply to host and extension pages.
 
 Optional panels still collapse when their final tab closes or moves away. An explicit empty-panel open does not exempt a later final-tab close. Related placement, manual closure and revisit keep the [related-opening rules](0019-related-resource-openings.md). No page Side/Bottom layer or page panel snapshots are added.
 
