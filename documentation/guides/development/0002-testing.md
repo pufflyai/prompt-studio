@@ -33,6 +33,8 @@ Choose checks that cover the changed behavior and its affected callers. Start wi
 
 Documentation-only changes need content, link, path, and formatting checks. A documentation path in a source comment, prompt, or test fixture does not by itself require application tests.
 
+Test product behavior. Do not add tests of tests, fixtures, setup, runners, suite selection, reports, or benchmark instrumentation. Repository-local tools do not need their own automated suites. Review these changes with static checks and the affected product scenarios.
+
 ```bash
 bun run --cwd scripts verify:docs-links      # relative links, published routes, anchors, exported skills
 bun run --cwd scripts verify:sdk-reference   # SDK references name every public method
@@ -83,13 +85,13 @@ Fetch the base first, following [PR completion](../../guidance/0004-ci.md#1-fini
 | Layer | Selection |
 | --- | --- |
 | Static | Documentation links; changed code formatting and boundaries; public contract checks when relevant |
-| Queue minimum | All repository/package P0; API/database P0/P1; P1 Bun contracts and queue service integrations, including unchanged owners. Membership comes from the merge-queue scope and owning runners |
+| Queue minimum | All fast repository/package P0; affected P1 API/database and Bun contracts; affected service integrations; canonical dashboard smoke; packaged desktop smoke and affected packaged flows. Membership comes from the common PR/merge-queue planner and owning runners |
 | Additional contracts | Affected source/API/CLI contracts, including consumers of changed helpers and fixtures |
 | Changed tests | Added or edited files at every priority, using the registered runner |
 | Browser | Always run the canonical `e2e test:smoke` command used by queue CI, plus edited or explicitly selected app scenarios |
 | CI evidence | Normal PR checks, plus explicitly justified exceptional coverage; deferred breadth is an inventory for nightly/release coverage, not a mandatory PR matrix |
 
-Execution currently supports macOS and Linux; Windows agents can inspect the plan and use isolated CI. Every invocation includes the queue test minimum, even for a narrow or documentation-only diff; documentation-only tasks can still use scoped verification without invoking this command. Queue tests are never deferred. The command installs into a private scratch clone, builds selected prerequisites once with one build task at a time, then executes checks serially. Existing runner worker pools and per-test limits remain unchanged. It does not create a Prompt Studio implementation workspace or run workspace-ready hooks. Mutable dependencies, Nx indexes, restored build outputs, reports and runtime state belong to that run. Browser scenarios use the existing wrapper's dynamic ports and isolated home. A running Docker daemon is required for queue service integrations. Missing prerequisites fail the run rather than skipping tests. Install supported browser binaries beforehand; the immutable browser cache remains readable across runs. Source tests use their existing temporary fixtures. Service integrations use unique Compose projects and automatically allocated networks. Each launcher records its exact project and config before startup; the supervisor cleans those projects after stopping test processes, including on interruption. Cleanup failures prevent a pass; unrelated Docker resources are never pruned.
+Execution currently supports macOS and Linux; Windows agents can inspect the plan and use isolated CI. Every invocation includes the shared PR/queue test minimum on the actual local host, including packaging and its selected flows; Linux artifact qualification remains a hosted CI requirement. This applies even to narrow or documentation-only diffs; documentation-only tasks can still use scoped verification without invoking this command. Queue tests are never deferred. The command installs into a private scratch clone, builds selected prerequisites once with one build task at a time, then executes checks serially. Existing runner worker pools and per-test limits remain unchanged. It does not create a Prompt Studio implementation workspace or run workspace-ready hooks. Mutable dependencies, Nx indexes, restored build outputs, reports and runtime state belong to that run. Browser scenarios use the existing wrapper's dynamic ports and isolated home. A running Docker daemon is required for queue service integrations. Missing prerequisites fail the run rather than skipping tests. Install supported browser binaries beforehand; the immutable browser cache remains readable across runs. Source tests use their existing temporary fixtures. Service integrations use unique Compose projects and automatically allocated networks. Each launcher records its exact project and config before startup; the supervisor cleans those projects after stopping test processes, including on interruption. Cleanup failures prevent a pass; unrelated Docker resources are never pruned.
 
 The local target is **15 minutes from invocation**, including source selection, clone, install, build, tests and owned-process cleanup. This is a target, not a cancellation deadline. Broad changes must finish every selected check even when they take longer. The runner warns at 15 minutes, continues automatically, and records elapsed time and `exceededTarget` in its report. Never reduce coverage or shorten a benchmark to meet the target. Explicit interruption still stops owned processes and preserves partial evidence. Individual test, fixture and CI job limits remain unchanged.
 
@@ -99,7 +101,7 @@ Reports live in `test-results/local-review/<run-id>.json`. Each report names the
 
 `local_passed` means the selected local checks passed. Review readiness also requires normal latest-head PR CI and any explicitly required exceptional checks. The deferred list records coverage not run locally; it does not require `ci:full`, native, packaged or benchmark matrices for every PR. Report unrun and failed diagnostics honestly without treating optional breadth as a routine readiness gate.
 
-Native, packaged and benchmark suites are reserved for exceptional high-risk changes that focused checks cannot establish, or an explicit user request. Record the concrete risk, affected behavior and smallest complete owning workload before dispatch. A transitive shared dependency or an unedited deferred test alone is not enough. Normal nightly and stable validation continue to cover complete matrices.
+Native, additional packaged and benchmark suites beyond the required profile are reserved for exceptional high-risk changes that focused checks cannot establish, or an explicit user request. Record the concrete risk, affected behavior and smallest complete owning workload before dispatch. A transitive shared dependency or an unedited deferred test alone is not enough. Normal nightly and stable validation continue to cover complete matrices.
 
 When an exceptional case needs source benchmark qualification, use `gh workflow run benchmarks.yml --ref <candidate-branch> -f commits=<exact-sha> -f qualify_source=true -f release_channel=stable`. This preserves the selected suite’s original workloads, host policy, quarantines and limits. Do not use this as a routine PR completion step. Source qualification does not publish or certify signed release artifacts.
 
@@ -112,7 +114,7 @@ The shorthand `bun run test` uses Lerna's default bail and chains later phases w
 ```sh
 CI_PRIORITY=P2 bun x --no-install lerna run test --no-bail --concurrency 1 --ignore e2e --ignore canvas-tests
 CI_PRIORITY=P2 bun run build -- --scope e2e --include-dependencies --no-bail --concurrency 1
-CI_PRIORITY=P2 bun run --cwd packages/e2e test:scripts
+bun test:p1 --scope e2e --runner bun
 CI_PRIORITY=P2 bun run --cwd packages/e2e test:cli
 CI_PRIORITY=P2 bun run --cwd packages/e2e test:ui
 CI_PRIORITY=P2 bun run --cwd packages/e2e test:vite-terminal
@@ -255,7 +257,7 @@ Copy `dist/pstdio` to a private path and point `E2E_PACKAGED_BINARY_PATH` at the
 
 ## Isolation
 
-Packaged desktop update-channel and database-recovery tests use `PSTDIO_DEFAULT_EXTENSIONS=[]`. They keep real project creation, Settings and CLI checks, database ownership conflicts, damaged control files, and recovery after repair. These host checks do not use an agent harness. Navigation customization keeps its workbench fixture extension configuration across relaunches. Cold default-extension installation remains covered by `packages/e2e/src/packaged/packaged-core-extensions-smoke.p1.test.ts`, which runs in the native packaged toolchain checks, including Windows, with its existing workload and allowance. Attached backend-recovery tests keep their existing cold extension setup.
+Packaged desktop update-channel and database-recovery tests use `PSTDIO_DEFAULT_EXTENSIONS=[]`. They keep real project creation, Settings and CLI checks, database ownership conflicts, damaged control files, and recovery after repair. These host checks do not use an agent harness. Failing navigation-customization and cold core-extension smoke cases were removed with the quarantine cleanup. Their failure evidence and source remain in Git history. Attached backend shutdown retains its existing cold extension setup.
 
 The signed Windows installation check follows [the 0.46 database baseline](../../adrs/0103-database-baseline-replaces-in-place-upgrades.md). Updating an older baseline must retain the raw database and the original project's JSON export, preserve workspace files, and support a new project in the fresh database. Updates within the current baseline must preserve the active project. Installer, signature, launcher, CLI, and Squirrel feed checks run for both transitions.
 
@@ -316,21 +318,13 @@ Linux UI, CLI, and packaged/Vite jobs use the official `mcr.microsoft.com/playwr
 
 The browser container installs the root manifest's Bun version with `scripts/ci/setup-container-bun.ts`. This temporary bootstrap uses Bun's official registry archive because the normal setup action requires `unzip`, which the image lacks. ADR 0026 describes when to remove it.
 
-Obsolete dashboard specs were removed. Current tests cover project selection, ticket workflows, session follow-ups, workspace files and terminals, extension lifecycle, and workbench navigation. Add coverage for restored features against the current UI. Live Claude, Codex, and OpenCode follow-up tests skip unless `E2E_AGENTS` selects the provider. Packaged browser checks cover Chromium, Firefox, and WebKit; the main UI suite covers Chromium. The packaged webview suite gives commands/settings, workspace panels/session tabs, and documents/collections independent cold fixtures and test results. It keeps every assertion and the existing 120-second per-test allowance.
+Obsolete dashboard specs were removed. Current tests cover project selection, ticket workflows, session follow-ups, workspace files and terminals, extension lifecycle, and workbench navigation. Add coverage for restored features against the current UI. Live Claude, Codex, and OpenCode follow-up tests skip unless `E2E_AGENTS` selects the provider. Packaged native-settings checks cover Chromium, Firefox, and WebKit; the main UI suite covers Chromium. The packaged webview suite gives Chromium commands/settings, workspace panels/session tabs, and documents/collections independent cold fixtures and test results; Firefox retains commands/settings. The failing WebKit case was removed. Remaining cases keep the existing 120-second per-test allowance.
 
-### Flaky-test quarantine and reliability runs
+### Failing quarantined tests
 
-`scripts/ci/test-quarantine.json` records confirmed flakes, their affected platforms, owners, first-failure evidence, and removal criteria. The shared Bun wrapper, API file driver, and packaged Bun/Playwright runners exclude only registered cases on the listed platform. CI executes them separately in quarantine steps, without retries or changed limits. Only the registered test steps allow failures; setup and build failures remain blocking. A separate report check requires every registered case to execute exactly once and records its failure count in the job summary. Missing reports, skipped cases and retries fail that check. Bun JUnit reports, packaged browser JSON reports, and traces are uploaded with attempt-specific names. A passing stable gate does not mean that quarantine passed. [ADR 0101](../../adrs/0101-temporary-flaky-test-quarantine.md) records the temporary trade-off.
+Remove known-failing quarantined cases and their entries from `scripts/ci/test-quarantine.json`. For a mixed file, remove only the failing case or generated variant and its unused setup. Delete the file when no cases remain. Preserve the first-failure evidence in the ticket or report and use Git history when restoring coverage after a fix. Do not rename, skip, retry, relax, or return the failed case to the stable lane.
 
-Database coverage uses the same stable selection. Quarantined cases do not contribute to its line-coverage report; their separate lane owns their execution evidence.
-
-The Apple Silicon desktop row runs its registered packaged cases in a separate step against the same built app. The normal desktop suite retains the project-tab lifecycle case on Linux, Windows and Intel macOS. `E2E_TEST_LANE=quarantine bun run --cwd clients/desktop test:packaged` selects the registered cases on an affected native machine. The separate report check remains required and uploads beside the stable desktop results.
-
-Run registered cases locally with `E2E_TEST_LANE=quarantine bun run --cwd packages/pstdio-db test`, `E2E_TEST_LANE=quarantine bun run --cwd scripts test`, or `E2E_TEST_LANE=quarantine bun run --cwd packages/e2e test:packaged:browser`. Use the normal package scripts for the stable lane. Direct `bun test <file>` remains available for diagnosis and does not apply quarantine selection.
-
-Compiled CLI quarantine runs after native package verification against that same binary. For diagnosis, set `E2E_PACKAGED_BINARY_PATH` to the compiled executable and run `E2E_TEST_LANE=quarantine bun run --cwd packages/e2e test:packaged:cli`. The API quarantine step runs its registered file in an isolated source-conditions process, with the same 30-second test allowance as normal API shards.
-
-Each CI pipeline executes each test once per applicable platform, including performance and quarantine cases. Do not repeat a test or create multiple reliability refs to obtain a passing result. Quarantine confirmed flakes with first-failure evidence, an owner and a removal criterion; keep their limits and assertions, and require their separate execution report. A later pass does not erase an earlier failure.
+The recorded failing cases have been removed and the registry is empty. The quarantine runners remain available for focused diagnosis. If a case is registered during diagnosis, its separate lane must execute it exactly once and retain the native report; missing reports, setup failures, skipped cases, and retries still fail verification. A passing stable gate does not mean the diagnostic case passed.
 
 To investigate a failure, keep retries disabled and run only the affected spec once:
 
@@ -417,11 +411,7 @@ On 2026-10-28 the user approved a 60-second Windows allowance for two packaged c
 
 Use [Write a benchmark](0016-writing-benchmarks.md#desktop-benchmarks) for packaging commands, shared helpers, sampling, desktop workloads and budget evidence. The [nonfunctional requirements](../../guidance/0003-nonfunctional-requirements.md) set mandatory product targets. Regular performance coverage runs in nightly CI and stable-release validation.
 
-Installed harness compatibility resolves and pins npm versions before execution. When `latest` equals `minimum` and both lanes are scheduled, the required minimum lane owns their single execution; a latest-only invocation still executes. The Windows x64 Pi 0.73.1 cold detection/model case runs once in its version-specific quarantine before the blocking tool/session-resume case. Its report must prove exactly one first attempt; the 3000 ms probe remains unchanged.
-
-The final full battery additionally confirmed Intel macOS harness-submenu dismissal and compiled collection-view restart flakes. Both complete cases passed in the prior battery with unchanged sources. Their exact darwin-x64 cases join the existing native quarantine lanes; other platforms remain blocking and no deadline or assertion changes.
-
-Desktop benchmarks retain one complete ordered Playwright invocation: launch cases (including the quarantined cold start) precede renderer cases. The runner classifies the resulting first-attempt report: stable/setup failures block CI, quarantined failures remain visible in a separate mandatory report. Comparison artifacts retain all measurements and the quarantine evidence. No second invocation repeats or moves the cold scenario after renderer work.
+Installed harness compatibility resolves and pins npm versions before execution. When `latest` equals `minimum` and both lanes are scheduled, the required minimum lane owns their single execution; a latest-only invocation still executes. The installed Pi compatibility suite retains its tool/session-resume case. Its failing cold detection/model case was removed with the quarantine cleanup.
 
 ## Critical UI checks
 

@@ -71,8 +71,4 @@ A failing workflow alone does not enforce separation. Current whole-package mapp
 
 ## Local validation
 
-```bash
-bun test scripts/ci/pr-risk-labels.p0.test.ts
-```
-
-The tests cover classification outcomes, reversions, failed classification, changed head/base snapshots, manual label removal during a run, and API errors. GitHub rollout checks above prove the actual hosted permissions and merge gate.
+Use static checks for policy and configuration changes. Review the actual hosted permissions and merge gate with the disposable PR scenarios above; do not add a suite that tests workflow setup or label classification.

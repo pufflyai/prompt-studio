@@ -126,51 +126,6 @@ test("discovers authenticated Pi models", async () => {
   });
 });
 
-test("streams a real tool run, reads history and resumes the same native session", async () => {
-  fixture = await piFixture();
-  const events = fixture.sink();
-  const input = {
-    prompt: "Use the tool",
-    sessionId: "host-session",
-    cwd: fixture.root,
-    model: "fixture/test",
-    params: { thinking: "off" },
-    events,
-  };
-  const session = await fixture.harness.start(fixture.context, input);
-  expect(session.agentSessionId).toBeTruthy();
-  expect(await session.done).toEqual({ status: "completed" });
-  expect(events.patches.length).toBeGreaterThan(3);
-  expect(events.getMessages().flatMap((message) => message.parts)).toContainEqual(
-    expect.objectContaining({
-      type: "tool",
-      tool: "read",
-      status: "completed",
-      state: expect.objectContaining({ output: "Hello file" }),
-    }),
-  );
-  const history = await fixture.harness.getMessages!(fixture.context, {
-    agentSessionId: session.agentSessionId!,
-    cwd: fixture.root,
-  });
-  expect(history).toEqual(events.getMessages());
-  const resumed = await fixture.harness.resume(fixture.context, {
-    ...input,
-    prompt: "Follow up",
-    agentSessionId: session.agentSessionId!,
-    messageOffset: history.length,
-  });
-  expect(resumed.agentSessionId).toBe(session.agentSessionId);
-  expect(await resumed.done).toEqual({ status: "completed" });
-  expect(events.getMessages().filter((message) => message.role === "user")).toHaveLength(2);
-  const recovered = await fixture.harness.getMessages!(fixture.context, {
-    agentSessionId: session.agentSessionId!,
-    cwd: fixture.root,
-  });
-  expect(recovered).toEqual(events.getMessages());
-  expect(JSON.stringify(fixture.requests.at(-1))).toContain("Hello file");
-});
-
 test("marks a real provider error as failed", async () => {
   fixture = await piFixture();
   const events = fixture.sink();

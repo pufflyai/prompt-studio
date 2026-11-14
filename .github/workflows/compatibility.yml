@@ -1,0 +1,15 @@
+name: Weekly native compatibility
+on:
+  schedule:
+    - cron: "41 15 * * 5"
+  workflow_dispatch: null
+permissions:
+  contents: read
+  actions: read
+  pull-requests: read
+jobs:
+  secondary_artifacts:
+    uses: ./.github/workflows/test-and-build.yml
+    with:
+      profile: compatibility
+      release_channel: stable

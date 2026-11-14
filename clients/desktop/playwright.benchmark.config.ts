@@ -5,8 +5,7 @@ import { playwrightQuarantineSelection } from "pstdio-scripts/testing";
 const quarantine = process.env.E2E_TEST_LANE === "quarantine";
 const ordered = process.env.E2E_TEST_LANE === "benchmark";
 
-// Benchmarks measure the packaged app without traces. One worker runs files in name order and
-// tests in declaration order; packaged-launch.p3.bench.ts relies on that order for its cold start.
+// Benchmarks measure the packaged app without traces, using one worker in declaration order.
 export default defineConfig({
   outputDir: quarantine ? "test-results/benchmark-quarantine" : "test-results/benchmark",
   testDir: "src/e2e",

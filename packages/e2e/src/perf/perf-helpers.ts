@@ -1,4 +1,4 @@
-import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
+import { type APIRequestContext, expect, type Page } from "@playwright/test";
 import { findBudgetFailures, recordPageMemory, throttleChromiumCpu } from "pstdio-benchmarks";
 import { recordMeasurement } from "pstdio-benchmarks/writer";
 import { prepareDashboard } from "../ui/helpers/workspace-files";
@@ -145,16 +145,4 @@ export const preparePerfPage = async (page: Page, projectId: string) => {
   await prepareDashboard(page, projectId);
   await installInteractionClock(page);
   await throttleChromiumCpu(page);
-};
-
-// Only a failed numeric performance assertion can use a performance quarantine.
-// Missing UI, invalid setup and whole-case timeouts keep their blocking result.
-export const checkPerformance = (check: () => void) => {
-  try {
-    check();
-  } catch (error) {
-    if (error instanceof Error)
-      test.info().annotations.push({ type: "performance-budget-failure", description: String(error) });
-    throw error;
-  }
 };

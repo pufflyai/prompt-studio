@@ -73,6 +73,9 @@ const synced = (device: CloudAcceptanceDevice, projectId: string, completion = e
   completion
     .poll(() => device.client.account.projectSyncStatus(projectId), {
       message: `${device.name}: waiting for Cloud sync`,
+      // Keep observing within the existing deadline after the relay reconnects;
+      // exponential polling can otherwise stop almost a second before it expires.
+      intervals: [100],
     })
     .toMatchObject({ state: "synced" });
 const read = <T>(device: CloudAcceptanceDevice, projectId: string) =>

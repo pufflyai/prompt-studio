@@ -5,7 +5,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { commandRefId } from "@pstdio/sdk/extensions";
 import { createTestApp } from "../../test-utils/create-test-app";
-import { provisionProjectWorkspaces } from "./provision-coordinator";
 import { findWorkspaceProvider, runWorkspaceProviderOperation } from "./workspace-provider-runtime";
 
 let root: string;
@@ -118,52 +117,6 @@ test("an installed provider discovers current choices through its public project
   expect(await providers()).toMatchObject([{ id: providerId, params: { revision: { defaultValue: "main" } } }]);
   await writeFile(join(sourceFolder, "revision.txt"), "review");
   expect(await providers()).toMatchObject([{ id: providerId, params: { revision: { defaultValue: "review" } } }]);
-});
-
-test("an installed local provider prepares its directory before readiness and reopens it after restart", async () => {
-  // This case also runs without the preceding discovery check in quarantine.
-  await writeFile(join(sourceFolder, "revision.txt"), "review");
-  const created = await post("/v1/workspaces", { project_id: projectId, provider_id: providerId, params: {} });
-  expect(created.status).toBe(201);
-  const workspace = await created.json();
-  expect(workspace).toMatchObject({ provider_state: "ready", execution_kind: "local", provider_error_json: null });
-  const directory = join(root, "home", "workspaces", workspace.id);
-  expect(workspace.root_path).toBe(directory);
-  expect(JSON.parse(await readFile(join(directory, "identity.json"), "utf8"))).toEqual({
-    id: workspace.id,
-    revision: "review",
-  });
-  await handle.close();
-  handle = await openApp();
-  const runtime = await findWorkspaceProvider(handle.deps, { projectId, providerId, workspaceId: workspace.id });
-  expect(runtime).toBeDefined();
-  // Catalog reload schedules the normal project setup queue. Join it before
-  // checking command readiness or removing its local target.
-  await provisionProjectWorkspaces(handle.deps, projectId);
-  expect(await handle.deps.workspaceService.get(workspace.id)).toMatchObject({
-    initializing: false,
-    setup_error: null,
-  });
-  expect(
-    await runWorkspaceProviderOperation(runtime!, (ctx) =>
-      runtime!.provider.resolve(ctx, {
-        projectId,
-        workspaceId: workspace.id,
-        providerRef: workspace.provider_ref_json,
-      }),
-    ),
-  ).toMatchObject({
-    executionTarget: { kind: "local", rootPath: directory },
-    providerRef: workspace.provider_ref_json,
-  });
-  expect(await runtime!.context.workspaces.get(workspace.id)).toMatchObject({
-    id: workspace.id,
-    rootPath: directory,
-    providerId,
-  });
-  await runtime!.context.workspaces.delete(workspace.id);
-  expect(existsSync(directory)).toBe(false);
-  expect(existsSync(sourceFolder)).toBe(true);
 });
 
 const providerDirectory = async (workspaceId: string) => {

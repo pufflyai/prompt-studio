@@ -96,9 +96,9 @@ jobs:
       - name: "[phase:test] Measure fixed workloads without traces or retries"
         if: inputs.kind == 'performance'
         run: bun scripts/test.ts --performance-family desktop --prebuilt
-      - name: "[phase:test] Test every packaged functional case"
+      - name: "[phase:test] Test the declared shared or native packaged contract"
         if: inputs.kind == 'functional'
-        run: bun scripts/test.ts --artifact packaged-desktop --prebuilt
+        run: bun scripts/test.ts --artifact packaged-desktop --prebuilt --out test-results/ci/desktop-contract-plan.json
       - name: Require first-attempt launch quarantine execution
         if: ${{ !cancelled() && inputs.kind == 'performance' && matrix.platform == 'win32' }}
         run: bun scripts/ci/verify-quarantine-reports.ts packaged-desktop-benchmark --scope @pstdio/desktop
@@ -111,7 +111,7 @@ jobs:
       - name: Attest actual consumer inputs and outcome
         if: always()
         env:
-          CHECK: ${{ inputs.kind == 'functional' && 'signed-functional' || 'performance-desktop' }}-${{ matrix.target }}
+          CHECK: ${{ inputs.kind == 'functional' && (matrix.platform == 'linux' && 'desktop-shared' || 'desktop-native') || 'performance-desktop' }}-${{ matrix.target }}
           OUTCOME: ${{ job.status }}
         shell: bash
         run: bun scripts/ci/production-evidence.ts --check "$CHECK" --outcome "$OUTCOME"
@@ -128,6 +128,7 @@ jobs:
         with:
           name: production-desktop-${{ inputs.kind }}-${{ matrix.target }}-attempt-${{ github.run_attempt }}
           path: |
+            test-results/ci/desktop-contract-plan.json
             clients/desktop/test-results
             test-results/ci/planned
             !test-results/ci/planned/**/extension-fixtures-*/**

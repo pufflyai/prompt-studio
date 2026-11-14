@@ -18,8 +18,7 @@ const priorities: Record<string, TestPriority> = {
   package_checks: "P0",
   license_check: "P0",
   browser_smoke: "P1",
-  windows_test_and_build: "P2",
-  windows_database_tests: "P2",
+  windows_native_contracts: "P2",
   harness_cli_support: "P2",
   build_docker: "P2",
   quarantined_bun_tests: "P2",
@@ -53,7 +52,9 @@ export const matchesJob = (name: string, id: string) => {
 };
 
 export const isGateJob = (name: string) =>
-  ["validation_results", "ci_passed", "production_ci_passed", "windows_ci_passed"].some((id) => matchesJob(name, id));
+  ["validation_results", "ci_passed", "production_ci_passed", "windows_ci_passed", "macos_ci_passed"].some((id) =>
+    matchesJob(name, id),
+  );
 
 const completedFailure = (job: ObservedJob) => job.status === "completed" && job.conclusion !== "success";
 
