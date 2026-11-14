@@ -5,9 +5,9 @@ This repository-local extension prepares Prompt Studio worktrees, controls isola
 ## CLI commands
 
 ```sh
-pst pstdio.dev workspace open-in-vscode --workspace-id <id>
-pst pstdio.dev workspace open-in-isolation --workspace-id <id>
-pst pstdio.dev workspace stop-isolation --workspace-id <id>
+pst pstdio-dev workspace open-in-vscode --workspace-id <id>
+pst pstdio-dev workspace open-in-isolation --workspace-id <id>
+pst pstdio-dev workspace stop-isolation --workspace-id <id>
 ```
 
 `open-in-vscode` opens the workspace worktree in VS Code. `open-in-isolation` starts the repository's isolated development stack and opens its dashboard. `stop-isolation` stops that stack.
@@ -21,8 +21,8 @@ At noon each day, it starts an evidence-gated search for one high-impact issue. 
 Expand **Performance** in the project navigation to open **Trends**, **Compare**, or **Runs**. Each destination keeps the project navigation visible. **Trends** shows every benchmark across releases, one line per platform. **Compare** compares two commits, or shows one commit's own results, and measures commits that have none. **Runs** lists benchmark runs on GitHub Actions. Its native **New run** attached menu selects commits, suites, and platforms and skips commits that already have results. Close the menu with its divider; reopening retains its draft. Results are cached in extension storage; see [Benchmark results](../../../documentation/references/performance/0006-benchmark-results.md).
 
 ```sh
-pst pstdio.dev benchmarks sync
-pst pstdio.dev benchmarks start-run --commits pstdio@0.45.0 --commits main --platforms linux-x64
+pst pstdio-dev benchmarks sync
+pst pstdio-dev benchmarks start-run --commits pstdio@0.45.0 --commits main --platforms linux-x64
 ```
 
 The pages use your GitHub CLI login. Run `gh auth login` in this repository first.
@@ -31,12 +31,25 @@ The pages use your GitHub CLI login. Run `gh auth login` in this repository firs
 
 Open **Release health** from the project navigation for chronological test history. The total-tests plot stacks end-to-end, component, backend, package, harness, performance, and quarantine categories in blue shades. Separate plots show failed tests and quarantined tests, each on its own count scale so small counts stay readable beside full test totals. A line plot tracks each completed run's total duration from start to finish. Pointer or keyboard tooltips show exact counts, duration, status, commit, and evidence coverage. **Overview** holds the plots; **Runs** lists every run in a data table with its duration and a GitHub link. Select a run to read failure links, evidence coverage, and skipped or unrun tests. Publication and verification have separate statuses; a published nightly can still fail verification.
 
-The panel reads runner summaries, including quarantined cases, through your GitHub CLI login. It refreshes on opening, on demand, and daily; completed job counts are cached under this extension's project storage. Missing reports and unavailable logs remain explicit. A refresh preserves previous results if GitHub is unavailable. The initial history covers the latest ten manual, scheduled, or version-release candidates among the latest 100 workflow runs.
+The panel reads runner summaries, including quarantined cases, through your GitHub CLI login. It refreshes on opening, on demand, and daily; completed job counts are cached under this extension's project storage. Missing reports and unavailable logs remain explicit. A refresh preserves previous results if GitHub is unavailable. The initial history covers the latest ten release candidates among the latest 100 workflow runs, including main pushes that resume an unpublished release. Pushes that only update the version PR do not count toward that limit.
 
 ```sh
 pst pstdio.dev release-health sync
 pst pstdio.dev release-health history
+pst pstdio.dev release-health inspect
+pst pstdio.dev release-health inspect --run-id 43304493970
 ```
+
+All release-health data is available as CLI JSON. `sync` starts or reuses a background refresh. `history` returns the same cached results the page reads: test totals, category counts, quarantine counts, durations, publication status, evidence coverage, failed-job links, and collection errors. Its `sync` field contains the background run's ID, exact status, timestamps, result, and structured error; it is `null` before a refresh or after that automation record expires. `syncedAt` records the most recent saved run, so it can advance while `syncing` is still true.
+
+```sh
+# Inspect refresh state without opening the page.
+pst pstdio.dev release-health history | jq '{syncedAt, syncing, error, sync}'
+# Read the newest cached run, including every chart value and failure detail.
+pst pstdio.dev release-health history | jq '.runs | reverse | .[0]'
+```
+
+`inspect` compares the latest GitHub release workflow run, or the requested run ID, with its cached evidence. It returns live run metadata and job statuses, the cached result (or `null`), sync state, collection limits, and an eligibility decision with its reason. If GitHub's job request fails, the command preserves run metadata, cached evidence and sync status, reports the error, and returns `null` for jobs and eligibility. Inspection uses the same eligibility rule as collection and does not download logs or change the cache. Eligibility does not imply a run is already cached: collection scans at most 100 workflow runs and processes the latest ten eligible candidates per refresh. The Runs table shows cached runs newest first; chart history stays oldest first.
 
 ## Merge queue repair
 

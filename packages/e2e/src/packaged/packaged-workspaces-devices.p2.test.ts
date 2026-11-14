@@ -15,6 +15,7 @@ import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } 
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 import { removeTestDirectory } from "./remove-test-directory";
+import { waitForForeignWorkspaceHistory } from "./workspace-history-readiness.fixture";
 
 type ResourceListRendererQueryResult = Omit<KanbanRendererQueryResult, "rows"> & { rows: ResourceListRendererRow[] };
 let root: string;
@@ -227,14 +228,13 @@ test(
         });
         progress("wait for native session completion");
         await waitFor(async () => (await first.client.sessions.get(session.id)).status === "completed");
-        progress("wait for foreign history sync");
-        await waitFor(async () =>
-          (await second.client.sessions.query(projectId)).items.some((row) => row.id === session.id),
-        );
-        progress("wait for foreign workspace sync");
-        await waitFor(async () =>
-          (await second.client.workspaces.query(projectId)).items.some((row) => row.device?.id === first.id),
-        );
+        progress("wait for foreign session, workspace and history link sync");
+        const foreignWorkspace = await waitForForeignWorkspaceHistory({
+          sessionId: session.id,
+          deviceId: first.id,
+          readSessions: (workspaceId) => second.client.sessions.query(projectId, { workspaceId }),
+          readWorkspaces: () => second.client.workspaces.query(projectId),
+        });
         progress("query device groups and workspace history");
         const data = await second.query();
         const device = data.attributes!.find((field) => field.id === "device")!;
@@ -249,7 +249,7 @@ test(
             },
           }),
         );
-        const foreign = data.rows.find((row) => row.resource?.device?.id === first.id)!;
+        const foreign = data.rows.find((row) => row.resource?.id === foreignWorkspace.id)!;
         expect(foreign.target).toMatchObject({ kind: "page", page: { id: "history" } });
         const history = await second.command("view.history.resourceList.query", {
           renderer: {

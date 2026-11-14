@@ -50,6 +50,7 @@ const toCommandRecord = (command: ExtensionRuntime["commands"][number]) => ({
   automation: command.automation,
   copyResultToClipboard: command.copyResultToClipboard,
   resourceMutation: command.resourceMutation,
+  confirmation: command.confirmation,
   params: command.params as WorkbenchExtensionMetadata["commands"][number]["params"],
 });
 

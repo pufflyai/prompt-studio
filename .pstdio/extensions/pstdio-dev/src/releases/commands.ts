@@ -1,6 +1,8 @@
-import { defineCommand } from "@pstdio/sdk/extensions";
+import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { healthChanged } from "./events";
 import { readHealth, syncHealth } from "./history";
+import { inspectRelease } from "./inspection";
+import { HEALTH_SYNC_FILE, readHealthSync } from "./sync-state";
 
 let requesting = Promise.resolve();
 const serializeRefresh = <T>(work: () => Promise<T>) => {
@@ -11,7 +13,6 @@ const serializeRefresh = <T>(work: () => Promise<T>) => {
   );
   return next;
 };
-const syncFile = "releases/sync.json";
 const worker = defineCommand({
   id: "release-health.sync-worker",
   title: "Collect release test results",
@@ -31,17 +32,14 @@ export const healthSync = defineCommand({
   run: (ctx) =>
     serializeRefresh(async () => {
       if (!ctx.extensionFiles) throw new Error("Release history needs a project.");
-      if (await ctx.extensionFiles.exists(syncFile)) {
-        const id = JSON.parse(await ctx.extensionFiles.readText(syncFile)) as string;
-        const current = await ctx.automation.get(id);
-        if (current && (current.status === "queued" || current.status === "running")) return current;
-      }
+      const current = await readHealthSync(ctx);
+      if (current && (current.status === "queued" || current.status === "running")) return current;
       const run = await ctx.automation.enqueue({
         command: worker.ref,
         input: { workspaceId: ctx.workspaceId },
         key: `health:${Date.now()}`,
       });
-      await ctx.extensionFiles.writeText(syncFile, JSON.stringify(run.id));
+      await ctx.extensionFiles.writeText(HEALTH_SYNC_FILE, JSON.stringify(run.id));
       await ctx.events.emit(healthChanged, {});
       return run;
     }),
@@ -53,16 +51,17 @@ export const releaseCommands = {
     cli: true,
     async run(ctx) {
       const history = await readHealth(ctx);
-      let syncing = false;
-      let syncError: string | undefined;
-      if (ctx.extensionFiles && (await ctx.extensionFiles.exists(syncFile))) {
-        const id = JSON.parse(await ctx.extensionFiles.readText(syncFile)) as string;
-        const run = await ctx.automation.get(id);
-        syncing = run?.status === "queued" || run?.status === "running";
-        if (run?.status === "failed") syncError = run.error?.message;
-      }
-      return { ...history, error: syncError ?? history.error, syncing };
+      const sync = await readHealthSync(ctx);
+      const syncing = sync?.status === "queued" || sync?.status === "running";
+      return { ...history, error: sync?.error?.message ?? history.error, syncing, sync };
     },
+  }),
+  "release-health.inspect": defineCommand({
+    id: "release-health.inspect",
+    title: "Inspect a live release run and its cached evidence",
+    cli: true,
+    params: { runId: params.text({ label: "GitHub run ID; defaults to the latest release workflow run" }) },
+    run: (ctx, { runId }) => inspectRelease(ctx, runId),
   }),
   "release-health.sync": healthSync,
   "release-health.sync-worker": worker,

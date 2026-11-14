@@ -69,13 +69,13 @@ test("startup changes select the existing app smoke and its build prerequisites"
   expect(result.setup.flatMap((check) => check.command)).toContain("--concurrency");
 });
 
-test("affected unedited breadth and benchmarks remain visible as required CI evidence", () => {
+test("affected unedited breadth remains visible without requiring full PR matrices", () => {
   const result = plan(["packages/producer/src/rule.ts"]);
   expect(result.deferred).toContainEqual(
-    expect.objectContaining({ file: tests[5], evidence: "ci:full diagnostics required" }),
+    expect.objectContaining({ file: tests[5], evidence: "nightly/release coverage; exceptional diagnostics only" }),
   );
   expect(result.deferred).toContainEqual(
-    expect.objectContaining({ file: tests[6], evidence: "complete benchmark diagnostics required" }),
+    expect.objectContaining({ file: tests[6], evidence: "nightly/release benchmarks; exceptional diagnostics only" }),
   );
 });
 

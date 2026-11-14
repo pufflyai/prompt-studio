@@ -65,5 +65,7 @@
   "settings.workflow.statuses.title": "워크플로 상태 선택",
   "settings.workflow.statuses.description": "이 확장의 설정 탭에서 워크플로 상태를 선택하세요. 표시 이름은 동작을 결정하지 않습니다.",
   "commands.requestReview.title": "검토 요청",
-  "commands.requestReview.description": "검토 요청을 만들고 티켓을 주의가 필요한 상태로 표시합니다."
+  "commands.requestReview.description": "검토 요청을 만들고 티켓을 주의가 필요한 상태로 표시합니다.",
+  "commands.cleanupBoard.title": "보드 정리",
+  "commands.cleanupBoard.model": "모델"
 }

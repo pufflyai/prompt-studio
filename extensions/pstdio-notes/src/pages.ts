@@ -130,6 +130,7 @@ export const noteTarget = (
   id: string,
   label: string,
   context?: Pick<ExtensionContextBase, "extensionId" | "projectId">,
+  writable?: boolean,
 ) => ({
   kind: "compound" as const,
   targets: [
@@ -137,7 +138,7 @@ export const noteTarget = (
     {
       kind: "panel" as const,
       panel: notesPage.panels.note,
-      resource: noteResource(id, label, context),
+      resource: noteResource(id, label, context, writable),
       open: "pin" as const,
     },
   ],

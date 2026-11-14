@@ -201,7 +201,19 @@ test("keeps typing in the same editor when the first line names a new note", asy
   });
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
+  const resolutionReady = Promise.withResolvers<void>();
+  const releaseResolution = Promise.withResolvers<void>();
+  const resolutionForwarded = Promise.withResolvers<void>();
   try {
+    // Keep the real resolver result pending until typing begins, so access metadata
+    // arriving later cannot rely on request timing to avoid a document reload.
+    await page.route("**/extensions/commands/pstdio.pstdio-notes.command.notes.resolve/execute", async (route) => {
+      const resolved = await route.fetch();
+      resolutionReady.resolve();
+      await releaseResolution.promise;
+      await route.fulfill({ response: resolved });
+      resolutionForwarded.resolve();
+    });
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
     await page.goto(`/projects/${project.id}/extensions/pstdio.notes/notes`);
     const sidebar = page.locator('[data-workbench-region="sidenav"]');
@@ -209,12 +221,15 @@ test("keeps typing in the same editor when the first line names a new note", asy
     await sidebar.getByRole("button", { name: "New note", exact: true }).click();
     const editor = page.getByTestId("content-editable").filter({ visible: true }).first();
     await expect(editor).toBeEmpty();
+    await resolutionReady.promise;
     const mountedEditor = await editor.elementHandle();
     const documentReads: string[] = [];
     page.on("request", (request) => {
       if (request.url().includes("pstdio.notes.view.note-editor.file.load/execute")) documentReads.push(request.url());
     });
     await editor.fill("First line title");
+    releaseResolution.resolve();
+    await resolutionForwarded.promise;
     await expect(page.getByRole("tab", { name: "First line title", exact: true })).toHaveAttribute(
       "aria-selected",
       "true",
@@ -227,6 +242,7 @@ test("keeps typing in the same editor when the first line names a new note", asy
     await page.keyboard.type(" and keep typing");
     await expect(editor).toHaveText("First line title and keep typing");
   } finally {
+    releaseResolution.resolve();
     rmSync(repoRoot, { recursive: true, force: true });
   }
 });

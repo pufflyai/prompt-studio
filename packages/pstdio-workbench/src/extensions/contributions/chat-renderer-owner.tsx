@@ -27,6 +27,22 @@ interface ChatRendererSessionOwner {
   untrack?(): void;
 }
 
+const availableCommandIds = (input: RegisterWorkbenchExtensionContributionsInput) =>
+  JSON.stringify(input.metadata.commands.map((command) => command.id).sort());
+
+const selectRegistration = (
+  owner: ChatRendererSessionOwner,
+  render: WorkbenchPanelRenderInput,
+  registration: RegisterWorkbenchExtensionContributionsInput,
+  streaming: boolean,
+) => {
+  const commandsChanged = availableCommandIds(owner.registration) !== availableCommandIds(registration);
+  owner.render = render;
+  owner.registration = registration;
+  // Optional provider commands resolve against the registration captured by the watch.
+  if (commandsChanged && streaming) owner.session.reconnect();
+};
+
 const createQueryRootKeys = () => {
   const roots = new WeakMap<ScopedQueryClient, number>();
   let nextRoot = 0;
@@ -47,6 +63,7 @@ export const createChatRendererOwner = (
   const hosts = new WeakMap<WorkbenchCore, ComponentType<NativeChatHostProps> | undefined>();
   const sessions = new Map<string, ChatRendererSessionOwner>();
   const replacement = createChatRegistrationReplacement(() => sessions.values());
+
   const normalizeResource = (resource: ResourceRef | undefined) =>
     resource ? (input.resolveChatResource?.(resource, input.projectId) ?? resource) : undefined;
   const rootKey = createQueryRootKeys();
@@ -65,8 +82,7 @@ export const createChatRendererOwner = (
     const key = keyFor(resource, queries);
     let owner = sessions.get(key);
     if (owner) {
-      owner.render = render;
-      owner.registration = registration;
+      selectRegistration(owner, render, registration, Boolean(body.stream));
       retention.touch(owner.session);
     }
     const binding = () => {
@@ -111,8 +127,7 @@ export const createChatRendererOwner = (
         viewId: view.id,
         isSource,
         select: (render, registration) => {
-          capturedOwner.render = render;
-          capturedOwner.registration = registration;
+          selectRegistration(capturedOwner, render, registration, Boolean(body.stream));
         },
       });
       owner.untrack = retention.add(queries, session, () => {

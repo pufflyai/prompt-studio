@@ -30,7 +30,7 @@ export const notesTree = defineView({
         canDrag: writable,
         canDrop: writable,
         resource: noteResource(note.id, note.title, ctx, writable),
-        target: noteTarget(note.id, note.title, ctx),
+        target: noteTarget(note.id, note.title, ctx, writable),
       });
       const folderIds = new Set(folders.map((folder) => folder.id));
       return [

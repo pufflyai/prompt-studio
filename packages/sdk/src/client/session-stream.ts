@@ -18,6 +18,7 @@ export interface SessionStreamListener {
 }
 
 export type ClientStreamSubscription =
+  | { workspace_files: { project_id: string; workspace_id: string } }
   | { workspace_diff: { project_id: string; workspace_id: string } }
   | { native_document: { project_id: string; document_key: string; room_id: string } }
   | { text_editing: { project_id: string; token: string } }
