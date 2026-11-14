@@ -4,9 +4,9 @@ import type { ReactNode } from "react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { getWorkbenchRenderers, type WorkbenchCore, type WorkbenchWidgetPlacement } from "../../core";
 import { toPanelContribution, toPanelInstance } from "../../core/registries/layout/panel-api";
-import { settingsLeaveGuard } from "../settings/settings-leave-guard";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
+import { createOverlayCloseHandler } from "./overlay-dismissal";
 
 export interface WorkbenchOverlayWidgetConfig {
   size?: "xs" | "sm" | "md" | "lg" | "xl" | "cover" | "full";
@@ -205,13 +205,7 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
     <WorkbenchOverlayFallback label={`No renderer registered for ${widget.rendererId}.`} />
   );
 
-  const handleOpenChange = async (details: { open: boolean }) => {
-    if (!details.open && canCloseOverlay) {
-      if (placement.viewId === "workbench.settings" && !(await settingsLeaveGuard(workbench).request())) return;
-      setExitingPlacement(placement);
-      workbench.layout.closePanel(placement.widgetId);
-    }
-  };
+  const handleOpenChange = createOverlayCloseHandler({ workbench, placement, open, onExit: setExitingPlacement });
 
   // Nested overlays (confirmation dialogs, popovers, menus) portal outside this
   // dialog's content, so their clicks register as outside interactions here. If
@@ -230,6 +224,9 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
       variant={pageDialog ? "create" : undefined}
       open={open}
       onOpenChange={handleOpenChange}
+      // The placement owns this dialog. Retiring an earlier menu or popover
+      // must not dismiss it through the library's inferred layer hierarchy.
+      onRequestDismiss={(event) => event.preventDefault()}
       onInteractOutside={handleInteractOutside}
     >
       <Portal>

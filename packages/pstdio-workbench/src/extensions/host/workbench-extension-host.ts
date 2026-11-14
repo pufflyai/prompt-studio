@@ -227,7 +227,11 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
     disposables.push(...registerMenus(input, context));
     disposables.push(...registerCommandPaletteContributions(input, context));
     disposables.push(
-      registerWorkbenchExtensionTreeRenderers({ ...input, resolveNodeResource: input.resolveTreeNodeResource }),
+      registerWorkbenchExtensionTreeRenderers({
+        ...input,
+        resolveNodeResource: input.resolveTreeNodeResource,
+        renderNodeEndContent: input.renderTreeNodeEndContent,
+      }),
     );
     disposables.push(registerWorkbenchExtensionFileRenderers(input));
     disposables.push(registerWorkbenchExtensionControlsRenderers(context, input.metadata.controlsRenderers ?? []));

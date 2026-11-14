@@ -10,7 +10,7 @@ import type { setTicketAttributeCommand } from "../../commands/set-ticket-attrib
 import type { commands } from "../commands/index";
 import { planChanged } from "../contracts";
 import { plannerTicketsChanged } from "../planner";
-import { useLiveValue } from "./use-live-value";
+import { usePlannerQuery } from "./use-planner-query";
 
 // The timeline answers Planner review requests through the same commands as the CLI.
 type PlanCommands = typeof commands & {
@@ -27,8 +27,6 @@ type PlanCommands = typeof commands & {
 
 export type PlanClient = ReturnType<typeof createWebviewClient<PlanCommands>>;
 
-const readPlan = (client: PlanClient) => client.commands["timeline.plan.read"]();
-
 // Planner reports tag changes as ticket changes, so track names stay current too.
 const planEvents = [
   plannerTicketsChanged,
@@ -40,6 +38,10 @@ const planEvents = [
 
 export function usePlan(host: GuestHost) {
   const [client] = useState(() => createWebviewClient<PlanCommands>(host));
-  const { value: plan } = useLiveValue(client, readPlan, planEvents);
-  return { client, plan };
+  const {
+    value: plan,
+    error,
+    retry,
+  } = usePlannerQuery(client, client.commands["timeline.plan.read"].query(undefined, { events: planEvents }));
+  return { client, plan, error, retry };
 }

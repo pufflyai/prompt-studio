@@ -1,11 +1,12 @@
 import type { ScopedQuery } from "@pstdio/sdk/extensions";
-import { settleReadBatch } from "@pstdio/workbench";
 import { getRuntimeApiClient } from "@/lib/api";
 import { getDashboardQueryClient } from "@/lib/query-client";
 import { getDashboardScopedQueries } from "@/lib/scoped-queries";
 import { getRuntimeCollections, type RuntimeCollections } from "@/lib/sync/collections";
 import { createRuntimeState } from "@/lib/sync/runtime-state";
 import { createWorkspaceDiffAdmission } from "./workspace-diff-admission";
+import { waitForWorkspaceDiffSummary } from "./workspace-diff-query-wait";
+import { settleWorkspaceDiffReads } from "./workspace-diff-reads";
 import { createWorkspaceDiffSource } from "./workspace-diff-source";
 import { workspaceState } from "./workspace-state";
 
@@ -17,30 +18,55 @@ export interface DashboardWorkspaceDiffSummary {
 }
 
 const queryId = "workspaces.diff-summary";
+const sourceKeyFor = (projectId: string | undefined, workspaceId: string) => JSON.stringify([projectId, workspaceId]);
+const workspaceDiffLocation = (row: Record<string, unknown>) =>
+  JSON.stringify([row.execution_kind, row.provider_id, row.root_path, row.provider_ref_json, row.branch]);
 const runtimeState = createRuntimeState(
-  () => ({
-    queries: new Map<string, ScopedQuery<DashboardWorkspaceDiffSummary | null>>(),
-    sources: new Map<string, ReturnType<typeof createWorkspaceDiffSource> & { location: string }>(),
-    admit: createWorkspaceDiffAdmission(),
-  }),
+  (owner) => {
+    const queries = new Map<string, ScopedQuery<DashboardWorkspaceDiffSummary | null>>();
+    let pruning = false;
+    const stopRetirement = getDashboardScopedQueries(owner).subscribeRetirement(() => {
+      if (pruning) return;
+      pruning = true;
+      // Retirement can occur during row creation; prune once after the current render batch.
+      queueMicrotask(() => {
+        pruning = false;
+        for (const [id, query] of queries) if (query.isDisposed()) queries.delete(id);
+      });
+    });
+    return {
+      queries,
+      stopRetirement,
+      sources: new Map<string, ReturnType<typeof createWorkspaceDiffSource> & { location: string }>(),
+      admit: createWorkspaceDiffAdmission(),
+    };
+  },
   (state) => {
+    state.stopRetirement();
     for (const source of state.sources.values()) source.close();
     state.sources.clear();
     state.queries.clear();
   },
 );
 const readyWorkspace = (workspaceId: string, owner: RuntimeCollections) => {
+  if (owner.isDisposed()) return undefined;
   const workspace = owner.getCollection("workspaces").get(workspaceId);
   const capabilities = workspace?.provider_capabilities_json as { diff?: boolean } | undefined;
   return workspace && workspaceState(workspace) === "ready" && capabilities?.diff === true ? workspace : undefined;
 };
 
-export const getDashboardWorkspaceDiffQuery = (workspaceId: string, owner = getRuntimeCollections()) => {
+export const getDashboardWorkspaceDiffQuery = (
+  workspaceId: string,
+  owner = getRuntimeCollections(),
+  expectedProjectId?: string,
+) => {
+  if (owner.isDisposed()) throw new Error("Runtime is disposed");
   const state = runtimeState(owner);
-  for (const [id, query] of state.queries) if (query.isDisposed()) state.queries.delete(id);
   const workspace = owner.getCollection("workspaces").get(workspaceId);
-  const projectId = typeof workspace?.project_id === "string" ? workspace.project_id : undefined;
-  const sourceKey = JSON.stringify([projectId, workspaceId]);
+  const projectId = expectedProjectId ?? (typeof workspace?.project_id === "string" ? workspace.project_id : undefined);
+  const sourceKey = sourceKeyFor(projectId, workspaceId);
+  const cached = state.queries.get(sourceKey);
+  if (cached && !cached.isDisposed()) return cached;
   const query = getDashboardScopedQueries(owner)
     .forScope({ projectId })
     .query({
@@ -48,12 +74,22 @@ export const getDashboardWorkspaceDiffQuery = (workspaceId: string, owner = getR
       resourceKey: workspaceId,
       read: async (signal) => {
         const row = readyWorkspace(workspaceId, owner);
-        if (!row || row.project_id !== workspace?.project_id) return null;
+        if (!row || row.project_id !== projectId) return null;
+        const location = workspaceDiffLocation(row);
+        const currentLocation = () => {
+          const current = readyWorkspace(workspaceId, owner);
+          return current && current.project_id === projectId && workspaceDiffLocation(current) === location;
+        };
         await state.sources.get(sourceKey)?.ready;
         signal.throwIfAborted();
-        const response = await state.admit(signal, () =>
-          getRuntimeApiClient(owner).workspaces.diffSummary(workspaceId, "fork_point", signal),
+        // Watch setup and finite admission can both outlive a scope or capability change.
+        const response = await state.admit(signal, async () =>
+          currentLocation()
+            ? getRuntimeApiClient(owner).workspaces.diffSummary(workspaceId, "fork_point", signal)
+            : null,
         );
+        signal.throwIfAborted();
+        if (!currentLocation()) return null;
         return response
           ? {
               workspaceId: response.workspace_id,
@@ -64,6 +100,14 @@ export const getDashboardWorkspaceDiffQuery = (workspaceId: string, owner = getR
           : null;
       },
       subscribe: (invalidate) => {
+        const readIdentity = () => {
+          const row = readyWorkspace(workspaceId, owner);
+          if (!row || row.project_id !== projectId) return undefined;
+          // Only local workspaces have a file stream; others still need revision hints.
+          const revision = row.execution_kind === "local" ? undefined : row.updated_at;
+          return JSON.stringify([workspaceDiffLocation(row), revision]);
+        };
+        let observedIdentity = readIdentity();
         const syncSource = () => {
           const row = readyWorkspace(workspaceId, owner);
           const current = state.sources.get(sourceKey);
@@ -76,7 +120,7 @@ export const getDashboardWorkspaceDiffQuery = (workspaceId: string, owner = getR
             current?.close();
             state.sources.delete(sourceKey);
           } else {
-            const location = JSON.stringify([row.root_path, row.provider_ref_json]);
+            const location = workspaceDiffLocation(row);
             if (current?.location === location) return;
             current?.close();
             state.sources.set(sourceKey, {
@@ -88,6 +132,9 @@ export const getDashboardWorkspaceDiffQuery = (workspaceId: string, owner = getR
         const stop = owner.subscribeCollections((change) => {
           if (change && (change.table !== "workspaces" || !change.changes.some((row) => row.key === workspaceId)))
             return;
+          const identity = readIdentity();
+          if (identity === observedIdentity) return;
+          observedIdentity = identity;
           syncSource();
           invalidate();
         });
@@ -99,7 +146,7 @@ export const getDashboardWorkspaceDiffQuery = (workspaceId: string, owner = getR
         };
       },
     });
-  state.queries.set(workspaceId, query);
+  state.queries.set(sourceKey, query);
   return query;
 };
 
@@ -108,7 +155,10 @@ export const formatDashboardWorkspaceDiffOverview = (summary: DashboardWorkspace
 
 export const getDashboardWorkspaceDiffSummary = (workspaceId: string, owner = getRuntimeCollections()) => {
   if (owner.isDisposed()) return undefined;
-  const query = runtimeState(owner).queries.get(workspaceId);
+  const projectId = owner.getCollection("workspaces").get(workspaceId)?.project_id;
+  const query = runtimeState(owner).queries.get(
+    sourceKeyFor(typeof projectId === "string" ? projectId : undefined, workspaceId),
+  );
   return !query?.isDisposed() ? (query?.getSnapshot().data ?? undefined) : undefined;
 };
 
@@ -129,16 +179,7 @@ export const resolveDashboardWorkspaceDiffSummary = async (
   signal?.throwIfAborted();
   if (!readyWorkspace(workspaceId, owner)) return null;
   const query = getDashboardWorkspaceDiffQuery(workspaceId, owner);
-  const stop = query.subscribe(() => {});
-  const aborted = Promise.withResolvers<never>();
-  const onAbort = () => aborted.reject(signal?.reason);
-  signal?.addEventListener("abort", onAbort, { once: true });
-  try {
-    return await Promise.race([query.read(), aborted.promise]);
-  } finally {
-    signal?.removeEventListener("abort", onAbort);
-    stop();
-  }
+  return waitForWorkspaceDiffSummary(query, signal);
 };
 
 export const requestDashboardWorkspaceDiffSummaries = async (
@@ -148,21 +189,19 @@ export const requestDashboardWorkspaceDiffSummaries = async (
 ) => {
   const summaries = new Map<string, DashboardWorkspaceDiffSummary>();
   const ids = [...new Set(workspaceIds)];
-  for (let index = 0; index < ids.length; index += 4) {
-    const loaded = await settleReadBatch(
-      ids.slice(index, index + 4).map((id) => async (signal) => {
-        try {
-          return [id, await resolveDashboardWorkspaceDiffSummary(id, signal, owner)] as const;
-        } catch (error) {
-          signal.throwIfAborted();
-          if (error instanceof Error && error.name === "AbortError") throw error;
-          return [id, null] as const;
-        }
-      }),
-      signal,
-    );
-    for (const [id, summary] of loaded) if (summary) summaries.set(id, summary);
-  }
+  const loaded = await settleWorkspaceDiffReads(
+    ids.map((id) => async (signal) => {
+      try {
+        return [id, await resolveDashboardWorkspaceDiffSummary(id, signal, owner)] as const;
+      } catch (error) {
+        signal.throwIfAborted();
+        if (error instanceof Error && error.name === "AbortError") throw error;
+        return [id, null] as const;
+      }
+    }),
+    signal,
+  );
+  for (const [id, summary] of loaded) if (summary) summaries.set(id, summary);
   return summaries;
 };
 

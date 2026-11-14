@@ -19,6 +19,75 @@ afterEach(async () => {
   environment.IS_REACT_ACT_ENVIRONMENT = previousEnvironment;
 });
 
+test("automatic shared reads keep their original scope when the first presenter changes queries", async () => {
+  environment.IS_REACT_ACT_ENVIRONMENT = true;
+  const values: Record<string, ReturnType<typeof useRendererRead<string>>> = {};
+  const calls: string[] = [];
+  const Capture = ({ name, query }: { name: string; query: string }) => {
+    values[name] = useRendererRead({
+      workbench,
+      ownerKey: name,
+      queryKey: query,
+      sourceId: "shared",
+      load: () => {
+        calls.push(query);
+        return query;
+      },
+    });
+    return null;
+  };
+  const content = (first: string) => (
+    <>
+      <Capture name="first" query={first} />
+      <Capture name="peer" query="a" />
+    </>
+  );
+  await act(async () => {
+    renderer = create(content("a"));
+  });
+  await act(async () => renderer!.update(content("b")));
+  await act(async () => workbench.views.reads.invalidate("shared"));
+  expect(values.first.value).toBe("b");
+  expect(values.peer.value).toBe("a");
+  expect(calls.filter((query) => query === "a")).toHaveLength(2);
+  expect(calls.filter((query) => query === "b")).toHaveLength(2);
+});
+
+test("a presenter moved to another core cannot supply that core's loader to its surviving peer", async () => {
+  environment.IS_REACT_ACT_ENVIRONMENT = true;
+  const other = createWorkbench();
+  const values: Record<string, ReturnType<typeof useRendererRead<string>>> = {};
+  const Capture = ({ name, core }: { name: string; core: typeof workbench }) => {
+    values[name] = useRendererRead<string>({
+      workbench: core,
+      ownerKey: name,
+      queryKey: "same",
+      sourceId: "shared",
+      load: () => (core === workbench ? "a" : "b"),
+    });
+    return null;
+  };
+  const content = (movable: typeof workbench) => (
+    <>
+      <Capture name="peer" core={workbench} />
+      <Capture name="movable" core={movable} />
+    </>
+  );
+  try {
+    await act(async () => {
+      renderer = create(content(workbench));
+    });
+    await act(async () => renderer!.update(content(other)));
+    await act(async () => workbench.views.reads.invalidate("shared"));
+    expect(values.peer.value).toBe("a");
+    expect(values.movable.value).toBe("b");
+  } finally {
+    await act(async () => renderer?.unmount());
+    renderer = undefined;
+    await other.dispose();
+  }
+});
+
 test("successful equal rows clear the prior refresh error in every duplicate view", async () => {
   environment.IS_REACT_ACT_ENVIRONMENT = true;
   const values: Record<string, ReturnType<typeof useRendererRead<string>>> = {};

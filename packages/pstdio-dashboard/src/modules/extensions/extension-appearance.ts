@@ -30,8 +30,9 @@ const toFileIconThemePreference = (theme: ResolvedWorkbenchExtensionAppearance["
 export const resolveExtensionAppearancePreferences = (
   rawAppearance: ListExtensionAppearanceResponse,
   owner = getRuntimeCollections(),
+  projectId?: string,
 ) => {
-  const appearance = localizeExtensionAppearance(rawAppearance, owner);
+  const appearance = localizeExtensionAppearance(rawAppearance, owner, projectId);
   return {
     themes: appearance.themes.map(toThemePreference),
     fileIconThemes: appearance.fileIconThemes.map(toFileIconThemePreference),

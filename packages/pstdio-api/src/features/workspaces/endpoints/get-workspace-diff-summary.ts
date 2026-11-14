@@ -39,6 +39,8 @@ export const getWorkspaceDiffSummaryHandler = (
   deps: WorkspacesRouteDeps,
 ): AppRouteHandler<typeof getWorkspaceDiffSummaryRoute> => {
   return async (c) => {
+    const signal = c.req.raw.signal;
+    signal.throwIfAborted();
     const { id } = c.req.valid("param");
     const { mode } = c.req.valid("query");
     const forwarded = await remoteWorkspaceAction(
@@ -46,14 +48,14 @@ export const getWorkspaceDiffSummaryHandler = (
       deps,
       id,
       { type: "workspace.diffSummary", id, mode },
-      c.req.raw.signal,
+      signal,
     );
     if (forwarded) return forwarded;
     const context = await resolveWorkspaceExecutionTarget(deps, id, "diff");
     if (!context) return c.json({ error: `Workspace has no linked file root: ${id}` }, 404);
 
     const resolved = mode === "current" ? { sha: "HEAD" } : await resolveBase(context.root);
-    const summary = await getWorktreeDiffSummary({ worktreePath: context.root, base: resolved.sha });
+    const summary = await getWorktreeDiffSummary({ worktreePath: context.root, base: resolved.sha, signal });
 
     return c.json({ workspace_id: context.workspace.id, ...summary }, 200);
   };

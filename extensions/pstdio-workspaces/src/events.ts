@@ -1,10 +1,10 @@
-import { accountEvents, eventRef, gitEvents, workspaceEvents } from "@pstdio/sdk/extensions";
+import { accountEvents, eventRef, gitEvents, viewDataEvents, workspaceEvents } from "@pstdio/sdk/extensions";
 export const changed = eventRef({ extensionId: "pstdio.pstdio-workspaces", id: "changed" });
 export const refreshEvents = [
   changed,
-  "pstdio.view.workspaces.changed",
-  "pstdio.view.sessions.changed",
-  "pstdio.view.resources.changed",
+  viewDataEvents.workspacesChanged,
+  viewDataEvents.sessionsChanged,
+  viewDataEvents.resourcesChanged,
   accountEvents.changed,
   workspaceEvents.ready,
   gitEvents.committed,

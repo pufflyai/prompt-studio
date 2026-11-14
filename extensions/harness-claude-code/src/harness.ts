@@ -175,6 +175,8 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
       return { agentSessionId: result.sessionId };
     },
     getCommandState: (_ctx, input) => claudeCommandState(input),
+    // This catalog is static; mode changes come from committed session params.
+    watchCommandState: () => () => {},
     prepareOperation: (ctx, input, operation) => prepareClaudeOperation(input, operation, ctx.projectId),
 
     start: (ctx, input) =>
