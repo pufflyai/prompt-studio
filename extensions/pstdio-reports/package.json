@@ -1,6 +1,6 @@
 {
   "name": "pstdio-reports",
-  "version": "0.46.1",
+  "version": "0.46.2",
   "displayName": "Agent Reports",
   "icon": "FileChartColumn",
   "description": "Built-in pstdio workspace reports for agent handoffs.",

@@ -1,5 +1,19 @@
 # @pstdio/ui
 
+## 0.47.1
+
+_2026-11-14_
+
+### Patch Changes
+
+- 86bbbef: Keep sessions and navigation within reach: refresh session pins without waiting for unrelated resources, open resource and collection pages by dragging, reopen closed tabs, and preview complete shortcuts in open menus. Add project-tab settings actions, compact Cloud status, fix retained Home reads and editor toolbars, and show nonempty linked-resource groups with relationships discoverable from either end. Expose session links through a right panel menu that follows attached and floating sessions and hides when empty; keep session navigation focused on conversations and keep the Side launcher floating above Main. Deliver streaming refresh events immediately and hide empty chat attachment trays.
+- c2e7a01: Keep keyboard menu selection when layout moves a previously hovered item away from a stationary pointer.
+- eb4d205: Keep stopped chat reading in place when visible content shrinks during a panel resize, and preserve automatic following across overlapping resize observations.
+- 0145c2a: Export a controlled DashboardRenderer from @pstdio/ui/dashboard-renderer with caller-owned metric, chart, and table data, responsive drag and resize editing, layout modes, and popover settings.
+- ccae1c5: Observe workspace files, expose Git-ignore decorations, and retain expanded tree rows while selection refreshes, and let extension commands use the host delete confirmation.
+- e89584c: Reduce repeated row-layout styling while streamed replies update. Shared theme rules emit static row geometry and token spacing once rather than serializing them on every streaming measurement.
+- 2e61d22: Keep the selected model at the top of model selector lists and show the harness icon in the selector button.
+
 ## 0.47.0
 
 _2026-11-12_

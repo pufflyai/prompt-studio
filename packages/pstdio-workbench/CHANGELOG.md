@@ -1,5 +1,19 @@
 # @pstdio/workbench
 
+## 0.47.1
+
+_2026-11-14_
+
+### Patch Changes
+
+- 86bbbef: Keep sessions and navigation within reach: refresh session pins without waiting for unrelated resources, open resource and collection pages by dragging, reopen closed tabs, and preview complete shortcuts in open menus. Add project-tab settings actions, compact Cloud status, fix retained Home reads and editor toolbars, and show nonempty linked-resource groups with relationships discoverable from either end. Expose session links through a right panel menu that follows attached and floating sessions and hides when empty; keep session navigation focused on conversations and keep the Side launcher floating above Main. Deliver streaming refresh events immediately and hide empty chat attachment trays.
+- 69efa88: Recover stalled Cloud sources safely and show source phases and named file transfer activity.
+- de66f90: Hide session workspace information when Workspaces is unavailable and refresh open conversations when tools change.
+- 34f00bd: Fix Home appearing in two panels when returning from Canvas after its retained view expires.
+- ccae1c5: Observe workspace files, expose Git-ignore decorations, and retain expanded tree rows while selection refreshes, and let extension commands use the host delete confirmation.
+- 21494ed: Keep note editors closed while their initial presentation is replaced
+- a2e8cbb: Recover dropped page requests silently while retaining loaded content.
+
 ## 0.47.0
 
 _2026-11-12_

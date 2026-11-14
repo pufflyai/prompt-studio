@@ -1,5 +1,27 @@
 # pstdio-planner
 
+## 0.48.0
+
+_2026-11-14_
+
+### Minor Changes
+
+- 33a1d31: Add Cleanup board to review stale ticket statuses and blocked reasons with an editable prompt that preserves ongoing sessions.
+
+### Patch Changes
+
+- b7c28cd: Show the original local date and time on Needs Attention request cards.
+- 86bbbef: Keep sessions and navigation within reach: refresh session pins without waiting for unrelated resources, open resource and collection pages by dragging, reopen closed tabs, and preview complete shortcuts in open menus. Add project-tab settings actions, compact Cloud status, fix retained Home reads and editor toolbars, and show nonempty linked-resource groups with relationships discoverable from either end. Expose session links through a right panel menu that follows attached and floating sessions and hides when empty; keep session navigation focused on conversations and keep the Side launcher floating above Main. Deliver streaming refresh events immediately and hide empty chat attachment trays.
+- cd05536: Let the session asked to resume a ticket continue in its existing workspace, consulting another implementer only when that ticket is already active elsewhere.
+- b510245: Prepare bundled extensions for API 0.5 without dropping their existing host ranges, and return Planner, Reports and Artifacts paths and links using the host-provided owner.
+
+  Use publisher-qualified Planner and Reports commands in shipped skills, prompts, help examples and documentation so agent instructions also work after the API 0.5 shortcut removal.
+
+  Keep ticket page ancestry and fresh draft ignore rules on the host-provided owner, including timeline rows, pulls and workspace provisioning.
+
+- c396e07: Use publisher-qualified commands when cleaning up the Planner board.
+- f64fda8: Open ticket content directly without waiting for review requests.
+
 ## 0.47.0
 
 _2026-11-12_
