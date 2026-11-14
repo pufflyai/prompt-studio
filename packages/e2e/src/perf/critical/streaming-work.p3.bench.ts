@@ -73,7 +73,7 @@ await runScenario("B4", (capture) =>
         await first.page.evaluate(() => {
           window.criticalStream.visible = false;
         });
-        const history = first.page.locator('[role="log"] [data-part="viewport"]');
+        const history = first.page.getByRole("log").locator(':scope > [data-part="root"] > [data-part="viewport"]');
         await history.evaluate((element) => {
           element.scrollTop = 0;
         });
