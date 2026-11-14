@@ -109,7 +109,7 @@ jobs:
       # Direct argv preserves the native shell's signal behavior and keeps the input out of shell syntax.
       - name: Run the selected native file with its owning runner
         run: >-
-          bun -e 'const child = Bun.spawnSync(["bun", "scripts/test.ts", "--file", process.env.DIAGNOSTIC_FILE, "--out", "test-results/ci/native-file-plan.json"], { stdio: "inherit" }); process.exit(child.exitCode);'
+          bun -e 'const child = Bun.spawnSync(["bun", "scripts/test.ts", "--file", process.env.DIAGNOSTIC_FILE, "--out", "test-results/ci/native-file-plan.json"], { stdio: ["inherit", "inherit", "inherit"] }); process.exit(child.exitCode);'
       - name: Preserve native file execution
         if: always()
         uses: actions/upload-artifact@v4
