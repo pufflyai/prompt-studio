@@ -9,8 +9,8 @@ import {
 } from "../../../core";
 import { resolveNavigationLevels } from "../../../core/controllers/page-location/navigation-level";
 import { useOptionalWorkbenchStore } from "../../shared/use-workbench-store";
-import { usePageParams } from "../use-page-params";
 import { rendererQueryKey } from "../renderer-query-key";
+import { usePageParams } from "../use-page-params";
 import { useRendererRead } from "../use-renderer-read";
 import { type LoadedTreeData, loadExpandedTreeChildren, loadTreeData, treeStructure } from "./tree-view-load";
 
