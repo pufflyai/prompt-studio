@@ -374,7 +374,7 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
   await page.keyboard.press("w");
   causalEvidence.mark("workspace-shortcut:dispatched");
   const workspaceForm = page.frameLocator('iframe[title="Workspace action"]');
-  await expect(workspaceForm.getByText("Create workspace", { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Create workspace", exact: true })).toBeVisible();
   causalEvidence.mark("workspace-dialog:visible");
   await workspaceForm.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(page.locator('iframe[title="Workspace action"]')).not.toBeVisible();
