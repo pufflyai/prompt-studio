@@ -121,11 +121,54 @@ that matching candidate rather than the earlier handlers.
 
 Each definition names fields by paths within `record.value`, optional leading
 `equality` fields and a fixed `orderBy`. Field types are `string`, `number`,
-`boolean` and `array` (strings only). Timestamps use consistently formatted strings.
+`boolean`, `array` (strings only), and `object` (JSON objects only). Timestamps use consistently formatted strings.
 Selectable fields are not implicitly equality keys. Omitted `equality` means none.
 An optional complete-address `prefix` restricts the index to a namespace or
 collection. Record methods otherwise cover the whole extension owner across scopes.
 The host supplies the owner; callers cannot query another extension or workbench.
+
+For an existing collection, set `collection` on its index definition. Its field
+paths are relative to the collection item. The host resolves addresses in the
+selected storage scope, keeping other collections and scopes out of the index.
+Declare these in `storageIndexes` to install them before commands become available;
+the first action must not build indexes. Do not parse opaque record addresses.
+This addition requires extension API 0.4.2 and a matching SDK build.
+`readCollectionRecords` reads up to 100 opaque addresses from a query page and
+returns collection values in request order, with `undefined` for missing or
+deleted rows. It requires an SDK build that exports this helper.
+
+```ts
+import { readCollectionRecords } from "@pstdio/sdk/data";
+import type { StorageRecordIndex } from "@pstdio/sdk/extensions";
+
+const index: StorageRecordIndex = {
+  name: "requests-by-ticket",
+  collection: "requests",
+  fields: { ticketId: { path: ["ticketId"], type: "string" } },
+  equality: ["ticketId"],
+};
+await ctx.storage.records.defineIndexes([index]);
+const page = await ctx.storage.records.query({
+  index: index.name,
+  where: { field: "ticketId", op: "eq", value: ticketId },
+  fields: [],
+  limit: 100,
+});
+const values = await readCollectionRecords(ctx.storage, page.records.map(({ recordId }) => recordId));
+```
+
+For bulk field changes, `patchCollectionRecords(ctx.storage, page.records, fields)`
+saves 1–100 selected collection rows in one bounded operation. It changes only
+the named top-level fields and escapes field names as literal JSON pointer keys.
+It returns `null` if any selected revision changed or disappeared: query the
+original selection again before retrying. Inspect an accepted save's state before
+continuing. Do not replace complete records from an earlier query snapshot.
+
+The lower-level `records.commitIfCurrent(group)` takes 1–100 distinct existing
+record edits, each with `expectedRevision`. It checks all observations under the
+local owner lock before saving anything. Accepted field edits merge with later
+unrelated edits; a delete/recreate lifetime remains fenced. Reuse an operation ID
+only with the identical request. These additions require extension API 0.4.2.
 
 Predicates use `{ field, op, value }`, nested `{ all: [...] }`, `{ any: [...] }`,
 or `{ not: predicate }`. Negation is the boolean complement, including for missing
@@ -151,6 +194,10 @@ Numeric text preserves JavaScript's decimal and exponent spelling, including
 floating-point representation. This is scalar text, not a cell formatter: date
 labels, custom display labels, and diff summaries need their provider's matching
 rules. `contains` keeps its existing string and string-array behavior.
+
+`hasKey` matches a key in a declared `object` field, including keys whose value is
+false or null. Arrays and strings do not match. It accepts one string key and
+uses the index's object membership projection.
 
 `fields` selects declared field names. Each result has `recordId`, the record's
 content `revision`, and a `fields` object; it does not include the complete body,
@@ -388,4 +435,4 @@ the synced extension owns migrations, or a published extension's Cloud membershi
 This is a fresh policy read, not a stored flag. Ordinary edits still use the
 existing publication write permissions.
 
-*Updated at: 2026-11-07*
+*Updated at: 2026-11-14*

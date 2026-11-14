@@ -5,6 +5,7 @@ import { session_queue_entries, sessions } from "../../db/schemas.pg";
 import { createLegacyAnchorMutations, sessionColumns, writeLegacyResourceLinks } from "../legacy-resource-links";
 import { createSessionImportOperations } from "./session-import";
 import { createSessionQuery } from "./session-query";
+import { createSessionRead } from "./session-read";
 import { removeSession } from "./session-removal";
 import { type SessionStatusGuards, updateSessionStatus } from "./session-status";
 import {
@@ -232,10 +233,7 @@ export const createSessionsDBService = (db: DbClient) => {
     });
   };
 
-  const get = async (id: string) => {
-    const [row] = await db.select(sessionColumns).from(sessions).where(eq(sessions.id, id));
-    return row ?? null;
-  };
+  const get = createSessionRead(db);
 
   const list = async (projectId: string, filters?: ListFilters) => {
     const conditions = [eq(sessions.project_id, projectId)];

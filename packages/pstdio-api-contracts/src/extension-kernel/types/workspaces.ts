@@ -1,4 +1,6 @@
+import type { Page } from "../../pagination";
 import type { WorkspaceDiffFile, WorkspaceDiffFiles, WorkspaceDiffSummary } from "../../workspace-diffs";
+import type { WorkspaceQuery } from "../../workspace-query";
 import type {
   ListWorkspaceFilesInput,
   RenameWorkspaceInput,
@@ -7,6 +9,9 @@ import type {
   WorkspaceFilesResponse,
   WriteWorkspaceFileInput,
 } from "../../workspaces";
+
+export type { WorkspaceQuery } from "../../workspace-query";
+
 import type { Localizable } from "../l10n";
 import type { WorkspaceCapabilities, WorkspaceProviderResult, WorkspaceProviderState } from "./extension";
 import type { JsonObject } from "./json";
@@ -126,6 +131,9 @@ export interface ExtensionWorkspacesApi {
   updateCapacity(input: { limit: number | null }): Promise<WorkspaceCapacity>;
   listProviders(): Promise<ExtensionWorkspaceProvider[]>;
   getDefault(): Promise<ExtensionWorkspace | null>;
+  /** Query a bounded page of active local and personal remote workspaces. */
+  query(input?: WorkspaceQuery): Promise<Page<ExtensionWorkspace>>;
+  /** @deprecated Use query for bounded pages. */
   list(): Promise<ExtensionWorkspace[]>;
   get(id: string): Promise<ExtensionWorkspace | null>;
   getByShorthand(shorthand: string): Promise<ExtensionWorkspace | null>;

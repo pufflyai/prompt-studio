@@ -46,11 +46,28 @@ test("incremental session updates preserve the primary workspace and unlinked se
       ),
       deps: source.deps,
     };
+    const anchor = { type: "project", id: project.id, extensionId: "pstdio", projectId: project.id };
+    await source.deps.resourceLinksService.add(anchor, [
+      { type: "workspace", id: first.id, extensionId: "pstdio", projectId: project.id },
+      { type: "session", id: linked.id, extensionId: "pstdio", projectId: project.id },
+    ]);
     await capturePersonalHistory(input);
+    expect((await history.readRecords("workspaces")).find((row) => row.id === first.id)?.anchors_json).toContainEqual(
+      expect.objectContaining(anchor),
+    );
+    expect((await history.readRecords("sessions")).find((row) => row.id === linked.id)?.anchors_json).toContainEqual(
+      expect.objectContaining(anchor),
+    );
+    const login = { accountId: "alice", deviceId: "remote-reader" };
+    expect((await history.queryWorkspaces(login, { anchors: [anchor] })).rows.map(({ id }) => id)).toEqual([first.id]);
+    expect(
+      (await history.querySessions(login, { anchor, includeWorkspaceAnchors: true })).rows.map(({ id }) => id),
+    ).toEqual([linked.id]);
     await source.deps.sessionService.update(linked.id, { title: "Renamed linked" });
     await source.deps.sessionService.update(unlinked.id, { title: "Renamed unlinked" });
     await captureSessionChanges(input, [linked.id, unlinked.id]);
     const rows = await history.readRecords("sessions");
+    expect(rows.find((row) => row.id === linked.id)?.anchors_json).toContainEqual(expect.objectContaining(anchor));
     expect(rows.find((row) => row.id === linked.id)).toMatchObject({
       title: "Renamed linked",
       workspace_id: first.id,

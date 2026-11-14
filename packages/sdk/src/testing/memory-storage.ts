@@ -3,6 +3,7 @@ import {
   createStorageId,
   createStorageMigration,
   createStoragePositions,
+  resolveCollectionIndexes,
 } from "pstdio-api-contracts";
 import type {
   ExtensionBlobRef,
@@ -155,7 +156,10 @@ export const createMemoryStorageDevice = (options: MemoryStorageOptions = {}) =>
       ids: { create: createStorageId },
       positions,
       readLegacy: async (source) => structuredClone(options.legacyData?.[source]),
-      records,
+      records: {
+        ...records,
+        defineIndexes: (indexes) => records.defineIndexes(resolveCollectionIndexes(indexes, scopeType, scopeId)),
+      },
       text: (recordId, field) => ({
         edit: (edits) =>
           records.commit({ operationId: createStorageId(), edits: [{ recordId, text: { [field]: edits } }] }),

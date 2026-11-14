@@ -14,8 +14,16 @@ export const capturePersonalHistory = async (input: {
   >;
 }) => {
   const { deps, history, device, projectId, references } = input;
-  const localWorkspaces = await deps.workspaceService.listForProviderReconciliation(projectId);
-  const localSessions = (await deps.sessionService.query(projectId, { includeArchived: true }, { unpaged: true })).rows;
+  const localWorkspaces = await deps.workspaceService.listForProviderReconciliation(projectId, {
+    includeIncomingAnchors: true,
+  });
+  const localSessions = (
+    await deps.sessionService.query(
+      projectId,
+      { includeArchived: true },
+      { unpaged: true, includeIncomingAnchors: true },
+    )
+  ).rows;
   const workspaceIds = await history.claimLocalRecords(
     "workspaces",
     localWorkspaces.map((row) => row.id),
@@ -67,7 +75,7 @@ export const captureSessionChanges = async (input: Parameters<typeof capturePers
   const claimed = await history.claimLocalRecords("sessions", ids);
   const present = new Set<string>();
   for (const id of claimed) {
-    const row = await deps.sessionService.get(id);
+    const row = await deps.sessionService.get(id, { includeIncomingAnchors: true });
     if (!row || row.project_id !== projectId) {
       await history.patchRecords("sessions", device, [], [id]);
       await history.patchRecords("queues", device, [], [id]);

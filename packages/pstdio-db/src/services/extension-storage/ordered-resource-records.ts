@@ -1,5 +1,6 @@
 import { type StorageObserver, type StorageOwner, StorageRevisionChangedError } from "pstdio-sync";
-import { observeOrderedRecord, orderedBody, projectOrderedOperation } from "pstdio-sync/records";
+import { commitCurrentBatch, observeOrderedRecord, orderedBody, projectOrderedOperation } from "pstdio-sync/records";
+import type { StorageCurrentGroup } from "pstdio-sync-contracts";
 import {
   assertStorageLimits,
   fingerprint,
@@ -181,6 +182,46 @@ export const createOrderedResourceRecords = (
     });
     return notify(result);
   };
+  const transaction = async <T>(
+    run: (
+      records: {
+        read: (id: string) => ReturnType<LegacyRecords["read"]>;
+        readMany: (ids: string[]) => ReturnType<LegacyRecords["readMany"]>;
+        commit: (group: StorageGroup) => Promise<StorageSaveOutcome>;
+        outcome: (id: string) => Promise<StorageSaveOutcome | undefined>;
+      },
+      tx: OrderedTransaction,
+    ) => Promise<T>,
+  ) => {
+    const results: Awaited<ReturnType<typeof commitIn>>[] = [];
+    const ownRevisions = new Map<string, string>();
+    const queue = createCommitQueue();
+    const value = await withOrderedOwner(db, owner, async (journal, tx) => {
+      try {
+        return await run(
+          {
+            read: async (id) => (await readIn(tx, [id], deps.observer))[0]!,
+            readMany: (ids) => readIn(tx, ids, deps.observer),
+            outcome: async (id) => ((await journal.requestIdentity(id)) ? savedOutcome(journal, id) : undefined),
+            commit: (group) =>
+              queue.run(async () => {
+                const result = await commitIn(journal, tx, group, ownRevisions);
+                for (const record of result.records) ownRevisions.set(record.recordId, record.revision);
+                results.push(result);
+                return result.outcome;
+              }),
+          },
+          tx,
+        );
+      } finally {
+        // Promise.all can reject before another admitted save finishes. Drain before rollback.
+        await queue.settled();
+      }
+    });
+    for (const result of results) notify(result);
+    return value;
+  };
+
   return {
     ...queries,
     defineIndexes: async (...input: Parameters<typeof queries.defineIndexes>) => {
@@ -253,42 +294,7 @@ export const createOrderedResourceRecords = (
       withOrderedOwner(db, owner, async (journal) => {
         return (await journal.requestIdentity(id)) ? savedOutcome(journal, id) : undefined;
       }),
-    transaction: async <T>(
-      run: (
-        records: {
-          read: (id: string) => ReturnType<LegacyRecords["read"]>;
-          readMany: (ids: string[]) => ReturnType<LegacyRecords["readMany"]>;
-          commit: (group: StorageGroup) => Promise<StorageSaveOutcome>;
-        },
-        tx: OrderedTransaction,
-      ) => Promise<T>,
-    ) => {
-      const results: Awaited<ReturnType<typeof commitIn>>[] = [];
-      const ownRevisions = new Map<string, string>();
-      const queue = createCommitQueue();
-      const value = await withOrderedOwner(db, owner, async (journal, tx) => {
-        try {
-          return await run(
-            {
-              read: async (id) => (await readIn(tx, [id], deps.observer))[0]!,
-              readMany: (ids) => readIn(tx, ids, deps.observer),
-              commit: (group) =>
-                queue.run(async () => {
-                  const result = await commitIn(journal, tx, group, ownRevisions);
-                  for (const record of result.records) ownRevisions.set(record.recordId, record.revision);
-                  results.push(result);
-                  return result.outcome;
-                }),
-            },
-            tx,
-          );
-        } finally {
-          // Promise.all can reject before another admitted save finishes. Drain before rollback.
-          await queue.settled();
-        }
-      });
-      for (const result of results) notify(result);
-      return value;
-    },
+    transaction,
+    commitIfCurrent: (group: StorageCurrentGroup) => commitCurrentBatch({ transaction }, group),
   };
 };

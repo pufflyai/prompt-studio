@@ -101,6 +101,7 @@ export const createCommandContextDefaults = (input: {
       listProviders: async () => [],
       getDefault: async () => null,
       list: async () => [],
+      query: async () => ({ items: [], nextCursor: null }),
       get: async () => null,
       getByShorthand: async () => null,
       create: unavailable,

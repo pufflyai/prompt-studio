@@ -4,11 +4,13 @@ import type { Json } from "./json";
 export interface StorageIndexField {
   /** A path within the record value. */
   path: string[];
-  type: "string" | "number" | "boolean" | "array";
+  type: "string" | "number" | "boolean" | "array" | "object";
 }
 
 export interface StorageRecordIndex {
   name: string;
+  /** Extension collection in the selected scope; field paths are relative to its items. */
+  collection?: string;
   /** Selectable fields. Declaring a field does not make it an equality key. */
   fields: Record<string, StorageIndexField>;
   /** Explicit equality keys preceding the sort keys. Defaults to no equality keys. */
@@ -24,7 +26,7 @@ export type StoragePredicate =
   | { not: StoragePredicate }
   | {
       field: string;
-      op: "eq" | "ne" | "gt" | "gte" | "lt" | "lte" | "contains" | "equalsIgnoreCase" | "textContains";
+      op: "eq" | "ne" | "gt" | "gte" | "lt" | "lte" | "contains" | "equalsIgnoreCase" | "textContains" | "hasKey";
       value: Json;
     }
   | { field: string; op: "in" | "notIn"; value: Json[] }
