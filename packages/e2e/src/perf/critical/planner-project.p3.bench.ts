@@ -59,7 +59,7 @@ await runScenario("B6", async (capture) => {
       };
       const before = await counters();
       const url = `${runtime.baseUrl}/projects/${fixture.projectId}/extensions/pstdio.pstdio-planner/tickets`;
-      const rows = page.getByRole("row").filter({ has: page.getByTestId("row-status-icon") });
+      const rows = page.getByRole("option").filter({ has: page.getByTestId("row-status-icon") });
       const actionable = async () => {
         await expect(rows.first()).toContainText("Planner stress");
         await expect(page.getByRole("button", { name: "Search this view" })).toBeEnabled();
@@ -141,6 +141,20 @@ await runScenario("B6", async (capture) => {
       );
       assert(mounted <= 100, "Planner mounted more than one bounded page");
       assert.equal(after.sequentialRows - before.sequentialRows, 0, "Planner performed a full record projection scan");
+    } catch (error) {
+      capture.detail(
+        "failed-browser-state",
+        await Promise.all(
+          (browser?.contexts().flatMap((context) => context.pages()) ?? []).map(async (page) => ({
+            url: page.url(),
+            text: await page
+              .locator("body")
+              .innerText()
+              .catch(() => "unavailable"),
+          })),
+        ),
+      );
+      throw error;
     } finally {
       await browser?.close();
       await stopProcess(runtime.child);

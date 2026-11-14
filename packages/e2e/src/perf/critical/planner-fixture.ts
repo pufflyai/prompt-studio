@@ -1,3 +1,4 @@
+import { strict as assert } from "node:assert";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -40,7 +41,12 @@ const saveFilteredView = async (runtime: Awaited<ReturnType<typeof startRuntime>
     headers: runtime.headers,
     body: JSON.stringify({
       title: "In flight",
-      settings: { viewMode: "list", rowGrouping: "none", columnGrouping: "status", displayProperties: ["id"] },
+      settings: {
+        viewMode: "list",
+        rowGrouping: "none",
+        columnGrouping: "status",
+        displayProperties: ["id", "status"],
+      },
       filter: {
         conjunction: "and",
         rules: [
@@ -52,12 +58,15 @@ const saveFilteredView = async (runtime: Awaited<ReturnType<typeof startRuntime>
       sorts: [{ attributeId: "created", direction: "desc" }],
     }),
   });
+  assert(view.ok, `Saving filtered view failed: HTTP ${view.status}`);
   const { id } = (await view.json()) as { id: string };
-  await fetch(`${boardUrl}/views/default`, {
+  assert(id, "Saved view identity missing");
+  const selected = await fetch(`${boardUrl}/views/default`, {
     method: "PUT",
     headers: runtime.headers,
     body: JSON.stringify({ viewId: id }),
   });
+  assert(selected.ok, `Selecting filtered view failed: HTTP ${selected.status}`);
 };
 
 const installPlanner = async (

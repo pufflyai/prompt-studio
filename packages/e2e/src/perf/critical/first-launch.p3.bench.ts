@@ -5,7 +5,7 @@ import { expect } from "@playwright/test";
 import { desktopBudgets } from "pstdio-benchmarks";
 import { runScenario } from "pstdio-benchmarks/writer";
 import { afterPaint, desktopWorkload } from "./desktop-lifecycle";
-import { request } from "./desktop-project";
+import { request, selectProject } from "./desktop-project";
 
 await runScenario("B1", (capture) =>
   desktopWorkload(capture, async (context) => {
@@ -32,21 +32,12 @@ await runScenario("B1", (capture) =>
       initial_workspace: { provider_id: "pstdio.root", params: { path: folder } },
     });
     assert.equal(project.extension_warnings?.length ?? 0, 0, "Default tools failed to initialize");
-    await expect(app.page.getByRole("button", { name: /^Open (?:project|\/ create project)$/ })).toBeEnabled();
     capture.detail(
       "boundary",
       "Empty-home launch through authenticated API, first-project default-tool initialization, selected Home content and completed first native interaction; no prewarm. The unchanged 2s product limit applies on the actual 10-core/32GiB M5 reference host.",
     );
     const before = await app.page.evaluate(() => performance.now());
-    await app.page.getByRole("button", { name: /^Open (?:project|\/ create project)$/ }).click();
-    const picker = app.page
-      .getByRole("dialog")
-      .filter({ has: app.page.getByRole("button", { name: "Create project", exact: true }) });
-    await picker.getByText(project.name, { exact: true }).click();
-    await expect(app.page.getByRole("tab", { name: project.name, exact: true })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
+    await selectProject(app.page, project.name);
     await expect(app.page.frameLocator('iframe[title="Home"]').getByTestId("start-page")).toBeVisible();
     capture.record("first-interaction", (await afterPaint(app.page)) - before);
     capture.record("usable", Date.now() - app.startedAt);

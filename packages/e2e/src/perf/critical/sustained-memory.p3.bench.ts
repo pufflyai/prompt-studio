@@ -3,7 +3,6 @@ import { join } from "node:path";
 import { runScenario, scenarioById } from "pstdio-benchmarks/writer";
 import { sampleDesktopMemory } from "../desktop-memory-samples";
 import { desktopWorkload } from "./desktop-lifecycle";
-import { navigate } from "./desktop-project";
 
 await runScenario("B5", (capture) =>
   desktopWorkload(capture, async (context) => {
@@ -34,10 +33,10 @@ await runScenario("B5", (capture) =>
         context.signal.throwIfAborted();
         await seeded.actions.conversation();
         await Bun.sleep(3_000);
-        await navigate(seeded.page, `/projects/${seeded.fixture.project.id}/sessions`);
+        await seeded.actions.home();
         await seeded.actions.file();
         await Bun.sleep(3_000);
-        await navigate(seeded.page, seeded.fixture.filePath.replace(/[?&]document=[^&]*/, ""));
+        await seeded.actions.home();
         await seeded.page.getByRole("button", { name: "Hide Bottom Panel", exact: true }).click();
         await Bun.sleep(3_000);
         await seeded.page.getByRole("button", { name: "Show Bottom Panel", exact: true }).click();

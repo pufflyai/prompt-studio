@@ -127,13 +127,17 @@ export const launchMemoryDesktop = async (
     let runtime: RuntimeDescriptor | undefined;
     while (!runtime) {
       signal.throwIfAborted();
+      if (child.exitCode !== null || child.signalCode !== null)
+        throw new Error(`Owned desktop exited before runtime readiness: ${stderr}`);
       const descriptor = readMemoryRuntime(home);
       if (descriptor) {
         const ready = await fetch(`${descriptor.origin}/runtime/ready`, {
           headers: runtimeAuthorization(descriptor),
           signal,
-        });
-        if (ready.ok) runtime = descriptor;
+        }).catch(() => undefined);
+        // A relaunch can observe the previous process descriptor until the new
+        // runtime publishes its authenticated ready endpoint.
+        if (ready?.ok) runtime = descriptor;
       }
       if (!runtime) await Bun.sleep(100);
     }

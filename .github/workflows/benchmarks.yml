@@ -145,6 +145,7 @@ jobs:
     name: ${{ matrix.platform }} · ${{ matrix.suite }}
     env:
       GH_TOKEN: ${{ github.token }}
+      BENCHMARK_BASELINE: ${{ inputs.baseline && '1' || '0' }}
     needs: plan
     runs-on: ${{ matrix.os }}
     # Approved in PS-920 as an upper limit until the first full runs give real timings.

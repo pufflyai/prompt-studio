@@ -60,6 +60,7 @@ if (process.argv[2] === "--seed") {
             writes: Number(table.rows[0]!.writes),
           };
         };
+        const indexedReads: { metric: string; sequentialRows: number; indexEntries: number }[] = [];
         let returned = 0,
           transferred = 0,
           scanned = 0;
@@ -82,8 +83,11 @@ if (process.argv[2] === "--seed") {
           );
           assert.equal(result.records.length, fixture.pageSize);
           if (indexed) {
-            assert.equal(after.sequential - before.sequential, 0, "A bounded indexed page scanned the full projection");
-            assert(after.indexed > before.indexed, "The index traversal counter did not advance");
+            indexedReads.push({
+              metric,
+              sequentialRows: after.sequential - before.sequential,
+              indexEntries: after.indexed - before.indexed,
+            });
           }
           returned += result.records.length;
           transferred += Buffer.byteLength(JSON.stringify(result));
@@ -142,6 +146,13 @@ if (process.argv[2] === "--seed") {
         capture.record("writes", afterWrites.writes - beforeWrites.writes);
         capture.record("transferred", transferred);
         capture.record("rss-peak", process.resourceUsage().maxRSS * 1_024);
+        // Retain every fixed phase's raw evidence before rejecting scan guards.
+        // A failed cold guard remains failed; it must not erase later observations.
+        capture.detail("indexed-read-guards", indexedReads);
+        for (const read of indexedReads) {
+          assert.equal(read.sequentialRows, 0, `${read.metric}: a bounded indexed page scanned the full projection`);
+          assert(read.indexEntries > 0, `${read.metric}: the index traversal counter did not advance`);
+        }
       } finally {
         await close();
       }
