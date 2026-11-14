@@ -107,10 +107,19 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
     if (!index) throw new Error(`Storage index not installed: ${name}`);
     return decodeProjectionValue(index.definition as unknown as Json) as unknown as StorageRecordIndex;
   };
-  // The projection row is the owner's revision; an owner without one has no records yet.
+  // Index replacement can change selection without editing records. Both belong to a query snapshot.
   const getRevision = async (connection: Reader) => {
-    const [projection] = await connection.select().from(projections).where(ownerWhere(projections));
-    return String(projection?.revision ?? 0);
+    const projection = connection
+      .select({ revision: projections.revision })
+      .from(projections)
+      .where(ownerWhere(projections));
+    const [row] = await connection
+      .select({
+        revision: sql<string>`coalesce((${projection}), 0)::text || ':' || md5(coalesce(string_agg(${indexes.database_name}, ',' ORDER BY ${indexes.database_name} COLLATE "C"), ''))`,
+      })
+      .from(indexes)
+      .where(ownerWhere(indexes));
+    return row.revision;
   };
   const api: StorageRecordQueries = {
     defineIndexes: async (definitions) => {
@@ -184,7 +193,7 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
                 revision,
               })
             : null;
-        diagnostics?.({ phase: "records-queried", owner, records: rows.length });
+        diagnostics?.({ phase: "records-queried", owner, records: rows.length, materialized: result.rows.length });
         return {
           revision,
           cursor,

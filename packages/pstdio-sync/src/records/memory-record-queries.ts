@@ -51,6 +51,13 @@ const indexFor = (document: Y.Doc, name: string) => {
   if (!index) throw new Error(`Storage index not installed: ${name}`);
   return index;
 };
+const queryRevision = (document: Y.Doc, saved: StorageRecord[]) =>
+  fingerprint({
+    saved: saved as unknown as Json,
+    indexes: [...(definitions.get(document)?.values() ?? [])].sort((left, right) =>
+      compareQueryValues(left.name, right.name),
+    ) as unknown as Json,
+  });
 
 interface OrderedRecord {
   recordId: string;
@@ -94,7 +101,7 @@ export const createMemoryRecordQueries = (
         for (const name of relatedQueryIndexes(query.where)) indexFor(document, name);
         const saved = await records(document);
         const predicate = memoryPredicate(document, saved);
-        const revision = await fingerprint(saved as unknown as Json);
+        const revision = await queryRevision(document, saved);
         const page = await prepareRecordQuery(owner, index, query, revision, predicate.resolve);
         const values = (record: StorageRecord) =>
           (index.orderBy ?? []).map((sort) => typedFieldValue(record.value, queryField(index, sort.field)) ?? null);
@@ -139,7 +146,7 @@ export const createMemoryRecordQueries = (
             (index.prefix === undefined || record.recordId.startsWith(index.prefix)) &&
             matchesPredicate(index, record.value, query.where, predicate.related),
         );
-        return memoryRecordAggregate(index, query, selected, await fingerprint(saved as unknown as Json));
+        return memoryRecordAggregate(index, query, selected, await queryRevision(document, saved));
       }),
   };
   return api;

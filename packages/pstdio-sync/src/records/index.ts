@@ -4,7 +4,6 @@ export { documentRecordTypes, type RecordType, readDocumentRecord } from "./docu
 export { type DocumentSnapshot, findDocumentReplacements, snapshotDocumentRecords } from "./document-replacements";
 export { createDocumentStorage, type LockedRecords } from "./document-storage";
 export { createLegacyRecordStorage } from "./legacy";
-export { deriveMarkdownTitle } from "./markdown-title";
 export { createMemoryRecordQueries } from "./memory-record-queries";
 export { initialRecordRevision, scopeRecordStorage, storageRecordId } from "./namespaces";
 export { nativeAssetBaseline, nativeAssetBindingBaseline } from "./native-asset-source";

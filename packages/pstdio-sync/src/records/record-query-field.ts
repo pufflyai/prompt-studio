@@ -1,5 +1,4 @@
-import type { Json, StorageIndexField, StorageRecordIndex } from "pstdio-sync-contracts";
-import { deriveMarkdownTitle } from "./markdown-title";
+import { deriveMarkdownTitle, type Json, type StorageIndexField, type StorageRecordIndex } from "pstdio-sync-contracts";
 
 export const fieldValue = (value: Json, path: string[]) => {
   let current: Json | undefined = value;

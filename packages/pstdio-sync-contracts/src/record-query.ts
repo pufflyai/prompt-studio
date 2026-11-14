@@ -54,7 +54,7 @@ export interface StorageRecordQuery {
   cursor?: string;
   /** Direct zero-based page offset. Cannot be combined with a cursor. Skipped rows stay in the database. */
   offset?: number;
-  /** Expected owner revision for direct page jumps; reject if committed data changed. */
+  /** Expected owner query revision; reject if committed data or installed index definitions changed. */
   revision?: string;
 }
 

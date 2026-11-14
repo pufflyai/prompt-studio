@@ -184,6 +184,8 @@ test("relationship cursors reject a changed related definition and missing keys 
     const page = await records.query({ index: "items", where, limit: 1 });
     expect(page.records.map((row) => row.recordId)).toEqual(["items/a"]);
     expect((await records.aggregate({ index: "items", where })).count).toBe(2);
+    await records.defineIndexes([...definitions].reverse());
+    expect((await records.aggregate({ index: "items" })).revision).toBe(page.revision);
     await records.defineIndexes(
       definitions.map((index) =>
         index.name !== "requests"
@@ -195,6 +197,7 @@ test("relationship cursors reject a changed related definition and missing keys 
       ),
     );
     await expect(records.query({ index: "items", where, limit: 1, cursor: page.cursor! })).rejects.toThrow("stale");
+    await expect(records.query({ index: "items", revision: page.revision })).rejects.toThrow("stale");
     expect((await records.aggregate({ index: "items", where })).count).toBe(0);
   }
 });

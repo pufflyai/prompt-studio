@@ -157,6 +157,22 @@ const page = await ctx.storage.records.query({
 const values = await readCollectionRecords(ctx.storage, page.records.map(({ recordId }) => recordId));
 ```
 
+`readCollectionPage(ctx.storage, selection)` from `@pstdio/sdk/data` combines a
+bounded indexed page with global view counts. Declare `index`, selected `fields`,
+the complete filter as `where`, optional `search` and collapsed-group exclusion
+as `visible`, and the requested `orderBy`. Pass the renderer's `page` request;
+omitting it selects 100 projections. Hydrate only those addresses afterward.
+
+The result contains `records` and renderer `page` metadata. `total` counts the
+filter before search; `filteredTotal` includes search and collapsed-group
+exclusions. Up to two `groups: [{ field, indexField }]` describe global group
+counts before exclusions, with at most 500 combinations. Counts and selected rows
+must share a revision; concurrent edits or installed index-definition changes
+fail visibly and the view restarts. Revisions are opaque, not record counters.
+Nonempty search or collapsed groups require their translated predicate. This
+helper does not translate field-specific display semantics or silently discard
+unsupported controls. Declare those mappings in the provider before calling it.
+
 For bulk field changes, `patchCollectionRecords(ctx.storage, page.records, fields)`
 saves 1–100 selected collection rows in one bounded operation. It changes only
 the named top-level fields and escapes field names as literal JSON pointer keys.
