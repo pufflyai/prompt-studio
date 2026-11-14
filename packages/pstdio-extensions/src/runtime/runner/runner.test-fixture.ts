@@ -1,4 +1,4 @@
-import { createMemoryResources, createMemoryStorage } from "@pstdio/sdk/testing";
+import { createMemoryActivity, createMemoryResources, createMemoryStorage } from "@pstdio/sdk/testing";
 import type { ExtensionRuntime } from "../../types/runtime";
 import type { LoadedExtensionSource } from "../loader";
 import { normalizeExtensionSources } from "../normalize";
@@ -148,7 +148,7 @@ export const stubEnvironment = (
       removeWorktree: async () => ({ removed: true }),
       delete: async () => {},
     },
-    activity: { record: async () => ({ id: "" }) },
+    activity: createMemoryActivity(),
     notify: {
       setStatus: async () => null,
       setStatusByKey: async () => [],

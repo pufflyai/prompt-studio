@@ -1,4 +1,5 @@
 import { Box, Center } from "@chakra-ui/react";
+import { resourceKey } from "@pstdio/sdk/extensions";
 import type { ReactNode } from "react";
 import type {
   RegisteredPlaceholderContribution,
@@ -13,6 +14,7 @@ import type {
 import { getWorkbenchRenderers } from "../../core";
 import { toPanelContribution, toPanelInstance } from "../../core/registries/layout/panel-api";
 import { WorkbenchActionErrors } from "../notifications/action-errors";
+import { WorkbenchResourceActivity } from "../resource-activity/resource-activity";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { WorkbenchWidgetContents } from "./widget-contents";
@@ -92,12 +94,17 @@ export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
   const renderer = rendererFromStore ?? getWorkbenchRenderers(workbench).getRenderer(rendererId);
   useWorkbenchStore(getWorkbenchRenderers(workbench).store, (state) => state.refreshKeys[rendererId] ?? 0);
 
+  const instance = toPanelInstance(placement);
+  const resource = instance.resource;
+  const activity = useWorkbenchStore(workbench.resources.store, () =>
+    resource ? workbench.resources.getKind(resource.type, resource.extensionId)?.activity : undefined,
+  );
+
   if (!widget && !view) {
     return <WorkbenchWidgetFallback label="Widget contribution is no longer registered." />;
   }
   const panel = toHostedPanel({ placement, region: props.region, view, widget });
   if (!panel) return <WorkbenchWidgetFallback label="View contribution is no longer registered." />;
-  const instance = toPanelInstance(placement);
 
   return (
     // `flex: 1 0 auto` lets the host fill its region when the widget is short and
@@ -133,6 +140,15 @@ export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
         </WorkbenchRenderedWidgetFrame>
       ) : (
         <WorkbenchWidgetFallback label={`No renderer registered for ${rendererId}.`} />
+      )}
+      {resource && activity && props.region === "main" && (
+        <WorkbenchResourceActivity
+          key={resourceKey(resource)}
+          workbench={workbench}
+          binding={activity}
+          resource={resource}
+          visible={props.visible ?? true}
+        />
       )}
     </Box>
   );

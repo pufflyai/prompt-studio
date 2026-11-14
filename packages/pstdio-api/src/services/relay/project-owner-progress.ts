@@ -21,8 +21,15 @@ export const projectOwnerProgress = (
   /** Folder progress sits beside records and never makes them unready. */
   folder?: ProjectFolderRecoveryStatus,
 ) => {
-  const names = ["core", "publications", "automations", "personal", ...extensionIds];
-  const labels = ["Project information", "Extensions", "Automations", "Sessions and history", ...extensionNames];
+  const names = ["core", "publications", "automations", "activity", "personal", ...extensionIds];
+  const labels = [
+    "Project information",
+    "Extensions",
+    "Automations",
+    "Resource Activity",
+    "Sessions and history",
+    ...extensionNames,
+  ];
   apiLogger.debug(
     {
       event: "relay.project.status",

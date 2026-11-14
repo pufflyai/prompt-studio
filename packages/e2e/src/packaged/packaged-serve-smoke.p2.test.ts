@@ -42,6 +42,7 @@ import { expectPackagedNativeMarkdown, writeNativeMarkdownExtension } from "./pa
 // packaged-extension-install-smoke.p1.test.ts checks every replacement webview and preserves the working install if one fails.
 // packaged-canvas-install.p2.test.ts checks optional Canvas assets, previews, themes, and the current source skill without local build fingerprints.
 // packaged-showcase-smoke.p2.test.ts checks shipped proposal, refinement, and child-ticket skills and proposal design templates against source assets.
+// packaged-resource-links-smoke.p2.test.ts checks durable resource Activity through the compiled HTTP API and CLI, including restart.
 // Catalog IDs and extension icons remain available through the compiled host.
 // Navigation metadata preserves tabless pages, panel views, slot replacements, caller-relative handoff,
 // placeholder actions and status-item popover views through the compiled host.

@@ -15,6 +15,7 @@ import type { ExtensionConnectionsApi, ExtensionLoggerApi } from "./connections"
 import type { EventDeliveryResult, EventRef } from "./events";
 import type { JsonObject, JsonValue, MaybePromise, Struct } from "./json";
 import type { NavigationTarget } from "./navigation-target";
+import type { ResourceActivityApi } from "./resource-activity";
 import type { ExtensionResourcesApi, RendererContext, ResourceRef } from "./resources";
 import type { ExtensionViewsApi } from "./saved-views";
 import type { ExtensionSessionsApi } from "./sessions";
@@ -121,7 +122,12 @@ export interface ExtensionEventsApi {
   ): Promise<EventDeliveryResult>;
 }
 
-export interface ExtensionActivityApi {
+export interface ExtensionActivityApi extends ResourceActivityApi {
+  /** Resource owners may preserve immutable historical evidence during migration. */
+  importEntry(
+    resource: ResourceRef,
+    input: import("../../resource-activity").ResourceActivityImport,
+  ): Promise<import("../../resource-activity").ResourceActivityEntry>;
   record(input: {
     message: string;
     target?: ResourceRef;

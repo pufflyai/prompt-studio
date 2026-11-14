@@ -240,6 +240,7 @@ export const createContextFactory = (
     );
     return {
       ...base,
+      activity: env.activityForInvocation?.(source) ?? base.activity,
       stream: { write: async () => {} },
       commandId,
       invocationId,

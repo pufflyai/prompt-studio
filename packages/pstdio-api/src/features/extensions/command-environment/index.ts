@@ -184,6 +184,7 @@ export const createCommandEnvironment = (
     resources: createResourcesApi(deps, input),
     views: createViewsApi(deps, input),
     activity: createActivityApi(deps, { projectId: input.projectId, enabledSource }),
+    activityForInvocation: (source) => createActivityApi(deps, { projectId: input.projectId, enabledSource, source }),
     notify: createNotifyApi(deps, { projectId: input.projectId, enabledSource }),
     automation: createAutomationApi(() => deps.automationService, {
       projectId: input.projectId,

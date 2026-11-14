@@ -170,6 +170,37 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
         },
         kanbanAdapter: kanban,
         nativeDocuments: getApiClient().nativeDocuments,
+        resourceActivity: {
+          api: getApiClient().activity,
+          watch: (resource, options) => getApiClient().activity.watch(resource, options),
+          targets: async () => {
+            const api = getApiClient().agents;
+            const targets: { harnessId: string; modelId: string; label: string }[] = [];
+            let cursor: string | undefined;
+            do {
+              const page = await api.query(input.projectId, { cursor, limit: 100 });
+              for (const harness of page.items) {
+                let modelCursor: string | undefined;
+                do {
+                  const models = await api.queryModels(input.projectId, harness.id, {
+                    cursor: modelCursor,
+                    limit: 100,
+                  });
+                  targets.push(
+                    ...models.items.map((model) => ({
+                      harnessId: harness.id,
+                      modelId: model.id,
+                      label: `${harness.name} · ${model.label ?? model.id}`,
+                    })),
+                  );
+                  modelCursor = models.nextCursor ?? undefined;
+                } while (modelCursor);
+              }
+              cursor = page.nextCursor ?? undefined;
+            } while (cursor);
+            return targets;
+          },
+        },
         textEditing: getApiClient().textEditing,
         dataTableAdapter: {
           resolveRowResource: (_record, row) =>

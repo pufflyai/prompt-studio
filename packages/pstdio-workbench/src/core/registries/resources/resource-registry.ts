@@ -80,6 +80,7 @@ export const getWorkbenchSelectionResourceKeys = (resource: ResourceRef | undefi
   return [resourceKey(resource), selectionResourceKey];
 };
 export interface ResourceKindContribution {
+  activity?: import("./resource-activity").ResourceActivityBinding;
   kind: string;
   extensionId?: string;
   relatedOpenings?(

@@ -79,6 +79,8 @@ export interface CommandRunnerEnvironment {
   sessions: ExtensionSessionsApi;
   workspaces: ExtensionWorkspacesApi;
   activity: ExtensionActivityApi;
+  /** Attribute command-generated Activity to the invocation rather than its resource owner. */
+  activityForInvocation?: (source?: CommandSource) => ExtensionActivityApi;
   notify: ExtensionNotifyApi;
   automation: ExtensionAutomationApi;
   process: ExtensionProcessApi;

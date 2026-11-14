@@ -459,4 +459,9 @@ CLI and API invocations remain unchanged: commands must keep their explicit cons
 validation or existing presentation path when that parameter is absent. Older hosts
 omit this optional declaration and never synthesize consent.
 
-*Updated at: 2026-11-13*
+
+## Resource Activity in API 0.4.2
+
+Optional resource Activity declarations, `ctx.activity` discussion/outcome methods, owner-only historical import and `client.activity` are additive in API 0.4.2. The current `pstdio@0.47.0` API-report baseline contains API 0.4.1. Existing `ctx.activity.record` remains supported. Publish the supporting host, SDK, UI and workbench before releasing independent consumers. See [resource Activity](../cli/0012-resource-activity.md).
+
+*Updated at: 2026-11-12*
