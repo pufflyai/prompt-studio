@@ -40,7 +40,6 @@
     }
   },
   "scripts": {
-    "bench:open-resources": "bun src/core/controllers/page-runtime/open-resource-inventory.p3.bench.ts",
     "build": "cross-env NODE_ENV=production vite build && rolldown -c rolldown.types.config.ts && bun ../../scripts/build/mark-dts-modules.ts dist && bun ../../scripts/release/stage-package.ts .",
     "typecheck": "bun check",
     "lint": "bun run typecheck && biome check .",
@@ -80,7 +79,6 @@
     "babel-plugin-react-compiler": "^1.0.0",
     "cross-env": "10.1.0",
     "pstdio-api-contracts": "workspace:*",
-    "pstdio-benchmarks": "workspace:*",
     "pstdio-extensions": "workspace:*",
     "pstdio-sync": "workspace:*",
     "pstdio-sync-contracts": "workspace:*",

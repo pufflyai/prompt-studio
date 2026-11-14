@@ -1,7 +1,10 @@
 import { execFileSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
+import ts from "typescript";
+import { approvedCatalog, readContract } from "./catalog/contract";
+import { scenarios } from "./catalog/scenarios";
 import type { BenchmarkSuite, SuiteContext } from "./suite-types";
 
 interface SuiteFiles {
@@ -38,7 +41,9 @@ export const benchmarkCoverageErrors = (files: string[], suites: SuiteFiles[]) =
     if (!file.endsWith(".bench.ts")) continue;
     const assigned = owners.get(file) ?? [];
     if (!assigned.length)
-      errors.push(`${file} is not tracked. Add it to a suite in packages/benchmarks/src/suites.ts.`);
+      errors.push(
+        `${file} is not authorized by the frozen catalog. A human instruction and protected approval are required.`,
+      );
     else if (assigned.length > 1) errors.push(`${file} is tracked by multiple suites: ${assigned.join(", ")}`);
   }
   return errors;
@@ -56,7 +61,10 @@ export const benchmarkExecutionErrors = (context: SuiteContext, suites: Benchmar
       .map((file) => `Suite ${suite.id} does not execute its registered benchmark: ${file}`);
   });
 
-export const verifyBenchmarkCoverage = (root: string, suites: BenchmarkSuite[]) => {
+const literalArgument = (argument: ts.Expression | undefined) =>
+  argument && ts.isStringLiteral(argument) ? argument.text : undefined;
+
+export const verifyBenchmarkCoverage = async (root: string, suites: BenchmarkSuite[]) => {
   const files = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", "-z"], {
     cwd: root,
     encoding: "utf8",
@@ -70,5 +78,38 @@ export const verifyBenchmarkCoverage = (root: string, suites: BenchmarkSuite[]) 
       suites,
     ),
   ];
+  if (scenarios.length !== 8 || scenarios.some((scenario, index) => scenario.id !== `B${index + 1}`))
+    errors.push("The frozen catalog is exactly B1–B8 in order");
+  for (const scenario of scenarios) {
+    const source = ts.createSourceFile(
+      scenario.file,
+      readFileSync(join(root, scenario.file), "utf8"),
+      ts.ScriptTarget.Latest,
+      true,
+    );
+    const cases: string[] = [];
+    const visit = (node: ts.Node) => {
+      if (!ts.isCallExpression(node)) {
+        ts.forEachChild(node, visit);
+        return;
+      }
+      {
+        const name = node.expression.getText(source);
+        const id = literalArgument(node.arguments[0]);
+        if (name === "runScenario") cases.push(id ?? "dynamic-case");
+        if (/^(test|it|describe)(\.|$)/.test(name))
+          errors.push(`${scenario.file}: extra test/case registration is forbidden`);
+        if (name.endsWith(".record") && id && !scenario.metrics.some((metric) => metric.id === id))
+          errors.push(`${scenario.file}: undeclared metric ${id}`);
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(source);
+    if (JSON.stringify(cases) !== JSON.stringify([scenario.id]))
+      errors.push(`${scenario.file}: expected exactly one ${scenario.id} case`);
+  }
   if (errors.length) throw new Error(`Benchmark coverage failed:\n${errors.join("\n")}`);
+  const { digest } = readContract(root);
+  await approvedCatalog(digest);
+  console.log(`Human-approved frozen catalog revision 1: ${digest}`);
 };

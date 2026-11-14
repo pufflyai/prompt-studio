@@ -1,28 +1,23 @@
 import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { suites } from "./benchmark-registry";
+import { performanceSuites } from "./production-performance-profile";
 import { productionDesktopPlatforms, productionPerformanceWorkloads } from "./production-platforms";
 import type { TestPackage } from "./runner-profiles";
 import { createTestPlan, mergeTestPlans, type SourceIdentity } from "./test-plan";
 import { testPlanSource } from "./test-plan-source";
 import { readWorkspacePackages } from "./workspace-packages";
 
-const suitesForFamily = (family: string) => {
-  if (family === "browser") return ["workbench", "canvas", "chat"];
-  if (family === "navigation") return ["subnav"];
-  return [family];
-};
-
-// Comparative benchmark tooling keeps its historical one-sample contract. This
-// qualification path uses the shared adapters, including ordered navigation.
 export const createBenchmarkCiPlan = (source: SourceIdentity, packages: TestPackage[], channel: string) => {
   if (!["stable", "nightly"].includes(channel)) throw new Error(`Unknown release channel: ${channel}`);
   const hosts = productionDesktopPlatforms(channel);
   const assignments = [
-    ...hosts.map((host) => ({ ...host, suite: "desktop" })),
+    ...hosts.flatMap((host) =>
+      performanceSuites("desktop", host.target).map((suite) => ({ ...host, suite: suite.id })),
+    ),
     ...productionPerformanceWorkloads(channel).flatMap(({ family, os }) => {
-      const host = hosts.find((host) => host.os === os)!;
-      return suitesForFamily(family).map((suite) => ({ ...host, suite }));
+      const host = productionDesktopPlatforms("stable").find((host) => host.os === os)!;
+      return performanceSuites(family, host.target).map((suite) => ({ ...host, suite: suite.id }));
     }),
   ].map((row) => ({ ...row, job: `benchmark-${row.target}-${row.suite}` }));
   const plan = mergeTestPlans(

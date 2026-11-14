@@ -11,13 +11,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   "pstdio-benchmarks": [],
   "pstdio-account-manager": ["pstdio-sync-contracts", "pstdio-service-telemetry"],
   "pstdio-psx": ["pstdio-extensions"],
-  "pstdio-relay": [
-    "pstdio-account-manager",
-    "pstdio-sync",
-    "pstdio-sync-contracts",
-    "pstdio-service-telemetry",
-    "pstdio-benchmarks",
-  ],
+  "pstdio-relay": ["pstdio-account-manager", "pstdio-sync", "pstdio-sync-contracts", "pstdio-service-telemetry"],
   "pstdio-api-contracts": ["pstdio-sync-contracts"],
   "pstdio-diagnostics": ["pstdio-api-contracts"],
   "pstdio-sync-contracts": [],
@@ -41,7 +35,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   "pstdio-storage": ["pstdio-paths", "pstdio-sync-contracts"],
   "@pstdio/sdk": ["pstdio-api-contracts", "pstdio-sync", "pstdio-sync-contracts"],
   "pstdio-extensions": ["@pstdio/sdk", "pstdio-api-contracts", "pstdio-paths", "pstdio-theme"],
-  "pstdio-api-runtime-host": ["pstdio-api-contracts", "pstdio-extensions", "pstdio-benchmarks"],
+  "pstdio-api-runtime-host": ["pstdio-api-contracts", "pstdio-extensions"],
   // pstdio-api also declares the extensions and fixtures its tests install from source,
   // so changing one marks pstdio-api as affected.
   "pstdio-api": [
@@ -62,7 +56,6 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-planner",
     "pstdio-skills",
     "workbench-fixture",
-    "pstdio-benchmarks",
     "pstdio-scripts",
   ],
   pstdio: [
@@ -75,14 +68,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-paths",
     "pstdio-wt",
   ],
-  "@pstdio/ui": [
-    "@pstdio/canvas",
-    "@pstdio/sdk",
-    "pstdio-api-contracts",
-    "pstdio-file-types",
-    "pstdio-theme",
-    "pstdio-benchmarks",
-  ],
+  "@pstdio/ui": ["@pstdio/canvas", "@pstdio/sdk", "pstdio-api-contracts", "pstdio-file-types", "pstdio-theme"],
   "@pstdio/workbench": [
     "@pstdio/canvas",
     "@pstdio/sdk",
@@ -91,7 +77,6 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-extensions",
     "pstdio-sync-contracts",
     "pstdio-sync",
-    "pstdio-benchmarks",
   ],
   "pstdio-dashboard": [
     "@pstdio/canvas",
@@ -152,7 +137,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "storage-scale-fixture",
     "pstdio-scripts",
   ],
-  "canvas-tests": ["@pstdio/ui", "@pstdio/workbench", "pstdio-benchmarks", "pstdio-dashboard"],
+  "canvas-tests": ["@pstdio/ui", "@pstdio/workbench", "pstdio-dashboard"],
   "pstdio-scripts": ["pstdio-api-contracts", "pstdio-extensions", "pstdio-benchmarks"],
   "@pstdio/desktop": [
     "@pstdio/canvas",
@@ -166,7 +151,6 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-home",
     "pstdio-session-browser",
     "pstdio-performance",
-    "pstdio-benchmarks",
     "pstdio-scripts",
   ],
   "@pstdio/landing-page": ["@pstdio/canvas", "@pstdio/ui"],

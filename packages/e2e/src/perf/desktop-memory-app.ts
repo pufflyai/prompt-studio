@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { chromium } from "@playwright/test";
@@ -7,7 +7,7 @@ import { type RuntimeDescriptor, runtimeAuthorization } from "../packaged/packag
 
 const repo = join(import.meta.dirname, "../../../..");
 
-export const prepareMemoryExtensions = async (root: string, signal: AbortSignal) => {
+export const prepareMemoryExtensions = async (root: string, signal: AbortSignal, includeFixtures = true) => {
   const catalog = JSON.parse(readFileSync(join(repo, "packages/pstdio-api/files/extension-catalog.json"), "utf8")) as {
     extensions: { default?: boolean; alwaysEnabled?: boolean; installName: string; origin: { path: string } }[];
   };
@@ -15,8 +15,12 @@ export const prepareMemoryExtensions = async (root: string, signal: AbortSignal)
   const entries = [
     ...defaults.map((entry) => ({ name: entry.installName, path: entry.origin.path })),
     // Workspaces supplies the file browser. The deterministic harness supplies the completed conversation.
-    { name: "pstdio-workspaces", path: "extensions/pstdio-workspaces" },
-    { name: "workbench-fixture", path: "packages/workbench-fixture" },
+    ...(includeFixtures
+      ? [
+          { name: "pstdio-workspaces", path: "extensions/pstdio-workspaces" },
+          { name: "workbench-fixture", path: "packages/workbench-fixture" },
+        ]
+      : []),
   ];
   const sources: { installName: string; source: string }[] = [];
   for (const entry of entries) {
@@ -34,14 +38,7 @@ export const readMemoryRuntime = (home: string) => {
   return existsSync(path) ? (JSON.parse(readFileSync(path, "utf8")) as RuntimeDescriptor) : undefined;
 };
 
-export const launchMemoryDesktop = async (
-  executable: string,
-  home: string,
-  defaults: { installName: string; source: string }[],
-  signal: AbortSignal,
-  launched: (pid: number) => void,
-) => {
-  mkdirSync(home, { recursive: true });
+export const memoryEnvironment = (home: string, defaults?: { installName: string; source: string }[]) => {
   const env: NodeJS.ProcessEnv = {
     ...process.env,
     HOME: home,
@@ -54,8 +51,9 @@ export const launchMemoryDesktop = async (
     LOCALAPPDATA: join(home, "local-app-data"),
     XDG_CONFIG_HOME: join(home, "config"),
     PSTDIO_LOG_PATH: join(home, "logs.jsonl"),
-    PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({ defaultExtensions: defaults }),
+    ...(defaults ? { PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({ defaultExtensions: defaults }) } : {}),
   };
+  if (!defaults) delete env.PSTDIO_DEFAULT_EXTENSIONS;
   for (const key of [
     "ELECTRON_RUN_AS_NODE",
     "PSTDIO_API_URL",
@@ -65,6 +63,18 @@ export const launchMemoryDesktop = async (
     "PSTDIO_DESKTOP_EXTERNAL_RUNTIME",
   ])
     delete env[key];
+  return env;
+};
+
+export const launchMemoryDesktop = async (
+  executable: string,
+  home: string,
+  defaults: { installName: string; source: string }[] | undefined,
+  signal: AbortSignal,
+  launched: (pid: number) => void,
+) => {
+  mkdirSync(home, { recursive: true });
+  const env = memoryEnvironment(home, defaults);
   const child = spawn(
     executable,
     ["--remote-debugging-port=0", `--user-data-dir=${join(home, "electron-user-data")}`],
@@ -92,7 +102,11 @@ export const launchMemoryDesktop = async (
   const close = async () => {
     if (child.exitCode === null && child.signalCode === null) {
       const exited = new Promise<void>((done) => child.once("close", () => done()));
-      process.kill(-child.pid!, "SIGKILL");
+      if (process.platform === "win32") {
+        const killed = spawnSync("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore" });
+        if (killed.status !== 0 && child.exitCode === null)
+          throw new Error("Could not stop the owned desktop process tree");
+      } else process.kill(-child.pid!, "SIGKILL");
       await exited;
     }
     const runtime = readMemoryRuntime(home);

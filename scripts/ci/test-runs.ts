@@ -1,5 +1,4 @@
 import { dirname, relative } from "node:path";
-import { suites } from "./benchmark-registry";
 import { canvasTestOwner } from "./canvas-test-owner";
 import { runnerCommand, type TestPackage } from "./runner-profiles";
 import { selectPriorityTests, testRunner } from "./test-discovery";
@@ -12,7 +11,6 @@ interface Selection {
   allowQuarantineOnly?: boolean;
 }
 
-const workbenchBenchmarks = new Set(suites.find((suite) => suite.id === "workbench")!.files);
 const playwrightRunners = new Set(["app", "desktop", "packaged-browser"]);
 interface TestGroup {
   owner: TestPackage;
@@ -21,7 +19,7 @@ interface TestGroup {
   componentOwner?: string;
 }
 
-const groupDetails = (file: string, runner: string, owner: TestPackage) => {
+const groupDetails = (file: string, runner: string) => {
   if (runner === "component") {
     const componentOwner = relative("packages/canvas-tests/src/ui", dirname(file)).replaceAll("\\", "/");
     if (!componentOwner || componentOwner.includes("/"))
@@ -30,13 +28,6 @@ const groupDetails = (file: string, runner: string, owner: TestPackage) => {
   }
   if (runner === "desktop") return { subgroup: file.includes("/packaged-") ? "packaged" : "source" };
   if (runner !== "performance") return { subgroup: "" };
-  if (
-    owner.name === "@pstdio/desktop" ||
-    owner.name === "@pstdio/ui" ||
-    (workbenchBenchmarks.has(file) && file.startsWith("packages/e2e/src/perf/"))
-  )
-    return { subgroup: "browser" };
-  if (file.startsWith("packages/e2e/src/packaged/")) return { subgroup: "packaged-browser" };
   return { subgroup: file };
 };
 
@@ -77,7 +68,7 @@ export const createTestRuns = (
       scripts: {},
     };
     const runner = testRunner(file);
-    const { subgroup, componentOwner } = groupDetails(file, runner, owner);
+    const { subgroup, componentOwner } = groupDetails(file, runner);
     const sourceOwner = componentOwner ? canvasTestOwner(packages, componentOwner) : undefined;
     const scopedOwners = sourceOwner ? [owner, sourceOwner] : [owner];
     if (

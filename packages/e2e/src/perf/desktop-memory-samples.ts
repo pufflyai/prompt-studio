@@ -35,7 +35,12 @@ export const ownedProcessTree = async (
 };
 
 /** Use the packaged sidecar's kernel sampler, outside the observed app's process tree. */
-export const sampleDesktopMemory = (sidecar: string, roots: () => number[], output: string) => {
+export const sampleDesktopMemory = (
+  sidecar: string,
+  roots: () => number[],
+  output: string,
+  heap?: () => Promise<number>,
+) => {
   const observer = spawn(sidecar, ["performance-observer"], { stdio: ["pipe", "pipe", "ignore"] });
   const lines = createInterface({ input: observer.stdout });
   let pending: ReturnType<typeof Promise.withResolvers<KernelProcessReading | null>> | undefined;
@@ -58,7 +63,18 @@ export const sampleDesktopMemory = (sidecar: string, roots: () => number[], outp
   let phase = "startup";
   let stopped = false;
   const identities = new Map<number, string>();
-  const samples: { at: number; phase: string; total: number | null; count: number }[] = [];
+  const samples: {
+    at: number;
+    phase: string;
+    total: number | null;
+    count: number;
+    rss: number | null;
+    heap: number | null;
+    cycle: number;
+  }[] = [];
+  let cycle = 0;
+  let measuredAt = 0;
+  let measuredUntil = 0;
   const sample = async () => {
     const at = performance.now();
     const { stdout } = await promisify(execFile)("ps", ["-axo", "pid=,ppid="]);
@@ -82,7 +98,11 @@ export const sampleDesktopMemory = (sidecar: string, roots: () => number[], outp
       readings.length > 0 &&
       readings.every(({ reading }) => reading?.physicalFootprintBytes != null);
     const total = complete ? readings.reduce((sum, { reading }) => sum + reading!.physicalFootprintBytes!, 0) : null;
-    const sample = { at, phase, total, count: readings.length };
+    const rss =
+      readings.length && readings.every(({ reading }) => reading?.residentBytes != null)
+        ? readings.reduce((sum, { reading }) => sum + reading!.residentBytes!, 0)
+        : null;
+    const sample = { at, phase, total, count: readings.length, rss, heap: heap ? await heap() : null, cycle };
     samples.push(sample);
     appendFileSync(
       output,
@@ -101,7 +121,12 @@ export const sampleDesktopMemory = (sidecar: string, roots: () => number[], outp
   void running.catch(() => {});
   return {
     phase: (value: string) => {
+      if (value === "measure") measuredAt = performance.now();
+      if (phase === "measure" && value !== phase) measuredUntil = performance.now();
       phase = value;
+    },
+    cycle: (value: number) => {
+      cycle = value;
     },
     close: async () => {
       stopped = true;
@@ -120,8 +145,8 @@ export const sampleDesktopMemory = (sidecar: string, roots: () => number[], outp
       for (let index = 0; index + 1 < samples.length; index++) {
         const current = samples[index]!,
           next = samples[index + 1]!;
-        if (current.phase !== "measure") continue;
-        const duration = next.at - current.at;
+        const duration = Math.max(0, Math.min(next.at, measuredUntil) - Math.max(current.at, measuredAt));
+        if (!duration) continue;
         if (current.total === null) missingMs += duration;
         else {
           weighted += current.total * duration;
@@ -143,6 +168,16 @@ export const sampleDesktopMemory = (sidecar: string, roots: () => number[], outp
         measuredPeakBytes: Math.max(0, ...measured.map((sample) => sample.total ?? 0)),
         finalBytes: measured.at(-1)?.total,
         maximumProcessCount: Math.max(0, ...measured.map((sample) => sample.count)),
+        rssPeakBytes: measured.some((sample) => sample.rss === null)
+          ? null
+          : Math.max(...measured.map((sample) => sample.rss!)),
+        heapPeakBytes: measured.some((sample) => sample.heap === null || !Number.isFinite(sample.heap))
+          ? null
+          : Math.max(...measured.map((sample) => sample.heap!)),
+        cycles: [...new Set(measured.map((sample) => sample.cycle))].map((cycle) => ({
+          cycle,
+          retainedBytes: measured.findLast((sample) => sample.cycle === cycle)?.total,
+        })),
       };
     },
   };

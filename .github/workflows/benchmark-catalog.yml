@@ -1,0 +1,37 @@
+name: Frozen benchmark catalog
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+  merge_group:
+permissions:
+  contents: read
+  actions: read
+  deployments: read
+  checks: write
+jobs:
+  catalog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - name: Check candidate data with the trusted base implementation
+        id: verify
+        continue-on-error: true
+        env:
+          CATALOG_CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: bun scripts/ci/check-benchmark-catalog.ts
+      - name: Publish required result on the candidate
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.event.merge_group.head_sha }}
+          OUTCOME: ${{ steps.verify.outcome == 'success' && 'success' || 'failure' }}
+        run: gh api --method POST repos/${{ github.repository }}/check-runs -f name=benchmark_catalog -f head_sha="$CANDIDATE_SHA" -f status=completed -f conclusion="$OUTCOME"

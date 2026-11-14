@@ -6,8 +6,8 @@ export const createProductionPerformancePlan = (
   target: Target,
   candidateSourceSha = source.sha,
 ) => {
-  const files = productionPerformanceFiles(family);
-  if (family === "relay") target = { platform: "linux", arch: "x64" };
+  const files = productionPerformanceFiles(family, `${target.platform}-${target.arch}`);
+  if (!files.length) throw new Error(`No frozen scenario owns ${family} on ${target.platform}-${target.arch}`);
   const run = {
     id: planHash({ family, source, target, candidateSourceSha }).slice(0, 24),
     owner: "benchmarks",

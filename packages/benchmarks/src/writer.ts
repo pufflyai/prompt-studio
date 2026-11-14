@@ -1,7 +1,7 @@
 import { appendFileSync } from "node:fs";
 
 // Lower is better for every unit, so one comparison rule covers time, CPU share, and memory.
-export type BenchmarkUnit = "ms" | "share" | "percent" | "bytes";
+export type BenchmarkUnit = "ms" | "share" | "percent" | "bytes" | "count";
 
 export interface BenchmarkMeasurement {
   metric: string;
@@ -9,15 +9,17 @@ export interface BenchmarkMeasurement {
   unit: BenchmarkUnit;
   value: number;
   budget?: number;
+  identity?: Record<string, unknown>;
 }
 
 export const RESULTS_FILE_ENV = "BENCHMARK_RESULTS";
 
 // Benchmarks also run on their own. Measurements are kept only when the runner names a results file.
-// A missing measurement (NaN) is left out, so it never reads as zero.
+// Missing or invalid observations fail; they never read as zero.
 export const recordMeasurement = (measurement: BenchmarkMeasurement) => {
+  if (!Number.isFinite(measurement.value)) throw new Error(`Invalid benchmark measurement: ${measurement.metric}`);
   const file = process.env[RESULTS_FILE_ENV];
-  if (!file || !Number.isFinite(measurement.value)) return;
+  if (!file) return;
   appendFileSync(file, `${JSON.stringify(measurement)}\n`);
 };
 

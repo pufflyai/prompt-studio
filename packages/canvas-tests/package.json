@@ -5,7 +5,6 @@
   "scripts": {
     "test": "bun ../../scripts/test.ts --scope canvas-tests",
     "test:browser": "bun src/scripts/run-browser.ts",
-    "perf:startup": "bun x --no-install lerna run build:previews --scope canvas-tests && bun run test:browser --config playwright.startup-perf.config.ts",
     "typecheck": "bun check && bun src/scripts/typecheck-canvas-files.ts",
     "lint": "bun run typecheck && biome check .",
     "report": "playwright show-report",
@@ -15,8 +14,7 @@
     "@playwright/test": "^1.60.0",
     "@pstdio/ui": "workspace:*",
     "@pstdio/workbench": "workspace:*",
-    "pstdio-dashboard": "workspace:*",
-    "pstdio-benchmarks": "workspace:*"
+    "pstdio-dashboard": "workspace:*"
   },
   "nx": {
     "targets": {

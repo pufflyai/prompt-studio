@@ -50,10 +50,10 @@ export const productionToolchainPlatforms = (channel: string) =>
     });
 
 export const productionPerformanceWorkloads = (channel: string) => [
-  ...["storage", "runtime"].flatMap((family) =>
+  ...["storage"].flatMap((family) =>
     forChannel(channel, ["ubuntu-24.04", "macos-15", "windows-2025"], (os) => os).map((os) => ({ family, os })),
   ),
-  ...["browser", "relay", "navigation", "planner"].map((family) => ({ family, os: "ubuntu-24.04" })),
+  ...["planner"].map((family) => ({ family, os: "ubuntu-24.04" })),
 ];
 
 export const quarantineBunHosts = (_channel: string) => ["ubuntu-latest", "windows-latest", "macos-15"];
