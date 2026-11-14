@@ -12,6 +12,7 @@ import type {
 export type {
   SharedEdit as SharedStorageEdit,
   StorageAggregateQuery,
+  StorageAggregateResult,
   StorageConflict,
   StorageConflictInspection,
   StorageCurrentGroup,
@@ -24,9 +25,11 @@ export type {
   StorageRecordIndex,
   StorageRecordQueries,
   StorageRecordQuery,
+  StorageRelatedSelection,
   StorageResolution,
   StorageSaveOutcome,
   StorageSaveState,
+  StorageSelection,
 } from "pstdio-sync-contracts";
 
 /** One extension's shared content within the current workbench. All methods use complete record addresses. */
