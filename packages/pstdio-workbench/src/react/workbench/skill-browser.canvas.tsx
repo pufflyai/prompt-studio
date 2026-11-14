@@ -110,13 +110,14 @@ const SkillDetailsPreview = (props: {
             title: "Info",
             collapsible: true,
             params: [
-              { id: "name", name: "Name", type: "readOnly", value: "create-ticket" },
-              { id: "version", name: "Version", type: "readOnly", value: "1.2.0" },
+              { id: "name", name: "Name", type: "text", singleLine: true, defaultValue: "create-ticket" },
+              { id: "version", name: "Version", type: "text", singleLine: true, defaultValue: "1.2.0" },
               {
                 id: "description",
                 name: "Description",
-                type: "readOnly",
-                value: "Create actionable tickets from a request.",
+                type: "text",
+                singleLine: false,
+                defaultValue: "Create actionable tickets from a request.",
               },
             ],
           },

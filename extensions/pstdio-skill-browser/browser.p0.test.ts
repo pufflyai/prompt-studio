@@ -74,8 +74,8 @@ test("renders metadata as read-only parameters in a collapsible Info section", (
     title: "Info",
     collapsible: true,
     params: [
-      { id: "name", name: "Name", type: "readOnly", value: "review" },
-      { id: "description", name: "Description", type: "readOnly", value: "Review a change" },
+      { id: "name", name: "Name", type: "text", singleLine: true, defaultValue: "review" },
+      { id: "description", name: "Description", type: "text", singleLine: false, defaultValue: "Review a change" },
     ],
   });
 });
