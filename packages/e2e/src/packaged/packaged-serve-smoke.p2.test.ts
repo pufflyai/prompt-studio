@@ -3,6 +3,7 @@
 // packaged-extensions-navigation.p1.spec.ts covers fixed headers and nested extension URLs.
 // packaged-collection-view-order-smoke.p2.test.ts keeps Save view clickable beneath explanatory tooltips.
 // packaged-extension-icons.p1.spec.ts covers public SVG assets and light/dark image colors.
+// packaged-extension-compatibility.p2.test.ts isolates incompatible installed extensions and checks recovery.
 import { beforeAll, expect, test } from "bun:test";
 import { type ChildProcess, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";

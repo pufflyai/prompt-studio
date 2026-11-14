@@ -9,7 +9,12 @@ import { bundleEntry } from "./bundle-entry";
 import { createDiagnostic } from "./diagnostics";
 import { discoverExtensionPackages } from "./discovery";
 import { mirrorNodeModules } from "./mirror-node-modules";
-import { type ExtensionApiProvider, type PackageManifest, readPackageManifest } from "./package-manifest";
+import {
+  type ExtensionApiProvider,
+  getExtensionApiVersionError,
+  type PackageManifest,
+  readPackageManifestMetadata,
+} from "./package-manifest";
 import {
   beginRuntimeLoad,
   publishRuntimePackage,
@@ -30,7 +35,7 @@ export type LoadedExtensionSource = {
   sourceKind: ExtensionSourceKind;
   manifest: PackageManifest;
   /**
-   * Contributions module. Empty when `main` failed to import; the diagnostic explains
+   * Contributions module. Empty when the API is incompatible or `main` failed to import; the diagnostic explains
    * why. Identity (`manifest.*`) is still surfaced so the dashboard can render the
    * broken extension instead of dropping it.
    */
@@ -152,8 +157,12 @@ const runtimePackageKey = (packagePath: string, runtimeModulePaths: Set<string>,
 // and Bun keeps a module that failed to evaluate, so a failed load can only end differently once
 // the key changes.
 export const extensionLoadKey = (packagePath: string) => {
-  const { entryPath, diagnostics } = readPackageManifest(packagePath);
-  if (!entryPath) return `manifest-${digest(JSON.stringify(diagnostics))}`;
+  const { manifest, entryPath, diagnostics } = readPackageManifestMetadata(packagePath);
+  // An incompatible release still has observable identity. Refresh that metadata
+  // when it changes without reading the modules of code this host cannot run.
+  if (!manifest || !entryPath || getExtensionApiVersionError(manifest.name, manifest.enginesPstdio)) {
+    return `manifest-${digest(JSON.stringify({ manifest, diagnostics }))}`;
+  }
   return runtimePackageKey(
     packagePath,
     collectRuntimeModulePaths(packagePath, entryPath),
@@ -211,13 +220,28 @@ export const loadExtensionPackage = async (
   diagnostics: ExtensionDiagnostic[],
   options: { apiProvider?: ExtensionApiProvider } = {},
 ): Promise<LoadedExtensionSource | null> => {
-  const { manifest, entryPath, diagnostics: manifestDiagnostics } = readPackageManifest(pkg.path, options);
+  const { manifest, entryPath, diagnostics: manifestDiagnostics } = readPackageManifestMetadata(pkg.path);
   diagnostics.push(...manifestDiagnostics);
 
   if (!manifest || !entryPath) return null;
 
   const sourceKind = pkg.sourceKind ?? "local_path";
   let definition: ExtensionDefinition = {};
+
+  // Compatibility is an extension diagnostic, not a host failure. Keep the identity
+  // for recovery, but never import code that cannot run against this host API.
+  const versionError = getExtensionApiVersionError(manifest.name, manifest.enginesPstdio, options);
+  if (versionError) {
+    diagnostics.push(
+      createDiagnostic({
+        code: "extension_manifest_unsupported_api_version",
+        message: versionError,
+        sourcePath: join(pkg.path, "package.json"),
+        extensionId: manifest.id,
+      }),
+    );
+    return { packagePath: pkg.path, sourcePath: entryPath, sourceKind, manifest, definition };
+  }
 
   try {
     const mod = (await importFresh(entryPath, pkg.path, manifest.name)) as Record<string, unknown>;
