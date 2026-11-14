@@ -76,4 +76,7 @@ Use `pst <namespace> <command> [params] --stream` for commands that declare stre
 
 A success outcome exits with code 0. Other outcomes exit with code 1. Ctrl+C aborts the handler and exits with code 130. Without `--stream`, command output stays unchanged. A command without a stream declaration fails with `command_not_streamable`.
 
-*Updated at: 2026-10-26*
+
+Resource discussion and structured implementation/review evidence are core commands under [`pst resources activity`](0012-resource-activity.md). The owner chooses which capabilities a resource supports; sessions keep their own conversation.
+
+*Updated at: 2026-11-12*

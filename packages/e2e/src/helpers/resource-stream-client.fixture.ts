@@ -30,6 +30,22 @@ const stopSession = new AbortController();
 let sessionWatch: Promise<void> | undefined;
 let command: ReturnType<typeof client.extensions.streamCommand> | undefined;
 let commandWatch: Promise<void> | undefined;
+const activityAbort = new AbortController();
+let activityWatch: Promise<void> | undefined;
+let activityEvents = 0;
+let activityReadies = 0;
+const activityResource = (projectId: string) => ({
+  projectId,
+  extensionId: "test.stream-fixture",
+  type: "item",
+  id: "activity",
+});
+export const publishActivity = (projectId: string) =>
+  client.activity.publish(activityResource(projectId), {
+    key: crypto.randomUUID(),
+    kind: "comment",
+    body: "Activity shares the mixed resource stream",
+  });
 
 export const open = async (projectId: string, target: Target) => {
   const connection = await client.textEditing.connect({ projectId, scope: { kind: "agent", target } });
@@ -54,6 +70,24 @@ export const open = async (projectId: string, target: Target) => {
   return session.getSnapshot().text.toString();
 };
 export const start = async (input: { projectId: string; targets: Target[]; sessionId: string }) => {
+  const ready = Promise.withResolvers<void>();
+  activityWatch = (async () => {
+    while (!activityAbort.signal.aborted) {
+      try {
+        await client.activity.watch(activityResource(input.projectId), {
+          signal: activityAbort.signal,
+          onChange: () => activityEvents++,
+          onReady: () => {
+            activityReadies++;
+            ready.resolve();
+          },
+        });
+      } catch {
+        if (activityAbort.signal.aborted) break;
+      }
+    }
+  })();
+  await ready.promise;
   sessionWatch = client.sessions
     .stream(input.sessionId, () => sessionEvents++, { signal: stopSession.signal })
     .catch(() => {});
@@ -66,6 +100,8 @@ export const start = async (input: { projectId: string; targets: Target[]; sessi
   return content;
 };
 export const state = () => ({
+  activityEvents,
+  activityReadies,
   snapshots,
   sessionEvents,
   chunks,
@@ -104,6 +140,8 @@ export const cancelPending = async () => {
   await pending!.watch;
 };
 export const close = async () => {
+  activityAbort.abort();
+  await activityWatch;
   await command?.cancel();
   await commandWatch;
   stopSession.abort();

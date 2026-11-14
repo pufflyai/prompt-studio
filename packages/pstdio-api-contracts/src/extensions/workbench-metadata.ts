@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { dockedWorkbenchRegions, extensionPanelRegions } from "../extension-kernel/types/composition";
+import { resourceActivityCapabilitiesSchema } from "../resource-activity";
 import { chatRendererSnapshotSchema } from "./chat-renderer";
 import {
   extensionCommandPaletteContributionSchema,
@@ -210,6 +211,8 @@ const workbenchExtensionNavigationTreeRecordSchema = z.object({
 });
 
 const workbenchExtensionResourceKindRecordSchema = z.object({
+  activity: resourceActivityCapabilitiesSchema.optional(),
+  activityHandoff: z.boolean().optional(),
   id: z.string(),
   localId: z.string(),
   extensionId: z.string(),

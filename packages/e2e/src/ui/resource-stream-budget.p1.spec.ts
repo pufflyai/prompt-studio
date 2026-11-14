@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { observeEventConnectionBudget } from "../helpers/event-connection-budget";
 import { getPlannerTicket } from "../helpers/planner-api";
 import { createResourceStreamFixture } from "../helpers/resource-stream-fixture";
@@ -40,9 +41,13 @@ test("mixed resources share two HTTP/1.1 connections through admission cancellat
   });
   expect(content).toHaveLength(8);
   expect(content[7]).toContain("Retained file 2");
+  await page.evaluate((id) => Reflect.get(window, "resourceClient").publishActivity(id), projectId);
+  await expect
+    .poll(() => page.evaluate(() => Reflect.get(window, "resourceClient").state().activityEvents))
+    .toBeGreaterThan(0);
   await expect
     .poll(() => page.evaluate(() => Reflect.get(window, "resourceClient").state()))
-    .toMatchObject({ sync: true, chunks: 1, connected: true, sessionEvents: expect.any(Number) });
+    .toMatchObject({ activityReadies: 1, sync: true, chunks: 1, connected: true, sessionEvents: expect.any(Number) });
   expect(await page.evaluate(() => Reflect.get(window, "resourceClient").state().sessionEvents)).toBeGreaterThan(0);
   // Hold admission, cancel its logical owner, then allow the acknowledgement to arrive late.
   const admission = Promise.withResolvers<void>();
@@ -93,7 +98,7 @@ test("mixed resources share two HTTP/1.1 connections through admission cancellat
   await page.evaluate(() => Reflect.get(window, "resourceClient").drop());
   await expect
     .poll(() => page.evaluate(() => Reflect.get(window, "resourceClient").state()))
-    .toMatchObject({ connected: true, resets: 8 });
+    .toMatchObject({ connected: true, resets: 8, activityReadies: 2 });
   await expect
     .poll(() => page.evaluate(() => Reflect.get(window, "resourceClient").state().snapshots))
     .toBeGreaterThan(beforeRecovery);
@@ -165,4 +170,132 @@ test("retained tickets and files keep tools responsive while switching projects 
     body: JSON.stringify(budget.state(), null, 2),
     contentType: "application/json",
   });
+});
+
+// Critical: a selected file must be sendable without text and remain downloadable after reload.
+test("resource discussion sends file-only comments and retains the original attachment", async ({ page }, testInfo) => {
+  const uri = `pstdio://extension-resource/item/attachment?extensionId=test.stream-fixture&projectId=${fixture.projectId}`;
+  await prepareDashboard(page, fixture.projectId);
+  await page.goto(
+    `/projects/${fixture.projectId}/extensions/test.stream-fixture/discussion?resource=${encodeURIComponent(uri)}`,
+  );
+  const activity = page.locator('[aria-label="Resource activity"]');
+  const file = { name: "trace.txt", mimeType: "text/plain", buffer: Buffer.from("Original Activity evidence\n") };
+  const upload = activity.locator('input[type="file"]');
+  const send = activity.getByRole("button", { name: "Submit comment", exact: true });
+  await expect(send).toBeDisabled();
+  await upload.setInputFiles(file);
+  await expect(activity.getByRole("button", { name: "Remove trace.txt" })).toBeVisible();
+  await expect(send).toBeEnabled();
+  await activity.getByRole("button", { name: "Remove trace.txt" }).click();
+  await expect(send).toBeDisabled();
+  await upload.setInputFiles(file);
+  await expect(send).toBeEnabled();
+  await send.click();
+  await expect(activity.getByRole("button", { name: "trace.txt", exact: true })).toBeVisible();
+  await page.reload();
+  const downloadEvent = page.waitForEvent("download");
+  await activity.getByRole("button", { name: "trace.txt", exact: true }).click();
+  const download = await downloadEvent;
+  const saved = testInfo.outputPath("trace.txt");
+  await download.saveAs(saved);
+  expect(await readFile(saved)).toEqual(file.buffer);
+
+  // Critical: formatting and multiple paragraphs must survive sending and reload,
+  // while the controlled editor clears without losing a subsequent draft.
+  const input = activity.locator('[contenteditable="true"]');
+  await input.fill("Important");
+  await input.press("ControlOrMeta+a");
+  await input.press("ControlOrMeta+b");
+  await input.press("ArrowRight");
+  await input.press("Enter");
+  const bold = page
+    .locator(".floating-text-format-toolbar")
+    .getByRole("button", { name: "Bold", exact: true, includeHidden: true });
+  if ((await bold.getAttribute("data-active")) === "true") await input.press("ControlOrMeta+b");
+  await expect(bold).not.toHaveAttribute("data-active", "true");
+  await page.keyboard.type("Next paragraph");
+  await send.click();
+  const comments = activity.locator("article");
+  await expect(comments.last().locator("strong, b")).toHaveText("Important");
+  await expect(input).toHaveText("");
+  await input.fill("Later comment");
+  await send.click();
+  await expect(comments.last()).toContainText("Later comment");
+  await page.reload();
+  await expect(comments).toHaveCount(3);
+  await expect(comments.nth(0).getByRole("button", { name: "trace.txt", exact: true })).toBeVisible();
+  await expect(comments.nth(1).locator("strong, b")).toHaveText("Important");
+  await expect(comments.nth(1)).toContainText("Next paragraph");
+  await expect(comments.nth(2)).toContainText("Later comment");
+});
+
+// Critical: prepending history must keep the reading position and editor focus,
+// and must not drain all remaining cursor pages while the boundary stays visible.
+test("earlier discussion retries at the top without moving the reader or focus", async ({ page, request }) => {
+  const resource = { projectId: fixture.projectId, extensionId: "test.stream-fixture", type: "item", id: "history" };
+  for (let index = 0; index < 120; index++) {
+    const response = await request.post(`/v1/projects/${fixture.projectId}/activity/publish`, {
+      data: { resource, entry: { key: String(index), kind: "comment", body: `History ${index}` } },
+    });
+    expect(response.ok()).toBe(true);
+  }
+  const earlier = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const retryStarted = Promise.withResolvers<void>();
+  const retryRelease = Promise.withResolvers<void>();
+  let held = false;
+  let retried = false;
+  await page.route("**/activity/query", async (route) => {
+    if (route.request().postDataJSON().cursor) {
+      if (!held) {
+        held = true;
+        earlier.resolve();
+        await release.promise;
+        await route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"History unavailable"}' });
+        return;
+      }
+      if (!retried) {
+        retried = true;
+        retryStarted.resolve();
+        await retryRelease.promise;
+      }
+    }
+    await route.continue();
+  });
+  try {
+    await prepareDashboard(page, fixture.projectId);
+    const uri = `pstdio://extension-resource/item/history?extensionId=test.stream-fixture&projectId=${fixture.projectId}`;
+    await page.goto(
+      `/projects/${fixture.projectId}/extensions/test.stream-fixture/discussion?resource=${encodeURIComponent(uri)}`,
+    );
+    await earlier.promise;
+    const activity = page.locator('[aria-label="Resource activity"]');
+    const entries = activity.locator("[data-activity-entry]");
+    await expect(entries).toHaveCount(50);
+    const firstId = await entries.first().getAttribute("data-activity-entry");
+    const anchor = activity.locator(`[data-activity-entry="${firstId}"]`);
+    release.resolve();
+    await activity.getByRole("button", { name: "Retry", exact: true }).click();
+    await retryStarted.promise;
+    const top = (await anchor.boundingBox())!.y;
+    const input = activity.getByRole("textbox", { name: "Leave a comment…" });
+    await input.evaluate((element) => element.focus({ preventScroll: true }));
+    retryRelease.resolve();
+    await expect(entries).toHaveCount(100);
+    await expect.poll(async () => (await anchor.boundingBox())!.y).toBeCloseTo(top, 0);
+    await expect(input).toBeFocused();
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await expect(entries).toHaveCount(100);
+    await activity.evaluate((element) => {
+      element.closest('[data-scope="scroll-area"][data-part="viewport"]')!.scrollTop = 0;
+    });
+    await expect(entries).toHaveCount(120);
+    await expect(entries.first()).toContainText("History 0");
+    await expect(entries.last()).toContainText("History 119");
+    await expect(input).toBeFocused();
+  } finally {
+    release.resolve();
+    retryRelease.resolve();
+  }
 });
