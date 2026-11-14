@@ -34,8 +34,8 @@ test("a cold personal-history point read does not hydrate the owner's history", 
       );
     const query = db.$client.query.bind(db.$client);
     let hydrated = 0;
-    db.$client.query = async (...args: Parameters<typeof query>) => {
-      const result = await query(...args);
+    db.$client.query = async <T>(...args: Parameters<typeof query>) => {
+      const result = await query<T>(...args);
       if (String(args[0]).includes('from "storage_personal_history"')) hydrated += result.rows.length;
       return result;
     };
