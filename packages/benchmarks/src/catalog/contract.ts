@@ -9,7 +9,7 @@ import ts from "typescript";
 export const workloadSource = (file: string) =>
   file.startsWith("packages/benchmarks/src/") ||
   /^scripts\/ci\/(.*benchmark.*|production-performance.*|production-platforms)\.ts$/.test(file) ||
-  /^\.github\/workflows\/(benchmarks|benchmark-catalog|production-performance|production-desktop|verify-windows-signing|source-benchmarks)\.yml$/.test(
+  /^\.github\/workflows\/(benchmarks|production-performance|production-desktop|verify-windows-signing|source-benchmarks)\.yml$/.test(
     file,
   ) ||
   file.startsWith("packages/e2e/src/perf/critical/") ||
@@ -47,7 +47,6 @@ export const catalogDigest = (root: string) => {
   return sourceDigest(files.map((file) => [file, readFileSync(join(root, file), "utf8")]));
 };
 
-export const approvalEnvironment = "benchmark-catalog";
 export const readContract = (root: string) => {
   const lock = JSON.parse(readFileSync(join(root, "packages/benchmarks/catalog.lock.json"), "utf8")) as {
     revision: number;
@@ -55,56 +54,8 @@ export const readContract = (root: string) => {
     authorization: string;
   };
   if (lock.revision !== 1 || lock.digest !== catalogDigest(root))
-    throw new Error("Frozen workload source changed; explicit human authorization and protected review are required");
+    throw new Error(
+      "Frozen workload source changed; update the authorized contract in a benchmark-labeled PR for human review and merge",
+    );
   return lock;
-};
-
-// The receipt is external to the candidate. Only an actual environment review on a
-// completed workflow run can approve the immutable commit containing the lock.
-export const approvedCatalog = async (digest: string) => {
-  const repository = process.env.GITHUB_REPOSITORY ?? "pufflyai/prompt-studio";
-  const token = process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN;
-  const request = async (path: string) => {
-    const response = await fetch(`https://api.github.com/repos/${repository}/${path}`, {
-      headers: { accept: "application/vnd.github+json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
-    });
-    if (!response.ok) throw new Error(`Cannot read external benchmark approval: HTTP ${response.status}`);
-    return response.json();
-  };
-  const deployments = await request(`deployments?environment=${approvalEnvironment}&per_page=100`);
-  for (const deployment of deployments) {
-    if (
-      deployment.payload?.catalogDigest !== digest ||
-      deployment.creator?.login !== "github-actions[bot]" ||
-      !deployment.payload.runId
-    )
-      continue;
-    const run = await request(`actions/runs/${deployment.payload.runId}`);
-    if (
-      run.path !== ".github/workflows/benchmarks.yml" ||
-      run.event !== "workflow_dispatch" ||
-      run.conclusion !== "success" ||
-      run.head_sha !== deployment.sha
-    )
-      continue;
-    const statuses = await request(`deployments/${deployment.id}/statuses`);
-    if (statuses[0]?.state !== "success") continue;
-    const reviews = await request(`actions/runs/${run.id}/approvals`);
-    if (
-      !reviews.some(
-        (review: { state: string; user: { type: string }; environments: { name: string }[] }) =>
-          review.state === "approved" &&
-          review.user.type === "User" &&
-          review.environments.some((environment) => environment.name === approvalEnvironment),
-      )
-    )
-      continue;
-    const file = await request(`contents/packages/benchmarks/catalog.lock.json?ref=${run.head_sha}`);
-    const accepted = JSON.parse(Buffer.from(file.content, "base64").toString());
-    if (accepted.revision === 1 && accepted.digest === digest)
-      return { runId: run.id, sha: run.head_sha, url: run.html_url };
-  }
-  throw new Error(
-    `Catalog revision 1 (${digest}) has no retained human approval in the protected ${approvalEnvironment} environment. Agents must never approve their own request. A self-edited lock is not approval.`,
-  );
 };

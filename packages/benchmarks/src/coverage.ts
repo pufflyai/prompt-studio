@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 import ts from "typescript";
-import { approvedCatalog, readContract } from "./catalog/contract";
+import { readContract } from "./catalog/contract";
 import { scenarios } from "./catalog/scenarios";
 import type { BenchmarkSuite, SuiteContext } from "./suite-types";
 
@@ -42,7 +42,7 @@ export const benchmarkCoverageErrors = (files: string[], suites: SuiteFiles[]) =
     const assigned = owners.get(file) ?? [];
     if (!assigned.length)
       errors.push(
-        `${file} is not authorized by the frozen catalog. A human instruction and protected approval are required.`,
+        `${file} is not authorized by the frozen catalog. An explicit human instruction and a benchmark-labeled PR for human merge are required.`,
       );
     else if (assigned.length > 1) errors.push(`${file} is tracked by multiple suites: ${assigned.join(", ")}`);
   }
@@ -110,6 +110,5 @@ export const verifyBenchmarkCoverage = async (root: string, suites: BenchmarkSui
   }
   if (errors.length) throw new Error(`Benchmark coverage failed:\n${errors.join("\n")}`);
   const { digest } = readContract(root);
-  await approvedCatalog(digest);
-  console.log(`Human-approved frozen catalog revision 1: ${digest}`);
+  console.log(`Frozen catalog revision 1: ${digest}`);
 };

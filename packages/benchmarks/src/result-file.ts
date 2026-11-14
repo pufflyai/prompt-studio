@@ -63,7 +63,6 @@ export const mergeSamples = (samples: SuiteSample[]) => {
         planDigest: _plan,
         runId: _run,
         executionId: _execution,
-        approval: _approval,
         dirty: _dirty,
         ...identity
       } = measurement.identity;

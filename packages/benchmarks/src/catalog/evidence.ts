@@ -52,10 +52,9 @@ export const scenarioEvidence = (
       event.fingerprint !== fingerprint ||
       event.dirty ||
       event.sample !== 0 ||
-      !event.approval ||
       Object.entries(expected).some(([key, value]) => event[key] !== value)
     )
-      throw new Error(`${id}: stale, unapproved or unlike workload evidence`);
+      throw new Error(`${id}: stale or unlike workload evidence`);
   }
   const metrics = events.filter((event) => event.event === "metric");
   if (

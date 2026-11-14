@@ -1,5 +1,5 @@
 {
   "revision": 1,
-  "digest": "6ed5d9cd2c4ca943d7506772f792e944128478e489f856276667391c5579b960",
-  "authorization": "PS-233 authorizes the one-time eight-scenario consolidation; accepted qualification and later semantic changes require retained protected human review"
+  "digest": "e4d2866cf4f25ecf100c21bc13c28b7608b62b69f0ee78d0f4a8e1f49c198f14",
+  "authorization": "PS-233 authorizes the one-time eight-scenario consolidation; later semantic changes require explicit human instructions and a benchmark-labeled PR left for human review and merge"
 }

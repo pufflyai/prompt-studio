@@ -10,9 +10,9 @@ PR and queue run only catalog verification. Editing a benchmark does not schedul
 
 ## Raw evidence
 
-`test-results/production-performance/B1.jsonl` through `B8.jsonl` contain started, observation, metric and finished/failed records. Each has source SHA, catalog digest/revision, retained human approval receipt, scenario version and fixture fingerprint, actual platform/CPU/cores/RAM, cache and throttle, sample and plan/run/execution identity. Artifact hashes and owned process details are observations. The manifest declares exact metric IDs and units.
+`test-results/production-performance/B1.jsonl` through `B8.jsonl` contain started, observation, metric and finished/failed records. Each has source SHA, catalog digest/revision, scenario version and fixture fingerprint, actual platform/CPU/cores/RAM, cache and throttle, sample and plan/run/execution identity. Artifact hashes and owned process details are observations. The manifest declares exact metric IDs and units.
 
-A consumer checks identity again after transport. Missing, duplicate, extra, nonfinite, stale, dirty-source, unapproved or incomplete measurements fail. Unqualified limits/reference hardware cannot read as green. Raw budget outcomes are retained before failure. A baseline capture is labelled unqualified even if all observed values happen to be low.
+A consumer checks identity again after transport. Missing, duplicate, extra, nonfinite, stale, dirty-source or incomplete measurements fail. Unqualified limits/reference hardware cannot read as green. Raw budget outcomes are retained before failure. A baseline capture is labelled unqualified even if all observed values happen to be low.
 
 ## Aggregate result format 2
 
@@ -24,6 +24,6 @@ Comparisons require equal scenario/workload version and fixture fingerprint, cat
 
 ## Review and qualification
 
-A human instruction identifies each authorized semantic change. The protected `benchmark-catalog` environment records approval of an immutable commit's lock; a self-edited lock cannot pass verification. See [human authorization](../../guides/development/0016-writing-benchmarks.md#human-authorization) for bootstrap and required-status activation limitations.
+A human instruction identifies each authorized semantic change. Benchmark PRs carry the `benchmark` label and agents leave them for human review and merge. The source digest checks consistency with the lock; updating the lock is not human authorization. See [human authorization](../../guides/development/0016-writing-benchmarks.md#human-authorization).
 
 New latency metrics are pending human decisions based on exact-workload actual-host baselines. Existing approved guards remain binding for their matching workloads or explicitly unresolved in the ledger. PS-96 failures are not repaired by retirement. Neither this candidate nor its unrun reference workloads are qualified yet.

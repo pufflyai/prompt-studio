@@ -2,7 +2,7 @@
 
 Proposed: 2026-11-14. Status: implementation candidate; **not qualified**.
 
-PS-233 is the user's one-time authorization for the exact eight scenarios. [Manifest](../../../packages/benchmarks/src/catalog/scenarios.ts), [lock](../../../packages/benchmarks/catalog.lock.json), [guidance](../../guides/development/0016-writing-benchmarks.md). Initial external human approval and required trusted-status activation are pending. No new numeric latency limit has been approved.
+PS-233 is the user's one-time authorization for the exact eight scenarios. [Manifest](../../../packages/benchmarks/src/catalog/scenarios.ts), [lock](../../../packages/benchmarks/catalog.lock.json), [guidance](../../guides/development/0016-writing-benchmarks.md). Benchmark changes carry the `benchmark` PR label and are left for human review and merge. No new numeric latency limit has been approved.
 
 ## Previous catalog
 
@@ -55,8 +55,6 @@ B6 write amplification and B6/B7 scanned-entry ceilings are explicitly pending g
 - B4 first local launch attempt stopped in fixture preparation because the public UI publish build was absent. The prerequisite build was repaired; the next actual setup failed with two default-tool warnings. A focused project-creation diagnostic established local ENOSPC during real extension installation. No stream measurements ran. No setup failure is called a pass.
 - B1/B2/B3/B5/B6/B8 and required hosted/source/signed-artifact combinations are unrun at this update. M5 reference host is unavailable locally. Pending numeric decisions cannot be resolved from unrun or failed phases.
 
-## Required activation
+## Human review and merge
 
-The protected GitHub environment is configured with human reviewer `au-re` and administrator bypass disabled. Agents must never approve their own request. Retained deployment receipts bind an actual reviewed workflow run and its immutable lock. The initial catalog review has not been approved.
-
-After this workflow reaches main, add `benchmark_catalog` as a required check for PR and merge-group candidates. Until then, the trusted-base workflow cannot run from main; do not break the still-open prerequisite #2057 by requiring an absent workflow. This activation and representative host measurements remain delivery blockers for the fully enforced, qualified frozen suite.
+Benchmark PRs carry the `benchmark` label. Agents must leave them for a human to review and merge, even when CI is green; they must not enable auto-merge, enqueue the PR, merge it directly or remove the label to bypass the rule. Human instructions still authorize semantic workload and numeric-limit changes. The catalog check validates source/manifest consistency without a deployment receipt or a separate required status. Actual-host measurements and unresolved numeric decisions remain qualification blockers.

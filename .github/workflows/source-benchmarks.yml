@@ -28,7 +28,6 @@ on:
 permissions:
   contents: read
   actions: read
-  deployments: read
 jobs:
   plan:
     runs-on: ubuntu-latest

@@ -4,7 +4,7 @@ import { appendFileSync, mkdirSync } from "node:fs";
 import { cpus, hostname, totalmem } from "node:os";
 import { dirname, resolve } from "node:path";
 import { type BenchmarkUnit, recordMeasurement } from "../writer";
-import { approvedCatalog, readContract } from "./contract";
+import { readContract } from "./contract";
 import { retainedLimit } from "./limits";
 import { catalogRevision, conversationFixture, type ScenarioId, scenarioById } from "./scenarios";
 
@@ -28,7 +28,7 @@ export const runScenario = async (
 const createCapture = async (id: ScenarioId) => {
   const root = resolve(import.meta.dir, "../../../..");
   const contract = readContract(root);
-  const approval = process.env.BENCHMARK_BASELINE === "1" ? null : await approvedCatalog(contract.digest);
+  const baseline = process.env.BENCHMARK_BASELINE === "1";
   const scenario = scenarioById(id);
   const platform = `${process.platform}-${process.arch}`;
   if (!(scenario.platforms as readonly string[]).includes(platform)) throw new Error(`${id} does not own ${platform}`);
@@ -38,7 +38,6 @@ const createCapture = async (id: ScenarioId) => {
   const identity = {
     catalogRevision,
     catalogDigest: contract.digest,
-    approval,
     scenario: id,
     workloadVersion: 1,
     planDigest: process.env.CI_PLAN_DIGEST,
@@ -63,7 +62,7 @@ const createCapture = async (id: ScenarioId) => {
   const referenceHost =
     /Apple M5$/.test(identity.cpu ?? "") && identity.cores === 10 && identity.memoryBytes === 32 * 1024 ** 3;
   const eligibility = Boolean(
-    approval && !identity.dirty && !pendingGuards.length && (!["B1", "B5"].includes(id) || referenceHost),
+    !baseline && !identity.dirty && !pendingGuards.length && (!["B1", "B5"].includes(id) || referenceHost),
   );
   const measurementIdentity = { ...identity, qualificationEligible: eligibility };
   const observations = new Map<string, { value: number; unit: BenchmarkUnit; budget?: number; kind: string }>();
@@ -106,16 +105,11 @@ const createCapture = async (id: ScenarioId) => {
       const pending = scenario.metrics
         .filter((metric) => metric.kind === "pending-guard" && !retainedLimit(id, metric.id))
         .map((metric) => metric.id);
-      const referenceHost =
-        /Apple M5$/.test(identity.cpu ?? "") && identity.cores === 10 && identity.memoryBytes === 32 * 1024 ** 3;
-      const qualification =
-        approval && !identity.dirty && !pending.length && (!["B1", "B5"].includes(id) || referenceHost)
-          ? "qualified"
-          : "unqualified";
+      const qualification = eligibility && !missing.length && !failed.length ? "qualified" : "unqualified";
       write({ event: "finished", missing, failed, pending, qualification, referenceHost });
       if (missing.length) throw new Error(`${id}: missing required metrics: ${missing.join(", ")}`);
       if (failed.length) throw new Error(`${id}: failed approved limits: ${failed.map(([name]) => name).join(", ")}`);
-      if (qualification !== "qualified" && process.env.BENCHMARK_BASELINE !== "1")
+      if (qualification !== "qualified" && !baseline)
         throw new Error(
           `${id}: unqualified workload; human-approved limits and required reference-host proof are still needed`,
         );

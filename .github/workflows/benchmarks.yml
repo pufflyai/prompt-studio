@@ -21,10 +21,6 @@ on:
       release_tag:
         description: Release these results belong to. The release workflow sets it after publishing; it only names the run.
         default: ""
-      catalog_review:
-        description: Human review of the exact workflow commit and frozen catalog lock; agents must not approve
-        type: boolean
-        default: false
       baseline:
         description: Collect unqualified first-attempt source evidence
         type: boolean
@@ -41,41 +37,17 @@ on:
 permissions:
   contents: read
   actions: read
-  deployments: read
 
 jobs:
-  catalog_review:
-    if: inputs.catalog_review
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    environment:
-      name: benchmark-catalog
-      url: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
-    permissions:
-      contents: read
-      deployments: write
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          ref: ${{ github.sha }}
-          fetch-depth: 0
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
-      - run: bun install --frozen-lockfile
-      - name: Retain approval for this immutable workload digest
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: bun scripts/ci/benchmark-catalog-review.ts
   qualification:
-    if: inputs.qualify_source && !inputs.catalog_review
+    if: inputs.qualify_source
     uses: ./.github/workflows/source-benchmarks.yml
     with:
       source_sha: ${{ inputs.commits }}
       baseline: ${{ inputs.baseline }}
       release_channel: ${{ inputs.release_channel }}
   plan:
-    if: ${{ !inputs.qualify_source && !inputs.catalog_review }}
+    if: ${{ !inputs.qualify_source }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:

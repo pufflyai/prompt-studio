@@ -6,11 +6,9 @@ PS-233 authorizes a one-time consolidation into **exactly eight scenarios**. The
 
 After this consolidation, agents must not add, delete, replace, resize, reorder, relax or extend scenarios, metrics, fixtures, variants or platforms without an explicit human instruction identifying that change. Do not automatically add a benchmark for a feature. Ordinary product regression tests remain allowed. Never add tests of benchmark setup, instrumentation, selection or reports.
 
-`bun run verify:benchmarks` checks the exact eight entry points, single case registration, metric allowlist, source digest and external approval. Executable workload/fixture/runner source is included in the digest, so grouping another loop or case under an existing ID cannot avoid review. Formatting and comments do not change the TypeScript digest. A harness repair can keep the scenario version and fixture identity when semantics are unchanged; its changed executable source still needs review before accepted measurements.
+`bun run verify:benchmarks` checks the exact eight entry points, single case registration, metric allowlist and source digest. Executable workload/fixture/runner source is included in the digest, so grouping another loop or case under an existing ID changes the reviewed source. Formatting and comments do not change the TypeScript digest. A harness repair can keep the scenario version and fixture identity when semantics are unchanged.
 
-A self-edited lock is not approval. The repository's **benchmark-catalog** GitHub environment requires the human reviewer `au-re`, with administrator bypass disabled. Agents must never approve their own environment request. The existing Benchmarks workflow's `catalog_review` input records the reviewed immutable workflow commit and lock digest in a retained deployment receipt. Verification reopens the workflow outcome, actual environment approval history and lock from that commit. A changed lock without that receipt fails.
-
-The trusted `benchmark-catalog.yml` workflow reads candidate files as data using the base implementation; it never executes candidate code. It publishes `benchmark_catalog` on PR and queue candidate SHAs. **Bootstrap remains pending:** the workflow must reach main before that status is made required in the main ruleset. Do not enable a required status that cannot run on #2057. Until activation is recorded, do not claim the repository freeze is fully enforced.
+A self-edited lock is not human authorization. Add the `benchmark` label to PRs that change benchmarks, workload definitions, fixtures, metrics, budgets or runners. Agents must leave these PRs for human review and merge, even when CI is green: do not merge directly, enable auto-merge or add them to the merge queue, and do not remove the label to bypass the rule. The PR records the human review and merge decision. There is no deployment approval or separate environment permission. See [PR labels](0004-pull-request-labels.md#benchmark-review-and-merge).
 
 ## Scenarios and hosts
 
@@ -41,7 +39,7 @@ CPU profiling, Electron traces and forced-GC heap belong in separately labelled 
 
 `bun run verify:benchmarks` is the fast PR/queue check. Measured scenarios run in dedicated nightly/release/source qualification; editing a benchmark must not add it to PS-232's ten-minute gate.
 
-For a first-attempt local investigation, `BENCHMARK_BASELINE=1` permits capture without pretending that pending human approval/limits are resolved. Such results are explicitly unqualified and cannot certify a production consumer. Use the registered CLI's prepare and sample commands, select a supported B1–B8 ID, and retain all output. The [result reference](../../references/performance/0006-benchmark-results.md) describes identity and transport.
+For a first-attempt local investigation, `BENCHMARK_BASELINE=1` permits capture without pretending that pending human limit decisions are resolved. Such results are explicitly unqualified and cannot certify a production consumer. Use the registered CLI's prepare and sample commands, select a supported B1–B8 ID, and retain all output. The [result reference](../../references/performance/0006-benchmark-results.md) describes identity and transport.
 
 ## Desktop benchmarks
 
