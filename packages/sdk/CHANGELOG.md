@@ -1,5 +1,14 @@
 # @pstdio/sdk
 
+## 0.47.1-nightly.20261114030224
+
+_2026-11-14_
+
+### Patch Changes
+
+- 69efa88: Recover stalled Cloud sources safely and show source phases and named file transfer activity.
+- a2e8cbb: Recover dropped page requests silently while retaining loaded content.
+
 ## 0.47.0
 
 _2026-11-12_

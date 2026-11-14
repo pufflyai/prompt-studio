@@ -1,6 +1,6 @@
 {
   "name": "pstdio-home",
-  "version": "0.2.0",
+  "version": "0.2.1-nightly.20261114030224",
   "displayName": "Home",
   "icon": "house",
   "description": "Project home, recent resources, and setup recovery.",

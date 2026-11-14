@@ -1,6 +1,6 @@
 {
   "name": "pstdio-planner",
-  "version": "0.47.0",
+  "version": "0.47.1-nightly.20261114030224",
   "displayName": "Project Planner",
   "description": "Built-in Prompt Studio planner: tickets, managed attempts, reviews, and templates.",
   "publisher": "pstdio",

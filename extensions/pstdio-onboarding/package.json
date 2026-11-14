@@ -1,6 +1,6 @@
 {
   "name": "pstdio-onboarding",
-  "version": "0.2.0",
+  "version": "0.2.1-nightly.20261114030224",
   "displayName": "Onboarding",
   "description": "Choose harnesses and default tools when opening a new project.",
   "publisher": "pstdio",

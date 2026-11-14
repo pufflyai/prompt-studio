@@ -1,6 +1,6 @@
 {
   "name": "harness-codex",
-  "version": "0.47.0",
+  "version": "0.47.1-nightly.20261114030224",
   "displayName": "Codex",
   "description": "Contributes the Codex agent harness.",
   "publisher": "pstdio",
