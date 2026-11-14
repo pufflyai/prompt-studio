@@ -14,9 +14,8 @@ test("opens skill instructions and supporting files from the navigation footer",
   await page.goto(`/projects/${project.id}`);
   await page.getByRole("option", { name: "Skills", exact: true }).click();
   await expect(page).toHaveURL(/extensions\/pstdio.pstdio-skills\/skills$/);
-  await page.getByPlaceholder("Search skills").fill(skill.title);
   await page.getByRole("option", { name: skill.title, exact: true }).click();
-  const viewer = page.frameLocator('iframe[title="Skills"]');
+  const viewer = page.frameLocator('iframe[title="Skills"]:visible');
   await expect(viewer.getByTestId("project-skill-metadata")).toContainText("create-pstdio-extension");
   await viewer.getByRole("tab", { name: "Files", exact: true }).click();
   await viewer.getByText("pages.md", { exact: true }).click();

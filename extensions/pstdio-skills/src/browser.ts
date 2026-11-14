@@ -50,8 +50,6 @@ const list = defineView({
   title,
   body: {
     kind: "tree",
-    searchable: true,
-    searchPlaceholder: l10n("skills.search", "Search skills"),
     refreshEvents: [viewDataEvents.extensionCatalogChanged, viewDataEvents.resourcesChanged],
     body: async (ctx) => [
       {

@@ -61,7 +61,7 @@ Agents are harness contributions from enabled extensions. The core does not main
 
 ## Skills, templates, and credentials
 
-The [Skills extension](../../../extensions/pstdio-skills/README.md) opens from the project navigation footer, outside Settings. Its searchable sidebar and read-only viewer show skill metadata, instructions, and supporting files. The host owns skill storage and installation. Templates resolve through extension-owned providers and retain user overrides. Machine tokens are scoped credentials for automation; connection secrets stay in the host-managed secret boundary. Settings pages must not expose credentials as ordinary extension settings or webview state.
+The [Skills extension](../../../extensions/pstdio-skills/README.md) opens from the project navigation footer, outside Settings. Its sidebar and read-only viewer show skill metadata, instructions, and supporting files. The host owns skill storage and installation. Templates resolve through extension-owned providers and retain user overrides. Machine tokens are scoped credentials for automation; connection secrets stay in the host-managed secret boundary. Settings pages must not expose credentials as ordinary extension settings or webview state.
 
 Global preferences survive project deletion. Deleting one project's data must not reset installation-wide runtime or beta preferences.
 

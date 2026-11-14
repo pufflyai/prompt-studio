@@ -49,7 +49,6 @@ export const SkillViewerContent = (props: { skill: Skill }) => {
       <Tabs.Root
         defaultValue="info"
         size="sm"
-        tray
         h="full"
         minH="0"
         width="64"

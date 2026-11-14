@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["src/**/*.canvas.tsx", ".canvas/preview.tsx"],
+  "exclude": []
+}

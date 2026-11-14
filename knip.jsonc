@@ -446,15 +446,18 @@
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "extensions/pstdio-skills": {
-      // The skill's example extensions are typechecked source.
+      // The browser entry loads by packageAsset path; shipped examples are also typechecked.
       "entry": [
         "extension.ts",
         "test-setup.ts",
+        "src/view.tsx",
+        ".canvas/**/*.{ts,tsx}",
         "src/**/*.canvas.tsx",
+        "src/**/*.test.ts",
         "*.test.ts",
         "skills/create-pstdio-extension/references/examples/**/*.{ts,tsx}"
       ],
-      "project": ["*.ts", "skills/create-pstdio-extension/references/examples/**/*.{ts,tsx}"]
+      "project": ["*.ts", "src/**/*.{ts,tsx}", "skills/create-pstdio-extension/references/examples/**/*.{ts,tsx}"]
     },
     "infra/local/extensions/*": {
       "entry": ["extension.ts", "src/**/*.canvas.tsx", "*.test.ts"],
