@@ -59,11 +59,7 @@ const createCapture = async (id: ScenarioId) => {
   const pendingGuards = scenario.metrics
     .filter((metric) => metric.kind === "pending-guard" && !retainedLimit(id, metric.id))
     .map((metric) => metric.id);
-  const referenceHost =
-    /Apple M5$/.test(identity.cpu ?? "") && identity.cores === 10 && identity.memoryBytes === 32 * 1024 ** 3;
-  const eligibility = Boolean(
-    !baseline && !identity.dirty && !pendingGuards.length && (!["B1", "B5"].includes(id) || referenceHost),
-  );
+  const eligibility = !baseline && !identity.dirty && !pendingGuards.length;
   const measurementIdentity = { ...identity, qualificationEligible: eligibility };
   const observations = new Map<string, { value: number; unit: BenchmarkUnit; budget?: number; kind: string }>();
   const evidence =
@@ -106,13 +102,11 @@ const createCapture = async (id: ScenarioId) => {
         .filter((metric) => metric.kind === "pending-guard" && !retainedLimit(id, metric.id))
         .map((metric) => metric.id);
       const qualification = eligibility && !missing.length && !failed.length ? "qualified" : "unqualified";
-      write({ event: "finished", missing, failed, pending, qualification, referenceHost });
+      write({ event: "finished", missing, failed, pending, qualification });
       if (missing.length) throw new Error(`${id}: missing required metrics: ${missing.join(", ")}`);
       if (failed.length) throw new Error(`${id}: failed approved limits: ${failed.map(([name]) => name).join(", ")}`);
       if (qualification !== "qualified" && !baseline)
-        throw new Error(
-          `${id}: unqualified workload; human-approved limits and required reference-host proof are still needed`,
-        );
+        throw new Error(`${id}: unqualified workload; clean source and human-approved limits are required`);
     },
     failure: (error: unknown) => write({ event: "failed", error: String(error) }),
   };

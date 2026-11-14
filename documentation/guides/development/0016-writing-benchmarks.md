@@ -18,7 +18,7 @@ A self-edited lock is not human authorization. Add the `benchmark` label to PRs 
 | B2 | Fresh-process saved project: 100 messages, file, idle terminal | Linux x64 |
 | B3 | Same saved project, attach to an already-running owned runtime | Linux x64 |
 | B4 | Two populated projects; 30 turns × 8 updates × 25ms, one tool result per turn; foreground actions and cancel a second replay | Linux x64, macOS ARM, Windows x64 |
-| B5 | Same saved fixture; 30s settle, forty fixed 15s action cycles; whole process tree sampled every 500ms | macOS ARM; mandatory M5 reference qualification separate |
+| B5 | Same saved fixture; 30s settle, forty fixed 15s action cycles; whole process tree sampled every 500ms | macOS ARM |
 | B6 | 1,000 Planner tickets, three edits each, one saved filtered list; cold actionable content, search, page, move, reopen | Linux x64 |
 | B7 | 10,000 deterministic records with three history edits; cold/warm page of 100, one edit, read during 100-record write/maintenance | Linux x64, macOS ARM, Windows x64 |
 | B8 | One idle-session runtime crash; feedback, restored authenticated API/tools/content, first action, persisted data and cleanup | Linux x64, macOS ARM, Windows x64 |
@@ -49,11 +49,11 @@ B2/B3/B4/B5/B8 share the same 100-message/file/idle-terminal fixture. Restore an
 
 ## M5 and average-memory reference procedure
 
-The [mandatory targets](../../guidance/0003-nonfunctional-requirements.md) are unchanged: **2 seconds** empty-home launch through interactive workbench/API/default tools on Apple M5, 10 cores, 32 GiB; and **2 GB decimal** average physical footprint over the specified ten-minute workload. Hosted timings and first-install OS checks are separate evidence.
+The [numeric targets](../../guidance/0003-nonfunctional-requirements.md) are unchanged: **2 seconds** empty-home launch through interactive workbench/API/default tools on the M5 reference configuration; and **2 GB decimal** average physical footprint over the specified ten-minute workload. Per the user's instruction, a separate 10-core/32 GiB M5 proof run is optional and is not a benchmark-suite or release qualification prerequisite. Use the applicable CI hosts, record their actual CPU/cores/RAM and keep unlike host measurements separate. Other hardware does not certify the M5-specific target.
 
-B5 measures all owned desktop/runtime descendants, validates process generations, clips the time-weighted average to the measured interval and retains raw process readings. Missing physical samples, incomplete cycles, sampling gaps over one second or an incomplete ten-minute window fail. RSS, JS heap and physical footprint including compression remain distinct. Do not force GC. The available local M5 has 16 GiB and cannot qualify the 32 GiB reference requirement.
+B5 measures all owned desktop/runtime descendants, validates process generations, clips the time-weighted average to the measured interval and retains raw process readings. Missing physical samples, incomplete cycles, sampling gaps over one second or an incomplete ten-minute window fail. RSS, JS heap and physical footprint including compression remain distinct. Do not force GC. Available hardware, including a 16 GiB M5 or hosted Apple Silicon, is not disqualified solely for differing from the reference configuration.
 
-B1's default-tool/actionable boundary and all new latency guards require representative actual-host measurements before qualification. Missing M5 validation, unrun phases and unresolved legacy guards stay visible in the ledger. No new numeric UX limits have been approved by this implementation.
+B1's default-tool/actionable boundary and all new latency guards require representative actual-host measurements before qualification. Unrun phases and unresolved legacy guards stay visible in the ledger. The absence of a 32 GiB M5 run is not a blocker. No new numeric UX limits have been approved by this implementation.
 
 ## Keep a diagnostic only for unique evidence
 

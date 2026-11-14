@@ -1,5 +1,5 @@
 {
   "revision": 1,
-  "digest": "e4d2866cf4f25ecf100c21bc13c28b7608b62b69f0ee78d0f4a8e1f49c198f14",
-  "authorization": "PS-233 authorizes the one-time eight-scenario consolidation; later semantic changes require explicit human instructions and a benchmark-labeled PR left for human review and merge"
+  "digest": "4eb9f91cf659bbd0de58371384be7588b0b680136fc6768675681a5f68436171",
+  "authorization": "PS-233 authorizes the one-time eight-scenario consolidation; later semantic changes require explicit human instructions and a benchmark-labeled PR left for human review and merge; the user explicitly removed exact 10-core/32 GiB M5 reference proof as a qualification prerequisite"
 }

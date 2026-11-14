@@ -32,8 +32,8 @@ Historical source is preserved in Git at `bd56e2c399be208edcb64eef9f0e7f6ab17eb1
 
 | Guard | Disposition and evidence needed |
 | --- | --- |
-| M5 2s empty-home interactive/API/default-tools cold start | B1; exact 10-core/32GiB host and boundary proof pending. Hosted first-install timings remain separate. Current local M5 is 16GiB. |
-| M5 2GB average physical footprint | B5; fixed 30s settle/10min/100 messages/file/terminal, ≥1Hz whole owned tree; actual reference run pending. RSS/heap cannot substitute. |
+| M5 2s empty-home interactive/API/default-tools cold start | B1; numeric target and readiness boundary retained. Exact 10-core/32 GiB M5 proof is optional, per the user's instruction, and is not a suite/release qualification blocker. Record actual hosts separately. |
+| M5 2GB average physical footprint | B5; fixed 30s settle/10min/100 messages/file/terminal, ≥1Hz whole owned tree. Exact M5 reference proof is optional; complete valid physical sampling remains required. RSS/heap cannot substitute. |
 | Idle renderer 2% script / 5% task; settle2s/sample10s | B4 retains the exact idle phase and numeric guards. Per-renderer coverage still needs actual-host review; one captured renderer cannot certify every live renderer. |
 | Hosted startup window and shell deadlines; recovery feedback500ms | B1/B8 retain matching existing budget constants. Complete usable journeys have separate unqualified clocks. B1 must retain OS first-launch checks. |
 | Streaming renderer script85% / task120% | B4 retains counters/limits; task120% provides no independent responsiveness guarantee. New foreground/paint/stall/completion/cancel guards pending human baseline decisions. |
@@ -53,7 +53,7 @@ B6 write amplification and B6/B7 scanned-entry ceilings are explicitly pending g
 
 - B7 local M5/16GiB: deterministic 10,000-record/three-history fixture verified. First page returned100 correct rows but scanned10,000 projection rows and traversed zero index entries; the bounded indexed-read assertion failed. Later phases did not run. This is an unresolved result, not a qualified baseline or a product repair.
 - B4 first local launch attempt stopped in fixture preparation because the public UI publish build was absent. The prerequisite build was repaired; the next actual setup failed with two default-tool warnings. A focused project-creation diagnostic established local ENOSPC during real extension installation. No stream measurements ran. No setup failure is called a pass.
-- B1/B2/B3/B5/B6/B8 and required hosted/source/signed-artifact combinations are unrun at this update. M5 reference host is unavailable locally. Pending numeric decisions cannot be resolved from unrun or failed phases.
+- At the first local update, B1/B2/B3/B5/B6/B8 and required hosted/source/signed-artifact combinations were unrun. Later hosted outcomes are retained in RP-747. The unavailable 32 GiB M5 is no longer a qualification blocker under the user's instruction. Pending numeric decisions cannot be resolved from unrun or failed phases.
 
 ## Human review and merge
 

@@ -72,13 +72,8 @@ export const scenarioEvidence = (
     )
   )
     throw new Error(`${id}: missing, unexpected, invalid or over-budget measurement`);
-  const referenceHost = /Apple M5$/.test(first.cpu) && first.cores === 10 && first.memoryBytes === 32 * 1024 ** 3;
   return {
-    nativeFailure:
-      (!["B1", "B5"].includes(id) || referenceHost) === false ||
-      last.qualification !== "qualified" ||
-      last.missing.length > 0 ||
-      last.failed.length > 0,
+    nativeFailure: last.qualification !== "qualified" || last.missing.length > 0 || last.failed.length > 0,
     metrics,
   };
 };
