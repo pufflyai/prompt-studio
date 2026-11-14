@@ -447,7 +447,14 @@
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "extensions/pstdio-skills": {
-      "entry": ["extension.ts", "skills/create-pstdio-extension/references/examples/**/*.{ts,tsx}"],
+      // The skill's example extensions are typechecked source.
+      "entry": [
+        "extension.ts",
+        "test-setup.ts",
+        "src/**/*.canvas.tsx",
+        "*.test.ts",
+        "skills/create-pstdio-extension/references/examples/**/*.{ts,tsx}"
+      ],
       "project": ["*.ts", "skills/create-pstdio-extension/references/examples/**/*.{ts,tsx}"]
     },
     "extensions/pstdio-skill-browser": {
