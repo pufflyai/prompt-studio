@@ -83,10 +83,10 @@ export const expectPackagedSessionsProvider = async (input: {
   expect(inventoryResponse.status).toBe(200);
   const inventory = await inventoryResponse.json();
   const workspaces = inventory.extensions.find(
-    (extension: { extensionId: string }) => extension.extensionId === "pstdio.pstdio-workspaces",
+    (extension: { extensionId: string }) => extension.extensionId === "pstdio.workspaces",
   );
   expect(workspaces).toBeDefined();
-  const created = await execute("pstdio.pstdio-session-browser.command.new", {});
+  const created = await execute("pstdio.session-browser.command.new", {});
   const resource = created.navigationRequests[0].resource as ResourceRef;
   const binding = { renderer: { rendererId: chat.id, resource }, draftKey: resource.id };
   const queryHandlerId = chat.body.queryHandlerId!;
