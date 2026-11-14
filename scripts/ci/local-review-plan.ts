@@ -32,8 +32,8 @@ const selectionReason = (explicit: boolean, edited: boolean, priority: string | 
   return "affected extended coverage";
 };
 const deferredEvidence = (edited: boolean, priority: string | undefined) => {
-  if (edited) return "edited_tests";
   if (priority === "P3") return "nightly/release benchmarks; exceptional diagnostics only";
+  if (edited) return "edited_tests";
   return "nightly/release coverage; exceptional diagnostics only";
 };
 

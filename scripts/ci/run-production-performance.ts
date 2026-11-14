@@ -1,7 +1,6 @@
-import { cpSync, existsSync, mkdirSync } from "node:fs";
+import { cpSync, mkdirSync } from "node:fs";
 import { cpus, platform, release, totalmem } from "node:os";
 import { join, resolve } from "node:path";
-import { captureOrderedPerformanceReport } from "./ordered-performance-reports";
 import { performanceChecks } from "./production-performance-profile";
 import { runCiChecks } from "./run-ci-checks";
 
@@ -10,7 +9,6 @@ if (!family || !evidence) throw new Error("Expected performance family and evide
 const checks = performanceChecks(family);
 const directory = resolve(`test-results/production-performance/${family}`);
 mkdirSync(directory, { recursive: true });
-if (family === "storage" || family === "runtime") await Bun.write(join(directory, `${family}.jsonl`), "");
 const identity = {
   planDigest: process.env.CI_PLAN_DIGEST,
   runId: process.env.CI_PLAN_RUN_ID,
@@ -52,18 +50,12 @@ for (const check of checks) {
     inheritProcessGroup: true,
     logDirectory: join(directory, "logs"),
     env: {
-      SUBNAV_LABEL: process.env.CI_PLAN_SOURCE_SHA,
-      CI_PLAN_BROWSER_EVIDENCE: join(directory, `${check.id}-cases.json`),
+      BENCHMARK_EVIDENCE_DIR: directory,
     },
   });
-  captureOrderedPerformanceReport(process.cwd(), directory, check.id);
   results.push(...report.results);
   passed &&= report.outcome === "success";
   cleanedUp &&= !report.cleanupFailures?.length;
-}
-if (family === "navigation") {
-  const raw = join("__test-tmp__/subnav-benchmark/results", process.env.CI_PLAN_SOURCE_SHA!);
-  if (existsSync(raw)) cpSync(raw, join(directory, "performance/subnav"), { recursive: true });
 }
 const complete =
   results.length === checks.length &&

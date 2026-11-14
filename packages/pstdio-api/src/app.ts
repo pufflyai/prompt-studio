@@ -18,6 +18,7 @@ import {
   startAppLifecycle,
   startNotificationWakeTimer,
 } from "./app-runtime";
+import { registerBenchmarkCounters } from "./benchmark-counters";
 import { createAutomationService } from "./features/automation/automation-service";
 import type { RouteDeps } from "./features/deps";
 import { createArtifactMountWriteLedger } from "./features/extensions/artifact-mount-watch/write-ledger";
@@ -304,6 +305,7 @@ const buildApp = async (
   const artifactMountWatch = startAppArtifactMountWatch(deps, projectService);
   const notificationWakeTimer = startNotificationWakeTimer(notificationService);
 
+  registerBenchmarkCounters(app, db, runtimeHost);
   registerAppRuntime(app, deps, input, {
     extensionScheduler,
     host: runtimeHost,

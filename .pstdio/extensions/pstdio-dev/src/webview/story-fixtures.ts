@@ -185,7 +185,6 @@ export const storyCommits: CommitOptionView[] = [
 const PLATFORM_FACTOR: Record<string, number> = {
   "linux-x64": 1,
   "darwin-arm64": 0.72,
-  "darwin-x64": 1.35,
   "win32-x64": 1.6,
 };
 

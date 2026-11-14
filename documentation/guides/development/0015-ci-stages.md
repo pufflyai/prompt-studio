@@ -55,8 +55,8 @@ A local run only proves your own machine. It does not prove other platforms or s
 | Pull request | Push to a PR branch | Test and Build (`pull_request`) | All fast P0 units, affected source contracts, static/type checks, one Linux desktop package, smoke and affected packaged flows | The selected profile passed on this candidate | at most 10 min; qualification pending |
 | Merge queue | Add to queue | Test and Build (`merge_group`) | The same required profile on the actual merged tree and combined diff | The exact merged candidate passed | at most 10 min; qualification pending |
 | Main | Queue merges a commit | Test and Build (`push`) | Checks that main matches the tested queue commit, publishes the build cache, runs a startup smoke test | Main is the commit the queue tested, and it still starts | under 8 min |
-| Nightly | 03:00 UTC daily, or manual `nightly` | Release Packages → Production validation | P0–P2 on Linux, with focused native checks on Apple Silicon and Windows x64; P3 performance, coverage, signed apps for Linux and Apple Silicon | Nightly published; full results recorded for that commit | 40–50 min of execution |
-| Stable release | Manual `stable` | Release Packages → Production validation | Everything nightly runs, plus Windows and Intel macOS: signed desktop apps, packaged CLI hosts, focused Windows process/security and filesystem/storage contracts, backend benchmarks on Windows, and the Windows update check | A complete certificate for the exact release files allows publishing | 40–50 min of execution |
+| Nightly | 03:00 UTC daily, or manual `nightly` | Release Packages → Production validation | P0–P2 on Linux, with focused native checks on Apple Silicon and Windows x64; all eight P3 benchmarks on Linux x64, Apple Silicon and Windows x64, coverage, signed apps for Linux and Apple Silicon | Nightly published; full results recorded for that commit | 40–50 min of execution |
+| Stable release | Manual `stable` | Release Packages → Production validation | Everything nightly runs, plus Windows and Intel macOS: signed desktop apps, packaged CLI hosts, focused Windows process/security and filesystem/storage contracts, the same three-host benchmark matrix, and the Windows update check | A complete certificate for the exact release files allows publishing | 40–50 min of execution |
 
 Prioritize distinct coverage first, then minimize repeated work on frequent runs. Parallel jobs contribute their dependency critical path, not the sum of every runner minute. Report total runner work separately to expose expensive duplication.
 
@@ -142,6 +142,7 @@ A red `main` usually means a startup smoke failure or a cache problem. Fix it be
   - P3 performance measurements
   - container service checks
   - native artifact contracts on Linux x64, Apple Silicon and Windows x64; full shared CLI behavior runs separately on Linux
+- B1–B8 each run once on Linux x64, Apple Silicon Mac and Windows x64: 24 combinations. Intel Mac is excluded from benchmarks. Windows desktop measurements use an unpublished production-mode package in nightly validation and the signed candidate in stable validation.
 - Windows runs focused source/native contracts and an unpublished packaged desktop diagnostic. Intel macOS and the other secondary CLI architectures have weekly compatibility diagnostics and exact-artifact checks in stable releases. Signed installation/update certification belongs to the release path.
 - The shared Bun unit, API and database suites run on Linux. Apple Silicon runs the desktop app's own Bun tests, the native desktop and packaged CLI checks, and the Bun quarantine lane.
 - Source line coverage comes from the nightly's P0–P2 Bun jobs. The Coverage workflow publishes only a successful full nightly's measurement. Quarantined tests and P3 are not counted.
@@ -158,7 +159,7 @@ Start **Release Packages** manually with the `stable` channel.
 
 1. `plan` picks the version and places the release tag.
 2. The release files are built once: npm packages, containers, and signed desktop apps for Linux x64, macOS x64, macOS arm64 and Windows x64. The Windows installer also gets an update check.
-3. **Production validation** runs everything the nightly runs, against those exact files, and adds Windows and Intel macOS: all six native CLI artifact contracts, with shared CLI journeys on Linux, focused Windows process/security and filesystem/storage contracts, and Windows backend benchmarks.
+3. **Production validation** runs everything the nightly runs, against those exact files, and adds Windows and Intel macOS: all six native CLI artifact contracts, with shared CLI journeys on Linux, focused Windows process/security and filesystem/storage contracts, and exact signed Windows benchmark artifacts. Benchmark coverage is B1–B8 on Linux x64, Apple Silicon Mac and Windows x64 in both channels; Intel Mac has no benchmark lane.
 4. `certify` writes a certificate. It ties the results to the source commit, version commit, toolchain, producing run and attempt, and the artifact IDs and digests.
 5. `publish` runs only if every job passed. It checks the certificate again before it downloads the files. Missing, expired, changed or partial results block publishing.
 

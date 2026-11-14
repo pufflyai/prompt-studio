@@ -49,12 +49,18 @@ export const productionToolchainPlatforms = (channel: string) =>
       return Array.from({ length: shards }, (_, index) => ({ ...row, priorities, shard: index + 1, shards }));
     });
 
-export const productionPerformanceWorkloads = (channel: string) => [
-  ...["storage", "runtime"].flatMap((family) =>
-    forChannel(channel, ["ubuntu-24.04", "macos-15", "windows-2025"], (os) => os).map((os) => ({ family, os })),
-  ),
-  ...["browser", "relay", "navigation", "planner"].map((family) => ({ family, os: "ubuntu-24.04" })),
-];
+// Benchmark ownership is the same on nightly and stable, independent of published installers.
+export const productionBenchmarkPlatforms = () =>
+  productionDesktopPlatforms("stable").filter((row) => ["linux-x64", "darwin-arm64", "win32-x64"].includes(row.target));
+
+export const productionPerformanceWorkloads = (_channel: string) =>
+  ["storage", "planner"].flatMap((family) =>
+    productionBenchmarkPlatforms().map((host) => ({
+      ...host,
+      family,
+      platform_pkg: `cli-${host.target.replace("win32", "win")}`,
+    })),
+  );
 
 export const quarantineBunHosts = (_channel: string) => ["ubuntu-latest", "windows-latest", "macos-15"];
 
@@ -78,6 +84,6 @@ if (import.meta.main) {
   const channel = process.env.CHANNEL!;
   appendFileSync(
     process.env.GITHUB_OUTPUT!,
-    `desktop_matrix=${JSON.stringify(productionDesktopPlatforms(channel))}\nperformance_matrix=${JSON.stringify(productionPerformanceWorkloads(channel))}\n`,
+    `desktop_matrix=${JSON.stringify(productionDesktopPlatforms(channel))}\nbenchmark_desktop_matrix=${JSON.stringify(productionBenchmarkPlatforms())}\nperformance_matrix=${JSON.stringify(productionPerformanceWorkloads(channel))}\n`,
   );
 }

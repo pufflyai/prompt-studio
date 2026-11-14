@@ -40,7 +40,7 @@ const parseCheckout = (value: string): Checkout => {
 
 const command = positionals[0];
 if (command === "verify") {
-  verifyBenchmarkCoverage(repoRoot, suites);
+  await verifyBenchmarkCoverage(repoRoot, suites);
   console.log("Every benchmark belongs to exactly one suite.");
 } else if (command === "describe") {
   const available = findSuites(suiteIds, platform);

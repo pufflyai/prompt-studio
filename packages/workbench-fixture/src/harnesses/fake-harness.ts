@@ -246,6 +246,31 @@ export const createFakeHarness = (longStream: LongStreamShape = DEFAULT_LONG_STR
     resume: (_ctx, input) => {
       const existing = sessions.get(input.agentSessionId) ?? input.events.getMessages();
       const startIndex = input.messageOffset ?? existing?.length ?? 0;
+      if (input.prompt.includes(LONG_STREAM_PROMPT_TRIGGER)) {
+        const messages = [...(existing ?? [])];
+        const user = createMessage({
+          agentSessionId: input.agentSessionId,
+          index: startIndex,
+          role: "user",
+          text: input.prompt,
+          attachments: input.attachments,
+        });
+        messages[startIndex] = user;
+        sessions.set(input.agentSessionId, messages);
+        pushMessages(input.events, startIndex, [user]);
+        return createSession(input.agentSessionId, (signal) =>
+          replayLongStream({
+            agentSessionId: input.agentSessionId,
+            startIndex: startIndex + 1,
+            shape: longStream,
+            signal,
+            push: (patch) => {
+              messages[Number(patch.path.slice("/messages/".length))] = patch.value as SessionMessage;
+              input.events.push(patch);
+            },
+          }),
+        );
+      }
       const newMessages = buildResumeMessages(input, startIndex);
       const nextMessages = [...(existing ?? [])];
 

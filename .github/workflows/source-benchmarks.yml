@@ -5,6 +5,9 @@ on:
       source_sha:
         required: true
         type: string
+      baseline:
+        type: boolean
+        default: false
       release_channel:
         type: string
         default: stable
@@ -14,6 +17,10 @@ on:
         description: Exact source revision to qualify
         required: true
         type: string
+      baseline:
+        description: Collect unqualified first-attempt evidence; never certifies release acceptance
+        type: boolean
+        default: false
       release_channel:
         type: choice
         options: [stable, nightly]
@@ -48,6 +55,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     # Keep the existing source benchmark execution allowance.
     timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+      BENCHMARK_BASELINE: ${{ inputs.baseline && '1' || '0' }}
     strategy:
       fail-fast: false
       matrix:

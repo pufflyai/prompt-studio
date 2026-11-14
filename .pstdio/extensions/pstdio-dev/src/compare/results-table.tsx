@@ -1,6 +1,6 @@
 import { Box, Grid, Stack, Text } from "@chakra-ui/react";
 import { SimpleCard } from "@pstdio/ui";
-import type { CompareRow } from "../benchmarks/analysis";
+import { type CompareRow, exceedsBudget } from "../benchmarks/analysis";
 import { metricId } from "../trends/trend-summary";
 import {
   differenceColor,
@@ -16,7 +16,7 @@ export const HEAD_COLOR = "vis.categorical.2";
 
 // One value per commit has no spread, so it gets neither an interval nor an improved or regressed verdict.
 export const isSingleSample = (row: CompareRow) => (row.base?.samples ?? 1) <= 1 && (row.head?.samples ?? 1) <= 1;
-const overBudget = (row: CompareRow) => row.budget !== undefined && row.head !== null && row.head.median > row.budget;
+const overBudget = (row: CompareRow) => row.head !== null && exceedsBudget(row, row.head.values);
 
 const COLUMNS = "minmax(11rem, 13rem) 9rem 9rem 7rem minmax(12rem, 1fr) 9rem";
 
