@@ -1,4 +1,5 @@
 import {
+  canonicalJson,
   fingerprint,
   type Json,
   type StorageRecord,
@@ -8,6 +9,7 @@ import {
 import type * as Y from "yjs";
 import type { DocumentStore, StorageOwner } from "../shared";
 import { readDocumentRecord } from "./document-record";
+import { memoryRecordAggregate } from "./memory-record-aggregate";
 import {
   compareQueryValues,
   encodeQueryCursor,
@@ -18,6 +20,30 @@ import {
   validateIndexes,
   validatePredicate,
 } from "./record-query";
+import { relatedQueryIndexes, requestedRecordIndex } from "./record-query-options";
+
+const memoryPredicate = (document: Y.Doc, saved: StorageRecord[]) => {
+  const resolve = (name: string) => indexFor(document, name);
+  const related = (
+    source: StorageRecordIndex,
+    value: Json,
+    selection: import("pstdio-sync-contracts").StorageRelatedSelection,
+  ): boolean => {
+    const target = resolve(selection.index);
+    return saved.some(
+      (record) =>
+        !record.deleted &&
+        (target.prefix === undefined || record.recordId.startsWith(target.prefix)) &&
+        selection.on.every((join) => {
+          const left = typedFieldValue(value, queryField(source, join.sourceField));
+          const right = typedFieldValue(record.value, queryField(target, join.relatedField));
+          return left != null && right != null && canonicalJson(left) === canonicalJson(right);
+        }) &&
+        matchesPredicate(target, record.value, selection.where, related),
+    );
+  };
+  return { resolve, related };
+};
 
 const definitions = new WeakMap<Y.Doc, Map<string, StorageRecordIndex>>();
 const indexFor = (document: Y.Doc, name: string) => {
@@ -64,10 +90,12 @@ export const createMemoryRecordQueries = (
       }),
     query: (query) =>
       store.transaction(owner, async ({ document }) => {
-        const index = indexFor(document, query.index);
+        const index = requestedRecordIndex(indexFor(document, query.index), query);
+        for (const name of relatedQueryIndexes(query.where)) indexFor(document, name);
         const saved = await records(document);
+        const predicate = memoryPredicate(document, saved);
         const revision = await fingerprint(saved as unknown as Json);
-        const page = await prepareRecordQuery(owner, index, query, revision);
+        const page = await prepareRecordQuery(owner, index, query, revision, predicate.resolve);
         const values = (record: StorageRecord) =>
           (index.orderBy ?? []).map((sort) => typedFieldValue(record.value, queryField(index, sort.field)) ?? null);
         const compare = (left: OrderedRecord, right: OrderedRecord) => compareRecords(index, left, right);
@@ -76,7 +104,7 @@ export const createMemoryRecordQueries = (
             (record) =>
               !record.deleted &&
               (index.prefix === undefined || record.recordId.startsWith(index.prefix)) &&
-              matchesPredicate(index, record.value, query.where),
+              matchesPredicate(index, record.value, query.where, predicate.related),
           )
           .map((record) => ({ record, recordId: record.recordId, values: values(record) }))
           .filter((record) => !page.after || compare(record, page.after) > 0)
@@ -101,28 +129,17 @@ export const createMemoryRecordQueries = (
     aggregate: (query) =>
       store.transaction(owner, async ({ document }) => {
         const index = indexFor(document, query.index);
-        validatePredicate(index, query.where);
+        for (const name of relatedQueryIndexes(query.where)) indexFor(document, name);
+        validatePredicate(index, query.where, 0, (name) => indexFor(document, name));
         const saved = await records(document);
+        const predicate = memoryPredicate(document, saved);
         const selected = saved.filter(
           (record) =>
             !record.deleted &&
             (index.prefix === undefined || record.recordId.startsWith(index.prefix)) &&
-            matchesPredicate(index, record.value, query.where),
+            matchesPredicate(index, record.value, query.where, predicate.related),
         );
-        const groups = new Map<string, { value: Json; count: number }>();
-        if (query.groupBy !== undefined)
-          for (const record of selected) {
-            const value = typedFieldValue(record.value, queryField(index, query.groupBy)) ?? null;
-            const key = JSON.stringify(value);
-            const group = groups.get(key) ?? { value, count: 0 };
-            group.count++;
-            groups.set(key, group);
-          }
-        return {
-          revision: await fingerprint(saved as unknown as Json),
-          count: selected.length,
-          groups: [...groups.values()].sort((a, b) => compareQueryValues(a.value, b.value)),
-        };
+        return memoryRecordAggregate(index, query, selected, await fingerprint(saved as unknown as Json));
       }),
   };
   return api;

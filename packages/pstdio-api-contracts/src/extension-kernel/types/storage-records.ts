@@ -12,6 +12,7 @@ import type {
 export type {
   SharedEdit as SharedStorageEdit,
   StorageAggregateQuery,
+  StorageAggregateResult,
   StorageConflict,
   StorageConflictInspection,
   StorageCurrentGroup,
@@ -24,6 +25,7 @@ export type {
   StorageRecordIndex,
   StorageRecordQueries,
   StorageRecordQuery,
+  StorageRelatedSelection,
   StorageResolution,
   StorageSaveOutcome,
   StorageSaveState,

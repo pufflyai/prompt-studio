@@ -120,7 +120,7 @@ definitions while the host retries the newer load; a failed retry falls back to
 that matching candidate rather than the earlier handlers.
 
 Each definition names fields by paths within `record.value`, optional leading
-`equality` fields and a fixed `orderBy`. Field types are `string`, `number`,
+`equality` fields and a default `orderBy`. Field types are `string`, `number`,
 `boolean`, `array` (strings only), and `object` (JSON objects only). Timestamps use consistently formatted strings.
 Selectable fields are not implicitly equality keys. Omitted `equality` means none.
 An optional complete-address `prefix` restricts the index to a namespace or
@@ -230,6 +230,74 @@ and writes fail with an out-of-date projection error. Installing the same index
 definitions again explicitly rebuilds the projection. This repair is atomic: a
 failed rebuild leaves source records and operation identities intact, and the next
 installation can retry it. Normal reads never perform this backfill.
+
+### Bounded selection across relationships
+
+The following additions require the host and SDK containing the PS-236 query
+support. Their presence in documentation does not imply that support has shipped.
+
+`records.query` accepts an `orderBy` override of at most eight declared scalar
+fields. The database sorts the matching set before selecting the page. An empty
+order uses record ID alone. Every order ends with record ID as a stable tie breaker;
+changing order, index definitions, selection or owner revision invalidates a cursor.
+
+An `exists` predicate selects records with a matching related row. Both indexes
+belong to the calling extension and workbench. The related index's prefix and typed
+fields still apply. Null or missing join keys do not match. Several matching
+related rows select the source once; no related record bodies enter the result.
+Negation and nesting can describe unanswered requests without reading all requests.
+
+```ts
+const page = await ctx.storage.records.query({
+  index: "items",
+  where: { exists: {
+    index: "requests",
+    on: [{ sourceField: "id", relatedField: "itemId" }],
+    where: { not: { exists: {
+      index: "answers",
+      on: [{ sourceField: "id", relatedField: "requestId" }],
+    } } },
+  } },
+  orderBy: [{ field: "updated", direction: "desc" }],
+  fields: ["id", "title"],
+  limit: 100,
+});
+```
+
+Predicates allow at most sixteen related indexes, eight join fields per relation,
+eight levels and 256 nodes. Declare related equality keys so correlation can use
+their indexes. These limits bound the request and materialized results; arbitrary
+filtering, sorting and aggregates can still require database work across a set.
+
+`records.aggregate` accepts up to sixteen named numeric `metrics`, each with
+`{ operation: "sum" | "min" | "max", field }`. Missing, null and incorrectly typed
+values do not contribute. Sums use exact decimal arithmetic over saved JSON numbers
+and round once to a JavaScript number; a result outside the finite number range
+fails visibly. Empty sums are zero; empty minimum and maximum are null.
+`groupBy` can name one field or up to eight fields. Multi-field group values are
+arrays in the requested field order. Overall and per-group metrics cover the full
+matching selection rather than the current page.
+
+`groupLimit` bounds a grouped response to 1–500 groups. An oversized result fails;
+it is never silently truncated. Numeric and multi-field grouping default to 500.
+The existing count-only, single-field aggregate retains its public behavior when
+no limit is supplied; bounded view providers must supply a limit for that form.
+
+### Titles derived from canonical Markdown
+
+A string field may declare
+`derive: { kind: "markdownTitle", fallbackPath?: string[], empty?: string }`.
+Its `path` selects canonical Markdown; a missing or empty source uses the optional
+fallback path. Nonempty Markdown yields its first visible text, stripping inline
+markup and skipping fenced code and image-only lines. `empty` supplies the result
+when that nonempty Markdown contains no visible text. Both paths are relative to
+the record value, or to the item when the index declares a collection.
+
+Index installation computes these values in bounded pages. Ordinary record and
+native-text edits update them in the same transaction as the canonical projection;
+querying never scans bodies to rebuild them. This is a local database index, not
+another editable source of record data. Point reads keep their original value.
+The public `deriveMarkdownTitle(content, empty?)` helper uses the same text rules.
 
 ## Edits and outcomes
 

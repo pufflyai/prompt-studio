@@ -5,6 +5,8 @@ export interface StorageIndexField {
   /** A path within the record value. */
   path: string[];
   type: "string" | "number" | "boolean" | "array" | "object";
+  /** Deterministic text projection, maintained from canonical record/native text in the commit transaction. */
+  derive?: { kind: "markdownTitle"; fallbackPath?: string[]; empty?: string };
 }
 
 export interface StorageRecordIndex {
@@ -21,6 +23,7 @@ export interface StorageRecordIndex {
 }
 
 export type StoragePredicate =
+  | { exists: StorageRelatedSelection }
   | { all: StoragePredicate[] }
   | { any: StoragePredicate[] }
   | { not: StoragePredicate }
@@ -32,8 +35,17 @@ export type StoragePredicate =
   | { field: string; op: "in" | "notIn"; value: Json[] }
   | { field: string; op: "empty" | "notEmpty" | "exists" | "missing" };
 
+export interface StorageRelatedSelection {
+  /** An installed index in the same extension and workbench as the source. */
+  index: string;
+  on: { sourceField: string; relatedField: string }[];
+  where?: StoragePredicate;
+}
+
 export interface StorageRecordQuery {
   index: string;
+  /** Overrides the declared order using selectable scalar fields. Record ID breaks ties. */
+  orderBy?: { field: string; direction: "asc" | "desc" }[];
   where?: StoragePredicate;
   fields?: string[];
   /** Between 1 and 500. Defaults to 100. */
@@ -61,18 +73,25 @@ export interface StorageQueryPage {
 export interface StorageAggregateQuery {
   index: string;
   where?: StoragePredicate;
-  groupBy?: string;
+  groupBy?: string | string[];
+  /** At most 16 numeric metrics; typed missing/null/invalid values do not contribute. */
+  metrics?: Record<string, { operation: "sum" | "min" | "max"; field: string }>;
+  /** 1–500 groups. Numeric/multi-field queries default to 500; legacy count-only grouping retains its contract. */
+  groupLimit?: number;
+}
+
+export interface StorageAggregateResult {
+  revision: string;
+  count: number;
+  metrics?: Record<string, number | null>;
+  groups: { value: Json; count: number; metrics?: Record<string, number | null> }[];
 }
 
 export interface StorageRecordQueries {
   /** Install or upgrade local indexes explicitly. Prefer the extension's storageIndexes declaration. */
   defineIndexes(indexes: StorageRecordIndex[]): Promise<void>;
   query(query: StorageRecordQuery): Promise<StorageQueryPage>;
-  aggregate(query: StorageAggregateQuery): Promise<{
-    revision: string;
-    count: number;
-    groups: { value: Json; count: number }[];
-  }>;
+  aggregate(query: StorageAggregateQuery): Promise<StorageAggregateResult>;
   /** At most 100 complete addresses, in request order, including missing records and tombstones. */
   readMany(recordIds: string[]): Promise<StorageRecord[]>;
 }

@@ -1,9 +1,11 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import {
+  aggregateOptions,
   compareQueryValues,
   encodeQueryCursor,
   prepareRecordQuery,
+  requestedRecordIndex,
   validateIndexes,
   validatePredicate,
 } from "pstdio-sync/records";
@@ -20,17 +22,19 @@ import {
   storage_record_indexes as indexes,
   storage_record_projections as projections,
 } from "../../db/schemas.pg";
+import { aggregateRecordQuery } from "./record-aggregate-query";
+import { hasDerivedQueryFields, rebuildDerivedQueryValues } from "./record-derived-fields";
 import { dropRecordIndexes } from "./record-index-lifecycle";
 import { decodeProjectionValue, encodeProjectionValue } from "./record-projection-codec";
 import {
   arrayIndexFields,
   pageAfterSql,
-  predicateSql,
   recordFieldSql,
   recordIndexKeys,
   recordPageSql,
   recordScopeSql,
 } from "./record-query-sql";
+import { loadRelatedQueryIndexes, relatedRecordPredicateSql } from "./record-related-query";
 import type { StorageDiagnostics } from "./storage-diagnostics";
 
 type QueryRow = { record_id: string; revision: string; fields: Record<string, Json>; sort_values: Json[] };
@@ -123,6 +127,8 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
       await db.transaction(async (tx) => {
         await dropRecordIndexes(tx, ownerWhere(indexes)!);
         await tx.delete(indexes).where(ownerWhere(indexes));
+        if (hasDerivedQueryFields(desired) || hasDerivedQueryFields(installed))
+          await rebuildDerivedQueryValues(tx, owner, desired);
         for (const index of desired) {
           const name = `storage_query_${(await fingerprint({ owner: { ...owner }, definition: index as unknown as Json })).slice(0, 32)}`;
           const keys = recordIndexKeys(index);
@@ -153,14 +159,15 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
     },
     query: (query) =>
       db.transaction(async (tx) => {
-        const index = await getIndex(tx, query.index);
+        const index = requestedRecordIndex(await getIndex(tx, query.index), query);
+        const related = await loadRelatedQueryIndexes(query.where, (name) => getIndex(tx, name));
         const revision = await getRevision(tx);
-        const page = await prepareRecordQuery(owner, index, query, revision);
+        const page = await prepareRecordQuery(owner, index, query, revision, related);
         const result = await tx.execute<QueryRow>(
           recordPageSql(
             index,
             page.fields,
-            sql`${visible(index)} AND ${predicateSql(index, query.where)} AND ${pageAfterSql(index, page.after)}`,
+            sql`${visible(index)} AND ${relatedRecordPredicateSql(owner, index, query.where, related)} AND ${pageAfterSql(index, page.after)}`,
             // One extra row shows whether a next page exists without a second scan.
             page.limit + 1,
             page.offset,
@@ -191,29 +198,26 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
     aggregate: (query) =>
       db.transaction(async (tx) => {
         const index = await getIndex(tx, query.index);
+        aggregateOptions(index, query);
+        const related = await loadRelatedQueryIndexes(query.where, (name) => getIndex(tx, name));
         const revision = await getRevision(tx);
-        validatePredicate(index, query.where);
-        if (query.where === undefined && query.groupBy === undefined && index.prefix === undefined) {
+        validatePredicate(index, query.where, 0, related);
+        if (
+          query.where === undefined &&
+          query.groupBy === undefined &&
+          query.metrics === undefined &&
+          index.prefix === undefined
+        ) {
           const [projection] = await tx.select().from(projections).where(ownerWhere(projections));
           return { revision, count: projection?.live_count ?? 0, groups: [] };
         }
-        const group =
-          query.groupBy === undefined
-            ? sql`NULL::jsonb`
-            : sql`coalesce(${recordFieldSql(index, query.groupBy)}, 'null'::jsonb)`;
-        const result = await tx.execute<{ value: Json; count: string }>(
-          sql`SELECT ${group} AS value, count(*)::text AS count FROM storage_current_records WHERE ${visible(index)} AND ${predicateSql(index, query.where)} GROUP BY 1`,
-        );
-        return {
+        return aggregateRecordQuery(
+          tx,
+          index,
+          query,
           revision,
-          count: result.rows.reduce((sum, row) => sum + Number(row.count), 0),
-          groups:
-            query.groupBy === undefined
-              ? []
-              : result.rows
-                  .map((row) => ({ value: decodeProjectionValue(row.value ?? null), count: Number(row.count) }))
-                  .sort((a, b) => compareQueryValues(a.value, b.value)),
-        };
+          sql`${visible(index)} AND ${relatedRecordPredicateSql(owner, index, query.where, related)}`,
+        );
       }),
     readMany: async (ids) => {
       if (ids.length > 100) throw new Error("A batch can read at most 100 records");

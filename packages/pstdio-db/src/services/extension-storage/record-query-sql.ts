@@ -1,6 +1,6 @@
 import { type SQL, sql } from "drizzle-orm";
 import { queryField } from "pstdio-sync/records";
-import type { Json, StoragePredicate, StorageRecordIndex } from "pstdio-sync-contracts";
+import type { Json, StoragePredicate, StorageRecordIndex, StorageRelatedSelection } from "pstdio-sync-contracts";
 import { recordNumberTextSql } from "./record-number-text";
 import {
   encodeProjectionValue,
@@ -26,16 +26,25 @@ const stringBytesSql = (value: SQL, folded = false) => {
 };
 const sortValueSql = (value: Json) =>
   typeof value === "string" ? sql`decode(${projectionStringBytes(value)}, 'hex')` : json(value);
-export const recordScopeSql = (owner: { workbenchId: string; extensionId: string }, index: StorageRecordIndex) =>
-  sql`workbench_id = ${sqlLiteral(owner.workbenchId)} AND extension_id = ${sqlLiteral(owner.extensionId)}
-    AND NOT deleted ${index.prefix === undefined ? sql`` : sql`AND starts_with(record_id, ${sqlLiteral(index.prefix)})`}`;
-export const recordFieldSql = (index: StorageRecordIndex, name: string) => {
+const column = (name: string, alias?: string) =>
+  alias ? sql`${sql.identifier(alias)}.${sql.identifier(name)}` : sql`${sql.identifier(name)}`;
+export const recordScopeSql = (
+  owner: { workbenchId: string; extensionId: string },
+  index: StorageRecordIndex,
+  alias?: string,
+) =>
+  sql`${column("workbench_id", alias)} = ${sqlLiteral(owner.workbenchId)} AND ${column("extension_id", alias)} = ${sqlLiteral(owner.extensionId)}
+    AND NOT ${column("deleted", alias)} ${index.prefix === undefined ? sql`` : sql`AND starts_with(${column("record_id", alias)}, ${sqlLiteral(index.prefix)})`}`;
+export const recordFieldSql = (index: StorageRecordIndex, name: string, alias?: string) => {
   const field = queryField(index, name);
+  if (field.derive)
+    return sql`(${column("query_values", alias)} #> ARRAY[${sqlLiteral(projectionKey(index.name))}, ${sqlLiteral(projectionKey(name))}]::text[])`;
   const path = field.path.map((part) => sqlLiteral(projectionKey(part)));
-  const value = sql`(value #> ARRAY[${sql.join(path, sql`, `)}]::text[])`;
+  const source = column("value", alias);
+  const value = sql`(${source} #> ARRAY[${sql.join(path, sql`, `)}]::text[])`;
   const parents = path.map(
     (_, position) =>
-      sql`jsonb_typeof(value #> ARRAY[${sql.join(path.slice(0, position), sql`, `)}]::text[]) = 'object'`,
+      sql`jsonb_typeof(${source} #> ARRAY[${sql.join(path.slice(0, position), sql`, `)}]::text[]) = 'object'`,
   );
   const type = field.type === "array" ? "array" : field.type;
   const validArray =
@@ -46,8 +55,8 @@ export const recordFieldSql = (index: StorageRecordIndex, name: string) => {
   const validObject = field.type === "object" ? sql`AND NOT (${value} ? ${sqlLiteral(projectionStringTag)})` : sql``;
   return sql`(CASE WHEN (${sql.join(parents, sql` AND `)}) AND (${value} = 'null'::jsonb OR (jsonb_typeof(${value}) = ${sqlLiteral(type)} ${validArray} ${validObject}) ${encodedString}) THEN ${value} ELSE NULL END)`;
 };
-export const sortFieldSql = (index: StorageRecordIndex, name: string) => {
-  const value = sql`nullif(${recordFieldSql(index, name)}, 'null'::jsonb)`;
+export const sortFieldSql = (index: StorageRecordIndex, name: string, alias?: string) => {
+  const value = sql`nullif(${recordFieldSql(index, name, alias)}, 'null'::jsonb)`;
   return queryField(index, name).type === "string" ? stringBytesSql(value) : value;
 };
 
@@ -55,10 +64,10 @@ export const arrayIndexFields = (index: StorageRecordIndex) =>
   Object.entries(index.fields).filter(([, field]) => field.type === "array" || field.type === "object");
 
 const equalityKey = (value: SQL) => sql`md5((${value})::text)`;
-const equalityPredicate = (index: StorageRecordIndex, field: string, comparable: SQL, value: Json) =>
+export const recordEqualitySql = (index: StorageRecordIndex, field: string, comparable: SQL, value: SQL) =>
   index.equality?.includes(field)
-    ? sql`(${equalityKey(comparable)} = ${equalityKey(json(value))} AND ${comparable} = ${json(value)})`
-    : sql`${comparable} = ${json(value)}`;
+    ? sql`(${equalityKey(comparable)} = ${equalityKey(value)} AND ${comparable} = ${value})`
+    : sql`${comparable} = ${value}`;
 const orderingPrefix = (index: StorageRecordIndex, name: string) =>
   sql`substring(${sortFieldSql(index, name)} from 1 for ${sql.raw(String(Math.max(1, Math.floor(1024 / (index.orderBy?.length || 1)))))})`;
 
@@ -74,28 +83,42 @@ export const recordIndexKeys = (index: StorageRecordIndex) => {
   return keys;
 };
 
-export const predicateSql = (index: StorageRecordIndex, predicate?: StoragePredicate) => {
+type RelatedSql = (index: StorageRecordIndex, selection: StorageRelatedSelection, alias?: string) => SQL;
+export const predicateSql = (
+  index: StorageRecordIndex,
+  predicate?: StoragePredicate,
+  related?: RelatedSql,
+  alias?: string,
+) => {
   if (!predicate) return sql`true`;
+  if ("exists" in predicate) {
+    if (!related) throw new Error("Related query needs installed indexes");
+    return related(index, predicate.exists, alias);
+  }
   // Missing typed values fail comparisons; negation must complement that false result.
   if ("not" in predicate) {
-    const child: SQL = predicateSql(index, predicate.not);
+    const child: SQL = predicateSql(index, predicate.not, related, alias);
     return sql`NOT coalesce(${child}, false)`;
   }
   if ("all" in predicate) {
     const parts: SQL[] = [];
-    for (const child of predicate.all) parts.push(predicateSql(index, child));
+    for (const child of predicate.all) parts.push(predicateSql(index, child, related, alias));
     return parts.length ? sql`(${sql.join(parts, sql` AND `)})` : sql`true`;
   }
   if ("any" in predicate) {
     const parts: SQL[] = [];
-    for (const child of predicate.any) parts.push(predicateSql(index, child));
+    for (const child of predicate.any) parts.push(predicateSql(index, child, related, alias));
     return parts.length ? sql`(${sql.join(parts, sql` OR `)})` : sql`false`;
   }
-  return fieldPredicateSql(index, predicate);
+  return fieldPredicateSql(index, predicate, alias);
 };
 
-const fieldPredicateSql = (index: StorageRecordIndex, predicate: Extract<StoragePredicate, { field: string }>) => {
-  const field = recordFieldSql(index, predicate.field);
+const fieldPredicateSql = (
+  index: StorageRecordIndex,
+  predicate: Extract<StoragePredicate, { field: string }>,
+  alias?: string,
+) => {
+  const field = recordFieldSql(index, predicate.field, alias);
   const comparable = sql`coalesce(${field}, 'null'::jsonb)`;
   const empty = sql`(${field} IS NULL OR ${field} IN ('null'::jsonb, '""'::jsonb, '[]'::jsonb))`;
   switch (predicate.op) {
@@ -110,7 +133,7 @@ const fieldPredicateSql = (index: StorageRecordIndex, predicate: Extract<Storage
     case "notEmpty":
       return sql`NOT ${empty}`;
     case "eq":
-      return equalityPredicate(index, predicate.field, comparable, predicate.value);
+      return recordEqualitySql(index, predicate.field, comparable, json(predicate.value));
     case "ne":
       return sql`${comparable} <> ${json(predicate.value)}`;
     case "equalsIgnoreCase":
@@ -142,7 +165,7 @@ const fieldPredicateSql = (index: StorageRecordIndex, predicate: Extract<Storage
     default: {
       if (predicate.value === null) return sql`false`;
       const operators = { gt: ">", gte: ">=", lt: "<", lte: "<=" };
-      return sql`${sortFieldSql(index, predicate.field)} ${sql.raw(operators[predicate.op])} ${sortValueSql(predicate.value)}`;
+      return sql`${sortFieldSql(index, predicate.field, alias)} ${sql.raw(operators[predicate.op])} ${sortValueSql(predicate.value)}`;
     }
   }
 };
