@@ -90,7 +90,12 @@ export const PageReturn = () => {
     w.navigation.openTarget({ kind: "page", page: page("home") });
     return w;
   });
-  useEffect(() => () => workbench.dispose(), [workbench]);
+  useEffect(
+    () => () => {
+      void workbench.dispose();
+    },
+    [workbench],
+  );
   return (
     <WorkbenchThemeProvider>
       <Box h="100dvh">
