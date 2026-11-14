@@ -58,6 +58,7 @@ jobs:
     outputs:
       artifact_id: ${{ steps.identity.outputs.artifact-id }}
       desktop_matrix: ${{ steps.platforms.outputs.desktop_matrix }}
+      benchmark_desktop_matrix: ${{ steps.platforms.outputs.benchmark_desktop_matrix }}
       performance_matrix: ${{ steps.platforms.outputs.performance_matrix }}
     steps:
       - uses: actions/checkout@v5
@@ -140,7 +141,7 @@ jobs:
       artifact_attempt: ${{ inputs.artifact_attempt }}
       candidate_artifact_id: ${{ needs.candidate.outputs.artifact_id }}
       channel: ${{ inputs.channel }}
-      desktop_platforms: ${{ needs.candidate.outputs.desktop_matrix }}
+      desktop_platforms: ${{ needs.candidate.outputs.benchmark_desktop_matrix }}
       workloads: ${{ needs.candidate.outputs.performance_matrix }}
   services:
     needs: candidate

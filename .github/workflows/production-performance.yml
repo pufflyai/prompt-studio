@@ -58,7 +58,7 @@ jobs:
       CHANNEL: ${{ inputs.channel }}
       GH_TOKEN: ${{ github.token }}
       PLAYWRIGHT_TRACE: "off"
-      E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/cli-linux-x64/bin/pstdio
+      E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/${{ matrix.platform_pkg }}/bin/${{ matrix.platform == 'win32' && 'pstdio.exe' || 'pstdio' }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -94,7 +94,7 @@ jobs:
           bun scripts/ci/production-payload.ts check
           tar -xzf release-build.tar.gz
       - name: Install browser engines
-        if: matrix.family == 'browser' || matrix.family == 'navigation' || matrix.family == 'planner'
+        if: matrix.family == 'planner'
         # Approved 2026-11-11 (PS-1164): hosted installs take up to 91 s; an unreachable Ubuntu
         # archive otherwise stalls apt for the whole job.
         timeout-minutes: 3

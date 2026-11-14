@@ -12,6 +12,7 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
+      actions: read
       id-token: write
     steps:
       - uses: actions/checkout@v5
@@ -45,13 +46,12 @@ jobs:
 
       - name: Benchmark signed packaged application
         id: benchmark
-        run: bun run --cwd clients/desktop test:benchmark
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bun scripts/test.ts --performance-family desktop --prebuilt
       - name: Smoke signed packaged application
         if: ${{ !cancelled() && (success() || steps.benchmark.outcome == 'failure') }}
         run: bun run --cwd clients/desktop test:packaged
-      - name: Require first-attempt launch quarantine execution
-        if: ${{ !cancelled() && (success() || steps.benchmark.outcome == 'failure') }}
-        run: bun scripts/ci/verify-quarantine-reports.ts packaged-desktop-benchmark --scope @pstdio/desktop
       - name: Verify installed Windows command
         if: ${{ !cancelled() && (success() || steps.benchmark.outcome == 'failure') }}
         run: bun clients/desktop/scripts/verify-windows-cli-install.ts
@@ -60,7 +60,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-signed-readiness-attempt-${{ github.run_attempt }}
-          path: clients/desktop/test-results
+          path: |
+            clients/desktop/test-results
+            test-results/production-performance
+            test-results/ci/planned
           if-no-files-found: warn
       - name: Upload signed installer for manual testing
         uses: actions/upload-artifact@v4

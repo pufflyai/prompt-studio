@@ -65,6 +65,7 @@ const resultFile = (input: {
   const metrics = mergeSamples(input.samples);
   return {
     format: RESULT_FORMAT,
+    qualification: input.samples.every((sample) => sample.qualified) ? "qualified" : "unqualified",
     commit: { sha: input.checkout.sha, ...(input.checkout.ref ? { ref: input.checkout.ref } : {}) },
     platform: input.platform,
     runner: process.env.ImageOS ?? process.env.RUNNER_NAME ?? hostname(),
@@ -97,11 +98,17 @@ export const run = async (options: RunOptions) => {
       const file = join(out, ".samples", `${commit.sha}-${suite.id}-${sample}.jsonl`);
       await writeFile(file, "");
       const args = ["sample", "--suite", suite.id, "--sha", commit.sha, "--cache", cache(commit), "--out", file];
-      if (!(await bench(commit, args, { BENCHMARK_SAMPLE_INDEX: String(sample) })))
-        failures.push(`${suite.id} sample ${sample + 1} on ${commit.sha}`);
-      samples.get(commit.sha)?.push({ suite: suite.id, lines: await readFile(file, "utf8") });
+      const passed = await bench(commit, args, { BENCHMARK_SAMPLE_INDEX: String(sample) });
+      if (!passed) failures.push(`${suite.id} sample ${sample + 1} on ${commit.sha}`);
+      const lines = await readFile(file, "utf8");
+      const eligible = lines
+        .split("\n")
+        .filter(Boolean)
+        .every((line) => JSON.parse(line).identity?.qualificationEligible === true);
+      samples.get(commit.sha)?.push({ suite: suite.id, lines, qualified: passed && eligible });
     }
   }
+  const comparison = new Map<string, string>();
   for (const checkout of checkouts) {
     const file = resultFile({
       checkout,
@@ -111,6 +118,13 @@ export const run = async (options: RunOptions) => {
       samples: samples.get(checkout.sha) ?? [],
     });
     await writeFile(join(out, `${checkout.sha}-${options.platform}.json`), `${JSON.stringify(file, null, 2)}\n`);
+    for (const metric of file.metrics) {
+      const key = `${metric.suite}/${metric.metric}`;
+      const identity = JSON.stringify({ workload: metric.identity, unit: metric.unit, budget: metric.budget });
+      if (comparison.has(key) && comparison.get(key) !== identity)
+        failures.push(`Unlike workloads cannot be compared: ${key}`);
+      comparison.set(key, identity);
+    }
   }
   return failures;
 };

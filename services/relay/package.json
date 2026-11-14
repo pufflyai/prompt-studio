@@ -13,14 +13,12 @@
     "typecheck": "bun check",
     "lint": "bun run typecheck && biome check .",
     "test": "bun ../../scripts/ci/run-bun-tests.ts",
-    "bench:storage-bound": "bun scripts/storage-bound.p3.bench.ts",
     "test:integration": "bun scripts/test-isolated.ts && bun ../../packages/pstdio-sync-contracts/scripts/isolated.ts"
   },
   "devDependencies": {
     "@types/bun": "1.4.4",
     "@types/pg": "^8.18.0",
     "drizzle-kit": "^0.31.9",
-    "pstdio-benchmarks": "workspace:*",
     "typescript": "6.0.2"
   },
   "dependencies": {

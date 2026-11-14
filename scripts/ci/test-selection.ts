@@ -1,5 +1,4 @@
 import { relative } from "node:path";
-import { suites } from "./benchmark-registry";
 import { selectIntegrationFiles } from "./coverage-ownership";
 import { partitionPackageChecks } from "./package-check-matrix";
 import { productionDesktopPlatforms, productionToolchainPlatforms } from "./production-platforms";
@@ -179,16 +178,11 @@ export const selectEditedTests = (files: string[], packages: Packages, coveredFi
     string,
     { owner: string; runner: string; priority: string; subgroup: string; files: string[] }
   >();
-  const performance = new Map<string, string[]>();
   for (const file of files) {
     const priority = priorityFromFile(file)!;
     const runner = testRunner(file);
-    if (runner === "performance") {
-      const suite = suites.find((suite) => suite.files.includes(file));
-      if (!suite) throw new Error(`Edited benchmark has no registered suite: ${file}`);
-      performance.set(suite.id, [...(performance.get(suite.id) ?? []), file]);
-      continue;
-    }
+    // Frozen measurements stay in dedicated nightly/release qualification, even when edited.
+    if (runner === "performance") continue;
     const owner = packages.find((pkg) => file.startsWith(`${pkg.dir}/`))?.name ?? "repository";
     const subgroup = runner === "desktop" && file.includes("/packaged-") ? "packaged" : "source";
     const key = `${owner}:${runner}:${priority}:${subgroup}`;
@@ -250,28 +244,6 @@ export const selectEditedTests = (files: string[], packages: Packages, coveredFi
       });
     });
   });
-  for (const [id, files] of performance) {
-    let platforms = [linux];
-    if (["desktop", "runtime", "storage"].includes(id)) platforms = productionDesktopPlatforms("nightly");
-    for (const platform of platforms)
-      rows.push({
-        name: `${id} P3 ${platform.os}`,
-        ...platform,
-        owner: "",
-        runner: "performance",
-        priority: "P3",
-        files: JSON.stringify(files),
-        stable: true,
-        quarantine: quarantineRegistry.some(
-          (entry) => files.includes(entry.file) && matchesPlatform(entry, platform.platform, platform.arch),
-        ),
-        suite: id,
-        browser: ["desktop", "workbench", "canvas", "chat", "subnav", "planner"].includes(id),
-        desktop: false,
-        // Benchmarks keep the native hosts their budgets were measured on.
-        container: false,
-      });
-  }
   if (rows.length > 256) throw new Error("Edited tests exceed the matrix limit; split this PR");
   return rows;
 };

@@ -2,7 +2,7 @@ import { useCommandQuery } from "@pstdio/sdk/extensions/react";
 import { AlertMessage } from "@pstdio/ui";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import { DEFAULT_PLATFORM, DEFAULT_SUITES, runsOn, SUITES } from "../benchmarks/platforms";
+import { DEFAULT_SUITES, PLATFORMS, runsOn, SUITES } from "../benchmarks/platforms";
 import { useBenchmarks, useBenchmarksRefresh } from "../webview/client";
 import { PageFrame } from "../webview/page-frame";
 import { RunForm, type RunRequest } from "./run-form";
@@ -12,7 +12,7 @@ export const RunOptions = () => {
   const [request, setRequest] = useState<RunRequest>({
     commits: [],
     suites: DEFAULT_SUITES,
-    platforms: [DEFAULT_PLATFORM],
+    platforms: PLATFORMS.map((platform) => platform.id),
   });
   useBenchmarksRefresh();
   // Measured means every chosen suite that can run on a chosen platform has results.

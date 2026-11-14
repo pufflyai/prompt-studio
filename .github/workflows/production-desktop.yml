@@ -41,6 +41,7 @@ jobs:
       CI_PROFILE: production
       PLAN_DISPLAY: ${{ matrix.platform == 'linux' && 'true' || 'false' }}
       SOURCE_SHA: ${{ inputs.source_sha }}
+      VERSION_SHA: ${{ inputs.ref }}
       ARTIFACT_RUN_ID: ${{ inputs.artifact_run_id }}
       ARTIFACT_ATTEMPT: ${{ inputs.artifact_attempt }}
       CHANNEL: ${{ inputs.channel }}
@@ -74,16 +75,24 @@ jobs:
       - name: "[phase:build] Build desktop test dependencies"
         run: bun run build -- --scope @pstdio/desktop --include-dependencies
       - name: Download the exact signed release app
+        if: inputs.channel != 'nightly' || matrix.platform != 'win32'
         uses: actions/download-artifact@v4
         with:
           name: validation-app-${{ matrix.target }}
           run-id: ${{ inputs.artifact_run_id }}
           github-token: ${{ github.token }}
       - name: Restore the exact release app
+        if: inputs.channel != 'nightly' || matrix.platform != 'win32'
         shell: bash
         run: |
           bun scripts/ci/production-payload.ts check
           tar -xzf validation-app-${{ matrix.target }}.tar.gz -C clients/desktop
+      - name: Build the unpublished nightly Windows benchmark app
+        if: inputs.channel == 'nightly' && matrix.platform == 'win32'
+        shell: bash
+        run: |
+          bun run --cwd clients/desktop package -- --arch=x64
+          bun -e 'await Bun.write("production-build-identity.json", JSON.stringify({ sourceSha: process.env.SOURCE_SHA, versionSha: process.env.VERSION_SHA, toolchain: "bun-" + Bun.version }))'
       - name: Configure Linux sandbox
         if: matrix.platform == 'linux'
         shell: bash
@@ -99,9 +108,6 @@ jobs:
       - name: "[phase:test] Test the declared shared or native packaged contract"
         if: inputs.kind == 'functional'
         run: bun scripts/test.ts --artifact packaged-desktop --prebuilt --out test-results/ci/desktop-contract-plan.json
-      - name: Require first-attempt launch quarantine execution
-        if: ${{ !cancelled() && inputs.kind == 'performance' && matrix.platform == 'win32' }}
-        run: bun scripts/ci/verify-quarantine-reports.ts packaged-desktop-benchmark --scope @pstdio/desktop
       - name: Download the immutable candidate identity
         uses: actions/download-artifact@v4
         if: always()
@@ -129,6 +135,7 @@ jobs:
           name: production-desktop-${{ inputs.kind }}-${{ matrix.target }}-attempt-${{ github.run_attempt }}
           path: |
             test-results/ci/desktop-contract-plan.json
+            test-results/production-performance
             clients/desktop/test-results
             test-results/ci/planned
             !test-results/ci/planned/**/extension-fixtures-*/**

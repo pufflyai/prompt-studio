@@ -1,7 +1,7 @@
 import { finished } from "./github";
 import { platformLabel, runsOn, SUITES } from "./platforms";
 import type { BenchmarkMetricResult, BenchmarkResultFile, BenchmarkUnit } from "./result-file";
-import { compareSamples, median, summarize } from "./stats";
+import { compareSamples, summarize } from "./stats";
 import type { CachedResult, ReleaseRecord, RunRecord } from "./store";
 
 export type Summary = ReturnType<typeof summarize>;
@@ -14,6 +14,7 @@ export interface MetricKey {
   label: string;
   unit: BenchmarkUnit;
   budget?: number;
+  budgetComparison?: "strict-ms-bytes";
 }
 
 export interface TrendPoint extends Summary {
@@ -31,7 +32,18 @@ export interface CompareRow extends MetricKey {
   change: Change | null;
 }
 
-const keyOf = (metric: Pick<BenchmarkMetricResult, "suite" | "metric">) => `${metric.suite}/${metric.metric}`;
+// Every raw observation must meet the limit; a passing median cannot hide a failure.
+export const exceedsBudget = (metric: Pick<MetricKey, "unit" | "budget" | "budgetComparison">, values: number[]) => {
+  const budget = metric.budget;
+  if (budget === undefined) return false;
+  const strict = metric.budgetComparison === "strict-ms-bytes" && (metric.unit === "ms" || metric.unit === "bytes");
+  return (
+    !values.length || values.some((value) => !Number.isFinite(value) || (strict ? value >= budget : value > budget))
+  );
+};
+
+const keyOf = (metric: BenchmarkMetricResult) =>
+  `${metric.suite}/${metric.metric}/${JSON.stringify(metric.identity ?? "historical-format-1")}`;
 
 const runIdOf = (result: CachedResult) => (result.source.kind === "run" ? result.source.runId : undefined);
 
@@ -50,9 +62,14 @@ const metricKey = (file: BenchmarkResultFile, metric: BenchmarkMetricResult): Me
     suite: metric.suite,
     suiteLabel: suite?.label ?? metric.suite,
     metric: metric.metric,
-    label: metric.label,
+    label: metric.identity
+      ? `${metric.label} (v${metric.identity.workloadVersion}, ${metric.identity.cpu})`
+      : `${metric.label} (historical)`,
     unit: metric.unit,
     ...(metric.budget === undefined ? {} : { budget: metric.budget }),
+    ...(metric.identity?.budgetComparison === "strict-ms-bytes"
+      ? { budgetComparison: "strict-ms-bytes" as const }
+      : {}),
   };
 };
 
@@ -210,13 +227,14 @@ export const buildRunResults = (results: CachedResult[], runId: string, platform
   return {
     results: own.map(({ file }) => ({
       commit: file.commit,
+      qualification: file.qualification ?? "historical-unqualified",
       platform: file.platform,
       suites: file.suites.map((suite) => suite.id),
       metrics: file.metrics.map((metric) => ({
         ...metricKey(file, metric),
         ...summarize(metric.values),
         values: metric.values,
-        ...(metric.budget === undefined ? {} : { overBudget: median(metric.values) > metric.budget }),
+        ...(metric.budget === undefined ? {} : { overBudget: exceedsBudget(metricKey(file, metric), metric.values) }),
       })),
     })),
     // Platforms the run covered without results: failed, cancelled, still running, or not downloaded yet.

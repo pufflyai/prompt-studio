@@ -119,8 +119,6 @@
     "test": "bun ../../scripts/test.ts --scope @pstdio/ui",
     "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --conditions production --coverage",
     "typecheck": "bun check -p tsconfig.build.json && bun check -p tsconfig.examples.json",
-    "perf:chat": "bunx playwright test -c playwright.chat-perf.config.ts",
-    "perf:chat:trace": "PLAYWRIGHT_TRACE=on bunx playwright test -c playwright.chat-perf.config.ts",
     "prepublishOnly": "bun run build"
   },
   "peerDependencies": {
@@ -179,14 +177,12 @@
     "@chakra-ui/cli": "^3.30.0",
     "@chakra-ui/react": "3.32.0",
     "@emotion/react": "11.14.0",
-    "@playwright/test": "^1.60.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.2.0",
     "babel-plugin-react-compiler": "^1.0.0",
     "cross-env": "10.1.0",
     "pstdio-api-contracts": "workspace:*",
-    "pstdio-benchmarks": "workspace:*",
     "pstdio-file-types": "workspace:*",
     "react": "19.2.4",
     "react-dom": "19.2.4",

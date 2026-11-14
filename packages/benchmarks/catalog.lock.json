@@ -1,0 +1,5 @@
+{
+  "revision": 1,
+  "digest": "155aea2b9cc7178a05bbb1fb9be2ac9f12a4ae63974b57b347eecc80c6dd3847",
+  "authorization": "PS-233 authorizes the one-time eight-scenario consolidation; later semantic changes require explicit human instructions and a benchmark-labeled PR left for human review and merge; the user explicitly removed exact 10-core/32 GiB M5 reference proof as a qualification prerequisite; the user explicitly selected all eight scenarios on linux-x64, darwin-arm64 and win32-x64, removed Intel Mac, and authorized native memory adapters for B5 version 2; on 2026-11-14 the user approved aligned strict B1/B2/B3/B7/B8 timing limits and B5 native-memory ceilings (Linux/macOS 2GB, Windows 3GB), delegated reasonable B4 timing limits, and requested investigation of B6; its stale next-page button was repaired to scroll and require a measured cursor page without reducing its workload or extending waits"
+}

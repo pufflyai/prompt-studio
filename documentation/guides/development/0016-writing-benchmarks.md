@@ -1,141 +1,80 @@
-# Write a benchmark
+# Frozen critical workload benchmarks
 
-Benchmarks measure fixed product operations and report to the Performance pages. Use the shared runner and helpers so every benchmark is discovered, sampled and checked the same way.
+PS-233 authorizes a one-time consolidation into **exactly eight scenarios**. The executable owners are [suites.ts](../../../packages/benchmarks/src/suites.ts), [scenario manifest revision 1](../../../packages/benchmarks/src/catalog/scenarios.ts) and [catalog lock](../../../packages/benchmarks/catalog.lock.json). This candidate is **not qualified**. See the [disposition and qualification ledger](../../references/performance/0009-frozen-workload-ledger.md).
 
-## Name and register the file
+## Human authorization
 
-Keep the benchmark beside the code it measures and name it `<behavior>.p3.bench.ts`. Add its exact repository path to one suite's `files` array in [suites.ts](../../../packages/benchmarks/src/suites.ts). That declaration supplies both the coverage check and the files a sample executes. Browser suites pass their declared files to Playwright; standalone suites execute their files with Bun.
+After this consolidation, agents must not add, delete, replace, resize, reorder, relax or extend scenarios, metrics, fixtures, variants or platforms without an explicit human instruction identifying that change. Do not automatically add a benchmark for a feature. Ordinary product regression tests remain allowed. Never add tests of benchmark setup, instrumentation, selection or reports.
 
-Use `.diagnostic.ts` for investigations and stress reports. Diagnostics stay outside benchmark suites and the Performance pages. Existing fixed-workload benchmarks can contain repeated edits or navigation inside one workload; that does not turn their fixture into a diagnostic.
+`bun run verify:benchmarks` checks the exact eight entry points, single case registration, metric allowlist and source digest. Executable workload/fixture/runner source is included in the digest, so grouping another loop or case under an existing ID changes the reviewed source. Formatting and comments do not change the TypeScript digest. A harness repair can keep the scenario version and fixture identity when semantics are unchanged.
 
-Run `bun run verify:benchmarks`. CI runs the same check on every PR. It rejects unregistered benchmark files, missing registered files, duplicate ownership, registered files their suite does not execute, and the former `.perf.ts` and `.stress.ts` names. A new suite also needs a matching option in the pstdio-dev Runs page; existing suites need no UI change.
+A self-edited lock is not human authorization. Add the `benchmark` label to PRs that change benchmarks, workload definitions, fixtures, metrics, budgets or runners. Agents must leave these PRs for human review and merge, even when CI is green: do not merge directly, enable auto-merge or add them to the merge queue, and do not remove the label to bypass the rule. The PR records the human review and merge decision. There is no deployment approval or separate environment permission. See [PR labels](0004-pull-request-labels.md#benchmark-review-and-merge).
 
-## Keep a diagnostic only for unique evidence
+## Scenarios and hosts
 
-A diagnostic stays only while no registered benchmark measures the same operation, data size, cold or warm state and correctness checks. When a benchmark covers all of them, delete the diagnostic, its launch scripts and Knip entries, and point its documentation at the benchmark. A similar name is not coverage.
-
-PS-971 compared every diagnostic with the files in `suites.ts` on 2026-10-30. No benchmark covered any of them, so all stay:
-
-| Diagnostic | Unique evidence | Closest benchmark and why it does not cover it |
+| ID | Fixed workload | Owning hosts |
 | --- | --- | --- |
-| `packages/e2e/src/perf/planner-moves.diagnostic.ts` | Board drag-and-drop paint, long tasks, CPU profiles, command and refresh timing, and saved order for 50–1,000 tickets with 1 or 15 views | `planner-board-cold-open.p3.bench.ts` (`planner`) times only the first card after a restart. No benchmark moves a card. |
-| `extensions/pstdio-planner/src/commands/reorder-ticket.diagnostic.ts` | Storage writes, unchanged writes and stored bytes for one reorder at 50, 500 and 1,000 tickets, without a browser or database | No benchmark runs a reorder. `ticket-move-performance.p0.test.ts` checks the one-write rule with three tickets. |
-| `packages/e2e/src/perf/planner-stress.diagnostic.ts` | Timeline first open, plan response bytes, mounted cards, filter switches and page heap with 1,000 tickets | `planner-board-cold-open.p3.bench.ts` uses the same seed data but opens the Tickets board, not the timeline. |
-| `packages/e2e/src/perf/storage-scale.diagnostic.ts` with the sync and database `document-scale.diagnostic.ts` workers | PS-903 owners with 1,000–100,000 records, cold first writes, lists, atomic edits, folding, sync merges and container limits | `document-storage.p3.bench.ts` (`storage`) edits one record. `storage-bound.p3.bench.ts` (`relay`) measures relay storage, not client documents. |
-| `packages/pstdio-db/src/services/extension-storage/record-read-scale.diagnostic.ts` | Cold and warm indexed reads, paging, reads during writes and folding, and scan counts at PS-903 sizes | No benchmark reads extension records. |
-| `packages/pstdio-db/src/services/resource-number-scale.diagnostic.ts` | Cold number allocation, one-record upload and new-device download with 100,000 resource numbers | No benchmark allocates or syncs resource numbers. |
+| B1 | Empty-home first installed launch: window, authenticated API, default tools, usable workbench, first interaction | Linux x64, Apple Silicon Mac, Windows x64 |
+| B2 | Fresh-process saved project: 100 messages, file, idle terminal | Linux x64, Apple Silicon Mac, Windows x64 |
+| B3 | Same saved project, attach to an already-running owned runtime | Linux x64, Apple Silicon Mac, Windows x64 |
+| B4 | Two populated projects; 30 turns × 8 updates × 25ms, one tool result per turn; foreground actions and cancel a second replay | Linux x64, Apple Silicon Mac, Windows x64 |
+| B5 | Same saved fixture; 30s settle, forty fixed 15s action cycles; whole process tree sampled every 500ms | Linux x64, Apple Silicon Mac, Windows x64 |
+| B6 | 1,000 Planner tickets, three edits each, one saved filtered list; cold actionable content, search, page, move, reopen | Linux x64, Apple Silicon Mac, Windows x64 |
+| B7 | 10,000 deterministic records with three history edits; cold/warm page of 100, one edit, read during 100-record write/maintenance | Linux x64, Apple Silicon Mac, Windows x64 |
+| B8 | One idle-session runtime crash; feedback, restored authenticated API/tools/content, first action, persisted data and cleanup | Linux x64, Apple Silicon Mac, Windows x64 |
 
-Run them with:
-
-```sh
-bun run --cwd packages/e2e src/perf/planner-moves.diagnostic.ts   # after bun run dev:playwright -- --desktop
-bun run --cwd extensions/pstdio-planner src/commands/reorder-ticket.diagnostic.ts
-bun run test:planner-stress -- --packaged
-bun run --cwd packages/pstdio-db diagnose:resource-numbers -- prepare /absolute/new-dir
-bun run --cwd packages/pstdio-db diagnose:resource-numbers -- sample /absolute/new-dir
-```
-
-[Planner ticket moves](../../references/performance/0001-planner-ticket-moves.md) describes the move diagnostics. [Storage scale diagnostic](../../references/performance/0005-storage-scale-diagnostic.md) gives the storage-scale and record-read commands.
+Every B1–B8 scenario runs once on each of the three hosts in nightly and stable validation: **24 scenario/host combinations** per candidate. Intel Mac is excluded. The manual workflow and Performance run form default to all three hosts. Stable consumers keep signed release artifact identities; nightly Windows builds an unpublished production-mode desktop package and labels it source-diagnostic.
 
 ## Record before checking
 
-Use `pstdio-benchmarks/writer` and `pstdio-benchmarks`. A record needs a stable metric ID, label, unit and finite value. Record every measurement before asserting so failed samples keep evidence.
+Each scenario uses `runScenario` and emits one raw JSONL record for every declared metric, plus observations, host/CPU/RAM, source, workload version/fingerprint, cache, throttle, process ownership, sample and plan/execution identity. Missing, nonfinite, duplicate or unexpected measurements fail. Failed and incomplete first attempts remain evidence. Never substitute zero for a missing observation.
 
-`findBudgetFailures` checks every raw reading. A value passes only when it is finite and **strictly below** its budget. Equality fails. Missing data and an empty measurement list fail. The failure names the measured value, unit, budget and strictly-below rule. This policy was approved for PS-924 on 2026-10-30; it tightens the older inclusive comparisons without increasing any number.
+The result writer preserves raw values and maxima in format 2. Comparison requires matching workload identity, host class, cache, throttle, units and approved limits. A new workload starts a new explicitly authorized version; unlike workloads cannot be presented as an improvement. Never use a median-only budget gate or repeat an unchanged failing measurement to obtain a pass.
 
-Do not gate on a median that hides a slow raw reading. The [result format](../../references/performance/0006-benchmark-results.md) uses one median per independent sample for chart statistics; that reduction does not replace raw budget checks.
+Metric classifications are product requirement, regression guard, supporting diagnostic, or **pending guard** awaiting a human limit decision. The user approved the aligned timing and native-memory limits below on 2026-11-14 and delegated B4's foreground limits. These supersede the former hardware-specific startup exceptions. Stronger journeys do not inherit unrelated old first-card/root-visible limits. Unqualified observations never become a successful production gate.
 
-Add limits in [budget-limits.ts](../../../packages/benchmarks/src/budget-limits.ts), where each entry keeps its value, unit, establishment date and evidence. Use the existing limit for a migrated operation. Some old limits have no recorded measurement date; their entries say so instead of inventing evidence. Change a budget or timeout only after the user approves that exact value. Keep fixture sizes, cold-start boundaries and platform coverage fixed.
+## Approved acceptance limits
 
-For example, an existing operation can record and check a reading with its registered limit:
+Timing and average-memory targets use strict **<**, including equality as a failure, on all three platforms. GB means decimal bytes. Renderer share guards retain inclusive **≤**. The executable definitions are [catalog limits](../../../packages/benchmarks/src/catalog/limits.ts) and [shared phase limits](../../../packages/benchmarks/src/budget-limits.ts).
 
-```ts
-import { plannerBudget } from "pstdio-benchmarks";
-import { findBudgetFailures } from "pstdio-benchmarks";
-import { recordMeasurement } from "pstdio-benchmarks/writer";
+| Scenario | Targets |
+| --- | --- |
+| B1 | Window <1,200ms; shell <3,000ms; usable <5,000ms; first interaction <1,200ms |
+| B2 | Usable <5,000ms; first interaction <250ms |
+| B3 | Runtime attachment <1,800ms; usable <5,000ms; first interaction <250ms |
+| B4 | Input/history/stream-to-paint <250ms; file <1,500ms; terminal <250ms; panel <500ms; project/session switch <2,000ms; longest stall <200ms; completion <10,000ms; cancellation <500ms |
+| B5 | Average native memory <2GB on Linux/macOS, <3GB on Windows; complete ten-minute coverage, no missing samples, maximum gap ≤1,000ms |
+| B6 | Timing, total scanned entries and write-amplification ceilings remain pending. Correctness requires bounded query pages and mounted rows ≤100, zero sequential projection scans, and persisted edits. |
+| B7 | Cold read <300ms; warm read <180ms; one-record edit <120ms; read during maintenance <120ms. Correct data, zero sequential scans for indexed cold/warm pages, advancing index counters and exactly 101 writes remain required. |
+| B8 | Recovery feedback <480ms; restored usable state <6,000ms; first action <300ms |
 
-const measurement = { metric: "cold-open", label: "Open Tickets", unit: "ms" as const,
-  value: elapsedMs, budget: plannerBudget.value };
-recordMeasurement(measurement);
-const failures = findBudgetFailures([{ name: measurement.label, ...measurement }]);
-if (failures.length) throw new Error(failures.join("\n"));
-```
+B4's chosen limits bound immediate foreground feedback, allow file/tool initialization separately, and keep the ten-second completion target above the fixed six-second replay schedule without extending that schedule. Retained renderer guards are idle script ≤2% and task ≤5%, streaming script ≤85% and task ≤120%. The last task-share guard alone does not constrain responsiveness; paint and stall targets do.
 
-## Let the runner own sampling
 
-Use `benchmarkSampleCount(existingDefault)` from `pstdio-benchmarks` when a standalone script repeats its scenario. Playwright configs use the same function for `repeatEach`. `BENCHMARK_SAMPLES` is the one override; do not add another per-family repeat variable or an internal outer loop. Keep repetitions that are part of a fixed workload, such as ten project-switch cycles, unchanged.
+CPU profiling, Electron traces and forced-GC heap belong in separately labelled temporary investigations outside discovery and acceptance. CDP renderer script/task counters are supporting main-thread shares, not whole-app CPU or responsiveness proof. B4 also retains the mandatory two-second settle and ten-second idle renderer guard. Never dilute a share by increasing its idle window.
 
-The runner's `--samples N` controls independent samples. It starts each child with `BENCHMARK_SAMPLES=1` and carries `BENCHMARK_SAMPLE_INDEX` for counterbalancing within a workload. A request for ten samples runs each benchmark once per sample, rather than multiplying by a standalone default. Standalone defaults stay unchanged. Use `benchmarkSampleIndex()` when the workload alternates strategy order across samples.
+## Run and review
 
-A direct invocation still records and checks the same operations:
+`bun run verify:benchmarks` is the fast PR/queue check. Measured scenarios run in dedicated nightly/release/source qualification; editing a benchmark must not add it to PS-232's ten-minute gate.
 
-```sh
-BENCHMARK_SAMPLES=10 bun run --cwd packages/e2e perf:subnav
-BENCHMARK_SAMPLES=3 bun run --cwd packages/ui perf:chat -- chat-rendering.p3.bench.ts
-```
-
-Choose committed CI runs for comparisons; local runs validate the harness but competing work can distort their measurements. CI runs each benchmark once, so a CI comparison shows the difference and budget outcome but no interval or improved/regressed verdict. Start a paired run through the Performance Runs page or the [Benchmarks workflow](../../../.github/workflows/benchmarks.yml). See the [runner commands and result schema](../../references/performance/0006-benchmark-results.md).
-
-## Share browser helpers
-
-Use `throttleChromiumCpu(page)` and `recordPageMemory(page, { metric, label })` from `pstdio-benchmarks`. CPU throttling defaults to 4x and accepts `CPU_THROTTLE`. Keep its CDP session until the workload ends or the page closes. The memory helper collects garbage, reads retained JavaScript heap, and always detaches its own CDP session. Missing heap data is omitted, never recorded as zero.
-
-Measure input and readiness in the same browser clock. e2e's `perf-helpers.ts` provides its workbench interaction clock and domain setup; it delegates shared budget and memory work to the benchmark package. Keep setup outside the measured interval, report renderer/OS metrics with their actual meanings, and close the isolated fixture in cleanup.
+For a first-attempt local investigation, `BENCHMARK_BASELINE=1` permits capture without pretending that pending human limit decisions are resolved. Such results are explicitly unqualified and cannot certify a production consumer. Use the registered CLI's prepare and sample commands, select a supported B1–B8 ID, and retain all output. The [result reference](../../references/performance/0006-benchmark-results.md) describes identity and transport.
 
 ## Desktop benchmarks
 
-The [nonfunctional requirements](../../guidance/0003-nonfunctional-requirements.md) set mandatory targets, including a 2-second M5 cold start and 2 GB average memory. Regular performance coverage runs in nightly CI and stable-release validation. Agents **SHOULD** run relevant benchmarks locally when they expect significant performance impact from a change. The existing CI budgets below use hosted hardware and a visible-workbench milestone; dedicated M5, aggregate-download, and average-memory checks are not implemented yet.
+B1 is first on every desktop host, with a new home and no owned runtime. Native first-launch OS checks remain part of the measured launch; do not clear quarantine or prewarm the app. The direct-executable macOS activation helper follows [temporary ADR 0150](../../adrs/0150-temporary-macos-native-test-activation.md); it does not establish signed-install or M5 portability by itself.
 
-Every benchmark, including these, also reports to the shared result format that the Benchmarks workflow and the Performance pages use. See [Benchmark results](../../references/performance/0006-benchmark-results.md).
+B2/B3/B4/B5/B8 share the same 100-message/file/idle-terminal fixture. Restore and check actual conversation contents, file text and usable controls. B3 verifies attachment to the same runtime PID/instance. B8 separates feedback from usable recovery and verifies old-process termination. Repeated crashes and terminal/error screens remain functional tests.
 
-Desktop limits and their evidence live in `packages/benchmarks/src/budget-limits.ts`. Run them against a packaged app:
+## Native memory sampling procedure
 
-```bash
-bun run --cwd clients/desktop package
-bun run --cwd clients/desktop test:benchmark
-```
+The [numeric targets](../../guidance/0003-nonfunctional-requirements.md) apply to the three requested platforms without an M5 hardware condition. B1 must become fully usable in <5 seconds, and B5 average native memory must remain <2GB on Linux/macOS or <3GB on Windows. Record actual CPU/cores/RAM and keep differing native memory semantics in separate series.
 
-The release workflow runs them in a separate step before the functional packaged suite. One worker runs files in name order and tests in declaration order. Intel macOS runs only the benchmark tagged `@essential`, the cold start, so it measures the first launch of the freshly signed app, including macOS launch checks. Other platforms run the cold start after the recovery launch. Before benchmarks were separated, it ran after two other packaged launches there too, so their budgets do not cover first-launch checks. The functional packaged suite and package checks still run after a benchmark failure, and the job still fails. The Windows signing workflow runs the benchmarks the same way. Benchmarks run without Electron traces, because trace screenshots and DOM snapshots add renderer work. Use the traced functional suite or a separate profile to diagnose a failure.
+B5 workload version 2 uses `native-average`, `native-peak` and `resident-peak` metric IDs. It records physical footprint including compression on macOS, resident set bytes on Linux, and private committed bytes on Windows. These are separate platform series; they are not interchangeable physical-memory measurements. Older B5 physical-only results remain version 1 history.
 
-Each benchmark attaches `benchmark-<name>.json` before checking its budgets. It records the scenario, workload, measured process, start and end events, every metric with its unit and budget, the source revision, the sidecar checksum, and the runner. A metric must be below its budget. A missing or non-finite measurement fails the benchmark. `test-results/packaged-benchmarks.json` collects the run.
+B5 measures all owned desktop/runtime descendants, validates process generations, clips the time-weighted average to the measured interval and retains raw process readings. Missing native memory samples, incomplete cycles, sampling gaps over one second or an incomplete ten-minute window fail. RSS, JS heap and physical footprint including compression remain distinct. Do not force GC.
 
-| Benchmark | Measured interval | Budget |
-| --- | --- | --- |
-| Cold start (empty home) | Process spawn to visible workbench root; process spawn to visible startup window | 8 s cold start (10 s on Windows, 28 s on Intel macOS); startup window 1.5 s on macOS (10 s on Intel), 1 s on Linux and Windows |
-| Sidecar crash recovery | Runtime kill to visible recovery heading | 500 ms |
-| Idle workbench, monitoring off or on | Renderer CPU share over 10 s after a 2 s settle | See the renderer table below; Electron main below 10% of one core with monitoring on |
-| Idle extension preview | Workbench and Lab renderer CPU share over 10 s after a 2 s settle | See the renderer table below |
-| Long streaming replay | Renderer CPU share from submitting the replay to an already open session until the API reports completion and Step 30 is visible | See the renderer table below |
+The user-approved timing and memory decisions do not turn earlier measurements into passing evidence. Preserve failed and unrun phases, incomplete samples and unresolved B6/scan/write guards in the ledger. Do not relax workloads or execution timeouts to meet a target.
 
-Renderer benchmarks took 10–17 seconds each on Apple Silicon, within the existing 30-second packaged test limit. Linux and Windows release runs have not been measured yet.
+## Keep a diagnostic only for unique evidence
 
-Renderer benchmarks read Chrome DevTools Protocol `Performance.getMetrics` deltas for each measured renderer and attach the raw counter deltas. `ScriptDuration` and `TaskDuration` are main-thread proxies. They are not OS CPU, GPU, or paint measurements. Each budget is the share of measured wall time the renderer may spend in scripts or tasks.
-
-| Check | Window | Budget (script / task) | Apple Silicon baseline, 3 runs |
-| --- | --- | --- | --- |
-| Idle workbench, monitoring off | 10 s after a 2 s settle | 2% / 5% | ≤ 0.04% / ≤ 0.11% |
-| Idle workbench, monitoring on | 10 s after a 2 s settle | 2% / 5% | ≤ 0.01% / ≤ 0.07% |
-| Idle extension preview (workbench and Lab frame) | 10 s after a 2 s settle | 2% / 5% each | ≤ 0.05% / ≤ 0.15% |
-| Long streaming replay | about 6 s, until the session completes | 85% / 120% | 28–38% / 51–68% |
-
-The idle budgets catch a constant render or polling loop. On 2026-10-10 the release rehearsals measured the streaming replay at up to 69% script and 99% task time on Apple Silicon, Linux, and Windows runners. The user approved budgets about 20% above those values. A task budget above 100% no longer limits anything, so script time is the remaining streaming guard.
-
-The monitoring-on idle benchmark loads the Performance Monitoring extension, which turns monitoring on, so the dashboard's slow-frame observer and frame counter run during the measurement. The monitoring-off benchmark launches without it. Monitoring itself runs in Electron main, which renderer metrics cannot see, so the monitoring-on benchmark also records the main process share from the snapshot. On Apple Silicon it measured 0.1–0.8% while idle with monitoring on.
-
-`clients/desktop/src/e2e/packaged-performance-monitoring.p2.spec.ts` covers the monitoring feature without budgets. A reload test forces a 120 ms frame before and after reloading the workbench and requires both to reach the snapshot. An extension process test opens the fixture's Lab webview and requires a process that hosts only that extension, separate from the workbench process. It then pauses the extension from the Performance Monitoring extension's details and requires the snapshot to list it in `pausedExtensionIds` and no process to host its frames. A snapshot test reads the snapshot through the preload and through `pst performance` to prove that a person and an agent receive the same measurements, then checks that turning monitoring off stops the endpoint.
-
-The fake agent replays the long conversation when a prompt contains `__fake_long_stream__`: 30 assistant turns, 8 text updates each at 25 ms intervals, and one tool result per turn.
-
-The streaming benchmark opens an empty session before submitting that prompt. Its counter interval covers the full replay, including the last rendered turn. It does not wait for Step 1 to be visible: auto-follow can move that row out of view before an assertion sees it.
-
-`packages/e2e/src/ui/performance-monitoring.p2.spec.ts` covers the Prompt Studio Performance Monitoring extension in a browser tab. It checks that the loaded extension's meter shows measurements without any setting, and that its details show the desktop-only CPU note and no switch. A browser tab cannot measure processes, so pausing is covered only by the desktop spec. This spec has no time budget.
-
-## M5 and average-memory reference procedure
-
-- Use a production desktop build with default extensions on a native Apple M5 Mac with 10 CPU cores and 32 GiB RAM. Record the source revision, artifact, macOS version, power mode, cache state, and OS first-launch checks.
-- Measure 10 independent cold launches, each with an empty app home and no app-owned process or persistent runtime running. Time process launch to a visible, interactive workbench with the authenticated core API and default tools ready. Retain separate phase timings.
-- Report every launch sample, median, p95, and maximum against the 2,000 ms target. Saved-project launches and warm attachment are separate scenarios. These are planned measurements, not retries that replace failed results.
-- For memory, use one local project, default extensions, a completed 100-message conversation, one open file, and one idle terminal. After a 30-second settle, record 10 minutes of a fixed sequence of opening and closing the conversation, file, and panels.
-- Sample at least once per second. Include every app-owned process: desktop main, renderers, GPU and utility helpers, local runtime, and extension hosts.
-- Compute the time-weighted average as `sum(total process-tree memory × sample duration) / sum(sample durations)`. On macOS, use OS-attributed physical footprint including compressed memory; keep RSS and JavaScript heap separate.
-- Retain raw samples, missing-sample information, process counts, startup and steady-state peaks, and memory after repeated open/close cycles. Do not replace missing readings with zero. Other platforms must identify their native memory metric.
+Existing manual diagnostic tools may retain unique investigation evidence while their selected replacement is unqualified. They do not run in the frozen catalog or certify acceptance. Once a chosen scenario qualifies the same operation/data size/cache/correctness boundary, delete overlapping diagnostics, commands and documentation. Temporary profiling never becomes a new scheduled suite. The migration ledger records unresolved guards; similar names do not prove equivalent coverage.
