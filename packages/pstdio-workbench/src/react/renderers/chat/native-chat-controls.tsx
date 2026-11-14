@@ -122,7 +122,11 @@ export const NativeChatControls = (props: NativeChatControlsProps) => {
 };
 
 /** Tool approvals take over the composer with the same form as agent questions. Skip denies. */
-export const nativeChatApproval = (conversation: ChatRendererSnapshot, run: ChatSession["run"]) => {
+export const nativeChatApproval = (
+  conversation: ChatRendererSnapshot,
+  run: ChatSession["run"],
+  reportError: ChatSession["reportError"],
+) => {
   const approval = conversation.approval;
   if (!approval) return undefined;
   const prompt: ChatInputQuestionPrompt = {
@@ -139,7 +143,12 @@ export const nativeChatApproval = (conversation: ChatRendererSnapshot, run: Chat
       const choice = approval.choices.find((item) =>
         label === undefined ? item.id === "deny" : item.label === label,
       )?.id;
-      if (!choice) throw new Error("Choose one of the offered answers.");
+      if (!choice) {
+        // Not every extension offers Deny, so say why Skip did nothing instead of resetting silently.
+        const error = new Error("This request has no Deny choice. Choose an answer to continue.");
+        reportError(error);
+        throw error;
+      }
       await run({ type: "approve", id: approval.id, choice });
     },
   };

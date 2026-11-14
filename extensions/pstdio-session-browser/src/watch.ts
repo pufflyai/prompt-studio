@@ -29,13 +29,13 @@ type ChatWatchUpdate =
 export const approvalSnapshot = (approval?: ApprovalRequest): ChatRendererSnapshot["approval"] => {
   if (!approval) return null;
   // Name what the tool will do, so the person can judge the request before allowing it.
-  const command = (approval.toolInput as { command?: unknown } | null)?.command;
+  // The tool call in the transcript keeps the full command; a long one would push the form off screen.
+  const input = (approval.toolInput as { command?: unknown } | null)?.command;
+  const command = typeof input === "string" ? input.trim() : "";
+  const shown = command.length > 200 ? `${command.slice(0, 200)}…` : command;
   return {
     id: approval.id,
-    title:
-      typeof command === "string" && command.trim()
-        ? `Allow ${approval.toolName} to run: ${command.trim()}`
-        : `Allow ${approval.toolName}?`,
+    title: shown ? `Allow ${approval.toolName} to run: ${shown}` : `Allow ${approval.toolName}?`,
     choices: [
       { id: "approve", label: "Allow" },
       { id: "deny", label: "Deny" },

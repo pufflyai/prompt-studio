@@ -120,7 +120,7 @@ const NativeChatConversation = (props: NativeChatViewProps) => {
     ? (messageId: string) => run({ type: "fork", messageId }).then(() => undefined)
     : undefined;
   const Host = props.Host ?? PassthroughChatHost;
-  const approval = nativeChatApproval(conversation, run);
+  const approval = nativeChatApproval(conversation, run, session.reportError);
   return (
     <Host
       session={session}

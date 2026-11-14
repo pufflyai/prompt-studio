@@ -101,8 +101,12 @@ test("independent native chat paints and accepts input before history, then reta
     const side = page.locator('[data-workbench-region="side"]');
     await page.getByRole("button", { name: "Show Side Panel", exact: true }).click();
     await expect(side.locator('[data-testid="content-editable"][contenteditable="true"]')).toBeVisible();
-    await main.getByRole("button", { name: "Allow operation", exact: true }).click();
+    // Critical risk: a tool approval asks in the question form and answering it must not consume the draft.
+    await main.getByRole("button", { name: "Request approval", exact: true }).click();
+    await main.getByRole("radiogroup").getByText("Allow operation", { exact: true }).click();
+    await main.getByRole("button", { name: "Send answer", exact: true }).click();
     await expect(main.getByText("Operation approved", { exact: true })).toBeVisible();
+    await expect(composer).toContainText("Unsent native draft");
     const chooser = page.waitForEvent("filechooser");
     await main.getByRole("button", { name: "Attach files", exact: true }).click();
     await (await chooser).setFiles({

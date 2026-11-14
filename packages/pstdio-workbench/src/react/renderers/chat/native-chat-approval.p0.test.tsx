@@ -7,17 +7,19 @@ import { WorkbenchThemeProvider } from "../../theme/workbench-theme-provider";
 import type { NativeChatHostProps } from "./native-chat-host";
 import { NativeChatView } from "./native-chat-view";
 
-const renderPanel = () => {
+const allowAndDeny = [
+  { id: "approve", label: "Allow" },
+  { id: "deny", label: "Deny" },
+];
+
+const renderPanel = (choices = allowAndDeny) => {
   const actions: unknown[] = [];
   const session = createChatSession({
     initial: {
       approval: {
         id: "approval-1",
         title: "Allow Bash to run: git status",
-        choices: [
-          { id: "approve", label: "Allow" },
-          { id: "deny", label: "Deny" },
-        ],
+        choices,
       },
     },
     query: async () => ({}),
@@ -64,4 +66,12 @@ test("skipping an approval denies the tool", async () => {
   const prompt = panel.props.chatInputQuestionPrompt!;
   await panel.props.onSubmitMessage?.("Skipped", [], { answers: [], callId: prompt.callId });
   expect(actions).toEqual([{ type: "approve", id: "approval-1", choice: "deny" }]);
+});
+
+test("skipping an approval that offers no Deny choice says why nothing was sent", async () => {
+  const { panel, actions, session } = renderPanel([{ id: "allow", label: "Allow" }]);
+  const prompt = panel.props.chatInputQuestionPrompt!;
+  await expect(panel.props.onSubmitMessage?.("Skipped", [], { answers: [], callId: prompt.callId })).rejects.toThrow();
+  expect(actions).toEqual([]);
+  expect(session.getSnapshot().error).toBeTruthy();
 });
