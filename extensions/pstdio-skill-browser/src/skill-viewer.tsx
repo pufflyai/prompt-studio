@@ -1,7 +1,7 @@
-import { Accordion, Box, Flex, IconButton, Stack, Text } from "@chakra-ui/react";
+import { Accordion, Box, Flex, Icon, IconButton, Stack, Text } from "@chakra-ui/react";
 import type { Skill } from "@pstdio/sdk/resources";
 import {
-  getIconComponent,
+  createGlyphIcon,
   Header,
   ResizableSplitLayout,
   ScrollArea,
@@ -13,8 +13,8 @@ import { useState } from "react";
 import { buildSkillFileTree, collectFolderIds } from "./build-skill-file-tree";
 import { parseSkillMetadata } from "./parse-skill-metadata";
 
-const PanelLeft = getIconComponent("panel-left");
-const X = getIconComponent("x");
+const PanelLeft = createGlyphIcon("sidebar-left");
+const X = createGlyphIcon("close");
 
 export const SkillViewerContent = (props: { skill: Skill }) => {
   const { skill } = props;
@@ -32,7 +32,7 @@ export const SkillViewerContent = (props: { skill: Skill }) => {
           Skill details
         </Text>
         <IconButton size="xs" variant="ghost" aria-label="Close skill details" onClick={() => setCollapsed(true)}>
-          <X />
+          <Icon as={X} />
         </IconButton>
       </Header>
       <Accordion.Root multiple defaultValue={["info", "files"]} flex="1" minH="0" display="flex" flexDirection="column">
@@ -91,7 +91,7 @@ export const SkillViewerContent = (props: { skill: Skill }) => {
       <Header variant="narrow" borderBottomWidth="1px" flexShrink="0" gap="xs">
         {collapsed && (
           <IconButton size="xs" variant="ghost" aria-label="Show skill details" onClick={() => setCollapsed(false)}>
-            <PanelLeft />
+            <Icon as={PanelLeft} />
           </IconButton>
         )}
         <Text textStyle="label/S/medium" truncate>
