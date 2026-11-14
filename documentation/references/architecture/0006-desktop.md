@@ -296,7 +296,7 @@ desktop release builds run only from `release-packages.yml` on `main`. A failed
 release resumes by re-running the failed jobs or with the next push to `main`; see
 [Versioning and releases](../../requirements/platform/0005-versioning-and-releases.md#done-marker-and-recovery).
 
-The secured compiled-runtime browser suite runs Chromium, Firefox, and WebKit.
+The secured compiled-runtime webview suite runs Chromium and Firefox. Packaged native-settings checks also retain WebKit.
 `bun run --cwd packages/e2e test:packaged` runs the compiled CLI checks with Bun and the browser checks with the Playwright runner.
 It proves opaque iframe command and project-setting persistence across reloads.
 Chromium also sends a terminal sentinel through the runtime's WebSocket endpoint,
