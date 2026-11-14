@@ -26,17 +26,23 @@ type ChatWatchUpdate =
   | { recoverDraft: ChatDraft }
   | { patch: Extract<ChatRendererEvent, { patch: unknown }>["patch"] };
 
-export const approvalSnapshot = (approval?: ApprovalRequest): ChatRendererSnapshot["approval"] =>
-  approval
-    ? {
-        id: approval.id,
-        title: `Allow ${approval.toolName}?`,
-        choices: [
-          { id: "approve", label: "Allow" },
-          { id: "deny", label: "Deny" },
-        ],
-      }
-    : null;
+export const approvalSnapshot = (approval?: ApprovalRequest): ChatRendererSnapshot["approval"] => {
+  if (!approval) return null;
+  // Name what the tool will do, so the person can judge the request before allowing it.
+  const command = (approval.toolInput as { command?: unknown } | null)?.command;
+  return {
+    id: approval.id,
+    title:
+      typeof command === "string" && command.trim()
+        ? `Allow ${approval.toolName} to run: ${command.trim()}`
+        : `Allow ${approval.toolName}?`,
+    choices: [
+      { id: "approve", label: "Allow" },
+      { id: "deny", label: "Deny" },
+    ],
+  };
+};
+
 const waitForRefresh = (signal: AbortSignal) =>
   new Promise<void>((done) => {
     const finish = () => {

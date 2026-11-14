@@ -14,9 +14,9 @@ import {
   uploadNativeChatAttachments,
 } from "./native-chat-attachments";
 import {
-  NativeChatApproval,
   NativeChatControls,
   NativeChatHarnessControls,
+  nativeChatApproval,
   nativeChatCommands,
   nativeChatDecision,
 } from "./native-chat-controls";
@@ -120,6 +120,7 @@ const NativeChatConversation = (props: NativeChatViewProps) => {
     ? (messageId: string) => run({ type: "fork", messageId }).then(() => undefined)
     : undefined;
   const Host = props.Host ?? PassthroughChatHost;
+  const approval = nativeChatApproval(conversation, run);
   return (
     <Host
       session={session}
@@ -171,12 +172,15 @@ const NativeChatConversation = (props: NativeChatViewProps) => {
             }
             readOnlyQueue={conversation.readOnly || conversation.queueReadOnly}
             queueSteeringUnavailableReason={conversation.queueSteeringUnavailableReason}
-            onSubmitMessage={nativeChatInputHandler({
-              account: host.account,
-              session,
-              run,
-              draft: { attachments, values },
-            })}
+            onSubmitMessage={(text, files, questionResponse) =>
+              approval && questionResponse && questionResponse.callId === approval.prompt.callId
+                ? approval.answer(questionResponse)
+                : nativeChatInputHandler({ account: host.account, session, run, draft: { attachments, values } })(
+                    text,
+                    files,
+                    questionResponse,
+                  )
+            }
             onInterrupt={
               conversation.streaming && !conversation.readOnly
                 ? () => {
@@ -184,7 +188,7 @@ const NativeChatConversation = (props: NativeChatViewProps) => {
                   }
                 : undefined
             }
-            approvalPrompt={<NativeChatApproval run={run} conversation={conversation} />}
+            chatInputQuestionPrompt={approval?.prompt}
             chatInputCommands={nativeChatCommands(conversation, host.account, run, values)}
             composerDecision={nativeChatDecision(
               conversation,

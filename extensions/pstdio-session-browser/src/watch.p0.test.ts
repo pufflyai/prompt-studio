@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import { nativeSubmissionIndex } from "./native-submission";
-import { watchConversation } from "./watch";
+import { approvalSnapshot, watchConversation } from "./watch";
 
 const session = {
   id: "s",
@@ -626,4 +626,15 @@ test("an idle turn tells the person the agent is waiting and which background ta
   expect(notices[0]).toContain("Watch the extension for changes");
   expect(notices[1]).toBe("");
   expect(notices[3]).toBe("Could not refresh queued messages");
+});
+
+test("a command approval names the command the person is allowing", () => {
+  const approval = approvalSnapshot({
+    id: "approval-1",
+    toolName: "Bash",
+    toolInput: { command: "git status", description: "Show working tree status" },
+    toolUseId: "toolu_1",
+  });
+  expect(approval?.title).toContain("git status");
+  expect(approval?.choices.map((choice) => choice.id)).toEqual(["approve", "deny"]);
 });
