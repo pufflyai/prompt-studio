@@ -103,6 +103,7 @@ import {
   updateTagOptionCommand,
   updateTicketTagCommand,
 } from "./ticket-tags";
+import { cleanupTicketWorkspacesCommand } from "./ticket-workspace-cleanup";
 import {
   ticketWorkspacesCommand,
   ticketWorktreesListCommand,
@@ -198,6 +199,7 @@ export const plannerCommands = [
   archiveTicketCommand,
   unarchiveTicketCommand,
   archiveTicketColumnActionCommand,
+  cleanupTicketWorkspacesCommand,
   deleteTicketCommand,
   writeTicketCommand,
   saveTicketCommand,

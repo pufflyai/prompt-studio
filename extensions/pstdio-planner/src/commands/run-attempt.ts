@@ -8,8 +8,9 @@ import {
 } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
 import { legacyAttemptOutput } from "../data/attempt-compatibility";
+import { readTicketAttempts } from "../data/attempt-queries";
 import { readRetiredWorkspaceIds } from "../data/attempt-retirement";
-import { appendAttemptEvent, attemptSelectionsCollection, listAttempts, putAttempt } from "../data/attempt-storage";
+import { appendAttemptEvent, attemptSelectionsCollection, putAttempt } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
 import { attemptWaitMessage } from "../data/attempt-wait-message";
 import { findTicket } from "../data/resolve";
@@ -61,15 +62,17 @@ const reuseAttempt = async (
   commandParams: ParamsOf<typeof runAttemptParams>,
   options: StartAttemptOptions,
 ) => {
-  const [attempts, selections, retired] = await Promise.all([
-    listAttempts(ctx.storage),
-    attemptSelectionsCollection(ctx.storage).list(),
-    readRetiredWorkspaceIds(ctx.storage),
+  const [attempts, selection] = await Promise.all([
+    readTicketAttempts(ctx.storage, [ticketIdentity.id]),
+    attemptSelectionsCollection(ctx.storage).get(ticketIdentity.id),
   ]);
+  const retired = await readRetiredWorkspaceIds(
+    ctx.storage,
+    attempts.map(({ workspaceId }) => workspaceId),
+  );
   const variants = attempts.filter(
     (attempt) => attempt.ticketId === ticketIdentity.id && !retired.has(attempt.workspaceId),
   );
-  const selection = selections.find((candidate) => candidate.ticketId === ticketIdentity.id);
   const chosen = selection ? variants.filter((attempt) => attempt.workspaceId === selection.workspaceId) : variants;
   if (variants.length && chosen.length !== 1)
     throw new Error("Select the implementation variant to resume, or explicitly request a new variant.");

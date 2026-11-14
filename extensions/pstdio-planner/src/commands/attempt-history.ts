@@ -1,10 +1,9 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
 import { legacyAttemptOutput } from "../data/attempt-compatibility";
-import { paginateAttemptEvents } from "../data/attempt-state";
+import { readAttemptHistoryPage } from "../data/attempt-history-page";
 import {
   appendAttemptEvent,
-  attemptEventsCollection,
   attemptSelectionsCollection,
   putAttempt,
   readAttempt,
@@ -12,7 +11,7 @@ import {
   reviewLaunchClaimsCollection,
   reviewThreadsCollection,
 } from "../data/attempt-storage";
-import type { ReviewComment } from "../data/attempt-types";
+import type { AttemptTimelineEvent, ReviewComment } from "../data/attempt-types";
 import { findTicket } from "../data/resolve";
 import { readReviewRequest } from "../data/review-request-storage";
 import { withQueuedWriteGuard, withWriteGuard } from "../data/write-guard";
@@ -29,14 +28,11 @@ export const readAttemptHistoryCommand = defineCommand({
   async run(ctx, commandParams) {
     const attempt = await readAttempt(ctx.storage, commandParams.workspaceId);
     if (!attempt) throw new Error(`Unknown managed attempt "${commandParams.workspaceId}"`);
-    const events = (await attemptEventsCollection(ctx.storage).list()).filter(
-      (event) => event.workspaceId === attempt.workspaceId,
-    );
-    const page = paginateAttemptEvents(
-      events,
-      commandParams.cursor,
-      Math.min(100, Math.max(1, commandParams.limit ?? 50)),
-    );
+    const page = await readAttemptHistoryPage<AttemptTimelineEvent>(ctx.storage, {
+      ...commandParams,
+      scope: "workspaceId",
+      id: attempt.workspaceId,
+    });
     return {
       attempt: await legacyAttemptOutput(ctx.storage, attempt),
       variant: attempt,
@@ -58,14 +54,11 @@ export const readReviewThreadCommand = defineCommand({
   async run(ctx, commandParams) {
     const thread = await reviewThreadsCollection(ctx.storage).get(commandParams.threadId);
     if (!thread) throw new Error(`Unknown review thread "${commandParams.threadId}"`);
-    const comments = (await reviewCommentsCollection(ctx.storage).list()).filter(
-      (comment) => comment.threadId === thread.id,
-    );
-    const page = paginateAttemptEvents(
-      comments,
-      commandParams.cursor,
-      Math.min(100, Math.max(1, commandParams.limit ?? 50)),
-    );
+    const page = await readAttemptHistoryPage<ReviewComment>(ctx.storage, {
+      ...commandParams,
+      scope: "threadId",
+      id: thread.id,
+    });
     return { thread, comments: page.items, nextCursor: page.nextCursor };
   },
 });

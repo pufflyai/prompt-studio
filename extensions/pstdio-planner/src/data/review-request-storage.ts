@@ -11,6 +11,7 @@ import type {
   TicketReviewRequests,
 } from "./review-request-types";
 import { parseStoredOutcome, parseStoredRequest } from "./review-request-validation";
+import { inBatches } from "./ticket-selection";
 
 // New collection names: records from the old free-text request format are not read or migrated.
 export const REVIEW_REQUESTS_COLLECTION = "planner-review-requests";
@@ -124,9 +125,26 @@ export const hasPendingInput = (group: TicketReviewRequests) =>
   group.errors.length > 0 || group.requests.some((request) => request.state === "open");
 
 export const deleteTicketReviewRequests = async (storage: ExtensionStorageApi, ticketId: string) => {
-  const requests = await reviewRequestsCollection(storage).list();
-  for (const request of requests.filter((entry) => entry.ticketId === ticketId)) {
-    await reviewRequestsCollection(storage).delete(request.id);
-    await reviewOutcomesCollection(storage).delete(request.id);
+  await prepareNavigationQueries(storage);
+  for (;;) {
+    // Each deletion changes the revision, so select the next remaining page without a stale cursor.
+    const page = await storage.records.query({
+      index: "ticket-review-requests",
+      where: { field: "ticketId", op: "eq", value: ticketId },
+      fields: [],
+      limit: 100,
+    });
+    if (!page.records.length) return;
+    const requests = await readCollectionRecords<Partial<ReviewRequest>>(
+      storage,
+      page.records.map(({ recordId }) => recordId),
+    );
+    await inBatches(requests, async (request) => {
+      if (typeof request?.id === "string") await reviewOutcomesCollection(storage).delete(request.id);
+    });
+    await storage.records.commit({
+      operationId: storage.ids.create(),
+      edits: page.records.map(({ recordId }) => ({ recordId, deleted: true })),
+    });
   }
 };

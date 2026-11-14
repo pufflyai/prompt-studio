@@ -1,15 +1,20 @@
 import { type CommandContext, defineCommand, params } from "@pstdio/sdk/extensions";
+import { readTicketAttempts, readWorkspaceEvents } from "../data/attempt-queries";
 import {
   type AttemptReadinessTicket,
   resolveAttemptDependencies,
   resolveAttemptReadiness,
 } from "../data/attempt-readiness";
 import { readRetiredWorkspaceIds } from "../data/attempt-retirement";
-import { attemptEventsCollection, attemptSelectionsCollection, listAttempts } from "../data/attempt-storage";
-import { ticketsCollection } from "../data/collections";
+import { attemptSelectionsCollection } from "../data/attempt-storage";
+import type { TicketAttemptSelection } from "../data/attempt-types";
+import { upgradeAttemptStorage } from "../data/attempt-upgrade";
 import { type DependencyDeliveryReads, readDependencyDeliveries } from "../data/dependency-deliveries";
-import { findTicket } from "../data/resolve";
-import { readTicketReviewRequests } from "../data/review-request-storage";
+import { listTicketReviewRequests } from "../data/review-request-storage";
+import type { TicketReviewRequests } from "../data/review-request-types";
+import { preparePlannerIndexes } from "../data/storage-indexes";
+import { readTicketDependencyClosure } from "../data/ticket-dependency-reads";
+import { inBatches } from "../data/ticket-selection";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "../data/workflow-statuses";
 import { isLiveSession } from "./auto-build-sessions";
 
@@ -24,11 +29,36 @@ interface ReadinessParams {
 }
 
 export async function readImplementationCapacity(ctx: Pick<ReadinessContext, "storage" | "sessions" | "settings">) {
-  const attempts = await listAttempts(ctx.storage);
-  const implementationIds = [...new Set(attempts.map(({ implementationSessionId }) => implementationSessionId))];
-  const sessions = await Promise.all(implementationIds.map((id) => ctx.sessions.get(id)));
-  const liveStatuses = new Set(["queued", "in_progress", "awaiting_input"]);
-  const running = sessions.filter((session) => liveStatuses.has(session?.status ?? "")).length;
+  await upgradeAttemptStorage(ctx.storage);
+  await preparePlannerIndexes(ctx.storage);
+  let running = 0,
+    cursor: string | undefined;
+  do {
+    const page = await ctx.sessions.query({
+      status: ["queued", "in_progress", "awaiting_input"],
+      includeArchived: true,
+      limit: 100,
+      cursor,
+    });
+    if (page.items.length) {
+      const ids = new Set<unknown>();
+      let ownershipCursor: string | undefined;
+      do {
+        const owned = await ctx.storage.records.query({
+          index: "attempt-session",
+          where: { field: "implementationSessionId", op: "in", value: page.items.map(({ id }) => id) },
+          fields: ["implementationSessionId"],
+          limit: 100,
+          cursor: ownershipCursor,
+        });
+        for (const { fields } of owned.records) ids.add(fields.implementationSessionId);
+        ownershipCursor = owned.cursor ?? undefined;
+      } while (ownershipCursor && ids.size < page.items.length);
+      // Several variants may share an implementation owner. Count each live session once.
+      running += page.items.filter(({ id }) => ids.has(id)).length;
+    }
+    cursor = page.nextCursor ?? undefined;
+  } while (cursor);
   const settings = await ctx.settings.all();
   const configured = settings["automation.maxInProgress"];
   return { running, limit: typeof configured === "number" ? configured : 2 };
@@ -46,16 +76,28 @@ const loadDependencyInput = async (
   commandParams: ReadinessParams,
   deliveryReads?: DependencyDeliveryReads,
 ) => {
-  const [storedTickets, attempts, selections, statuses, home, requests, events] = await Promise.all([
-    ticketsCollection(ctx).list(),
-    listAttempts(ctx.storage),
-    attemptSelectionsCollection(ctx.storage).list(),
+  const [{ selected: storedTarget, tickets: storedTickets }, statuses, home] = await Promise.all([
+    readTicketDependencyClosure(ctx, ticketRef),
     readWorkflowStatuses(ctx),
     ctx.workspaces.getDefault(),
-    readTicketReviewRequests(ctx.storage),
-    attemptEventsCollection(ctx.storage).list(),
   ]);
-  const storedTarget = await findTicket(ctx, ticketRef);
+  await upgradeAttemptStorage(ctx.storage);
+  const attempts = await readTicketAttempts(
+    ctx.storage,
+    storedTickets.map(({ id }) => id),
+  );
+  const selections: TicketAttemptSelection[] = [];
+  const requests = new Map<string, TicketReviewRequests>();
+  await inBatches(storedTickets, async ({ id }) => {
+    const [selection, group] = await Promise.all([
+      attemptSelectionsCollection(ctx.storage).get(id),
+      listTicketReviewRequests(ctx.storage, id),
+    ]);
+    if (selection) selections.push(selection);
+    requests.set(id, group);
+  });
+  const workspaceIds = attempts.map(({ workspaceId }) => workspaceId);
+  const events = await readWorkspaceEvents(ctx.storage, workspaceIds, "attempt_merged");
   const target: AttemptReadinessTicket = storedTarget ?? {
     id: ticketRef,
     shorthand: ticketRef,
@@ -79,15 +121,11 @@ const loadDependencyInput = async (
     throw new Error(gitRequirement, { cause });
   });
   const doneStatusIds = new Set(usableWorkflowStatuses(statuses).completedStatusIds);
-  const owners = await Promise.all(
-    attempts.map(async (attempt) => ({
-      workspaceId: attempt.workspaceId,
-      session: await ctx.sessions.get(attempt.implementationSessionId),
-    })),
-  );
-  const activeImplementationWorkspaceIds = new Set(
-    owners.filter(({ session }) => isLiveSession(session)).map(({ workspaceId }) => workspaceId),
-  );
+  const activeImplementationWorkspaceIds = new Set<string>();
+  await inBatches(attempts, async (attempt) => {
+    if (isLiveSession(await ctx.sessions.get(attempt.implementationSessionId)))
+      activeImplementationWorkspaceIds.add(attempt.workspaceId);
+  });
   const input = {
     dependencyDeliveries: storedTarget
       ? await readDependencyDeliveries(ctx, storedTarget, storedTickets, doneStatusIds, rootPath, deliveryReads)
@@ -99,7 +137,7 @@ const loadDependencyInput = async (
       return heads;
     }, new Map<string, string[]>()),
     activeImplementationWorkspaceIds,
-    retiredWorkspaceIds: await readRetiredWorkspaceIds(ctx.storage),
+    retiredWorkspaceIds: await readRetiredWorkspaceIds(ctx.storage, workspaceIds),
     requireMergedDependencies: commandParams.requireMergedDependencies,
     requests,
     target: target.id,

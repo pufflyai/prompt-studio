@@ -142,7 +142,7 @@ test("separate host contexts wait for one upgrade instead of failing", async () 
   await storage
     .collection("planner-attempts")
     .put("legacy", { schemaVersion: 1, workspaceId: "legacy", state: "blocked" });
-  const original = storage.collection.bind(storage);
+  const readMany = storage.records.readMany.bind(storage.records);
   let released!: () => void;
   const gate = new Promise<void>((resolve) => {
     released = resolve;
@@ -154,18 +154,14 @@ test("separate host contexts wait for one upgrade instead of failing", async () 
   let scans = 0;
   const host = {
     ...storage,
-    collection: <T>(name: string) => {
-      const collection = original<T>(name);
-      if (name !== "planner-attempts") return collection;
-      return {
-        ...collection,
-        list: async () => {
-          scans++;
-          entered();
-          await gate;
-          return collection.list();
-        },
-      };
+    records: {
+      ...storage.records,
+      readMany: async (ids: string[]) => {
+        scans++;
+        entered();
+        await gate;
+        return readMany(ids);
+      },
     },
   };
   const first = upgradeAttemptStorage(host);

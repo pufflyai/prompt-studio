@@ -1,24 +1,23 @@
-import { defineCommand, type ExtensionContextBase, l10n, params } from "@pstdio/sdk/extensions";
-import { ticketsCollection } from "../data/collections";
-import { findTicket } from "../data/resolve";
+import { patchCollectionRecords } from "@pstdio/sdk/data";
+import {
+  defineCommand,
+  type ExtensionContextBase,
+  l10n,
+  params,
+  type StorageQueryRecord,
+} from "@pstdio/sdk/extensions";
+import { findStoredTicket } from "../data/resolve";
+import { ticketWithCurrentTitle, withTicketIdentity } from "../data/ticket-identity";
+import { changeTicketRecord } from "../data/ticket-records";
+import { ticketSelectionPage } from "../data/ticket-selection";
 import { withTicketTagIds } from "../data/ticket-tags";
-import type { Ticket } from "../data/types";
+import { queueTicketWrite, queueTicketWrites } from "../data/ticket-write-queue";
 import { plannerTicketsChanged } from "../events";
 import { ticketMenuSlots } from "../resource-kinds";
 import { ticketRefFromCommandContext } from "./ticket-command-ref";
-import { deleteUnusedLinkedWorkspaces, type TicketCleanupContext } from "./ticket-workspace-cleanup";
+import { cleanupTicketWorkspacesCommand, deleteUnusedLinkedWorkspaces } from "./ticket-workspace-cleanup";
 
 const ARCHIVE_ALL_COLUMN_ACTION = "archive_all";
-
-const persistArchivedTickets = async (ctx: TicketCleanupContext, tickets: Ticket[]) => {
-  const updatedAt = new Date().toISOString();
-  const archivedTickets = tickets.map((ticket) => ({ ...ticket, archived: true, updatedAt }));
-  const collection = ticketsCollection(ctx);
-
-  await Promise.all(archivedTickets.map((ticket) => collection.put(ticket.id, ticket)));
-
-  return archivedTickets;
-};
 
 export const archiveTicketCommand = defineCommand({
   id: "archive-ticket",
@@ -35,11 +34,18 @@ export const archiveTicketCommand = defineCommand({
     },
   ],
   async run(ctx, commandParams) {
-    const existing = await findTicket(ctx, ticketRefFromCommandContext(ctx, commandParams));
+    const existing = await findStoredTicket(ctx, ticketRefFromCommandContext(ctx, commandParams));
     if (!existing) return null;
 
-    const [next] = await persistArchivedTickets(ctx, [existing]);
-    if (!next) return null;
+    const saved = await queueTicketWrite(existing.id, () =>
+      changeTicketRecord(ctx.storage, existing.id, (current) => ({
+        ...current,
+        archived: true,
+        updatedAt: new Date().toISOString(),
+      })),
+    );
+    if (!saved) return null;
+    const next = await withTicketIdentity(ctx, ticketWithCurrentTitle(saved));
 
     // Await cascade so single-ticket UX reflects completion, but never reject:
     // the ticket is durably archived, so a cleanup failure should not be reported
@@ -51,24 +57,95 @@ export const archiveTicketCommand = defineCommand({
   },
 });
 
+const archiveSelectedTickets = (
+  ctx: Pick<ExtensionContextBase, "storage">,
+  selected: StorageQueryRecord[],
+  columnId: string,
+) =>
+  queueTicketWrites(
+    selected.map(({ fields }) => String(fields.id)),
+    async () => {
+      let current = selected;
+      for (;;) {
+        if (!current.length) return [];
+        const outcome = await patchCollectionRecords(ctx.storage, current, {
+          archived: true,
+          updatedAt: new Date().toISOString(),
+        });
+        if (outcome) {
+          if (outcome.state === "refused" || outcome.state === "needs-attention")
+            throw new Error(outcome.reason ?? "Ticket archival was refused");
+          return current.map(({ fields }) => String(fields.id));
+        }
+        current = (
+          await ticketSelectionPage(ctx.storage, {
+            index: "ticket-status",
+            limit: 100,
+            where: {
+              all: [
+                { field: "id", op: "in", value: selected.map(({ fields }) => fields.id) },
+                { field: "archived", op: "eq", value: false },
+                { field: "statusId", op: "eq", value: columnId },
+              ],
+            },
+          })
+        ).records;
+      }
+    },
+  );
+
 export const archiveTicketColumnAction = async (
-  ctx: Pick<ExtensionContextBase, "events" | "notify" | "storage" | "workspaces" | "settings" | "resources">,
+  ctx: Pick<
+    ExtensionContextBase,
+    "events" | "notify" | "storage" | "workspaces" | "settings" | "resources" | "automation"
+  >,
   input: { columnId: string; actionId: string },
 ) => {
-  if (input.actionId !== ARCHIVE_ALL_COLUMN_ACTION) return { archived: [] };
+  if (input.actionId !== ARCHIVE_ALL_COLUMN_ACTION) return { archivedCount: 0 };
+  let archivedCount = 0;
+  let after: string | undefined;
+  for (;;) {
+    const page = await ticketSelectionPage(ctx.storage, {
+      index: "ticket-status",
+      after,
+      where: {
+        all: [
+          { field: "archived", op: "eq", value: false },
+          { field: "statusId", op: "eq", value: input.columnId },
+        ],
+      },
+    });
+    if (!page.records.length) break;
+    const archived: string[] = [];
+    archived.push(...(await archiveSelectedTickets(ctx, page.records, input.columnId)));
+    archivedCount += archived.length;
+    // Durable jobs retain bounded IDs, not detached closures holding every archived body.
+    if (archived.length) {
+      try {
+        await ctx.automation.enqueue({
+          command: cleanupTicketWorkspacesCommand.ref,
+          input: { params: { ticketIds: archived } },
+          key: `archive-cleanup:${ctx.storage.ids.create()}`,
+        });
+      } catch (error) {
+        await ctx.notify
+          .action({
+            title: "Workspace cleanup failed",
+            body: `Could not queue linked workspace cleanup: ${String(error)}`,
+            kind: "failed",
+            priority: "normal",
+          })
+          .catch(() => {});
+      }
+    }
+    after = String(page.records.at(-1)!.fields.id);
+    if (page.records.length < 100) break;
+  }
 
-  const tickets = (await ticketsCollection(ctx).list()).filter(
-    (ticket) => !ticket.archived && ticket.statusId === input.columnId,
-  );
-  const archived = await persistArchivedTickets(ctx, tickets);
-
-  // Fire-and-forget: return as soon as tickets are persisted so the board refresh
-  // fires immediately. Linked workspaces are sync'd to the dashboard, so their UI
-  // updates as the cascade completes; failures surface via a persistent notification.
-  void deleteUnusedLinkedWorkspaces(ctx, archived);
+  // Tickets are durable and cleanup jobs are queued before the board refreshes.
   await ctx.events.emit(plannerTicketsChanged, {});
 
-  return { archived };
+  return { archivedCount };
 };
 
 export const archiveTicketColumnActionCommand = defineCommand({

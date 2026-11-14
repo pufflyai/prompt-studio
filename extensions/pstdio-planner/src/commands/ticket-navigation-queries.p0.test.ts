@@ -23,5 +23,14 @@ test("ticket navigation reads only its anchored session history", async () => {
       },
     }),
   );
-  expect(queries).toEqual([{ anchor: { type: "ticket", id: ticket.id }, limit: 200 }]);
+  expect(queries).toEqual([
+    {
+      anchor: { type: "ticket", id: ticket.id, projectId: "proj-1", extensionId: "pstdio.pstdio-planner" },
+      includeWorkspaceAnchors: true,
+      includeArchived: true,
+      orderBy: "lastActivity",
+      limit: 100,
+      cursor: undefined,
+    },
+  ]);
 });

@@ -24,9 +24,7 @@ const { createExtensionStorageFixture } = await import(
   join(workspace, "packages/pstdio-db/src/services/extension-storage/extension-storage.fixture.ts")
 );
 const { storageRecordId } = await import(join(workspace, "packages/pstdio-sync/src/records/namespaces.ts"));
-const { createMemoryStorage, makeCommandContext } = await import(
-  Bun.resolveSync("@pstdio/sdk/testing", join(workspace, "extensions/pstdio-planner"))
-);
+const { createMemoryStorage, makeCommandContext } = await import(join(workspace, "packages/sdk/dist/testing/index.js"));
 const { sql } = await import(Bun.resolveSync("drizzle-orm", join(workspace, "packages/pstdio-db")));
 const { resolveCollectionIndexes } = await import(
   join(workspace, "packages/pstdio-api-contracts/src/storage-indexes.ts")
@@ -134,11 +132,14 @@ try {
     },
   });
   let indexInstallationMs = 0;
+  const fullDeclaration = join(source, "extensions/pstdio-planner/src/data/storage-indexes.ts");
   const declaration = join(source, "extensions/pstdio-planner/src/data/navigation-queries.ts");
   if (await Bun.file(declaration).exists()) {
-    const { plannerNavigationIndexes } = await import(declaration);
+    const indexes = (await Bun.file(fullDeclaration).exists())
+      ? (await import(fullDeclaration)).plannerStorageIndexes()
+      : (await import(declaration)).plannerNavigationIndexes;
     const start = performance.now();
-    await storage.records.defineIndexes(plannerNavigationIndexes);
+    await storage.records.defineIndexes(indexes);
     indexInstallationMs = performance.now() - start;
   }
   console.log(
@@ -190,6 +191,9 @@ try {
       }),
     );
   }
+} catch (error) {
+  console.error("Ticket opening diagnostic failed", error);
+  throw error;
 } finally {
   await fixture.close();
 }

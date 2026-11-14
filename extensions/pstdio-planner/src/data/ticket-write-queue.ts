@@ -18,3 +18,19 @@ export const queueTicketWrite = <T>(ticketId: string, write: () => Promise<T>) =
   });
   return result;
 };
+
+/** Reserve every selected queue before waiting, so overlapping batches cannot deadlock. */
+export const queueTicketWrites = <T>(ticketIds: string[], write: () => Promise<T>) => {
+  const ids = [...new Set(ticketIds)];
+  const previous = ids.flatMap((id) => (queues.get(id) ? [queues.get(id)!] : []));
+  const result = Promise.all(previous).then(write);
+  const tail = result.then(
+    () => {},
+    () => {},
+  );
+  for (const id of ids) queues.set(id, tail);
+  void tail.then(() => {
+    for (const id of ids) if (queues.get(id) === tail) queues.delete(id);
+  });
+  return result;
+};

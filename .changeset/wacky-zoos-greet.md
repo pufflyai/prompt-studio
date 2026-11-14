@@ -2,4 +2,4 @@
 "pstdio-planner": patch
 ---
 
-Open tickets using scoped relationship and review queries, and page large navigation sections without loading the complete ticket collection.
+Keep ticket opening, bulk archival, ordering, dependency checks, linked history, and recovery bounded with scoped indexes and saves, without loading complete ticket collections.

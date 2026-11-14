@@ -1,5 +1,6 @@
 import type { ExtensionStorageApi, StoragePredicate, StorageRecordIndex } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "./collections";
+import { preparePlannerIndexes } from "./storage-indexes";
 import { normalizeTicketDependencies } from "./ticket-dependencies";
 import type { TicketContext } from "./ticket-identity";
 import { readTicketParentLookup } from "./ticket-resource-hierarchy";
@@ -35,8 +36,7 @@ export const plannerNavigationIndexes = navigationIndexDefinitions.map((index) =
   collection: index.name === "ticket-review-requests" ? "planner-review-requests" : "tickets",
 }));
 
-export const prepareNavigationQueries = (storage: ExtensionStorageApi) =>
-  storage.records.defineIndexes(plannerNavigationIndexes);
+export const prepareNavigationQueries = (storage: ExtensionStorageApi) => preparePlannerIndexes(storage);
 
 export const queryTicketNavigationPage = async (
   ctx: TicketContext,
