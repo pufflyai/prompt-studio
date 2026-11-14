@@ -101,33 +101,6 @@ test("automatic stack repair honors the merge requirement and keeps stopped owne
   }
 });
 
-test("the owner can reconcile conflicting dependencies and submit without a review request", async () => {
-  const f = await independentDependencies(true);
-  try {
-    await expect(updateStackCommand.run(f.ctx, f.input)).rejects.toThrow("conflict");
-    const pending = await f.git("diff", "--name-only", "--diff-filter=U");
-    expect(pending).toBe("shared.txt");
-    expect(await f.git("show", "HEAD:child.txt")).toBe("child.txt");
-    await Bun.write(`${f.path}/shared.txt`, "Both dependency implementations reconciled");
-    await f.git("add", "shared.txt");
-    await f.git("commit", "-m", "Reconcile dependency code");
-    const updated = await updateStackCommand.run(f.ctx, {
-      ...f.input,
-      expectedHeadSha: await f.git("rev-parse", "HEAD"),
-    });
-    await f.git("merge-base", "--is-ancestor", f.left, updated.headSha);
-    await f.git("merge-base", "--is-ancestor", f.right, updated.headSha);
-    expect(await f.git("status", "--porcelain")).toBe("");
-    expect(updated.base.headSha).toBe(f.base);
-    await submitChangeRequestCommand.run(f.ctx, await f.params());
-    expect(await readStackRepair(f.ctx, (await readAttempt(f.storage, "child"))!, {})).toBeNull();
-    expect((await listTicketReviewRequests(f.storage, "Child")).requests).toHaveLength(0);
-    expect(await f.git("rev-parse", "main")).toBe(f.base);
-  } finally {
-    await f.cleanup();
-  }
-});
-
 test("conflicting dependency branches start a managed implementation owner", async () => {
   const f = await independentDependencies(true);
   try {

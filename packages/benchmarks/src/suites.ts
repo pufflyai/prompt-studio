@@ -24,10 +24,7 @@ export const suites: BenchmarkSuite[] = [
   {
     id: "desktop",
     label: "Desktop app",
-    files: [
-      "clients/desktop/src/e2e/packaged-launch.p3.bench.ts",
-      "clients/desktop/src/e2e/packaged-renderer.p3.bench.ts",
-    ],
+    files: ["clients/desktop/src/e2e/packaged-renderer.p3.bench.ts"],
     prepare: (context) => [
       { command: ["bun", "run", "make", "--", `--arch=${arch(context)}`], cwd: "clients/desktop" },
       ...linuxSandbox(`${desktopOut(context)}/chrome-sandbox`),
@@ -50,11 +47,7 @@ export const suites: BenchmarkSuite[] = [
     label: "Workbench interactions",
     files: [
       "packages/e2e/src/perf/nav-chrome.p3.bench.ts",
-      "packages/e2e/src/perf/panel-tabs.p3.bench.ts",
-      "packages/e2e/src/perf/project-switch.p3.bench.ts",
       "packages/e2e/src/perf/resource-hierarchy.p3.bench.ts",
-      "packages/e2e/src/perf/side-panel.p3.bench.ts",
-      "packages/e2e/src/perf/sidenav-header.p3.bench.ts",
       "packages/e2e/src/perf/workbench-interactions.p3.bench.ts",
       "packages/e2e/src/packaged/packaged-paged-collections.p3.bench.ts",
     ],

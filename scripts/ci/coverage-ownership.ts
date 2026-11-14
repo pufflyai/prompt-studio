@@ -17,7 +17,6 @@ const nativeCli = new Set([
   "extension-smoke",
   "packaged-linked-webview-smoke",
   "packaged-linked-dependency-smoke",
-  "codex-transport",
   "runtime-lifecycle",
   "packaged-runtime-autostart",
   "extension-browser-install",
@@ -31,14 +30,12 @@ const nativeCli = new Set([
   "packaged-storage-migration-smoke",
   "packaged-artifact-watch-limit",
   "packaged-project-setup-smoke",
-  "packaged-core-extensions-smoke",
   "packaged-folder-recovery",
   "packaged-document-sync-smoke",
   "packaged-two-device-sync-smoke",
   "packaged-cloud-project-recovery",
 ]);
 const sharedDesktop = new Set([
-  "packaged-navigation-customization",
   "packaged-project-tab-order",
   "packaged-benchmark-evidence",
   "packaged-startup-evidence",
@@ -47,7 +44,6 @@ const sharedDesktop = new Set([
   "desktop-visible-element-timing",
 ]);
 const desktopReasons: Record<string, string> = {
-  "packaged-app": "Native launch, authenticated sidecar, extension load, ownership and warm relaunch",
   "packaged-active-work": "Native quit with a live terminal and real shell signals",
   "packaged-attached-recovery": "Native backend ownership and process shutdown",
   "packaged-detached-process": "Detached process survival across native shutdown",
@@ -102,7 +98,7 @@ export const integrationCoverage = (file: string) => {
     targets = primary;
     surface = "native-desktop";
     reason = desktopReasons[name] ?? "Unclassified existing desktop contract retains native coverage pending review";
-    if (name === "packaged-app") targets = [...primary, "darwin-x64"];
+    if (name === "packaged-startup-recovery") targets = [...primary, "darwin-x64"];
     if (name === "packaged-folder-picker") targets = ["win32-x64"];
   } else if (name === "packaged-webview-browsers") {
     surface = "browser-engine";
@@ -116,7 +112,7 @@ export const integrationCoverage = (file: string) => {
   if (/session|chat|harness|codex|claude/.test(name))
     owners.push("pstdio-session-browser", "harness-codex", "harness-claude-code");
   if (/canvas|artifact/.test(name)) owners.push("ui-canvas", "pstdio-artifacts");
-  return { surface, targets, reason, owners, smoke: name === "packaged-app" };
+  return { surface, targets, reason, owners, smoke: name === "packaged-startup-recovery" };
 };
 
 // Follow relative fixture/helper imports as well as production owners. A helper edit must

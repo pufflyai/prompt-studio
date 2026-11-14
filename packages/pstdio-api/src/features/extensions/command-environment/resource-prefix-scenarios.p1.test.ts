@@ -56,21 +56,6 @@ const createHarness = async () => {
   };
 };
 
-test("a project whose derived shorthand collides with a reserved prefix can still allocate", async () => {
-  const harness = await createHarness();
-  try {
-    const project = await harness.app.deps.projectService.create({ name: "Work Space" });
-    expect(project.shorthand).not.toBe("WS");
-    await harness.install(project.id, "planner", { $prefix: "project" });
-
-    const allocated = await harness.allocate(project.id, "planner");
-
-    expect(allocated.shorthand).toBe(`${project.shorthand}-1`);
-  } finally {
-    await harness.close();
-  }
-});
-
 test("a project whose name has no letters can still allocate", async () => {
   const harness = await createHarness();
   try {

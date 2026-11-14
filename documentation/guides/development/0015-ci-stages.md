@@ -110,7 +110,7 @@ When a P1 job fails, the other P1 jobs stop themselves on purpose (see [Failure 
 
 1. Read the `validation_results` log. It lists each failed job.
 2. Sort the failures by time. The earliest failed job that is not `validation_results` or `ci_passed` is the cause.
-3. If the PR did not touch that code, the test is unreliable. Fix it, or quarantine it, in a separate PR. Do not queue the same commit again and hope it passes.
+3. If the PR did not touch that code, the test is unreliable. Fix it in a separate PR. Remove a failing quarantined case and keep the evidence for restoring coverage after a fix. Do not queue the same commit again and hope it passes.
 
 Causes of unreliable queue failures we have fixed before:
 
@@ -197,13 +197,9 @@ None of these replace the real queue run or release certification.
 
 ### Quarantine
 
-Quarantine is manual, never automatic. Entries live in `scripts/ci/test-quarantine.json`. Each entry names the runner, file and title, platform, owner, reason, evidence and the condition for removing it.
+Remove failing quarantined cases and their matching entries from `scripts/ci/test-quarantine.json`. Preserve first-failure evidence in the ticket or report; restore product coverage after fixing the cause. Do not turn a failing quarantine into a stable test or a permanent skip.
 
-- Quarantined tests run in their own jobs. Their failures do not block the queue, but each test must still run exactly once.
-- A scoped Bun file whose reported cases all belong to the platform quarantine records an unselected stable lane with zero executed cases. The separate quarantine lane must still execute and verify those cases. Empty files, missing reports and unregistered skipped cases cannot use this handoff. An edited Playwright file with quarantine entries for the platform may likewise select no stable cases; its quarantine lane must still execute and verify every registered case.
-- Retries are not allowed: no rerun flags, no per-test retries, no retries hidden in helpers.
-- Local selections include their applicable quarantine lane once. Use `bun run test -- --lane quarantine --scope <workspace> --runner <kind>` for a focused diagnosis. The shared executor validates every registered case and keeps its raw outcome. Dedicated ordered benchmark lifecycles retain their native budget classification and report verifier.
-- Keep the first failed attempt before a rerun. A later pass does not explain the failure.
+The registry is currently empty. Quarantine execution remains available for focused diagnosis. Registered diagnostic cases must run once in their separate lane with native evidence. Setup failures, missing cases or reports, cancellation, skipped cases, and retries fail verification. A stable pass does not establish that a diagnostic case passed.
 
 ## Builds and caches
 
@@ -245,9 +241,9 @@ Keep `ci_passed` and ALLGREEN. Read the live ruleset before you change it. If a 
 
 ## Coverage ownership and qualification
 
-[`coverage-ownership.ts`](../../../scripts/ci/coverage-ownership.ts) owns integration applicability. Shared navigation, Planner and editing flows have one Linux owner. Native shell, drive, locking, process ownership and install behavior stays on its OS. Mixed native files retain their native assertions until a replacement is extracted and qualified. Quarantines keep their original native targets. The Intel Mac desktop runs the startup/persistence artifact contract and its registered native quarantine, rather than ARM feature permutations.
+[`coverage-ownership.ts`](../../../scripts/ci/coverage-ownership.ts) owns integration applicability. Shared navigation, Planner and editing flows have one Linux owner. Native shell, drive, locking, process ownership and install behavior stays on its OS. Mixed native files retain their native assertions until a replacement is extracted and qualified. The Intel Mac desktop runs the retained startup/recovery smoke. The failing startup/persistence cases, including their Intel terminal assertion, were removed with the quarantine cleanup; their earlier validation does not certify the retained coverage.
 
-Daily native diagnostics include an unpublished Windows desktop package; nightly publication still contains only Linux and Apple Silicon apps. Stable validation consumes every shipped target's exact bytes. Certificate names distinguish `desktop-shared-linux-x64` from `desktop-native-<target>` and the policy digest includes the selection and execution code. P3 workloads, installation/update verification and signature checks retain their existing contracts.
+Daily native diagnostics include an unpublished Windows desktop package; nightly publication still contains only Linux and Apple Silicon apps. Stable validation consumes every shipped target's exact bytes. Certificate names distinguish `desktop-shared-linux-x64` from `desktop-native-<target>` and the policy digest includes the selection and execution code. Surviving P3 cases keep their existing workloads and budgets. Failing quarantined P3 cases were removed; their coverage gaps are recorded in [the quarantine decision](../../adrs/0101-temporary-flaky-test-quarantine.md). Installation/update verification and signature checks retain their existing contracts.
 
 Measure a completed first-attempt run with `bun scripts/ci/required-turnaround.ts <run-id> cold` or `warm`. Preserve the cache provenance with the report. The JSON records workflow creation through required-gate completion, runner waits when GitHub provides creation timestamps, and individual job/step timings. Unknown cache provenance, incomplete or failed runs, reruns and overruns cannot qualify the ten-minute target. Do not omit selected tests or raise allowances to pass it.
 

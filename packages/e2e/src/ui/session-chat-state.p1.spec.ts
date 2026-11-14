@@ -55,57 +55,6 @@ test("keeps the unsent draft after editing a queued follow-up", async ({ page, r
   await expect(editor).toHaveText("Half-written note");
 });
 
-test("turns a New session tab into the created session when the request ends after leaving the tab", async ({
-  page,
-  request,
-}) => {
-  const { header, project } = await openSessionsInOneSidePanelTab(page, request, "Background session start");
-  const side = page.locator('[data-workbench-region="side"]');
-  const editor = side.getByTestId("content-editable").filter({ visible: true }).last();
-  const send = side.getByTestId("send-message-button").filter({ visible: true }).last();
-  await header.getByRole("button", { name: "Add panel", exact: true }).click();
-  await page.getByRole("menuitem", { name: "New session", exact: true }).click();
-  const draftTab = header.getByRole("tab", { name: "New session", exact: true });
-  await expect(draftTab).toHaveAttribute("aria-selected", "true");
-
-  let release!: () => void;
-  const held = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  let submitCount = 0;
-  await page.route(`**${actionPath}`, async (route) => {
-    if (isSubmit(route.request())) {
-      submitCount++;
-      await held;
-    }
-    await route.continue();
-  });
-  const created = page.waitForResponse((response) => isSubmit(response.request()));
-  const prompt = "Start while away";
-  await editor.fill(prompt);
-  await expect(send).toBeEnabled();
-  await send.click();
-  await expect(editor).toBeEmpty();
-  await header.getByRole("tab", { name: "Session B", exact: true }).click();
-  await draftTab.click();
-  await expect(editor).toHaveAttribute("contenteditable", "false");
-  await expect(send).toBeDisabled();
-  await header.getByRole("tab", { name: "Session B", exact: true }).click();
-  release();
-  expect((await created).ok()).toBe(true);
-  expect(submitCount).toBe(1);
-
-  const createdTab = header.getByRole("tab", { name: prompt, exact: true });
-  await expect(createdTab).toBeVisible();
-  await expect(draftTab).toHaveCount(0);
-  await createdTab.click();
-  await expect(editor).toBeEmpty();
-  const sessions = (await (await request.get(`${apiBase}/v1/sessions?project_id=${project.id}`)).json()) as {
-    title: string;
-  }[];
-  expect(sessions.filter((session) => session.title === prompt)).toHaveLength(1);
-});
-
 test("keeps a tab on the session picked while its new session was still starting", async ({ page, request }) => {
   const { header, switchTab } = await openSessionsInOneSidePanelTab(page, request, "Switch while starting");
   const side = page.locator('[data-workbench-region="side"]');

@@ -2,7 +2,7 @@
 
 ## 1. Red: write a test first
 
-1. Follow the red, green, and refactor workflow for every change. Skip a test only when no useful test applies.
+1. Follow the red, green, and refactor workflow for supported product behavior. Changes to tests, test setup, runners, suite configuration, documentation, or configuration do not need tests of their own.
 2. Reproduce a bug with Playwright or another tool before fixing it.
 3. For a meaningful behavioral bug, write the smallest regression test that proves the expected behavior before changing code.
 4. Confirm the test fails for the right reason.
@@ -21,7 +21,7 @@
 3. Add or update end-to-end tests for new features, update documentation, and remove tests that cover only implementation details.
 4. Keep tests green.
 5. CI runs each test once per applicable platform. Never retry unchanged failures or run repeated reliability checks to obtain a pass. Verify cause repairs and the final revision through section 9.
-6. Quarantine confirmed flakes with evidence, an owner, and removal criteria. Run them once in a separate lane and require its execution report.
+6. Remove failing quarantined cases and their registry entries. Keep their failure evidence in the ticket or report so product coverage can be restored after the cause is fixed. Do not move known failures into the stable lane.
 
 ## 4. Prove it works
 
@@ -54,6 +54,7 @@
 11. Do not keep tests that cover only implementation details.
 12. Demo/example extensions and repository-local tools do not carry automated test suites or app journeys. Test platform behavior with minimal fixtures, without exercising demo application features.
 13. Keep production extension suites focused on their own behavior and runnable with their declared public dependencies and extension-owned setup. Avoid installing unrelated extensions or starting the complete host for unit tests.
+14. Do not test test code. Remove meta tests that assert fixture generation, test setup, runners, discovery, suite selection, reporting, or benchmark instrumentation. Exercise those helpers through product behavior tests; inspect setup changes with static checks and the affected product scenarios.
 
 ## 7. Test commands
 

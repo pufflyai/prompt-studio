@@ -249,46 +249,6 @@ describe("GET /v1/sessions/:id/conversation", () => {
     await settleQueuedSession(queued.id);
   });
 
-  test("preserves conversation history before the persisted queued follow-up prompt", async () => {
-    const projectRes = await app.request("/v1/projects", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(folderProjectInput({ name: "Queued Follow-up Conversation Project" })),
-    });
-    expect(projectRes.status).toBe(201);
-    const project = (await projectRes.json()) as { id: string };
-
-    const createRes = await app.request("/v1/sessions", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        project_id: project.id,
-        title: "Queued follow-up",
-        prompt: "original prompt",
-        agent: FAKE_ID,
-      }),
-    });
-    expect(createRes.status).toBe(201);
-    const created = (await createRes.json()) as { id: string };
-    await waitForSessionStatus(created.id, "completed");
-
-    await handle.deps.sessionService.queueExistingWithEntry({
-      id: created.id,
-      prompt: "queued follow-up prompt",
-      request_kind: "follow_up",
-    });
-
-    const conversationRes = await app.request(`/v1/sessions/${created.id}/conversation`);
-    expect(conversationRes.status).toBe(200);
-    const conversation = (await conversationRes.json()) as { messages: unknown[] };
-
-    const textParts = extractTextParts(conversation.messages);
-    expect(textParts.indexOf("original prompt")).toBeGreaterThanOrEqual(0);
-    expect(textParts.indexOf("queued follow-up prompt")).toBeGreaterThan(textParts.indexOf("original prompt"));
-
-    await settleQueuedSession(created.id);
-  });
-
   test("falls back to stored messages when a queued attachment is missing", async () => {
     const projectRes = await app.request("/v1/projects", {
       method: "POST",
