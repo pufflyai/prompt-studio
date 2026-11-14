@@ -37,3 +37,17 @@ test("a narrow change still runs all fast P0 units while contracts follow affect
   expect(files).not.toContain("packages/unrelated/src/contract.p1.test.ts");
   expect(files).toContain("packages/pstdio-api/src/isolation.p1.test.ts");
 });
+
+test("edited contracts already selected by the required profile execute once", () => {
+  const input = scopeFixture();
+  const files = ["packages/pstdio-api/src/isolation.p1.test.ts", "packages/e2e/src/packaged/startup.p1.test.ts"];
+  const scope = resolveCiScope({ ...input, changedFiles: files });
+  const plan = createCiTestPlan(
+    scope,
+    input.packages.map((pkg) => ({ ...pkg, scripts: {} })),
+    input.tests,
+    source,
+  );
+  for (const file of files)
+    expect(plan.runs.filter((run) => run.lane === "stable" && run.files.includes(file))).toHaveLength(1);
+});

@@ -14,7 +14,7 @@ import {
 } from "./production-platforms";
 import { plannedCiJobs, requiredCiJobs } from "./required-ci-jobs";
 import { sourceCoverageArtifacts } from "./source-coverage-artifacts";
-import { discoverTestFiles, priorityFromFile } from "./test-discovery";
+import { discoverTestFiles, priorityFromFile, testRunner } from "./test-discovery";
 import { testPlanSource } from "./test-plan-source";
 import type { TestPriority } from "./test-policy";
 import { selectCiTests, selectEditedTests } from "./test-selection";
@@ -86,6 +86,26 @@ const productionProfile = (event: string, profile?: string) =>
 const integrationOwnersFor = (packages: CiScopeInput["packages"], code: string[], all: boolean) =>
   all ? packages.map((pkg) => pkg.name) : integrationSourceOwners(packages, code);
 
+const requiredEditedRows = (
+  input: CiScopeInput,
+  affectedOwners: string[],
+  integrations: ReturnType<typeof selectCiTests>["packagedMatrix"],
+) => {
+  const covered = new Set<string>(
+    integrations.flatMap((row) => (JSON.parse(row.files) as string[]).map((file) => `packages/e2e/${file}`)),
+  );
+  for (const file of input.tests) {
+    if (priorityFromFile(file) !== "P1" || !["bun", "api", "integration"].includes(testRunner(file))) continue;
+    if (input.packages.some((pkg) => affectedOwners.includes(pkg.name) && file.startsWith(`${pkg.dir}/`)))
+      covered.add(file);
+  }
+  const edited = input.tests.filter(
+    (file) =>
+      input.changedFiles.includes(file) && priorityFromFile(file) !== "P3" && !file.startsWith("clients/desktop/"),
+  );
+  return selectEditedTests(edited, input.packages, covered).filter((row) => row.platform === "linux");
+};
+
 const resolveBaseScope = (input: CiScopeInput) => {
   const { event, changedFiles, packages, tests, profile, releaseChannel = "stable", signedCandidate = false } = input;
   for (const file of tests) priorityFromFile(file);
@@ -142,14 +162,7 @@ const resolveBaseScope = (input: CiScopeInput) => {
     affectedOwners,
     integrationOwners,
     // Both gates include edited behavior tests; platform diagnostics remain outside the universal Linux profile.
-    editedMatrix: requiredProfile
-      ? selectEditedTests(
-          tests.filter(
-            (file) => code.includes(file) && priorityFromFile(file) !== "P3" && !file.startsWith("clients/desktop/"),
-          ),
-          packages,
-        ).filter((row) => row.platform === "linux")
-      : [],
+    editedMatrix: requiredProfile ? requiredEditedRows(input, affectedOwners, affectedIntegrations) : [],
     ...matrices,
     appMatrix: production ? matrices.appMatrix : [],
     // Shared CLI journeys have one Linux owner; native toolchain rows consume only their contracts.

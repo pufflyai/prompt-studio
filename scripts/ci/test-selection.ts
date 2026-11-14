@@ -174,7 +174,7 @@ export const selectCiTests = (
 type Packages = ReturnType<typeof readWorkspacePackages>;
 const linux = { os: "ubuntu-24.04", platform: "linux", arch: "x64" };
 
-export const selectEditedTests = (files: string[], packages: Packages) => {
+export const selectEditedTests = (files: string[], packages: Packages, coveredFiles = new Set<string>()) => {
   const groups = new Map<
     string,
     { owner: string; runner: string; priority: string; subgroup: string; files: string[] }
@@ -210,10 +210,9 @@ export const selectEditedTests = (files: string[], packages: Packages) => {
         });
     return platforms.flatMap((platform) => {
       const covered =
-        group.priority === "P0" &&
         platform.platform === "linux" &&
-        ["bun", "api", "integration"].includes(group.runner) &&
-        group.owner !== "repository";
+        (group.files.every((file) => coveredFiles.has(file)) ||
+          (group.priority === "P0" && ["bun", "api", "integration"].includes(group.runner)));
       const quarantined = new Set(
         quarantineRegistry
           .filter(
