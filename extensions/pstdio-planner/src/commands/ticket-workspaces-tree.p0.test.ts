@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { workspaceCommands, workspacePages } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { makeCommandArgs } from "./command-context.fixture";
+import { workspaceArgs } from "./archive-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { listTicketFilesTreeCommand } from "./ticket-files";
 
@@ -20,7 +20,7 @@ const ticketRendererParams = (ticket: { id: string; shorthand: string }, documen
 describe("ticket files tree workspace commands", () => {
   test("appends a Workspaces section for linked workspaces and excludes unrelated ones", async () => {
     const storage = createMemoryStorage();
-    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));
+    const ticket = await createTicketCommand.run(...(await workspaceArgs({ storage, params: { title: "Ticket" } })));
 
     const linked = {
       id: "ws-1",
@@ -49,11 +49,11 @@ describe("ticket files tree workspace commands", () => {
     };
 
     const sections = await listTicketFilesTreeCommand.run(
-      ...makeCommandArgs({
+      ...(await workspaceArgs({
         storage,
         params: ticketRendererParams(ticket),
         overrides: { workspaces: { list: async () => [linked, unrelated] } },
-      }),
+      })),
     );
 
     expect(sections.map((section) => section.id)).toEqual(["ticket", "workspaces"]);
@@ -121,10 +121,10 @@ describe("ticket files tree workspace commands", () => {
 
   test("sorts linked workspaces by latest workspace activity before shorthand", async () => {
     const storage = createMemoryStorage();
-    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));
+    const ticket = await createTicketCommand.run(...(await workspaceArgs({ storage, params: { title: "Ticket" } })));
 
     const sections = await listTicketFilesTreeCommand.run(
-      ...makeCommandArgs({
+      ...(await workspaceArgs({
         storage,
         params: ticketRendererParams(ticket),
         overrides: {
@@ -149,7 +149,7 @@ describe("ticket files tree workspace commands", () => {
             ],
           },
         },
-      }),
+      })),
     );
 
     expect(sections.find((section) => section.id === "workspaces")?.nodes.map((node) => node.id)).toEqual([
@@ -160,13 +160,13 @@ describe("ticket files tree workspace commands", () => {
 
   test("keeps workspace creation on the ticket when its empty group is hidden", async () => {
     const storage = createMemoryStorage();
-    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));
+    const ticket = await createTicketCommand.run(...(await workspaceArgs({ storage, params: { title: "Ticket" } })));
     const sections = await listTicketFilesTreeCommand.run(
-      ...makeCommandArgs({
+      ...(await workspaceArgs({
         storage,
         params: ticketRendererParams(ticket),
         overrides: { workspaces: { list: async () => [] } },
-      }),
+      })),
     );
     expect(sections.map((section) => section.id)).toEqual(["ticket"]);
     expect(sections[0].nodes[0].contextMenuActions).toContainEqual(

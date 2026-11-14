@@ -9,11 +9,12 @@ export interface DependencyDelivery {
 }
 
 export type DependencyDeliveryReads = Map<string, Promise<DependencyDelivery | null>>;
+type DeliveryTicket = Pick<Ticket, "id" | "shorthand" | "statusId" | "dependsOn" | "reviewLinks">;
 
 export async function readDependencyDeliveries(
   ctx: Pick<ExtensionContextBase, "process" | "logger">,
-  target: Ticket,
-  tickets: Ticket[],
+  target: DeliveryTicket,
+  tickets: DeliveryTicket[],
   doneStatusIds: Set<string>,
   cwd: string,
   reads: DependencyDeliveryReads = new Map(),

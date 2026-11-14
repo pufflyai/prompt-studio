@@ -1,14 +1,10 @@
-import type { CommandContext, ExtensionSessionsApi } from "@pstdio/sdk/extensions";
+import type { CommandContext, ExtensionSessionsApi, StoragePredicate } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
-import {
-  appendAttemptEvent,
-  attemptEventsCollection,
-  attemptSelectionsCollection,
-  readAttempt,
-} from "../data/attempt-storage";
+import { appendAttemptEvent, attemptSelectionsCollection, readAttempt } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
 import { resolveImplementationBase } from "../data/implementation-targets";
 import { findTicket } from "../data/resolve";
+import { preparePlannerIndexes } from "../data/storage-indexes";
 import { isLiveSession } from "./auto-build-sessions";
 
 export interface WorkspaceRecovery {
@@ -49,19 +45,59 @@ export async function readRecoveryBase(ctx: CommandContext, attempt: AttemptReco
   return resolved.stdout.trim();
 }
 
+async function* recoveryRefs(
+  ctx: CommandContext,
+  attempt: AttemptRecord,
+  branch: string | null | undefined,
+  base: string,
+) {
+  // The surviving branch may contain work newer than the last submitted revision.
+  yield branch;
+  yield attempt.revisions.at(-1)?.headSha;
+  await preparePlannerIndexes(ctx.storage);
+  let after: { createdAt: string; id: string } | undefined;
+  do {
+    const continuation: StoragePredicate[] = after
+      ? [
+          {
+            any: [
+              { field: "createdAt", op: "lt", value: after.createdAt },
+              {
+                all: [
+                  { field: "createdAt", op: "eq", value: after.createdAt },
+                  { field: "id", op: "lt", value: after.id },
+                ],
+              },
+            ],
+          },
+        ]
+      : [];
+    const page = await ctx.storage.records.query({
+      index: "attempt-recovery-commits",
+      where: {
+        all: [
+          { field: "workspaceId", op: "eq", value: attempt.workspaceId },
+          { field: "commitSha", op: "notEmpty" },
+          ...continuation,
+        ],
+      },
+      fields: ["commitSha", "createdAt", "id"],
+      limit: 100,
+    });
+    // Git checks can outlive the owner revision. Continue by stable keys so an
+    // unrelated edit cannot invalidate the fallback halfway through recovery.
+    for (const { fields } of page.records) yield String(fields.commitSha);
+    const last = page.records.at(-1)?.fields;
+    after =
+      page.records.length === 100 && last ? { createdAt: String(last.createdAt), id: String(last.id) } : undefined;
+  } while (after);
+  yield base;
+}
+
 export async function readRecoverySeed(ctx: CommandContext, attempt: AttemptRecord, requiredBase: string) {
   const [workspace, home] = await Promise.all([ctx.workspaces.get(attempt.workspaceId), ctx.workspaces.getDefault()]);
   if (!home?.root_path) throw new Error("Attach a Git project folder before recovering work.");
-  const events = (await attemptEventsCollection(ctx.storage).list())
-    .filter(({ workspaceId }) => workspaceId === attempt.workspaceId)
-    .toSorted((a, b) => b.createdAt.localeCompare(a.createdAt));
-  // The surviving branch may contain work newer than the last submitted revision.
-  for (const ref of [
-    workspace?.branch,
-    attempt.revisions.at(-1)?.headSha,
-    ...events.map(({ commitSha }) => commitSha),
-    requiredBase,
-  ]) {
+  for await (const ref of recoveryRefs(ctx, attempt, workspace?.branch, requiredBase)) {
     if (!ref) continue;
     const result = await ctx.process.run({
       command: ["git", "-C", home.root_path, "rev-parse", "--verify", "--end-of-options", `${ref}^{commit}`],

@@ -1,13 +1,14 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { putTicket } from "../data/collections";
-import { createTicketParentLookup, TICKET_RESOURCE_ICON } from "../data/mappers";
-import { readMigratedTickets } from "../data/read-migrated-tickets";
+import { appendTicketPositionFromStorage } from "../data/indexed-ticket-order";
+import { TICKET_RESOURCE_ICON } from "../data/mappers";
+import { ensureTicketStorage } from "../data/read-migrated-tickets";
 import { resolveDependencyIds, resolveStatusId, resolveTagOptionIds, resolveTicketId } from "../data/resolve";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
 import { ticketTagsForIds } from "../data/tag-cardinality";
 import { allocateTicketIdentity } from "../data/ticket-identity";
-import { appendTicketPosition, withTicketOrder } from "../data/ticket-order";
-import { plannerOwnerFor, ticketResourceReference } from "../data/ticket-resource-hierarchy";
+import { withTicketOrder } from "../data/ticket-order";
+import { plannerOwnerFor, readTicketParentLookup, ticketResourceReference } from "../data/ticket-resource-hierarchy";
 import { withTicketTagIds } from "../data/ticket-tags";
 import type { StoredTicketAttachment } from "../data/types";
 import { plannerTicketsChanged } from "../events";
@@ -81,9 +82,9 @@ export const createTicketCommand = defineCommand({
         ? await resolveTicketId(ctx, commandParams.parent)
         : (commandParams.parentId ?? null);
 
-    const { existing, ticket } = await withTicketOrder(ctx, async () => {
-      const existing = await readMigratedTickets(ctx);
-      const position = appendTicketPosition(ctx.storage, existing);
+    const ticket = await withTicketOrder(ctx, async () => {
+      await ensureTicketStorage(ctx);
+      const position = await appendTicketPositionFromStorage(ctx.storage);
       const ticket = await putTicket(ctx, {
         id,
         title: ticketTitle(commandParams),
@@ -101,13 +102,17 @@ export const createTicketCommand = defineCommand({
         createdAt: now,
         updatedAt: now,
       });
-      return { existing, ticket };
+      return ticket;
     });
     await ctx.events.emit(plannerTicketsChanged, { ticketId: ticket.id });
     return {
       ...withTicketTagIds(ticket),
       resource: {
-        ...ticketResourceReference(ticket, createTicketParentLookup([...existing, ticket]), plannerOwnerFor(ctx)),
+        ...ticketResourceReference(
+          ticket,
+          await readTicketParentLookup(ctx, new Map([[ticket.id, ticket]])),
+          plannerOwnerFor(ctx),
+        ),
         projectId: ctx.projectId,
         icon: TICKET_RESOURCE_ICON,
       },

@@ -1,5 +1,4 @@
 import { type ArtifactMount, defineCommand, type ExtensionStorageApi, params } from "@pstdio/sdk/extensions";
-import { ticketsCollection } from "../data/collections";
 import {
   ensureTicketDraftsIgnored,
   requireTicketDraftFiles,
@@ -12,7 +11,9 @@ import { refreshTicketCheckout } from "../data/ticket-checkout";
 import { readTicketFileContent } from "../data/ticket-file-content";
 import { validateTicketFileName } from "../data/ticket-file-name";
 import type { TicketContext } from "../data/ticket-identity";
+import { withTicketIdentities } from "../data/ticket-identity";
 import { pullTicketImages } from "../data/ticket-images";
+import { ticketRecordPages } from "../data/ticket-selection";
 import type { Ticket } from "../data/types";
 
 const pullTicket = async (input: {
@@ -81,20 +82,22 @@ export const pullTicketCommand = defineCommand({
       };
     }
 
-    const tickets = (await ticketsCollection(ctx).list()).filter((ticket) => !ticket.archived);
-    const results = [];
-    for (const ticket of tickets) {
-      results.push(
-        await pullTicket({
+    let pulled = 0;
+    let total = 0;
+    for await (const page of ticketRecordPages(ctx.storage, { field: "archived", op: "eq", value: false })) {
+      for (const ticket of await withTicketIdentities(ctx, page)) {
+        const result = await pullTicket({
           storage: ctx.storage,
           resources: ctx.resources,
           projectFiles,
           ticket,
           force,
           extensionId: ctx.extensionId,
-        }),
-      );
+        });
+        total++;
+        if (!result.skipped) pulled++;
+      }
     }
-    return { pulled: results.filter((result) => !result.skipped).length, total: tickets.length };
+    return { pulled, total };
   },
 });

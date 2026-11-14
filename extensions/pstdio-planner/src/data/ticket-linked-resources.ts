@@ -80,3 +80,22 @@ export const loadTicketLinkedResources = async (
     ]),
   );
 };
+
+export const readTicketLinkedResourcePage = async (
+  resources: ExtensionResourcesApi,
+  ticket: ResourceRef,
+  cursor?: string,
+) => {
+  const page = await resources.queryRelated({
+    resources: [ticket],
+    direction: "both",
+    excludeKinds: ["workspace", "session"],
+    limit: 100,
+    cursor,
+  });
+  const resolved = new Map((await resources.resolveMany(page.items)).map((item) => [resourceKey(item.resource), item]));
+  return {
+    items: page.items.map((ref) => badgeItem(ref, resolved.get(resourceKey(ref)))).filter((item) => item !== undefined),
+    nextCursor: page.nextCursor ?? undefined,
+  };
+};

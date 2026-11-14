@@ -1,18 +1,18 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { ExtensionWorkspace } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { makeCommandArgs } from "./command-context.fixture";
+import { workspaceArgs } from "./archive-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { ticketWorktreesListCommand, ticketWorktreesRemoveAllCommand } from "./ticket-workspaces";
 
 describe("ticketWorktreesRemoveAllCommand", () => {
   test("uses workspace lifecycle cleanup and preserves workspace records", async () => {
     const storage = createMemoryStorage();
-    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Cleanup" } }));
+    const ticket = await createTicketCommand.run(...(await workspaceArgs({ storage, params: { title: "Cleanup" } })));
     const removeWorktree = mock(async () => ({ removed: true }));
 
     const result = await ticketWorktreesRemoveAllCommand.run(
-      ...makeCommandArgs({
+      ...(await workspaceArgs({
         storage,
         params: { id: ticket.id },
         overrides: {
@@ -30,7 +30,7 @@ describe("ticketWorktreesRemoveAllCommand", () => {
             removeWorktree,
           },
         },
-      }),
+      })),
     );
 
     expect(result).toEqual({ removed: 1 });
@@ -44,7 +44,7 @@ test.each([
 ] as const)("ticket worktrees %s includes Git worktrees and excludes other providers", async (command) => {
   const storage = createMemoryStorage();
   const ticket = await createTicketCommand.run(
-    ...makeCommandArgs({ storage, params: { title: "Provider ownership" } }),
+    ...(await workspaceArgs({ storage, params: { title: "Provider ownership" } })),
   );
   const targets = [
     {
@@ -64,7 +64,7 @@ test.each([
     anchors_json: [{ type: "ticket", id: ticket.id, label: ticket.shorthand }],
   }));
   const removed: string[] = [];
-  const args = makeCommandArgs({
+  const args = await workspaceArgs({
     storage,
     params: { id: ticket.id },
     overrides: {
@@ -79,7 +79,7 @@ test.each([
   });
 
   if (command === "list") {
-    expect(await ticketWorktreesListCommand.run(...args)).toEqual([
+    expect((await ticketWorktreesListCommand.run(...args)).items).toEqual([
       { workspace: "git", branch: "feature", path: "/git" },
     ]);
     return;
@@ -90,7 +90,7 @@ test.each([
 
 test("bulk worktree cleanup refuses shared worktrees before removing any workspace", async () => {
   const storage = createMemoryStorage();
-  const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "One" } }));
+  const ticket = await createTicketCommand.run(...(await workspaceArgs({ storage, params: { title: "One" } })));
   const anchor = { type: "ticket", id: ticket.id, shorthand: ticket.shorthand };
   const exclusive: ExtensionWorkspace = {
     id: "exclusive",
@@ -108,7 +108,7 @@ test("bulk worktree cleanup refuses shared worktrees before removing any workspa
     anchors_json: [anchor, { type: "ticket", id: "other-ticket", shorthand: "T-2" }],
   };
   const removed: string[] = [];
-  const args = makeCommandArgs({
+  const args = await workspaceArgs({
     storage,
     params: { id: ticket.id },
     overrides: {
@@ -125,6 +125,9 @@ test("bulk worktree cleanup refuses shared worktrees before removing any workspa
   expect(removed).toEqual([]);
 
   shared.anchors_json = [anchor];
+  await args[0].resources.removeAnchors({ type: "workspace", id: shared.id, extensionId: "pstdio" }, [
+    { type: "ticket", id: "other-ticket", extensionId: "pstdio.pstdio-planner" },
+  ]);
   expect(await ticketWorktreesRemoveAllCommand.run(...args)).toEqual({ removed: 2 });
-  expect(removed).toEqual(["exclusive", "shared"]);
+  expect(removed.sort()).toEqual(["exclusive", "shared"]);
 });

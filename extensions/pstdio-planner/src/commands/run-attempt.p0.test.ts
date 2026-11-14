@@ -335,7 +335,15 @@ describe("runAttemptCommand guarded launches", () => {
         ...makeCommandArgs({
           storage,
           params: { ticket: ticket.shorthand },
-          overrides: { sessions: { get: async () => createSessionResource() } as never },
+          overrides: {
+            sessions: {
+              get: async () => createSessionResource(),
+              query: async () => ({
+                items: ["running-1", "running-2"].map((id) => ({ ...createSessionResource(), id: `session-${id}` })),
+                nextCursor: null,
+              }),
+            } as never,
+          },
         }),
       ),
     ).rejects.toThrow("2 attempts");

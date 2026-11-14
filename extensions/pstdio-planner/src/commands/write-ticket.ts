@@ -6,12 +6,13 @@ import {
   ticketToMarkdown,
   writeTicketMarkdown,
 } from "../data/draft-storage";
-import { readMigratedTickets } from "../data/read-migrated-tickets";
+import { appendTicketPositionFromStorage } from "../data/indexed-ticket-order";
+import { ensureTicketStorage } from "../data/read-migrated-tickets";
 import { resolveStatusId, resolveTagOptionIds, resolveTicketId } from "../data/resolve";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
 import { ticketTagsForIds } from "../data/tag-cardinality";
 import { allocateTicketIdentity } from "../data/ticket-identity";
-import { appendTicketPosition, withTicketOrder } from "../data/ticket-order";
+import { withTicketOrder } from "../data/ticket-order";
 
 // `pst pstdio.pstdio-planner write-ticket`: create a draft ticket in extension storage and lay down its
 // local `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/<shorthand>/ticket.md` via the host file primitive. The
@@ -49,8 +50,8 @@ export const writeTicketCommand = defineCommand({
     const parentId = commandParams.parent !== undefined ? await resolveTicketId(ctx, commandParams.parent) : null;
 
     const ticket = await withTicketOrder(ctx, async () => {
-      const existing = await readMigratedTickets(ctx);
-      const position = appendTicketPosition(ctx.storage, existing);
+      await ensureTicketStorage(ctx);
+      const position = await appendTicketPositionFromStorage(ctx.storage);
       return putTicket(ctx, {
         id,
         title: commandParams.title,

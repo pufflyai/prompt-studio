@@ -20,7 +20,7 @@ test("reconciles an existing dependency-only blocker after its prerequisite was 
     changes.push({ event, payload });
     return { delivered: 0 };
   };
-  expect(await reconcileDependencyBlockers(ctx)).toEqual([child.id]);
+  expect(await reconcileDependencyBlockers(ctx)).toBe(1);
   expect(await ticketsCollection(storage).get(child.id)).toMatchObject({
     statusId: "ready",
     blockedReason: null,
@@ -28,7 +28,7 @@ test("reconciles an existing dependency-only blocker after its prerequisite was 
   });
   expect((await nextTicketsCommand.run(ctx, {})).tickets.map(({ id }) => id)).toContain(child.id);
   expect(changes).toEqual([{ event: plannerTicketsChanged, payload: {} }]);
-  expect(await reconcileDependencyBlockers(ctx)).toEqual([]);
+  expect(await reconcileDependencyBlockers(ctx)).toBe(0);
   expect(changes).toHaveLength(1);
 });
 
@@ -42,20 +42,14 @@ test("keeps a new independent blocker edited after reconciliation listed the tic
     ...child,
     blockedReason: `Complete ${parent.shorthand} before implementing this dependent contract.`,
   });
-  const list = collection.list.bind(collection);
-  collection.list = async () => {
-    const listed = await list();
+  const query = storage.records.query.bind(storage.records);
+  storage.records.query = async (input) => {
+    const selected = await query(input);
     await collection.put(child.id, { ...child, title: "Edited", blockedReason: "Needs contract-owner approval" });
-    return listed;
+    return selected;
   };
-  const context = {
-    ...ctx,
-    storage: {
-      ...storage,
-      collection: (name: string) => (name === "tickets" ? collection : storage.collection(name)) as never,
-    },
-  };
-  expect(await reconcileDependencyBlockers(context)).toEqual([]);
+  const context = ctx;
+  expect(await reconcileDependencyBlockers(context)).toBe(0);
   expect(await collection.get(child.id)).toMatchObject({
     title: "Edited",
     blockedReason: "Needs contract-owner approval",
@@ -88,7 +82,7 @@ test("clears a dependency-only blocker before its prerequisite is done and keeps
     ...child,
     blockedReason: `Complete ${parent.shorthand} before implementing this dependent contract.`,
   });
-  expect(await reconcileDependencyBlockers(ctx)).toEqual([child.id]);
+  expect(await reconcileDependencyBlockers(ctx)).toBe(1);
   expect(await ticketsCollection(storage).get(child.id)).toMatchObject({ blockedReason: null, dependsOn: [parent.id] });
   expect((await nextTicketsCommand.run(ctx, {})).waiting).toContainEqual(
     expect.objectContaining({ id: child.id, reason: "dependency-not-ready" }),
