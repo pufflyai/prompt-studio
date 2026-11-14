@@ -46,6 +46,14 @@ export const isCollectionViewDirty = <TSettings>(
   return comparable(view) !== comparable(state);
 };
 
+/** Saves edits to a view. Built-in views are read-only, so edits to one become the user's own copy. */
+export const saveCollectionView = <TSettings>(
+  source: CollectionViewsSource<TSettings>,
+  view: CollectionSavedView<TSettings> & { builtIn: boolean },
+  state: CollectionViewState<TSettings>,
+  createView: (input: Parameters<CollectionViewsSource<TSettings>["onCreateView"]>[0]) => Promise<void>,
+) => (view.builtIn ? createView({ title: `${view.title} copy`, ...state }) : source.onUpdateView(view.id, state));
+
 export interface CollectionViewsInput<TSettings> {
   storageKey: string;
   fields?: AttributeDescriptor[];
