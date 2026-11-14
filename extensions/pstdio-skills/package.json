@@ -2,11 +2,11 @@
   "name": "pstdio-skills",
   "version": "0.45.2",
   "displayName": "Prompt Studio Skills",
-  "description": "Built-in Prompt Studio skills for using Prompt Studio and authoring extensions.",
+  "description": "Browse project skills and read their instructions and supporting files.",
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.3.0 || ^0.4.0 || ^0.5.0"
+    "pstdio": "^0.4.0 || ^0.5.0"
   },
   "pstdio": {
     "scope": "user"
@@ -15,19 +15,21 @@
   "type": "module",
   "scripts": {
     "typecheck": "bun check",
-    "lint": "bun run typecheck"
+    "lint": "bun run typecheck",
+    "test": "bun test"
   },
   "dependencies": {
-    "@pstdio/sdk": "0.46.0-preview.sha-2c2b2e4c6b144c418cc048219c56553afe938bf4"
-  },
-  "devDependencies": {
-    "@types/bun": "1.4.4",
-    "typescript": "6.0.2",
-    "@pstdio/ui": "0.46.0-preview.sha-2c2b2e4c6b144c418cc048219c56553afe938bf4",
+    "@pstdio/sdk": "0.47.1-nightly.20261113030235",
+    "@pstdio/ui": "0.47.1-nightly.20261113030235",
     "@chakra-ui/react": "3.32.0",
     "@emotion/react": "^11.0.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "yaml": "2.9.0"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.4",
+    "typescript": "6.0.2",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0"
   },

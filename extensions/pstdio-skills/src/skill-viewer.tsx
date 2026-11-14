@@ -1,18 +1,12 @@
-import { Box, Flex, Spinner, Stack, Tabs, Text } from "@chakra-ui/react";
+import { Box, Flex, Stack, Tabs, Text } from "@chakra-ui/react";
+import type { Skill } from "@pstdio/sdk/resources";
 import { ScrollArea, TreeList, type TreeListNavigateEvent, useFileIconThemePreference } from "@pstdio/ui";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
 import { useEffect, useState } from "react";
-import type { ProjectSkillDetails } from "../data/skills-api";
-import { useProjectSkill } from "../data/use-skills";
-import { buildSkillFileTree, collectFolderIds } from "../utils/build-skill-file-tree";
-import { parseSkillMetadata } from "../utils/parse-skill-metadata";
+import { buildSkillFileTree, collectFolderIds } from "./build-skill-file-tree";
+import { parseSkillMetadata } from "./parse-skill-metadata";
 
-interface SkillViewerProps {
-  projectId: string | undefined;
-  skillName: string;
-}
-
-type SkillFile = ProjectSkillDetails["files"][number];
+type SkillFile = Skill["files"][number];
 
 const getDefaultFilePath = (files: SkillFile[]) => {
   return files.find((file) => file.path === "SKILL.md")?.path ?? files[0]?.path ?? "";
@@ -20,7 +14,7 @@ const getDefaultFilePath = (files: SkillFile[]) => {
 
 const isMarkdown = (path: string) => path.toLowerCase().endsWith(".md");
 
-export const SkillViewerContent = (props: { skill: ProjectSkillDetails }) => {
+export const SkillViewerContent = (props: { skill: Skill }) => {
   const { skill } = props;
   const { activeFileIconTheme } = useFileIconThemePreference();
   const treeNodes = buildSkillFileTree(skill.files, activeFileIconTheme);
@@ -89,13 +83,7 @@ export const SkillViewerContent = (props: { skill: ProjectSkillDetails }) => {
           </ScrollArea>
         </Tabs.Content>
         <Tabs.Content value="files" flex="1" minH="0" p="0" overflow="hidden">
-          <ScrollArea
-            h="full"
-            minH="0"
-            viewportProps={{ style: { overflowX: "hidden" } }}
-            contentProps={{ style: { minWidth: "100%", width: "100%" } }}
-            data-testid="project-skill-file-tree"
-          >
+          <ScrollArea h="full" minH="0" data-testid="project-skill-file-tree">
             <TreeList
               sections={sections}
               expandedSectionIds={["files"]}
@@ -143,39 +131,4 @@ export const SkillViewerContent = (props: { skill: ProjectSkillDetails }) => {
       </ScrollArea>
     </Flex>
   );
-};
-
-export const SkillViewer = (props: SkillViewerProps) => {
-  const { projectId, skillName } = props;
-  const { data: skill, isLoading, error } = useProjectSkill(projectId, skillName);
-
-  if (isLoading) {
-    return (
-      <Flex h="full" minH="0" flex="1" justifyContent="center" alignItems="center" padding="lg">
-        <Spinner />
-      </Flex>
-    );
-  }
-
-  if (error) {
-    return (
-      <Flex h="full" minH="0" flex="1" justifyContent="center" alignItems="center" padding="lg">
-        <Text textStyle="paragraph/S/regular" color="fg.muted">
-          {error instanceof Error ? error.message : "Failed to load skill."}
-        </Text>
-      </Flex>
-    );
-  }
-
-  if (!skill) {
-    return (
-      <Flex h="full" minH="0" flex="1" justifyContent="center" alignItems="center" padding="lg">
-        <Text textStyle="paragraph/S/regular" color="fg.muted">
-          Skill not found.
-        </Text>
-      </Flex>
-    );
-  }
-
-  return <SkillViewerContent skill={skill} />;
 };

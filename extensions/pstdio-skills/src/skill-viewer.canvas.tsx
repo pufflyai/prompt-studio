@@ -1,10 +1,10 @@
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
-import { FileIconThemePreferenceProvider, SettingsPage } from "@pstdio/ui";
-import type { ProjectSkillDetails } from "../data/skills-api";
+import type { SkillWithContent } from "@pstdio/sdk/resources";
+import { FileIconThemePreferenceProvider } from "@pstdio/ui";
 import { SkillViewerContent } from "./skill-viewer";
 
 const meta: CanvasMeta<typeof SkillViewerContent> = {
-  title: "Product/Settings/Skills",
+  title: "Extensions/Skills/Browser",
   component: SkillViewerContent,
   fullscreen: true,
   description:
@@ -13,9 +13,7 @@ const meta: CanvasMeta<typeof SkillViewerContent> = {
     (Story) => (
       <FileIconThemePreferenceProvider>
         <div style={{ height: "640px" }}>
-          <SettingsPage title="Create Ticket" contentLayout="full-width">
-            <Story />
-          </SettingsPage>
+          <Story />
         </div>
       </FileIconThemePreferenceProvider>
     ),
@@ -23,7 +21,7 @@ const meta: CanvasMeta<typeof SkillViewerContent> = {
 };
 export default meta;
 type Story = CanvasFrame<typeof SkillViewerContent>;
-const baseSkill: ProjectSkillDetails = {
+const baseSkill: SkillWithContent = {
   deleted_at: null,
   id: "skill-1",
   project_id: "project-1",
@@ -52,27 +50,11 @@ const baseSkill: ProjectSkillDetails = {
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",
 };
-const installation = (agentId: string, agentName: string) => ({
-  agent_id: agentId,
-  agent_name: agentName,
-  installed_version: "1.2.0",
-});
-// Workspace provisioning copies the skill into each agent's skill folder.
 export const InstalledExtensionSkill: Story = {
   id: "projectsettings-skillviewer--installed-extension-skill",
-  args: {
-    skill: {
-      ...baseSkill,
-      agent_installations: [
-        installation("pstdio.harness-claude-code.harness.claude-code", "claude-code"),
-        installation("pstdio.harness-codex.harness.codex", "codex"),
-      ],
-    },
-  },
+  args: { skill: baseSkill },
 };
 export const NotInstalledSkill: Story = {
   id: "projectsettings-skillviewer--not-installed-skill",
-  args: {
-    skill: { ...baseSkill, installed_agents: [], agent_installations: [] },
-  },
+  args: { skill: { ...baseSkill } },
 };

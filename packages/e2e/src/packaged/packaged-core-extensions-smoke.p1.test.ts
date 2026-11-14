@@ -122,6 +122,20 @@ test(
       expect(metadata.pages).toContainEqual(
         expect.objectContaining({ extensionId: "pstdio.pstdio-home", path: "home" }),
       );
+      expect(metadata.navigationItems).toContainEqual(
+        expect.objectContaining({ extensionId: "pstdio.pstdio-skills", slot: "footer" }),
+      );
+      const skillView = metadata.views.find(
+        (view) => view.extensionId === "pstdio.pstdio-skills" && view.localId === "skill",
+      );
+      expect(skillView?.body.kind).toBe("webview");
+      if (skillView?.body.kind === "webview") {
+        const module = await fetch(`${started.baseUrl}${skillView.body.webview.moduleUrl}`, {
+          headers: runtimeAuthorization(started.descriptor),
+        });
+        expect(module.status).toBe(200);
+        expect(await module.text()).not.toBe("");
+      }
       const installedSessionsMetadata = await expectPackagedSessionsInstall({
         started,
         tempRoot,

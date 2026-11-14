@@ -1,7 +1,5 @@
-import { Spinner } from "@chakra-ui/react";
 import { standardResourceIcons, type WorkbenchModuleContext, type WorkbenchPanelRenderInput } from "@pstdio/workbench";
 import { WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "@pstdio/workbench/react";
-import { lazy, Suspense } from "react";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId, getDashboardSelectedProjectName } from "@/shared/app/project-context";
 import { dashboardEditableTemplatesContextKey } from "@/shared/extensions/workbench-extension-contributions";
@@ -12,14 +10,11 @@ import { ProjectDangerZone } from "./components/project-danger-zone";
 import { ProjectFolderPanel } from "./components/project-folder-panel";
 import { RuntimeSettingsPanel } from "./components/runtime-settings-panel";
 import { TemplateSettingsEditor } from "./components/template-settings-editor";
-import { getProjectSkills, type ProjectSkill } from "./data/skills-api";
 import {
   getProjectTemplateAssets,
   type ProjectTemplateAsset,
   templateTypesForProject,
 } from "./data/template-provider-api";
-
-const SkillViewer = lazy(() => import("./components/skill-viewer").then((module) => ({ default: module.SkillViewer })));
 
 // The default settings entry opened by the command/sidenav. It is global, so it
 // stays reachable even when no project is selected.
@@ -29,7 +24,6 @@ const settingsViewIds = {
   runtime: "dashboard.settings.runtime",
   appearance: "dashboard.settings.appearance",
   projectFolder: "dashboard.settings.project-folder",
-  skill: "dashboard.settings.skill",
   template: "dashboard.settings.template",
   machineTokens: "dashboard.settings.machine-tokens",
   dangerZone: "dashboard.settings.danger-zone",
@@ -93,22 +87,6 @@ export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleConte
     body: {
       kind: "react",
       render: () => <ProjectFolderPanel projectId={getDashboardSelectedProjectId(ctx)} />,
-    },
-  });
-  ctx.views.registerView({
-    id: settingsViewIds.skill,
-    title: "Skill",
-    body: {
-      kind: "react",
-      layout: "full-width",
-      render: (input) => {
-        const skill = settingsItem<ProjectSkill>(input, "skills");
-        return skill ? (
-          <Suspense fallback={<Spinner />}>
-            <SkillViewer projectId={getDashboardSelectedProjectId(ctx)} skillName={skill.name} />
-          </Suspense>
-        ) : null;
-      },
     },
   });
   ctx.views.registerView({
@@ -184,23 +162,6 @@ export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleConte
     order: 20,
     icon: "GitBranch",
     viewId: settingsViewIds.projectFolder,
-  });
-
-  ctx.settings.registerPanel<ProjectSkill>({
-    kind: "collection",
-    viewId: settingsViewIds.skill,
-    id: "skills",
-    title: "Skills",
-    section: "project",
-    scope: "project",
-    order: 30,
-    icon: "Sparkles",
-    items: () => {
-      const projectId = getDashboardSelectedProjectId(ctx);
-      return projectId ? getProjectSkills(projectId) : [];
-    },
-    itemId: (skill) => skill.name,
-    itemLabel: (skill) => skill.title || skill.name,
   });
 
   ctx.settings.registerPanel<ProjectTemplateAsset>({

@@ -16,6 +16,10 @@
   "include": [
     "extension.ts",
     "skills/create-pstdio-extension/references/examples/**/*.ts",
-    "skills/create-pstdio-extension/references/examples/**/*.tsx"
-  ]
+    "skills/create-pstdio-extension/references/examples/**/*.tsx",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "*.test.ts"
+  ],
+  "exclude": ["src/**/*.canvas.tsx", ".canvas"]
 }

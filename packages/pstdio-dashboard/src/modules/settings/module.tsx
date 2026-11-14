@@ -43,7 +43,7 @@ const registerSettingsSidenavs = (ctx: WorkbenchModuleContext) => {
 };
 
 // The settings slice registers the dashboard's settings entries against the
-// shared workbench settings surface. The surface owns the full-window overlay,
+// shared workbench settings surface. The surface owns the settings overlay,
 // its navigation, and the presenter — the dashboard only adds project scope, the
 // sidenav entry points, and a command to open it.
 export const createSettingsModule = () =>
@@ -59,10 +59,7 @@ export const createSettingsModule = () =>
       registerSettingsSidenavs(ctx);
       ctx.keybindings.registerKeybinding({ action: createSettingsFooterNode().target, keybinding: "Mod+," });
 
-      for (const [key, panelId, label] of [
-        ["I", "appearance", "Appearance settings"],
-        ["S", "skills", "Inspect contributed skills"],
-      ])
+      for (const [key, panelId, label] of [["I", "appearance", "Appearance settings"]])
         ctx.keybindings.registerKeybinding({
           action: { kind: "command", commandId: WORKBENCH_SETTINGS_OPEN_COMMAND_ID, args: { panelId } },
           keybinding: key!,

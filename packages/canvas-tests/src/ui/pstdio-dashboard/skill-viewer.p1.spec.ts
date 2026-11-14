@@ -5,7 +5,7 @@ import { openCanvasPreview } from "../preview";
 test("skill Info and Files tabs preserve frontmatter metadata and the selected file", async ({ page }) => {
   const preview = await openCanvasPreview(
     page,
-    "packages/pstdio-dashboard/src/modules/settings/components/skill-viewer.canvas.tsx#InstalledExtensionSkill",
+    "extensions/pstdio-skills/src/skill-viewer.canvas.tsx#InstalledExtensionSkill",
   );
   await expect(preview.getByRole("tab", { name: "Info", exact: true })).toHaveAttribute("aria-selected", "true");
   const metadata = preview.getByTestId("project-skill-metadata");
