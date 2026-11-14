@@ -18,7 +18,7 @@ import type { Ticket } from "../data/types";
 import { notifyProposalRefined, resolveProposalRefinedNotification } from "../planner-notifications";
 import { ticketMenuSlots } from "../resource-kinds";
 
-const openActionSession = (
+export const openActionSession = (
   ctx: Pick<CommandContext, "navigation">,
   session: { id: string; title?: string; status?: string },
 ) => {

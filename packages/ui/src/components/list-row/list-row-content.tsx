@@ -51,6 +51,7 @@ const resolveLabelColor = (input: {
 }) => {
   if (input.isEmptyStateVariant) return "fg.menu-item.secondary";
   if (input.isDisabled) return "fg.muted";
+  if (input.tone === "muted") return "fg.subtle";
   if (input.tone === "danger") return "red.500";
   return "fg";
 };
@@ -146,7 +147,8 @@ const RowContent = (props: RowContentProps & { labelId: string; onToggleExpand?:
     isDisabled,
     tone,
   });
-  const iconColor = item.iconColor ?? (tone === "danger" ? "red.500" : "fg.muted");
+  const defaultIconColor = tone === "muted" ? "fg.subtle" : "fg.muted";
+  const iconColor = item.iconColor ?? (tone === "danger" ? "red.500" : defaultIconColor);
   const descriptionColor = tone === "danger" ? "red.400" : "fg.menu-item.secondary";
 
   return (

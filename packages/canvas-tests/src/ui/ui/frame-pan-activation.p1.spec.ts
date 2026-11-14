@@ -57,3 +57,43 @@ test("a fresh pointer gesture after a pan activates its control", async ({ page 
   await preview.getByRole("button", { name: "New folder", exact: true }).click();
   await expect(preview.getByRole("textbox", { name: "New folder name" })).toBeVisible();
 });
+
+// Critical: keyboard activation during a pan must not enable the pan's trailing pointer click.
+test("keyboard activation during a pan preserves drag click suppression", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/list-row/list-row-hover-content.canvas.tsx#NarrowNavigation",
+  );
+  const activations = preview.getByRole("status", { name: "Action activations" });
+  await expect(activations).toHaveText("0");
+  await preview.getByText("Hover or focus a row. Hidden actions release label space; the count stays visible.").click();
+  await expect(
+    preview
+      .locator("body")
+      .evaluate((body) =>
+        Boolean(
+          body.ownerDocument.activeElement?.closest(
+            'input,textarea,button,select,[contenteditable],a[href],[role="combobox"]',
+          ),
+        ),
+      ),
+  ).resolves.toBe(false);
+  await preview.getByRole("option", { name: "Workspaces", exact: true }).first().hover();
+  const button = preview.getByRole("button", { name: "New workspace", exact: true }).first();
+  await button.hover();
+  const bounds = (await button.boundingBox())!;
+  await page.keyboard.down("Space");
+  await page.mouse.down();
+  await page.mouse.move(bounds.x + bounds.width / 2 + 12, bounds.y + bounds.height / 2 + 5, { steps: 3 });
+  // Releasing Space does not end the captured pan; do it before focusing the button.
+  await page.keyboard.up("Space");
+  await button.press("Enter");
+  await expect(activations).toHaveText("1");
+  await page.mouse.up();
+  await preview
+    .locator("body")
+    .evaluate(
+      () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
+    );
+  await expect(activations).toHaveText("1");
+});

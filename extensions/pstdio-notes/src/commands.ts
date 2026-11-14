@@ -37,12 +37,13 @@ export const createNoteCommand = defineCommand({
     folderId: params.text({ label: l10n("params.folder", "Folder") }),
   },
   async run(ctx, commandParams) {
+    const { writable } = await notesFileAccess(ctx);
     if (commandParams.folderId) await requireFolder(notesMount(ctx), commandParams.folderId);
     const note = await createNote(notesMount(ctx), ctx.storage.ids.create(), commandParams.title);
     if (commandParams.folderId) await moveNote(notesMount(ctx), note.id, commandParams.folderId);
     await ctx.events.emit(notesChanged, { noteId: note.id });
 
-    ctx.navigation.open(noteTarget(note.id, note.title, ctx));
+    ctx.navigation.open(noteTarget(note.id, note.title, ctx, writable));
     return note;
   },
 });

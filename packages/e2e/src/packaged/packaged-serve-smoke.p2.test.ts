@@ -26,6 +26,7 @@ import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 // packaged-core-extensions-smoke.p1.test.ts installs the production Sessions provider with local public artifacts,
 // runs CLI dev -> add --force with package-local dependencies and unavailable authoring source,
 // then checks Main/Side native declarations and durable text/files through compiled-host command handlers.
+// It also hides session workspace presentation while Workspaces is disabled, preserving device and execution context.
 // packaged-native-terminal.p1.test.ts opens an installed SDK native terminal through the compiled host and existing PTY transport.
 // Also checks native harness controls and their structured values in packaged command handlers.
 // packaged-claude-plan-smoke.p2.test.ts checks Claude plan review through the live question channel.
@@ -53,6 +54,7 @@ import { expectPackagedNativeMarkdown, writeNativeMarkdownExtension } from "./pa
 // packaged-notes-page.p2.spec.ts checks immediate palette creation, Notes creation cards, Add actions, and page-owned Main tabs across navigation and reload.
 // packaged-planner-timeline-smoke.ts checks side-panel attention actions without leaving the board or timeline.
 // packaged-planner-smoke.p2.test.ts checks manual recovery of missing stopped work with Auto Build disabled.
+// packaged-planner-commands-smoke.ts checks the Cleanup board command and shipped editable prompt.
 // performance-observer.p2.test.ts checks native CPU units and memory through the compiled observer's direct startup path.
 // packaged-core-extensions-smoke.p1.test.ts checks Onboarding's setup contribution and bundled webview.
 // packaged-core-extensions-smoke.p1.test.ts installs Workspaces, its native resource list and file document routes through packed SDK/UI/workbench.

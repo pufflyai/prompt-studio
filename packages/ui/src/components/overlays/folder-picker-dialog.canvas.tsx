@@ -33,7 +33,7 @@ const meta = {
   title: "Design system/Components/Overlays/Folder picker/Overview",
   component: FolderPickerDialog,
   description:
-    "Open a project in an existing folder or create a folder first. The host owns navigation and creation. Hidden folders start hidden; press Cmd/Ctrl+Shift+. to toggle them. Matches the folder picker states in Pencil node LmcML.",
+    "Open a project in an existing folder or create a folder first. Selecting a tall preview keeps its Theme control reachable. The host owns navigation and creation. Hidden folders start hidden; press Cmd/Ctrl+Shift+. to toggle them. Matches the folder picker states in Pencil node LmcML.",
   args: {
     open: true,
     currentPath: "/Users/alex/Documents",

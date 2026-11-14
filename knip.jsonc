@@ -403,7 +403,14 @@
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "extensions/pstdio-cloud": {
-      "entry": ["package.json", "extension.ts", "src/**/*.test.ts", "src/{status,details,settings}-view.tsx"],
+      "entry": [
+        "package.json",
+        "extension.ts",
+        "src/**/*.test.ts",
+        "src/**/*.canvas.tsx",
+        "src/.canvas/**/*.{ts,tsx}",
+        "src/{status,details,settings}-view.tsx"
+      ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "extensions/pstdio-performance": {

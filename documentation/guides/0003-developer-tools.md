@@ -98,7 +98,7 @@ Disable the extension. The meter and its details disappear. Sampling, the frame 
 - **Shared processes:** when several extensions share one process, their row names all of them and shows the process total once. That row has no Pause button, and its number cannot tell which extension is busy.
 - **Frame names are not proof.** Row names come from the addresses of the frames each process hosts. An extension that navigates its own frame can change the name shown for it.
 - **Needs an open project.** Extension controls load with a project. With no project open, or in a project where the extension is disabled, the status bar shows no meter, even while monitoring is on. Open a project with the extension to see or change it.
-- **No palette commands.** Extension commands run in the runtime, which cannot read this device's measurements. Open the details from the meter instead.
+- **Device measurements stay local.** Runtime commands cannot read this device's measurements. Use `pst performance` for those; backend diagnostic commands capture the connected runtime instead.
 - **Windows** reports no idle wakeups; the snapshot marks them unavailable. Private memory is reported only on Windows.
 - **Long tasks only:** a renderer without long-animation-frame support reports long tasks without script names.
 - **Agents cannot turn monitoring on.** Only a loaded monitoring extension on this device turns it on.
@@ -110,6 +110,8 @@ Monitoring samples Electron's process metrics every 2 seconds. It keeps at most 
 The packaged desktop benchmarks measure the idle workbench with monitoring off and on; see [Tests](development/0002-testing.md#desktop-benchmarks).
 
 ## Runtime capture
+
+For explicit CPU profiling and function-call counts, use **Backend diagnostics** in the Performance details or the matching `pst pstdio.pstdio-performance diagnostics` commands. See the [Performance Monitoring README](../../extensions/pstdio-performance/README.md#for-agents) for start, list, read, cancel and export. These short captures run inside the backend as cancellable automation jobs. They keep raw profiles and memory readings on the runtime machine, including source paths, separately from the sanitized device capture below. Reading or opening the tool does not start a profiler. The temporary repository `runtime-diagnostic` extension has been retired; its previously saved files are preserved.
 
 Desktop snapshots use schema version 2 and keep the version-1 fields used by the existing meter. The `capture` field adds a capture id, host version, platform, timestamps, actual sample gaps, and a rolling history of at most 150 samples and 512 KiB. `pst performance` prints this same capture.
 

@@ -9,7 +9,7 @@ import { prepareCommandSubscription } from "../../extensions/command-stream-subs
 import type { ExtensionsRouteDeps } from "../../extensions/deps";
 import { streamNativeDocumentEvents } from "../../native-documents/shared-stream";
 import { streamTextEditingEvents } from "../../text-editing/shared-stream";
-import { streamWorkspaceDiffChanges } from "../../workspaces/workspace-diff-stream";
+import { streamWorkspaceChanges } from "../../workspaces/workspace-change-stream";
 import type { SessionsRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
 import type { SessionEventSink, SessionStreamConnections } from "../session-stream-connections";
@@ -43,6 +43,12 @@ export const subscribeSessionStreamRoute = createRoute({
       content: {
         "application/json": {
           schema: z.union([
+            z
+              .object({
+                subscription_id: z.string().min(1),
+                workspace_files: z.object({ project_id: z.string().min(1), workspace_id: z.string().min(1) }).strict(),
+              })
+              .strict(),
             z
               .object({
                 subscription_id: z.string().min(1),
@@ -124,9 +130,15 @@ export const subscribeSessionStreamHandler = (
   return async (c) => {
     const { connectionId } = c.req.valid("param");
     const input = c.req.valid("json");
+    if ("workspace_files" in input) {
+      const started = connections.subscribe(connectionId, input.subscription_id, (sink) =>
+        streamWorkspaceChanges(deps, input.workspace_files, sink, "files"),
+      );
+      return subscriptionResponse(c, connectionId, started);
+    }
     if ("workspace_diff" in input) {
       const started = connections.subscribe(connectionId, input.subscription_id, (sink) =>
-        streamWorkspaceDiffChanges(deps, input.workspace_diff, sink),
+        streamWorkspaceChanges(deps, input.workspace_diff, sink, "diff"),
       );
       return subscriptionResponse(c, connectionId, started);
     }

@@ -1,3 +1,4 @@
+import { test as causalTest } from "../helpers/causal-evidence-test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { expect, mergeTests, test as sessionTest } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
@@ -6,7 +7,7 @@ import { installShortcutReferenceExtension } from "./helpers/shortcut-reference-
 import { showSidenavEntry } from "./helpers/sidenav-navigation";
 import { changeThemeThroughCommandPalette } from "./helpers/theme-picker";
 
-const test = mergeTests(notificationTest, sessionTest);
+const test = mergeTests(notificationTest, sessionTest, causalTest);
 test.use({ notificationsEnabled: true });
 
 test("the fullscreen shortcut toggles from editing and completes shortcut mode", async ({ page, request }) => {
@@ -306,12 +307,18 @@ test("changes and saves the theme through the command palette", { tag: "@smoke" 
   await changeThemeThroughCommandPalette(page);
 });
 
-test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async ({ page, request }) => {
+test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async ({
+  page,
+  request,
+  causalEvidence,
+}) => {
+  causalEvidence.mark("project-create:started");
   const response = await request.post(`${apiBase}/v1/projects`, {
     data: folderProjectInput({ name: "Shortcut defaults" }),
   });
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
+  causalEvidence.mark("project-create:completed", { projectId: project.id });
   await installShortcutReferenceExtension(request, apiBase, project.id);
   await page.goto(`/projects/${project.id}/tickets`);
   await expect(page.getByRole("option", { name: /^Notes/ }).first()).toBeVisible({ timeout: 30_000 });
@@ -357,14 +364,18 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
   await expect(ticketForm.getByText("Properties", { exact: true })).toBeVisible();
   await ticketForm.locator('[contenteditable="true"]').first().fill("# Shortcut ticket");
   await ticketForm.getByRole("button", { name: "Create ticket", exact: true }).click();
+  causalEvidence.mark("ticket-create:clicked");
   await expect(ticketForm).not.toBeVisible();
   await expect(page.getByRole("tab", { name: /Shortcut ticket/ }).first()).toBeVisible();
   await page.getByRole("button", { name: "Help", exact: true }).focus();
+  causalEvidence.mark("workspace-shortcut:started");
   await page.keyboard.press("Alt+Shift+Space");
   await page.keyboard.press("c");
   await page.keyboard.press("w");
+  causalEvidence.mark("workspace-shortcut:dispatched");
   const workspaceForm = page.frameLocator('iframe[title="Workspace action"]');
   await expect(workspaceForm.getByText("Create workspace", { exact: true }).first()).toBeVisible();
+  causalEvidence.mark("workspace-dialog:visible");
   await workspaceForm.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(page.locator('iframe[title="Workspace action"]')).not.toBeVisible();
   await page.getByRole("button", { name: "Help", exact: true }).click();
