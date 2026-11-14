@@ -1,3 +1,4 @@
+import { demoSeed } from "./src/demo-seed";
 import {
   defineCommandPaletteResource,
   defineExtension,
@@ -143,6 +144,7 @@ export default defineExtension({
   },
 
   commands: [
+    demoSeed,
     ...plannerCommands,
     ...plannerKeyboardCommands,
     ...Object.values(timelineCommands),
