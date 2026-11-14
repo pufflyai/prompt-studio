@@ -23,6 +23,42 @@ const runtimeFor = (names: [string, string]) =>
     })),
   );
 
+test("collection indexes are scoped and ready before the first extension query", async () => {
+  const connection = await createDb({ path: ":memory:" });
+  try {
+    const project = await createProjectsDBService(connection.db).create({ name: "Scoped collection indexes" });
+    const service = createExtensionStorageDBService(connection.db);
+    const runtime = runtimeFor(["requests", "unused"]);
+    runtime.extensions[0].definition.storageIndexes = [
+      {
+        name: "requests",
+        collection: "requests",
+        fields: { ticketId: { path: ["ticketId"], type: "string" } },
+        equality: ["ticketId"],
+      },
+    ];
+    await installExtensionStorageIndexes(service, project.id, runtime);
+    const storage = await service.open({ owner: { workbenchId: project.id, extensionId: "example.index-0" } });
+    const addresses = [
+      ["project", project.id, "collection", "requests", "one"],
+      ["project", project.id, "collection", "attempts", "two"],
+      ["resource", "another", "collection", "requests", "three"],
+    ].map((parts) => JSON.stringify(parts));
+    await storage.records.commit({
+      operationId: "seed",
+      edits: addresses.map((recordId) => ({ recordId, replace: { value: { ticketId: "selected" }, sortOrder: null } })),
+    });
+    const page = await storage.records.query({
+      index: "requests",
+      where: { field: "ticketId", op: "eq", value: "selected" },
+    });
+    expect(page.records.map(({ recordId }) => recordId)).toEqual([addresses[0]]);
+    expect(page.records[0].fields).toEqual({ ticketId: "selected" });
+  } finally {
+    await connection.close();
+  }
+});
+
 test("failed multi-extension index installation preserves every previous runtime query", async () => {
   const connection = await createDb({ path: ":memory:" });
   try {

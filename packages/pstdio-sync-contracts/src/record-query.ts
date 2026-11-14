@@ -9,6 +9,8 @@ export interface StorageIndexField {
 
 export interface StorageRecordIndex {
   name: string;
+  /** Extension collection in the selected scope; field paths are relative to its items. */
+  collection?: string;
   /** Selectable fields. Declaring a field does not make it an equality key. */
   fields: Record<string, StorageIndexField>;
   /** Explicit equality keys preceding the sort keys. Defaults to no equality keys. */

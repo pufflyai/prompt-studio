@@ -1,3 +1,4 @@
+import { resolveCollectionIndexes } from "pstdio-api-contracts";
 import { createMemoryDocumentStore, type DocumentStore } from "pstdio-sync";
 import {
   createDocumentStorage,
@@ -47,7 +48,7 @@ export const createMemoryRecordOwner = (
       add(["project", owner.workbenchId, "collection", name], id, { value, sortOrder: null });
   ordered.seed(initial);
   const queries = createMemoryRecordQueries(owner, baseStore, ordered);
-  const initialized = queries.defineIndexes(seed.indexes ?? []);
+  const initialized = queries.defineIndexes(resolveCollectionIndexes(seed.indexes ?? [], "project", owner.workbenchId));
   const store: DocumentStore = {
     transaction: async (target, action) => {
       await initialized;

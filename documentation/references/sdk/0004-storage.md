@@ -127,6 +127,35 @@ An optional complete-address `prefix` restricts the index to a namespace or
 collection. Record methods otherwise cover the whole extension owner across scopes.
 The host supplies the owner; callers cannot query another extension or workbench.
 
+For an existing collection, set `collection` on its index definition. Its field
+paths are relative to the collection item. The host resolves addresses in the
+selected storage scope, keeping other collections and scopes out of the index.
+Declare these in `storageIndexes` to install them before commands become available;
+the first action must not build indexes. Do not parse opaque record addresses.
+This addition requires extension API 0.4.1 and a matching SDK build.
+`readCollectionRecords` reads up to 100 opaque addresses from a query page and
+returns collection values in request order, with `undefined` for missing or
+deleted rows. It requires an SDK build that exports this helper.
+
+```ts
+import { readCollectionRecords } from "@pstdio/sdk/data";
+
+const index = {
+  name: "requests-by-ticket",
+  collection: "requests",
+  fields: { ticketId: { path: ["ticketId"], type: "string" } },
+  equality: ["ticketId"],
+};
+await ctx.storage.records.defineIndexes([index]);
+const page = await ctx.storage.records.query({
+  index: index.name,
+  where: { field: "ticketId", op: "eq", value: ticketId },
+  fields: [],
+  limit: 100,
+});
+const values = await readCollectionRecords(ctx.storage, page.records.map(({ recordId }) => recordId));
+```
+
 Predicates use `{ field, op, value }`, nested `{ all: [...] }`, `{ any: [...] }`,
 or `{ not: predicate }`. Negation is the boolean complement, including for missing
 and null fields: negating a failed comparison matches those records.
@@ -388,4 +417,4 @@ the synced extension owns migrations, or a published extension's Cloud membershi
 This is a fresh policy read, not a stored flag. Ordinary edits still use the
 existing publication write permissions.
 
-*Updated at: 2026-11-07*
+*Updated at: 2026-11-14*
