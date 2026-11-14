@@ -1,5 +1,5 @@
 import { normalizeHotkey } from "@tanstack/hotkeys";
-import { withNamedKeyCase } from "pstdio-api-contracts/keyboard-chords";
+import { withNamedKeyCase } from "pstdio-api-contracts";
 
 export type ReservedKeybindingPlatform = "mac" | "linux" | "win";
 

@@ -1,5 +1,5 @@
 import { parseHotkey } from "@tanstack/hotkeys";
-import { typesText, withNamedKeyCase } from "pstdio-api-contracts/keyboard-chords";
+import { typesText, withNamedKeyCase } from "pstdio-api-contracts";
 import type { ContextKeyService } from "../../shared/context/context-key-service";
 import {
   byContributionPriority,

@@ -1,6 +1,6 @@
 import type { JsonObject, KeybindingContribution, WhenExpression } from "@pstdio/sdk/extensions";
 import { normalizeHotkey, parseHotkey, validateHotkey } from "@tanstack/hotkeys";
-import { typesText, withNamedKeyCase } from "pstdio-api-contracts/keyboard-chords";
+import { typesText, withNamedKeyCase } from "pstdio-api-contracts";
 import type { NormalizedExtension, ParsedKeybindingChord, RuntimeKeybindingRecord } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
