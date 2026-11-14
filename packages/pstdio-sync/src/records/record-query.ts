@@ -23,19 +23,22 @@ export const typedFieldValue = (value: Json, field: StorageIndexField) => {
   if (current == null) return current;
   if (field.type === "array")
     return Array.isArray(current) && current.every((item) => typeof item === "string") ? current : undefined;
+  if (field.type === "object") return typeof current === "object" && !Array.isArray(current) ? current : undefined;
   return typeof current === field.type ? current : undefined;
 };
 
 const validateIndex = (index: StorageRecordIndex) => {
   if (!Object.keys(index.fields).length) throw new Error("An index needs fields");
   for (const [name, field] of Object.entries(index.fields)) {
-    if (!name || !["string", "number", "boolean", "array"].includes(field.type)) throw new Error("Invalid index field");
+    if (!name || !["string", "number", "boolean", "array", "object"].includes(field.type))
+      throw new Error("Invalid index field");
     if (!field.path.length || field.path.some((part) => typeof part !== "string" || !part))
       throw new Error("Invalid field path");
   }
   for (const name of [...(index.equality ?? []), ...(index.orderBy ?? []).map((sort) => sort.field)]) {
     if (!Object.hasOwn(index.fields, name)) throw new Error(`Unknown index field: ${name}`);
-    if (index.fields[name].type === "array") throw new Error("Array fields cannot order a page");
+    if (["array", "object"].includes(index.fields[name].type))
+      throw new Error("Array and object fields cannot order a page");
   }
   for (const sort of index.orderBy ?? [])
     if (sort.direction !== "asc" && sort.direction !== "desc") throw new Error("Invalid sort direction");
@@ -60,12 +63,24 @@ const validateOperator = (field: StorageIndexField, predicate: Extract<StoragePr
     throw new Error("Case-insensitive equality requires a string field");
   if (predicate.op === "contains" && field.type !== "string" && field.type !== "array")
     throw new Error("Contains requires a string or array field");
-  if (field.type === "array" && ["gt", "gte", "lt", "lte"].includes(predicate.op))
-    throw new Error("Array fields do not support ordering predicates");
+  if (predicate.op === "hasKey" && field.type !== "object") throw new Error("Key existence requires an object field");
+  if (["array", "object"].includes(field.type) && ["gt", "gte", "lt", "lte"].includes(predicate.op))
+    throw new Error("Array and object fields do not support ordering predicates");
   if (
-    !["eq", "ne", "gt", "gte", "lt", "lte", "contains", "equalsIgnoreCase", "textContains", "in", "notIn"].includes(
-      predicate.op,
-    )
+    ![
+      "eq",
+      "ne",
+      "gt",
+      "gte",
+      "lt",
+      "lte",
+      "contains",
+      "equalsIgnoreCase",
+      "textContains",
+      "in",
+      "notIn",
+      "hasKey",
+    ].includes(predicate.op)
   )
     throw new Error("Unsupported query predicate");
 };
@@ -76,7 +91,8 @@ const validatePredicateValues = (field: StorageIndexField, predicate: Extract<St
   for (const value of values) {
     if (value === null && predicate.op !== "contains" && predicate.op !== "equalsIgnoreCase") continue;
     const type = Array.isArray(value) ? "array" : typeof value;
-    const expected = predicate.op === "contains" && field.type === "array" ? "string" : field.type;
+    const expected =
+      predicate.op === "hasKey" || (predicate.op === "contains" && field.type === "array") ? "string" : field.type;
     if (type !== expected) throw new Error(`Query value must be ${expected}`);
     if (Array.isArray(value) && value.some((item) => typeof item !== "string"))
       throw new Error("Query arrays contain strings");
@@ -85,7 +101,7 @@ const validatePredicateValues = (field: StorageIndexField, predicate: Extract<St
 };
 
 const validateScalarTextPredicate = (field: StorageIndexField, value: Json) => {
-  if (field.type === "array") throw new Error("Text contains requires a scalar field");
+  if (["array", "object"].includes(field.type)) throw new Error("Text contains requires a scalar field");
   if (typeof value !== "string") throw new Error("Query value must be string");
 };
 
@@ -158,6 +174,13 @@ const matchesFieldPredicate = (
   const actual = typedFieldValue(value, queryField(index, predicate.field));
   const empty = actual == null || actual === "" || (Array.isArray(actual) && !actual.length);
   switch (predicate.op) {
+    case "hasKey":
+      return (
+        actual !== null &&
+        typeof actual === "object" &&
+        !Array.isArray(actual) &&
+        Object.hasOwn(actual, String(predicate.value))
+      );
     case "exists":
       return actual !== undefined;
     case "missing":

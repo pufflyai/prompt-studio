@@ -43,7 +43,8 @@ export const recordFieldSql = (index: StorageRecordIndex, name: string) => {
       ? sql`AND NOT jsonb_path_exists(${value}, ${sqlLiteral(`$[*] ? (@.type() != "string" && !exists(@.${JSON.stringify(projectionStringTag)}))`)})`
       : sql``;
   const encodedString = field.type === "string" ? sql`OR ${value} ? ${sqlLiteral(projectionStringTag)}` : sql``;
-  return sql`(CASE WHEN (${sql.join(parents, sql` AND `)}) AND (${value} = 'null'::jsonb OR (jsonb_typeof(${value}) = ${sqlLiteral(type)} ${validArray}) ${encodedString}) THEN ${value} ELSE NULL END)`;
+  const validObject = field.type === "object" ? sql`AND NOT (${value} ? ${sqlLiteral(projectionStringTag)})` : sql``;
+  return sql`(CASE WHEN (${sql.join(parents, sql` AND `)}) AND (${value} = 'null'::jsonb OR (jsonb_typeof(${value}) = ${sqlLiteral(type)} ${validArray} ${validObject}) ${encodedString}) THEN ${value} ELSE NULL END)`;
 };
 export const sortFieldSql = (index: StorageRecordIndex, name: string) => {
   const value = sql`nullif(${recordFieldSql(index, name)}, 'null'::jsonb)`;
@@ -51,7 +52,7 @@ export const sortFieldSql = (index: StorageRecordIndex, name: string) => {
 };
 
 export const arrayIndexFields = (index: StorageRecordIndex) =>
-  Object.entries(index.fields).filter(([, field]) => field.type === "array");
+  Object.entries(index.fields).filter(([, field]) => field.type === "array" || field.type === "object");
 
 const equalityKey = (value: SQL) => sql`md5((${value})::text)`;
 const equalityPredicate = (index: StorageRecordIndex, field: string, comparable: SQL, value: Json) =>
@@ -98,6 +99,8 @@ const fieldPredicateSql = (index: StorageRecordIndex, predicate: Extract<Storage
   const comparable = sql`coalesce(${field}, 'null'::jsonb)`;
   const empty = sql`(${field} IS NULL OR ${field} IN ('null'::jsonb, '""'::jsonb, '[]'::jsonb))`;
   switch (predicate.op) {
+    case "hasKey":
+      return sql`${field} ? ${projectionKey(String(predicate.value))}`;
     case "exists":
       return sql`${field} IS NOT NULL`;
     case "missing":

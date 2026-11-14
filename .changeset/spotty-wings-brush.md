@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Install collection-scoped indexes before extension commands become available, and add batch reads for indexed collection results.
+Keep extension work bounded with collection-scoped indexes, indexed batch reads and conditional field saves, object-key selection, distinct related-resource pages, scoped workspace queries, and paged local and remote session history.

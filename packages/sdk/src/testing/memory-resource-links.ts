@@ -1,5 +1,6 @@
 import type {
   ExtensionResourcesApi,
+  RelatedResourceQuery,
   ResourceAnchor,
   ResourceAnchorQuery,
   ResourceRef,
@@ -15,6 +16,34 @@ const withSavedPresentation = <T extends ResourceRef>(reference: T, saved: Resou
     }),
   ),
 });
+const relatedReferences = (
+  query: RelatedResourceQuery,
+  refs: Set<string>,
+  edges: Map<string, Edge>,
+  identity: (ref: ResourceRef) => string,
+) => {
+  const direction = query.direction ?? "outgoing";
+  const found = new Map<string, ResourceRef>();
+  const save = (ref: ResourceRef) => {
+    if (query.excludeKinds?.includes(ref.type)) return;
+    if ((!query.kind || ref.type === query.kind) && (!query.owner || ref.extensionId === query.owner))
+      found.set(identity(ref), ref);
+  };
+  for (const { source, target } of edges.values()) {
+    if (query.role && target.role !== query.role) continue;
+    if (direction !== "outgoing" && refs.has(identity(target))) save(source);
+  }
+  for (const { source, target } of edges.values()) {
+    if (query.role && target.role !== query.role) continue;
+    if (direction !== "incoming" && refs.has(identity(source))) {
+      const { role: _role, ...ref } = target;
+      save(ref);
+    }
+  }
+
+  return found;
+};
+
 export const createMemoryResourceLinks = (input: {
   projectId: string;
   extensionId: string;
@@ -77,6 +106,31 @@ export const createMemoryResourceLinks = (input: {
   } satisfies Pick<ExtensionResourcesApi, "addAnchors" | "removeAnchors" | "listAnchors" | "removed">;
   return {
     ...api,
+    queryRelated: async (query: RelatedResourceQuery) => {
+      if (query.resources.length > 100) throw new Error("Query at most 100 resources.");
+      const limit = query.limit ?? 100;
+      if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new Error("Limit must be between 1 and 100.");
+      const refs = new Set(query.resources.map((ref) => identity(canonical(ref))));
+      const scope = JSON.stringify([
+        [...refs].sort(),
+        query.direction ?? "outgoing",
+        query.role,
+        query.kind,
+        query.owner,
+        query.excludeKinds,
+      ]);
+      const after = query.cursor ? JSON.parse(query.cursor) : undefined;
+      if (after && (after.scope !== scope || typeof after.key !== "string"))
+        throw new Error("Invalid related resource cursor.");
+      const found = relatedReferences(query, refs, input.edges, identity);
+      const ordered = [...found]
+        .filter(([key]) => !after || key > after.key)
+        .sort(([a], [b]) => (a < b ? -1 : Number(a !== b)));
+      return {
+        items: ordered.slice(0, limit).map(([, ref]) => ref),
+        nextCursor: ordered.length > limit ? JSON.stringify({ scope, key: ordered[limit - 1]![0] }) : null,
+      };
+    },
     resolveMany: async () => [],
     queryAnchorsMany: async (query: Omit<ResourceAnchorQuery, "resource"> & { resources: ResourceRef[] }) => {
       if (query.resources.length > 100) throw new Error("Query at most 100 resources.");

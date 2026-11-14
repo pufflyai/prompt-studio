@@ -35,3 +35,13 @@ export const resourceAnchorsQuerySchema = resourceAnchorQuerySchema.omit({ resou
 });
 
 export const resourceAnchorQueryPageSchema = resourceAnchorPageSchema.extend({ nextCursor: z.string().nullable() });
+
+export const relatedResourceQuerySchema = resourceAnchorsQuerySchema.extend({
+  excludeKinds: z.array(z.string().min(1)).max(100).optional(),
+  kind: z.string().min(1).optional(),
+  owner: z.string().min(1).optional(),
+});
+export const relatedResourcePageSchema = z.object({
+  items: z.array(resourceLinkRefSchema),
+  nextCursor: z.string().nullable(),
+});

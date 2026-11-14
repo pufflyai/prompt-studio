@@ -4,7 +4,7 @@ import type { Json } from "./json";
 export interface StorageIndexField {
   /** A path within the record value. */
   path: string[];
-  type: "string" | "number" | "boolean" | "array";
+  type: "string" | "number" | "boolean" | "array" | "object";
 }
 
 export interface StorageRecordIndex {
@@ -26,7 +26,7 @@ export type StoragePredicate =
   | { not: StoragePredicate }
   | {
       field: string;
-      op: "eq" | "ne" | "gt" | "gte" | "lt" | "lte" | "contains" | "equalsIgnoreCase" | "textContains";
+      op: "eq" | "ne" | "gt" | "gte" | "lt" | "lte" | "contains" | "equalsIgnoreCase" | "textContains" | "hasKey";
       value: Json;
     }
   | { field: string; op: "in" | "notIn"; value: Json[] }

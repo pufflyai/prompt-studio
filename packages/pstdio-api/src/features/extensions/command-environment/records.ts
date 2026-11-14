@@ -51,6 +51,10 @@ export const createExtensionRecordsApi = (
       const owned = structuredClone(group);
       return (await records()).commit(owned);
     },
+    commitIfCurrent: async (group) => {
+      const owned = structuredClone(group);
+      return (await records()).commitIfCurrent(owned);
+    },
     outcome: (id) => read(async () => (await records()).outcome(id)),
     conflicts: () => read(async () => (await records()).conflicts()),
     inspect: (id) => read(async () => (await records()).inspect(id)),

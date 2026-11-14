@@ -1,6 +1,7 @@
 import { resolveCollectionIndexes } from "pstdio-api-contracts";
 import { createMemoryDocumentStore, type DocumentStore } from "pstdio-sync";
 import {
+  commitCurrentBatch,
   createDocumentStorage,
   createLegacyRecordStorage,
   createMemoryRecordQueries,
@@ -8,7 +9,7 @@ import {
   scopeRecordStorage,
   storageRecordId,
 } from "pstdio-sync/records";
-import type { StorageRecordIndex, StorageTextDeclaration } from "pstdio-sync-contracts";
+import type { StorageCurrentGroup, StorageRecordIndex, StorageTextDeclaration } from "pstdio-sync-contracts";
 import type { createMemoryAssets } from "./memory-assets";
 import { createOrderedMemoryRecords, type OrderedMemoryState } from "./ordered-memory-records";
 
@@ -66,6 +67,8 @@ export const createMemoryRecordOwner = (
       throw new Error("Records merge automatically; there are no conflicts to resolve");
     },
   };
+  const transaction = <T>(run: (value: typeof locked) => Promise<T>) =>
+    store.transaction(owner, async () => run(locked));
   const records = {
     ...queries,
     read: (id: string) => store.transaction(owner, async () => locked.read(id)),
@@ -78,7 +81,8 @@ export const createMemoryRecordOwner = (
     conflicts: locked.conflicts,
     inspect: locked.inspect,
     resolve: locked.resolve,
-    transaction: <T>(run: (value: typeof locked) => Promise<T>) => store.transaction(owner, async () => run(locked)),
+    transaction,
+    commitIfCurrent: (group: StorageCurrentGroup) => commitCurrentBatch({ transaction }, group),
   };
   const legacy = createLegacyRecordStorage({ records });
   return {

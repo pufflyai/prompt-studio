@@ -6,6 +6,7 @@ import { storage_personal_history_positions as positions } from "../../db/schema
 import { createPersonalIndexCache } from "./personal-history-index-cache";
 import { applyPersonalIndexRows } from "./personal-history-index-rows";
 import { applyPendingPersonalIndex } from "./personal-history-pending";
+import { queryPersonalSessions, queryPersonalWorkspaces } from "./personal-history-queries";
 import {
   acceptPersonalSource,
   personalPendingPage,
@@ -49,6 +50,8 @@ export const createPersonalHistoryIndex = (db: DbClient) => {
     current.apply(applied);
   };
   return {
+    querySessions: queryPersonalSessions.bind(null, db),
+    queryWorkspaces: queryPersonalWorkspaces.bind(null, db),
     apply: (owner: StorageOwner, cursor: string | null, changes: PersonalIndexDelta[], pendingId?: string) =>
       apply(
         owner,
