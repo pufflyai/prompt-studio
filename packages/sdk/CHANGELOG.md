@@ -1,5 +1,15 @@
 # @pstdio/sdk
 
+## 0.47.1
+
+_2026-11-14_
+
+### Patch Changes
+
+- 69efa88: Recover stalled Cloud sources safely and show source phases and named file transfer activity.
+- ccae1c5: Observe workspace files, expose Git-ignore decorations, and retain expanded tree rows while selection refreshes, and let extension commands use the host delete confirmation.
+- a2e8cbb: Recover dropped page requests silently while retaining loaded content.
+
 ## 0.47.0
 
 _2026-11-12_

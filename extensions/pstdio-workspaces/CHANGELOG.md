@@ -1,5 +1,20 @@
 # pstdio-workspaces
 
+## 0.2.1
+
+_2026-11-14_
+
+### Patch Changes
+
+- de66f90: Hide session workspace information when Workspaces is unavailable and refresh open conversations when tools change.
+- b510245: Prepare bundled extensions for API 0.5 without dropping their existing host ranges, and return Planner, Reports and Artifacts paths and links using the host-provided owner.
+
+  Use publisher-qualified Planner and Reports commands in shipped skills, prompts, help examples and documentation so agent instructions also work after the API 0.5 shortcut removal.
+
+  Keep ticket page ancestry and fresh draft ignore rules on the host-provided owner, including timeline rows, pulls and workspace provisioning.
+
+- f28e72e: Keep file trees current, show Git-ignored entries subdued, create entries from the background menu, and use the host's native file deletion confirmation.
+
 ## 0.2.0
 
 _2026-11-12_
