@@ -117,16 +117,21 @@ export const CollectionViewTabs = <TSettings,>(props: CollectionViewTabsProps<TS
     setDrop(undefined);
   };
 
+  // Built-in views are read-only: they can be duplicated but not renamed or deleted.
   const actionsFor = (view: CollectionSavedView<TSettings> & { builtIn: boolean }): ResourceContextAction[] =>
     viewsSource
       ? [
-          {
-            key: "rename",
-            label: "Rename",
-            isDisabled: busy,
-            icon: <Icon as={Pencil} boxSize="0.875rem" />,
-            onClick: () => setRenameTarget(view),
-          },
+          ...(view.builtIn
+            ? []
+            : [
+                {
+                  key: "rename",
+                  label: "Rename",
+                  isDisabled: busy,
+                  icon: <Icon as={Pencil} boxSize="0.875rem" />,
+                  onClick: () => setRenameTarget(view),
+                },
+              ]),
           {
             key: "duplicate",
             label: "Duplicate",
@@ -139,18 +144,22 @@ export const CollectionViewTabs = <TSettings,>(props: CollectionViewTabsProps<TS
                   filter: view.filter,
                   sorts: view.sorts,
                   title: `${view.title} copy`,
-                  copyFrom: view.id,
+                  copyFrom: view.builtIn ? undefined : view.id,
                 }),
               ),
           },
-          {
-            key: "delete",
-            label: "Delete view",
-            icon: <Icon as={Trash2} boxSize="0.875rem" />,
-            isDisabled: views.length === 1 || busy,
-            separatorBefore: true,
-            onClick: () => run(() => viewsSource.onDeleteView(view.id)),
-          },
+          ...(view.builtIn
+            ? []
+            : [
+                {
+                  key: "delete",
+                  label: "Delete view",
+                  icon: <Icon as={Trash2} boxSize="0.875rem" />,
+                  isDisabled: views.length === 1 || busy,
+                  separatorBefore: true,
+                  onClick: () => run(() => viewsSource.onDeleteView(view.id)),
+                },
+              ]),
         ]
       : [];
 
