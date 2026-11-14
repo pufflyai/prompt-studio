@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import type { StorageRecordIndex } from "pstdio-api-contracts/extension-kernel";
 
 const workspace = process.argv[4];
 const source = process.argv[2];
@@ -95,7 +96,7 @@ try {
     ...memory,
     records: {
       ...nativeRecords,
-      defineIndexes: async (indexes) =>
+      defineIndexes: async (indexes: StorageRecordIndex[]) =>
         nativeRecords.defineIndexes(resolveCollectionIndexes(indexes, "project", fixture.projectAId)),
       readMany: async (ids: string[]) => {
         const values = await nativeRecords.readMany(ids);
@@ -114,7 +115,7 @@ try {
       list: async () => {
         const values = await fixture.svc.listCollection({ ...scope, collection: name });
         counted(name, values);
-        return values.map((item) => item.value_json);
+        return values.map((item: { value_json: unknown }) => item.value_json);
       },
     }),
   };
@@ -124,8 +125,9 @@ try {
     projectId: fixture.projectAId,
     overrides: {
       resources: {
-        identity: async ({ id }) => ({ id, kind: "ticket", shorthand: `T-${id}`, aliases: [] }),
-        identityMany: async ({ ids }) => ids.map((id) => ({ id, kind: "ticket", shorthand: `T-${id}`, aliases: [] })),
+        identity: async ({ id }: { id: string }) => ({ id, kind: "ticket", shorthand: `T-${id}`, aliases: [] }),
+        identityMany: async ({ ids }: { ids: string[] }) =>
+          ids.map((id) => ({ id, kind: "ticket", shorthand: `T-${id}`, aliases: [] })),
       },
       workspaces: { list: async () => [], listProviders: async () => [] },
       sessions: { query: async () => ({ items: [], nextCursor: null }) },
