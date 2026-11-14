@@ -57,6 +57,11 @@ export function RequestForm(props: RequestFormProps) {
         </Text>
       ) : null}
       <Text textStyle="label/M/medium">{request.title}</Text>
+      <Text textStyle="label/S/regular" color="fg.muted">
+        <time dateTime={request.requestedAt}>
+          {new Date(request.requestedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
+        </time>
+      </Text>
       <Instructions text={request.instructions} />
       {request.state === "cancelled" ? <Text color="fg.muted">{request.outcomeText}</Text> : null}
       {request.state === "answered" ? (

@@ -16,7 +16,7 @@ const task: ReviewRequestView = {
   title: "Check the preview",
   instructions: "Open the preview and confirm its layout.",
   request: { kind: "task" },
-  requestedAt: "2026-10-10T09:00:00.000Z",
+  requestedAt: "2026-11-14T08:30:00.000Z",
   requestedBy: agent,
   context,
   state: "open",
@@ -27,6 +27,7 @@ const decision: ReviewRequestView = {
   ...task,
   id: "decision",
   title: "Choose the release scope",
+  requestedAt: "2026-11-13T15:45:00.000Z",
   instructions: "Choose the scope and describe any limits.",
   request: {
     kind: "decision",
@@ -101,13 +102,13 @@ const handoff: ReviewRequestView = {
 const answered: ReviewRequestView = {
   ...task,
   state: "answered",
-  outcome: { kind: "answered", at: "2026-10-10T10:00:00.000Z", by: person, response: { confirmed: true } },
+  outcome: { kind: "answered", at: "2026-11-14T10:00:00.000Z", by: person, response: { confirmed: true } },
   outcomeText: "Completion confirmed",
 };
 const cancelled: ReviewRequestView = {
   ...decision,
   state: "cancelled",
-  outcome: { kind: "cancelled", at: "2026-10-10T10:00:00.000Z", by: person, reason: "The release scope changed." },
+  outcome: { kind: "cancelled", at: "2026-11-14T10:00:00.000Z", by: person, reason: "The release scope changed." },
   outcomeText: "Cancelled: The release scope changed.",
 };
 const answeredDecision: ReviewRequestView = {
@@ -115,7 +116,7 @@ const answeredDecision: ReviewRequestView = {
   state: "answered",
   outcome: {
     kind: "answered",
-    at: "2026-10-10T10:00:00.000Z",
+    at: "2026-11-14T10:00:00.000Z",
     by: person,
     response: { answers: { scope: "preview", platforms: ["mac"], limits: "Internal project first." } },
   },
