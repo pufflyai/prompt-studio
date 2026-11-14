@@ -24,7 +24,7 @@ test("projects own editable Home sources and keep their customizations through s
       const listed = await request.get(`/v1/projects/${project.id}/extensions`);
       expect(listed.ok()).toBe(true);
       const { extensions } = (await listed.json()) as ListProjectExtensionsResponse;
-      const home = extensions.find((extension) => extension.extensionId === "pstdio.pstdio-home")!;
+      const home = extensions.find((extension) => extension.extensionId === "pstdio.home")!;
       expect(home).toBeTruthy();
       expect(home.scope).toBe("repo");
       expect(home.sourcePath).toBe(

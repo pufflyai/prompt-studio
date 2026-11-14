@@ -207,7 +207,7 @@ test("keeps typing in the same editor when the first line names a new note", asy
   try {
     // Keep the real resolver result pending until typing begins, so access metadata
     // arriving later cannot rely on request timing to avoid a document reload.
-    await page.route("**/extensions/commands/pstdio.pstdio-notes.command.notes.resolve/execute", async (route) => {
+    await page.route("**/extensions/commands/pstdio.notes.command.notes.resolve/execute", async (route) => {
       const resolved = await route.fetch();
       resolutionReady.resolve();
       await releaseResolution.promise;
