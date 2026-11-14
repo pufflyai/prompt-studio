@@ -1,6 +1,6 @@
-import { Button, Flex, Text } from "@chakra-ui/react";
+import { Button, Flex } from "@chakra-ui/react";
 import type { ChatDraft, ChatRendererSnapshot, ControlValueMap } from "@pstdio/sdk/extensions";
-import { HarnessControls } from "@pstdio/ui/chat-ui";
+import { type ChatInputQuestionPrompt, type ChatInputQuestionResponse, HarnessControls } from "@pstdio/ui/chat-ui";
 import { ParamEditor } from "@pstdio/ui/param-editor";
 import { controlValueSchema } from "pstdio-api-contracts";
 import type { ReactNode } from "react";
@@ -121,27 +121,37 @@ export const NativeChatControls = (props: NativeChatControlsProps) => {
   );
 };
 
-export const NativeChatApproval = (props: { run: ChatSession["run"]; conversation: ChatRendererSnapshot }) => {
-  const { run, conversation } = props;
+/** Tool approvals take over the composer with the same form as agent questions. Skip denies. */
+export const nativeChatApproval = (
+  conversation: ChatRendererSnapshot,
+  run: ChatSession["run"],
+  reportError: ChatSession["reportError"],
+) => {
   const approval = conversation.approval;
-  if (!approval) return null;
-  return (
-    <Flex direction="column" gap="xs">
-      <Text>{approval.title}</Text>
-      <Flex gap="xs">
-        {approval.choices.map((choice) => (
-          <Button
-            key={choice.id}
-            size="xs"
-            disabled={conversation.readOnly}
-            onClick={() => void run({ type: "approve", id: approval.id, choice: choice.id }).catch(() => undefined)}
-          >
-            {choice.label}
-          </Button>
-        ))}
-      </Flex>
-    </Flex>
-  );
+  if (!approval) return undefined;
+  const prompt: ChatInputQuestionPrompt = {
+    // Its own call ID keeps an approval answer from reaching an agent question.
+    callId: `approval:${approval.id}`,
+    questions: [
+      { question: approval.title, options: approval.choices.map(({ label }) => ({ label })), required: true },
+    ],
+  };
+  return {
+    prompt,
+    answer: async (response: ChatInputQuestionResponse) => {
+      const label = response.answers[0]?.[0];
+      const choice = approval.choices.find((item) =>
+        label === undefined ? item.id === "deny" : item.label === label,
+      )?.id;
+      if (!choice) {
+        // Not every extension offers Deny, so say why Skip did nothing instead of resetting silently.
+        const error = new Error("This request has no Deny choice. Choose an answer to continue.");
+        reportError(error);
+        throw error;
+      }
+      await run({ type: "approve", id: approval.id, choice });
+    },
+  };
 };
 
 export const nativeChatCommands = (
