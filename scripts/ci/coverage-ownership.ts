@@ -15,8 +15,11 @@ const artifactCli = new Set([
 // Narrowing these files requires extracting and qualifying the native replacement first.
 const nativeCli = new Set([
   "extension-smoke",
+  "packaged-linked-webview-smoke",
+  "packaged-linked-dependency-smoke",
   "codex-transport",
   "runtime-lifecycle",
+  "packaged-runtime-autostart",
   "extension-browser-install",
   "harness-npm-detection",
   "harness-native-probe-fixture",

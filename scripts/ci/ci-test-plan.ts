@@ -94,7 +94,7 @@ export const createCiTestPlan = (
       (JSON.parse(row.files) as string[]).map((file) => `packages/e2e/${file}`),
       { shard: row.shard },
     );
-  if (scope.production && !scope.windowsOnly && scope.harnessCli)
+  if (scope.production && !scope.diagnosticPlatform && scope.harnessCli)
     add(
       "cli",
       tests.filter((file) => testRunner(file) === "cli" && priorityFromFile(file) !== "P3"),

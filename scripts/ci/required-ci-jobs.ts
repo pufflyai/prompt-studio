@@ -16,9 +16,9 @@ const quarantinePlan = (scope: Scope) => {
   const names = scope.quarantineBunOs.map((os) => `quarantined_bun_tests (${os})`);
   return [
     ...(names.length ? [{ id: "quarantined_bun_tests", priority: "P2" as const, count: names.length, names }] : []),
-    ...(scope.windowsOnly || !scope.quarantineBunOs.length
+    ...(scope.diagnosticPlatform === "win32" || !scope.quarantineBunOs.length
       ? []
-      : ["quarantined_browser_tests", "quarantined_native_ui_tests"]
+      : ["quarantined_native_ui_tests", ...(!scope.diagnosticPlatform ? ["quarantined_browser_tests"] : [])]
     ).map((id) => ({
       id,
       priority: "P2" as const,
@@ -28,7 +28,7 @@ const quarantinePlan = (scope: Scope) => {
   ];
 };
 
-const linuxCliSelected = (scope: Scope) => scope.harnessCli && !scope.windowsOnly;
+const linuxCliSelected = (scope: Scope) => scope.harnessCli && !scope.diagnosticPlatform;
 
 export const plannedCiJobs = (scope: Scope) => {
   const jobs: PlannedJob[] = [];

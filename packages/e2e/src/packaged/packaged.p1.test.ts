@@ -3,7 +3,6 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { cleanupDirs, createGitRepo } from "../cli/helpers";
-import { getFreePort } from "../cli/start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "../cli/timeouts";
 import { PSTDIO_E2E_DEFAULT_EXTENSIONS } from "../default-extensions";
 import { buildBinary, PACKAGED_BINARY_PATH, runPackagedAsync, runPackagedSafe } from "./packaged-helpers";
@@ -47,7 +46,7 @@ beforeAll(async () => {
   );
   // Transport readiness intentionally precedes background default preparation.
   // This shared runtime's sixteen cold installs belong to its existing setup hook;
-  // the separate auto-start case still creates its runtime inside the test.
+  // Native auto-start owns a separate cold runtime in packaged-runtime-autostart.p1.test.ts.
   const stopped = () => prepared.reject(new Error("Packaged runtime stopped before default preparation completed"));
   api.child.once("close", stopped);
   try {
@@ -115,41 +114,6 @@ describe("packaged pstdio — project lifecycle", () => {
 
       const output = await run(["--version"], repo);
       expect(output.trim()).toMatch(/\d+\.\d+\.\d+/);
-    },
-    TEST_TIMEOUT,
-  );
-});
-
-describe("packaged pstdio — auto-start", () => {
-  test(
-    "keeps the detached API alive after the launcher exits",
-    async () => {
-      const port = await getFreePort();
-      const url = `http://localhost:${port}`;
-      const repo = createGitRepo();
-      const homePath = mkdtempSync(join(tmpdir(), "pstdio-packaged-autostart-home-"));
-      dirs.push(repo, homePath);
-
-      try {
-        const output = await runPackagedAsync(["projects", "create", "packaged-autostart"], repo, {
-          PSTDIO_API_PORT: String(port),
-          PSTDIO_API_URL: url,
-          PSTDIO_DB_PATH: ":memory:",
-          PSTDIO_DISABLE_API_AUTO_START: "0",
-          PSTDIO_HOME: homePath,
-          PSTDIO_LOG_LEVEL: "info",
-          PSTDIO_STORAGE_PATH: join(homePath, "storage"),
-        });
-        expect(output).toContain("packaged-autostart");
-
-        for (let request = 0; request < 3; request += 1) {
-          const response = await fetch(`${url}/healthz`);
-          expect(response.ok).toBe(true);
-          await Bun.sleep(50);
-        }
-      } finally {
-        runPackagedSafe("close", repo, { PSTDIO_HOME: homePath });
-      }
     },
     TEST_TIMEOUT,
   );

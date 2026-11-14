@@ -9,7 +9,7 @@ export const windowsSourceContract = (file: string, root = resolve(import.meta.d
   if (/pglite-(lock|current-home)|rename-pglite-home|file-watch|watcher|symlink/.test(file))
     return { group: "filesystem-storage", reason: "Native filesystem watching, locking, rename and cleanup" };
   if (
-    /windows|win32|process-command|process-tree|terminal-interrupt|performance-endpoint|shell-environment|credential/.test(
+    /windows|win32|process-command|process-tree|process-observer|native-capture|terminal-interrupt|performance-endpoint|shell-environment|credential/.test(
       file,
     )
   )

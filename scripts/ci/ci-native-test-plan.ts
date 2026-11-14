@@ -84,13 +84,14 @@ export const nativeCiRequests = (scope: Scope, tests: string[]) => {
       extra: { target, lane: "quarantine" },
     });
   }
-  if (!scope.windowsOnly && scope.quarantineBunOs.length) {
+  if (scope.diagnosticPlatform !== "win32" && scope.quarantineBunOs.length) {
     for (const [job, target, runner] of [
       ["quarantine-ui-native", { platform: "darwin", arch: "arm64" }, "playwright-ui"],
       ["quarantine-browser", { platform: "linux", arch: "x64" }, "playwright-ui"],
       ["quarantine-browser", { platform: "linux", arch: "x64" }, "playwright"],
     ] as const)
-      requests.push({ job, files: quarantineFiles(runner, target), extra: { target, lane: "quarantine" } });
+      if (!scope.diagnosticPlatform || target.platform === scope.diagnosticPlatform)
+        requests.push({ job, files: quarantineFiles(runner, target), extra: { target, lane: "quarantine" } });
   }
   for (const row of scope.toolchainMatrix) {
     const [, platform, arch] = row.platform_pkg.split("-");

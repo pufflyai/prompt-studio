@@ -94,7 +94,7 @@ test("Windows diagnostics keep focused contracts and reject signed or nightly pu
   const scope = resolveCiScope({ ...input, profile: "windows" });
   expect(scope).toMatchObject({
     production: true,
-    windowsOnly: true,
+    diagnosticPlatform: "win32",
     windows: true,
     packageChecks: false,
     databaseTests: false,

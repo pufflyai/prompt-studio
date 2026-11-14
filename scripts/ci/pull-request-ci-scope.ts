@@ -1,6 +1,7 @@
 import { appendFileSync, readFileSync } from "node:fs";
 import { basename } from "node:path";
 import { changedFiles } from "./changed-files";
+import { diagnosticScope } from "./ci-diagnostic-scope";
 import { affectedPackages } from "./ci-packages";
 import { createCiTestPlan } from "./ci-test-plan";
 import { selectIntegrationFiles } from "./coverage-ownership";
@@ -106,7 +107,7 @@ const requiredEditedRows = (
   return selectEditedTests(edited, input.packages, covered).filter((row) => row.platform === "linux");
 };
 
-const resolveBaseScope = (input: CiScopeInput) => {
+export const resolveBaseScope = (input: CiScopeInput) => {
   const { event, changedFiles, packages, tests, profile, releaseChannel = "stable", signedCandidate = false } = input;
   for (const file of tests) priorityFromFile(file);
   const production = productionProfile(event, profile);
@@ -202,74 +203,11 @@ const resolveBaseScope = (input: CiScopeInput) => {
 };
 
 export const resolveCiScope = (input: CiScopeInput) => {
-  const windowsOnly = input.profile === "windows";
-  if (windowsOnly && input.signedCandidate)
-    throw new Error("Windows diagnostics cannot certify a signed release candidate");
-  if (windowsOnly && input.releaseChannel && input.releaseChannel !== "stable")
-    throw new Error("Windows diagnostics require the stable Windows lanes");
-  const scope = resolveBaseScope(windowsOnly ? { ...input, profile: "production" } : input);
-  if (input.profile === "compatibility")
-    return {
-      ...scope,
-      windowsOnly: false,
-      affectedOwners: [],
-      packageChecks: false,
-      packageMatrix: [],
-      lernaFilter: "",
-      sharedBuild: "",
-      databaseTests: false,
-      databaseMatrix: [],
-      integrationMatrix: [],
-      bunContractMatrix: [],
-      componentChecks: false,
-      componentMatrix: [],
-      appMatrix: [],
-      packagedMatrix: [],
-      clientMatrix: scope.clientMatrix
-        .filter((row) => row.target === "darwin-x64")
-        .map((row) => ({ ...row, tests: false })),
-      toolchainMatrix: scope.toolchainMatrix.filter((row) =>
-        ["cli-linux-arm64", "cli-darwin-x64", "cli-win-arm64"].includes(row.platform_pkg),
-      ),
-      quarantineBunOs: [],
-      harnessMatrix: [],
-      windows: false,
-      harnessCli: false,
-      dockerBuild: false,
-      license: false,
-      publishedExtensions: false,
-      sdkApiReport: false,
-    };
-  if (!windowsOnly) return { ...scope, windowsOnly };
-  // Reuse complete stable Windows lanes, including their shards and quarantine evidence.
-  // This source diagnostic is separate from both the PR gate and signed release certification.
-  return {
-    ...scope,
-    windowsOnly,
-    affectedOwners: [],
-    packageChecks: false,
-    packageMatrix: [],
-    lernaFilter: "",
-    sharedBuild: "",
-    databaseTests: false,
-    databaseMatrix: [],
-    integrationMatrix: [],
-    bunContractMatrix: [],
-    componentChecks: false,
-    componentMatrix: [],
-    appMatrix: [],
-    packagedMatrix: [],
-    clientMatrix: scope.clientMatrix.filter((row) => row.platform === "win32"),
-    toolchainMatrix: scope.toolchainMatrix.filter((row) => row.platform_pkg.startsWith("cli-win-")),
-    quarantineBunOs: scope.quarantineBunOs.filter((os) => os.startsWith("windows")),
-    harnessMatrix: scope.harnessMatrix.filter(
-      (row) => "os" in row && typeof row.os === "string" && row.os.startsWith("windows"),
-    ),
-    dockerBuild: false,
-    license: false,
-    publishedExtensions: false,
-    sdkApiReport: false,
-  };
+  const native = ["windows", "macos"].includes(input.profile ?? "");
+  if (native && input.signedCandidate) throw new Error("Native diagnostics cannot certify a signed release candidate");
+  if (native && input.releaseChannel && input.releaseChannel !== "stable")
+    throw new Error("Native diagnostics require the stable native lanes");
+  return diagnosticScope(resolveBaseScope(native ? { ...input, profile: "production" } : input), input.profile);
 };
 
 if (import.meta.main) {

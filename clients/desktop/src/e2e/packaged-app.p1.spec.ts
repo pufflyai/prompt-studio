@@ -134,6 +134,36 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
       return theme.id;
     });
 
+    // Intel owns a narrow artifact contract, so it must execute its own native PTY here.
+    // Primary OS hosts exercise terminal lifecycle in packaged-active-work instead.
+    if (process.platform === "darwin" && process.arch === "x64") {
+      await test.step("Execute a command through the shipped Intel app's terminal", async () => {
+        const page = first!.page;
+        const connection = page.waitForEvent(
+          "websocket",
+          (socket) => new URL(socket.url()).pathname === "/v1/terminal",
+        );
+        const bottom = page.getByRole("button", { name: "Show Bottom Panel", exact: true });
+        if (await bottom.isVisible()) await bottom.click();
+        await page
+          .locator('[data-workbench-panel-header="secondary"]')
+          .getByRole("button", { name: "Add panel" })
+          .click();
+        const choice = page.getByRole("menuitem", { name: "Open terminal", exact: true });
+        const input = page.getByRole("textbox", { name: "Terminal input" });
+        await expect(choice.or(input)).toBeVisible();
+        if (await choice.isVisible()) await choice.click();
+        const socket = await connection;
+        await input.pressSequentially("printf '__pstdio_%s__\\n' intel_terminal");
+        await input.press("Enter");
+        await expect(page.locator(".xterm:visible .xterm-rows")).toContainText("__pstdio_intel_terminal__");
+        const closed = socket.waitForEvent("close");
+        await input.pressSequentially("exit");
+        await input.press("Enter");
+        await closed;
+      });
+    }
+
     const originalPid = first.runtime.pid;
     await test.step("Promote the running sidecar through the packaged CLI", async () => {
       expect(await runPackagedCli(home, ["serve"])).toMatchObject({ exitCode: 0 });

@@ -52,7 +52,9 @@ export const matchesJob = (name: string, id: string) => {
 };
 
 export const isGateJob = (name: string) =>
-  ["validation_results", "ci_passed", "production_ci_passed", "windows_ci_passed"].some((id) => matchesJob(name, id));
+  ["validation_results", "ci_passed", "production_ci_passed", "windows_ci_passed", "macos_ci_passed"].some((id) =>
+    matchesJob(name, id),
+  );
 
 const completedFailure = (job: ObservedJob) => job.status === "completed" && job.conclusion !== "success";
 

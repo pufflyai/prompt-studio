@@ -141,8 +141,8 @@ A red `main` usually means a startup smoke failure or a cache problem. Fix it be
   - P1 and P2 against the signed desktop apps. When the run validates signed release files, the source desktop jobs keep only the source Electron checks, so each packaged desktop case runs once.
   - P3 performance measurements
   - container service checks
-  - the packaged CLI in the toolchain job on Linux x64, Linux arm64 and Apple Silicon: P1 everywhere; P2 feature workflows on Linux x64 and Apple Silicon only, because they test OS-independent behavior. Install, native process and asset checks are P1.
-- The nightly does not run Windows or Intel macOS. Stable releases validate them, so add `ci:windows` to request Windows source diagnostics before cutting a release. Signed installation/update certification still belongs to the release path.
+  - native artifact contracts on Linux x64, Apple Silicon and Windows x64; full shared CLI behavior runs separately on Linux
+- Windows runs focused source/native contracts and an unpublished packaged desktop diagnostic. Intel macOS and the other secondary CLI architectures have weekly compatibility diagnostics and exact-artifact checks in stable releases. Signed installation/update certification belongs to the release path.
 - The shared Bun unit, API and database suites run on Linux. Apple Silicon runs the desktop app's own Bun tests, the native desktop and packaged CLI checks, and the Bun quarantine lane.
 - Source line coverage comes from the nightly's P0–P2 Bun jobs. The Coverage workflow publishes only a successful full nightly's measurement. Quarantined tests and P3 are not counted.
 
@@ -172,11 +172,11 @@ If a stable release stops halfway, re-run the `publish` job. It skips the steps 
 
 ## Extra diagnostics
 
-These expensive workflows are exceptions, not routine PR requirements. Use them only for a concrete high-risk change that focused local checks and normal PR CI cannot establish, or an explicit user request. Record the risk and smallest complete workload first. Deferred inventory entries and shared dependency changes do not automatically justify a full matrix. Nightly and release matrices remain unchanged.
+These expensive workflows are exceptions, not routine PR requirements. Use them only for a concrete high-risk change that focused local checks and normal PR CI cannot establish, or an explicit user request. Record the risk and smallest complete workload first. Deferred inventory entries and shared dependency changes do not automatically justify a full matrix. Nightly and release validation retain their declared complete coverage.
 
 - **`ci:full` label.** Runs production functional diagnostics for a same-repository PR through the trusted base workflow. Its `production_ci_passed` result does not replace `ci_passed`. A maintainer runs this for fork PRs.
 - **`ci:windows` label.** Runs Windows-only source diagnostics for the exact same-repository PR merge commit. Includes the two focused Windows source groups, native desktop contracts and x64/ARM64 CLI artifact contracts, Windows harness checks and Bun quarantine evidence, plus repository static checks. Reports `windows_ci_passed`; it does not replace either the fast PR gate or full production/release certification. The label runs once when added; remove and re-add it to test a new head. Forks require maintainer dispatch of a reviewed repository ref.
-- **Manual Test and Build.** The `merge_queue` profile repeats the queue checks without a real queue. The `production` profile runs production functional checks from source; `windows` selects the Windows lanes only. These profiles publish nothing. A newer manual run for the same branch and `source_sha` cancels the older one.
+- **Manual Test and Build.** The `merge_queue` profile repeats the queue checks without a real queue. The `production` profile runs production functional checks from source; `windows` selects the Windows lanes only, and `macos` selects Apple Silicon and Intel native desktop/CLI contracts plus Mac quarantine evidence. The Mac diagnostic excludes Linux shared journeys and Windows jobs. These profiles publish nothing. A newer manual run for the same branch and `source_sha` cancels the older one.
 - **Reliability branches.** Pushes to `test/ci-reliability/merge/**` run the queue checks. Other `test/ci-reliability/**` branches run production functional checks.
 
 None of these replace the real queue run or release certification.
