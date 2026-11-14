@@ -11,7 +11,7 @@ import {
 import { ticketsCollection } from "../data/collections";
 import { selectedDocumentFromResource, TICKET_BODY_DOCUMENT } from "../data/document-selection";
 import { createTicketFile, deleteTicketFile, updateTicketFile } from "../data/file-operations";
-import { createTicketParentLookup, TICKET_RESOURCE_ICON, ticketDisplayTitle } from "../data/mappers";
+import { TICKET_RESOURCE_ICON, ticketDisplayTitle } from "../data/mappers";
 import { REVIEW_REQUEST_ICON, reviewRequestSummary } from "../data/review-request-summary";
 import {
   REVIEW_REQUESTS_DOCUMENT,
@@ -22,6 +22,7 @@ import {
 import {
   linkedResourceParentMetadata,
   plannerOwnerFor,
+  readTicketParentLookup,
   ticketResourceReference,
 } from "../data/ticket-resource-hierarchy";
 import { plannerTicketsChanged } from "../events";
@@ -180,12 +181,10 @@ export const deleteTicketFileCommand = defineCommand({
     if (selectedDocumentFromResource(ctx.resource) !== fileId) return { ticketId, fileId };
 
     // The open document is gone, so the page moves back to the ticket body.
-    const tickets = await ticketsCollection(ctx).list();
-    const ticket = tickets.find((entry) => entry.id === ticketId);
+    const ticket = await ticketsCollection(ctx).get(ticketId);
     if (!ticket) return { ticketId, fileId };
-    ctx.navigation.open(
-      ticketPageTarget(ticketResourceReference(ticket, createTicketParentLookup(tickets), plannerOwnerFor(ctx))),
-    );
+    const lookup = await readTicketParentLookup(ctx, new Map([[ticket.id, ticket]]));
+    ctx.navigation.open(ticketPageTarget(ticketResourceReference(ticket, lookup, plannerOwnerFor(ctx))));
     return { ticketId, fileId };
   },
 });
@@ -205,6 +204,8 @@ export const listTicketFilesTree = async (
   const selectedDocument = selectedDocumentFromResource(resource);
   const {
     tickets,
+    children,
+    dependents,
     reviewRequests,
     workspaces,
     linkedWorkspaces,
@@ -215,7 +216,7 @@ export const listTicketFilesTree = async (
     resourceLinks,
   } = await readTicketTreeData(ctx, ticket);
 
-  const parentLookup = createTicketParentLookup(tickets);
+  const parentLookup = new Map(tickets.map((ticket) => [ticket.id, ticket]));
   const ticketMeta = linkedResourceParentMetadata(ticket, parentLookup, plannerOwnerFor(ctx));
 
   const ticketResource = ticketResourceReference(ticket, parentLookup, plannerOwnerFor(ctx));
@@ -289,6 +290,8 @@ export const listTicketFilesTree = async (
     tickets,
     parentTicketId: ticket.id,
     statusesById,
+    children: children.tickets,
+    nextCursor: children.nextCursor,
   });
   const linkedWorkspacesSection = buildWorkspacesSection(
     visibleWorkspaces,
@@ -311,10 +314,10 @@ export const listTicketFilesTree = async (
     workspaceSessions,
   });
 
-  return mergeTicketLinkSections(
+  const sections = mergeTicketLinkSections(
     [
       ticketSection,
-      ...ticketRelationshipSections(ticket, tickets, plannerOwnerFor(ctx)),
+      ...ticketRelationshipSections(ticket, tickets, plannerOwnerFor(ctx), dependents.tickets, dependents.nextCursor),
       filesSection,
       ...(maybeSubTicketsSection ? [maybeSubTicketsSection] : []),
       linkedWorkspacesSection,
@@ -324,6 +327,11 @@ export const listTicketFilesTree = async (
     ctx.projectId,
     plannerOwnerFor(ctx),
   );
+  return sections.map((section) => ({
+    ...section,
+    ...(section.id === "sub-tickets" && children.nextCursor ? { nextCursor: children.nextCursor } : {}),
+    ...(section.id === "required-by" && dependents.nextCursor ? { nextCursor: dependents.nextCursor } : {}),
+  }));
 };
 
 export const listTicketFilesTreeCommand = defineCommand({

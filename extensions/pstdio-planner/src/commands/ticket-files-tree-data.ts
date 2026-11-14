@@ -1,5 +1,6 @@
 import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
-import { statusesCollection, ticketsCollection } from "../data/collections";
+import { statusesCollection } from "../data/collections";
+import { readTicketNavigation } from "../data/navigation-queries";
 import { listTicketReviewRequests } from "../data/review-request-storage";
 import { readSessionHistory } from "../data/session-history";
 import { loadTicketLinkedResources } from "../data/ticket-linked-resources";
@@ -18,8 +19,8 @@ export const readTicketTreeData = async (
     );
     return { workspaces, linkedWorkspaces, workspaceSessions: histories.flat() };
   });
-  const [tickets, reviewRequests, statuses, providers, sessions, linked, resourceLinks] = await Promise.all([
-    ticketsCollection(ctx).list(),
+  const [navigation, reviewRequests, statuses, providers, sessions, linked, resourceLinks] = await Promise.all([
+    readTicketNavigation(ctx, ticket),
     listTicketReviewRequests(ctx.storage, ticket.id),
     statusesCollection(ctx.storage).list(),
     ctx.workspaces.listProviders(),
@@ -30,7 +31,7 @@ export const readTicketTreeData = async (
     ]),
   ]);
   return {
-    tickets,
+    ...navigation,
     resourceLinks: resourceLinks.get(ticket.id) ?? [],
     reviewRequests,
     statusesById: new Map(statuses.map((status) => [status.id, status])),

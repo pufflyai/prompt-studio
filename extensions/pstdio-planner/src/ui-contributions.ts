@@ -20,6 +20,7 @@ import { queryTickets } from "./commands/query-tickets";
 import { saveTicketContent } from "./commands/save-ticket-content";
 import { setTicketAttribute } from "./commands/set-ticket-attribute";
 import { listTicketFilesTree } from "./commands/ticket-files";
+import { listTicketFilesPage } from "./commands/ticket-files-page";
 import { queryTicketProperties } from "./commands/ticket-properties/query";
 import { updateTicketProperty } from "./commands/ticket-properties/update";
 import { buildTicketAttributes, TICKET_ARCHIVE_STATE_ACTIVE, TICKET_ARCHIVE_STATE_ATTRIBUTE_ID } from "./data/mappers";
@@ -58,6 +59,7 @@ const createTicketFilesView = () =>
       kind: "tree",
       structure: ticketNavigationStructure,
       body: listTicketFilesTree,
+      page: listTicketFilesPage,
       refreshEvents: [
         plannerTicketsChanged,
         viewDataEvents.sessionsChanged,
