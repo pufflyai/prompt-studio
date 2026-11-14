@@ -36,7 +36,7 @@ export const publishCreatedResourceAnchors = (
   );
 };
 
-export const refreshResourceAnchorSources = async (
+export const refreshResourceAnchorEndpoints = async (
   bus: EventBus,
   items: Array<{ source: ResourceRef; target: ResourceAnchor }>,
   readers: Partial<
@@ -48,8 +48,9 @@ export const refreshResourceAnchorSources = async (
 ) => {
   const sources = new Map(
     items
-      .filter(({ source }) => source.extensionId === "pstdio")
-      .map(({ source }) => [JSON.stringify([source.type, source.id]), source]),
+      .flatMap(({ source, target }) => [source, target])
+      .filter((ref) => ref.extensionId === "pstdio")
+      .map((ref) => [JSON.stringify([ref.type, ref.id]), ref]),
   );
   for (const source of sources.values()) {
     if (source.type !== "project" && source.type !== "workspace" && source.type !== "session") continue;

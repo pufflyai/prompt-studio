@@ -85,7 +85,17 @@ export type ResourceAnchorValidationResult = { allowed: true } | { allowed: fals
 
 export type ResourceAnchorQueryPage = Page<ResourceAnchorPage["items"][number]>;
 
+export interface RelatedResourceQuery extends Omit<ResourceAnchorQuery, "resource"> {
+  resources: ResourceRef[];
+  /** Restrict the related endpoint before pagination. */
+  kind?: string;
+  owner?: string;
+  excludeKinds?: string[];
+}
+
 export interface ExtensionResourcesApi {
+  /** One indexed page of distinct shared project links, deduplicated across directions and selected resources. Maximum 100. Use workspace/session queries for private history. */
+  queryRelated(input: RelatedResourceQuery): Promise<Page<ResourceRef>>;
   /** Resolve up to 100 references through enabled owners. Missing resources are omitted. */
   resolveMany(resources: ResourceRef[]): Promise<ResourceResolution[]>;
   addAnchors(resource: ResourceRef, anchors: ResourceAnchor[]): Promise<void>;

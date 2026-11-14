@@ -1,3 +1,4 @@
+export { patchCollectionRecords, readCollectionRecords } from "./collection-records";
 export { assertSafePathSegment, createDraftLayout, requireRepoFiles } from "./draft-layout";
 export {
   applyFrontmatter,

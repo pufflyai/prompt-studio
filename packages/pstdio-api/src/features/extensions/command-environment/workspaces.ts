@@ -1,3 +1,4 @@
+import { workspaceQuerySchema } from "pstdio-api-contracts";
 import type {
   CreateExtensionWorkspaceInput,
   ExtensionWorkspaceCreateInput,
@@ -5,7 +6,7 @@ import type {
 } from "pstdio-api-contracts/extension-kernel";
 import { legacyResourceOwner } from "pstdio-db";
 import { type CommandRunnerEnvironment, createReadBoundary } from "pstdio-extensions";
-import { readableWorkspaces } from "../../../services/personal-history/queries";
+import { queryReadableWorkspaces, readableWorkspaces } from "../../../services/personal-history/queries";
 import { readDeviceWorkspaceCapacity } from "../../workspaces/device-capacity";
 import { toExtensionWorkspace } from "../../workspaces/extension-workspace";
 import { removeWorkspaceWorktree } from "../../workspaces/remove-workspace-worktree";
@@ -118,6 +119,11 @@ export const createWorkspacesApi = (
     listProviders: () => read(() => listWorkspaceProviders(deps, input.projectId)),
     getDefault: async () =>
       read(async () => projectOptionalWorkspace(await read(() => deps.workspaceService.getDefault(input.projectId)))),
+    query: (query) =>
+      read(async () => {
+        const page = await queryReadableWorkspaces(deps, input.projectId, workspaceQuerySchema.parse(query ?? {}));
+        return { items: page.rows.map(projectWorkspace), nextCursor: page.nextCursor };
+      }),
     list: async () =>
       read(async () =>
         Promise.all(

@@ -1,3 +1,4 @@
+export { commitCurrentBatch } from "./current-batch";
 export { recordTypeName } from "./document-edits";
 export { documentRecordTypes, type RecordType, readDocumentRecord } from "./document-record";
 export { type DocumentSnapshot, findDocumentReplacements, snapshotDocumentRecords } from "./document-replacements";

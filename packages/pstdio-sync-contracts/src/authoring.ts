@@ -57,6 +57,11 @@ export interface StorageGroup {
   edits: (RecordEdit & { expectedRevision?: string })[];
 }
 
+/** A bounded local comparison of existing records followed by one field-preserving save. */
+export type StorageCurrentGroup = Omit<StorageGroup, "edits"> & {
+  edits: (StorageGroup["edits"][number] & { expectedRevision: string })[];
+};
+
 /** @deprecated Conflicts go away because edits merge. Remove calls to `records.resolve`. */
 export interface StorageResolution {
   operationId: string;
