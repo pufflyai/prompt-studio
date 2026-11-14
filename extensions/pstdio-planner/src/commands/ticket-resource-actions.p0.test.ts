@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
+import { workspaceArgs } from "./archive-context.fixture";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { createTicketFileCommand, listTicketFilesTreeCommand } from "./ticket-files";
@@ -14,7 +15,7 @@ test("ticket tree rows identify their action resource independently of file navi
     ...makeCommandArgs({ storage, params: { ticketId: ticket.id, name: "notes.md" } }),
   );
   const sections = await listTicketFilesTreeCommand.run(
-    ...makeCommandArgs({
+    ...(await workspaceArgs({
       storage,
       params: {
         renderer: {
@@ -34,7 +35,7 @@ test("ticket tree rows identify their action resource independently of file navi
           ],
         },
       },
-    }),
+    })),
   );
 
   const ticketNode = sections.find((section) => section.id === "ticket")!.nodes[0];

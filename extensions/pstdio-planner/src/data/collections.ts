@@ -1,6 +1,7 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { dependencyBlockerRefs, withIndependentBlockers } from "./dependency-blockers";
 import { readTicketReviewRequests } from "./review-request-storage";
+import { normalizeTicketDependencies } from "./ticket-dependencies";
 import { deleteTicketBlobs, deleteTicketFileContent, deleteTicketScopedBlobs } from "./ticket-file-content";
 import { queueTicketWrite } from "./ticket-write-queue";
 import type { StoredStatus, StoredTag, StoredTicket, Ticket } from "./types";
@@ -142,6 +143,21 @@ export const withDerivedTicketState = async (ctx: TicketContext, ticket: Ticket)
 
 const withIndependentBlocker = async (ctx: TicketContext, ticket: Ticket) => {
   if (!dependencyBlockerRefs(ticket.blockedReason)) return ticket;
-  const tickets = (await ticketsCollection(ctx).list()).filter(({ id }) => id !== ticket.id);
+  const ids = normalizeTicketDependencies(ticket.dependsOn);
+  const tickets: Ticket[] = [];
+  for (const id of ids) {
+    if (id === ticket.id) continue;
+    const records = ticketsCollection(ctx);
+    const stored =
+      (await records.get(id)) ?? (id !== id.toLowerCase() ? await records.get(id.toLowerCase()) : undefined);
+    if (stored) tickets.push(stored);
+    else {
+      const matches = await ctx.resources.findByShorthand({ kind: "ticket", shorthand: id.trim().toUpperCase() });
+      for (const match of matches) {
+        const dependency = await ticketsCollection(ctx).get(match.id);
+        if (dependency) tickets.push(dependency);
+      }
+    }
+  }
   return withIndependentBlockers([...tickets, ticket]).at(-1)!;
 };

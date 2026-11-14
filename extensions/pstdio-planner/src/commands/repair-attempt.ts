@@ -1,29 +1,45 @@
 import { type CommandContext, defineCommand, params, type SessionRunSnapshot } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
 import { readRetiredWorkspaceIds } from "../data/attempt-retirement";
-import { appendAttemptEvent, attemptEventsCollection, readAttempt } from "../data/attempt-storage";
+import { appendAttemptEvent, readAttempt } from "../data/attempt-storage";
 import { hasPendingImplementationInput } from "../data/implementation-input";
 import { listTicketReviewRequests } from "../data/review-request-storage";
-import { readSessionHistory } from "../data/session-history";
+import { preparePlannerIndexes } from "../data/storage-indexes";
+import { hasWorkspaceWriter } from "../data/workspace-writers";
 import { withWriteGuard } from "../data/write-guard";
 import { readImplementationCapacity } from "./attempt-readiness";
 import { isLiveSession } from "./auto-build-sessions";
 import { workspaceHead } from "./change-requests";
 
 const assertNoCompetingWriter = async (ctx: CommandContext, workspaceId: string, sessionId: string) => {
-  if (
-    (await readSessionHistory(ctx.sessions, { workspaceId: workspaceId })).some(
-      (other) => other.id !== sessionId && isLiveSession(other),
-    )
-  )
+  if (await hasWorkspaceWriter(ctx.sessions, workspaceId, sessionId))
     throw new Error("Another session is executing in this workspace. Wait for acknowledged handoff.");
 };
 
-const alreadyRequested = async (ctx: CommandContext, key: string | undefined) =>
-  key &&
-  (await attemptEventsCollection(ctx.storage).list()).some(
-    (event) => event.metadata.evidenceKey === key || event.id === key,
+const alreadyRequested = async (ctx: CommandContext, workspaceId: string, key: string | undefined) => {
+  if (!key) return false;
+  await preparePlannerIndexes(ctx.storage);
+  return (
+    (
+      await ctx.storage.records.query({
+        index: "attempt-events-workspace",
+        fields: [],
+        limit: 1,
+        where: {
+          all: [
+            { field: "workspaceId", op: "eq", value: workspaceId },
+            {
+              any: [
+                { field: "evidenceKey", op: "eq", value: key },
+                { field: "id", op: "eq", value: key },
+              ],
+            },
+          ],
+        },
+      })
+    ).records.length > 0
   );
+};
 
 export const repairAttempt = async (
   ctx: CommandContext,
@@ -38,7 +54,7 @@ export const repairAttempt = async (
 ) => {
   return withWriteGuard(ctx, `attempt:${input.workspaceId}`, async () => {
     const attempt = await readAttempt(ctx.storage, input.workspaceId);
-    if (!attempt || (await readRetiredWorkspaceIds(ctx.storage)).has(attempt.workspaceId))
+    if (!attempt || (await readRetiredWorkspaceIds(ctx.storage, [attempt.workspaceId])).has(attempt.workspaceId))
       throw new Error("Choose a current implementation variant.");
     if ((await workspaceHead(ctx, attempt.workspaceId)) !== input.expectedHeadSha)
       throw new Error("Workspace HEAD changed before repair.");
@@ -53,7 +69,7 @@ export const repairAttempt = async (
     if (!isLiveSession(session) && capacity.running >= capacity.limit)
       throw new Error("Implementation capacity is full.");
     await assertNoCompetingWriter(ctx, attempt.workspaceId, session.id);
-    if (await alreadyRequested(ctx, input.evidenceKey))
+    if (await alreadyRequested(ctx, input.workspaceId, input.evidenceKey))
       return { decision: "already-requested" as const, sessionId: session.id };
     await beforeFollowup?.();
     const outcome = await ctx.sessions.followup({

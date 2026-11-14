@@ -200,19 +200,13 @@ describe("tag operations", () => {
     await readTicketTags(storage);
     const created = await putTicket(storage, ticket({ tags: { "default-priority": "default-priority-high" } }));
     const records = storage.collection<Ticket>(TICKETS_COLLECTION);
-    const list = records.list.bind(records);
-    records.list = async () => {
-      const listed = await list();
+    const query = storage.records.query.bind(storage.records);
+    storage.records.query = async (input) => {
+      const selected = await query(input);
       await records.put(created.id, { ...(await records.get(created.id))!, content: "Edited elsewhere" });
-      return listed;
+      return selected;
     };
-    const ctx = {
-      ...ticketContext(storage),
-      storage: {
-        ...storage,
-        collection: (name: string) => (name === TICKETS_COLLECTION ? records : storage.collection(name)),
-      },
-    } as ReturnType<typeof ticketContext>;
+    const ctx = ticketContext(storage);
 
     if (change === "changing the tag type") {
       await updateTicketTag({ ...ctx, tagId: "default-priority", type: "multi_select" });
@@ -236,10 +230,10 @@ describe("tag operations", () => {
     const ctx = ticketContext(storage);
     const file = await createTicketFile({ ...ctx, ticketId: created.id, name: "plan.md" });
     const records = storage.collection<Ticket>(TICKETS_COLLECTION);
-    const get = records.get.bind(records);
+    const read = records.read.bind(records);
     let deletion: Promise<unknown> | undefined;
-    records.get = async (id) => {
-      const record = await get(id);
+    records.read = async (id) => {
+      const record = await read(id);
       if (!deletion) {
         deletion = deleteTicketFile({ ...ctx, ticketId: created.id, fileId: file.id });
         await Promise.race([deletion, Bun.sleep(20)]);

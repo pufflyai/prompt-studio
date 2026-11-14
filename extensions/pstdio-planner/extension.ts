@@ -17,6 +17,7 @@ import { queryTicketResources } from "./src/commands/query-ticket-resources";
 import { savePlannerSettings } from "./src/commands/save-planner-settings";
 import { templateCommands } from "./src/commands/template-commands";
 import { findTicket } from "./src/data/resolve";
+import { plannerStorageIndexes } from "./src/data/storage-indexes";
 import { ticketsPageTarget } from "./src/data/ticket-page-target";
 import { ticketRefFromLifecyclePayload } from "./src/data/workspace-ticket-link";
 import { autoBuildHooks, autoBuildSchedule } from "./src/hooks/auto-build";
@@ -44,6 +45,7 @@ const templateCommandRefs = {
 };
 
 export default defineExtension({
+  storageIndexes: plannerStorageIndexes(),
   textSources: [ticketText],
   settings: {
     properties: {

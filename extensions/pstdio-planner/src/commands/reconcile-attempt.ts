@@ -90,7 +90,7 @@ export const reconcileAttempt = async (
   return withWriteGuard(ctx, `attempt:${commandParams.workspaceId}`, async () => {
     const attempt = await readAttempt(ctx.storage, commandParams.workspaceId);
     if (!attempt) throw new Error(`Unknown managed attempt "${commandParams.workspaceId}"`);
-    const retired = (await readRetiredWorkspaceIds(ctx.storage)).has(attempt.workspaceId);
+    const retired = (await readRetiredWorkspaceIds(ctx.storage, [attempt.workspaceId])).has(attempt.workspaceId);
     if (retired) return { decision: "unchanged" as const, attempt };
     const session = await ctx.sessions.get(attempt.implementationSessionId);
     if (liveStatuses.has(session?.status ?? "")) return { decision: "active" as const, attempt };

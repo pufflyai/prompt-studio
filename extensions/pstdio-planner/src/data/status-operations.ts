@@ -1,7 +1,8 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { sortedBySortOrder } from "../utils/sort";
-import { putStatus, putTicket, statusesCollection, ticketsCollection } from "./collections";
+import { putStatus, statusesCollection } from "./collections";
 import { seedDefaultStatuses } from "./seed";
+import { reassignTicketStatuses } from "./ticket-bulk-edit";
 import type { TicketContext } from "./ticket-identity";
 import type { StoredStatus } from "./types";
 
@@ -73,11 +74,7 @@ export const deleteTicketStatus = async (input: {
   const remaining = (await statusesCollection(input.storage).list()).filter((status) => status.id !== input.statusId);
   const fallbackId = (remaining.find((status) => status.isDefault) ?? remaining[0])?.id ?? null;
 
-  await Promise.all(
-    (await ticketsCollection(input).list()).map((ticket) =>
-      ticket.statusId === input.statusId ? putTicket(input, { ...ticket, statusId: fallbackId }) : undefined,
-    ),
-  );
+  await reassignTicketStatuses(input.storage, [input.statusId], fallbackId);
 
   await statusesCollection(input.storage).delete(input.statusId);
   return { statusId: input.statusId };

@@ -22,6 +22,7 @@
 12. Fix a problem in the part of the system responsible for it. Do not build a large solution for a small local issue.
 13. Reconsider a design that needs a workaround flag, special case, duplicate data, or internal details exposed across layers.
 14. Tests must prove restored behavior and system rules rather than preserve a workaround.
+15. Design Planner reads and actions for thousands of tickets. Never load the complete ticket collection to filter, count, resolve relationships, or perform an action. Query only the required records and fields; use bounded pages for bulk work and scoped existence checks for shared-resource protection. See [Planner scale](0003-nonfunctional-requirements.md#3-performance).
 
 ## 3. Before writing code
 
