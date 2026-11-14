@@ -27,7 +27,7 @@ interface AppProps {
   context: ExtensionViewRenderContext<HostProps>;
 }
 
-const HomeApp = (props: AppProps) => {
+export const HomeApp = (props: AppProps) => {
   const { context } = props;
   const [client] = useState(() => createWebviewClient<typeof commands>(context.host));
   useWebviewScope(client.queries);

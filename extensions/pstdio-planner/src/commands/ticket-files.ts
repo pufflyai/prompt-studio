@@ -24,7 +24,7 @@ import {
   plannerOwnerFor,
   ticketResourceReference,
 } from "../data/ticket-resource-hierarchy";
-import { plannerTicketsChanged, emitPlannerTicketsChanged } from "../events";
+import { emitPlannerTicketsChanged, plannerTicketsChanged } from "../events";
 import { isImageAttachment } from "../utils/is-image-attachment";
 import { readTicketTreeData } from "./ticket-files-tree-data";
 import { mergeTicketLinkSections, ticketRelationshipSections } from "./ticket-link-sections";

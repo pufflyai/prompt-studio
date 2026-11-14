@@ -36,6 +36,7 @@
     "typescript": "6.0.2"
   },
   "exports": {
+    "./package.json": "./package.json",
     "./testing": "./src/testing.ts"
   }
 }

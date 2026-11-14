@@ -5,8 +5,8 @@ import { draftSnapshot } from "./draft-snapshot";
 import { readDraft } from "./drafts";
 import { nativePresentation } from "./native-presentation";
 import { sessionId } from "./resource";
-import { readSnapshotInputs, type SnapshotOptions, type SnapshotReads } from "./snapshot-reads";
-import { readWorkspacePresentation, savedWorkspaceControls, withWorkspaceControls } from "./workspace";
+import { readSnapshotInputs, readSnapshotWorkspace, type SnapshotOptions, type SnapshotReads } from "./snapshot-reads";
+import { savedWorkspaceControls, withWorkspaceControls } from "./workspace";
 
 export { composerControls } from "./controls";
 
@@ -27,6 +27,10 @@ export const readSnapshot = async (
   const id = sessionId(resource);
   return id ? (await readSessionSnapshot(ctx, id, values, options)).snapshot : draftSnapshot(ctx, resource, values);
 };
+const sessionComposerControls = (session: SnapshotReads["session"], remote: boolean) =>
+  composerControls.map((control) =>
+    control.type === "harness" ? { ...control, lockIdentity: Boolean(session.agent), readOnly: remote } : control,
+  );
 export const readSessionSnapshot = async (
   ctx: ExtensionContextBase,
   id: string,
@@ -37,9 +41,7 @@ export const readSessionSnapshot = async (
   const { session, execution, queued, harness, workspace: workspaceInfo } = reads;
   const remote = execution.kind === "remote";
   const workspaceId = session.workspaceId ?? undefined;
-  const savedControls = composerControls.map((control) =>
-    control.type === "harness" ? { ...control, lockIdentity: Boolean(session.agent), readOnly: remote } : control,
-  );
+  const savedControls = sessionComposerControls(session, remote);
   const display = conversationState(
     id,
     [...messages.filter((message) => !message.id.startsWith(`queued-prompt-${id}-`)), ...queued.messages],
@@ -48,10 +50,7 @@ export const readSessionSnapshot = async (
     remote,
   );
   const notice = executionNotice(execution, queued.error);
-  const refreshWorkspace = sessionRead || executionRead || options.changes?.has("workspace") || options.changes?.has("harness");
-  const workspacePresentation = !refreshWorkspace && options.previous?.workspacePresentation
-    ? options.previous.workspacePresentation
-    : await readWorkspacePresentation(ctx, { id: workspaceId, existingSession: true, available: execution.available });
+  const workspacePresentation = await readSnapshotWorkspace(ctx, reads, options, sessionRead || executionRead);
   const snapshot: ChatRendererSnapshot = {
     nativeLinks: true,
     nativeHarnessAccount: { controlId: "harness", remote },

@@ -1,7 +1,7 @@
 import type { ExtensionContextBase, ExtensionWorkspace } from "@pstdio/sdk/extensions";
 import type { nativePresentation } from "./native-presentation";
 import { readQueue } from "./queue-snapshot";
-import type { readWorkspacePresentation } from "./workspace";
+import { readWorkspacePresentation } from "./workspace";
 
 export interface SnapshotReads {
   execution: Awaited<ReturnType<ExtensionContextBase["sessions"]["getExecutionState"]>>;
@@ -18,6 +18,21 @@ export interface SnapshotOptions {
   previous?: SnapshotReads;
   changes?: ReadonlySet<string>;
 }
+export const readSnapshotWorkspace = (
+  ctx: ExtensionContextBase,
+  reads: SnapshotReads,
+  options: SnapshotOptions,
+  refresh: boolean | undefined,
+) => {
+  const changed = refresh || options.changes?.has("workspace") || options.changes?.has("harness");
+  const previous = options.previous?.workspacePresentation;
+  if (!changed && previous) return previous;
+  return readWorkspacePresentation(ctx, {
+    id: reads.session.workspaceId ?? undefined,
+    existingSession: true,
+    available: reads.execution.available,
+  });
+};
 export const readSnapshotInputs = async (ctx: ExtensionContextBase, id: string, options: SnapshotOptions) => {
   const previous = options.previous;
   const sessionRead = !previous || Boolean(options.changes?.has("session"));

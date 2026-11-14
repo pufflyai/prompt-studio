@@ -9,10 +9,7 @@ import { workspacePages } from "@pstdio/sdk/extensions";
 type WorkspacePresentation = NonNullable<ChatRendererSnapshot["workspace"]>;
 type WorkspacePresentationInput = { id?: string; existingSession?: boolean; available?: boolean };
 
-export const readWorkspacePresentation = async (
-  ctx: ExtensionContextBase,
-  input: WorkspacePresentationInput = {},
-) => {
+export const readWorkspacePresentation = async (ctx: ExtensionContextBase, input: WorkspacePresentationInput = {}) => {
   // Workspaces owns this optional presentation. Missing or failed tools must not stop the conversation.
   let outcome: CommandOutcome<WorkspacePresentation> | undefined;
   try {

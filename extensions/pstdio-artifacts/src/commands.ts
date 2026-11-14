@@ -4,7 +4,7 @@ import { deleteResource, renameResource, resolvePath, resolveResource, resolveRe
 import { serviceFor } from "./artifact-context";
 import { removeArtifact, renameArtifact } from "./artifact-mutations";
 import { HTML_LIMIT_BYTES } from "./artifacts";
-import { changedEvent, artifactIdFromUrl, artifactTarget } from "./contracts";
+import { artifactIdFromUrl, artifactTarget, changedEvent } from "./contracts";
 import { openCreation, startCreation } from "./create-artifact";
 import { emitArtifactChanged } from "./events";
 

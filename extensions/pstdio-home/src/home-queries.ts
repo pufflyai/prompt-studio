@@ -10,7 +10,12 @@ export const homeQueries = (client: ReturnType<typeof createWebviewClient<typeof
     workbenchCommands.recentResources,
     {},
     {
-      events: [viewDataEvents.recentResourcesChanged, viewDataEvents.sessionsChanged, viewDataEvents.workspacesChanged, viewDataEvents.resourcesChanged],
+      events: [
+        viewDataEvents.recentResourcesChanged,
+        viewDataEvents.sessionsChanged,
+        viewDataEvents.workspacesChanged,
+        viewDataEvents.resourcesChanged,
+      ],
     },
   ),
 });
