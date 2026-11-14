@@ -3,6 +3,7 @@ import type { Skill } from "@pstdio/sdk/resources";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import extension from "./extension";
 import { commands } from "./src/browser";
+import { skillInfo } from "./src/skill-content";
 
 const skill: Skill = {
   id: "skill-id",
@@ -67,22 +68,70 @@ test("reads a supporting file through the native file view using the page route"
   expect(loaded).toMatchObject({ fileName: "references/examples.md", content: "# Examples", editable: false });
 });
 
-test("keeps Info and Files in one native attached menu and selects the routed file", async () => {
-  const view = extension.views?.find((view) => view.id === "skill-details")?.body;
-  if (view?.kind !== "tree") throw new Error("Skills need a native details tree");
-  const sections = await view.body(context(), {
-    renderer: {
-      rendererId: "skill-details",
-      resource: { type: "skill", id: "review" },
-      pageParams: { file: "references/examples.md" },
+test("renders metadata as read-only parameters in a collapsible Info section", () => {
+  expect(skillInfo(skill)).toMatchObject({
+    id: "info",
+    title: "Info",
+    collapsible: true,
+    params: [
+      { id: "name", name: "Name", type: "readOnly", value: "review" },
+      { id: "description", name: "Description", type: "readOnly", value: "Review a change" },
+    ],
+  });
+});
+
+test("groups skills by source extension display name and keeps project skills separate", async () => {
+  const tree = extension.views?.find((view) => view.id === "skill-list")?.body;
+  if (tree?.kind !== "tree") throw new Error("Skills need a navigation tree");
+  const installed = (id: string, displayName: string) => ({
+    id,
+    projectId: "project",
+    extensionId: id,
+    installedExtensionId: id,
+    installName: id,
+    name: id,
+    displayName,
+    sourcePath: "/extensions",
+    scope: "global" as const,
+    status: "loaded" as const,
+    enabled: true,
+    config: {},
+    canUpgrade: false,
+    updateAvailable: false,
+  });
+  const ctx = makeCommandContext({
+    storage: createMemoryStorage(),
+    projectId: "project",
+    params: {},
+    overrides: {
+      skills: {
+        list: async () => [
+          { ...skill, name: "canvas", source_kind: "extension", extension_id: "pstdio.canvas" },
+          skill,
+          { ...skill, name: "create-ticket", source_kind: "extension", extension_id: "pstdio.pstdio-skills" },
+          { ...skill, name: "create-proposal", source_kind: "extension", extension_id: "pstdio.pstdio-skills" },
+        ],
+      },
+      extensions: {
+        list: async () => ({
+          marketplace: [],
+          extensions: [
+            installed("pstdio.canvas", "UI Canvas"),
+            installed("pstdio.pstdio-skills", "Prompt Studio Skills"),
+          ],
+        }),
+        install: async () => {},
+      },
     },
   });
-  expect(sections.map((section) => section.id)).toEqual(["info", "files"]);
-  const directory = sections[1]?.nodes.find((node) => node.id === "dir:references");
-  expect(directory?.children?.[0]).toMatchObject({
-    selected: true,
-    target: { kind: "page", page: { id: "skill" }, params: { file: "references/examples.md" } },
-  });
+  const sections = await tree.body(ctx);
+  expect(
+    sections.map((section) => ({ label: section.label, names: section.nodes.map((node) => node.resource?.id) })),
+  ).toEqual([
+    { label: "UI Canvas", names: ["canvas"] },
+    { label: "Project", names: ["review"] },
+    { label: "Prompt Studio Skills", names: ["create-ticket", "create-proposal"] },
+  ]);
 });
 
 test("opens an empty browser when the project has no skills", async () => {

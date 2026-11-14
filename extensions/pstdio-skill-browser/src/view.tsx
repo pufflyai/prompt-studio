@@ -12,6 +12,7 @@ import { ChakraProvider, FileIconThemePreferenceProvider, psTheme } from "@pstdi
 import { useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
 import type { commands } from "./browser";
+import { SkillMenu } from "./skill-menu";
 import { useSkillSelection } from "./use-skill-selection";
 
 interface HostProps {
@@ -23,6 +24,7 @@ const SkillContent = (props: { context: ExtensionViewRenderContext<HostProps>; n
   const [client] = useState(() => createWebviewClient<typeof commands>(context.host));
   useWebviewScope(client.queries);
   const visible = useWebviewVisibility();
+  const selectedPath = useSyncExternalStore(client.page.subscribe, () => client.page.params().file);
   const query = useWebviewCommandQuery(
     client.commands.read.query(name ? { name } : {}, {
       events: [viewDataEvents.extensionCatalogChanged, viewDataEvents.resourcesChanged],
@@ -56,6 +58,7 @@ const SkillContent = (props: { context: ExtensionViewRenderContext<HostProps>; n
         <Spinner />
       </Flex>
     );
+  if (name) return <SkillMenu skill={query.data} path={selectedPath} navigation={client.navigation} />;
   return <Spinner m="md" aria-label="Opening skill" />;
 };
 const App = (props: { context: ExtensionViewRenderContext<HostProps> }) => {

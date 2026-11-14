@@ -1,4 +1,4 @@
-import type { ExtensionContextBase, NavigationTarget, TreeNode } from "@pstdio/sdk/extensions";
+import type { ExtensionContextBase, NavigationTarget, ReadOnlyControl, TreeNode } from "@pstdio/sdk/extensions";
 import type { Skill } from "@pstdio/sdk/resources";
 import { parseSkillMetadata } from "./parse-skill-metadata";
 
@@ -48,8 +48,10 @@ export const skillFiles = (
 export const skillInfo = (skill: Skill) => {
   const metadata = parseSkillMetadata(skill.files.find((file) => file.path === "SKILL.md")?.content ?? "");
   const description = metadata.description || skill.description;
-  const nodes: TreeNode[] = [{ id: "name", label: metadata.name || skill.name, icon: "sparkles" }];
-  if (metadata.version) nodes.push({ id: "version", label: `Version ${metadata.version}`, icon: "tag" });
-  if (description) nodes.push({ id: "description", label: description, tooltip: description });
-  return { id: "info", label: "Info", nodes };
+  const params: ReadOnlyControl[] = [
+    { id: "name", name: "Name", type: "readOnly", value: metadata.name || skill.name },
+  ];
+  if (metadata.version) params.push({ id: "version", name: "Version", type: "readOnly", value: metadata.version });
+  if (description) params.push({ id: "description", name: "Description", type: "readOnly", value: description });
+  return { id: "info", title: "Info", collapsible: true, params };
 };

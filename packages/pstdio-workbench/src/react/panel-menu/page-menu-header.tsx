@@ -1,7 +1,10 @@
+import { Text } from "@chakra-ui/react";
 import { Header } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../core";
 import { resolvePageContent } from "../../core/registries/pages/page-content";
+import { WorkbenchIcon } from "../shared/icon";
 import { usePanelPolicy } from "../shared/use-panel-policy";
+import { usePlacementTab } from "../shared/use-placement-tab";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { WorkbenchPanelMenuOpeners } from "./panel-menu";
@@ -11,14 +14,16 @@ interface WorkbenchPageMenuHeaderProps {
   workbench: WorkbenchCore;
 }
 
-// A tabless page has no Main tab header, but its closed view menus still need openers.
-// This header holds only those openers: no tabs, border, panel drag, or drop target.
+// Pages can supply a title through their standard presentation without adding tabs.
 export const WorkbenchPageMenuHeader = (props: WorkbenchPageMenuHeaderProps) => {
   const { workbench } = props;
   const policy = usePanelPolicy(workbench, "main");
   const pageContent = useWorkbenchStore(workbench.pages.store, resolvePageContent);
+  const snapshot = usePlacementTab(pageContent, workbench);
   const menus = useWorkbenchPanelMenus(workbench, "main");
-  if (policy.showHeader || !pageContent || !menus.some((menu) => menu.has && menu.collapsed)) return null;
+  const hasTitle = Boolean(snapshot.label);
+  if (policy.showHeader || !pageContent || (!hasTitle && !menus.some((menu) => menu.has && menu.collapsed)))
+    return null;
 
   return (
     <Header
@@ -27,8 +32,17 @@ export const WorkbenchPageMenuHeader = (props: WorkbenchPageMenuHeaderProps) => 
       bg={workbenchBackgrounds.main}
       justifyContent="flex-end"
       flexShrink={0}
+      gap="xs"
     >
-      <WorkbenchPanelMenuOpeners workbench={workbench} panel="main" />
+      {hasTitle && (
+        <>
+          {snapshot.icon && <WorkbenchIcon name={snapshot.icon} size={14} />}
+          <Text flex="1" minW="0" textStyle="label/S/regular" truncate>
+            {snapshot.label}
+          </Text>
+        </>
+      )}
+      <WorkbenchPanelMenuOpeners workbench={workbench} panel="main" toggle={hasTitle} />
     </Header>
   );
 };

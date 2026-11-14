@@ -12,7 +12,8 @@ import {
   viewDataEvents,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
-import { readSkill, selectedSkillFile, skillFiles, skillInfo } from "./skill-content";
+import { readSkill, selectedSkillFile } from "./skill-content";
+import { skillNavigation } from "./skill-navigation";
 
 const title = l10n("skills.title", "Skills");
 const skill = defineResourceKind({ id: "skill", label: l10n("skill.title", "Skill"), icon: "sparkles" });
@@ -27,7 +28,7 @@ const viewer = defineView({
       const item = await readSkill(ctx, renderer.resource?.id);
       const file = item && selectedSkillFile(item, renderer.pageParams?.file);
       if (!file) return { emptyState: { title: "No skill content" } };
-      return { fileName: file.path, filePath: file.path, content: file.content, editable: false };
+      return { fileName: file.path, content: file.content, editable: false };
     },
   },
 });
@@ -59,7 +60,17 @@ const detail = definePage({
   parent: skills.ref,
   resource: { kinds: [skill.ref] },
   params: { file: { type: "string", default: "SKILL.md" } },
-  main,
+  main: {
+    ...main,
+    tab: {
+      query: async (ctx, { renderer }) => {
+        const item = await readSkill(ctx, renderer.resource?.id);
+        const file = item && selectedSkillFile(item, renderer.pageParams?.file);
+        return { label: file?.path ?? "Skill", icon: "file-text" };
+      },
+      refreshEvents: [viewDataEvents.extensionCatalogChanged, viewDataEvents.resourcesChanged],
+    },
+  },
   slots: [],
 });
 const details = defineView({
@@ -67,34 +78,9 @@ const details = defineView({
   title: l10n("skill.details", "Skill details"),
   icon: "info",
   body: {
-    kind: "tree",
-    defaultExpandedSectionIds: ["info", "files"],
-    refreshEvents: [viewDataEvents.extensionCatalogChanged, viewDataEvents.resourcesChanged],
-    body: async (ctx, { renderer }) => {
-      const item = await readSkill(ctx, renderer.resource?.id);
-      if (!item) return [];
-      const resource = renderer.resource ?? {
-        type: skill.id,
-        id: item.name,
-        label: item.title,
-        extensionId: ctx.extensionId,
-        projectId: ctx.projectId,
-      };
-      const file = selectedSkillFile(item, renderer.pageParams?.file);
-      return [
-        skillInfo(item),
-        {
-          id: "files",
-          label: l10n("skill.files", "Files"),
-          nodes: skillFiles(item, file?.path, (path) => ({
-            kind: "page",
-            page: detail.ref,
-            resource,
-            params: { file: path },
-          })),
-        },
-      ];
-    },
+    kind: "webview",
+    entry: packageAsset("./view.tsx", import.meta.url),
+    capabilities: ["commands.query", "navigation.open"],
   },
 });
 const list = defineView({
@@ -103,29 +89,19 @@ const list = defineView({
   body: {
     kind: "tree",
     refreshEvents: [viewDataEvents.extensionCatalogChanged, viewDataEvents.resourcesChanged],
-    body: async (ctx) => [
-      {
-        id: "skills",
-        label: title,
-        collapsible: false,
-        nodes: ((await ctx.skills?.list()) ?? []).map((item) => {
-          const resource = {
-            type: skill.id,
-            id: item.name,
-            label: item.title || item.name,
-            extensionId: ctx.extensionId,
-            projectId: ctx.projectId,
-          };
-          return {
-            id: item.name,
-            label: resource.label,
-            icon: "sparkles",
-            resource,
-            target: { kind: "page" as const, page: detail.ref, resource },
-          };
-        }),
-      },
-    ],
+    body: async (ctx) => {
+      const [items, catalog] = await Promise.all([ctx.skills?.list(), ctx.extensions?.list()]);
+      return skillNavigation(items ?? [], catalog?.extensions ?? [], (item) => {
+        const resource = {
+          type: skill.id,
+          id: item.name,
+          label: item.title || item.name,
+          extensionId: ctx.extensionId,
+          projectId: ctx.projectId,
+        };
+        return { resource, target: { kind: "page" as const, page: detail.ref, resource } };
+      });
+    },
   },
 });
 export const commands = {

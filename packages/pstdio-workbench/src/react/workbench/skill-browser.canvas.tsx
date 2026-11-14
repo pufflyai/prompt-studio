@@ -23,7 +23,7 @@ const createBrowser = () => {
       kind: "file",
       load: (_resource, _signal, params) => {
         const file = files.find((file) => file.path === params?.file) ?? files[0];
-        return { fileName: file.path, filePath: file.path, content: file.content, editable: false };
+        return { fileName: file.path, content: file.content, editable: false };
       },
     },
   });
@@ -47,7 +47,18 @@ const createBrowser = () => {
     modeId: "project",
     resource: { kinds: [{ kind: "resource-kind", id: "skill" }] },
     params: { file: { type: "string", default: "SKILL.md" } },
-    main: { kind: "view", presentation: "page", view: { kind: "view", id: "skill" }, cardinality: "one" },
+    main: {
+      kind: "view",
+      presentation: "page",
+      view: { kind: "view", id: "skill" },
+      cardinality: "one",
+      tab: {
+        getSnapshot: () => ({
+          label: String(workbench.pages.store.getState().location?.params?.file ?? "SKILL.md"),
+          icon: "file-text",
+        }),
+      },
+    },
     slots: [],
   });
   workbench.views.registerView({
@@ -59,10 +70,16 @@ const createBrowser = () => {
       getBody: () => [
         {
           id: "pstdio-skills",
+          collapsible: false,
           label: "Prompt Studio Skills",
           nodes: [{ id: "create-ticket", label: "Create a ticket", target: { kind: "page", page, resource } }],
         },
-        { id: "canvas", label: "UI Canvas", nodes: [{ id: "canvas", label: "Work with UI Canvas" }] },
+        {
+          id: "canvas",
+          collapsible: false,
+          label: "UI Canvas",
+          nodes: [{ id: "canvas", label: "Work with UI Canvas" }],
+        },
       ],
     },
   });
