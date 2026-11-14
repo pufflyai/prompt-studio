@@ -1,12 +1,11 @@
 // Shared by commands and webviews, so it holds plain data only.
 export const PLATFORMS = [
   { id: "linux-x64", label: "Linux x64" },
-  { id: "darwin-arm64", label: "macOS arm64" },
-  { id: "darwin-x64", label: "macOS x64" },
+  { id: "darwin-arm64", label: "Apple Silicon Mac" },
   { id: "win32-x64", label: "Windows x64" },
 ] as const;
 
-// Linux runners are the cheapest and most stable, so runs and pages start there.
+// Comparisons start on Linux; new runs select all three benchmark hosts.
 export const DEFAULT_PLATFORM = "linux-x64";
 
 export const platformLabel = (id: string) => PLATFORMS.find((platform) => platform.id === id)?.label ?? id;
@@ -24,13 +23,13 @@ export interface SuiteOption {
 // costs of one execution on a Linux runner, used only to estimate a run's length.
 export const SUITES: SuiteOption[] = [
   { id: "B1", label: "First installed launch", minutes: 1 },
-  { id: "B2", label: "Saved project launch", minutes: 1, platforms: ["linux-x64"] },
-  { id: "B3", label: "Warm runtime attachment", minutes: 1, platforms: ["linux-x64"] },
-  { id: "B4", label: "Work during streaming", minutes: 1, platforms: ["linux-x64", "darwin-arm64", "win32-x64"] },
-  { id: "B5", label: "Sustained whole-app memory", minutes: 11, platforms: ["darwin-arm64"] },
-  { id: "B6", label: "Populated Planner journey", minutes: 1, platforms: ["linux-x64"] },
-  { id: "B7", label: "Record store maintenance", minutes: 1, platforms: ["linux-x64", "darwin-arm64", "win32-x64"] },
-  { id: "B8", label: "Resume after crash", minutes: 1, platforms: ["linux-x64", "darwin-arm64", "win32-x64"] },
+  { id: "B2", label: "Saved project launch", minutes: 1 },
+  { id: "B3", label: "Warm runtime attachment", minutes: 1 },
+  { id: "B4", label: "Work during streaming", minutes: 1 },
+  { id: "B5", label: "Sustained whole-app memory", minutes: 11 },
+  { id: "B6", label: "Populated Planner journey", minutes: 1 },
+  { id: "B7", label: "Record store maintenance", minutes: 1 },
+  { id: "B8", label: "Resume after crash", minutes: 1 },
 ];
 export const DEFAULT_SUITES = SUITES.map((suite) => suite.id);
 

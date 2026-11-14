@@ -58,7 +58,7 @@ jobs:
       CHANNEL: ${{ inputs.channel }}
       GH_TOKEN: ${{ github.token }}
       PLAYWRIGHT_TRACE: "off"
-      E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/cli-linux-x64/bin/pstdio
+      E2E_PACKAGED_BINARY_PATH: ${{ github.workspace }}/packages/pstdio/dist/platforms/${{ matrix.platform_pkg }}/bin/${{ matrix.platform == 'win32' && 'pstdio.exe' || 'pstdio' }}
     steps:
       - uses: actions/checkout@v5
         with:

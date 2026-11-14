@@ -2,7 +2,7 @@
 
 Proposed: 2026-11-14. Status: implementation candidate; **not qualified**.
 
-PS-233 is the user's one-time authorization for the exact eight scenarios. [Manifest](../../../packages/benchmarks/src/catalog/scenarios.ts), [lock](../../../packages/benchmarks/catalog.lock.json), [guidance](../../guides/development/0016-writing-benchmarks.md). Benchmark changes carry the `benchmark` PR label and are left for human review and merge. No new numeric latency limit has been approved.
+PS-233 is the user's one-time authorization for the exact eight scenarios. [Manifest](../../../packages/benchmarks/src/catalog/scenarios.ts), [lock](../../../packages/benchmarks/catalog.lock.json), [guidance](../../guides/development/0016-writing-benchmarks.md). Benchmark changes carry the `benchmark` PR label and are left for human review and merge. No new numeric latency limit has been approved. The user explicitly selected B1–B8 on Linux x64, Apple Silicon Mac and Windows x64, with Intel Mac removed entirely from benchmarks. Nightly and stable each require all 24 combinations. B5 version 2 labels native memory by platform; its Linux/Windows limits remain pending. Older host mappings and measurements below are historical evidence.
 
 ## Previous catalog
 

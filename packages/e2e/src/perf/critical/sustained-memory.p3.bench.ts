@@ -58,13 +58,19 @@ await runScenario("B5", (capture) =>
       assert.equal(memory.cycles.length, workload.cycles);
       assert(memory.cycles.every((cycle) => cycle.retainedBytes !== null));
       const retained = memory.cycles.map((cycle) => cycle.retainedBytes!);
-      capture.record("physical-average", memory.averageBytes, {
-        value: 2_000_000_000,
-        evidence: "003.3.1: M5 whole-app physical footprint including compression",
-      });
-      capture.record("physical-peak", memory.measuredPeakBytes);
+      capture.record(
+        "native-average",
+        memory.averageBytes,
+        process.platform === "darwin"
+          ? {
+              value: 2_000_000_000,
+              evidence: "003.3.1: M5 whole-app physical footprint including compression",
+            }
+          : undefined,
+      );
+      capture.record("native-peak", memory.measuredPeakBytes);
       capture.record("retained-growth", Math.max(...retained) - retained[0]!);
-      capture.record("rss-peak", memory.rssPeakBytes);
+      capture.record("resident-peak", memory.rssPeakBytes);
       capture.record("js-heap-peak", memory.heapPeakBytes);
       capture.record("processes", memory.maximumProcessCount);
       capture.record("maximum-sample-gap", memory.maximumGapMs);

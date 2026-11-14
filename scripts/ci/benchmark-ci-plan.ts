@@ -2,7 +2,7 @@ import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { suites } from "./benchmark-registry";
 import { performanceSuites } from "./production-performance-profile";
-import { productionDesktopPlatforms, productionPerformanceWorkloads } from "./production-platforms";
+import { productionBenchmarkPlatforms, productionPerformanceWorkloads } from "./production-platforms";
 import type { TestPackage } from "./runner-profiles";
 import { createTestPlan, mergeTestPlans, type SourceIdentity } from "./test-plan";
 import { testPlanSource } from "./test-plan-source";
@@ -10,13 +10,13 @@ import { readWorkspacePackages } from "./workspace-packages";
 
 export const createBenchmarkCiPlan = (source: SourceIdentity, packages: TestPackage[], channel: string) => {
   if (!["stable", "nightly"].includes(channel)) throw new Error(`Unknown release channel: ${channel}`);
-  const hosts = productionDesktopPlatforms(channel);
+  const hosts = productionBenchmarkPlatforms();
   const assignments = [
     ...hosts.flatMap((host) =>
       performanceSuites("desktop", host.target).map((suite) => ({ ...host, suite: suite.id })),
     ),
     ...productionPerformanceWorkloads(channel).flatMap(({ family, os }) => {
-      const host = productionDesktopPlatforms("stable").find((host) => host.os === os)!;
+      const host = hosts.find((host) => host.os === os)!;
       return performanceSuites(family, host.target).map((suite) => ({ ...host, suite: suite.id }));
     }),
   ].map((row) => ({ ...row, job: `benchmark-${row.target}-${row.suite}` }));

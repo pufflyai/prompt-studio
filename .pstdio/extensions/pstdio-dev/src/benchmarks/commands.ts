@@ -175,7 +175,7 @@ const startRunCommand = defineCommand({
     platforms: params.list({ label: "Platforms" }),
   },
   async run(ctx, input) {
-    const platforms = input.platforms?.length ? input.platforms : [DEFAULT_PLATFORM];
+    const platforms = input.platforms?.length ? input.platforms : ALL_PLATFORMS;
     const strange = platforms.filter((platform) => !ALL_PLATFORMS.includes(platform));
     if (strange.length) throw new Error(`Unknown platforms: ${strange.join(", ")}. Use ${ALL_PLATFORMS.join(", ")}.`);
     const requested = input.suites?.length ? input.suites : DEFAULT_SUITES;

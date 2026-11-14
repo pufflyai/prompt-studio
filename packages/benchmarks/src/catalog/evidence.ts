@@ -31,7 +31,7 @@ export const scenarioEvidence = (
     events.some((event) => event.event === "failed")
   )
     throw new Error(`${id}: incomplete or failed first-attempt evidence`);
-  const sameHost = ["host", "cpu", "cores", "memoryBytes", "cache", "throttle", "units"];
+  const sameHost = ["host", "cpu", "cores", "memoryBytes", "cache", "throttle", "units", "memoryMetric"];
   if (
     typeof first.cpu !== "string" ||
     !first.cpu ||
@@ -48,7 +48,8 @@ export const scenarioEvidence = (
     if (
       event.scenario !== id ||
       event.catalogRevision !== catalogRevision ||
-      event.workloadVersion !== 1 ||
+      event.workloadVersion !== (scenario.id === "B5" ? scenario.workloadVersion : 1) ||
+      (scenario.id === "B5" && event.memoryMetric !== scenario.memoryMetrics[expected.platform.split("-")[0]!]) ||
       event.fingerprint !== fingerprint ||
       event.dirty ||
       event.sample !== 0 ||

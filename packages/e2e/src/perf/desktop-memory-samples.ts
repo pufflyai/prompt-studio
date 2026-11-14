@@ -1,8 +1,8 @@
-import { execFile, spawn } from "node:child_process";
+import { spawn } from "node:child_process";
 import { appendFileSync } from "node:fs";
 import { createInterface } from "node:readline";
-import { promisify } from "node:util";
 import type { KernelProcessReading } from "pstdio-diagnostics";
+import { readProcessTable } from "./critical/owned-processes";
 
 export const ownedProcessTree = async (
   processes: number[][],
@@ -41,6 +41,14 @@ export const sampleDesktopMemory = (
   output: string,
   heap?: () => Promise<number>,
 ) => {
+  const nativeMemory = {
+    darwin: { field: "physicalFootprintBytes", label: "macOS physical footprint including compressed memory" },
+    linux: { field: "residentBytes", label: "Linux resident set bytes" },
+    win32: { field: "privateCommittedBytes", label: "Windows private committed bytes" },
+  } as const;
+  const native = nativeMemory[process.platform as keyof typeof nativeMemory];
+  if (!native) throw new Error(`Unsupported memory host: ${process.platform}`);
+  const { field: memoryField, label: metric } = native;
   const observer = spawn(sidecar, ["performance-observer"], { stdio: ["pipe", "pipe", "ignore"] });
   const lines = createInterface({ input: observer.stdout });
   let pending: ReturnType<typeof Promise.withResolvers<KernelProcessReading | null>> | undefined;
@@ -77,11 +85,7 @@ export const sampleDesktopMemory = (
   let measuredUntil = 0;
   const sample = async () => {
     const at = performance.now();
-    const { stdout } = await promisify(execFile)("ps", ["-axo", "pid=,ppid="]);
-    const processes = stdout
-      .trim()
-      .split("\n")
-      .map((line) => line.trim().split(/\s+/).map(Number));
+    const processes = await readProcessTable();
     // Validate remembered parents before expanding their branches; a rejected parent
     // cannot introduce unrelated descendants into the retained ownership set.
     const { owned, priorReadings, reused } = await ownedProcessTree(processes, roots(), identities, read);
@@ -94,10 +98,8 @@ export const sampleDesktopMemory = (
     // Keep each original generation for this bounded capture, including after exit.
     // A static root PID must never acquire an unrelated replacement on a later sample.
     const complete =
-      reused.size === 0 &&
-      readings.length > 0 &&
-      readings.every(({ reading }) => reading?.physicalFootprintBytes != null);
-    const total = complete ? readings.reduce((sum, { reading }) => sum + reading!.physicalFootprintBytes!, 0) : null;
+      reused.size === 0 && readings.length > 0 && readings.every(({ reading }) => reading?.[memoryField] != null);
+    const total = complete ? readings.reduce((sum, { reading }) => sum + reading![memoryField]!, 0) : null;
     const rss =
       readings.length && readings.every(({ reading }) => reading?.residentBytes != null)
         ? readings.reduce((sum, { reading }) => sum + reading!.residentBytes!, 0)
@@ -154,7 +156,7 @@ export const sampleDesktopMemory = (
         }
       }
       return {
-        metric: "macOS physical footprint including compressed memory",
+        metric,
         averageBytes: durationMs ? weighted / durationMs : null,
         durationMs,
         missingMs,

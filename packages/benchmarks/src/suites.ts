@@ -80,11 +80,9 @@ export const suites: BenchmarkSuite[] = scenarios.map((scenario) => ({
         ...layout(context),
         ...(scenario.id === "B6"
           ? {
-              E2E_PACKAGED_BINARY_PATH: join(
-                context.root,
-                "dist",
-                context.platform.startsWith("win32-") ? "pstdio.exe" : "pstdio",
-              ),
+              E2E_PACKAGED_BINARY_PATH:
+                process.env.E2E_PACKAGED_BINARY_PATH ??
+                join(context.root, "dist", context.platform.startsWith("win32-") ? "pstdio.exe" : "pstdio"),
             }
           : {}),
         BENCHMARK_SOURCE_SHA: context.sha,

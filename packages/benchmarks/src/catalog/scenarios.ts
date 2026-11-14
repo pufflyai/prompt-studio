@@ -1,6 +1,5 @@
 // PS-233 authorizes this one-time catalog. Later semantic changes require human approval.
 const primary = ["linux-x64", "darwin-arm64", "win32-x64"];
-const desktop = [...primary, "darwin-x64"];
 const metric = (id: string, unit: "ms" | "bytes" | "share" | "count", kind = "supporting") => ({ id, unit, kind });
 const elapsed = (id: string) => metric(id, "ms", "pending-guard");
 export const catalogRevision = 1;
@@ -16,7 +15,7 @@ export const scenarios = [
   {
     id: "B1",
     label: "First installed launch",
-    platforms: desktop,
+    platforms: primary,
     file: "packages/e2e/src/perf/critical/first-launch.p3.bench.ts",
     cache: "empty app home; no owned process; OS first-launch checks retained",
     throttle: 1,
@@ -26,7 +25,7 @@ export const scenarios = [
   {
     id: "B2",
     label: "Saved project process launch",
-    platforms: ["linux-x64"],
+    platforms: primary,
     file: "packages/e2e/src/perf/critical/saved-launch.p3.bench.ts",
     cache: "saved local project; fresh app and runtime processes",
     throttle: 1,
@@ -42,7 +41,7 @@ export const scenarios = [
   {
     id: "B3",
     label: "Attach to owned runtime",
-    platforms: ["linux-x64"],
+    platforms: primary,
     file: "packages/e2e/src/perf/critical/warm-reopen.p3.bench.ts",
     cache: "saved local project; authenticated owned runtime already running",
     throttle: 1,
@@ -103,8 +102,14 @@ export const scenarios = [
   },
   {
     id: "B5",
+    workloadVersion: 2,
+    memoryMetrics: {
+      darwin: "physical footprint including compression",
+      linux: "resident set",
+      win32: "private committed",
+    } as Record<string, string>,
     label: "Sustained whole-app memory",
-    platforms: ["darwin-arm64"],
+    platforms: primary,
     file: "packages/e2e/src/perf/critical/sustained-memory.p3.bench.ts",
     cache: "conversation fixture; default tools; no forced GC",
     throttle: 1,
@@ -115,10 +120,10 @@ export const scenarios = [
     cycleMs: 15_000,
     actions: ["open conversation", "close conversation", "open file", "close file", "hide panel", "show panel"],
     metrics: [
-      metric("physical-average", "bytes", "product"),
-      metric("physical-peak", "bytes"),
+      metric("native-average", "bytes", "pending-guard"),
+      metric("native-peak", "bytes"),
       metric("retained-growth", "bytes"),
-      metric("rss-peak", "bytes"),
+      metric("resident-peak", "bytes"),
       metric("js-heap-peak", "bytes"),
       metric("processes", "count"),
       metric("maximum-sample-gap", "ms", "product"),
@@ -127,7 +132,7 @@ export const scenarios = [
   {
     id: "B6",
     label: "Populated Planner journey",
-    platforms: ["linux-x64"],
+    platforms: primary,
     file: "packages/e2e/src/perf/critical/planner-project.p3.bench.ts",
     cache: "fresh runtime and browser after deterministic seed",
     throttle: 4,

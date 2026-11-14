@@ -14,16 +14,16 @@ A self-edited lock is not human authorization. Add the `benchmark` label to PRs 
 
 | ID | Fixed workload | Owning hosts |
 | --- | --- | --- |
-| B1 | Empty-home first installed launch: window, authenticated API, default tools, usable workbench, first interaction | Linux x64, macOS ARM/Intel, Windows x64 |
-| B2 | Fresh-process saved project: 100 messages, file, idle terminal | Linux x64 |
-| B3 | Same saved project, attach to an already-running owned runtime | Linux x64 |
-| B4 | Two populated projects; 30 turns × 8 updates × 25ms, one tool result per turn; foreground actions and cancel a second replay | Linux x64, macOS ARM, Windows x64 |
-| B5 | Same saved fixture; 30s settle, forty fixed 15s action cycles; whole process tree sampled every 500ms | macOS ARM |
-| B6 | 1,000 Planner tickets, three edits each, one saved filtered list; cold actionable content, search, page, move, reopen | Linux x64 |
-| B7 | 10,000 deterministic records with three history edits; cold/warm page of 100, one edit, read during 100-record write/maintenance | Linux x64, macOS ARM, Windows x64 |
-| B8 | One idle-session runtime crash; feedback, restored authenticated API/tools/content, first action, persisted data and cleanup | Linux x64, macOS ARM, Windows x64 |
+| B1 | Empty-home first installed launch: window, authenticated API, default tools, usable workbench, first interaction | Linux x64, Apple Silicon Mac, Windows x64 |
+| B2 | Fresh-process saved project: 100 messages, file, idle terminal | Linux x64, Apple Silicon Mac, Windows x64 |
+| B3 | Same saved project, attach to an already-running owned runtime | Linux x64, Apple Silicon Mac, Windows x64 |
+| B4 | Two populated projects; 30 turns × 8 updates × 25ms, one tool result per turn; foreground actions and cancel a second replay | Linux x64, Apple Silicon Mac, Windows x64 |
+| B5 | Same saved fixture; 30s settle, forty fixed 15s action cycles; whole process tree sampled every 500ms | Linux x64, Apple Silicon Mac, Windows x64 |
+| B6 | 1,000 Planner tickets, three edits each, one saved filtered list; cold actionable content, search, page, move, reopen | Linux x64, Apple Silicon Mac, Windows x64 |
+| B7 | 10,000 deterministic records with three history edits; cold/warm page of 100, one edit, read during 100-record write/maintenance | Linux x64, Apple Silicon Mac, Windows x64 |
+| B8 | One idle-session runtime crash; feedback, restored authenticated API/tools/content, first action, persisted data and cleanup | Linux x64, Apple Silicon Mac, Windows x64 |
 
-Nightly retains Linux and Apple Silicon ownership; stable validation adds existing Windows/Intel owners. These assignments do not multiply all eight scenarios across every architecture or browser. Signed release consumers keep their immutable artifact identities. Source-built measurements are labelled separately.
+Every B1–B8 scenario runs once on each of the three hosts in nightly and stable validation: **24 scenario/host combinations** per candidate. Intel Mac is excluded. The manual workflow and Performance run form default to all three hosts. Stable consumers keep signed release artifact identities; nightly Windows builds an unpublished production-mode desktop package and labels it source-diagnostic.
 
 ## Record before checking
 
@@ -51,7 +51,9 @@ B2/B3/B4/B5/B8 share the same 100-message/file/idle-terminal fixture. Restore an
 
 The [numeric targets](../../guidance/0003-nonfunctional-requirements.md) are unchanged: **2 seconds** empty-home launch through interactive workbench/API/default tools on the M5 reference configuration; and **2 GB decimal** average physical footprint over the specified ten-minute workload. Per the user's instruction, a separate 10-core/32 GiB M5 proof run is optional and is not a benchmark-suite or release qualification prerequisite. Use the applicable CI hosts, record their actual CPU/cores/RAM and keep unlike host measurements separate. Other hardware does not certify the M5-specific target.
 
-B5 measures all owned desktop/runtime descendants, validates process generations, clips the time-weighted average to the measured interval and retains raw process readings. Missing physical samples, incomplete cycles, sampling gaps over one second or an incomplete ten-minute window fail. RSS, JS heap and physical footprint including compression remain distinct. Do not force GC. Available hardware, including a 16 GiB M5 or hosted Apple Silicon, is not disqualified solely for differing from the reference configuration.
+B5 workload version 2 uses `native-average`, `native-peak` and `resident-peak` metric IDs. It records physical footprint including compression on macOS, resident set bytes on Linux, and private committed bytes on Windows. These are separate platform series; they are not interchangeable physical-memory measurements. The existing 2 GB physical-footprint guard applies on macOS. Linux/Windows native-average limits remain pending explicit human decisions. Older B5 physical-only results remain version 1 history.
+
+B5 measures all owned desktop/runtime descendants, validates process generations, clips the time-weighted average to the measured interval and retains raw process readings. Missing native memory samples, incomplete cycles, sampling gaps over one second or an incomplete ten-minute window fail. RSS, JS heap and physical footprint including compression remain distinct. Do not force GC. Available hardware, including a 16 GiB M5 or hosted Apple Silicon, is not disqualified solely for differing from the reference configuration.
 
 B1's default-tool/actionable boundary and all new latency guards require representative actual-host measurements before qualification. Unrun phases and unresolved legacy guards stay visible in the ledger. The absence of a 32 GiB M5 run is not a blocker. No new numeric UX limits have been approved by this implementation.
 

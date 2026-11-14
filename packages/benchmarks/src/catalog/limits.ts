@@ -25,6 +25,6 @@ export const retainedLimit = (scenario: string, metric: string) => {
         "idle-task": rendererBudgets.idleTask,
       } as Record<string, { value: number; evidence: string }>
     )[metric];
-  if (scenario === "B5" && metric === "physical-average")
+  if (scenario === "B5" && metric === "native-average" && process.platform === "darwin")
     return { value: 2_000_000_000, evidence: "003.3.1: M5 whole-app physical footprint including compression" };
 };

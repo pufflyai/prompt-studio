@@ -3,4 +3,4 @@
 "pstdio-planner": patch
 ---
 
-Keep performance qualification tied to fixed critical workloads and reject incomplete evidence. Leave benchmark PRs for human review and merge.
+Run all eight fixed performance workloads on Linux x64, Apple Silicon Mac and Windows x64, and reject incomplete evidence. Leave benchmark PRs for human review and merge.

@@ -1,5 +1,5 @@
 {
   "revision": 1,
-  "digest": "4eb9f91cf659bbd0de58371384be7588b0b680136fc6768675681a5f68436171",
-  "authorization": "PS-233 authorizes the one-time eight-scenario consolidation; later semantic changes require explicit human instructions and a benchmark-labeled PR left for human review and merge; the user explicitly removed exact 10-core/32 GiB M5 reference proof as a qualification prerequisite"
+  "digest": "2fa4f97389d69277ca911f082ce7c3fb72c76e19a81fec7c4605833dfd3f033a",
+  "authorization": "PS-233 authorizes the one-time eight-scenario consolidation; later semantic changes require explicit human instructions and a benchmark-labeled PR left for human review and merge; the user explicitly removed exact 10-core/32 GiB M5 reference proof as a qualification prerequisite; the user explicitly selected all eight scenarios on linux-x64, darwin-arm64 and win32-x64, removed Intel Mac, and authorized native memory adapters for B5 version 2"
 }

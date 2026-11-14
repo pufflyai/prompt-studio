@@ -13,8 +13,8 @@ on:
         description: Suite ids separated by commas. Empty runs every suite.
         default: ""
       platforms:
-        description: Platforms separated by commas (linux-x64, darwin-arm64, darwin-x64, win32-x64).
-        default: linux-x64
+        description: Platforms separated by commas (linux-x64, darwin-arm64, win32-x64).
+        default: linux-x64,darwin-arm64,win32-x64
       samples:
         description: Executions per commit and suite. Must be 1; CI never repeats tests.
         default: "1"
@@ -67,7 +67,7 @@ jobs:
         id: plan
         env:
           COMMITS: ${{ inputs.commits }}
-          PLATFORMS: ${{ inputs.platforms || 'linux-x64' }}
+          PLATFORMS: ${{ inputs.platforms || 'linux-x64,darwin-arm64,win32-x64' }}
           SUITES: ${{ inputs.suites }}
           SAMPLES: ${{ inputs.samples }}
         run: |
@@ -89,7 +89,7 @@ jobs:
             echo "No commits to measure" >&2
             exit 1
           fi
-          RUNNERS='{"linux-x64":"ubuntu-24.04","darwin-arm64":"macos-15","darwin-x64":"macos-15-intel","win32-x64":"windows-2025"}'
+          RUNNERS='{"linux-x64":"ubuntu-24.04","darwin-arm64":"macos-15","win32-x64":"windows-2025"}'
           include='[]'
           IFS=',' read -ra platforms <<< "$PLATFORMS"
           for platform in "${platforms[@]}"; do

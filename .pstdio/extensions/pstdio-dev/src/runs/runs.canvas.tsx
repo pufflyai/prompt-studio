@@ -2,7 +2,7 @@ import { Button, Stack } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { AttachedMenu, ResizableSplitLayout, ScrollArea } from "@pstdio/ui";
 import { useState } from "react";
-import { DEFAULT_PLATFORM } from "../benchmarks/platforms";
+import { DEFAULT_SUITES, PLATFORMS } from "../benchmarks/platforms";
 import { storyRefs, storyRuns } from "../webview/story-runs";
 import { RunForm, type RunRequest } from "./run-form";
 import { RunList } from "./run-list";
@@ -13,8 +13,8 @@ interface RunsStoryProps {
 const RunsStory = (props: RunsStoryProps) => {
   const [request, setRequest] = useState<RunRequest>({
     commits: ["pstdio@0.45.0", "pstdio@0.43.0"],
-    suites: ["storage", "runtime"],
-    platforms: [DEFAULT_PLATFORM],
+    suites: DEFAULT_SUITES,
+    platforms: PLATFORMS.map((platform) => platform.id),
   });
   const [collapsed, setCollapsed] = useState(false);
   return (
@@ -63,7 +63,7 @@ const meta: CanvasMeta<typeof RunsStory> = {
   component: RunsStory,
   fullscreen: true,
   description:
-    "Open the commit input to see every tag; pstdio@0.45.0 is Measured and not run again. Pick a platform other than Linux x64 to see Relay storage disabled.",
+    "Open the commit input to see every tag; pstdio@0.45.0 is Measured and not run again. All eight workloads are selected on Linux x64, Apple Silicon Mac and Windows x64.",
 };
 export default meta;
 type Story = CanvasFrame<typeof RunsStory>;
