@@ -152,7 +152,7 @@ export default {
   title: "Extensions/Skill Browser/Workbench",
   fullscreen: true,
   description:
-    "Skills grouped by extension; parameter Info and Files share the host menu. Filename and menu toggle share the file header.",
+    "Skills grouped by extension; parameter Info and Files share the host menu. Filename and menu toggle share the file header with the standard bottom divider.",
 } satisfies CanvasMeta;
 
 export const Browser = () => {

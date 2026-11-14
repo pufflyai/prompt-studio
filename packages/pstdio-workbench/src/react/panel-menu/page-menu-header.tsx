@@ -7,6 +7,7 @@ import { usePanelPolicy } from "../shared/use-panel-policy";
 import { usePlacementTab } from "../shared/use-placement-tab";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
+import { WorkbenchHeaderBorder } from "../workbench/header-bottom-border";
 import { WorkbenchPanelMenuOpeners } from "./panel-menu";
 import { useWorkbenchPanelMenus } from "./use-panel-menu";
 
@@ -33,6 +34,7 @@ export const WorkbenchPageMenuHeader = (props: WorkbenchPageMenuHeaderProps) => 
       justifyContent="flex-end"
       flexShrink={0}
       gap="xs"
+      position="relative"
     >
       {hasTitle && (
         <>
@@ -43,6 +45,7 @@ export const WorkbenchPageMenuHeader = (props: WorkbenchPageMenuHeaderProps) => 
         </>
       )}
       <WorkbenchPanelMenuOpeners workbench={workbench} panel="main" toggle={hasTitle} />
+      {hasTitle && <WorkbenchHeaderBorder workbench={workbench} region="main-header" />}
     </Header>
   );
 };
