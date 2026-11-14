@@ -73,9 +73,9 @@ export const SettingsOverlay = (props: SettingsOverlayProps) => {
           resizableSide="left"
           resizablePanel={nav}
           contentPanel={content}
-          defaultSizePx={240}
-          minSizePx={220}
-          maxSizePx={420}
+          defaultSizePx={200}
+          minSizePx={180}
+          maxSizePx={280}
           contentMinSizePx={360}
           collapsible={false}
           resizeLabel="Resize settings navigation"

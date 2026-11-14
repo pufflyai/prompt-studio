@@ -50,6 +50,7 @@ describe("isolated development paths", () => {
         ["pstdio-performance", "extensions/pstdio-performance"],
         ["pstdio-planner", "extensions/pstdio-planner"],
         ["pstdio-skills", "extensions/pstdio-skills"],
+        ["pstdio-skill-browser", "extensions/pstdio-skill-browser"],
         ["extension-lab", "extensions/extension-lab"],
         ["local-example", "infra/local/extensions/local-example"],
       ].map(([installName, source]) => ({

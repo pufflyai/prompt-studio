@@ -183,6 +183,7 @@
         "pstdio-planner",
         "pstdio-reports",
         "pstdio-skills",
+        "pstdio-skill-browser",
         "remote-workspaces",
         "workbench-fixture"
       ]
@@ -446,18 +447,19 @@
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "extensions/pstdio-skills": {
-      // The browser entry loads by packageAsset path; shipped examples are also typechecked.
+      "entry": ["extension.ts", "skills/create-pstdio-extension/references/examples/**/*.{ts,tsx}"],
+      "project": ["*.ts", "skills/create-pstdio-extension/references/examples/**/*.{ts,tsx}"]
+    },
+    "extensions/pstdio-skill-browser": {
       "entry": [
         "extension.ts",
-        "test-setup.ts",
         "src/view.tsx",
         ".canvas/**/*.{ts,tsx}",
         "src/**/*.canvas.tsx",
         "src/**/*.test.ts",
-        "*.test.ts",
-        "skills/create-pstdio-extension/references/examples/**/*.{ts,tsx}"
+        "*.test.ts"
       ],
-      "project": ["*.ts", "src/**/*.{ts,tsx}", "skills/create-pstdio-extension/references/examples/**/*.{ts,tsx}"]
+      "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "infra/local/extensions/*": {
       "entry": ["extension.ts", "src/**/*.canvas.tsx", "*.test.ts"],

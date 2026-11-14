@@ -21,7 +21,7 @@ const viewer = defineView({
   body: {
     kind: "webview",
     entry: packageAsset("./view.tsx", import.meta.url),
-    capabilities: ["commands.query"],
+    capabilities: ["commands.query", "navigation.open"],
   },
 });
 const main = { kind: "view" as const, view: viewer.ref, cardinality: "one" as const, presentation: "page" as const };
@@ -87,9 +87,11 @@ export const commands = {
     id: "read",
     title: l10n("skills.read", "Read skill"),
     cli: true,
-    params: { name: { type: "text", required: true } },
+    params: { name: { type: "text" } },
     run: async (ctx, { name }) => {
-      const item = (await ctx.skills?.list())?.find((item) => item.name === name);
+      const skills = (await ctx.skills?.list()) ?? [];
+      if (!name) return skills[0] ?? null;
+      const item = skills.find((item) => item.name === name);
       if (!item) throw new Error(`Skill not found: ${name}`);
       return item;
     },

@@ -1,20 +1,21 @@
+import { Box } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { SkillWithContent } from "@pstdio/sdk/resources";
 import { FileIconThemePreferenceProvider } from "@pstdio/ui";
 import { SkillViewerContent } from "./skill-viewer";
 
 const meta: CanvasMeta<typeof SkillViewerContent> = {
-  title: "Extensions/Skills/Browser",
+  title: "Extensions/Skill Browser/Viewer",
   component: SkillViewerContent,
   fullscreen: true,
   description:
-    "Full-width preview with a top divider. Info and Files tabs switch the sidebar while preserving the selected file.",
+    "Read-only skill viewer with combined Info and Files, a resizable details panel, and close/reopen controls.",
   decorators: [
     (Story) => (
       <FileIconThemePreferenceProvider>
-        <div style={{ height: "640px" }}>
+        <Box h="100vh">
           <Story />
-        </div>
+        </Box>
       </FileIconThemePreferenceProvider>
     ),
   ],
@@ -53,8 +54,4 @@ const baseSkill: SkillWithContent = {
 export const InstalledExtensionSkill: Story = {
   id: "projectsettings-skillviewer--installed-extension-skill",
   args: { skill: baseSkill },
-};
-export const NotInstalledSkill: Story = {
-  id: "projectsettings-skillviewer--not-installed-skill",
-  args: { skill: { ...baseSkill } },
 };

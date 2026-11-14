@@ -75,6 +75,7 @@
     "pstdio-home": "workspace:*",
     "yjs": "^13.6.29",
     "pstdio-session-browser": "workspace:*",
-    "pstdio-workspaces": "workspace:*"
+    "pstdio-workspaces": "workspace:*",
+    "pstdio-skill-browser": "workspace:*"
   }
 }

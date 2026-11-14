@@ -10,8 +10,8 @@ import {
 } from "@pstdio/ui";
 import { MarkdownEditor } from "@pstdio/ui/rich-text";
 import { useState } from "react";
-import { buildSkillFileTree, collectFolderIds } from "../../src/build-skill-file-tree";
-import { parseSkillMetadata } from "../../src/parse-skill-metadata";
+import { buildSkillFileTree, collectFolderIds } from "./build-skill-file-tree";
+import { parseSkillMetadata } from "./parse-skill-metadata";
 
 const PanelLeft = getIconComponent("panel-left");
 const X = getIconComponent("x");
@@ -101,7 +101,7 @@ export const SkillViewerContent = (props: { skill: Skill }) => {
       <ScrollArea flex="1" minH="0" minW="0" data-testid="project-skill-editor-scroll">
         <Stack p="md" minW="0">
           {!selectedFile && <Text color="fg.muted">No skill content.</Text>}
-          {selectedFile && selectedFile.path.toLowerCase().endsWith(".md") && (
+          {selectedFile?.path.toLowerCase().endsWith(".md") && (
             <MarkdownEditor
               key={`${skill.id}:${selectedFile.path}`}
               defaultState={selectedFile.content}

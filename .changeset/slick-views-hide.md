@@ -1,7 +1,7 @@
 ---
 "pstdio": patch
 "@pstdio/workbench": patch
-"pstdio-skills": minor
+"pstdio-skill-browser": minor
 ---
 
-Move the skill browser into the Skills extension in the navigation footer and narrow the settings modal.
+Preinstall a separate Skill Browser with automatic selection and resizable details above Settings in the footer, and narrow the settings modal.

@@ -113,6 +113,7 @@ test(
           expect.objectContaining({ canUpgrade: false, enabled: true, installName: "pstdio-planner" }),
           expect.objectContaining({ enabled: true, installName: "pstdio-reports" }),
           expect.objectContaining({ enabled: true, installName: "pstdio-skills" }),
+          expect.objectContaining({ enabled: true, installName: "pstdio-skill-browser" }),
         ]),
       );
 
@@ -123,10 +124,10 @@ test(
         expect.objectContaining({ extensionId: "pstdio.pstdio-home", path: "home" }),
       );
       expect(metadata.navigationItems).toContainEqual(
-        expect.objectContaining({ extensionId: "pstdio.pstdio-skills", slot: "footer" }),
+        expect.objectContaining({ extensionId: "pstdio.pstdio-skill-browser", slot: "footer" }),
       );
       const skillView = metadata.views.find(
-        (view) => view.extensionId === "pstdio.pstdio-skills" && view.localId === "skill",
+        (view) => view.extensionId === "pstdio.pstdio-skill-browser" && view.localId === "skill",
       );
       expect(skillView?.body.kind).toBe("webview");
       if (skillView?.body.kind === "webview") {

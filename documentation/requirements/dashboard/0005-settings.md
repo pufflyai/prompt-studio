@@ -24,7 +24,7 @@ Extensions can contribute settings through public APIs. Template editors call co
 
 ## Consistent layout and pending changes
 
-The settings modal has a maximum width of 1024px, bounded by the viewport, with an initial navigation width of 240px. Settings pages share one centered content width and parameter-editor controls. Each page title uses the same icon as its navigation entry. Save changes and Reset changes stay in the page header, above scrolling content. Native content uses the page scroll area. Extension editors fill the body and center their fields inside a full-width scroll area, placing the scrollbar at the right edge while keeping pickers and confirmation dialogs in a bounded viewport. The overlay close button stays at the top right of the modal header.
+The settings modal has a maximum width of 760px, bounded by the viewport, with an initial navigation width of 200px. Settings pages share one centered content width and parameter-editor controls. Each page title uses the same icon as its navigation entry. Save changes and Reset changes stay in the page header, above scrolling content. Native content uses the page scroll area. Extension editors fill the body and center their fields inside a full-width scroll area, placing the scrollbar at the right edge while keeping pickers and confirmation dialogs in a bounded viewport. The overlay close button stays at the top right of the modal header.
 
 Leaving a page with pending changes, including closing settings, offers Stay, Discard changes, and Save and leave. A failed save keeps the page and its draft open with the error visible. Settings that save immediately do not prompt. Navigation and content loading use visible static skeletons.
 
@@ -61,7 +61,7 @@ Agents are harness contributions from enabled extensions. The core does not main
 
 ## Skills, templates, and credentials
 
-The [Skills extension](../../../extensions/pstdio-skills/README.md) opens from the project navigation footer, outside Settings. Its sidebar and read-only viewer show skill metadata, instructions, and supporting files. The host owns skill storage and installation. Templates resolve through extension-owned providers and retain user overrides. Machine tokens are scoped credentials for automation; connection secrets stay in the host-managed secret boundary. Settings pages must not expose credentials as ordinary extension settings or webview state.
+The [Skill Browser extension](../../../extensions/pstdio-skill-browser/README.md) is preinstalled and opens above Settings in the project navigation footer, automatically selecting a skill. Its resizable, closable details panel and sidebar and read-only viewer show skill metadata, instructions, and supporting files. The host owns skill storage and installation. Templates resolve through extension-owned providers and retain user overrides. Machine tokens are scoped credentials for automation; connection secrets stay in the host-managed secret boundary. Settings pages must not expose credentials as ordinary extension settings or webview state.
 
 Global preferences survive project deletion. Deleting one project's data must not reset installation-wide runtime or beta preferences.
 

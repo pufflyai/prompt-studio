@@ -26,6 +26,8 @@ const ownersEqual = (left: NavigationTreeOwner, right: NavigationTreeOwner) => o
 
 const contributionOrder =
   (owner: NavigationTreeOwner) => (left: NavigationTreeContribution, right: NavigationTreeContribution) => {
+    const groupOrder = (left.order ?? 0) - (right.order ?? 0);
+    if (groupOrder !== 0) return groupOrder;
     const leftOwn = left.sourceExtensionId === owner.extensionId;
     const rightOwn = right.sourceExtensionId === owner.extensionId;
     if (leftOwn !== rightOwn) return leftOwn ? -1 : 1;

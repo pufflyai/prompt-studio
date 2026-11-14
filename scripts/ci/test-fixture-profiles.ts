@@ -4,6 +4,7 @@ export const uiFixtureExtensions = [
   "pstdio-artifacts",
   "pstdio-cloud",
   "pstdio-home",
+  "pstdio-skill-browser",
   "pstdio-performance",
   "pstdio-planner",
   "pstdio-workspaces",

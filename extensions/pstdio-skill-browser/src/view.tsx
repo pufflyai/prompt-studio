@@ -13,33 +13,45 @@ import { useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
 import type { commands } from "./browser";
 import { SkillViewerContent } from "./skill-viewer";
+import { useSkillSelection } from "./use-skill-selection";
 
 interface HostProps {
   projectId: string;
   resource?: ResourceRef;
 }
-const SkillContent = (props: { context: ExtensionViewRenderContext<HostProps>; name: string }) => {
+const SkillContent = (props: { context: ExtensionViewRenderContext<HostProps>; name?: string }) => {
   const { context, name } = props;
   const [client] = useState(() => createWebviewClient<typeof commands>(context.host));
   useWebviewScope(client.queries);
   const visible = useWebviewVisibility();
   const query = useWebviewCommandQuery(
-    client.commands.read.query(
-      { name },
-      {
-        events: [viewDataEvents.extensionCatalogChanged, viewDataEvents.resourcesChanged],
-      },
-    ),
+    client.commands.read.query(name ? { name } : {}, {
+      events: [viewDataEvents.extensionCatalogChanged, viewDataEvents.resourcesChanged],
+    }),
     visible,
   );
-  if (query.error)
+  const selection = useSkillSelection(client.navigation, query.data, visible && !name);
+  if (query.error || selection.error)
     return (
       <Flex p="md" gap="md" align="center">
-        <Text role="alert">{String(query.error)}</Text>
-        <Button onClick={() => query.refresh()}>Retry</Button>
+        <Text role="alert">{String(query.error || selection.error)}</Text>
+        <Button
+          onClick={() => {
+            if (selection.error) selection.retry();
+            else query.refresh();
+          }}
+        >
+          Retry
+        </Button>
       </Flex>
     );
-  if (!query.data)
+  if (query.data === null)
+    return (
+      <Text p="md" color="fg.muted">
+        No skills available.
+      </Text>
+    );
+  if (query.data === undefined)
     return (
       <Flex p="md" role="status">
         <Spinner />
@@ -50,16 +62,12 @@ const SkillContent = (props: { context: ExtensionViewRenderContext<HostProps>; n
 const App = (props: { context: ExtensionViewRenderContext<HostProps> }) => {
   const { context } = props;
   const hostProps = useSyncExternalStore(context.propsStore.subscribe, context.propsStore.get);
-  return hostProps.resource ? (
+  return (
     <SkillContent
-      key={`${hostProps.projectId}:${hostProps.resource.id}`}
+      key={`${hostProps.projectId}:${hostProps.resource?.id ?? ""}`}
       context={context}
-      name={hostProps.resource.id}
+      name={hostProps.resource?.id}
     />
-  ) : (
-    <Text p="md" color="fg.muted">
-      Select a skill in the sidebar.
-    </Text>
   );
 };
 export default defineExtensionView<HostProps>({

@@ -46,3 +46,17 @@ test("opens a project skill from its browser tree and reads its files through th
   expect(read?.cli).toBe(true);
   expect(await commands.read.run(context(), { name: "review" })).toEqual(skill);
 });
+
+test("selects the first skill when opening the browser without a selection", async () => {
+  expect(await commands.read.run(context(), {})).toEqual(skill);
+});
+
+test("opens an empty browser when the project has no skills", async () => {
+  const empty = makeCommandContext({
+    storage: createMemoryStorage(),
+    projectId: "project",
+    params: {},
+    overrides: { skills: { list: async () => [] } },
+  });
+  expect(await commands.read.run(empty, {})).toBeNull();
+});
