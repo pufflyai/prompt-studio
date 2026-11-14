@@ -145,7 +145,9 @@ const ordinaryTestPlan = (input: PlanInput) => {
     const run = {
       ...group,
       runner:
-        input.artifact === "compiled-cli" && group.files.every((file) => file.startsWith("packages/e2e/src/packaged/"))
+        input.artifact === "compiled-cli" &&
+        group.runner === "bun" &&
+        group.files.every((file) => file.startsWith("packages/e2e/src/packaged/"))
           ? "packaged-cli"
           : group.runner,
     };
