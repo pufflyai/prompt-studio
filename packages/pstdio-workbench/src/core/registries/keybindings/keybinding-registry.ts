@@ -1,4 +1,5 @@
 import { parseHotkey } from "@tanstack/hotkeys";
+import { typesText, withNamedKeyCase } from "pstdio-api-contracts/keyboard-chords";
 import type { ContextKeyService } from "../../shared/context/context-key-service";
 import {
   byContributionPriority,
@@ -82,13 +83,11 @@ export const getKeybindingSteps = (keybinding: KeybindingSequence) => {
  */
 export const isTypingKeybinding = (keybinding: KeybindingSequence) => {
   const first = getKeybindingSteps(keybinding)[0];
-  if (!first) return false;
-  const parsed = parseHotkey(first);
-  return !(parsed.alt || parsed.ctrl || parsed.meta) && (parsed.key?.length === 1 || parsed.key === "Space");
+  return first ? typesText(parseHotkey(withNamedKeyCase(first))) : false;
 };
 
 const normalizeKeybindingSequence = (keybinding: KeybindingSequence): KeybindingSequence => {
-  const steps = getKeybindingSteps(keybinding);
+  const steps = getKeybindingSteps(keybinding).map(withNamedKeyCase);
   return steps.length === 1 ? (steps[0] ?? "") : steps;
 };
 
@@ -120,7 +119,10 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
     let defaultScope: Keybinding["targetScope"];
     if (assigned === "extensions" || assigned === "help") defaultScope = "project";
     else if (layer === "current") defaultScope = "panel";
-    const keybinding = override?.keybinding ?? binding.keybinding;
+    // An empty override keeps its meaning; only a chord is spelled the way the matcher expects.
+    const keybinding = override?.keybinding
+      ? normalizeKeybindingSequence(override.keybinding)
+      : (override?.keybinding ?? binding.keybinding);
     const first = getKeybindingSteps(keybinding)[0];
     const held = first ? holdsInputModifier(first) : false;
     return {

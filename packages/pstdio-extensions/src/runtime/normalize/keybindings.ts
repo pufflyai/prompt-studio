@@ -1,5 +1,6 @@
 import type { JsonObject, KeybindingContribution, WhenExpression } from "@pstdio/sdk/extensions";
 import { normalizeHotkey, parseHotkey, validateHotkey } from "@tanstack/hotkeys";
+import { typesText, withNamedKeyCase } from "pstdio-api-contracts/keyboard-chords";
 import type { NormalizedExtension, ParsedKeybindingChord, RuntimeKeybindingRecord } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
@@ -8,7 +9,6 @@ import { contributionArray, contributionRecordBase, uniqueContributions } from "
 import { reportReservedKeybinding } from "./keybinding-reserved-diagnostic";
 import { normalizeNavigationAction } from "./navigation-action";
 import { resolveCommandRef } from "./references";
-import { withNamedKeyCase } from "./reserved-keybindings";
 
 const PLATFORM_KEYS = ["mac", "linux", "win"] as const;
 const TANSTACK_PLATFORMS = { linux: "linux", mac: "mac", win: "windows" } as const;
@@ -52,18 +52,15 @@ const validateChord = (
   runtime: Accumulator,
 ) => {
   const result = validateHotkey(chord);
-  const parsed = result.valid ? parseHotkey(chord, "mac") : undefined;
-  const hasNonModifierKey = parsed?.key ? !MODIFIER_KEY_NAMES.has(parsed.key.toLowerCase()) : false;
-  // A printable key alone or with Shift types text, so it belongs to whatever has focus.
-  const typesText =
-    parsed !== undefined &&
-    !(parsed.alt || parsed.ctrl || parsed.meta) &&
-    (parsed.key?.length === 1 || parsed.key === "Space");
-  if (result.valid && hasNonModifierKey && !typesText) return true;
+  // A sequence starts with its first chord; that chord decides whether the binding takes typed keys.
+  const parsed = result.valid ? parseHotkey(chord.trim().split(/\s+/)[0]!, "mac") : undefined;
+  const hasNonModifierKey = parsed?.key ? !MODIFIER_KEY_NAMES.has(parsed.key.toLowerCase()) : Boolean(parsed?.code);
+  const takesTypedKeys = parsed !== undefined && typesText(parsed);
+  if (result.valid && hasNonModifierKey && !takesTypedKeys) return true;
 
   let errors = result.errors.map((issue) => (issue.part ? `${issue.reason}: ${issue.part}` : issue.reason));
   if (result.valid)
-    errors = typesText
+    errors = takesTypedKeys
       ? ["Hotkey types text; add Ctrl, Cmd, Alt or Mod, or use a shortcut-mode layer"]
       : ["Hotkey must include a non-modifier key"];
 

@@ -124,7 +124,7 @@ describe("createKeybindingRegistry", () => {
     context.set("inputFocus", false);
 
     expect(keybindings.listActiveKeybindings()).toMatchObject([
-      { action: { kind: "command", commandId: "resource.open" }, keybinding: "enter" },
+      { action: { kind: "command", commandId: "resource.open" }, keybinding: "Enter" },
     ]);
   });
 
@@ -180,6 +180,21 @@ test("only chords holding Alt, Ctrl or Cmd work while typing", () => {
   expect(typing).toEqual({ plain: false, shifted: false, held: true, command: true });
 });
 
+test("named keys match in any spelling the earlier shortcut library accepted", () => {
+  const core = createWorkbench();
+  for (const [id, keybinding] of [
+    ["up", "alt+shift+up"],
+    ["close", "Mod+Esc"],
+    ["rename", "Alt+Shift+f2"],
+  ] as const) {
+    core.commands.registerCommand({ id, label: id }, { execute() {} });
+    core.keybindings.registerKeybinding({ id, action: { kind: "command", commandId: id }, keybinding });
+  }
+  expect(
+    Object.fromEntries(core.keybindings.listActiveKeybindings().map((binding) => [binding.id, binding.keybinding])),
+  ).toMatchObject({ up: "alt+shift+ArrowUp", close: "Mod+Escape", rename: "Alt+Shift+F2" });
+});
+
 test("direct shortcuts never take keys that type text", async () => {
   const preferences = createPreferenceRegistry();
   let overrides: Record<string, { keybinding: string }> = {};
@@ -193,7 +208,8 @@ test("direct shortcuts never take keys that type text", async () => {
   for (const [id, keybinding, layer] of [
     ["letter", "E", undefined],
     ["shifted", "Shift+/", undefined],
-    ["space", "Space", undefined],
+    ["space", "space", undefined],
+    ["physical", "Shift+[Slash]", undefined],
     ["layered", "E", "go"],
     ["chord", "Mod+/", undefined],
   ] as const) {

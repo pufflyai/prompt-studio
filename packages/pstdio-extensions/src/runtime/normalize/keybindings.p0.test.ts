@@ -72,18 +72,23 @@ describe("normalizeExtensionSources keybindings", () => {
         defineKeybinding({ id: "letter", key: "E", action }),
         defineKeybinding({ id: "shifted", key: "Shift+/", action }),
         defineKeybinding({ id: "override", key: "Mod+E", win: "Shift+E", action }),
+        defineKeybinding({ id: "sequence", key: "G H", action }),
+        defineKeybinding({ id: "physical", key: "Shift+[Slash]", action }),
         defineKeybinding({ id: "layered", key: "E", layer: "go", action }),
         defineKeybinding({ id: "chord", key: "Mod+/", action }),
+        defineKeybinding({ id: "physical-chord", key: "Mod+[KeyS]", action }),
       ],
     });
     const runtime = normalizeExtensionSources([source(definition)]);
-    expect(runtime.keybindings.map((binding) => binding.localId)).toEqual(["layered", "chord"]);
+    expect(runtime.keybindings.map((binding) => binding.localId)).toEqual(["layered", "chord", "physical-chord"]);
     expect(
       runtime.diagnostics.filter((entry) => entry.code === "invalid_keybinding").map((entry) => entry.metadata),
     ).toEqual([
       expect.objectContaining({ contributionId: "pstdio.lab.keybinding.letter" }),
       expect.objectContaining({ contributionId: "pstdio.lab.keybinding.shifted" }),
       expect.objectContaining({ contributionId: "pstdio.lab.keybinding.override", field: "win" }),
+      expect.objectContaining({ contributionId: "pstdio.lab.keybinding.sequence" }),
+      expect.objectContaining({ contributionId: "pstdio.lab.keybinding.physical" }),
     ]);
   });
 
@@ -98,11 +103,20 @@ describe("normalizeExtensionSources keybindings", () => {
           win: "ctrl+alt+f2",
           action: { kind: "command", target: { command: command.ref } },
         }),
+        defineKeybinding({
+          id: "close",
+          key: "Mod+Esc",
+          linux: "Alt+Shift+Up",
+          action: { kind: "command", target: { command: command.ref } },
+        }),
       ],
     });
     const runtime = normalizeExtensionSources([source(definition)]);
     expect(runtime.diagnostics).toEqual([]);
-    expect(runtime.keybindings[0]?.contribution).toMatchObject({ key: "alt+shift+ArrowLeft", win: "ctrl+alt+F2" });
+    expect(runtime.keybindings.map((binding) => binding.contribution)).toEqual([
+      expect.objectContaining({ key: "alt+shift+ArrowLeft", win: "ctrl+alt+F2" }),
+      expect.objectContaining({ key: "Mod+Escape", linux: "Alt+Shift+ArrowUp" }),
+    ]);
   });
 
   test("keeps the first binding when two chords and contexts are equal", () => {

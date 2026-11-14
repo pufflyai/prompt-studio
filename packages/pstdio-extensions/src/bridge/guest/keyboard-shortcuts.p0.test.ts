@@ -169,3 +169,17 @@ test("a negotiated plain view chord runs once and unowned ordinary keys remain l
   }
   expect(requests).toEqual([{ id: "move", repeat: false }]);
 });
+
+test("a symbol chord fires when the layout needs Shift to type the symbol", () => {
+  const target = new EventTarget();
+  const requests: unknown[] = [];
+  installKeyboardShortcuts(
+    target,
+    () => [{ id: "help", key: "/", metaKey: true }],
+    (request) => requests.push(request),
+  );
+  // German layout: Cmd+Shift+7 types "/". US layout: Cmd+Shift+/ types "?" and is a different chord.
+  target.dispatchEvent(keydown("/", { code: "Digit7", metaKey: true, shiftKey: true }));
+  target.dispatchEvent(keydown("?", { code: "Slash", metaKey: true, shiftKey: true }));
+  expect(requests).toEqual([{ id: "help", repeat: false }]);
+});

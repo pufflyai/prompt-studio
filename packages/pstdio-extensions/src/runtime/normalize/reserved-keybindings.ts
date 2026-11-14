@@ -1,4 +1,5 @@
 import { normalizeHotkey } from "@tanstack/hotkeys";
+import { withNamedKeyCase } from "pstdio-api-contracts/keyboard-chords";
 
 export type ReservedKeybindingPlatform = "mac" | "linux" | "win";
 
@@ -112,21 +113,6 @@ export interface ReservedKeybindingMatch {
   reason: ReservedKeybindingReason;
   description: string;
 }
-
-const NAMED_KEYS = new Map(
-  [
-    ...["Escape", "Enter", "Space", "Tab", "Backspace", "Delete", "Insert", "Home", "End", "PageUp", "PageDown"],
-    ...["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"],
-    ...Array.from({ length: 24 }, (_, index) => `F${index + 1}`),
-  ].map((key) => [key.toLowerCase(), key]),
-);
-
-/** `@tanstack/hotkeys` matches named keys only in their canonical case, such as `ArrowLeft`. */
-export const withNamedKeyCase = (chord: string) =>
-  chord
-    .split(/(\s+|\+)/)
-    .map((part) => NAMED_KEYS.get(part.toLowerCase()) ?? part)
-    .join("");
 
 const canonicalize = (chord: string, platform: ReservedKeybindingPlatform) =>
   normalizeHotkey(withNamedKeyCase(chord), TANSTACK_PLATFORMS[platform]);

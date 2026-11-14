@@ -32,7 +32,7 @@ The host derives setup actions from public metadata:
 - Alt+Shift+T is the single color-theme action, regardless of the number of theme providers.
 - Alt+Shift+R reopens the most recently closed tab in the current project.
 
-A direct extension chord must hold Ctrl, Cmd, Alt or Mod. A printable key alone or with Shift types text, so extension checks report it as `invalid_keybinding` and drop it; bind single keys in a shortcut-mode layer instead.
+A direct extension chord must not type text. A printable key or Space, alone or with only Shift, types text; this includes physical-key chords such as `Shift+[Slash]` and sequences whose first step types text, such as `G H`. Extension checks report such chords as `invalid_keybinding` and drop them; bind single keys in a shortcut-mode layer instead. Keys such as F2, Escape or Shift+Enter remain valid direct chords. Named keys accept any case and common aliases, such as `esc` or `Up`.
 
 These actions do not depend on provider names. Disabled extensions contribute no active shortcuts. Destination navigation uses its G sequence, and creation uses its C sequence, each without duplicate direct chords. Direct Option+Shift chords control panels and tabs and also work inside shortcut mode. Installed external extensions, including Pencil, keep their public actions available for search and personal assignment; their source is outside this repository, so this change does not add provider-specific defaults to them.
 

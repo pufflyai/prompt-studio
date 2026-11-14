@@ -11,7 +11,8 @@
     "./extension-webview-path": "./src/extension-webview-path.ts",
     "./performance-diagnostics": "./src/performance-diagnostics.ts",
     "./session-attachment-types": "./src/session-attachment-types.ts",
-    "./collections": "./src/collections.ts"
+    "./collections": "./src/collections.ts",
+    "./keyboard-chords": "./src/keyboard-chords.ts"
   },
   "scripts": {
     "typecheck": "bun check",

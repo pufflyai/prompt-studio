@@ -8,7 +8,7 @@ Press **Alt+Shift+Space** to enter shortcut mode. A small bubble appears at the 
 
 ## Keys that type text
 
-Direct shortcuts never use keys that type text: a printable key or Space, alone or with only Shift. Those keys belong to whatever has focus, including editors that type into a `role="textbox"` element instead of a textarea, and keyboard layouts that put symbols on other physical keys. Single letters and numbers work only inside shortcut mode's layers. The workbench refuses such direct bindings from the core and from extensions, ignores saved overrides that assign one, and rejects them in shortcut assignment.
+Direct shortcuts never start with a key that types text: a printable key or Space, alone or with only Shift. Keys such as F2 or Escape stay valid. Those keys belong to whatever has focus, including editors that type into a `role="textbox"` element instead of a textarea, and keyboard layouts that put symbols on other physical keys. Single letters and numbers work only inside shortcut mode's layers. The workbench refuses such direct bindings from the core and from extensions, ignores saved overrides that assign one, and rejects them in shortcut assignment.
 
 ## Preview shortcuts
 
