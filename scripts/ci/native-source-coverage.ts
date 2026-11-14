@@ -21,7 +21,8 @@ export const windowsSourceContract = (file: string, root = resolve(import.meta.d
       group: "process-security",
       reason: "Retain native process and terminal assertions, including helper-driven cases",
     };
-  if (/node:fs|symlink|chmod|rename|watchFile|fs\.watch/.test(source))
+  // Domain-object renames alone do not exercise the host filesystem.
+  if (/node:fs|symlink|chmod|watchFile|fs\.watch/.test(source))
     return {
       group: "filesystem-storage",
       reason: "Retain mixed native filesystem assertions until their cases are audited",

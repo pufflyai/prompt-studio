@@ -26,6 +26,15 @@ on:
         type: string
         default: ""
         description: Optional exact merged source for diagnostics
+      test_file:
+        type: string
+        default: ""
+        description: Optional single native test file; runs its owning runner instead of a full profile
+      test_os:
+        type: choice
+        options: [windows-latest, macos-15, macos-15-intel]
+        default: windows-latest
+        description: Host for a single-file native diagnostic
       release_channel:
         type: choice
         options: [stable, nightly]
@@ -74,7 +83,45 @@ concurrency:
 env:
   NX_DAEMON: "false"
 jobs:
+  native_file:
+    if: inputs.test_file != ''
+    runs-on: ${{ inputs.test_os || 'windows-latest' }}
+    timeout-minutes: 20
+    env:
+      CI_PROFILE: production
+      GH_TOKEN: ${{ github.token }}
+      DIAGNOSTIC_FILE: ${{ inputs.test_file }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24.22.1"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: ./.github/actions/setup-ci-cache
+        with:
+          install-strategy: native
+          windows-dev-drive: "true"
+      # Direct argv preserves the native shell's signal behavior and keeps the input out of shell syntax.
+      - name: Run the selected native file with its owning runner
+        run: >-
+          bun -e 'const child = Bun.spawnSync(["bun", "scripts/test.ts", "--file", process.env.DIAGNOSTIC_FILE, "--out", "test-results/ci/native-file-plan.json"], { stdio: "inherit" }); process.exit(child.exitCode);'
+      - name: Preserve native file execution
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-file-${{ runner.os }}-attempt-${{ github.run_attempt }}
+          path: |
+            test-results/ci
+            packages/e2e/test-results
+            clients/desktop/test-results
+          if-no-files-found: error
   scope:
+    if: inputs.test_file == ''
     permissions:
       contents: read
       pull-requests: read
@@ -1359,7 +1406,7 @@ jobs:
           path: test-results/coverage/*.json
           if-no-files-found: error
   ci_passed:
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && inputs.test_file == '' }}
     needs:
       - scope
       - validation_results
@@ -1469,7 +1516,7 @@ jobs:
       - packaged_toolchain
       - source_coverage
       - sdk_api_report
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && inputs.test_file == '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
