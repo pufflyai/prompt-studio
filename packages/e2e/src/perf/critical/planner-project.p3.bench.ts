@@ -2,12 +2,15 @@ import { strict as assert } from "node:assert";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { chromium, expect, type Locator, type Page } from "@playwright/test";
+import { chromium, type Locator, type Page, expect as playwrightExpect } from "@playwright/test";
 import type { CollectionPage, CollectionPageRequest } from "@pstdio/sdk/extensions";
 import { runScenario } from "pstdio-benchmarks/writer";
 import { signInBrowser, stopProcess } from "../../packaged/packaged-serve-helpers";
 import { afterPaint } from "./desktop-lifecycle";
 import { seedHome, startRuntime } from "./planner-fixture";
+
+// An execution allowance lets slow observations finish without changing their performance limits.
+const expect = playwrightExpect.configure({ timeout: 30_000 });
 
 const observeQueries = (page: Page) => {
   const requests: {
