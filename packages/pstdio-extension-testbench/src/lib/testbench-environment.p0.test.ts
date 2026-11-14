@@ -1,6 +1,30 @@
 import { expect, test } from "bun:test";
 import { createBenchEnvironment } from "./testbench-environment";
 
+test("testbench workspace queries page qualified selected links in either direction", async () => {
+  const anchor = { type: "foobar", id: "selected", extensionId: "example.tools", projectId: "bench-project" };
+  const { workspaces, resources } = await createBenchEnvironment({
+    workspaces: Array.from({ length: 205 }, (_, i) => ({
+      id: `workspace-${String(i).padStart(3, "0")}`,
+      anchors_json: [anchor],
+    })),
+  });
+  await resources.addAnchors(anchor, [{ type: "workspace", id: "workspace-204", extensionId: "pstdio" }]);
+  let cursor: string | undefined;
+  const ids: string[] = [];
+  const sizes: number[] = [];
+  do {
+    const page = await workspaces.query({ anchors: [anchor], limit: 100, cursor });
+    sizes.push(page.items.length);
+    ids.push(...page.items.map(({ id }) => id));
+    cursor = page.nextCursor ?? undefined;
+  } while (cursor);
+  expect(sizes).toEqual([100, 100, 5]);
+  expect(new Set(ids).size).toBe(205);
+  expect((await workspaces.query({ anchors: [] })).items).toEqual([]);
+  expect((await workspaces.query({ anchors: [{ ...anchor, extensionId: "wrong-owner" }] })).items).toEqual([]);
+});
+
 test("bench file updates retain identity and expose the new bytes and metadata", async () => {
   const { storage } = await createBenchEnvironment();
   const first = await storage.files.put({ name: "before.md", data: new TextEncoder().encode("Before") });

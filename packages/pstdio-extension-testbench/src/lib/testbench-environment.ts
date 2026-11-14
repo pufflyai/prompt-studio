@@ -104,6 +104,11 @@ export const createBenchEnvironment = async (
   prefixes: Record<string, string> = {},
   projectId = "bench-project",
 ) => {
+  const workspaces = (seed?.workspaces ?? []).filter(
+    (workspace) => (workspace.projectId ?? workspace.project_id ?? projectId) === projectId,
+  );
+  const workspaceById = new Map(workspaces.map((workspace) => [workspace.id, workspace]));
+  const resources = await createBenchResources(prefixes, seed?.resourceIdentities, projectId, workspaces);
   const queuedRequestsRequireHost = async () => {
     throw new Error("Queued requests require the host runtime.");
   };
@@ -113,7 +118,7 @@ export const createBenchEnvironment = async (
   const environment: CommandRunnerEnvironment = {
     project: { id: projectId, name: "Bench Project", shorthand: "BP" },
     storage: createStorage(seed),
-    resources: await createBenchResources(prefixes, seed?.resourceIdentities, projectId, seed?.workspaces),
+    resources,
     artifacts: { mount: () => ({}) as never },
     packageFiles: {
       exists: async () => false,
@@ -211,12 +216,34 @@ export const createBenchEnvironment = async (
       addAnchors: async () => {},
       removeAnchors: async () => {},
       listProviders: async () => [],
-      getDefault: async () => seed?.workspaces?.find((workspace) => workspace.is_default) ?? null,
-      list: async () => seed?.workspaces ?? [],
+      getDefault: async () => workspaces.find((workspace) => workspace.isDefault ?? workspace.is_default) ?? null,
+      list: async () => workspaces,
+      query: async (input = {}) => {
+        const limit = Number.isFinite(input.limit) ? Math.max(1, Math.min(100, Math.trunc(input.limit!))) : 50;
+        if (input.anchors) {
+          const page = await resources.queryRelated({
+            resources: input.anchors,
+            direction: "both",
+            kind: "workspace",
+            owner: "pstdio",
+            limit,
+            cursor: input.cursor,
+          });
+          return {
+            items: page.items.flatMap(({ id }) => workspaceById.get(id) ?? []),
+            nextCursor: page.nextCursor,
+          };
+        }
+        const rows = workspaces
+          .filter(({ id }) => !input.cursor || id > input.cursor)
+          .sort((a, b) => (a.id < b.id ? -1 : Number(a.id > b.id)));
+        const items = rows.slice(0, limit);
+        return { items, nextCursor: rows.length > limit ? items.at(-1)!.id : null };
+      },
       cancel: async (id) => ({ id }),
       create: async () => ({ id: crypto.randomUUID() }),
       delete: async () => {},
-      get: async () => null,
+      get: async (id) => workspaceById.get(id) ?? null,
       getByShorthand: async () => null,
       removeWorktree: async () => ({ removed: true }),
       resolve: async () => ({}) as never,
