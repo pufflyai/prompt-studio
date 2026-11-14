@@ -88,3 +88,79 @@ test("native text changes refresh a derived query field in the same committed re
   expect(after.revision).not.toBe(before.revision);
   expect((await records.read("note")).value).toEqual({ title: "Stale", content: "# **Changed É😀**\nbody" });
 });
+
+test("unrelated index field changes do not read canonical bodies or rebuild title projections", async () => {
+  const f = await createExtensionStorageFixture();
+  cleanup.push(f.close);
+  let read = 0;
+  const records = createDocumentStorageDBService(f.db, undefined, (event) => {
+    if (event.phase === "index-records-read") read += event.records ?? 0;
+  }).open({ owner: { workbenchId: f.projectAId, extensionId: "ext.documents" } }).records;
+  await records.commit({
+    operationId: "seed",
+    edits: [{ recordId: "doc", replace: { content: "# Current", status: "ready" } }],
+  });
+  await records.defineIndexes([definition]);
+  expect(read).toBe(1);
+  read = 0;
+  await records.defineIndexes([
+    { ...definition, fields: { ...definition.fields, status: { path: ["status"], type: "string" } } },
+  ]);
+  expect(read).toBe(0);
+  expect((await records.query({ index: "documents" })).records[0].fields.title).toBe("Current");
+});
+
+test("changing a derived definition reads its prefixes and preserves other indexes", async () => {
+  const f = await createExtensionStorageFixture();
+  cleanup.push(f.close);
+  let read = 0;
+  const records = createDocumentStorageDBService(f.db, undefined, (event) => {
+    if (event.phase === "index-records-read") read += event.records ?? 0;
+  }).open({ owner: { workbenchId: f.projectAId, extensionId: "ext.documents" } }).records;
+  await records.commit({
+    operationId: "seed",
+    edits: [
+      { recordId: "docs/a", replace: { content: "# A", alternate: "# Changed" } },
+      { recordId: "others/b", replace: { content: "# B" } },
+      { recordId: "new/c", replace: { content: "# C" } },
+    ],
+  });
+  const docs = { ...definition, prefix: "docs/" };
+  const others = { ...definition, name: "others", prefix: "others/" };
+  await records.defineIndexes([docs, others]);
+  expect(read).toBe(2);
+  read = 0;
+  const changed = { ...docs, fields: { title: { ...definition.fields.title, path: ["alternate"] } } };
+  await records.defineIndexes([changed, others]);
+  expect(read).toBe(1);
+  expect((await records.query({ index: "documents" })).records[0].fields.title).toBe("Changed");
+  expect((await records.query({ index: "others" })).records[0].fields.title).toBe("B");
+  read = 0;
+  await records.defineIndexes([{ ...docs, prefix: "new/" }, others]);
+  expect(read).toBe(2);
+  expect((await records.query({ index: "documents" })).records[0].fields.title).toBe("C");
+  expect((await records.query({ index: "others" })).records[0].fields.title).toBe("B");
+});
+
+test("concurrent installations derive values from the final committed definition", async () => {
+  const f = await createExtensionStorageFixture();
+  cleanup.push(f.close);
+  const records = createDocumentStorageDBService(f.db).open({
+    owner: { workbenchId: f.projectAId, extensionId: "ext.documents" },
+  }).records;
+  await records.commit({
+    operationId: "seed",
+    edits: [{ recordId: "doc", replace: { content: "# Original", alternate: "# Alternate", status: "ready" } }],
+  });
+  await records.defineIndexes([definition]);
+  await Promise.all([
+    records.defineIndexes([{ ...definition, fields: { title: { ...definition.fields.title, path: ["alternate"] } } }]),
+    records.defineIndexes([
+      { ...definition, fields: { ...definition.fields, status: { path: ["status"], type: "string" } } },
+    ]),
+  ]);
+  expect((await records.query({ index: "documents" })).records[0].fields).toEqual({
+    title: "Original",
+    status: "ready",
+  });
+});

@@ -33,3 +33,18 @@ test("collection indexes select only their collection and storage scope", async 
     expect(page.records[0].recordId).toContain(expected === "resource" ? "selected" : "project");
   }
 });
+
+test("collection selection derivations resolve both source paths within the collection item", async () => {
+  const storage = createMemoryStorage();
+  await storage.collection("choices").put("item", { legacy: "a", delta: { type: "single", value: "b" } });
+  await storage.records.defineIndexes([
+    {
+      name: "selected",
+      collection: "choices",
+      fields: {
+        selected: { path: ["legacy"], type: "array", derive: { kind: "selection", selectionPath: ["delta"] } },
+      },
+    },
+  ]);
+  expect((await storage.records.query({ index: "selected" })).records[0].fields.selected).toEqual(["b"]);
+});

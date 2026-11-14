@@ -23,7 +23,7 @@ import {
   storage_record_projections as projections,
 } from "../../db/schemas.pg";
 import { aggregateRecordQuery } from "./record-aggregate-query";
-import { hasDerivedQueryFields, rebuildDerivedQueryValues } from "./record-derived-fields";
+import { derivedQueryChanges, rebuildDerivedQueryValues } from "./record-derived-fields";
 import { dropRecordIndexes } from "./record-index-lifecycle";
 import { decodeProjectionValue, encodeProjectionValue } from "./record-projection-codec";
 import {
@@ -125,19 +125,19 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
     defineIndexes: async (definitions) => {
       validateIndexes(definitions);
       const desired = orderDefinitions(structuredClone(definitions));
-      const previous = await db.select().from(indexes).where(ownerWhere(indexes));
-      const installed = orderDefinitions(
-        decodeProjectionValue(
-          previous.map((row) => row.definition) as unknown as Json,
-        ) as unknown as StorageRecordIndex[],
-      );
-      // Every project runtime reload calls this for each extension, records or not.
-      if ((await fingerprint(installed as unknown as Json)) === (await fingerprint(desired as unknown as Json))) return;
       await db.transaction(async (tx) => {
+        const previous = await tx.select().from(indexes).where(ownerWhere(indexes));
+        const installed = orderDefinitions(
+          decodeProjectionValue(
+            previous.map((row) => row.definition) as unknown as Json,
+          ) as unknown as StorageRecordIndex[],
+        );
+        // Compare under the same lock as installation: concurrent reloads can change derived sources.
+        if ((await fingerprint(installed as unknown as Json)) === (await fingerprint(desired as unknown as Json)))
+          return;
         await dropRecordIndexes(tx, ownerWhere(indexes)!);
         await tx.delete(indexes).where(ownerWhere(indexes));
-        if (hasDerivedQueryFields(desired) || hasDerivedQueryFields(installed))
-          await rebuildDerivedQueryValues(tx, owner, desired);
+        await rebuildDerivedQueryValues(tx, owner, derivedQueryChanges(installed, desired), diagnostics);
         for (const index of desired) {
           const name = `storage_query_${(await fingerprint({ owner: { ...owner }, definition: index as unknown as Json })).slice(0, 32)}`;
           const keys = recordIndexKeys(index);

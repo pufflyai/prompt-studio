@@ -5,6 +5,7 @@ export * from "./identity";
 export { deriveMarkdownTitle } from "./markdown-title";
 export * from "./protocol";
 export type * from "./record-query";
+export { resolveSelectedValues, type StorageSelection } from "./selection";
 export * from "./storage-limits";
 export type {
   StorageLogApi,

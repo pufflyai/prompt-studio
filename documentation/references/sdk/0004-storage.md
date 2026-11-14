@@ -319,6 +319,41 @@ querying never scans bodies to rebuild them. This is a local database index, not
 another editable source of record data. Point reads keep their original value.
 The public `deriveMarkdownTitle(content, empty?)` helper uses the same text rules.
 
+### Resolved selection fields
+
+Choice properties may retain legacy scalar/array values while independent edits
+merge through `StorageSelection`. `resolveSelectedValues(legacy, selection?)`
+returns the canonical selected IDs without discarding concurrent choices. A
+`single` selection has `value`; a `multi` selection may retain `value` and
+`replacedValue` from conversion. `options` stores individual booleans, including
+false for removals. A single conversion's `replacedOptions` records the option
+writes it consumed, so a later independent change stays visible. Base value order
+is retained; concurrently added option keys use deterministic UTF-16 order.
+
+An index can select these resolved values directly:
+
+```ts
+const fields = {
+  priority: {
+    path: ["tags", "priority"],
+    type: "string",
+    derive: {
+      kind: "selection",
+      selectionPath: ["tagSelections", "priority"],
+      knownValues: ["high", "medium", "low"],
+    },
+  },
+};
+```
+
+Both paths are relative to the canonical record or collection item. An array
+field exposes all resolved choices; a string field exposes the first. Optional
+`knownValues` removes IDs that are no longer declared, matching displayed option
+properties. Use the same resolver for point reads and indexed views. Ordinary
+edits update the local query projection in their commit transaction. Changing an
+unrelated index field does not reread bodies; changed derived definitions rebuild
+only their affected old/new prefixes and retain other indexes' query values.
+
 ## Edits and outcomes
 
 A record can hold JSON in `value`, one shared primitive, an immutable asset

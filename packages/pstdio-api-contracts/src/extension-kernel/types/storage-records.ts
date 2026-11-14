@@ -29,6 +29,7 @@ export type {
   StorageResolution,
   StorageSaveOutcome,
   StorageSaveState,
+  StorageSelection,
 } from "pstdio-sync-contracts";
 
 /** One extension's shared content within the current workbench. All methods use complete record addresses. */

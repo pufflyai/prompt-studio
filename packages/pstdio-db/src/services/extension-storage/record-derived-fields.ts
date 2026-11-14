@@ -1,13 +1,39 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, or, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { typedFieldValue } from "pstdio-sync/records";
-import type { Json, StorageRecordIndex } from "pstdio-sync-contracts";
+import { canonicalJson, type Json, type StorageRecordIndex } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_current_records as current, storage_record_indexes as indexes } from "../../db/schemas.pg";
-import { decodeProjectionValue, encodeProjectionValue } from "./record-projection-codec";
+import { decodeProjectionValue, encodeProjectionValue, projectionKey } from "./record-projection-codec";
+import type { StorageDiagnostics } from "./storage-diagnostics";
 
-export const hasDerivedQueryFields = (definitions: StorageRecordIndex[]) =>
-  definitions.some((index) => Object.values(index.fields).some((field) => field.derive));
+const derivedDefinitions = (definitions: StorageRecordIndex[]) =>
+  new Map(
+    definitions.flatMap((index) => {
+      const fields = Object.fromEntries(Object.entries(index.fields).filter(([, field]) => field.derive));
+      return Object.keys(fields).length
+        ? [[index.name, { name: index.name, prefix: index.prefix, fields }] as const]
+        : [];
+    }),
+  );
+
+export const derivedQueryChanges = (previous: StorageRecordIndex[], next: StorageRecordIndex[]) => {
+  const before = derivedDefinitions(previous);
+  const after = derivedDefinitions(next);
+  const names = [...new Set([...before.keys(), ...after.keys()])].filter(
+    (name) =>
+      canonicalJson((before.get(name) ?? null) as unknown as Json) !==
+      canonicalJson((after.get(name) ?? null) as unknown as Json),
+  );
+  const changed = new Set(names);
+  return {
+    names,
+    definitions: next.filter((index) => changed.has(index.name)),
+    prefixes: names.flatMap((name) =>
+      [before.get(name), after.get(name)].flatMap((index) => (index ? [index.prefix] : [])),
+    ),
+  };
+};
 
 export const readDerivedQueryIndexes = async (tx: Pick<DbClient, "select">, owner: StorageOwner) => {
   const rows = await tx
@@ -46,8 +72,17 @@ export const derivedQueryValues = (
 export const rebuildDerivedQueryValues = async (
   tx: Pick<DbClient, "select" | "execute">,
   owner: StorageOwner,
-  definitions: StorageRecordIndex[],
+  changes: ReturnType<typeof derivedQueryChanges>,
+  diagnostics?: StorageDiagnostics,
 ) => {
+  if (!changes.names.length) return;
+  const scope = changes.prefixes.includes(undefined)
+    ? undefined
+    : or(...changes.prefixes.map((prefix) => sql`starts_with(${current.record_id}, ${prefix!})`));
+  const removed = sql`ARRAY[${sql.join(
+    changes.names.map((name) => sql`${projectionKey(name)}`),
+    sql`, `,
+  )}]::text[]`;
   let after: string | undefined;
   for (;;) {
     const rows = await tx
@@ -57,25 +92,28 @@ export const rebuildDerivedQueryValues = async (
         and(
           eq(current.workbench_id, owner.workbenchId),
           eq(current.extension_id, owner.extensionId),
+          scope,
           after === undefined ? undefined : sql`${current.record_id} COLLATE "C" > ${after}`,
         ),
       )
       .orderBy(sql`${current.record_id} COLLATE "C"`)
       .limit(100);
     if (!rows.length) return;
+    diagnostics?.({ phase: "index-records-read", owner, records: rows.length });
     const input = rows.map((row) => ({
       record_id: row.recordId,
       query_values: encodeProjectionValue(
-        derivedQueryValues(definitions, {
+        derivedQueryValues(changes.definitions, {
           ...row,
           value: decodeProjectionValue(row.value ?? null),
         }),
       ),
     }));
-    await tx.execute(sql`UPDATE storage_current_records AS target SET query_values = input.query_values
+    const merged = sql`(target.query_values - ${removed}) || input.query_values`;
+    await tx.execute(sql`UPDATE storage_current_records AS target SET query_values = ${merged}
       FROM jsonb_to_recordset(${JSON.stringify(input)}::jsonb) AS input(record_id text, query_values jsonb)
       WHERE target.workbench_id = ${owner.workbenchId} AND target.extension_id = ${owner.extensionId}
-        AND target.record_id = input.record_id AND target.query_values IS DISTINCT FROM input.query_values`);
+        AND target.record_id = input.record_id AND target.query_values IS DISTINCT FROM (${merged})`);
     after = rows.at(-1)!.recordId;
   }
 };

@@ -20,7 +20,12 @@ export const resolveCollectionIndexes = (indexes: StorageRecordIndex[], scopeTyp
               ? {
                   derive: {
                     ...field.derive,
-                    ...(field.derive.fallbackPath ? { fallbackPath: ["value", ...field.derive.fallbackPath] } : {}),
+                    ...(field.derive.kind === "markdownTitle" && field.derive.fallbackPath
+                      ? { fallbackPath: ["value", ...field.derive.fallbackPath] }
+                      : {}),
+                    ...(field.derive.kind === "selection"
+                      ? { selectionPath: ["value", ...field.derive.selectionPath] }
+                      : {}),
                   },
                 }
               : {}),

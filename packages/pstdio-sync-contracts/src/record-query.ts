@@ -5,8 +5,10 @@ export interface StorageIndexField {
   /** A path within the record value. */
   path: string[];
   type: "string" | "number" | "boolean" | "array" | "object";
-  /** Deterministic text projection, maintained from canonical record/native text in the commit transaction. */
-  derive?: { kind: "markdownTitle"; fallbackPath?: string[]; empty?: string };
+  /** Deterministic local projection, maintained from canonical record/native text in the commit transaction. */
+  derive?:
+    | { kind: "markdownTitle"; fallbackPath?: string[]; empty?: string }
+    | { kind: "selection"; selectionPath: string[]; knownValues?: string[] };
 }
 
 export interface StorageRecordIndex {
