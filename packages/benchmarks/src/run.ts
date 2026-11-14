@@ -62,7 +62,8 @@ const resultFile = (input: {
   suites: BenchmarkSuiteInfo[];
   samples: SuiteSample[];
 }): BenchmarkResultFile => {
-  const metrics = mergeSamples(input.samples);
+  // An early failed workload still needs an unqualified result file, even with no observations.
+  const metrics = mergeSamples(input.samples.filter((sample) => sample.qualified || sample.lines.trim().length > 0));
   return {
     format: RESULT_FORMAT,
     qualification: input.samples.every((sample) => sample.qualified) ? "qualified" : "unqualified",
@@ -72,7 +73,7 @@ const resultFile = (input: {
     ...githubRun(),
     startedAt: input.startedAt,
     finishedAt: new Date().toISOString(),
-    suites: input.suites.filter((suite) => metrics.some((metric) => metric.suite === suite.id)),
+    suites: input.suites.filter((suite) => input.samples.some((sample) => sample.suite === suite.id)),
     metrics,
   };
 };
