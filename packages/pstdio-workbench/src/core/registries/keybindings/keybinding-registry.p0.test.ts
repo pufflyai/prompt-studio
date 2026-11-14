@@ -159,7 +159,7 @@ test("only chords holding Alt, Ctrl or Cmd work while typing", () => {
   const core = createWorkbench();
   for (const [id, keybinding] of [
     ["plain", "F2"],
-    ["shifted", "Shift+J"],
+    ["shifted", "Shift+F2"],
     ["held", "Alt+Shift+J"],
     ["command", "Mod+J"],
   ] as const) {
@@ -178,6 +178,38 @@ test("only chords holding Alt, Ctrl or Cmd work while typing", () => {
       .map((binding) => [binding.id, Boolean(binding.allowInInputs)]),
   );
   expect(typing).toEqual({ plain: false, shifted: false, held: true, command: true });
+});
+
+test("direct shortcuts never take keys that type text", async () => {
+  const preferences = createPreferenceRegistry();
+  let overrides: Record<string, { keybinding: string }> = {};
+  preferences.registerValueAdapter(SHORTCUT_PREFERENCE_KEY, { get: () => ({ overrides }), set() {} });
+  const core = createWorkbench();
+  const keybindings = createKeybindingRegistry({
+    commands: core.commands,
+    context: createContextKeyService(),
+    preferences: () => preferences,
+  });
+  for (const [id, keybinding, layer] of [
+    ["letter", "E", undefined],
+    ["shifted", "Shift+/", undefined],
+    ["space", "Space", undefined],
+    ["layered", "E", "go"],
+    ["chord", "Mod+/", undefined],
+  ] as const) {
+    core.commands.registerCommand({ id, label: id }, { execute() {} });
+    keybindings.registerKeybinding({ id, action: { kind: "command", commandId: id }, keybinding, layer });
+  }
+  expect(keybindings.listKeybindings().map((binding) => binding.id)).toEqual(["layered", "chord"]);
+  expect(keybindings.listActiveKeybindings().map((binding) => binding.id)).toEqual(["chord"]);
+  // An override saved before this rule cannot turn the chord back into a typing key.
+  overrides = { chord: { keybinding: "Shift+J" } };
+  expect(keybindings.listActiveKeybindings()).toEqual([]);
+
+  core.commands.registerCommand({ id: "assigned", label: "Assigned" }, { execute() {} });
+  await expect(core.keyboard.setAssignment("assigned", { layer: "direct", keybinding: "Shift+J" })).rejects.toThrow(
+    "types text",
+  );
 });
 
 for (const commandHints of [false, true]) {

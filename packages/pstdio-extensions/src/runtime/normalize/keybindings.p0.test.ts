@@ -63,6 +63,48 @@ describe("normalizeExtensionSources keybindings", () => {
     });
   });
 
+  test("drops direct keys that type text and keeps them in shortcut-mode layers", () => {
+    const command = defineCommand({ id: "hello", title: "Hello", async run() {} });
+    const action = { kind: "command" as const, target: { command: command.ref } };
+    const definition = defineExtension({
+      commands: [command],
+      keybindings: [
+        defineKeybinding({ id: "letter", key: "E", action }),
+        defineKeybinding({ id: "shifted", key: "Shift+/", action }),
+        defineKeybinding({ id: "override", key: "Mod+E", win: "Shift+E", action }),
+        defineKeybinding({ id: "layered", key: "E", layer: "go", action }),
+        defineKeybinding({ id: "chord", key: "Mod+/", action }),
+      ],
+    });
+    const runtime = normalizeExtensionSources([source(definition)]);
+    expect(runtime.keybindings.map((binding) => binding.localId)).toEqual(["layered", "chord"]);
+    expect(
+      runtime.diagnostics.filter((entry) => entry.code === "invalid_keybinding").map((entry) => entry.metadata),
+    ).toEqual([
+      expect.objectContaining({ contributionId: "pstdio.lab.keybinding.letter" }),
+      expect.objectContaining({ contributionId: "pstdio.lab.keybinding.shifted" }),
+      expect.objectContaining({ contributionId: "pstdio.lab.keybinding.override", field: "win" }),
+    ]);
+  });
+
+  test("named keys in any case reach the host in the case the shortcut matcher recognizes", () => {
+    const command = defineCommand({ id: "hello", title: "Hello", async run() {} });
+    const definition = defineExtension({
+      commands: [command],
+      keybindings: [
+        defineKeybinding({
+          id: "back",
+          key: "alt+shift+arrowleft",
+          win: "ctrl+alt+f2",
+          action: { kind: "command", target: { command: command.ref } },
+        }),
+      ],
+    });
+    const runtime = normalizeExtensionSources([source(definition)]);
+    expect(runtime.diagnostics).toEqual([]);
+    expect(runtime.keybindings[0]?.contribution).toMatchObject({ key: "alt+shift+ArrowLeft", win: "ctrl+alt+F2" });
+  });
+
   test("keeps the first binding when two chords and contexts are equal", () => {
     const command = defineCommand({ id: "hello", title: "Hello", async run() {} });
     const definition = defineExtension({

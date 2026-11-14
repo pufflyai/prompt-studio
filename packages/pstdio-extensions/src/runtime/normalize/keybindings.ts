@@ -8,6 +8,7 @@ import { contributionArray, contributionRecordBase, uniqueContributions } from "
 import { reportReservedKeybinding } from "./keybinding-reserved-diagnostic";
 import { normalizeNavigationAction } from "./navigation-action";
 import { resolveCommandRef } from "./references";
+import { withNamedKeyCase } from "./reserved-keybindings";
 
 const PLATFORM_KEYS = ["mac", "linux", "win"] as const;
 const TANSTACK_PLATFORMS = { linux: "linux", mac: "mac", win: "windows" } as const;
@@ -33,7 +34,7 @@ const stableWhenKey = (when: WhenExpression | undefined) => (when ? stableString
 const toParsedChord = (chord: string): ParsedKeybindingChord => {
   const parsed = parseHotkey(chord, "mac");
   return {
-    key: parsed.key,
+    key: parsed.key ?? "",
     ctrl: parsed.ctrl,
     shift: parsed.shift,
     alt: parsed.alt,
@@ -53,9 +54,18 @@ const validateChord = (
   const result = validateHotkey(chord);
   const parsed = result.valid ? parseHotkey(chord, "mac") : undefined;
   const hasNonModifierKey = parsed?.key ? !MODIFIER_KEY_NAMES.has(parsed.key.toLowerCase()) : false;
-  if (result.valid && hasNonModifierKey) return true;
+  // A printable key alone or with Shift types text, so it belongs to whatever has focus.
+  const typesText =
+    parsed !== undefined &&
+    !(parsed.alt || parsed.ctrl || parsed.meta) &&
+    (parsed.key?.length === 1 || parsed.key === "Space");
+  if (result.valid && hasNonModifierKey && !typesText) return true;
 
-  const errors = result.valid ? ["Hotkey must include a non-modifier key"] : result.errors;
+  let errors = result.errors.map((issue) => (issue.part ? `${issue.reason}: ${issue.part}` : issue.reason));
+  if (result.valid)
+    errors = typesText
+      ? ["Hotkey types text; add Ctrl, Cmd, Alt or Mod, or use a shortcut-mode layer"]
+      : ["Hotkey must include a non-modifier key"];
 
   runtime.diagnostics.push(
     createDiagnostic({
@@ -223,7 +233,15 @@ export const registerKeybindings = (
     source,
     runtime,
     kind: "keybinding",
-    contributions: contributionArray<KeybindingContribution>(source.definition.keybindings),
+    contributions: contributionArray<KeybindingContribution>(source.definition.keybindings).map((contribution) => {
+      if (!isRecord(contribution)) return contribution;
+      const canonical = { ...contribution };
+      for (const field of ["key", "mac", "linux", "win"] as const) {
+        const chord = canonical[field];
+        if (typeof chord === "string") canonical[field] = withNamedKeyCase(chord);
+      }
+      return canonical;
+    }),
   });
   for (const contribution of contributions) {
     const localId = contribution.id;

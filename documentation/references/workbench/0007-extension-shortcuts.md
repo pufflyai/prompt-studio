@@ -32,6 +32,8 @@ The host derives setup actions from public metadata:
 - Alt+Shift+T is the single color-theme action, regardless of the number of theme providers.
 - Alt+Shift+R reopens the most recently closed tab in the current project.
 
+A direct extension chord must hold Ctrl, Cmd, Alt or Mod. A printable key alone or with Shift types text, so extension checks report it as `invalid_keybinding` and drop it; bind single keys in a shortcut-mode layer instead.
+
 These actions do not depend on provider names. Disabled extensions contribute no active shortcuts. Destination navigation uses its G sequence, and creation uses its C sequence, each without duplicate direct chords. Direct Option+Shift chords control panels and tabs and also work inside shortcut mode. Installed external extensions, including Pencil, keep their public actions available for search and personal assignment; their source is outside this repository, so this change does not add provider-specific defaults to them.
 
 ## Several panels
@@ -50,4 +52,4 @@ Managed webviews negotiate entry chords with the host. Artifacts installs the pu
 
 Extension adoption uses the keyboard API from [SDK/core PR #1377](https://github.com/pufflyai/prompt-studio/pull/1377) and pins the published SDK/UI preview pair from main commit `2c2b2e4c6b144c418cc048219c56553afe938bf4`. It requires a host providing extension API 0.3.0. Future adoption changes that need an unpublished SDK or UI must keep the waiting-for-release label until compatible packages are published; then update dependency ranges and rerun published-extension validation. Do not bypass the published dependency check.
 
-*Updated at: 2026-11-11*
+*Updated at: 2026-11-14*

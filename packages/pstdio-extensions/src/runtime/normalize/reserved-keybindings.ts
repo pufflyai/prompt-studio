@@ -113,8 +113,23 @@ export interface ReservedKeybindingMatch {
   description: string;
 }
 
+const NAMED_KEYS = new Map(
+  [
+    ...["Escape", "Enter", "Space", "Tab", "Backspace", "Delete", "Insert", "Home", "End", "PageUp", "PageDown"],
+    ...["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"],
+    ...Array.from({ length: 24 }, (_, index) => `F${index + 1}`),
+  ].map((key) => [key.toLowerCase(), key]),
+);
+
+/** `@tanstack/hotkeys` matches named keys only in their canonical case, such as `ArrowLeft`. */
+export const withNamedKeyCase = (chord: string) =>
+  chord
+    .split(/(\s+|\+)/)
+    .map((part) => NAMED_KEYS.get(part.toLowerCase()) ?? part)
+    .join("");
+
 const canonicalize = (chord: string, platform: ReservedKeybindingPlatform) =>
-  normalizeHotkey(chord, TANSTACK_PLATFORMS[platform]);
+  normalizeHotkey(withNamedKeyCase(chord), TANSTACK_PLATFORMS[platform]);
 
 const buildReservedIndex = () => {
   const byPlatform = new Map<ReservedKeybindingPlatform, Map<string, ReservedKeybindingEntry>>();
