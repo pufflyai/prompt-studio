@@ -269,3 +269,60 @@ test.each([
     environment.IS_REACT_ACT_ENVIRONMENT = previous;
   }
 });
+
+test("tree change hints refresh the mounted tree and detach when its presentation hides", async () => {
+  const environment = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
+  const previous = environment.IS_REACT_ACT_ENVIRONMENT;
+  environment.IS_REACT_ACT_ENVIRONMENT = true;
+  const workbench = createWorkbench();
+  let nodes = [{ id: "old", label: "Old" }];
+  let invalidate: (() => void) | undefined;
+  let subscriptions = 0;
+  workbench.views.registerView({
+    id: "files",
+    title: "Files",
+    body: {
+      kind: "tree",
+      getBody: () => [{ id: "files", nodes }],
+      getChildren: () => [],
+      subscribe: (_ctx, listener) => {
+        subscriptions++;
+        invalidate = listener;
+        return () => {
+          subscriptions--;
+          invalidate = undefined;
+        };
+      },
+    },
+  });
+  let value: ReturnType<typeof useTreeData> | undefined;
+  const Capture = () => {
+    value = useTreeData(workbench, "files");
+    return null;
+  };
+  const content = (visible: boolean) => (
+    <Activity mode={visible ? "visible" : "hidden"}>
+      <Capture />
+    </Activity>
+  );
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    await act(async () => {
+      renderer = create(content(true));
+    });
+    expect(subscriptions).toBe(1);
+    expect(value?.body[0]?.nodes[0]?.id).toBe("old");
+    nodes = [{ id: "external", label: "External" }];
+    await act(async () => invalidate?.());
+    expect(value?.body[0]?.nodes[0]?.id).toBe("external");
+    await act(async () => renderer!.update(content(false)));
+    expect(subscriptions).toBe(0);
+    await act(async () => renderer!.update(content(true)));
+    expect(subscriptions).toBe(1);
+  } finally {
+    await act(async () => renderer?.unmount());
+    expect(subscriptions).toBe(0);
+    await workbench.dispose();
+    environment.IS_REACT_ACT_ENVIRONMENT = previous;
+  }
+});

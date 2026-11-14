@@ -23,12 +23,14 @@ import type { Workspace, WorkspaceListItem } from "../resources";
 import { pageQuery } from "./page-query";
 import type { RequestFn } from "./request";
 import type { createSessionStreamTransport } from "./session-stream";
-import { type WorkspaceDiffWatchInput, watchWorkspaceDiff } from "./workspace-diff-stream";
+import { type WorkspaceDiffWatchInput, watchWorkspaceDiff, watchWorkspaceFiles } from "./workspace-diff-stream";
 import { createWorkspaceDiffClient } from "./workspace-diffs";
 
 export type WorkspaceClient = ReturnType<typeof createWorkspaceDiffClient> & {
   /** Observe external file and Git changes while a local diff is presented. */
   watchDiff(workspaceId: string, input: WorkspaceDiffWatchInput): Promise<void>;
+  /** Observe external changes while a local file explorer is presented. */
+  watchFiles(workspaceId: string, input: WorkspaceDiffWatchInput): Promise<void>;
   /** Resolve a protected existing local entry for platform integrations. */
   resolveEntry(workspaceId: string, path: string): Promise<WorkspaceResolvedEntry>;
   getCapacity(): Promise<WorkspaceCapacity>;
@@ -79,6 +81,7 @@ export const createWorkspaceClient = (
   streams: ReturnType<typeof createSessionStreamTransport>,
 ): WorkspaceClient => ({
   watchDiff: (id, input) => watchWorkspaceDiff(streams, id, input),
+  watchFiles: (id, input) => watchWorkspaceFiles(streams, id, input),
   ...createWorkspaceDiffClient(request),
   resolveEntry: (workspaceId, path) =>
     request(`/v1/workspaces/${encodeURIComponent(workspaceId)}/entry?${new URLSearchParams({ path })}`),

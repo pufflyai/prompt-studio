@@ -50,6 +50,14 @@ const selectFrame = (selection: ReturnType<typeof createFrameSelection>, raise: 
   if (id) raise(id);
 };
 
+const focusedRegionBounds = (target: HTMLElement, item: HTMLElement) => {
+  // The temporary selection overlay can be taller than the viewport.
+  const region = target.hasAttribute("data-canvas-select")
+    ? (item.querySelector<HTMLElement>("[data-canvas-handle]") ?? target)
+    : target;
+  return region.getBoundingClientRect();
+};
+
 export const createCanvasRuntime = (
   canvas: CanvasDefinition,
   initial: Layout,
@@ -226,7 +234,7 @@ export const createCanvasRuntime = (
       cancelAnimationFrame(focusFrame);
       focusFrame = requestAnimationFrame(() => {
         if (!shell || !target.isConnected || !target.contains(document.activeElement)) return;
-        const rect = target.getBoundingClientRect();
+        const rect = focusedRegionBounds(target, item);
         const view = shell.getBoundingClientRect();
         const next = revealCamera(
           layout.camera,
