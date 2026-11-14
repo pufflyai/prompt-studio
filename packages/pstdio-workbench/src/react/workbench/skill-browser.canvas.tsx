@@ -1,4 +1,6 @@
 import type { CanvasMeta } from "@pstdio/canvas";
+import { ScrollArea, TreeList } from "@pstdio/ui";
+import { ParamEditor } from "@pstdio/ui/param-editor";
 import { useState } from "react";
 import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
@@ -30,35 +32,10 @@ const createBrowser = () => {
     title: "Skill details",
     icon: "info",
     body: {
-      kind: "tree",
-      defaultExpandedSectionIds: ["info", "files"],
-      getBody: ({ pageParams }) => [
-        {
-          id: "info",
-          label: "Info",
-          nodes: [
-            { id: "name", label: "create-ticket", icon: "sparkles" },
-            { id: "version", label: "1.2.0", icon: "tag" },
-            {
-              id: "description",
-              label: "Create actionable tickets",
-              tooltip: "Create actionable tickets from a request.",
-            },
-          ],
-        },
-        {
-          id: "files",
-          label: "Files",
-          nodes: files.map((file) => ({
-            id: file.path,
-            label: file.path,
-            fileName: file.path,
-            selected: file.path === (pageParams?.file ?? "SKILL.md"),
-            target: { kind: "page" as const, page, resource, params: { file: file.path } },
-          })),
-        },
-      ],
-      getChildren: () => [],
+      kind: "react",
+      render: ({ instance }) => (
+        <SkillDetailsPreview workbench={workbench} files={files} resource={instance.resource!} />
+      ),
     },
   });
   workbench.viewMenus.registerViewMenu({ id: "details", ownerViewId: "skill", viewId: "details", side: "right" });
@@ -73,15 +50,91 @@ const createBrowser = () => {
     main: { kind: "view", presentation: "page", view: { kind: "view", id: "skill" }, cardinality: "one" },
     slots: [],
   });
+  workbench.views.registerView({
+    id: "skill-navigation",
+    title: "Skills",
+    body: {
+      kind: "tree",
+      getChildren: () => [],
+      getBody: () => [
+        {
+          id: "pstdio-skills",
+          label: "Prompt Studio Skills",
+          nodes: [{ id: "create-ticket", label: "Create a ticket", target: { kind: "page", page, resource } }],
+        },
+        { id: "canvas", label: "UI Canvas", nodes: [{ id: "canvas", label: "Work with UI Canvas" }] },
+      ],
+    },
+  });
+  workbench.shellPlacements.registerPlacement({
+    id: "skill-navigation",
+    region: "sidenav",
+    item: { kind: "view", presence: "fixed", view: { kind: "view", id: "skill-navigation" } },
+  });
   workbench.pageLocations.switchProject("skill-browser-preview");
   workbench.pageLocations.navigate({ kind: "page", page, resource });
   return workbench;
 };
 
+const SkillDetailsPreview = (props: {
+  workbench: ReturnType<typeof createWorkbench>;
+  files: { path: string; content: string }[];
+  resource: { type: string; id: string };
+}) => {
+  const [expanded, setExpanded] = useState(["files"]);
+  return (
+    <ScrollArea h="full" minH="0">
+      <ParamEditor
+        readOnly
+        fullWidth
+        groups={[
+          {
+            id: "info",
+            title: "Info",
+            collapsible: true,
+            params: [
+              { id: "name", name: "Name", type: "readOnly", value: "create-ticket" },
+              { id: "version", name: "Version", type: "readOnly", value: "1.2.0" },
+              {
+                id: "description",
+                name: "Description",
+                type: "readOnly",
+                value: "Create actionable tickets from a request.",
+              },
+            ],
+          },
+        ]}
+      />
+      <TreeList
+        sections={[
+          {
+            id: "files",
+            label: "Files",
+            nodes: props.files.map((file) => ({
+              id: file.path,
+              label: file.path,
+              onActivate: () =>
+                props.workbench.pageLocations.navigate({
+                  kind: "page",
+                  page: { kind: "page", extensionId: "preview", id: "skill" },
+                  resource: props.resource,
+                  params: { file: file.path },
+                }),
+            })),
+          },
+        ]}
+        expandedSectionIds={expanded}
+        onToggleSection={(id) => setExpanded((value) => (value.includes(id) ? [] : [id]))}
+      />
+    </ScrollArea>
+  );
+};
+
 export default {
   title: "Extensions/Skill Browser/Workbench",
   fullscreen: true,
-  description: "Actual workbench chrome, native file preview and a host-owned resizable details menu.",
+  description:
+    "Skills grouped by extension; parameter Info and Files share the host menu. Filename and menu toggle share the file header.",
 } satisfies CanvasMeta;
 
 export const Browser = () => {
