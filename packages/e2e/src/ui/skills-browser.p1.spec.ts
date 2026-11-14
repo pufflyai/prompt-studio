@@ -1,5 +1,5 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { cpSync } from "node:fs";
+import { basename, join } from "node:path";
 import { e2eExtension } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { expect, test } from "../scripts/session-test";
@@ -9,23 +9,18 @@ test("opens an installed skill browser with native menus and preserves files acr
   request,
 }) => {
   // Critical: automatic selection and closing details must keep instructions and supporting files accessible.
-  const created = await request.post("/v1/projects", { data: folderProjectInput({ name: "Skill browser" }) });
+  const input = folderProjectInput({ name: "Skill browser" });
+  // Prepared fixtures carry source only in CI. Exercise a real install so this optional
+  // extension gets its public dependencies without borrowing a default's node_modules.
+  cpSync(e2eExtension("pstdio-skill-browser").source, join(input.initial_workspace.params.path, "skill-browser"), {
+    recursive: true,
+    filter: (path) => basename(path) !== "node_modules",
+  });
+  const created = await request.post("/v1/projects", { data: input });
   expect(created.status()).toBe(201);
   const project = (await created.json()) as { id: string };
-  const source = e2eExtension("pstdio-skill-browser").source;
-  const manifest = JSON.parse(readFileSync(join(source, "package.json"), "utf8"));
-  const installed = await request.post(`/v1/projects/${project.id}/extensions/installed/pstdio-skill-browser/enable`, {
-    data: {
-      displayName: manifest.displayName,
-      extensionId: "pstdio.pstdio-skill-browser",
-      manifest,
-      name: manifest.name,
-      sourceHash: "skill-browser",
-      sourceKind: "local_path",
-      sourcePath: source,
-      sourceRef: null,
-      version: manifest.version,
-    },
+  const installed = await request.post(`/v1/projects/${project.id}/extensions/install`, {
+    data: { source: { kind: "project-folder", path: "skill-browser" } },
   });
   expect(installed.ok(), await installed.text()).toBe(true);
   const listed = await request.get(`/v1/projects/${project.id}/skills`);
