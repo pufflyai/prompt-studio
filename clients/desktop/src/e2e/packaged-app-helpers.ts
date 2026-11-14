@@ -16,8 +16,6 @@ import { waitForVisibleElement } from "./visible-element-timing";
 
 const desktopRoot = resolve(import.meta.dirname, "../..");
 
-export const desktopVersion = JSON.parse(readFileSync(join(desktopRoot, "package.json"), "utf8")).version as string;
-
 const packageLayout = resolvePackagedLayout(desktopRoot, process.platform, process.arch);
 
 const packagedEnvironment = (home: string) => {
@@ -103,37 +101,6 @@ export type PackagedWindow = {
 };
 
 export type PackagedApp = PackagedWindow & { runtime: RuntimeDescriptor; page: Page; readyInMs: number };
-
-export const attachStartupTimings = async (app: PackagedApp) => {
-  const lifecycle = await app.lifecyclePage.evaluate(() => ({
-    timeOrigin: performance.timeOrigin,
-    entries: performance.getEntries().map((entry) => entry.toJSON()),
-  }));
-  await test.info().attach("lifecycle-startup-performance", {
-    body: JSON.stringify({ startedAt: app.startedAt, ...lifecycle }),
-    contentType: "application/json",
-  });
-  const entries = await app.page.evaluate(() =>
-    performance
-      .getEntries()
-      .filter((entry) => ["navigation", "resource"].includes(entry.entryType))
-      .map((entry) => entry.toJSON()),
-  );
-  await test.info().attach("workbench-startup-performance", {
-    body: JSON.stringify({ readyInMs: app.readyInMs, entries }),
-    contentType: "application/json",
-  });
-  const windowShown = readFileSync(join(app.home, "logs.jsonl"), "utf8")
-    .trim()
-    .split("\n")
-    .map((line) => JSON.parse(line) as { event?: string; time: string; visible?: boolean })
-    .reverse()
-    .find((entry) => entry.event === "desktop.window.ready");
-  const firstContent = lifecycle.entries.find((entry) => entry.name === "first-contentful-paint");
-  // A missing event is reported as an unmeasured startup window, so the benchmark keeps its other samples.
-  if (!windowShown?.visible || !firstContent) return Number.NaN;
-  return Math.max(Date.parse(windowShown.time), lifecycle.timeOrigin + firstContent.startTime) - app.startedAt;
-};
 
 const launchPackaged = async <T>(
   home: string,
