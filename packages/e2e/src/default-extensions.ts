@@ -43,7 +43,6 @@ const e2eDefaultExtensions = [
   e2eExtension("pstdio-performance"),
   e2eExtension("pstdio-planner"),
   e2eExtension("pstdio-skills"),
-  e2eExtension("pstdio-skill-browser"),
   e2eExtension("harness-claude-code"),
   e2eExtension("harness-codex"),
   e2eExtension("harness-open-code"),

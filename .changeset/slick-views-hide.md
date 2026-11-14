@@ -2,6 +2,7 @@
 "pstdio": patch
 "@pstdio/workbench": patch
 "pstdio-skill-browser": minor
+"pstdio-onboarding": patch
 ---
 
-Preinstall a separate Skill Browser with automatic selection and resizable details above Settings in the footer, and narrow the settings modal.
+Offer a separate Skill Browser through Coding onboarding with automatic selection and native workbench menus above Settings in the footer, and narrow the settings modal.

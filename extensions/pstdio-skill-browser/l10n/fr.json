@@ -2,5 +2,7 @@
   "skills.title": "Compétences",
   "skill.title": "Compétence",
   "skills.list": "Lister les compétences",
-  "skills.read": "Lire une compétence"
+  "skills.read": "Lire une compétence",
+  "skill.details": "Détails de la compétence",
+  "skill.files": "Fichiers"
 }

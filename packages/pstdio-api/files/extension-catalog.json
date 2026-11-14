@@ -224,7 +224,7 @@
         "path": "extensions/pstdio-skill-browser",
         "ref": "{hostRelease}"
       },
-      "default": true
+      "default": false
     },
     {
       "installName": "pstdio-performance",

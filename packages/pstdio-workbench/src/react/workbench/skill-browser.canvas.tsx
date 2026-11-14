@@ -1,7 +1,7 @@
 import type { CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
-import { createWorkbench } from "../../../../core";
-import { WorkbenchStory } from "../../../../examples/workbench-story";
+import { createWorkbench } from "../../core";
+import { WorkbenchStory } from "../../examples/workbench-story";
 
 const createBrowser = () => {
   const page = { kind: "page", extensionId: "preview", id: "skill" } as const;
@@ -12,6 +12,7 @@ const createBrowser = () => {
   ];
   const workbench = createWorkbench({ startPage: page });
   workbench.modes.registerMode({ id: "project", activate() {} });
+  workbench.resources.registerKind({ kind: "skill", label: "Skill", icon: "sparkles", extensionId: "preview" });
   workbench.views.registerView({
     id: "skill",
     title: "Skill",
@@ -78,7 +79,7 @@ const createBrowser = () => {
 };
 
 export default {
-  title: "Proposals/PS-235 Native skill browser",
+  title: "Extensions/Skill Browser/Workbench",
   fullscreen: true,
   description: "Actual workbench chrome, native file preview and a host-owned resizable details menu.",
 } satisfies CanvasMeta;

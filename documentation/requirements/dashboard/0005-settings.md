@@ -61,7 +61,7 @@ Agents are harness contributions from enabled extensions. The core does not main
 
 ## Skills, templates, and credentials
 
-The [Skill Browser extension](../../../extensions/pstdio-skill-browser/README.md) is preinstalled and opens above Settings in the project navigation footer, automatically selecting a skill. Its resizable, closable details panel and sidebar and read-only viewer show skill metadata, instructions, and supporting files. The host owns skill storage and installation. Templates resolve through extension-owned providers and retain user overrides. Machine tokens are scoped credentials for automation; connection secrets stay in the host-managed secret boundary. Settings pages must not expose credentials as ordinary extension settings or webview state.
+Install the optional [Skill Browser extension](../../../extensions/pstdio-skill-browser/README.md) through Coding onboarding or the extension catalog. Once installed, Skills opens above Settings in the project navigation footer and automatically selects a skill. The native file viewer uses standard workbench chrome and a resizable, closable menu with collapsible Info and Files sections. The host owns skill storage and installation. Templates resolve through extension-owned providers and retain user overrides. Machine tokens are scoped credentials for automation; connection secrets stay in the host-managed secret boundary. Settings pages must not expose credentials as ordinary extension settings or webview state.
 
 Global preferences survive project deletion. Deleting one project's data must not reset installation-wide runtime or beta preferences.
 

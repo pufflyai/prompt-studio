@@ -12,7 +12,10 @@ const skill: Skill = {
   description: "Review a change",
   source_kind: "project",
   editable: true,
-  files: [{ path: "SKILL.md", content: "# Review", encoding: "utf8" }],
+  files: [
+    { path: "SKILL.md", content: "# Review", encoding: "utf8" },
+    { path: "references/examples.md", content: "# Examples", encoding: "utf8" },
+  ],
   created_at: "",
   updated_at: "",
   deleted_at: null,
@@ -49,6 +52,37 @@ test("opens a project skill from its browser tree and reads its files through th
 
 test("selects the first skill when opening the browser without a selection", async () => {
   expect(await commands.read.run(context(), {})).toEqual(skill);
+});
+
+test("reads a supporting file through the native file view using the page route", async () => {
+  const view = extension.views?.find((view) => view.id === "skill")?.body;
+  if (view?.kind !== "file") throw new Error("Skills need a native file view");
+  const loaded = await view.load(context(), {
+    renderer: {
+      rendererId: "skill",
+      resource: { type: "skill", id: "review" },
+      pageParams: { file: "references/examples.md" },
+    },
+  });
+  expect(loaded).toMatchObject({ fileName: "references/examples.md", content: "# Examples", editable: false });
+});
+
+test("keeps Info and Files in one native attached menu and selects the routed file", async () => {
+  const view = extension.views?.find((view) => view.id === "skill-details")?.body;
+  if (view?.kind !== "tree") throw new Error("Skills need a native details tree");
+  const sections = await view.body(context(), {
+    renderer: {
+      rendererId: "skill-details",
+      resource: { type: "skill", id: "review" },
+      pageParams: { file: "references/examples.md" },
+    },
+  });
+  expect(sections.map((section) => section.id)).toEqual(["info", "files"]);
+  const directory = sections[1]?.nodes.find((node) => node.id === "dir:references");
+  expect(directory?.children?.[0]).toMatchObject({
+    selected: true,
+    target: { kind: "page", page: { id: "skill" }, params: { file: "references/examples.md" } },
+  });
 });
 
 test("opens an empty browser when the project has no skills", async () => {

@@ -1,8 +1,8 @@
 # Skill Browser
 
-Skill Browser is preinstalled. Open **Skills** above Settings in the project navigation footer; the first skill opens automatically. Select another skill from the sidebar.
+Install Skill Browser through the **Coding** onboarding group or the extension catalog. Open **Skills** above Settings in the project navigation footer; the first skill opens automatically. Select another skill from the sidebar.
 
-The read-only viewer combines collapsible **Info** and **Files** sections in a details panel. Drag its divider to resize it, close it to focus on the document, and use **Show skill details** to reopen it without losing the selected file.
+The native read-only file viewer has a standard workbench menu with collapsible **Info** and **Files** sections. Drag its divider to resize it, drag to the edge or press Home on the divider to close it, and use **Open Main right menu** to reopen it without losing the selected file.
 
 The browser reads the project's resolved skill catalog through the public extension API. **Prompt Studio Skills** is a separate collection of skills for using Prompt Studio and authoring extensions.
 

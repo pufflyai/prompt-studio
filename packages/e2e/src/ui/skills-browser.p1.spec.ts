@@ -1,7 +1,10 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { e2eExtension } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { expect, test } from "../scripts/session-test";
 
-test("opens a preinstalled skill browser with a selected skill and preserves files across panel changes", async ({
+test("opens an installed skill browser with native menus and preserves files across panel changes", async ({
   page,
   request,
 }) => {
@@ -9,6 +12,22 @@ test("opens a preinstalled skill browser with a selected skill and preserves fil
   const created = await request.post("/v1/projects", { data: folderProjectInput({ name: "Skill browser" }) });
   expect(created.status()).toBe(201);
   const project = (await created.json()) as { id: string };
+  const source = e2eExtension("pstdio-skill-browser").source;
+  const manifest = JSON.parse(readFileSync(join(source, "package.json"), "utf8"));
+  const installed = await request.post(`/v1/projects/${project.id}/extensions/installed/pstdio-skill-browser/enable`, {
+    data: {
+      displayName: manifest.displayName,
+      extensionId: "pstdio.pstdio-skill-browser",
+      manifest,
+      name: manifest.name,
+      sourceHash: "skill-browser",
+      sourceKind: "local_path",
+      sourcePath: source,
+      sourceRef: null,
+      version: manifest.version,
+    },
+  });
+  expect(installed.ok(), await installed.text()).toBe(true);
   const listed = await request.get(`/v1/projects/${project.id}/skills`);
   expect(listed.ok()).toBe(true);
   const skills = (await listed.json()) as { name: string; title: string }[];
@@ -23,29 +42,30 @@ test("opens a preinstalled skill browser with a selected skill and preserves fil
   expect(labels.indexOf("Skills")).toBeLessThan(labels.indexOf("Settings"));
   await page.getByRole("option", { name: "Skills", exact: true }).click();
   await expect(page).toHaveURL(/extensions\/pstdio.pstdio-skill-browser\/skill\?/);
-  const viewer = page.frameLocator('iframe[title="Skills"]:visible');
-  await expect(viewer.getByTestId("project-skill-metadata")).toContainText(first.name);
+  const menu = page.locator('[data-workbench-panel-menu="main-right"]');
+  await expect(menu).toContainText(first.name);
   await page.getByRole("option", { name: skill.title, exact: true }).click();
-  await expect(viewer.getByTestId("project-skill-metadata")).toContainText(skill.name);
-  await viewer.getByText("pages.md", { exact: true }).click();
-  const document = viewer.getByTestId("project-skill-editor-scroll");
+  await expect(menu).toContainText(skill.name);
+  await menu.getByText("references", { exact: true }).click();
+  await menu.getByText("pages.md", { exact: true }).click();
+  const document = page.getByRole("region", { name: "Main", exact: true });
   await expect(document).toContainText("Pages and panels");
-  const divider = viewer.getByRole("separator", { name: "Resize skill details" });
+  const divider = page.getByRole("separator", { name: "Resize Main right menu" });
   const original = Number(await divider.getAttribute("aria-valuenow"));
   await divider.focus();
-  await divider.press("ArrowRight");
+  await divider.press("ArrowLeft");
   await expect.poll(async () => Number(await divider.getAttribute("aria-valuenow"))).toBeGreaterThan(original);
-  await viewer.getByRole("button", { name: "Close skill details", exact: true }).click();
-  await expect(viewer.getByTestId("project-skill-file-tree")).toBeHidden();
+  await divider.press("Home");
+  await expect(menu).toBeHidden();
   await expect(document).toContainText("Pages and panels");
-  await viewer.getByRole("button", { name: "Show skill details", exact: true }).click();
-  await expect(viewer.getByTestId("project-skill-file-tree")).toBeVisible();
+  await page.getByRole("button", { name: "Open Main right menu", exact: true }).click();
+  await expect(menu).toBeVisible();
   await expect(document).toContainText("Pages and panels");
-  await viewer.getByRole("button", { name: "Info", exact: true }).click();
-  await expect(viewer.getByTestId("project-skill-metadata")).toBeHidden();
-  await expect(viewer.getByTestId("project-skill-file-tree")).toBeVisible();
+  await menu.getByText("Info", { exact: true }).click();
+  await expect(menu.getByText(skill.name, { exact: true })).toBeHidden();
+  await expect(menu.getByText("pages.md", { exact: true })).toBeVisible();
   await page.reload();
-  await expect(viewer.getByTestId("project-skill-metadata")).toContainText(skill.name);
+  await expect(document).toContainText("Pages and panels");
   await page.getByRole("option", { name: "Settings", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await expect(page.getByRole("dialog").getByText("Runtime", { exact: true }).last()).toBeVisible();

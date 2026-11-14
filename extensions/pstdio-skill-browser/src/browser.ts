@@ -6,11 +6,13 @@ import {
   definePage,
   defineResourceKind,
   defineView,
+  defineViewMenu,
   l10n,
   packageAsset,
   viewDataEvents,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
+import { readSkill, selectedSkillFile, skillFiles, skillInfo } from "./skill-content";
 
 const title = l10n("skills.title", "Skills");
 const skill = defineResourceKind({ id: "skill", label: l10n("skill.title", "Skill"), icon: "sparkles" });
@@ -18,6 +20,20 @@ const viewer = defineView({
   id: "skill",
   title,
   icon: "sparkles",
+  body: {
+    kind: "file",
+    refreshEvents: [viewDataEvents.extensionCatalogChanged, viewDataEvents.resourcesChanged],
+    load: async (ctx, { renderer }) => {
+      const item = await readSkill(ctx, renderer.resource?.id);
+      const file = item && selectedSkillFile(item, renderer.pageParams?.file);
+      if (!file) return { emptyState: { title: "No skill content" } };
+      return { fileName: file.path, filePath: file.path, content: file.content, editable: false };
+    },
+  },
+});
+const landing = defineView({
+  id: "skill-landing",
+  title,
   body: {
     kind: "webview",
     entry: packageAsset("./view.tsx", import.meta.url),
@@ -31,7 +47,7 @@ const skills = definePage({
   icon: "sparkles",
   path: "skills",
   mode: workbenchModes.project,
-  main,
+  main: { ...main, view: landing.ref },
   slots: [],
 });
 const detail = definePage({
@@ -42,8 +58,44 @@ const detail = definePage({
   mode: workbenchModes.project,
   parent: skills.ref,
   resource: { kinds: [skill.ref] },
+  params: { file: { type: "string", default: "SKILL.md" } },
   main,
   slots: [],
+});
+const details = defineView({
+  id: "skill-details",
+  title: l10n("skill.details", "Skill details"),
+  icon: "info",
+  body: {
+    kind: "tree",
+    defaultExpandedSectionIds: ["info", "files"],
+    refreshEvents: [viewDataEvents.extensionCatalogChanged, viewDataEvents.resourcesChanged],
+    body: async (ctx, { renderer }) => {
+      const item = await readSkill(ctx, renderer.resource?.id);
+      if (!item) return [];
+      const resource = renderer.resource ?? {
+        type: skill.id,
+        id: item.name,
+        label: item.title,
+        extensionId: ctx.extensionId,
+        projectId: ctx.projectId,
+      };
+      const file = selectedSkillFile(item, renderer.pageParams?.file);
+      return [
+        skillInfo(item),
+        {
+          id: "files",
+          label: l10n("skill.files", "Files"),
+          nodes: skillFiles(item, file?.path, (path) => ({
+            kind: "page",
+            page: detail.ref,
+            resource,
+            params: { file: path },
+          })),
+        },
+      ];
+    },
+  },
 });
 const list = defineView({
   id: "skill-list",
@@ -88,20 +140,15 @@ export const commands = {
     title: l10n("skills.read", "Read skill"),
     cli: true,
     params: { name: { type: "text" } },
-    run: async (ctx, { name }) => {
-      const skills = (await ctx.skills?.list()) ?? [];
-      if (!name) return skills[0] ?? null;
-      const item = skills.find((item) => item.name === name);
-      if (!item) throw new Error(`Skill not found: ${name}`);
-      return item;
-    },
+    run: async (ctx, { name }) => readSkill(ctx, typeof name === "string" ? name : undefined),
   }),
 };
 export const browser = {
   resourceKinds: [skill],
   commands: Object.values(commands),
-  views: [viewer, list],
+  views: [viewer, landing, list, details],
   pages: [skills, detail],
+  viewMenus: [defineViewMenu({ id: "skill-details", owner: viewer.ref, view: details.ref, side: "right" })],
   navigationItems: [
     defineNavigationItem({
       id: "skills",

@@ -51,6 +51,7 @@ test("Coding installs Workspaces with its selected tools", async () => {
       "pstdio-planner",
       "pstdio-reports",
       "pstdio-artifacts",
+      "pstdio-skill-browser",
       "pstdio-base-themes",
       "pstdio-skills",
     ],

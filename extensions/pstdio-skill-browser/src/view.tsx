@@ -12,7 +12,6 @@ import { ChakraProvider, FileIconThemePreferenceProvider, psTheme } from "@pstdi
 import { useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
 import type { commands } from "./browser";
-import { SkillViewerContent } from "./skill-viewer";
 import { useSkillSelection } from "./use-skill-selection";
 
 interface HostProps {
@@ -57,7 +56,7 @@ const SkillContent = (props: { context: ExtensionViewRenderContext<HostProps>; n
         <Spinner />
       </Flex>
     );
-  return <SkillViewerContent key={query.data.id} skill={query.data} />;
+  return <Spinner m="md" aria-label="Opening skill" />;
 };
 const App = (props: { context: ExtensionViewRenderContext<HostProps> }) => {
   const { context } = props;
