@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import catalogData from "../../../files/extension-catalog.json";
 import { loadExtensionCatalog, packagedExtensionCatalog, parseExtensionCatalog } from "./extension-catalog";
 
@@ -25,7 +26,7 @@ describe("extension catalog", () => {
       const manifest = JSON.parse(
         readFileSync(join(import.meta.dir, "../../../../..", extension.origin.path, "package.json"), "utf8"),
       );
-      expect(extension.extensionId).toBe(`${manifest.publisher}.${manifest.name}`);
+      expect(extension.extensionId).toBe(canonicalExtensionId(`${manifest.publisher}.${manifest.name}`));
       expect(typeof extension.icon).toBe("string");
       expect(extension.icon).toBe(manifest.icon);
     }
@@ -111,12 +112,6 @@ describe("extension catalog", () => {
       .filter((catalogEntry) => catalogEntry.default)
       .map((catalogEntry) => catalogEntry.installName);
 
-    expect(defaults).toEqual([
-      "pstdio-home",
-      "pstdio-session-browser",
-      "pstdio-onboarding",
-      "pstdio-base-themes",
-      "pstdio-skills",
-    ]);
+    expect(defaults).toEqual(["home", "session-browser", "onboarding", "base-themes", "skills"]);
   });
 });

@@ -21,13 +21,13 @@ export const expectPlannerWorkflow = async (
   const commands = (await commandsResponse.json()) as { commands: Array<{ id: string; cliPath?: string }> };
   expect(commands.commands).toContainEqual(
     expect.objectContaining({
-      id: "pstdio.pstdio-planner.command.implementation-policy",
-      cliPath: "pstdio.pstdio-planner implementation-policy",
+      id: "pstdio.planner.command.implementation-policy",
+      cliPath: "pstdio.planner implementation-policy",
     }),
   );
   const execute = async <T>(command: string, params: Record<string, unknown> = {}, targetProjectId = projectId) => {
     const response = await fetch(
-      `${baseUrl}/v1/projects/${targetProjectId}/extensions/commands/pstdio.pstdio-planner.command.${command}/execute`,
+      `${baseUrl}/v1/projects/${targetProjectId}/extensions/commands/pstdio.planner.command.${command}/execute`,
       {
         method: "POST",
         headers,

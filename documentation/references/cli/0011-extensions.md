@@ -5,7 +5,7 @@ Install extensions, share package files and request compatible updates from a li
 ## Install and update
 
 ~~~bash
-pst extensions add pstdio.pstdio-notes
+pst extensions add pstdio.notes
 pst extensions update pstdio-notes
 pst extensions check
 ~~~
@@ -42,7 +42,6 @@ pst bob.notes list
 
 The namespace is the extension's full publisher and name. A deprecated name-only
 namespace works while exactly one enabled extension uses that name. Ambiguous
-names fail and list the full-ID choices. Declared global aliases such as
-pst tickets keep their short form.
+names fail and list the full-ID choices. Extension commands use their full publisher-qualified namespace. The API 0.5.0 release removes extension-defined global shortcuts such as `pst tickets`; use `pst pstdio.planner` instead.
 
-*Updated at: 2026-11-02*
+*Updated at: 2026-11-12*

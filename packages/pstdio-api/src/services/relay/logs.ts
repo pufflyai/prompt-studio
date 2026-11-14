@@ -1,3 +1,4 @@
+import { extensionTransportName } from "pstdio-api-contracts/extension-host";
 import type { StorageOwner } from "pstdio-sync";
 import type { SyncSpace } from "pstdio-sync/encryption";
 import { createLogStreamSync, type LogDirectoryEntry, type LogRemote, type LogStreamStore } from "pstdio-sync/logs";
@@ -21,7 +22,7 @@ export const createRelayLogs = (input: {
   let closed = false;
   const create = async (entry: LogDirectoryEntry, store: LogStreamStore) => {
     const documentId = await input.space.documentId(
-      JSON.stringify([input.owner.extensionId, "append-log-v1", entry.name, entry.scope, entry.stream]),
+      extensionTransportName(input.owner.extensionId, "append-log-v1", entry.name, entry.scope, entry.stream),
     );
     input.signal.throwIfAborted();
     if (closed) throw new Error("Log connection is closed");

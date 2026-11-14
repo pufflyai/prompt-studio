@@ -1,7 +1,14 @@
 import { sep } from "node:path";
 import { and, desc, eq, gte, inArray, lt } from "drizzle-orm";
+import {
+  canonicalExtensionId,
+  canonicalInstallName,
+  historicalExtensionId,
+  matchesExtensionInstallName,
+} from "pstdio-api-contracts/extension-host";
 import type { DbClient } from "../../db/connection.pglite";
 import { extension_reload_events, installed_extension_sources } from "../../db/schemas.pg";
+import { migrateExtensionIdentities } from "../extension-identity-migration";
 
 type InstalledSourceRow = typeof installed_extension_sources.$inferSelect;
 type InstalledSourceInsert = typeof installed_extension_sources.$inferInsert;
@@ -56,11 +63,12 @@ export const createInstalledExtensionSourcesDBService = (db: DbClient) => {
   };
 
   const getByInstallName = async (installName: string) => {
-    const [row] = await db
-      .select()
-      .from(installed_extension_sources)
-      .where(eq(installed_extension_sources.install_name, installName));
-    return row ?? null;
+    const rows = (await list()).filter((row) =>
+      matchesExtensionInstallName({ extensionId: row.extension_id, installName: row.install_name }, installName),
+    );
+    if (new Set(rows.map((row) => row.extension_id)).size > 1)
+      throw new Error(`Extension install name is ambiguous: ${installName}. Use its publisher-qualified ID.`);
+    return rows[0] ?? null;
   };
 
   const getBySourcePath = async (sourcePath: string) => {
@@ -88,6 +96,28 @@ export const createInstalledExtensionSourcesDBService = (db: DbClient) => {
   };
 
   const register = async (input: RegisterInput) => {
+    await migrateExtensionIdentities(db, { extensionId: input.extension_id });
+    const extension_id = canonicalExtensionId(input.extension_id);
+    if (historicalExtensionId(extension_id) !== extension_id)
+      input = {
+        ...input,
+        extension_id,
+        install_name: matchesExtensionInstallName(
+          { extensionId: extension_id, installName: canonicalInstallName(extension_id) },
+          input.install_name,
+        )
+          ? canonicalInstallName(extension_id)
+          : input.install_name,
+        manifest_json:
+          input.manifest_json &&
+          typeof input.manifest_json.name === "string" &&
+          matchesExtensionInstallName(
+            { extensionId: extension_id, installName: canonicalInstallName(extension_id) },
+            input.manifest_json.name,
+          )
+            ? { ...input.manifest_json, name: canonicalInstallName(input.extension_id) }
+            : input.manifest_json,
+      };
     const timestamp = nowTimestamp();
     const row: InstalledSourceInsert = {
       id: crypto.randomUUID(),
@@ -101,6 +131,9 @@ export const createInstalledExtensionSourcesDBService = (db: DbClient) => {
   };
 
   const updateLoadState = async (id: string, input: UpdateLoadStateInput) => {
+    const current = await get(id);
+    if (current?.last_error_json?.code === "extension_identity_conflict")
+      await migrateExtensionIdentities(db, { extensionId: current.extension_id });
     const timestamp = nowTimestamp();
     const [updated] = await db
       .update(installed_extension_sources)
@@ -111,6 +144,24 @@ export const createInstalledExtensionSourcesDBService = (db: DbClient) => {
   };
 
   const updateRegistration = async (id: string, input: UpdateRegistrationInput) => {
+    const current = await get(id);
+    if (input.extension_id || current?.last_error_json?.code === "extension_identity_conflict")
+      await migrateExtensionIdentities(db, { extensionId: input.extension_id ?? current!.extension_id });
+    const owner = input.extension_id ?? current?.extension_id;
+    if (owner) {
+      const extension_id = canonicalExtensionId(owner);
+      input = { ...input, extension_id };
+      if (
+        input.manifest_json &&
+        typeof input.manifest_json.name === "string" &&
+        historicalExtensionId(extension_id) !== extension_id &&
+        matchesExtensionInstallName(
+          { extensionId: extension_id, installName: canonicalInstallName(extension_id) },
+          input.manifest_json.name,
+        )
+      )
+        input.manifest_json = { ...input.manifest_json, name: canonicalInstallName(owner) };
+    }
     const timestamp = nowTimestamp();
     const [updated] = await db
       .update(installed_extension_sources)
@@ -121,6 +172,9 @@ export const createInstalledExtensionSourcesDBService = (db: DbClient) => {
   };
 
   const updateLoadStateIfUnchanged = async (id: string, updatedAt: string, input: UpdateLoadStateInput) => {
+    const current = await get(id);
+    if (current?.last_error_json?.code === "extension_identity_conflict")
+      await migrateExtensionIdentities(db, { extensionId: current.extension_id });
     const [updated] = await db
       .update(installed_extension_sources)
       .set({ ...input, updated_at: nowTimestamp() })

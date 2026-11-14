@@ -18,7 +18,7 @@ const instance = {
 const installedSource = {
   id: "installed-1",
   install_name: "pstdio-planner",
-  extension_id: "pstdio.pstdio-planner",
+  extension_id: "pstdio.planner",
   display_name: "Project Planner",
   source_hash: "old-hash",
   source_kind: "git",
@@ -31,7 +31,7 @@ const installed = {
   installName: "pstdio-planner",
   manifest: { name: "pstdio-planner" },
   metadata: {
-    id: "pstdio.pstdio-planner",
+    id: "pstdio.planner",
     name: "pstdio-planner",
     displayName: "Project Planner",
     version: "0.8.0",
@@ -142,7 +142,7 @@ describe("extension upgrade service", () => {
 
   test("offers the bundled source update when a full host ref maps to another commit", async () => {
     const ref = "a".repeat(40);
-    const origin = packagedExtensionCatalog.extensions.find((entry) => entry.installName === "pstdio-planner")!.origin;
+    const origin = packagedExtensionCatalog.extensions.find((entry) => entry.installName === "planner")!.origin;
     const manifest: BundledExtensionSources = {
       ref,
       commit: "b".repeat(40),
@@ -150,7 +150,7 @@ describe("extension upgrade service", () => {
         {
           ...origin,
           installName: "pstdio-planner",
-          id: "pstdio.pstdio-planner",
+          id: "pstdio.planner",
           version: "1.0.0",
           sha256: "c".repeat(64),
         },
@@ -480,7 +480,7 @@ describe("catalog Git installs on a registry host", () => {
       fetch: () =>
         Response.json({
           versions: versions.map((version) => ({
-            id: "pstdio.pstdio-planner",
+            id: "pstdio.planner",
             version,
             enginesPstdio: `^${EXTENSION_API_VERSION}`,
             sha256: "0".repeat(64),

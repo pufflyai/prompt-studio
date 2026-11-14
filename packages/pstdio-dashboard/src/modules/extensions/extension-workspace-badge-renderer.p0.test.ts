@@ -15,7 +15,7 @@ describe("extension workspace badge renderer", () => {
       resource: { type: "workspace", id: "workspace-1" },
       parent: {
         kind: "page",
-        page: { kind: "page", id: "ticket", extensionId: "pstdio.pstdio-planner" },
+        page: { kind: "page", id: "ticket", extensionId: "pstdio.planner" },
         resource: { type: "ticket", id: "ticket-1" },
       },
     };

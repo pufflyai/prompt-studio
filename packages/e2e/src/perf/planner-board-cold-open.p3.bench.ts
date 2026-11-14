@@ -12,7 +12,7 @@ import { runtimeAuthorization, startPackagedServe, stopProcess } from "../packag
 import { summarizeSamples } from "./perf-helpers";
 
 const repoRoot = join(import.meta.dirname, "../../../..");
-const board = "pstdio.pstdio-planner.view.tickets";
+const board = "pstdio.planner.view.tickets";
 // The saved view filters by stored option IDs. While loading, none of them may reach the screen.
 const rawLabels = /\bin-progress\b|default-priority-low|Unavailable field/;
 // The shared registry records the approved budget and its native timing evidence.
@@ -33,7 +33,7 @@ const startRuntime = async (home: string) => {
   const headers = { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" };
   const execute = async <T>(projectId: string, command: string, params: Record<string, unknown>) => {
     const response = await fetch(
-      `${started.baseUrl}/v1/projects/${projectId}/extensions/commands/pstdio.pstdio-planner.command.${command}/execute`,
+      `${started.baseUrl}/v1/projects/${projectId}/extensions/commands/pstdio.planner.command.${command}/execute`,
       { method: "POST", headers, body: JSON.stringify({ params }) },
     );
     const body = (await response.json()) as { outcome: { status: string; value: T } };
@@ -163,7 +163,7 @@ const measureColdOpen = async (home: string, fixture: Fixture) => {
     });
     if (!response.ok) throw new Error(`Browser login failed with HTTP ${response.status}`);
     const login = new URL(((await response.json()) as { url: string }).url);
-    login.pathname = `/projects/${fixture.projectId}/extensions/pstdio.pstdio-planner/tickets`;
+    login.pathname = `/projects/${fixture.projectId}/extensions/pstdio.planner/tickets`;
     if (page.url() !== "about:blank") throw new Error("Cold open must use the browser's first page navigation.");
     const started = performance.now();
     try {

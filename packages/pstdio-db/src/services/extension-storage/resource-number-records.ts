@@ -1,4 +1,5 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { StorageOwner } from "pstdio-sync";
 import { coreOwnerId, type NumberedResource, retainedResourceValue } from "pstdio-sync/records";
 import type { StorageRecord } from "pstdio-sync-contracts";
@@ -51,7 +52,10 @@ const hasNumberValue = (record: StorageRecord) => {
 
 export const isNumberRecord = (record: StorageRecord) => !record.deleted && hasNumberValue(record);
 
-export const numberValue = (record: StorageRecord) => record.value as unknown as NumberRecord;
+export const numberValue = (record: StorageRecord) => {
+  const value = record.value as unknown as NumberRecord;
+  return { ...value, extensionId: canonicalExtensionId(value.extensionId) };
+};
 
 /** Both indexes include numeric values: a large former alias must never be allocated again. */
 export const indexedNumberCandidate = async (tx: Transaction, projectId: string, prefix: string) => {

@@ -34,11 +34,11 @@ records this policy. Extensions adopt the new APIs only after the 0.44 SDK is pu
 | Access to another extension's preference names, except core preferences | Caller-owned names | Deprecated in 0.44, removed in 0.45 |
 | Filesystem-hook contexts and singular hook-client facade | Typed hooks and events, or the SDK client | Deprecated in 0.44, removed in 0.45 |
 | SDK `requireRepoFiles` | Named file handle | Deprecated in 0.44, removed in 0.45 |
-| Planner [`auto-build candidates`](../../../extensions/pstdio-planner/src/commands/auto-build-candidates.ts) | `pst tickets next` | Deprecated in 0.44, removed in 0.45 |
+| Planner [`auto-build candidates`](../../../extensions/pstdio-planner/src/commands/auto-build-candidates.ts) | `pst pstdio.planner next-tickets` | Deprecated in 0.44, removed in 0.45 |
 | Planner [`expectedAttemptState`](../../../extensions/pstdio-planner/src/commands/change-requests.ts) and its CLI flag | Ownership checks and `expectedRevision` | Deprecated in 0.44, removed in 0.45 |
 
 Do not delete published data, SQL migration history or promised URL readers because a private name
-says legacy. Author-facing aliases such as `pst tickets` are current.
+says legacy. Author-facing aliases such as `pst pstdio.planner` are current.
 
 ## Delivery and acceptance
 

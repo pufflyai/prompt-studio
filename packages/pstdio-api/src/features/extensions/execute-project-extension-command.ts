@@ -7,11 +7,12 @@ import {
   queryChangeEnvelopeSchema,
   resolveCommandResourceParams,
 } from "pstdio-api-contracts";
-import { createCommandRunner, createReadBoundary } from "pstdio-extensions";
+import { canonicalRuntimeId, createCommandRunner, createReadBoundary } from "pstdio-extensions";
 import { z } from "zod";
 import { withStorageObservation } from "../../services/shared-files/storage-observation";
 import { createCommandEnvironment } from "./command-environment";
 import type { ExtensionsRouteDeps } from "./deps";
+import { publishExtensionEventNotifications } from "./extension-event-notifications";
 import { createExtensionLogger } from "./extension-logger";
 
 export class ExtensionCommandNotFoundError extends Error {
@@ -37,8 +38,9 @@ export const executeProjectExtensionCommand = async (
     onChunk?: (chunk: JsonValue) => Promise<void>;
   },
 ) => {
-  const { body, commandId, projectId } = input;
+  const { body, projectId } = input;
   const snapshot = await createReadBoundary(input.signal)(() => deps.extensionRuntimeCatalog.get(projectId));
+  const commandId = canonicalRuntimeId(snapshot.runtime, input.commandId);
   const command = snapshot.runtime.commands.find((candidate) => candidate.id === commandId);
   const handler = command ?? snapshot.runtime.privateHandlers.find((candidate) => candidate.id === commandId);
   if (!handler) throw new ExtensionCommandNotFoundError(commandId);
@@ -70,7 +72,7 @@ export const executeProjectExtensionCommand = async (
       // with the same envelope; response deduplication is only for finite calls.
       if (input.onChunk) {
         const { id: eventId, ...scope } = event;
-        deps.eventBus.emit("extension_events", "set", { ...scope, id: crypto.randomUUID(), eventId });
+        publishExtensionEventNotifications(deps.eventBus, snapshot.runtime, eventId, scope);
       }
       const key = JSON.stringify(event);
       // Repeated hooks still run; consumers need each distinct invalidation only once.
@@ -116,9 +118,15 @@ export const executeProjectExtensionCommand = async (
       ...outcome,
       data: { ...outcome.data, fileStorageVersions: { ...expected, ...observed.versions } },
     };
-  if (!input.onChunk && body.source !== "dashboard") {
+  if (!input.onChunk) {
     for (const { id: eventId, ...refresh } of events)
-      deps.eventBus.emit("extension_events", "set", { ...refresh, id: crypto.randomUUID(), projectId, eventId });
+      publishExtensionEventNotifications(
+        deps.eventBus,
+        snapshot.runtime,
+        eventId,
+        refresh,
+        body.source !== "dashboard",
+      );
   }
   return { commandId, extensionId: handler.extensionId, eventIds: [...eventIds], events, outcome };
 };

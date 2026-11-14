@@ -14,7 +14,7 @@ export const verifyPackagedCollectionBreadcrumb = async (
   const path = join(projectFolder, fileName);
   writeFileSync(path, `<html><head><title>${title}</title></head><body>Artifact preview</body></html>`);
   const response = await fetch(
-    `${baseUrl}/v1/projects/${projectId}/extensions/commands/pstdio.pstdio-artifacts.command.publish/execute`,
+    `${baseUrl}/v1/projects/${projectId}/extensions/commands/pstdio.artifacts.command.publish/execute`,
     {
       method: "POST",
       headers: { ...headers, "content-type": "application/json" },
@@ -24,7 +24,7 @@ export const verifyPackagedCollectionBreadcrumb = async (
   expect(response.status).toBe(200);
   const result = await response.json();
   expect(result, JSON.stringify(result)).toMatchObject({ outcome: { status: "success" } });
-  await page.goto(`${baseUrl}/projects/${projectId}/extensions/pstdio.pstdio-artifacts/artifacts`);
+  await page.goto(`${baseUrl}/projects/${projectId}/extensions/pstdio.artifacts/artifacts`);
   const libraryUrl = page.url();
   await page.frameLocator('iframe[title="Artifacts"]').getByText(title, { exact: true }).click();
   const breadcrumbs = page.getByRole("navigation", { name: "breadcrumb", exact: true });

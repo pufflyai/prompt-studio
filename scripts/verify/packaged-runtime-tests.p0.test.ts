@@ -6,12 +6,14 @@ import { join } from "node:path";
 import { copyCiRuntime, isolateCiRuntimeEnvironment } from "../ci/copy-ci-runtime.test-fixture";
 import { runPackagedRuntimeTests } from "./packaged-runtime-tests";
 
-test("planned runtime shards execute the complete native workload exactly once", async () => {
+test("standalone runtime shards honor assigned priorities and execute the complete native workload exactly once", async () => {
   const root = mkdtempSync(join(tmpdir(), "packaged-shards-"));
   const cwd = join(root, "packages/e2e");
   const executed = join(root, "test-results/executed");
   const binaryPath = join(cwd, "native-candidate");
   const restoreEnvironment = isolateCiRuntimeEnvironment();
+  const inheritedPriorities = process.env.TEST_PRIORITIES;
+  process.env.TEST_PRIORITIES = "P0,P1";
   try {
     await copyCiRuntime(root);
     mkdirSync(join(cwd, "src/packaged"), { recursive: true });
@@ -39,6 +41,11 @@ test("native case ${index}", () => {
   appendFileSync(${JSON.stringify(executed)}, ${JSON.stringify(`${index}\n`)});
 });`,
       );
+    writeFileSync(
+      join(cwd, "src/packaged", "other-priority.p2.test.ts"),
+      `import { test } from "bun:test";import { appendFileSync } from "node:fs";
+test("other platform workload", () => appendFileSync(${JSON.stringify(executed)}, "P2\\n"));`,
+    );
     execFileSync("git", ["init", "--quiet"], { cwd: root });
     execFileSync("git", ["add", "."], { cwd: root });
     execFileSync(
@@ -59,6 +66,8 @@ test("native case ${index}", () => {
     expect(cases()).toEqual(complete);
   } finally {
     rmSync(root, { recursive: true, force: true });
+    if (inheritedPriorities === undefined) delete process.env.TEST_PRIORITIES;
+    else process.env.TEST_PRIORITIES = inheritedPriorities;
     restoreEnvironment();
   }
 });

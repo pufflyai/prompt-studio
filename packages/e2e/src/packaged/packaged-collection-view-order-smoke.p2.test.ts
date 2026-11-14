@@ -117,7 +117,7 @@ test("packaged Kanban and data table view tabs save pointer and keyboard order",
     const id = projectSetup.value;
     const page = browserSetup.value;
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
-    await signInBrowser(page, runtime.descriptor, `/projects/${id}/extensions/pstdio.pstdio-planner/tickets`);
+    await signInBrowser(page, runtime.descriptor, `/projects/${id}/extensions/pstdio.planner/tickets`);
     phase("browser signed in");
     await Promise.all([
       (async () => {
@@ -136,17 +136,13 @@ test("packaged Kanban and data table view tabs save pointer and keyboard order",
         await save.click();
         await expect(save).toBeHidden();
         phase("view saved beneath tooltip");
-        await verifyOrder(page, id, "pstdio.pstdio-planner.view.tickets");
+        await verifyOrder(page, id, "pstdio.planner.view.tickets");
       })(),
       (async () => {
         const workspaces = await browser!.newPage({ extraHTTPHeaders: runtimeAuthorization(runtime.descriptor) });
         await workspaces.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
-        await signInBrowser(
-          workspaces,
-          runtime.descriptor,
-          `/projects/${id}/extensions/pstdio.pstdio-workspaces/workspaces`,
-        );
-        await verifyOrder(workspaces, id, "pstdio.pstdio-workspaces.view.workspaces");
+        await signInBrowser(workspaces, runtime.descriptor, `/projects/${id}/extensions/pstdio.workspaces/workspaces`);
+        await verifyOrder(workspaces, id, "pstdio.workspaces.view.workspaces");
       })(),
     ]);
   } finally {

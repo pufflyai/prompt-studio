@@ -791,7 +791,7 @@ Dashboard webviews with `commands.execute` can use public `workbenchCommands` re
 
 ### Sessions provider navigation
 
-`sessionBrowser` and `sessionBrowserId` are implementation-free public refs for `pstdio.pstdio-session-browser`. Use `sessionBrowser.pages.sessions` for browsing, `pages.session` with a canonical `pstdio` session resource for a full conversation, and `panels.conversation` for shared Side chat. `pages.compose` is the landing composer; `pages.draft` accepts a canonical `pstdio` session-draft resource. `views.conversation` and `views.list` let compatibility definitions use the same installed renderer without another chat or persistence owner. Missing or disabled providers use ordinary unavailable-target feedback.
+`sessionBrowser` and `sessionBrowserId` are implementation-free public refs for `pstdio.session-browser`. Use `sessionBrowser.pages.sessions` for browsing, `pages.session` with a canonical `pstdio` session resource for a full conversation, and `panels.conversation` for shared Side chat. `pages.compose` is the landing composer; `pages.draft` accepts a canonical `pstdio` session-draft resource. `views.conversation` and `views.list` let compatibility definitions use the same installed renderer without another chat or persistence owner. Missing or disabled providers use ordinary unavailable-target feedback.
 
 `sessionBrowser.commands.create` accepts optional `workspaceId`, `harnessId`, `deviceId`, `side`, and `replace`. `commands.open` accepts a required `sessionId` plus optional `side` and `replace`. Use command refs through public command/navigation APIs; `replace` switches the invoking viewer and preserves its placement. These refs declare the provider contract; the SDK/host prerequisite does not install that provider. Publish supporting SDK packages before production adoption.
 
@@ -799,4 +799,4 @@ The old `workbenchPages.sessions`, `session`, `newSession`, `sessionComposer`, `
 
 Resource mutation commands can act on another provider's canonical resource. When the invoking resource matches the declared mutation type and resolved ID in the selected project, native optimistic previews and write serialization preserve that resource's identity. Without a matching subject, the command's own extension identity remains the default. This changes presentation ownership only; the command service still enforces its normal permissions and scope.
 
-*Updated at: 2026-11-07*
+*Updated at: 2026-11-12*

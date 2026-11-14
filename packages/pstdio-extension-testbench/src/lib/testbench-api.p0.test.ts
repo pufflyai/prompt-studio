@@ -76,7 +76,7 @@ describe("createExtensionTestbenchApi", () => {
               metadata: {
                 resourceParent: {
                   type: "view",
-                  viewId: "pstdio.pstdio-planner.view.tickets",
+                  viewId: "pstdio.planner.view.tickets",
                 },
               },
             },
@@ -105,11 +105,11 @@ describe("createExtensionTestbenchApi", () => {
         await api.handleRequest(
           jsonRequest(`http://bench${apiPrefix}/command`, {
             benchId: bench.benchId,
-            commandId: "pstdio.pstdio-planner.command.ticket-files.tree.body",
+            commandId: "pstdio.planner.command.ticket-files.tree.body",
             request: {
               params: {
                 renderer: {
-                  rendererId: "pstdio.pstdio-planner.view.ticket-files",
+                  rendererId: "pstdio.planner.view.ticket-files",
                   resource: { type: "ticket", id: "PS-16", label: "PS-16" },
                 },
               },
@@ -129,7 +129,7 @@ describe("createExtensionTestbenchApi", () => {
         await api.handleRequest(
           jsonRequest(`http://bench${apiPrefix}/command`, {
             benchId: bench.benchId,
-            commandId: "pstdio.pstdio-planner.command.query-tickets",
+            commandId: "pstdio.planner.command.query-tickets",
             request: { params: {}, projectId: bench.projectId, source: "dashboard" },
           }),
         ),
@@ -213,7 +213,7 @@ describe("createExtensionTestbenchApi", () => {
       expect(bench.inventory.themes).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            id: "pstdio.pstdio-base-themes.theme.monokai",
+            id: "pstdio.base-themes.theme.monokai",
             mode: "dark",
             tokens: expect.objectContaining({ "colors.bg": "#272822" }),
             monacoTheme: expect.objectContaining({ base: "vs-dark" }),
@@ -224,7 +224,7 @@ describe("createExtensionTestbenchApi", () => {
       expect(bench.inventory.fileIconThemes).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            id: "pstdio.pstdio-base-themes.file-icon-theme.seti",
+            id: "pstdio.base-themes.file-icon-theme.seti",
             sourcePath: "./icons/seti-icon-theme.json",
           }),
         ]),

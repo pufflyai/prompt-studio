@@ -1,5 +1,5 @@
 import type { CreateAutomationRunInput } from "pstdio-api-contracts";
-import { validateCommandParams } from "pstdio-extensions";
+import { canonicalRuntimeId, contributionAliases, validateCommandParams } from "pstdio-extensions";
 import {
   type AutomationPolicyDeps,
   AutomationRequestError,
@@ -18,17 +18,39 @@ export const admitAutomationRun = async (input: {
   maxRunsPerMinute: number;
   startExecution: (runId: string) => void;
 }) => {
-  const { deps, auth, projectId, idempotencyKey, body, maxRunsPerMinute, startExecution } = input;
+  const { deps, auth, projectId, idempotencyKey, maxRunsPerMinute, startExecution } = input;
+  const commandDeps = deps.getCommandDeps();
+  const snapshot = await commandDeps.extensionRuntimeCatalog.get(projectId);
+  const commandId = canonicalRuntimeId(snapshot.runtime, input.body.commandId);
+  const body = { ...input.body, commandId };
   await deps.automationDBService.pruneTerminalRuns(new Date(Date.now() - RUN_RETENTION_MS).toISOString());
   const hash = inputHash(body);
-  const existing = await deps.automationDBService.getRunByIdempotency({
-    principalId: auth.principal.id,
-    projectId,
-    commandId: body.commandId,
-    idempotencyKey,
-  });
+  const candidates = [
+    commandId,
+    ...[...contributionAliases(snapshot.runtime)].filter(([, target]) => target === commandId).map(([old]) => old),
+  ];
+  const matches = (
+    await Promise.all(
+      candidates.map((id) =>
+        deps.automationDBService.getRunByIdempotency({
+          principalId: auth.principal.id,
+          projectId,
+          commandId: id,
+          idempotencyKey,
+        }),
+      ),
+    )
+  ).filter((run) => run !== null);
+  if (matches.length > 1)
+    throw new AutomationRequestError(
+      "idempotency_conflict",
+      "Both historical and canonical commands have runs for this key.",
+      409,
+    );
+  const existing = matches[0];
   if (existing) {
-    if (existing.input_hash !== hash) {
+    const previous = { ...existing.input_json, commandId };
+    if (inputHash(previous) !== hash) {
       throw new AutomationRequestError(
         "idempotency_conflict",
         "The idempotency key was already used with different input.",
@@ -36,7 +58,7 @@ export const admitAutomationRun = async (input: {
       );
     }
     if (existing.status === "queued") startExecution(existing.id);
-    return toRunRecord(existing);
+    return { ...toRunRecord(existing), commandId };
   }
 
   const recentRuns = await deps.automationDBService.countRecentRuns({
@@ -48,8 +70,6 @@ export const admitAutomationRun = async (input: {
     throw new AutomationRequestError("automation_rate_limited", "Automation run rate limit exceeded.", 429);
   }
 
-  const commandDeps = deps.getCommandDeps();
-  const snapshot = await commandDeps.extensionRuntimeCatalog.get(projectId);
   const command = snapshot.runtime.commands.find(
     (candidate) =>
       candidate.id === body.commandId &&

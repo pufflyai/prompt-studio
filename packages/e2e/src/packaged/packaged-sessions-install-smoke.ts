@@ -65,8 +65,8 @@ export const expectSessionsDevelopment = async (child: ChildProcess, source: str
     await waitForProcessReady(child, "Sessions dev", async () =>
       output.includes(`watching ${source}`) ? true : undefined,
     );
-    expect(output).toContain("validated pstdio.pstdio-session-browser");
-    expect(output).toContain("registered pstdio.pstdio-session-browser.view.conversation");
+    expect(output).toContain("validated pstdio.session-browser");
+    expect(output).toContain("registered pstdio.session-browser.view.conversation");
     expect(output).not.toContain("refresh failed");
   } finally {
     // Readiness owns cancellation until it returns; shutdown owns it until the watcher is reaped.

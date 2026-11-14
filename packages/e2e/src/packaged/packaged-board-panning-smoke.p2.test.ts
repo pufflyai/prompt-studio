@@ -1,6 +1,6 @@
 import { test } from "bun:test";
 import type { ChildProcess } from "node:child_process";
-import { appendFileSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { appendFileSync, mkdirSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { chromium, expect } from "@playwright/test";
@@ -13,6 +13,7 @@ import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 import { verifyTicketCreation } from "./packaged-ticket-creation";
+import { removeTestDirectory } from "./remove-test-directory";
 
 setupPackagedSmokeTests();
 
@@ -74,7 +75,7 @@ test(
           }),
         ]).then(() => phase("tickets created")),
         (async () => {
-          await signInBrowser(page, runtime.descriptor, `/projects/${id}/extensions/pstdio.pstdio-planner/tickets`);
+          await signInBrowser(page, runtime.descriptor, `/projects/${id}/extensions/pstdio.planner/tickets`);
           phase("browser signed in");
           await page.getByRole("option", { name: "Tickets", exact: true }).click();
         })(),
@@ -95,10 +96,14 @@ test(
       phase("ticket creation checked");
       await page.getByTestId("renderer-card").filter({ hasText: "Pan board ticket" }).click();
       await expect(page.getByTestId("board-column-backlog")).toBeHidden();
+      phase("ticket opened");
     } finally {
       await browser?.close();
+      phase("browser closed");
       if (child) await stopProcess(child);
-      rmSync(root, { recursive: true, force: true });
+      phase("runtime closed");
+      await removeTestDirectory(root);
+      phase("fixture files removed");
     }
   },
   process.platform === "win32" ? 60_000 : 30_000,

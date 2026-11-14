@@ -9,7 +9,8 @@ import {
 import type { EnabledExtensionSource } from "./project-extension-runtime-snapshot";
 
 /** The fields a source needs to be imported, so an unpersisted candidate can be loaded too. */
-export type LoadableExtensionSource = Pick<EnabledExtensionSource["installedSource"], "source_kind" | "source_path">;
+export type LoadableExtensionSource = Pick<EnabledExtensionSource["installedSource"], "source_kind" | "source_path"> &
+  Partial<Pick<EnabledExtensionSource["installedSource"], "last_error_json">>;
 
 export type CachedSource = {
   diagnostics: Awaited<ReturnType<typeof loadExtensionSources>>["diagnostics"];
@@ -44,6 +45,8 @@ export const createExtensionSourceCache = (input: { loadSources?: typeof loadExt
   const lastHealthyByPath = new Map<string, CachedSource>();
 
   const load = (installedSource: LoadableExtensionSource) => {
+    // An ownership conflict is an activation gate, not a recoverable source-load failure.
+    if (installedSource.last_error_json?.code === "extension_identity_conflict") return Promise.resolve(null);
     const key = canonicalSourcePath(installedSource.source_path);
     const cached = sourcesByPath.get(key);
     if (cached && !uncheckedPaths.has(key)) return cached.loading;
@@ -103,6 +106,7 @@ export const createExtensionSourceCache = (input: { loadSources?: typeof loadExt
       // of a snapshot: a source that no longer defines a command has to stop offering it, and a
       // source whose webview build failed still owns the commands its code declares.
       for (const { installedSource } of enabledSources) {
+        if (installedSource.last_error_json?.code === "extension_identity_conflict") continue;
         if (!existsSync(join(installedSource.source_path, "package.json"))) {
           const retained = lastHealthyByPath.get(canonicalSourcePath(installedSource.source_path));
           if (retained) cachedSources.push(retained);

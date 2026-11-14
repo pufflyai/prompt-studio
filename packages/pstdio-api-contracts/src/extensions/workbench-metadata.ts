@@ -234,6 +234,7 @@ const workbenchExtensionResourceKindRecordSchema = z.object({
 
 const workbenchExtensionSettingsPanelRecordSchema = z.object({
   id: z.string(),
+  localId: z.string().optional(),
   extensionId: z.string(),
   view: viewRefSchema,
   slot: z.object({ id: z.string() }),

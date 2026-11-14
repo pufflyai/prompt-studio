@@ -1,7 +1,7 @@
 import { strict as assert } from "node:assert";
 import type { APIRequestContext } from "@playwright/test";
 
-export const plannerBoardId = "pstdio.pstdio-planner.view.tickets";
+export const plannerBoardId = "pstdio.planner.view.tickets";
 export const ticketTitle = (index: number) => `Stress ticket ${String(index + 1).padStart(4, "0")}`;
 
 export interface StressTicket {
@@ -20,7 +20,7 @@ export const executePlanner = async <T>(
 ) => {
   const start = performance.now();
   const response = await api.post(
-    `/v1/projects/${projectId}/extensions/commands/pstdio.pstdio-planner.command.${command}/execute`,
+    `/v1/projects/${projectId}/extensions/commands/pstdio.planner.command.${command}/execute`,
     { data: { params } },
   );
   const body = await response.json();

@@ -78,7 +78,7 @@ const synced = (device: CloudAcceptanceDevice, projectId: string, completion = e
 const read = <T>(device: CloudAcceptanceDevice, projectId: string) =>
   device.command<T>(projectId, acceptanceOwner, "read-acceptance");
 const noteCopy = (device: CloudAcceptanceDevice, noteId: string) => {
-  const path = join(device.folder, ".pstdio/extension-storage/pstdio.pstdio-notes/documents", noteId, "content.md");
+  const path = join(device.folder, ".pstdio/extension-storage/pstdio.notes/documents", noteId, "content.md");
   return existsSync(path) ? readFileSync(path, "utf8") : undefined;
 };
 const setup = async (resources: Resources) => {
@@ -123,7 +123,7 @@ const openNote = async (resources: Resources, device: CloudAcceptanceDevice, pro
     projectId,
     scope: {
       kind: "agent",
-      target: { fileRendererId: "pstdio.pstdio-notes.view.note-editor", resource: { type: "note", id: noteId } },
+      target: { fileRendererId: "pstdio.notes.view.note-editor", resource: { type: "note", id: noteId } },
     },
   });
   const guest = connection.guest();
@@ -166,15 +166,15 @@ test("three independent packaged devices keep extension content, offline collabo
   resources,
 }) => {
   const { fixture, first, second, third, devices, projectId } = await setup(resources);
-  const note = await first.command<{ id: string }>(projectId, "pstdio.pstdio-notes", "notes.create", {
+  const note = await first.command<{ id: string }>(projectId, "pstdio.notes", "notes.create", {
     title: "phase-one-secret-note",
   });
   const html = "<title>phase-one-secret-artifact</title><p>phase-one-secret-file-bytes</p>";
   writeFileSync(join(first.folder, "phase-one-secret-file.html"), html);
-  const artifact = await first.command<{ url: string }>(projectId, "pstdio.pstdio-artifacts", "publish", {
+  const artifact = await first.command<{ url: string }>(projectId, "pstdio.artifacts", "publish", {
     file_path: "phase-one-secret-file.html",
   });
-  const ticket = await first.command<{ id: string }>(projectId, "pstdio.pstdio-planner", "create-ticket", {
+  const ticket = await first.command<{ id: string }>(projectId, "pstdio.planner", "create-ticket", {
     content: "# phase-one-secret-ticket\n\nBefore",
   });
   for (const device of devices) await synced(device, projectId);
@@ -212,7 +212,7 @@ test("three independent packaged devices keep extension content, offline collabo
   );
   expect(allocations[0]!.id).not.toBe(allocations[1]!.id);
   expect(allocations[0]!.shorthand).toBe(allocations[1]!.shorthand);
-  await third.command(projectId, "pstdio.pstdio-planner", "update-ticket", {
+  await third.command(projectId, "pstdio.planner", "update-ticket", {
     id: ticket.id,
     content: "# phase-one-secret-ticket\n\nEdited offline by third",
   });
@@ -233,10 +233,10 @@ test("three independent packaged devices keep extension content, offline collabo
     await expect.poll(editor.text).toBe(`${initial}offline left: first\nlast: offline right`);
   for (const device of devices) {
     await expect
-      .poll(() => device.command(projectId, "pstdio.pstdio-artifacts", "read", { url: artifact.url }))
+      .poll(() => device.command(projectId, "pstdio.artifacts", "read", { url: artifact.url }))
       .toMatchObject({ html });
     await expect
-      .poll(() => device.command(projectId, "pstdio.pstdio-planner", "get-ticket", { id: ticket.id }))
+      .poll(() => device.command(projectId, "pstdio.planner", "get-ticket", { id: ticket.id }))
       .toMatchObject({ content: "# phase-one-secret-ticket\n\nEdited offline by third" });
     await expect
       .poll(() => read(device, projectId))

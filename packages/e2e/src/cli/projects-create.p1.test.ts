@@ -67,11 +67,11 @@ describe("pstdio projects create", () => {
         projectExtensions.extensions.map((extension) => [extension.installName, extension]),
       );
 
-      const planner = extensionsByName.get("pstdio-planner");
+      const planner = extensionsByName.get("planner");
       expect(planner).toBeDefined();
       expect(realpathSync(planner!.sourcePath)).toBe(realpathSync(plannerPath));
 
-      const skills = extensionsByName.get("pstdio-skills");
+      const skills = extensionsByName.get("skills");
       expect(skills).toEqual(expect.objectContaining({ enabled: true }));
       expect(realpathSync(skills!.sourcePath)).toBe(realpathSync(skillsPath));
     },

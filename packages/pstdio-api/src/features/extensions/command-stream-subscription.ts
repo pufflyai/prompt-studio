@@ -1,4 +1,5 @@
 import type { CommandExecuteBody } from "pstdio-api-contracts";
+import { canonicalRuntimeId } from "pstdio-extensions";
 import { ProjectNotFoundError } from "../../services/extension-service";
 import type { SessionEventSink } from "../sessions/session-stream-connections";
 import type { ExtensionsRouteDeps } from "./deps";
@@ -8,9 +9,11 @@ export const prepareCommandSubscription = async (
   deps: ExtensionsRouteDeps,
   command: { project_id: string; command_id: string; body: CommandExecuteBody },
 ) => {
-  const { project_id: projectId, command_id: commandId, body } = command;
+  const { project_id: projectId, body } = command;
+  let commandId = command.command_id;
   try {
     const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
+    commandId = canonicalRuntimeId(snapshot.runtime, commandId);
     const record = snapshot.runtime.commands.find((item) => item.id === commandId);
     if (!record) return { error: `Command not found: ${commandId}`, code: "command_not_found", status: 404 as const };
     if (!record.stream)

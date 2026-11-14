@@ -32,7 +32,7 @@ bun packages/e2e/src/perf/folder-recovery-workload/workload.diagnostic.ts [outpu
 ```
 
 `E2E_PACKAGED_BINARY_PATH` selects another compiled host. The default output is
-`.pstdio/extension-storage/pstdio.pstdio-artifacts/folder-recovery-workload` with `results.json`
+`.pstdio/extension-storage/pstdio.artifacts/folder-recovery-workload` with `results.json`
 and `run.log`. The runner needs 25 GiB free in the system temporary folder. Three 5 GiB copies exist
 at once: the source, the laptop's recovery store and the peer's blobs while uploading, then the peer's
 blobs, the desktop's recovery store and the restored folder after the runner removes the laptop's

@@ -87,22 +87,20 @@ describe("core extension catalog", () => {
     };
     expect(
       metadata.templates.some(
-        (template) => template.localId === "implement-ticket" && template.extensionId === "pstdio.pstdio-planner",
+        (template) => template.localId === "implement-ticket" && template.extensionId === "pstdio.planner",
       ),
     ).toBe(true);
 
     expect(
-      metadata.templates.some(
-        (template) => template.localId === "prd" && template.extensionId === "pstdio.pstdio-planner",
-      ),
+      metadata.templates.some((template) => template.localId === "prd" && template.extensionId === "pstdio.planner"),
     ).toBe(true);
     expect(metadata.templateTypes.find((type) => type.localId === "ticket")).toMatchObject({
       label: "Ticket",
       commands: {
-        list: "pstdio.pstdio-planner.command.templates.list",
-        read: "pstdio.pstdio-planner.command.templates.read",
-        save: "pstdio.pstdio-planner.command.templates.save",
-        delete: "pstdio.pstdio-planner.command.templates.delete",
+        list: "pstdio.planner.command.templates.list",
+        read: "pstdio.planner.command.templates.read",
+        save: "pstdio.planner.command.templates.save",
+        delete: "pstdio.planner.command.templates.delete",
       },
     });
 
@@ -111,9 +109,7 @@ describe("core extension catalog", () => {
     expect(
       skills.some(
         (skill: { install_name?: string; name: string; source_kind: string }) =>
-          skill.name === "create-ticket" &&
-          skill.source_kind === "extension" &&
-          skill.install_name === "pstdio-planner",
+          skill.name === "create-ticket" && skill.source_kind === "extension" && skill.install_name === "planner",
       ),
     ).toBe(true);
 
@@ -122,14 +118,14 @@ describe("core extension catalog", () => {
         (skill: { install_name?: string; name: string; source_kind: string }) =>
           skill.name === "create-pstdio-extension" &&
           skill.source_kind === "extension" &&
-          skill.install_name === "pstdio-skills",
+          skill.install_name === "skills",
       ),
     ).toBe(true);
 
     expect(
       skills.some(
         (skill: { install_name?: string; name: string; source_kind: string }) =>
-          skill.name === "create-pstdio-extension" && skill.install_name === "pstdio-planner",
+          skill.name === "create-pstdio-extension" && skill.install_name === "planner",
       ),
     ).toBe(false);
 

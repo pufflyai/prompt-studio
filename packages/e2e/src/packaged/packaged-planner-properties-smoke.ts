@@ -10,7 +10,7 @@ export const expectPlannerProperties = async (
 ) => {
   const commandUrl = `${baseUrl}/v1/projects/${projectId}/extensions/commands`;
   const commandHeaders = { ...authorization, "content-type": "application/json" };
-  const ticketRes = await fetch(`${commandUrl}/pstdio.pstdio-planner.command.create-ticket/execute`, {
+  const ticketRes = await fetch(`${commandUrl}/pstdio.planner.command.create-ticket/execute`, {
     method: "POST",
     headers: commandHeaders,
     body: JSON.stringify({ source: "api", params: { title: "Properties smoke test" } }),
@@ -18,7 +18,7 @@ export const expectPlannerProperties = async (
   expect(ticketRes.status).toBe(200);
   const ticket = (await ticketRes.json()) as { outcome: { ok: boolean; value: { id: string } } };
   expect(ticket.outcome.ok).toBe(true);
-  const propertiesRes = await fetch(`${commandUrl}/pstdio.pstdio-planner.command.ticket-properties.query/execute`, {
+  const propertiesRes = await fetch(`${commandUrl}/pstdio.planner.command.ticket-properties.query/execute`, {
     method: "POST",
     headers: commandHeaders,
     body: JSON.stringify({
@@ -56,7 +56,7 @@ export const expectPlannerProperties = async (
     ["ticket-tag.apply-draft", { tagId: "default-priority", optionIdsToDelete: ["default-priority-high"] }],
     ["ticket-tag.delete", { tagId: "default-priority" }],
   ] as const) {
-    const response = await fetch(`${commandUrl}/pstdio.pstdio-planner.command.${command}/execute`, {
+    const response = await fetch(`${commandUrl}/pstdio.planner.command.${command}/execute`, {
       method: "POST",
       headers: commandHeaders,
       body: JSON.stringify({ params }),
@@ -64,7 +64,7 @@ export const expectPlannerProperties = async (
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({
       outcome: { ok: true },
-      eventIds: expect.arrayContaining(["pstdio.pstdio-planner.event.tickets.changed"]),
+      eventIds: expect.arrayContaining(["pstdio.planner.event.tickets.changed"]),
     });
   }
 };

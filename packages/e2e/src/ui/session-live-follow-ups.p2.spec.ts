@@ -5,7 +5,7 @@ import { switchSession } from "../helpers/session-side-panel";
 import { type APIRequestContext, expect, type Page, type Request, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 
-const commandId = "pstdio.pstdio-session-browser.view.conversation.chat.onAction";
+const commandId = "pstdio.session-browser.view.conversation.chat.onAction";
 const actionRoute = `**/extensions/commands/${commandId}/execute`;
 const isSubmit = (request: Request) =>
   request.method() === "POST" &&
@@ -122,7 +122,7 @@ test("queues two follow-ups without stopping the active session and keeps a fail
     return route.fulfill({
       json: {
         commandId,
-        extensionId: "pstdio.pstdio-session-browser",
+        extensionId: "pstdio.session-browser",
         outcome: {
           ok: false,
           status: "error",

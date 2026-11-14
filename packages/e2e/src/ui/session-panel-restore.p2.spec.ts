@@ -74,7 +74,7 @@ test("reuses a dashboard session tab selected again from a planner ticket", asyn
         id: ticket.id,
         projectId: project.id,
         label: ticket.shorthand,
-        extensionId: "pstdio.pstdio-planner",
+        extensionId: "pstdio.planner",
       },
     },
   );
@@ -125,7 +125,7 @@ test("restores an attached session Side Panel and its session across refresh", a
         id: ticket.id,
         projectId: project.id,
         label: ticket.shorthand,
-        extensionId: "pstdio.pstdio-planner",
+        extensionId: "pstdio.planner",
       },
     },
   );

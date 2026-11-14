@@ -1,4 +1,9 @@
 import { isAbsolute } from "node:path";
+import {
+  canonicalExtensionId,
+  canonicalInstallName,
+  matchesExtensionInstallName,
+} from "pstdio-api-contracts/extension-host";
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
 import { publishedExtensionsId } from "../features/extensions/publication/types";
 import type { RegisterInstalledSourceInput } from "./extension-service";
@@ -91,10 +96,23 @@ export const registrationValues = (
   existing: Awaited<ReturnType<typeof findInstalledSourceForRegistration>>,
 ) => ({
   display_name: input.displayName,
-  extension_id: input.extensionId,
+  extension_id: canonicalExtensionId(input.extensionId),
   // Runtime views carry callbacks. Compare the same JSON representation the
   // database stores, so unchanged callbacks do not trigger adoption and builds.
-  manifest_json: JSON.parse(JSON.stringify(input.manifest)) as RegisterInstalledSourceInput["manifest"],
+  manifest_json: JSON.parse(
+    JSON.stringify(
+      typeof input.manifest.name === "string" &&
+        matchesExtensionInstallName(
+          {
+            extensionId: canonicalExtensionId(input.extensionId),
+            installName: canonicalInstallName(input.extensionId),
+          },
+          input.manifest.name,
+        )
+        ? { ...input.manifest, name: canonicalInstallName(input.extensionId) }
+        : input.manifest,
+    ),
+  ) as RegisterInstalledSourceInput["manifest"],
   source_hash: input.sourceHash ?? existing?.source_hash ?? null,
   source_kind: input.sourceKind ?? existing?.source_kind ?? "local_path",
   source_path: input.sourcePath,

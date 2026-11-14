@@ -1,4 +1,5 @@
 import { extensionResourceRefSchema } from "pstdio-api-contracts";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import {
   isNavigationTarget,
   qualifyNavigationTarget,
@@ -8,7 +9,11 @@ import {
   workbenchPages,
   workspacePages,
 } from "pstdio-api-contracts/extension-kernel";
-import { type ExtensionRuntime, isRuntimeNavigationTargetAvailable } from "pstdio-extensions";
+import {
+  canonicalNavigationOwners,
+  type ExtensionRuntime,
+  isRuntimeNavigationTargetAvailable,
+} from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
 import { executeProjectExtensionCommand } from "../execute-project-extension-command";
 import { canonicalResource } from "./resource-link-policy";
@@ -60,13 +65,13 @@ const ownerResolutions = (batch: ResourceRef[], value: unknown, runtime: Extensi
     if (!parsed.success) continue;
     const resource = {
       ...parsed.data,
-      extensionId: parsed.data.extensionId ?? owner.extensionId,
+      extensionId: canonicalExtensionId(parsed.data.extensionId ?? owner.extensionId!),
       projectId: parsed.data.projectId ?? owner.projectId,
     };
     const key = resourceKey(resource);
     if (!allowed.has(key)) continue;
     const target = isNavigationTarget(item.target)
-      ? qualifyNavigationTarget(item.target, owner.extensionId!, owner.projectId)
+      ? canonicalNavigationOwners(qualifyNavigationTarget(item.target, owner.extensionId!, owner.projectId))
       : undefined;
     results.set(key, {
       resource,
@@ -101,7 +106,7 @@ export const resolveResources = async (
       (kind) => kind.extensionId === ref.extensionId && kind.localId === ref.type,
     );
     const resolver = kind?.contribution.resolveMany;
-    if (!resolver || (resolver.extensionId && resolver.extensionId !== ref.extensionId)) continue;
+    if (!resolver || (resolver.extensionId && canonicalExtensionId(resolver.extensionId) !== ref.extensionId)) continue;
     const commandId = `${ref.extensionId}.command.${resolver.id}`;
     const batch = groups.get(commandId) ?? [];
     batch.push(ref);

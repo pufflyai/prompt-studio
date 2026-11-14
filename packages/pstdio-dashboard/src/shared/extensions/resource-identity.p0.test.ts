@@ -7,7 +7,7 @@ import {
 } from "./workbench-extension-contributions";
 
 test("legacy unowned ticket references retain owner actions through canonical metadata", () => {
-  const extensionId = "pstdio.pstdio-planner";
+  const extensionId = "pstdio.planner";
   const kinds = [
     {
       id: "ticket",

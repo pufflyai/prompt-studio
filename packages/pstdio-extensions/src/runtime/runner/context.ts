@@ -14,7 +14,9 @@ import type {
   Struct,
 } from "@pstdio/sdk/extensions";
 import { qualifyNavigationTarget, queryChangeEnvelopeSchema } from "pstdio-api-contracts";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { ExtensionRuntime } from "../../types/runtime";
+import { canonicalNavigationOwners } from "../canonical-navigation-owners";
 import { type EventDispatcher, refId } from "./dispatch";
 import type { NavigationScope } from "./navigation-scope";
 import type { InvocationScope } from "./scope";
@@ -110,10 +112,22 @@ const unavailableViewsApi: ExtensionViewsApi = {
   setDefault: unavailableViews,
 };
 
-const buildEventsApi = (dispatcher: EventDispatcher, origin: BuildEnvironmentInput): ExtensionEventsApi => ({
+const buildEventsApi = (
+  dispatcher: EventDispatcher,
+  origin: BuildEnvironmentInput,
+  runtime: ExtensionRuntime,
+): ExtensionEventsApi => ({
   emit: async (event, payload, options) =>
     dispatcher.dispatch(
-      refId(event, origin.extensionId),
+      refId(
+        typeof event !== "string" &&
+          runtime.extensions.some(
+            (provider) => provider.id === canonicalExtensionId(event.extensionId ?? origin.extensionId),
+          )
+          ? { ...event, extensionId: canonicalExtensionId(event.extensionId ?? origin.extensionId) }
+          : event,
+        origin.extensionId,
+      ),
       payload as Struct,
       origin,
       options?.refresh ? queryChangeEnvelopeSchema.parse(options.refresh) : undefined,
@@ -160,6 +174,7 @@ export const createContextFactory = (
   dispatcher: EventDispatcher,
   createLogger: (extensionId: string) => ExtensionLoggerApi,
   createExecute: (origin: NestedExecuteOrigin) => CommandHelpersApi["execute"],
+  runtime: ExtensionRuntime,
 ): ContextFactory => ({
   buildExtensionContext(env, ids, depth, scope, navigationScope) {
     const hostApis: ScopedHostApis = scope ? env.withScope(scope) : env;
@@ -184,7 +199,10 @@ export const createContextFactory = (
       views: env.views ?? unavailableViewsApi,
       navigation: {
         open: (target) => {
-          if (navigationScope) navigationScope.open(qualifyNavigationTarget(target, ids.extensionId, ids.projectId));
+          if (navigationScope)
+            navigationScope.open(
+              canonicalNavigationOwners(qualifyNavigationTarget(target, ids.extensionId, ids.projectId)),
+            );
         },
       },
       artifacts: hostApis.artifacts,
@@ -198,7 +216,7 @@ export const createContextFactory = (
       sessions: hostApis.sessions,
       workspaces: hostApis.workspaces,
       commands: buildCommandsApi(createExecute, origin),
-      events: buildEventsApi(dispatcher, ids),
+      events: buildEventsApi(dispatcher, ids, runtime),
       activity: env.activity,
       notify: env.notify,
       automation: env.automation,

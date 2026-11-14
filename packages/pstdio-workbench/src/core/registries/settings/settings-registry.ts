@@ -1,3 +1,4 @@
+import { canonicalRegistryId } from "../../shared/contributions/identity-aliases";
 import type { ContributionMetadata, RegisteredContributionMetadata } from "../../shared/contributions/metadata";
 import { byContributionPriority, normalizeContributionMetadata } from "../../shared/contributions/metadata";
 import { createDisposable, type Disposable } from "../../shared/disposable";
@@ -116,7 +117,7 @@ export const createSettingsRegistry = (input: { hasView?: (viewId: string) => bo
     initialState: { sections: {}, panels: {}, revision: 0 },
   });
   const collectionItems = new Map<string, unknown>();
-  const itemKey = (panelId: string, itemId: string) => JSON.stringify([panelId, itemId]);
+  const itemKey = (panelId: string, itemId: string) => JSON.stringify([canonicalRegistryId(store, panelId), itemId]);
 
   return {
     store,
@@ -168,11 +169,11 @@ export const createSettingsRegistry = (input: { hasView?: (viewId: string) => bo
     },
 
     getSection(id) {
-      return store.getState().sections[id];
+      return store.getState().sections[canonicalRegistryId(store, id)];
     },
 
     getPanel(id) {
-      return store.getState().panels[id];
+      return store.getState().panels[canonicalRegistryId(store, id)];
     },
 
     listSections() {
@@ -184,7 +185,7 @@ export const createSettingsRegistry = (input: { hasView?: (viewId: string) => bo
     },
 
     async resolveCollectionItem(panelId, itemId) {
-      const panel = store.getState().panels[panelId];
+      const panel = store.getState().panels[canonicalRegistryId(store, panelId)];
       if (!panel || panel.kind !== "collection") return undefined;
       const item = (await panel.items()).find((candidate) => panel.itemId(candidate) === itemId);
       if (item !== undefined) collectionItems.set(itemKey(panelId, itemId), item);

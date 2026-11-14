@@ -3,7 +3,7 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { expect, type Request, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 
-const actionPath = "/extensions/commands/pstdio.pstdio-session-browser.view.conversation.chat.onAction/execute";
+const actionPath = "/extensions/commands/pstdio.session-browser.view.conversation.chat.onAction/execute";
 const isSubmit = (request: Request) =>
   request.method() === "POST" &&
   request.url().endsWith(actionPath) &&

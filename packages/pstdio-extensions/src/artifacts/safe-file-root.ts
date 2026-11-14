@@ -1,5 +1,6 @@
 import { mkdir, realpath, stat } from "node:fs/promises";
 import { isAbsolute, join, posix, relative, resolve } from "node:path";
+import { isExtensionIdentityBackup } from "./extension-identity-backup";
 
 export const normalizeMountRelativePath = (path: string) => {
   if (path.includes("\0") || path.includes("\\")) {
@@ -38,15 +39,20 @@ export const createSafeFileRoot = (mountRoot: string) => {
 
   const resolveRoot = async (create: boolean) => {
     if (create) await mkdir(absoluteRoot, { recursive: true });
-    return realpath(absoluteRoot);
+    const root = await realpath(absoluteRoot);
+    if (isExtensionIdentityBackup(root)) throw new Error("Extension migration originals are retained by the host");
+    return root;
   };
 
   const resolveExisting = async (path: string): Promise<SafeResolvedPath> => {
     const relativePath = normalizeMountRelativePath(path);
+    if (isExtensionIdentityBackup(join(absoluteRoot, relativePath)))
+      throw new Error("Extension migration originals are retained by the host");
     const root = await resolveRoot(false);
     const operationPath = relativePath ? join(root, ...relativePath.split("/")) : root;
     const realPath = await realpath(operationPath);
     assertContained(root, realPath);
+    if (isExtensionIdentityBackup(realPath)) throw new Error("Extension migration originals are retained by the host");
     return { operationPath, realPath, relativePath };
   };
 
@@ -70,6 +76,8 @@ export const createSafeFileRoot = (mountRoot: string) => {
       });
       const currentRealPath = await realpath(current);
       assertContained(root, currentRealPath);
+      if (isExtensionIdentityBackup(currentRealPath))
+        throw new Error("Extension migration originals are retained by the host");
       if (!(await stat(currentRealPath)).isDirectory()) {
         throw new Error(`Artifact directory is not a directory: ${relativePath}`);
       }
@@ -80,6 +88,8 @@ export const createSafeFileRoot = (mountRoot: string) => {
 
   const resolveForWrite = async (path: string): Promise<SafeResolvedPath> => {
     const relativePath = normalizeMountRelativePath(path);
+    if (isExtensionIdentityBackup(join(absoluteRoot, relativePath)))
+      throw new Error("Extension migration originals are retained by the host");
     const root = await resolveRoot(true);
     const parent = posix.dirname(relativePath);
     const safeParent = parent === "." ? "" : parent;

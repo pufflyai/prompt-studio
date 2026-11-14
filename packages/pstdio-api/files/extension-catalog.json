@@ -2,8 +2,8 @@
   "version": 1,
   "extensions": [
     {
-      "installName": "pstdio-cloud",
-      "extensionId": "pstdio.pstdio-cloud",
+      "installName": "cloud",
+      "extensionId": "pstdio.cloud",
       "displayName": "Prompt Studio Cloud",
       "description": "Sync projects across your computers and manage your account and devices.",
       "icon": "cloud",
@@ -16,7 +16,7 @@
       "default": false
     },
     {
-      "installName": "pstdio-home",
+      "installName": "home",
       "displayName": "Home",
       "icon": "house",
       "description": "Project home, recent conversations, and setup recovery.",
@@ -27,10 +27,10 @@
         "ref": "{hostRelease}"
       },
       "default": true,
-      "extensionId": "pstdio.pstdio-home"
+      "extensionId": "pstdio.home"
     },
     {
-      "installName": "pstdio-session-browser",
+      "installName": "session-browser",
       "displayName": "Sessions",
       "icon": "messages-circle",
       "description": "Browse conversations and compose in pages and Side panels.",
@@ -41,10 +41,10 @@
         "ref": "{hostRelease}"
       },
       "default": true,
-      "extensionId": "pstdio.pstdio-session-browser"
+      "extensionId": "pstdio.session-browser"
     },
     {
-      "installName": "pstdio-onboarding",
+      "installName": "onboarding",
       "displayName": "Onboarding",
       "description": "Choose harnesses and default tools when opening a new project.",
       "origin": {
@@ -54,11 +54,11 @@
         "ref": "{hostRelease}"
       },
       "default": true,
-      "extensionId": "pstdio.pstdio-onboarding",
+      "extensionId": "pstdio.onboarding",
       "icon": "Sparkles"
     },
     {
-      "installName": "pstdio-workspaces",
+      "installName": "workspaces",
       "displayName": "Workspaces",
       "icon": "folder-git-2",
       "description": "Project files and workspaces grouped by device.",
@@ -69,7 +69,7 @@
         "ref": "{hostRelease}"
       },
       "default": false,
-      "extensionId": "pstdio.pstdio-workspaces"
+      "extensionId": "pstdio.workspaces"
     },
     {
       "installName": "harness-claude-code",
@@ -129,7 +129,7 @@
       "icon": "./assets/icon.svg"
     },
     {
-      "installName": "pstdio-base-themes",
+      "installName": "base-themes",
       "displayName": "Themes",
       "description": "Color themes and the Seti file icon theme.",
       "origin": {
@@ -139,11 +139,11 @@
         "ref": "{hostRelease}"
       },
       "default": true,
-      "extensionId": "pstdio.pstdio-base-themes",
+      "extensionId": "pstdio.base-themes",
       "icon": "Palette"
     },
     {
-      "installName": "pstdio-artifacts",
+      "installName": "artifacts",
       "displayName": "Artifacts",
       "description": "Publish interactive HTML pages and browse their saved revisions.",
       "origin": {
@@ -153,11 +153,11 @@
         "ref": "{hostRelease}"
       },
       "default": false,
-      "extensionId": "pstdio.pstdio-artifacts",
+      "extensionId": "pstdio.artifacts",
       "icon": "AppWindow"
     },
     {
-      "installName": "pstdio-notes",
+      "installName": "notes",
       "displayName": "Notes",
       "description": "Write Markdown notes that live in the project repository.",
       "origin": {
@@ -167,11 +167,11 @@
         "ref": "{hostRelease}"
       },
       "default": false,
-      "extensionId": "pstdio.pstdio-notes",
+      "extensionId": "pstdio.notes",
       "icon": "NotebookPen"
     },
     {
-      "installName": "pstdio-planner",
+      "installName": "planner",
       "displayName": "Project Planner",
       "description": "Tickets, managed attempts, reviews, and templates.",
       "origin": {
@@ -181,11 +181,11 @@
         "ref": "{hostRelease}"
       },
       "default": false,
-      "extensionId": "pstdio.pstdio-planner",
+      "extensionId": "pstdio.planner",
       "icon": "Kanban"
     },
     {
-      "installName": "pstdio-reports",
+      "installName": "reports",
       "displayName": "Agent Reports",
       "description": "Workspace reports for agent handoffs.",
       "origin": {
@@ -195,11 +195,11 @@
         "ref": "{hostRelease}"
       },
       "default": false,
-      "extensionId": "pstdio.pstdio-reports",
+      "extensionId": "pstdio.reports",
       "icon": "FileChartColumn"
     },
     {
-      "installName": "pstdio-skills",
+      "installName": "skills",
       "displayName": "Prompt Studio Skills",
       "description": "Skills for using Prompt Studio and authoring extensions.",
       "origin": {
@@ -209,12 +209,12 @@
         "ref": "{hostRelease}"
       },
       "default": true,
-      "extensionId": "pstdio.pstdio-skills",
+      "extensionId": "pstdio.skills",
       "icon": "BookOpen"
     },
     {
-      "installName": "pstdio-performance",
-      "extensionId": "pstdio.pstdio-performance",
+      "installName": "performance",
+      "extensionId": "pstdio.performance",
       "displayName": "Prompt Studio Performance Monitoring",
       "description": "Frame rate, backend response time, CPU and memory in the status bar while monitoring is on.",
       "origin": {

@@ -1,6 +1,7 @@
 import { createHash, scrypt, scryptSync, timingSafeEqual } from "node:crypto";
 import type { AutomationRunError } from "pstdio-api-contracts";
 import type { createAutomationDBService } from "pstdio-db";
+import { canonicalRuntimeId } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
 import type { ExtensionsRouteDeps } from "../extensions/deps";
 import { fireExtensionEventAsync } from "../extensions/extension-event-runtime";
@@ -135,7 +136,12 @@ export const authorizeAutomationToken = async (
   commandId?: string,
 ) => {
   const auth = await authenticateAutomationToken(deps, rawToken);
-  if (auth.token.project_id !== projectId || (commandId && !auth.token.command_scopes_json.includes(commandId))) {
+  const { runtime } = await deps.getCommandDeps().extensionRuntimeCatalog.get(auth.token.project_id);
+  const canonical = (id: string) => canonicalRuntimeId(runtime, id);
+  if (
+    auth.token.project_id !== projectId ||
+    (commandId && !auth.token.command_scopes_json.some((scope) => canonical(scope) === canonical(commandId)))
+  ) {
     await deps
       .getCommandDeps()
       .activityEventsService.create({

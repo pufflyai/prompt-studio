@@ -55,7 +55,7 @@ try {
       if (iteration === 0 && process.env.SUBNAV_TRACE === "1")
         await context.tracing.start({ screenshots: true, snapshots: true });
       await signInBrowser(page, fixture.descriptor);
-      const startUrl = `${fixture.baseUrl}/projects/${fixture.project.id}/extensions/pstdio.pstdio-planner/tickets`;
+      const startUrl = `${fixture.baseUrl}/projects/${fixture.project.id}/extensions/pstdio.planner/tickets`;
       await page.goto(startUrl);
       const sidenav = page.locator('[data-workbench-region="sidenav"]');
       await expect(sidenav.getByRole("option", { name: "Sessions", exact: true })).toBeVisible();

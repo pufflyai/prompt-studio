@@ -228,11 +228,11 @@ describe("extensionService source installation", () => {
     const project = await projectService.create({ name: "Extension Project" });
     const migratedSource = await installedExtensionSourcesService.register({
       install_name: "pstdio-planner",
-      extension_id: "pstdio.pstdio-planner",
+      extension_id: "pstdio.planner",
       display_name: "pstdio-planner",
       source_kind: "local_path",
       source_path: "registry:unresolved-package",
-      manifest_json: { id: "pstdio.pstdio-planner" },
+      manifest_json: { id: "pstdio.planner" },
       status: "loaded",
     });
     const migratedInstance = await extensionInstancesService.create({
@@ -245,14 +245,14 @@ describe("extensionService source installation", () => {
     const synced = await service.syncInstalledSourceForProject({
       projectId: project.id,
       installName: "pstdio-planner",
-      extensionId: "pstdio.pstdio-planner",
+      extensionId: "pstdio.planner",
       name: "pstdio-planner",
       displayName: "Planner",
       version: "2.0.0",
       sourceKind: "local_path",
       sourcePath: "/home/user/.pstdio/extensions/pstdio-planner",
       sourceHash: "hash-2",
-      manifest: { id: "pstdio.pstdio-planner", version: "2.0.0" },
+      manifest: { id: "pstdio.planner", version: "2.0.0" },
     });
 
     expect(synced!.installedSource.id).toBe(migratedSource.id);

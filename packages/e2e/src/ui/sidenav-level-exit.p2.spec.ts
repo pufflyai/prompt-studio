@@ -38,7 +38,7 @@ test("the project crumb leaves a Sidenav level for the last root-level page", as
   await row("Sessions").click();
   await expect(row("Tickets")).toHaveCount(0);
   await row("Exit session").click();
-  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-session-browser\/conversation\?resource=/);
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.session-browser\/conversation\?resource=/);
 
   // The breadcrumb leads with the project crumb, which returns to the board the user came from.
   await projectCrumb.click();
@@ -47,7 +47,7 @@ test("the project crumb leaves a Sidenav level for the last root-level page", as
 
   // The saved board survives a reload that opens a level page straight from the URL.
   await row("Sessions").click();
-  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-session-browser\/conversations\/compose$/);
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.session-browser\/conversations\/compose$/);
   await page.reload();
   await expect(row("Exit session")).toBeVisible();
   await projectCrumb.click();

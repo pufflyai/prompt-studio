@@ -3,7 +3,7 @@ import {
   decodeExtensionWebviewSegment,
   EXTENSION_WEBVIEW_PATH_PREFIX,
   parseExtensionWebviewPath,
-} from "pstdio-api-contracts/extension-webview-path";
+} from "pstdio-api-contracts/extension-host";
 
 const READ_ONLY_METHODS = new Set(["GET", "HEAD"]);
 const CAPABILITY_PATH = /\/v1\/extensions\/webviews\/[^/\s?#]+/g;

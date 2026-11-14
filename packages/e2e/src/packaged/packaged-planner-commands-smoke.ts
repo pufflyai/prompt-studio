@@ -10,12 +10,10 @@ export const expectPlannerCommands = async (
   headers: Record<string, string>,
   metadata: WorkbenchExtensionMetadata,
 ) => {
-  const commandId = "pstdio.pstdio-planner.command.open-tickets";
+  const commandId = "pstdio.planner.command.open-tickets";
   expect(metadata.commands).toContainEqual(expect.objectContaining({ id: commandId }));
   expect(metadata.commandPaletteContributions).toContainEqual(expect.objectContaining({ commandId }));
-  expect(metadata.commands).toContainEqual(
-    expect.objectContaining({ id: "pstdio.pstdio-planner.command.cleanup-board" }),
-  );
+  expect(metadata.commands).toContainEqual(expect.objectContaining({ id: "pstdio.planner.command.cleanup-board" }));
   const tickets = metadata.pages.find(({ localId }) => localId === "tickets");
   if (tickets?.main.kind !== "view" || !tickets.main.tab) throw new Error("Missing Tickets breadcrumb menu");
   const menu = await fetch(
@@ -23,7 +21,7 @@ export const expectPlannerCommands = async (
     {
       method: "POST",
       headers: { ...headers, "content-type": "application/json" },
-      body: JSON.stringify({ params: { renderer: { rendererId: "pstdio.pstdio-planner.view.tickets", projectId } } }),
+      body: JSON.stringify({ params: { renderer: { rendererId: "pstdio.planner.view.tickets", projectId } } }),
     },
   );
   expect(menu.status).toBe(200);
@@ -46,7 +44,7 @@ export const expectPlannerCommands = async (
     type: "template",
     label: "Ticket template",
     required: false,
-    templateType: "pstdio.pstdio-planner.template-type.ticket",
+    templateType: "pstdio.planner.template-type.ticket",
   });
   const response = await fetch(`${baseUrl}/v1/projects/${projectId}/extensions/commands/${commandId}/execute`, {
     method: "POST",
@@ -57,9 +55,7 @@ export const expectPlannerCommands = async (
   expect(await response.json()).toMatchObject({
     outcome: {
       status: "success",
-      navigationRequests: [
-        { kind: "page", page: { kind: "page", id: "tickets", extensionId: "pstdio.pstdio-planner" } },
-      ],
+      navigationRequests: [{ kind: "page", page: { kind: "page", id: "tickets", extensionId: "pstdio.planner" } }],
     },
   });
   await expectPlannerArchiveFilters(baseUrl, projectId, headers);

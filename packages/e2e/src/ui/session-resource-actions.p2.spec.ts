@@ -19,15 +19,15 @@ const row = (page: Page, title: string) =>
 const menuItem = (page: Page, name: string) =>
   page.locator("[role=menu][data-state=open]").getByRole("menuitem", { name, exact: true });
 const breadcrumbMenu = async (page: Page) => page.locator("[data-workbench-breadcrumb-resource-actions]").click();
-const commandRoute = (name: string) => `**/extensions/commands/pstdio.pstdio-session-browser.command.${name}/execute`;
+const commandRoute = (name: string) => `**/extensions/commands/pstdio.session-browser.command.${name}/execute`;
 const rejectCommand = (page: Page, name: string, sessionId: string, message: string) =>
   page.route(commandRoute(name), async (route) => {
     const body = route.request().postDataJSON();
     expect(body.params.sessionId).toBe(sessionId);
     await route.fulfill({
       json: {
-        commandId: `pstdio.pstdio-session-browser.command.${name}`,
-        extensionId: "pstdio.pstdio-session-browser",
+        commandId: `pstdio.session-browser.command.${name}`,
+        extensionId: "pstdio.session-browser",
         outcome: { ok: false, status: "error", reason: message, error: { message }, notices: [] },
       },
     });
@@ -168,7 +168,7 @@ test("archive keeps saved data, preserves a different page, and rolls back faile
   await menuItem(page, "Archive session").click();
   await page.getByRole("button", { name: "Archive session", exact: true }).click();
   await expect(page).toHaveURL(
-    new RegExp(`/projects/${project.id}/extensions/pstdio.pstdio-session-browser/conversations/compose$`),
+    new RegExp(`/projects/${project.id}/extensions/pstdio.session-browser/conversations/compose$`),
   );
   await expect(page.getByText("No sessions yet", { exact: true })).toBeVisible();
 });
@@ -204,7 +204,7 @@ test("delete confirms, keeps a failed session usable, closes only its views, and
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect(row(page, b.title)).toBeHidden();
   await expect(page).toHaveURL(
-    new RegExp(`/projects/${project.id}/extensions/pstdio.pstdio-session-browser/conversations/compose$`),
+    new RegExp(`/projects/${project.id}/extensions/pstdio.session-browser/conversations/compose$`),
   );
   await expect(kept).toBeVisible();
   expect((await request.get(`/v1/sessions/${b.id}`)).status()).toBe(404);

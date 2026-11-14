@@ -12,7 +12,7 @@ test("shares saved ticket views while keeping active views local", async ({
   const response = await request.post("/v1/projects", { data: folderProjectInput({ name: "Shared ticket views" }) });
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
-  const path = `/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`;
+  const path = `/projects/${project.id}/extensions/pstdio.planner/tickets`;
   const secondContext = await browser.newContext({ baseURL: new URL(response.url()).origin });
   const setup = (projectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
@@ -21,7 +21,7 @@ test("shares saved ticket views while keeping active views local", async ({
   await context.addInitScript(setup, project.id);
   await secondContext.addInitScript(setup, project.id);
   const second = await secondContext.newPage();
-  const boardPath = `/v1/projects/${project.id}/boards/pstdio.pstdio-planner.view.tickets/views`;
+  const boardPath = `/v1/projects/${project.id}/boards/pstdio.planner.view.tickets/views`;
   try {
     await page.goto(path);
     await second.goto(path);
@@ -99,7 +99,7 @@ test("shares saved ticket views while keeping active views local", async ({
         "--project-id",
         project.id,
         "--board",
-        "pstdio.pstdio-planner.view.tickets",
+        "pstdio.planner.view.tickets",
         "--title",
         "Agent created",
         "--filter",
@@ -125,7 +125,7 @@ test("shares saved ticket views while keeping active views local", async ({
     await expect(second.getByRole("tab", { name: "Agent created", exact: true })).toBeVisible();
     const execute = async (name: string, params: Record<string, unknown>) => {
       const result = await request.post(
-        `/v1/projects/${project.id}/extensions/commands/pstdio.pstdio-planner.command.${name}/execute`,
+        `/v1/projects/${project.id}/extensions/commands/pstdio.planner.command.${name}/execute`,
         { data: { params } },
       );
       expect(result.ok(), await result.text()).toBe(true);

@@ -1,4 +1,5 @@
 import { and, eq } from "drizzle-orm";
+import { canonicalOwner } from "pstdio-api-contracts/extension-host";
 import { type AssetStore, hasDocumentUserData, type StorageObserver, type StorageOwner } from "pstdio-sync";
 import { createDocumentStorage } from "pstdio-sync/records";
 import { createTextDocumentStorage } from "pstdio-sync/text";
@@ -128,6 +129,7 @@ export const createDocumentStorageDBService = (
   const transaction = transactionFor("records");
   const nativeStore = (id: string) => createNativeDocumentStore(db, id, transactionFor, documentRevision(db, id));
   const isResourceDocument = (id: string) =>
+    id.startsWith('["host-local-migration",') ||
     id.startsWith(resourceDocumentId("").slice(0, -2)) ||
     id.startsWith('["ordered-conversion') ||
     id.startsWith('["ordered-index-blob",') ||
@@ -179,7 +181,7 @@ export const createDocumentStorageDBService = (
           ? nativeStore(documentId)
           : { transaction: transactionFor(documentId), revision: documentRevision(db, documentId) },
       recordStream: (owner: StorageOwner) =>
-        createOrderedStreamStore(db, owner, {
+        createOrderedStreamStore(db, canonicalOwner(owner), {
           statistics,
           numbersChanged,
           metadata: transaction,
@@ -188,9 +190,10 @@ export const createDocumentStorageDBService = (
             for (const listener of listeners) listener({ ...owner, ...(recordIds && { recordIds }) }, "relay");
           },
         }),
-      list: (owner: StorageOwner) => directory.list(owner),
+      list: (owner: StorageOwner) => directory.list(canonicalOwner(owner)),
     },
     async hasData(owner: StorageOwner) {
+      owner = canonicalOwner(owner);
       if (await hasProjectedRecords(db, owner)) return true;
       const documents = await db
         .select({ id: storage_documents.document_id })
@@ -214,6 +217,7 @@ export const createDocumentStorageDBService = (
       };
     },
     open(input: { owner: StorageOwner; assets?: AssetStore; textFields?: StorageTextDeclaration[] }) {
+      input = { ...input, owner: canonicalOwner(input.owner) };
       // The owner document keeps owner metadata such as data migration versions; records have their own documents.
       const metadata = createDocumentStorage({ owner: input.owner, store: { transaction, observer } });
       return {
@@ -240,12 +244,14 @@ export const createDocumentStorageDBService = (
       };
     },
     openTextDocument(input: { owner: StorageOwner; fileId: string }) {
+      input = { ...input, owner: canonicalOwner(input.owner) };
       return createTextDocumentStorage({
         owner: input.owner,
         store: { transaction: transactionFor(JSON.stringify(["text-file", input.fileId])) },
       });
     },
     openNativeTextDocument(input: { owner: StorageOwner; fileId: string }) {
+      input = { ...input, owner: canonicalOwner(input.owner) };
       return openNativeDocument(input, {
         db,
         transactionFor,

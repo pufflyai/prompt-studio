@@ -1,6 +1,7 @@
 import { getCommandValue } from "@pstdio/sdk/extensions";
 import type { TerminalSessionHandle, TerminalViewOpenRequest } from "pstdio-api-contracts";
 import { extensionResourceRefSchema } from "pstdio-api-contracts";
+import { canonicalRuntimeId } from "pstdio-extensions";
 import { z } from "zod";
 import { resolveLocalWorkspaceTarget } from "../extensions/command-environment/workspace-target";
 import type { ExtensionsRouteDeps } from "../extensions/deps";
@@ -38,13 +39,14 @@ export const openNativeTerminalSession = async (
   request: TerminalViewOpenRequest,
   signal: AbortSignal,
 ) => {
-  const { projectId, viewId, resource, cols, rows } = nativeTerminalOpenSchema.parse(request);
+  const { projectId, resource, cols, rows } = nativeTerminalOpenSchema.parse(request);
   if (resource?.projectId && resource.projectId !== projectId)
     throw new Error("Terminal resource belongs to another project");
   if (!deps.terminal) throw new Error("Terminal sessions are not available on this host");
   signal.throwIfAborted();
   const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
   signal.throwIfAborted();
+  const viewId = canonicalRuntimeId(snapshot.runtime, request.viewId);
   const view = snapshot.runtime.views.find((candidate) => candidate.id === viewId);
   if (!view || view.contribution.body.kind !== "terminal")
     throw new Error("Native terminal view is not enabled in this project");

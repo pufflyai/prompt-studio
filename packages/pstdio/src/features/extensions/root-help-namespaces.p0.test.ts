@@ -5,64 +5,53 @@ import { extensionNamespaceSummaries, loadExtensionNamespaces } from "./root-hel
 const commands: ExtensionCommandRecord[] = [
   {
     id: "pstdio-planner.create-ticket",
-    extensionId: "pstdio.pstdio-planner",
+    extensionId: "pstdio.planner",
     title: "Create ticket",
-    cliPath: "pstdio-planner create-ticket",
-    cliAliases: ["tickets create", "tickets add"],
+    cliPath: "pstdio.planner create-ticket",
   },
   {
     id: "pstdio-planner.ticketStatus.read",
-    extensionId: "pstdio.pstdio-planner",
+    extensionId: "pstdio.planner",
     title: "List statuses",
-    cliPath: "pstdio-planner ticketStatus read",
-    cliAliases: ["statuses list"],
+    cliPath: "pstdio.planner ticket-status read",
   },
   {
     id: "acme-tools.workspaceNote.set",
     extensionId: "acme.acme-tools",
     title: "Set workspace note",
-    cliPath: "acme-tools workspaceNote set",
-    cliAliases: ["workspaces set-note"],
+    cliPath: "acme.acme-tools workspaceNote set",
   },
 ];
 
 describe("extensionNamespaceSummaries", () => {
-  test("includes canonical extension namespaces for commands without global aliases", () => {
+  test("includes the owning extension namespace for CLI commands", () => {
     const summaries = extensionNamespaceSummaries([
       {
         id: "onefin-dev.spinUpApp",
         extensionId: "onefin.onefin-dev",
         title: "Spin up app",
-        cliPath: "onefin-dev spinUpApp",
+        cliPath: "onefin.onefin-dev spinUpApp",
       },
     ]);
 
-    expect(summaries).toEqual([{ namespace: "onefin-dev", description: "onefin-dev" }]);
+    expect(summaries).toEqual([{ namespace: "onefin.onefin-dev", description: "onefin.onefin-dev" }]);
   });
 
-  test("derives runnable canonical and alias namespaces with their providers", () => {
+  test("derives runnable canonical namespaces with their providers", () => {
     expect(extensionNamespaceSummaries(commands)).toEqual([
-      { namespace: "acme-tools", description: "acme-tools" },
-      { namespace: "pstdio-planner", description: "pstdio-planner" },
-      { namespace: "statuses", description: "pstdio-planner" },
-      { namespace: "tickets", description: "pstdio-planner" },
-      { namespace: "workspaces", description: "acme-tools" },
+      { namespace: "acme.acme-tools", description: "acme.acme-tools" },
+      { namespace: "pstdio.planner", description: "pstdio.planner" },
     ]);
   });
 
   test("excludes namespaces that collide with static built-ins", () => {
-    const summaries = extensionNamespaceSummaries(commands, { exclude: new Set(["workspaces"]) });
-    expect(summaries.map((summary) => summary.namespace)).toEqual([
-      "acme-tools",
-      "pstdio-planner",
-      "statuses",
-      "tickets",
-    ]);
+    const summaries = extensionNamespaceSummaries(commands, { exclude: new Set(["acme.acme-tools"]) });
+    expect(summaries.map((summary) => summary.namespace)).toEqual(["pstdio.planner"]);
   });
 
   test("deduplicates canonical cliPath namespaces across commands", () => {
     const namespaces = extensionNamespaceSummaries(commands).map((summary) => summary.namespace);
-    expect(namespaces.filter((namespace) => namespace === "pstdio-planner")).toHaveLength(1);
+    expect(namespaces.filter((namespace) => namespace === "pstdio.planner")).toHaveLength(1);
   });
 });
 
@@ -70,7 +59,7 @@ describe("loadExtensionNamespaces", () => {
   test("returns summaries when project context and API are available", async () => {
     const summaries = await loadExtensionNamespaces({
       healthUrl: "http://localhost:19840/healthz",
-      exclude: new Set(["workspaces"]),
+      exclude: new Set(["acme.acme-tools"]),
       deps: {
         resolveProjectId: () => ({ projectId: "project-1", root: "/repo" }),
         isHealthy: mock(async () => true),
@@ -78,12 +67,7 @@ describe("loadExtensionNamespaces", () => {
       },
     });
 
-    expect(summaries.map((summary) => summary.namespace)).toEqual([
-      "acme-tools",
-      "pstdio-planner",
-      "statuses",
-      "tickets",
-    ]);
+    expect(summaries.map((summary) => summary.namespace)).toEqual(["pstdio.planner"]);
   });
 
   test("stays offline-safe: returns [] when the API is unreachable", async () => {
@@ -116,4 +100,18 @@ describe("loadExtensionNamespaces", () => {
 
     expect(summaries).toEqual([]);
   });
+});
+
+test("root discovery advertises canonical namespaces during identity upgrades", () => {
+  expect(
+    extensionNamespaceSummaries([
+      {
+        id: "pstdio.notes.command.notes.create",
+        extensionId: "pstdio.notes",
+        title: "New note",
+        cliPath: "pstdio.notes create",
+        cliAliases: ["pstdio.pstdio-notes notes create", "pstdio-notes notes create", "pstdio.notes notes create"],
+      },
+    ]),
+  ).toEqual([{ namespace: "pstdio.notes", description: "pstdio.notes" }]);
 });
