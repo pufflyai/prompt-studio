@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, jest, mock, test } from "bun:test";
 import type { HarnessExit, TimeoutStrategy } from "pstdio-api-contracts";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
 import { createTrackedSessionStore } from "./session-store.test-utils";
@@ -99,31 +99,45 @@ describe("spawnAgentSession exit timeouts", () => {
     const remove = mock(() => {});
     const store = createTrackedSessionStore();
 
-    await spawnAgentSession(
-      {
-        sessionId: "session_1",
-        agentId: CLAUDE_CODE_ID,
-        prompt: "hello",
-        cwd: "/repo",
-      },
-      createDeps(store, transitionStatus, remove, {
-        registry: createRegistry(stop),
-        processExitTimeoutMs: 20,
-      }),
-    );
+    jest.useFakeTimers();
+    try {
+      await spawnAgentSession(
+        {
+          sessionId: "session_1",
+          agentId: CLAUDE_CODE_ID,
+          prompt: "hello",
+          cwd: "/repo",
+        },
+        createDeps(store, transitionStatus, remove, {
+          registry: createRegistry(stop),
+          processExitTimeoutMs: 20,
+        }),
+      );
 
-    await wait(15);
-    store.get("session_1")!.eventStore.push({ op: "add", path: "/messages/0", value: { role: "assistant" } });
-    await wait(15);
-    store.get("session_1")!.eventStore.push({ op: "add", path: "/messages/1", value: { role: "assistant" } });
-    await wait(15);
+      // Keep the event timeline independent of host scheduling. setImmediate lets
+      // the asynchronous activity consumer reset the watchdog before the next step.
+      const tick = () => new Promise((resolve) => setImmediate(resolve));
+      jest.advanceTimersByTime(15);
+      store.get("session_1")!.eventStore.push({ op: "add", path: "/messages/0", value: { role: "assistant" } });
+      await tick();
+      jest.advanceTimersByTime(15);
+      store.get("session_1")!.eventStore.push({ op: "add", path: "/messages/1", value: { role: "assistant" } });
+      await tick();
+      jest.advanceTimersByTime(15);
 
-    expect(stop).toHaveBeenCalledTimes(0);
+      expect(stop).toHaveBeenCalledTimes(0);
+      jest.advanceTimersByTime(4);
+      await tick();
+      expect(stop).toHaveBeenCalledTimes(0);
 
-    await waitForTransition(transitionStatus);
+      jest.advanceTimersByTime(1);
+      await tick();
 
-    expect(stop).toHaveBeenCalledTimes(1);
-    expect(transitionStatus).toHaveBeenCalledWith("session_1", "failed", expect.anything());
+      expect(stop).toHaveBeenCalledTimes(1);
+      expect(transitionStatus).toHaveBeenCalledWith("session_1", "failed", expect.anything());
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   test("activity-strategy resumed sessions still time out", async () => {
