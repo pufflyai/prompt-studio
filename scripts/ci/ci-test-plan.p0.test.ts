@@ -24,7 +24,9 @@ test("database owners execute exactly once even when their package row contains 
     tests,
   });
   const plan = createCiTestPlan(scope, packages, tests, source);
-  expect(plan.runs.flatMap((run) => run.files)).toEqual([tests[0]!]);
+  const selected = plan.runs.flatMap((run) => run.files);
+  expect([...selected].sort()).toEqual([...tests].sort());
+  expect(new Set(selected).size).toBe(selected.length);
   expect(Object.values(projectCiJobs(plan)).flat()).toEqual(plan.runs.map((run) => run.id));
 });
 

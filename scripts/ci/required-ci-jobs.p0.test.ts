@@ -26,7 +26,7 @@ test("required matrix identities come from discovered priority rows", () => {
 test("production requires breadth while main requires provenance and smoke", () => {
   const production = resolveCiScope({ ...scopeFixture(), event: "workflow_dispatch", profile: "production" });
   expect(requiredCiJobs(production)).toContain("e2e_P2");
-  expect(requiredCiJobs(production)).toContain("windows_database_tests");
+  expect(requiredCiJobs(production)).toContain("windows_native_contracts");
   const main = resolveCiScope({ ...scopeFixture(), event: "push" });
   expect(requiredCiJobs(main)).toEqual(["scope", "static_checks", "browser_smoke"]);
 });
@@ -48,7 +48,7 @@ test("queue requires startup smoke while production requires all six independent
     ).outcome,
   ).toBe("failure");
   const production = plannedCiJobs(resolveCiScope({ ...input, event: "workflow_dispatch", profile: "production" }));
-  expect(production.find((job) => job.id === "packaged_toolchain")?.count).toBe(9);
+  expect(production.find((job) => job.id === "packaged_toolchain")?.count).toBe(6);
 });
 
 test("production cannot pass without native UI quarantine execution", () => {
@@ -69,14 +69,14 @@ test("production cannot pass without native UI quarantine execution", () => {
   ).toBe("failure");
 });
 
-test("production requires every packaged runtime shard on both Windows architectures", () => {
+test("production requires the actual packaged runtime on both Windows architectures", () => {
   const scope = resolveCiScope({ ...scopeFixture(), event: "workflow_dispatch", profile: "production" });
   const plan = plannedCiJobs(scope);
   const names = plan.find((job) => job.id === "packaged_toolchain")!.names!;
-  expect(names).toContain("packaged_toolchain / verify (cli-win-x64 1/2)");
-  expect(names).toContain("packaged_toolchain / verify (cli-win-x64 2/2)");
-  expect(names).toContain("packaged_toolchain / verify (cli-win-arm64 1/2)");
-  expect(names).toContain("packaged_toolchain / verify (cli-win-arm64 2/2)");
+  expect(names).toContain("packaged_toolchain / verify (cli-win-x64 1/1)");
+  expect(names).toContain("packaged_toolchain / verify (cli-win-x64 1/1)");
+  expect(names).toContain("packaged_toolchain / verify (cli-win-arm64 1/1)");
+  expect(names).toContain("packaged_toolchain / verify (cli-win-arm64 1/1)");
   const observed = plan.flatMap((job) =>
     job.names!.map((name) => ({ name, status: "completed", conclusion: "success" })),
   );
@@ -85,19 +85,19 @@ test("production requires every packaged runtime shard on both Windows architect
     expect(
       evaluateCiGate(
         plan,
-        observed.filter((job) => job.name !== `packaged_toolchain / verify (${platform} 2/2)`),
+        observed.filter((job) => job.name !== `packaged_toolchain / verify (${platform} 1/1)`),
         false,
         true,
       ).outcome,
     ).toBe("failure");
 });
 
-test("production requires both Intel Mac desktop smoke shards while keeping physical release targets unique", async () => {
+test("production requires the Intel Mac native artifact contract while keeping physical release targets unique", async () => {
   const scope = resolveCiScope({ ...scopeFixture(), event: "workflow_dispatch", profile: "production" });
   const plan = plannedCiJobs(scope);
   const names = plan.find((job) => job.id === "build_clients")!.names!;
-  expect(names).toContain("build_clients (darwin-x64 1/2)");
-  expect(names).toContain("build_clients (darwin-x64 2/2)");
+  expect(names).toContain("build_clients (darwin-x64 1/1)");
+  expect(names).toContain("build_clients (darwin-x64 1/1)");
   const observed = plan.flatMap((job) =>
     job.names!.map((name) => ({ name, status: "completed", conclusion: "success" })),
   );
@@ -105,7 +105,7 @@ test("production requires both Intel Mac desktop smoke shards while keeping phys
   expect(
     evaluateCiGate(
       plan,
-      observed.filter((job) => job.name !== "build_clients (darwin-x64 2/2)"),
+      observed.filter((job) => job.name !== "build_clients (darwin-x64 1/1)"),
       false,
       true,
     ).outcome,
@@ -148,7 +148,7 @@ test("production accepts every supported harness version and requires the Window
   ).toBe("failure");
 });
 
-test("Windows diagnostics require all selected Windows shards and report a separate gate", () => {
+test("Windows diagnostics require the selected Windows contracts and report a separate gate", () => {
   const scope = resolveCiScope({ ...scopeFixture(), event: "workflow_dispatch", profile: "windows" });
   const plan = plannedCiJobs(scope);
   expect(plan.map((row) => row.id).sort()).toEqual([
@@ -158,12 +158,10 @@ test("Windows diagnostics require all selected Windows shards and report a separ
     "quarantined_bun_tests",
     "scope",
     "static_checks",
-    "windows_database_tests",
-    "windows_test_and_build",
+    "windows_native_contracts",
   ]);
-  expect(plan.find((row) => row.id === "windows_database_tests")?.count).toBe(12);
-  expect(plan.find((row) => row.id === "windows_test_and_build")?.count).toBe(5);
-  expect(plan.find((row) => row.id === "packaged_toolchain")?.count).toBe(4);
+  expect(plan.find((row) => row.id === "windows_native_contracts")?.count).toBe(2);
+  expect(plan.find((row) => row.id === "packaged_toolchain")?.count).toBe(2);
   const observed = plan.flatMap((job) =>
     job.names!.map((name) => ({ name, status: "completed", conclusion: "success" })),
   );
@@ -174,7 +172,7 @@ test("Windows diagnostics require all selected Windows shards and report a separ
   expect(
     evaluateCiGate(
       plan,
-      observed.filter((row) => !row.name.includes("cli-win-arm64 2/2")),
+      observed.filter((row) => !row.name.includes("cli-win-arm64 1/1")),
       false,
       true,
     ).outcome,

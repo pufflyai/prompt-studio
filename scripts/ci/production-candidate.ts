@@ -77,7 +77,10 @@ export const requiredProductionChecks = (channel: string) => {
   return [
     "functional",
     "services",
-    ...targets.flatMap((target) => [`signed-functional-${target}`, `performance-desktop-${target}`]),
+    ...targets.flatMap((target) => [
+      `desktop-${target === "linux-x64" ? "shared" : "native"}-${target}`,
+      `performance-desktop-${target}`,
+    ]),
     ...productionPerformanceWorkloads(channel).map((row) => `performance-${row.family}-${row.os}`),
   ];
 };

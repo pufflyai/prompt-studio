@@ -1,3 +1,4 @@
+import { integrationCoverage, selectIntegrationFiles } from "./coverage-ownership";
 import type { resolveCiScope } from "./pull-request-ci-scope";
 import { priorityFromFile, testRunner } from "./test-discovery";
 import type { PlanInput } from "./test-plan";
@@ -6,7 +7,7 @@ import { matchesPlatform, quarantineRegistry } from "./test-quarantine";
 type Scope = ReturnType<typeof resolveCiScope>;
 export type CiPlanRequest = { job: string; files: string[]; extra?: Partial<PlanInput> };
 const host = (os: string) => {
-  if (os.startsWith("macos")) return { platform: "darwin", arch: "arm64" };
+  if (os.startsWith("macos")) return { platform: "darwin", arch: os.includes("intel") ? "x64" : "arm64" };
   if (os.startsWith("windows")) return { platform: "win32", arch: "x64" };
   return { platform: "linux", arch: "x64" };
 };
@@ -44,13 +45,20 @@ const desktopRequests = (scope: Scope, tests: string[]) => {
     if (row.tests && row.shard === 1)
       requests.push({
         job: `electron-${row.target}`,
-        files: functional.filter((file) => testRunner(file) === "desktop" && !file.includes("/packaged-")),
+        files: selectIntegrationFiles(
+          functional.filter((file) => testRunner(file) === "desktop" && !file.includes("/packaged-")),
+          target,
+        ),
         extra: { target },
       });
     if (row.packaged) {
       requests.push({
         job: `desktop-${row.target}-${row.shard}/${row.shards}`,
-        files: functional.filter((file) => testRunner(file) === "desktop" && file.includes("/packaged-")),
+        files: selectIntegrationFiles(
+          functional.filter((file) => testRunner(file) === "desktop" && file.includes("/packaged-")),
+          target,
+          scope.production ? undefined : { changed: scope.changedFiles, owners: scope.integrationOwners },
+        ),
         extra: { target, shard: `${row.shard}/${row.shards}` },
       });
       if (row.shard === 1)
@@ -61,7 +69,7 @@ const desktopRequests = (scope: Scope, tests: string[]) => {
         });
     }
   }
-  return requests;
+  return requests.map((request) => ({ ...request, files: request.files.filter((file) => tests.includes(file)) }));
 };
 export const nativeCiRequests = (scope: Scope, tests: string[]) => {
   const functional = tests.filter((file) => priorityFromFile(file) !== "P3");
@@ -76,7 +84,7 @@ export const nativeCiRequests = (scope: Scope, tests: string[]) => {
       extra: { target, lane: "quarantine" },
     });
   }
-  if (!scope.windowsOnly) {
+  if (!scope.windowsOnly && scope.quarantineBunOs.length) {
     for (const [job, target, runner] of [
       ["quarantine-ui-native", { platform: "darwin", arch: "arm64" }, "playwright-ui"],
       ["quarantine-browser", { platform: "linux", arch: "x64" }, "playwright-ui"],
@@ -89,11 +97,15 @@ export const nativeCiRequests = (scope: Scope, tests: string[]) => {
     const target = { platform: platform === "win" ? "win32" : platform!, arch: arch! };
     requests.push({
       job: `toolchain-${row.platform_pkg}-${row.shard}/${row.shards}`,
-      files: functional.filter(
-        (file) =>
-          file.startsWith("packages/e2e/src/packaged/") &&
-          /\.test\.tsx?$/.test(file) &&
-          row.priorities.split(",").includes(priorityFromFile(file)!),
+      files: selectIntegrationFiles(
+        functional.filter(
+          (file) =>
+            file.startsWith("packages/e2e/src/packaged/") &&
+            /\.test\.tsx?$/.test(file) &&
+            (integrationCoverage(file).surface === "cli-artifact" ||
+              (target.platform !== "linux" && integrationCoverage(file).surface === "native-runtime")),
+        ),
+        target,
       ),
       extra: { target, shard: `${row.shard}/${row.shards}`, artifact: "compiled-cli" },
     });
@@ -104,5 +116,5 @@ export const nativeCiRequests = (scope: Scope, tests: string[]) => {
         extra: { target, lane: "quarantine" },
       });
   }
-  return requests;
+  return requests.map((request) => ({ ...request, files: request.files.filter((file) => tests.includes(file)) }));
 };

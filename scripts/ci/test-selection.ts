@@ -1,5 +1,6 @@
 import { relative } from "node:path";
 import { suites } from "./benchmark-registry";
+import { selectIntegrationFiles } from "./coverage-ownership";
 import { partitionPackageChecks } from "./package-check-matrix";
 import { productionDesktopPlatforms, productionToolchainPlatforms } from "./production-platforms";
 import { priorityFromFile, testRunner } from "./test-discovery";
@@ -222,7 +223,9 @@ export const selectEditedTests = (files: string[], packages: Packages) => {
           )
           .map((entry) => entry.file),
       );
-      const selected = covered ? group.files.filter((file) => quarantined.has(file)) : group.files;
+      let selected = covered ? group.files.filter((file) => quarantined.has(file)) : group.files;
+      if (["desktop", "packaged-cli", "packaged-browser"].includes(group.runner))
+        selected = selectIntegrationFiles(selected, platform);
       return Array.from({ length: Math.ceil(selected.length / 8) }, (_, index) => {
         const files = selected.slice(index * 8, (index + 1) * 8);
         return {

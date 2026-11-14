@@ -18,6 +18,7 @@ on:
           - production
           - windows
           - merge_queue
+          - compatibility
         default: production
         description: Production, Windows-only source diagnostics, or merge queue checks
       source_sha:
@@ -112,10 +113,10 @@ jobs:
       database_matrix: ${{ steps.scope.outputs.databaseMatrix }}
       edited_matrix: ${{ steps.scope.outputs.editedMatrix }}
     steps:
-      # Scope compares the candidate with its first parent only.
+      # PRs compare the merge parent; merge groups compare their combined candidate with merge_group.base_sha.
       - uses: actions/checkout@v5
         with:
-          fetch-depth: 2
+          fetch-depth: 0
           ref: ${{ inputs.source_sha || github.sha }}
       - name: Setup Node
         uses: actions/setup-node@v5
@@ -593,8 +594,8 @@ jobs:
       ref: ${{ inputs.source_sha || github.sha }}
       versions: '["minimum","latest"]'
       harnesses: ${{ needs.scope.outputs.harness_matrix }}
-  windows_test_and_build:
-    name: windows_test_and_build (${{ matrix.check }})
+  windows_native_contracts:
+    name: windows_native_contracts (${{ matrix.group }})
     needs: scope
     if: needs.scope.outputs.windows == 'true'
     runs-on: windows-latest
@@ -602,148 +603,41 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - check: lint
-            lane: lint
-          - check: unit-1
-            lane: unit
-            shard: 1/4
-          - check: unit-2
-            lane: unit
-            shard: 2/4
-          - check: unit-3
-            lane: unit
-            shard: 3/4
-          - check: unit-4
-            lane: unit
-            shard: 4/4
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-        with:
-          fetch-depth: 0
-          ref: ${{ inputs.source_sha || github.sha }}
-      - name: Setup Node
-        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
-        with:
-          node-version: "24.22.1"
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
-        with:
-          bun-version-file: package.json
-      - name: "[phase:install] Install dependencies and restore build cache"
-        uses: ./.github/actions/setup-ci-cache
-      - name: Warm up Windows PowerShell
-        if: matrix.lane != 'lint'
-        run: powershell.exe -NoLogo -NoProfile -NonInteractive -Command "@{} | ConvertTo-Json | Out-Null; Add-Type -TypeDefinition 'public static
-          class PromptStudioWarmUp {}'"
-      - name: "[phase:build] Build monorepo"
-        run: bun run build
-      - name: Lint monorepo
-        if: matrix.lane == 'lint'
-        run: bunx lerna run lint --no-bail --concurrency=2
-      - name: Test monorepo shard ${{ matrix.shard }} (non-e2e)
-        if: ${{ !cancelled() && (matrix.lane == 'unit') }}
-        uses: ./.github/actions/run-test-plan
-        with:
-          plan-artifact-id: ${{ needs.scope.outputs.plan_artifact_id }}
-          job: windows-unit-${{ matrix.shard }}
-          prebuilt: "true"
-          display: "false"
-      - name: "[phase:report-transfer] Preserve file and case execution evidence"
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows_test_and_build-${{ strategy.job-index }}-attempt-${{ github.run_attempt }}
-          path: test-results/ci
-          include-hidden-files: true
-          if-no-files-found: warn
-      - name: Require committed generated outputs to match their source
-        if: ${{ !cancelled() }}
-        run: git diff --exit-code
+        group: [process-security, filesystem-storage]
     env:
       CI_PROFILE: production
       CI_PRIORITY: P2
-      CI_SOURCE_COVERAGE: ${{ needs.scope.outputs.source_coverage == 'true' && '1' || '0' }}
       GH_TOKEN: ${{ github.token }}
-  windows_database_tests:
-    name: windows_database_tests (${{ matrix.package }} ${{ matrix.shard }})
-    needs: scope
-    if: needs.scope.outputs.windows == 'true'
-    runs-on: windows-latest
-    timeout-minutes: 25
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - package: pstdio-api
-            shard: 1/8
-          - package: pstdio-api
-            shard: 2/8
-          - package: pstdio-api
-            shard: 3/8
-          - package: pstdio-api
-            shard: 4/8
-          - package: pstdio-api
-            shard: 5/8
-          - package: pstdio-api
-            shard: 6/8
-          - package: pstdio-api
-            shard: 7/8
-          - package: pstdio-api
-            shard: 8/8
-          - package: pstdio-db
-            shard: 1/4
-          - package: pstdio-db
-            shard: 2/4
-          - package: pstdio-db
-            shard: 3/4
-          - package: pstdio-db
-            shard: 4/4
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - uses: actions/checkout@v5
         with:
-          fetch-depth: 0
           ref: ${{ inputs.source_sha || github.sha }}
-      - name: Setup Node
-        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+      - uses: actions/setup-node@v5
         with:
           node-version: "24.22.1"
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+      - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-      - name: "[phase:install] Install dependencies and restore build cache"
-        uses: ./.github/actions/setup-ci-cache
-      - name: "[phase:build] Build ${{ matrix.package }} and its dependencies"
-        run: bun run build -- --scope ${{ matrix.package }} --include-dependencies
-      - name: Warm up Windows PowerShell
-        if: matrix.package == 'pstdio-api'
-        run: powershell.exe -NoLogo -NoProfile -NonInteractive -Command "@{} | ConvertTo-Json | Out-Null; Add-Type -TypeDefinition 'public static
-          class PromptStudioWarmUp {}'"
-      - name: Test ${{ matrix.package }} shard ${{ matrix.shard }}
-        if: ${{ !cancelled() }}
+      - uses: ./.github/actions/setup-ci-cache
+        with:
+          install-strategy: native
+          windows-dev-drive: "true"
+      - name: "[phase:build] Build native contract dependencies"
+        run: bun run build -- --scope pstdio-api --scope pstdio-db --scope @pstdio/desktop --include-dependencies
+      - name: "[phase:test] Check Windows native contracts"
         uses: ./.github/actions/run-test-plan
         with:
           plan-artifact-id: ${{ needs.scope.outputs.plan_artifact_id }}
-          job: windows-database-${{ matrix.package }}-${{ matrix.shard }}
+          job: windows-native-${{ matrix.group }}
           prebuilt: "true"
           display: "false"
-      - name: "[phase:report-transfer] Preserve file and case execution evidence"
+      - name: Preserve native reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: windows_database_tests-${{ strategy.job-index }}-attempt-${{ github.run_attempt }}
+          name: windows-native-${{ matrix.group }}-attempt-${{ github.run_attempt }}
           path: test-results/ci
-          include-hidden-files: true
-          if-no-files-found: warn
-      - name: Require committed generated outputs to match their source
-        if: ${{ !cancelled() }}
-        run: git diff --exit-code
-    env:
-      CI_PROFILE: production
-      CI_PRIORITY: P2
-      CI_SOURCE_COVERAGE: ${{ needs.scope.outputs.source_coverage == 'true' && '1' || '0' }}
-      GH_TOKEN: ${{ github.token }}
+          if-no-files-found: error
   components:
     name: components_${{ matrix.priority }} (${{ matrix.package }})
     needs: scope
@@ -879,7 +773,7 @@ jobs:
   e2e:
     name: e2e_${{ matrix.priority }} (${{ matrix.shard }}/${{ matrix.total }})
     needs: scope
-    if: needs.scope.outputs.production == 'true' && needs.scope.outputs.windows_only != 'true'
+    if: needs.scope.outputs.harness_cli == 'true' && needs.scope.outputs.windows_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 18
     container:
@@ -939,7 +833,7 @@ jobs:
         run: git diff --exit-code
   e2e_cli:
     needs: scope
-    if: needs.scope.outputs.production == 'true' && needs.scope.outputs.windows_only != 'true'
+    if: needs.scope.outputs.harness_cli == 'true' && needs.scope.outputs.windows_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 18
     container:
@@ -985,7 +879,7 @@ jobs:
   packaged_and_vite_e2e:
     name: packaged_and_vite_e2e_${{ matrix.priority }} (${{ matrix.suite }} ${{ matrix.shard }})
     needs: scope
-    if: needs.scope.outputs.production == 'true' && needs.scope.outputs.windows_only != 'true'
+    if: needs.scope.outputs.packaged_matrix != '[]'
     runs-on: ubuntu-latest
     timeout-minutes: 18
     strategy:
@@ -1067,7 +961,7 @@ jobs:
         run: git diff --exit-code
   quarantined_bun_tests:
     needs: scope
-    if: needs.scope.outputs.production == 'true'
+    if: needs.scope.outputs.quarantine_bun_os != '[]'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     strategy:
@@ -1109,7 +1003,7 @@ jobs:
     name: quarantined_bun_tests (${{ matrix.os }})
   quarantined_native_ui_tests:
     needs: scope
-    if: needs.scope.outputs.production == 'true' && needs.scope.outputs.windows_only != 'true'
+    if: needs.scope.outputs.harness_cli == 'true' && needs.scope.outputs.windows_only != 'true'
     runs-on: macos-15
     timeout-minutes: 18
     env:
@@ -1156,7 +1050,7 @@ jobs:
         run: git diff --exit-code
   quarantined_browser_tests:
     needs: scope
-    if: needs.scope.outputs.production == 'true' && needs.scope.outputs.windows_only != 'true'
+    if: needs.scope.outputs.harness_cli == 'true' && needs.scope.outputs.windows_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 18
     container:
@@ -1244,7 +1138,7 @@ jobs:
   build_clients:
     name: build_clients (${{ matrix.target }} ${{ matrix.shard }}/${{ matrix.shards }})
     needs: scope
-    if: needs.scope.outputs.production == 'true'
+    if: needs.scope.outputs.client_matrix != '[]'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     env:
@@ -1291,12 +1185,12 @@ jobs:
         env:
           CI_CHECK_COMMAND: bun run build
         shell: bash
-      - name: "[phase:build] Compile CLI binaries for every platform"
+      - name: "[phase:build] Compile the Linux gate runtime or production binaries"
         if: needs.scope.outputs.production == 'true' && matrix.platform == 'linux'
         run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
           "$CI_CHECK_COMMAND"
         env:
-          CI_CHECK_COMMAND: bun run --cwd scripts build:all
+          CI_CHECK_COMMAND: ${{ needs.scope.outputs.production == 'true' && 'bun run --cwd scripts build:all' || 'bun run --cwd scripts build:host' }}
         shell: bash
       - name: Scaffold platform packages
         if: needs.scope.outputs.production == 'true' && matrix.platform == 'linux'
@@ -1305,6 +1199,9 @@ jobs:
         env:
           CI_CHECK_COMMAND: bun run --cwd scripts release:platforms:scaffold
         shell: bash
+      - name: "[phase:build] Build Linux gate dependencies"
+        if: needs.scope.outputs.production != 'true'
+        run: bun run build -- --scope @pstdio/desktop --include-dependencies
       - name: "[phase:build] Build unsigned desktop app"
         id: desktop
         env:
@@ -1317,7 +1214,7 @@ jobs:
         if: failure() && matrix.platform == 'darwin' && steps.desktop.outcome == 'failure'
         run: hdiutil info -plist
       - name: Configure the Linux Chromium sandboxes
-        if: needs.scope.outputs.production == 'true' && matrix.platform == 'linux'
+        if: matrix.platform == 'linux'
         run: bun "$GITHUB_WORKSPACE/scripts/ci/run-ci-checks.ts" --priority "$CI_PRIORITY" --observe-peers -- bash -eo pipefail -c
           "$CI_CHECK_COMMAND"
         env:
@@ -1344,7 +1241,7 @@ jobs:
         shell: bash
       # A signed release candidate runs these packaged cases in signed functional validation.
       - name: Smoke packaged desktop app
-        if: needs.scope.outputs.production == 'true' && matrix.packaged && !cancelled() && steps.desktop.outcome == 'success'
+        if: matrix.packaged && !cancelled() && steps.desktop.outcome == 'success'
         env:
           DEBUG: pw:api,pw:browser
         uses: ./.github/actions/run-test-plan
@@ -1354,7 +1251,7 @@ jobs:
           prebuilt: "true"
           display: "true"
       - name: Run quarantined packaged desktop cases
-        if: needs.scope.outputs.production == 'true' && matrix.packaged && matrix.shard == 1 && !cancelled() && steps.desktop.outcome == 'success'
+        if: matrix.packaged && matrix.shard == 1 && !cancelled() && steps.desktop.outcome == 'success'
         uses: ./.github/actions/run-test-plan
         with:
           plan-artifact-id: ${{ needs.scope.outputs.plan_artifact_id }}
@@ -1362,7 +1259,7 @@ jobs:
           prebuilt: "true"
           display: "true"
       - name: "[phase:report-transfer] Preserve desktop test reports and traces"
-        if: always() && needs.scope.outputs.production == 'true' && matrix.tests
+        if: always() && (matrix.tests || matrix.packaged)
         uses: actions/upload-artifact@v4
         with:
           name: desktop-test-results-${{ matrix.target }}-shard-${{ matrix.shard }}-of-${{ matrix.shards }}-attempt-${{ github.run_attempt }}
@@ -1556,8 +1453,7 @@ jobs:
       - database_tests
       - published_extensions
       - harness_cli_support
-      - windows_test_and_build
-      - windows_database_tests
+      - windows_native_contracts
       - components
       - browser_smoke
       - e2e

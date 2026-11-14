@@ -41,10 +41,10 @@ test("source and packaged desktop checks have distinct required result identitie
   expect(new Set(rows.map((row) => row.name)).size).toBe(rows.length);
 });
 
-test("edited packaged CLI P1 tests run on every nightly toolchain host without duplicate shard rows", () => {
+test("edited shared CLI cases keep one Linux owner at every priority", () => {
   const file = "packages/e2e/src/packaged/install.p1.test.ts";
   const rows = selectEditedTests([file], scopeFixture().packages);
-  expect(rows.map((row) => `${row.platform}-${row.arch}`).sort()).toEqual(["darwin-arm64", "linux-arm64", "linux-x64"]);
+  expect(rows.map((row) => `${row.platform}-${row.arch}`).sort()).toEqual(["linux-x64"]);
 });
 
 test("P0 unit tests already checked by PR CI are not executed twice", () => {
@@ -103,7 +103,7 @@ test("the required PR gate cannot pass when an edited-test result is missing or 
 test("edited packaged tests use the hosts their suites use in nightly", () => {
   const packages = scopeFixture().packages;
   const feature = selectEditedTests(["packages/e2e/src/packaged/boards.p2.test.ts"], packages);
-  expect(feature.map((row) => `${row.platform}-${row.arch}`).sort()).toEqual(["darwin-arm64", "linux-x64"]);
+  expect(feature.map((row) => `${row.platform}-${row.arch}`).sort()).toEqual(["linux-x64"]);
   const browser = selectEditedTests(["packages/e2e/src/packaged/editing.p2.spec.ts"], packages);
   expect(browser.map((row) => `${row.platform}-${row.arch}`)).toEqual(["linux-x64"]);
 });

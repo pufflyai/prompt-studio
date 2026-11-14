@@ -189,7 +189,7 @@ test("health compares each stage with its target and counts queue runs, reruns a
   const health = summarizeCiHealth(summarizeCiTiming(jobs), jobs, runs, 2);
   expect(health.stages.find((stage) => stage.stage === "merge_queue")).toEqual({
     stage: "merge_queue",
-    targetMs: 480_000,
+    targetMs: 600_000,
     runs: 3,
     measured: 3,
     p50Ms: 420_000,

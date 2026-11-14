@@ -79,7 +79,7 @@ test("stable releases certify every published host while the nightly certifies L
   const stable = requiredProductionChecks("stable");
   const nightly = requiredProductionChecks("nightly");
   for (const target of ["darwin-x64", "win32-x64"]) {
-    expect(stable).toContain(`signed-functional-${target}`);
+    expect(stable).toContain(`desktop-${target === "linux-x64" ? "shared" : "native"}-${target}`);
     expect(stable).toContain(`performance-desktop-${target}`);
   }
   for (const suite of ["storage", "runtime"])
@@ -87,7 +87,7 @@ test("stable releases certify every published host while the nightly certifies L
       expect(stable).toContain(`performance-${suite}-${os}`);
   expect(nightly.filter((check) => /win32|windows|darwin-x64/.test(check))).toEqual([]);
   expect(nightly).toContain("performance-storage-macos-15");
-  expect(nightly).toContain("signed-functional-darwin-arm64");
+  expect(nightly).toContain("desktop-native-darwin-arm64");
 });
 
 test("production reruns retain matching successful attestations and the newest failed result remains blocking", () => {

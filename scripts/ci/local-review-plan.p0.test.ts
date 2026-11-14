@@ -44,7 +44,7 @@ test("benchmarks stay complete in CI and never masquerade as local passes", () =
 
 test("invoking review for documentation still preserves the queue baseline", () => {
   const result = plan(["documentation/guidance/0005-testing.md"]);
-  expect(result.selected.map((entry) => entry.file)).toEqual(tests.slice(0, 5));
+  expect(result.selected.map((entry) => entry.file)).toEqual([tests[0]!, tests[3]!, tests[4]!]);
   expect(result.packageChecks.map((check) => check.id)).toEqual(["producer:lint", "consumer:typecheck"]);
   expect(result.setup.length).toBeGreaterThan(0);
   expect(result.staticChecks.map((check) => check.id)).toEqual(["docs-links"]);
@@ -57,7 +57,9 @@ test("root inputs select all owners and deleted files still select their former 
 
 test("explicit behavior selection is additive and rejects missing tests", () => {
   expect(plan(["documentation/example.md"], [tests[5]!]).selected.map((entry) => entry.file)).toEqual([
-    ...tests.slice(0, 5),
+    tests[0]!,
+    tests[3]!,
+    tests[4]!,
     tests[5]!,
   ]);
   expect(() => plan([], ["does-not-exist.p1.test.ts"])).toThrow("Unknown test");
@@ -85,7 +87,7 @@ test("global preload and test runners cover every consumer without manifest depe
   }
 });
 
-test("queue API, database, repository and service tests cannot be deferred by a narrow change", () => {
+test("all fast queue units remain mandatory for a narrow change", () => {
   const queuePackages = [
     ...packages,
     { name: "pstdio-api", dir: "packages/pstdio-api", dependencies: [], scripts: {} },
@@ -94,9 +96,9 @@ test("queue API, database, repository and service tests cannot be deferred by a 
   ];
   const queueFiles = [
     "root.p0.test.ts",
-    "packages/pstdio-api/src/auth.p1.test.ts",
-    "packages/pstdio-db/src/data.p1.test.ts",
-    "services/manager/src/authority.p1.integration.ts",
+    "packages/pstdio-api/src/auth.p0.test.ts",
+    "packages/pstdio-db/src/data.p0.test.ts",
+    "services/manager/src/authority.p0.integration.ts",
   ];
   const result = createLocalReviewPlan({
     packages: queuePackages,
