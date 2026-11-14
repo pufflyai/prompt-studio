@@ -84,6 +84,7 @@ export {
   workspaceSlots,
   worktreeEvents,
 } from "pstdio-api-contracts/extension-kernel";
+export { deriveMarkdownTitle, resolveSelectedValues } from "pstdio-sync-contracts";
 export { SDK_VERSION } from "../version";
 export { CommandOutcomeError, type CommandResponse, getCommandValue, unwrapCommandOutcome } from "./command-outcome";
 export { commandRefId, contributionRefId } from "./contribution-reference";

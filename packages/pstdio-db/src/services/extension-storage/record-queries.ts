@@ -1,9 +1,11 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import {
+  aggregateOptions,
   compareQueryValues,
   encodeQueryCursor,
   prepareRecordQuery,
+  requestedRecordIndex,
   validateIndexes,
   validatePredicate,
 } from "pstdio-sync/records";
@@ -20,17 +22,19 @@ import {
   storage_record_indexes as indexes,
   storage_record_projections as projections,
 } from "../../db/schemas.pg";
+import { aggregateRecordQuery } from "./record-aggregate-query";
+import { derivedQueryChanges, rebuildDerivedQueryValues } from "./record-derived-fields";
 import { dropRecordIndexes } from "./record-index-lifecycle";
 import { decodeProjectionValue, encodeProjectionValue } from "./record-projection-codec";
 import {
   arrayIndexFields,
   pageAfterSql,
-  predicateSql,
   recordFieldSql,
   recordIndexKeys,
   recordPageSql,
   recordScopeSql,
 } from "./record-query-sql";
+import { loadRelatedQueryIndexes, relatedRecordPredicateSql } from "./record-related-query";
 import type { StorageDiagnostics } from "./storage-diagnostics";
 
 type QueryRow = { record_id: string; revision: string; fields: Record<string, Json>; sort_values: Json[] };
@@ -103,26 +107,37 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
     if (!index) throw new Error(`Storage index not installed: ${name}`);
     return decodeProjectionValue(index.definition as unknown as Json) as unknown as StorageRecordIndex;
   };
-  // The projection row is the owner's revision; an owner without one has no records yet.
+  // Index replacement can change selection without editing records. Both belong to a query snapshot.
   const getRevision = async (connection: Reader) => {
-    const [projection] = await connection.select().from(projections).where(ownerWhere(projections));
-    return String(projection?.revision ?? 0);
+    const projection = connection
+      .select({ revision: projections.revision })
+      .from(projections)
+      .where(ownerWhere(projections));
+    const [row] = await connection
+      .select({
+        revision: sql<string>`coalesce((${projection}), 0)::text || ':' || md5(coalesce(string_agg(${indexes.database_name}, ',' ORDER BY ${indexes.database_name} COLLATE "C"), ''))`,
+      })
+      .from(indexes)
+      .where(ownerWhere(indexes));
+    return row.revision;
   };
   const api: StorageRecordQueries = {
     defineIndexes: async (definitions) => {
       validateIndexes(definitions);
       const desired = orderDefinitions(structuredClone(definitions));
-      const previous = await db.select().from(indexes).where(ownerWhere(indexes));
-      const installed = orderDefinitions(
-        decodeProjectionValue(
-          previous.map((row) => row.definition) as unknown as Json,
-        ) as unknown as StorageRecordIndex[],
-      );
-      // Every project runtime reload calls this for each extension, records or not.
-      if ((await fingerprint(installed as unknown as Json)) === (await fingerprint(desired as unknown as Json))) return;
       await db.transaction(async (tx) => {
+        const previous = await tx.select().from(indexes).where(ownerWhere(indexes));
+        const installed = orderDefinitions(
+          decodeProjectionValue(
+            previous.map((row) => row.definition) as unknown as Json,
+          ) as unknown as StorageRecordIndex[],
+        );
+        // Compare under the same lock as installation: concurrent reloads can change derived sources.
+        if ((await fingerprint(installed as unknown as Json)) === (await fingerprint(desired as unknown as Json)))
+          return;
         await dropRecordIndexes(tx, ownerWhere(indexes)!);
         await tx.delete(indexes).where(ownerWhere(indexes));
+        await rebuildDerivedQueryValues(tx, owner, derivedQueryChanges(installed, desired), diagnostics);
         for (const index of desired) {
           const name = `storage_query_${(await fingerprint({ owner: { ...owner }, definition: index as unknown as Json })).slice(0, 32)}`;
           const keys = recordIndexKeys(index);
@@ -153,14 +168,15 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
     },
     query: (query) =>
       db.transaction(async (tx) => {
-        const index = await getIndex(tx, query.index);
+        const index = requestedRecordIndex(await getIndex(tx, query.index), query);
+        const related = await loadRelatedQueryIndexes(query.where, (name) => getIndex(tx, name));
         const revision = await getRevision(tx);
-        const page = await prepareRecordQuery(owner, index, query, revision);
+        const page = await prepareRecordQuery(owner, index, query, revision, related);
         const result = await tx.execute<QueryRow>(
           recordPageSql(
             index,
             page.fields,
-            sql`${visible(index)} AND ${predicateSql(index, query.where)} AND ${pageAfterSql(index, page.after)}`,
+            sql`${visible(index)} AND ${relatedRecordPredicateSql(owner, index, query.where, related)} AND ${pageAfterSql(index, page.after)}`,
             // One extra row shows whether a next page exists without a second scan.
             page.limit + 1,
             page.offset,
@@ -177,7 +193,7 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
                 revision,
               })
             : null;
-        diagnostics?.({ phase: "records-queried", owner, records: rows.length });
+        diagnostics?.({ phase: "records-queried", owner, records: rows.length, materialized: result.rows.length });
         return {
           revision,
           cursor,
@@ -191,29 +207,26 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
     aggregate: (query) =>
       db.transaction(async (tx) => {
         const index = await getIndex(tx, query.index);
+        aggregateOptions(index, query);
+        const related = await loadRelatedQueryIndexes(query.where, (name) => getIndex(tx, name));
         const revision = await getRevision(tx);
-        validatePredicate(index, query.where);
-        if (query.where === undefined && query.groupBy === undefined && index.prefix === undefined) {
+        validatePredicate(index, query.where, 0, related);
+        if (
+          query.where === undefined &&
+          query.groupBy === undefined &&
+          query.metrics === undefined &&
+          index.prefix === undefined
+        ) {
           const [projection] = await tx.select().from(projections).where(ownerWhere(projections));
           return { revision, count: projection?.live_count ?? 0, groups: [] };
         }
-        const group =
-          query.groupBy === undefined
-            ? sql`NULL::jsonb`
-            : sql`coalesce(${recordFieldSql(index, query.groupBy)}, 'null'::jsonb)`;
-        const result = await tx.execute<{ value: Json; count: string }>(
-          sql`SELECT ${group} AS value, count(*)::text AS count FROM storage_current_records WHERE ${visible(index)} AND ${predicateSql(index, query.where)} GROUP BY 1`,
-        );
-        return {
+        return aggregateRecordQuery(
+          tx,
+          index,
+          query,
           revision,
-          count: result.rows.reduce((sum, row) => sum + Number(row.count), 0),
-          groups:
-            query.groupBy === undefined
-              ? []
-              : result.rows
-                  .map((row) => ({ value: decodeProjectionValue(row.value ?? null), count: Number(row.count) }))
-                  .sort((a, b) => compareQueryValues(a.value, b.value)),
-        };
+          sql`${visible(index)} AND ${relatedRecordPredicateSql(owner, index, query.where, related)}`,
+        );
       }),
     readMany: async (ids) => {
       if (ids.length > 100) throw new Error("A batch can read at most 100 records");

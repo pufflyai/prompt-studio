@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { createDb } from "../../db/connection.pglite";
 import { sessions, workspace_sessions } from "../../db/schemas.pg";
 import { createProjectsDBService } from "../projects/projects";
+import { createResourceLinksDBService } from "../resource-links";
 import { createWorkspacesDBService } from "../workspaces/workspaces";
 import { createSessionsDBService } from "./sessions";
 
@@ -29,6 +30,35 @@ const create = async (title: string, agent = "claude-code", date = "2026-10-01T0
   await conn.db.update(sessions).set({ created_at: date, updated_at: date }).where(eq(sessions.id, row.id));
   return row;
 };
+
+test("ticket session pages include linked workspace history without duplicate sessions", async () => {
+  const workspaces = createWorkspacesDBService(conn.db);
+  const links = createResourceLinksDBService(conn.db);
+  const anchor = { projectId, extensionId: "example", type: "foobar", id: "selected" };
+  const a = await workspaces.create({ project_id: projectId, shorthand_base: "A", anchors: [anchor] });
+  const b = await workspaces.create({ project_id: projectId, shorthand_base: "B" });
+  await links.add(anchor, [{ projectId, extensionId: "pstdio", type: "workspace", id: b.id }]);
+  const direct = await create("Direct");
+  await service.addAnchors(direct.id, [anchor]);
+  const workspace = await create("Workspace");
+  const second = await create("Other workspace");
+  const reverse = await create("Linked from ticket");
+  await links.add(anchor, [{ projectId, extensionId: "pstdio", type: "session", id: reverse.id }]);
+  await create("Unrelated");
+  await conn.db.insert(workspace_sessions).values([
+    { id: "direct-a", workspace_id: a.id, session_id: direct.id, created_at: "2026-10-01" },
+    { id: "workspace-a", workspace_id: a.id, session_id: workspace.id, created_at: "2026-10-01" },
+    { id: "workspace-b", workspace_id: b.id, session_id: workspace.id, created_at: "2026-10-01" },
+    { id: "second-b", workspace_id: b.id, session_id: second.id, created_at: "2026-10-01" },
+  ]);
+  const input = { anchor, includeWorkspaceAnchors: true, limit: 2 };
+  const first = await service.query(projectId, input);
+  const next = await service.query(projectId, { ...input, cursor: first.nextCursor! });
+  expect([...first.rows, ...next.rows].map(({ id }) => id).sort()).toEqual(
+    [direct.id, workspace.id, second.id, reverse.id].sort(),
+  );
+  expect((await service.query(projectId, { anchor })).rows.map(({ id }) => id)).toEqual([direct.id]);
+});
 
 test("title search filters before pagination and treats wildcard text literally", async () => {
   await create("Unrelated", "codex", "2026-10-03T00:00:00.000Z");

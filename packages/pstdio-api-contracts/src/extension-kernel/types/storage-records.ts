@@ -1,6 +1,7 @@
 import type {
   StorageConflict,
   StorageConflictInspection,
+  StorageCurrentGroup,
   StorageGroup,
   StorageRecord,
   StorageRecordQueries,
@@ -11,8 +12,10 @@ import type {
 export type {
   SharedEdit as SharedStorageEdit,
   StorageAggregateQuery,
+  StorageAggregateResult,
   StorageConflict,
   StorageConflictInspection,
+  StorageCurrentGroup,
   StorageGroup,
   StorageIndexField,
   StoragePredicate,
@@ -22,9 +25,11 @@ export type {
   StorageRecordIndex,
   StorageRecordQueries,
   StorageRecordQuery,
+  StorageRelatedSelection,
   StorageResolution,
   StorageSaveOutcome,
   StorageSaveState,
+  StorageSelection,
 } from "pstdio-sync-contracts";
 
 /** One extension's shared content within the current workbench. All methods use complete record addresses. */
@@ -37,6 +42,8 @@ export interface ExtensionRecordsApi extends StorageRecordQueries {
   list(): Promise<StorageRecord[]>;
   /** Save the entire group durably. Reuse the operation ID only for an identical request. */
   commit(group: StorageGroup): Promise<StorageSaveOutcome>;
+  /** Compare 1–100 existing records under the local owner lock. Null means stale, with no writes. Accepted paths merge independently of later unrelated edits; record lifetimes remain guarded. Reuse the operation ID only for an identical request. */
+  commitIfCurrent(group: StorageCurrentGroup): Promise<StorageSaveOutcome | null>;
   /** Current sync state of a save, or undefined for an unknown operation. Poll it to wait until a save has synced. */
   outcome(operationId: string): Promise<StorageSaveOutcome | undefined>;
   /** @deprecated Conflicts go away because edits merge. Remove the call; `outcome` reports saves that need attention. */

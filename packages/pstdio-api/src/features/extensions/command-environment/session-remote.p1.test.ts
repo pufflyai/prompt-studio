@@ -62,7 +62,7 @@ test("scoped remote conversation and resource reads preserve the personal worksp
   }
 });
 
-test("public title search filters local and readable remote history before a shared cursor page", async () => {
+test("public title search combines local results with scoped remote query pages", async () => {
   const handle = await createTestApp();
   let restore = () => {};
   try {
@@ -73,24 +73,24 @@ test("public title search filters local and readable remote history before a sha
       agent: "test.agent",
     });
     await handle.deps.sessionService.create({ project_id: project.id, title: "Unrelated local", agent: "test.agent" });
-    const personal = spyOn(handle.deps.personalHistoryService, "sessions").mockResolvedValue([
-      {
-        ...local,
-        id: "remote-match",
-        title: "Remote Needle",
-        workspace_id: null,
-        device: { ownerId: "owner", id: "laptop", name: "Laptop" },
-        approval_requests: [],
+    const remote = {
+      ...local,
+      id: "remote-match",
+      title: "Remote Needle",
+      workspace_id: null,
+      device: { ownerId: "owner", id: "laptop", name: "Laptop" },
+      approval_requests: [],
+    };
+    // The personal history service owns filtering/pagination. Exercise its scoped
+    // query boundary, rather than the retired whole-history list fixture.
+    const personal = spyOn(handle.deps.personalHistoryService, "querySessions").mockImplementation(
+      async (projectId, query = {}) => {
+        expect(projectId).toBe(project.id);
+        expect(query.search).toBe("needle");
+        expect(query.limit).toBe(1);
+        return { rows: query.cursor ? [] : [remote], nextCursor: null };
       },
-      {
-        ...local,
-        id: "remote-unrelated",
-        title: "Unrelated remote",
-        workspace_id: null,
-        device: { ownerId: "owner", id: "laptop", name: "Laptop" },
-        approval_requests: [],
-      },
-    ]);
+    );
     restore = () => personal.mockRestore();
     const api = createSessionsApi(handle.deps, { projectId: project.id, project: { ...project, shorthand: "SH" } });
     const first = await api.query({ search: "needle", limit: 1 });

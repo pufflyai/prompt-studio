@@ -1,3 +1,4 @@
+import { resolveCollectionIndexes } from "pstdio-api-contracts";
 import type { createExtensionStorageDBService } from "pstdio-db";
 import type { ExtensionRuntime } from "pstdio-extensions";
 
@@ -19,7 +20,7 @@ export const installExtensionStorageIndexes = async (
   await service.installIndexes(
     runtime.extensions.map((extension) => ({
       owner: { workbenchId: projectId, extensionId: extension.id },
-      definitions: extension.definition.storageIndexes ?? [],
+      definitions: resolveCollectionIndexes(extension.definition.storageIndexes ?? [], "project", projectId),
     })),
     validate,
   );

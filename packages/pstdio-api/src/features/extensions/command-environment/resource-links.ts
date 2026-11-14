@@ -1,11 +1,17 @@
 import {
   addResourceAnchorsSchema,
+  relatedResourceQuerySchema,
   removeResourceAnchorsSchema,
   resourceAnchorQuerySchema,
   resourceAnchorsQuerySchema,
 } from "pstdio-api-contracts";
-import type { ResourceAnchor, ResourceAnchorQuery, ResourceRef } from "pstdio-api-contracts/extension-kernel";
-import { publishResourceAnchorChanges, refreshResourceAnchorSources } from "../../../services/resource-anchor-events";
+import type {
+  RelatedResourceQuery,
+  ResourceAnchor,
+  ResourceAnchorQuery,
+  ResourceRef,
+} from "pstdio-api-contracts/extension-kernel";
+import { publishResourceAnchorChanges, refreshResourceAnchorEndpoints } from "../../../services/resource-anchor-events";
 import type { ExtensionsRouteDeps } from "../deps";
 import { canonicalResource, createAnchorPolicy } from "./resource-link-policy";
 
@@ -34,13 +40,21 @@ export const createResourceLinksApi = (
   ) => {
     if (!items.length) return;
     publishResourceAnchorChanges(deps.eventBus, items, operation);
-    await refreshResourceAnchorSources(deps.eventBus, items, {
+    await refreshResourceAnchorEndpoints(deps.eventBus, items, {
       project: deps.projectService.get,
       workspace: deps.workspaceService.get,
       session: deps.sessionService.get,
     });
   };
   return {
+    queryRelated: async (query: RelatedResourceQuery) => {
+      const parsed = relatedResourceQuerySchema.parse(query);
+      const page = await deps.resourceLinksService.related({
+        ...parsed,
+        resources: await Promise.all(parsed.resources.map(canonical)),
+      });
+      return { ...page, items: await Promise.all(page.items.map(canonical)) };
+    },
     queryAnchorsMany: async (query: Omit<ResourceAnchorQuery, "resource"> & { resources: ResourceRef[] }) => {
       const parsed = resourceAnchorsQuerySchema.parse(query);
       const page = await deps.resourceLinksService.listMany({
