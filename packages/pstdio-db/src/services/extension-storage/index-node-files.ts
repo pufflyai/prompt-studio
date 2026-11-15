@@ -3,9 +3,10 @@ import { dirname, join } from "node:path";
 import type { StorageOwner } from "pstdio-sync";
 import { type OrderedIndexReference, readOrderedIndexReference } from "pstdio-sync/relay";
 import type { DbClient } from "../../db/connection.pglite";
+import { flushDirectory } from "../../db/pglite-home-recovery";
 
 /**
- * Encrypted index nodes live in files, never in the database (rule 0006.2.15).
+ * Encrypted index nodes live in files, never in the database (rule 0006.2.16).
  * `receipts` nodes are the full writer's durable copy of its receipt index: they must survive
  * a crash once a saved root names them, so their writes are flushed before they return.
  * `logs` nodes cache relay data for log and history indexes and can always be fetched again.
@@ -33,6 +34,8 @@ export interface IndexNodeFiles {
   removeOwner(owner: StorageOwner): Promise<void>;
   /** Moves every project's nodes to a renamed extension id; nodes the target already has win. */
   moveExtension(from: string, to: string): Promise<void>;
+  /** Whether any project keeps nodes under this extension id. */
+  hasExtension(extensionId: string): Promise<boolean>;
   /** Removes every project folder whose id is not in `projectIds`. */
   retainProjects(projectIds: ReadonlySet<string>): Promise<void>;
 }
@@ -73,16 +76,6 @@ const decode = (file: Buffer): IndexNode => {
 const missing = (error: unknown) => (error as NodeJS.ErrnoException).code === "ENOENT";
 const exists = (error: unknown) => (error as NodeJS.ErrnoException).code === "EEXIST";
 
-/** Flushes a directory so a rename into it survives a crash. */
-const syncDirectory = async (directory: string) => {
-  const handle = await open(directory, "r");
-  try {
-    await handle.sync();
-  } finally {
-    await handle.close();
-  }
-};
-
 export const createIndexNodeFiles = (root: string): IndexNodeFiles => {
   const ownerDirectory = (owner: StorageOwner) => join(root, segment(owner.workbenchId), segment(owner.extensionId));
   const kindDirectory = (owner: StorageOwner, kind: IndexNodeKind) => join(ownerDirectory(owner), kind);
@@ -111,14 +104,20 @@ export const createIndexNodeFiles = (root: string): IndexNodeFiles => {
     return undefined;
   };
   const directories = new Set<string>();
-  const ensureDirectory = async (directory: string) => {
+  // Receipt folders are flushed level by level, so a crash cannot drop a new folder with its files.
+  const ensureDirectory = async (directory: string, durable: boolean) => {
     if (directories.has(directory)) return;
-    await mkdir(directory, { recursive: true });
+    const created = await mkdir(directory, { recursive: true });
+    if (durable && created) {
+      const levels: string[] = [];
+      for (let level = directory; level !== dirname(created); level = dirname(level)) levels.push(level);
+      for (const level of levels.reverse()) await flushDirectory(dirname(level));
+    }
     directories.add(directory);
   };
   const stage = async (kind: IndexNodeKind, file: string, node: IndexNode) => {
     const temporary = `${file}.${crypto.randomUUID()}.tmp`;
-    await ensureDirectory(dirname(file));
+    await ensureDirectory(dirname(file), kind === "receipts");
     const handle = await open(temporary, "w");
     try {
       await handle.writeFile(encode(node));
@@ -140,7 +139,7 @@ export const createIndexNodeFiles = (root: string): IndexNodeFiles => {
     } finally {
       await rm(temporary, { force: true });
     }
-    if (kind === "receipts") await syncDirectory(dirname(file));
+    if (kind === "receipts") await flushDirectory(dirname(file));
   };
   return {
     async read(owner, kind, id) {
@@ -176,7 +175,7 @@ export const createIndexNodeFiles = (root: string): IndexNodeFiles => {
       const file = path(owner, kind, id);
       if (kind === "receipts") return publish(kind, file, await stage(kind, file, node), false);
       // A cache node needs no staging: a torn file reads as missing and is downloaded again.
-      await ensureDirectory(dirname(file));
+      await ensureDirectory(dirname(file), false);
       await writeFile(file, encode(node), { flag: "wx" }).catch((error) => {
         if (!exists(error)) throw error;
       });
@@ -224,16 +223,22 @@ export const createIndexNodeFiles = (root: string): IndexNodeFiles => {
           for (const file of await files(join(source, kind))) {
             const name = fileName(file.id);
             const destination = join(target, kind, name.slice(0, 2), name);
-            await mkdir(dirname(destination), { recursive: true });
+            await ensureDirectory(dirname(destination), kind === "receipts");
             await link(file.path, destination).catch((error) => {
               if (!exists(error)) throw error;
             });
-            if (kind === "receipts") await syncDirectory(dirname(destination));
+            if (kind === "receipts") await flushDirectory(dirname(destination));
           }
         }
         await rm(source, { recursive: true, force: true });
       }
       directories.clear();
+    },
+    async hasExtension(extensionId) {
+      for (const project of await readdir(root).catch(() => [] as string[])) {
+        if (await stat(join(root, project, segment(extensionId))).catch(() => null)) return true;
+      }
+      return false;
     },
     async retainProjects(projectIds) {
       for (const name of await readdir(root).catch(() => [] as string[])) {
@@ -301,6 +306,7 @@ export const createMemoryIndexNodeFiles = (): IndexNodeFiles => {
         nodes.delete(entry);
       }
     },
+    hasExtension: async (extensionId) => select(([, e]) => e === extensionId).length > 0,
     async retainProjects(projectIds) {
       for (const entry of select(([w]) => !projectIds.has(w))) nodes.delete(entry);
     },

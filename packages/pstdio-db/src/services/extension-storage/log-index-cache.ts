@@ -15,6 +15,9 @@ const WRITES_PER_CHECK = 64;
  * pending uploads keep their own bytes, and a missing node is downloaded again. The cache is
  * bounded so rebuilt indexes cannot accumulate on the device.
  */
+// Each sync builds a new cache over the same files, so counting lives with the files and owner.
+const accounting = new WeakMap<IndexNodeFiles, Map<string, { writes: number; evicting: boolean }>>();
+
 export const createLogIndexCache = (
   files: IndexNodeFiles,
   owner: StorageOwner,
@@ -23,13 +26,20 @@ export const createLogIndexCache = (
   budgetBytes = LOG_INDEX_CACHE_BYTES,
 ): OrderedIndexBlobs => {
   const { blobs } = createOrderedManifestCache(files, owner, "logs", space, remote);
-  let writes = 0;
-  let evicting: Promise<unknown> | undefined;
+  const key = JSON.stringify([owner.workbenchId, owner.extensionId]);
+  const owners = accounting.get(files) ?? new Map<string, { writes: number; evicting: boolean }>();
+  accounting.set(files, owners);
+  const state = owners.get(key) ?? { writes: 0, evicting: false };
+  owners.set(key, state);
   const written = () => {
-    if (++writes % WRITES_PER_CHECK || evicting) return;
-    evicting = files.evict(owner, "logs", budgetBytes, RECENT_MS).finally(() => {
-      evicting = undefined;
-    });
+    if (++state.writes % WRITES_PER_CHECK || state.evicting) return;
+    state.evicting = true;
+    files
+      .evict(owner, "logs", budgetBytes, RECENT_MS)
+      .catch((error: unknown) => console.warn("Log index cache eviction failed; it retries later.", error))
+      .finally(() => {
+        state.evicting = false;
+      });
   };
   return {
     ...blobs,

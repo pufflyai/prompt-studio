@@ -8,6 +8,11 @@ const legacyOwnerPrefix = '["pstdio.personal-history",';
 
 export type DatabaseMaintenancePhase = "database_cleaning" | "database_compacting";
 
+/** Records that space must be reclaimed at the next maintenance, before a change commits. */
+export const invalidateMaintenance = async (path: string) => {
+  if (path !== ":memory:") await rm(join(path, ".pstdio-maintenance.json"), { force: true });
+};
+
 export const maintainDatabase = async (
   db: PGlite,
   path: string,

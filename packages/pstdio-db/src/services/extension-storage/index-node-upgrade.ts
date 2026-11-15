@@ -41,15 +41,23 @@ const readRows = async (db: DbClient, owner: StorageOwner, ids: string[]) => {
   }));
 };
 
-/** Writes one page of stored nodes as receipt files and returns the ids of their children. */
+/**
+ * Writes one page of stored nodes as receipt files and returns the ids of their children. A node
+ * already moved, or written by sync after an earlier partial run, has no row; its file's edges
+ * continue the walk so descendants that only have rows are still copied.
+ */
 const copyRows = async (db: DbClient, files: IndexNodeFiles, owner: StorageOwner, ids: string[]) => {
   const children: string[] = [];
-  for (const { id, node } of await readRows(db, owner, ids)) {
+  const rows = await readRows(db, owner, ids);
+  for (const { id, node } of rows) {
     if (node?.version !== 1 || typeof node.bytes !== "string") throw new Error(`Invalid stored index node ${id}`);
     const edges = node.children && sortIndexChildren(node.children.map(readOrderedIndexReference));
     await files.write(owner, "receipts", id, { bytes: Buffer.from(node.bytes, "base64"), children: edges });
     for (const child of edges ?? []) children.push(child.blobId);
   }
+  const copied = new Set(rows.map((row) => row.id));
+  for (const id of ids.filter((candidate) => !copied.has(candidate)))
+    for (const child of (await files.edges(owner, "receipts", id)) ?? []) children.push(child.blobId);
   return children;
 };
 
@@ -91,7 +99,7 @@ const upgradeOwner = async (db: DbClient, files: IndexNodeFiles, owner: StorageO
 };
 
 /**
- * One-time move of index nodes from database rows to files (rule 0006.2.15). Returns whether rows
+ * One-time move of index nodes from database rows to files (rule 0006.2.16). Returns whether rows
  * were removed, so startup compacts the database. An owner with unreadable rows keeps them and
  * is retried on the next start; it never stops the app from opening.
  */
@@ -99,12 +107,15 @@ export const upgradeIndexNodesToFiles = async (
   db: DbClient,
   files: IndexNodeFiles,
   report: (progress: IndexNodeUpgradeProgress) => void = () => {},
+  /** Runs once before the first row is deleted, so space reclamation is recorded as owed first. */
+  beforeChange: () => Promise<void> = async () => {},
 ) => {
   const result = await db.execute(
     sql`SELECT DISTINCT workbench_id, extension_id FROM ${documents} WHERE document_id LIKE ${NODE_ROWS}
       ORDER BY workbench_id, extension_id`,
   );
   let removed = false;
+  if (result.rows.length) await beforeChange();
   for (const row of result.rows) {
     const owner = { workbenchId: String(row.workbench_id), extensionId: String(row.extension_id) };
     try {

@@ -1,6 +1,6 @@
 import { getTableColumns, sql } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
-import { extensionIdentityRenames } from "pstdio-api-contracts/extension-host";
+import { type ExtensionIdentityRename, extensionIdentityRenames } from "pstdio-api-contracts/extension-host";
 import * as Y from "yjs";
 import type { DbClient } from "../db/connection.pglite";
 import * as s from "../db/schemas.pg";
@@ -108,7 +108,12 @@ const cloneParent = async (tx: Transaction, table: PgTable, from: string, to: st
 /** Startup runs under the database lock, before any extension, writer, relay or projection cache can open. */
 export const migrateExtensionIdentities = async (
   db: DbClient,
-  options: { extensionId?: string; onConflict?: (error: ExtensionIdentityConflictError) => Promise<void> } = {},
+  options: {
+    extensionId?: string;
+    onConflict?: (error: ExtensionIdentityConflictError) => Promise<void>;
+    /** Runs once before the first rename commits, so space reclamation is recorded as owed first. */
+    beforeChange?: () => Promise<void>;
+  } = {},
 ) => {
   const renames = extensionIdentityRenames.filter(
     ({ from, to }) =>
@@ -166,6 +171,7 @@ export const migrateExtensionIdentities = async (
     const to = `${canonical.publisher}.${canonical.name}`;
     if (!presentOwners.has(from) && !gatedOwners.has(from) && !gatedOwners.has(to)) continue;
     try {
+      if (!renamed) await options.beforeChange?.();
       await db.transaction(async (tx) => {
         await assertNoConflicts(tx, from, to);
         for (const table of parents) await cloneParent(tx, table, from, to);
@@ -193,8 +199,6 @@ export const migrateExtensionIdentities = async (
         await tx.execute(sql`UPDATE ${s.installed_extension_sources} SET status = 'pending', last_error_json = NULL
         WHERE extension_id = ${to} AND last_error_json->>'code' = 'extension_identity_conflict'`);
       });
-      // Index node files follow their rows once the rename has committed.
-      await indexNodeFilesFor(db).moveExtension(from, to);
       renamed = true;
     } catch (error) {
       if (!(error instanceof ExtensionIdentityConflictError) || !options.onConflict) throw error;
@@ -213,5 +217,23 @@ export const migrateExtensionIdentities = async (
       .values(pending.map((workbench_id) => ({ workbench_id, extension_id: "pstdio", document_id: markerId, state })))
       .onConflictDoNothing();
   }
+  await moveRenamedIndexNodes(db, renames);
   return renamed;
+};
+
+/**
+ * Index node files follow their rows. This also runs when no rows moved now, so files left under an
+ * old id by a crash after an earlier rename committed still move. A refused rename keeps its rows,
+ * and therefore its files, under the old id.
+ */
+const moveRenamedIndexNodes = async (db: DbClient, renames: readonly ExtensionIdentityRename[]) => {
+  const files = indexNodeFilesFor(db);
+  for (const { from: previous, to: canonical } of renames) {
+    const from = `${previous.publisher}.${previous.name}`;
+    if (!(await files.hasExtension(from))) continue;
+    const remaining = await db.execute(
+      sql`SELECT 1 FROM ${s.storage_ordered_owners} WHERE extension_id = ${from} LIMIT 1`,
+    );
+    if (!remaining.rows.length) await files.moveExtension(from, `${canonical.publisher}.${canonical.name}`);
+  }
 };

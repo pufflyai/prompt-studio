@@ -1,6 +1,6 @@
 # What belongs in the database
 
-The local database (PGlite, `PSTDIO_HOME/pstdio.db`) holds structured data and references. Bytes live in files. PGlite has no autovacuum, every startup opens the whole database, and every storage owner's work reads it, so anything large or unbounded there slows the whole app and is hard to reclaim. Rule [0006.2.15](../../guidance/0006-engineering.md#2-system-design) states the rule; this page explains how to apply it.
+The local database (PGlite, `PSTDIO_HOME/pstdio.db`) holds structured data and references. Bytes live in files. PGlite has no autovacuum, every startup opens the whole database, and every storage owner's work reads it, so anything large or unbounded there slows the whole app and is hard to reclaim. Rule [0006.2.16](../../guidance/0006-engineering.md#2-system-design) states the rule; this page explains how to apply it.
 
 ## Belongs in the database
 

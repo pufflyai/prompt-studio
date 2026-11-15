@@ -7,7 +7,7 @@ import { type IndexNodeFiles, type IndexNodeKind, sortIndexChildren } from "./in
 export const orderedIndexBlobDocumentId = (id: string) => JSON.stringify(["ordered-index-blob", id]);
 
 /**
- * Encrypted index nodes for one owner, kept in files (rule 0006.2.15). Nodes are immutable:
+ * Encrypted index nodes for one owner, kept in files (rule 0006.2.16). Nodes are immutable:
  * a node's bytes and, once validated, its edges never change.
  */
 export const createOrderedManifestCache = (
@@ -18,6 +18,13 @@ export const createOrderedManifestCache = (
   remote: OrderedIndexBlobs,
 ) => {
   const saved = (id: string) => files.read(owner, kind, id);
+  // A cached copy that is not the authenticated length is damaged; drop it and use the relay's.
+  const verified = async (id: string, extent: number) => {
+    const cached = await saved(id);
+    if (!cached || cached.bytes.length === extent) return cached;
+    await files.remove(owner, kind, [id]);
+    return undefined;
+  };
   const storeBytes = async (id: string, bytes: Uint8Array) => {
     const previous = await saved(id);
     if (previous && !Buffer.from(previous.bytes).equals(bytes)) throw new Error("Cached encrypted node is immutable");
@@ -27,7 +34,7 @@ export const createOrderedManifestCache = (
     // Files need no write batching; callers keep their batch boundaries.
     batch: (run) => run(),
     async get(id, extent) {
-      const cached = await saved(id);
+      const cached = await verified(id, extent);
       const bytes = cached?.bytes ?? (await remote.get(id, extent));
       if (bytes.length !== extent) throw new Error("Cached manifest differs from authenticated extent");
       if (!cached) await storeBytes(id, bytes);
@@ -38,7 +45,12 @@ export const createOrderedManifestCache = (
       await remote.put(id, bytes, [...children].sort());
     },
     async remember(reference, children) {
-      const cached = await saved(reference.blobId);
+      let cached = await verified(reference.blobId, reference.byteLength);
+      // Cache eviction may remove a log node between its read and this call; the relay still has it.
+      if (!cached && kind === "logs") {
+        await storeBytes(reference.blobId, await remote.get(reference.blobId, reference.byteLength));
+        cached = await saved(reference.blobId);
+      }
       if (!cached || cached.bytes.length !== reference.byteLength)
         throw new Error("Cannot retain an unavailable manifest node");
       const ordered = sortIndexChildren(children);

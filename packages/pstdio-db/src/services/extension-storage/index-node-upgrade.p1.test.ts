@@ -141,3 +141,55 @@ test("opening an on-disk database moves its node rows into the folder beside it 
   await emptied.close();
   expect(await createIndexNodeFiles(`${path}-index-nodes`).list(records, "receipts")).toEqual([]);
 });
+
+test("a retried upgrade follows file edges to descendants that still only have rows, and records owed compaction first", async () => {
+  const { db, close } = await createDb({ path: ":memory:" });
+  try {
+    const { records } = await seed(db);
+    const files = createMemoryIndexNodeFiles();
+    // After a partial run, sync saved a root that exists only as a file and reuses a row-only node.
+    await db.update(storage_ordered_owners).set({
+      receipt_root: encodeOrderedJson({
+        version: 1,
+        root: { blobId: id("file-root"), byteLength: 4 },
+        published: null,
+        stateId: null,
+      }),
+    });
+    await files.write(records, "receipts", id("file-root"), { bytes: new Uint8Array(4), children: [reference("b")] });
+    const order: string[] = [];
+    await upgradeIndexNodesToFiles(
+      db,
+      files,
+      () => order.push("progress"),
+      async () => void order.push("owed"),
+    );
+    expect(order[0]).toBe("owed");
+    expect((await files.list(records, "receipts")).sort()).toEqual(["b", "file-root"].map(id).sort());
+    expect(await db.select().from(storage_documents).where(nodeRows)).toEqual([]);
+  } finally {
+    await close();
+  }
+});
+
+test("files left under a renamed extension's old id by a crash move on the next start", async () => {
+  const folder = await mkdtemp(join(tmpdir(), "index-node-rename-"));
+  folders.push(folder);
+  const path = join(folder, "pstdio.db");
+  const first = await createDb({ path });
+  const now = new Date().toISOString();
+  const workbenchId = crypto.randomUUID();
+  await first.db
+    .insert(projects)
+    .values({ id: workbenchId, name: "Rename", shorthand: "R", created_at: now, updated_at: now });
+  await first.close();
+  // The rename committed (no rows under the old id), then the process stopped before moving files.
+  const files = createIndexNodeFiles(`${path}-index-nodes`);
+  const old = { workbenchId, extensionId: "pstdio.pstdio-planner" };
+  await files.write(old, "receipts", id("root"), { bytes: new Uint8Array(4), children: [] });
+
+  const reopened = await createDb({ path });
+  await reopened.close();
+  expect(await files.list(old, "receipts")).toEqual([]);
+  expect(await files.list({ workbenchId, extensionId: "pstdio.planner" }, "receipts")).toEqual([id("root")]);
+});

@@ -21,7 +21,7 @@ import { type PgliteRetirementPhase, prepareCurrentPgliteHome } from "./pglite-c
 import { pgliteIdentity } from "./pglite-identity";
 import { acquirePgliteLock } from "./pglite-lock";
 import * as schema from "./schemas.pg";
-import { type DatabaseMaintenancePhase, maintainDatabase } from "./startup-maintenance";
+import { type DatabaseMaintenancePhase, invalidateMaintenance, maintainDatabase } from "./startup-maintenance";
 
 type EmbeddedFile = Blob & { name: string };
 // Bun's embedded file objects are runtime-specific; narrowing the contract keeps extraction testable
@@ -218,8 +218,11 @@ export const createDb = async (options?: {
     });
     // Remove node rows before renames copy owners' rows, and compact once after both.
     onPhase("database_index_nodes");
-    const movedNodes = await upgradeIndexNodesToFiles(db, indexNodes);
+    // A run that stops after deleting rows must still compact on the next start.
+    const owed = () => invalidateMaintenance(dbPath);
+    const movedNodes = await upgradeIndexNodesToFiles(db, indexNodes, undefined, owed);
     const renamed = await migrateExtensionIdentities(db, {
+      beforeChange: owed,
       onConflict: async (error) => {
         await db
           .update(schema.installed_extension_sources)
