@@ -1,4 +1,4 @@
-import { type Localizable, l10n } from "@pstdio/sdk/extensions";
+import { type KanbanRendererEnumOption, type Localizable, l10n } from "@pstdio/sdk/extensions";
 import type { KanbanRendererCreateRowConfig } from "@pstdio/ui/kanban-renderer";
 export const ticketCreateForm = {
   title: l10n("kanbanRenderers.tickets.createRow.title", "New ticket"),
@@ -25,11 +25,12 @@ export const ticketCreateForm = {
 } as const;
 export const localizeTicketFormValue = (value: Localizable, t: (key: string, fallback?: string) => string) =>
   typeof value === "string" ? value : t(value.$l10n, value.default);
-export const localizeTicketFormOption = <T extends { label: Localizable; note?: Localizable }>(
-  option: T,
+export const localizeTicketFormOption = (
+  option: KanbanRendererEnumOption,
   t: (key: string, fallback?: string) => string,
 ) => {
-  const { label, note, ...rest } = option;
+  // Filter and create-form choices use presentation values, not renderer navigation actions.
+  const { label, note, noteAction: _noteAction, contextMenuActions: _contextMenuActions, ...rest } = option;
   return {
     ...rest,
     label: localizeTicketFormValue(label, t),
