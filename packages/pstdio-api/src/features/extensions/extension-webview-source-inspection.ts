@@ -1,4 +1,10 @@
-import { inspectExtensionLoadKey, prepareExtensionRevision, readAcceptedRevision } from "pstdio-extensions";
+import {
+  getExtensionApiVersionError,
+  inspectExtensionLoadKey,
+  prepareExtensionRevision,
+  readAcceptedRevision,
+  readPackageManifestMetadata,
+} from "pstdio-extensions";
 import { hashRevisionSource } from "pstdio-extensions/revision-dependencies";
 import { runExtensionPreparation } from "./extension-preparation";
 import { type LoadedExtension, type LoadedExtensionSnapshot, loadExtensionSource } from "./extension-runtime";
@@ -33,7 +39,13 @@ const inspections = new Map<string, { id: string; loaded: LoadedExtension }>();
 // runtime here would both inspect unadopted callbacks and detach frontend acceptance
 // from the runtime revision that serving still uses.
 export const inspectWebviewSourceInWorker = async (input: { sourcePath: string }) => {
-  const revision = (await readAcceptedRevision(input.sourcePath)) ?? (await prepareExtensionRevision(input.sourcePath));
+  const accepted = await readAcceptedRevision(input.sourcePath);
+  if (!accepted) {
+    const { manifest } = readPackageManifestMetadata(input.sourcePath);
+    if (manifest && getExtensionApiVersionError(manifest.name, manifest.enginesPstdio))
+      return loadExtensionSource(input.sourcePath);
+  }
+  const revision = accepted ?? (await prepareExtensionRevision(input.sourcePath));
   const cached = inspections.get(input.sourcePath);
   if (cached?.id === revision.id) return cached.loaded;
   const loaded = JSON.parse(
