@@ -34,19 +34,25 @@ const eventPayload = (error: AutomationRunError | null) => {
 };
 
 // A run only ever moves queued → running → a final status, and the run row keeps the time of each step.
-// Events are read from those times, so cursors number the steps of one run: 1 queued, 2 running, 3 final.
+// Events are read from those times. A cursor is the step's time in milliseconds times four plus its step,
+// so it rises within a run and stays above the cursors the former event table issued.
+const eventCursor = (at: string, step: number) => Date.parse(at) * 4 + step;
+
 export const automationRunEvents = (run: typeof automation_runs.$inferSelect, after = 0) =>
   [
-    { cursor: 1, type: "queued", at: run.created_at, payload: {} },
-    { cursor: 2, type: "running", at: run.started_at, payload: {} },
+    { step: 1, type: "queued", at: run.created_at, payload: {} },
+    { step: 2, type: "running", at: run.started_at, payload: {} },
     {
-      cursor: 3,
+      step: 3,
       type: run.status,
       at: terminalStatuses.has(run.status) ? run.finished_at : null,
       payload: eventPayload(run.error_json),
     },
   ]
-    .filter((event): event is typeof event & { at: string } => event.at !== null && event.cursor > after)
+    .flatMap((event) =>
+      event.at === null ? [] : [{ ...event, at: event.at, cursor: eventCursor(event.at, event.step) }],
+    )
+    .filter((event) => event.cursor > after)
     .map((event) => ({
       cursor: event.cursor,
       run_id: run.id,

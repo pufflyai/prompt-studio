@@ -159,13 +159,18 @@ describe("automation run persistence", () => {
     await service.transitionRun(queued.id, { status: "failed", error });
 
     const events = await service.listRunEvents(queued.id);
-    expect(events.map((event) => [event.cursor, event.type])).toEqual([
-      [1, "queued"],
-      [2, "running"],
-      [3, "failed"],
-    ]);
+    expect(events.map((event) => event.type)).toEqual(["queued", "running", "failed"]);
+    expect(events.map((event) => event.cursor)).toEqual(events.map((event) => event.cursor).sort((a, b) => a - b));
+    expect(new Set(events.map((event) => event.cursor)).size).toBe(3);
     expect(events.at(-1)?.payload_json).toEqual({ error });
-    expect((await service.listRunEvents(queued.id, 2)).map((event) => event.type)).toEqual(["failed"]);
+    expect((await service.listRunEvents(queued.id, events[1]!.cursor)).map((event) => event.type)).toEqual(["failed"]);
+  });
+
+  test("returns a run's later steps to a reader holding a cursor from the former event table", async () => {
+    const queued = (await createRun("upgraded-reader")).run;
+    await service.transitionRun(queued.id, { status: "cancelled" });
+
+    expect((await service.listRunEvents(queued.id, 4_127)).map((event) => event.type)).toEqual(["queued", "cancelled"]);
   });
 
   test("bounds event payloads by UTF-8 bytes", async () => {

@@ -126,6 +126,7 @@ const createAppCloser = (input: {
   startupDone: Promise<void>;
   getStartupBackgroundDone: () => Promise<void>;
   notificationWakeTimer: ReturnType<typeof setInterval>;
+  stopDeadRowCleanup: () => Promise<void>;
   unsubscribeExtensionEvents: () => void;
   extensionRuntime: { dispose(): Promise<void>; stopPreparation?: () => Promise<void> };
   extensionScheduler: { dispose(): Promise<void> };
@@ -144,6 +145,9 @@ const createAppCloser = (input: {
   let closePromise: Promise<void> | null = null;
   return async () => {
     closePromise ??= (async () => {
+      // A vacuum holds PGlite's only thread, so database cleanup stops before any other part waits on it.
+      const deadRowCleanupStopped = traceShutdownPhase("dead_row_cleanup", () => input.stopDeadRowCleanup());
+      deadRowCleanupStopped.catch(() => {});
       const hooksStopped = traceShutdownPhase("session_hooks", () => input.closeSessionHooks());
       const installationsStopped = traceShutdownPhase("extension_installations", () =>
         input.extensionInstallations.dispose(),
@@ -184,6 +188,7 @@ const createAppCloser = (input: {
         } finally {
           try {
             await nativeDocumentsStopped;
+            await deadRowCleanupStopped;
           } finally {
             await traceShutdownPhase("database", () => input.closeDb());
           }
@@ -212,6 +217,7 @@ export const closeAppDatabase = async (
 export const startAppLifecycle = async (input: {
   deps: RouteDeps;
   notificationWakeTimer: ReturnType<typeof setInterval>;
+  stopDeadRowCleanup: () => Promise<void>;
   unsubscribeExtensionEvents: () => void;
   extensionRuntime: { dispose(): Promise<void>; stopPreparation?: () => Promise<void> };
   extensionStartup: Promise<void>;

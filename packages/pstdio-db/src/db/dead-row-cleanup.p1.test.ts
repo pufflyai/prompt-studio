@@ -1,4 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { vacuumDeadRows } from "./dead-row-cleanup";
 
@@ -21,6 +24,9 @@ describe("dead-row cleanup", () => {
       CREATE TABLE settled (id int PRIMARY KEY, body text);
       INSERT INTO rewritten SELECT g, 'a' FROM generate_series(1, 500) g;
       INSERT INTO settled SELECT g, 'a' FROM generate_series(1, 500) g;
+    `);
+    await db.exec("VACUUM");
+    await db.exec(`
       UPDATE rewritten SET body = 'b';
       UPDATE settled SET body = 'b' WHERE id <= 10;
     `);
@@ -49,5 +55,38 @@ describe("dead-row cleanup", () => {
     await publishStatistics(db);
 
     expect(await vacuumDeadRows(db)).toContain("documents");
+  });
+
+  test("judges a reopened database by its estimated rows, not the new session's empty counters", async () => {
+    const path = mkdtempSync(join(tmpdir(), "dead-row-cleanup-"));
+    try {
+      const first = new PGlite(path);
+      await first.exec(`
+        CREATE TABLE large (id int PRIMARY KEY, body text);
+        INSERT INTO large SELECT g, 'a' FROM generate_series(1, 2000) g;
+      `);
+      await first.exec("VACUUM large");
+      await first.close();
+
+      const reopened = new PGlite(path);
+      try {
+        await reopened.exec("UPDATE large SET body = 'b' WHERE id <= 60");
+        await publishStatistics(reopened);
+        expect(await vacuumDeadRows(reopened)).toEqual([]);
+
+        await reopened.exec("UPDATE large SET body = 'c' WHERE id <= 500");
+        await publishStatistics(reopened);
+        expect(await vacuumDeadRows(reopened)).toEqual(["large"]);
+      } finally {
+        await reopened.close();
+      }
+    } finally {
+      rmSync(path, { recursive: true, force: true });
+    }
+  });
+
+  test("vacuums nothing once stopped", async () => {
+    expect(await vacuumDeadRows(db, { stopped: () => true })).toEqual([]);
+    expect(await deadRows(db, "rewritten")).toBe(500);
   });
 });
