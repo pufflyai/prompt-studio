@@ -134,7 +134,7 @@ test("Cloud refresh preserves accepted content, reports account failures and ret
     pending = f.holdStatus();
     await act(async () => {
       mounted.values[0]!.refresh();
-      await turn();
+      await pending!.entered;
     });
     expect(mounted.values[0]!.data?.devices).toEqual([cloudDevice]);
     await act(async () => {
