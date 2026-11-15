@@ -33,10 +33,6 @@ export const createTicketCommand = defineCommand({
   title: "Create ticket",
   palette: [{ group: "Tickets", icon: TICKET_RESOURCE_ICON }],
   cli: {
-    globalAliases: [
-      ["tickets", "create"],
-      ["tickets", "add"],
-    ],
     examples: ["pstdio pstdio.pstdio-planner create-ticket --content '# Title' --status TODO --tags High"],
   },
   params: {

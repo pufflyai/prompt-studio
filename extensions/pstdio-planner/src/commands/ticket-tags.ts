@@ -20,7 +20,7 @@ import { plannerSchemaChanged, plannerTicketsChanged } from "../events";
 export const readTicketTagsCommand = defineCommand({
   id: "ticket-tag.read",
   title: "Read ticket tags",
-  cli: { globalAliases: [["tags", "list"]], examples: ["pstdio pstdio.pstdio-planner ticket-tag read"] },
+  cli: { examples: ["pstdio pstdio.pstdio-planner ticket-tag read"] },
   async run(ctx, _commandParams) {
     await migratePlannerStorage(ctx);
     return readTicketTags(ctx.storage);
@@ -32,7 +32,6 @@ export const createTicketTagCommand = defineCommand({
   mutating: true,
   title: "Create ticket tag",
   cli: {
-    globalAliases: [["tags", "create"]],
     examples: ["pstdio pstdio.pstdio-planner ticket-tag create --name Priority --type single_select"],
   },
   params: {
@@ -58,7 +57,6 @@ export const updateTicketTagCommand = defineCommand({
   mutating: true,
   title: "Update ticket tag",
   cli: {
-    globalAliases: [["tags", "update"]],
     examples: ["pstdio pstdio.pstdio-planner ticket-tag update --tag-id default-priority --sort-order 0"],
   },
   params: {
@@ -89,7 +87,6 @@ export const deleteTicketTagCommand = defineCommand({
   mutating: true,
   title: "Delete ticket tag",
   cli: {
-    globalAliases: [["tags", "delete"]],
     examples: ["pstdio pstdio.pstdio-planner ticket-tag delete --tag Priority"],
   },
   params: {
@@ -110,7 +107,6 @@ export const createTagOptionCommand = defineCommand({
   mutating: true,
   title: "Create tag option",
   cli: {
-    globalAliases: [["tags", "options", "create"]],
     examples: [
       "pstdio pstdio.pstdio-planner ticket-tag create-option --tag-id default-priority --name Urgent --color red",
     ],
@@ -143,7 +139,6 @@ export const updateTagOptionCommand = defineCommand({
   mutating: true,
   title: "Update tag option",
   cli: {
-    globalAliases: [["tags", "options", "update"]],
     examples: [
       "pstdio pstdio.pstdio-planner ticket-tag update-option --tag-id default-priority --option-id default-priority-urgent --color red",
     ],
@@ -180,7 +175,6 @@ export const deleteTagOptionCommand = defineCommand({
   mutating: true,
   title: "Delete tag option",
   cli: {
-    globalAliases: [["tags", "options", "delete"]],
     examples: [
       "pstdio pstdio.pstdio-planner ticket-tag delete-option --tag-id default-priority --option-id default-priority-urgent",
     ],
@@ -207,7 +201,6 @@ export const applyTicketTagDraftCommand = defineCommand({
   mutating: true,
   title: "Apply ticket tag draft",
   cli: {
-    globalAliases: [["tags", "apply-draft"]],
     examples: [
       "pstdio pstdio.pstdio-planner ticket-tag apply-draft --tag-id default-priority --options-to-update '[]' --options-to-create '[]' --option-ids-to-delete '[]'",
     ],

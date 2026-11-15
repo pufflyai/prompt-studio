@@ -210,7 +210,8 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
     // A valid Track cannot hide a missing module behind a schema error.
     expect(await moduleStatus(host, valid.id, "timeline")).toEqual({ status: 200, body: "" });
     browser = await chromium.launch(PROVISIONED_CHROMIUM);
-    const page = await (await browser.newContext()).newPage();
+    const context = await browser.newContext();
+    const page = await context.newPage();
     await page.addInitScript(() => {
       if (window.top === window) localStorage.setItem("onboarding-complete", "true");
     });
@@ -306,7 +307,7 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
     const trackOptions = [conflictData.product.id, conflictData.platform.id];
     await expect(
       conflicting.execute("ticket-tag.update", { tagId: conflictData.track.id, type: "single_select" }),
-    ).rejects.toThrow(new RegExp(`Track has more than one value on .*${conflictData.draft.shorthand}`));
+    ).rejects.toThrow(/Track has more than one value on /);
     await expectConflictsPreserved(conflicting.execute, conflictData.track.id, trackOptions);
 
     phase("repair start");
@@ -319,6 +320,11 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
         }),
       ),
     );
+    // Error messages show a bounded conflict page. After repairing it, a later
+    // draft must still prevent conversion; unloaded conflicts cannot be lost.
+    await expect(
+      conflicting.execute("ticket-tag.update", { tagId: conflictData.track.id, type: "single_select" }),
+    ).rejects.toThrow(new RegExp(`Track has more than one value on .*${conflictData.draft.shorthand}`));
     await conflicting.execute("update-ticket", {
       id: conflictData.draft.shorthand,
       tagIds: [conflictData.platform.id],

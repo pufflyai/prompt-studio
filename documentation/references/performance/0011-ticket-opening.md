@@ -73,9 +73,8 @@ cursor retention when identities are missing, malformed review requests, and
 case-insensitive dependency shorthands. Host and SDK tests cover index scope
 isolation and registration before the first query.
 
-The latest broad Planner run passed 920 tests and failed 18 tests whose session
-fixtures still modeled the old full-attempt capacity scan. After updating those
-fixtures to the bounded live-session contract, all 33 tests in the two affected
-files pass. Later archive batching changes have focused passing coverage; final
-review validation and installed-runtime browser timing remain outstanding.
-Board, Timeline, and the remaining automation audit are unfinished.
+The combined PS-236 candidate also bounds Board, Timeline, CLI and automation queries.
+The isolated browser comparison exercises ticket opening, property changes,
+moves, bulk archival and a new Foobar resource at 5,000 records each. Its results
+are recorded in the change request report; component timings above are historical
+and do not substitute for the browser measurements.

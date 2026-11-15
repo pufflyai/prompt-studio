@@ -27,7 +27,6 @@ export const updateTicketCommand = defineCommand({
   mutating: true,
   title: "Update ticket",
   cli: {
-    globalAliases: [["tickets", "update"]],
     examples: ["pstdio pstdio.pstdio-planner update-ticket --id PS-1 --status 'In Progress' --tags High --tags Bug"],
   },
   params: {

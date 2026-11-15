@@ -115,7 +115,9 @@ const fixture = async () => {
     subscribe(input: string | ClientStreamSubscription, listener: SessionStreamListener) {
       if (typeof input === "string" || !("text_editing" in input)) throw new Error("Expected a text subscription");
       if (input.text_editing.token !== `lease-${lease}`) {
-        queueMicrotask(() => listener.onError(Object.assign(new Error("Lease expired"), { code: "connection_expired" })));
+        queueMicrotask(() =>
+          listener.onError(Object.assign(new Error("Lease expired"), { code: "connection_expired" })),
+        );
         return { close() {} };
       }
       const controller = new AbortController();

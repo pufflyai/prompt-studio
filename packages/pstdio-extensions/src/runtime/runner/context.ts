@@ -16,6 +16,7 @@ import type {
 import { qualifyNavigationTarget, queryChangeEnvelopeSchema } from "pstdio-api-contracts";
 import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { ExtensionRuntime } from "../../types/runtime";
+import { canonicalNavigationOwners } from "../canonical-navigation-owners";
 import { boundedQueryAutomation, boundedQueryStorage, rejectUnboundedCollectionRead } from "./collection-query";
 import { type EventDispatcher, refId } from "./dispatch";
 import type { NavigationScope } from "./navigation-scope";

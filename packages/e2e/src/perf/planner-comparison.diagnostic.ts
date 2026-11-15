@@ -14,6 +14,7 @@ interface Connection {
   projectId: string;
   side: string;
   bounded: boolean;
+  fixture: { movingId: string; archiveIds: string[] };
 }
 const [connectionPath, outputPath] = process.argv.slice(2);
 if (!connectionPath || !outputPath) throw new Error("Pass an isolated connection file and evidence folder");
@@ -24,6 +25,7 @@ const output = resolve(outputPath);
 await mkdir(output, { recursive: true });
 const headers = { authorization: `Bearer ${connection.apiToken}`, "content-type": "application/json" };
 const origin = `http://127.0.0.1:${connection.apiPort}`;
+const plannerId = connection.side === "candidate" ? "pstdio.planner" : "pstdio.pstdio-planner";
 const request = async (path: string, body?: unknown, method = body === undefined ? "GET" : "POST") => {
   const response = await fetch(`${origin}/v1${path}`, {
     method,
@@ -35,26 +37,20 @@ const request = async (path: string, body?: unknown, method = body === undefined
 };
 const execute = async (command: string, params: Record<string, unknown> = {}) => {
   const result = await request(
-    `/projects/${connection.projectId}/extensions/commands/pstdio.pstdio-planner.command.${command}/execute`,
+    `/projects/${connection.projectId}/extensions/commands/${plannerId}.command.${command}/execute`,
     { params },
   );
   assert(result.outcome?.ok || result.outcome?.status === "success", `${command} failed`);
   return result.outcome.value;
 };
-const markers = await execute("demo-seed", { offset: 4950, part: 3 });
-const archiveIds: string[] = [];
-for (let index = 0; index < 205; index += 10) {
-  const page = await execute("demo-seed", { offset: Math.floor(index / 50) * 50, part: Math.floor((index % 50) / 10) });
-  archiveIds.push(
-    ...page.saved.filter((marker: { index: number }) => marker.index < 205).map((marker: { id: string }) => marker.id),
-  );
-}
+const { archiveIds } = connection.fixture;
+assert.equal(archiveIds.length, 205);
 await execute("unarchive-ticket", { id: archiveIds[0] });
-const moving = markers.saved[0];
+const moving = { id: connection.fixture.movingId };
 const ticket = await execute("get-ticket", { id: moving.id });
 assert(ticket.title.startsWith("Demo focus "), "Only synthetic comparison tickets may be changed");
 await execute("set-ticket-attribute", { rowId: moving.id, attributeId: "priority", value: [] });
-const boardPath = `/projects/${connection.projectId}/boards/pstdio.pstdio-planner.view.tickets`;
+const boardPath = `/projects/${connection.projectId}/boards/${plannerId}.view.tickets`;
 const views = await request(`${boardPath}/views`);
 const definition = {
   title: "Linked comparison 25 of 5,000",
@@ -81,7 +77,7 @@ if (archiveView)
   await request(`/projects/${connection.projectId}/board-views/${archiveView.id}`, archiveDefinition, "PATCH");
 else await request(`${boardPath}/views`, archiveDefinition);
 await request(`${boardPath}/views/default`, { viewId: view.id }, "PUT");
-const boardUrl = `${connection.dashboardUrl}projects/${connection.projectId}/extensions/pstdio.pstdio-planner/tickets`;
+const boardUrl = `${connection.dashboardUrl}projects/${connection.projectId}/extensions/${plannerId}/tickets`;
 const browser = await chromium.launch(PROVISIONED_CHROMIUM);
 let failurePage: Page | undefined;
 let archiving = false;

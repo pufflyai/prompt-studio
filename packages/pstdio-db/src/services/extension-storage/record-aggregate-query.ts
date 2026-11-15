@@ -3,6 +3,7 @@ import { aggregateOptions, compareAggregateGroups } from "pstdio-sync/records";
 import type { Json, StorageAggregateQuery, StorageRecordIndex } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { decodeProjectionValue, projectionKey } from "./record-projection-codec";
+import { createQueryFieldCache, queryFieldCacheSourceSql } from "./record-query-field-cache";
 import { type QuerySqlOwner, recordFieldSql } from "./record-query-sql";
 import { aggregateRecordStatistics } from "./record-statistics";
 
@@ -19,6 +20,13 @@ export const aggregateRecordQuery = async (
   const statistics = query.statistics
     ? { statistics: await aggregateRecordStatistics(tx, index, query, where, resolve, owner) }
     : {};
+  const original = index;
+  const cache = options.metrics.length > 1 ? createQueryFieldCache(index) : undefined;
+  if (cache) index = cache.index;
+  const source = () => {
+    if (!cache?.fields.size) return sql`storage_current_records WHERE ${where}`;
+    return queryFieldCacheSourceSql(cache, where, (name) => recordFieldSql(original, name, undefined, resolve, owner));
+  };
   const metrics = options.metrics.length
     ? sql`jsonb_build_object(${sql.join(
         options.metrics.flatMap(([name, metric]) => {
@@ -55,7 +63,7 @@ export const aggregateRecordQuery = async (
   const readTotals = async () =>
     (
       await tx.execute<AggregateRow>(sql`SELECT count(*)::text AS count, ${metrics} AS metrics, ${digest} AS fingerprint
-    FROM storage_current_records WHERE ${where}`)
+    FROM ${source()}`)
     ).rows[0];
   if (!options.groupBy.length) {
     const total = await readTotals();
@@ -83,7 +91,7 @@ export const aggregateRecordQuery = async (
     : sql`NULL::jsonb`;
   const grouped = await tx.execute<AggregateRow>(sql`WITH grouped AS (
     SELECT ${group} AS value, count(*)::text AS count, ${metrics} AS metrics
-    FROM storage_current_records WHERE ${where} GROUP BY 1
+    FROM ${source()} GROUP BY 1
   ) SELECT *, sum(count::numeric) OVER ()::text AS total_count, ${totalMetrics} AS total_metrics FROM grouped
     ${options.groupLimit === undefined ? sql`` : sql`LIMIT ${options.groupLimit + 1}`}`);
   if (options.groupLimit !== undefined && grouped.rows.length > options.groupLimit)

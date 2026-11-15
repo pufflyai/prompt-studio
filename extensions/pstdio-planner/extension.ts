@@ -20,7 +20,6 @@ import { findTicket } from "./src/data/resolve";
 import { plannerStorageIndexes } from "./src/data/storage-indexes";
 import { ticketsPageTarget } from "./src/data/ticket-page-target";
 import { ticketRefFromLifecyclePayload } from "./src/data/workspace-ticket-link";
-import { demoSeed } from "./src/demo-seed";
 import { autoBuildHooks, autoBuildSchedule } from "./src/hooks/auto-build";
 import { dependencyBlockerHooks } from "./src/hooks/dependency-blockers";
 import { gitMergedHook } from "./src/hooks/git-merged";
@@ -144,7 +143,6 @@ export default defineExtension({
   },
 
   commands: [
-    demoSeed,
     ...plannerCommands,
     ...plannerKeyboardCommands,
     ...Object.values(timelineCommands),

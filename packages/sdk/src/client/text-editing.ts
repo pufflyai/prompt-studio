@@ -105,7 +105,7 @@ export const createTextTransportClient = (
           if (release) throw textEditingFailure("session_closed", "This text connection was disposed");
           const token = info.token;
           const desired = active;
-        if (!force && acknowledged?.token === token && acknowledged.active === desired) return;
+          if (!force && acknowledged?.token === token && acknowledged.active === desired) return;
           try {
             await call<void>("active", { active: desired });
             acknowledged = { token, active: desired };

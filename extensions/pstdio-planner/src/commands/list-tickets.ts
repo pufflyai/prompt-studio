@@ -7,7 +7,6 @@ export const listTicketsCommand = defineCommand({
   id: "list-tickets",
   title: "List tickets",
   cli: {
-    globalAliases: [["tickets", "list"]],
     examples: ["pstdio pstdio.pstdio-planner list-tickets --status 'In Progress' --tags High"],
   },
   params: {

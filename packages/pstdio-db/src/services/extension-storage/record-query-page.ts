@@ -2,7 +2,7 @@ import { type SQL, sql } from "drizzle-orm";
 import { queryField } from "pstdio-sync/records";
 import type { Json, StoragePredicate, StorageRecordIndex } from "pstdio-sync-contracts";
 import { projectionKey } from "./record-projection-codec";
-import { recordCandidateSourceSql } from "./record-query-candidates";
+import { recordCandidateSourceSql, recordRelatedOrderCandidatesSql } from "./record-query-candidates";
 import { orderingPrefix, type QuerySqlOwner, recordFieldSql, sqlLiteral } from "./record-query-sql";
 import { hasTextOrder, orderedFieldPartsSql, orderedValuePartsSql } from "./record-text-order";
 
@@ -43,7 +43,9 @@ export const recordPageSql = (
   const sort = (index.orderBy ?? []).map(
     (sort) => sql`coalesce(${recordFieldSql(index, sort.field, undefined, resolve, owner)}, 'null'::jsonb)`,
   );
-  const candidates = recordCandidateSourceSql(index, predicate, where, limit, offset, resolve, owner);
+  const candidates =
+    recordCandidateSourceSql(index, predicate, where, limit, offset, resolve, owner) ??
+    recordRelatedOrderCandidatesSql(index, where, limit, offset, resolve, owner);
   return sql`
     SELECT record_id, revision,
       jsonb_build_object(${sql.join(selected, sql`, `)}) AS fields,

@@ -12,7 +12,6 @@ export const listTicketFilesCommand = defineCommand({
   id: "list-ticket-files",
   title: "List ticket files",
   cli: {
-    globalAliases: [["tickets", "files"]],
     examples: ["pstdio pstdio.pstdio-planner list-ticket-files --id PS-1"],
   },
   params: { id: params.text({ required: true }) },

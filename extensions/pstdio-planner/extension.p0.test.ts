@@ -129,40 +129,19 @@ describe("pstdio planner extension contributions", () => {
     expect(skill("create-pstdio-extension")).toBeUndefined();
     expect(skill("pstdio")).toBeUndefined();
   });
-  test("registers the link review ticket command", () => {
-    expect(command("link-review")).toMatchObject({
-      title: "Link review",
-      cli: { globalAliases: [["tickets", "link-review"]] },
-    });
-  });
-  test("exposes manual planner settings commands through the CLI", () => {
-    expect(command("ticket-status.update")?.cli).toEqual({
-      globalAliases: [["statuses", "update"]],
-      examples: ["pstdio pstdio.pstdio-planner ticket-status update --status-id backlog --label Backlog"],
-    });
-    expect(command("ticket-status.reorder")?.cli).toEqual({
-      globalAliases: [["statuses", "reorder"]],
-      examples: ['pstdio pstdio.pstdio-planner ticket-status reorder --status-ids \'["backlog","ready"]\''],
-    });
-    expect(command("ticket-tag.update")).toMatchObject({
-      cli: {
-        globalAliases: [["tags", "update"]],
-        examples: ["pstdio pstdio.pstdio-planner ticket-tag update --tag-id default-priority --sort-order 0"],
-      },
-      params: { sortOrder: { type: "number" } },
-    });
-    expect(command("ticket-tag.create-option")?.cli).toMatchObject({
-      globalAliases: [["tags", "options", "create"]],
-    });
-    expect(command("ticket-tag.update-option")?.cli).toMatchObject({
-      globalAliases: [["tags", "options", "update"]],
-    });
-    expect(command("ticket-tag.delete-option")?.cli).toMatchObject({
-      globalAliases: [["tags", "options", "delete"]],
-    });
-    expect(command("ticket-tag.apply-draft")?.cli).toMatchObject({
-      globalAliases: [["tags", "apply-draft"]],
-    });
+  test("exposes review and manual planner settings commands through the CLI", () => {
+    for (const id of [
+      "link-review",
+      "ticket-status.update",
+      "ticket-status.reorder",
+      "ticket-tag.update",
+      "ticket-tag.create-option",
+      "ticket-tag.update-option",
+      "ticket-tag.delete-option",
+      "ticket-tag.apply-draft",
+    ])
+      expect(command(id)?.cli).toBeTruthy();
+    expect(command("ticket-tag.update")?.params).toMatchObject({ sortOrder: { type: "number" } });
   });
   test("owns planner translation bundles and localizable contribution copy", () => {
     expect(extension.defaultLocale).toBe("en");

@@ -23,6 +23,7 @@ import {
   projectionStringTag,
   projectionSubstringBytes,
 } from "./record-projection-codec";
+import { cachedQueryFieldSql } from "./record-query-field-cache";
 import { recordHierarchySql } from "./record-query-hierarchy";
 import { recordLookupSql } from "./record-query-lookup";
 import { relatedRecordPredicateSql } from "./record-related-query";
@@ -66,6 +67,8 @@ export const recordFieldSql = (
   owner?: QuerySqlOwner,
 ) => {
   const field = queryField(index, name);
+  const cached = cachedQueryFieldSql(index, name, alias);
+  if (cached) return cached;
   if (field.format) {
     const cache = formatCacheFields.get(field);
     if (!cache) throw new Error("Date formatting cache is not prepared");

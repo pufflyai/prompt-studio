@@ -1,7 +1,7 @@
 import { type SQL, sql } from "drizzle-orm";
 import type { StorageRecordIndex } from "pstdio-sync-contracts";
-import { expressionLiteral } from "./query-expression-values";
-import { identityQueryText } from "./record-identity-query";
+import { expressionHex, expressionLiteral, expressionString } from "./query-expression-values";
+import { queryStringFromHex } from "./query-string-codec";
 
 /** Only the resulting label leaves SQL. Deep ancestry is never hydrated into an extension. */
 export const recordHierarchySql = (
@@ -31,5 +31,5 @@ export const recordHierarchySql = (
         AND ${scope("hierarchy_ancestor")} AND ${equal(hierarchy.idField, field(hierarchy.idField, "hierarchy_ancestor"), sql`lineage.parent`)}
       ORDER BY ${ancestor}.record_id COLLATE "C" LIMIT 1
     ) AS parent WHERE NOT (parent.record_id = ANY(lineage.visited))
-  ) SELECT to_jsonb(string_agg(${identityQueryText(sql`lineage.label`)}, ${expressionLiteral(hierarchy.separator)} ORDER BY lineage.depth DESC)) FROM lineage)`;
+  ) SELECT ${queryStringFromHex(sql`string_agg(${expressionHex(sql`lineage.label`)}, ${expressionLiteral(Buffer.from(hierarchy.separator, "utf16le").toString("hex"))} ORDER BY lineage.depth DESC) FILTER (WHERE ${expressionString(sql`lineage.label`)})`)} FROM lineage)`;
 };

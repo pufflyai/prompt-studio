@@ -19,12 +19,15 @@ export const dropRecordIndexes = async (db: Pick<DbClient, "select" | "execute">
   }
 };
 
+export const recordIndexName = async (owner: StorageOwner, index: StorageRecordIndex) =>
+  `storage_query_v2_${(await fingerprint({ owner: { ...owner }, definition: index as unknown as Json })).slice(0, 32)}`;
+
 export const installRecordIndex = async (
   tx: Pick<DbClient, "execute" | "insert">,
   owner: StorageOwner,
   index: StorageRecordIndex,
 ) => {
-  const name = `storage_query_v2_${(await fingerprint({ owner: { ...owner }, definition: index as unknown as Json })).slice(0, 32)}`;
+  const name = await recordIndexName(owner, index);
   const keys = formatCacheSource(index.name) ? [] : recordIndexKeys(index);
   if (keys.length) {
     await tx.execute(

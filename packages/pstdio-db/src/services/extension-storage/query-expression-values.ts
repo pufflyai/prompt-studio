@@ -19,8 +19,14 @@ export const expressionHex = (value: SQL) => {
       ELSE ${unitHex(sql`55296 + ((${code} - 65536) / 1024)`)} || ${unitHex(sql`56320 + ((${code} - 65536) % 1024)`)} END, '' ORDER BY units.position), '')
       FROM regexp_split_to_table(${text}, '') WITH ORDINALITY AS units(character, position)) END)`;
 };
-export const expressionComparable = (value: SQL) => sql`(CASE WHEN ${expressionString(value)}
-  THEN jsonb_build_object(${expressionLiteral(projectionStringTag)}, ${expressionHex(value)}) ELSE ${value} END)`;
+export const expressionComparable = (value: SQL) => {
+  const input = sql`comparable_input.value`;
+  // Related and computed inputs can be substantial queries. Bind once rather
+  // than expanding their SQL at every type/encoding check (including nested normalization).
+  return sql`(SELECT CASE WHEN ${expressionString(input)}
+    THEN jsonb_build_object(${expressionLiteral(projectionStringTag)}, ${expressionHex(input)}) ELSE ${input} END
+    FROM (SELECT ${value} AS value OFFSET 0) AS comparable_input)`;
+};
 
 export const expressionGet = (source: SQL, key: SQL, literal?: string | number) => {
   const objectKey =

@@ -61,7 +61,9 @@ export const relatedRecordPredicateSql = (
           if (join.op === "containedBy") matches = sql`${right} @> jsonb_build_array(${left})`;
           if (
             outer.identity?.shorthandField === join.sourceField ||
-            target.identity?.shorthandField === join.relatedField
+            target.identity?.shorthandField === join.relatedField ||
+            outer.hierarchy?.breadcrumbField === join.sourceField ||
+            target.hierarchy?.breadcrumbField === join.relatedField
           ) {
             matches = identityJoinSql(left, right, join.op);
           }

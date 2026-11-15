@@ -12,7 +12,6 @@ export const unarchiveTicketCommand = defineCommand({
   mutating: true,
   title: "Unarchive ticket",
   cli: {
-    globalAliases: [["tickets", "unarchive"]],
     examples: ["pstdio pstdio.pstdio-planner unarchive-ticket --id PS-1"],
   },
   menus: [

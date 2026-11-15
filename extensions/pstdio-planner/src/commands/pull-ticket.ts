@@ -52,7 +52,6 @@ export const pullTicketCommand = defineCommand({
   mutating: true,
   title: "Pull ticket",
   cli: {
-    globalAliases: [["tickets", "pull"]],
     examples: [
       "pstdio pstdio.pstdio-planner pull-ticket --id PS-1",
       "pstdio pstdio.pstdio-planner pull-ticket --force",

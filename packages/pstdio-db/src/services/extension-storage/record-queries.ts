@@ -31,7 +31,7 @@ import { prepareDateFormatIndexes, pruneDateFormatIndexes, retainDateFormatIndex
 import { dependencyOrderedPageSql } from "./record-dependency-order";
 import { derivedQueryChanges, rebuildDerivedQueryValues } from "./record-derived-fields";
 import { formatCachePrefix, formatCacheSource } from "./record-format-key";
-import { dropRecordIndexes, installRecordIndex } from "./record-index-lifecycle";
+import { dropRecordIndexes, installRecordIndex, recordIndexName } from "./record-index-lifecycle";
 import { decodeProjectionValue } from "./record-projection-codec";
 import { pageAfterSql, recordPageSql, recordScopeSql } from "./record-query-sql";
 import { loadRelatedQueryIndexes, relatedRecordPredicateSql } from "./record-related-query";
@@ -138,6 +138,11 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
       traceStorageQuery("indexes-start", definitions.map(({ name }) => name).join(","));
       validateIndexes(definitions);
       const publicDesired = orderDefinitions(structuredClone(definitions));
+      const names = new Map(
+        await Promise.all(
+          publicDesired.map(async (index) => [index.name, await recordIndexName(owner, index)] as const),
+        ),
+      );
       await db.transaction(async (tx) => {
         const previous = await tx.select().from(indexes).where(ownerWhere(indexes));
         const installed = orderDefinitions(
@@ -147,7 +152,7 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
         );
         // Compare under the same lock as installation: concurrent reloads can change derived sources.
         if (
-          previous.every((row) => formatCacheSource(row.name) || row.database_name.startsWith("storage_query_v2_")) &&
+          previous.every((row) => formatCacheSource(row.name) || row.database_name === names.get(row.name)) &&
           (await fingerprint(installed.filter((index) => !formatCacheSource(index.name)) as unknown as Json)) ===
             (await fingerprint(publicDesired as unknown as Json))
         )

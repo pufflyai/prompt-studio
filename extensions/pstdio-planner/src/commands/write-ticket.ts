@@ -22,7 +22,6 @@ export const writeTicketCommand = defineCommand({
   mutating: true,
   title: "Write draft ticket",
   cli: {
-    globalAliases: [["tickets", "write"]],
     examples: ["pstdio pstdio.pstdio-planner write-ticket --title 'Fix login' --status TODO --tags High"],
   },
   params: {
