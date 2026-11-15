@@ -106,3 +106,53 @@ test("upgrading repairs identities that arrived after the old query-metadata mar
     await f.close();
   }
 });
+
+test("pre-repair identity cursors restart instead of skipping newly eligible earlier records", async () => {
+  const f = await createExtensionStorageFixture();
+  const service = createDocumentStorageDBService(f.db);
+  try {
+    const owner = { workbenchId: f.projectAId, extensionId: "example.cursor-upgrade" };
+    const records = service.open({ owner }).records;
+    const core = service.open({ owner: { ...owner, extensionId: "pstdio" } }).records;
+    await records.defineIndexes([
+      {
+        name: "things",
+        fields: { id: { path: ["id"], type: "string" }, shorthand: { path: ["shorthand"], type: "string" } },
+        identity: { kind: "thing", idField: "id", shorthandField: "shorthand" },
+      },
+    ]);
+    for (const [value, id] of ["a", "c", "d"].entries()) {
+      await core.commit({
+        operationId: `allocate-${id}`,
+        edits: [
+          {
+            recordId: id,
+            replace: {
+              id,
+              extensionId: owner.extensionId,
+              kind: "thing",
+              prefix: "T",
+              value: value + 1,
+              aliases: [],
+            },
+          },
+        ],
+      });
+      await records.commit({ operationId: `create-${id}`, edits: [{ recordId: id, replace: { id } }] });
+    }
+    const first = await records.query({ index: "things", limit: 1 });
+    // Historical v1 cursors used owner/index/core revisions, without a query-metadata generation.
+    // An old page saw C first because A's newly allocated identity had no query metadata yet.
+    const legacy = JSON.parse(Buffer.from(first.cursor!, "base64").toString("utf8"));
+    legacy.revision = first.revision.split(":").slice(0, 3).join(":");
+    legacy.recordId = "c";
+    const cursor = Buffer.from(JSON.stringify(legacy)).toString("base64");
+    await expect(records.query({ index: "things", limit: 1, cursor })).rejects.toThrow("stale");
+    await expect(records.query({ index: "things", limit: 1, revision: legacy.revision })).rejects.toThrow("stale");
+    expect(first.records[0]?.recordId).toBe("a");
+    expect((await records.query({ index: "things", limit: 1, cursor: first.cursor! })).records[0]?.recordId).toBe("c");
+  } finally {
+    await service.flushStatistics();
+    await f.close();
+  }
+});

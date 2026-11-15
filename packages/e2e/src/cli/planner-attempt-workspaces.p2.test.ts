@@ -162,9 +162,11 @@ describe("planner attempt workspaces", () => {
         params: { id: ticket.shorthand },
       });
       expect(workspaces.outcome.ok).toBe(true);
-      expect(workspaces.outcome.value).toEqual([
-        expect.objectContaining({ id: value.workspace.id, workspace: `${ticket.shorthand}_A1`, active: false }),
-      ]);
+      expect(workspaces.outcome.value).toEqual({
+        items: [
+          expect.objectContaining({ id: value.workspace.id, workspace: `${ticket.shorthand}_A1`, active: false }),
+        ],
+      });
     },
     TEST_TIMEOUT,
   );

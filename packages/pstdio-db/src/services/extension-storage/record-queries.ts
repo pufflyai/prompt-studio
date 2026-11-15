@@ -36,7 +36,7 @@ import { decodeProjectionValue } from "./record-projection-codec";
 import { pageAfterSql, recordPageSql, recordScopeSql } from "./record-query-sql";
 import { loadRelatedQueryIndexes, relatedRecordPredicateSql } from "./record-related-query";
 import { prepareTextOrder } from "./record-text-order";
-import { prepareResourceQueryValues } from "./resource-query-values";
+import { identityQueryVersion, prepareResourceQueryValues } from "./resource-query-values";
 import type { StorageDiagnostics } from "./storage-diagnostics";
 
 type QueryRow = { record_id: string; revision: string; fields: Record<string, Json>; sort_values: Json[] };
@@ -119,7 +119,7 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
         .where(and(eq(projections.workbench_id, owner.workbenchId), eq(projections.extension_id, "pstdio")));
       if (core && core.current !== (core.projected ?? 0))
         throw new Error("Resource identity projection is stale; upgrade before reading");
-      identityRevision = `:${core?.projected ?? 0}`;
+      identityRevision = `:${core?.projected ?? 0}:${identityQueryVersion}`;
     }
     const projection = connection
       .select({ revision: projections.revision })

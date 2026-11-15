@@ -7,7 +7,8 @@ import { encodeProjectionValue } from "./record-projection-codec";
 
 export const identityQueryKey = "@pstdio/identity-query-v1";
 // Revisit missing metadata left by ordered identities allocated after the v1 backfill.
-const marker = '@pstdio/query-format/["@core-identities","v2","0"]';
+export const identityQueryVersion = "v2";
+const marker = `@pstdio/query-format/${JSON.stringify(["@core-identities", identityQueryVersion, "0"])}`;
 type Transaction = Pick<DbClient, "execute" | "select" | "insert">;
 
 export const writeResourceQueryValues = async (
