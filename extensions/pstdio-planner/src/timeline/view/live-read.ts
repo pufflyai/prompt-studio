@@ -17,6 +17,14 @@ export function createLiveRead<T>(read: () => Promise<T>, handlers: LiveReadHand
       void drain();
     }, 100);
   };
+  const readCurrent = async () => {
+    try {
+      const value = await read();
+      if (active && !pending) handlers.onValue(value);
+    } catch (error) {
+      if (active && !pending) handlers.onError(error);
+    }
+  };
   const drain = async () => {
     if (reading || !active) return;
     reading = true;
@@ -24,12 +32,7 @@ export function createLiveRead<T>(read: () => Promise<T>, handlers: LiveReadHand
       while (active && pending && !scheduled) {
         pending = false;
         immediate = false;
-        try {
-          const value = await read();
-          if (active && !pending) handlers.onValue(value);
-        } catch (error) {
-          if (active && !pending) handlers.onError(error);
-        }
+        await readCurrent();
         // A slow read must yield before another background read; its original
         // timer may otherwise expire while the read still owns the host queue.
         if (pending && !immediate) schedule();
