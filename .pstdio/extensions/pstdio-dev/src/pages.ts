@@ -58,6 +58,26 @@ const health = defineView({
     capabilities: ["commands.execute", "navigation.open"],
   },
 });
+const startup = defineView({
+  id: "startup-timeline",
+  title: "Startup timeline",
+  icon: "timer",
+  body: {
+    kind: "webview",
+    entry: packageAsset("./startup/main.tsx", import.meta.url),
+    capabilities: ["commands.execute"],
+  },
+});
+const storage = defineView({
+  id: "storage-report",
+  title: "Storage",
+  icon: "hard-drive",
+  body: {
+    kind: "webview",
+    entry: packageAsset("./storage/main.tsx", import.meta.url),
+    capabilities: ["commands.execute"],
+  },
+});
 const performancePage = definePage({
   id: "performance",
   title: "Performance",
@@ -124,6 +144,26 @@ const performanceTree = defineView({
             icon: health.icon,
             target: { kind: "page", page: healthPage.ref },
           },
+          {
+            id: "diagnostics",
+            label: l10n("navigation.diagnostics", "Diagnostics"),
+            icon: "stethoscope",
+            collapsible: true,
+            children: [
+              {
+                id: "startup-timeline",
+                label: startup.title,
+                icon: startup.icon,
+                target: { kind: "page", page: startupPage.ref },
+              },
+              {
+                id: "storage-report",
+                label: storage.title,
+                icon: storage.icon,
+                target: { kind: "page", page: storagePage.ref },
+              },
+            ],
+          },
         ],
       },
     ],
@@ -138,8 +178,26 @@ const healthPage = definePage({
   main: { kind: "view", view: health.ref, cardinality: "one", presentation: "page" },
   slots: [],
 });
-export const pages = [performancePage, comparePage, runsPage, healthPage];
-export const views = [trends, compare, runs, runOptions, performanceTree, health];
+const startupPage = definePage({
+  id: "startup-timeline",
+  title: startup.title,
+  icon: startup.icon,
+  path: "startup-timeline",
+  mode: workbenchModes.project,
+  main: { kind: "view", view: startup.ref, cardinality: "one", presentation: "page" },
+  slots: [],
+});
+const storagePage = definePage({
+  id: "storage-report",
+  title: storage.title,
+  icon: storage.icon,
+  path: "storage-report",
+  mode: workbenchModes.project,
+  main: { kind: "view", view: storage.ref, cardinality: "one", presentation: "page" },
+  slots: [],
+});
+export const pages = [performancePage, comparePage, runsPage, healthPage, startupPage, storagePage];
+export const views = [trends, compare, runs, runOptions, performanceTree, health, startup, storage];
 export const navigationTrees = [
   defineNavigationTree({
     id: "performance",

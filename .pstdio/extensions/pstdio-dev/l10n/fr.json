@@ -1,4 +1,5 @@
 {
   "navigation.performance": "Performances",
-  "views.newRun": "Nouvelle exécution"
+  "views.newRun": "Nouvelle exécution",
+  "navigation.diagnostics": "Diagnostics"
 }

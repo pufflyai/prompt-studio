@@ -10,6 +10,7 @@ import {
 } from "@pstdio/sdk/extensions";
 import { repairRemovedCommand, repairRemovedSchedule } from "./merge-queue-repair";
 import { benchmarkCommands, syncCommandRef } from "./src/benchmarks/commands";
+import { diagnosticsCommands } from "./src/diagnostics/commands";
 import { navigationTrees, pages, viewMenus, views } from "./src/pages";
 import { healthSync, releaseCommands } from "./src/releases/commands";
 
@@ -166,6 +167,7 @@ export default defineExtension({
     stopIsolationCommand,
     ...Object.values(benchmarkCommands),
     ...Object.values(releaseCommands),
+    ...Object.values(diagnosticsCommands),
     repairRemovedCommand,
   ],
   views,

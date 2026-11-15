@@ -22,6 +22,7 @@
 12. Fix a problem in the part of the system responsible for it. Do not build a large solution for a small local issue.
 13. Reconsider a design that needs a workaround flag, special case, duplicate data, or internal details exposed across layers.
 14. Tests must prove restored behavior and system rules rather than preserve a workaround.
+15. The database holds structured data and references only, never blobs. Store bytes such as file contents, transcripts, document snapshots, encrypted payloads, and cached remote data in file storage. Keep only their ID, hash, and size in the database. This includes caches and private bookkeeping rows.
 
 ## 3. Before writing code
 
