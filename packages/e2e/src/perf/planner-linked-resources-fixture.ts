@@ -82,7 +82,7 @@ export const installLinkedResourceFixture = async (
 
 export const seedLinkedResources = async (api: Api, projectId: string) => {
   const planner = <T>(command: string, params: Record<string, unknown> = {}) =>
-    api.execute<T>(projectId, "pstdio.pstdio-planner", command, params);
+    api.execute<T>(projectId, "pstdio.planner", command, params);
   const existing = await planner<LinkedTicket[]>("read-tickets");
   assert.equal(existing.length, 0, "Seed only a fresh isolated project; never add this workload to a working board");
   const statuses = await planner<{ statuses: { id: string }[] }>("ticket-status.read");
@@ -96,7 +96,7 @@ export const seedLinkedResources = async (api: Api, projectId: string) => {
       project_id: projectId,
       provider_id: "pstdio.worktree",
       params: { base: "HEAD" },
-      anchors: [{ type: "ticket", extensionId: "pstdio.pstdio-planner", id: ticket.id, label: ticket.shorthand }],
+      anchors: [{ type: "ticket", extensionId: "pstdio.planner", id: ticket.id, label: ticket.shorthand }],
     });
     await api.execute(projectId, linkedResourceOwner, "link", { ticket: ticket.id, number: String(number) });
     tickets.push({
@@ -110,7 +110,7 @@ export const seedLinkedResources = async (api: Api, projectId: string) => {
     if (number % 25 === 0)
       console.info(`Seeded ${number}/${linkedResourceCount} tickets with workspaces, PRs and builds`);
   }
-  const path = `/projects/${projectId}/boards/pstdio.pstdio-planner.view.tickets`;
+  const path = `/projects/${projectId}/boards/pstdio.planner.view.tickets`;
   const view = await api.request<{ id: string }>(`${path}/views`, {
     title: "200 linked tickets",
     settings: {

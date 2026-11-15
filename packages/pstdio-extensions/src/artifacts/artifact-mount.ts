@@ -2,7 +2,9 @@ import { open, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { join, posix, relative, resolve } from "node:path";
 import type { ArtifactFile, ArtifactMount, WorkspaceFilesMount } from "@pstdio/sdk/extensions";
 import { createReadBoundary } from "../runtime/read-boundary";
+import { isExtensionIdentityBackup } from "./extension-identity-backup";
 import { ARTIFACT_MOUNT_ROOT, extensionStorageDirectory } from "./extension-storage-path";
+import { createMigratedWorkspaceRoot } from "./migrated-workspace-root";
 import { normalizeArtifactMountPath } from "./path-normalization";
 import { createSafeFileRoot, normalizeMountRelativePath } from "./safe-file-root";
 import { createWorkspaceFileAccess, type WorkspaceFileAccess } from "./workspace-file-access";
@@ -54,6 +56,7 @@ const walkFiles = async (root: string, current: string, files: ArtifactFile[], s
   for (const entry of await readdir(current, { withFileTypes: true })) {
     signal?.throwIfAborted();
     const absolutePath = join(current, entry.name);
+    if (isExtensionIdentityBackup(absolutePath)) continue;
     if (entry.isDirectory()) {
       await walkFiles(root, absolutePath, files, signal);
       continue;
@@ -70,8 +73,11 @@ const walkFiles = async (root: string, current: string, files: ArtifactFile[], s
 };
 
 /** Build an ArtifactMount scoped to an absolute filesystem root, rejecting path escapes. */
-const createFileMountState = (mountRoot: string, { signal, onWrite }: FileMountOptions = {}) => {
-  const safeRoot = createSafeFileRoot(mountRoot);
+const createFileMountState = (
+  mountRoot: string,
+  { signal, onWrite }: FileMountOptions = {},
+  safeRoot = createSafeFileRoot(mountRoot),
+) => {
   const read = createReadBoundary(signal);
   // Report paths under the root as given, not the root's resolved real path, so they match what a
   // watcher on that root reports. A write through a linked file changes the file it points to.
@@ -128,7 +134,9 @@ const createFileMountState = (mountRoot: string, { signal, onWrite }: FileMountO
         if (!resolved) return [];
         const entries = await readdir(resolved.operationPath, { withFileTypes: true });
         return entries
-          .filter((entry) => entry.isDirectory())
+          .filter(
+            (entry) => entry.isDirectory() && !isExtensionIdentityBackup(join(resolved.operationPath, entry.name)),
+          )
           .map((entry) => toPosixPath(posix.join(resolved.relativePath, entry.name)))
           .sort((a, b) => a.localeCompare(b));
       }),
@@ -155,7 +163,11 @@ export const createWorkspaceFilesMount = (
   mountRoot: string,
   options: { syncStateRoot?: string; signal?: AbortSignal; onKeptFile?: (file: KeptWorkspaceFile) => void } = {},
 ): WorkspaceFilesMount & WorkspaceFileAccess => {
-  const { mount, safeRoot } = createFileMountState(mountRoot, { signal: options.signal });
+  const { mount, safeRoot } = createFileMountState(
+    mountRoot,
+    { signal: options.signal },
+    createMigratedWorkspaceRoot(mountRoot),
+  );
 
   const syncDir: WorkspaceFilesMount["syncDir"] = (dir, files) => {
     const { syncStateRoot } = options;

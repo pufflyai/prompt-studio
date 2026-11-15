@@ -21,7 +21,7 @@ Use notifications only for actionable items such as review, approval, merge, unb
 ```ts
 import { qualifyRef } from "@pstdio/sdk/extensions";
 
-const ticketPage = qualifyRef("pstdio.pstdio-planner", { kind: "page", id: "ticket" });
+const ticketPage = qualifyRef("pstdio.planner", { kind: "page", id: "ticket" });
 
 await ctx.notify.action({
   title: "Review PRD: PS-42",
@@ -38,7 +38,7 @@ await ctx.notify.action({
       target: { kind: "page", page: ticketPage, resource: { type: "ticket", id: "ticket-42" } },
       primary: true,
     },
-    { id: "approve", label: "Approve", kind: "command", command: "pstdio.pstdio-planner.command.approve-proposal", params: { ticket: "PS-42" } },
+    { id: "approve", label: "Approve", kind: "command", command: "pstdio.planner.command.approve-proposal", params: { ticket: "PS-42" } },
   ],
 });
 ```
@@ -86,4 +86,4 @@ Snoozing requires a timestamp; other statuses reject a snooze timestamp.
 remain available but deprecated in 0.44. Use the methods above before their 0.45 removal.
 Notification types come from `@pstdio/sdk/resources`.
 
-*Updated at: 2026-10-24*
+*Updated at: 2026-11-12*

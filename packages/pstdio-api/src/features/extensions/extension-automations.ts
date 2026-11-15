@@ -1,3 +1,4 @@
+import { historicalContributionId } from "pstdio-api-contracts/extension-host";
 import type { RuntimeScheduleRecord } from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "./deps";
 import { listDeviceAutomations } from "./device-automations";
@@ -12,13 +13,25 @@ type EnabledSourceLike = {
 // A user preference row always wins; without one the author's `disabled` flag is
 // the default, which makes automations enabled by default.
 export const isAutomationEnabled = (
-  schedule: Pick<RuntimeScheduleRecord, "id" | "disabled">,
+  schedule: Pick<RuntimeScheduleRecord, "id" | "disabled"> &
+    Partial<Pick<RuntimeScheduleRecord, "extensionId" | "localId">>,
   instanceId: string | undefined,
   preferences: AutomationPreferenceRow[],
 ) => {
-  const preference = instanceId
-    ? preferences.find((row) => row.extension_instance_id === instanceId && row.automation_id === schedule.id)
-    : undefined;
+  const previous =
+    schedule.extensionId && schedule.localId
+      ? historicalContributionId({ extensionId: schedule.extensionId, kind: "schedule", id: schedule.localId })
+      : undefined;
+  const matches = instanceId
+    ? preferences.filter(
+        (row) =>
+          row.extension_instance_id === instanceId &&
+          (row.automation_id === schedule.id || row.automation_id === previous),
+      )
+    : [];
+  if (matches.length > 1 && new Set(matches.map((row) => row.enabled)).size > 1)
+    throw new Error(`Conflicting automation preferences: ${schedule.id}`);
+  const preference = matches[0];
   return preference ? preference.enabled : !schedule.disabled;
 };
 

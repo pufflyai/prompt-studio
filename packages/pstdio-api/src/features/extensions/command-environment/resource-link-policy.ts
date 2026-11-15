@@ -1,3 +1,4 @@
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { ResourceAnchor, ResourceRef } from "pstdio-api-contracts/extension-kernel";
 import { legacyResourceOwner } from "pstdio-db";
 import { createReadBoundary } from "pstdio-extensions";
@@ -34,7 +35,7 @@ export const canonicalResource = async (
   assertProject(resource, input.projectId);
   const { runtime } = await read(() => deps.extensionRuntimeCatalog.get(input.projectId));
   const owners = runtime.resourceKinds.filter((kind) => kind.localId === resource.type);
-  let extensionId = resource.extensionId;
+  let extensionId = resource.extensionId ? canonicalExtensionId(resource.extensionId) : undefined;
   if (!extensionId && hostKinds.has(resource.type)) extensionId = "pstdio";
   if (!extensionId && owners.some((kind) => kind.extensionId === input.extensionId)) extensionId = input.extensionId;
   if (!extensionId && owners.length === 1) extensionId = owners[0]!.extensionId;
@@ -75,7 +76,7 @@ export const createAnchorPolicy = async (deps: ExtensionsRouteDeps, projectId: s
     if (!owner.instance.enabled) throw new Error(`Resource owner ${endpoint.extensionId} is disabled.`);
     const validator = kindOf(endpoint)?.contribution.validateAnchors;
     if (!validator) return;
-    const ownerId = validator.extensionId ?? endpoint.extensionId;
+    const ownerId = canonicalExtensionId(validator.extensionId ?? endpoint.extensionId!);
     if (ownerId !== endpoint.extensionId) throw new Error("An anchor validator must belong to the resource owner.");
     await runAnchorValidator(deps, projectId, `${ownerId}.command.${validator.id}`, endpoint, {
       operation,

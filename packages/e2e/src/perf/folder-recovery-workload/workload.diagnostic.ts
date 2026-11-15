@@ -47,7 +47,7 @@ const totalBytes = workload.reduce((sum, file) => sum + file.bytes, 0);
 // capture after the laptop's files are removed. The rest is headroom for other work on the machine.
 const requiredFreeBytes = 5 * totalBytes;
 
-const output = resolve(process.argv[2] ?? ".pstdio/extension-storage/pstdio.pstdio-artifacts/folder-recovery-workload");
+const output = resolve(process.argv[2] ?? ".pstdio/extension-storage/pstdio.artifacts/folder-recovery-workload");
 const root = resolve(import.meta.dir, "../../../../..");
 await mkdir(output, { recursive: true });
 const logs: string[] = [];

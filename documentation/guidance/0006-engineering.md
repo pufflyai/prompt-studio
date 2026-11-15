@@ -59,7 +59,7 @@
 1. Keep all extension-owned project files under `.pstdio/extension-storage/<publisher>.<name>/`: configuration, caches, drafts, prototypes, screenshots, ticket and report checkouts, and migration backups.
 2. Use `ctx.extensionFiles` or declared artifact mounts for files and `ctx.storage` for structured project data. Both file APIs stay inside the full extension-ID directory.
 3. Prompt Studio 0.46 does not read the older `<name>/` or `.publishers/<publisher>/` folders.
-4. Keep artifact drafts and prototypes under `.pstdio/extension-storage/pstdio.pstdio-artifacts/`. Put report evidence under the `filesPath` returned by `pst reports write`.
+4. Keep artifact drafts and prototypes under `.pstdio/extension-storage/pstdio.artifacts/`. Put report evidence under the `filesPath` returned by `pst pstdio.reports reports write`.
 5. Do not create extension data folders directly under `.pstdio/` or keep runtime data in extension source folders. `.pstdio/extensions/` holds extension source.
 6. Files an extension deliberately edits as project source, such as icon fonts, stay at their configured paths. The extension's own settings and working files stay in extension storage.
 
