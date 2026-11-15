@@ -135,7 +135,7 @@ harnessTest(
       await dialog.getByRole("button", { name: "main", exact: true }).click();
       await dialog.getByRole("menuitem", { name: "feature/base", exact: true }).click();
       await dialog.getByRole("button", { name: "Create workspace", exact: true }).click();
-      await expect(page).toHaveURL(/extensions\/pstdio.pstdio-workspaces\/workspace\?resource=/);
+      await expect(page).toHaveURL(/extensions\/pstdio.workspaces\/workspace\?resource=/);
       const workspaces = await (await request.get(`${uiOrigin}/v1/workspaces?project_id=${projectId}`)).json();
       const workspace = workspaces.find((item: { is_default: boolean }) => !item.is_default);
       expect(workspace).toMatchObject({
