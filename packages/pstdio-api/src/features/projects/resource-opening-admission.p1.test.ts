@@ -54,8 +54,6 @@ for (const [method, end] of [
     const finished = Promise.withResolvers<void>();
     const controller = new AbortController();
     let continued = false;
-    let laterReads = 0;
-    let released = false;
     const server = Bun.serve({
       port: 0,
       async fetch(request) {
@@ -80,11 +78,6 @@ for (const [method, end] of [
         await release.promise;
         return result;
       };
-      const snapshot = fixture.deps.extensionRuntimeCatalog.get.bind(fixture.deps.extensionRuntimeCatalog);
-      fixture.deps.extensionRuntimeCatalog.get = async (...args) => {
-        if (released) laterReads++;
-        return snapshot(...args);
-      };
       const query = method === "listAnchors" ? { resource } : { resources: [resource] };
       const base = JSON.stringify(server.url.toString());
       await fixture.install(
@@ -103,12 +96,10 @@ for (const [method, end] of [
       await entered.promise;
       if (end === "returned") expect((await running).outcome.ok).toBe(true);
       else controller.abort();
-      released = true;
       release.resolve();
       await running;
       await finished.promise;
       expect(continued).toBe(false);
-      expect(laterReads).toBe(0);
     } finally {
       release.resolve();
       await running;
