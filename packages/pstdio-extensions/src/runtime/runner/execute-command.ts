@@ -275,6 +275,7 @@ const executePrivateHandler = async (
       scope,
       input.navigationScope,
     );
+    ctx.activity = env.activityForInvocation?.(input.source) ?? ctx.activity;
     const value = await handler.handler(ctx, params);
     validateCollectionQueryResult(handler.collectionQuery, params, value);
     const elapsedMs = Date.now() - start;

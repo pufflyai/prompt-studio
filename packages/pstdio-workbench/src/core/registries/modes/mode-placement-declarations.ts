@@ -8,7 +8,8 @@ import type { WorkbenchViewRegistry } from "../views/view-registry";
 import type { WorkbenchModePlacementContribution } from "./mode-placement-registry";
 import { pageSlotReferenceKey } from "./placement-replacement";
 
-export const placementRefKey = (ref: PlacementRef) => JSON.stringify([ref.extensionId, ref.id]);
+export const placementRefKey = (ref: PlacementRef) =>
+  JSON.stringify([ref.extensionId && canonicalExtensionId(ref.extensionId), ref.id]);
 
 export const validatePlacement = (input: {
   placement: WorkbenchModePlacementContribution;
@@ -51,3 +52,5 @@ export const copyPlacement = (placement: WorkbenchModePlacementContribution) => 
   ...(placement.addableIn ? { addableIn: [...placement.addableIn] } : {}),
   ...(placement.movableTo ? { movableTo: [...placement.movableTo] } : {}),
 });
+
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";

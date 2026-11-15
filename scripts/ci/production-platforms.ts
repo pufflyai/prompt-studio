@@ -21,42 +21,48 @@ export const publishedDesktopTargets = (channel: string) =>
   productionDesktopPlatforms(channel).map((row) => row.target);
 
 export const productionDesktopCheckPlatforms = (channel: string) =>
-  productionDesktopPlatforms(channel).flatMap((row) => {
-    const shards = row.target === "darwin-x64" ? 2 : 1;
+  [
+    ...productionDesktopPlatforms(channel),
+    ...(channel === "nightly" ? [{ target: "win32-x64", os: "windows-2025", platform: "win32", arch: "x64" }] : []),
+  ].flatMap((row) => {
+    const shards = 1;
     return Array.from({ length: shards }, (_, index) => ({ ...row, shard: index + 1, shards }));
   });
 
-// P2 packaged CLI files test OS-independent feature workflows, so one host per OS runs them.
-// Install, native process and asset checks are P1 and run on every host.
-const featureHosts = new Set(["cli-linux-x64", "cli-darwin-arm64", "cli-win-x64"]);
+// Artifact ownership is independent of priority. Linux shared CLI behavior has its own plan.
 
 export const productionToolchainPlatforms = (channel: string) =>
-  forChannel(
-    channel,
-    [
-      { os: "ubuntu-24.04", platform_pkg: "cli-linux-x64" },
-      { os: "ubuntu-24.04-arm", platform_pkg: "cli-linux-arm64" },
-      { os: "macos-15", platform_pkg: "cli-darwin-arm64" },
-      { os: "macos-15-intel", platform_pkg: "cli-darwin-x64" },
-      { os: "windows-latest", platform_pkg: "cli-win-x64" },
-      { os: "windows-11-arm", platform_pkg: "cli-win-arm64" },
-    ],
-    (row) => row.platform_pkg,
-  ).flatMap((row) => {
-    const shards = row.platform_pkg.startsWith("cli-win-") || row.platform_pkg === "cli-darwin-x64" ? 2 : 1;
-    const priorities = featureHosts.has(row.platform_pkg) ? "P0,P1,P2" : "P0,P1";
-    return Array.from({ length: shards }, (_, index) => ({ ...row, priorities, shard: index + 1, shards }));
-  });
+  [
+    { os: "ubuntu-24.04", platform_pkg: "cli-linux-x64" },
+    { os: "ubuntu-24.04-arm", platform_pkg: "cli-linux-arm64" },
+    { os: "macos-15", platform_pkg: "cli-darwin-arm64" },
+    { os: "macos-15-intel", platform_pkg: "cli-darwin-x64" },
+    { os: "windows-latest", platform_pkg: "cli-win-x64" },
+    { os: "windows-11-arm", platform_pkg: "cli-win-arm64" },
+  ]
+    .filter(
+      (row) => channel !== "nightly" || ["cli-linux-x64", "cli-darwin-arm64", "cli-win-x64"].includes(row.platform_pkg),
+    )
+    .flatMap((row) => {
+      const shards = 1;
+      const priorities = "P0,P1,P2";
+      return Array.from({ length: shards }, (_, index) => ({ ...row, priorities, shard: index + 1, shards }));
+    });
 
-export const productionPerformanceWorkloads = (channel: string) => [
-  ...["storage", "runtime"].flatMap((family) =>
-    forChannel(channel, ["ubuntu-24.04", "macos-15", "windows-2025"], (os) => os).map((os) => ({ family, os })),
-  ),
-  ...["browser", "relay", "navigation", "planner"].map((family) => ({ family, os: "ubuntu-24.04" })),
-];
+// Benchmark ownership is the same on nightly and stable, independent of published installers.
+export const productionBenchmarkPlatforms = () =>
+  productionDesktopPlatforms("stable").filter((row) => ["linux-x64", "darwin-arm64", "win32-x64"].includes(row.target));
 
-export const quarantineBunHosts = (channel: string) =>
-  forChannel(channel, ["ubuntu-latest", "windows-latest", "macos-15"], (os) => os);
+export const productionPerformanceWorkloads = (_channel: string) =>
+  ["storage", "planner"].flatMap((family) =>
+    productionBenchmarkPlatforms().map((host) => ({
+      ...host,
+      family,
+      platform_pkg: `cli-${host.target.replace("win32", "win")}`,
+    })),
+  );
+
+export const quarantineBunHosts = (_channel: string) => ["ubuntu-latest", "windows-latest", "macos-15"];
 
 const harnessPackages = {
   "harness-codex": "@openai/codex",
@@ -78,6 +84,6 @@ if (import.meta.main) {
   const channel = process.env.CHANNEL!;
   appendFileSync(
     process.env.GITHUB_OUTPUT!,
-    `desktop_matrix=${JSON.stringify(productionDesktopPlatforms(channel))}\nperformance_matrix=${JSON.stringify(productionPerformanceWorkloads(channel))}\n`,
+    `desktop_matrix=${JSON.stringify(productionDesktopPlatforms(channel))}\nbenchmark_desktop_matrix=${JSON.stringify(productionBenchmarkPlatforms())}\nperformance_matrix=${JSON.stringify(productionPerformanceWorkloads(channel))}\n`,
   );
 }

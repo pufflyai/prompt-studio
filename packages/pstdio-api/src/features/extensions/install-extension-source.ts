@@ -25,6 +25,7 @@ import type {
   InstallExtensionSourceInput,
   InstalledExtensionSource,
 } from "./install-extension-source-types";
+import { installedIdentityPath } from "./installed-identity-path";
 import { prepareInstallDependencies } from "./prepare-extension-dependencies";
 import { ExtensionAlreadyInstalledError, promotePreparedSource } from "./promote-extension-source";
 import { validateExtensionWebviews } from "./validate-extension-webviews";
@@ -307,7 +308,11 @@ export const installExtensionSource = async (input: InstallExtensionSourceInput)
       installName === sourceScope(resolvedSource.path, input.allowUnsupportedApiVersion === true).manifest.id
         ? extensionStorageDirectory(installName)
         : installName;
-    const targetPath = join(extensionsRoot, directoryName);
+    const targetPath = installedIdentityPath(
+      extensionsRoot,
+      directoryName,
+      sourceScope(resolvedSource.path, input.allowUnsupportedApiVersion === true).manifest.id,
+    );
     const targetExists = existsSync(targetPath);
     const inPlace = targetExists && isSameDirectory(resolvedSource.path, targetPath);
     if (!inPlace) assertCanCopy(resolvedSource.path, targetPath);

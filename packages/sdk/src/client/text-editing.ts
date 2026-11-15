@@ -97,7 +97,7 @@ export const createTextTransportClient = (
         throw textEditingFailure("connection_reset", "The text host connection was renewed", true);
       }
     };
-    const syncParticipation = () => {
+    const syncParticipation = (force = false) => {
       // Every caller owns its queued work, including a change arriving as the previous request settles.
       participation = participation
         .catch(() => {})
@@ -105,7 +105,7 @@ export const createTextTransportClient = (
           if (release) throw textEditingFailure("session_closed", "This text connection was disposed");
           const token = info.token;
           const desired = active;
-          if (acknowledged?.token === token && acknowledged.active === desired) return;
+        if (!force && acknowledged?.token === token && acknowledged.active === desired) return;
           try {
             await call<void>("active", { active: desired });
             acknowledged = { token, active: desired };
@@ -122,10 +122,11 @@ export const createTextTransportClient = (
       watch: async (input) => {
         const abort = new AbortController();
         const signal = AbortSignal.any([input.signal, abort.signal]);
+        let token = info.token;
         streams.add(abort);
         try {
           await syncParticipation();
-          const token = info.token;
+          token = info.token;
           await watchTextConnection(
             transport,
             { project_id: projectId, token },
@@ -136,6 +137,9 @@ export const createTextTransportClient = (
               },
             },
           );
+        } catch (error) {
+          if (acknowledged?.token === token) acknowledged = undefined;
+          throw error;
         } finally {
           streams.delete(abort);
         }
@@ -182,7 +186,7 @@ export const createTextTransportClient = (
         createTextConnectionGuest(connection, {
           generation: () => generation,
           closed: () => release !== undefined,
-          ensure: syncParticipation,
+          ensure: () => syncParticipation(true),
         }),
     };
     return connection;

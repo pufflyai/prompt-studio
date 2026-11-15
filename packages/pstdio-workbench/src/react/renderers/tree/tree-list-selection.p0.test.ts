@@ -3,7 +3,7 @@ import type { NavigationTarget, TreeViewSection } from "../../../core";
 import { resolveTreeListSelection } from "./tree-list-adapter";
 
 test("Files selects only the active document within its workspace, and none before opening a file", () => {
-  const page = { kind: "page", extensionId: "pstdio.pstdio-workspaces", id: "files" } as const;
+  const page = { kind: "page", extensionId: "pstdio.workspaces", id: "files" } as const;
   const resource = { type: "workspace", id: "workspace" };
   const sections = [
     {

@@ -14,6 +14,7 @@ import type {
   Struct,
 } from "@pstdio/sdk/extensions";
 import { qualifyNavigationTarget, queryChangeEnvelopeSchema } from "pstdio-api-contracts";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { ExtensionRuntime } from "../../types/runtime";
 import { boundedQueryAutomation, boundedQueryStorage, rejectUnboundedCollectionRead } from "./collection-query";
 import { type EventDispatcher, refId } from "./dispatch";
@@ -112,10 +113,22 @@ const unavailableViewsApi: ExtensionViewsApi = {
   setDefault: unavailableViews,
 };
 
-const buildEventsApi = (dispatcher: EventDispatcher, origin: BuildEnvironmentInput): ExtensionEventsApi => ({
+const buildEventsApi = (
+  dispatcher: EventDispatcher,
+  origin: BuildEnvironmentInput,
+  runtime: ExtensionRuntime,
+): ExtensionEventsApi => ({
   emit: async (event, payload, options) =>
     dispatcher.dispatch(
-      refId(event, origin.extensionId),
+      refId(
+        typeof event !== "string" &&
+          runtime.extensions.some(
+            (provider) => provider.id === canonicalExtensionId(event.extensionId ?? origin.extensionId),
+          )
+          ? { ...event, extensionId: canonicalExtensionId(event.extensionId ?? origin.extensionId) }
+          : event,
+        origin.extensionId,
+      ),
       payload as Struct,
       origin,
       options?.refresh ? queryChangeEnvelopeSchema.parse(options.refresh) : undefined,
@@ -163,6 +176,7 @@ export const createContextFactory = (
   dispatcher: EventDispatcher,
   createLogger: (extensionId: string) => ExtensionLoggerApi,
   createExecute: (origin: NestedExecuteOrigin) => CommandHelpersApi["execute"],
+  runtime: ExtensionRuntime,
 ): ContextFactory => ({
   buildExtensionContext(env, ids, depth, scope, navigationScope) {
     const hostApis: ScopedHostApis = scope ? env.withScope(scope) : env;
@@ -188,7 +202,10 @@ export const createContextFactory = (
       views: env.views ?? unavailableViewsApi,
       navigation: {
         open: (target) => {
-          if (navigationScope) navigationScope.open(qualifyNavigationTarget(target, ids.extensionId, ids.projectId));
+          if (navigationScope)
+            navigationScope.open(
+              canonicalNavigationOwners(qualifyNavigationTarget(target, ids.extensionId, ids.projectId)),
+            );
         },
       },
       artifacts: hostApis.artifacts,
@@ -204,7 +221,7 @@ export const createContextFactory = (
         ? { ...hostApis.workspaces, list: rejectUnboundedCollectionRead }
         : hostApis.workspaces,
       commands: buildCommandsApi(createExecute, origin),
-      events: buildEventsApi(dispatcher, ids),
+      events: buildEventsApi(dispatcher, ids, runtime),
       activity: env.activity,
       notify: env.notify,
       automation: scope?.collectionQuery ? boundedQueryAutomation(env.automation) : env.automation,
@@ -214,7 +231,7 @@ export const createContextFactory = (
       terminal: hostApis.terminal,
       logger: createLogger(ids.extensionId),
       settings: hostApis.settings,
-      account: env.account ?? unavailableAccount,
+      account: hostApis.account ?? unavailableAccount,
     };
   },
 
@@ -246,6 +263,7 @@ export const createContextFactory = (
     );
     return {
       ...base,
+      activity: env.activityForInvocation?.(source) ?? base.activity,
       stream: { write: async () => {} },
       commandId,
       invocationId,

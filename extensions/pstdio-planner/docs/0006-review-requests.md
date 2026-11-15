@@ -8,7 +8,7 @@ Use descriptive Markdown links to relevant documents or exact sections, such as 
 
 Missing resources, credentials, access, reproduction details and non-decision actions use **Blocked** and a specific blocked reason: what is missing and what allows work to continue. Clear the reason when resolved. Dependency waiting belongs in dependency links. Routine assumptions, risk checklists and handing in work do not by themselves need a request.
 
-Planner owns the saved requests and answers used by Auto Build, card and milestone modals, and the ticket page. The numbered **Needs attention** bubble counts open or unreadable requests. “Review” here means a person's answer. Code reviews use `run-review` and `submit-review`; see [Attempts](0002-attempts.md).
+Planner owns the saved requests and answers used by Auto Build, card and milestone modals, and the ticket page. Each request card shows its original creation date and time beneath the title, in your local time zone. This timestamp stays visible after the request is answered or cancelled. The numbered **Needs attention** bubble counts open or unreadable requests. “Review” here means a person's answer. Code reviews use `run-review` and `submit-review`; see [Attempts](0002-attempts.md).
 
 Opening a ticket from the Tickets board goes directly to its content, even when it has pending requests. Navigation does not wait for a review-request check. Use the **Needs attention** bubble or the ticket sidebar entry to read and answer requests.
 

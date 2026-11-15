@@ -45,6 +45,7 @@ export type {
 export { NotificationCenter } from "@/components/notification-center";
 export * from "@/components/overlays";
 export * from "@/components/primitives";
+export { LazyRichMessage } from "@/components/rich-text/lazy-rich-message";
 export { Sidenav } from "@/components/sidenav/sidenav";
 export { useSidenavStore } from "@/components/sidenav/sidenav.store";
 export type { SidenavProps } from "@/components/sidenav/sidenav.types";
@@ -81,6 +82,7 @@ export { getTreeListOrderStore, useTreeListOrderStore } from "@/components/tree-
 export { applyTreeListOrder } from "@/components/tree-list/tree-list-order-filter";
 export type { TreeListPagination } from "@/components/tree-list/tree-list-page-boundary";
 export type { TreeListMove, TreeListMoveEndpoint, TreeListMovePolicy } from "@/components/tree-list/tree-list-reorder";
+export { useTreeListRowVisibility } from "@/components/tree-list/tree-list-reveal";
 export type { VisibilityOverride } from "@/components/tree-list/tree-list-visibility.store";
 export {
   getTreeListVisibilityStore,

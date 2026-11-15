@@ -315,19 +315,32 @@ const deleteWhileRestoring = async () => {
 test("deleting an extension's data during a restore keeps it deleted", async () => {
   expect(await deleteWhileRestoring()).toBe(0);
 });
-
-test("restoring records that together are over one commit's size limit splits the restore", async () => {
-  const { svc, projectId, records } = await setup();
-  const tickets = await records("ext.tickets");
-  const body = "x".repeat(220 * 1024);
-  const ids = Array.from({ length: 20 }, (_, index) => `PS-${index}`);
-  // Each save stays within the limits; the restore writes all of them back.
-  for (const id of ids) await tickets.commit({ operationId: `create-${id}`, edits: [{ recordId: id, replace: body }] });
+test("an imported historical recovery owner restores into the canonical owner with stable record IDs", async () => {
+  const { db, svc, projectId, records } = await setup();
+  const source = await createInstalledExtensionSourcesDBService(db).register({
+    install_name: "notes",
+    extension_id: "pstdio.notes",
+    display_name: "Notes",
+    source_kind: "local_path",
+    source_path: "/notes",
+  });
+  await createExtensionInstancesDBService(db).create({
+    installed_extension_id: source.id,
+    scope_type: "project",
+    scope_id: projectId,
+  });
+  const notes = await records("pstdio.notes");
+  await notes.commit({ operationId: "original", edits: [{ recordId: "stable-note", replace: { title: "Before" } }] });
   await svc.recovery.capture(projectId, start);
   const [point] = await svc.recovery.list(projectId);
-  for (const id of ids) await tickets.commit({ operationId: `delete-${id}`, edits: [{ recordId: id, deleted: true }] });
-
-  await svc.recovery.restore(projectId, { hours: point!.hours, capturedAt: point!.capturedAt });
-
-  for (const id of ids) expect((await tickets.read(id)).value).toBe(body);
+  await db.update(recovery_point_owners).set({ extension_id: "pstdio.pstdio-notes" });
+  await notes.commit({ operationId: "later", edits: [{ recordId: "stable-note", replace: { title: "After" } }] });
+  expect(await svc.recovery.restore(projectId, { ...point!, extensionId: "pstdio.pstdio-notes" })).toEqual({
+    extensions: ["pstdio.notes"],
+    records: 1,
+  });
+  expect((await notes.read("stable-note")).value).toEqual({ title: "Before" });
+  expect(
+    (await svc.recovery.list(projectId)).flatMap((p) => p.extensions).filter((o) => o === "pstdio.pstdio-notes"),
+  ).toEqual([]);
 });

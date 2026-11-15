@@ -114,6 +114,10 @@ const fixture = async () => {
   const transport = {
     subscribe(input: string | ClientStreamSubscription, listener: SessionStreamListener) {
       if (typeof input === "string" || !("text_editing" in input)) throw new Error("Expected a text subscription");
+      if (input.text_editing.token !== `lease-${lease}`) {
+        queueMicrotask(() => listener.onError(Object.assign(new Error("Lease expired"), { code: "connection_expired" })));
+        return { close() {} };
+      }
       const controller = new AbortController();
       const signal = controller.signal;
       void request<ReadableStream<Uint8Array>>("/text-editing/stream", {
@@ -179,6 +183,33 @@ test("an acknowledged participation state is shared by the placement and its eve
     await expect(f.connection.setActive(false)).rejects.toThrow("Participation acknowledgement lost");
     await f.connection.setActive(false);
     expect(f.participationCalls.slice(-2)).toEqual([false, false]);
+  } finally {
+    await f.connection.disconnect();
+  }
+});
+
+test("an expired watch renews after an acknowledged participation state", async () => {
+  const f = await fixture();
+  try {
+    await f.watched();
+    f.expire();
+    const watch = () => f.connection.watch({ signal: new AbortController().signal, onEvent() {} });
+    await expect(watch()).rejects.toMatchObject({ code: "connection_expired" });
+    await expect(watch()).rejects.toMatchObject({ code: "connection_reset" });
+    expect(f.connections()).toBe(2);
+  } finally {
+    await f.connection.disconnect();
+  }
+});
+
+test("closing a guest renews a silently expired acknowledged connection", async () => {
+  const f = await fixture();
+  try {
+    await f.watched();
+    f.expire();
+    await f.guest.close();
+    expect(f.connections()).toBe(2);
+    expect(f.releases).toContain("lease-1");
   } finally {
     await f.connection.disconnect();
   }

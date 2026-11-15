@@ -9,6 +9,8 @@ export type ThemePreferenceTokens = Record<string, string>;
 
 export interface ThemePreferenceOption {
   id: ThemePreference;
+  /** Historical choices supplied by the registering owner; discovery keeps one canonical option. */
+  aliases?: readonly string[];
   title?: string;
   mode: ThemePreferenceMode;
   tokens?: ThemePreferenceTokens;

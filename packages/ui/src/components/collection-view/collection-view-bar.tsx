@@ -20,7 +20,7 @@ import {
   type CollectionViewStoreState,
   useCollectionViewStore,
 } from "./use-collection-view-store";
-import { isCollectionViewDirty } from "./use-collection-views";
+import { isCollectionViewDirty, saveCollectionView } from "./use-collection-views";
 import { ViewBarPopover } from "./view-bar-popover";
 import { ViewSearchField } from "./view-search-field";
 
@@ -196,9 +196,13 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
                   size="2xs"
                   variant="primary"
                   disabled={!viewsSource || busy}
-                  onClick={() => viewsSource && activeView && run(() => viewsSource.onUpdateView(activeView.id, state))}
+                  onClick={() =>
+                    viewsSource &&
+                    activeView &&
+                    run(() => saveCollectionView(viewsSource, activeView, state, createView))
+                  }
                 >
-                  Save view
+                  {activeView?.builtIn ? "Save as new view" : "Save view"}
                 </Button>
               </>
             ) : null}

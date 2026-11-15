@@ -62,3 +62,26 @@ test("failed icon persistence keeps the window's choice through switching, regis
   expect(storage.getItem("file-icon-theme-preference")).toBe("icons.one");
   await act(async () => renderer.unmount());
 });
+
+test("a registered historical icon choice resolves without falling back to another theme", async () => {
+  Object.defineProperty(globalThis, "window", { configurable: true, value: {} });
+  (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+  installMockLocalStorage().setItem("file-icon-theme-preference", "old.icons");
+  let choice: string | null = null;
+  const Probe = () => {
+    choice = useFileIconThemePreference().fileIconThemePreference;
+    return null;
+  };
+  let renderer: ReturnType<typeof create>;
+  await act(async () => {
+    renderer = create(
+      <FileIconThemePreferenceProvider
+        themePreferences={[theme("fallback.seti"), { ...theme("canonical.icons"), aliases: ["old.icons"] }]}
+      >
+        <Probe />
+      </FileIconThemePreferenceProvider>,
+    );
+  });
+  expect(choice).toBe("canonical.icons");
+  await act(async () => renderer.unmount());
+});

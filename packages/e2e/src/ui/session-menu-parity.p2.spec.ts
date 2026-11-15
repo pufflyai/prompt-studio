@@ -22,10 +22,12 @@ test("Session menus share resource actions and switch through the full history",
     ).toBe(true);
   }
   await prepareResourceActionsDashboard(page, project.id);
-  await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-session-browser/conversations`);
+  await page.goto(`/projects/${project.id}/extensions/pstdio.session-browser/conversations`);
   const nav = page.locator('[data-workbench-region="sidenav"]');
   await expect(nav.getByRole("option", { name: "History 64", exact: true })).toBeVisible();
   const revealOldestSessions = async () => {
+    // Navigation retains the previous rows while the new owner's first page loads.
+    await expect(nav.locator("section[aria-busy]").filter({ visible: true })).toHaveAttribute("aria-busy", "false");
     // Reaching the visible end fetches the next page before scrolling its rows into view.
     await nav.locator('[data-scope="scroll-area"][data-part="viewport"]').evaluateAll((elements) => {
       for (const element of elements) element.scrollTop = element.scrollHeight;

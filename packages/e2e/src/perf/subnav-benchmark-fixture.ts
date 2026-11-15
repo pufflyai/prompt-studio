@@ -171,7 +171,7 @@ export const startSubnavBenchmarkFixture = async () => {
     }
     const execute = async (command: string, params: Record<string, unknown> = {}) => {
       const result = await request(
-        `/projects/${project.id}/extensions/commands/pstdio.pstdio-planner.command.${command}/execute`,
+        `/projects/${project.id}/extensions/commands/pstdio.planner.command.${command}/execute`,
         { source: "api", params },
       );
       if (!result.outcome.ok) throw new Error(`${command}: ${JSON.stringify(result.outcome)}`);
@@ -182,7 +182,7 @@ export const startSubnavBenchmarkFixture = async () => {
     if (!ticket.files?.some((file) => file.name === "Benchmark notes.md"))
       await execute("create-ticket-file", { ticketId: ticket.id, name: "Benchmark notes.md" });
     // Keep the benchmark ticket in the visible portion of the unfiltered 1,000-ticket board.
-    const { views } = await request(`/projects/${project.id}/boards/pstdio.pstdio-planner.view.tickets/views`);
+    const { views } = await request(`/projects/${project.id}/boards/pstdio.planner.view.tickets/views`);
     await request(
       `/projects/${project.id}/board-views/${views[0].id}`,
       { sorts: [{ attributeId: "created", direction: "asc" }] },
@@ -201,7 +201,7 @@ export const startSubnavBenchmarkFixture = async () => {
           provider_id: "pstdio.worktree",
           shorthand_base: ticket.shorthand,
           params: { base: "main" },
-          anchors: [{ type: "ticket", extensionId: "pstdio.pstdio-planner", id: ticket.id, label: ticket.shorthand }],
+          anchors: [{ type: "ticket", extensionId: "pstdio.planner", id: ticket.id, label: ticket.shorthand }],
         }),
       );
     }
@@ -218,7 +218,7 @@ export const startSubnavBenchmarkFixture = async () => {
         ...(index >= 100 && index < 120
           ? {
               anchors: [
-                { type: "ticket", extensionId: "pstdio.pstdio-planner", id: ticket.id, label: ticket.shorthand },
+                { type: "ticket", extensionId: "pstdio.planner", id: ticket.id, label: ticket.shorthand },
               ],
             }
           : {}),

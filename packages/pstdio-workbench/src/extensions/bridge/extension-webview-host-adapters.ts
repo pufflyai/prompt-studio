@@ -43,7 +43,7 @@ export interface ExtensionWebviewPreferencesAdapter {
   get(
     name: string,
     scope?: WebviewPreferencesGetParams["scope"],
-  ): MaybePromise<WebviewHostCapabilityResults["preferences.get"]>;
+  ): MaybePromise<WebviewPreferencesSetParams["value"] | undefined>;
   set(
     name: string,
     value: WebviewPreferencesSetParams["value"],
@@ -58,6 +58,24 @@ export interface ExtensionWebviewFilesAdapter {
 }
 
 export interface ExtensionWebviewHostAdapters {
+  preferenceQueries?: Pick<
+    ReturnType<typeof import("./webview-preference-queries").createWebviewPreferenceQueries>,
+    "request" | "seeds"
+  >;
+  accountQueries?: {
+    request(
+      input: import("pstdio-api-contracts/extension-kernel").WebviewServiceQueryRequest<
+        import("pstdio-api-contracts/extension-kernel").WebviewAccountQuery
+      >,
+    ): Promise<import("pstdio-api-contracts/extension-kernel").WebviewCommandQuerySnapshot | undefined>;
+  };
+  performanceQueries?: {
+    request(
+      input: import("pstdio-api-contracts/extension-kernel").WebviewServiceQueryRequest<
+        import("pstdio-api-contracts/extension-kernel").WebviewPerformanceQuery
+      >,
+    ): Promise<import("pstdio-api-contracts/extension-kernel").WebviewCommandQuerySnapshot | undefined>;
+  };
   commandQueries?: Pick<
     ReturnType<typeof import("./webview-command-queries").createWebviewCommandQueryAdapter>,
     "request"

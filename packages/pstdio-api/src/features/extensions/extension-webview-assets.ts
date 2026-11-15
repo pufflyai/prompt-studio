@@ -1,5 +1,6 @@
 import { existsSync, statSync } from "node:fs";
 import { extname, join, resolve, sep } from "node:path";
+import { canonicalRuntimeId } from "pstdio-extensions";
 import type { createExtensionService } from "../../services/extension-service";
 import { classifyWebviewEntry, resolveManagedWebviewPaths } from "./extension-webviews";
 import { resolvePstdioHome } from "./install-extension-source";
@@ -75,6 +76,7 @@ export const resolveWebviewAssetFile = async (
   if (!source) return null;
 
   const runtime = await deps.extensionRuntimeCatalog.getSourcesRuntime([source]);
+  input = { ...input, webviewId: canonicalRuntimeId(runtime, input.webviewId) };
   const webview = runtime.views.find((view) => view.id === input.webviewId)?.contribution.body;
   if (!webview || webview.kind !== "webview") return null;
 

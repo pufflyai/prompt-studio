@@ -4,6 +4,7 @@ import type {
   UploadExtensionRequest,
   WorkbenchExtensionAutomationRecord,
 } from "pstdio-api-contracts";
+import { canonicalRuntimeId } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
 import { ExtensionUpgradeUnavailableError } from "../../services/extension-upgrade-unavailable-error";
 import type { RouteDeps } from "../deps";
@@ -116,11 +117,13 @@ export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
 
     const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
     const schedule = snapshot.runtime.schedules.find(
-      (candidate) => candidate.id === automationId && candidate.extensionId === existing.installedSource.extension_id,
+      (candidate) =>
+        candidate.id === canonicalRuntimeId(snapshot.runtime, automationId) &&
+        candidate.extensionId === existing.installedSource.extension_id,
     );
     if (!schedule) return null;
 
-    await setDeviceAutomationEnabled(deps, projectId, { scheduleId: automationId, instanceId, enabled });
+    await setDeviceAutomationEnabled(deps, projectId, { scheduleId: schedule.id, instanceId, enabled });
 
     return {
       id: schedule.id,

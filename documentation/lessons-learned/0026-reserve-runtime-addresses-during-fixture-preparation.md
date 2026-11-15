@@ -19,5 +19,5 @@
 
 ## Evidence
 
-- [UI registry preparation](../../packages/e2e/src/scripts/prepare-ui-registry.ts) and its [real-socket regression](../../packages/e2e/src/scripts/prepare-ui-registry.p0.test.ts).
+- [UI registry preparation](../../packages/e2e/src/scripts/prepare-ui-registry.ts).
 - [UI fixture readiness](../../packages/e2e/src/serve-web-server.ts) waits for runtime and tool setup completion rather than an open TCP port.

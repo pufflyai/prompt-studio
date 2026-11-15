@@ -17,7 +17,7 @@ export const expectPackagedQueuedSubmission = async (page: Page, sessionId: stri
     await route.fulfill({
       json: {
         commandId: sessionChatActionCommandId,
-        extensionId: "pstdio.pstdio-session-browser",
+        extensionId: "pstdio.session-browser",
         outcome: {
           ok: false,
           status: "error",

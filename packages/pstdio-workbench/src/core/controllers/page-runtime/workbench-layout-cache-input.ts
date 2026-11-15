@@ -1,3 +1,4 @@
+import { canonicalRegistryId, historicalRegistryId } from "../../shared/contributions/identity-aliases";
 import type { createWorkbenchInput, WorkbenchCore } from "../../workbench-core-types";
 import { migratePagePanelView } from "./page-panel-view";
 import { createWorkbenchLayoutCache } from "./workbench-layout-cache";
@@ -18,4 +19,12 @@ export const createCoreLayoutCache = (input: createWorkbenchInput, resolve: () =
           ?.modePlacements.listPlacements(modeId)
           .map((placement) => placement.id) ?? [],
       ),
+    (id) => {
+      const store = resolve()?.pages.store;
+      return store ? historicalRegistryId(store, id) : id;
+    },
+    (id) => {
+      const store = resolve()?.pages.store;
+      return store ? canonicalRegistryId(store, id) : id;
+    },
   );

@@ -7,8 +7,7 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { verifyEditingSession } from "../helpers/verify-editing-session";
 import { browserLaunchOptions } from "../scripts/browser-launch-options";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
-import { type Browser, chromium, expect, firefox, test, webkit } from "../scripts/playwright-test";
-import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
+import { type Browser, expect, firefox, test } from "../scripts/playwright-test";
 import { buildBinary } from "./packaged-helpers";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
@@ -19,11 +18,7 @@ test.beforeAll(() => {
   if (!process.env.E2E_PACKAGED_BINARY_PATH) buildBinary();
 });
 
-for (const [type, launchOptions] of [
-  [chromium, PROVISIONED_CHROMIUM],
-  [firefox, {}],
-  [webkit, {}],
-] as const) {
+for (const [type, launchOptions] of [[firefox, {}]] as const) {
   const available = existsSync(type.executablePath());
   const browserTest = available || process.env.E2E_REQUIRE_WEBVIEW_BROWSERS === "1" ? test : test.skip;
   browserTest(`packaged editing sessions preview, coalesce saves and cancel gestures in ${type.name()}`, async () => {

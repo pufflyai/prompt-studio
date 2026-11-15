@@ -26,17 +26,23 @@ type ChatWatchUpdate =
   | { recoverDraft: ChatDraft }
   | { patch: Extract<ChatRendererEvent, { patch: unknown }>["patch"] };
 
-export const approvalSnapshot = (approval?: ApprovalRequest): ChatRendererSnapshot["approval"] =>
-  approval
-    ? {
-        id: approval.id,
-        title: `Allow ${approval.toolName}?`,
-        choices: [
-          { id: "approve", label: "Allow" },
-          { id: "deny", label: "Deny" },
-        ],
-      }
-    : null;
+export const approvalSnapshot = (approval?: ApprovalRequest): ChatRendererSnapshot["approval"] => {
+  if (!approval) return null;
+  // Name what the tool will do, so the person can judge the request before allowing it.
+  // The tool call in the transcript keeps the full command; a long one would push the form off screen.
+  const input = (approval.toolInput as { command?: unknown } | null)?.command;
+  const command = typeof input === "string" ? input.trim() : "";
+  const shown = command.length > 200 ? `${command.slice(0, 200)}…` : command;
+  return {
+    id: approval.id,
+    title: shown ? `Allow ${approval.toolName} to run: ${shown}` : `Allow ${approval.toolName}?`,
+    choices: [
+      { id: "approve", label: "Allow" },
+      { id: "deny", label: "Deny" },
+    ],
+  };
+};
+
 const waitForRefresh = (signal: AbortSignal) =>
   new Promise<void>((done) => {
     const finish = () => {

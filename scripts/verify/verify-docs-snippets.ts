@@ -99,7 +99,7 @@ if (import.meta.main) {
   const problems = await verifyDocsSnippets(resolve(import.meta.dir, "../.."));
   for (const problem of problems) console.error(problem);
   if (problems.length > 0) {
-    console.error("\nCopy the example file into the guide, or change the example and its tests first.");
+    console.error("\nCopy the example file into the guide, or change the example first.");
     process.exitCode = 1;
   } else {
     console.log(`Documentation snippets match ${DOCUMENTED_EXAMPLES.length} maintained example(s).`);

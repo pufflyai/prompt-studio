@@ -40,6 +40,7 @@ export const createCommandRunner = (runtime: ExtensionRuntime, deps: CommandRunn
     dispatcher,
     (extensionId) => deps.createLogger?.(extensionId) ?? logger,
     executeBuilder,
+    runtime,
   );
   const state: RunnerState = { runtime, deps, logger, maxDepth, generateId, dispatcher, factory };
   const executeInternal = async (input: InternalExecuteInput) => {

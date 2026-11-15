@@ -136,7 +136,7 @@ async function expectDependencyStack(input: { baseUrl: string; headers: Record<s
     });
   if (conflict) {
     const response = await request(
-      `/projects/${project.id}/extensions/commands/pstdio.pstdio-planner.command.update-stack/execute`,
+      `/projects/${project.id}/extensions/commands/pstdio.planner.command.update-stack/execute`,
       "POST",
       {
         params: {

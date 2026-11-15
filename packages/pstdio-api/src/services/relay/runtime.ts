@@ -1,11 +1,13 @@
 import { createLiveConnection, createRelayAccess, type LiveConnection } from "pstdio-sync/relay";
 import { canonicalJson } from "pstdio-sync-contracts";
+import { resourceActivityOwnerId } from "../../features/activity/resource-activity-store";
 import { publishedExtensionsId } from "../../features/extensions/publication/catalog";
 import { apiLogger } from "../../lib/logger";
 import { AccountRequestError } from "../account/native-account";
 import { isRecoveryCatalogOwner } from "../project-recovery/catalog";
 import { startAutomationSync } from "./automations";
 import { startCoreDocumentSync } from "./core-documents";
+import { startCoreRecordSync } from "./core-records";
 import type { RelayDeps } from "./deps";
 import { createDeviceCommandCaller } from "./device-command-call";
 import { startDeviceCommands } from "./device-commands";
@@ -101,9 +103,12 @@ export const startRelayRuntime = async (input: RelayRuntimeInput) => {
   });
   const publications = createWorkbenchConnections((config) => startPublishedExtensions(core(config)));
   const automations = createWorkbenchConnections((config) => startAutomationSync(core(config)));
+  const activity = createWorkbenchConnections((config) =>
+    startCoreRecordSync({ ...core(config), ownerId: resourceActivityOwnerId }),
+  );
   const personal = createWorkbenchConnections((config) => startRelayPersonalHistory(core(config)));
   const coreDocuments = createWorkbenchConnections((config) => startCoreDocumentSync(core(config)));
-  const coreOwners = [publications, automations, personal, coreDocuments];
+  const coreOwners = [coreDocuments, publications, automations, activity, personal];
   const commands = createWorkbenchConnections((config) => startDeviceCommands(core(config)));
   const recovery = createWorkbenchConnections((config) => startFolderRecovery(core(config)));
   const lifecycleOwners = [...coreOwners, commands, recovery];
@@ -216,7 +221,7 @@ export const startRelayRuntime = async (input: RelayRuntimeInput) => {
     ...projectEntryPoints(commands.get, recovery.get),
     retry: createProjectSyncRetry({
       refresh,
-      owners: { core: coreDocuments, publications, automations, personal },
+      owners: { core: coreDocuments, publications, automations, activity, personal },
       folders: recovery,
       extensions: connections,
     }),
@@ -226,10 +231,7 @@ export const startRelayRuntime = async (input: RelayRuntimeInput) => {
       assertLiveAvailable(live.get(workbenchId));
       const snapshot = await deps.extensionRuntimeCatalog.get(workbenchId);
       const owners = [
-        coreDocuments.get(workbenchId),
-        publications.get(workbenchId),
-        automations.get(workbenchId),
-        personal.get(workbenchId),
+        ...coreOwners.map((owner) => owner.get(workbenchId)),
         ...snapshot.enabledSources.map(({ installedSource }) =>
           connections.get(JSON.stringify([workbenchId, installedSource.extension_id])),
         ),
