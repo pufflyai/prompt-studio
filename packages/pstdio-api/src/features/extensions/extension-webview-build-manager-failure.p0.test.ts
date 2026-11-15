@@ -147,8 +147,10 @@ test("keeps an unwritten failure incomplete and reports its finished result with
     fixture.release.resolve();
     fixture.setReportingUnavailable(true);
     await fixture.manager.refresh(fixture.sourcePath);
-    await expect(fixture.manager.adopt(fixture.sourcePath)).rejects.toThrow("Could not record");
-    await expect(fixture.manager.ensure(fixture.id, "pstdio.lab.view.page")).rejects.toThrow();
+    const adoptionError = await fixture.manager.adopt(fixture.sourcePath).catch((error: Error) => error);
+    expect((adoptionError as Error).message).toContain("Could not record");
+    const buildError = await fixture.manager.ensure(fixture.id, "pstdio.lab.view.page").catch((error: Error) => error);
+    expect(buildError).toBeInstanceOf(Error);
     expect(await fixture.error()).toBeNull();
     fixture.setReportingUnavailable(false);
     await fixture.manager.ensure(fixture.id, "pstdio.lab.view.page");
@@ -278,7 +280,8 @@ test("retains a successful repair until its status can be recorded without rebui
     writeFileSync(fixture.entry, 'console.log("repaired bundle");');
     fixture.setReportingUnavailable(true);
     await fixture.manager.refresh(fixture.sourcePath);
-    await expect(fixture.manager.ensure(fixture.id)).rejects.toThrow();
+    const reportError = await fixture.manager.ensure(fixture.id).catch((error: Error) => error);
+    expect(reportError).toBeInstanceOf(Error);
     fixture.setReportingUnavailable(false);
     await fixture.manager.ensure(fixture.id);
     expect(await fixture.error()).toBeNull();
@@ -301,7 +304,8 @@ test("recovers after source inspection throws without retaining rejected build w
     fixture.releaseSuccess.resolve();
     await refresh;
     writeFileSync(fixture.entry, updated);
-    await expect(fixture.manager.adopt(fixture.sourcePath)).resolves.toBeUndefined();
+    const adopted = await fixture.manager.adopt(fixture.sourcePath);
+    expect(adopted).toBeUndefined();
     expect(fixture.module()).toContain("restored bundle");
     expect(fixture.state.builds).toBe(3);
   } finally {

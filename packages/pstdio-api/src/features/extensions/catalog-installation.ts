@@ -22,13 +22,13 @@ export const createCatalogInstaller =
       (source) => source.extension_id === extensionId,
     );
     if (!installed) {
-      const sources = await installMissingDefaultExtensions({
+      await installMissingDefaultExtensions({
+        registerInstalledSources: (sources) => registerInstalledExtensionSources(input.extensionService, sources),
         signal,
         installNames: [installName],
         releaseRef: input.releaseRef,
         forceSourceDefaults: process.env.PSTDIO_DISABLE_EMBED_MANIFEST === "1",
       });
-      await registerInstalledExtensionSources(input.extensionService, sources);
       installed = (await getInstalledUserSources(input.installedExtensionSourcesService)).find(
         (source) => source.extension_id === extensionId,
       );

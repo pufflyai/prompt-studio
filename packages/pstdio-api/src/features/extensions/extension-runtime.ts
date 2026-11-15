@@ -1,17 +1,24 @@
+import { runExtensionPreparation } from "./extension-preparation";
+import "./extension-preparation";
 import { existsSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import type { ExtensionDiagnostic, ExtensionHostCapabilities, ExtensionsCheckResponse } from "pstdio-api-contracts";
 import { canonicalExtensionId, canonicalInstallName } from "pstdio-api-contracts/extension-host";
 import {
+  acceptPreparedRevision,
   checkExtensionHostCompatibility,
   collectConventionDiagnostics,
   dashboardExtensionHostCapabilities,
+  isPreparationHost,
   loadExtensionPackage,
   normalizeExtensionSources,
   type PackageManifest,
+  type PreparedExtensionRevision,
   type ExtensionDiagnostic as RuntimeExtensionDiagnostic,
+  readAcceptedRevision,
   readPackageManifest,
   readPackageManifestMetadata,
+  remapPackageAssets,
 } from "pstdio-extensions";
 import { createWorkbenchExtensionMetadata } from "pstdio-extensions/workbench";
 import {
@@ -28,6 +35,7 @@ import { emptyCheck } from "./empty-extension-check";
 import { addDiagnostic, isRecord, type UnknownRecord } from "./extension-diagnostics";
 import { mergeCheck } from "./merge-checks";
 
+export { hashExtensionSourceAsync } from "./extension-preparation";
 export { hashExtensionSource } from "./hash-extension-source";
 
 export type ExtensionMetadata = {
@@ -46,6 +54,7 @@ export type LoadedExtension = {
   manifest: UnknownRecord;
   metadata: ExtensionMetadata;
   diagnostics: RuntimeExtensionDiagnostic[];
+  preparedRevision?: PreparedExtensionRevision;
 };
 
 export type LoadedExtensionSnapshot = {
@@ -83,9 +92,18 @@ const manifestSnapshot = (metadata: ExtensionMetadata, definition: UnknownRecord
   templates: Array.isArray(definition.templates) ? definition.templates : [],
 });
 
-export const loadExtensionSource = async (sourcePath: string) => {
+export const loadExtensionSource = async (
+  sourcePath: string,
+  options: { accepted?: boolean; preparedRevision?: PreparedExtensionRevision } = {},
+) => {
   const diagnostics: RuntimeExtensionDiagnostic[] = [];
-  const loaded = await loadExtensionPackage({ path: sourcePath, sourceKind: "local_path" }, diagnostics);
+  const accepted = options.accepted ? await readAcceptedRevision(sourcePath) : null;
+  const loaded = await loadExtensionPackage({ path: sourcePath, sourceKind: "local_path" }, diagnostics, {
+    preparedRevision: options.preparedRevision ?? accepted ?? undefined,
+    immutableAssets: true,
+  });
+  if (options.accepted && loaded?.preparedRevision && !diagnostics.some((d) => d.severity === "error") && !accepted)
+    await acceptPreparedRevision(sourcePath, loaded.preparedRevision, { expectedId: null });
 
   if (!loaded) {
     const first = diagnostics[0];
@@ -97,7 +115,9 @@ export const loadExtensionSource = async (sourcePath: string) => {
 
 export const loadExtensionSourceRuntime = async (sourcePath: string) => {
   const diagnostics: RuntimeExtensionDiagnostic[] = [];
-  const source = await loadExtensionPackage({ path: sourcePath, sourceKind: "local_path" }, diagnostics);
+  const source = await loadExtensionPackage({ path: sourcePath, sourceKind: "local_path" }, diagnostics, {
+    immutableAssets: true,
+  });
 
   if (!source) {
     const first = diagnostics[0];
@@ -158,9 +178,14 @@ const toLoadedExtension = (
 
   return {
     definition,
-    manifest: manifestSnapshot(metadata, definition),
+    manifest: remapPackageAssets(
+      manifestSnapshot(metadata, definition),
+      loaded.packagePath,
+      loaded.originalPackagePath ?? loaded.packagePath,
+    ) as UnknownRecord,
     metadata,
     diagnostics,
+    ...(loaded.preparedRevision ? { preparedRevision: loaded.preparedRevision } : {}),
   } satisfies LoadedExtension;
 };
 
@@ -211,9 +236,17 @@ export const checkExtensionSource = async (
   extensionsRoot: string,
   options: CheckExtensionHostOptions = {},
 ) => {
+  if (isPreparationHost)
+    return runExtensionPreparation<{ check: ExtensionsCheckResponse; loaded: LoadedExtension | null }>("source.check", {
+      sourcePath,
+      extensionsRoot,
+      options,
+    });
   const check = emptyCheck(extensionsRoot, existsSync(extensionsRoot), options.hostCapabilities);
   const diagnostics: RuntimeExtensionDiagnostic[] = [];
-  const source = await loadExtensionPackage({ path: sourcePath, sourceKind: "local_path" }, diagnostics);
+  const source = await loadExtensionPackage({ path: sourcePath, sourceKind: "local_path" }, diagnostics, {
+    immutableAssets: true,
+  });
 
   if (!source) {
     addRuntimeDiagnostics(check, diagnostics);
@@ -224,6 +257,8 @@ export const checkExtensionSource = async (
     const loaded = toLoadedExtension(source, diagnostics);
     const runtime = normalizeExtensionSources([source]);
     populateCheckFromRuntime(check, runtime, options);
+    for (const extension of check.extensions)
+      extension.sourcePath = join(sourcePath, relative(source.packagePath, source.sourcePath));
     addRuntimeDiagnostics(check, loaded.diagnostics);
     addRuntimeDiagnostics(check, runtime.diagnostics);
     // Convention checks (icon names, contribution id casing, dangling command
@@ -266,6 +301,8 @@ const collectFallbackMetadata = (sourcePath: string) => {
 };
 
 export const checkExtensionsRoot = async (extensionsRoot: string, options: CheckExtensionHostOptions = {}) => {
+  if (isPreparationHost)
+    return runExtensionPreparation<ExtensionsCheckResponse>("source.check-root", { extensionsRoot, options });
   const check = emptyCheck(extensionsRoot, existsSync(extensionsRoot), options.hostCapabilities);
   if (!existsSync(extensionsRoot)) return check;
 

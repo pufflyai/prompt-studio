@@ -1,6 +1,8 @@
-import { availableParallelism } from "node:os";
 import { dirname } from "node:path";
+import { isPreparationHost } from "pstdio-extensions";
+import { preparationBuildConcurrency, withPreparationBuildCommand } from "pstdio-extensions/preparation-command";
 import { isPackagedRuntime } from "pstdio-paths";
+import { runExtensionPreparation } from "./extension-preparation";
 import { runCommand } from "./install-extension-dependencies";
 
 export const extensionWebviewBuildOptions = {
@@ -44,9 +46,9 @@ const buildArguments = (input: ExtensionWebviewBatchBuildInput, entryNaming: str
   ];
 };
 
-// Each build process needs several hundred megabytes, and a host upgrade rebuilds every webview at
-// startup, so only a few builds run at once.
-const buildSlots = Math.max(1, Math.min(4, availableParallelism()));
+// Builds and fresh input inspectors share these leaf slots. Never hold a slot around
+// preparation orchestration: its nested inspection/build calls need the same pool.
+const buildSlots = preparationBuildConcurrency;
 let runningBuilds = 0;
 const waitingBuilds: (() => void)[] = [];
 
@@ -65,34 +67,46 @@ const releaseBuildSlot = () => {
   else runningBuilds--;
 };
 
+export const withExtensionWebviewBuildSlot = async <T>(work: () => Promise<T>): Promise<T> => {
+  await acquireBuildSlot();
+  try {
+    return await withPreparationBuildCommand(work);
+  } finally {
+    releaseBuildSlot();
+  }
+};
+
 // A long-running Bun process keeps package resolutions it has already read, so an in-process
 // build cannot see a replaced extension folder. Each build runs in a new Bun process (ADR 0070).
 const runBuild = async (input: ExtensionWebviewBatchBuildInput, entryNaming: string) => {
   if (input.signal.aborted) return { success: false, details: "Build aborted." };
 
-  await acquireBuildSlot();
-  let result: Awaited<ReturnType<typeof runCommand>>;
-  try {
-    if (input.signal.aborted) return { success: false, details: "Build aborted." };
-    result = await runCommand(process.execPath, buildArguments(input, entryNaming), {
+  const result = await withExtensionWebviewBuildSlot(async () => {
+    if (input.signal.aborted) return { exitCode: 1, stdout: "", stderr: "Build aborted." };
+    return runCommand(process.execPath, buildArguments(input, entryNaming), {
       cwd: dirname(input.entryPaths[0]!),
       env: { ...process.env, NO_COLOR: "1", ...(isPackagedRuntime() ? { BUN_BE_BUN: "1" } : {}) },
       signal: input.signal,
     });
-  } finally {
-    releaseBuildSlot();
-  }
+  });
 
   if (input.signal.aborted) return { success: false, details: "Build aborted." };
   if (result.exitCode === 0) return { success: true, details: "" };
   return { success: false, details: result.stderr.trim() || result.stdout.trim() || "Webview build failed." };
 };
 
-export const buildExtensionWebview: ExtensionWebviewBuilder = (input) =>
-  runBuild(
+export const buildExtensionWebview: ExtensionWebviewBuilder = (input) => {
+  if (isPreparationHost)
+    return runExtensionPreparation(
+      "webview.build",
+      { entryPath: input.entryPath, outdir: input.outdir },
+      { signal: input.signal },
+    );
+  return runBuild(
     { outdir: input.outdir, signal: input.signal, entryPaths: [input.entryPath] },
     extensionWebviewBuildOptions.naming.entry,
   );
+};
 
 /** One fresh process validates the complete replacement and shares its common module graph. */
 export const buildExtensionWebviewBatch = (input: ExtensionWebviewBatchBuildInput) =>

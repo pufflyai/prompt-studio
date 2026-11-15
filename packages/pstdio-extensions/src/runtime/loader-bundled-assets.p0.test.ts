@@ -8,12 +8,7 @@ import type { ExtensionDiagnostic } from "../types/runtime";
 import { loadExtensionPackage } from "./loader";
 
 const tempDirs: string[] = [];
-let previousEmbeddedFiles: readonly unknown[] | undefined;
 let previousPstdioHome: string | undefined;
-
-const setEmbeddedFiles = (value: readonly unknown[] | undefined) => {
-  (globalThis.Bun as unknown as { embeddedFiles: unknown[] }).embeddedFiles = [...(value ?? [])];
-};
 
 const createTempDir = () => {
   const dir = mkdtempSync(join(tmpdir(), "pstdio-loader-packaged-"));
@@ -21,10 +16,7 @@ const createTempDir = () => {
   return dir;
 };
 
-const usePackagedRuntime = () => {
-  previousEmbeddedFiles = globalThis.Bun.embeddedFiles;
-  setEmbeddedFiles(["pstdio-packaged-test"]);
-
+const useIsolatedHome = () => {
   previousPstdioHome = process.env.PSTDIO_HOME;
   process.env.PSTDIO_HOME = join(createTempDir(), "pstdio-home");
 };
@@ -61,19 +53,16 @@ const writeSdkDependency = (dir: string) => {
 };
 
 afterEach(() => {
-  setEmbeddedFiles(previousEmbeddedFiles);
-
   if (previousPstdioHome === undefined) delete process.env.PSTDIO_HOME;
   else process.env.PSTDIO_HOME = previousPstdioHome;
 
-  previousEmbeddedFiles = undefined;
   previousPstdioHome = undefined;
   for (const dir of tempDirs) rmSync(dir, { recursive: true, force: true });
   tempDirs.length = 0;
 });
 
-test("keeps package asset urls relative to the source module after packaged bundling", async () => {
-  usePackagedRuntime();
+test("keeps package asset urls relative to the source module after cached bundling", async () => {
+  useIsolatedHome();
   const dir = createTempDir();
   mkdirSync(join(dir, "src"));
   writePackage(dir);
@@ -106,9 +95,9 @@ test("keeps package asset urls relative to the source module after packaged bund
 
   const diagnostics: ExtensionDiagnostic[] = [];
   const loaded = await loadExtensionPackage({ path: dir }, diagnostics);
+  expect(diagnostics).toEqual([]);
   const templates = loaded?.definition.templates as readonly { source: { baseUrl: string; path: string } }[];
   const source = templates[0]!.source;
 
-  expect(diagnostics).toEqual([]);
   expect(fileURLToPath(new URL(source.path, source.baseUrl))).toBe(join(dir, "src", "template.md"));
 });
