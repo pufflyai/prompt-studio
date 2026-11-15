@@ -5,6 +5,7 @@ import { nativeSourceGroups, selectWindowsSourceContracts } from "./native-sourc
 import type { resolveCiScope } from "./pull-request-ci-scope";
 import type { TestPackage } from "./runner-profiles";
 import { priorityFromFile, testRunner } from "./test-discovery";
+import { shardTestFiles } from "./test-file-shards";
 import { createTestPlan, mergeTestPlans, type PlanInput, type SourceIdentity, sealTestPlan } from "./test-plan";
 import { matchesPlatform, quarantineRegistry, quarantineRunnerForTest } from "./test-quarantine";
 import { createTestRuns } from "./test-runs";
@@ -88,12 +89,10 @@ export const createCiTestPlan = (
         tests.filter((file) => testRunner(file) === "browser-helper" && priorityFromFile(file) === "P1"),
       );
   }
-  for (const row of scope.packagedMatrix)
-    add(
-      `packaged-${row.suite}-${row.priority}-${row.shard}`,
-      (JSON.parse(row.files) as string[]).map((file) => `packages/e2e/${file}`),
-      { shard: row.shard },
-    );
+  for (const row of scope.packagedMatrix) {
+    const request = packagedRequest(row);
+    add(request.job, request.files, request.extra);
+  }
   if (scope.production && !scope.diagnosticPlatform && scope.harnessCli)
     add(
       "cli",
@@ -103,6 +102,14 @@ export const createCiTestPlan = (
   for (const request of nativeCiRequests(scope, tests)) add(request.job, request.files, request.extra);
   const { digest: _digest, ...body } = mergeTestPlans(plans, source);
   return sealTestPlan({ ...body, emptyJobs });
+};
+
+const packagedRequest = (row: Scope["packagedMatrix"][number]) => {
+  const job = `packaged-${row.suite}-${row.priority}-${row.shard}`;
+  const files = (JSON.parse(row.files) as string[]).map((file) => `packages/e2e/${file}`);
+  // Own browser file assignment here: Playwright's whole-file case sharding can leave a row empty.
+  if (row.suite === "browser") return { job, files: shardTestFiles(files, { shard: row.shard }).files, extra: {} };
+  return { job, files, extra: { shard: row.shard } };
 };
 
 const windowsRequests = (scope: Scope, tests: string[], packages: TestPackage[]) => {
