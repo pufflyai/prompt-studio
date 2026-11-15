@@ -1,41 +1,50 @@
 import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
-import { statusesCollection, ticketsCollection } from "../data/collections";
+import { statusesCollection } from "../data/collections";
+import { linkedWorkspacePage } from "../data/linked-workspaces";
+import { readTicketNavigation } from "../data/navigation-queries";
 import { listTicketReviewRequests } from "../data/review-request-storage";
-import { readSessionHistory } from "../data/session-history";
-import { loadTicketLinkedResources } from "../data/ticket-linked-resources";
+import { readTicketLinkedResourcePage } from "../data/ticket-linked-resources";
 import { plannerOwnerFor } from "../data/ticket-resource-hierarchy";
+import { readTicketSessionPage } from "../data/ticket-session-page";
 import type { Ticket } from "../data/types";
-import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
 
 export const readTicketTreeData = async (
   ctx: Pick<ExtensionContextBase, "storage" | "sessions" | "workspaces" | "resources" | "projectId" | "extensionId">,
   ticket: Ticket,
 ) => {
-  const workspaceData = ctx.workspaces.list().then(async (workspaces) => {
-    const linkedWorkspaces = workspaces.filter((workspace) => isWorkspaceLinkedToTicket(workspace, ticket));
-    const histories = await Promise.all(
-      linkedWorkspaces.map((workspace) => readSessionHistory(ctx.sessions, { workspaceId: workspace.id })),
-    );
-    return { workspaces, linkedWorkspaces, workspaceSessions: histories.flat() };
-  });
-  const [tickets, reviewRequests, statuses, providers, sessions, linked, resourceLinks] = await Promise.all([
-    ticketsCollection(ctx).list(),
+  const workspaceData = (async () => {
+    const [page, home] = await Promise.all([linkedWorkspacePage(ctx, [ticket]), ctx.workspaces.getDefault()]);
+    const workspaces = [...new Map([...(home ? [home] : []), ...page.items].map((row) => [row.id, row])).values()];
+    return {
+      workspaces,
+      linkedWorkspaces: page.items,
+      workspaceCursor: page.nextCursor,
+    };
+  })();
+  const [navigation, reviewRequests, statuses, providers, sessions, linked, resourceLinks] = await Promise.all([
+    readTicketNavigation(ctx, ticket),
     listTicketReviewRequests(ctx.storage, ticket.id),
     statusesCollection(ctx.storage).list(),
     ctx.workspaces.listProviders(),
-    readSessionHistory(ctx.sessions, { anchor: { type: "ticket", id: ticket.id } }),
+    readTicketSessionPage(ctx, ticket.id),
     workspaceData,
-    loadTicketLinkedResources(ctx.resources, [
-      { type: "ticket", extensionId: plannerOwnerFor(ctx), projectId: ctx.projectId, id: ticket.id },
-    ]),
+    readTicketLinkedResourcePage(ctx.resources, {
+      type: "ticket",
+      extensionId: plannerOwnerFor(ctx),
+      projectId: ctx.projectId,
+      id: ticket.id,
+    }),
   ]);
   return {
-    tickets,
-    resourceLinks: resourceLinks.get(ticket.id) ?? [],
+    ...navigation,
+    resourceLinks: resourceLinks.items,
+    resourceCursor: resourceLinks.nextCursor,
     reviewRequests,
     statusesById: new Map(statuses.map((status) => [status.id, status])),
     providers,
-    sessions,
+    sessions: [],
+    workspaceSessions: sessions.items,
+    sessionCursor: sessions.nextCursor ?? undefined,
     ...linked,
   };
 };

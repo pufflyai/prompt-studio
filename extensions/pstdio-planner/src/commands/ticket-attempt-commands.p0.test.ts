@@ -3,7 +3,8 @@ import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { seedDefaultStatuses } from "../data/seed";
 import { putTicket, ticketsCollection } from "../data/ticket-context.fixture";
 import type { Ticket } from "../data/types";
-import { commandParamsFor, makeCommandArgs, makeCommandContext } from "./command-context.fixture";
+import { workspaceArgs } from "./archive-context.fixture";
+import { commandParamsFor, makeCommandContext } from "./command-context.fixture";
 import { implementTicketCommand } from "./implement-ticket";
 import { sessionQuery } from "./session-query.fixture";
 import { sessionRecord } from "./session-record.fixture";
@@ -86,7 +87,7 @@ describe("ticket workspace listing", () => {
   };
 
   const listContext = (storage: ReturnType<typeof createMemoryStorage>, ticket: Ticket) =>
-    makeCommandArgs({
+    workspaceArgs({
       storage,
       params: { id: ticket.shorthand },
       overrides: {
@@ -134,8 +135,8 @@ describe("ticket workspace listing", () => {
     const storage = createMemoryStorage();
     const ticket = await seedTicket(storage);
 
-    const rows = await ticketWorkspacesCommand.run(...listContext(storage, ticket));
-    expect(rows).toEqual([
+    const rows = await ticketWorkspacesCommand.run(...(await listContext(storage, ticket)));
+    expect(rows.items).toEqual([
       { id: "w1", workspace: "T-1_A1", branch: "b1", path: "/wt/1", active: true },
       { id: "w2", workspace: "T-1_A2", branch: "b2", path: "", active: false },
     ]);
@@ -145,7 +146,7 @@ describe("ticket workspace listing", () => {
     const storage = createMemoryStorage();
     const ticket = await seedTicket(storage);
 
-    const rows = await ticketWorktreesListCommand.run(...listContext(storage, ticket));
-    expect(rows.map((row) => row.workspace)).toEqual(["T-1_A1"]);
+    const rows = await ticketWorktreesListCommand.run(...(await listContext(storage, ticket)));
+    expect(rows.items.map((row) => row.workspace)).toEqual(["T-1_A1"]);
   });
 });

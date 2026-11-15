@@ -9,10 +9,9 @@ import {
   sessionBrowser,
   type TemplateParam,
 } from "@pstdio/sdk/extensions";
-import { ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
 import { renderOwnedTemplate } from "../data/template-store";
-import { plannerOwnerFor, ticketResourceIdentity } from "../data/ticket-resource-hierarchy";
+import { plannerOwnerFor, readTicketParentLookup, ticketResourceIdentity } from "../data/ticket-resource-hierarchy";
 import { withTicketTagIds } from "../data/ticket-tags";
 import type { Ticket } from "../data/types";
 import { notifyProposalRefined, resolveProposalRefinedNotification } from "../planner-notifications";
@@ -81,8 +80,7 @@ const ticketHierarchyMetadata = async (
   ticket: Ticket | undefined,
 ) => {
   if (!ticket) return undefined;
-  const tickets = await ticketsCollection(ctx).list();
-  const parentLookup = new Map(tickets.map((candidate) => [candidate.id, candidate]));
+  const parentLookup = await readTicketParentLookup(ctx, new Map([[ticket.id, ticket]]));
   return ticketResourceIdentity(ticket, parentLookup, plannerOwnerFor(ctx)).metadata;
 };
 

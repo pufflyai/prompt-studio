@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { ticketsCollection } from "../data/ticket-context.fixture";
-
+import { prepareArchiveContext } from "./archive-context.fixture";
 import { archiveTicketColumnAction } from "./archive-ticket";
 import { makeCommandArgs, makeCommandContext } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
@@ -58,12 +58,13 @@ test("bulk archives 28 tickets before host workspace cleanup completes", async (
     },
   });
 
+  await prepareArchiveContext(ctx);
   const command = archiveTicketColumnAction(ctx, { columnId, actionId: "archive_all" });
   try {
     const result = await command;
     await cleanupStarted.promise;
 
-    expect(result.archived.map((ticket) => ticket.id).sort()).toEqual(tickets.map((ticket) => ticket.id).sort());
+    expect(result.archivedCount).toBe(tickets.length);
     expect((await ticketsCollection(storage).list()).every((ticket) => ticket.archived)).toBe(true);
     expect(changed).toBe(true);
     expect(deleted).toEqual([]);
@@ -72,7 +73,7 @@ test("bulk archives 28 tickets before host workspace cleanup completes", async (
     await cleanupFinished.promise;
   }
 
-  expect(deleted).toEqual(workspaces.map((workspace) => workspace.id));
+  expect(deleted.sort()).toEqual(workspaces.map((workspace) => workspace.id).sort());
 });
 
 test("bulk cleanup attempts every workspace and reports all deletion failures", async () => {
@@ -103,16 +104,18 @@ test("bulk cleanup attempts every workspace and reports all deletion failures", 
     },
   });
 
+  await prepareArchiveContext(ctx);
   await archiveTicketColumnAction(ctx, { columnId, actionId: "archive_all" });
   await notificationPosted.promise;
 
-  expect(attempted).toEqual(workspaces.map((workspace) => workspace.id));
-  expect(deleted).toEqual([workspaces[1].id, workspaces[3].id]);
+  expect(attempted.sort()).toEqual(workspaces.map((workspace) => workspace.id).sort());
+  expect(deleted.sort()).toEqual([workspaces[1].id, workspaces[3].id].sort());
   expect((await ticketsCollection(storage).list()).every((ticket) => ticket.archived)).toBe(true);
   expect(notifications).toEqual([
     expect.objectContaining({
       kind: "failed",
-      body: expect.stringContaining(`Cannot delete ${workspaces[0].id}; Cannot delete ${workspaces[2].id}`),
+      body: expect.stringContaining(`Cannot delete ${workspaces[0].id}`),
     }),
   ]);
+  expect((notifications[0] as { body: string }).body).toContain(`Cannot delete ${workspaces[2].id}`);
 });

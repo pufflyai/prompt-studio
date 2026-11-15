@@ -12,6 +12,13 @@ export const sessionQuery =
     const matching = [...(await (input?.workspaceId && byWorkspace ? byWorkspace(input.workspaceId) : all()))]
       .reverse()
       .filter((session) => !input?.status || input.status.includes(session.status))
+      .filter(
+        (session) =>
+          !input?.anchor ||
+          (session.anchors_json ?? []).some(
+            (anchor) => anchor.type === input.anchor!.type && anchor.id === input.anchor!.id,
+          ),
+      )
       .map((session) =>
         sessionRecord({
           workspaceId: input?.workspaceId ?? null,

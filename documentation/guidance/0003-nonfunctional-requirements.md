@@ -18,6 +18,7 @@
 2. **Average whole-app memory: <2 GB** on Linux x64 and Apple Silicon Mac; **<3 GB** on Windows x64. Include all app-owned processes. Measure macOS physical footprint including compression, Linux resident set, and Windows private committed bytes in separately labelled platform series.
 3. Memory workload: one local project, default extensions, a completed 100-message conversation, one open file, and one idle terminal. Measure 10 minutes of repeated opening and closing of the conversation, file, and panels after a 30-second settle.
 4. **Idle renderer work: ≤2% script time and ≤5% task time** per renderer main thread over 10 seconds after a 2-second settle. These are shares of elapsed time, not whole-app CPU usage.
+5. **Planner scale:** assume projects contain thousands of tickets. No ticket action or view may require loading the complete ticket collection. Select records and fields through scoped, indexed queries, point reads, existence checks, or aggregates. Process bulk selections in bounded pages without accumulating the complete collection, and bound concurrent writes. Loading everything before filtering or paginating does not satisfy this requirement.
 
 ## 4. Verification
 
