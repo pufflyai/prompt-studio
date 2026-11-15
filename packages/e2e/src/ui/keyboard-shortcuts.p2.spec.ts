@@ -29,7 +29,7 @@ test("the fullscreen shortcut toggles from editing and completes shortcut mode",
   await expect(page.getByRole("button", { name: "Enter Main fullscreen", exact: true })).toBeVisible();
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
   await expect(draft).toContainText("Keep fullscreen draft");
-  await page.keyboard.press("Shift+/");
+  await page.keyboard.press("ControlOrMeta+/");
   const reference = page.getByRole("dialog", { name: "Keyboard shortcuts", exact: true });
   await reference.getByRole("textbox", { name: "Search keyboard shortcuts" }).fill("fullscreen");
   const action = reference.getByRole("group", { name: "Toggle Main fullscreen", exact: true });
@@ -70,7 +70,7 @@ test("Go destinations use shortcut mode while history chords respect editing foc
   await expect(composer).toBeFocused();
   // Shortcut help is available outside inputs; history restores the composer's focus.
   await page.getByRole("button", { name: "Help", exact: true }).focus();
-  await page.keyboard.press("Shift+/");
+  await page.keyboard.press("ControlOrMeta+/");
   const reference = page.getByRole("dialog", { name: "Keyboard shortcuts", exact: true });
   await expect(reference).toBeVisible();
   await reference.getByRole("textbox", { name: "Search keyboard shortcuts" }).fill("Keyboard shortcuts");
@@ -150,7 +150,7 @@ test("direct panel shortcuts open, focus, move and close tabs without entering s
     await page.locator("body").dispatchEvent("keydown", input);
     await expect(toggle).toHaveAttribute("aria-pressed", String(wasOpen));
     await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
-    await page.keyboard.press("Shift+/");
+    await page.keyboard.press("ControlOrMeta+/");
     const reference = page.getByRole("dialog", { name: "Keyboard shortcuts", exact: true });
     const search = reference.getByRole("textbox", { name: "Search keyboard shortcuts" });
     await search.fill("Keep this search");

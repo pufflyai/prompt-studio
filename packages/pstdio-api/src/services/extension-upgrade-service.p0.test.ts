@@ -400,8 +400,8 @@ describe("catalog extension installation and upgrades", () => {
   test("upgrades a source-ref extension without a catalog entry", async () => {
     const originUrl = "https://example.com/acme/extensions.git";
     const sourceRef = `${originUrl}@${"1".repeat(40)}#extensions/recipes`;
-    const installExtensionSource = mock(async (input: { prepareNamedSource?: (...args: never[]) => unknown }) => {
-      expect(input.prepareNamedSource).toBeFunction();
+    const installExtensionSource = mock(async (input: { originSource?: { kind: string } }) => {
+      expect(input.originSource?.kind).toBe("release");
       return installed as never;
     });
     const registerInstalledSource = mock(

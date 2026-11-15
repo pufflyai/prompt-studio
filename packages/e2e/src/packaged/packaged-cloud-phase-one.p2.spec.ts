@@ -84,8 +84,8 @@ const noteCopy = (device: CloudAcceptanceDevice, noteId: string) => {
   const path = join(device.folder, ".pstdio/extension-storage/pstdio.notes/documents", noteId, "content.md");
   return existsSync(path) ? readFileSync(path, "utf8") : undefined;
 };
-const setup = async (resources: Resources) => {
-  const fixture = await createCloudAcceptanceFixture(resources.root, resources.children);
+const setup = async (resources: Resources, extensions?: string[]) => {
+  const fixture = await createCloudAcceptanceFixture(resources.root, resources.children, { extensions });
   resources.fixture = fixture;
   const starting = await Promise.allSettled(["first", "second", "third"].map(fixture.start));
   const failedStarts = starting.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
@@ -360,7 +360,9 @@ test("three independent packaged devices keep extension content, offline collabo
 test("a packaged device catches up after eight trimmed replacements and a reset device receives repaired missing edits", async ({
   resources,
 }) => {
-  const { fixture, first, second, third, devices, projectId } = await setup(resources);
+  // This record-stream scenario uses the independent storage provider; application flows above
+  // retain Notes, Artifacts and Planner. Keep unrelated tool installs out of its four cold devices.
+  const { fixture, first, second, third, devices, projectId } = await setup(resources, []);
   const completion = expect.configure({ timeout: 10_000 });
   const space = await createSyncSpace({ projectId, spaceOwner: null, keys: [packagedProjectKey] });
   const documentId = await space.documentId(JSON.stringify([acceptanceOwner, "record-stream-v2"]));

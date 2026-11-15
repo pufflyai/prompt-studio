@@ -1,12 +1,15 @@
 import { randomUUID } from "node:crypto";
-import { mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
+import { threadId } from "node:worker_threads";
+import { currentFileMutationWorker, fileMutationWorkerMarker } from "./file-mutation-worker";
 import { isProcessAlive } from "./process-liveness";
 
 type LockOwner = {
   id: string;
   pid: number;
   ticket: number;
+  worker?: string;
 };
 
 type Claim = {
@@ -31,7 +34,13 @@ const readOwner = (claimPath: string) => {
   }
 
   const pid = Number.parseInt(basename(claimPath), 10);
-  return { id: claimPath, pid, ticket: Number.MAX_SAFE_INTEGER };
+  const worker = /^\d+-w([1-9]\d*)-/.exec(basename(claimPath));
+  return {
+    id: claimPath,
+    pid,
+    ticket: Number.MAX_SAFE_INTEGER,
+    worker: worker ? fileMutationWorkerMarker(pid, Number(worker[1])) : undefined,
+  };
 };
 
 const removeClaim = (claimPath: string) => {
@@ -64,7 +73,11 @@ const listClaims = (lockPath: string) => {
         changed = true;
         break;
       }
-      if (!Number.isFinite(owner.pid) || !isProcessAlive(owner.pid)) {
+      if (
+        !Number.isFinite(owner.pid) ||
+        !isProcessAlive(owner.pid) ||
+        (owner.worker !== undefined && !existsSync(owner.worker))
+      ) {
         removeClaim(claimPath);
         changed = true;
         break;
@@ -85,7 +98,11 @@ const hasChoosingClaim = (lockPath: string) => {
     const claimPath = join(lockPath, name);
     const owner = readOwner(claimPath);
     if (!owner) continue;
-    if (!Number.isFinite(owner.pid) || !isProcessAlive(owner.pid)) {
+    if (
+      !Number.isFinite(owner.pid) ||
+      !isProcessAlive(owner.pid) ||
+      (owner.worker !== undefined && !existsSync(owner.worker))
+    ) {
       removeClaim(claimPath);
     } else {
       choosing = true;
@@ -109,8 +126,8 @@ export const acquireFileMutationLock = (descriptorPath: string, label = "file mu
   const lockPath = `${descriptorPath}.lock`;
   ensureLockDirectory(lockPath);
 
-  const owner: LockOwner = { id: randomUUID(), pid: process.pid, ticket: 0 };
-  const claimPrefix = join(lockPath, `${owner.pid}-${owner.id}`);
+  const owner: LockOwner = { id: randomUUID(), pid: process.pid, ticket: 0, worker: currentFileMutationWorker() };
+  const claimPrefix = join(lockPath, `${owner.pid}-w${threadId}-${owner.id}`);
   const choosingPath = `${claimPrefix}.choosing`;
   const waitingPath = `${claimPrefix}.waiting`;
   const activePath = `${claimPrefix}.active`;

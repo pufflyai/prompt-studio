@@ -102,9 +102,10 @@ test("replaces multiple extensions concurrently without retaining old dependenci
     expect(readFileSync(join(target, "extension.ts"), "utf8")).toContain("commands: []");
     expect(existsSync(join(target, "node_modules"))).toBe(false);
   }
-  expect(readdirSync(home).sort()).toEqual([".extension-source-locks", "extensions"]);
+  expect(readdirSync(home).sort()).toEqual([".extension-source-locks", "cache", "extensions"]);
   // Coordination directories stay so other processes can safely join them;
   // completed replacements must leave no active or waiting ownership claims.
   const locks = join(home, ".extension-source-locks");
-  for (const name of readdirSync(locks)) expect(readdirSync(join(locks, name))).toEqual([]);
+  for (const entry of readdirSync(locks, { withFileTypes: true }))
+    if (entry.isDirectory()) expect(readdirSync(join(locks, entry.name))).toEqual([]);
 });

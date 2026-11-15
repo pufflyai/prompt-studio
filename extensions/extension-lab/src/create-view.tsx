@@ -4,6 +4,7 @@ import { defineExtensionView, type GuestHost, type PropsStore } from "@pstdio/sd
 import { ChakraProvider, psTheme } from "@pstdio/ui";
 import { type ComponentType, useEffect, useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
+import { EditingError } from "./editing-error";
 import { createExampleHost, type ExampleProps, type ExampleViewInput, ViewContext } from "./view-context";
 
 export const viewBackgrounds = {
@@ -15,11 +16,12 @@ export const viewBackgrounds = {
 };
 
 interface ExampleStoreConnection {
+  retry?(): Promise<void>;
   connect(
     host: GuestHost,
     props: PropsStore<ExampleProps>,
     onError: (error: unknown) => void,
-    onReady?: () => void,
+    onReady?: (ready?: boolean) => void,
   ): () => void;
 }
 interface ExampleRootProps {
@@ -41,7 +43,10 @@ const ExampleRoot = (props: ExampleRootProps) => {
         bridge,
         propsStore,
         (error) => setError(String(error)),
-        () => setReady(true),
+        (ready = true) => {
+          setReady(ready);
+          if (ready) setError(undefined);
+        },
       ),
     [bridge, propsStore, store],
   );
@@ -49,7 +54,8 @@ const ExampleRoot = (props: ExampleRootProps) => {
   return (
     <ViewContext value={input}>
       <Box h="100dvh" w="full" display="flex" flexDirection="column" overflow="hidden" color="fg" bg={background}>
-        {error ? (
+        {error && store?.retry ? <EditingError error={error} retry={() => store.retry!()} /> : null}
+        {error && !store?.retry ? (
           <Text role="alert" color="fg.error" p="sm">
             {error}
           </Text>

@@ -2,7 +2,8 @@ import { randomUUID } from "node:crypto";
 import { readFileSync, realpathSync } from "node:fs";
 import { rename } from "node:fs/promises";
 import { basename, extname, isAbsolute, join, relative } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { revisionSnapshotPath } from "./revision-snapshot-path";
 
 const RUNTIME_BUNDLE_SUFFIX = ".pstdio-runtime-bundle.mjs";
 const sourceFilePattern = /\.(?:[cm]js|[jt]sx?)$/;
@@ -55,10 +56,27 @@ const preserveImportMetaUrlPlugin = (packagePath: string) => {
   };
 };
 
+const frozenAbsoluteImportsPlugin = (snapshotRoot: string) => ({
+  name: "pstdio-freeze-absolute-imports",
+  setup(build: Bun.PluginBuilder) {
+    build.onResolve({ filter: /^(?:file:|\/|[A-Za-z]:[\\/]|\\\\)/ }, (args) => {
+      const path = args.path.startsWith("file:") ? fileURLToPath(args.path) : args.path;
+      if (!isAbsolute(path) || isInside(snapshotRoot, path)) return;
+      return { path: revisionSnapshotPath(snapshotRoot, Bun.resolveSync(path, args.resolveDir)) };
+    });
+  },
+});
+
 // Bundling gives development and compiled hosts the same dependency resolution. Host source
 // conditions must not select files omitted from published packages, and compiled Bun cannot
 // resolve an externally imported module's node_modules. Dependencies are treated uniformly.
-const buildEntry = async (entryPath: string, packagePath: string, outDir: string, bundlePath: string) => {
+const buildEntry = async (
+  entryPath: string,
+  outDir: string,
+  bundlePath: string,
+  preserveRoot: string,
+  snapshotRoot?: string,
+) => {
   if (await Bun.file(bundlePath).exists()) return bundlePath;
 
   const result = await Bun.build({
@@ -70,7 +88,10 @@ const buildEntry = async (entryPath: string, packagePath: string, outDir: string
     // while building, then move only the JS entry to our stable cached module path. Each build
     // writes its own name, so another process building the same copy never publishes a partial file.
     naming: `[name].${process.pid}-${randomUUID()}.pstdio-runtime-bundle.[ext]`,
-    plugins: [preserveImportMetaUrlPlugin(packagePath)],
+    plugins: [
+      preserveImportMetaUrlPlugin(preserveRoot),
+      ...(snapshotRoot ? [frozenAbsoluteImportsPlugin(snapshotRoot)] : []),
+    ],
   });
 
   if (!result.success) {
@@ -85,14 +106,14 @@ const buildEntry = async (entryPath: string, packagePath: string, outDir: string
   return bundlePath;
 };
 
-export const bundleEntry = (entryPath: string, packagePath: string, outDir: string) => {
+export const bundleEntry = (entryPath: string, packagePath: string, outDir: string, snapshotRoot?: string) => {
   const bundlePath = join(outDir, `${basename(entryPath, extname(entryPath))}${RUNTIME_BUNDLE_SUFFIX}`);
   const pending = pendingBundles.get(bundlePath);
   if (pending) return pending;
 
   // A build can expose its output before it finishes. Join the pending build before checking
   // the cache, so another loader cannot import an unfinished bundle.
-  const build = buildEntry(entryPath, packagePath, outDir, bundlePath).finally(() => {
+  const build = buildEntry(entryPath, outDir, bundlePath, snapshotRoot ?? packagePath, snapshotRoot).finally(() => {
     pendingBundles.delete(bundlePath);
   });
   pendingBundles.set(bundlePath, build);

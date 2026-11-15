@@ -6,7 +6,13 @@ import {
   chatRendererSnapshotSchema,
 } from "pstdio-api-contracts";
 import { createWorkbenchStore } from "../../core/shared/store/workbench-store";
-import { chatDraftContentKey, hydrateChatDraft, recoverChatDraft } from "./chat-draft-recovery";
+import {
+  canReplaceRecoveredChatDraft,
+  chatDraftContentKey,
+  hydrateChatDraft,
+  rebaseChatRecoveryKey,
+  recoverChatDraft,
+} from "./chat-draft-recovery";
 import { createChatDraftRestoration } from "./chat-draft-restoration";
 import { createChatEventReader } from "./chat-event-reader";
 import { clearDeliveredChatRecoveries } from "./chat-failed-submission";
@@ -41,9 +47,6 @@ const executeChatAction = async (
   assertChatActionAvailable(conversation, action);
   return chatRendererActionResultSchema.parse((await handler(chatRendererActionSchema.parse(action))) ?? {});
 };
-
-const emptyChatDraft = (draft: ChatDraft) =>
-  !draft.text && !draft.attachments.length && !draft.recovered?.length && !Object.keys(draft.values).length;
 
 const initialChatState = (initial?: ChatRendererSnapshot) => ({
   conversation: {
@@ -148,6 +151,8 @@ export const createChatSession = (input: ChatSessionInput) => {
   ) => {
     const pending = state.pending;
     const merged = snapshots.merge(state, incoming, issued, expectedValues, action);
+    // Host control defaults do not create a new composer draft; explicit user edits still fence recovery.
+    recoverableDraft = rebaseChatRecoveryKey(recoverableDraft, state.draft, merged.state.draft);
     hasLoaded = true;
     publish({ ...merged.state, loading: false });
     const recovery = clearDeliveredChatRecoveries(state.draft, pending ?? [], state.pending);
@@ -166,8 +171,7 @@ export const createChatSession = (input: ChatSessionInput) => {
         recoverChatDraft(
           state.draft,
           recovered,
-          (drafts.changes() === 0 && emptyChatDraft(state.draft)) ||
-            chatDraftContentKey(state.draft) === recoverableDraft,
+          canReplaceRecoveredChatDraft(state.draft, drafts.changes(), recoverableDraft),
         ),
       );
       recoverableDraft = undefined;

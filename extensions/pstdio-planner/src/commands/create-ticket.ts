@@ -11,7 +11,7 @@ import { withTicketOrder } from "../data/ticket-order";
 import { plannerOwnerFor, readTicketParentLookup, ticketResourceReference } from "../data/ticket-resource-hierarchy";
 import { withTicketTagIds } from "../data/ticket-tags";
 import type { StoredTicketAttachment } from "../data/types";
-import { plannerTicketsChanged } from "../events";
+import { emitPlannerTicketsChanged } from "../events";
 import { deriveTitle } from "../utils/derive-title";
 
 const ticketTitle = (input: { content?: string; title?: string }) =>
@@ -100,7 +100,7 @@ export const createTicketCommand = defineCommand({
       });
       return ticket;
     });
-    await ctx.events.emit(plannerTicketsChanged, { ticketId: ticket.id });
+    await emitPlannerTicketsChanged(ctx, { ticketId: ticket.id });
     return {
       ...withTicketTagIds(ticket),
       resource: {

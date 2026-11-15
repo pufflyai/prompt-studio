@@ -48,7 +48,11 @@ export function TicketForm(props: TicketFormProps) {
         label: localizeTicketFormValue(attribute.label, t),
         type: {
           ...type,
-          options: Array.isArray(type.options) ? type.options.map((option) => localizeTicketFormOption(option, t)) : [],
+          options: Array.isArray(type.options)
+            ? type.options.map((option) =>
+                localizeTicketFormOption(option, t, (target) => void host.call("navigation.open", { target })),
+              )
+            : [],
         },
       },
     ];

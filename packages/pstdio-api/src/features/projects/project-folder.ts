@@ -1,7 +1,11 @@
 import { basename } from "node:path";
 import type { CreateProjectInput, ExtensionSetupWarning } from "pstdio-api-contracts";
 import { traceSetupPhase } from "../../lib/setup-phase";
-import { installRepoDefaultExtensions, resolveDefaultExtensionsConfig } from "../extensions/default-extensions";
+import {
+  installRepoDefaultExtensions,
+  registerInstalledExtensionSources,
+  resolveDefaultExtensionsConfig,
+} from "../extensions/default-extensions";
 import { syncRepoExtensionsForProject } from "../extensions/repo-extensions";
 import { runWorkspaceProvisioning } from "../workspaces/provision-coordinator";
 import { ensureWorkspaceConfig } from "../workspaces/workspace-config";
@@ -85,6 +89,7 @@ const initializeLocalProjectWorkspace = async (
         defaultExtensions: defaults.defaultExtensions,
         repoPath: rootPath,
         releaseRef: deps.extensionUpgradeService?.releaseRef,
+        registerInstalledSources: (installed) => registerInstalledExtensionSources(deps.extensionService, installed),
       }),
     );
     await traceSetupPhase("project.repo_sync", context, () =>

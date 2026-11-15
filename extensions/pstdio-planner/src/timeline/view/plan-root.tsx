@@ -1,10 +1,12 @@
 // Compose the feature-branch graph with its milestone timeline and the selected ticket's details.
-import { Box, Flex } from "@chakra-ui/react";
-import type { GuestHost } from "@pstdio/sdk/extensions";
+import { Box, Flex, Stack } from "@chakra-ui/react";
+import { createWebviewQueryClient, type GuestHost } from "@pstdio/sdk/extensions";
+import { useWebviewScope } from "@pstdio/sdk/extensions/react";
 import { type HostStorage, HostStorageProvider, installPrismGlobal } from "@pstdio/ui";
 import { type CollectionViewsSource, useCollectionViewStore, useCollectionViews } from "@pstdio/ui/collection-view";
 import type { KanbanRendererSettings } from "@pstdio/ui/kanban-renderer";
 import { lazy, Suspense, useEffect, useState } from "react";
+import { PlannerReadError } from "../../views/planner-read-error";
 import { AutoBuildControl } from "./auto-build-control";
 import { BackgroundMenu } from "./background-menu";
 import { formatDay } from "./flags";
@@ -39,8 +41,13 @@ interface PlanRootProps {
 }
 
 export function PlanRoot(props: PlanRootProps) {
+  const scope = useWebviewScope(createWebviewQueryClient(props.host));
+  return <ProjectPlanRoot key={scope} {...props} />;
+}
+
+function ProjectPlanRoot(props: PlanRootProps) {
   const { host, t } = props;
-  const { client, plan } = usePlan(host);
+  const { client, plan, error, retry } = usePlan(host);
   // Restore project presentation before mounting controls or applying collapsed geometry.
   const [storage, setStorage] = useState<HostStorage>();
   useEffect(() => {
@@ -57,14 +64,21 @@ export function PlanRoot(props: PlanRootProps) {
       active = false;
     };
   }, [client, host]);
-  if (!plan || !storage) return <PlanLoading t={t} />;
-  const viewsSource = timelineViewsSource(client, plan.savedViews);
+  const viewsSource = plan ? timelineViewsSource(client, plan.savedViews) : undefined;
   return (
-    <HostStorageProvider storage={storage}>
-      <TimelinePresentationProvider key={plan.projectId} projectId={plan.projectId} storage={storage}>
-        <PlanContent host={host} t={t} client={client} plan={plan} viewsSource={viewsSource} />
-      </TimelinePresentationProvider>
-    </HostStorageProvider>
+    <Stack h="full" minH="0" gap="0">
+      <PlannerReadError error={error} retry={retry} />
+      <Box flex="1" minH="0">
+        {plan && storage && viewsSource ? (
+          <HostStorageProvider storage={storage}>
+            <TimelinePresentationProvider key={plan.projectId} projectId={plan.projectId} storage={storage}>
+              <PlanContent host={host} t={t} client={client} plan={plan} viewsSource={viewsSource} />
+            </TimelinePresentationProvider>
+          </HostStorageProvider>
+        ) : null}
+        {(!plan || !storage) && !error ? <PlanLoading t={t} /> : null}
+      </Box>
+    </Stack>
   );
 }
 
@@ -99,7 +113,7 @@ function PlanContent(props: PlanContentProps) {
     (state) => state.activeViewId,
   );
   const ready = views.some(({ id }) => id === activeViewId);
-  const { plan, paging } = usePlanWindow(client, filter, search, ready);
+  const { plan, paging, error: windowError, retry: retryWindow } = usePlanWindow(client, filter, search, ready);
   const attentionSection = plan?.sections.find(({ deadline }) => (deadline?.id ?? null) === attention?.id);
   const attentionRows =
     attention?.kind === "milestone"
@@ -110,7 +124,7 @@ function PlanContent(props: PlanContentProps) {
       ? (attentionSection?.deadline?.name ??
         (attentionSection?.deadline ? formatDay(attentionSection.deadline.date) : "Unscheduled"))
       : attentionRows.map(({ shorthand, title }) => `${shorthand} · ${title}`).join("");
-  const queryData = timelineQueryData(plan ?? schema, t);
+  const queryData = timelineQueryData(plan ?? schema, t, (target) => void host.call("navigation.open", { target }));
   const displayProperties = useCollectionViewStore(
     queryData.storageKey,
     timelineInitialState,
@@ -137,6 +151,7 @@ function PlanContent(props: PlanContentProps) {
   });
   return (
     <Flex direction="column" h="full" minH="0" minW="0">
+      <PlannerReadError error={windowError} retry={retryWindow} />
       <PlanHeader
         data={queryData}
         viewsSource={viewsSource}

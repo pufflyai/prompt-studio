@@ -47,5 +47,8 @@
     "vite": "^8.3.1",
     "ws": "^8.21.3",
     "@pstdio/canvas": "workspace:*"
+  },
+  "exports": {
+    "./testing": "./src/testing.ts"
   }
 }

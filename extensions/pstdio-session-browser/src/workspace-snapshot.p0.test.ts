@@ -10,6 +10,7 @@ const presentation = {
   additions: 12,
   deletions: 3,
 };
+const workspaces = [{ id: "a", name: "Workspace A", isDefault: true }];
 const snapshotContext = () =>
   makeCommandContext({
     storage: createMemoryStorage({ indexes: [nativeSubmissionIndex] }),
@@ -23,7 +24,10 @@ const snapshotContext = () =>
         },
         install: async () => {},
       },
-      workspaces: { list: async () => [{ id: "a", name: "Workspace A", isDefault: true }] },
+      workspaces: {
+        list: async () => workspaces,
+        get: async (id) => workspaces.find((workspace) => workspace.id === id) ?? null,
+      },
       commands: {
         execute: async () =>
           ({ ok: false, status: "error", code: "command_not_found", reason: "Workspaces not installed" }) as never,

@@ -1,6 +1,7 @@
 import { rm } from "node:fs/promises";
 import type { createExtensionInstancesDBService, createInstalledExtensionSourcesDBService } from "pstdio-db";
-import { hashExtensionSource, type LoadedExtension } from "../features/extensions/extension-runtime";
+import { acceptPreparedRevision } from "pstdio-extensions";
+import { hashExtensionSourceAsync, type LoadedExtension } from "../features/extensions/extension-runtime";
 
 interface Activation {
   projectId: string;
@@ -39,7 +40,7 @@ const registerActivation = async (deps: ActivationDeps, input: Activation) => {
           display_name: source.loaded.metadata.displayName,
           extension_id: source.loaded.metadata.id,
           manifest_json: source.loaded.manifest,
-          source_hash: hashExtensionSource(source.path),
+          source_hash: await hashExtensionSourceAsync(source.path),
           loaded_revision: source.revision,
           source_kind: "registry",
           source_path: source.path,
@@ -51,6 +52,8 @@ const registerActivation = async (deps: ActivationDeps, input: Activation) => {
           install_name: source.loaded.metadata.name,
         });
   if (!registered) throw new Error("Published source disappeared");
+  if (source.kind === "prepared" && source.loaded.preparedRevision)
+    await acceptPreparedRevision(source.path, source.loaded.preparedRevision, { expectedId: null });
 
   return { input, registered, previousInstance, previousSource };
 };

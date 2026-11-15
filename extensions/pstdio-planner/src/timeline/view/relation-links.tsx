@@ -1,8 +1,9 @@
 import { Button, Flex, Stack, Text } from "@chakra-ui/react";
 import { useState } from "react";
+import { PlannerReadError } from "../../views/planner-read-error";
 import type { PlanLink } from "../contracts";
-import { useLiveValue } from "./use-live-value";
 import { type PlanClient, planEvents } from "./use-plan";
+import { usePlannerQuery } from "./use-planner-query";
 
 export function Links(props: { title: string; links: PlanLink[]; onSelect: (id: string) => void }) {
   const { title, links, onSelect } = props;
@@ -23,7 +24,6 @@ export function Links(props: { title: string; links: PlanLink[]; onSelect: (id: 
     </Stack>
   );
 }
-const readPage = (client: PlanClient, input?: string) => client.commands["timeline.relations.read"](JSON.parse(input!));
 export function RelationshipWindow(props: {
   client: PlanClient;
   ticketId: string;
@@ -32,10 +32,14 @@ export function RelationshipWindow(props: {
 }) {
   const { client, ticketId, direction, onSelect } = props;
   const [offset, setOffset] = useState(0);
-  const { value } = useLiveValue(client, readPage, planEvents, JSON.stringify({ ticketId, direction, offset }));
-  if (!value) return null;
+  const { value, error, retry } = usePlannerQuery(
+    client,
+    client.commands["timeline.relations.read"].query({ ticketId, direction, offset }, { events: planEvents }),
+  );
+  if (!value) return <PlannerReadError error={error} retry={retry} />;
   return (
     <Stack gap="xs">
+      <PlannerReadError error={error} retry={retry} />
       <Links title={direction === "dependsOn" ? "Depends on" : "Holding up"} links={value.links} onSelect={onSelect} />
       {value.total > 25 ? (
         <Flex align="center" gap="sm">

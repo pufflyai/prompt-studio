@@ -4,13 +4,18 @@ import type { commands } from "./commands";
 /** Finite reads belong to the project query owner, including after a Home frame is recreated. */
 export const homeQueries = (client: ReturnType<typeof createWebviewClient<typeof commands>>) => ({
   home: client.commands.read.query(undefined, {
-    events: [viewDataEvents.sessionsChanged, viewDataEvents.workspacesChanged],
+    events: [viewDataEvents.projectsChanged, viewDataEvents.sessionsChanged, viewDataEvents.workspacesChanged],
   }),
   recent: client.queries.command(
     workbenchCommands.recentResources,
     {},
     {
-      events: [viewDataEvents.recentResourcesChanged],
+      events: [
+        viewDataEvents.recentResourcesChanged,
+        viewDataEvents.sessionsChanged,
+        viewDataEvents.workspacesChanged,
+        viewDataEvents.resourcesChanged,
+      ],
     },
   ),
 });

@@ -1,19 +1,19 @@
 import { describe, expect, test } from "bun:test";
 import { createInstalledExtensionRuntime } from "./installed-extension-runtime";
 
-const wait = () => new Promise((resolve) => setTimeout(resolve, 0));
-
 const createProcess = (onRefresh?: (sourcePath?: string) => Promise<void>) => ({
   adopt: onRefresh ?? (async () => {}),
   ensure: async () => {},
   dispose: () => {},
   refresh: onRefresh ?? (async () => {}),
+  reconcile: onRefresh ?? (async () => {}),
 });
 
 describe("createInstalledExtensionRuntime targeted webview refresh", () => {
   test("waits for a targeted webview build when an installed source changes", async () => {
     let releaseTargetedBuild: () => void = () => {};
     let targetedRefreshFinished = false;
+    const targetedStarted = Promise.withResolvers<void>();
     const refreshedSourcePaths: Array<string | undefined> = [];
     const targetedBuildReleased = new Promise<void>((resolve) => {
       releaseTargetedBuild = resolve;
@@ -35,7 +35,10 @@ describe("createInstalledExtensionRuntime targeted webview refresh", () => {
       createWebviewBuildManager: () =>
         createProcess(async (sourcePath) => {
           refreshedSourcePaths.push(sourcePath);
-          if (sourcePath) await targetedBuildReleased;
+          if (sourcePath) {
+            targetedStarted.resolve();
+            await targetedBuildReleased;
+          }
         }),
     });
     await runtime.ready;
@@ -44,7 +47,7 @@ describe("createInstalledExtensionRuntime targeted webview refresh", () => {
       const targetedRefresh = runtime.refresh("/extensions/lab").then(() => {
         targetedRefreshFinished = true;
       });
-      await wait();
+      await targetedStarted.promise;
 
       expect(refreshedSourcePaths).toEqual([undefined, "/extensions/lab"]);
       expect(targetedRefreshFinished).toBe(false);
@@ -63,6 +66,7 @@ describe("createInstalledExtensionRuntime targeted webview refresh", () => {
     const unexpectedRootRefreshReleased = new Promise<void>((resolve) => {
       releaseUnexpectedRootRefresh = resolve;
     });
+    const unexpectedRoot = Promise.withResolvers<void>();
     const webviewRefreshes: Array<string | undefined> = [];
     const runtime = createInstalledExtensionRuntime({
       harnessRegistry: {} as never,
@@ -80,7 +84,10 @@ describe("createInstalledExtensionRuntime targeted webview refresh", () => {
       createRootWatcher: async () =>
         createProcess(async () => {
           rootRefreshCount++;
-          if (rootRefreshCount > 1) await unexpectedRootRefreshReleased;
+          if (rootRefreshCount > 1) {
+            unexpectedRoot.resolve();
+            await unexpectedRootRefreshReleased;
+          }
         }),
       createWebviewBuildManager: () =>
         createProcess(async (sourcePath) => {
@@ -91,7 +98,9 @@ describe("createInstalledExtensionRuntime targeted webview refresh", () => {
     const targetedRefresh = runtime.refresh("/extensions/lab");
 
     try {
-      await wait();
+      expect(
+        await Promise.race([targetedRefresh.then(() => "targeted"), unexpectedRoot.promise.then(() => "root")]),
+      ).toBe("targeted");
 
       expect(rootRefreshCount).toBe(1);
       expect(webviewRefreshes).toEqual([undefined, "/extensions/lab"]);

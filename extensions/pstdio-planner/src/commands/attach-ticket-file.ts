@@ -1,7 +1,7 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { changeTicketFiles, ticketsCollection } from "../data/collections";
 import type { StoredTicketAttachment } from "../data/types";
-import { plannerTicketsChanged } from "../events";
+import { emitPlannerTicketsChanged } from "../events";
 
 export const attachTicketFileCommand = defineCommand({
   id: "attach-file",
@@ -22,7 +22,7 @@ export const attachTicketFileCommand = defineCommand({
       ],
       updatedAt: new Date().toISOString(),
     }));
-    await ctx.events.emit(plannerTicketsChanged, { ticketId: existing.id });
+    await emitPlannerTicketsChanged(ctx, { ticketId: existing.id });
     return next;
   },
 });
@@ -43,7 +43,7 @@ export const detachTicketFileCommand = defineCommand({
       attachments: (stored.attachments ?? []).filter((attachment) => attachment.id !== commandParams.fileId),
       updatedAt: new Date().toISOString(),
     }));
-    await ctx.events.emit(plannerTicketsChanged, { ticketId: existing.id });
+    await emitPlannerTicketsChanged(ctx, { ticketId: existing.id });
     return next;
   },
 });

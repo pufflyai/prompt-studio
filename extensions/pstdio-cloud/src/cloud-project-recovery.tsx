@@ -3,7 +3,9 @@ import { AlertMessage } from "@pstdio/ui";
 import { useState } from "react";
 import { Button } from "./button";
 import { useCloudContext } from "./cloud-context";
-import type { CloudData } from "./cloud-store";
+import type { useCloud } from "./use-cloud";
+
+type CloudData = NonNullable<ReturnType<typeof useCloud>["data"]>;
 
 export const CloudProjectRecovery = (props: { data: CloudData; refresh(): void }) => {
   const { data, refresh } = props;

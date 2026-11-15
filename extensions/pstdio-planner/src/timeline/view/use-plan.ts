@@ -11,7 +11,7 @@ import { plannerSchemaChanged } from "../../events";
 import type { commands } from "../commands/index";
 import { planChanged } from "../contracts";
 import { plannerTicketsChanged } from "../planner";
-import { useLiveValue } from "./use-live-value";
+import { usePlannerQuery } from "./use-planner-query";
 
 // The timeline answers Planner review requests through the same commands as the CLI.
 type PlanCommands = typeof commands & {
@@ -28,9 +28,7 @@ type PlanCommands = typeof commands & {
 
 export type PlanClient = ReturnType<typeof createWebviewClient<PlanCommands>>;
 
-const readPlan = (client: PlanClient) => client.commands["timeline.plan.schema"]();
-
-// Page data and schema have separate invalidations; ordinary ticket edits keep the field schema.
+// Planner reports tag changes as ticket changes, so track names stay current too.
 export const planEvents = [
   plannerTicketsChanged,
   planChanged,
@@ -39,10 +37,17 @@ export const planEvents = [
   viewDataEvents.resourcesChanged,
 ];
 
-const schemaEvents = [plannerSchemaChanged, viewDataEvents.boardViewsChanged];
-
 export function usePlan(host: GuestHost) {
   const [client] = useState(() => createWebviewClient<PlanCommands>(host));
-  const { value: plan } = useLiveValue(client, readPlan, schemaEvents);
-  return { client, plan };
+  const {
+    value: plan,
+    error,
+    retry,
+  } = usePlannerQuery(
+    client,
+    client.commands["timeline.plan.schema"].query(undefined, {
+      events: [plannerSchemaChanged, viewDataEvents.boardViewsChanged],
+    }),
+  );
+  return { client, plan, error, retry };
 }

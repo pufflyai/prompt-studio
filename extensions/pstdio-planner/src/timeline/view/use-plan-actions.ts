@@ -6,16 +6,9 @@ import type { BackgroundContext } from "./background-menu";
 import type { Editor } from "./plan-editor";
 import { relationsFor, useDragAndDrop, type useViewSections } from "./plan-state";
 import type { PlanViewProps } from "./plan-view";
-import { useLiveValue } from "./use-live-value";
 import type { PlanClient } from "./use-plan";
 import { planEvents } from "./use-plan";
-
-const readSelected = async (client: PlanClient, ticketId?: string) =>
-  ticketId
-    ? (await client.commands["timeline.plan.read"]({ ticketId })).sections
-        .flatMap(({ rows }) => rows)
-        .find(({ id }) => id === ticketId)
-    : undefined;
+import { usePlannerQuery } from "./use-planner-query";
 
 export function usePlanActions({
   host,
@@ -39,7 +32,12 @@ export function usePlanActions({
   const [context, setContext] = useState<BackgroundContext>();
   const dnd = useDragAndDrop(client);
   const resident = plan?.sections.flatMap(({ rows }) => rows).find(({ id }) => id === selectedId);
-  const { value: outside } = useLiveValue(client, readSelected, planEvents, resident ? undefined : selectedId);
+  const { value: outsidePlan } = usePlannerQuery(
+    client,
+    client.commands["timeline.plan.read"].query({ ticketId: selectedId ?? "" }, { events: planEvents }),
+    Boolean(selectedId && !resident),
+  );
+  const outside = outsidePlan?.sections.flatMap(({ rows }) => rows).find(({ id }) => id === selectedId);
   const selected = resident ?? (outside?.id === selectedId ? outside : undefined);
   const relations = relationsFor(selected, plan);
   const open = (target: NavigationTarget) => void host.call("navigation.open", { target });

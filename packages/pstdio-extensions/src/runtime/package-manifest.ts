@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -302,3 +303,10 @@ export const readPackageManifest = (
 
 import { readExtensionIcon } from "./extension-icon";
 import { resolveEntry } from "./package-entry";
+
+/** Preserve observable identity without inspecting code the host cannot run. */
+export const unavailableManifestLoadKey = (packagePath: string) => {
+  const { manifest, entryPath, diagnostics } = readPackageManifestMetadata(packagePath);
+  if (manifest && entryPath && !getExtensionApiVersionError(manifest.name, manifest.enginesPstdio)) return;
+  return `manifest-${createHash("sha256").update(JSON.stringify({ manifest, diagnostics })).digest("hex")}`;
+};

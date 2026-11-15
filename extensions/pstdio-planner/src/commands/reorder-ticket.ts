@@ -3,7 +3,7 @@ import { ticketsCollection } from "../data/collections";
 import { readTicketOrderChange } from "../data/indexed-ticket-order";
 import { ensureTicketStorage } from "../data/read-migrated-tickets";
 import { withWriteGuard } from "../data/write-guard";
-import { plannerTicketsChanged } from "../events";
+import { emitPlannerTicketsChanged } from "../events";
 
 export const reorderTicket = async (
   ctx: Pick<ExtensionContextBase, "events" | "storage" | "projectId" | "extensionId" | "resources" | "files">,
@@ -20,7 +20,7 @@ export const reorderTicket = async (
         position: ticket.position,
         updatedAt: now,
       }));
-    if (changes.length) await ctx.events.emit(plannerTicketsChanged, { ticketId: input.rowId });
+    if (changes.length) await emitPlannerTicketsChanged(ctx, { ticketId: input.rowId });
     return { changed: changes.length };
   });
 

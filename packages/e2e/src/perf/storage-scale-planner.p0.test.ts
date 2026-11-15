@@ -1,7 +1,6 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
-import { createTicketCommand } from "planner/src/commands/create-ticket";
-import { queryTicketPage } from "planner/src/data/query-ticket-page";
+import { createTicketCommand, queryTicketPage } from "planner/testing";
 import { compareRows, createRow, pageRows, workload } from "storage-scale-fixture";
 import { fixtureCommands, plannerStorageIndexes } from "./storage-scale-extension";
 

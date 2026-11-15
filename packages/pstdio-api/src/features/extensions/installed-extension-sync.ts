@@ -1,9 +1,14 @@
-import { existsSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { getExtensionApiVersionError } from "pstdio-extensions";
 import type { PruneProjectExtensionInstancesInput, SyncInstalledSourceInput } from "../../services/extension-service";
-import { hashExtensionSource, loadExtensionSource, readExtensionSourceMetadata } from "./extension-runtime";
-import { EXTENSION_INSTALLING_MARKER, resolvePstdioHome } from "./install-extension-source";
+import { listExtensionSources } from "./discover-extension-sources";
+import {
+  type hashExtensionSource,
+  hashExtensionSourceAsync,
+  loadExtensionSource,
+  readExtensionSourceMetadata,
+} from "./extension-runtime";
+import { resolvePstdioHome } from "./install-extension-source";
 
 type InstalledExtensionDiscoveryDeps = {
   env?: NodeJS.ProcessEnv | Record<string, string | undefined>;
@@ -53,17 +58,16 @@ type PrunedExtensionInstance = {
 
 const discoverInstalledExtensions = async (deps: InstalledExtensionDiscoveryDeps) => {
   const root = deps.extensionsRoot ?? join(resolvePstdioHome({ env: deps.env, homedir: deps.homedir }), "extensions");
-  if (!existsSync(root)) return { discovered: [], presentSourcePaths: [], root, rootExists: false };
+  const listing = await listExtensionSources(root);
+  if (!listing.rootExists) return { discovered: [], presentSourcePaths: [], root, rootExists: false };
 
-  const load = deps.loadExtension ?? loadExtensionSource;
-  const hash = deps.hashExtension ?? hashExtensionSource;
+  const load = deps.loadExtension ?? ((path: string) => loadExtensionSource(path, { accepted: true }));
+  const hash = deps.hashExtension ?? hashExtensionSourceAsync;
   const discovered: DiscoveredInstalledExtension[] = [];
   const presentSourcePaths: string[] = [];
 
-  for (const entry of readdirSync(root, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
-    if (!entry.isDirectory()) continue;
-    const sourcePath = join(root, entry.name);
-    if (existsSync(join(sourcePath, EXTENSION_INSTALLING_MARKER))) continue;
+  for (const sourcePath of listing.paths) {
+    const installName = basename(sourcePath);
 
     let loaded: Awaited<ReturnType<typeof loadExtensionSource>>;
     try {
@@ -74,7 +78,7 @@ const discoverInstalledExtensions = async (deps: InstalledExtensionDiscoveryDeps
         if (!getExtensionApiVersionError(metadataOnly.metadata.name, metadataOnly.metadata.enginesPstdio)) throw error;
         loaded = metadataOnly;
       } catch {
-        deps.onLoadFailure?.({ error, installName: entry.name, sourcePath });
+        deps.onLoadFailure?.({ error, installName, sourcePath });
         // User-edited installed sources can become invalid; project creation should still sync healthy extensions.
         continue;
       }
@@ -82,12 +86,12 @@ const discoverInstalledExtensions = async (deps: InstalledExtensionDiscoveryDeps
 
     presentSourcePaths.push(sourcePath);
     discovered.push({
-      installName: entry.name,
+      installName,
       displayName: loaded.metadata.displayName,
       extensionId: loaded.metadata.id,
       manifest: loaded.manifest,
       name: loaded.metadata.name,
-      sourceHash: hash(sourcePath),
+      sourceHash: await hash(sourcePath),
       sourcePath,
       version: loaded.metadata.version,
     });

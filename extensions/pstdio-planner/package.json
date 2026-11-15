@@ -32,5 +32,8 @@
     "@types/react-dom": "^19.0.0",
     "typescript": "6.0.2"
   },
-  "icon": "Kanban"
+  "icon": "Kanban",
+  "exports": {
+    "./testing": "./src/testing.ts"
+  }
 }

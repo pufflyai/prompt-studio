@@ -5,7 +5,7 @@ import { ensureTicketStorage } from "../data/read-migrated-tickets";
 import { ticketWithAttributes } from "../data/ticket-attributes";
 import type { Ticket } from "../data/types";
 import { withWriteGuard } from "../data/write-guard";
-import { plannerTicketsChanged } from "../events";
+import { emitPlannerTicketsChanged } from "../events";
 import { movePlanPlacement, planPlacements, readPlanMetadata } from "../timeline/commands/placement-store";
 import { deadlineOrNone } from "../timeline/commands/plan-store";
 
@@ -42,7 +42,7 @@ export const moveTicketOnBoard = async (
           updatedAt: now,
         }));
       await savePlan?.();
-      if (changes.size || savePlan) await ctx.events.emit(plannerTicketsChanged, { ticketId: input.rowId });
+      if (changes.size || savePlan) await emitPlannerTicketsChanged(ctx, { ticketId: input.rowId });
       return { changed: changes.size };
     };
     if (milestone === undefined) return save();

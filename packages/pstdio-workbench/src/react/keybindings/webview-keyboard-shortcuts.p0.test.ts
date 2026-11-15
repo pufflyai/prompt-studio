@@ -209,12 +209,12 @@ test("a plain direct chord remains restricted to noneditable content", () => {
   workbench.commands.registerCommand({ id: "plain", label: "Plain" }, { execute() {} });
   workbench.keybindings.registerKeybinding({
     action: { kind: "command", commandId: "plain" },
-    keybinding: "Shift+J",
+    keybinding: "Shift+F2",
     allowInInputs: true,
   });
   const { shortcuts } = createWebviewKeyboardShortcuts(workbench);
   expect(shortcuts.length).toBeGreaterThan(0);
-  expect(shortcuts.find((shortcut) => shortcut.key === "J")).toMatchObject({ ignoreInputs: true });
+  expect(shortcuts.find((shortcut) => shortcut.key === "F2")).toMatchObject({ ignoreInputs: true });
 });
 
 test("direct view shortcuts are withdrawn when focus leaves their owning view", async () => {
@@ -224,7 +224,7 @@ test("direct view shortcuts are withdrawn when focus leaves their owning view", 
   workbench.commands.registerCommand({ id: "move", label: "Move" }, { execute: () => calls++ });
   workbench.keybindings.registerKeybinding({
     action: { kind: "command", commandId: "move" },
-    keybinding: "V",
+    keybinding: "Alt+Shift+V",
     when: "workbench.view.id == 'drawing'",
   });
   const bridge = createWebviewKeyboardShortcuts(workbench);

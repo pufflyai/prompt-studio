@@ -192,6 +192,8 @@
     },
     "packages/pstdio-api": {
       "entry": [
+        // The API and compiled CLI start preparation in an isolated worker by path.
+        "src/features/extensions/extension-preparation-worker.ts",
         "package.json",
         "src/index.ts",
         "src/server.ts",
@@ -260,6 +262,8 @@
     },
     "packages/pstdio-extensions": {
       "entry": [
+        // The source runtime starts this default preparation worker by path.
+        "src/runtime/preparation-worker.ts",
         "package.json",
         "scripts/**/*.ts",
         "src/index.ts",
@@ -373,11 +377,25 @@
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "extensions/pstdio-workspaces": {
-      "entry": ["package.json", "extension.ts", "src/**/*.test.ts", "src/**/*.canvas.tsx", "src/*-view.tsx"],
+      "entry": [
+        "package.json",
+        "test-setup.ts",
+        "extension.ts",
+        "src/**/*.test.ts",
+        "src/**/*.canvas.tsx",
+        "src/*-view.tsx"
+      ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "extensions/pstdio-home": {
-      "entry": ["package.json", "extension.ts", "src/**/*.test.ts", "src/**/*.canvas.tsx", "src/view.tsx"],
+      "entry": [
+        "package.json",
+        "test-setup.ts",
+        "extension.ts",
+        "src/**/*.test.ts",
+        "src/**/*.canvas.tsx",
+        "src/view.tsx"
+      ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "extensions/extension-lab": {
@@ -386,6 +404,8 @@
         "extension.ts",
         "*.test.ts",
         "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+        "src/**/*.canvas.tsx",
         // The packaged host compatibility test bundles this entry by path.
         "src/legacy-state.fixture.ts",
         "src/views/*.tsx"
@@ -406,8 +426,9 @@
     "extensions/pstdio-cloud": {
       "entry": [
         "package.json",
+        "test-setup.ts",
         "extension.ts",
-        "src/**/*.test.ts",
+        "src/**/*.test.{ts,tsx}",
         "src/**/*.canvas.tsx",
         "src/.canvas/**/*.{ts,tsx}",
         "src/{status,details,settings}-view.tsx"

@@ -1,4 +1,5 @@
 import { parseHotkey } from "@tanstack/hotkeys";
+import { typesText, withNamedKeyCase } from "pstdio-api-contracts";
 import type { ContextKeyService } from "../../shared/context/context-key-service";
 import {
   byContributionPriority,
@@ -76,8 +77,17 @@ export const getKeybindingSteps = (keybinding: KeybindingSequence) => {
   return keybinding.trim().split(/\s+/).filter(Boolean);
 };
 
+/**
+ * A direct shortcut whose first key types text: a printable key alone or with Shift only. Such keys
+ * belong to whatever has focus, so the workbench never binds them outside shortcut-mode layers.
+ */
+export const isTypingKeybinding = (keybinding: KeybindingSequence) => {
+  const first = getKeybindingSteps(keybinding)[0];
+  return first ? typesText(parseHotkey(withNamedKeyCase(first))) : false;
+};
+
 const normalizeKeybindingSequence = (keybinding: KeybindingSequence): KeybindingSequence => {
-  const steps = getKeybindingSteps(keybinding);
+  const steps = getKeybindingSteps(keybinding).map(withNamedKeyCase);
   return steps.length === 1 ? (steps[0] ?? "") : steps;
 };
 
@@ -109,7 +119,10 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
     let defaultScope: Keybinding["targetScope"];
     if (assigned === "extensions" || assigned === "help") defaultScope = "project";
     else if (layer === "current") defaultScope = "panel";
-    const keybinding = override?.keybinding ?? binding.keybinding;
+    // An empty override keeps its meaning; only a chord is spelled the way the matcher expects.
+    const keybinding = override?.keybinding
+      ? normalizeKeybindingSequence(override.keybinding)
+      : (override?.keybinding ?? binding.keybinding);
     const first = getKeybindingSteps(keybinding)[0];
     const held = first ? holdsInputModifier(first) : false;
     return {
@@ -120,7 +133,8 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
       // Plain keys belong to the editor, so only Alt, Ctrl or Cmd chords may act while typing.
       allowInInputs: binding.allowInInputs === true && held,
       layer,
-      disabled: override?.disabled === true,
+      // A stale override can still assign a typing key as a direct shortcut.
+      disabled: override?.disabled === true || (!layer && isTypingKeybinding(keybinding)),
     };
   };
   const listCatalog = () => {
@@ -169,6 +183,13 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
     registerKeybinding(keybinding, metadata) {
       if (keybinding.action.kind === "command" && !deps.commands.getCommand(keybinding.action.commandId)) {
         throw new Error(`Keybinding command not registered: ${keybinding.action.commandId}`);
+      }
+
+      if (!keybinding.layer && isTypingKeybinding(keybinding.keybinding)) {
+        console.warn(
+          `Keybinding refused: "${getKeybindingSteps(keybinding.keybinding).join(" ")}" for ${getId(keybinding)} types text. Add Ctrl, Cmd, Alt or Mod, or bind it in a shortcut-mode layer.`,
+        );
+        return createDisposable(() => {});
       }
 
       const record: RegisteredKeybinding = {

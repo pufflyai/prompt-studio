@@ -13,7 +13,7 @@ import { changeTicketRecord } from "../data/ticket-records";
 import { ticketSelectionPage } from "../data/ticket-selection";
 import { withTicketTagIds } from "../data/ticket-tags";
 import { queueTicketWrite, queueTicketWrites } from "../data/ticket-write-queue";
-import { plannerTicketsChanged } from "../events";
+import { emitPlannerTicketsChanged, plannerTicketsChanged } from "../events";
 import { ticketMenuSlots } from "../resource-kinds";
 import { ticketRefFromCommandContext } from "./ticket-command-ref";
 import { cleanupTicketWorkspacesCommand, deleteUnusedLinkedWorkspaces } from "./ticket-workspace-cleanup";
@@ -52,7 +52,7 @@ export const archiveTicketCommand = defineCommand({
     // the ticket is durably archived, so a cleanup failure should not be reported
     // as a failed archive. The failure surfaces via a persistent notification instead.
     await deleteUnusedLinkedWorkspaces(ctx, [next]);
-    await ctx.events.emit(plannerTicketsChanged, { ticketId: next.id });
+    await emitPlannerTicketsChanged(ctx, { ticketId: next.id });
 
     return withTicketTagIds(next);
   },

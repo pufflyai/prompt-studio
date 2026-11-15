@@ -3,10 +3,12 @@ import type { WorkbenchExtensionAutomationRecord } from "@pstdio/sdk/api";
 import { ScopedPopover as Popover, PopoverHeader, Portal, ScrollArea, Switch } from "@pstdio/ui";
 import { Timer } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { getRuntimeCollections } from "@/lib/sync/collections";
 import { useActionError } from "@/shared/components/use-action-error";
-import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
+import { createExtensionStringResolver } from "@/shared/extensions/extension-localization";
 
 export interface ExtensionAutomationsPopoverProps {
+  projectId?: string;
   automations: WorkbenchExtensionAutomationRecord[];
   togglingAutomation?: boolean;
   onToggleAutomation: (automation: WorkbenchExtensionAutomationRecord, enabled: boolean) => Promise<unknown>;
@@ -14,6 +16,7 @@ export interface ExtensionAutomationsPopoverProps {
 
 export const ExtensionAutomationsPopover = (props: ExtensionAutomationsPopoverProps) => {
   const { automations, togglingAutomation = false, onToggleAutomation } = props;
+  const resolveString = createExtensionStringResolver(getRuntimeCollections(), props.projectId);
   const { t } = useTranslation("projects");
   const { showError, errorNotice, clearError } = useActionError();
 
@@ -74,7 +77,7 @@ export const ExtensionAutomationsPopover = (props: ExtensionAutomationsPopoverPr
                     <HStack key={automation.id} gap="md" paddingX="sm" paddingY="xs">
                       <Stack gap="0" flex="1" minW="0">
                         <Text textStyle="label/S/regular" truncate>
-                          {resolveLocalizableString(automation.title, automation.extensionId)}
+                          {resolveString(automation.title, automation.extensionId)}
                         </Text>
                         <Text textStyle="label/XS" fontFamily="mono" color="fg.subtle" truncate>
                           {t("projectSettings.extensionsPanel.automations.cron", { cron: automation.cron })}
@@ -86,7 +89,7 @@ export const ExtensionAutomationsPopover = (props: ExtensionAutomationsPopoverPr
                         disabled={togglingAutomation}
                         onCheckedChange={(details) => void handleToggle(automation, details.checked)}
                         aria-label={t("projectSettings.extensionsPanel.automations.toggleAriaLabel", {
-                          name: resolveLocalizableString(automation.title, automation.extensionId),
+                          name: resolveString(automation.title, automation.extensionId),
                         })}
                       />
                     </HStack>

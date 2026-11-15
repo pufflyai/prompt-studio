@@ -1,4 +1,5 @@
 import { normalizeHotkey } from "@tanstack/hotkeys";
+import { withNamedKeyCase } from "pstdio-api-contracts";
 
 export type ReservedKeybindingPlatform = "mac" | "linux" | "win";
 
@@ -114,7 +115,7 @@ export interface ReservedKeybindingMatch {
 }
 
 const canonicalize = (chord: string, platform: ReservedKeybindingPlatform) =>
-  normalizeHotkey(chord, TANSTACK_PLATFORMS[platform]);
+  normalizeHotkey(withNamedKeyCase(chord), TANSTACK_PLATFORMS[platform]);
 
 const buildReservedIndex = () => {
   const byPlatform = new Map<ReservedKeybindingPlatform, Map<string, ReservedKeybindingEntry>>();

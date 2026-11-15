@@ -14,6 +14,7 @@ import { ExtensionIcon } from "./extension-icon";
 import { ExtensionIdentity } from "./extension-identity";
 
 export interface ExtensionListRowProps {
+  projectId?: string;
   extension: ProjectExtensionInstance;
   diagnostics: ExtensionDiagnostic[];
   automations: WorkbenchExtensionAutomationRecord[];
@@ -101,6 +102,7 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
         data-testid="extension-automation-status"
       >
         <ExtensionAutomationsPopover
+          projectId={props.projectId}
           automations={automations}
           togglingAutomation={togglingAutomation}
           onToggleAutomation={onToggleAutomation}

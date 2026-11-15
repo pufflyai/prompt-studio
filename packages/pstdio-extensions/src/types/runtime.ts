@@ -51,6 +51,8 @@ export interface NormalizedExtension {
   description?: string;
   /** Path to the extension's package directory. */
   packagePath: string;
+  /** Installed package that owns an immutable prepared copy. */
+  originalPackagePath?: string;
   /** Path to the imported contributions entry file. */
   sourcePath: string;
   sourceKind: ExtensionSourceKind;

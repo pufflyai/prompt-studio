@@ -5,6 +5,8 @@ type DocumentSnapshot = Pick<MarmaladeState, "document" | "selectedIds" | "expan
 export interface MarmaladeHistory {
   past: DocumentSnapshot[];
   future: DocumentSnapshot[];
+  /** Last explicit undo/redo; compatible peer edits leave unfinished gestures valid. */
+  boundary: string;
 }
 const snapshot = (state: MarmaladeState) => ({
   document: state.document,
@@ -22,6 +24,7 @@ export const applyMarmaladeHistory = (current: MarmaladeState, history: Marmalad
     return {
       state: { ...current, ...structuredClone(target) },
       history: {
+        ...history,
         past: undo ? source.slice(0, -1) : [...history.past, saved],
         future: undo ? [...history.future, saved] : source.slice(0, -1),
       },
@@ -29,5 +32,5 @@ export const applyMarmaladeHistory = (current: MarmaladeState, history: Marmalad
   }
   const state = applyMarmaladeAction(current, action);
   if (JSON.stringify(state.document) === JSON.stringify(current.document)) return { state, history };
-  return { state, history: { past: [...history.past, snapshot(current)].slice(-20), future: [] } };
+  return { state, history: { ...history, past: [...history.past, snapshot(current)].slice(-20), future: [] } };
 };
