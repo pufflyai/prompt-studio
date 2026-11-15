@@ -29,7 +29,7 @@ test("ticket history and arbitrary related resources load only their visible pag
   };
   for (let offset = 0; offset < 205; offset += 100)
     await ctx.resources.addAnchors(
-      { type: "ticket", id: ticket.id, extensionId: "pstdio.pstdio-planner" },
+      { type: "ticket", id: ticket.id, extensionId: "pstdio.planner" },
       Array.from({ length: Math.min(100, 205 - offset) }, (_, index) => ({
         type: "foobar",
         id: `item-${String(offset + index).padStart(3, "0")}`,

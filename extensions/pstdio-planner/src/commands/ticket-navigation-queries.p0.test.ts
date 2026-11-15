@@ -25,7 +25,7 @@ test("ticket navigation reads only its anchored session history", async () => {
   );
   expect(queries).toEqual([
     {
-      anchor: { type: "ticket", id: ticket.id, projectId: "proj-1", extensionId: "pstdio.pstdio-planner" },
+      anchor: { type: "ticket", id: ticket.id, projectId: "proj-1", extensionId: "pstdio.planner" },
       includeWorkspaceAnchors: true,
       includeArchived: true,
       orderBy: "lastActivity",

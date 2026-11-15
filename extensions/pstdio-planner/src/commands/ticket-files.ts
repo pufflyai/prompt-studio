@@ -67,7 +67,7 @@ export const createTicketFileCommand = defineCommand({
       ticketId,
       name: commandParams.name,
     });
-    await ctx.events.emit(plannerTicketsChanged, { ticketId });
+    await emitPlannerTicketsChanged(ctx, { ticketId });
     // ticketId travels with the result so the editor can filter the broadcast.
     return { ...file, ticketId };
   },
@@ -128,7 +128,7 @@ export const deleteTicketFileCommand = defineCommand({
   async run(ctx, commandParams) {
     const { ticketId, fileId } = commandParams;
     await deleteTicketFile({ storage: ctx.storage, resources: ctx.resources, ticketId, fileId });
-    await ctx.events.emit(plannerTicketsChanged, { ticketId });
+    await emitPlannerTicketsChanged(ctx, { ticketId });
     if (selectedDocumentFromResource(ctx.resource) !== fileId) return { ticketId, fileId };
 
     // The open document is gone, so the page moves back to the ticket body.

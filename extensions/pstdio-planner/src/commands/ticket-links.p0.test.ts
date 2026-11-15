@@ -33,7 +33,7 @@ const setup = async () => {
     },
   });
   const overrides = {
-    extensionId: "pstdio.pstdio-planner",
+    extensionId: "pstdio.planner",
     workspaces: {
       ...anchorsApi(workspace),
       list: async () => [workspace],

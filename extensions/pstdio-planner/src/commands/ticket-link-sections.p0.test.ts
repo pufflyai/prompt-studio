@@ -42,7 +42,7 @@ test("ticket resource navigation merges bidirectional session links without empt
       resource,
       target: {
         kind: "page",
-        page: { kind: "page", extensionId: "pstdio.pstdio-session-browser", id: "conversation" },
+        page: { kind: "page", extensionId: "pstdio.session-browser", id: "conversation" },
         resource,
       },
     }));
@@ -86,7 +86,7 @@ test("ticket navigation queries canonical project-scoped links", async () => {
       resource,
       target: {
         kind: "page",
-        page: { kind: "page", id: "conversation", extensionId: "pstdio.pstdio-session-browser" },
+        page: { kind: "page", id: "conversation", extensionId: "pstdio.session-browser" },
         resource,
       },
     }));

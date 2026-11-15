@@ -126,7 +126,7 @@ test("bulk worktree cleanup refuses shared worktrees before removing any workspa
 
   shared.anchors_json = [anchor];
   await args[0].resources.removeAnchors({ type: "workspace", id: shared.id, extensionId: "pstdio" }, [
-    { type: "ticket", id: "other-ticket", extensionId: "pstdio.pstdio-planner" },
+    { type: "ticket", id: "other-ticket", extensionId: "pstdio.planner" },
   ]);
   expect(await ticketWorktreesRemoveAllCommand.run(...args)).toEqual({ removed: 2 });
   expect(removed.sort()).toEqual(["exclusive", "shared"]);

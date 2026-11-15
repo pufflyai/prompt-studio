@@ -56,7 +56,7 @@ export const listTicketFilesTree = async (
   ctx: Pick<ExtensionContextBase, "extensionId" | "projectId" | "sessions" | "storage" | "workspaces" | "resources">,
   input: { renderer?: RendererContext },
 ) => {
-  const renderer = input.renderer ?? { rendererId: "pstdio.pstdio-planner.view.ticket-files" };
+  const renderer = input.renderer ?? { rendererId: "pstdio.planner.view.ticket-files" };
   const resource = renderer.resource as TicketTreeResource | undefined;
   const ticketId = resource?.type === "ticket" ? resource.id : undefined;
   if (!ticketId) return [emptyFilesSection()];

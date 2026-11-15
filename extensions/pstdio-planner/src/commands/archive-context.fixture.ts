@@ -43,7 +43,7 @@ export const seedWorkspaceLinks = async (
       { type: "workspace", id: workspace.id, extensionId: "pstdio" },
       (workspace.anchors_json ?? []).map((ref) => ({
         ...ref,
-        extensionId: ref.extensionId ?? "pstdio.pstdio-planner",
+        extensionId: ref.extensionId ?? "pstdio.planner",
       })),
     );
 };
