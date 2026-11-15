@@ -185,11 +185,14 @@ const readVarlena = (page: DataView, bytes: Uint8Array, at: number) => {
     return { size: length, end: at + length, text: new TextDecoder().decode(bytes.subarray(at + 1, at + length)) };
   }
   const aligned = (at + 3) & ~3;
-  const length = page.getUint32(aligned, true) >>> 2;
+  const header = page.getUint32(aligned, true);
+  const length = header >>> 2;
+  // Low bits 10 mark an inline pglz-compressed value: its bytes are not text.
+  const compressed = (header & 3) === 2;
   return {
     size: length,
     end: aligned + length,
-    text: new TextDecoder().decode(bytes.subarray(aligned + 4, aligned + length)),
+    text: compressed ? "(compressed)" : new TextDecoder().decode(bytes.subarray(aligned + 4, aligned + length)),
   };
 };
 
