@@ -59,6 +59,19 @@ type CandidateExtensionSource = LoadableExtensionSource & {
   preparedRevision?: import("pstdio-extensions").PreparedExtensionRevision;
 };
 
+const logLoadFailure = (context: LoadContext, error: unknown) => {
+  apiLogger.error(
+    {
+      duration_ms: Math.round(performance.now() - context.startedAt),
+      err: error,
+      event: "extensions.runtime_catalog.load_failed",
+      project_id: context.projectId,
+      reason: context.reason,
+    },
+    "Project extension runtime load failed",
+  );
+};
+
 export const createProjectExtensionRuntimeCatalog = (deps: {
   extensionService: ReturnType<typeof createExtensionService>;
   projectService: ReturnType<typeof createProjectService>;
@@ -153,19 +166,6 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
       "Published project extension runtime snapshot",
     );
     return snapshot;
-  };
-
-  const logLoadFailure = (context: LoadContext, error: unknown) => {
-    apiLogger.error(
-      {
-        duration_ms: Math.round(performance.now() - context.startedAt),
-        err: error,
-        event: "extensions.runtime_catalog.load_failed",
-        project_id: context.projectId,
-        reason: context.reason,
-      },
-      "Project extension runtime load failed",
-    );
   };
 
   const runLoad = async (projectId: string, state: ProjectState) => {

@@ -13,9 +13,9 @@ test("inventory change checks leave a live frontend continuation admitted and st
   const root = await mkdtemp(join(tmpdir(), "extension-inventory-admission-"));
   const previous = { home: process.env.PSTDIO_HOME, defaults: process.env.PSTDIO_DEFAULT_EXTENSIONS };
   process.env.PSTDIO_HOME = join(root, "home");
-  process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify(["pstdio-base-themes"]);
-  const source = join(root, "home/extensions/pstdio-base-themes");
-  writeExtension(source, "pstdio-base-themes");
+  process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify(["base-themes"]);
+  const source = join(root, "home/extensions/base-themes");
+  writeExtension(source, "base-themes");
   let handle: Awaited<ReturnType<typeof createTestApp>> | undefined;
   const release = Promise.withResolvers<void>();
   let continuation: Promise<unknown> | undefined;
@@ -41,9 +41,9 @@ test("inventory change checks leave a live frontend continuation admitted and st
       last_error_json: { message: "Current frontend diagnostic" },
     });
     release.resolve();
-    expect(
-      (await inventory).extensions.find((entry) => entry.installName === "pstdio-base-themes")?.updateAvailable,
-    ).toBe(true);
+    expect((await inventory).extensions.find((entry) => entry.installName === "base-themes")?.updateAvailable).toBe(
+      true,
+    );
     expect((await inventory).extensions[0]).toMatchObject({
       status: "error",
       lastError: { message: "Current frontend diagnostic" },

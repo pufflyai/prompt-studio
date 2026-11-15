@@ -5,7 +5,7 @@ import { withTicketTagIds } from "../data/ticket-tags";
 export const getTicketCommand = defineCommand({
   id: "get-ticket",
   title: "Get ticket",
-  cli: { globalAliases: [["tickets", "panel"]], examples: ["pstdio pstdio.pstdio-planner get-ticket --id PS-1"] },
+  cli: { examples: ["pstdio pstdio.planner get-ticket --id PS-1"] },
   params: { id: params.text({ required: true }) },
   async run(ctx, commandParams) {
     const matches = (await findTickets(ctx, commandParams.id)).map(withTicketTagIds);

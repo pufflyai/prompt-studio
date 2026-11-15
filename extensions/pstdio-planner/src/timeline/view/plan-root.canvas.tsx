@@ -58,7 +58,7 @@ function TimelineStory(props: { failConfigure?: boolean; loading?: "tickets" | "
     return { outcome: { ok: true, status: "success", value } };
   };
   const host: GuestHost = {
-    extensionId: "pstdio.pstdio-planner",
+    extensionId: "pstdio.planner",
     call: respond as GuestHost["call"],
     onEvent: () => () => {},
   };

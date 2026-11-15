@@ -24,7 +24,7 @@ export const archiveTicketCommand = defineCommand({
   id: "archive-ticket",
   mutating: true,
   title: "Archive ticket",
-  cli: { globalAliases: [["tickets", "archive"]], examples: ["pstdio pstdio.pstdio-planner archive-ticket --id PS-1"] },
+  cli: { examples: ["pstdio pstdio.planner archive-ticket --id PS-1"] },
   menus: [
     {
       slot: ticketMenuSlots.headerOverflow,

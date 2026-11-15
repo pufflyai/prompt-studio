@@ -13,7 +13,7 @@ export const createDeadlineCommand = defineCommand({
   title: "Create deadline",
   cli: {
     description: "Add a deadline. Move tickets into it to make them due by its date.",
-    examples: ['pst pstdio.pstdio-planner timeline deadline create --date 2026-10-15 --name "Staging acceptance"'],
+    examples: ['pst pstdio.planner timeline deadline create --date 2026-10-15 --name "Staging acceptance"'],
   },
   params: {
     date: params.text({ label: "Date", description: "YYYY-MM-DD.", required: true }),
@@ -36,7 +36,7 @@ export const updateDeadlineCommand = defineCommand({
   title: "Change deadline",
   cli: {
     description: "Change a deadline's date or name. Its tickets stay with it.",
-    examples: ["pst pstdio.pstdio-planner timeline deadline update --deadline 2026-10-15 --date 2026-10-17"],
+    examples: ["pst pstdio.planner timeline deadline update --deadline 2026-10-15 --date 2026-10-17"],
   },
   params: {
     deadline: deadlineParam,

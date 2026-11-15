@@ -207,7 +207,7 @@ Existing resource and startup budgets remain unchanged.
 
 [Temporary Bun import identities](0151-temporary-bun-runtime-import-identities.md) records the pinned runtime failure,
 workaround, limitations, and removal condition. [Temporary compiled dependency
-resolution](0145-temporary-compiled-bun-dependency-resolution.md) records the separate bare-import ambiguity and
+resolution](0152-temporary-compiled-bun-dependency-resolution.md) records the separate bare-import ambiguity and
 conservative physical binding retention.
 
 Editable skill files retain their existing canonical installed paths. Skill editing and workspace provisioning
