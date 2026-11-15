@@ -34,7 +34,7 @@ export async function expectPackagedDependencyBlockers(input: {
     dependsOn: [parent.id],
   });
   const cleared = await runPackagedAsync(
-    ["tickets", "update", "--project-id", input.projectId, "--id", child.id, "--blocked-reason", ""],
+    ["pstdio.planner", "update-ticket", "--project-id", input.projectId, "--id", child.id, "--blocked-reason", ""],
     process.cwd(),
     {
       PSTDIO_API_URL: input.baseUrl,

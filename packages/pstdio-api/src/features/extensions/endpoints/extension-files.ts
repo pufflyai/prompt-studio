@@ -1,3 +1,4 @@
+import { canonicalRuntimeId } from "pstdio-extensions";
 import { ProjectNotFoundError } from "../../../services/extension-service";
 import type { AppRouteHandler } from "../../../types";
 import { findEnabledSource } from "../command-environment/types";
@@ -33,8 +34,12 @@ export const uploadExtensionCommandFileHandler = (
     try {
       const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
       const command =
-        snapshot.runtime.commands.find((candidate) => candidate.id === commandId) ??
-        snapshot.runtime.privateHandlers.find((candidate) => candidate.id === commandId);
+        snapshot.runtime.commands.find(
+          (candidate) => candidate.id === canonicalRuntimeId(snapshot.runtime, commandId),
+        ) ??
+        snapshot.runtime.privateHandlers.find(
+          (candidate) => candidate.id === canonicalRuntimeId(snapshot.runtime, commandId),
+        );
       const enabledSource = command ? findEnabledSource(snapshot.enabledSources, command.extensionId) : undefined;
       if (!enabledSource) return c.json({ error: `Extension command not found: ${commandId}` }, 404);
 

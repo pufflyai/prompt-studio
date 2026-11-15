@@ -219,7 +219,7 @@ test("the default project header puts ordinary Home before Search and keeps Sear
     id: "home",
     owner,
     slot: "header",
-    sourceExtensionId: "pstdio.pstdio-home",
+    sourceExtensionId: "pstdio.home",
     declarationIndex: 0,
     getSections: () => [
       {
@@ -228,7 +228,7 @@ test("the default project header puts ordinary Home before Search and keeps Sear
           {
             id: "home",
             label: "Home",
-            target: { kind: "page", page: { kind: "page", extensionId: "pstdio.pstdio-home", id: "home" } },
+            target: { kind: "page", page: { kind: "page", extensionId: "pstdio.home", id: "home" } },
           },
         ],
       },

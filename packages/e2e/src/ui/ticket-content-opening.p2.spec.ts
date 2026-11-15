@@ -26,7 +26,7 @@ test("ticket content opens with pending requests while navigation details are st
       request: { kind: "task" },
     });
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
-    await page.goto(`/projects/${id}/extensions/pstdio.pstdio-planner/tickets`);
+    await page.goto(`/projects/${id}/extensions/pstdio.planner/tickets`);
     const card = page.getByTestId("renderer-card").filter({ hasText: ticket.title }).first();
     await expect(card).toBeVisible();
     await page.route(/ticket-files.*\/execute/, async (route) => {

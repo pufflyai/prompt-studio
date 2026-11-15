@@ -23,7 +23,7 @@ const waitForPlanner = async (request: import("@playwright/test").APIRequestCont
         const response = await request.get(`${apiBase}/v1/projects/${projectId}/extensions/ui`);
         if (!response.ok()) return false;
         const metadata = (await response.json()) as { views?: Array<{ id: string }> };
-        return metadata.views?.some((view) => view.id === "pstdio.pstdio-planner.view.tickets") ?? false;
+        return metadata.views?.some((view) => view.id === "pstdio.planner.view.tickets") ?? false;
       },
       { timeout: 30_000 },
     )
@@ -50,7 +50,7 @@ test("returns to a resource's parent after deleting the open resource", async ({
   });
 
   await prepareDashboard(page, project.id);
-  await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
+  await page.goto(`/projects/${project.id}/extensions/pstdio.planner/tickets`);
   const ticketCard = page.getByTestId("renderer-card").filter({ hasText: "Delete open resource" }).first();
   await expect(ticketCard).toBeVisible();
   await ticketCard.getByText("Delete open resource", { exact: true }).click();
@@ -60,16 +60,14 @@ test("returns to a resource's parent after deleting the open resource", async ({
   const deleteResponse = page.waitForResponse(
     (response) =>
       response.request().method() === "POST" &&
-      new URL(response.url()).pathname.endsWith(
-        "/extensions/commands/pstdio.pstdio-planner.command.delete-ticket/execute",
-      ),
+      new URL(response.url()).pathname.endsWith("/extensions/commands/pstdio.planner.command.delete-ticket/execute"),
   );
   await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
   expect((await deleteResponse).ok()).toBe(true);
 
   await expect(page.getByRole("button", { name: "Create row", exact: true })).toBeVisible();
   await expect(page.locator("[data-workbench-breadcrumb-resource-actions]")).toHaveAccessibleName("Page actions");
-  expect(new URL(page.url()).pathname).toBe(`/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
+  expect(new URL(page.url()).pathname).toBe(`/projects/${project.id}/extensions/pstdio.planner/tickets`);
   await expect(page.getByText("Delete open resource", { exact: true }).filter({ visible: true })).toHaveCount(0);
   await expect
     .poll(async () => (await listPlannerTickets(request, apiBase, project.id)).map((item) => item.id))
@@ -90,7 +88,7 @@ test("remote deletion closes a clean dashboard while keeping another dashboard's
   try {
     for (const dashboard of [page, other]) {
       await prepareDashboard(dashboard, project.id);
-      await dashboard.goto(`${apiBase}/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
+      await dashboard.goto(`${apiBase}/projects/${project.id}/extensions/pstdio.planner/tickets`);
       await dashboard.getByTestId("renderer-card").filter({ hasText: ticket.title }).first().click();
       await expect(dashboard.getByTestId("content-editable").first()).toContainText(ticket.title);
     }
@@ -136,7 +134,7 @@ test("a removed note's pending draft stays recoverable until its tab is explicit
   await waitForPlanner(request, project.id);
   const noteCommand = async (command: string, params: Record<string, string>) => {
     const response = await request.post(
-      `${apiBase}/v1/projects/${project.id}/extensions/commands/pstdio.pstdio-notes.command.notes.${command}/execute`,
+      `${apiBase}/v1/projects/${project.id}/extensions/commands/pstdio.notes.command.notes.${command}/execute`,
       { data: { params, source: "api" } },
     );
     expect(response.ok()).toBe(true);
@@ -146,7 +144,7 @@ test("a removed note's pending draft stays recoverable until its tab is explicit
   };
   const note = await noteCommand("create", { title: "Recover before closing" });
   await prepareDashboard(page, project.id);
-  await page.goto(`${apiBase}/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
+  await page.goto(`${apiBase}/projects/${project.id}/extensions/pstdio.planner/tickets`);
   await page.getByRole("option", { name: "Notes", exact: true }).click();
   await page.getByRole("option", { name: note.title, exact: true }).click();
   const tabId = await page

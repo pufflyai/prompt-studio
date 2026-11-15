@@ -1,4 +1,5 @@
 import type { ScopedQueryClient } from "@pstdio/sdk/extensions";
+import { canonicalRegistryId } from "../../shared/contributions/identity-aliases";
 import {
   type ContributionMetadata,
   normalizeContributionMetadata,
@@ -127,7 +128,7 @@ export const createViewRegistry = (input: CreateWorkbenchViewRegistryInput): Wor
     },
 
     getView(viewId) {
-      return store.getState().views[viewId];
+      return store.getState().views[canonicalRegistryId(store, viewId)];
     },
 
     listViews() {
@@ -135,6 +136,7 @@ export const createViewRegistry = (input: CreateWorkbenchViewRegistryInput): Wor
     },
 
     refreshView(viewId, refreshInput) {
+      viewId = canonicalRegistryId(store, viewId);
       if (!store.getState().views[viewId]) throw new Error(`View is not registered: ${viewId}`);
       bodies.get(viewId)?.refresh?.(refreshInput);
     },

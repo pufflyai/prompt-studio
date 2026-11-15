@@ -14,6 +14,10 @@ export type InstallExtensionSourceInput = {
   force?: boolean;
   homedir?: () => string;
   installName?: string;
+  /** Worker-inspected owner whose destination family was reserved before preparation. */
+  expectedIdentity?: string;
+  /** The batch can share source reads while retaining exclusive destination ownership. */
+  reservation?: { reads: readonly string[]; writes: readonly string[] };
   /** Running host release used by catalog origins whose ref is `{hostRelease}`. */
   hostReleaseRef?: string;
   repoPath?: string;

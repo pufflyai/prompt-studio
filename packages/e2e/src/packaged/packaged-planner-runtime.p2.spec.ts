@@ -86,7 +86,7 @@ const plannerInstance = async (host: Host, projectId: string) => {
     headers: runtimeAuthorization(host.descriptor),
   });
   const { extensions } = (await response.json()) as { extensions: { id: string; installName: string }[] };
-  return extensions.find((instance) => instance.installName === "pstdio-planner");
+  return extensions.find((instance) => instance.installName === "planner");
 };
 
 // Installing from one project enables Planner there. Other projects receive a disabled instance
@@ -117,9 +117,7 @@ const plannerWebview = async (host: Host, projectId: string, localId: string) =>
     headers: runtimeAuthorization(host.descriptor),
   });
   const metadata = (await response.json()) as WorkbenchExtensionMetadata;
-  const view = metadata.views.find(
-    (entry) => entry.extensionId === "pstdio.pstdio-planner" && entry.localId === localId,
-  );
+  const view = metadata.views.find((entry) => entry.extensionId === "pstdio.planner" && entry.localId === localId);
   return view?.body.kind === "webview" ? view.body.webview : undefined;
 };
 
@@ -132,14 +130,14 @@ const moduleStatus = async (host: Host, projectId: string, localId: string) => {
 };
 
 const openTimeline = async (page: Page, host: Host, projectId: string) => {
-  await page.goto(`${host.baseUrl}/projects/${projectId}/extensions/pstdio.pstdio-planner/ticket-timeline`);
+  await page.goto(`${host.baseUrl}/projects/${projectId}/extensions/pstdio.planner/ticket-timeline`);
   return page.locator('[data-workbench-region="main"]').frameLocator("iframe");
 };
 
 const timelineCache = (host: Host) => {
   const root = join(host.home, "cache", "extension-webviews");
   const [installedId] = readdirSync(root);
-  return join(root, installedId!, "pstdio.pstdio-planner.view.timeline", "dist");
+  return join(root, installedId!, "pstdio.planner.view.timeline", "dist");
 };
 
 type TicketRow = { title: string; attributes: Record<string, unknown> };
@@ -250,7 +248,7 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
       ...preference.value,
       [stateKey]: JSON.stringify(restored),
     });
-    await page.goto(`${host.baseUrl}/projects/${valid.id}/extensions/pstdio.pstdio-planner/tickets`);
+    await page.goto(`${host.baseUrl}/projects/${valid.id}/extensions/pstdio.planner/tickets`);
     await expect(page.getByRole("tab", { name: "Timeline focus", exact: true })).toHaveCount(0);
     timeline = await openTimeline(page, host, valid.id);
     await page.reload();

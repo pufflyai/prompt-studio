@@ -3,6 +3,7 @@ import "./extension-preparation";
 import { existsSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import type { ExtensionDiagnostic, ExtensionHostCapabilities, ExtensionsCheckResponse } from "pstdio-api-contracts";
+import { canonicalExtensionId, canonicalInstallName } from "pstdio-api-contracts/extension-host";
 import {
   acceptPreparedRevision,
   checkExtensionHostCompatibility,
@@ -134,8 +135,8 @@ export const readExtensionSourceMetadata = (sourcePath: string) => {
   }
 
   const metadata: ExtensionMetadata = {
-    id: manifest.id,
-    name: manifest.name,
+    id: canonicalExtensionId(manifest.id),
+    name: canonicalExtensionId(manifest.id) === manifest.id ? manifest.name : canonicalInstallName(manifest.id),
     displayName: manifest.displayName ?? manifest.name,
     version: manifest.version,
     description: manifest.description,
@@ -162,8 +163,11 @@ const toLoadedExtension = (
   }
 
   const metadata: ExtensionMetadata = {
-    id: loaded.manifest.id,
-    name: loaded.manifest.name,
+    id: canonicalExtensionId(loaded.manifest.id),
+    name:
+      canonicalExtensionId(loaded.manifest.id) === loaded.manifest.id
+        ? loaded.manifest.name
+        : canonicalInstallName(loaded.manifest.id),
     displayName: loaded.manifest.displayName ?? loaded.manifest.name,
     version: loaded.manifest.version,
     description: loaded.manifest.description,
@@ -288,8 +292,8 @@ const collectFallbackMetadata = (sourcePath: string) => {
   const { manifest } = readPackageManifest(sourcePath);
   if (!manifest) return null;
   return {
-    id: manifest.id,
-    name: manifest.name,
+    id: canonicalExtensionId(manifest.id),
+    name: canonicalExtensionId(manifest.id) === manifest.id ? manifest.name : canonicalInstallName(manifest.id),
     displayName: manifest.displayName ?? manifest.name,
     version: manifest.version,
     description: manifest.description,

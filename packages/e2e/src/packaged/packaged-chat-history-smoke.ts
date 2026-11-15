@@ -42,7 +42,7 @@ export const expectPackagedChatHistory = async (
   logTestPhase("Packaged chat history: switch away");
 
   let historyReads = 0;
-  const route = "**/extensions/commands/pstdio.pstdio-session-browser.view.conversation.chat.query/execute";
+  const route = "**/extensions/commands/pstdio.session-browser.view.conversation.chat.query/execute";
   await page.route(route, async (request) => {
     if (request.request().postDataJSON()?.params?.renderer?.resource?.id === sessionId) historyReads++;
     await request.continue();
@@ -103,9 +103,7 @@ export const expectPackagedChatHistory = async (
     await expect(page.getByText(/^Step 30\./).filter({ visible: true })).toBeVisible();
     const refreshed = page.waitForResponse(
       (response) =>
-        response
-          .url()
-          .includes("/extensions/commands/pstdio.pstdio-session-browser.view.conversation.chat.query/execute") &&
+        response.url().includes("/extensions/commands/pstdio.session-browser.view.conversation.chat.query/execute") &&
         response.request().postDataJSON()?.params?.renderer?.resource?.id === sessionId,
     );
     await retry.click();

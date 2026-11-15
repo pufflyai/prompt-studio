@@ -144,3 +144,31 @@ describe("extensions update", () => {
     process.exitCode = 0;
   });
 });
+
+test.each([
+  "pstdio-notes",
+  "pstdio.pstdio-notes",
+  "notes",
+  "pstdio.notes",
+])("updates the canonical first-party instance selected by %s", async (name) => {
+  const notes = extension("notes");
+  const { deps, upgradeProjectExtension } = makeDeps([notes]);
+  await createHandler(deps)(argv({ name }));
+  expect(upgradeProjectExtension).toHaveBeenCalledWith("project-1", notes.id);
+});
+
+test("an explicit custom install name wins over a first-party legacy selector", async () => {
+  const custom = extension("pstdio-notes", { extensionId: "acme.notes" });
+  const { deps, upgradeProjectExtension } = makeDeps([extension("notes"), custom]);
+  await createHandler(deps)(argv({ name: "pstdio-notes" }));
+  expect(upgradeProjectExtension).toHaveBeenCalledTimes(1);
+  expect(upgradeProjectExtension).toHaveBeenCalledWith("project-1", custom.id);
+});
+
+test("an explicit custom install named like a qualified canonical ID wins alone", async () => {
+  const custom = extension("pstdio.notes", { extensionId: "acme.tools" });
+  const { deps, upgradeProjectExtension } = makeDeps([extension("notes"), custom]);
+  await createHandler(deps)(argv({ name: "pstdio.notes" }));
+  expect(upgradeProjectExtension).toHaveBeenCalledTimes(1);
+  expect(upgradeProjectExtension).toHaveBeenCalledWith("project-1", custom.id);
+});

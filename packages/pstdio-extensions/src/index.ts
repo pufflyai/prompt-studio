@@ -8,6 +8,7 @@ export {
   extensionStorageDirectory,
   isPackageAssetDescriptor,
   isWindowsDeviceName,
+  migrateExtensionFiles,
   normalizeArtifactMountPath,
   normalizeCliPath,
   normalizeMountRelativePath,
@@ -89,6 +90,8 @@ export {
   toSettingDefinitionRecord,
   validateCommandParams,
 } from "./runtime";
+export { canonicalNavigationOwners } from "./runtime/canonical-navigation-owners";
+export { canonicalRuntimeId, contributionAliases } from "./runtime/contribution-aliases";
 export { collectConventionDiagnostics } from "./runtime/conventions";
 export { extensionIconAssetName, readExtensionIcon } from "./runtime/extension-icon";
 export { mirrorNodeModules } from "./runtime/mirror-node-modules";

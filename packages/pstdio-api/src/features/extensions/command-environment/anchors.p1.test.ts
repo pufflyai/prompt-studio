@@ -20,7 +20,7 @@ const setup = async () => {
   const project = await app.deps.projectService.create({ name: "Anchors" });
   const other = await app.deps.projectService.create({ name: "Other" });
   for (const [extensionId, kind] of [
-    ["pstdio.pstdio-planner", "ticket"],
+    ["pstdio.planner", "ticket"],
     ["example.documents", "document"],
   ]) {
     const path = join(root, extensionId!);

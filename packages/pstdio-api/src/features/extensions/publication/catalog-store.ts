@@ -1,5 +1,6 @@
 import type { GroupCommit } from "pstdio-sync/records";
 import type { Asset, StorageRecord } from "pstdio-sync-contracts";
+import { canonicalPublicationRecords } from "./identity-records";
 import { type Publication, PublicationChangedError, packageMetadataSchema, selectionSchema } from "./types";
 
 type CatalogLockedRecords = Pick<CatalogRecords, "read" | "commit">;
@@ -17,7 +18,7 @@ export const createPublicationCatalog = (input: {
   records: CatalogRecords;
   verifyComplete: (assets: Asset[]) => Promise<void>;
 }) => {
-  const { records } = input;
+  const records = canonicalPublicationRecords(input.records);
   // A selection without its matching package reads as unpublished, so one bad entry cannot break callers.
   // Activation still refuses it and keeps the current set.
   const resolve = async (selected: StorageRecord, reader: Pick<CatalogRecords, "read">) => {
@@ -69,18 +70,33 @@ export const createPublicationCatalog = (input: {
       if (asset.sha256 !== publication.revision) throw new Error("Published package identity mismatch");
       // Hashing package bytes stays outside the owner lock.
       await input.verifyComplete([asset]);
-      return change(publication.extensionId, expectedRevision, ({ records }) =>
-        records.commit({
+      return change(publication.extensionId, expectedRevision, async ({ records }) => {
+        const packageId = `package:${publication.revision}`;
+        const existing = await records.read(packageId);
+        if (
+          existing.exists &&
+          (existing.deleted ||
+            existing.asset?.sha256 !== asset.sha256 ||
+            !packageMetadataSchema.safeParse(existing.value).success ||
+            (existing.value as { extensionId: string }).extensionId !== publication.extensionId ||
+            (existing.value as { version: string }).version !== publication.version)
+        )
+          throw new Error("Published package identity mismatch");
+        return records.commit({
           operationId: crypto.randomUUID(),
           edits: [
-            {
-              recordId: `package:${publication.revision}`,
-              replace: {
-                extensionId: publication.extensionId,
-                version: publication.version,
-              },
-              asset,
-            },
+            ...(existing.exists
+              ? []
+              : [
+                  {
+                    recordId: packageId,
+                    replace: {
+                      extensionId: publication.extensionId,
+                      version: publication.version,
+                    },
+                    asset,
+                  },
+                ]),
             {
               recordId: publication.extensionId,
               expectedRevision,
@@ -88,8 +104,8 @@ export const createPublicationCatalog = (input: {
               deleted: false,
             },
           ],
-        }),
-      );
+        });
+      });
     },
   };
 };

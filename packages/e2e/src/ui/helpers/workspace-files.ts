@@ -101,7 +101,7 @@ export const exerciseWorkspaceFileOperations = async (input: {
   const moved = filesTree.locator('[data-tree-list-node-id="generated/zzz-folder"]');
   await moved.focus();
   await moved.press("ArrowRight");
-  const selectedTreeRead = "**/pstdio.pstdio-workspaces.view.file-tree.tree.body/execute";
+  const selectedTreeRead = "**/pstdio.workspaces.view.file-tree.tree.body/execute";
   const readPending = Promise.withResolvers<void>();
   const releaseRead = Promise.withResolvers<void>();
   const holdSelectedRead = async (route: import("@playwright/test").Route) => {
@@ -123,7 +123,7 @@ export const exerciseWorkspaceFileOperations = async (input: {
     const renameFolder = filesTree.getByRole("textbox", { name: "Folder name", exact: true });
     await expect(renameFolder).toBeFocused();
     await renameFolder.fill("generated-renamed");
-    const renamed = page.waitForRequest("**/pstdio.pstdio-workspaces.command.rename-entry/execute");
+    const renamed = page.waitForRequest("**/pstdio.workspaces.command.rename-entry/execute");
     await renameFolder.press("Enter");
     await renamed;
     releaseRead.resolve();

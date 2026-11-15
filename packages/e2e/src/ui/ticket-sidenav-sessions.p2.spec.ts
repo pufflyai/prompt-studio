@@ -88,7 +88,7 @@ test.describe("Ticket sidenav sessions", () => {
           id: ticket.id,
           projectId,
           label: ticket.shorthand,
-          extensionId: "pstdio.pstdio-planner",
+          extensionId: "pstdio.planner",
         },
       },
     );

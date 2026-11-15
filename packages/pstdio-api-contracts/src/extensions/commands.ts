@@ -13,6 +13,8 @@ const commandParamDescriptorSchema = z
 
 export const extensionCommandRecordSchema = z.object({
   id: z.string(),
+  /** Structured identity for clients that retain historical contribution references. */
+  localId: z.string().optional(),
   extensionId: z.string(),
   title: localizableStringSchema,
   description: localizableStringSchema.optional(),

@@ -26,7 +26,7 @@ const createRepository = (root: string) => {
       displayName: "Example tool 0",
       version: "1.0.0",
       main: "extension.ts",
-      engines: { pstdio: "^0.4.0" },
+      engines: { pstdio: "^0.4.0 || ^0.5.0" },
     }),
   );
   const commands = Array.from({ length: 50 }, (_, index) => ({

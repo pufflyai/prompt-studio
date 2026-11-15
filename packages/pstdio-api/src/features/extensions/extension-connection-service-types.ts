@@ -1,3 +1,4 @@
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { ExtensionConnectionContribution } from "pstdio-api-contracts/extension-kernel";
 import type { createExtensionConnectionsDBService } from "pstdio-db";
 import type { ConnectionSecretStore } from "./connection-secret-store";
@@ -45,6 +46,6 @@ export const toConnectionRecord = (stored: StoredConnection) => ({
 
 export const connectionKey = (input: ConnectionKey) => ({
   projectId: input.projectId,
-  extensionId: input.extensionId,
+  extensionId: canonicalExtensionId(input.extensionId),
   contributionId: input.connectionId,
 });

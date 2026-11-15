@@ -19,7 +19,7 @@ const fixtureManifest = {
   publisher: "fixture",
   version: "0.0.1",
   main: "extension.ts",
-  engines: { pstdio: "^0.4.0" },
+  engines: { pstdio: "^0.4.0 || ^0.5.0" },
 };
 const fixtureSource = `
 const capabilities = { files: "write", diff: false, merge: false, rebase: false, delete: true };

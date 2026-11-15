@@ -14,7 +14,7 @@ import {
   RepoScopedExtensionNeedsProjectFolderError,
   resolvePstdioHome,
 } from "./extension-install-preparation";
-import { extensionInstallResources } from "./extension-install-resources";
+import { extensionInstallSourceResources, type inspectExtensionInstallResources } from "./extension-install-resources";
 import { claimPreparedInstall } from "./extension-install-transaction";
 import type { InstallExtensionSourceInput, InstalledExtensionSource } from "./install-extension-source-types";
 
@@ -67,9 +67,20 @@ export const installExtensionSource = async (
       );
     }
     signal?.throwIfAborted();
+    const home = resolvePstdioHome(input);
+    const reservation = await runExtensionPreparation<ReturnType<typeof inspectExtensionInstallResources>>(
+      "install.resources",
+      data,
+      { signal, home, resources: extensionInstallSourceResources(data) },
+    );
     const installed = await transport(
-      { ...data, env: { ...(input.env ?? process.env), PSTDIO_HOME: resolvePstdioHome(input) } },
-      { signal, home: resolvePstdioHome(input), resources: extensionInstallResources(input) },
+      {
+        ...data,
+        expectedIdentity: reservation.identity,
+        reservation: reservation.reservation,
+        env: { ...(input.env ?? process.env), PSTDIO_HOME: home },
+      },
+      { signal, home, resources: reservation.resources },
     );
     if (installed.installation) claimPreparedInstall(installed.installation);
     return installed;

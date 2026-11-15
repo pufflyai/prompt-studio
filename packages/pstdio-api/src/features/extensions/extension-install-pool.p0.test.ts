@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { Worker } from "node:worker_threads";
 import { stopExtensionPreparation } from "pstdio-extensions";
 import { createPreparationClient } from "pstdio-extensions/preparation-client";
+import { createExtensionInstallBatch } from "./extension-install-batch";
 import { extensionInstallResources } from "./extension-install-resources";
 import { installExtensionSource } from "./install-extension-source";
 import { makeExtension } from "./install-extension-source-test-fixtures";
@@ -149,6 +150,51 @@ for (const symlink of [false, true]) {
       a.release.resolve();
       b.release.resolve();
       await Promise.allSettled([first, replacement]);
+    }
+  });
+}
+
+for (const batch of [false, true]) {
+  test(`renamed installs serialize custom aliases at their existing destination (${batch ? "batch" : "pool"})`, async () => {
+    const directory = root(),
+      a = gate(),
+      b = gate();
+    const home = join(directory, "home"),
+      target = join(home, "extensions", "pstdio-notes");
+    makeExtension(target, { publisher: "pstdio", namespace: "pstdio-notes" });
+    const inputs = [a, b].map((g, index) => {
+      const source = join(directory, `renamed-${index}`);
+      makeExtension(source, { publisher: "pstdio", namespace: index === 0 ? "pstdio-notes" : "notes" });
+      const entry = join(source, "extension.ts");
+      writeFileSync(entry, `await fetch(${JSON.stringify(g.url)});\n${readFileSync(entry, "utf8")}`);
+      return {
+        source,
+        installName: `custom-${index}`,
+        skipInstall: true,
+        force: true,
+        env: { ...process.env, PSTDIO_HOME: home },
+      };
+    });
+    const install = batch ? createExtensionInstallBatch(inputs.length) : installExtensionSource;
+    const jobs = inputs.map((input) => install(input));
+    try {
+      const first = await Promise.race([a.entered.promise.then(() => 0), b.entered.promise.then(() => 1)]);
+      const gates = [a, b];
+      const other = 1 - first;
+      expect(
+        await Promise.race([gates[other]!.entered.promise.then(() => "started"), Bun.sleep(50).then(() => "held")]),
+      ).toBe("held");
+      gates[first]!.release.resolve();
+      await gates[other]!.entered.promise;
+      gates[other]!.release.resolve();
+      expect((await Promise.all(jobs)).map((result) => result.targetPath)).toEqual([target, target]);
+      expect(JSON.parse(readFileSync(join(target, "package.json"), "utf8")).name).toBe(
+        other === 0 ? "pstdio-notes" : "notes",
+      );
+    } finally {
+      a.release.resolve();
+      b.release.resolve();
+      await Promise.allSettled(jobs);
     }
   });
 }

@@ -98,7 +98,7 @@ test("extension page groups preserve their default child through metadata serial
       publisher: "example",
       version: "1.0.0",
       main: "./extension.ts",
-      enginesPstdio: "^0.4.0",
+      enginesPstdio: "^0.4.0 || ^0.5.0",
     },
     definition: defineExtension({ pages: [group, child] }),
   };

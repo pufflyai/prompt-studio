@@ -36,7 +36,7 @@ test("the reply footer forks its own message and keeps failed copies available f
   await reply.hover();
   const button = reply.getByRole("button", { name: "Fork conversation", exact: true });
   await expect(reply.getByRole("button", { name: "Copy message", exact: true })).toBeVisible();
-  const commandId = "pstdio.pstdio-session-browser.view.conversation.chat.onAction";
+  const commandId = "pstdio.session-browser.view.conversation.chat.onAction";
   const actionRoute = `**/extensions/commands/${commandId}/execute`;
   let fail = true;
   let calls = 0;
@@ -50,7 +50,7 @@ test("the reply footer forks its own message and keeps failed copies available f
       await route.fulfill({
         json: {
           commandId,
-          extensionId: "pstdio.pstdio-session-browser",
+          extensionId: "pstdio.session-browser",
           outcome: {
             ok: false,
             status: "error",

@@ -8,6 +8,7 @@ import { traceSetupPhase } from "../../lib/setup-phase";
 import { listExtensionSourcesInWorker } from "./discover-extension-sources";
 import { validateCandidateInWorker } from "./extension-candidate";
 import { extensionInstallConcurrency } from "./extension-install-concurrency";
+import { inspectExtensionInstallResources } from "./extension-install-resources";
 import {
   activatePreparedInstall,
   assertPreparedInstallOwned,
@@ -59,6 +60,7 @@ const handle = createPreparationHandler({
     recoverPreparationStages(true);
   },
   "source.list": listExtensionSourcesInWorker,
+  "install.resources": inspectExtensionInstallResources,
   "published.prepare": async (
     input: Omit<PreparePublishedInput, "bytes" | "signal"> & { bytes: ArrayBuffer },
     signal: AbortSignal,
@@ -97,22 +99,33 @@ const handle = createPreparationHandler({
     const results = new Array<{ value: unknown } | { error: ReturnType<typeof serializePreparationError> }>(
       inputs.length,
     );
-    let next = 0;
-    await Promise.all(
-      Array.from({ length: extensionInstallConcurrency }, async () => {
-        while (next < inputs.length) {
-          const index = next++;
-          signal.throwIfAborted();
-          try {
-            results[index] = {
-              value: JSON.parse(JSON.stringify(await installExtensionSource({ ...inputs[index]!, signal }))),
-            };
-          } catch (error) {
-            results[index] = { error: serializePreparationError(error) };
-          }
+    type Reservation = Parameters<typeof installExtensionSource>[0]["reservation"];
+    const active = new Map<Promise<void>, Reservation>();
+    const overlap = (left: readonly string[], right: readonly string[]) =>
+      left.some((a) => right.some((b) => a === b || a.startsWith(`${b}/`) || b.startsWith(`${a}/`)));
+    for (const [index, input] of inputs.entries()) {
+      const reservation = input.reservation;
+      const conflicts = (other: Reservation) =>
+        !reservation ||
+        !other ||
+        overlap(reservation.writes, [...other.reads, ...other.writes]) ||
+        overlap(reservation.reads, other.writes);
+      while (active.size >= extensionInstallConcurrency || [...active.values()].some(conflicts))
+        await Promise.race(active.keys());
+      let done: Promise<void>;
+      done = (async () => {
+        signal.throwIfAborted();
+        try {
+          results[index] = {
+            value: JSON.parse(JSON.stringify(await installExtensionSource({ ...input, signal }))),
+          };
+        } catch (error) {
+          results[index] = { error: serializePreparationError(error) };
         }
-      }),
-    );
+      })().finally(() => active.delete(done));
+      active.set(done, reservation);
+    }
+    await Promise.all(active.keys());
     return results;
   },
   install: async (input: Parameters<typeof installExtensionSource>[0], signal: AbortSignal) =>

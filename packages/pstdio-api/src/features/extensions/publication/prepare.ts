@@ -1,5 +1,6 @@
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import { isPreparationHost } from "pstdio-extensions";
 import { runExtensionPreparation } from "../extension-preparation";
 import { checkExtensionSource } from "../extension-runtime";
@@ -39,7 +40,8 @@ export const preparePublishedExtension = async (
       throw new Error(
         check.diagnostics.find((diagnostic) => diagnostic.severity === "error")?.message ?? "Invalid extension",
       );
-    if (loaded.metadata.id !== input.extensionId) throw new Error("Published package identity mismatch");
+    if (canonicalExtensionId(loaded.metadata.id) !== canonicalExtensionId(input.extensionId))
+      throw new Error("Published package identity mismatch");
     await validateExtensionWebviews(loaded, path, loaded.metadata.name, input.signal);
     input.signal?.throwIfAborted();
     return { path, loaded };

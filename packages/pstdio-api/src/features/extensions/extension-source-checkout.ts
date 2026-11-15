@@ -6,7 +6,12 @@ import { isPreparationHost } from "pstdio-extensions";
 import { createRegistryClient } from "pstdio-extensions/distribution";
 import { requireGitExecutable } from "pstdio-wt";
 import { prepareBundledExtensionSource } from "./bundled-extension-source";
-import { findExtensionCatalogEntry, type GitExtensionOrigin, packagedExtensionCatalog } from "./extension-catalog";
+import {
+  findExtensionCatalogEntry,
+  type GitExtensionOrigin,
+  packagedExtensionCatalog,
+  selectExtensionCatalogEntry,
+} from "./extension-catalog";
 import { runExtensionPreparation } from "./extension-preparation";
 import { type CommandOptions, type CommandResult, runCommand } from "./install-extension-dependencies";
 import { trackPreparationStage } from "./preparation-stages";
@@ -57,8 +62,7 @@ const cloneRepoSparse = async (
   return git(["rev-parse", "HEAD"], "Failed to resolve the installed commit");
 };
 
-const packagedEntry = (installName: string) =>
-  packagedExtensionCatalog.extensions.find((entry) => entry.installName === installName);
+const packagedEntry = (installName: string) => selectExtensionCatalogEntry(packagedExtensionCatalog, installName);
 
 export const namedSourceRef = (commit: string, source: GitExtensionOrigin | string) => {
   const origin = typeof source === "string" ? packagedEntry(source)?.origin : source;
@@ -236,7 +240,8 @@ export const createSharedNamedSourceCheckout = async (
 
   const shared = async (name: string, _tempDir?: string, _ref?: string, signal?: AbortSignal) => {
     signal?.throwIfAborted();
-    const prepared = preparedByName.get(name);
+    const entry = selectExtensionCatalogEntry({ version: 1, extensions: entries }, name);
+    const prepared = entry && preparedByName.get(entry.installName);
     if (!prepared) throw new Error(`No prepared checkout for extension: ${name}`);
     return prepared;
   };

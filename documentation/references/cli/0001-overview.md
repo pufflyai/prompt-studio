@@ -17,9 +17,9 @@ An extension can expose the same command behind a button, toolbar action, or men
 Run inside the project folder, or pass `--project-id <project-id>` to an extension command. The available extension commands come from that project's enabled tools. For example, with Notes enabled:
 
 ```sh
-pst pstdio-notes --help
-pst pstdio-notes notes create --help
-pst pstdio-notes notes create --title "Meeting notes" --json
+pst pstdio.notes --help
+pst pstdio.notes notes create --help
+pst pstdio.notes notes create --title "Meeting notes" --json
 ```
 
 Command and option descriptions use extension translations. The CLI reads `LC_ALL`, then
@@ -28,7 +28,7 @@ locale and the declared fallback text. This also applies to parameter guidance i
 
 A successful extension command normally prints its returned value as JSON. `--json` prints the full execution response, including `commandId` and `outcome`; check `outcome.ok` and read `outcome.value` on success. A failed or rejected execution exits with code 1. Core commands have their own output formats; check each command's help.
 
-The extension author must declare CLI access and connect the UI action to the command. A custom webview button is not automatically a CLI command. See [Make actions CLI-ready](../../guides/extensions/0007-cli-ready-actions.md) for authoring and [Commands and processes](../extensions/0003-command-and-process-api.md#cli-contributions) for flags and aliases.
+The extension author must declare CLI access and connect the UI action to the command. A custom webview button is not automatically a CLI command. See [Make actions CLI-ready](../../guides/extensions/0007-cli-ready-actions.md) for authoring and [Commands and processes](../extensions/0003-command-and-process-api.md#cli-contributions) for flags and namespaces.
 
 ## Core commands
 

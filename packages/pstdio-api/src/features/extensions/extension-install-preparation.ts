@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, unlinkSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, relative } from "node:path";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import {
   extensionStorageDirectory,
   readPackageManifest,
@@ -27,6 +28,7 @@ import type {
   InstallExtensionSourceInput,
   InstalledExtensionSource,
 } from "./install-extension-source-types";
+import { installedIdentityPath } from "./installed-identity-path";
 import { trackPreparationStage } from "./preparation-stages";
 import { prepareInstallDependencies } from "./prepare-extension-dependencies";
 import { ExtensionAlreadyInstalledError, promotePreparedSource } from "./promote-extension-source";
@@ -110,8 +112,12 @@ const sourceScope = (sourcePath: string, allowUnsupportedApiVersion: boolean) =>
   return { manifest, scope: manifest.pstdio?.scope ?? "user" };
 };
 
-const resolveExtensionsRoot = (input: InstallExtensionSourceInput, pstdioHome: string, sourcePath: string) => {
-  const { manifest, scope } = sourceScope(sourcePath, input.allowUnsupportedApiVersion === true);
+const resolveExtensionsRoot = (
+  input: InstallExtensionSourceInput,
+  pstdioHome: string,
+  source: ReturnType<typeof sourceScope>,
+) => {
+  const { manifest, scope } = source;
   if ((input.scope ?? scope) === "repo") {
     if (!input.repoPath) throw new RepoScopedExtensionNeedsProjectFolderError(manifest.id);
     return join(input.repoPath, ".pstdio", "extensions");
@@ -155,9 +161,10 @@ const validatePreparedInstall = async (
 const resolveInstallName = (
   input: InstallExtensionSourceInput,
   source: Awaited<ReturnType<typeof resolveInstallSource>>,
+  manifest: ReturnType<typeof sourceScope>["manifest"],
 ) => {
   if (input.installName !== undefined) return input.installName;
-  if (source.ref?.endsWith(".tgz")) return sourceScope(source.path, false).manifest.id;
+  if (source.ref?.endsWith(".tgz")) return manifest.id;
   return source.kind === "named" ? source.name : basename(source.path);
 };
 
@@ -226,16 +233,19 @@ export const prepareAndInstallExtensionSource = async (input: InstallExtensionSo
     const resolvedSource = await resolveInstallSource(input, tempDir);
     input.signal?.throwIfAborted();
     failIfInvalidSource(resolvedSource.path);
-    const extensionsRoot = resolveExtensionsRoot(input, pstdioHome, resolvedSource.path);
+    const source = sourceScope(resolvedSource.path, input.allowUnsupportedApiVersion === true);
+    const assertReservedIdentity = (id: string) => {
+      if (input.expectedIdentity && canonicalExtensionId(id) !== input.expectedIdentity)
+        throw new Error("Extension identity changed after reserving its installation destination");
+    };
+    assertReservedIdentity(source.manifest.id);
+    const extensionsRoot = resolveExtensionsRoot(input, pstdioHome, source);
 
-    const installName = resolveInstallName(input, resolvedSource);
+    const installName = resolveInstallName(input, resolvedSource, source.manifest);
     validateInstallName(installName);
 
-    const directoryName =
-      installName === sourceScope(resolvedSource.path, input.allowUnsupportedApiVersion === true).manifest.id
-        ? extensionStorageDirectory(installName)
-        : installName;
-    const targetPath = join(extensionsRoot, directoryName);
+    const directoryName = installName === source.manifest.id ? extensionStorageDirectory(installName) : installName;
+    const targetPath = installedIdentityPath(extensionsRoot, directoryName, source.manifest.id);
     const targetExists = existsSync(targetPath);
     const inPlace = targetExists && isSameDirectory(resolvedSource.path, targetPath);
     if (!inPlace) assertCanCopy(resolvedSource.path, targetPath);
@@ -273,6 +283,7 @@ export const prepareAndInstallExtensionSource = async (input: InstallExtensionSo
     const { check, loaded } = await traceSetupPhase("extension.validate", { extension: installName }, () =>
       validatePreparedInstall(installPath, extensionsRoot, input.allowUnsupportedApiVersion === true),
     );
+    assertReservedIdentity(loaded.metadata.id);
     input.signal?.throwIfAborted();
 
     // A replacement must activate every managed view before the working source is replaced.

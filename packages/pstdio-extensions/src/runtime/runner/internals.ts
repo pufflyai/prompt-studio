@@ -3,6 +3,7 @@ import type { ExtensionLoggerApi } from "@pstdio/sdk/extensions";
 export { serializeCommandError as serializeError } from "pstdio-api-contracts/extension-kernel";
 
 import type { ExtensionRuntime } from "../../types/runtime";
+import { canonicalRuntimeId } from "../contribution-aliases";
 
 export const consoleLogger: ExtensionLoggerApi = { info: () => {}, warn: () => {}, error: () => {} };
 
@@ -11,10 +12,11 @@ export const defaultGenerateId = () => {
   return `id-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 };
 
-export const findCommand = (runtime: ExtensionRuntime, id: string) => runtime.commands.find((cmd) => cmd.id === id);
+export const findCommand = (runtime: ExtensionRuntime, id: string) =>
+  runtime.commands.find((cmd) => cmd.id === canonicalRuntimeId(runtime, id));
 
 export const findPrivateHandler = (runtime: ExtensionRuntime, id: string) =>
-  runtime.privateHandlers.find((handler) => handler.id === id);
+  runtime.privateHandlers.find((handler) => handler.id === canonicalRuntimeId(runtime, id));
 
 export const middlewaresFor = (runtime: ExtensionRuntime, commandId: string) =>
   runtime.middlewares.filter((middleware) => middleware.commandId === commandId);
