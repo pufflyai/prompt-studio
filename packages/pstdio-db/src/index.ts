@@ -22,7 +22,6 @@ export {
   type ExtensionSettingOwnerType,
 } from "./services/extension-settings/extension-settings";
 export { createExtensionStorageDBService } from "./services/extension-storage/extension-storage";
-export { prepareIndexNodeFiles } from "./services/extension-storage/index-node-host";
 export { NativeDocumentRoomError } from "./services/extension-storage/native-document-errors";
 export {
   createPersonalHistoryIndex,

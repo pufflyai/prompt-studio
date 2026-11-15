@@ -17,7 +17,6 @@ interface StoredNode {
 const NODE_ROWS = '["ordered-index-blob",%';
 // Rows hold up to a few hundred KiB of base64; reading a few at a time bounds memory by bytes, not count.
 const READ_BATCH = 16;
-const COMPACT_MARKER = "index-nodes-compact-pending";
 
 export interface IndexNodeUpgradeProgress {
   owner: StorageOwner;
@@ -36,16 +35,17 @@ const readRows = async (db: DbClient, owner: StorageOwner, ids: string[]) => {
         inArray(documents.document_id, ids.map(orderedIndexBlobDocumentId)),
       ),
     );
-  return new Map(
-    rows.map((row) => [(JSON.parse(row.id) as [string, string])[1], decodeOrderedJson<StoredNode>(row.state)]),
-  );
+  return rows.map((row) => ({
+    id: (JSON.parse(row.id) as [string, string])[1],
+    node: decodeOrderedJson<StoredNode | null>(row.state),
+  }));
 };
 
 /** Writes one page of stored nodes as receipt files and returns the ids of their children. */
 const copyRows = async (db: DbClient, files: IndexNodeFiles, owner: StorageOwner, ids: string[]) => {
   const children: string[] = [];
-  for (const [id, node] of await readRows(db, owner, ids)) {
-    if (node.version !== 1 || typeof node.bytes !== "string") throw new Error("Invalid stored index node");
+  for (const { id, node } of await readRows(db, owner, ids)) {
+    if (node?.version !== 1 || typeof node.bytes !== "string") throw new Error(`Invalid stored index node ${id}`);
     const edges = node.children && sortIndexChildren(node.children.map(readOrderedIndexReference));
     await files.write(owner, "receipts", id, { bytes: Buffer.from(node.bytes, "base64"), children: edges });
     for (const child of edges ?? []) children.push(child.blobId);
@@ -91,28 +91,29 @@ const upgradeOwner = async (db: DbClient, files: IndexNodeFiles, owner: StorageO
 };
 
 /**
- * One-time upgrade from database rows to index node files (rule 0006.2.15). It reclaims the
- * freed space with VACUUM FULL, which PGlite never runs on its own. A durable marker makes an
- * interrupted run finish the compaction on the next start.
+ * One-time move of index nodes from database rows to files (rule 0006.2.15). Returns whether rows
+ * were removed, so startup compacts the database. An owner with unreadable rows keeps them and
+ * is retried on the next start; it never stops the app from opening.
  */
 export const upgradeIndexNodesToFiles = async (
   db: DbClient,
   files: IndexNodeFiles,
-  report: (progress: IndexNodeUpgradeProgress | { compacted: true }) => void = () => {},
+  report: (progress: IndexNodeUpgradeProgress) => void = () => {},
 ) => {
   const result = await db.execute(
     sql`SELECT DISTINCT workbench_id, extension_id FROM ${documents} WHERE document_id LIKE ${NODE_ROWS}
       ORDER BY workbench_id, extension_id`,
   );
-  const pending = result.rows.map((row) => ({
-    workbenchId: String(row.workbench_id),
-    extensionId: String(row.extension_id),
-  }));
-  const marker = files.marker(COMPACT_MARKER);
-  if (pending.length) await marker.set();
-  for (const owner of pending) report(await upgradeOwner(db, files, owner));
-  if (!(await marker.exists())) return;
-  await db.execute(sql`VACUUM FULL ${documents}`);
-  await marker.clear();
-  report({ compacted: true });
+  let removed = false;
+  for (const row of result.rows) {
+    const owner = { workbenchId: String(row.workbench_id), extensionId: String(row.extension_id) };
+    try {
+      const progress = await upgradeOwner(db, files, owner);
+      removed ||= progress.removed > 0;
+      report(progress);
+    } catch (error) {
+      console.warn("Index nodes of one storage owner stay in the database until the next start.", owner, error);
+    }
+  }
+  return removed;
 };

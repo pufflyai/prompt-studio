@@ -13,6 +13,8 @@ export const maintainDatabase = async (
   path: string,
   fresh: boolean,
   onPhase: (phase: DatabaseMaintenancePhase) => void,
+  /** Startup removed or rewrote data after the migrations, so the space must be reclaimed now. */
+  changed = false,
 ) => {
   if (path === ":memory:") return;
   const marker = join(path, ".pstdio-maintenance.json");
@@ -27,7 +29,7 @@ export const maintainDatabase = async (
     if (error.code !== "ENOENT") throw error;
     return undefined;
   });
-  if (previous === expected && !rows[0].legacy) return;
+  if (previous === expected && !rows[0].legacy && !changed) return;
 
   // Invalidate completion before deleting anything. A crash after deletion or migration
   // must still vacuum on the next start, even when no obsolete documents remain.
@@ -39,7 +41,7 @@ export const maintainDatabase = async (
 
   // The migrator has committed and the runtime still owns the exclusive database lock.
   // FULL returns unused table/index/TOAST space to disk; a fresh image has none to reclaim.
-  if (!fresh || rows[0].legacy) {
+  if (!fresh || rows[0].legacy || changed) {
     onPhase("database_compacting");
     try {
       await db.exec("VACUUM (FULL, ANALYZE)");

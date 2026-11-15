@@ -17,7 +17,7 @@ The local database (PGlite, `PSTDIO_HOME/pstdio.db`) holds structured data and r
 | --- | --- |
 | File contents, attachments, images, archives | Asset store: `PSTDIO_HOME/storage/asset-bytes/` ([assets guide](../../guides/sdk/0002-assets.md)) |
 | Transcripts and session logs | Session log files: `PSTDIO_HOME/storage/personal-history/` |
-| Encrypted relay index nodes (receipt, log, and history indexes) | Index node files: `PSTDIO_HOME/storage/index-nodes/` ([below](#encrypted-index-nodes)) |
+| Encrypted relay index nodes (receipt, log, and history indexes) | Index node files beside the database: `PSTDIO_HOME/pstdio.db-index-nodes/` ([below](#encrypted-index-nodes)) |
 | Cached copies of relay or remote data | Files with an eviction rule, never rows |
 | Document snapshots or exports | Files, written by the feature that needs them |
 
@@ -27,22 +27,23 @@ The local database (PGlite, `PSTDIO_HOME/pstdio.db`) holds structured data and r
 2. Is it a cache? Write down how entries leave: a byte budget, reachability from saved roots, or the owner's deletion. A cache without an exit rule is a leak.
 3. Is it history? Say what is kept and what removes the rest. Immutable and append-only data still needs a collector.
 4. Who deletes it? Project deletion, extension data removal, and extension renames must reach the files too.
-5. Measure it on a large real home with the pstdio-dev **Storage** page before shipping.
+5. Does a foreign key cascade into it? Index the foreign key's columns, or every parent delete scans the table.
+6. Measure it on a large real home with the pstdio-dev **Storage** page before shipping, and time startup on a clone of that home.
 
 ## Encrypted index nodes
 
-The relay stores record receipts, append logs, and personal history as trees of immutable encrypted nodes. Each change writes new nodes and a new root; nodes only the old root reached stay behind. Each device keeps copies in `PSTDIO_HOME/storage/index-nodes/<project>/<extension>/<kind>/`, one file per node holding its validated edges and ciphertext.
+The relay stores record receipts, append logs, and personal history as trees of immutable encrypted nodes. Each change writes new nodes and a new root; nodes only the old root reached stay behind. Each device keeps copies in `<database folder>-index-nodes/<project>/<extension>/<kind>/`, one file per node holding its validated edges and ciphertext. The folder belongs to its database: `createDb` attaches it, so a database opened from another path never touches this home's nodes.
 
 | Kind | What it is | When nodes leave |
 | --- | --- | --- |
-| `receipts` | The full writer's durable copy of its receipt index. `replay()` re-uploads it after true relay loss, so writes are flushed to disk before a root naming them is saved. | When the owner first connects in a runtime, nodes that neither saved root (`storage_ordered_owners.receipt_root`: `root` and `published`) reaches through known edges are removed. |
+| `receipts` | The full writer's durable copy of its receipt index. `replay()` re-uploads it after true relay loss. Each write is fsynced, file and folder, before it returns, and therefore before a root naming the node is saved. | Once per runtime, when an owner first connects and before its receipt index exists: nodes that neither saved root (`storage_ordered_owners.receipt_root`: `root` and `published`) reaches through known edges are removed. |
 | `logs` | A cache of relay index nodes for logs and personal history. Their roots live on the relay, and pending uploads keep their own bytes. | Least recently read nodes leave once the owner's cache exceeds 128 MiB. Nodes written in the last 10 minutes always stay. |
 
-Collection follows the relay's rule ([blind relay](0029-blind-relay.md)): a node stays while a root needs it. Missing nodes and nodes whose edges are not yet validated end a traversal. Anything only reachable through them was downloaded and is still on the relay while a root needs it, so removing the local copy costs one download. A node this device wrote always records its edges before a root naming it is saved, so the device never removes its only copy of something a saved root needs.
+Collection follows the relay's rule ([blind relay](0029-blind-relay.md)): a node stays while a root needs it. Missing nodes, damaged files, and nodes whose edges are not yet validated end a traversal. Anything only reachable through them was downloaded and is still on the relay while a root needs it, so removing the local copy costs one download. A node this device wrote always records its edges before a root naming it is saved, so the device never removes its only copy of something a saved root needs. A failed collection only logs a warning; it never stops an owner from syncing.
 
-Deleting a project removes its folder at the next startup. Removing an extension's data removes the owner's folder. An extension identity rename moves the folder when the database moved the owner's rows.
+A damaged or truncated node file reads as missing and is deleted. Deleting a project removes its folder at the next start. Removing an extension's data removes the owner's folder. An extension identity rename moves the files right after it moves the rows, at startup or at runtime.
 
-Until PS-1195 these nodes were base64 JSON inside `storage_documents` rows (`["ordered-index-blob", id]`) and nothing removed them; one Mac reached 6.6 GB of them. The first startup with PS-1195 moves the reachable receipt nodes into files, drops every node row, and runs `VACUUM FULL storage_documents`. A marker file in the index node folder finishes an interrupted compaction on the next start.
+Until PS-1195 these nodes were base64 JSON inside `storage_documents` rows (`["ordered-index-blob", id]`) and nothing removed them; one Mac reached 6.6 GB of them. `createDb` now runs, in order: migrations, the move of reachable receipt nodes into files (every node row is dropped), extension identity renames, then the existing startup compaction (`VACUUM (FULL, ANALYZE)`), forced when either step changed data. An owner whose rows cannot be read keeps them and is retried on the next start. On that Mac the first start took 87 s and the database went from 12 GB to 2.1 GB.
 
 ## Known exceptions
 

@@ -15,8 +15,10 @@
 - Follow [What belongs in the database](../references/architecture/0031-database-contents.md) and rule [0006.2.15](../guidance/0006-engineering.md#2-system-design): bytes go to files, the database keeps references.
 - Give every cache and history an exit rule (byte budget, reachability, or owner deletion) in the same change that adds it.
 - Check database and storage size on a large real home with the pstdio-dev **Storage** page before shipping storage changes.
+- Rehearse startup changes on a clone of a large real home (`cp -c -R` on APFS clones instantly) and time each step.
 
 ## 4. Evidence
 
-- PS-1195 moved index nodes to `PSTDIO_HOME/storage/index-nodes/` with reachability collection for receipts and a bounded cache for logs.
+- PS-1195 moved index nodes to files beside the database (`PSTDIO_HOME/pstdio.db-index-nodes/`) with reachability collection for receipts and a bounded cache for logs. The first start on that Mac took 87 s and shrank the database from 12 GB to 2.1 GB.
+- The same rehearsal found extension renames spending 271 s in one `DELETE`: `storage_ordered_receipts` had no index on the foreign key it shares with `storage_ordered_operations`, so each deleted operation scanned the owner's receipts. Index every foreign key a cascade follows.
 - [Index node files](../../packages/pstdio-db/src/services/extension-storage/index-node-files.ts)

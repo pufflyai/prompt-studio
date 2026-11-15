@@ -6,7 +6,7 @@ import { createOrderedReceiptIndex, type OrderedIndexReference } from "pstdio-sy
 import { fingerprint, type Json } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_ordered_records as canonical } from "../../db/schemas.pg";
-import { type IndexNodeFiles, indexNodeFilesFor } from "./index-node-files";
+import { indexNodeFilesFor } from "./index-node-files";
 import { createOrderedCanonicalBatch } from "./ordered-canonical-batch";
 import { indexOrderedCheckpoint, stageOrderedCheckpoint } from "./ordered-checkpoint";
 import { type OrderedJournal, withOrderedOwner } from "./ordered-journal";
@@ -33,11 +33,25 @@ const hasCanonicalRecords = async (tx: OrderedTransaction, owner: StorageOwner) 
   (await tx.select({ id: canonical.record_id }).from(canonical).where(orderedOwnerWhere(canonical, owner)).limit(1))
     .length > 0;
 
-const collectSavedReceiptNodes = (db: DbClient, owner: StorageOwner, files: IndexNodeFiles) =>
-  withOrderedOwner(db, owner, async (_journal, tx) => {
-    const roots = receiptRoots((await readOrderedOwner(tx, owner)).receipt_root);
-    await collectOrderedReceiptNodes(files, owner, [roots.root, roots.published]);
+// Once per runtime and owner: later connections reuse the files this pass left in order.
+const collectedOwners = new WeakMap<DbClient, Set<string>>();
+const collectSavedReceiptNodes = async (db: DbClient, owner: StorageOwner) => {
+  const done = collectedOwners.get(db) ?? new Set<string>();
+  collectedOwners.set(db, done);
+  const key = JSON.stringify([owner.workbenchId, owner.extensionId]);
+  if (done.has(key)) return;
+  done.add(key);
+  // Only reading the roots holds the owner lock; the walk reads file headers outside it.
+  await collectOrderedReceiptNodes(indexNodeFilesFor(db), owner, () =>
+    withOrderedOwner(db, owner, async (_journal, tx) => {
+      const roots = receiptRoots((await readOrderedOwner(tx, owner)).receipt_root);
+      return [roots.root, roots.published];
+    }),
+  ).catch((error: unknown) => {
+    // Collection only reclaims space; it must never stop an owner from syncing.
+    console.warn("Receipt node collection did not finish; it retries in the next runtime.", error);
   });
+};
 
 export const createOrderedStreamStore = (
   db: DbClient,
@@ -107,10 +121,10 @@ export const createOrderedStreamStore = (
     async connect(space: SyncSpace, relay: DocumentRelay) {
       if (connected === relay) return;
       if (!relay.manifestBlobs) throw new Error("Ordered receipts require relay manifest graph support");
+      // Before the receipt index exists nothing writes receipt nodes, so the saved roots are the only roots.
+      if (!index) await collectSavedReceiptNodes(db, owner);
       cache = createOrderedManifestCache(indexNodeFilesFor(db), owner, "receipts", space, await relay.manifestBlobs());
       index = createOrderedReceiptIndex({ space, blobs: cache.blobs });
-      // The first connection precedes every staged checkpoint, so the saved roots are the only roots.
-      if (!connected && !staged) await collectSavedReceiptNodes(db, owner, indexNodeFilesFor(db));
       connected = relay;
     },
     open: () => run(async (_journal, tx) => orderedCursor(await readOrderedOwner(tx, owner))),

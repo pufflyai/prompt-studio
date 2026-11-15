@@ -4,6 +4,7 @@ import { extensionIdentityRenames } from "pstdio-api-contracts/extension-host";
 import * as Y from "yjs";
 import type { DbClient } from "../db/connection.pglite";
 import * as s from "../db/schemas.pg";
+import { indexNodeFilesFor } from "./extension-storage/index-node-files";
 
 // Ordered by foreign-key dependency. Only these composite-key parents need a new key before moving children.
 const parents = [
@@ -114,7 +115,7 @@ export const migrateExtensionIdentities = async (
       !options.extensionId ||
       [`${from.publisher}.${from.name}`, `${to.publisher}.${to.name}`].includes(options.extensionId),
   );
-  if (!renames.length) return;
+  if (!renames.length) return false;
   const projects = await db.execute(sql`SELECT id FROM ${s.projects} p WHERE NOT EXISTS
     (SELECT 1 FROM ${s.storage_documents} d WHERE d.workbench_id = p.id AND d.extension_id = 'pstdio' AND d.document_id = ${markerId})`);
   const pending = projects.rows.map((row) => String(row.id));
@@ -159,6 +160,7 @@ export const migrateExtensionIdentities = async (
     WHERE last_error_json->>'code' = 'extension_identity_conflict'`);
   const gatedOwners = new Set(gated.rows.map((row) => String(row.extension_id)));
   let conflicted = false;
+  let renamed = false;
   for (const { from: previous, to: canonical } of renames) {
     const from = `${previous.publisher}.${previous.name}`;
     const to = `${canonical.publisher}.${canonical.name}`;
@@ -191,6 +193,9 @@ export const migrateExtensionIdentities = async (
         await tx.execute(sql`UPDATE ${s.installed_extension_sources} SET status = 'pending', last_error_json = NULL
         WHERE extension_id = ${to} AND last_error_json->>'code' = 'extension_identity_conflict'`);
       });
+      // Index node files follow their rows once the rename has committed.
+      await indexNodeFilesFor(db).moveExtension(from, to);
+      renamed = true;
     } catch (error) {
       if (!(error instanceof ExtensionIdentityConflictError) || !options.onConflict) throw error;
       conflicted = true;
@@ -208,4 +213,5 @@ export const migrateExtensionIdentities = async (
       .values(pending.map((workbench_id) => ({ workbench_id, extension_id: "pstdio", document_id: markerId, state })))
       .onConflictDoNothing();
   }
+  return renamed;
 };

@@ -1,4 +1,4 @@
-import { mkdir, open, readdir, readFile, rename, rm, stat, utimes } from "node:fs/promises";
+import { link, mkdir, open, readdir, readFile, rename, rm, stat, utimes, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { StorageOwner } from "pstdio-sync";
 import { type OrderedIndexReference, readOrderedIndexReference } from "pstdio-sync/relay";
@@ -20,18 +20,21 @@ export interface IndexNode {
 
 export interface IndexNodeFiles {
   read(owner: StorageOwner, kind: IndexNodeKind, id: string): Promise<IndexNode | undefined>;
+  /** Reads only a node's edges, or undefined when the node is missing or unreadable. */
+  edges(owner: StorageOwner, kind: IndexNodeKind, id: string): Promise<IndexNode["children"] | undefined>;
+  /** Adds a node unless one exists; never replaces edges another writer already recorded. */
+  create(owner: StorageOwner, kind: IndexNodeKind, id: string, node: IndexNode): Promise<void>;
+  /** Replaces a node, for recording validated edges. */
   write(owner: StorageOwner, kind: IndexNodeKind, id: string, node: IndexNode): Promise<void>;
   list(owner: StorageOwner, kind: IndexNodeKind): Promise<string[]>;
   remove(owner: StorageOwner, kind: IndexNodeKind, ids: Iterable<string>): Promise<void>;
-  /** Removes the oldest unread cache nodes until the owner's cache fits `budgetBytes`. */
+  /** Removes the least recently read cache nodes until the owner's cache fits `budgetBytes`. */
   evict(owner: StorageOwner, kind: IndexNodeKind, budgetBytes: number, keepNewerThanMs: number): Promise<number>;
   removeOwner(owner: StorageOwner): Promise<void>;
-  /** Moves an owner's nodes after its rows moved to a new extension id; an existing target wins. */
-  moveOwner(from: StorageOwner, to: StorageOwner): Promise<void>;
+  /** Moves every project's nodes to a renamed extension id; nodes the target already has win. */
+  moveExtension(from: string, to: string): Promise<void>;
   /** Removes every project folder whose id is not in `projectIds`. */
   retainProjects(projectIds: ReadonlySet<string>): Promise<void>;
-  /** A durable flag for resumable maintenance, such as an unfinished upgrade. */
-  marker(name: string): { exists(): Promise<boolean>; set(): Promise<void>; clear(): Promise<void> };
 }
 
 /** Child order matches the relay's stored order: plain code-unit order, never locale order. */
@@ -54,18 +57,31 @@ const encode = (node: IndexNode) => {
   return Buffer.concat([length, header, node.bytes]);
 };
 
+const decodeHeader = (header: Buffer) => {
+  const value = JSON.parse(header.toString()) as { version: number; children: unknown };
+  if (value.version !== 1 || (value.children !== null && !Array.isArray(value.children)))
+    throw new Error("Invalid index node file");
+  return value.children === null ? null : (value.children as unknown[]).map(readOrderedIndexReference);
+};
+
 const decode = (file: Buffer): IndexNode => {
   const length = file.readUInt32LE(0);
-  const header = JSON.parse(file.subarray(4, 4 + length).toString()) as { version: number; children: unknown };
-  if (header.version !== 1 || (header.children !== null && !Array.isArray(header.children)))
-    throw new Error("Invalid index node file");
-  return {
-    bytes: new Uint8Array(file.subarray(4 + length)),
-    children: header.children === null ? null : (header.children as unknown[]).map(readOrderedIndexReference),
-  };
+  if (4 + length > file.byteLength) throw new RangeError("Truncated index node file");
+  return { children: decodeHeader(file.subarray(4, 4 + length)), bytes: new Uint8Array(file.subarray(4 + length)) };
 };
 
 const missing = (error: unknown) => (error as NodeJS.ErrnoException).code === "ENOENT";
+const exists = (error: unknown) => (error as NodeJS.ErrnoException).code === "EEXIST";
+
+/** Flushes a directory so a rename into it survives a crash. */
+const syncDirectory = async (directory: string) => {
+  const handle = await open(directory, "r");
+  try {
+    await handle.sync();
+  } finally {
+    await handle.close();
+  }
+};
 
 export const createIndexNodeFiles = (root: string): IndexNodeFiles => {
   const ownerDirectory = (owner: StorageOwner) => join(root, segment(owner.workbenchId), segment(owner.extensionId));
@@ -74,15 +90,57 @@ export const createIndexNodeFiles = (root: string): IndexNodeFiles => {
     const name = fileName(id);
     return join(kindDirectory(owner, kind), name.slice(0, 2), name);
   };
-  const files = async (owner: StorageOwner, kind: IndexNodeKind) => {
+  const files = async (directory: string) => {
     const found: { id: string; path: string }[] = [];
-    const directory = kindDirectory(owner, kind);
     for (const shard of await readdir(directory).catch(() => [] as string[])) {
       for (const name of await readdir(join(directory, shard)).catch(() => [] as string[])) {
         if (!name.endsWith(".tmp")) found.push({ id: idOf(name), path: join(directory, shard, name) });
       }
     }
     return found;
+  };
+  // A torn or damaged file is a missing node: receipts are fetched or refounded, logs download again.
+  const unreadable = async (file: string, error: unknown) => {
+    if (missing(error)) return undefined;
+    const damaged =
+      error instanceof RangeError ||
+      error instanceof SyntaxError ||
+      String((error as Error).message).includes("index node");
+    if (!damaged) throw error;
+    await rm(file, { force: true });
+    return undefined;
+  };
+  const directories = new Set<string>();
+  const ensureDirectory = async (directory: string) => {
+    if (directories.has(directory)) return;
+    await mkdir(directory, { recursive: true });
+    directories.add(directory);
+  };
+  const stage = async (kind: IndexNodeKind, file: string, node: IndexNode) => {
+    const temporary = `${file}.${crypto.randomUUID()}.tmp`;
+    await ensureDirectory(dirname(file));
+    const handle = await open(temporary, "w");
+    try {
+      await handle.writeFile(encode(node));
+      if (kind === "receipts") await handle.sync();
+    } catch (error) {
+      await handle.close();
+      await rm(temporary, { force: true });
+      throw error;
+    }
+    await handle.close();
+    return temporary;
+  };
+  const publish = async (kind: IndexNodeKind, file: string, temporary: string, replace: boolean) => {
+    try {
+      if (replace) await rename(temporary, file);
+      else await link(temporary, file);
+    } catch (error) {
+      if (replace || !exists(error)) throw error;
+    } finally {
+      await rm(temporary, { force: true });
+    }
+    if (kind === "receipts") await syncDirectory(dirname(file));
   };
   return {
     async read(owner, kind, id) {
@@ -93,30 +151,47 @@ export const createIndexNodeFiles = (root: string): IndexNodeFiles => {
         if (kind === "logs") await utimes(file, new Date(), new Date()).catch(() => undefined);
         return node;
       } catch (error) {
-        if (missing(error)) return undefined;
-        throw error;
+        return unreadable(file, error);
       }
+    },
+    async edges(owner, kind, id) {
+      const file = path(owner, kind, id);
+      try {
+        const handle = await open(file, "r");
+        try {
+          const length = Buffer.alloc(4);
+          if ((await handle.read(length, 0, 4, 0)).bytesRead !== 4) throw new RangeError("Truncated index node file");
+          const header = Buffer.alloc(length.readUInt32LE(0));
+          if ((await handle.read(header, 0, header.byteLength, 4)).bytesRead !== header.byteLength)
+            throw new RangeError("Truncated index node file");
+          return decodeHeader(header);
+        } finally {
+          await handle.close();
+        }
+      } catch (error) {
+        return unreadable(file, error);
+      }
+    },
+    async create(owner, kind, id, node) {
+      const file = path(owner, kind, id);
+      if (kind === "receipts") return publish(kind, file, await stage(kind, file, node), false);
+      // A cache node needs no staging: a torn file reads as missing and is downloaded again.
+      await ensureDirectory(dirname(file));
+      await writeFile(file, encode(node), { flag: "wx" }).catch((error) => {
+        if (!exists(error)) throw error;
+      });
     },
     async write(owner, kind, id, node) {
       const file = path(owner, kind, id);
-      const temporary = `${file}.${crypto.randomUUID()}.tmp`;
-      await mkdir(dirname(file), { recursive: true });
-      const handle = await open(temporary, "w");
-      try {
-        await handle.writeFile(encode(node));
-        if (kind === "receipts") await handle.sync();
-      } finally {
-        await handle.close();
-      }
-      await rename(temporary, file);
+      await publish(kind, file, await stage(kind, file, node), true);
     },
-    list: async (owner, kind) => (await files(owner, kind)).map((file) => file.id),
+    list: async (owner, kind) => (await files(kindDirectory(owner, kind))).map((file) => file.id),
     async remove(owner, kind, ids) {
       for (const id of ids) await rm(path(owner, kind, id), { force: true });
     },
     async evict(owner, kind, budgetBytes, keepNewerThanMs) {
       const entries = await Promise.all(
-        (await files(owner, kind)).map(async (file) => {
+        (await files(kindDirectory(owner, kind))).map(async (file) => {
           const info = await stat(file.path).catch(() => null);
           return info && { ...file, bytes: info.size, used: info.mtimeMs };
         }),
@@ -127,52 +202,60 @@ export const createIndexNodeFiles = (root: string): IndexNodeFiles => {
       let removed = 0;
       for (const entry of present) {
         if (total <= budgetBytes || entry.used > cutoff) break;
+        // A read since the listing makes the node recent again; keep it.
+        const current = await stat(entry.path).catch(() => null);
+        if (current && current.mtimeMs !== entry.used) continue;
         await rm(entry.path, { force: true });
         total -= entry.bytes;
         removed++;
       }
       return removed;
     },
-    removeOwner: (owner) => rm(ownerDirectory(owner), { recursive: true, force: true }),
-    async moveOwner(from, to) {
-      const target = ownerDirectory(to);
-      if (await stat(target).catch(() => null)) return;
-      await mkdir(dirname(target), { recursive: true });
-      await rename(ownerDirectory(from), target).catch((error) => {
-        if (!missing(error)) throw error;
-      });
+    async removeOwner(owner) {
+      directories.clear();
+      await rm(ownerDirectory(owner), { recursive: true, force: true });
+    },
+    async moveExtension(from, to) {
+      for (const project of await readdir(root).catch(() => [] as string[])) {
+        if (project.startsWith(".")) continue;
+        const source = join(root, project, segment(from));
+        const target = join(root, project, segment(to));
+        for (const kind of ["receipts", "logs"] as const) {
+          for (const file of await files(join(source, kind))) {
+            const name = fileName(file.id);
+            const destination = join(target, kind, name.slice(0, 2), name);
+            await mkdir(dirname(destination), { recursive: true });
+            await link(file.path, destination).catch((error) => {
+              if (!exists(error)) throw error;
+            });
+            if (kind === "receipts") await syncDirectory(dirname(destination));
+          }
+        }
+        await rm(source, { recursive: true, force: true });
+      }
+      directories.clear();
     },
     async retainProjects(projectIds) {
       for (const name of await readdir(root).catch(() => [] as string[])) {
         if (name.startsWith(".")) continue;
         if (!projectIds.has(unsegment(name))) await rm(join(root, name), { recursive: true, force: true });
       }
-    },
-    marker(name) {
-      const file = join(root, `.${name}`);
-      return {
-        exists: async () => !!(await stat(file).catch(() => null)),
-        async set() {
-          await mkdir(root, { recursive: true });
-          const handle = await open(file, "w");
-          await handle.sync();
-          await handle.close();
-        },
-        clear: () => rm(file, { force: true }),
-      };
+      directories.clear();
     },
   };
 };
 
-/** Test and tool databases without a host storage folder keep index nodes in memory. */
+/** In-memory databases keep their index nodes in memory too. */
 export const createMemoryIndexNodeFiles = (): IndexNodeFiles => {
   const nodes = new Map<string, { node: IndexNode; used: number }>();
-  const ownerKey = (owner: StorageOwner) => JSON.stringify([owner.workbenchId, owner.extensionId]);
-  const prefix = (owner: StorageOwner, kind: IndexNodeKind) => `${ownerKey(owner).slice(0, -1)},"${kind}",`;
-  const key = (owner: StorageOwner, kind: IndexNodeKind, id: string) => `${prefix(owner, kind)}${JSON.stringify(id)}]`;
-  const keys = (start: string) => [...nodes.keys()].filter((entry) => entry.startsWith(start));
+  const key = (owner: StorageOwner, kind: IndexNodeKind, id: string) =>
+    JSON.stringify([owner.workbenchId, owner.extensionId, kind, id]);
+  const parse = (entry: string) => JSON.parse(entry) as [string, string, IndexNodeKind, string];
+  const select = (match: (parts: ReturnType<typeof parse>) => boolean) =>
+    [...nodes.keys()].filter((entry) => match(parse(entry)));
+  const of = (owner: StorageOwner, kind?: IndexNodeKind) =>
+    select(([w, e, k]) => w === owner.workbenchId && e === owner.extensionId && (!kind || k === kind));
   let clock = 0;
-  const markers = new Set<string>();
   const copy = (node: IndexNode) => ({ bytes: node.bytes.slice(), children: node.children && [...node.children] });
   return {
     async read(owner, kind, id) {
@@ -181,15 +264,22 @@ export const createMemoryIndexNodeFiles = (): IndexNodeFiles => {
       entry.used = ++clock;
       return copy(entry.node);
     },
+    edges: async (owner, kind, id) => {
+      const entry = nodes.get(key(owner, kind, id));
+      return entry && copy(entry.node).children;
+    },
+    async create(owner, kind, id, node) {
+      if (!nodes.has(key(owner, kind, id))) nodes.set(key(owner, kind, id), { node: copy(node), used: ++clock });
+    },
     async write(owner, kind, id, node) {
       nodes.set(key(owner, kind, id), { node: copy(node), used: ++clock });
     },
-    list: async (owner, kind) => keys(prefix(owner, kind)).map((entry) => (JSON.parse(entry) as string[])[3]!),
+    list: async (owner, kind) => of(owner, kind).map((entry) => parse(entry)[3]),
     async remove(owner, kind, ids) {
       for (const id of ids) nodes.delete(key(owner, kind, id));
     },
     async evict(owner, kind, budgetBytes) {
-      const entries = keys(prefix(owner, kind)).sort((a, b) => nodes.get(a)!.used - nodes.get(b)!.used);
+      const entries = of(owner, kind).sort((a, b) => nodes.get(a)!.used - nodes.get(b)!.used);
       let total = entries.reduce((sum, entry) => sum + nodes.get(entry)!.node.bytes.byteLength, 0);
       let removed = 0;
       for (const entry of entries) {
@@ -201,43 +291,31 @@ export const createMemoryIndexNodeFiles = (): IndexNodeFiles => {
       return removed;
     },
     async removeOwner(owner) {
-      for (const entry of keys(ownerKey(owner).slice(0, -1))) nodes.delete(entry);
+      for (const entry of of(owner)) nodes.delete(entry);
     },
-    async moveOwner(from, to) {
-      if (keys(ownerKey(to).slice(0, -1)).length) return;
-      for (const entry of keys(ownerKey(from).slice(0, -1))) {
-        const [, , kind, id] = JSON.parse(entry) as [string, string, IndexNodeKind, string];
-        nodes.set(key(to, kind, id), nodes.get(entry)!);
+    async moveExtension(from, to) {
+      for (const entry of select(([, e]) => e === from)) {
+        const [workbenchId, , kind, id] = parse(entry);
+        const target = key({ workbenchId, extensionId: to }, kind, id);
+        if (!nodes.has(target)) nodes.set(target, nodes.get(entry)!);
         nodes.delete(entry);
       }
     },
     async retainProjects(projectIds) {
-      for (const entry of [...nodes.keys()]) {
-        if (!projectIds.has((JSON.parse(entry) as string[])[0]!)) nodes.delete(entry);
-      }
-    },
-    marker(name) {
-      return {
-        exists: async () => markers.has(name),
-        set: async () => void markers.add(name),
-        clear: async () => void markers.delete(name),
-      };
+      for (const entry of select(([w]) => !projectIds.has(w))) nodes.delete(entry);
     },
   };
 };
 
 const attached = new WeakMap<DbClient, IndexNodeFiles>();
 
-/** The host attaches its storage folder once per database; every storage service then shares it. */
+/** `createDb` attaches the folder that belongs to its database; every storage service shares it. */
 export const attachIndexNodeFiles = (db: DbClient, files: IndexNodeFiles) => {
   attached.set(db, files);
 };
 
 export const indexNodeFilesFor = (db: DbClient) => {
-  let files = attached.get(db);
-  if (!files) {
-    files = createMemoryIndexNodeFiles();
-    attached.set(db, files);
-  }
+  const files = attached.get(db);
+  if (!files) throw new Error("Index node files are not attached to this database");
   return files;
 };

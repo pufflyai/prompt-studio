@@ -21,7 +21,7 @@ export const createOrderedManifestCache = (
   const storeBytes = async (id: string, bytes: Uint8Array) => {
     const previous = await saved(id);
     if (previous && !Buffer.from(previous.bytes).equals(bytes)) throw new Error("Cached encrypted node is immutable");
-    if (!previous) await files.write(owner, kind, id, { bytes: bytes.slice(), children: null });
+    if (!previous) await files.create(owner, kind, id, { bytes: bytes.slice(), children: null });
   };
   const blobs: OrderedIndexBlobs = {
     // Files need no write batching; callers keep their batch boundaries.
@@ -85,23 +85,26 @@ export const createOrderedManifestCache = (
  * reachable through them was fetched from the relay, which still holds it while a root needs it,
  * so removing the local copy costs a download at most. Nodes this device wrote always record
  * their edges before a root naming them is saved, so the device's only copies are never removed.
- * Run it under the owner lock with no staged checkpoint, so no unsaved root is in flight.
+ *
+ * Callers run it before the owner's receipt index exists, so nothing else writes receipt nodes.
+ * Candidates are listed before the roots are read: a node written later is never a candidate.
  */
 export const collectOrderedReceiptNodes = async (
   files: IndexNodeFiles,
   owner: StorageOwner,
-  roots: (OrderedIndexReference | null | undefined)[],
+  readRoots: () => Promise<(OrderedIndexReference | null | undefined)[]>,
 ) => {
+  const candidates = await files.list(owner, "receipts");
+  const roots = await readRoots();
   const reachable = new Set<string>();
   const pending = roots.filter((root): root is OrderedIndexReference => !!root).map((root) => root.blobId);
   while (pending.length) {
     const id = pending.pop()!;
     if (reachable.has(id)) continue;
     reachable.add(id);
-    const node = await files.read(owner, "receipts", id);
-    for (const child of node?.children ?? []) pending.push(child.blobId);
+    for (const child of (await files.edges(owner, "receipts", id)) ?? []) pending.push(child.blobId);
   }
-  const unreachable = (await files.list(owner, "receipts")).filter((id) => !reachable.has(id));
+  const unreachable = candidates.filter((id) => !reachable.has(id));
   await files.remove(owner, "receipts", unreachable);
-  return { kept: reachable.size, removed: unreachable.length };
+  return { kept: candidates.length - unreachable.length, removed: unreachable.length };
 };

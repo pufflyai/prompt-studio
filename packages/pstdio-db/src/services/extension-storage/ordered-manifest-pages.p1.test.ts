@@ -86,7 +86,7 @@ test("collection keeps every node a saved root reaches and removes interrupted a
     const root = await nodes.write({ children: [shared], version: 2 }, [shared]);
     const published = await nodes.write({ children: [shared], published: true }, [shared]);
 
-    const result = await collectOrderedReceiptNodes(files, context.owner, [root, published]);
+    const result = await collectOrderedReceiptNodes(files, context.owner, async () => [root, published]);
     expect(result).toEqual({ kept: 3, removed: 3 });
     expect((await files.list(context.owner, "receipts")).sort()).toEqual(
       [shared.blobId, root.blobId, published.blobId].sort(),
@@ -121,7 +121,7 @@ test("collection treats nodes with unknown edges as leaves and keeps them", asyn
     const node = await files.read(context.owner, "receipts", root.blobId);
     await files.write(context.owner, "receipts", root.blobId, { bytes: node!.bytes, children: null });
 
-    expect(await collectOrderedReceiptNodes(files, context.owner, [root])).toEqual({ kept: 1, removed: 1 });
+    expect(await collectOrderedReceiptNodes(files, context.owner, async () => [root])).toEqual({ kept: 1, removed: 1 });
     expect(await files.read(context.owner, "receipts", root.blobId)).toBeDefined();
     // The child is still on the relay, so reading through the root downloads it again.
     const reader = createOrderedManifestCache(files, context.owner, "receipts", context.space, context.remote);
