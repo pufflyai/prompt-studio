@@ -17,7 +17,10 @@ import {
   getCollectionViewStore,
 } from "./use-collection-view-store";
 
-const normalizeStoredFilter = (state: CollectionViewStoreState<unknown>, fields?: AttributeDescriptor[]) => {
+const normalizeStoredFilter = <TSettings>(
+  state: CollectionViewStoreState<TSettings>,
+  fields?: AttributeDescriptor[],
+) => {
   if (!fields) return;
   const normalized = normalizeBooleanViewFilter(state.filter, fields);
   if (normalized !== state.filter) state.setFilter(normalized);
