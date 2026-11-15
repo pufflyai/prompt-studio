@@ -15,7 +15,7 @@ export const readTicketParentLookup = async (
   );
   const visited = new Set(selected.keys());
   let pending = [...lookup.values()];
-  await preparePlannerIndexes(ctx.storage);
+  let prepared = false;
   while (pending.length > 0) {
     const ids = new Set(
       pending.flatMap((ticket) => (ticket.parentId && !visited.has(ticket.parentId) ? [ticket.parentId] : [])),
@@ -24,6 +24,10 @@ export const readTicketParentLookup = async (
     for (const id of ids) visited.add(id);
     pending = [];
     const keys = [...ids];
+    if (keys.length && !prepared) {
+      await preparePlannerIndexes(ctx.storage);
+      prepared = true;
+    }
     for (let offset = 0; offset < keys.length; offset += 100) {
       const page = await ctx.storage.records.query({
         index: "ticket-view",

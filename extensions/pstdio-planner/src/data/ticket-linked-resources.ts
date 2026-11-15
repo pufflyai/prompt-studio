@@ -37,17 +37,22 @@ export const loadTicketLinkedResources = async (
 ): Promise<TicketLinkedResourceLookup> => {
   const byIdentity = new Map(tickets.map((ticket) => [resourceKey(ticket), new Map<string, ResourceRef>()]));
   const more = new Set<string>();
-  // Each card is a bounded preview, even when one ticket is a hub with thousands of links.
-  for (let offset = 0; offset < tickets.length; offset += 8)
-    await Promise.all(
-      tickets.slice(offset, offset + 8).map(async (ticket) => {
-        const page = await resources.queryRelated({ resources: [ticket], direction: "both", limit: 8 });
-        const key = resourceKey(ticket),
-          related = byIdentity.get(key)!;
-        for (const ref of page.items) if (resourceKey(ref) !== key) related.set(resourceKey(ref), ref);
-        if (page.nextCursor) more.add(key);
-      }),
-    );
+  for (let start = 0; start < tickets.length; start += 100) {
+    const batch = tickets.slice(start, start + 100);
+    // A bounded existence query avoids one empty host round trip for every card.
+    if (!(await resources.queryRelated({ resources: batch, direction: "both", limit: 1 })).items.length) continue;
+    // Each linked card retains its own bounded preview, including hub continuations.
+    for (let offset = 0; offset < batch.length; offset += 8)
+      await Promise.all(
+        batch.slice(offset, offset + 8).map(async (ticket) => {
+          const page = await resources.queryRelated({ resources: [ticket], direction: "both", limit: 8 });
+          const key = resourceKey(ticket),
+            related = byIdentity.get(key)!;
+          for (const ref of page.items) if (resourceKey(ref) !== key) related.set(resourceKey(ref), ref);
+          if (page.nextCursor) more.add(key);
+        }),
+      );
+  }
   const unique = new Map([...byIdentity.values()].flatMap((refs) => [...refs]));
   const refs = [...unique.values()];
   const batches: ResourceRef[][] = [];

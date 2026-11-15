@@ -24,6 +24,27 @@ const artifact: ResourceRef = {
   label: "Saved artifact",
 };
 
+test("unlinked ticket pages establish empty badges with bounded batch queries", async () => {
+  const ctx = makeCommandContext({ storage: createMemoryStorage(), params: {} });
+  const queryRelated = ctx.resources.queryRelated.bind(ctx.resources);
+  const reads: { size: number; limit?: number }[] = [];
+  ctx.resources.queryRelated = (query) => {
+    reads.push({ size: query.resources.length, limit: query.limit });
+    return queryRelated(query);
+  };
+  const lookup = await loadTicketLinkedResources(
+    ctx.resources,
+    Array.from({ length: 205 }, (_, index) => ticket(String(index))),
+  );
+  expect(lookup.size).toBe(205);
+  expect([...lookup.values()].every((badges) => badges.length === 0)).toBe(true);
+  expect(reads).toEqual([
+    { size: 100, limit: 1 },
+    { size: 100, limit: 1 },
+    { size: 5, limit: 1 },
+  ]);
+});
+
 test("one resource list deduplicates incoming and outgoing links while keeping owner identities distinct", async () => {
   const ctx = makeCommandContext({
     storage: createMemoryStorage(),
