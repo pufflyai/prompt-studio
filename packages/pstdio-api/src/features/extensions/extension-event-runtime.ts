@@ -3,6 +3,7 @@ import { createCommandRunner } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
 import { createCommandEnvironment } from "./command-environment";
 import type { ExtensionsRouteDeps } from "./deps";
+import { publishExtensionEventNotifications } from "./extension-event-notifications";
 import { createExtensionLogger } from "./extension-logger";
 
 export type ExtensionEventDeps = ExtensionsRouteDeps;
@@ -62,7 +63,7 @@ export const fireExtensionEvent = async <TPayload extends Struct>(
     createLogger: createExtensionLogger,
     onWillDispatchEvent: (eventId, refresh) => {
       if (!initialDispatch || options.broadcast !== false)
-        deps.eventBus.emit("extension_events", "set", { ...refresh, id: crypto.randomUUID(), projectId, eventId });
+        publishExtensionEventNotifications(deps.eventBus, snapshot.runtime, eventId, { ...refresh, projectId });
       initialDispatch = false;
     },
     buildEnvironment: (input) =>

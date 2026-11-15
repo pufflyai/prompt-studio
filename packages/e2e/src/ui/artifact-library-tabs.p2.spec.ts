@@ -20,7 +20,7 @@ test("the artifact library moves between panels and remains a singleton", async 
     await page.addInitScript(() => {
       if (window === window.top) localStorage.setItem("onboarding-complete", "true");
     });
-    await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-artifacts/artifacts`);
+    await page.goto(`/projects/${project.id}/extensions/pstdio.artifacts/artifacts`);
     const main = page.locator('[data-workbench-panel="main"]');
     const library = main.frameLocator('iframe[title="Artifacts"]:visible');
     await expect(library.getByRole("button", { name: "Project brief", exact: true })).toBeVisible();
@@ -65,7 +65,7 @@ test("the artifact library moves between panels and remains a singleton", async 
     await expect(libraryTab).toBeVisible();
     writeFileSync(join(folder, "page.html"), "<title>Placeholder example</title><h1>Example content</h1>");
     const published = await request.post(
-      `${uiOrigin}/v1/projects/${project.id}/extensions/commands/pstdio.pstdio-artifacts.command.publish/execute`,
+      `${uiOrigin}/v1/projects/${project.id}/extensions/commands/pstdio.artifacts.command.publish/execute`,
       { data: { params: { file_path: "page.html" }, source: "api" } },
     );
     expect(published.ok()).toBe(true);

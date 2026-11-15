@@ -35,6 +35,7 @@ export type { NativeTextTarget, TextSourceTarget } from "./native-documents";
 export { createFileRendererLoadKey, createNativeDocumentKey, type NativeDocumentTarget } from "./native-documents";
 export * from "./notifications/types";
 export * from "./pagination";
+export * from "./project-composition";
 export * from "./project-folder";
 export * from "./project-folder-recovery";
 export * from "./project-recovery";

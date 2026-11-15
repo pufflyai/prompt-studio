@@ -50,6 +50,20 @@ describe("isLocalExtensionSource", () => {
 });
 
 describe("installExtensionSource scope", () => {
+  test("a renamed first-party upgrade retains its existing installed source directory", async () => {
+    const existing = join(pstdioHome, "extensions", "pstdio-notes");
+    makeExtension(existing, { namespace: "pstdio-notes", publisher: "pstdio" });
+    const source = join(root, "new-notes");
+    makeExtension(source, { namespace: "notes", publisher: "pstdio" });
+    const installed = await installExtensionSource({
+      source,
+      installName: "notes",
+      force: true,
+      env: { PSTDIO_HOME: pstdioHome },
+    });
+    expect(installed.targetPath).toBe(existing);
+    expect(existsSync(join(pstdioHome, "extensions", "notes"))).toBe(false);
+  });
   test("keeps a full install identity while allocating a portable device-name folder", async () => {
     const source = join(root, "source");
     makeExtension(source, { id: "con.notes", namespace: "notes" });

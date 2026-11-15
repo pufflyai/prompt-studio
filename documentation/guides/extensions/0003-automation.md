@@ -35,8 +35,8 @@ export default defineExtension({ middlewares: [requireTitle] });
 Check it from the project folder after installing the extension:
 
 ```sh
-pst tickets create --content "# Draft"   # rejected: Supply a ticket title. (exit code 1)
-pst tickets create --title "Draft"       # prints the created ticket as JSON
+pst pstdio.planner create-ticket --content "# Draft"   # rejected: Supply a ticket title. (exit code 1)
+pst pstdio.planner create-ticket --title "Draft"       # prints the created ticket as JSON
 ```
 
 The policy reads the `title` parameter only, so a title written as a Markdown heading in `--content` is rejected too. If both commands succeed, the middleware is not loaded: run `pst extensions check` and confirm that Planner and your extension are enabled in this project.

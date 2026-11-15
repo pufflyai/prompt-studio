@@ -111,7 +111,7 @@ States: fixed and verified, open, blocked, accepted limit. "Fixed" means fixed i
 
 ## Delivery order and ownership
 
-P0 means a prerequisite or a blocker to trusting the workflow. P1 means required follow-through before closing this initiative. Assign real owners and tickets using `pst`; save edited tickets with `pst tickets save --id PS-XXX`. Keep findings visible until they pass or have an explicitly accepted follow-up with truthful user-facing limits.
+P0 means a prerequisite or a blocker to trusting the workflow. P1 means required follow-through before closing this initiative. Assign real owners and tickets using `pst`; save edited tickets with `pst pstdio.planner save-ticket --id PS-XXX`. Keep findings visible until they pass or have an explicitly accepted follow-up with truthful user-facing limits.
 
 | Workstream | Priority | Suggested owner | Depends on | Reviewable output |
 | --- | --- | --- | --- | --- |

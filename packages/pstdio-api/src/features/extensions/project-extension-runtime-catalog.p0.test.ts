@@ -53,7 +53,7 @@ const createHarness = (input: {
   const catalog = createProjectExtensionRuntimeCatalog({
     extensionService: { listEnabledSourcesForProject: async (id: string) => input.sourcesByProject(id) } as never,
     projectService: { get: async (id: string) => ({ id, name: `Project ${id}`, shorthand: "PS" }) } as never,
-    workspaceService: { getDefault: async () => null } as never,
+    workspaceService: { list: async () => [], getDefault: async () => null } as never,
     loadSources,
     observer: {
       onLoadStart: (event) => loadStarts.push({ projectId: event.projectId, reason: event.reason }),
@@ -291,7 +291,7 @@ test("activates a project once even when its runtime is refreshed", async () => 
   const catalog = createProjectExtensionRuntimeCatalog({
     extensionService: { listEnabledSourcesForProject: async () => [] } as never,
     projectService: { get: async (id: string) => ({ id, name: id, shorthand: "P" }) } as never,
-    workspaceService: { getDefault: async () => null } as never,
+    workspaceService: { list: async () => [], getDefault: async () => null } as never,
   });
   catalog.subscribeActivation((id) => {
     activated.push(id);

@@ -40,7 +40,7 @@ test("a plain-folder ticket creates a linked cloud workspace through its provide
     page.on("request", (request) => {
       if (/\/v1\/workspaces\/[^/]+\/diff/.test(request.url())) gitRequests.push(request.url());
     });
-    await page.goto(`/projects/${projectId}/extensions/pstdio.pstdio-planner/tickets`);
+    await page.goto(`/projects/${projectId}/extensions/pstdio.planner/tickets`);
     await page.getByTestId("renderer-card").getByText("Cloud workspace ticket", { exact: true }).click();
     await expect(page.getByRole("option", { name: "Project folder", exact: true })).toBeVisible();
     await page.getByText("Workspaces", { exact: true }).last().hover();
@@ -61,9 +61,9 @@ test("a plain-folder ticket creates a linked cloud workspace through its provide
         id: ticket.id,
         shorthand: ticket.shorthand,
         label: `${ticket.shorthand} ${ticket.title}`,
-        metadata: { resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" } },
+        metadata: { resourceParent: { type: "view", viewId: "pstdio.planner.view.tickets" } },
         projectId,
-        extensionId: "pstdio.pstdio-planner",
+        extensionId: "pstdio.planner",
         role: "primary",
       },
     ];

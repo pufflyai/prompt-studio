@@ -155,3 +155,24 @@ test("rejects an oversized declared SVG before publishing an archive", async () 
   await writeFile(join(root, "assets/icon.svg"), " ".repeat(256 * 1024 + 1));
   await expect(packExtension(root)).rejects.toThrow("256 KiB");
 });
+
+test("a historical first-party archive retains its authored release identity", async () => {
+  const root = await fixture();
+  const raw = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
+  await writeFile(join(root, "package.json"), JSON.stringify({ ...raw, publisher: "pstdio", name: "pstdio-notes" }));
+  const packed = await packExtension(root);
+  const target = await mkdtemp(join(tmpdir(), "historical-release-"));
+  roots.push(target);
+  expect(
+    (
+      await unpackExtension(packed.bytes, target, {
+        id: "pstdio.pstdio-notes",
+        version: raw.version,
+        sha256: packed.sha256,
+      })
+    ).id,
+  ).toBe("pstdio.pstdio-notes");
+  await expect(
+    unpackExtension(packed.bytes, target, { id: "pstdio.notes", version: raw.version, sha256: packed.sha256 }),
+  ).rejects.toThrow("identity does not match");
+});

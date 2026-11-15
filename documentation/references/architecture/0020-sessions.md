@@ -8,7 +8,7 @@ CLI and dashboard clients call the session API. Domain services coordinate datab
 
 ## Presentation ownership
 
-The default-installed `pstdio.pstdio-session-browser` extension owns browsing,
+The default-installed `pstdio.session-browser` extension owns browsing,
 search, session actions, draft policy and conversation composition. It declares
 native `chat` and tree views through the public SDK. The workbench renders chat
 with `@pstdio/ui/chat-ui` in its own document; no extension React entry or webview

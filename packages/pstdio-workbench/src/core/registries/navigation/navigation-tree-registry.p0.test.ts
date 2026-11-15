@@ -130,7 +130,7 @@ describe("navigation tree registry", () => {
       id: "note-list",
       idScope: "note-list",
       owner: project,
-      sourceExtensionId: "pstdio.pstdio-notes",
+      sourceExtensionId: "pstdio.notes",
       declarationIndex: 0,
       getSections: () => [
         { id: "notes", nodes: [{ id: "notes", label: "Notes", children: [{ id: "n1", label: "N1" }] }] },

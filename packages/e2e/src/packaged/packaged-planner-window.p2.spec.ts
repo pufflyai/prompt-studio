@@ -53,7 +53,7 @@ test("Planner keeps long dependency chains usable with a bounded card window", a
       if (window.top === window) localStorage.setItem("onboarding-complete", "true");
     });
     await signInBrowser(page, started.descriptor);
-    await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/pstdio.pstdio-planner/ticket-timeline`);
+    await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/pstdio.planner/ticket-timeline`);
     const timeline = page.locator('[data-workbench-region="main"]').frameLocator("iframe");
     await expect(timeline.locator("[data-timeline-viewport]")).toBeVisible();
     await expectPlannerWindow(timeline, execute, track.id);

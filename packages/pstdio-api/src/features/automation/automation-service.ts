@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import type { CreateAutomationRunInput, IssueAutomationTokenInput } from "pstdio-api-contracts";
+import { canonicalRuntimeId } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
 import { executeProjectExtensionCommand } from "../extensions/execute-project-extension-command";
 import { SessionCancellationCleanupError } from "../sessions/session-request-cancellation";
@@ -52,6 +53,19 @@ const createAuthAttemptConsumer = (maxAttemptsPerMinute: number) => {
   };
 };
 
+const listCanonicalTokens = async (deps: AutomationServiceDeps, projectId: string) => {
+  const { runtime } = await deps.getCommandDeps().extensionRuntimeCatalog.get(projectId);
+  return (await deps.automationDBService.listTokens(projectId)).map((row) => ({
+    ...toTokenRecord(row)!,
+    commandScopes: row.token.command_scopes_json.map((id) => canonicalRuntimeId(runtime, id)),
+  }));
+};
+const canonicalRun = async (deps: AutomationServiceDeps, row: Parameters<typeof toRunRecord>[0]) => {
+  const record = toRunRecord(row);
+  const { runtime } = await deps.getCommandDeps().extensionRuntimeCatalog.get(row.project_id);
+  return { ...record, commandId: canonicalRuntimeId(runtime, row.command_id) };
+};
+
 export const createAutomationService = (deps: AutomationServiceDeps) => {
   const activeRuns = new Map<
     string,
@@ -84,6 +98,7 @@ export const createAutomationService = (deps: AutomationServiceDeps) => {
   const issueToken = async (input: IssueAutomationTokenInput) => {
     const commandDeps = deps.getCommandDeps();
     const snapshot = await commandDeps.extensionRuntimeCatalog.get(input.projectId);
+    input = { ...input, commandScopes: input.commandScopes.map((id) => canonicalRuntimeId(snapshot.runtime, id)) };
     const allowedCommands = new Set(
       snapshot.runtime.commands.filter((command) => command.automation).map((command) => command.id),
     );
@@ -119,9 +134,6 @@ export const createAutomationService = (deps: AutomationServiceDeps) => {
     });
     return { ...toTokenRecord(stored)!, token: rawToken };
   };
-
-  const listTokens = async (projectId: string) =>
-    (await deps.automationDBService.listTokens(projectId)).map((row) => toTokenRecord(row)!);
 
   const auditDeniedRoute = async (rawToken: string | null, path: string) => {
     const auth = await authenticateAutomationToken(policyDeps, rawToken);
@@ -193,14 +205,21 @@ export const createAutomationService = (deps: AutomationServiceDeps) => {
   const getAuthorizedRun = async (rawToken: string | null, projectId: string, runId: string) => {
     const auth = await authorizeAutomationToken(policyDeps, rawToken, projectId);
     const run = await deps.automationDBService.getRun(projectId, runId);
-    if (!run || run.principal_id !== auth.principal.id || !auth.token.command_scopes_json.includes(run.command_id)) {
+    const { runtime } = await deps.getCommandDeps().extensionRuntimeCatalog.get(projectId);
+    if (
+      !run ||
+      run.principal_id !== auth.principal.id ||
+      !auth.token.command_scopes_json.some(
+        (id) => canonicalRuntimeId(runtime, id) === canonicalRuntimeId(runtime, run.command_id),
+      )
+    ) {
       throw new AutomationRequestError("automation_run_not_found", "Automation run not found.", 404);
     }
     return run;
   };
 
   const getRun = async (rawToken: string | null, projectId: string, runId: string) =>
-    toRunRecord(await getAuthorizedRun(rawToken, projectId, runId));
+    canonicalRun(deps, await getAuthorizedRun(rawToken, projectId, runId));
 
   const listRunEvents = async (rawToken: string | null, projectId: string, runId: string, after: number) => {
     await getAuthorizedRun(rawToken, projectId, runId);
@@ -248,9 +267,9 @@ export const createAutomationService = (deps: AutomationServiceDeps) => {
       }
       const settled = await runExecutor.cancelStoredRun(runId);
       if (!settled) throw new AutomationRequestError("automation_run_not_found", "Automation run not found.", 404);
-      return toRunRecord(settled);
+      return canonicalRun(deps, settled);
     }
-    return toRunRecord((await runExecutor.cancelStoredRun(runId))!);
+    return canonicalRun(deps, (await runExecutor.cancelStoredRun(runId))!);
   };
 
   const close = async () => {
@@ -275,7 +294,7 @@ export const createAutomationService = (deps: AutomationServiceDeps) => {
     getRun,
     issueToken,
     listRunEvents,
-    listTokens,
+    listTokens: (projectId: string) => listCanonicalTokens(deps, projectId),
     recoverInterruptedRuns: () =>
       deps.automationDBService.recoverInterruptedRuns((run) => recordRunActivity(deps, run)),
     recoverQueuedRuns,

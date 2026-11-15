@@ -53,7 +53,7 @@ test(
       // Templates must survive packaging and be readable through the public command.
       for (const name of ["proposal", "architecture-overview", "research", "contracts", "schemas"]) {
         const response = await fetch(
-          `${started.baseUrl}/v1/projects/${project.id}/extensions/commands/pstdio.pstdio-planner.command.templates.read/execute`,
+          `${started.baseUrl}/v1/projects/${project.id}/extensions/commands/pstdio.planner.command.templates.read/execute`,
           {
             method: "POST",
             headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
