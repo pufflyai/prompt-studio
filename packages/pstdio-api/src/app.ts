@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { websocket } from "hono/bun";
 import { createStoragePositions } from "pstdio-api-contracts";
+import { prepareIndexNodeFiles } from "pstdio-db";
 import { ensureStorageRoot } from "pstdio-storage";
 import type { AppDependencies, CreateAppInput } from "./app-contracts";
 import { createAppDatabaseServices, openAppDatabase, upgradeAppStorage } from "./app-database";
@@ -31,6 +32,7 @@ import { createSessionImportService } from "./features/sessions/imports/service"
 import { createSessionQueueLifecycle } from "./features/sessions/session-queue-lifecycle";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { EventBus } from "./features/sync/event-bus";
+import { apiLogger } from "./lib/logger";
 import { logStartupPhase } from "./lib/startup-phase";
 import { createAppAccount } from "./services/account/app-account";
 import { createNativeDocumentService } from "./services/native-documents/documents";
@@ -136,6 +138,9 @@ const buildApp = async (
 
   const storageRoot = input.config.storage.root;
   ensureStorageRoot(storageRoot);
+  await prepareIndexNodeFiles(db, join(storageRoot, "index-nodes"), (progress) =>
+    apiLogger.info({ event: "storage.index_nodes.upgrade", ...progress }, "Moved index nodes out of the database"),
+  );
 
   const dbs = createAppDatabaseServices(db, database.path === ":memory:" ? storageRoot : database.path);
   const { environmentId } = await dbs.environmentDBService.get();
