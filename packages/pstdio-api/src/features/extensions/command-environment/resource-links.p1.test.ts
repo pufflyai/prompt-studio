@@ -4,9 +4,42 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { createResourceLinksApi } from "./resource-links";
 import { createResourcesApi } from "./resources";
 import { createSessionsApi } from "./sessions";
 import { createWorkspacesApi } from "./workspaces";
+
+test("cancelling a pending related-resource read rejects even an empty result", async () => {
+  const app = await createTestApp();
+  const entered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  let result: Promise<string> | undefined;
+  try {
+    const project = await app.deps.projectService.create({ name: "Cancelled related resources" });
+    const controller = new AbortController();
+    const related = app.deps.resourceLinksService.related.bind(app.deps.resourceLinksService);
+    app.deps.resourceLinksService.related = async (query) => {
+      const page = await related(query);
+      expect(page.items).toEqual([]);
+      entered.resolve();
+      await release.promise;
+      return page;
+    };
+    const resources = createResourceLinksApi(app.deps, { projectId: project.id, signal: controller.signal });
+    result = resources.queryRelated({ resources: [{ type: "project", id: project.id }] }).then(
+      () => "resolved",
+      (error: Error) => error.name,
+    );
+    await entered.promise;
+    controller.abort();
+    release.resolve();
+    expect(await result).toBe("AbortError");
+  } finally {
+    release.resolve();
+    await result;
+    await app.close();
+  }
+});
 
 test("public resource links enforce owner policies atomically and publish committed changes only", async () => {
   const root = mkdtempSync(join(tmpdir(), "resource-links-"));

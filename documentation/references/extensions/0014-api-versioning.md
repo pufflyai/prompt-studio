@@ -481,4 +481,8 @@ omit this optional declaration and never synthesize consent.
 
 Optional resource Activity declarations, `ctx.activity` discussion/outcome methods, owner-only historical import and `client.activity` are additive in API 0.4.2. The current `pstdio@0.47.0` API-report baseline contains API 0.4.1. Existing `ctx.activity.record` remains supported. Publish the supporting host, SDK, UI and workbench before releasing independent consumers. See [resource Activity](../cli/0012-resource-activity.md).
 
+## Optional navigation views in API 0.4.2
+
+`NavigationTreeContribution.optionalView` lets a tool attach a tree supplied by an independently installed view provider. An absent foreign provider keeps the tree inactive; missing local views, missing views in a present provider, and non-tree views still fail validation. Publish a compatible SDK and host before consumers adopt this additive contract. The published 0.47.0 SDK does not include it. See [navigation trees](0004-contribution-api.md#dashboard-ui-contributions).
+
 *Updated at: 2026-11-14*

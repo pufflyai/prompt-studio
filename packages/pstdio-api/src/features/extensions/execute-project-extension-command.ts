@@ -34,6 +34,7 @@ export const executeProjectExtensionCommand = async (
     commandId: string;
     body: CommandExecuteBody;
     signal?: AbortSignal;
+    resourceLinksReadOnly?: boolean;
     onChunk?: (chunk: JsonValue) => Promise<void>;
   },
 ) => {
@@ -82,6 +83,7 @@ export const executeProjectExtensionCommand = async (
     buildEnvironment: (environment) =>
       createCommandEnvironment(deps, snapshot.enabledSources, {
         ...environment,
+        resourceLinksReadOnly: input.resourceLinksReadOnly,
         artifactMounts: snapshot.runtime.artifactMounts,
         project: snapshot.project,
         settings: snapshot.runtime.settings,
