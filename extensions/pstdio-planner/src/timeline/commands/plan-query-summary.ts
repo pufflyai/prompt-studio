@@ -56,7 +56,7 @@ const complexityExpression = (view: View): StorageExpression => {
   };
 };
 
-export const planQuerySummary = async (storage: Storage, view: View) => {
+export const planQuerySummary = async (storage: Storage, view: View, selectsAllActive = false) => {
   const weight = complexityExpression(view);
   const done: StorageExpression = {
     op: "or",
@@ -100,8 +100,10 @@ export const planQuerySummary = async (storage: Storage, view: View) => {
       groupLimit: 500,
       metrics: { ...metrics, ...(selected ? countMetrics : { done: countMetrics.done }) },
     });
-  // Each selection is scanned once; flags and complexity totals share its scalar projections.
-  const [global, selected] = await Promise.all([group(activeTicket, false), group(filtered, true)]);
+  // An unfiltered Timeline shares one scan for selected and global totals.
+  const [global, selected] = selectsAllActive
+    ? await group(filtered, true).then((summary) => [summary, summary])
+    : await Promise.all([group(activeTicket, false), group(filtered, true)]);
   const starts = await storage.records.aggregate({
     index: "attempt-ticket",
     where: {

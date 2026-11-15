@@ -154,11 +154,14 @@ test("Timeline counts an unchanged visible selection once", async () => {
   await readPlanCommand.run(ctx, {});
   const aggregate = storage.records.aggregate.bind(storage.records);
   let counts = 0;
+  let summaries = 0;
   storage.records.aggregate = (query) => {
     if (query.index === "ticket-view" && !query.groupBy && !query.metrics) counts++;
+    if (query.index === "ticket-view" && query.groupBy === "deadlineId" && query.metrics?.totalComplexity) summaries++;
     return aggregate(query);
   };
   const result = await readPlanCommand.run(ctx, {});
   expect(result.page).toMatchObject({ total: 0, filteredTotal: 0 });
   expect(counts).toBe(1);
+  expect(summaries).toBe(1);
 });

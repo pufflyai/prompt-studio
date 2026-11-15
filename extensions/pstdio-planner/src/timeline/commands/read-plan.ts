@@ -124,14 +124,12 @@ export const readPlanCommand = defineCommand({
         ) || filter.groups?.some(hasRules),
       );
     };
-    const page = await planPageRows(
-      ctx,
-      view,
+    const executionOffset =
       !input.ticketId && !hasRules(input.filter) && !input.page?.search.trim() && !visible.length
         ? (input.page?.offset ?? 0)
-        : undefined,
-    );
-    const summary = await planQuerySummary(ctx.storage, view);
+        : undefined;
+    const page = await planPageRows(ctx, view, executionOffset);
+    const summary = await planQuerySummary(ctx.storage, view, executionOffset !== undefined);
     await ctx.storage.records.query({
       index: "ticket-view",
       fields: [],
