@@ -13,7 +13,7 @@ export const normalizeKanbanViewDefaults = (
   })),
 });
 
-/** Resource lists share the collection view model, with one fixed display. */
+/** Resource lists share the collection view model, with one fixed display. Sub-grouping is optional. */
 export const normalizeResourceListViewDefaults = (
   body: Pick<
     import("../extension-kernel/types").ResourceListRendererContribution,
@@ -25,7 +25,7 @@ export const normalizeResourceListViewDefaults = (
     defaultSettings: {
       ...body.defaultSettings,
       viewMode: "list",
-      rowGrouping: "none",
+      rowGrouping: body.defaultSettings?.rowGrouping ?? "none",
       showChildren: body.defaultSettings?.showChildren ?? true,
     },
     defaultViews: body.defaultViews?.map((view) => ({
@@ -33,7 +33,7 @@ export const normalizeResourceListViewDefaults = (
       settings: {
         ...view.settings,
         viewMode: "list",
-        rowGrouping: "none",
+        rowGrouping: view.settings.rowGrouping ?? body.defaultSettings?.rowGrouping ?? "none",
         showChildren: view.settings.showChildren ?? body.defaultSettings?.showChildren ?? true,
       },
     })),

@@ -27,6 +27,12 @@ const columnRendererSchema = z.discriminatedUnion("type", [
   }),
   z.object({ type: z.literal("json") }),
   z.object({
+    type: z.literal("image"),
+    fit: z.enum(["cover", "contain"]).optional(),
+    shape: z.enum(["square", "circle"]).optional(),
+    showLabel: z.boolean().optional(),
+  }),
+  z.object({
     type: z.literal("color-scale"),
     stops: z.array(z.object({ value: z.number(), color: themeColorSchema })),
   }),

@@ -155,6 +155,12 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
                 if (value === "none" || value === settings.rowGrouping) onRowGroupingChange("none");
               }}
             />
+            <DisplayMenuSelect
+              label="Sub-grouping"
+              value={settings.rowGrouping}
+              options={resolveSubGroupingOptions(groupingOptions, settings.columnGrouping)}
+              onSelect={onRowGroupingChange}
+            />
             {props.resourceList ? (
               <DisplayMenuSelect
                 label="Children"
@@ -165,14 +171,7 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
                 ]}
                 onSelect={(value) => props.onShowChildrenChange?.(value === "nested")}
               />
-            ) : (
-              <DisplayMenuSelect
-                label="Sub-grouping"
-                value={settings.rowGrouping}
-                options={resolveSubGroupingOptions(groupingOptions, settings.columnGrouping)}
-                onSelect={onRowGroupingChange}
-              />
-            )}
+            ) : null}
 
             {props.sortControl}
             <SectionLabel>PROPERTIES</SectionLabel>

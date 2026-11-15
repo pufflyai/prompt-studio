@@ -1,14 +1,22 @@
 import type { KanbanRendererContribution, KanbanRendererRow, KanbanRendererSettings } from "./kanban-renderer";
 
-/** A resource list has one display and one grouping. */
+/** A resource list has one display: a grouped list with an optional sub-grouping. */
 export interface ResourceListRendererSettings extends Omit<KanbanRendererSettings, "viewMode" | "rowGrouping"> {
+  /** A second groupable attribute that splits each group, or "none". Defaults to "none". */
+  rowGrouping?: string;
   showChildren?: boolean;
+}
+
+/** A child resource. Children can have their own children, rendered at increasing indents. */
+export interface ResourceListRendererChildRow extends KanbanRendererRow {
+  icon?: string;
+  children?: ResourceListRendererChildRow[];
 }
 
 export interface ResourceListRendererRow extends KanbanRendererRow {
   icon?: string;
-  /** One level of child resources, rendered underneath their parent. */
-  children?: (KanbanRendererRow & { icon?: string })[];
+  /** Child resources, rendered underneath their parent. */
+  children?: ResourceListRendererChildRow[];
 }
 
 export interface ResourceListRendererContribution

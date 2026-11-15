@@ -65,12 +65,8 @@ export const validateBoardView = (
     kind !== "dataTable"
       ? validateKanbanSettings(view.settings, fields)
       : validateDataTableSettings(view.settings, fields);
-  if (
-    kind === "resourceList" &&
-    "viewMode" in settings &&
-    (settings.viewMode !== "list" || settings.rowGrouping !== "none")
-  )
-    throw new BoardViewError("Resource lists require list display and one grouping.");
+  if (kind === "resourceList" && "viewMode" in settings && settings.viewMode !== "list")
+    throw new BoardViewError("Resource lists require list display.");
   const problem =
     (sent.filter === undefined ? undefined : findViewFilterProblem(view.filter, fields)) ??
     (sent.sorts === undefined ? undefined : findViewSortsProblem(view.sorts, fields));

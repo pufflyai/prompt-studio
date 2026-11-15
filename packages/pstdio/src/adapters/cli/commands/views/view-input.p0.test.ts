@@ -39,6 +39,13 @@ test("resource list views expose grouping, child visibility and properties to ag
   expect(() => buildViewInput({ children: "nested" }, table)).toThrow("--children applies to resource list views only");
 });
 
+test("resource list views take a sub-grouping that only resource lists accept", () => {
+  expect(buildViewInput({ group: "tag", subgroup: "none" }, resourceList)).toEqual({
+    settings: { columnGrouping: "tag", rowGrouping: "none" },
+  });
+  expect(() => buildViewInput({ subgroup: "tag" }, board)).toThrow("--subgroup applies to resource list views only");
+});
+
 test("accepts one ordering and rejects a second", () => {
   expect(() => buildViewInput({ sort: ["score:desc", "title:asc"] }, board)).toThrow("one sort");
 });

@@ -16,6 +16,7 @@ import { DataTableChartCell } from "./data-table-chart-cell";
 import type { DataTableColumnMeta } from "./data-table-column-meta";
 import { DataTableDateCell, formatDataTableRelativeDate } from "./data-table-date-cell";
 import { DataTableDiffCell } from "./data-table-diff-cell";
+import { DataTableImageCell } from "./data-table-image-cell";
 import { DataTablePathCell } from "./data-table-path-cell";
 import { formatDisplayValue } from "./helpers";
 import { JsonCell } from "./json-cell";
@@ -173,6 +174,9 @@ interface DataCellProps {
 
 const DataCell = (props: DataCellProps) => {
   const { columnLabel, renderer, value, wrapRows, search } = props;
+
+  if (renderer?.type === "image")
+    return <DataTableImageCell columnLabel={columnLabel} renderer={renderer} value={value} search={search} />;
 
   if (renderer?.type === "sparkline" || renderer?.type === "bar-chart")
     return <DataTableChartCell value={value} renderer={renderer} label={columnLabel} />;

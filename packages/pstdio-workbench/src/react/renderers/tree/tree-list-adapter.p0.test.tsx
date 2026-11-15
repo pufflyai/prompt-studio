@@ -1,5 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 import { Box } from "@chakra-ui/react";
+import { TreeRowTags } from "@pstdio/ui";
 import { DiffBubble } from "@pstdio/ui/diff";
 import { createWorkbench, type ResourceRef, resourceContextMenuPath } from "../../../core";
 import { resolveTreeListSelection, toTreeListSection } from "./tree-list-adapter";
@@ -340,6 +341,26 @@ describe("toTreeListSection", () => {
   });
 });
 describe("toTreeListSection end content", () => {
+  test("shows a row's tags before its count badge", () => {
+    const workbench = createWorkbench();
+    const tags = [
+      { id: "eu", label: "EU", color: "blue" },
+      { id: "draft", label: "Draft" },
+    ];
+    const section = toTreeListSection(
+      {
+        id: "rulebooks",
+        nodes: [
+          { id: "apparel", label: "Apparel", tags, badge: { label: "3", color: "red" } },
+          { id: "shoes", label: "Shoes", tags: [] },
+        ],
+      },
+      {},
+      { workbench },
+    );
+    expect(section.nodes[0]?.endContent).toMatchObject({ type: TreeRowTags, props: { tags, badge: { label: "3" } } });
+    expect(section.nodes[1]?.endContent).toBeUndefined();
+  });
   test("does not render a chevron for menu-backed tree rows", () => {
     const workbench = createWorkbench();
     workbench.commands.registerCommand({ id: "help.open", label: "Open help" }, { execute: () => undefined });

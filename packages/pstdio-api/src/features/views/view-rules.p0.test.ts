@@ -150,3 +150,26 @@ test("retained saved ordering is single on unrelated edits while explicit multi-
   expect(validateBoardView("kanban", stored, fields, {}).sorts).toEqual([stored.sorts[0]!]);
   expect(() => validateBoardView("kanban", stored, fields, { sorts: stored.sorts })).toThrow("only one sort");
 });
+
+test("resource list views accept a sub-grouping but keep their list display", () => {
+  const groupFields = [
+    ...fields,
+    field("channel", "enum", { groupable: true, options: [{ value: "web", label: "Web" }] }),
+  ];
+  const list = { ...board, viewMode: "list" as const, rowGrouping: "channel", showChildren: true };
+  const sent = { filter: undefined, sorts: undefined };
+  expect(
+    validateBoardView("resourceList", { ...draft(and()), settings: list }, groupFields, sent).settings,
+  ).toMatchObject({ columnGrouping: "status", rowGrouping: "channel" });
+  expect(() =>
+    validateBoardView("resourceList", { ...draft(and()), settings: { ...list, viewMode: "board" } }, groupFields, sent),
+  ).toThrow("Resource lists require list display.");
+  expect(() =>
+    validateBoardView(
+      "resourceList",
+      { ...draft(and()), settings: { ...list, rowGrouping: "score" } },
+      groupFields,
+      sent,
+    ),
+  ).toThrow('Invalid groupable field "score"');
+});

@@ -1,6 +1,7 @@
 import type {
   DataTableRendererChartOptions,
   DataTableRendererChartValue,
+  DataTableRendererImageOptions,
   DataTableRendererSettings,
   ViewFilterGroup,
   ViewSort,
@@ -70,6 +71,8 @@ export type DataTableChartValue = DataTableRendererChartValue;
 
 export type DataTableColumnRenderer =
   | DataTableRendererChartOptions
+  /** Shows image thumbnails sized to the row height, with a larger preview on click. */
+  | DataTableRendererImageOptions
   | { type: "json" }
   | { type: "color-scale"; stops: DataTableColorScaleStop[] }
   | { type: "categorical-color"; categories: DataTableCategoricalColor[] }
