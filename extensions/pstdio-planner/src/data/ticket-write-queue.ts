@@ -1,6 +1,7 @@
 // Runtime reloads import new source snapshots while old handlers may still be running, so every
-// snapshot shares one queue per ticket. One process runs Planner commands, as in write-guard.ts.
-const queuesKey = Symbol.for("pstdio.planner.ticket-write-queues");
+// snapshot shares one queue per ticket. Keep this internal key stable through owner renames.
+// One process runs Planner commands, as in write-guard.ts.
+const queuesKey = Symbol.for("pstdio.pstdio-planner.ticket-write-queues");
 const runtime = globalThis as typeof globalThis & { [queuesKey]?: Map<string, Promise<unknown>> };
 runtime[queuesKey] ??= new Map();
 const queues = runtime[queuesKey];
