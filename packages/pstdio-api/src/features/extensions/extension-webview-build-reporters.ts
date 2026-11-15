@@ -13,6 +13,12 @@ export type CreateExtensionWebviewBuildManagerInput = {
   getInstalledSource?: (installedExtensionId: string) => Promise<InstalledSourceWithManifest | null>;
   loadSource?: (sourcePath: string) => Promise<LoadedExtension>;
   onError?: (error: unknown) => void;
+  /** Notify clients after a complete accepted frontend set is actually published. */
+  reportPublication?: (
+    installedExtensionId: string,
+    publicationId: string,
+    expectedSource: ExpectedWebviewBuildSource,
+  ) => Promise<WebviewBuildReport>;
   reportBuildFailure: (
     installedExtensionId: string,
     webviewId: string,

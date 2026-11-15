@@ -28,8 +28,12 @@ const sessionSchema = z
   })
   .strict();
 const installedOwnerKey = (snapshot: ProjectExtensionRuntimeSnapshot, sourcePath: string) => {
-  const source = resolveEnabledSourceForRecord(sourcePath, snapshot.enabledSources);
-  return JSON.stringify([sourcePath, source?.instance.id, source?.installedSource.id]);
+  const source = resolveEnabledSourceForRecord(sourcePath, snapshot.enabledSources, snapshot.runtime.extensions);
+  return JSON.stringify([
+    source?.installedSource.source_path ?? sourcePath,
+    source?.instance.id,
+    source?.installedSource.id,
+  ]);
 };
 
 /** Resolve executable settings on the host, then transfer PTY lifetime to the presentation's socket. */

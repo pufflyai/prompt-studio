@@ -1,6 +1,7 @@
 import type { JsonObject, ParamObjectSchema } from "pstdio-api-contracts/extension-kernel";
 import { resolveDeclaredParams } from "pstdio-extensions";
 import { git } from "pstdio-wt";
+import { WorkspaceTargetUnavailableError } from "../extensions/command-environment/workspace-target";
 import type { WorkspacesRouteDeps } from "./deps";
 import { findWorktreeProvider } from "./workspace-provider-catalog";
 import { discoverWorkspaceProvider } from "./workspace-provider-discovery";
@@ -57,7 +58,11 @@ const validateProviderWorkspaceParams = async (
   input: JsonObject,
   options: { signal?: AbortSignal },
 ) => {
-  const discovery = await discoverWorkspaceProvider(handle, options);
+  const discovery = await discoverWorkspaceProvider(handle, options).catch((cause) => {
+    options.signal?.throwIfAborted();
+    if (!(cause instanceof WorkspaceTargetUnavailableError)) throw cause;
+    throw new InvalidWorkspaceParamsError(`Workspace provider is unavailable: ${providerId}`, { cause });
+  });
   if (!discovery) throw new InvalidWorkspaceParamsError(`Workspace provider is unavailable: ${providerId}`);
   const params = validateWorkspaceParams(providerId, discovery.params, input);
   if (handle.provider.validateParams) {

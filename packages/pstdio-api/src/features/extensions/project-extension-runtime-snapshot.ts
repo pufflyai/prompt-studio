@@ -80,15 +80,19 @@ export class ExtensionRuntimeGenerationStaleError extends Error {
 export const resolveEnabledSourceForRecord = (
   recordSourcePath: string,
   enabledSources: ProjectExtensionRuntimeSnapshot["enabledSources"],
+  extensions: ProjectExtensionRuntimeSnapshot["runtime"]["extensions"] = [],
 ) => {
-  const normalizedRecordSourcePath = recordSourcePath.replaceAll("\\", "/");
+  const original = extensions.find((extension) => extension.sourcePath === recordSourcePath)?.originalPackagePath;
+  const ownedPath = original ?? recordSourcePath;
+  const normalizedRecordSourcePath = ownedPath.replaceAll("\\", "/");
   let match: EnabledExtensionSource | undefined;
   let matchLength = -1;
 
   for (const source of enabledSources) {
     const root = source.installedSource.source_path.replaceAll("\\", "/");
     const prefix = root.endsWith("/") ? root : `${root}/`;
-    if (!normalizedRecordSourcePath.startsWith(prefix) || root.length <= matchLength) continue;
+    if (normalizedRecordSourcePath !== root && !normalizedRecordSourcePath.startsWith(prefix)) continue;
+    if (root.length <= matchLength) continue;
     match = source;
     matchLength = root.length;
   }

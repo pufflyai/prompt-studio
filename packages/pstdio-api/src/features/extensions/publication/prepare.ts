@@ -1,17 +1,28 @@
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { isPreparationHost } from "pstdio-extensions";
+import { runExtensionPreparation } from "../extension-preparation";
 import { checkExtensionSource } from "../extension-runtime";
-import { buildExtensionWebview } from "../extension-webview-builder";
-import { collectExtensionWebviews, resolvePackageAssetFile } from "../extension-webviews";
 import { installDependencies } from "../install-extension-dependencies";
+import { validateExtensionWebviews } from "../validate-extension-webviews";
 import { unpackExtension } from "./package";
 
-export const preparePublishedExtension = async (input: {
+export type PreparePublishedInput = {
   bytes: Blob;
   root: string;
   extensionId: string;
   signal?: AbortSignal;
-}) => {
+};
+export const preparePublishedExtension = async (
+  input: PreparePublishedInput,
+): Promise<{
+  path: string;
+  loaded: NonNullable<Awaited<ReturnType<typeof checkExtensionSource>>["loaded"]>;
+}> => {
+  if (isPreparationHost) {
+    const { signal, bytes, ...data } = input;
+    return runExtensionPreparation("published.prepare", { ...data, bytes: await bytes.arrayBuffer() }, { signal });
+  }
   await mkdir(input.root, { recursive: true });
   const path = await mkdtemp(join(input.root, "revision-"));
   try {
@@ -29,14 +40,7 @@ export const preparePublishedExtension = async (input: {
         check.diagnostics.find((diagnostic) => diagnostic.severity === "error")?.message ?? "Invalid extension",
       );
     if (loaded.metadata.id !== input.extensionId) throw new Error("Published package identity mismatch");
-    for (const [index, webview] of collectExtensionWebviews(loaded).entries()) {
-      const result = await buildExtensionWebview({
-        entryPath: resolvePackageAssetFile(webview.entry),
-        outdir: join(path, ".pstdio", "validated-webviews", String(index)),
-        signal: input.signal ?? new AbortController().signal,
-      });
-      if (!result.success) throw new Error(result.details);
-    }
+    await validateExtensionWebviews(loaded, path, loaded.metadata.name, input.signal);
     input.signal?.throwIfAborted();
     return { path, loaded };
   } catch (error) {

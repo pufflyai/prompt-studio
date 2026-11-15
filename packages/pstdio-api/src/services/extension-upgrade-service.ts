@@ -13,7 +13,6 @@ import {
 import {
   type InstallExtensionSourceInput,
   installExtensionSource as installExtensionSourceDefault,
-  prepareReleaseExtensionSource,
   resolvePstdioHome,
   toExtensionEnableInput,
 } from "../features/extensions/install-extension-source";
@@ -66,9 +65,9 @@ const installFromRecordedOrigin = (input: {
     source: input.installName,
     installName: input.installName,
     force: true,
+    retainBackup: true,
     ref: input.origin.ref,
-    prepareNamedSource: (_name, tempDir, ref) =>
-      prepareReleaseExtensionSource(input.origin, tempDir, ref ?? input.origin.ref),
+    originSource: { kind: "release", origin: input.origin },
     ...(input.repoPath ? { repoPath: input.repoPath } : {}),
     reuseInstalledDependencies: true,
   });
@@ -177,7 +176,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
   const installForRelease = async (installName: string, repoPath?: string) => {
     const entry = await requireCatalogEntry(installName);
     if (deps.release?.source === "registry" && entry.extensionId) {
-      return registry.installCatalog(entry, { installName, force: true, repoPath });
+      return registry.installCatalog(entry, { installName, force: true, retainBackup: true, repoPath });
     }
     const workspaceSource = deps.release?.source === "workspace" && entry.origin.ref === "{hostRelease}";
     const source =
@@ -191,6 +190,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
       ...(workspaceSource ? { skipInstall: true } : { hostReleaseRef: deps.release?.ref }),
       ...(repoPath ? { repoPath } : {}),
       reuseInstalledDependencies: true,
+      retainBackup: true,
     });
   };
 
@@ -254,6 +254,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
       installed = await registry.installRecorded(existing.installedSource, {
         installName: existing.installedSource.install_name,
         force: true,
+        retainBackup: true,
         repoPath,
       });
     } else if (entry) {

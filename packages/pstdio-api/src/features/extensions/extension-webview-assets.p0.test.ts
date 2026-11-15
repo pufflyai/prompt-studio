@@ -68,7 +68,8 @@ describe("extension webview asset routes", () => {
           expect((await app.request(`${webviewBasePath}/assets/module.js`)).status).toBe(200);
         }),
       );
-      expect(loads).toBe(2);
+      // Unadopted disk edits keep the accepted callbacks and open tool identity.
+      expect(loads).toBe(1);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

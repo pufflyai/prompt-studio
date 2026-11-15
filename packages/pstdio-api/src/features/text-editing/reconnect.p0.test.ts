@@ -70,6 +70,10 @@ const setup = async (
 
 test("a public session reacquires its source after service restart and recovers edits behind a lost acknowledgement", async () => {
   const f = await setup();
+  const disconnected = Promise.withResolvers<void>();
+  const stop = f.session.subscribe(() => {
+    if (!f.session.getSnapshot().connected) disconnected.resolve();
+  });
   const entered = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();
   let held = false;
@@ -97,6 +101,8 @@ test("a public session reacquires its source after service restart and recovers 
     ]);
     f.session.transact((text) => text.insert(text.length, " later"));
     await f.restart();
+    // Retire the old stream before renewing the source after the forced socket close.
+    await disconnected.promise;
     release.resolve();
     await expect(flushing).rejects.toBeDefined();
     await f.session.retry();
@@ -106,6 +112,7 @@ test("a public session reacquires its source after service restart and recovers 
     expect(await readFile(join(f.root, "notes.txt"), "utf8")).toBe("once saved selected folder later");
     await f.session.close();
   } finally {
+    stop();
     release.resolve();
     await f.guest.close().catch(() => {});
   }

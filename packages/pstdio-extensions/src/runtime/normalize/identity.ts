@@ -17,6 +17,7 @@ export const registerExtension = (
     version: manifest.version,
     description: manifest.description,
     packagePath: source.packagePath,
+    originalPackagePath: source.originalPackagePath,
     sourcePath: source.sourcePath,
     sourceKind: source.sourceKind,
     definition: source.definition as NormalizedExtension["definition"],

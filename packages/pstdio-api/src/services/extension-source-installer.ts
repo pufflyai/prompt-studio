@@ -2,11 +2,7 @@ import { existsSync, realpathSync } from "node:fs";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import type { InstallExtensionRequest, UploadExtensionRequest } from "pstdio-api-contracts";
 import { type ExtensionCatalogEntry, ExtensionNotInCatalogError } from "../features/extensions/extension-catalog";
-import {
-  type InstallExtensionSourceInput,
-  prepareGitExtensionSource,
-  prepareReleaseExtensionSource,
-} from "../features/extensions/install-extension-source";
+import type { InstallExtensionSourceInput } from "../features/extensions/install-extension-source";
 import {
   InvalidExtensionFolderError,
   installLocalExtensionFolder,
@@ -65,13 +61,7 @@ export const createExtensionSourceInstaller = (input: ExtensionSourceInstallerDe
       ...(workspaceSource
         ? { skipInstall: true }
         : {
-            prepareNamedSource: (_name, tempDir, explicitRef, signal) =>
-              (source.ref ? prepareGitExtensionSource : prepareReleaseExtensionSource)(
-                entry.origin,
-                tempDir,
-                explicitRef ?? ref,
-                signal,
-              ),
+            originSource: { kind: source.ref ? "git" : "release", origin: entry.origin },
           }),
     });
   };
@@ -85,6 +75,7 @@ export const createExtensionSourceInstaller = (input: ExtensionSourceInstallerDe
     const workspace = await deps.workspaceService.getDefault(projectId);
     if (!workspace) throw new ProjectNotFoundError(projectId);
     const options = {
+      retainBackup: true,
       installName: request.installName,
       force: request.force,
       skipInstall: request.skipInstall,

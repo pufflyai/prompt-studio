@@ -125,3 +125,22 @@ test("keeps installed dependency links readable after their folder moves", async
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("a failed backup rename preserves the installed tool and an unrelated backup", async () => {
+  const root = mkdtempSync(join(tmpdir(), "extension-promotion-backup-failure-"));
+  const prepared = join(root, "staging/tool");
+  const installed = join(root, "extensions/tool");
+  const backup = join(root, "staging/.previous");
+  try {
+    for (const path of [prepared, installed, backup]) mkdirSync(path, { recursive: true });
+    writeFileSync(join(prepared, "version.txt"), "replacement");
+    writeFileSync(join(installed, "version.txt"), "working installation");
+    writeFileSync(join(backup, "version.txt"), "unrelated backup");
+    await expect(promotePreparedSource(prepared, installed, true, false)).rejects.toThrow();
+    expect(readFileSync(join(installed, "version.txt"), "utf8")).toBe("working installation");
+    expect(readFileSync(join(backup, "version.txt"), "utf8")).toBe("unrelated backup");
+    expect(readFileSync(join(prepared, "version.txt"), "utf8")).toBe("replacement");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

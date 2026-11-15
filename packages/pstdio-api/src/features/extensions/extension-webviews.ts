@@ -1,4 +1,4 @@
-import { extname, join } from "node:path";
+import { extname, isAbsolute, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { PackageAssetDescriptor } from "pstdio-api-contracts/extension-kernel";
 import { isWindowsDeviceName } from "pstdio-extensions";
@@ -70,3 +70,11 @@ export const resolveManagedWebviewPaths = (input: {
 
 export type CollectedExtensionWebview = ReturnType<typeof collectExtensionWebviews>[number];
 export type WebviewEntryKind = ReturnType<typeof classifyWebviewEntry>["kind"];
+
+export const resolveWebviewSourceEntry = (asset: PackageAssetDescriptor, sourcePath: string, preparedPath?: string) => {
+  const entry = resolvePackageAssetFile(asset);
+  if (!preparedPath) return entry;
+  const rel = relative(preparedPath, entry);
+  if (rel.startsWith("..") || isAbsolute(rel)) return entry;
+  return join(sourcePath, rel);
+};
