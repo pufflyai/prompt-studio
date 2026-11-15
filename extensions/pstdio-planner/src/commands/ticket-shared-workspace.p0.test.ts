@@ -121,7 +121,7 @@ describe("ticket work in shared folders", () => {
         storage,
         params: {
           renderer: {
-            rendererId: "pstdio.pstdio-planner.view.ticket-files",
+            rendererId: "pstdio.planner.view.ticket-files",
             resource: { type: "ticket", id: ticket.id },
           },
         },

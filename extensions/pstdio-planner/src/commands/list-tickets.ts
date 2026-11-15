@@ -7,7 +7,7 @@ export const listTicketsCommand = defineCommand({
   id: "list-tickets",
   title: "List tickets",
   cli: {
-    examples: ["pstdio pstdio.pstdio-planner list-tickets --status 'In Progress' --tags High"],
+    examples: ["pstdio pstdio.planner list-tickets --status 'In Progress' --tags High"],
   },
   params: {
     status: params.text(),

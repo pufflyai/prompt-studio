@@ -21,7 +21,7 @@ const PresentationContext = createContext({
 
 export function TimelinePresentationProvider(props: { projectId: string; storage?: HostStorage; children: ReactNode }) {
   const { projectId, storage, children } = props;
-  const key = `pstdio.pstdio-planner.timeline-presentation:${projectId}`;
+  const key = `pstdio.planner.timeline-presentation:${projectId}`;
   const [value, setValue] = useState(() => read(storage, key));
   const update = (changes: Partial<TimelinePresentation>) => {
     const next = { ...value, ...changes };

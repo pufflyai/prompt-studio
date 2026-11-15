@@ -8,7 +8,7 @@ import { formatBytes, formatCpu } from "../format";
 import { useTranslations } from "../translations";
 import { SectionLabel } from "./section-label";
 
-const OWN_EXTENSION_ID = "pstdio.pstdio-performance";
+const OWN_EXTENSION_ID = "pstdio.performance";
 
 // A row turns amber when its 30-second average reaches a quarter of one core.
 const BUSY_CPU_PERCENT = 25;

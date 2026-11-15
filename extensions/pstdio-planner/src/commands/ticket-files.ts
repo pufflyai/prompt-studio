@@ -6,7 +6,7 @@ import { ticketPageTarget } from "../data/ticket-page-target";
 import { plannerOwnerFor, readTicketParentLookup, ticketResourceReference } from "../data/ticket-resource-hierarchy";
 import { plannerTicketsChanged } from "../events";
 
-const ticketResourceKind = { extensionId: "pstdio.pstdio-planner", kind: "resource-kind", id: "ticket" } as const;
+const ticketResourceKind = { extensionId: "pstdio.planner", kind: "resource-kind", id: "ticket" } as const;
 
 const fileEnding = (name: string) => {
   const dotIndex = name.lastIndexOf(".");

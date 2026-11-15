@@ -112,7 +112,10 @@ export const nextTicketsCommand = defineCommand({
   title: "Read next tickets",
   cli: {
     description: "Query a bounded page of launchable tickets and waiting reasons using current Auto Build rules.",
-    examples: ["pst pstdio.pstdio-planner next-tickets --track Workbench"],
+    examples: [
+      "pst pstdio.planner next-tickets --track Workbench",
+      "pst pstdio.planner next-tickets --status Todo --tags High",
+    ],
   },
   params: {
     track: params.text(),

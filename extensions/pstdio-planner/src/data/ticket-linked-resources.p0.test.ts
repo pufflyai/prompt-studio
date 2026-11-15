@@ -6,7 +6,7 @@ import { loadTicketLinkedResources } from "./ticket-linked-resources";
 const ticket = (id: string): ResourceRef => ({
   type: "ticket",
   id,
-  extensionId: "pstdio.pstdio-planner",
+  extensionId: "pstdio.planner",
   projectId: "proj-1",
 });
 const workspace: ResourceRef = {
@@ -49,7 +49,7 @@ test("one resource list deduplicates incoming and outgoing links while keeping o
   const ctx = makeCommandContext({
     storage: createMemoryStorage(),
     params: {},
-    overrides: { extensionId: "pstdio.pstdio-planner" },
+    overrides: { extensionId: "pstdio.planner" },
   });
   await ctx.resources.addAnchors(ticket("one"), [workspace, artifact]);
   await ctx.resources.addAnchors(workspace, [ticket("one"), ticket("two")]);
@@ -94,7 +94,7 @@ test("unavailable resources retain saved labels without an activation fallback; 
   const ctx = makeCommandContext({
     storage: createMemoryStorage(),
     params: {},
-    overrides: { extensionId: "pstdio.pstdio-planner" },
+    overrides: { extensionId: "pstdio.planner" },
   });
   await ctx.resources.addAnchors(ticket("one"), [artifact]);
   const lookup = await loadTicketLinkedResources(ctx.resources, [ticket("one"), ticket("empty")]);
@@ -113,7 +113,7 @@ test("resources without a saved or resolved label are hidden instead of showing 
   const ctx = makeCommandContext({
     storage: createMemoryStorage(),
     params: {},
-    overrides: { extensionId: "pstdio.pstdio-planner" },
+    overrides: { extensionId: "pstdio.planner" },
   });
   const unlabeled: ResourceRef = {
     type: "artifact",
@@ -130,7 +130,7 @@ test("overview relationships use a bounded preview with a continuation to the ti
   const ctx = makeCommandContext({
     storage: createMemoryStorage(),
     params: {},
-    overrides: { extensionId: "pstdio.pstdio-planner" },
+    overrides: { extensionId: "pstdio.planner" },
   });
   const refs = Array.from({ length: 105 }, (_, index) => ({ ...artifact, id: String(index) }));
   await ctx.resources.addAnchors(ticket("one"), refs);

@@ -8,8 +8,8 @@ export const documentLinkCommand = defineCommand({
   title: "Get ticket document link",
   cli: {
     examples: [
-      "pstdio pstdio.pstdio-planner document-link --id PS-1",
-      "pstdio pstdio.pstdio-planner document-link --id PS-1 --file research.md",
+      "pstdio pstdio.planner document-link --id PS-1",
+      "pstdio pstdio.planner document-link --id PS-1 --file research.md",
     ],
   },
   params: {

@@ -24,7 +24,7 @@ export const ticketWorkspacesCommand = defineCommand({
   id: "ticket-workspaces",
   title: "List ticket workspaces",
   cli: {
-    examples: ["pstdio pstdio.pstdio-planner ticket-workspaces --id PS-1"],
+    examples: ["pstdio pstdio.planner ticket-workspaces --id PS-1"],
   },
   params: { id: params.text({ required: true }), cursor: params.text() },
   async run(ctx, commandParams) {
@@ -55,7 +55,7 @@ export const ticketWorktreesListCommand = defineCommand({
   id: "ticket-worktrees-list",
   title: "List ticket worktrees",
   cli: {
-    examples: ["pstdio pstdio.pstdio-planner ticket-worktrees-list --id PS-1"],
+    examples: ["pstdio pstdio.planner ticket-worktrees-list --id PS-1"],
   },
   params: { id: params.text({ required: true }), cursor: params.text() },
   async run(ctx, commandParams) {
@@ -77,7 +77,7 @@ export const ticketWorktreesRemoveAllCommand = defineCommand({
   mutating: true,
   title: "Remove ticket worktrees",
   cli: {
-    examples: ["pstdio pstdio.pstdio-planner ticket-worktrees-remove-all --id PS-1"],
+    examples: ["pstdio pstdio.planner ticket-worktrees-remove-all --id PS-1"],
   },
   params: { id: params.text({ required: true }) },
   async run(ctx, commandParams) {

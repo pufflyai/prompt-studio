@@ -18,7 +18,7 @@ describe("ticket files tree sub-ticket section", () => {
         storage,
         params: {
           renderer: {
-            rendererId: "pstdio.pstdio-planner.view.ticket-files",
+            rendererId: "pstdio.planner.view.ticket-files",
             resource: { type: "ticket", id: parent.id, label: parent.shorthand },
           },
         },
@@ -39,20 +39,20 @@ describe("ticket files tree sub-ticket section", () => {
           iconTooltip: "Backlog",
           target: {
             kind: "page",
-            page: { kind: "page", id: "ticket", extensionId: "pstdio.pstdio-planner" },
+            page: { kind: "page", id: "ticket", extensionId: "pstdio.planner" },
             parent: {
               kind: "page",
-              page: { kind: "page", id: "ticket", extensionId: "pstdio.pstdio-planner" },
+              page: { kind: "page", id: "ticket", extensionId: "pstdio.planner" },
               resource: {
                 type: "ticket",
                 id: parent.id,
                 label: `${parent.shorthand} ${parent.title}`,
                 shorthand: parent.shorthand,
                 metadata: {
-                  resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
+                  resourceParent: { type: "view", viewId: "pstdio.planner.view.tickets" },
                 },
               },
-              parent: { kind: "page", page: { kind: "page", id: "tickets", extensionId: "pstdio.pstdio-planner" } },
+              parent: { kind: "page", page: { kind: "page", id: "tickets", extensionId: "pstdio.planner" } },
             },
             resource: {
               type: "ticket",
@@ -66,7 +66,7 @@ describe("ticket files tree sub-ticket section", () => {
                   label: `${parent.shorthand} ${parent.title}`,
                   shorthand: parent.shorthand,
                   metadata: {
-                    resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
+                    resourceParent: { type: "view", viewId: "pstdio.planner.view.tickets" },
                   },
                 },
               },

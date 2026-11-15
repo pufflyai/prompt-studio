@@ -23,7 +23,7 @@ test("workspace discovery pages ticket links and cleanup preflights later pages"
   }));
   await seedWorkspaceLinks(ctx, workspaces);
   for (const workspace of workspaces)
-    await ctx.resources.addAnchors({ type: "ticket", id: ticket.id, extensionId: "pstdio.pstdio-planner" }, [
+    await ctx.resources.addAnchors({ type: "ticket", id: ticket.id, extensionId: "pstdio.planner" }, [
       { type: "workspace", id: workspace.id, extensionId: "pstdio" },
     ]);
   ctx.workspaces.list = async () => {

@@ -5,6 +5,7 @@ import type { WorkspaceRecord } from "./workspace-provider-projection";
 import { createProviderBackedWorkspace, normalizeResult } from "./workspace-provider-service";
 
 const makeCreateDeps = (provider: Record<string, unknown>) => {
+  let available = true;
   let workspace = makeWorkspace({
     provider_ref_json: null,
     provider_state: "provisioning",
@@ -61,7 +62,7 @@ const makeCreateDeps = (provider: Record<string, unknown>) => {
         get: async () => workspace,
       },
       workspaceProviderRuntime: {
-        find: async () => ({ context: {} as never, provider: provider as never }),
+        find: async () => (available ? { context: {} as never, provider: provider as never } : undefined),
       },
       extensionRuntimeCatalog: {
         get: async () => ({
@@ -76,8 +77,49 @@ const makeCreateDeps = (provider: Record<string, unknown>) => {
     beginProviderOperation,
     createStandalone,
     updateProviderProjection,
+    setAvailable: (value: boolean) => {
+      available = value;
+    },
   };
 };
+
+test.each([
+  "create",
+  "resolve",
+] as const)("disabling a provider during %s retains its accepted reference without restoring readiness", async (phase) => {
+  const started = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const providerRef = { version: 1 as const, data: { remoteId: "accepted" } };
+  const ready: WorkspaceProviderResult = {
+    state: "ready",
+    executionKind: "remote",
+    providerRef,
+    capabilities: remoteWorkspaceCapabilities,
+  };
+  const waiting = async () => {
+    started.resolve();
+    await release.promise;
+    return ready;
+  };
+  const { deps, setAvailable } = makeCreateDeps({
+    create: phase === "create" ? waiting : async () => ({ ...ready, state: "provisioning" }),
+    resolve: waiting,
+  });
+  const creating = createProviderBackedWorkspace(deps, {
+    projectId: "project-1",
+    providerId: "pocketcoder.remote",
+    standalone: true,
+  });
+  await started.promise;
+  setAvailable(false);
+  release.resolve();
+  expect(await creating).toMatchObject({
+    provider_state: "provider_missing",
+    provider_ref_json: providerRef,
+    provider_operation_kind: "create",
+    provider_operation_id: expect.any(String),
+  });
+});
 
 test("deletes an accepted remote create when cancelled before its response and no cancel method exists", async () => {
   const controller = new AbortController();

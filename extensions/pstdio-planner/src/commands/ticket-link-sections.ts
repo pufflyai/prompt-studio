@@ -15,7 +15,7 @@ import type { Ticket } from "../data/types";
 export const ticketRelationshipSections = (
   ticket: Ticket,
   tickets: TicketSummary[],
-  extensionId = "pstdio.pstdio-planner",
+  extensionId = "pstdio.planner",
   requiredBy?: TicketSummary[],
   nextCursor?: string,
   dependencyPage?: { tickets: TicketSummary[]; nextCursor?: string },
@@ -78,7 +78,7 @@ export const mergeTicketLinkSections = (
   sections: TreeViewSection[],
   links: CollectionBadgeItem[],
   projectId?: string,
-  extensionId = "pstdio.pstdio-planner",
+  extensionId = "pstdio.planner",
 ) => {
   const key = (resource: ResourceRef) =>
     resourceKey({

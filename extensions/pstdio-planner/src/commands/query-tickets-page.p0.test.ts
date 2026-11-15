@@ -62,6 +62,7 @@ test("Board selects late matching tickets and global counts without loading tick
   expect(result.page?.total).toBe(3);
   expect(result.page?.groups).toContainEqual({ field: "status", value: "ready", count: 3 });
   expect(result.page?.cursor).toBeString();
+  expect(result.rows.map((row) => row.resource.extensionId)).toEqual(["pstdio.planner", "pstdio.planner"]);
   expect(selectedFields.flat()).not.toContain("needsAttention");
   expect(selectedFields.flat()).not.toContain("reviewRequests");
 });

@@ -21,7 +21,7 @@ test("workspace badges follow stable ticket IDs even when an anchor has a shared
         type: "ticket",
         id: second.id,
         shorthand: "T-1",
-        extensionId: "pstdio.pstdio-planner",
+        extensionId: "pstdio.planner",
         projectId: ctx.projectId,
       },
     ],

@@ -79,7 +79,7 @@ test("a failed optional workspace presentation leaves the transcript and device 
 test("available Workspaces supplies header presentation without changing execution", async () => {
   const ctx = snapshotContext();
   ctx.commands.execute = async (command, invocation) => {
-    expect(command).toEqual({ kind: "command", extensionId: "pstdio.pstdio-workspaces", id: "session-presentation" });
+    expect(command).toEqual({ kind: "command", extensionId: "pstdio.workspaces", id: "session-presentation" });
     expect(invocation.params).toMatchObject({ id: "a", available: true });
     return { ok: true, status: "success", value: presentation } as never;
   };

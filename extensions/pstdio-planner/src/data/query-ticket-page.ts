@@ -11,7 +11,7 @@ import {
 import { loadTicketLinkedResources } from "./ticket-linked-resources";
 import { ticketPageTarget } from "./ticket-page-target";
 import { ticketQuerySummary } from "./ticket-query-summary";
-import { readTicketParentLookup } from "./ticket-resource-hierarchy";
+import { plannerOwnerFor, readTicketParentLookup } from "./ticket-resource-hierarchy";
 import { prepareTicketViewQuery, type TicketQueryContext, type TicketViewSelection } from "./ticket-view-selection";
 
 export const readTicketViewPage = async (
@@ -26,8 +26,7 @@ export const readTicketViewPage = async (
     const ticket = ticketQuerySummary(fields);
     return ticket ? [ticket] : [];
   });
-  const extensionId =
-    selection.owner ?? (ctx.extensionId === "pstdio.planner" ? ctx.extensionId : "pstdio.pstdio-planner");
+  const extensionId = selection.owner ?? plannerOwnerFor(ctx);
   const [links, parents, reviews] = await Promise.all([
     loadTicketLinkedResources(
       ctx.resources,

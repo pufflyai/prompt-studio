@@ -8,7 +8,7 @@ export const implementTicketCommand = defineCommand({
   mutating: true,
   title: "Implement ticket",
   cli: {
-    examples: ["pstdio pstdio.pstdio-planner implement-ticket --id PS-1"],
+    examples: ["pstdio pstdio.planner implement-ticket --id PS-1"],
   },
   params: {
     id: params.text({ required: true }),

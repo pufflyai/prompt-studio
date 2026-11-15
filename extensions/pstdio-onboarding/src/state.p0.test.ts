@@ -39,29 +39,18 @@ test("no harness and no work keep foundation defaults without optional tools", a
   const { context, state, selected } = fixture();
   await state.update(context, { step: "harnesses", harnesses: [] });
   await state.update(context, { step: "complete", workAreas: [] });
-  expect(selected).toEqual([[], ["pstdio-base-themes", "pstdio-skills"]]);
+  expect(selected).toEqual([[], ["base-themes", "skills"]]);
   expect(await state.read(context)).toMatchObject({ completed: true, harnesses: [], workAreas: [] });
 });
 test("Coding installs Workspaces with its selected tools", async () => {
   const { context, state, selected } = fixture();
   await state.update(context, { step: "complete", workAreas: ["coding"] });
-  expect(selected).toEqual([
-    [
-      "pstdio-workspaces",
-      "pstdio-planner",
-      "pstdio-reports",
-      "pstdio-artifacts",
-      "pstdio-base-themes",
-      "pstdio-skills",
-    ],
-  ]);
+  expect(selected).toEqual([["workspaces", "planner", "reports", "artifacts", "base-themes", "skills"]]);
 });
 test("Project planning installs its selected tools", async () => {
   const { context, state, selected } = fixture();
   await state.update(context, { step: "complete", workAreas: ["planning"] });
-  expect(selected).toEqual([
-    ["pstdio-planner", "pstdio-notes", "pstdio-reports", "pstdio-base-themes", "pstdio-skills"],
-  ]);
+  expect(selected).toEqual([["planner", "notes", "reports", "base-themes", "skills"]]);
 });
 test("a failed durable selection leaves remembered choices editable for recovery", async () => {
   const { context, state } = fixture();
