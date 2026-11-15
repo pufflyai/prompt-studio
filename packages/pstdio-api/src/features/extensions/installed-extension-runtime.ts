@@ -162,6 +162,7 @@ export const createInstalledExtensionRuntime = (input: {
         refresh: async () => {},
       };
   const reconcileWebviewsInBackground = () => {
+    if (!input.webviewBuilds) return;
     webviewBuildManager
       .reconcile()
       .then(() => input.projectRuntimeCatalog.invalidate({ reason: "webviews_built" }))
