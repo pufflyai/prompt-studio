@@ -8,19 +8,31 @@ export function createLiveRead<T>(read: () => Promise<T>, handlers: LiveReadHand
   let active = true;
   let reading = false;
   let pending = false;
+  let immediate = false;
   let scheduled: ReturnType<typeof setTimeout> | undefined;
+  const schedule = () => {
+    if (scheduled || !active) return;
+    scheduled = setTimeout(() => {
+      scheduled = undefined;
+      void drain();
+    }, 100);
+  };
   const drain = async () => {
     if (reading || !active) return;
     reading = true;
     try {
       while (active && pending && !scheduled) {
         pending = false;
+        immediate = false;
         try {
           const value = await read();
           if (active && !pending) handlers.onValue(value);
         } catch (error) {
           if (active && !pending) handlers.onError(error);
         }
+        // A slow read must yield before another background read; its original
+        // timer may otherwise expire while the read still owns the host queue.
+        if (pending && !immediate) schedule();
       }
     } finally {
       reading = false;
@@ -31,6 +43,7 @@ export function createLiveRead<T>(read: () => Promise<T>, handlers: LiveReadHand
       clearTimeout(scheduled);
       scheduled = undefined;
       pending = true;
+      immediate = true;
       return drain();
     },
     invalidate() {
@@ -38,11 +51,7 @@ export function createLiveRead<T>(read: () => Promise<T>, handlers: LiveReadHand
       // Identity, record and domain notifications can describe one committed action.
       // Mark its snapshot obsolete now and batch notifications without extending the deadline.
       pending = true;
-      if (scheduled) return;
-      scheduled = setTimeout(() => {
-        scheduled = undefined;
-        void drain();
-      }, 100);
+      if (!reading) schedule();
     },
     dispose() {
       active = false;
