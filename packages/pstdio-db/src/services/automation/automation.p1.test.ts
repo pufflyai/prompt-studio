@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { createDb } from "../../db/connection.pglite";
 import { automation_principals, automation_runs } from "../../db/schemas.pg";
@@ -152,22 +152,29 @@ describe("automation run persistence", () => {
     expect((await service.listRunEvents(queued.id)).map((event) => event.type)).toEqual(["queued", "running"]);
   });
 
-  test("rolls back a status transition when its matching event cannot be stored", async () => {
-    const queued = (await createRun("atomic-terminal-event")).run;
-    await db.execute(
-      sql`alter table automation_run_events add constraint reject_succeeded_event check (type <> 'succeeded')`,
-    );
+  test("reads each run step as an event after the given cursor", async () => {
+    const queued = (await createRun("stepped")).run;
+    await service.claimQueuedRun(queued.id);
+    const error = { code: "boom", message: "Command failed.", retryable: false };
+    await service.transitionRun(queued.id, { status: "failed", error });
 
-    await expect(service.transitionRun(queued.id, { status: "succeeded", result: { ok: true } })).rejects.toThrow();
-
-    expect((await service.getRunById(queued.id))?.status).toBe("queued");
-    expect((await service.listRunEvents(queued.id)).map((event) => event.type)).toEqual(["queued"]);
+    const events = await service.listRunEvents(queued.id);
+    expect(events.map((event) => [event.cursor, event.type])).toEqual([
+      [1, "queued"],
+      [2, "running"],
+      [3, "failed"],
+    ]);
+    expect(events.at(-1)?.payload_json).toEqual({ error });
+    expect((await service.listRunEvents(queued.id, 2)).map((event) => event.type)).toEqual(["failed"]);
   });
 
-  test("bounds stored event payloads by UTF-8 bytes", async () => {
+  test("bounds event payloads by UTF-8 bytes", async () => {
     const queued = (await createRun("bounded-event")).run;
 
-    await service.appendEvent(queued.id, "diagnostic", { detail: "å".repeat(9_000) });
+    await service.transitionRun(queued.id, {
+      status: "failed",
+      error: { code: "large", message: "å".repeat(9_000), retryable: false },
+    });
 
     const events = await service.listRunEvents(queued.id);
     expect(events.at(-1)?.payload_json).toEqual({ truncated: true });
