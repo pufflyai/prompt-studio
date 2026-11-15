@@ -1,6 +1,14 @@
 import type { StorageRecordIndex } from "@pstdio/sdk/extensions";
 import { reviewLinkProjections } from "./review-link-projections";
 
+// Global predicates and small card fields read the narrow projection, avoiding decompression
+// of every matching ticket body. Installation backfills these fields in bounded pages.
+const projected = <T extends StorageRecordIndex["fields"][string]["type"]>(path: string, type: T) => ({
+  path: [path],
+  type,
+  derive: { kind: "expression" as const, expression: { variable: "value" } },
+});
+
 export const ticketViewIndex: StorageRecordIndex = {
   name: "ticket-view",
   collection: "tickets",
@@ -13,24 +21,24 @@ export const ticketViewIndex: StorageRecordIndex = {
     separator: " / ",
   },
   fields: {
-    id: { path: ["id"], type: "string" },
-    shorthand: { path: ["shorthand"], type: "string" },
-    aliases: { path: ["aliases"], type: "array" },
+    id: projected("id", "string"),
+    shorthand: projected("shorthand", "string"),
+    aliases: projected("aliases", "array"),
     breadcrumb: { path: ["breadcrumb"], type: "string" },
     title: {
       path: ["content"],
       type: "string",
       derive: { kind: "markdownTitle", fallbackPath: ["title"], empty: "Untitled" },
     },
-    statusId: { path: ["statusId"], type: "string" },
-    archived: { path: ["archived"], type: "boolean" },
-    draft: { path: ["draft"], type: "boolean" },
-    position: { path: ["position"], type: "string" },
-    createdAt: { path: ["createdAt"], type: "string" },
-    updatedAt: { path: ["updatedAt"], type: "string" },
+    statusId: projected("statusId", "string"),
+    archived: projected("archived", "boolean"),
+    draft: projected("draft", "boolean"),
+    position: projected("position", "string"),
+    createdAt: projected("createdAt", "string"),
+    updatedAt: projected("updatedAt", "string"),
     updatedInstant: { path: ["updatedAt"], type: "number", derive: { kind: "timestamp" } },
-    parentId: { path: ["parentId"], type: "string" },
-    blockedReason: { path: ["blockedReason"], type: "string" },
+    parentId: projected("parentId", "string"),
+    blockedReason: projected("blockedReason", "string"),
     ...reviewLinkProjections,
     dependencyReasonRefs: {
       path: ["blockedReason"],

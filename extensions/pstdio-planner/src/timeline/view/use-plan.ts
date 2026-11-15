@@ -7,6 +7,7 @@ import type { configureAutoBuildCommand, readAutoBuildCommand } from "../../comm
 import type { stopAutoBuildCommand } from "../../commands/auto-build-stop";
 import type { openReviewRequestCommand, reviewCommand } from "../../commands/review-requests";
 import type { setTicketAttributeCommand } from "../../commands/set-ticket-attribute";
+import { plannerSchemaChanged } from "../../events";
 import type { commands } from "../commands/index";
 import { planChanged } from "../contracts";
 import { plannerTicketsChanged } from "../planner";
@@ -29,7 +30,7 @@ export type PlanClient = ReturnType<typeof createWebviewClient<PlanCommands>>;
 
 const readPlan = (client: PlanClient) => client.commands["timeline.plan.schema"]();
 
-// Planner reports tag changes as ticket changes, so track names stay current too.
+// Page data and schema have separate invalidations; ordinary ticket edits keep the field schema.
 export const planEvents = [
   plannerTicketsChanged,
   planChanged,
@@ -38,8 +39,10 @@ export const planEvents = [
   viewDataEvents.resourcesChanged,
 ];
 
+const schemaEvents = [plannerSchemaChanged, viewDataEvents.boardViewsChanged];
+
 export function usePlan(host: GuestHost) {
   const [client] = useState(() => createWebviewClient<PlanCommands>(host));
-  const { value: plan } = useLiveValue(client, readPlan, planEvents);
+  const { value: plan } = useLiveValue(client, readPlan, schemaEvents);
   return { client, plan };
 }

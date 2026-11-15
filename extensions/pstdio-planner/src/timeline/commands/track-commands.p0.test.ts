@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { makeCommandArgs } from "../../commands/command-context.fixture";
-import { plannerTicketsChanged } from "../../events";
+import { plannerSchemaChanged, plannerTicketsChanged } from "../../events";
 import { createTrackCommand, renameTrackCommand } from "./track-commands";
 
 test("creating and renaming tracks notify Planner views", async () => {
@@ -19,7 +19,7 @@ test("creating and renaming tracks notify Planner views", async () => {
     },
   });
   const track = await createTrackCommand.run(ctx, { name: "Product" });
-  expect(events).toEqual([plannerTicketsChanged]);
+  expect(events).toEqual([plannerTicketsChanged, plannerSchemaChanged]);
   await renameTrackCommand.run(ctx, { track: track.id, name: "Platform" });
-  expect(events).toEqual([plannerTicketsChanged, plannerTicketsChanged]);
+  expect(events).toEqual([plannerTicketsChanged, plannerSchemaChanged, plannerTicketsChanged, plannerSchemaChanged]);
 });

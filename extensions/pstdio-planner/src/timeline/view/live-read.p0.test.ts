@@ -49,15 +49,27 @@ test("a burst of changes waits for one fresh read and never publishes an obsolet
   const pending: Array<(value: number) => void> = [];
   const values: number[] = [];
   const errors: unknown[] = [];
-  const reader = createLiveRead(() => new Promise<number>((resolve) => pending.push(resolve)), {
-    onValue: (value) => values.push(value),
-    onError: (error) => errors.push(error),
+  let reads = 0;
+  let started: () => void = () => {};
+  const secondRead = new Promise<void>((resolve) => {
+    started = resolve;
   });
+  const reader = createLiveRead(
+    () =>
+      new Promise<number>((resolve) => {
+        pending.push(resolve);
+        if (++reads === 2) started();
+      }),
+    {
+      onValue: (value) => values.push(value),
+      onError: (error) => errors.push(error),
+    },
+  );
   const first = reader.refresh();
   for (let event = 0; event < 20; event++) void reader.refresh();
   expect(pending).toHaveLength(1);
   pending.shift()!(1);
-  await Promise.resolve();
+  await secondRead;
   expect(values).toEqual([]);
   expect(pending).toHaveLength(1);
   pending.shift()!(2);

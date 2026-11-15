@@ -5,7 +5,7 @@ import { findTicket } from "../../data/resolve";
 import { createTagOption, createTicketTag, readTicketTags, updateTagOption } from "../../data/tag-operations";
 import type { StoredTag } from "../../data/types";
 import { withWriteGuard } from "../../data/write-guard";
-import { plannerTicketsChanged } from "../../events";
+import { plannerSchemaChanged, plannerTicketsChanged } from "../../events";
 import { trackProperty } from "../model/tracks";
 import type { PlannerTicket } from "../planner";
 
@@ -76,6 +76,7 @@ export const createTrackCommand = defineCommand({
         name: label,
       });
       await ctx.events.emit(plannerTicketsChanged, {});
+      await ctx.events.emit(plannerSchemaChanged, {});
       return option;
     });
   },
@@ -123,6 +124,7 @@ export const renameTrackCommand = defineCommand({
         name: label,
       });
       await ctx.events.emit(plannerTicketsChanged, {});
+      await ctx.events.emit(plannerSchemaChanged, {});
       return option;
     });
   },

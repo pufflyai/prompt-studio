@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import { chromium, type Page } from "@playwright/test";
 import { PROVISIONED_CHROMIUM } from "../packaged/packaged-chromium";
 import { signInBrowser } from "../packaged/packaged-serve-helpers";
+import { verifyPlannerComparisonSource } from "./planner-comparison-source";
 import { installPlannerClock, measurePlannerDrop, recordPlannerRequests } from "./planner-moves-browser";
 
 interface Connection {
@@ -16,8 +17,9 @@ interface Connection {
   bounded: boolean;
   fixture: { movingId: string; archiveIds: string[] };
 }
-const [connectionPath, outputPath] = process.argv.slice(2);
-if (!connectionPath || !outputPath) throw new Error("Pass an isolated connection file and evidence folder");
+const [connectionPath, outputPath, expectedPlannerSource] = process.argv.slice(2);
+if (!connectionPath || !outputPath || !expectedPlannerSource)
+  throw new Error("Pass an isolated connection file, evidence folder and expected Planner source folder");
 const connection: Connection = JSON.parse(await readFile(connectionPath, "utf8"));
 assert.equal(new URL(connection.dashboardUrl).hostname, "127.0.0.1");
 assert(["main", "candidate"].includes(connection.side));
@@ -43,6 +45,12 @@ const execute = async (command: string, params: Record<string, unknown> = {}) =>
   assert(result.outcome?.ok || result.outcome?.status === "success", `${command} failed`);
   return result.outcome.value;
 };
+const source = await verifyPlannerComparisonSource(
+  expectedPlannerSource,
+  await request(`/projects/${connection.projectId}/extensions`),
+  plannerId,
+);
+await writeFile(resolve(output, "source-identity.json"), JSON.stringify(source, null, 2));
 const { archiveIds } = connection.fixture;
 assert.equal(archiveIds.length, 205);
 await execute("unarchive-ticket", { id: archiveIds[0] });
@@ -222,6 +230,7 @@ try {
   assert.deepEqual(errors, []);
   const evidence = {
     side: connection.side,
+    source,
     workload: { tickets: 5000, foobars: 5000, linkedFocusTickets: 25, reviewRequests: 25, historyEdits: 50 },
     chromium: browser.version(),
     boardMs,
