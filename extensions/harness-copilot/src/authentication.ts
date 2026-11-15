@@ -32,7 +32,7 @@ const chooseMethod = (channel: HarnessAuthenticationChannel) =>
       {
         id: "gh-cli",
         label: "GitHub CLI",
-        description: "Run `gh auth login` in a terminal on this computer.",
+        description: "Run gh auth login in a terminal on this computer.",
         kind: "oauth",
       },
       {
@@ -49,7 +49,7 @@ const chooseMethod = (channel: HarnessAuthenticationChannel) =>
 const waitForCliLogin = async (client: CopilotClientHandle, channel: HarnessAuthenticationChannel) => {
   await channel.emit({
     type: "message",
-    message: "Run `gh auth login` in a terminal on this computer. This finishes when Copilot sees the login.",
+    message: "Run gh auth login in a terminal on this computer. This finishes when Copilot sees the login.",
   });
   const deadline = Date.now() + CLI_LOGIN.timeoutMs;
   while (Date.now() < deadline) {
@@ -57,7 +57,7 @@ const waitForCliLogin = async (client: CopilotClientHandle, channel: HarnessAuth
     if ((await client.getAuthStatus()).isAuthenticated) return;
     await Bun.sleep(CLI_LOGIN.intervalMs);
   }
-  throw new Error("Copilot did not see a GitHub CLI login. Run `gh auth login`, then sign in again.");
+  throw new Error("Copilot did not see a GitHub CLI login. Run gh auth login, then sign in again.");
 };
 
 /** Token replies travel only on the account channel, never in chat history or command events. */
@@ -66,7 +66,7 @@ export const runLogin = async (
   input: HarnessAuthenticationInput,
   channel: HarnessAuthenticationChannel,
 ) => {
-  if (input.action === "logout") throw new Error("Sign out with `gh auth logout` or Copilot's own `/logout`.");
+  if (input.action === "logout") throw new Error("Sign out with gh auth logout or the Copilot CLI's /logout.");
   const method = input.method ?? (await chooseMethod(channel));
   channel.signal.throwIfAborted();
   if (method !== "token") return waitForCliLogin(client, channel);
