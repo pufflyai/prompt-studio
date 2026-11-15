@@ -128,3 +128,62 @@ test("a turn cut off by a host restart shows its tool call as failed", () => {
   ]);
   expect(messages[1]?.parts[0]).toMatchObject({ callId: "t1", status: "failed" });
 });
+
+test("subagent work and hidden skill prompts stay out of the conversation", () => {
+  const agent = { agentId: "task-1" };
+  const messages = normalizeCopilotEvents([
+    event("user.message", { content: "Investigate" }),
+    event("assistant.message", {
+      messageId: "m1",
+      content: "Delegating",
+      toolRequests: [{ toolCallId: "t1", name: "task" }],
+    }),
+    event("tool.execution_start", { toolCallId: "t1", toolName: "task" }),
+    event("user.message", { content: "Subagent prompt" }, false, agent),
+    event("assistant.reasoning", { reasoningId: "r-sub", content: "subagent thinking" }, false, agent),
+    event("assistant.message", { messageId: "m-sub", content: "subagent reply" }, false, agent),
+    event("session.error", { errorType: "tool", message: "subagent failed" }, false, agent),
+    event("user.message", { content: "<skill text>", source: "skill-pdf" }),
+    event("tool.execution_complete", { toolCallId: "t1", success: true, result: { content: "found it" } }),
+    event("assistant.message", { messageId: "m2", content: "Done" }),
+  ]);
+  expect(messages.map((message) => [message.role, message.parts.map((part) => part.type)])).toEqual([
+    ["user", ["text"]],
+    ["assistant", ["text", "tool"]],
+    ["assistant", ["text"]],
+  ]);
+  expect(messages[1]?.parts[1]).toMatchObject({ status: "completed", state: { output: "found it" } });
+});
+
+test("a fork through a message that ran a subagent keeps the subagent's result", () => {
+  const agent = { agentId: "task-1" };
+  const log = [
+    event("user.message", { content: "Investigate" }),
+    event("assistant.turn_start", { turnId: "0" }),
+    event("assistant.message", { messageId: "m1", content: "", toolRequests: [{ toolCallId: "t1", name: "task" }] }),
+    event("tool.execution_start", { toolCallId: "t1", toolName: "task" }),
+    event("assistant.turn_start", { turnId: "0" }, false, agent),
+    event("user.message", { content: "Subagent prompt" }, false, agent),
+    event("tool.execution_complete", { toolCallId: "t1", success: true, result: { content: "found it" } }),
+    event("assistant.turn_start", { turnId: "1" }),
+  ];
+  const [, delegated] = normalizeCopilotEvents(log);
+  expect(forkBoundary(log, delegated!.id)).toBe(log[7]?.id);
+});
+
+test("a turn that ended without settling marks its running tools as failed", () => {
+  const log = [
+    event("user.message", { content: "Run" }),
+    event("tool.execution_start", { toolCallId: "t1", toolName: "bash" }),
+  ];
+  expect(normalizeCopilotEvents(log)[1]?.parts[0]).toMatchObject({ status: "running" });
+  expect(normalizeCopilotEvents(log, 0, true)[1]?.parts[0]).toMatchObject({ status: "failed" });
+});
+
+test("saved history, which keeps no streaming events, has the same messages as the live turn", () => {
+  const live = recorded as unknown as SessionEvent[];
+  const saved = live.filter((event) => !event.ephemeral);
+  const strip = (messages: ReturnType<typeof normalizeCopilotEvents>) =>
+    messages.map((message) => ({ ...message, parts: message.parts.filter((part) => part.type !== "token_usage") }));
+  expect(strip(normalizeCopilotEvents(saved))).toEqual(strip(normalizeCopilotEvents(live)));
+});

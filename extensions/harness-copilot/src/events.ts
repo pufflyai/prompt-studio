@@ -27,7 +27,7 @@ class Conversation {
   apply(event: SessionEvent) {
     this.position++;
     // Subagent traffic belongs to its parent tool call; the parent's result already summarizes it.
-    if ("parentToolCallId" in event.data && event.data.parentToolCallId) return;
+    if (isSubagent(event)) return;
     if (event.type === "user.message") this.user(event);
     else if (event.type === "assistant.reasoning_delta")
       this.think(event.data.reasoningId, event.data.deltaContent, true);
@@ -81,6 +81,8 @@ class Conversation {
   }
 
   private user(event: EventOf<"user.message">) {
+    // Copilot inserts hidden prompts, such as a loaded skill's text, that the person never wrote.
+    if (isHiddenInput(event)) return;
     this.assistant = undefined;
     this.push({
       // Steered input carries the host's delivery id as its turn id, so recovery can match it.
@@ -182,15 +184,24 @@ const usagePart = (event: EventOf<"assistant.usage">): SessionMessagePart => ({
 
 const SETTLED = new Set(["session.idle", "session.shutdown", "abort"]);
 
-const replay = (events: readonly SessionEvent[], offset: number) => {
+/** Events a subagent produced inside a parent tool call. The deprecated `parentToolCallId` is the older marker. */
+export const isSubagent = (event: SessionEvent) =>
+  Boolean(event.agentId) || Boolean("parentToolCallId" in event.data && event.data.parentToolCallId);
+
+const isHiddenInput = (event: EventOf<"user.message">) =>
+  !event.data.clientTurnId && event.data.source !== undefined && event.data.source !== "user";
+
+const replay = (events: readonly SessionEvent[], offset: number, ended = false) => {
   const conversation = new Conversation(offset);
   for (const event of events) conversation.apply(event);
-  const last = events.findLast((event) => !event.ephemeral || event.type === "session.idle");
-  if (last && SETTLED.has(last.type)) conversation.settle();
+  const last = events.findLast((event) => !isSubagent(event) && (!event.ephemeral || event.type === "session.idle"));
+  if (ended || (last && SETTLED.has(last.type))) conversation.settle();
   return conversation;
 };
 
-export const normalizeCopilotEvents = (events: readonly SessionEvent[], offset = 0) => replay(events, offset).messages;
+/** `ended` marks a turn the host knows is over, so tools still running were interrupted. */
+export const normalizeCopilotEvents = (events: readonly SessionEvent[], offset = 0, ended = false) =>
+  replay(events, offset, ended).messages;
 
 /**
  * The first event a fork through `messageId` must leave out: the start of the next user message or
@@ -201,6 +212,9 @@ export const forkBoundary = (events: readonly SessionEvent[], messageId: string)
   if (start === undefined) throw new Error(`Message ${messageId} is not in this Copilot session.`);
   return events.find(
     (event, position) =>
-      position > start && !event.ephemeral && (event.type === "user.message" || event.type === "assistant.turn_start"),
+      position > start &&
+      !event.ephemeral &&
+      !isSubagent(event) &&
+      ((event.type === "user.message" && !isHiddenInput(event)) || event.type === "assistant.turn_start"),
   )?.id;
 };

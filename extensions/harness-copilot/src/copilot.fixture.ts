@@ -3,12 +3,18 @@ import type { JsonPatch, SessionMessage } from "@pstdio/sdk/extensions";
 import type { CopilotClientHandle, CopilotSessionHandle } from "./client";
 
 let sequence = 0;
-export const event = (type: string, data: Record<string, unknown>, ephemeral = false) =>
+export const event = (
+  type: string,
+  data: Record<string, unknown>,
+  ephemeral = false,
+  extra: { agentId?: string } = {},
+) =>
   ({
     id: `e${++sequence}`,
     parentId: null,
     timestamp: "2026-11-15T12:00:00.000Z",
     ephemeral,
+    ...extra,
     type,
     data,
   }) as unknown as SessionEvent;
@@ -64,6 +70,7 @@ export const fakeCopilot = (script: (send: MessageOptions) => SessionEvent[]) =>
     },
     forceStop: async () => void calls.push("forceStop"),
     getStatus: async () => ({ version: "1.0.112" }),
+    ping: async () => ({}),
     getAuthStatus: async () => ({ isAuthenticated: true }),
     listModels: async () => [],
     storeToken: async () => {},

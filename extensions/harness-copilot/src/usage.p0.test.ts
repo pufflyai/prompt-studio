@@ -90,3 +90,23 @@ test("usage is empty when Copilot has no saved sessions", async () => {
   });
   expect(usage).toMatchObject({ inputTokens: 0, outputTokens: 0, models: [] });
 });
+
+test("a fork does not count the usage it copied from its source session again", async () => {
+  const home = await mkdtemp(join(tmpdir(), "copilot-usage-fork-"));
+  try {
+    const start = (timestamp: string) => JSON.stringify({ type: "session.start", timestamp, data: {} });
+    const source = [start("2026-11-02T08:00:00Z"), checkpoint("2026-11-02T09:00:00Z", { "gpt-6-luna": [100, 10] })];
+    await Bun.write(join(home, "session-state", "source", "events.jsonl"), `${source.join("\n")}\n`);
+    // The fork starts later and begins with a copy of the source's record, keeping its old time.
+    const fork = [
+      start("2026-11-03T08:00:00Z"),
+      source[1]!,
+      checkpoint("2026-11-03T09:00:00Z", { "gpt-6-luna": [130, 15] }),
+    ];
+    await Bun.write(join(home, "session-state", "fork", "events.jsonl"), `${fork.join("\n")}\n`);
+    const usage = await readCopilotUsage({ home, now: new Date("2026-11-15T12:00:00Z") });
+    expect([usage.inputTokens, usage.outputTokens]).toEqual([130, 15]);
+  } finally {
+    await rm(home, { recursive: true, force: true });
+  }
+});

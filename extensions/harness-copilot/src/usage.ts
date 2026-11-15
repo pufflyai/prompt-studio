@@ -49,21 +49,31 @@ const totalsOf = (record: UsageRecord): Totals => {
   return { models, nanoAiu: record.data.totalNanoAiu ?? 0 };
 };
 
-/** Usage this session added after `since`: its latest totals minus the totals it had already reached. */
+/**
+ * Usage this session added after `since`: its latest totals minus the totals it had already reached.
+ * A fork starts with copies of its source's records, dated before the fork's own start, so those
+ * count as already reached and are not counted twice.
+ */
 const readSession = async (file: string, since: number) => {
   let before: Totals | undefined;
   let latest: Totals | undefined;
+  let cutoff = since;
   const lines = createInterface({ input: createReadStream(file), crlfDelay: Number.POSITIVE_INFINITY });
   for await (const line of lines) {
-    if (!line.includes('"session.usage_checkpoint"') && !line.includes('"session.shutdown"')) continue;
+    const start = line.startsWith('{"type":"session.start"');
+    if (!start && !line.includes('"session.usage_checkpoint"') && !line.includes('"session.shutdown"')) continue;
     let record: UsageRecord;
     try {
       record = JSON.parse(line);
     } catch {
       continue; // A session being written can end in a partial line.
     }
+    if (start) {
+      cutoff = Math.max(since, Date.parse(record.timestamp) || since);
+      continue;
+    }
     const totals = totalsOf(record);
-    if (Date.parse(record.timestamp) < since) before = totals;
+    if (Date.parse(record.timestamp) < cutoff) before = totals;
     else latest = totals;
   }
   if (!latest) return undefined;
@@ -74,6 +84,23 @@ const readSession = async (file: string, since: number) => {
   latest.nanoAiu = Math.max(0, latest.nanoAiu - (before?.nanoAiu ?? 0));
   return latest;
 };
+
+// Home refreshes quotas often; only sessions that changed since the last read are read again.
+const cache = new Map<string, { key: string; totals: Totals | undefined }>();
+
+const readCachedSession = async (file: string, since: number, info: { mtimeMs: number; size: number }) => {
+  const key = `${since}:${info.mtimeMs}:${info.size}`;
+  const cached = cache.get(file);
+  if (cached?.key === key) return cached.totals;
+  const totals = await readSession(file, since).catch(() => undefined);
+  cache.set(file, { key, totals });
+  return totals;
+};
+
+const copyTotals = (totals: Totals): Totals => ({
+  nanoAiu: totals.nanoAiu,
+  models: new Map([...totals.models].map(([id, tokens]) => [id, { ...tokens }])),
+});
 
 export const cycleStart = (now = new Date()) => new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
 
@@ -86,14 +113,12 @@ export const readCopilotUsage = async (options: { home?: string; now?: Date } = 
   let nanoAiu = 0;
   for (const session of sessions) {
     const file = join(root, session, "events.jsonl");
+    const info = await stat(file).catch(() => undefined);
     // A session untouched since the cycle began cannot have used tokens in it.
-    const modified = await stat(file).then(
-      (info) => info.mtimeMs,
-      () => 0,
-    );
-    if (modified < since.getTime()) continue;
-    const totals = await readSession(file, since.getTime()).catch(() => undefined);
-    if (!totals) continue;
+    if (!info || info.mtimeMs < since.getTime()) continue;
+    const cached = await readCachedSession(file, since.getTime(), info);
+    if (!cached) continue;
+    const totals = copyTotals(cached);
     nanoAiu += totals.nanoAiu;
     for (const [id, tokens] of totals.models) {
       const sum = models.get(id) ?? empty();

@@ -269,7 +269,7 @@
     },
     "extensions/harness-copilot": {
       "name": "harness-copilot",
-      "version": "0.0.0",
+      "version": "0.47.0",
       "dependencies": {
         "@github/copilot-sdk": "1.0.34",
         "@pstdio/sdk": "0.47.0-preview.sha-39796d3892fb176a0254332998ce50fb36ad155f",

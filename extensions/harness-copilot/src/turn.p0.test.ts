@@ -1,7 +1,9 @@
 import { expect, test } from "bun:test";
 import type { PermissionRequest } from "@github/copilot-sdk";
 import { event, eventSink, fakeCopilot } from "./copilot.fixture";
-import { startCopilotTurn } from "./turn";
+import { LIVENESS, startCopilotTurn } from "./turn";
+
+const startTurn = (...args: Parameters<typeof startCopilotTurn>) => startCopilotTurn(...args).session;
 
 const reply = (text: string) => [
   event("user.message", { content: "native prompt" }),
@@ -12,7 +14,7 @@ const reply = (text: string) => [
 test("a turn streams into the conversation, keeps the host prompt, and releases the runtime", async () => {
   const copilot = fakeCopilot(() => reply("Hello"));
   const sink = eventSink();
-  const session = await startCopilotTurn(
+  const session = await startTurn(
     {
       prompt: "Say hello",
       sessionId: "host",
@@ -54,7 +56,7 @@ test("resuming appends after existing history and a session error fails the turn
   ]);
   const sink = eventSink();
   sink.messages.push({ id: "old", role: "user", parts: [{ type: "text", text: "before" }] });
-  const session = await startCopilotTurn(
+  const session = await startTurn(
     { prompt: "again", sessionId: "host", events: sink, agentSessionId: "copilot-session" },
     copilot.factory,
     {},
@@ -71,11 +73,7 @@ test("resuming appends after existing history and a session error fails the turn
 
 test("stopping aborts Copilot and settles the turn as cancelled", async () => {
   const copilot = fakeCopilot(() => [event("user.message", { content: "long" })]);
-  const session = await startCopilotTurn(
-    { prompt: "long", sessionId: "host", events: eventSink() },
-    copilot.factory,
-    {},
-  );
+  const session = await startTurn({ prompt: "long", sessionId: "host", events: eventSink() }, copilot.factory, {});
   await session.stop();
   expect(await session.done).toEqual({ status: "cancelled" });
   expect(copilot.calls).toContain("abort");
@@ -85,7 +83,7 @@ test("stopping aborts Copilot and settles the turn as cancelled", async () => {
 test("Ask mode routes permission prompts to the host approval channel", async () => {
   const copilot = fakeCopilot(() => reply("ok"));
   const asked: unknown[] = [];
-  const session = await startCopilotTurn(
+  const session = await startTurn(
     {
       prompt: "edit",
       sessionId: "host",
@@ -125,7 +123,7 @@ test("Ask mode routes permission prompts to the host approval channel", async ()
 
 test("without an approval channel Copilot is told nobody can approve", async () => {
   const copilot = fakeCopilot(() => reply("ok"));
-  const session = await startCopilotTurn({ prompt: "x", sessionId: "host", events: eventSink() }, copilot.factory, {});
+  const session = await startTurn({ prompt: "x", sessionId: "host", events: eventSink() }, copilot.factory, {});
   await session.done;
   const config = copilot.configs[0] as { onPermissionRequest(request: PermissionRequest): Promise<unknown> };
   expect(await config.onPermissionRequest({ kind: "read", path: "a" } as PermissionRequest)).toEqual({
@@ -144,7 +142,7 @@ test("steering delivers into the running turn and shows the host's prompt and at
       : [event("user.message", { content: send.prompt })],
   );
   const sink = eventSink();
-  const session = await startCopilotTurn({ prompt: "start", sessionId: "host", events: sink }, copilot.factory, {});
+  const session = await startTurn({ prompt: "start", sessionId: "host", events: sink }, copilot.factory, {});
   const attachment = {
     fileId: "f",
     fileName: "b.txt",
@@ -165,4 +163,108 @@ test("steering delivers into the running turn and shows the host's prompt and at
   expect(await session.steer({ deliveryId: "late", prompt: "too late", attachments: [] })).toMatchObject({
     status: "rejected",
   });
+});
+
+test("a turn fails instead of hanging when the Copilot runtime stops answering", async () => {
+  const saved = { ...LIVENESS };
+  Object.assign(LIVENESS, { intervalMs: 5, timeoutMs: 50 });
+  try {
+    const copilot = fakeCopilot(() => [event("user.message", { content: "x" })]);
+    copilot.client.ping = () => Promise.reject(new Error("connection closed"));
+    const sink = eventSink();
+    const session = await startTurn({ prompt: "x", sessionId: "host", events: sink }, copilot.factory, {});
+    expect(await session.done).toEqual({ status: "failed" });
+    expect(copilot.calls.at(-1)).toBe("stop");
+  } finally {
+    Object.assign(LIVENESS, saved);
+  }
+});
+
+test("an idle event left over from resuming does not end the new turn", async () => {
+  const copilot = fakeCopilot(() => reply("fresh"));
+  const sink = eventSink();
+  const original = copilot.client.resumeSession;
+  copilot.client.resumeSession = async (id, config) => {
+    const resumed = await original(id, config);
+    const on = resumed.on.bind(resumed);
+    resumed.on = (handler) => {
+      const off = on(handler);
+      handler(event("session.idle", {}, true));
+      return off;
+    };
+    return resumed;
+  };
+  const session = await startTurn(
+    { prompt: "again", sessionId: "host", events: sink, agentSessionId: "copilot-session" },
+    copilot.factory,
+    {},
+  );
+  expect(await session.done).toEqual({ status: "completed" });
+  expect(sink.messages.at(-1)?.parts).toEqual([{ type: "text", text: "fresh" }]);
+});
+
+test("the conversation shows a tool as failed when the turn ends with an error", async () => {
+  const copilot = fakeCopilot(() => [
+    event("user.message", { content: "run" }),
+    event("tool.execution_start", { toolCallId: "t1", toolName: "bash" }),
+    event("session.error", { errorType: "quota", message: "Out of quota" }),
+    event("session.idle", {}, true),
+  ]);
+  const sink = eventSink();
+  const session = await startTurn({ prompt: "run", sessionId: "host", events: sink }, copilot.factory, {});
+  expect(await session.done).toEqual({ status: "failed" });
+  expect(sink.messages[1]?.parts).toEqual([
+    { type: "tool", tool: "bash", callId: "t1", status: "failed", state: { input: undefined } },
+    { type: "error", errorType: "other", message: "Out of quota" },
+  ]);
+});
+
+test("stopping a turn that is still starting cancels it before anything is sent", async () => {
+  const copilot = fakeCopilot(() => reply("never"));
+  const starting = Promise.withResolvers<void>();
+  copilot.client.start = () => starting.promise;
+  copilot.client.forceStop = async () => {
+    copilot.calls.push("forceStop");
+    starting.reject(new Error("runtime stopped"));
+  };
+  const turn = startCopilotTurn({ prompt: "x", sessionId: "host", events: eventSink() }, copilot.factory, {});
+  await turn.stop();
+  expect(await turn.done).toEqual({ status: "cancelled" });
+  await expect(turn.session).rejects.toThrow();
+  expect(copilot.calls).not.toContain("create");
+  expect(copilot.calls.some((call) => call.startsWith("send"))).toBe(false);
+});
+
+test("steered input that Copilot never takes in is reported as uncertain", async () => {
+  const finish = Promise.withResolvers<void>();
+  const copilot = fakeCopilot((send) =>
+    send.mode === "immediate" ? [] : [event("user.message", { content: send.prompt })],
+  );
+  const sink = eventSink();
+  const session = await startTurn({ prompt: "start", sessionId: "host", events: sink }, copilot.factory, {});
+  const steering = session.steer({ deliveryId: "d1", prompt: "late", attachments: [] });
+  await Bun.sleep(5);
+  void session.stop().then(finish.resolve);
+  expect(await steering).toMatchObject({ status: "uncertain" });
+  await finish.promise;
+});
+
+test("model-specific reasoning levels reach Copilot unchanged", async () => {
+  const copilot = fakeCopilot(() => reply("ok"));
+  const session = await startTurn(
+    { prompt: "x", sessionId: "host", events: eventSink(), params: { reasoning: "minimal" } },
+    copilot.factory,
+    {},
+  );
+  await session.done;
+  expect(copilot.configs[0]).toMatchObject({ reasoningEffort: "minimal", enableConfigDiscovery: true });
+  const defaulted = fakeCopilot(() => reply("ok"));
+  await (
+    await startTurn(
+      { prompt: "x", sessionId: "host", events: eventSink(), params: { reasoning: "default" } },
+      defaulted.factory,
+      {},
+    )
+  ).done;
+  expect(defaulted.configs[0]?.reasoningEffort).toBeUndefined();
 });

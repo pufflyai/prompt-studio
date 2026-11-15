@@ -34,7 +34,9 @@ export const normalizeCopilotQuotas = (
             id,
             label: LABELS[id] ?? id,
             remainingPercent: Math.max(0, Math.min(100, snapshot.remainingPercentage)),
-            ...(snapshot.resetDate ? { resetsAt: new Date(snapshot.resetDate).toISOString() } : {}),
+            ...(Number.isFinite(Date.parse(snapshot.resetDate ?? ""))
+              ? { resetsAt: new Date(snapshot.resetDate!).toISOString() }
+              : {}),
           },
         ]
       : [],
@@ -68,10 +70,22 @@ export const createQuotasCommand = (
     description: l10n("quotas.description", "Show GitHub Copilot quotas and this month's token use."),
     cli: true,
     run: async (ctx) => {
-      const [snapshots, usage] = await Promise.all([
+      const [snapshots, usage] = await Promise.allSettled([
         withCopilotClient(factory, { signal: ctx.signal }, (client) => client.getQuota()),
-        readUsage().catch(() => undefined),
+        readUsage(),
       ]);
-      return normalizeCopilotQuotas(snapshots, usage);
+      const used = usage.status === "fulfilled" ? usage.value : undefined;
+      if (snapshots.status === "fulfilled") return normalizeCopilotQuotas(snapshots.value, used);
+      ctx.signal?.throwIfAborted();
+      // Still show this device's token use when Copilot cannot report quotas, for example when signed out.
+      return {
+        status: "unavailable",
+        checkedAt: new Date().toISOString(),
+        limits: [],
+        message: used
+          ? `${usageSentence(used)} Copilot could not report quotas; check that you are signed in.`
+          : "Copilot could not report quotas; check that you are signed in.",
+        ...(used ? { usage: used } : {}),
+      } satisfies CopilotQuotaReport;
     },
   });

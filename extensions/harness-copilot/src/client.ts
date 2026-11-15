@@ -19,6 +19,7 @@ export interface CopilotClientHandle {
   stop(): Promise<Error[]>;
   forceStop(): Promise<void>;
   getStatus(): Promise<{ version: string }>;
+  ping(): Promise<unknown>;
   getAuthStatus(): Promise<{ isAuthenticated: boolean; login?: string; statusMessage?: string }>;
   listModels(): Promise<ModelInfo[]>;
   createSession(config: SessionConfig): Promise<CopilotSessionHandle>;
@@ -83,6 +84,9 @@ export const withCopilotClient = async <T>(
     return await action(client);
   } finally {
     options.signal?.removeEventListener("abort", onAbort);
-    await client.stop().catch(() => client.forceStop());
+    await client
+      .stop()
+      .catch(() => client.forceStop())
+      .catch(() => {});
   }
 };

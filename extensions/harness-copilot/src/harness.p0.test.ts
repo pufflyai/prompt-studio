@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import type { ModelInfo } from "@github/copilot-sdk";
 import { fakeCopilot } from "./copilot.fixture";
 import { createCopilotHarness, toAgentModel } from "./harness";
-import { normalizeCopilotQuotas } from "./quotas";
+import { createQuotasCommand, normalizeCopilotQuotas } from "./quotas";
 
 test("models expose only the reasoning efforts Copilot supports for them", () => {
   const reasoning = toAgentModel({
@@ -56,4 +56,44 @@ test("forking reads saved history and cuts it after the chosen message", async (
     agentSessionId: "forked-session",
   });
   expect(copilot.calls).toContain(`fork:source:${recorded[6]?.id}`);
+});
+
+test("disabling the extension stops a turn that is still starting", async () => {
+  const copilot = fakeCopilot(() => []);
+  const starting = Promise.withResolvers<void>();
+  copilot.client.start = () => starting.promise;
+  copilot.client.forceStop = async () => {
+    copilot.calls.push("forceStop");
+    starting.reject(new Error("runtime stopped"));
+  };
+  const harness = createCopilotHarness(copilot.factory);
+  const ctx = { projectId: "p", logger: { warn() {} } } as never;
+  const session = harness.start(ctx, { prompt: "x", sessionId: "host", events: { getMessages: () => [], push() {} } });
+  await harness.dispose(ctx);
+  await expect(session).rejects.toThrow();
+  expect(copilot.calls).toContain("forceStop");
+  expect(copilot.calls).not.toContain("create");
+});
+
+test("quotas keep this device's token use when Copilot cannot report quotas", async () => {
+  const copilot = fakeCopilot(() => []);
+  copilot.client.getQuota = () => Promise.reject(new Error("not signed in"));
+  const usage = {
+    since: "2026-11-01T00:00:00.000Z",
+    scope: "device" as const,
+    inputTokens: 2_000,
+    outputTokens: 10,
+    cacheReadTokens: 0,
+    cacheWriteTokens: 0,
+    reasoningTokens: 0,
+    nanoAiu: 0,
+    models: [],
+  };
+  const command = createQuotasCommand(copilot.factory, async () => usage);
+  expect(await command.run({ signal: new AbortController().signal } as never, {} as never)).toMatchObject({
+    status: "unavailable",
+    limits: [],
+    usage: { inputTokens: 2_000 },
+    message: expect.stringContaining("2K input"),
+  });
 });
