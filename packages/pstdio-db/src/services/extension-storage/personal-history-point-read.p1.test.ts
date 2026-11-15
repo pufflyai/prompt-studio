@@ -28,7 +28,7 @@ test("a cold personal-history point read does not hydrate the owner's history", 
             created_at: now,
             updated_at: now,
             anchors_json:
-              offset + index < 205 ? [{ type: "ticket", id: "selected", extensionId: "pstdio.pstdio-planner" }] : [],
+              offset + index < 205 ? [{ type: "ticket", id: "selected", extensionId: "pstdio.planner" }] : [],
           },
         })),
       );
@@ -44,7 +44,7 @@ test("a cold personal-history point read does not hydrate the owner's history", 
     expect(await index.get(owner, "sessions", "session-0002")).toMatchObject({ id: "session-0002" });
     expect(hydrated).toBeLessThanOrEqual(1);
     hydrated = 0;
-    const input = { anchor: { type: "ticket", id: "selected", extensionId: "pstdio.pstdio-planner" }, limit: 100 };
+    const input = { anchor: { type: "ticket", id: "selected", extensionId: "pstdio.planner" }, limit: 100 };
     const first = await index.querySessions(owner, { accountId: "alice", deviceId: "local" }, input);
     expect(first.rows).toHaveLength(100);
     expect(hydrated).toBeLessThanOrEqual(101);

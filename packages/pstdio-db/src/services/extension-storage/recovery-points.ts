@@ -1,5 +1,6 @@
 import { statfs } from "node:fs/promises";
 import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { AssetStore, StorageOwner } from "pstdio-sync";
 import type { DbClient } from "../../db/connection.pglite";
 import { projects, recovery_point_owners, recovery_points } from "../../db/schemas.pg";
@@ -125,6 +126,7 @@ export const createRecoveryPoints = (
   };
 
   const readPoint = async (projectId: string, input: { hours: number; capturedAt: string; extensionId?: string }) => {
+    input = { ...input, extensionId: input.extensionId && canonicalExtensionId(input.extensionId) };
     const points = await savedPoints(db, projectId);
     if (!points.some((point) => point.hours === input.hours && point.capturedAt === input.capturedAt))
       throw new RecoveryPointError("This recovery point changed or is no longer available. Refresh the list.");
@@ -132,17 +134,24 @@ export const createRecoveryPoints = (
       .select()
       .from(recovery_point_owners)
       .where(and(eq(recovery_point_owners.workbench_id, projectId), eq(recovery_point_owners.hours, input.hours)));
-    const known = new Set([...rows.map((row) => row.extension_id), ...(await dataOwners(db, projectId))]);
+    const known = new Set([
+      ...rows.map((row) => canonicalExtensionId(row.extension_id)),
+      ...(await dataOwners(db, projectId)).map(canonicalExtensionId),
+    ]);
     if (input.extensionId && !known.has(input.extensionId))
       throw new RecoveryPointError("This extension has no data in the project or the recovery point.");
     const scope = input.extensionId ? [input.extensionId] : [...known].sort();
     const saved = new Map<string, SavedOwner>();
-    for (const row of rows)
-      if (scope.includes(row.extension_id))
-        saved.set(row.extension_id, {
+    for (const row of rows) {
+      const extensionId = canonicalExtensionId(row.extension_id);
+      if (saved.has(extensionId))
+        throw new RecoveryPointError(`Conflicting recovery owners: ${extensionId}. Original evidence was retained.`);
+      if (scope.includes(extensionId))
+        saved.set(extensionId, {
           records: await decodeRecovery<RecoveryRecord[]>(row.records),
           metadata: await decodeRecovery<RecoveryMetadata>(row.metadata),
         });
+    }
     return { points, scope, saved };
   };
 
@@ -194,7 +203,10 @@ export const createRecoveryPoints = (
       return (await savedPoints(db, projectId)).map((point) => ({
         ...point,
         extensions: [
-          ...new Set([...saved.filter((owner) => owner.hours === point.hours).map((owner) => owner.id), ...current]),
+          ...new Set([
+            ...saved.filter((owner) => owner.hours === point.hours).map((owner) => canonicalExtensionId(owner.id)),
+            ...current.map(canonicalExtensionId),
+          ]),
         ].sort(),
       }));
     },

@@ -9,7 +9,7 @@ export const writeRegistryNotes = async (source: string, version: string) => {
   await writeFile(
     join(source, "package.json"),
     JSON.stringify({
-      name: "pstdio-notes",
+      name: "notes",
       publisher: "pstdio",
       displayName: "Notes",
       version,

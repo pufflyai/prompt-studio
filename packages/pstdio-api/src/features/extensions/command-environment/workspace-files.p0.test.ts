@@ -161,3 +161,18 @@ test("workspace sync keeps a file it does not own and logs where it is", async (
     warnSpy.mockRestore();
   }
 });
+
+test("historical allocated list queries retain their logical path prefix", async () => {
+  const mount = environment().projectFiles!;
+  const historical = ".pstdio/extension-storage/pstdio.pstdio-planner/tickets";
+  const canonical = ".pstdio/extension-storage/pstdio.planner/tickets";
+  await mount.writeText(`${historical}/PS-1/files/note.txt`, "Retained");
+  expect((await mount.list(`${historical}/PS-1/files/**`)).map((file) => file.path)).toEqual([
+    `${historical}/PS-1/files/note.txt`,
+  ]);
+  expect(await mount.listDirs(historical)).toEqual([`${historical}/PS-1`]);
+  expect((await mount.list(`${canonical}/PS-1/files/**`)).map((file) => file.path)).toEqual([
+    `${canonical}/PS-1/files/note.txt`,
+  ]);
+  expect(await readFile(join(root, canonical, "PS-1/files/note.txt"), "utf8")).toBe("Retained");
+});

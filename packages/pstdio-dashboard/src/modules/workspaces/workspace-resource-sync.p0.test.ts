@@ -109,7 +109,7 @@ test("an open file tree reloads when its project gets a folder on this device", 
   getWriter("workspaces")!.upsert({ ...row, root_path: "/projects/cloud-project" });
 
   expect(workbench.getPrimaryResource()?.metadata?.workspaceProviderState).toBe("ready");
-  expect(refreshed).toContain("pstdio.pstdio-workspaces.view.file-tree");
+  expect(refreshed).toContain("pstdio.workspaces.view.file-tree");
   getWriter("workspaces")!.remove(row.id);
 });
 

@@ -17,7 +17,7 @@ test("the fullscreen shortcut toggles from editing and completes shortcut mode",
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
   await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
-  await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-session-browser/conversations/compose`);
+  await page.goto(`/projects/${project.id}/extensions/pstdio.session-browser/conversations/compose`);
   const draft = page.locator('[data-workbench-region="main"]').getByRole("textbox").last();
   await draft.fill("Keep fullscreen draft");
   await page.keyboard.press("Alt+Shift+Z");
@@ -44,13 +44,13 @@ test("Go destinations use shortcut mode while history chords respect editing foc
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
   await page.goto(`/projects/${project.id}`);
-  const home = new RegExp(`/projects/${project.id}/extensions/pstdio\\.pstdio-home/home$`);
+  const home = new RegExp(`/projects/${project.id}/extensions/pstdio\\.home/home$`);
   await expect(page).toHaveURL(home);
   await expect(page.getByRole("button", { name: "Help", exact: true })).toBeVisible();
   await page.keyboard.press("Alt+Shift+Space");
   await page.keyboard.press("g");
   await page.keyboard.press("s");
-  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-session-browser\/conversations\/compose$/);
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.session-browser\/conversations\/compose$/);
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
   const composer = page.locator(
     '[data-workbench-panel="main"] [data-testid="content-editable"][contenteditable="true"]',
@@ -58,14 +58,14 @@ test("Go destinations use shortcut mode while history chords respect editing foc
   const help = page.getByRole("button", { name: "Help", exact: true });
   await expect(composer).toBeFocused();
   await page.keyboard.press("Alt+Shift+ArrowLeft");
-  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-session-browser\/conversations\/compose$/);
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.session-browser\/conversations\/compose$/);
   await help.focus();
   await page.keyboard.press("Alt+Shift+ArrowLeft");
   await expect(page).toHaveURL(home);
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
   await help.focus();
   await page.keyboard.press("Alt+Shift+ArrowRight");
-  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-session-browser\/conversations\/compose$/);
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.session-browser\/conversations\/compose$/);
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
   await expect(composer).toBeFocused();
   // Shortcut help is available outside inputs; history restores the composer's focus.
@@ -88,7 +88,7 @@ test("direct panel shortcuts open, focus, move and close tabs without entering s
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
   await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
-  await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-session-browser/conversations`);
+  await page.goto(`/projects/${project.id}/extensions/pstdio.session-browser/conversations`);
   await expect(page.getByRole("button", { name: "Help", exact: true })).toBeVisible();
   const secondary = page.locator('[data-workbench-region="secondary"]');
   const before = await secondary.getByRole("tab").count();
@@ -323,7 +323,7 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
   await page.goto(`/projects/${project.id}/tickets`);
   await expect(page.getByRole("option", { name: /^Notes/ }).first()).toBeVisible({ timeout: 30_000 });
   for (const [key, label, destination] of [
-    ["S", "Sessions", /\/extensions\/pstdio\.pstdio-session-browser\/conversations\/compose$/],
+    ["S", "Sessions", /\/extensions\/pstdio\.session-browser\/conversations\/compose$/],
     ["W", "Workspaces", /\/workspaces$/],
     ["N", "Notes", /\/notes$/],
     ["K", "Tickets", /\/tickets$/],
@@ -349,7 +349,7 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
   await page.keyboard.press("Alt+Shift+Space");
   await page.keyboard.press("g");
   await page.keyboard.press("h");
-  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/extensions/pstdio\\.pstdio-home/home$`));
+  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/extensions/pstdio\\.home/home$`));
   await page.keyboard.press("Alt+Shift+Space");
   await page.keyboard.press("c");
   await page.keyboard.press("n");

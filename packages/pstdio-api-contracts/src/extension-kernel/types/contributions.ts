@@ -23,7 +23,6 @@ export type * from "./kanban-renderer";
 
 export interface CliContribution {
   path?: string[];
-  globalAliases?: string[][];
   description?: Localizable<string>;
   examples?: string[];
   hidden?: boolean;

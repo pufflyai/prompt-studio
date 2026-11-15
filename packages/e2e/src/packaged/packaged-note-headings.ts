@@ -21,9 +21,9 @@ export const verifyPackagedNoteHeadings = async (page: Page, origin: string, pro
   const metadataResponse = await fetch(`${endpoint}/ui`, { headers });
   expect(metadataResponse.status).toBe(200);
   const metadata = (await metadataResponse.json()) as WorkbenchExtensionMetadata;
-  const view = metadata.views.find((entry) => entry.id === "pstdio.pstdio-notes.view.note-editor");
+  const view = metadata.views.find((entry) => entry.id === "pstdio.notes.view.note-editor");
   if (view?.body.kind !== "file") throw new Error("Missing Notes file editor");
-  const note = (await execute("pstdio.pstdio-notes.command.notes.create", { title: "Heading formatting" })) as {
+  const note = (await execute("pstdio.notes.command.notes.create", { title: "Heading formatting" })) as {
     id: string;
   };
   const renderer = { rendererId: view.id, projectId, resource: { type: "note", id: note.id } };
@@ -53,7 +53,7 @@ export const verifyPackagedNoteHeadings = async (page: Page, origin: string, pro
   } finally {
     await guest.close();
   }
-  await page.goto(`${origin}/projects/${projectId}/extensions/pstdio.pstdio-notes/notes`);
+  await page.goto(`${origin}/projects/${projectId}/extensions/pstdio.notes/notes`);
   const notes = await showSidenavEntry(page, "Notes");
   if ((await notes.getAttribute("aria-expanded")) !== "true") await notes.click();
   await page.locator('[data-workbench-region="sidenav"]').getByText("Heading formatting", { exact: true }).click();
@@ -83,5 +83,5 @@ export const verifyPackagedNoteHeadings = async (page: Page, origin: string, pro
   await page.getByRole("dialog").getByRole("button", { name: "Delete note", exact: true }).click();
   await expect(row).toHaveCount(0);
   await expect(page.getByRole("tab", { name: "Heading formatting", exact: true })).toHaveCount(0);
-  await expect.poll(() => execute("pstdio.pstdio-notes.command.notes.resolve", { noteId: note.id })).toBeNull();
+  await expect.poll(() => execute("pstdio.notes.command.notes.resolve", { noteId: note.id })).toBeNull();
 };

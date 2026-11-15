@@ -36,7 +36,7 @@ export const CommandBubbles: Story = {
             index={0}
             point={{ x: 0, y: 0 }}
             mode="chat"
-            command="$ pst shaders update --scale 16 --speed 1.2"
+            command="$ pst pstdio.shaders update --scale 16 --speed 1.2"
             result="✓ Preview updated"
           />
           <AssemblyCursor
@@ -44,7 +44,7 @@ export const CommandBubbles: Story = {
             index={1}
             point={{ x: 0, y: 40 }}
             mode="chat"
-            command="$ pst icons rename --id component --name component-glow"
+            command="$ pst pstdio.icons rename --id component --name component-glow"
             result="✓ Icon renamed"
           />
           <AssemblyCursor
@@ -52,7 +52,7 @@ export const CommandBubbles: Story = {
             index={2}
             point={{ x: 0, y: 80 }}
             mode="chat"
-            command='$ pst tickets update --id TOOL-18 --status "In Progress"'
+            command='$ pst pstdio.planner update-ticket --id TOOL-18 --status "In Progress"'
             result="✓ Ticket moved to In progress"
           />
         </chakra.svg>

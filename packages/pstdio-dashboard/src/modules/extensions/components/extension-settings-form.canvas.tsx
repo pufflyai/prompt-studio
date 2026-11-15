@@ -9,7 +9,7 @@ import { ExtensionSettingsForm } from "./extension-settings-form";
 const settings: ExtensionSettingValueRecord[] = [
   {
     key: "implementation.adversarialReview",
-    extensionId: "pstdio.pstdio-planner",
+    extensionId: "pstdio.planner",
     type: "boolean",
     scope: "project",
     default: true,
@@ -20,7 +20,7 @@ const settings: ExtensionSettingValueRecord[] = [
   },
   {
     key: "automation.maxInProgress",
-    extensionId: "pstdio.pstdio-planner",
+    extensionId: "pstdio.planner",
     type: "number",
     scope: "project",
     default: 2,
@@ -30,14 +30,14 @@ const settings: ExtensionSettingValueRecord[] = [
   },
   {
     key: "implementation.defaultTargetBranch",
-    extensionId: "pstdio.pstdio-planner",
+    extensionId: "pstdio.planner",
     type: "string",
     scope: "project",
     default: "",
     title: "Default target branch",
     description: "Remote branch that new work targets. Clear it to use the repository default branch.",
     options: {
-      commandId: "pstdio.pstdio-planner.command.implementation-targets",
+      commandId: "pstdio.planner.command.implementation-targets",
       valueField: "branch",
       labelField: "branch",
     },

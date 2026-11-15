@@ -3,6 +3,7 @@ import { jsonObjectSchema, localizableStringSchema, packageAssetDescriptorSchema
 
 export const extensionThemeRecordSchema = z.object({
   id: z.string(),
+  localId: z.string().optional(),
   extensionId: z.string(),
   title: localizableStringSchema,
   description: localizableStringSchema.optional(),
@@ -20,6 +21,7 @@ export const extensionThemeRecordSchema = z.object({
 
 export const extensionFileIconThemeRecordSchema = z.object({
   id: z.string(),
+  localId: z.string().optional(),
   extensionId: z.string(),
   title: localizableStringSchema,
   description: localizableStringSchema.optional(),

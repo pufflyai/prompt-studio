@@ -26,6 +26,10 @@ test.each([
   "pagedResourceList",
 ] as const)("%s extension commands manage the same saved views as the project API", async (kind) => {
   const resourceList = kind !== "kanban";
+  const legacy = kind === "kanban";
+  const owner = legacy ? "pstdio.notes" : "test.views";
+  const declaredOwner = legacy ? "pstdio.pstdio-notes" : owner;
+  const name = legacy ? "pstdio-notes" : "views";
   const paged = kind === "pagedResourceList";
   root = mkdtempSync(join(tmpdir(), "extension-views-"));
   priorHome = process.env.PSTDIO_HOME;
@@ -37,8 +41,8 @@ test.each([
   writeFileSync(
     join(source, "package.json"),
     JSON.stringify({
-      name: "views",
-      publisher: "test",
+      name,
+      publisher: legacy ? "pstdio" : "test",
       version: "1.0.0",
       main: "./extension.ts",
       engines: { pstdio: `^${EXTENSION_API_VERSION}` },
@@ -47,7 +51,7 @@ test.each([
   writeFileSync(
     join(source, "extension.ts"),
     `
-const board={kind:"view",id:"tasks"};
+const board={kind:"view",id:"tasks",extensionId:${JSON.stringify(declaredOwner)}};
 const settings={viewMode:"${resourceList ? "list" : "board"}",columnGrouping:"none",rowGrouping:"none",displayProperties:[],${resourceList ? "showChildren:false" : ""}};
 const filter={conjunction:"and",rules:[{attributeId:"title",condition:"contains",value:"Ready"}]};
 export default {
@@ -89,9 +93,9 @@ export default {
     });
   const enabled = await request("/extensions/installed/views/enable", {
     displayName: "Views",
-    extensionId: "test.views",
-    manifest: { id: "test.views", name: "views" },
-    name: "views",
+    extensionId: declaredOwner,
+    manifest: { id: declaredOwner, name },
+    name,
     sourceHash: null,
     sourceKind: "local_path",
     sourcePath: source,
@@ -99,9 +103,7 @@ export default {
     version: null,
   });
   expect(enabled.status).toBe(200);
-  const result = await (
-    await request("/extensions/commands/test.views.command.exercise/execute", { params: {} })
-  ).json();
+  const result = await (await request(`/extensions/commands/${owner}.command.exercise/execute`, { params: {} })).json();
   expect(result.outcome.status, JSON.stringify(result)).toBe("success");
   const value = result.outcome.value;
   expect(value.invalidCreate).toBe(true);
@@ -113,7 +115,7 @@ export default {
   expect(value.outsideBoard).toBe("View does not belong to this board");
   expect(value.lastView).toContain("at least one");
   expect(value.other.views[0].title).toBe("All");
-  const persisted = await (await request("/boards/test.views.view.tasks/views")).json();
+  const persisted = await (await request(`/boards/${owner}.view.tasks/views`)).json();
   expect(persisted).toEqual(value.remaining);
   expect(persisted.views).toHaveLength(1);
 });

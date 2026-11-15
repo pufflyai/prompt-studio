@@ -7,7 +7,7 @@ import {
   getBridgeWebviewHostEventPublisher,
 } from "@pstdio/workbench/extensions";
 import type { NativeDocumentTarget } from "pstdio-api-contracts";
-import { parseExtensionWebviewPath } from "pstdio-api-contracts/extension-webview-path";
+import { parseExtensionWebviewPath } from "pstdio-api-contracts/extension-host";
 import { createHostEventPublisher } from "pstdio-extensions/bridge/host";
 import { useEffect, useState } from "react";
 import i18n from "@/i18n";

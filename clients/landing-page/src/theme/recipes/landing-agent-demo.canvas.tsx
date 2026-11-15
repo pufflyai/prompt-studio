@@ -69,15 +69,15 @@ const AgentDemo = () => {
           <Stack css={story.panelBody}>
             <Text textStyle="label/M/medium">Create a ticket</Text>
             <Code whiteSpace="pre-wrap" overflowWrap="anywhere">
-              {'pst tickets create --content "# Add a color picker" --status "Queued"'}
+              {'pst pstdio.planner create-ticket --content "# Add a color picker" --status "Queued"'}
             </Code>
             <Text textStyle="label/M/medium">Update ticket status</Text>
             <Code whiteSpace="pre-wrap" overflowWrap="anywhere">
-              {'pst tickets update --id TOOL-16 --status "Ready for review"'}
+              {'pst pstdio.planner update-ticket --id TOOL-16 --status "Ready for review"'}
             </Code>
             <Text textStyle="label/M/medium">List tickets</Text>
             <Code whiteSpace="pre-wrap" overflowWrap="anywhere">
-              {'pst tickets list --status "Queued"'}
+              {'pst pstdio.planner list-tickets --status "Queued"'}
             </Code>
           </Stack>
         </Box>

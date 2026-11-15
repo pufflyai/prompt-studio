@@ -232,10 +232,11 @@ export const createNavigationRegistry = (input: CreateNavigationRegistryInput = 
     resolveLocation(location) {
       const parser = this.listParsers().find((candidate) => candidate.canParse(location));
       if (!parser) throw new Error(`No navigation parser registered for location: ${location}`);
-      return parser.parse(location);
+      return canonicalNavigationTarget(parser.parse(location));
     },
 
     async openTarget(target, context) {
+      target = canonicalNavigationTarget(target);
       if (!invocationCurrent(context, input.getProjectId)) return [];
       const dispatcher = resolveDispatcher();
       const items = toItems(target);
@@ -277,3 +278,5 @@ export const createNavigationRegistry = (input: CreateNavigationRegistryInput = 
 
   return registry;
 };
+
+import { canonicalNavigationTarget } from "../../shared/contributions/canonical-navigation";
