@@ -1,4 +1,4 @@
-import type { StorageExpression, StoragePredicate } from "@pstdio/sdk/extensions";
+import type { StorageComputedField, StorageExpression, StoragePredicate } from "@pstdio/sdk/extensions";
 import { ticketTagAttributeId } from "../../data/mappers";
 import type { readTicketViewPage } from "../../data/query-ticket-page";
 import { activeTicket } from "../../data/ticket-view-state";
@@ -10,13 +10,22 @@ const together = (...parts: (StoragePredicate | undefined)[]): StoragePredicate 
   all: parts.filter((part) => part !== undefined),
 });
 
-const predicateFields = (where: StoragePredicate): string[] => {
-  if ("field" in where) return [where.field];
-  if ("all" in where) return where.all.flatMap(predicateFields);
-  if ("any" in where) return where.any.flatMap(predicateFields);
-  if ("not" in where) return predicateFields(where.not);
-  if ("exists" in where && where.exists.where) return predicateFields(where.exists.where);
-  return [];
+const selectionComputedFields = (view: View, values: unknown[]) => {
+  const selected: NonNullable<View["scope"]["computed"]> = {};
+  const visit = (value: unknown) => {
+    if (!value || typeof value !== "object") return;
+    if (Array.isArray(value)) return value.forEach(visit);
+    for (const [key, child] of Object.entries(value)) {
+      if (key === "literal") continue;
+      if (key === "field" && typeof child === "string" && view.computed[child] && !selected[child]) {
+        selected[child] = view.computed[child];
+        visit(selected[child]);
+      }
+      visit(child);
+    }
+  };
+  values.forEach(visit);
+  return selected;
 };
 
 const complexityExpression = (view: View): StorageExpression => {
@@ -54,7 +63,6 @@ export const planQuerySummary = async (storage: Storage, view: View) => {
     args: view.workflow.completedStatusIds.map((id) => ({ op: "eq", args: [{ field: "statusId" }, { literal: id }] })),
   };
   const computed = {
-    ...view.scope.computed,
     complexityWeight: { type: "number" as const, expression: weight },
     completedWeight: {
       type: "number" as const,
@@ -65,35 +73,35 @@ export const planQuerySummary = async (storage: Storage, view: View) => {
     totalComplexity: { operation: "sum" as const, field: "complexityWeight" },
     completedComplexity: { operation: "sum" as const, field: "completedWeight" },
   };
-  const group = (where: StoragePredicate) =>
+  const filtered = together(view.scope.where, view.scope.search);
+  const conditions = {
+    done: view.conditions.done,
+    reviewNeeded: view.conditions.needsReview,
+    blocked: view.conditions.blocked,
+    atRisk: view.conditions.atRisk,
+  };
+  const countFields = Object.fromEntries(
+    Object.entries(conditions).map(([name, when]) => [
+      `count:${name}`,
+      { type: "number", cases: [{ when, value: 1 }], otherwise: 0 } satisfies StorageComputedField,
+    ]),
+  );
+  const flags = selectionComputedFields(view, [filtered]);
+  const countMetrics = Object.fromEntries(
+    Object.keys(conditions).map((name) => [name, { operation: "sum" as const, field: `count:${name}` }]),
+  );
+  const group = (where: StoragePredicate, selected: boolean) =>
     storage.records.aggregate({
       index: "ticket-view",
-      computed: {
-        ...computed,
-        ...Object.fromEntries(
-          predicateFields(where)
-            .filter((name) => name.startsWith("flag:"))
-            .map((name) => [name, view.computed[name]]),
-        ),
-      },
+      computed: { ...computed, ...flags, ...countFields },
       where,
+      formats: view.scope.formats,
       groupBy: "deadlineId",
       groupLimit: 500,
-      metrics,
+      metrics: { ...metrics, ...(selected ? countMetrics : { done: countMetrics.done }) },
     });
-  const filtered = together(view.scope.where, view.scope.search);
-  const conditions = [
-    undefined,
-    view.predicates.done,
-    view.predicates.needsReview,
-    view.predicates.blocked,
-    view.predicates.atRisk,
-  ];
-  const [global, globalDone, ...counts] = await Promise.all([
-    group(activeTicket),
-    group(together(activeTicket, view.predicates.done)),
-    ...conditions.map((predicate) => group(together(filtered, predicate))),
-  ]);
+  // Each selection is scanned once; flags and complexity totals share its scalar projections.
+  const [global, selected] = await Promise.all([group(activeTicket, false), group(filtered, true)]);
   const starts = await storage.records.aggregate({
     index: "attempt-ticket",
     where: {
@@ -113,23 +121,22 @@ export const planQuerySummary = async (storage: Storage, view: View) => {
       : null;
   const byDeadline = (groups: typeof global.groups) => new Map(groups.map((group) => [String(group.value), group]));
   const globalGroups = byDeadline(global.groups),
-    completedGroups = byDeadline(globalDone.groups),
-    selected = counts.map(({ groups }) => byDeadline(groups));
+    selectedGroups = byDeadline(selected.groups);
   const section = (id: string | null) => {
     const key = String(id),
-      total = selected[0].get(key),
+      total = selectedGroups.get(key),
       entire = globalGroups.get(key);
     const quantities = total?.metrics;
     const remaining = (quantities?.totalComplexity ?? 0) - (quantities?.completedComplexity ?? 0);
     return {
       counts: {
         total: total?.count ?? 0,
-        done: selected[1].get(key)?.count ?? 0,
-        reviewNeeded: selected[2].get(key)?.count ?? 0,
-        blocked: selected[3].get(key)?.count ?? 0,
-        atRisk: id ? (selected[4].get(key)?.count ?? 0) : 0,
+        done: quantities?.done ?? 0,
+        reviewNeeded: quantities?.reviewNeeded ?? 0,
+        blocked: quantities?.blocked ?? 0,
+        atRisk: id ? (quantities?.atRisk ?? 0) : 0,
       },
-      globalCounts: { total: entire?.count ?? 0, done: completedGroups.get(key)?.count ?? 0 },
+      globalCounts: { total: entire?.count ?? 0, done: entire?.metrics?.done ?? 0 },
       eta:
         id && total?.count && (!remaining || pace)
           ? {

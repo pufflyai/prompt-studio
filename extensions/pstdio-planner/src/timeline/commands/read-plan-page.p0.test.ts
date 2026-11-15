@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { makeCommandContext } from "../../commands/command-context.fixture";
 import { putTicket } from "../../data/ticket-context.fixture";
+import { planPlacements, readPlanMetadata } from "./placement-store";
 import { readPlanCommand } from "./read-plan";
 
 test("Timeline filters before paging and counts unloaded work without listing resources", async () => {
@@ -89,4 +90,60 @@ test("tickets added and restored after the initial placement migration receive e
   expect(result.ticketRows).toHaveLength(3);
   const placements = await storage.records.aggregate({ index: "timeline-placements" });
   expect(placements.count).toBe(3);
+});
+
+test("filtered global steps exclude archived tickets and placements whose ticket no longer exists", async () => {
+  const storage = createMemoryStorage();
+  for (const id of ["first", "archived", "last"])
+    await putTicket(storage, {
+      id,
+      shorthand: `T-${id}`,
+      title: id,
+      content: "",
+      statusId: "ready",
+      archived: id === "archived",
+      createdAt: "2026-01-01",
+      updatedAt: "2026-01-01",
+    });
+  await readPlanMetadata(storage);
+  for (const [i, id] of ["first", "archived", "missing", "last"].entries())
+    await planPlacements(storage).put(id, { ticketId: id, deadlineId: null, position: String(i) });
+  const result = await readPlanCommand.run(makeCommandContext({ storage, params: {} }), {
+    filter: { conjunction: "and", rules: [{ attributeId: "title", condition: "is", value: "last" }] },
+    page: { limit: 1, offset: 0, fields: ["id"], search: "" },
+  } as never);
+  expect(result.sections.flatMap(({ rows }) => rows.map(({ id, step }) => ({ id, step })))).toEqual([
+    { id: "last", step: 2 },
+  ]);
+});
+
+test("the default active filter retains global steps on later pages and narrower nested views", async () => {
+  const storage = createMemoryStorage();
+  for (const [i, id] of ["first", "archived", "second", "last"].entries())
+    await putTicket(storage, {
+      id,
+      shorthand: `T-${i + 1}`,
+      title: id,
+      content: "",
+      statusId: "ready",
+      archived: id === "archived",
+      createdAt: "2026-01-01",
+      updatedAt: "2026-01-01",
+    });
+  await readPlanMetadata(storage);
+  for (const [i, id] of ["first", "archived", "second", "last"].entries())
+    await planPlacements(storage).put(id, { ticketId: id, deadlineId: null, position: String(i) });
+  const active = { attributeId: "archived", condition: "is-any-of", value: ["active"] } as const;
+  const read = (filter: unknown, offset: number) =>
+    readPlanCommand.run(makeCommandContext({ storage, params: {} }), {
+      filter,
+      page: { limit: 1, offset, fields: ["id"], search: "" },
+    } as never);
+  const steps = (value: Awaited<ReturnType<typeof read>>) =>
+    value.sections.flatMap(({ rows }) => rows.map(({ id, step }) => ({ id, step })));
+  expect(steps(await read({ conjunction: "and", rules: [active] }, 1))).toEqual([{ id: "second", step: 2 }]);
+  const last = { attributeId: "title", condition: "is", value: "last" };
+  expect(
+    steps(await read({ conjunction: "and", rules: [active], groups: [{ conjunction: "or", rules: [last] }] }, 0)),
+  ).toEqual([{ id: "last", step: 3 }]);
 });

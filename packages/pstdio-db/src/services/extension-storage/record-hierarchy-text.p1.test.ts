@@ -6,7 +6,7 @@ import { createExtensionStorageFixture } from "./extension-storage.fixture";
 test("hierarchy text preserves Unicode, surrogate boundaries and complete-string case folding", async () => {
   const fixture = await createExtensionStorageFixture();
   try {
-    const labels = ["", "ΟΣ", "Α", "\ud83d", "\ude00", "B\0é", "\ue0007\ue001İ"];
+    const labels = ["", " \t", "ΟΣ", "Α", "\ud83d", "\ude00", "B\0é", "\ue0007\ue001İ"];
     for (const separator of ["/", "", "\u0301"]) {
       const outputs = [];
       for (const records of [
@@ -53,6 +53,23 @@ test("hierarchy text preserves Unicode, surrogate boundaries and complete-string
           where: { field: "breadcrumb", op: "contains", value: labels.join(separator).toLowerCase() },
           limit: 100,
         });
+        const grouped = await records.aggregate({
+          index: "nodes",
+          computed: {
+            choice: {
+              type: "string",
+              expression: {
+                op: "if",
+                args: [
+                  { op: "eq", args: [{ field: "id" }, { literal: "0" }] },
+                  { literal: labels.slice(0, 2).join(separator) },
+                  { field: "breadcrumb" },
+                ],
+              },
+            },
+          },
+          groupBy: "choice",
+        });
         const selections = [];
         for (const where of [
           { field: "breadcrumb", op: "empty" as const },
@@ -68,10 +85,11 @@ test("hierarchy text preserves Unicode, surrogate boundaries and complete-string
           rows: page.records.map(({ fields }) => fields),
           folded: folded.records.map(({ fields }) => fields),
           selections,
+          groups: grouped.groups,
         });
       }
       expect(outputs[0]).toEqual(outputs[1]);
-      expect(outputs[0].rows.find((row) => row.id === "6")?.breadcrumb).toBe(labels.join(separator));
+      expect(outputs[0].rows.find((row) => row.id === "7")?.breadcrumb).toBe(labels.join(separator));
     }
   } finally {
     await fixture.close();

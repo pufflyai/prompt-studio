@@ -25,7 +25,7 @@ export const planStepCounts = async (
           {
             all: [
               { field: "deadlineId", op: "eq", value: deadlineId },
-              { field: "planPosition", op: "lt", value: fields.planPosition },
+              { field: "position", op: "lt", value: fields.planPosition },
             ],
           },
         ],
@@ -35,9 +35,15 @@ export const planStepCounts = async (
       metrics[name] = { operation: "sum", field: name };
     }
     const totals = await ctx.storage.records.aggregate({
-      index: "ticket-view",
+      index: "timeline-placement-order",
       computed,
-      where: activeTicket,
+      where: {
+        exists: {
+          index: "ticket-view",
+          on: [{ sourceField: "ticketId", relatedField: "id" }],
+          where: activeTicket,
+        },
+      },
       metrics,
     });
     result.push(...page.map((_, i) => (totals.metrics?.[`step${i}`] ?? 0) + 1));

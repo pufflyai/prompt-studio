@@ -106,6 +106,7 @@ export const prepareTicketViewQuery = async (
     metadata,
     fields,
     predicates: state.predicates,
+    conditions: state.conditions,
     scope,
     revision: before.revision,
   };

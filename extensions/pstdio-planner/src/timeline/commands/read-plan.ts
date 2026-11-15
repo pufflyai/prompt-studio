@@ -109,8 +109,20 @@ export const readPlanCommand = defineCommand({
         "gate",
       ],
     });
-    const hasRules = (filter?: KanbanRendererQueryParams["filter"]): boolean =>
-      Boolean(filter?.rules.length || filter?.groups?.some(hasRules));
+    const hasRules = (filter?: KanbanRendererQueryParams["filter"]): boolean => {
+      if (!filter) return false;
+      // Timeline already selects active work. Its default saved-view rule does not narrow that order.
+      if (filter.conjunction !== "and") return Boolean(filter.rules.length || filter.groups?.some(hasRules));
+      return Boolean(
+        filter.rules.some(
+          (rule) =>
+            rule.attributeId !== "archived" ||
+            rule.condition !== "is-any-of" ||
+            !Array.isArray(rule.value) ||
+            !rule.value.includes("active"),
+        ) || filter.groups?.some(hasRules),
+      );
+    };
     const page = await planPageRows(
       ctx,
       view,

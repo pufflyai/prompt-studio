@@ -230,5 +230,5 @@ export const ticketViewState = async (storage: ExtensionStorageApi, workflow: Wo
       return [name, { field: `flag:${name}`, op: "eq", value: true } satisfies StoragePredicate];
     }),
   ) as Record<keyof typeof conditions, StoragePredicate>;
-  return { computed, metadata, predicates: { ...predicates, unfinished, waiting } };
+  return { computed, metadata, conditions, predicates: { ...predicates, unfinished, waiting } };
 };

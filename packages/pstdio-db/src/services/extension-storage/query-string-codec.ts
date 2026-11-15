@@ -36,7 +36,7 @@ export const queryStringFromHex = (hex: SQL) => {
       SELECT ordinal, CASE WHEN parts[1] IS NOT NULL THEN parts[1]::integer ELSE ascii(parts[2]) END AS point
       FROM lowered CROSS JOIN LATERAL regexp_matches(value, ${expressionLiteral(`${sentinel}([0-9]+)${end}|(.)`)}, 'gs') WITH ORDINALITY AS matches(parts, ordinal)
     ) SELECT CASE WHEN (SELECT hex FROM encoded) IS NULL THEN NULL
-    WHEN (SELECT hex FROM encoded) ~ '^(?:[0-7][0-9a-f]00)*$' AND (SELECT hex FROM encoded) !~ '0000'
+    WHEN (SELECT hex FROM encoded) ~ '^(?:[0-7][0-9a-f]00)*$' AND (SELECT hex FROM encoded) !~ '^(....)*0000'
       THEN to_jsonb(convert_from(decode(regexp_replace((SELECT hex FROM encoded), '(..)00', ${expressionLiteral("\\1")}, 'g'), 'hex'), 'UTF8'))
     ELSE jsonb_build_object(
       ${expressionLiteral(projectionStringTag)}, (SELECT hex FROM encoded),
