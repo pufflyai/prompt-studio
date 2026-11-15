@@ -1,8 +1,7 @@
 import { expect, test } from "bun:test";
 import { createWebviewClient, viewDataEvents } from "@pstdio/sdk/extensions";
 import { ChakraProvider, psTheme } from "@pstdio/ui";
-import { HomeApp } from "pstdio-home/testing";
-import { createElement } from "react";
+import { HomeApp } from "home/testing";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { createRetainedExtensionQueryFixture } from "./retained-extension-query.fixture";
 
@@ -44,7 +43,9 @@ test("Home snapshot updates preserve the quota owner while its actual command is
     const context = { host: frame.host, propsStore: frame.host.propsStore } as never;
     await act(async () => {
       tree = create(
-        createElement(ChakraProvider, { value: psTheme }, createElement(HomeApp, { context, projectId: "selected" })),
+        <ChakraProvider value={psTheme}>
+          <HomeApp context={context} />
+        </ChakraProvider>,
       );
     });
     expect(home).toBe(1);

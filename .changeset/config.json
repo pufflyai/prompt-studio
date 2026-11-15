@@ -26,7 +26,7 @@
     "pstdio-file-types",
     "pstdio-logging",
     "pstdio-paths",
-    "pstdio-dev",
+    "dev",
     "pstdio-scheduler",
     "pstdio-scripts",
     "pstdio-storage",

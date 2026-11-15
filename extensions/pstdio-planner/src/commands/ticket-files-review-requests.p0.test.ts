@@ -50,7 +50,7 @@ describe("review requests in the ticket navigation", () => {
       selected: false,
       target: {
         kind: "page",
-        page: { kind: "page", id: "ticket-requests", extensionId: "pstdio.pstdio-planner" },
+        page: { kind: "page", id: "ticket-requests", extensionId: "pstdio.planner" },
         resource: { type: "ticket", id: ticket.id, metadata: { documentId: "review-requests" } },
         parent: { kind: "page", page: { id: "ticket" } },
       },

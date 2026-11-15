@@ -28,7 +28,7 @@ test("artifact mutations identify their changed resource for scoped query invali
   await commands.delete.run(ctx, { url: published.url });
   expect(changes).toEqual(
     Array.from({ length: 3 }, () => ({
-      extensionId: "pstdio.pstdio-artifacts",
+      extensionId: "pstdio.artifacts",
       resourceIds: [published.artifactId],
     })),
   );
@@ -162,6 +162,31 @@ test("publishing returns a usable URL for the host-provided owner", async () => 
     ...makeCommandArgs({ storage, params: { resources: [first.resource] }, overrides }),
   );
   expect(resolved).toMatchObject([{ resource: { extensionId: "pstdio.artifacts", id: first.artifactId } }]);
+});
+
+// Existing consumers subscribe to this exported raw key independently of package names.
+test("publishing notifies historical artifact subscribers once", async () => {
+  const files = createMemoryRepoFiles();
+  await files.writeText("page.html", "<title>Retained event</title>");
+  const received: unknown[] = [];
+  const published = await commands.publish.run(
+    ...makeCommandArgs({
+      storage: createMemoryStorage(),
+      params: { file_path: "page.html" },
+      overrides: {
+        extensionId: "pstdio.artifacts",
+        projectFiles: files,
+        artifacts: { mount: () => createMemoryRepoFiles() },
+        events: {
+          emit: async (event, payload) => {
+            if (event === "pstdio.pstdio-artifacts.artifacts.changed") received.push(payload);
+            return { delivered: received.length };
+          },
+        },
+      },
+    }),
+  );
+  expect(received).toEqual([{ artifactId: published.artifactId }]);
 });
 
 test("canonical and historical allocated snapshots resolve the same artifact", async () => {

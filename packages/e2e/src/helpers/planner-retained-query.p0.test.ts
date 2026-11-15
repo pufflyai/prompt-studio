@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { createWebviewClient } from "@pstdio/sdk/extensions";
-import { plannerTicketsChanged, publishRequestChange } from "pstdio-planner/testing";
+import { type PlanClient, plannerTicketsChanged, publishRequestChange } from "planner/testing";
 import { createRetainedExtensionQueryFixture } from "./retained-extension-query.fixture";
 
 const turn = () => new Promise<void>((resolve) => setImmediate(resolve));
@@ -8,7 +8,7 @@ const fixture = () => {
   let failed = false,
     reads = 0;
   const transport = createRetainedExtensionQueryFixture({
-    extensionId: "pstdio.pstdio-planner",
+    extensionId: "pstdio.planner",
     execute: async () => {
       reads++;
       if (failed) throw new Error("Planner unavailable");
@@ -16,14 +16,14 @@ const fixture = () => {
     },
   });
   const frame = transport.frame(),
-    client = createWebviewClient(frame.host);
+    client = createWebviewClient(frame.host) as PlanClient;
   const query = (id = "timeline", resourceId?: string) =>
-    client.commands.read.query(
-      { id },
-      { events: [plannerTicketsChanged], ...(resourceId ? { dependency: { resourceId } } : {}) },
-    );
+    client.commands["timeline.plan.read"].query({ id } as never, {
+      events: [plannerTicketsChanged],
+      ...(resourceId ? { dependency: { resourceId } } : {}),
+    });
   const emit = (project = "selected", resourceIds?: string[]) =>
-    transport.emit("pstdio.pstdio-planner.event." + plannerTicketsChanged.id, project, resourceIds);
+    transport.emit("pstdio.planner.event." + plannerTicketsChanged.id, project, resourceIds);
   return {
     query,
     emit,

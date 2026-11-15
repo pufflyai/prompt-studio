@@ -78,12 +78,16 @@ export const createRetainedExtensionQueryFixture = (input: {
       commandQueries: adapter,
       accountQueries: services,
     });
-    const props = {
+    const props: WebviewHostProps = {
+      themePreference: "system",
+      locale: "en",
+      pageParams: {},
+      translations: { locale: "en", defaultLocale: "en", bundle: {}, defaultBundle: {} },
       projectId,
       queryScope: { runtimeId: "retained-contract" },
       commandQueries: adapter.seeds(),
       serviceQueries: { account: services?.seeds(), preferences: extra?.preferenceQueries?.seeds() },
-    } as WebviewHostProps;
+    };
     const host = {
       extensionId: input.extensionId,
       propsStore: {

@@ -1,8 +1,7 @@
 import { expect, test } from "bun:test";
 import { createWebviewClient } from "@pstdio/sdk/extensions";
 import { ChakraProvider, psTheme } from "@pstdio/ui";
-import { ArtifactThumbnail, ArtifactTranslations, createArtifactQueries } from "pstdio-artifacts/testing";
-import { createElement } from "react";
+import { ArtifactThumbnail, ArtifactTranslations, createArtifactQueries } from "artifacts/testing";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { createRetainedExtensionQueryFixture } from "./retained-extension-query.fixture";
 
@@ -52,18 +51,16 @@ test("hiding an Artifact thumbnail cancels its actual optional HTML read and rej
     });
     await act(async () => {
       tree = create(
-        createElement(
-          ChakraProvider,
-          { value: psTheme },
-          createElement(
-            ArtifactTranslations.Provider,
-            { value: { locale: "en", t: (_key: string, fallback?: string) => fallback ?? "" } },
-            createElement(ArtifactThumbnail, {
-              item: { artifactId: "a", revisionId: "r", title: "Page" } as never,
-              loadPreview: queries.preview,
-            }),
-          ),
-        ),
+        <ChakraProvider value={psTheme}>
+          <ArtifactTranslations.Provider
+            value={{ locale: "en", t: (_key: string, fallback?: string) => fallback ?? "" }}
+          >
+            <ArtifactThumbnail
+              item={{ artifactId: "a", revisionId: "r", title: "Page" } as never}
+              loadPreview={queries.preview}
+            />
+          </ArtifactTranslations.Provider>
+        </ChakraProvider>,
         { createNodeMock: () => ({}) },
       );
     });

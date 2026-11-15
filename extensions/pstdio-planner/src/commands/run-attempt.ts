@@ -273,7 +273,7 @@ async function launchAttempt(
 export const runAttemptCommand = defineCommand({
   id: "run-attempt",
   title: "Run attempt",
-  cli: { examples: ["pst pstdio.pstdio-planner run-attempt --ticket PS-1"] },
+  cli: { examples: ["pst pstdio.planner run-attempt --ticket PS-1"] },
   menus: [
     {
       slot: ticketMenuSlots.headerOverflow,

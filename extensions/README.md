@@ -91,10 +91,10 @@ The default list is every catalog entry marked `"default": true`:
 - `harness-claude-code`
 - `harness-codex`
 - `harness-open-code`
-- `pstdio-base-themes`
-- `pstdio-skills`
+- `base-themes`
+- `skills`
 
-The other catalog entries, such as `pstdio-planner`, `pstdio-reports`, `pstdio-notes`, and `pstdio-artifacts`, are listed in the dashboard but not installed by default.
+The other catalog entries, such as `planner`, `reports`, `notes`, and `artifacts`, are listed in the dashboard but not installed by default.
 
 Default extensions use user scope. Subsequent project creates skip existing installs. The Docker stack keeps
 those installs in its isolated `PSTDIO_HOME`. Stopping it with `--down` removes the stack's test data.

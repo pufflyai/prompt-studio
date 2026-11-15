@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { accountEvents } from "@pstdio/sdk/extensions";
-import { CloudContext, cloudStatus, useCloud } from "pstdio-cloud/testing";
-import { Activity, createElement } from "react";
+import { CloudContext, cloudStatus, useCloud } from "cloud/testing";
+import { Activity } from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { cloudAccount, cloudDevice, cloudQueryFixture } from "./cloud-retained-query.fixture";
 
@@ -48,17 +48,14 @@ const mountedCloud = (f: ReturnType<typeof cloudQueryFixture>) => {
   };
   let project = "project",
     devices = false;
-  const tree = (nextProject: string, nextDevices: boolean, mode: "visible" | "hidden" = "visible") =>
-    createElement(
-      CloudContext.Provider,
-      { value: { client: f.client, t: translate } },
-      createElement(
-        Activity,
-        { mode },
-        createElement(Probe, { index: 0, project: nextProject, devices: nextDevices }),
-        createElement(Probe, { index: 1, project: nextProject, devices: false }),
-      ),
-    );
+  const tree = (nextProject: string, nextDevices: boolean, mode: "visible" | "hidden" = "visible") => (
+    <CloudContext.Provider value={{ client: f.client, t: translate }}>
+      <Activity mode={mode}>
+        <Probe index={0} project={nextProject} devices={nextDevices} />
+        <Probe index={1} project={nextProject} devices={false} />
+      </Activity>
+    </CloudContext.Provider>
+  );
   let root: ReactTestRenderer | undefined;
   return {
     values,

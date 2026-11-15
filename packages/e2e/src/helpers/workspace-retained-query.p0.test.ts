@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { createWebviewClient } from "@pstdio/sdk/extensions";
-import { changed, createChangesQueries } from "pstdio-workspaces/testing";
+import { changed, createChangesQueries } from "workspaces/testing";
 import { createRetainedExtensionQueryFixture } from "./retained-extension-query.fixture";
 
 const turn = () => new Promise<void>((resolve) => setImmediate(resolve));
@@ -12,7 +12,7 @@ test("Workspaces retains its summary independently of lazy file bodies and drain
     live = 0,
     maxLive = 0;
   const transport = createRetainedExtensionQueryFixture({
-    extensionId: "pstdio.pstdio-workspaces",
+    extensionId: "pstdio.workspaces",
     execute: async (command, signal) => {
       if (command.commandId.endsWith(".read-changes")) {
         reads.summary++;
@@ -68,11 +68,11 @@ test("Workspaces retains its summary independently of lazy file bodies and drain
     hold = false;
     await queries.body("a.ts").read();
     expect(reads).toEqual({ summary: 1, body: 2 });
-    transport.emit("pstdio.pstdio-workspaces.event." + changed.id, "selected", ["different-workspace"]);
+    transport.emit("pstdio.workspaces.event." + changed.id, "selected", ["different-workspace"]);
     await turn();
     expect(reads.summary).toBe(1);
     stop();
-    transport.emit("pstdio.pstdio-workspaces.event." + changed.id, "selected", ["workspace"]);
+    transport.emit("pstdio.workspaces.event." + changed.id, "selected", ["workspace"]);
     await turn();
     expect(reads).toEqual({ summary: 1, body: 2 });
     stop = queries.summary.subscribe(() => {});

@@ -1,12 +1,6 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { createWebviewClient } from "@pstdio/sdk/extensions";
-import {
-  type PlanClient,
-  type TicketRequestsClient,
-  useAutoBuild,
-  usePlan,
-  useTicketRequests,
-} from "pstdio-planner/testing";
+import { type PlanClient, type TicketRequestsClient, useAutoBuild, usePlan, useTicketRequests } from "planner/testing";
 import { Activity, createElement } from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { createRetainedExtensionQueryFixture } from "./retained-extension-query.fixture";
@@ -28,7 +22,7 @@ const fixture = () => {
   let account = "one";
   let pending: ReturnType<typeof Promise.withResolvers<unknown>>;
   const transport = createRetainedExtensionQueryFixture({
-    extensionId: "pstdio.pstdio-planner",
+    extensionId: "pstdio.planner",
     async execute(command, _signal, project) {
       const scope = project + "/" + account;
       calls.push(scope + ":" + command.commandId);
@@ -82,8 +76,8 @@ test("the production timeline hook follows project props and reuses a clean warm
   const f = fixture();
   let latest: ReturnType<typeof usePlan>;
   const Probe = () => {
-    latest = usePlan(f.host);
-    return <span>{latest.plan?.projectId}</span>;
+    latest = usePlan(f.host as Parameters<typeof usePlan>[0]);
+    return createElement("span", null, String(latest.plan?.projectId ?? ""));
   };
   let tree: ReactTestRenderer | undefined;
   try {
@@ -122,7 +116,11 @@ for (const boundary of ["project", "account", "Activity"])
     let action: Promise<boolean>;
     try {
       await act(async () => {
-        tree = create(createElement(Activity, { mode: "visible" }, createElement(Probe)));
+        tree = create(
+          <Activity mode="visible">
+            <Probe />
+          </Activity>,
+        );
       });
       const oldConfigure = latest!.configure;
       await act(async () => {
@@ -131,10 +129,18 @@ for (const boundary of ["project", "account", "Activity"])
       expect(latest!.saving).toBe(true);
       if (boundary === "Activity") {
         await act(async () => {
-          tree!.update(createElement(Activity, { mode: "hidden" }, createElement(Probe)));
+          tree!.update(
+            <Activity mode="hidden">
+              <Probe />
+            </Activity>,
+          );
         });
         await act(async () => {
-          tree!.update(createElement(Activity, { mode: "visible" }, createElement(Probe)));
+          tree!.update(
+            <Activity mode="visible">
+              <Probe />
+            </Activity>,
+          );
         });
       } else await f.select(boundary === "project" ? "b" : "a", boundary === "account" ? "two" : "one");
       const expectedScope = { project: "b/one", account: "a/two", Activity: "a/one" }[boundary];
@@ -178,7 +184,7 @@ test("an acknowledged auto-build configuration survives Activity hide and return
   };
   const saved = { ...base, revision: "accepted", enabled: true, state: "running", prompt: "saved choice" };
   const transport = createRetainedExtensionQueryFixture({
-    extensionId: "pstdio.pstdio-planner",
+    extensionId: "pstdio.planner",
     execute: async (command) => {
       if (command.commandId.endsWith(".auto-build.configure")) {
         failed = true;
@@ -234,7 +240,7 @@ test("ticket review requests use a retained resource query and retire callbacks 
   environment.IS_REACT_ACT_ENVIRONMENT = true;
   const calls: { id: string; project: string; ticket?: unknown }[] = [];
   const transport = createRetainedExtensionQueryFixture({
-    extensionId: "pstdio.pstdio-planner",
+    extensionId: "pstdio.planner",
     execute: async (command, _signal, project) => {
       calls.push({ id: command.commandId, project, ticket: command.params?.ticket });
       return { requests: [], errors: [] };
@@ -260,13 +266,13 @@ test("ticket review requests use a retained resource query and retire callbacks 
     });
     const first = latest!.openChat;
     expect(calls).toEqual([
-      { id: "pstdio.pstdio-planner.command.review-requests.list", project: "first", ticket: "shared-id" },
+      { id: "pstdio.planner.command.review-requests.list", project: "first", ticket: "shared-id" },
     ]);
     await act(async () => {
       frame.project("second");
     });
     expect(calls.at(-1)).toEqual({
-      id: "pstdio.pstdio-planner.command.review-requests.list",
+      id: "pstdio.planner.command.review-requests.list",
       project: "second",
       ticket: "shared-id",
     });
@@ -276,7 +282,7 @@ test("ticket review requests use a retained resource query and retire callbacks 
     const second = latest!.openChat;
     await second("current-request");
     expect(calls.at(-1)?.project).toBe("second");
-    expect(calls.at(-1)?.id).toBe("pstdio.pstdio-planner.command.review-requests.open");
+    expect(calls.at(-1)?.id).toBe("pstdio.planner.command.review-requests.open");
     await act(async () => {
       tree!.update(content("hidden"));
     });
@@ -288,7 +294,7 @@ test("ticket review requests use a retained resource query and retire callbacks 
     });
     const current = latest!.openChat;
     await current("returned-request");
-    expect(calls.at(-1)?.id).toBe("pstdio.pstdio-planner.command.review-requests.open");
+    expect(calls.at(-1)?.id).toBe("pstdio.planner.command.review-requests.open");
   } finally {
     await act(async () => {
       tree?.unmount();

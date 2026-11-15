@@ -15,7 +15,7 @@ export const queryTickets = async (
     storage: ctx.storage,
     resources: ctx.resources,
     projectId: ctx.projectId,
-    extensionId: ctx.extensionId === "pstdio.planner" ? ctx.extensionId : "pstdio.pstdio-planner",
+    extensionId: ctx.extensionId === "pstdio.pstdio-planner" ? ctx.extensionId : "pstdio.planner",
     workflow: usableWorkflowStatuses(await readWorkflowStatuses(ctx)),
     filter: input.filter,
   });

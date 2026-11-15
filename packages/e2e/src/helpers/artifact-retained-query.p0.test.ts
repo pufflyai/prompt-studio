@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { createWebviewClient, type QueryChangeEnvelope } from "@pstdio/sdk/extensions";
 import { createMemoryRepoFiles, createMemoryStorage, makeCommandArgs } from "@pstdio/sdk/testing";
-import { changedEvent, commands, createArtifactQueries, extensionId } from "pstdio-artifacts/testing";
+import { changedEvent, commands, createArtifactQueries, extensionId } from "artifacts/testing";
 import { createRetainedExtensionQueryFixture } from "./retained-extension-query.fixture";
 
 const turn = () => new Promise<void>((resolve) => setImmediate(resolve));
@@ -12,7 +12,7 @@ const fixture = async () => {
   const reads = { list: 0, revisions: 0, read: 0 };
   let transport: ReturnType<typeof createRetainedExtensionQueryFixture>;
   const emit = (scope: QueryChangeEnvelope) =>
-    transport.emit(changedEvent, scope.projectId ?? "selected", scope.resourceIds);
+    transport.emit(changedEvent, scope.projectId ?? "selected", scope.resourceIds ? [...scope.resourceIds] : undefined);
   const [ctx] = makeCommandArgs({
     projectId: "selected",
     storage,

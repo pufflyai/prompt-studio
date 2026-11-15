@@ -69,8 +69,7 @@ export const saveReportCommand = defineCommand({
   id: "reports.save",
   title: "Save report",
   cli: {
-    globalAliases: [["reports", "save"]],
-    examples: ["pstdio pstdio.pstdio-reports reports save --name review"],
+    examples: ["pstdio pstdio.reports reports save --name review"],
   },
   params: {
     workspace: params.text(),

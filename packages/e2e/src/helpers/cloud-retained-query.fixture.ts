@@ -8,8 +8,8 @@ import {
   type ProjectSyncStatus,
   type WebviewCommandQuery,
 } from "@pstdio/sdk/extensions";
-import type { CloudProjectState, cloudCommands } from "pstdio-cloud/testing";
-import { createCloudQueries } from "pstdio-cloud/testing";
+import type { CloudProjectState, cloudCommands } from "cloud/testing";
+import { createCloudQueries } from "cloud/testing";
 import { createAccountQuerySources } from "pstdio-dashboard/testing";
 import { createRetainedExtensionQueryFixture } from "./retained-extension-query.fixture";
 export const cloudAccount: AccountStatus = {
