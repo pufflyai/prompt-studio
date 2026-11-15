@@ -97,3 +97,11 @@ test("quotas keep this device's token use when Copilot cannot report quotas", as
     message: expect.stringContaining("2K input"),
   });
 });
+
+test("the model list is empty, not an error, until the person signs in", async () => {
+  const copilot = fakeCopilot(() => []);
+  copilot.client.getAuthStatus = async () => ({ isAuthenticated: false });
+  copilot.client.listModels = () => Promise.reject(new Error("Not authenticated. Please authenticate first."));
+  const harness = createCopilotHarness(copilot.factory);
+  expect(await harness.listModels({ logger: { warn() {} } } as never)).toEqual([]);
+});

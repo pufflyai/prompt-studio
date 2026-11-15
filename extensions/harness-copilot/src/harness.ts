@@ -106,7 +106,10 @@ export const createCopilotHarness = (factory: CopilotClientFactory = createCopil
     authenticate: (ctx, input, channel) =>
       short(ctx, (client) => runLogin(client, input, channel), { signal: channel.signal }),
     listModels: async (ctx) => {
-      const models = await short(ctx, (client) => client.listModels());
+      // Copilot refuses to list models before sign-in; an empty list lets the model menu offer sign-in.
+      const models = await short(ctx, async (client) =>
+        (await client.getAuthStatus()).isAuthenticated ? client.listModels() : [],
+      );
       return models.filter((model) => model.policy?.state !== "disabled").map(toAgentModel);
     },
     start: run,
