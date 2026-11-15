@@ -28,7 +28,7 @@ const environment: CommandRunnerEnvironment = {
   },
   sessions: stubEnvironment(storage).sessions,
   workspaces: stubEnvironment(storage).workspaces,
-  activity: { record: async () => ({ id: "" }) },
+  activity: stubEnvironment(storage).activity,
   notify: {
     setStatus: async () => null,
     setStatusByKey: async () => [],

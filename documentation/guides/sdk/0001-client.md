@@ -4,7 +4,7 @@ Use `createClient` from `@pstdio/sdk/client` to call the Prompt Studio API from 
 
 The client covers the core API: projects, workspaces, sessions, extensions, and
 more. Planner tickets, ticket statuses, and ticket tags belong to the Planner
-extension. Reach them through extension commands or the `pst tickets` commands,
+extension. Reach them through extension commands or the `pst pstdio.planner` commands,
 not through a core client group.
 
 Install the `@pstdio/sdk` version that matches the Prompt Studio app you call, such as `bun add @pstdio/sdk@0.43.1`. A newer SDK can include methods that your app's API does not answer yet. Updating the SDK does not update the app. See [App, SDK, and extension API versions](../../references/extensions/0014-api-versioning.md#app-sdk-and-extension-api-versions). The [method reference](../../references/sdk/0003-api.md#release-availability) marks the methods that are not in the current stable release.
@@ -177,16 +177,16 @@ const models = await client.agents.queryModels(projectId, "pstdio.harness-claude
 The planner extension owns ticket data. Use the CLI for normal automation:
 
 ```sh
-pst tickets create --content "# Fix login bug"
-pst tickets save --id PS-12
-pst tickets list --json
+pst pstdio.planner create-ticket --content "# Fix login bug"
+pst pstdio.planner save-ticket --id PS-12
+pst pstdio.planner list-tickets --json
 ```
 
 Programmatic callers can execute planner commands through the extension command
 API when they need direct command results:
 
 ```ts
-const response = await client.extensions.execute("pstdio.pstdio-planner.command.list-tickets", {
+const response = await client.extensions.execute("pstdio.planner.command.list-tickets", {
   projectId,
   params: {},
 });
@@ -274,4 +274,4 @@ A cloud project that came from another device starts without a folder. `client.p
 
 `client.projects.folder(projectId)` returns `{ path, gitRemote }`: the folder on this device, or `null`, and the Git remote recorded for the project. Before the project has a folder, `client.projects.chooseFolder(projectId, { path, clone })` can attach a chosen checkout instead. With `clone: true` it clones `gitRemote` into a new folder; with `clone: false` it uses an existing folder and checks that it holds the same repository. The path may start with `~/`.
 
-*Updated at: 2026-10-30*
+*Updated at: 2026-11-12*

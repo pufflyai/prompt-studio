@@ -1,5 +1,5 @@
 import { expect, type Page } from "@playwright/test";
-import { parseExtensionWebviewPath } from "pstdio-api-contracts/extension-webview-path";
+import { parseExtensionWebviewPath } from "pstdio-api-contracts/extension-host";
 import { test } from "../testing/packaged-fixture";
 import {
   createPackagedHome,

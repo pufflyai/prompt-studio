@@ -10,6 +10,7 @@ const errorSchema = z.object({ error: z.string() });
 
 const toThemeRecord = (theme: ExtensionRuntime["themes"][number]) => ({
   id: theme.id,
+  localId: theme.localId,
   extensionId: theme.extensionId,
   title: theme.title,
   description: theme.description,
@@ -22,6 +23,7 @@ const toThemeRecord = (theme: ExtensionRuntime["themes"][number]) => ({
 
 const toFileIconThemeRecord = (theme: ExtensionRuntime["fileIconThemes"][number]) => ({
   id: theme.id,
+  localId: theme.localId,
   extensionId: theme.extensionId,
   title: theme.title,
   description: theme.description,

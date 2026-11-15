@@ -1,5 +1,6 @@
 import type { PlacementIdentity } from "@pstdio/sdk/extensions";
 import { type ContextKeyService, matchesContextExpression } from "../../shared/context/context-key-service";
+import { canonicalRegistryId } from "../../shared/contributions/identity-aliases";
 import {
   byContributionPriority,
   type ContributionMetadata,
@@ -134,7 +135,7 @@ export const createCommandRegistry = (input: CreateCommandRegistryInput = {}): C
   const errorListeners = new Set<WorkbenchCommandExecutionErrorListener>();
 
   const requireCommand = (id: string) => {
-    const record = store.getState().commands[id];
+    const record = store.getState().commands[canonicalRegistryId(store, id)];
     if (!record) throw new Error(`Command not registered: ${id}`);
     return record;
   };
@@ -167,7 +168,7 @@ export const createCommandRegistry = (input: CreateCommandRegistryInput = {}): C
     },
 
     getCommand(id) {
-      return store.getState().commands[id];
+      return store.getState().commands[canonicalRegistryId(store, id)];
     },
 
     listCommands() {

@@ -45,6 +45,7 @@ export type {
 export { NotificationCenter } from "@/components/notification-center";
 export * from "@/components/overlays";
 export * from "@/components/primitives";
+export { LazyRichMessage } from "@/components/rich-text/lazy-rich-message";
 export { Sidenav } from "@/components/sidenav/sidenav";
 export { useSidenavStore } from "@/components/sidenav/sidenav.store";
 export type { SidenavProps } from "@/components/sidenav/sidenav.types";

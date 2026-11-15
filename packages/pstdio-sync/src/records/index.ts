@@ -91,6 +91,12 @@ export {
   validatePredicate,
 } from "./record-query";
 export {
+  aggregateOptions,
+  compareAggregateGroups,
+  relatedQueryIndexes,
+  requestedRecordIndex,
+} from "./record-query-options";
+export {
   adoptResourceDocument,
   editResourceDocument,
   mergeResourceDocument,

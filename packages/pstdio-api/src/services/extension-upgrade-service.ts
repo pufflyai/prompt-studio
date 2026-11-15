@@ -9,6 +9,7 @@ import {
   type ExtensionCatalog,
   type ExtensionCatalogEntry,
   getExtensionCatalog,
+  selectExtensionCatalogEntry,
 } from "../features/extensions/extension-catalog";
 import {
   type InstallExtensionSourceInput,
@@ -99,8 +100,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
   const catalog = deps.catalog ? Promise.resolve(deps.catalog) : getExtensionCatalog();
   const releaseCommits = new Map<string, Promise<string>>();
   const previewSources = new Map<string, ReturnType<typeof install>>();
-  const catalogEntry = async (installName: string) =>
-    (await catalog).extensions.find((entry) => entry.installName === installName || entry.extensionId === installName);
+  const catalogEntry = async (installName: string) => selectExtensionCatalogEntry(await catalog, installName);
   const releaseRefFor = (entry: ExtensionCatalogEntry) => {
     if (entry.origin.ref !== "{hostRelease}") return entry.origin.ref;
     if (deps.release) return deps.release.ref;

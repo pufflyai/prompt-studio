@@ -48,7 +48,7 @@ describe("packaged pstdio — error cases", () => {
       const repo = createGitRepo();
       dirs.push(repo);
 
-      const result = runSafe("tickets list", repo);
+      const result = runSafe("pstdio.planner list-tickets", repo);
       expect(result.exitCode).not.toBe(0);
     },
     TEST_TIMEOUT,

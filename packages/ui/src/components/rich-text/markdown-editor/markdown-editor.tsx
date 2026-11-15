@@ -39,6 +39,7 @@ import type { MarkdownSectionNavigation } from "./plugins/markdown-section-navig
 const INITIAL_IMPORT_TAG = "markdown-initial-import";
 
 export interface MarkdownEditorProps {
+  ariaLabel?: string;
   autoFocus?: boolean;
   debug?: boolean;
   defaultState: string;
@@ -56,6 +57,7 @@ export interface MarkdownEditorProps {
 
 export function MarkdownEditor(props: MarkdownEditorProps) {
   const {
+    ariaLabel,
     autoFocus = false,
     debug = false,
     defaultState = "",
@@ -140,6 +142,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
             <RichTextPlugin
               contentEditable={
                 <ContentEditable
+                  ariaLabel={ariaLabel}
                   fullWidth={fullWidth}
                   padding={padding}
                   layerStyle="markdownEditorInset"

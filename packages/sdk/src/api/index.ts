@@ -78,7 +78,13 @@ export type {
   WorkbenchExtensionViewBody,
   WorkbenchExtensionViewRecord,
 } from "./extensions";
-export type { CreateProjectInput, UpdateProjectInput } from "./projects";
+export type {
+  CreateProjectInput,
+  ProjectComposition,
+  ProjectCompositionInput,
+  ResourceOpener,
+  UpdateProjectInput,
+} from "./projects";
 export type {
   CreateNotificationInput,
   ListNotificationsQuery,

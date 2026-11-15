@@ -98,9 +98,9 @@ export const expectPackagedGitFreeExtensions = async () => {
       extensions: { installName: string; enabled: boolean; canUpgrade: boolean; sourcePath: string }[];
     };
     expect(body.extensions).toContainEqual(
-      expect.objectContaining({ installName: "pstdio-skills", enabled: true, canUpgrade: false }),
+      expect.objectContaining({ installName: "skills", enabled: true, canUpgrade: false }),
     );
-    const skills = body.extensions.find((extension) => extension.installName === "pstdio-skills")!;
+    const skills = body.extensions.find((extension) => extension.installName === "skills")!;
     const installedManifest = JSON.parse(readFileSync(join(skills.sourcePath, "package.json"), "utf8"));
     const sourceManifest = JSON.parse(
       readFileSync(join(import.meta.dirname, "../../../../extensions/pstdio-skills/package.json"), "utf8"),

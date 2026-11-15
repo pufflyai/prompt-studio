@@ -44,7 +44,7 @@ test("tabless pages render their content without tab headers", async ({ page, re
     await expect(homePage(page)).toBeVisible();
     await expect(page.locator('[data-workbench-panel-header="main"]')).toHaveCount(0);
     for (const path of ["tickets", "ticket-timeline"]) {
-      await page.goto(`/projects/${id}/extensions/pstdio.pstdio-planner/${path}`);
+      await page.goto(`/projects/${id}/extensions/pstdio.planner/${path}`);
       await expect(page.getByRole("navigation", { name: "breadcrumb" })).toBeVisible();
       await expect(panel(page, "main").getByRole("tab")).toHaveCount(0);
       await expect(panel(page, "main").getByRole("button", { name: "Add panel", exact: true })).toHaveCount(0);
@@ -121,7 +121,7 @@ panelTest(
     const { id } = await created.json();
     try {
       await prepare(page);
-      await page.goto(`/projects/${id}/extensions/pstdio.pstdio-artifacts/artifacts`);
+      await page.goto(`/projects/${id}/extensions/pstdio.artifacts/artifacts`);
       await expect(panel(page, "main").getByRole("tab", { name: "Artifacts", exact: true })).toBeVisible();
       await openTool(page, "side", "New letter viewer");
       const side = panel(page, "side");
@@ -133,7 +133,7 @@ panelTest(
       const moved = main.getByRole("tab", { name: /^Letter draft-/ });
       await expect(moved).toBeVisible();
       await moved.click();
-      const collectionUrl = `/projects/${id}/extensions/pstdio.pstdio-artifacts/artifacts`;
+      const collectionUrl = `/projects/${id}/extensions/pstdio.artifacts/artifacts`;
       await expect(page).toHaveURL(collectionUrl);
       const reader = main.frameLocator('iframe[title="Letter viewer"]:visible');
       await reader.getByRole("button", { name: "Switch to B", exact: true }).click();

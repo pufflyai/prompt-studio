@@ -5,7 +5,7 @@ import { uiOrigin as apiBase } from "../ui-server";
 
 // Session writes now cross the public provider command boundary in the browser.
 // Hold the same work before server execution; its internal service HTTP calls are not browser traffic.
-const actionPath = "/extensions/commands/pstdio.pstdio-session-browser.view.conversation.chat.onAction/execute";
+const actionPath = "/extensions/commands/pstdio.session-browser.view.conversation.chat.onAction/execute";
 const isSubmit = (request: Request) =>
   request.method() === "POST" &&
   request.url().endsWith(actionPath) &&
