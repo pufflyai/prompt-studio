@@ -34,7 +34,12 @@ export function useLiveValue<T, Client extends Pick<PlanClient, "events" | "noti
     };
 
     // Subscribe before the first read so a change during that read is not missed.
-    const unsubscribe = events.map((event) => client.events.subscribe(event, () => void refresh()));
+    const unsubscribe = events.map((event) =>
+      client.events.subscribe(event, () => {
+        clearTimeout(retry);
+        reader.invalidate();
+      }),
+    );
     void refresh();
     return () => {
       reader.dispose();
