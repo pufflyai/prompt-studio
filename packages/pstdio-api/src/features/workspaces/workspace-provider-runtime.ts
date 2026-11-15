@@ -14,6 +14,7 @@ import { apiLogger } from "../../lib/logger";
 import { createCommandEnvironment } from "../extensions/command-environment";
 import type { WorkspacesRouteDeps } from "./deps";
 import { createWorkspaceProviderDirectory } from "./workspace-provider-directory";
+import { runtimeProviderId } from "./workspace-provider-identity";
 import { createWorkspaceProviderProcess } from "./workspace-provider-process";
 
 export interface WorkspaceProviderHandle {
@@ -42,7 +43,9 @@ const providerLogger = {
 export const defaultWorkspaceProviderRuntime: WorkspaceProviderRuntime = {
   async find(deps, input) {
     const snapshot = await deps.extensionRuntimeCatalog.get(input.projectId);
-    const record = snapshot.runtime.workspaceTypes.find((candidate) => candidate.id === input.providerId);
+    const record = snapshot.runtime.workspaceTypes.find(
+      (candidate) => candidate.id === runtimeProviderId(input.providerId),
+    );
     if (!record) return undefined;
 
     const runner = createCommandRunner(snapshot.runtime, {

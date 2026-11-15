@@ -269,6 +269,20 @@
       "default": false,
       "icon": "Cloud",
       "listed": false
+    },
+    {
+      "installName": "git-workspaces",
+      "extensionId": "pstdio.git-workspaces",
+      "displayName": "Git Workspaces",
+      "description": "Create isolated Git branches and worktrees in a project repository.",
+      "icon": "git-branch",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/git-workspaces",
+        "ref": "{hostRelease}"
+      },
+      "default": true
     }
   ]
 }

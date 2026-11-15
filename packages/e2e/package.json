@@ -70,6 +70,7 @@
     "home": "workspace:*",
     "yjs": "^13.6.29",
     "session-browser": "workspace:*",
-    "workspaces": "workspace:*"
+    "workspaces": "workspace:*",
+    "git-workspaces": "workspace:*"
   }
 }
