@@ -82,6 +82,7 @@ export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
       workspace,
       sessionId: input.sessionId,
       events: conversation,
+      approvals: entry.approvalService,
       questions: entry.questionService,
       turns: entry.turns,
       signal: input.signal,

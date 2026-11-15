@@ -174,6 +174,8 @@ export type HarnessStartInput = {
   events: HarnessEventSink;
   /** Channel for asking the person something. Present on start and on resume. */
   questions?: HarnessQuestionChannel;
+  /** Channel for tool approvals. Providers that report the Approvals capability use it. Present on start and on resume. */
+  approvals?: HarnessApprovalChannel;
   /** Report turns that end while the run stays open. Present on start and on resume. */
   turns?: HarnessTurnChannel;
   /** Aborted when the host cancels the request that started or resumed this session. */
@@ -185,7 +187,6 @@ export type HarnessResumeInput = HarnessStartInput & {
   /** Index offset so resumed streams align message patches with existing history. */
   messageOffset?: number;
   questionResponse?: QuestionResponse;
-  approvals?: HarnessApprovalChannel;
 };
 
 export type HarnessReattachInput = {
