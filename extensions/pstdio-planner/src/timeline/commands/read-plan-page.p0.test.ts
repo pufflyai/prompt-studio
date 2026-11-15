@@ -5,6 +5,28 @@ import { putTicket } from "../../data/ticket-context.fixture";
 import { planPlacements, readPlanMetadata } from "./placement-store";
 import { readPlanCommand } from "./read-plan";
 
+test("Timeline retains linked-resource badges with its title and ID search projection", async () => {
+  const storage = createMemoryStorage();
+  await putTicket(storage, {
+    id: "ticket",
+    shorthand: "T-1",
+    title: "Ticket",
+    content: "# Ticket",
+    statusId: "ready",
+    archived: false,
+    createdAt: "2026-01-01",
+    updatedAt: "2026-01-01",
+  });
+  const ctx = makeCommandContext({ storage, params: {} });
+  const ticket = { type: "ticket", id: "ticket", extensionId: ctx.extensionId, projectId: ctx.projectId };
+  const artifact = { type: "artifact", id: "artifact", extensionId: "example.artifacts", label: "Prototype" };
+  await ctx.resources.addAnchors(ticket, [artifact]);
+  const result = await readPlanCommand.run(ctx, {
+    page: { limit: 100, offset: 0, fields: ["title", "id"], search: "" },
+  });
+  expect(result.ticketRows[0].attributes.linkedResourceItems).toMatchObject([{ label: "Prototype" }]);
+});
+
 test("Timeline filters before paging and counts unloaded work without listing resources", async () => {
   const storage = createMemoryStorage();
   let previous: string | undefined;

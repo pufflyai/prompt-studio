@@ -5,4 +5,4 @@
 "pstdio": minor
 ---
 
-Keep collection views bounded by default with indexed queries, global summaries and resource-safe paging.
+Keep collection views bounded by default with indexed queries, global summaries and resource-safe paging. Hold column-action refreshes until their writes finish and retain loaded views during reconciliation.

@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import { chromium, type Page } from "@playwright/test";
 import { PROVISIONED_CHROMIUM } from "../packaged/packaged-chromium";
 import { signInBrowser } from "../packaged/packaged-serve-helpers";
+import { armPlannerAction, readPlannerAction } from "./planner-action-latency";
 import { verifyPlannerComparisonSource } from "./planner-comparison-source";
 import { installPlannerClock, measurePlannerDrop, recordPlannerRequests } from "./planner-moves-browser";
 
@@ -174,6 +175,7 @@ try {
     (response) =>
       response.url().endsWith("/execute") && response.request().postDataJSON()?.params?.attributeId === "priority",
   );
+  await armPlannerAction(page, "property", ticket.title);
   const editing = performance.now();
   await high.click();
   await card().getByRole("button", { name: "High", exact: true }).waitFor();
@@ -181,6 +183,7 @@ try {
   assert((await saved).ok());
   await network.settle();
   const propertySettledMs = Math.round(performance.now() - editing);
+  const propertyAction = await readPlannerAction(page);
   const destination = ticket.statusId === "ready" ? "backlog" : "ready";
   phase = "move";
   const move = await measurePlannerDrop({
@@ -211,6 +214,7 @@ try {
   const archiveResponse = page.waitForResponse((response) => response.url().includes(".kanban.onColumnAction/execute"));
   await page.getByRole("button", { name: "Column actions for Done", exact: true }).click();
   archiving = true;
+  await armPlannerAction(page, "archive");
   const archiveStarted = performance.now();
   await page.getByRole("menuitem", { name: "Archive all", exact: true }).click();
   const archived = await archiveResponse;
@@ -221,6 +225,7 @@ try {
   await page.waitForFunction(() => document.querySelectorAll('[data-testid="renderer-card"]').length === 0);
   await network.settle();
   const archiveSettledMs = Math.round(performance.now() - archiveStarted);
+  const archiveAction = await readPlannerAction(page);
   await page.screenshot({ path: resolve(output, "archive.png") });
   if (connection.bounded)
     assert(
@@ -238,10 +243,12 @@ try {
     menuMs,
     propertyPaintMs,
     propertySettledMs,
+    propertyAction,
     move,
     foobarMs,
     archiveSavedMs,
     archiveSettledMs,
+    archiveAction,
     pages,
     commands: network.commands,
     browserErrors: errors,

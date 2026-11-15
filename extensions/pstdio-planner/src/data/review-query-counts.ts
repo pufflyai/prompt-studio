@@ -2,6 +2,7 @@ import type { ExtensionStorageApi, StoragePredicate } from "@pstdio/sdk/extensio
 import { answeredReviewRequest, pendingReviewRequest } from "./review-query-indexes";
 
 export const readReviewCounts = async (storage: ExtensionStorageApi, ids: string[]) => {
+  if (!ids.length) return new Map<string, { total: number; pending: number; answered: number }>();
   if (ids.length > 100) {
     const result = new Map<string, { total: number; pending: number; answered: number }>();
     for (let start = 0; start < ids.length; start += 100)

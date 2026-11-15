@@ -8,7 +8,11 @@ import {
   reviewRequestCountSummary,
   reviewSummaryBadgeItems,
 } from "./review-request-summary";
-import { loadTicketLinkedResources } from "./ticket-linked-resources";
+import {
+  loadTicketLinkedResources,
+  TICKET_LINKED_RESOURCE_ITEMS_ATTRIBUTE,
+  TICKET_LINKED_RESOURCES_ATTRIBUTE,
+} from "./ticket-linked-resources";
 import { ticketPageTarget } from "./ticket-page-target";
 import { ticketQuerySummary } from "./ticket-query-summary";
 import { plannerOwnerFor, readTicketParentLookup } from "./ticket-resource-hierarchy";
@@ -18,6 +22,7 @@ export const readTicketViewPage = async (
   ctx: TicketQueryContext,
   input: Partial<KanbanRendererQueryParams>,
   selection: TicketViewSelection = {},
+  displayFields?: readonly string[],
 ) => {
   const prepared = await prepareTicketViewQuery(ctx, input, selection);
   const { scope, tags, statuses, attributes } = prepared;
@@ -27,15 +32,18 @@ export const readTicketViewPage = async (
     return ticket ? [ticket] : [];
   });
   const extensionId = selection.owner ?? plannerOwnerFor(ctx);
+  const requested = (fields: string[]) => !displayFields || fields.some((field) => displayFields.includes(field));
   const [links, parents, reviews] = await Promise.all([
-    loadTicketLinkedResources(
-      ctx.resources,
-      tickets.map(({ id }) => ({ type: "ticket", id, extensionId, projectId: ctx.projectId })),
-    ),
+    requested([TICKET_LINKED_RESOURCES_ATTRIBUTE, TICKET_LINKED_RESOURCE_ITEMS_ATTRIBUTE])
+      ? loadTicketLinkedResources(
+          ctx.resources,
+          tickets.map(({ id }) => ({ type: "ticket", id, extensionId, projectId: ctx.projectId })),
+        )
+      : new Map(),
     readTicketParentLookup(ctx, new Map(tickets.map((ticket) => [ticket.id, ticket]))),
     readReviewCounts(
       ctx.storage,
-      tickets.map(({ id }) => id),
+      requested(["reviewRequests", REVIEW_REQUEST_ITEMS_ATTRIBUTE]) ? tickets.map(({ id }) => id) : [],
     ),
   ]);
   const toRow = createTicketRowMapper(ctx.projectId, tags, links, parents, extensionId);
@@ -44,7 +52,7 @@ export const readTicketViewPage = async (
     const mapped = toRow(ticket),
       fields = projections.get(ticket.id)!;
     const row = { ...mapped, resource: { ...mapped.resource, extensionId } };
-    const review = reviews.get(ticket.id)!;
+    const review = reviews.get(ticket.id) ?? { total: 0, pending: 0, answered: 0 };
     return {
       ...row,
       target: ticketPageTarget(row.resource),
@@ -69,15 +77,17 @@ export const readTicketViewPage = async (
     page: selected.page,
     boardColumnConfigs: Object.fromEntries(statuses.map((status) => [status.id, statusToColumnConfig(status)])),
   };
-  await ctx.storage.records.query({
-    index: "ticket-view",
-    fields: [],
-    limit: 1,
-    orderBy: [],
-    revision: prepared.revision,
-  });
+  // An empty selection has no subsequent relationship reads to reconcile with its page revision.
+  if (tickets.length)
+    await ctx.storage.records.query({
+      index: "ticket-view",
+      fields: [],
+      limit: 1,
+      orderBy: [],
+      revision: prepared.revision,
+    });
   return { ...prepared, result, tickets, projections, reviews, parents };
 };
 
 export const queryTicketPage = async (ctx: TicketQueryContext, input: Partial<KanbanRendererQueryParams>) =>
-  (await readTicketViewPage(ctx, input)).result;
+  (await readTicketViewPage(ctx, input, {}, input.page?.fields)).result;

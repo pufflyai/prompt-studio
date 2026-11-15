@@ -285,7 +285,13 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
         onCreateRow={contribution.onCreateRow}
         onColumnAction={
           contribution.onColumnAction
-            ? (...args) => runUserAction(workbench, "Column action", () => contribution.onColumnAction!(...args))
+            ? (...args) =>
+                runUserAction(workbench, "Column action", () =>
+                  mutate(
+                    (snapshot) => snapshot,
+                    () => contribution.onColumnAction!(...args),
+                  ),
+                )
             : undefined
         }
         getRowContextMenuActions={getRowContextMenuActions}

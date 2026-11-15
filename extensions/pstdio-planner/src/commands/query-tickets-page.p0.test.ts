@@ -66,3 +66,45 @@ test("Board selects late matching tickets and global counts without loading tick
   expect(selectedFields.flat()).not.toContain("needsAttention");
   expect(selectedFields.flat()).not.toContain("reviewRequests");
 });
+
+test("Board does not resolve hidden relationship badges or query reviews for an empty page", async () => {
+  const storage = createMemoryStorage();
+  const ctx = makeCommandContext({ storage, params: {} });
+  await putTicket(storage, {
+    id: "visible",
+    shorthand: "T-1",
+    title: "Visible",
+    content: "# Visible",
+    statusId: "ready",
+    archived: false,
+    position: "a",
+    createdAt: "2026-01-01",
+    updatedAt: "2026-01-01",
+  });
+  ctx.resources.queryRelated = async () => {
+    throw new Error("Hidden links must not be resolved");
+  };
+  const aggregate = storage.records.aggregate;
+  storage.records.aggregate = async (query) => {
+    if (query.index === "review-request-state") throw new Error("Unrequested reviews must not be counted");
+    return aggregate(query);
+  };
+  const input = {
+    page: { limit: 100, offset: 0, fields: ["id", "priority"], search: "" },
+    settings: {
+      viewMode: "board",
+      columnGrouping: "status",
+      rowGrouping: "none",
+      displayProperties: ["id", "priority"],
+    },
+  } as const;
+  const visible = await queryTickets(ctx, input as never);
+  expect(visible.rows.map(({ id }) => id)).toEqual(["visible"]);
+  const empty = await queryTickets(ctx, {
+    ...input,
+    page: { ...input.page, fields: ["reviewRequests"] },
+    filter: { conjunction: "and", rules: [{ attributeId: "status", condition: "is-any-of", value: ["done"] }] },
+  } as never);
+  expect(empty.rows).toEqual([]);
+  expect(empty.page.total).toBe(0);
+});

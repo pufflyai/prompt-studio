@@ -6,6 +6,7 @@ import {
   params,
   type StorageQueryRecord,
 } from "@pstdio/sdk/extensions";
+import { linkedWorkspacePage } from "../data/linked-workspaces";
 import { findStoredTicket } from "../data/resolve";
 import { ticketWithCurrentTitle, withTicketIdentity } from "../data/ticket-identity";
 import { changeTicketRecord } from "../data/ticket-records";
@@ -122,11 +123,18 @@ export const archiveTicketColumnAction = async (
     // Durable jobs retain bounded IDs, not detached closures holding every archived body.
     if (archived.length) {
       try {
-        await ctx.automation.enqueue({
-          command: cleanupTicketWorkspacesCommand.ref,
-          input: { params: { ticketIds: archived } },
-          key: `archive-cleanup:${ctx.storage.ids.create()}`,
-        });
+        const linked = await linkedWorkspacePage(
+          ctx,
+          archived.map((id) => ({ id })),
+          undefined,
+          1,
+        ).catch(() => undefined);
+        if (!linked || linked.items.length)
+          await ctx.automation.enqueue({
+            command: cleanupTicketWorkspacesCommand.ref,
+            input: { params: { ticketIds: archived } },
+            key: `archive-cleanup:${ctx.storage.ids.create()}`,
+          });
       } catch (error) {
         await ctx.notify
           .action({

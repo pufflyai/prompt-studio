@@ -1,5 +1,6 @@
 import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
 import { readTicketStatuses } from "./status-operations";
+import type { StoredStatus } from "./types";
 
 export interface WorkflowStatusSelections {
   completedStatusIds: string[];
@@ -36,9 +37,9 @@ export const parseWorkflowStatuses = (value: unknown) => {
 
 type WorkflowContext = Pick<ExtensionContextBase, "settings" | "storage">;
 
-export const readWorkflowStatuses = async (ctx: WorkflowContext) => {
+export const readWorkflowStatuses = async (ctx: WorkflowContext, definitions?: StoredStatus[]) => {
   const selections = parseWorkflowStatuses((await ctx.settings.all())["workflow.statuses"]);
-  const { statuses } = await readTicketStatuses(ctx.storage);
+  const statuses = definitions ?? (await readTicketStatuses(ctx.storage)).statuses;
   const known = new Set(statuses.map(({ id }) => id));
   const ids = [...selections.completedStatusIds, ...selections.blockedStatusIds, ...selections.activeStatusIds];
   return { selections, statuses, missingStatusIds: ids.filter((id) => !known.has(id)) };
