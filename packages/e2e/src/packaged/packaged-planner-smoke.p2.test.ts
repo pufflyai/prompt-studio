@@ -11,11 +11,11 @@ const plannerTestTimeout = process.platform === "darwin" && process.arch === "ar
 
 test(
   "packaged Planner keeps independent views, timeline status, milestones, and review requests",
-  () => withPackagedPlanner(expectPackagedPlannerTimeline, ["workbench-fixture"]),
+  () => withPackagedPlanner(expectPackagedPlannerTimeline, ["workbench-fixture", "git-workspaces"]),
   plannerTestTimeout,
 );
 test(
   "packaged Planner keeps supervisor model choices, scoped Auto Build dispatch, and dependency blockers",
-  () => withPackagedPlanner(expectPackagedPlannerAutoBuild),
+  () => withPackagedPlanner(expectPackagedPlannerAutoBuild, ["git-workspaces"]),
   process.platform === "win32" ? 45_000 : plannerTestTimeout,
 );

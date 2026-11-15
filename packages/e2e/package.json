@@ -73,6 +73,7 @@
     "workspaces": "workspace:*",
     "react-test-renderer": "19.2.4",
     "@types/react-test-renderer": "^19.1.0",
-    "extension-lab": "workspace:*"
+    "extension-lab": "workspace:*",
+    "git-workspaces": "workspace:*"
   }
 }
