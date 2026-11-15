@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { createMemoryRepoFiles, createMemoryStorage } from "@pstdio/sdk/testing";
+import { seedWorkspaceLinks } from "./archive-context.fixture";
 import { makeCommandContext } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { getTicketCommand } from "./get-ticket";
@@ -88,7 +89,8 @@ test("read commands show every ticket matched by a shared alias", async () => {
       id: `workspace-${index}`,
       anchors_json: [{ type: "ticket", id: ticket.id }],
     }));
-  expect(await ticketWorkspacesCommand.run(ctx, { id: "T-1" })).toHaveLength(2);
+  await seedWorkspaceLinks(ctx, await ctx.workspaces.list());
+  expect((await ticketWorkspacesCommand.run(ctx, { id: "T-1" })).items).toHaveLength(2);
   const search = await queryTicketResources(ctx, {
     query: "T-1",
     providerId: "tickets",

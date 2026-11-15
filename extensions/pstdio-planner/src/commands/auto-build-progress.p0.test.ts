@@ -61,8 +61,11 @@ async function monitorFixture() {
     if (id === worker.id) return worker;
     return null;
   };
-  ctx.sessions.query = async () => {
-    throw new Error("Scheduled wake must not query project session history");
+  const query = ctx.sessions.query;
+  ctx.sessions.query = async (input) => {
+    if (!input?.status || input.limit !== 100)
+      throw new Error("Scheduled wake must use a bounded live-session capacity query");
+    return query(input);
   };
   ctx.workspaces.list = async () => {
     throw new Error("Scheduled wake must not list project workspaces");

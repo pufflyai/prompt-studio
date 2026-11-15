@@ -8,6 +8,7 @@ export interface TicketSession {
   last_request_started?: string | null;
   last_request_ended?: string | null;
   updated_at?: string | null;
+  created_at?: string | null;
   anchors_json?: ResourceAnchor[];
 }
 
@@ -34,7 +35,14 @@ const sessionStatusColor = (status: string) => {
 };
 
 const sessionActivityAt = (session: TicketSession) =>
-  session.last_request_ended ?? session.last_request_started ?? session.updated_at ?? "";
+  [
+    session.last_request_ended ?? "",
+    session.last_request_started ?? "",
+    session.updated_at ?? "",
+    session.created_at ?? "",
+  ]
+    .sort()
+    .at(-1)!;
 
 const sessionNode = (session: TicketSession): TreeNode => {
   const resource = { type: "session", extensionId: "pstdio", id: session.id, label: session.title };

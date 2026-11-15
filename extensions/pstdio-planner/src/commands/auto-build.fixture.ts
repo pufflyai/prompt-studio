@@ -15,7 +15,7 @@ export async function fixture(limit = 2) {
   };
   let sequence = 0;
   const workspaceBases = new Map<string, string>();
-  const ctx = makeCommandContext({
+  const ctx: ReturnType<typeof makeCommandContext> = makeCommandContext({
     storage,
     params: {},
     overrides: {
@@ -64,7 +64,12 @@ export async function fixture(limit = 2) {
       } as never,
       sessions: {
         query: sessionQuery(
-          async () => [],
+          async () => {
+            const attempts = await storage.collection<{ implementationSessionId: string }>("planner-attempts").list();
+            const ids = [...new Set(attempts.map(({ implementationSessionId }) => implementationSessionId))];
+            const sessions = await Promise.all(ids.map((id) => ctx.sessions.get(id)));
+            return sessions.flatMap((session, i) => (session ? [{ ...session, id: ids[i]! }] : []));
+          },
           async () => [],
         ),
         create: async () => ({ ...createSessionResource(), id: `session-${sequence}` }),

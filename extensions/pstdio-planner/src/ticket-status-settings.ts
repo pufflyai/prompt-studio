@@ -10,9 +10,10 @@ export interface TicketStatusDraft {
   actions?: string[];
 }
 
-import { putStatus, putTicket, statusesCollection, ticketsCollection } from "./data/collections";
+import { putStatus, statusesCollection } from "./data/collections";
 import { migratePlannerStorage } from "./data/migrate-storage";
 import { seedDefaultStatuses } from "./data/seed";
+import { reassignTicketStatuses } from "./data/ticket-bulk-edit";
 import type { StoredStatus } from "./data/types";
 import { plannerSchemaChanged, plannerTicketsChanged } from "./events";
 import { sortedBySortOrder } from "./utils/sort";
@@ -78,10 +79,10 @@ export const saveStatusSettings = defineCommand({
     await Promise.all([
       ...next.map((status) => putStatus(ctx.storage, status)),
       ...removed.map((status) => statusesCollection(ctx.storage).delete(status.id)),
-      ...(await ticketsCollection(ctx).list()).map((ticket) =>
-        removed.some((status) => status.id === ticket.statusId)
-          ? putTicket(ctx, { ...ticket, statusId: fallbackId })
-          : undefined,
+      reassignTicketStatuses(
+        ctx.storage,
+        removed.map(({ id }) => id),
+        fallbackId,
       ),
     ]);
     await ctx.events.emit(plannerTicketsChanged, {});
