@@ -3,7 +3,7 @@ import { dirname, join, relative } from "node:path";
 import { withFileMutationLock } from "pstdio-paths";
 import { hashExtensionSource } from "../authoring/hash-extension-source";
 import { bundleEntry } from "./bundle-entry";
-import { type ExtensionApiProvider, readPackageManifest } from "./package-manifest";
+import { type ExtensionApiProvider, readPackageManifest, unavailableManifestLoadKey } from "./package-manifest";
 import { retainPreparedRevision } from "./prepared-cache";
 import {
   acceptedRevisionPath,
@@ -55,6 +55,8 @@ export const inspectRevisionInputsAsync = async (sourcePath: string, apiProvider
 // Discovery must reach the loader's diagnostics for an invalid manifest. Handle local
 // inspection errors here; transport failures still reject callers in the worker client.
 export const inspectRevisionLoadKeyAsync = async (sourcePath: string) => {
+  const unavailable = unavailableManifestLoadKey(sourcePath);
+  if (unavailable) return unavailable;
   try {
     return (await inspectRevisionInputsAsync(sourcePath)).loadKey;
   } catch (error) {

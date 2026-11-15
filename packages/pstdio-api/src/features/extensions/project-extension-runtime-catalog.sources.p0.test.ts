@@ -1,13 +1,51 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
-import { acceptPreparedRevision, loadExtensionSources, prepareExtensionRevision } from "pstdio-extensions";
+import {
+  acceptPreparedRevision,
+  loadExtensionSources,
+  prepareExtensionRevision,
+  stopExtensionPreparation,
+} from "pstdio-extensions";
 import { createProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
+import { createExtensionSourceCache } from "./project-extension-runtime-sources";
 
 const tempDirs: string[] = [];
 let previousPstdioHome: string | undefined;
+
+test("refreshes an incompatible tool's displayed identity without importing its code", async () => {
+  const path = createTempDir();
+  writeRuntimeExtension(path, "hello");
+  const packagePath = join(path, "package.json");
+  const manifest = { ...JSON.parse(readFileSync(packagePath, "utf8")), engines: { pstdio: "^999.0.0" } };
+  writeFileSync(packagePath, JSON.stringify(manifest));
+  writeFileSync(join(path, "extension.ts"), 'throw new Error("Unsupported code executed");');
+  const cache = createExtensionSourceCache({});
+  const row = { source_path: path, source_kind: "local_path" as const };
+  try {
+    const initial = await cache.load(row);
+    expect(initial?.source.manifest.version).toBe("1.0.0");
+    writeFileSync(
+      packagePath,
+      JSON.stringify({ ...manifest, version: "2.0.0", displayName: "Renamed tool", description: "Updated identity" }),
+    );
+    cache.recheck(path);
+    const refreshed = await cache.load(row);
+    expect(refreshed?.source.manifest).toMatchObject({
+      version: "2.0.0",
+      displayName: "Renamed tool",
+      description: "Updated identity",
+    });
+    expect(refreshed?.source.definition).toEqual({});
+    expect(refreshed?.diagnostics).toContainEqual(
+      expect.objectContaining({ code: "extension_manifest_unsupported_api_version" }),
+    );
+  } finally {
+    await stopExtensionPreparation();
+  }
+});
 
 const createTempDir = () => {
   const dir = mkdtempSync(join(tmpdir(), "pstdio-runtime-catalog-sources-"));

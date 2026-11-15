@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { join } from "node:path";
 import type { ExtensionDefinition, ExtensionSourceKind } from "@pstdio/sdk/extensions";
 import { remapPackageAssets } from "../artifacts/remap-package-assets";
@@ -10,6 +9,7 @@ import {
   getExtensionApiVersionError,
   type PackageManifest,
   readPackageManifestMetadata,
+  unavailableManifestLoadKey,
 } from "./package-manifest";
 import { PreparationUnavailableError } from "./preparation-error";
 import { inspectRevisionInputs } from "./prepare-revision";
@@ -72,10 +72,8 @@ const importWithCacheKey = (filePath: string) => import(`${filePath}?pstdio_cach
 
 // Synchronous authoring API. The running host uses inspectExtensionLoadKey in its worker.
 export const extensionLoadKey = (packagePath: string) => {
-  const { manifest, entryPath, diagnostics } = readPackageManifestMetadata(packagePath);
-  if (!manifest || !entryPath || getExtensionApiVersionError(manifest.name, manifest.enginesPstdio)) {
-    return `manifest-${createHash("sha256").update(JSON.stringify({ manifest, diagnostics })).digest("hex")}`;
-  }
+  const unavailable = unavailableManifestLoadKey(packagePath);
+  if (unavailable) return unavailable;
   try {
     return inspectRevisionInputs(packagePath).loadKey;
   } catch (error) {
