@@ -1,7 +1,7 @@
 import type { CommandContext } from "@pstdio/sdk/extensions";
 import type { readTicketViewPage } from "../../data/query-ticket-page";
 import { normalizeTicketDependencies } from "../../data/ticket-dependencies";
-import { readTicketParentLookup } from "../../data/ticket-resource-hierarchy";
+import type { readTicketParentLookup } from "../../data/ticket-resource-hierarchy";
 import { ticketTagIds } from "../../data/ticket-tags";
 import type { PlanRow } from "../contracts";
 import { daysBetween } from "../model/days";
@@ -16,7 +16,7 @@ export const planPageRows = async (
 ) => {
   const track = await readTrack(ctx, view.tags);
   const trackIds = new Set(track?.options.map(({ id }) => id));
-  const parents = await readTicketParentLookup(ctx, new Map(view.tickets.map((ticket) => [ticket.id, ticket])));
+  const parents = view.parents;
   const statuses = new Map(view.statuses.map((status) => [status.id, status]));
   const today = new Intl.DateTimeFormat("en-CA").format(new Date());
   const steps = await planStepCounts(ctx, view, executionOffset);

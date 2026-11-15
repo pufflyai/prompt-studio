@@ -77,7 +77,7 @@ export const readTicketViewPage = async (
     orderBy: [],
     revision: prepared.revision,
   });
-  return { ...prepared, result, tickets, projections, reviews };
+  return { ...prepared, result, tickets, projections, reviews, parents };
 };
 
 export const queryTicketPage = async (ctx: TicketQueryContext, input: Partial<KanbanRendererQueryParams>) =>

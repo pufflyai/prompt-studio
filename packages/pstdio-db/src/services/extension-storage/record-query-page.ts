@@ -3,6 +3,7 @@ import { queryField } from "pstdio-sync/records";
 import type { Json, StoragePredicate, StorageRecordIndex } from "pstdio-sync-contracts";
 import { projectionKey } from "./record-projection-codec";
 import { recordCandidateSourceSql, recordRelatedOrderCandidatesSql } from "./record-query-candidates";
+import { createQueryFieldCache, queryFieldCacheSourceSql } from "./record-query-field-cache";
 import { orderingPrefix, type QuerySqlOwner, recordFieldSql, sqlLiteral } from "./record-query-sql";
 import { hasTextOrder, orderedFieldPartsSql, orderedValuePartsSql } from "./record-text-order";
 
@@ -36,6 +37,12 @@ export const recordPageSql = (
   owner?: QuerySqlOwner,
   predicate?: StoragePredicate,
 ) => {
+  const candidates =
+    recordCandidateSourceSql(index, predicate, where, limit, offset, resolve, owner) ??
+    recordRelatedOrderCandidatesSql(index, where, limit, offset, resolve, owner);
+  const original = index;
+  const cache = candidates ? createQueryFieldCache(index) : undefined;
+  if (cache) index = cache.index;
   const selected = fields.flatMap((name) => [
     sqlLiteral(projectionKey(name)),
     sql`coalesce(${recordFieldSql(index, name, undefined, resolve, owner)}, 'null'::jsonb)`,
@@ -43,16 +50,32 @@ export const recordPageSql = (
   const sort = (index.orderBy ?? []).map(
     (sort) => sql`coalesce(${recordFieldSql(index, sort.field, undefined, resolve, owner)}, 'null'::jsonb)`,
   );
-  const candidates =
-    recordCandidateSourceSql(index, predicate, where, limit, offset, resolve, owner) ??
-    recordRelatedOrderCandidatesSql(index, where, limit, offset, resolve, owner);
+  const order = pageOrderSql(index, resolve, owner);
+  // Bound IDs before caching output leaves: deep offsets must not project every preceding row.
+  const pageSource =
+    candidates && owner
+      ? sql`(SELECT record_id AS page_record_id FROM ${candidates}
+        ORDER BY ${pageOrderSql(original, resolve, owner)} LIMIT ${limit} OFFSET ${offset}) AS page
+        INNER JOIN storage_current_records ON storage_current_records.record_id = page.page_record_id
+        AND storage_current_records.workbench_id = ${owner.workbenchId}
+        AND storage_current_records.extension_id = ${owner.extensionId}`
+      : undefined;
+  const source =
+    cache?.fields.size && pageSource
+      ? queryFieldCacheSourceSql(
+          cache,
+          sql`true`,
+          (name) => recordFieldSql(original, name, undefined, resolve, owner),
+          pageSource,
+        )
+      : undefined;
   return sql`
     SELECT record_id, revision,
       jsonb_build_object(${sql.join(selected, sql`, `)}) AS fields,
       jsonb_build_array(${sql.join(sort, sql`, `)}) AS sort_values
-    FROM ${candidates ?? sql`storage_current_records`}
+    FROM ${source ?? candidates ?? sql`storage_current_records`}
     ${candidates ? sql`` : sql`WHERE ${where}`}
-    ORDER BY ${pageOrderSql(index, resolve, owner)} LIMIT ${limit} OFFSET ${offset}`;
+    ORDER BY ${order} LIMIT ${limit} OFFSET ${source ? 0 : offset}`;
 };
 
 export const pageAfterSql = (

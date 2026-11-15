@@ -84,7 +84,7 @@ export const readPlanCommand = defineCommand({
       });
     const view = await readTicketViewPage(ctx, input, {
       where: input.ticketId ? { all: [activeTicket, { field: "id", op: "eq", value: input.ticketId }] } : activeTicket,
-      visible: { all: visible },
+      visible: visible.length ? { all: visible } : undefined,
       groups: [],
       owner: ctx.extensionId,
       attentionPage: "timeline",

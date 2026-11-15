@@ -147,3 +147,18 @@ test("the default active filter retains global steps on later pages and narrower
     steps(await read({ conjunction: "and", rules: [active], groups: [{ conjunction: "or", rules: [last] }] }, 0)),
   ).toEqual([{ id: "last", step: 3 }]);
 });
+
+test("Timeline counts an unchanged visible selection once", async () => {
+  const storage = createMemoryStorage();
+  const ctx = makeCommandContext({ storage, params: {} });
+  await readPlanCommand.run(ctx, {});
+  const aggregate = storage.records.aggregate.bind(storage.records);
+  let counts = 0;
+  storage.records.aggregate = (query) => {
+    if (query.index === "ticket-view" && !query.groupBy && !query.metrics) counts++;
+    return aggregate(query);
+  };
+  const result = await readPlanCommand.run(ctx, {});
+  expect(result.page).toMatchObject({ total: 0, filteredTotal: 0 });
+  expect(counts).toBe(1);
+});
