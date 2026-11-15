@@ -1,6 +1,7 @@
 import type { CommandRef, ContributionKind, ContributionRef, EventRef, WhenExpression } from "@pstdio/sdk/extensions";
 import { contributionRefId } from "@pstdio/sdk/extensions";
 import { resolveEventReferenceId } from "pstdio-api-contracts";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { NormalizedExtension } from "../../types/runtime";
 
 export const contributionId = (ext: NormalizedExtension, localId: string) => `${ext.name}.${localId}`;
@@ -8,11 +9,13 @@ export const contributionId = (ext: NormalizedExtension, localId: string) => `${
 export const normalizeContributionRef = <Kind extends ContributionKind>(
   ext: NormalizedExtension,
   ref: ContributionRef<Kind>,
-) => ({ ...ref, extensionId: ref.extensionId ?? ext.id });
+) => ({ ...ref, extensionId: canonicalExtensionId(ref.extensionId ?? ext.id) });
 
-export const resolveCommandRef = (ext: NormalizedExtension, ref: CommandRef) => contributionRefId(ref, ext.id);
+export const resolveCommandRef = (ext: NormalizedExtension, ref: CommandRef) =>
+  contributionRefId(normalizeContributionRef(ext, ref), ext.id);
 
-export const resolveEventRef = (ext: NormalizedExtension, ref: EventRef) => resolveEventReferenceId(ref, ext.id);
+export const resolveEventRef = (ext: NormalizedExtension, ref: EventRef) =>
+  resolveEventReferenceId({ ...ref, extensionId: canonicalExtensionId(ref.extensionId ?? ext.id) }, ext.id);
 
 export const resourceKindReferences = (
   kinds: readonly { id: string; localId?: string; name: string; extensionId?: string }[],
@@ -61,10 +64,14 @@ const oneOrMany = (values: readonly string[]) => {
 
 export const serializeWhenExpression = (when: WhenExpression | undefined, extensionId: string) => {
   if (!when) return undefined;
-  const mode = oneOrMany(refs(when.mode).map((ref) => contributionRefId(ref, extensionId)));
-  const viewId = oneOrMany(refs(when.view).map((ref) => contributionRefId(ref, extensionId)));
+  const qualify = <Kind extends ContributionKind>(ref: ContributionRef<Kind>) => ({
+    ...ref,
+    extensionId: canonicalExtensionId(ref.extensionId ?? extensionId),
+  });
+  const mode = oneOrMany(refs(when.mode).map((ref) => contributionRefId(qualify(ref), extensionId)));
+  const viewId = oneOrMany(refs(when.view).map((ref) => contributionRefId(qualify(ref), extensionId)));
   const resourceType = when.resourceType?.map((ref) => {
-    const owner = ref.extensionId ?? extensionId;
+    const owner = canonicalExtensionId(ref.extensionId ?? extensionId);
     return owner === "pstdio" ? ref.id : `${owner}.${ref.id}`;
   });
   return {

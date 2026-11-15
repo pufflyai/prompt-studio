@@ -6,36 +6,20 @@ import {
   type StoragePredicate,
   type StorageRecordIndex,
   type StorageRecordQuery,
+  type StorageRelatedSelection,
   storageLimits,
 } from "pstdio-sync-contracts";
+import { queryField, typedFieldValue, validateQueryField } from "./record-query-field";
 
-export const fieldValue = (value: Json, path: string[]) => {
-  let current: Json | undefined = value;
-  for (const key of path) {
-    if (current === null || typeof current !== "object" || Array.isArray(current)) return undefined;
-    current = current[key];
-  }
-  return current;
-};
-
-export const typedFieldValue = (value: Json, field: StorageIndexField) => {
-  const current = fieldValue(value, field.path);
-  if (current == null) return current;
-  if (field.type === "array")
-    return Array.isArray(current) && current.every((item) => typeof item === "string") ? current : undefined;
-  return typeof current === field.type ? current : undefined;
-};
+export { fieldValue, queryField, typedFieldValue } from "./record-query-field";
 
 const validateIndex = (index: StorageRecordIndex) => {
   if (!Object.keys(index.fields).length) throw new Error("An index needs fields");
-  for (const [name, field] of Object.entries(index.fields)) {
-    if (!name || !["string", "number", "boolean", "array"].includes(field.type)) throw new Error("Invalid index field");
-    if (!field.path.length || field.path.some((part) => typeof part !== "string" || !part))
-      throw new Error("Invalid field path");
-  }
+  for (const [name, field] of Object.entries(index.fields)) validateQueryField(name, field);
   for (const name of [...(index.equality ?? []), ...(index.orderBy ?? []).map((sort) => sort.field)]) {
     if (!Object.hasOwn(index.fields, name)) throw new Error(`Unknown index field: ${name}`);
-    if (index.fields[name].type === "array") throw new Error("Array fields cannot order a page");
+    if (["array", "object"].includes(index.fields[name].type))
+      throw new Error("Array and object fields cannot order a page");
   }
   for (const sort of index.orderBy ?? [])
     if (sort.direction !== "asc" && sort.direction !== "desc") throw new Error("Invalid sort direction");
@@ -50,22 +34,29 @@ export const validateIndexes = (indexes: StorageRecordIndex[]) => {
   }
 };
 
-export const queryField = (index: StorageRecordIndex, name: string) => {
-  if (!Object.hasOwn(index.fields, name)) throw new Error(`Unknown index field: ${name}`);
-  return index.fields[name];
-};
-
 const validateOperator = (field: StorageIndexField, predicate: Extract<StoragePredicate, { value: Json }>) => {
   if (predicate.op === "equalsIgnoreCase" && field.type !== "string")
     throw new Error("Case-insensitive equality requires a string field");
   if (predicate.op === "contains" && field.type !== "string" && field.type !== "array")
     throw new Error("Contains requires a string or array field");
-  if (field.type === "array" && ["gt", "gte", "lt", "lte"].includes(predicate.op))
-    throw new Error("Array fields do not support ordering predicates");
+  if (predicate.op === "hasKey" && field.type !== "object") throw new Error("Key existence requires an object field");
+  if (["array", "object"].includes(field.type) && ["gt", "gte", "lt", "lte"].includes(predicate.op))
+    throw new Error("Array and object fields do not support ordering predicates");
   if (
-    !["eq", "ne", "gt", "gte", "lt", "lte", "contains", "equalsIgnoreCase", "textContains", "in", "notIn"].includes(
-      predicate.op,
-    )
+    ![
+      "eq",
+      "ne",
+      "gt",
+      "gte",
+      "lt",
+      "lte",
+      "contains",
+      "equalsIgnoreCase",
+      "textContains",
+      "in",
+      "notIn",
+      "hasKey",
+    ].includes(predicate.op)
   )
     throw new Error("Unsupported query predicate");
 };
@@ -76,7 +67,8 @@ const validatePredicateValues = (field: StorageIndexField, predicate: Extract<St
   for (const value of values) {
     if (value === null && predicate.op !== "contains" && predicate.op !== "equalsIgnoreCase") continue;
     const type = Array.isArray(value) ? "array" : typeof value;
-    const expected = predicate.op === "contains" && field.type === "array" ? "string" : field.type;
+    const expected =
+      predicate.op === "hasKey" || (predicate.op === "contains" && field.type === "array") ? "string" : field.type;
     if (type !== expected) throw new Error(`Query value must be ${expected}`);
     if (Array.isArray(value) && value.some((item) => typeof item !== "string"))
       throw new Error("Query arrays contain strings");
@@ -85,21 +77,55 @@ const validatePredicateValues = (field: StorageIndexField, predicate: Extract<St
 };
 
 const validateScalarTextPredicate = (field: StorageIndexField, value: Json) => {
-  if (field.type === "array") throw new Error("Text contains requires a scalar field");
+  if (["array", "object"].includes(field.type)) throw new Error("Text contains requires a scalar field");
   if (typeof value !== "string") throw new Error("Query value must be string");
 };
 
-export const validatePredicate = (index: StorageRecordIndex, predicate?: StoragePredicate, depth = 0) => {
+const validateRelatedFields = (
+  index: StorageRecordIndex,
+  selection: StorageRelatedSelection,
+  resolveIndex?: (name: string) => StorageRecordIndex,
+) => {
+  if (!resolveIndex) throw new Error("Related query needs installed indexes");
+  const related = resolveIndex(selection.index);
+  const joins = selection.on;
+  if (!Array.isArray(joins) || !joins.length || joins.length > 8)
+    throw new Error("Related query needs 1 to 8 join fields");
+  for (const join of joins) {
+    const source = queryField(index, join.sourceField).type;
+    const target = queryField(related, join.relatedField).type;
+    const operation = join.op ?? "eq";
+    if (operation === "eq" && source !== target) throw new Error("Related fields must have the same type");
+    if (operation === "contains" && (source !== "array" || target !== "string"))
+      throw new Error("Related contains needs a source string array and related string");
+    if (operation === "containedBy" && (source !== "string" || target !== "array"))
+      throw new Error("Related containedBy needs a source string and related string array");
+    if (!["eq", "contains", "containedBy"].includes(operation)) throw new Error("Unsupported related join");
+  }
+  return related;
+};
+
+export const validatePredicate = (
+  index: StorageRecordIndex,
+  predicate?: StoragePredicate,
+  depth = 0,
+  resolveIndex?: (name: string) => StorageRecordIndex,
+) => {
   if (!predicate) return;
   if (depth > 8) throw new Error("Query predicate is too deep");
+  if ("exists" in predicate) {
+    const related = validateRelatedFields(index, predicate.exists, resolveIndex);
+    validatePredicate(related, predicate.exists.where, depth + 1, resolveIndex);
+    return;
+  }
   if ("not" in predicate) {
-    validatePredicate(index, predicate.not, depth + 1);
+    validatePredicate(index, predicate.not, depth + 1, resolveIndex);
     return;
   }
   if ("all" in predicate || "any" in predicate) {
     const children = "all" in predicate ? predicate.all : predicate.any;
     if (children.length > 100) throw new Error("Too many query predicates");
-    for (const child of children) validatePredicate(index, child, depth + 1);
+    for (const child of children) validatePredicate(index, child, depth + 1, resolveIndex);
     return;
   }
   const field = queryField(index, predicate.field);
@@ -133,18 +159,27 @@ export const compareQueryValues = (left: Json | undefined, right: Json | undefin
   return left < right ? -1 : 1;
 };
 
-export const matchesPredicate = (index: StorageRecordIndex, value: Json, predicate?: StoragePredicate) => {
+export const matchesPredicate = (
+  index: StorageRecordIndex,
+  value: Json,
+  predicate?: StoragePredicate,
+  related?: (index: StorageRecordIndex, value: Json, selection: StorageRelatedSelection) => boolean,
+) => {
   if (!predicate) return true;
+  if ("exists" in predicate) {
+    if (!related) throw new Error("Related query needs installed indexes");
+    return related(index, value, predicate.exists);
+  }
   if ("not" in predicate) {
-    if (matchesPredicate(index, value, predicate.not)) return false;
+    if (matchesPredicate(index, value, predicate.not, related)) return false;
     return true;
   }
   if ("all" in predicate) {
-    for (const child of predicate.all) if (!matchesPredicate(index, value, child)) return false;
+    for (const child of predicate.all) if (!matchesPredicate(index, value, child, related)) return false;
     return true;
   }
   if ("any" in predicate) {
-    for (const child of predicate.any) if (matchesPredicate(index, value, child)) return true;
+    for (const child of predicate.any) if (matchesPredicate(index, value, child, related)) return true;
     return false;
   }
   return matchesFieldPredicate(index, value, predicate);
@@ -158,6 +193,13 @@ const matchesFieldPredicate = (
   const actual = typedFieldValue(value, queryField(index, predicate.field));
   const empty = actual == null || actual === "" || (Array.isArray(actual) && !actual.length);
   switch (predicate.op) {
+    case "hasKey":
+      return (
+        actual !== null &&
+        typeof actual === "object" &&
+        !Array.isArray(actual) &&
+        Object.hasOwn(actual, String(predicate.value))
+      );
     case "exists":
       return actual !== undefined;
     case "missing":
@@ -221,8 +263,21 @@ export const prepareRecordQuery = async (
   index: StorageRecordIndex,
   query: StorageRecordQuery,
   revision: string,
+  resolveIndex?: (name: string) => StorageRecordIndex,
 ) => {
-  validatePredicate(index, query.where);
+  const related = new Map<string, StorageRecordIndex>();
+  validatePredicate(
+    index,
+    query.where,
+    0,
+    resolveIndex
+      ? (name) => {
+          const definition = resolveIndex(name);
+          related.set(name, definition);
+          return definition;
+        }
+      : undefined,
+  );
   const fields = query.fields ?? Object.keys(index.fields);
   for (const name of fields) queryField(index, name);
   const { limit, offset } = queryWindow(query, revision);
@@ -231,6 +286,7 @@ export const prepareRecordQuery = async (
     index: index as unknown as Json,
     where: (query.where as unknown as Json) ?? null,
     fields,
+    ...(related.size ? { related: [...related.values()] as unknown as Json } : {}),
   });
   let after: QueryCursor | undefined;
   if (query.cursor) {

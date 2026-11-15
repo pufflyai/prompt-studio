@@ -22,7 +22,7 @@ const HIGH_IMPACT_ISSUE_DISCOVERY_PROMPT = [
   "2. Check existing open and archived planner tickets. Stop if an equivalent issue is already tracked, was archived after being addressed, or was previously rejected; use the archived ticket's history and rejection rationale instead of recreating it.",
   "3. Reproduce the candidate safely with a focused existing test, diagnostic command, deterministic steps, failing architecture check, or a concrete code trace against a documented rule. Do not perform destructive, production-facing, or exploitative security validation. An unverified hypothesis does not qualify.",
   "4. Establish material impact and actionability for users, security, data integrity, reliability, or architecture before creating anything.",
-  "5. Only when every gate passes, create exactly one evidence-backed planner ticket with the `pst tickets` CLI and save it with `pst tickets save`.",
+  "5. Only when every gate passes, create exactly one evidence-backed planner ticket with the `pst pstdio.planner` CLI and save it with `pst pstdio.planner save-ticket`.",
   "For a reproduced defect, record the reproduction steps or failing command, observed result, expected result, material impact, relevant code area, and validation direction.",
   "For an architecture infraction, cite the governing rule, offending dependency or code path, concrete evidence, architectural risk, and intended boundary to restore.",
   "If any gate fails or no valuable reproduced fix is found, report that outcome and create no ticket. A no-ticket result is a successful run.",

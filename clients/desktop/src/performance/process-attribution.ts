@@ -1,5 +1,5 @@
 import type { ProcessMetric } from "electron";
-import { parseExtensionWebviewPath } from "pstdio-api-contracts/extension-webview-path";
+import { parseExtensionWebviewPath } from "pstdio-api-contracts/extension-host";
 import type { PerformanceExtensionFrame, PerformanceProcessRole } from "pstdio-api-contracts/performance-diagnostics";
 
 export interface OwnedFrame {

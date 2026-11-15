@@ -24,7 +24,7 @@ test("returning to the timeline after creating a ticket refreshes without a clos
       }).observe(document, { subtree: true, childList: true, characterData: true });
     });
     await page.setViewportSize({ width: 1440, height: 1000 });
-    const timelinePath = `/projects/${id}/extensions/pstdio.pstdio-planner/ticket-timeline`;
+    const timelinePath = `/projects/${id}/extensions/pstdio.planner/ticket-timeline`;
     await page.goto(timelinePath);
     const timeline = page.frameLocator('iframe[title="Project Timeline"]');
     await expect(timeline.getByRole("button", { name: "Auto Build", exact: true })).toBeVisible();

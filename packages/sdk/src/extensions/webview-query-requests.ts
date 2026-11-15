@@ -1,13 +1,16 @@
-import type { WebviewCommandQueryDefinition, WebviewCommandQuerySnapshot } from "pstdio-api-contracts/extension-kernel";
-import type { GuestHost } from "./guest-host";
+import type { WebviewCommandQuerySnapshot } from "pstdio-api-contracts/extension-kernel";
 import { runQueryCleanup } from "./query-cleanup";
+import type { WebviewQueryTransport } from "./webview-query-projection";
 
 /** Request cancellation also settles locally when a completed RPC reply is delayed in transport. */
-export const createWebviewQueryRequests = (host: GuestHost, owner: string, changed: () => void) => {
+export const createWebviewQueryRequests = <Definition>(
+  request: WebviewQueryTransport<Definition>["request"],
+  changed: () => void,
+) => {
   let closed = false;
   const pending = new Map<string, (reason: unknown) => void>();
   const begin = () => {
-    if (closed) throw new Error("Command query authority is closed");
+    if (closed) throw new Error("Retained query authority is closed");
     const id = crypto.randomUUID();
     pending.set(id, () => {});
     return id;
@@ -18,7 +21,7 @@ export const createWebviewQueryRequests = (host: GuestHost, owner: string, chang
     pending.delete(requestId);
     cancel(reason);
     try {
-      void host.call("commands.query", { operation: "close", owner, requestId }).catch(() => {});
+      void request(undefined, "close", requestId).catch(() => {});
     } catch {
       /* Local release remains complete if the bridge has already retired. */
     }
@@ -28,7 +31,7 @@ export const createWebviewQueryRequests = (host: GuestHost, owner: string, chang
     close,
     active: () => pending.size > 0,
     async read<T>(
-      definition: WebviewCommandQueryDefinition,
+      definition: Definition,
       operation: "read" | "refresh",
       signal: AbortSignal | undefined,
       settle: (value: WebviewCommandQuerySnapshot | undefined) => T,
@@ -40,12 +43,7 @@ export const createWebviewQueryRequests = (host: GuestHost, owner: string, chang
       const aborted = () => close(requestId, signal?.reason);
       signal?.addEventListener("abort", aborted, { once: true });
       try {
-        return settle(
-          await Promise.race([
-            host.call("commands.query", { ...definition, owner, requestId, operation }),
-            cancelled.promise,
-          ]),
-        );
+        return settle(await Promise.race([request(definition, operation, requestId), cancelled.promise]));
       } finally {
         signal?.removeEventListener("abort", aborted);
         close(requestId);

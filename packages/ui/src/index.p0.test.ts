@@ -46,7 +46,29 @@ test("the UI entry point supports server rendering", () => {
   expect(result.stdout.toString()).toContain("Ready");
 });
 
+test("the built UI entry exposes visibility for optional tree-row observations", () => {
+  const result = Bun.spawnSync(
+    [
+      process.execPath,
+      "-e",
+      `const { useTreeListRowVisibility } = await import("./dist/index.js");
+      const { createElement } = await import("react");
+      const { renderToStaticMarkup } = await import("react-dom/server");
+      const Row = () => createElement("output", null, String(useTreeListRowVisibility()));
+      console.log(renderToStaticMarkup(createElement(Row)));`,
+    ],
+    { cwd: fileURLToPath(new URL("..", import.meta.url)) },
+  );
+
+  expect(result.stderr.toString()).toBe("");
+  expect(result.exitCode).toBe(0);
+  expect(result.stdout.toString().trim()).toBe("<output>true</output>");
+});
+
 test.each([
+  { entry: "index", exported: "ActivityComposer" },
+  { entry: "index", exported: "ActivityComment" },
+  { entry: "index", exported: "LazyRichMessage" },
   { entry: "chat-skeleton", exported: "ChatSkeleton" },
   { entry: "lazy-markdown-editor", exported: "LazyMarkdownEditor" },
   { entry: "lazy-markdown-editor", exported: "preloadMarkdownEditor" },

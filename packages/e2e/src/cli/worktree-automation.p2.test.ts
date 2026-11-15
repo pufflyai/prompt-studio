@@ -11,7 +11,9 @@ let api: ApiInstance;
 const ctx: HookTestContext = { api: null!, dirs: [] };
 
 beforeAll(async () => {
-  api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-planner", "workbench-fixture") } });
+  api = await startApi({
+    env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-planner", "workbench-fixture", "git-workspaces") },
+  });
   ctx.api = api;
 }, SETUP_TIMEOUT);
 
@@ -51,7 +53,7 @@ describe("workspace provisioning", () => {
       const extensionsByName = new Map(
         projectExtensions.extensions.map((extension) => [extension.installName, extension]),
       );
-      expect(realpathSync(extensionsByName.get("pstdio-planner")!.sourcePath)).toBe(
+      expect(realpathSync(extensionsByName.get("planner")!.sourcePath)).toBe(
         realpathSync(join(api.homePath, "extensions", "pstdio-planner")),
       );
 
@@ -64,7 +66,7 @@ describe("workspace provisioning", () => {
         worktreePath,
         ".pstdio",
         "extension-storage",
-        "pstdio.pstdio-planner",
+        "pstdio.planner",
         "tickets",
         ticketShorthand,
         "ticket.md",

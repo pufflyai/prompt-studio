@@ -56,5 +56,5 @@ export const LazyMarkdownEditor = (props: MarkdownEditorProps) => {
     );
   }
 
-  return <MarkdownEditorSkeleton />;
+  return <MarkdownEditorSkeleton fullWidth={props.fullWidth} padding={props.padding} />;
 };

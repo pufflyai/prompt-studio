@@ -4,7 +4,7 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { expect, type Request, test } from "../scripts/session-test";
 import { uiOrigin } from "../ui-server";
 
-const actionPath = "/extensions/commands/pstdio.pstdio-session-browser.view.conversation.chat.onAction/execute";
+const actionPath = "/extensions/commands/pstdio.session-browser.view.conversation.chat.onAction/execute";
 const isSubmit = (request: Request) =>
   request.method() === "POST" &&
   request.url().endsWith(actionPath) &&
@@ -113,7 +113,7 @@ test("keeps sent messages visible through session creation, redirect and follow-
       if (!sessionId) sessionId = outcome.navigationRequests[0].resource.id;
       await expect(page).toHaveURL(
         (url) =>
-          url.pathname === `/projects/${projectId}/extensions/pstdio.pstdio-session-browser/conversation` &&
+          url.pathname === `/projects/${projectId}/extensions/pstdio.session-browser/conversation` &&
           Boolean(url.searchParams.get("resource")?.includes(sessionId!)),
       );
       const confirmed = main.locator('[data-chat-message-list-item="user"]:visible').filter({ hasText: prompt });

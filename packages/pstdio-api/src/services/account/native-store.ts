@@ -22,13 +22,13 @@ const credentialHash = (token: string) => createHash("sha256").update(token).dig
 export type DeviceLogin = z.infer<typeof deviceLoginSchema>;
 
 export const createNativeStore = (path: string) => {
-  const readState = async () => readPrivateFile(path, fileSchema, { login: null });
-  const read = async () => (await readState()).login;
+  const readStateRaw = async () => readPrivateFile(path, fileSchema, { login: null });
+  const readLoginRaw = async () => (await readStateRaw()).login;
   return {
-    read,
+    read: () => serializeNativeWrite(path, readLoginRaw),
     signingKeys: (token: string) =>
       serializeNativeWrite(path, async () => {
-        const state = await readState();
+        const state = await readStateRaw();
         if (state.login?.token !== token) throw new Error("Device login changed");
         if (state.signingKeys) return state.signingKeys;
         const pair = await crypto.subtle.generateKey("Ed25519", true, ["sign", "verify"]);
@@ -39,20 +39,21 @@ export const createNativeStore = (path: string) => {
         await writePrivateFile(path, { ...state, signingKeys });
         return signingKeys;
       }),
-    signInRequired: async (deviceId: string) => (await readState()).rejected?.deviceId === deviceId,
+    signInRequired: (deviceId: string) =>
+      serializeNativeWrite(path, async () => (await readStateRaw()).rejected?.deviceId === deviceId),
     save: (login: z.input<typeof deviceLoginSchema>) =>
       serializeNativeWrite(path, () => writePrivateFile(path, { login: deviceLoginSchema.parse(login) })),
     // Clears the login only while it still holds this credential, so a newer login is kept.
     forget: (token: string | null) =>
       serializeNativeWrite(path, async () => {
-        const state = await readState();
+        const state = await readStateRaw();
         const sameLogin = (state.login?.token ?? null) === token;
         const sameRejection = token !== null && state.rejected?.credentialHash === credentialHash(token);
         if (sameLogin || sameRejection) await writePrivateFile(path, { login: null });
       }),
     reject: (token: string) =>
       serializeNativeWrite(path, async () => {
-        const login = await read();
+        const login = await readLoginRaw();
         if (login?.token === token)
           await writePrivateFile(path, {
             login: null,

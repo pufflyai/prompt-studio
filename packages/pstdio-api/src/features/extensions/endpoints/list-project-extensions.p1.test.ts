@@ -293,7 +293,7 @@ describe("GET /v1/projects/:projectId/extensions", () => {
     const project = await createProject("Local Core Extension Project");
     const seeded = await seedInstance(project.id, {
       name: "pstdio-planner",
-      extensionId: "pstdio.pstdio-planner",
+      extensionId: "pstdio.planner",
       displayName: "Project Planner",
       installName: "pstdio-planner",
       enginesPstdio: `^${EXTENSION_API_VERSION}`,
@@ -309,7 +309,7 @@ describe("GET /v1/projects/:projectId/extensions", () => {
 
     expect(row).toMatchObject({
       canUpgrade: false,
-      installName: "pstdio-planner",
+      installName: "planner",
       status: "loaded",
       version: "0.10.0",
     });
@@ -319,7 +319,7 @@ describe("GET /v1/projects/:projectId/extensions", () => {
     const project = await createProject("Incompatible Core Extension Project");
     const seeded = await seedInstance(project.id, {
       name: "pstdio-skills",
-      extensionId: "pstdio.pstdio-skills",
+      extensionId: "pstdio.skills",
       displayName: "Prompt Studio Skills",
       installName: "pstdio-skills",
       enginesPstdio: "^0.0.9",
@@ -335,7 +335,7 @@ describe("GET /v1/projects/:projectId/extensions", () => {
 
     expect(row).toMatchObject({
       canUpgrade: true,
-      installName: "pstdio-skills",
+      installName: "skills",
       status: "error",
       lastError: { code: "extension_manifest_unsupported_api_version" },
       version: "0.3.0",
@@ -353,7 +353,7 @@ describe("GET /v1/projects/:projectId/extensions", () => {
       expect.arrayContaining([
         expect.objectContaining({
           displayName: "Project Planner",
-          installName: "pstdio-planner",
+          installName: "planner",
           installed: false,
           origin: {
             kind: "git",

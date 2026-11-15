@@ -147,12 +147,12 @@ test("Notes and Planner use public native sessions while retaining domain titles
     return target.href;
   };
 
-  const notes = "pstdio.pstdio-notes";
+  const notes = "pstdio.notes";
   const note = await command<{ id: string }>(notes, "notes.create", { title: "Kept note title" });
   const noteFile = join(folder, ".pstdio/extension-storage", notes, "documents", note.id, "content.md");
   const header = readFileSync(noteFile, "utf8");
   // Notes opens panels through its navigation target; it is not a resource-bound page.
-  await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
+  await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/pstdio.planner/tickets`);
   const sidebar = page.locator('[data-workbench-region="sidenav"]');
   await sidebar.getByRole("option", { name: "Notes", exact: true }).click();
   await sidebar.getByRole("option", { name: "Kept note title", exact: true }).click();
@@ -175,7 +175,7 @@ test("Notes and Planner use public native sessions while retaining domain titles
   await notePeer.close();
   phase("note body, title and rename persisted");
 
-  const planner = "pstdio.pstdio-planner";
+  const planner = "pstdio.planner";
   const ticket = await command<{ id: string }>(planner, "create-ticket", { title: "Initial ticket" });
   await page.goto(url(planner, "ticket", "ticket", ticket.id));
   const ticketEditor = await nativeEditor("");

@@ -1,3 +1,4 @@
+import { resolveCollectionIndexes } from "pstdio-api-contracts";
 import type { ExtensionRecordsApi } from "pstdio-api-contracts/extension-kernel";
 import { createReadBoundary } from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
@@ -41,13 +42,18 @@ export const createExtensionRecordsApi = (
     id: (key) => deps.extensionStorageService.recordId(input.scopeType, input.scopeId, key),
     read: (id, branch) => read(async () => (await records()).read(id, branch)),
     list: () => read(async () => (await records()).list()),
-    defineIndexes: async (indexes) => (await records()).defineIndexes(indexes),
+    defineIndexes: async (indexes) =>
+      (await records()).defineIndexes(resolveCollectionIndexes(indexes, input.scopeType, input.scopeId)),
     query: (query) => read(async () => (await records()).query(query)),
     aggregate: (query) => read(async () => (await records()).aggregate(query)),
     readMany: (ids) => read(async () => (await records()).readMany(ids)),
     commit: async (group) => {
       const owned = structuredClone(group);
       return (await records()).commit(owned);
+    },
+    commitIfCurrent: async (group) => {
+      const owned = structuredClone(group);
+      return (await records()).commitIfCurrent(owned);
     },
     outcome: (id) => read(async () => (await records()).outcome(id)),
     conflicts: () => read(async () => (await records()).conflicts()),

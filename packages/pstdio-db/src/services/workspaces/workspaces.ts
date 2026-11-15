@@ -1,7 +1,12 @@
 import { and, eq, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { workspaces } from "../../db/schemas.pg";
-import { createLegacyAnchorMutations, workspaceColumns, writeLegacyResourceLinks } from "../legacy-resource-links";
+import {
+  createLegacyAnchorMutations,
+  historyAnchorProjection,
+  workspaceColumns,
+  writeLegacyResourceLinks,
+} from "../legacy-resource-links";
 import { softDeleteWorkspace } from "./delete-workspace";
 import {
   beginProviderOperation,
@@ -124,9 +129,12 @@ export const createWorkspacesDBService = (db: DbClient) => {
     return rows;
   };
 
-  const listForProviderReconciliation = (projectId: string) =>
+  const listForProviderReconciliation = (projectId: string, options: { includeIncomingAnchors?: boolean } = {}) =>
     db
-      .select(workspaceColumns)
+      .select({
+        ...workspaceColumns,
+        ...(options.includeIncomingAnchors ? { anchors_json: historyAnchorProjection(workspaces, "workspace") } : {}),
+      })
       .from(workspaces)
       .where(and(eq(workspaces.project_id, projectId), sql`${workspaces.deleted_at} is null`))
       .orderBy(workspaces.created_at);

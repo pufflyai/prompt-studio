@@ -1,12 +1,14 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { execSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { folderProjectInput } from "../../../test-utils/folder-project-input";
+import { enableGitWorkspaceProvider } from "../../../test-utils/git-workspace-provider.fixture";
 import type { AppBindings } from "../../../types";
+import { reconcileProviderWorkspaces } from "../workspace-provider-reconciliation";
 
 let app: OpenAPIHono<AppBindings>;
 let appHandle: Awaited<ReturnType<typeof createTestApp>>;
@@ -35,6 +37,7 @@ const createWorkspaceAttempt = async (repoRoot: string) => {
   });
   expect(projectRes.status).toBe(201);
   projectId = (await projectRes.json()).id;
+  await enableGitWorkspaceProvider(appHandle, projectId);
 
   const workspaceRes = await app.request("/v1/workspaces", {
     method: "POST",
@@ -111,6 +114,10 @@ describe("POST /v1/workspaces/:id/remove-worktree", () => {
       branch: null,
       root_path: null,
     });
+    await reconcileProviderWorkspaces(appHandle.deps, projectId);
+    expect(await appHandle.deps.workspaceService.list(projectId)).toContainEqual(
+      expect.objectContaining({ id: workspace.id, root_path: null, branch: null }),
+    );
 
     const repeatedRes = await app.request(`/v1/workspaces/${workspace.id}/remove-worktree`, {
       method: "POST",
@@ -125,5 +132,31 @@ describe("POST /v1/workspaces/:id/remove-worktree", () => {
     });
 
     expect(res.status).toBe(404);
+  });
+
+  test("recovers a failed backing removal without deleting its record or retaining removed paths", async () => {
+    const repoRoot = createGitRepo("recover-remove-worktree-repo");
+    const { workspace } = await createWorkspaceAttempt(repoRoot);
+    execFileSync("git", ["worktree", "lock", workspace.root_path!], { cwd: repoRoot, stdio: "pipe" });
+    const removed = await app.request(`/v1/workspaces/${workspace.id}/remove-worktree`, { method: "POST" });
+    expect(removed.status).toBe(500);
+    expect(existsSync(workspace.root_path!)).toBe(true);
+    expect(await appHandle.deps.workspaceService.get(workspace.id)).toMatchObject({
+      provider_operation_kind: "cancel",
+    });
+    execFileSync("git", ["worktree", "unlock", workspace.root_path!], { cwd: repoRoot, stdio: "pipe" });
+    await reconcileProviderWorkspaces(appHandle.deps, projectId, { workspaceId: workspace.id });
+    expect(await appHandle.deps.workspaceService.list(projectId)).toContainEqual(
+      expect.objectContaining({
+        id: workspace.id,
+        provider_state: "cancelled",
+        provider_operation_kind: null,
+        root_path: null,
+        branch: null,
+        display_path: null,
+      }),
+    );
+    expect(existsSync(workspace.root_path!)).toBe(false);
+    expect(existsSync(join(repoRoot, "README.md"))).toBe(true);
   });
 });

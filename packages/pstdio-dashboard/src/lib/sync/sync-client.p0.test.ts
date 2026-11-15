@@ -195,3 +195,30 @@ it("a synced presentation reset performs zero full-document or unrelated-extensi
     await collections.dispose();
   }
 });
+
+it("publishes effective project preference scope without exposing persisted values to another runtime", async () => {
+  const first = createRuntimeCollections(),
+    other = createRuntimeCollections();
+  const received: unknown[] = [];
+  const stop = subscribeToExtensionEventFeed((event) => received.push(event), first);
+  const row = {
+    id: "preference",
+    name: "choice",
+    extension_id: "owned",
+    scope_type: "project",
+    scope_id: "B",
+    value: { private: "selected" },
+  };
+  try {
+    createDashboardSyncWriterProvider(other).getWriter("webview_preferences")!.upsert(row);
+    expect(received).toEqual([]);
+    createDashboardSyncWriterProvider(first).getWriter("webview_preferences")!.upsert(row);
+    expect(received).toEqual([
+      { id: "preferences.changed", extensionId: "owned", projectId: "B", resourceIds: ["choice"] },
+    ]);
+  } finally {
+    stop();
+    await first.dispose();
+    await other.dispose();
+  }
+});

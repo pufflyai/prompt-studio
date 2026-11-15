@@ -23,6 +23,26 @@ afterAll(async () => {
   await handle?.close();
 });
 
+test("SDK session search includes linked workspace history in one filtered page", async () => {
+  const project = await handle.deps.projectService.create({ name: "Related sessions" });
+  const anchor = { type: "project", id: project.id, extensionId: "pstdio", projectId: project.id };
+  const workspace = await handle.deps.workspaceService.createStandalone({ project_id: project.id, anchors: [anchor] });
+  const session = await handle.deps.sessionService.create({
+    project_id: project.id,
+    title: "Wanted 100%_ history",
+    agent: "worker",
+    status: "completed",
+  });
+  await handle.deps.workspaceSessionService.link(workspace.id, session.id);
+  await handle.deps.sessionService.create({ project_id: project.id, title: "Unrelated", agent: "worker" });
+  expect(
+    (
+      await client.sessions.query(project.id, { anchor, includeWorkspaceAnchors: true, search: "100%_", limit: 1 })
+    ).items.map(({ id }) => id),
+  ).toEqual([session.id]);
+  expect((await client.sessions.query(project.id, { anchor, search: "100%_", limit: 1 })).items).toEqual([]);
+});
+
 test("SDK iteration reads a live session beyond page one and stops requesting after break", async () => {
   const project = await handle.deps.projectService.create({ name: "Paged sessions" });
   const live = await handle.deps.sessionService.create({ project_id: project.id, title: "Live", agent: "worker" });

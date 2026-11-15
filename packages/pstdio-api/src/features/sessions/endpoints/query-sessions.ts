@@ -6,6 +6,11 @@ import { queryExtensionSessions, SessionQueryWorkspaceNotFound } from "../query-
 
 const querySchema = z
   .object({
+    search: z.string().optional(),
+    includeWorkspaceAnchors: z
+      .enum(["true", "false"])
+      .optional()
+      .transform((value) => value === "true"),
     status: z
       .string()
       .optional()

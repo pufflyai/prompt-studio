@@ -14,6 +14,7 @@ import type {
   WorkspaceFileEntry,
   WorkspaceFilesResponse,
   WorkspaceProviderDescriptor,
+  WorkspaceQuery,
   WorkspaceResolvedEntry,
   WriteWorkspaceFileInput,
 } from "pstdio-api-contracts";
@@ -41,7 +42,7 @@ export type WorkspaceClient = ReturnType<typeof createWorkspaceDiffClient> & {
   ): Promise<Page<WorkspaceProviderDescriptor>>;
   /** @deprecated Use queryProviders for bounded pages. */
   listProviders(projectId: string, options?: { signal?: AbortSignal }): Promise<WorkspaceProviderDescriptor[]>;
-  query(projectId: string, input?: PageQuery): Promise<Page<WorkspaceListItem & ExtensionWorkspace>>;
+  query(projectId: string, input?: WorkspaceQuery): Promise<Page<WorkspaceListItem & ExtensionWorkspace>>;
   /** @deprecated Use query to read one bounded page. */
   list(projectId: string): Promise<(WorkspaceListItem & ExtensionWorkspace)[]>;
   getByShorthand(projectId: string, shorthand: string): Promise<Workspace & ExtensionWorkspace>;
@@ -147,7 +148,11 @@ export const createWorkspaceClient = (
     const query = params.toString();
     return request(`/v1/workspaces/${workspaceId}/activity${query ? `?${query}` : ""}`);
   },
-  query: (projectId, input) => request(`/v1/projects/${encodeURIComponent(projectId)}/workspaces${pageQuery(input)}`),
+  query: (projectId, input) => {
+    const query = new URLSearchParams(pageQuery(input).replace(/^\?/, ""));
+    if (input?.anchors !== undefined) query.set("anchors", JSON.stringify(input.anchors));
+    return request(`/v1/projects/${encodeURIComponent(projectId)}/workspaces?${query}`);
+  },
   list: (projectId) => request(`/v1/workspaces?projectId=${encodeURIComponent(projectId)}`),
   getByShorthand: (projectId, shorthand) =>
     request(

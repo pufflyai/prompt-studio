@@ -19,7 +19,7 @@ export const timelineTicketPreviewTarget = (target: NavigationTargetPage) => {
     kind: "panel",
     panel: {
       kind: "page-slot",
-      page: { kind: "page", id: "timeline", extensionId: "pstdio.pstdio-planner" },
+      page: { kind: "page", id: "timeline", extensionId: "pstdio.planner" },
       id: ticketPreviewPanel.id,
     },
     resource: target.resource,

@@ -2,6 +2,7 @@ import type { PersonalIndexDelta } from "pstdio-db";
 import type { StorageOwner } from "pstdio-sync";
 import { createMemoryLogStore, type LogDirectoryEntry } from "pstdio-sync/logs";
 import type { Json, StorageLogDefinition } from "pstdio-sync-contracts";
+import { memoryHistoryQueries } from "./query-index.fixture";
 import type { PersonalHistoryInput } from "./store";
 
 /** Small isolated store/identity tests; SQL and encrypted transport have separate integration coverage. */
@@ -12,6 +13,7 @@ export const memoryPersonalIndexFixture = () => {
   const revisions = new Map<string, object>();
   const key = (owner: StorageOwner) => JSON.stringify(owner);
   const index = {
+    ...memoryHistoryQueries((owner) => rows.get(key(owner)) ?? []),
     sourcePosition: async () => 0,
     sourcePage: async () => [],
     pendingPage: async () => [],

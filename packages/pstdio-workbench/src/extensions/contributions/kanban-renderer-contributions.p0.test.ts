@@ -18,7 +18,7 @@ describe("registerWorkbenchExtensionKanbanRenderers", () => {
     const workbench = createWorkbench();
     const record = {
       id: "tickets",
-      extensionId: "pstdio.pstdio-planner",
+      extensionId: "pstdio.planner",
       title: "Tickets",
       queryHandlerId: "pstdio-planner.tickets.query",
       defaultViews: [
@@ -63,7 +63,7 @@ describe("registerWorkbenchExtensionKanbanRenderers", () => {
           return { rows: [] };
         },
       },
-      [{ id: "tickets", extensionId: "pstdio.pstdio-planner", title: "Tickets", queryHandlerId: "query" }],
+      [{ id: "tickets", extensionId: "pstdio.planner", title: "Tickets", queryHandlerId: "query" }],
     );
     const filter = {
       conjunction: "and" as const,
@@ -91,7 +91,7 @@ describe("registerWorkbenchExtensionKanbanRenderers", () => {
     const workbench = createWorkbench();
     const record = {
       id: "tickets",
-      extensionId: "pstdio.pstdio-planner",
+      extensionId: "pstdio.planner",
       title: "Tickets",
       queryHandlerId: "pstdio-planner.tickets.query",
     } satisfies WorkbenchExtensionKanbanRendererRecord;
@@ -128,7 +128,7 @@ describe("registerWorkbenchExtensionKanbanRenderers actions", () => {
     const workbench = createWorkbench();
     const record = {
       id: "tickets",
-      extensionId: "pstdio.pstdio-planner",
+      extensionId: "pstdio.planner",
       title: "Tickets",
       queryHandlerId: "pstdio-planner.tickets.query",
       rowActions: [
@@ -160,7 +160,7 @@ describe("registerWorkbenchExtensionKanbanRenderers actions", () => {
     const calls: Array<{ commandId: string; request: unknown }> = [];
     const record = {
       id: "tickets",
-      extensionId: "pstdio.pstdio-planner",
+      extensionId: "pstdio.planner",
       title: "Tickets",
       resourceKind: "ticket",
       queryHandlerId: "pstdio-planner.tickets.query",
@@ -190,7 +190,7 @@ describe("registerWorkbenchExtensionKanbanRenderers actions", () => {
         workbench,
         executeCommand: async (commandId, request) => {
           calls.push({ commandId, request });
-          return { commandId, extensionId: "pstdio.pstdio-planner", outcome: { ok: true, status: "success" } };
+          return { commandId, extensionId: "pstdio.planner", outcome: { ok: true, status: "success" } };
         },
       },
       [record],
@@ -226,7 +226,7 @@ describe("registerWorkbenchExtensionKanbanRenderers actions", () => {
     const refreshes: string[] = [];
     const record = {
       id: "tickets",
-      extensionId: "pstdio.pstdio-planner",
+      extensionId: "pstdio.planner",
       title: "Tickets",
       queryHandlerId: "pstdio-planner.tickets.query",
       attributeChangeHandlerId: "pstdio-planner.tickets.onAttributeChange",
@@ -286,14 +286,14 @@ describe("registerWorkbenchExtensionKanbanRenderers row activation", () => {
     const calls: Array<{ commandId: string; resourceType: unknown; rowId: unknown }> = [];
     const record = {
       id: "tickets",
-      extensionId: "pstdio.pstdio-planner",
+      extensionId: "pstdio.planner",
       title: "Tickets",
       queryHandlerId: "pstdio-planner.tickets.query",
       rowActivationHandlerId: "pstdio-planner.tickets.onRowActivate",
     } satisfies WorkbenchExtensionKanbanRendererRecord;
     const inertRecord = {
       id: "inertTickets",
-      extensionId: "pstdio.pstdio-planner",
+      extensionId: "pstdio.planner",
       title: "Inert tickets",
       queryHandlerId: "pstdio-planner.inertTickets.query",
     } satisfies WorkbenchExtensionKanbanRendererRecord;

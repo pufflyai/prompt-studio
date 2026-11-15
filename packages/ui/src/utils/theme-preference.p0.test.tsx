@@ -328,3 +328,19 @@ test("explicit initial themes keep their override and publish later user choices
   expect(contexts.shared.themePreference).toBe("pstdio-dark");
   await act(async () => renderer.unmount());
 });
+
+test("a registered historical theme choice resolves to its canonical preference", () => {
+  installWindow();
+  const html = renderToStaticMarkup(
+    <ThemePreferenceProvider
+      initialPreference="old.theme"
+      themePreferences={[
+        { id: "fallback", mode: "light" },
+        { id: "canonical.theme", aliases: ["old.theme"], mode: "dark" },
+      ]}
+    >
+      <ActiveTheme />
+    </ThemePreferenceProvider>,
+  );
+  expect(html).toContain("canonical.theme");
+});

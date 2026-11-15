@@ -12,6 +12,7 @@ import { runQueryCleanup } from "./query-cleanup";
 import { createScopedQueryClient, type QueryScope, type ScopedQueryDescriptor } from "./scoped-query";
 import { createWebviewCommandQueries, type WebviewCommandQueryOptions } from "./webview-command-query";
 import type { WebviewExtensionEvent } from "./webview-events";
+import { disposeWebviewServiceQueries } from "./webview-service-query";
 
 export type WebviewQueryDescriptor<T> = ScopedQueryDescriptor<T> & {
   events?: readonly RendererEventReference[];
@@ -102,7 +103,7 @@ export const createWebviewQueryClient = (host: GuestHost, extensionId = host.ext
     dispose() {
       if (roots.get(host) !== state) return;
       roots.delete(host);
-      runQueryCleanup([() => stopProps?.(), commands.dispose, root.dispose]);
+      runQueryCleanup([() => stopProps?.(), commands.dispose, () => disposeWebviewServiceQueries(host), root.dispose]);
     },
   };
 };

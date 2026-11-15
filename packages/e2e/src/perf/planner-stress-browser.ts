@@ -58,7 +58,7 @@ export async function checkPlannerStress(
     const assets = new Map<string, { type: string; bytes: number }>();
     session.on("Network.requestWillBeSent", ({ requestId, request, type }) => {
       const path = new URL(request.url).pathname;
-      if (type === "Document" && path.endsWith("/pstdio.pstdio-planner.view.timeline/runtime"))
+      if (type === "Document" && path.endsWith("/pstdio.planner.view.timeline/runtime"))
         iframeStartedAt ??= performance.now();
       if (type && path.includes("/extensions/webviews/") && ["Script", "Stylesheet"].includes(type))
         assets.set(requestId, { type, bytes: 0 });

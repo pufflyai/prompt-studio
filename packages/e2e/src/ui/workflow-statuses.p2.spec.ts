@@ -45,7 +45,7 @@ test("editing Planner statuses updates its board", async ({ page, request }) => 
   });
   await prepareDashboard(page, project.id);
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
+  await page.goto(`/projects/${project.id}/extensions/pstdio.planner/tickets`);
   await expect(page.getByTestId("board-column-backlog")).toContainText("Keep the Planner board visible", {
     timeout: 30_000,
   });
@@ -86,7 +86,7 @@ test("state commands in the status editor control the matching column", async ({
   await prepareDashboard(page, project.id);
   await page.setViewportSize({ width: 1440, height: 900 });
 
-  await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
+  await page.goto(`/projects/${project.id}/extensions/pstdio.planner/tickets`);
   const backlogColumn = page.getByTestId(`board-column-${backlog!.id}`);
   const doneColumn = page.getByTestId(`board-column-${done!.id}`);
   await expect(backlogColumn).toContainText("Keep the backlog column visible", { timeout: 30_000 });

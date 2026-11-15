@@ -4,10 +4,10 @@ import { createWorkbench } from "@pstdio/workbench";
 import { WorkbenchKeyboardShortcutsPanel } from "@pstdio/workbench/react";
 
 const workbench = createWorkbench();
-workbench.resources.registerKind({ kind: "note", label: "Notes", extensionId: "pstdio.pstdio-notes" });
+workbench.resources.registerKind({ kind: "note", label: "Notes", extensionId: "pstdio.notes" });
 workbench.commands.registerCommand({ id: "notes.create", label: "New note" }, { execute() {} });
 workbench.keybindings.registerKeybinding({
-  sourceExtensionId: "pstdio.pstdio-notes",
+  sourceExtensionId: "pstdio.notes",
   action: { kind: "command", commandId: "notes.create" },
   keybinding: "N",
   layer: "create",

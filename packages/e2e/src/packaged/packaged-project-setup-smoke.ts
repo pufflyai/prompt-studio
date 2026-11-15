@@ -70,7 +70,7 @@ export const expectPackagedProjectChoices = async (
   };
   for (const id of [projectId, peerId]) {
     expect(await enabled(id, "pstdio.harness-codex")).toBe(false);
-    expect(await enabled(id, "pstdio.pstdio-planner")).toBe(false);
+    expect(await enabled(id, "pstdio.planner")).toBe(false);
   }
   for (const id of [projectId, peerId]) {
     const attached = await fetch(`${baseUrl}/v1/projects/${id}/extensions/installed/catalog-client/enable`, {
@@ -113,8 +113,8 @@ export const expectPackagedProjectChoices = async (
     },
   );
   expect(empty.status).toBe(200);
-  await waitForEnabled(peerId, "pstdio.pstdio-skills");
-  expect(await enabled(peerId, "pstdio.pstdio-planner")).toBe(false);
+  await waitForEnabled(peerId, "pstdio.skills");
+  expect(await enabled(peerId, "pstdio.planner")).toBe(false);
   const sourcePath = writePackagedChoiceSource(root, "harness-pi");
   const registered = await fetch(`${baseUrl}/v1/projects/${projectId}/extensions/installed/harness-pi/enable`, {
     method: "POST",
@@ -140,5 +140,5 @@ export const expectPackagedProjectChoices = async (
   );
   expect(late.status).toBe(200);
   await waitForEnabled(peerId, "pstdio.harness-pi");
-  expect(await enabled(peerId, "pstdio.pstdio-planner")).toBe(false);
+  expect(await enabled(peerId, "pstdio.planner")).toBe(false);
 };
