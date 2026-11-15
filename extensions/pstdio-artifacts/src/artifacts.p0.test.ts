@@ -62,7 +62,7 @@ const fixture = async (projectId = "project-1") => {
 };
 
 test("two offline artifact imports use core migration IDs without duplicating artifacts or revisions", async () => {
-  const pair = await createMemoryStorageDevices({ extensionId: "pstdio.pstdio-artifacts" });
+  const pair = await createMemoryStorageDevices({ extensionId: "pstdio.artifacts" });
   const imported: { artifactId: string; revisionId: string }[] = [];
   for (const storage of pair.devices) {
     const snapshots = createMemoryRepoFiles();
@@ -98,7 +98,7 @@ describe("published artifacts", () => {
     const html = "<!doctype html><title>Release &amp; review</title><button>Ready</button>";
     const published = await service.publish({ file_path: "release.html", html, favicon: "📦", label: "Draft" });
     expect(published.title).toBe("Release & review");
-    expect(published.url).toStartWith("/projects/project-1/extensions/pstdio.pstdio-artifacts/");
+    expect(published.url).toStartWith("/projects/project-1/extensions/pstdio.artifacts/");
     expect((await service.read(published.url)).html).toBe(html);
     expect((await service.list())[0]).toMatchObject({ favicon: "📦", label: "Draft" });
   });

@@ -18,7 +18,7 @@ const template = (id: string, name: string, type = "report") => ({
 
 test("two offline report template imports converge on one record per source template", async () => {
   const pair = await createMemoryStorageDevices({
-    extensionId: "pstdio.pstdio-reports",
+    extensionId: "pstdio.reports",
     legacyData: { templates: source([template("source-file", "custom_report")]) },
   });
   for (const storage of pair.devices) {

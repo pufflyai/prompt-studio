@@ -74,7 +74,7 @@ const createTicketResourceIdentity = (
 export const resolveTicketHierarchy = (
   ticket: TicketSummary,
   parentLookup: TicketParentLookup = new Map(),
-  extensionId = "pstdio.pstdio-planner",
+  extensionId = "pstdio.planner",
 ) => {
   const lineage = [];
   const visitedTicketIds = new Set<string>();
@@ -105,7 +105,7 @@ export const resolveTicketHierarchy = (
 };
 
 export const plannerOwnerFor = (ctx: { extensionId?: string }) =>
-  ctx.extensionId === "pstdio.planner" ? ctx.extensionId : "pstdio.pstdio-planner";
+  ctx.extensionId === "pstdio.pstdio-planner" ? ctx.extensionId : "pstdio.planner";
 
 export const ticketResourceReference = (
   ticket: TicketSummary,

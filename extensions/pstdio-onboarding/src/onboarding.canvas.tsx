@@ -16,12 +16,7 @@ const harnessIcons = Object.fromEntries(
 const info: OnboardingInfo = {
   platform: "darwin",
   detectedHarnesses: ["codex", "open-code"],
-  installedExtensions: [
-    "pstdio.pstdio-home",
-    "pstdio.pstdio-onboarding",
-    "pstdio.pstdio-base-themes",
-    "pstdio.pstdio-skills",
-  ],
+  installedExtensions: ["pstdio.home", "pstdio.onboarding", "pstdio.base-themes", "pstdio.skills"],
   state: { completed: false, hidden: false, harnesses: null, workAreas: null },
 };
 
@@ -65,12 +60,7 @@ export const InstalledWork: Story = {
   args: {
     info: {
       ...info,
-      installedExtensions: [
-        ...info.installedExtensions,
-        "pstdio.pstdio-planner",
-        "pstdio.pstdio-reports",
-        "pstdio.pstdio-artifacts",
-      ],
+      installedExtensions: [...info.installedExtensions, "pstdio.planner", "pstdio.reports", "pstdio.artifacts"],
     },
   },
 };

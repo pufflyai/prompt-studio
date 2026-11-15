@@ -11,11 +11,7 @@ import { ticketPageTarget } from "../data/ticket-page-target";
 import { ticketResourceReference } from "../data/ticket-resource-hierarchy";
 import type { Ticket } from "../data/types";
 
-export const ticketRelationshipSections = (
-  ticket: Ticket,
-  tickets: Ticket[],
-  extensionId = "pstdio.pstdio-planner",
-) => {
+export const ticketRelationshipSections = (ticket: Ticket, tickets: Ticket[], extensionId = "pstdio.planner") => {
   const lookup = createTicketParentLookup(tickets);
   const byReference = new Map(
     tickets.flatMap((item) => [
@@ -64,7 +60,7 @@ export const mergeTicketLinkSections = (
   sections: TreeViewSection[],
   links: CollectionBadgeItem[],
   projectId?: string,
-  extensionId = "pstdio.pstdio-planner",
+  extensionId = "pstdio.planner",
 ) => {
   const key = (resource: ResourceRef) =>
     resourceKey({

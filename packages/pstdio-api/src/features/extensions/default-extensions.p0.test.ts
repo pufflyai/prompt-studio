@@ -13,7 +13,14 @@ describe("resolveDefaultExtensionsConfig", () => {
   test("returns the production defaults when the env override is absent", async () => {
     const config = await resolveDefaultExtensionsConfig({});
 
-    expect(config.defaultExtensions).toEqual(["home", "session-browser", "onboarding", "base-themes", "skills"]);
+    expect(config.defaultExtensions).toEqual([
+      "home",
+      "session-browser",
+      "onboarding",
+      "base-themes",
+      "skills",
+      "git-workspaces",
+    ]);
   });
 
   test("uses PSTDIO_DEFAULT_EXTENSIONS JSON when set", async () => {
@@ -268,7 +275,13 @@ describe("installDefaultExtensions sources", () => {
     });
 
     expect(prepareSharedCheckout).not.toHaveBeenCalled();
-    expect(calls.map((call) => call.installName)).toEqual(["session-browser", "onboarding", "base-themes", "skills"]);
+    expect(calls.map((call) => call.installName)).toEqual([
+      "session-browser",
+      "onboarding",
+      "base-themes",
+      "skills",
+      "git-workspaces",
+    ]);
     expect(
       calls.every(
         (call) =>
@@ -349,7 +362,7 @@ describe("installDefaultExtensions sources", () => {
   test("passes existsOk=true and reuses one shared checkout for all named entries", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-default-shared-"));
     writeExtension(join(root, "pstdio-planner"), "pstdio-planner");
-    writeExtension(join(root, "pstdio-skills"), "pstdio-skills");
+    writeExtension(join(root, "skills"), "skills");
     const calls: Array<Record<string, unknown>> = [];
     const installExtensionSource = mock(async (input: Record<string, unknown>) => {
       calls.push(input);
@@ -362,7 +375,7 @@ describe("installDefaultExtensions sources", () => {
 
     try {
       await installDefaultExtensions({
-        config: { defaultExtensions: ["pstdio-planner", "pstdio-skills"] },
+        config: { defaultExtensions: ["pstdio-planner", "skills"] },
         installExtensionSource,
         prepareSharedCheckout,
         signal: controller.signal,
@@ -372,7 +385,7 @@ describe("installDefaultExtensions sources", () => {
     }
 
     expect(prepareSharedCheckout).toHaveBeenCalledTimes(1);
-    expect(prepareSharedCheckout).toHaveBeenCalledWith(["pstdio-planner", "pstdio-skills"], {
+    expect(prepareSharedCheckout).toHaveBeenCalledWith(["pstdio-planner", "skills"], {
       signal: controller.signal,
     });
     expect(installExtensionSource).toHaveBeenCalledTimes(2);

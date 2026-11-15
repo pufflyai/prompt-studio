@@ -17,7 +17,7 @@ import {
 import { homePage } from "./packaged-performance-helpers";
 import { createPackagedProject, openPackagedProject } from "./packaged-project-helpers";
 
-const homePath = dirname(fileURLToPath(import.meta.resolve("pstdio-home/package.json")));
+const homePath = dirname(fileURLToPath(import.meta.resolve("home/package.json")));
 
 for (const shutdown of ["desktop confirmation", "forced CLI close"] as const) {
   test(`protects a running terminal before ${shutdown}`, async () => {

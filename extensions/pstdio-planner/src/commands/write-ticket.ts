@@ -13,16 +13,15 @@ import { ticketTagsForIds } from "../data/tag-cardinality";
 import { allocateTicketIdentity } from "../data/ticket-identity";
 import { appendTicketPosition, withTicketOrder } from "../data/ticket-order";
 
-// `pst pstdio.pstdio-planner write-ticket`: create a draft ticket in extension storage and lay down its
-// local `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/<shorthand>/ticket.md` via the host file primitive. The
-// draft is later reconciled with edits by `pst pstdio.pstdio-planner save-ticket`.
+// `pst pstdio.planner write-ticket`: create a draft ticket in extension storage and lay down its
+// local `.pstdio/extension-storage/pstdio.planner/tickets/<shorthand>/ticket.md` via the host file primitive. The
+// draft is later reconciled with edits by `pst pstdio.planner save-ticket`.
 export const writeTicketCommand = defineCommand({
   id: "write-ticket",
   mutating: true,
   title: "Write draft ticket",
   cli: {
-    globalAliases: [["tickets", "write"]],
-    examples: ["pstdio pstdio.pstdio-planner write-ticket --title 'Fix login' --status TODO --tags High"],
+    examples: ["pstdio pstdio.planner write-ticket --title 'Fix login' --status TODO --tags High"],
   },
   params: {
     title: params.text({ required: true }),

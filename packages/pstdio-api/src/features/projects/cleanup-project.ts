@@ -1,6 +1,6 @@
 import { removeWorkspaceConfig } from "../workspaces/workspace-config";
 import { cleanupProviderBackedWorkspace } from "../workspaces/workspace-provider-lifecycle";
-import { isBuiltInProviderId, rootProviderId } from "../workspaces/workspace-provider-service";
+import { rootProviderId } from "../workspaces/workspace-provider-service";
 import type { ProjectsRouteDeps } from "./deps";
 
 export const cleanupProjectArtifacts = async (
@@ -17,8 +17,8 @@ export const cleanupProjectArtifacts = async (
   for (const ws of projectWorkspaces) {
     if (ws.provider_id === rootProviderId) continue;
     const removedWorktree = await remove(deps, ws);
-    if (isBuiltInProviderId(ws.provider_id) && ws.root_path && !removedWorktree) {
-      throw new Error(`Workspace worktree could not be removed: ${ws.id}`);
+    if (!removedWorktree) {
+      throw new Error(`Workspace backing resource could not be removed: ${ws.id}`);
     }
     await deps.workspaceService.softDelete(ws.id);
   }
