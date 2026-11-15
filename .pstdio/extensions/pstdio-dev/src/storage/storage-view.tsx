@@ -15,7 +15,7 @@ export interface StorageViewProps {
 const bytes = (value: number) => formatValue(value, "bytes");
 // Table cells stay numeric so columns sort by size.
 const megabytes = (value: number) => Math.round(value / 1e5) / 10;
-// Out-of-line values above this share of the database mean it stores blobs (rule 0006.2.15).
+// Out-of-line values above this share of the database mean it stores blobs (rule 0006.2.16).
 const BLOB_SHARE_WARNING = 0.25;
 
 const Figure = (props: { label: string; value: string; detail?: string }) => (
@@ -68,7 +68,7 @@ const Report = (props: { report: StorageReport }) => {
       {blobShare > BLOB_SHARE_WARNING ? (
         <AlertMessage status="warning" title="The database stores blobs">
           {bytes(largeValues)} of the database is out-of-line large values. The database should hold structured data and
-          references only (rule 0006.2.15); bytes belong in file storage.
+          references only (rule 0006.2.16); bytes belong in file storage.
         </AlertMessage>
       ) : null}
       <Section
