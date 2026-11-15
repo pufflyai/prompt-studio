@@ -1,12 +1,12 @@
 {
-  "name": "pstdio-planner",
+  "name": "planner",
   "version": "0.47.0",
   "displayName": "Project Planner",
   "description": "Built-in Prompt Studio planner: tickets, managed attempts, reviews, and templates.",
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.4.0 || ^0.5.0"
+    "pstdio": "^0.5.0"
   },
   "private": true,
   "type": "module",

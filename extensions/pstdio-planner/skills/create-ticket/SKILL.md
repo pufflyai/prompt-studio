@@ -5,7 +5,7 @@ metadata:
   version: 0.0.8
 ---
 
-Manage Planner tickets with the `pst pstdio.pstdio-planner` commands.
+Manage Planner tickets with the `pst pstdio.planner` commands.
 
 ## Titles
 
@@ -22,14 +22,14 @@ Name what gets better for the person, not the code change. Someone should unders
 
 ## UI designs
 
-Before saving a new ticket that adds or changes UI, read `pst pstdio.pstdio-planner refinement-policy`. When `updateCanvasDesign` is enabled, follow the project's canvas skill and update the relevant live design first. Preserve existing previews and add named variations when comparing alternatives. Link the canvas page, exact preview names, source paths, and a short walkthrough in the ticket. Complete the canvas skill's source handoff before saving: record where the implementation workspace finds the reviewed design sources, either a proposal folder merged to the default branch or, in Git projects, a pushed branch and commit SHA. Canvas designs replace artifact prototypes. If Canvas is unavailable, use the project's existing design workflow and record why no canvas was linked. Do not install extensions automatically. If the option is off, record why the design step was skipped. Resolve policy-read failures before finishing.
+Before saving a new ticket that adds or changes UI, read `pst pstdio.planner refinement-policy`. When `updateCanvasDesign` is enabled, follow the project's canvas skill and update the relevant live design first. Preserve existing previews and add named variations when comparing alternatives. Link the canvas page, exact preview names, source paths, and a short walkthrough in the ticket. Complete the canvas skill's source handoff before saving: record where the implementation workspace finds the reviewed design sources, either a proposal folder merged to the default branch or, in Git projects, a pushed branch and commit SHA. Canvas designs replace artifact prototypes. If Canvas is unavailable, use the project's existing design workflow and record why no canvas was linked. Do not install extensions automatically. If the option is off, record why the design step was skipped. Resolve policy-read failures before finishing.
 
 ## Workflow
 
-1. List the available statuses, tags, and ticket templates with `pst pstdio.pstdio-planner ticket-status read`, `pst pstdio.pstdio-planner ticket-tag read`, and `pst pstdio.pstdio-planner list-ticket-templates`. Do not assume their names. Use `pst pstdio.pstdio-planner list-tickets` to check for related work. See [Tags and statuses](https://prompt.studio/docs/extensions/planner/tags-and-statuses/).
+1. List the available statuses, tags, and ticket templates with `pst pstdio.planner ticket-status read`, `pst pstdio.planner ticket-tag read`, and `pst pstdio.planner list-ticket-templates`. Do not assume their names. Use `pst pstdio.planner list-tickets` to check for related work. See [Tags and statuses](https://prompt.studio/docs/extensions/planner/tags-and-statuses/).
 2. Choose how to create the ticket.
-   - For a detailed body, run `pst pstdio.pstdio-planner write-ticket --title "<title>" [--status <status>] [--tags <tag>]`. Apply a template with `pst pstdio.pstdio-planner apply-ticket-template --id <shorthand> --template <template>`, edit the returned absolute `path` in the default project folder, then save it with `pst pstdio.pstdio-planner save-ticket --id <shorthand>`. See [Edit a ticket as a local file](https://prompt.studio/docs/extensions/planner/cli/#edit-a-ticket-as-a-local-file).
-   - If the complete body already exists, run `pst pstdio.pstdio-planner create-ticket --content "<markdown>" [--status <status>] [--tags <tag>]`. The first heading becomes the title.
+   - For a detailed body, run `pst pstdio.planner write-ticket --title "<title>" [--status <status>] [--tags <tag>]`. Apply a template with `pst pstdio.planner apply-ticket-template --id <shorthand> --template <template>`, edit the returned absolute `path` in the default project folder, then save it with `pst pstdio.planner save-ticket --id <shorthand>`. See [Edit a ticket as a local file](https://prompt.studio/docs/extensions/planner/cli/#edit-a-ticket-as-a-local-file).
+   - If the complete body already exists, run `pst pstdio.planner create-ticket --content "<markdown>" [--status <status>] [--tags <tag>]`. The first heading becomes the title.
    - For a bug, use the `bug-fix` template and follow [Bug reports](#bug-reports).
 3. Read the relevant code and documentation before writing the body. Use the repository's own documentation, such as its PRDs, ADRs, and contributor rules: they describe the product you are changing. Prompt Studio's documentation describes the tool that tracks the work; do not treat its product requirements as this repository's requirements unless the repository is Prompt Studio itself.
 4. Fill in every template section that applies. Keep the ticket short and specific. Remove the template's HTML comments. A free-form ticket must still state:
@@ -37,8 +37,8 @@ Before saving a new ticket that adds or changes UI, read `pst pstdio.pstdio-plan
    - The real files or modules involved.
    - The tests or checks that will prove it works, and the documentation to update, or `None`.
 5. Set `depends_on` in the frontmatter. List tickets that supply required code or other prerequisites. Planner checks their current attempts and Git integration before starting dependent work.
-6. Put priority and type in tags from `pst pstdio.pstdio-planner ticket-tag read`. Repeat `--tags` when needed.
-7. Check unfinished tickets with `pst pstdio.pstdio-planner list-tickets`. Keep dependency waiting in `depends_on`; do not copy it into `blocked_reason` or change the ticket to Blocked for that reason alone. Planner derives readiness from the current prerequisites; see [Dependencies](https://prompt.studio/docs/extensions/planner/cli/#dependencies). Use `--blocked-reason "<why>"` only for an independent blocker, such as missing credentials. Clear that text with `pst pstdio.pstdio-planner update-ticket --id <shorthand> --blocked-reason ''` when the independent blocker is resolved; keep the dependency links.
+6. Put priority and type in tags from `pst pstdio.planner ticket-tag read`. Repeat `--tags` when needed.
+7. Check unfinished tickets with `pst pstdio.planner list-tickets`. Keep dependency waiting in `depends_on`; do not copy it into `blocked_reason` or change the ticket to Blocked for that reason alone. Planner derives readiness from the current prerequisites; see [Dependencies](https://prompt.studio/docs/extensions/planner/cli/#dependencies). Use `--blocked-reason "<why>"` only for an independent blocker, such as missing credentials. Clear that text with `pst pstdio.planner update-ticket --id <shorthand> --blocked-reason ''` when the independent blocker is resolved; keep the dependency links.
 8. Before saving, read the title alone. If it does not say what gets better, rewrite it.
 9. Save the ticket. Create a review request only for a genuine unresolved decision, as described in [Review requests](#review-requests).
 10. Stop after saving the ticket unless the user also asked for implementation. In that case, follow the `implement-ticket` skill.
@@ -49,7 +49,7 @@ A bug report is only useful when someone can see the bug happen. Reproduce it be
 
 1. Reproduce the bug as a user would, from a clean state. Use the app, the CLI, Playwright, or a failing test.
 2. Write the exact steps, the expected result, and the actual result. Copy error text exactly.
-3. Add proof under **Proof**: error output, log lines, failing test output, or a screenshot. A failing test is the strongest proof. Save screenshots (PNG, JPEG, GIF, WebP, or SVG) and long logs in the ticket's `files/` and name them under **Proof**. `pst pstdio.pstdio-planner save-ticket` stores images as ticket attachments, and `pst pstdio.pstdio-planner pull-ticket` writes them back.
+3. Add proof under **Proof**: error output, log lines, failing test output, or a screenshot. A failing test is the strongest proof. Save screenshots (PNG, JPEG, GIF, WebP, or SVG) and long logs in the ticket's `files/` and name them under **Proof**. `pst pstdio.planner save-ticket` stores images as ticket attachments, and `pst pstdio.planner pull-ticket` writes them back.
 4. Find the cause. Label it **Confirmed** only when you traced it in the code or proved it with a test. Otherwise label it **Hypothesis**.
 5. Propose a fix. Compare it with at least one alternative in the table, and state what each option costs.
 6. If the proposed fix works around the cause instead of removing it, write `files/adr.md`. Mark it as a temporary workaround. Explain how the system should work, what prevents that today, the trade-offs of the workaround, and when it will be removed.
@@ -66,7 +66,7 @@ When you cannot reproduce the bug:
 
 Create a review request only for a genuine unresolved decision that the existing instructions and your authority cannot settle. Do not ask for routine assumptions, blanket risk acceptance, handoff acknowledgement, missing credentials, access, resources, reproduction details, or a non-decision action.
 
-For an independent non-decision blocker, discover the configured Blocked status with `pst pstdio.pstdio-planner ticket-status read`, then use `pst pstdio.pstdio-planner update-ticket --id <ticket> --status <blocked-status> --blocked-reason "<what is missing and what allows work to continue>"`. Clear the reason when resolved and resume the appropriate status. Keep dependency waiting in `depends_on`, without an independent blocked reason.
+For an independent non-decision blocker, discover the configured Blocked status with `pst pstdio.planner ticket-status read`, then use `pst pstdio.planner update-ticket --id <ticket> --status <blocked-status> --blocked-reason "<what is missing and what allows work to continue>"`. Clear the reason when resolved and resume the appropriate status. Keep dependency waiting in `depends_on`, without an independent blocked reason.
 
 Keep request text to at most 80 words, excluding document links. Identify the ticket in the title. Prefer **Problem**, **Solution**, and **Downside**, with one short sentence per part; use another structure when it makes the decision clearer. State the decision, mark the recommended choice, and name the main cost of each option. Keep question and option labels short; do not repeat the summary in them. Use a required choice question; add optional notes only when useful. Do not add confirmation or risk checklists that contain no decision.
 
@@ -75,7 +75,7 @@ Use descriptive Markdown links to relevant documents or exact sections, such as 
 This example assumes the ticket has an attached `files/release-plan.md` and no agreed first-release audience.
 
 ```bash
-pst pstdio.pstdio-planner request-review --ticket PS-12 \
+pst pstdio.planner request-review --ticket PS-12 \
   --title "PS-12 · Choose the first release audience" \
   --instructions "**Problem:** The export is ready, but its first release audience is undecided.
 
@@ -87,4 +87,4 @@ pst pstdio.pstdio-planner request-review --ticket PS-12 \
   --request '{"kind":"decision","questions":[{"id":"audience","label":"Who should receive the first release?","required":true,"input":{"kind":"single-choice","options":[{"id":"internal","label":"Internal project first (recommended)"},{"id":"everyone","label":"Everyone now"}]}}]}'
 ```
 
-Read saved answers with `pst pstdio.pstdio-planner review-requests read --request-id <request-id>` before continuing. Never answer your own request.
+Read saved answers with `pst pstdio.planner review-requests read --request-id <request-id>` before continuing. Never answer your own request.

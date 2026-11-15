@@ -1,5 +1,5 @@
 {
-  "name": "pstdio-base-themes",
+  "name": "base-themes",
   "version": "0.45.2",
   "displayName": "Themes",
   "icon": "Palette",
@@ -12,7 +12,7 @@
     "icons"
   ],
   "engines": {
-    "pstdio": "^0.1.0 || ^0.2.0 || ^0.3.0 || ^0.4.0 || ^0.5.0"
+    "pstdio": "^0.5.0"
   },
   "private": true,
   "type": "module",

@@ -12,7 +12,7 @@ import { inlineThreadIsOutdated } from "../data/thread-mapping";
 import { withWriteGuard } from "../data/write-guard";
 import { validateSubmittedStack } from "./stack-validation";
 
-const reportsCommand = commandRef.forExtension({ publisher: "pstdio", name: "pstdio-reports" });
+const reportsCommand = commandRef.forExtension({ publisher: "pstdio", name: "reports" });
 const readReportCommand = reportsCommand<{ id: string }, { id?: string; workspaceId?: string | null; draft?: boolean }>(
   "reports.read",
 );

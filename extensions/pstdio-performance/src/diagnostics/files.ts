@@ -20,6 +20,8 @@ const validId = (id: string) => {
   return id;
 };
 
+// Keep the private capture store at its established location across extension renames.
+// Both versions must read and write the same saved capture IDs and results.
 export const diagnosticDirectory = () =>
   join(
     process.env.PSTDIO_HOME ?? join(homedir(), ".pstdio"),

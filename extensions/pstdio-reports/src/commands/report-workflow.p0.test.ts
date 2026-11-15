@@ -275,13 +275,11 @@ describe("report workflow", () => {
 
     expect(result).toMatchObject({
       name: "review_01",
-      path: join(defaultProjectRoot, ".pstdio/extension-storage/pstdio.pstdio-reports/reports/review/report_01.md"),
-      filesPath: join(defaultProjectRoot, ".pstdio/extension-storage/pstdio.pstdio-reports/reports/review/files_01"),
+      path: join(defaultProjectRoot, ".pstdio/extension-storage/pstdio.reports/reports/review/report_01.md"),
+      filesPath: join(defaultProjectRoot, ".pstdio/extension-storage/pstdio.reports/reports/review/files_01"),
     });
     expect(new TextDecoder().decode(projectFiles.files.get(reportMarkdownPath("review"))!)).toBe("local edits");
-    expect(projectFiles.files.has(".pstdio/extension-storage/pstdio.pstdio-reports/reports/review/report_01.md")).toBe(
-      true,
-    );
+    expect(projectFiles.files.has(".pstdio/extension-storage/pstdio.reports/reports/review/report_01.md")).toBe(true);
     expect(await reportsCollection(storage).list()).toHaveLength(2);
     expect(events).toHaveLength(1);
 
@@ -295,8 +293,8 @@ describe("report workflow", () => {
 
     expect(third).toMatchObject({
       name: "review_02",
-      path: join(defaultProjectRoot, ".pstdio/extension-storage/pstdio.pstdio-reports/reports/review/report_02.md"),
-      filesPath: join(defaultProjectRoot, ".pstdio/extension-storage/pstdio.pstdio-reports/reports/review/files_02"),
+      path: join(defaultProjectRoot, ".pstdio/extension-storage/pstdio.reports/reports/review/report_02.md"),
+      filesPath: join(defaultProjectRoot, ".pstdio/extension-storage/pstdio.reports/reports/review/files_02"),
     });
   });
 
@@ -314,8 +312,8 @@ describe("report workflow", () => {
 
     expect(result).toMatchObject({
       name: "review_01",
-      path: join(defaultProjectRoot, ".pstdio/extension-storage/pstdio.pstdio-reports/reports/review/report_01.md"),
-      filesPath: join(defaultProjectRoot, ".pstdio/extension-storage/pstdio.pstdio-reports/reports/review/files_01"),
+      path: join(defaultProjectRoot, ".pstdio/extension-storage/pstdio.reports/reports/review/report_01.md"),
+      filesPath: join(defaultProjectRoot, ".pstdio/extension-storage/pstdio.reports/reports/review/files_01"),
     });
     expect(new TextDecoder().decode(projectFiles.files.get(reportMarkdownPath("review"))!)).toBe("untracked review");
   });
@@ -593,7 +591,7 @@ describe("saved report identity and failures", () => {
     expect(await reportsCollection(storage).list()).toEqual([]);
     expect(
       [...projectFiles.files.keys()].filter((path) =>
-        path.startsWith(".pstdio/extension-storage/pstdio.pstdio-reports/reports/review/"),
+        path.startsWith(".pstdio/extension-storage/pstdio.reports/reports/review/"),
       ),
     ).toEqual([]);
     expect(events[0]?.event).toBe("pstdio-reports.report.deleted");
@@ -626,7 +624,7 @@ describe("saved report identity and failures", () => {
     expect(await reportsCollection(storage).list()).toEqual([]);
     expect(
       [...projectFiles.files.keys()].filter((path) =>
-        path.startsWith(".pstdio/extension-storage/pstdio.pstdio-reports/reports/review/"),
+        path.startsWith(".pstdio/extension-storage/pstdio.reports/reports/review/"),
       ),
     ).toEqual([]);
   });
