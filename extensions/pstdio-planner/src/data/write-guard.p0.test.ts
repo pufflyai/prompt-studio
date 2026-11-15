@@ -89,3 +89,35 @@ test("queued writes wait for active ownership records before taking the guard", 
   await Promise.all([first, second]);
   expect(order).toEqual(["saved", "stopped"]);
 });
+
+test.each([
+  ["pstdio.pstdio-planner", "pstdio.planner"],
+  ["pstdio.planner", "pstdio.pstdio-planner"],
+])("renaming Planner from %s to %s preserves active write ownership", async (previousOwner, currentOwner) => {
+  const ctx = context();
+  const entered = Promise.withResolvers<void>();
+  const finish = Promise.withResolvers<void>();
+  const running = withWriteGuard({ ...ctx, extensionId: previousOwner }, "plan", async () => {
+    entered.resolve();
+    await finish.promise;
+  });
+  await entered.promise;
+  try {
+    const reloaded = await import(`${import.meta.dir}/write-guard.ts?rename=${crypto.randomUUID()}`);
+    await expect(
+      reloaded.withWriteGuard({ ...ctx, extensionId: currentOwner }, "plan", async () => "overlap"),
+    ).rejects.toThrow("Another Planner write");
+    let stopped = false;
+    const queued = reloaded.withQueuedWriteGuard({ ...ctx, extensionId: currentOwner }, "plan", async () => {
+      stopped = true;
+    });
+    await Promise.resolve();
+    expect(stopped).toBe(false);
+    finish.resolve();
+    await Promise.all([running, queued]);
+    expect(stopped).toBe(true);
+  } finally {
+    finish.resolve();
+    await running;
+  }
+});
