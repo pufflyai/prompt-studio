@@ -21,6 +21,45 @@ export const readAuthentication = async (client: CopilotClientHandle): Promise<H
   };
 };
 
+/** How often, and for how long, the GitHub CLI method checks whether Copilot sees the new login. */
+export const CLI_LOGIN = { intervalMs: 2_000, timeoutMs: 10 * 60_000 };
+
+const chooseMethod = (channel: HarnessAuthenticationChannel) =>
+  channel.request({
+    type: "select",
+    title: "Sign in to GitHub Copilot",
+    options: [
+      {
+        id: "gh-cli",
+        label: "GitHub CLI",
+        description: "Run `gh auth login` in a terminal on this computer.",
+        kind: "oauth",
+      },
+      {
+        id: "token",
+        label: "GitHub token",
+        description: "Paste a token with Copilot access. It stays in Copilot's credential store.",
+        kind: "api_key",
+      },
+    ],
+    initial: "gh-cli",
+  });
+
+// The dialog stays open while the flow runs, so wait for the login instead of returning at once.
+const waitForCliLogin = async (client: CopilotClientHandle, channel: HarnessAuthenticationChannel) => {
+  await channel.emit({
+    type: "message",
+    message: "Run `gh auth login` in a terminal on this computer. This finishes when Copilot sees the login.",
+  });
+  const deadline = Date.now() + CLI_LOGIN.timeoutMs;
+  while (Date.now() < deadline) {
+    channel.signal.throwIfAborted();
+    if ((await client.getAuthStatus()).isAuthenticated) return;
+    await Bun.sleep(CLI_LOGIN.intervalMs);
+  }
+  throw new Error("Copilot did not see a GitHub CLI login. Run `gh auth login`, then sign in again.");
+};
+
 /** Token replies travel only on the account channel, never in chat history or command events. */
 export const runLogin = async (
   client: CopilotClientHandle,
@@ -28,13 +67,9 @@ export const runLogin = async (
   channel: HarnessAuthenticationChannel,
 ) => {
   if (input.action === "logout") throw new Error("Sign out with `gh auth logout` or Copilot's own `/logout`.");
-  if (input.method !== "token") {
-    await channel.emit({
-      type: "message",
-      message: "Run `gh auth login` in a terminal. Copilot uses the GitHub CLI login, then this session refreshes.",
-    });
-    return;
-  }
+  const method = input.method ?? (await chooseMethod(channel));
+  channel.signal.throwIfAborted();
+  if (method !== "token") return waitForCliLogin(client, channel);
   const token = await channel.request({ type: "input", title: "GitHub token with Copilot access", secret: true });
   channel.signal.throwIfAborted();
   await client.storeToken(token.trim());
