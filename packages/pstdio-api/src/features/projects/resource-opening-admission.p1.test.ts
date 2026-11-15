@@ -96,6 +96,8 @@ for (const [method, end] of [
       await entered.promise;
       if (end === "returned") expect((await running).outcome.ok).toBe(true);
       else controller.abort();
+      const [opening] = await resolveResourceOpenings(fixture.deps, { projectId: fixture.project.id }, [resource]);
+      expect(opening?.resource).toMatchObject(resource);
       release.resolve();
       await running;
       await finished.promise;
