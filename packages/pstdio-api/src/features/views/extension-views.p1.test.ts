@@ -55,7 +55,7 @@ const board={kind:"view",id:"tasks",extensionId:${JSON.stringify(declaredOwner)}
 const settings={viewMode:"${resourceList ? "list" : "board"}",columnGrouping:"none",rowGrouping:"none",displayProperties:[],${resourceList ? "showChildren:false" : ""}};
 const filter={conjunction:"and",rules:[{attributeId:"title",condition:"contains",value:"Ready"}]};
 export default {
- views:["tasks","other"].map(id=>({id,ref:{kind:"view",id},title:id,body:{kind:"${resourceList ? "resourceList" : "kanban"}",${paged ? 'queryMode:"paged",' : ""}query:(_ctx,{page})=>{${paged ? 'if(!page || page.limit < 1 || page.offset !== 0 || page.search !== "" || !Array.isArray(page.fields)) throw Error("Missing bounded schema request");' : ""}return {rows:[]};}}})),
+ views:["tasks","other"].map(id=>({id,ref:{kind:"view",id},title:id,body:{kind:"${resourceList ? "resourceList" : "kanban"}",${paged ? 'queryMode:"paged",' : ""}query:(_ctx,{page})=>{${paged ? 'if(!page || page.limit < 1 || page.offset !== 0 || page.search !== "" || !Array.isArray(page.fields)) throw Error("Missing bounded schema request");' : ""}return {rows:[]${paged ? ',page:{revision:"empty",cursor:null,total:0,filteredTotal:0,groups:[]}' : ""}};}}})),
  commands:[{id:"exercise",ref:{kind:"command",id:"exercise"},title:"Exercise",mutating:true,params:{},async run(ctx){
    const initial=await ctx.views.list(board);
    const created=await ctx.views.create(board,{title:"Ready",settings,filter,sorts:[]});
