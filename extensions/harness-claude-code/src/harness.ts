@@ -202,6 +202,7 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
         questions: input.questions,
         approvals: input.approvals,
         turns: input.turns,
+        signal: input.signal,
       }),
 
     resume: (ctx, input) =>
@@ -218,6 +219,7 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
         questions: input.questions,
         approvals: input.approvals,
         turns: input.turns,
+        signal: input.signal,
       }),
 
     getMessages: async (_ctx, input) => {

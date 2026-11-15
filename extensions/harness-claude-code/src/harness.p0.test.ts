@@ -288,3 +288,21 @@ test("start forwards the approval channel to the Claude session", async () => {
   expect(received).toHaveLength(1);
   expect(received[0]).toBe(approvals);
 });
+
+test("start passes the host's cancel signal to the Claude session", async () => {
+  const signals: unknown[] = [];
+  const harness = createClaudeCodeHarness({
+    startSession: async (input) => {
+      signals.push(input.signal);
+      return { agentSessionId: "session", done: Promise.resolve({ status: "completed" as const }), stop: () => {} };
+    },
+  });
+  const controller = new AbortController();
+  await harness.start(ctx, {
+    prompt: "Plan",
+    sessionId: "host",
+    events: { getMessages: () => [], push() {} },
+    signal: controller.signal,
+  });
+  expect(signals[0]).toBe(controller.signal);
+});
