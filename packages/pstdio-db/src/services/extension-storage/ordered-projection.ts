@@ -8,6 +8,7 @@ import { refreshOrderedNativeVersions } from "./ordered-native-versions";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { writeProjectedRecords } from "./record-projection-rows";
 import { readProjectedRecords } from "./record-queries";
+import { refreshResourceQueryValues } from "./resource-query-values";
 
 export { orderedBody, orderedProjection } from "pstdio-sync/records";
 
@@ -35,6 +36,11 @@ export const publishOrderedProjection = async (
     0,
   );
   const projected = await writeProjectedRecords(tx, owner, materialized);
+  await refreshResourceQueryValues(
+    tx,
+    owner,
+    records.map(({ recordId }) => recordId),
+  );
   await refreshOrderedNativeVersions(tx, owner, records, previous);
   if (projected)
     await tx

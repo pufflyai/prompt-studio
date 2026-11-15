@@ -6,7 +6,8 @@ import { jsonBatches } from "./json-batches";
 import { encodeProjectionValue } from "./record-projection-codec";
 
 export const identityQueryKey = "@pstdio/identity-query-v1";
-const marker = '@pstdio/query-format/["@core-identities","v1","0"]';
+// Revisit missing metadata left by ordered identities allocated after the v1 backfill.
+const marker = '@pstdio/query-format/["@core-identities","v2","0"]';
 type Transaction = Pick<DbClient, "execute" | "select" | "insert">;
 
 export const writeResourceQueryValues = async (
@@ -23,6 +24,24 @@ export const writeResourceQueryValues = async (
     await tx.execute(sql`UPDATE storage_current_records AS target SET query_values = target.query_values || input.fields
       FROM jsonb_to_recordset(${input}::jsonb) AS input(id text, fields jsonb)
       WHERE target.workbench_id = ${projectId} AND target.extension_id = 'pstdio' AND target.record_id = input.id`);
+};
+
+/** Ordered number arbitration runs before the current record is published. Refresh only its touched identities afterward. */
+export const refreshResourceQueryValues = async (tx: Transaction, owner: StorageOwner, ids: string[]) => {
+  if (owner.extensionId !== "pstdio") return;
+  for (let offset = 0; offset < ids.length; offset += 100) {
+    const selected = ids.slice(offset, offset + 100);
+    const result = await tx.execute<{ id: string; shorthand: string; aliases: string[] }>(sql`
+      SELECT identity.resource_id AS id, identity.shorthand,
+        coalesce((SELECT jsonb_agg(alias.shorthand ORDER BY alias.shorthand COLLATE "C") FROM storage_resource_aliases alias
+          WHERE alias.workbench_id = identity.workbench_id AND alias.resource_id = identity.resource_id), '[]'::jsonb) AS aliases
+      FROM storage_resource_identities identity
+      WHERE identity.workbench_id = ${owner.workbenchId} AND identity.resource_id IN (${sql.join(
+        selected.map((id) => sql`${id}`),
+        sql`, `,
+      )})`);
+    await writeResourceQueryValues(tx, owner.workbenchId, result.rows);
+  }
 };
 
 /** Upgrade local query metadata in bounded identity/alias pages, without loading core documents. */
