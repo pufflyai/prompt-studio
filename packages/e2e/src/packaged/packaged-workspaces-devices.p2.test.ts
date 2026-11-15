@@ -245,7 +245,7 @@ test(
             id: "create",
             action: {
               kind: "command",
-              target: { command: { kind: "command", extensionId: "pstdio.pstdio-workspaces", id: "show-create" } },
+              target: { command: { kind: "command", extensionId: "pstdio.workspaces", id: "show-create" } },
             },
           }),
         );

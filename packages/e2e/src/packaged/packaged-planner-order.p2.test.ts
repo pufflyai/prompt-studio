@@ -1,6 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
 import type { ChildProcess } from "node:child_process";
-import { rmSync } from "node:fs";
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -9,6 +8,7 @@ import { createCloudAcceptanceFixture, signInCloudAcceptanceDevice } from "./pac
 import { stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
+import { removeTestDirectory } from "./remove-test-directory";
 
 setupPackagedSmokeTests();
 interface Ticket {
@@ -151,13 +151,7 @@ const runScenario = async (signal: AbortSignal, setClose: (close: () => Promise<
   }
   await close();
   phase("cleanup complete");
-  if (failures.length === 0) {
-    try {
-      rmSync(root, { recursive: true, force: true });
-    } catch (cause) {
-      failures.push(cause);
-    }
-  }
+  if (failures.length === 0) await removeTestDirectory(root).catch((cause) => failures.push(cause));
   if (failures.length) {
     console.error(`Planner ordering failure evidence retained at ${root}`);
     throw new AggregateError(failures, `Planner ordering scenario or cleanup failed: ${root}`);
