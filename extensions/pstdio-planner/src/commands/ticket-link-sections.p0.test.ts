@@ -32,7 +32,7 @@ test("ticket resource navigation merges bidirectional session links without empt
   const ctx = makeCommandContext({
     storage: createMemoryStorage(),
     params: {},
-    overrides: { extensionId: "pstdio.pstdio-planner" },
+    overrides: { extensionId: "pstdio.planner" },
   });
   const ticket = { type: "ticket", id: "ticket", extensionId: ctx.extensionId, projectId: ctx.projectId };
   const session = { type: "session", id: "session", extensionId: "pstdio", projectId: ctx.projectId, label: "Review" };
@@ -60,10 +60,8 @@ test("ticket resource navigation merges bidirectional session links without empt
   expect(mergeTicketLinkSections(sections, links)[0].nodes).toHaveLength(1);
 });
 
-test.each([
-  "pstdio.pstdio-planner",
-  "pstdio.planner",
-])("ticket navigation queries %s project-scoped links", async (extensionId) => {
+test("ticket navigation queries canonical project-scoped links", async () => {
+  const extensionId = "pstdio.planner";
   const { createTicketCommand } = await import("./create-ticket");
   const { listTicketFilesTree } = await import("./ticket-files");
   const { makeCommandContext: plannerContext } = await import("./command-context.fixture");

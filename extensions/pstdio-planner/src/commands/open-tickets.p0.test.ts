@@ -21,7 +21,5 @@ test("opens the tickets board through the registered Planner command", async () 
       },
     }),
   );
-  expect(targets).toEqual([
-    { kind: "page", page: { kind: "page", id: "tickets", extensionId: "pstdio.pstdio-planner" } },
-  ]);
+  expect(targets).toEqual([{ kind: "page", page: { kind: "page", id: "tickets", extensionId: "pstdio.planner" } }]);
 });

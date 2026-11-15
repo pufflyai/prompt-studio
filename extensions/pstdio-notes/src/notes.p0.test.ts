@@ -7,7 +7,7 @@ import { createNotesMount } from "./test-mount";
 const coreIds = createIdStorage().ids;
 
 test("an offline import can give notes and folders the same core migration IDs on both devices", async () => {
-  const pair = await createMemoryStorageDevices({ extensionId: "pstdio.pstdio-notes" });
+  const pair = await createMemoryStorageDevices({ extensionId: "pstdio.notes" });
   const results: { id: string; title: string }[][] = [];
   for (const storage of pair.devices) {
     const mount = createNotesMount();

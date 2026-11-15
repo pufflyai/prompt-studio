@@ -32,7 +32,7 @@ test("later wakes query work without repeating the brief or resetting a current 
     expect(await autoBuildCommand.run(ctx, {})).toMatchObject({ prompted: true, sessionId: initial.sessionId });
     const followup = prompts.at(-1)!.prompt!;
     expect(followup).not.toContain("Implement relevant tickets.");
-    expect(followup).toContain("pst pstdio.pstdio-planner next-tickets");
+    expect(followup).toContain("pst pstdio.planner next-tickets");
     expect(followup).not.toContain("auto-build scope");
     expect(followup.length).toBeLessThan(initial.prompt!.length / 4);
     expect(await storage.get("auto-build-supervisor")).toMatchObject({ scope: { revision: "test", queries: [{}] } });

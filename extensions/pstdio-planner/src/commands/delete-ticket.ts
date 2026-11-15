@@ -11,7 +11,7 @@ export const deleteTicketCommand = defineCommand({
   id: "delete-ticket",
   mutating: true,
   title: "Delete ticket",
-  cli: { globalAliases: [["tickets", "delete"]], examples: ["pstdio pstdio.pstdio-planner delete-ticket --id PS-1"] },
+  cli: { examples: ["pstdio pstdio.planner delete-ticket --id PS-1"] },
   menus: [
     {
       slot: ticketMenuSlots.headerOverflow,
