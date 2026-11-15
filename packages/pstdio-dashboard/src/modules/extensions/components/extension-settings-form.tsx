@@ -3,6 +3,7 @@ import type { ExtensionSettingValueRecord } from "@pstdio/sdk/api";
 import { ParamEditorRow } from "@pstdio/ui/param-editor";
 import { CommandOptionStatus, type ExecuteOptionCommand, useCommandOptions } from "@pstdio/workbench/react";
 import { Fragment } from "react";
+import type { ExtensionStringResolver } from "@/shared/extensions/extension-localization";
 import {
   settingChangeValue,
   settingsToOptionValues,
@@ -13,6 +14,7 @@ import {
 
 export interface ExtensionSettingsFormProps {
   settings: ExtensionSettingValueRecord[];
+  resolveString?: ExtensionStringResolver;
   executeOptionCommand: ExecuteOptionCommand;
   /** `undefined` removes the saved value. */
   onChangeSetting: (key: string, value: unknown) => void;
@@ -36,7 +38,7 @@ const ExtensionSettingsFields = (props: ExtensionSettingsFormProps) => {
   // Fields carry the param editor's own row padding, like a command dialog.
   return (
     <Stack gap="0">
-      {settingsToParams(settings, options.states).map((param) => (
+      {settingsToParams(settings, options.states, props.resolveString).map((param) => (
         <Fragment key={param.id}>
           <ParamEditorRow
             param={param}

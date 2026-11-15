@@ -1,5 +1,6 @@
 import "@pstdio/ui/style.css";
-import { createWebviewClient, defineExtensionView, type WebviewPerformanceClient } from "@pstdio/sdk/extensions";
+import { createWebviewClient, defineExtensionView, type WebviewClient } from "@pstdio/sdk/extensions";
+import { useWebviewCommandQuery, useWebviewVisibility } from "@pstdio/sdk/extensions/react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
 import { PerformancePopoverContent } from "./components/performance-popover-content";
@@ -7,19 +8,21 @@ import { PerformanceRoot } from "./components/performance-root";
 import { RuntimeDiagnostics } from "./components/runtime-diagnostics";
 import type { diagnosticCommands } from "./diagnostics/commands";
 import { createDiagnosticsStore, type DiagnosticsStore } from "./diagnostics/store";
-import { createSnapshotStore, type SnapshotStore } from "./snapshot-store";
+import { createSnapshotQuery } from "./snapshot-query";
 
 interface DetailsProps {
-  store: SnapshotStore;
-  performance: WebviewPerformanceClient;
+  client: WebviewClient<typeof diagnosticCommands>;
   diagnostics: DiagnosticsStore;
 }
 
 const Details = (props: DetailsProps) => {
-  const { store, performance, diagnostics } = props;
+  const { client, diagnostics } = props;
   const captures = useSyncExternalStore(diagnostics.subscribe, diagnostics.get);
-  const snapshot = useSyncExternalStore(store.subscribe, store.get);
-  const readError = useSyncExternalStore(store.subscribe, store.getError);
+  const { performance } = client;
+  const { data: snapshot, error: readError } = useWebviewCommandQuery(
+    createSnapshotQuery(client),
+    useWebviewVisibility(),
+  );
   const [copied, setCopied] = useState(false);
   // The check mark confirms one copy, then the button offers to copy again.
   useEffect(() => {
@@ -43,7 +46,7 @@ const Details = (props: DetailsProps) => {
   return (
     <PerformancePopoverContent
       snapshot={snapshot}
-      error={readError}
+      error={readError?.message}
       copied={copied}
       actionError={error}
       onCopy={() => run(copy())}
@@ -70,13 +73,12 @@ export default defineExtensionView({
     const root = createRoot(context.mount);
     root.render(
       <PerformanceRoot context={context}>
-        <Details
-          store={createSnapshotStore(client.performance)}
-          performance={client.performance}
-          diagnostics={createDiagnosticsStore(client)}
-        />
+        <Details client={client} diagnostics={createDiagnosticsStore(client)} />
       </PerformanceRoot>,
     );
-    return () => root.unmount();
+    return () => {
+      root.unmount();
+      client.queries.dispose();
+    };
   },
 });

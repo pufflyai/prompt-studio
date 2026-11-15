@@ -20,14 +20,15 @@ export const useWorkbenchCompositionRegionPanels = (workbench: WorkbenchCore, re
   return region ? workbench.composition.panelsFor(region) : { open: [], addable: [], closable: [] };
 };
 
-export const useWorkbenchCompositionPanels = (workbench: WorkbenchCore): WorkbenchCompositionPanelsByRegion => {
+export const useWorkbenchCompositionPanels = <Region extends WorkbenchPanelRegion>(
+  workbench: WorkbenchCore,
+  regions: readonly Region[],
+) => {
   "use no memo";
 
   useWorkbenchCompositionChanges(workbench);
 
-  return {
-    main: workbench.composition.panelsFor("main"),
-    secondary: workbench.composition.panelsFor("secondary"),
-    side: workbench.composition.panelsFor("side"),
-  };
+  const panels = {} as Record<Region, WorkbenchCompositionRegionPanels>;
+  for (const region of regions) panels[region] = workbench.composition.panelsFor(region);
+  return panels;
 };

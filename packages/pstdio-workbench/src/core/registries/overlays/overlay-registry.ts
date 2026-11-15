@@ -1,4 +1,5 @@
 import type { Disposable } from "../../shared/disposable";
+import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import type { LayoutModel } from "../layout/layout-model";
 import type { ResourceRef } from "../resources/resource-registry";
 import type { WorkbenchViewMenuRegistry } from "../view-menus/view-menu-registry";
@@ -75,16 +76,18 @@ export const createWorkbenchOverlayRegistry = (input: {
 
     openOverlay(id, openInput = {}) {
       if (!overlays.has(id)) throw new Error(`Unknown overlay: ${id}`);
-      const instanceId = input.layout.openPanel(overlayContributionId(id), {
-        viewId: overlays.get(id)?.viewId,
-        resource: openInput.resource ?? null,
-        pageContext: openInput.pageContext,
-        title: openInput.title,
-        closable: overlays.get(id)?.closable ?? true,
-        strategy: { kind: "persistent" },
-      }).instanceId;
-      openings.set(instanceId, { overlayId: id });
-      return instanceId;
+      return batchWorkbenchChanges(() => {
+        const instanceId = input.layout.openPanel(overlayContributionId(id), {
+          viewId: overlays.get(id)?.viewId,
+          resource: openInput.resource ?? null,
+          pageContext: openInput.pageContext,
+          title: openInput.title,
+          closable: overlays.get(id)?.closable ?? true,
+          strategy: { kind: "persistent" },
+        }).instanceId;
+        openings.set(instanceId, { overlayId: id });
+        return instanceId;
+      });
     },
 
     closeOverlay(instanceId) {

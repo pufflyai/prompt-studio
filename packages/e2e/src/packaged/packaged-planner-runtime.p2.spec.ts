@@ -298,10 +298,10 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
     await expectAutoBuildFilter(timeline);
 
     phase("views checked; conflict start");
-    // Ordinary ticket work stays available while host chrome reports the Track problem.
+    // Ordinary ticket work stays available while Planner reports the Track problem.
     expect(await ticketRows(conflicting.execute)).toHaveLength(ACTIVE_CONFLICTS + ARCHIVED_CONFLICTS + 3);
     timeline = await openTimeline(page, host, conflicting.id);
-    await expect(page.getByText(/Track must be a single-select property/)).toBeVisible({ timeout: 30_000 });
+    await expect(timeline.getByText(/Track must be a single-select property/)).toBeVisible({ timeout: 30_000 });
 
     const trackOptions = [conflictData.product.id, conflictData.platform.id];
     await expect(

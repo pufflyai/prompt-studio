@@ -4,8 +4,8 @@ import { deleteResource, renameResource, resolvePath, resolveResource, resolveRe
 import { serviceFor } from "./artifact-context";
 import { removeArtifact, renameArtifact } from "./artifact-mutations";
 import { HTML_LIMIT_BYTES } from "./artifacts";
-import { changedEvent } from "./contracts";
 import { openCreation, startCreation } from "./create-artifact";
+import { emitArtifactChanged } from "./events";
 
 const publishFile = async (
   ctx: ExtensionContextBase,
@@ -31,7 +31,7 @@ const publishFile = async (
     html: new TextDecoder("utf-8", { fatal: true }).decode(bytes),
     workspaceId: ctx.workspaceId,
   });
-  await ctx.events.emit(changedEvent, { artifactId: result.artifactId });
+  await emitArtifactChanged(ctx, result.artifactId);
   return result;
 };
 
