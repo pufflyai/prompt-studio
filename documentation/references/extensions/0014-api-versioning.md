@@ -18,6 +18,14 @@ Stable app and SDK releases share the same number. SDK and UI previews can be pu
 
 The host decides what loads. It compares its own extension API version with `engines.pstdio`. Updating `@pstdio/sdk` in your extension does not update the app. A newer SDK can compile code that calls APIs your app does not have yet.
 
+An installed extension outside the host's supported API range keeps its identity
+and compatibility diagnostic, but contributes no commands, views, hooks, or other
+runtime capabilities. The host does not import its entry module or build its
+webviews. Other compatible extensions continue running. The host preserves the
+user's enabled choice, configuration, and stored data. Installing or reloading a
+compatible extension release makes its contributions available again. Authoring
+checks and new installs still reject unsupported API ranges.
+
 ### Versions in current releases
 
 | Release | Extension API | Notes |
