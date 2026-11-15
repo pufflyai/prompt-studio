@@ -195,9 +195,9 @@ test("paged sub-groups keep loaded resources when the provider reports only top-
   });
   const local = items.find((item) => item.title === "This device");
   expect(local?.countBadge).toBe(12);
-  expect(local?.children?.map((group) => [group.title, group.children?.map((row) => row.title)])).toEqual([
-    ["Web shop", ["Rule"]],
-  ]);
+  expect(
+    local?.children?.map((group) => [group.title, group.countBadge, group.children?.map((row) => row.title)]),
+  ).toEqual([["Web shop", 1, ["Rule"]]]);
 });
 
 test("view filters, ordering and search narrow the resource list", () => {

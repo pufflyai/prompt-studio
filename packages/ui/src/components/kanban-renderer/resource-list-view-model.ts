@@ -138,7 +138,8 @@ const resourceListGroupItem = (input: ResourceListGroupItemInput): KanbanRendere
     id: JSON.stringify(["group", ...path]),
     title: group.label,
     isGroup: true,
-    countBadge: group.count ?? group.rows.length,
+    // A paged provider may omit sub-group counts; never show fewer than the rows already loaded.
+    countBadge: Math.max(group.count ?? 0, group.rows.length),
     statusIcon: getIconComponent(option?.icon),
     statusColorPalette: option?.color,
     note: option?.note,
