@@ -76,7 +76,12 @@ export const installWebviewKeyboardRelay = (host?: WebviewKeyboardRelayHost) => 
         Boolean(candidate.ctrlKey) === event.ctrlKey &&
         Boolean(candidate.metaKey) === event.metaKey &&
         Boolean(candidate.altKey) === event.altKey &&
-        Boolean(candidate.shiftKey) === event.shiftKey,
+        (Boolean(candidate.shiftKey) === event.shiftKey ||
+          // Some layouts need Shift to type a symbol, such as "/" on German keyboards (Shift+7).
+          (event.shiftKey &&
+            !candidate.shiftKey &&
+            /^[^\p{L}\p{N}\s]$/u.test(candidate.key) &&
+            event.key === candidate.key)),
     );
     if (!shortcut) return;
     event.preventDefault();

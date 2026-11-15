@@ -21,6 +21,7 @@ export * from "./harness";
 export * from "./harness-authentication";
 export * from "./harness-commands";
 export * from "./history-reconciliation";
+export { typesText, withNamedKeyCase } from "./keyboard-chords";
 export * from "./link-icons";
 export * from "./native-document-presence";
 export {
