@@ -1,5 +1,6 @@
 import type { CommandContext, ExtensionStorageApi } from "pstdio-api-contracts/extension-kernel";
 import { createCommandContextDefaults } from "./command-context-defaults";
+import { connectMemoryQueryResources } from "./memory-query-resources";
 import { createMemoryResourceLinks } from "./memory-resource-links";
 import { createMemoryResources } from "./memory-resources";
 
@@ -97,6 +98,7 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>(inpu
     invocation: { ...base.invocation, ...overrides?.invocation },
   };
   paramsByContext.set(context, params);
+  connectMemoryQueryResources(context.storage, context.resources);
   return context;
 };
 export const commandParamsFor = <TParams extends Record<string, unknown>>(context: CommandContext) =>

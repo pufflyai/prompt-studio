@@ -70,7 +70,7 @@ test("selected hierarchy retains summaries without retaining bodies or rereading
     new Map([[child.id, child]]),
   );
 
-  expect(observed.reads).toEqual(["tickets/parent"]);
+  expect(observed.reads).toEqual([]);
   expect([...lookup.keys()]).toEqual(["child", "parent"]);
   for (const summary of lookup.values()) {
     expect(summary).not.toHaveProperty("content");

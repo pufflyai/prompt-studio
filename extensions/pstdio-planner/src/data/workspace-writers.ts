@@ -14,3 +14,8 @@ export const hasWorkspaceWriter = async (
   });
   return page.items.some(({ id }) => id !== exceptSessionId);
 };
+
+export const sessionBelongsToWorkspace = (
+  session: { workspaceId?: string | null; workspace_id?: string | null } | null,
+  workspaceId: string,
+) => Boolean(session && (session.workspaceId ?? session.workspace_id) === workspaceId);

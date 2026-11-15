@@ -37,6 +37,7 @@ export const createTextTransportClient = (
     let generation = 0;
     let candidate: TextEditingConnectionInfo | undefined;
     let active = true;
+    let acknowledged: { token: string; active: boolean } | undefined;
     let participation = Promise.resolve();
     let renewal: Promise<void> | undefined;
     let release: { work?: Promise<void> } | undefined;
@@ -48,8 +49,8 @@ export const createTextTransportClient = (
       renewal = (async () => {
         candidate ??= await connect();
         const next = candidate;
+        let applied = active;
         try {
-          let applied = active;
           do {
             applied = active;
             value(
@@ -64,6 +65,7 @@ export const createTextTransportClient = (
           throw error;
         }
         info = next;
+        acknowledged = { token: next.token, active: applied };
         candidate = undefined;
         generation++;
         for (const stream of streams)
@@ -97,7 +99,22 @@ export const createTextTransportClient = (
     };
     const syncParticipation = () => {
       // Every caller owns its queued work, including a change arriving as the previous request settles.
-      participation = participation.catch(() => {}).then(() => call<void>("active", { active }));
+      participation = participation
+        .catch(() => {})
+        .then(async () => {
+          if (release) throw textEditingFailure("session_closed", "This text connection was disposed");
+          const token = info.token;
+          const desired = active;
+          if (acknowledged?.token === token && acknowledged.active === desired) return;
+          try {
+            await call<void>("active", { active: desired });
+            acknowledged = { token, active: desired };
+          } catch (error) {
+            // A lost reply leaves the applied state unknown; recovery must send it again.
+            acknowledged = undefined;
+            throw error;
+          }
+        });
       return participation;
     };
     const connection: TextEditingConnection = {

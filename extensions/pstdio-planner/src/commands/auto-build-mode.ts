@@ -6,7 +6,7 @@ import { readAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { ticketsCollection } from "../data/collections";
 import { withWriteGuard } from "../data/write-guard";
 import { enqueueAutoBuild } from "../hooks/auto-build";
-import { readPlanCommand } from "../timeline/commands/read-plan";
+import { planSchemaCommand } from "../timeline/commands/plan-schema";
 import { timelineQueryData } from "../timeline/model/query-data";
 import { readImplementationCapacity } from "./attempt-readiness";
 import { readAutoBuildCandidates } from "./auto-build-candidates";
@@ -14,7 +14,7 @@ import { isLiveSession, readAutoBuildAssignments } from "./auto-build-sessions";
 
 const validateEligibility = async (ctx: CommandContext, enabled: boolean, filter: ViewFilterGroup) => {
   if (!enabled) return;
-  const plan = await readPlanCommand.run(ctx, {});
+  const plan = await planSchemaCommand.run(ctx, {});
   const query = timelineQueryData(plan, (_key, fallback) => fallback ?? _key);
   if (!readAutoBuildFilter(filter, query.attributes).complete)
     throw new Error("Complete or remove invalid eligible ticket filters before starting Auto Build.");
@@ -24,18 +24,17 @@ export const readAutoBuildCommand = defineCommand({
   id: "auto-build.read",
   title: "Read Auto Build mode",
   cli: true,
-  async run(ctx) {
+  params: { requestOffset: params.number() },
+  async run(ctx, input) {
     const mode = await readAutoBuildMode(ctx);
     const state = await readAutoBuildSupervisor(ctx);
     const [supervisor, { sessions }, capacity, runs] = await Promise.all([
       state.sessionId ? ctx.sessions.get(state.sessionId) : null,
       readAutoBuildAssignments(ctx),
       readImplementationCapacity(ctx),
-      ctx.automation.list(),
+      ctx.automation.list({ commandId: `${ctx.extensionId}.command.auto-build`, limit: 1, order: "newest" }),
     ]);
-    const latest = runs
-      .filter(({ commandId }) => commandId === `${ctx.extensionId}.command.auto-build`)
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
+    const latest = runs[0];
     const running = latest?.status === "queued" || latest?.status === "running";
     const ticketSessions = sessions.filter(({ id }) => id !== state.sessionId);
     const inspect = mode.enabled && !running && capacity.running === 0 && !isLiveSession(supervisor);
@@ -52,10 +51,11 @@ export const readAutoBuildCommand = defineCommand({
     const pendingRequests = await readPendingAutoBuildRequests(
       ctx,
       mode.state === "stopped" ? undefined : state.sessionId,
-      work?.reviewRequests,
+      work?.requestSelection,
+      input.requestOffset,
     );
     const reviewRequests = await Promise.all(
-      pendingRequests.map(async (request) => {
+      pendingRequests.requests.map(async (request) => {
         const ticket = await ticketsCollection(ctx).get(request.ticketId);
         return { ...request, ticketLabel: ticket ? `${ticket.shorthand} · ${ticket.title}` : request.ticketId };
       }),
@@ -63,7 +63,8 @@ export const readAutoBuildCommand = defineCommand({
     return {
       ...mode,
       reviewRequests,
-      requestErrors: work?.requestErrors ?? [],
+      requestErrors: pendingRequests.errors,
+      requestPage: { offset: pendingRequests.offset, total: pendingRequests.total, hasNext: pendingRequests.hasNext },
       observations: work?.observations ?? [],
       waitingTickets: work?.waitingTickets ?? [],
       configurationError: work?.configurationError ?? null,

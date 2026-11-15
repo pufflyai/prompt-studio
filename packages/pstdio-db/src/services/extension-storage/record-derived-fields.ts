@@ -59,7 +59,7 @@ export const derivedQueryValues = (
     if (index.prefix !== undefined && !record.recordId.startsWith(index.prefix)) continue;
     const fields = Object.entries(index.fields).flatMap(([name, field]) => {
       if (!field.derive) return [];
-      const value = typedFieldValue(record.value, field);
+      const value = typedFieldValue(record.value, field, record.recordId);
       return value === undefined ? [] : [[name, value] as const];
     });
     if (fields.length)

@@ -56,6 +56,35 @@ const createRun = (idempotencyKey: string) =>
   });
 
 describe("automation run persistence", () => {
+  test("extension activity selects the latest matching command inside its database limit", async () => {
+    const owner = { projectId, extensionId: "example.worker" };
+    const principal = await service.getOrCreateExtensionPrincipal(owner);
+    const ids: string[] = [];
+    for (let i = 0; i < 4; i++) {
+      const commandId = i === 3 ? "example.worker.command.other" : "example.worker.command.run";
+      const result = await service.createRun({
+        projectId,
+        principalId: principal.id,
+        tokenId: null,
+        commandId,
+        idempotencyKey: String(i),
+        inputHash: String(i),
+        inputJson: { commandId, input: {} },
+      });
+      await db
+        .update(automation_runs)
+        .set({ created_at: `2026-11-15T00:00:0${i}Z` })
+        .where(eq(automation_runs.id, result.run.id));
+      ids.push(result.run.id);
+    }
+    const page = await service.listExtensionRuns(owner, {
+      commandId: "example.worker.command.run",
+      limit: 1,
+      order: "newest",
+    } as never);
+    expect(page.map(({ id }) => id)).toEqual([ids[2]]);
+    expect(await service.listExtensionRuns({ ...owner, extensionId: "peer" }, { limit: 1 } as never)).toEqual([]);
+  });
   test("preserves idempotency across token rotation for one principal", async () => {
     const first = await createRun("rotation-safe");
     const rotatedTokenId = crypto.randomUUID();

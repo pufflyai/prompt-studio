@@ -294,6 +294,10 @@ test("selective in-list pages probe the declared equality index after ordinary w
     ["ordinal"],
     sql`${recordScopeSql(owner, index)} AND ${predicateSql(index, where)}`,
     5,
+    0,
+    undefined,
+    owner,
+    where,
   );
   const evidence = JSON.stringify((await f.db.execute(sql`EXPLAIN (ANALYZE, FORMAT JSON) ${statement}`)).rows);
   expect(evidence).toContain("storage_query_");

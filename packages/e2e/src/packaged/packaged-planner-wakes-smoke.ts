@@ -133,7 +133,7 @@ export async function expectBriefSupervisorWakes(input: { baseUrl: string; heade
     await execute("review", { requestId: human.id, response: { confirmed: true } });
     expect(await status()).toBe("ready");
     expect(
-      (await execute("list-attempts")).filter((row: { ticketId: string }) => row.ticketId === ticket.id),
+      (await execute("list-attempts")).attempts.filter((row: { ticketId: string }) => row.ticketId === ticket.id),
     ).toHaveLength(1);
     expect(await execute("auto-build.read")).toMatchObject({ enabled: false });
   } finally {

@@ -4,14 +4,13 @@ import type { StoredTicket } from "./types";
 
 export const TICKETS_COLLECTION = "tickets";
 export const ticketRecords = (storage: ExtensionStorageApi) => {
-  const records = storage.collection<StoredTicketRecord>(TICKETS_COLLECTION);
+  const { list: _list, ...records } = storage.collection<StoredTicketRecord>(TICKETS_COLLECTION);
   return {
     ...records,
     get: async (id: string) => {
       const stored = await records.get(id);
       return stored && readTicketTags(stored);
     },
-    list: async () => (await records.list()).map(readTicketTags),
     read: async (id: string) => {
       const observed = await records.read(id);
       return observed && { ...observed, stored: observed.value, value: readTicketTags(observed.value) };

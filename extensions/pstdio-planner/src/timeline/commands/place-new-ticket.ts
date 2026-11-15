@@ -1,9 +1,9 @@
 import type { CommandContext } from "@pstdio/sdk/extensions";
 import { withWriteGuard } from "../../data/write-guard";
-import { moveTicket } from "../model/edit-plan";
-import { resolvePlan } from "../model/resolve-plan";
+import { planChanged } from "../contracts";
 import type { PlannerTicket } from "../planner";
-import { deadlineOrNone, loadPlan, savePlan } from "./plan-store";
+import { movePlanPlacement, readPlanMetadata } from "./placement-store";
+import { deadlineOrNone } from "./plan-store";
 
 // Validate placement before creation and preserve the ticket identity if the plan write fails.
 export async function placeNewTicket<T extends PlannerTicket>(
@@ -14,13 +14,13 @@ export async function placeNewTicket<T extends PlannerTicket>(
   let created: T | undefined;
   try {
     return await withWriteGuard(ctx, "plan", async () => {
-      const loaded = await loadPlan(ctx);
-      const deadlineId = deadlineOrNone(loaded.plan, milestone);
+      const plan = await readPlanMetadata(ctx.storage);
+      const deadlineId = deadlineOrNone(plan, milestone);
       const ticket = await create();
       created = ticket;
       try {
-        const plan = resolvePlan(loaded.plan, [...loaded.tickets, ticket], loaded.statuses);
-        await savePlan(ctx, moveTicket(plan, { ticketId: ticket.id, deadlineId }), "ticket");
+        await movePlanPlacement(ctx.storage, { ticketId: ticket.id, deadlineId });
+        await ctx.events.emit(planChanged, { reason: "ticket" });
         return { ticket, placementError: null as string | null };
       } catch (error) {
         return { ticket, placementError: String(error) };

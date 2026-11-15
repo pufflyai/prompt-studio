@@ -88,7 +88,8 @@ const runScenario = async (signal: AbortSignal, setClose: (close: () => Promise<
       () => second.client.extensions.listCommands(project.id),
       ({ commands }) => commands.some(({ id }) => id === `${owner}.command.read-tickets`),
     );
-    const read = (device: typeof first) => device.command<Ticket[]>(project.id, owner, "read-tickets");
+    const read = async (device: typeof first) =>
+      (await device.command<{ tickets: Ticket[] }>(project.id, owner, "read-tickets")).tickets;
     await waitFor(
       signal,
       () => read(second),

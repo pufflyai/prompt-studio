@@ -1,20 +1,29 @@
 import {
   canonicalJson,
+  fingerprint,
   type Json,
   type StorageAggregateQuery,
   type StorageRecord,
   type StorageRecordIndex,
 } from "pstdio-sync-contracts";
 import { createDecimalSum } from "./decimal-sum";
-import { queryField, typedFieldValue } from "./record-query";
+import type { QueryIdentities } from "./memory-query-identities";
 import { aggregateOptions, compareAggregateGroups } from "./record-query-options";
+import { recordQueryValue } from "./record-query-value";
+import { memoryColumnStatistic } from "./record-statistics";
 
-export const memoryRecordAggregate = (
+export const memoryRecordAggregate = async (
   index: StorageRecordIndex,
   query: StorageAggregateQuery,
   selected: StorageRecord[],
   revision: string,
+  identities?: QueryIdentities,
+  records: StorageRecord[] = selected,
+  resolve?: (name: string) => StorageRecordIndex,
+  read?: (index: StorageRecordIndex, record: StorageRecord, name: string) => Json | undefined,
 ) => {
+  const readField = (record: StorageRecord, name: string) =>
+    read ? read(index, record, name) : recordQueryValue(index, record, name, identities, records, resolve);
   const options = aggregateOptions(index, query);
   const metrics = () => ({
     values: Object.fromEntries(options.metrics.map(([name]) => [name, null])) as Record<string, number | null>,
@@ -24,7 +33,7 @@ export const memoryRecordAggregate = (
   });
   const add = (state: ReturnType<typeof metrics>, record: StorageRecord) => {
     for (const [name, metric] of options.metrics) {
-      const value = typedFieldValue(record.value, queryField(index, metric.field));
+      const value = readField(record, metric.field);
       if (typeof value !== "number") continue;
       const previous = state.values[name];
       if (metric.operation === "sum") state.sums[name].add(value);
@@ -38,7 +47,7 @@ export const memoryRecordAggregate = (
   for (const record of selected) {
     add(total, record);
     if (!options.groupBy.length) continue;
-    const fields = options.groupBy.map((field) => typedFieldValue(record.value, queryField(index, field)) ?? null);
+    const fields = options.groupBy.map((field) => readField(record, field) ?? null);
     const value = typeof query.groupBy === "string" ? fields[0] : fields;
     const key = canonicalJson(value);
     const group = groups.get(key) ?? { value, count: 0, metrics: metrics() };
@@ -62,7 +71,36 @@ export const memoryRecordAggregate = (
   return {
     revision,
     count: selected.length,
+    ...(query.statistics
+      ? {
+          statistics: Object.fromEntries(
+            options.statistics.map(([name, statistic]) => [
+              name,
+              memoryColumnStatistic(
+                selected.map((record) => ({ id: record.recordId, value: readField(record, statistic.field) })),
+                statistic,
+              ),
+            ]),
+          ),
+        }
+      : {}),
     ...resultMetrics(total),
+    ...(query.fingerprint
+      ? {
+          fingerprint: await fingerprint(
+            selected
+              .slice()
+              .sort((a, b) => {
+                if (a.recordId === b.recordId) return 0;
+                return a.recordId < b.recordId ? -1 : 1;
+              })
+              .map((record) => [
+                record.recordId,
+                ...query.fingerprint!.map((field) => readField(record, field) ?? null),
+              ]),
+          ),
+        }
+      : {}),
     groups: [...groups.values()]
       .map(({ value, count, metrics }) => ({ value, count, ...resultMetrics(metrics) }))
       .sort((a, b) => compareAggregateGroups(query, a.value, b.value)),

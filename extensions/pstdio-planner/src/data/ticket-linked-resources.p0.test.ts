@@ -105,7 +105,7 @@ test("resources without a saved or resolved label are hidden instead of showing 
   expect(lookup.get("one")).toEqual([]);
 });
 
-test("relationships include every page and owner resolution uses bounded batches across cards", async () => {
+test("overview relationships use a bounded preview with a continuation to the ticket", async () => {
   const ctx = makeCommandContext({
     storage: createMemoryStorage(),
     params: {},
@@ -119,6 +119,7 @@ test("relationships include every page and owner resolution uses bounded batches
     return [];
   };
   const lookup = await loadTicketLinkedResources(ctx.resources, [ticket("one")]);
-  expect(lookup.get("one")).toHaveLength(105);
-  expect(sizes).toEqual([100, 5]);
+  expect(lookup.get("one")).toHaveLength(9);
+  expect(lookup.get("one")!.at(-1)?.action).toMatchObject({ kind: "page", resource: ticket("one") });
+  expect(sizes).toEqual([8]);
 });

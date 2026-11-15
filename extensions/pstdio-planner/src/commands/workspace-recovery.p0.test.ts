@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { readRetiredWorkspaceIds } from "../data/attempt-retirement";
-import { attemptSelectionsCollection, listAttempts, putAttempt, readAttempt } from "../data/attempt-storage";
+import { attemptSelectionsCollection, putAttempt, readAttempt } from "../data/attempt-storage";
+import { listAttempts } from "../data/attempt-storage.fixture";
 import { putTicket } from "../data/ticket-context.fixture";
 
 import { fixture } from "./auto-build.fixture";
@@ -117,7 +118,7 @@ test.each([
   expect(replacement?.base.headSha).toBe("main-sha");
   expect(replacement?.revisions).toEqual([]);
   expect(await readAttempt(f.storage, f.old.workspace.id)).toMatchObject({ revisions: f.previous.revisions });
-  expect(await readRetiredWorkspaceIds(f.storage)).toContain(f.old.workspace.id);
+  expect(await readRetiredWorkspaceIds(f.storage, [f.old.workspace.id])).toContain(f.old.workspace.id);
   expect(await attemptSelectionsCollection(f.storage).get(f.ticket.id)).toMatchObject({ workspaceId: "workspace-2" });
   expect(f.created[0]?.originalSessionId).toBe(source === "missing owner" ? undefined : f.old.session.id);
   expect(f.created[0]?.prompt).toContain("https://github.com/acme/tools/pull/1");
@@ -240,7 +241,7 @@ test("manual resume recovers missing stopped work with Auto Build disabled and p
   expect(result).toMatchObject({ decision: "started", workspace: { id: "workspace-2" } });
   expect(await readAttempt(f.storage, f.old.workspace.id)).toEqual(f.previous);
   expect((await readAttempt(f.storage, "workspace-2"))?.revisions).toEqual([]);
-  expect(await readRetiredWorkspaceIds(f.storage)).toContain(f.old.workspace.id);
+  expect(await readRetiredWorkspaceIds(f.storage, [f.old.workspace.id])).toContain(f.old.workspace.id);
   expect(await attemptSelectionsCollection(f.storage).get(f.ticket.id)).toMatchObject({ workspaceId: "workspace-2" });
   expect(f.created[0]?.originalSessionId).toBe(f.old.session.id);
   expect(f.created[0]?.prompt).toContain("old-report");

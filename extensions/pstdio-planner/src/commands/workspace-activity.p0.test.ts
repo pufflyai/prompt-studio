@@ -59,6 +59,7 @@ describe("workspaceActivityCommand", () => {
 
     expect(result).toEqual({
       active: false,
+      nextCursor: null,
       sessions: [
         {
           id: "s1",
@@ -89,6 +90,30 @@ describe("workspaceActivityCommand", () => {
   test("reports inactive for a workspace without sessions", async () => {
     const result = await workspaceActivityCommand.run(...activityContext([]));
 
-    expect(result).toEqual({ active: false, sessions: [] });
+    expect(result).toEqual({ active: false, nextCursor: null, sessions: [] });
   });
+});
+
+test("workspace activity pages history while live state uses a separate existence query", async () => {
+  const rows = [
+    session("old-live", "in_progress"),
+    ...Array.from({ length: 5000 }, (_, i) => session(`old-${i}`, "completed")),
+  ];
+  const query = sessionQuery(async () => rows);
+  const args = makeCommandArgs({
+    storage: createMemoryStorage(),
+    params: { workspaceId: "w1" },
+    overrides: {
+      sessions: {
+        query: async (input) => {
+          expect(input?.limit).toBeLessThanOrEqual(100);
+          return query(input);
+        },
+      },
+    },
+  });
+  const first = await workspaceActivityCommand.run(...args);
+  expect(first.active).toBe(true);
+  expect(first.sessions).toHaveLength(100);
+  expect(first.nextCursor).not.toBeNull();
 });

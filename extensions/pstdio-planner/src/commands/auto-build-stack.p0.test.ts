@@ -26,6 +26,7 @@ test("stack repair cannot resume an owner stopped after its readiness check", as
   });
   let owner: NonNullable<Awaited<ReturnType<typeof ctx.sessions.get>>> = sessionRecord({
     id: started.session.id,
+    workspaceId: started.workspace.id,
     title: "Owner",
     status: "completed",
   });

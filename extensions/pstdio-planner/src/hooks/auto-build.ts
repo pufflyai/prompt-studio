@@ -22,7 +22,11 @@ export const enqueueAutoBuild = (ctx: ExtensionContextBase) =>
     "auto-build-enqueue",
     async () => {
       if (!(await readAutoBuildMode(ctx)).enabled) return;
-      const active = await ctx.automation.list({ status: ["queued", "running"] });
+      const active = await ctx.automation.list({
+        status: ["queued", "running"],
+        commandId: `${ctx.extensionId}.command.${autoBuildCommand.id}`,
+        limit: 1,
+      });
       if (active.some(({ commandId }) => commandId === `${ctx.extensionId}.command.${autoBuildCommand.id}`)) return;
       await ctx.automation.enqueue({
         command: autoBuildCommand.ref,

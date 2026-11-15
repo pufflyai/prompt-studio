@@ -157,6 +157,7 @@ export interface CommandRunner {
 }
 
 export interface InternalExecuteInput extends CommandExecuteInput {
+  collectionQuery?: import("./collection-query").CollectionQueryPolicy;
   navigationScope?: NavigationScope;
   depth: number;
 }

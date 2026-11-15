@@ -15,6 +15,7 @@ import type {
 } from "@pstdio/sdk/extensions";
 import { qualifyNavigationTarget, queryChangeEnvelopeSchema } from "pstdio-api-contracts";
 import type { ExtensionRuntime } from "../../types/runtime";
+import { boundedQueryAutomation, boundedQueryStorage, rejectUnboundedCollectionRead } from "./collection-query";
 import { type EventDispatcher, refId } from "./dispatch";
 import type { NavigationScope } from "./navigation-scope";
 import type { InvocationScope } from "./scope";
@@ -61,6 +62,7 @@ export interface RunnerState {
 
 /** Where a nested `ctx.commands.execute()` runs from. */
 interface NestedExecuteOrigin {
+  collectionQuery?: InvocationScope["collectionQuery"];
   navigationScope?: NavigationScope;
   depth: number;
   extensionId: string;
@@ -138,6 +140,7 @@ export const createExecuteBuilder = (runRef: {
   return (origin) => async (command, invocation) => {
     const id = refId(command, origin.extensionId);
     const outcome = await runRef.run({
+      collectionQuery: origin.collectionQuery,
       commandId: id,
       projectId: origin.projectId,
       params: (invocation?.params ?? {}) as JsonObject,
@@ -164,6 +167,7 @@ export const createContextFactory = (
   buildExtensionContext(env, ids, depth, scope, navigationScope) {
     const hostApis: ScopedHostApis = scope ? env.withScope(scope) : env;
     const origin = {
+      collectionQuery: scope?.collectionQuery,
       navigationScope,
       depth,
       extensionId: ids.extensionId,
@@ -179,7 +183,7 @@ export const createContextFactory = (
       project: env.project,
       extensionId: ids.extensionId,
       name: ids.name,
-      storage: hostApis.storage,
+      storage: scope?.collectionQuery ? boundedQueryStorage(hostApis.storage) : hostApis.storage,
       resources: env.resources,
       views: env.views ?? unavailableViewsApi,
       navigation: {
@@ -196,12 +200,14 @@ export const createContextFactory = (
       skills: hostApis.skills,
       extensions: hostApis.extensions,
       sessions: hostApis.sessions,
-      workspaces: hostApis.workspaces,
+      workspaces: scope?.collectionQuery
+        ? { ...hostApis.workspaces, list: rejectUnboundedCollectionRead }
+        : hostApis.workspaces,
       commands: buildCommandsApi(createExecute, origin),
       events: buildEventsApi(dispatcher, ids),
       activity: env.activity,
       notify: env.notify,
-      automation: env.automation,
+      automation: scope?.collectionQuery ? boundedQueryAutomation(env.automation) : env.automation,
       process: hostApis.process,
       net: env.net,
       connections: hostApis.connections ?? unavailableConnections,

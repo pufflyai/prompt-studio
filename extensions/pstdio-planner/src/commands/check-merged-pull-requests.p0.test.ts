@@ -6,7 +6,7 @@ import { seedTicketIdentity, ticketsCollection } from "../data/ticket-context.fi
 import type { Ticket } from "../data/types";
 import { loadAttemptReadiness } from "./attempt-readiness";
 import { checkMergedPullRequestsCommand } from "./check-merged-pull-requests";
-import { makeCommandArgs } from "./command-context.fixture";
+import { makeCommandArgs, makeCommandContext } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { stackSubmissionFixture } from "./stack-submission.fixture";
 
@@ -124,28 +124,28 @@ for (const scenario of ["branch merged", "disabled", "open", "unavailable"]) {
     await statusesCollection(storage).put("done", { id: "done", name: "Done" } as never);
     const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Branch" } }));
     let calls = 0;
-    await checkMergedPullRequestsCommand.run(
-      ...makeCommandArgs({
-        storage,
-        params: {},
-        overrides: {
-          settings: { get: async () => scenario !== "disabled" },
-          workspaces: {
-            list: async () => [{ id: "ws", branch: "feature/work", anchors_json: [{ type: "ticket", id: ticket.id }] }],
-          },
-          process: {
-            run: async () => {
-              calls++;
-              return {
-                exitCode: scenario === "unavailable" ? 1 : 0,
-                stdout: scenario === "branch merged" ? '[{"number":1}]' : "[]",
-                stderr: "not logged in",
-              };
-            },
+    const ctx = makeCommandContext({
+      storage,
+      params: {},
+      overrides: {
+        settings: { get: async () => scenario !== "disabled" },
+        workspaces: { query: async () => ({ items: [{ id: "ws", branch: "feature/work" }], nextCursor: null }) },
+        process: {
+          run: async () => {
+            calls++;
+            return {
+              exitCode: scenario === "unavailable" ? 1 : 0,
+              stdout: scenario === "branch merged" ? '[{"number":1}]' : "[]",
+              stderr: "not logged in",
+            };
           },
         },
-      }),
-    );
+      },
+    });
+    await ctx.resources.addAnchors({ type: "workspace", id: "ws", extensionId: "pstdio", projectId: ctx.projectId }, [
+      { type: "ticket", id: ticket.id, extensionId: ctx.extensionId, projectId: ctx.projectId },
+    ]);
+    await checkMergedPullRequestsCommand.run(ctx, {});
     expect(calls).toBe(scenario === "disabled" ? 0 : 1);
     expect((await ticketsCollection(storage).get(ticket.id))?.statusId).toBe(
       scenario === "branch merged" ? "done" : ticket.statusId,
@@ -265,4 +265,76 @@ test("an old merged PR cannot complete a later submitted correction", async () =
       : { exitCode: 0, stdout: '{"state":"MERGED","headRefOid":"old-head"}', stderr: "" };
   await checkMergedPullRequestsCommand.run(ctx, {});
   expect((await ticketsCollection(storage).get(task.id))?.statusId).toBe(task.statusId);
+});
+
+test("merge checks page ticket metadata and never list complete project collections", async () => {
+  const now = new Date().toISOString();
+  const storage = createMemoryStorage({
+    collections: {
+      "ticket-statuses": { done: { id: "done", name: "Done" } },
+      tickets: Object.fromEntries(
+        Array.from({ length: 203 }, (_, index) => {
+          const id = `scale-${String(index).padStart(3, "0")}`;
+          return [
+            id,
+            {
+              id,
+              title: id,
+              shorthand: `T-${index + 1}`,
+              content: "Large ticket body. ".repeat(1000),
+              statusId: "backlog",
+              archived: false,
+              createdAt: now,
+              updatedAt: now,
+              reviewLinks:
+                index === 202
+                  ? [
+                      {
+                        id: "pr",
+                        provider: "github",
+                        kind: "pull_request",
+                        url: "https://github.com/acme/tools/pull/203",
+                      },
+                    ]
+                  : [],
+            },
+          ];
+        }),
+      ),
+    },
+  });
+  for (let i = 0; i < 203; i++)
+    seedTicketIdentity(storage, { id: `scale-${String(i).padStart(3, "0")}`, shorthand: `T-${i + 1}` });
+  const collection = storage.collection.bind(storage);
+  storage.collection = ((name: string) => ({
+    ...collection(name),
+    list: async () => {
+      throw Error(`Whole collection read: ${name}`);
+    },
+  })) as typeof storage.collection;
+  storage.records.list = async () => {
+    throw Error("Whole record read");
+  };
+  const commands: string[][] = [];
+  await checkMergedPullRequestsCommand.run(
+    ...makeCommandArgs({
+      storage,
+      params: {},
+      overrides: {
+        workspaces: {
+          list: async () => {
+            throw Error("Whole workspace read");
+          },
+        },
+        process: {
+          run: async ({ command }) => {
+            commands.push(command as string[]);
+            return { exitCode: 0, stdout: '{"state":"MERGED"}', stderr: "" };
+          },
+        },
+      },
+    }),
+  );
+  expect(commands).toHaveLength(1);
+  expect((await ticketsCollection(storage).get("scale-202"))?.statusId).toBe("done");
 });

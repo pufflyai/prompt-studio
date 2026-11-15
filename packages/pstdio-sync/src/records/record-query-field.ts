@@ -1,10 +1,11 @@
 import {
-  deriveMarkdownTitle,
+  evaluateStorageExpression,
+  formatViewDate,
   type Json,
-  resolveSelectedValues,
   type StorageIndexField,
   type StorageRecordIndex,
 } from "pstdio-sync-contracts";
+import { derivedQueryValue, validateDerivedField } from "./record-query-derive";
 
 export const fieldValue = (value: Json, path: string[]) => {
   let current: Json | undefined = value;
@@ -15,24 +16,25 @@ export const fieldValue = (value: Json, path: string[]) => {
   return current;
 };
 
-const querySourceValue = (value: Json, field: StorageIndexField) => {
-  let current = fieldValue(value, field.path);
-  if (field.derive?.kind === "markdownTitle") {
-    if (typeof current === "string" && current.length) current = deriveMarkdownTitle(current, field.derive.empty);
-    else current = field.derive.fallbackPath ? fieldValue(value, field.derive.fallbackPath) : undefined;
-  }
-  if (field.derive?.kind === "selection") {
-    const known = field.derive.knownValues;
-    const selected = resolveSelectedValues(current, fieldValue(value, field.derive.selectionPath)).filter(
-      (id) => !known || known.includes(id),
-    );
-    current = field.type === "string" ? selected[0] : selected;
-  }
-  return current;
+const querySourceValue = (
+  value: Json,
+  field: StorageIndexField,
+  recordId?: string,
+  resolve?: (name: string) => Json | undefined,
+) => {
+  if (field.expression) return evaluateStorageExpression(field.expression, resolve);
+  if (field.format) return formatViewDate(resolve?.(field.format.field), field.format);
+  if (field.derive) return derivedQueryValue(value, field, recordId);
+  return fieldValue(value, field.path ?? []);
 };
 
-export const typedFieldValue = (value: Json, field: StorageIndexField) => {
-  const current = querySourceValue(value, field);
+export const typedFieldValue = (
+  value: Json,
+  field: StorageIndexField,
+  recordId?: string,
+  resolve?: (name: string) => Json | undefined,
+): Json | undefined => {
+  const current: Json | undefined = querySourceValue(value, field, recordId, resolve);
   if (current == null) return current;
   if (field.type === "array")
     return Array.isArray(current) && current.every((item) => typeof item === "string") ? current : undefined;
@@ -45,37 +47,14 @@ export const queryField = (index: StorageRecordIndex, name: string) => {
   return index.fields[name];
 };
 
-const validateDerivedField = (field: StorageIndexField) => {
-  if (!field.derive) return;
-  if (field.derive.kind === "selection") {
-    if (!["array", "string"].includes(field.type)) throw new Error("Selection fields need string or array type");
-    const path = field.derive.selectionPath;
-    if (!Array.isArray(path) || !path.length || path.some((part) => typeof part !== "string" || !part))
-      throw new Error("Invalid selection path");
-    const known = field.derive.knownValues;
-    if (
-      known !== undefined &&
-      (!Array.isArray(known) ||
-        known.some((value) => typeof value !== "string") ||
-        new Set(known).size !== known.length)
-    )
-      throw new Error("Known selection values must be different strings");
-    return;
-  }
-  if (field.type !== "string" || field.derive.kind !== "markdownTitle") throw new Error("Invalid derived string field");
-  if (field.derive.empty !== undefined && typeof field.derive.empty !== "string")
-    throw new Error("Derived empty text must be a string");
-  const fallback = field.derive.fallbackPath;
-  if (
-    fallback !== undefined &&
-    (!Array.isArray(fallback) || !fallback.length || fallback.some((part) => typeof part !== "string" || !part))
-  )
-    throw new Error("Invalid derived fallback path");
-};
-
 export const validateQueryField = (name: string, field: StorageIndexField) => {
   if (!name || !["string", "number", "boolean", "array", "object"].includes(field.type))
     throw new Error("Invalid index field");
+  if (field.lookup) {
+    if (!field.lookup.index || !field.lookup.field || field.derive || field.expression || field.path !== undefined)
+      throw new Error("Related projection needs an index and field without a local path");
+    return;
+  }
   if (!Array.isArray(field.path) || !field.path.length || field.path.some((part) => typeof part !== "string" || !part))
     throw new Error("Invalid field path");
   validateDerivedField(field);

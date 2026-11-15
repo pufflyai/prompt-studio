@@ -178,3 +178,21 @@ test("rebinding an index between counts and rows rejects the mixed selection", a
   };
   await expect(readCollectionPage(storage, { index: "items" })).rejects.toThrow("stale");
 });
+
+test("grouped views count the same selection once when no search changes it", async () => {
+  const storage = await fixture();
+  let aggregates = 0;
+  const aggregate = storage.records.aggregate;
+  storage.records.aggregate = async (query) => {
+    aggregates++;
+    return aggregate(query);
+  };
+  const result = await readCollectionPage(storage, {
+    index: "foobar",
+    fields: ["rank"],
+    groups: [{ field: "status", indexField: "state" }],
+  });
+  expect(result.page.total).toBe(240);
+  expect(result.page.groups.map(({ count }) => count)).toEqual([120, 120]);
+  expect(aggregates).toBe(1);
+});

@@ -1,7 +1,7 @@
 import { strict as assert } from "node:assert";
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
-import { runTicketsQuery } from "../data/query";
+import { runTicketsQuery } from "../data/query.fixture";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
 import { ticketContext, ticketsCollection } from "../data/ticket-context.fixture";
 import type { Ticket } from "../data/types";

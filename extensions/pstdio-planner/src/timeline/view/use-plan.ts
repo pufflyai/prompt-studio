@@ -27,10 +27,10 @@ type PlanCommands = typeof commands & {
 
 export type PlanClient = ReturnType<typeof createWebviewClient<PlanCommands>>;
 
-const readPlan = (client: PlanClient) => client.commands["timeline.plan.read"]();
+const readPlan = (client: PlanClient) => client.commands["timeline.plan.schema"]();
 
 // Planner reports tag changes as ticket changes, so track names stay current too.
-const planEvents = [
+export const planEvents = [
   plannerTicketsChanged,
   planChanged,
   viewDataEvents.boardViewsChanged,

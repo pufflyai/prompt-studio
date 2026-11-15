@@ -11,8 +11,12 @@ interface ReviewRequestStates {
 
 export const reviewRequestSummary = (group: ReviewRequestStates) => {
   const total = group.requests.length + group.errors.length;
-  if (total === 0) return null;
   const open = group.requests.filter((request) => request.state === "open").length + group.errors.length;
+  return reviewRequestCountSummary(total, open);
+};
+
+export const reviewRequestCountSummary = (total: number, open: number) => {
+  if (total === 0) return null;
   const count = open || total;
   const noun = count === 1 ? "item" : "items";
   const pendingTooltip = `${count} ${noun} ${count === 1 ? "needs" : "need"} attention`;
@@ -25,6 +29,13 @@ export const reviewRequestSummary = (group: ReviewRequestStates) => {
 
 export const reviewRequestBadgeItems = (group: ReviewRequestStates, action: NavigationTarget) => {
   const summary = reviewRequestSummary(group);
+  return reviewSummaryBadgeItems(summary, action);
+};
+
+export const reviewSummaryBadgeItems = (
+  summary: ReturnType<typeof reviewRequestCountSummary>,
+  action: NavigationTarget,
+) => {
   return summary
     ? [
         {

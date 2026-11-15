@@ -1,5 +1,6 @@
 import { type ExtensionContextBase, l10n, type TreeNode, type TreeRendererPageParams } from "@pstdio/sdk/extensions";
-import { statusesCollection, ticketsCollection } from "../data/collections";
+import { ticketsCollection } from "../data/collections";
+import { readStatusDefinitions } from "../data/definition-query";
 import { linkedWorkspacePage } from "../data/linked-workspaces";
 import { queryTicketNavigationPage } from "../data/navigation-queries";
 import { readTicketLinkedResourcePage } from "../data/ticket-linked-resources";
@@ -17,7 +18,8 @@ export const listTicketFilesPage = async (
   const resource = input.renderer.resource;
   if (resource?.type !== "ticket" || input.parent.kind !== "section") return { nodes: [] };
   const section = input.parent.id;
-  if (!["sub-tickets", "required-by", "workspaces", "sessions", "related"].includes(section)) return { nodes: [] };
+  if (!["sub-tickets", "required-by", "depends-on", "workspaces", "sessions", "related"].includes(section))
+    return { nodes: [] };
   const ticket = await ticketsCollection(ctx).get(resource.id);
   if (!ticket) return { nodes: [] };
   if (section === "sessions") {
@@ -52,12 +54,17 @@ export const listTicketFilesPage = async (
       nextCursor: page.nextCursor,
     };
   }
-  const page = await queryTicketNavigationPage(ctx, ticket, section as "sub-tickets" | "required-by", input.cursor);
+  const page = await queryTicketNavigationPage(
+    ctx,
+    ticket,
+    section as "sub-tickets" | "required-by" | "depends-on",
+    input.cursor,
+  );
   const lookup = await readTicketParentLookup(ctx, new Map([ticket, ...page.tickets].map((row) => [row.id, row])));
   const tickets = [...lookup.values()];
   let nodes: TreeNode[];
   if (section === "sub-tickets") {
-    const statuses = await statusesCollection(ctx.storage).list();
+    const statuses = await readStatusDefinitions(ctx.storage);
     nodes =
       buildSubTicketsSection({
         tickets,
@@ -67,8 +74,14 @@ export const listTicketFilesPage = async (
       })?.nodes ?? [];
   } else {
     nodes =
-      ticketRelationshipSections(ticket, tickets, plannerOwnerFor(ctx), page.tickets).find(({ id }) => id === section)
-        ?.nodes ?? [];
+      ticketRelationshipSections(
+        ticket,
+        tickets,
+        plannerOwnerFor(ctx),
+        page.tickets,
+        undefined,
+        section === "depends-on" ? page : undefined,
+      ).find(({ id }) => id === section)?.nodes ?? [];
   }
   return { nodes, ...(page.nextCursor ? { nextCursor: page.nextCursor } : {}) };
 };

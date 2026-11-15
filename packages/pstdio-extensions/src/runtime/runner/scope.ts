@@ -11,6 +11,7 @@ export type ScopeDisposer = () => void | Promise<void>;
  * signal to work the host keeps running after the command returns, such as an agent session.
  */
 export interface InvocationScope {
+  collectionQuery?: import("./collection-query").CollectionQueryPolicy;
   /** Aborted when the host cancels the invocation. */
   readonly signal: AbortSignal;
   /** Registers cleanup for a resource this invocation created. */

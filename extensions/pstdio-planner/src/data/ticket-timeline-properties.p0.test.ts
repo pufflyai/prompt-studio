@@ -6,7 +6,7 @@ import { setTicketAttributeCommand } from "../commands/set-ticket-attribute";
 import { createDeadlineCommand, deleteDeadlineCommand } from "../timeline/commands/deadline-commands";
 import { moveTicketCommand } from "../timeline/commands/move-ticket";
 import { readPlanCommand } from "../timeline/commands/read-plan";
-import { runTicketsQuery } from "./query";
+import { runTicketsQuery } from "./query.fixture";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "./workflow-statuses";
 
 test("ticket properties expose milestone, date, progress, and attention from the same plan", async () => {

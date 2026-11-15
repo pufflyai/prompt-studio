@@ -37,7 +37,7 @@ describe("readTicketsCommand", () => {
       }),
     );
 
-    const result = await readTicketsCommand.run(...makeCommandArgs({ storage, params: {} }));
+    const { tickets: result } = await readTicketsCommand.run(...makeCommandArgs({ storage, params: {} }));
 
     expect(result.map((ticket) => ticket.shorthand)).toEqual(["T-early", "T-late"]);
     expect(result[0]).toMatchObject({

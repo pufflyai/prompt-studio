@@ -41,17 +41,19 @@ interface FixtureTicket {
   files?: { name: string }[];
 }
 const seedTickets = async (execute: (command: string, params?: Record<string, unknown>) => Promise<unknown>) => {
-  const tickets = (await execute("read-tickets")) as FixtureTicket[];
-  while (tickets.length < SUBNAV_WORKLOAD.tickets) {
-    const index = tickets.length;
-    tickets.push(
-      (await execute("create-ticket", {
-        content: `# Benchmark ticket ${String(index + 1).padStart(4, "0")}\n\n${"Representative ticket instructions.\n".repeat(128)}`,
-      })) as FixtureTicket,
-    );
-    if (tickets.length % 100 === 0) console.info(`Tickets ${tickets.length}/${SUBNAV_WORKLOAD.tickets}`);
+  const initial = (await execute("list-tickets", { limit: 1 })) as { tickets: FixtureTicket[]; total: number };
+  let count = initial.total;
+  let first = initial.tickets[0];
+  while (count < SUBNAV_WORKLOAD.tickets) {
+    const created = (await execute("create-ticket", {
+      content: `# Benchmark ticket ${String(count + 1).padStart(4, "0")}\n\n${"Representative ticket instructions.\n".repeat(128)}`,
+    })) as FixtureTicket;
+    first ??= created;
+    count++;
+    if (count % 100 === 0) console.info(`Tickets ${count}/${SUBNAV_WORKLOAD.tickets}`);
   }
-  return tickets;
+  if (!first) throw new Error("Benchmark ticket is missing");
+  return { count, ticket: (await execute("get-ticket", { id: first.id })) as FixtureTicket };
 };
 
 const seedFiles = async (folder: string) => {
@@ -175,8 +177,7 @@ export const startSubnavBenchmarkFixture = async () => {
       if (!result.outcome.ok) throw new Error(`${command}: ${JSON.stringify(result.outcome)}`);
       return result.outcome.value;
     };
-    const tickets = await seedTickets(execute);
-    const ticket = tickets.find((row) => row.title === "Benchmark ticket 0001")!;
+    const { count: ticketCount, ticket } = await seedTickets(execute);
     // Empty groups are hidden. Seed a real file so the timed Files heading remains meaningful.
     if (!ticket.files?.some((file) => file.name === "Benchmark notes.md"))
       await execute("create-ticket-file", { ticketId: ticket.id, name: "Benchmark notes.md" });
@@ -227,7 +228,7 @@ export const startSubnavBenchmarkFixture = async () => {
     }
     sessions = await request(`/sessions?project_id=${project.id}`);
     if (
-      tickets.length !== SUBNAV_WORKLOAD.tickets ||
+      ticketCount !== SUBNAV_WORKLOAD.tickets ||
       sessions.length !== SUBNAV_WORKLOAD.sessions ||
       linked.length !== SUBNAV_WORKLOAD.linkedWorkspaces
     )

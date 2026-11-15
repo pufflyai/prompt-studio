@@ -1,6 +1,7 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { sortedBySortOrder } from "../utils/sort";
 import { putStatus, statusesCollection } from "./collections";
+import { readStatusDefinitions } from "./definition-query";
 import { seedDefaultStatuses } from "./seed";
 import { reassignTicketStatuses } from "./ticket-bulk-edit";
 import type { TicketContext } from "./ticket-identity";
@@ -71,7 +72,7 @@ export const deleteTicketStatus = async (input: {
   resources: TicketContext["resources"];
   statusId: string;
 }) => {
-  const remaining = (await statusesCollection(input.storage).list()).filter((status) => status.id !== input.statusId);
+  const remaining = (await readStatusDefinitions(input.storage)).filter((status) => status.id !== input.statusId);
   const fallbackId = (remaining.find((status) => status.isDefault) ?? remaining[0])?.id ?? null;
 
   await reassignTicketStatuses(input.storage, [input.statusId], fallbackId);
@@ -106,7 +107,7 @@ export const reorderTicketStatuses = async (input: {
   resources: TicketContext["resources"];
   statusIds: string[];
 }) => {
-  const statuses = sortedBySortOrder(await statusesCollection(input.storage).list());
+  const statuses = sortedBySortOrder(await readStatusDefinitions(input.storage));
   const statusesById = new Map(statuses.map((status) => [status.id, status]));
   const requestedIds = new Set<string>();
   const requestedStatuses: StoredStatus[] = [];

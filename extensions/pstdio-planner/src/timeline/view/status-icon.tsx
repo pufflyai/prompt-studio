@@ -1,7 +1,11 @@
 import { Box, Icon } from "@chakra-ui/react";
 import { getIconComponent, Tooltip } from "@pstdio/ui";
 import { CollectionBadge } from "@pstdio/ui/kanban-renderer";
-import { REVIEW_REQUEST_ICON, reviewRequestSummary } from "../../data/review-request-summary";
+import {
+  REVIEW_REQUEST_ICON,
+  reviewRequestCountSummary,
+  reviewRequestSummary,
+} from "../../data/review-request-summary";
 import type { PlanRow } from "../contracts";
 
 export function StatusIcon(props: { row: PlanRow }) {
@@ -30,7 +34,9 @@ export function StatusIcon(props: { row: PlanRow }) {
 
 export function ReviewStatusIcon(props: { row: PlanRow; onOpen?: () => void }) {
   const { row, onOpen } = props;
-  const summary = reviewRequestSummary({ requests: row.requests, errors: row.requestErrors });
+  const summary = row.reviewCounts
+    ? reviewRequestCountSummary(row.reviewCounts.total, row.reviewCounts.pending)
+    : reviewRequestSummary({ requests: row.requests, errors: row.requestErrors });
   if (!summary) return null;
   return (
     <span

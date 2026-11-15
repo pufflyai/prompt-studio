@@ -1,13 +1,20 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
+import { preparePlannerIndexes } from "./storage-indexes";
 
 const definitions = "workspace-status-definitions";
 const initialized = "workspace-status-definitions-initialized";
 const values = "workspace-status-values";
 
 export const cleanupLegacyWorkspaceStatus = async (storage: ExtensionStorageApi) => {
-  const definitionCollection = storage.collection<{ id: string }>(definitions);
-  const valueCollection = storage.collection<{ workspaceId: string }>(values);
-  for (const definition of await definitionCollection.list()) await definitionCollection.delete(definition.id);
-  for (const value of await valueCollection.list()) await valueCollection.delete(value.workspaceId);
+  await preparePlannerIndexes(storage);
+  for (const collection of [definitions, values])
+    for (;;) {
+      const page = await storage.records.query({ index: `cleanup:${collection}`, fields: [], limit: 100 });
+      if (!page.records.length) break;
+      await storage.records.commit({
+        operationId: storage.ids.create(),
+        edits: page.records.map(({ recordId }) => ({ recordId, deleted: true })),
+      });
+    }
   await storage.delete(initialized);
 };

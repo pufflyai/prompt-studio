@@ -1,7 +1,6 @@
 import { type CommandContext, defineCommand, l10n } from "@pstdio/sdk/extensions";
 import { pauseAutoBuildMode, readAutoBuildMode } from "../data/auto-build-mode";
 import { readAutoBuildSupervisor, saveAutoBuildSupervisor } from "../data/auto-build-supervisor";
-import { readSessionHistory } from "../data/session-history";
 import { withWriteGuard } from "../data/write-guard";
 import { readImplementationCapacity } from "./attempt-readiness";
 import { initialSupervisorPrompt, supervisorWakePrompt } from "./auto-build-prompts";
@@ -35,15 +34,17 @@ async function wakeSupervisor(ctx: CommandContext) {
       );
     if (isLiveSession(session)) return { prompted: false, sessionId: session!.id };
     // A first wake needs one viable ticket. The supervisor queries the full scope before dispatching.
-    const {
-      tickets: candidates,
-      capacity,
-      snapshot,
-      progressAt,
-      active,
-    } = await readNextTickets(ctx, mode, session ? {} : { limit: 1 });
-    const history = session ? (await readSessionHistory(ctx.sessions)).find(({ id }) => id === session.id) : undefined;
-    const lastPromptAt = Date.parse(history?.last_request_started ?? "1970-01-01T00:00:00Z");
+    const work = await readNextTickets(ctx, mode, { limit: 1, scan: true }).catch(async (error: unknown) => {
+      const current = await readAutoBuildMode(ctx);
+      if (!current.enabled || current.revision !== mode.revision) return null;
+      throw error;
+    });
+    if (!work) return { prompted: false };
+    const { tickets: candidates, capacity, snapshot, progressAt, active } = work;
+    const lastPromptAt = Math.max(
+      Date.parse(session?.lastRequestStarted ?? "1970-01-01T00:00:00Z"),
+      Date.parse(session?.last_request_started ?? "1970-01-01T00:00:00Z"),
+    );
     const stalled = Boolean(session && Date.now() - Math.max(progressAt, lastPromptAt) >= 60 * 60 * 1000);
     if (
       (!candidates.length && !(stalled && active > 0)) ||

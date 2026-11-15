@@ -1,3 +1,4 @@
+import { RequestWindowControls } from "../timeline/view/request-window";
 import "@pstdio/ui/style.css";
 import { Stack, Text } from "@chakra-ui/react";
 import {
@@ -21,7 +22,10 @@ type Commands = {
   "review-requests.open": typeof openReviewRequestCommand;
 };
 type Client = ReturnType<typeof createWebviewClient<Commands>>;
-const read = (client: Client, ticket = "") => client.commands["review-requests.list"]({ ticket });
+const read = async (client: Client, input = "") => ({
+  input,
+  ...(await client.commands["review-requests.list"](JSON.parse(input))),
+});
 const events = [plannerTicketsChanged];
 interface HostProps {
   resource?: ResourceRef;
@@ -30,19 +34,23 @@ interface HostProps {
 function TicketRequests(props: { host: GuestHost; resource: ResourceRef }) {
   const { host, resource } = props;
   const [client] = useState(() => createWebviewClient<Commands>(host));
-  const { value } = useLiveValue(client, read, events, resource.id);
+  const [offset, setOffset] = useState(0);
+  const input = JSON.stringify({ ticket: resource.id, offset });
+  const { value } = useLiveValue(client, read, events, input);
+  const current = value?.input === input ? value : undefined;
   return (
     <ScrollArea h="full">
       <Stack p="md" gap="md" w="full" maxW="2xl" mx="auto">
         <Text textStyle="label/L/medium">{resource.label ?? resource.shorthand}</Text>
-        {value ? (
+        {current ? (
           <RequestsPanel
-            row={{ requests: value.requests, requestErrors: value.errors }}
+            row={{ requests: current.requests, requestErrors: current.errors }}
             onAnswer={(requestId, response) => client.commands.review({ requestId, response })}
             onOpenChat={(requestId) => client.commands["review-requests.open"]({ requestId })}
           />
         ) : null}
-        {!value ? <Text>Loading requests…</Text> : null}
+        {!current ? <Text>Loading requests…</Text> : null}
+        <RequestWindowControls result={value} offset={value?.offset ?? 0} move={setOffset} loading={!current} />
       </Stack>
     </ScrollArea>
   );

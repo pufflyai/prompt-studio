@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { listAttempts } from "../data/attempt-storage";
+import { listAttempts } from "../data/attempt-storage.fixture";
+
 import { readAutoBuildMode } from "../data/auto-build-mode";
 import { autoBuildCommand } from "./auto-build";
 import { fixture } from "./auto-build.fixture";

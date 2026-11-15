@@ -3,7 +3,7 @@ import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import { resolveTicketResourcesCommand } from "../commands/resolve-ticket-resources";
 import { ticketsCollection } from "./collections";
 
-for (const surface of ["list", "resources"] as const) {
+for (const surface of ["selected records", "resources"] as const) {
   test(`${surface} reads current identities in batches of at most 100`, async () => {
     const storage = createMemoryStorage();
     const ctx = makeCommandContext({ storage, params: {} });
@@ -20,14 +20,14 @@ for (const surface of ["list", "resources"] as const) {
     };
 
     const tickets =
-      surface === "list"
-        ? await ticketsCollection(ctx).list()
+      surface === "selected records"
+        ? (await ticketsCollection(ctx).getMany(ids)).flatMap((ticket) => (ticket ? [ticket] : []))
         : (await resolveTicketResourcesCommand.run(ctx, { resources: ids.map((id) => ({ type: "ticket", id })) })).map(
             (result) => result.resource,
           );
 
     expect(batches.map((batch) => batch.length)).toEqual([100, 100, 5]);
-    expect(tickets.map((ticket) => ticket.id)).toEqual(surface === "list" ? [...ids].sort() : ids);
+    expect(tickets.map((ticket) => ticket.id)).toEqual(ids);
     expect(tickets.find((ticket) => ticket.id === "ticket-204")?.shorthand).toBe("PS-204");
   });
 }

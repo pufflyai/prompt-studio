@@ -1,6 +1,6 @@
 import type { ExtensionWorkspace } from "@pstdio/sdk/extensions";
 import { linkedWorkspacePages } from "../data/linked-workspaces";
-import { readSessionHistory } from "../data/session-history";
+import { readSessionHistory } from "../data/session-history.fixture";
 import { type makeCommandArgs, makeCommandContext } from "./command-context.fixture";
 import { cleanupTicketWorkspacesCommand } from "./ticket-workspace-cleanup";
 

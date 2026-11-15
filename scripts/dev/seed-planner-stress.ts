@@ -26,7 +26,14 @@ interface Tag {
 }
 
 async function seedPlannerStress(execute: Execute, progress: (count: number) => void) {
-  const tickets = stressTicketsInOrder(await execute<Ticket[]>("read-tickets"));
+  const existing: Ticket[] = [];
+  let cursor: string | undefined;
+  do {
+    const page = await execute<{ tickets: Ticket[]; cursor: string | null }>("list-tickets", { limit: 100, cursor });
+    existing.push(...page.tickets);
+    cursor = page.cursor ?? undefined;
+  } while (cursor);
+  const tickets = stressTicketsInOrder(existing);
   const { tags } = await execute<{ tags: Tag[] }>("ticket-tag.read");
   const tracks: string[] = [];
   for (const name of trackNames) {

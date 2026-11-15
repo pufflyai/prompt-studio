@@ -164,7 +164,7 @@ async function expectDependencyStack(input: { baseUrl: string; headers: Record<s
   expect(await git(started.workspace.root_path, "show", "HEAD:child.ts")).toContain("true");
   expect(await git(folder, "rev-parse", "main")).toBe(original);
   expect(
-    (await execute("list-attempts")).filter((attempt: { ticketId: string }) => attempt.ticketId === child.id),
+    (await execute("list-attempts")).attempts.filter((attempt: { ticketId: string }) => attempt.ticketId === child.id),
   ).toHaveLength(1);
   expect((await execute("review-requests.list", { ticket: child.id })).requests).toHaveLength(0);
   return { execute, request, project, folder, original, started, updated, stop, child };

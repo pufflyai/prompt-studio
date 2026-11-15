@@ -4,7 +4,7 @@ import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { makeCommandArgs, makeCommandContext } from "../commands/command-context.fixture";
 import { createTicketCommand } from "../commands/create-ticket";
 import { createPlannerUi } from "../ui-contributions";
-import { runTicketsQuery } from "./query";
+import { runTicketsQuery } from "./query.fixture";
 import { reviewRequestsCollection } from "./review-request-storage";
 import { ticketContext } from "./ticket-context.fixture";
 

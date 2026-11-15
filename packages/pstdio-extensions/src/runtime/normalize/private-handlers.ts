@@ -18,6 +18,7 @@ export const registerPrivateHandler = (input: {
   rendererKind: RuntimePrivateHandlerRecord["rendererKind"];
   rendererLocalId: string;
   operation: string;
+  collectionQuery?: RuntimePrivateHandlerRecord["collectionQuery"];
   handler: unknown;
 }): string | undefined => {
   if (typeof input.handler !== "function") return undefined;
@@ -46,6 +47,7 @@ export const registerPrivateHandler = (input: {
     rendererId: input.rendererId,
     rendererKind: input.rendererKind,
     operation: input.operation,
+    collectionQuery: input.collectionQuery,
     handler: input.handler as RuntimePrivateHandlerRecord["handler"],
   };
 

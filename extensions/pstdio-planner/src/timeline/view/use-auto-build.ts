@@ -5,7 +5,8 @@ import { plannerTicketsChanged } from "../../events";
 import { useLiveValue } from "./use-live-value";
 import type { PlanClient } from "./use-plan";
 
-const readMode = (client: PlanClient) => client.commands["auto-build.read"]();
+const readMode = (client: PlanClient, offset?: string) =>
+  client.commands["auto-build.read"]({ requestOffset: Number(offset ?? 0) });
 const modeEvents = [
   autoBuildChanged,
   plannerTicketsChanged,
@@ -14,7 +15,8 @@ const modeEvents = [
 ];
 
 export function useAutoBuild(client: PlanClient) {
-  const { value: mode, setValue: setMode } = useLiveValue(client, readMode, modeEvents);
+  const [requestOffset, setRequestOffset] = useState(0);
+  const { value: mode, setValue: setMode } = useLiveValue(client, readMode, modeEvents, String(requestOffset));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
   const configure = async (
@@ -60,5 +62,13 @@ export function useAutoBuild(client: PlanClient) {
     }
   };
   // Saved run failures belong to the activity popover, not a new configuration attempt.
-  return { mode, saving, error, configure, transition };
+  return {
+    mode,
+    saving,
+    error,
+    configure,
+    transition,
+    setRequestOffset,
+    requestLoading: mode?.requestPage?.offset !== requestOffset,
+  };
 }

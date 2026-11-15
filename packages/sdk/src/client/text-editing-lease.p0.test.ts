@@ -14,6 +14,7 @@ const fixture = async () => {
   const inactiveApplied = Promise.withResolvers<void>();
   const releases: string[] = [];
   const participationErrors: string[] = [];
+  const participationCalls: boolean[] = [];
   let watchSignal: AbortSignal | undefined;
   const watchStarted = Promise.withResolvers<void>();
   let active = true;
@@ -68,6 +69,7 @@ const fixture = async () => {
     return { ok: true };
   };
   const applyParticipation = async (next: boolean) => {
+    participationCalls.push(next);
     if (!next && refuseInactive) {
       refuseInactive = false;
       return { ok: false, error: { code: "source_unavailable", message: "Participation refused", retryable: true } };
@@ -136,6 +138,7 @@ const fixture = async () => {
     connections: () => connections,
     participating: () => active,
     participationErrors,
+    participationCalls,
     inactiveApplied: inactiveApplied.promise,
     refuseInactive: () => {
       refuseInactive = true;
@@ -160,6 +163,26 @@ const fixture = async () => {
     holdAbandon: () => (abandonGate = gate()),
   };
 };
+
+test("an acknowledged participation state is shared by the placement and its event watch", async () => {
+  const f = await fixture();
+  try {
+    await f.watched();
+    await f.connection.setActive(true);
+    await f.connection.setActive(true);
+    expect(f.participationCalls).toEqual([true]);
+    await f.connection.setActive(false);
+    await f.connection.setActive(false);
+    expect(f.participationCalls).toEqual([true, false]);
+    f.loseInactiveAck();
+    await f.connection.setActive(true);
+    await expect(f.connection.setActive(false)).rejects.toThrow("Participation acknowledgement lost");
+    await f.connection.setActive(false);
+    expect(f.participationCalls.slice(-2)).toEqual([false, false]);
+  } finally {
+    await f.connection.disconnect();
+  }
+});
 
 test.each([
   "body",

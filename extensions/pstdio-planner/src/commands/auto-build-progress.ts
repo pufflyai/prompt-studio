@@ -1,6 +1,6 @@
 import type { CommandContext } from "@pstdio/sdk/extensions";
 import { readAttempt } from "../data/attempt-storage";
-import { autoBuildDispatches, autoBuildPullRequestNotifications } from "../data/auto-build-dispatches";
+import { autoBuildDispatchPages, autoBuildPullRequestNotifications } from "../data/auto-build-dispatches";
 import { pauseAutoBuildMode, readAutoBuildMode } from "../data/auto-build-mode";
 import { acknowledgeAutoBuildWake, readAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { ticketsCollection } from "../data/collections";
@@ -45,48 +45,10 @@ export async function checkAutoBuildProgress(ctx: CommandContext) {
         endedAt: session.lastRequestEnded,
       };
       const lastPromptAt = timestamp(session.lastRequestStarted);
-      const dispatches = await autoBuildDispatches(ctx, session.id).list();
-      const progress = await Promise.all(
-        dispatches.map(async ({ workspaceId, dispatchedAt }) => {
-          // Only workspace recovery retires an attempt, and it dispatches the replacement for the same ticket.
-          const attempt = await readAttempt(ctx.storage, workspaceId);
-          if (!attempt) return;
-          const [ticket, worker] = await Promise.all([
-            ticketsCollection(ctx).get(attempt.ticketId),
-            ctx.sessions.get(attempt.implementationSessionId),
-          ]);
-          if (!ticket || ticket.archived) return;
-          const updatedAt = Math.max(
-            timestamp(ticket.updatedAt),
-            timestamp(attempt.updatedAt),
-            timestamp(worker?.updatedAt),
-          );
-          const pendingRepair =
-            worker &&
-            !isLiveSession(worker) &&
-            worker.status !== "failed" &&
-            !isUnexpectedExit(worker) &&
-            worker.last_exit?.cause !== "user_stop"
-              ? await readPendingPullRequestRepair(ctx, ticket, attempt)
-              : undefined;
-          const notified = pendingRepair
-            ? await autoBuildPullRequestNotifications(ctx, session.id).get(workspaceId)
-            : undefined;
-          return {
-            workspaceId,
-            pendingRepair,
-            updatedAt: Math.max(updatedAt, timestamp(dispatchedAt)),
-            changed:
-              Boolean(pendingRepair && pendingRepair !== notified?.evidenceKey) ||
-              updatedAt > Math.max(lastPromptAt, timestamp(dispatchedAt)),
-            active: isLiveSession(worker),
-          };
-        }),
-      );
-      const progressAt = Math.max(lastPromptAt, ...progress.map((work) => work?.updatedAt ?? 0));
-      const stalled = progress.some((work) => work?.active) && Date.now() - progressAt >= 60 * 60 * 1000;
+      const { progressAt, active, changed, notifications } = await dispatchedProgress(ctx, session.id, lastPromptAt);
+      const stalled = active && Date.now() - progressAt >= 60 * 60 * 1000;
       const pendingWake = supervisor.pendingWakeRevision === mode.revision;
-      if (!pendingWake && !stalled && session.status !== "failed" && !progress.some((work) => work?.changed)) return;
+      if (!pendingWake && !stalled && session.status !== "failed" && !changed) return;
       if (await implementationCapacityFull(ctx)) return;
       const current = await readAutoBuildMode(ctx);
       if (!current?.enabled || current.revision !== mode.revision) return;
@@ -96,7 +58,7 @@ export async function checkAutoBuildProgress(ctx: CommandContext) {
           expectedRun,
           prompt: supervisorWakePrompt({ stalled, refreshScope: supervisor.scope?.revision !== mode.revision }),
         });
-        await acknowledgePullRequestNotifications(ctx, session.id, progress);
+        await acknowledgePullRequestNotifications(ctx, session.id, notifications);
         await acknowledgeAutoBuildWake(ctx, supervisor);
       } catch (error) {
         const latest = await ctx.sessions.get(session.id);
@@ -108,3 +70,56 @@ export async function checkAutoBuildProgress(ctx: CommandContext) {
     () => undefined,
   );
 }
+
+const dispatchedProgress = async (ctx: CommandContext, sessionId: string, lastPromptAt: number) => {
+  let progressAt = lastPromptAt;
+  let active = false;
+  let changed = false;
+  const notifications: { workspaceId: string; pendingRepair: string }[] = [];
+  for await (const dispatches of autoBuildDispatchPages(ctx, sessionId)) {
+    const progress = await Promise.all(
+      dispatches.map(async ({ workspaceId, dispatchedAt }) => {
+        // Only workspace recovery retires an attempt, and it dispatches the replacement for the same ticket.
+        const attempt = await readAttempt(ctx.storage, workspaceId);
+        if (!attempt) return;
+        const [ticket, worker] = await Promise.all([
+          ticketsCollection(ctx).get(attempt.ticketId),
+          ctx.sessions.get(attempt.implementationSessionId),
+        ]);
+        if (!ticket || ticket.archived) return;
+        const updatedAt = Math.max(
+          timestamp(ticket.updatedAt),
+          timestamp(attempt.updatedAt),
+          timestamp(worker?.updatedAt),
+        );
+        const pendingRepair =
+          worker &&
+          !isLiveSession(worker) &&
+          worker.status !== "failed" &&
+          !isUnexpectedExit(worker) &&
+          worker.last_exit?.cause !== "user_stop"
+            ? await readPendingPullRequestRepair(ctx, ticket, attempt)
+            : undefined;
+        const notified = pendingRepair
+          ? await autoBuildPullRequestNotifications(ctx, sessionId).get(workspaceId)
+          : undefined;
+        return {
+          workspaceId,
+          pendingRepair,
+          updatedAt: Math.max(updatedAt, timestamp(dispatchedAt)),
+          changed:
+            Boolean(pendingRepair && pendingRepair !== notified?.evidenceKey) ||
+            updatedAt > Math.max(lastPromptAt, timestamp(dispatchedAt)),
+          active: isLiveSession(worker),
+        };
+      }),
+    );
+    progressAt = Math.max(progressAt, ...progress.map((work) => work?.updatedAt ?? 0));
+    active ||= progress.some((work) => work?.active);
+    changed ||= progress.some((work) => work?.changed);
+    for (const work of progress)
+      if (work?.pendingRepair) notifications.push({ workspaceId: work.workspaceId, pendingRepair: work.pendingRepair });
+  }
+
+  return { progressAt, active, changed, notifications };
+};

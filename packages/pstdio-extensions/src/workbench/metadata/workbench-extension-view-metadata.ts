@@ -49,7 +49,7 @@ const toNativeViewBody = (
 ): Exclude<WorkbenchExtensionViewBody, { kind: "webview" }> => {
   const body = view.contribution.body as Exclude<ViewBody, { kind: "webview" }>;
   const handlers = body as typeof body & Record<string, unknown>;
-  const resourceKind = body.resourceKind ? normalizedRef(body.resourceKind, view.extensionId) : undefined;
+  const resourceKind = normalizedResourceKind(body, view.extensionId);
   if (body.kind === "terminal") {
     return {
       kind: "terminal",
@@ -120,7 +120,7 @@ const toNativeViewBody = (
   if (body.kind === "dataTable") {
     return {
       kind: "dataTable",
-      queryMode: body.queryMode,
+      queryMode: body.queryMode === "paged" ? "paged" : undefined,
       ...common,
       columns: body.columns,
       queryHandlerId: String(handlers.queryHandlerId),
@@ -143,7 +143,7 @@ const toNativeViewBody = (
   }
   return {
     kind: body.kind,
-    queryMode: body.queryMode,
+    queryMode: body.queryMode === "paged" ? "paged" : undefined,
     initialPageSize: body.initialPageSize,
     ...common,
     attributes: body.attributes?.map((attribute) => ({
@@ -210,3 +210,6 @@ export const toViewRecord = (
     body: webview ? { kind: "webview", webview } : toNativeViewBody(view),
   };
 };
+
+const normalizedResourceKind = (body: Exclude<ViewBody, { kind: "webview" }>, extensionId: string) =>
+  body.resourceKind ? normalizedRef(body.resourceKind, extensionId) : undefined;

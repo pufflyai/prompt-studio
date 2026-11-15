@@ -87,15 +87,21 @@ export {
   prepareRecordQuery,
   queryField,
   typedFieldValue,
+  validateComputedConditions,
   validateIndexes,
   validatePredicate,
 } from "./record-query";
+export { loadQueryIndexDependencies } from "./record-query-dependencies";
 export {
   aggregateOptions,
   compareAggregateGroups,
   relatedQueryIndexes,
   requestedRecordIndex,
+  validateRelatedQueryFields,
 } from "./record-query-options";
+export { isLocaleQueryText } from "./record-query-string-order";
+export { recordQueryTextOrders } from "./record-query-text-order";
+export { histogramResult, statisticOptions, topValuesResult } from "./record-statistics";
 export {
   adoptResourceDocument,
   editResourceDocument,

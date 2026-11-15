@@ -9,7 +9,10 @@ export const demoSeed = defineCommand({
   title: "Seed isolated performance demo",
   cli: true,
   mutating: true,
-  params: { offset: params.number({ required: true }), part: params.number({ required: true }) },
+  params: {
+    offset: params.number({ required: true }),
+    part: params.number({ required: true }),
+  },
   async run(ctx, { offset, part }) {
     if (!Number.isInteger(offset) || offset < 0 || offset >= 5000 || offset % 50) throw Error("Invalid offset");
     if (!Number.isInteger(part) || part < 0 || part > 4) throw Error("Invalid part");

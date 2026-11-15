@@ -1,5 +1,5 @@
 import { type CommandContext, defineCommand, l10n, params } from "@pstdio/sdk/extensions";
-import { readTicketAttempts } from "../data/attempt-queries";
+import { isManagedAttemptLink } from "../data/attempt-link-ownership";
 import { findTicket } from "../data/resolve";
 import { resolveTicketAnchor } from "./ticket-actions";
 
@@ -26,14 +26,11 @@ const changeLink = async (ctx: CommandContext, input: LinkParams, unlink: boolea
   const api = workspace ? ctx.workspaces : ctx.sessions;
 
   if (unlink) {
-    const managed = (await readTicketAttempts(ctx.storage, [ticket.id])).some((attempt) => {
-      if (attempt.ticketId !== ticket.id) return false;
-      if (workspace) return attempt.workspaceId === workspace.id;
-      return (
-        attempt.implementationSessionId === target.id ||
-        attempt.revisions.some((revision) => revision.reviews.some((review) => review.sessionId === target.id))
-      );
-    });
+    const managed = await isManagedAttemptLink(
+      ctx.storage,
+      ticket.id,
+      workspace ? { workspaceId: workspace.id } : { sessionId: target.id },
+    );
     if (managed)
       throw new Error(`${input.workspace ?? input.session} belongs to the managed attempt for ${ticket.shorthand}.`);
     await api.removeAnchors(target.id, [{ type: "ticket", id: ticket.id }]);

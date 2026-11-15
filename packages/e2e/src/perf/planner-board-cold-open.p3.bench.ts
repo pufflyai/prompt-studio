@@ -119,12 +119,23 @@ const seedHome = async (home: string, edits: number, plannerSource?: string) => 
     if (seeded.status !== 0) throw new Error("Seeding tickets failed.");
     const fixture = JSON.parse(seeded.stdout.trim()) as Fixture;
     await saveFilteredView(runtime, fixture.projectId);
-    const tickets = await runtime.execute<{ id: string; title: string; content: string }[]>(
-      fixture.projectId,
-      "read-tickets",
-      {},
-    );
-    for (const [index, ticket] of tickets.entries()) {
+    const ids: string[] = [];
+    let cursor: string | undefined;
+    do {
+      const page = await runtime.execute<{ tickets: { id: string }[]; cursor: string | null }>(
+        fixture.projectId,
+        "list-tickets",
+        { limit: 100, cursor },
+      );
+      ids.push(...page.tickets.map(({ id }) => id));
+      cursor = page.cursor ?? undefined;
+    } while (cursor);
+    for (const [index, id] of ids.entries()) {
+      const ticket = await runtime.execute<{ id: string; title: string; content: string }>(
+        fixture.projectId,
+        "get-ticket",
+        { id },
+      );
       const completed =
         Array.from({ length: edits }, (_, index) => index + 1).findLast(
           (edit) => ticket.content === editedContent(ticket.title, edit),
@@ -134,7 +145,7 @@ const seedHome = async (home: string, edits: number, plannerSource?: string) => 
           id: ticket.id,
           content: editedContent(ticket.title, edit),
         });
-      if (index % 100 === 99) process.stderr.write(`Edited ${index + 1}/${tickets.length} tickets\n`);
+      if (index % 100 === 99) process.stderr.write(`Edited ${index + 1}/${ids.length} tickets\n`);
     }
     writeFileSync(join(home, "fixture.json"), JSON.stringify(fixture));
     return fixture;

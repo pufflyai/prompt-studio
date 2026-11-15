@@ -1,6 +1,7 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { sortedBySortOrder } from "../utils/sort";
-import { putStatus, putTag, statusesCollection, tagsCollection } from "./collections";
+import { putStatus, putTag } from "./collections";
+import { readStatusDefinitions, readTagDefinitions } from "./definition-query";
 import type { StoredStatus, StoredTag, StoredTagOption } from "./types";
 
 const statusSeedPromises = new WeakMap<ExtensionStorageApi, Promise<StoredStatus[]>>();
@@ -80,7 +81,7 @@ export const seedDefaultStatuses = async (storage: ExtensionStorageApi) => {
   if (pending) return pending;
 
   const promise = (async () => {
-    const [existing, seeded] = await Promise.all([statusesCollection(storage).list(), storage.get(STATUS_SEED_MARKER)]);
+    const [existing, seeded] = await Promise.all([readStatusDefinitions(storage), storage.get(STATUS_SEED_MARKER)]);
     if (seeded || (existing.length > 0 && !isOnlyDefaultStatuses(existing))) {
       if (!seeded) await storage.set(STATUS_SEED_MARKER, true);
       return existing;
@@ -88,7 +89,7 @@ export const seedDefaultStatuses = async (storage: ExtensionStorageApi) => {
 
     await Promise.all(DEFAULT_STATUSES.map((seed) => putStatus(storage, seed)));
     await storage.set(STATUS_SEED_MARKER, true);
-    return sortedBySortOrder(await statusesCollection(storage).list());
+    return sortedBySortOrder(await readStatusDefinitions(storage));
   })();
   statusSeedPromises.set(storage, promise);
   try {
@@ -161,7 +162,7 @@ export const seedDefaultTags = async (storage: ExtensionStorageApi) => {
   if (pending) return pending;
 
   const promise = (async () => {
-    const [existing, seeded] = await Promise.all([tagsCollection(storage).list(), storage.get(TAG_SEED_MARKER)]);
+    const [existing, seeded] = await Promise.all([readTagDefinitions(storage), storage.get(TAG_SEED_MARKER)]);
     if (seeded || (existing.length > 0 && !isOnlyDefaultTags(existing))) {
       if (!seeded) await storage.set(TAG_SEED_MARKER, true);
       return sortedBySortOrder(existing);
@@ -171,7 +172,7 @@ export const seedDefaultTags = async (storage: ExtensionStorageApi) => {
     const missing = DEFAULT_TAGS.map((seed) => seed()).filter((tag) => !existingIds.has(tag.id));
     await Promise.all(missing.map((tag) => putTag(storage, tag)));
     await storage.set(TAG_SEED_MARKER, true);
-    return sortedBySortOrder(await tagsCollection(storage).list());
+    return sortedBySortOrder(await readTagDefinitions(storage));
   })();
   tagSeedPromises.set(storage, promise);
   try {

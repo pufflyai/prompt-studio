@@ -1,6 +1,4 @@
 import { defineCommand, params, type ResourceAnchor } from "@pstdio/sdk/extensions";
-import { readSessionHistory } from "../data/session-history";
-import { isLiveSessionStatus } from "../session-status";
 
 const phaseFromAnchors = (anchors: ResourceAnchor[]) => {
   if (anchors.some((anchor) => anchor.type === "planner-review")) return "review" as const;
@@ -17,25 +15,43 @@ export const workspaceActivityCommand = defineCommand({
   title: "Workspace activity",
   params: {
     workspaceId: params.text({ label: "Workspace", required: true }),
+    cursor: params.text(),
+    limit: params.number(),
   },
   async run(ctx, commandParams) {
-    const sessions = (await readSessionHistory(ctx.sessions, { workspaceId: commandParams.workspaceId })).map(
-      (session) => {
-        const anchors = (session.anchors_json ?? []) as ResourceAnchor[];
-        return {
-          id: session.id,
-          title: session.title,
-          status: session.status as string,
-          anchors,
-          phase: phaseFromAnchors(anchors),
-          ...(session.created_at ? { createdAt: session.created_at } : {}),
-          ...(session.updated_at ? { updatedAt: session.updated_at } : {}),
-        };
-      },
-    );
+    const limit = commandParams.limit ?? 100;
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100)
+      throw new Error("Choose a session page size from 1 to 100");
+    const [page, live] = await Promise.all([
+      ctx.sessions.query({
+        workspaceId: commandParams.workspaceId,
+        includeArchived: true,
+        limit,
+        cursor: commandParams.cursor,
+      }),
+      ctx.sessions.query({
+        workspaceId: commandParams.workspaceId,
+        includeArchived: true,
+        status: ["queued", "in_progress", "awaiting_input"],
+        limit: 1,
+      }),
+    ]);
+    const sessions = page.items.toReversed().map((session) => {
+      const anchors = (session.anchors_json ?? []) as ResourceAnchor[];
+      return {
+        id: session.id,
+        title: session.title,
+        status: session.status as string,
+        anchors,
+        phase: phaseFromAnchors(anchors),
+        ...(session.created_at ? { createdAt: session.created_at } : {}),
+        ...(session.updated_at ? { updatedAt: session.updated_at } : {}),
+      };
+    });
 
     return {
-      active: sessions.some((session) => isLiveSessionStatus(session.status)),
+      active: live.items.length > 0,
+      nextCursor: page.nextCursor,
       sessions,
     };
   },
