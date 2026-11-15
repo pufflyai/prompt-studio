@@ -129,6 +129,21 @@
       "icon": "./assets/icon.svg"
     },
     {
+      "installName": "harness-copilot",
+      "displayName": "GitHub Copilot",
+      "description": "Contributes the optional GitHub Copilot coding agent harness.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/harness-copilot",
+        "ref": "{hostRelease}"
+      },
+      "publisher": "pstdio",
+      "default": false,
+      "extensionId": "pstdio.harness-copilot",
+      "icon": "./assets/icon.svg"
+    },
+    {
       "installName": "base-themes",
       "displayName": "Themes",
       "description": "Color themes and the Seti file icon theme.",

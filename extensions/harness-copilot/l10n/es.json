@@ -1,0 +1,7 @@
+{
+  "harness.copilot": "GitHub Copilot",
+  "params.permissionMode": "Modo de permisos",
+  "params.reasoning": "Razonamiento",
+  "quotas.description": "Mostrar los límites de GitHub Copilot y el uso de tokens de este mes.",
+  "quotas.title": "Consultar los límites de la cuenta"
+}
