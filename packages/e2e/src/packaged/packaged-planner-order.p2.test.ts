@@ -1,6 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
 import type { ChildProcess } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { rmSync } from "node:fs";
+import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { folderProjectInput } from "../helpers/folder-project";
@@ -67,6 +68,12 @@ const runScenario = async (signal: AbortSignal, setClose: (close: () => Promise<
       created.push(await first.command<Ticket>(project.id, owner, "create-ticket", { title }));
     }
     phase("first device enrolled and five tickets created");
+    await waitFor(
+      signal,
+      () => first.client.account.projectSyncStatus(project.id),
+      (status) => status.state === "synced" && status.offlineReady,
+    );
+    phase("first project published and offline ready");
     signal.throwIfAborted();
     const second = await fixture.start("second");
     phase("second runtime ready");
@@ -144,7 +151,13 @@ const runScenario = async (signal: AbortSignal, setClose: (close: () => Promise<
   }
   await close();
   phase("cleanup complete");
-  if (failures.length === 0) await rm(root, { recursive: true, force: true }).catch((cause) => failures.push(cause));
+  if (failures.length === 0) {
+    try {
+      rmSync(root, { recursive: true, force: true });
+    } catch (cause) {
+      failures.push(cause);
+    }
+  }
   if (failures.length) {
     console.error(`Planner ordering failure evidence retained at ${root}`);
     throw new AggregateError(failures, `Planner ordering scenario or cleanup failed: ${root}`);
