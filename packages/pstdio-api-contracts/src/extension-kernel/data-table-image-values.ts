@@ -1,6 +1,10 @@
-import type { DataTableRendererImageItem } from "./types/data-table-renderer";
+// Self-contained: `collections` consumers such as the UI must not load the extension kernel types.
+interface DataTableImageItem {
+  src: string;
+  alt?: string;
+}
 
-const toImageItem = (value: unknown): DataTableRendererImageItem[] => {
+const toImageItem = (value: unknown): DataTableImageItem[] => {
   if (typeof value === "string") return value ? [{ src: value }] : [];
   if (!value || typeof value !== "object" || !("src" in value) || typeof value.src !== "string" || !value.src)
     return [];
