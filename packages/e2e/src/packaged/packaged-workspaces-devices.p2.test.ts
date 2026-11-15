@@ -27,12 +27,12 @@ setupPackagedSmokeTests(async () => {
   extensionSource = await preparePackagedExtensionSource(
     join(root, "source"),
     join(import.meta.dirname, "../../../../extensions/pstdio-workspaces"),
-    { install: true },
+    { install: true, dependencies: "declared" },
   );
   sessionsSource = await preparePackagedExtensionSource(
     join(root, "sessions-source"),
     join(import.meta.dirname, "../../../../extensions/pstdio-session-browser"),
-    { install: true },
+    { install: true, dependencies: "declared" },
   );
   harness = join(root, "harness");
   await mkdir(harness);
@@ -245,7 +245,7 @@ test(
             id: "create",
             action: {
               kind: "command",
-              target: { command: { kind: "command", extensionId: "pstdio.workspaces", id: "show-create" } },
+              target: { command: { kind: "command", extensionId: "pstdio.pstdio-workspaces", id: "show-create" } },
             },
           }),
         );

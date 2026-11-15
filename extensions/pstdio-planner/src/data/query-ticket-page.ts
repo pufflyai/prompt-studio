@@ -59,7 +59,7 @@ export const readTicketViewPage = async (
         reviewRequests: fields.reviewRequests,
         [REVIEW_REQUEST_ITEMS_ATTRIBUTE]: reviewSummaryBadgeItems(
           reviewRequestCountSummary(review.total, review.pending),
-          attentionPanelTarget(row.resource),
+          attentionPanelTarget(row.resource, selection.attentionPage),
         ),
       },
     };

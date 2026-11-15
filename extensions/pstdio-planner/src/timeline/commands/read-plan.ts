@@ -87,6 +87,7 @@ export const readPlanCommand = defineCommand({
       visible: { all: visible },
       groups: [],
       owner: ctx.extensionId,
+      attentionPage: "timeline",
       orderBy: [
         { field: "deadlineRank", direction: "asc" },
         { field: "planPosition", direction: "asc" },

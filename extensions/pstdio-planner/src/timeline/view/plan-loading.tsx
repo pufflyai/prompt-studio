@@ -37,31 +37,37 @@ export function PlanLoading(props: PlanLoadingProps) {
           />
         </HostStorageProvider>
       </Fieldset.Root>
-      <Flex
-        role="region"
-        aria-label={t("timeline.loading", "Loading timeline")}
-        aria-busy="true"
-        flex="1"
-        minH="0"
-        overflow="hidden"
-        p="md"
-        gap="lg"
-      >
-        <Stack aria-hidden="true" w="20" flexShrink="0" gap="2xl">
-          {[0, 1, 2].map((row) => (
-            <Skeleton key={row} h="3" w="full" borderRadius="xs" />
-          ))}
-        </Stack>
-        <Flex aria-hidden="true" flex="1" minW="0" gap="lg">
-          {[0, 1, 2].map((column) => (
-            <Stack key={column} flex="1" minW="64" gap="md">
-              <Skeleton h="4" w="32" borderRadius="xs" />
-              {[0, 1, 2].map((row) => (
-                <Skeleton key={row} h="28" w="full" borderRadius="xs" />
-              ))}
-            </Stack>
-          ))}
-        </Flex>
+      <PlanLoadingBody t={t} />
+    </Flex>
+  );
+}
+
+export function PlanLoadingBody({ t }: PlanLoadingProps) {
+  return (
+    <Flex
+      role="region"
+      aria-label={t("timeline.loading", "Loading timeline")}
+      aria-busy="true"
+      flex="1"
+      minH="0"
+      overflow="hidden"
+      p="md"
+      gap="lg"
+    >
+      <Stack aria-hidden="true" w="20" flexShrink="0" gap="2xl">
+        {[0, 1, 2].map((row) => (
+          <Skeleton key={row} h="3" w="full" borderRadius="xs" />
+        ))}
+      </Stack>
+      <Flex aria-hidden="true" flex="1" minW="0" gap="lg">
+        {[0, 1, 2].map((column) => (
+          <Stack key={column} flex="1" minW="64" gap="md">
+            <Skeleton h="4" w="32" borderRadius="xs" />
+            {[0, 1, 2].map((row) => (
+              <Skeleton key={row} h="28" w="full" borderRadius="xs" />
+            ))}
+          </Stack>
+        ))}
       </Flex>
     </Flex>
   );

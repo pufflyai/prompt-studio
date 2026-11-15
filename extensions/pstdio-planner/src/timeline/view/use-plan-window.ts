@@ -6,7 +6,8 @@ import { useLiveValue } from "./use-live-value";
 import { type PlanClient, planEvents } from "./use-plan";
 
 const readWindow = async (client: PlanClient, request?: string) => {
-  const { scope, offset } = JSON.parse(request!);
+  if (!request) return;
+  const { scope, offset } = JSON.parse(request);
   const input = JSON.parse(scope);
   const plan = await client.commands["timeline.plan.read"]({
     filter: input.filter,
@@ -26,12 +27,12 @@ const readWindow = async (client: PlanClient, request?: string) => {
   return { scope, offset, plan };
 };
 
-export function usePlanWindow(client: PlanClient, filter: ViewFilterGroup, search: string) {
+export function usePlanWindow(client: PlanClient, filter: ViewFilterGroup, search: string, ready: boolean) {
   const { value: display } = useTimelinePresentation();
   const scope = JSON.stringify({ filter, search, display });
   const [window, setWindow] = useState({ scope, offset: 0 });
   const offset = window.scope === scope ? window.offset : 0;
-  const { value } = useLiveValue(client, readWindow, planEvents, JSON.stringify({ scope, offset }));
+  const { value } = useLiveValue(client, readWindow, planEvents, ready ? JSON.stringify({ scope, offset }) : undefined);
   const plan = value?.scope === scope ? value.plan : undefined;
   const loading = value?.scope !== scope || value.offset !== offset;
   const move = (direction: "previous" | "next") => {

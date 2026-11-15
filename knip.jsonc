@@ -138,6 +138,8 @@
         "src/**/*.diagnostic.ts",
         "src/**/*.bench.ts",
         "src/perf/planner-moves.validation.ts",
+        // The isolated comparison runbook imports this fixture setup from a private connection script.
+        "src/perf/planner-comparison-fixture.ts",
         // These diagnostics compile or launch fixture modules by path.
         "src/perf/storage-scale-container-setup.ts",
         "src/perf/storage-scale-container-entry.ts",

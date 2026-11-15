@@ -86,6 +86,15 @@ test("an open request blocks the ticket and prerequisites without a stored tag",
     state: "await-input",
     reviewCounts: { total: 1, pending: 1 },
   });
+  expect(plan.ticketRows.find(({ id }) => id === ticket.id)?.attributes.reviewRequestItems).toMatchObject([
+    {
+      action: {
+        kind: "panel",
+        panel: { kind: "page-slot", page: { id: "timeline" }, id: "needs-attention" },
+        resource: { id: ticket.id },
+      },
+    },
+  ]);
   expect((await requestPageCommand.run(ctx, { scope: { ticketId: ticket.id } })).requests).toEqual([
     expect.objectContaining({ state: "open" }),
   ]);

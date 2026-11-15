@@ -27,6 +27,7 @@ export interface TicketViewSelection {
   groups?: string[];
   select?: string[];
   owner?: string;
+  attentionPage?: string;
 }
 const filterFields = (filter?: ViewFilterGroup): string[] =>
   filter ? [...filter.rules.map(({ attributeId }) => attributeId), ...(filter.groups ?? []).flatMap(filterFields)] : [];

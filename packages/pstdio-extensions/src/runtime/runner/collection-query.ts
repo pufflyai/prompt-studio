@@ -1,5 +1,4 @@
 import type { ExtensionContextBase, ExtensionStorageApi } from "@pstdio/sdk/extensions";
-import type { RuntimePrivateHandlerRecord } from "../../types/runtime";
 
 export type CollectionQueryPolicy = { mode: "paged" | "static"; maxRows?: number };
 const boundedRead = (): never => {
@@ -32,8 +31,6 @@ export const boundedQueryAutomation = (
     return automation.list(options);
   },
 });
-
-export const collectionQueryPolicy = (handler: RuntimePrivateHandlerRecord) => handler.collectionQuery;
 
 export const validateCollectionQueryRequest = (
   policy: CollectionQueryPolicy | undefined,

@@ -2,7 +2,7 @@
 import { Box, Flex } from "@chakra-ui/react";
 import type { GuestHost } from "@pstdio/sdk/extensions";
 import { type HostStorage, HostStorageProvider, installPrismGlobal } from "@pstdio/ui";
-import { type CollectionViewsSource, useCollectionViewStore } from "@pstdio/ui/collection-view";
+import { type CollectionViewsSource, useCollectionViewStore, useCollectionViews } from "@pstdio/ui/collection-view";
 import type { KanbanRendererSettings } from "@pstdio/ui/kanban-renderer";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { AutoBuildControl } from "./auto-build-control";
@@ -10,7 +10,7 @@ import { BackgroundMenu } from "./background-menu";
 import { formatDay } from "./flags";
 import { PlanGraph } from "./plan-graph";
 import { PlanHeader } from "./plan-header";
-import { PlanLoading } from "./plan-loading";
+import { PlanLoading, PlanLoadingBody } from "./plan-loading";
 import { useViewSections } from "./plan-state";
 import { TicketRequestsDialog } from "./ticket-requests-dialog";
 import { reportPlannerError } from "./timeline-notice";
@@ -87,7 +87,19 @@ function PlanContent(props: PlanContentProps) {
   }>();
   const querySchema = timelineQueryData(schema, t);
   const filter = useCollectionViewStore(querySchema.storageKey, timelineInitialState, (state) => state.filter);
-  const { plan, paging } = usePlanWindow(client, filter, search);
+  const { views } = useCollectionViews({
+    storageKey: querySchema.storageKey,
+    fields: querySchema.attributes,
+    initialState: timelineInitialState,
+    viewsSource,
+  });
+  const activeViewId = useCollectionViewStore(
+    querySchema.storageKey,
+    timelineInitialState,
+    (state) => state.activeViewId,
+  );
+  const ready = views.some(({ id }) => id === activeViewId);
+  const { plan, paging } = usePlanWindow(client, filter, search, ready);
   const attentionSection = plan?.sections.find(({ deadline }) => (deadline?.id ?? null) === attention?.id);
   const attentionRows =
     attention?.kind === "milestone"
@@ -123,59 +135,63 @@ function PlanContent(props: PlanContentProps) {
         fallback,
       }),
   });
-  if (!plan) return <PlanLoading t={t} />;
   return (
     <Flex direction="column" h="full" minH="0" minW="0">
       <PlanHeader
         data={queryData}
         viewsSource={viewsSource}
+        views={views}
         search={search}
         onSearchChange={setSearch}
-        resultLabel={`${plan.page.filteredTotal} of ${plan.page.total}`}
+        resultLabel={plan ? `${plan.page.filteredTotal} of ${plan.page.total}` : ""}
         actions={<AutoBuildControl host={host} client={client} t={t} data={queryData} />}
       />
-      <Flex flex="1" minH="0" minW="0">
-        <Box flex="1" minH="0" minW="0">
-          <PlanGraph
-            {...viewProps}
-            paging={paging}
-            today={plan.today}
-            cardInteraction={{
-              host,
-              client,
-              attributes: queryData.attributes,
-              displayProperties,
-              rows: new Map(queryData.rows.map((row) => [row.id, row])),
-            }}
-            onOpenRequests={(row) => {
-              viewProps.onSelect(row.id);
-              setAttention({
-                pendingOnly: row.reviewCounts
-                  ? row.reviewCounts.pending > 0
-                  : row.requests.some(({ state }) => state === "open"),
-                kind: "ticket",
-                id: row.id,
-                open: true,
-                trigger: document.activeElement as HTMLElement | null,
-              });
-            }}
-          />
-        </Box>
-        {selected ? (
-          <Suspense fallback={null}>
-            <Details
-              key={selected.id}
-              row={selected}
-              plan={plan}
-              client={client}
-              onOpen={open}
-              onSelect={setSelectedId}
-              onClose={() => setSelectedId(undefined)}
+      {plan ? (
+        <Flex flex="1" minH="0" minW="0">
+          <Box flex="1" minH="0" minW="0">
+            <PlanGraph
+              {...viewProps}
+              paging={paging}
+              today={plan.today}
+              cardInteraction={{
+                host,
+                client,
+                attributes: queryData.attributes,
+                displayProperties,
+                rows: new Map(queryData.rows.map((row) => [row.id, row])),
+              }}
+              onOpenRequests={(row) => {
+                viewProps.onSelect(row.id);
+                setAttention({
+                  pendingOnly: row.reviewCounts
+                    ? row.reviewCounts.pending > 0
+                    : row.requests.some(({ state }) => state === "open"),
+                  kind: "ticket",
+                  id: row.id,
+                  open: true,
+                  trigger: document.activeElement as HTMLElement | null,
+                });
+              }}
             />
-          </Suspense>
-        ) : null}
-      </Flex>
-      {attention ? (
+          </Box>
+          {selected ? (
+            <Suspense fallback={null}>
+              <Details
+                key={selected.id}
+                row={selected}
+                plan={plan}
+                client={client}
+                onOpen={open}
+                onSelect={setSelectedId}
+                onClose={() => setSelectedId(undefined)}
+              />
+            </Suspense>
+          ) : null}
+        </Flex>
+      ) : (
+        <PlanLoadingBody t={t} />
+      )}
+      {plan && attention ? (
         <TicketRequestsDialog
           key={`${attention.kind}:${attention.id}`}
           rows={attentionRows}
@@ -193,7 +209,7 @@ function PlanContent(props: PlanContentProps) {
           onOpenChat={(requestId) => client.commands["review-requests.open"]({ requestId })}
         />
       ) : null}
-      {editor ? (
+      {plan && editor ? (
         <Suspense fallback={null}>
           <PlanEditor
             key={JSON.stringify(editor)}

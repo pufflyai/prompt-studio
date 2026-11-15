@@ -1,11 +1,5 @@
 // Load the stored plan against current Planner tickets, save edits, and resolve CLI names to ids.
-import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import type { StoredPlan } from "../contracts";
-
-const planKey = "timeline.plan";
-export const readStoredPlan = (storage: ExtensionStorageApi) => storage.get<StoredPlan>(planKey);
-
-export const writeStoredPlan = (storage: ExtensionStorageApi, plan: StoredPlan) => storage.set(planKey, plan);
 
 // A deadline is named by its id, or on the CLI by its date.
 export function findDeadlineId(plan: Pick<StoredPlan, "deadlines">, key: string) {
