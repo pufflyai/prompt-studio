@@ -150,7 +150,7 @@ describe("installedExtensionSourcesService", () => {
     expect(selectQuery).toContain("source_path");
   });
 
-  test("updates load state and records reload events", async () => {
+  test("updates load state", async () => {
     const registered = await svc.register({
       install_name: "pstdio.core-skills",
       extension_id: "pstdio.core-skills",

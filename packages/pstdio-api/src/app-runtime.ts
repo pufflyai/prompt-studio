@@ -188,9 +188,12 @@ const createAppCloser = (input: {
         } finally {
           try {
             await nativeDocumentsStopped;
-            await deadRowCleanupStopped;
           } finally {
-            await traceShutdownPhase("database", () => input.closeDb());
+            try {
+              await deadRowCleanupStopped;
+            } finally {
+              await traceShutdownPhase("database", () => input.closeDb());
+            }
           }
         }
       }

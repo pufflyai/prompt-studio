@@ -173,6 +173,21 @@ describe("automation run persistence", () => {
     expect((await service.listRunEvents(queued.id, 4_127)).map((event) => event.type)).toEqual(["queued", "cancelled"]);
   });
 
+  test("keeps each step's cursor above the previous one when the clock steps back", async () => {
+    const run = (await createRun("clock-step")).run;
+    await service.claimQueuedRun(run.id);
+    await service.transitionRun(run.id, { status: "succeeded", result: { ok: true } });
+    await db
+      .update(automation_runs)
+      .set({ started_at: "2026-11-16T10:00:00.000Z", finished_at: "2026-11-16T09:59:59.000Z" })
+      .where(eq(automation_runs.id, run.id));
+
+    const events = await service.listRunEvents(run.id);
+    const running = events.find((event) => event.type === "running")!;
+    expect(events.at(-1)!.cursor).toBeGreaterThan(running.cursor);
+    expect((await service.listRunEvents(run.id, running.cursor)).map((event) => event.type)).toEqual(["succeeded"]);
+  });
+
   test("bounds event payloads by UTF-8 bytes", async () => {
     const queued = (await createRun("bounded-event")).run;
 

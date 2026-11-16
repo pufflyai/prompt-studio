@@ -85,6 +85,43 @@ describe("dead-row cleanup", () => {
     }
   });
 
+  test("reclaims dead rows that earlier sessions left below each session's threshold", async () => {
+    const path = mkdtempSync(join(tmpdir(), "dead-row-cleanup-"));
+    try {
+      const create = new PGlite(path);
+      await create.exec(`
+        CREATE TABLE slow (id int PRIMARY KEY, body text);
+        INSERT INTO slow SELECT g, 'a' FROM generate_series(1, 1000) g;
+      `);
+      await create.exec("VACUUM slow");
+      await create.close();
+
+      for (const body of ["b", "c", "d"]) {
+        const session = new PGlite(path);
+        await session.query(`UPDATE slow SET body = $1 WHERE id <= 200`, [body]);
+        await publishStatistics(session);
+        expect(await vacuumDeadRows(session)).toEqual([]);
+        await session.close();
+      }
+
+      const next = new PGlite(path);
+      try {
+        const pages = async () =>
+          Number((await next.query<{ pages: number }>("SELECT pg_relation_size('slow') AS pages")).rows[0]!.pages);
+        expect(await vacuumDeadRows(next, { all: true })).toEqual(["slow"]);
+        const reclaimed = await pages();
+        await next.query("UPDATE slow SET body = 'e' WHERE id <= 200");
+        await next.exec("VACUUM slow");
+        // Rewrites after the full pass reuse the reclaimed space instead of growing the table.
+        expect(await pages()).toBe(reclaimed);
+      } finally {
+        await next.close();
+      }
+    } finally {
+      rmSync(path, { recursive: true, force: true });
+    }
+  });
+
   test("vacuums nothing once stopped", async () => {
     expect(await vacuumDeadRows(db, { stopped: () => true })).toEqual([]);
     expect(await deadRows(db, "rewritten")).toBe(500);

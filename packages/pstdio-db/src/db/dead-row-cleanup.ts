@@ -1,5 +1,6 @@
 import type { PGlite } from "@electric-sql/pglite";
 
+const FIRST_PASS_DELAY_MS = 60_000;
 const CHECK_INTERVAL_MS = 5 * 60_000;
 
 /**
@@ -8,10 +9,13 @@ const CHECK_INTERVAL_MS = 5 * 60_000;
  * dead rows exceed 50 plus 20% of its estimated rows. The estimate is `reltuples`, which survives a
  * restart; PGlite starts every session with empty activity counters. A plain VACUUM makes the space
  * reusable without a rewrite; startup maintenance keeps VACUUM FULL for after migrations.
+ *
+ * Those counters also forget dead rows left by earlier sessions, so `all` vacuums every table once.
+ * A plain VACUUM skips pages the visibility map marks clean, so tables without leftovers cost little.
  */
 export const vacuumDeadRows = async (
   db: PGlite,
-  options: { stopped?: () => boolean; onError?: (error: unknown, table?: string) => void } = {},
+  options: { all?: boolean; stopped?: () => boolean; onError?: (error: unknown, table?: string) => void } = {},
 ) => {
   const { rows } = await db.query<{ name: string }>(
     `SELECT c.oid::regclass::text AS name
@@ -22,10 +26,12 @@ export const vacuumDeadRows = async (
      WHERE c.relnamespace = 'public'::regnamespace
        AND c.relkind = 'r'
        AND (
-         s.n_dead_tup > 50 + 0.2 * greatest(c.reltuples, 0)
+         $1
+         OR s.n_dead_tup > 50 + 0.2 * greatest(c.reltuples, 0)
          OR coalesce(t.n_dead_tup, 0) > 50 + 0.2 * greatest(coalesce(tc.reltuples, 0), 0)
        )
      ORDER BY greatest(s.n_dead_tup, coalesce(t.n_dead_tup, 0)) DESC`,
+    [options.all === true],
   );
   const vacuumed: string[] = [];
   for (const { name } of rows) {
@@ -46,16 +52,21 @@ export const vacuumDeadRows = async (
 export const startDeadRowCleanup = (db: PGlite, onError: (error: unknown, table?: string) => void) => {
   let stopped = false;
   let running: Promise<unknown> | undefined;
-  const timer = setInterval(() => {
-    running ??= vacuumDeadRows(db, { stopped: () => stopped, onError })
+  const pass = (all: boolean) => {
+    running ??= vacuumDeadRows(db, { all, stopped: () => stopped, onError })
       .catch((error) => onError(error))
       .finally(() => {
         running = undefined;
       });
-  }, CHECK_INTERVAL_MS);
+  };
+  // The first pass covers what earlier sessions left; later passes follow this session's counters.
+  const firstPass = setTimeout(() => pass(true), FIRST_PASS_DELAY_MS);
+  const timer = setInterval(() => pass(false), CHECK_INTERVAL_MS);
+  firstPass.unref?.();
   timer.unref?.();
   return async () => {
     stopped = true;
+    clearTimeout(firstPass);
     clearInterval(timer);
     await running;
   };

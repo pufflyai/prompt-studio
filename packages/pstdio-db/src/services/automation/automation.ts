@@ -35,11 +35,10 @@ const eventPayload = (error: AutomationRunError | null) => {
 
 // A run only ever moves queued → running → a final status, and the run row keeps the time of each step.
 // Events are read from those times. A cursor is the step's time in milliseconds times four plus its step,
-// so it rises within a run and stays above the cursors the former event table issued.
-const eventCursor = (at: string, step: number) => Date.parse(at) * 4 + step;
-
-export const automationRunEvents = (run: typeof automation_runs.$inferSelect, after = 0) =>
-  [
+// which stays above the cursors the former event table issued. Each cursor is also kept above the one
+// before it, so a clock that steps back between steps cannot hide a later step from a polling reader.
+export const automationRunEvents = (run: typeof automation_runs.$inferSelect, after = 0) => {
+  const steps = [
     { step: 1, type: "queued", at: run.created_at, payload: {} },
     { step: 2, type: "running", at: run.started_at, payload: {} },
     {
@@ -48,18 +47,21 @@ export const automationRunEvents = (run: typeof automation_runs.$inferSelect, af
       at: terminalStatuses.has(run.status) ? run.finished_at : null,
       payload: eventPayload(run.error_json),
     },
-  ]
-    .flatMap((event) =>
-      event.at === null ? [] : [{ ...event, at: event.at, cursor: eventCursor(event.at, event.step) }],
-    )
-    .filter((event) => event.cursor > after)
-    .map((event) => ({
-      cursor: event.cursor,
-      run_id: run.id,
-      type: event.type,
-      payload_json: event.payload as Record<string, unknown>,
-      created_at: event.at,
-    }));
+  ].flatMap((event) => (event.at === null ? [] : [{ ...event, at: event.at }]));
+  let previous = 0;
+  return steps
+    .map((event) => {
+      previous = Math.max(Date.parse(event.at) * 4 + event.step, previous + 1);
+      return {
+        cursor: previous,
+        run_id: run.id,
+        type: event.type,
+        payload_json: event.payload as Record<string, unknown>,
+        created_at: event.at,
+      };
+    })
+    .filter((event) => event.cursor > after);
+};
 
 const createAutomationRunDBService = (db: DbClient) => {
   const getRunByIdempotency = async (input: {

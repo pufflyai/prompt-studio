@@ -313,32 +313,38 @@ const buildApp = async (
           apiLogger.warn({ err, table, event: "db.dead_row_cleanup.error" }, "Database cleanup failed; it will retry"),
         );
 
-  registerBenchmarkCounters(app, db, runtimeHost);
-  registerAppRuntime(app, deps, input, {
-    extensionScheduler,
-    host: runtimeHost,
-    sessionService,
-    terminalSupervisor,
-  });
+  try {
+    registerBenchmarkCounters(app, db, runtimeHost);
+    registerAppRuntime(app, deps, input, {
+      extensionScheduler,
+      host: runtimeHost,
+      sessionService,
+      terminalSupervisor,
+    });
 
-  drainSessionQueue = (input) => createSessionScheduler(deps).drainQueue(input);
-  deliverIdleTurn = (sessionId) => deliverIdleFollowUp(deps, sessionId);
+    drainSessionQueue = (input) => createSessionScheduler(deps).drainQueue(input);
+    deliverIdleTurn = (sessionId) => deliverIdleFollowUp(deps, sessionId);
 
-  const close = await startAppLifecycle({
-    deps,
-    closeSessionHooks: sessionHooks.close,
-    notificationWakeTimer,
-    stopDeadRowCleanup,
-    unsubscribeExtensionEvents,
-    extensionRuntime,
-    extensionStartup,
-    extensionScheduler,
-    artifactMountWatch,
-    automationService,
-    terminalSupervisor,
-    closeDb: () => closeAppDatabase(deps, closeDb),
-  });
-  return account.connectAccountRelay({ app, close, deps, eventBus });
+    const close = await startAppLifecycle({
+      deps,
+      closeSessionHooks: sessionHooks.close,
+      notificationWakeTimer,
+      stopDeadRowCleanup,
+      unsubscribeExtensionEvents,
+      extensionRuntime,
+      extensionStartup,
+      extensionScheduler,
+      artifactMountWatch,
+      automationService,
+      terminalSupervisor,
+      closeDb: () => closeAppDatabase(deps, closeDb),
+    });
+    return await account.connectAccountRelay({ app, close, deps, eventBus });
+  } catch (error) {
+    // createApp closes the database on a failed startup; the cleanup must not outlive it.
+    await stopDeadRowCleanup();
+    throw error;
+  }
 };
 
 export const createApp = async (input: CreateAppInput, dependencies: AppDependencies = productionAppDependencies) => {
