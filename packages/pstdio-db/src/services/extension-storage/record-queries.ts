@@ -96,6 +96,14 @@ export const listProjectedRecords = async (connection: Reader, owner: StorageOwn
       return left.recordId < right.recordId ? -1 : 1;
     });
 
+const matchesRecordCatalog = (
+  catalog: { name: string; databaseName: string }[],
+  names: ReadonlyMap<string, string>,
+) => {
+  const declared = catalog.filter((row) => !formatCacheSource(row.name));
+  return declared.length === names.size && declared.every((row) => row.databaseName === names.get(row.name));
+};
+
 export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnostics?: StorageDiagnostics) => {
   const ownerWhere = (table: typeof current | typeof indexes | typeof projections) =>
     and(eq(table.workbench_id, owner.workbenchId), eq(table.extension_id, owner.extensionId));
@@ -144,19 +152,19 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
         ),
       );
       await db.transaction(async (tx) => {
+        // The physical name hashes the complete definition and implementation version.
+        // Check that exact catalog identity before hydrating definitions needed only for replacement.
+        const catalog = await tx
+          .select({ name: indexes.name, databaseName: indexes.database_name })
+          .from(indexes)
+          .where(ownerWhere(indexes));
+        if (matchesRecordCatalog(catalog, names)) return;
         const previous = await tx.select().from(indexes).where(ownerWhere(indexes));
         const installed = orderDefinitions(
           decodeProjectionValue(
             previous.map((row) => row.definition) as unknown as Json,
           ) as unknown as StorageRecordIndex[],
         );
-        // Compare under the same lock as installation: concurrent reloads can change derived sources.
-        if (
-          previous.every((row) => formatCacheSource(row.name) || row.database_name === names.get(row.name)) &&
-          (await fingerprint(installed.filter((index) => !formatCacheSource(index.name)) as unknown as Json)) ===
-            (await fingerprint(publicDesired as unknown as Json))
-        )
-          return;
         const desired = orderDefinitions([
           ...publicDesired,
           ...(await retainDateFormatIndexes(installed, publicDesired)),
