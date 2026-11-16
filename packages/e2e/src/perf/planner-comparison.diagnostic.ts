@@ -256,6 +256,16 @@ try {
   await writeFile(resolve(output, "measurements.json"), JSON.stringify(evidence, null, 2));
   await writeFile(resolve(output, "requests.json"), JSON.stringify(requests, null, 2));
   console.log(JSON.stringify(evidence, null, 2));
+  if (connection.bounded) {
+    for (const [action, result] of [
+      ["property", propertyAction],
+      ["archive", archiveAction],
+    ] as const)
+      assert(
+        result.readyMs < 800,
+        `${action} click-to-save-and-reconciliation took ${result.readyMs.toFixed(1)}ms; needs <800ms`,
+      );
+  }
 } catch (error) {
   if (failurePage) {
     await writeFile(

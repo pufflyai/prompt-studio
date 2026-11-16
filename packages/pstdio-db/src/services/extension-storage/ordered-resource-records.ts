@@ -26,7 +26,12 @@ import { compileOrderedGroup } from "./ordered-record-compiler";
 import type { OrderedTransaction } from "./ordered-sql";
 import { orderedOwnerJoinedCloud, readOrderedOwner } from "./ordered-stream-state";
 import { writeOrderedTextAsset } from "./ordered-text-asset";
-import { createRecordQueries, listProjectedRecords, readProjectedRecords } from "./record-queries";
+import {
+  createRecordQueries,
+  listProjectedRecords,
+  readProjectedRecords,
+  readProjectedRevisions,
+} from "./record-queries";
 import type { createResourceRecords as createLegacyResourceRecords } from "./resource-records";
 
 const savedOutcome = async (journal: OrderedJournal, operationId: string) => {
@@ -190,6 +195,7 @@ export const createOrderedResourceRecords = (
       records: {
         read: (id: string) => ReturnType<LegacyRecords["read"]>;
         readMany: (ids: string[]) => ReturnType<LegacyRecords["readMany"]>;
+        readCurrentMany: (ids: string[]) => ReturnType<typeof readProjectedRevisions>;
         commit: (group: StorageGroup) => Promise<StorageSaveOutcome>;
         outcome: (id: string) => Promise<StorageSaveOutcome | undefined>;
       },
@@ -205,6 +211,7 @@ export const createOrderedResourceRecords = (
           {
             read: async (id) => (await readIn(tx, [id], deps.observer))[0]!,
             readMany: (ids) => readIn(tx, ids, deps.observer),
+            readCurrentMany: (ids) => readProjectedRevisions(tx, owner, ids),
             outcome: async (id) => ((await journal.requestIdentity(id)) ? savedOutcome(journal, id) : undefined),
             commit: (group) =>
               queue.run(async () => {

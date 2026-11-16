@@ -82,6 +82,22 @@ export const readProjectedRecords = async (connection: Reader, owner: StorageOwn
   return Promise.all(ids.map((id) => byId.get(id) ?? missingRecord(id)));
 };
 
+/** Conditional saves compare state under the owner lock without loading projected bodies. */
+export const readProjectedRevisions = async (connection: Reader, owner: StorageOwner, ids: string[]) => {
+  if (!ids.length) return [];
+  const rows = await connection
+    .select({ recordId: current.record_id, deleted: current.deleted, revision: current.revision })
+    .from(current)
+    .where(and(currentWhere(owner), inArray(current.record_id, ids)));
+  const byId = new Map(rows.map((row) => [row.recordId, row]));
+  return ids.map((id) => {
+    const row = byId.get(id);
+    return row
+      ? { exists: true, deleted: row.deleted, revision: row.revision }
+      : { exists: false, deleted: false, revision: "" };
+  });
+};
+
 /** Live records under an address prefix, in UTF-16 record ID order like the in-memory storage. */
 export const listProjectedRecords = async (connection: Reader, owner: StorageOwner, prefix = "") =>
   (

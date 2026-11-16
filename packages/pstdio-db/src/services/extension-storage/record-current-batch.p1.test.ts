@@ -1,6 +1,9 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
+import { drizzle } from "drizzle-orm/pglite";
 import { resolveCollectionIndexes } from "pstdio-api-contracts";
+import * as schema from "../../db/schemas.pg";
+import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
 
 for (const backend of ["database", "memory"] as const)
@@ -82,3 +85,49 @@ for (const backend of ["database", "memory"] as const)
       await fixture.close();
     }
   });
+
+test("conditional saves compare revisions without materializing projected bodies", async () => {
+  const f = await createExtensionStorageFixture();
+  try {
+    const queries: string[] = [];
+    const db = drizzle(f.db.$client, {
+      schema,
+      logger: {
+        logQuery: (query) => {
+          if (query.startsWith("select") && query.includes('from "storage_current_records"')) queries.push(query);
+        },
+      },
+    });
+    const owner = { workbenchId: f.projectAId, extensionId: "ext.example" };
+    const service = createDocumentStorageDBService(db);
+    const records = service.open({ owner }).records;
+    const ids = Array.from({ length: 32 }, (_, i) => `ticket-${i}`);
+    await records.commit({
+      operationId: "seed",
+      edits: ids.map((recordId) => ({
+        recordId,
+        replace: { archived: false, content: recordId.repeat(10) },
+      })),
+    });
+    const selected = await records.readMany(ids);
+    await records.commit({ operationId: "other", edits: [{ recordId: "other", replace: { title: "Other" } }] });
+    queries.length = 0;
+    const saved = await records.commitIfCurrent({
+      operationId: "archive",
+      edits: selected.map((record) => ({
+        recordId: record.recordId,
+        expectedRevision: record.revision,
+        set: { "/archived": true },
+      })),
+    });
+    await service.flushStatistics();
+    expect(saved?.state).toBe("saved-locally");
+    expect(queries.length).toBeGreaterThan(0);
+    expect(
+      queries.every((query) => !query.includes('"value"') && !query.includes('"shared"') && !query.includes('"asset"')),
+    ).toBe(true);
+    expect((await records.read(ids[0])).value).toEqual({ archived: true, content: ids[0].repeat(10) });
+  } finally {
+    await f.close();
+  }
+});
