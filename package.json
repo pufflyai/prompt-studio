@@ -89,7 +89,6 @@
   },
   "packageManager": "bun@1.4.4",
   "overrides": {
-    "yauzl": "3.4.0",
     "@electron/node-gyp": "10.2.0-electron.2",
     "katex": "^0.19.0",
     "yauzl": "3.4.0"
