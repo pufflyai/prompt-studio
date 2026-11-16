@@ -116,6 +116,20 @@ bun run dev:planner-stress -- --down
 
 For an automated check using a disposable packaged runtime and temporary home, run `bun run test:planner-stress -- --packaged`. It builds the host binary if needed, installs Planner normally, and removes the runtime and fixture after the check. The Docker command above is the persistent environment for manual use.
 
+### Try a large project
+
+Start a named stack whose demo project already holds 3,000 Planner tickets and 5,000 committed source files:
+
+```bash
+bun run dev:isolated -- --name my-large --large
+```
+
+The stack starts as usual, then the tickets are created through Planner's commands and the files are written into the project folder and committed. On a laptop, seeding takes several minutes; progress is printed as it goes. The last line names the counts and the Planner timeline URL. Set `PSTDIO_PLANNER_STRESS_TICKETS` or `PSTDIO_LARGE_PROJECT_FILES` to change the counts. Repeating the command resumes an interrupted seed without duplicates. To seed a stack that is already running, pass its `connection.json` and name:
+
+```bash
+bun scripts/dev/seed-large-project.ts __test-tmp__/dev-isolated/my-large/connection.json my-large
+```
+
 ### Sign agents in inside the stack
 
 The isolated stack, including `bun run dev:playwright`, runs agents inside its container. Each agent needs a login that the container can read. Sign in once on the host before you start a stack. The image installs these versions:
