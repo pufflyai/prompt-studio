@@ -102,12 +102,16 @@ const readRepoExtension = async (sourcePath: string, manifestOnly: boolean, load
 const sourceInputFor = (
   loaded: Awaited<ReturnType<typeof loadExtensionSource>>,
   source: { name: string; projectId: string; sourceHash: string; sourcePath: string },
+  existing?: Awaited<ReturnType<ExtensionService["listProjectExtensionInstances"]>>[number],
 ) =>
   ({
     displayName: loaded.metadata.displayName,
     extensionId: loaded.metadata.id,
     installName: source.name,
-    manifest: loaded.manifest,
+    manifest:
+      existing?.instance.enabled === false && existing.installedSource.source_hash === source.sourceHash
+        ? existing.installedSource.manifest_json
+        : loaded.manifest,
     name: loaded.metadata.name,
     projectId: source.projectId,
     sourceHash: source.sourceHash,
@@ -146,9 +150,7 @@ export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForP
 
     presentSourcePaths.add(sourcePath);
     const sourceHash = await hash(sourcePath);
-    const source = sourceInputFor(loaded, { name, projectId: input.projectId, sourceHash, sourcePath });
-    if (existing?.instance.enabled === false && existing.installedSource.source_hash === sourceHash)
-      source.manifest = existing.installedSource.manifest_json;
+    const source = sourceInputFor(loaded, { name, projectId: input.projectId, sourceHash, sourcePath }, existing);
     const synced = await input.extensionService.syncInstalledSourceForProject(source);
     if (!synced) continue;
     if (existing) {
