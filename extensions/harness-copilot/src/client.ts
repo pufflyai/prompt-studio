@@ -41,6 +41,13 @@ export interface CopilotClientOptions {
 
 export type CopilotClientFactory = (options: CopilotClientOptions) => CopilotClientHandle;
 
+/** Runs `stop` and kills the runtime process if it is still alive afterwards, for example after ignoring SIGTERM. */
+export const stopAndKillSurvivor = async <T>(child: ChildProcess | null | undefined, stop: () => Promise<T>) => {
+  const result = await stop();
+  if (child && child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+  return result;
+};
+
 export const createCopilotClient: CopilotClientFactory = (options) => {
   const client = new CopilotClient({
     logLevel: "error",
@@ -51,12 +58,7 @@ export const createCopilotClient: CopilotClientFactory = (options) => {
   return Object.assign(client, {
     // SDK 1.0.34's stop() sends SIGTERM and drops its reference to a runtime that survives it, so a later
     // forceStop() cannot reach that process. Keep the reference and kill a survivor here.
-    stop: async () => {
-      const child = (client as unknown as { cliProcess?: ChildProcess | null }).cliProcess;
-      const errors = await stop();
-      if (child && child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
-      return errors;
-    },
+    stop: () => stopAndKillSurvivor((client as unknown as { cliProcess?: ChildProcess | null }).cliProcess, stop),
     readEvents: async (sessionId: string) => {
       const events: SessionEvent[] = [];
       let cursor: string | undefined;
