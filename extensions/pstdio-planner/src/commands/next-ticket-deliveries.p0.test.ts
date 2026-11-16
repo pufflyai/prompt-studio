@@ -37,6 +37,7 @@ async function sharedDelivery() {
       stderr: "",
       stdout: JSON.stringify({
         state: merged ? "MERGED" : "OPEN",
+        baseRefName: "main",
         headRefOid: "head",
         mergeCommit: { oid: "main-sha" },
       }),

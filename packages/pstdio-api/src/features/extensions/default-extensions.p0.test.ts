@@ -19,6 +19,7 @@ describe("resolveDefaultExtensionsConfig", () => {
       "onboarding",
       "base-themes",
       "skills",
+      "github",
       "git-workspaces",
     ]);
   });
@@ -278,6 +279,7 @@ describe("installDefaultExtensions sources", () => {
       "onboarding",
       "base-themes",
       "skills",
+      "github",
       "git-workspaces",
     ]);
     expect(
