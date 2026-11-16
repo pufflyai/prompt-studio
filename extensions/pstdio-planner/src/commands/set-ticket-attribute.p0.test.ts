@@ -88,3 +88,61 @@ describe("setTicketAttributeCommand", () => {
     });
   });
 });
+
+test("concurrent property changes preserve each other's fields", async () => {
+  const storage = createMemoryStorage();
+  const created = await createTicketCommand.run(
+    ...makeCommandArgs({ storage, params: { title: "Concurrent", statusId: "ready" } }),
+  );
+  const { tags } = await readTicketTags(storage);
+  const high = tags
+    .find((tag) => tag.id === "default-priority")!
+    .options.find((option) => option.id === "default-priority-high")!;
+  await Promise.all([
+    setTicketAttributeCommand.run(
+      ...makeCommandArgs({ storage, params: { rowId: created.id, attributeId: "priority", value: high.id } }),
+    ),
+    setTicketAttributeCommand.run(
+      ...makeCommandArgs({ storage, params: { rowId: created.id, attributeId: "status", value: "done" } }),
+    ),
+  ]);
+  const saved = await ticketsCollection(storage).get(created.id);
+  expect(saved?.statusId).toBe("done");
+  expect(saved?.tags).toEqual({ "default-priority": high.id });
+});
+
+test("property edits skip tickets whose core identity has not arrived", async () => {
+  const storage = createMemoryStorage();
+  const created = await createTicketCommand.run(
+    ...makeCommandArgs({ storage, params: { title: "Waiting for identity", statusId: "ready" } }),
+  );
+  const resources = { ...ticketContext(storage).resources, identity: async () => null };
+  expect(
+    await setTicketAttributeCommand.run(
+      ...makeCommandArgs({
+        storage,
+        params: { rowId: created.id, attributeId: "status", value: "done" },
+        overrides: { resources },
+      }),
+    ),
+  ).toBeNull();
+  expect((await storage.collection<{ statusId: string }>("tickets").get(created.id))?.statusId).toBe("ready");
+});
+
+test("property edits retain the title derived from current native content", async () => {
+  const storage = createMemoryStorage();
+  const created = await createTicketCommand.run(
+    ...makeCommandArgs({ storage, params: { title: "Old title", statusId: "ready" } }),
+  );
+  const records = storage.collection<Record<string, unknown>>("tickets");
+  await records.put(created.id, {
+    ...(await records.get(created.id))!,
+    title: "Old title",
+    content: "# Current native title\n\nBody",
+  });
+  const saved = await setTicketAttributeCommand.run(
+    ...makeCommandArgs({ storage, params: { rowId: created.id, attributeId: "status", value: "done" } }),
+  );
+  expect(saved?.title).toBe("Current native title");
+  expect((await records.get(created.id))?.title).toBe("Current native title");
+});
