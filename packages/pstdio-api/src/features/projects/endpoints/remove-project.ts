@@ -3,7 +3,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import { apiLogger } from "../../../lib/logger";
 import type { AppRouteHandler } from "../../../types";
 import { resolvePstdioHome } from "../../extensions/install-extension-source";
-import { inProjectWorkspaceQueue } from "../../workspaces/provision-coordinator";
+import { removeProjectAfterProvisioning } from "../../workspaces/provision-coordinator";
 import { cleanupProjectArtifacts } from "../cleanup-project";
 import type { ProjectsRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
@@ -55,8 +55,7 @@ export const removeProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<t
 
     const home = await deps.workspaceService.getDefault(id);
     return withFolderCreation(home?.root_path ?? null, async () => {
-      // Provisioning queued for this project writes its folder config, so removal waits its turn.
-      const removeConnectionSecrets = await inProjectWorkspaceQueue(id, async () => {
+      const removeConnectionSecrets = await removeProjectAfterProvisioning(id, async () => {
         await cleanupProjectArtifacts(deps, id, {
           removeProjectStorage: deps.fileService.removeProjectStorage,
         });

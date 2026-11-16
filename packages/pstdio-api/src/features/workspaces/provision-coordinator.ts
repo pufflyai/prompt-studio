@@ -54,16 +54,30 @@ export const runWorkspaceProvisioning = async <
 };
 
 const projectQueues = new Map<string, Promise<unknown>>();
-/**
- * Runs one project's provisioning and removal in order. Provisioning writes the folder config, so a
- * removal that ran beside a queued pass could see that pass write the config back after it was deleted.
- */
-export const inProjectWorkspaceQueue = <T>(projectId: string, task: () => Promise<T>) => {
+const pendingRemovals = new Map<string, number>();
+// Runs one project's provisioning and removal in order, so removal never interleaves with a config write.
+const inProjectWorkspaceQueue = <T>(projectId: string, task: () => Promise<T>) => {
   const queued = (projectQueues.get(projectId) ?? Promise.resolve()).catch(() => undefined).then(task);
   projectQueues.set(projectId, queued);
   return queued.finally(() => {
     if (projectQueues.get(projectId) === queued) projectQueues.delete(projectId);
   });
+};
+
+/**
+ * Removes a project after its queued provisioning. Provisioning writes the folder config, so a removal
+ * running beside it could see the config written back. A pass that is already running skips its
+ * remaining workspaces, so removal waits for at most one workspace's provisioning.
+ */
+export const removeProjectAfterProvisioning = async <T>(projectId: string, task: () => Promise<T>) => {
+  pendingRemovals.set(projectId, (pendingRemovals.get(projectId) ?? 0) + 1);
+  try {
+    return await inProjectWorkspaceQueue(projectId, task);
+  } finally {
+    const remaining = (pendingRemovals.get(projectId) ?? 1) - 1;
+    if (remaining > 0) pendingRemovals.set(projectId, remaining);
+    else pendingRemovals.delete(projectId);
+  }
 };
 
 export const provisionProjectWorkspaces = (
@@ -73,6 +87,7 @@ export const provisionProjectWorkspaces = (
 ) =>
   inProjectWorkspaceQueue(projectId, async () => {
     for (const workspace of await deps.workspaceService.list(projectId)) {
+      if (pendingRemovals.has(projectId)) return;
       if (workspace.provider_state !== "ready" || workspace.execution_kind !== "local" || !workspace.root_path)
         continue;
       await runWorkspaceProvisioning(
@@ -82,6 +97,7 @@ export const provisionProjectWorkspaces = (
       );
     }
   });
+
 export const scheduleProjectWorkspaceProvisioning = (
   deps: ProvisionCoordinatorDeps,
   projectId: string,
