@@ -109,7 +109,7 @@ export const createAppServerRpc = (
     };
     const receive = (chunk: Buffer) => {
       buffered += decoder.write(chunk);
-      // Bun readline splits U+2028/U+2029 inside JSON strings; Codex frames only at LF (ADR 0152).
+      // Bun readline splits U+2028/U+2029 inside JSON strings; Codex frames only at LF (ADR 0154).
       let newline = buffered.indexOf("\n");
       while (!closed && newline >= 0) {
         const value = buffered.slice(0, newline);
