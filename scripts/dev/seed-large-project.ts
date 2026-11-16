@@ -78,6 +78,7 @@ const seedTickets = async (api: StackApi, project: Project, label: string, total
   const from = start === -1 ? ids.length : start;
   const buckets: number[] = [];
   let bucketStart = performance.now();
+  let bucketCount = 0;
   for (let index = from; index < total; index++) {
     if (ids[index]) continue;
     const isEpic = index % 10 === 0;
@@ -89,9 +90,12 @@ const seedTickets = async (api: StackApi, project: Project, label: string, total
       ...(index >= 5 && !isEpic ? { dependsOn: [ids[index - 5]!] } : {}),
     });
     ids[index] = created.id;
+    bucketCount++;
     if ((index + 1) % 500 === 0) {
-      buckets.push(Math.round((performance.now() - bucketStart) / 500));
+      // A resumed run starts mid-block, so divide by the tickets this run created.
+      buckets.push(Math.round((performance.now() - bucketStart) / bucketCount));
       bucketStart = performance.now();
+      bucketCount = 0;
       log(`${project.name}: ${index + 1}/${total} tickets (${buckets.at(-1)} ms each for the last 500)`);
     }
   }
