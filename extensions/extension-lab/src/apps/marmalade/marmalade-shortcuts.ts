@@ -26,6 +26,8 @@ export const marmaladeShortcuts = (views: ViewRef[]) =>
     defineKeybinding({
       id: action.type === "tool" ? `marmalade-tool-${action.tool}` : `marmalade-${action.type}`,
       key,
+      // Single-letter tool keys type text, so they live in shortcut mode; modifier chords stay direct.
+      ...(action.type === "tool" ? { layer: "current" as const } : {}),
       when: { view: views },
       action: { kind: "command", target: { command: executeMarmalade.ref, params: { action } } },
     }),
