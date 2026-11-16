@@ -172,6 +172,7 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
             // One extra row shows whether a next page exists without a second scan.
             page.limit + 1,
             page.offset,
+            query.where,
           ),
         );
         const rows = result.rows.slice(0, page.limit);
