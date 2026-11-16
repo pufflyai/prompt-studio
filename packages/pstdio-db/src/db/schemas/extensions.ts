@@ -1,5 +1,5 @@
 import { boolean, index, jsonb, pgTable, primaryKey, text, uniqueIndex } from "drizzle-orm/pg-core";
-import { extensionLoadStatusEnum, extensionReloadStatusEnum, extensionSourceKindEnum } from "./enums";
+import { extensionLoadStatusEnum, extensionSourceKindEnum } from "./enums";
 import { files } from "./files";
 import { projects } from "./projects";
 import type { JsonObject } from "./types";
@@ -57,24 +57,6 @@ export const extension_instances = pgTable(
     index("extension_instances_scope_idx").on(table.scope_type, table.scope_id),
     index("extension_instances_installed_idx").on(table.installed_extension_id),
   ],
-);
-
-export const extension_reload_events = pgTable(
-  "extension_reload_events",
-  {
-    id: text("id").primaryKey(),
-    installed_extension_id: text("installed_extension_id")
-      .notNull()
-      .references(() => installed_extension_sources.id, { onDelete: "cascade" }),
-    previous_source_hash: text("previous_source_hash"),
-    next_source_hash: text("next_source_hash"),
-    previous_revision: text("previous_revision"),
-    next_revision: text("next_revision"),
-    status: extensionReloadStatusEnum("status").notNull(),
-    error_json: jsonb("error_json").$type<JsonObject>(),
-    created_at: text("created_at").notNull(),
-  },
-  (table) => [index("extension_reload_events_installed_idx").on(table.installed_extension_id, table.created_at)],
 );
 
 export const extension_settings = pgTable(

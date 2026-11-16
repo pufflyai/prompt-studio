@@ -219,7 +219,6 @@ describe("extensionService webview build status", () => {
         sourcePath: "/extensions/lab",
       },
     );
-    const reloadEvents = await installedExtensionSourcesService.listReloadEvents(registered.id);
 
     expect(failed.status).toBe("reported");
     expect((await installedExtensionSourcesService.get(registered.id))?.last_error_json).toMatchObject({
@@ -227,7 +226,6 @@ describe("extensionService webview build status", () => {
       message: "build failed",
       webviewId: "pstdio.lab.view.page",
     });
-    expect(reloadEvents.at(-1)?.error_json).toMatchObject({ webviewId: "pstdio.lab.view.page" });
 
     const recovered = reportedSource(
       await buildService.reportWebviewBuildSuccess(registered.id, "pstdio.lab.view.page", {

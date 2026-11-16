@@ -79,7 +79,7 @@ jobs:
           bun-version-file: package.json
       - uses: actions/setup-node@v5
         with:
-          node-version: "24.22.1"
+          node-version: "26.7.0"
       - name: "[phase:install] Install native dependencies"
         run: bun __test-tmp__/native-installer/scripts/ci/install-native-dependencies.ts
       - name: "[phase:report-transfer] Download the immutable compiled candidate"

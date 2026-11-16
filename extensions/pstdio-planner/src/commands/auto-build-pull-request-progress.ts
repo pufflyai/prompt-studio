@@ -3,15 +3,20 @@ import { attemptEventsCollection } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
 import { autoBuildPullRequestNotifications } from "../data/auto-build-dispatches";
 import { statusesCollection } from "../data/collections";
+import type { GithubReads } from "../data/pull-request-resources";
 import type { Ticket } from "../data/types";
 import { parseWorkflowStatuses } from "../data/workflow-statuses";
 import { WorkspaceUnavailableError, workspaceHead } from "./change-requests";
 import { pullRequestRepairKey, pullRequestRepairReason, readPullRequestEvidence } from "./pull-request-evidence";
 
-export async function readPendingPullRequestRepair(ctx: CommandContext, ticket: Ticket, attempt: AttemptRecord) {
+export async function readPendingPullRequestRepair(
+  ctx: CommandContext,
+  ticket: Ticket,
+  attempt: AttemptRecord,
+  reads?: GithubReads,
+) {
   const revision = attempt.revisions.at(-1);
-  if (!revision || !ticket.reviewLinks?.some((link) => link.provider === "github" && link.kind === "pull_request"))
-    return;
+  if (!revision) return;
   const completed = parseWorkflowStatuses((await ctx.settings.all())["workflow.statuses"]).completedStatusIds;
   if (
     ticket.statusId &&
@@ -19,7 +24,7 @@ export async function readPendingPullRequestRepair(ctx: CommandContext, ticket: 
     (await statusesCollection(ctx.storage).get(ticket.statusId))
   )
     return;
-  const pr = await readPullRequestEvidence(ctx, ticket, revision.headSha);
+  const pr = await readPullRequestEvidence(ctx, ticket, revision.headSha, reads);
   if (!pullRequestRepairReason(pr, revision.headSha)) return;
   const head = await workspaceHead(ctx, attempt.workspaceId).catch((error: unknown) => {
     if (error instanceof WorkspaceUnavailableError) return undefined;

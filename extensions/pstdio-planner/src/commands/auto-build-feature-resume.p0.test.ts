@@ -46,7 +46,12 @@ test("a feature attempt keeps its recorded base when its owner stops", async () 
       return {
         exitCode: 0,
         stderr: "",
-        stdout: JSON.stringify({ state: "MERGED", headRefOid: "parent-head", mergeCommit: { oid: "feature-merge" } }),
+        stdout: JSON.stringify({
+          state: "MERGED",
+          baseRefName: "main",
+          headRefOid: "parent-head",
+          mergeCommit: { oid: "feature-merge" },
+        }),
       };
     if (
       command.includes("feature^{commit}") ||
