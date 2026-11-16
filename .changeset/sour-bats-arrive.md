@@ -1,6 +1,6 @@
 ---
 "pstdio": minor
-"pstdio-planner": minor
+"planner": minor
 "github": minor
 ---
 

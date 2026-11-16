@@ -144,6 +144,10 @@ describe("syncRepoExtensionsForProject", () => {
     const repoPath = join(tempRoot, "repo");
     const extensionPath = join(repoPath, ".pstdio", "extensions", "worktree-bootstrap");
     writeExtension(extensionPath, "worktree-bootstrap");
+    writeFileSync(
+      join(extensionPath, "extension.ts"),
+      'export default { commands: { hello: { title: "Hello", params: {}, run: () => "hello" } } };\n',
+    );
 
     await syncRepoExtensionsForProject({
       extensionService,
@@ -154,6 +158,8 @@ describe("syncRepoExtensionsForProject", () => {
     const [instance] = await extensionInstancesService.list({ scope_id: project.id, scope_type: "project" });
     expect(instance).toBeDefined();
     await extensionService.setProjectExtensionEnabled(instance!.id, false);
+    const accepted = await installedExtensionSourcesService.getBySourcePath(extensionPath);
+    expect(accepted?.manifest_json.commands).toEqual(["hello"]);
 
     await syncRepoExtensionsForProject({
       extensionService,
@@ -164,6 +170,9 @@ describe("syncRepoExtensionsForProject", () => {
 
     const disabled = await extensionInstancesService.get(instance!.id);
     expect(disabled?.enabled).toBe(false);
+    expect((await installedExtensionSourcesService.getBySourcePath(extensionPath))?.manifest_json).toEqual(
+      accepted?.manifest_json,
+    );
   });
 
   test("marks removed repo-local folders missing without deleting rows", async () => {
