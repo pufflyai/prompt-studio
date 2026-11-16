@@ -140,6 +140,8 @@ bun scripts/dev/seed-large-project.ts __test-tmp__/dev-isolated/my-large/connect
 
 The platform does not allow links between projects, so each project's links stay within it.
 
+The first start of a new stack builds its image and can exceed the start timeout before seeding begins. Rerun the same command; the stack and the seeding resume.
+
 ### Sign agents in inside the stack
 
 The isolated stack, including `bun run dev:playwright`, runs agents inside its container. Each agent needs a login that the container can read. Sign in once on the host before you start a stack. The image installs these versions:
