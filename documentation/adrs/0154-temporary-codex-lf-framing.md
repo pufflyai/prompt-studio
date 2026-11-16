@@ -13,7 +13,7 @@ Bun 1.4.4's `node:readline` also splits at U+2028 and U+2029. A saved Figma tool
 
 ## Decision
 
-Keep LF framing in the Codex RPC adapter. Decode chunks with `StringDecoder`, split only at LF, and flush the last partial line at EOF. Existing JSON parsing accepts CRLF whitespace. No stored history, public API, connection ownership, or cancellation behavior changes.
+Keep LF framing in the Codex RPC adapter. Decode chunks with `StringDecoder`, split only at LF, and flush the last partial line at EOF. Keep decoded fragments, scan each chunk once, and join only at LF or EOF so fragmented histories load in linear work. Existing JSON parsing accepts CRLF whitespace. No stored history, public API, connection ownership, or cancellation behavior changes.
 
 ## Limitations
 

@@ -81,12 +81,12 @@ export const createAppServerRpc = (
   };
   const finished = new Promise<void>((resolve, reject) => {
     const decoder = new StringDecoder("utf8");
-    let buffered = "";
+    let fragments: string[] = [];
     const detach = () => {
       child.stdout.off("data", receive);
       child.stdout.off("end", finish);
       child.stdout.off("close", finish);
-      buffered = "";
+      fragments = [];
     };
     const fail = (error: unknown) => {
       reject(error);
@@ -108,19 +108,24 @@ export const createAppServerRpc = (
       }
     };
     const receive = (chunk: Buffer) => {
-      buffered += decoder.write(chunk);
+      const value = decoder.write(chunk);
       // Bun readline splits U+2028/U+2029 inside JSON strings; Codex frames only at LF (ADR 0154).
-      let newline = buffered.indexOf("\n");
+      // Search each decoded chunk once; a fragmented response must not rescan its growing prefix.
+      let start = 0;
+      let newline = value.indexOf("\n");
       while (!closed && newline >= 0) {
-        const value = buffered.slice(0, newline);
-        buffered = buffered.slice(newline + 1);
-        line(value);
-        newline = buffered.indexOf("\n");
+        fragments.push(value.slice(start, newline));
+        const message = fragments.join("");
+        fragments = [];
+        start = newline + 1;
+        line(message);
+        newline = value.indexOf("\n", start);
       }
+      if (!closed && start < value.length) fragments.push(value.slice(start));
     };
     const finish = () => {
       if (closed) return;
-      line(buffered + decoder.end());
+      line(fragments.join("") + decoder.end());
       close();
       detach();
       resolve();

@@ -114,3 +114,30 @@ test("RPC EOF rejects an outstanding request while its real TCP peer remains ali
     await new Promise<void>((resolve) => server.close(() => resolve()));
   }
 });
+
+test("RPC delivers a large fragmented history response before its following notification", async () => {
+  const stdin = new PassThrough();
+  const stdout = new PassThrough();
+  const stderr = new PassThrough();
+  const delivered: string[] = [];
+  const rpc = createAppServerRpc(
+    { stdin, stdout, stderr, kill: () => {}, onExit: Promise.resolve({ code: 0, signal: null }) },
+    () => delivered.push("notification"),
+  );
+  const response = { text: "x".repeat(8 * 1024 * 1024) };
+  const pending = rpc.request("thread/read", {}, () => delivered.push("response"));
+  const bytes = Buffer.from(
+    `${JSON.stringify({ id: 1, result: response })}\n${JSON.stringify({ method: "item/completed" })}\n`,
+  );
+  try {
+    for (let offset = 0; offset < bytes.length; offset += 64) stdout.write(bytes.subarray(offset, offset + 64));
+    stdout.end();
+    await rpc.finished;
+    expect(await pending).toEqual(response);
+    expect(delivered).toEqual(["response", "notification"]);
+  } finally {
+    stdin.destroy();
+    stdout.destroy();
+    stderr.destroy();
+  }
+});
