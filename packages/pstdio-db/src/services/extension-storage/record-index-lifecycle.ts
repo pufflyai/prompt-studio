@@ -14,13 +14,15 @@ export const dropRecordIndexes = async (db: Pick<DbClient, "select" | "execute">
     await db.execute(sql`DROP INDEX IF EXISTS ${sql.identifier(`${index.database_name}_o`)}`);
     for (const [position] of arrayIndexFields(index.definition).entries())
       await db.execute(sql`DROP INDEX IF EXISTS ${sql.identifier(`${index.database_name}_g${position}`)}`);
-    for (const position of (index.definition.equality ?? []).keys())
+    for (const position of (index.definition.equality ?? []).keys()) {
+      await db.execute(sql`DROP INDEX IF EXISTS ${sql.identifier(`${index.database_name}_e${position}`)}`);
       await db.execute(sql`DROP STATISTICS IF EXISTS ${sql.identifier(`${index.database_name}_s${position}`)}`);
+    }
   }
 };
 
 export const recordIndexName = async (owner: StorageOwner, index: StorageRecordIndex) =>
-  `storage_query_v2_${(await fingerprint({ owner: { ...owner }, definition: index as unknown as Json })).slice(0, 32)}`;
+  `storage_query_v3_${(await fingerprint({ owner: { ...owner }, definition: index as unknown as Json })).slice(0, 32)}`;
 
 export const installRecordIndex = async (
   tx: Pick<DbClient, "execute" | "insert">,
@@ -48,10 +50,17 @@ export const installRecordIndex = async (
       await tx.execute(
         sql`CREATE INDEX ${sql.identifier(`${name}_o`)} ON storage_current_records (${sql.join(orderKeys, sql`, `)}) WHERE ${recordScopeSql(owner, { ...index, identity: undefined })}`,
       );
-    for (const [position, key] of keys.slice(0, localEqualityCount).entries())
+    for (const [position, key] of keys.slice(0, localEqualityCount).entries()) {
+      // A composite key only seeks its leading equality field. Preserve ordered seeks
+      // when a filter names another declared equality field without fixing that prefix.
+      if (position > 0)
+        await tx.execute(
+          sql`CREATE INDEX ${sql.identifier(`${name}_e${position}`)} ON storage_current_records (${key}, ${sql.join(orderKeys, sql`, `)}) WHERE ${recordScopeSql(owner, { ...index, identity: undefined })}`,
+        );
       await tx.execute(
         sql`CREATE STATISTICS ${sql.identifier(`${name}_s${position}`)} ON ${key} FROM storage_current_records`,
       );
+    }
     for (const [position, [field]] of arrayIndexFields(index).entries())
       await tx.execute(
         sql`CREATE INDEX ${sql.identifier(`${name}_g${position}`)} ON storage_current_records USING gin ((${recordFieldSql(index, field)})) WHERE ${recordScopeSql(owner, { ...index, identity: undefined })}`,
