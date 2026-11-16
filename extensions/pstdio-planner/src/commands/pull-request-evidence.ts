@@ -1,34 +1,22 @@
 import type { CommandContext } from "@pstdio/sdk/extensions";
+import { type GithubReads, linkedPullRequests, readGithubResources } from "../data/pull-request-resources";
 import type { Ticket } from "../data/types";
 
-const readLinkedPullRequest = async (ctx: Pick<CommandContext, "process">, url: string) => {
-  const result = await ctx.process.run({
-    command: ["gh", "pr", "view", url, "--json", "headRefOid,mergeable,statusCheckRollup,state,mergeCommit"],
-  });
-  if (result.exitCode !== 0) return { error: result.stderr.trim() || "Pull request evidence is unavailable." };
-  try {
-    const value = JSON.parse(result.stdout) as {
-      headRefOid: string;
-      mergeable: string;
-      state: string;
-      mergeCommit?: { oid: string } | null;
-      statusCheckRollup?: { status?: string; conclusion?: string; state?: string }[];
-    };
-    if (!value.headRefOid || !value.state) throw new Error("Missing pull request identity");
-    return value;
-  } catch {
-    return { error: "Pull request evidence is unreadable." };
-  }
-};
-
 export const readPullRequestEvidence = async (
-  ctx: Pick<CommandContext, "process">,
+  ctx: CommandContext,
   ticket: Ticket,
   expectedHead?: string,
+  reads?: GithubReads,
 ) => {
-  const links = ticket.reviewLinks?.filter((link) => link.provider === "github" && link.kind === "pull_request") ?? [];
+  const links = await linkedPullRequests(ctx, ticket);
+  if (!links)
+    return { error: "Saved pull request links could not be migrated. Restore GitHub and resource linking access." };
   if (!links.length) return null;
-  const evidence = await Promise.all(links.map((link) => readLinkedPullRequest(ctx, link.url)));
+  const evidence = await readGithubResources(
+    ctx,
+    links.map((link) => link.id),
+    reads,
+  );
   const matched = evidence.filter((pr) => !("error" in pr) && pr.headRefOid === expectedHead);
   if (matched.length === 1) return matched[0]!;
   if (evidence.length === 1) return evidence[0]!;
@@ -44,12 +32,14 @@ export const readPullRequestEvidence = async (
       statusCheckRollup: current.flatMap((pr) => pr.statusCheckRollup ?? []),
     };
   }
-  const failure = evidence.find((pr) => "error" in pr);
-  return failure ?? { error: "No linked PR matches the current submitted revision." };
+  return evidence.find((pr) => "error" in pr) ?? { error: "No linked PR matches the current submitted revision." };
 };
 
 export const pullRequestRepairReason = (
-  pr: Awaited<ReturnType<typeof readPullRequestEvidence>>,
+  pr:
+    | { headRefOid: string; mergeable: string; statusCheckRollup?: { conclusion?: string; state?: string }[] }
+    | { error: string }
+    | null,
   submittedHead: string,
 ) => {
   if (!pr || "error" in pr) return "";
@@ -63,8 +53,5 @@ export const pullRequestRepairReason = (
   return failed ? "CI failed on the submitted PR head. Fix the cause and satisfy the task's latest-head checks." : "";
 };
 
-export const pullRequestRepairKey = (
-  workspaceId: string,
-  head: string,
-  evidence: Awaited<ReturnType<typeof readPullRequestEvidence>>,
-) => `repair:${workspaceId}:${head}:${JSON.stringify(evidence)}`;
+export const pullRequestRepairKey = (workspaceId: string, head: string, evidence: unknown) =>
+  `repair:${workspaceId}:${head}:${JSON.stringify(evidence)}`;

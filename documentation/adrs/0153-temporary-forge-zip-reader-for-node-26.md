@@ -6,7 +6,7 @@ Status: Accepted for the Node 26 nightly repair.
 
 ## Decision
 
-Pin the transitive `yauzl` ZIP reader to 3.4.0 while Electron Forge 7 uses `extract-zip` 2.0.1, whose dependency range selects yauzl 2.10.0. Bun owns installation and locking. Node 26.7.0 is the requested tooling target; PR #2085 owns the development, CI and release pin migration.
+Pin the transitive `yauzl` ZIP reader to 3.4.0 while Electron Forge 7 uses `extract-zip` 2.0.1, whose dependency range selects yauzl 2.10.0. Bun owns installation and locking. Development, CI and release tooling use Node 26.7.0.
 
 ## How it should work
 
