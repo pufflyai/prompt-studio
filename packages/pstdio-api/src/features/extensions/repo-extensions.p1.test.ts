@@ -309,3 +309,20 @@ test("does not import a restored tool that stays disabled during later discovery
   const [instance] = await extensionInstancesService.list({ scope_id: project.id, scope_type: "project" });
   expect(instance?.enabled).toBe(false);
 });
+
+test("keeps a disabled tool's accepted metadata when its mutable manifest is removed", async () => {
+  const project = await projectService.create({ name: "Accepted disabled tool" });
+  const repoPath = join(tempRoot, "repo");
+  const extensionPath = join(repoPath, ".pstdio", "extensions", "accepted-tool");
+  writeExtension(extensionPath, "accepted-tool");
+  const input = { extensionService, installedExtensionSourcesService, projectId: project.id, repoPath };
+  await syncRepoExtensionsForProject(input);
+  const source = await installedExtensionSourcesService.getBySourcePath(extensionPath);
+  const [instance] = await extensionInstancesService.list({ scope_id: project.id, scope_type: "project" });
+  await extensionService.setProjectExtensionEnabled(instance!.id, false);
+  rmSync(join(extensionPath, "package.json"));
+  const result = await syncRepoExtensionsForProject(input);
+  expect(result).toMatchObject({ missing: [], skipped: [], enabled: [] });
+  expect((await installedExtensionSourcesService.get(source!.id))?.status).toBe("loaded");
+  expect((await extensionInstancesService.get(instance!.id))?.enabled).toBe(false);
+});

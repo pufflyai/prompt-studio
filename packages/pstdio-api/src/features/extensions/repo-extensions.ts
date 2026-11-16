@@ -1,5 +1,6 @@
 import { basename, join } from "node:path";
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
+import { readAcceptedRevision } from "pstdio-extensions";
 import type { createExtensionService, SyncInstalledSourceInput } from "../../services/extension-service";
 import { AlwaysEnabledExtensionError } from "./always-on-extensions";
 import { listExtensionSources } from "./discover-extension-sources";
@@ -90,7 +91,9 @@ const keepsOff = (input: Pick<SyncRepoExtensionsForProjectInput, "enable">, name
 /** A folder that stays off is read from its manifest only, so its code is never imported. */
 const readRepoExtension = async (sourcePath: string, manifestOnly: boolean, load: typeof loadExtensionSource) => {
   try {
-    return manifestOnly ? readExtensionSourceMetadata(sourcePath) : await load(sourcePath);
+    if (!manifestOnly) return await load(sourcePath);
+    const accepted = await readAcceptedRevision(sourcePath);
+    return readExtensionSourceMetadata(accepted?.packagePath ?? sourcePath);
   } catch {
     return null;
   }
