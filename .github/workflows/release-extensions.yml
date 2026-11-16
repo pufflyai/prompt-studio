@@ -25,7 +25,7 @@ jobs:
           bun-version-file: package.json
       - uses: actions/setup-node@v5
         with:
-          node-version: "24.22.1"
+          node-version: "26.7.0"
       - run: bun install --frozen-lockfile
       - name: Publish new extension versions independently
         env:
