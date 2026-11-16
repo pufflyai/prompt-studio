@@ -5,9 +5,9 @@ import { join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { vacuumDeadRows } from "./dead-row-cleanup";
 
-// PGlite publishes table statistics once the session has been idle for about a second.
+// PGlite otherwise publishes table statistics only after the session has been idle for a second.
 const publishStatistics = async (db: PGlite) => {
-  await new Promise((resolve) => setTimeout(resolve, 1_100));
+  await db.query("SELECT pg_stat_force_next_flush()");
   await db.query("SELECT 1");
 };
 const deadRows = async (db: PGlite, table: string) =>
@@ -57,73 +57,62 @@ describe("dead-row cleanup", () => {
     expect(await vacuumDeadRows(db)).toContain("documents");
   });
 
-  test("judges a reopened database by its estimated rows, not the new session's empty counters", async () => {
-    const path = mkdtempSync(join(tmpdir(), "dead-row-cleanup-"));
-    try {
-      const first = new PGlite(path);
-      await first.exec(`
-        CREATE TABLE large (id int PRIMARY KEY, body text);
-        INSERT INTO large SELECT g, 'a' FROM generate_series(1, 2000) g;
-      `);
-      await first.exec("VACUUM large");
-      await first.close();
-
-      const reopened = new PGlite(path);
-      try {
-        await reopened.exec("UPDATE large SET body = 'b' WHERE id <= 60");
-        await publishStatistics(reopened);
-        expect(await vacuumDeadRows(reopened)).toEqual([]);
-
-        await reopened.exec("UPDATE large SET body = 'c' WHERE id <= 500");
-        await publishStatistics(reopened);
-        expect(await vacuumDeadRows(reopened)).toEqual(["large"]);
-      } finally {
-        await reopened.close();
-      }
-    } finally {
-      rmSync(path, { recursive: true, force: true });
-    }
-  });
-
-  test("reclaims dead rows that earlier sessions left below each session's threshold", async () => {
-    const path = mkdtempSync(join(tmpdir(), "dead-row-cleanup-"));
-    try {
-      const create = new PGlite(path);
-      await create.exec(`
-        CREATE TABLE slow (id int PRIMARY KEY, body text);
-        INSERT INTO slow SELECT g, 'a' FROM generate_series(1, 1000) g;
-      `);
-      await create.exec("VACUUM slow");
-      await create.close();
-
-      for (const body of ["b", "c", "d"]) {
-        const session = new PGlite(path);
-        await session.query(`UPDATE slow SET body = $1 WHERE id <= 200`, [body]);
-        await publishStatistics(session);
-        expect(await vacuumDeadRows(session)).toEqual([]);
-        await session.close();
-      }
-
-      const next = new PGlite(path);
-      try {
-        const pages = async () =>
-          Number((await next.query<{ pages: number }>("SELECT pg_relation_size('slow') AS pages")).rows[0]!.pages);
-        expect(await vacuumDeadRows(next, { all: true })).toEqual(["slow"]);
-        const reclaimed = await pages();
-        await next.query("UPDATE slow SET body = 'e' WHERE id <= 200");
-        await next.exec("VACUUM slow");
-        // Rewrites after the full pass reuse the reclaimed space instead of growing the table.
-        expect(await pages()).toBe(reclaimed);
-      } finally {
-        await next.close();
-      }
-    } finally {
-      rmSync(path, { recursive: true, force: true });
-    }
-  });
-
   test("vacuums nothing once stopped", async () => {
     expect(await vacuumDeadRows(db, { stopped: () => true })).toEqual([]);
     expect(await deadRows(db, "rewritten")).toBe(500);
+  });
+});
+
+describe("dead-row cleanup across restarts", () => {
+  let path: string;
+
+  beforeEach(async () => {
+    path = mkdtempSync(join(tmpdir(), "dead-row-cleanup-"));
+    const first = new PGlite(path);
+    await first.exec(`
+      CREATE TABLE large (id int PRIMARY KEY, body text);
+      INSERT INTO large SELECT g, 'a' FROM generate_series(1, 2000) g;
+    `);
+    await first.exec("VACUUM large");
+    // 300 rewritten rows stay below this session's threshold of 50 + 20% of 2,000 rows.
+    await first.exec("UPDATE large SET body = 'b' WHERE id <= 300");
+    await first.close();
+  });
+
+  afterEach(() => {
+    rmSync(path, { recursive: true, force: true });
+  });
+
+  test("judges a reopened database by its estimated rows, not the new session's empty counters", async () => {
+    const reopened = new PGlite(path);
+    try {
+      await reopened.exec("UPDATE large SET body = 'c' WHERE id <= 60");
+      await publishStatistics(reopened);
+      expect(await vacuumDeadRows(reopened)).toEqual([]);
+
+      await reopened.exec("UPDATE large SET body = 'd' WHERE id <= 500");
+      await publishStatistics(reopened);
+      expect(await vacuumDeadRows(reopened)).toEqual(["large"]);
+    } finally {
+      await reopened.close();
+    }
+  });
+
+  test("reclaims dead rows that an earlier session left below its threshold", async () => {
+    const reopened = new PGlite(path);
+    try {
+      const size = async () =>
+        Number((await reopened.query<{ bytes: number }>("SELECT pg_relation_size('large') AS bytes")).rows[0]!.bytes);
+      // The new session's counters start empty, so the earlier session's dead rows are invisible to the rule.
+      expect(await vacuumDeadRows(reopened)).toEqual([]);
+
+      expect(await vacuumDeadRows(reopened, { all: true })).toEqual(["large"]);
+      const reclaimed = await size();
+      await reopened.exec("UPDATE large SET body = 'e' WHERE id <= 300");
+      // Rewrites after the full pass reuse the reclaimed space instead of growing the table.
+      expect(await size()).toBe(reclaimed);
+    } finally {
+      await reopened.close();
+    }
   });
 });
