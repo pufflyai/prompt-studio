@@ -1,0 +1,1 @@
+CREATE INDEX "storage_ordered_receipts_operation_idx" ON "storage_ordered_receipts" USING btree ("workbench_id","extension_id","operation_id");

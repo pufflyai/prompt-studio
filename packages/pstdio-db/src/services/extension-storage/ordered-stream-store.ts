@@ -6,6 +6,7 @@ import { createOrderedReceiptIndex, type OrderedIndexReference } from "pstdio-sy
 import { fingerprint, type Json } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_ordered_records as canonical } from "../../db/schemas.pg";
+import { indexNodeFilesFor } from "./index-node-files";
 import { createOrderedCanonicalBatch } from "./ordered-canonical-batch";
 import { indexOrderedCheckpoint, stageOrderedCheckpoint } from "./ordered-checkpoint";
 import { type OrderedJournal, withOrderedOwner } from "./ordered-journal";
@@ -15,7 +16,7 @@ import { combineNumberEvents } from "./ordered-number-projection";
 import { applyBoundedOrderedOperation } from "./ordered-policy";
 import { admissionDecisions, rebaseOrderedProjection } from "./ordered-rebase";
 import { adoptOrderedCheckpoint } from "./ordered-receipts-adoption";
-import { createOrderedManifestCache } from "./ordered-receipts-blobs";
+import { collectOrderedReceiptNodes, createOrderedManifestCache } from "./ordered-receipts-blobs";
 import { coverOrderedReceiptRoot, coversOrderedReceipts } from "./ordered-receipts-covered";
 import { createOrderedReceiptResolver } from "./ordered-receipts-resolver";
 import { receiptRoots, sameReceiptRoot, saveReceiptRoots } from "./ordered-receipts-state";
@@ -32,6 +33,26 @@ const hasCanonicalRecords = async (tx: OrderedTransaction, owner: StorageOwner) 
   (await tx.select({ id: canonical.record_id }).from(canonical).where(orderedOwnerWhere(canonical, owner)).limit(1))
     .length > 0;
 
+// Once per runtime and owner: later connections reuse the files this pass left in order.
+const collectedOwners = new WeakMap<DbClient, Set<string>>();
+const collectSavedReceiptNodes = async (db: DbClient, owner: StorageOwner) => {
+  const done = collectedOwners.get(db) ?? new Set<string>();
+  collectedOwners.set(db, done);
+  const key = JSON.stringify([owner.workbenchId, owner.extensionId]);
+  if (done.has(key)) return;
+  done.add(key);
+  // Only reading the roots holds the owner lock; the walk reads file headers outside it.
+  await collectOrderedReceiptNodes(indexNodeFilesFor(db), owner, () =>
+    withOrderedOwner(db, owner, async (_journal, tx) => {
+      const roots = receiptRoots((await readOrderedOwner(tx, owner)).receipt_root);
+      return [roots.root, roots.published];
+    }),
+  ).catch((error: unknown) => {
+    // Collection only reclaims space; it must never stop an owner from syncing.
+    console.warn("Receipt node collection did not finish; it retries in the next runtime.", error);
+  });
+};
+
 export const createOrderedStreamStore = (
   db: DbClient,
   owner: StorageOwner,
@@ -46,9 +67,7 @@ export const createOrderedStreamStore = (
     return index;
   };
   const run = <T>(action: (journal: OrderedJournal, tx: OrderedTransaction) => Promise<T>) =>
-    withOrderedOwner(db, owner, async (journal, tx) => {
-      return cache ? cache.transaction(tx, () => action(journal, tx)) : action(journal, tx);
-    });
+    withOrderedOwner(db, owner, action);
   const notify = (events: NumberChange[] = [], recordIds?: readonly string[]) => {
     if (!recordIds || recordIds.length) deps.changed(recordIds);
     deps.numbersChanged?.(combineNumberEvents(events));
@@ -102,7 +121,9 @@ export const createOrderedStreamStore = (
     async connect(space: SyncSpace, relay: DocumentRelay) {
       if (connected === relay) return;
       if (!relay.manifestBlobs) throw new Error("Ordered receipts require relay manifest graph support");
-      cache = createOrderedManifestCache(db, owner, space, await relay.manifestBlobs());
+      // Before the receipt index exists nothing writes receipt nodes, so the saved roots are the only roots.
+      if (!index) await collectSavedReceiptNodes(db, owner);
+      cache = createOrderedManifestCache(indexNodeFilesFor(db), owner, "receipts", space, await relay.manifestBlobs());
       index = createOrderedReceiptIndex({ space, blobs: cache.blobs });
       connected = relay;
     },
