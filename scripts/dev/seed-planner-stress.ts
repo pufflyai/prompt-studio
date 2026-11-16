@@ -70,17 +70,6 @@ async function main() {
     }
     return body.outcome.value as T;
   };
-  // The demo project can exist before Planner has registered its commands; wait for them, not for a fixed time.
-  const deadline = Date.now() + 5 * 60_000;
-  for (;;) {
-    const probe = await fetch(
-      `${baseUrl}/v1/projects/${project.id}/extensions/commands/pstdio.pstdio-planner.command.read-tickets/execute`,
-      { method: "POST", headers, body: JSON.stringify({ params: {} }) },
-    );
-    if (probe.status !== 404) break;
-    if (Date.now() > deadline) throw new Error("Planner's commands did not become available within 5 minutes.");
-    await Bun.sleep(2_000);
-  }
   const start = performance.now();
   const fixture = await seedPlannerStress(execute, (count) =>
     process.stderr.write(`Planner stress tickets: ${count}/${stressTicketCount}\n`),
