@@ -81,3 +81,38 @@ test("a shared native key retains the sequential marker result when an earlier a
     await f.close();
   }
 });
+
+test("publishing selected records reads only prior lifecycle metadata, not old ticket bodies", async () => {
+  const f = await createExtensionStorageFixture();
+  try {
+    const { withOrderedOwner } = await import("./ordered-journal");
+    const { publishOrderedProjection } = await import("./ordered-projection");
+    const selects: string[] = [];
+    const db = drizzle(f.db.$client, {
+      schema,
+      logger: {
+        logQuery: (query) => {
+          if (query.startsWith("select")) selects.push(query);
+        },
+      },
+    });
+    const owner = { workbenchId: f.projectAId, extensionId: "ext.example" };
+    await createDocumentStorageDBService(db)
+      .open({ owner })
+      .records.commit({
+        operationId: "seed",
+        edits: [{ recordId: "ticket", replace: { content: "Large ticket body".repeat(500) } }],
+      });
+    await withOrderedOwner(db, owner, async (journal, tx) => {
+      const records = [...(await journal.canonical(["ticket"])).values()];
+      selects.length = 0;
+      await publishOrderedProjection(tx, owner, records);
+    });
+    const previous = selects.filter((query) => query.includes('from "storage_current_records"'));
+    expect(previous).toHaveLength(1);
+    expect(previous[0]).not.toMatch(/"(?:value|query_values|revision|asset|shared)"/);
+    expect(previous[0]).toContain('"native_sources"');
+  } finally {
+    await f.close();
+  }
+});

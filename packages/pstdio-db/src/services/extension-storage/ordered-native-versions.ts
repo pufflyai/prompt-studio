@@ -51,7 +51,7 @@ export const refreshOrderedNativeVersions = async (
   tx: OrderedTransaction,
   owner: StorageOwner,
   records: OrderedRecord[],
-  previous: NativeProjectedRecord[],
+  previous: Pick<NativeProjectedRecord, "recordId" | "nativeSources">[],
 ) => {
   const old = new Map(previous.map((record) => [record.recordId, record]));
   let batch: FieldVersion[] = [];
