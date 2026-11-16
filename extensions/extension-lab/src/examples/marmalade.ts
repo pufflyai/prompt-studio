@@ -42,6 +42,9 @@ export default defineExtension({
   resourceKinds: [example.resourceKind],
   pages: [example.homePage, example.page],
   views,
-  keybindings: marmaladeShortcuts(views.map((view) => view.ref)),
+  keybindings: marmaladeShortcuts(
+    views.map((view) => view.ref),
+    views[0].ref,
+  ),
   navigationItems: [example.navigation],
 });
