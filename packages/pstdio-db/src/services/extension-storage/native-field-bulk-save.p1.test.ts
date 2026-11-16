@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/pglite";
 import * as schema from "../../db/schemas.pg";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
+import { type OrderedFieldMarker, orderedFieldMarkerId, readOrderedMarker } from "./ordered-native-metadata";
 
 test("bulk property saves preserve native text without a marker query per ticket", async () => {
   const f = await createExtensionStorageFixture();
@@ -51,3 +52,32 @@ test("bulk property saves preserve native text without a marker query per ticket
     await f.close();
   }
 }, 30_000);
+
+test("a shared native key retains the sequential marker result when an earlier alias retires", async () => {
+  const f = await createExtensionStorageFixture();
+  try {
+    const owner = { workbenchId: f.projectAId, extensionId: "ext.example" };
+    const service = createDocumentStorageDBService(f.db);
+    const records = service.open({ owner }).records;
+    await records.commit({
+      operationId: "seed",
+      edits: ["first", "second"].map((recordId) => ({ recordId, replace: { content: "Shared" } })),
+    });
+    const first = await records.bindText({ recordId: "first", field: "/content", documentKey: "a".repeat(64) });
+    const second = await records.bindText({ recordId: "second", field: "/content", documentKey: "a".repeat(64) });
+    expect(first.documentKey).toBe(second.documentKey);
+    const before = await readOrderedMarker<OrderedFieldMarker>(f.db, owner, orderedFieldMarkerId(second.documentKey));
+    await records.commit({
+      operationId: "retire-one",
+      edits: [
+        { recordId: "first", deleted: true },
+        { recordId: "second", set: { "/archived": true } },
+      ],
+    });
+    const after = await readOrderedMarker<OrderedFieldMarker>(f.db, owner, orderedFieldMarkerId(second.documentKey));
+    expect(after?.value.recordId).toBe("second");
+    expect(after?.value.textVersion).toBe(before?.value.textVersion);
+  } finally {
+    await f.close();
+  }
+});

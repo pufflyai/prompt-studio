@@ -32,14 +32,17 @@ const refreshFieldVersions = async (tx: OrderedTransaction, owner: StorageOwner,
     const version = await fingerprint({ lifetime: record.lifetime, active, state: state?.state ?? null });
     if (marker?.value.textVersion === version) continue;
     const generation = !active && previouslyPresent ? version : marker?.value.generation;
-    await saveOrderedMarker(tx, owner, id, {
+    const value = {
       ...marker?.value,
       recordId: record.recordId,
       field,
       lifetime: record.lifetime,
       textVersion: version,
       generation,
-    });
+    };
+    await saveOrderedMarker(tx, owner, id, value);
+    // Shared keys must observe the preceding write just as sequential point reads did.
+    markers.set(id, { value });
   }
 };
 
