@@ -87,3 +87,31 @@ test("selected identities survive restart and batch reads never hydrate the iden
     await connection.close();
   }
 });
+
+test("allocating many numbers commits consecutive identities in one save that later allocations continue after", async () => {
+  const connection = await createDb({ path: ":memory:" });
+  const documents = createDocumentStorageDBService(connection.db);
+  try {
+    const project = await createProjectsDBService(connection.db).create({ name: "Bulk identities" });
+    const service = createExtensionResourceSequencesDBService(connection.db, documents);
+    const input = { projectId: project.id, extensionId: "pstdio.planner", kind: "ticket", prefix: "PS" };
+    await service.allocate(input);
+
+    const batch = await service.allocateMany({ ...input, count: 100, idPrefix: "tk" });
+
+    expect(batch.map((item) => item.shorthand)).toEqual(Array.from({ length: 100 }, (_, index) => `PS-${index + 2}`));
+    expect(new Set(batch.map((item) => item.id)).size).toBe(100);
+    expect(batch[0]!.id).toMatch(/^tk_[0-9A-Za-z]{22}$/);
+    const identities = await service.identityMany({ ...input, ids: [batch[0]!.id, batch[99]!.id] });
+    expect(identities.map((identity) => identity?.shorthand)).toEqual(["PS-2", "PS-101"]);
+    expect((await service.allocate(input)).shorthand).toBe("PS-102");
+    await expect(service.allocateMany({ ...input, count: 0 })).rejects.toThrow("1 to 100");
+    await expect(service.allocateMany({ ...input, count: 101 })).rejects.toThrow("1 to 100");
+    await expect(service.allocateMany({ ...input, extensionId: "pstdio.other", count: 2 })).rejects.toThrow(
+      "pstdio.planner",
+    );
+  } finally {
+    await documents.flushStatistics();
+    await connection.close();
+  }
+});
