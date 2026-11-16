@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import type { PermissionRequest } from "@github/copilot-sdk";
 import { event, eventSink, fakeCopilot } from "./copilot.fixture";
-import { LIVENESS, startCopilotTurn } from "./turn";
+import { LIVENESS, RPC_DEADLINE, startCopilotTurn } from "./turn";
 
 const startTurn = (...args: Parameters<typeof startCopilotTurn>) => startCopilotTurn(...args).session;
 
@@ -45,7 +45,8 @@ test("a turn streams into the conversation, keeps the host prompt, and releases 
     ],
     [{ type: "text", text: "Hello" }],
   ]);
-  expect(copilot.calls).toEqual(["start", "create", "send:Say hello", "disconnect", "stop"]);
+  // stop() detaches the session itself, with its own deadline.
+  expect(copilot.calls).toEqual(["start", "create", "send:Say hello", "stop"]);
 });
 
 test("resuming appends after existing history and a session error fails the turn", async () => {
@@ -174,7 +175,8 @@ test("a turn fails instead of hanging when the Copilot runtime stops answering",
     const sink = eventSink();
     const session = await startTurn({ prompt: "x", sessionId: "host", events: sink }, copilot.factory, {});
     expect(await session.done).toEqual({ status: "failed" });
-    expect(copilot.calls.at(-1)).toBe("stop");
+    // A runtime that stopped answering is killed rather than asked to shut down.
+    expect(copilot.calls.at(-1)).toBe("forceStop");
   } finally {
     Object.assign(LIVENESS, saved);
   }
@@ -267,4 +269,29 @@ test("model-specific reasoning levels reach Copilot unchanged", async () => {
     )
   ).done;
   expect(defaulted.configs[0]?.reasoningEffort).toBeUndefined();
+});
+
+test("a turn ends when the runtime dies before it accepts the prompt, and stop never hangs on it", async () => {
+  const saved = { liveness: { ...LIVENESS }, deadline: { ...RPC_DEADLINE } };
+  Object.assign(LIVENESS, { intervalMs: 5, timeoutMs: 20 });
+  Object.assign(RPC_DEADLINE, { ms: 20 });
+  try {
+    const copilot = fakeCopilot(() => []);
+    const hung = new Promise<never>(() => {});
+    copilot.client.ping = () => hung;
+    const original = copilot.client.createSession;
+    copilot.client.createSession = async (config) => {
+      const session = await original(config);
+      session.send = () => hung;
+      session.abort = () => hung;
+      return session;
+    };
+    const session = await startTurn({ prompt: "x", sessionId: "host", events: eventSink() }, copilot.factory, {});
+    expect(await session.done).toEqual({ status: "failed" });
+    expect(copilot.calls.at(-1)).toBe("forceStop");
+    await session.stop();
+  } finally {
+    Object.assign(LIVENESS, saved.liveness);
+    Object.assign(RPC_DEADLINE, saved.deadline);
+  }
 });

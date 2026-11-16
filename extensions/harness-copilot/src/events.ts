@@ -14,7 +14,8 @@ class Conversation {
   private readonly drafts = new Map<string, SessionMessage>();
   // Reasoning already placed in a message: its later events update that part instead of repeating it.
   private readonly placed = new Map<string, ReasoningPart>();
-  private reasoning: { id: string; text: string } | undefined;
+  // Messages opened to show reasoning before Copilot names the message the reasoning belongs to.
+  private readonly unnamed = new Set<SessionMessage>();
   private assistant: SessionMessage | undefined;
   // Copilot reports a model call's usage just before the message that call produced.
   private usage: SessionMessagePart[] = [];
@@ -30,8 +31,8 @@ class Conversation {
     if (isSubagent(event)) return;
     if (event.type === "user.message") this.user(event);
     else if (event.type === "assistant.reasoning_delta")
-      this.think(event.data.reasoningId, event.data.deltaContent, true);
-    else if (event.type === "assistant.reasoning") this.think(event.data.reasoningId, event.data.content, false);
+      this.think(event, event.data.reasoningId, event.data.deltaContent, true);
+    else if (event.type === "assistant.reasoning") this.think(event, event.data.reasoningId, event.data.content, false);
     else if (event.type === "assistant.message_delta") this.stream(event);
     else if (event.type === "assistant.message") this.reply(event);
     else if (event.type === "tool.execution_start")
@@ -49,6 +50,8 @@ class Conversation {
         errorType: "other",
         message: event.data.message,
       });
+    // A turn ends here, so its unfinished tools were interrupted, even if a later turn follows.
+    else if (TURN_ENDS.has(event.type)) this.settle();
   }
 
   /** Tools still running when the turn ended were interrupted by an abort, crash, or restart. */
@@ -93,30 +96,53 @@ class Conversation {
     });
   }
 
-  private think(id: string, text: string, delta: boolean) {
-    const target = this.placed.get(id) ?? (this.reasoning?.id === id ? this.reasoning : undefined);
-    if (target) target.text = delta ? target.text + text : text;
-    else this.reasoning = { id, text };
+  /** Reasoning shows as it arrives, in the message being written or a new one that its reply later names. */
+  private think(event: SessionEvent, id: string, text: string, delta: boolean) {
+    const placed = this.placed.get(id);
+    if (placed) {
+      placed.text = delta ? placed.text + text : text;
+      return;
+    }
+    let target = this.assistant && this.unnamed.has(this.assistant) ? this.assistant : undefined;
+    if (!target) {
+      target = this.push({
+        id: `copilot-${event.id}`,
+        role: "assistant",
+        createdAt: Date.parse(event.timestamp),
+        parts: [],
+      });
+      this.unnamed.add(target);
+      this.assistant = target;
+    }
+    const part: ReasoningPart = { type: "reasoning", text };
+    this.placed.set(id, part);
+    target.parts.push(part);
   }
 
-  private takeReasoning(): SessionMessagePart[] {
-    const pending = this.reasoning;
-    this.reasoning = undefined;
-    if (!pending?.text) return [];
-    const part: ReasoningPart = { type: "reasoning", text: pending.text };
-    this.placed.set(pending.id, part);
-    return [part];
+  /** Give the message opened for reasoning the id of the reply it belongs to, as saved history does. */
+  private name(messageId: string) {
+    const message = this.assistant && this.unnamed.has(this.assistant) ? this.assistant : undefined;
+    if (!message) return undefined;
+    this.unnamed.delete(message);
+    const start = this.starts.get(message.id);
+    this.starts.delete(message.id);
+    message.id = `copilot-${messageId}`;
+    if (start !== undefined) this.starts.set(message.id, start);
+    return message;
   }
 
   private stream(event: EventOf<"assistant.message_delta">) {
     let draft = this.drafts.get(event.data.messageId);
     if (!draft) {
-      draft = this.push({
-        id: `copilot-${event.data.messageId}`,
-        role: "assistant",
-        createdAt: Date.parse(event.timestamp),
-        parts: [...this.takeReasoning(), { type: "text", text: "" }],
-      });
+      draft =
+        this.name(event.data.messageId) ??
+        this.push({
+          id: `copilot-${event.data.messageId}`,
+          role: "assistant",
+          createdAt: Date.parse(event.timestamp),
+          parts: [],
+        });
+      draft.parts.push({ type: "text", text: "" });
       this.drafts.set(event.data.messageId, draft);
       this.assistant = draft;
     }
@@ -125,12 +151,9 @@ class Conversation {
   }
 
   private reply(event: EventOf<"assistant.message">) {
-    const draft = this.drafts.get(event.data.messageId);
+    const draft = this.drafts.get(event.data.messageId) ?? this.name(event.data.messageId);
     this.drafts.delete(event.data.messageId);
-    const parts: SessionMessagePart[] = [
-      ...(draft?.parts.filter((part) => part.type === "reasoning") ?? []),
-      ...this.takeReasoning(),
-    ];
+    const parts: SessionMessagePart[] = draft?.parts.filter((part) => part.type === "reasoning") ?? [];
     if (event.data.content) parts.push({ type: "text", text: event.data.content });
     const message = {
       id: `copilot-${event.data.messageId}`,
@@ -146,12 +169,14 @@ class Conversation {
 
   private addTool(target: SessionMessage, call: ToolCall) {
     if (this.tools.has(call.toolCallId)) return;
+    // Copilot's ask_user becomes the shared question tool, so the chat shows its question form.
+    const asks = call.name === ASK_USER;
     const part: ToolPart = {
       type: "tool",
-      tool: call.name,
+      tool: asks ? "question" : call.name,
       callId: call.toolCallId,
       status: "running",
-      state: { input: call.arguments },
+      state: { input: asks ? questionInput(call.arguments) : call.arguments },
     };
     this.tools.set(call.toolCallId, part);
     target.parts.push(part);
@@ -183,6 +208,20 @@ const usagePart = (event: EventOf<"assistant.usage">): SessionMessagePart => ({
 });
 
 const SETTLED = new Set(["session.idle", "session.shutdown", "abort"]);
+const TURN_ENDS = SETTLED;
+
+export const ASK_USER = "ask_user";
+
+/** ask_user's question and choices in the question form's shape. Unknown shapes pass through unchanged. */
+const questionInput = (args: unknown) => {
+  const value = (args && typeof args === "object" ? args : {}) as Record<string, unknown>;
+  if (typeof value.question !== "string") return args;
+  const choices = Array.isArray(value.choices) ? value.choices.filter((choice) => typeof choice === "string") : [];
+  const freeform = value.allow_freeform ?? value.allowFreeform;
+  return {
+    questions: [{ question: value.question, options: choices.map((label) => ({ label })), custom: freeform !== false }],
+  };
+};
 
 /** Events a subagent produced inside a parent tool call. The deprecated `parentToolCallId` is the older marker. */
 export const isSubagent = (event: SessionEvent) =>

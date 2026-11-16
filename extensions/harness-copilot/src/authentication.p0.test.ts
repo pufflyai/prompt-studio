@@ -114,3 +114,25 @@ test("every Copilot runtime the harness starts receives the saved token", async 
   expect(envs).toHaveLength(3);
   for (const env of envs) expect(env).toMatchObject({ COPILOT_GITHUB_TOKEN: "github_pat_saved" });
 });
+
+test("choosing the GitHub CLI drops a saved token, and a cancelled token sign-in saves nothing", async () => {
+  const saved = { ...CLI_LOGIN };
+  Object.assign(CLI_LOGIN, { intervalMs: 1 });
+  try {
+    const cli = deps(() => true, "github_pat_old");
+    await runLogin(cli.value, { action: "login", method: "gh-cli" }, channel().channel);
+    expect(cli.state.saved).toBeUndefined();
+  } finally {
+    Object.assign(CLI_LOGIN, saved);
+  }
+  const controller = new AbortController();
+  const cancelled = deps((token) => {
+    controller.abort();
+    return token === "github_pat_new";
+  });
+  const login = channel("github_pat_new");
+  await expect(
+    runLogin(cancelled.value, { action: "login", method: "token" }, { ...login.channel, signal: controller.signal }),
+  ).rejects.toThrow();
+  expect(cancelled.state.saved).toBeUndefined();
+});

@@ -12,12 +12,23 @@ import type {
 import { publishConversationChanges } from "@pstdio/sdk/extensions";
 import { permissionHandler, userInputHandler } from "./channels";
 import type { CopilotClientFactory, CopilotClientHandle, CopilotSessionHandle } from "./client";
-import { isSubagent, normalizeCopilotEvents } from "./events";
+import { ASK_USER, isSubagent, normalizeCopilotEvents } from "./events";
 
 export type CopilotTurnInput = HarnessStartInput & { agentSessionId?: string; approvals?: HarnessApprovalChannel };
 
 /** How often a running turn checks that the Copilot runtime still answers, and how long it waits. */
 export const LIVENESS = { intervalMs: 15_000, timeoutMs: 30_000 };
+
+/** How long a request to a possibly unresponsive runtime may take before the turn stops waiting for it. */
+export const RPC_DEADLINE = { ms: 10_000 };
+
+/** Settles when `promise` does, or after `ms`, so an unresponsive runtime cannot hold a turn open. */
+const within = (promise: Promise<unknown>, ms = RPC_DEADLINE.ms) => {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  return Promise.race([promise.catch(() => {}), new Promise((resolve) => (timer = setTimeout(resolve, ms)))]).finally(
+    () => clearTimeout(timer),
+  );
+};
 
 const promptParts = (prompt: string, attachments: HarnessAttachment[] = []): SessionMessagePart[] => [
   { type: "text", text: prompt },
@@ -62,6 +73,8 @@ export const startCopilotTurn = (
   let stopped = false;
   let ended = false;
   let failed = false;
+  // The runtime stopped answering, so the turn must not wait on it again.
+  let unresponsive = false;
   // A session.idle left over from resuming must not end this turn before it starts.
   let begun = false;
 
@@ -88,7 +101,7 @@ export const startCopilotTurn = (
     if (event.type === "user.message") {
       begun = true;
       if (event.data.clientTurnId) deliveries.get(event.data.clientTurnId)?.(true);
-    } else if (event.type === "tool.execution_start" && event.data.toolName === "ask_user") {
+    } else if (event.type === "tool.execution_start" && event.data.toolName === ASK_USER) {
       pendingAsk = event.data.toolCallId;
     } else if (event.type === "session.error") {
       failed = true;
@@ -155,14 +168,20 @@ export const startCopilotTurn = (
         ]);
       } catch {
         failed = true;
+        unresponsive = true;
         idle.resolve({ status: stopped ? "cancelled" : "failed" });
       } finally {
         clearTimeout(timer);
       }
     }, LIVENESS.intervalMs);
     try {
-      await active.send({ prompt: input.prompt, attachments: nativeAttachments(input.attachments) });
-      begun = true;
+      // The send itself can hang on a dead runtime; the watchdog then ends the turn through `idle`.
+      await Promise.race([
+        active.send({ prompt: input.prompt, attachments: nativeAttachments(input.attachments) }).then(() => {
+          begun = true;
+        }),
+        idle.promise,
+      ]);
       return await idle.promise;
     } catch {
       return { status: stopped || input.signal?.aborted ? "cancelled" : "failed" };
@@ -172,11 +191,13 @@ export const startCopilotTurn = (
       publish();
       for (const [deliveryId, settle] of deliveries) settle(seen(deliveryId));
       unsubscribe();
-      await active.disconnect().catch(() => {});
-      await runtime
-        .stop()
-        .catch(() => runtime.forceStop())
-        .catch(() => {});
+      // stop() detaches the session with its own deadline; a runtime that stopped answering is killed.
+      if (unresponsive) await runtime.forceStop().catch(() => {});
+      else
+        await runtime
+          .stop()
+          .catch(() => runtime.forceStop())
+          .catch(() => {});
     }
   };
 
@@ -187,7 +208,7 @@ export const startCopilotTurn = (
   const stop = async () => {
     stopped = true;
     idle.resolve({ status: "cancelled" });
-    if (session) await session.abort().catch(() => {});
+    if (session) await within(session.abort());
     else await client?.forceStop().catch(() => {});
     await done;
   };

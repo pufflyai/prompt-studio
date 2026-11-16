@@ -94,11 +94,19 @@ export const runLogin = async (
   }
   const method = input.method ?? (await chooseMethod(channel));
   channel.signal.throwIfAborted();
-  if (method !== "token") return waitForCliLogin(deps, channel);
+  if (method !== "token") {
+    await waitForCliLogin(deps, channel);
+    // A saved token would otherwise keep overriding the GitHub CLI login the person just chose.
+    channel.signal.throwIfAborted();
+    await deps.clearToken();
+    return;
+  }
   const reply = await channel.request({ type: "input", title: "GitHub token with Copilot access", secret: true });
   const token = reply.trim();
   channel.signal.throwIfAborted();
   if (!token || !(await deps.signedIn(token)))
     throw new Error("GitHub did not accept this token for Copilot. Use a fine-grained token with Copilot Requests.");
+  // The dialog may have closed while the check ran; never save a token for a cancelled sign-in.
+  channel.signal.throwIfAborted();
   await deps.saveToken(token);
 };

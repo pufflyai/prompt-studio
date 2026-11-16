@@ -1,3 +1,4 @@
+import type { ChildProcess } from "node:child_process";
 import type {
   CopilotSession,
   MessageOptions,
@@ -46,7 +47,16 @@ export const createCopilotClient: CopilotClientFactory = (options) => {
     workingDirectory: options.cwd,
     env: { ...process.env, COPILOT_TELEMETRY_DISABLED: "true", ...options.env },
   });
+  const stop = client.stop.bind(client);
   return Object.assign(client, {
+    // SDK 1.0.34's stop() sends SIGTERM and drops its reference to a runtime that survives it, so a later
+    // forceStop() cannot reach that process. Keep the reference and kill a survivor here.
+    stop: async () => {
+      const child = (client as unknown as { cliProcess?: ChildProcess | null }).cliProcess;
+      const errors = await stop();
+      if (child && child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+      return errors;
+    },
     readEvents: async (sessionId: string) => {
       const events: SessionEvent[] = [];
       let cursor: string | undefined;

@@ -187,3 +187,73 @@ test("saved history, which keeps no streaming events, has the same messages as t
     messages.map((message) => ({ ...message, parts: message.parts.filter((part) => part.type !== "token_usage") }));
   expect(strip(normalizeCopilotEvents(saved))).toEqual(strip(normalizeCopilotEvents(live)));
 });
+
+test("Copilot's ask_user call becomes the question tool the chat's question form reads", () => {
+  const [, asked] = normalizeCopilotEvents([
+    event("user.message", { content: "Pick" }),
+    event("assistant.message", {
+      messageId: "m1",
+      content: "",
+      toolRequests: [
+        { toolCallId: "ask-1", name: "ask_user", arguments: { question: "Which color?", choices: ["Red", "Blue"] } },
+      ],
+    }),
+  ]);
+  expect(asked?.parts[0]).toEqual({
+    type: "tool",
+    tool: "question",
+    callId: "ask-1",
+    status: "running",
+    state: {
+      input: {
+        questions: [{ question: "Which color?", options: [{ label: "Red" }, { label: "Blue" }], custom: true }],
+      },
+    },
+  });
+});
+
+test("reasoning shows while it streams, joins its reply, and survives an interrupted turn", () => {
+  const thinking = [
+    event("user.message", { content: "Think" }),
+    event("assistant.reasoning_delta", { reasoningId: "r1", deltaContent: "Considering" }, true),
+  ];
+  const streaming = normalizeCopilotEvents(thinking);
+  expect(streaming[1]?.parts).toEqual([{ type: "reasoning", text: "Considering" }]);
+
+  const answered = normalizeCopilotEvents([
+    ...thinking,
+    event("assistant.message", { messageId: "m1", content: "Done" }),
+  ]);
+  expect(answered).toHaveLength(2);
+  expect(answered[1]).toMatchObject({
+    id: "copilot-m1",
+    parts: [
+      { type: "reasoning", text: "Considering" },
+      { type: "text", text: "Done" },
+    ],
+  });
+
+  const interrupted = normalizeCopilotEvents([
+    ...thinking,
+    event("abort", { reason: "user" }),
+    event("user.message", { content: "Next" }),
+    event("assistant.message", { messageId: "m2", content: "Fresh" }),
+  ]);
+  expect(interrupted.map((message) => message.parts.map((part) => part.type))).toEqual([
+    ["text"],
+    ["reasoning"],
+    ["text"],
+    ["text"],
+  ]);
+});
+
+test("a tool interrupted in an earlier turn stays failed while a later turn runs", () => {
+  const messages = normalizeCopilotEvents([
+    event("user.message", { content: "Run" }),
+    event("tool.execution_start", { toolCallId: "t1", toolName: "bash" }),
+    event("abort", { reason: "user" }),
+    event("user.message", { content: "Again" }),
+    event("assistant.message_delta", { messageId: "m2", deltaContent: "Working" }, true),
+  ]);
+  expect(messages[1]?.parts[0]).toMatchObject({ callId: "t1", status: "failed" });
+});
