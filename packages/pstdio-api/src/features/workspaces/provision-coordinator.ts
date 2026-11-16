@@ -53,31 +53,35 @@ export const runWorkspaceProvisioning = async <
   }
 };
 
-const projectProvisionQueues = new Map<string, Promise<void>>();
+const projectQueues = new Map<string, Promise<unknown>>();
+/**
+ * Runs one project's provisioning and removal in order. Provisioning writes the folder config, so a
+ * removal that ran beside a queued pass could see that pass write the config back after it was deleted.
+ */
+export const inProjectWorkspaceQueue = <T>(projectId: string, task: () => Promise<T>) => {
+  const queued = (projectQueues.get(projectId) ?? Promise.resolve()).catch(() => undefined).then(task);
+  projectQueues.set(projectId, queued);
+  return queued.finally(() => {
+    if (projectQueues.get(projectId) === queued) projectQueues.delete(projectId);
+  });
+};
+
 export const provisionProjectWorkspaces = (
   deps: ProvisionCoordinatorDeps,
   projectId: string,
   hooks: WorkspaceProvisioningHooks = defaultHooks(),
-) => {
-  const previous = projectProvisionQueues.get(projectId) ?? Promise.resolve();
-  const queued = previous
-    .catch(() => undefined)
-    .then(async () => {
-      for (const workspace of await deps.workspaceService.list(projectId)) {
-        if (workspace.provider_state !== "ready" || workspace.execution_kind !== "local" || !workspace.root_path)
-          continue;
-        await runWorkspaceProvisioning(
-          deps,
-          { projectId, workspace, repoPath: workspace.root_path },
-          { ...hooks, fireReadyAsync: () => {} },
-        );
-      }
-    });
-  projectProvisionQueues.set(projectId, queued);
-  return queued.finally(() => {
-    if (projectProvisionQueues.get(projectId) === queued) projectProvisionQueues.delete(projectId);
+) =>
+  inProjectWorkspaceQueue(projectId, async () => {
+    for (const workspace of await deps.workspaceService.list(projectId)) {
+      if (workspace.provider_state !== "ready" || workspace.execution_kind !== "local" || !workspace.root_path)
+        continue;
+      await runWorkspaceProvisioning(
+        deps,
+        { projectId, workspace, repoPath: workspace.root_path },
+        { ...hooks, fireReadyAsync: () => {} },
+      );
+    }
   });
-};
 export const scheduleProjectWorkspaceProvisioning = (
   deps: ProvisionCoordinatorDeps,
   projectId: string,
