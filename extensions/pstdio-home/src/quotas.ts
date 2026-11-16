@@ -20,12 +20,13 @@ export interface QuotaReport extends QuotaSnapshot {
   icon?: string;
 }
 
-// These four extension commands are the complete integration for Home.
+// These five extension commands are the complete integration for Home.
 const providers = [
   ["harness-codex", "Codex"],
   ["harness-claude-code", "Claude Code"],
   ["harness-open-code", "OpenCode"],
   ["harness-pi", "Pi"],
+  ["harness-copilot", "GitHub Copilot"],
 ].map(([name, label]) => ({
   id: name!,
   label: label!,

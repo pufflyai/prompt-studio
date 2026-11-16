@@ -1,0 +1,7 @@
+{
+  "harness.copilot": "GitHub Copilot",
+  "params.permissionMode": "权限模式",
+  "params.reasoning": "推理",
+  "quotas.description": "显示 GitHub Copilot 配额和本月的令牌用量。",
+  "quotas.title": "查看账户配额"
+}

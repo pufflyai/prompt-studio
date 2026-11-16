@@ -1,0 +1,7 @@
+{
+  "harness.copilot": "GitHub Copilot",
+  "params.permissionMode": "Mode d’autorisation",
+  "params.reasoning": "Raisonnement",
+  "quotas.description": "Afficher les quotas GitHub Copilot et les jetons utilisés ce mois-ci.",
+  "quotas.title": "Consulter les quotas du compte"
+}

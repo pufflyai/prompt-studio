@@ -1,0 +1,372 @@
+[
+  {
+    "id": "8f12ba9a-a25e-4aa0-a003-a929efc457a9",
+    "parentId": null,
+    "timestamp": "2026-11-15T15:13:39.520Z",
+    "type": "user.message",
+    "data": {
+      "content": "Run `ls` in the shell, then read note.txt, then reply with one short sentence."
+    }
+  },
+  {
+    "id": "2c4ce259-5861-4200-bd92-f10c0a3c07db",
+    "parentId": null,
+    "timestamp": "2026-11-15T15:13:39.523Z",
+    "type": "assistant.turn_start",
+    "data": {
+      "turnId": "0"
+    }
+  },
+  {
+    "id": "6060f500-d085-40c1-854b-46ada65af74f",
+    "parentId": null,
+    "timestamp": "2026-11-15T15:13:42.317Z",
+    "ephemeral": true,
+    "type": "assistant.usage",
+    "data": {
+      "model": "gpt-6-luna",
+      "inputTokens": 12893,
+      "outputTokens": 24,
+      "cacheReadTokens": 0,
+      "cacheWriteTokens": 12890
+    }
+  },
+  {
+    "id": "64b7ccc7-ada2-454f-b219-3f1ee3d5ff05",
+    "parentId": null,
+    "timestamp": "2026-11-15T15:13:42.318Z",
+    "type": "assistant.message",
+    "data": {
+      "messageId": "c853c7c6-d17c-4973-aaba-8e57e6fe0be3",
+      "model": "gpt-6-luna",
+      "content": "",
+      "toolRequests": [
+        {
+          "toolCallId": "call_GaApdXX3vYIFoI93VFnX0msq",
+          "name": "bash",
+          "arguments": {
+            "command": "ls",
+            "description": "List current directory"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "fc9b748f-b20e-4164-a439-deb26f3d8eed",
+    "parentId": null,
+    "timestamp": "2026-11-15T15:13:42.322Z",
+    "type": "tool.execution_start",
+    "data": {
+      "toolCallId": "call_GaApdXX3vYIFoI93VFnX0msq",
+      "toolName": "bash",
+      "arguments": {
+        "command": "ls",
+        "description": "List current directory"
+      }
+    }
+  },
+  {
+    "id": "af282d8d-6fcc-435f-9e39-834d6ce6f558",
+    "parentId": null,
+    "timestamp": "2026-11-15T15:13:42.346Z",
+    "type": "tool.execution_complete",
+    "data": {
+      "toolCallId": "call_GaApdXX3vYIFoI93VFnX0msq",
+      "success": true,
+      "result": {
+        "content": "note.txt\n<shellId: 0 completed with exit code 0>"
+      }
+    }
+  },
+  {
+    "id": "c2c35136-ef85-4125-b459-b4edeee5c4e6",
+    "parentId": null,
+    "timestamp": "2026-11-15T15:13:42.348Z",
+    "type": "assistant.turn_start",
+    "data": {
+      "turnId": "1"
+    }
+  },
+  {
+    "id": "199e47f6-851e-454d-a48b-301bfbda2694",
+    "parentId": null,
+    "timestamp": "2026-11-15T15:13:43.405Z",
+    "ephemeral": true,
+    "type": "assistant.usage",
+    "data": {
+      "model": "gpt-6-luna",
+      "inputTokens": 12944,
+      "outputTokens": 24,
+      "cacheReadTokens": 12890,
+      "cacheWriteTokens": 51
+    }
+  },
+  {
+    "id": "42748811-c8ae-4ab9-9ef7-d9a1f2009210",
+    "parentId": null,
+    "timestamp": "2026-11-15T15:13:43.406Z",
+    "type": "assistant.message",
+    "data": {
+      "messageId": "1dbd1bcd-f445-4560-be23-56360078a7e1",
+      "model": "gpt-6-luna",
+      "content": "",
+      "toolRequests": [
+        {
+          "toolCallId": "call_8mqLg3sExge4Alvk6g9pfHmF",
+          "name": "view",
+          "arguments": {
+            "path": "/tmp/copilot-run/note.txt"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "id": "2b539c2b-ce86-4ef3-8bc7-15a619b3050f",
+    "parentId": null,
+    "timestamp": "2026-11-15T15:13:43.406Z",
+    "type": "tool.execution_start",
+    "data": {
+      "toolCallId": "call_8mqLg3sExge4Alvk6g9pfHmF",
+      "toolName": "view",
+      "arguments": {
+        "path": "/tmp/copilot-run/note.txt"
+      }
+    }
+  },
+  {
+    "id": "630f4d56-7a70-4df8-adcc-df647cad5c1f",
+    "parentId": null,
+    "timestamp": "2026-11-15T15:13:43.410Z",
+    "type": "permission.completed",
+    "data": {
+      "requestId": "5b59929a-b345-4108-8e5b-5f4197227378",
+      "toolCallId": "call_8mqLg3sExge4Alvk6g9pfHmF",
+      "result": {
+        "kind": "approved"
+      }
+    }
+  },
+  {
+    "id": "c7576280-26db-4cbb-bed8-6034b00a217e",
+    "parentId": null,
+    "timestamp": "2026-11-15T15:13:43.412Z",
+    "type": "tool.execution_complete",
+    "data": {
+      "toolCallId": "call_8mqLg3sExge4Alvk6g9pfHmF",
+      "success": true,
+      "result": {
+        "content": "hello from fixture\n"
+      }
+    }
+  },
+  {
+    "id": "10896f18-aa5c-4cb6-a113-da423c4c2d9c",
+    "parentId": null,
+    "timestamp": "2026-11-15T15:13:43.413Z",
+    "type": "assistant.turn_start",
+    "data": {
+      "turnId": "2"
+    }
+  },
+  {
+    "id": "b7cad2e3-0439-4dca-b44f-408d11acab8c",
+    "parentId": null,
+    "timestamp": "2026-11-15T15:13:44.200Z",
+    "ephemeral": true,
+    "type": "assistant.message_delta",
+    "data": {
+      "messageId": "066e70a0-b601-48e6-b290-05843e438cdf",
+      "deltaContent": "`"
+    }
+  },
+  {
+    "id": "a407fab4-5ed1-46f1-9379-de2a969c908b",
+    "parentId": null,
+    "timestamp": "2026-11-15T15:13:44.220Z",
+    "ephemeral": true,
+    "type": "assistant.message_delta",
+    "data": {
+      "messageId": "066e70a0-b601-48e6-b290-05843e438cdf",
+      "deltaContent": "ls"
+    }
+  },
+  {
+    "id": "fd30e8f9-c3df-490e-abd2-6c9f0cb9f8fe",
+    "parentId": null,
+    "timestamp": "2026-11-15T15:13:44.247Z",
+    "ephemeral": true,
+    "type": "assistant.message_delta",
+    "data": {
+      "messageId": "066e70a0-b601-48e6-b290-05843e438cdf",
+      "deltaContent": "`"
+    }
+  },
+  {
+    "id": "9842c67e-8752-4ebd-a53a-318b95d23719",
+    "parentId": null,
+    "timestamp": "2026-11-15T15:13:44.247Z",
+    "ephemeral": true,
+    "type": "assistant.message_delta",
+    "data": {
+      "messageId": "066e70a0-b601-48e6-b290-05843e438cdf",
+      "deltaContent": " showed"
+    }
+  },
+  {
+    "id": "bc2e65b4-0b17-40e4-9713-8296fed882eb",
+    "parentId": null,
+    "timestamp": "2026-11-15T15:13:44.247Z",
+    "ephemeral": true,
+    "type": "assistant.message_delta",
+    "data": {
+      "messageId": "066e70a0-b601-48e6-b290-05843e438cdf",
+      "deltaContent": " `"
+    }
+  },
+  {
+    "id": "101f4add-ad18-4260-a5ee-6e6287f75353",
+    "parentId": null,
+    "timestamp": "2026-11-15T15:13:44.247Z",
+    "ephemeral": true,
+    "type": "assistant.message_delta",
+    "data": {
+      "messageId": "066e70a0-b601-48e6-b290-05843e438cdf",
+      "deltaContent": "note"
+    }
+  },
+  {
+    "id": "0185b2d3-de36-475f-a644-d0d815091b81",
+    "parentId": null,
+    "timestamp": "2026-11-15T15:13:44.272Z",
+    "ephemeral": true,
+    "type": "assistant.message_delta",
+    "data": {
+      "messageId": "066e70a0-b601-48e6-b290-05843e438cdf",
+      "deltaContent": ".txt"
+    }
+  },
+  {
+    "id": "6b8992e8-fac9-49d6-a24e-44f5d98cf399",
+    "parentId": null,
+    "timestamp": "2026-11-15T15:13:44.272Z",
+    "ephemeral": true,
+    "type": "assistant.message_delta",
+    "data": {
+      "messageId": "066e70a0-b601-48e6-b290-05843e438cdf",
+      "deltaContent": "`,"
+    }
+  },
+  {
+    "id": "39658e67-d737-404a-b2f9-29f9324ba058",
+    "parentId": null,
+    "timestamp": "2026-11-15T15:13:44.272Z",
+    "ephemeral": true,
+    "type": "assistant.message_delta",
+    "data": {
+      "messageId": "066e70a0-b601-48e6-b290-05843e438cdf",
+      "deltaContent": " which"
+    }
+  },
+  {
+    "id": "97939b3f-8607-4ea8-bfcd-b550ad360bc6",
+    "parentId": null,
+    "timestamp": "2026-11-15T15:13:44.298Z",
+    "ephemeral": true,
+    "type": "assistant.message_delta",
+    "data": {
+      "messageId": "066e70a0-b601-48e6-b290-05843e438cdf",
+      "deltaContent": " contains"
+    }
+  },
+  {
+    "id": "0d0ec845-ecf6-4c52-bc0c-f6dfc392ef60",
+    "parentId": null,
+    "timestamp": "2026-11-15T15:13:44.298Z",
+    "ephemeral": true,
+    "type": "assistant.message_delta",
+    "data": {
+      "messageId": "066e70a0-b601-48e6-b290-05843e438cdf",
+      "deltaContent": " “"
+    }
+  },
+  {
+    "id": "5c79ba28-6edf-4413-a80d-d5bb4c975bd5",
+    "parentId": null,
+    "timestamp": "2026-11-15T15:13:44.299Z",
+    "ephemeral": true,
+    "type": "assistant.message_delta",
+    "data": {
+      "messageId": "066e70a0-b601-48e6-b290-05843e438cdf",
+      "deltaContent": "hello"
+    }
+  },
+  {
+    "id": "594bc065-4bad-4fcf-9b28-c7441dbc00e5",
+    "parentId": null,
+    "timestamp": "2026-11-15T15:13:44.299Z",
+    "ephemeral": true,
+    "type": "assistant.message_delta",
+    "data": {
+      "messageId": "066e70a0-b601-48e6-b290-05843e438cdf",
+      "deltaContent": " from"
+    }
+  },
+  {
+    "id": "24835c7c-de9f-4592-b42a-7857655ff0b6",
+    "parentId": null,
+    "timestamp": "2026-11-15T15:13:44.321Z",
+    "ephemeral": true,
+    "type": "assistant.message_delta",
+    "data": {
+      "messageId": "066e70a0-b601-48e6-b290-05843e438cdf",
+      "deltaContent": " fixture"
+    }
+  },
+  {
+    "id": "ed0e6531-c997-426c-b243-3ca66bd51127",
+    "parentId": null,
+    "timestamp": "2026-11-15T15:13:44.321Z",
+    "ephemeral": true,
+    "type": "assistant.message_delta",
+    "data": {
+      "messageId": "066e70a0-b601-48e6-b290-05843e438cdf",
+      "deltaContent": ".”"
+    }
+  },
+  {
+    "id": "51278694-6438-43f3-a06c-3d03ae46343a",
+    "parentId": null,
+    "timestamp": "2026-11-15T15:13:44.441Z",
+    "ephemeral": true,
+    "type": "assistant.usage",
+    "data": {
+      "model": "gpt-6-luna",
+      "inputTokens": 12982,
+      "outputTokens": 19,
+      "cacheReadTokens": 12941,
+      "cacheWriteTokens": 38
+    }
+  },
+  {
+    "id": "ae22600a-c6c1-419a-8ebb-6266da37b1f8",
+    "parentId": null,
+    "timestamp": "2026-11-15T15:13:44.442Z",
+    "type": "assistant.message",
+    "data": {
+      "messageId": "066e70a0-b601-48e6-b290-05843e438cdf",
+      "model": "gpt-6-luna",
+      "content": "`ls` showed `note.txt`, which contains “hello from fixture.”",
+      "toolRequests": []
+    }
+  },
+  {
+    "id": "0991cba0-cdec-4b62-bb2b-00256a70660c",
+    "parentId": null,
+    "timestamp": "2026-11-15T15:13:44.445Z",
+    "ephemeral": true,
+    "type": "session.idle",
+    "data": {}
+  }
+]
