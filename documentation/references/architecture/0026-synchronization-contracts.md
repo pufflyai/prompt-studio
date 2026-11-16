@@ -178,6 +178,10 @@ The document address is the project, extension and document ID. The extension's
 records use `records`; text files use a separate address based on their stable file ID.
 Foreign keys remove these rows when their project or document is removed.
 
+Encrypted relay index nodes for receipts, logs and personal history are not rows. They
+live in files beside the database (`PSTDIO_HOME/pstdio.db-index-nodes/`) with their own retention rules; see
+[What belongs in the database](0031-database-contents.md#encrypted-index-nodes).
+
 A database transaction locks the document row, checks its revision and loads the saved
 state plus its remaining updates when needed. A bounded cache reuses a matching loaded
 document. A save appends only its new update. Every 128 updates, the same transaction

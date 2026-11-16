@@ -9,13 +9,19 @@ import { drizzle, type PgliteDatabase } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { normalizeEmbeddedFileName, relativeEmbeddedFileName } from "pstdio-paths";
 import { migrateExtensionIdentities } from "../services/extension-identity-migration";
+import {
+  attachIndexNodeFiles,
+  createIndexNodeFiles,
+  createMemoryIndexNodeFiles,
+} from "../services/extension-storage/index-node-files";
+import { upgradeIndexNodesToFiles } from "../services/extension-storage/index-node-upgrade";
 import { openPglite } from "./open-pglite";
 import { canonicalDbPath, resolveDbPath } from "./paths";
 import { type PgliteRetirementPhase, prepareCurrentPgliteHome } from "./pglite-current-home";
 import { pgliteIdentity } from "./pglite-identity";
 import { acquirePgliteLock } from "./pglite-lock";
 import * as schema from "./schemas.pg";
-import { type DatabaseMaintenancePhase, maintainDatabase } from "./startup-maintenance";
+import { type DatabaseMaintenancePhase, invalidateMaintenance, maintainDatabase } from "./startup-maintenance";
 
 type EmbeddedFile = Blob & { name: string };
 // Bun's embedded file objects are runtime-specific; narrowing the contract keeps extraction testable
@@ -154,12 +160,15 @@ export type DbOpenPhase =
   | "database_engine_loaded"
   | "database_image_restored"
   | "database_opened"
-  | "database_migrated";
+  | "database_migrated"
+  | "database_index_nodes";
 
 export const createDb = async (options?: {
   path?: string;
   onPhase?: (phase: DbOpenPhase) => void;
   signal?: AbortSignal;
+  /** Folder for encrypted index nodes; defaults to a sibling of the database folder. */
+  indexNodesPath?: string;
 }) => {
   const onPhase = options?.onPhase ?? (() => {});
   const requestedPath = resolveDbPath(options?.path);
@@ -195,14 +204,25 @@ export const createDb = async (options?: {
     onPhase("database_opened");
 
     const db = drizzle(openedPglite, { schema });
+    // The node folder belongs to this database, so another database can never clean it up.
+    const indexNodes =
+      dbPath === ":memory:"
+        ? createMemoryIndexNodeFiles()
+        : createIndexNodeFiles(options?.indexNodesPath ?? `${dbPath}-index-nodes`);
+    attachIndexNodeFiles(db, indexNodes);
+    let migrated = false;
     await withMigrationsFolder(async (migrationsFolder) => {
-      if (fs.existsSync(migrationsFolder)) {
-        await migrate(db, { migrationsFolder });
-        await maintainDatabase(openedPglite, dbPath, fresh, onPhase);
-      }
+      if (!fs.existsSync(migrationsFolder)) return;
+      await migrate(db, { migrationsFolder });
+      migrated = true;
     });
-    onPhase("database_migrated");
-    await migrateExtensionIdentities(db, {
+    // Remove node rows before renames copy owners' rows, and compact once after both.
+    onPhase("database_index_nodes");
+    // A run that stops after deleting rows must still compact on the next start.
+    const owed = () => invalidateMaintenance(dbPath);
+    const movedNodes = await upgradeIndexNodesToFiles(db, indexNodes, undefined, owed);
+    const renamed = await migrateExtensionIdentities(db, {
+      beforeChange: owed,
       onConflict: async (error) => {
         await db
           .update(schema.installed_extension_sources)
@@ -210,6 +230,10 @@ export const createDb = async (options?: {
           .where(inArray(schema.installed_extension_sources.extension_id, [error.from, error.to]));
       },
     });
+    if (migrated) await maintainDatabase(openedPglite, dbPath, fresh, onPhase, movedNodes || renamed);
+    const projectIds = await db.select({ id: schema.projects.id }).from(schema.projects);
+    await indexNodes.retainProjects(new Set(projectIds.map((project) => project.id)));
+    onPhase("database_migrated");
 
     let closed = false;
     const close = async () => {

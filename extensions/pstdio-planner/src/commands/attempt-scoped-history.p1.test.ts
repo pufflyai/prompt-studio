@@ -6,7 +6,33 @@ import { createTicketCommand } from "./create-ticket";
 import { runAttemptCommand } from "./run-attempt";
 
 test("starting a ticket and reading its history never loads unrelated attempts or events", async () => {
-  const storage = createMemoryStorage();
+  const unrelated = Array.from({ length: 5000 }, (_, i) => [`unrelated-${i}`, i] as const);
+  const storage = createMemoryStorage({
+    collections: {
+      "planner-attempts": Object.fromEntries(
+        unrelated.map(([id, i]) => [
+          id,
+          {
+            schemaVersion: 2,
+            workspaceId: `unrelated-${i}`,
+            ticketId: `unrelated-${i}`,
+            implementationSessionId: `old-session-${i}`,
+          },
+        ]),
+      ),
+      "planner-attempt-events": Object.fromEntries(
+        unrelated.map(([id, i]) => [
+          id,
+          {
+            id,
+            workspaceId: `unrelated-${i}`,
+            type: "attempt_started",
+            createdAt: "2026-01-01",
+          },
+        ]),
+      ),
+    },
+  });
   const ctx = makeCommandContext({
     storage,
     params: {},
@@ -16,20 +42,6 @@ test("starting a ticket and reading its history never loads unrelated attempts o
     },
   });
   const ticket = await createTicketCommand.run(ctx, { title: "Selected" });
-  for (let i = 0; i < 5000; i++) {
-    await storage.collection("planner-attempts").put(`unrelated-${i}`, {
-      schemaVersion: 2,
-      workspaceId: `unrelated-${i}`,
-      ticketId: `unrelated-${i}`,
-      implementationSessionId: `old-session-${i}`,
-    });
-    await storage.collection("planner-attempt-events").put(`unrelated-${i}`, {
-      id: `unrelated-${i}`,
-      workspaceId: `unrelated-${i}`,
-      type: "attempt_started",
-      createdAt: "2026-01-01",
-    });
-  }
   const collection = storage.collection.bind(storage);
   let eventReads = 0;
   storage.collection = <T>(name: string) => ({

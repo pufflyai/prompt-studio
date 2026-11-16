@@ -27,15 +27,16 @@ test("startup logs each step with the time since the process started at the defa
     .map((line) => JSON.parse(line) as { event?: string; phase?: string; elapsedMs?: number })
     .filter((entry) => entry.event === "runtime.startup.phase");
 
-  expect(phases.slice(0, 4).map((entry) => entry.phase)).toEqual([
+  expect(phases.slice(0, 5).map((entry) => entry.phase)).toEqual([
     "database_locked",
     "database_engine_loaded",
     "database_opened",
+    "database_index_nodes",
     "database_migrated",
   ]);
   expect(
     phases
-      .slice(4)
+      .slice(5)
       .map((entry) => entry.phase)
       .sort(),
   ).toEqual(["app_ready", "extensions_ready"]);
