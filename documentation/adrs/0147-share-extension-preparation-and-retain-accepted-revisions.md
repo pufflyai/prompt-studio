@@ -158,7 +158,10 @@ Dependency hashing preserves the same byte order while prefetching at most eight
 observed at admission; concurrently growing files can exceed that size. This bounds ordinary read-ahead, not total
 worker memory. Larger files stream in one-MiB chunks when consumed. Failed inspections drain outstanding reads before
 staging cleanup. Runtime and frontend guards each collect fresh inputs before and after their builds. Immutable copies
-use best-effort copy-on-write with an ordinary-copy fallback. A manager build reuses its initial input inspection for
+use best-effort copy-on-write with an ordinary-copy fallback. Each runtime snapshot copies at most eight
+files concurrently across its complete dependency graph, then drains every admitted write before either
+publishing dependency bindings or returning a failure to staging cleanup. Fresh post-build input guards
+still reject source or dependency edits. A manager build reuses its initial input inspection for
 artifact identity; the fresh post-build inspection and publication guards still reject source or dependency changes.
 Missing serving files are repaired from accepted artifacts without evaluating mutable source. Repository fallback
 frontend dependencies use the same prepared source context for compilation and graph fingerprinting. Batch guards

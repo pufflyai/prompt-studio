@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import { constants, copyFileSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { constants, mkdirSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { copyFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 
 export const visitRevisionFiles = (root: string, visit: (path: string, rel: string) => void) => {
@@ -25,23 +26,43 @@ export const visitRevisionFiles = (root: string, visit: (path: string, rel: stri
   };
   walk(root);
 };
-export const copyRevisionSource = (sourcePath: string, targetPath: string, files?: Set<string>) => {
+export function* revisionSourceFiles(sourcePath: string, targetPath: string, files?: Set<string>) {
   mkdirSync(targetPath, { recursive: true });
-  const directories = new Set([targetPath]);
-  const copy = (file: string, rel: string) => {
-    const target = join(targetPath, rel);
-    const directory = dirname(target);
-    if (!directories.has(directory)) {
-      mkdirSync(directory, { recursive: true });
-      directories.add(directory);
-    }
-    // Copy-on-write keeps accepted bytes independent without physically copying
-    // large native dependencies on filesystems that support cloning.
-    copyFileSync(file, target, constants.COPYFILE_FICLONE);
-  };
-  if (files) for (const rel of files) copy(join(sourcePath, rel), rel);
-  else visitRevisionFiles(sourcePath, copy);
+  if (files) {
+    for (const rel of files) yield { source: join(sourcePath, rel), target: join(targetPath, rel) };
+  } else {
+    const entries: { source: string; target: string }[] = [];
+    visitRevisionFiles(sourcePath, (source, rel) => entries.push({ source, target: join(targetPath, rel) }));
+    yield* entries;
+  }
+}
+
+export const copyRevisionFiles = async (files: Iterable<{ source: string; target: string }>) => {
+  const entries = files[Symbol.iterator]();
+  const directories = new Set<string>();
+  const results = await Promise.allSettled(
+    Array.from({ length: 8 }, async () => {
+      while (true) {
+        const entry = entries.next();
+        if (entry.done) return;
+        const { source, target } = entry.value;
+        const directory = dirname(target);
+        if (!directories.has(directory)) {
+          mkdirSync(directory, { recursive: true });
+          directories.add(directory);
+        }
+        // Retain independent accepted bytes, using copy-on-write where available.
+        await copyFile(source, target, constants.COPYFILE_FICLONE);
+      }
+    }),
+  );
+  // Every admitted write must finish before a failed preparation can remove its snapshot.
+  const failed = results.find((result) => result.status === "rejected");
+  if (failed?.status === "rejected") throw failed.reason;
 };
+
+export const copyRevisionSource = (sourcePath: string, targetPath: string, files?: Set<string>) =>
+  copyRevisionFiles(revisionSourceFiles(sourcePath, targetPath, files));
 export const hashRevisionSource = (sourcePath: string, include: (path: string) => boolean = () => true) => {
   const hash = createHash("sha256");
   visitRevisionFiles(sourcePath, (file, rel) => {

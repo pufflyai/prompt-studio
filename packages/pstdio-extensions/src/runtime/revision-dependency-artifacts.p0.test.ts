@@ -16,7 +16,7 @@ for (const conflict of [false, true]) {
     conflict
       ? "conflicting physical dependency bindings reject preparation"
       : "ancestor alias bindings share the same frozen dependency",
-    () => {
+    async () => {
       const root = realpathSync(mkdtempSync(join(tmpdir(), "revision-physical-bindings-")));
       roots.push(root);
       const source = join(root, "source");
@@ -47,10 +47,10 @@ for (const conflict of [false, true]) {
       const copy = () =>
         copyRevisionDependencies(packages, source, revisionSnapshotPath(generation, source), generation);
       if (conflict) {
-        expect(copy).toThrow();
+        await expect(copy()).rejects.toThrow();
         return;
       }
-      copy();
+      await copy();
       const aliased = revisionSnapshotLocation(
         generation,
         join(source, "node_modules", "outer", "node_modules", "shared", "index.js"),
