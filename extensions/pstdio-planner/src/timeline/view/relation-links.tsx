@@ -41,7 +41,7 @@ export function RelationshipWindow(props: {
     <Stack gap="xs">
       <PlannerReadError error={error} retry={retry} />
       <Links title={direction === "dependsOn" ? "Depends on" : "Holding up"} links={value.links} onSelect={onSelect} />
-      {value.total > 25 ? (
+      {value.total > 25 || offset > 0 ? (
         <Flex align="center" gap="sm">
           <Button size="xs" variant="outline" disabled={!offset} onClick={() => setOffset(Math.max(0, offset - 25))}>
             Previous

@@ -46,7 +46,10 @@ export const armPlannerAction = (page: Page, action: ActionClock["action"], rowT
             action === "archive"
               ? cards.length === 0
               : Boolean(
-                  card && [...card.querySelectorAll("button")].some((button) => button.textContent?.includes("High")),
+                  card &&
+                    [...card.querySelectorAll('button, [role="button"]')].some((button) =>
+                      button.textContent?.includes("High"),
+                    ),
                 );
           const entries = (performance.getEntriesByType("resource") as PerformanceResourceTiming[]).filter(
             (entry) =>

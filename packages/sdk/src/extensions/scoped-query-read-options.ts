@@ -14,8 +14,14 @@ export const createQueryReadOptions = <T>(input: {
   ledger: ReturnType<typeof createQueryLedger<T>>;
   read(signal: AbortSignal): Promise<T>;
   assertOpen(): void;
+  beforeRepeat(signal: AbortSignal): Promise<void>;
 }) => {
   const { client, queryKey, ledger } = input;
+  const repeat = async (signal: AbortSignal) => {
+    if (!ledger.dirty()) return false;
+    await input.beforeRepeat(signal);
+    return ledger.dirty();
+  };
   return {
     queryKey,
     retry: false as const,
@@ -35,14 +41,14 @@ export const createQueryReadOptions = <T>(input: {
         } catch (error) {
           signal.throwIfAborted();
           if (ledger.fail(issued, client.getQueryData<T>(queryKey), error)) throw error;
-          if (!ledger.dirty()) return client.getQueryData<T>(queryKey)!;
+          if (!(await repeat(signal))) return client.getQueryData<T>(queryKey)!;
           continue;
         }
         signal.throwIfAborted();
         input.assertOpen();
         if (ledger.complete(issued, shareQueryValue(client.getQueryData<T>(queryKey), value))) return value;
         // Authoritative mutation/live data supersedes an older read without a second writer.
-        if (!ledger.dirty()) return client.getQueryData<T>(queryKey)!;
+        if (!(await repeat(signal))) return client.getQueryData<T>(queryKey)!;
       }
     },
   };

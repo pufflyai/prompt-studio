@@ -258,6 +258,21 @@ try {
   console.log(JSON.stringify(evidence, null, 2));
 } catch (error) {
   if (failurePage) {
+    await writeFile(
+      resolve(output, "failure-action-clock.json"),
+      JSON.stringify(
+        await failurePage.evaluate(() => ({
+          clock: window.__plannerActionClock,
+          resources: (performance.getEntriesByType("resource") as PerformanceResourceTiming[]).map((entry) => ({
+            path: new URL(entry.name).pathname,
+            startTime: entry.startTime,
+            responseEnd: entry.responseEnd,
+          })),
+        })),
+        null,
+        2,
+      ),
+    );
     await failurePage.screenshot({ path: resolve(output, "failure.png") });
     await writeFile(
       resolve(output, "failure-dom.txt"),

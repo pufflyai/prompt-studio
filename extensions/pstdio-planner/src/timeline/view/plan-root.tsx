@@ -132,7 +132,19 @@ function PlanContent(props: PlanContentProps) {
   );
   const tracks = visibleTracks(plan, filter, queryData.attributes);
   const { sections, toggle } = useViewSections(plan, new Set(queryData.rows.map(({ id }) => id)), true);
-  const { viewProps, selected, open, editor, context, setSelectedId, setContext, setEditor, done } = usePlanActions({
+  const {
+    viewProps,
+    selected,
+    selectionError,
+    retrySelection,
+    open,
+    editor,
+    context,
+    setSelectedId,
+    setContext,
+    setEditor,
+    done,
+  } = usePlanActions({
     host,
     client,
     plan,
@@ -152,6 +164,7 @@ function PlanContent(props: PlanContentProps) {
   return (
     <Flex direction="column" h="full" minH="0" minW="0">
       <PlannerReadError error={windowError} retry={retryWindow} />
+      <PlannerReadError error={selectionError} retry={retrySelection} />
       <PlanHeader
         data={queryData}
         viewsSource={viewsSource}

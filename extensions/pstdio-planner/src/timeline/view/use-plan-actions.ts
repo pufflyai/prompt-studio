@@ -32,7 +32,11 @@ export function usePlanActions({
   const [context, setContext] = useState<BackgroundContext>();
   const dnd = useDragAndDrop(client);
   const resident = plan?.sections.flatMap(({ rows }) => rows).find(({ id }) => id === selectedId);
-  const { value: outsidePlan } = usePlannerQuery(
+  const {
+    value: outsidePlan,
+    error: selectionError,
+    retry: retrySelection,
+  } = usePlannerQuery(
     client,
     client.commands["timeline.plan.read"].query({ ticketId: selectedId ?? "" }, { events: planEvents }),
     Boolean(selectedId && !resident),
@@ -73,6 +77,8 @@ export function usePlanActions({
     }
   };
   return {
+    selectionError: selectedId && !resident ? selectionError : undefined,
+    retrySelection,
     viewProps,
     selected: selected?.gate || selection?.presentation === "details" ? selected : undefined,
     open,

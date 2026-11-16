@@ -42,7 +42,7 @@ export function RequestWindowControls(props: {
   const { offset, move, loading } = props;
   const result = props.result ?? props.previous;
   const notice = <PlannerReadError error={props.error} retry={props.retry ?? (() => {})} />;
-  if (!result || result.total <= 25) return notice;
+  if (!result || (result.total <= 25 && !offset)) return notice;
   return (
     <Stack gap="sm">
       {notice}
