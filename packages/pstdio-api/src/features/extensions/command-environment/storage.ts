@@ -78,10 +78,18 @@ export const createStorageApi = (
     migrate: (version, run) =>
       deps.extensionStorageService.migrate(scope, version, async (previous) => {
         input.signal?.throwIfAborted();
-        await run(
-          previous,
-          createStorageMigration([input.extensionId, input.projectId, scope.scope_type, scope.scope_id, version]),
-        );
+        let running = true;
+        try {
+          await run(previous, {
+            ...createStorageMigration([input.extensionId, input.projectId, scope.scope_type, scope.scope_id, version]),
+            moveCollection: (name, options) => {
+              if (!running) throw new Error("moveCollection is only valid while its migration runs");
+              return deps.extensionStorageService.moveCollection({ ...scope, collection: name }, options.keyPrefix);
+            },
+          });
+        } finally {
+          running = false;
+        }
         input.signal?.throwIfAborted();
       }),
     ids: { create: createStorageId },

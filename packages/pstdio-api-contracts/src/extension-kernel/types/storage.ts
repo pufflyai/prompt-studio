@@ -34,6 +34,13 @@ export interface ExtensionStorageMigration {
   position(rank: number, key: string): string;
   /** Derive the same ID from a stable source key. A prefix selects lossless, case-sensitive Base62 output. */
   id(key: string, prefix?: string): string;
+  /**
+   * Move every item of the deprecated `collection(name)` in this scope to `records.id(keyPrefix + itemId)`.
+   * The item value becomes the record value; text history and native text bindings move with it, and
+   * `sortOrder` is dropped. Old-format collection calls and late old-format writes reach the moved
+   * records. Safe to retry. Only valid while this migration runs.
+   */
+  moveCollection(name: string, options: { keyPrefix: string }): Promise<{ moved: number }>;
 }
 
 export interface ExtensionStoragePositionsApi {

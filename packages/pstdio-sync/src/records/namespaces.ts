@@ -4,6 +4,18 @@ import type { GroupCommit } from "./types";
 
 export const storageRecordId = (namespace: string[], recordId: string) => JSON.stringify([...namespace, recordId]);
 
+/** Address prefix shared by every item of a deprecated collection. */
+export const collectionRecordPrefix = (scopeType: string, scopeId: string, name: string) =>
+  `${JSON.stringify([scopeType, scopeId, "collection", name]).slice(0, -1)},`;
+
+/** Host record that names the record key prefix a moved collection's items live under. */
+export const collectionMoveMarkerId = (scopeType: string, scopeId: string, name: string) =>
+  JSON.stringify([scopeType, scopeId, "collection-moved", name]);
+
+/** Address prefix of the records whose `records.id` key starts with `keyPrefix`. */
+export const recordKeyPrefix = (scopeType: string, scopeId: string, keyPrefix: string) =>
+  JSON.stringify([scopeType, scopeId, "kv", keyPrefix]).slice(0, -2);
+
 export const scopeRecordStorage = <Records extends object>(records: Records, namespace: string[]) => {
   return { id: (key: string) => storageRecordId(namespace, key), ...records };
 };
