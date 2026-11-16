@@ -43,19 +43,32 @@ export const createTransportFixture = () => {
     relayDatabaseUrl: relayDatabase.url,
     managerDatabaseUrl: managerDatabase.url,
     async initialize() {
+      const started = performance.now();
+      const phase = (name: string) =>
+        console.log(JSON.stringify({ relayFixtureSetup: name, elapsedMs: Math.round(performance.now() - started) }));
+      phase("start");
       await admin.connect();
+      phase("admin connected");
       for (const target of [managerDatabase, relayDatabase]) {
+        const name = target === managerDatabase ? "manager" : "relay";
+        phase(`${name} role starting`);
         await admin.query(`CREATE ROLE "${target.role}" LOGIN PASSWORD '${target.password}'`);
+        phase(`${name} database starting`);
         await admin.query(`CREATE DATABASE "${target.role}" OWNER "${target.role}"`);
+        phase(`${name} permissions starting`);
         await admin.query(`REVOKE ALL ON DATABASE "${target.role}" FROM PUBLIC`);
         await admin.query(`GRANT CONNECT ON DATABASE "${target.role}" TO "${target.role}"`);
       }
+      phase("manager migration starting");
       await migrateAccountManager(
         managerDatabase.url,
         new URL("../drizzle/", import.meta.resolve("pstdio-account-manager")).pathname,
       );
+      phase("relay migration starting");
       await migrateRelayStorage(relayDatabase.url, new URL("../../drizzle/", import.meta.url).pathname);
+      phase("bucket starting");
       await objects.send(new CreateBucketCommand({ Bucket: bucket }));
+      phase("complete");
     },
     async disconnectRelayListeners() {
       await admin.query(

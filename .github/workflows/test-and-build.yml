@@ -29,12 +29,12 @@ on:
       test_file:
         type: string
         default: ""
-        description: Optional single native test file; runs its owning runner instead of a full profile
+        description: Optional single test file; runs its owning runner instead of a full profile
       test_os:
         type: choice
-        options: [windows-latest, macos-15, macos-15-intel]
+        options: [ubuntu-latest, windows-latest, macos-15, macos-15-intel]
         default: windows-latest
-        description: Host for a single-file native diagnostic
+        description: Host for a single-file owning-runner diagnostic
       release_channel:
         type: choice
         options: [stable, nightly]
@@ -98,7 +98,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
-          node-version: "24.22.1"
+          node-version: "26.7.0"
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
