@@ -6,6 +6,8 @@ import { createTicketCommand } from "./create-ticket";
 import { runAttemptCommand } from "./run-attempt";
 
 test("starting a ticket and reading its history never loads unrelated attempts or events", async () => {
+  const started = performance.now();
+  const phase = (name: string) => console.log(`[scoped history +${Math.round(performance.now() - started)}ms] ${name}`);
   const unrelated = Array.from({ length: 5000 }, (_, i) => [`unrelated-${i}`, i] as const);
   const storage = createMemoryStorage({
     collections: {
@@ -33,6 +35,7 @@ test("starting a ticket and reading its history never loads unrelated attempts o
       ),
     },
   });
+  phase("storage seeded");
   const ctx = makeCommandContext({
     storage,
     params: {},
@@ -42,6 +45,7 @@ test("starting a ticket and reading its history never loads unrelated attempts o
     },
   });
   const ticket = await createTicketCommand.run(ctx, { title: "Selected" });
+  phase("ticket created");
   const collection = storage.collection.bind(storage);
   let eventReads = 0;
   storage.collection = <T>(name: string) => ({
@@ -64,6 +68,7 @@ test("starting a ticket and reading its history never loads unrelated attempts o
     return rows;
   };
   const result = await runAttemptCommand.run(ctx, { ticket: ticket.id });
+  phase("attempt started");
   expect(result.variant.ticketId).toBe(ticket.id);
   for (let i = 0; i < 205; i++)
     await storage.collection("planner-attempt-events").put(`selected-${i}`, {
@@ -72,7 +77,9 @@ test("starting a ticket and reading its history never loads unrelated attempts o
       type: "attempt_started",
       createdAt: `2026-11-14T00:00:${String(i % 60).padStart(2, "0")}.000Z`,
     });
+  phase("history written");
   const first = await readAttemptHistoryCommand.run(ctx, { workspaceId: result.workspace.id, limit: 100 });
+  phase("first page read");
   expect(first.events).toHaveLength(100);
   expect(first.nextCursor).toBeDefined();
   expect(eventReads).toBe(100);
@@ -86,6 +93,7 @@ test("starting a ticket and reading its history never loads unrelated attempts o
     cursor: second.nextCursor!,
     limit: 100,
   });
+  phase("all pages read");
   expect(second.events).toHaveLength(100);
   expect(third.events).toHaveLength(6);
   expect(new Set([...first.events, ...second.events, ...third.events].map(({ id }) => id)).size).toBe(206);
