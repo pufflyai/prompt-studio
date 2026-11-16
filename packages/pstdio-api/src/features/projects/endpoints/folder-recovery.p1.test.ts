@@ -50,7 +50,7 @@ test("a new device restores another device's folder copy while that device is of
     );
     await writeFile(
       join(folder, ".pstdio/extensions/local-tool/extension.ts"),
-      `import { writeFileSync } from "node:fs";\nwriteFileSync(${JSON.stringify(marker)}, "ran");\nexport default {};\n`,
+      `import { writeFileSync } from "node:fs";\nwriteFileSync(${JSON.stringify(marker)}, import.meta.url);\nexport default {};\n`,
     );
     const project = await source.deps.projectService.create({ name: "Recovered folder" });
     await source.deps.workspaceService.ensureDefault({ project_id: project.id, root_path: folder, name: "Folder" });
@@ -123,6 +123,8 @@ test("a new device restores another device's folder copy while that device is of
       (record) => record.installedSource.source_path.startsWith(restored),
     );
     expect(restoredExtension?.instance.enabled ?? false).toBe(false);
+    if (await Bun.file(marker).exists())
+      console.log("Recovery fixture module executed at", await readFile(marker, "utf8"));
     await expect(lstat(marker)).rejects.toThrow();
 
     // The restored folder is now this device's source and keeps the copy's policy.
