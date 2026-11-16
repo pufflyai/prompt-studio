@@ -23,7 +23,7 @@ if (!connectionPath || !outputPath || !expectedPlannerSource)
   throw new Error("Pass an isolated connection file, evidence folder and expected Planner source folder");
 const displayProperties = properties?.split(",") ?? ["id", "priority"];
 assert(displayProperties.includes("priority"), "The property edit needs a visible priority");
-assert(displayProperties.every((field) => ["id", "priority", "workspace", "reviewRequests"].includes(field)));
+assert(displayProperties.every((field) => ["id", "priority", "workspace"].includes(field)));
 const variant = properties ? ` (${displayProperties.join(", ")})` : "";
 const connection: Connection = JSON.parse(await readFile(connectionPath, "utf8"));
 assert.equal(new URL(connection.dashboardUrl).hostname, "127.0.0.1");
