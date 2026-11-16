@@ -234,8 +234,8 @@ export const encodeQueryCursor = (cursor: QueryCursor) => btoa(unescape(encodeUR
 
 const queryWindow = (query: StorageRecordQuery, revision: string) => {
   const limit = query.limit ?? storageLimits.queryDefaultLimit;
-  if (!Number.isSafeInteger(limit) || limit < 1 || limit > storageLimits.queryLimit)
-    throw new Error(`Query limit must be between 1 and ${storageLimits.queryLimit}`);
+  if (!Number.isSafeInteger(limit) || limit < 0 || limit > storageLimits.queryLimit)
+    throw new Error(`Query limit must be between 0 and ${storageLimits.queryLimit}`);
   const offset = query.offset ?? 0;
   if (!Number.isSafeInteger(offset) || offset < 0 || (offset > 0 && query.cursor))
     throw new Error("Query offset must be a nonnegative integer without a cursor");

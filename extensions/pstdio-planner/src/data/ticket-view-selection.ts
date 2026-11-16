@@ -41,7 +41,7 @@ export const prepareTicketViewQuery = async (
   await ensureTicketStorage(ctx);
   const [tags, statuses] = await Promise.all([seedDefaultTags(ctx.storage), seedDefaultStatuses(ctx.storage)]);
   const [workflow] = await Promise.all([readWorkflowStatuses(ctx, statuses), readPlanMetadata(ctx.storage)]);
-  const before = await ctx.storage.records.query({ index: "ticket-view", fields: [], limit: 1, orderBy: [] });
+  const before = await ctx.storage.records.query({ index: "ticket-view", fields: [], limit: 0, orderBy: [] });
   const state = await ticketViewState(ctx.storage, usableWorkflowStatuses(workflow));
   const { computed, metadata } = state;
   const attributes = [...buildTicketAttributes(statuses, tags), ...timelineTicketAttributes(metadata.deadlines)];

@@ -49,6 +49,8 @@ static row limit. The host rejects whole-collection reads from bounded view
 callbacks, including nested commands. Existing providers built with older SDKs
 retain their legacy contract. This step also includes the indexed related-query,
 derived projection, column-statistics and collection-view helpers used by Planner.
+Record queries accept `limit: 0` for validated revision checks without selecting
+resource rows; empty collection pages use this path.
 Planner requires this host API. Its independent release must follow publication
 of the matching SDK and host; a local development link only proves the candidate.
 

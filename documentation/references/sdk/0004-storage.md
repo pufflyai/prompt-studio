@@ -246,9 +246,11 @@ content `revision`, and a `fields` object; it does not include the complete body
 asset or shared content. Unset selected fields are null. Omit `fields` to select
 all declared fields. Use `readMany` when complete selected records are needed.
 
-The page limit is 1–500 and defaults to 100. The host exposes these bounds as
-`storageLimits.queryLimit` and `storageLimits.queryDefaultLimit`. SQL filters
-and sorts before the
+The page limit defaults to 100 and accepts up to 500. The host exposes these
+bounds as `storageLimits.queryLimit` and `storageLimits.queryDefaultLimit`.
+Unreleased API 0.5.0 also accepts `limit: 0` for a revision-only check: it validates
+the index, fields, predicate, revision and cursor, then returns no records and a
+null cursor without selecting resource rows. SQL filters and sorts before the
 limit and field materialization. Sorting uses the definition's order, with nulls
 last in either direction and a final ascending complete-record-ID tie breaker.
 Strings use Unicode code point order, independent of locale. Equality keys use

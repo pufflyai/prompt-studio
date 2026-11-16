@@ -82,7 +82,7 @@ export const readTicketViewPage = async (
     await ctx.storage.records.query({
       index: "ticket-view",
       fields: [],
-      limit: 1,
+      limit: 0,
       orderBy: [],
       revision: prepared.revision,
     });

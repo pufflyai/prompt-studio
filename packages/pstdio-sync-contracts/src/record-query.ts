@@ -103,7 +103,7 @@ export interface StorageRecordQuery {
   orderBy?: { field: string; direction: "asc" | "desc" }[];
   where?: StoragePredicate;
   fields?: string[];
-  /** Between 1 and 500. Defaults to 100. */
+  /** Between 0 and 500. Defaults to 100. Zero validates the query/revision/cursor without selecting rows; returns no cursor. */
   limit?: number;
   /** Opaque. A changed owner revision rejects the cursor; restart from the first page. */
   cursor?: string;

@@ -96,6 +96,11 @@ export const listProjectedRecords = async (connection: Reader, owner: StorageOwn
       return left.recordId < right.recordId ? -1 : 1;
     });
 
+const emptyQueryResult = (owner: StorageOwner, revision: string, diagnostics?: StorageDiagnostics) => {
+  diagnostics?.({ phase: "records-queried", owner, records: 0, materialized: 0 });
+  return { revision, records: [], cursor: null };
+};
+
 const matchesRecordCatalog = (
   catalog: { name: string; databaseName: string }[],
   names: ReadonlyMap<string, string>,
@@ -202,6 +207,7 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
         const revision = await getRevision(tx, related.hasIdentity);
         traceStorageQuery("query-execute", query.index);
         const page = await prepareRecordQuery(owner, index, query, revision, related);
+        if (page.limit === 0) return emptyQueryResult(owner, revision, diagnostics);
         const result = await tx.execute<QueryRow>(
           query.dependencyOrder
             ? dependencyOrderedPageSql(

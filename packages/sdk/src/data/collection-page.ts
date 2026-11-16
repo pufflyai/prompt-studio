@@ -6,6 +6,7 @@ import {
   type StoragePredicate,
   type StorageRecordQueries,
   type StorageRecordQuery,
+  storageLimits,
 } from "pstdio-api-contracts/extension-kernel";
 import { canonicalJson, type Json } from "pstdio-sync-contracts";
 
@@ -44,6 +45,9 @@ export const readCollectionPage = async (
     throw new Error("Collapsed groups need an indexed collapsed-group predicate");
   if (groups.length > 2 || new Set(groups.map((group) => group.field)).size !== groups.length)
     throw new Error("Collection pages support at most two different grouping fields");
+  const limit = page?.limit ?? DEFAULT_COLLECTION_PAGE_SIZE;
+  if (!Number.isSafeInteger(limit) || limit < 0 || limit > storageLimits.queryLimit)
+    throw new Error(`Query limit must be between 0 and ${storageLimits.queryLimit}`);
   const groupSelection = groups.length ? { groupBy: groups.map((group) => group.indexField), groupLimit: 500 } : {};
   const total = await storage.records.aggregate({
     index,
@@ -79,7 +83,7 @@ export const readCollectionPage = async (
     fields,
     orderBy,
     textOrder: selection.textOrder,
-    limit: page?.limit ?? DEFAULT_COLLECTION_PAGE_SIZE,
+    limit: counts.count === 0 ? 0 : limit,
     cursor: page?.cursor,
     offset: page?.cursor ? undefined : page?.offset,
     revision,

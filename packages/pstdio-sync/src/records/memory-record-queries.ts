@@ -159,6 +159,7 @@ export const createMemoryRecordQueries = (
         const predicate = memoryPredicate(saved, identities, dependencies.resolve);
         const revision = await queryRevision(document, saved, identities);
         const page = await prepareRecordQuery(owner, index, query, revision, predicate.resolve);
+        if (page.limit === 0) return { revision, records: [], cursor: null };
         const values = (record: StorageRecord) =>
           (index.orderBy ?? []).map((sort) => predicate.read(index, record, sort.field) ?? null);
         const compare = (left: OrderedRecord, right: OrderedRecord) => compareRecords(index, left, right);
