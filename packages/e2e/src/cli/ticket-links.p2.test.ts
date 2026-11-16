@@ -33,13 +33,15 @@ test(
         `${workspace} is linked to other tickets`,
       );
       for (const ticket of [one, two]) {
-        expect(JSON.parse(run(`pstdio.planner ticket-workspaces --id ${ticket.shorthand}`, repo))).toEqual([
-          expect.objectContaining({ workspace }),
-        ]);
+        expect(JSON.parse(run(`pstdio.planner ticket-workspaces --id ${ticket.shorthand}`, repo))).toEqual({
+          items: [expect.objectContaining({ workspace })],
+        });
       }
       run(`pstdio.planner unlink --id ${one.shorthand} --workspace ${workspace}`, repo);
-      expect(JSON.parse(run(`pstdio.planner ticket-workspaces --id ${one.shorthand}`, repo))).toEqual([]);
-      expect(JSON.parse(run(`pstdio.planner ticket-workspaces --id ${two.shorthand}`, repo))).toHaveLength(1);
+      expect(JSON.parse(run(`pstdio.planner ticket-workspaces --id ${one.shorthand}`, repo))).toEqual({ items: [] });
+      expect(JSON.parse(run(`pstdio.planner ticket-workspaces --id ${two.shorthand}`, repo))).toEqual({
+        items: [expect.objectContaining({ workspace })],
+      });
       run(`workspaces delete --id ${workspace}`, repo);
     } finally {
       await api.stop();
