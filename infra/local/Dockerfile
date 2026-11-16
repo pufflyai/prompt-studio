@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV PATH="/home/bun/.local/bin:/opt/bun/bin:${PATH}"
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends bash ca-certificates curl git ripgrep unzip \
+  && apt-get install -y --no-install-recommends bash ca-certificates curl git libatomic1 ripgrep unzip \
   && rm -rf /var/lib/apt/lists/*
 
 # A network whose proxy re-signs TLS needs its CA here. The folder is empty unless one is supplied.
