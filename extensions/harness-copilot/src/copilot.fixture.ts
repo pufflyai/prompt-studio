@@ -73,7 +73,6 @@ export const fakeCopilot = (script: (send: MessageOptions) => SessionEvent[]) =>
     ping: async () => ({}),
     getAuthStatus: async () => ({ isAuthenticated: true }),
     listModels: async () => [],
-    storeToken: async () => {},
     readEvents: async () => [],
     forkSession: async (id, toEventId) => {
       calls.push(`fork:${id}:${toEventId ?? "all"}`);
@@ -93,3 +92,15 @@ export const fakeCopilot = (script: (send: MessageOptions) => SessionEvent[]) =>
   };
   return { client, calls, configs, factory: () => client };
 };
+
+/** A harness context with in-memory harness state, as the host provides. */
+export const harnessContext = (values = new Map<string, unknown>()) =>
+  ({
+    projectId: "p",
+    logger: { warn() {}, info() {}, error() {} },
+    state: {
+      get: async (key: string) => values.get(key),
+      set: async (key: string, value: unknown) => void values.set(key, value),
+      delete: async (key: string) => void values.delete(key),
+    },
+  }) as never;

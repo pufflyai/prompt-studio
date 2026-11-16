@@ -28,8 +28,6 @@ export interface CopilotClientHandle {
   readEvents(sessionId: string): Promise<SessionEvent[]>;
   /** Copy a session, keeping events before `toEventId` (all events when omitted). Returns the new id. */
   forkSession(sessionId: string, toEventId?: string): Promise<string>;
-  /** Store a GitHub token in Copilot's own credential store. */
-  storeToken(token: string): Promise<void>;
   getQuota(): Promise<Record<string, QuotaSnapshot | undefined>>;
 }
 
@@ -62,9 +60,6 @@ export const createCopilotClient: CopilotClientFactory = (options) => {
     },
     forkSession: async (sessionId: string, toEventId?: string) =>
       (await client.rpc.sessions.fork({ sessionId, ...(toEventId ? { toEventId } : {}) })).sessionId,
-    storeToken: async (token: string) => {
-      await client.rpc.account.login({ host: "https://github.com", token });
-    },
     getQuota: async () => (await client.rpc.account.getQuota({})).quotaSnapshots,
   });
 };

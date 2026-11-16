@@ -11,7 +11,7 @@ import type {
 } from "@pstdio/sdk/extensions";
 import { publishConversationChanges } from "@pstdio/sdk/extensions";
 import { permissionHandler, userInputHandler } from "./channels";
-import type { CopilotClientFactory, CopilotSessionHandle } from "./client";
+import type { CopilotClientFactory, CopilotClientHandle, CopilotSessionHandle } from "./client";
 import { isSubagent, normalizeCopilotEvents } from "./events";
 
 export type CopilotTurnInput = HarnessStartInput & { agentSessionId?: string; approvals?: HarnessApprovalChannel };
@@ -44,9 +44,10 @@ const cancelledError = () => Object.assign(new Error("The Copilot turn was cance
 export const startCopilotTurn = (
   input: CopilotTurnInput,
   factory: CopilotClientFactory,
-  env: Record<string, string>,
+  env: Record<string, string> | Promise<Record<string, string>>,
 ) => {
-  const client = factory({ cwd: input.cwd, env });
+  // Created once the environment, including any saved token, is known.
+  let client: CopilotClientHandle | undefined;
   const prefix = [...input.events.getMessages()];
   const events: SessionEvent[] = [];
   // Host-side parts for user input, so the conversation shows attachments as the person sent them.
@@ -107,6 +108,9 @@ export const startCopilotTurn = (
   const opened = (async () => {
     try {
       input.signal?.throwIfAborted();
+      const runtimeEnv = await env;
+      if (stopped) throw cancelledError();
+      client = factory({ cwd: input.cwd, env: runtimeEnv });
       await client.start();
       if (stopped) throw cancelledError();
       const config = {
@@ -131,19 +135,20 @@ export const startCopilotTurn = (
       session = created;
       return created;
     } catch (error) {
-      await client.forceStop().catch(() => {});
+      await client?.forceStop().catch(() => {});
       throw error;
     }
   })();
 
   const run = async (active: CopilotSessionHandle): Promise<HarnessExit> => {
+    const runtime = client!;
     const unsubscribe = active.on(observe);
     // The SDK does not tell its callers when the runtime dies, so a running turn checks it answers.
     const liveness = setInterval(async () => {
       let timer: ReturnType<typeof setTimeout> | undefined;
       try {
         await Promise.race([
-          client.ping(),
+          runtime.ping(),
           new Promise((_, reject) => {
             timer = setTimeout(() => reject(new Error("The Copilot runtime stopped answering.")), LIVENESS.timeoutMs);
           }),
@@ -168,9 +173,9 @@ export const startCopilotTurn = (
       for (const [deliveryId, settle] of deliveries) settle(seen(deliveryId));
       unsubscribe();
       await active.disconnect().catch(() => {});
-      await client
+      await runtime
         .stop()
-        .catch(() => client.forceStop())
+        .catch(() => runtime.forceStop())
         .catch(() => {});
     }
   };
@@ -183,7 +188,7 @@ export const startCopilotTurn = (
     stopped = true;
     idle.resolve({ status: "cancelled" });
     if (session) await session.abort().catch(() => {});
-    else await client.forceStop().catch(() => {});
+    else await client?.forceStop().catch(() => {});
     await done;
   };
   input.signal?.addEventListener("abort", () => void stop(), { once: true });

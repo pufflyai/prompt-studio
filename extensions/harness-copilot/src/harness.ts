@@ -1,7 +1,7 @@
 import type { ModelInfo } from "@github/copilot-sdk";
 import type { AgentModel, HarnessContext, HarnessProvider } from "@pstdio/sdk/extensions";
 import { l10n, params, reconcileMessageHistory } from "@pstdio/sdk/extensions";
-import { readAuthentication, runLogin } from "./authentication";
+import { describeAuthentication, type LoginDeps, runLogin, TOKEN_KEY, tokenEnv } from "./authentication";
 import { type CopilotClientFactory, createCopilotClient, withCopilotClient } from "./client";
 import { forkBoundary, normalizeCopilotEvents } from "./events";
 import { type CopilotTurnInput, startCopilotTurn } from "./turn";
@@ -39,14 +39,20 @@ export const createCopilotHarness = (factory: CopilotClientFactory = createCopil
     return item;
   };
 
+  const savedToken = (ctx: HarnessContext) => ctx.state.get<string>(TOKEN_KEY);
+
+  /** One operation against a short-lived runtime, signed in with the saved token when there is one. */
   const short = <T>(
     ctx: HarnessContext,
     action: Parameters<typeof withCopilotClient<T>>[2],
-    options: { cwd?: string; signal?: AbortSignal } = {},
+    options: { cwd?: string; signal?: AbortSignal; env?: Record<string, string> } = {},
   ) => {
     const controller = new AbortController();
     const signal = options.signal ? AbortSignal.any([controller.signal, options.signal]) : controller.signal;
-    const done = withCopilotClient(factory, { cwd: options.cwd, signal }, action);
+    const done = (async () => {
+      const env = options.env ?? tokenEnv(await savedToken(ctx));
+      return withCopilotClient(factory, { cwd: options.cwd, signal, env }, action);
+    })();
     track(ctx.projectId, {
       done,
       stop: async () => {
@@ -63,10 +69,15 @@ export const createCopilotHarness = (factory: CopilotClientFactory = createCopil
   const run = (ctx: HarnessContext, input: CopilotTurnInput) =>
     track(
       ctx.projectId,
-      startCopilotTurn(input, factory, {
-        PSTDIO_SESSION_ID: input.sessionId,
-        ...(ctx.projectId ? { PSTDIO_PROJECT_ID: ctx.projectId } : {}),
-      }),
+      startCopilotTurn(
+        input,
+        factory,
+        savedToken(ctx).then((token) => ({
+          PSTDIO_SESSION_ID: input.sessionId,
+          ...(ctx.projectId ? { PSTDIO_PROJECT_ID: ctx.projectId } : {}),
+          ...tokenEnv(token),
+        })),
+      ),
     ).session;
 
   return {
@@ -98,13 +109,26 @@ export const createCopilotHarness = (factory: CopilotClientFactory = createCopil
     },
     getAuthentication: async (ctx) => {
       try {
-        return await short(ctx, readAuthentication);
+        const token = await savedToken(ctx);
+        const status = await short(ctx, (client) => client.getAuthStatus(), { env: tokenEnv(token) });
+        return describeAuthentication(status.isAuthenticated, Boolean(token));
       } catch {
         return { status: "unknown", providers: [] };
       }
     },
-    authenticate: (ctx, input, channel) =>
-      short(ctx, (client) => runLogin(client, input, channel), { signal: channel.signal }),
+    authenticate: (ctx, input, channel) => {
+      const deps: LoginDeps = {
+        signedIn: (token) =>
+          short(ctx, async (client) => (await client.getAuthStatus()).isAuthenticated, {
+            signal: channel.signal,
+            env: tokenEnv(token),
+          }),
+        savedToken: () => savedToken(ctx),
+        saveToken: (token) => ctx.state.set(TOKEN_KEY, token),
+        clearToken: () => ctx.state.delete(TOKEN_KEY),
+      };
+      return runLogin(deps, input, channel);
+    },
     listModels: async (ctx) => {
       // Copilot refuses to list models before sign-in; an empty list lets the model menu offer sign-in.
       const models = await short(ctx, async (client) =>

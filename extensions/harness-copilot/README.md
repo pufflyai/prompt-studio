@@ -6,7 +6,7 @@ Run the GitHub Copilot coding agent from Prompt Studio. Install this optional ex
 
 The extension ships the Copilot runtime through the pinned `@github/copilot-sdk` package. Installation downloads only your platform's runtime package. No global Copilot CLI or Node installation is needed.
 
-Copilot uses your GitHub CLI login. Run `gh auth login` in a terminal, or choose **Sign in → GitHub token** in a chat and paste a token with Copilot access. The token stays in Copilot's own credential store. Sign out with `gh auth logout` or Copilot's `/logout`.
+Choose **Sign in** in a session, then **GitHub CLI** or **GitHub token**. The GitHub CLI method uses your `gh auth login`. The token method takes a fine-grained personal access token with the **Copilot Requests** permission; classic `ghp_` tokens are not accepted. Prompt Studio keeps the token in its private harness state on this computer and passes it to each Copilot run, so token sign-in also works on hosts without a system keychain, such as Linux servers and containers. **Sign out** removes a saved token; sign out of a GitHub CLI login with `gh auth logout`.
 
 Install **GitHub Copilot** from **Settings → Project → Extensions**, or run:
 
@@ -42,7 +42,7 @@ A host restart ends a running turn, as with Codex: the Copilot runtime stops wit
 
 ## Account quotas
 
-`pst harness-copilot quotas` reports premium-request quotas for plans billed by request.
+`pst harness-copilot quotas` reports premium-request quotas for plans billed by request. It uses the GitHub CLI or keychain login; a token saved through Sign in is not available to commands.
 
 Plans billed by tokens have no limit Copilot can report, so the command returns `unsupported` with this month's token use instead. The `usage` field lists input, output, cache and reasoning tokens since the 1st of the month (UTC), in total and per model. It counts sessions saved on this device, including sessions started outside Prompt Studio. Check the remaining budget at github.com/settings/billing.
 

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { ModelInfo } from "@github/copilot-sdk";
-import { fakeCopilot } from "./copilot.fixture";
+import { fakeCopilot, harnessContext } from "./copilot.fixture";
 import { createCopilotHarness, toAgentModel } from "./harness";
 import { createQuotasCommand, normalizeCopilotQuotas } from "./quotas";
 
@@ -50,7 +50,7 @@ test("forking reads saved history and cuts it after the chosen message", async (
   const copilot = fakeCopilot(() => []);
   copilot.client.readEvents = async () => recorded as never;
   const harness = createCopilotHarness(copilot.factory);
-  const ctx = { logger: { warn() {} } } as never;
+  const ctx = harnessContext();
   const [, bash] = await harness.getMessages(ctx, { agentSessionId: "source" });
   expect(await harness.fork(ctx, { agentSessionId: "source", messageId: bash!.id } as never)).toEqual({
     agentSessionId: "forked-session",
@@ -67,12 +67,13 @@ test("disabling the extension stops a turn that is still starting", async () => 
     starting.reject(new Error("runtime stopped"));
   };
   const harness = createCopilotHarness(copilot.factory);
-  const ctx = { projectId: "p", logger: { warn() {} } } as never;
+  const ctx = harnessContext();
   const session = harness.start(ctx, { prompt: "x", sessionId: "host", events: { getMessages: () => [], push() {} } });
   await harness.dispose(ctx);
   await expect(session).rejects.toThrow();
-  expect(copilot.calls).toContain("forceStop");
+  // Stopped before or while the runtime starts: no Copilot session is ever created.
   expect(copilot.calls).not.toContain("create");
+  expect(copilot.calls.filter((call) => call === "start" || call === "forceStop")).not.toEqual(["start"]);
 });
 
 test("quotas keep this device's token use when Copilot cannot report quotas", async () => {
@@ -103,5 +104,5 @@ test("the model list is empty, not an error, until the person signs in", async (
   copilot.client.getAuthStatus = async () => ({ isAuthenticated: false });
   copilot.client.listModels = () => Promise.reject(new Error("Not authenticated. Please authenticate first."));
   const harness = createCopilotHarness(copilot.factory);
-  expect(await harness.listModels({ logger: { warn() {} } } as never)).toEqual([]);
+  expect(await harness.listModels(harnessContext())).toEqual([]);
 });

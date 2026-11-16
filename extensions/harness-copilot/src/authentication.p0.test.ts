@@ -1,9 +1,10 @@
 import { expect, test } from "bun:test";
 import type { HarnessAuthenticationChannel } from "@pstdio/sdk/extensions";
-import { CLI_LOGIN, readAuthentication, runLogin } from "./authentication";
-import { fakeCopilot } from "./copilot.fixture";
+import { CLI_LOGIN, describeAuthentication, type LoginDeps, runLogin, tokenEnv } from "./authentication";
+import { fakeCopilot, harnessContext } from "./copilot.fixture";
+import { createCopilotHarness } from "./harness";
 
-const channel = (reply: string) => {
+const channel = (...replies: string[]) => {
   const emitted: unknown[] = [];
   const requested: unknown[] = [];
   return {
@@ -14,68 +15,102 @@ const channel = (reply: string) => {
       emit: async (prompt) => void emitted.push(prompt),
       request: async (prompt) => {
         requested.push(prompt);
-        return reply;
+        return replies.shift() ?? "";
       },
     } satisfies HarnessAuthenticationChannel,
   };
 };
 
-test("a pasted GitHub token goes to Copilot's credential store through a masked prompt", async () => {
-  const copilot = fakeCopilot(() => []);
-  const stored: string[] = [];
-  let signedIn = false;
-  copilot.client.storeToken = async (token) => {
-    stored.push(token);
-    signedIn = true;
+const deps = (accepts: (token?: string) => boolean, saved?: string) => {
+  const state = { saved, checks: [] as (string | undefined)[] };
+  const value: LoginDeps = {
+    signedIn: async (token) => {
+      state.checks.push(token);
+      return accepts(token);
+    },
+    savedToken: async () => state.saved,
+    saveToken: async (token) => {
+      state.saved = token;
+    },
+    clearToken: async () => {
+      state.saved = undefined;
+    },
   };
-  copilot.client.getAuthStatus = async () => ({ isAuthenticated: signedIn });
-  const login = channel("  ghp_secret \n");
-  await runLogin(copilot.client, { action: "login", method: "token" }, login.channel);
-  expect(stored).toEqual(["ghp_secret"]);
-  expect(login.requested).toEqual([expect.objectContaining({ type: "input", secret: true })]);
-  expect(JSON.stringify(login.emitted)).not.toContain("ghp_secret");
-  expect(await readAuthentication(copilot.client)).toMatchObject({ status: "signed_in", provider: "github" });
+  return { value, state };
+};
+
+test("a pasted token is checked with a fresh Copilot runtime, then saved for later sessions", async () => {
+  const login = channel("token", "  github_pat_secret \n");
+  const { value, state } = deps((token) => token === "github_pat_secret");
+  await runLogin(value, { action: "login" }, login.channel);
+  expect(state.checks).toEqual(["github_pat_secret"]);
+  expect(state.saved).toBe("github_pat_secret");
+  expect(login.requested).toEqual([
+    expect.objectContaining({ type: "select" }),
+    expect.objectContaining({ type: "input", secret: true }),
+  ]);
+  expect(JSON.stringify(login.emitted)).not.toContain("github_pat_secret");
+  expect(tokenEnv(state.saved)).toEqual({ COPILOT_GITHUB_TOKEN: "github_pat_secret" });
 });
 
-test("a token Copilot rejects fails the sign-in, and the GitHub CLI method explains what to run", async () => {
-  const copilot = fakeCopilot(() => []);
-  copilot.client.getAuthStatus = async () => ({ isAuthenticated: false });
-  await expect(runLogin(copilot.client, { action: "login", method: "token" }, channel("bad").channel)).rejects.toThrow(
+test("a token Copilot rejects is not saved", async () => {
+  const { value, state } = deps(() => false);
+  await expect(runLogin(value, { action: "login", method: "token" }, channel("ghp_classic").channel)).rejects.toThrow(
     "did not accept",
   );
-  const cli = channel("");
-  const saved = { ...CLI_LOGIN };
-  Object.assign(CLI_LOGIN, { intervalMs: 1, timeoutMs: 20 });
-  try {
-    await expect(runLogin(copilot.client, { action: "login", method: "gh-cli" }, cli.channel)).rejects.toThrow(
-      "did not see",
-    );
-  } finally {
-    Object.assign(CLI_LOGIN, saved);
-  }
-  expect(cli.emitted).toEqual([
-    expect.objectContaining({ type: "message", message: expect.stringContaining("gh auth login") }),
-  ]);
-  await expect(runLogin(copilot.client, { action: "logout" }, cli.channel)).rejects.toThrow("gh auth logout");
+  expect(state.saved).toBeUndefined();
 });
 
-test("signing in without a chosen method asks for one, and the GitHub CLI method waits for the login", async () => {
-  const copilot = fakeCopilot(() => []);
-  let checks = 0;
-  copilot.client.getAuthStatus = async () => ({ isAuthenticated: ++checks >= 3 });
-  const login = channel("gh-cli");
+test("the GitHub CLI method waits until Copilot sees the login, and gives up after a while", async () => {
   const saved = { ...CLI_LOGIN };
-  Object.assign(CLI_LOGIN, { intervalMs: 1 });
+  Object.assign(CLI_LOGIN, { intervalMs: 1, timeoutMs: 1_000 });
   try {
-    await runLogin(copilot.client, { action: "login" }, login.channel);
+    let checks = 0;
+    const login = channel("gh-cli");
+    await runLogin(deps(() => ++checks >= 3).value, { action: "login" }, login.channel);
+    expect(checks).toBe(3);
+    expect(login.emitted).toEqual([
+      expect.objectContaining({ type: "message", message: expect.stringContaining("gh auth login") }),
+    ]);
+    Object.assign(CLI_LOGIN, { timeoutMs: 20 });
+    await expect(
+      runLogin(deps(() => false).value, { action: "login", method: "gh-cli" }, channel().channel),
+    ).rejects.toThrow("did not see");
   } finally {
     Object.assign(CLI_LOGIN, saved);
   }
-  expect(login.requested).toEqual([
-    expect.objectContaining({
-      type: "select",
-      options: [expect.objectContaining({ id: "gh-cli" }), expect.objectContaining({ id: "token" })],
-    }),
-  ]);
-  expect(checks).toBe(3);
+});
+
+test("signing out removes a saved token; a GitHub CLI login is left to gh", async () => {
+  const signedInWithToken = deps(() => true, "github_pat_secret");
+  await runLogin(signedInWithToken.value, { action: "logout" }, channel().channel);
+  expect(signedInWithToken.state.saved).toBeUndefined();
+  await expect(runLogin(deps(() => true).value, { action: "logout" }, channel().channel)).rejects.toThrow(
+    "gh auth logout",
+  );
+  expect(describeAuthentication(true, true).providers[0]?.canLogout).toBe(true);
+  expect(describeAuthentication(true, false).providers[0]?.canLogout).toBe(false);
+});
+
+test("every Copilot runtime the harness starts receives the saved token", async () => {
+  const copilot = fakeCopilot(() => []);
+  const envs: (Record<string, string | undefined> | undefined)[] = [];
+  const harness = createCopilotHarness((options) => {
+    envs.push(options.env);
+    return copilot.client;
+  });
+  const ctx = harnessContext(new Map<string, unknown>([["githubToken", "github_pat_saved"]]));
+  expect(await harness.getAuthentication(ctx)).toMatchObject({
+    status: "signed_in",
+    providers: [{ canLogout: true }],
+  });
+  await harness.listModels(ctx);
+  const session = await harness.start(ctx, {
+    prompt: "x",
+    sessionId: "host",
+    events: { getMessages: () => [], push() {} },
+  });
+  await session.stop();
+  expect(envs).toHaveLength(3);
+  for (const env of envs) expect(env).toMatchObject({ COPILOT_GITHUB_TOKEN: "github_pat_saved" });
 });
