@@ -269,3 +269,40 @@ test("account changes refresh Claude's model catalog immediately", async () => {
   );
   expect((await harness.listModels!(accountCtx))[0]?.id).toBe("2");
 });
+
+test("start forwards the approval channel to the Claude session", async () => {
+  const received: unknown[] = [];
+  const approvals = { requestApproval: async () => ({ id: "a", decision: "approve" as const }) };
+  const harness = createClaudeCodeHarness({
+    startSession: async (input) => {
+      received.push(input.approvals);
+      return { agentSessionId: "session", done: Promise.resolve({ status: "completed" as const }), stop: () => {} };
+    },
+  });
+  await harness.start(ctx, {
+    prompt: "Plan",
+    sessionId: "host",
+    events: { getMessages: () => [], push() {} },
+    approvals,
+  } as Parameters<typeof harness.start>[1]);
+  expect(received).toHaveLength(1);
+  expect(received[0]).toBe(approvals);
+});
+
+test("start passes the host's cancel signal to the Claude session", async () => {
+  const signals: unknown[] = [];
+  const harness = createClaudeCodeHarness({
+    startSession: async (input) => {
+      signals.push(input.signal);
+      return { agentSessionId: "session", done: Promise.resolve({ status: "completed" as const }), stop: () => {} };
+    },
+  });
+  const controller = new AbortController();
+  await harness.start(ctx, {
+    prompt: "Plan",
+    sessionId: "host",
+    events: { getMessages: () => [], push() {} },
+    signal: controller.signal,
+  });
+  expect(signals[0]).toBe(controller.signal);
+});
