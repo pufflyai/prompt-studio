@@ -13,6 +13,7 @@ import {
 } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { createCommitQueue } from "./commit-queue";
+import { createOrderedCommitJournal } from "./ordered-canonical-batch";
 import { createOrderedCommitCache } from "./ordered-commit-cache";
 import { publishCommittedOrderedGroup } from "./ordered-commit-projection";
 import { ensureOrderedOwner } from "./ordered-conversion";
@@ -100,6 +101,8 @@ export const createOrderedResourceRecords = (
     input: StorageGroup,
     ownRevisions?: Map<string, string>,
   ) => {
+    // Retain only this group's canonical reads. Text and core-number policy keep their SQL-visible path.
+    journal = createOrderedCommitJournal(journal, owner);
     // Capture before the first asynchronous boundary; retries bind the entire authored request.
     const group = structuredClone(input);
     const identity = await fingerprint(group as unknown as Json);
