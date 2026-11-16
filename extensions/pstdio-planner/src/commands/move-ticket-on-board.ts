@@ -12,7 +12,7 @@ import { moveTicket } from "../timeline/model/edit-plan";
 export const moveTicketOnBoard = async (
   ctx: Pick<
     ExtensionContextBase,
-    "storage" | "events" | "projectId" | "extensionId" | "settings" | "resources" | "files"
+    "storage" | "events" | "projectId" | "extensionId" | "settings" | "resources" | "commands" | "extensionId" | "files"
   >,
   input: KanbanRendererMove,
 ) =>
