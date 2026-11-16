@@ -146,6 +146,10 @@ try {
   await page.goto(boardUrl);
   const card = () => page.getByTestId("renderer-card").filter({ hasText: ticket.title });
   await card().waitFor();
+  if (displayProperties.includes("workspace"))
+    await card()
+      .getByText(/Foobar focus /)
+      .waitFor();
   const boardMs = Math.round(performance.now() - started);
   console.log({ phase: "board-ready", boardMs });
   await network.settle();
@@ -249,6 +253,7 @@ try {
       reviewRequests: 25,
       historyEdits: 50,
       displayProperties,
+      genericResourceLinks: displayProperties.includes("workspace") ? 25 : undefined,
     },
     chromium: browser.version(),
     boardMs,
