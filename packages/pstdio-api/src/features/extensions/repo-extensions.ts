@@ -1,5 +1,6 @@
 import { basename, join } from "node:path";
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
+import { readAcceptedRevision } from "pstdio-extensions";
 import type { createExtensionService, SyncInstalledSourceInput } from "../../services/extension-service";
 import { AlwaysEnabledExtensionError } from "./always-on-extensions";
 import { listExtensionSources } from "./discover-extension-sources";
@@ -90,7 +91,9 @@ const keepsOff = (input: Pick<SyncRepoExtensionsForProjectInput, "enable">, name
 /** A folder that stays off is read from its manifest only, so its code is never imported. */
 const readRepoExtension = async (sourcePath: string, manifestOnly: boolean, load: typeof loadExtensionSource) => {
   try {
-    return manifestOnly ? readExtensionSourceMetadata(sourcePath) : await load(sourcePath);
+    if (!manifestOnly) return await load(sourcePath);
+    const accepted = await readAcceptedRevision(sourcePath);
+    return readExtensionSourceMetadata(accepted?.packagePath ?? sourcePath);
   } catch {
     return null;
   }
@@ -99,12 +102,16 @@ const readRepoExtension = async (sourcePath: string, manifestOnly: boolean, load
 const sourceInputFor = (
   loaded: Awaited<ReturnType<typeof loadExtensionSource>>,
   source: { name: string; projectId: string; sourceHash: string; sourcePath: string },
+  existing?: Awaited<ReturnType<ExtensionService["listProjectExtensionInstances"]>>[number],
 ) =>
   ({
     displayName: loaded.metadata.displayName,
     extensionId: loaded.metadata.id,
     installName: source.name,
-    manifest: loaded.manifest,
+    manifest:
+      existing?.instance.enabled === false && existing.installedSource.source_hash === source.sourceHash
+        ? existing.installedSource.manifest_json
+        : loaded.manifest,
     name: loaded.metadata.name,
     projectId: source.projectId,
     sourceHash: source.sourceHash,
@@ -135,16 +142,16 @@ export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForP
     const existing = instancesBySourcePath.get(sourcePath);
     const register = keepsOff(input, name, existing);
 
-    const loaded = await readRepoExtension(sourcePath, register, load);
+    const loaded = await readRepoExtension(sourcePath, register || existing?.instance.enabled === false, load);
     if (!loaded) {
       skipped.push(name);
       continue;
     }
 
     presentSourcePaths.add(sourcePath);
-    const synced = await input.extensionService.syncInstalledSourceForProject(
-      sourceInputFor(loaded, { name, projectId: input.projectId, sourceHash: await hash(sourcePath), sourcePath }),
-    );
+    const sourceHash = await hash(sourcePath);
+    const source = sourceInputFor(loaded, { name, projectId: input.projectId, sourceHash, sourcePath }, existing);
+    const synced = await input.extensionService.syncInstalledSourceForProject(source);
     if (!synced) continue;
     if (existing) {
       enabled.push(...(existing.instance.enabled ? [name] : []));

@@ -27,6 +27,7 @@ test("a new device restores another device's folder copy while that device is of
   const peer = documentPeer();
   const controller = new AbortController();
   const owners: ReturnType<typeof startFolderRecovery>[] = [];
+  let sourceClosed: Promise<void> | undefined;
   try {
     const folder = join(root, "laptop");
     await mkdir(join(folder, "src"), { recursive: true });
@@ -96,6 +97,11 @@ test("a new device restores another device's folder copy while that device is of
     });
     laptop.close();
     await laptop.done;
+    // The source device may run its own trusted local tool. Stop it before testing
+    // whether the offline copy's code runs on the destination.
+    sourceClosed = source.close();
+    await sourceClosed;
+    await rm(marker, { force: true });
 
     const listed = (await laptopCopy())!;
     const copy = { deviceId: listed.deviceId, sourceId: listed.sourceId };
@@ -150,7 +156,7 @@ test("a new device restores another device's folder copy while that device is of
     controller.abort();
     await Promise.all(owners.map((owner) => owner.done));
     peer.close();
-    await source.close();
+    await (sourceClosed ?? source.close());
     await destination.close();
     await rm(root, { recursive: true, force: true });
   }
