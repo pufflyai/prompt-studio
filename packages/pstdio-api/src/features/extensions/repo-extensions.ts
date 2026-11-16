@@ -145,9 +145,11 @@ export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForP
     }
 
     presentSourcePaths.add(sourcePath);
-    const synced = await input.extensionService.syncInstalledSourceForProject(
-      sourceInputFor(loaded, { name, projectId: input.projectId, sourceHash: await hash(sourcePath), sourcePath }),
-    );
+    const sourceHash = await hash(sourcePath);
+    const source = sourceInputFor(loaded, { name, projectId: input.projectId, sourceHash, sourcePath });
+    if (existing?.instance.enabled === false && existing.installedSource.source_hash === sourceHash)
+      source.manifest = existing.installedSource.manifest_json;
+    const synced = await input.extensionService.syncInstalledSourceForProject(source);
     if (!synced) continue;
     if (existing) {
       enabled.push(...(existing.instance.enabled ? [name] : []));
