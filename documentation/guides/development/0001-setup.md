@@ -118,17 +118,27 @@ For an automated check using a disposable packaged runtime and temporary home, r
 
 ### Try a large project
 
-Start a named stack whose demo project already holds 3,000 Planner tickets and 5,000 committed source files:
+Start a named stack and seed it with several large, connected projects:
 
 ```bash
 bun run dev:isolated -- --name my-large --large
 ```
 
-The stack starts as usual, then the tickets are created through Planner's commands and the files are written into the project folder and committed. On a laptop, seeding takes several minutes; progress is printed as it goes. The last line names the counts and the Planner timeline URL. Set `PSTDIO_PLANNER_STRESS_TICKETS` or `PSTDIO_LARGE_PROJECT_FILES` to change the counts. Repeating the command resumes an interrupted seed without duplicates. To seed a stack that is already running, pass its `connection.json` and name:
+After the stack starts, the seeder goes through product APIs only:
+
+- **Projects:** 3 folder projects, each a Git repository with 5,000 committed files. The folders are under the stack's `__test-tmp__/dev-isolated/<name>/large-projects/` folder, so they survive restarts.
+- **Tickets:** 3,000 Planner tickets per project through `create-ticket`, in epics of ten (a parent and nine children), with dependency chains across five tracks and mixed statuses.
+- **Workspaces:** 100 worktree workspaces per project through `POST /v1/workspaces`, after enabling the Git workspaces extension for the project.
+- **Sessions:** 1,000 sessions per project with short transcripts, imported in one `POST /v1/session-imports` job. Imported sessions belong to each project's main workspace.
+- **Links:** each workspace and every second session is linked to a ticket with Planner's `link` command.
+
+It prints each project's URL and counts, and how many milliseconds a ticket took for each block of 500, so a slowdown as projects grow is visible. Seeding takes tens of minutes. Rerunning resumes without duplicates. Change the counts with `PSTDIO_LARGE_PROJECTS`, `PSTDIO_LARGE_TICKETS`, `PSTDIO_LARGE_FILES`, `PSTDIO_LARGE_WORKSPACES` and `PSTDIO_LARGE_SESSIONS`. To seed a stack that is already running, pass its `connection.json`:
 
 ```bash
-bun scripts/dev/seed-large-project.ts __test-tmp__/dev-isolated/my-large/connection.json my-large
+bun scripts/dev/seed-large-project.ts __test-tmp__/dev-isolated/my-large/connection.json
 ```
+
+The platform does not allow links between projects, so each project's links stay within it.
 
 ### Sign agents in inside the stack
 

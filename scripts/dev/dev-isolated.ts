@@ -40,7 +40,7 @@ const usage = `Usage:
   bun run dev:isolated -- --down                # tear the stack down (incl. volumes)
   bun run dev:isolated -- --logs                # follow logs
   bun run dev:isolated -- --desktop             # unified runtime for Electron development
-  bun run dev:isolated -- --large               # also seed 3,000 tickets and 5,000 committed files
+  bun run dev:isolated -- --large               # also seed large connected projects
 
 Multiple instances: each --name produces an independent stack with its own ports,
 state volumes, and demo project. Omit --name to get a random suffix.`;
@@ -336,8 +336,10 @@ const main = async () => {
   process.stdout.write(`Logs:      bun run dev:isolated -- --name ${projectName} --logs\n`);
   process.stdout.write(`Stop:      bun run dev:isolated -- --name ${projectName} --down\n`);
   if (hasFlag(args, "--large")) {
-    const large = seedLargeProject(resolve(pstdioHome, "..", "connection.json"), projectName);
-    process.stdout.write(`Large:     ${large.tickets} tickets, ${large.files} files. Timeline: ${large.timelineUrl}\n`);
+    for (const project of await seedLargeProject(resolve(pstdioHome, "..", "connection.json")))
+      process.stdout.write(
+        `Large:     ${project.project}: ${project.tickets} tickets, ${project.workspaces} workspaces, ${project.sessions} sessions, ${project.links} links ${project.url}\n`,
+      );
   }
 };
 

@@ -1,13 +1,22 @@
-// Runs inside an isolated stack's container, in the demo project's folder (`bun -e`).
-// Writes only missing files and commits whatever is still uncommitted, so a rerun resumes.
-import { execFileSync } from "node:child_process";
+// Writes a large, committed source tree into a project folder. Only missing files are written and
+// only uncommitted changes are committed, so a rerun resumes.
+import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 
-const count = Number(process.env.LARGE_PROJECT_FILES);
-if (!Number.isInteger(count) || count < 1) throw new Error("LARGE_PROJECT_FILES must be a positive whole number");
-const root = "large-project";
+const ROOT = "large-project";
 
-const source = (index: number) => {
+const git = (folder: string, ...args: string[]) => {
+  const result = spawnSync(
+    "git",
+    ["-c", "user.name=Prompt Studio", "-c", "user.email=dev@prompt.studio", "-c", "init.defaultBranch=main", ...args],
+    { cwd: folder, encoding: "utf8" },
+  );
+  if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed in ${folder}: ${result.stderr}`);
+  return result.stdout;
+};
+
+const source = (index: number, count: number) => {
   const name = `Module${index}`;
   const lines = [
     `// Generated for large-project checks. File ${index + 1} of ${count}.`,
@@ -34,26 +43,28 @@ const source = (index: number) => {
 const note = (index: number) =>
   `# Notes ${index + 1}\n\n${"This generated note gives search, previews and diffs realistic text to work through. ".repeat(12)}\n`;
 
-for (let index = 0; index < count; index++) {
-  const directory = `${root}/area-${String(index % 50).padStart(2, "0")}/module-${String(Math.floor(index / 50) % 20).padStart(2, "0")}`;
-  const isNote = index % 10 === 0;
-  const path = `${directory}/${isNote ? "notes" : "file"}-${String(index).padStart(5, "0")}.${isNote ? "md" : "ts"}`;
-  if (existsSync(path)) continue;
-  mkdirSync(directory, { recursive: true });
-  writeFileSync(path, isNote ? note(index) : source(index));
-}
-
-if (execFileSync("git", ["status", "--porcelain", "--", root], { encoding: "utf8" }).trim()) {
-  execFileSync("git", ["add", "--", root]);
-  execFileSync("git", [
-    "-c",
-    "user.name=Prompt Studio",
-    "-c",
-    "user.email=dev@prompt.studio",
-    "commit",
-    "--quiet",
-    "-m",
-    `Add ${count} large-project files`,
-  ]);
-}
-console.log(JSON.stringify({ files: count }));
+/** Makes `folder` a Git repository holding `count` committed files under large-project/. */
+export const writeLargeProjectFiles = (folder: string, count: number) => {
+  mkdirSync(folder, { recursive: true });
+  if (!existsSync(join(folder, ".git"))) git(folder, "init", "--quiet");
+  for (let index = 0; index < count; index++) {
+    const directory = join(
+      folder,
+      ROOT,
+      `area-${String(index % 50).padStart(2, "0")}`,
+      `module-${String(Math.floor(index / 50) % 20).padStart(2, "0")}`,
+    );
+    const isNote = index % 10 === 0;
+    const path = join(
+      directory,
+      `${isNote ? "notes" : "file"}-${String(index).padStart(5, "0")}.${isNote ? "md" : "ts"}`,
+    );
+    if (existsSync(path)) continue;
+    mkdirSync(directory, { recursive: true });
+    writeFileSync(path, isNote ? note(index) : source(index, count));
+  }
+  if (git(folder, "status", "--porcelain", "--", ROOT).trim()) {
+    git(folder, "add", "--", ROOT);
+    git(folder, "commit", "--quiet", "-m", `Add ${count} large-project files`);
+  }
+};
