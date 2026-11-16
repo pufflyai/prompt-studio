@@ -75,17 +75,16 @@ const canonicalNumberIndex = (
         value: number.value,
       })),
     )) {
-      // Every other current holder of a requested number is itself a claimant, so comparing claimants
-      // with each other finds the losers without scanning the prefix once per requested number.
-      const rows = await tx.execute(sql`WITH claims AS MATERIALIZED (
-          SELECT i.resource_id, i.extension_id, i.kind, i.prefix, i.value FROM storage_ordered_resource_numbers i
+      // Every other current holder of a requested number is itself a claimant, so the losers are the
+      // claimants after the first one per number, found in one pass instead of one prefix scan per number.
+      const rows = await tx.execute(sql`SELECT resource_id FROM (
+          SELECT i.resource_id, min(i.resource_id COLLATE "C")
+            OVER (PARTITION BY i.extension_id, i.kind, i.prefix, i.value) AS first
+          FROM storage_ordered_resource_numbers i
           INNER JOIN (SELECT DISTINCT extension_id, kind, prefix, value FROM jsonb_to_recordset(${batch}::jsonb)
             AS k(extension_id text, kind text, prefix text, value bigint)) k USING(extension_id, kind, prefix, value)
           WHERE i.workbench_id = ${owner.workbenchId} AND i.current = true
-        ) SELECT claim.resource_id FROM claims claim
-        WHERE EXISTS (SELECT 1 FROM claims other WHERE other.extension_id = claim.extension_id
-          AND other.kind = claim.kind AND other.prefix = claim.prefix AND other.value = claim.value
-          AND other.resource_id COLLATE "C" < claim.resource_id COLLATE "C")`);
+        ) claims WHERE resource_id COLLATE "C" > first`);
       for (const row of rows.rows as { resource_id: string }[]) losers.add(row.resource_id);
     }
     return [...losers].sort();
