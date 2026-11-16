@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
@@ -289,4 +289,23 @@ describe("syncRepoExtensionsForProject", () => {
 
     expect(result?.enabled).toEqual(["repo-b"]);
   });
+});
+
+test("does not import a restored tool that stays disabled during later discovery", async () => {
+  const project = await projectService.create({ name: "Restored tool" });
+  const repoPath = join(tempRoot, "restored");
+  const extensionPath = join(repoPath, ".pstdio", "extensions", "restored-tool");
+  const marker = join(tempRoot, "restored-code-ran");
+  writeExtension(extensionPath, "restored-tool");
+  writeFileSync(
+    join(extensionPath, "extension.ts"),
+    `import { writeFileSync } from "node:fs";\nwriteFileSync(${JSON.stringify(marker)}, "ran");\nexport default {};\n`,
+  );
+  const input = { extensionService, installedExtensionSourcesService, projectId: project.id, repoPath };
+  await syncRepoExtensionsForProject({ ...input, enable: () => false });
+  expect(existsSync(marker)).toBe(false);
+  await syncRepoExtensionsForProject(input);
+  expect(existsSync(marker)).toBe(false);
+  const [instance] = await extensionInstancesService.list({ scope_id: project.id, scope_type: "project" });
+  expect(instance?.enabled).toBe(false);
 });

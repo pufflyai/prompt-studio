@@ -135,7 +135,7 @@ export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForP
     const existing = instancesBySourcePath.get(sourcePath);
     const register = keepsOff(input, name, existing);
 
-    const loaded = await readRepoExtension(sourcePath, register, load);
+    const loaded = await readRepoExtension(sourcePath, register || existing?.instance.enabled === false, load);
     if (!loaded) {
       skipped.push(name);
       continue;
