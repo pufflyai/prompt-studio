@@ -40,12 +40,20 @@ export function* revisionSourceFiles(sourcePath: string, targetPath: string, fil
 export const copyRevisionFiles = async (files: Iterable<{ source: string; target: string }>) => {
   const entries = files[Symbol.iterator]();
   const directories = new Set<string>();
+  const copies = new Map<string, string>();
   const results = await Promise.allSettled(
     Array.from({ length: 8 }, async () => {
       while (true) {
         const entry = entries.next();
         if (entry.done) return;
         const { source, target } = entry.value;
+        const key = process.platform === "win32" ? target.toLowerCase() : target;
+        const owner = process.platform === "win32" ? source.toLowerCase() : source;
+        const previous = copies.get(key);
+        if (previous === owner) continue;
+        if (previous !== undefined) throw new Error("Snapshot file has conflicting source owners.");
+        // Ancestor and nested package roots can enumerate the same frozen file.
+        copies.set(key, owner);
         const directory = dirname(target);
         if (!directories.has(directory)) {
           mkdirSync(directory, { recursive: true });
