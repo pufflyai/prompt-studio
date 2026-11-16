@@ -33,9 +33,10 @@ export const createStackApi = (connection: StackConnection) => {
         body: JSON.stringify({ params }),
       });
       const body = (await response.json().catch(() => ({}))) as {
-        outcome?: { status: string; value?: unknown; error?: { message?: string } };
+        outcome?: { status: string; value?: unknown; error?: unknown };
       };
-      const message = body.outcome?.error?.message ?? `HTTP ${response.status}`;
+      const error = body.outcome?.error as { message?: string; reason?: string } | undefined;
+      const message = error?.message ?? error?.reason ?? (error ? JSON.stringify(error) : `HTTP ${response.status}`);
       if (response.ok && body.outcome?.status === "success") return body.outcome.value as T;
       if ((response.status === 404 || BUSY.test(message)) && Date.now() < deadline) {
         await Bun.sleep(response.status === 404 ? 2_000 : 100);

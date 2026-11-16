@@ -33,7 +33,7 @@ interface Project {
   folder: string;
 }
 
-const ensureProject = async (api: StackApi, repoRoot: string, name: string, folder: string, files: number) => {
+const ensureProject = async (api: StackApi, name: string, folder: string, files: number) => {
   writeLargeProjectFiles(folder, files);
   const existing = (await api.get<{ id: string; name: string }[]>("/projects")).find(
     (project) => project.name === name,
@@ -44,7 +44,12 @@ const ensureProject = async (api: StackApi, repoRoot: string, name: string, fold
       name,
       initial_workspace: { provider_id: "pstdio.root", params: { path: folder } },
     }));
-  // Worktree workspaces come from the Git workspaces extension, which new projects do not enable by default.
+  return { id: project.id, name, folder } satisfies Project;
+};
+
+// Worktree workspaces come from the Git workspaces extension, which new projects do not enable by default.
+// Enabling re-provisions every workspace, so it runs only while workspaces are still missing.
+const enableWorktrees = async (api: StackApi, repoRoot: string, project: Project) => {
   const sourcePath = join(repoRoot, "extensions", "git-workspaces");
   const manifest = JSON.parse(readFileSync(join(sourcePath, "package.json"), "utf8"));
   await api.post(`/projects/${project.id}/extensions/installed/git-workspaces/enable`, {
@@ -58,7 +63,6 @@ const ensureProject = async (api: StackApi, repoRoot: string, name: string, fold
     sourceRef: null,
     version: manifest.version,
   });
-  return { id: project.id, name, folder } satisfies Project;
 };
 
 // Tickets form epics of ten (parent and children) and five interleaved dependency tracks.
@@ -75,6 +79,7 @@ const seedTickets = async (api: StackApi, project: Project, label: string, total
   const buckets: number[] = [];
   let bucketStart = performance.now();
   for (let index = from; index < total; index++) {
+    if (ids[index]) continue;
     const isEpic = index % 10 === 0;
     const title = `${prefix}${index + 1}: ${TOPICS[index % TOPICS.length]} the ${AREAS[index % AREAS.length]}`;
     const created = await api.command<{ id: string }>(project.id, `${PLANNER}.create-ticket`, {
@@ -93,10 +98,14 @@ const seedTickets = async (api: StackApi, project: Project, label: string, total
   return { ids, msPerTicketBy500: buckets };
 };
 
-const seedWorkspaces = async (api: StackApi, project: Project, total: number) => {
+const seedWorkspaces = async (api: StackApi, repoRoot: string, project: Project, total: number) => {
   type Workspace = { id: string; is_default: boolean; provider_state: string };
-  const current = (await api.get<Workspace[]>(`/workspaces?project_id=${project.id}`)).filter((row) => !row.is_default);
-  const missing = Math.max(0, total - current.length);
+  const ready = async () =>
+    (await api.get<Workspace[]>(`/workspaces?project_id=${project.id}`)).filter(
+      (row) => !row.is_default && row.provider_state === "ready",
+    );
+  const missing = Math.max(0, total - (await ready()).length);
+  if (missing > 0) await enableWorktrees(api, repoRoot, project);
   await inParallel(Array.from({ length: missing }), 2, async () => {
     for (let attempt = 1; ; attempt++) {
       try {
@@ -112,9 +121,7 @@ const seedWorkspaces = async (api: StackApi, project: Project, total: number) =>
       }
     }
   });
-  return (await api.get<Workspace[]>(`/workspaces?project_id=${project.id}`))
-    .filter((row) => !row.is_default)
-    .map((row) => row.id);
+  return (await ready()).map((row) => row.id);
 };
 
 const importSessions = async (api: StackApi, folder: string, projects: Project[], perProject: number) => {
@@ -138,11 +145,17 @@ const importSessions = async (api: StackApi, folder: string, projects: Project[]
       await Bun.sleep(3_000);
     }
   }
+  const deadline = Date.now() + 60 * 60_000;
   while (job.status === "running" || job.status === "paused") {
+    if (Date.now() > deadline) throw new Error(`Session import did not finish within an hour: ${JSON.stringify(job)}`);
+    // A runtime restart pauses the job; resuming continues where it stopped.
+    if (job.status === "paused") await api.post(`/session-imports/${job.id}/resume`, {});
     await Bun.sleep(3_000);
     job = await api.get<Job>(`/session-imports/${job.id}`);
   }
   if (job.status !== "completed") throw new Error(`Session import ${job.status}: ${JSON.stringify(job)}`);
+  if (job.failed > 0)
+    log(`session import finished with ${job.failed} failed sessions; see /v1/session-imports/${job.id}/errors`);
   return new Map(
     projects.map((project, index) => [
       project.id,
@@ -161,14 +174,19 @@ const linkResources = async (
   const links = [
     ...workspaces.map((workspace, index) => ({ id: tickets[(index * 7) % tickets.length]!, workspace })),
     ...sessions
-      .filter((_, index) => index % 2 === 0)
+      .filter((_, index) => index % 2 === 1)
       .map((session, index) => ({ id: tickets[(index * 13) % tickets.length]!, session })),
   ];
   let failed = 0;
+  let firstError: string | undefined;
   await inParallel(links, 4, async (link) => {
-    await api.command(project.id, `${PLANNER}.link`, link).catch(() => failed++);
+    await api.command(project.id, `${PLANNER}.link`, link).catch((error) => {
+      failed++;
+      firstError ??= String(error);
+    });
   });
-  return { links: links.length - failed, failed };
+  if (firstError) log(`${project.name}: ${failed} links failed, first: ${firstError}`);
+  return { links: links.length - failed, failedLinks: failed };
 };
 
 export const seedLargeProject = async (connectionPath: string) => {
@@ -183,20 +201,14 @@ export const seedLargeProject = async (connectionPath: string) => {
   const projects: Project[] = [];
   for (let index = 1; index <= size.projects; index++)
     projects.push(
-      await ensureProject(
-        api,
-        repoRoot,
-        `Large ${index}`,
-        join(stackDirectory, "large-projects", `large-${index}`),
-        size.files,
-      ),
+      await ensureProject(api, `Large ${index}`, join(stackDirectory, "large-projects", `large-${index}`), size.files),
     );
 
   log(`seeding ${size.tickets} tickets and ${size.workspaces} workspaces per project`);
   const seeded = await Promise.all(
     projects.map(async (project, index) => {
       const tickets = await seedTickets(api, project, `L${index + 1}`, size.tickets);
-      const workspaces = await seedWorkspaces(api, project, size.workspaces);
+      const workspaces = await seedWorkspaces(api, repoRoot, project, size.workspaces);
       return { project, tickets, workspaces };
     }),
   );
