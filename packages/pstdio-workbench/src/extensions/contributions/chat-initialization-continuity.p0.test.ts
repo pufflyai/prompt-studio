@@ -3,6 +3,7 @@ import { createChatFiniteRead } from "./chat-finite-read";
 
 test("chat initialization awaits the latest observation started by a snapshot callback", async () => {
   const requests: ReturnType<typeof Promise.withResolvers<unknown>>[] = [];
+  const replacementStarted = Promise.withResolvers<void>();
   let loaded = false;
   let issued = 0;
   let replacement: Promise<void> | undefined;
@@ -11,6 +12,7 @@ test("chat initialization awaits the latest observation started by a snapshot ca
     read: () => {
       const pending = Promise.withResolvers<unknown>();
       requests.push(pending);
+      if (requests.length === 2) replacementStarted.resolve();
       return pending.promise;
     },
     issue: () => ++issued,
@@ -30,7 +32,7 @@ test("chat initialization awaits the latest observation started by a snapshot ca
   const initial = finite.observe();
   try {
     requests[0].resolve({ messages: [] });
-    await new Promise<void>((resolve) => setImmediate(resolve));
+    await replacementStarted.promise;
     expect(requests).toHaveLength(2);
     expect(replacementSettled).toBe(false);
     requests[1].resolve({ messages: [] });

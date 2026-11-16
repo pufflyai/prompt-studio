@@ -18,7 +18,9 @@ test.each([
   { name: "repeated metadata", sourceHash: "A", metadataOnly: true, priority: "background" },
   { name: "changed metadata", sourceHash: "B", metadataOnly: true, priority: "requested" },
   { name: "unknown metadata", sourceHash: undefined, metadataOnly: true, priority: "requested" },
-  { name: "ordinary source event", sourceHash: "A", metadataOnly: false, priority: "requested" },
+  { name: "unchanged source event", sourceHash: "A", metadataOnly: false, priority: "background" },
+  { name: "changed source event", sourceHash: "B", metadataOnly: false, priority: "requested" },
+  { name: "unknown source event", sourceHash: undefined, metadataOnly: false, priority: "requested" },
 ])("fresh source reconciliation retains appropriate admission for $name", async (scenario) => {
   const root = await realpath(await mkdtemp(join(tmpdir(), "source-metadata-admission-")));
   const previousHome = process.env.PSTDIO_HOME;

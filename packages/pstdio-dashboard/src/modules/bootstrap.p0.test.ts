@@ -168,6 +168,7 @@ test.each([
   "failure",
 ])("an extension URL waits for the latest catalog after a superseded initial %s", async (outcome) => {
   const loads: ReturnType<typeof Promise.withResolvers<typeof metadata>>[] = [];
+  const latestStarted = Promise.withResolvers<void>();
   const browser = browserAt("/projects/project-1/extensions/pstdio.extension-lab/lab");
   const workbench = createWorkbench({ startPage: dashboardHomePage, pageLocationBrowser: browser });
   workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
@@ -179,6 +180,7 @@ test.each([
       loadMetadata: () => {
         const load = Promise.withResolvers<typeof metadata>();
         loads.push(load);
+        if (loads.length === 2) latestStarted.resolve();
         return load.promise;
       },
     }),
@@ -191,8 +193,7 @@ test.each([
     await flushMicrotasks();
     if (outcome === "success") loads[0]!.resolve(metadata);
     else loads[0]!.reject(new Error("Catalog unavailable"));
-    await flushMicrotasks();
-    await flushMicrotasks();
+    await latestStarted.promise;
     expect(loads).toHaveLength(2);
     expect(getDashboardExtensionsReadyProjectId(workbench)).toBeUndefined();
     expect(workbench.pages.store.getState().activePageId).toBeUndefined();

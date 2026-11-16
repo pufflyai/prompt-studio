@@ -18,9 +18,13 @@ interface Connection {
   bounded: boolean;
   fixture: { movingId: string; archiveIds: string[] };
 }
-const [connectionPath, outputPath, expectedPlannerSource] = process.argv.slice(2);
+const [connectionPath, outputPath, expectedPlannerSource, properties] = process.argv.slice(2);
 if (!connectionPath || !outputPath || !expectedPlannerSource)
   throw new Error("Pass an isolated connection file, evidence folder and expected Planner source folder");
+const displayProperties = properties?.split(",") ?? ["id", "priority"];
+assert(displayProperties.includes("priority"), "The property edit needs a visible priority");
+assert(displayProperties.every((field) => ["id", "priority", "workspace", "reviewRequests"].includes(field)));
+const variant = properties ? ` (${displayProperties.join(", ")})` : "";
 const connection: Connection = JSON.parse(await readFile(connectionPath, "utf8"));
 assert.equal(new URL(connection.dashboardUrl).hostname, "127.0.0.1");
 assert(["main", "candidate"].includes(connection.side));
@@ -62,14 +66,15 @@ await execute("set-ticket-attribute", { rowId: moving.id, attributeId: "priority
 const boardPath = `/projects/${connection.projectId}/boards/${plannerId}.view.tickets`;
 const views = await request(`${boardPath}/views`);
 const definition = {
-  title: "Linked comparison 25 of 5,000",
-  settings: { viewMode: "board", rowGrouping: "none", columnGrouping: "status", displayProperties: ["id", "priority"] },
+  title: `Linked comparison 25 of 5,000${variant}`,
+  settings: { viewMode: "board", rowGrouping: "none", columnGrouping: "status", displayProperties },
   filter: { conjunction: "and", rules: [{ attributeId: "title", condition: "contains", value: "Demo focus" }] },
   sorts: [],
 };
 const existing = views.views.find((view: { title: string }) => view.title === definition.title);
+if (existing) await request(`/projects/${connection.projectId}/board-views/${existing.id}`, definition, "PATCH");
 const view = existing ?? (await request(`${boardPath}/views`, definition));
-const archiveTitle = "Archive comparison 205 of 5,000";
+const archiveTitle = `Archive comparison 205 of 5,000${variant}`;
 const archiveDefinition = {
   ...definition,
   title: archiveTitle,
@@ -118,7 +123,7 @@ try {
           : {}),
       });
   });
-  const pages: { command: string; rows: number; bytes: number; total?: number }[] = [];
+  const pages: { command: string; rows: number; bytes: number; total?: number; fields?: string[] }[] = [];
   page.on("response", async (response) => {
     if (!response.url().includes("/extensions/commands/") || !response.url().endsWith("/execute")) return;
     const body = await response.body().catch(() => Buffer.alloc(0));
@@ -130,6 +135,7 @@ try {
           rows: value.rows.length,
           bytes: body.length,
           total: value.page?.total,
+          fields: response.request().postDataJSON()?.params?.page?.fields,
         });
     } catch {
       /* Failed responses remain visible in the network evidence. */
@@ -236,7 +242,14 @@ try {
   const evidence = {
     side: connection.side,
     source,
-    workload: { tickets: 5000, foobars: 5000, linkedFocusTickets: 25, reviewRequests: 25, historyEdits: 50 },
+    workload: {
+      tickets: 5000,
+      foobars: 5000,
+      linkedFocusTickets: 25,
+      reviewRequests: 25,
+      historyEdits: 50,
+      displayProperties,
+    },
     chromium: browser.version(),
     boardMs,
     openingMs,
