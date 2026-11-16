@@ -46,7 +46,7 @@
 3. Put each test next to the file it tests.
 4. Avoid mocks. Test real behavior when possible.
 5. Test behavior users can use and rules the product still supports.
-6. When removing a feature, delete or update its tests. Do not add tests that only prove a removed feature, command, or setting stays absent.
+6. When removing a feature, delete or update its tests and their workflow, package-script and runner callers. Preview affected selectors through existing test discovery so an empty selection cannot break release validation. Do not add tests that only prove a removed feature, command, or setting stays absent.
 7. Write failure-case tests only for supported rules such as validation, permissions, and error handling.
 8. Do not write exhaustive UI permutations or cosmetic-only assertions. Use Canvas for exploration. Automate browser checks only for a critical behavior and name the risk in the test.
 9. Do not write tests for changes that only affect configuration or documentation.
