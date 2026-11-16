@@ -76,7 +76,7 @@ const createProject = async (host: Host, name: string) => {
 };
 
 const installPlanner = (host: Host, cwd: string, source: string) =>
-  runPackagedAsync(["extensions", "add", source, "--name", "pstdio-planner"], cwd, {
+  runPackagedAsync(["extensions", "add", source, "--name", "planner"], cwd, {
     HOME: host.home,
     PSTDIO_HOME: host.home,
   });
@@ -353,7 +353,7 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
 
     // A failed candidate reports its build error while the accepted view remains usable.
     // Reload, not the file watcher, decides when the repaired version is adopted.
-    const entry = join(home, "extensions", "pstdio-planner", "src", "timeline", "view", "entry.tsx");
+    const entry = join(home, "extensions", "planner", "src", "timeline", "view", "entry.tsx");
     const original = readFileSync(entry, "utf8");
     const acceptedView = await plannerWebview(host, valid.id, "timeline");
     const acceptedModule = await (await fetch(`${host.baseUrl}${acceptedView!.moduleUrl}`)).text();
