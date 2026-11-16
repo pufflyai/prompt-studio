@@ -64,7 +64,7 @@ test(
       phase("removed");
     }
   },
-  diskLimit,
+  process.platform === "linux" ? 10_000 : diskLimit,
 );
 
 test(
