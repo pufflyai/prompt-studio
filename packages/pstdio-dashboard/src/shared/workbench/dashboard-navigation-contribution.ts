@@ -24,6 +24,7 @@ interface DashboardNavigationContribution {
   id: string;
   modes: readonly (typeof dashboardModes)[number][];
   slot?: NavigationTreeSlot;
+  order?: number;
   defaultExpandedSectionIds?: string[];
   /** Host navigation reads project data unless it declares a resource dependency. */
   resolveResource?(input: { modeId: string; resource?: ResourceRef }): ResourceRef | undefined;
@@ -49,6 +50,7 @@ export const registerDashboardNavigationContribution = (
       sourceExtensionId: "pstdio",
       declarationIndex: declarationIndex < 0 ? declarations[slot].length : declarationIndex,
       slot,
+      order: contribution.order,
       defaultExpandedSectionIds: contribution.defaultExpandedSectionIds,
       resolveResource: (resource) => resolveResource?.({ modeId, resource }),
       getStructure: contribution.getStructure,

@@ -67,5 +67,7 @@
   "commands.requestReview.title": "レビューを依頼",
   "commands.requestReview.description": "レビュー依頼を作成し、チケットを要対応としてマークします。",
   "commands.cleanupBoard.title": "ボードを整理",
-  "commands.cleanupBoard.model": "モデル"
+  "commands.cleanupBoard.model": "モデル",
+  "activity.context": "アクティビティのコンテキストを読む",
+  "activity.migrate": "過去の成果をチケットのアクティビティに移動"
 }

@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
+import { migratePlannerStorage } from "./migrate-storage";
 import { deleteTicketReviewRequests } from "./review-request-storage";
 
 test("ticket deletion removes only its requests in bounded pages, including malformed requests", async () => {
@@ -13,6 +14,8 @@ test("ticket deletion removes only its requests in bounded pages, including malf
       "planner-review-request-outcomes": Object.fromEntries(entries.map(([id]) => [id, { requestId: id }])),
     },
   });
+  // The project's one-time storage upgrade may list its small legacy collections; deletion must not.
+  await migratePlannerStorage({ storage });
   const collection = storage.collection.bind(storage);
   storage.collection = <T>(name: string) => ({
     ...collection<T>(name),
