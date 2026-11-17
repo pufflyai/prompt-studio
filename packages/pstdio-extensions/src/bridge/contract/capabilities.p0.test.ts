@@ -9,6 +9,24 @@ import {
   WEBVIEW_SCOPED_DECLARABLE_CAPABILITIES,
 } from "./capabilities";
 
+test("native resource action registration requires its explicit capability", async () => {
+  let calls = 0;
+  const capabilities = {
+    "resources.actions.register": async () => {
+      calls++;
+    },
+  };
+  const request = {
+    method: "resources.actions.register",
+    params: { operation: "unregister", registrationId: crypto.randomUUID() },
+  };
+  await expect(
+    createHostCapabilityGate({ capabilities, declaredCapabilities: ["resources.actions"] }).call(request),
+  ).rejects.toThrow("did not declare");
+  await createHostCapabilityGate({ capabilities, declaredCapabilities: ["resources.actions.register"] }).call(request);
+  expect(calls).toBe(1);
+});
+
 // The contracts package repeats these lists as the public type source. A mismatch
 // type-checks fine and only fails at runtime, so assert they stay identical.
 describe("capability list sync with pstdio-api-contracts", () => {

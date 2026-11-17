@@ -7,6 +7,7 @@ import { createWorkbenchEditingSessionAdapter } from "./webview-editing-adapter"
 import { createWebviewPreferenceQueries } from "./webview-preference-queries";
 import { createWebviewPreferencesAdapter, type WebviewOwnedPreferences } from "./webview-preferences-capability";
 import { createWebviewResourceActions } from "./webview-resource-actions";
+import { createWebviewResourceActionRegistrations } from "./webview-resource-action-registrations";
 import { createWorkbenchTextEditingAdapter, type WorkbenchTextEditingInput } from "./webview-text-editing";
 
 interface CreateWorkbenchWebviewHostAdaptersInput extends WorkbenchTextEditingInput {
@@ -72,6 +73,7 @@ export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebview
       : undefined;
   return {
     preferenceQueries,
+    registerResourceAction: createWebviewResourceActionRegistrations(input, requireCurrentViewer),
     resourceActions: async (request) => {
       requireCurrentViewer();
       return resourceActions(request);

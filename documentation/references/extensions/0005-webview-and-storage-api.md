@@ -167,6 +167,39 @@ On `main`, extension API 0.2.1 adds two declared webview capabilities. Use `harn
 
 Use `resources.actions` with `{ operation: "list", resource }` to read the same current menu actions as a native resource card. Pass the resource's own `extensionId` for extension resource kinds; the host does not fill it in with the calling extension. Each action has a `label`, a workbench `icon` name or an `iconSrc` image URL, `isDisabled`, and a `description` that explains a disabled action. Render those actions with `ResourceContextMenu`. Invoke one with `{ operation: "execute", resource, key }`. The host resolves the menu again before execution, applies its availability rules, and opens the normal parameter form when an action needs input. The call rejects when the action is no longer available or its command fails, so the webview reports the error. A listed snapshot does not update by itself. After the first list, the host sends `{ type: "changed" }` on the `resources.actions` event scope whenever the actions may have changed. Listen with `host.onEvent("resources.actions", ...)` and list again. Declare each named capability on the view.
 
+### Live reader actions in native resource menus
+
+On `main`, API 0.5.0 adds `registerWebviewResourceAction(host, action, run)`.
+Declare `resources.actions.register` on the view. Pass its current resource,
+label and optional icon. The host adds the action to that reader's breadcrumb
+and tab resource menus, beside persistent resource commands such as Rename and
+Delete. It is scoped to the exact project, placement, extension and resource;
+it is omitted from other readers and unopened-resource menus.
+
+The returned `ready` promise reports registration errors. Await `dispose()` when
+the view unmounts or changes resource. The callback receives an `AbortSignal`;
+check it after awaited work and before downloading or another external effect.
+The native action awaits completion and reports callback failures normally.
+Disconnect removes the action and rejects pending invocations. Invocations are
+never queued for a later frame. Declare `files.download` separately to export.
+
+```ts
+import { createWebviewClient, registerWebviewResourceAction } from "@pstdio/sdk/extensions";
+
+const action = registerWebviewResourceAction(host, {
+  resource,
+  label: "Export report",
+  icon: "download",
+}, async (signal) => {
+  const data = new TextEncoder().encode("Report contents");
+  signal.throwIfAborted();
+  await createWebviewClient(host).files.download({ name: "report.txt", data, mimeType: "text/plain" });
+});
+await action.ready;
+// Dispose when this reader's owner changes or unmounts.
+await action.dispose();
+```
+
 ### Cloud account and sync status
 
 On `main`, extension API 0.2.1 also adds `account.read` and `account.manage`. `client.account` has the same methods as [`ctx.account`](0003-command-and-process-api.md#cloud-account-and-sync-status). Declare `account.read` for `client.account.status`, `loginStatus`, `devices`, and `projectSyncStatus`. Declare `account.manage` for `client.account.login`, `cancelLogin`, `logout`, `renameDevice`, `removeDevice`, `syncProject`, `stopProjectSync`, and `resolveReturnedChanges`. Without a project ID, a call uses the webview's project.

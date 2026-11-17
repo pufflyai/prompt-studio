@@ -24,6 +24,7 @@ export {
   toolResultBytes,
 } from "pstdio-api-contracts/collections";
 export type * from "pstdio-api-contracts/extension-kernel";
+export { registerWebviewResourceAction } from "./webview-resource-action";
 export type {
   CommitPayload,
   ConflictPayload,

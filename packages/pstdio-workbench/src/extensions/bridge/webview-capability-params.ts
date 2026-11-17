@@ -106,6 +106,21 @@ const schemas = {
     z.strictObject({ operation: z.enum(["pause-extension", "resume-extension"]), installedExtensionId: identifier }),
   ]),
   "harnesses.read": z.object({ harnessId: identifier.optional(), model: z.string().optional() }),
+  "resources.actions.register": z.discriminatedUnion("operation", [
+    z.object({
+      operation: z.literal("register"),
+      registrationId: z.string().uuid(),
+      resource: extensionResourceRefSchema,
+      label: z.string().trim().min(1).max(200),
+      icon: z.string().max(100).optional(),
+    }),
+    z.object({ operation: z.literal("unregister"), registrationId: z.string().uuid() }),
+    z.object({
+      operation: z.literal("complete"),
+      requestId: z.string().uuid(),
+      error: z.string().max(2000).optional(),
+    }),
+  ]),
   "resources.actions": z.discriminatedUnion("operation", [
     z.object({ operation: z.literal("list"), resource: extensionResourceRefSchema }),
     z.object({ operation: z.literal("execute"), resource: extensionResourceRefSchema, key: identifier }),

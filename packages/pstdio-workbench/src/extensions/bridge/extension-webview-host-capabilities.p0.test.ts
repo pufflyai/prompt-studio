@@ -28,6 +28,7 @@ const requests = {
   "terminal.session": { operation: "kill", sessionId: "terminal" },
   "files.upload": { name: "note.txt", data: new Uint8Array([1]) },
   "files.download": { name: "page.html", data: new Uint8Array([1]) },
+  "resources.actions.register": { operation: "unregister", registrationId: "49cd7198-aa2c-41c1-8080-453bff23d6e0" },
   "files.list": {},
   "files.delete": { id: "file" },
   "artifacts.read": { op: "readText", mount: "notes", path: "note.md" },

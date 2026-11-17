@@ -49,6 +49,7 @@ export const WEBVIEW_DECLARABLE_CAPABILITIES = [
   "editing.text",
   "harnesses.read",
   "resources.actions",
+  "resources.actions.register",
   "navigation.open",
   "page.params.update",
   "placement.close",
@@ -223,6 +224,10 @@ export interface WebviewHostCapabilityParams {
   "resources.actions":
     | { operation: "list"; resource: ResourceRef }
     | { operation: "execute"; resource: ResourceRef; key: string };
+  "resources.actions.register":
+    | { operation: "register"; registrationId: string; resource: ResourceRef; label: string; icon?: string }
+    | { operation: "unregister"; registrationId: string }
+    | { operation: "complete"; requestId: string; error?: string };
   "commands.execute": WebviewCommandsExecuteParams;
   "commands.query": WebviewCommandQueryRequest;
   "commands.stream": WebviewCommandsStreamParams;
@@ -271,6 +276,7 @@ export interface WebviewHostCapabilityResults {
     selection?: ExtensionHarnessInput;
   };
   "resources.actions": WebviewResourceAction[];
+  "resources.actions.register": void;
   "commands.execute": { outcome: CommandOutcome };
   "commands.query": WebviewCommandQuerySnapshot | undefined;
   "commands.stream": { operation: "start" | "cancel" | "ack"; accepted: true };

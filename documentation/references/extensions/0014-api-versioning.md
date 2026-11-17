@@ -117,6 +117,11 @@ the user's browser download UI, without adding sandbox permissions or file read
 access. Publish the host and SDK before independent extensions adopt it. See
 [webview files](0005-webview-and-storage-api.md#webview-files).
 
+The optional `resources.actions.register` capability and `registerWebviewResourceAction`
+also share API 0.5.0. They attach live reader actions to native resource menus,
+bound to the calling extension, project, placement and resource. Closing or
+replacing that reader removes its actions and cancels pending work.
+
 `migration.moveCollection` and the `keyPrefix` option of storage index declarations also share API 0.5.0. Older hosts do not provide either; see [move a collection to records](0018-data-migrations.md#move-a-collection-to-records).
 
 The optional `HarnessStartInput.approvals` channel also shares API 0.5.0. A supporting host passes the session's approval channel on a session's first turn as well as on resume. Hosts up to 0.47 pass it only on resume, so providers must treat it as optional on start.

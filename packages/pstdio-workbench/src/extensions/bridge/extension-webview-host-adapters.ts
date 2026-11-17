@@ -94,6 +94,7 @@ export interface ExtensionWebviewHostAdapters {
   resourceActions?: (
     input: WebviewHostCapabilityParams["resources.actions"],
   ) => MaybePromise<WebviewHostCapabilityResults["resources.actions"]>;
+  registerResourceAction?: (input: WebviewHostCapabilityParams["resources.actions.register"]) => MaybePromise<void>;
   executeCommand?(
     input: WebviewCommandsExecuteParams,
     signal?: AbortSignal,
