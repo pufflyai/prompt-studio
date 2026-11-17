@@ -5,6 +5,7 @@ import { retiredWorkspaceIds } from "../data/attempt-retirement";
 import { attemptSelectionsCollection } from "../data/attempt-storage";
 import type { AutoBuildMode } from "../data/auto-build-mode";
 import type { DependencyDeliveryReads } from "../data/dependency-deliveries";
+import type { GithubReads } from "../data/pull-request-resources";
 import { findStoredTicket } from "../data/resolve";
 import { readTicketDependencyClosure } from "../data/ticket-dependency-reads";
 import { readTicketInputStates } from "../data/ticket-input-state";
@@ -55,6 +56,7 @@ export interface NextPageState {
   progressAt: number;
   dependencies: string;
   more: boolean;
+  pullRequestReads: GithubReads;
 }
 export const visitNextTicketPage = async (
   ctx: CommandContext,
@@ -95,7 +97,6 @@ export const visitNextTicketPage = async (
     state.progressAt = Math.max(state.progressAt, Date.parse(ticket.updatedAt) || 0);
     const evidence = await readNextTicketEvidence(ctx, ticket, mode);
     const { attempts } = evidence;
-    state.dependencies = await nextDependencySnapshot(ctx, state.dependencies, evidence);
     for (const attempt of attempts) state.progressAt = Math.max(state.progressAt, Date.parse(attempt.updatedAt) || 0);
     state.base = await appendNextTicketOutcome(ctx, {
       row,
@@ -110,7 +111,15 @@ export const visitNextTicketPage = async (
       deliveryReads,
       base: state.base,
       requestedBase: requestedBase,
+      pullRequestReads: state.pullRequestReads,
     });
+    // Readiness can convert legacy delivery links into canonical relationships.
+    // Seal the dependency snapshot after that preparation, using current records.
+    const currentTicket = await findStoredTicket(ctx, row.id);
+    if (currentTicket) {
+      const currentEvidence = await readNextTicketEvidence(ctx, currentTicket, mode);
+      state.dependencies = await nextDependencySnapshot(ctx, state.dependencies, currentEvidence);
+    }
     // Wake checks may search past waiting pages; keep only a bounded explanation window.
     if (waiting.length > 100) waiting.length = 100;
     if (observations.length > 100) observations.length = 100;

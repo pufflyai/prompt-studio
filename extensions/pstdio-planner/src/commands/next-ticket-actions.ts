@@ -4,6 +4,7 @@ import type { AttemptRecord, TicketAttemptSelection } from "../data/attempt-type
 import type { AutoBuildMode } from "../data/auto-build-mode";
 import type { DependencyDeliveryReads } from "../data/dependency-deliveries";
 import { resolveImplementationBase } from "../data/implementation-targets";
+import type { GithubReads } from "../data/pull-request-resources";
 import type { ticketQuerySummary } from "../data/ticket-query-summary";
 import type { Ticket } from "../data/types";
 import { loadAttemptReadiness } from "./attempt-readiness";
@@ -107,6 +108,7 @@ interface NextOutcomeInput {
   deliveryReads: DependencyDeliveryReads;
   base?: string;
   requestedBase?: string;
+  pullRequestReads: GithubReads;
 }
 
 export const appendNextTicketOutcome = async (
@@ -124,6 +126,7 @@ export const appendNextTicketOutcome = async (
     deliveryReads,
     base,
     requestedBase,
+    pullRequestReads,
   }: NextOutcomeInput,
 ) => {
   const { attempts, requests, assignment, resumption, events, retired, selections, pending } = evidence;
@@ -159,6 +162,7 @@ export const appendNextTicketOutcome = async (
       retired,
       selections,
       events,
+      pullRequestReads,
     });
     observations.push(...work.observations);
     appendObservedWork(work, { ...display, ...wait }, capacity, next, waiting);
