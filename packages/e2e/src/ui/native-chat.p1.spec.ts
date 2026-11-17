@@ -1,10 +1,28 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import type { Locator } from "@playwright/test";
+import type { Locator, Page, Request } from "@playwright/test";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
 import { expect, test } from "../scripts/session-test";
+
+const editBesideResolvedLink = async (page: Page, composer: Locator) => {
+  // Editing a draft must not ask the provider to resolve completed transcript links again.
+  const repeatedLinks: string[] = [];
+  const countResolution = (request: Request) => {
+    if (request.url().endsWith(".chat.resolveLink/execute")) repeatedLinks.push(request.url());
+  };
+  page.on("request", countResolution);
+  const savedEdit = page.waitForResponse(
+    (response) =>
+      response.url().endsWith(".chat.saveDraft/execute") &&
+      response.request().postData()?.includes("Typing beside a resolved link") === true,
+  );
+  await composer.fill("Typing beside a resolved link");
+  await savedEdit;
+  page.off("request", countResolution);
+  expect(repeatedLinks).toEqual([]);
+};
 
 // Critical risk: a tool approval must take over the composer as the same question form agents use.
 const allowOperationInQuestionForm = async (main: Locator) => {
@@ -192,6 +210,7 @@ test("independent native chat paints and accepts input before history, then reta
     const providerImage = main.getByRole("img", { name: "Provider image" });
     await expect(providerImage).toBeVisible();
     await expect.poll(() => providerImage.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBe(1);
+    await editBesideResolvedLink(page, composer);
     await main.getByRole("link", { name: "Provider document" }).click();
     await expect(main.getByText("Provider link opened", { exact: true })).toBeVisible();
     await main.getByRole("button", { name: "Edit queued message: Saved queued prompt", exact: true }).click();
@@ -220,7 +239,7 @@ test("independent native chat paints and accepts input before history, then reta
     await main.getByRole("button", { name: "Revise plan decision", exact: true }).click();
     await main.getByRole("button", { name: "Skip", exact: true }).click();
     await expect(main.getByRole("button", { name: "Skip", exact: true })).toHaveCount(0);
-    await expect(composer).toContainText("Unsent native draft");
+    await expect(composer).toContainText("Typing beside a resolved link");
   } finally {
     release();
     await page.unrouteAll({ behavior: "wait" });
