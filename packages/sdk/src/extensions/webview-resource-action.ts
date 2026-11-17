@@ -38,12 +38,24 @@ export const registerWebviewResourceAction = (
       })
       .catch(() => {});
   });
-  const ready = host.call("resources.actions.register", {
-    operation: "register",
-    registrationId,
-    ...action,
-    resource: { ...action.resource },
-  });
+  const stopListening = () => {
+    if (disposed) return;
+    disposed = true;
+    stop();
+    for (const controller of pending.values()) controller.abort();
+    pending.clear();
+  };
+  const ready = host
+    .call("resources.actions.register", {
+      operation: "register",
+      registrationId,
+      ...action,
+      resource: { ...action.resource },
+    })
+    .catch((error) => {
+      stopListening();
+      throw error;
+    });
   return {
     ready,
     /** Refresh up to 1024 choices without interrupting an accepted selection. */
@@ -60,10 +72,7 @@ export const registerWebviewResourceAction = (
     },
     async dispose() {
       if (disposed) return;
-      disposed = true;
-      stop();
-      for (const controller of pending.values()) controller.abort();
-      pending.clear();
+      stopListening();
       try {
         await ready;
       } catch {

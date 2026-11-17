@@ -187,7 +187,10 @@ test("one scoped choice lease exposes checked rows and validates its choice befo
     "disabled",
   );
   await expect(f.w.commands.executeCommand(f.commandId(), { choiceId: "4" }, f.context)).rejects.toThrow("disabled");
+  const idleMenu = f.w.layout.menuStore.getState();
   const result = rows[3]!.run!();
+  expect(f.w.layout.menuStore.getState()).not.toBe(idleMenu);
+  expect(resolveMenuEntries({ ...menu, context: f.context })[3]?.disabled).toBe(true);
   const event = f.messages.at(-1)!.payload as { requestId: string };
   expect(event).toMatchObject({ choiceId: "3", registrationId: f.registrationId });
   // A preference refresh may change the checked row before the accepted callback completes.
@@ -252,4 +255,27 @@ test("live choice updates preserve row identity and leave paging rows as ordinar
   expect(after[1]?.id).toBe(before[0]?.id);
   expect(after[2]?.id).toBe(before[1]?.id);
   expect(after[1]?.group?.label).toBe("Revisions");
+});
+
+test("cancelling a choice when the menu becomes busy prevents guest execution", async () => {
+  const f = await setup();
+  await f.request({ ...f.action, choices: [{ id: "page", label: "Next" }] });
+  const controller = new AbortController();
+  const stop = f.w.layout.menuStore.subscribe(() => controller.abort());
+  try {
+    const result = f.w.commands.executeCommand(
+      f.commandId(),
+      { choiceId: "page" },
+      {
+        ...f.context,
+        signal: controller.signal,
+      },
+    );
+    await expect(result).rejects.toThrow("cancelled");
+    expect(f.messages.map((message) => message.payload)).not.toContainEqual(
+      expect.objectContaining({ type: "execute" }),
+    );
+  } finally {
+    stop();
+  }
 });

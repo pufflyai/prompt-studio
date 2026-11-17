@@ -1,6 +1,6 @@
 import type { WebviewHostCapabilityParams, WebviewResourceActionChoice } from "pstdio-api-contracts/extension-kernel";
 import type { HostEventPublisher } from "pstdio-extensions/bridge/host";
-import type { Disposable, WorkbenchCommandExecutionContext } from "../../core";
+import { batchWorkbenchChanges, type Disposable, type WorkbenchCommandExecutionContext } from "../../core";
 import { placementIdentityKey } from "../../core/registries/layout/placement-reconciliation";
 import { resolveResourceActionMenu } from "../../react/menus/resource-action-menu";
 import type { WorkbenchTextEditingInput } from "./webview-text-editing";
@@ -99,7 +99,7 @@ export const createWebviewResourceActionRegistrations = (
       );
     let active: string | undefined;
     const refreshChoices = () => {
-      if (choices && owner.actions.has(request.registrationId)) renderMenu();
+      if (choices && owner.actions.has(request.registrationId)) batchWorkbenchChanges(renderMenu);
     };
     const disposables: Disposable[] = [];
     let menuDisposables: Disposable[] = [];
@@ -149,6 +149,8 @@ export const createWebviewResourceActionRegistrations = (
                 cancel();
                 return;
               }
+              refreshChoices();
+              if (!owner.pending.has(requestId)) return;
               hostEvents.emit({
                 scope,
                 payload: {

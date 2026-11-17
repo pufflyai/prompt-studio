@@ -102,3 +102,26 @@ test("refreshing a choice group keeps its accepted selection alive", async () =>
   expect(f.calls.at(-1)).toMatchObject({ operation: "complete", requestId: "accepted", error: undefined });
   await action.dispose();
 });
+
+test("a rejected registration releases its subscription before a retry", async () => {
+  let subscriptions = 0;
+  const action = registerWebviewResourceAction(
+    {
+      onEvent: () => {
+        subscriptions++;
+        return () => {
+          subscriptions--;
+        };
+      },
+      call: async () => {
+        throw new Error("Resource unavailable");
+      },
+    },
+    { resource, label: "Export" },
+    async () => {},
+  );
+  await expect(action.ready).rejects.toThrow("Resource unavailable");
+  expect(subscriptions).toBe(0);
+  await action.dispose();
+  expect(subscriptions).toBe(0);
+});
