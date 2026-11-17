@@ -115,7 +115,11 @@ test("archived work does not change the active milestone progress", async () => 
     workflow: usableWorkflowStatuses(await readWorkflowStatuses(ctx)),
   });
   expect(query.rows.find((row) => row.id === done.id)?.attributes.milestoneState).toBe("completed-past");
-  expect(query.rows.find((row) => row.id === archived.id)?.attributes.milestone).toBe("");
+  expect(query.rows.find((row) => row.id === archived.id)?.attributes).toMatchObject({
+    milestone: "",
+    milestoneDate: null,
+    milestoneState: "unscheduled",
+  });
   expect(
     (await readPlanCommand.run(ctx, {})).sections.find((section) => section.deadline?.id === milestone.id)?.counts,
   ).toMatchObject({ total: 1, done: 1 });

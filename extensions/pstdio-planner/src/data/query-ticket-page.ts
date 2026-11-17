@@ -61,7 +61,7 @@ export const readTicketViewPage = async (
         id: fields.breadcrumb,
         milestone: fields.milestone,
         milestoneDate: fields.milestoneDate,
-        milestoneState: ticket.archived ? "unscheduled" : fields.milestoneState,
+        milestoneState: fields.milestoneState,
         needsAttention: fields.needsAttention,
         reviewRequests: fields.reviewRequests,
         [REVIEW_REQUEST_ITEMS_ATTRIBUTE]: reviewSummaryBadgeItems(

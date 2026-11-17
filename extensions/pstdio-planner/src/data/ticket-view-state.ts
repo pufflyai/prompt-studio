@@ -41,7 +41,13 @@ export const ticketViewState = async (storage: ExtensionStorageApi, workflow: Wo
   const lookup = (values: Record<string, string>, fallback: string | null): StorageExpression => ({
     op: "if",
     args: [
-      { op: "missing", args: [{ get: { literal: values }, key: { field: "deadlineId" } }] },
+      {
+        op: "or",
+        args: [
+          { op: "eq", args: [{ field: "archived" }, { literal: true }] },
+          { op: "missing", args: [{ get: { literal: values }, key: { field: "deadlineId" } }] },
+        ],
+      },
       { literal: fallback },
       { get: { literal: values }, key: { field: "deadlineId" } },
     ],
