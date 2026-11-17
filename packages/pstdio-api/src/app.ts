@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { websocket } from "hono/bun";
 import { createStoragePositions } from "pstdio-api-contracts";
+import { startDeadRowCleanup } from "pstdio-db";
 import { ensureStorageRoot } from "pstdio-storage";
 import type { AppDependencies, CreateAppInput } from "./app-contracts";
 import { createAppDatabaseServices, openAppDatabase, upgradeAppStorage } from "./app-database";
@@ -31,6 +32,7 @@ import { createSessionImportService } from "./features/sessions/imports/service"
 import { createSessionQueueLifecycle } from "./features/sessions/session-queue-lifecycle";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { EventBus } from "./features/sync/event-bus";
+import { apiLogger } from "./lib/logger";
 import { logStartupPhase } from "./lib/startup-phase";
 import { createAppAccount } from "./services/account/app-account";
 import { createNativeDocumentService } from "./services/native-documents/documents";
@@ -304,32 +306,45 @@ const buildApp = async (
   const extensionScheduler = startAppExtensionScheduler(deps, projectService, storageRoot);
   const artifactMountWatch = startAppArtifactMountWatch(deps, projectService);
   const notificationWakeTimer = startNotificationWakeTimer(notificationService);
+  const stopDeadRowCleanup =
+    database.path === ":memory:"
+      ? async () => {}
+      : startDeadRowCleanup(database.pglite, (err, table) =>
+          apiLogger.warn({ err, table, event: "db.dead_row_cleanup.error" }, "Database cleanup failed; it will retry"),
+        );
 
-  registerBenchmarkCounters(app, db, runtimeHost);
-  registerAppRuntime(app, deps, input, {
-    extensionScheduler,
-    host: runtimeHost,
-    sessionService,
-    terminalSupervisor,
-  });
+  try {
+    registerBenchmarkCounters(app, db, runtimeHost);
+    registerAppRuntime(app, deps, input, {
+      extensionScheduler,
+      host: runtimeHost,
+      sessionService,
+      terminalSupervisor,
+    });
 
-  drainSessionQueue = (input) => createSessionScheduler(deps).drainQueue(input);
-  deliverIdleTurn = (sessionId) => deliverIdleFollowUp(deps, sessionId);
+    drainSessionQueue = (input) => createSessionScheduler(deps).drainQueue(input);
+    deliverIdleTurn = (sessionId) => deliverIdleFollowUp(deps, sessionId);
 
-  const close = await startAppLifecycle({
-    deps,
-    closeSessionHooks: sessionHooks.close,
-    notificationWakeTimer,
-    unsubscribeExtensionEvents,
-    extensionRuntime,
-    extensionStartup,
-    extensionScheduler,
-    artifactMountWatch,
-    automationService,
-    terminalSupervisor,
-    closeDb: () => closeAppDatabase(deps, closeDb),
-  });
-  return account.connectAccountRelay({ app, close, deps, eventBus });
+    const close = await startAppLifecycle({
+      deps,
+      closeSessionHooks: sessionHooks.close,
+      notificationWakeTimer,
+      stopDeadRowCleanup,
+      unsubscribeExtensionEvents,
+      extensionRuntime,
+      extensionStartup,
+      extensionScheduler,
+      artifactMountWatch,
+      automationService,
+      terminalSupervisor,
+      closeDb: () => closeAppDatabase(deps, closeDb),
+    });
+    return await account.connectAccountRelay({ app, close, deps, eventBus });
+  } catch (error) {
+    // createApp closes the database on a failed startup; the cleanup must not outlive it.
+    await stopDeadRowCleanup();
+    throw error;
+  }
 };
 
 export const createApp = async (input: CreateAppInput, dependencies: AppDependencies = productionAppDependencies) => {

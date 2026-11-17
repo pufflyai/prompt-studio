@@ -61,6 +61,7 @@ export const createBenchResources = async (
         return [{ resource, target: { kind: "page" as const, page: workbenchPages.workspace, resource } }];
       }),
     allocate: allocated.allocate,
+    allocateMany: allocated.allocateMany,
     identity: async (input) => seededIdentity(input.kind, input.id) ?? allocated.identity(input),
     identityMany: async (input) => {
       const identities = await allocated.identityMany(input);

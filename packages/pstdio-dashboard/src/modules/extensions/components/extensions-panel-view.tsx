@@ -18,6 +18,7 @@ import { ExtensionListRow } from "./extension-list-row";
 import { MarketplaceExtensionRow } from "./marketplace-extension-row";
 
 export interface ExtensionsPanelViewProps {
+  projectId?: string;
   extensions: ProjectExtensionInstance[];
   marketplace: MarketplaceExtension[];
   diagnostics: ExtensionDiagnostic[];
@@ -179,6 +180,7 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
 
       {visible.map((extension) => (
         <ExtensionListRow
+          projectId={props.projectId}
           key={extension.id}
           extension={extension}
           diagnostics={diagnosticsByExtensionId.get(extension.extensionId) ?? []}

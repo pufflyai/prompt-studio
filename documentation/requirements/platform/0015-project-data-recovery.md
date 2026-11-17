@@ -7,13 +7,15 @@ remain included unless explicitly excluded in `.pstignore`. On 2026-11-10 (PS-11
 folder copy opt-in: only a folder with a root `.pstignore` is copied, because project records already sync
 the data most tools keep, and copying it again doubled the upload. This document and
 [PRD 0014](0014-local-first-sync.md) reflect that decision. PS-1069 implemented the runtime
-in #1793 (capture and transfer), #1858 (restore and public API, SDK and CLI) and a third PR
-(integrated qualification, the 5 GiB workload and documentation).
+in #1793 (capture and transfer), #1858 (restore and public API, SDK and CLI) and #1866
+(integrated qualification, the 5 GiB workload and documentation). All three PRs are merged.
 
 ## Implementation status
 
-Checked 2026-11-07 on the third PS-1069 PR's branch; not released yet. Core captures, downloads
-and restores project folders on macOS and Linux (glibc 2.28 or later) through a public API, SDK and
+Source and acceptance evidence reconciled 2026-11-17. The original integrated and 5 GiB
+qualification ran on 2026-11-07; later source changes are identified below and do not restamp that
+measurement. Core captures, downloads and restores project folders on macOS and Linux
+(glibc 2.28 or later) through a public API, SDK and
 `pst projects folder`. The Cloud extension UI does not exist yet (PS-1068), so the CLI and SDK are
 the only ways to restore. User and reference documentation:
 [Cloud sync guide](../../guides/concepts/0007-cloud-sync.md#restore-a-project-folder-on-another-computer),
@@ -46,6 +48,9 @@ and the [workload results](../../references/performance/0008-folder-recovery-wor
   `.pstdio/extensions` register disabled. Restored entries keep permission bits only. External Git
   administration is rebuilt under `.pstdio/recovery/<copy>/`; links to unrestored targets are
   omitted and listed.
+- Since #1957, capture walking, hashing and encryption, plus publish/download chunk verification,
+  run in Bun workers. The compiled host includes the worker entry point. The original 5 GiB sample
+  predates this change; it is not a measurement of the current worker implementation.
 - Progress for capture, download and restore is derived in memory and exposed by
   `GET /projects/{id}/folder/sources|recovery`, `POST /projects/{id}/folder/capture|download|restore|cancel`,
   the SDK `projects` methods, `pst projects folder` and the `folder` field of project sync status.
@@ -55,9 +60,9 @@ Gaps that remain:
 - No Cloud extension UI or critical Playwright folder/download scenario (PS-1068). Opening a cloud
   project in the picker creates a managed folder first, after which a restored folder stays beside
   it; restore before opening. A second restore is not bound as its own workspace.
-- Capture hashing and encryption run on the host's main thread; no worker yet.
-- Windows and musl Linux: the native capture adapter loads `libSystem` or glibc, so capture cannot
-  run there, and restore reports `unsupported`.
+- Windows and musl Linux report `unsupported` before capture or restore touches the folder.
+  Unsupported-platform refusal preserves data; it does not establish recovery capability there.
+  The Windows qualification required by ADR 0138 remains outstanding.
 - Progress has no per-entry problem list or pending file and byte counts.
 - A restored folder is sealed again with new random chunk IDs, so the restoring device uploads
   the whole folder once more as its own copy.
@@ -81,8 +86,8 @@ project list apart; it is not the deployed relay. Unit and service tests live ne
 | 3. Functional Git | Passed | Integrated: HEAD, branches, all commits (unpushed on two branches), reflog, staged and unstaged diffs, untracked files and local config match; `git fsck --full` passes; the post-checkout hook never runs. `git-dependencies.p0` and `restore.p0` cover linked worktrees, submodules, unregistered and crafted administration. Detached commits are covered only by object-level capture, not a dedicated test. |
 | 4. Restarts, watcher loss, interruption | Passed | Integrated: a download interrupted by relay failures resumes after retry and reads no blob twice. `schedule.p0`, `local-source.p0` (restart candidate, new folder scanned at once), `capture.p0` (changing files stay pending), `transfer.p0` (corruption, cancellation). Quota and full-disk failures are mapped to errors but not exercised end to end. |
 | 5. Independent copies and confidentiality | Passed, device removal unproved | Integrated: the laptop's and the desktop's copies are both listed and restorable; the second account sees neither the project nor its copy; relay blobs and documents contain no known file name, credential or file bytes from either account. Device removal is not tested for folders. |
-| 6. Destination safety | Passed | Integrated: an existing empty folder is refused without writes; a folder created during a restore is kept with `destination_created` and no staging is left; hooks do not run. `restore.p0` (traversal, links, case collisions, cancellation, staging cleanup), endpoint test (restored extension stays disabled and its code never runs). |
-| 7. Interfaces and the 1 GiB file | Partly proved | Integrated: `pst projects folder sources` equals the API listing, `status` equals `folderRecovery`, CLI `download` and `restore` complete and an existing destination fails with exit status 1. No Playwright scenario (no UI). The [5 GiB workload](../../references/performance/0008-folder-recovery-workload.md) passed on 2026-11-07: capture and upload 249.6 s, download with the laptop off 191.0 s, CLI restore 58.7 s, every digest matched; all 140 record saves completed with an update at the relay (max 787 ms) and all 103 second-account captures published (max 4.6 s) during the transfers. |
+| 6. Destination safety | Core filesystem checks passed; extension-activation qualification unresolved | Integrated: an existing empty folder is refused without writes, no staging is left and hooks do not run. The deterministic real-filesystem `restore.p0` owner creates a destination during an awaited progress callback and verifies `destination_created`, preserved bytes and staging cleanup; #2099 removed only the duplicate unsynchronized packaged race. `restore.p0` also covers traversal, links, case collisions and cancellation. The endpoint test retains disabled-extension and no-code-execution assertions; its shared-marker failure remains under investigation. A frozen module URL can be reused for identical bytes at another source path, so the URL alone does not establish which device requested evaluation. A passing disabled-instance check does not qualify the no-code-execution contract. |
+| 7. Interfaces and the 1 GiB file | Partly proved | Integrated: `pst projects folder sources` equals the API listing, completed download/restore receipts agree across CLI and API while live capture may advance, CLI `download` and `restore` complete and an existing destination fails with exit status 1. No Playwright scenario (no UI). The [5 GiB workload](../../references/performance/0008-folder-recovery-workload.md) passed on 2026-11-07: capture and upload 249.6 s, download with the laptop off 191.0 s, CLI restore 58.7 s, every digest matched; all 140 record saves completed and all 103 second-account captures published (max 4.6 s) during the transfers. The original record probe could complete on another document stream; its reported latency does not qualify the subsequently tightened notes-stream-specific probe. |
 
 ## Outcome and boundary
 

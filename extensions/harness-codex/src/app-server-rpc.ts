@@ -1,4 +1,4 @@
-import { createInterface } from "node:readline";
+import { StringDecoder } from "node:string_decoder";
 import type { SpawnDeps } from "./codex-process";
 
 export interface RpcMessage {
@@ -79,25 +79,24 @@ export const createAppServerRpc = (
       pending.reject(error);
     }
   };
-  const reader = createInterface({ input: child.stdout, crlfDelay: Number.POSITIVE_INFINITY });
   const finished = new Promise<void>((resolve, reject) => {
+    const decoder = new StringDecoder("utf8");
+    let fragments: string[] = [];
+    const detach = () => {
+      child.stdout.off("data", receive);
+      child.stdout.off("end", finish);
+      child.stdout.off("close", finish);
+      fragments = [];
+    };
     const fail = (error: unknown) => {
       reject(error);
       close();
-      reader.close();
+      detach();
     };
-    child.stdout.on("error", fail);
-    child.stdout.once("close", () => reader.close());
-    child.stdin.on("error", fail);
-    reader.on("error", fail);
-    reader.once("close", () => {
-      close();
-      resolve();
-    });
-    reader.on("line", (line) => {
+    const line = (value: string) => {
       if (closed) return;
       try {
-        const message = parseMessage(line);
+        const message = parseMessage(value);
         if (!message) return;
         if (!message.method && message.id !== undefined) {
           const pending = requests.get(message.id);
@@ -107,7 +106,35 @@ export const createAppServerRpc = (
       } catch (error) {
         fail(error);
       }
-    });
+    };
+    const receive = (chunk: Buffer) => {
+      const value = decoder.write(chunk);
+      // Bun readline splits U+2028/U+2029 inside JSON strings; Codex frames only at LF (ADR 0154).
+      // Search each decoded chunk once; a fragmented response must not rescan its growing prefix.
+      let start = 0;
+      let newline = value.indexOf("\n");
+      while (!closed && newline >= 0) {
+        fragments.push(value.slice(start, newline));
+        const message = fragments.join("");
+        fragments = [];
+        start = newline + 1;
+        line(message);
+        newline = value.indexOf("\n", start);
+      }
+      if (!closed && start < value.length) fragments.push(value.slice(start));
+    };
+    const finish = () => {
+      if (closed) return;
+      line(fragments.join("") + decoder.end());
+      close();
+      detach();
+      resolve();
+    };
+    child.stdout.on("error", fail);
+    child.stdin.on("error", fail);
+    child.stdout.on("data", receive);
+    child.stdout.once("end", finish);
+    child.stdout.once("close", finish);
   });
   child.stderr.resume();
   return { request, write, finished };

@@ -1,5 +1,5 @@
 import { type CommandContext, defineCommand, l10n, params } from "@pstdio/sdk/extensions";
-import { listAttempts } from "../data/attempt-storage";
+import { readTicketAttempts } from "../data/attempt-queries";
 import { findTicket } from "../data/resolve";
 import { resolveTicketAnchor } from "./ticket-actions";
 
@@ -26,7 +26,7 @@ const changeLink = async (ctx: CommandContext, input: LinkParams, unlink: boolea
   const api = workspace ? ctx.workspaces : ctx.sessions;
 
   if (unlink) {
-    const managed = (await listAttempts(ctx.storage)).some((attempt) => {
+    const managed = (await readTicketAttempts(ctx.storage, [ticket.id])).some((attempt) => {
       if (attempt.ticketId !== ticket.id) return false;
       if (workspace) return attempt.workspaceId === workspace.id;
       return (

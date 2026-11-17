@@ -298,15 +298,15 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
     await expectAutoBuildFilter(timeline);
 
     phase("views checked; conflict start");
-    // Ordinary ticket work stays available while host chrome reports the Track problem.
+    // Ordinary ticket work stays available while Planner reports the Track problem.
     expect(await ticketRows(conflicting.execute)).toHaveLength(ACTIVE_CONFLICTS + ARCHIVED_CONFLICTS + 3);
     timeline = await openTimeline(page, host, conflicting.id);
-    await expect(page.getByText(/Track must be a single-select property/)).toBeVisible({ timeout: 30_000 });
+    await expect(timeline.getByText(/Track must be a single-select property/)).toBeVisible({ timeout: 30_000 });
 
     const trackOptions = [conflictData.product.id, conflictData.platform.id];
     await expect(
       conflicting.execute("ticket-tag.update", { tagId: conflictData.track.id, type: "single_select" }),
-    ).rejects.toThrow(new RegExp(`Track has more than one value on .*${conflictData.draft.shorthand}`));
+    ).rejects.toThrow(/Track has more than one value on /);
     await expectConflictsPreserved(conflicting.execute, conflictData.track.id, trackOptions);
 
     phase("repair start");
@@ -319,6 +319,11 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
         }),
       ),
     );
+    // Conflict feedback is bounded. Once the active and archived examples are resolved,
+    // the remaining stored draft must still prevent conversion and name its own ticket.
+    await expect(
+      conflicting.execute("ticket-tag.update", { tagId: conflictData.track.id, type: "single_select" }),
+    ).rejects.toThrow(new RegExp(`Track has more than one value on .*${conflictData.draft.shorthand}`));
     await conflicting.execute("update-ticket", {
       id: conflictData.draft.shorthand,
       tagIds: [conflictData.platform.id],
@@ -346,21 +351,23 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
     rmSync(join(timelineCache(host), ".."), { recursive: true });
     expect(await moduleStatus(host, valid.id, "timeline")).toEqual({ status: 200, body: "" });
 
-    // Reload repairs a view whose import failed in the open browser session. Reload, not the file
-    // watcher, decides when each version builds.
+    // A failed candidate reports its build error while the accepted view remains usable.
+    // Reload, not the file watcher, decides when the repaired version is adopted.
     const entry = join(home, "extensions", "pstdio-planner", "src", "timeline", "view", "entry.tsx");
     const original = readFileSync(entry, "utf8");
+    const acceptedView = await plannerWebview(host, valid.id, "timeline");
+    const acceptedModule = await (await fetch(`${host.baseUrl}${acceptedView!.moduleUrl}`)).text();
     writeFileSync(entry, `${original}\nexport const broken = ;\n`);
     expect(await reloadPlanner(host, valid.id)).toMatchObject({
       status: "error",
       lastError: { code: "extension_webview_build_failed" },
     });
     const webview = await plannerWebview(host, valid.id, "timeline");
-    expect(await (await fetch(`${host.baseUrl}${webview!.moduleUrl}`)).text()).toContain(
-      "Extension webview build failed",
-    );
+    const workingModule = await fetch(`${host.baseUrl}${webview!.moduleUrl}`);
+    expect(workingModule.status).toBe(200);
+    expect(await workingModule.text()).toBe(acceptedModule);
     timeline = await openTimeline(page, host, valid.id);
-    await expect(page.getByText(/Extension view failed to load/)).toBeVisible({ timeout: 30_000 });
+    await expect(timeline.getByText("Seeded ticket 0", { exact: true })).toBeVisible({ timeout: 30_000 });
     writeFileSync(entry, original);
     expect(await reloadPlanner(host, valid.id)).toMatchObject({ status: "loaded", lastError: null });
     await expect(timeline.getByText("Seeded ticket 0", { exact: true })).toBeVisible({ timeout: 30_000 });

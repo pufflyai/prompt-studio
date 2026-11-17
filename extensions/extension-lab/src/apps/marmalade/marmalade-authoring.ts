@@ -9,6 +9,7 @@ import {
   range,
   selectedBlock,
   selectedRoots,
+  setMarmaladeParent,
 } from "./marmalade-layers";
 
 const validateStroke = (points: [number, number][] | undefined) => {
@@ -31,9 +32,16 @@ const create = (state: MarmaladeState, action: Extract<MarmaladeAction, { type: 
   validateColor(fill);
   range(action.strokeWidth ?? 8, 1, 100);
   if (action.kind === "brush") validateStroke(action.points);
+  if (
+    action.id !== undefined &&
+    (typeof action.id !== "string" ||
+      !action.id.length ||
+      state.document.layers.some((layer) => layer.id === action.id))
+  )
+    throw new Error("Use a unique layer ID");
   const names = { text: "Text", rectangle: "Rectangle", ellipse: "Ellipse", brush: "Brush stroke" };
   const layer: MarmaladeLayer = {
-    id: crypto.randomUUID(),
+    id: action.id ?? crypto.randomUUID(),
     name: names[action.kind],
     kind: "shape",
     shape: "rectangle",
@@ -86,14 +94,17 @@ const selectionAction = (state: MarmaladeState, type: "duplicate" | "delete" | "
     state.selectedIds = [];
   } else if (type === "duplicate") {
     const ids = new Map(block.map((layer) => [layer.id, crypto.randomUUID()]));
-    const copies = block.map((layer) => ({
-      ...structuredClone(layer),
-      id: ids.get(layer.id)!,
-      name: `${layer.name} copy`,
-      parentId: ids.get(layer.parentId ?? "") ?? layer.parentId,
-      x: layer.x + 20,
-      y: layer.y + 20,
-    }));
+    const copies = block.map((layer) => {
+      const copy = {
+        ...structuredClone(layer),
+        id: ids.get(layer.id)!,
+        name: `${layer.name} copy`,
+        x: layer.x + 20,
+        y: layer.y + 20,
+      };
+      setMarmaladeParent(copy, ids.get(layer.parentId ?? "") ?? layer.parentId);
+      return copy;
+    });
     const copiesById = new Map(block.map((layer, index) => [layer.id, copies[index]]));
     const subtrees = new Map(
       roots.map((root) => [
@@ -113,7 +124,6 @@ const selectionAction = (state: MarmaladeState, type: "duplicate" | "delete" | "
       id: crypto.randomUUID(),
       name: "Group",
       kind: "group",
-      parentId: roots[0].parentId,
       x: Math.min(...roots.map((l) => l.x)),
       y: Math.min(...roots.map((l) => l.y)),
       width: 1,
@@ -122,6 +132,7 @@ const selectionAction = (state: MarmaladeState, type: "duplicate" | "delete" | "
       locked: false,
       opacity: 1,
     };
+    setMarmaladeParent(group, roots[0].parentId);
     group.width = Math.max(...roots.map((l) => l.x + l.width)) - group.x;
     group.height = Math.max(...roots.map((l) => l.y + l.height)) - group.y;
     const index = state.document.layers.indexOf(roots[0]);
@@ -135,7 +146,7 @@ const selectionAction = (state: MarmaladeState, type: "duplicate" | "delete" | "
     const children: string[] = [];
     for (const group of roots) {
       for (const child of state.document.layers.filter((layer) => layer.parentId === group.id)) {
-        child.parentId = group.parentId;
+        setMarmaladeParent(child, group.parentId);
         child.visible = child.visible && group.visible;
         child.opacity *= group.opacity;
         children.push(child.id);

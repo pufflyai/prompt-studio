@@ -1,17 +1,20 @@
 import { Button, HStack, Icon, IconButton, Text } from "@chakra-ui/react";
-import { Check, ChevronDown, List, Settings2, SquareKanban } from "lucide-react";
-import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
-import { ScrollArea } from "@/components/primitives/scroll-area";
+import { List, Settings2, SquareKanban } from "lucide-react";
+import { normalizeSubGroupings } from "pstdio-api-contracts/collections";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Tooltip } from "@/components/primitives/tooltip";
-import { ScopedMenu as Menu, ScopedPopover as Popover } from "@/utils/scoped-overlays";
+import { ScopedPopover as Popover } from "@/utils/scoped-overlays";
 import { Portal, useUiScope } from "@/utils/ui-scope";
+import { DisplayMenuSelect } from "./display-menu-select";
 import { type MenuOption, resolveSubGroupingOptions } from "./kanban-renderer-helpers";
+import { ResourceListGroupingControls } from "./resource-list-grouping-controls";
 import type { KanbanRendererSettings } from "./types";
 
 interface DisplayMenuProps {
   settings: KanbanRendererSettings;
   resourceList?: boolean;
   onShowChildrenChange?: (show: boolean) => void;
+  onSubGroupingsChange?: (subGroupings: string[]) => void;
   sortControl?: ReactNode;
   groupingOptions: MenuOption[];
   displayPropertyOptions: MenuOption[];
@@ -21,57 +24,13 @@ interface DisplayMenuProps {
   onDisplayPropertyToggle: (property: string) => void;
 }
 
+export { DisplayMenuSelect, type DisplayMenuSelectProps } from "./display-menu-select";
+
 const SectionLabel = (props: { children: string }) => (
   <Text paddingX="xs" paddingTop="xs" paddingBottom="2xs" textStyle="label/XS/medium" color="fg.muted">
     {props.children}
   </Text>
 );
-
-export interface DisplayMenuSelectProps {
-  label: string;
-  value: string;
-  options: MenuOption[];
-  onSelect: (value: string) => void;
-}
-
-/** A Display menu row: the setting's name on the left, its value and a menu on the right. */
-export const DisplayMenuSelect = (props: DisplayMenuSelectProps) => {
-  const selectedLabel = props.options.find((option) => option.value === props.value)?.label ?? props.label;
-  const hasNoneFirst = props.options[0]?.value === "none";
-
-  return (
-    <Menu.Root positioning={{ strategy: "fixed", hideWhenDetached: true }}>
-      <Menu.Trigger asChild>
-        <Button size="xs" variant="ghost" width="full" justifyContent="flex-start" gap="xs">
-          <Text textStyle="label/S/regular">{props.label}</Text>
-          <HStack marginLeft="auto" minW="0" gap="2xs" color="fg.muted">
-            <Text textStyle="label/S/regular" truncate>
-              {selectedLabel}
-            </Text>
-          </HStack>
-          <ChevronDown size={12} />
-        </Button>
-      </Menu.Trigger>
-      <Menu.Positioner>
-        <Menu.Content overflow="hidden" overflowY="hidden">
-          <ScrollArea maxH="var(--available-height)" minH="0" viewportProps={{ overscrollBehavior: "contain" }}>
-            {props.options.map((option, index) => (
-              <Fragment key={option.value}>
-                {hasNoneFirst && index === 1 ? <Menu.Separator /> : null}
-                <Menu.Item value={option.value} onClick={() => props.onSelect(option.value)}>
-                  <HStack width="full" gap="xs">
-                    <Text textStyle="label/S/regular">{option.label}</Text>
-                    {option.value === props.value ? <Icon as={Check} marginLeft="auto" boxSize="0.875rem" /> : null}
-                  </HStack>
-                </Menu.Item>
-              </Fragment>
-            ))}
-          </ScrollArea>
-        </Menu.Content>
-      </Menu.Positioner>
-    </Menu.Root>
-  );
-};
 
 export const DisplayMenu = (props: DisplayMenuProps) => {
   const surfaceActive = useUiScope()?.active ?? true;
@@ -153,18 +112,28 @@ export const DisplayMenu = (props: DisplayMenuProps) => {
               onSelect={(value) => {
                 onColumnGroupingChange(value);
                 if (value === "none" || value === settings.rowGrouping) onRowGroupingChange("none");
+                // Keep stored levels valid for the new grouping, so saved views never carry stale ones.
+                if (props.resourceList)
+                  props.onSubGroupingsChange?.(normalizeSubGroupings(value, settings.subGroupings));
               }}
             />
             {props.resourceList ? (
-              <DisplayMenuSelect
-                label="Children"
-                value={settings.showChildren === false ? "hidden" : "nested"}
-                options={[
-                  { value: "nested", label: "Nested" },
-                  { value: "hidden", label: "Hidden" },
-                ]}
-                onSelect={(value) => props.onShowChildrenChange?.(value === "nested")}
-              />
+              <>
+                <ResourceListGroupingControls
+                  settings={settings}
+                  groupingOptions={groupingOptions}
+                  onSubGroupingsChange={(subGroupings) => props.onSubGroupingsChange?.(subGroupings)}
+                />
+                <DisplayMenuSelect
+                  label="Child rows"
+                  value={settings.showChildren === false ? "hide" : "show"}
+                  options={[
+                    { value: "show", label: "Show" },
+                    { value: "hide", label: "Hide" },
+                  ]}
+                  onSelect={(value) => props.onShowChildrenChange?.(value === "show")}
+                />
+              </>
             ) : (
               <DisplayMenuSelect
                 label="Sub-grouping"

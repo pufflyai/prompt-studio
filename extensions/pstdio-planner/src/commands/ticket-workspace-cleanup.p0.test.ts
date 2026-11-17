@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { ticketsCollection } from "../data/ticket-context.fixture";
 
+import { archiveArgs } from "./archive-context.fixture";
 import { archiveTicketCommand } from "./archive-ticket";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
@@ -19,7 +20,7 @@ for (const command of [archiveTicketCommand, deleteTicketCommand]) {
       if (scenario === "shared") anchors.push({ type: "ticket", id: other.id, shorthand: other.shorthand });
       if (scenario === "missing ticket") anchors.push({ type: "ticket", id: "missing", shorthand: "T-999" });
       await command.run(
-        ...makeCommandArgs({
+        ...(await archiveArgs({
           storage,
           params: {},
           overrides: {
@@ -52,7 +53,7 @@ for (const command of [archiveTicketCommand, deleteTicketCommand]) {
               },
             } as never,
           },
-        }),
+        })),
       );
       expect(deleted).toEqual(["unused", "missing ticket", "failure"].includes(scenario) ? ["workspace"] : []);
       expect(notifications.length).toBe(scenario === "failure" ? 1 : 0);

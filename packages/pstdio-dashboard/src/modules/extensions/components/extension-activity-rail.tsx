@@ -4,6 +4,7 @@ import { Tooltip } from "@pstdio/ui";
 import { runUserAction } from "@pstdio/workbench";
 import { useWorkbenchStore, WorkbenchIcon, type WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useEffect, useState } from "react";
+import { getRuntimeCollections } from "@/lib/sync/collections";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import { getCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
@@ -43,7 +44,13 @@ export const ExtensionActivityRailWidget = (props: { input: WorkbenchPanelRender
       aria-label="Activity"
     >
       {items.map((item) => {
-        const title = resolveLocalizableString(item.title, item.extensionId);
+        const title = resolveLocalizableString(
+          item.title,
+          item.extensionId,
+          undefined,
+          getRuntimeCollections(),
+          projectId,
+        );
         return (
           <Tooltip key={item.id} content={title} positioning={{ placement: horizontal ? "bottom" : "right" }}>
             <IconButton

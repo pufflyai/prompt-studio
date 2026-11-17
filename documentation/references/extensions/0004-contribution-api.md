@@ -118,7 +118,7 @@ When extension UI needs dashboard placement, attach it to a host-owned target an
 
 ## Keybindings
 
-Keybindings bind app-level keyboard shortcuts to a navigation `action`. The action is any navigation target: a command, a page, a panel, an href, or a compound target. Pages and panels bind directly; no wrapper command is needed. Chords use `@tanstack/hotkeys` syntax and are validated by the extension runtime. Invalid chords, modifier-only chords, and duplicate platform-aware chords are reported by extension checks and dropped from metadata.
+Keybindings bind app-level keyboard shortcuts to a navigation `action`. The action is any navigation target: a command, a page, a panel, an href, or a compound target. Pages and panels bind directly; no wrapper command is needed. Chords use `@tanstack/hotkeys` syntax and are validated by the extension runtime. Invalid chords, modifier-only chords, direct chords whose first step types text (a printable key or Space, alone or with only Shift), and duplicate platform-aware chords are reported by extension checks and dropped from metadata. Single keys belong in a shortcut-mode `layer`.
 
 Help → Keyboard shortcuts manages assigned, inactive, disabled, and unassigned actions. It supports personal bindings, disabling, resetting, Leader, and extension aliases. Menus, the command palette, and navigation items supply readable action labels. Repeated placements of the same target and parameters share one row. Different parameters remain separate. The reference updates when extensions change. Hidden row actions release label space; labels truncate only when visible content needs that space. Navigation rows show effective shortcut hints while keyboard mode is active. Row actions use the existing hover fade and remain visible while keyboard focus is inside the row. Command shortcuts without supplied parameters open the shared parameter form before execution.
 
@@ -236,6 +236,8 @@ Rows without a resource or navigation target keep their declared selection.
 Set `tooltip` to show text while the pointer rests on a row or the row has keyboard focus, such as the full path of a file whose row shows only its name. `iconTooltip` shows text only over the row icon. Use one of the two on a row, not both.
 
 Set `badge: { label: "3", color: "orange" }` for a trailing count beside a tree row. It uses the notification count badge style. Omit it when there is no count to show.
+
+Set `tags` to show display-only labels after a tree row's label, such as a region or a draft state. Each tag has an `id`, a `label` and optional `icon`, `color` and `tooltip`, the same shape as kanban `badge-list` items without an action. Two tags show; the rest collapse into a "+N" chip whose tooltip lists them, and screen readers read every tag. Long tags truncate at a fixed width, and the count `badge` stays last. Clicking a tag activates the row. Available on `main` in API 0.5.0; publish the host and SDK before an independent extension adopts it.
 
 Kanban attributes with `display: { kind: "badge-list", itemsAttributeId: "items" }` read their badges from the named row attribute. Each item has an `id`, `label`, and optional `icon`, `color`, `tooltip`, and `action`. The action accepts any navigation target, including a page-owned panel that opens beside the collection without changing its route. Page, panel, and resource references are scoped to the contributing extension and project. Actions run without activating the card. The older page-only `target` remains supported and is deprecated in favor of `action`; when both are present, `action` wins. This addition shares the planned extension API 0.3.0 release in Prompt Studio 0.46. Publish the SDK and host before extensions adopt it.
 
@@ -507,6 +509,20 @@ The default stays compact for existing views. Row wrapping remains independent.
 These additive declarations share the coordinated API 0.4.0 step on `main`.
 Publish the supporting host, SDK, and UI before an independent extension uses them.
 
+### Image columns (on main)
+
+Native table columns and the React `DataTable` support `renderer: { type: "image" }`. A cell value is an image URL, `{ src, alt }`, or an array of either for a gallery. `src` is any image URL the dashboard can load, such as an `https:` or `data:image/` URL; the host does not check the scheme. Prefer alt text: search, sorting, filtering and screen readers use it, falling back to the file name.
+
+```ts
+columns: [
+  { id: "photo", label: "Photo", renderer: { type: "image" } },
+  { id: "brand", label: "Brand", renderer: { type: "image", shape: "circle", fit: "contain", showLabel: true } },
+],
+// A row value: { photo: { src: "https://cdn.example.com/shoe.png", alt: "Trail shoe, side view" } }
+```
+
+Thumbnails fill the row, so Comfortable and Tall row heights show larger previews. A gallery shows three thumbnails and counts the rest. Clicking a thumbnail opens the shared image viewer without activating the row; a gallery opens as a carousel. An image that fails to load shows a placeholder, and an empty value shows a dash. `fit` is `cover` (default) or `contain`; `shape` is `square` (default) or `circle`; `showLabel` shows the first image's alt text beside it. Image columns are text fields for filters. This addition shares API 0.5.0 on `main`; publish the host, SDK and UI before an independent extension adopts it.
+
 The query receives `filter`, `sorts`, and the display `settings`. For default full-result providers, use them only to narrow what you load. The renderer applies the full filter and sorts to the returned rows, so returning more rows than the view shows is correct. Opt-in [paged providers](#paged-tables-and-boards) apply these controls before returning a bounded page.
 
 API 0.2.0 removes the fields deprecated in published package version 0.43.1. Migrate declarations and query handlers to the replacements below.
@@ -530,7 +546,7 @@ Use [board view commands and APIs](../cli/0009-board-views.md) for agent workflo
 
 ## Resource lists
 
-Available on `main`, after 0.46.0 (`view.resourceList.v1`). A `resourceList` body renders the native kanban detailed list with the shared view bar, filters, ordering and properties. It has one display, one grouping and no row dragging. Extensions supply data through the public SDK; no webview is needed.
+Available on `main`, after 0.46.0 (`view.resourceList.v1`). A `resourceList` body renders the native kanban detailed list with the shared view bar, filters, ordering and properties. It has one display, a grouping with any number of sub-groupings, and no row dragging. Extensions supply data through the public SDK; no webview is needed.
 
 ```ts
 import { defineView } from "@pstdio/sdk/extensions";
@@ -556,11 +572,13 @@ const resources = defineView({
 });
 ```
 
-Enum options define group labels, dot colors and optional short `note` text. `canCreate: true` shows an Add action when the body also declares `createRow`. Its `columnParam` receives the group value, using the same creation form as kanban. Groups count parent resources and collapse independently; children nest one level. Row IDs must be unique across parents and children.
+Enum options define group labels, dot colors and optional short `note` text. `canCreate: true` shows an Add action when the body also declares `createRow`. Its `columnParam` receives the group value, using the same creation form as kanban. Groups count parent resources and collapse independently. Children can have their own `children`; each level nests one indent further and collapses independently. Row IDs must be unique across parents and all levels of children.
+
+Set `subGroupings` to further groupable attributes, outermost first, to split each group again, such as rules grouped by region, then channel, then severity. Each level uses a different attribute. Sub-groups count the loaded resources they contain and collapse independently; sub-groups without resources are absent. Add actions stay on the top-level groups. Without a grouping there are no sub-groupings. `rowGrouping` stays `"none"` for resource lists. Sub-groupings and deeper children share API 0.5.0 on `main`.
 
 Groups without source resources are absent, so their Add actions are also absent. Supply a creation toolbar action for a new empty collection or to create the first resource in an unused group.
 
-Rows reuse kanban shorthand (`attributes.id`), property chips, badges, dates and resource menus. Each row can declare an optional icon and navigation target. The Display menu offers grouping, Children (Nested or Hidden), ordering and visible properties. `defaultViews` uses `ResourceListRendererSettings`: `columnGrouping`, `displayProperties` and optional `showChildren`. The host persists these alongside the filter and sorts using the existing collection-view store. Its wire settings also contain the fixed `viewMode: "list"` and `rowGrouping: "none"` fields.
+Rows reuse kanban shorthand (`attributes.id`), property chips, badges, dates and resource menus. Each row can declare an optional icon and navigation target. The Display menu offers Grouping, then Sub-grouping, Sub-grouping 2 and so on (added with **Add sub-grouping**), Child rows (Show or Hide), ordering and visible properties. `defaultViews` uses `ResourceListRendererSettings`: `columnGrouping`, `displayProperties` and optional `subGroupings` and `showChildren`. The host persists these alongside the filter and sorts using the existing collection-view store. Its wire settings also contain the fixed `viewMode: "list"` and `rowGrouping: "none"` fields.
 
 See the [example extension](../../../packages/pstdio-workbench/src/examples/onboarding/extensions/resource-list-extension.ts) and the **ResourceList** onboarding Canvas preview. The shared list skeleton and empty state cover first load and empty queries. `queryMode: "paged"`, refresh events, toolbar actions, row actions and activation callbacks follow the kanban contracts.
 
@@ -801,4 +819,4 @@ The old `workbenchPages.sessions`, `session`, `newSession`, `sessionComposer`, `
 
 Resource mutation commands can act on another provider's canonical resource. When the invoking resource matches the declared mutation type and resolved ID in the selected project, native optimistic previews and write serialization preserve that resource's identity. Without a matching subject, the command's own extension identity remains the default. This changes presentation ownership only; the command service still enforces its normal permissions and scope.
 
-*Updated at: 2026-11-12*
+*Updated at: 2026-11-14*

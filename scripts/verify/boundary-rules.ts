@@ -39,6 +39,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   // pstdio-api also declares the extensions and fixtures its tests install from source,
   // so changing one marks pstdio-api as affected.
   "pstdio-api": [
+    "github",
     "git-workspaces",
     "pstdio-sync",
     "pstdio-sync-contracts",
@@ -101,6 +102,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   // e2e also declares the extensions it installs at runtime and the dashboard it serves,
   // so changing one marks e2e as affected.
   e2e: [
+    "github",
     "git-workspaces",
     "@pstdio/ui",
     "@pstdio/sdk",
@@ -116,6 +118,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-wt",
     "pstdio-relay",
     "canvas",
+    "extension-lab",
     "harness-claude-code",
     "harness-codex",
     "harness-open-code",
@@ -133,6 +136,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "planner",
     "reports",
     "skills",
+    "pstdio-skill-browser",
     "remote-workspaces",
     "workbench-fixture",
     "pstdio-benchmarks",
@@ -184,9 +188,11 @@ export const PRIVATE_EXPORT_LIMITS: Record<string, number> = {
   // These are ownership boundaries, not file-level escape hatches.
   // Root, records, text, relay, encryption, presence and append-only logs.
   "pstdio-sync": 7,
-  "pstdio-api": 2,
+  // ADR0147 adds the pure compiled input inspector alongside app and runtime routes.
+  "pstdio-api": 3,
   "pstdio-api-contracts": 7,
-  "pstdio-extensions": 12,
+  // ADR0147 owns six preparation transport, worker, cache and pure revision-input modules.
+  "pstdio-extensions": 18,
 };
 
 // These edges support test infrastructure, never packaged runtime imports.

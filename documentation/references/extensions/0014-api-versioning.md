@@ -109,6 +109,14 @@ The CLI `globalAliases` declaration is removed in API 0.5.0. Root shortcuts such
 
 The shorter first-party extension identities also share API 0.5.0. Canonical discovery and output use names such as `pstdio.notes`; historical invocations remain deprecated aliases. Ship the migration-capable host before renamed packages. See [identity upgrades](../../guides/extensions/0011-identity-upgrades.md).
 
+Data-table image columns, resource list `subGroupings` (any number of levels) with children nested to any depth, and tree row `tags` are additive and share API 0.5.0. Existing columns, saved views and tree rows keep their behavior. Publish the supporting host, SDK and UI before independent extensions adopt them. See [image columns](0004-contribution-api.md#image-columns-on-main) and [resource lists](0004-contribution-api.md#resource-lists).
+
+`ctx.resources.allocateMany` also shares API 0.5.0. It numbers 1 to 100 resources of one kind in one save, so imports do not allocate one number per call.
+
+`migration.moveCollection` and the `keyPrefix` option of storage index declarations also share API 0.5.0. Older hosts do not provide either; see [move a collection to records](0018-data-migrations.md#move-a-collection-to-records).
+
+The optional `HarnessStartInput.approvals` channel also shares API 0.5.0. A supporting host passes the session's approval channel on a session's first turn as well as on resume. Hosts up to 0.47 pass it only on resume, so providers must treat it as optional on start.
+
 ### Which version each check uses
 
 | Check | Where it runs | Extension API version it compares with |

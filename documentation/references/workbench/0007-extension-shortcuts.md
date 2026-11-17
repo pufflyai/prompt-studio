@@ -28,9 +28,11 @@ Creation runs the same UI flow as the rest of the application. Notes open immedi
 The host derives setup actions from public metadata:
 
 - C S lists new session drafts with the exact harness provider. Select its numbered choice directly; no arrow navigation is required. Creating a draft does not start an agent.
-- G E opens Extensions; Mod+, opens agent defaults; S S opens skill setup; S I opens appearance and icon settings.
+- G E opens Extensions; Mod+, opens agent defaults; G S offers Skills and Sessions through the numbered destination chooser; S I opens appearance and icon settings.
 - Alt+Shift+T is the single color-theme action, regardless of the number of theme providers.
 - Alt+Shift+R reopens the most recently closed tab in the current project.
+
+A direct extension chord must not type text. A printable key or Space, alone or with only Shift, types text; this includes physical-key chords such as `Shift+[Slash]` and sequences whose first step types text, such as `G H`. Extension checks report such chords as `invalid_keybinding` and drop them; bind single keys in a shortcut-mode layer instead. Keys such as F2, Escape or Shift+Enter remain valid direct chords. Named keys accept any case and common aliases, such as `esc` or `Up`.
 
 These actions do not depend on provider names. Disabled extensions contribute no active shortcuts. Destination navigation uses its G sequence, and creation uses its C sequence, each without duplicate direct chords. Direct Option+Shift chords control panels and tabs and also work inside shortcut mode. Installed external extensions, including Pencil, keep their public actions available for search and personal assignment; their source is outside this repository, so this change does not add provider-specific defaults to them.
 
@@ -50,4 +52,4 @@ Managed webviews negotiate entry chords with the host. Artifacts installs the pu
 
 Extension adoption uses the keyboard API from [SDK/core PR #1377](https://github.com/pufflyai/prompt-studio/pull/1377) and pins the published SDK/UI preview pair from main commit `2c2b2e4c6b144c418cc048219c56553afe938bf4`. It requires a host providing extension API 0.3.0. Future adoption changes that need an unpublished SDK or UI must keep the waiting-for-release label until compatible packages are published; then update dependency ranges and rerun published-extension validation. Do not bypass the published dependency check.
 
-*Updated at: 2026-11-11*
+*Updated at: 2026-11-14*

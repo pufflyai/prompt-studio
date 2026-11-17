@@ -112,6 +112,14 @@ describe("extension catalog", () => {
       .filter((catalogEntry) => catalogEntry.default)
       .map((catalogEntry) => catalogEntry.installName);
 
-    expect(defaults).toEqual(["home", "session-browser", "onboarding", "base-themes", "skills", "git-workspaces"]);
+    expect(defaults).toEqual([
+      "home",
+      "session-browser",
+      "onboarding",
+      "base-themes",
+      "skills",
+      "github",
+      "git-workspaces",
+    ]);
   });
 });

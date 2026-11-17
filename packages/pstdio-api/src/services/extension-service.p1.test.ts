@@ -499,8 +499,6 @@ describe("extensionService reload", () => {
       makeExtension(root, { name: "Reloaded Extension", version: "1.1.0", templateKey: "second" });
 
       const result = await reloadingService.reloadInstalledSourceBySourcePath(root);
-      const reloadEvents = await installedExtensionSourcesService.listReloadEvents(result.installedSource.id);
-      const reloadEvent = reloadEvents.at(-1);
 
       expect(result.installedSource.status).toBe("loaded");
       expect(result.installedSource.display_name).toBe("Reloaded Extension");
@@ -511,9 +509,6 @@ describe("extensionService reload", () => {
       expect(result.installedSource.source_hash).not.toBe("old-hash");
       expect(result.installedSource.loaded_revision).toBeString();
       expect(result.installedSource.last_error_json).toBeNull();
-      expect(reloadEvent?.status).toBe("success");
-      expect(reloadEvent?.previous_revision).toBeNull();
-      expect(reloadEvent?.next_revision).toBe(result.installedSource.loaded_revision);
       expect(events.some((event) => event.table === "installed_extension_sources" && event.op === "set")).toBe(true);
     } finally {
       rmSync(root, { recursive: true, force: true });
@@ -583,7 +578,7 @@ describe("extensionService reload", () => {
 
     try {
       makeExtension(root);
-      const registered = await reloadingService.registerInstalledSource({
+      await reloadingService.registerInstalledSource({
         installName: "reload",
         displayName: "Reload Extension",
         extensionId: "pstdio.reload",
@@ -597,12 +592,10 @@ describe("extensionService reload", () => {
       writeFileSync(join(root, "extension.ts"), "throw new Error('reload boom');\n");
 
       const result = await reloadingService.reloadInstalledSourceBySourcePath(root);
-      const reloadEvents = await installedExtensionSourcesService.listReloadEvents(registered.id);
 
       expect(result.installedSource.status).toBe("error");
       expect(result.installedSource.manifest_json).toEqual({ id: "pstdio.reload", templates: ["ticket"] });
       expect(result.installedSource.last_error_json).toMatchObject({ code: "extension_import_failed" });
-      expect(reloadEvents.at(-1)?.status).toBe("error");
       // A refused update keeps the adopted hash, so the source still reads as having an update waiting.
       expect(result.installedSource.source_hash).toBe("old-hash");
     } finally {

@@ -9,9 +9,16 @@ import { createTicketParentLookup, ticketDisplayTitle } from "../data/mappers";
 import { normalizeTicketDependencies } from "../data/ticket-dependencies";
 import { ticketPageTarget } from "../data/ticket-page-target";
 import { ticketResourceReference } from "../data/ticket-resource-hierarchy";
+import type { TicketSummary } from "../data/ticket-summary";
 import type { Ticket } from "../data/types";
 
-export const ticketRelationshipSections = (ticket: Ticket, tickets: Ticket[], extensionId = "pstdio.planner") => {
+export const ticketRelationshipSections = (
+  ticket: Ticket,
+  tickets: TicketSummary[],
+  extensionId = "pstdio.planner",
+  requiredBy?: TicketSummary[],
+  nextCursor?: string,
+) => {
   const lookup = createTicketParentLookup(tickets);
   const byReference = new Map(
     tickets.flatMap((item) => [
@@ -26,7 +33,7 @@ export const ticketRelationshipSections = (ticket: Ticket, tickets: Ticket[], ex
     {
       id: "required-by",
       label: l10n("navigation.requiredBy", "Required by"),
-      refs: tickets
+      refs: (requiredBy ?? tickets)
         .filter(
           (item) =>
             !item.archived &&
@@ -50,7 +57,10 @@ export const ticketRelationshipSections = (ticket: Ticket, tickets: Ticket[], ex
         },
       ];
     });
-    return nodes.length ? [{ ...group, collapsible: true, nodes }] : [];
+    const cursor = group.id === "required-by" ? nextCursor : undefined;
+    return nodes.length || cursor
+      ? [{ ...group, collapsible: true, nodes, ...(cursor ? { nextCursor: cursor } : {}) }]
+      : [];
   });
 };
 
@@ -99,7 +109,7 @@ export const mergeTicketLinkSections = (
         .filter((section) => section.nodes.length === 0)
         .flatMap((section) => section.actions ?? []),
     ];
-  return [...groups.values()].filter((section) => section.nodes.length > 0);
+  return [...groups.values()].filter((section) => section.nodes.length > 0 || section.nextCursor);
 };
 
 const linkGroup = (type: string) => {

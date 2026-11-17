@@ -16,7 +16,7 @@
     "@pstdio/sdk": "workspace:*",
     "@pstdio/ui": "workspace:*",
     "@pstdio/workbench": "workspace:*",
-    "@tanstack/hotkeys": "^0.7.1",
+    "@tanstack/hotkeys": "0.30.0",
     "lucide-react": "^0.557.0",
     "pstdio-api-contracts": "workspace:*",
     "pstdio-extensions": "workspace:*",

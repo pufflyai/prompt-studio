@@ -1,8 +1,9 @@
 import { expect, mock, test } from "bun:test";
 import { params } from "@pstdio/sdk/extensions";
+import { WorkspaceTargetUnavailableError } from "../extensions/command-environment/workspace-target";
 import type { WorkspacesRouteDeps } from "./deps";
 import { listWorkspaceProviders } from "./workspace-provider-catalog";
-import { resolveWorkspaceParams } from "./workspace-provider-params";
+import { InvalidWorkspaceParamsError, resolveWorkspaceParams } from "./workspace-provider-params";
 import { createProviderBackedWorkspace } from "./workspace-provider-service";
 
 const discoveryFixture = () => {
@@ -65,6 +66,14 @@ test("an unavailable installed provider is omitted and rejects creation without 
     { id: fixture.staticId, params: { revision: { defaultValue: "static-fallback" } } },
   ]);
   await expect(resolveWorkspaceParams(fixture.deps, "project", fixture.id, {})).rejects.toThrow(/unavailable/);
+});
+
+test("discovery while its project workspace is provisioning rejects creation as unavailable", async () => {
+  const fixture = discoveryFixture();
+  fixture.select(new WorkspaceTargetUnavailableError("This workspace has no ready local file target."));
+  const error = await resolveWorkspaceParams(fixture.deps, "project", fixture.id, {}).catch((error) => error);
+  expect(error).toBeInstanceOf(InvalidWorkspaceParamsError);
+  expect(error.message).toContain("unavailable");
 });
 
 test("one failed discovery preserves the other provider choices", async () => {

@@ -29,6 +29,9 @@ export const dispatchQueuedEntry = async (
   const removeEntry = () =>
     entry.attachments_json?.length ? undefined : deps.sessionQueueEntriesService.remove(entry.queue_position);
   const fail = async (error: unknown) => {
+    // Shutdown can retire a provider while its lookup is pending. Preserve the durable
+    // dispatch claim for startup recovery instead of recording a tool failure.
+    if (deps.sessionQueueLifecycle.isClosing()) return;
     if (error instanceof WorkspaceSessionNotReadyError && error.retryable) {
       deps.sessionService.store.remove(session.id);
       await deps.sessionService.recoverQueuedDispatchClaim(

@@ -120,7 +120,7 @@ test("lists an unchanged harness while another extension installs", async () => 
       method: "POST",
       body: uploadExtension("unrelated-tool"),
     });
-    expect(installed.status).toBe(201);
+    expect(installed.status, JSON.stringify(await installed.clone().json())).toBe(201);
     // A listing that starts after the install sees the new extension set.
     expect((await app.request("/v1/agents/info")).status).toBe(200);
     releaseGate();

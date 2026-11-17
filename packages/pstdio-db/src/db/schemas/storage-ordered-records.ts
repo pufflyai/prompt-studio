@@ -119,6 +119,8 @@ export const storage_ordered_receipts = pgTable(
   },
   (table) => [
     primaryKey({ columns: [table.workbench_id, table.extension_id, table.epoch, table.operation_id] }),
+    // Deleting an operation cascades here; without this index each delete scans the owner's receipts.
+    index("storage_ordered_receipts_operation_idx").on(table.workbench_id, table.extension_id, table.operation_id),
     index("storage_ordered_receipts_unindexed_idx")
       .on(table.workbench_id, table.extension_id, table.epoch, table.operation_id)
       .where(sql`${table.indexed} = false`),

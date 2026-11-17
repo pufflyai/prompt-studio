@@ -4,7 +4,7 @@ import { read as readChangesetsConfig } from "@changesets/config";
 
 const changesetDirectory = ".changeset";
 const changesetConfigPath = join(changesetDirectory, "config.json");
-const frontmatterEntryPattern = /^"[^"]+": (patch|minor|major)$/;
+const frontmatterEntryPattern = /^"([^"]+)": (patch|minor|major)$/;
 
 type RootManifest = {
   workspaces?: string[];
@@ -22,7 +22,7 @@ export type ChangesetValidationIssue = {
   message: string;
 };
 
-const validateChangesetFile = (filePath: string, content: string) => {
+const validateChangesetFile = (filePath: string, content: string, workspaces: ReadonlyMap<string, unknown>) => {
   const normalizedContent = content.replaceAll("\r\n", "\n");
   const lines = normalizedContent.split("\n");
 
@@ -56,13 +56,17 @@ const validateChangesetFile = (filePath: string, content: string) => {
   }
 
   for (const line of frontmatterLines) {
-    if (!frontmatterEntryPattern.test(line)) {
+    const entry = frontmatterEntryPattern.exec(line);
+    if (!entry) {
       return [
         {
           filePath,
           message: `invalid frontmatter entry: ${line}`,
         },
       ];
+    }
+    if (!workspaces.has(entry[1]!)) {
+      return [{ filePath, message: `unknown workspace package: ${entry[1]}` }];
     }
   }
 
@@ -83,32 +87,56 @@ const validateChangesetFile = (filePath: string, content: string) => {
   return [];
 };
 
-const readChangesetFiles = async () => {
-  const entries = await readdir(changesetDirectory, { withFileTypes: true });
+const readChangesetFiles = async (cwd: string) => {
+  const entries = await readdir(join(cwd, changesetDirectory), { withFileTypes: true });
   const files = entries
     .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
     .map((entry) => join(changesetDirectory, entry.name))
     .sort();
 
   const contents = await Promise.all(
-    files.map(async (filePath) => [filePath, await Bun.file(filePath).text()] as const),
+    files.map(async (filePath) => [filePath, await Bun.file(join(cwd, filePath)).text()] as const),
   );
 
   return Object.fromEntries(contents);
 };
 
-export const collectChangesetValidationIssues = async (changesetFiles?: Record<string, string>) => {
-  const files = changesetFiles ?? (await readChangesetFiles());
+const readWorkspaces = async (cwd: string) => {
+  const rootManifest = (await Bun.file(join(cwd, "package.json")).json()) as RootManifest;
+  const workspaces = new Map<string, { repoLocal: boolean; extension: boolean }>();
+
+  for (const workspace of rootManifest.workspaces ?? []) {
+    const manifests = new Bun.Glob(`${workspace.replace(/\/$/, "")}/package.json`);
+    for await (const manifestPath of manifests.scan({ cwd, dot: true, onlyFiles: true })) {
+      const manifestFullPath = resolve(cwd, manifestPath);
+      const pathFromRoot = relative(cwd, manifestFullPath);
+
+      const manifest = (await Bun.file(manifestFullPath).json()) as WorkspaceManifest;
+      if (manifest.name)
+        workspaces.set(manifest.name, {
+          repoLocal: pathFromRoot.split(sep)[0] === ".pstdio",
+          extension: isExtensionManifest(manifest),
+        });
+    }
+  }
+  return workspaces;
+};
+
+export const collectChangesetValidationIssues = async (
+  changesetFiles?: Record<string, string>,
+  cwd = process.cwd(),
+) => {
+  const files = changesetFiles ?? (await readChangesetFiles(cwd));
+  const workspaces = await readWorkspaces(cwd);
 
   return Object.entries(files)
     .sort(([leftPath], [rightPath]) => leftPath.localeCompare(rightPath))
-    .flatMap(([filePath, content]) => validateChangesetFile(filePath, content));
+    .flatMap(([filePath, content]) => validateChangesetFile(filePath, content, workspaces));
 };
 
 export const collectChangesetConfigIssues = async (cwd = process.cwd()) => {
   try {
     const config = await readChangesetsConfig(cwd);
-    const rootManifest = (await Bun.file(join(cwd, "package.json")).json()) as RootManifest;
     const issues: ChangesetValidationIssue[] = [];
     const releasedNames = new Set(config.fixed[0] ?? []);
     if (config.fixed.length !== 1) {
@@ -117,22 +145,7 @@ export const collectChangesetConfigIssues = async (cwd = process.cwd()) => {
         message: `expected exactly one fixed version group, found ${config.fixed.length}`,
       });
     }
-    const workspaces = new Map<string, { repoLocal: boolean; extension: boolean }>();
-
-    for (const workspace of rootManifest.workspaces ?? []) {
-      const manifests = new Bun.Glob(`${workspace.replace(/\/$/, "")}/package.json`);
-      for await (const manifestPath of manifests.scan({ cwd, dot: true, onlyFiles: true })) {
-        const manifestFullPath = resolve(cwd, manifestPath);
-        const pathFromRoot = relative(cwd, manifestFullPath);
-
-        const manifest = (await Bun.file(manifestFullPath).json()) as WorkspaceManifest;
-        if (manifest.name)
-          workspaces.set(manifest.name, {
-            repoLocal: pathFromRoot.split(sep)[0] === ".pstdio",
-            extension: isExtensionManifest(manifest),
-          });
-      }
-    }
+    const workspaces = await readWorkspaces(cwd);
 
     for (const [name, { repoLocal, extension }] of [...workspaces].sort(([a], [b]) => a.localeCompare(b))) {
       if (config.ignore.includes(name)) continue;

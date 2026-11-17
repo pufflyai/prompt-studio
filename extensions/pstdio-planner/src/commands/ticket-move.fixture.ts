@@ -1,5 +1,5 @@
-import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
+import { observeTicketRecords } from "../data/storage-reads.fixture";
 import { ticketsCollection } from "../data/ticket-context.fixture";
 import { sortedByTicketOrder } from "../utils/sort";
 
@@ -12,26 +12,8 @@ export const ticketMoveFixture = async () => {
   const tickets = [];
   for (const title of ["First", "Hidden", "Last"]) tickets.push(await createTicketCommand.run(ctx, { title }));
   const stored = await ticketsCollection(storage).list();
-  const writes: string[] = [];
   const events: string[] = [];
-  const observed: ExtensionStorageApi = {
-    ...storage,
-    collection<T>(name: string) {
-      const collection = storage.collection<T>(name);
-      return {
-        ...collection,
-        async updateIfUnchanged(id: string, revision: string, value: T) {
-          const saved = await collection.updateIfUnchanged(id, revision, value);
-          if (saved && name === "tickets") writes.push(id);
-          return saved;
-        },
-        async put(id: string, value: T) {
-          if (name === "tickets") writes.push(id);
-          await collection.put(id, value);
-        },
-      };
-    },
-  };
+  const { storage: observed, writes } = observeTicketRecords(storage);
   const movingContext = {
     ...ctx,
     storage: observed,
