@@ -72,6 +72,8 @@ export interface KanbanRendererSettings {
   viewMode: KanbanRendererViewMode;
   columnGrouping: string;
   rowGrouping: string;
+  /** Resource lists only: further grouping levels below `columnGrouping`, outermost first. */
+  subGroupings?: string[];
   displayProperties: string[];
   showChildren?: boolean;
 }

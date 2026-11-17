@@ -1,7 +1,8 @@
 import { readCollectionRecords } from "@pstdio/sdk/data";
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import type { AttemptRecord, AttemptTimelineEvent } from "./attempt-types";
-import { preparePlannerIndexes } from "./storage-indexes";
+import { migratePlannerStorage } from "./migrate-storage";
+import { plannerStorageIndexes } from "./storage-indexes";
 
 type LegacyAttempt = Omit<AttemptRecord, "schemaVersion"> & { schemaVersion: 1; state: string };
 
@@ -51,9 +52,11 @@ const upgradeLegacyAttempt = async (storage: ExtensionStorageApi, record: Legacy
 
 // One resumable storage upgrade preserves the originals before changing any record.
 // The host serializes concurrent callers and records the checkpoint only after the upgrade succeeds.
-export const upgradeAttemptStorage = (storage: ExtensionStorageApi) =>
-  storage.scope({ type: "planner-storage-upgrade", id: migrationKey }).migrate(1, async () => {
-    await preparePlannerIndexes(storage);
+export const upgradeAttemptStorage = async (storage: ExtensionStorageApi) => {
+  // Planner's project migration runs first: a migration must not start another one inside it.
+  await migratePlannerStorage({ storage });
+  await storage.scope({ type: "planner-storage-upgrade", id: migrationKey }).migrate(1, async () => {
+    await storage.records.defineIndexes(plannerStorageIndexes());
     for (;;) {
       const page = await storage.records.query({
         index: "attempt-schema",
@@ -75,3 +78,4 @@ export const upgradeAttemptStorage = (storage: ExtensionStorageApi) =>
     if (mode && mode.eligible === undefined)
       await storage.set("auto-build", { ...mode, enabled: false, eligible: { conjunction: "and", rules: [] } });
   });
+};
