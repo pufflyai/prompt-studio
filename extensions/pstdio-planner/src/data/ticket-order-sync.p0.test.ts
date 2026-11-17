@@ -33,7 +33,9 @@ test("offline Planner migrations and moves preserve every card in one movable or
     for (const id of ["a", "b", "c", "d", "e"]) seedTicketIdentity(storage, { id, shorthand: `T-${id}` });
   }
   for (const ctx of contexts) await migratePlannerStorage(ctx);
-  await pair.merge();
+  // Both devices moved the tickets offline; the losing device forwards its order writes and the
+  // winner's catch-up moves its cards, so convergence takes a few sync rounds.
+  for (let round = 0; round < 3; round++) await pair.merge();
   const ordered = async (storage: typeof first) => {
     const rows = await storage.collection<ReturnType<typeof legacyTicket> & { position?: string }>("tickets").list();
     for (const row of rows) {
