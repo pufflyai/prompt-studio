@@ -64,8 +64,7 @@ const FrameRateSection = (props: FrameRateSectionProps) => {
 export interface PerformancePopoverContentProps extends CpuSectionProps {
   renderOverlay?: ReactRenderControlProps;
   copied?: boolean;
-  // A failed copy, pause or resume, shown below the header that started it.
-  actionError?: string;
+  actionError?: { message: string; source: "metrics" | "render-overlay" };
   onCopy: () => void;
   onDismissActionError: () => void;
 }
@@ -87,6 +86,9 @@ export const PerformancePopoverContent = (props: PerformancePopoverContentProps)
   const copyLabel = copied
     ? t("popover.copied", "Performance snapshot copied")
     : t("popover.copy", "Copy performance snapshot");
+  const actionAlert = actionError ? (
+    <AlertMessage status="error" title={actionError.message} onClose={onDismissActionError} />
+  ) : null;
 
   return (
     <Stack gap="0" minH="0" maxH="100dvh" overflow="hidden" data-testid="performance-popover">
@@ -104,9 +106,8 @@ export const PerformancePopoverContent = (props: PerformancePopoverContentProps)
       />
       <ScrollArea minH="0" contentProps={{ paddingX: "md", paddingBottom: "sm" }}>
         <Stack gap="sm">
-          {actionError ? <AlertMessage status="error" title={actionError} onClose={onDismissActionError} /> : null}
+          {actionError?.source === "metrics" ? actionAlert : null}
           <FrameRateSection buckets={buckets} />
-          {renderOverlay ? <ReactRenderControl {...renderOverlay} /> : null}
           {sustained ? (
             <AlertMessage status="warning" title={t("popover.sustainedTitle", "Sustained high CPU")}>
               {t("popover.sustainedBody", "{{process}} averaged {{cpu}} CPU over the last {{seconds}} seconds.", {
@@ -126,6 +127,12 @@ export const PerformancePopoverContent = (props: PerformancePopoverContentProps)
           <CpuSection {...cpu} />
         </Stack>
       </ScrollArea>
+      {renderOverlay ? (
+        <Stack gap="xs" flexShrink="0" paddingX="md" paddingY="sm" borderTopWidth="1px" borderColor="border.subtle">
+          {actionError?.source === "render-overlay" ? actionAlert : null}
+          <ReactRenderControl {...renderOverlay} />
+        </Stack>
+      ) : null}
     </Stack>
   );
 };

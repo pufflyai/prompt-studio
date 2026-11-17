@@ -105,7 +105,13 @@ export const ManyExtensions: Story = {
 };
 export const ShortViewport: Story = {
   id: "extensions-performance-popover--short-viewport",
-  args: { snapshot: manyExtensionsSnapshot },
+  args: {
+    snapshot: manyExtensionsSnapshot,
+    renderOverlay: {
+      state: { supported: true, enabled: false, scope: "workbench" },
+      onEnabledChange: () => undefined,
+    },
+  },
   decorators: [
     (Story) => (
       <Box height="xs" display="flex" flexDirection="column" minH="0">
@@ -166,5 +172,9 @@ export const SharedProcess: Story = {
 };
 export const ActionFailed: Story = {
   id: "extensions-performance-popover--action-failed",
-  args: { snapshot: smoothSnapshot, actionError: "Performance controls require a local user interaction" },
+  args: {
+    ...ShortViewport.args,
+    actionError: { message: "Performance controls require a local user interaction", source: "render-overlay" },
+  },
+  decorators: ShortViewport.decorators,
 };

@@ -8,7 +8,10 @@ import {
 import { useWebviewCommandQuery, useWebviewVisibility } from "@pstdio/sdk/extensions/react";
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { PerformancePopoverContent } from "./components/performance-popover-content";
+import {
+  PerformancePopoverContent,
+  type PerformancePopoverContentProps,
+} from "./components/performance-popover-content";
 import { PerformanceRoot } from "./components/performance-root";
 import { createSnapshotQuery } from "./snapshot-query";
 
@@ -31,7 +34,7 @@ const Details = (props: DetailsProps) => {
     const timer = setTimeout(() => setCopied(false), 2_000);
     return () => clearTimeout(timer);
   }, [copied]);
-  const [error, setError] = useState<string>();
+  const [error, setError] = useState<PerformancePopoverContentProps["actionError"]>();
   const [renderOverlay, setRenderOverlay] = useState<PerformanceMonitoringState["renderOverlay"]>();
   const [changingOverlay, setChangingOverlay] = useState(false);
   const visible = useWebviewVisibility();
@@ -59,9 +62,9 @@ const Details = (props: DetailsProps) => {
       setChangingOverlay(false);
     }
   };
-  const run = (action: Promise<unknown>) => {
+  const run = (action: Promise<unknown>, source: NonNullable<typeof error>["source"] = "metrics") => {
     setError(undefined);
-    action.catch((cause) => setError(String(cause)));
+    action.catch((cause) => setError({ message: String(cause), source }));
   };
   const copy = async () => {
     // Copy the latest reading, not the one this view last drew.
@@ -79,7 +82,7 @@ const Details = (props: DetailsProps) => {
       renderOverlay={{
         state: renderOverlay,
         pending: changingOverlay,
-        onEnabledChange: (enabled) => run(changeOverlay(enabled)),
+        onEnabledChange: (enabled) => run(changeOverlay(enabled), "render-overlay"),
       }}
       actionError={error}
       onCopy={() => run(copy())}
