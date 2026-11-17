@@ -1,4 +1,5 @@
 import { folderProjectInput } from "../helpers/folder-project";
+import { homeFrame } from "../helpers/home-loading";
 import { createPlannerTicket } from "../helpers/planner-api";
 import { switchSession } from "../helpers/session-side-panel";
 import { expect, test } from "../scripts/session-test";
@@ -85,9 +86,18 @@ test("preserves other Session tabs when selecting from New session", async ({ pa
     localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
   }, project.id);
   await page.goto(`/projects/${project.id}/`);
+  // Project boot can still apply its saved panel layout after the shell mounts.
+  await expect(homeFrame(page).getByText("Project home", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Open Side Panel" }).click();
   await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
   const sideHeader = page.locator('[data-workbench-panel-header="side"]');
+  const initialSession = sideHeader.getByRole("tab", { name: "New session", exact: true });
+  const provider = page
+    .getByRole("region", { name: "Side Panel", exact: true })
+    .getByRole("group", { name: "Available tabs" })
+    .getByRole("button", { name: "New session", exact: true });
+  await expect(initialSession.or(provider)).toBeVisible();
+  if (await provider.isVisible()) await provider.click();
   await expect(sideHeader.getByRole("tab", { name: "New session", exact: true })).toBeVisible();
   await sideHeader.getByRole("button", { name: "Add panel" }).click();
   const sessionChoice = page
@@ -159,9 +169,18 @@ test("switches a pinned Session tab in place from its menu", async ({ page, requ
     localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
   }, project.id);
   await page.goto(`/projects/${project.id}/`);
+  // Project boot can still apply its saved panel layout after the shell mounts.
+  await expect(homeFrame(page).getByText("Project home", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Open Side Panel" }).click();
   await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
   const sideHeader = page.locator('[data-workbench-panel-header="side"]');
+  const initialSession = sideHeader.getByRole("tab", { name: "New session", exact: true });
+  const provider = page
+    .getByRole("region", { name: "Side Panel", exact: true })
+    .getByRole("group", { name: "Available tabs" })
+    .getByRole("button", { name: "New session", exact: true });
+  await expect(initialSession.or(provider)).toBeVisible();
+  if (await provider.isVisible()) await provider.click();
   const sessionTabs = sideHeader.getByRole("tab");
   await expect(sessionTabs).toHaveCount(1);
   const previewId = await sessionTabs.first().getAttribute("id");
