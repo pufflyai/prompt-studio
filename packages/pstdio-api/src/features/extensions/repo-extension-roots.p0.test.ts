@@ -1,10 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
+import { restoredFolderSetupPending } from "../workspaces/workspace-provider-identity";
 import { listRepoExtensionRoots } from "./repo-extension-roots";
 
 const readyWorkspace = {
   execution_kind: "local" as const,
+  provider_id: "pstdio.root",
   provider_state: "ready" as const,
+  provider_params_json: {},
   initializing: false,
   setup_error: null,
 };
@@ -54,7 +57,12 @@ describe("listRepoExtensionRoots", () => {
 
   test("discovers a restored folder only after workspace setup is ready", async () => {
     const ready = { ...readyWorkspace, root_path: "/repos/attached" };
-    const restored = { ...ready, root_path: "/repos/restored", initializing: true };
+    const restored = {
+      ...ready,
+      root_path: "/repos/restored",
+      initializing: true,
+      provider_params_json: { [restoredFolderSetupPending]: true },
+    };
     const input = {
       projectService: { list: async () => [{ id: "attached" }, { id: "restored" }] },
       workspaceService: { getDefault: async (projectId: string) => (projectId === "restored" ? restored : ready) },
@@ -65,6 +73,9 @@ describe("listRepoExtensionRoots", () => {
     ]);
 
     restored.initializing = false;
+    expect((await listRepoExtensionRoots(input)).flatMap(({ projects }) => projects)).toHaveLength(1);
+
+    restored.provider_params_json[restoredFolderSetupPending] = false;
     expect((await listRepoExtensionRoots(input)).flatMap(({ projects }) => projects)).toEqual([
       { projectId: "attached", repoPath: ready.root_path },
       { projectId: "restored", repoPath: restored.root_path },

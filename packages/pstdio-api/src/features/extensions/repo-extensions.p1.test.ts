@@ -288,6 +288,7 @@ test("syncs extensions from the default workspace folder", async () => {
     execution_kind: "local" as const,
     provider_id: "pstdio.root",
     provider_state: "ready" as const,
+    provider_params_json: {},
     initializing: true,
     setup_error: null,
   };

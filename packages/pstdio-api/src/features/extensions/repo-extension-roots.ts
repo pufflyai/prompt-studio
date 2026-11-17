@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import type { createWorkspaceService } from "../../services/workspace-service";
+import { hasPendingRestoredFolderSetup } from "../workspaces/workspace-provider-identity";
 
 export type RepoExtensionRoot = {
   rootPath: string;
@@ -14,11 +15,18 @@ type ListRepoExtensionRootsInput = {
 type DefaultWorkspace = NonNullable<Awaited<ReturnType<ReturnType<typeof createWorkspaceService>["getDefault"]>>>;
 export type RepoExtensionWorkspace = Pick<
   DefaultWorkspace,
-  "root_path" | "execution_kind" | "provider_state" | "initializing" | "setup_error"
+  | "root_path"
+  | "execution_kind"
+  | "provider_id"
+  | "provider_state"
+  | "provider_params_json"
+  | "initializing"
+  | "setup_error"
 >;
 
 export const readyRepoExtensionFolder = (workspace: RepoExtensionWorkspace | null) => {
   if (workspace?.provider_state !== "ready" || workspace.initializing || workspace.setup_error) return null;
+  if (hasPendingRestoredFolderSetup(workspace)) return null;
   return workspace.execution_kind === "local" ? workspace.root_path : null;
 };
 
