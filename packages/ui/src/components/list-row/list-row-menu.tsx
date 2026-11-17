@@ -52,6 +52,8 @@ export const ListRowMenu = (props: ListRowMenuProps) => {
                 actions={items.map((item) => ({
                   key: item.id,
                   label: item.label,
+                  isSelected: item.selected,
+                  closeOnSelect: item.closeOnSelect,
                   group: item.group,
                   icon: typeof item.icon === "function" ? <Icon as={item.icon} boxSize="4" /> : item.icon,
                   endContent: item.endContent,
@@ -62,7 +64,8 @@ export const ListRowMenu = (props: ListRowMenuProps) => {
                 }))}
                 onSelect={(action) => {
                   action.onSelect?.();
-                  pending.current = action;
+                  if (action.closeOnSelect === false) void action.onClick?.();
+                  else pending.current = action;
                 }}
               />
             ) : (

@@ -1,8 +1,9 @@
-import { Box, Button, HStack, Icon, IconButton, Menu, Text } from "@chakra-ui/react";
+import { Box, Button, HStack, Icon, IconButton, Text } from "@chakra-ui/react";
 import { ArrowUpRight, ChevronDown, GitBranch } from "lucide-react";
 import { ListRow } from "@/components/list-row/list-row";
 import { SearchableMenu, type SearchableMenuItem } from "@/components/overlays/searchable-menu";
 import { Tooltip } from "@/components/primitives/tooltip";
+import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
 export interface ChatWorkspaceOption {
   id: string;
   title: string;
@@ -99,11 +100,11 @@ export const ChatWorkspaceMenu = (props: ChatWorkspaceMenuProps) => {
     <HStack gap="sm" minW="0">
       <SearchableMenu
         trigger={
-          <Box minW="0">
-            <Tooltip content={workspaces.length === 0 ? "No workspaces" : "Select workspace"}>
+          <Tooltip content={workspaces.length === 0 ? "No workspaces" : "Select workspace"}>
+            <Box minW="0">
               <WorkspaceMenuButton label={selectedLabel} disabled={workspaces.length === 0} />
-            </Tooltip>
-          </Box>
+            </Box>
+          </Tooltip>
         }
         items={buildWorkspaceItems(workspaces, selectedWorkspaceId, onSelectWorkspace)}
         width="280px"

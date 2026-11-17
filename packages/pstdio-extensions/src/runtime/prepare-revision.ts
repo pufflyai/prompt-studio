@@ -136,6 +136,9 @@ export const acceptRevision = (
     try {
       current = JSON.parse(readFileSync(path, "utf8"));
     } catch {}
+    // Reads treat an earlier host/format as absent. Its replacement uses that same guard;
+    // a compatible revision accepted in the meantime still participates in the CAS below.
+    if (current?.host !== preparationHostIdentity()) current = null;
     if (
       expectedState !== undefined &&
       preparedRevisionState(current) !== expectedState &&

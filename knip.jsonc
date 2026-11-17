@@ -155,7 +155,7 @@
         // Specs install fixture extensions by path.
         "src/fixtures/**/extension.ts",
         // Extension manifests load this webview entry by packageAsset path.
-        "src/fixtures/{editing-session,document,mode,settings}/view.ts",
+        "src/fixtures/{editing-session,document,mode,settings,file-download}/view.ts",
         "src/fixtures/panel-views/letter-{browser,reader}.tsx",
         "src/fixtures/public-text-editor/view.tsx"
       ],
@@ -329,6 +329,7 @@
         "scripts/**/*.ts",
         // Keep in sync with build-entries.ts and vite.monaco.config.ts.
         "src/index.ts",
+        "src/scrollbars.ts",
         "src/theme/index.ts",
         // The Canvas build loads these themes by absolute path.
         "src/theme/custom/vscode-theme.canvas-fixture.ts",
