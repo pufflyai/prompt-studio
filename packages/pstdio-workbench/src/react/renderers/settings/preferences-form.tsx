@@ -51,7 +51,10 @@ const PreferenceFormBody = ({
   const changes = {
     dirty,
     saving: draft.saving,
-    onSave: draft.save,
+    onSave: () => {
+      setDismissed(error);
+      return draft.save();
+    },
     onReset: () => {
       draft.discard();
       setFormKey((key) => key + 1);

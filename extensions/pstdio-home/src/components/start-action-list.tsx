@@ -50,7 +50,7 @@ export const StartActionList = (props: StartActionListProps) => {
                 status="error"
                 title={error.message}
                 position="absolute"
-                top="full"
+                top="100%"
                 minW="2xs"
                 zIndex="docked"
                 onClose={onDismissError}

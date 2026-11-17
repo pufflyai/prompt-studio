@@ -26,6 +26,7 @@ interface AutoBuildActivityProps
     | "capacity"
     | "error"
     | "actionError"
+    | "onDismissActionError"
     | "stuck"
     | "matchingTicketCount"
     | "readyTicketCount"

@@ -11,6 +11,7 @@ import { readCurrentHarness } from "../harnesses/read-current-harness";
 import { workspaceSessionReadiness } from "../workspaces/workspace-session-readiness";
 import type { SessionsRouteDeps } from "./deps";
 import { getSessionHarness } from "./get-session-harness";
+import { type HarnessCommandDiscovery, unavailableWorkspaceCommands } from "./harness-command-discovery";
 import { initializeConversation } from "./initialize-conversation";
 import { emitSessionCommandsChanged } from "./session-command-events";
 import {
@@ -31,13 +32,6 @@ export class HarnessOperationError extends Error {
     super(message);
   }
 }
-export const emptyHarnessCommands = (harnessId: string) => ({
-  harnessId,
-  commands: [],
-  modes: [],
-  slashCommands: false,
-});
-
 const resolve = async (deps: SessionsRouteDeps, id: string, operation = false) => {
   const session = await deps.sessionService.get(id);
   if (!session) throw new HarnessOperationError("Session not found.", 404);
@@ -67,9 +61,12 @@ export const observeSessionHarnessCommands = async (deps: SessionsRouteDeps, id:
   const timer = harness.supportsCommandState ? setInterval(changed, 30_000) : undefined;
   return () => clearInterval(timer);
 };
-export const getSessionHarnessCommands = async (deps: SessionsRouteDeps, id: string) => {
+export const getSessionHarnessCommands = async (
+  deps: SessionsRouteDeps,
+  id: string,
+): Promise<HarnessCommandDiscovery> => {
   const { harness, input, options, readiness } = await resolve(deps, id);
-  if (readiness.kind !== "ready") return emptyHarnessCommands(harness.id);
+  if (readiness.kind !== "ready") return unavailableWorkspaceCommands(harness.id);
   try {
     const state = await readCurrentHarness(deps.harnessRegistry, harness.id, options, async (current) => {
       if (input.workspace?.executionTarget.kind === "remote" && current.cwdRequirement === "required")

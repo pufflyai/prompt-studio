@@ -11,6 +11,7 @@ export default meta;
 type Story = CanvasFrame<typeof RendererReadNotice>;
 export const InitialFailure: Story = {
   id: "renderers-read-failure--initial-failure",
+  args: { initial: true },
 };
 export const RetainedContent: Story = {
   id: "renderers-read-failure--retained-content",

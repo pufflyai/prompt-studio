@@ -21,22 +21,50 @@ const hasUpdateNotices = (bridge: unknown): bridge is DesktopUpdateNoticeBridge 
       typeof bridge.takeUpdateNotice === "function",
   );
 
-export const connectDesktopUpdateNotices = (bridge: unknown, getWorkbench: () => WorkbenchCore | undefined) => {
+const updateNoticeId = "desktop.update";
+
+export const connectDesktopUpdateNotices = (
+  bridge: unknown,
+  getWorkbench: () => WorkbenchCore | undefined,
+  subscribeWorkbench?: (listener: () => void) => () => void,
+) => {
   if (!hasUpdateNotices(bridge)) return;
   let connected = true;
+  let pending: UpdateNotice | undefined;
+  let owner: WorkbenchCore | undefined;
+  let dismissal: ReturnType<WorkbenchCore["notifications"]["subscribe"]> | undefined;
+  const publish = () => {
+    if (pending) owner?.notifications.show({ ...pending, id: updateNoticeId });
+  };
+  const followActiveWorkbench = () => {
+    const next = getWorkbench();
+    if (next === owner) return;
+    dismissal?.dispose();
+    owner?.notifications.dismiss(updateNoticeId);
+    owner = next;
+    dismissal = owner?.notifications.subscribe((event) => {
+      if (event.type === "dismiss" && event.id === updateNoticeId) pending = undefined;
+    });
+    publish();
+  };
   const receive = () => {
     void bridge
       .takeUpdateNotice()
       .then((notice) => {
         if (!notice || !connected) return;
-        getWorkbench()?.notifications.show({ ...notice, id: "desktop.update" });
+        pending = notice;
+        publish();
       })
       .catch(() => {});
   };
+  followActiveWorkbench();
+  const stopWorkbench = subscribeWorkbench?.(followActiveWorkbench);
   const stop = bridge.onUpdateNotice(receive);
   receive();
   return () => {
     connected = false;
+    dismissal?.dispose();
+    stopWorkbench?.();
     stop();
   };
 };

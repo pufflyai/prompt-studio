@@ -51,6 +51,7 @@ export function AutoBuildControl(props: AutoBuildControlProps) {
           })
         }
         actionError={autoBuild.error}
+        onDismissActionError={autoBuild.dismissError}
         disabled={!autoBuild.mode || autoBuild.saving}
         configuration={
           autoBuild.mode

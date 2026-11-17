@@ -9,8 +9,8 @@ interface ActionErrorSlotProps {
 /** Anchors feedback to a positioned owner without changing the owner's layout. */
 export const ActionErrorSlot = (props: ActionErrorSlotProps) => {
   const { children, edge = "bottom" } = props;
-  const top = edge === "below" ? "full" : undefined;
-  const bottom = edge === "above" ? "full" : undefined;
+  const top = edge === "below" ? "100%" : undefined;
+  const bottom = edge === "above" ? "100%" : undefined;
   return (
     <Box
       position="absolute"

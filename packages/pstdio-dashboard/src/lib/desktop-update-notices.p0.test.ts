@@ -16,3 +16,37 @@ test("native update status goes to the active workbench and can be dismissed the
     await workbench.dispose();
   }
 });
+
+test("an unread update follows the active project until dismissed", async () => {
+  const picker = createWorkbench();
+  const project = createWorkbench();
+  const anotherProject = createWorkbench();
+  let active = picker;
+  let activeChanged: () => void = () => {};
+  const stop = connectDesktopUpdateNotices(
+    {
+      onUpdateNotice: () => () => {},
+      takeUpdateNotice: async () => ({ level: "info", title: "Restart to install" }),
+    },
+    () => active,
+    (listener: () => void) => {
+      activeChanged = listener;
+      return () => {};
+    },
+  );
+  try {
+    await Promise.resolve();
+    expect(picker.notifications.listNotifications()).toHaveLength(1);
+    active = project;
+    activeChanged();
+    await picker.dispose();
+    expect(project.notifications.listNotifications()).toMatchObject([{ title: "Restart to install" }]);
+    project.notifications.dismiss("desktop.update");
+    active = anotherProject;
+    activeChanged();
+    expect(active.notifications.listNotifications()).toEqual([]);
+  } finally {
+    stop?.();
+    await Promise.all([picker.dispose(), project.dispose(), anotherProject.dispose()]);
+  }
+});

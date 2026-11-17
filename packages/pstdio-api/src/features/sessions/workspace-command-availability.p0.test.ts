@@ -35,7 +35,8 @@ test("a draft can load its composer while workspace commands are unavailable", a
   expect(await getDraftHarnessCommands(deps, { project_id: "project", agent: "harness" })).toEqual({
     commands: [],
     modes: [],
-    slashCommands: false,
+    slashCommands: true,
+    unavailableReason: expect.stringContaining("Workspace commands are unavailable"),
     harnessId: "harness",
   });
   expect(calls()).toBe(0);
@@ -46,7 +47,8 @@ test("background command discovery for an existing conversation tolerates an una
   expect(await getSessionHarnessCommands(deps, "session")).toEqual({
     commands: [],
     modes: [],
-    slashCommands: false,
+    slashCommands: true,
+    unavailableReason: expect.stringContaining("Workspace commands are unavailable"),
     harnessId: "harness",
   });
   expect(calls()).toBe(0);

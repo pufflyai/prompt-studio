@@ -16,6 +16,9 @@ test("native chat errors remain in alerts and Retry restores the conversation", 
   const draft = preview.locator(".ps-chat-composer__input").getByRole("textbox");
   const send = preview.getByRole("button", { name: "Send message", exact: true });
   await expect(draft).toBeEditable();
+  const alertPosition = await alert.boundingBox();
+  const draftPosition = await draft.boundingBox();
+  expect(alertPosition!.y + alertPosition!.height).toBeLessThanOrEqual(draftPosition!.y);
   await draft.fill("Keep writing while disconnected");
   await expect(send).toBeDisabled();
   await page.screenshot({ path: test.info().outputPath("conversation-error.png") });

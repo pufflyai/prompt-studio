@@ -1,9 +1,11 @@
-import { Box, Portal as ChakraPortal, type PortalProps } from "@chakra-ui/react";
-import { createContext, type ReactNode, type RefObject, useContext, useRef } from "react";
+import { Box, Portal as ChakraPortal, type createToaster, type PortalProps } from "@chakra-ui/react";
+import { createContext, type ReactNode, type RefObject, useContext, useRef, useState } from "react";
+import { createUiToaster } from "./create-ui-toaster";
 
 export interface UiScope {
   root: RefObject<HTMLDivElement | null>;
   active: boolean;
+  toaster: ReturnType<typeof createToaster>;
 }
 const UiScopeContext = createContext<UiScope | null>(null);
 
@@ -12,7 +14,10 @@ export const UiScopeProvider = (props: { active: boolean; children: ReactNode })
   const { active, children } = props;
   const parent = useContext(UiScopeContext);
   const root = useRef<HTMLDivElement>(null);
-  return <UiScopeContext value={{ root, active: active && (parent?.active ?? true) }}>{children}</UiScopeContext>;
+  const [toaster] = useState(createUiToaster);
+  return (
+    <UiScopeContext value={{ root, active: active && (parent?.active ?? true), toaster }}>{children}</UiScopeContext>
+  );
 };
 
 /** Deactivates a retained view without taking ownership of its surface's theme, portals or feedback. */

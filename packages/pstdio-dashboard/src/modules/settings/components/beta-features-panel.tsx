@@ -1,6 +1,6 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
 import type { Settings, UpdateSettingsInput } from "@pstdio/sdk/api";
-import { ActionErrorSlot, AlertMessage, SettingsContentSkeleton, Switch } from "@pstdio/ui";
+import { ActionErrorSlot, AlertMessage, ReadErrorRecovery, SettingsContentSkeleton, Switch } from "@pstdio/ui";
 import { ParamEditorRow } from "@pstdio/ui/param-editor";
 import { useTranslation } from "react-i18next";
 import { useSettings, useUpdateSettings } from "../data/use-settings";
@@ -30,6 +30,8 @@ export const BetaFeaturesContent = (props: BetaFeaturesContentProps) => {
       description: t("betaFeatures.machineTokensDescription"),
     },
   ] as const;
+  if (!settings && error)
+    return <ReadErrorRecovery title={error} retry={onRetry} retryLabel={t("runtimeSettings.retry")} />;
   return (
     <Stack gap="md" position="relative">
       {settings

@@ -42,8 +42,10 @@ export const operationForDraft = (
   state: HarnessCommandState | undefined,
 ) => {
   const intent = commandIntent(values);
+  if (!intent && !/^\/[^\s/]+(?:\s|$)/.test(text)) return undefined;
+  if (state && "unavailableReason" in state && typeof state.unavailableReason === "string")
+    throw new Error(state.unavailableReason);
   if (intent) return taggedCommandOperation(intent, text, harnessId, state, attachments);
-  if (!/^\/[^\s/]+(?:\s|$)/.test(text)) return undefined;
   if (!state) throw new Error("Native commands are unavailable. Reload the session and try again.");
   if (!state.slashCommands) return undefined;
   if (attachments) throw new Error("Remove attachments before running this command.");

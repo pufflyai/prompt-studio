@@ -11,6 +11,7 @@ interface AutoBuildWarningsProps
     | "supervisor"
     | "error"
     | "actionError"
+    | "onDismissActionError"
     | "stuck"
     | "matchingTicketCount"
     | "starting"
@@ -27,20 +28,22 @@ export function AutoBuildWarnings(props: AutoBuildWarningsProps) {
   const problem =
     error ?? t("timeline.autoBuild.failed", "The supervisor failed. Open its session to inspect the error.");
   const alert = actionError ?? (needsHelp && failed ? problem : undefined);
+  const dismissAction = actionError ? props.onDismissActionError : undefined;
+  if (dismissed && dismissed !== alert) setDismissed(undefined);
   if (!alert && !noMatches && !needsHelp) return null;
   return (
     <Stack gap="sm" position="relative">
-      {alert && alert !== dismissed ? (
+      {alert && (dismissAction || alert !== dismissed) ? (
         <AlertMessage
           size="sm"
           role="alert"
           status="error"
           title={alert}
           position="absolute"
-          bottom="full"
+          bottom="100%"
           insetInline="xs"
           zIndex="docked"
-          onClose={() => setDismissed(alert)}
+          onClose={dismissAction ?? (() => setDismissed(alert))}
         />
       ) : null}
       {needsHelp && !failed ? (

@@ -28,11 +28,16 @@ export const RuntimeDiagnostics = (props: RuntimeDiagnosticsProps) => {
   const { t } = useTranslations();
   const [seconds, setSeconds] = useState("15");
   const [dismissed, setDismissed] = useState<string>();
+  if (dismissed && dismissed !== error) setDismissed(undefined);
   const durationId = useId();
   const valid = Number.isInteger(Number(seconds)) && Number(seconds) >= 1 && Number(seconds) <= 60;
   const active = captures.some(diagnosticRunning);
   const disabled = Boolean(loading) || active || !valid;
   const latest = captures.find((capture) => capture.summary);
+  const start = (kind: DiagnosticKind) => {
+    setDismissed(undefined);
+    onStart(kind, Number(seconds));
+  };
   return (
     <Stack gap="sm" position="relative" data-testid="runtime-diagnostics">
       <HStack justifyContent="space-between">
@@ -58,10 +63,10 @@ export const RuntimeDiagnostics = (props: RuntimeDiagnosticsProps) => {
         </HStack>
       </HStack>
       <HStack>
-        <Button size="xs" variant="outline" disabled={disabled} onClick={() => onStart("cpu", Number(seconds))}>
+        <Button size="xs" variant="outline" disabled={disabled} onClick={() => start("cpu")}>
           {t("diagnostics.cpu", "Record CPU")}
         </Button>
-        <Button size="xs" variant="outline" disabled={disabled} onClick={() => onStart("coverage", Number(seconds))}>
+        <Button size="xs" variant="outline" disabled={disabled} onClick={() => start("coverage")}>
           {t("diagnostics.coverage", "Count calls")}
         </Button>
       </HStack>

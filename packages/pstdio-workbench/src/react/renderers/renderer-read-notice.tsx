@@ -1,13 +1,15 @@
 import { Button } from "@chakra-ui/react";
-import { ActionErrorSlot, AlertMessage } from "@pstdio/ui";
+import { ActionErrorSlot, AlertMessage, ReadErrorRecovery } from "@pstdio/ui";
 
 interface RendererReadNoticeProps {
   error: string;
+  initial?: boolean;
   retry(): void;
 }
 
 export const RendererReadNotice = (props: RendererReadNoticeProps) => {
-  const { error, retry } = props;
+  const { error, retry, initial } = props;
+  if (initial) return <ReadErrorRecovery error={error} title="Could not load this view" retry={retry} />;
   return (
     <ActionErrorSlot>
       <AlertMessage

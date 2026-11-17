@@ -87,7 +87,11 @@ const renderDashboard = async () => {
     ? startDesktopProjectWorkbenches(projectTabs.controller, storage)
     : startBrowserWorkbench(storage);
   const stopDesktopCommands = connectDesktopCommands(window.promptStudioDesktop, workbenches.getActive);
-  const stopDesktopUpdateNotices = connectDesktopUpdateNotices(window.promptStudioDesktop, workbenches.getActive);
+  const stopDesktopUpdateNotices = connectDesktopUpdateNotices(
+    window.promptStudioDesktop,
+    workbenches.getActive,
+    projectTabs?.controller.subscribeState,
+  );
   if (stopDesktopCommands) window.addEventListener("pagehide", stopDesktopCommands, { once: true });
   if (stopDesktopUpdateNotices) window.addEventListener("pagehide", stopDesktopUpdateNotices, { once: true });
   // E2E specs and the packaged launch benchmark drive the visible workbench.

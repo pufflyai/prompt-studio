@@ -5,11 +5,15 @@ import { workspaceSessionReadiness } from "../workspaces/workspace-session-readi
 import type { SessionsRouteDeps } from "./deps";
 import { resolveCreateSessionModel } from "./endpoints/resolve-create-session";
 import { resolveCreateWorkspace } from "./endpoints/resolve-create-workspace";
+import { type HarnessCommandDiscovery, unavailableWorkspaceCommands } from "./harness-command-discovery";
 import { resolveHarnessRunParams } from "./harness-params";
-import { emptyHarnessCommands, HarnessOperationError } from "./session-harness-commands";
+import { HarnessOperationError } from "./session-harness-commands";
 import { toHarnessWorkspaceContext } from "./session-workspace-context";
 
-export const getDraftHarnessCommands = async (deps: SessionsRouteDeps, input: DraftHarnessCommandInput) => {
+export const getDraftHarnessCommands = async (
+  deps: SessionsRouteDeps,
+  input: DraftHarnessCommandInput,
+): Promise<HarnessCommandDiscovery> => {
   const project = await deps.projectService.get(input.project_id);
   if (!project) throw new HarnessOperationError("Project not found.", 404);
   const selected = await deps.harnessRegistry.get(input.agent, { projectId: input.project_id });
@@ -17,7 +21,7 @@ export const getDraftHarnessCommands = async (deps: SessionsRouteDeps, input: Dr
   const resolved = await resolveCreateWorkspace(deps, input.project_id, input.workspace_id);
   if (resolved.error) throw new HarnessOperationError(resolved.error, resolved.status);
   const record = resolved.workspace!;
-  if (workspaceSessionReadiness(record).kind !== "ready") return emptyHarnessCommands(selected.id);
+  if (workspaceSessionReadiness(record).kind !== "ready") return unavailableWorkspaceCommands(selected.id);
   const workspace = toHarnessWorkspaceContext(record, selected.cwdRequirement);
   const cwd = workspace?.executionTarget.kind === "local" ? workspace.executionTarget.rootPath : undefined;
   const model = await resolveCreateSessionModel(input.model, project, input.agent, deps.harnessRegistry, {

@@ -4,6 +4,7 @@ import {
   AlertMessage,
   NumberInputField,
   NumberInputRoot,
+  ReadErrorRecovery,
   SettingsContentSkeleton,
   Switch,
 } from "@pstdio/ui";
@@ -45,7 +46,10 @@ export const RuntimeSettingsPanel = (props: { projectId?: string }) => {
   if (isLoading) return <SettingsContentSkeleton />;
   return (
     <Stack gap="lg" position="relative">
-      {error ? (
+      {error && !settings ? (
+        <ReadErrorRecovery title={error.message} retry={() => void refetch()} retryLabel={t("runtimeSettings.retry")} />
+      ) : null}
+      {error && settings ? (
         <ActionErrorSlot>
           <AlertMessage
             compact

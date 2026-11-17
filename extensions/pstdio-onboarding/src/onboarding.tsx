@@ -149,7 +149,7 @@ export const Onboarding = (props: OnboardingProps) => {
             status="error"
             title={t("onboarding.saveError")}
             position="absolute"
-            bottom="full"
+            bottom="100%"
             insetInline="sm"
             zIndex="docked"
             onClose={() => setError(undefined)}
