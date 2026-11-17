@@ -15,7 +15,7 @@ import { createExtensionSourceWatcher } from "./extension-source-watcher";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
 import { EXTENSION_INSTALLING_MARKER, resolvePstdioHome } from "./install-extension-source";
 import type { ProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
-import { listRepoExtensionRoots } from "./repo-extension-roots";
+import { listRepoExtensionRoots, readyRepoExtensionFolder } from "./repo-extension-roots";
 import { syncRepoExtensionsForProject } from "./repo-extensions";
 import { createRuntimeCandidateInspection } from "./runtime-candidate-inspection";
 
@@ -79,6 +79,9 @@ export const createInstalledExtensionRuntime = (input: {
       sync: async () => {
         let markedMissing = false;
         for (const project of root.projects) {
+          // Setup registers restored sources as disabled before background discovery can load them.
+          const workspace = await input.workspaceService.getDefault(project.projectId);
+          if (readyRepoExtensionFolder(workspace) !== project.repoPath) continue;
           const result = await syncRepoExtensionsForProject({
             extensionService: input.extensionService,
             installedExtensionSourcesService: input.installedExtensionSourcesService,
