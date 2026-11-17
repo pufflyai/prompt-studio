@@ -24,6 +24,8 @@ test("adding a tool keeps the other empty panel open", async () => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "pstdio-empty-panels-")));
   let child: ChildProcess | null = null;
   let browser: Browser | null = null;
+  let diagnosticPage: import("@playwright/test").Page | null = null;
+  const diagnosticEvents: unknown[] = [];
   try {
     const started = await test.step("Start the packaged runtime", () =>
       startPackagedServe(root, {
@@ -48,6 +50,57 @@ test("adding a tool keeps the other empty panel open", async () => {
     phase("project created; launch browser");
     browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
+    diagnosticPage = page;
+    page.on("console", (message) =>
+      diagnosticEvents.push({ at: Date.now(), kind: "console", type: message.type(), text: message.text() }),
+    );
+    page.on("pageerror", (error) =>
+      diagnosticEvents.push({ at: Date.now(), kind: "pageerror", message: error.message, stack: error.stack }),
+    );
+    page.on("request", (request) =>
+      diagnosticEvents.push({ at: Date.now(), kind: "request", path: new URL(request.url()).pathname }),
+    );
+    page.on("requestfailed", (request) =>
+      diagnosticEvents.push({
+        at: Date.now(),
+        kind: "requestfailed",
+        path: new URL(request.url()).pathname,
+        failure: request.failure(),
+      }),
+    );
+    page.on("response", (response) =>
+      diagnosticEvents.push({
+        at: Date.now(),
+        kind: "response",
+        path: new URL(response.url()).pathname,
+        status: response.status(),
+      }),
+    );
+    await page.addInitScript(() => {
+      const state = window as unknown as { __ps136Input: unknown[] };
+      state.__ps136Input = [];
+      const describe = (value: EventTarget | null) =>
+        value instanceof Element
+          ? {
+              tag: value.tagName,
+              label: value.getAttribute("aria-label"),
+              role: value.getAttribute("role"),
+              panel: value.getAttribute("data-workbench-panel-header"),
+              text: value.textContent?.slice(0, 120),
+            }
+          : null;
+      for (const type of ["keydown", "focusin", "focusout", "contextmenu"])
+        document.addEventListener(type, (event) => {
+          state.__ps136Input.push({
+            at: Date.now(),
+            type,
+            key: event instanceof KeyboardEvent ? event.key : null,
+            defaultPrevented: event.defaultPrevented,
+            target: describe(event.target),
+            active: describe(document.activeElement),
+          });
+        });
+    });
     phase("browser ready; sign in");
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
     await signInBrowser(page, started.descriptor);
@@ -68,6 +121,37 @@ test("adding a tool keeps the other empty panel open", async () => {
       .getByRole("button", { name: "Close Artifacts", exact: true })
       .click();
     await test.step("Place panels and cancel from the grab point", () => verifyPanelInsertionTargets(page));
+  } catch (error) {
+    const diagnosticRoot = "test-results/panel-menu-dom";
+    mkdirSync(diagnosticRoot, { recursive: true });
+    try {
+      await Bun.write(`${diagnosticRoot}/events.json`, JSON.stringify(diagnosticEvents, null, 2));
+      if (diagnosticPage && !diagnosticPage.isClosed()) {
+        await Bun.write(`${diagnosticRoot}/page.html`, await diagnosticPage.content());
+        await Bun.write(
+          `${diagnosticRoot}/state.json`,
+          JSON.stringify(
+            await diagnosticPage.evaluate(() => ({
+              url: location.origin + location.pathname,
+              active: document.activeElement?.outerHTML,
+              input: (window as unknown as { __ps136Input?: unknown[] }).__ps136Input,
+              headers: [...document.querySelectorAll("[data-workbench-panel-header]")].map(
+                (element) => element.outerHTML,
+              ),
+              menus: [...document.querySelectorAll('[role="menu"],[role="menuitem"]')].map(
+                (element) => element.outerHTML,
+              ),
+            })),
+            null,
+            2,
+          ),
+        );
+        await diagnosticPage.screenshot({ path: `${diagnosticRoot}/page.png`, fullPage: true, timeout: 5000 });
+      }
+    } catch (captureError) {
+      console.log("PS136 diagnostic capture failed", String(captureError));
+    }
+    throw error;
   } finally {
     phase("cleanup");
     await browser?.close();
