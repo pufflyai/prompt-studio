@@ -8,20 +8,24 @@ const themeTokens = {
   font: "fonts-body",
 };
 
-export const postPreviewTheme = (frame: HTMLIFrameElement | null, title: string) => {
-  if (!frame) return;
+export const readPreviewTheme = () => {
   const computed = getComputedStyle(document.documentElement);
-  const mode = computed.colorScheme === "dark" ? "dark" : "light";
-  // The embedding element controls prefers-color-scheme inside the document.
-  frame.style.colorScheme = mode;
+  const mode = computed.colorScheme === "dark" ? ("dark" as const) : ("light" as const);
   const variables = Object.fromEntries(
     Object.entries(themeTokens).map(([name, token]) => [
       `--artifact-${name}`,
       computed.getPropertyValue(`--chakra-${token}`).trim(),
     ]),
   );
+  return { mode, variables };
+};
+
+export const postPreviewTheme = (frame: HTMLIFrameElement | null, title: string) => {
+  if (!frame) return;
+  const theme = readPreviewTheme();
+  frame.style.colorScheme = theme.mode;
   // Sandboxed documents have an opaque origin. Only the title and theme values cross this boundary.
-  frame.contentWindow?.postMessage({ type: "pstdio.preview-theme", mode, variables, title }, "*");
+  frame.contentWindow?.postMessage({ type: "pstdio.preview-theme", ...theme, title }, "*");
 };
 
 // This function runs inside the isolated document and must have no module dependencies.

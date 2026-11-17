@@ -28,6 +28,7 @@ const meta = {
     content,
     revisions: [exampleArtifact],
     onSelect: () => {},
+    onExport: () => {},
   },
 } satisfies CanvasMeta<typeof ArtifactReader>;
 export default meta;

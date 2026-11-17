@@ -15,6 +15,7 @@ import type { ArtifactSummary } from "./artifacts";
 import type { commands } from "./commands";
 import { ArtifactLibrary } from "./components/artifact-library";
 import { ArtifactReader } from "./components/artifact-reader";
+import { readPreviewTheme } from "./components/html-preview-theme";
 import type { ArtifactExample } from "./create-artifact";
 import { ArtifactTranslations } from "./translations";
 
@@ -34,6 +35,7 @@ const ArtifactsApp = (props: AppProps) => {
   const [client] = useState(() => createWebviewClient<typeof commands>(host));
   const [actionError, setActionError] = useState<string>();
   const [creating, setCreating] = useState<ArtifactExample>();
+  const [exporting, setExporting] = useState(false);
   const id = hostProps.resource?.id;
   const visible = useWebviewVisibility();
   const selection = createArtifactRevisionSelection(client, hostProps.projectId, id ?? "library");
@@ -72,7 +74,38 @@ const ArtifactsApp = (props: AppProps) => {
     </Center>
   );
   if (id && content && items) {
-    body = <ArtifactReader content={content} revisions={items} onSelect={setSelected} />;
+    const exportHtml = async () => {
+      setActionError(undefined);
+      setExporting(true);
+      try {
+        const result = await client.commands.export({
+          url: content.url,
+          revisionId: content.revisionId,
+          theme: readPreviewTheme(),
+        });
+        if (result.html === undefined) throw new Error("The export did not return HTML.");
+        await client.files.download({
+          name: result.fileName,
+          data: new TextEncoder().encode(result.html),
+          mimeType: "text/html;charset=utf-8",
+        });
+      } catch (error) {
+        setActionError(String(error));
+      } finally {
+        setExporting(false);
+      }
+    };
+    body = (
+      <ArtifactReader
+        content={content}
+        revisions={items}
+        onSelect={setSelected}
+        onExport={() => {
+          void exportHtml();
+        }}
+        exporting={exporting}
+      />
+    );
   } else if (!id && items) {
     body = (
       <ArtifactLibrary

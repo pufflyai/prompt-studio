@@ -54,6 +54,26 @@ Use **Versions** in the reader header to pick a saved version. New versions appe
 - Rename the artifact. The new name applies to all versions and later updates. The saved HTML does not change.
 - Delete the artifact. After you confirm, Artifacts removes all its versions and their saved copies. Your original source files stay.
 
+## Export an artifact
+
+Choose **Export HTML** beside **Versions** to download the displayed saved version.
+The file includes its scripts, embedded images and the current preview theme, and
+opens in a browser without Prompt Studio. It starts from the saved HTML; temporary
+form values, filters and other preview state are not included. Your browser handles
+the download location and cancellation.
+
+Agents can save the latest version to a workspace-relative destination:
+
+```sh
+pst pstdio.artifacts export --url '<returned url>' --file_path exports/report.html
+```
+
+Add `--revision-id '<version id>'` to export an earlier version. Without
+`--file_path`, the command returns the portable `html`, suggested `fileName` and
+`revisionId`. CLI exports use system theme colors unless a theme is supplied.
+Exports leave the published versions unchanged and work after the original source
+file has been removed. External assets are not fetched or bundled.
+
 ## Pages that follow the theme
 
 Previews and thumbnails follow the dashboard's light or dark theme. When you switch themes, the page does not reload and keeps its state. The page body takes the dashboard's background, text color, and font. Use these CSS variables for the rest of the page:

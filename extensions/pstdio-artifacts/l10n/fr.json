@@ -41,5 +41,8 @@
   "library.briefTitle": "Présentation du projet",
   "library.briefDescription": "Objectifs, décisions et prochaines étapes",
   "library.diagramTitle": "Diagramme du système",
-  "library.diagramDescription": "Composants, connexions et flux de données"
+  "library.diagramDescription": "Composants, connexions et flux de données",
+  "commands.export": "Exporter l’artefact",
+  "params.exportFile": "Destination HTML dans l’espace de travail",
+  "reader.export": "Exporter en HTML"
 }

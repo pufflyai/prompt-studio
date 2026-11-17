@@ -22,6 +22,7 @@ export const view = defineView({
     entry: packageAsset("./view.tsx", import.meta.url),
     capabilities: [
       "commands.execute",
+      "files.download",
       "commands.query",
       "preferences.get",
       "preferences.set",

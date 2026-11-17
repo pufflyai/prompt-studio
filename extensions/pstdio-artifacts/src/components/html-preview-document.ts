@@ -1,7 +1,7 @@
 import { webviewKeyboardRelayDocument } from "@pstdio/sdk/extensions";
 import { previewThemeDocument, previewThemeRelayDocument } from "./html-preview-theme";
 
-const policy = [
+export const artifactPreviewPolicy = [
   "default-src 'none'",
   "script-src 'unsafe-inline'",
   "style-src 'unsafe-inline'",
@@ -22,7 +22,7 @@ export const previewDocument = (html: string) => {
   const content = `<!doctype html><meta name="referrer" content="no-referrer">${webviewKeyboardRelayDocument}${previewThemeDocument}${html}`;
   // Navigation is governed by the embedding document's frame-src policy. Keep that
   // document separate from artifact scripts, which run only in its opaque child.
-  return `<!doctype html><meta http-equiv="Content-Security-Policy" content="${policy}">
+  return `<!doctype html><meta http-equiv="Content-Security-Policy" content="${artifactPreviewPolicy}">
 <meta name="referrer" content="no-referrer">
 <style>html,body{height:100%;margin:0}iframe{display:block;width:100%;height:100%;border:0}</style>
 ${previewThemeRelayDocument}
