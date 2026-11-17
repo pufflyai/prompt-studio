@@ -2,7 +2,7 @@ import { mkdirSync, realpathSync, symlinkSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import type { collectRevisionDependencies } from "./revision-dependencies";
 import { hashRevisionInputs, hashRevisionInputsAsync, type RevisionHashInput } from "./revision-file-hash";
-import { copyRevisionSource, visitRevisionFiles } from "./revision-file-inputs";
+import { copyRevisionFiles, revisionSourceFiles, visitRevisionFiles } from "./revision-file-inputs";
 import { revisionSnapshotLocation, revisionSnapshotPath } from "./revision-snapshot-path";
 
 const dependencyHashInputs = (packages: ReturnType<typeof collectRevisionDependencies>, sourcePath: string) => {
@@ -31,19 +31,22 @@ export const hashRevisionDependenciesAsync = (
   packages: ReturnType<typeof collectRevisionDependencies>,
   sourcePath: string,
 ) => hashRevisionInputsAsync(dependencyHashInputs(packages, sourcePath), packages.contents);
-export const copyRevisionDependencies = (
+export const copyRevisionDependencies = async (
   packages: ReturnType<typeof collectRevisionDependencies>,
   sourcePath: string,
   targetPath: string,
   generationRoot: string,
 ) => {
   const targets = new Map<string, string>([[realpathSync(sourcePath), targetPath]]);
-  for (const [path, entry] of packages) {
-    if (targets.has(path)) continue;
-    const target = revisionSnapshotPath(generationRoot, path);
-    targets.set(path, target);
-    copyRevisionSource(path, target, entry.allFiles ? undefined : entry.files);
+  function* files() {
+    for (const [path, entry] of packages) {
+      if (targets.has(path)) continue;
+      const target = revisionSnapshotPath(generationRoot, path);
+      targets.set(path, target);
+      yield* revisionSourceFiles(path, target, entry.allFiles ? undefined : entry.files);
+    }
   }
+  await copyRevisionFiles(files());
   const links = new Map<string, string>();
   for (const entry of packages.values())
     for (const [location, dependency] of entry.bindings) {
