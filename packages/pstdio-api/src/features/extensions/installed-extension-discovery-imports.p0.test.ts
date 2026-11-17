@@ -93,8 +93,9 @@ test("discovery joins first admission after its accepted marker has been publish
   const adopted = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();
   const before = readRuntimeImportCount();
-  const first = loadAcceptedExtensionSource(source, async () => {
+  const first = loadAcceptedExtensionSource(source, async (_accepted, markAccepting) => {
     const loaded = await loadExtensionSource(source);
+    markAccepting(loaded.preparedRevision!);
     await acceptPreparedRevision(source, loaded.preparedRevision!);
     adopted.resolve();
     await release.promise;
@@ -134,6 +135,7 @@ test("an obsolete cold admission still discovers the revision that was accepted 
     writeFileSync(join(source, "extension.ts"), 'export default { commands: { current: { title: "Current" } } };');
     await acceptPreparedRevision(source, await prepareExtensionRevision(source));
     second = discover("project-with-current-revision");
+    expect(await Promise.race([second.then(() => "current"), Bun.sleep(1_000).then(() => "waiting")])).toBe("current");
     release.resolve();
     const accepted = await first;
     await second;

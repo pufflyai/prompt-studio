@@ -3,7 +3,8 @@ import { type PreparedExtensionRevision, readAcceptedRevision } from "pstdio-ext
 import type { LoadedExtension } from "./extension-runtime";
 
 const loadedByPath = new Map<string, { key: string; loaded: LoadedExtension }>();
-const loadingByPath = new Map<string, Map<string | null, Promise<LoadedExtension>>>();
+type PendingLoad = { promise: Promise<LoadedExtension>; acceptance: { key: string | null } };
+const loadingByPath = new Map<string, Map<string | null, PendingLoad>>();
 const retainedSourceLimit = 128;
 const revisionKey = (revision: PreparedExtensionRevision | null) =>
   revision ? JSON.stringify([revision.host, revision.id, revision.entryPath]) : null;
@@ -18,7 +19,10 @@ const retainLoadedSource = (path: string, entry: { key: string; loaded: LoadedEx
 // remain outside this cache so a failed evaluation can recover without editing its source.
 export const loadAcceptedExtensionSource = async (
   sourcePath: string,
-  load: (accepted: PreparedExtensionRevision | null) => Promise<LoadedExtension>,
+  load: (
+    accepted: PreparedExtensionRevision | null,
+    markAccepting: (revision: PreparedExtensionRevision) => void,
+  ) => Promise<LoadedExtension>,
 ): Promise<LoadedExtension> => {
   let path = sourcePath;
   try {
@@ -32,17 +36,20 @@ export const loadAcceptedExtensionSource = async (
     return cached.loaded;
   }
   if (cached) loadedByPath.delete(path);
-  const pending = loadingByPath.get(path) ?? new Map<string | null, Promise<LoadedExtension>>();
+  const pending = loadingByPath.get(path) ?? new Map<string | null, PendingLoad>();
   const current = pending.get(key);
-  if (current) return current;
+  if (current) return current.promise;
   const admission = pending.get(null);
-  if (admission) {
-    await admission;
+  if (admission && admission.acceptance.key === key) {
+    await admission.promise;
     // Admission can publish the marker before its successful result reaches this cache.
     // Re-read it after joining: a different revision may also have been accepted meanwhile.
     return loadAcceptedExtensionSource(sourcePath, load);
   }
-  const loading = load(accepted)
+  const acceptance = { key: null as string | null };
+  const loading = load(accepted, (revision) => {
+    acceptance.key = revisionKey(revision);
+  })
     .then(async (loaded) => {
       if (loaded.preparedRevision && !loaded.diagnostics.some((diagnostic) => diagnostic.severity === "error")) {
         const actual = revisionKey(await readAcceptedRevision(sourcePath));
@@ -53,7 +60,7 @@ export const loadAcceptedExtensionSource = async (
       return loaded;
     })
     .finally(() => {
-      if (pending.get(key) === loading) pending.delete(key);
+      if (pending.get(key)?.promise === loading) pending.delete(key);
       if (pending.size === 0 && loadingByPath.get(path) === pending) loadingByPath.delete(path);
     })
     .catch(async (error) => {
@@ -63,7 +70,7 @@ export const loadAcceptedExtensionSource = async (
       if (current && current !== key) return loadAcceptedExtensionSource(sourcePath, load);
       throw error;
     });
-  pending.set(key, loading);
+  pending.set(key, { promise: loading, acceptance });
   loadingByPath.set(path, pending);
   return loading;
 };
