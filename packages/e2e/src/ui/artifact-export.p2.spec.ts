@@ -47,8 +47,8 @@ test("exports the displayed saved version as an interactive offline HTML file an
     }, project.id);
     await page.goto(first.url);
     const frame = page.frameLocator('iframe[title="Artifacts"]:visible').last();
-    await frame.getByRole("button", { name: "Versions", exact: true }).click();
-    await frame.getByRole("menuitemradio", { name: "First", exact: true }).click();
+    await page.locator("[data-workbench-breadcrumb-resource-actions]").click();
+    await page.getByRole("menuitemradio", { name: "First", exact: true }).click();
     const preview = frame.frameLocator('iframe[title^="Preview: "]').frameLocator("iframe");
     await expect(preview.getByRole("heading", { name: "Earlier audit" })).toBeVisible();
     const mode = await page.evaluate(() => (matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "dark"));

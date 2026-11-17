@@ -111,7 +111,7 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     await page.goto(libraryUrl);
     const frame = page.frameLocator('iframe[title="Artifacts"]:visible').last();
     const artifactMenu = page.locator("[data-workbench-breadcrumb-resource-actions]");
-    const versionMenu = frame.getByRole("button", { name: "Versions", exact: true });
+    const versionMenu = page.locator("[data-workbench-breadcrumb-resource-actions]");
     await expect(frame.getByText("Your first artifact starts with an idea", { exact: true })).toBeVisible();
     const mainTabs = page.locator('[data-workbench-panel="main"]').getByRole("tab");
     writeFileSync(
@@ -181,11 +181,11 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     await expect(frame.locator('iframe[title^="Preview: "]')).toHaveAttribute("title", "Preview: Second page");
     await expect(preview.getByRole("button", { name: "Complete", exact: true })).toBeVisible();
     await versionMenu.click();
-    await frame.getByRole("menuitemradio", { name: "Second · Latest", exact: true }).click();
+    await page.getByRole("menuitemradio", { name: "Second · Latest", exact: true }).click();
     await expect(preview.getByRole("heading", { name: "Second page" })).toBeVisible();
     await versionMenu.click();
-    await expect(frame.getByRole("menuitemradio", { name: "Second · Latest", exact: true })).toBeChecked();
-    await frame.getByRole("menuitemradio", { name: "First", exact: true }).click();
+    await expect(page.getByRole("menuitemradio", { name: "Second · Latest", exact: true })).toBeChecked();
+    await page.getByRole("menuitemradio", { name: "First", exact: true }).click();
     await expect(preview.getByRole("heading", { name: "First page" })).toBeVisible();
     // The selected immutable revision is a saved preference, including across reloads.
     await page.reload();

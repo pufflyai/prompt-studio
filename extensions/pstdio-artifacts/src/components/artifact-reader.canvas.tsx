@@ -4,7 +4,7 @@ import { createGlyphIcon, Header, ScopedMenu as Menu, Portal, ScrollArea } from 
 import { useState } from "react";
 import { weeklyActivityHtml } from "../../examples/weekly-activity";
 import type { ArtifactContent, ArtifactSummary } from "../artifacts";
-import { HtmlPreview } from "./html-preview";
+import { ArtifactReader } from "./artifact-reader";
 import { exampleArtifact } from "./artifact-story-fixture";
 import { ArtifactTranslationStory } from "./artifact-translation-story";
 
@@ -16,32 +16,53 @@ ${Array.from({ length: 20 }, (_, index) => `<p>Scrollable result ${index + 1}</p
 ${Array.from({ length: 24 }, (_, index) => `<p>Document section ${index + 1}</p>`).join("")}`,
 };
 const ChevronDown = createGlyphIcon("arrow-down-1");
-const ReaderWithChrome = (props: { content: ArtifactContent; revisions: ArtifactSummary[]; onSelect(id: string): void }) => (
+const ReaderWithChrome = (props: {
+  content: ArtifactContent;
+  revisions: ArtifactSummary[];
+  onSelect(id: string): void;
+}) => (
   <Stack height="full" minHeight="0" gap="0">
     <Header>
       <Text>{props.content.title}</Text>
       <Menu.Root>
-        <Menu.Trigger asChild><Button variant="ghost" aria-label="Artifact actions"><ChevronDown /></Button></Menu.Trigger>
-        <Portal><Menu.Positioner><Menu.Content maxHeight="var(--available-height)">
-          <ScrollArea flex="1" minHeight="0" viewportProps={{ tabIndex: -1 }}>
-            <Menu.Item value="export">Export HTML</Menu.Item>
-            <Menu.Item value="rename">Rename artifact…</Menu.Item>
-            <Menu.Item value="delete">Delete artifact…</Menu.Item>
-            <Menu.Separator />
-            <Menu.ItemGroupLabel>Versions</Menu.ItemGroupLabel>
-            <Menu.RadioItemGroup aria-label="Versions" value={props.content.id} onValueChange={(event) => props.onSelect(event.value)}>
-              {props.revisions.map((revision, index) => (
-                <Menu.RadioItem key={revision.id} value={revision.id}>
-                  <Menu.ItemText truncate>{revision.label || `Version ${props.revisions.length-index}`}{index === 0 ? " · Latest" : ""}</Menu.ItemText>
-                  <Menu.ItemIndicator>✓</Menu.ItemIndicator>
-                </Menu.RadioItem>
-              ))}
-            </Menu.RadioItemGroup>
-          </ScrollArea>
-        </Menu.Content></Menu.Positioner></Portal>
+        <Menu.Trigger asChild>
+          <Button variant="ghost" aria-label="Artifact actions">
+            <ChevronDown />
+          </Button>
+        </Menu.Trigger>
+        <Portal>
+          <Menu.Positioner>
+            <Menu.Content maxHeight="var(--available-height)">
+              <ScrollArea flex="1" minHeight="0" viewportProps={{ tabIndex: -1 }}>
+                <Menu.Item value="export">Export HTML</Menu.Item>
+                <Menu.Item value="rename">Rename artifact…</Menu.Item>
+                <Menu.Item value="delete">Delete artifact…</Menu.Item>
+                <Menu.Separator />
+                <Menu.ItemGroupLabel>Versions</Menu.ItemGroupLabel>
+                <Menu.RadioItemGroup
+                  aria-label="Versions"
+                  value={props.content.id}
+                  onValueChange={(event) => props.onSelect(event.value)}
+                >
+                  {props.revisions.map((revision, index) => (
+                    <Menu.RadioItem key={revision.id} value={revision.id}>
+                      <Menu.ItemText truncate>
+                        {revision.label || `Version ${props.revisions.length - index}`}
+                        {index === 0 ? " · Latest" : ""}
+                      </Menu.ItemText>
+                      <Menu.ItemIndicator>✓</Menu.ItemIndicator>
+                    </Menu.RadioItem>
+                  ))}
+                </Menu.RadioItemGroup>
+              </ScrollArea>
+            </Menu.Content>
+          </Menu.Positioner>
+        </Portal>
       </Menu.Root>
     </Header>
-    <Box flex="1" minHeight="0"><HtmlPreview html={props.content.html} title={props.content.title} /></Box>
+    <Box flex="1" minHeight="0">
+      <ArtifactReader content={props.content} />
+    </Box>
   </Stack>
 );
 const meta = {
@@ -55,7 +76,6 @@ const meta = {
         <Story />
       </ArtifactTranslationStory>
     ),
-
   ],
   args: {
     content,

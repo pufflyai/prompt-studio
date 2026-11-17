@@ -9,9 +9,15 @@ import {
 } from "@pstdio/sdk/extensions";
 import { useScopedQueries, useWebviewCommandQuery, useWebviewVisibility } from "@pstdio/sdk/extensions/react";
 import { AlertMessage, ChakraProvider, psTheme } from "@pstdio/ui";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
 import { createArtifactQueries, createArtifactRevisionSelection } from "./artifact-queries";
+import {
+  artifactRevisionChoices,
+  newerVersionsChoice,
+  olderVersionsChoice,
+  revisionChoicePrefix,
+} from "./artifact-revision-choices";
 import type { ArtifactSummary } from "./artifacts";
 import type { commands } from "./commands";
 import { ArtifactLibrary } from "./components/artifact-library";
@@ -42,9 +48,6 @@ const ArtifactsApp = (props: AppProps) => {
   const preference = useWebviewCommandQuery(selection.query, Boolean(id) && visible);
   const selected =
     typeof preference.data?.value === "string" && preference.data.value ? preference.data.value : undefined;
-  const setSelected = (revision: string) => {
-    void selection.save(revision).catch((error) => setActionError(String(error)));
-  };
   const queries = createArtifactQueries(client, hostProps.projectId);
   const index = useWebviewCommandQuery(id ? queries.revisions(id) : queries.list(), visible);
   const reads = useScopedQueries(id && preference.data !== undefined ? [queries.content(id, selected)] : [], visible);
@@ -105,13 +108,80 @@ const ArtifactsApp = (props: AppProps) => {
     };
   }, [client, content, exportLabel, host, id]);
 
+  const choices = useRef<ReturnType<typeof registerWebviewResourceAction> | null>(null);
+  const [choicePage, setChoicePage] = useState(0);
+  const versionsLabel = context.t("reader.versions", "Versions");
+  const currentChoices = useEffectEvent(() =>
+    artifactRevisionChoices(items ?? [], selected ?? content?.id ?? items?.[0]?.id, choicePage, context.t),
+  );
+  const chooseRevision = useEffectEvent(async (signal: AbortSignal, choiceId?: string) => {
+    signal.throwIfAborted();
+    if (choiceId === newerVersionsChoice || choiceId === olderVersionsChoice) {
+      const { page, lastPage } = currentChoices();
+      setChoicePage(Math.max(0, Math.min(lastPage, page + (choiceId === olderVersionsChoice ? 1 : -1))));
+      return;
+    }
+    const revisionId = choiceId?.startsWith(revisionChoicePrefix)
+      ? choiceId.slice(revisionChoicePrefix.length)
+      : undefined;
+    if (!revisionId || !items?.some((revision) => revision.id === revisionId))
+      throw new Error("The selected artifact revision is no longer available.");
+    try {
+      setActionError(undefined);
+      await selection.save(revisionId);
+    } catch (error) {
+      if (!signal.aborted) setActionError(String(error));
+      throw error;
+    }
+  });
+  // A content read can change while an accepted preference write is still completing.
+  // The App key binds this lifetime to its project and resource.
+  useEffect(() => {
+    return () => {
+      const registration = choices.current;
+      choices.current = null;
+      void registration?.dispose().catch(() => {});
+    };
+  }, []);
+  useEffect(() => {
+    if (!id || !items?.length || preference.data === undefined) return;
+    const values = artifactRevisionChoices(
+      items,
+      selected ?? content?.id ?? items[0]?.id,
+      choicePage,
+      context.t,
+    ).choices;
+    const existing = choices.current;
+    const registration =
+      existing ??
+      registerWebviewResourceAction(
+        host,
+        {
+          resource: { type: "artifact", id, projectId: hostProps.projectId, extensionId: host.extensionId },
+          label: versionsLabel,
+          choices: values,
+        },
+        chooseRevision,
+      );
+    choices.current = registration;
+    let cancelled = false;
+    void (existing ? registration.updateChoices(values, { label: versionsLabel }) : registration.ready).catch(
+      (error) => {
+        if (!cancelled && choices.current === registration) setActionError(String(error));
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [host, hostProps.projectId, id, content, items, selected, preference.data, choicePage, versionsLabel, context.t]);
+
   let body = (
     <Center flex="1">
       <Spinner />
     </Center>
   );
   if (id && content && items) {
-    body = <ArtifactReader content={content} revisions={items} onSelect={setSelected} />;
+    body = <ArtifactReader content={content} />;
   } else if (!id && items) {
     body = (
       <ArtifactLibrary

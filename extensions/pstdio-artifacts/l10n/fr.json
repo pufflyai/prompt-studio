@@ -28,6 +28,8 @@
   "library.emptyHint": "Demandez à un agent de créer et de publier une page HTML interactive.",
   "library.thumbnail": "Aperçu miniature : {{title}}",
   "reader.versions": "Versions",
+  "reader.newerVersions": "Versions plus récentes…",
+  "reader.olderVersions": "Versions plus anciennes…",
   "reader.version": "Version {{number}}",
   "reader.latest": " · Dernière version",
   "reader.rename": "Renommer l’artefact…",
