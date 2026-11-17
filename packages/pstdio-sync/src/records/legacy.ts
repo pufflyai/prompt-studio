@@ -1,20 +1,7 @@
-import { canonicalJson, fingerprint, type Json, type StorageRecord } from "pstdio-sync-contracts";
+import type { Json, StorageRecord } from "pstdio-sync-contracts";
+import { createLegacyCollection, legacyJson } from "./legacy-collection";
 import { legacyNamespaceStorage } from "./namespaces";
 import type { GroupCommit } from "./types";
-
-interface LegacyCollectionValue {
-  value: Json;
-  sortOrder: number | null;
-}
-
-// Legacy SQL JSON writes omitted undefined object fields and used null for undefined array entries.
-const legacyJson = (value: Json) => JSON.parse(JSON.stringify(value)) as Json;
-
-const collectionRevision = (record: StorageRecord) =>
-  fingerprint({
-    revision: record.revision,
-    lifetime: "recordLifetime" in record ? String(record.recordLifetime) : null,
-  });
 
 interface LegacyRecords {
   read(id: string): Promise<StorageRecord>;
@@ -87,91 +74,7 @@ export const createLegacyRecordStorage = (input: { records: LegacyRecords }) => 
       const namespace = [scopeType, scopeId];
       return {
         kv: namespaceApi([...namespace, "kv"]),
-        collection: (name: string) => {
-          const items = namespaceApi([...namespace, "collection", name]);
-          const valueFor = (value: Json, sortOrder: number | null) => ({ value, sortOrder });
-          const update = async (id: string, value: Json, revision?: string) => {
-            // Read and change only the payload within the same owner lock.
-            return within([...namespace, "collection", name], async (records) => {
-              const current = await records.read(id);
-              if (
-                !current.exists ||
-                current.deleted ||
-                (revision !== undefined && (await collectionRevision(current)) !== revision)
-              )
-                return false;
-              const stored = current.value as unknown as LegacyCollectionValue;
-              await records.commit({
-                operationId: crypto.randomUUID(),
-                edits: [
-                  {
-                    recordId: id,
-                    // The boolean condition was checked under this local owner lock. Reuse
-                    // its baseline without later refusing the accepted save at relay order.
-                    observedRevision: current.revision,
-                    expectedLifetime: current.revision,
-                    replace: legacyJson(valueFor(value, stored.sortOrder)),
-                  },
-                ],
-              });
-              return true;
-            });
-          };
-          return {
-            read: async (id: string) => {
-              const record = await items.read(id);
-              if (!record.exists || record.deleted) return undefined;
-              return {
-                id,
-                ...(record.value as unknown as LegacyCollectionValue),
-                revision: await collectionRevision(record),
-              };
-            },
-            get: async (id: string) => {
-              const stored = (await items.get(id)) as unknown as LegacyCollectionValue | undefined;
-              return stored && { id, ...stored };
-            },
-            list: async () =>
-              (await items.list())
-                .map((record) => ({
-                  id: record.recordId,
-                  ...(record.value as unknown as LegacyCollectionValue),
-                }))
-                .sort((left, right) => {
-                  if (left.sortOrder !== right.sortOrder)
-                    return (left.sortOrder ?? Infinity) - (right.sortOrder ?? Infinity);
-                  return left.id.localeCompare(right.id);
-                }),
-            set: (id: string, value: Json, sortOrder: number | null = null) =>
-              items.set(id, valueFor(value, sortOrder)),
-            update: (id: string, value: Json) => update(id, value),
-            updateIfUnchanged: (id: string, revision: string, value: Json) => {
-              if (typeof revision !== "string") throw new TypeError("A collection observation revision is required");
-              return update(id, value, revision);
-            },
-            createIfAbsent: (id: string, value: Json, sortOrder: number | null = null) =>
-              items.createIfAbsent(id, valueFor(value, sortOrder)),
-            delete: items.delete,
-            deleteIfValue: (id: string, value: Json) =>
-              within([...namespace, "collection", name], async (records) => {
-                const current = await records.read(id);
-                if (!current.exists || current.deleted) return false;
-                const stored = current.value as unknown as LegacyCollectionValue;
-                if (canonicalJson(stored.value) !== canonicalJson(legacyJson(value))) return false;
-                await records.commit({
-                  operationId: crypto.randomUUID(),
-                  edits: [
-                    {
-                      recordId: id,
-                      expectedRevision: current.revision,
-                      deleted: true,
-                    },
-                  ],
-                });
-                return true;
-              }),
-          };
-        },
+        collection: (name: string) => createLegacyCollection(input.records, { scopeType, scopeId }, name),
       };
     },
   };
