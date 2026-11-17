@@ -167,6 +167,22 @@ export const arrayIndexFields = (index: StorageRecordIndex) =>
   );
 
 const equalityKey = (value: SQL) => sql`md5((${value})::text)`;
+const inListSql = (members: Json[], comparable: SQL, indexed: boolean, normalize: (member: SQL) => SQL) => {
+  if (!members.length) return sql`false`;
+  // Keep a bounded number of bind parameters for large lists.
+  if (members.length > 1_000) {
+    const input = sql`jsonb_array_elements(${json(members)}) AS wanted(item)`;
+    const values = sql`${comparable} = ANY(ARRAY(SELECT ${normalize(sql`item`)} FROM ${input}))`;
+    if (!indexed) return values;
+    const keys = sql`ARRAY(SELECT ${equalityKey(sql`item`)} FROM ${input})`;
+    return sql`(${equalityKey(comparable)} = ANY(${keys}) AND ${values})`;
+  }
+  const wanted = members.map((item) => normalize(json(item)));
+  const values = sql`ARRAY[${sql.join(wanted, sql`, `)}]::jsonb[]`;
+  if (!indexed) return sql`${comparable} = ANY(${values})`;
+  const keys = sql`ARRAY[${sql.join(wanted.map(equalityKey), sql`, `)}]`;
+  return sql`(${equalityKey(comparable)} = ANY(${keys}) AND ${comparable} = ANY(${values}))`;
+};
 const localField = (index: StorageRecordIndex, field: string) =>
   !queryField(index, field).lookup &&
   index.identity?.shorthandField !== field &&
@@ -282,18 +298,13 @@ const fieldPredicateSql = (
       return sql`${comparable} <> ${valueJson(predicate.value)}`;
     case "equalsIgnoreCase":
       return sql`${stringBytesSql(field, true)} = decode(${projectionSubstringBytes(String(predicate.value).toLowerCase())}, 'hex')`;
-    case "in": {
-      if (!predicate.value.length) return sql`false`;
-      // One hashed array comparison per row; an OR chain re-evaluates the field for every value.
-      const values = sql`ARRAY[${sql.join(predicate.value.map(valueJson), sql`, `)}]::jsonb[]`;
-      if (!index.equality?.includes(predicate.field) || !localField(index, predicate.field))
-        return sql`${comparable} = ANY(${values})`;
-      const keys = sql`ARRAY[${sql.join(
-        predicate.value.map((value) => equalityKey(valueJson(value))),
-        sql`, `,
-      )}]`;
-      return sql`(${equalityKey(comparable)} = ANY(${keys}) AND ${comparable} = ANY(${values}))`;
-    }
+    case "in":
+      return inListSql(
+        predicate.value,
+        comparable,
+        Boolean(index.equality?.includes(predicate.field) && localField(index, predicate.field)),
+        projectedString ? expressionComparable : (item) => item,
+      );
     case "notIn":
       return predicate.value.length
         ? sql`${comparable} NOT IN (${sql.join(predicate.value.map(valueJson), sql`, `)})`
