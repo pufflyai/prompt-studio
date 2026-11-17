@@ -60,6 +60,7 @@
         "errorCopied": "錯誤已複製"
       },
       "upgrade": {
+        "waiting": "等待升級",
         "action": "升級",
         "succeeded": "擴充功能已升級",
         "current": "擴充功能已是最新",

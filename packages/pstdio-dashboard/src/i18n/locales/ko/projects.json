@@ -60,6 +60,7 @@
         "errorCopied": "오류를 복사했습니다"
       },
       "upgrade": {
+        "waiting": "업그레이드 대기 중",
         "action": "업그레이드",
         "succeeded": "확장을 업그레이드했습니다",
         "current": "확장이 이미 최신입니다",

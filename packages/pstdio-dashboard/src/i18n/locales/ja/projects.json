@@ -60,6 +60,7 @@
         "errorCopied": "エラーをコピーしました"
       },
       "upgrade": {
+        "waiting": "アップグレード待ち",
         "action": "アップグレード",
         "succeeded": "拡張機能をアップグレードしました",
         "current": "拡張機能はすでに最新です",

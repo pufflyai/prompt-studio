@@ -60,6 +60,7 @@
         "errorCopied": "Error copiado"
       },
       "upgrade": {
+        "waiting": "En espera de actualización",
         "action": "Actualizar versión",
         "succeeded": "Extensión actualizada",
         "current": "La extensión ya está al día",

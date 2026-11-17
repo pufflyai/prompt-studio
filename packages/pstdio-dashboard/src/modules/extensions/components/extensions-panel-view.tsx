@@ -28,6 +28,7 @@ export interface ExtensionsPanelViewProps {
   togglingInstanceId?: string;
   togglingAutomation?: boolean;
   upgradingInstanceIds?: string[];
+  queuedInstanceIds?: string[];
   onToggle?: (extension: ProjectExtensionInstance, enabled: boolean) => void;
   onToggleAutomation?: (
     extension: ProjectExtensionInstance,
@@ -90,6 +91,7 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
     togglingInstanceId,
     togglingAutomation,
     upgradingInstanceIds = [],
+    queuedInstanceIds = [],
     installingMarketplaceNames = [],
     onToggle,
     onToggleAutomation,
@@ -188,6 +190,7 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
           unavailableHarnesses={unavailableExtensionHarnesses(extension, harnesses, agents)}
           toggling={togglingInstanceId === extension.id}
           togglingAutomation={togglingAutomation}
+          queued={queuedInstanceIds.includes(extension.id)}
           upgrading={upgradingInstanceIds.includes(extension.id)}
           onToggle={(enabled) => onToggle?.(extension, enabled)}
           onToggleAutomation={async (automation, enabled) => onToggleAutomation?.(extension, automation, enabled)}
