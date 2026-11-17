@@ -10,12 +10,12 @@ import { indexNodeFilesFor } from "./index-node-files";
 import { createOrderedCanonicalBatch } from "./ordered-canonical-batch";
 import { indexOrderedCheckpoint, stageOrderedCheckpoint } from "./ordered-checkpoint";
 import { type OrderedJournal, withOrderedOwner } from "./ordered-journal";
+import { createDisplacedSaves } from "./ordered-move-reauthor";
 import { applyOrderedNativeAdmission } from "./ordered-native-apply";
 import { applyOrderedNumberPolicy } from "./ordered-number-admission";
 import { combineNumberEvents } from "./ordered-number-projection";
 import { applyBoundedOrderedOperation } from "./ordered-policy";
 import { admissionDecisions, rebaseOrderedProjection } from "./ordered-rebase";
-import { adoptOrderedCheckpoint } from "./ordered-receipts-adoption";
 import { collectOrderedReceiptNodes, createOrderedManifestCache } from "./ordered-receipts-blobs";
 import { coverOrderedReceiptRoot, coversOrderedReceipts } from "./ordered-receipts-covered";
 import { createOrderedReceiptResolver } from "./ordered-receipts-resolver";
@@ -53,6 +53,15 @@ const collectSavedReceiptNodes = async (db: DbClient, owner: StorageOwner) => {
   });
 };
 
+const notifyChanges = (
+  deps: Parameters<typeof createRecordStreamStore>[2],
+  events: NumberChange[] = [],
+  recordIds?: readonly string[],
+) => {
+  if (!recordIds || recordIds.length) deps.changed(recordIds);
+  deps.numbersChanged?.(combineNumberEvents(events));
+};
+
 export const createOrderedStreamStore = (
   db: DbClient,
   owner: StorageOwner,
@@ -68,10 +77,8 @@ export const createOrderedStreamStore = (
   };
   const run = <T>(action: (journal: OrderedJournal, tx: OrderedTransaction) => Promise<T>) =>
     withOrderedOwner(db, owner, action);
-  const notify = (events: NumberChange[] = [], recordIds?: readonly string[]) => {
-    if (!recordIds || recordIds.length) deps.changed(recordIds);
-    deps.numbersChanged?.(combineNumberEvents(events));
-  };
+  const displaced = createDisplacedSaves(owner);
+  const notify = (events?: NumberChange[], recordIds?: readonly string[]) => notifyChanges(deps, events, recordIds);
   const applyAdmission = async (
     journal: OrderedJournal,
     tx: OrderedTransaction,
@@ -94,6 +101,7 @@ export const createOrderedStreamStore = (
     );
     await recordOrderedReplaced(journal, tx, owner, operation, applied.skipped);
     const result = await applyOrderedNumberPolicy(tx, owner, operation, epoch, applied, !!previous);
+    await displaced.note(journal, tx, operation, result.decision, applied.skipped);
     await journal.saveCanonical(result.records);
     await journal.recordDecision(result.decision, await fingerprint(admission as unknown as Json));
     return [
@@ -105,8 +113,7 @@ export const createOrderedStreamStore = (
     tx: OrderedTransaction,
     remote: Map<string, Uint8Array[]>,
     cursor: RecordStreamCursor,
-  ) =>
-    adoptOrderedCheckpoint({ journal, tx, owner, index: receiptIndex(), remote, cursor, applyAdmission, applyNative });
+  ) => displaced.adopt({ journal, tx, owner, index: receiptIndex(), remote, cursor, applyAdmission, applyNative });
   const applyNative = (
     journal: OrderedJournal,
     tx: OrderedTransaction,
@@ -164,6 +171,7 @@ export const createOrderedStreamStore = (
           for (const id of await applyOrderedStreamFrame(journal, tx, frame, epoch, group, native)) changed.add(id);
         }
         await batch?.flush();
+        await displaced.reauthor(journal, tx, changed);
         const saved = await rebaseOrderedProjection(journal, tx, owner, [...changed]);
         const next = await coverOrderedReceiptRoot(journal, tx, owner, receiptIndex(), {
           ...cursor,

@@ -94,8 +94,12 @@ export const findOrderedNativeField = async (
   return undefined;
 };
 
-const sourceAddress = (sources: NativeRecordSources, key: string, lifetime: string) => {
-  if (Object.hasOwn(sources, key) || lifetime === "initial") return key;
+const sourceAddress = (sources: NativeRecordSources, key: string, lifetime: string, field?: string) => {
+  if (Object.hasOwn(sources, key)) return key;
+  // A moved record keeps its field's original binding key, so every declaration of the field shares one text.
+  const bound = field && Object.entries(sources).find(([, source]) => "field" in source && source.field === field);
+  if (bound) return bound[0];
+  if (lifetime === "initial") return key;
   const occurrence = JSON.parse(lifetime) as string[];
   // A pending recreation and its accepted occurrence name the same authored lifetime.
   const authored = occurrence[0] === "pending" ? occurrence[1]! : occurrence[2]!;
@@ -165,7 +169,7 @@ export const bindOrderedNativeSource = async (
     throw new StorageRevisionChangedError();
   const body = orderedBody(record);
   const sources = body.nativeSources;
-  const key = sourceAddress(sources, input.sourceKey ?? input.documentKey, record.lifetime);
+  const key = sourceAddress(sources, input.sourceKey ?? input.documentKey, record.lifetime, input.field);
   if (input.sourceKey && key !== input.documentKey) throw new StorageRevisionChangedError();
   const existing = Object.entries(sources).find(([, source]) =>
     input.field ? "field" in source && source.field === input.field : "asset" in source,
@@ -242,14 +246,14 @@ export const bindOrderedNativeSource = async (
 export const orderedNativeAddress = async (
   tx: Pick<OrderedTransaction, "select">,
   owner: StorageOwner,
-  input: { recordId: string; documentKey: string },
+  input: { recordId: string; documentKey: string; field?: string },
 ) => {
   const [row] = await tx
     .select({ deleted: current.deleted, lifetime: current.record_lifetime, sources: current.native_sources })
     .from(current)
     .where(and(orderedOwnerWhere(current, owner), eq(current.record_id, input.recordId)));
   if (!row || row.deleted) throw new NativeSourceRetiredError(input.recordId);
-  const key = sourceAddress(row.sources, input.documentKey, row.lifetime);
+  const key = sourceAddress(row.sources, input.documentKey, row.lifetime, input.field);
   const marker = await readOrderedMarker<OrderedFieldMarker>(tx, owner, orderedFieldMarkerId(key));
   return { documentKey: key, lifetime: row.lifetime, generation: marker?.value.generation };
 };
