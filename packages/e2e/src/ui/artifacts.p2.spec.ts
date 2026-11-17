@@ -201,8 +201,8 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     await reading;
     await expect(versionMenu).toBeFocused();
     releaseRead();
-    await page.unroute(readRoute);
     await expect(preview.getByRole("heading", { name: "Second page" })).toBeVisible();
+    await page.unrouteAll({ behavior: "wait" });
     await versionMenu.click();
     await expect(frame.getByRole("menuitemradio", { name: /^Second · Latest/ })).toBeChecked();
     await frame.getByRole("menuitemradio", { name: /^First/ }).click();
