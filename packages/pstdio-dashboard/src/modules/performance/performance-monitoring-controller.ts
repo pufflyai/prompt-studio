@@ -78,9 +78,10 @@ export const createPerformanceMonitoringController = (host: PerformanceHost, ren
     try {
       await reportRendererState();
     } catch (error) {
-      clearRenderCapture();
+      if (renderOverlay.readCapture() === recording) clearRenderCapture();
       throw error;
     }
+    if (renderOverlay.readCapture() !== recording) throw new Error("React render capture stopped");
     return recording;
   });
   const reportStateChanges = () => {

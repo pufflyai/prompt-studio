@@ -172,7 +172,10 @@ export class DesktopPerformanceMonitor {
 
   reportRendererState(report: unknown) {
     const state = rendererStateReportSchema.parse(report);
-    if (!this.#cancel) return;
+    if (!this.#cancel) {
+      if (state.renderCapture?.status === "recording") throw new Error("Performance monitoring stopped");
+      return;
+    }
     this.#rendererState = state;
   }
 

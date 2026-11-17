@@ -121,6 +121,16 @@ describe("desktop performance monitor", () => {
     expect(readRenders?.()).toBeNull();
   });
 
+  test("rejects a recording publication after monitoring stops", async () => {
+    const harness = createHarness(true);
+    await harness.monitor.start();
+    await harness.monitor.stop();
+    const renderCapture = { status: "recording", startedAt: "2026-11-17T12:00:00.000Z" };
+    expect(() => harness.monitor.reportRendererState({ frameRate: [], pausedExtensionIds: [], renderCapture })).toThrow(
+      "Performance monitoring stopped",
+    );
+  });
+
   test("reports CPU per process for the measured window, busiest first", async () => {
     const harness = createHarness();
     await harness.monitor.setEnabled(true);

@@ -64,6 +64,7 @@ test("render highlighting needs local activation and ends with its monitoring ow
 test("a CLI capture waits for desktop publication and can retry a rejected start", async () => {
   let start: (() => Promise<ReactRenderCapture>) | undefined;
   let failPublication = true;
+  let pendingPublication: Promise<void> | undefined;
   const overlay = createReactRenderOverlay({
     scanner: { isSupported: () => true, scan() {}, setOptions() {} },
     setVisible() {},
@@ -77,6 +78,7 @@ test("a CLI capture waits for desktop publication and can retry a rejected start
       reportFrames() {},
       async reportState(report) {
         if (report.renderCapture && failPublication) throw new Error("Desktop rejected publication");
+        if (report.renderCapture) await pendingPublication;
       },
       onRenderCaptureRequest(listener) {
         start = listener;
@@ -92,7 +94,16 @@ test("a CLI capture waits for desktop publication and can retry a rejected start
     await expect(start!()).rejects.toThrow("Desktop rejected publication");
     expect(overlay.readCapture()).toBeUndefined();
     failPublication = false;
-    expect((await start!()).status).toBe("recording");
+    const held = Promise.withResolvers<void>();
+    pendingPublication = held.promise;
+    const stopped = start!();
+    await controller.setEnabled(false);
+    await controller.setEnabled(true);
+    pendingPublication = undefined;
+    const replacement = await start!();
+    held.resolve();
+    await expect(stopped).rejects.toThrow("React render capture stopped");
+    expect(overlay.readCapture()).toBe(replacement);
   } finally {
     controller.dispose();
   }
