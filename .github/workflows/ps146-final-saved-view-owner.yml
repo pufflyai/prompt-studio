@@ -1,7 +1,7 @@
 name: PS146 final saved view owner verification
 on:
   push:
-    branches: [test/ps146-final-owner]
+    branches: [test/ps146-capacity-owner]
 permissions:
   contents: read
   actions: read
@@ -26,7 +26,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: 3b69179c4173dc8fd6b0ad97eb7fce5f81f91763
+          ref: 2665d3224f7e3b06ce796ed94e27644441ce50ce
           fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
