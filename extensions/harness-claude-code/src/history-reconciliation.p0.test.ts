@@ -6,33 +6,6 @@ import { normalizeClaudeCodeStream } from "./normalize-stream";
 import { normalizeClaudeCodeMessages } from "./normalize-transcript";
 import type { ClaudeCodeTranscriptEntry, RawLogEvent } from "./types";
 
-test("reopening saved Claude history restores replies and tools across task wake-ups", () => {
-  const nativeMessages = normalizeClaudeCodeMessages([
-    { uuid: "person", type: "user", message: { role: "user", content: "Watch the files." } },
-    {
-      uuid: "watch",
-      type: "assistant",
-      message: {
-        role: "assistant",
-        content: [{ type: "tool_use", id: "watch-call", name: "Bash", input: { command: "watch files" } }],
-      },
-    },
-    { uuid: "reply", type: "assistant", message: { role: "assistant", content: "The watcher is ready." } },
-  ]);
-  const knownMessages: SessionMessage[] = [
-    ...nativeMessages,
-    {
-      id: "task-notification",
-      role: "system",
-      parts: [{ type: "text", text: "Background task finished.Background task finished." }],
-    },
-  ];
-  expect(recoverClaudeMessages({ knownMessages, nativeMessages })).toEqual({
-    kind: "recovered",
-    messages: nativeMessages,
-  });
-});
-
 test("actual Claude transcript tool results merge with live normalization and retain rich native output", async () => {
   const entries = (await Bun.file(new URL("./mocks/tool-calls-transcript.jsonl", import.meta.url)).text())
     .split(/\r?\n/)

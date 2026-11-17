@@ -43,17 +43,6 @@ const projection: HistoryProjection = {
 };
 
 export const recoverClaudeMessages = (input: HarnessRecoveryInput) => {
-  // Older projections saved these notices, sometimes merging consecutive wake-ups.
-  // Omit them during recovery too, so reopening cannot restore the generated text.
-  const knownMessages = input.knownMessages.filter(
-    (message) =>
-      !(
-        message.role === "system" &&
-        message.parts.length === 1 &&
-        message.parts[0].type === "text" &&
-        /^(Background task finished\.)+$/.test(message.parts[0].text)
-      ),
-  );
   const nativeUsers = new Map(
     input.nativeMessages.flatMap((message, index) => (message.role === "user" ? [[message.id, index] as const] : [])),
   );
@@ -63,7 +52,7 @@ export const recoverClaudeMessages = (input: HarnessRecoveryInput) => {
   const recoverSpan = (knownEnd: number, nativeEnd: number) => {
     const result = reconcileMessageHistory(
       {
-        knownMessages: knownMessages.slice(knownOffset, knownEnd),
+        knownMessages: input.knownMessages.slice(knownOffset, knownEnd),
         nativeMessages: input.nativeMessages.slice(nativeOffset, nativeEnd),
       },
       projection,
@@ -74,7 +63,7 @@ export const recoverClaudeMessages = (input: HarnessRecoveryInput) => {
   try {
     // Native user UUIDs anchor submissions even when identical prompts have unfinished replies.
     // Between anchors the shared recovery API still owns content, tool and legacy-history merging.
-    for (const [knownIndex, message] of knownMessages.entries()) {
+    for (const [knownIndex, message] of input.knownMessages.entries()) {
       if (message.role !== "user") continue;
       const nativeIndex = nativeUsers.get(message.id);
       if (nativeIndex === undefined) continue;
@@ -84,7 +73,7 @@ export const recoverClaudeMessages = (input: HarnessRecoveryInput) => {
       knownOffset = knownIndex + 1;
       nativeOffset = nativeIndex + 1;
     }
-    recoverSpan(knownMessages.length, input.nativeMessages.length);
+    recoverSpan(input.knownMessages.length, input.nativeMessages.length);
     return {
       kind: "recovered" as const,
       messages: messages.map((message, index) => (message.index === undefined ? message : { ...message, index })),

@@ -28,6 +28,41 @@ const listUiSourceFiles = () => {
 };
 
 describe("chat message types", () => {
+  test("live and saved history keeps replies, tools and errors through system status updates", () => {
+    const person: SessionMessage = { id: "person", role: "user", parts: [{ type: "text", text: "Check the files." }] };
+    const reply: SessionMessage = { id: "reply", role: "assistant", parts: [{ type: "text", text: "Files checked." }] };
+    const tool: SessionMessage = {
+      id: "tool",
+      role: "assistant",
+      parts: [{ type: "tool", tool: "Bash", status: "completed" }],
+    };
+    const failure: SessionMessage = {
+      id: "failure",
+      role: "system",
+      parts: [{ type: "error", errorType: "other", message: "Could not read file." }],
+    };
+    const status: SessionMessage = {
+      id: "status",
+      role: "system",
+      parts: [
+        { type: "text", text: "Native context compaction completed." },
+        { type: "token_usage", inputTokens: 10, outputTokens: 5 },
+      ],
+    };
+    const input: SessionMessage[] = [
+      person,
+      tool,
+      reply,
+      { id: "saved-notice", role: "system", parts: [{ type: "text", text: "Background task finished." }] },
+      status,
+      failure,
+    ];
+    const shown = normalizeChatMessagesForDisplay(input);
+    expect(shown).toEqual([person, { ...reply, parts: [...tool.parts, ...reply.parts] }, failure]);
+    expect(input[4]).toBe(status);
+    expect(status.parts).toHaveLength(2);
+  });
+
   test("display normalization preserves messages that already contain visible parts", () => {
     const completed: SessionMessage = { id: "completed", role: "assistant", parts: [{ type: "text", text: "Done" }] };
     const streaming: SessionMessage = { id: "streaming", role: "assistant", parts: [{ type: "text", text: "First" }] };

@@ -214,7 +214,9 @@ export const normalizeChatMessagesForDisplay = (messages: SessionMessage[], opti
   };
 
   for (const message of messages) {
-    const displayParts = (message.parts ?? []).filter(isDisplayRenderablePart);
+    const displayParts = (message.parts ?? []).filter(
+      (part) => !(message.role === "system" && part.type === "text") && isDisplayRenderablePart(part),
+    );
     if (displayParts.length === 0) continue;
 
     const displayMessage = displayParts.length === message.parts.length ? message : { ...message, parts: displayParts };
