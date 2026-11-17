@@ -51,10 +51,18 @@ export const verifyQuarantineReport = (xml: string, expected: ExpectedCase[], ro
   return verifyBunQuarantineCases(reported, expected);
 };
 
-export const assertStableQuarantineExclusions = (reported: ReportedCase[], expected: ExpectedCase[]) => {
+export const assertStableQuarantineExclusions = (
+  reported: ReportedCase[],
+  expected: ExpectedCase[],
+  requireReport = false,
+) => {
   for (const entry of expected) {
     const matches = reported.filter((actual) => matchesTitle(actual.title, entry.name));
-    if (matches.some((actual) => !matchesCase(actual, entry) || actual.outcome !== "skipped") || matches.length > 1)
+    if (
+      matches.some((actual) => !matchesCase(actual, entry) || actual.outcome !== "skipped") ||
+      matches.length > 1 ||
+      (requireReport && matches.length === 0)
+    )
       throw new Error(`Ambiguous or bypassed quarantine: ${entry.file}: ${entry.name}`);
   }
 };

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { benchmarkPlanEvidence } from "./benchmark-plan-evidence";
 import { productionPerformanceEvidence } from "./production-performance-evidence";
-import { verifyBunQuarantineCases } from "./quarantine-reports";
+import { assertStableQuarantineExclusions, verifyBunQuarantineCases } from "./quarantine-reports";
 import type { PlannedRun, TestPlan } from "./test-plan";
 import { matchesPlatform, quarantineRegistry, quarantineRunnerForTest } from "./test-quarantine";
 
@@ -127,6 +127,12 @@ export const collectRunEvidence = (
       if (!expected.length || expected.length !== run.quarantineIds.length)
         throw new Error("Unregistered quarantine selection");
       quarantine = verifyBunQuarantineCases(cases, expected);
+    } else if (run.lane === "stable" && run.runner === "packaged-browser" && run.quarantineIds.length) {
+      const expected = quarantineRegistry.filter(
+        (entry) => reportedFiles.includes(entry.file) && run.quarantineIds.includes(`${entry.file}:${entry.name}`),
+      );
+      // A packaged browser shard selects whole files. Report its registered cases even when skipped.
+      assertStableQuarantineExclusions(cases, expected, true);
     }
     if (!complete) reason = "Runner evidence is incomplete or does not match the selected plan";
   } catch (error) {
