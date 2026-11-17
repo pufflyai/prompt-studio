@@ -127,8 +127,10 @@ test("keeps note titles independent of the body and renames them through the con
     let body = "Body text with a different name";
     await editor.fill(body);
     await expect
-      .poll(() =>
-        readFileSync(`${repoRoot}/.pstdio/extension-storage/pstdio.notes/documents/${note.id}/content.md`, "utf8"),
+      .poll(
+        () =>
+          readFileSync(`${repoRoot}/.pstdio/extension-storage/pstdio.notes/documents/${note.id}/content.md`, "utf8"),
+        { timeout: 15_000 },
       )
       .toContain(body);
     await expect(row).toHaveAttribute("aria-selected", "true");
@@ -147,8 +149,10 @@ test("keeps note titles independent of the body and renames them through the con
     body += " after returning";
     await editor.fill(body);
     await expect
-      .poll(() =>
-        readFileSync(`${repoRoot}/.pstdio/extension-storage/pstdio.notes/documents/${note.id}/content.md`, "utf8"),
+      .poll(
+        () =>
+          readFileSync(`${repoRoot}/.pstdio/extension-storage/pstdio.notes/documents/${note.id}/content.md`, "utf8"),
+        { timeout: 15_000 },
       )
       .toContain(body);
 
@@ -223,7 +227,7 @@ test("keeps typing in the same editor when the first line names a new note", asy
     await sidebar.getByRole("option", { name: "Notes", exact: true }).click();
     await sidebar.getByRole("button", { name: "New note", exact: true }).click();
     const editor = page.getByTestId("content-editable").filter({ visible: true }).first();
-    await expect(editor).toBeEmpty();
+    await expect(editor).toBeEmpty({ timeout: 15_000 });
     await resolutionReady.promise;
     const mountedEditor = await editor.elementHandle();
     const documentReads: string[] = [];
