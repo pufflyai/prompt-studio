@@ -287,7 +287,9 @@ export const prepareAndInstallExtensionSource = async (input: InstallExtensionSo
     input.signal?.throwIfAborted();
 
     // A replacement must activate every managed view before the working source is replaced.
-    await validateExtensionWebviews(loaded, installPath, installName, input.signal);
+    await traceSetupPhase("ps182.webview.validate", { extension: installName }, () =>
+      validateExtensionWebviews(loaded, installPath, installName, input.signal),
+    );
     const sourceHash = await traceSetupPhase("extension.source_hash", { extension: installName }, async () =>
       hashExtensionSource(installPath),
     );

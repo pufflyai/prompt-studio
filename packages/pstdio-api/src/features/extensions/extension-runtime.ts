@@ -21,6 +21,7 @@ import {
   remapPackageAssets,
 } from "pstdio-extensions";
 import { createWorkbenchExtensionMetadata } from "pstdio-extensions/workbench";
+import { traceSetupPhase } from "../../lib/setup-phase";
 import {
   toCheckArtifactMounts,
   toCheckFileIconThemes,
@@ -244,9 +245,9 @@ export const checkExtensionSource = async (
     });
   const check = emptyCheck(extensionsRoot, existsSync(extensionsRoot), options.hostCapabilities);
   const diagnostics: RuntimeExtensionDiagnostic[] = [];
-  const source = await loadExtensionPackage({ path: sourcePath, sourceKind: "local_path" }, diagnostics, {
-    immutableAssets: true,
-  });
+  const source = await traceSetupPhase("ps182.validation.load-package", { task: sourcePath }, () =>
+    loadExtensionPackage({ path: sourcePath, sourceKind: "local_path" }, diagnostics, { immutableAssets: true }),
+  );
 
   if (!source) {
     addRuntimeDiagnostics(check, diagnostics);
@@ -255,7 +256,9 @@ export const checkExtensionSource = async (
 
   try {
     const loaded = toLoadedExtension(source, diagnostics);
-    const runtime = normalizeExtensionSources([source]);
+    const runtime = await traceSetupPhase("ps182.validation.normalize", { extension: source.manifest.name }, async () =>
+      normalizeExtensionSources([source]),
+    );
     populateCheckFromRuntime(check, runtime, options);
     for (const extension of check.extensions)
       extension.sourcePath = join(sourcePath, relative(source.packagePath, source.sourcePath));
