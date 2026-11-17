@@ -222,7 +222,7 @@ None of these replace the real queue run or release certification.
 
 Keep confirmed intermittent cases in `scripts/ci/test-quarantine.json` with their exact title, file, affected platform, owner, failure/pass evidence and removal criteria. Preserve all assertions and workloads. Execute each once in quarantine and require complete native evidence. A known failure is reported separately as `quarantined-failure`; unexpected failures and missing coverage block. Restore the case to the stable lane after fixing its cause. See [ADR 0101](../../adrs/0101-temporary-flaky-test-quarantine.md).
 
-The registry is currently empty. Quarantine execution remains available for focused diagnosis. Registered diagnostic cases must run once in their separate lane with native evidence. Setup failures, missing cases or reports, cancellation, skipped cases, and retries fail verification. A stable pass does not establish that a diagnostic case passed.
+Quarantine retains confirmed intermittent cases for focused diagnosis. Registered cases must run once in their separate lane with native evidence. Setup failures, missing cases or reports, cancellation, skipped cases, and retries fail verification. A stable pass does not establish that a diagnostic case passed.
 
 ## Builds and caches
 
