@@ -115,6 +115,8 @@ The shorter first-party extension identities also share API 0.5.0. Canonical dis
 
 The optional `HarnessStartInput.approvals` channel also shares API 0.5.0. A supporting host passes the session's approval channel on a session's first turn as well as on resume. Hosts up to 0.47 pass it only on resume, so providers must treat it as optional on start.
 
+The optional durable-automation `notBefore` deadline also shares API 0.5.0 on `main`. Waiting runs remain queued across restart until the deadline. See [delayed execution](0007-durable-automation.md#delayed-execution-on-main).
+
 ### Which version each check uses
 
 | Check | Where it runs | Extension API version it compares with |

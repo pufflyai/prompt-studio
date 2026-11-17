@@ -65,5 +65,10 @@ export const quotasCommand = defineCommand({
   title: l10n("quotas.title", "Inspect account quotas"),
   description: l10n("quotas.description", "Read Claude Code's native account quota snapshot without starting a turn."),
   cli: true,
-  run: readClaudeQuotas,
+  async run(ctx) {
+    return {
+      ...(await readClaudeQuotas(ctx)),
+      restartAfterQuotaReset: (await ctx.settings.get("restartAfterQuotaReset")) === true,
+    };
+  },
 });

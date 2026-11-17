@@ -56,3 +56,7 @@ The **Thinking** option picks the model's thinking level: None, Minimal, Low, Me
 Run `pst harness-open-code quotas` to inspect native OpenCode Go quota windows and account budgets through `api GET /api/experimental/usage/limits --standalone`. Budget IDs use a `budget.` prefix so a budget named `weekly`, `rolling`, or `monthly` keeps its own chart and history. The command starts no agent turn. Provider accounts without limits in that endpoint return `unavailable`; it does not estimate subscription quotas from local token usage.
 
 *Updated at: 2026-11-10*
+
+## Restart after quota reset
+
+In this extension's settings, enable **Restart after quota reset** to resume conversations stopped by quota errors. The setting is off by default and applies only to this device. Sessions resumes the unchanged failed conversation 15 seconds after the latest exhausted quota window resets. It checks the preference and native quota again before continuing. Manual stops, archived conversations, changed runs and unrelated failures stay stopped. A running host is required; queued restarts survive host restart. Unknown reset times cannot schedule a restart.

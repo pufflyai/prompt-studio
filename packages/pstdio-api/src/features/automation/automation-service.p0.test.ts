@@ -329,3 +329,30 @@ describe("automation service cancellation", () => {
     expect(storedRun.status).toBe("running");
   });
 });
+
+test("delayed durable automation stays queued across shutdown and resumes only after its deadline", async () => {
+  const claimQueuedRun = mock(async () => null);
+  const notBefore = new Date(Date.now() + 150).toISOString();
+  const options = {
+    automationDBService: {
+      listQueuedRuns: async () => [{ id: "later", input_json: { notBefore } }],
+      claimQueuedRun,
+    } as never,
+    getCommandDeps: () => ({}) as never,
+  };
+  const first = createAutomationService(options);
+  await first.recoverQueuedRuns();
+  await Bun.sleep(10);
+  expect(claimQueuedRun).not.toHaveBeenCalled();
+  await first.close();
+  const recovered = createAutomationService(options);
+  try {
+    await recovered.recoverQueuedRuns();
+    await recovered.recoverQueuedRuns();
+    expect(claimQueuedRun).not.toHaveBeenCalled();
+    await Bun.sleep(Math.max(0, Date.parse(notBefore) - Date.now()) + 15);
+    expect(claimQueuedRun).toHaveBeenCalledTimes(1);
+  } finally {
+    await recovered.close();
+  }
+});
