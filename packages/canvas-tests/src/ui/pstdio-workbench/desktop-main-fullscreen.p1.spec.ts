@@ -5,7 +5,8 @@ const frame =
 
 test("Main fullscreen keeps its exit button clear of the native window controls", async ({ page }) => {
   await page.goto(`/?frame=${encodeURIComponent(frame)}`);
-  const canvas = page.frameLocator("[data-verification-host]").locator(`[data-canvas-item="${frame}"]`);
+  const shell = page.frameLocator("[data-verification-host]");
+  const canvas = shell.locator(`[data-canvas-item="${frame}"]`);
   await canvas.getByRole("button", { name: /^Select / }).click();
   const preview = canvas.frameLocator("iframe");
   const enter = preview.getByRole("button", { name: "Enter Main fullscreen", exact: true });
@@ -20,6 +21,7 @@ test("Main fullscreen keeps its exit button clear of the native window controls"
   await expect(preview.getByRole("button", { name: "Open / create project", exact: true })).toBeHidden();
   await expect(projectTabs).toBeHidden();
   await expect(preview.getByRole("list", { name: "Other editors", exact: true })).toBeVisible();
+  await shell.locator("[data-canvas-viewport]").press("f");
   await exit.click();
   await expect(enter).toBeFocused();
   await expect(projectTabs).toBeVisible();
