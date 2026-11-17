@@ -1,0 +1,46 @@
+name: PS232 Bash startup state diagnostic
+on:
+  push:
+    branches: [test/ps232-bash-startup-state-20261117]
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash
+env:
+  NX_DAEMON: "false"
+  CI_PRIORITY: P0
+  TEST_PRIORITIES: P0
+jobs:
+  desktop:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: ./.github/actions/setup-ci-cache
+      - name: Prepare diagnostics and bind source
+        run: |
+          mkdir -p test-results/bash-startup
+          git rev-parse HEAD HEAD^{tree}
+          cat /etc/profile > test-results/bash-startup/system-profile.txt
+          ls -l /etc/profile.d > test-results/bash-startup/system-profile-directory.txt
+          /bin/bash --version > test-results/bash-startup/bash-version.txt
+      - name: Build desktop and actual dependencies
+        run: bun run build -- --scope @pstdio/desktop --include-dependencies --no-bail
+      - name: Run complete original desktop P0 owner with diagnostic capture
+        run: bun run --cwd clients/desktop test 2>&1 | tee test-results/bash-startup/whole-owner.log
+      - name: Retain diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps232-bash-startup-state-attempt-${{ github.run_attempt }}
+          path: |
+            test-results/bash-startup
+            test-results/ci
+          if-no-files-found: error

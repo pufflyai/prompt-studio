@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveRuntimeEnvironment } from "./runtime-environment";
@@ -21,12 +21,15 @@ for (const shell of ["/bin/bash", "/bin/zsh"]) {
       writeFileSync(join(home, shell.endsWith("bash") ? ".bash_profile" : ".zshrc"), startup);
       const controller = new AbortController();
       const reason = new Error("Runtime startup cancelled");
+      let observed: unknown = { state: "pending" };
       const outcome = resolveRuntimeEnvironment(controller.signal, {
         HOME: home,
         ZDOTDIR: home,
         SHELL: shell,
         PATH: "/usr/bin:/bin:/usr/sbin:/sbin",
-      }).catch((error) => error);
+      }).then((value) => { observed = { state: "resolved", path: value.PATH }; return value; }, (error) => {
+        observed = { state: "rejected", error: String(error) }; return error;
+      });
       const readPids = () =>
         ["shell.pid", "child.pid"]
           .map((name) => {
@@ -41,6 +44,11 @@ for (const shell of ["/bin/bash", "/bin/zsh"]) {
           if (pids.length === 2) break;
           await Bun.sleep(10);
         }
+        appendFileSync(`${process.env.GITHUB_WORKSPACE}/test-results/bash-startup/assertion-state.jsonl`, JSON.stringify({ shell, home, pids, observed,
+          processState: spawnSync("ps", ["-eo", "pid,ppid,pgid,stat,etimes,comm"], { encoding: "utf8" }).stdout,
+          shellFile: existsSync(join(home, "shell.pid")) ? readFileSync(join(home, "shell.pid"), "utf8") : null,
+          childFile: existsSync(join(home, "child.pid")) ? readFileSync(join(home, "child.pid"), "utf8") : null,
+        }) + "\n");
         expect(pids).toHaveLength(2);
         expect(pids.every(isRunning)).toBe(true);
         controller.abort(reason);
