@@ -92,7 +92,8 @@ const plannerInstance = async (host: Host, projectId: string) => {
 // Installing from one project enables Planner there. Other projects receive a disabled instance
 // once the host notices the new user extension, and enable it themselves.
 const enablePlanner = async (host: Host, projectId: string) => {
-  await expect.poll(() => plannerInstance(host, projectId)).toBeTruthy();
+  // Discovering a shared install prepares its metadata for this second project asynchronously.
+  await expect.poll(() => plannerInstance(host, projectId), { timeout: 30_000 }).toBeTruthy();
   const instance = (await plannerInstance(host, projectId))!;
   const response = await fetch(`${host.baseUrl}/v1/projects/${projectId}/extensions/${instance.id}`, {
     body: JSON.stringify({ enabled: true }),
