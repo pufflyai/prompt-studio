@@ -133,16 +133,6 @@ const reloadInstalledSourceRow = async (deps: ReloadDeps, existing: InstalledSou
         : refreshed;
     if (!completed) throw new Error(`Installed extension not found: ${existing.id}`);
 
-    await deps.installedExtensionSourcesService.recordReload({
-      installed_extension_id: existing.id,
-      previous_source_hash: existing.source_hash,
-      next_source_hash: nextSourceHash,
-      previous_revision: existing.loaded_revision,
-      next_revision: completed.loaded_revision,
-      status: completed.status === "error" ? "error" : "success",
-      ...(completed.status === "error" ? { error_json: completed.last_error_json } : {}),
-    });
-
     deps.emitInstalledSource(completed);
     return { installedSource: completed, check: result.check };
   } catch (error) {
@@ -157,16 +147,6 @@ const reloadInstalledSourceRow = async (deps: ReloadDeps, existing: InstalledSou
       last_error_json: currentErrorJson,
     });
     if (!updated) throw new Error(`Installed extension not found: ${existing.id}`);
-
-    await deps.installedExtensionSourcesService.recordReload({
-      installed_extension_id: existing.id,
-      previous_source_hash: existing.source_hash,
-      next_source_hash: nextSourceHash ?? existing.source_hash,
-      previous_revision: existing.loaded_revision,
-      next_revision: existing.loaded_revision,
-      status: "error",
-      error_json: currentErrorJson,
-    });
 
     deps.emitInstalledSource(updated);
     await deps.notifyInstalledSourcesChanged(existing.source_path);
@@ -203,16 +183,6 @@ export const reportWebviewBuildFailure = async (
     },
   );
   if (!updated) return { status: "source-changed" as const };
-
-  await deps.installedExtensionSourcesService.recordReload({
-    installed_extension_id: existing.id,
-    previous_source_hash: existing.source_hash,
-    next_source_hash: existing.source_hash,
-    previous_revision: existing.loaded_revision,
-    next_revision: existing.loaded_revision,
-    status: "error",
-    error_json: currentErrorJson,
-  });
 
   deps.emitInstalledSource(updated);
   return { status: "reported" as const, source: updated };

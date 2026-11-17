@@ -39,6 +39,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   // pstdio-api also declares the extensions and fixtures its tests install from source,
   // so changing one marks pstdio-api as affected.
   "pstdio-api": [
+    "github",
     "git-workspaces",
     "pstdio-sync",
     "pstdio-sync-contracts",
@@ -101,6 +102,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   // e2e also declares the extensions it installs at runtime and the dashboard it serves,
   // so changing one marks e2e as affected.
   e2e: [
+    "github",
     "git-workspaces",
     "@pstdio/ui",
     "@pstdio/sdk",
@@ -134,6 +136,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "planner",
     "reports",
     "skills",
+    "pstdio-skill-browser",
     "remote-workspaces",
     "workbench-fixture",
     "pstdio-benchmarks",

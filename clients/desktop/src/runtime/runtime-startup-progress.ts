@@ -7,6 +7,7 @@ const startupPhases: Record<string, DesktopStartupPhase> = {
   database_retired: "database",
   database_image_restored: "database",
   database_opened: "migrations",
+  database_index_nodes: "cleanup",
   database_cleaning: "cleanup",
   database_compacting: "compacting",
   database_migrated: "extensions",

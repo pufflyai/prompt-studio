@@ -3,6 +3,7 @@ import { putAttempt } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
 import { autoBuildDispatches, autoBuildPullRequestNotifications } from "../data/auto-build-dispatches";
 import { saveAutoBuildSupervisor } from "../data/auto-build-supervisor";
+import { observeTicketRecords } from "../data/storage-reads.fixture";
 import { ticketsCollection } from "../data/ticket-context.fixture";
 
 import { withWriteGuard } from "../data/write-guard";
@@ -40,7 +41,10 @@ async function monitorFixture() {
     lastRequestStarted: ago(5),
   });
   const followups: string[] = [];
-  const fetched: string[] = [];
+  // Tickets are records since storage version 5; their record reads count as fetches.
+  const tickets = observeTicketRecords(ctx.storage);
+  ctx.storage.records = tickets.storage.records;
+  const fetched = tickets.reads;
   const collection = ctx.storage.collection.bind(ctx.storage);
   ctx.storage.collection = <T>(name: string) => {
     const source = collection<T>(name);
@@ -275,6 +279,8 @@ test.each([
   const process = ctx.process.run;
   let changed = false;
   const evidence = () => ({
+    id: "https://github.com/example/project/pull/1",
+    baseRefName: "main",
     headRefOid: "submitted-head",
     state: "OPEN",
     mergeable: changed && change === "merge conflict" ? "CONFLICTING" : "MERGEABLE",
@@ -383,6 +389,7 @@ test("unchanged PR evidence wakes once while a review request prevents repair, t
           exitCode: 0,
           stderr: "",
           stdout: JSON.stringify({
+            baseRefName: "main",
             headRefOid: "submitted-head",
             state: "OPEN",
             mergeable: conflict ? "CONFLICTING" : "MERGEABLE",

@@ -129,6 +129,21 @@
       "icon": "./assets/icon.svg"
     },
     {
+      "installName": "harness-copilot",
+      "displayName": "GitHub Copilot",
+      "description": "Contributes the optional GitHub Copilot coding agent harness.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/harness-copilot",
+        "ref": "{hostRelease}"
+      },
+      "publisher": "pstdio",
+      "default": false,
+      "extensionId": "pstdio.harness-copilot",
+      "icon": "./assets/icon.svg"
+    },
+    {
       "installName": "base-themes",
       "displayName": "Themes",
       "description": "Color themes and the Seti file icon theme.",
@@ -213,6 +228,20 @@
       "icon": "BookOpen"
     },
     {
+      "installName": "pstdio-skill-browser",
+      "extensionId": "pstdio.pstdio-skill-browser",
+      "displayName": "Skill Browser",
+      "description": "Browse project skills, instructions, and supporting files.",
+      "icon": "sparkles",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/pstdio-skill-browser",
+        "ref": "{hostRelease}"
+      },
+      "default": false
+    },
+    {
       "installName": "performance",
       "extensionId": "pstdio.performance",
       "displayName": "Prompt Studio Performance Monitoring",
@@ -269,6 +298,20 @@
       "default": false,
       "icon": "Cloud",
       "listed": false
+    },
+    {
+      "installName": "github",
+      "extensionId": "pstdio.github",
+      "displayName": "GitHub",
+      "description": "Reusable GitHub pull request resources.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/github",
+        "ref": "{hostRelease}"
+      },
+      "default": true,
+      "icon": "Github"
     },
     {
       "installName": "git-workspaces",

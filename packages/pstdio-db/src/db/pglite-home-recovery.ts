@@ -24,7 +24,7 @@ const exists = async (path: string) => {
     throw error;
   }
 };
-const flushDirectory = async (path: string) => {
+export const flushDirectory = async (path: string) => {
   // Windows does not expose directory fsync through Node. Process-interruption recovery
   // uses the same rename protocol there; power-loss durability is not yet qualified.
   if (process.platform === "win32") return;

@@ -162,4 +162,5 @@ test("a lost snapshot acknowledgement reloads its base and the next index change
   await reader.synchronizeIndex(device.id, false, space, peer.relay);
   expect((await reader.readRecords("sessions"))[0]?.title).toBe("After failure");
   expect(await source.indexPending()).toBe(false);
-});
+  // A thousand index syncs write their index nodes to real files; CI runners take about 15 s.
+}, 60_000);
