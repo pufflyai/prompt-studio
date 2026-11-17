@@ -12,7 +12,7 @@ type ListRepoExtensionRootsInput = {
 };
 
 type DefaultWorkspace = NonNullable<Awaited<ReturnType<ReturnType<typeof createWorkspaceService>["getDefault"]>>>;
-type RepoExtensionWorkspace = Pick<
+export type RepoExtensionWorkspace = Pick<
   DefaultWorkspace,
   "root_path" | "execution_kind" | "provider_state" | "initializing" | "setup_error"
 >;

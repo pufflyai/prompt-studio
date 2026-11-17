@@ -272,32 +272,38 @@ describe("syncRepoExtensionsForProject", () => {
     expect(missing?.status).toBe("missing");
     expect(disabled?.enabled).toBe(false);
   });
+});
 
-  test("syncs extensions from the default workspace folder", async () => {
-    const project = await projectService.create({ name: "Repo Extensions" });
-    const repoA = join(tempRoot, "a");
-    const repoB = join(tempRoot, "b");
-    writeExtension(join(repoB, ".pstdio", "extensions", "repo-b"), "repo-b");
-    writeExtension(join(repoA, ".pstdio", "extensions", "repo-a"), "repo-a");
+test("syncs extensions from the default workspace folder", async () => {
+  const project = await projectService.create({ name: "Repo Extensions" });
+  const repoA = join(tempRoot, "a");
+  const repoB = join(tempRoot, "b");
+  writeExtension(join(repoB, ".pstdio", "extensions", "repo-b"), "repo-b");
+  writeExtension(join(repoA, ".pstdio", "extensions", "repo-a"), "repo-a");
 
-    const result = await syncRepoExtensionsForProjectFolder({
-      extensionService,
-      installedExtensionSourcesService,
-      projectId: project.id,
-      workspaceService: {
-        getDefault: async () => ({
-          id: "home",
-          project_id: "project-1",
-          root_path: repoB,
-          execution_kind: "local",
-          provider_id: "pstdio.root",
-          provider_state: "ready",
-        }),
-      },
-    });
+  const workspace = {
+    id: "home",
+    project_id: "project-1",
+    root_path: repoB,
+    execution_kind: "local" as const,
+    provider_id: "pstdio.root",
+    provider_state: "ready" as const,
+    initializing: true,
+    setup_error: null,
+  };
+  const input = {
+    extensionService,
+    installedExtensionSourcesService,
+    projectId: project.id,
+    workspaceService: { getDefault: async () => workspace },
+  };
 
-    expect(result?.enabled).toEqual(["repo-b"]);
-  });
+  expect(await syncRepoExtensionsForProjectFolder(input)).toBeNull();
+  expect(await extensionService.listProjectExtensionInstances(project.id)).toEqual([]);
+
+  workspace.initializing = false;
+  const result = await syncRepoExtensionsForProjectFolder(input);
+  expect(result?.enabled).toEqual(["repo-b"]);
 });
 
 test("does not import a restored tool that stays disabled during later discovery", async () => {

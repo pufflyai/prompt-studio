@@ -55,8 +55,8 @@ export const runWorkspaceProvisioning = async <
 
 const projectQueues = new Map<string, Promise<unknown>>();
 const pendingRemovals = new Map<string, number>();
-// Runs one project's provisioning and removal in order, so removal never interleaves with a config write.
-const inProjectWorkspaceQueue = <T>(projectId: string, task: () => Promise<T>) => {
+// Folder setup, provisioning and removal share a queue so they cannot change readiness or config out of order.
+export const inProjectWorkspaceQueue = <T>(projectId: string, task: () => Promise<T>) => {
   const queued = (projectQueues.get(projectId) ?? Promise.resolve()).catch(() => undefined).then(task);
   projectQueues.set(projectId, queued);
   return queued.finally(() => {

@@ -7,7 +7,7 @@ import {
   resolveDefaultExtensionsConfig,
 } from "../extensions/default-extensions";
 import { syncRepoExtensionsForProject } from "../extensions/repo-extensions";
-import { runWorkspaceProvisioning } from "../workspaces/provision-coordinator";
+import { inProjectWorkspaceQueue, runWorkspaceProvisioning } from "../workspaces/provision-coordinator";
 import { ensureWorkspaceConfig } from "../workspaces/workspace-config";
 import { PROVIDER_READY_TIMEOUT_MS } from "../workspaces/workspace-provider-creation";
 import { reconcileProviderWorkspaces } from "../workspaces/workspace-provider-reconciliation";
@@ -119,7 +119,7 @@ const initializeLocalProjectWorkspace = async (
   }
 };
 
-export const initializeProjectWorkspace = async (
+const initializeWorkspace = async (
   deps: ProjectsRouteDeps,
   projectId: string,
   initial: CreateProjectInput["initial_workspace"],
@@ -167,4 +167,15 @@ export const initializeProjectWorkspace = async (
     initial.provider_id === rootProviderId ? setupExtensions : undefined,
     options,
   );
+};
+
+export const initializeProjectWorkspace = (
+  deps: ProjectsRouteDeps,
+  projectId: string,
+  initial: CreateProjectInput["initial_workspace"],
+  setupExtensions?: () => Promise<ExtensionSetupWarning[]>,
+  options: WorkspaceSetupOptions = {},
+) => {
+  const initialize = () => initializeWorkspace(deps, projectId, initial, setupExtensions, options);
+  return initial.provider_id === rootProviderId ? inProjectWorkspaceQueue(projectId, initialize) : initialize();
 };
