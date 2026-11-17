@@ -1,4 +1,5 @@
 import { Button, Text } from "@chakra-ui/react";
+import type { SessionMessage } from "@pstdio/sdk/extensions";
 import { AlertMessage, EmptyState } from "@pstdio/ui";
 import { ChatPanel } from "@pstdio/ui/chat-ui";
 import { useState } from "react";
@@ -47,9 +48,35 @@ export const RecoveredDraft = () => (
 );
 
 // Synthetic trusted-host states; no account or session service is contacted by these frames.
-type AccountPreviewState = "signed-out" | "checking" | "error" | "history" | "fork" | "fork-failure" | "read-only";
+type AccountPreviewState =
+  | "signed-out"
+  | "checking"
+  | "checking-question"
+  | "error"
+  | "history"
+  | "fork"
+  | "fork-failure"
+  | "read-only";
+const savedQuestion: SessionMessage = {
+  id: "saved-question",
+  role: "assistant",
+  parts: [
+    {
+      type: "tool",
+      tool: "question",
+      actionType: "execute",
+      status: "completed",
+      state: {
+        status: "completed",
+        input: {
+          tool: "question",
+          questions: [{ question: "Which language?", options: ["TypeScript", "Python"], required: true }],
+        },
+      },
+    },
+  ],
+};
 const PreviewAccountSetup = ({ state }: { state: AccountPreviewState }) => {
-  if (state === "checking") return null;
   if (state === "error")
     return (
       <AlertMessage
@@ -71,13 +98,19 @@ const PreviewAccountSetup = ({ state }: { state: AccountPreviewState }) => {
 const NativeAccountPreview = (props: { state: AccountPreviewState }) => {
   const [forkedId, setForkedId] = useState("");
   const forkable = props.state === "fork" || props.state === "fork-failure" || props.state === "read-only";
+  const checking = props.state === "checking" || props.state === "checking-question";
+  const messages: SessionMessage[] = [];
+  if (props.state === "checking-question") messages.push(savedQuestion);
+  if (props.state === "history" || forkable)
+    messages.push({
+      id: "completed-reply",
+      role: "assistant",
+      parts: [{ type: "text", text: "Earlier completed reply" }],
+    });
   const [session] = useState(() =>
     createChatSession({
       initial: {
-        messages:
-          props.state === "history" || forkable
-            ? [{ id: "completed-reply", role: "assistant", parts: [{ type: "text", text: "Earlier completed reply" }] }]
-            : [],
+        messages,
         readOnly: props.state === "read-only",
         fork: forkable ? { disabledReason: null } : undefined,
       },
@@ -101,7 +134,7 @@ const NativeAccountPreview = (props: { state: AccountPreviewState }) => {
         submit: () => undefined,
         progress: null,
         notice: null,
-        setup: forkable || props.state === "checking" ? undefined : <PreviewAccountSetup state={props.state} />,
+        setup: forkable || checking ? undefined : <PreviewAccountSetup state={props.state} />,
       },
     });
   return (
@@ -113,6 +146,10 @@ const NativeAccountPreview = (props: { state: AccountPreviewState }) => {
 };
 export const SignInRequired = () => <NativeAccountPreview state="signed-out" />;
 export const AuthenticationChecking = () => <NativeAccountPreview state="checking" />;
+export const QuestionWhileAuthenticationLoads = {
+  description: "Choices stay editable. Send answer and Skip are disabled until the harness is ready.",
+  render: () => <NativeAccountPreview state="checking-question" />,
+};
 export const AuthenticationFailure = () => <NativeAccountPreview state="error" />;
 export const SignedOutHistory = () => <NativeAccountPreview state="history" />;
 export const ForkableReply = () => <NativeAccountPreview state="fork" />;
