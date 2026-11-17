@@ -153,7 +153,10 @@ test("a removed note's pending draft stays recoverable until its tab is explicit
     .getAttribute("data-workbench-tab");
   expect(tabId).toBeTruthy();
   const tab = page.locator(`[data-workbench-tab="${tabId}"]`);
-  const editor = page.getByTestId("content-editable").filter({ visible: true }).first();
+  const editor = page
+    .getByRole("region", { name: "Main", exact: true })
+    .getByRole("textbox", { name: "", exact: true })
+    .filter({ visible: true });
   await expect(editor).toBeVisible();
   const held: import("@playwright/test").Route[] = [];
   await page.route("**/text-editing/request", async (route) => {

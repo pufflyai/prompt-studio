@@ -63,7 +63,12 @@ test("opens notes in the project Sidenav tree and follows the active note throug
     await firstRow.click();
     await expect(firstRow).toHaveAttribute("aria-selected", "true");
     await expect(page.getByRole("tab", { name: first.title, exact: true })).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByTestId("content-editable").filter({ visible: true })).toHaveText(`${first.title} body`);
+    await expect(
+      page
+        .getByRole("region", { name: "Main", exact: true })
+        .getByRole("textbox", { name: "", exact: true })
+        .filter({ visible: true }),
+    ).toHaveText(`${first.title} body`);
     // Opening content must not queue another read of every note in the project.
     const noteListReads: string[] = [];
     page.on("request", (request) => {
@@ -71,7 +76,12 @@ test("opens notes in the project Sidenav tree and follows the active note throug
     });
     await secondRow.click();
     await expect(secondRow).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByTestId("content-editable").filter({ visible: true })).toHaveText(`${second.title} body`);
+    await expect(
+      page
+        .getByRole("region", { name: "Main", exact: true })
+        .getByRole("textbox", { name: "", exact: true })
+        .filter({ visible: true }),
+    ).toHaveText(`${second.title} body`);
     expect(noteListReads).toEqual([]);
     await page.getByRole("tab", { name: first.title, exact: true }).click();
     await expect(firstRow).toHaveAttribute("aria-selected", "true");
@@ -114,7 +124,10 @@ test("keeps note titles independent of the body and renames them through the con
     const row = sidebar.getByRole("option", { name: note.title, exact: true });
     await sidebar.getByRole("option", { name: "Notes", exact: true }).click();
     await row.click();
-    const editor = page.getByTestId("content-editable").filter({ visible: true }).first();
+    const editor = page
+      .getByRole("region", { name: "Main", exact: true })
+      .getByRole("textbox", { name: "", exact: true })
+      .filter({ visible: true });
     await expect(editor).toBeEmpty();
     let mountedEditor = await editor.elementHandle();
     const documentReads: string[] = [];
@@ -219,7 +232,10 @@ test("keeps typing in the same editor when the first line names a new note", asy
     const sidebar = page.locator('[data-workbench-region="sidenav"]');
     await sidebar.getByRole("option", { name: "Notes", exact: true }).click();
     await sidebar.getByRole("button", { name: "New note", exact: true }).click();
-    const editor = page.getByTestId("content-editable").filter({ visible: true }).first();
+    const editor = page
+      .getByRole("region", { name: "Main", exact: true })
+      .getByRole("textbox", { name: "", exact: true })
+      .filter({ visible: true });
     await expect(editor).toBeEmpty();
     await resolutionReady.promise;
     const mountedEditor = await editor.elementHandle();

@@ -49,7 +49,12 @@ test("preserves browser Forward history between extension pages after refresh", 
   await page.reload();
   await page.goForward();
   await expect(page).toHaveURL(/\/extensions\/pstdio\.planner\/ticket\?resource=/);
-  await expect(page.getByRole("region", { name: "Main", exact: true }).getByRole("textbox")).toHaveText(ticket.content);
+  await expect(
+    page
+      .getByRole("region", { name: "Main", exact: true })
+      .getByRole("textbox", { name: "", exact: true })
+      .filter({ visible: true }),
+  ).toHaveText(ticket.content);
 });
 
 test("keeps the project selector and Session Panel available on project home", async ({ page, request }) => {
@@ -88,6 +93,9 @@ test("preserves other Session tabs when selecting from New session", async ({ pa
   await page.getByRole("button", { name: "Open Side Panel" }).click();
   await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
   const sideHeader = page.locator('[data-workbench-panel-header="side"]');
+  const chooser = page.locator('[data-workbench-panel="side"]').getByRole("group", { name: "Available tabs" });
+  await expect(sideHeader.getByRole("tab", { selected: true }).or(chooser)).toBeVisible();
+  if (await chooser.isVisible()) await chooser.getByRole("button", { name: "New session", exact: true }).click();
   await expect(sideHeader.getByRole("tab", { name: "New session", exact: true })).toBeVisible();
   await sideHeader.getByRole("button", { name: "Add panel" }).click();
   const sessionChoice = page
@@ -162,6 +170,9 @@ test("switches a pinned Session tab in place from its menu", async ({ page, requ
   await page.getByRole("button", { name: "Open Side Panel" }).click();
   await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
   const sideHeader = page.locator('[data-workbench-panel-header="side"]');
+  const chooser = page.locator('[data-workbench-panel="side"]').getByRole("group", { name: "Available tabs" });
+  await expect(sideHeader.getByRole("tab", { selected: true }).or(chooser)).toBeVisible();
+  if (await chooser.isVisible()) await chooser.getByRole("button", { name: "New session", exact: true }).click();
   const sessionTabs = sideHeader.getByRole("tab");
   await expect(sessionTabs).toHaveCount(1);
   const previewId = await sessionTabs.first().getAttribute("id");
