@@ -3,6 +3,7 @@ import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, renameSync, 
 import { join } from "node:path";
 import { retainPreparedArtifacts } from "pstdio-extensions/prepared-cache";
 import { resolvePstdioHome, withFileMutationLock } from "pstdio-paths";
+import { traceSetupPhase } from "../../lib/setup-phase";
 import {
   inspectManagedWebviewBuildInputsAsync,
   type ManagedWebviewBuildInputs,
@@ -96,7 +97,10 @@ export const prepareWebviewArtifacts = async (inputs: WebviewArtifactInput[], si
   const stage = trackPreparationStage([batch]);
   mkdirSync(batch, { recursive: true });
   try {
-    const { sources, signatures } = await inspectPreparedWebviewInputs(inputs, join(batch, "sources"), signal);
+    const context = { extension: inputs[0]!.installName, task: "ps185.frontend-diagnostic" };
+    const { sources, signatures } = await traceSetupPhase("ps185.webview.inspect-inputs", context, () =>
+      inspectPreparedWebviewInputs(inputs, join(batch, "sources"), signal),
+    );
     const artifacts = signatures.map((signature) =>
       artifactPaths(
         createHash("sha256")
@@ -123,10 +127,14 @@ export const prepareWebviewArtifacts = async (inputs: WebviewArtifactInput[], si
       );
       return entry;
     });
-    const outcome = await buildExtensionWebviewBatch({ entryPaths: entries, outdir: join(batch, "dist"), signal });
+    const outcome = await traceSetupPhase("ps185.webview.batch-build", context, () =>
+      buildExtensionWebviewBatch({ entryPaths: entries, outdir: join(batch, "dist"), signal }),
+    );
     if (!outcome.success) throw new Error(outcome.details);
     signal.throwIfAborted();
-    const after = await inspectPreparedWebviewInputs(inputs, join(batch, "sources"), signal);
+    const after = await traceSetupPhase("ps185.webview.inspect-after-build", context, () =>
+      inspectPreparedWebviewInputs(inputs, join(batch, "sources"), signal),
+    );
     signal.throwIfAborted();
     if (after.signatures.some((signature, index) => signature.signature !== signatures[index]!.signature))
       throw new Error("Extension webview changed while preparing its bundle.");
