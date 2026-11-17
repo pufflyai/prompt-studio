@@ -125,6 +125,21 @@ describe("published artifacts", () => {
     expect((await service.publish({ file_path: "reports/weekly.htm", html: "<h1>Weekly</h1>" })).title).toBe("weekly");
   });
 
+  test("opens a selected revision by ID without listing history or crossing artifacts", async () => {
+    const { service, input } = await fixture();
+    const first = await service.publish({ file_path: "first.html", html: "<title>First</title>" });
+    const second = await service.publish({ file_path: "second.html", html: "<title>Second</title>" });
+    await service.rename(first.url, "New name");
+    input.revisions.list = async () => {
+      throw new Error("Unexpected revision history scan");
+    };
+    await expect(service.read(first.url, first.revisionId)).resolves.toMatchObject({
+      title: "New name",
+      html: "<title>First</title>",
+    });
+    await expect(service.read(first.url, second.revisionId)).rejects.toThrow("Artifact revision not found.");
+  });
+
   test("rejects oversized or unsupported files before publishing a revision", async () => {
     const { service } = await fixture();
     await expect(service.publish({ file_path: "page.tsx", html: "hello" })).rejects.toThrow("HTML");

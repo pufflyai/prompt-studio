@@ -1,5 +1,6 @@
 import { Box, Button, Center, Spinner, Stack, Text } from "@chakra-ui/react";
 import { createGlyphIcon, Header, ScopedMenu as Menu, Portal, ScrollArea } from "@pstdio/ui";
+import { type UIEvent, useState } from "react";
 import type { ArtifactContent, ArtifactSummary } from "../artifacts";
 import { useArtifactTranslations } from "../translations";
 import { HtmlPreview } from "./html-preview";
@@ -7,6 +8,7 @@ import { HtmlPreview } from "./html-preview";
 const ChevronDown = createGlyphIcon("arrow-down-1");
 const History = createGlyphIcon("history");
 const Check = createGlyphIcon("check");
+const VERSION_PAGE_SIZE = 100;
 interface ArtifactReaderProps {
   content?: ArtifactContent;
   selectedId?: string;
@@ -17,6 +19,7 @@ interface ArtifactReaderProps {
 export const ArtifactReader = (props: ArtifactReaderProps) => {
   const { content, selectedId = content?.id, revisions, onSelect } = props;
   const { t, locale } = useArtifactTranslations();
+  const [versionLimit, setVersionLimit] = useState(VERSION_PAGE_SIZE);
   const date = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" });
   const latest = revisions[0];
   const title = latest?.title ?? content?.title ?? "";
@@ -24,10 +27,24 @@ export const ArtifactReader = (props: ArtifactReaderProps) => {
   const selected = revisions[selectedIndex];
   const selectedLabel =
     selected?.label?.trim() || t("reader.version", "Version {{number}}", { number: revisions.length - selectedIndex });
+  const visibleRevisions = revisions.slice(0, versionLimit).map((revision, index) => ({ revision, index }));
+  if (selected && selectedIndex >= versionLimit) visibleRevisions.unshift({ revision: selected, index: selectedIndex });
+  const loadMoreVersions = (event: UIEvent<HTMLElement>) => {
+    const { scrollHeight, clientHeight, scrollTop } = event.currentTarget;
+    if (scrollHeight - scrollTop <= clientHeight * 2)
+      setVersionLimit((limit) => Math.min(limit + VERSION_PAGE_SIZE, revisions.length));
+  };
   return (
     <Stack height="full" gap="0" minHeight="0" minWidth="0">
       <Header flexShrink="0" minWidth="0" justifyContent="flex-end">
-        <Menu.Root lazyMount unmountOnExit positioning={{ placement: "bottom-end" }}>
+        <Menu.Root
+          lazyMount
+          unmountOnExit
+          positioning={{ placement: "bottom-end" }}
+          onOpenChange={({ open }) => {
+            if (!open) setVersionLimit(VERSION_PAGE_SIZE);
+          }}
+        >
           <Menu.Trigger asChild>
             <Button
               variant="outline"
@@ -51,13 +68,17 @@ export const ArtifactReader = (props: ArtifactReaderProps) => {
                 maxWidth="var(--available-width)"
                 maxHeight="min(var(--available-height), var(--chakra-sizes-xs))"
               >
-                <ScrollArea flex="1" minHeight="0" viewportProps={{ overscrollBehavior: "contain", tabIndex: -1 }}>
+                <ScrollArea
+                  flex="1"
+                  minHeight="0"
+                  viewportProps={{ overscrollBehavior: "contain", tabIndex: -1, onScroll: loadMoreVersions }}
+                >
                   <Menu.RadioItemGroup
                     aria-label={t("reader.versions", "Versions")}
                     value={selectedId}
                     onValueChange={(event) => onSelect(event.value)}
                   >
-                    {revisions.map((revision, index) => (
+                    {visibleRevisions.map(({ revision, index }) => (
                       <Menu.RadioItem key={revision.id} value={revision.id}>
                         <Stack flex="1" minWidth="0" gap="0">
                           <Menu.ItemText truncate>
