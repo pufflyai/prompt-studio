@@ -4,6 +4,7 @@ import {
   type KanbanViewSettings,
   normalizeBooleanViewRule,
 } from "pstdio-api-contracts";
+import { normalizeSubGroupings } from "pstdio-api-contracts/collections";
 import {
   type DataTableRendererSettings,
   VIEW_FILTER_CONDITIONS,
@@ -60,12 +61,23 @@ const grouping = (value: string, fallback: string, fields: BoardField[]) => {
   if (ids.includes(value)) return value;
   return ids.includes(fallback) ? fallback : "none";
 };
-const cleanKanbanSettings = (settings: KanbanViewSettings, defaults: KanbanViewSettings, fields: BoardField[]) => ({
-  ...settings,
-  columnGrouping: grouping(settings.columnGrouping, defaults.columnGrouping, fields),
-  rowGrouping: grouping(settings.rowGrouping, defaults.rowGrouping, fields),
-  displayProperties: settings.displayProperties.filter((id) => idsFor(fields, "displayable").includes(id)),
-});
+const cleanKanbanSettings = (settings: KanbanViewSettings, defaults: KanbanViewSettings, fields: BoardField[]) => {
+  const columnGrouping = grouping(settings.columnGrouping, defaults.columnGrouping, fields);
+  // Sub-groupings must stay valid against the grouping that survives, or later edits would fail.
+  const subGroupings = settings.subGroupings
+    ? normalizeSubGroupings(
+        columnGrouping,
+        settings.subGroupings.filter((id) => idsFor(fields, "groupable").includes(id)),
+      )
+    : undefined;
+  return {
+    ...settings,
+    columnGrouping,
+    rowGrouping: grouping(settings.rowGrouping, defaults.rowGrouping, fields),
+    ...(subGroupings ? { subGroupings } : {}),
+    displayProperties: settings.displayProperties.filter((id) => idsFor(fields, "displayable").includes(id)),
+  };
+};
 const cleanDataTableSettings = (
   settings: DataTableRendererSettings,
   defaults: DataTableRendererSettings,

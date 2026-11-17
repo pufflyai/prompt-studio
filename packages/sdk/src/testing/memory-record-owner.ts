@@ -109,6 +109,12 @@ export const createMemoryRecordOwner = (
       await initialized;
       return baseStore.duringMigration(key, run);
     },
+    /** Records for a host collection move; callers hold no other owner transaction. */
+    movable: {
+      read: records.read,
+      list: records.list,
+      move: (input: Parameters<typeof ordered.move>[0]) => store.transaction(owner, async () => locked.move(input)),
+    },
     scope: (type: string, id: string) => ({
       records: scopeRecordStorage(records, [type, id, "kv"]),
       legacy: legacy.scope(type, id),

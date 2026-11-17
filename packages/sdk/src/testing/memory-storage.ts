@@ -14,6 +14,7 @@ import type {
   StorageLogDefinition,
   StorageScope,
 } from "pstdio-api-contracts/extension-kernel";
+import { moveCollection } from "pstdio-sync/records";
 import { createMemoryAssets } from "./memory-assets";
 import { createMemoryLogs } from "./memory-logs";
 import { createMemoryRecordOwner, type MemoryStorageSeed } from "./memory-record-owner";
@@ -149,9 +150,20 @@ export const createMemoryStorageDevice = (options: MemoryStorageOptions = {}) =>
       canMigrate: async () => true,
       migrate: (version, run) =>
         migrateFor(blobKey)(version, (previous) =>
-          owner.duringMigration(JSON.stringify([owner.extensionId, scopeType, scopeId, version]), () =>
-            run(previous, createStorageMigration([owner.extensionId, owner.workbenchId, scopeType, scopeId, version])),
-          ),
+          owner.duringMigration(JSON.stringify([owner.extensionId, scopeType, scopeId, version]), async () => {
+            let running = true;
+            try {
+              await run(previous, {
+                ...createStorageMigration([owner.extensionId, owner.workbenchId, scopeType, scopeId, version]),
+                moveCollection: (name, options) => {
+                  if (!running) throw new Error("moveCollection is only valid while its migration runs");
+                  return moveCollection(owner.movable, { scopeType, scopeId, name, keyPrefix: options.keyPrefix });
+                },
+              });
+            } finally {
+              running = false;
+            }
+          }),
         ),
       ids: { create: createStorageId },
       positions,
