@@ -52,6 +52,16 @@ test("picker dependencies ignore rows in another project and include membership 
 });
 
 test("storage resets follow source, provider and resolved-target owners with a conservative legacy fallback", async () => {
+  const runtime = globalThis as typeof globalThis & { __PSTDIO_CONFIG__?: { apiBaseUrl?: string } };
+  const previous = runtime.__PSTDIO_CONFIG__;
+  const server = Bun.serve({
+    port: 0,
+    async fetch(request) {
+      const { resources } = (await request.json()) as { resources: unknown[] };
+      return Response.json(resources.map((resource) => ({ resource })));
+    },
+  });
+  runtime.__PSTDIO_CONFIG__ = { apiBaseUrl: server.url.origin };
   const ctx = createWorkbench();
   ctx.commandPaletteResources.registerProvider({
     id: "notes",
@@ -85,5 +95,7 @@ test("storage resets follow source, provider and resolved-target owners with a c
   } finally {
     stop();
     await ctx.dispose();
+    runtime.__PSTDIO_CONFIG__ = previous;
+    await server.stop(true);
   }
 });

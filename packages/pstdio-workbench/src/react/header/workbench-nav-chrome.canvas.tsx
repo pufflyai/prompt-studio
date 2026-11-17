@@ -5,7 +5,7 @@ import { WorkbenchStory } from "../../examples/workbench-story";
 
 const createNavigationWorkbench = () => {
   const page = { kind: "page", extensionId: "preview", id: "panel-controls" } as const;
-  const workbench = createWorkbench({ startPage: page, initialSidePanelMode: "attached" });
+  const workbench = createWorkbench({ defaultPage: page, initialSidePanelMode: "attached" });
   workbench.modes.registerMode({ id: "project", activate() {}, chrome: { sidenav: "navigation" } });
   for (const [id, title] of [
     ["navigation", "Project navigation"],

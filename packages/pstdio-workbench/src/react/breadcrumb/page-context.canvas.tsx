@@ -4,7 +4,7 @@ import { WorkbenchStory } from "../../examples/workbench-story";
 
 const createPageContextWorkbench = (routed = false, contextView = false) => {
   const page = { kind: "page" as const, extensionId: "preview", id: "documents" };
-  const workbench = createWorkbench({ startPage: page, initialSidePanelMode: "attached" });
+  const workbench = createWorkbench({ defaultPage: page, initialSidePanelMode: "attached" });
   workbench.modes.registerMode({ id: "project", activate: () => undefined });
   workbench.resources.registerKind({ kind: "note", label: "Note", icon: "file-text" });
   workbench.views.registerView({

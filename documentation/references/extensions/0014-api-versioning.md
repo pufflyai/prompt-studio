@@ -500,4 +500,18 @@ Optional resource Activity declarations, `ctx.activity` discussion/outcome metho
 
 `NavigationTreeContribution.optionalView` lets a tool attach a tree supplied by an independently installed view provider. An absent foreign provider keeps the tree inactive; missing local views, missing views in a present provider, and non-tree views still fail validation. Publish a compatible SDK and host before consumers adopt this additive contract. The published 0.47.0 SDK does not include it. See [navigation trees](0004-contribution-api.md#dashboard-ui-contributions).
 
-*Updated at: 2026-11-14*
+## Project composition adoption in API 0.4.2
+
+The host retires its fixed Start/Home/Workspaces presentation aliases. Projects choose
+an ordinary default page and public resource openers. Paths, parents, navigation order,
+and workspace presentation decisions belong to extensions. Existing presentation links
+may become unavailable; shared workspace and session records keep their identity and
+storage. Deprecated SDK reference exports remain available during consumer migration;
+their removal belongs to a separate coordinated breaking release.
+
+`ctx.resources.resolveOpenings` and the SDK project composition client require the
+matching published SDK and host. Validate consumer PRs against that SDK and declare
+their published dependency ranges before release. See
+[project composition](0004-contribution-api.md#configure-project-composition).
+
+*Updated at: 2026-11-15*

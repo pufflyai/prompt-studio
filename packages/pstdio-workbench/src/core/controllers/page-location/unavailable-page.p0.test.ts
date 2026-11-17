@@ -1,5 +1,4 @@
 import { expect, test } from "bun:test";
-import { workbenchPages } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "../../workbench-core";
 import { modePanelFixture } from "../page-runtime/mode-panel-state.fixture";
 import { createMemoryWorkbenchPageLocationBrowser } from "./page-location-memory";
@@ -115,7 +114,8 @@ test("an unavailable default restores only the selected project's shared panels"
 });
 
 test("saved and available default destinations choose their own mode on project switches", () => {
-  const fixture = modePanelFixture();
+  const defaultPage = { kind: "page", extensionId: "example.project", id: "landing" } as const;
+  const fixture = modePanelFixture(undefined, true, [], "alpha", undefined, defaultPage);
   fixture.navigate("beta");
   fixture.w.pageLocations.switchProject("other");
   fixture.navigate("alpha");
@@ -125,7 +125,7 @@ test("saved and available default destinations choose their own mode on project 
 
   fixture.w.pages.registerPage({
     id: "start",
-    ref: workbenchPages.start,
+    ref: defaultPage,
     path: "start",
     modeId: "beta",
     main: { kind: "panels" },
@@ -133,7 +133,7 @@ test("saved and available default destinations choose their own mode on project 
   });
   fixture.navigate("alpha");
   fixture.w.pageLocations.switchProject("new");
-  expect(fixture.w.pages.store.getState().location?.page).toEqual(workbenchPages.start);
+  expect(fixture.w.pages.store.getState().location?.page).toEqual(defaultPage);
   expect(fixture.w.modes.getActiveModeId()).toBe("beta");
 });
 
@@ -211,7 +211,7 @@ test("history keeps an unavailable configured page empty and restores it after r
   const browser = createMemoryWorkbenchPageLocationBrowser();
   const home = { kind: "page" as const, extensionId: "example", id: "home" };
   const tool = { ...home, id: "tool" };
-  const core = createWorkbench({ startPage: home, pageLocationBrowser: browser });
+  const core = createWorkbench({ defaultPage: home, pageLocationBrowser: browser });
   core.modes.registerMode({ id: "project", activate() {} });
   const register = (ref: typeof home) =>
     core.pages.registerPage({
@@ -242,7 +242,7 @@ test("a native history entry from another project cannot clear the current tool 
   const browser = createMemoryWorkbenchPageLocationBrowser();
   const home = { kind: "page" as const, extensionId: "example", id: "home" };
   const tool = { ...home, id: "tool" };
-  const core = createWorkbench({ startPage: home, pageLocationBrowser: browser });
+  const core = createWorkbench({ defaultPage: home, pageLocationBrowser: browser });
   core.modes.registerMode({ id: "project", activate() {} });
   const register = (ref: typeof home) =>
     core.pages.registerPage({
