@@ -101,3 +101,22 @@ test("a key prefix index returns the same pages after the move as the collection
   ]);
   expect(await page()).toEqual(before);
 });
+
+test("list keeps one entry per item when an item stays in place because its target is taken", async () => {
+  const storage = createMemoryStorage();
+  const tickets = storage.collection<{ title: string }>("tickets");
+  await tickets.put("b", { title: "B" });
+  await moveTickets(storage);
+  // An item that could not move: a record already sits at its target address.
+  const legacy = JSON.stringify([...JSON.parse(storage.records.id("x")).slice(0, 2), "collection", "tickets", "a"]);
+  await storage.records.commit({
+    operationId: crypto.randomUUID(),
+    edits: [
+      { recordId: legacy, replace: { value: { title: "A in place" }, sortOrder: null } },
+      { recordId: storage.records.id("ticket:a"), replace: { title: "Other record" } },
+    ],
+  });
+
+  expect(await tickets.list()).toEqual([{ title: "A in place" }, { title: "B" }]);
+  expect(await tickets.get("a")).toEqual({ title: "A in place" });
+});

@@ -1,3 +1,4 @@
+import { and, eq, like } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import {
   forwardDisplacedSave,
@@ -7,12 +8,40 @@ import {
   planCatchUpMoves,
   prepareCatchUpMoves,
 } from "pstdio-sync/records";
+import { storage_current_records as current } from "../../db/schemas.pg";
 import type { OrderedJournal } from "./ordered-journal";
 import { rememberOrderedTextGeneration } from "./ordered-native-recovery";
 import { rebaseOrderedProjection } from "./ordered-rebase";
 import { adoptOrderedCheckpoint } from "./ordered-receipts-adoption";
 import type { OrderedTransaction } from "./ordered-sql";
+import { orderedOwnerWhere } from "./ordered-sql";
 import { listProjectedRecords } from "./record-queries";
+
+/** Every live collection marker; a sync that changed an unknown set of records checks all moved collections. */
+const collectionMarkers = async (tx: OrderedTransaction, owner: StorageOwner) =>
+  (
+    await tx
+      .select({ id: current.record_id })
+      .from(current)
+      .where(
+        and(
+          orderedOwnerWhere(current, owner),
+          eq(current.deleted, false),
+          like(current.record_id, '%,"collection-moved",%'),
+        ),
+      )
+  ).map((row) => row.id);
+
+/** This device's saves still waiting for relay order, before a checkpoint settles them. */
+const pendingOwnOperations = async (journal: OrderedJournal) => {
+  const operations: OrderedOperation[] = [];
+  for (let after = 0; ; ) {
+    const page = await journal.pending({ after });
+    if (!page.length) return operations;
+    operations.push(...page.map((local) => local.operation));
+    after = page.at(-1)!.sequence;
+  }
+};
 
 /** This device's own save that relay order refused or partly skipped, checked for moved items. */
 interface DecidedOwnSave {
@@ -40,8 +69,9 @@ export const createDisplacedSaves = (owner: StorageOwner) => {
     }
     const list = async (prefix: string) =>
       (await listProjectedRecords(tx, owner, prefix)).map((record) => record.recordId);
-    if (changed)
-      prepared.push(...(await prepareCatchUpMoves(await planCatchUpMoves({ changed, canonical, list }), views)));
+    // Unknown changes cover every record, so every moved collection is checked whole.
+    const touched = changed ?? (await collectionMarkers(tx, owner));
+    prepared.push(...(await prepareCatchUpMoves(await planCatchUpMoves({ changed: touched, canonical, list }), views)));
     const queued = new Set<string>();
     for (const next of prepared) {
       await rememberOrderedTextGeneration(tx, owner, next.operation);
@@ -68,7 +98,19 @@ export const createDisplacedSaves = (owner: StorageOwner) => {
       for (const id of await settle(journal, tx, [...changed])) changed.add(id);
     },
     adopt: async (input: Parameters<typeof adoptOrderedCheckpoint>[0]) => {
+      // A checkpoint settles pending saves without the stream path, so note its refusals here.
+      const pending = await pendingOwnOperations(input.journal);
       const merged = await adoptOrderedCheckpoint(input);
+      const saves = notes.get(input.tx) ?? [];
+      // Saves admitted in the checkpoint's tail were already noted on the stream path.
+      const noted = new Set(saves.map((save) => save.operation.operationId));
+      for (const operation of pending)
+        if (
+          !noted.has(operation.operationId) &&
+          (await input.journal.outcome(operation.operationId))?.state === "refused"
+        )
+          saves.push({ operation, refused: true, skipped: new Set() });
+      notes.set(input.tx, saves);
       const queued = await settle(input.journal, input.tx, merged.recordIds);
       if (!queued.size) return merged;
       const saved = await rebaseOrderedProjection(input.journal, input.tx, owner, [...queued]);

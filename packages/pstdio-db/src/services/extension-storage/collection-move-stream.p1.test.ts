@@ -3,7 +3,16 @@ import { createSyncSpace } from "pstdio-sync/encryption";
 import { createLegacyRecordStorage, moveCollection, storageRecordId } from "pstdio-sync/records";
 import { createRecordStreamSync } from "pstdio-sync/relay";
 import { createDb } from "../../db/connection.pglite";
-import { projects } from "../../db/schemas.pg";
+import {
+  projects,
+  storage_current_records,
+  storage_documents,
+  storage_ordered_operations,
+  storage_ordered_owners,
+  storage_ordered_records,
+  storage_ordered_touches,
+  storage_record_projections,
+} from "../../db/schemas.pg";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createRelay } from "./record-stream-relay.fixture";
 
@@ -12,7 +21,7 @@ afterEach(async () => {
   for (const close of cleanup.splice(0).reverse()) await close();
 });
 
-const peers = async (count = 2) => {
+const peers = async (count = 2, options: { checkpoints?: boolean; uploads?: (number | undefined)[] } = {}) => {
   const projectId = crypto.randomUUID();
   const owner = { workbenchId: projectId, extensionId: "example.tickets" };
   const space = await createSyncSpace({
@@ -21,8 +30,11 @@ const peers = async (count = 2) => {
     keys: [{ generation: 1, secret: "A".repeat(43) }],
   });
   const documentId = await space.documentId(JSON.stringify([owner.extensionId, "record-stream"]));
-  const { relay } = createRelay();
-  const device = async () => {
+  const wire = createRelay();
+  const { relay } = wire;
+  const device = async (_: unknown, index: number) => {
+    // A device with an upload budget loses its connection after that many updates.
+    let budget = options.uploads?.[index] ?? Number.POSITIVE_INFINITY;
     const { db, close } = await createDb({ path: ":memory:" });
     cleanup.push(close);
     const now = new Date().toISOString();
@@ -34,21 +46,34 @@ const peers = async (count = 2) => {
     const sync = createRecordStreamSync({
       space,
       documentId,
-      relay,
+      relay: {
+        ...relay,
+        update: async (update: Parameters<typeof relay.update>[0]) => {
+          if (budget-- <= 0) throw new Error("Network unavailable");
+          return relay.update(update);
+        },
+        replace: async (state: Parameters<typeof relay.replace>[0]) => {
+          if (budget-- <= 0) throw new Error("Network unavailable");
+          return relay.replace(state);
+        },
+      },
       store: service.documents.recordStream(owner),
+      // Compacting after every update makes a returning device adopt a checkpoint instead of the stream.
+      ...(options.checkpoints ? { limits: { bytes: Number.MAX_SAFE_INTEGER, updates: 0 } } : {}),
       quarantine: async (failure) => {
         throw new Error(`Unexpected quarantine: ${JSON.stringify(failure)}`);
       },
     });
     const tickets = createLegacyRecordStorage({ records }).scope("project", projectId).collection("tickets");
-    const move = () =>
-      moveCollection(records, { scopeType: "project", scopeId: projectId, name: "tickets", keyPrefix: "ticket:" });
-    const record = (id: string) => records.read(storageRecordId(["project", projectId, "kv"], `ticket:${id}`));
+    const move = (keyPrefix = "ticket:") =>
+      moveCollection(records, { scopeType: "project", scopeId: projectId, name: "tickets", keyPrefix });
+    const record = (id: string, keyPrefix = "ticket:") =>
+      records.read(storageRecordId(["project", projectId, "kv"], `${keyPrefix}${id}`));
     const moved = async (id: string) => (await record(id)).value;
     const old = (id: string) => records.read(storageRecordId(["project", projectId, "collection", "tickets"], id));
-    return { records, sync, tickets, move, record, moved, old };
+    return { db, records, sync, tickets, move, record, moved, old };
   };
-  return Promise.all(Array.from({ length: count }, device));
+  return Object.assign(await Promise.all(Array.from({ length: count }, device)), { wire });
 };
 type Device = Awaited<ReturnType<typeof peers>>[number];
 const syncAll = async (devices: Device[], rounds = 2) => {
@@ -175,4 +200,56 @@ test("a refused move whose target was written meanwhile leaves the item in place
     expect(await device.moved("x")).toEqual({ title: "X new code" });
     expect((await device.old("x")).value).toEqual({ value: { title: "X edited" }, sortOrder: null });
   }
+});
+
+test("two devices that move under different key prefixes end with every item under the winning prefix", async () => {
+  const [first, second] = await peers();
+  await first.tickets.set("a", { title: "A" });
+  await first.tickets.set("b", { title: "B" });
+  await syncAll([first, second]);
+  await first.move("ticket:");
+  await second.move("item:");
+  await syncAll([first, second], 3);
+
+  for (const device of [first, second]) {
+    for (const id of ["a", "b"]) {
+      expect((await device.record(id, "ticket:")).value).toEqual({ title: id.toUpperCase() });
+      expect(await device.tickets.get(id)).toMatchObject({ value: { title: id.toUpperCase() } });
+    }
+    expect((await device.record("a", "item:")).exists && !(await device.record("a", "item:")).deleted).toBe(false);
+  }
+});
+
+// Copies a device's ordered storage, without receipts, as a backup taken before its pending save uploaded.
+const tables = [
+  storage_documents,
+  storage_ordered_owners,
+  storage_ordered_records,
+  storage_ordered_operations,
+  storage_ordered_touches,
+  storage_record_projections,
+  storage_current_records,
+] as const;
+const copyStorage = async (from: Device["db"], to: Device["db"]) => {
+  for (const table of tables)
+    for (const row of await from.select().from(table)) await to.insert(table).values(row as never);
+};
+
+test("an offline write that a compacted checkpoint refuses still reaches the moved record", async () => {
+  const devices = await peers(3, { checkpoints: true, uploads: [undefined, 1] });
+  const [mover, offline, restored] = devices;
+  await mover.tickets.set("a", { title: "A" });
+  await syncAll([mover, offline]);
+  await offline.tickets.update("a", { title: "A offline" });
+  await copyStorage(offline.db, restored.db);
+  await mover.move();
+  await mover.sync.synchronize();
+  // The offline device uploads its save, which relay order refuses, then loses its connection before
+  // its own forward goes out.
+  await offline.sync.synchronize().catch(() => {});
+  devices.wire.trim();
+  // A copy from before the upload settles that refusal from the compacted checkpoint.
+  await syncAll([restored, mover], 3);
+
+  for (const device of [mover, restored]) expect(await device.moved("a")).toEqual({ title: "A offline" });
 });

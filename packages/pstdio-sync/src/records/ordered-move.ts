@@ -85,6 +85,11 @@ export interface OrderedMoveInput {
   extra?: OrderedEdit[];
   /** A catch-up move during sync leaves an item whose target is taken where it is instead of failing. */
   conflict?: "throw" | "skip";
+  /**
+   * Rewrite this value on the condition that its record is unchanged since `views`, so relay order
+   * refuses the group if another device changed it, such as a collection marker naming another prefix.
+   */
+  guard?: { recordId: string; path: string[]; value: Json };
 }
 
 /**
@@ -116,6 +121,12 @@ export const prepareOrderedMove = async (views: ReadonlyMap<string, OrderedRecor
     moved++;
   }
   const remaining = input.moves.slice(next);
+  if (moved && input.guard)
+    edits.push({
+      recordId: input.guard.recordId,
+      changes: [{ path: input.guard.path, set: input.guard.value }],
+      expectedRevision: await observeOrderedRecord(views.get(input.guard.recordId)),
+    });
   if (!edits.length) return { moved, remaining, operation: undefined, identity: undefined };
   // Two devices can run the same move; each save needs its own identity in relay order.
   const operation = await prepareOrderedOperation({ operationId: orderedMoveOperationId(), edits }, views);

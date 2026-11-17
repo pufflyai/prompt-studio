@@ -112,13 +112,14 @@ export const createLegacyCollection = (
         ...(record.value as unknown as LegacyCollectionValue),
       }));
       const prefix = await movedPrefix(records);
+      // An item left in place because its target is taken, or moved between the two reads, keeps one
+      // entry; the item at its collection address wins, like in get.
+      const seen = new Set(items.map((item) => item.id));
       if (prefix !== undefined)
-        for (const record of await records.list(recordKeyPrefix(scopeType, scopeId, prefix)))
-          items.push({
-            id: lastKey(record.recordId).slice(prefix.length),
-            value: record.value as Json,
-            sortOrder: null,
-          });
+        for (const record of await records.list(recordKeyPrefix(scopeType, scopeId, prefix))) {
+          const id = lastKey(record.recordId).slice(prefix.length);
+          if (!seen.has(id)) items.push({ id, value: record.value as Json, sortOrder: null });
+        }
       return items.sort((left, right) => {
         if (left.sortOrder !== right.sortOrder) return (left.sortOrder ?? Infinity) - (right.sortOrder ?? Infinity);
         return left.id.localeCompare(right.id);

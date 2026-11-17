@@ -171,7 +171,10 @@ export const planCatchUpMoves = async (input: {
   for (const [key, { scopeType, scopeId, name, items }] of collections) {
     const prefix = prefixFor(scopeType, scopeId, name);
     if (prefix === undefined) continue;
-    const ids = whole.has(key) ? await input.list(collectionRecordPrefix(scopeType, scopeId, name)) : [...items];
+    // A listed projection can predate items created in the same sync, so keep the changed ones too.
+    const ids = whole.has(key)
+      ? [...new Set([...(await input.list(collectionRecordPrefix(scopeType, scopeId, name))), ...items])]
+      : [...items];
     for (const from of ids)
       moves.push({ from, to: storageRecordId([scopeType, scopeId, "kv"], prefix + collectionItem(from)!.itemId) });
   }

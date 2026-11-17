@@ -13,6 +13,7 @@ export interface MovableRecords {
     field: string[];
     extra?: OrderedEdit[];
     conflict?: "throw" | "skip";
+    guard?: { recordId: string; path: string[]; value: string };
   }): Promise<{ moved: number; remaining: OrderedRecordMove[] }>;
 }
 
@@ -47,7 +48,8 @@ export const moveCollection = async (
   );
   const collision = moves.find((move) => taken.has(move.to));
   if (collision) throw new OrderedMoveTargetExistsError(collision.from, collision.to);
-  // The marker is its own unconditioned save, written before any item, so it always lands. A
+  // The marker is its own save, written before any item. It applies without a base, so it is never
+  // skipped, but only while no other device has saved a marker, so two prefixes cannot both win. A
   // restored recovery point can leave it as a tombstone; saving it again revives it.
   if (saved === undefined)
     await records.move({
@@ -59,13 +61,20 @@ export const moveCollection = async (
           changes: [{ path: [], set: { value: { keyPrefix: input.keyPrefix } } }],
           ...(marker.exists && marker.deleted ? { deleted: false } : {}),
           base: null,
+          expectedRevision: marker.revision,
         },
       ],
     });
   let moved = 0;
   while (moves.length) {
     // A group reads its records under the owner lock; bounded pages keep each lock short.
-    const result = await records.move({ moves: moves.slice(0, PAGE), field: ["value"] });
+    // Each group also requires the marker it saw, so a group under a losing marker is refused and
+    // catch-up moves its items under the winning prefix.
+    const result = await records.move({
+      moves: moves.slice(0, PAGE),
+      field: ["value"],
+      guard: { recordId: markerId, path: ["value", "keyPrefix"], value: input.keyPrefix },
+    });
     moved += result.moved;
     moves = [...result.remaining, ...moves.slice(PAGE)];
   }

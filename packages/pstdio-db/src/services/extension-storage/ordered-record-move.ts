@@ -17,6 +17,7 @@ export const moveOrderedRecords = async (
   const ids = [
     ...input.moves.flatMap(({ from, to }) => [from, to]),
     ...(input.extra ?? []).map((edit) => edit.recordId),
+    ...(input.guard ? [input.guard.recordId] : []),
   ];
   const { views } = await rebaseOrderedProjection(journal, tx, owner, ids);
   const { moved, remaining, operation, identity } = await prepareOrderedMove(views, input);
@@ -24,7 +25,12 @@ export const moveOrderedRecords = async (
   await rememberOrderedTextGeneration(tx, owner, operation);
   await journal.queue(operation, identity);
   const saved = await rebaseOrderedProjection(journal, tx, owner, ids);
-  return { moved, remaining, saved, operationId: operation.operationId };
+  // The rebase can republish other pending records; observers advance only for records this move wrote.
+  const authored = new Set(operation.edits.map((edit) => edit.recordId));
+  const records = saved.suppressed.has(operation.operationId)
+    ? []
+    : saved.records.filter((record) => authored.has(record.recordId));
+  return { moved, remaining, saved: { ...saved, records } };
 };
 
 /** Run a move under the owner lock and notify like a local commit. */
@@ -46,8 +52,7 @@ export const moveOrderedRecordsIn = async (
     if (saved.projected) deps.statistics.record(saved.projected);
     deps.numbersChanged?.(combineNumberEvents(saved.events));
     if (saved.recordIds.length) deps.changed(saved.recordIds);
-    if (!saved.suppressed.has(result.operationId!) && saved.records.length)
-      deps.observer?.committed(owner, saved.records, { status: "saved-locally" });
+    if (saved.records.length) deps.observer?.committed(owner, saved.records, { status: "saved-locally" });
   }
   committed();
   return { moved: result.moved, remaining: result.remaining };
