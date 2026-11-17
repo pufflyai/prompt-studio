@@ -200,7 +200,7 @@ test("retains fresh-install retry and dismiss ownership from marketplace through
   expect(installs).toHaveLength(3);
   const toggle = Promise.withResolvers<Route>();
   await page.route(`**/v1/projects/${project.id}/extensions/${instance.id}`, (route) => toggle.resolve(route));
-  await detail.getByRole("checkbox", { name: new RegExp(catalog.displayName) }).click();
+  await detail.getByRole("checkbox", { name: `Toggle ${catalog.displayName}`, exact: true }).press("Space");
   const toggling = await toggle.promise;
   await page.goBack();
   await expect(installedRow.getByTestId("extension-row-upgrade")).toBeDisabled();
