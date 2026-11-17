@@ -251,3 +251,103 @@ test("closing a tab releases its active query while the other resource remains s
   if (typeof stopA === "function") stopA();
   else stopA.dispose();
 });
+
+test("tab presentation follows a viewer's page parameters without reusing another file title", async () => {
+  const workbench = createWorkbench();
+  const page = { kind: "page" as const, extensionId: "skills", id: "skill" };
+  workbench.pages.registerPage({
+    id: "skill",
+    ref: page,
+    title: "Skill",
+    path: "skill",
+    modeId: "project",
+    params: { file: { type: "string", default: "SKILL.md" } },
+    main: { kind: "panels" },
+    slots: [],
+  });
+  const seen: unknown[] = [];
+  const tab = createWorkbenchExtensionTabPresentation(
+    {
+      workbench,
+      projectId: "project",
+      metadata: emptyWorkbenchExtensionMetadata,
+      executeCommand: async (_id, body) => {
+        const renderer = (body?.params as { renderer: { pageParams?: { file?: string } } }).renderer;
+        seen.push(renderer.pageParams);
+        return { label: renderer.pageParams?.file ?? "SKILL.md" };
+      },
+    },
+    { extensionId: "skills", placementId: "skill", queryHandlerId: "filename" },
+  );
+  const first: WorkbenchPanelInstance = {
+    instanceId: "viewer",
+    panelId: "skill",
+    closable: false,
+    resource: { type: "skill", id: "review" },
+    pageContext: { page, params: { file: "SKILL.md" } },
+  };
+  const second = { ...first, pageContext: { page, params: { file: "references/pages.md" } } };
+  const firstSubscription = tab.subscribe!(() => {}, first);
+  const secondSubscription = tab.subscribe!(() => {}, second);
+  try {
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(tab.getSnapshot(first).label).toBe("SKILL.md");
+    expect(tab.getSnapshot(second).label).toBe("references/pages.md");
+    expect(seen).toEqual([{ file: "SKILL.md" }, { file: "references/pages.md" }]);
+  } finally {
+    for (const subscription of [firstSubscription, secondSubscription]) {
+      if (typeof subscription === "function") subscription();
+      else subscription.dispose();
+    }
+    tab.dispose();
+    await workbench.dispose();
+  }
+});
+
+test("an active page's tab presentation rebinds when route parameters change", async () => {
+  const workbench = createWorkbench();
+  const page = { kind: "page" as const, extensionId: "skills", id: "skill" };
+  workbench.modes.registerMode({ id: "project", activate() {} });
+  workbench.pages.registerPage({
+    id: "skill",
+    ref: page,
+    title: "Skill",
+    path: "skill",
+    modeId: "project",
+    params: { file: { type: "string", default: "SKILL.md" } },
+    main: { kind: "panels" },
+    slots: [],
+  });
+  workbench.pageLocations.setProject("project");
+  workbench.pageLocations.navigate({ kind: "page", page });
+  const tab = createWorkbenchExtensionTabPresentation(
+    {
+      workbench,
+      projectId: "project",
+      metadata: emptyWorkbenchExtensionMetadata,
+      executeCommand: async (_id, body) => ({
+        label: (body?.params as { renderer: { pageParams: { file: string } } }).renderer.pageParams.file,
+      }),
+    },
+    { extensionId: "skills", placementId: "skill", queryHandlerId: "filename" },
+  );
+  const instance: WorkbenchPanelInstance = {
+    instanceId: "viewer",
+    panelId: "skill",
+    closable: false,
+    placementIdentity: { kind: "page", pageId: "skill", slotId: "main", instanceKey: "one" },
+  };
+  const subscription = tab.subscribe!(() => {}, instance);
+  try {
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(tab.getSnapshot(instance).label).toBe("SKILL.md");
+    workbench.pageLocations.navigate({ kind: "page", page, params: { file: "references/pages.md" } });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(tab.getSnapshot(instance).label).toBe("references/pages.md");
+  } finally {
+    if (typeof subscription === "function") subscription();
+    else subscription.dispose();
+    tab.dispose();
+    await workbench.dispose();
+  }
+});

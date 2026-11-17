@@ -7,7 +7,7 @@ created: "2026-03-10T20:12:05Z"
 
 ## Purpose
 
-Users can open a project folder and use its tools without first configuring an agent. Settings expose host runtime controls and project-scoped folder, skill, and template settings through the shared workbench settings surface.
+Users can open a project folder and use its tools without first configuring an agent. Settings expose host runtime controls and project-scoped folder and template settings through the shared workbench settings surface.
 
 ## Settings surface
 
@@ -16,7 +16,7 @@ Settings open in the workbench overlay. Dashboard contributions register section
 | Scope | Panels |
 | --- | --- |
 | Global | Workbench → Runtime, Appearance, Update channel (desktop only); Experimental → Beta features |
-| Project | Project folder, Skills, Templates, Machine tokens (beta), Danger zone |
+| Project | Project folder, Templates, Machine tokens (beta), Danger zone |
 
 Device-local controls contributed by extensions appear as their own settings entries. Extension controls appear only while a project with that extension is open. Performance monitoring runs while the Prompt Studio Performance Monitoring extension is enabled; it has no setting. Machine tokens shows only while its Beta features switch is on. Experimental switches include visible descriptions of what enabling them does.
 
@@ -24,7 +24,7 @@ Extensions can contribute settings through public APIs. Template editors call co
 
 ## Consistent layout and pending changes
 
-Settings pages share one centered content width and parameter-editor controls. Each page title uses the same icon as its navigation entry. Save changes and Reset changes stay in the page header, above scrolling content. Native content uses the page scroll area. Extension editors fill the body and center their fields inside a full-width scroll area, placing the scrollbar at the right edge while keeping pickers and confirmation dialogs in a bounded viewport. The overlay close button stays at the top right of the modal header.
+The settings modal has a maximum width of 760px, bounded by the viewport, with an initial navigation width of 200px. Settings pages share one centered content width and parameter-editor controls. Each page title uses the same icon as its navigation entry. Save changes and Reset changes stay in the page header, above scrolling content. Native content uses the page scroll area. Extension editors fill the body and center their fields inside a full-width scroll area, placing the scrollbar at the right edge while keeping pickers and confirmation dialogs in a bounded viewport. The overlay close button stays at the top right of the modal header.
 
 Leaving a page with pending changes, including closing settings, offers Stay, Discard changes, and Save and leave. A failed save keeps the page and its draft open with the error visible. Settings that save immediately do not prompt. Navigation and content loading use visible static skeletons.
 
@@ -61,7 +61,7 @@ Agents are harness contributions from enabled extensions. The core does not main
 
 ## Skills, templates, and credentials
 
-Skills show content and installation information. Templates resolve through extension-owned providers and retain user overrides. Machine tokens are scoped credentials for automation; connection secrets stay in the host-managed secret boundary. Settings pages must not expose credentials as ordinary extension settings or webview state.
+Install the optional [Skill Browser extension](../../../extensions/pstdio-skill-browser/README.md) through Coding onboarding or the extension catalog. Once installed, Skills opens above Settings in the project navigation footer and automatically selects a skill. The sidebar groups skills by their source extension. The native file viewer shows the filename and menu toggle in one standard header, with a resizable, closable menu containing parameter-based Info and a Files tree. Both sections collapse. The host owns skill storage and installation. Templates resolve through extension-owned providers and retain user overrides. Machine tokens are scoped credentials for automation; connection secrets stay in the host-managed secret boundary. Settings pages must not expose credentials as ordinary extension settings or webview state.
 
 Global preferences survive project deletion. Deleting one project's data must not reset installation-wide runtime or beta preferences.
 

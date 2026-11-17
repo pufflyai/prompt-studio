@@ -136,6 +136,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "planner",
     "reports",
     "skills",
+    "pstdio-skill-browser",
     "remote-workspaces",
     "workbench-fixture",
     "pstdio-benchmarks",
