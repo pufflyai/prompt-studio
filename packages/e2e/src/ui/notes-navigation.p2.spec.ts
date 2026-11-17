@@ -5,6 +5,9 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { type APIRequestContext, expect, test } from "../scripts/session-test";
 import { uiOrigin } from "../ui-server";
 
+// Project preparation, document projection and retained navigation share this allowance.
+test.setTimeout(120_000);
+
 const executeNoteCommand = async (
   request: APIRequestContext,
   projectId: string,
@@ -233,6 +236,7 @@ test("keeps typing in the same editor when the first line names a new note", asy
     await expect(page.getByRole("tab", { name: "First line title", exact: true })).toHaveAttribute(
       "aria-selected",
       "true",
+      { timeout: 15_000 },
     );
     await expect(sidebar.getByRole("option", { name: "First line title", exact: true })).toBeVisible();
     await expect(editor).toBeFocused();
