@@ -67,9 +67,10 @@ export const readRuntimeModuleImports = (
     transpilers.set(loader, transpiler);
   }
 
+  // CSS regex captures can retain the whole stylesheet. Copy their UTF-16 code units before caching.
   const imports =
     extname(filePath) === ".css"
-      ? cssModuleInputs(contents.toString())
+      ? cssModuleInputs(contents.toString()).map((path) => Buffer.from(path, "utf16le").toString("utf16le"))
       : [
           ...new Set([
             ...(foldConstants
