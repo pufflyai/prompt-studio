@@ -22,3 +22,13 @@ test("bounds the summary and preserves unknown timings", () => {
   expect(summary.components).toHaveLength(20);
   expect(summary.components[0]).toMatchObject({ unchanged: 0, unknown: 1, renderMs: null });
 });
+
+test("reports unnamed renders separately to avoid ranking them as one component", () => {
+  const capture = createRenderSummary();
+  capture.record(null, 100, "unchanged");
+  capture.record(null, 100, "unchanged");
+  capture.record("Navigation", 3, "unchanged");
+  const summary = capture.finish();
+  expect(summary.unnamedRenders).toBe(2);
+  expect(summary.components.map((row) => row.name)).toEqual(["Navigation"]);
+});

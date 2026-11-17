@@ -95,6 +95,7 @@ export const expectPackagedRenderCapture = async () => {
     startedAt: "2026-11-17T12:00:00.000Z",
     endedAt: "2026-11-17T12:00:10.000Z",
     components: [{ name: "SidebarRow", renders: 3, unchanged: 2, unknown: 0, renderMs: 10, unchangedRenderMs: 8 }],
+    unnamedRenders: 0,
     truncated: false,
   };
   const server = createServer((socket) => {

@@ -7,8 +7,9 @@ const addTime = (total: number | null, ms: number | null) => {
 };
 
 export const createRenderSummary = () => {
-  const rows = new Map<string | null, ReactRenderSummaryRow>();
+  const rows = new Map<string, ReactRenderSummaryRow>();
   let samples = 0;
+  let unnamedRenders = 0;
   let truncated = false;
   return {
     full() {
@@ -22,7 +23,11 @@ export const createRenderSummary = () => {
         return;
       }
       samples += 1;
-      const name = componentName?.slice(0, RENDER_CAPTURE_LIMITS.nameLength) ?? null;
+      if (!componentName) {
+        unnamedRenders += 1;
+        return;
+      }
+      const name = componentName.slice(0, RENDER_CAPTURE_LIMITS.nameLength);
       let row = rows.get(name);
       if (!row) {
         if (rows.size >= RENDER_CAPTURE_LIMITS.names) {
@@ -49,7 +54,7 @@ export const createRenderSummary = () => {
             (b.renderMs ?? 0) - (a.renderMs ?? 0),
         )
         .slice(0, RENDER_CAPTURE_LIMITS.rows);
-      return { components, truncated: truncated || components.length < rows.size };
+      return { components, unnamedRenders, truncated: truncated || components.length < rows.size };
     },
   };
 };

@@ -42,6 +42,10 @@ export const createReactRenderOverlay = (options: RenderOverlayOptions) => {
     for (const render of renders) {
       if (render.phase !== 2) continue; // React Scan's update phase excludes mounting and unmounting.
       if (capture.summary.full()) return;
+      if (!render.componentName) {
+        capture.summary.record(null, null, "unknown");
+        continue;
+      }
       // The production renderer may omit profiling fields. React Scan substitutes zero in that case.
       const time = typeof fiber.actualDuration === "number" ? render.time : null;
       capture.summary.record(render.componentName, time, detectRenderInputChange(fiber));

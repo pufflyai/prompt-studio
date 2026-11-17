@@ -95,6 +95,7 @@ test("reads only an explicitly collected render capture from the local endpoint"
     startedAt: "2026-11-17T12:00:00.000Z",
     endedAt: "2026-11-17T12:00:10.000Z",
     components: [{ name: "Sidebar", renders: 3, unchanged: 2, unknown: 0, renderMs: 12, unchangedRenderMs: 7 }],
+    unnamedRenders: 0,
     truncated: false,
   };
   await serve(path, `${JSON.stringify({ version: 1, host: "desktop", processes: [], renderCapture })}\n`);

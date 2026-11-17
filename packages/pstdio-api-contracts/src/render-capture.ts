@@ -10,7 +10,7 @@ export const RENDER_CAPTURE_LIMITS = {
 
 const duration = z.number().finite().nonnegative().nullable();
 const component = z.strictObject({
-  name: z.string().max(RENDER_CAPTURE_LIMITS.nameLength).nullable(),
+  name: z.string().min(1).max(RENDER_CAPTURE_LIMITS.nameLength),
   renders: z.number().int().positive().max(RENDER_CAPTURE_LIMITS.renders),
   unchanged: z.number().int().nonnegative().max(RENDER_CAPTURE_LIMITS.renders),
   unknown: z.number().int().nonnegative().max(RENDER_CAPTURE_LIMITS.renders),
@@ -25,6 +25,7 @@ export const renderCaptureSchema = z.discriminatedUnion("status", [
     startedAt: z.iso.datetime(),
     endedAt: z.iso.datetime(),
     components: z.array(component).max(RENDER_CAPTURE_LIMITS.rows),
+    unnamedRenders: z.number().int().nonnegative().max(RENDER_CAPTURE_LIMITS.renders),
     truncated: z.boolean(),
   }),
 ]);
