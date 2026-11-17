@@ -65,13 +65,14 @@ const peers = async (count = 2, options: { checkpoints?: boolean; uploads?: (num
       },
     });
     const tickets = createLegacyRecordStorage({ records }).scope("project", projectId).collection("tickets");
-    const move = (keyPrefix = "ticket:") =>
-      moveCollection(records, { scopeType: "project", scopeId: projectId, name: "tickets", keyPrefix });
+    const move = (keyPrefix = "ticket:", pageSize?: number) =>
+      moveCollection(records, { scopeType: "project", scopeId: projectId, name: "tickets", keyPrefix, pageSize });
     const record = (id: string, keyPrefix = "ticket:") =>
       records.read(storageRecordId(["project", projectId, "kv"], `${keyPrefix}${id}`));
     const moved = async (id: string) => (await record(id)).value;
-    const old = (id: string) => records.read(storageRecordId(["project", projectId, "collection", "tickets"], id));
-    return { db, records, sync, tickets, move, record, moved, old };
+    const itemId = (id: string) => storageRecordId(["project", projectId, "collection", "tickets"], id);
+    const old = (id: string) => records.read(itemId(id));
+    return { db, records, sync, tickets, move, record, moved, old, itemId };
   };
   return Object.assign(await Promise.all(Array.from({ length: count }, device)), { wire });
 };
@@ -168,18 +169,19 @@ test("a move by a device that missed another device's marker still moves its ite
 
 test("a refused first page does not lose writes to items on later pages", async () => {
   const [editor, mover, offline] = await peers(3);
-  for (let index = 0; index < 101; index++)
-    await editor.tickets.set(`a${String(index).padStart(3, "0")}`, { n: index });
+  for (const id of ["a", "b", "c"]) await editor.tickets.set(id, { title: id });
   await syncAll([editor, mover, offline]);
-  await editor.tickets.update("a000", { n: "edited" });
-  await mover.move();
-  await offline.tickets.update("a100", { n: "offline" });
+  await editor.tickets.update("a", { title: "a edited" });
+  // Pages of two put "c" in a second group that relay order accepts after refusing the first.
+  await mover.move("ticket:", 2);
+  await offline.tickets.update("c", { title: "c offline" });
   await editor.sync.synchronize();
   await syncAll([mover, offline, editor], 3);
 
   for (const device of [editor, mover, offline]) {
-    expect(await device.moved("a000")).toEqual({ n: "edited" });
-    expect(await device.moved("a100")).toEqual({ n: "offline" });
+    expect(await device.moved("a")).toEqual({ title: "a edited" });
+    expect(await device.moved("b")).toEqual({ title: "b" });
+    expect(await device.moved("c")).toEqual({ title: "c offline" });
   }
 });
 

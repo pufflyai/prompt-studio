@@ -23,7 +23,8 @@ export interface MovableRecords {
  */
 export const moveCollection = async (
   records: MovableRecords,
-  input: { scopeType: string; scopeId: string; name: string; keyPrefix: string },
+  /** `pageSize` bounds the items per group; it defaults to 100 and exists for tests. */
+  input: { scopeType: string; scopeId: string; name: string; keyPrefix: string; pageSize?: number },
 ) => {
   // A delimiter keeps the prefix from matching other keys, such as "tickets-config" for "ticket".
   if (!/[^A-Za-z0-9]$/.test(input.keyPrefix))
@@ -71,12 +72,12 @@ export const moveCollection = async (
     // Each group also requires the marker it saw, so a group under a losing marker is refused and
     // catch-up moves its items under the winning prefix.
     const result = await records.move({
-      moves: moves.slice(0, PAGE),
+      moves: moves.slice(0, input.pageSize ?? PAGE),
       field: ["value"],
       guard: { recordId: markerId, path: ["value", "keyPrefix"], value: input.keyPrefix },
     });
     moved += result.moved;
-    moves = [...result.remaining, ...moves.slice(PAGE)];
+    moves = [...result.remaining, ...moves.slice(input.pageSize ?? PAGE)];
   }
   return { moved };
 };
