@@ -698,13 +698,14 @@ Publish the additive SDK before harness extensions adopt it. Codex native accept
 
 ## Paged tables and boards
 
-On unreleased API 0.5.0, `defineView` defaults `dataTable`, `kanban`, and
-`resourceList` bodies to `queryMode: "paged"`. For a genuinely small fixed list,
+On unreleased API 0.5.0, `defineView` defaults queries created by
+`collectionViewQuery` or `collectionTableQuery` to `queryMode: "paged"`. Existing
+custom callbacks retain their full-result contract when rebuilt with the new SDK;
+custom bounded providers explicitly set `queryMode: "paged"`. For a genuinely small fixed list,
 declare `queryMode: "static"` and `maxRows` between 1 and 500. The host checks
 the bound, including nested rows. Both modes reject complete collection reads
 through storage or workspace APIs, including nested command calls. Query only
-the required projections and use database aggregates for counts. Providers built
-with older SDKs retain their existing full-result contract.
+the required projections and use database aggregates for counts. Providers without an explicit bounded mode retain their existing full-result contract.
 
 For a new resource, use `collectionViewQuery({ index, attributes, resourceKind })`
 from `@pstdio/sdk/extensions`, or `collectionTableQuery({ index, columns,

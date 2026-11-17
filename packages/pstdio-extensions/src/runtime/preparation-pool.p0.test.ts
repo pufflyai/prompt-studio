@@ -492,3 +492,54 @@ test("a starting worker reserves its source while its peer runs a disjoint prepa
     await Promise.allSettled(jobs);
   }
 });
+
+test("idle overflow preparation releases its worker while exclusive state and later parallel work remain available", async () => {
+  const workers: Worker[] = [];
+  const exited: number[] = [];
+  const client = createPreparationClient(
+    () => {
+      const worker = new Worker(new URL("./preparation-worker.fixture.ts", import.meta.url));
+      const index = workers.push(worker) - 1;
+      worker.on("exit", () => exited.push(index));
+      return worker;
+    },
+    undefined,
+    { workers: 2 },
+  );
+  clients.push(client);
+  const first = gate(),
+    second = gate();
+  const jobs = [
+    client.run<{ sequence: number }>("wait", { name: "first", url: first.url }, { resources: ["first"] }),
+    client.run<{ sequence: number }>("wait", { name: "second", url: second.url }, { resources: ["second"] }),
+  ];
+  try {
+    await Promise.all([first.entered.promise, second.entered.promise]);
+    first.release.resolve();
+    second.release.resolve();
+    await Promise.all(jobs);
+    // These are real worker exits, not merely an unref or an idle scheduler flag.
+    const deadline = Date.now() + 7_000;
+    while (!exited.includes(1) && Date.now() < deadline) await Bun.sleep(20);
+    expect(exited).toEqual([1]);
+    expect(await client.run("value", { name: "exclusive" })).toMatchObject({ name: "exclusive", sequence: 2 });
+    const a = gate(),
+      b = gate();
+    const later = [
+      client.run("wait", { name: "a", url: a.url }, { resources: ["a"] }),
+      client.run("wait", { name: "b", url: b.url }, { resources: ["b"] }),
+    ];
+    try {
+      await Promise.all([a.entered.promise, b.entered.promise]);
+      expect(workers).toHaveLength(3);
+    } finally {
+      a.release.resolve();
+      b.release.resolve();
+      await Promise.allSettled(later);
+    }
+  } finally {
+    first.release.resolve();
+    second.release.resolve();
+    await Promise.allSettled(jobs);
+  }
+}, 15_000);

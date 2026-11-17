@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { defineView } from "@pstdio/sdk/extensions";
 import { validateCollectionQueryResult } from "./collection-query";
 import { createCommandRunner } from "./runner";
 import { buildRuntime, makeStorage, stubEnvironment } from "./runner.test-fixture";
@@ -83,9 +84,8 @@ test("paged providers cannot omit counts or return more rows than requested; old
   const run = async (queryMode: "paged" | undefined, rows: number) => {
     const runtime = buildRuntime({
       views: [
-        {
+        defineView({
           id: "probe",
-          ref: { kind: "view", id: "probe" },
           title: "Probe",
           body: {
             kind: "kanban",
@@ -94,7 +94,7 @@ test("paged providers cannot omit counts or return more rows than requested; old
               rows: Array.from({ length: rows }, (_, i) => ({ id: String(i), title: String(i), attributes: {} })),
             }),
           },
-        },
+        }),
       ],
     });
     return createCommandRunner(runtime, { buildEnvironment: () => stubEnvironment(storage) }).execute({

@@ -34,6 +34,7 @@ import type {
   WorkspaceTypeProvider,
 } from "pstdio-api-contracts/extension-kernel";
 import { defineSlot, validatePageParamDefinitions } from "pstdio-api-contracts/extension-kernel";
+import { collectionQueryIndex } from "./collection-view";
 
 const defineContribution =
   <Kind extends ContributionKind>(_kind: Kind) =>
@@ -75,14 +76,15 @@ const createView = (definition: ViewDefinition) => {
     return defineContribution("view")(definition);
   if (body.queryMode === "static" && (!Number.isInteger(body.maxRows) || body.maxRows! < 1 || body.maxRows! > 500))
     throw new Error("Static collection views require maxRows between 1 and 500");
-  return defineContribution("view")({ ...definition, body: { ...body, queryMode: body.queryMode ?? "paged" } });
+  const queryMode = body.queryMode ?? (collectionQueryIndex(body.query) ? "paged" : undefined);
+  return defineContribution("view")({ ...definition, body: { ...body, ...(queryMode ? { queryMode } : {}) } });
 };
 export const defineView = createView as <const Definition extends ViewDefinition>(
   definition: NoExtraFields<Definition, ViewDefinition>,
 ) => Definition &
   ContributionDefinition<"view"> &
   (Definition["body"] extends { kind: "kanban" | "resourceList" | "dataTable" }
-    ? { body: Definition["body"] & { queryMode: "paged" | "static" } }
+    ? { body: Definition["body"] & { queryMode?: "paged" | "static" } }
     : unknown);
 
 type ViewMenuDefinition = Omit<ViewMenuContribution, "ref">;
