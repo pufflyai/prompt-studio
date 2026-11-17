@@ -1,7 +1,7 @@
-name: PS146 final saved view owner verification
+name: PS243 private transfer phase diagnostic
 on:
   push:
-    branches: [test/ps146-final-owner]
+    branches: [test/ps243-transfer-phase]
 permissions:
   contents: read
   actions: read
@@ -26,7 +26,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: 3b69179c4173dc8fd6b0ad97eb7fce5f81f91763
+          ref: 359aa9ea612292c107566a044bc3fe0076fdbca6
           fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
@@ -48,15 +48,25 @@ jobs:
           run-id: "44089825358"
           github-token: ${{ github.token }}
           path: test-results/ci
+      - name: Record and instrument only cache transfer and configured worker
+        shell: bash
+        run: |
+          mkdir -p test-results/ci/transfer-profile/workers test-results/ci/transfer-profile/cache test-results/ci/transfer-profile/processes
+          git diff --exit-code
+          git rev-parse HEAD HEAD^{tree} > test-results/ci/transfer-profile/source-before.txt
+          python3 - <<'PYINSTRUMENT'
+          import base64
+          exec(base64.b64decode("ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCnA9UGF0aCgncGFja2FnZXMvcHN0ZGlvLWV4dGVuc2lvbnMvc3JjL3J1bnRpbWUvcnVudGltZS1tb2R1bGUtaW1wb3J0LWNhY2hlLnRzJyk7cz1wLnJlYWRfdGV4dCgpCnM9J2ltcG9ydCB7IGFwcGVuZEZpbGVTeW5jIH0gZnJvbSAibm9kZTpmcyI7XG5pbXBvcnQgeyB0aHJlYWRJZCB9IGZyb20gIm5vZGU6d29ya2VyX3RocmVhZHMiO1xuJytzCmFuY2hvcj0nbGV0IHJldGFpbmVkQnl0ZXMgPSAyOycKcz1zLnJlcGxhY2UoYW5jaG9yLGFuY2hvcisnJycKY29uc3QgcHJvZmlsZVJvb3QgPSBwcm9jZXNzLmVudi5QUzI0M19UUkFOU0ZFUl9QUk9GSUxFX0RJUjsKY29uc3QgcHJvZmlsZUZpbGUgPSBwcm9maWxlUm9vdCA/IGAke3Byb2ZpbGVSb290fS8ke3Byb2Nlc3MucGlkfS0ke3RocmVhZElkfS0ke2NyeXB0by5yYW5kb21VVUlEKCl9Lmpzb25sYCA6IG51bGw7CmNvbnN0IG1lYXN1cmVkID0geyBoaXRzOiAwLCBtaXNzZXM6IDAsIGluc2VydGVkOiAwLCBldmljdGVkOiAwLCBzbmFwc2hvdHM6IDAsIHNuYXBzaG90RW50cmllczogMCwgcmVzdG9yZXM6IDAsIHJlc3RvcmVFbnRyaWVzOiAwIH07CmNvbnN0IGZsdXNoID0gKCkgPT4geyBpZiAocHJvZmlsZUZpbGUpIGFwcGVuZEZpbGVTeW5jKHByb2ZpbGVGaWxlLCBKU09OLnN0cmluZ2lmeSh7IHRpbWU6IERhdGUubm93KCksIHBpZDogcHJvY2Vzcy5waWQsIHRocmVhZElkLCBlbnRyaWVzOiBlbnRyaWVzLnNpemUsIHJldGFpbmVkQnl0ZXMsIC4uLm1lYXN1cmVkLCBtZW1vcnk6IHByb2Nlc3MubWVtb3J5VXNhZ2UoKSB9KSArICJcXG4iKTsgfTsKaWYgKHByb2ZpbGVGaWxlKSB7IHNldEludGVydmFsKGZsdXNoLCAyMDAwKS51bnJlZigpOyBwcm9jZXNzLm9uKCJleGl0IiwgZmx1c2gpOyB9CicnJykKcz1zLnJlcGxhY2UoJ2V4cG9ydCBjb25zdCBjYWNoZWRSdW50aW1lTW9kdWxlSW1wb3J0cyA9IChrZXk6IHN0cmluZykgPT4gZW50cmllcy5nZXQoa2V5KT8uaW1wb3J0czsnLCAnZXhwb3J0IGNvbnN0IGNhY2hlZFJ1bnRpbWVNb2R1bGVJbXBvcnRzID0gKGtleTogc3RyaW5nKSA9PiB7IGNvbnN0IHZhbHVlID0gZW50cmllcy5nZXQoa2V5KT8uaW1wb3J0czsgaWYgKHZhbHVlKSBtZWFzdXJlZC5oaXRzKys7IGVsc2UgbWVhc3VyZWQubWlzc2VzKys7IHJldHVybiB2YWx1ZTsgfTsnKQpzPXMucmVwbGFjZSgnICAgIGVudHJpZXMuZGVsZXRlKG9sZGVzdCk7JywnICAgIGVudHJpZXMuZGVsZXRlKG9sZGVzdCk7IG1lYXN1cmVkLmV2aWN0ZWQrKzsnKQpzPXMucmVwbGFjZSgnICByZXRhaW5lZEJ5dGVzICs9IHNpemU7JywgJyAgcmV0YWluZWRCeXRlcyArPSBzaXplOyBtZWFzdXJlZC5pbnNlcnRlZCsrOycpCm9sZD0nZXhwb3J0IGNvbnN0IHNuYXBzaG90UnVudGltZU1vZHVsZUltcG9ydHMgPSAoZXhjbHVkZTogUmVhZG9ubHlTZXQ8c3RyaW5nPiA9IG5ldyBTZXQoKSkgPT5cbiAgWy4uLmVudHJpZXNdLmZpbHRlcigoW2tleV0pID0+ICFleGNsdWRlLmhhcyhrZXkpKS5tYXAoKFtrZXksIHZhbHVlXSkgPT4gW2tleSwgdmFsdWUuaW1wb3J0c10gYXMgY29uc3QpOycKbmV3PSdleHBvcnQgY29uc3Qgc25hcHNob3RSdW50aW1lTW9kdWxlSW1wb3J0cyA9IChleGNsdWRlOiBSZWFkb25seVNldDxzdHJpbmc+ID0gbmV3IFNldCgpKSA9PiB7IGNvbnN0IHNuYXBzaG90ID0gWy4uLmVudHJpZXNdLmZpbHRlcigoW2tleV0pID0+ICFleGNsdWRlLmhhcyhrZXkpKS5tYXAoKFtrZXksIHZhbHVlXSkgPT4gW2tleSwgdmFsdWUuaW1wb3J0c10gYXMgY29uc3QpOyBtZWFzdXJlZC5zbmFwc2hvdHMrKzsgbWVhc3VyZWQuc25hcHNob3RFbnRyaWVzICs9IHNuYXBzaG90Lmxlbmd0aDsgZmx1c2goKTsgcmV0dXJuIHNuYXBzaG90OyB9OycKYXNzZXJ0IG9sZCBpbiBzO3M9cy5yZXBsYWNlKG9sZCxuZXcpCnM9cy5yZXBsYWNlKCcgIHJldHVybiByZXN0b3JlZDtcbn07JywnICBtZWFzdXJlZC5yZXN0b3JlcysrOyBtZWFzdXJlZC5yZXN0b3JlRW50cmllcyArPSByZXN0b3JlZC5zaXplOyBmbHVzaCgpO1xuICByZXR1cm4gcmVzdG9yZWQ7XG59OycpCnAud3JpdGVfdGV4dChzKQpwPVBhdGgoJ3BhY2thZ2VzL3BzdGRpby1hcGkvc3JjL2ZlYXR1cmVzL2V4dGVuc2lvbnMvZXh0ZW5zaW9uLXByZXBhcmF0aW9uLXdvcmtlci50cycpO3Aud3JpdGVfdGV4dCgnaW1wb3J0IHsgc3RhcnRTYW1wbGluZ1Byb2ZpbGVyLCBzYW1wbGluZ1Byb2ZpbGVyU3RhY2tUcmFjZXMgfSBmcm9tICJidW46anNjIjtcbmltcG9ydCB7IGFwcGVuZEZpbGVTeW5jIH0gZnJvbSAibm9kZTpmcyI7XG5jb25zdCBjcHVQcm9maWxlUm9vdCA9IHByb2Nlc3MuZW52LlBTMTQ2X1dPUktFUl9QUk9GSUxFX0RJUiE7XG5jb25zdCBjcHVQcm9maWxlRmlsZSA9IGAke2NwdVByb2ZpbGVSb290fS8ke3Byb2Nlc3MucGlkfS0ke2NyeXB0by5yYW5kb21VVUlEKCl9Lmpzb25sYDtcbnN0YXJ0U2FtcGxpbmdQcm9maWxlcihjcHVQcm9maWxlUm9vdCk7XG5zZXRJbnRlcnZhbCgoKSA9PiBhcHBlbmRGaWxlU3luYyhjcHVQcm9maWxlRmlsZSwgSlNPTi5zdHJpbmdpZnkoeyB0aW1lOiBEYXRlLm5vdygpLCAuLi5zYW1wbGluZ1Byb2ZpbGVyU3RhY2tUcmFjZXMoKSB9KSArICJcXG4iKSwgMjAwMCkudW5yZWYoKTtcbicrcC5yZWFkX3RleHQoKSkK"))
+          PYINSTRUMENT
+          git diff --binary > test-results/ci/transfer-profile/instrumentation.patch
       - name: Bind original plan to exact repaired source
         shell: bash
         run: |
           mkdir -p test-results/ci/final-saved-view-owner
           cp test-results/ci/plan.json test-results/ci/final-saved-view-owner/original-plan.json
           git rev-parse HEAD HEAD^{tree} > test-results/ci/final-saved-view-owner/source.txt
-          git diff --exit-code
           git diff 3944dd91c6c9fc5bc3f0782af4eb4aa2eaf27951 HEAD --binary > test-results/ci/final-saved-view-owner/repair.patch
-          bun -e 'import { readFileSync, writeFileSync } from "node:fs"; import { sealTestPlan, validateTestPlan } from "./scripts/ci/test-plan"; import { testPlanSource } from "./scripts/ci/test-plan-source"; const original = JSON.parse(readFileSync("test-results/ci/final-saved-view-owner/original-plan.json", "utf8")); validateTestPlan(original); const { digest, ...body } = original; const selected = original.runs.filter((run) => run.id === "3b5ab4bffce62d61ee9797ad"); if (selected.length !== 1 || selected[0].files.length !== 1 || selected[0].files[0] !== "packages/e2e/src/ui/workspace-saved-views.p2.spec.ts") throw new Error("Incorrect failed owning selection"); const next = sealTestPlan({ ...body, source: testPlanSource(process.cwd()), runs: selected }); if (JSON.stringify(next.setup) !== JSON.stringify(original.setup) || JSON.stringify(next.runs) !== JSON.stringify(selected)) throw new Error("Repair verification changed owning workload"); validateTestPlan(next, testPlanSource(process.cwd())); writeFileSync("test-results/ci/plan.json", JSON.stringify(next, null, 2)); writeFileSync("test-results/ci/final-saved-view-owner/provenance.json", JSON.stringify({originalSource: original.source, repairedSource: next.source, originalDigest: digest, repairedDigest: next.digest, setupByteIdentical: true, selectedOriginalWholeOwnerByteIdentical: true, selectedRunIds: selected.map((run) => run.id), passingPeersNotRepeated: true, profiling: false, timeoutOrWorkloadChanges: false}, null, 2));'
+          bun -e 'import { readFileSync, writeFileSync } from "node:fs"; import { sealTestPlan, validateTestPlan } from "./scripts/ci/test-plan"; import { testPlanSource } from "./scripts/ci/test-plan-source"; const original = JSON.parse(readFileSync("test-results/ci/final-saved-view-owner/original-plan.json", "utf8")); validateTestPlan(original); const { digest, ...body } = original; const selected = original.runs.filter((run) => run.id === "3b5ab4bffce62d61ee9797ad"); if (selected.length !== 1 || selected[0].files.length !== 1 || selected[0].files[0] !== "packages/e2e/src/ui/workspace-saved-views.p2.spec.ts") throw new Error("Incorrect failed owning selection"); const next = sealTestPlan({ ...body, source: testPlanSource(process.cwd()), runs: selected }); if (JSON.stringify(next.setup) !== JSON.stringify(original.setup) || JSON.stringify(next.runs) !== JSON.stringify(selected)) throw new Error("Repair verification changed owning workload"); validateTestPlan(next, testPlanSource(process.cwd())); writeFileSync("test-results/ci/plan.json", JSON.stringify(next, null, 2)); writeFileSync("test-results/ci/final-saved-view-owner/provenance.json", JSON.stringify({originalSource: original.source, repairedSource: next.source, originalDigest: digest, repairedDigest: next.digest, setupByteIdentical: true, selectedOriginalWholeOwnerByteIdentical: true, selectedRunIds: selected.map((run) => run.id), passingPeersNotRepeated: true, profiling: true, acceptanceQualification: false, instrumentation: "Configured worker sampling and existing pure-cache transfer counters only; fresh guards/budgets/workload unchanged", timeoutOrWorkloadChanges: false}, null, 2));'
       - name: Execute complete failed saved-view owner without profiling
         shell: bash
         env:
@@ -64,7 +74,16 @@ jobs:
           PLAN_PREBUILT: "false"
           PLAN_DISPLAY: "true"
           CI_PLAN_OUTPUT_DIR: test-results/ci/final-saved-view-owner/execution-${{ matrix.job }}
-        run: bun scripts/ci/run-ci-test-job.ts
+        run: |
+          export BUN_OPTIONS="--cpu-prof --cpu-prof-dir=$GITHUB_WORKSPACE/test-results/ci/transfer-profile/processes"
+          export PS243_TRANSFER_PROFILE_DIR="$GITHUB_WORKSPACE/test-results/ci/transfer-profile/cache"
+          export PS146_WORKER_PROFILE_DIR="$GITHUB_WORKSPACE/test-results/ci/transfer-profile/workers"
+          bun scripts/ci/run-ci-test-job.ts
+      - name: Record hardware after the complete owning workload
+        if: always()
+        run: |
+          cat /proc/cpuinfo > test-results/ci/final-saved-view-owner/cpuinfo.txt
+          cat /sys/fs/cgroup/cpu.max > test-results/ci/final-saved-view-owner/cpu-max.txt
       - name: Hash repair verification evidence
         if: always()
         shell: bash
