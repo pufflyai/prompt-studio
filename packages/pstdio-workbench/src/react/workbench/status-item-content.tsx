@@ -60,7 +60,12 @@ export const StatusItemContent = (props: {
             overflow="hidden"
           >
             {/* Bound the guest viewport; its frame clips to the content height reported by the view. */}
-            <Popover.Body minH="0" display="flex" flexDirection="column" css={{ "& iframe": { maxHeight: "70dvh" } }}>
+            <Popover.Body
+              minH="0"
+              display="flex"
+              flexDirection="column"
+              css={{ "& iframe": { minHeight: "70dvh", maxHeight: "70dvh" } }}
+            >
               <ViewActivityContext value={visible && open}>
                 <WorkbenchWidgetHost workbench={workbench} region="main" placement={detail} sizing="content-height" />
               </ViewActivityContext>

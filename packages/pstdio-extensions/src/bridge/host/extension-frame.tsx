@@ -64,8 +64,8 @@ const iframeStyle: CSSProperties = {
   width: "100%",
 };
 
-// Measure the guest independently of its reported shell height. The host can cap this viewport.
-const contentHeightIframeStyle: CSSProperties = { ...iframeStyle, flex: "none", height: "100dvh" };
+// The surface can bound this viewport without changing natural-height dialogs and embedded settings.
+const contentHeightIframeStyle: CSSProperties = { ...iframeStyle, flex: "none", minHeight: undefined };
 const frameViewportStyle = (sizing: ExtensionFrameProps["sizing"]) =>
   sizing === "content-height" ? contentHeightIframeStyle : iframeStyle;
 
