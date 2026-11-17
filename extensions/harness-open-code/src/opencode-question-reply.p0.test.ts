@@ -178,6 +178,73 @@ describe("OpenCode question replies", () => {
     setSystemTime();
   });
 
+  test("answers the selected native question when another form is pending first", async () => {
+    const questionMessage = createRunningQuestionMessage();
+    const posted: string[] = [];
+    const fallback = createQuestionReplyFetcher({
+      getSessionMessages: () => [questionMessage],
+      onReply: (body) => completeQuestionMessage(questionMessage, body.answers),
+    });
+    const fetcher = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(String(input));
+      if ((init?.method ?? "GET") === "GET" && url.pathname === "/api/session/oc-1/form")
+        return Response.json({
+          data: [
+            {
+              ...questionForm,
+              id: "frm_other",
+              metadata: { kind: "question", tool: { messageID: "other", id: "other" } },
+            },
+            questionForm,
+          ],
+        });
+      if (init?.method === "POST") posted.push(url.pathname);
+      return fallback(input, init);
+    };
+    const h = createOpencodeHarness(harnessDefaults(), { ...serviceOverrides(), fetcher });
+    try {
+      const session = await h.resume(ctx, {
+        agentSessionId: "oc-1",
+        sessionId: "host-1",
+        prompt: "Nice",
+        cwd: "/repo",
+        questionResponse: { callId: "call-question", answers: [["Nice"]] },
+        events: recordingSink().sink,
+      });
+      expect(await session.done).toEqual({ status: "completed" });
+      expect(posted).toEqual(["/api/session/oc-1/form/frm_weather/reply"]);
+    } finally {
+      await h.dispose!(ctx);
+    }
+  });
+
+  test("a stale question answer cannot fall back to another pending form", async () => {
+    const posts: string[] = [];
+    const fallback = createQuestionReplyFetcher({ getSessionMessages: () => [createRunningQuestionMessage()] });
+    const h = createOpencodeHarness(harnessDefaults(), {
+      ...serviceOverrides(),
+      fetcher: (input, init) => {
+        if (init?.method === "POST") posts.push(String(input));
+        return fallback(input, init);
+      },
+    });
+    try {
+      await expect(
+        h.resume(ctx, {
+          agentSessionId: "oc-1",
+          sessionId: "host-1",
+          prompt: "Nice",
+          cwd: "/repo",
+          questionResponse: { callId: "expired", answers: [["Nice"]] },
+          events: recordingSink().sink,
+        }),
+      ).rejects.toMatchObject({ questionRejected: true });
+      expect(posts).toEqual([]);
+    } finally {
+      await h.dispose!(ctx);
+    }
+  });
+
   test("answers the pending question request instead of sending a follow-up message", async () => {
     const questionMessage = createRunningQuestionMessage();
     const sessionMessages: Record<string, OpencodeSessionMessage[]> = {

@@ -47,7 +47,7 @@ The **Thinking** option picks the model's thinking level: None, Minimal, Low, Me
 
 - Prompt Studio talks to a local OpenCode server on `127.0.0.1`. It starts an authenticated server with `opencode serve` on port 4096, and tries the next ports up to 4115 when a port is taken.
 - OpenCode works in the session's folder. Prompt Studio does not change OpenCode's permission settings, so your OpenCode configuration decides what it may do without asking.
-- When OpenCode asks you a question, the session waits until you answer it in Prompt Studio.
+- When OpenCode asks you a question, the session waits until you answer it in Prompt Studio. Choices keep OpenCode's custom-answer setting, including its default **Other** option. Answers go to the selected question when several are pending.
 - After Prompt Studio restarts, it can reconnect to an OpenCode session that is still running.
 - Before a session starts in a new workspace, Prompt Studio copies the project's skills into `.agents/skills` in that workspace. To add them to the project folder as well, run `pst agents setup pstdio.harness-open-code.harness.opencode`.
 
