@@ -140,6 +140,11 @@ const fieldPredicateSql = (
       return sql`${stringBytesSql(field, true)} = decode(${projectionSubstringBytes(String(predicate.value).toLowerCase())}, 'hex')`;
     case "in": {
       if (!predicate.value.length) return sql`false`;
+      // Keep literal arrays for selective estimates without binding a large array member by member.
+      if (predicate.value.length > 1_000) {
+        const values = sql`SELECT value FROM jsonb_array_elements(${json(predicate.value)}) AS input(value)`;
+        return sql`${comparable} = ANY(ARRAY(${values}))`;
+      }
       // One hashed array comparison per row; an OR chain re-evaluates the field for every value.
       const values = sql`ARRAY[${sql.join(predicate.value.map(json), sql`, `)}]::jsonb[]`;
       if (!index.equality?.includes(predicate.field)) return sql`${comparable} = ANY(${values})`;
@@ -213,10 +218,7 @@ export const recordPageSql = (
   const candidates = selection
     ? sql`WITH candidates AS MATERIALIZED (
         SELECT page.* FROM (
-          SELECT DISTINCT value FROM (VALUES ${sql.join(
-            selection.value.map((value) => sql`(${json(value)})`),
-            sql`, `,
-          )}) AS input(value)
+          SELECT DISTINCT value FROM jsonb_array_elements(${json(selection.value)}) AS input(value)
         ) AS selected_values CROSS JOIN LATERAL (
           SELECT record_id, revision, value, query_values FROM storage_current_records
           WHERE ${where} AND ${recordEqualitySql(index, selection.field, sql`coalesce(${recordFieldSql(index, selection.field)}, 'null'::jsonb)`, sql`selected_values.value`)}
