@@ -92,13 +92,15 @@ export const Tooltip = React.forwardRef<HTMLDivElement, TooltipProps>(function T
     >
       <TooltipHoverReset disabled={visibilityBlocked} />
       <ChakraTooltip.Trigger asChild>{children}</ChakraTooltip.Trigger>
-      <Portal disabled={!portalled} container={portalRef}>
-        <ChakraTooltip.Positioner>
-          <ChakraTooltip.Content ref={ref} {...contentProps}>
-            {content}
-          </ChakraTooltip.Content>
-        </ChakraTooltip.Positioner>
-      </Portal>
+      {!visibilityBlocked ? (
+        <Portal disabled={!portalled} container={portalRef}>
+          <ChakraTooltip.Positioner>
+            <ChakraTooltip.Content ref={ref} {...contentProps}>
+              {content}
+            </ChakraTooltip.Content>
+          </ChakraTooltip.Positioner>
+        </Portal>
+      ) : null}
     </ChakraTooltip.Root>
   );
 });

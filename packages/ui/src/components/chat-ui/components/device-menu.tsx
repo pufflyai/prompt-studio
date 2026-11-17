@@ -1,8 +1,9 @@
-import { Box, Button, HStack, Icon, Menu, Text } from "@chakra-ui/react";
+import { Box, Button, HStack, Icon, Text } from "@chakra-ui/react";
 import { ChevronDown, Monitor } from "lucide-react";
 import { ListRow } from "@/components/list-row/list-row";
 import { SearchableMenu, type SearchableMenuItem } from "@/components/overlays/searchable-menu";
 import { Tooltip } from "@/components/primitives/tooltip";
+import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
 
 export interface ChatDeviceOption {
   id: string;

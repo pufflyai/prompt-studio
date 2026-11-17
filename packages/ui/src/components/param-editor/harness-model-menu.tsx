@@ -1,5 +1,6 @@
-import { Box, Button, Icon, Menu, Text } from "@chakra-ui/react";
+import { Box, Button, Icon, Text } from "@chakra-ui/react";
 import { ChevronDown, Cpu, TerminalIcon } from "lucide-react";
+import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
 import { ListRow } from "../list-row/list-row";
 import { SearchableMenu, type SearchableMenuItem } from "../overlays/searchable-menu";
 import { Tooltip } from "../primitives/tooltip";
