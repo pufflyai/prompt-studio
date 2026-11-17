@@ -231,6 +231,8 @@
         "src/services/extension-storage/record-read-scale.diagnostic.ts",
         "src/services/extension-storage/ordered-log-query-plan.diagnostic.ts",
         "src/services/extension-storage/ordered-log-scale.diagnostic.ts",
+        // PS-239's standalone runner launches the disposable query experiment by path.
+        "src/experiments/ps239/run.diagnostic.ts",
         "src/**/*.test.ts",
         // The isolated conformance runner and durability tests launch these by path.
         "src/**/*.integration.ts",
@@ -301,6 +303,7 @@
     "packages/pstdio-workbench": {
       "entry": [
         "package.json",
+        "src/proposals/PS-239/{run,refresh}.diagnostic.ts",
         ".canvas/**/*.{ts,tsx}",
         "rolldown.*.config.ts",
         "src/index.ts",
@@ -464,6 +467,7 @@
         "src/views/status-settings-panel.tsx",
         "src/views/ticket-review-requests.tsx",
         "src/commands/reorder-ticket.diagnostic.ts",
+        "src/proposals/PS-239/run.diagnostic.ts",
         "src/timeline/view/entry.tsx",
         "src/**/*.canvas.tsx"
       ],

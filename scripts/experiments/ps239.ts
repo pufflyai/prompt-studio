@@ -15,7 +15,6 @@ const root = resolve(import.meta.dirname, "../..");
 await mkdir(output, { recursive: true });
 const sources = [
   "packages/pstdio-db/src/experiments/ps239",
-  "packages/sdk/src/experiments/ps239",
   "extensions/pstdio-planner/src/proposals/PS-239",
   "packages/pstdio-workbench/src/proposals/PS-239",
   "scripts/experiments/ps239.ts",
@@ -37,7 +36,7 @@ const steps = [
     script: "src/experiments/ps239/run.diagnostic.ts",
     args: ["--count", String(count), "--samples", "12"],
   })),
-  { name: "refresh", cwd: "packages/sdk", script: "src/experiments/ps239/run.diagnostic.ts", args: [] },
+  { name: "refresh", cwd: "packages/pstdio-workbench", script: "src/proposals/PS-239/refresh.diagnostic.ts", args: [] },
   { name: "enrichment", cwd: "extensions/pstdio-planner", script: "src/proposals/PS-239/run.diagnostic.ts", args: [] },
   { name: "editor", cwd: "packages/pstdio-workbench", script: "src/proposals/PS-239/run.diagnostic.ts", args: [] },
 ];

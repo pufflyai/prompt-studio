@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
-import { createScopedQueryClient } from "../../extensions/scoped-query";
+import { createScopedQueryClient } from "@pstdio/sdk/extensions";
 import { createWindowedQueryPool } from "./windowed-query";
 
 const args = process.argv.slice(2);
