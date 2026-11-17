@@ -1,9 +1,9 @@
 import {
   type AutomationRun,
-  type AutomationRunStatus,
   type CreateAutomationRunInput,
   createAutomationRunInputSchema,
 } from "pstdio-api-contracts";
+import type { AutomationRunFilter } from "pstdio-api-contracts/extension-kernel";
 import { admitAutomationRun } from "./automation-admission";
 import {
   type AutomationPolicyDeps,
@@ -54,7 +54,7 @@ export const createExtensionAutomationService = (options: {
     const run = await deps.automationDBService.getExtensionRun(owner, runId);
     return run ? toRunRecord(run) : undefined;
   };
-  const listForExtension = async (owner: ExtensionOwner, filter?: { status?: AutomationRunStatus[] }) =>
+  const listForExtension = async (owner: ExtensionOwner, filter?: AutomationRunFilter) =>
     (await deps.automationDBService.listExtensionRuns(owner, filter)).map(toRunRecord);
   const cancelForExtension = async (owner: ExtensionOwner, runId: string) => {
     const run = await deps.automationDBService.getExtensionRun(owner, runId);

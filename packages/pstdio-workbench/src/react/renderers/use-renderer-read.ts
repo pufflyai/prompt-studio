@@ -110,15 +110,13 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
     const refresh = (reason?: "retry" | "observe") => {
       clearReconnectTimer();
       if (owner.pending()) return Promise.resolve();
-      setState((previous) =>
-        previous.queryKey === identity
-          ? { ...previous, loading: true, error: undefined }
-          : {
-              queryKey: identity,
-              value: warm?.data,
-              loading: warm?.data === undefined,
-            },
-      );
+      setState((previous) => {
+        if (previous.queryKey !== identity)
+          return { queryKey: identity, value: warm?.data, loading: warm?.data === undefined };
+        // Event-driven refreshes retain the loaded view too. Reconciliation is not another page load.
+        if (reason === "observe" && previous.value !== undefined && !previous.error) return previous;
+        return { ...previous, loading: true, error: undefined };
+      });
       const current = callbacks.current;
       const revision = owner.revision();
       const request = Symbol();
@@ -219,7 +217,11 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
       });
       const resume = readBinding.current?.hold();
       const operation = owner.begin(update);
-      const publish = () => setState((previous) => ({ ...previous, value: owner.value() }));
+      const publish = () =>
+        setState((previous) => {
+          const value = owner.value();
+          return value === previous.value ? previous : { ...previous, value };
+        });
       publish();
       const pending = saveQueue.current.then(save);
       saveQueue.current = pending.catch(() => undefined);

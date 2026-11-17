@@ -295,6 +295,8 @@ test("selective in-list pages probe the declared equality index after ordinary w
     sql`${recordScopeSql(owner, index)} AND ${predicateSql(index, where)}`,
     5,
     0,
+    undefined,
+    owner,
     where,
   );
   const evidence = JSON.stringify((await f.db.execute(sql`EXPLAIN (ANALYZE, FORMAT JSON) ${statement}`)).rows);
@@ -530,5 +532,24 @@ test("memory and database queries select a 500-row page", async () => {
     expect(first.cursor).not.toBeNull();
     const last = await records.query({ index: "bulk", limit: 500, fields: ["rank"], cursor: first.cursor! });
     expect(last.records.map((record) => record.fields.rank)).toEqual([500]);
+  }
+});
+
+test("revision-only queries validate fields and cursors without selecting resource rows", async () => {
+  const f = await fixture();
+  const memory = createMemoryStorage({ workbenchId: f.owner.workbenchId, extensionId: f.owner.extensionId }).records;
+  for (const records of [f.records, memory]) {
+    await records.defineIndexes([{ name: "items", fields: { title: { path: ["title"], type: "string" } } }]);
+    await records.commit({
+      operationId: "seed",
+      edits: ["one", "two"].map((recordId) => ({ recordId, replace: { title: recordId } })),
+    });
+    const first = await records.query({ index: "items", fields: ["title"], limit: 1 });
+    const checked = await records.query({ index: "items", fields: ["title"], limit: 0, cursor: first.cursor! });
+    expect(checked).toEqual({ revision: first.revision, records: [], cursor: null });
+    await expect(records.query({ index: "items", fields: ["missing"], limit: 0 })).rejects.toThrow();
+    await expect(records.query({ index: "items", limit: 0, cursor: "invalid" })).rejects.toThrow("cursor");
+    await records.commit({ operationId: "change", edits: [{ recordId: "one", set: { "/title": "Changed" } }] });
+    await expect(records.query({ index: "items", limit: 0, revision: first.revision })).rejects.toThrow("stale");
   }
 });
