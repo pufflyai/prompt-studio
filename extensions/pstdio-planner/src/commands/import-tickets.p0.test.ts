@@ -82,7 +82,9 @@ describe("importTicketsCommand", () => {
       if (key.includes("default-tags-seeded")) tagReads++;
       return get(key);
     };
-    await expect(importTickets(storage, [{ key: "a", title: "A", tags: ["Bug", "Feature"] }])).rejects.toThrow();
+    await expect(importTickets(storage, [{ key: "a", title: "A", tags: ["Bug", "Feature"] }])).rejects.toThrow(
+      "Type allows one value. Choose one of: Bug, Feature.",
+    );
     expect(await ticketsCollection(storage).list()).toEqual([]);
 
     tagReads = 0;
