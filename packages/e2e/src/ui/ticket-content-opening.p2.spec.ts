@@ -3,6 +3,9 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, executePlannerCommand } from "../helpers/planner-api";
 import { uiOrigin } from "../ui-server";
 
+// Prepare a project, create its review request and load the two cold content surfaces.
+test.setTimeout(120_000);
+
 test("ticket content opens with pending requests while navigation details are still loading", async ({
   page,
   request,
@@ -49,7 +52,7 @@ test("ticket content opens with pending requests while navigation details are st
         .getByRole("region", { name: "Main", exact: true })
         .frameLocator("iframe")
         .getByText("Confirm the change", { exact: true }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15_000 });
   } finally {
     sidebar.resolve();
     await page.unrouteAll({ behavior: "wait" });

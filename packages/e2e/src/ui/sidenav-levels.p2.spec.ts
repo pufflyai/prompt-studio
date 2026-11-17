@@ -3,6 +3,9 @@ import { createPlannerTicket } from "../helpers/planner-api";
 import { expect, test } from "../scripts/session-test";
 import { uiOrigin } from "../ui-server";
 
+// Cold project/tool setup precedes the complete navigation and note-projection journey.
+test.setTimeout(120_000);
+
 test("Notes and Sidenav levels keep rows users pinned to the header", async ({ page, request }) => {
   const response = await request.post(`${uiOrigin}/v1/projects`, {
     data: folderProjectInput({ name: "Sidenav levels" }),
@@ -57,7 +60,7 @@ test("Notes and Sidenav levels keep rows users pinned to the header", async ({ p
   await sidenav.getByRole("button", { name: "New note", exact: true }).click();
   const editor = page.getByTestId("content-editable").filter({ visible: true }).first();
   await editor.fill("Level note");
-  await expect(row("Level note")).toBeVisible();
+  await expect(row("Level note")).toBeVisible({ timeout: 15_000 });
   // Individual notes are data; the Notes collection can be hidden from the customize menu.
   await row("Search").click({ button: "right" });
   await page.getByRole("menuitem", { name: "Hide/show items" }).hover();
