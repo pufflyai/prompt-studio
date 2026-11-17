@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { readFileSync, realpathSync } from "node:fs";
 import { rename } from "node:fs/promises";
-import { basename, extname, isAbsolute, join, relative } from "node:path";
+import { basename, dirname, extname, isAbsolute, join, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { revisionSnapshotPath } from "./revision-snapshot-path";
 
@@ -23,8 +23,9 @@ const packageRelativePath = (realPackagePath: string, realPath: string) => {
   return rel;
 };
 
-const shouldPreserveImportMetaUrl = (relativePath: string) =>
-  relativePath !== "node_modules" && !relativePath.startsWith("node_modules/");
+// A prepared revision nests the package below the snapshot root, so its dependencies are not at
+// the start of the relative path. Bun resolves their file locations itself.
+const shouldPreserveImportMetaUrl = (relativePath: string) => !relativePath.split("/").includes("node_modules");
 
 const preserveImportMetaUrlPlugin = (packagePath: string) => {
   const realPackagePath = realpathSync(packagePath);
@@ -44,8 +45,13 @@ const preserveImportMetaUrlPlugin = (packagePath: string) => {
 
         const sourcePath = join(packagePath, relativePath);
         const loader = asJavaScriptLoader(args.loader);
+        // Without explicit paths the transpiler declares `__filename` as "input.js".
         const transpiler = new Bun.Transpiler({
-          define: { "import.meta.url": JSON.stringify(pathToFileURL(sourcePath).href) },
+          define: {
+            "import.meta.url": JSON.stringify(pathToFileURL(sourcePath).href),
+            __filename: JSON.stringify(sourcePath),
+            __dirname: JSON.stringify(dirname(sourcePath)),
+          },
           loader,
           target: "bun",
         });

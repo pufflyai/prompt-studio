@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 import { useAgentModels } from "@/shared/agents/use-agent-models";
 import { useAgents } from "@/shared/agents/use-agents";
 import { useHarnessParamDefaults, useUpdateHarnessParamDefaults } from "@/shared/agents/use-harness-param-defaults";
+import { ExtensionIcon } from "@/shared/components/extension-icon";
 import { useActionError } from "@/shared/components/use-action-error";
 import { WorkspaceAgentMenu } from "@/shared/components/workspace-agent-menu";
 import { useProjectDefaults, useUpdateProjectDefaults } from "../data/use-project-defaults";
@@ -30,7 +31,11 @@ export const ProjectDefaultsCard = (props: ProjectDefaultsCardProps) => {
   const { data: project } = useProjectDefaults(projectId);
   const updateProjectDefaults = useUpdateProjectDefaults(projectId);
 
-  const harnessOptions = agents.map((agent) => ({ label: agent.name, value: agent.id }));
+  const harnessOptions = agents.map((agent) => ({
+    label: agent.name,
+    value: agent.id,
+    icon: agent.icon ? () => <ExtensionIcon name={agent.icon} size="xs" /> : undefined,
+  }));
   const storedDefault = project?.default_agent_id ?? "";
   const selectedHarnessId = harnessOptions.some((option) => option.value === storedDefault) ? storedDefault : "";
   const selectedHarness = agents.find((agent) => agent.id === selectedHarnessId);

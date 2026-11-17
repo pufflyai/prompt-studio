@@ -228,7 +228,12 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
       <HarnessModelPicker
         label={commandParamName(entry)}
         description={entry.description}
-        harnesses={agentOptions.map((option) => ({ id: option.value, name: option.label, disabled: option.disabled }))}
+        harnesses={agents.map((agent) => ({
+          id: agent.id,
+          name: agent.name,
+          disabled: agent.availability.type === "NOT_FOUND",
+          icon: agent.icon,
+        }))}
         models={modelOptions.map((option) => ({
           id: option.value,
           name: option.label,
