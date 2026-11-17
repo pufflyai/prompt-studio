@@ -99,7 +99,7 @@ test("Timeline filters before paging and counts unloaded work without listing re
   expect(result.ticketRows).toHaveLength(2);
   expect(result.page.total).toBe(3);
   expect(result.sections[0]!.counts).toMatchObject({ total: 3, done: 3 });
-  expect(result.sections[0]!.globalCounts.total).toBe(103);
+  expect(result.sections[0]!.globalCounts?.total).toBe(103);
   expect(result.sections.flatMap(({ rows }) => rows.map(({ step }) => step))).toEqual([1, 2]);
   const aggregate = storage.records.aggregate.bind(storage.records);
   let stepQueries = 0;
