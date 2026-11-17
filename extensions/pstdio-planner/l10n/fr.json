@@ -86,5 +86,7 @@
   "navigation.requiredBy": "Requis par",
   "navigation.related": "Ressources associées",
   "commands.cleanupBoard.title": "Nettoyer le tableau",
-  "commands.cleanupBoard.model": "Modèle"
+  "commands.cleanupBoard.model": "Modèle",
+  "activity.context": "Lire le contexte de l’activité",
+  "activity.migrate": "Déplacer les résultats historiques vers l’activité de la tâche"
 }

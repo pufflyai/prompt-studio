@@ -41,8 +41,7 @@ export const createTicketTagCommand = defineCommand({
   async run(ctx, commandParams) {
     const type = commandParams.type === "multi_select" ? "multi_select" : "single_select";
     const result = await createTicketTag({
-      storage: ctx.storage,
-      resources: ctx.resources,
+      ...ctx,
       name: commandParams.name,
       type,
     });
@@ -69,8 +68,7 @@ export const updateTicketTagCommand = defineCommand({
     const type =
       commandParams.type === "multi_select" || commandParams.type === "single_select" ? commandParams.type : undefined;
     const result = await updateTicketTag({
-      storage: ctx.storage,
-      resources: ctx.resources,
+      ...ctx,
       tagId: commandParams.tagId,
       name: commandParams.name,
       type,
@@ -95,7 +93,7 @@ export const deleteTicketTagCommand = defineCommand({
   },
   async run(ctx, commandParams) {
     const tagId = commandParams.tagId ?? (await resolveTagId(ctx.storage, commandParams.tag ?? ""));
-    const result = await deleteTicketTag({ storage: ctx.storage, resources: ctx.resources, tagId });
+    const result = await deleteTicketTag({ ...ctx, tagId });
     await ctx.events.emit(plannerTicketsChanged, {});
     await ctx.events.emit(plannerSchemaChanged, {});
     return result;
@@ -118,8 +116,7 @@ export const createTagOptionCommand = defineCommand({
   },
   async run(ctx, commandParams) {
     const result = await createTagOption({
-      storage: ctx.storage,
-      resources: ctx.resources,
+      ...ctx,
       tagId: commandParams.tagId,
       name: commandParams.name,
       color: commandParams.color,
@@ -152,8 +149,7 @@ export const updateTagOptionCommand = defineCommand({
   },
   async run(ctx, commandParams) {
     const result = await updateTagOption({
-      storage: ctx.storage,
-      resources: ctx.resources,
+      ...ctx,
       tagId: commandParams.tagId,
       optionId: commandParams.optionId,
       name: commandParams.name,
@@ -183,8 +179,7 @@ export const deleteTagOptionCommand = defineCommand({
   },
   async run(ctx, commandParams) {
     const result = await deleteTagOption({
-      storage: ctx.storage,
-      resources: ctx.resources,
+      ...ctx,
       tagId: commandParams.tagId,
       optionId: commandParams.optionId,
     });
@@ -215,8 +210,7 @@ export const applyTicketTagDraftCommand = defineCommand({
     const type =
       commandParams.type === "multi_select" || commandParams.type === "single_select" ? commandParams.type : undefined;
     const result = await applyTagDraft({
-      storage: ctx.storage,
-      resources: ctx.resources,
+      ...ctx,
       tagId: commandParams.tagId,
       name: commandParams.name,
       type,
@@ -240,8 +234,7 @@ export const setTicketTagsCommand = defineCommand({
   },
   async run(ctx, commandParams) {
     const result = await setTicketTags({
-      storage: ctx.storage,
-      resources: ctx.resources,
+      ...ctx,
       ticketId: commandParams.rowId,
       tagIds: commandParams.tagIds ?? [],
     });

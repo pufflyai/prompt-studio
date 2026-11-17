@@ -10,7 +10,7 @@ A skill belongs to the extension that declares it. That extension's maintainers 
 | --- | --- | --- |
 | `pstdio`, `create-pstdio-extension` | `pstdio-skills` | `extensions/pstdio-skills/skills/` |
 | `create-ticket`, `refine-ticket`, `create-proposal`, `create-sub-tickets`, `implement-ticket` | `pstdio-planner` | `extensions/pstdio-planner/skills/` |
-| `use-reports` | `pstdio-reports` | `extensions/pstdio-reports/skills/` |
+| `use-resource-activity` | `pstdio-skills` | `extensions/pstdio-skills/skills/` |
 | `publish-artifact` | `pstdio-artifacts` | `extensions/pstdio-artifacts/skills/` |
 
 Repo-scoped extensions in `.pstdio/extensions/<name>/`, such as Shape Art, own their own skills. They are not shipped to users.

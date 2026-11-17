@@ -1,7 +1,8 @@
 import type { ExtensionContextBase, ResourceIdentity } from "@pstdio/sdk/extensions";
 import { deriveTitle } from "../utils/derive-title";
 
-export type TicketContext = Pick<ExtensionContextBase, "storage" | "resources">;
+export type TicketContext = Pick<ExtensionContextBase, "storage" | "resources"> &
+  Partial<Pick<ExtensionContextBase, "activity" | "projectId" | "extensionId">>;
 type TicketIdentityInput = { id: string; content?: string };
 
 // Native record text is already saved; read its title without a second text write.

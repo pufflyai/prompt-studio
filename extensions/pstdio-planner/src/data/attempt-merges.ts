@@ -29,6 +29,7 @@ export const recordSubmittedMerge = async (ctx: ExtensionContextBase, attempt: A
     actor: actorFromSource(ctx.source),
     sessionId: attempt.implementationSessionId,
     reportId: revision.changeRequestReportId,
+    activityId: revision.changeRequestActivityId,
     reviewId: null,
     threadId: null,
     commitSha,
