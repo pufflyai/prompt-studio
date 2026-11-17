@@ -1,4 +1,4 @@
-import { Box, Button, HStack, Icon, Text } from "@chakra-ui/react";
+import { Button, HStack, Icon, Text } from "@chakra-ui/react";
 import { ChevronDown, Monitor } from "lucide-react";
 import { ListRow } from "@/components/list-row/list-row";
 import { SearchableMenu, type SearchableMenuItem } from "@/components/overlays/searchable-menu";
@@ -53,12 +53,10 @@ export const ChatDeviceMenu = (props: ChatDeviceMenuProps) => {
     <SearchableMenu
       trigger={
         <Tooltip content="Select device">
-          <Box minW="0">
-            <Button variant="ghost" size="xs" px="2xs" gap="2xs" minW="0" aria-label="Select device">
-              <DeviceLabel label={label} />
-              <Icon as={ChevronDown} boxSize="14px" color="fg.muted" />
-            </Button>
-          </Box>
+          <Button variant="ghost" size="xs" px="2xs" gap="2xs" minW="0" aria-label="Select device">
+            <DeviceLabel label={label} />
+            <Icon as={ChevronDown} boxSize="14px" color="fg.muted" />
+          </Button>
         </Tooltip>
       }
       items={devices.map(

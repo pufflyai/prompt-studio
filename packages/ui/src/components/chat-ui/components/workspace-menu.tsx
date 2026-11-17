@@ -47,10 +47,10 @@ interface WorkspaceMenuButtonProps {
   onClick?: () => void;
 }
 
-const WorkspaceMenuButton = (props: WorkspaceMenuButtonProps) => {
+const renderWorkspaceMenuButton = (props: WorkspaceMenuButtonProps) => {
   const { label, disabled = false, opensWorkspace = false, onClick } = props;
 
-  return (
+  const button = (
     <Button
       variant="ghost"
       size="xs"
@@ -68,6 +68,7 @@ const WorkspaceMenuButton = (props: WorkspaceMenuButtonProps) => {
       {!opensWorkspace && !disabled ? <Icon as={ChevronDown} boxSize="14px" color="fg.muted" /> : null}
     </Button>
   );
+  return disabled ? <Box minW="0">{button}</Box> : button;
 };
 
 export const ChatWorkspaceMenu = (props: ChatWorkspaceMenuProps) => {
@@ -84,14 +85,12 @@ export const ChatWorkspaceMenu = (props: ChatWorkspaceMenuProps) => {
   if (isDisabled) {
     return (
       <Tooltip content="Open workspace" disabled={!onOpenWorkspace}>
-        <Box minW="0">
-          <WorkspaceMenuButton
-            label={selectedLabel}
-            opensWorkspace={Boolean(onOpenWorkspace)}
-            disabled={!onOpenWorkspace}
-            onClick={onOpenWorkspace}
-          />
-        </Box>
+        {renderWorkspaceMenuButton({
+          label: selectedLabel,
+          opensWorkspace: Boolean(onOpenWorkspace),
+          disabled: !onOpenWorkspace,
+          onClick: onOpenWorkspace,
+        })}
       </Tooltip>
     );
   }
@@ -101,9 +100,7 @@ export const ChatWorkspaceMenu = (props: ChatWorkspaceMenuProps) => {
       <SearchableMenu
         trigger={
           <Tooltip content={workspaces.length === 0 ? "No workspaces" : "Select workspace"}>
-            <Box minW="0">
-              <WorkspaceMenuButton label={selectedLabel} disabled={workspaces.length === 0} />
-            </Box>
+            {renderWorkspaceMenuButton({ label: selectedLabel, disabled: workspaces.length === 0 })}
           </Tooltip>
         }
         items={buildWorkspaceItems(workspaces, selectedWorkspaceId, onSelectWorkspace)}

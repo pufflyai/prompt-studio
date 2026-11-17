@@ -116,9 +116,9 @@ interface MenuTriggerButtonProps {
   size: NonNullable<HarnessModelMenuProps["size"]>;
 }
 
-const MenuTriggerButton = (props: MenuTriggerButtonProps) => {
+const renderMenuTriggerButton = (props: MenuTriggerButtonProps) => {
   const { label, ariaLabel, disabled, icon, size } = props;
-  return (
+  const button = (
     <Button variant="ghost" size={size} px="2" aria-label={ariaLabel} disabled={disabled}>
       {icon ? <Icon as={icon} boxSize="14px" color="fg.muted" flexShrink={0} /> : null}
       <Text textStyle="label/XS/medium" color="fg">
@@ -127,6 +127,7 @@ const MenuTriggerButton = (props: MenuTriggerButtonProps) => {
       <ChevronDown size={14} />
     </Button>
   );
+  return disabled ? <Box minW="0">{button}</Box> : button;
 };
 
 export const HarnessModelMenu = (props: HarnessModelMenuProps) => {
@@ -198,15 +199,13 @@ export const HarnessModelMenu = (props: HarnessModelMenuProps) => {
         fixedHeight
         trigger={
           <Tooltip content={resolvedLabels.agentSelect}>
-            <Box>
-              <MenuTriggerButton
-                label={selectedAgentLabel}
-                ariaLabel={resolvedLabels.agentSelect}
-                disabled={isSwitchDisabled}
-                icon={selectedAgentIcon}
-                size={size}
-              />
-            </Box>
+            {renderMenuTriggerButton({
+              label: selectedAgentLabel,
+              ariaLabel: resolvedLabels.agentSelect,
+              disabled: isSwitchDisabled,
+              icon: selectedAgentIcon,
+              size,
+            })}
           </Tooltip>
         }
         items={agentMenuItems.map((item) => ({
@@ -231,15 +230,13 @@ export const HarnessModelMenu = (props: HarnessModelMenuProps) => {
       fixedHeight
       trigger={
         <Tooltip content={isMenuDisabled ? resolvedLabels.modelNoneAvailable : resolvedLabels.modelSelect}>
-          <Box>
-            <MenuTriggerButton
-              label={selectedModelLabel}
-              ariaLabel={resolvedLabels.modelSelect}
-              disabled={isMenuDisabled}
-              icon={selectedAgentIcon}
-              size={size}
-            />
-          </Box>
+          {renderMenuTriggerButton({
+            label: selectedModelLabel,
+            ariaLabel: resolvedLabels.modelSelect,
+            disabled: isMenuDisabled,
+            icon: selectedAgentIcon,
+            size,
+          })}
         </Tooltip>
       }
       items={modelMenuItems}
