@@ -4,10 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createPerformanceRecording, readPerformanceRecordings } from "./performance-recording";
 
-test("rotates complete records within the disk bound and stops writing when closed", () => {
+test("rotates complete records within the disk bound and stops writing when closed", async () => {
   const directory = mkdtempSync(join(tmpdir(), "performance-recording-"));
   try {
-    const recorder = createPerformanceRecording(directory);
+    const recorder = await createPerformanceRecording(directory);
     const record = { captureId: "capture", kind: "sample", samples: "a".repeat(20_000) };
     for (let i = 0; i < 300; i++) recorder.write(record);
     recorder.close();
@@ -27,13 +27,13 @@ test("rotates complete records within the disk bound and stops writing when clos
   }
 });
 
-test("exports saved records after disable without creating an absent recording directory", () => {
+test("exports saved records after disable without creating an absent recording directory", async () => {
   const directory = mkdtempSync(join(tmpdir(), "performance-export-"));
   try {
     const absent = join(directory, "absent");
     expect(readPerformanceRecordings(absent)).toEqual({ directory: absent, files: [] });
     expect(readdirSync(directory)).toEqual([]);
-    const recorder = createPerformanceRecording(directory);
+    const recorder = await createPerformanceRecording(directory);
     recorder.write({ kind: "start", captureId: "capture" });
     recorder.close();
     const exported = readPerformanceRecordings(directory);

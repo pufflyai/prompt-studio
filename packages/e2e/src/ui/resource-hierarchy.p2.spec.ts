@@ -1,7 +1,7 @@
 import { rmSync } from "node:fs";
-import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerAttempt, createPlannerTicket, getPlannerTicketStatuses } from "../helpers/planner-api";
+import { type APIRequestContext, expect, type Page, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 import { createGitRepo } from "./helpers/workspace-session-attempt";
 
@@ -40,9 +40,11 @@ const prepareDashboard = async (page: Page, projectId: string) => {
 test("navigates ticket ancestry to a linked workspace and back", async ({ page, request }) => {
   test.slow();
   const repoRoot = createGitRepo("pstdio-ps-173-", "resource hierarchy e2e");
-  const project = await createProject(request, repoRoot);
-
+  let projectId: string | undefined;
+  const failures: unknown[] = [];
   try {
+    const project = await createProject(request, repoRoot);
+    projectId = project.id;
     const statuses = await getPlannerTicketStatuses(request, apiBase, project.id);
     const statusId = (statuses.find((status) => status.isDefault) ?? statuses[0])?.id;
     const root = await createPlannerTicket(request, apiBase, project.id, {
@@ -82,7 +84,11 @@ test("navigates ticket ancestry to a linked workspace and back", async ({ page, 
     await expect(breadcrumb).toContainText(root.shorthand);
     await expect(breadcrumb).toContainText(parent.shorthand);
     await expect(breadcrumb).toContainText(child.shorthand);
-    await expect(sidenav.getByRole("button", { name: "New file", includeHidden: true })).toHaveCount(1);
+    await sidenav
+      .getByRole("option", { name: `${child.shorthand} ${child.title}`, exact: true })
+      .click({ button: "right" });
+    await expect(page.getByRole("menuitem", { name: "New file", exact: true })).toBeVisible();
+    await page.keyboard.press("Escape");
     await expect(sidenav.getByRole("button", { name: "Create workspace", includeHidden: true })).toHaveCount(1);
 
     const workspaceRow = sidenav.getByRole("option", {
@@ -110,9 +116,33 @@ test("navigates ticket ancestry to a linked workspace and back", async ({ page, 
     await page.getByRole("button", { name: "Navigate back" }).click();
     await expect(breadcrumb).toContainText(child.shorthand);
     await expect(breadcrumb).not.toContainText(attempt.workspace.workspace_shorthand);
-    await expect(sidenav.getByRole("button", { name: "New file", includeHidden: true })).toHaveCount(1);
+    await sidenav
+      .getByRole("option", { name: `${child.shorthand} ${child.title}`, exact: true })
+      .click({ button: "right" });
+    await expect(page.getByRole("menuitem", { name: "New file", exact: true })).toBeVisible();
+    await page.keyboard.press("Escape");
     await expect(sidenav.getByRole("button", { name: "Create workspace", includeHidden: true })).toHaveCount(1);
-  } finally {
+  } catch (error) {
+    failures.push(error);
+  }
+  try {
+    await page.close();
+  } catch (error) {
+    failures.push(error);
+  }
+  try {
+    if (projectId) {
+      const deleted = await request.delete(`/v1/projects/${projectId}`);
+      expect(deleted.ok(), await deleted.text()).toBe(true);
+    }
+    // Failed owner release must retain the checkout instead of racing active writers.
     rmSync(repoRoot, { recursive: true, force: true });
+  } catch (error) {
+    failures.push(new Error(`Could not release hierarchy fixture at ${repoRoot}`, { cause: error }));
+  }
+  if (failures.length === 1) throw failures[0];
+  if (failures.length > 1) {
+    for (const failure of failures) console.error(failure);
+    throw new AggregateError(failures, `Hierarchy fixture failures: ${failures.map(String).join("; ")}`);
   }
 });

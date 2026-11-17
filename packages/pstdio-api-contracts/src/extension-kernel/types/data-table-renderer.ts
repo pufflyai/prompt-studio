@@ -16,6 +16,8 @@ export interface DataTableRendererSettings {
   grouping: string;
   rowNumbers: boolean;
   wrapRows: boolean;
+  /** Minimum row height. Omitted settings retain compact rows. */
+  rowHeight?: "compact" | "comfortable" | "tall";
   showStats: boolean;
   hiddenColumns: string[];
   /** Column ids in display order. An empty list means the declared order. */
@@ -62,7 +64,43 @@ export type DataTableRendererColumnStat =
   | { type: "histogram"; bins?: number }
   | { type: "top-values"; limit?: number };
 
+/** Inline chart data. Null entries are unmeasured gaps, never zeroes. */
+export type DataTableRendererChartValue = {
+  values: (number | null)[];
+  labels?: string[];
+};
+
+export interface DataTableRendererChartOptions {
+  type: "sparkline" | "bar-chart";
+  /** Shared numeric scale for comparable cells. Bars otherwise include zero. */
+  domain?: [number, number];
+  /** Suffix for accessible values and bar labels, such as ms or MB. */
+  unit?: string;
+}
+
+/** One image in an image cell. Prefer alt text: search, sorting and screen readers use it. */
+// A type alias, unlike an interface, fits the JSON row value type.
+export type DataTableRendererImageItem = {
+  src: string;
+  alt?: string;
+};
+
+/** An image cell: a URL, an image with alt text, or a gallery of either. */
+export type DataTableRendererImageValue = string | DataTableRendererImageItem | (string | DataTableRendererImageItem)[];
+
+export interface DataTableRendererImageOptions {
+  type: "image";
+  /** `cover` crops to the thumbnail; `contain` shows the whole image. Defaults to `cover`. */
+  fit?: "cover" | "contain";
+  /** `circle` suits avatars and logos. Defaults to `square`. */
+  shape?: "square" | "circle";
+  /** Show the first image's alt text beside its thumbnail. */
+  showLabel?: boolean;
+}
+
 export type DataTableRendererColumnRenderer =
+  | DataTableRendererChartOptions
+  | DataTableRendererImageOptions
   | { type: "json" }
   | { type: "color-scale"; stops: Array<{ value: number; color: DataTableRendererThemeColor }> }
   | {

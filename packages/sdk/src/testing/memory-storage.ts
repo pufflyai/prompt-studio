@@ -3,6 +3,7 @@ import {
   createStorageId,
   createStorageMigration,
   createStoragePositions,
+  resolveCollectionIndexes,
 } from "pstdio-api-contracts";
 import type {
   ExtensionBlobRef,
@@ -13,6 +14,7 @@ import type {
   StorageLogDefinition,
   StorageScope,
 } from "pstdio-api-contracts/extension-kernel";
+import { moveCollection } from "pstdio-sync/records";
 import { createMemoryAssets } from "./memory-assets";
 import { createMemoryLogs } from "./memory-logs";
 import { createMemoryRecordOwner, type MemoryStorageSeed } from "./memory-record-owner";
@@ -126,17 +128,50 @@ export const createMemoryStorageDevice = (options: MemoryStorageOptions = {}) =>
     const { records, legacy } = owner.scope(scopeType, scopeId);
     const blobKey = JSON.stringify([scopeType, scopeId]);
     const api: ExtensionStorageApi = {
+      observe(changed, options) {
+        const stop = options?.signal?.aborted
+          ? () => {}
+          : owner.observe((change) => {
+              if (
+                options?.recordIds &&
+                change.recordIds &&
+                !change.recordIds.some((id) => options.recordIds?.includes(id))
+              )
+                return;
+              changed(change);
+            });
+        const close = () => {
+          stop();
+          options?.signal?.removeEventListener("abort", close);
+        };
+        options?.signal?.addEventListener("abort", close, { once: true });
+        return { close };
+      },
       canMigrate: async () => true,
       migrate: (version, run) =>
         migrateFor(blobKey)(version, (previous) =>
-          owner.duringMigration(JSON.stringify([owner.extensionId, scopeType, scopeId, version]), () =>
-            run(previous, createStorageMigration([owner.extensionId, owner.workbenchId, scopeType, scopeId, version])),
-          ),
+          owner.duringMigration(JSON.stringify([owner.extensionId, scopeType, scopeId, version]), async () => {
+            let running = true;
+            try {
+              await run(previous, {
+                ...createStorageMigration([owner.extensionId, owner.workbenchId, scopeType, scopeId, version]),
+                moveCollection: (name, options) => {
+                  if (!running) throw new Error("moveCollection is only valid while its migration runs");
+                  return moveCollection(owner.movable, { scopeType, scopeId, name, keyPrefix: options.keyPrefix });
+                },
+              });
+            } finally {
+              running = false;
+            }
+          }),
         ),
       ids: { create: createStorageId },
       positions,
       readLegacy: async (source) => structuredClone(options.legacyData?.[source]),
-      records,
+      records: {
+        ...records,
+        defineIndexes: (indexes) => records.defineIndexes(resolveCollectionIndexes(indexes, scopeType, scopeId)),
+      },
       text: (recordId, field) => ({
         edit: (edits) =>
           records.commit({ operationId: createStorageId(), edits: [{ recordId, text: { [field]: edits } }] }),

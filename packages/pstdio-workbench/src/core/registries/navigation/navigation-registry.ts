@@ -100,6 +100,8 @@ export interface NavigationInvocationContext {
   isViewerCurrent?(): boolean;
   /** Captured by the host from the calling view, never accepted from extension payloads. */
   viewer?: PlacementIdentity;
+  /** Internal presentation handoff, called only after viewer replacement is authorized. */
+  onViewerReplace?(resource: NavigationTargetViewer["resource"]): void;
 }
 
 const byPriorityAndId = (left: { id: string; priority: number }, right: { id: string; priority: number }) =>
@@ -230,10 +232,11 @@ export const createNavigationRegistry = (input: CreateNavigationRegistryInput = 
     resolveLocation(location) {
       const parser = this.listParsers().find((candidate) => candidate.canParse(location));
       if (!parser) throw new Error(`No navigation parser registered for location: ${location}`);
-      return parser.parse(location);
+      return canonicalNavigationTarget(parser.parse(location));
     },
 
     async openTarget(target, context) {
+      target = canonicalNavigationTarget(target);
       if (!invocationCurrent(context, input.getProjectId)) return [];
       const dispatcher = resolveDispatcher();
       const items = toItems(target);
@@ -275,3 +278,5 @@ export const createNavigationRegistry = (input: CreateNavigationRegistryInput = 
 
   return registry;
 };
+
+import { canonicalNavigationTarget } from "../../shared/contributions/canonical-navigation";

@@ -12,6 +12,7 @@ import { isSingleViewPage } from "../../registries/pages/page-main";
 import type { WorkbenchPageContribution } from "../../registries/pages/page-registry-types";
 import { runWorkbenchEffect } from "../../shared/workbench-effect";
 import type { createWorkbenchInput, WorkbenchPagePersistenceScopeInput } from "../../workbench-core-types";
+import { canonicalLayout } from "./canonical-layout";
 import { migrateCollectionMain } from "./collection-main-migration";
 import { createOpenPlacementInventory } from "./open-placement-inventory";
 import { type MigratePagePanelView, prunePageContentLayout } from "./page-content-layout";
@@ -19,6 +20,7 @@ import { createPageHeaderCache } from "./page-header-layout";
 import { assemblePageLayout } from "./page-layout-assembly";
 import { isDefaultPageMain } from "./page-layout-baseline";
 import { createPageMainScopes, mainScope } from "./page-main-scope";
+import { retainUnavailableModePlacements } from "./unavailable-mode-placements";
 
 const selectPlacements = (
   layout: WorkbenchLayout,
@@ -43,6 +45,13 @@ const modeScope = (projectId: string | undefined, modeId: string) =>
 const isModePlacement = (placement: WorkbenchWidgetPlacement, region: (typeof workbenchRegions)[number]) =>
   region !== "main" &&
   (placement.placementIdentity?.kind === "mode" || Boolean(getWorkbenchModePanelForRegion(region)));
+
+const modeSnapshot = (layout: WorkbenchLayout, modeId: string) =>
+  selectPlacements(
+    layout,
+    (p, region) =>
+      isModePlacement(p, region) && (p.placementIdentity?.kind !== "mode" || p.placementIdentity.modeId === modeId),
+  );
 
 const legacyMainOwner = (input: {
   layout: WorkbenchLayout;
@@ -82,20 +91,11 @@ const legacyMainOwner = (input: {
   };
 };
 
-/** Main tabs and header choices belong to a page. Auxiliary tabs and geometry belong to its project/mode. */
-export const createWorkbenchLayoutCache = (
+const createLayoutAdapter = (
   input: createWorkbenchInput,
-  getActiveMode: () => string | undefined = () => undefined,
-  getTab: (contributionId: string) => WorkbenchWidgetPlacement["tab"] = () => undefined,
-  getPages: () => readonly WorkbenchPageContribution[] = () => [],
-  migratePanelView?: MigratePagePanelView,
-) => {
-  const { pageMainOwner, pageMainScope } = createPageMainScopes(getPages);
-  const memory = new Map<string | undefined, WorkbenchLayout>();
-  const inventory = createOpenPlacementInventory();
-  let restored = false;
-  let knownPages = getPages();
-  const adapter: LayoutPersistenceAdapter = input.persistence
+  memory: Map<string | undefined, WorkbenchLayout>,
+): LayoutPersistenceAdapter => {
+  return input.persistence
     ? {
         getLayout: (scope) => input.persistence?.getSnapshot(scope)?.layout,
         setLayout: (layout, scope) => input.persistence?.setSnapshot({ layout }, scope),
@@ -114,8 +114,31 @@ export const createWorkbenchLayoutCache = (
           memory.delete(scope);
         },
       });
+};
+
+/** Main tabs and header choices belong to a page. Auxiliary tabs and geometry belong to its project/mode. */
+export const createWorkbenchLayoutCache = (
+  input: createWorkbenchInput,
+  getActiveMode: () => string | undefined = () => undefined,
+  getTab: (contributionId: string) => WorkbenchWidgetPlacement["tab"] = () => undefined,
+  getPages: () => readonly WorkbenchPageContribution[] = () => [],
+  migratePanelView?: MigratePagePanelView,
+  registeredModePlacements?: (modeId: string) => ReadonlySet<string>,
+  identityId: (id: string) => string = (id) => id,
+  canonicalId: (id: string) => string = (id) => id,
+) => {
+  const { pageMainOwner, pageMainScope } = createPageMainScopes(getPages, identityId);
+  const memory = new Map<string | undefined, WorkbenchLayout>();
+  const inventory = createOpenPlacementInventory();
+  let restored = false;
+  let disposed = false;
+  let knownPages = getPages();
+  const adapter = createLayoutAdapter(input, memory);
   const remember = (scope: string | undefined, layout: WorkbenchLayout | undefined) => {
-    const normalized = layout ? prunePageContentLayout(scope, layout, getPages(), migratePanelView) : undefined;
+    if (disposed) return undefined;
+    const normalized = layout
+      ? prunePageContentLayout(scope, canonicalLayout(layout, canonicalId), getPages(), migratePanelView)
+      : undefined;
     if (normalized && normalized !== layout)
       runWorkbenchEffect("page content layout migration", () => adapter.setLayout(normalized, scope));
     inventory.set(scope, normalized);
@@ -123,11 +146,13 @@ export const createWorkbenchLayoutCache = (
   };
   const stopInventory = adapter.onDidChangeLayout?.((scope, layout) => remember(scope, layout));
   const read = (scope?: string) => {
+    if (disposed) return undefined;
     const saved = runWorkbenchEffect(`layout cache read for ${scope ?? "unscoped"}`, () => adapter.getLayout(scope));
     const layout = remember(scope, saved);
     return layout ? restoreLayoutPresentation(layout, getTab) : undefined;
   };
   const write = (layout: WorkbenchLayout, scope?: string) => {
+    if (disposed) return false;
     return runWorkbenchEffect(`layout cache write for ${scope ?? "unscoped"}`, () => {
       const normalized = prunePageContentLayout(scope, layout, getPages(), migratePanelView);
       adapter.setLayout(normalized, scope);
@@ -136,13 +161,14 @@ export const createWorkbenchLayoutCache = (
     });
   };
   const clear = (scope: string, fallback: WorkbenchLayout) => {
+    if (disposed) return;
     runWorkbenchEffect(`remove default page layout for ${scope}`, () => {
       if (adapter.removeLayout) adapter.removeLayout(scope);
       else if (adapter.getLayout(scope)) adapter.setLayout(fallback, scope);
     });
     inventory.set(scope, adapter.removeLayout ? undefined : adapter.getLayout(scope));
   };
-  const headers = createPageHeaderCache({ read, write, clear });
+  const headers = createPageHeaderCache({ read, write, clear, identityId });
   const migratePageMain = (
     layout: WorkbenchLayout,
     context: WorkbenchPagePersistenceScopeInput,
@@ -272,8 +298,17 @@ export const createWorkbenchLayoutCache = (
     layout: {
       ...adapter,
       dispose() {
-        stopInventory?.();
-        adapter.dispose?.();
+        if (disposed) return;
+        disposed = true;
+        try {
+          stopInventory?.();
+        } finally {
+          try {
+            adapter.dispose?.();
+          } finally {
+            memory.clear();
+          }
+        }
       },
       getLayout: read,
       setLayout: (layout: WorkbenchLayout, scope?: string) => {
@@ -287,16 +322,24 @@ export const createWorkbenchLayoutCache = (
         return write(snapshot, scope);
       },
     },
-    readMode: (projectId: string | undefined, modeId: string) => read(modeScope(projectId, modeId)),
-    saveMode: (projectId: string | undefined, modeId: string, layout: WorkbenchLayout) =>
-      write(
-        selectPlacements(
-          layout,
-          (p, region) =>
-            isModePlacement(p, region) &&
-            (p.placementIdentity?.kind !== "mode" || p.placementIdentity.modeId === modeId),
-        ),
-        modeScope(projectId, modeId),
-      ),
+    readMode: (projectId: string | undefined, modeId: string) => read(modeScope(projectId, identityId(modeId))),
+    clearMode: (projectId: string | undefined, modeId: string, fallback: WorkbenchLayout) =>
+      clear(modeScope(projectId, identityId(modeId)), fallback),
+    saveMode(projectId: string | undefined, modeId: string, layout: WorkbenchLayout, activatedWidgetId?: string) {
+      const scope = modeScope(projectId, identityId(modeId));
+      const current = modeSnapshot(layout, modeId);
+      return write(
+        registeredModePlacements
+          ? retainUnavailableModePlacements(
+              current,
+              read(scope),
+              modeId,
+              registeredModePlacements(modeId),
+              activatedWidgetId,
+            )
+          : current,
+        scope,
+      );
+    },
   };
 };

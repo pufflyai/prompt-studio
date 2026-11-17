@@ -23,6 +23,9 @@ interface StageProps {
 export const CanvasStage = (props: StageProps) => {
   const { canvas, runtime } = props;
   const selected = useSyncExternalStore(runtime.selection.subscribe, runtime.selection.get);
+  const selectedEditable = useSyncExternalStore(runtime.editable.subscribe, () =>
+    selected === undefined ? false : runtime.editable.get(selected),
+  );
   const [editorOpen, setEditorOpen] = useState(true);
   const [animationOpen, setAnimationOpen] = useState(true);
   const [animatedFrame, setAnimatedFrame] = useState<string>();
@@ -35,7 +38,7 @@ export const CanvasStage = (props: StageProps) => {
   const shell = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const hasAnimation = selected !== undefined && animatedFrame === selected;
-  const showEditor = selected !== undefined && editorOpen;
+  const showEditor = selectedEditable && editorOpen;
   const showAnimation = hasAnimation && animationOpen;
   useLayoutEffect(() => {
     const container = shell.current!;
@@ -137,7 +140,7 @@ export const CanvasStage = (props: StageProps) => {
                             </Button>
                           </Tooltip>
                         )}
-                        {!editorOpen && (
+                        {selectedEditable && !editorOpen && (
                           <Tooltip content="Open frame parameters">
                             <Button
                               ref={editorToggle}

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { TICKETS_COLLECTION } from "../data/collections";
+import { ticketIdOfRecord } from "../data/storage-reads.fixture";
 import { ticketsCollection } from "../data/ticket-context.fixture";
 import { makeCommandContext } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
@@ -28,23 +28,29 @@ test("answering a request preserves ticket edits that race with its reads", asyn
   const get = collection.get.bind(collection);
   let latest = (await get(ticket.id))!;
   let edits = 0;
-  collection.get = async (id) => {
-    const snapshot = await get(id);
-    if (!snapshot) return snapshot;
-    latest = {
-      ...snapshot,
-      title: `Edit ${++edits}`,
-      content: "Keep the new body",
-      statusId: "ready",
-      tags: { labels: ["other"] },
-    };
-    await collection.put(id, latest);
-    return snapshot;
-  };
-  const racing = {
+  // Tickets are records since storage version 5: another edit lands right after each ticket read.
+  const racing: typeof storage = {
     ...storage,
-    collection: (name: string) => (name === TICKETS_COLLECTION ? collection : storage.collection(name)),
-  } as typeof storage;
+    records: {
+      ...storage.records,
+      async read(recordId, ...rest) {
+        const snapshot = await storage.records.read(recordId, ...rest);
+        const id = ticketIdOfRecord(recordId);
+        const current = id && (await get(id));
+        if (!current) return snapshot;
+        const title = `Edit ${++edits}`;
+        latest = {
+          ...current,
+          title,
+          content: `${title}\n\nKeep the new body`,
+          statusId: "ready",
+          tags: { labels: ["other"] },
+        };
+        await collection.put(current.id, latest);
+        return snapshot;
+      },
+    },
+  };
   await reviewCommand.run({ ...ctx, storage: racing }, { requestId: request.id, response: { confirmed: true } });
   expect(edits).toBeGreaterThan(0);
   expect(await get(ticket.id)).toEqual(latest);

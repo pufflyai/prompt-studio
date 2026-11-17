@@ -2,9 +2,9 @@ import type { PaletteEntry } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import type { WorkbenchCore } from "../../core";
 import { runUserAction } from "../../core/shared/run-user-action";
-import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { SEARCH_MODE_ID } from "./palette-view";
+import { WorkbenchResourcePaletteIcon } from "./resource-palette";
 
 const RESOURCE_QUERY_LIMIT = 25;
 const RESOURCE_QUERY_DEBOUNCE_MS = 150;
@@ -45,7 +45,7 @@ export const useWorkbenchCommandPaletteResourceEntries = (input: UseWorkbenchCom
               searchText: `${query} ${result.label} ${(result.keywords ?? []).join(" ")}`.trim(),
               description: result.description,
               group: result.group ?? group.title,
-              icon: result.icon ? <WorkbenchIcon name={result.icon} /> : undefined,
+              icon: <WorkbenchResourcePaletteIcon icon={result.icon} indicator={result.indicator} />,
               onActivate: () => {
                 void runUserAction(workbench, result.label, () => result.activate(), {
                   inlineTarget: "command-palette",

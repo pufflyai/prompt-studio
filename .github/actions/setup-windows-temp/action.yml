@@ -1,0 +1,27 @@
+name: Set up Windows job temporary storage
+description: Keep runtime homes and cold installs on job-owned temporary storage.
+inputs:
+  dev-drive:
+    description: Use the accepted ReFS storage workaround for cold installation checks.
+    default: "false"
+runs:
+  using: composite
+  steps:
+    - name: Use the job temp directory on Windows
+      if: inputs.dev-drive != 'true'
+      shell: pwsh
+      run: |
+        "TEMP=$env:RUNNER_TEMP" >> $env:GITHUB_ENV
+        "TMP=$env:RUNNER_TEMP" >> $env:GITHUB_ENV
+    - name: Use a job-owned Dev Drive as the Windows temp directory
+      if: inputs.dev-drive == 'true'
+      shell: pwsh
+      # Keep runtime homes and cold install caches on a ReFS Dev Drive owned by this job. See ADR 0114.
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $partition = New-VHD -Path (Join-Path $env:RUNNER_TEMP 'temp-dev-drive.vhdx') -SizeBytes 50GB -Dynamic |
+          Mount-VHD -PassThru | Initialize-Disk -PassThru | New-Partition -AssignDriveLetter -UseMaximumSize
+        $partition | Format-Volume -DevDrive -Confirm:$false -Force | Out-Null
+        $temp = New-Item -ItemType Directory -Path "$($partition.DriveLetter):\temp"
+        "TEMP=$temp" >> $env:GITHUB_ENV
+        "TMP=$temp" >> $env:GITHUB_ENV

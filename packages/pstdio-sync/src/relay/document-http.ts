@@ -1,4 +1,3 @@
-import { setTimeout as delay } from "node:timers/promises";
 import {
   blobStatusSchema,
   readResultSchema,
@@ -15,8 +14,12 @@ import {
 import type { SyncSpace } from "../encryption";
 import { DocumentBlobMissing, type DocumentRelay, DocumentUpdateTooLarge } from "./document-sync-types";
 import { readExactResponse } from "./exact-response";
-import { serviceAddress, serviceUrl } from "./http";
+import { fetchWithBackoff, serviceAddress, serviceUrl } from "./http";
+import { fetchWithInactivity } from "./inactivity-response";
 import type { SubscribeDocument } from "./live";
+
+const requestDirection = (route: SyncRoute) =>
+  route.kind === "part" || (route.kind === "document" && route.operation !== "read") ? "upload" : "download";
 
 export const createDocumentRelay = (input: {
   subscribe?: SubscribeDocument;
@@ -25,28 +28,36 @@ export const createDocumentRelay = (input: {
   documentId: string;
   token: () => Promise<string>;
   signal: AbortSignal;
+  inactivityMs?: number;
+  progress?: (event: { phase: string; direction: "upload" | "download"; bytes?: number; blobId?: string }) => void;
 }) => {
   input.subscribe?.(input.space.spaceOwner, input.documentId);
   const address = serviceAddress(input.origin);
   const space = { projectId: input.space.projectId, spaceOwner: input.space.spaceOwner };
-  const request = async (route: SyncRoute, init: RequestInit = {}) => {
-    // The relay limits requests per device. Waiting as it asks keeps a busy device's sync going instead of failing it.
-    for (let attempt = 0; ; attempt++) {
-      const signal = input.signal;
-      signal.throwIfAborted();
+  const request = (route: SyncRoute, init: RequestInit = {}) => {
+    const signal = input.signal;
+    return fetchWithBackoff(async () => {
       const headers = new Headers(init.headers);
+      const direction = requestDirection(route);
+      const blobId = "blobId" in route ? route.blobId : undefined;
+      input.progress?.({ phase: "authorizing", direction, blobId });
       headers.set("authorization", `Bearer ${await input.token()}`);
       headers.set(syncProtocolHeader, String(syncProtocolVersion));
-      const response = await fetch(serviceUrl(address, syncPath(route)), { ...init, headers, signal });
-      if (response.status !== 429 || attempt >= 5) return response;
-      await response.body?.cancel();
-      const retryAfter = response.headers.get("retry-after");
-      const seconds = retryAfter === null ? 2 ** attempt : Number(retryAfter);
-      const milliseconds = Number.isFinite(seconds)
-        ? Math.max(0, seconds * 1000)
-        : Math.max(0, Date.parse(retryAfter!) - Date.now());
-      await delay(Number.isFinite(milliseconds) ? milliseconds : 1000, undefined, { signal });
-    }
+      input.progress?.({ phase: "waiting-for-response", direction, blobId });
+      const response = await fetchWithInactivity(
+        serviceUrl(address, syncPath(route)),
+        { ...init, headers },
+        {
+          signal,
+          inactivityMs: input.inactivityMs ?? 30_000,
+          progress: (bytes) => input.progress?.({ phase: "receiving-response", direction, bytes, blobId }),
+          uploading: direction === "upload",
+        },
+      );
+      if (route.kind === "part" && response.ok)
+        input.progress?.({ phase: "uploaded-part", direction, bytes: Number(headers.get("content-length")), blobId });
+      return response;
+    }, signal);
   };
   const checked = async (response: Response) => {
     if (response.ok) return response;
@@ -68,6 +79,7 @@ export const createDocumentRelay = (input: {
     bytes: Uint8Array,
     operation: "begin" | "begin-manifest",
     children?: string[],
+    progress?: (completedBytes: number) => void,
   ) => {
     const sha256 = (bytes: Uint8Array) => new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
     const status = blobStatusSchema.parse(
@@ -81,7 +93,10 @@ export const createDocumentRelay = (input: {
         )
       ).json(),
     );
-    if (status.completed) return;
+    if (status.completed) {
+      progress?.(bytes.length);
+      return;
+    }
     for (let offset = 0, number = 1; offset < bytes.length; offset += status.partSize, number++) {
       const part = bytes.subarray(offset, offset + status.partSize);
       const hash = sha256(part);
@@ -89,8 +104,10 @@ export const createDocumentRelay = (input: {
         status.parts.some(
           (existing) => existing.number === number && existing.sha256 === hash && existing.byteLength === part.length,
         )
-      )
+      ) {
+        progress?.(offset + part.length);
         continue;
+      }
       const response = await checked(
         await request(
           { kind: "part", ...space, blobId, number },
@@ -102,6 +119,7 @@ export const createDocumentRelay = (input: {
         ),
       );
       await response.body?.cancel();
+      progress?.(offset + part.length);
     }
     await (await checked(await post(blob(blobId, "finish"), {}))).body?.cancel();
   };
@@ -151,7 +169,8 @@ export const createDocumentRelay = (input: {
       return true;
     },
     blobs: {
-      put: (blobId, bytes) => putBlob(blobId, bytes, "begin"),
+      put: (blobId, bytes, progress?: (completedBytes: number) => void) =>
+        putBlob(blobId, bytes, "begin", undefined, progress),
       read: readBlob,
       get: async (blobId) => new Uint8Array(await new Response(await readBlob(blobId, 0)).arrayBuffer()),
     },

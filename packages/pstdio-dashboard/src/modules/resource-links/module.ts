@@ -10,6 +10,7 @@ import {
 } from "@/shared/extensions/extension-webview-broadcast";
 import { subscribeToResourceAnchorChanges } from "@/shared/extensions/resource-anchor-feed";
 import { subscribeToResourceRemovals } from "@/shared/extensions/resource-removal-feed";
+import { createResourceLinkDependencies } from "./resource-link-dependencies";
 import { linkableResource } from "./resource-link-identity";
 import { resolveLinkedResources } from "./resource-link-resolution";
 import { searchLinkResources } from "./resource-link-search";
@@ -19,20 +20,32 @@ export const createResourceLinksService = (
   resource: ResourceRef,
 ): ResourceLinksService => {
   const projectId = resource.projectId!;
+  const dependencies = createResourceLinkDependencies(ctx, resource);
   const api = () => getApiClient().resources;
   return {
     list: (input) => api().listAnchors(projectId, input),
     add: (source, targets) => api().addAnchors(projectId, source, targets),
     remove: (source, targets) => api().removeAnchors(projectId, source, targets),
     search: (query, signal) => searchLinkResources(ctx, projectId, query, signal),
-    resolve: (resources, signal) => resolveLinkedResources(ctx, projectId, resources, signal),
+    resolve: (resources, signal) => {
+      dependencies.resolved(resources);
+      return resolveLinkedResources(ctx, projectId, resources, signal);
+    },
     subscribe: (listener) => {
       const disposers = [
         ctx.pages.store.subscribe(listener),
         ctx.resources.store.subscribe(listener),
         ctx.commandPaletteResources.store.subscribe(listener),
         subscribeCollections((change) => {
-          if (change && ["workspaces", "sessions", "projects", "extension_instances"].includes(change.table))
+          if (!change) return listener();
+          if (!["workspaces", "sessions", "projects", "extension_instances"].includes(change.table)) return;
+          if (
+            change.changes.some(({ value, previousValue }) =>
+              [value, previousValue].some(
+                (row) => row && (change.table === "projects" ? row.id === projectId : row.project_id === projectId),
+              ),
+            )
+          )
             listener();
         }),
         subscribeToResourceAnchorChanges((event) => {
@@ -57,7 +70,7 @@ export const createResourceLinksService = (
             listener();
         }),
         subscribeToExtensionEventReset((reset) => {
-          if (reset.projectId === undefined || reset.projectId === projectId) listener();
+          if (dependencies.matches(reset)) listener();
         }),
       ];
       return () => {

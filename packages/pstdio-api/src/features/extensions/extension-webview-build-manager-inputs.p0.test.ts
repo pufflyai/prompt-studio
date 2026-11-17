@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
 import { writeDependency, writeExtension, writeManagedBuildOutput } from "./test-utils/webview-build-fixture";
 
@@ -98,6 +98,56 @@ describe("createExtensionWebviewBuildManager invalidation", () => {
       await manager.refresh();
 
       expect(runCount).toBe(1);
+    } finally {
+      manager.dispose();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("reports a missing entry file as a build failure while healthy webviews build", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-webview-missing-entry-test-"));
+    const sourcePath = join(root, "extension");
+    writeExtension(sourcePath, { labPage: "src/main.tsx", healthyPage: "src/healthy.tsx" });
+    rmSync(join(sourcePath, "src", "main.tsx"));
+    const failures: string[] = [];
+    const built: string[] = [];
+
+    const manager = createExtensionWebviewBuildManager({
+      listInstalledSources: async () => [
+        {
+          updated_at: "2026-10-16T00:00:00.000Z",
+          id: "installed-lab",
+          install_name: "extension-lab",
+          source_hash: "unchanged-hash",
+          source_path: sourcePath,
+        },
+      ],
+      reportBuildFailure: async (_installedExtensionId, _webviewId, error) => {
+        failures.push(String(error));
+        return "reported";
+      },
+      reportBuildSuccess: async () => "reported",
+      buildWebview: async (input) => {
+        built.push(basename(input.entryPath));
+        writeManagedBuildOutput(input);
+        return { success: true, details: "" };
+      },
+      webviewCacheRoot: join(root, "cache"),
+    });
+
+    try {
+      await manager.ensure("installed-lab");
+      await manager.refresh();
+
+      expect(built).toEqual(["healthy.tsx"]);
+      expect(failures).toHaveLength(1);
+      expect(failures[0]).toContain("src/main.tsx");
+
+      writeFileSync(join(sourcePath, "src", "main.tsx"), "console.log('restored webview');");
+      await manager.refresh();
+
+      expect(built).toEqual(["healthy.tsx", "main.tsx"]);
+      expect(failures).toHaveLength(1);
     } finally {
       manager.dispose();
       rmSync(root, { recursive: true, force: true });

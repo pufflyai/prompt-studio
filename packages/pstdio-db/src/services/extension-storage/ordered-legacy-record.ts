@@ -18,7 +18,13 @@ import { orderedFieldMarkerId, saveOrderedMarker } from "./ordered-native-metada
 import type { OrderedTransaction } from "./ordered-sql";
 import { loadResourceDocuments, resourceDocumentId } from "./resource-document-persistence";
 
-const legacyBody = async (tx: OrderedTransaction, owner: StorageOwner, record: NativeProjectedRecord) => {
+type Sources = Awaited<ReturnType<typeof loadResourceDocuments>>["sources"];
+const legacyBody = async (
+  tx: OrderedTransaction,
+  owner: StorageOwner,
+  record: NativeProjectedRecord,
+  sources?: Sources,
+) => {
   let body = {
     value: record.value,
     asset: record.asset,
@@ -27,8 +33,8 @@ const legacyBody = async (tx: OrderedTransaction, owner: StorageOwner, record: N
   };
   let lifetime = "initial";
   if (record.deleted || Object.keys(body.nativeSources).length) {
-    const { sources } = await loadResourceDocuments(tx, owner, [resourceDocumentId(record.recordId)]);
-    const saved = sources.get(resourceDocumentId(record.recordId));
+    const loaded = sources ?? (await loadResourceDocuments(tx, owner, [resourceDocumentId(record.recordId)])).sources;
+    const saved = loaded.get(resourceDocumentId(record.recordId));
     if (!saved) throw new Error("A legacy record is missing retained source history");
     if (record.deleted) body = { ...retainedResourceBody(record.recordId, saved.states), nativeSources: {} };
     else {
@@ -50,14 +56,15 @@ export const convertLegacyOrderedRecord = async (
   tx: OrderedTransaction,
   owner: StorageOwner,
   record: NativeProjectedRecord,
+  sources?: Sources,
 ) => {
-  const { body, lifetime } = await legacyBody(tx, owner, record);
+  const { body, lifetime } = await legacyBody(tx, owner, record, sources);
   let value = body as unknown as Json;
   const texts: Record<string, OrderedTextState> = {};
   for (const [key, source] of Object.entries(body.nativeSources)) {
     if (!("field" in source)) continue;
-    const { sources } = await loadResourceDocuments(tx, owner, [nativeDocumentId(key)]);
-    const saved = sources.get(nativeDocumentId(key));
+    const loaded = sources ?? (await loadResourceDocuments(tx, owner, [nativeDocumentId(key)])).sources;
+    const saved = loaded.get(nativeDocumentId(key));
     if (!saved) throw new Error("A legacy native field is missing its shared history");
     const document = new Y.Doc();
     try {
@@ -94,4 +101,23 @@ export const convertLegacyOrderedRecord = async (
     ),
     ...(Object.keys(texts).length ? { texts } : {}),
   } satisfies OrderedRecord;
+};
+
+/** Share document reads across a bounded record page, including native field sources. */
+export const convertLegacyOrderedRecords = async (
+  tx: OrderedTransaction,
+  owner: StorageOwner,
+  records: NativeProjectedRecord[],
+) => {
+  const ids = records.flatMap((record) => [
+    ...(record.deleted || Object.keys(record.nativeSources ?? {}).length ? [resourceDocumentId(record.recordId)] : []),
+    ...Object.keys(record.nativeSources ?? {}).map(nativeDocumentId),
+  ]);
+  const sources: Sources = new Map();
+  for (let offset = 0; offset < ids.length; offset += 100)
+    for (const [id, source] of (await loadResourceDocuments(tx, owner, ids.slice(offset, offset + 100))).sources)
+      sources.set(id, source);
+  const converted = [];
+  for (const record of records) converted.push(await convertLegacyOrderedRecord(tx, owner, record, sources));
+  return converted;
 };

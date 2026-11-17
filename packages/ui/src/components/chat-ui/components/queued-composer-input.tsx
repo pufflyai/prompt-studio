@@ -22,6 +22,7 @@ export const QueuedComposerInput = (props: QueuedComposerInputProps) => {
     chatInputCommands,
     inputDisabled,
     submitDisabled,
+    readOnlyQueue,
     onAttachFiles,
     onAttachText,
     onClearAttachments,
@@ -81,7 +82,9 @@ export const QueuedComposerInput = (props: QueuedComposerInputProps) => {
         onClearAttachments={onClearAttachments}
         attachmentList={attachmentList}
         isDisabled={inputDisabled || queuedComposer.updating}
-        submitDisabled={submitDisabled || (editing && queuedComposer.stale)}
+        // A degraded queue cannot accept another queued draft; keep text and Stop available.
+        // Question/decision takeovers have their own response controls and remain enabled.
+        submitDisabled={submitDisabled || (streaming && readOnlyQueue) || (editing && queuedComposer.stale)}
         attachedToTop={!editing && hasQueuedFollowUps}
         questionPrompt={chatInputQuestionPrompt}
         decision={composerDecision}

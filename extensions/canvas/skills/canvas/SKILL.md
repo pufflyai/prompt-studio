@@ -48,14 +48,14 @@ export const Example = () => {
 
 ## Browse and compare
 
-- Open **UI Canvas** in project navigation, or search for a canvas as a resource. Canvases are grouped by their titles. **Props and source** shows a frame's file, export and args.
+- Open **UI Canvas** in project navigation, or search for a canvas as a resource. Canvases are grouped by their titles. A frame with parameters opens the Frame editor, which shows its description and its **Props JSON** values.
 - Select a frame before interacting: the first click selects it. Empty canvas space or Escape with canvas focus clears selection.
 - **Theme** changes one frame's theme and keeps its input. **Reset frame** starts it fresh.
 - When a file changes, the watcher rebuilds and UI Canvas reloads only that canvas's frames.
 
 ## Parameters, playback, and saved versions
 
-Declare `controls` on a frame or default export: `number` with min/max/step, `boolean`, or `select` with value/label options. Args supply initial values. Select a frame to show its parameters and versions in the Frame editor menu on the right. With no selection, both panels and their reopen controls are hidden. Switching selection retains each frame’s temporary values and playback state. Parameters update only that frame and keep React state. Reset restores the selected version. Temporary experiments do not edit source.
+Declare `controls` on a frame or default export: `number` with min/max/step, `boolean`, or `select` with value/label options. Args supply initial values. Select a frame with parameters to show its parameters, versions and **Props JSON** in the Frame editor menu on the right; frames without parameters keep the menu closed. With no selection, both panels and their reopen controls are hidden. Switching selection retains each frame’s temporary values and playback state. Parameters update only that frame and keep React state. Reset restores the selected version. Temporary experiments do not edit source.
 
 Declare `motion: { duration, fps?, markers? }` to drive a `time` arg in seconds from independent play/pause, scrub, speed, and loop-range controls. Derive animation from time so scrubbing works.
 

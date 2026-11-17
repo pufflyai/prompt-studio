@@ -13,6 +13,13 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Isolate Intel macOS tests from Spotlight indexing
+      if: runner.os == 'macOS' && runner.arch == 'X64'
+      shell: bash
+      # Native and packaged toolchain checks share the accepted runner isolation in ADR 0032.
+      run: |
+        sudo mdutil -a -i off
+        mdutil -a -s
     - name: Use Ubuntu archive mirrors
       if: runner.os == 'Linux'
       shell: bash
@@ -28,13 +35,13 @@ runs:
         bun -e 'import { appendFileSync } from "node:fs"; import { execFileSync } from "node:child_process";
         appendFileSync(process.env.GITHUB_OUTPUT, `path=${execFileSync(process.execPath, ["pm", "cache"], { encoding: "utf8"
         }).trim()}\n`);'
-    - name: Restore dependency downloads
+    - name: "[phase:cache-restore] Restore dependency downloads"
       if: runner.os != 'Windows'
       uses: actions/cache/restore@v4
       with:
         path: ${{ steps.bun_cache.outputs.path }}
         key: bun-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('bun.lock', 'package.json') }}
-    - name: Install dependencies
+    - name: "[phase:install] Install dependencies"
       shell: bash
       env:
         INSTALL_STRATEGY: ${{ inputs.install-strategy }}
@@ -46,7 +53,8 @@ runs:
         else
           bun install --frozen-lockfile
         fi
-    - name: Restore portable Nx task archives
+    - name: "[phase:cache-restore] Restore portable Nx task archives"
+      if: runner.os != 'Windows'
       uses: actions/cache/restore@v4
       with:
         path: .cache/ci-build
@@ -54,28 +62,21 @@ runs:
           }}-${{ github.job }}-${{ strategy.job-index }}
         restore-keys: nx-${{ runner.os }}-${{ runner.arch }}-${{ inputs.profile }}-${{ hashFiles('bun.lock', 'package.json', 'nx.json') }}-
     - name: Start the job's Nx HTTP cache
+      if: runner.os != 'Windows'
       shell: bash
       run: bun scripts/ci/build-cache.ts
+    - name: Keep Windows builds independent of the HTTP cache
+      if: runner.os == 'Windows'
+      shell: bash
+      # Nx can fail completed builds when its cache request fails. See ADR 0148.
+      run: echo "NX_SKIP_REMOTE_CACHE=true" >> "$GITHUB_ENV"
     # The only CI writer of these shared declarations. Parallel checks only read them:
     # a package script that regenerates them can expose a half-written file to another typecheck.
     - name: Generate installed Chakra theme declarations
       shell: bash
       run: bun run --cwd packages/ui typegen:tokens
-    - name: Use the job temp directory on Windows
-      if: runner.os == 'Windows' && inputs.windows-dev-drive != 'true'
-      shell: pwsh
-      run: |
-        "TEMP=$env:RUNNER_TEMP" >> $env:GITHUB_ENV
-        "TMP=$env:RUNNER_TEMP" >> $env:GITHUB_ENV
-    - name: Use a job-owned Dev Drive as the Windows temp directory
-      if: runner.os == 'Windows' && inputs.windows-dev-drive == 'true'
-      shell: pwsh
-      # Keep runtime homes and cold install caches on a ReFS Dev Drive owned by this job. See ADR 0114.
-      run: |
-        $ErrorActionPreference = 'Stop'
-        $partition = New-VHD -Path (Join-Path $env:RUNNER_TEMP 'temp-dev-drive.vhdx') -SizeBytes 50GB -Dynamic |
-          Mount-VHD -PassThru | Initialize-Disk -PassThru | New-Partition -AssignDriveLetter -UseMaximumSize
-        $partition | Format-Volume -DevDrive -Confirm:$false -Force | Out-Null
-        $temp = New-Item -ItemType Directory -Path "$($partition.DriveLetter):\temp"
-        "TEMP=$temp" >> $env:GITHUB_ENV
-        "TMP=$temp" >> $env:GITHUB_ENV
+    - name: Set up Windows job temporary storage
+      if: runner.os == 'Windows'
+      uses: ./.github/actions/setup-windows-temp
+      with:
+        dev-drive: ${{ inputs.windows-dev-drive }}

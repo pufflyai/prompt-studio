@@ -1,4 +1,7 @@
+import { chatMessageRowLayoutCss } from "./chat-message-row-layout";
+
 export const globalCss = {
+  ...chatMessageRowLayoutCss,
   "@property --split-size": { syntax: '"<length>"', inherits: "true", initialValue: "0px" },
   "@keyframes text-chunk": { from: { opacity: 0 }, to: { opacity: 1 } },
   "*::selection": {

@@ -19,6 +19,15 @@ export const checkRecordStreamPage = (result: Extract<ReadResult, { status: "upd
   if (!result.more && expected < result.lastSequence) throw new Error("Relay did not return every update");
   return result.updates.filter((update) => update.sequence > after);
 };
+const pageReader = (relay: DocumentRelay, initial?: ReadResult) => {
+  let page = initial;
+  return (after: number) => {
+    const current = page;
+    page = undefined;
+    return current ?? relay.read(after);
+  };
+};
+
 /** Collects the latest state and every retained update for adoption or repair. Null when unreadable. */
 export const createRecordStreamDownload =
   (reader: ReturnType<typeof createRecordStreamReader>, relay: DocumentRelay) =>
@@ -28,6 +37,7 @@ export const createRecordStreamDownload =
       after: 0,
       state: null,
     },
+    first?: ReadResult,
   ) => {
     let { remote, after, state } = initial;
     let snapshot = new Map(remote);
@@ -35,8 +45,9 @@ export const createRecordStreamDownload =
     let tailUpdates: StoredUpdate[] = [];
     let skipped = false;
     let pendingBytes = 0;
+    const read = pageReader(relay, first);
     while (true) {
-      const result = await relay.read(after);
+      const result = await read(after);
       if (result.state && result.state.stateId !== state?.stateId) {
         state = result.state;
         const frames = await reader.openLatest(state);

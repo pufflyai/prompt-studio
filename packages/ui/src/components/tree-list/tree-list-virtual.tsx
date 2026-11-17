@@ -28,7 +28,7 @@ const VirtualRowContent = (props: {
   children: ReactNode;
 }) => {
   const { sortable, row, indicator, children } = props;
-  if (!sortable || row.kind === "section-empty") return children;
+  if (!sortable || row.kind === "section-empty" || row.kind === "continuation") return children;
   if (row.kind === "node" && row.level > 0)
     return (
       <Box position="relative" minW="0">
@@ -112,6 +112,9 @@ export const VirtualTreeList = (props: VirtualTreeListProps) => {
       {virtualItems.map((virtualItem) => {
         const row = rows[virtualItem.index];
         if (!row) return null;
+        const nextRow = rows[virtualItem.index + 1];
+        const endsSection = row.sectionId !== nextRow?.sectionId;
+        const rowGap = endsSection ? sectionGap : nodeGap;
 
         return (
           <Box
@@ -123,12 +126,7 @@ export const VirtualTreeList = (props: VirtualTreeListProps) => {
             top="0"
             left="0"
             w="full"
-            pb={
-              virtualItem.index === rows.length - 1 ||
-              (sortable && row.sectionId !== rows[virtualItem.index + 1]?.sectionId)
-                ? "0"
-                : nodeGap
-            }
+            pb={!nextRow || (sortable && endsSection) ? "0" : rowGap}
             style={{ transform: `translateY(${virtualItem.start}px)` }}
           >
             <VirtualRowContent sortable={sortable} row={row} indicator={indicator}>

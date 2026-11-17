@@ -5,9 +5,9 @@ import { toWorkbenchNavigationTarget } from "@pstdio/workbench/extensions";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useWorkbenchStore } from "@pstdio/workbench/react";
 import type { Notification, NotificationAction } from "pstdio-api-contracts";
-import { useSyncExternalStore } from "react";
 import { getApiClient } from "@/lib/api";
-import { getCollectionsVersion, getRuntimeCollections, subscribeCollections } from "@/lib/sync/collections";
+import { getRuntimeCollections } from "@/lib/sync/collections";
+import { useCollectionSelection } from "@/lib/sync/use-collection-selection";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { useActionError } from "@/shared/components/use-action-error";
@@ -99,11 +99,11 @@ export const NotificationCenterWidget = (props: NotificationCenterWidgetProps) =
   const owner = getRuntimeCollections();
   const { input } = props;
   const { showError, errorNotice, clearError } = useActionError();
-  useSyncExternalStore(subscribeCollections, getCollectionsVersion, getCollectionsVersion);
   const projectId = useWorkbenchStore(input.workbench.context.store, (state) => {
     const value = state.values[dashboardSelectedProjectIdContextKey];
     return typeof value === "string" ? value : undefined;
   });
+  useCollectionSelection({ tables: projectId ? ["notifications"] : [], projectId });
   const notifications = createDashboardNotifications(projectId);
   const items = notifications.map(toCenterItem);
 

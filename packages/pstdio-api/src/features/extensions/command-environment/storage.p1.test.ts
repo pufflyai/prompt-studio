@@ -46,6 +46,22 @@ test("host storage exposes document groups, verified assets, legacy access, and 
       });
     };
     const [first, other] = await Promise.all([context("First"), context("Other")]);
+    const controller = new AbortController();
+    const recordId = first.records.id("observed");
+    const hints: unknown[] = [];
+    const observation = first.observe((change) => hints.push(change), {
+      recordIds: [recordId],
+      signal: controller.signal,
+    });
+    await other.set("observed", "other project");
+    await first.set("different", "same project");
+    expect(hints).toEqual([]);
+    await first.set("observed", "committed locally while signed out");
+    expect(hints).toEqual([{ recordIds: [recordId] }]);
+    controller.abort();
+    await first.set("observed", "after disposal");
+    expect(hints).toHaveLength(1);
+    observation.close();
     expect(await first.canMigrate()).toBe(true);
     const tickets = first.collection<{ title: string; position?: string }>("tickets");
     await tickets.put("a", { title: "Original" });

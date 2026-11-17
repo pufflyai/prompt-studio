@@ -248,6 +248,7 @@ export {
   createWorkbench,
   createWorkbenchResourceContextValues,
   createWorkbenchSelectionResourceMetadata,
+  createWorkbenchStore,
   defaultPageResourceCodec,
   dockedWorkbenchRegions,
   getKeybindingSteps,

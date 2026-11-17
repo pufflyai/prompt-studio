@@ -21,3 +21,5 @@ The generated workspace migration removes stored capability `archive` keys. If a
 Storage KV and collection APIs deprecated only on the current development branch remain available for their normal deprecation window.
 
 Project settings contributions use `workbenchSlots.projectSettings` (`project.settings`). Commands from webviews receive the placement resource and a slot with the current project and panel. Command calls return the same response envelope in the dashboard, workbench, and testbench, including structured rejection details.
+
+*Updated at: 2026-10-18*

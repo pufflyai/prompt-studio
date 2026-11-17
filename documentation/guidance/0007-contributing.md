@@ -8,6 +8,7 @@
 4. Use PR titles `<category>(<PS-XXX>): <statement>`, such as `fix(PS-42): add new button component`.
 5. Use the headings in the [PR template](../../.github/pull_request_template.md), in the same order. `gh pr create --body` replaces the template, so include the headings yourself.
 6. Follow [PR and CI completion](0004-ci.md) through the latest commit.
+7. Agents must create worktrees through Prompt Studio workspaces, using `pst workspaces create` or **Create workspace**. Do not run `git worktree add` directly.
 
 ## 2. Generated files
 
@@ -31,7 +32,7 @@
 
 1. Changes adding 5,000 or more lines to a PR need human approval before writing code. This includes designs that commit the project to that much code later.
 2. Count every added line, including lockfiles, translations, tests, copied code, generated output, and fixtures. This also covers designs that keep adding files with every change.
-3. Stop before writing the code and create a decision request with `pst pstdio-planner request-review --request '{"kind":"decision"}'`.
+3. Stop before writing the code and create a decision request with `pst pstdio.planner request-review --request '{"kind":"decision"}'`.
 4. Explain the expected size, why it is needed, and the smaller alternatives considered.
 5. Wait for approval. Implement only after approval, and link the request in the PR description.
 6. If the change grows past the limit while working, stop and request approval the same way. Check size with `git diff --shortstat origin/main...HEAD`.

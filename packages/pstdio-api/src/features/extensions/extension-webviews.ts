@@ -1,5 +1,6 @@
-import { extname, join } from "node:path";
+import { extname, isAbsolute, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { PackageAssetDescriptor } from "pstdio-api-contracts/extension-kernel";
 import { isWindowsDeviceName } from "pstdio-extensions";
 import type { LoadedExtension } from "./extension-runtime";
@@ -40,7 +41,7 @@ export const collectExtensionWebviews = (loaded: Pick<LoadedExtension, "definiti
   if (!Array.isArray(views)) return webviews;
   for (const view of views) {
     if (!isRecord(view) || typeof view.id !== "string" || !isRecord(view.body)) continue;
-    collectWebview(webviews, `${loaded.metadata.id}.view.${view.id}`, view.body);
+    collectWebview(webviews, `${canonicalExtensionId(loaded.metadata.id)}.view.${view.id}`, view.body);
   }
 
   return webviews;
@@ -70,3 +71,11 @@ export const resolveManagedWebviewPaths = (input: {
 
 export type CollectedExtensionWebview = ReturnType<typeof collectExtensionWebviews>[number];
 export type WebviewEntryKind = ReturnType<typeof classifyWebviewEntry>["kind"];
+
+export const resolveWebviewSourceEntry = (asset: PackageAssetDescriptor, sourcePath: string, preparedPath?: string) => {
+  const entry = resolvePackageAssetFile(asset);
+  if (!preparedPath) return entry;
+  const rel = relative(preparedPath, entry);
+  if (rel.startsWith("..") || isAbsolute(rel)) return entry;
+  return join(sourcePath, rel);
+};

@@ -1,4 +1,5 @@
 import { validatePageParamDefinitions } from "pstdio-api-contracts";
+import { canonicalRegistryId } from "../../shared/contributions/identity-aliases";
 import { resourceMatchesConstraint } from "../../shared/contributions/reference-id";
 import { createDisposable } from "../../shared/disposable";
 import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
@@ -48,6 +49,12 @@ export const createWorkbenchPageRegistry = <Value>(
   const resourceKey = (resource: Parameters<WorkbenchPageResourceCodec["toUri"]>[0]) =>
     input.resources.toUri(normalizeResource(resource));
   const store = createPageRegistryStore(input);
+  let pageListing:
+    | {
+        source: WorkbenchPageRegistryStoreState<Value>["pages"];
+        sorted: ReturnType<WorkbenchPageRegistry<Value>["listPages"]>;
+      }
+    | undefined;
   let runtime:
     | ((
         state: WorkbenchPageRegistryStoreState<Value>,
@@ -84,7 +91,7 @@ export const createWorkbenchPageRegistry = <Value>(
     });
 
   const requirePage = (pageId: string) => {
-    const page = store.getState().pages[pageId];
+    const page = store.getState().pages[canonicalRegistryId(store, pageId)];
     if (!page) throw new Error(`Unknown page: ${pageId}`);
     return page;
   };
@@ -114,11 +121,19 @@ export const createWorkbenchPageRegistry = <Value>(
     },
 
     getPage(pageId) {
-      return store.getState().pages[pageId];
+      return store.getState().pages[canonicalRegistryId(store, pageId)];
     },
 
     listPages() {
-      return Object.values(store.getState().pages).sort((left, right) => left.id.localeCompare(right.id));
+      const pages = store.getState().pages;
+      // Location and layout updates read the same immutable page dictionary many times.
+      if (pageListing?.source !== pages)
+        pageListing = {
+          source: pages,
+          sorted: Object.values(pages).sort((left, right) => left.id.localeCompare(right.id)),
+        };
+      // Callers own their list; sorting or removing an entry must not alter later reads.
+      return pageListing.sorted.slice();
     },
 
     resourceReferenceKey(resource) {

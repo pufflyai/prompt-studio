@@ -11,6 +11,7 @@ export type {
   DataTableCategoricalValue,
   DataTableCellContext,
   DataTableCellContextAction,
+  DataTableChartValue,
   DataTableColorScaleStop,
   DataTableColumnRenderer,
   DataTableColumnStat,

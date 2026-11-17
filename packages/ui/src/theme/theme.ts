@@ -11,6 +11,8 @@ import { chartRecipe } from "./recipes/chart";
 import { chatQuestionBubbleRecipe } from "./recipes/chat-question-bubble";
 import { checkboxSlotRecipe } from "./recipes/checkbox";
 import { colorPickerSlotRecipe } from "./recipes/color-picker";
+import { dashboardRecipe } from "./recipes/dashboard";
+import { dataTableRecipe } from "./recipes/data-table";
 import { dialogSlotRecipe } from "./recipes/dialog";
 import { dividerRecipe } from "./recipes/divider";
 import { documentPresenceSlotRecipe } from "./recipes/document-presence";
@@ -106,7 +108,9 @@ const config = defineConfig({
       borders,
     },
     slotRecipes: {
+      dashboard: dashboardRecipe,
       chart: chartRecipe,
+      dataTable: dataTableRecipe,
       documentPresence: documentPresenceSlotRecipe,
       kanbanBoardColumn: kanbanBoardColumnSlotRecipe,
       stickyUserMessage: stickyUserMessageRecipe,

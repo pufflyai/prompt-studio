@@ -133,3 +133,4 @@ export const reindexBoards = defineHook({
 
 The decision is recorded in [ADR 0069](../../adrs/0069-host-owned-artifact-mount-watching.md).
 
+*Updated at: 2026-10-25*

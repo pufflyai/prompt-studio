@@ -13,6 +13,8 @@ export type {
   CreateAutomationRunInput,
   DeviceCommand,
   ExtensionDiagnosticsResponse,
+  FolderRecoveryError,
+  FolderRecoveryErrorCode,
   InstallExtensionRequest,
   InstallExtensionResponse,
   InstalledExtensionSource,
@@ -21,8 +23,15 @@ export type {
   LinkIcon,
   ListAutomationRunEventsResponse,
   ListAutomationTokensResponse,
+  ProjectFolderRecoveryStatus,
+  ProjectFolderSource,
+  ProjectFolderSourceRef,
   ProjectRecoveryPoint,
+  ProjectSyncFile,
+  ProjectSyncSource,
+  ProjectSyncStatus,
   ResourceRef,
+  RestoreProjectFolderInput,
   RestoreProjectInput,
   RestoreProjectResult,
   SessionImportError,
@@ -69,7 +78,13 @@ export type {
   WorkbenchExtensionViewBody,
   WorkbenchExtensionViewRecord,
 } from "./extensions";
-export type { CreateProjectInput, UpdateProjectInput } from "./projects";
+export type {
+  CreateProjectInput,
+  ProjectComposition,
+  ProjectCompositionInput,
+  ResourceOpener,
+  UpdateProjectInput,
+} from "./projects";
 export type {
   CreateNotificationInput,
   ListNotificationsQuery,
@@ -115,6 +130,8 @@ export type {
   TerminalSessionOperation,
   TerminalSessionRequest,
   TerminalSessionResult,
+  TerminalViewBinding,
+  TerminalViewOpenRequest,
 } from "./terminal";
 export type {
   CreateWorkspaceInput,

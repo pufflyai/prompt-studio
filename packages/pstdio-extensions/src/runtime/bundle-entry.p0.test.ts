@@ -102,3 +102,19 @@ test("a load waits for a pending build even when its output is already visible",
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("extension commands can import a public package with incidental CSS", async () => {
+  const root = mkdtempSync(join(tmpdir(), "extension-bundle-css-"));
+  const entry = join(root, "extension.ts");
+  writeFileSync(join(root, "style.css"), ".example { color: red; }");
+  writeFileSync(join(root, "helper.ts"), 'import "./style.css"; export const next = (value: number) => value + 1;');
+  writeFileSync(entry, 'import { next } from "./helper"; export default { run: () => next(41) };');
+  try {
+    const bundlePath = await bundleEntry(entry, root, join(root, "out"));
+    expect(bundlePath.endsWith(".pstdio-runtime-bundle.mjs")).toBe(true);
+    const loaded = await import(bundlePath);
+    expect(loaded.default.run()).toBe(42);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

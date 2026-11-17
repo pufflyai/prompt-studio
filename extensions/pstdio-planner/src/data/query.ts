@@ -15,16 +15,17 @@ import {
   TICKET_ARCHIVE_STATE_ARCHIVED,
   TICKET_ARCHIVE_STATE_ATTRIBUTE_ID,
 } from "./mappers";
-import { hasPendingInput, readTicketReviewRequests } from "./review-request-storage";
+import { readTicketReviewRequests } from "./review-request-storage";
 import { REVIEW_REQUEST_ITEMS_ATTRIBUTE, reviewRequestBadgeItems } from "./review-request-summary";
 import { seedDefaultStatuses, seedDefaultTags } from "./seed";
 import type { TicketContext } from "./ticket-identity";
 import { loadTicketLinkedResources } from "./ticket-linked-resources";
-import { ticketActivationTarget } from "./ticket-page-target";
+import { ticketPageTarget } from "./ticket-page-target";
 import type { Ticket } from "./types";
 import { emptyWorkflowStatuses, type WorkflowStatusSelections } from "./workflow-statuses";
 
 interface TicketsQueryInput {
+  extensionId?: string;
   tickets?: Ticket[];
   storage: ExtensionStorageApi;
   resources: TicketContext["resources"];
@@ -40,6 +41,7 @@ export const runTicketsQuery = async ({
   storage,
   resources,
   projectId,
+  extensionId = "pstdio.planner",
   filter,
   workflow = emptyWorkflowStatuses(),
 }: TicketsQueryInput): Promise<KanbanRendererQueryResult> => {
@@ -89,20 +91,18 @@ export const runTicketsQuery = async ({
       visibleTickets.map((ticket) => ({
         type: "ticket",
         id: ticket.id,
-        extensionId: "pstdio.pstdio-planner",
+        extensionId,
         projectId,
       })),
     ),
     createTicketParentLookup(tickets),
+    extensionId,
   );
   const rows = visibleTickets.map((ticket) => {
     const row = toTicketRow(ticket);
     return {
       ...row,
-      target: ticketActivationTarget(
-        row.resource,
-        hasPendingInput(requests.get(ticket.id) ?? { requests: [], errors: [] }),
-      ),
+      target: ticketPageTarget(row.resource),
       attributes: {
         ...row.attributes,
         ...(timeline.values.get(ticket.id) ?? {

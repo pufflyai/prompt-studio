@@ -50,12 +50,35 @@ const toNativeViewBody = (
   const body = view.contribution.body as Exclude<ViewBody, { kind: "webview" }>;
   const handlers = body as typeof body & Record<string, unknown>;
   const resourceKind = body.resourceKind ? normalizedRef(body.resourceKind, view.extensionId) : undefined;
+  if (body.kind === "terminal") {
+    return {
+      kind: "terminal",
+      ...(resourceKind ? { resourceKind: resourceKind.id } : {}),
+      sessionHandlerId: String(handlers.sessionHandlerId),
+    };
+  }
   const common = {
     ...(resourceKind ? { resourceKind: resourceKind.id } : {}),
     refreshEventIds: refreshEventIds(body.refreshEvents, view.extensionId),
     emptyTitle: body.emptyTitle,
     emptyDescription: body.emptyDescription,
   };
+  if (body.kind === "chat") {
+    return {
+      kind: "chat",
+      ...common,
+      draftKey: body.draftKey,
+      legacySessionDraft: body.legacySessionDraft,
+      initial: body.initial,
+      queryHandlerId: String(handlers.queryHandlerId),
+      actionHandlerId: String(handlers.actionHandlerId),
+      loadDraftHandlerId: handlers.loadDraftHandlerId as string | undefined,
+      saveDraftHandlerId: handlers.saveDraftHandlerId as string | undefined,
+      resolveLinkHandlerId: handlers.resolveLinkHandlerId as string | undefined,
+      resolveImageHandlerId: handlers.resolveImageHandlerId as string | undefined,
+      stream: body.stream ? commandRef(body.stream, view.extensionId) : undefined,
+    };
+  }
   if (body.kind === "tree") {
     return {
       kind: "tree",
@@ -66,6 +89,7 @@ const toNativeViewBody = (
       headerHandlerId: handlers.headerHandlerId as string | undefined,
       bodyHandlerId: String(handlers.bodyHandlerId),
       childrenHandlerId: handlers.childrenHandlerId as string | undefined,
+      pageHandlerId: handlers.pageHandlerId as string | undefined,
       moveHandlerId: handlers.moveHandlerId as string | undefined,
       footerHandlerId: handlers.footerHandlerId as string | undefined,
       defaultExpandedSectionIds: body.defaultExpandedSectionIds,
@@ -120,6 +144,7 @@ const toNativeViewBody = (
   return {
     kind: body.kind,
     queryMode: body.queryMode,
+    initialPageSize: body.initialPageSize,
     ...common,
     attributes: body.attributes?.map((attribute) => ({
       ...attribute,

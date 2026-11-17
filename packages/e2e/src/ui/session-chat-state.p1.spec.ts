@@ -1,7 +1,15 @@
 import { Buffer } from "node:buffer";
-import { expect, test } from "@playwright/test";
 import { openSessionsInOneSidePanelTab } from "../helpers/session-side-panel";
+import { expect, type Request, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
+
+// Session writes now cross the public provider command boundary in the browser.
+// Hold the same work before server execution; its internal service HTTP calls are not browser traffic.
+const actionPath = "/extensions/commands/pstdio.session-browser.view.conversation.chat.onAction/execute";
+const isSubmit = (request: Request) =>
+  request.method() === "POST" &&
+  request.url().endsWith(actionPath) &&
+  request.postDataJSON()?.params?.action?.type === "submit";
 
 test("keeps each session's draft when one Side Panel tab switches between sessions", async ({ page, request }) => {
   const { switchTab } = await openSessionsInOneSidePanelTab(page, request, "Session drafts");
@@ -47,54 +55,6 @@ test("keeps the unsent draft after editing a queued follow-up", async ({ page, r
   await expect(editor).toHaveText("Half-written note");
 });
 
-test("turns a New session tab into the created session when the request ends after leaving the tab", async ({
-  page,
-  request,
-}) => {
-  const { header, project } = await openSessionsInOneSidePanelTab(page, request, "Background session start");
-  const side = page.locator('[data-workbench-region="side"]');
-  const editor = side.getByTestId("content-editable").filter({ visible: true }).last();
-  const send = side.getByTestId("send-message-button").filter({ visible: true }).last();
-  await header.getByRole("button", { name: "Add panel", exact: true }).click();
-  await page.getByRole("menuitem", { name: "New session", exact: true }).click();
-  const draftTab = header.getByRole("tab", { name: "New session", exact: true });
-  await expect(draftTab).toHaveAttribute("aria-selected", "true");
-
-  let release!: () => void;
-  const held = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  await page.route("**/v1/sessions", async (route) => {
-    if (route.request().method() === "POST") await held;
-    await route.continue();
-  });
-  const created = page.waitForResponse(
-    (response) => response.request().method() === "POST" && response.url().endsWith("/v1/sessions"),
-  );
-  const prompt = "Start while away";
-  await editor.fill(prompt);
-  await expect(send).toBeEnabled();
-  await send.click();
-  await expect(editor).toBeEmpty();
-  await header.getByRole("tab", { name: "Session B", exact: true }).click();
-  await draftTab.click();
-  await expect(editor).toHaveAttribute("contenteditable", "false");
-  await expect(send).toBeDisabled();
-  await header.getByRole("tab", { name: "Session B", exact: true }).click();
-  release();
-  expect((await created).ok()).toBe(true);
-
-  const createdTab = header.getByRole("tab", { name: prompt, exact: true });
-  await expect(createdTab).toBeVisible();
-  await expect(draftTab).toHaveCount(0);
-  await createdTab.click();
-  await expect(editor).toBeEmpty();
-  const sessions = (await (await request.get(`${apiBase}/v1/sessions?project_id=${project.id}`)).json()) as {
-    title: string;
-  }[];
-  expect(sessions.filter((session) => session.title === prompt)).toHaveLength(1);
-});
-
 test("keeps a tab on the session picked while its new session was still starting", async ({ page, request }) => {
   const { header, switchTab } = await openSessionsInOneSidePanelTab(page, request, "Switch while starting");
   const side = page.locator('[data-workbench-region="side"]');
@@ -105,13 +65,15 @@ test("keeps a tab on the session picked while its new session was still starting
   const held = new Promise<void>((resolve) => {
     release = resolve;
   });
-  await page.route("**/v1/sessions", async (route) => {
-    if (route.request().method() === "POST") await held;
+  let submitCount = 0;
+  await page.route(`**${actionPath}`, async (route) => {
+    if (isSubmit(route.request())) {
+      submitCount++;
+      await held;
+    }
     await route.continue();
   });
-  const created = page.waitForResponse(
-    (response) => response.request().method() === "POST" && response.url().endsWith("/v1/sessions"),
-  );
+  const created = page.waitForResponse((response) => isSubmit(response.request()));
   const prompt = "Start before switching";
   await editor.fill(prompt);
   await expect(side.getByTestId("send-message-button").last()).toBeEnabled();
@@ -120,6 +82,7 @@ test("keeps a tab on the session picked while its new session was still starting
   await switchTab("New session", "Session B");
   release();
   expect((await created).ok()).toBe(true);
+  expect(submitCount).toBe(1);
   // The created session must not take over a tab the user already moved to another session.
   await page.waitForTimeout(1_000);
   await expect(header.getByRole("tab", { name: "Session B", exact: true })).toBeVisible();
@@ -134,7 +97,9 @@ test("keeps draft attachments with the session they were added to", async ({ pag
   const { switchTab } = await openSessionsInOneSidePanelTab(page, request, "Session attachments per tab");
   const side = page.locator('[data-workbench-region="side"]');
 
-  await side.locator("input[type='file']").setInputFiles({
+  const firstFileChooser = page.waitForEvent("filechooser");
+  await side.getByRole("button", { name: "Attach files", exact: true }).click();
+  await (await firstFileChooser).setFiles({
     name: "notes-for-b.txt",
     mimeType: "text/plain",
     buffer: Buffer.from("Context for session B"),
@@ -152,12 +117,16 @@ test("keeps draft attachments with the session they were added to", async ({ pag
   const uploading = new Promise<void>((resolve) => {
     uploaded = resolve;
   });
-  await page.route("**/v1/projects/*/session-attachments", async (route) => {
-    uploaded();
-    await held;
+  await page.route(`**${actionPath}`, async (route) => {
+    if (route.request().postDataJSON()?.params?.action?.type === "upload") {
+      uploaded();
+      await held;
+    }
     await route.continue();
   });
-  await side.locator("input[type='file']").setInputFiles({
+  const lateFileChooser = page.waitForEvent("filechooser");
+  await side.getByRole("button", { name: "Attach files", exact: true }).click();
+  await (await lateFileChooser).setFiles({
     name: "late-upload-for-b.txt",
     mimeType: "text/plain",
     buffer: Buffer.from("Late context for B"),

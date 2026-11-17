@@ -22,10 +22,8 @@ import {
   waitForDesktopRuntime,
 } from "./runtime-controller";
 import { resolveRuntimeEnvironment } from "./runtime-environment";
-import { spawnRuntimeProcess } from "./runtime-process";
+import { spawnRuntimeProcess, terminateRuntimeProcess } from "./runtime-process";
 import { observeRuntimeStartup } from "./runtime-startup-progress";
-
-const SIDECAR_TERMINATION_GRACE_MS = 2_000;
 
 export type ManagedRuntime = {
   descriptor: RuntimeDescriptor;
@@ -83,22 +81,6 @@ const defaultDeps: RuntimeManagerDeps = {
   waitForRuntimeExit,
 };
 
-const terminateSpawnedRuntime = async (
-  child: RuntimeProcess,
-  terminated: Promise<void>,
-  sleep: RuntimeManagerDeps["sleep"],
-) => {
-  child.kill("SIGTERM");
-  const stoppedGracefully = await Promise.race([
-    terminated.then(() => true),
-    sleep(SIDECAR_TERMINATION_GRACE_MS).then(() => false),
-  ]);
-  if (stoppedGracefully) return;
-
-  child.kill("SIGKILL");
-  await terminated;
-};
-
 export class DesktopRuntimeManager {
   #startupAbort: AbortController | null = null;
   #startupTask: Promise<ManagedRuntime> | null = null;
@@ -151,11 +133,11 @@ export class DesktopRuntimeManager {
     return redactSensitiveText(this.#readOutput(), token ? [token] : []);
   }
 
-  start() {
+  start(onStarting?: (descriptor: RuntimeDescriptor) => void) {
     if (this.#startupTask) return this.#startupTask;
     const startup = new AbortController();
     this.#startupAbort = startup;
-    this.#startupTask = this.#start(startup.signal).finally(() => {
+    this.#startupTask = this.#start(startup.signal, onStarting).finally(() => {
       startup.abort();
       this.#startupAbort = null;
       this.#startupTask = null;
@@ -168,7 +150,7 @@ export class DesktopRuntimeManager {
     await this.#startupTask?.catch(() => {});
   }
 
-  async #start(signal: AbortSignal) {
+  async #start(signal: AbortSignal, onStarting?: (descriptor: RuntimeDescriptor) => void) {
     this.#intentional = false;
     this.#eventAbort?.abort();
     this.#options.onPhase("discovery");
@@ -181,8 +163,20 @@ export class DesktopRuntimeManager {
     }
 
     const initialShutdown = readRuntimeShutdown(this.#options.descriptorPath);
+    let announced = false;
     const discover = async (path: string, expectedRuntime?: Pick<RuntimeDescriptor, "pid" | "instanceId">) => {
       signal.throwIfAborted();
+      if (expectedRuntime && !announced) {
+        const candidate = this.#deps.readRuntimeDescriptor(path);
+        if (
+          candidate?.pid === expectedRuntime.pid &&
+          candidate.instanceId === expectedRuntime.instanceId &&
+          this.#deps.isRuntimePidAlive(candidate.pid)
+        ) {
+          announced = true;
+          onStarting?.(candidate);
+        }
+      }
       const discovery = await this.#deps.discoverRuntime(path, {
         signal,
         ...(expectedRuntime ? { expectedRuntime } : {}),
@@ -254,7 +248,7 @@ export class DesktopRuntimeManager {
       ready = descriptor;
       return this.#attach(descriptor, false);
     } catch (error) {
-      await terminateSpawnedRuntime(child, childTerminated, this.#deps.sleep);
+      await terminateRuntimeProcess(child, childTerminated, this.#deps.sleep);
       const detail = child.readOutput() || (error instanceof Error ? error.message : String(error));
       const failure = classifyRuntimeFailure(detail);
       throw new Error(`${failure.code}: ${failure.message}`);

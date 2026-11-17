@@ -17,6 +17,8 @@ export const observeTraffic = (origin: string) => {
   const actors = new Map<string, string>();
   const samples: RequestSample[] = [];
   const partWaiters = new Map<string, (sample: RequestSample) => void>();
+  // File uploads start with blob/begin. Record-stream chunks use begin-manifest and can upload first.
+  const fileBlobs = new Set<string>();
   let phase = "setup";
   const wrapped: typeof fetch = Object.assign(async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
     const url = String(input);
@@ -39,7 +41,8 @@ export const observeTraffic = (origin: string) => {
       blobId: route && "blobId" in route ? route.blobId : null,
     };
     samples.push(sample);
-    if (route?.kind === "part") {
+    if (operation === "blob/begin") fileBlobs.add(String(sample.blobId));
+    if (operation === "part" && fileBlobs.has(String(sample.blobId))) {
       partWaiters.get(sample.actor)?.(sample);
       partWaiters.delete(sample.actor);
     }

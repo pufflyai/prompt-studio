@@ -15,7 +15,7 @@ import {
 
 const ticketRendererParams = (ticket: { id: string; shorthand: string }, documentId?: string) => ({
   renderer: {
-    rendererId: "pstdio.pstdio-planner.view.ticket-files",
+    rendererId: "pstdio.planner.view.ticket-files",
     resource: {
       type: "ticket",
       id: ticket.id,
@@ -33,10 +33,10 @@ const ticketDocumentTarget = (
 ) => {
   const body = {
     kind: "page" as const,
-    page: { kind: "page" as const, id: "ticket", extensionId: "pstdio.pstdio-planner" },
+    page: { kind: "page" as const, id: "ticket", extensionId: "pstdio.planner" },
     parent: {
       kind: "page" as const,
-      page: { kind: "page" as const, id: "tickets", extensionId: "pstdio.pstdio-planner" },
+      page: { kind: "page" as const, id: "tickets", extensionId: "pstdio.planner" },
     },
     resource: {
       type: "ticket",
@@ -45,7 +45,7 @@ const ticketDocumentTarget = (
       shorthand: ticket.shorthand,
       metadata: {
         archived: false,
-        resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
+        resourceParent: { type: "view", viewId: "pstdio.planner.view.tickets" },
       },
     },
   };
@@ -110,7 +110,7 @@ describe("ticket files tree commands", () => {
       }),
     );
 
-    expect(body.map((section) => section.id)).toEqual(["ticket", "files", "workspaces", "sessions"]);
+    expect(body.map((section) => section.id)).toEqual(["ticket", "files"]);
 
     // The ticket body is its own header-less entry, selected by default.
     expect(body[0]).toMatchObject({
@@ -159,18 +159,6 @@ describe("ticket files tree commands", () => {
         ],
       },
     ]);
-    expect(body[3]).toMatchObject({
-      id: "sessions",
-      nodes: [
-        {
-          id: "sessions-empty",
-          label: "No sessions",
-          icon: "MessageCircle",
-          disabled: true,
-          rowVariant: "empty-state",
-        },
-      ],
-    });
   });
 
   test("deleting the open file re-targets the page to the ticket body", async () => {

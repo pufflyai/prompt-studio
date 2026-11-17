@@ -1,5 +1,5 @@
 import type { CommandExecuteRequest, CommandExecutionResult, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import type { PlacementIdentity } from "@pstdio/sdk/extensions";
+import type { NavigationTarget, PlacementIdentity } from "@pstdio/sdk/extensions";
 import type {
   ResourceRef,
   WorkbenchCommandExecutionContext,
@@ -7,6 +7,8 @@ import type {
   WorkbenchPanelRegion,
 } from "../../core";
 import { resolveCommandResourceParams } from "../../core/registries/commands/command-resource-params";
+import { isPageContent } from "../../core/registries/pages/page-main";
+import { copyCommandResult } from "./command-clipboard";
 import { unwrapCommandValue } from "./command-response";
 import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
 import { runResourceMutation } from "./workbench-resource-mutation";
@@ -23,6 +25,7 @@ export interface WorkbenchExtensionCommandContext {
   workbench: WorkbenchModuleContext;
 }
 export interface ExecuteWorkbenchExtensionCommandInput {
+  onViewerReplace?(resource: ResourceRef): void;
   removalVersion?: number;
   isViewerCurrent?(): boolean;
   placement?: PlacementIdentity;
@@ -44,9 +47,23 @@ export const createExtensionSlot = (input: {
   kind: input.kind,
   context: { projectId: input.projectId, ...(input.context ?? {}) },
 });
+// Command callbacks do not receive private placement identity. A returned viewer
+// page is a destination hint for captured Main; panels keep their binding. Core
+// from/current-viewer checks still apply after this presentation-only adaptation.
+const commandViewerTarget = (
+  target: NavigationTarget,
+  viewer: PlacementIdentity | undefined,
+  pages: WorkbenchModuleContext["pages"],
+) => {
+  if (target.kind !== "viewer" || !target.page || !viewer) return target;
+  if (viewer.kind === "page" && isPageContent(pages.getPage(viewer.pageId), viewer)) return target;
+  const { page: _mainPage, ...panelTarget } = target;
+  return panelTarget;
+};
 export const executeWorkbenchExtensionCommandResponse = async (
-  context: Pick<WorkbenchExtensionCommandContext, "executeCommand" | "projectId"> & {
-    workbench: Pick<WorkbenchModuleContext, "navigation" | "notifications" | "resources" | "viewers">;
+  context: Pick<WorkbenchExtensionCommandContext, "executeCommand" | "projectId" | "metadata"> & {
+    workbench: Pick<WorkbenchModuleContext, "navigation" | "notifications" | "resources" | "viewers" | "pages"> &
+      Partial<Pick<WorkbenchModuleContext, "commands">>;
   },
   commandId: string,
   input: ExecuteWorkbenchExtensionCommandInput = {},
@@ -55,32 +72,47 @@ export const executeWorkbenchExtensionCommandResponse = async (
   const captured = context.workbench.viewers.captureContext(input.placement);
   const invocation = {
     ...captured,
+    onViewerReplace: input.onViewerReplace,
     removalVersion: input.removalVersion ?? captured.removalVersion,
     isViewerCurrent: input.isViewerCurrent ?? captured.isViewerCurrent,
   };
   const reportNavigationError = context.workbench.notifications.captureActionError("Open command result");
-  const response = await context.executeCommand(
-    commandId,
-    {
-      projectId: context.projectId,
-      ...(input.workspaceId ? { workspaceId: input.workspaceId } : {}),
-      ...(input.params ? { params: input.params } : {}),
-      ...(resource ? { resource } : {}),
-      ...(input.slot ? { slot: input.slot } : {}),
-      source: "dashboard",
-      ...(input.metadata ? { metadata: input.metadata } : {}),
-    },
-    input.signal,
+  const pendingResponse = Promise.resolve(
+    context.executeCommand(
+      commandId,
+      {
+        projectId: context.projectId,
+        ...(input.workspaceId ? { workspaceId: input.workspaceId } : {}),
+        ...(input.params ? { params: input.params } : {}),
+        ...(resource ? { resource } : {}),
+        ...(input.slot ? { slot: input.slot } : {}),
+        source: "dashboard",
+        ...(input.metadata ? { metadata: input.metadata } : {}),
+      },
+      input.signal,
+    ),
   );
+  const command =
+    context.metadata?.commands.find((candidate) => candidate.id === commandId) ??
+    context.workbench.commands?.getCommand(commandId)?.command;
+  // Start writing before awaiting the remote command, while the selecting gesture is active.
+  const copying = command?.copyResultToClipboard
+    ? copyCommandResult(pendingResponse, input.signal, invocation.isViewerCurrent)
+    : undefined;
+  const [response] = await Promise.all([pendingResponse, copying]);
   const outcome = (response as Partial<CommandExecutionResult> | undefined)?.outcome;
   if (outcome?.status === "success" && !input.signal?.aborted) {
     for (const target of outcome.navigationRequests ?? []) {
       if (input.signal?.aborted) break;
       try {
-        await context.workbench.navigation.openTarget(toWorkbenchNavigationTarget(target, { region: input.region }), {
-          ...invocation,
-          projectId: context.projectId,
-        });
+        const navigationTarget = commandViewerTarget(target, captured.viewer, context.workbench.pages);
+        await context.workbench.navigation.openTarget(
+          toWorkbenchNavigationTarget(navigationTarget, { region: input.region }),
+          {
+            ...invocation,
+            projectId: context.projectId,
+          },
+        );
       } catch (error) {
         reportNavigationError(error);
       }
@@ -94,10 +126,13 @@ export const executeWorkbenchExtensionCommand = async (
   input: ExecuteWorkbenchExtensionCommandInput = {},
 ) => {
   const command = context.metadata?.commands.find((candidate) => candidate.id === commandId);
-  const params = command
+  const resolved = command
     ? { ...resolveCommandResourceParams(command.params, input.params, { resource: input.resource }), ...input.params }
     : input.params;
+  const params = command?.confirmation ? { ...resolved, [command.confirmation.confirmedParam]: true } : resolved;
   const persist = async () =>
     unwrapCommandValue(await executeWorkbenchExtensionCommandResponse(context, commandId, { ...input, params }));
-  return command ? runResourceMutation(context, command, params, { resource: input.resource }, persist) : persist();
+  return command
+    ? runResourceMutation(context, command, params, { resource: input.resource, signal: input.signal }, persist)
+    : persist();
 };

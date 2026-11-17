@@ -8,6 +8,7 @@ export {
   extensionStorageDirectory,
   isPackageAssetDescriptor,
   isWindowsDeviceName,
+  migrateExtensionFiles,
   normalizeArtifactMountPath,
   normalizeCliPath,
   normalizeMountRelativePath,
@@ -89,11 +90,36 @@ export {
   toSettingDefinitionRecord,
   validateCommandParams,
 } from "./runtime";
+export { canonicalNavigationOwners } from "./runtime/canonical-navigation-owners";
+export { canonicalRuntimeId, contributionAliases } from "./runtime/contribution-aliases";
 export { collectConventionDiagnostics } from "./runtime/conventions";
 export { extensionIconAssetName, readExtensionIcon } from "./runtime/extension-icon";
 export { mirrorNodeModules } from "./runtime/mirror-node-modules";
 export { collectIconFontAssets } from "./runtime/normalize/icon-fonts";
 export { isRuntimeNavigationTargetAvailable } from "./runtime/normalize/page-target-validation";
+export { normalizeParamOptions } from "./runtime/normalize/param-options";
+export {
+  configureExtensionPreparationWorker,
+  createPreparationClient,
+  createPreparationScope,
+  isPreparationHost,
+  type PreparationOptions,
+  retainExtensionPreparation,
+  runExtensionPreparation,
+  stopExtensionPreparation,
+  stopUnownedExtensionPreparation,
+  subscribePreparationEvents,
+  withBackgroundPreparation,
+  withRequestedPreparation,
+} from "./runtime/preparation-client";
+export {
+  acceptPreparedRevision,
+  inspectExtensionLoadKey,
+  type PreparedExtensionRevision,
+  preparedRevisionState,
+  prepareExtensionRevision,
+  readAcceptedRevision,
+} from "./runtime/prepared-revision";
 export { createReadBoundary } from "./runtime/read-boundary";
 export { workbenchIconNames } from "./runtime/workbench-icon-names";
 export type * from "./types";

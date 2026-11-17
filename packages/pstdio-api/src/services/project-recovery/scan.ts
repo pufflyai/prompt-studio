@@ -38,7 +38,6 @@ const maxPointers = 1024;
 export interface RecoveryScanInput {
   root: string;
   chunks: Awaited<ReturnType<typeof createRecoveryChunkStore>>;
-  firstEnrollment?: boolean;
   /** A fixed policy for roots outside the project folder; the root `.pstignore` is not read. */
   policy?: { text: string | null };
   /** Small included files whose text the caller validates after the scan, such as Git pointers. */
@@ -149,9 +148,7 @@ export const scanRecoveryRoot = async (input: RecoveryScanInput) => {
     if (within(source.rootPath, cache) || within(cache, source.rootPath))
       throw new Error("Recovery working storage must be outside the captured folder");
     check();
-    const policy = input.policy
-      ? createRecoveryPolicy(input.policy.text)
-      : await sourceRecoveryPolicy(source.root, input.firstEnrollment ?? false, input.chunks.directory);
+    const policy = input.policy ? createRecoveryPolicy(input.policy.text) : await sourceRecoveryPolicy(source.root);
     const rootStat = await source.root.stat();
     await observe("", rootStat);
     const captureEntry = async (directory: RecoverySourceHandle, name: string, path: string) => {
@@ -211,7 +208,7 @@ export const scanRecoveryRoot = async (input: RecoveryScanInput) => {
         throw new RecoveryCaptureError(observation.path, error);
       }
     }
-    if (!input.policy && (await sourceRecoveryPolicy(source.root, false)).text !== policy.text)
+    if (!input.policy && (await sourceRecoveryPolicy(source.root)).text !== policy.text)
       throw new RecoveryCaptureError(".pstignore", new Error("The applied recovery policy changed"));
     const currentRoot = await openRecoverySource(input.root);
     try {

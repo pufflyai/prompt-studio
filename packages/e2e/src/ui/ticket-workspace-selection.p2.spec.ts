@@ -1,8 +1,9 @@
 import { existsSync, rmSync } from "node:fs";
-import { expect, test } from "@playwright/test";
+import { defaultPageResourceCodec } from "@pstdio/sdk/extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, createPlannerTicketFile } from "../helpers/planner-api";
 import { observeTreeRows } from "../helpers/tree-continuity";
+import { expect, test } from "../scripts/session-test";
 import { uiOrigin } from "../ui-server";
 import { enableCloudWorkspaceProvider } from "./helpers/cloud-workspace-provider";
 
@@ -39,7 +40,7 @@ test("workspace navigation owns selection while keeping ticket document context"
             type: "ticket",
             id: ticket.id,
             shorthand: ticket.shorthand,
-            extensionId: "pstdio.pstdio-planner",
+            extensionId: "pstdio.planner",
             projectId,
             role: "primary",
           },
@@ -55,7 +56,7 @@ test("workspace navigation owns selection while keeping ticket document context"
         title: "Workspace conversation",
         prompt: "Workspace conversation",
         agent: "pstdio.workbench-fixture.harness.fake",
-        anchors: [{ type: "ticket", id: ticket.id, extensionId: "pstdio.pstdio-planner", projectId }],
+        anchors: [{ type: "ticket", id: ticket.id, extensionId: "pstdio.planner", projectId }],
       },
     });
     expect(session.ok(), await session.text()).toBe(true);
@@ -63,7 +64,7 @@ test("workspace navigation owns selection while keeping ticket document context"
       localStorage.setItem("onboarding-complete", "true");
       localStorage.setItem("dashboard-wb2:selected-project:global", id);
     }, projectId!);
-    const board = `/projects/${projectId}/extensions/pstdio.pstdio-planner/tickets`;
+    const board = `/projects/${projectId}/extensions/pstdio.planner/tickets`;
     const sidenav = page.locator('[data-workbench-region="sidenav"]');
     const body = sidenav.getByRole("option", { name: `${ticket.shorthand} Workspace selection`, exact: true });
     const file = sidenav.getByRole("option", { name: "plan.md", exact: true });
@@ -89,13 +90,23 @@ test("workspace navigation owns selection while keeping ticket document context"
     await expect(rootRow).toHaveAttribute("aria-selected", "true");
     await expect(body).toHaveAttribute("aria-selected", "false");
     await page.getByRole("button", { name: "Hide Side Panel" }).click();
+    expect(await finishObservingRows()).toEqual([]);
     await linkedRow.click();
-    await expect(linkedRow).toHaveAttribute("aria-selected", "true");
-    await expect(rootRow).toHaveAttribute("aria-selected", "false");
+    const expectLinkedWorkspace = async () => {
+      await expect(page).toHaveURL(
+        (url) => defaultPageResourceCodec.fromUri(url.searchParams.get("resource") ?? "")?.id === linkedWorkspace.id,
+      );
+      await expect(page.getByRole("button", { name: "Back to project", exact: true })).toBeVisible();
+      await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText(ticket.shorthand);
+    };
+    await expectLinkedWorkspace();
     await page.goBack();
     await expect(rootRow).toHaveAttribute("aria-selected", "true");
     await page.goForward();
-    await expect(linkedRow).toHaveAttribute("aria-selected", "true");
+    await expectLinkedWorkspace();
+    await page.goBack();
+    await expect(rootRow).toHaveAttribute("aria-selected", "true");
+    const finishObservingProjectRows = await observeTreeRows(sidenav, [body, file, rootRow]);
     await file.click();
     await expect(file).toHaveAttribute("aria-selected", "true");
     await rootRow.click();
@@ -106,7 +117,7 @@ test("workspace navigation owns selection while keeping ticket document context"
     await body.click();
     await expect(body).toHaveAttribute("aria-selected", "true");
     await expect(file).toHaveAttribute("aria-selected", "false");
-    expect(await finishObservingRows()).toEqual([]);
+    expect(await finishObservingProjectRows()).toEqual([]);
   } finally {
     if (projectId) await request.delete(`${uiOrigin}/v1/projects/${projectId}`);
     if (existsSync(path)) rmSync(path, { recursive: true, force: true });

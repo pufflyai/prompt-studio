@@ -36,27 +36,21 @@ const run = (command: string, args: string[]) => {
 if (import.meta.main) {
   const option = (name: string) => process.argv[process.argv.indexOf(name) + 1];
   const actualSha = run("git", ["rev-parse", "HEAD"]);
-  const pages = JSON.parse(
-    run("gh", [
-      "api",
-      "--paginate",
-      "--slurp",
-      `repos/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.ARTIFACT_RUN_ID}/artifacts?per_page=100`,
-    ]),
+  // The producer freezes the artifact inventory once. Relisting while other jobs
+  // upload reports can move entries between API pages and change the observation.
+  const candidate: ProductionCandidate = JSON.parse(readFileSync("production-candidate.json", "utf8"));
+  if (
+    candidate.artifactRunId !== process.env.ARTIFACT_RUN_ID ||
+    candidate.artifactAttempt !== Number(process.env.ARTIFACT_ATTEMPT) ||
+    candidate.sourceSha !== process.env.SOURCE_SHA ||
+    candidate.policyDigest !== productionPolicyDigest()
+  )
+    throw new Error("Consumer candidate provenance mismatch");
+  selectProductionArtifacts(
+    candidate.artifacts.map((artifact) => ({ ...artifact, expired: false })),
+    candidate.artifactAttempt,
+    process.env.CHANNEL!,
   );
-  const candidate: ProductionCandidate = {
-    artifactRunId: process.env.ARTIFACT_RUN_ID!,
-    artifactAttempt: Number(process.env.ARTIFACT_ATTEMPT),
-    sourceSha: process.env.SOURCE_SHA!,
-    versionSha: actualSha,
-    toolchain: `bun-${Bun.version}`,
-    policyDigest: productionPolicyDigest(),
-    artifacts: selectProductionArtifacts(
-      pages.flatMap((page: { artifacts: Parameters<typeof selectProductionArtifacts>[0] }) => page.artifacts),
-      Number(process.env.ARTIFACT_ATTEMPT),
-      process.env.CHANNEL!,
-    ),
-  };
   // The archive's build identity must agree with this consumer's actual checkout,
   // rather than assigning expected candidate identity to a job result afterward.
   const buildIdentity = JSON.parse(readFileSync("production-build-identity.json", "utf8"));

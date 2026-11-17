@@ -1,5 +1,7 @@
-import { existsSync, renameSync, rmSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { existsSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { basename, dirname, join } from "node:path";
+import { withFileMutationLock } from "pstdio-paths";
+import { hashExtensionDependencyInputs } from "./hash-extension-dependency-inputs";
 import { prepareNodeModulesRelocation } from "./install-extension-source-node-modules";
 
 export class ExtensionAlreadyInstalledError extends Error {
@@ -11,33 +13,74 @@ export class ExtensionAlreadyInstalledError extends Error {
     this.targetPath = targetPath;
   }
 }
+const readPreviousOwner = (ownerPath: string) => {
+  try {
+    return readFileSync(ownerPath, "utf8");
+  } catch {
+    return null;
+  }
+};
+
+const assertReusableDependencies = (prepared: string, target: string, preserve: boolean) => {
+  if (
+    preserve &&
+    (!existsSync(join(target, "node_modules")) ||
+      hashExtensionDependencyInputs(prepared) !== hashExtensionDependencyInputs(target))
+  )
+    throw new Error("Installed extension dependencies changed while preparing the replacement");
+};
+
+const restorePreviousSource = (target: string, backup: string, promoted: boolean, backedUp: boolean) => {
+  if (promoted) {
+    try {
+      rmSync(target, { recursive: true, force: true });
+    } catch {}
+  }
+  if (backedUp) renameSync(backup, target);
+};
 
 export const promotePreparedSource = async (
   preparedPath: string,
   targetPath: string,
   replaceExisting: boolean,
   preserveDependencies: boolean,
+  onClaim?: (ownership: { ownerPath: string; token: string; previousToken: string | null }) => void,
 ) => {
   const backupPath = join(dirname(preparedPath), ".previous");
   const relocateNodeModules = await prepareNodeModulesRelocation(preparedPath, targetPath);
 
-  if (existsSync(targetPath)) {
-    if (!replaceExisting) throw new ExtensionAlreadyInstalledError(targetPath);
-    renameSync(targetPath, backupPath);
-  }
-
-  try {
-    renameSync(preparedPath, targetPath);
-    relocateNodeModules();
-    const previousNodeModules = join(backupPath, "node_modules");
-    if (preserveDependencies && existsSync(previousNodeModules)) {
-      renameSync(previousNodeModules, join(targetPath, "node_modules"));
-    }
-  } catch (error) {
+  // Default installs share this target across project and runtime processes. Keep the
+  // entire synchronous swap and rollback under one canonical filesystem claim.
+  const extensionsRoot = realpathSync.native(dirname(targetPath));
+  const lockPath = join(dirname(extensionsRoot), ".extension-source-locks", basename(targetPath));
+  return withFileMutationLock(lockPath, () => {
+    const ownerPath = `${lockPath}.owner`;
+    const previousToken = readPreviousOwner(ownerPath);
+    const token = crypto.randomUUID();
+    if (existsSync(targetPath) && !replaceExisting) throw new ExtensionAlreadyInstalledError(targetPath);
+    assertReusableDependencies(preparedPath, targetPath, preserveDependencies);
+    onClaim?.({ ownerPath, token, previousToken });
+    writeFileSync(ownerPath, token);
+    let backedUp = false;
+    let promoted = false;
     try {
-      rmSync(targetPath, { recursive: true, force: true });
-    } catch {}
-    if (existsSync(backupPath)) renameSync(backupPath, targetPath);
-    throw error;
-  }
+      if (existsSync(targetPath)) {
+        renameSync(targetPath, backupPath);
+        backedUp = true;
+      }
+      renameSync(preparedPath, targetPath);
+      promoted = true;
+      relocateNodeModules();
+      const previousNodeModules = join(backupPath, "node_modules");
+      if (preserveDependencies && existsSync(previousNodeModules)) {
+        renameSync(previousNodeModules, join(targetPath, "node_modules"));
+      }
+      return { ownerPath, token, previousToken };
+    } catch (error) {
+      restorePreviousSource(targetPath, backupPath, promoted, backedUp);
+      if (previousToken) writeFileSync(ownerPath, previousToken);
+      else rmSync(ownerPath, { force: true });
+      throw error;
+    }
+  });
 };

@@ -11,9 +11,10 @@ const REPO_ROOT = resolve(import.meta.dir, "../../../../..");
 const fixtureAgents = [
   {
     id: "pstdio.workbench-fixture.harness.fake",
+    extensionId: "pstdio.workbench-fixture",
     name: "Fake Agent",
     availability: { type: "INSTALLED" },
-    capabilities: [],
+    capabilities: ["SessionFork"],
     supportsModels: true,
   },
   ...[
@@ -21,10 +22,11 @@ const fixtureAgents = [
     ["native-action", "Native action fixture"],
   ].map(([id, name]) => ({
     id: `pstdio.workbench-fixture.harness.${id}`,
+    extensionId: "pstdio.workbench-fixture",
     name,
     availability: { type: "INSTALLED" },
     params: { planning: { type: "boolean", label: "Planning", defaultValue: false, control: "command" } },
-    capabilities: [],
+    capabilities: ["SessionFork"],
     supportsModels: true,
   })),
 ];
@@ -59,7 +61,7 @@ describe("harness registry", () => {
   test("installs default harness extensions before serving agent info", async () => {
     process.env.PSTDIO_HOME = join(tempRoot, "home-defaults");
     process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([
-      { source: resolve(REPO_ROOT, "packages/workbench-fixture"), installName: "workbench-fixture", skipInstall: true },
+      { source: resolve(REPO_ROOT, "packages/workbench-fixture"), installName: "workbench-fixture" },
     ]);
 
     const { app, close } = await createTestApp({
@@ -82,7 +84,7 @@ describe("harness registry", () => {
     // the host only loads what is there.
     process.env.PSTDIO_HOME = join(tempRoot, "home");
     process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
-    await installExtensionSource({ source: resolve(REPO_ROOT, "packages/workbench-fixture"), skipInstall: true });
+    await installExtensionSource({ source: resolve(REPO_ROOT, "packages/workbench-fixture") });
 
     const { app, close } = await createTestApp({
       databasePath: ":memory:",
@@ -102,13 +104,13 @@ describe("harness registry", () => {
   test("project-create selection disables unselected harness extensions and scopes listings", async () => {
     process.env.PSTDIO_HOME = join(tempRoot, "home-selection");
     process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
-    await installExtensionSource({ source: resolve(REPO_ROOT, "packages/workbench-fixture"), skipInstall: true });
+    await installExtensionSource({ source: resolve(REPO_ROOT, "packages/workbench-fixture") });
     const secondHarness = writeProvisionHarnessExtension(join(tempRoot, "sources-selection"), {
       installName: "second-harness",
       localId: "second",
       skillsDir: ".second/skills",
     });
-    await installExtensionSource({ source: secondHarness, skipInstall: true });
+    await installExtensionSource({ source: secondHarness });
 
     const { app, close } = await createTestApp({
       databasePath: ":memory:",

@@ -22,6 +22,14 @@ The PR author owns `waiting-for-release`. Add it to an extension PR that uses SD
 
 `ci:full` is not an area label. A person adds it to request separate full functional diagnostics for a same-repository PR. The trusted label handler dispatches the trusted base-branch Test and Build workflow with `profile=production` and the exact PR merge SHA as `source_sha`. That run reports `production_ci_passed`; it does not replace or delay the ordinary required `ci_passed` fast gate. Fork PRs receive an explicit manual diagnostic instruction instead of automatic dispatch. These functional diagnostics are not an immutable release certificate and do not replace P3 performance qualification. See [request deeper diagnostics](0015-ci-stages.md#extra-diagnostics).
 
+`ci:windows` requests separate Windows source diagnostics through the same trusted handler, with `profile=windows` and the exact PR merge SHA. It runs the stable Windows unit/lint and database shards, desktop source and packaged tests, x64/ARM64 packaged CLI checks, Windows harness checks, and registered Bun quarantine evidence. Repository static checks also run. Its `windows_ci_passed` result is separate from the required `ci_passed` and full `production_ci_passed` results. It does not sign, publish, or certify a release or run the signed installation/update check. Forks require a maintainer to dispatch a reviewed repository ref. Remove and re-add the label to request a new run after pushing changes; keeping a label does not rerun diagnostics on each push. The label handler and dispatch profile become available after their workflow changes merge to the base branch.
+
+## Benchmark review and merge
+
+`benchmark` is a manual consequence label. Authors and agents must add it to every PR that changes benchmarks, their workloads, fixtures, metrics, budgets or runners, including stacked PRs. It is outside `.github/labeler.yml`, so automatic area-label synchronization preserves it.
+
+Agents must read the current labels before any merge action. For a `benchmark` PR, leave review and merge to a human: do not merge directly, enable auto-merge, or add it to the merge queue, even when CI is green. Do not remove the label to bypass this rule. The PR and its review history retain the human decision; this policy does not use a deployment approval or a separate environment permission.
+
 ## SDK and extension separation
 
 `sdk-extension-separation` fails when synchronized labels contain both `sdk` and `extensions`. Split those changes into independently valid PRs. Merge compatible SDK preparation first, then extension adoption, then remove obsolete SDK behavior when consumers no longer need it. `extension-runtime` does not trigger this rule by itself.
@@ -69,8 +77,4 @@ A failing workflow alone does not enforce separation. Current whole-package mapp
 
 ## Local validation
 
-```bash
-bun test scripts/ci/pr-risk-labels.p0.test.ts
-```
-
-The tests cover classification outcomes, reversions, failed classification, changed head/base snapshots, manual label removal during a run, and API errors. GitHub rollout checks above prove the actual hosted permissions and merge gate.
+Use static checks for policy and configuration changes. Review the actual hosted permissions and merge gate with the disposable PR scenarios above; do not add a suite that tests workflow setup or label classification.

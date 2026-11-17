@@ -1,0 +1,209 @@
+import {
+  defineCommand,
+  l10n,
+  type PlacementRef,
+  params,
+  type ResourceRef,
+  sessionSlots,
+  viewDataEvents,
+  workbenchResourceKinds,
+} from "@pstdio/sdk/extensions";
+import { sessionBrowser } from "../refs";
+import { draftResource, isProjectSessionResource, sessionResource, sessionTarget } from "./resource";
+
+export const create = defineCommand({
+  id: "new",
+  title: l10n("commands.new", "New session"),
+  cli: true,
+  params: {
+    workspaceId: params.text(),
+    harnessId: params.text(),
+    deviceId: params.text(),
+    side: params.boolean(),
+    panel: params.json<PlacementRef>(),
+    replace: params.boolean(),
+  },
+  run(ctx, input) {
+    const resource = draftResource(ctx.projectId, {
+      ...input,
+      workspaceId: input.workspaceId ?? (ctx.resource?.type === "workspace" ? ctx.resource.id : undefined),
+      deviceId: input.deviceId ?? ctx.resource?.device?.id,
+    });
+    if (input.replace) {
+      ctx.navigation.open({
+        kind: "viewer",
+        operation: "switch",
+        from: ctx.resource,
+        page: sessionBrowser.pages.draft,
+        resource,
+      });
+      return;
+    }
+    ctx.navigation.open(
+      input.side
+        ? { kind: "panel", panel: input.panel ?? sessionBrowser.panels.conversation, resource, open: "pin" }
+        : { kind: "page", page: sessionBrowser.pages.draft, resource },
+    );
+  },
+});
+// A tab already supplies the destination context. Keep this action immediate;
+// the general creation command exposes optional parameters to the command form.
+export const newInViewer = defineCommand({
+  id: "new-in-viewer",
+  title: l10n("commands.new", "New session"),
+  async run(ctx) {
+    const resource = ctx.resource;
+    const session = resource?.type === "session" ? await ctx.sessions.get(resource.id) : undefined;
+    const workspaceId = session?.workspaceId ?? resource?.metadata?.workspaceId;
+    const deviceId = session ? session.device?.id : (resource?.metadata?.deviceId ?? resource?.device?.id);
+    return create.run(ctx, {
+      replace: true,
+      ...(typeof workspaceId === "string" ? { workspaceId } : {}),
+      // An empty selection explicitly means local, overriding any stale resource device.
+      deviceId: typeof deviceId === "string" ? deviceId : "",
+    });
+  },
+});
+export const open = defineCommand({
+  id: "open",
+  title: l10n("commands.open", "Open session"),
+  cli: true,
+  params: {
+    sessionId: params.text({ required: true, resolvedFrom: "resource" }),
+    side: params.boolean(),
+    panel: params.json<PlacementRef>(),
+    replace: params.boolean(),
+  },
+  async run(ctx, input) {
+    const session = await ctx.sessions.get(input.sessionId);
+    if (!session) throw new Error("Session not found.");
+    const resource = sessionResource(session, ctx.projectId);
+    if (input.replace) {
+      ctx.navigation.open({
+        kind: "viewer",
+        operation: "switch",
+        from: ctx.resource,
+        page: sessionBrowser.pages.session,
+        resource,
+      });
+      return;
+    }
+    ctx.navigation.open(
+      input.side
+        ? { kind: "panel", panel: input.panel ?? sessionBrowser.panels.conversation, resource, open: "preview" }
+        : sessionTarget(resource),
+    );
+  },
+});
+export const rename = defineCommand({
+  id: "rename",
+  title: l10n("commands.rename", "Rename session"),
+  cli: true,
+  menus: [{ slot: sessionSlots.headerOverflow, group: "session", icon: "pencil" }],
+  params: {
+    sessionId: params.text({ required: true, resolvedFrom: "resource" }),
+    title: params.text({ required: true, label: l10n("actions.sessionName", "Session name") }),
+  },
+  resourceMutation: { kind: "rename", resourceType: "session", idParam: "sessionId", labelParam: "title" },
+  async run(ctx, input) {
+    await ctx.sessions.rename(input.sessionId, input.title);
+    await ctx.events.emit(viewDataEvents.sessionsChanged, { projectId: ctx.projectId });
+  },
+});
+export const archive = defineCommand({
+  id: "archive",
+  menus: [{ slot: sessionSlots.headerOverflow, group: "session", icon: "archive" }],
+  title: l10n("commands.archive", "Archive session"),
+  description: l10n(
+    "actions.archiveExplanation",
+    "The saved conversation is kept. Queued work will be cancelled. Running work or work awaiting input will continue.",
+  ),
+  cli: true,
+  params: { sessionId: params.text({ required: true, resolvedFrom: "resource" }) },
+  resourceMutation: { kind: "remove", resourceType: "session", idParam: "sessionId" },
+  async run(ctx, input) {
+    await ctx.sessions.archive(input.sessionId);
+  },
+});
+export const remove = defineCommand({
+  id: "delete",
+  menus: ["in_progress", "awaiting_input", "queued", "completed", "failed", "cancelled", "disconnected"].map(
+    (status) => ({
+      slot: sessionSlots.headerOverflow,
+      group: "session",
+      icon: "trash-2",
+      when: { resourceType: [workbenchResourceKinds.session], metadata: { status } },
+      ...(["in_progress", "awaiting_input", "queued"].includes(status)
+        ? {
+            disabledWhen: { metadata: { status } },
+            disabledReason: l10n("actions.stopBeforeDelete", "Stop active or queued work before deleting."),
+          }
+        : {}),
+    }),
+  ),
+  title: l10n("commands.delete", "Delete session"),
+  description: l10n(
+    "actions.deleteExplanation",
+    "The saved conversation is removed. Workspace files and external agent history are kept.",
+  ),
+  cli: true,
+  params: { sessionId: params.text({ required: true, resolvedFrom: "resource" }) },
+  resourceMutation: { kind: "remove", resourceType: "session", idParam: "sessionId" },
+  async run(ctx, input) {
+    await ctx.sessions.delete(input.sessionId);
+  },
+});
+export const resolve = defineCommand({
+  id: "resolve",
+  title: "Resolve session",
+  params: { resources: params.json<ResourceRef[]>() },
+  async run(ctx, input) {
+    const refs = input.resources ?? (ctx.resource ? [ctx.resource] : []);
+    const result = await Promise.all(
+      refs.map(async (ref) => {
+        if (!isProjectSessionResource(ref, ctx.projectId)) return null;
+        const session = await ctx.sessions.get(ref.id);
+        if (!session || session.archived) return null;
+        const resource = { ...ref, ...sessionResource(session, ctx.projectId) };
+        return { resource, target: sessionTarget(resource) };
+      }),
+    );
+    return input.resources ? result.filter((item) => item !== null) : (result[0]?.resource ?? null);
+  },
+});
+
+export const fork = defineCommand({
+  id: "fork",
+  title: l10n("commands.fork", "Fork conversation"),
+  cli: true,
+  params: { sessionId: params.text({ required: true, resolvedFrom: "resource" }), messageId: params.text() },
+  async run(ctx, input) {
+    const result = await ctx.sessions.fork(input.sessionId, input.messageId);
+    ctx.navigation.open(sessionTarget(sessionResource(result, ctx.projectId)));
+  },
+});
+export const stop = defineCommand({
+  id: "stop",
+  title: l10n("commands.stop", "Stop session"),
+  cli: true,
+  menus: ["in_progress", "awaiting_input", "queued"].map((status) => ({
+    slot: sessionSlots.headerPrimary,
+    icon: "square",
+    when: { metadata: { status } },
+  })),
+  params: { sessionId: params.text({ required: true, resolvedFrom: "resource" }) },
+  run: (ctx, input) => ctx.sessions.stop(input.sessionId),
+});
+export const switchConversation = defineCommand({
+  id: "switch",
+  title: l10n("commands.switch", "Switch session"),
+  params: {
+    session: params.resource({ required: true, resourceType: "session", label: l10n("conversation.title", "Session") }),
+  },
+  run(ctx, input) {
+    const selected = input.session;
+    if (!isProjectSessionResource(selected, ctx.projectId))
+      throw new Error("Choose a saved session from this project.");
+    return open.run(ctx, { sessionId: selected.id, replace: true });
+  },
+});

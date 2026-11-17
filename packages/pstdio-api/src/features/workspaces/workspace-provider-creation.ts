@@ -1,15 +1,9 @@
 import type { JsonObject, WorkspaceProviderRef, WorkspaceProviderResult } from "pstdio-api-contracts/extension-kernel";
-import { defaultLocalWorkspaceCapabilities, folderWorkspaceCapabilities } from "pstdio-db";
+import { folderWorkspaceCapabilities } from "pstdio-db";
 import type { WorkspacesRouteDeps } from "./deps";
 import { failWorkspaceCreation } from "./workspace-provider-create-failure";
-import {
-  isBuiltInProviderId,
-  remoteReadOnlyCapabilities,
-  rootProviderId,
-  worktreeProviderId,
-} from "./workspace-provider-identity";
+import { isBuiltInProviderId, remoteReadOnlyCapabilities, rootProviderId } from "./workspace-provider-identity";
 import { handOffLateCreateProjection, updateCreateProjection } from "./workspace-provider-operation-projection";
-import { validateWorkspaceParams } from "./workspace-provider-params";
 import {
   cancelledProviderPatch,
   failedOperationPatch,
@@ -18,53 +12,17 @@ import {
   type WorkspaceRecord,
 } from "./workspace-provider-projection";
 import { normalizeResult } from "./workspace-provider-result";
-import { findWorkspaceProvider, runWorkspaceProviderCall } from "./workspace-provider-runtime";
-import type { setupWorkspaceWorktree } from "./worktree-setup";
+import { findWorkspaceProvider, runWorkspaceProviderOperation } from "./workspace-provider-runtime";
 
-const asString = (value: unknown) => (typeof value === "string" && value.trim() ? value : undefined);
-
-const safeProviderRef = (providerId: string, data: JsonObject) => ({
-  version: 1 as const,
-  data: { providerId, ...data },
-});
-
-const builtInCreate = async (input: {
-  providerId: string;
-  workspace: WorkspaceRecord;
-  params: JsonObject;
-  sourcePath: string;
-  setupWorktree: typeof setupWorkspaceWorktree;
-}) => {
-  if (input.providerId === rootProviderId) {
-    return {
-      providerRef: safeProviderRef(rootProviderId, {}),
-      state: "ready",
-      executionKind: "local",
-      executionTarget: { kind: "local", rootPath: input.sourcePath, displayPath: input.sourcePath },
-      displayPath: input.sourcePath,
-      capabilities: folderWorkspaceCapabilities,
-    } satisfies WorkspaceProviderResult;
-  }
-  const result = await input.setupWorktree({
-    repoPath: input.sourcePath,
-    workspaceShorthand: input.workspace.workspace_shorthand,
-    workspaceId: input.workspace.id,
-    base: asString(input.params.base) ?? "HEAD",
-  });
-  return {
-    providerRef: safeProviderRef(worktreeProviderId, {
-      sourceRoot: result.sourceRoot,
-      worktreeRoot: result.worktreePath,
-      relativePath: result.relativePath,
-    }),
-    branch: result.branch,
+const builtInCreate = (sourcePath: string) =>
+  ({
+    providerRef: { version: 1 as const, data: { providerId: rootProviderId } },
     state: "ready",
     executionKind: "local",
-    executionTarget: { kind: "local", rootPath: result.rootPath, displayPath: result.rootPath },
-    displayPath: result.rootPath,
-    capabilities: defaultLocalWorkspaceCapabilities,
-  } satisfies WorkspaceProviderResult;
-};
+    executionTarget: { kind: "local", rootPath: sourcePath, displayPath: sourcePath },
+    displayPath: sourcePath,
+    capabilities: folderWorkspaceCapabilities,
+  }) satisfies WorkspaceProviderResult;
 
 const persistCancelledCreate = (deps: WorkspacesRouteDeps, workspace: WorkspaceRecord) =>
   deps.workspaceService.updateProviderProjection(workspace.id, cancelledProviderPatch(workspace));
@@ -102,8 +60,8 @@ const cleanUpAcceptedCreate = async (
 
   try {
     if (input.handle.provider.cancel) {
-      const cancelled = await runWorkspaceProviderCall(() =>
-        input.handle.provider.cancel!(input.handle.context, {
+      const cancelled = await runWorkspaceProviderOperation(input.handle, (ctx) =>
+        input.handle.provider.cancel!(ctx, {
           operationId,
           projectId: input.projectId,
           workspaceId: input.workspace.id,
@@ -116,8 +74,8 @@ const cleanUpAcceptedCreate = async (
       return (await deps.workspaceService.updateProviderProjection(input.workspace.id, patch)) ?? pending;
     }
     if (input.handle.provider.delete) {
-      await runWorkspaceProviderCall(() =>
-        input.handle.provider.delete!(input.handle.context, {
+      await runWorkspaceProviderOperation(input.handle, (ctx) =>
+        input.handle.provider.delete!(ctx, {
           operationId,
           projectId: input.projectId,
           workspaceId: input.workspace.id,
@@ -179,9 +137,10 @@ const resolveAcceptedCreate = async (
   while (current.provider_state === "provisioning" && current.provider_ref_json && Date.now() < deadline) {
     if (input.signal?.aborted) return current;
     try {
-      const result = await runWorkspaceProviderCall(
-        () =>
-          input.handle.provider.resolve(input.handle.context, {
+      const result = await runWorkspaceProviderOperation(
+        input.handle,
+        (ctx) =>
+          input.handle.provider.resolve(ctx, {
             projectId: input.projectId,
             workspaceId: current.id,
             providerRef: current.provider_ref_json as WorkspaceProviderRef,
@@ -242,7 +201,6 @@ export const provisionProviderWorkspace = async (
     providerId: string;
     params: JsonObject;
     sourcePath: string | null;
-    setupWorktree: typeof setupWorkspaceWorktree;
     signal?: AbortSignal;
     workspace: WorkspaceRecord;
   },
@@ -267,33 +225,20 @@ export const provisionProviderWorkspace = async (
       ).workspace;
     }
 
-    if (handle) {
-      const params = validateWorkspaceParams(input.providerId, handle.provider.params ?? {}, input.params);
-      const projection = await updateCreateProjection(deps, input.workspace, input.operationId, {
-        provider_params_json: params,
-      });
-      if (!projection.applied) return projection.workspace;
-      input.params = params;
-      input.workspace = projection.workspace;
-    }
-
     const result = handle
-      ? await runWorkspaceProviderCall(() =>
-          handle.provider.create(handle.context, {
-            operationId: input.operationId,
-            projectId: input.projectId,
-            workspaceId: input.workspace.id,
-            params: input.params,
-            signal: input.signal,
-          }),
+      ? await runWorkspaceProviderOperation(
+          handle,
+          (ctx, signal) =>
+            handle.provider.create(ctx, {
+              operationId: input.operationId,
+              projectId: input.projectId,
+              workspaceId: input.workspace.id,
+              params: input.params,
+              signal,
+            }),
+          { resourceSignal: input.signal },
         )
-      : await builtInCreate({
-          providerId: input.providerId,
-          workspace: input.workspace,
-          params: input.params,
-          sourcePath: input.sourcePath!,
-          setupWorktree: input.setupWorktree,
-        });
+      : builtInCreate(input.sourcePath!);
 
     const normalized = normalizeResult(input.providerId, result);
     const resultPatch = {

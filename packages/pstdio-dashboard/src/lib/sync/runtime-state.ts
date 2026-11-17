@@ -1,11 +1,11 @@
 import { getRuntimeCollections, type RuntimeCollections } from "./collections";
 
-export const createRuntimeState = <T>(create: () => T, dispose?: (state: T) => void) => {
+export const createRuntimeState = <T>(create: (owner: RuntimeCollections) => T, dispose?: (state: T) => void) => {
   const states = new WeakMap<RuntimeCollections, T>();
   return (owner = getRuntimeCollections()) => {
     let state = states.get(owner);
     if (state === undefined) {
-      state = create();
+      state = create(owner);
       const owned = state;
       states.set(owner, state);
       owner.onDispose(() => {

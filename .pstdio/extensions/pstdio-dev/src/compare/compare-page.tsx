@@ -7,7 +7,7 @@ import { useBenchmarks, useBenchmarksRefresh } from "../webview/client";
 import { SyncFailed } from "../webview/result-notices";
 import { useSyncOnOpen } from "../webview/use-sync";
 import type { CommitOptionView } from "./commit-picker";
-import { CompareView, type ResultFilter } from "./compare-view";
+import { CompareView } from "./compare-view";
 
 // Defaults to the two newest measured commits, so the page opens on a comparison when one exists. With one
 // measured commit it shows that commit's own results.
@@ -24,7 +24,6 @@ export const ComparePage = () => {
   const [platform, setPlatform] = useState(DEFAULT_PLATFORM);
   // A null base is a choice: read the head's own results.
   const [chosen, setChosen] = useState<{ base?: string | null; head?: string }>({});
-  const [filter, setFilter] = useState<ResultFilter>("all");
   const [selected, setSelected] = useState<string>();
   useBenchmarksRefresh();
   const commits = useCommandQuery({
@@ -65,7 +64,6 @@ export const ComparePage = () => {
       head={head}
       platform={platform}
       rows={comparison.data?.rows ?? []}
-      filter={filter}
       selected={selected}
       notice={
         <>
@@ -84,7 +82,6 @@ export const ComparePage = () => {
       onBaseClear={() => setChosen({ base: null, head })}
       onHeadChange={(sha) => setChosen({ base: chosen.base === null ? null : base, head: sha })}
       onPlatformChange={setPlatform}
-      onFilterChange={setFilter}
       onSelect={setSelected}
       onMeasure={(shas) => measure.mutate(shas)}
     />

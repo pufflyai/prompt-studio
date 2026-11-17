@@ -72,6 +72,8 @@ export const useTerminalSession = ({ bridge, request, killOnUnmount = true }: Us
           return;
         }
         activeSession = session;
+        terminalState = "open";
+        setState({ session, status: "open", exit: null, error: null });
         disposers.push(
           session.onExit((exit) => {
             terminalState = "exited";
@@ -82,8 +84,6 @@ export const useTerminalSession = ({ bridge, request, killOnUnmount = true }: Us
             setState((prev) => ({ ...prev, status: "error", error }));
           }),
         );
-        terminalState = "open";
-        setState({ session, status: "open", exit: null, error: null });
       })
       .catch((cause: unknown) => {
         if (cancelled) return;

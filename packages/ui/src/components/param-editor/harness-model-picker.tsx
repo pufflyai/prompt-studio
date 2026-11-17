@@ -1,3 +1,4 @@
+import { moveSelectedModelFirst } from "./model-option-order";
 import type { SelectionOption, SelectionParam } from "./param-editor.types";
 import { ParamEditorRow } from "./param-editor-row";
 
@@ -9,6 +10,7 @@ interface HarnessModelPickerProps {
   harnessId: string;
   model?: string;
   disabled?: boolean;
+  lockHarness?: boolean;
   loadingHarnesses?: boolean;
   loadingModels?: boolean;
   onHarnessChange: (id: string) => void;
@@ -29,7 +31,9 @@ export const HarnessModelPicker = (props: HarnessModelPickerProps) => {
     onHarnessChange,
     onModelChange,
   } = props;
-  const options: SelectionOption[] = models.map((model) => ({ ...model, icon: "Cpu" }));
+  const options: SelectionOption[] = moveSelectedModelFirst(models, (modelOption) => modelOption.id === model).map(
+    (modelOption) => ({ ...modelOption, icon: "Cpu" }),
+  );
   if (loadingModels && options.length === 0)
     options.push({
       id: "model-loading",
@@ -58,7 +62,7 @@ export const HarnessModelPicker = (props: HarnessModelPickerProps) => {
       searchable: harnesses.length > 10,
       searchPlaceholder: "Search harnesses…",
       emptyText: "No harnesses available",
-      disabled: disabled || loadingHarnesses || harnesses.length <= 1,
+      disabled: disabled || props.lockHarness || loadingHarnesses || harnesses.length <= 1,
     },
   };
   return (

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { JsonValue, NavigationTarget, Struct } from "../extension-kernel";
+import { queryChangeEnvelopeSchema } from "../extension-kernel/query-change";
 import { createCommandOutcomeSchema, validatedCommandOutcomeSchema } from "./command-outcome";
 import { commandSourceSchema, extensionSlotKindSchema, jsonObjectSchema } from "./common";
 import { navigationTargetSchema } from "./navigation-target-metadata";
@@ -100,6 +101,7 @@ const responseFields = {
   commandId: z.string(),
   extensionId: z.string(),
   eventIds: z.array(z.string()).optional(),
+  events: z.array(queryChangeEnvelopeSchema.extend({ id: z.string() })).optional(),
 };
 /** @deprecated Use commandExecutionResultSchema. */
 export const commandExecuteResponseSchema = z.object({

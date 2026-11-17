@@ -27,7 +27,13 @@
     "./workbench": "./src/workbench/index.ts",
     "./bridge/diagnostics": "./src/bridge/host/host-diagnostics.ts",
     "./authoring": "./src/authoring/index.ts",
-    "./distribution": "./src/distribution/index.ts"
+    "./distribution": "./src/distribution/index.ts",
+    "./preparation-worker": "./src/runtime/preparation-tasks.ts",
+    "./preparation-server": "./src/runtime/preparation-server.ts",
+    "./prepared-cache": "./src/runtime/prepared-cache.ts",
+    "./revision-dependencies": "./src/runtime/revision-dependencies.ts",
+    "./preparation-command": "./src/runtime/preparation-command.ts",
+    "./preparation-client": "./src/runtime/preparation-client.ts"
   },
   "scripts": {
     "build": "bun run build:runtime",
@@ -35,12 +41,12 @@
     "typecheck": "bun check",
     "lint": "bun run typecheck && biome check .",
     "format": "biome check --write .",
-    "test": "bun ../../scripts/ci/run-bun-tests.ts --conditions=source --silent",
+    "test": "bun ../../scripts/test.ts --scope pstdio-extensions",
     "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --conditions=source --coverage"
   },
   "dependencies": {
     "@pstdio/sdk": "workspace:*",
-    "@tanstack/hotkeys": "^0.7.1",
+    "@tanstack/hotkeys": "0.30.0",
     "pstdio-api-contracts": "workspace:*",
     "pstdio-paths": "workspace:*",
     "rimless": "0.8.3",
@@ -49,7 +55,7 @@
     "pstdio-theme": "workspace:*"
   },
   "peerDependencies": {
-    "react": "^19.0.0"
+    "react": "19.2.4"
   },
   "peerDependenciesMeta": {
     "react": {
@@ -59,7 +65,6 @@
   "devDependencies": {
     "@types/bun": "1.4.4",
     "@types/react": "19.2.3",
-    "extension-lab": "workspace:*",
     "react": "19.2.4",
     "typescript": "6.0.2"
   }

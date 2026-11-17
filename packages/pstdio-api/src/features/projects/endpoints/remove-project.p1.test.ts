@@ -7,7 +7,14 @@ import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { folderProjectInput } from "../../../test-utils/folder-project-input";
+import { enableGitWorkspaceProvider } from "../../../test-utils/git-workspace-provider.fixture";
 import type { AppBindings } from "../../../types";
+import { fireExtensionEvent, fireExtensionEventAsync } from "../../extensions/extension-event-runtime";
+import { hashExtensionSource, loadExtensionSource } from "../../extensions/extension-runtime";
+import { syncRepoExtensionsForProjectFolder } from "../../extensions/repo-extensions";
+import { createTestExtensionSource } from "../../extensions/test-utils/create-test-extension-source";
+import { provisionProjectWorkspaces } from "../../workspaces/provision-coordinator";
+import { ensureWorkspaceConfig } from "../../workspaces/workspace-config";
 import { removeProjectHandler, removeProjectRoute } from "./remove-project";
 
 let app: OpenAPIHono<AppBindings>;
@@ -63,7 +70,9 @@ const createProject = async (name: string, path?: string) => {
         : folderProjectInput({ name }),
     ),
   });
-  return res.json() as Promise<{ id: string; name: string; shorthand: string }>;
+  const project = (await res.json()) as { id: string; name: string; shorthand: string };
+  if (path) await enableGitWorkspaceProvider(appHandle, project.id);
+  return project;
 };
 
 describe("DELETE /v1/projects/:id", () => {
@@ -87,6 +96,34 @@ describe("DELETE /v1/projects/:id", () => {
 
     const getRes = await app.request(`/v1/projects/${project.id}`);
     expect(getRes.status).toBe(404);
+  });
+
+  test("removes the folder config even while provisioning for the project is still writing it", async () => {
+    const project = await createProject("provisioning-race");
+    const folder = (await appHandle.deps.workspaceService.getDefault(project.id))?.root_path;
+    if (!folder) throw new Error("The project has no folder.");
+    const entered = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    // Startup re-provisions every project in the background; hold that pass inside its config write.
+    const provisioning = provisionProjectWorkspaces(appHandle.deps, project.id, {
+      fireProvision: fireExtensionEvent,
+      fireReadyAsync: fireExtensionEventAsync,
+      ensureConfig: async (...args) => {
+        entered.resolve();
+        await release.promise;
+        return ensureWorkspaceConfig(...args);
+      },
+    });
+    await entered.promise;
+
+    const deleting = app.request(`/v1/projects/${project.id}`, { method: "DELETE" });
+    // A delete that does not wait for provisioning finishes in this time and is then overwritten.
+    await Bun.sleep(50);
+    release.resolve();
+
+    expect((await deleting).status).toBe(204);
+    await provisioning;
+    expect(existsSync(join(folder, ".pstdio", "config.json"))).toBe(false);
   });
 
   test("hard-deleted project is excluded from list", async () => {
@@ -164,6 +201,45 @@ describe("DELETE /v1/projects/:id", () => {
 
     expect(response.status).toBe(204);
     expect(existsSync(file.storage_path)).toBe(false);
+  });
+
+  test("uninstalls extensions found only in the project's folder and keeps extensions other projects use", async () => {
+    const project = await createProject("folder-extensions");
+    const other = await createProject("folder-extensions-neighbor");
+    const folder = (await appHandle.deps.workspaceService.getDefault(project.id))!.root_path!;
+    const source = (installName: string, root: string) =>
+      createTestExtensionSource({ displayName: installName, installName, name: installName, root });
+    const enable = async (projectId: string, sourcePath: string, installName: string) => {
+      const loaded = await loadExtensionSource(sourcePath);
+      await appHandle.deps.extensionService.enableInstalledSourceForProject({
+        displayName: loaded.metadata.displayName,
+        extensionId: loaded.metadata.id,
+        installName,
+        manifest: loaded.manifest,
+        name: loaded.metadata.name,
+        projectId,
+        sourceHash: hashExtensionSource(sourcePath),
+        sourcePath,
+        version: loaded.metadata.version ?? null,
+      });
+    };
+    const local = source("folder-lab", join(folder, ".pstdio"));
+    const borrowed = source("borrowed-lab", join(folder, ".pstdio"));
+    await syncRepoExtensionsForProjectFolder({ ...appHandle.deps, projectId: project.id });
+    await enable(other.id, borrowed, "borrowed-lab");
+    const shared = source("shared-lab", join(tempRoot, "shared-extensions"));
+    await enable(project.id, shared, "shared-lab");
+    const installedPaths = async () =>
+      (await appHandle.deps.installedExtensionSourcesService.list()).map((row) => row.source_path);
+    expect(await installedPaths()).toEqual(expect.arrayContaining([local, borrowed, shared]));
+
+    const response = await app.request(`/v1/projects/${project.id}`, { method: "DELETE" });
+
+    expect(response.status).toBe(204);
+    const remaining = await installedPaths();
+    expect(remaining).not.toContain(local);
+    expect(remaining).toEqual(expect.arrayContaining([borrowed, shared]));
+    expect(existsSync(local)).toBe(true);
   });
 
   test("removes worktree directories on disk", async () => {

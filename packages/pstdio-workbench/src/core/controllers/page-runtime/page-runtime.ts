@@ -37,6 +37,7 @@ import { validatePageLandingDeclaration } from "./page-landing-declaration";
 import { belongsToActivePageContext, pageContextChanged } from "./page-main-tabs";
 import { preparePageLanding, validatePagePanelView } from "./page-panel-view";
 import { departingPagePreviews } from "./page-preview-lifetime";
+import { ownWorkbenchPageRuntime } from "./page-runtime-lifetime";
 import { normalizePageRuntimeState } from "./page-runtime-normalization";
 import { toWidgetPlacement } from "./page-view-instance";
 import { selectedMainLayout } from "./selected-main-layout";
@@ -291,7 +292,7 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
       });
     },
   });
-  connectWorkbenchPageRuntime({
+  const runtime = connectWorkbenchPageRuntime({
     isResourceViewer: input.isResourceViewer,
     loadPageLayout: input.loadPageLayout,
     loadModeLayout: input.loadModeLayout,
@@ -324,11 +325,12 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
     modes: input.modes,
     registry,
   });
-  getOwnedPlacementPreparation(input.modePlacements).connectRuntime((destination) =>
+  const mode = getOwnedPlacementPreparation(input.modePlacements).connectRuntime((destination) =>
     getWorkbenchPageRegistryInternals(registry).refreshModePlacements(destination),
   );
-  getOwnedPlacementPreparation(input.shellPlacements).connectRuntime((destination) =>
+  const shell = getOwnedPlacementPreparation(input.shellPlacements).connectRuntime((destination) =>
     getWorkbenchPageRegistryInternals(registry).refreshShellPlacements(destination),
   );
+  ownWorkbenchPageRuntime(registry, [runtime, mode, shell]);
   return registry;
 };

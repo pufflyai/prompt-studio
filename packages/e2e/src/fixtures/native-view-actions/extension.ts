@@ -11,10 +11,16 @@ const regions = defineCommand({
   ],
 });
 let failed = false;
+const copy = defineCommand({
+  id: "copy",
+  title: "Copy experiment reference",
+  copyResultToClipboard: true,
+  run: () => "experiment-reference",
+});
 const locales = defineCommand({
   id: "locales",
   title: "List locales",
-  params: { region: params.text() },
+  params: { region: params.text(), search: params.text() },
   run: async (_context, { region }) => {
     if (region === "error" && !failed) {
       failed = true;
@@ -32,6 +38,7 @@ const input = {
     defaultValue: ["a,b"],
     options: [{ value: "known", label: "Known tag" }],
   }),
+  search: params.text({ label: "Search locales" }),
   region: params.select({ required: true, options: { command: regions.ref, valueField: "id", labelField: "name" } }),
   locale: params.select({
     required: true,
@@ -39,7 +46,7 @@ const input = {
       command: locales.ref,
       valueField: "id",
       labelField: "name",
-      params: { region: params.valueOf("region") },
+      params: { region: params.valueOf("region"), search: params.valueOf("search") },
     },
   }),
 };
@@ -57,6 +64,7 @@ const run = defineCommand({
   },
 });
 const toolbarActions = [
+  { id: "copy", label: "Copy experiment reference", command: copy.ref },
   {
     id: "run",
     label: "Run experiment",
@@ -89,4 +97,4 @@ const pages = [table, board].map((view) =>
     slots: [],
   }),
 );
-export default defineExtension({ commands: [regions, locales, run], views: [table, board], pages });
+export default defineExtension({ commands: [regions, locales, run, copy], views: [table, board], pages });

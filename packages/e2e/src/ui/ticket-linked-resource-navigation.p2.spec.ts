@@ -1,7 +1,7 @@
 import { rmSync } from "node:fs";
-import { expect, test } from "@playwright/test";
 import { defaultPageResourceCodec } from "@pstdio/sdk/extensions";
 import { folderProjectInput } from "../helpers/folder-project";
+import { expect, test } from "../scripts/session-test";
 import { uiOrigin } from "../ui-server";
 import { createAttemptWithSessionViaApi, createGitRepo, createTicketViaApi } from "./helpers/workspace-session-attempt";
 
@@ -16,7 +16,7 @@ test("ticket resource badges keep keyboard navigation after a linked session is 
     const attempt = await createAttemptWithSessionViaApi(request, uiOrigin, projectId!, ticket.id, "Run ticket");
     const session = await (await request.get(`${uiOrigin}/v1/sessions/${attempt.session.id}`)).json();
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
-    const board = `/projects/${projectId}/extensions/pstdio.pstdio-planner/tickets`;
+    const board = `/projects/${projectId}/extensions/pstdio.planner/tickets`;
     await page.goto(board);
     const card = page.getByTestId("renderer-card").filter({ hasText: "Linked resource navigation" });
     await card.getByRole("button", { name: `pstdio · ${session.title}`, exact: true }).focus();
@@ -41,14 +41,13 @@ test("ticket resource badges keep keyboard navigation after a linked session is 
       attempt.workspace.workspace_shorthand,
     );
     await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText(ticket.shorthand);
-    const sidenav = page.locator('[data-workbench-region="sidenav"]');
-    await expect(sidenav.getByRole("option", { name: attempt.workspace.workspace_shorthand })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
-    await expect(
-      sidenav.getByRole("option", { name: `${ticket.shorthand} Linked resource navigation`, exact: true }),
-    ).toHaveAttribute("aria-selected", "false");
+    expect(defaultPageResourceCodec.fromUri(new URL(page.url()).searchParams.get("resource")!)).toMatchObject({
+      type: "workspace",
+      id: attempt.workspace.id,
+      extensionId: "pstdio",
+      projectId,
+    });
+    await expect(page.getByRole("button", { name: "Back to project", exact: true })).toBeVisible();
   } finally {
     if (projectId) await request.delete(`${uiOrigin}/v1/projects/${projectId}`);
     rmSync(folder, { recursive: true, force: true });

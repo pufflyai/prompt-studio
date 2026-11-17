@@ -2,6 +2,7 @@ import type {
   CollectionPage,
   CollectionPageRequest,
   KanbanRendererMove,
+  QueryChangeEnvelope,
   ViewFilterGroup,
   ViewSort,
 } from "@pstdio/sdk/extensions";
@@ -37,6 +38,9 @@ export interface KanbanRendererContribution<
   TNode = unknown,
   TIcon = unknown,
 > {
+  /** Captured host identity; never infer a hidden view's project from current selection. */
+  queryEvents?: readonly string[];
+  queryScope?: Partial<import("@pstdio/sdk/extensions").QueryScope>;
   id: string;
   title: string;
   presentation?: "kanban" | "resourceList";
@@ -83,6 +87,8 @@ export interface KanbanRendererContribution<
     state: KanbanRendererQueryState & { page: CollectionPageRequest },
     signal: AbortSignal,
   ): Promise<{ rows: TRow[]; page: CollectionPage }>;
+  /** Requested page size for a paged board. Defaults to 100 and is capped at 500. */
+  initialPageSize?: number;
   subscribe?: (listener: () => void) => Disposable | (() => void);
 
   /** Row activation surfaced by the renderer (mirrored from <KanbanRenderer>). */
@@ -116,7 +122,7 @@ export interface KanbanRendererStoreState {
   renderers: Record<string, RegisteredKanbanRendererContribution>;
 }
 
-export interface KanbanRendererRefreshEvent {
+export interface KanbanRendererRefreshEvent extends QueryChangeEnvelope {
   kanbanRendererId: string;
 }
 
@@ -140,7 +146,7 @@ export interface KanbanRendererRegistry {
   setKanbanRendererImplementation(impl: KanbanRendererImplementation): void;
   getKanbanRenderer(id: string): RegisteredKanbanRendererContribution | undefined;
   listKanbanRenderers(): RegisteredKanbanRendererContribution[];
-  refreshKanbanRenderer(id: string): void;
+  refreshKanbanRenderer(id: string, event?: QueryChangeEnvelope): void;
   onDidRefreshKanbanRenderer(listener: KanbanRendererRefreshListener): Disposable;
 }
 
@@ -209,9 +215,9 @@ export const createKanbanRendererRegistry = (input: CreateKanbanRendererRegistry
       return Object.values(dataStore.getState().renderers).sort(byContributionPriority);
     },
 
-    refreshKanbanRenderer(id) {
+    refreshKanbanRenderer(id, refresh) {
       requireKanbanRenderer(id);
-      const event = { kanbanRendererId: id };
+      const event = { ...refresh, kanbanRendererId: id };
       for (const listener of refreshListeners) listener(event);
     },
 

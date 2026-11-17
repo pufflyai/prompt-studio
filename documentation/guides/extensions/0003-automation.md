@@ -35,8 +35,8 @@ export default defineExtension({ middlewares: [requireTitle] });
 Check it from the project folder after installing the extension:
 
 ```sh
-pst tickets create --content "# Draft"   # rejected: Supply a ticket title. (exit code 1)
-pst tickets create --title "Draft"       # prints the created ticket as JSON
+pst pstdio.planner create-ticket --content "# Draft"   # rejected: Supply a ticket title. (exit code 1)
+pst pstdio.planner create-ticket --title "Draft"       # prints the created ticket as JSON
 ```
 
 The policy reads the `title` parameter only, so a title written as a Markdown heading in `--content` is rejected too. If both commands succeed, the middleware is not loaded: run `pst extensions check` and confirm that Planner and your extension are enabled in this project.
@@ -107,7 +107,7 @@ export default defineExtension({ commands: [writeReport], schedules: [nightlyRep
 ```
 
 The dashboard shows schedules as automations. People turn each one on or off per
-project on the extension's page in **Extensions**. Automations are on
+project from the automation dropdown in the **Extensions** list or on the extension's page. Automations are on
 by default. Set `disabled: true` to ship one turned off. A person's choice always
 wins over the default, and the scheduler skips automations that are off.
 
@@ -115,3 +115,5 @@ To check a schedule, open your extension in **Extensions** and find it under aut
 
 Use settings for project policy and storage for data that must survive a restart.
 See the [extension API](../../references/extensions/0001-api.md) for command outcomes, schedules, and context APIs.
+
+*Updated at: 2026-11-07*

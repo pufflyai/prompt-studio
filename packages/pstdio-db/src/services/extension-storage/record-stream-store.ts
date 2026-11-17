@@ -29,7 +29,7 @@ export const createRecordStreamStore = (
   deps: {
     statistics: ReturnType<typeof createProjectionStatistics>;
     /** Notifies owner watchers after downloaded records change. */
-    changed: () => void;
+    changed: (recordIds?: readonly string[]) => void;
     numbersChanged?: (events: NumberChange[]) => void;
     /** The owner's metadata document, which remembers where each asset's ciphertext lives. */
     metadata: DocumentStore["transaction"];

@@ -5,28 +5,32 @@ created: "{{CREATED_AT}}"
 
 # Research
 
-[Background knowledge needed to implement this ticket that is not obvious from the code.]
+<!-- Use concise bullets, with sources beside the findings they support. Keep only sections useful for judging the proposal or implementing the ticket. -->
+
+- [Background knowledge needed to judge or implement this ticket that is not obvious from the code.]
 
 ## Context
 
-[Why this investigation was needed and what question it answers.]
+- [Why this investigation was needed and what question it answers.]
 
 ## Findings
 
 ### [Finding]
 
-- Evidence: [File path, commit, log excerpt, or external documentation]
-- Effect on the implementation: [What changes because of this finding]
+- Observed evidence: [Inspected source link, commit, log excerpt, or external documentation.]
+- Interpretation: [What the evidence supports, separate from assumptions or unverified claims.]
+- Effect on the proposal or implementation: [What changes because of this finding.]
 
 Repeat the finding section when the research produced more than one result.
 
 ## Reproduction steps
 
-[List the local reproduction steps, then state the observed and expected results.]
+- [Local reproduction steps, when relevant.]
+- [Observed and expected results.]
 
 ## Open questions
 
-- [ ] [Unresolved question, owner, blocker]
+- [Material assumption, limitation, or unresolved choice and its effect; identify what would resolve it. Request a decision only when it needs the person's authority.]
 
 ## References
 

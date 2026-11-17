@@ -271,7 +271,7 @@ const scenarios: { name: string; initial: Json; firstValue: Json; lastValue: Jso
   { name: "arrays", initial: ["seed"], firstValue: ["laptop"], lastValue: ["desktop"] },
 ];
 for (const { name, initial, firstValue, lastValue } of scenarios) {
-  test(`the later-ordered offline save replaces plain ${name} whole on every device`, async () => {
+  test(`the first offline save to reach Cloud keeps plain ${name} whole on every device`, async () => {
     const [first, second] = await peers();
     await first.records.commit({ operationId: "seed", edits: [{ recordId: "card", replace: { value: initial } }] });
     await first.sync.synchronize();
@@ -282,9 +282,12 @@ for (const { name, initial, firstValue, lastValue } of scenarios) {
     await second.sync.synchronize();
     await first.sync.synchronize();
     for (const peer of [first, second]) {
-      expect((await peer.records.read("card")).value).toEqual({ value: lastValue });
+      expect((await peer.records.read("card")).value).toEqual({ value: firstValue });
       expect(peer.failures).toEqual([]);
     }
+    expect((await second.service.cloudReturn.status(second.owner.workbenchId)).replaced.records).toMatchObject([
+      { recordId: "card", fields: ["/value"], whole: false },
+    ]);
   });
 }
 
@@ -440,7 +443,7 @@ test("a conditional child can use its pending observation after the parent recei
   expect(await first.records.outcome("child-after-acceptance")).toMatchObject({ state: "synced" });
 });
 
-test("declared record text merges both devices typing while an undeclared multiline field remains whole", async () => {
+test("declared record text merges both devices typing while an undeclared multiline field keeps the first save to reach Cloud", async () => {
   const [first, second] = await peers([{ prefix: "card:", fields: ["/description"] }]);
   const initial = { title: "Initial\ntitle", description: "first\nlast" };
   await first.records.commit({ operationId: "seed-text", edits: [{ recordId: "card:one", replace: initial }] });
@@ -459,7 +462,7 @@ test("declared record text merges both devices typing while an undeclared multil
   await first.sync.synchronize();
   for (const peer of [first, second]) {
     expect((await peer.records.read("card:one")).value).toEqual({
-      title: "Desktop\ntitle",
+      title: "Laptop\ntitle",
       description: "FIRSTfirst\nLASTlast",
     });
     expect(peer.failures).toEqual([]);

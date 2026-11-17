@@ -1,4 +1,5 @@
 import type { Localizable } from "../l10n";
+import type { ChatRendererContribution } from "./chat-renderer";
 import type { ExtensionPanelRegion } from "./composition";
 import type { RendererCallback } from "./context";
 import type { ContributionDefinition, ModeRef, PageRef, ResourceKindRef, ViewRef } from "./contribution-identity";
@@ -26,8 +27,27 @@ export type ControlsViewBody = NativeViewBody<"controls", ControlsRendererContri
 export type KanbanViewBody = NativeViewBody<"kanban", KanbanRendererContribution>;
 export type ResourceListViewBody = NativeViewBody<"resourceList", ResourceListRendererContribution>;
 export type DataTableViewBody = NativeViewBody<"dataTable", DataTableRendererContribution>;
+export type ChatViewBody = NativeViewBody<"chat", ChatRendererContribution>;
+
+/** Serializable launch settings. The host resolves the workspace's ready local execution target. */
+export interface TerminalViewSession {
+  /** Defaults to the project's default workspace. Must belong to the view's project. */
+  readonly workspaceId?: string;
+  /** Command and arguments; omitted to use the host's shell. */
+  readonly command?: string[];
+  readonly env?: Record<string, string>;
+}
+
+/** A native PTY presentation owned by its view, independent of the callback invocation. */
+export interface TerminalViewBody {
+  readonly kind: "terminal";
+  readonly resourceKind?: ResourceKindRef;
+  readonly session: RendererCallback<JsonObject, TerminalViewSession>;
+}
 
 export type ViewBody =
+  | TerminalViewBody
+  | ChatViewBody
   | WebviewViewBody
   | TreeViewBody
   | FileViewBody
@@ -57,8 +77,12 @@ export interface NavigationItemContribution extends ContributionDefinition<"navi
 
 export interface NavigationTreeContribution extends ContributionDefinition<"navigation-tree"> {
   readonly owner: NavigationOwnerRef;
+  /** Stay inactive while a foreign owner extension is absent; local or present-owner typos still fail. */
+  readonly optionalOwner?: boolean;
   readonly slot?: NavigationTreeSlot;
   readonly view: ViewRef;
+  /** Stay inactive while the foreign view provider is absent; local or present-provider typos still fail. */
+  readonly optionalView?: boolean;
   /** Project-scoped trees read without a selected resource. Defaults to selection. */
   readonly resourceScope?: "project" | "selection";
 }

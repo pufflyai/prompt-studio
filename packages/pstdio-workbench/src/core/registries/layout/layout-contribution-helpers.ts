@@ -6,6 +6,7 @@ import {
 import { createDisposable } from "../../shared/disposable";
 import type { InternalWorkbenchStore } from "../../shared/store/workbench-store";
 import { getActivePlacement, removePlacementsForContribution } from "./layout-operations";
+import { restoreLayoutPresentation } from "./layout-tab-presentation";
 import type {
   PlaceholderContribution,
   RegisteredPlaceholderContribution,
@@ -115,7 +116,9 @@ export const createContributionRegistrations = (input: {
         ...normalizeContributionMetadata({ ...metadata, priority: metadata?.priority ?? priority }),
       };
       const snapshot = store.getState();
-      store.setState({ ...snapshot, widgets: { ...snapshot.widgets, [widget.id]: record } }, false, "registerWidget");
+      const widgets = { ...snapshot.widgets, [widget.id]: record };
+      const layout = restoreLayoutPresentation(snapshot.layout, (id) => widgets[id]?.tab);
+      store.setState({ ...snapshot, widgets, layout }, false, "registerWidget");
 
       return createDisposable(() => {
         const current = store.getState();

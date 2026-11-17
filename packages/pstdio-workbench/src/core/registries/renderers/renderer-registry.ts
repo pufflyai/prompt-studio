@@ -1,3 +1,4 @@
+import type { QueryChangeEnvelope } from "@pstdio/sdk/extensions";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 import type { WorkbenchCore } from "../../workbench-core";
@@ -7,6 +8,7 @@ import type {
   WorkbenchPanelContribution,
   WorkbenchPanelInstance,
 } from "../layout/layout-model";
+import { rendererRefreshScopes } from "./renderer-refresh-key";
 
 export interface WorkbenchPanelRenderInput {
   workbench: WorkbenchCore;
@@ -38,7 +40,7 @@ export interface WorkbenchRendererRegistry {
   registerRenderer(renderer: WorkbenchRendererRegistration): Disposable;
   getRenderer(id: string): WorkbenchRendererRegistration | undefined;
   listRenderers(): WorkbenchRendererRegistration[];
-  refreshRenderer(id: string): void;
+  refreshRenderer(id: string, event?: QueryChangeEnvelope): void;
   onDidChange(listener: WorkbenchRendererChangeListener): Disposable;
 }
 
@@ -79,14 +81,12 @@ export const createWorkbenchRendererRegistry = (
 
     listRenderers: () => Object.values(store.getState().renderers),
 
-    refreshRenderer(id) {
+    refreshRenderer(id, event) {
       const snapshot = store.getState();
       if (!snapshot.renderers[id]) throw new Error(`Renderer is not registered: ${id}`);
-      store.setState(
-        { ...snapshot, refreshKeys: { ...snapshot.refreshKeys, [id]: (snapshot.refreshKeys[id] ?? 0) + 1 } },
-        false,
-        "refreshRenderer",
-      );
+      const refreshKeys = { ...snapshot.refreshKeys };
+      for (const scope of rendererRefreshScopes(id, event)) refreshKeys[scope] = (refreshKeys[scope] ?? 0) + 1;
+      store.setState({ ...snapshot, refreshKeys }, false, "refreshRenderer");
     },
 
     onDidChange(listener) {

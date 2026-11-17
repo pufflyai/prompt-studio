@@ -5,7 +5,7 @@ Use the live Canvas designs as the source of truth for appearance, component sta
 - Start from [Foundations](src/docs/agents/foundations.md) for tokens and density rules.
 - Use [Component Map](src/docs/agents/component-map.md) to choose components and [Patterns](src/docs/agents/patterns.md) for composed flows.
 - Use [Preview Authoring](src/docs/agents/preview-authoring.md) when adding or changing examples.
-- Verify props against source types and the canvas's Props and source details.
+- Verify props against source types and, on frames that declare `controls`, the Frame editor's Props JSON details.
 - Prefer exported `@pstdio/ui` components when an equivalent exists.
 - Keep examples in colocated `*.canvas.tsx` files. Use deterministic local fixtures. Add interaction tests only for critical behavior; examples do not each need a test.
 - Keep `bun run canvas` running while you work, then run isolated browser checks only for critical risks.

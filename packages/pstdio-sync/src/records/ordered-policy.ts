@@ -23,7 +23,7 @@ export const applyBoundedOrderedOperation = async (...args: Parameters<typeof ap
   try {
     const result = applyOrderedOperation(...args);
     if (fits(result.records)) return result;
-    return { decision: { ...result.decision, state: "refused" as const }, records: [] };
+    return { decision: { ...result.decision, state: "refused" as const }, records: [], skipped: [] };
   } catch (error) {
     if (!(error instanceof OrderedTextCausalityError)) throw error;
     return {
@@ -34,6 +34,7 @@ export const applyBoundedOrderedOperation = async (...args: Parameters<typeof ap
         state: "refused" as const,
       },
       records: [],
+      skipped: [],
     };
   }
 };

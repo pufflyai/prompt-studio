@@ -42,7 +42,7 @@ export interface RunArtifact {
 export const GH_MISSING_MESSAGE =
   "GitHub CLI is not available or not signed in. Install gh and run `gh auth login` in this project.";
 
-const gh = async (ctx: Context, args: string[]) => {
+export const gh = async (ctx: Context, args: string[]) => {
   const result = await ctx.process.run({ command: ["gh", ...args] }).catch((error: unknown) => {
     // Only a missing executable means gh is not installed; other failures keep their own message.
     if (/ENOENT|not found/i.test(String(error))) throw new Error(GH_MISSING_MESSAGE);
@@ -55,7 +55,7 @@ const gh = async (ctx: Context, args: string[]) => {
   return result.stdout;
 };
 
-const ghJson = async <T>(ctx: Context, args: string[]) => JSON.parse(await gh(ctx, args)) as T;
+export const ghJson = async <T>(ctx: Context, args: string[]) => JSON.parse(await gh(ctx, args)) as T;
 
 // GitHub pages lists at 30 by default; every page is read, one JSON value per line.
 const ghPages = async <T>(ctx: Context, path: string, jq: string) =>

@@ -23,6 +23,12 @@ const WINDOW_SAMPLES = WARNING.windowMs / SAMPLE_INTERVAL_MS;
 
 const round = (value: number) => Math.round(value * 10) / 10;
 
+interface PerformanceCaptureOwner {
+  sample: (readProcesses: () => PerformanceProcessSample[]) => Promise<void>;
+  snapshot: () => PerformanceCapture;
+  close: () => Promise<void>;
+}
+
 export interface PerformanceMonitorOptions {
   preference: { readonly enabled: boolean; set: (enabled: boolean) => void };
   readMetrics: () => ProcessMetric[];
@@ -32,11 +38,7 @@ export interface PerformanceMonitorOptions {
   // Logical CPUs. Electron divides each process's CPU by this count.
   cpuCount: number;
   openEndpoint: (read: () => PerformanceSnapshot | null) => Promise<{ close: () => Promise<void> }>;
-  createCapture?: () => {
-    sample: (readProcesses: () => PerformanceProcessSample[]) => Promise<void>;
-    snapshot: () => PerformanceCapture;
-    close: () => Promise<void>;
-  };
+  createCapture?: () => PerformanceCaptureOwner | Promise<PerformanceCaptureOwner>;
   recordings?: () => PerformanceRecordingExport;
   now?: () => number;
   schedule?: (callback: () => void, intervalMs: number) => () => void;
@@ -53,7 +55,7 @@ export class DesktopPerformanceMonitor {
   readonly #options: PerformanceMonitorOptions;
   #cancel: (() => void) | null = null;
   #endpoint: { close: () => Promise<void> } | null = null;
-  #capture: ReturnType<NonNullable<PerformanceMonitorOptions["createCapture"]>> | null = null;
+  #capture: PerformanceCaptureOwner | null = null;
   #cpuHistory = new Map<string, number[]>();
   #lastSampleAt: number | null = null;
   #latest: { capturedAt: number; windowMs: number; processes: PerformanceProcess[] } | null = null;
@@ -63,26 +65,37 @@ export class DesktopPerformanceMonitor {
   // Changes run one at a time, so an endpoint never opens while the last one closes.
   #changes: Promise<void> = Promise.resolve();
   #owners = 0;
+  #monitoringOwners = 0;
+  // A monitoring view temporarily opts in without overwriting the saved device
+  // choice. An explicit switch change still takes effect while views are loaded.
+  #enabled: boolean;
 
   constructor(options: PerformanceMonitorOptions) {
     this.#options = options;
+    this.#enabled = options.preference.enabled;
   }
 
   get enabled() {
-    return this.#options.preference.enabled;
+    return this.#enabled;
   }
 
   recordings() {
     return this.#options.recordings?.() ?? null;
   }
 
-  async retainCapture() {
+  async retainCapture(monitoring = false) {
     await this.#change(async () => {
+      const previouslyEnabled = this.enabled;
       this.#owners++;
+      // Project renderers retain passive observers too. Only monitoring views opt
+      // the device in; their count must span every project, not one renderer.
+      if (monitoring) this.#monitoringOwners++;
       try {
+        if (monitoring && this.#monitoringOwners === 1) this.#enabled = true;
         if (this.enabled) await this.#begin();
       } catch (error) {
         this.#owners--;
+        if (monitoring && --this.#monitoringOwners === 0) this.#enabled = previouslyEnabled;
         throw error;
       }
     });
@@ -92,7 +105,10 @@ export class DesktopPerformanceMonitor {
         if (released) return;
         released = true;
         this.#owners--;
-        if (this.#owners === 0) await this.#end();
+        if (monitoring && --this.#monitoringOwners === 0) {
+          this.#enabled = this.#options.preference.enabled;
+        }
+        if (!this.enabled || this.#owners === 0) await this.#end();
       });
   }
 
@@ -105,6 +121,7 @@ export class DesktopPerformanceMonitor {
   setEnabled(enabled: boolean) {
     return this.#change(async () => {
       this.#options.preference.set(enabled);
+      this.#enabled = enabled;
       if (enabled === Boolean(this.#cancel)) return;
       if (enabled) await this.#begin();
       else await this.#end();
@@ -184,7 +201,7 @@ export class DesktopPerformanceMonitor {
   async #begin() {
     if (this.#cancel) return;
     try {
-      this.#capture = this.#options.createCapture?.() ?? null;
+      this.#capture = (await this.#options.createCapture?.()) ?? null;
       void this.#capture?.sample(() => []);
       this.#cancel = (this.#options.schedule ?? scheduleInterval)(() => {
         try {

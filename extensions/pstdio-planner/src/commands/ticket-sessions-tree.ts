@@ -1,10 +1,4 @@
-import {
-  l10n,
-  type ResourceAnchor,
-  type TreeNode,
-  type TreeViewSection,
-  workbenchPanels,
-} from "@pstdio/sdk/extensions";
+import { l10n, type ResourceAnchor, sessionBrowser, type TreeNode, type TreeViewSection } from "@pstdio/sdk/extensions";
 
 // Session query fields used by the sidenav.
 export interface TicketSession {
@@ -14,6 +8,7 @@ export interface TicketSession {
   last_request_started?: string | null;
   last_request_ended?: string | null;
   updated_at?: string | null;
+  created_at?: string | null;
   anchors_json?: ResourceAnchor[];
 }
 
@@ -40,7 +35,14 @@ const sessionStatusColor = (status: string) => {
 };
 
 const sessionActivityAt = (session: TicketSession) =>
-  session.last_request_ended ?? session.last_request_started ?? session.updated_at ?? "";
+  [
+    session.last_request_ended ?? "",
+    session.last_request_started ?? "",
+    session.updated_at ?? "",
+    session.created_at ?? "",
+  ]
+    .sort()
+    .at(-1)!;
 
 const sessionNode = (session: TicketSession): TreeNode => {
   const resource = { type: "session", extensionId: "pstdio", id: session.id, label: session.title };
@@ -52,7 +54,7 @@ const sessionNode = (session: TicketSession): TreeNode => {
     iconColor: sessionStatusColor(session.status),
     target: {
       kind: "panel",
-      panel: workbenchPanels.projectSession,
+      panel: sessionBrowser.panels.conversation,
       resource,
       open: "preview",
     },

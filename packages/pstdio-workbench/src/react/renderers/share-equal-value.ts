@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useLayoutEffect, useRef } from "react";
 
 const isPlainData = (value: unknown): value is Record<string, unknown> => {
   if (!value || typeof value !== "object") return false;
@@ -84,14 +84,17 @@ const shareParts = <T>(previous: unknown, next: T, active: WeakSet<object>, cycl
  * `shareEqualValue`), so a component whose sources return new but equal objects passes the same objects on.
  * A `scope` with any different item starts over: objects from another query or registration can carry another
  * source. React Compiler treats a hook
- * result as unchanging, so it can cache what is built from it. Parts that are not plain data, such as functions,
- * must keep their identity between renders, or every render would store a new value.
+ * result as unchanging, so it can cache what is built from it. The previous committed value is only a sharing
+ * cache: fresh callbacks and opaque provider metadata must not schedule another render to replace it.
  */
 export const useSharedEqualValue = <T>(value: T, scope: readonly unknown[]): T => {
-  const [shown, setShown] = useState({ scope, value });
+  const previous = useRef({ scope, value });
+  const shown = previous.current;
   const sameScope =
     shown.scope.length === scope.length && shown.scope.every((item, index) => Object.is(item, scope[index]));
   const shared = sameScope ? shareEqualValue(shown.value, value) : value;
-  if (!sameScope || shared !== shown.value) setShown({ scope, value: shared });
+  useLayoutEffect(() => {
+    previous.current = { scope, value: shared };
+  });
   return shared;
 };

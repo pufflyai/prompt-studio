@@ -46,6 +46,7 @@ const uploadWithSecondAccount = async (
     chunks: new Set(),
     frames: new Set(),
     files: new Set(),
+    index: new Set(),
   });
   await stream.records.commit({ operationId: "concurrent", edits: [{ recordId: "record-0", replace: value(0) }] });
   const transfer = traffic.nextPart("reference-source");
@@ -67,6 +68,8 @@ const uploadWithSecondAccount = async (
       (sample) =>
         sample.actor === "reference-source" && sample.operation === "part" && sample.blobId === firstPart.blobId,
     );
+    const largeFileBytes = parts.reduce((sum, part) => sum + part.sentBytes, 0);
+    assert(largeFileBytes >= 1024 ** 3, `Observed transfer sent ${largeFileBytes} bytes, not the 1 GiB file`);
     const transferEnd = Math.max(...parts.map((part) => part.startedAt + part.elapsedMs));
     const overlapped = start >= firstPart.startedAt && end <= transferEnd;
     assert(overlapped, "Second account did not sync inside the 1 GiB multipart transfer window");
@@ -75,6 +78,7 @@ const uploadWithSecondAccount = async (
       elapsedMs: end - start,
       overlapped,
       largeFilePartRequests: parts.length,
+      largeFileBytes,
       transferMs: transferEnd - firstPart.startedAt,
     };
   } finally {
@@ -169,6 +173,7 @@ export const runScenario = async (input: {
         chunks: new Set(),
         frames: new Set(),
         files: new Set(),
+        index: new Set(),
       };
       const peers = {
         input: ownerInput,
@@ -206,6 +211,7 @@ export const runScenario = async (input: {
         stored.rows,
         owner.source.documentId,
         new Set([...owner.input.chunks, ...owner.input.frames]),
+        owner.input.index,
       );
       checkpoints.push({ owner: ownerIndex, edits: editsPerOwner, ...bound });
       log(

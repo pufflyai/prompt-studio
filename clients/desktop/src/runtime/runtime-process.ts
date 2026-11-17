@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { type ChildProcess, spawn } from "node:child_process";
 import { closeSync, fstatSync, mkdirSync, openSync, readSync } from "node:fs";
 import { dirname } from "node:path";
 import { bunExec } from "../bun-exec";
@@ -38,4 +38,16 @@ export const spawnRuntimeProcess = (
   } finally {
     closeSync(fd);
   }
+};
+
+export const terminateRuntimeProcess = async (
+  child: Pick<ChildProcess, "kill">,
+  terminated: Promise<void>,
+  sleep: (milliseconds: number) => Promise<void>,
+) => {
+  child.kill("SIGTERM");
+  const stoppedGracefully = await Promise.race([terminated.then(() => true), sleep(2_000).then(() => false)]);
+  if (stoppedGracefully) return;
+  child.kill("SIGKILL");
+  await terminated;
 };

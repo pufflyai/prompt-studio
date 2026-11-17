@@ -51,3 +51,19 @@ test("a workspace without a linked session has no automatic openings", async () 
   const s = setup();
   expect(await s.resolve()).toEqual([]);
 });
+
+test("project files do not automatically open the project folder's latest session", async () => {
+  const s = setup(true, true);
+  getWriter("sessions")?.truncateAndWrite([{ id: "latest", project_id: "project", title: "Latest", archived: false }]);
+  getWriter("workspace_sessions")?.truncateAndWrite([{ id: "link", workspace_id: "workspace", session_id: "latest" }]);
+  expect(await s.resolve()).toEqual([]);
+});
+
+test("foreign project-folder history keeps its latest linked session preview", async () => {
+  const s = setup(true, true);
+  getWriter("sessions")?.truncateAndWrite([{ id: "latest", project_id: "project", title: "Latest", archived: false }]);
+  getWriter("workspace_sessions")?.truncateAndWrite([{ id: "link", workspace_id: "workspace", session_id: "latest" }]);
+  expect(
+    await s.resolve({ ...s.source, device: { id: "other", ownerId: "owner", name: "Other device" } }),
+  ).toMatchObject([{ resource: { type: "session", id: "latest" }, autoOpen: true, region: "side", open: "preview" }]);
+});

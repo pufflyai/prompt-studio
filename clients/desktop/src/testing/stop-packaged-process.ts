@@ -38,7 +38,19 @@ const isRunning = (pid: number) => {
 export const stopPackagedProcess = async (child: ChildProcess, kill: KillTree = killTree) => {
   if (child.pid === undefined || child.exitCode !== null || child.signalCode !== null) return;
   const exited = new Promise<void>((resolveExit) => child.once("exit", () => resolveExit()));
-  const refused = await kill(child.pid);
+  const closed = new Promise<void>((resolveClose) => child.once("close", () => resolveClose()));
+  let refused: number[];
+  try {
+    refused = await kill(child.pid);
+  } catch (error) {
+    if (process.platform !== "darwin" || (error as NodeJS.ErrnoException).code !== "EPERM") throw error;
+    // Darwin can refuse an exiting group before Node observes its owned child's close.
+    child.kill("SIGKILL");
+    await closed;
+    // The leader's close alone does not prove the rest of its group has drained.
+    while (isRunning(-child.pid)) await new Promise((resolve) => setTimeout(resolve, 10));
+    return;
+  }
   await exited;
   const survivors = refused.filter(isRunning);
   if (survivors.length > 0)

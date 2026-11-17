@@ -1,8 +1,15 @@
 import type { AccountDevice, AccountLogin, AccountLoginStatus, AccountStatus } from "../../account";
-import type { ProjectSyncStatus } from "../../project-sync";
+import type { ProjectReturnAction, ProjectSyncStatus } from "../../project-sync";
 
 export type { AccountDevice, AccountLogin, AccountLoginStatus, AccountStatus, DeviceLogin } from "../../account";
-export type { ProjectSyncState, ProjectSyncStatus } from "../../project-sync";
+export type {
+  ProjectReturnAction,
+  ProjectReturnRecord,
+  ProjectSyncFile,
+  ProjectSyncSource,
+  ProjectSyncState,
+  ProjectSyncStatus,
+} from "../../project-sync";
 
 /**
  * This device's Cloud account, the account's devices, and each project's sync status.
@@ -33,6 +40,8 @@ export interface ExtensionAccountApi {
   /** Stops the device from renewing Cloud access. Removing the current device signs it out. */
   removeDevice(id: string): Promise<void>;
   projectSyncStatus(projectId?: string): Promise<ProjectSyncStatus>;
+  /** Cancels and drains just this source before retrying; local work and checkpoints stay. */
+  retryProjectSyncSource(sourceId: string, projectId?: string): Promise<void>;
   /** Syncs the project on every device of the account that has it. */
   syncProject(projectId?: string): Promise<void>;
   /**
@@ -40,4 +49,10 @@ export interface ExtensionAccountApi {
    * Cloud data stays, so syncing again merges the copies.
    */
   stopProjectSync(projectId?: string): Promise<void>;
+  /**
+   * Settles this device's changes from its time away. `apply` uploads a held return; fields another
+   * device changed meanwhile still keep that device's values. `discard` drops held changes and takes
+   * Cloud's copy. `dismiss` clears the list of replaced changes.
+   */
+  resolveReturnedChanges(action: ProjectReturnAction, projectId?: string): Promise<void>;
 }

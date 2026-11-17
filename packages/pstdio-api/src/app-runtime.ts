@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { projectEvents } from "pstdio-api-contracts/extension-kernel";
+import { withBackgroundPreparation } from "pstdio-extensions";
 import type { RouteDeps } from "./features/deps";
 import { createArtifactMountWatchService } from "./features/extensions/artifact-mount-watch/watch-service";
 import { fireExtensionEvent } from "./features/extensions/extension-event-runtime";
@@ -11,7 +12,7 @@ import { watchSessionQueueReadiness } from "./features/sessions/session-queue-re
 import { prepareQueuedSessionRecovery } from "./features/sessions/session-queue-recovery";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { prepareOrphanedSessionRecovery } from "./features/sessions/startup";
-import { apiLogger } from "./lib/logger";
+import { apiLogger, shutdownLogger } from "./lib/logger";
 import type { createNotificationService } from "./services/notification-service";
 import type { createProjectService } from "./services/project-service";
 import type { createSessionService } from "./services/session-service";
@@ -106,13 +107,28 @@ export const startAppArtifactMountWatch = (deps: RouteDeps, projectService: Retu
     listProjectIds: async () => (await projectService.list()).map((project) => project.id),
   });
 
+const traceShutdownPhase = async <T>(phase: string, close: () => Promise<T>) => {
+  const startedAt = performance.now();
+  const fields = { event: "runtime.shutdown.phase", phase };
+  shutdownLogger.info({ ...fields, state: "started" }, "Runtime shutdown step started");
+  try {
+    return await close();
+  } finally {
+    shutdownLogger.info(
+      { ...fields, state: "settled", duration_ms: Math.round(performance.now() - startedAt) },
+      "Runtime shutdown step settled",
+    );
+  }
+};
+
 const createAppCloser = (input: {
   startupAbort: AbortController;
   startupDone: Promise<void>;
   getStartupBackgroundDone: () => Promise<void>;
   notificationWakeTimer: ReturnType<typeof setInterval>;
+  stopDeadRowCleanup: () => Promise<void>;
   unsubscribeExtensionEvents: () => void;
-  extensionRuntime: { dispose(): Promise<void> };
+  extensionRuntime: { dispose(): Promise<void>; stopPreparation?: () => Promise<void> };
   extensionScheduler: { dispose(): Promise<void> };
   artifactMountWatch: { dispose(): Promise<void> };
   automationService: { close(): Promise<void> };
@@ -129,31 +145,42 @@ const createAppCloser = (input: {
   let closePromise: Promise<void> | null = null;
   return async () => {
     closePromise ??= (async () => {
-      const hooksStopped = input.closeSessionHooks();
-      const installationsStopped = input.extensionInstallations.dispose();
+      // A vacuum holds PGlite's only thread, so database cleanup stops before any other part waits on it.
+      const deadRowCleanupStopped = traceShutdownPhase("dead_row_cleanup", () => input.stopDeadRowCleanup());
+      deadRowCleanupStopped.catch(() => {});
+      const hooksStopped = traceShutdownPhase("session_hooks", () => input.closeSessionHooks());
+      const installationsStopped = traceShutdownPhase("extension_installations", () =>
+        input.extensionInstallations.dispose(),
+      );
       installationsStopped.catch(() => {});
-      const nativeDocumentsStopped = input.textEditing.dispose().finally(() => input.nativeDocuments.dispose());
+      const nativeDocumentsStopped = traceShutdownPhase("text_editing", () => input.textEditing.dispose()).finally(() =>
+        traceShutdownPhase("native_documents", () => input.nativeDocuments.dispose()),
+      );
       try {
         input.startupAbort.abort();
-        const queueStopped = input.sessionQueueLifecycle.close();
+        const preparationStopped = input.extensionRuntime.stopPreparation?.() ?? Promise.resolve();
+        preparationStopped.catch(() => {});
+        const queueStopped = traceShutdownPhase("session_queue", () => input.sessionQueueLifecycle.close());
         // A queued startup can need worker disposal to settle. Stop admission first,
         // then begin cleanup before waiting for those dispatches to finish.
-        const harnessesStopped = input.harnessRegistry.dispose();
+        const harnessesStopped = traceShutdownPhase("harnesses", () => input.harnessRegistry.dispose());
         harnessesStopped.catch(() => {});
-        await input.stopQueueReadiness();
+        await traceShutdownPhase("queue_readiness", () => input.stopQueueReadiness());
         await queueStopped;
-        await input.startupDone;
-        await input.getStartupBackgroundDone();
+        await traceShutdownPhase("startup", () => input.startupDone);
+        await traceShutdownPhase("startup_background", () => input.getStartupBackgroundDone());
         await hooksStopped;
         await nativeDocumentsStopped;
         clearInterval(input.notificationWakeTimer);
         input.unsubscribeExtensionEvents();
-        await input.extensionRuntime.dispose();
-        await input.artifactMountWatch.dispose();
-        await input.extensionScheduler.dispose();
-        await input.automationService.close();
-        await input.terminalSupervisor.dispose();
+        await installationsStopped;
+        await traceShutdownPhase("extension_runtime", () => input.extensionRuntime.dispose());
+        await traceShutdownPhase("artifact_mounts", () => input.artifactMountWatch.dispose());
+        await traceShutdownPhase("extension_scheduler", () => input.extensionScheduler.dispose());
+        await traceShutdownPhase("automation", () => input.automationService.close());
+        await traceShutdownPhase("terminals", () => input.terminalSupervisor.dispose());
         await harnessesStopped;
+        await preparationStopped;
       } finally {
         // A part that fails to stop must not leave PGlite open (lessons 0002 and 0014).
         try {
@@ -162,7 +189,11 @@ const createAppCloser = (input: {
           try {
             await nativeDocumentsStopped;
           } finally {
-            await input.closeDb();
+            try {
+              await deadRowCleanupStopped;
+            } finally {
+              await traceShutdownPhase("database", () => input.closeDb());
+            }
           }
         }
       }
@@ -189,8 +220,9 @@ export const closeAppDatabase = async (
 export const startAppLifecycle = async (input: {
   deps: RouteDeps;
   notificationWakeTimer: ReturnType<typeof setInterval>;
+  stopDeadRowCleanup: () => Promise<void>;
   unsubscribeExtensionEvents: () => void;
-  extensionRuntime: { dispose(): Promise<void> };
+  extensionRuntime: { dispose(): Promise<void>; stopPreparation?: () => Promise<void> };
   extensionStartup: Promise<void>;
   extensionScheduler: { dispose(): Promise<void> };
   artifactMountWatch: { dispose(): Promise<void> };
@@ -213,22 +245,24 @@ export const startAppLifecycle = async (input: {
     createSessionScheduler(input.deps).drainQueue(),
   );
   const startupBackgroundTasks: Promise<void>[] = [input.extensionStartup];
-  const startupDone = runStartupTasks(input.deps, startupAbort.signal, {
-    recoverOrphanedSessions,
-    onBackgroundTask: (task) => {
-      startupBackgroundTasks.push(
-        task.catch((err) => {
-          if (!startupAbort.signal.aborted) {
-            apiLogger.error({ err, event: "api.startup.background.error" }, "Startup task failed");
-          }
-        }),
-      );
-    },
-    recoverQueuedAutomation: async () => {
-      await input.automationService.recoverQueuedRuns();
-    },
-    recoverQueuedSessions,
-  }).catch((err) => {
+  const startupDone = withBackgroundPreparation(() =>
+    runStartupTasks(input.deps, startupAbort.signal, {
+      recoverOrphanedSessions,
+      onBackgroundTask: (task) => {
+        startupBackgroundTasks.push(
+          task.catch((err) => {
+            if (!startupAbort.signal.aborted) {
+              apiLogger.error({ err, event: "api.startup.background.error" }, "Startup task failed");
+            }
+          }),
+        );
+      },
+      recoverQueuedAutomation: async () => {
+        await input.automationService.recoverQueuedRuns();
+      },
+      recoverQueuedSessions,
+    }),
+  ).catch((err) => {
     if (!startupAbort.signal.aborted) apiLogger.error({ err, event: "api.startup.error" }, "Startup task failed");
   });
 

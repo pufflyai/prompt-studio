@@ -1,11 +1,14 @@
-import type { ExtensionStorageApi, SharedStorageEdit, WebviewEditingChange } from "@pstdio/sdk/extensions";
+import type { ExtensionStorageApi, WebviewEditingChange } from "@pstdio/sdk/extensions";
 import { migrateScribblePageRecords } from "./scribble-pages-migration";
 import { exampleNames } from "./state-defaults";
 
 export const exampleRecordId = (storage: ExtensionStorageApi, name: string) => storage.records.id(`example:${name}`);
+export const storedChangeField = (key: string) => `/${key.replaceAll("~", "~0").replaceAll("/", "~1")}`;
+const objectValue = (value: unknown): Record<string, unknown> =>
+  value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 
 export const migrateExampleStorage = (storage: ExtensionStorageApi) =>
-  storage.migrate(2, async (previous, migration) => {
+  storage.migrate(3, async (previous, migration) => {
     if (previous < 1) await migrateScribblePageRecords(storage, migration);
     const collections = await Promise.all(
       exampleNames
@@ -16,21 +19,29 @@ export const migrateExampleStorage = (storage: ExtensionStorageApi) =>
           copied: (await storage.records.read(exampleRecordId(storage, name))).exists,
         })),
     );
-    const edits = collections
-      .filter(({ changes, copied }) => changes.length && !copied)
-      .map(({ name, changes }) => ({
-        recordId: exampleRecordId(storage, name),
-        shared: changes.map(
-          ({ path, value }) =>
-            ({ kind: "map.set", key: JSON.stringify(path), value: { path, value } }) satisfies SharedStorageEdit,
-        ),
-      }));
-    if (edits.length) await storage.records.commit({ operationId: storage.ids.create(), edits });
+    for (const { name, changes, copied } of collections)
+      if (changes.length && !copied)
+        await storage.records.commit({
+          operationId: migration.id(`example-record:${name}`),
+          edits: [
+            {
+              recordId: exampleRecordId(storage, name),
+              replace: Object.fromEntries(changes.map(({ path, value }) => [JSON.stringify(path), { path, value }])),
+            },
+          ],
+        });
+    for (const record of await storage.records.list()) {
+      if (record.shared?.kind !== "map" || record.value !== null) continue;
+      await storage.records.commit({
+        operationId: migration.id(`plain-record:${record.recordId}`),
+        edits: [{ recordId: record.recordId, replace: record.shared.value }],
+      });
+    }
     for (const { name, changes } of collections)
       for (const { path } of changes) await storage.collection(`examples:${name}`).delete(JSON.stringify(path));
   });
 
 export const readExampleChanges = async (storage: ExtensionStorageApi, name: string) => {
   const record = await storage.records.read(exampleRecordId(storage, name));
-  return record.shared?.kind === "map" ? (Object.values(record.shared.value) as unknown as WebviewEditingChange[]) : [];
+  return Object.values(objectValue(record.value)) as WebviewEditingChange[];
 };

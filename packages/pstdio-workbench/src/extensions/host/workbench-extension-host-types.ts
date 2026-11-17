@@ -1,5 +1,6 @@
 import type { CommandExecuteRequest, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import type { NativeDocumentsClient, TextEditingTransportClient } from "@pstdio/sdk/client";
+import type { QueryChangeEnvelope, ScopedQueryClient } from "@pstdio/sdk/extensions";
 import type { ExtensionKeybindingRecord } from "pstdio-api-contracts";
 import type {
   Disposable,
@@ -18,6 +19,7 @@ import type {
   ExtensionWebviewArtifactCapabilities,
   ExtensionWebviewFileCapabilities,
 } from "../bridge/webview-command-capabilities";
+import type { ChatCommandTransport } from "../contributions/chat-renderer-contributions";
 import type { WorkbenchExtensionDataTableRendererAdapter } from "../contributions/data-table-renderer-contributions";
 import type {
   WorkbenchExtensionMenuRegistration,
@@ -25,6 +27,7 @@ import type {
   WorkbenchExtensionMenuWhenBuilder,
 } from "../contributions/extension-contributions";
 import type { WorkbenchExtensionKanbanRendererAdapter } from "../contributions/kanban-renderer-adapter";
+import type { TerminalRendererOwners } from "../contributions/terminal-renderer-contributions";
 import type { RegisterWorkbenchExtensionTreeRenderersInput } from "../contributions/tree-renderer-contributions";
 import type { InternalWorkbenchExtensionMetadata } from "./internal-workbench-extension-metadata";
 import type { WorkbenchExtensionRefreshEvent } from "./workbench-extension-refresh";
@@ -34,7 +37,15 @@ export interface WorkbenchExtensionHostMenuRegistration
   menuItems: Array<{ menuItem: MenuItem; menuPath: MenuPath }>;
 }
 
-export interface RegisterWorkbenchExtensionContributionsInput {
+export interface RegisterWorkbenchExtensionContributionsInput extends ChatCommandTransport {
+  queries?: ScopedQueryClient;
+  resourceActivity?: Omit<
+    import("../../core/registries/resources/resource-activity").ResourceActivityBinding,
+    "capabilities"
+  >;
+  /** Stable requested locale and fallback hierarchy for localized tab results. */
+  presentationLocale?: string;
+  terminalRendererOwners?: TerminalRendererOwners;
   createKeybindingWhenExpression?: (when: ExtensionKeybindingRecord["when"]) => string | undefined;
   createMenuWhenExpression?: WorkbenchExtensionMenuWhenBuilder;
   createNavigationWhenExpression?: (
@@ -61,11 +72,13 @@ export interface RegisterWorkbenchExtensionContributionsInput {
   ): Promise<unknown> | unknown;
   projectId: string;
   resolveTreeNodeResource?: RegisterWorkbenchExtensionTreeRenderersInput["resolveNodeResource"];
+  treeSources?: RegisterWorkbenchExtensionTreeRenderersInput["treeSources"];
+  renderTreeNodeEndContent?: RegisterWorkbenchExtensionTreeRenderersInput["renderNodeEndContent"];
   renderWebview?(input: WorkbenchPanelRenderInput): unknown;
   settingsSectionId?: string;
   settingsSectionTitle?: string;
   subscribeRefreshEvents?: (listener: (event: WorkbenchExtensionRefreshEvent) => void) => Disposable;
-  subscribeRefreshReset?: (listener: () => void) => Disposable;
+  subscribeRefreshReset?: (listener: (event?: QueryChangeEnvelope) => void) => Disposable;
   webviewArtifacts?: ExtensionWebviewArtifactCapabilities;
   webviewFiles?: ExtensionWebviewFileCapabilities;
   workbench: WorkbenchModuleContext;

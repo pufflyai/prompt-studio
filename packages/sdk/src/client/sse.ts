@@ -38,9 +38,11 @@ export const readSseStream = async (
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  let cancellation: Promise<void> | undefined;
+  const cancel = () => (cancellation ??= reader.cancel().catch(() => {}));
   const abort = () => {
     // The pending read reports stream errors; cancellation may reject with the same error.
-    void reader.cancel().catch(() => {});
+    void cancel();
   };
 
   options.signal?.addEventListener("abort", abort, { once: true });
@@ -60,7 +62,7 @@ export const readSseStream = async (
     }
   } finally {
     options.signal?.removeEventListener("abort", abort);
-    await reader.cancel().catch(() => {});
+    await cancel();
     reader.releaseLock();
   }
 };

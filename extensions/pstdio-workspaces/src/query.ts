@@ -4,9 +4,8 @@ import type {
   ExtensionSession,
   KanbanRendererAttributeDescriptor,
   ResourceListRendererRow,
-  WorkspaceCapacity,
 } from "@pstdio/sdk/extensions";
-import { resourceKey } from "@pstdio/sdk/extensions";
+import { l10n, resourceKey } from "@pstdio/sdk/extensions";
 import { groupDevices, sessionTarget, workspaceKind, workspaceResource, workspaceTarget } from "./model";
 import { workspaceCommands } from "./refs";
 import { relatedChips } from "./related-chips";
@@ -55,12 +54,8 @@ export const sessionRows = (sessions: ExtensionSession[], projectId: string): Re
     resource: sessionTarget(session, projectId).resource,
     attributes: { status: session.status, harness: session.agent ?? "", date: session.createdAt },
   }));
-export const queryWorkspaces = async (ctx: ExtensionContextBase, showChildren = true) => {
-  const [workspaces, sessions, { local, devices }] = await Promise.all([
-    ctx.workspaces.list(),
-    showChildren ? listSessions(ctx) : Promise.resolve([]),
-    readDevices(ctx),
-  ]);
+export const queryWorkspaces = async (ctx: ExtensionContextBase) => {
+  const [workspaces, { local, devices }] = await Promise.all([ctx.workspaces.list(), readDevices(ctx)]);
   for (const workspace of workspaces)
     if (workspace.device && !devices.some((device) => device.id === workspace.device!.id))
       devices.push({
@@ -71,22 +66,6 @@ export const queryWorkspaces = async (ctx: ExtensionContextBase, showChildren = 
         lastSeenAt: workspace.updatedAt ?? "",
       });
   const ordered = groupDevices(devices);
-  const capacities = new Map<string, WorkspaceCapacity>([[local.deviceId, local]]);
-  await Promise.all(
-    ordered
-      .filter((device) => !device.current && device.online)
-      .map(async (device) => {
-        try {
-          capacities.set(device.id, await ctx.workspaces.getCapacity({ deviceId: device.id }));
-        } catch {
-          /* A presence lease can outlast a disconnected device. */
-        }
-      }),
-  );
-  const cached = ((await ctx.settings.get("deviceLimits")) ?? {}) as Record<string, number | null>;
-  const snapshots = { ...cached };
-  for (const [id, capacity] of capacities) snapshots[id] = capacity.limit;
-  if (JSON.stringify(snapshots) !== JSON.stringify(cached)) await ctx.settings.set("deviceLimits", snapshots);
   const attributes: KanbanRendererAttributeDescriptor[] = [
     {
       id: "device",
@@ -101,19 +80,11 @@ export const queryWorkspaces = async (ctx: ExtensionContextBase, showChildren = 
             label: device.name,
             icon: "monitor",
             contextMenuActions: [
-              {
-                id: "details",
-                label: device.current ? "This device" : "Device details",
-                action: {
-                  kind: "command" as const,
-                  target: { command: workspaceCommands.device, params: { deviceId: device.id } },
-                },
-              },
               ...(device.current
                 ? [
                     {
                       id: "create",
-                      label: "Create workspace",
+                      label: l10n("action.create", "Create workspace"),
                       action: { kind: "command" as const, target: { command: workspaceCommands.create } },
                     },
                   ]
@@ -145,8 +116,6 @@ export const queryWorkspaces = async (ctx: ExtensionContextBase, showChildren = 
       type: { kind: "string" },
       display: { kind: "badge-list", itemsAttributeId: "related" },
     },
-    { id: "status", label: "Status", displayable: true, type: { kind: "string" } },
-    { id: "harness", label: "Harness", displayable: true, type: { kind: "string" } },
     { id: "date", label: "Created", sortable: true, displayable: true, type: { kind: "date" } },
   ];
   const links: Awaited<ReturnType<typeof ctx.resources.queryAnchorsMany>>["items"] = [];
@@ -185,14 +154,6 @@ export const queryWorkspaces = async (ctx: ExtensionContextBase, showChildren = 
         related,
       ),
     },
-    ...(showChildren
-      ? {
-          children: sessionRows(
-            sessions.filter((session) => session.workspaceId === workspace.id),
-            ctx.project.id,
-          ),
-        }
-      : {}),
   }));
   return { rows, attributes };
 };

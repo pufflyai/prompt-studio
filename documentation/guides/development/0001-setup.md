@@ -6,7 +6,7 @@ This project is a Bun + TypeScript monorepo using workspaces, Lerna, and Nx cach
 
 - Git. The isolated stack mounts the checkout's Git folder, and core extensions are downloaded with Git.
 - Bun `1.4.4`, matching the root `packageManager` pin, CI, and Docker images
-- Node `24` for native build tooling, desktop development, and Canvas
+- Node `26.7.0` for native build tooling, desktop development, and Canvas
 - Docker with the Compose v2 plugin (`docker compose version`). The isolated stack needs BuildKit and Compose 2.17 or newer, because its build uses an extra build context. Docker Desktop includes both.
 - Free disk space for Docker. See [Disk space](#disk-space).
 
@@ -252,7 +252,7 @@ A trial is one validation run, for example a fresh-agent walkthrough or a reprod
 | Runtime home | `bun run dev:isolated -- --name <trial>` uses `__test-tmp__/dev-isolated/<trial>/pstdio-home`. Packaged tests and `pst extensions test` take a temporary `PSTDIO_HOME`. Never use `~/.pstdio`. |
 | Docker stack | The name is the Compose project name. Its containers, network, and volumes start with `<trial>`. Relay and account fixtures print their own run names, `pstdio-relay-test-<uuid>` and `manager-authority-<uuid>`. |
 | Ports | The launcher reserves free loopback ports for each start and writes them to `__test-tmp__/dev-isolated/<trial>/connection.json`. Fixtures publish no host ports. |
-| Fixture networks | Fixtures use fixed subnets: `SYNC_TEST_SUBNET` (default `10.254.236.0/24`), `RELAY_TEST_SUBNET` (`10.254.237.0/24`), and `MANAGER_TEST_SUBNET` (`10.254.234.0/24`). Run one fixture at a time, or give parallel trials different subnets after checking `docker network inspect` for unused ones. |
+| Fixture networks | Docker allocates a separate network for each unique Compose project. Explicit `SYNC_TEST_SUBNET` and `MANAGER_TEST_SUBNET` overrides are available for manual diagnostics; local review clears inherited overrides. |
 | Projects | Each stack seeds its own `project` folder in a volume. Create further projects inside the trial's stack, not in your own folders. |
 | Browsers | Set `PLAYWRIGHT_BROWSERS_PATH` to a new folder to prove a clean browser install. See [Tests](0002-testing.md#extension-smoke-checks). |
 | Agent logins | Mounted from the host only when they exist. Never copy credentials into evidence. |

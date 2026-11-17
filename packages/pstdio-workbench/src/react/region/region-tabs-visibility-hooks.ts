@@ -16,7 +16,7 @@ import { isSingleViewPage } from "../../core/registries/pages/page-main";
 import { resolveResourcePreview } from "../../core/registries/resources/resource-preview";
 import { listWorkbenchMenuItemsFromState } from "../menus/menu-items";
 import { useWorkbenchPanelMenus } from "../panel-menu/use-panel-menu";
-import { useWorkbenchCompositionPanels } from "../shared/use-workbench-composition-panels";
+import { useWorkbenchCompositionRegionPanels } from "../shared/use-workbench-composition-panels";
 import { useWorkbenchActiveModeId, useWorkbenchLocationResource } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { suppressesSidenavTabStrip, toTabKey } from "./region-tabs-visibility";
@@ -65,7 +65,8 @@ export const useWorkbenchRegionTabsState = (
   const layoutState = useWorkbenchStore(workbench.layout.store, (state) => state);
   const resource = useWorkbenchLocationResource(workbench);
   const modeId = useWorkbenchActiveModeId(workbench);
-  const compositionPanels = useWorkbenchCompositionPanels(workbench);
+  const panelRegion = isWorkbenchPanelRegion(region) ? region : undefined;
+  const compositionPanels = useWorkbenchCompositionRegionPanels(workbench, panelRegion);
   const storageKey = visibilityStorageKey ?? `${workbench.layout.getPersistenceScope() ?? "unscoped"}/${region}`;
   const tabStore = useTabVisibilityStore(storageKey, (state) => state);
   useEffect(() => {
@@ -96,8 +97,7 @@ export const useWorkbenchRegionTabsState = (
     { itemsByPath, commands, contextValues },
     workbenchRegionTabLeadingMenuPath(region),
   );
-  const panelRegion = isWorkbenchPanelRegion(region) ? region : undefined;
-  const eligibleSubPanels = panelRegion ? compositionPanels[panelRegion].addable : [];
+  const eligibleSubPanels = compositionPanels.addable;
   const showTabs =
     !pageContent && !suppressesSidenavTabStrip(region, visiblePlacements) && shouldShowRegionTabs(visiblePlacements);
   const hasActions =

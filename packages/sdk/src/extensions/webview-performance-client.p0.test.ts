@@ -1,6 +1,31 @@
 import { expect, test } from "bun:test";
+import type { WebviewCommandQuerySnapshot } from "pstdio-api-contracts/extension-kernel";
+import type {
+  PerformanceMonitoringState,
+  PerformanceReadResult,
+  PerformanceRecordingExport,
+  PerformanceSnapshot,
+} from "pstdio-api-contracts/performance-diagnostics";
 import type { GuestHost } from "./guest-host";
 import { createWebviewPerformanceClient } from "./webview-performance-client";
+
+test("performance calls preserve legacy result types and separate query snapshots", async () => {
+  type LegacyResult = PerformanceMonitoringState | PerformanceSnapshot | PerformanceRecordingExport | null | undefined;
+  const host: GuestHost = {
+    call: async () => undefined as never,
+    onEvent: () => () => {},
+  };
+  const exportedLegacyResult = undefined as PerformanceReadResult;
+  const legacyResult: LegacyResult = exportedLegacyResult;
+  const state: Promise<LegacyResult> = host.call("performance.read", { operation: "state" });
+  const snapshot: Promise<LegacyResult> = host.call("performance.read", { operation: "snapshot" });
+  const query: Promise<WebviewCommandQuerySnapshot | undefined> = host.call("performance.read", {
+    operation: "query",
+    query: { operation: "read", owner: "view", requestId: "read", source: { service: "snapshot" } },
+  });
+  expect(legacyResult).toBeUndefined();
+  expect(await Promise.all([state, snapshot, query])).toEqual([undefined, undefined, undefined]);
+});
 
 test("concurrent clients share a subscription and only the last disposal unsubscribes", async () => {
   const requests: unknown[] = [];

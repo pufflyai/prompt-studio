@@ -29,7 +29,8 @@ export const createProjectionStatistics = (
     /** Runs after the committed write, never inside a read or a write transaction. */
     record: (rows: number) => {
       changed += rows;
-      if (pending) return;
+      // Even an empty table needs more than 50 changes before statistics can be stale.
+      if (pending || changed <= 50) return;
       pending = run().finally(() => {
         pending = undefined;
       });

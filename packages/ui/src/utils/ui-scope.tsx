@@ -12,9 +12,21 @@ const UiScopeContext = createContext<UiScope | null>(null);
 /** Keeps window overlays and imperative component feedback inside their owning surface. */
 export const UiScopeProvider = (props: { active: boolean; children: ReactNode }) => {
   const { active, children } = props;
+  const parent = useContext(UiScopeContext);
   const root = useRef<HTMLDivElement>(null);
   const [toaster] = useState(createUiToaster);
-  return <UiScopeContext value={{ root, active, toaster }}>{children}</UiScopeContext>;
+  return (
+    <UiScopeContext value={{ root, active: active && (parent?.active ?? true), toaster }}>{children}</UiScopeContext>
+  );
+};
+
+/** Deactivates a retained view without taking ownership of its surface's theme, portals or feedback. */
+export const UiScopeActivity = (props: { active: boolean; children: ReactNode }) => {
+  const { active, children } = props;
+  const scope = useUiScope();
+  return (
+    <UiScopeContext value={scope ? { ...scope, active: scope.active && active } : null}>{children}</UiScopeContext>
+  );
 };
 
 /** Render inside the host's Chakra provider; the scope itself creates no provider or DOM. */

@@ -1,7 +1,7 @@
 import type { StorageOwner } from "pstdio-sync";
 import type { StorageRecordIndex } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
-import { createDocumentStorageDBService } from "./document-storage";
+import { createRecordQueries } from "./record-queries";
 
 /** A runtime's owner indexes are accepted together; failed refreshes retain the previous definitions. */
 export const installRecordIndexes = (
@@ -10,11 +10,8 @@ export const installRecordIndexes = (
   validate: () => void,
 ) =>
   db.transaction(async (tx) => {
-    // This service is private to the transaction: no observer or shared document cache
-    // can expose a provisional import or backfill before the whole installation commits.
-    const documents = createDocumentStorageDBService(tx);
-    for (const { owner, definitions } of owners) await documents.open({ owner }).records.defineIndexes(definitions);
-    // Private background work must finish while its transaction is still open.
-    await documents.flushStatistics();
+    // Indexes describe the existing query projection. Importing an owner's history here
+    // nests conversion in the catalog transaction and rolls every owner back on failure.
+    for (const { owner, definitions } of owners) await createRecordQueries(tx, owner).defineIndexes(definitions);
     validate();
   });

@@ -31,6 +31,23 @@ export const takeBrowserLoginCode = (hash: string) => {
   return { code, hash: rest ? `#${rest}` : "" };
 };
 
+// A desktop can load public assets while its runtime prepares the authenticated login link.
+export const waitForBrowserLoginLink = (
+  target: Pick<EventTarget, "addEventListener" | "removeEventListener"> & { location: Pick<Location, "hash"> } = window,
+) => {
+  const current = takeBrowserLoginCode(target.location.hash);
+  if (current.code) return Promise.resolve(current);
+  return new Promise<typeof current>((resolve) => {
+    const receive = () => {
+      const login = takeBrowserLoginCode(target.location.hash);
+      if (!login.code) return;
+      target.removeEventListener("hashchange", receive);
+      resolve(login);
+    };
+    target.addEventListener("hashchange", receive);
+  });
+};
+
 // Browsers cannot set headers on a WebSocket. The server selects the first protocol, so the
 // secret goes second and is never echoed back.
 export const browserSessionWebSocketProtocols = (secret: string | undefined) =>

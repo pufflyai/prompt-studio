@@ -42,7 +42,7 @@ pst bookmarks add --help
 pst bookmarks list --json
 ```
 
-Top-level help lists the project's enabled extension namespaces when run in a linked project folder with a reachable runtime. Otherwise, it shows only core commands. Right after the app starts, extensions may still be loading, and help shows only core commands without saying so. Wait until the extension's tools appear in the dashboard, then run `pst --help` again. Namespace help lists command paths. Command help identifies the provider and shows flags and examples. An extension may also declare shorter aliases; help lists them. An agent should read the help before inventing a command name or flag.
+Top-level help lists the project's enabled extension namespaces when run in a linked project folder with a reachable runtime. Otherwise, it shows only core commands. Right after the app starts, extensions may still be loading, and help shows only core commands without saying so. Wait until the extension's tools appear in the dashboard, then run `pst --help` again. Namespace help lists qualified command paths. Command help identifies the provider and shows flags and examples. Extensions cannot declare global shortcuts. An agent should read the help before inventing a command name or flag.
 
 From another folder, target the project explicitly:
 
@@ -60,7 +60,7 @@ Parameter names become CLI flags: `noteId` becomes `--note-id`. Text takes a val
 pst <extension> <command> --workspace '{"providerId":"pstdio.worktree","params":{"base":"main"}}'
 ```
 
-Use the command's actual name and provider fields from `--help` and its documentation. [CLI contributions](../../references/extensions/0003-command-and-process-api.md#cli-contributions) lists the supported input forms and alias rules.
+Use the command's actual name and provider fields from `--help` and its documentation. [CLI contributions](../../references/extensions/0003-command-and-process-api.md#cli-contributions) lists the supported input forms and namespace rules.
 
 A successful extension command normally prints its returned value as JSON. Add `--json` for the full execution response. Check `outcome.ok` before using `outcome.value`; a failure or rejection exits with code 1. Return stable IDs so a later operation can target the created item.
 
@@ -92,3 +92,5 @@ You do not need to write the command declarations yourself. Include CLI access i
 > Build a reading-list extension. Let me add a link, list the items, and mark an item as read from its page. Make those operations CLI-ready through pst, with useful help and returned IDs. Show that an item created through the CLI appears in the page, and that a change in the page is visible through the list command.
 
 The result is a tool you and your agents can use through the same operations. See [Add tools](../getting-started/0003-add-tools.md#ask-an-agent-to-build-your-tool) to set up the agent and install its extension-writing skill.
+
+*Updated at: 2026-10-18*

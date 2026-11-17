@@ -6,7 +6,6 @@ import { defaultLocalWorkspaceCapabilities } from "pstdio-db";
 import { git } from "pstdio-wt";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { runWorkspaceProvisioning } from "../../workspaces/provision-coordinator";
-import { setupWorkspaceWorktree } from "../../workspaces/worktree-setup";
 import { createWorkspacesApi } from "./workspaces";
 
 let handle: Awaited<ReturnType<typeof createTestApp>>;
@@ -32,11 +31,7 @@ const fixture = async () => {
     provider_state: "ready",
   });
   const api = (signal?: AbortSignal) =>
-    createWorkspacesApi(
-      handle.deps,
-      { projectId: project.id, signal },
-      { setupWorkspaceWorktree, runWorkspaceProvisioning },
-    );
+    createWorkspacesApi(handle.deps, { projectId: project.id, signal }, { runWorkspaceProvisioning });
   return { project, workspace, path, api };
 };
 
@@ -80,6 +75,21 @@ test("extensions browse, find, edit, move and delete workspace files through the
   await files.deleteEntry(workspace.id, "renamed");
   expect((await files.listFiles(workspace.id)).entries).toEqual([]);
   await expect(files.writeFile(workspace.id, "missing.md", { content: "save" })).rejects.toThrow();
+});
+
+test("extension file listings expose Git-ignore decorations through the command environment", async () => {
+  const { workspace, path, api } = await fixture();
+  await writeFile(join(path, ".gitignore"), "*.log\n");
+  await writeFile(join(path, "debug.log"), "ignored");
+  const files = api();
+  expect(
+    (await files.listFiles(workspace.id)).entries.find((entry) => entry.path === "debug.log")?.git_ignored,
+  ).not.toBe(true);
+  await git(path, ["init"]);
+  expect((await files.listFiles(workspace.id)).entries.find((entry) => entry.path === "debug.log")?.git_ignored).toBe(
+    true,
+  );
+  expect((await files.listFiles(workspace.id, { query: "debug" })).entries[0]?.git_ignored).toBe(true);
 });
 
 test("extensions read lightweight changes and lazy file bodies in both comparison modes", async () => {

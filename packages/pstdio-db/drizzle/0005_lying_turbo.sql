@@ -1,0 +1,1 @@
+ALTER TABLE "storage_current_records" ADD COLUMN "query_values" jsonb DEFAULT '{}'::jsonb NOT NULL;

@@ -32,6 +32,7 @@ export const runLargeSave = async (input: {
     chunks: new Set(),
     frames: new Set(),
     files: new Set(),
+    index: new Set(),
   };
   const started = performance.now();
   try {

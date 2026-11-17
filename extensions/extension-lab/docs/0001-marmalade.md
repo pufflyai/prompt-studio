@@ -57,3 +57,5 @@ Each webview subscribes to the public `marmalade.changed` event before its first
 ## Sample image
 
 The bundled [Great Wave image](../assets/great-wave.jpg) is Katsushika Hokusai's *Under the Wave off Kanagawa*, ca. 1830–32, Metropolitan Museum of Art, accession JP1847, [collection object 45434](https://www.metmuseum.org/art/collection/search/45434). The museum marks it public domain. Its Open Access image is bundled so editing does not require network access.
+
+*Updated at: 2026-10-30*

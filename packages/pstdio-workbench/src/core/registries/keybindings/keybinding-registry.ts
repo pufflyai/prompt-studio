@@ -1,4 +1,5 @@
 import { parseHotkey } from "@tanstack/hotkeys";
+import { typesText, withNamedKeyCase } from "pstdio-api-contracts";
 import type { ContextKeyService } from "../../shared/context/context-key-service";
 import {
   byContributionPriority,
@@ -12,7 +13,12 @@ import type { CommandRegistry } from "../commands/command-registry";
 import type { NavigationTarget } from "../navigation/navigation-registry";
 import { getNavigationTargetKey } from "../navigation/navigation-target-key";
 import type { PreferenceRegistry } from "../preferences/preference-registry";
-import { readShortcutPreferences, type ShortcutLayer, sharedShortcutLayer } from "./shortcut-preferences";
+import {
+  readShortcutPreferences,
+  type ShortcutLayer,
+  type ShortcutPreferences,
+  sharedShortcutLayer,
+} from "./shortcut-preferences";
 
 export interface Keybinding {
   id?: string;
@@ -60,7 +66,7 @@ export interface KeybindingRegistry {
   listCatalog(): RegisteredKeybinding[];
   resolve(binding: RegisteredKeybinding): RegisteredKeybinding & { disabled: boolean };
   getId(binding: Keybinding): string;
-  listActiveKeybindings(): RegisteredKeybinding[];
+  listActiveKeybindings(action?: NavigationTarget): RegisteredKeybinding[];
   /** Chords bound to plain command actions, for rendering shortcut hints beside commands. */
   listCommandKeybindings(): { commandId: string; keybinding: KeybindingSequence }[];
 }
@@ -71,8 +77,17 @@ export const getKeybindingSteps = (keybinding: KeybindingSequence) => {
   return keybinding.trim().split(/\s+/).filter(Boolean);
 };
 
+/**
+ * A direct shortcut whose first key types text: a printable key alone or with Shift only. Such keys
+ * belong to whatever has focus, so the workbench never binds them outside shortcut-mode layers.
+ */
+export const isTypingKeybinding = (keybinding: KeybindingSequence) => {
+  const first = getKeybindingSteps(keybinding)[0];
+  return first ? typesText(parseHotkey(withNamedKeyCase(first))) : false;
+};
+
 const normalizeKeybindingSequence = (keybinding: KeybindingSequence): KeybindingSequence => {
-  const steps = getKeybindingSteps(keybinding);
+  const steps = getKeybindingSteps(keybinding).map(withNamedKeyCase);
   return steps.length === 1 ? (steps[0] ?? "") : steps;
 };
 
@@ -97,14 +112,17 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
   const getId = (binding: Keybinding) =>
     binding.id ??
     `${binding.sourceExtensionId ?? "workbench"}:${binding.layer ?? "direct"}:${getNavigationTargetKey(binding.action)}`;
-  const resolve = (binding: RegisteredKeybinding) => {
-    const override = readShortcutPreferences(deps.preferences?.()).overrides[getId(binding)];
+  const resolveWithPreferences = (binding: RegisteredKeybinding, preferences: ShortcutPreferences) => {
+    const override = preferences.overrides[getId(binding)];
     const assigned = override?.layer === "direct" ? undefined : (override?.layer ?? binding.layer);
     const layer = assigned ? sharedShortcutLayer(assigned) : undefined;
     let defaultScope: Keybinding["targetScope"];
     if (assigned === "extensions" || assigned === "help") defaultScope = "project";
     else if (layer === "current") defaultScope = "panel";
-    const keybinding = override?.keybinding ?? binding.keybinding;
+    // An empty override keeps its meaning; only a chord is spelled the way the matcher expects.
+    const keybinding = override?.keybinding
+      ? normalizeKeybindingSequence(override.keybinding)
+      : (override?.keybinding ?? binding.keybinding);
     const first = getKeybindingSteps(keybinding)[0];
     const held = first ? holdsInputModifier(first) : false;
     return {
@@ -115,7 +133,8 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
       // Plain keys belong to the editor, so only Alt, Ctrl or Cmd chords may act while typing.
       allowInInputs: binding.allowInInputs === true && held,
       layer,
-      disabled: override?.disabled === true,
+      // A stale override can still assign a typing key as a direct shortcut.
+      disabled: override?.disabled === true || (!layer && isTypingKeybinding(keybinding)),
     };
   };
   const listCatalog = () => {
@@ -158,12 +177,19 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
   return {
     store,
     getId,
-    resolve,
+    resolve: (binding) => resolveWithPreferences(binding, readShortcutPreferences(deps.preferences?.())),
     listCatalog,
 
     registerKeybinding(keybinding, metadata) {
       if (keybinding.action.kind === "command" && !deps.commands.getCommand(keybinding.action.commandId)) {
         throw new Error(`Keybinding command not registered: ${keybinding.action.commandId}`);
+      }
+
+      if (!keybinding.layer && isTypingKeybinding(keybinding.keybinding)) {
+        console.warn(
+          `Keybinding refused: "${getKeybindingSteps(keybinding.keybinding).join(" ")}" for ${getId(keybinding)} types text. Add Ctrl, Cmd, Alt or Mod, or bind it in a shortcut-mode layer.`,
+        );
+        return createDisposable(() => {});
       }
 
       const record: RegisteredKeybinding = {
@@ -187,11 +213,30 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
       return [...store.getState().keybindings].sort(byContributionPriority);
     },
 
-    listActiveKeybindings() {
-      const bindings = [...store.getState().keybindings].sort(byContributionPriority);
-      const declared = new Set(bindings.map(getId));
+    listActiveKeybindings(action) {
+      // Resolve a profile against one settings snapshot. In the browser every
+      // read can cross localStorage and parse the complete preference document.
+      const preferences = readShortcutPreferences(deps.preferences?.());
+      const registered = store.getState().keybindings;
+      const actionKey = action ? getNavigationTargetKey(action) : undefined;
+      const matchesAction = (binding: RegisteredKeybinding) => {
+        if (!action) return true;
+        if (binding.action.kind !== action.kind) return false;
+        // Direct hints normally request one command. Unrelated command arguments
+        // cannot affect that hint and need no recursive canonical serialization.
+        if (
+          action.kind === "command" &&
+          binding.action.kind === "command" &&
+          action.commandId !== binding.action.commandId
+        )
+          return false;
+        return getNavigationTargetKey(binding.action) === actionKey;
+      };
+      const bindings = registered.filter(matchesAction).sort(byContributionPriority);
+      const overrides = Object.entries(preferences.overrides);
+      const declared = overrides.length ? new Set(registered.map(getId)) : new Set<string>();
       const assigned = new Set(
-        Object.entries(readShortcutPreferences(deps.preferences?.()).overrides)
+        overrides
           .filter(
             ([id, value]) =>
               !declared.has(id) &&
@@ -203,9 +248,10 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
       );
       // Generated discovery actions have no chord until a person assigns one.
       // Input dispatch must not enumerate page/menu providers on every layout change.
-      if (assigned.size) bindings.push(...listCatalog().filter((binding) => assigned.has(getId(binding))));
+      if (assigned.size)
+        bindings.push(...listCatalog().filter((binding) => assigned.has(getId(binding)) && matchesAction(binding)));
       return bindings
-        .map(resolve)
+        .map((binding) => resolveWithPreferences(binding, preferences))
         .filter(
           (binding) =>
             !binding.disabled &&
@@ -216,9 +262,10 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
     },
 
     listCommandKeybindings() {
+      const preferences = readShortcutPreferences(deps.preferences?.());
       return [...store.getState().keybindings]
         .sort(byContributionPriority)
-        .map(resolve)
+        .map((binding) => resolveWithPreferences(binding, preferences))
         .filter((record) => !record.layer && !record.disabled)
         .flatMap((record) =>
           record.action.kind === "command"

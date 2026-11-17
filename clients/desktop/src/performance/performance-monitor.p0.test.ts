@@ -248,6 +248,43 @@ test("starting the same enabled monitor twice does not duplicate its endpoint or
   expect(harness.endpoint.closed).toBe(1);
 });
 
+test("waits for private recording setup and releases it when stop arrives during startup", async () => {
+  const harness = createHarness(true);
+  const ready = Promise.withResolvers<{
+    sample: () => Promise<void>;
+    snapshot: () => never;
+    close: () => Promise<void>;
+  }>();
+  let closed = 0;
+  let startupError: unknown;
+  harness.options.createCapture = () => ready.promise;
+  const starting = harness.monitor.start();
+  void starting.catch((error) => {
+    startupError = error;
+  });
+  for (let turn = 0; turn < 5; turn++) await Promise.resolve();
+  expect(startupError).toBeUndefined();
+  expect(harness.monitor.snapshot()).toBeNull();
+  expect(harness.scheduled()).toBe(false);
+  const stopping = harness.monitor.stop();
+  ready.resolve({
+    sample: async () => {},
+    snapshot: () => {
+      throw new Error("unused");
+    },
+    close: async () => {
+      closed++;
+    },
+  });
+  await starting;
+  await stopping;
+  expect(closed).toBe(1);
+  expect(harness.endpoint.opened).toBe(1);
+  expect(harness.endpoint.closed).toBe(1);
+  expect(harness.scheduled()).toBe(false);
+  expect(harness.monitor.snapshot()).toBeNull();
+});
+
 test("the first periodic capture stays on schedule when the baseline metrics read is slow", async () => {
   const harness = createHarness(true);
   let now = 0;
@@ -361,4 +398,76 @@ test("disabling after the last capture release clears the saved preference befor
   expect(harness.scheduled()).toBe(false);
   expect(harness.endpoint.opened).toBe(1);
   await next();
+});
+
+test("project monitoring owners keep one capture alive until the last project releases it", async () => {
+  const harness = createHarness();
+  const observer = await harness.monitor.retainCapture();
+  const firstProject = await harness.monitor.retainCapture(true);
+  const secondProject = await harness.monitor.retainCapture(true);
+  expect(harness.preference()).toBe(false);
+  harness.sample(24);
+  const beforeSwitch = harness.monitor.snapshot();
+  expect(beforeSwitch?.processes.length).toBeGreaterThan(0);
+
+  await firstProject();
+  await firstProject();
+  expect(harness.monitor.enabled).toBe(true);
+  expect(harness.monitor.snapshot()).toEqual(beforeSwitch);
+  expect(harness.endpoint).toEqual({ opened: 1, closed: 0 });
+
+  await secondProject();
+  expect(harness.monitor.enabled).toBe(false);
+  expect(harness.monitor.snapshot()).toBeNull();
+  expect(harness.endpoint).toEqual({ opened: 1, closed: 1 });
+  await observer();
+});
+
+test("a replacement project can acquire monitoring while the previous project releases it", async () => {
+  const harness = createHarness();
+  const previous = await harness.monitor.retainCapture(true);
+  const [replacement] = await Promise.all([harness.monitor.retainCapture(true), previous()]);
+  expect(harness.monitor.enabled).toBe(true);
+  expect(harness.endpoint).toEqual({ opened: 1, closed: 0 });
+  await replacement();
+  expect(harness.monitor.snapshot()).toBeNull();
+});
+
+test("a failed monitoring acquisition restores the device switch and releases its ownership", async () => {
+  const harness = createHarness();
+  const openEndpoint = harness.options.openEndpoint;
+  harness.options.openEndpoint = async () => {
+    throw new Error("endpoint denied");
+  };
+  await expect(harness.monitor.retainCapture(true)).rejects.toThrow("endpoint denied");
+  expect(harness.monitor.enabled).toBe(false);
+  harness.options.openEndpoint = openEndpoint;
+  const release = await harness.monitor.retainCapture(true);
+  expect(harness.monitor.enabled).toBe(true);
+  await release();
+  expect(harness.monitor.enabled).toBe(false);
+});
+
+test("releasing a monitoring view preserves a manually enabled device capture", async () => {
+  const harness = createHarness(true);
+  const observer = await harness.monitor.retainCapture();
+  const release = await harness.monitor.retainCapture(true);
+  await release();
+  expect(harness.preference()).toBe(true);
+  expect(harness.monitor.enabled).toBe(true);
+  expect(harness.monitor.snapshot()).not.toBeNull();
+  expect(harness.endpoint).toEqual({ opened: 1, closed: 0 });
+  await observer();
+});
+
+test("an explicit device switch can stop monitoring while projects still hold capture owners", async () => {
+  const harness = createHarness();
+  const first = await harness.monitor.retainCapture(true);
+  const second = await harness.monitor.retainCapture(true);
+  await harness.monitor.setEnabled(false);
+  await first();
+  expect(harness.monitor.enabled).toBe(false);
+  expect(harness.monitor.snapshot()).toBeNull();
+  await second();
+  expect(harness.preference()).toBe(false);
 });

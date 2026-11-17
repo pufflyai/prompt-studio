@@ -102,23 +102,32 @@ export async function* piRecords(stdout: AsyncIterable<Buffer>) {
   if (pending.trim()) yield JSON.parse(pending) as Record<string, unknown>;
 }
 
-export const piRequest = async (type: string, args: string[], options: PiProcessOptions = {}) => {
+export const piRequests = async (types: readonly string[], args: string[], options: PiProcessOptions = {}) => {
   const process = startPiProcess(["--mode", "rpc", ...args], options);
   const timer = setTimeout(() => {
     void process.stop();
   }, 10000);
   timer.unref();
   try {
-    process.child.stdin.write(`${JSON.stringify({ id: "request", type })}\n`);
+    const results: Record<string, unknown>[] = [];
+    const requestId = () => (results.length ? `request-${results.length}` : "request");
+    const send = () =>
+      process.child.stdin.write(`${JSON.stringify({ id: requestId(), type: types[results.length] })}\n`);
+    send();
     for await (const record of piRecords(process.child.stdout)) {
-      if (record.type !== "response" || record.id !== "request") continue;
+      if (record.type !== "response" || record.id !== requestId()) continue;
       if (!record.success) throw new Error(String(record.error));
-      return record.data as Record<string, unknown>;
+      results.push(record.data as Record<string, unknown>);
+      if (results.length === types.length) return results;
+      send();
     }
     await process.exited;
-    throw new Error(`Pi did not answer ${type}. ${process.diagnostics()}`);
+    throw new Error(`Pi did not answer ${types[results.length]}. ${process.diagnostics()}`);
   } finally {
     clearTimeout(timer);
     await process.stop();
   }
 };
+
+export const piRequest = async (type: string, args: string[], options: PiProcessOptions = {}) =>
+  (await piRequests([type], args, options))[0];

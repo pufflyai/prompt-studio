@@ -3,7 +3,7 @@ import { notesFileAccess } from "./file-access";
 import { listFolders } from "./folders";
 import { moveTreeNote } from "./note-movement";
 import { listNotes } from "./notes";
-import { noteResource, notesChanged, notesMount, notesPage, noteTarget } from "./pages";
+import { noteResource, notesChanged, notesMount, noteTarget } from "./pages";
 import { folderActions, newFolderAction, newNoteAction } from "./tree-actions";
 
 export const notesTree = defineView({
@@ -30,7 +30,7 @@ export const notesTree = defineView({
         canDrag: writable,
         canDrop: writable,
         resource: noteResource(note.id, note.title, ctx, writable),
-        target: noteTarget(note.id, note.title, ctx),
+        target: noteTarget(note.id, note.title, ctx, writable),
       });
       const folderIds = new Set(folders.map((folder) => folder.id));
       return [
@@ -42,7 +42,6 @@ export const notesTree = defineView({
               id: "notes",
               label: l10n("navigation.notes", "Notes"),
               icon: "notebook-pen",
-              target: { kind: "page", page: notesPage.ref },
               canDrop: writable,
               collapsible: true,
               canHide: true,

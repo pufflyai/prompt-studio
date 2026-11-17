@@ -77,7 +77,11 @@ export const resolveDataTableRendererResourceActions = (
     .map((action) => ({
       label: action.label,
       icon: action.icon,
-      onSelect: (_context?: unknown) => void action.onClick?.(),
+      runOnSelect: Boolean(action.onSelect),
+      onSelect: (_context?: unknown) => {
+        action.onSelect?.();
+        void action.onClick?.();
+      },
     }));
 };
 export const resolveDataTableRendererStorageKey = (

@@ -48,3 +48,5 @@ See the [cookbook](../../guides/extensions/0002-workbench-cookbook.md) for worki
 Params describe view state and stay out of layout cache and breadcrumb identity. A page target carries all destination overrides and pushes history when they change. The page owner can use `page.params.update` to patch params and replace the current history entry. Defaults are omitted from URLs. Invalid URL values use defaults; invalid navigation values fail before any state changes. See [Page params](0005-webview-and-storage-api.md#page-params).
 
 Resource-list enum options can declare `contextMenuActions` with an `id`, localized `label`, `action` navigation target and optional `disabled` state. These actions belong to the group header and retain the declaring extension and project when invoked. Page dialogs use the standard dialog header and content sizing; embedded webviews report their content height. `workspacePages.create` is the bundled provider’s dedicated workspace creation page.
+
+*Updated at: 2026-11-06*

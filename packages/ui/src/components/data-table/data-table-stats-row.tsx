@@ -3,7 +3,7 @@ import type { CollectionPageStatistic } from "@pstdio/sdk/extensions";
 import type { Header, HeaderGroup } from "@tanstack/react-table";
 import { DataTableStatChart } from "./data-table-stat-chart";
 import { buildHistogramStat, buildTopValuesStat, countUniqueStatValues } from "./data-table-stats";
-import type { DataTableColumnStat, RowData } from "./types";
+import type { DataTableColumnRenderer, DataTableColumnStat, RowData } from "./types";
 
 const formatNumber = new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format;
 const STAT_CHART_COLOR = "vis.categorical.1";
@@ -29,6 +29,7 @@ const SingleValueStat = (props: SingleValueStatProps) => {
 };
 
 interface UniqueStatProps {
+  renderer?: DataTableColumnRenderer;
   summary?: Extract<CollectionPageStatistic, { type: "unique" }>;
   rows: RowData[];
   columnId: string;
@@ -36,7 +37,7 @@ interface UniqueStatProps {
 
 const UniqueStat = (props: UniqueStatProps) => {
   const { rows, columnId } = props;
-  const count = props.summary?.count ?? countUniqueStatValues(rows, columnId);
+  const count = props.summary?.count ?? countUniqueStatValues(rows, columnId, props.renderer);
 
   return (
     <Flex direction="column" gap="2xs" alignItems="flex-start">
@@ -51,6 +52,7 @@ const UniqueStat = (props: UniqueStatProps) => {
 };
 
 interface HistogramStatProps {
+  renderer?: DataTableColumnRenderer;
   summary?: Extract<CollectionPageStatistic, { type: "histogram" }>;
   rows: RowData[];
   columnId: string;
@@ -59,7 +61,9 @@ interface HistogramStatProps {
 
 const HistogramStat = (props: HistogramStatProps) => {
   const { rows, columnId, binCount } = props;
-  const histogram = props.summary ? props.summary.histogram : buildHistogramStat(rows, columnId, binCount);
+  const histogram = props.summary
+    ? props.summary.histogram
+    : buildHistogramStat(rows, columnId, binCount, props.renderer);
 
   if (!histogram) {
     return (
@@ -99,6 +103,7 @@ const HistogramStat = (props: HistogramStatProps) => {
 };
 
 interface TopValuesStatProps {
+  renderer?: DataTableColumnRenderer;
   summary?: Extract<CollectionPageStatistic, { type: "top-values" }>;
   rows: RowData[];
   columnId: string;
@@ -107,7 +112,7 @@ interface TopValuesStatProps {
 
 const TopValuesStat = (props: TopValuesStatProps) => {
   const { rows, columnId, limit } = props;
-  const groups = props.summary?.values ?? buildTopValuesStat(rows, columnId, limit);
+  const groups = props.summary?.values ?? buildTopValuesStat(rows, columnId, limit, props.renderer);
 
   if (groups.length === 1 && groups[0]) {
     return <SingleValueStat value={groups[0].label} count={groups[0].count} />;
@@ -153,6 +158,7 @@ const TopValuesStat = (props: TopValuesStatProps) => {
 };
 
 interface DataTableStatProps {
+  renderer?: DataTableColumnRenderer;
   summary?: CollectionPageStatistic;
   rows: RowData[];
   columnId: string;
@@ -165,6 +171,7 @@ const DataTableStat = (props: DataTableStatProps) => {
   if (stat.type === "unique")
     return (
       <UniqueStat
+        renderer={props.renderer}
         rows={rows}
         columnId={columnId}
         summary={props.summary?.type === "unique" ? props.summary : undefined}
@@ -173,6 +180,7 @@ const DataTableStat = (props: DataTableStatProps) => {
   if (stat.type === "histogram") {
     return (
       <HistogramStat
+        renderer={props.renderer}
         rows={rows}
         columnId={columnId}
         binCount={stat.bins ?? 10}
@@ -182,6 +190,7 @@ const DataTableStat = (props: DataTableStatProps) => {
   }
   return (
     <TopValuesStat
+      renderer={props.renderer}
       rows={rows}
       columnId={columnId}
       limit={stat.limit ?? 2}
@@ -191,6 +200,7 @@ const DataTableStat = (props: DataTableStatProps) => {
 };
 
 interface DataTableStatCellProps {
+  columnRenderers?: Partial<Record<string, DataTableColumnRenderer>>;
   summaries?: Record<string, CollectionPageStatistic>;
   header: Header<RowData, unknown>;
   headerGroup: HeaderGroup<RowData>;
@@ -222,6 +232,7 @@ const DataTableStatCell = (props: DataTableStatCellProps) => {
     >
       {stat ? (
         <DataTableStat
+          renderer={props.columnRenderers?.[header.column.id]}
           rows={rows}
           columnId={header.column.id}
           stat={stat}
@@ -233,6 +244,7 @@ const DataTableStatCell = (props: DataTableStatCellProps) => {
 };
 
 interface DataTableStatsRowProps {
+  columnRenderers?: Partial<Record<string, DataTableColumnRenderer>>;
   summaries?: Record<string, CollectionPageStatistic>;
   headerGroup: HeaderGroup<RowData>;
   rows: RowData[];
@@ -260,6 +272,7 @@ export const DataTableStatsRow = (props: DataTableStatsRowProps) => {
           headerGroup={headerGroup}
           rows={rows}
           columnStats={columnStats}
+          columnRenderers={props.columnRenderers}
           summaries={props.summaries}
           fullWidth={fullWidth}
         />

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { batchWorkbenchChanges } from "./workbench-batch";
 import { createWorkbenchStore } from "./workbench-store";
 
 interface Counter {
@@ -75,4 +76,17 @@ describe("createWorkbenchStore", () => {
 
     unsubscribe();
   });
+});
+
+test("disposing an observation owner also retires notifications queued in a workbench batch", () => {
+  const store = createWorkbenchStore({ initialState: { value: 0 } });
+  let notices = 0;
+  store.subscribe(() => notices++);
+  batchWorkbenchChanges(() => {
+    store.setState({ value: 1 });
+    store.dispose();
+  });
+  store.setState({ value: 2 });
+  expect(notices).toBe(0);
+  expect(store.getState().value).toBe(2);
 });

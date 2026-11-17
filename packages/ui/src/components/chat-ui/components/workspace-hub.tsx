@@ -11,6 +11,8 @@ interface ChatWorkspaceHubProps {
   deletions: number;
   /** Icon-only action that opens the workspace resource. */
   action?: ReactNode;
+  /** Provider creation fields live inside this workspace frame. */
+  options?: ReactNode;
   status?: WorkspaceHubStatus;
   statusLabel?: string;
 }
@@ -66,15 +68,18 @@ const HubStatus = (props: {
  * being created or has failed. The open action recedes during setup.
  */
 export const ChatWorkspaceHub = (props: ChatWorkspaceHubProps) => {
-  const { workspaceControl, additions, deletions, action, status = "ready", statusLabel } = props;
+  const { workspaceControl, additions, deletions, action, options, status = "ready", statusLabel } = props;
 
   return (
-    <Flex align="center" justify="space-between" gap="sm" minW="0" pl="xs" pr="2xs" py="2xs">
-      <HStack gap="sm" minW="0">
-        {workspaceControl}
-        {action ? <Flex flexShrink={0}>{action}</Flex> : null}
-        <HubStatus status={status} statusLabel={statusLabel} additions={additions} deletions={deletions} />
-      </HStack>
+    <Flex direction="column" gap="xs" minW="0">
+      <Flex align="center" justify="space-between" gap="sm" minW="0" pl="xs" pr="2xs" py="2xs">
+        <HStack gap="sm" minW="0">
+          {workspaceControl}
+          {action ? <Flex flexShrink={0}>{action}</Flex> : null}
+          <HubStatus status={status} statusLabel={statusLabel} additions={additions} deletions={deletions} />
+        </HStack>
+      </Flex>
+      {options}
     </Flex>
   );
 };

@@ -1,5 +1,5 @@
 import { normalizeHotkey, validateHotkey } from "@tanstack/hotkeys";
-import { getKeybindingSteps } from "../../registries/keybindings/keybinding-registry";
+import { getKeybindingSteps, isTypingKeybinding } from "../../registries/keybindings/keybinding-registry";
 import { type ShortcutAssignment, sharedShortcutLayer } from "../../registries/keybindings/shortcut-preferences";
 import type { WorkbenchCore } from "../../workbench-core-types";
 
@@ -33,6 +33,7 @@ export const validateShortcutAssignment = (core: WorkbenchCore, id: string, assi
     return;
   }
   for (const step of steps) if (!validateHotkey(step).valid) throw new Error(`Invalid shortcut: ${step}`);
+  if (isTypingKeybinding(steps)) throw new Error("Add Ctrl, Cmd or Alt. A key alone or with Shift types text.");
   const key = steps.map((step) => normalizeHotkey(step)).join(" ");
   const collision = core.keyboard.catalog().find(
     (candidate) =>

@@ -17,7 +17,7 @@ import { measureScalePage } from "./storage-scale-page";
 import { createObservedScaleRuntime } from "./storage-scale-performance";
 import { queryOracles, sampleQuery } from "./storage-scale-queries";
 import { configureScaleView, type ScaleFixture, startScaleRuntime } from "./storage-scale-runtime";
-import { createScaleSyncFixture } from "./storage-scale-sync";
+import { attachScaleSyncFixture } from "./storage-scale-sync";
 import { sampleVisibleEdit } from "./storage-scale-visible-edit";
 import { sampleWriteBurst } from "./storage-scale-write-burst";
 
@@ -113,7 +113,7 @@ const measureEdit = async (ctx: Context, scenario: Scenario) => {
     failures: [
       ...measured.failures,
       ...(visible?.failures ?? []),
-      ...(visible && scenario.temperature === "cold" ? ["cold-visible-edit-unavailable-owner-preloaded"] : []),
+      ...(visible && scenario.temperature === "cold" ? ["cold-visible-edit-unavailable-board-preloaded"] : []),
     ],
     durationMs: visible?.durationMs ?? measured.acknowledgementMs,
     status: "measured",
@@ -185,38 +185,34 @@ export const sampleScaleScenario = async (input: ScaleSampleCase, emit: (row: ob
   emit({ phase: "case-setup", scenario, status: "started" });
   const oracles = queryOracles(kind);
   const performance = createObservedScaleRuntime(root, (row) => emit({ ...row, scenario }));
-  const sync = input.sync ? await createScaleSyncFixture(home, fixture, emit) : undefined;
-  try {
-    const ctx: Context = {
-      home,
-      root,
-      fixture,
-      profile,
-      emit,
-      oracles,
-      startRuntime: performance.start,
-      environment: sync?.environment ?? {},
-      begin:
-        scenario.background === "idle"
-          ? undefined
-          : (runtime) => sync!.begin(runtime, scenario.background, scenario.operation),
-    };
-    emit({ phase: "case-setup", scenario, status: "completed" });
-    const isEdit =
-      (contract.edits as readonly string[]).includes(scenario.operation) ||
-      scenario.operation === "multiline" ||
-      scenario.operation === "all-owner-edit-burst";
-    const measured = isEdit ? await measureEdit(ctx, scenario) : await measureRead(ctx, scenario);
-    emit({
-      phase: "sample",
-      ...measured,
-      passed: measured.passed && scenario.background === "idle" && performance.failures.length === 0,
-      performanceFailures: [...new Set(performance.failures)],
-      contentionCoverage: scenario.background === "idle" ? "not-requested" : "attempted-unverified",
-    });
-  } finally {
-    await sync?.close();
-  }
+  const sync = input.sync ? attachScaleSyncFixture(home, fixture, emit) : undefined;
+  const ctx: Context = {
+    home,
+    root,
+    fixture,
+    profile,
+    emit,
+    oracles,
+    startRuntime: performance.start,
+    environment: sync?.environment ?? {},
+    begin:
+      scenario.background === "idle"
+        ? undefined
+        : (runtime) => sync!.begin(runtime, scenario.background, scenario.operation),
+  };
+  emit({ phase: "case-setup", scenario, status: "completed" });
+  const isEdit =
+    (contract.edits as readonly string[]).includes(scenario.operation) ||
+    scenario.operation === "multiline" ||
+    scenario.operation === "all-owner-edit-burst";
+  const measured = isEdit ? await measureEdit(ctx, scenario) : await measureRead(ctx, scenario);
+  emit({
+    phase: "sample",
+    ...measured,
+    passed: measured.passed && scenario.background === "idle" && performance.failures.length === 0,
+    performanceFailures: [...new Set(performance.failures)],
+    contentionCoverage: scenario.background === "idle" ? "not-requested" : "attempted-unverified",
+  });
 };
 
 export const sampleScaleRuntime = async (

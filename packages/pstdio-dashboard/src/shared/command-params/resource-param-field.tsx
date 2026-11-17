@@ -1,8 +1,8 @@
 import { ParamEditorRow, type SelectionParam } from "@pstdio/ui/param-editor";
 import type { WorkbenchCore } from "@pstdio/workbench";
 import { type CommandParamFieldProps, commandParamName, useWorkbenchStore } from "@pstdio/workbench/react";
-import { useSyncExternalStore } from "react";
-import { getDashboardDataVersion, subscribeDashboardData } from "@/shared/sync/dashboard-rows";
+import { useCollectionSelection } from "@/lib/sync/use-collection-selection";
+import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
 import { buildResourceParamOptions, type ResourceParamOption } from "./resource-param-options";
 
 interface ResourceParamFieldProps extends CommandParamFieldProps {
@@ -27,7 +27,15 @@ const selectedOptionId = (options: ResourceParamOption[], value: CommandParamFie
 export const ResourceParamField = (props: ResourceParamFieldProps) => {
   const { entry, value, disabled, onChange, workbench } = props;
   useWorkbenchStore(workbench.resources.store, (state) => state.providers);
-  useSyncExternalStore(subscribeDashboardData, getDashboardDataVersion, getDashboardDataVersion);
+  const projectId = useWorkbenchStore(workbench.context.store, (state) => {
+    const selected = state.values[dashboardSelectedProjectIdContextKey];
+    return typeof selected === "string" ? selected : undefined;
+  });
+  useCollectionSelection({ tables: !entry.resourceType || entry.resourceType === "project" ? ["projects"] : [] });
+  const tables = (["sessions", "workspaces", "files"] as const).filter(
+    (table) => !entry.resourceType || table === `${entry.resourceType}s`,
+  );
+  useCollectionSelection({ tables, projectId });
   const options = buildResourceParamOptions(workbench.resources.listResources(""), entry.resourceType);
   const resourceParam: SelectionParam = {
     id: entry.key,

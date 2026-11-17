@@ -10,6 +10,7 @@ import { createNativeProjectionQueue } from "../native-documents/projection-queu
 import { createSharedArtifactMount } from "../shared-files/artifact-mount";
 import type { RelayDeps } from "./deps";
 import { createExtensionDocumentSync } from "./documents";
+import { traceRelayOwnerPhase } from "./record-stream-progress";
 import type { RelayWorkbench } from "./runtime";
 
 type RelaySource = Awaited<ReturnType<ExtensionsRouteDeps["extensionService"]["listEnabledSourcesForProject"]>>[number];
@@ -73,6 +74,7 @@ export const startRelayExtension = async (input: {
     subscribe: (space, id) => connection?.subscribe(space, id),
     discoveryNeeded: () => connection?.wake(),
     statusChanged: input.statusChanged,
+    beforeDownload: () => traceRelayOwnerPhase(owner, "files-before", refreshFiles),
   });
   const snapshot = input.snapshot;
   const repoRoot = await resolveWorkspaceFilesPath(deps, { projectId: owner.workbenchId }, "read").catch(() => null);
@@ -161,10 +163,8 @@ export const startRelayExtension = async (input: {
         for (const name of deps.nativeDocuments.sources.current(owner)) wakeDocument(name);
       },
       synchronize: async (attemptSignal) => {
-        await documents.prepare(attemptSignal);
-        await refreshFiles();
-        await documents.synchronize(attemptSignal);
-        await refreshFiles();
+        await traceRelayOwnerPhase(owner, "documents", () => documents.synchronize(attemptSignal));
+        await traceRelayOwnerPhase(owner, "files-after", refreshFiles);
       },
       onError: (error) =>
         apiLogger.warn(
@@ -180,6 +180,7 @@ export const startRelayExtension = async (input: {
       wake: connection.wake,
       wakeDocument,
       retry: connection.retry,
+      restart: connection.restart,
       done: connection.done.finally(async () => {
         stopProjection();
         await projections.drain();

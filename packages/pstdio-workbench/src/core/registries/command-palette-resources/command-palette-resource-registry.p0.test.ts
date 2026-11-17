@@ -73,3 +73,27 @@ describe("createCommandPaletteResourceRegistry", () => {
     expect(registry.store.getState().refreshToken).toBe(before + 1);
   });
 });
+
+test("resource parameter queries only invoke providers for that declared kind", async () => {
+  const registry = createCommandPaletteResourceRegistry();
+  const queried: string[] = [];
+  for (const [id, resourceKind] of [
+    ["sessions", "session"],
+    ["notes", "note"],
+    ["global", undefined],
+  ] as const) {
+    const provider = {
+      id,
+      title: id,
+      resourceKind,
+      query: async () => {
+        queried.push(id);
+        return [result(id)];
+      },
+    };
+    registry.registerProvider(provider);
+  }
+  const context = { query: "saved", limit: 100, resourceType: "session" };
+  expect((await registry.queryProviders(context)).map((group) => group.providerId)).toEqual(["sessions"]);
+  expect(queried).toEqual(["sessions"]);
+});

@@ -460,3 +460,11 @@ Not carried as independent requirements: Illustrative architecture, external com
 ## Main integration
 
 RB 6.A.1 carries the newer runtime-snapshot read-freshness clause from main: reads include prior invalidations; webview builds refresh later reads without invalidating the active contribution load. The superseded PRD remains removed.
+
+- RB 9.A.67 ← R61, added upstream before the resumed integration.
+
+- RB 9.A.68 ← R62, added upstream before the resumed integration.
+
+## Resumed main integration — 2026-11-17
+
+The resumed branch preserves the current upstream guidance and PRD intent, including the approved three-platform frozen budgets, opt-in folder captures, stale-device save fencing, bounded offline saves, skill-browser placement and harness-specific model recall. Existing proposed intent remains proposed; this integration does not infer released or verified behavior. Original 5 GiB folder qualification remains in the performance reference and ticket evidence rather than becoming a second requirements authority. Contributor procedures from current main remain in guidance.

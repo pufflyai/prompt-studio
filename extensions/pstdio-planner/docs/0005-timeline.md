@@ -42,16 +42,16 @@ Open **Auto Build** in the header to start it or inspect its supervisor, running
 
 ## CLI
 
-Run `pst pstdio-planner timeline --help` to see the commands. For example:
+Run `pst pstdio.planner timeline --help` to see the commands. For example:
 
 ```sh
-pst pstdio-planner timeline plan read
-pst pstdio-planner auto-build configure --enabled true --prompt 'Choose valid tickets for the next release.'
-pst pstdio-planner auto-build configure --enabled false
-pst pstdio-planner timeline track create --name Product
-pst pstdio-planner timeline deadline create --date 2026-10-15 --name Preview
-pst pstdio-planner timeline ticket create --content '# Build the preview' --deadline 2026-10-15
-pst pstdio-planner timeline plan move --ticket PS-32 --deadline none
+pst pstdio.planner timeline plan read
+pst pstdio.planner auto-build configure --enabled true --prompt 'Choose valid tickets for the next release.'
+pst pstdio.planner auto-build configure --enabled false
+pst pstdio.planner timeline track create --name Product
+pst pstdio.planner timeline deadline create --date 2026-10-15 --name Preview
+pst pstdio.planner timeline ticket create --content '# Build the preview' --deadline 2026-10-15
+pst pstdio.planner timeline plan move --ticket PS-32 --deadline none
 ```
 
 ## Recover an interrupted write
@@ -61,3 +61,5 @@ Timeline writes and attempt launches use guards owned by the running Planner run
 A slow active writer keeps its guard until it finishes. If another write is still running, retry after it finishes. If the runtime has stopped responding, restart Prompt Studio and retry. A partially saved ticket keeps its identity so placement can be retried without creating another ticket. See [the runtime write-guard decision](../../../documentation/adrs/0083-temporary-runtime-planner-write-guards.md).
 
 Milestone progress bars show proportional segments for each configured ticket status, using its status color. The tooltip and accessible progress text include each status name and count; tickets without a status have a neutral segment. The completion count still follows the configured completed statuses.
+
+*Updated at: 2026-11-04*

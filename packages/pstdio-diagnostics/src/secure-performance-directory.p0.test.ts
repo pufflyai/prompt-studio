@@ -12,7 +12,7 @@ test.skipIf(process.platform !== "win32")("secures diagnostics without relying o
       process.execPath,
       [
         "-e",
-        `import { securePerformanceDirectory } from ${JSON.stringify(join(import.meta.dirname, "secure-performance-directory.ts"))}; securePerformanceDirectory(process.argv[1]);`,
+        `import { securePerformanceDirectory } from ${JSON.stringify(join(import.meta.dirname, "secure-performance-directory.ts"))}; let responsive = false; const tick = setInterval(() => { responsive = true; }, 0); try { await securePerformanceDirectory(process.argv[1]); if (!responsive) throw new Error("Permission setup blocked the event loop"); } finally { clearInterval(tick); }`,
         join(root, "diagnostics"),
       ],
       { env: { ...process.env, PATH: root }, encoding: "utf8" },
@@ -24,10 +24,10 @@ test.skipIf(process.platform !== "win32")("secures diagnostics without relying o
   }
 });
 
-test.skipIf(process.platform === "win32")("keeps existing diagnostics private on POSIX", () => {
+test.skipIf(process.platform === "win32")("keeps existing diagnostics private on POSIX", async () => {
   const root = mkdtempSync(join(tmpdir(), "pstdio-permissions-"));
   try {
-    securePerformanceDirectory(root);
+    await securePerformanceDirectory(root);
     expect(statSync(root).mode & 0o777).toBe(0o700);
   } finally {
     rmSync(root, { recursive: true, force: true });

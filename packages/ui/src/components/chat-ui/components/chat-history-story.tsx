@@ -2,8 +2,9 @@ import { Box, Button } from "@chakra-ui/react";
 import { useState } from "react";
 import { ChatPanel } from "./chat-panel";
 import type { SessionMessage } from "./message-types";
-export const PromptHistoryPanel = (props: { prompts?: string[] }) => {
+export const PromptHistoryPanel = (props: { prompts?: string[]; pendingPrompt?: string }) => {
   const { prompts = ["Explain the project", "Show the next steps", "Summarize the plan"] } = props;
+  const { pendingPrompt } = props;
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<SessionMessage[]>(
     prompts.map((text, index) => ({ id: String(index), role: "user", parts: [{ type: "text", text }] })),
@@ -13,6 +14,12 @@ export const PromptHistoryPanel = (props: { prompts?: string[] }) => {
       <ChatPanel
         conversationKey="prompt-history"
         messages={messages}
+        historyMessages={
+          pendingPrompt
+            ? [...messages, { id: "accepted", role: "user", parts: [{ type: "text", text: pendingPrompt }] }]
+            : messages
+        }
+        queuedFollowUps={pendingPrompt ? [{ id: "accepted", prompt: pendingPrompt, sending: true }] : []}
         chatInputDefaultValue={draft}
         onChatInputChange={setDraft}
         emptyStateTitle="Start a conversation"

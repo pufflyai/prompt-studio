@@ -40,3 +40,5 @@ The normal automation switch changes the synced definition once it has an assign
 A disable stops new dispatches when the device receives it. Active work can finish.
 An offline device receives the edit through normal project sync when it reconnects.
 There is no separate pending-disable delivery service.
+
+*Updated at: 2026-10-22*

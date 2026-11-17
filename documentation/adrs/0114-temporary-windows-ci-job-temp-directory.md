@@ -40,3 +40,16 @@ In the packaged-toolchain job, the temp directory is on a different volume from 
 ## Removal
 
 Remove the override when the hosted Windows images offer a fast job-owned temp volume on both architectures, or when a fresh-directory comparison shows that their defaults complete the unchanged native workloads reliably. Run the complete Windows x64 and ARM64 packaged suites on the resulting configuration before removing this ADR.
+
+## Update: desktop cold installs (2026-11-06)
+
+The Test and Build Windows desktop row and signed release desktop job now opt
+into the same job-owned Dev Drive through `setup-windows-temp`, shared with
+`setup-ci-cache`.
+Its cold packaged application tests install defaults in disposable runtime homes,
+just as the toolchain checks do. Previously this row used the ordinary runner temp
+directory: fresh qualification still spent 24–29 seconds installing user defaults
+and another 12 seconds installing Home dependencies, exceeding the unchanged
+60-second lifecycle allowance. Retain every cold install, project, lifecycle
+assertion, and report. This extends the existing temp-directory setup; it does not
+reuse a runtime home or installation cache between cases.

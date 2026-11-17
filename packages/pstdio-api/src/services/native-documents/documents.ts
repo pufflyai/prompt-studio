@@ -209,7 +209,14 @@ export const createNativeDocumentService = (deps: {
     },
     watch(input: RoomRequest, changed: () => void, onClose?: () => void) {
       return run(input, async (room) => {
-        const stop = canonical(room).watch(changed);
+        const stop = canonical(room).watch((change) => {
+          if (
+            !change?.recordIds ||
+            room.backingRecordId === undefined ||
+            (room.backingRecordId !== null && change.recordIds.includes(room.backingRecordId))
+          )
+            changed();
+        });
         const close = () => {
           unsubscribe();
           onClose?.();

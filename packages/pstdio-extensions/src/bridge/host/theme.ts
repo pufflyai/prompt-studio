@@ -5,7 +5,8 @@ export const collectChakraThemeVariables = (root?: HTMLElement | null) => {
 
   const computed = getComputedStyle(root ?? document.documentElement);
   const variables: Record<string, string> = {};
-  for (let index = 0; index < computed.length; index += 1) {
+  const length = computed.length;
+  for (let index = 0; index < length; index += 1) {
     const name = computed.item(index);
     if (name.startsWith("--chakra-")) {
       variables[name] = computed.getPropertyValue(name).trim();

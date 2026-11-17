@@ -79,7 +79,7 @@ test("workspace creation commits links atomically and deletion removes incoming 
       anchors: [{ type: "ticket", id: "one", role: "primary" }],
     });
     const ref = { type: "workspace", id: first.id, projectId: project.id, extensionId: "pstdio" };
-    const ticket = { type: "ticket", id: "one", projectId: project.id, extensionId: "pstdio.pstdio-planner" };
+    const ticket = { type: "ticket", id: "one", projectId: project.id, extensionId: "pstdio.planner" };
     await links.add(ticket, [ref]);
     await workspaces.softDelete(first.id);
     expect((await links.list({ resource: ticket, direction: "both" })).items).toEqual([]);

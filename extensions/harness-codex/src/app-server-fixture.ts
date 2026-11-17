@@ -12,6 +12,33 @@ const complete = () => {
   emit({ method: "item/completed", params: { item: { id: "answer", type: "agentMessage", text: "Hi, colleague" } } });
   emit({ method: "turn/completed", params: { turn: { id: "turn-1", status: "completed", error: null } } });
 };
+const fixtureTurns = () => {
+  if (process.env.PSTDIO_TEST_MODE === "fork-cutoff")
+    return [
+      {
+        id: "old-turn",
+        status: "completed",
+        items: [
+          { type: "agentMessage", id: "commentary", text: "Working" },
+          { type: "agentMessage", id: "answer", text: "First answer" },
+        ],
+      },
+      {
+        id: "later-turn",
+        status: "completed",
+        items: [{ type: "agentMessage", id: "later-answer", text: "Later answer" }],
+      },
+    ];
+  if (process.env.PSTDIO_TEST_MODE?.startsWith("plan-approval"))
+    return [
+      {
+        id: "plan-turn",
+        status: "completed",
+        items: [{ type: "plan", id: "proposal", text: "Build the agreed feature." }],
+      },
+    ];
+  return [];
+};
 emit({ type: "thread.started", thread_id: "thread-fixture" });
 for await (const line of createInterface({ input: process.stdin })) {
   let message: { id?: string | number; method?: string; params?: Record<string, unknown>; result?: unknown };
@@ -21,6 +48,8 @@ for await (const line of createInterface({ input: process.stdin })) {
     complete();
     process.exit(0);
   }
+  if (process.env.PSTDIO_TEST_RPC_LOG) appendFileSync(process.env.PSTDIO_TEST_RPC_LOG, `${JSON.stringify(message)}\n`);
+  if (message.method === "thread/fork") emit({ id: message.id, result: { thread: { id: "forked-thread" } } });
   if (["config/read", "thread/unsubscribe"].includes(message.method ?? "")) emit({ id: message.id, result: {} });
   if (message.method === "fixture/stop" && process.env.PSTDIO_TEST_MODE === "async-cleanup-error") process.exit(1);
   if (message.method === "initialize") emit({ id: message.id, result: {} });
@@ -34,15 +63,7 @@ for await (const line of createInterface({ input: process.stdin })) {
       id: message.id,
       result: {
         thread: {
-          turns: process.env.PSTDIO_TEST_MODE?.startsWith("plan-approval")
-            ? [
-                {
-                  id: "plan-turn",
-                  status: "completed",
-                  items: [{ type: "plan", id: "proposal", text: "Build the agreed feature." }],
-                },
-              ]
-            : [],
+          turns: fixtureTurns(),
         },
       },
     });

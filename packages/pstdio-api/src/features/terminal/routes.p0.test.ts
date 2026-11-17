@@ -1,10 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import type { WSContext, WSEvents } from "hono/ws";
 import type {
+  TerminalEvent,
   TerminalSessionHandle,
   TerminalWebSocketClientMessage,
   TerminalWebSocketServerMessage,
 } from "pstdio-api-contracts";
+import { createRetainedTerminals } from "./retained-terminals";
 import { createTerminalWebSocketEvents, isTerminalWebSocketOriginAllowed } from "./routes";
 
 const createSocket = () => {
@@ -25,12 +27,102 @@ const send = (events: WSEvents, socket: WSContext, message: TerminalWebSocketCli
   events.onMessage?.({ data: JSON.stringify(message) } as MessageEvent<string>, socket);
 };
 
+// A PTY whose output the test pushes; it runs until killed.
+const createLiveHandle = (id: string) => {
+  const pending: TerminalEvent[] = [];
+  let wake: (() => void) | undefined;
+  const kills: Array<string | undefined> = [];
+  const push = (event: TerminalEvent) => {
+    pending.push(event);
+    wake?.();
+  };
+  const handle: TerminalSessionHandle = {
+    id,
+    write() {},
+    resize() {},
+    async kill(signal) {
+      kills.push(signal);
+      push({ kind: "exit", code: null, signal: signal ?? "SIGHUP" });
+    },
+    events: async function* () {
+      while (true) {
+        const event = pending.shift();
+        if (!event) {
+          await new Promise<void>((resolve) => {
+            wake = resolve;
+          });
+          continue;
+        }
+        yield event;
+        if (event.kind === "exit") return;
+      }
+    },
+  };
+  return { handle, kills, output: (text: string) => push({ kind: "data", chunk: new TextEncoder().encode(text) }) };
+};
+
 const waitFor = async (condition: () => boolean) => {
   for (let attempt = 0; attempt < 100 && !condition(); attempt += 1) await Bun.sleep(1);
   expect(condition()).toBe(true);
 };
 
 describe("terminal WebSocket", () => {
+  test("disconnect during native admission releases a late session", async () => {
+    let release!: (session: TerminalSessionHandle) => void;
+    let killed = 0;
+    const events = createTerminalWebSocketEvents({
+      openView: () =>
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+    });
+    const { socket, messages } = createSocket();
+    send(events, socket, {
+      type: "openView",
+      request: { projectId: "project", viewId: "owner.view.shell", cols: 80, rows: 24 },
+    });
+    events.onClose?.({} as CloseEvent, socket);
+    release({
+      id: "late",
+      write() {},
+      resize() {},
+      async kill() {
+        killed += 1;
+      },
+      events: async function* () {},
+    });
+    await waitFor(() => killed === 1);
+    expect(messages).toEqual([]);
+  });
+
+  test("one socket cannot replace its terminal with a second open", async () => {
+    let opened = 0;
+    let killed = 0;
+    const events = createTerminalWebSocketEvents({
+      terminal: {
+        openSession: () => {
+          opened += 1;
+          return {
+            id: "single",
+            write() {},
+            resize() {},
+            async kill() {
+              killed += 1;
+            },
+            events: async function* () {
+              await new Promise(() => {});
+            },
+          };
+        },
+      },
+    });
+    const { socket, closes } = createSocket();
+    send(events, socket, { type: "open", request: { cols: 80, rows: 24 } });
+    send(events, socket, { type: "open", request: { cols: 80, rows: 24 } });
+    await waitFor(() => closes.length > 0);
+    expect(opened).toBe(1);
+    expect(killed).toBe(1);
+  });
   test("allows only same-origin or explicitly trusted browser handshakes", () => {
     const request = (origin?: string) =>
       new Request("http://localhost:19841/v1/terminal", {
@@ -130,6 +222,55 @@ describe("terminal WebSocket", () => {
     await waitFor(() => killed === 1);
 
     expect(killed).toBe(1);
+  });
+
+  test("keeps a keyed PTY running after its socket disconnects and reattaches it with recent output", async () => {
+    const live = createLiveHandle("kept");
+    let opened = 0;
+    const retained = createRetainedTerminals();
+    const terminal = {
+      openSession: () => {
+        opened += 1;
+        return live.handle;
+      },
+    };
+    const first = createSocket();
+    const firstEvents = createTerminalWebSocketEvents({ terminal, retained });
+    send(firstEvents, first.socket, { type: "open", request: { cols: 80, rows: 24 }, attachKey: "project/panel" });
+    live.output("before ");
+    await waitFor(() => first.messages.length === 2);
+    firstEvents.onClose?.({} as CloseEvent, first.socket);
+    live.output("while away");
+    await Bun.sleep(5);
+
+    const second = createSocket();
+    const secondEvents = createTerminalWebSocketEvents({ terminal, retained });
+    send(secondEvents, second.socket, { type: "open", request: { cols: 80, rows: 24 }, attachKey: "project/panel" });
+
+    expect(opened).toBe(1);
+    expect(live.kills).toEqual([]);
+    expect(second.messages).toEqual([
+      { type: "open", sessionId: "kept" },
+      { type: "data", chunk: Buffer.from("before while away").toString("base64") },
+    ]);
+    send(secondEvents, second.socket, { type: "kill" });
+    await waitFor(() => live.kills.length === 1);
+  });
+
+  test("starts a separate keyed PTY while the existing one is attached elsewhere", () => {
+    const handles = [createLiveHandle("first"), createLiveHandle("second")];
+    const retained = createRetainedTerminals();
+    const terminal = { openSession: () => handles.shift()!.handle };
+    const windows = [createSocket(), createSocket()];
+    for (const window of windows) {
+      const events = createTerminalWebSocketEvents({ terminal, retained });
+      send(events, window.socket, { type: "open", request: { cols: 80, rows: 24 }, attachKey: "project/panel" });
+    }
+
+    expect(windows.map((window) => window.messages[0])).toEqual([
+      { type: "open", sessionId: "first" },
+      { type: "open", sessionId: "second" },
+    ]);
   });
 
   test("reports hosts where terminal sessions are unavailable", () => {

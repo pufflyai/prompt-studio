@@ -8,11 +8,13 @@ Declare `performance.read` to read state, a snapshot, or subscribe to snapshots.
 
 `state()` returns the host kind and enabled state. `snapshot()` returns `null` while disabled. `subscribe(listener)` returns an asynchronous disposer. Concurrent consumers share the host's collector and polling; the bridge releases its listener on disconnect. Call the disposer when the view unmounts.
 
-Use `await client.performance.retain()` to hold capture ownership while your monitoring view is loaded. It returns a disposer. In the Prompt Studio dashboard, the first retained capture also turns monitoring on and releasing the last one turns it off, so a loaded monitoring extension is the device opt-in. The host shares one capture across owners, releases ownership on disconnect, and stops collection when the last owner leaves. The saved preference stays unchanged. The host's own renderer observers also hold an owner for the window's lifetime.
+Use `await client.performance.retain()` to hold capture ownership while your monitoring view is loaded. It returns a disposer. In the Prompt Studio dashboard, the first retained capture turns monitoring on, so a loaded monitoring extension is the device opt-in. The desktop host counts monitoring owners across all projects, separately from passive renderer observers. Switching or closing one project cannot disable another project's monitoring view. Releasing the last monitoring owner restores the saved device choice without changing it. The host shares one capture across owners and releases ownership on disconnect. The host's own renderer observers also hold a passive owner for the window's lifetime; they do not keep monitoring enabled after the last monitoring view leaves when the saved choice is off.
 
 `recordings()` explicitly exports the protected recording directory and bounded saved JSONL files, including after disable. Browser hosts return `null`. Read access never starts a recorder.
 
 `setEnabled(boolean)` controls the existing device preference. `pauseExtension(installedExtensionId)` and `resumeExtension(installedExtensionId)` use the host's paused-view state, which the snapshot reports as `pausedExtensionIds`. They do not stop backend commands or sessions.
+
+On `main`, API 0.4.2 adds `client.performance.query()` under `performance.read`. It returns the readonly retained snapshot of the same window controller and collector. Observe it with `useWebviewCommandQuery(query, useWebviewVisibility())`; hiding a view releases optional sampling observation. Accepted `null` means monitoring is off, while initial failure remains unread with an error and failed refresh retains accepted data. Capture ownership still uses `retain()`. Existing `snapshot()` and `subscribe()` stay supported. Publish the matching host and SDK before separately released consumers adopt `query()`.
 
 ## Developer settings
 
@@ -42,3 +44,5 @@ These are gaps in the published API, not choices of the Performance Monitoring e
 - An extension cannot open its own status popover from a command, and its commands run in the runtime, which cannot read device measurements. Device actions such as copying a snapshot belong in the extension's views.
 - `extensionFrames` identify an extension only by its install id and webview id. Consumers cannot show the extension's display name.
 - Extension contributions load with a project. With no project open, no extension control or meter exists, although the device switch may still be on.
+
+*Updated at: 2026-11-04*

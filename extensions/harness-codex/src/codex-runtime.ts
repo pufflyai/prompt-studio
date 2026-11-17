@@ -1,9 +1,12 @@
 import { createAppServerTransport, serverEnvironment } from "./app-server-transport";
 import { createCodexWorker } from "./app-server-worker";
 import { defaultSpawnProcess, resolveCodexCommand, type SpawnDeps } from "./codex-process";
+import { createCodexCommandObservers, readCodexCommandFingerprint } from "./command-observation";
 import { nativeThreadMessages } from "./native-history";
 import type { Turn } from "./protocol/v2/Turn";
 import type { ResumeSpawnInput, StartSpawnInput } from "./session-input";
+
+type ThreadInput = { agentSessionId: string; cwd?: string; env?: Record<string, string>; messageId?: string };
 
 export const createCodexRuntime = (deps: SpawnDeps = { spawnProcess: defaultSpawnProcess }) => {
   let authenticationGeneration = 0;
@@ -36,12 +39,23 @@ export const createCodexRuntime = (deps: SpawnDeps = { spawnProcess: defaultSpaw
     JSON.stringify([input.env?.PSTDIO_PROJECT_ID, input.env?.PSTDIO_SESSION_ID ?? input.agentSessionId]);
   const keyOf = (input: Pick<StartSpawnInput & Partial<ResumeSpawnInput>, "env" | "agentSessionId" | "cwd">) =>
     JSON.stringify([serverKey(input.env), identity(input)]);
+  const commandObservers = createCodexCommandObservers<Parameters<typeof keyOf>[0]>({
+    key: keyOf,
+    covered: (input) =>
+      !input.agentSessionId ||
+      (workers.get(keyOf(input))?.worker.threadId() === input.agentSessionId &&
+        !workers.get(keyOf(input))?.worker.isClosed()),
+    read: async (input, signal) => {
+      const current = worker({ ...input, prompt: "", events: { getMessages: () => [], push: () => {} } });
+      return readCodexCommandFingerprint(current.request, input.agentSessionId!, signal);
+    },
+  });
   const worker = (input: StartSpawnInput & Partial<ResumeSpawnInput>) => {
     input.signal?.throwIfAborted();
     const key = keyOf(input);
     let owned = workers.get(key)?.worker;
     if (!owned || owned.isClosed()) {
-      owned = createCodexWorker(input, server(input.env), identity(input));
+      owned = createCodexWorker(input, server(input.env), identity(input), () => commandObservers.changed(key));
       workers.set(key, {
         projectId: input.env?.PSTDIO_PROJECT_ID,
         sessionId: input.env?.PSTDIO_SESSION_ID,
@@ -53,7 +67,30 @@ export const createCodexRuntime = (deps: SpawnDeps = { spawnProcess: defaultSpaw
   const releaseStale = async (key: string, value: NonNullable<ReturnType<typeof workers.get>>) => {
     if (value.stale && (await value.worker.releaseIdle()) && workers.get(key) === value) workers.delete(key);
   };
+  const withReader = async <T>(
+    input: ThreadInput,
+    read: (transport: ReturnType<typeof createAppServerTransport>, signal: AbortSignal) => Promise<T>,
+  ) => {
+    const transport = server(input.env);
+    const reader = { receive: () => {}, disconnect: () => {} };
+    const controller = new AbortController();
+    const completion = Promise.withResolvers<void>();
+    readers.set(controller, { projectId: input.env?.PSTDIO_PROJECT_ID, done: completion.promise });
+    transport.retain(reader);
+    try {
+      await transport.ready;
+      return await read(transport, controller.signal);
+    } finally {
+      try {
+        await transport.release(reader);
+      } finally {
+        readers.delete(controller);
+        completion.resolve();
+      }
+    }
+  };
   return {
+    observeCommands: commandObservers.observe,
     worker,
     refreshAuthentication: async () => {
       authenticationGeneration++;
@@ -78,15 +115,8 @@ export const createCodexRuntime = (deps: SpawnDeps = { spawnProcess: defaultSpaw
       return released.every((result) => result.status === "fulfilled" && result.value);
     },
     prepareGoalUpdate: (input: Parameters<typeof keyOf>[0]) => workers.get(keyOf(input))?.worker.prepareGoalUpdate(),
-    readMessages: async (input: { agentSessionId: string; cwd?: string; env?: Record<string, string> }) => {
-      const transport = server(input.env);
-      const reader = { receive: () => {}, disconnect: () => {} };
-      const controller = new AbortController();
-      const completion = Promise.withResolvers<void>();
-      readers.set(controller, { projectId: input.env?.PSTDIO_PROJECT_ID, done: completion.promise });
-      transport.retain(reader);
-      try {
-        await transport.ready;
+    readMessages: (input: ThreadInput) =>
+      withReader(input, async (transport, signal) => {
         const result = (await transport.request(
           "thread/read",
           {
@@ -94,18 +124,60 @@ export const createCodexRuntime = (deps: SpawnDeps = { spawnProcess: defaultSpaw
             includeTurns: true,
           },
           undefined,
-          controller.signal,
+          signal,
         )) as { thread: { turns: Turn[] } };
         return nativeThreadMessages(result.thread.turns);
-      } finally {
-        try {
-          await transport.release(reader);
-        } finally {
-          readers.delete(controller);
-          completion.resolve();
+      }),
+    fork: (input: ThreadInput) =>
+      withReader(input, async (transport, signal) => {
+        signal.throwIfAborted();
+        let lastTurnId: string | undefined;
+        if (input.messageId) {
+          const result = (await transport.request(
+            "thread/read",
+            { threadId: input.agentSessionId, includeTurns: true },
+            undefined,
+            signal,
+          )) as { thread: { turns: Turn[] } };
+          const turn = result.thread.turns.find((turn) =>
+            nativeThreadMessages([turn]).some((message) => message.id === input.messageId),
+          );
+          if (!turn || turn.status === "inProgress" || nativeThreadMessages([turn]).at(-1)?.id !== input.messageId)
+            throw new Error("Codex can fork only from the last reply in a completed turn.");
+          lastTurnId = turn.id;
         }
-      }
-    },
+        signal.throwIfAborted();
+        // A native copy can finish after scope cancellation. Keep its reply owned so
+        // the loaded fork is released even when the caller has already gone away.
+        const copied = transport
+          .request("thread/fork", {
+            threadId: input.agentSessionId,
+            deferGoalContinuation: true,
+            ...(lastTurnId ? { lastTurnId } : {}),
+            ...(input.cwd ? { cwd: input.cwd } : {}),
+          })
+          .then(async (response) => {
+            const result = response as { thread: { id: string } };
+            await transport.request("thread/unsubscribe", { threadId: result.thread.id });
+            return result.thread.id;
+          });
+        return new Promise<string>((resolve, reject) => {
+          const abort = () => reject(signal.reason);
+          const release = () => signal.removeEventListener("abort", abort);
+          copied.then(
+            (id) => {
+              release();
+              resolve(id);
+            },
+            (error) => {
+              release();
+              reject(error);
+            },
+          );
+          signal.addEventListener("abort", abort, { once: true });
+          if (signal.aborted) abort();
+        });
+      }),
     run: (
       input: StartSpawnInput & Partial<ResumeSpawnInput>,
       command?: { method: string; params: Record<string, unknown>; goal?: boolean },
@@ -121,6 +193,7 @@ export const createCodexRuntime = (deps: SpawnDeps = { spawnProcess: defaultSpaw
       })();
     },
     dispose: async () => {
+      commandObservers.close(undefined, true);
       // Shutdown ends the entire provider generation, including any unanswered native requests.
       const owned = [...workers.values()];
       workers.clear();
@@ -131,6 +204,7 @@ export const createCodexRuntime = (deps: SpawnDeps = { spawnProcess: defaultSpaw
       servers.clear();
     },
     disposeScope: async (projectId?: string) => {
+      commandObservers.close(projectId);
       const selected = [...workers.entries()].filter(([, value]) => value.projectId === projectId);
       await disposeReaders(projectId);
       await Promise.all(

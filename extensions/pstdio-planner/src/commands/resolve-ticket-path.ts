@@ -1,7 +1,7 @@
 import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
-import { TICKETS_DIR, ticketFilesDir, ticketMarkdownPath } from "../data/draft-storage";
+import { TICKETS_DIR, ticketFilesDir, ticketMarkdownPath, ticketPathPrefixes } from "../data/draft-storage";
 import { ticketPageTarget } from "../data/ticket-page-target";
-import { ticketResourceReference } from "../data/ticket-resource-hierarchy";
+import { plannerOwnerFor, ticketResourceReference } from "../data/ticket-resource-hierarchy";
 import { findTicketAncestors, findTicketsByShorthand } from "../data/ticket-shorthand-lookup";
 
 export const resolveTicketPathCommand = defineCommand({
@@ -9,17 +9,21 @@ export const resolveTicketPathCommand = defineCommand({
   title: l10n("commands.resolveTicketPath.title", "Resolve ticket path"),
   params: { path: params.text({ required: true }), workspaceId: params.text({ required: true }) },
   async run(ctx, input) {
-    if (!input.path.startsWith(`${TICKETS_DIR}/`)) return null;
-    const [shorthand] = input.path.slice(`${TICKETS_DIR}/`.length).split("/");
+    const prefix = ticketPathPrefixes.find((prefix) => input.path.startsWith(prefix));
+    if (!prefix) return null;
+    const path = `${TICKETS_DIR}/${input.path.slice(prefix.length)}`;
+    const [shorthand] = path.slice(`${TICKETS_DIR}/`.length).split("/");
     const tickets = shorthand ? await findTicketsByShorthand(ctx, shorthand) : [];
     const resolutions = (
       await Promise.all(
         tickets.map(async (ticket) => {
-          const document = (ticket.files ?? []).find(
-            (file) => input.path === `${ticketFilesDir(shorthand)}/${file.name}`,
+          const document = (ticket.files ?? []).find((file) => path === `${ticketFilesDir(shorthand)}/${file.name}`);
+          if (path !== ticketMarkdownPath(shorthand) && !document) return null;
+          const reference = ticketResourceReference(
+            ticket,
+            await findTicketAncestors(ctx, ticket),
+            plannerOwnerFor(ctx),
           );
-          if (input.path !== ticketMarkdownPath(shorthand) && !document) return null;
-          const reference = ticketResourceReference(ticket, await findTicketAncestors(ctx, ticket));
           const resource = {
             ...reference,
             projectId: ctx.projectId,

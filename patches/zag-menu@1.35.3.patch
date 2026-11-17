@@ -1,0 +1,40 @@
+diff --git a/dist/menu.machine.mjs b/dist/menu.machine.mjs
+--- a/dist/menu.machine.mjs
++++ b/dist/menu.machine.mjs
+@@ -441,7 +441,7 @@
+           }
+         ],
+         ITEM_POINTERLEAVE: {
+-          guard: and(not("isPointerSuspended"), not("isTriggerItem")),
++          guard: and(not("isPointerSuspended"), not("isTriggerItem"), "isHighlightedItem"),
+           actions: ["clearHighlightedItem"]
+         },
+         ITEM_CLICK: [
+@@ -495,6 +495,7 @@
+       closeOnSelect: ({ prop, event }) => !!(event?.closeOnSelect ?? prop("closeOnSelect")),
+       // whether the trigger is also a menu item
+       isTriggerItem: ({ event }) => dom.isTriggerItem(event.target),
++      isHighlightedItem: ({ context, event }) => context.get("highlightedValue") === dom.getItemValue(event.target),
+       // whether the trigger item is the active item
+       isTriggerItemHighlighted: ({ event, scope, computed }) => {
+         const target = event.target ?? scope.getById(computed("highlightedId"));
+diff --git a/dist/menu.machine.js b/dist/menu.machine.js
+--- a/dist/menu.machine.js
++++ b/dist/menu.machine.js
+@@ -463,7 +463,7 @@
+           }
+         ],
+         ITEM_POINTERLEAVE: {
+-          guard: and(not("isPointerSuspended"), not("isTriggerItem")),
++          guard: and(not("isPointerSuspended"), not("isTriggerItem"), "isHighlightedItem"),
+           actions: ["clearHighlightedItem"]
+         },
+         ITEM_CLICK: [
+@@ -517,6 +517,7 @@
+       closeOnSelect: ({ prop, event }) => !!(event?.closeOnSelect ?? prop("closeOnSelect")),
+       // whether the trigger is also a menu item
+       isTriggerItem: ({ event }) => dom.isTriggerItem(event.target),
++      isHighlightedItem: ({ context, event }) => context.get("highlightedValue") === dom.getItemValue(event.target),
+       // whether the trigger item is the active item
+       isTriggerItemHighlighted: ({ event, scope, computed }) => {
+         const target = event.target ?? scope.getById(computed("highlightedId"));

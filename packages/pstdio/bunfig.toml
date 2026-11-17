@@ -1,3 +1,3 @@
 [test]
 preload = ["../../scripts/test-setup.ts"]
-timeout = 15000
+# Bun ignores a [test] timeout here. Package runners pass --timeout; a slow case declares its own.

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../scripts/session-test";
 import {
   createResourceActionsProject,
   openSessionSidePanel,
@@ -22,15 +22,27 @@ test("Session menus share resource actions and switch through the full history",
     ).toBe(true);
   }
   await prepareResourceActionsDashboard(page, project.id);
-  await page.goto(`/projects/${project.id}/sessions`);
+  await page.goto(`/projects/${project.id}/extensions/pstdio.session-browser/conversations`);
   const nav = page.locator('[data-workbench-region="sidenav"]');
   await expect(nav.getByRole("option", { name: "History 64", exact: true })).toBeVisible();
-  // The oldest sessions are outside the virtualized viewport until it is scrolled.
-  await nav.locator('[data-scope="scroll-area"][data-part="viewport"]').evaluateAll((elements) => {
-    for (const element of elements) element.scrollTop = element.scrollHeight;
-  });
+  const revealOldestSessions = async () => {
+    // Navigation retains the previous rows while the new owner's first page loads.
+    await expect(nav.locator("section[aria-busy]").filter({ visible: true })).toHaveAttribute("aria-busy", "false");
+    // Reaching the visible end fetches the next page before scrolling its rows into view.
+    await nav.locator('[data-scope="scroll-area"][data-part="viewport"]').evaluateAll((elements) => {
+      for (const element of elements) element.scrollTop = element.scrollHeight;
+    });
+    await expect(nav.getByRole("option", { name: "History 14", exact: true })).toBeAttached();
+    await nav.locator('[data-scope="scroll-area"][data-part="viewport"]').evaluateAll((elements) => {
+      for (const element of elements) element.scrollTop = element.scrollHeight;
+    });
+  };
+  await revealOldestSessions();
   await nav.getByRole("option", { name: "Keep open", exact: true }).click();
+  await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Keep open");
   const route = page.url();
+  // Conversations own their linked resources and a fresh, paginated session list.
+  await revealOldestSessions();
   await nav.getByRole("option", { name: "Inspect this session", exact: true }).click({ button: "right" });
   const resourceGroup = () => page.getByRole("group", { name: "Session", exact: true });
   const expected = await resourceGroup().getByRole("menuitem").allTextContents();
@@ -59,7 +71,7 @@ test("Session menus share resource actions and switch through the full history",
   await expect(picker.getByRole("option", { name: /Keep open$/ })).toBeVisible();
   await search.fill("history 00");
   await expect(options).toHaveText(["History 00"]);
-  await expect(picker.getByRole("img", { name: "Session status: completed" })).toBeVisible();
+  await expect(picker.getByRole("img", { name: "Session status: pending" })).toBeVisible();
   const sessions = await (await request.get(`/v1/sessions?project_id=${project.id}`)).json();
   const history = sessions.find((session: { title: string }) => session.title === "History 00");
   try {

@@ -17,7 +17,21 @@ const columnStatSchema = z.discriminatedUnion("type", [
 ]);
 
 const columnRendererSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.enum(["sparkline", "bar-chart"]),
+    domain: z
+      .tuple([z.number(), z.number()])
+      .refine(([low, high]) => low < high, "Chart domain must increase")
+      .optional(),
+    unit: z.string().optional(),
+  }),
   z.object({ type: z.literal("json") }),
+  z.object({
+    type: z.literal("image"),
+    fit: z.enum(["cover", "contain"]).optional(),
+    shape: z.enum(["square", "circle"]).optional(),
+    showLabel: z.boolean().optional(),
+  }),
   z.object({
     type: z.literal("color-scale"),
     stops: z.array(z.object({ value: z.number(), color: themeColorSchema })),
@@ -47,6 +61,7 @@ export const dataTableRendererSettingsSchema = z.object({
   grouping: z.string(),
   rowNumbers: z.boolean(),
   wrapRows: z.boolean(),
+  rowHeight: z.enum(["compact", "comfortable", "tall"]).optional(),
   showStats: z.boolean(),
   hiddenColumns: z.array(z.string()),
   columnOrder: z.array(z.string()),

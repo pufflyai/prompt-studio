@@ -114,7 +114,7 @@ export const WorkbenchHeaderActions = (props: WorkbenchHeaderActionsProps) => {
                         label={item.label}
                         icon={item.icon ? <WorkbenchIcon name={item.icon} size={16} /> : undefined}
                         disabled={item.disabled}
-                        endContent={createMenuEndContent({ readOnly: item.readOnly, disabledReason: item.description })}
+                        endContent={createMenuEndContent({ disabledReason: item.disabledReason })}
                         onActivate={() => onSelect(item)}
                       />
                     </Menu.Item>

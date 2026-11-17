@@ -186,6 +186,16 @@ export const DataTableDisplayMenu = (props: DataTableDisplayMenuProps) => {
               checked={settings.rowNumbers}
               onChange={(rowNumbers) => onSettingsChange({ rowNumbers })}
             />
+            <DisplayMenuSelect
+              label="Row height"
+              value={settings.rowHeight ?? "compact"}
+              options={[
+                { value: "compact", label: "Compact" },
+                { value: "comfortable", label: "Comfortable" },
+                { value: "tall", label: "Tall" },
+              ]}
+              onSelect={(rowHeight) => onSettingsChange({ rowHeight: rowHeight as DataTableSettings["rowHeight"] })}
+            />
             <SettingSwitch
               label="Wrap rows"
               checked={settings.wrapRows}

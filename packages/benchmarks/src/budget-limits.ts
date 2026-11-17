@@ -31,7 +31,12 @@ export const subnavBudgets = {
   dataMs: limit(1525, "ms", "2026-10-26", `${hosted} Slowest 1,263 ms.`),
   editorMs: limit(1325, "ms", "2026-10-26", `${hosted} Slowest 1,089 ms.`),
 };
-export const plannerBudget = limit(3000, "ms", "2026-10-26", `${hosted} Slowest cold open 2,426 ms.`);
+export const plannerBudget = limit(
+  4000,
+  "ms",
+  "2026-11-11",
+  `${hosted} Temporary approved limit; hosted cold open 3,303 ms, local 1,258 ms.`,
+);
 export const collectionBudget = limit(
   1250,
   "ms",
@@ -52,17 +57,12 @@ export const chatBudgets = {
 };
 
 const desktopEvidence =
-  "User-approved 2026-10-10 release rehearsal: Intel cold launch 23.3 s, Windows 8.2 s; about 20% headroom. See the desktop benchmark section of the testing guide.";
-export const desktopBudgets = (platform = process.platform, arch = process.arch) => {
-  const intelMac = platform === "darwin" && arch === "x64";
-  const cold = platform === "win32" ? 10000 : 8000;
-  const macWindow = intelMac ? 10000 : 1500;
-  return {
-    coldStartMs: limit(intelMac ? 28000 : cold, "ms", "2026-10-10", desktopEvidence),
-    startupWindowMs: limit(platform === "darwin" ? macWindow : 1000, "ms", "2026-10-10", desktopEvidence),
-    recoveryMs: limit(500, "ms", "2026-10-10", desktopEvidence),
-  };
-};
+  "User-approved 2026-11-14: the same strict startup/recovery targets on Linux x64, Apple Silicon Mac and Windows x64.";
+export const desktopBudgets = () => ({
+  coldStartMs: limit(3_000, "ms", "2026-11-14", desktopEvidence),
+  startupWindowMs: limit(1_200, "ms", "2026-11-14", desktopEvidence),
+  recoveryMs: limit(480, "ms", "2026-11-14", desktopEvidence),
+});
 export const rendererBudgets = {
   idleScript: limit(0.02, "share", "2026-10-10", "Idle main-thread script budget from the desktop release rehearsal."),
   idleTask: limit(0.05, "share", "2026-10-10", "Idle main-thread task budget from the desktop release rehearsal."),
@@ -90,4 +90,11 @@ export const relayStorageBudget = limit(
   "share",
   "unrecorded",
   "PRD 0014 R23: stored bytes stay below twice the latest state size plus the grace-period copy. This ratio is a product storage bound, not a timing measurement.",
+);
+
+export const legacyConversionMacrotaskBudget = limit(
+  1500,
+  "ms",
+  "2026-11-11",
+  "User-approved 1,500 ms after release verification 42962479744 measured 1,066.5 ms; retain the complete legacy conversion workload.",
 );

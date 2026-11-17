@@ -4,6 +4,7 @@ import { hasEarlierRecordLifetime, recordLifetime } from "pstdio-sync/records";
 import * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_ordered_owners } from "../../db/schemas.pg";
+import { ensureOrderedOwner } from "./ordered-conversion";
 import { orderedNativeAddress } from "./ordered-native-source";
 import { orderedOwnerWhere } from "./ordered-sql";
 import { lockRecordOwner } from "./record-changes";
@@ -15,7 +16,7 @@ type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 export const nativeSourceAddressIn = async (
   tx: Transaction,
   owner: StorageOwner,
-  input: { recordId: string; documentKey: string },
+  input: { recordId: string; documentKey: string; field?: string },
 ) => {
   const [ordered] = await tx
     .select({ id: storage_ordered_owners.workbench_id })
@@ -44,12 +45,14 @@ export const nativeSourceAddressIn = async (
   }
 };
 
-export const resolveNativeRecordAddress = (
+export const resolveNativeRecordAddress = async (
   db: DbClient,
   owner: StorageOwner,
-  input: { recordId: string; documentKey: string },
-) =>
-  db.transaction(async (tx) => {
+  input: { recordId: string; documentKey: string; field?: string },
+) => {
+  await ensureOrderedOwner(db, owner);
+  return db.transaction(async (tx) => {
     await lockRecordOwner(tx, owner);
     return nativeSourceAddressIn(tx, owner, input);
   });
+};

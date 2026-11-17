@@ -1,56 +1,41 @@
 import type { ExtensionWorkspaceProvider } from "pstdio-api-contracts/extension-kernel";
-import { git, isGitAvailable, listBranches } from "pstdio-wt";
 import { apiLogger } from "../../lib/logger";
 import type { WorkspacesRouteDeps } from "./deps";
-import { worktreeProviderId } from "./workspace-provider-identity";
-import { hasUsableGitBase } from "./worktree-setup";
-
-const discoverGitProvider = async (path: string) => {
-  if (!(await isGitAvailable())) return null;
-  try {
-    if (!(await hasUsableGitBase(path))) return null;
-    const branches = await listBranches(path);
-    const currentBranch = await git(path, ["branch", "--show-current"]);
-    const defaultValue = currentBranch ? (branches.find((branch) => branch.isCurrent)?.name ?? currentBranch) : "HEAD";
-    const options = branches
-      .filter((branch) => Boolean(currentBranch) || !branch.isCurrent)
-      .map((branch) => ({ label: branch.name, value: branch.name, icon: "git-commit-horizontal" }));
-    if (!currentBranch) {
-      options.unshift({ label: "Current checkout (no branch)", value: "HEAD", icon: "git-commit-horizontal" });
-    }
-    return {
-      id: worktreeProviderId,
-      label: "Git worktree",
-      icon: "git-branch",
-      description: "Create an isolated branch in the project repository.",
-      params: {
-        base: { type: "select", label: "Base branch", required: true, defaultValue, options },
-      },
-    } satisfies ExtensionWorkspaceProvider;
-  } catch (error) {
-    apiLogger.warn({ err: error, root_path: path }, "Git workspace provider discovery failed");
-    return null;
-  }
-};
-
-export const findWorktreeProvider = async (deps: Pick<WorkspacesRouteDeps, "workspaceService">, projectId: string) => {
-  const home = await deps.workspaceService.getDefault(projectId);
-  return home?.execution_kind === "local" && home.root_path ? discoverGitProvider(home.root_path) : null;
-};
+import { discoverWorkspaceProvider } from "./workspace-provider-discovery";
+import { catalogProviderId } from "./workspace-provider-identity";
+import { findWorkspaceProvider } from "./workspace-provider-runtime";
 
 export const listWorkspaceProviders = async (deps: WorkspacesRouteDeps, projectId: string) => {
-  const gitProvider = await findWorktreeProvider(deps, projectId);
-  const providers: ExtensionWorkspaceProvider[] = gitProvider ? [gitProvider] : [];
+  const providers: ExtensionWorkspaceProvider[] = [];
   const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
-  for (const entry of snapshot.runtime.workspaceTypes) {
-    providers.push({
-      id: entry.id,
-      label: entry.provider.label,
-      icon: entry.provider.icon,
-      description:
-        "The provider supplies this environment and its files. Local files are not uploaded or synchronized.",
-      params: entry.provider.params ?? {},
-    });
-  }
+  const installed = await Promise.all(
+    snapshot.runtime.workspaceTypes.map(async (entry) => {
+      let params = entry.provider.params ?? {};
+      if (entry.provider.discover) {
+        try {
+          const handle = await findWorkspaceProvider(deps, { projectId, providerId: entry.id });
+          if (!handle) return null;
+          const discovery = await discoverWorkspaceProvider(handle);
+          if (!discovery) return null;
+          params = discovery.params;
+        } catch (error) {
+          apiLogger.error(
+            { err: error, project_id: projectId, provider_id: entry.id },
+            "Workspace provider discovery failed",
+          );
+          return null;
+        }
+      }
+      return {
+        id: catalogProviderId(entry.id),
+        label: entry.provider.label,
+        icon: entry.provider.icon,
+        description:
+          "The provider supplies this environment and its files. Local files are not uploaded or synchronized.",
+        params,
+      } satisfies ExtensionWorkspaceProvider;
+    }),
+  );
+  for (const provider of installed) if (provider) providers.push(provider);
   return providers;
 };

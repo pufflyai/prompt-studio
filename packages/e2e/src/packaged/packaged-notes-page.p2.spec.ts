@@ -9,6 +9,7 @@ import { verifyNotesPageIsolation } from "../helpers/notes-page-isolation";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import { test } from "../scripts/playwright-test";
 import { buildBinary } from "./packaged-helpers";
+import { observePackagedNotes } from "./packaged-notes-evidence";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
 test.afterEach(stopPendingTestProcesses);
@@ -21,12 +22,20 @@ test("Notes offers note creation and restores its Main tabs separately from Arti
   const root = realpathSync(mkdtempSync(join(tmpdir(), "pstdio-notes-page-")));
   let child: ChildProcess | null = null;
   let browser: Browser | null = null;
+  let finishEvidence: Awaited<ReturnType<typeof observePackagedNotes>> | undefined;
+  let folder: string | undefined;
+  let failed = true;
   try {
     const started = await startPackagedServe(root, {
-      PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-artifacts", "pstdio-notes", "pstdio-planner"),
+      PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions(
+        "pstdio-artifacts",
+        "pstdio-notes",
+        "pstdio-planner",
+        "pstdio-session-browser",
+      ),
     });
     child = started.child;
-    const folder = join(root, "project");
+    folder = join(root, "project");
     mkdirSync(folder);
     const response = await fetch(`${started.baseUrl}/v1/projects`, {
       method: "POST",
@@ -37,6 +46,7 @@ test("Notes offers note creation and restores its Main tabs separately from Arti
     const project = (await response.json()) as { id: string };
     browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
+    finishEvidence = await observePackagedNotes(page);
     await page.addInitScript(() => {
       if (window.top === window) localStorage.setItem("onboarding-complete", "true");
     });
@@ -54,7 +64,9 @@ test("Notes offers note creation and restores its Main tabs separately from Arti
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await main.getByRole("button", { name: "Close New note", exact: true }).click();
     await verifyNotesPageIsolation(page);
+    failed = false;
   } finally {
+    await finishEvidence?.(folder, failed);
     await browser?.close();
     if (child) await stopProcess(child);
     rmSync(root, { recursive: true, force: true });

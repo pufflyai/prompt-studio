@@ -7,22 +7,16 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
+import { createStore } from "zustand/vanilla";
 import { useUiScope } from "./ui-scope";
 
 const createSurfaceRegistry = () => {
   const surfaces = new Set<object>();
-  const listeners = new Set<() => void>();
-  const notify = () => {
-    for (const listener of listeners) listener();
-  };
+  const state = createStore<number>(() => 0);
+  const notify = () => state.setState(surfaces.size, true);
   return {
-    getSnapshot: () => surfaces.size,
-    subscribe(listener: () => void) {
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
-    },
+    getSnapshot: state.getState,
+    subscribe: state.subscribe,
     register(token: object) {
       surfaces.add(token);
       notify();

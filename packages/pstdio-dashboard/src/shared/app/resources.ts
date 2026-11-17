@@ -21,7 +21,7 @@ export const createDashboardSessionResource = (
   projectId: string | undefined,
   metadata: Record<string, unknown> = {},
 ) => ({
-  ...createDashboardResource("session", id, label, "MessageCircle", projectId, metadata),
+  ...createDashboardResource("session", id, label, "message-circle", projectId, metadata),
   extensionId: "pstdio",
   projectId,
 });
@@ -33,4 +33,4 @@ export const dashboardViews = {
 export const dashboardExtensionsPage = { kind: "page", extensionId: "pstdio", id: "extensions" } as const;
 export const dashboardExtensionDetailPage = { ...dashboardExtensionsPage, id: "extension-detail" } as const;
 
-export const dashboardHomePage = { kind: "page", extensionId: "pstdio.pstdio-home", id: "home" } as const;
+export const dashboardHomePage = { kind: "page", extensionId: "pstdio.home", id: "home" } as const;

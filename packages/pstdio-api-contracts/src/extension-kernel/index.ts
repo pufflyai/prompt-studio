@@ -29,6 +29,7 @@ export {
   localContributionIdGrammar,
   localContributionIdPattern,
 } from "./contribution-id";
+export { dataTableImageText, readDataTableImageValue } from "./data-table-image-values";
 export { resolveDataTableComparableValue, resolveDataTableFieldKind } from "./data-table-values";
 export { applyEditingChanges, diffEditingState, rebaseEditingChanges } from "./editing-state";
 export * from "./event-reference";
@@ -69,12 +70,15 @@ export {
 export { pagePlaceholderView } from "./page-placeholder";
 export * from "./page-resource-codec";
 export * from "./page-url";
+export { type QueryDependency, queryChangeEnvelopeSchema } from "./query-change";
 export { commandRef, eventRef } from "./refs";
 export { resourceKey } from "./resource-key";
 export { serializeCommandError } from "./serialize-error";
+export { sessionBrowser, sessionBrowserId } from "./session-browser-refs";
 export { defineSlot } from "./slots";
 export { isFileSourcePosition } from "./source-position";
 export type * from "./types";
+export { DEFAULT_COLLECTION_PAGE_SIZE, MAX_COLLECTION_PAGE_SIZE } from "./types/collection-page";
 export { VIEW_FILTER_CONDITIONS } from "./types/collection-view";
 export { dockedWorkbenchRegions, extensionPanelRegions } from "./types/composition";
 export { DEFAULT_DATA_TABLE_SETTINGS } from "./types/data-table-renderer";
@@ -87,5 +91,6 @@ export {
   WEBVIEW_HOST_CAPABILITY_VERSION,
   WEBVIEW_SCOPED_DECLARABLE_CAPABILITIES,
 } from "./types/webview-capabilities";
+export type * from "./types/webview-service-query";
 export { artifactMountId, EXTENSION_EVENTS_SCOPE, RESOURCE_ACTIONS_EVENTS_SCOPE } from "./webview-protocol";
 export { workspaceCommands, workspacePages, workspaceViews } from "./workspace-refs";

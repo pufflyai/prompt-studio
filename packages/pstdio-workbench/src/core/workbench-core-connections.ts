@@ -10,6 +10,17 @@ import { createDisposable } from "./shared/disposable";
 import { registerWorkbenchBuiltIns } from "./workbench-built-ins";
 import type { createWorkbenchInput, WorkbenchCore } from "./workbench-core-types";
 
+export const subscribePrimaryWorkbenchResource = (
+  core: WorkbenchCore,
+  listener: Parameters<WorkbenchCore["onDidChangePrimaryResource"]>[0],
+) =>
+  createDisposable(
+    core.pages.store.subscribeSelector(
+      (state) => state.location?.resource,
+      () => listener(core.getPrimaryResource()),
+    ),
+  );
+
 export const createCoreCompositionController = (resolveCore: () => WorkbenchCore) =>
   createWorkbenchCompositionController({
     acceptsTabs: (region) => resolveCore().shell.getPanelPolicy(region).acceptsTabs,
@@ -28,8 +39,8 @@ export const createCoreCompositionController = (resolveCore: () => WorkbenchCore
   });
 
 export const connectWorkbenchCoreState = (core: WorkbenchCore, input: createWorkbenchInput) => {
-  connectMainPageSelection(core);
-  core.layout.store.subscribe((state) => {
+  const stopSelection = connectMainPageSelection(core);
+  const stopLayout = core.layout.store.subscribe((state) => {
     const activeRegion = core.focus.getActiveRegion();
     if (
       activeRegion &&
@@ -42,10 +53,12 @@ export const connectWorkbenchCoreState = (core: WorkbenchCore, input: createWork
     if (viewId) core.context.set(workbenchViewIdContextKey, viewId);
     else core.context.delete(workbenchViewIdContextKey);
   };
-  for (const store of [core.layout.store, core.pages.store, core.focus.store]) store.subscribe(updateViewContext);
+  const stopContext = [core.layout.store, core.pages.store, core.focus.store].map((store) =>
+    store.subscribe(updateViewContext),
+  );
   updateViewContext();
 
-  createPrimaryCoordinator({
+  const primary = createPrimaryCoordinator({
     layout: core.layout,
     primary: {
       getResource: () =>
@@ -57,6 +70,12 @@ export const connectWorkbenchCoreState = (core: WorkbenchCore, input: createWork
     isInScope: input.isInScope ?? createScopedIsInScope(core.resources),
   });
   registerWorkbenchBuiltIns(core);
+  return createDisposable(() => {
+    stopSelection();
+    stopLayout();
+    for (const stop of stopContext) stop();
+    primary.dispose();
+  });
 };
 
 const activeWorkbenchPlacement = (core: WorkbenchCore) => {

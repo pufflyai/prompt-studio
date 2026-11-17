@@ -261,7 +261,13 @@ test("local receipt identity and atomic refusal survive a database restart", asy
 test("losing a founding CAS adopts the winner before resubmitting local records", async () => {
   const [first, second] = await peers();
   await first.records.commit({ operationId: "loser-local", edits: [{ recordId: "card", replace: { count: 1 } }] });
-  await second.records.commit({ operationId: "winner-local", edits: [{ recordId: "card", replace: { count: 2 } }] });
+  await second.records.commit({
+    operationId: "winner-local",
+    edits: [
+      { recordId: "card", replace: { count: 2 } },
+      { recordId: "winner-only", replace: "Retain the winning state" },
+    ],
+  });
   const replace = first.relay.replace;
   let raced = false;
   first.relay.replace = async (state) => {
@@ -275,6 +281,7 @@ test("losing a founding CAS adopts the winner before resubmitting local records"
   await second.sync.synchronize();
   for (const peer of [first, second]) {
     expect((await peer.records.read("card")).value).toEqual({ count: 1 });
+    expect((await peer.records.read("winner-only")).value).toBe("Retain the winning state");
     expect(peer.failures).toEqual([]);
   }
 });

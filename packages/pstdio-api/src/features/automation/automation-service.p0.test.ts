@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
+import { normalizeExtensionSources } from "pstdio-extensions";
 import { createAutomationService } from "./automation-service";
 
 describe("automation service recovery", () => {
@@ -140,7 +141,10 @@ describe("automation service recovery", () => {
         ({
           extensionRuntimeCatalog: {
             get: async () => ({
-              runtime: { commands: [{ id: "pstdio.test.command.run", automation: true }] },
+              runtime: {
+                ...normalizeExtensionSources([]),
+                commands: [{ id: "pstdio.test.command.run", automation: true }],
+              },
             }),
           },
         }) as never,
@@ -201,7 +205,12 @@ describe("automation authentication", () => {
       getCommandDeps: () =>
         ({
           extensionRuntimeCatalog: {
-            get: async () => ({ runtime: { commands: [{ id: "pstdio.test.command.run", automation: true }] } }),
+            get: async () => ({
+              runtime: {
+                ...normalizeExtensionSources([]),
+                commands: [{ id: "pstdio.test.command.run", automation: true }],
+              },
+            }),
           },
         }) as never,
       maxAuthAttemptsPerMinute: 2,
@@ -281,7 +290,10 @@ describe("automation service cancellation", () => {
           activityEventsService: { create: async () => {} },
           extensionRuntimeCatalog: {
             get: async () => ({
-              runtime: { commands: [{ id: "pstdio.test.command.blocking", automation: true }] },
+              runtime: {
+                ...normalizeExtensionSources([]),
+                commands: [{ id: "pstdio.test.command.blocking", automation: true }],
+              },
             }),
           },
         }) as never,

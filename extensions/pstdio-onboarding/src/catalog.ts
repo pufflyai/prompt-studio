@@ -27,12 +27,16 @@ export const workChoices: { id: OnboardingWorkArea; key: string; icon: Component
   { id: "planning", key: "planning", icon: SquareKanban },
 ];
 export const extensions: Record<string, { name: string; icon?: string }> = {
-  "pstdio-base-themes": { name: "Themes" },
-  "pstdio-skills": { name: "Prompt Studio Skills" },
-  "pstdio-planner": { name: "Project Planner" },
-  "pstdio-reports": { name: "Agent Reports" },
-  "pstdio-artifacts": { name: "Artifacts" },
-  "pstdio-notes": { name: "Notes" },
+  home: { name: "Home" },
+  onboarding: { name: "Onboarding" },
+  "base-themes": { name: "Themes" },
+  skills: { name: "Prompt Studio Skills" },
+  "pstdio-skill-browser": { name: "Skill Browser" },
+  workspaces: { name: "Workspaces" },
+  planner: { name: "Project Planner" },
+  reports: { name: "Agent Reports" },
+  artifacts: { name: "Artifacts" },
+  notes: { name: "Notes" },
 };
 export const resolveExtensionChoices = (inventory?: Parameters<typeof resolveHarnessIcons>[0]) =>
   Object.fromEntries(

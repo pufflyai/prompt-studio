@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { folderWorkspaceCapabilities } from "pstdio-db";
 import { testHarnessId } from "../../harnesses/test-harness-registry";
+import { createSessionQueueLifecycle } from "../session-queue-lifecycle";
 import { createTrackedSessionStore } from "../session-store.test-utils";
 import { createSessionHandler } from "./create-session";
 
@@ -101,6 +102,7 @@ const createDeps = () => {
         transitionStatus,
         store: createTrackedSessionStore(),
       },
+      sessionQueueLifecycle: createSessionQueueLifecycle(),
       sessionQueueEntriesService: {
         createDispatchStarted: async () => ({ queue_position: 1 }),
         remove: async () => {},

@@ -1,4 +1,5 @@
 import { and, eq } from "drizzle-orm";
+import { canonicalOwner } from "pstdio-api-contracts/extension-host";
 import { type AssetStore, hasDocumentUserData, type StorageObserver, type StorageOwner } from "pstdio-sync";
 import { createDocumentStorage } from "pstdio-sync/records";
 import { createTextDocumentStorage } from "pstdio-sync/text";
@@ -10,6 +11,8 @@ import { createDocumentCache } from "./document-cache";
 import { createDocumentDirectory } from "./document-directory";
 import { createDocumentTransactions } from "./document-transactions";
 import { createNativeDocumentStore, openNativeDocument } from "./native-document-storage";
+import { createOrderedCloudReturn } from "./ordered-cloud-return";
+import { convertLegacyOwners } from "./ordered-conversion";
 import { createOrderedLogs } from "./ordered-logs";
 import { createOrderedResourceRecords } from "./ordered-resource-records";
 import { createOrderedStreamStore } from "./ordered-stream-store";
@@ -18,7 +21,9 @@ import { resourceDocumentId } from "./resource-document-persistence";
 import type { NumberChange } from "./resource-number-repair";
 import type { StorageDiagnostics } from "./storage-diagnostics";
 
-const notifyNativeRecords = (listeners: Map<string, Set<() => void>>, owner: StorageOwner, keys: string[]) => {
+type NativeChange = { recordIds?: readonly string[] };
+type NativeListener = (change?: NativeChange) => void;
+const notifyNativeRecords = (listeners: Map<string, Set<NativeListener>>, owner: StorageOwner, keys: string[]) => {
   for (const documentKey of keys) {
     const key = JSON.stringify({
       workbench_id: owner.workbenchId,
@@ -51,7 +56,7 @@ const hasProjectedRecords = async (db: DbClient, owner: StorageOwner) => {
     .limit(1);
   return !!record;
 };
-type StorageChange = StorageOwner & { documentId?: string };
+export type StorageChange = StorageOwner & { documentId?: string; recordIds?: readonly string[] };
 
 const documentRevision = (db: DbClient, documentId: string) => async (owner: StorageOwner) => {
   const [row] = await db
@@ -93,9 +98,9 @@ export const createDocumentStorageDBService = (
 ) => {
   const cache = createDocumentCache();
   const listeners = new Set<(owner: StorageChange, origin?: "relay") => void>();
-  const documentListeners = new Map<string, Set<() => void>>();
+  const documentListeners = new Map<string, Set<NativeListener>>();
   const numberListeners = new Set<(event: NumberChange) => void>();
-  const notifyOwnerNative = (owner: StorageOwner) => {
+  const notifyOwnerNative = (owner: StorageOwner, recordIds?: readonly string[]) => {
     for (const [key, callbacks] of documentListeners) {
       const address = JSON.parse(key) as { workbench_id: string; extension_id: string; document_id: string };
       if (
@@ -103,7 +108,7 @@ export const createDocumentStorageDBService = (
         address.extension_id === owner.extensionId &&
         address.document_id.startsWith('["native-markdown",')
       )
-        for (const listener of callbacks) listener();
+        for (const listener of callbacks) listener({ recordIds });
     }
   };
   const numbersChanged = (events: NumberChange[]) => notifyNumbers(numberListeners, events);
@@ -124,12 +129,16 @@ export const createDocumentStorageDBService = (
   const transaction = transactionFor("records");
   const nativeStore = (id: string) => createNativeDocumentStore(db, id, transactionFor, documentRevision(db, id));
   const isResourceDocument = (id: string) =>
+    id.startsWith('["host-local-migration",') ||
     id.startsWith(resourceDocumentId("").slice(0, -2)) ||
+    id.startsWith('["ordered-conversion') ||
     id.startsWith('["ordered-index-blob",') ||
     id.startsWith('["ordered-native-field",') ||
     id.startsWith('["ordered-native-room",') ||
     id.startsWith('["ordered-native-authored",') ||
     id.startsWith('["ordered-dependency",') ||
+    id.startsWith('["ordered-replaced",') ||
+    id === '["ordered-return"]' ||
     id === '["ordered-directory"]';
   directory = createDocumentDirectory(db, {
     metadata: transaction,
@@ -142,9 +151,17 @@ export const createDocumentStorageDBService = (
       for (const listener of listeners) listener(owner);
     },
   });
+  const cloudReturn = createOrderedCloudReturn(db, {
+    changed: (owner) => {
+      notifyOwnerNative(owner);
+      for (const listener of listeners) listener(owner);
+    },
+  });
   return {
     transaction,
+    convertLegacyOwners: (options: Parameters<typeof convertLegacyOwners>[1]) => convertLegacyOwners(db, options),
     logs,
+    cloudReturn,
     observer,
     getEnvironment,
     flushStatistics: async () => {
@@ -164,18 +181,19 @@ export const createDocumentStorageDBService = (
           ? nativeStore(documentId)
           : { transaction: transactionFor(documentId), revision: documentRevision(db, documentId) },
       recordStream: (owner: StorageOwner) =>
-        createOrderedStreamStore(db, owner, {
+        createOrderedStreamStore(db, canonicalOwner(owner), {
           statistics,
           numbersChanged,
           metadata: transaction,
-          changed: () => {
-            notifyOwnerNative(owner);
-            for (const listener of listeners) listener(owner, "relay");
+          changed: (recordIds) => {
+            notifyOwnerNative(owner, recordIds);
+            for (const listener of listeners) listener({ ...owner, ...(recordIds && { recordIds }) }, "relay");
           },
         }),
-      list: (owner: StorageOwner) => directory.list(owner),
+      list: (owner: StorageOwner) => directory.list(canonicalOwner(owner)),
     },
     async hasData(owner: StorageOwner) {
+      owner = canonicalOwner(owner);
       if (await hasProjectedRecords(db, owner)) return true;
       const documents = await db
         .select({ id: storage_documents.document_id })
@@ -199,6 +217,7 @@ export const createDocumentStorageDBService = (
       };
     },
     open(input: { owner: StorageOwner; assets?: AssetStore; textFields?: StorageTextDeclaration[] }) {
+      input = { ...input, owner: canonicalOwner(input.owner) };
       // The owner document keeps owner metadata such as data migration versions; records have their own documents.
       const metadata = createDocumentStorage({ owner: input.owner, store: { transaction, observer } });
       return {
@@ -217,20 +236,22 @@ export const createDocumentStorageDBService = (
               for (const listener of listeners)
                 listener({ ...input.owner, documentId: JSON.stringify(["native-markdown", key]) });
           },
-          changed: () => {
-            notifyOwnerNative(input.owner);
-            for (const listener of listeners) listener(input.owner);
+          changed: (recordIds) => {
+            notifyOwnerNative(input.owner, recordIds);
+            for (const listener of listeners) listener({ ...input.owner, ...(recordIds && { recordIds }) });
           },
         }),
       };
     },
     openTextDocument(input: { owner: StorageOwner; fileId: string }) {
+      input = { ...input, owner: canonicalOwner(input.owner) };
       return createTextDocumentStorage({
         owner: input.owner,
         store: { transaction: transactionFor(JSON.stringify(["text-file", input.fileId])) },
       });
     },
     openNativeTextDocument(input: { owner: StorageOwner; fileId: string }) {
+      input = { ...input, owner: canonicalOwner(input.owner) };
       return openNativeDocument(input, {
         db,
         transactionFor,

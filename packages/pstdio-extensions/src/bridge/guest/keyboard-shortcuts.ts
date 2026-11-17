@@ -1,10 +1,15 @@
 import type { WebviewKeyboardShortcut, WebviewKeyboardShortcutRequest } from "pstdio-api-contracts/extension-kernel";
+import { isEditableKeyboardTarget } from "./keyboard-owner";
 
 const normalizeKey = (key: string) => (key === " " ? "SPACE" : key.toUpperCase());
 
 // Option can replace a letter with a symbol or dead key. Keep ordinary layout letters intact.
 const shortcutEventKey = (event: KeyboardEvent) =>
   event.altKey && !/^[a-z]$/i.test(event.key) && /^Key[A-Z]$/.test(event.code) ? event.code.slice(3) : event.key;
+
+// Some layouts need Shift to type a symbol, such as "/" on German keyboards (Shift+7).
+const shiftTypedSymbol = (event: KeyboardEvent, shortcut: WebviewKeyboardShortcut) =>
+  event.shiftKey && !shortcut.shiftKey && /^[^\p{L}\p{N}\s]$/u.test(shortcut.key) && event.key === shortcut.key;
 
 export const matchesKeyboardShortcut = (event: KeyboardEvent, shortcut: WebviewKeyboardShortcut) =>
   !(event.isComposing || event.getModifierState?.("AltGraph")) &&
@@ -14,9 +19,9 @@ export const matchesKeyboardShortcut = (event: KeyboardEvent, shortcut: WebviewK
   event.ctrlKey === Boolean(shortcut.ctrlKey) &&
   event.metaKey === Boolean(shortcut.metaKey) &&
   event.altKey === Boolean(shortcut.altKey) &&
-  event.shiftKey === Boolean(shortcut.shiftKey);
+  (event.shiftKey === Boolean(shortcut.shiftKey) || shiftTypedSymbol(event, shortcut));
 
-/** Only negotiated host chords cross this boundary. Ordinary guest keys stay local. */
+/** Only negotiated host chords cross this boundary. Editable controls keep their own actions. */
 export const installKeyboardShortcuts = (
   target: EventTarget,
   shortcuts: () => readonly WebviewKeyboardShortcut[],
@@ -24,13 +29,15 @@ export const installKeyboardShortcuts = (
 ) => {
   const listener = (input: Event) => {
     const event = input as KeyboardEvent;
-    // Global chords always hold Alt, Ctrl or Cmd, so ordinary typing never pays for a lookup.
-    if (!event.altKey && !event.ctrlKey && !event.metaKey) return;
-    const shortcut = shortcuts().find((candidate) => matchesKeyboardShortcut(event, candidate));
+    const inputFocus = isEditableKeyboardTarget(event.target);
+    if (inputFocus && !event.altKey && !event.ctrlKey && !event.metaKey) return;
+    const shortcut = shortcuts().find(
+      (candidate) => (!inputFocus || !candidate.ignoreInputs) && matchesKeyboardShortcut(event, candidate),
+    );
     if (!shortcut) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    dispatch({ id: shortcut.id, repeat: event.repeat });
+    dispatch({ id: shortcut.id, repeat: event.repeat, ...(inputFocus ? { inputFocus } : {}) });
   };
   target.addEventListener("keydown", listener, true);
   return () => target.removeEventListener("keydown", listener, true);

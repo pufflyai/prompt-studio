@@ -15,8 +15,8 @@ test.beforeAll(() => {
   if (!process.env.E2E_PACKAGED_BINARY_PATH) buildBinary();
 });
 
-// A visible full ID must locate its download even when the catalog uses a different install name.
-test("packaged marketplace search finds an extension by its visible full ID", async () => {
+// Full-ID search must locate the download even when the catalog uses a different install name.
+test("packaged marketplace search finds an extension by its full ID", async () => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "pstdio-packaged-marketplace-search-")));
   let child: ChildProcess | undefined;
   let browser: Browser | undefined;
@@ -58,7 +58,7 @@ test("packaged marketplace search finds an extension by its visible full ID", as
     await signInBrowser(page, started.descriptor);
     await page.goto(`${started.baseUrl}/projects/${project.id}/extensions`);
     const row = page.getByTestId("marketplace-extension-entry").filter({
-      has: page.getByText("acme.roadmap", { exact: true }),
+      has: page.getByText("Planning tools", { exact: true }),
     });
     await expect(row).toBeVisible();
     const search = page.getByTestId("extensions-search");

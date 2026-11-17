@@ -4,7 +4,7 @@ import type { ArtifactMount, ExtensionContextBase } from "@pstdio/sdk/extensions
 import { applyFrontmatter, buildReportFrontmatter } from "./frontmatter";
 import type { StoredReport } from "./types";
 
-export const REPORTS_DIR = ".pstdio/extension-storage/pstdio.pstdio-reports/reports";
+export const REPORTS_DIR = ".pstdio/extension-storage/pstdio.reports/reports";
 
 const layout = createDraftLayout(REPORTS_DIR, "report");
 export const reportDir = layout.directory;
@@ -52,12 +52,24 @@ export const readReportMarkdown = async (projectFiles: ArtifactMount, report: St
   return projectFiles.readText(path);
 };
 
-export const requireReportDraftFiles = async (ctx: Pick<ExtensionContextBase, "projectFiles" | "workspaces">) => {
+export const requireReportDraftFiles = async (
+  ctx: Pick<ExtensionContextBase, "projectFiles" | "workspaces" | "extensionId">,
+) => {
   const projectFiles = requireRepoFiles(ctx.projectFiles);
   const home = await ctx.workspaces.getDefault();
   if (home?.execution_kind !== "local" || !home.root_path) {
     throw new Error("Report drafts require a local project folder.");
   }
   const root = home.root_path;
-  return { projectFiles, resolvePath: (path: string) => resolve(root, path) };
+  // Existing hosts keep their historical root; a migration-capable host supplies the canonical owner.
+  const previous = ".pstdio/extension-storage/pstdio.pstdio-reports";
+  const allocated = ctx.extensionId === "pstdio.reports" ? `.pstdio/extension-storage/${ctx.extensionId}` : previous;
+  return {
+    projectFiles,
+    resolvePath: (path: string) =>
+      resolve(
+        root,
+        path === previous || path.startsWith(`${previous}/`) ? `${allocated}${path.slice(previous.length)}` : path,
+      ),
+  };
 };

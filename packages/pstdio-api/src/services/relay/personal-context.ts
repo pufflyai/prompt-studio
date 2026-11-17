@@ -89,7 +89,6 @@ export const createPersonalContext = (config: RelayWorkbench, deps: ExtensionsRo
     accountId: config.accountId,
     projectId: config.workbenchId,
   });
-  let legacyDiscarded = false;
   const streams = createPersonalLogStreams({
     owner: history.owner,
     service: deps.extensionStorageService.logs,
@@ -102,23 +101,7 @@ export const createPersonalContext = (config: RelayWorkbench, deps: ExtensionsRo
     namespace,
     streams,
     logs: deps.extensionStorageService.logs,
-    async discardLegacy() {
-      if (legacyDiscarded) return;
-      await discardLegacyHistory(config, deps);
-      legacyDiscarded = true;
-    },
   };
-};
-
-/** The old index is small. Never open a legacy transcript or replay its journal during upgrade. */
-export const discardLegacyHistory = async (config: RelayWorkbench, deps: ExtensionsRouteDeps) => {
-  const owner = {
-    workbenchId: config.workbenchId,
-    extensionId: JSON.stringify(["pstdio.personal-history", config.managerOrigin, config.accountId]),
-  };
-  const documents = deps.extensionStorageService.documents;
-  const names = await documents.list(owner);
-  for (const name of names) await documents.discard(owner, name);
 };
 
 export const createPersonalReaders = (

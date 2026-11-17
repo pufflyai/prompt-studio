@@ -4,6 +4,7 @@ export interface PeerLiveData {
   discovery: Set<string | null>;
   deviceId: string;
   projectId: string;
+  accountId: string;
 }
 const topicKey = (projectId: string, spaceOwner: string | null, topic: string) =>
   JSON.stringify([projectId, spaceOwner, topic]);
@@ -53,7 +54,7 @@ export const createPeerLive = () => {
       },
       message(socket: Bun.ServerWebSocket<PeerLiveData>, data: string | Buffer) {
         const message = liveClientMessageSchema.parse(JSON.parse(String(data)));
-        if ("spaceOwner" in message && message.spaceOwner !== null && message.spaceOwner !== "owner")
+        if ("spaceOwner" in message && message.spaceOwner !== null && message.spaceOwner !== socket.data.accountId)
           return socket.close(1008);
         if (message.type === "discover") socket.data.discovery.add(message.spaceOwner);
         if (message.type === "undiscover") socket.data.discovery.delete(message.spaceOwner);

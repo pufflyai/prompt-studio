@@ -105,6 +105,7 @@ test.each(["dataTable", "kanban"] as const)("%s toolbar actions survive the publ
             kind: "dataTable",
             resourceKind: resourceKind.ref,
             query: async () => ({ rows: [] }),
+            initialPageSize: 500,
             toolbarActions: [action],
           },
         })
@@ -115,6 +116,7 @@ test.each(["dataTable", "kanban"] as const)("%s toolbar actions survive the publ
             kind: "kanban",
             resourceKind: resourceKind.ref,
             query: async () => ({ rows: [] }),
+            initialPageSize: 500,
             toolbarActions: [action],
           },
         });
@@ -124,6 +126,7 @@ test.each(["dataTable", "kanban"] as const)("%s toolbar actions survive the publ
   const metadata = workbenchExtensionMetadataSchema.parse(createWorkbenchExtensionMetadata({ runtime }));
   expect(metadata.views[0]?.body).toMatchObject({
     resourceKind: "ticket",
+    initialPageSize: 500,
     toolbarActions: [{ ...action, command: { ...run.ref, extensionId: "pstdio.lab" } }],
   });
 });

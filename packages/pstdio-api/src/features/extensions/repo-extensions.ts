@@ -1,9 +1,14 @@
-import { existsSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
 import type { createExtensionService, SyncInstalledSourceInput } from "../../services/extension-service";
 import { AlwaysEnabledExtensionError } from "./always-on-extensions";
-import { hashExtensionSource, loadExtensionSource } from "./extension-runtime";
+import { listExtensionSources } from "./discover-extension-sources";
+import {
+  type hashExtensionSource,
+  hashExtensionSourceAsync,
+  loadExtensionSource,
+  readExtensionSourceMetadata,
+} from "./extension-runtime";
 
 type ExtensionService = Pick<
   ReturnType<typeof createExtensionService>,
@@ -17,6 +22,12 @@ type InstalledSourcesService = Pick<
 
 type SyncRepoExtensionsForProjectInput = {
   discover?: boolean;
+  /**
+   * Which newly discovered folders to enable. Omit it to enable every new folder. A folder
+   * restored from another device is registered disabled, so its code runs only after a
+   * person enables it.
+   */
+  enable?: (name: string) => boolean;
   extensionService: ExtensionService;
   hashExtension?: typeof hashExtensionSource;
   installedExtensionSourcesService: InstalledSourcesService;
@@ -32,20 +43,14 @@ type SyncRepoExtensionsForProjectFolderInput = Omit<SyncRepoExtensionsForProject
 export type SyncRepoExtensionsResult = {
   /** Folders another enabled source already provides. They are registered, but left disabled. */
   conflicting: string[];
+  /** New folders the caller chose not to enable. They are registered, but left disabled. */
+  disabled: string[];
   enabled: string[];
   missing: string[];
   skipped: string[];
 };
 
 const repoExtensionsRoot = (repoPath: string) => join(repoPath, ".pstdio", "extensions");
-
-const listExtensionDirs = (root: string) => {
-  if (!existsSync(root)) return [];
-  return readdirSync(root, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .sort((left, right) => left.localeCompare(right));
-};
 
 const markMissingSources = async (
   input: SyncRepoExtensionsForProjectInput,
@@ -78,11 +83,42 @@ const enableUnlessRequiredElsewhere = async (extensionService: ExtensionService,
   }
 };
 
+/** Only a new folder can be kept off; an existing registration keeps its state. */
+const keepsOff = (input: Pick<SyncRepoExtensionsForProjectInput, "enable">, name: string, existing: unknown) =>
+  !existing && !!input.enable && !input.enable(name);
+
+/** A folder that stays off is read from its manifest only, so its code is never imported. */
+const readRepoExtension = async (sourcePath: string, manifestOnly: boolean, load: typeof loadExtensionSource) => {
+  try {
+    return manifestOnly ? readExtensionSourceMetadata(sourcePath) : await load(sourcePath);
+  } catch {
+    return null;
+  }
+};
+
+const sourceInputFor = (
+  loaded: Awaited<ReturnType<typeof loadExtensionSource>>,
+  source: { name: string; projectId: string; sourceHash: string; sourcePath: string },
+) =>
+  ({
+    displayName: loaded.metadata.displayName,
+    extensionId: loaded.metadata.id,
+    installName: source.name,
+    manifest: loaded.manifest,
+    name: loaded.metadata.name,
+    projectId: source.projectId,
+    sourceHash: source.sourceHash,
+    sourceKind: "local_path",
+    sourcePath: source.sourcePath,
+    version: loaded.metadata.version,
+  }) satisfies SyncInstalledSourceInput;
+
 export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForProjectInput) => {
   const root = repoExtensionsRoot(input.repoPath);
-  const load = input.loadExtension ?? loadExtensionSource;
-  const hash = input.hashExtension ?? hashExtensionSource;
+  const load = input.loadExtension ?? ((path: string) => loadExtensionSource(path, { accepted: true }));
+  const hash = input.hashExtension ?? hashExtensionSourceAsync;
   const conflicting: string[] = [];
+  const disabled: string[] = [];
   const enabled: string[] = [];
   const skipped: string[] = [];
   const presentSourcePaths = new Set<string>();
@@ -92,35 +128,26 @@ export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForP
     instances.filter((record) => record.instance.enabled).map((record) => record.installedSource.extension_id),
   );
 
-  for (const name of input.discover === false ? [] : listExtensionDirs(root)) {
+  const paths = input.discover === false ? [] : (await listExtensionSources(root)).paths;
+  for (const path of paths) {
+    const name = basename(path);
     const sourcePath = join(root, name);
+    const existing = instancesBySourcePath.get(sourcePath);
+    const register = keepsOff(input, name, existing);
 
-    let loaded: Awaited<ReturnType<typeof loadExtensionSource>>;
-    try {
-      loaded = await load(sourcePath);
-    } catch {
+    const loaded = await readRepoExtension(sourcePath, register, load);
+    if (!loaded) {
       skipped.push(name);
       continue;
     }
 
     presentSourcePaths.add(sourcePath);
-    const sourceInput = {
-      displayName: loaded.metadata.displayName,
-      extensionId: loaded.metadata.id,
-      installName: name,
-      manifest: loaded.manifest,
-      name: loaded.metadata.name,
-      projectId: input.projectId,
-      sourceHash: hash(sourcePath),
-      sourceKind: "local_path",
-      sourcePath,
-      version: loaded.metadata.version,
-    } satisfies SyncInstalledSourceInput;
-    const existing = instancesBySourcePath.get(sourcePath);
-    const synced = await input.extensionService.syncInstalledSourceForProject(sourceInput);
+    const synced = await input.extensionService.syncInstalledSourceForProject(
+      sourceInputFor(loaded, { name, projectId: input.projectId, sourceHash: await hash(sourcePath), sourcePath }),
+    );
     if (!synced) continue;
     if (existing) {
-      if (existing.instance.enabled) enabled.push(name);
+      enabled.push(...(existing.instance.enabled ? [name] : []));
       continue;
     }
 
@@ -131,7 +158,10 @@ export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForP
       conflicting.push(name);
       continue;
     }
-
+    if (register) {
+      disabled.push(name);
+      continue;
+    }
     if (!(await enableUnlessRequiredElsewhere(input.extensionService, synced.instance.id))) {
       conflicting.push(name);
       continue;
@@ -141,7 +171,7 @@ export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForP
   }
 
   const missing = await markMissingSources(input, root, presentSourcePaths, instances);
-  return { conflicting, enabled, missing, skipped };
+  return { conflicting, disabled, enabled, missing, skipped };
 };
 
 export const syncRepoExtensionsForProjectFolder = async (input: SyncRepoExtensionsForProjectFolderInput) => {

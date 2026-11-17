@@ -40,6 +40,7 @@ export const createCommandRunner = (runtime: ExtensionRuntime, deps: CommandRunn
     dispatcher,
     (extensionId) => deps.createLogger?.(extensionId) ?? logger,
     executeBuilder,
+    runtime,
   );
   const state: RunnerState = { runtime, deps, logger, maxDepth, generateId, dispatcher, factory };
   const executeInternal = async (input: InternalExecuteInput) => {
@@ -55,18 +56,23 @@ export const createCommandRunner = (runtime: ExtensionRuntime, deps: CommandRunn
   runRef.run = executeInternal;
 
   return {
-    buildExtensionContext: async (input: BuildEnvironmentInput) => {
+    buildExtensionContext: async (input: BuildEnvironmentInput, scope?: InvocationScope) => {
       const env = await deps.buildEnvironment(input);
-      return factory.buildExtensionContext(env, input, 0);
+      return factory.buildExtensionContext(env, input, 0, scope);
     },
     execute: (input: CommandExecuteInput) => executeInternal({ ...input, depth: 0 }),
     executeHostCommand: (input) => executeHostCommand(state, input),
     dispatchEvent: (input: ExtensionEventDispatchInput): Promise<EventDeliveryResult> =>
-      dispatcher.dispatch(input.eventId, { ...(input.payload ?? {}), projectId: input.projectId } as Struct, {
-        projectId: input.projectId,
-        workspaceDir: input.payload?.workspaceDir as string | undefined,
-        workspaceId: input.payload?.workspaceId as string | undefined,
-      }),
+      dispatcher.dispatch(
+        input.eventId,
+        { ...(input.payload ?? {}), projectId: input.projectId } as Struct,
+        {
+          projectId: input.projectId,
+          workspaceDir: input.payload?.workspaceDir as string | undefined,
+          workspaceId: input.payload?.workspaceId as string | undefined,
+        },
+        input.refresh,
+      ),
   };
 };
 

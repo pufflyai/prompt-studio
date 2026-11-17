@@ -34,6 +34,13 @@ export interface ExtensionStorageMigration {
   position(rank: number, key: string): string;
   /** Derive the same ID from a stable source key. A prefix selects lossless, case-sensitive Base62 output. */
   id(key: string, prefix?: string): string;
+  /**
+   * Move every item of the deprecated `collection(name)` in this scope to `records.id(keyPrefix + itemId)`.
+   * The item value becomes the record value; text history and native text bindings move with it, and
+   * `sortOrder` is dropped. Old-format collection calls and late old-format writes reach the moved
+   * records. Safe to retry. Only valid while this migration runs.
+   */
+  moveCollection(name: string, options: { keyPrefix: string }): Promise<{ moved: number }>;
 }
 
 export interface ExtensionStoragePositionsApi {
@@ -47,6 +54,12 @@ export interface ExtensionStorageTextApi {
 }
 
 export interface ExtensionStorageApi {
+  /** Observe committed structured records in this project and extension, including local signed-out writes.
+   * IDs are opaque records.id() identities. Missing scope is conservative. Subscribe before a finite read. */
+  observe(
+    changed: (change: { recordIds?: readonly string[] }) => void,
+    options?: { recordIds?: readonly string[]; signal?: AbortSignal },
+  ): { close(): void };
   /** Whether this source may run data upgrades now; false when the synced extension owns migrations. */
   canMigrate(): Promise<boolean>;
   /** Upgrade this storage scope once. Saves the version after success; failed work must be safe to retry. */

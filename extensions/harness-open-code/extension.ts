@@ -1,5 +1,6 @@
 import { defineExtension, defineHarness, defineHook, workspaceEvents } from "@pstdio/sdk/extensions";
 import { createOpencodeHarness } from "./src/harness";
+import { quotasCommand } from "./src/quotas";
 
 type ProvisionSkill = {
   name: string;
@@ -39,6 +40,7 @@ export const provisionOpencodeSkills = async (ctx: OpencodeSkillProvisionContext
 };
 
 export default defineExtension({
+  commands: [quotasCommand],
   harnesses: [defineHarness(createOpencodeHarness())],
   hooks: [
     defineHook({

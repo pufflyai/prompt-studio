@@ -7,6 +7,7 @@ export interface QueryReply {
   bytes: number;
   finishedAt: number;
   rows: { id: string; title?: string; attributes?: Record<string, unknown> }[];
+  page?: { filteredTotal: number };
 }
 
 export const openScaleBrowser = async (profile: Profile) => {
@@ -51,6 +52,7 @@ export const openScaleBrowser = async (profile: Profile) => {
               bytes: body.byteLength,
               finishedAt: performance.now(),
               rows: result.outcome.value.rows,
+              page: result.outcome.value.page,
             });
         })
         .catch(() => {}),

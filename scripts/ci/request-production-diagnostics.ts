@@ -9,7 +9,11 @@ interface DiagnosticRequest {
 }
 
 export const requestProductionDiagnostics = async (input: DiagnosticRequest) => {
-  if (input.label !== "ci:full") return { requested: false, reason: "No full diagnostic request" };
+  const profile = new Map([
+    ["ci:full", "production"],
+    ["ci:windows", "windows"],
+  ]).get(input.label);
+  if (!profile) return { requested: false, reason: "No diagnostic request" };
   if (input.headRepository !== input.repository)
     return { requested: false, reason: "Fork diagnostics require an owner to dispatch a reviewed repository ref" };
   if (!/^[a-f0-9]{40}$/.test(input.sha) || !input.ref || !input.repository || !input.token)
@@ -23,12 +27,12 @@ export const requestProductionDiagnostics = async (input: DiagnosticRequest) => 
         accept: "application/vnd.github+json",
         "content-type": "application/json",
       },
-      body: JSON.stringify({ ref: input.ref, inputs: { profile: "production", source_sha: input.sha } }),
+      body: JSON.stringify({ ref: input.ref, inputs: { profile, source_sha: input.sha } }),
       signal: AbortSignal.timeout(10000),
     },
   );
   if (!response.ok) throw new Error(`Diagnostic dispatch failed: HTTP ${response.status}`);
-  return { requested: true, reason: "Separate full functional diagnostics requested; fast PR gate is unchanged" };
+  return { requested: true, reason: `Separate ${profile} diagnostics requested; fast PR gate is unchanged` };
 };
 
 if (import.meta.main) {

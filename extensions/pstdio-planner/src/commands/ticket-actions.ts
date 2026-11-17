@@ -6,25 +6,24 @@ import {
   l10n,
   params,
   type ResourceAnchor,
+  sessionBrowser,
   type TemplateParam,
-  workbenchPanels,
 } from "@pstdio/sdk/extensions";
-import { ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
 import { renderOwnedTemplate } from "../data/template-store";
-import { ticketResourceIdentity } from "../data/ticket-resource-hierarchy";
+import { plannerOwnerFor, readTicketParentLookup, ticketResourceIdentity } from "../data/ticket-resource-hierarchy";
 import { withTicketTagIds } from "../data/ticket-tags";
 import type { Ticket } from "../data/types";
 import { notifyProposalRefined, resolveProposalRefinedNotification } from "../planner-notifications";
 import { ticketMenuSlots } from "../resource-kinds";
 
-const openActionSession = (
+export const openActionSession = (
   ctx: Pick<CommandContext, "navigation">,
   session: { id: string; title?: string; status?: string },
 ) => {
   ctx.navigation.open({
     kind: "panel",
-    panel: workbenchPanels.projectSession,
+    panel: sessionBrowser.panels.conversation,
     open: "preview",
     resource: {
       type: "session",
@@ -77,13 +76,12 @@ export const resolveTicketIdentity = async (
 };
 
 const ticketHierarchyMetadata = async (
-  ctx: Pick<CommandContext<{ ticket?: string; rowId?: string }>, "storage" | "resources">,
+  ctx: Pick<CommandContext<{ ticket?: string; rowId?: string }>, "extensionId" | "storage" | "resources">,
   ticket: Ticket | undefined,
 ) => {
   if (!ticket) return undefined;
-  const tickets = await ticketsCollection(ctx).list();
-  const parentLookup = new Map(tickets.map((candidate) => [candidate.id, candidate]));
-  return ticketResourceIdentity(ticket, parentLookup).metadata;
+  const parentLookup = await readTicketParentLookup(ctx, new Map([[ticket.id, ticket]]));
+  return ticketResourceIdentity(ticket, parentLookup, plannerOwnerFor(ctx)).metadata;
 };
 
 export const resolveTicketAnchor = async (
@@ -227,8 +225,7 @@ export const proposalRefinedCommand = defineCommand({
   id: "proposal-refined",
   title: "Mark proposal refined",
   cli: {
-    globalAliases: [["tickets", "proposal-refined"]],
-    examples: ["pstdio tickets proposal-refined --id PS-1"],
+    examples: ["pstdio pstdio.planner proposal-refined --id PS-1"],
   },
   params: {
     id: params.text({ label: "Ticket", required: true }),

@@ -272,3 +272,5 @@ These file APIs do not add their contents to records.
 See the [storage reference](../../references/sdk/0004-storage.md),
 [asset workflow](0002-assets.md), and
 [allocated extension files](../extensions/0009-allocated-extension-files.md).
+
+*Updated at: 2026-11-06*

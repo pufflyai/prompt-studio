@@ -1,9 +1,8 @@
 import { sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
-import { type OrderedOperation, type OrderedRecord, orderedBody } from "pstdio-sync/records";
+import { type OrderedOperation, type OrderedRecord, orderedBody, orderedProjection } from "pstdio-sync/records";
 import { storage_record_projections as projections } from "../../db/schemas.pg";
 import { jsonBatches } from "./json-batches";
-import type { NativeProjectedRecord } from "./native-record-projection";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { encodeProjectionValue } from "./record-projection-codec";
 
@@ -15,10 +14,10 @@ export const publishOrderedSharedProjection = async (input: {
   owner: StorageOwner;
   operation: OrderedOperation;
   before: ReadonlyMap<string, OrderedRecord>;
-  records: NativeProjectedRecord[];
+  projected: OrderedRecord[];
 }) => {
-  const { tx, owner, operation, before, records } = input;
-  if (records.length !== operation.edits.length || !records.length) return;
+  const { tx, owner, operation, before, projected: visible } = input;
+  if (visible.length !== operation.edits.length || !visible.length) return;
   for (const edit of operation.edits) {
     const previous = before.get(edit.recordId);
     if (
@@ -33,6 +32,8 @@ export const publishOrderedSharedProjection = async (input: {
     )
       return;
   }
+  // Other saves publish through canonical rebase or the full projection path.
+  const records = await Promise.all(visible.map(orderedProjection));
   let projected = 0;
   const rows = records.map((record) => ({
     record_id: record.recordId,

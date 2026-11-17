@@ -29,6 +29,21 @@ describe("classifyWebviewEntry", () => {
 });
 
 describe("collectExtensionWebviews", () => {
+  test("historical packages build the canonical view URL requested by discovery", () => {
+    const webviews = collectExtensionWebviews({
+      metadata: {
+        id: "pstdio.pstdio-home",
+        name: "pstdio-home",
+        displayName: "Home",
+        version: "1.0.0",
+        enginesPstdio: "^0.4.0 || ^0.5.0",
+      },
+      definition: {
+        views: [{ id: "home", title: "Home", body: { kind: "webview", entry: asset("./home.tsx") } }],
+      } as never,
+    });
+    expect(webviews[0]?.id).toBe("pstdio.home.view.home");
+  });
   test("collects every webview body from views and ignores placements that reuse them", () => {
     const webviews = collectExtensionWebviews({
       metadata: {

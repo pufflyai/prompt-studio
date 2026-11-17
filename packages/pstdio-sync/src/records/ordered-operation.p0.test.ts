@@ -8,6 +8,7 @@ import {
   prepareOrderedOperation,
   projectOrderedOperation,
 } from "./ordered-operation";
+import { orderedBody } from "./ordered-projection";
 
 const create = async (value: Json) => {
   const records = new Map<string, OrderedRecord>();
@@ -87,6 +88,7 @@ for (const aba of [false, true])
     expect(applyOrderedOperation(new Map(), careful, "epoch", result.decision)).toEqual({
       decision: result.decision,
       records: [],
+      skipped: [],
     });
   });
 
@@ -293,4 +295,9 @@ test("explicit channel paths preserve unedited asset changes while guarding only
       records,
     ),
   ).rejects.toThrow("replacement or explicit paths");
+});
+
+test("a deleted record with a null body reads as an empty body", () => {
+  const record = { recordId: "gone", value: null, deleted: true, lifetime: "initial", stamps: {} };
+  expect(orderedBody(record)).toEqual({ value: null, asset: null, shared: null, nativeSources: {} });
 });

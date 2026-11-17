@@ -1,4 +1,5 @@
 import type { LayoutPersistenceAdapter, WorkbenchLayout } from "../core";
+import { layoutScopeIdentity } from "../core/controllers/page-runtime/layout-scope-identity";
 import { cacheLayoutData } from "../core/registries/layout/layout-tab-presentation";
 import {
   type CreateWorkbenchStoragePersistenceInput,
@@ -20,11 +21,12 @@ type PersistedWorkbenchLayout = PersistedWorkbenchLayoutV5;
 // layouts saved a side visibility that never meant open, so they are discarded.
 // Only the layout cache changes; routed locations and independent preferences stay valid.
 const WORKBENCH_LAYOUT_VERSION = 5 as const;
-const WORKBENCH_LAYOUT_INDEX_VERSION = 1 as const;
+// Rebuild legacy-only indexes once; existing layout values keep their format and identity.
+const WORKBENCH_LAYOUT_INDEX_VERSION = 2 as const;
 const WORKBENCH_LAYOUT_RESOURCE_LIMIT = 50;
 
 interface PersistedWorkbenchLayoutScopeIndex {
-  version: 1;
+  version: 2;
   scopes: string[];
 }
 
@@ -43,9 +45,11 @@ const createLayoutRemoval = (
   namespace: string,
   pending: { delete(key: string): boolean },
   notify: (scope: string | undefined, layout: WorkbenchLayout | undefined) => void,
+  active: () => boolean,
 ) =>
   storage.removeItem
     ? (scope?: string) => {
+        if (!active()) return;
         const key = workbenchStoragePersistenceKey(namespace, "layout", scope);
         const existed = pending.delete(key) || storage.getItem(key) !== null;
         storage.removeItem?.(key);
@@ -53,10 +57,37 @@ const createLayoutRemoval = (
       }
     : undefined;
 
+const resourceProjectId = (scope: string | undefined) => {
+  const identity = layoutScopeIdentity(scope);
+  return identity?.resource ? identity.projectId : undefined;
+};
+const scopeProjectId = (scope: string | undefined) => layoutScopeIdentity(scope)?.projectId;
+
+const listStoredLayouts = (
+  storage: WorkbenchStorageLike,
+  namespace: string,
+  pending: Iterable<string>,
+  getLayout: LayoutPersistenceAdapter["getLayout"],
+) => {
+  const prefix = `${namespace}:layout:`;
+  const keys = new Set(pending);
+  for (let index = 0; index < (storage.length ?? 0); index++) {
+    const key = storage.key?.(index);
+    if (key?.startsWith(prefix)) keys.add(key);
+  }
+  return [...keys].flatMap((key) => {
+    const suffix = key.slice(prefix.length);
+    const scope = suffix === "global" ? undefined : suffix;
+    const layout = getLayout(scope);
+    return layout ? [{ scope, layout }] : [];
+  });
+};
+
 export const createLocalStorageLayoutPersistence = (
   input: CreateWorkbenchStoragePersistenceInput,
 ): LayoutPersistenceAdapter => {
   const storage = resolveStorage(input.storage);
+  let disposed = false;
   const pending = new Map<string, { generation: number; raw: string; scope: string | undefined }>();
   const listeners = new Set<(scope: string | undefined, layout: WorkbenchLayout | undefined) => void>();
   const notify = (scope: string | undefined, layout: WorkbenchLayout | undefined) => {
@@ -88,6 +119,7 @@ export const createLocalStorageLayoutPersistence = (
   };
 
   const advanceGeneration = () => {
+    if (disposed) return getGeneration();
     const generation = getGeneration() + 1;
     const persisted: PersistedWorkbenchLayoutGeneration = { version: 1, generation };
     storage.setItem(generationKey, JSON.stringify(persisted));
@@ -96,10 +128,6 @@ export const createLocalStorageLayoutPersistence = (
     for (const write of cancelled) notify(write.scope, savedLayout(write.scope));
     return generation;
   };
-
-  const resourceProjectId = (scope: string | undefined) =>
-    scope?.match(/^project\/([^/]+)\/mode\/[^/]+\/resource\//)?.[1];
-  const scopeProjectId = (scope: string | undefined) => scope?.match(/^project\/([^/]+)/)?.[1];
 
   const storedProjectScopes = (projectId: string) => {
     if (!storage.key) return [];
@@ -146,7 +174,11 @@ export const createLocalStorageLayoutPersistence = (
   const touchResourceScope = (scope: string | undefined) => {
     const projectId = resourceProjectId(scope);
     if (!projectId || !scope) return;
-    const scopes = readScopes("layout-resource-index", projectId).filter((candidate) => candidate !== scope);
+    const indexed = readScopes("layout-resource-index", projectId);
+    const known = indexed.length
+      ? indexed
+      : storedProjectScopes(projectId).filter((candidate) => resourceProjectId(candidate) === projectId);
+    const scopes = known.filter((candidate) => candidate !== scope);
     scopes.push(scope);
     for (const evictedScope of scopes.splice(0, Math.max(0, scopes.length - WORKBENCH_LAYOUT_RESOURCE_LIMIT))) {
       storage.removeItem?.(workbenchStoragePersistenceKey(input.namespace, "layout", evictedScope));
@@ -157,6 +189,7 @@ export const createLocalStorageLayoutPersistence = (
   };
 
   const flush = () => {
+    if (disposed) return;
     if (timer) clearTimeout(timer);
     timer = undefined;
     const writes = [...pending.values()];
@@ -196,6 +229,7 @@ export const createLocalStorageLayoutPersistence = (
       return undefined;
     },
     setLayout: (layout, scope) => {
+      if (disposed) return;
       const persisted: PersistedWorkbenchLayoutV5 = {
         version: WORKBENCH_LAYOUT_VERSION,
         layout: cacheLayoutData(layout),
@@ -211,25 +245,15 @@ export const createLocalStorageLayoutPersistence = (
       scheduleFlush();
     },
     onDidChangeLayout(listener) {
+      if (disposed) return () => {};
       listeners.add(listener);
       return () => {
         listeners.delete(listener);
       };
     },
-    removeLayout: createLayoutRemoval(storage, input.namespace, pending, notify),
+    removeLayout: createLayoutRemoval(storage, input.namespace, pending, notify, () => !disposed),
     listLayouts() {
-      const prefix = `${input.namespace}:layout:`;
-      const keys = new Set(pending.keys());
-      for (let index = 0; index < (storage.length ?? 0); index++) {
-        const key = storage.key?.(index);
-        if (key?.startsWith(prefix)) keys.add(key);
-      }
-      return [...keys].flatMap((key) => {
-        const suffix = key.slice(prefix.length);
-        const scope = suffix === "global" ? undefined : suffix;
-        const layout = this.getLayout(scope);
-        return layout ? [{ scope, layout }] : [];
-      });
+      return listStoredLayouts(storage, input.namespace, pending.keys(), this.getLayout);
     },
     flush,
     listScopes(projectId) {
@@ -242,6 +266,7 @@ export const createLocalStorageLayoutPersistence = (
       ];
     },
     transformLayouts(projectId, transform) {
+      if (disposed) return;
       flush();
       advanceGeneration();
       for (const scope of this.listScopes?.(projectId) ?? []) {
@@ -264,6 +289,7 @@ export const createLocalStorageLayoutPersistence = (
     getCompatibilityMarker: (key) =>
       readJson<string>(storage, workbenchStoragePersistenceKey(input.namespace, "layout-compatibility", key)),
     setCompatibilityMarker: (key, value) => {
+      if (disposed) return;
       advanceGeneration();
       storage.setItem(
         workbenchStoragePersistenceKey(input.namespace, "layout-compatibility", key),
@@ -272,9 +298,15 @@ export const createLocalStorageLayoutPersistence = (
     },
     advanceWriteGeneration: advanceGeneration,
     dispose() {
-      flush();
-      eventTarget?.removeEventListener("pagehide", flush);
-      listeners.clear();
+      if (disposed) return;
+      try {
+        flush();
+      } finally {
+        disposed = true;
+        pending.clear();
+        listeners.clear();
+        eventTarget?.removeEventListener("pagehide", flush);
+      }
     },
   };
 };

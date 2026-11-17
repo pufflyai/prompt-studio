@@ -19,8 +19,15 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  setSystemTime();
-  await close();
+  try {
+    setSystemTime();
+    await close();
+  } finally {
+    // Hooks recreate these owners; release closed engines between cases and files.
+    close = undefined!;
+    sessions = undefined!;
+    queue = undefined!;
+  }
 });
 
 test("concurrent resumes advance run ownership while the clock is unchanged", async () => {

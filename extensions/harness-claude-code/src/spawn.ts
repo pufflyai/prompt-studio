@@ -7,6 +7,7 @@ import type {
   HarnessExit,
   HarnessQuestionChannel,
   HarnessSession,
+  HarnessTurnChannel,
 } from "@pstdio/sdk/extensions";
 import { createRawEventStream, extractSessionId } from "./cli-stream";
 import { claudePrompt } from "./literal-prompt";
@@ -167,6 +168,7 @@ export type StartSpawnInput = {
   events: HarnessEventSink;
   questions?: HarnessQuestionChannel;
   approvals?: HarnessApprovalChannel;
+  turns?: HarnessTurnChannel;
 };
 
 export const startClaudeCodeSession = async (input: StartSpawnInput, deps: SpawnDeps = defaultDeps) => {
@@ -182,7 +184,7 @@ export const startClaudeCodeSession = async (input: StartSpawnInput, deps: Spawn
   input.signal?.addEventListener("abort", abort, { once: true });
   void child.onExit.then(() => input.signal?.removeEventListener("abort", abort));
 
-  const sessionInput = createSessionInput(child.stdin);
+  const sessionInput = createSessionInput(child.stdin, input.turns);
   void child.onExit.then(sessionInput.processExited);
   const initialMessage = userMessageFor(input.prompt, input.attachments);
   sessionInput.send(
@@ -253,7 +255,7 @@ export const resumeClaudeCodeSession = (input: ResumeSpawnInput, deps: SpawnDeps
   input.signal?.addEventListener("abort", abort, { once: true });
   void child.onExit.then(() => input.signal?.removeEventListener("abort", abort));
 
-  const sessionInput = createSessionInput(child.stdin);
+  const sessionInput = createSessionInput(child.stdin, input.turns);
   void child.onExit.then(sessionInput.processExited);
   const initialMessage = userMessageFor(input.prompt, input.attachments);
   sessionInput.send(

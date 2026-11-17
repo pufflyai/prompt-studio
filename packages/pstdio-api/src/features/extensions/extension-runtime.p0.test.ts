@@ -78,21 +78,29 @@ describe("first-party extension loading", () => {
     }
   });
 
-  test("loads the workbench fixture with alpha.4 views and typed middleware", async () => {
-    const sourcePath = resolve(import.meta.dir, "../../../../../packages/workbench-fixture");
-    const loaded = await loadExtensionSource(sourcePath);
-    const result = await checkExtensionSource(sourcePath, resolve(sourcePath, ".."));
-
-    expect(supportsExtensionApiVersion(String(loaded.manifest.enginesPstdio), EXTENSION_API_VERSION)).toBe(true);
-    expect(result.check.errorCount).toBe(0);
-    expect(result.check.middlewares).toContainEqual(
-      expect.objectContaining({
-        commandId: "pstdio.workbench-fixture.command.awaken",
-        id: "pstdio.workbench-fixture.middleware.reject-sentient-awakening",
-      }),
+  test("loads compatible webviews and typed command middleware", async () => {
+    const sourcePath = makeExtension();
+    writeFileSync(join(sourcePath, "page.ts"), "export default {render(){}};");
+    writeFileSync(
+      join(sourcePath, "extension.ts"),
+      `export default {
+      commands:[{id:"save",ref:{kind:"command",id:"save"},title:"Save",run:()=>({saved:true})}],
+      middlewares:[{id:"validate",ref:{kind:"middleware",id:"validate"},command:{kind:"command",id:"save"},run:()=>{}}],
+      views:[{id:"page",ref:{kind:"view",id:"page"},title:"Contract view",body:{kind:"webview",entry:{kind:"package-asset",path:"./page.ts",baseUrl:import.meta.url},capabilities:["commands.execute"]}}]
+    };`,
     );
-    expect(result.check.views.some((view) => view.body.kind === "webview")).toBe(true);
-    expect(result.check).not.toHaveProperty("routes");
+    try {
+      const loaded = await loadExtensionSource(sourcePath);
+      const result = await checkExtensionSource(sourcePath, resolve(sourcePath, ".."));
+      expect(supportsExtensionApiVersion(String(loaded.manifest.enginesPstdio), EXTENSION_API_VERSION)).toBe(true);
+      expect(result.check.errorCount, JSON.stringify(result.check.diagnostics)).toBe(0);
+      expect(result.check.middlewares).toContainEqual(
+        expect.objectContaining({ commandId: "pstdio.x.command.save", id: "pstdio.x.middleware.validate" }),
+      );
+      expect(result.check.views.some((view) => view.body.kind === "webview")).toBe(true);
+    } finally {
+      rmSync(sourcePath, { recursive: true, force: true });
+    }
   });
 });
 

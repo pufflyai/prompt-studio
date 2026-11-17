@@ -132,8 +132,6 @@ const expectExtensionSettingsViewsToLoad = async (page: import("@playwright/test
   await page.getByText("Settings", { exact: true }).last().click();
   const settings = page.getByRole("dialog").last();
   await expect(settings.getByRole("option", { name: "Templates", exact: true })).toBeVisible();
-  await expectSettingsViewToLoad(page, settings, "Lab (global)", "Greeting tone");
-  await expectSettingsViewToLoad(page, settings, "Lab (project)", "Counter step");
   await expectSettingsViewToLoad(page, settings, "Ticket tags", "Add tag");
 };
 
@@ -184,8 +182,6 @@ test.describe
       const { localRow } = await openLocalExtensionToggle(page);
       await localRow.click();
       await expect(page.getByTestId("extension-detail")).toBeVisible();
-      await page.getByRole("tab", { name: "Settings" }).click();
-
       const heldReads = await holdProjectExtensionReads(page);
       await page.getByTestId("extension-delete").click();
       const dialog = page.getByRole("dialog").last();

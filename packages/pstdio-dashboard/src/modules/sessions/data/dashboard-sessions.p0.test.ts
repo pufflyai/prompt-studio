@@ -1,13 +1,10 @@
-import { describe, expect, test } from "bun:test";
+import { expect, test } from "bun:test";
 import { getCollection, getRuntimeCollections, getWriter } from "@/lib/sync/collections";
-import {
-  buildDashboardSessionsFromRows,
-  createDashboardSessions,
-  resolveDashboardSessionView,
-  resolveDashboardSessionViewForPlacement,
-} from "./dashboard-sessions";
+import { subscribeCoreViewDataEvents } from "@/shared/extensions/core-view-data-events";
+import type { ExtensionRefreshEvent } from "@/shared/extensions/extension-webview-broadcast";
+import { buildDashboardSessionsFromRows, createDashboardSessions, findDashboardSession } from "./dashboard-sessions";
 
-test("ten thousand sessions reuse their snapshot during unrelated sync writes", () => {
+test("ten thousand observed sessions reuse their snapshot during unrelated sync writes", async () => {
   const writer = getWriter("sessions")!;
   const rows = Array.from({ length: 10_000 }, (_, index) => ({
     id: `cache-scale-${index}`,
@@ -15,8 +12,14 @@ test("ten thousand sessions reuse their snapshot during unrelated sync writes", 
     updated_at: new Date(index * 1000).toISOString(),
   }));
   const previous = [...getCollection("sessions").values()];
-  writer.truncateAndWrite(rows);
+  const events: ExtensionRefreshEvent[] = [];
+  const stop = subscribeCoreViewDataEvents((event) => events.push(event));
   try {
+    writer.truncateAndWrite(rows);
+    await Promise.resolve();
+    const event = events.find((event) => event.projectId === "cache-scale-project");
+    expect(event?.resourceIds).toHaveLength(10_000);
+    expect(event?.changes).toHaveLength(10_000);
     const snapshot = createDashboardSessions("cache-scale-project");
     expect(snapshot).toHaveLength(10_000);
     expect(snapshot[0].id).toBe("cache-scale-9999");
@@ -32,6 +35,7 @@ test("ten thousand sessions reuse their snapshot during unrelated sync writes", 
     writer.upsert({ ...rows[0], updated_at: "2099-01-01T00:00:00Z" });
     expect(createDashboardSessions("cache-scale-project")[0].id).toBe(rows[0].id);
   } finally {
+    stop();
     writer.truncateAndWrite(previous);
   }
 });
@@ -88,10 +92,10 @@ test("selected session and recent menus never enumerate unrelated files", () => 
     },
   });
   try {
-    expect(resolveDashboardSessionView("keyed").workspaceTitle).toBe("Workspace");
+    expect(findDashboardSession("keyed")?.workspaceId).toBe("keyed-workspace");
     expect(createDashboardSessions("project").some((session) => session.id === "keyed")).toBe(true);
     getWriter("workspace_sessions")!.remove("keyed-link");
-    expect(resolveDashboardSessionView("keyed").workspaceId).toBeNull();
+    expect(findDashboardSession("keyed")?.workspaceId).toBeNull();
   } finally {
     if (descriptor) Object.defineProperty(files, "state", descriptor);
     else Reflect.deleteProperty(files, "state");
@@ -100,93 +104,19 @@ test("selected session and recent menus never enumerate unrelated files", () => 
   }
 });
 
-describe("resolveDashboardSessionView", () => {
-  test("a draft's explicit harness stays local to that presentation", () => {
-    const view = resolveDashboardSessionViewForPlacement({
-      resource: { type: "session-draft", id: "local", metadata: { agent: "acme.worker" } },
-    });
-    const other = resolveDashboardSessionViewForPlacement({ resource: { type: "session-draft", id: "other" } });
-    expect(view.agent).toBe("acme.worker");
-    expect(view.sessionId).toBeUndefined();
-    expect(other.agent).toBeNull();
-  });
-  test("keeps an opened session addressable before synced rows arrive", () => {
-    const view = resolveDashboardSessionView("session-created-from-draft");
-    expect(view.id).toBe("session-created-from-draft");
-    expect(view.sessionId).toBe("session-created-from-draft");
-  });
-  test("keeps workspace context on a new session draft placement", () => {
-    const view = resolveDashboardSessionViewForPlacement({
-      resource: {
-        type: "session-draft",
-        id: "workspace-1",
-        label: "New session",
-        metadata: {
-          workspaceId: "workspace-1",
-          workspaceShorthand: "PS-307_A1",
-          workspaceTitle: "PS-307_A1",
-        },
+test("canonical session resources expose their synchronized status", () => {
+  const [session] = buildDashboardSessionsFromRows({
+    sessions: [
+      {
+        id: "session-1",
+        project_id: "project-1",
+        title: "Fix selector",
+        status: "queued",
+        updated_at: "2026-06-02T12:00:00.000Z",
       },
-    });
-    expect(view.sessionId).toBeUndefined();
-    expect(view.workspaceId).toBe("workspace-1");
-    expect(view.workspaceShorthand).toBe("PS-307_A1");
+    ],
+    workspaceSessions: [],
+    workspaces: [],
   });
-  test("gives each new session draft resource its own draft storage key", () => {
-    const first = resolveDashboardSessionViewForPlacement({
-      resource: {
-        type: "session-draft",
-        id: "new-workspace-1-first",
-        label: "New session",
-      },
-    });
-    const second = resolveDashboardSessionViewForPlacement({
-      resource: {
-        type: "session-draft",
-        id: "new-workspace-1-second",
-        label: "New session",
-      },
-    });
-    expect(first.draftKey).toBe("new-workspace-1-first");
-    expect(second.draftKey).toBe("new-workspace-1-second");
-  });
-  test("exposes session status on the session resource", () => {
-    const [session] = buildDashboardSessionsFromRows({
-      sessions: [
-        {
-          id: "session-1",
-          project_id: "project-1",
-          title: "Fix selector",
-          status: "queued",
-          updated_at: "2026-06-02T12:00:00.000Z",
-        },
-      ],
-      workspaceSessions: [],
-      workspaces: [],
-    });
-    expect(session?.resource.metadata?.status).toBe("queued");
-  });
-});
-
-test("session views expose the latest synchronized running status", () => {
-  const writer = getWriter("sessions")!;
-  const startedAt = "2026-10-01T12:00:00.000Z";
-  writer.upsert({
-    id: "running-view",
-    project_id: "project-1",
-    status: "in_progress",
-    last_request_started: startedAt,
-  });
-  expect(resolveDashboardSessionView("running-view").status).toBe("in_progress");
-  expect(resolveDashboardSessionView("running-view").lastRequestStarted).toBe(startedAt);
-  writer.upsert({ id: "running-view", project_id: "project-1", status: "completed" });
-  expect(resolveDashboardSessionView("running-view").status).toBe("completed");
-  writer.remove("running-view");
-});
-
-test("session views expose the saved harness parameters", () => {
-  const writer = getWriter("sessions")!;
-  writer.upsert({ id: "effort-view", project_id: "project-1", params_json: { model_reasoning_effort: "high" } });
-  expect(resolveDashboardSessionView("effort-view").params).toEqual({ model_reasoning_effort: "high" });
-  writer.remove("effort-view");
+  expect(session?.resource.metadata?.status).toBe("queued");
 });

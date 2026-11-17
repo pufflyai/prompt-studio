@@ -1,36 +1,16 @@
+import type { WebviewKeyboardShortcut } from "@pstdio/sdk/extensions";
 import { hasLocalKeyboardOwner } from "pstdio-extensions/bridge/host";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import type { WorkbenchCore } from "../../core";
+import { getWebviewKeyboardShortcutStore } from "./webview-keyboard-shortcut-store";
 import { createWebviewKeyboardShortcuts } from "./webview-keyboard-shortcuts";
 
+const emptyShortcuts: WebviewKeyboardShortcut[] = [];
+const emptyStore = { getSnapshot: () => emptyShortcuts, subscribe: () => () => {} };
+
 export const useWebviewKeyboardShortcuts = (workbench: WorkbenchCore | undefined) => {
-  const [shortcuts, setShortcuts] = useState(() =>
-    workbench ? createWebviewKeyboardShortcuts(workbench).shortcuts : [],
-  );
-  useEffect(() => {
-    if (!workbench) {
-      setShortcuts([]);
-      return;
-    }
-    const refresh = () => setShortcuts(createWebviewKeyboardShortcuts(workbench).shortcuts);
-    const dispose = [
-      ...[
-        workbench.activation.store,
-        workbench.keybindings.store,
-        workbench.commands.store,
-        workbench.context.store,
-        workbench.layout.store,
-      ].map((store) => store.subscribe(refresh)),
-      // Only the selected panel changes which shortcuts apply; previews and typed keys do not.
-      workbench.keyboard.store.subscribeSelector((state) => state.selectedRegion, refresh),
-    ];
-    const preferences = workbench.preferences.onDidChangeValue(refresh);
-    refresh();
-    return () => {
-      for (const stop of dispose) stop();
-      preferences.dispose();
-    };
-  }, [workbench]);
+  const store = workbench ? getWebviewKeyboardShortcutStore(workbench) : emptyStore;
+  const shortcuts = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
   return {
     keyboardShortcuts: shortcuts,
     onShortcut: async (request: Parameters<ReturnType<typeof createWebviewKeyboardShortcuts>["dispatch"]>[0]) => {

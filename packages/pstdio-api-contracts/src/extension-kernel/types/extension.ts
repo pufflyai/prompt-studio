@@ -41,7 +41,7 @@ import type {
 /** Current host extension API version. `engines.pstdio` declares caret ranges, such as `^0.1.0`. */
 // Stays on 0.x until the API is settled, so a breaking change moves the minor. The version moves at
 // most one step per release; the manifest reference has the change levels.
-export const EXTENSION_API_VERSION = "0.4.0";
+export const EXTENSION_API_VERSION = "0.5.0";
 
 type SchemaParams<TSchema extends ParamObjectSchema | undefined> = TSchema extends ParamObjectSchema
   ? ParamsOf<TSchema>
@@ -142,10 +142,22 @@ export interface CommandDefinition<
   cli?: true | CliContribution;
   /** Exposes this exact command and its params schema to scoped machine tokens. */
   automation?: true;
+  /** Copy the successful string result in the dashboard. CLI/API calls still return the result without copying. */
+  copyResultToClipboard?: boolean;
   /** Preview a resource rename or removal in the dashboard while this command saves. Removal asks for confirmation. */
   resourceMutation?:
     | { kind: "rename"; resourceType: string; idParam: string; labelParam: string }
     | { kind: "remove"; resourceType: string; idParam: string };
+  /** Dashboard-only destructive confirmation, rendered by the host. CLI/API invocations are unchanged.
+   * The host sets `confirmedParam` to true only after confirmation. Keep that parameter in the command schema.
+   */
+  confirmation?: {
+    kind: "delete";
+    confirmedParam: string;
+    subjectParam?: string;
+    description?: Localizable<string>;
+    buttonLabel?: Localizable<string>;
+  };
   /** Records CLI invocations of this command as mutations. */
   mutating?: true;
   stream?: CommandStreamDeclaration<TChunk>;
@@ -180,10 +192,20 @@ export interface ScheduleContribution<TParams extends Struct = Struct> extends C
   disabled?: boolean;
 }
 
+/** Current creation choices for a provider in the invoking project. */
+export interface WorkspaceProviderDiscovery {
+  /** Overrides the static creation schema, including current choices and defaults. */
+  params?: ParamObjectSchema;
+}
+
 export interface WorkspaceTypeProvider extends ContributionDefinition<"workspace-type"> {
   label: Localizable<string>;
   icon?: string;
   params?: ParamObjectSchema;
+  /** Return null when this project has no usable environment. Omit to keep static discovery. */
+  discover?(ctx: ExtensionContextBase): MaybePromise<WorkspaceProviderDiscovery | null>;
+  /** Project-scoped preflight before initial allocation. Keep it read-only; enforce backing-resource invariants in create. */
+  validateParams?(ctx: ExtensionContextBase, params: JsonObject): MaybePromise<void>;
   create(ctx: ExtensionContextBase, input: WorkspaceProviderCreateInput): MaybePromise<WorkspaceProviderResult>;
   resolve(ctx: ExtensionContextBase, input: WorkspaceProviderResolveInput): MaybePromise<WorkspaceProviderResult>;
   cancel?(ctx: ExtensionContextBase, input: WorkspaceProviderMutationInput): MaybePromise<WorkspaceProviderResult>;

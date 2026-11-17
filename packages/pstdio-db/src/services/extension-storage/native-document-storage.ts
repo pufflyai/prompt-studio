@@ -66,7 +66,7 @@ export const openNativeDocument = (
     db: DbClient;
     transactionFor: DocumentTransactions;
     nativeStore: (id: string) => ReturnType<typeof createNativeDocumentStore>;
-    watch(owner: StorageOwner, id: string, listener: () => void): () => void;
+    watch(owner: StorageOwner, id: string, listener: (change?: { recordIds?: readonly string[] }) => void): () => void;
   },
 ) => {
   const { db, transactionFor, nativeStore } = deps;
@@ -111,6 +111,7 @@ export const openNativeDocument = (
         snapshot.destroy();
       }
     },
-    watch: (listener: () => void) => deps.watch(input.owner, documentId, listener),
+    watch: (listener: (change?: { recordIds?: readonly string[] }) => void) =>
+      deps.watch(input.owner, documentId, listener),
   };
 };

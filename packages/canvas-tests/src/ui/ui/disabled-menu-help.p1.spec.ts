@@ -81,3 +81,17 @@ test("a chosen text field keeps focus while a requested composer unlocks", async
   await expect(preview.locator('[contenteditable="true"]')).toBeVisible();
   await expect(notes).toBeFocused();
 });
+
+// Critical: a ready composer must not steal a keyboard tab selection before its menu opens.
+test("composer readiness keeps the selected tab focused for its keyboard menu", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/rich-text/prompt-input/prompt-input-focus.canvas.tsx#ChosenTab",
+  );
+  const tab = preview.getByRole("tab", { name: "Waiting for input", exact: true });
+  await tab.focus();
+  await expect(preview.getByRole("status")).toHaveText("Loading finished");
+  await expect(tab).toBeFocused();
+  await page.keyboard.press("ContextMenu");
+  await expect(preview.getByRole("menuitem", { name: "Rename session", exact: true })).toBeVisible();
+});

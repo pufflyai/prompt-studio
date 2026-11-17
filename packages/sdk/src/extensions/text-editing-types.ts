@@ -7,6 +7,8 @@ export interface TextSelection {
 }
 export interface TextParticipant {
   id: string;
+  /** Stable connected-device identity, shared by its document cursors. */
+  deviceId?: string;
   label: string;
   deviceName: string;
   selection: TextSelection | null;

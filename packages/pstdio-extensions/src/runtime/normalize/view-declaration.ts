@@ -1,4 +1,5 @@
 import {
+  chatRendererSnapshotSchema,
   controlValuesSchema,
   extensionTreeRendererRecordSchema,
   localizableStringSchema,
@@ -15,6 +16,23 @@ const native = {
   emptyDescription: localizableStringSchema.optional(),
 };
 const body = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("terminal"), resourceKind: native.resourceKind, session: callbackSchema }).strict(),
+  z
+    .object({
+      kind: z.literal("chat"),
+      ...native,
+      draftKey: z.string().min(1),
+      legacySessionDraft: z.boolean().optional(),
+      initial: chatRendererSnapshotSchema.optional(),
+      query: callbackSchema,
+      onAction: callbackSchema,
+      stream: localRefSchema("command").optional(),
+      loadDraft: callbackSchema.optional(),
+      saveDraft: callbackSchema.optional(),
+      resolveLink: callbackSchema.optional(),
+      resolveImage: callbackSchema.optional(),
+    })
+    .strict(),
   z
     .object({
       kind: z.literal("controls"),
@@ -48,6 +66,7 @@ const body = z.discriminatedUnion("kind", [
       header: callbackSchema.optional(),
       footer: callbackSchema.optional(),
       children: callbackSchema.optional(),
+      page: callbackSchema.optional(),
       onMove: callbackSchema.optional(),
       searchable: z.boolean().optional(),
       searchPlaceholder: localizableStringSchema.optional(),

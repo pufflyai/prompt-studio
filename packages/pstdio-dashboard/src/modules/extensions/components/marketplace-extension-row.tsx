@@ -3,7 +3,6 @@ import type { MarketplaceExtension } from "@pstdio/sdk/api";
 import { Download } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ExtensionIcon } from "./extension-icon";
-import { ExtensionIdentity } from "./extension-identity";
 
 interface MarketplaceExtensionRowProps {
   extension: MarketplaceExtension;
@@ -48,12 +47,9 @@ export const MarketplaceExtensionRow = (props: MarketplaceExtensionRowProps) => 
         <ExtensionIcon name={extension.icon} />
       </Flex>
       <Stack gap="0" flex="1" minW="0">
-        <HStack gap="sm" minW="0">
-          <Text textStyle="label/S/medium" truncate>
-            {extension.displayName}
-          </Text>
-          <ExtensionIdentity value={extension.extensionId ?? extension.installName} />
-        </HStack>
+        <Text textStyle="label/S/medium" truncate>
+          {extension.displayName}
+        </Text>
         <Text textStyle="label/XS" color="fg.muted" truncate>
           {extension.description}
         </Text>

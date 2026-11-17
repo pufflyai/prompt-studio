@@ -1,3 +1,4 @@
+import { canonicalRegistryId } from "../../shared/contributions/identity-aliases";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore } from "../../shared/store/workbench-store";
 import { runWorkbenchEffect } from "../../shared/workbench-effect";
@@ -51,6 +52,10 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
   let activeModeContext: Disposable | undefined;
   let deferredSeedModeId: string | undefined;
   let transitioning = false;
+  let disposed = false;
+  const assertActive = () => {
+    if (disposed) throw new Error("Mode registry is disposed");
+  };
 
   const initializeMode = (mode: WorkbenchModeContribution) => {
     if (initializedModes.has(mode.id)) return;
@@ -104,7 +109,7 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
       return;
     }
 
-    const mode = store.getState().modes[id];
+    const mode = store.getState().modes[canonicalRegistryId(store, id)];
     if (!mode) throw new Error(`Workbench mode not registered: ${id}`);
     if (unscoped) {
       restoreModeLayout(
@@ -121,7 +126,10 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
   };
 
   const activatePageMode = (id: string | undefined, applyLayout: () => void) => {
-    if (id && !store.getState().modes[id]) throw new Error(`Workbench mode not registered: ${id}`);
+    assertActive();
+    id = id && canonicalRegistryId(store, id);
+    if (id && !store.getState().modes[canonicalRegistryId(store, id)])
+      throw new Error(`Workbench mode not registered: ${id}`);
     if (id === store.getState().activeModeId) {
       applyLayout();
       return;
@@ -151,8 +159,9 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
   };
 
   const activate = (id: string, options: { seed: boolean; afterPublish?: () => void }) => {
+    id = canonicalRegistryId(store, id);
     const context = input.resolveContext();
-    const mode = store.getState().modes[id];
+    const mode = store.getState().modes[canonicalRegistryId(store, id)];
     if (!mode) throw new Error(`Workbench mode not registered: ${id}`);
 
     const contextScope = context.context.createScope("workbench.mode");
@@ -180,6 +189,8 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     if (mode) reconcileScope(mode);
   });
   const registryDisposable = createDisposable(() => {
+    disposed = true;
+    store.dispose();
     scopeSubscription.dispose();
     disposeActive();
     for (const disposables of initializedModes.values()) disposeReverse(disposables);
@@ -197,6 +208,7 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     },
 
     registerMode(mode) {
+      assertActive();
       const snapshot = store.getState();
       if (snapshot.modes[mode.id]) throw new Error(`Workbench mode already registered: ${mode.id}`);
 
@@ -221,7 +233,7 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     },
 
     getMode(id) {
-      return store.getState().modes[id];
+      return store.getState().modes[canonicalRegistryId(store, id)];
     },
 
     listModes() {
@@ -240,10 +252,12 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     },
 
     setActiveMode(id, setActiveInput = {}) {
+      assertActive();
+      id = id && canonicalRegistryId(store, id);
       if (id === store.getState().activeModeId) {
         // Reselecting the active mode reconciles its layout without disposing or
         // rerunning enter, so a missing required placement can recover.
-        const mode = id ? store.getState().modes[id] : undefined;
+        const mode = id ? store.getState().modes[canonicalRegistryId(store, id)] : undefined;
         if (mode && id !== deferredSeedModeId) reconcileScope(mode);
         return;
       }
@@ -257,6 +271,7 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     },
 
     seedActiveMode() {
+      assertActive();
       const activeModeId = store.getState().activeModeId;
       const mode = activeModeId ? store.getState().modes[activeModeId] : undefined;
       transitioning = true;
@@ -277,6 +292,11 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     },
   };
 
-  setWorkbenchModeRegistryInternals(registry, { activatePageMode });
+  setWorkbenchModeRegistryInternals(registry, {
+    activatePageMode,
+    close() {
+      disposed = true;
+    },
+  });
   return registry;
 };

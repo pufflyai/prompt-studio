@@ -78,7 +78,7 @@ test("prints the shared version-two capture without stripping its history", asyn
 test("reads saved recordings after the live endpoint is gone", async () => {
   const path = endpointPath();
   const directory = join(path, "..", "saved");
-  const writer = createPerformanceRecording(directory);
+  const writer = await createPerformanceRecording(directory);
   writer.write({ kind: "sample", captureId: "saved-capture", sample: { sequence: 1 } });
   writer.close();
   const log = mock();

@@ -1,12 +1,13 @@
-import { canonicalJson, type Json, type StorageGroup, type StorageTextDeclaration } from "pstdio-sync-contracts";
+import { canonicalJson, type Json, type StorageTextDeclaration } from "pstdio-sync-contracts";
 import { applyJsonChanges, observeJson, parseJsonPointer, replacementChanges } from "./ordered-json";
 import { type OrderedRecord, prepareOrderedOperation } from "./ordered-operation";
 import { readOrderedObservation } from "./ordered-operation-wire";
 import { orderedBody } from "./ordered-projection";
 import { editOrderedShared } from "./ordered-shared";
 import { compileOrderedText } from "./ordered-text-compiler";
+import type { GroupCommit } from "./types";
 
-const valueChanges = async (edit: StorageGroup["edits"][number], current: OrderedRecord | undefined) => {
+const valueChanges = async (edit: GroupCommit["edits"][number], current: OrderedRecord | undefined) => {
   if (edit.replace !== undefined && (edit.set !== undefined || edit.unset !== undefined))
     throw new Error("Choose a replacement or explicit paths");
   if (Object.hasOwn(edit, "replace")) {
@@ -23,7 +24,7 @@ const valueChanges = async (edit: StorageGroup["edits"][number], current: Ordere
 };
 
 const compileEdit = async (
-  edit: StorageGroup["edits"][number],
+  edit: GroupCommit["edits"][number],
   current: OrderedRecord | undefined,
   declarations: StorageTextDeclaration[],
   operationId: string,
@@ -83,13 +84,14 @@ const compileEdit = async (
     changes: compiled.changes,
     ...(compiled.texts.length ? { texts: compiled.texts } : {}),
     ...(edit.deleted === undefined ? {} : { deleted: edit.deleted }),
+    ...(edit.expectedLifetime === undefined ? {} : { expectedLifetime: edit.expectedLifetime }),
     ...(edit.expectedRevision === undefined ? {} : { expectedRevision: edit.expectedRevision }),
   };
 };
 
 /** Compile only channels requested by the author, even when its observed baseline is stale. */
 export const compileOrderedGroup = async (
-  group: StorageGroup,
+  group: GroupCommit,
   views: ReadonlyMap<string, OrderedRecord>,
   declarations: StorageTextDeclaration[] = [],
 ) =>

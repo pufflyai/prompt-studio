@@ -178,8 +178,18 @@ export const prepareExistingDispatch = async (deps: SessionsRouteDeps, input: Di
     params,
   });
 
-  const fail = (error: unknown, entry: ActiveSession | null) =>
-    logStartupFailure(deps, { error, session: dispatchSession, agentId, cwd, model, submittedQueuePosition, entry });
+  const fail = async (error: unknown, entry: ActiveSession | null) => {
+    if (deps.sessionQueueLifecycle.isClosing()) return;
+    await logStartupFailure(deps, {
+      error,
+      session: dispatchSession,
+      agentId,
+      cwd,
+      model,
+      submittedQueuePosition,
+      entry,
+    });
+  };
 
   const emitDispatchHook = () => {
     if (session.last_request_started === null) deps.sessionService.emitStartedHook?.(dispatchSession);
@@ -187,25 +197,33 @@ export const prepareExistingDispatch = async (deps: SessionsRouteDeps, input: Di
   };
 
   return async () => {
+    if (deps.sessionQueueLifecycle.isClosing()) return;
     const launch = async (starting: Promise<unknown>) => {
       const owner = deps.sessionService.store.get(session.id);
       if (!input.signal && !input.questionResponse) {
-        void starting.catch((error) => fail(error, owner));
+        void deps.sessionQueueLifecycle.run(() =>
+          starting.then(
+            () => undefined,
+            (error) => fail(error, owner),
+          ),
+        );
         return;
       }
-      try {
-        await starting;
-      } catch (error) {
-        if (input.signal?.aborted) {
-          if (submittedQueuePosition !== undefined) {
-            await deps.sessionQueueEntriesService.remove(submittedQueuePosition);
+      await deps.sessionQueueLifecycle.run(async () => {
+        try {
+          await starting;
+        } catch (error) {
+          if (input.signal?.aborted) {
+            if (submittedQueuePosition !== undefined) {
+              await deps.sessionQueueEntriesService.remove(submittedQueuePosition);
+            }
+            await deps.sessionService.cancel(session.id);
+          } else {
+            await fail(error, owner);
           }
-          await deps.sessionService.cancel(session.id);
-        } else {
-          await fail(error, owner);
+          throw error;
         }
-        throw error;
-      }
+      });
     };
 
     if (!switchingAgent && session.agent_session_id) {

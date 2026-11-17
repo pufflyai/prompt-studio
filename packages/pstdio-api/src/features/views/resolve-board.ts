@@ -16,6 +16,7 @@ import {
   VIEW_FILTER_CONDITIONS,
   type ViewFieldKind,
 } from "pstdio-api-contracts/extension-kernel";
+import { canonicalRuntimeId } from "pstdio-extensions";
 import { createWorkbenchExtensionMetadata, text } from "pstdio-extensions/workbench";
 import type { RouteDeps } from "../deps";
 import type { ExtensionsRouteDeps } from "../extensions/deps";
@@ -34,7 +35,11 @@ export const getBoards = async (deps: BoardViewsDeps, projectId: string) => {
     const body = view.body;
     if (body.kind !== "kanban" && body.kind !== "dataTable" && body.kind !== "resourceList") return [];
     const record = snapshot.runtime.views.find((record) => record.id === view.id)!;
-    const source = resolveEnabledSourceForRecord(record.sourcePath, snapshot.enabledSources);
+    const source = resolveEnabledSourceForRecord(
+      record.sourcePath,
+      snapshot.enabledSources,
+      snapshot.runtime.extensions,
+    );
     if (!source) return [];
     const common = {
       id: view.id,
@@ -64,7 +69,9 @@ export const getBoards = async (deps: BoardViewsDeps, projectId: string) => {
 };
 export type ResolvedBoard = Awaited<ReturnType<typeof getBoards>>[number];
 export const requireBoard = async (deps: BoardViewsDeps, projectId: string, boardId: string) => {
-  const board = (await getBoards(deps, projectId)).find((board) => board.id === boardId);
+  const { runtime } = await deps.extensionRuntimeCatalog.get(projectId);
+  const canonical = canonicalRuntimeId(runtime, boardId);
+  const board = (await getBoards(deps, projectId)).find((board) => board.id === canonical);
   if (!board) throw new BoardViewError("board is not enabled", 404);
   return board;
 };

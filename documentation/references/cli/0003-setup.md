@@ -101,3 +101,5 @@ pst logs [--lines <count>] [--path]
 - Prints the last `--lines` (or `-n`) lines of the log file. The default is `100`.
 - `--path` prints the log file path without reading the file.
 - If the log file does not exist, the command fails and prints the path it checked.
+
+*Updated at: 2026-11-05*

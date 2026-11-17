@@ -1,46 +1,39 @@
+import {
+  combineQueuedFollowUpsInputSchema,
+  pendingQueuedFollowUpsResponseSchema,
+  queuedFollowUpUpdateResponseSchema,
+  sessionDetailsSchema,
+  sessionFollowUpResponseSchema,
+  updateQueuedFollowUpInputSchema,
+} from "pstdio-api-contracts";
 import type { ExtensionProjectContext } from "pstdio-api-contracts/extension-kernel";
 import { legacyResourceOwner } from "pstdio-db";
 import { type CommandRunnerEnvironment, createReadBoundary } from "pstdio-extensions";
 import { readSessionExit } from "../../../services/session-exit";
-import { emitActivityEvent } from "../../activity/activity-events";
 import { getDraftHarnessCommands } from "../../sessions/draft-harness-commands";
-import { createSessionBodySchema } from "../../sessions/dto";
-import { resolveCreateSessionAgent, resolveCreateSessionModel } from "../../sessions/endpoints/resolve-create-session";
-import { toExtensionSession, toExtensionSessionDetails } from "../../sessions/extension-session";
-import { resolveHarnessRunParams } from "../../sessions/harness-params";
+import { toExtensionSessionDetails } from "../../sessions/extension-session";
 import { pendingQueuedRequests } from "../../sessions/pending-queued-requests";
 import { queryExtensionSessions } from "../../sessions/query-sessions";
 import { combineQueuedRequests, updateQueuedRequest } from "../../sessions/queued-request-operations";
 import { steerQueuedFollowUp } from "../../sessions/queued-steering";
-import { resolveSessionCwd } from "../../sessions/resolve-session-cwd";
 import { sendSessionFollowUp } from "../../sessions/send-session-followup";
-import { withResolvedSubmittingSessionAttachments } from "../../sessions/session-attachments";
-import { createSessionHarnessOperation } from "../../sessions/session-harness-commands";
-import { createSessionScheduler } from "../../sessions/session-scheduler";
 import type { ExtensionsRouteDeps } from "../deps";
-import { resolveExtensionPrompt, resolveHarnessInput } from "./prompt";
+import { resolveExtensionPrompt } from "./prompt";
 import { validateLegacyAnchors } from "./resource-link-policy";
 import { createResourceLinksApi } from "./resource-links";
 import { createSessionAccess, type SessionApiScope } from "./session-access";
 import { createSessionAttachments } from "./session-attachments";
 import { createSessionControls } from "./session-controls";
+import { createScopedSession } from "./session-create";
+import { createRemoteSessionAccess } from "./session-remote";
 
 export const createSessionsApi = (
   deps: ExtensionsRouteDeps,
   input: SessionApiScope & { project: ExtensionProjectContext },
 ): CommandRunnerEnvironment["sessions"] => {
+  const remote = createRemoteSessionAccess(deps, input);
   const read = createReadBoundary(input.signal);
-  const { getProjectSession, requireProjectSession } = createSessionAccess(deps, input);
-  const getProjectWorkspace = async (id: string) => {
-    const byId = await read(() => deps.workspaceService.get(id));
-    if (byId?.project_id === input.projectId) return byId;
-    return read(() => deps.workspaceService.getByShorthand(input.projectId, id));
-  };
-  const requireProjectWorkspace = async (id: string) => {
-    const workspace = await getProjectWorkspace(id);
-    if (!workspace || workspace.project_id !== input.projectId) throw new Error(`Workspace not found: ${id}`);
-    return workspace;
-  };
+  const { getProjectSession, requireProjectSession, requireProjectWorkspace } = createSessionAccess(deps, input);
 
   return {
     ...createSessionControls(deps, input),
@@ -59,20 +52,56 @@ export const createSessionsApi = (
     },
     stop: async (id) => {
       input.signal?.throwIfAborted();
+      if (await remote(id, { type: "session.interrupt", id }, sessionDetailsSchema)) return;
       await read(() => requireProjectSession(id));
       if (!(await deps.sessionService.cancel(id))) throw new Error("Session execution changed before stopping.");
     },
     getQueuedFollowUps: async (id) => {
-      await read(() => requireProjectSession(id));
-      return read(() => pendingQueuedRequests(deps, id));
+      if (await getProjectSession(id)) return read(() => pendingQueuedRequests(deps, id));
+      try {
+        const forwarded = await remote(
+          id,
+          { type: "session.queuedFollowUps", id },
+          pendingQueuedFollowUpsResponseSchema,
+        );
+        if (forwarded) return forwarded.value;
+      } catch (error) {
+        input.signal?.throwIfAborted();
+        const shared = await read(() => deps.personalHistoryService.queuedMessages(id, input.projectId));
+        if (shared?.queue) return shared.queue;
+        throw error;
+      }
+      throw new Error(`Session not found: ${id}`);
     },
     updateQueuedFollowUp: async (id, position, request) => {
       input.signal?.throwIfAborted();
+      const forwarded = await remote(
+        id,
+        {
+          type: "session.queueUpdate",
+          id,
+          queuePosition: position,
+          input: updateQueuedFollowUpInputSchema.parse(request),
+        },
+        queuedFollowUpUpdateResponseSchema,
+      );
+      if (forwarded) return forwarded.value.request;
       await requireProjectSession(id);
       return updateQueuedRequest(deps, id, position, request);
     },
     combineQueuedFollowUps: async (id, position, request) => {
       input.signal?.throwIfAborted();
+      const forwarded = await remote(
+        id,
+        {
+          type: "session.queueCombine",
+          id,
+          queuePosition: position,
+          input: combineQueuedFollowUpsInputSchema.parse(request),
+        },
+        queuedFollowUpUpdateResponseSchema,
+      );
+      if (forwarded) return forwarded.value.request;
       await requireProjectSession(id);
       return combineQueuedRequests(deps, id, position, request);
     },
@@ -97,111 +126,33 @@ export const createSessionsApi = (
         };
       }),
     query: (query = {}) => queryExtensionSessions(deps, input.projectId, query, input.signal),
-    create: async (sessionInput) => {
-      input.signal?.throwIfAborted();
-      createSessionBodySchema.parse({
-        project_id: input.projectId,
-        title: sessionInput.title,
-        prompt: sessionInput.prompt,
-        operation: sessionInput.operation,
-        attachments: sessionInput.attachments,
-      });
-      const workspace = sessionInput.workspaceId
-        ? await requireProjectWorkspace(sessionInput.workspaceId)
-        : await read(() => deps.workspaceService.getDefault(input.projectId));
-      if (!workspace) throw new Error("Attach a workspace before starting a session.");
-      if (sessionInput.originalSessionId) await read(() => requireProjectSession(sessionInput.originalSessionId!));
-      const project = await deps.projectService.get(input.projectId);
-      if (!project) throw new Error(`Project not found: ${input.projectId}`);
-
-      const harness = resolveHarnessInput(sessionInput.harness);
-      const resolvedAgent = await resolveCreateSessionAgent(harness.agent, project, deps.harnessRegistry);
-
-      if (resolvedAgent.type === "error") {
-        throw new Error(resolvedAgent.error);
-      }
-
-      const agentId = resolvedAgent.agentId;
-      if (!agentId) {
-        throw new Error("No harness available. Install and enable a harness extension first.");
-      }
-
-      const model = await resolveCreateSessionModel(harness.model, project, agentId, deps.harnessRegistry, {
-        requestAgentWasOmitted: !harness.agent,
-      });
-      // Same resolution as REST sessions: harness defaults, project defaults, then the extension's choice.
-      const params = await resolveHarnessRunParams(deps, {
-        projectId: input.projectId,
-        agentId,
-        model,
-        overrides: harness.params,
-      });
-      const prompt = resolveExtensionPrompt(sessionInput);
-      const cwd = await resolveSessionCwd(deps, input.projectId, workspace?.id);
-      const onCreated = async (createdSession: { id: string }) => {
-        await deps.workspaceSessionService.link(workspace.id, createdSession.id);
-      };
-      const creation = sessionInput.operation
-        ? await createSessionHarnessOperation(
-            deps,
-            {
-              project_id: input.projectId,
-              title: sessionInput.title,
-              agent: agentId,
-              last_selected_model: model,
-              params_json: params,
-              original_session_id: sessionInput.originalSessionId,
-              cwd,
-              anchors: sessionInput.anchors,
-            },
-            sessionInput.operation,
-            onCreated,
-            input.signal,
-          ).then((session) => ({ session, operationResult: session.operation_result }))
-        : await withResolvedSubmittingSessionAttachments(
-            deps,
-            input.projectId,
-            sessionInput.attachments,
-            async (attachments) => {
-              input.signal?.throwIfAborted();
-              return createSessionScheduler(deps).createSession({
-                projectId: input.projectId,
-                workspaceId: workspace.id,
-                title: sessionInput.title,
-                agentId,
-                prompt,
-                attachments,
-                attachmentRefs: sessionInput.attachments,
-                model,
-                params,
-                originalSessionId: sessionInput.originalSessionId,
-                cwd,
-                anchors: sessionInput.anchors,
-                signal: input.signal,
-                onCreated,
-              });
-            },
-          ).then((session) => ({ session, operationResult: undefined }));
-      const { session, operationResult } = creation;
-      await emitActivityEvent(deps, {
-        projectId: input.projectId,
-        resourceType: "session",
-        resourceId: session.id,
-        eventType: "session_created",
-        summary: `Created session ${session.title}`,
-        payload: {
-          status: session.status,
-          workspace_id: workspace?.id ?? null,
-        },
-      });
-      return {
-        type: "session",
-        ...toExtensionSession(session, workspace.id),
-        ...(operationResult ? { operationResult } : {}),
-      };
-    },
+    create: (sessionInput) => createScopedSession(deps, input, sessionInput),
     followup: async (followupInput) => {
       input.signal?.throwIfAborted();
+      if (!(await getProjectSession(followupInput.sessionId))) {
+        if (followupInput.expectedRun)
+          throw new Error("Guarded automatic continuation is unavailable on another device.");
+        await remote(
+          followupInput.sessionId,
+          {
+            type: "session.followUp",
+            id: followupInput.sessionId,
+            input: {
+              prompt: followupInput.prompt,
+              agent: followupInput.harness?.harnessId,
+              model: followupInput.harness?.model,
+              params: followupInput.harness?.params,
+              questionResponse: followupInput.questionResponse,
+              summaryFromSessionId: followupInput.summaryFromSessionId,
+              summaryFormat: followupInput.summaryFormat,
+              summaryRole: followupInput.summaryRole,
+              attachments: followupInput.attachments?.map(({ file_id }) => ({ fileId: file_id })),
+            },
+          },
+          sessionFollowUpResponseSchema,
+        );
+        return;
+      }
       const session = await read(() => requireProjectSession(followupInput.sessionId));
       if (
         followupInput.expectedRun &&

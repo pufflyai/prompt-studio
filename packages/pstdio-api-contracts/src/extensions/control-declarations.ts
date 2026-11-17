@@ -7,7 +7,8 @@ const numeric = { min: z.number().optional(), max: z.number().optional(), step: 
 const vector = z.strictObject({ x: z.number(), y: z.number() });
 const range = z.tuple([z.number(), z.number()]);
 const harness = z.strictObject({
-  harnessId: z.string().min(1),
+  // Empty is an unselected native picker; session execution validates the chosen identity.
+  harnessId: z.string(),
   model: z.string().optional(),
   params: z.record(z.string(), z.union([z.string(), z.boolean()])).optional(),
 });
@@ -39,7 +40,14 @@ const readOnlyContent = z.union([
 export const controlValueSchema = z.union([primitive, z.array(z.string()), range, vector, harness]);
 export const controlValuesSchema = z.record(z.string(), controlValueSchema);
 export const controlParamSchema = z.discriminatedUnion("type", [
-  z.strictObject({ ...base, type: z.literal("harness"), defaultValue: harness }),
+  z.strictObject({
+    ...base,
+    type: z.literal("harness"),
+    defaultValue: harness,
+    lockIdentity: z.boolean().optional(),
+    preserveSettings: z.boolean().optional(),
+    settingsMode: z.enum(["overrides", "resolved"]).optional(),
+  }),
   z.strictObject({
     ...base,
     ...numeric,

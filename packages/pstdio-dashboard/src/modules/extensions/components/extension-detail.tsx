@@ -1,22 +1,24 @@
-import { Button, Flex, HStack, Icon, Separator, Stack, Tabs, Text } from "@chakra-ui/react";
+import { Button, Flex, HStack, Icon, Stack, Tabs, Text } from "@chakra-ui/react";
 import type {
   ExtensionDiagnostic,
   ExtensionSettingValueRecord,
   ProjectExtensionInstance,
   WorkbenchExtensionAutomationRecord,
 } from "@pstdio/sdk/api";
-import { AlertMessage, EmptyState, Switch, type SwitchProps } from "@pstdio/ui";
+import { AlertMessage, Switch, type SwitchProps } from "@pstdio/ui";
 import type { WorkbenchCore } from "@pstdio/workbench";
 import type { ExecuteOptionCommand } from "@pstdio/workbench/react";
-import { ArrowLeft, ArrowUpCircle, Blocks, RotateCw, SlidersHorizontal, Timer, Trash2 } from "lucide-react";
+import { ArrowUpCircle, Blocks, RotateCw, SlidersHorizontal, Timer } from "lucide-react";
 import type { AgentInfo } from "pstdio-api-contracts";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { getRuntimeCollections } from "@/lib/sync/collections";
 import { PageContentLayout } from "@/shared/components/page-content-layout";
-import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
+import { createExtensionStringResolver } from "@/shared/extensions/extension-localization";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
 import { ExtensionConnectionsCard } from "./extension-connections-card";
 import { ExtensionContributions } from "./extension-contributions";
+import { ExtensionDeleteSection } from "./extension-delete-section";
 import { ExtensionDetailHealth } from "./extension-detail-health";
 import { ExtensionHealthPopover } from "./extension-health-popover";
 import { ExtensionIcon } from "./extension-icon";
@@ -38,7 +40,6 @@ export interface ExtensionDetailProps {
   upgrading?: boolean;
   uninstalling?: boolean;
   togglingAutomationId?: string;
-  onBack: () => void;
   onToggle: (enabled: boolean) => void;
   onToggleAutomation: (automation: WorkbenchExtensionAutomationRecord, enabled: boolean) => void;
   /** Runs the commands that load a setting's choices. */
@@ -65,7 +66,6 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
     upgrading,
     uninstalling,
     togglingAutomationId,
-    onBack,
     onToggle,
     onToggleAutomation,
     executeOptionCommand,
@@ -75,39 +75,34 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
     onUninstall,
   } = props;
   const { t } = useTranslation("projects");
+  const resolveString = createExtensionStringResolver(getRuntimeCollections(), projectId);
   const failed = extension.status === "error";
   // Changed source on disk is adopted by reloading it. Upgrade is only for sources a release replaces.
   const showReload = !extension.canUpgrade && extension.updateAvailable;
   const hasErrorDiagnostics = diagnostics.some((diagnostic) => diagnostic.severity === "error");
-  const hasSettings = settingsToParams(settings).length > 0;
-  const hasSettingsViews = Boolean(settingsViews);
+  const hasSettings = settingsToParams(settings, {}, resolveString).length > 0;
+  const connections = metadata?.connections ?? [];
+  const hasConnections = !!projectId && connections.length > 0;
+  const hasSettingsContent = hasSettings || Boolean(settingsViews) || hasConnections || automations.length > 0;
+  const [tab, setTab] = useState("settings");
   const handleCheckedChange: NonNullable<SwitchProps["onCheckedChange"]> = (details) => {
     onToggle(details.checked);
   };
 
   return (
-    <Tabs.Root defaultValue="settings" size="sm" tray h="full" minH="0">
+    <Tabs.Root
+      value={hasSettingsContent ? tab : "contributions"}
+      onValueChange={({ value }) => setTab(value)}
+      size="sm"
+      tray
+      h="full"
+      minH="0"
+    >
       <PageContentLayout
         testId="extension-detail"
         header={
           <Stack gap="md">
             <Stack gap="md" paddingX="lg" paddingTop="lg">
-              <HStack justifyContent="space-between">
-                <Button variant="ghost" size="2xs" onClick={onBack} data-testid="extension-detail-back">
-                  <ArrowLeft size={12} />
-                  {t("projectSettings.extensionsPanel.detail.back")}
-                </Button>
-                {unavailableHarnesses.length > 0 && (
-                  <ExtensionHealthPopover
-                    extension={extension}
-                    diagnostics={diagnostics}
-                    unavailableHarnesses={unavailableHarnesses}
-                    upgrading={upgrading}
-                    onUpgrade={onUpgrade}
-                  />
-                )}
-              </HStack>
-
               <HStack gap="md" alignItems="center">
                 <Flex
                   alignItems="center"
@@ -129,6 +124,15 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                     {t(`projectSettings.extensionsPanel.scope.${extension.scope}`)}
                   </Text>
                 </Stack>
+                {unavailableHarnesses.length > 0 && (
+                  <ExtensionHealthPopover
+                    extension={extension}
+                    diagnostics={diagnostics}
+                    unavailableHarnesses={unavailableHarnesses}
+                    upgrading={upgrading}
+                    onUpgrade={onUpgrade}
+                  />
+                )}
                 {extension.canUpgrade && (
                   <Button
                     variant="primary"
@@ -208,11 +212,13 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
               )}
             </Stack>
             <Tabs.List>
-              <Tabs.Trigger value="settings">
-                <SlidersHorizontal size={14} />
-                {t("projectSettings.extensionsPanel.detail.tabs.settings")}
-              </Tabs.Trigger>
-              <Tabs.Trigger value="contributions">
+              {hasSettingsContent && (
+                <Tabs.Trigger value="settings">
+                  <SlidersHorizontal size={14} />
+                  {t("projectSettings.extensionsPanel.detail.tabs.settings")}
+                </Tabs.Trigger>
+              )}
+              <Tabs.Trigger value="contributions" onClick={() => setTab("contributions")}>
                 <Blocks size={14} />
                 {t("projectSettings.extensionsPanel.detail.tabs.contributions")}
               </Tabs.Trigger>
@@ -220,110 +226,78 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
           </Stack>
         }
       >
-        <Tabs.Content value="settings">
-          <Stack gap="lg">
-            <Stack gap="lg" paddingX="lg">
-              {hasSettings ? (
-                <ExtensionSettingsForm
-                  settings={settings}
-                  executeOptionCommand={executeOptionCommand}
-                  onChangeSetting={onChangeSetting}
-                />
-              ) : null}
-              {!hasSettings && !hasSettingsViews ? (
-                <EmptyState
-                  size="sm"
-                  title={t("projectSettings.extensionsPanel.detail.noSettings")}
-                  icon={<SlidersHorizontal />}
-                />
-              ) : null}
+        <Stack gap="lg">
+          {hasSettingsContent && (
+            <Tabs.Content value="settings">
+              <Stack gap="lg" paddingX="lg">
+                {hasSettings ? (
+                  <ExtensionSettingsForm
+                    resolveString={resolveString}
+                    settings={settings}
+                    executeOptionCommand={executeOptionCommand}
+                    onChangeSetting={onChangeSetting}
+                  />
+                ) : null}
+                {settingsViews}
 
-              {settingsViews}
+                {hasConnections ? <ExtensionConnectionsCard projectId={projectId} definitions={connections} /> : null}
 
-              {projectId && metadata?.connections?.length ? (
-                <ExtensionConnectionsCard projectId={projectId} definitions={metadata.connections} />
-              ) : null}
-
-              {automations.length > 0 && (
-                <Stack gap="2xs">
-                  <HStack gap="2xs">
-                    <Icon boxSize="3" color="fg.subtle">
-                      <Timer />
-                    </Icon>
-                    <Text
-                      textStyle="label/XS/medium"
-                      color="fg.subtle"
-                      textTransform="uppercase"
-                      letterSpacing="0.06em"
-                    >
-                      {t("projectSettings.extensionsPanel.automations.title")}
-                    </Text>
-                  </HStack>
-                  {automations.map((automation) => (
-                    <HStack key={automation.id} gap="md" minH="7" data-testid="extension-automation-row">
-                      <Stack gap="0" flex="1" minW="0">
-                        <Text textStyle="label/S/regular" truncate>
-                          {resolveLocalizableString(automation.title, automation.extensionId)}
-                        </Text>
-                        <Text textStyle="label/XS" fontFamily="mono" color="fg.subtle" truncate>
-                          {automation.commandId} ·{" "}
-                          {t("projectSettings.extensionsPanel.automations.cron", { cron: automation.cron })}
-                        </Text>
-                      </Stack>
-                      <Switch
-                        size="sm"
-                        checked={automation.enabled}
-                        disabled={togglingAutomationId === automation.id}
-                        onCheckedChange={(details) => onToggleAutomation(automation, details.checked)}
-                        aria-label={t("projectSettings.extensionsPanel.automations.toggleAriaLabel", {
-                          name: resolveLocalizableString(automation.title, automation.extensionId),
-                        })}
-                      />
+                {automations.length > 0 && (
+                  <Stack gap="2xs">
+                    <HStack gap="2xs">
+                      <Icon boxSize="3" color="fg.subtle">
+                        <Timer />
+                      </Icon>
+                      <Text
+                        textStyle="label/XS/medium"
+                        color="fg.subtle"
+                        textTransform="uppercase"
+                        letterSpacing="0.06em"
+                      >
+                        {t("projectSettings.extensionsPanel.automations.title")}
+                      </Text>
                     </HStack>
-                  ))}
-                </Stack>
-              )}
+                    {automations.map((automation) => (
+                      <HStack key={automation.id} gap="md" minH="7" data-testid="extension-automation-row">
+                        <Stack gap="0" flex="1" minW="0">
+                          <Text textStyle="label/S/regular" truncate>
+                            {resolveString(automation.title, automation.extensionId)}
+                          </Text>
+                          <Text textStyle="label/XS" fontFamily="mono" color="fg.subtle" truncate>
+                            {automation.commandId} ·{" "}
+                            {t("projectSettings.extensionsPanel.automations.cron", { cron: automation.cron })}
+                          </Text>
+                        </Stack>
+                        <Switch
+                          size="sm"
+                          checked={automation.enabled}
+                          disabled={togglingAutomationId === automation.id}
+                          onCheckedChange={(details) => onToggleAutomation(automation, details.checked)}
+                          aria-label={t("projectSettings.extensionsPanel.automations.toggleAriaLabel", {
+                            name: resolveString(automation.title, automation.extensionId),
+                          })}
+                        />
+                      </HStack>
+                    ))}
+                  </Stack>
+                )}
+              </Stack>
+            </Tabs.Content>
+          )}
+
+          <Tabs.Content value="contributions">
+            <Stack paddingX="lg">
+              <ExtensionContributions
+                resolveString={resolveString}
+                workbench={props.workbench}
+                metadata={metadata}
+                extensionId={extension.extensionId}
+                automations={automations}
+              />
             </Stack>
-
-            <Separator borderColor="border.subtle" />
-
-            <Stack gap="2xs" paddingX="lg">
-              <Text textStyle="label/XS/medium" color="fg.subtle" textTransform="uppercase" letterSpacing="0.06em">
-                {t("projectSettings.extensionsPanel.detail.dangerZone")}
-              </Text>
-              <HStack justifyContent="space-between">
-                <Text textStyle="label/XS" color="fg.muted">
-                  {t(
-                    extension.scope === "global"
-                      ? "projectSettings.extensionsPanel.detail.deleteHintShared"
-                      : "projectSettings.extensionsPanel.detail.deleteHint",
-                  )}
-                </Text>
-                <Button
-                  variant="destructive"
-                  size="2xs"
-                  onClick={onUninstall}
-                  loading={uninstalling}
-                  data-testid="extension-delete"
-                >
-                  <Trash2 size={12} />
-                  {t("projectSettings.extensionsPanel.delete")}
-                </Button>
-              </HStack>
-            </Stack>
-          </Stack>
-        </Tabs.Content>
-
-        <Tabs.Content value="contributions">
-          <Stack paddingX="lg">
-            <ExtensionContributions
-              workbench={props.workbench}
-              metadata={metadata}
-              extensionId={extension.extensionId}
-              automations={automations}
-            />
-          </Stack>
-        </Tabs.Content>
+          </Tabs.Content>
+          <ExtensionDeleteSection scope={extension.scope} uninstalling={uninstalling} onUninstall={onUninstall} />
+        </Stack>
       </PageContentLayout>
     </Tabs.Root>
   );

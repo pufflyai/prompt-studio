@@ -6,7 +6,7 @@ import { updateWindowsPath, type WindowsPathAction } from "./windows-path";
 const execute = promisify(execFile);
 export const quotePowerShell = (value: string) => `'${value.replaceAll("'", "''")}'`;
 
-export const runWindowsPowerShell = async (script: string, env?: NodeJS.ProcessEnv) => {
+export const runWindowsPowerShell = async (script: string, env?: NodeJS.ProcessEnv, signal?: AbortSignal) => {
   const executable = join(
     process.env.SystemRoot ?? "C:\\Windows",
     "System32",
@@ -14,7 +14,7 @@ export const runWindowsPowerShell = async (script: string, env?: NodeJS.ProcessE
     "v1.0",
     "powershell.exe",
   );
-  const { stdout } = await execute(
+  const command = execute(
     executable,
     [
       "-NoLogo",
@@ -26,9 +26,16 @@ export const runWindowsPowerShell = async (script: string, env?: NodeJS.ProcessE
         "utf16le",
       ).toString("base64"),
     ],
-    { windowsHide: true, env: { ...process.env, ...env } },
+    { windowsHide: true, env: { ...process.env, ...env }, signal },
   );
-  return stdout.trim();
+  const closed = new Promise<void>((resolve) => command.child.once("close", () => resolve()));
+  try {
+    const { stdout } = await command;
+    return stdout.trim();
+  } finally {
+    // Abort can reject execFile before the child has exited and released its files.
+    await closed;
+  }
 };
 
 // Notify Explorer so newly opened terminals inherit the changed user environment.

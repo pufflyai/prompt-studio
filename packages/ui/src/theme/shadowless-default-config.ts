@@ -1,9 +1,11 @@
 import { defaultBaseConfig } from "@chakra-ui/react/preset-base";
-import { mergeConfigs, type SystemConfig } from "@chakra-ui/react/styled-system";
+import type { SystemConfig } from "@chakra-ui/react/styled-system";
 import { defaultThemeConfig } from "@chakra-ui/react/theme";
 
 // Reading the preset also constructs its unused default system before ours.
-const defaultConfig = mergeConfigs(defaultBaseConfig, defaultThemeConfig);
+// These presets have disjoint keys. createSystem owns cloning and token normalization;
+// doing that work here repeats it for every workbench and extension renderer.
+const defaultConfig = { ...defaultBaseConfig, ...defaultThemeConfig };
 
 // this is an escape hatch:
 // remove unwanted chakra default programmatically

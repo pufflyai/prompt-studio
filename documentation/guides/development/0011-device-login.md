@@ -46,6 +46,7 @@ Signing in, registering a device, presence, listing devices, renaming and removi
 - If the relay's access renewal gets a 401, the host refreshes its list. That stops a removed device, and a project that another device stopped syncing.
 - A login saved for another environment ID, for example by another database in the same folder, counts as logged out.
 - `pst logout` clears the login even when the manager cannot be reached. The device then stays on the account's list until another device removes it.
+- Signing out also ends sync locally: each joined extension owner keeps its join and folds its unsent saves into one pending save per record (a private `["ordered-return"]` marker document with state `signed-out`). Once a signed-in account's project list loads, every joined project it does not sync is kept the same way, still joined, so syncing it again sends only this device's changes. See [ADR 0139](../../adrs/0139-devices-that-return-never-override-in-sync-devices.md).
 - A project that another device makes a cloud project later starts syncing here at the next start, login, or project create or bind.
 
 The device credential never leaves the native host. Host API responses and extension events do not include it.

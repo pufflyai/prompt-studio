@@ -1,5 +1,12 @@
 import { type StorageObserver, type StorageOwner, StorageRevisionChangedError } from "pstdio-sync";
-import { observeOrderedRecord, projectOrderedOperation } from "pstdio-sync/records";
+import {
+  commitCurrentBatch,
+  type OrderedMoveInput,
+  observeOrderedRecord,
+  orderedBody,
+  projectOrderedOperation,
+} from "pstdio-sync/records";
+import type { StorageCurrentGroup } from "pstdio-sync-contracts";
 import {
   assertStorageLimits,
   fingerprint,
@@ -11,18 +18,18 @@ import {
   type StorageTextDeclaration,
 } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
-import { storage_ordered_owners as owners } from "../../db/schemas.pg";
 import { createCommitQueue } from "./commit-queue";
 import { createOrderedCommitCache } from "./ordered-commit-cache";
 import { publishCommittedOrderedGroup } from "./ordered-commit-projection";
+import { ensureOrderedOwner } from "./ordered-conversion";
 import { type OrderedJournal, withOrderedOwner } from "./ordered-journal";
 import { rememberOrderedTextGeneration } from "./ordered-native-recovery";
 import { bindOrderedNativeSource, type OrderedSourceInput } from "./ordered-native-source";
 import { combineNumberEvents } from "./ordered-number-projection";
-import { initializeOrderedOwner, orderedProjection } from "./ordered-projection";
 import { knownDependencies, rebaseOrderedProjection } from "./ordered-rebase";
 import { compileOrderedGroup } from "./ordered-record-compiler";
-import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
+import { moveOrderedRecordsIn } from "./ordered-record-move";
+import type { OrderedTransaction } from "./ordered-sql";
 import { orderedOwnerJoinedCloud, readOrderedOwner } from "./ordered-stream-state";
 import { writeOrderedTextAsset } from "./ordered-text-asset";
 import { createRecordQueries, listProjectedRecords, readProjectedRecords } from "./record-queries";
@@ -51,10 +58,10 @@ const prepareCommitViews = async (
   cache: ReturnType<typeof createOrderedCommitCache>,
 ) => {
   const cached = await cache.read(tx, ids);
-  if (cached) return cached;
+  if (cached) return { ...cached, recordIds: [] as string[] };
   const row = await readOrderedOwner(tx, owner);
   if (!(await orderedOwnerJoinedCloud(tx, owner, row)) && !(await journal.pendingFor(ids, { limit: 1 })).length)
-    return { views: await journal.canonical(ids), events: [] };
+    return { views: await journal.canonical(ids), events: [], recordIds: [] as string[] };
   return rebaseOrderedProjection(journal, tx, owner, ids);
 };
 
@@ -82,13 +89,7 @@ export const createOrderedResourceRecords = (
   const commitCache = createOrderedCommitCache(db, owner);
   let initialized: Promise<void> | undefined;
   const ready = () =>
-    (initialized ??= (async () => {
-      const [row] = await db.select({ id: owners.workbench_id }).from(owners).where(orderedOwnerWhere(owners, owner));
-      if (!row)
-        await withOrderedOwner(db, owner, (journal, tx, created) =>
-          initializeOrderedOwner(journal, tx, owner, created),
-        );
-    })().catch((error) => {
+    (initialized ??= ensureOrderedOwner(db, owner).catch((error) => {
       initialized = undefined;
       throw error;
     }));
@@ -118,6 +119,7 @@ export const createOrderedResourceRecords = (
         events: [],
         outcome: await savedOutcome(journal, group.operationId),
         cache: undefined,
+        recordIds: [] as string[],
       };
     }
     const ids = group.edits.map((edit) => edit.recordId);
@@ -135,14 +137,16 @@ export const createOrderedResourceRecords = (
     const { views } = prepared;
     const operation = await compileOrderedGroup(group, views, deps.textFields);
     const projected = projectOrderedOperation(views, operation, await knownDependencies(journal, operation));
-    const records = await Promise.all(projected.map(orderedProjection));
-    assertStorageLimits(records);
+    // Admission measures content. Publication computes revisions after local settlement.
+    assertStorageLimits(
+      projected.map((record) => ({ recordId: record.recordId, deleted: record.deleted, ...orderedBody(record) })),
+    );
     const assets = group.edits.flatMap((edit) => (edit.asset ? [edit.asset] : []));
     if (assets.length) {
       if (!deps.assets) throw new Error("Asset verification is unavailable");
       await deps.assets.verifyComplete(assets);
     }
-    await rememberOrderedTextGeneration(tx, owner, operation, records.length > 0);
+    await rememberOrderedTextGeneration(tx, owner, operation, projected.length > 0);
     await journal.queue(operation, identity);
     const saved = await publishCommittedOrderedGroup({
       journal,
@@ -151,10 +155,10 @@ export const createOrderedResourceRecords = (
       operation,
       projected,
       before: views,
-      records,
     });
     return {
       ...saved,
+      recordIds: [...new Set([...prepared.recordIds, ...saved.recordIds])],
       cache: await commitCache.stage(tx, ids, views, projected, saved),
       // Projection maintenance can include other pending groups. Only this
       // command's applied writes may advance its native load observations.
@@ -166,23 +170,65 @@ export const createOrderedResourceRecords = (
     };
   };
   const notify = (
-    result: Pick<Awaited<ReturnType<typeof commitIn>>, "records" | "projected" | "events" | "outcome" | "cache">,
+    result: Pick<
+      Awaited<ReturnType<typeof commitIn>>,
+      "records" | "projected" | "events" | "outcome" | "cache" | "recordIds"
+    >,
   ) => {
     commitCache.committed(result.cache);
     if (result.projected) deps.statistics.record(result.projected);
     deps.numbersChanged?.(result.events);
-    deps.changed();
+    if (result.recordIds.length) deps.changed(result.recordIds);
     if (result.records.length) deps.observer?.committed(owner, result.records, result.outcome);
     return result.outcome;
   };
   const commit = async (group: StorageGroup) => {
     const owned = structuredClone(group);
-    const result = await withOrderedOwner(db, owner, async (journal, tx, created) => {
-      await initializeOrderedOwner(journal, tx, owner, created);
+    const result = await withOrderedOwner(db, owner, async (journal, tx) => {
       return commitIn(journal, tx, owned);
     });
     return notify(result);
   };
+  const transaction = async <T>(
+    run: (
+      records: {
+        read: (id: string) => ReturnType<LegacyRecords["read"]>;
+        readMany: (ids: string[]) => ReturnType<LegacyRecords["readMany"]>;
+        commit: (group: StorageGroup) => Promise<StorageSaveOutcome>;
+        outcome: (id: string) => Promise<StorageSaveOutcome | undefined>;
+      },
+      tx: OrderedTransaction,
+    ) => Promise<T>,
+  ) => {
+    const results: Awaited<ReturnType<typeof commitIn>>[] = [];
+    const ownRevisions = new Map<string, string>();
+    const queue = createCommitQueue();
+    const value = await withOrderedOwner(db, owner, async (journal, tx) => {
+      try {
+        return await run(
+          {
+            read: async (id) => (await readIn(tx, [id], deps.observer))[0]!,
+            readMany: (ids) => readIn(tx, ids, deps.observer),
+            outcome: async (id) => ((await journal.requestIdentity(id)) ? savedOutcome(journal, id) : undefined),
+            commit: (group) =>
+              queue.run(async () => {
+                const result = await commitIn(journal, tx, group, ownRevisions);
+                for (const record of result.records) ownRevisions.set(record.recordId, record.revision);
+                results.push(result);
+                return result.outcome;
+              }),
+          },
+          tx,
+        );
+      } finally {
+        // Promise.all can reject before another admitted save finishes. Drain before rollback.
+        await queue.settled();
+      }
+    });
+    for (const result of results) notify(result);
+    return value;
+  };
+
   return {
     ...queries,
     defineIndexes: async (...input: Parameters<typeof queries.defineIndexes>) => {
@@ -208,25 +254,26 @@ export const createOrderedResourceRecords = (
       ),
     commit,
     bindText: async (input: OrderedSourceInput) => {
-      const result = await withOrderedOwner(db, owner, async (journal, tx, created) => {
-        await initializeOrderedOwner(journal, tx, owner, created);
+      const result = await withOrderedOwner(db, owner, async (journal, tx) => {
         return bindOrderedNativeSource(journal, tx, owner, input, deps.observer);
       });
       if (result.projected) deps.statistics.record(result.projected);
       if (result.changed) {
-        deps.changed();
+        deps.changed([input.recordId]);
         deps.nativeChanged?.([result.documentKey]);
       }
       return { documentKey: result.documentKey, lifetime: result.lifetime, changed: result.changed };
     },
+    /** Host-only: move live records to new IDs with their text history and native sources. */
+    move: (input: OrderedMoveInput) =>
+      ready().then(() => moveOrderedRecordsIn(db, owner, deps, input, () => commitCache.committed(undefined))),
     writeTextAsset: async (input: {
       recordId: string;
       content: string;
       replace: StorageGroup["edits"][number]["replace"];
     }) => {
       const group = { operationId: crypto.randomUUID(), edits: [{ recordId: input.recordId, replace: input.replace }] };
-      const saved = await withOrderedOwner(db, owner, async (journal, tx, created) => {
-        await initializeOrderedOwner(journal, tx, owner, created);
+      const saved = await withOrderedOwner(db, owner, async (journal, tx) => {
         return writeOrderedTextAsset({
           ...input,
           tx,
@@ -254,47 +301,10 @@ export const createOrderedResourceRecords = (
       return records;
     },
     outcome: (id: string) =>
-      withOrderedOwner(db, owner, async (journal, tx, created) => {
-        await initializeOrderedOwner(journal, tx, owner, created);
+      withOrderedOwner(db, owner, async (journal) => {
         return (await journal.requestIdentity(id)) ? savedOutcome(journal, id) : undefined;
       }),
-    transaction: async <T>(
-      run: (
-        records: {
-          read: (id: string) => ReturnType<LegacyRecords["read"]>;
-          readMany: (ids: string[]) => ReturnType<LegacyRecords["readMany"]>;
-          commit: (group: StorageGroup) => Promise<StorageSaveOutcome>;
-        },
-        tx: OrderedTransaction,
-      ) => Promise<T>,
-    ) => {
-      const results: Awaited<ReturnType<typeof commitIn>>[] = [];
-      const ownRevisions = new Map<string, string>();
-      const queue = createCommitQueue();
-      const value = await withOrderedOwner(db, owner, async (journal, tx, created) => {
-        await initializeOrderedOwner(journal, tx, owner, created);
-        try {
-          return await run(
-            {
-              read: async (id) => (await readIn(tx, [id], deps.observer))[0]!,
-              readMany: (ids) => readIn(tx, ids, deps.observer),
-              commit: (group) =>
-                queue.run(async () => {
-                  const result = await commitIn(journal, tx, group, ownRevisions);
-                  for (const record of result.records) ownRevisions.set(record.recordId, record.revision);
-                  results.push(result);
-                  return result.outcome;
-                }),
-            },
-            tx,
-          );
-        } finally {
-          // Promise.all can reject before another admitted save finishes. Drain before rollback.
-          await queue.settled();
-        }
-      });
-      for (const result of results) notify(result);
-      return value;
-    },
+    transaction,
+    commitIfCurrent: (group: StorageCurrentGroup) => commitCurrentBatch({ transaction }, group),
   };
 };

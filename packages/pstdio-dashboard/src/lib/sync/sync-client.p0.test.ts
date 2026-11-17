@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { createScopedQueryClient } from "@pstdio/sdk/extensions";
 import {
   subscribeToExtensionEventFeed,
   subscribeToExtensionEventReset,
@@ -102,5 +103,122 @@ it("refreshes the changed project's views after a committed storage change witho
   } finally {
     stop();
     await collections.dispose();
+  }
+});
+
+it("preserves safe scoped invalidation metadata from another client without forwarding its payload", () => {
+  const events: unknown[] = [];
+  const stop = subscribeToExtensionEventFeed((event) => events.push(event));
+  try {
+    createDashboardSyncWriterProvider()
+      .getWriter("extension_events")
+      ?.upsert({
+        id: "notification",
+        eventId: "notes.changed",
+        projectId: "project",
+        resourceIds: ["note"],
+        changes: [{ resourceId: "note", changedFields: ["title"] }],
+        payload: { privateDocument: "secret" },
+      });
+    expect(events).toEqual([
+      {
+        id: "notes.changed",
+        projectId: "project",
+        resourceIds: ["note"],
+        changes: [{ resourceId: "note", changedFields: ["title"] }],
+      },
+    ]);
+  } finally {
+    stop();
+  }
+});
+
+it("retains storage extension and record scope in the reset contract without forwarding values", async () => {
+  const collections = createRuntimeCollections();
+  const resets: unknown[] = [];
+  const stop = subscribeToExtensionEventReset((event) => resets.push(event), collections);
+  try {
+    createDashboardSyncWriterProvider(collections)
+      .getWriter("extension_events")!
+      .upsert({
+        id: "storage",
+        eventId: "pstdio.event.storage-changed",
+        projectId: "project",
+        extensionId: "marmalade",
+        recordIds: ["presentation"],
+        payload: { document: "private" },
+      });
+    expect(resets).toEqual([{ projectId: "project", extensionId: "marmalade", recordIds: ["presentation"] }]);
+  } finally {
+    stop();
+    await collections.dispose();
+  }
+});
+
+it("a synced presentation reset performs zero full-document or unrelated-extension reads", async () => {
+  const collections = createRuntimeCollections();
+  const queries = createScopedQueryClient(
+    { runtimeId: "storage", projectId: "project", extensionId: "marmalade" },
+    {
+      subscribe: (invalidate) =>
+        subscribeToExtensionEventReset((event) => invalidate({ ...event, type: "reset" }), collections),
+    },
+  );
+  const counts = { presentation: 0, document: 0, notes: 0 };
+  const stops = Object.keys(counts).map((key) => {
+    const id = key as keyof typeof counts;
+    return queries
+      .forScope({ extensionId: id === "notes" ? "notes" : "marmalade" })
+      .query({
+        id,
+        dependency: { recordId: id },
+        read: () => ++counts[id],
+      })
+      .subscribe(() => {});
+  });
+  try {
+    await Bun.sleep(0);
+    createDashboardSyncWriterProvider(collections)
+      .getWriter("extension_events")!
+      .upsert({
+        id: "storage",
+        eventId: "pstdio.event.storage-changed",
+        projectId: "project",
+        extensionId: "marmalade",
+        recordIds: ["presentation"],
+      });
+    await Bun.sleep(0);
+    expect(counts).toEqual({ presentation: 2, document: 1, notes: 1 });
+  } finally {
+    for (const stop of stops) stop();
+    queries.dispose();
+    await collections.dispose();
+  }
+});
+
+it("publishes effective project preference scope without exposing persisted values to another runtime", async () => {
+  const first = createRuntimeCollections(),
+    other = createRuntimeCollections();
+  const received: unknown[] = [];
+  const stop = subscribeToExtensionEventFeed((event) => received.push(event), first);
+  const row = {
+    id: "preference",
+    name: "choice",
+    extension_id: "owned",
+    scope_type: "project",
+    scope_id: "B",
+    value: { private: "selected" },
+  };
+  try {
+    createDashboardSyncWriterProvider(other).getWriter("webview_preferences")!.upsert(row);
+    expect(received).toEqual([]);
+    createDashboardSyncWriterProvider(first).getWriter("webview_preferences")!.upsert(row);
+    expect(received).toEqual([
+      { id: "preferences.changed", extensionId: "owned", projectId: "B", resourceIds: ["choice"] },
+    ]);
+  } finally {
+    stop();
+    await first.dispose();
+    await other.dispose();
   }
 });

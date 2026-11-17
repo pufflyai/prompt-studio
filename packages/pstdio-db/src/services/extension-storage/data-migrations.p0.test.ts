@@ -17,7 +17,14 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await close?.();
+  try {
+    await close?.();
+  } finally {
+    // Hooks recreate these owners; release closed engines between cases and files.
+    close = undefined!;
+    db = undefined!;
+    svc = undefined!;
+  }
 });
 
 test("migration checkpoints cannot read or overwrite the public custom-scope namespace", async () => {

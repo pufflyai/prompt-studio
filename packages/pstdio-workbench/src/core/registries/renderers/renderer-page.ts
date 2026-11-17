@@ -2,7 +2,7 @@ import type { CollectionPage, CollectionPageRequest } from "@pstdio/sdk/extensio
 
 export class RendererPageRevisionChanged extends Error {
   constructor() {
-    super("The query revision changed. Reload the first page.");
+    super("The query revision changed.");
   }
 }
 

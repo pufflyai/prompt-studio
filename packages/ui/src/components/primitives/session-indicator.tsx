@@ -12,6 +12,7 @@ import {
 import type { ComponentProps } from "react";
 
 export const sessionCompletionStatuses = [
+  "pending",
   "in_progress",
   "awaiting_input",
   "queued",

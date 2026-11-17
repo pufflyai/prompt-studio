@@ -2,6 +2,7 @@ import type { ResourceRef } from "./registries/resources/resource-registry";
 import type { ContributionMetadata, ContributionSource } from "./shared/contributions/metadata";
 import type { Disposable } from "./shared/disposable";
 import { createDisposable } from "./shared/disposable";
+import { runWorkbenchEffect } from "./shared/workbench-effect";
 import type { WorkbenchCore, WorkbenchModuleContribution, WorkbenchModuleContributionContext } from "./workbench-core";
 
 type WorkbenchModuleActivationResult = Disposable | readonly Disposable[] | undefined;
@@ -21,7 +22,8 @@ export const toDisposables = (result: WorkbenchModuleActivationResult) => {
 };
 
 export const disposeDisposables = (disposables: Disposable[]) => {
-  for (let index = disposables.length - 1; index >= 0; index -= 1) disposables[index]?.dispose();
+  for (const disposable of [...disposables].reverse())
+    runWorkbenchEffect("module contribution disposal", () => disposable.dispose());
 };
 
 interface CreateModuleContextInput {
@@ -160,6 +162,8 @@ export const createModuleContext = (
     },
     preferences: {
       ...core.preferences,
+      registerValueAdapter: (name, adapter) => track(core.preferences.registerValueAdapter(name, adapter)),
+      onDidChangeValue: (listener) => track(core.preferences.onDidChangeValue(listener)),
       registerSchema: (schema, metadata) =>
         track(core.preferences.registerSchema(schema, withModuleMetadata(input, metadata))),
     },

@@ -4,6 +4,24 @@ import { AccountRequestError } from "../../services/account/native-account";
 import type { AppRouteHandler } from "../../types";
 import type { RouteDeps } from "../deps";
 
+/** Shared relay boundary for HTTP routes and project-scoped extension services. */
+export const readDeviceCommandResult = async (
+  account: RouteDeps["accountService"],
+  projectId: string,
+  deviceId: string,
+  command: DeviceCommand,
+  signal: AbortSignal,
+) => {
+  let result: z.infer<typeof deviceCommandResultSchema>;
+  try {
+    result = deviceCommandResultSchema.parse(await account.sendDeviceCommand(projectId, deviceId, command, signal));
+  } catch (error) {
+    if (!(error instanceof AccountRequestError)) throw error;
+    result = { body: { error: error.message }, status: 400 };
+  }
+  return result;
+};
+
 export const deviceCommandResponse = async <R extends RouteConfig>(
   route: R,
   account: RouteDeps["accountService"],
@@ -13,13 +31,7 @@ export const deviceCommandResponse = async <R extends RouteConfig>(
   signal: AbortSignal,
   device?: { ownerId: string; id: string; name: string },
 ) => {
-  let result: z.infer<typeof deviceCommandResultSchema>;
-  try {
-    result = deviceCommandResultSchema.parse(await account.sendDeviceCommand(projectId, deviceId, command, signal));
-  } catch (error) {
-    if (!(error instanceof AccountRequestError)) throw error;
-    result = { body: { error: error.message }, status: 400 };
-  }
+  const result = await readDeviceCommandResult(account, projectId, deviceId, command, signal);
   const response = route.responses[result.status];
   const schema = response && "content" in response ? response.content?.["application/json"]?.schema : undefined;
   if (!(schema instanceof z.ZodType)) throw new Error("Unexpected device action response");

@@ -10,12 +10,23 @@ export interface StorageRows {
   blobs: { blobId: string; byteLength: number }[];
 }
 
-/** R23 applies to the record stream's envelope and encrypted chunks together (ADR 0102). */
-export const measureDocument = (rows: StorageRows, documentId: string, chunks: Set<string>) => {
+/**
+ * R23 applies to the record stream's envelope and encrypted chunks together (ADR 0102). Receipt-index
+ * nodes are record storage too: they count in stored bytes but add nothing to the latest or grace
+ * allowance, so the bound stays conservative.
+ */
+export const measureDocument = (
+  rows: StorageRows,
+  documentId: string,
+  chunks: Set<string>,
+  index: Set<string> = new Set(),
+) => {
   const states = rows.states.filter((row) => row.documentId === documentId);
   const updates = rows.updates.filter((row) => row.documentId === documentId);
-  const blobs = rows.blobs.filter((row) => chunks.has(row.blobId));
-  const sizes = new Map(blobs.map((row) => [row.blobId, Number(row.byteLength)]));
+  const blobs = rows.blobs.filter((row) => chunks.has(row.blobId) || index.has(row.blobId));
+  const sizes = new Map(
+    blobs.filter((row) => !index.has(row.blobId)).map((row) => [row.blobId, Number(row.byteLength)]),
+  );
   const stateBytes = (state: (typeof states)[number]) =>
     Number(state.byteLength) + [...new Set(state.blobIds)].reduce((sum, id) => sum + (sizes.get(id) ?? 0), 0);
   const latest = states.find((row) => row.replacedAt === null);
@@ -27,7 +38,9 @@ export const measureDocument = (rows: StorageRows, documentId: string, chunks: S
   const graceIds = new Set(covered.flatMap((row) => row.blobIds ?? []));
   const graceBytes =
     covered.reduce((sum, row) => sum + Number(row.byteLength), 0) +
-    blobs.filter((row) => graceIds.has(row.blobId)).reduce((sum, row) => sum + Number(row.byteLength), 0);
+    blobs
+      .filter((row) => graceIds.has(row.blobId) && !index.has(row.blobId))
+      .reduce((sum, row) => sum + Number(row.byteLength), 0);
   const storedBytes = [...states, ...updates, ...blobs].reduce((sum, row) => sum + Number(row.byteLength), 0);
   const limitBytes = 2 * latestBytes + graceBytes;
   return {
@@ -38,6 +51,7 @@ export const measureDocument = (rows: StorageRows, documentId: string, chunks: S
     passed: latestBytes > 0 && storedBytes < limitBytes,
     stateRows: states.length,
     updateRows: updates.length,
-    chunkObjects: blobs.length,
+    chunkObjects: blobs.filter((row) => !index.has(row.blobId)).length,
+    indexObjects: blobs.filter((row) => index.has(row.blobId)).length,
   };
 };

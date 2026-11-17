@@ -2,7 +2,7 @@ import {
   type NavigationTargetPage,
   type PageLocation,
   type PageRef,
-  workbenchPages,
+  sessionBrowser,
   workspacePages,
 } from "@pstdio/sdk/extensions";
 import type { ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
@@ -42,9 +42,9 @@ export const navigateDashboardPage = (ctx: WorkbenchModuleContext, input: Naviga
   return result.location;
 };
 export const openSessionsPage = (ctx: WorkbenchModuleContext, resource?: ResourceRef) => {
-  let page: PageRef = workbenchPages.sessions;
-  if (resource?.type === "session") page = workbenchPages.session;
-  if (resource?.type === "session-draft") page = workbenchPages.newSession;
+  let page: PageRef = sessionBrowser.pages.sessions;
+  if (resource?.type === "session") page = sessionBrowser.pages.session;
+  if (resource?.type === "session-draft") page = sessionBrowser.pages.draft;
   return navigateDashboardPage(ctx, {
     page,
     ...(resource ? { resource } : {}),

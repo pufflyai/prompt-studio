@@ -38,8 +38,45 @@ Pass an optional prefix, such as `migration.id(sourceKey, "nt")`, for a lossless
 22-character Base62 body. Keep that prefix choice fixed across devices and retries;
 changing it changes the record ID. Migration IDs hash stable inputs without using
 the current time and do not sort by creation time. Existing record IDs stay unchanged.
+
 These additions ship in the release after 0.44.0. See the
 [ID and ordering guide](../../guides/sdk/0003-storage.md#create-records-and-arrange-items).
+
+## Move a collection to records
+
+`migration.moveCollection(name, { keyPrefix })` moves every item of the deprecated
+`ctx.storage.collection(name)` in the migrating scope to `records.id(keyPrefix + itemId)`.
+It returns `{ moved }` and is valid only while the `migrate` callback runs. The key prefix must end
+with a delimiter such as `:`, so it cannot match unrelated keys.
+
+```ts
+await ctx.storage.migrate(3, async (previousVersion, migration) => {
+  if (previousVersion < 3) await migration.moveCollection("tickets", { keyPrefix: "ticket:" });
+});
+```
+
+- **Value.** The item value becomes the record value. The `{ value, sortOrder }` envelope is
+  removed and `sortOrder` is dropped, so keep ordering in a field such as a position.
+- **Text.** Text history and native text bindings move with each item. An editor that is open
+  during the move keeps saving to the moved record, and a `{ kind: "record" }` declaration of
+  the same field opens the same text document.
+- **Old-format calls.** `collection(name)` keeps working after the move: moved and new items are
+  read and written at their records. A device that saved an old-format change before it learned
+  about the move saves the change again on the moved record once relay order refuses it, unless
+  the record was edited after the move; the newer edit wins. Items such a device created in the
+  old format are moved when they sync.
+- **Retries and conflicts.** Items already moved are skipped, so a failed run can retry. A
+  record already at a target address fails the move before anything moves and names the item.
+  A move that missed a concurrent edit is refused in relay order and runs again with the edit
+  when it syncs. If a record was written at its target address meanwhile, the item stays in the
+  collection.
+- **Indexes.** Switch the collection's index declarations from `collection` to `keyPrefix` in
+  the same release. See [storage indexes](../sdk/0004-storage.md).
+- **Recovery.** Restoring a recovery point from before the move brings back the collection items
+  and the earlier migration version, so the move runs again.
+
+Collection attachments keep their item ID and stay readable through
+`collection(name).attachments(itemId)`. This method requires extension API 0.5.0.
 
 ## Read retained source records
 
@@ -56,3 +93,5 @@ The host retained the source after import and failure. Reading it does not ackno
 `createMemoryStorage({ legacyData: { old_notes: { version: "old-schema", records: [...] } } })` from `@pstdio/sdk/testing` supplies retained-data fixtures. It implements scope-local migration versions and returns copies of source records. Test first import, retry after a partial write, newer-data preservation, and repeated calls.
 
 See [ADR 0077](../../adrs/0077-extension-owned-data-migrations.md) for storage ownership and retention.
+
+*Updated at: 2026-10-24*

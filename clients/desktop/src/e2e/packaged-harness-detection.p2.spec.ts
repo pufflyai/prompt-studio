@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, linkSync, mkdirSync, writeFileSync } from "node:fs";
-import { delimiter, join, resolve } from "node:path";
+import { delimiter, dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { expect } from "@playwright/test";
 import { test } from "../testing/packaged-fixture";
 import {
@@ -13,11 +14,11 @@ import {
 } from "./packaged-app-helpers";
 import { createPackagedProject, openPackagedProject } from "./packaged-project-helpers";
 
-const environments =
-  process.platform === "win32" ? ["Windows PATH"] : ["/bin/bash", "/bin/zsh", "/bin/csh", "/bin/tcsh"];
+const environments = process.platform === "win32" ? ["Windows PATH"] : ["/bin/bash", "/bin/csh", "/bin/tcsh"];
 // The oldest versions each harness accepts, so detection proves its minimum stays supported.
-const versions = { codex: "codex-cli 0.157.0", claude: "2.1.203 (Claude Code)", opencode: "1.0.175" };
+const versions = { codex: "codex-cli 0.157.0", claude: "2.1.203 (Claude Code)", opencode: "2.2.5" };
 const executableSuffix = process.platform === "win32" ? ".exe" : "";
+const sessionsPath = dirname(fileURLToPath(import.meta.resolve("session-browser/refs")));
 
 for (const shell of environments) {
   test(`selects installed harnesses after a desktop launch with ${shell}`, async () => {
@@ -54,11 +55,14 @@ for (const shell of environments) {
         SHELL: shell,
         ZDOTDIR: home,
         PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
-          defaultExtensions: harnessPackages.map((installName) => ({
-            installName,
-            source: resolve(import.meta.dirname, "../../../../extensions", installName),
-            skipInstall: true,
-          })),
+          defaultExtensions: [
+            ...harnessPackages.map((installName) => ({
+              installName,
+              source: resolve(import.meta.dirname, "../../../../extensions", installName),
+              skipInstall: true,
+            })),
+            { source: sessionsPath, installName: "pstdio-session-browser", skipInstall: true },
+          ],
         }),
       });
       const agents = await app.page.evaluate(async () => {

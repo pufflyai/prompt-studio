@@ -2,6 +2,72 @@ import { expect, test } from "bun:test";
 import type { GuestHost } from "./guest-host";
 import { createWebviewClient } from "./webview-client";
 
+test("command editing loads its authoritative value and sends one stable gesture request per execution", async () => {
+  const requests: Record<string, unknown>[] = [];
+  const host: GuestHost = {
+    extensionId: "pstdio.lab",
+    onEvent: () => () => {},
+    call: async <Result>(_method: string, input?: unknown) => {
+      const request = input as Record<string, unknown>;
+      requests.push(request);
+      return {
+        value: { title: "Accepted" },
+        version: requests.length,
+        revision: 0,
+        savedRevision: 0,
+        hasDrafts: false,
+      } as Result;
+    },
+  };
+  const session = await createWebviewClient(host).editing.openCommand<{ title: string }>({
+    key: "document",
+    read: { commandId: "pstdio.lab.command.read" },
+    command: { commandId: "pstdio.lab.command.edit" },
+    dependsOn: ["document.changed"],
+  });
+  expect(session.getSnapshot().value).toEqual({ title: "Accepted" });
+  await session.execute({ type: "rename", title: "A" }, { changes: [{ path: ["title"], value: "A" }] });
+  await session.execute({ type: "rename", title: "B" });
+  expect(requests.map((request) => request.operation)).toEqual(["open-command", "execute", "execute"]);
+  expect(requests[1]).toMatchObject({ params: { type: "rename", title: "A" }, sequence: 1 });
+  expect(requests[2]).toMatchObject({ params: { type: "rename", title: "B" }, sequence: 2, changes: [] });
+  await session.close();
+});
+
+test("retiring a command session clears SDK optimism and rejects late admission synchronously", async () => {
+  let listener = (_payload: unknown) => {};
+  const held = Promise.withResolvers<void>();
+  const host: GuestHost = {
+    extensionId: "pstdio.lab",
+    onEvent: (_scope, handler) => {
+      listener = handler;
+      return () => {};
+    },
+    call: async <Result>(_method: string, input?: unknown) => {
+      if ((input as { operation: string }).operation === "execute") await held.promise;
+      return { value: { title: "Private" }, version: 1, revision: 0, savedRevision: 0 } as Result;
+    },
+  };
+  const session = await createWebviewClient(host).editing.openCommand<{ title: string }>({
+    key: "document",
+    read: { commandId: "pstdio.lab.command.read" },
+    command: { commandId: "pstdio.lab.command.edit" },
+    dependsOn: [],
+  });
+  const saving = session
+    .execute({ title: "Newer private draft" }, { changes: [{ path: ["title"], value: "Newer private draft" }] })
+    .catch((error: unknown) => error);
+  listener({
+    sessionId: session.id,
+    snapshot: { value: {}, version: 2, revision: 0, savedRevision: 0, retired: true },
+  });
+  expect(Object.keys(session.getSnapshot().value)).toEqual([]);
+  await expect(session.preview([{ path: ["title"], value: "Too late" }])).rejects.toThrow("editing_session_closed");
+  held.resolve();
+  await saving;
+  expect(Object.keys(session.getSnapshot().value)).toEqual([]);
+});
+
 test("shared editing keeps newer local edits and ignores older host replies", async () => {
   let listener = (_value: unknown) => {};
   const replies: ((value: unknown) => void)[] = [];
@@ -125,5 +191,108 @@ test("pending local gestures cannot block an incoming structural edit", async ()
   rejectPreview(new Error("Editing paths must traverse objects"));
   await preview;
   expect(session.getSnapshot().value.position).toBeNull();
+  await session.close();
+});
+
+test("preview admission keeps one actual request and the latest intent while required commands bypass held replies", async () => {
+  const held = Promise.withResolvers<void>();
+  const requests: { operation: string; changes?: unknown[] }[] = [];
+  const host: GuestHost = {
+    extensionId: "pstdio.lab",
+    onEvent: () => () => {},
+    call: async <Result>(_method: string, input?: unknown) => {
+      const request = input as (typeof requests)[number];
+      requests.push(request);
+      if (request.operation === "preview") await held.promise;
+      if (request.operation === "execute")
+        return { value: { x: 999 }, version: 2, revision: 1, savedRevision: 1 } as Result;
+      return { value: { x: 0 }, version: 0, revision: 0, savedRevision: 0 } as Result;
+    },
+  };
+  const session = await createWebviewClient(host).editing.openCommand<{ x: number }>({
+    key: "doc",
+    read: { commandId: "pstdio.lab.command.read" },
+    command: { commandId: "pstdio.lab.command.edit" },
+    dependsOn: [],
+  });
+  const pending = Array.from({ length: 1000 }, (_, x) => session.preview([{ path: ["x"], value: x }]));
+  try {
+    expect(requests.filter((entry) => entry.operation === "preview")).toHaveLength(1);
+    expect(session.getSnapshot().value.x).toBe(999);
+    await session.execute({ x: 999 });
+    expect(requests.find((entry) => entry.operation === "execute")?.changes).toEqual([{ path: ["x"], value: 999 }]);
+    expect(session.getSnapshot().value.x).toBe(999);
+  } finally {
+    held.resolve();
+    await Promise.all(pending);
+    await session.close();
+  }
+  expect(requests.filter((entry) => entry.operation === "preview")).toHaveLength(1);
+});
+
+test("an authoritative structural change retires incompatible preview intent before the next valid edit", async () => {
+  let listener = (_event: unknown) => {};
+  let version = 0;
+  let value: object = { position: { x: 0 }, other: 0 };
+  const host: GuestHost = {
+    extensionId: "pstdio.lab",
+    onEvent: (_scope, handler) => {
+      listener = handler;
+      return () => {};
+    },
+    call: async <Result>(_method: string, input?: unknown) => {
+      const request = input as { sessionId: string; sequence?: number; operation: string };
+      const snapshot = { value, version: ++version, revision: 0, savedRevision: 0 };
+      if (request.sequence) listener({ sessionId: request.sessionId, snapshot, appliedSequence: request.sequence });
+      return snapshot as Result;
+    },
+  };
+  const session = await createWebviewClient(host).editing.openCommand<{
+    position: { x: number } | null;
+    other: number;
+  }>({
+    key: "doc",
+    read: { commandId: "pstdio.lab.command.read" },
+    command: { commandId: "pstdio.lab.command.edit" },
+    dependsOn: [],
+  });
+  await session.preview([{ path: ["position", "x"], value: 12 }]);
+  value = { position: null, other: 0 };
+  listener({ sessionId: session.id, snapshot: { value, version: ++version, revision: 0, savedRevision: 0 } });
+  await session.preview([{ path: ["other"], value: 1 }]);
+  await session.execute({ other: 1 });
+  await session.close();
+});
+
+test("a superseded preview failure cannot turn a completed command into a failed draft", async () => {
+  const held = Promise.withResolvers<void>();
+  const host: GuestHost = {
+    extensionId: "pstdio.lab",
+    onEvent: () => () => {},
+    call: async <Result>(_method: string, input?: unknown) => {
+      const request = input as { operation: string };
+      if (request.operation === "preview") {
+        await held.promise;
+        throw new Error("Obsolete preview failed");
+      }
+      return {
+        value: { x: request.operation === "execute" ? 2 : 0 },
+        version: request.operation === "execute" ? 2 : 0,
+        revision: 0,
+        savedRevision: 0,
+      } as Result;
+    },
+  };
+  const session = await createWebviewClient(host).editing.openCommand<{ x: number }>({
+    key: "doc",
+    read: { commandId: "pstdio.lab.command.read" },
+    command: { commandId: "pstdio.lab.command.edit" },
+    dependsOn: [],
+  });
+  const preview = session.preview([{ path: ["x"], value: 1 }]);
+  await session.execute({ x: 2 }, { changes: [{ path: ["x"], value: 2 }] });
+  held.resolve();
+  await preview;
+  expect(session.getSnapshot().value.x).toBe(2);
   await session.close();
 });

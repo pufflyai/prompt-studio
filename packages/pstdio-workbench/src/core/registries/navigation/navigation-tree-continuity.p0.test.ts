@@ -83,3 +83,13 @@ test("removing a contribution clears its navigation snapshot", async () => {
   });
   expect(registry.getStructure(owner)).toEqual([]);
 });
+
+test("navigation restores A after visiting B without borrowing either project's rows", async () => {
+  const { registry } = fixture();
+  const a = { projectId: "a" };
+  const b = { projectId: "b" };
+  const first = await registry.getSections(owner, "content", a);
+  await registry.getSections(owner, "content", b);
+  expect(registry.getStructure(owner, "content", a)).toEqual(first);
+  expect(registry.getStructure(owner, "content", { projectId: "unvisited" })).toEqual([]);
+});

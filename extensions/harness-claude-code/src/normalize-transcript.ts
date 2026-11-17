@@ -71,6 +71,10 @@ const toTranscriptMessages = (entry: ClaudeCodeTranscriptEntry, toolMap: Map<str
     ];
   }
 
+  // Live output omits provider-injected context. Treating it as a submission here splits
+  // the same reply into different turns, so recovery appends the reply a second time.
+  if (role === "user" && entry.isMeta) return [];
+
   if (typeof entry.error === "string") {
     return [{ id: entry.uuid, role, parts: [apiErrorPart(entry.error, content)], createdAt } satisfies SessionMessage];
   }
@@ -128,7 +132,7 @@ const pushTranscriptMessage = (messages: SessionMessage[], message: SessionMessa
 
     if (existingIndex !== undefined) {
       messages[existingIndex] = mergeToolResultMessage(messages[existingIndex], message);
-      return;
+      return messages[existingIndex].id;
     }
   }
 
@@ -152,7 +156,7 @@ const pushTranscriptMessage = (messages: SessionMessage[], message: SessionMessa
     } satisfies SessionMessage;
 
     messages[messages.length - 1] = updated;
-    return;
+    return updated.id;
   }
 
   if (
@@ -167,24 +171,37 @@ const pushTranscriptMessage = (messages: SessionMessage[], message: SessionMessa
     } satisfies SessionMessage;
 
     messages[messages.length - 1] = updated;
-    return;
+    return updated.id;
   }
 
   messages.push(message);
+  return message.id;
 };
 
-export const normalizeClaudeCodeMessages = (entries: ClaudeCodeTranscriptEntry[]): SessionMessage[] => {
+const projectTranscript = (entries: ClaudeCodeTranscriptEntry[], boundaries?: Map<string, string>) => {
   const toolMap = new Map<string, string>();
   const toolCalls = new Map<string, number>();
   const messages: SessionMessage[] = [];
 
   for (const entry of entries) {
     const transcriptMessages = toTranscriptMessages(entry, toolMap);
-
+    let lastId: string | undefined;
     for (const message of transcriptMessages) {
-      pushTranscriptMessage(messages, message, toolCalls);
+      lastId = pushTranscriptMessage(messages, message, toolCalls);
+      if (lastId) boundaries?.delete(lastId);
     }
+    if (lastId) boundaries?.set(lastId, entry.uuid);
   }
 
   return messages.map((message, index) => ({ ...message, index }));
+};
+
+export const normalizeClaudeCodeMessages = (entries: ClaudeCodeTranscriptEntry[]) => projectTranscript(entries);
+
+export const getClaudeForkMessageId = (entries: ClaudeCodeTranscriptEntry[], messageId: string) => {
+  const boundaries = new Map<string, string>();
+  projectTranscript(entries, boundaries);
+  const uuid = boundaries.get(messageId);
+  if (!uuid) throw new Error("The selected reply does not end at a Claude transcript boundary.");
+  return uuid;
 };

@@ -26,7 +26,7 @@ export const FocusRequestPlugin = (props: { requested: boolean; isEditable: bool
         !root?.contains(active) &&
         (active.isContentEditable ||
           active.matches("input, textarea, select, iframe") ||
-          active.closest('[role="menu"], [role="option"], [role="treeitem"]'));
+          active.closest('[role="menu"], [role="option"], [role="treeitem"], [role="tab"]'));
       if (!focusElsewhere) root?.focus();
       onComplete?.();
     };

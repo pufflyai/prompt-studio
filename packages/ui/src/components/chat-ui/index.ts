@@ -23,6 +23,7 @@ export { ChatPanel } from "./components/chat-panel";
 export { ChatSkeleton } from "./components/chat-skeleton";
 export type { ComposerDecision } from "./components/composer-decision";
 export { ConversationBrowse, type ConversationBrowseItem } from "./components/conversation-browse";
+export { ChatDeviceMenu, type ChatDeviceOption } from "./components/device-menu";
 export { HarnessControls, type HarnessControlsProps } from "./components/harness-controls";
 export type {
   AlertPart,
@@ -37,6 +38,12 @@ export type { SendButtonProps } from "./components/send-button";
 export { SendButton } from "./components/send-button";
 export { useQuestionPromptState } from "./components/use-question-prompt-state";
 export { ChatWorkspaceHub } from "./components/workspace-hub";
+export { ChatWorkspaceMenu, type ChatWorkspaceOption } from "./components/workspace-menu";
+export {
+  applySessionMessagePatch,
+  type SessionMessagePatch,
+  visibleSessionMessages,
+} from "./data/session-message-patch";
 export type { ChatLinkCandidate, ChatLinkHandler, ChatLinkProps } from "./links/chat-link";
 export { isGuessedChatLink, parseChatLink } from "./links/chat-link";
 export { createSerializedPromptState } from "./utils/editor-state";

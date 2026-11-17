@@ -1,7 +1,7 @@
 import { createClient, type PstdioClient } from "@pstdio/sdk/client";
 import { readBrowserSession } from "./browser-session";
-
 import { resolveApiBaseUrl } from "./runtime-config";
+import { getRuntimeCollections, type RuntimeCollections } from "./sync/collections";
 
 export type { PstdioConfig } from "./runtime-config";
 export { readRuntimeConfig } from "./runtime-config";
@@ -49,15 +49,18 @@ export const buildAbsoluteApiUrl = (path: string, baseHref = globalThis.location
 // The browser session secret is a bearer credential. A server without auth ignores it.
 export const apiClientOptions = () => ({ baseUrl: resolveApiBaseUrl(), token: readBrowserSession() ?? "" });
 
-let apiClientInstance: PstdioClient | null = null;
-let apiClientKey: string | null = null;
+const runtimeClients = new WeakMap<RuntimeCollections, PstdioClient>();
 
-export const getApiClient = (options = apiClientOptions()) => {
-  const key = JSON.stringify(options);
-  if (!apiClientInstance || apiClientKey !== key) {
-    apiClientInstance = createClient(options);
-    apiClientKey = key;
+/** The runtime's client owns its shared resource transport for the whole connection lifetime. */
+export const getRuntimeApiClient = (owner: RuntimeCollections) => {
+  if (owner.isDisposed()) throw new Error("Runtime is disposed");
+  let client = runtimeClients.get(owner);
+  if (!client) {
+    client = createClient(owner.connection);
+    runtimeClients.set(owner, client);
+    owner.onDispose(() => runtimeClients.delete(owner));
   }
-
-  return apiClientInstance;
+  return client;
 };
+
+export const getApiClient = (options = apiClientOptions()) => getRuntimeApiClient(getRuntimeCollections(options));

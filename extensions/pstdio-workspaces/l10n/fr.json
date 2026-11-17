@@ -1,6 +1,10 @@
 {
+  "confirmation.deleteEntryDescription": "L’entrée et son contenu seront définitivement supprimés.",
+  "confirmation.deleteEntryButton": "Supprimer",
+  "commands.sessionPresentation": "Lire la présentation de l’espace de travail de la session",
   "page.create": "Créer un espace de travail",
-  "page.device": "Détails de l’appareil",
+  "page.workspaces": "Espaces de travail",
+  "action.create": "Créer un espace de travail",
   "sidebar.files": "Fichiers",
   "sidebar.title": "Espaces de travail du projet",
   "sidebar.workspaces": "Espaces de travail"

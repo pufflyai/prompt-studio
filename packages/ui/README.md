@@ -8,7 +8,7 @@ Shared React UI package for Prompt Studio apps. This package owns:
 
 ## Work with the live catalog
 
-Browse Design System in the Canvas extension. Open a component canvas and use Theme and Props and source to inspect its states and public API.
+Browse Design System in the Canvas extension. Use Theme on a frame, and open the Frame editor's Props JSON on frames that declare `controls` to inspect their states and public API.
 
 ```sh
 bun run --cwd packages/ui build
@@ -29,9 +29,15 @@ See [Canvas coverage](../../documentation/guides/development/0003-canvas-coverag
 The root entry holds the light, widely reused components. A feature that pulls a
 heavy dependency, such as the Lexical editor, Monaco, Mermaid, or the terminal,
 gets its own entry: `./rich-text`, `./param-editor`, `./kanban-renderer`,
-`./data-table`, `./charts`, `./chat-ui`, `./diff`, `./mermaid`, `./terminal`. Nothing reachable
+`./data-table`, `./charts`, `./dashboard-renderer`, `./chat-ui`, `./diff`, `./mermaid`, `./terminal`. Nothing reachable
 from the root entry may import one of those, or every consumer's bundler emits the
 heavy chunks even when the consumer never renders the feature.
+
+Import `LazyMarkdownEditor` from `@pstdio/ui/lazy-markdown-editor` when a host registers
+an editor before opening a document. This entry loads the editor when mounted; the
+`./rich-text` entry also exports the eager editor and its supporting tools. Import
+`ChatSkeleton` from `@pstdio/ui/chat-skeleton` to show a session loading state
+without loading the conversation and editor implementation.
 
 Code and diff editors follow the active theme preference, including live theme previews.
 Themes can supply a `monacoTheme` palette. Otherwise, the editors use the built-in
@@ -129,3 +135,40 @@ See **Components/Media/Keyframe Timeline** for Animation, ReadOnly, Empty, and L
 ## Charts
 
 Use the themed TanStack components from `@pstdio/ui/charts`. See the [chart guide](src/components/charts/README.md) for sizing, palettes, tooltips, and Gantt dependencies.
+
+## Dashboard renderer
+
+Import `DashboardRenderer`, `DashboardDefinition`, and `DashboardDataSource` from
+`@pstdio/ui/dashboard-renderer`. Render inside the usual `ChakraProvider` with
+`psTheme`, in a parent with a bounded height. The renderer fills that parent and
+keeps its toolbar above the scrolling widgets.
+
+```tsx
+const [value, setValue] = useState<DashboardDefinition>({
+  mode: "vertical",
+  widgets: [{ id: "orders", title: "Orders", kind: "metric", source: "sales",
+    layout: { x: 0, y: 0, w: 4, h: 3 } }],
+});
+const sources: DashboardDataSource[] = [{
+  id: "sales", name: "Sales", metric: { value: 1240, description: "+12% this week" },
+  series: [{ label: "Monday", value: 120 }, { label: "Tuesday", value: 140 }],
+  table: { data: [{ Day: "Monday", Orders: 120 }], columnTypes: { Orders: "number" } },
+}];
+return <DashboardRenderer title="Sales" value={value} sources={sources} onChange={setValue} />;
+```
+
+Sources provide metric values, labeled numeric series, and/or read-only table data.
+Grouped bars stack points by `label` and `group`. Source IDs are application-owned
+strings. Updating sources refreshes content without discarding layout edits. Pass
+filters or refresh controls in `actions`; fetching and errors belong to the caller.
+
+Omit `onChange` for read-only use. With it, Edit dashboard opens a draft; Apply emits
+the complete definition and Cancel emits nothing. The caller owns the saved value,
+persistence, permissions, and undo. An async `onChange` can reject to retain the
+draft and display its error with Retry. Use stable unique widget IDs. Titles may
+be empty. Layout coordinates use a 12-column grid with widths from 3 to 12 and
+heights of at least 3 rows. Narrow presentation preserves those saved widths.
+Modes are `vertical` (Compact up), `horizontal` (Compact left), and `free`.
+
+See **Design system/Components/Data display/Dashboard**, frame **Editable dashboard**. It replaces
+the PS-1177 proposal frame and retains its `Dashboard` export and frame ID.

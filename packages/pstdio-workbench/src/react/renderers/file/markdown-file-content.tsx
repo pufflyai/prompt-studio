@@ -1,5 +1,5 @@
 import { Box, Flex } from "@chakra-ui/react";
-import { LazyMarkdownEditor } from "@pstdio/ui/rich-text";
+import { LazyMarkdownEditor } from "@pstdio/ui/lazy-markdown-editor";
 import type { ReactNode } from "react";
 import type { FileRendererContent } from "../../../core";
 import type { FileRendererContentViewProps } from "./file-renderer-content";

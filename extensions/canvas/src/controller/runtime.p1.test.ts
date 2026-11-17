@@ -137,3 +137,35 @@ test("group rows follow measured height while saved manual positions and themes 
     globalThis.requestAnimationFrame = original;
   }
 });
+
+test("editable frames notify only when parameter availability changes", () => {
+  const originalFrame = globalThis.requestAnimationFrame;
+  const originalCancel = globalThis.cancelAnimationFrame;
+  globalThis.requestAnimationFrame = () => 1;
+  globalThis.cancelAnimationFrame = () => {};
+  try {
+    const item = { id: "frame", name: "Frame", width: 640, height: 240, position: { x: 0, y: 0 }, preview };
+    const runtime = createCanvasRuntime(
+      { id: "group", name: "Group", group: "", items: [item] },
+      readLayout(null, [item]),
+      () => {},
+    );
+    const seen: boolean[] = [];
+    const stop = runtime.editable.subscribe(() => seen.push(runtime.editable.get(item.id)));
+    expect(runtime.editable.get(item.id)).toBe(false);
+    runtime.editable.set(item.id, false);
+    expect(seen).toEqual([]);
+    runtime.editable.set(item.id, true);
+    expect(seen).toEqual([true]);
+    runtime.editable.set(item.id, true);
+    expect(seen).toEqual([true]);
+    stop();
+    runtime.editable.set(item.id, false);
+    expect(seen).toEqual([true]);
+    runtime.dispose();
+    expect(runtime.editable.get(item.id)).toBe(false);
+  } finally {
+    globalThis.requestAnimationFrame = originalFrame;
+    globalThis.cancelAnimationFrame = originalCancel;
+  }
+});

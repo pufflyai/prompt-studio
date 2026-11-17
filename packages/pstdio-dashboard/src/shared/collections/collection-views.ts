@@ -1,11 +1,14 @@
 import type { BoardView } from "@pstdio/sdk/api";
 import type { CollectionViewsProvider, CollectionViewsSource } from "@pstdio/workbench";
-import { getApiClient } from "@/lib/api";
-import { type CollectionChange, getRuntimeCollections } from "@/lib/sync/collections";
+import { getRuntimeApiClient } from "@/lib/api";
+import { getDashboardScopedQueries } from "@/lib/scoped-queries";
 import {
-  subscribeToExtensionEventFeed,
-  subscribeToExtensionEventReset,
-} from "@/shared/extensions/extension-webview-broadcast";
+  type CollectionChange,
+  getRuntimeCollections,
+  type RuntimeCollections,
+  type SyncedRow,
+} from "@/lib/sync/collections";
+import { createRuntimeState } from "@/lib/sync/runtime-state";
 
 interface CollectionViewsInput {
   projectId: string;
@@ -19,20 +22,22 @@ interface CollectionViewsInput {
 }
 
 /** Native and extension collections share storage, sync, defaults, and mutation actions. */
-export const createSharedCollectionViews = <
-  TSettings extends NonNullable<import("@pstdio/sdk/api").BoardView["settings"]>,
->(
+const createCollectionViewsOwner = <TSettings extends NonNullable<import("@pstdio/sdk/api").BoardView["settings"]>>(
   input: CollectionViewsInput,
-): CollectionViewsProvider<TSettings> => {
+  owner: RuntimeCollections,
+) => {
   const { projectId, extensionInstanceId: instanceId, localId, record } = input;
-  const owner = getRuntimeCollections();
-  const views = getApiClient(owner.connection).views;
+  const views = getRuntimeApiClient(owner).views;
   let cached: CollectionViewsSource<TSettings> | undefined;
-  let version = -1;
+  let sourceRows: readonly SyncedRow[] | undefined;
+  let defaultRow: SyncedRow | undefined;
+  let stopRows: (() => void) | undefined;
+  let stopQuery: (() => void) | undefined;
+  const refreshEventIds = new Set<string>();
   let pendingOrder: { ids: string[]; saved: boolean; snapshotDuringSave: boolean } | undefined;
   const listeners = new Set<() => void>();
   const notify = () => {
-    version = -1;
+    sourceRows = undefined;
     for (const listener of listeners) listener();
   };
   const matches = (row: Record<string, unknown>) =>
@@ -77,6 +82,7 @@ export const createSharedCollectionViews = <
     onReorderViews: async (viewIds) => {
       const order = { ids: [...viewIds], saved: false, snapshotDuringSave: false };
       pendingOrder = order;
+      observeRows();
       notify();
       try {
         await views.reorder(projectId, record.id, viewIds);
@@ -84,6 +90,7 @@ export const createSharedCollectionViews = <
         if (pendingOrder === order) {
           pendingOrder = undefined;
           notify();
+          releaseRows();
         }
         throw error;
       }
@@ -99,18 +106,67 @@ export const createSharedCollectionViews = <
       }
     },
   };
-  return {
+  const query = () =>
+    getDashboardScopedQueries(owner)
+      .forScope({ projectId })
+      .query({
+        id: "collection-views.cleanup",
+        resourceKey: record.id,
+        dependsOn: [...refreshEventIds],
+        read: async (signal) => {
+          // Sync owns the rows. This request only cleans obsolete schema/filter options.
+          await views.list(projectId, record.id, { signal });
+          return null;
+        },
+      });
+  const releaseRows = () => {
+    if (listeners.size || pendingOrder) return;
+    stopRows?.();
+    stopRows = undefined;
+  };
+  const observeRows = () => {
+    if (stopRows) return;
+    stopRows = owner.subscribeCollections((change) => {
+      if (
+        change &&
+        (!["board_views", "board_default_views"].includes(change.table) ||
+          !change.changes.some(
+            ({ value, previousValue }) => (value && matches(value)) || (previousValue && matches(previousValue)),
+          ))
+      )
+        return;
+      const previous = cached;
+      if (change) reconcilePendingOrder(change);
+      sourceRows = undefined;
+      if (!change || provider.getSnapshot() !== previous) for (const notify of listeners) notify();
+      releaseRows();
+    });
+  };
+  const provider: CollectionViewsProvider<TSettings> = {
     getSnapshot: () => {
       if (!owner.isInitialCollectionsSyncComplete()) return undefined;
-      const current = owner.getCollectionsVersion();
-      if (version === current && cached) return cached;
-      const rows = getSyncedRows().sort(
+      const selected = getSyncedRows();
+      const chosenRow = owner.getIndexedRows("board_default_views", "project_id", projectId).find(matches);
+      if (
+        sourceRows &&
+        selected.length === sourceRows.length &&
+        selected.every((row, index) => row === sourceRows![index]) &&
+        chosenRow === defaultRow
+      )
+        return cached;
+      sourceRows = selected;
+      defaultRow = chosenRow;
+      const rows = [...selected].sort(
         (a, b) =>
           Number(a.sort_order) - Number(b.sort_order) ||
           String(a.created_at).localeCompare(String(b.created_at)) ||
           a.id.localeCompare(b.id),
       );
-      if (!rows.length) return undefined;
+      if (!rows.length) {
+        pendingOrder = undefined;
+        cached = undefined;
+        return cached;
+      }
       // Keep the intended order over partial sync events until the stream catches up.
       // Read view content from sync throughout, so renames and edits remain current.
       if (pendingOrder) {
@@ -130,43 +186,66 @@ export const createSharedCollectionViews = <
         sorts: row.sorts as BoardView["sorts"],
         builtIn: false,
       }));
-      const chosen = owner
-        .getIndexedRows("board_default_views", "project_id", projectId)
-        .find(matches)?.default_view_id;
+      const chosen = chosenRow?.default_view_id;
       const defaultViewId = [chosen, views[0]?.id].find((id) => views.some((view) => view.id === id)) as string;
-      version = current;
       cached = { views, defaultViewId, ...actions };
       return cached;
     },
     subscribe: (listener) => {
       listeners.add(listener);
-      const unsubscribe = owner.subscribeCollections((change) => {
-        if (change) reconcilePendingOrder(change);
-        if (!change || change.table === "board_views" || change.table === "board_default_views") listener();
-      });
-      const controller = new AbortController();
-      // Reads also clean deleted field options; the normal sync stream publishes any cleanup.
-      const refresh = () => {
-        void views.list(projectId, record.id, { signal: controller.signal }).catch(() => undefined);
-      };
-      const stopEvents = subscribeToExtensionEventFeed((event) => {
-        if (
-          event.projectId === projectId &&
-          (record.schemaRefreshEventIds ?? record.refreshEventIds)?.includes(event.id)
-        )
-          refresh();
-      }, owner);
-      const stopReset = subscribeToExtensionEventReset((reset) => {
-        if (reset.projectId === undefined || reset.projectId === projectId) refresh();
-      }, owner);
-      refresh();
+      observeRows();
+      if (!stopQuery) stopQuery = query().subscribe(() => {});
       return () => {
         listeners.delete(listener);
-        stopEvents();
-        stopReset();
-        controller.abort();
-        unsubscribe();
+        if (!listeners.size) {
+          stopQuery?.();
+          stopQuery = undefined;
+          // The ordered-write journal must still see shared snapshots until it reconciles.
+          releaseRows();
+        }
       };
     },
   };
+  return {
+    provider,
+    retained: () => listeners.size > 0 || Boolean(pendingOrder),
+    watch(record: CollectionViewsInput["record"]) {
+      for (const id of record.schemaRefreshEventIds ?? record.refreshEventIds ?? []) refreshEventIds.add(id);
+      query();
+    },
+    dispose() {
+      stopRows?.();
+      stopQuery?.();
+      listeners.clear();
+    },
+  };
+};
+
+const owners = createRuntimeState(
+  () => new Map<string, ReturnType<typeof createCollectionViewsOwner>>(),
+  (cache) => {
+    for (const entry of cache.values()) entry.dispose();
+    cache.clear();
+  },
+);
+
+/** One board owner keeps sync authority and optimistic ordering across duplicate views and remounts. */
+export const createSharedCollectionViews = <TSettings extends NonNullable<BoardView["settings"]>>(
+  input: CollectionViewsInput,
+): CollectionViewsProvider<TSettings> => {
+  const owner = getRuntimeCollections();
+  const cache = owners(owner);
+  const key = JSON.stringify([input.projectId, input.extensionInstanceId ?? null, input.localId, input.record.id]);
+  let entry = cache.get(key);
+  if (!entry) entry = createCollectionViewsOwner(input, owner);
+  cache.delete(key);
+  cache.set(key, entry);
+  entry.watch(input.record);
+  const inactive = [...cache].filter(([id, value]) => id !== key && !value.retained());
+  for (const [id, value] of inactive.slice(0, Math.max(0, cache.size - 128))) {
+    value.dispose();
+    cache.delete(id);
+  }
+  // The board's declared renderer determines its settings shape at this API boundary.
+  return entry.provider as unknown as CollectionViewsProvider<TSettings>;
 };

@@ -29,7 +29,7 @@ export const resolveNoteCommand = defineCommand({
 export const createNoteCommand = defineCommand({
   id: "notes.create",
   title: l10n("commands.createNote", "New note"),
-  cli: true,
+  cli: { path: ["create"] },
   palette: [{ group: "Notes", icon: "sticky-note", params: {} }],
   mutating: true,
   params: {
@@ -37,12 +37,13 @@ export const createNoteCommand = defineCommand({
     folderId: params.text({ label: l10n("params.folder", "Folder") }),
   },
   async run(ctx, commandParams) {
+    const { writable } = await notesFileAccess(ctx);
     if (commandParams.folderId) await requireFolder(notesMount(ctx), commandParams.folderId);
     const note = await createNote(notesMount(ctx), ctx.storage.ids.create(), commandParams.title);
     if (commandParams.folderId) await moveNote(notesMount(ctx), note.id, commandParams.folderId);
     await ctx.events.emit(notesChanged, { noteId: note.id });
 
-    ctx.navigation.open(noteTarget(note.id, note.title, ctx));
+    ctx.navigation.open(noteTarget(note.id, note.title, ctx, writable));
     return note;
   },
 });
@@ -51,7 +52,7 @@ export const deleteNoteCommand = defineCommand({
   id: "notes.delete",
   resourceMutation: { kind: "remove", resourceType: "note", idParam: "noteId" },
   title: l10n("commands.deleteNote", "Delete note"),
-  cli: true,
+  cli: { path: ["delete"] },
   mutating: true,
   menus: [{ ...noteMenu, label: l10n("tree.actions.deleteNote", "Delete"), icon: "trash" }],
   params: {
@@ -72,7 +73,7 @@ export const renameNoteCommand = defineCommand({
   id: "notes.rename",
   resourceMutation: { kind: "rename", resourceType: "note", idParam: "noteId", labelParam: "title" },
   title: l10n("commands.renameNote", "Rename note"),
-  cli: true,
+  cli: { path: ["rename"] },
   mutating: true,
   menus: [{ ...noteMenu, placement: "first", label: l10n("tree.actions.renameNote", "Rename note"), icon: "pencil" }],
   params: {
@@ -84,5 +85,35 @@ export const renameNoteCommand = defineCommand({
     const note = await renameNote(notesMount(ctx), commandParams.noteId, commandParams.title);
     await ctx.events.emit(notesChanged, { noteId: note.id });
     return note;
+  },
+});
+
+export const resolveNotesCommand = defineCommand({
+  id: "notes.resolve-many",
+  title: l10n("activity.resolve", "Resolve notes"),
+  params: { resources: params.json<import("@pstdio/sdk/extensions").ResourceRef[]>() },
+  async run(ctx, input) {
+    const access = await notesFileAccess(ctx);
+    if (!access.readable) return [];
+    const results = [];
+    for (const resource of input.resources ?? []) {
+      if (await noteExists(notesMount(ctx), resource.id))
+        results.push({
+          resource: noteResource(resource.id, await readNoteTitle(notesMount(ctx), resource.id), ctx, access.writable),
+        });
+    }
+    return results;
+  },
+});
+export const authorizeNoteActivityCommand = defineCommand({
+  id: "notes.authorize-activity",
+  title: l10n("activity.authorize", "Check discussion access"),
+  params: { operation: params.text() },
+  async run(ctx, input) {
+    const access = await notesFileAccess(ctx);
+    return {
+      allowed: input.operation === "read" ? access.readable : access.writable,
+      reason: "Notes are read-only or unavailable.",
+    };
   },
 });

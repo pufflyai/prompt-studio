@@ -23,7 +23,7 @@ export const openPerformanceEndpoint = async (path: string, read: () => unknown)
     throw new Error("Another app is already serving performance diagnostics.");
   }
   rmSync(path, { force: true });
-  securePerformanceDirectory(dirname(path));
+  await securePerformanceDirectory(dirname(path));
   const token = randomBytes(32).toString("hex");
   const sockets = new Set<Socket>();
   const server = createServer({ allowHalfOpen: true }, (socket) => {

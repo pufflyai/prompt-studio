@@ -9,7 +9,7 @@ import {
 import type { WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
 import { resolveEventReferenceId, viewDataEvents } from "pstdio-api-contracts/extension-kernel";
 import { publishExtensionEvent } from "@/shared/extensions/extension-webview-broadcast";
-import { canonicalDashboardResource } from "@/shared/extensions/resource-identity";
+import { canonicalDashboardPageTarget, canonicalDashboardResource } from "@/shared/extensions/resource-identity";
 
 interface RecentResource {
   resource: ResourceRef;
@@ -20,20 +20,36 @@ const pageTarget = (location: PageLocation): Extract<NavigationTarget, { kind: "
   const { parent, ...page } = location;
   return { ...page, kind: "page", ...(parent ? { parent: pageTarget(parent) } : {}) };
 };
+// Recents cross extension bridges: a bare core resource must retain its original
+// owner instead of being qualified to the extension that displays the shortcut.
+const canonicalDestination = (target: Extract<NavigationTarget, { kind: "page" | "panel" }>, projectId: string) => {
+  if (target.kind === "page") return canonicalDashboardPageTarget(target, projectId);
+  return {
+    ...target,
+    ...(target.resource ? { resource: canonicalDashboardResource(target.resource, projectId) } : {}),
+  };
+};
+const canonicalTarget = (target: RecentResource["target"], projectId: string) =>
+  target.kind === "page"
+    ? canonicalDashboardPageTarget(target, projectId)
+    : { ...target, targets: target.targets.map((target) => canonicalDestination(target, projectId)) };
 const readSaved = (ctx: WorkbenchModuleContext, projectId: string): RecentResource[] => {
   const saved = ctx.preferences.getValue(preference, { scope: "project", scopeId: projectId });
   if (!saved || typeof saved !== "object" || !("items" in saved) || !Array.isArray(saved.items)) return [];
-  return saved.items.filter((item): item is RecentResource =>
-    Boolean(
-      item &&
-        typeof item === "object" &&
-        item.resource &&
-        typeof item.resource.type === "string" &&
-        typeof item.resource.id === "string" &&
-        (!item.resource.projectId || item.resource.projectId === projectId) &&
-        isNavigationTarget(item.target),
-    ),
-  );
+  return saved.items
+    .filter((item): item is RecentResource =>
+      Boolean(
+        item &&
+          typeof item === "object" &&
+          item.resource &&
+          typeof item.resource.type === "string" &&
+          typeof item.resource.id === "string" &&
+          (!item.resource.projectId || item.resource.projectId === projectId) &&
+          (item.target?.kind === "page" || item.target?.kind === "compound") &&
+          isNavigationTarget(item.target),
+      ),
+    )
+    .map((item) => ({ ...item, target: canonicalTarget(item.target, projectId) }));
 };
 const available = (ctx: WorkbenchModuleContext, target: NavigationTarget): boolean => {
   if (target.kind === "compound") return target.targets.every((target) => available(ctx, target));
@@ -89,7 +105,16 @@ export const createRecentResourcesModule = () =>
           return;
         resource = canonicalDashboardResource(resource, projectId);
         const items = readSaved(ctx, projectId).filter((item) => resourceKey(item.resource) !== resourceKey(resource));
-        void save(projectId, [{ resource: { ...resource, projectId }, target }, ...items].slice(0, 50));
+        void save(
+          projectId,
+          [
+            {
+              resource: { ...resource, projectId },
+              target: canonicalTarget(target, projectId),
+            },
+            ...items,
+          ].slice(0, 50),
+        );
       };
       const rememberActive = (resource = ctx.getActiveResource()) => {
         const location = ctx.pages.store.getState().location;

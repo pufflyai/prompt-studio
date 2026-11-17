@@ -18,17 +18,17 @@ describe("template param options", () => {
         template({
           name: "bug-fix",
           title: "Bug fix",
-          templateType: "pstdio.pstdio-planner.template-type.ticket",
+          templateType: "pstdio.planner.template-type.ticket",
           localType: "ticket",
         }),
         template({
           name: "review",
           title: "Review",
-          templateType: "pstdio.pstdio-reports.template-type.report",
+          templateType: "pstdio.reports.template-type.report",
           localType: "report",
         }),
       ],
-      { templateType: "pstdio.pstdio-planner.template-type.ticket" },
+      { templateType: "pstdio.planner.template-type.ticket" },
     );
 
     expect(options).toEqual([{ label: "Bug fix", value: "bug-fix" }]);

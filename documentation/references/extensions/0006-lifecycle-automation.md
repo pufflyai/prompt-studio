@@ -49,3 +49,5 @@ The [automation cookbook](../../guides/extensions/0003-automation.md) has comple
 Causes include successful completion, explicit user stop, request abort, worker loss, timeout, failure, and unknown historical intent. A missing value is unknown evidence, not permission to restart a cancellation. Extensions own their recovery policy; core owns execution and stop intent.
 
 Automatic continuation can supply `expectedRun` to `ctx.sessions.followup`. Pass the observed `status`, `startedAt`, and `endedAt`. The host compares them when it reserves execution or inserts queued work. A changed execution, including a user stop, rejects the continuation. Explicit follow-ups may omit this guard.
+
+*Updated at: 2026-10-22*

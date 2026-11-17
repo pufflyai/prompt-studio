@@ -18,6 +18,7 @@ import { ExtensionListRow } from "./extension-list-row";
 import { MarketplaceExtensionRow } from "./marketplace-extension-row";
 
 export interface ExtensionsPanelViewProps {
+  projectId?: string;
   extensions: ProjectExtensionInstance[];
   marketplace: MarketplaceExtension[];
   diagnostics: ExtensionDiagnostic[];
@@ -25,8 +26,14 @@ export interface ExtensionsPanelViewProps {
   harnesses?: WorkbenchExtensionHarnessRecord[];
   agents?: AgentInfo[];
   togglingInstanceId?: string;
+  togglingAutomation?: boolean;
   upgradingInstanceIds?: string[];
   onToggle?: (extension: ProjectExtensionInstance, enabled: boolean) => void;
+  onToggleAutomation?: (
+    extension: ProjectExtensionInstance,
+    automation: WorkbenchExtensionAutomationRecord,
+    enabled: boolean,
+  ) => Promise<unknown>;
   onUpgrade?: (extension: ProjectExtensionInstance) => void;
   onOpen?: (extension: ProjectExtensionInstance) => void;
   installingMarketplaceNames?: string[];
@@ -37,6 +44,9 @@ export interface ExtensionsPanelViewProps {
   addingFolderName?: string;
   onDropFolder?: (folder: DroppedExtensionFolder) => void;
 }
+
+const compareDisplayName = (a: { displayName: string }, b: { displayName: string }) =>
+  a.displayName.localeCompare(b.displayName);
 
 const getDiagnosticsByExtensionId = (extensions: ProjectExtensionInstance[], diagnostics: ExtensionDiagnostic[]) => {
   const installedExtensionIds = new Set(extensions.map((extension) => extension.extensionId));
@@ -78,9 +88,11 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
     harnesses,
     agents,
     togglingInstanceId,
+    togglingAutomation,
     upgradingInstanceIds = [],
     installingMarketplaceNames = [],
     onToggle,
+    onToggleAutomation,
     onUpgrade,
     onOpen,
     onInstallMarketplace,
@@ -94,8 +106,9 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
   const [search, setSearch] = useState("");
 
   const diagnosticsByExtensionId = getDiagnosticsByExtensionId(extensions, diagnostics);
-  const visible = extensions.filter((extension) => matchesSearch(extension, search));
-  const availableMarketplace = marketplace.filter((extension) => !extension.installed);
+  const sortedExtensions = [...extensions].sort(compareDisplayName);
+  const visible = sortedExtensions.filter((extension) => matchesSearch(extension, search));
+  const availableMarketplace = marketplace.filter((extension) => !extension.installed).sort(compareDisplayName);
   const visibleMarketplace = availableMarketplace.filter((extension) => matchesMarketplaceSearch(extension, search));
   const installingNames = new Set(installingMarketplaceNames);
   const upgradable = extensions.filter((extension) => extension.canUpgrade);
@@ -167,14 +180,17 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
 
       {visible.map((extension) => (
         <ExtensionListRow
+          projectId={props.projectId}
           key={extension.id}
           extension={extension}
           diagnostics={diagnosticsByExtensionId.get(extension.extensionId) ?? []}
-          automations={automations.filter((automation) => automation.extensionId === extension.extensionId)}
+          automations={automations.filter((automation) => automation.extensionInstanceId === extension.id)}
           unavailableHarnesses={unavailableExtensionHarnesses(extension, harnesses, agents)}
           toggling={togglingInstanceId === extension.id}
+          togglingAutomation={togglingAutomation}
           upgrading={upgradingInstanceIds.includes(extension.id)}
           onToggle={(enabled) => onToggle?.(extension, enabled)}
+          onToggleAutomation={async (automation, enabled) => onToggleAutomation?.(extension, automation, enabled)}
           onUpgrade={() => onUpgrade?.(extension)}
           onOpen={() => onOpen?.(extension)}
         />

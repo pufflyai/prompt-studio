@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { listActivityInputSchema, listActivityResponseSchema } from "./activity";
 import type { SessionExit } from "./extension-kernel/types/sessions";
-import { extensionResourceRefSchema } from "./extensions";
+import { extensionResourceRefSchema } from "./extensions/resource-ref";
 import { harnessOperationResponseSchema, harnessOperationSchema } from "./harness-commands";
 import { pendingQueuedFollowUpsResponseSchema } from "./queued-follow-ups";
 import { sessionMessageSchema } from "./session-messages";

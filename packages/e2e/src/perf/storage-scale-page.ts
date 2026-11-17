@@ -39,11 +39,7 @@ export const measureScalePage = async (
       ...(await diagnostics()),
       screenshot,
       passed: false,
-      failures: [
-        ...(durationMs >= contract.ceilingMs ? ["latency"] : []),
-        "legacy-client-paging-hydrates-owner",
-        "all-page-row-readiness-unproved",
-      ],
+      failures: [...(durationMs >= contract.ceilingMs ? ["latency"] : []), "all-page-row-readiness-unproved"],
     };
   } finally {
     await browser.close();

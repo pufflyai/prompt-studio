@@ -11,12 +11,12 @@ export const startRegistryWireFixture = async () => {
     [];
   const packages = new Map<string, Buffer>();
   const server = createServer((request, response) => {
-    if (request.url === "/api/pstdio/pstdio-notes/versions") {
+    if (request.url === "/api/pstdio/notes/versions") {
       response.setHeader("content-type", "application/json");
       response.end(JSON.stringify({ versions }));
       return;
     }
-    const version = /^\/api\/pstdio\/pstdio-notes\/([^/]+)\/file$/.exec(request.url ?? "")?.[1];
+    const version = /^\/api\/pstdio\/notes\/([^/]+)\/file$/.exec(request.url ?? "")?.[1];
     const bytes = version ? packages.get(version) : null;
     response.statusCode = bytes ? 200 : 404;
     response.end(bytes ?? "Not found");
@@ -34,11 +34,11 @@ export const startRegistryWireFixture = async () => {
       await closed;
     },
     publish: async (path: string) => {
-      const version = /^pstdio\.pstdio-notes-(\d+\.\d+\.\d+)\.tgz$/.exec(basename(path))?.[1];
+      const version = /^pstdio\.notes-(\d+\.\d+\.\d+)\.tgz$/.exec(basename(path))?.[1];
       if (!version) throw new Error("Unexpected Notes fixture package name");
       const bytes = await readFile(path);
       versions.push({
-        id: "pstdio.pstdio-notes",
+        id: "pstdio.notes",
         version,
         enginesPstdio: registryNotesEngines,
         sha256: createHash("sha256").update(bytes).digest("hex"),

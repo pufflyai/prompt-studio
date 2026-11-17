@@ -89,6 +89,7 @@ export type WorkbenchTreeViews = Pick<
 >;
 
 export interface WorkbenchCoreContributionContext {
+  activation: WorkbenchActivation;
   viewers: WorkbenchViewerController;
   pinPlacement(identity: import("@pstdio/sdk/extensions").PlacementIdentity, pinned?: boolean): void;
   getPanelDestinations(instanceId: string): import("./registries/layout/layout-types").WorkbenchPanelRegion[];
@@ -172,7 +173,6 @@ export interface WorkbenchHost {
 }
 
 export interface WorkbenchCore extends WorkbenchCoreContributionContext {
-  activation: WorkbenchActivation;
   dispose(): Promise<void>;
   host: WorkbenchHost;
   layout: WorkbenchLayoutModel;
@@ -197,6 +197,8 @@ export interface WorkbenchPagePersistenceScope {
 }
 
 export interface createWorkbenchInput {
+  /** Share the host runtime cache with native query adapters. */
+  queries?: import("@pstdio/sdk/extensions").ScopedQueryClient;
   /** Whether this workbench owns window effects. Defaults to true for single-workbench hosts. */
   active?: boolean;
   storageScope?: string;

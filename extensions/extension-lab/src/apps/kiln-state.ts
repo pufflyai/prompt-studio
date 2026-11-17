@@ -5,10 +5,17 @@ import type { KilnVector } from "./kiln-data";
 
 const stateStore = createExampleStore("kiln", exampleDefaults.kiln);
 let snapshot = stateStore.getState();
+let sourceState = JSON.stringify(snapshot);
 const listeners = new Set<() => void>();
 const update = () => {
   const state = stateStore.getState();
-  snapshot = { ...state, frame: sampleKilnPlayback(state, Date.now()) };
+  const frame = sampleKilnPlayback(state, Date.now());
+  const nextSourceState = JSON.stringify(state);
+  // Save acknowledgments can republish the same scene. Keep its snapshot stable
+  // so React and the WebGL viewport do not redraw unchanged geometry.
+  if (nextSourceState === sourceState && frame === snapshot.frame) return;
+  sourceState = nextSourceState;
+  snapshot = { ...state, frame };
   for (const listener of listeners) listener();
 };
 stateStore.subscribe(update);

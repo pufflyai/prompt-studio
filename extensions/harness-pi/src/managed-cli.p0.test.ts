@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { resolvePiCommand } from "./cli";
+import { piBunCommand, readManagedPiVersion, resolvePiCommand } from "./cli";
 
 test("a private Pi script runs with bundled Bun and does not pass Bun mode to child tools", async () => {
   const root = mkdtempSync(join(tmpdir(), "pi-private-"));
@@ -33,4 +33,80 @@ test("Windows Pi npm shims use their existing script with Bun", () => {
       managed: () => "private",
     }).command.at(-1),
   ).toBe(entry);
+});
+
+const managedBundle = () => {
+  const root = mkdtempSync(join(tmpdir(), "pi-metadata-"));
+  const entry = join(root, "dist/cli.js");
+  mkdirSync(join(root, "dist"));
+  writeFileSync(entry, 'console.log("0.79.0");');
+  const writeManifest = (overrides: Record<string, unknown> = {}) =>
+    writeFileSync(
+      join(root, "package.json"),
+      JSON.stringify({
+        name: "@earendil-works/pi-coding-agent",
+        version: "0.79.0",
+        bin: { pi: "dist/cli.js" },
+        ...overrides,
+      }),
+    );
+  writeManifest();
+  return { root, entry, ...piBunCommand(entry), writeManifest };
+};
+
+test("managed metadata is reread after a version change and rejects a removed CLI", () => {
+  const bundle = managedBundle();
+  try {
+    expect(readManagedPiVersion(bundle.command, bundle.env, bundle.entry)).toBe("0.79.0");
+    bundle.writeManifest({ version: "0.78.1" });
+    expect(readManagedPiVersion(bundle.command, bundle.env, bundle.entry)).toBe("0.78.1");
+    unlinkSync(bundle.entry);
+    expect(readManagedPiVersion(bundle.command, bundle.env, bundle.entry)).toBeUndefined();
+  } finally {
+    rmSync(bundle.root, { recursive: true, force: true });
+  }
+});
+
+test("managed metadata never substitutes for a different command or package override", () => {
+  const bundle = managedBundle();
+  try {
+    expect(readManagedPiVersion(["external-pi"], bundle.env, bundle.entry)).toBeUndefined();
+    expect(
+      readManagedPiVersion([...bundle.command, "--session-dir", "elsewhere"], bundle.env, bundle.entry),
+    ).toBeUndefined();
+    expect(
+      readManagedPiVersion(bundle.command, { ...bundle.env, PI_PACKAGE_DIR: bundle.root }, bundle.entry),
+    ).toBeUndefined();
+    expect(readManagedPiVersion(bundle.command, { ...bundle.env, BUN_BE_BUN: "" }, bundle.entry)).toBeUndefined();
+  } finally {
+    rmSync(bundle.root, { recursive: true, force: true });
+  }
+});
+
+test("managed metadata requires the declared package and CLI to agree", () => {
+  const bundle = managedBundle();
+  try {
+    bundle.writeManifest({ name: "another-agent" });
+    expect(readManagedPiVersion(bundle.command, bundle.env, bundle.entry)).toBeUndefined();
+    const other = join(bundle.root, "dist/other.js");
+    writeFileSync(other, 'console.log("0.79.0");');
+    bundle.writeManifest({ bin: { pi: "dist/other.js" } });
+    expect(readManagedPiVersion(bundle.command, bundle.env, bundle.entry)).toBeUndefined();
+    bundle.writeManifest({ version: "not a version" });
+    expect(readManagedPiVersion(bundle.command, bundle.env, bundle.entry)).toBeUndefined();
+    writeFileSync(join(bundle.root, "package.json"), "{");
+    expect(readManagedPiVersion(bundle.command, bundle.env, bundle.entry)).toBeUndefined();
+  } finally {
+    rmSync(bundle.root, { recursive: true, force: true });
+  }
+});
+
+test("managed metadata rejects a closer manifest that can change the CLI version", () => {
+  const bundle = managedBundle();
+  try {
+    writeFileSync(join(bundle.root, "dist/package.json"), JSON.stringify({ name: "pi-binary", version: "0.78.1" }));
+    expect(readManagedPiVersion(bundle.command, bundle.env, bundle.entry)).toBeUndefined();
+  } finally {
+    rmSync(bundle.root, { recursive: true, force: true });
+  }
 });

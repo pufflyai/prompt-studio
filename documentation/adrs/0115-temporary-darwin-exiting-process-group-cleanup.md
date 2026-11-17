@@ -45,6 +45,17 @@ hide arbitrary permission errors or change Linux and Windows termination.
 The regression injects the group refusal while using a real owned child.
 Native account worker tests also cover completion and cancellation.
 
+## Desktop test cleanup
+
+The [native desktop benchmark run](https://github.com/pufflyai/prompt-studio/actions/runs/42276190039/job/128093352556)
+also reported `kill EPERM` while Node stopped an owned packaged Electron group
+after the recovery case timed out. Desktop test cleanup uses the same Darwin-only
+owned-child fallback. It waits for the child to close and then for the original
+process group to disappear, so ending the leader cannot hide surviving children.
+The owning test's existing deadline still bounds cleanup. Other errors and
+platforms retain their original behavior. This fixes cleanup; it does not waive
+the recovery timeout or establish that startup meets its performance budgets.
+
 ## Removal
 
 Remove the fallback once the supported Bun/macOS combination consistently

@@ -6,19 +6,19 @@ import { RelatedResources } from "./related-resources";
 import type { ResourceLinksService } from "./resource-links-types";
 
 const ticket: ResourceRef = {
-  type: "ticket",
-  id: "ticket",
-  extensionId: "planner",
+  type: "session",
+  id: "session",
+  extensionId: "pstdio",
   projectId: "project",
-  label: "PS-490 · General resource linking",
+  label: "Review the release",
 };
 const artifact: ResourceRef = {
-  type: "artifact",
-  id: "prototype",
-  extensionId: "artifacts",
+  type: "pull-request",
+  id: "https://github.com/pufflyai/prompt-studio/pull/1602",
+  extensionId: "pstdio.github",
   projectId: "project",
-  label: "Interaction prototype",
-  icon: "file-code",
+  label: "pufflyai/prompt-studio #1602",
+  icon: "git-pull-request",
 };
 const workspace: ResourceRef = {
   type: "workspace",
@@ -37,7 +37,7 @@ const service = (items: ResourceAnchorPage["items"], fail = false): ResourceLink
   add: async () => undefined,
   remove: async () => undefined,
   search: async () => [
-    { resource: artifact, description: "Artifacts" },
+    { resource: artifact, description: "GitHub" },
     { resource: workspace, description: "Workspaces" },
   ],
   resolve: async () => [
@@ -55,7 +55,7 @@ const meta = {
       <WorkbenchThemeProvider>
         <Dialog.Root open>
           <Dialog.Positioner>
-            <Dialog.Content maxW="lg">
+            <Dialog.Content maxW="md" textAlign="start">
               <Story />
             </Dialog.Content>
           </Dialog.Positioner>

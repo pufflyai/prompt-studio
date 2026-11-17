@@ -5,12 +5,12 @@ import { createDesktopCapture } from "../performance/create-performance-capture"
 void app.whenReady().then(async () => {
   const window = new BrowserWindow({ show: false });
   await window.loadURL("data:text/html,<h1>Performance capture fixture</h1>");
-  let capture: ReturnType<typeof createDesktopCapture> | undefined;
+  let capture: Awaited<ReturnType<typeof createDesktopCapture>> | undefined;
   let timer: ReturnType<typeof setInterval> | undefined;
   process.on("message", async (command) => {
     try {
       if (command === "capture") {
-        capture = createDesktopCapture({
+        capture = await createDesktopCapture({
           backend: () => ({
             id: "fixture",
             scope: "local",

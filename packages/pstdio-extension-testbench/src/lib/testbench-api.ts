@@ -156,6 +156,8 @@ const loadExtensionBench = async (input: LoadExtensionBenchInput) => {
     extensionPackages: [{ path: resolve(input.sourcePath), sourceKind: "local_path" }],
   });
   const runtime = normalizeExtensionSources(loaded.sources, loaded.diagnostics);
+  // Preview data follows the source package being authored, including an older published identity.
+  const storage = input.storage ?? createPreviewStorage(runtime.extensions[0]?.id);
   if (input.prepareWebviews) {
     const webviews: ResolveWorkbenchExtensionWebviewInput[] = [];
     createWorkbenchExtensionMetadata({
@@ -170,7 +172,7 @@ const loadExtensionBench = async (input: LoadExtensionBenchInput) => {
   const metadata = createWorkbenchExtensionMetadata({ resolveWebview: input.resolveWebview, runtime });
   const inventory = createBenchContributionInventory(runtime);
   const environment = await createBenchEnvironment(
-    input.storage,
+    storage,
     Object.fromEntries(
       runtime.resourceKinds.flatMap((record) => {
         const prefix = record.contribution.prefix;
@@ -267,7 +269,6 @@ export const createExtensionTestbenchApi = (input: ExtensionTestbenchApiInput) =
       prepareWebviews: webviewHost.prepareWebviews,
       resolveWebview: webviewHost.resolveWebview,
       sourcePath,
-      storage: createPreviewStorage(),
     });
     const benchId = `bench-${++benchCounter}`;
     benches.set(benchId, bench);

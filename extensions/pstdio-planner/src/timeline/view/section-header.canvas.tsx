@@ -13,7 +13,7 @@ import type { PlanClient } from "./use-plan";
 import { usePlanActions } from "./use-plan-actions";
 
 const host: GuestHost = {
-  extensionId: "pstdio.pstdio-planner",
+  extensionId: "pstdio.planner",
   call: async () => {
     throw new Error("This story does not run host commands.");
   },

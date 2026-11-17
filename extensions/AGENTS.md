@@ -20,7 +20,7 @@ When a change requires both SDK updates and extension updates:
 
 ## Core extension releases
 
-Core extensions share the host version through the fixed group in `.changeset/config.json`. Add each new core extension to that group. Continue naming changed extensions in changesets. One `pstdio@<version>` tag supplies all core extension code; do not create extension tags or releases. Shared versions do not update published SDK or UI dependency ranges.
+Core extensions have independent versions and changelogs and stay outside the host fixed group (007.5.10). Add a changeset naming each changed extension. Current hosts bundle catalog sources from the host release checkout; `{hostRelease}` selects that checkout, not the extension version. Follow [independent core extension releases](../documentation/guides/development/0013-independent-extension-releases.md) and keep published SDK/UI dependency validation enabled. Do not edit established package versions by hand.
 
 ## Shared keyboard actions
 

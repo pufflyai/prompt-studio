@@ -1,8 +1,8 @@
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { expect, test } from "@playwright/test";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
+import { expect, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 
 const bypassOnboarding = async (page: import("@playwright/test").Page, projectId: string) => {
@@ -46,7 +46,7 @@ const createInstalledExtension = (input: { displayName: string; installName: str
 };
 
 // Regression: interacting with the delete confirmation (e.g. the delete-data
-// checkbox) must not dismiss the modal or the settings overlay behind it.
+// checkbox) must not dismiss the modal or the extension page behind it.
 test("delete extension flow survives clicks inside the confirmation modal", async ({ page, request }) => {
   const unique = Date.now();
   const installName = `e2e-delete-flow-${unique}`;
@@ -84,7 +84,6 @@ test("delete extension flow survives clicks inside the confirmation modal", asyn
   await expect(row).toBeVisible();
   await row.click();
   await expect(page.getByTestId("extension-detail")).toBeVisible();
-  await page.getByRole("tab", { name: "Settings" }).click();
   await page.getByTestId("extension-delete").click();
 
   const dialog = page.getByRole("dialog").last();

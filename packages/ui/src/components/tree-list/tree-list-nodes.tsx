@@ -4,6 +4,7 @@ import type { TreeListNode } from "./tree-list.types";
 import type { TreeListDropIndicator } from "./tree-list-drop-indicator";
 import { getNodeChildren } from "./tree-list-model";
 import { TreeListNodeRow } from "./tree-list-node-row";
+import { TreeListPageBoundary } from "./tree-list-page-boundary";
 import { TreeListReveal } from "./tree-list-reveal";
 import { canStartTreeListDrag, DropLine, SortableHost } from "./tree-list-sortable-host";
 
@@ -31,13 +32,17 @@ const TreeListNodeBranch = (props: TreeListNodesProps & { node: TreeListNode }) 
       onFocus={() => onRowFocus?.(node.id)}
     />
   );
-  const descendants = children.length ? (
-    <TreeListReveal open={rowProps.expandedNodeIds.includes(node.id)}>
-      <Box pt={rowProps.nodeGap}>
-        <TreeListNodes {...props} nodes={children} level={level + 1} />
-      </Box>
-    </TreeListReveal>
-  ) : null;
+  const descendants =
+    children.length || node.pagination ? (
+      <TreeListReveal open={rowProps.expandedNodeIds.includes(node.id)}>
+        <Box pt={rowProps.nodeGap}>
+          <TreeListNodes {...props} nodes={children} level={level + 1} />
+          {node.pagination && rowProps.expandedNodeIds.includes(node.id) ? (
+            <TreeListPageBoundary pagination={node.pagination} />
+          ) : null}
+        </Box>
+      </TreeListReveal>
+    ) : null;
 
   if (sortable && level === 0) {
     return (

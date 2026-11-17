@@ -1,4 +1,4 @@
-import type { ControlsQueryResult, ControlValue, ControlValueMap } from "@pstdio/sdk/extensions";
+import type { ControlsQueryResult, ControlValue, ControlValueMap, QueryChangeEnvelope } from "@pstdio/sdk/extensions";
 
 export type { ControlsQueryResult } from "@pstdio/sdk/extensions";
 
@@ -36,6 +36,9 @@ export interface ControlsResetInput {
 }
 
 export interface ControlsRendererContribution {
+  /** Captured host identity; never infer a hidden view's project from current selection. */
+  queryEvents?: readonly string[];
+  queryScope?: Partial<import("@pstdio/sdk/extensions").QueryScope>;
   id: string;
   title: string;
   resourceKind?: string;
@@ -67,7 +70,7 @@ export interface ControlsRendererStoreState {
   renderers: Record<string, RegisteredControlsRendererContribution>;
 }
 
-export interface ControlsRendererRefreshEvent {
+export interface ControlsRendererRefreshEvent extends QueryChangeEnvelope {
   controlsRendererId: string;
 }
 
@@ -90,7 +93,7 @@ export interface ControlsRendererRegistry {
   setControlsRendererImplementation(impl: ControlsRendererImplementation): void;
   getControlsRenderer(id: string): RegisteredControlsRendererContribution | undefined;
   listControlsRenderers(): RegisteredControlsRendererContribution[];
-  refreshControlsRenderer(id: string): void;
+  refreshControlsRenderer(id: string, event?: QueryChangeEnvelope): void;
   onDidRefreshControlsRenderer(listener: ControlsRendererRefreshListener): Disposable;
 }
 
@@ -162,9 +165,9 @@ export const createControlsRendererRegistry = (
       return Object.values(controlsStore.getState().renderers).sort(byContributionPriority);
     },
 
-    refreshControlsRenderer(id) {
+    refreshControlsRenderer(id, refresh) {
       requireControlsRenderer(id);
-      const event = { controlsRendererId: id };
+      const event = { ...refresh, controlsRendererId: id };
       for (const listener of refreshListeners) listener(event);
     },
 

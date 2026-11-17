@@ -3,6 +3,7 @@ import { Box, createSlotRecipeContext, HStack, Stack, Text } from "@chakra-ui/re
 import { Children, type ReactNode } from "react";
 
 import { activityCommentSlotRecipe as recipe } from "@/theme/recipes/activity-comment";
+import { LazyRichMessage } from "../rich-text/lazy-rich-message";
 import type { ActivityActor } from "./activity.types";
 import { ActivityAvatar } from "./activity-avatar";
 
@@ -40,10 +41,6 @@ export interface ActivityReplyProps extends Omit<HTMLChakraProps<"div">, "title"
   children: ReactNode;
 }
 
-const TimestampSeparator = () => (
-  <Box as="span" boxSize="3px" borderRadius="full" background="fg.subtle" flexShrink={0} />
-);
-
 const ActivityCommentHeader = (props: ActivityCommentHeaderProps) => {
   const { actor, icon, iconColor, iconBackground, timestamp, actions } = props;
 
@@ -54,12 +51,9 @@ const ActivityCommentHeader = (props: ActivityCommentHeaderProps) => {
         {actor.name}
       </Text>
       {timestamp ? (
-        <>
-          <TimestampSeparator />
-          <Text textStyle="label/S/regular" color="fg.muted" flexShrink={0}>
-            {timestamp}
-          </Text>
-        </>
+        <Text textStyle="label/S/regular" color="fg.muted" flexShrink={0}>
+          {timestamp}
+        </Text>
       ) : null}
       <Box marginLeft="auto" flexShrink={0}>
         {actions}
@@ -81,7 +75,7 @@ export const ActivityReply = (props: ActivityReplyProps) => {
         <ActivityCommentHeader actor={actor} timestamp={timestamp} actions={actions} />
         <Box paddingLeft="32px">
           <Text as="div" textStyle="label/S/regular" color="fg" overflowWrap="anywhere">
-            {children}
+            {typeof children === "string" ? <LazyRichMessage defaultState={children} fullWidth /> : children}
           </Text>
         </Box>
       </Stack>
@@ -105,7 +99,9 @@ export const ActivityComment = (props: ActivityCommentProps) => {
           timestamp={timestamp}
           actions={actions}
         />
-        <ActivityCommentContent>{children}</ActivityCommentContent>
+        <ActivityCommentContent>
+          {typeof children === "string" ? <LazyRichMessage defaultState={children} fullWidth /> : children}
+        </ActivityCommentContent>
       </ActivityCommentBody>
       {hasReplies ? (
         <Box borderTopWidth="1px" borderColor="border.subtle">

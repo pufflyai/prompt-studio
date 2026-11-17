@@ -47,3 +47,5 @@ Cancellation aborts `ctx.signal` and waits for command cleanup. A cancelled work
 - Terminal runs: pruned after 30 days. Keys can be reused after their run is pruned.
 
 Use `AutomationRun` and `AutomationRunStatus` from `@pstdio/sdk/extensions` for stored run handles. The host owns run supervision. Extensions own retry policies, checkpoints, progress, and their run tables. [Remote automation](../cli/0007-automation.md) describes machine tokens, which start runs from outside Prompt Studio. [Lifecycle automation](0006-lifecycle-automation.md) describes hooks and schedules, which are separate features.
+
+*Updated at: 2026-10-06*

@@ -45,7 +45,9 @@ export const createKeyboardActionRunner = (input: {
       return;
     }
     const { binding } = current;
-    const context = target ? { resource: target.resource, region: target.region } : undefined;
+    const context = target
+      ? { resource: target.resource, region: target.region, placement: target.placementIdentity }
+      : undefined;
     const keepMode = binding.action.kind === "command" && keyboardEntryKind(binding.action.commandId) === "tab";
     const path = store.getState().path;
     if (!keepMode) stop(false);

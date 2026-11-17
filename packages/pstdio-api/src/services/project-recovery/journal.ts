@@ -1,19 +1,18 @@
+import { Database } from "bun:sqlite";
 import { createHash } from "node:crypto";
 import { link, mkdir, open, readFile, rename, stat, unlink, utimes } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
 import { recoveryChunkSchema } from "./chunks";
 
-const journalSchema = z.strictObject({
+// Journals written before PS-1130 also hold a retired `enrolled` flag; parsing drops it.
+const journalSchema = z.object({
   version: z.literal(1),
-  /** Set once the starter policy decision for this source was applied. A later
-   * missing `.pstignore` is then a deliberate deletion, never a reason to seed again. */
-  enrolled: z.boolean(),
   /** A complete local capture that has not been acknowledged by the relay yet. */
   candidate: recoveryChunkSchema.nullable(),
 });
 export type RecoveryJournal = z.infer<typeof journalSchema>;
-const empty: RecoveryJournal = { version: 1, enrolled: false, candidate: null };
+const empty: RecoveryJournal = { version: 1, candidate: null };
 type Change = Partial<Omit<RecoveryJournal, "version">>;
 // Read-modify-write of one journal is serialized within the process.
 const updates = new Map<string, Promise<unknown>>();
@@ -91,7 +90,7 @@ export const openRecoveryJournal = async (input: { root: string; source: string[
   };
   /** One process owns a source's capture and publication at a time. The owner
    * refreshes the lock; an exited or silent owner's lock is taken over. */
-  const acquire = async (): Promise<(() => Promise<void>) | null> => {
+  const acquireMarker = async (): Promise<(() => Promise<void>) | null> => {
     for (let attempt = 0; attempt < 2; attempt++) {
       const token = crypto.randomUUID();
       const content = JSON.stringify({ pid: process.pid, token });
@@ -129,6 +128,38 @@ export const openRecoveryJournal = async (input: { root: string; source: string[
       await takeOver(current);
     }
     return null;
+  };
+  const acquire = async () => {
+    // Keep this inode: the OS releases the lease on process death.
+    const lease = new Database(`${lockPath}.sqlite`, { create: true });
+    try {
+      lease.exec("BEGIN IMMEDIATE");
+    } catch (error) {
+      lease.close();
+      if ((error as { code?: string }).code === "SQLITE_BUSY") return null;
+      throw error;
+    }
+    let release: (() => Promise<void>) | null;
+    try {
+      release = await acquireMarker();
+    } catch (error) {
+      lease.close();
+      throw error;
+    }
+    if (!release) {
+      lease.close();
+      return null;
+    }
+    let released = false;
+    return async () => {
+      if (released) return;
+      released = true;
+      try {
+        await release();
+      } finally {
+        lease.close();
+      }
+    };
   };
   return {
     read,

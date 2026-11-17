@@ -171,6 +171,12 @@ packages/api/.data/
 _embed-manifest.generated.ts
 packages/pstdio/files/extension-sources/
 
+# Owned release downloads and attestations are inputs to candidate verification.
+/release-build.tar.gz
+/production-build-identity.json
+/validation-app-*.tar.gz
+/production-evidence/
+
 # Vendored PGlite runtime assets (regenerated from @electric-sql/pglite)
 packages/pstdio-db/vendor
 

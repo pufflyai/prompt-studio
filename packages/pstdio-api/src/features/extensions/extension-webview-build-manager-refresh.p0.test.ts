@@ -6,6 +6,53 @@ import { createExtensionWebviewBuildManager } from "./extension-webview-build-ma
 import { writeExtension, writeManagedBuildOutput } from "./test-utils/webview-build-fixture";
 
 describe("createExtensionWebviewBuildManager refresh scheduling", () => {
+  test("a full refresh reads each installed source by id instead of listing every source per check", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-webview-refresh-reads-test-"));
+    const rows = Array.from({ length: 12 }, (_, index) => {
+      const sourcePath = join(root, `extension-${index}`);
+      writeExtension(sourcePath, { view: "src/view.tsx" });
+      return {
+        updated_at: "2026-11-06T00:00:00.000Z",
+        id: `installed-${index}`,
+        install_name: `extension-${index}`,
+        source_hash: "hash-1",
+        source_path: sourcePath,
+      };
+    });
+    let listed = 0;
+    let built = 0;
+    const read: string[] = [];
+    const manager = createExtensionWebviewBuildManager({
+      listInstalledSources: async () => {
+        listed++;
+        return rows;
+      },
+      getInstalledSource: async (id) => {
+        read.push(id);
+        return rows.find((row) => row.id === id) ?? null;
+      },
+      reportBuildFailure: async () => "reported",
+      reportBuildSuccess: async () => "reported",
+      buildWebview: async (input) => {
+        built++;
+        writeManagedBuildOutput(input);
+        return { success: true, details: "" };
+      },
+      webviewCacheRoot: join(root, "cache"),
+    });
+
+    try {
+      await manager.refresh();
+      // One list selects the sources to check; every check reads only its own row.
+      expect(listed).toBe(1);
+      expect(new Set(read)).toEqual(new Set(rows.map((row) => row.id)));
+      expect(built).toBe(rows.length);
+    } finally {
+      manager.dispose();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("builds an extension's webviews concurrently rather than one at a time", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-parallel-test-"));
     const sourcePath = join(root, "extension");

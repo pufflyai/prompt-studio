@@ -12,7 +12,6 @@ import { fingerprint, type Json } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import {
   storage_ordered_operations as operations,
-  storage_ordered_owners as owners,
   storage_ordered_receipts as receipts,
   storage_ordered_touches as touches,
 } from "../../db/schemas.pg";
@@ -22,6 +21,7 @@ import {
   retryOrderedLocalOperation,
 } from "./ordered-authorship";
 import { createOrderedCanonical } from "./ordered-canonical";
+import { ensureOrderedOwner } from "./ordered-conversion";
 import { createOrderedDependencyCache } from "./ordered-dependency-cache";
 import { isOrderedNativeRequest } from "./ordered-native-identity";
 import { fenceOrderedNativeText, forgetOrderedTextGeneration } from "./ordered-native-recovery";
@@ -65,7 +65,16 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
     return row;
   };
   const bind = (id: string, identity: string) => bindOperationIdentity(tx, owner, id, identity);
+  // Receipts are immutable, so a found receipt stays valid for this owner transaction.
+  const held = new Map<string, Awaited<ReturnType<typeof readDecision>>>();
   const cachedDecision = async (id: string, epoch: string) => {
+    const key = JSON.stringify([id, epoch]);
+    if (held.has(key)) return held.get(key);
+    const row = await readDecision(id, epoch);
+    if (row) held.set(key, row);
+    return row;
+  };
+  const readDecision = async (id: string, epoch: string) => {
     const [row] = await tx
       .select({
         operationId: receipts.operation_id,
@@ -251,6 +260,7 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
     },
     /** Checkpoint reconciliation explicitly selects a known exact receipt before any readmission. */
     async settleKnown(decision: OrderedDecision) {
+      dependencies.forget(decision.operationId);
       const row = await operation(decision.operationId);
       const known = await cachedDecision(decision.operationId, decision.epoch);
       if (!row?.envelope || row.settled_epoch) return;
@@ -270,16 +280,13 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
 export const withOrderedOwner = <T>(
   db: DbClient,
   owner: StorageOwner,
-  run: (journal: OrderedJournal, tx: Transaction, created: boolean) => Promise<T>,
+  run: (journal: OrderedJournal, tx: Transaction) => Promise<T>,
 ) =>
-  db.transaction(async (tx) => {
-    await lockRecordOwner(tx, owner);
-    const created = await tx
-      .insert(owners)
-      .values({ workbench_id: owner.workbenchId, extension_id: owner.extensionId })
-      .onConflictDoNothing()
-      .returning({ id: owners.workbench_id });
-    return run(createOrderedJournal(tx, owner), tx, created.length > 0);
-  });
+  ensureOrderedOwner(db, owner).then(() =>
+    db.transaction(async (tx) => {
+      await lockRecordOwner(tx, owner);
+      return run(createOrderedJournal(tx, owner), tx);
+    }),
+  );
 
 export type OrderedJournal = ReturnType<typeof createOrderedJournal>;

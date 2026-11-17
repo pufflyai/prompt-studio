@@ -86,3 +86,5 @@ The dashboard only answers on the loopback address that `pst` prints, such as `h
 The desktop app and `pst` share one background runtime. They show the same projects. See [runtime commands](../../references/cli/0003-setup.md) for how the runtime starts and stops.
 
 Next, [open a project](0002-open-a-project.md).
+
+*Updated at: 2026-10-18*

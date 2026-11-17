@@ -8,7 +8,7 @@ import {
 } from "@pstdio/sdk/extensions";
 import { refreshEvents } from "./events";
 import { workspaceResource } from "./model";
-import { workspacePages } from "./refs";
+import { workspaceCommands, workspacePages } from "./refs";
 
 export const sidebarView = defineView({
   id: "sidebar",
@@ -48,6 +48,14 @@ export const sidebarView = defineView({
               canHide: true,
               canReorder: true,
               target: { kind: "page", page: workspacePages.list },
+              contextMenuActions: [
+                {
+                  id: "create-workspace",
+                  label: l10n("action.create", "Create workspace"),
+                  icon: "plus",
+                  command: workspaceCommands.create,
+                },
+              ],
             },
           ],
         },

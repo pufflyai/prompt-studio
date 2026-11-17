@@ -1,10 +1,13 @@
 import type { WorkspaceProviderDescriptor } from "@pstdio/sdk/api";
 import { commandRefId, isLocalizedString, type ParamOptionSource } from "@pstdio/sdk/extensions";
 import type { CommandParamSchema } from "@pstdio/workbench";
-import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 
-export const workspaceProviderText = (value: unknown) =>
-  typeof value === "string" || isLocalizedString(value) ? resolveLocalizableString(value) : "";
+// Provider descriptors have no translation namespace here. Reading their fallback labels is pure;
+// it must not initialize a runtime/API owner (including in sandboxed Canvas frames).
+export const workspaceProviderText = (value: unknown) => {
+  if (typeof value === "string") return value;
+  return isLocalizedString(value) ? (value.default ?? value.$l10n) : "";
+};
 
 const workspaceProviderOptions = (value: unknown) => {
   if (Array.isArray(value)) return value.map((option) => ({ ...option, label: workspaceProviderText(option.label) }));

@@ -78,6 +78,16 @@ Test and Build now runs the desktop source and packaged tests after each merge t
 runs no tests, so it does not disable indexing. Intel tests still run only in
 `.github/workflows/release-desktop.yml`, together with the indexing step.
 
+## Update: shared native and toolchain setup (2026-11-06)
+
+Test and Build now executes packaged desktop cases on Intel as well as building
+its app. Packaged toolchain checks also execute Intel browser fixtures. The
+older build-only exception above no longer applies. Keep the same indexing
+isolation and recorded status in `setup-ci-cache`, before dependency installation,
+so these native jobs and release checks use the accepted runner preparation.
+Local validation and application startup continue to use normal OS settings.
+No test, workload, budget, timeout, or required report changes.
+
 ## Removal
 
 Remove the setup when the hosted image provides a quiet indexing state before

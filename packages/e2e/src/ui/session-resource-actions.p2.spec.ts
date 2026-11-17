@@ -1,4 +1,4 @@
-import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
+import { type APIRequestContext, expect, type Page, test } from "../scripts/session-test";
 import {
   createResourceActionsProject,
   openSessionSidePanel,
@@ -19,6 +19,19 @@ const row = (page: Page, title: string) =>
 const menuItem = (page: Page, name: string) =>
   page.locator("[role=menu][data-state=open]").getByRole("menuitem", { name, exact: true });
 const breadcrumbMenu = async (page: Page) => page.locator("[data-workbench-breadcrumb-resource-actions]").click();
+const commandRoute = (name: string) => `**/extensions/commands/pstdio.session-browser.command.${name}/execute`;
+const rejectCommand = (page: Page, name: string, sessionId: string, message: string) =>
+  page.route(commandRoute(name), async (route) => {
+    const body = route.request().postDataJSON();
+    expect(body.params.sessionId).toBe(sessionId);
+    await route.fulfill({
+      json: {
+        commandId: `pstdio.session-browser.command.${name}`,
+        extensionId: "pstdio.session-browser",
+        outcome: { ok: false, status: "error", reason: message, error: { message }, notices: [] },
+      },
+    });
+  });
 
 test("drafts omit management actions and workspace session rows explain guarded deletion", async ({
   page,
@@ -28,6 +41,7 @@ test("drafts omit management actions and workspace session rows explain guarded 
   await prepareResourceActionsDashboard(page, project.id);
   await page.goto(`/projects/${project.id}/sessions`);
   await breadcrumbMenu(page);
+  await expect(menuItem(page, "Copy session ID")).toHaveCount(0);
   await expect(menuItem(page, "Rename session")).toHaveCount(0);
   await expect(menuItem(page, "Delete session")).toHaveCount(0);
   await page.keyboard.press("Escape");
@@ -44,6 +58,10 @@ test("drafts omit management actions and workspace session rows explain guarded 
   const [workspace] = await (await request.get(`/v1/workspaces?project_id=${project.id}`)).json();
   const resource = `pstdio://extension-resource/workspace/${workspace.id}`;
   await page.goto(`/projects/${project.id}/workspace?resource=${encodeURIComponent(resource)}`);
+  await page
+    .locator('[data-workbench-region="sidenav"]')
+    .getByRole("option", { name: "Sessions", exact: true })
+    .press("ArrowRight");
   await row(page, session.title).click({ button: "right" });
   await expect(menuItem(page, "Rename session")).toBeVisible();
   await expect(menuItem(page, "Archive session")).toBeVisible();
@@ -52,7 +70,7 @@ test("drafts omit management actions and workspace session rows explain guarded 
   ).toHaveAttribute("data-disabled");
   await menuItem(page, "Archive session").click();
   await expect(page.getByRole("dialog")).toContainText("will continue");
-  await page.getByRole("button", { name: "Archive", exact: true }).click();
+  await page.getByRole("button", { name: "Archive session", exact: true }).click();
   await expect(row(page, session.title)).toBeHidden();
   expect(await (await request.get(`/v1/sessions/${session.id}`)).json()).toMatchObject({
     archived: true,
@@ -61,10 +79,35 @@ test("drafts omit management actions and workspace session rows explain guarded 
   await expect(page).toHaveURL(new RegExp(workspace.id));
 });
 
+test("copying a failed session reference uses the invoking row and preserves the open session", async ({
+  page,
+  request,
+  context,
+  browserName,
+}) => {
+  const project = await createResourceActionsProject(request);
+  const open = await createSession(request, project.id, "Open conversation");
+  const failed = await createSession(request, project.id, "Failed conversation");
+  const failedStatus = await request.patch(`/v1/sessions/${failed.id}/status`, { data: { status: "failed" } });
+  expect(failedStatus.ok()).toBe(true);
+  expect(await failedStatus.json()).toMatchObject({ id: failed.id, status: "failed" });
+  if (browserName === "chromium") await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await prepareResourceActionsDashboard(page, project.id);
+  await page.goto(`/projects/${project.id}/sessions`);
+  await row(page, open.title).click();
+  await row(page, failed.title).click({ button: "right" });
+  await menuItem(page, "Copy session ID").click();
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(failed.id);
+  await expect(page).toHaveURL(new RegExp(open.id));
+  await breadcrumbMenu(page);
+  await menuItem(page, "Copy session ID").click();
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(open.id);
+});
+
 test("shared session actions rename another row without changing the selected session", async ({ page, request }) => {
   const project = await createResourceActionsProject(request);
   const a = await createSession(request, project.id, "Open conversation");
-  await createSession(request, project.id, "Other conversation");
+  const b = await createSession(request, project.id, "Other conversation");
   await prepareResourceActionsDashboard(page, project.id);
   await page.goto(`/projects/${project.id}/sessions`);
   await row(page, a.title).click();
@@ -79,16 +122,14 @@ test("shared session actions rename another row without changing the selected se
   await expect(input).toHaveValue("Other conversation");
   await input.fill("  ");
   await page.getByRole("button", { name: "Run", exact: true }).click();
-  await expect(page.getByRole("alert")).toContainText("Enter a session name");
+  await expect(page.getByRole("alert")).toContainText(/title cannot be empty/i);
   await input.fill("  Renamed conversation  ");
-  await page.route("**/v1/sessions/*/title", (route) =>
-    route.fulfill({ status: 503, json: { error: "Save unavailable. Try again." } }),
-  );
+  await rejectCommand(page, "rename", b.id, "Save unavailable. Try again.");
   await page.getByRole("button", { name: "Run", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("Save unavailable");
   await expect(input).toHaveValue("  Renamed conversation  ");
   await expect(row(page, "Other conversation")).toBeVisible();
-  await page.unroute("**/v1/sessions/*/title");
+  await page.unroute(commandRoute("rename"));
   await page.getByRole("button", { name: "Run", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect(row(page, "Renamed conversation")).toBeVisible();
@@ -113,22 +154,22 @@ test("archive keeps saved data, preserves a different page, and rolls back faile
   await expect(row(page, b.title)).toBeVisible();
   await row(page, b.title).click({ button: "right" });
   await menuItem(page, "Archive session").click();
-  await page.route("**/v1/sessions/*/archive", (route) =>
-    route.fulfill({ status: 503, json: { error: "Archive unavailable. Try again." } }),
-  );
-  await page.getByRole("button", { name: "Archive", exact: true }).click();
+  await rejectCommand(page, "archive", b.id, "Archive unavailable. Try again.");
+  await page.getByRole("button", { name: "Archive session", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("Archive unavailable");
   await expect(row(page, b.title)).toBeVisible();
-  await page.unroute("**/v1/sessions/*/archive");
-  await page.getByRole("button", { name: "Archive", exact: true }).click();
+  await page.unroute(commandRoute("archive"));
+  await page.getByRole("button", { name: "Archive session", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect(row(page, b.title)).toBeHidden();
   await expect(page).toHaveURL(new RegExp(a.id));
   expect(await (await request.get(`/v1/sessions/${b.id}`)).json()).toMatchObject({ archived: true });
   await breadcrumbMenu(page);
   await menuItem(page, "Archive session").click();
-  await page.getByRole("button", { name: "Archive", exact: true }).click();
-  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/sessions/compose$`));
+  await page.getByRole("button", { name: "Archive session", exact: true }).click();
+  await expect(page).toHaveURL(
+    new RegExp(`/projects/${project.id}/extensions/pstdio.session-browser/conversations/compose$`),
+  );
   await expect(page.getByText("No sessions yet", { exact: true })).toBeVisible();
 });
 
@@ -154,19 +195,17 @@ test("delete confirms, keeps a failed session usable, closes only its views, and
   await expect(row(page, b.title)).toBeVisible();
   await breadcrumbMenu(page);
   await menuItem(page, "Delete session").click();
-  await page.route("**/v1/sessions/*", async (route) => {
-    if (route.request().method() === "DELETE")
-      await route.fulfill({ status: 503, json: { error: "Delete unavailable. Try again." } });
-    else await route.continue();
-  });
-  await page.getByRole("button", { name: "Delete", exact: true }).click();
+  await rejectCommand(page, "delete", b.id, "Delete unavailable. Try again.");
+  await page.getByRole("button", { name: "Delete session", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("Delete unavailable");
   await expect(row(page, b.title)).toBeVisible();
-  await page.unroute("**/v1/sessions/*");
-  await page.getByRole("button", { name: "Delete", exact: true }).click();
+  await page.unroute(commandRoute("delete"));
+  await page.getByRole("button", { name: "Delete session", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect(row(page, b.title)).toBeHidden();
-  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/sessions/compose$`));
+  await expect(page).toHaveURL(
+    new RegExp(`/projects/${project.id}/extensions/pstdio.session-browser/conversations/compose$`),
+  );
   await expect(kept).toBeVisible();
   expect((await request.get(`/v1/sessions/${b.id}`)).status()).toBe(404);
   await page.reload();

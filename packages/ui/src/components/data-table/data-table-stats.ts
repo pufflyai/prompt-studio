@@ -1,5 +1,5 @@
-import { isDisplayValue } from "./helpers";
-import type { RowData } from "./types";
+import { resolveDataTableComparableValue } from "./data-table-cell-value";
+import type { DataTableColumnRenderer, RowData } from "./types";
 
 export interface HistogramBin {
   start: number;
@@ -19,18 +19,21 @@ export interface TopValueStat {
   percentage: number;
 }
 
-const getStatValue = (value: unknown) => (isDisplayValue(value) ? value.sortValue : value);
-
-const getColumnStatValues = (rows: RowData[], columnId: string) =>
+const getColumnStatValues = (rows: RowData[], columnId: string, renderer?: DataTableColumnRenderer) =>
   rows
-    .map((row) => getStatValue(row[columnId]))
+    .map((row) => resolveDataTableComparableValue(row[columnId], renderer))
     .filter((value) => value !== null && value !== undefined && value !== "");
 
-export const countUniqueStatValues = (rows: RowData[], columnId: string) =>
-  new Set(getColumnStatValues(rows, columnId)).size;
+export const countUniqueStatValues = (rows: RowData[], columnId: string, renderer?: DataTableColumnRenderer) =>
+  new Set(getColumnStatValues(rows, columnId, renderer)).size;
 
-export const buildTopValuesStat = (rows: RowData[], columnId: string, limit: number) => {
-  const values = getColumnStatValues(rows, columnId);
+export const buildTopValuesStat = (
+  rows: RowData[],
+  columnId: string,
+  limit: number,
+  renderer?: DataTableColumnRenderer,
+) => {
+  const values = getColumnStatValues(rows, columnId, renderer);
   const counts = new Map<unknown, number>();
 
   for (const value of values) {
@@ -59,8 +62,15 @@ export const buildTopValuesStat = (rows: RowData[], columnId: string, limit: num
   ];
 };
 
-export const buildHistogramStat = (rows: RowData[], columnId: string, binCount: number): HistogramStat | null => {
-  const values = getColumnStatValues(rows, columnId).filter((value): value is number => typeof value === "number");
+export const buildHistogramStat = (
+  rows: RowData[],
+  columnId: string,
+  binCount: number,
+  renderer?: DataTableColumnRenderer,
+): HistogramStat | null => {
+  const values = getColumnStatValues(rows, columnId, renderer).filter(
+    (value): value is number => typeof value === "number",
+  );
   if (values.length === 0) return null;
 
   const min = Math.min(...values);

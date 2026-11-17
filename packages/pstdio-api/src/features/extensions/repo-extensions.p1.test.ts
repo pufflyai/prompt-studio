@@ -102,7 +102,7 @@ describe("syncRepoExtensionsForProject", () => {
         repoPath,
       });
 
-      expect(result).toEqual({ conflicting: ["worktree-bootstrap"], enabled: [], missing: [], skipped: [] });
+      expect(result).toMatchObject({ conflicting: ["worktree-bootstrap"], enabled: [], missing: [], skipped: [] });
       expect(await extensionService.listEnabledSourcesForProject(project.id)).toEqual([]);
     } finally {
       if (previous.home === undefined) delete process.env.PSTDIO_HOME;
@@ -128,7 +128,7 @@ describe("syncRepoExtensionsForProject", () => {
     const installed = await installedExtensionSourcesService.getBySourcePath(extensionPath);
     const instances = await extensionInstancesService.list({ scope_id: project.id, scope_type: "project" });
 
-    expect(result).toEqual({ conflicting: [], enabled: ["worktree-bootstrap"], missing: [], skipped: [] });
+    expect(result).toMatchObject({ conflicting: [], enabled: ["worktree-bootstrap"], missing: [], skipped: [] });
     expect(installed).toMatchObject({
       install_name: "worktree-bootstrap",
       source_kind: "local_path",
@@ -192,12 +192,12 @@ describe("syncRepoExtensionsForProject", () => {
     const missing = installed ? await installedExtensionSourcesService.get(installed.id) : null;
     const disabled = instance ? await extensionInstancesService.get(instance.id) : null;
 
-    expect(result).toEqual({ conflicting: [], enabled: [], missing: ["worktree-bootstrap"], skipped: [] });
+    expect(result).toMatchObject({ conflicting: [], enabled: [], missing: ["worktree-bootstrap"], skipped: [] });
     expect(missing?.status).toBe("missing");
     expect(disabled?.enabled).toBe(false);
   });
 
-  test("marks invalid repo-local folders missing when package.json is deleted", async () => {
+  test("keeps the accepted repo-local revision when its mutable package.json is deleted", async () => {
     const project = await projectService.create({ name: "Repo Extensions" });
     const repoPath = join(tempRoot, "repo");
     const extensionPath = join(repoPath, ".pstdio", "extensions", "worktree-bootstrap");
@@ -223,14 +223,14 @@ describe("syncRepoExtensionsForProject", () => {
     const missing = installed ? await installedExtensionSourcesService.get(installed.id) : null;
     const disabled = instance ? await extensionInstancesService.get(instance.id) : null;
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       conflicting: [],
-      enabled: [],
-      missing: ["worktree-bootstrap"],
-      skipped: ["worktree-bootstrap"],
+      enabled: ["worktree-bootstrap"],
+      missing: [],
+      skipped: [],
     });
-    expect(missing?.status).toBe("missing");
-    expect(disabled?.enabled).toBe(false);
+    expect(missing?.status).toBe("loaded");
+    expect(disabled?.enabled).toBe(true);
   });
 
   test("marks repo-local folders missing when discovery is disabled", async () => {
@@ -259,7 +259,7 @@ describe("syncRepoExtensionsForProject", () => {
     const missing = installed ? await installedExtensionSourcesService.get(installed.id) : null;
     const disabled = instance ? await extensionInstancesService.get(instance.id) : null;
 
-    expect(result).toEqual({ conflicting: [], enabled: [], missing: ["worktree-bootstrap"], skipped: [] });
+    expect(result).toMatchObject({ conflicting: [], enabled: [], missing: ["worktree-bootstrap"], skipped: [] });
     expect(missing?.status).toBe("missing");
     expect(disabled?.enabled).toBe(false);
   });

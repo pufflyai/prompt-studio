@@ -1,12 +1,12 @@
 {
-  "name": "pstdio-artifacts",
-  "version": "0.46.0",
+  "name": "artifacts",
+  "version": "0.46.1",
   "displayName": "Artifacts",
   "description": "Publish interactive HTML pages and browse their saved revisions.",
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.3.0 || ^0.4.0"
+    "pstdio": "^0.5.0"
   },
   "pstdio": {
     "scope": "user"
@@ -14,18 +14,19 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun ../../scripts/ci/run-bun-tests.ts",
-    "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --coverage",
+    "test": "bun test",
+    "test:coverage": "bun test --coverage",
     "typecheck": "bun check"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.0.0",
     "@emotion/react": "^11.0.0",
-    "@pstdio/sdk": "0.47.0-nightly.20261104030253",
-    "@pstdio/ui": "0.47.0-nightly.20261104030253",
+    "@pstdio/sdk": "0.48.0-preview.sha-3b41d415bd0c5c2d607249ba8bdd47a499d62a77",
+    "@pstdio/ui": "0.48.0-preview.sha-3b41d415bd0c5c2d607249ba8bdd47a499d62a77",
+    "@tanstack/react-query": "^5.90.21",
     "entities": "4.5.0",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
   },
   "devDependencies": {
     "@types/bun": "1.4.4",
@@ -33,5 +34,8 @@
     "@types/react-dom": "^19.0.0",
     "typescript": "6.0.2"
   },
-  "icon": "AppWindow"
+  "icon": "AppWindow",
+  "exports": {
+    "./testing": "./src/testing.ts"
+  }
 }

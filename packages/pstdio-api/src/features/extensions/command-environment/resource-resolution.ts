@@ -1,4 +1,5 @@
 import { extensionResourceRefSchema } from "pstdio-api-contracts";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import {
   isNavigationTarget,
   qualifyNavigationTarget,
@@ -8,15 +9,21 @@ import {
   workbenchPages,
   workspacePages,
 } from "pstdio-api-contracts/extension-kernel";
-import { type ExtensionRuntime, isRuntimeNavigationTargetAvailable } from "pstdio-extensions";
+import {
+  canonicalNavigationOwners,
+  createReadBoundary,
+  type ExtensionRuntime,
+  isRuntimeNavigationTargetAvailable,
+} from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
 import { executeProjectExtensionCommand } from "../execute-project-extension-command";
 import { canonicalResource } from "./resource-link-policy";
 
-const resolveHostResource = async (deps: ExtensionsRouteDeps, ref: ResourceRef) => {
+const resolveHostResource = async (deps: ExtensionsRouteDeps, ref: ResourceRef, signal?: AbortSignal) => {
+  const read = createReadBoundary(signal);
   // Personal history pointers keep their saved identity without exposing another device's data.
   if (ref.device) return;
-  const record = ref.type === "workspace" ? await deps.workspaceService.get(ref.id) : undefined;
+  const record = ref.type === "workspace" ? await read(() => deps.workspaceService.get(ref.id)) : undefined;
   if (record && record.project_id === ref.projectId) {
     const resource = {
       ...ref,
@@ -43,9 +50,9 @@ const resolveHostResource = async (deps: ExtensionsRouteDeps, ref: ResourceRef) 
     return { resource, target: { kind: "page" as const, page, resource } };
   }
   if (ref.type === "session") {
-    const session = await deps.sessionService.get(ref.id);
+    const session = await read(() => deps.sessionService.get(ref.id));
     if (!session || session.project_id !== ref.projectId) return;
-    const resource = { ...ref, label: session.title || session.id, icon: "message-square" };
+    const resource = { ...ref, label: session.title || session.id, icon: "message-circle" };
     return { resource, target: { kind: "page" as const, page: workbenchPages.session, resource } };
   }
 };
@@ -60,13 +67,13 @@ const ownerResolutions = (batch: ResourceRef[], value: unknown, runtime: Extensi
     if (!parsed.success) continue;
     const resource = {
       ...parsed.data,
-      extensionId: parsed.data.extensionId ?? owner.extensionId,
+      extensionId: canonicalExtensionId(parsed.data.extensionId ?? owner.extensionId!),
       projectId: parsed.data.projectId ?? owner.projectId,
     };
     const key = resourceKey(resource);
     if (!allowed.has(key)) continue;
     const target = isNavigationTarget(item.target)
-      ? qualifyNavigationTarget(item.target, owner.extensionId!, owner.projectId)
+      ? canonicalNavigationOwners(qualifyNavigationTarget(item.target, owner.extensionId!, owner.projectId))
       : undefined;
     results.set(key, {
       resource,
@@ -78,22 +85,24 @@ const ownerResolutions = (batch: ResourceRef[], value: unknown, runtime: Extensi
   return [...results.values()];
 };
 
-export const resolveResources = async (
+export const resolveResourceRecords = async (
   deps: ExtensionsRouteDeps,
-  input: { projectId: string; extensionId: string },
+  input: { projectId: string; extensionId?: string; signal?: AbortSignal; resourceLinksReadOnly?: boolean },
   resources: ResourceRef[],
 ) => {
+  const read = createReadBoundary(input.signal);
+  input.signal?.throwIfAborted();
   if (!Array.isArray(resources) || resources.length > 100) throw new Error("Resolve at most 100 resources.");
   const refs = await Promise.all(
     resources.map((ref) => canonicalResource(deps, input, extensionResourceRefSchema.parse(ref))),
   );
   const requested = new Map(refs.map((ref) => [resourceKey(ref), ref]));
-  const { runtime } = await deps.extensionRuntimeCatalog.get(input.projectId);
+  const { runtime } = await read(() => deps.extensionRuntimeCatalog.get(input.projectId));
   const groups = new Map<string, ResourceRef[]>();
   const resolved: ResourceResolution[] = [];
   for (const ref of requested.values()) {
     if (ref.extensionId === "pstdio") {
-      const host = await resolveHostResource(deps, ref);
+      const host = await read(() => resolveHostResource(deps, ref, input.signal));
       if (host) resolved.push(host);
       continue;
     }
@@ -101,7 +110,7 @@ export const resolveResources = async (
       (kind) => kind.extensionId === ref.extensionId && kind.localId === ref.type,
     );
     const resolver = kind?.contribution.resolveMany;
-    if (!resolver || (resolver.extensionId && resolver.extensionId !== ref.extensionId)) continue;
+    if (!resolver || (resolver.extensionId && canonicalExtensionId(resolver.extensionId) !== ref.extensionId)) continue;
     const commandId = `${ref.extensionId}.command.${resolver.id}`;
     const batch = groups.get(commandId) ?? [];
     batch.push(ref);
@@ -114,14 +123,24 @@ export const resolveResources = async (
         const response = await executeProjectExtensionCommand(deps, {
           projectId: input.projectId,
           commandId,
+          signal: input.signal,
+          resourceLinksReadOnly: input.resourceLinksReadOnly,
           body: { params: { resources: batch }, source: "api" },
         });
         value = response.outcome.ok ? response.outcome.value : undefined;
       } catch {
+        input.signal?.throwIfAborted();
         return [];
       }
       return ownerResolutions(batch, value, runtime);
     }),
   );
-  return [...resolved, ...batches.flat()];
+  input.signal?.throwIfAborted();
+  return { requested: [...requested.values()], resolved: [...resolved, ...batches.flat()] };
 };
+
+export const resolveResources = async (
+  deps: ExtensionsRouteDeps,
+  input: { projectId: string; extensionId?: string; signal?: AbortSignal; resourceLinksReadOnly?: boolean },
+  resources: ResourceRef[],
+) => (await resolveResourceRecords(deps, input, resources)).resolved;

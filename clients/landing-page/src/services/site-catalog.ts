@@ -29,6 +29,9 @@ const docPage = (entry: CollectionEntry<"docs">): LandingPage => {
   const description = frontmatter?.description;
   if (!heading) throw new Error(`${entry.id} needs a "# " title.`);
   if (!description) throw new Error(`${entry.id} needs a paragraph right after its title. It is the page description.`);
+  if (!/\n\n\*Updated at: \d{4}-\d{2}-\d{2}\*$/.test(entry.body?.trimEnd() ?? "")) {
+    throw new Error(`${entry.id} must end with an italic updated date: *Updated at: YYYY-MM-DD*.`);
+  }
   const name = heading === topic.label ? heading : `${heading} · ${topic.label}`;
   return {
     path,

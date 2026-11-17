@@ -1,15 +1,13 @@
-import {
-  applyEditingChanges,
-  type JsonObject,
-  rebaseEditingChanges,
-  type WebviewEditingChange,
-  type WebviewEditingSessionEvent,
-  type WebviewEditingSessionParams,
-  type WebviewEditingSnapshot,
+import type {
+  JsonObject,
+  WebviewEditingChange,
+  WebviewEditingSessionParams,
+  WebviewEditingSnapshot,
 } from "pstdio-api-contracts/extension-kernel";
 import type { GuestHost } from "./guest-host";
 import { createTextEditingClient } from "./text-editing-client";
 import type { TextEditingClient } from "./text-editing-types";
+import { openEditingSession } from "./webview-editing-session";
 
 export type EditingSnapshot<State extends object> = Omit<WebviewEditingSnapshot, "value"> & { value: State };
 export type EditingSessionOptions<State extends object> = Pick<
@@ -33,112 +31,34 @@ export interface WebviewEditingSession<State extends object> {
   close(): Promise<void>;
 }
 
+export type EditingCommandSessionOptions = Omit<
+  Extract<WebviewEditingSessionParams, { operation: "open-command" }>,
+  "operation" | "sessionId"
+>;
+export interface EditingCommandOptions {
+  changes?: WebviewEditingChange[];
+  channel?: "document" | "presentation";
+}
+export interface WebviewCommandEditingSession<State extends object>
+  extends Omit<WebviewEditingSession<State>, "commit" | "refresh"> {
+  /** One completed gesture, one ordered domain command. Failed commands retain their operationId for save(). */
+  execute(params: JsonObject, options?: EditingCommandOptions): Promise<void>;
+}
+
 export interface WebviewEditingClient {
   text: TextEditingClient;
+  /** Share authoritative loading, previews and domain commands across views of one document. */
+  openCommand<State extends object>(
+    options: EditingCommandSessionOptions,
+  ): Promise<WebviewCommandEditingSession<State>>;
   open<State extends object>(options: EditingSessionOptions<State>): Promise<WebviewEditingSession<State>>;
 }
 
 export const createWebviewEditingClient = (host: GuestHost) =>
   ({
     text: createTextEditingClient(host),
-    async open<State extends object>(options: EditingSessionOptions<State>) {
-      const sessionId = crypto.randomUUID();
-      const listeners = new Set<() => void>();
-      const pending = new Map<number, WebviewEditingChange[]>();
-      let sequence = 0;
-      let active = true;
-      let base: WebviewEditingSnapshot = {
-        value: options.initial as JsonObject,
-        version: -1,
-        revision: 0,
-        savedRevision: 0,
-      };
-      let current = base as EditingSnapshot<State>;
-      const publish = () => {
-        current = {
-          ...base,
-          value: rebaseEditingChanges(base.value, pending).value as State,
-        };
-        for (const listener of listeners) listener();
-      };
-      const acknowledge = (sequence: number | undefined) => {
-        if (sequence === undefined) return;
-        for (const key of pending.keys()) if (key <= sequence) pending.delete(key);
-      };
-      const accept = (next: WebviewEditingSnapshot, appliedSequence?: number) => {
-        if (!active) return;
-        const size = pending.size;
-        acknowledge(appliedSequence);
-        if (next.version >= base.version) base = next;
-        else if (size === pending.size) return;
-        publish();
-      };
-      const unsubscribe = host.onEvent("editing.session", (payload) => {
-        const event = payload as WebviewEditingSessionEvent;
-        if (event.sessionId === sessionId) accept(event.snapshot, event.appliedSequence);
-      });
-      const request = async (input: WebviewEditingSessionParams) => {
-        if (!active) throw new Error("editing_session_closed");
-        const result = await host.call("editing.session", input);
-        if (result) accept(result);
-        return result;
-      };
-      const edit = async (operation: "commit" | "preview", changes: WebviewEditingChange[]) => {
-        if (!active) throw new Error("editing_session_closed");
-        applyEditingChanges(current.value, changes);
-        const next = ++sequence;
-        pending.set(next, structuredClone(changes));
-        publish();
-        try {
-          await request({ operation, sessionId, sequence: next, changes });
-        } catch (error) {
-          if (pending.delete(next)) publish();
-          throw error;
-        }
-      };
-      try {
-        await request({ operation: "open", sessionId, ...options, initial: options.initial as JsonObject });
-      } catch (error) {
-        active = false;
-        unsubscribe();
-        throw error;
-      }
-      return {
-        id: sessionId,
-        getSnapshot: () => current,
-        subscribe(listener) {
-          listeners.add(listener);
-          return () => {
-            listeners.delete(listener);
-          };
-        },
-        commit: (changes = []) => edit("commit", changes),
-        preview: (changes) => edit("preview", changes),
-        async cancel() {
-          await request({ operation: "cancel", sessionId });
-        },
-        async save() {
-          await request({ operation: "save", sessionId });
-        },
-        async refresh(read) {
-          while (active) {
-            await request({ operation: "save", sessionId });
-            const expectedVersion = base.version;
-            const value = await read();
-            if (
-              !active ||
-              (await request({ operation: "refresh", sessionId, value: value as JsonObject, expectedVersion }))
-            )
-              return;
-          }
-        },
-        async close() {
-          if (!active) return;
-          active = false;
-          unsubscribe();
-          listeners.clear();
-          await host.call("editing.session", { operation: "close", sessionId });
-        },
-      } satisfies WebviewEditingSession<State>;
-    },
+    open: <State extends object>(options: EditingSessionOptions<State>) =>
+      openEditingSession<State>(host, { operation: "open", ...options, initial: options.initial as JsonObject }),
+    openCommand: <State extends object>(options: EditingCommandSessionOptions) =>
+      openEditingSession<State>(host, { operation: "open-command", ...options }),
   }) satisfies WebviewEditingClient;

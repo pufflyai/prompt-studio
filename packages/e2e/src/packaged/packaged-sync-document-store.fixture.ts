@@ -83,7 +83,8 @@ export const createPackagedDocumentStore = (
     const doc = document(id);
     if (typeof failReads === "function" ? failReads(id.slice(1)) : failReads) {
       failedReads++;
-      return new Response(null, { status: 503 });
+      // A simulated outage asks for an immediate retry, so clients exhaust their bounded backoff without waiting.
+      return new Response(null, { status: 503, headers: { "retry-after": "0" } });
     }
     const { after } = (await request.json()) as { after: number };
     completedReads++;

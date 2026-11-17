@@ -77,6 +77,10 @@ export const applyPersonalIndexRows = async (
 ) => {
   const changed: (typeof rows.$inferSelect)[] = [];
   for (const page of personalIndexPages(changes)) {
+    if (page.length === 1) {
+      changed.push(...(await updatePersonalIndexRow(tx, owner, page[0]!, sourceId)));
+      continue;
+    }
     const inserted = await tx
       .insert(rows)
       .values(

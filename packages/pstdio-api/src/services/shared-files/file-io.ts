@@ -1,6 +1,7 @@
 import { mkdir, rename, rm, rmdir, stat } from "node:fs/promises";
-import { join, relative } from "node:path";
+import { dirname, join, relative } from "node:path";
 import type { AssetOwner, AssetReference } from "pstdio-api-contracts";
+import { historicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { ArtifactMount } from "pstdio-api-contracts/extension-kernel";
 import { createSafeFileRoot } from "pstdio-extensions";
 import type { createAssetTransferService } from "../asset-transfer-service";
@@ -103,5 +104,8 @@ export const createFileProjectionIO = (input: {
       if (temporary) await rm(temporary.operationPath, { force: true });
     }
   };
-  return { source, install, projectionKey: (path: string) => JSON.stringify(["artifact-file", input.root, path]) };
+  const previousOwner = historicalExtensionId(input.owner.extensionId);
+  const identityRoot =
+    previousOwner === input.owner.extensionId ? input.root : join(dirname(input.root), previousOwner);
+  return { source, install, projectionKey: (path: string) => JSON.stringify(["artifact-file", identityRoot, path]) };
 };

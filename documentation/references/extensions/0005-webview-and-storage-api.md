@@ -158,7 +158,7 @@ Use `resources.actions` with `{ operation: "list", resource }` to read the same 
 
 ### Cloud account and sync status
 
-On `main`, extension API 0.2.1 also adds `account.read` and `account.manage`. `client.account` has the same methods as [`ctx.account`](0003-command-and-process-api.md#cloud-account-and-sync-status). Declare `account.read` for `client.account.status`, `loginStatus`, `devices`, and `projectSyncStatus`. Declare `account.manage` for `client.account.login`, `cancelLogin`, `logout`, `renameDevice`, `removeDevice`, `syncProject`, and `stopProjectSync`. Without a project ID, a call uses the webview's project.
+On `main`, extension API 0.2.1 also adds `account.read` and `account.manage`. `client.account` has the same methods as [`ctx.account`](0003-command-and-process-api.md#cloud-account-and-sync-status). Declare `account.read` for `client.account.status`, `loginStatus`, `devices`, and `projectSyncStatus`. Declare `account.manage` for `client.account.login`, `cancelLogin`, `logout`, `renameDevice`, `removeDevice`, `syncProject`, `stopProjectSync`, and `resolveReturnedChanges`. Without a project ID, a call uses the webview's project.
 
 ```ts
 const client = createWebviewClient<typeof commands>(host);
@@ -166,6 +166,8 @@ const refresh = async () => render(await client.account.projectSyncStatus());
 await refresh();
 const stop = client.events.subscribe(accountEvents.projectSyncChanged, refresh);
 ```
+
+On `main`, API 0.4.2 adds `client.account.query(source)`, a readonly retained query for `{service:"status"}`, `{service:"projectSyncStatus", projectId}` or `{service:"devices", accountId, managerOrigin}`. Declare `account.read` and observe it with `useWebviewCommandQuery(query, useWebviewVisibility())`. The runtime identity guard owns status; project and device reads are fenced by account and server identity. Optional view cancellation preserves another reader and the mandatory guard. Publish the matching host and SDK before independent adoption.
 
 The dashboard delivers `accountEvents.projectSyncChanged` only to webviews of the project that changed. The extension testbench does not provide an account; both capabilities answer `unsupported` there.
 
@@ -204,6 +206,35 @@ the call if the view did not declare `navigation.open` or the target is invalid.
 
 `@pstdio/sdk/extensions/react` ships react-query hooks built on the client. `react` and
 `@tanstack/react-query` are optional peer dependencies used only by this entry.
+
+On `main` for API 0.4.0, `client.queries`, `useWebviewQuery` and `useScopedQuery`
+provide common project/authority identity, retained finite reads and scoped
+invalidation without a per-component refresh controller. Declare both React peers
+when importing this entry. Use the
+[state and project lifetime guide](../../guides/extensions/0010-shared-state-and-project-lifetimes.md)
+for new consumers, command-backed editing, committed storage observation and the
+reusable lifecycle fixture. Existing `useCommandQuery` consumers retain the
+QueryClientProvider contract below.
+
+The webview query client also provides these lifetime methods:
+
+| Method | Purpose |
+| --- | --- |
+| `client.queries.getScope()` | Read a stable serialized key for the selected runtime, account/origin and project, suitable for external-store snapshot comparison. |
+| `client.queries.subscribeScope(listener)` | Observe host scope updates; the returned function detaches the listener. Compare `getScope()` to ignore unrelated host props. |
+| `client.queries.inspect()` | Read active query and total retained-owner counts for lifecycle diagnostics. |
+| `client.queries.dispose()` | Retire this guest host's shared query root and release its subscriptions. Reserve this for the owning host's teardown, since peer views share that root. |
+
+`ctx.storage.observe(changed, { recordIds?, signal? })` observes committed structured
+records in the calling project and extension, including local signed-out commits.
+Record IDs are opaque `records.id()` identities. Install observation before its
+finite read; close the returned handle or abort its signal to detach.
+
+`await ctx.sessions.observeMetadata(sessionId, changed, { signal? })` installs
+shared host observation for the session's `session`, `workspace`, `harness` and
+`execution` field-group hints. It does not carry transcript or queue snapshots.
+Await installation before the baseline reads and close the returned handle or
+abort the signal when optional observation ends.
 
 ```tsx
 import { useCommandMutation, useCommandQuery } from "@pstdio/sdk/extensions/react";
@@ -350,6 +381,13 @@ The low-level `commands.stream` bridge accepts `start`, `cancel`, and `ack` oper
 
 ## Local editing sessions
 
+On main for API 0.4.0, `client.editing.openCommand(options)` joins host-owned
+command editing for the calling project, extension and document key. Its declared
+read sources return full values or patches; semantic commands, stable operation
+IDs and acknowledged previews share one authoritative owner across views.
+See the [shared-state author guide](../../guides/extensions/0010-shared-state-and-project-lifetimes.md)
+for result envelopes, read coverage and required-write retirement.
+
 To try the API, run `bun run --cwd packages/pstdio-workbench canvas` and open
 **Reference → Extension API → Shared editing sessions → Playground**. Hold and release saves,
 edit either shared view, preview or cancel a move, and fail a held save to test retrying.
@@ -493,6 +531,8 @@ await client.preferences.set("lastRange", "now-6h");
 const range = await client.preferences.get("lastRange");
 ```
 
+On `main`, API 0.4.2 adds `client.preferences.query(name, scope?)` under `preferences.get`. Its readonly query data is `{value}`: a loaded missing choice has `value: undefined`, while unread data is `undefined`. The host retains accepted choices across guest recreation, scopes invalidation to the effective preference project and keeps required `client.preferences.set` writes ordered after the guest closes. Observe through `useWebviewCommandQuery`; save through `set`, without publishing a second local snapshot. Publish the supporting host and SDK before independent adoption.
+
 An undeclared name belongs to the calling extension. Other extensions have separate values under the same name. Dashboard webviews store these values on the server, so browser reloads and Desktop restarts keep them, and other clients read the same values. `set` returns only after storage succeeds.
 
 The default scope is `user`, shared by clients of the runtime. `project` uses the active project when `scopeId` is omitted. `workspace` and `session` require `scopeId`. `extension` uses the calling extension's user scope. Scoped reads fall back to the user value. `default` is read only and has no value for an undeclared name. Writing it fails with `preference_scope_read_only`.
@@ -509,3 +549,5 @@ Agents use the same authenticated API:
 - Global views use `/v1/extensions/installed/{installName}/preferences/{name}`. Project, workspace, and session scopes need an explicit `scopeId` on this path.
 
 These routes store extension-owned values. Declared settings use the settings API. Theme and locale remain host appearance choices. Use `ctx.storage` for extension product data rather than view preferences.
+
+*Updated at: 2026-11-09*

@@ -1,27 +1,14 @@
-import { normalizeMessageResults, type SessionMessage, sessionSchema, workspaceSchema } from "pstdio-api-contracts";
+import { normalizeMessageResults, type SessionMessage } from "pstdio-api-contracts";
 import { z } from "zod";
 import type { RouteDeps } from "../../features/deps";
 import { createPersonalIdentity } from "./identity";
 import { historyNamespace, type SessionLogFiles } from "./log-files";
 import { createPersonalMessageReader } from "./message-reader";
 import { sharedQueueRecordSchema, sharedQueueResponse } from "./queue-snapshot";
+import { createHistoryRecordQueries } from "./record-queries";
+import { deviceSchema, personalSessionSchema, personalWorkspaceSchema, remoteSession } from "./record-schemas";
 import { createHistoryReferences, historyReferenceName } from "./references";
 import { createPersonalHistoryStore, type HistoryDocuments } from "./store";
-
-const deviceSchema = z.object({ ownerId: z.string(), id: z.string(), name: z.string() });
-const personalSessionSchema = sessionSchema.extend({
-  device: deviceSchema,
-  workspace_id: z.string().nullable(),
-  approval_requests: z
-    .array(z.object({ id: z.string(), toolName: z.string(), toolUseId: z.string(), toolInput: z.unknown() }))
-    .optional(),
-});
-const personalWorkspaceSchema = workspaceSchema.extend({ device: deviceSchema });
-const remoteSession = (
-  row: z.infer<typeof personalSessionSchema>,
-  login: { accountId: string; deviceId: string },
-  projectId: string,
-) => row.device.ownerId === login.accountId && row.device.id !== login.deviceId && row.project_id === projectId;
 
 export const createPersonalHistoryService = (input: {
   documents: HistoryDocuments;
@@ -129,18 +116,6 @@ export const createPersonalHistoryService = (input: {
         return row;
       });
   };
-  const find = async <T extends { id: string }>(
-    read: (projectId: string) => Promise<T[]>,
-    id: string,
-    projectId?: string,
-  ) => {
-    const projects = projectId ? [{ id: projectId }] : await input.projects.list();
-    for (const project of projects) {
-      const row = (await read(project.id)).find((row) => row.id === id);
-      if (row) return row;
-    }
-    return null;
-  };
   const getSession = async (id: string, projectId?: string) => {
     const projects = projectId ? [{ id: projectId }] : await input.projects.list();
     for (const project of projects) {
@@ -231,11 +206,7 @@ export const createPersonalHistoryService = (input: {
         device.success && device.data.ownerId === session.device.ownerId && device.data.id === session.device.id;
       return sharedQueueResponse(id, sameDevice && parsed.success ? parsed.data.requests : []);
     },
-    getWorkspace: (id: string, projectId?: string) => find(workspaces, id, projectId),
-    async getWorkspaceByShorthand(projectId: string, shorthand: string) {
-      const matches = (await workspaces(projectId)).filter((row) => row.workspace_shorthand === shorthand);
-      return matches.length === 1 ? matches[0]! : null;
-    },
+    ...createHistoryRecordQueries({ context, account, projects: input.projects, parseSession }),
     ...createPersonalMessageReader({
       context,
       session: getSession,

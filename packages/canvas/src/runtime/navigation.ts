@@ -75,10 +75,10 @@ export const installFrameNavigation = (send: (message: Omit<FrameMessage, "proto
   document.addEventListener(
     "pointerdown",
     (event) => {
+      dragged = false;
       if (event.button !== 1 && !(space && !control(document.activeElement))) return;
       event.preventDefault();
       event.stopPropagation();
-      dragged = false;
       pan = { id: event.pointerId, x: event.screenX, y: event.screenY };
       (event.target as Element).setPointerCapture(event.pointerId);
     },
@@ -110,6 +110,11 @@ export const installFrameNavigation = (send: (message: Omit<FrameMessage, "proto
   );
   const suppressDragClick = (event: MouseEvent) => {
     if (!dragged) return;
+    // Keyboard activation is a new action, not the pointer click produced by the drag.
+    if (event.detail === 0) {
+      if (!pan) dragged = false;
+      return;
+    }
     dragged = false;
     event.preventDefault();
     event.stopPropagation();

@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { BrowserWindow, type Session, session, shell, WebContentsView } from "electron";
 import type { RuntimeDescriptor } from "pstdio/runtime";
+import { createLogger } from "pstdio-logging";
 import { DESKTOP_CHANNELS, type DesktopStartupAppearance } from "../desktop-api";
 import type { DesktopState } from "../lifecycle/lifecycle-machine";
 import type { OwnedFrame } from "../performance/process-attribution";
@@ -8,15 +9,20 @@ import { secureSession, secureWebContents } from "../security/apply-window-secur
 import { createRuntimeLoginUrl } from "../security/runtime-session";
 import { createSecureWindowOptions } from "../security/window-security";
 import { LIFECYCLE_SCHEME, LIFECYCLE_URL, readLifecycleAsset } from "./lifecycle-protocol";
+import { createStartupDocument } from "./startup-paint";
 import type { TitleBarAppearance } from "./title-bar-appearance";
+import { prepareWorkbenchDocument } from "./workbench-loading";
 
 const WORKBENCH_PARTITION = "pstdio-workbench";
+const logger = createLogger({ component: "desktop", level: "info", service: "pstdio-desktop", sync: true });
 
 export class DesktopWindowController {
   #runtimeOrigin: string | null = null;
   #workbench: WebContentsView | null = null;
   #workbenchLoad: Promise<void> | undefined;
+  #workbenchRuntimeId: string | undefined;
   readonly #shown: Promise<void>;
+  #lifecycle: ReturnType<typeof createStartupDocument>;
   readonly lifecycleUrl: string;
   readonly window: BrowserWindow;
 
@@ -32,10 +38,17 @@ export class DesktopWindowController {
       // Painted before the lifecycle document, so the window never flashes another theme.
       ...(appearance ? { backgroundColor: appearance.backgroundColor } : {}),
     });
-    // The workbench covers the retained lifecycle renderer. Keep it responsive to
-    // recovery and IPC while this window owns focus; throttle it again on blur.
-    this.window.on("focus", () => this.window.webContents.setBackgroundThrottling(false));
-    this.window.on("blur", () => this.window.webContents.setBackgroundThrottling(true));
+    this.#lifecycle = createStartupDocument(this.window.webContents);
+    this.window.on("focus", () => this.syncLifecycleThrottling());
+    this.window.on("blur", () => this.syncLifecycleThrottling());
+    const visibilityChanged = () =>
+      queueMicrotask(() => {
+        if (!this.window.isDestroyed()) this.syncLifecycleThrottling();
+      });
+    this.window.on("show", visibilityChanged);
+    this.window.on("hide", visibilityChanged);
+    this.window.on("minimize", visibilityChanged);
+    this.window.on("restore", visibilityChanged);
     secureWebContents(this.window.webContents, {
       lifecycleUrl: this.lifecycleUrl,
       runtimeOrigin: () => null,
@@ -46,6 +59,12 @@ export class DesktopWindowController {
       // resources must not keep that screen behind a hidden native window.
       this.window.webContents.once("dom-ready", () => {
         this.window.show();
+        // Native visibility and content paint are separate startup evidence. Record
+        // the explicit show result here; renderer visibility also allows hidden windows.
+        logger.info(
+          { event: "desktop.window.ready", visible: this.window.isVisible() },
+          "Desktop startup window is ready",
+        );
         resolve();
       });
     });
@@ -128,6 +147,16 @@ export class DesktopWindowController {
     this.#workbench?.setBounds({ x: 0, y: 0, width, height });
   }
 
+  private syncLifecycleThrottling() {
+    // A revealed startup/recovery surface must paint promptly even without focus.
+    // Hidden/minimized windows retain the normal background resource policy.
+    this.window.webContents.setBackgroundThrottling(
+      !this.window.isVisible() ||
+        this.window.isMinimized() ||
+        (Boolean(this.#workbench?.getVisible()) && !this.window.isFocused()),
+    );
+  }
+
   private createWorkbench() {
     const view = new WebContentsView({
       webPreferences: createSecureWindowOptions(this.preloadPath, WORKBENCH_PARTITION).webPreferences,
@@ -161,33 +190,88 @@ export class DesktopWindowController {
       return;
     }
     this.#workbench.setVisible(true);
+    this.syncLifecycleThrottling();
     this.#workbench.webContents.focus();
   }
 
   async showLifecycle() {
     // Recovery must not wait for a new renderer, JavaScript bundle, or theme initialization.
     this.#workbench?.setVisible(false);
-    if (this.window.webContents.getURL() !== this.lifecycleUrl) await this.window.loadURL(this.lifecycleUrl);
+    this.syncLifecycleThrottling();
+    if (
+      this.window.webContents.getURL() !== this.lifecycleUrl ||
+      this.window.webContents.isCrashed() ||
+      this.#lifecycle.failed
+    ) {
+      await this.loadLifecycle();
+    } else await this.#lifecycle.load;
     const contents = this.#workbench?.getVisible() ? this.#workbench.webContents : this.window.webContents;
     contents.focus();
   }
 
-  showWorkbench(descriptor: RuntimeDescriptor) {
-    // A quit during startup joins the load in progress. A second load would abort it.
-    this.#workbenchLoad ??= this.#loadWorkbench(descriptor).finally(() => {
-      this.#workbenchLoad = undefined;
-    });
+  prepareWorkbench(descriptor: RuntimeDescriptor) {
+    const loading = this.#loadRuntime(descriptor, () => this.#prepareWorkbenchAssets(descriptor));
+    // Keep an early failure owned until showWorkbench joins this preparation.
+    void loading.catch(() => {});
+    return loading;
+  }
+
+  async showWorkbench(descriptor: RuntimeDescriptor) {
+    const loading = this.#loadRuntime(descriptor, () => this.#loadWorkbench(descriptor));
+    try {
+      await loading;
+      this.#workbench!.setVisible(true);
+      this.syncLifecycleThrottling();
+      this.#workbench!.webContents.focus();
+    } finally {
+      if (this.#workbenchLoad === loading) this.#workbenchLoad = undefined;
+    }
+  }
+
+  #loadRuntime(descriptor: RuntimeDescriptor, load: () => Promise<void>) {
+    if (this.#workbenchRuntimeId !== descriptor.instanceId) {
+      const previous = this.#workbenchLoad;
+      this.#workbenchRuntimeId = descriptor.instanceId;
+      // A failed runtime can expose Retry before its early asset preparation has settled.
+      this.#workbenchLoad = previous ? previous.catch(() => {}).then(load) : load();
+    }
+    this.#workbenchLoad ??= load();
     return this.#workbenchLoad;
   }
 
   async #loadWorkbench(descriptor: RuntimeDescriptor) {
     this.#runtimeOrigin = descriptor.origin;
-    // Prepare login while the startup window loads, but keep the second renderer from
-    // competing with showing that window. Its remaining resources can load alongside the workbench.
-    const [loginUrl] = await Promise.all([createRuntimeLoginUrl(fetch, descriptor), this.#shown]);
+    const [loginUrl] = await Promise.all([
+      createRuntimeLoginUrl(fetch, descriptor),
+      this.#shown,
+      this.#lifecycle.painted,
+    ]);
     const view = this.#workbench ?? this.createWorkbench();
     await view.webContents.loadURL(loginUrl);
-    view.setVisible(true);
-    view.webContents.focus();
+  }
+
+  async #prepareWorkbenchAssets(descriptor: RuntimeDescriptor) {
+    this.#runtimeOrigin = descriptor.origin;
+    // Show the startup window before a second renderer competes with its first paint.
+    await Promise.all([this.#shown, this.#lifecycle.painted]);
+    const view = this.#workbench ?? this.createWorkbench();
+    // The dashboard waits for this fragment during native bootstrap; it redeems it without reloading.
+    await prepareWorkbenchDocument(view.webContents, descriptor);
+  }
+
+  private loadLifecycle() {
+    const previous = this.#lifecycle;
+    if (previous.load && !previous.failed && this.window.webContents.isLoadingMainFrame()) return previous.load;
+    if (previous.load || previous.failed) {
+      previous.close();
+      this.#lifecycle = createStartupDocument(this.window.webContents);
+    }
+    const document = this.#lifecycle;
+    document.load = this.window.loadURL(this.lifecycleUrl);
+    void document.load.catch(() => {
+      document.failed = true;
+      document.close();
+    });
+    return document.load;
   }
 }

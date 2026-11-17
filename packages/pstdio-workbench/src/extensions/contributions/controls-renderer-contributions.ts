@@ -52,6 +52,8 @@ const registerControlsRenderer = (
     icon: record.icon,
     body: {
       kind: "controls",
+      queryEvents: record.refreshEventIds,
+      queryScope: { projectId: context.projectId, extensionId: record.extensionId },
       emptyTitle: localize(record.emptyTitle, ""),
       emptyDescription: localize(record.emptyDescription, ""),
       defaultValues: record.defaultValues,

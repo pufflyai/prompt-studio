@@ -25,6 +25,18 @@ export interface TreeRendererChildrenParams extends TreeRendererQueryParams {
   node: TreeNode;
 }
 
+/** Continue a section's nodes or an expanded node's children in the same query scope. */
+export interface TreeRendererPageParams extends TreeRendererQueryParams {
+  cursor: string;
+  parent: { kind: "section"; id: string } | { kind: "node"; node: TreeNode };
+}
+
+export interface TreeNodePage {
+  nodes: TreeNode[];
+  /** Omit when the collection is exhausted. */
+  nextCursor?: string;
+}
+
 export interface TreeRendererActionParams extends TreeRendererQueryParams {
   actionId: string;
   node?: TreeNode;
@@ -65,16 +77,29 @@ export interface TreeSectionEmptyState {
 
 export type TreeNodeRowVariant = "empty-state" | "file";
 
+/** A display-only tag after a tree row's label. Uses the same shape as kanban `badge-list` items, without actions. */
+export interface TreeNodeTag {
+  id: string;
+  label: string;
+  icon?: string;
+  color?: string;
+  tooltip?: string;
+}
+
 export interface TreeNode {
   id: string;
   label: Localizable<string>;
   icon?: string;
   iconColor?: string;
+  /** Subdued foreground without disabling row actions or navigation. */
+  tone?: "default" | "muted";
   /** File icon theme hint for native file rows. */
   fileName?: string;
   showContextMenuTrigger?: boolean;
   /** Trailing count, using the same badge as notification counts. */
   badge?: { label: string; color?: string };
+  /** Tags after the label and before the count badge. Two show; the rest collapse into "+N". */
+  tags?: TreeNodeTag[];
   iconTooltip?: string;
   /** Shown while the pointer rests on the row or the row has keyboard focus. `iconTooltip` covers only the icon. */
   tooltip?: string;
@@ -90,6 +115,8 @@ export interface TreeNode {
   // document in a files tree). The renderer reflects it into the tree selection.
   selected?: boolean;
   children?: TreeNode[];
+  /** Cursor for more children, appended automatically while this node is expanded. Requires `page`. */
+  nextCursor?: string;
   description?: string;
   contextValue?: string;
   hiddenByDefault?: boolean;
@@ -108,6 +135,8 @@ export interface TreeViewSection {
   collapsible?: boolean;
   emptyState?: TreeSectionEmptyState;
   nodes: TreeNode[];
+  /** Cursor for more nodes, appended automatically when this section's end enters view. Requires `page`. */
+  nextCursor?: string;
   hiddenByDefault?: boolean;
   /** Opt in to the tree's hide/show customization menu (a category). Off by default. */
   canHide?: boolean;
@@ -132,6 +161,7 @@ export interface TreeRendererContribution extends RendererContributionBase {
   header?: RendererCallback<TreeRendererQueryParams, TreeViewSection[]>;
   body: RendererCallback<TreeRendererQueryParams, TreeViewSection[]>;
   children?: RendererCallback<TreeRendererChildrenParams, TreeNode[]>;
+  page?: RendererCallback<TreeRendererPageParams, TreeNodePage>;
   footer?: RendererCallback<TreeRendererQueryParams, TreeViewSection[]>;
   /** Persist a drop between nodes owned by this tree. */
   onMove?: RendererCallback<TreeRendererMoveParams, void>;

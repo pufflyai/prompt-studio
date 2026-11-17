@@ -1,0 +1,55 @@
+import { defineSlotRecipe } from "@chakra-ui/react";
+
+export const dataTableRecipe = defineSlotRecipe({
+  slots: ["root", "chart", "sparkline", "bar", "barPlot"],
+  base: {
+    root: {
+      "--table-row-height": "{sizes.10}",
+      "--table-chart-height": "{sizes.6}",
+      "--table-bar-height": "{sizes.3}",
+      "--table-bar-gap": "0",
+    },
+    chart: {
+      display: "flex",
+      flexDirection: "column",
+      w: "full",
+      minW: "0",
+      h: "var(--table-chart-height, {sizes.6})",
+      gap: "2xs",
+      color: "fg.muted",
+      focusVisibleRing: "inside",
+      "&[data-table-chart=bar-chart]": {
+        h: "auto",
+        minH: "var(--table-chart-height, {sizes.6})",
+        justifyContent: "center",
+        // The SVG adds 10% padding above and below the visible bar.
+        gap: "var(--table-bar-gap, 0)",
+      },
+    },
+    sparkline: { display: "block", w: "full", h: "full", overflow: "visible" },
+    bar: { display: "flex", flexDirection: "column", justifyContent: "center", flex: "0 0 auto", minW: "0" },
+    barPlot: { display: "block", flexShrink: "0", w: "full", h: "var(--table-bar-height, {sizes.3})" },
+  },
+  variants: {
+    rowHeight: {
+      compact: {},
+      comfortable: {
+        root: {
+          "--table-row-height": "{sizes.16}",
+          "--table-chart-height": "{sizes.10}",
+          "--table-bar-height": "{sizes.4}",
+          "--table-bar-gap": "calc(var(--table-bar-height) * 0.2)",
+        },
+      },
+      tall: {
+        root: {
+          "--table-row-height": "{sizes.24}",
+          "--table-chart-height": "{sizes.16}",
+          "--table-bar-height": "{sizes.5}",
+          "--table-bar-gap": "calc(var(--table-bar-height) * 0.2)",
+        },
+      },
+    },
+  },
+  defaultVariants: { rowHeight: "compact" },
+});

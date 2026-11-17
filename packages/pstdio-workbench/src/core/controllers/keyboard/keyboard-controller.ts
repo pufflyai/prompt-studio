@@ -87,7 +87,7 @@ export const createKeyboardController = (getCore: () => WorkbenchCore) => {
       return;
     }
     store.setState({ selection: undefined, selectedId: tab.id, selectedRegion: tab.region, restoreFocus: false });
-    core.layout.activateWidget(tab.id);
+    core.layout.activatePanel(tab.id);
     choices = [];
     stack.length = 0;
     if (!store.getState().active) {
@@ -229,9 +229,10 @@ export const createKeyboardController = (getCore: () => WorkbenchCore) => {
     ...createKeyboardPreferences(getCore, refresh),
     hints,
     hint(action: import("../../registries/navigation/navigation-registry").NavigationTarget) {
-      return store.getState().active
-        ? hints().get(getNavigationTargetKey(action))
-        : directShortcutHint(getCore(), action);
+      const { active, preview } = store.getState();
+      if (active) return hints().get(getNavigationTargetKey(action));
+      const direct = directShortcutHint(getCore(), action);
+      return direct ?? (preview ? hints().get(getNavigationTargetKey(action)) : undefined);
     },
     visibleTargets,
   };

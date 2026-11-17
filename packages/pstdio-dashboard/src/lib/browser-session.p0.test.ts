@@ -1,5 +1,10 @@
 import { describe, expect, it } from "bun:test";
-import { browserSessionStorageKey, browserSessionWebSocketProtocols, takeBrowserLoginCode } from "./browser-session";
+import {
+  browserSessionStorageKey,
+  browserSessionWebSocketProtocols,
+  takeBrowserLoginCode,
+  waitForBrowserLoginLink,
+} from "./browser-session";
 
 it("scopes credentials to the selected API runtime, including its port", () => {
   const page = "http://localhost:19840/projects";
@@ -33,4 +38,20 @@ describe("browser session WebSocket protocols", () => {
   it("offers no protocols without a session", () => {
     expect(browserSessionWebSocketProtocols(undefined)).toBeUndefined();
   });
+});
+
+it("waits for the initial native login link without accepting unrelated fragment changes", async () => {
+  const target = Object.assign(new EventTarget(), { location: { hash: "#panel=terminal" } });
+  const login = waitForBrowserLoginLink(target);
+  let settled = false;
+  void login.then(() => {
+    settled = true;
+  });
+  target.location.hash = "#panel=files";
+  target.dispatchEvent(new Event("hashchange"));
+  await Promise.resolve();
+  expect(settled).toBe(false);
+  target.location.hash = "#panel=files&browser-login=one-time";
+  target.dispatchEvent(new Event("hashchange"));
+  expect(await login).toEqual({ code: "one-time", hash: "#panel=files" });
 });

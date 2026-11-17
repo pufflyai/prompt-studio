@@ -5,8 +5,8 @@ import { workspaceCommands } from "./refs";
 
 const grouped = {
   columnGrouping: "device",
-  displayProperties: ["id", "tickets", "type", "status", "harness", "date"],
-  showChildren: true,
+  displayProperties: ["id", "tickets", "type", "date"],
+  showChildren: false,
 };
 export const workspacesView = defineView({
   id: "workspaces",
@@ -15,11 +15,11 @@ export const workspacesView = defineView({
   body: {
     kind: "resourceList",
     refreshEvents,
-    query: (ctx, { settings }) => queryWorkspaces(ctx, settings.showChildren !== false),
+    query: (ctx) => queryWorkspaces(ctx),
     defaultSettings: grouped,
     defaultViews: [
       { id: "grouped", title: "By device", settings: grouped },
-      { id: "compact", title: "Compact", settings: { ...grouped, columnGrouping: "none", showChildren: false } },
+      { id: "compact", title: "Compact", settings: { ...grouped, columnGrouping: "none" } },
     ],
     defaultActiveViewId: "grouped",
     createRow: {
@@ -60,7 +60,7 @@ export const changesView = defineView({
   body: {
     kind: "webview",
     entry: packageAsset("./changes-view.tsx", import.meta.url),
-    capabilities: ["commands.execute", "page.params.update"],
+    capabilities: ["commands.execute", "commands.query", "preferences.get", "preferences.set", "page.params.update"],
   },
 });
 export const actionView = defineView({
@@ -69,7 +69,7 @@ export const actionView = defineView({
   body: {
     kind: "webview",
     entry: packageAsset("./action-view.tsx", import.meta.url),
-    capabilities: ["commands.execute", "navigation.open", "placement.close"],
+    capabilities: ["commands.execute", "commands.query", "navigation.open", "placement.close"],
   },
 });
 export const summaryView = defineView({

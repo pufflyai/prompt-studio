@@ -1,3 +1,4 @@
+export type { NativeChatHostProps, NativeChatHostServices } from "../react/renderers/chat/native-chat-host";
 export type {
   BridgeWebviewConfig,
   BridgeWebviewRenderContext,
@@ -5,7 +6,11 @@ export type {
   CreateBridgeWebviewProps,
   CreateBridgeWebviewTheme,
 } from "./bridge/bridge-webview-renderer";
-export { getBridgeWebviewHostEventPublisher, renderBridgeWebviewFrame } from "./bridge/bridge-webview-renderer";
+export {
+  getBridgeWebviewHostEventPublisher,
+  reconcileBridgeWebviewHostEventPublishers,
+  renderBridgeWebviewFrame,
+} from "./bridge/bridge-webview-renderer";
 export type {
   ExtensionWebviewFilesAdapter,
   ExtensionWebviewHostAdapters,
@@ -20,12 +25,15 @@ export type {
   ExtensionWebviewArtifactCapabilities,
   ExtensionWebviewFileCapabilities,
 } from "./bridge/webview-command-capabilities";
+export { createWebviewCommandQueryAdapter } from "./bridge/webview-command-queries";
 export { withFrameSignal } from "./bridge/webview-command-streams";
 export {
   createWorkbenchWebviewHostAdapters,
   createWorkbenchWebviewHostCapabilities,
 } from "./bridge/webview-host-capabilities";
 export { resolveWebviewPageProps } from "./bridge/webview-page-props";
+export { createWebviewServiceQueryAdapter } from "./bridge/webview-service-queries";
+export { createWorkbenchExtensionChatRendererOwners } from "./contributions/chat-renderer-contributions";
 export { registerWorkbenchExtensionCommandPaletteResources } from "./contributions/command-palette-resource-contributions";
 export {
   registerWorkbenchExtensionControlsRenderers,
@@ -52,6 +60,7 @@ export {
 } from "./contributions/file-renderer-contributions";
 export type { WorkbenchExtensionKanbanRendererAdapter } from "./contributions/kanban-renderer-adapter";
 export { registerWorkbenchExtensionKanbanRenderers } from "./contributions/kanban-renderer-contributions";
+export { createWorkbenchExtensionTerminalRendererOwners } from "./contributions/terminal-renderer-contributions";
 export {
   type RegisterWorkbenchExtensionTreeRenderersInput,
   registerWorkbenchExtensionTreeRenderers,

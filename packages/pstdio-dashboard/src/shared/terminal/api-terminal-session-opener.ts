@@ -67,26 +67,53 @@ const terminalWebSocketUrl = () => {
   return url.toString();
 };
 
-/** Opens a PTY over one bidirectional WebSocket, including stdin and resize. */
-export const openDashboardTerminalSession: WorkbenchTerminalSessionOpener = (request) =>
+/**
+ * Opens a PTY over one bidirectional WebSocket, including stdin and resize. With an attach key the
+ * PTY outlives the socket: `detach` leaves it running, and the next open with that key resumes it.
+ */
+export const openDashboardTerminalSession = (
+  request: Parameters<WorkbenchTerminalSessionOpener>[0],
+  view?: Parameters<WorkbenchTerminalSessionOpener>[1],
+  signal?: Parameters<WorkbenchTerminalSessionOpener>[2],
+  attachKey?: string,
+): ReturnType<WorkbenchTerminalSessionOpener> =>
   new Promise((resolve, reject) => {
+    if (signal?.aborted) return reject(signal.reason);
     const url = terminalWebSocketUrl();
     const socket = new WebSocket(url, browserSessionWebSocketProtocols(readBrowserSession(url)));
     const hub = createSessionEventHub();
     let opened = false;
+    const releaseAdmission = () => signal?.removeEventListener("abort", cancelAdmission);
+    const cancelAdmission = () => {
+      releaseAdmission();
+      reject(signal?.reason);
+      socket.close();
+    };
+    signal?.addEventListener("abort", cancelAdmission, { once: true });
 
     const send = (message: TerminalWebSocketClientMessage) => socket.send(JSON.stringify(message));
 
-    socket.addEventListener("open", () => send({ type: "open", request }));
+    socket.addEventListener("open", () =>
+      send(
+        view
+          ? { type: "openView", request: { ...view, cols: request.cols, rows: request.rows } }
+          : { type: "open", request, ...(attachKey ? { attachKey } : {}) },
+      ),
+    );
     socket.addEventListener("message", (event) => {
       const message = JSON.parse(String(event.data)) as TerminalWebSocketServerMessage;
       if (message.type !== "open") {
-        if (!opened && message.type === "error") reject(new Error(message.message));
-        else hub.dispatch(message);
+        if (!opened && message.type === "error") {
+          releaseAdmission();
+          socket.close();
+          reject(new Error(message.message));
+        } else hub.dispatch(message);
         return;
       }
 
       opened = true;
+      releaseAdmission();
+      let detached = false;
       resolve({
         id: message.sessionId,
         write(data) {
@@ -96,9 +123,18 @@ export const openDashboardTerminalSession: WorkbenchTerminalSessionOpener = (req
           send({ type: "resize", cols, rows });
         },
         kill(signal) {
+          if (detached) return;
           if (socket.readyState === WebSocket.OPEN) send({ type: "kill", signal });
           socket.close();
         },
+        ...(attachKey
+          ? {
+              detach() {
+                detached = true;
+                socket.close();
+              },
+            }
+          : {}),
         onData: hub.onData,
         onTitle: hub.onTitle,
         onExit: hub.onExit,
@@ -106,9 +142,11 @@ export const openDashboardTerminalSession: WorkbenchTerminalSessionOpener = (req
       });
     });
     socket.addEventListener("error", () => {
+      releaseAdmission();
       if (!opened) reject(new Error("Could not open a terminal session."));
     });
     socket.addEventListener("close", (event) => {
+      releaseAdmission();
       if (!opened) reject(new Error("The terminal connection closed before the session opened."));
       else if (!event.wasClean) hub.dispatch({ type: "error", message: "Terminal connection lost." });
     });

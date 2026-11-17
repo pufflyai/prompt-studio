@@ -3,6 +3,10 @@ import type { ContributionKind, ContributionRef, WhenExpression } from "@pstdio/
 import { toCommandPaletteContributions } from "../../runtime/command-palette-contributions";
 import { serializeWhenExpression } from "../../runtime/normalize/references";
 import { toSettingDefinitionRecord } from "../../runtime/normalize/settings";
+import {
+  hasAbsentOptionalNavigationOwner,
+  hasAbsentOptionalNavigationView,
+} from "../../runtime/optional-navigation-reference";
 import type { ExtensionRuntime } from "../../types/runtime";
 import {
   commandRef,
@@ -39,14 +43,17 @@ const toExtensionRecord = (extension: ExtensionRuntime["extensions"][number]) =>
 
 const toCommandRecord = (command: ExtensionRuntime["commands"][number]) => ({
   id: command.id,
+  localId: command.localId,
   extensionId: command.extensionId,
   title: command.title,
   description: command.description,
   cliPath: command.cli?.pathKey,
-  cliAliases: command.cli?.globalAliases?.map((alias) => alias.join(" ")),
+  cliAliases: command.cli?.deprecatedPaths?.map((alias) => alias.join(" ")),
   examples: command.cli?.examples,
   automation: command.automation,
+  copyResultToClipboard: command.copyResultToClipboard,
   resourceMutation: command.resourceMutation,
+  confirmation: command.confirmation,
   params: command.params as WorkbenchExtensionMetadata["commands"][number]["params"],
 });
 
@@ -189,6 +196,8 @@ export const createWorkbenchExtensionMetadata = (
   })),
   placements: toPlacementRecords(input.runtime),
   resourceKinds: input.runtime.resourceKinds.map((record) => ({
+    activity: record.contribution.activity,
+    activityHandoff: Boolean(record.contribution.activityContext),
     id: record.id,
     localId: record.localId,
     extensionId: record.extensionId,
@@ -222,14 +231,20 @@ export const createWorkbenchExtensionMetadata = (
     when: normalizeWhen(item.contribution.when, item.extensionId),
     action: normalizeTarget(item.contribution.action, item.extensionId),
   })),
-  navigationTrees: input.runtime.navigationTrees.map((tree) => ({
-    id: tree.id,
-    extensionId: tree.extensionId,
-    owner: normalizedRef(tree.contribution.owner, tree.extensionId),
-    slot: tree.contribution.slot ?? "content",
-    view: normalizedRef(tree.contribution.view, tree.extensionId),
-    ...(tree.contribution.resourceScope ? { resourceScope: tree.contribution.resourceScope } : {}),
-  })),
+  navigationTrees: input.runtime.navigationTrees
+    .filter(
+      (tree) =>
+        !hasAbsentOptionalNavigationOwner(tree, input.runtime.extensions) &&
+        !hasAbsentOptionalNavigationView(tree, input.runtime.extensions),
+    )
+    .map((tree) => ({
+      id: tree.id,
+      extensionId: tree.extensionId,
+      owner: normalizedRef(tree.contribution.owner, tree.extensionId),
+      slot: tree.contribution.slot ?? "content",
+      view: normalizedRef(tree.contribution.view, tree.extensionId),
+      ...(tree.contribution.resourceScope ? { resourceScope: tree.contribution.resourceScope } : {}),
+    })),
   statusBarItems: input.runtime.statusBarItems.map((item) => ({
     id: item.id,
     extensionId: item.extensionId,
@@ -251,12 +266,14 @@ export const createWorkbenchExtensionMetadata = (
   })),
   settingsSections: input.runtime.settingsSections.map((section) => ({
     id: section.id,
+    localId: section.localId,
     extensionId: section.extensionId,
     title: section.contribution.title,
     order: section.contribution.order,
   })),
   settingsPanels: input.runtime.settingsPanels.map((panel) => ({
     id: panel.id,
+    localId: panel.localId,
     extensionId: panel.extensionId,
     view: normalizedRef(panel.contribution.view, panel.extensionId),
     slot: panel.contribution.slot,

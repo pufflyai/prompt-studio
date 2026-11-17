@@ -1,3 +1,4 @@
+import { createPreferenceChoiceStore } from "./preference-choice-store";
 import type { ThemePreferenceStorage } from "./theme-preference";
 
 const windows = new WeakMap<
@@ -5,29 +6,8 @@ const windows = new WeakMap<
   WeakMap<ThemePreferenceStorage, Map<string, ReturnType<typeof createThemePreferenceStore>>>
 >();
 
-export const createThemePreferenceStore = (storage: ThemePreferenceStorage, key: string, initial?: string) => {
-  let choice = initial ?? storage.getItem(key);
-  const listeners = new Set<() => void>();
-  const update = (next: string | null) => {
-    if (next === choice) return;
-    choice = next;
-    for (const listener of listeners) listener();
-  };
-  return {
-    getSnapshot: () => choice,
-    subscribe(listener: () => void) {
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
-    },
-    setChoice(next: string) {
-      update(next);
-      storage.setItem(key, next);
-    },
-    update,
-  };
-};
+export const createThemePreferenceStore = (storage: ThemePreferenceStorage, key: string, initial?: string) =>
+  createPreferenceChoiceStore(storage, key, initial);
 
 /** Equal storage adapters and keys represent one shared choice in the window. */
 export const getThemePreferenceStore = (storage: ThemePreferenceStorage, key: string, browserStorage: boolean) => {

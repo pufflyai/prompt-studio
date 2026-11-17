@@ -45,3 +45,5 @@ Each request carries an idempotency key, a unique name for that request. Sending
 - [Remote automation commands](../../references/cli/0007-automation.md)
 - [Durable work](../../references/extensions/0007-durable-automation.md)
 - [Move an extension to remote execution](../extensions/0004-remote-execution-migration.md)
+
+*Updated at: 2026-10-12*

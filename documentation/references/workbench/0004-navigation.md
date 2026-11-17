@@ -16,6 +16,10 @@ The workbench navigates only to explicit targets. This page lists the target kin
 
 A page target may carry `resource`, `section` or `position`, `open`, and contextual `parent`. A panel target may carry `resource` and `open`. A target never carries a region or activation callback.
 
+[Native chat views](../extensions/0028-native-chat.md) use those same page and panel
+targets. Their action bindings capture the current placement, so conversion does
+not give a delayed navigation result the previous viewer's context.
+
 ## Related resources
 
 Appearance's **Open related resources** setting is on by default. Opening a resource or selecting its tab evaluates its owner's optional `relatedOpenings` command. Only entries with `autoOpen: true` open automatically. Targets use their normal owner resolvers; automatic openings do not recursively open their own related resources.
@@ -102,7 +106,7 @@ A routed resource page can declare `document: { metadataKey: "workspaceFilePath"
 
 `position: { line, column?, endLine?, endColumn? }` is a one-based source location. It requires a selected document and cannot be combined with a Markdown heading `section`. URLs use the same named coordinate parameters. Monaco reveals and selects the requested range after loading, and on another explicit navigation within the same file. It retains the editor draft. Images and rich Markdown show a notice when source positions are unavailable. Markdown heading navigation still uses `section`.
 
-Chat UI accepts an optional `linkHandler` with `resolveHref`, `open`, and optional `describe` methods. It passes the original destination and its origin (Markdown, inline code, reference, or tool) to the host. The session host resolves relative paths from the originating workspace root, checks rooted paths against that root, and uses registered page URLs for saved resources. A file path under `.pstdio/extension-storage/pstdio.pstdio-planner/tickets` opens those workspace bytes. It does not imply a saved Planner document. Absolute dashboard URLs must have the dashboard's origin; another project is selected before its page is restored. Raw custom schemes cannot execute commands. Uploaded attachments retain their own open behavior.
+Chat UI accepts an optional `linkHandler` with `resolveHref`, `open`, and optional `describe` methods. It passes the original destination and its origin (Markdown, inline code, reference, or tool) to the host. The session host resolves relative paths from the originating workspace root, checks rooted paths against that root, and uses registered page URLs for saved resources. A file path under `.pstdio/extension-storage/pstdio.planner/tickets` opens those workspace bytes. It does not imply a saved Planner document. Absolute dashboard URLs must have the dashboard's origin; another project is selected before its page is restored. Raw custom schemes cannot execute commands. Uploaded attachments retain their own open behavior.
 
 The legacy public `onOpenFile` callback remains available and is deprecated in favor of `linkHandler`. Existing callers without a handler retain their behavior.
 
@@ -119,7 +123,7 @@ Global panel controls render in the web navigation header: closed Sidenav recove
 | `workbench.resizePanel` | `region: sidenav, secondary, side`, `size: number` in pixels |
 | `workbench.setSidePanelPresentation` | `presentation: attached, floating, closed` |
 
-The matching shell methods enforce the same permissions. Main headers follow page presentation: tabless pages have no tab header, while tabbed pages keep theirs. A tabless page whose view has a closed view menu shows a minimal, borderless menu header that holds only that menu's opener and accepts no tab drops or panel placement. Header menus offer placement actions without a visibility toggle. `setPanelHeaderVisible` and `shell.setHeaderVisible` remain for legacy auxiliary integrations and cannot override a page's Main header policy. Optional panels collapse after their last tab closes, including panels previously opened empty.
+The matching shell methods enforce the same permissions. Main headers follow page presentation: tabless pages have no tab header, while tabbed pages keep theirs. A tabless page can provide a title and icon through `main.tab`; a header shows that presentation beside its view-menu toggles with the standard bottom divider. Without an explicit title, it shows only closed-menu openers and remains borderless. This header accepts no tab drops or panel placement. Header menus offer placement actions without a visibility toggle. `setPanelHeaderVisible` and `shell.setHeaderVisible` remain for legacy auxiliary integrations and cannot override a page's Main header policy. Optional panels collapse after their last tab closes, including panels previously opened empty.
 
 ## Panel placement and closed-edge drops
 
@@ -146,3 +150,5 @@ An application sets its default page with `createWorkbench({ startPage })`. Prom
 Use the Workspaces provider's public `workspacePages` refs for the grouped list, project Files, workspace, overview and synced history destinations. Files are documents in `workspaceFilePath` on the routed host-owned workspace resource. The default project folder uses `workspacePages.files` and has no Changes tab. Foreign resources use `workspacePages.history`; local file and execution actions require the host's current provider permissions.
 
 The legacy host `workbenchPages.workspace` and `workbenchPages.workspaces` refs are deprecated. Their saved URLs remain available through compatibility declarations while the provider views are installed. An ordinary extension can declare workspace page names under its own namespace; this does not grant ownership of the host's resource kind or file services.
+
+*Updated at: 2026-11-12*

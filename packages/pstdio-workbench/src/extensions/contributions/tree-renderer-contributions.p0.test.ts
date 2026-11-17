@@ -91,6 +91,45 @@ describe("extension tree renderer contributions", () => {
   });
 });
 
+test("warm navigation rows keep extension child identity after their data changes", async () => {
+  const workbench = createWorkbench();
+  let label = "One";
+  const calls: string[] = [];
+  workbench.registerModule({
+    id: "test.tree-navigation-cache",
+    activate: (context) =>
+      registerWorkbenchExtensionTreeRenderers({
+        executeCommand: (id) => {
+          calls.push(id);
+          return id.endsWith("children")
+            ? [{ id: "child", label: "Child" }]
+            : [{ id: "notes", nodes: [{ id: "one", label, hasChildren: true }] }];
+        },
+        metadata,
+        projectId: "project-1",
+        workbench: context,
+      }),
+  });
+  const owner = { kind: "mode", id: "project", extensionId: "pstdio.lab" } as const;
+  workbench.navigationTrees.registerContribution({
+    id: "notes",
+    owner,
+    viewId: treeId,
+    sourceExtensionId: "pstdio.lab",
+    declarationIndex: 0,
+  });
+  const context = { projectId: "project-1" };
+  await workbench.navigationTrees.getSections(owner, "content", context);
+  label = "Two";
+  workbench.views.refreshView(treeId);
+  await workbench.navigationTrees.getSections(owner, "content", context);
+  const warm = await workbench.navigationTrees.getSections(owner, "content", context);
+  expect(warm[0].nodes[0].label).toBe("Two");
+  expect(await workbench.navigationTrees.getChildren(warm[0].nodes[0], context)).toMatchObject([{ id: "child" }]);
+  expect(calls).toEqual(["pstdio.lab.tree.body", "pstdio.lab.tree.body", "pstdio.lab.tree.children"]);
+  await workbench.dispose();
+});
+
 describe("extension tree resource navigation", () => {
   test("closes a note opened from a tree when its project reports removal", async () => {
     const workbench = createWorkbench();

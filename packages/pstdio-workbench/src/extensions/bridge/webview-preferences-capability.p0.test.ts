@@ -82,3 +82,47 @@ test("preference capabilities wait for persistence and forward write failures", 
     );
   }
 });
+
+test("core retirement drains accepted remote presentation writes and rejects new admission", async () => {
+  const workbench = createWorkbench();
+  const held = Promise.withResolvers<void>();
+  const writes: unknown[] = [];
+  const capabilities = createWorkbenchWebviewHostCapabilities({
+    workbench,
+    extensionId: "owned",
+    ownedPreferences: {
+      get: () => undefined,
+      set: async (_name, value) => {
+        writes.push(value);
+        if (value === "first") await held.promise;
+      },
+    },
+  });
+  const first = capabilities["preferences.set"]({
+    name: "selection",
+    value: "first",
+    scope: { scope: "project", scopeId: "a" },
+  });
+  const last = capabilities["preferences.set"]({
+    name: "selection",
+    value: "last",
+    scope: { scope: "project", scopeId: "a" },
+  });
+  let disposed = false;
+  const closing = workbench.dispose().then(() => {
+    disposed = true;
+  });
+  try {
+    await Promise.resolve();
+    expect(disposed).toBe(false);
+    expect(writes).toEqual(["first"]);
+    expect(() => capabilities["preferences.set"]({ name: "selection", value: "late" })).toThrow("Workbench is closed");
+    held.resolve();
+    await Promise.all([first, last, closing]);
+    expect(writes).toEqual(["first", "last"]);
+    expect(disposed).toBe(true);
+  } finally {
+    held.resolve();
+    await closing;
+  }
+});

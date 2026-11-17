@@ -6,6 +6,10 @@ Navigate visible panels, choose an action's target, and discover available keybo
 
 Press **Alt+Shift+Space** to enter shortcut mode. A small bubble appears at the bottom center, using the planner zoom control's surface. It shows the opening chord and current sequence while choosing an action. Hover to reveal choices that continue from the current prefix. Up/Down also reveals choices for keyboard selection; `/` opens search. Choose View (V), Go (G), Create (C), Current view (A), or Settings (S). A completed action exits shortcut mode. Tab selection stays active until Enter or Escape; Backspace returns one level. Keyboard Shortcuts under Help is a searchable reference. Shortcut editing controls are deferred.
 
+## Keys that type text
+
+Direct shortcuts never start with a key that types text: a printable key or Space, alone or with only Shift. Keys such as F2 or Escape stay valid. Those keys belong to whatever has focus, including editors that type into a `role="textbox"` element instead of a textarea, and keyboard layouts that put symbols on other physical keys. Single letters and numbers work only inside shortcut mode's layers. The workbench refuses such direct bindings from the core and from extensions, ignores saved overrides that assign one, and rejects them in shortcut assignment.
+
 ## Preview shortcuts
 
 Some shortcuts work anywhere, such as Mod+P or Alt+Shift+1. Sequences such as G → H work only inside shortcut mode.
@@ -20,7 +24,7 @@ On macOS, Alt is Option. Entry matches the physical Space key even when Option p
 
 Extensions contribute to these shared groups. Groups with no available actions are hidden. No flow requires choosing an extension by name first.
 
-The shortcut reference uses the command palette's search layout and groups assigned actions by resource. Each action has one default shortcut. Rows contain the action and keys without subtitles. Internal commands with no assigned shortcut stay in command discovery. Shift+/ opens this view, including from shortcut mode.
+The shortcut reference uses the command palette's search layout and groups assigned actions by resource. Each action has one default shortcut. Rows contain the action and keys without subtitles. Internal commands with no assigned shortcut stay in command discovery. Mod+/ (Cmd+/ on macOS, Ctrl+/ elsewhere) opens this view, including from shortcut mode. In a focused text field, such as the file editor, Mod+/ stays with the field.
 
 ## Navigation
 
@@ -60,7 +64,7 @@ When actions share an initial, the host sorts the available actions by name, wit
 
 Alt+Shift+T is the single default shortcut for choosing a color theme. Theme providers contribute themes to that shared picker rather than registering another shortcut. Creation keeps C → N, C → T, and C → A without additional direct creation chords.
 
-Settings → I opens appearance and file icon themes, and S contributed skills. Mod+, opens agent runtime and skill setup. These destinations are registered once, regardless of the number of providers.
+Settings → I opens appearance and file icon themes. Go → S offers Skills and Sessions through the numbered destination chooser. Mod+, opens agent runtime settings. These destinations are registered once, regardless of the number of providers.
 
 Creation uses the same UI as the resource's existing entry point. Notes create and open directly, with bound empty parameters instead of an optional-parameter dialog. Ticket shortcuts and the palette invoke the board's `createRow.command`, so the shared creation dialog supplies markdown, attachments, editable properties, and the same submission handler. Artifact creation opens the library's existing creation choices.
 
@@ -83,3 +87,5 @@ The resolved catalog supplies execution, the shortcut reference, contribution de
 Shortcuts that work while typing must hold Alt, Ctrl, or Cmd. Keys pressed without one of them never look up shortcuts, so typing stays fast. Managed webviews negotiate explicitly global entry chords with the host. The guest consumes an owned chord synchronously and sends a typed request. The host validates the live frame and effective binding, then owns plain keys in its menu. Ordinary typing, editor keys, terminal keys, composition, and local modal controls remain local. The selected editor receives focus again when navigation finishes.
 
 Opaque nested previews can include `webviewKeyboardRelayDocument` from `@pstdio/sdk/extensions` in each frame. The managed parent supplies a bounded profile for keyboard-menu entry, tab navigation, panel visibility, and Main fullscreen; it cannot invoke arbitrary host commands. Panel and fullscreen toggles also work while a dialog or menu owns focus. Option-letter chords handle macOS symbols and dead keys. Messages must come from a direct child, and requests must come from the focused child. Removed bindings no longer execute.
+
+*Updated at: 2026-11-14*

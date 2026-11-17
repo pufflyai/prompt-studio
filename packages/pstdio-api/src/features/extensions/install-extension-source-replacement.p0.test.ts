@@ -51,6 +51,36 @@ afterEach(() => {
 });
 
 describe("installExtensionSource replacement", () => {
+  test("concurrent missing-only installs return the source that won the shared target", async () => {
+    const otherSource = join(root, "other-source");
+    mkdirSync(otherSource);
+    const manifest = JSON.parse(readFileSync(join(source, "package.json"), "utf8"));
+    writeFileSync(join(otherSource, "package.json"), JSON.stringify({ ...manifest, version: "2.0.0" }));
+    writeFileSync(join(otherSource, "extension.ts"), "export default { commands: [] };");
+    const prepared = Promise.withResolvers<void>();
+    let preparations = 0;
+    const runCommand = async () => {
+      if (++preparations === 2) prepared.resolve();
+      await prepared.promise;
+      return { exitCode: 0, stderr: "", stdout: "" };
+    };
+    const results = await Promise.all(
+      [source, otherSource].map((source) =>
+        installExtensionSource({
+          source,
+          installName: "source-extension",
+          existsOk: true,
+          env: { PSTDIO_HOME: pstdioHome },
+          runCommand,
+        }),
+      ),
+    );
+    const installed = JSON.parse(readFileSync(join(target, "package.json"), "utf8"));
+    expect(results.map((result) => result.metadata.version)).toEqual([installed.version, installed.version]);
+    expect(results[0]!.sourceHash).toBe(results[1]!.sourceHash);
+    expect(results.every((result) => result.targetPath === target && result.check.errorCount === 0)).toBe(true);
+  });
+
   test("does not let cleanup errors replace the install result", async () => {
     const remove = mock(() => {
       throw new Error("cleanup failed");

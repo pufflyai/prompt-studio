@@ -19,6 +19,7 @@ export const resolveMenuItemState = (
   return {
     readOnly,
     disabled: readOnly || record.handler.isEnabled?.(action.args, context) === false,
+    disabledReason: readOnly ? action.disabledReason : undefined,
     description: readOnly ? (action.disabledReason ?? description) : description,
   };
 };

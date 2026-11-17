@@ -1,7 +1,7 @@
 import type { JsonPatch, SessionMessage } from "pstdio-api-contracts";
 import type { SessionsRouteDeps } from "../deps";
 import { getSessionHistory, SessionNotFoundError } from "../session-history";
-import type { ActiveSession } from "../session-store";
+import { type ActiveSession, IDLE_TURN_PATH } from "../session-store";
 import type { SessionEventSink } from "../session-stream-connections";
 import { streamPersonalSession } from "./stream-personal-session";
 import { createStreamQueuePublisher, type StreamQueuePublisher } from "./stream-session-queue";
@@ -97,6 +97,7 @@ const streamEntry = async (
         path: "/approval_requests",
         value: entry.approvalService.pendingRequests(),
       });
+      if (entry.idleTurn) await sink.write("patch", { op: "replace", path: IDLE_TURN_PATH, value: entry.idleTurn });
       return await streamLivePatches({ [Symbol.asyncIterator]: () => iterator }, sink, queue);
     } finally {
       await iterator.return?.();

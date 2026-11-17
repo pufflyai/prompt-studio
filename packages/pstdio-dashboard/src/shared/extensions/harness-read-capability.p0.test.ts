@@ -65,3 +65,13 @@ test("embedded harness controls open on the project's last-used harness like the
   saveRecentHarnessSelection("project-one", { harnessId: "claude", model: "opus" }, storage);
   expect(await createRead(storage)({})).toMatchObject({ selection: { harnessId: "claude", model: "opus" } });
 });
+
+test("embedded harness controls restore the last model for a selected harness", async () => {
+  const storage = createMemoryRecentHarnessStorage();
+  saveRecentHarnessSelection("project-one", { harnessId: "claude", model: "opus" }, storage);
+  saveRecentHarnessSelection("project-one", { harnessId: "codex", model: "large" }, storage);
+
+  expect(await createRead(storage)({ harnessId: "claude", model: "" })).toMatchObject({
+    selection: { harnessId: "claude", model: "opus" },
+  });
+});

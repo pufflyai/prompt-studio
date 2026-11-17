@@ -2,10 +2,10 @@ import type { WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdi
 import { WorkbenchBreadcrumbView } from "@pstdio/workbench/react";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { ProjectHeader } from "../projects/components/project-header";
-import type { DesktopProjectTabsController } from "../projects/desktop-project-tabs-controller";
+import type { DesktopProjectTabs } from "../projects/project-selection-sync";
 import { registerCopyPageLink } from "./copy-page-link";
 
-const registerHeaders = (ctx: WorkbenchModuleContext, projectTabs?: DesktopProjectTabsController) => {
+const registerHeaders = (ctx: WorkbenchModuleContext, projectTabs?: DesktopProjectTabs) => {
   ctx.views.registerView({
     id: dashboardWidgetIds.projectHeader,
     title: projectTabs ? "Project navigation" : "Project selector",
@@ -28,7 +28,7 @@ const registerHeaders = (ctx: WorkbenchModuleContext, projectTabs?: DesktopProje
     region: "nav",
   });
 };
-export const createHeadersModule = (projectTabs?: DesktopProjectTabsController) =>
+export const createHeadersModule = (projectTabs?: DesktopProjectTabs) =>
   ({
     id: "dashboard.headers",
     activate(ctx) {

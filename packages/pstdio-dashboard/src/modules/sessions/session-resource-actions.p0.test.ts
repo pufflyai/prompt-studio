@@ -1,10 +1,12 @@
 import { expect, test } from "bun:test";
-import { createWorkbench, resourceContextMenuPath } from "@pstdio/workbench";
+import { sessionBrowser } from "@pstdio/sdk/extensions";
+import { createWorkbench } from "@pstdio/workbench";
 import { getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { openSessionsPage } from "@/shared/workbench/page-navigation";
 import { createSessionsModule } from "./module";
+import { registerSessionProvider } from "./session-provider.fixture";
 
 const setup = () => {
   const workbench = createWorkbench();
@@ -18,30 +20,9 @@ const setup = () => {
   return workbench;
 };
 
-test("session management belongs to Sessions and resolves explicit and row targets before active selection", async () => {
+test("synced removal preserves another provider page and archive clears only the affected session route", () => {
   const workbench = setup();
-  const context = { resource: { type: "session", id: "b", label: "Stale B" } };
-  expect(
-    await workbench.commands.prepareCommandArgs(dashboardCommandIds.renameSession, undefined, context),
-  ).toMatchObject({ sessionId: "b", title: "B" });
-  expect(
-    await workbench.commands.prepareCommandArgs(dashboardCommandIds.renameSession, { sessionId: "a" }, context),
-  ).toMatchObject({ sessionId: "a", title: "A" });
-  const menu = workbench.layout.listMenuItems(resourceContextMenuPath("session"));
-  expect(menu.map((item) => item.commandId)).toEqual(
-    expect.arrayContaining([
-      dashboardCommandIds.renameSession,
-      dashboardCommandIds.archiveSession,
-      dashboardCommandIds.deleteSession,
-    ]),
-  );
-  await workbench.commands.executeCommand(dashboardCommandIds.renameSession, undefined, context);
-  expect(workbench.commandPalette.getParamsRequest()?.args).toMatchObject({ sessionId: "b", title: "B" });
-  workbench.dispose();
-});
-
-test("synced removal preserves a different page and archive clears the affected session route", () => {
-  const workbench = setup();
+  registerSessionProvider(workbench, { projectId: "actions-project" });
   openSessionsPage(workbench, { type: "session", id: "a" });
   expect(workbench.pages.store.getState().location?.resource).toMatchObject({
     id: "a",
@@ -57,57 +38,12 @@ test("synced removal preserves a different page and archive clears the affected 
     status: "completed",
     archived: true,
   });
-  expect(workbench.pages.store.getState().location?.page.id).toBe("session-composer");
+  expect(workbench.pages.store.getState().location?.page).toEqual(sessionBrowser.pages.compose);
   expect(workbench.pages.store.getState().location?.resource).toBeUndefined();
   workbench.dispose();
 });
 
-test("draft context never falls back to a saved session for management", async () => {
-  const workbench = setup();
-  await expect(
-    workbench.commands.prepareCommandArgs(dashboardCommandIds.renameSession, undefined, {
-      resource: { type: "session-draft", id: "draft" },
-    }),
-  ).rejects.toThrow("saved session");
-  workbench.dispose();
-});
-
-test("each session state offers exactly one delete action with the lifecycle guard", () => {
-  const workbench = setup();
-  const actions = workbench.layout
-    .listMenuItems(resourceContextMenuPath("session"))
-    .filter((item) => item.commandId === dashboardCommandIds.deleteSession);
-  for (const status of [
-    "in_progress",
-    "awaiting_input",
-    "queued",
-    "completed",
-    "failed",
-    "cancelled",
-    "disconnected",
-  ]) {
-    workbench.context.set("workbench.resource.type", "session");
-    workbench.context.set("workbench.resource.metadata.status", status);
-    const matches = actions.filter((item) => workbench.context.matches(item.when));
-    expect(matches).toHaveLength(1);
-    expect(matches[0]?.readOnly === true).toBe(["in_progress", "awaiting_input", "queued"].includes(status));
-  }
-  workbench.dispose();
-});
-
-test("message fork retains the invoking session and reply", async () => {
-  const workbench = setup();
-  expect(
-    await workbench.commands.prepareCommandArgs(
-      dashboardCommandIds.forkSession,
-      { sessionId: "a", messageId: "earlier-answer" },
-      { resource: { type: "session", id: "b" } },
-    ),
-  ).toEqual({ sessionId: "a", messageId: "earlier-answer" });
-  workbench.dispose();
-});
-
-test("a pending fork does not replace navigation after switching projects", async () => {
+test("a pending public fork keeps its session/reply and cannot replace another project's navigation", async () => {
   let release!: () => void;
   let entered!: () => void;
   const requested = new Promise<void>((resolve) => {
@@ -116,28 +52,28 @@ test("a pending fork does not replace navigation after switching projects", asyn
   const response = new Promise<void>((resolve) => {
     release = resolve;
   });
-  const server = Bun.serve({
-    port: 0,
-    async fetch() {
-      entered();
-      await response;
-      return Response.json(
-        { id: "copied-session", title: "A (fork)", project_id: "actions-project", status: "completed" },
-        { status: 201 },
-      );
+  const workbench = setup();
+  const calls: unknown[] = [];
+  registerSessionProvider(workbench, {
+    projectId: "actions-project",
+    sessions: {
+      fork: async (id, messageId) => {
+        calls.push({ id, messageId });
+        entered();
+        await response;
+        return { id: "copied-session", title: "A (fork)", status: "completed" } as never;
+      },
     },
   });
-  const runtime = globalThis as typeof globalThis & { __PSTDIO_CONFIG__?: { apiBaseUrl?: string } };
-  const previous = runtime.__PSTDIO_CONFIG__;
-  runtime.__PSTDIO_CONFIG__ = { apiBaseUrl: server.url.origin };
-  const workbench = setup();
   try {
+    openSessionsPage(workbench, { type: "session", id: "b" });
     const pending = workbench.commands.executeCommand(
       dashboardCommandIds.forkSession,
-      { sessionId: "a", messageId: "reply" },
-      { resource: { type: "session", id: "a" } },
+      { sessionId: "a", messageId: "earlier-answer" },
+      { resource: { type: "session", id: "b" } },
     );
     await requested;
+    expect(calls).toEqual([{ id: "a", messageId: "earlier-answer" }]);
     selectDashboardProject(workbench, { id: "other-project", name: "Other" });
     openSessionsPage(workbench);
     const location = workbench.pages.store.getState().location;
@@ -146,8 +82,6 @@ test("a pending fork does not replace navigation after switching projects", asyn
     expect(workbench.pages.store.getState().location).toEqual(location);
   } finally {
     release();
-    runtime.__PSTDIO_CONFIG__ = previous;
-    server.stop(true);
     workbench.dispose();
   }
 });

@@ -270,7 +270,7 @@ export const createTreeRendererRegistry = (input: CreateTreeRendererRegistryInpu
       );
     },
 
-    refresh(id) {
+    refresh(id, refresh) {
       requireTree(id);
       const snapshot = treeStore.getState();
       const current = snapshot.refreshKeysByTreeId[id] ?? 0;
@@ -282,7 +282,7 @@ export const createTreeRendererRegistry = (input: CreateTreeRendererRegistryInpu
         false,
         "refreshTreeRenderer",
       );
-      const event = { treeId: id };
+      const event = { ...refresh, treeId: id };
       for (const listener of refreshListeners) listener(event);
     },
 

@@ -32,8 +32,8 @@ const excluded = new Set(["node_modules", "dist", ".git", "bun.lock", "bun.lockb
 export async function stageExtension(root: string, dir: string, temporaryRoot: string) {
   const destination = join(temporaryRoot, dir);
   await cp(join(root, dir), destination, { recursive: true, filter: (path) => !excluded.has(basename(path)) });
-  // Keep shared compiler settings and the hermetic test preload, but no workspace manifest or packages.
-  for (const file of ["tsconfig.base.json", "scripts/test-setup.ts"]) {
+  // Keep compiler settings; test setup belongs to each extension, not this checkout.
+  for (const file of ["tsconfig.base.json"]) {
     if (!(await Bun.file(join(root, file)).exists())) continue;
     await mkdir(dirname(join(temporaryRoot, file)), { recursive: true });
     await cp(join(root, file), join(temporaryRoot, file));

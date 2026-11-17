@@ -3,6 +3,7 @@ import { matchesResourceWhen } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import type { Disposable, WorkbenchCommandExecutionContext } from "../../core";
 import { workbenchCommandPaletteMenuPath } from "../../core";
+import { registerWorkbenchExtensionChatRenderers } from "../contributions/chat-renderer-contributions";
 import { registerWorkbenchExtensionCommandPaletteResources } from "../contributions/command-palette-resource-contributions";
 import { registerWorkbenchExtensionControlsRenderers } from "../contributions/controls-renderer-contributions";
 import { registerWorkbenchExtensionDataTableRenderers } from "../contributions/data-table-renderer-contributions";
@@ -14,6 +15,7 @@ import { registerWorkbenchExtensionFileRenderers } from "../contributions/file-r
 import { registerWorkbenchExtensionKanbanRenderers } from "../contributions/kanban-renderer-contributions";
 import { registerWorkbenchExtensionNavigationItems } from "../contributions/navigation-item-contributions";
 import { localizeParamSchema } from "../contributions/param-schema-localization";
+import { registerWorkbenchExtensionTerminalRenderers } from "../contributions/terminal-renderer-contributions";
 import { registerWorkbenchExtensionTreeRenderers } from "../contributions/tree-renderer-contributions";
 import { registerResourceKinds } from "./resource-kind-contributions";
 import {
@@ -33,6 +35,7 @@ import { toInternalWorkbenchExtensionMetadata } from "./workbench-extension-meta
 import { registerWorkbenchExtensionRendererRefreshEvents } from "./workbench-extension-refresh";
 import { registerSettings, registerViewMenus, registerWebviewPanels } from "./workbench-extension-surfaces";
 import { createWorkbenchExtensionTabPresentation } from "./workbench-extension-tab-presentation";
+import { registerWorkbenchIdentityAliases } from "./workbench-identity-aliases";
 
 const disposeAll = (disposables: Disposable[]) => {
   for (let index = disposables.length - 1; index >= 0; index -= 1) disposables[index]?.dispose();
@@ -56,8 +59,9 @@ const registerCommands = (
         id: command.id,
         label: text(command.title, command.id),
         description: text(command.description),
-        params: localizeParamSchema(command.params, text, command.extensionId),
+        params: localizeParamSchema(command.params, text, command.extensionId, command.confirmation?.confirmedParam),
         resourceMutation: command.resourceMutation,
+        copyResultToClipboard: command.copyResultToClipboard,
       },
       {
         prepareArgs: (args, executionContext, onArgsChange) =>
@@ -194,16 +198,24 @@ const registerModes = (input: InternalRegisterWorkbenchExtensionContributionsInp
 const registerModePlacements = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>
   input.metadata.placements.map((placement) => input.workbench.modePlacements.registerPlacement(placement));
 export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWorkbenchExtensionContributionsInput) => {
+  const disposables: Disposable[] = registerWorkbenchIdentityAliases(sourceInput);
   const input: InternalRegisterWorkbenchExtensionContributionsInput = {
     ...sourceInput,
     metadata: toInternalWorkbenchExtensionMetadata(sourceInput.metadata, {
       projectId: sourceInput.projectId,
-      createTab: (metadata) => createWorkbenchExtensionTabPresentation(sourceInput, metadata),
+      createTab: (metadata) => {
+        const tab = createWorkbenchExtensionTabPresentation(sourceInput, metadata);
+        disposables.push(tab);
+        return tab;
+      },
     }),
   };
-  const disposables: Disposable[] = [];
+  let terminals: ReturnType<typeof registerWorkbenchExtensionTerminalRenderers> | undefined;
   const context: WorkbenchExtensionCommandContext = input;
   try {
+    disposables.push(registerWorkbenchExtensionChatRenderers(sourceInput));
+    terminals = registerWorkbenchExtensionTerminalRenderers(sourceInput);
+    disposables.push(terminals);
     disposables.push(...registerCommands(context, input.metadata));
     disposables.push(
       ...registerWorkbenchExtensionKeybindings({
@@ -216,7 +228,11 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
     disposables.push(...registerMenus(input, context));
     disposables.push(...registerCommandPaletteContributions(input, context));
     disposables.push(
-      registerWorkbenchExtensionTreeRenderers({ ...input, resolveNodeResource: input.resolveTreeNodeResource }),
+      registerWorkbenchExtensionTreeRenderers({
+        ...input,
+        resolveNodeResource: input.resolveTreeNodeResource,
+        renderNodeEndContent: input.renderTreeNodeEndContent,
+      }),
     );
     disposables.push(registerWorkbenchExtensionFileRenderers(input));
     disposables.push(registerWorkbenchExtensionControlsRenderers(context, input.metadata.controlsRenderers ?? []));
@@ -259,6 +275,7 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
     disposables.push(...registerModes(input));
     disposables.push(...registerModePlacements(input));
     disposables.push(...registerPages(input));
+    terminals.commit();
     return {
       dispose() {
         disposeAll(disposables);
@@ -266,6 +283,7 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
     };
   } catch (error) {
     disposeAll(disposables);
+    terminals?.rollback();
     throw error;
   }
 };

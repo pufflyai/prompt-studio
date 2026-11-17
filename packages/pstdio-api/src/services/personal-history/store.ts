@@ -46,6 +46,22 @@ const createStore = (input: PersonalHistoryInput) => {
     return input.index.read(owner, kind);
   };
   return {
+    querySessions: async (
+      ...args: Parameters<PersonalHistoryInput["index"]["querySessions"]> extends [unknown, ...infer Rest]
+        ? Rest
+        : never
+    ) => {
+      await index.ready();
+      return input.index.querySessions(owner, ...args);
+    },
+    queryWorkspaces: async (
+      ...args: Parameters<PersonalHistoryInput["index"]["queryWorkspaces"]> extends [unknown, ...infer Rest]
+        ? Rest
+        : never
+    ) => {
+      await index.ready();
+      return input.index.queryWorkspaces(owner, ...args);
+    },
     owner,
     records,
     readRecords,

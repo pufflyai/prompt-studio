@@ -1,21 +1,33 @@
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import type { AgentModel, HarnessContext, HarnessProvider } from "@pstdio/sdk/extensions";
+import type {
+  AgentModel,
+  HarnessApprovalChannel,
+  HarnessContext,
+  HarnessProvider,
+  HarnessSession,
+  HarnessStartInput,
+} from "@pstdio/sdk/extensions";
 import { l10n, params } from "@pstdio/sdk/extensions";
 import { authenticateClaude, getClaudeAuthentication } from "./authentication";
 import { claudeCommandState, prepareClaudeOperation } from "./commands";
 import { detectClaude } from "./detection";
 import { recoverClaudeMessages } from "./history-reconciliation";
 import { discoverClaudeModels } from "./models";
-import { normalizeClaudeCodeMessages } from "./normalize-transcript";
+import { getClaudeForkMessageId, normalizeClaudeCodeMessages } from "./normalize-transcript";
 import { resumeClaudeCodeSession, startClaudeCodeSession } from "./spawn";
 import type { ClaudeCodeTranscriptEntry } from "./types";
 
 export const buildTranscriptPath = (agentSessionId: string, cwd?: string) => {
   const projectDir = cwd ?? process.cwd();
   const sanitized = projectDir.replace(/[^a-zA-Z0-9]/g, "-");
-  return join(homedir(), ".claude", "projects", sanitized, `${agentSessionId}.jsonl`);
+  return join(
+    process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), ".claude"),
+    "projects",
+    sanitized,
+    `${agentSessionId}.jsonl`,
+  );
 };
 
 const defaultReadTranscript = async (agentSessionId: string, cwd?: string) => {
@@ -90,6 +102,7 @@ const sessionEnv = (ctx: HarnessContext, sessionId: string) => ({
 
 type ClaudeCodeDeps = {
   detect: NonNullable<HarnessProvider["detect"]>;
+  startSession: (input: Parameters<typeof startClaudeCodeSession>[0]) => Promise<HarnessSession>;
   listModels: (ctx: HarnessContext) => Promise<AgentModel[]>;
   now: () => number;
   readTranscript: (agentSessionId: string, cwd?: string) => Promise<string>;
@@ -97,6 +110,7 @@ type ClaudeCodeDeps = {
 
 const defaultDeps: ClaudeCodeDeps = {
   detect: detectClaude,
+  startSession: startClaudeCodeSession,
   listModels: discoverClaudeModels,
   now: Date.now,
   readTranscript: defaultReadTranscript,
@@ -158,11 +172,26 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
       modelCache = undefined;
     },
     listModels,
+    fork: async (_ctx, input) => {
+      const { forkSession } = await import("@anthropic-ai/claude-agent-sdk");
+      const upToMessageId = input.messageId
+        ? getClaudeForkMessageId(
+            parseTranscript(await deps.readTranscript(input.agentSessionId, input.cwd)),
+            input.messageId,
+          )
+        : undefined;
+      const result = await forkSession(input.agentSessionId, { dir: input.cwd, upToMessageId });
+      return { agentSessionId: result.sessionId };
+    },
     getCommandState: (_ctx, input) => claudeCommandState(input),
+    // This catalog is static; mode changes come from committed session params.
+    watchCommandState: () => () => {},
     prepareOperation: (ctx, input, operation) => prepareClaudeOperation(input, operation, ctx.projectId),
 
-    start: (ctx, input) =>
-      startClaudeCodeSession({
+    // Hosts from PS-1197 on pass approvals on start too. Drop the widened type once a released SDK
+    // declares `approvals` on HarnessStartInput.
+    start: (ctx, input: HarnessStartInput & { approvals?: HarnessApprovalChannel }) =>
+      deps.startSession({
         prompt: input.prompt,
         attachments: input.attachments,
         model: input.model,
@@ -171,6 +200,9 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
         env: sessionEnv(ctx, input.sessionId),
         events: input.events,
         questions: input.questions,
+        approvals: input.approvals,
+        turns: input.turns,
+        signal: input.signal,
       }),
 
     resume: (ctx, input) =>
@@ -186,6 +218,8 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
         messageOffset: input.messageOffset,
         questions: input.questions,
         approvals: input.approvals,
+        turns: input.turns,
+        signal: input.signal,
       }),
 
     getMessages: async (_ctx, input) => {

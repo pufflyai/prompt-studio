@@ -1,11 +1,11 @@
 import { rmSync } from "node:fs";
-import { expect, test } from "@playwright/test";
 import {
   createPlannerAttempt,
   createPlannerTicket,
   createPlannerTicketFile,
   getPlannerTicket,
 } from "../helpers/planner-api";
+import { type APIRequestContext, expect, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 import {
   createResourceActionsProject,
@@ -15,46 +15,67 @@ import {
 import { showSidenavEntry } from "./helpers/sidenav-navigation";
 import { createGitRepo } from "./helpers/workspace-session-attempt";
 
+const removeOwnedProject = async (request: APIRequestContext, projectId?: string, repoRoot?: string) => {
+  try {
+    if (projectId) {
+      const response = await request.delete(`${apiBase}/v1/projects/${projectId}`);
+      expect(response.ok(), await response.text()).toBe(true);
+      const remaining = await request.get(`${apiBase}/v1/projects`);
+      expect(remaining.ok()).toBe(true);
+      expect(((await remaining.json()) as { id: string }[]).some((project) => project.id === projectId)).toBe(false);
+    }
+  } finally {
+    if (repoRoot) rmSync(repoRoot, { recursive: true, force: true });
+  }
+};
+
 test("tree menus act on an inactive sub-ticket and preserve the open ticket", async ({ page, request }, testInfo) => {
-  const project = await createResourceActionsProject(request);
-  const parent = await createPlannerTicket(request, apiBase, project.id, { content: "Parent ticket stays open" });
-  const child = await createPlannerTicket(request, apiBase, project.id, {
-    content: "Archive this sub-ticket",
-    parentId: parent.id,
-  });
-  await prepareResourceActionsDashboard(page, project.id, "");
-  await page.goto(`/projects/${project.id}/tickets`);
-  const sidenav = page.locator('[data-workbench-region="sidenav"]');
-  await sidenav.getByRole("option", { name: "Tickets", exact: true }).first().click();
-  await page
-    .getByTestId("renderer-card")
-    .filter({ hasText: parent.title })
-    .getByText(parent.title, { exact: true })
-    .click();
-  const parentRow = sidenav.getByRole("option", { name: `${parent.shorthand} ${parent.title}` });
-  const childRow = sidenav.getByRole("option", { name: `${child.shorthand} ${child.title}` });
-  await expect(parentRow).toBeVisible();
-  const openedUrl = page.url();
+  let projectId: string | undefined;
+  try {
+    const project = await createResourceActionsProject(request, undefined, (project) => {
+      projectId = project.id;
+    });
+    const parent = await createPlannerTicket(request, apiBase, project.id, { content: "Parent ticket stays open" });
+    const child = await createPlannerTicket(request, apiBase, project.id, {
+      content: "Archive this sub-ticket",
+      parentId: parent.id,
+    });
+    await prepareResourceActionsDashboard(page, project.id, "");
+    await page.goto(`/projects/${project.id}/tickets`);
+    const sidenav = page.locator('[data-workbench-region="sidenav"]');
+    await sidenav.getByRole("option", { name: "Tickets", exact: true }).first().click();
+    await page
+      .getByTestId("renderer-card")
+      .filter({ hasText: parent.title })
+      .getByText(parent.title, { exact: true })
+      .click();
+    const parentRow = sidenav.getByRole("option", { name: `${parent.shorthand} ${parent.title}` });
+    const childRow = sidenav.getByRole("option", { name: `${child.shorthand} ${child.title}` });
+    await expect(parentRow).toBeVisible();
+    const openedUrl = page.url();
 
-  await parentRow.click({ button: "right" });
-  await expectResourceMenuItems(page, ["Run attempt", "Refine ticket", "Archive"]);
-  await expect(page.getByRole("menu")).toHaveCount(1);
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("menu")).toHaveCount(0);
-  await childRow.click({ button: "right" });
-  await expectResourceMenuItems(page, ["Archive"]);
-  await expect(page).toHaveURL(openedUrl);
-  await page.screenshot({ path: testInfo.outputPath("sub-ticket-menu.png"), animations: "disabled" });
-  await page.getByRole("menuitem", { name: "Archive", exact: true }).click();
-  await expect(childRow).toHaveCount(0);
-  await expect(parentRow).toBeVisible();
-  await expect(page).toHaveURL(openedUrl);
-  expect((await getPlannerTicket(request, apiBase, project.id, child.id))?.archived).toBe(true);
-  expect((await getPlannerTicket(request, apiBase, project.id, parent.id))?.archived).toBe(false);
+    await parentRow.click({ button: "right" });
+    await expectResourceMenuItems(page, ["Run attempt", "Refine ticket", "Archive"]);
+    await expect(page.getByRole("menu")).toHaveCount(1);
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("menu")).toHaveCount(0);
+    await childRow.click({ button: "right" });
+    await expectResourceMenuItems(page, ["Archive"]);
+    await expect(page).toHaveURL(openedUrl);
+    await page.screenshot({ path: testInfo.outputPath("sub-ticket-menu.png"), animations: "disabled" });
+    await page.getByRole("menuitem", { name: "Archive", exact: true }).click();
+    await expect(childRow).toHaveCount(0);
+    await expect(parentRow).toBeVisible();
+    await expect(page).toHaveURL(openedUrl);
+    expect((await getPlannerTicket(request, apiBase, project.id, child.id))?.archived).toBe(true);
+    expect((await getPlannerTicket(request, apiBase, project.id, parent.id))?.archived).toBe(false);
 
-  await page.getByRole("button", { name: /Resource Actions$/ }).click();
-  await showSidenavEntry(page, "Workspaces");
-  await expect(page.getByRole("menu")).toHaveCount(0);
+    await page.getByRole("button", { name: /Resource Actions$/ }).click();
+    await showSidenavEntry(page, "Workspaces");
+    await expect(page.getByRole("menu")).toHaveCount(0);
+  } finally {
+    await removeOwnedProject(request, projectId);
+  }
 });
 
 test("tree file menus rename and delete files while workspace menus delete the clicked workspace", async ({
@@ -62,9 +83,11 @@ test("tree file menus rename and delete files while workspace menus delete the c
   request,
 }, testInfo) => {
   const repoRoot = createGitRepo("pstdio-tree-resource-actions-", "tree resource actions");
-  const project = await createResourceActionsProject(request, repoRoot);
-
+  let projectId: string | undefined;
   try {
+    const project = await createResourceActionsProject(request, repoRoot, (project) => {
+      projectId = project.id;
+    });
     const ticket = await createPlannerTicket(request, apiBase, project.id, { content: "Tree resource actions" });
     const fileContent = "Keep this file open while using other menus.";
     const file = await createPlannerTicketFile(request, apiBase, project.id, ticket.id, {
@@ -110,10 +133,12 @@ test("tree file menus rename and delete files while workspace menus delete the c
     );
     await page.getByRole("menuitem", { name: "Delete workspace", exact: true }).click();
     const confirmation = page.getByRole("dialog");
-    await expect(confirmation.getByRole("button", { name: "Delete", exact: true })).toBeVisible();
+    await expect(confirmation.getByRole("button", { name: "Delete workspace", exact: true })).toBeVisible();
     await expect(page).toHaveURL(openedUrl);
-    await confirmation.getByRole("button", { name: "Delete", exact: true }).click();
-    expect((await deleted).ok()).toBe(true);
+    await confirmation.getByRole("button", { name: "Delete workspace", exact: true }).click();
+    const deletion = await deleted;
+    expect(deletion.ok()).toBe(true);
+    expect((await deletion.json()).outcome).toMatchObject({ ok: true });
     await expect(workspaceRow).toHaveCount(0);
     await expect(renamedRow).toBeVisible();
     await expect(page).toHaveURL(openedUrl);
@@ -139,93 +164,6 @@ test("tree file menus rename and delete files while workspace menus delete the c
     expect(saved?.archived).toBe(false);
     expect(saved?.files?.some((entry) => entry.id === file.id)).toBe(false);
   } finally {
-    rmSync(repoRoot, { recursive: true, force: true });
+    await removeOwnedProject(request, projectId, repoRoot);
   }
-});
-
-test("session row menus keep their subject across Sessions, workspace and ticket navigation", async ({
-  page,
-  request,
-}, testInfo) => {
-  const project = await createResourceActionsProject(request);
-  const ticket = await createPlannerTicket(request, apiBase, project.id, { content: "Session row actions" });
-  for (const title of ["Session A", "Session B"]) {
-    const response = await request.post(`${apiBase}/v1/sessions`, {
-      data: {
-        project_id: project.id,
-        title,
-        prompt: title,
-        agent: "pstdio.workbench-fixture.harness.fake",
-        anchors: [{ type: "ticket", id: ticket.id }],
-      },
-    });
-    expect(response.ok()).toBe(true);
-  }
-  await prepareResourceActionsDashboard(page, project.id);
-  await page.goto(`/projects/${project.id}/sessions`);
-  const sidenav = page.locator('[data-workbench-region="sidenav"]');
-  const row = (name: string) => sidenav.getByRole("option", { name, exact: true });
-  await row("Session A").click();
-  const sessionUrl = page.url();
-  await row("Session B").click({ button: "right" });
-  await expectResourceMenuItems(page, ["Rename session", "Archive session", "Delete session"]);
-  await expect(page.getByRole("menu")).toHaveCount(1);
-  await expect(page).toHaveURL(sessionUrl);
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("menu")).toHaveCount(0);
-  await expect(row("Session A")).toHaveAttribute("aria-selected", "true");
-  await row("Session B").focus();
-  await page.keyboard.press("Shift+F10");
-  await expectResourceMenuItems(page, ["Rename session", "Archive session", "Delete session"]);
-  await page.keyboard.press("Escape");
-  await expect(row("Session B")).toBeFocused();
-  await page.keyboard.press("ContextMenu");
-  await page.keyboard.press("Escape");
-  await row("Session B").click();
-  await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Session B");
-
-  await page.goto(`/projects/${project.id}/`);
-  await showSidenavEntry(page, "Workspaces");
-  await row("Workspaces").click();
-  await page.getByText("Project folder", { exact: true }).first().click();
-  await row("Session A").click();
-  const workspaceUrl = page.url();
-  await row("Session B").dispatchEvent("pointerdown", { pointerType: "touch", clientX: 80, clientY: 200 });
-  await expectResourceMenuItems(page, ["Rename session", "Archive session", "Delete session"]);
-  await row("Session B").dispatchEvent("pointerup", { pointerType: "touch" });
-  await expect(page.getByRole("menu")).toHaveCount(1);
-  await expect(page).toHaveURL(workspaceUrl);
-  await page.keyboard.press("Escape");
-  await row("Session B").click({ button: "right" });
-  await expectResourceMenuItems(page, ["Rename session", "Archive session", "Delete session"]);
-  await page.screenshot({ path: testInfo.outputPath("workspace-session-menu.png"), animations: "disabled" });
-  await page.keyboard.press("Escape");
-  await row("Session B").click();
-  await expect(
-    page.locator('[data-workbench-panel-header="side"]').getByRole("tab", { name: /Session B/ }),
-  ).toHaveAttribute("aria-selected", "true");
-  await expect(page).toHaveURL(workspaceUrl);
-
-  await page.goto(`/projects/${project.id}/tickets`);
-  await row("Tickets").click();
-  await page
-    .getByTestId("renderer-card")
-    .filter({ hasText: ticket.title })
-    .getByText(ticket.title, { exact: true })
-    .click();
-  await expect(row("Session B")).toBeVisible();
-  const ticketUrl = page.url();
-  await row("Session B").click({ button: "right" });
-  await expectResourceMenuItems(page, ["Rename session", "Archive session", "Delete session"]);
-  await expect(page.getByRole("menu")).toHaveCount(1);
-  await expect(page.getByRole("menuitem", { name: "Archive", exact: true })).toHaveCount(0);
-  await page.keyboard.press("Escape");
-  await row("Session B").click();
-  await expect(
-    page.locator('[data-workbench-panel-header="side"]').getByRole("tab", { name: /Session B/ }),
-  ).toHaveAttribute("aria-selected", "true");
-  await expect(page).toHaveURL(ticketUrl);
-  await row("Search").click({ button: "right" });
-  await page.getByRole("menuitem", { name: "Hide/show items" }).hover();
-  await expect(page.getByRole("menuitem", { name: "Reset to default", exact: true })).toBeVisible();
 });

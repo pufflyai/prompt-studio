@@ -1,4 +1,11 @@
-import type { DataTableRendererSettings, ViewFilterGroup, ViewSort } from "@pstdio/sdk/extensions";
+import type {
+  DataTableRendererChartOptions,
+  DataTableRendererChartValue,
+  DataTableRendererImageOptions,
+  DataTableRendererSettings,
+  ViewFilterGroup,
+  ViewSort,
+} from "@pstdio/sdk/extensions";
 import type { ReactNode } from "react";
 import type { CollectionPageControl } from "../collection-view/collection-page";
 import type { CollectionSavedView, CollectionViewsSource } from "../collection-view/collection-view-types";
@@ -60,7 +67,12 @@ export interface DataTableDiffValue {
   deletions: number;
 }
 
+export type DataTableChartValue = DataTableRendererChartValue;
+
 export type DataTableColumnRenderer =
+  | DataTableRendererChartOptions
+  /** Shows image thumbnails sized to the row height, with a larger preview on click. */
+  | DataTableRendererImageOptions
   | { type: "json" }
   | { type: "color-scale"; stops: DataTableColorScaleStop[] }
   | { type: "categorical-color"; categories: DataTableCategoricalColor[] }
@@ -100,6 +112,8 @@ export interface DataTableCellContext {
 }
 
 export interface DataTableCellContextAction {
+  /** Start actions requiring a browser user gesture before the menu closes. */
+  runOnSelect?: boolean;
   label: string;
   icon?: ReactNode;
   destructive?: boolean;

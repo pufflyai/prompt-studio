@@ -25,7 +25,10 @@ export interface NavigationTargetViewer extends Pick<ViewLocation, "section" | "
   /** Expected current resource. Omit only for a resource-free Main landing. */
   from?: ResourceRef;
   resource: ResourceRef;
-  /** Destination resource page when changing the current Main page content. */
+  /** Destination resource page when changing the current Main page content.
+   * For command results this is a Main-only hint: captured panel viewers keep
+   * their binding and do not navigate Main. The host still guards from/current-viewer identity.
+   */
   page?: PageRef;
 }
 

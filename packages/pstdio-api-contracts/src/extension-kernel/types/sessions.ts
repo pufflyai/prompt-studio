@@ -97,10 +97,14 @@ export interface ExtensionSessionSummary {
 }
 
 export interface ExtensionSessionQuery {
+  /** Case-insensitive literal title substring, applied before pagination. */
+  search?: string;
   status?: SessionStatus[];
   agent?: string;
   workspaceId?: string;
   anchor?: Pick<ResourceRef, "type" | "id" | "extensionId" | "projectId">;
+  /** Include sessions in workspaces linked to the anchor, in the same deduplicated page. */
+  includeWorkspaceAnchors?: boolean;
   /** Default created. All orders use id descending to break ties. */
   orderBy?: "created" | "lastActivity" | "updated";
   /** Inclusive ISO timestamp bounds. */
@@ -161,6 +165,8 @@ export interface ExtensionSessionsApi extends ExtensionSessionControlsApi {
     prompt?: string;
     harness?: ExtensionHarnessInput;
     workspaceId?: string;
+    /** Omit for this host, or use an account device returned by account.devices(). */
+    deviceId?: string;
     anchors?: ResourceAnchor[];
     attachments?: SessionAttachmentRef[];
     originalSessionId?: string;

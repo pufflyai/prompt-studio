@@ -1,5 +1,12 @@
 import type { WebviewKeyboardShortcut } from "pstdio-api-contracts/extension-kernel";
 
+export const isEditableKeyboardTarget = (target: EventTarget | null) =>
+  Boolean(
+    (target as Element | null)?.closest?.(
+      'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="combobox"], [role="textbox"]',
+    ),
+  );
+
 /** Dialogs and menus keep ownership of their keys before a host shortcut may enter. */
 export const hasLocalKeyboardOwner = (document: Document) =>
   [

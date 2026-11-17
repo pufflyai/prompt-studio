@@ -8,7 +8,7 @@
     "prebuild": "bun run typegen:tokens",
     "typecheck": "bun check -b",
     "lint": "bun run typecheck && biome check . && bun scripts/check-module-isolation.ts",
-    "test": "bun ../../scripts/ci/run-bun-tests.ts --conditions production --silent --tsconfig-override tsconfig.app.json",
+    "test": "bun ../../scripts/test.ts --scope pstdio-dashboard",
     "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --conditions production --coverage --tsconfig-override tsconfig.app.json",
     "preview": "vite preview",
     "typegen:tokens": "chakra typegen ../ui/src/theme/theme.ts",
@@ -29,8 +29,7 @@
     "pstdio-extensions": "workspace:*",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "react-i18next": "^16.5.4",
-    "yaml": "2.9.0"
+    "react-i18next": "^16.5.4"
   },
   "devDependencies": {
     "@chakra-ui/cli": "^3.30.0",
@@ -38,12 +37,17 @@
     "@types/node": "^24.10.1",
     "@types/react": "19.2.3",
     "@types/react-dom": "19.2.3",
+    "@types/react-test-renderer": "^19.1.0",
     "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^5.2.0",
     "babel-plugin-react-compiler": "^1.0.0",
     "typescript": "6.0.2",
+    "react-test-renderer": "19.2.4",
     "vite": "^8.3.1",
     "ws": "^8.21.3",
     "@pstdio/canvas": "workspace:*"
+  },
+  "exports": {
+    "./testing": "./src/testing.ts"
   }
 }

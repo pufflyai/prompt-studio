@@ -95,6 +95,12 @@ export const WorkChoices = (props: {
 }) => {
   const { selected, installed, disabled, onChange, choices = extensions } = props;
   const { t } = useTranslation("common");
+  const names = [
+    ...new Set([
+      ...Object.keys(choices).filter((name) => installed.includes(`pstdio.${name}`)),
+      ...onboardingExtensions(selected),
+    ]),
+  ];
   return (
     <Stack gap="xl">
       <Stack gap="xs" role="group" aria-label={t("onboarding.workAreas")}>
@@ -115,10 +121,8 @@ export const WorkChoices = (props: {
       </Stack>
       <Stack gap="xs" role="region" aria-label={t("onboarding.extensions")}>
         {[true, false].map((existing) => {
-          const names = onboardingExtensions(selected).filter(
-            (name) => installed.includes(`pstdio.${name}`) === existing,
-          );
-          if (!names.length) return null;
+          const group = names.filter((name) => installed.includes(`pstdio.${name}`) === existing);
+          if (!group.length) return null;
           return (
             <Stack key={String(existing)} gap="xs">
               <Text textStyle="label/S/medium" color="fg.muted">
@@ -127,7 +131,7 @@ export const WorkChoices = (props: {
               <SimpleCard>
                 <SimpleCardBody>
                   <Stack gap="xs">
-                    {names.map((name) => {
+                    {group.map((name) => {
                       const entry = choices[name];
                       return (
                         <HStack key={name} gap="xs">

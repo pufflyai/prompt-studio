@@ -6,6 +6,7 @@ import { type ScaleFixture, startScaleRuntime } from "./storage-scale-runtime";
 
 interface StoredShape {
   count: number;
+  unadopted: number;
   historyCounts: Record<string, number>;
   minBytes: number;
   medianBytes: number;
@@ -25,6 +26,7 @@ export const verifyScaleFixture = async (home: string, kind: Workload) => {
         input: { action: "stats", planner: owner.index === 9 },
       });
       assert.equal(value.count, owner.rows);
+      assert.equal(value.unadopted, 0);
       assert.deepEqual(value.historyCounts, { "3": owner.rows });
       if (kind === "rich") {
         assert(value.medianBytes >= 2_048);

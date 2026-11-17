@@ -5,7 +5,9 @@ import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from
 import type { DashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
 import {
   getDashboardExtensionsReadyProjectId,
+  getDashboardExtensionsRegisteredProjectId,
   subscribeDashboardExtensionsReadyProject,
+  subscribeDashboardExtensionsRegisteredProject,
 } from "@/shared/extensions/extension-readiness";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 
@@ -31,12 +33,12 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
       ctx.context.set("project.open", true);
 
       let generation = 0;
-      let readyUnsubscribe: (() => void) | undefined;
+      let waitingUnsubscribe: (() => void) | undefined;
       let selectionUnsubscribe: (() => void) | undefined;
 
       const disposePending = () => {
-        readyUnsubscribe?.();
-        readyUnsubscribe = undefined;
+        waitingUnsubscribe?.();
+        waitingUnsubscribe = undefined;
         selectionUnsubscribe?.();
         selectionUnsubscribe = undefined;
       };
@@ -73,21 +75,22 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
           // A user can navigate through the core shell while an extension URL waits.
           // That committed location takes precedence over the delayed restore.
           if (ctx.pages.store.getState().location) {
-            readyUnsubscribe?.();
-            readyUnsubscribe = undefined;
+            waitingUnsubscribe?.();
+            waitingUnsubscribe = undefined;
             return true;
           }
           // Registered extension pages may still belong to the previous project.
           // Restore only core page paths before this project's metadata arrives,
           // preserving extension URLs and saved parents until their pages register.
-          if (
-            getDashboardExtensionsReadyProjectId(ctx) !== projectId &&
-            !isCorePageLocation(ctx.pageLocations.getBootLocation(projectId))
-          ) {
+          // This project's registered pages can serve a URL while a newer catalog read
+          // loads; a URL they cannot serve waits for that newest read.
+          const location = ctx.pageLocations.getBootLocation(projectId);
+          const registered = getDashboardExtensionsRegisteredProjectId(ctx) === projectId && location !== undefined;
+          if (getDashboardExtensionsReadyProjectId(ctx) !== projectId && !registered && !isCorePageLocation(location)) {
             return false;
           }
-          readyUnsubscribe?.();
-          readyUnsubscribe = undefined;
+          waitingUnsubscribe?.();
+          waitingUnsubscribe = undefined;
           batchWorkbenchChanges(() => {
             const overlay = ctx.layout.getLayout().regions.overlay;
             ctx.pageLocations.boot(projectId);
@@ -100,7 +103,12 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
         };
 
         if (!boot()) {
-          readyUnsubscribe = subscribeDashboardExtensionsReadyProject(ctx, boot);
+          const registered = subscribeDashboardExtensionsRegisteredProject(ctx, boot);
+          const ready = subscribeDashboardExtensionsReadyProject(ctx, boot);
+          waitingUnsubscribe = () => {
+            registered();
+            ready();
+          };
         }
       };
 

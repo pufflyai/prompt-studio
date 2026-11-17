@@ -1,7 +1,18 @@
 import { describe, expect, test } from "bun:test";
 import { findReservedKeybindingConflict } from "pstdio-extensions";
+import { createWebviewKeyboardShortcuts } from "../react/keybindings/webview-keyboard-shortcuts";
 import { getNavigationTargetKey } from "./registries/navigation/navigation-target-key";
 import { createWorkbench } from "./workbench-core";
+
+test("the command palette stays available while editing a note, including inside a webview", async () => {
+  const workbench = createWorkbench();
+  workbench.context.set("inputFocus", true);
+  const shortcuts = createWebviewKeyboardShortcuts(workbench);
+  const shortcut = shortcuts.shortcuts.find((shortcut) => shortcut.key === "P");
+  expect(shortcut).toBeDefined();
+  await shortcuts.dispatch({ id: shortcut!.id, repeat: false });
+  expect(workbench.commandPalette.isOpen()).toBe(true);
+});
 
 describe("workbench built-ins", () => {
   test("each built-in action has one default shortcut", () => {

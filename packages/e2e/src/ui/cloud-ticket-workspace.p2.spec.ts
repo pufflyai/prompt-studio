@@ -1,7 +1,7 @@
 import { existsSync, rmSync } from "node:fs";
-import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket } from "../helpers/planner-api";
+import { expect, test } from "../scripts/session-test";
 import { uiOrigin } from "../ui-server";
 import { enableCloudWorkspaceProvider } from "./helpers/cloud-workspace-provider";
 import { showSidenavEntry } from "./helpers/sidenav-navigation";
@@ -40,7 +40,7 @@ test("a plain-folder ticket creates a linked cloud workspace through its provide
     page.on("request", (request) => {
       if (/\/v1\/workspaces\/[^/]+\/diff/.test(request.url())) gitRequests.push(request.url());
     });
-    await page.goto(`/projects/${projectId}/extensions/pstdio.pstdio-planner/tickets`);
+    await page.goto(`/projects/${projectId}/extensions/pstdio.planner/tickets`);
     await page.getByTestId("renderer-card").getByText("Cloud workspace ticket", { exact: true }).click();
     await expect(page.getByRole("option", { name: "Project folder", exact: true })).toBeVisible();
     await page.getByText("Workspaces", { exact: true }).last().hover();
@@ -61,9 +61,9 @@ test("a plain-folder ticket creates a linked cloud workspace through its provide
         id: ticket.id,
         shorthand: ticket.shorthand,
         label: `${ticket.shorthand} ${ticket.title}`,
-        metadata: { resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" } },
+        metadata: { resourceParent: { type: "view", viewId: "pstdio.planner.view.tickets" } },
         projectId,
-        extensionId: "pstdio.pstdio-planner",
+        extensionId: "pstdio.planner",
         role: "primary",
       },
     ];
@@ -80,7 +80,7 @@ test("a plain-folder ticket creates a linked cloud workspace through its provide
     });
     expect(workspace.provider_ref_json).toEqual({ version: 1, data: { environment: workspace.id, params } });
     await expect(page.locator('iframe[title="Workspace action"]')).toBeHidden();
-    await workspaceNavigation.click();
+    await (await showSidenavEntry(page, "Workspaces")).click();
     await expect(
       page
         .getByRole("region", { name: "Main", exact: true })

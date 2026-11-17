@@ -9,8 +9,9 @@ import {
   type WebviewEditingSnapshot,
 } from "pstdio-api-contracts/extension-kernel";
 import type { HostEventPublisher } from "pstdio-extensions/bridge/host";
-import type { WorkbenchCore, WorkbenchPanelInstance } from "../../core";
-import { settingsLeaveGuard } from "../../react/settings/settings-leave-guard";
+import type { settingsLeaveGuard } from "../../react/settings/settings-leave-guard";
+
+import { editingSequence } from "./editing-sequence";
 
 interface Member {
   id: string;
@@ -68,6 +69,7 @@ const publish = (document: EditingDocument, accepted?: { member: Member; sequenc
 };
 
 const preview = (member: Member, input: Extract<WebviewEditingSessionParams, { changes: unknown }>) => {
+  if (!editingSequence(member).preview(input.sequence)) return;
   const document = member.document;
   const draft = applyEditingChanges(document.value, document.previews.get(member) ?? []);
   const next = applyEditingChanges(draft, input.changes);
@@ -80,17 +82,19 @@ const preview = (member: Member, input: Extract<WebviewEditingSessionParams, { c
 };
 const commit = (member: Member, input: Extract<WebviewEditingSessionParams, { changes: unknown }>) => {
   const document = member.document;
-  const changes = [...(document.previews.get(member) ?? []), ...input.changes];
+  const ownPreview = editingSequence(member).complete(input.sequence);
+  const changes = [...(ownPreview ? (document.previews.get(member) ?? []) : []), ...input.changes];
   const value = applyEditingChanges(document.value, changes);
   const previews = new Map(document.previews);
-  previews.delete(member);
+  if (ownPreview) previews.delete(member);
   const rebased = rebaseEditingChanges(value, previews);
   document.value = value;
   document.previews = rebased.drafts;
   if (changes.length) document.revision++;
   publish(document, { member, sequence: input.sequence });
 };
-const cancel = (member: Member) => {
+const cancel = (member: Member, sequence?: number) => {
+  if (!editingSequence(member).cancel(sequence)) return;
   const document = member.document;
   if (!document.previews.has(member)) return;
   const previews = new Map(document.previews);
@@ -128,8 +132,9 @@ const createDocument = (owner: Owner, key: string, input: OpenRequest, execute: 
   return document;
 };
 
-const createSessions = () => {
+export const createLegacyEditingSessions = (retiring: () => boolean) => {
   const documents = new Map<string, EditingDocument>();
+  let closed = false;
   const connections = new WeakMap<HostEventPublisher, Map<string, Member>>();
   const clean = (document: EditingDocument) => {
     if (!document.members.size && !document.writing && document.savedRevision === document.revision)
@@ -137,11 +142,14 @@ const createSessions = () => {
   };
   const close = (member: Member) => {
     const document = member.document;
-    member.unregister?.();
     document.members.delete(member);
     connections.get(member.events)?.delete(member.id);
-    cancel(member);
-    clean(document);
+    try {
+      member.unregister?.();
+    } finally {
+      cancel(member);
+      clean(document);
+    }
   };
   const flush = (document: EditingDocument) => {
     if (!document.writing && document.savedRevision === document.revision) return Promise.resolve();
@@ -233,55 +241,75 @@ const createSessions = () => {
     }
     return snapshot(document);
   };
-  return (owner: Owner) => ({
-    async request(input: WebviewEditingSessionParams, execute: EditingDocument["execute"]) {
-      if (input.operation === "open") return open(owner, input, execute);
-      const member = connection(owner.events).get(input.sessionId);
-      if (!member && input.operation === "close") return;
-      if (!member) throw fail("editing_session_closed");
-      if (member.document.scope !== ownerScope(owner)) throw fail("editing_session_closed");
-      const document = member.document;
-      if (input.operation === "close") {
-        close(member);
-        return;
-      }
-      switch (input.operation) {
-        case "preview":
-          preview(member, input);
-          break;
-        case "cancel":
-          cancel(member);
-          break;
-        case "refresh":
-          return refresh(document, input);
-        case "commit":
-          commit(member, input);
-          await flush(document);
-          break;
-        case "save":
-          await flush(document);
-          break;
-      }
-      return snapshot(document);
-    },
+  const isClosed = () => closed || retiring();
+  const assertOpen = () => {
+    if (isClosed()) throw fail("editing_session_closed");
+  };
+  const memberFor = (owner: Owner, id: string) => {
+    const member = connections.get(owner.events)?.get(id);
+    if (member && member.document.scope !== ownerScope(owner)) throw fail("editing_session_closed");
+    return member;
+  };
+  const applyRequest = async (member: Member, input: WebviewEditingSessionParams) => {
+    const document = member.document;
+    switch (input.operation) {
+      case "preview":
+        preview(member, input);
+        break;
+      case "cancel":
+        cancel(member, input.sequence);
+        break;
+      case "refresh":
+        return refresh(document, input);
+      case "commit":
+        commit(member, input);
+        await flush(document);
+        break;
+      case "save":
+        await flush(document);
+        break;
+    }
+    return snapshot(document);
+  };
+  const request = async (owner: Owner, input: WebviewEditingSessionParams, execute: EditingDocument["execute"]) => {
+    if (isClosed() && input.operation === "close") return;
+    assertOpen();
+    if (input.operation === "open-command" || input.operation === "execute")
+      throw fail("editing_operation_not_supported");
+    if (input.operation === "open") return open(owner, input, execute);
+    const member = memberFor(owner, input.sessionId);
+    if (!member && input.operation === "close") return;
+    if (!member) throw fail("editing_session_closed");
+    if (input.operation === "close") {
+      close(member);
+      return;
+    }
+    return applyRequest(member, input);
+  };
+  const forOwner = (owner: Owner) => ({
+    request: (input: WebviewEditingSessionParams, execute: EditingDocument["execute"]) =>
+      request(owner, input, execute),
   });
-};
-
-const sessions = new WeakMap<WorkbenchCore, ReturnType<typeof createSessions>>();
-export const createWorkbenchEditingSessionAdapter = (input: {
-  workbench: WorkbenchCore;
-  extensionId?: string;
-  projectId?: string;
-  hostEvents?: HostEventPublisher;
-  placement?: WorkbenchPanelInstance;
-}) => {
-  const { workbench, extensionId, projectId, hostEvents } = input;
-  if (!extensionId || !projectId || !hostEvents) return;
-  let owner = sessions.get(workbench);
-  if (!owner) {
-    owner = createSessions();
-    sessions.set(workbench, owner);
-  }
-  const settings = input.placement?.resource?.type === "workbench-settings" ? settingsLeaveGuard(workbench) : undefined;
-  return owner({ extensionId, projectId, events: hostEvents, settings, title: input.placement?.resource?.label });
+  return {
+    forOwner,
+    async dispose() {
+      if (closed) return;
+      closed = true;
+      const errors: unknown[] = [];
+      const pending = [...documents.values()];
+      for (const document of pending)
+        for (const member of [...document.members]) {
+          try {
+            close(member);
+          } catch (error) {
+            errors.push(error);
+          }
+        }
+      const results = await Promise.allSettled(pending.map(flush));
+      documents.clear();
+      for (const result of results) if (result.status === "rejected") errors.push(result.reason);
+      if (errors.length === 1) throw errors[0];
+      if (errors.length) throw new AggregateError(errors, "Structured editing could not finish");
+    },
+  };
 };

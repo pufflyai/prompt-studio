@@ -59,5 +59,7 @@ export const createWorkspaceSessionsDBService = (db: DbClient) => {
       .where(inArray(sessions.status, ["in_progress", "awaiting_input"]));
     return rows.map((row) => row.id);
   };
-  return { link, getWorkspaceBySessionId, listByWorkspace, listLinks, activeWorkspaceIds };
+  const listSessionLinks = (sessionId: string) =>
+    db.select().from(workspace_sessions).where(eq(workspace_sessions.session_id, sessionId));
+  return { link, getWorkspaceBySessionId, listByWorkspace, listLinks, listSessionLinks, activeWorkspaceIds };
 };

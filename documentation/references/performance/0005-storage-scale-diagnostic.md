@@ -33,12 +33,18 @@ before accepted measurement; the small preparation group avoids thousands of
 setup commits without removing rows or edit rounds. The separately measured
 atomic operation always changes exactly 100 rows.
 
-Planner creation uses its public collection API, one resource per commit. Later
-Planner seed edits discover opaque record addresses through the public API and
-preserve those addresses in grouped commits. No code reconstructs a private
-collection address. The manifest describes generator inputs; Planner adds domain
-fields. `--verify-fixture` records actual stored counts, byte distributions, field
-counts and final history values after the full seed, in a process that then exits.
+Planner creates each ticket, with its core ticket number, through its public
+`create-ticket` command, in view order (rank, then ID), before any ticket gains
+fixture data. Its first edit then stores the generator row under the ticket's `scale`
+field beside Planner's own fields and sets the title and status the board shows;
+Planner's own body stays empty. Later Planner edits find tickets through the identity
+index and keep their opaque record addresses in grouped commits. No code reconstructs
+a private collection address. The manifest describes generator inputs; Planner adds
+domain fields. Creating a Planner ticket reads every existing ticket, so rich seeding
+takes noticeably longer; it is preparation and is not timed. `--verify-fixture`
+records actual stored counts, byte distributions, field counts and final history
+values after the full seed, in a process that then exits. It fails if Planner holds a
+ticket the fixture did not adopt.
 
 A separate `--churn` seed creates and edits another complete set of distinct IDs,
 then deletes them. It retains all live rows. Never use churn as a smaller live
@@ -49,55 +55,49 @@ The focus predicate selects 100 distributed rows. The broader predicate selects
 more than 100, so page two is distinct and sorting is real. Sort ties use record
 ID. B view measurements target the 100,000-row owner. A also measures Planner.
 Simultaneous public queries target all ten owners.
+
+Every owner declares the shared `scaleStorageIndexes` before its first write. For
+Planner, the fixture adds them beside its commands, so Planner writes in this fixture
+also maintain these indexes. Fixture views use the paged collection contract, and
+fixture page, count and burst reads use `records.query` and `records.aggregate`. They
+read one bounded page and its counts, never the whole owner. When a write lands between
+a page and its counts, the read is repeated until both describe one revision. Planner
+fixture edits find ticket addresses through the identity index. Only fixture
+verification during preparation lists every stored row.
 The `all-owner-edit-burst` shard also submits one durable write per owner together,
-records each acknowledgement and fairness, then kills/reopens and restores them.
-Planner's legacy collection retry-identity gap remains an explicit failure.
+records each acknowledgement and fairness, then kills/reopens, retries each
+acknowledged write with its operation ID and restores them.
 
-## Exclusive machine timing window
+## Isolated measurements
 
-Use this protocol for PS-903 and later PS-904 through PS-909 evidence. A lock file
-alone does not pause another session.
+Collect accepted timings on an isolated runner. Finish builds and fixture
+preparation before measurement, run one diagnostic shard at a time, and retain
+machine/process inventories with the evidence. Preparation is not an accepted
+timing sample. Keep interrupted or contaminated results with an explicit
+exclusion reason instead of blending them into accepted summaries.
 
-1. List active sessions on the machine. Ask every owner to pause benchmarks,
-   builds and tests, including child processes and Docker jobs. Obtain explicit
-   acknowledgements, or a person's explicit confirmation that those sessions are
-   paused. No reply or elapsed time is not acknowledgement.
-2. Save an input JSON file with `sessionId`, `requiredPeers`,
-   `acknowledgements: [{sessionId, evidence}]` and `purpose`. A dedicated runner
-   with no peers must provide `isolatedRunnerEvidence`.
-3. Acquire the shared atomic lock and save its returned owner credential:
+The existing diagnostic requires a per-run `--timing-owner` credential. On the
+isolated runner, save an input file with its session ID, purpose and actual
+runner isolation evidence; the legacy peer arrays remain empty:
 
-   ```sh
-   bun packages/e2e/src/perf/storage-timing-window.ts acquire /path/ack.json > /path/owner.json
-   ```
+```json
+{
+  "sessionId": "<current-session-id>",
+  "purpose": "<diagnostic-shard>",
+  "requiredPeers": [],
+  "acknowledgements": [],
+  "isolatedRunnerEvidence": "<runner/job identity and isolation evidence>"
+}
+```
 
-   The default lock is the machine-wide temporary directory
-   `pstdio-exclusive-timing.lock`, shared across worktrees. Acquisition fails if
-   another owner holds it. Never steal a lock because its timestamp is old.
-4. Inspect host processes and Docker processes. Check leftover jobs as well as
-   agent status. Record the inventory and machine load. Stop only your own jobs
-   or jobs whose owner authorized stopping. Resolve unexplained benchmark,
-   build or test activity before collecting accepted timings.
-5. Finish fixture preparation, builds and tests before the measured window.
-   Run one diagnostic shard at a time. Pass `--timing-owner /path/owner.json`.
-   The driver checks machine, session and token and records entry/exit inventories.
-   Direct layer workers require the same credential through the driver's
-   environment. The lock coordinates participants; it cannot detect every
-   external workload. If another session resumes heavy work, invalidate the
-   affected samples, record the cause and arrange a new exclusive window.
-6. Save raw output and the acknowledgements with the report. Verify the lock is
-   still owned at completion. Release it explicitly, then tell peer owners the
-   window ended:
+Create the credential before invoking the diagnostic, then release it after its
+owned processes have ended:
 
-   ```sh
-   bun packages/e2e/src/perf/storage-timing-window.ts release /path/owner.json
-   ```
-
-Do not run tests or builds beside accepted benchmarks, even in another worktree.
-Fixture setup can overlap other setup owned by this session, but those periods
-are preparation and must not be reported as accepted timings. Keep interrupted
-or contaminated results with an explicit exclusion reason; never blend them into
-accepted summaries.
+```sh
+bun packages/e2e/src/perf/storage-timing-window.ts acquire /path/isolated-runner.json > /path/owner.json
+# Run the diagnostic with --timing-owner /path/owner.json.
+bun packages/e2e/src/perf/storage-timing-window.ts release /path/owner.json
+```
 
 ## Preparation and reproducible commands
 
@@ -174,7 +174,8 @@ and worker cleanup all consume that same allowance.
 | Case boundary | Included work |
 | --- | --- |
 | One database sample process | Database open/close, cold and warm operations, verification and shutdown. Fixture construction and copying finish before the process starts. Ten independent cold cases are still required. |
-| Application and sync layer controllers | These still include some fixture work inside their old case wrappers. PS-909 must move initial relay download, extension/view preparation and sync-layer seeding outside measured workers before claiming compliance with the corrected boundary. |
+| Application cases | Runtime startup, the offered background, foreground operations, drain, restoration and reset propagation. Rich board and list cases also save Planner's view settings before the timer. Initial relay upload and download and the second device's extension installation finish in `--prepare-sync` first. |
+| Sync layer controllers | These still include sync-layer seeding inside their case wrappers. PS-909 must move it outside measured workers before claiming compliance with the corrected boundary. |
 
 Separate binary and fixture extension builds run before these cases under their existing build limits.
 Run `perf:storage-scale:build` again after changing the fixture consumer; seed and
@@ -189,7 +190,7 @@ At expiry the supervisor freezes its owned POSIX process group, finds descendant
 completion IPC handshake keeps a normally finishing worker alive until its tree
 can be inspected and terminated; an unexpected exit cannot pass. SIGINT/SIGTERM
 to the supervisor also terminate its active case. SIGKILL of the supervisor itself
-cannot run cleanup; reconcile its processes and timing lease before another run.
+cannot run cleanup; verify its owned processes have ended before another run.
 
 Tree inspection, Docker control calls and reaping each have independent
 one-second administrative limits. OS scheduling and termination delivery may
@@ -258,15 +259,14 @@ virtualized rows, labels and controls are ready.
 
 The second-page driver clicks the native table's next-page control and checks the
 new first row and absence of the prior page's first row. Its API companion checks
-all 100 IDs, sort order and owner. Legacy client paging and unproved complete
-virtualized-row readiness remain failures; this is not evidence of indexed cursor
-paging.
+all 100 IDs, sort order and owner. The table requests each page from its provider.
+Unproved complete row readiness remains a failure.
 
 Every edit kind has separate public SDK and UI observations. The SDK timer starts
 at request and ends at durable local response. The first-write case performs no
 owner read after restart. UI timing starts at Save and waits for durable response
 and committed visible values. Assertions check titles, nested/tag/multiline
-summaries, membership and order. The legacy editor loads its owner before Save;
+summaries, membership and order. The editor loads its board page before Save, so
 requested cold UI edits are explicitly marked unavailable, even if fast. The
 separate direct cold SDK case prevents editor preparation from hiding hydration.
 
@@ -278,8 +278,25 @@ A scenario exception records the error and invalidates the fixture rather than
 retrying or continuing with unproved restoration. Missing remaining samples stay
 missing in the coverage ledger.
 
-`--sync` prepares a local TLS relay and a second full device through public APIs.
-Initial upload/download is separate preparation. The offered incoming workload is
+Sync shards need a prepared sync service. `--prepare-sync` starts it for one seeded
+home: a local TLS relay and a second full device, signed in through public APIs. It
+returns once the fixture is uploaded, the second device has installed every owner
+and downloaded the whole fixture. The service keeps running between shards, so each
+`--sync` case attaches to two devices that are already synced; initial upload,
+download and extension installation stay outside the 60-second case cap.
+`--stop-sync` stops it, waits for its devices to stop and removes the second device;
+it also clears a service that crashed or was interrupted while preparing. Sync cases
+refuse a service that is still preparing, has stopped, or runs another runtime build.
+Run idle shards before preparing sync: the home stays signed in to the service's relay,
+also after it stops, so idle measurement afterwards needs a fresh seed.
+
+```sh
+bun packages/e2e/src/perf/storage-scale.diagnostic.ts --fixture small --output /path/evidence/sync-service --home /path/native-small --prepare-sync --timing-owner /path/owner.json
+bun packages/e2e/src/perf/storage-scale.diagnostic.ts --fixture small --output /path/evidence/incoming-board --home /path/native-small --measure --profile native --operation board --background incoming --sync --timing-owner /path/owner.json
+bun packages/e2e/src/perf/storage-scale.diagnostic.ts --fixture small --output /path/evidence/sync-service --home /path/native-small --stop-sync --timing-owner /path/owner.json
+```
+
+The offered incoming workload is
 100 operations at 100 ms intervals over ten seconds. Fold pressure offers 129
 writes to cross the current persisted threshold. Driver offered/completed counts,
 failures, backlog and drain are recorded. Drain requires both sync statuses and
@@ -336,7 +353,7 @@ and that each rebuilt record matches the generator and its projection row. It ru
 in preparation; the first resource access in a sample remains its measured write.
 
 `record-read-scale.diagnostic.ts` measures indexed reads on the same fixtures. It is a
-diagnostic and does not take the timing window. `PSTDIO_SCALE_READ_COLD` selects the first
+diagnostic and does not use the timing-owner credential. `PSTDIO_SCALE_READ_COLD` selects the first
 read in the fresh process: `view`, `second-page`, `point`, `aggregate` or `all-owner-burst`.
 A view is one 100-row page plus its selected and total counts. Each sample then records ten
 warm runs of every read, cursor navigation, the all-owner burst, views while another owner
@@ -406,7 +423,7 @@ coverage failures instead of fabricated memory values. Observation and cleanup
 still fit within the existing case cap.
 
 Save commands, environment, exact commit, fixture manifests, full compressed input
-files, stored-shape verification, raw JSONL, stderr, screenshots, pause evidence,
+files, stored-shape verification, raw JSONL, stderr, screenshots, runner isolation evidence,
 control calibration and coverage ledger under the change-request report's
 `filesPath`. Record p50/p95/max and every individual failed sample. Keep native and
 constrained evidence separate. State which scenario matrix entries were not run,

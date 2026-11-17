@@ -7,7 +7,7 @@ export async function expectIndependentPlannerViews(input: {
   execute: (command: string, params: unknown) => Promise<unknown>;
 }) {
   const { baseUrl, projectId, headers, execute } = input;
-  const path = `${baseUrl}/v1/projects/${projectId}/boards/pstdio.pstdio-planner.view.tickets/views`;
+  const path = `${baseUrl}/v1/projects/${projectId}/boards/pstdio.planner.view.tickets/views`;
   const request = async (url: string, method = "GET", body?: unknown) => {
     const response = await fetch(url, {
       method,

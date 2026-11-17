@@ -5,6 +5,7 @@ const encodeQuery = (input: ExtensionSessionQuery) => {
   const params = new URLSearchParams();
   if (input.status !== undefined) params.set("status", input.status.join(","));
   for (const key of [
+    "search",
     "agent",
     "workspaceId",
     "createdFrom",
@@ -13,6 +14,7 @@ const encodeQuery = (input: ExtensionSessionQuery) => {
     "cursor",
     "limit",
     "includeArchived",
+    "includeWorkspaceAnchors",
     "orderBy",
   ] as const) {
     if (input[key] !== undefined) params.set(key, String(input[key]));

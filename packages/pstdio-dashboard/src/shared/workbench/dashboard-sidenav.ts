@@ -31,11 +31,6 @@ export const setDashboardSidenavSelection = (ctx: WorkbenchModuleContext, nodeId
   if (!ctx.views.getView(dashboardWidgetIds.dashboardSidenav)) return;
   ctx.treeViews.setSelectedNode(dashboardWidgetIds.dashboardSidenav, nodeId);
 };
-const syncSidenavForActiveMode = (ctx: WorkbenchModuleContext) => {
-  const mode = ctx.modes.getActiveModeId();
-  if (!mode) return;
-  updateDashboardSidenav(ctx);
-};
 export const DASHBOARD_SIDENAV_REGION_SIZE = { defaultPx: 250, minPx: 200, maxPx: 360 };
 const isHome = (node: TreeNode) =>
   node.target?.kind === "page" &&
@@ -59,8 +54,6 @@ const registerSidenavWidget = (ctx: WorkbenchModuleContext) => {
         getStructure: () => navigation.getStructure("content"),
         getHeaderStructure: () => homeFirst(navigation.getStructure("header")),
         getFooterStructure: () => navigation.getStructure("footer"),
-        defaultExpandedNodeIds: ["workspace-sessions"],
-        defaultExpandedSectionIds: ["sessions-wrap"],
         canMove: ({ source, destination }) => source.moveScope === destination.moveScope,
         getHeader: async (context) =>
           homeFirst(
@@ -89,24 +82,42 @@ const registerSidenavWidget = (ctx: WorkbenchModuleContext) => {
 // Explicit mode chrome replaces or hides the host navigation at the region boundary.
 export const registerDashboardSidenav = (ctx: WorkbenchModuleContext) => {
   registerSidenavWidget(ctx);
+  const appliedNodeDefaults = new Set<string>();
+  const syncSidenavForActiveMode = () => {
+    if (!ctx.modes.getActiveModeId()) return;
+    for (const nodeId of createLevelNavigation(ctx).getDefaultExpandedNodeIds()) {
+      if (appliedNodeDefaults.has(nodeId)) continue;
+      appliedNodeDefaults.add(nodeId);
+      ctx.treeViews.setNodeExpanded(dashboardWidgetIds.dashboardSidenav, nodeId, true);
+    }
+    updateDashboardSidenav(ctx);
+  };
   const refresh = () => {
     if (ctx.views.getView(dashboardWidgetIds.dashboardSidenav))
       ctx.views.refreshView(dashboardWidgetIds.dashboardSidenav);
   };
-  const modeSubscription = ctx.modes.onDidChangeActive(() => syncSidenavForActiveMode(ctx));
-  // Resource-scoped contributions read the primary resource (e.g. the sessions list scopes to the
-  // open workspace), but the tree only recomputes on refresh. A workspace→workspace switch
-  // crosses no mode boundary and changes no data, so without this the list keeps the previous
-  // primary's scope (or none, showing every session). The primary change fires after placement,
-  // unlike the beforeOpen refresh that runs before it.
-  const primaryResourceSubscription = ctx.onDidChangePrimaryResource(refresh);
-  const pageSubscription = ctx.pages.store.subscribeSelector(
-    (state) => state.location,
-    () => updateDashboardSidenav(ctx),
-  );
+  const navigation = createLevelNavigation(ctx);
+  const readScope = () =>
+    JSON.stringify([ctx.pages.store.getState().projectId, ctx.modes.getActiveModeId(), navigation.getReadKey()]);
+  let scope = readScope();
+  const syncNavigation = () => {
+    const next = readScope();
+    if (next === scope) return;
+    scope = next;
+    syncSidenavForActiveMode();
+  };
+  // Location and primary-resource updates can describe the same selection. Only changes
+  // to a contribution's declared data scope need another read; data events refresh below.
+  const modeSubscription = ctx.modes.onDidChangeActive(syncNavigation);
+  const primaryResourceSubscription = ctx.onDidChangePrimaryResource(syncNavigation);
+  const pageSubscription = ctx.pages.store.subscribeSelector((state) => state.location, syncNavigation);
   const unsubscribeDashboardData = subscribeSessionListData(refresh);
   const unsubscribeProject = subscribeDashboardSelectedProject(ctx, refresh);
-  const navigationContributionSubscription = ctx.navigationTrees.onDidChange(() => syncSidenavForActiveMode(ctx));
+  const navigationContributionSubscription = ctx.navigationTrees.onDidChange(() => {
+    scope = readScope();
+    syncSidenavForActiveMode();
+  });
+  syncSidenavForActiveMode();
   return {
     dispose: () => {
       modeSubscription.dispose();

@@ -1,5 +1,5 @@
 import type { KanbanRendererResourceRef } from "@pstdio/sdk/extensions";
-import { workbenchPanels } from "@pstdio/sdk/extensions";
+import { sessionBrowser } from "@pstdio/sdk/extensions";
 import type { AttributeDescriptor, KanbanRendererRow } from "@pstdio/ui/kanban-renderer";
 import {
   type MenuPath,
@@ -10,6 +10,7 @@ import {
 } from "@pstdio/workbench";
 import type { WorkbenchExtensionKanbanRendererAdapter } from "@pstdio/workbench/extensions";
 import { getApiClient } from "@/lib/api";
+import { getRuntimeCollections } from "@/lib/sync/collections";
 import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/extension-localization";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import { canonicalDashboardPageTarget, canonicalDashboardResource } from "@/shared/extensions/resource-identity";
@@ -120,7 +121,7 @@ const decorateAttribute = (
       if (resource.type === "session") {
         void ctx.navigation.openTarget({
           kind: "panel",
-          panel: workbenchPanels.projectSession,
+          panel: sessionBrowser.panels.conversation,
           resource: resource,
         });
       }
@@ -178,13 +179,17 @@ const attachCreatedFiles = async (input: {
   }
 };
 export const createDashboardKanbanAdapter = (input: {
+  owner?: ReturnType<typeof getRuntimeCollections>;
   ctx: WorkbenchModuleContext;
   executeCommand: ExecuteDashboardExtensionCommand;
   metadata: ResolvedWorkbenchExtensionMetadata;
   projectId: string;
 }) => {
   const { ctx, executeCommand, metadata, projectId } = input;
-  const menuRegistrations = buildDashboardExtensionMenuRegistrations(metadata).registrations;
+  const owner = input.owner ?? getRuntimeCollections();
+  const menuRegistrations = buildDashboardExtensionMenuRegistrations(metadata, (value, extensionId, args) =>
+    resolveLocalizableString(value, extensionId, args, owner, projectId),
+  ).registrations;
   const adapter: WorkbenchExtensionKanbanRendererAdapter = {
     createViewsProvider: (record) => createSharedBoardViews(projectId, record, metadata),
     decorateAttribute: (_record, attribute) => decorateAttribute(ctx, projectId, attribute),
@@ -196,7 +201,7 @@ export const createDashboardKanbanAdapter = (input: {
       if (!command) return runDefault();
       const args = { rowId: row.id };
       const context = resource ? { resource } : undefined;
-      const label = resolveLocalizableString(action.label, record.extensionId);
+      const label = resolveLocalizableString(action.label, record.extensionId, undefined, owner, projectId);
       if (Object.keys(command.command.params ?? {}).length > 0) {
         ctx.commandPalette.requestParams({ record: command, label, args, context });
         return;

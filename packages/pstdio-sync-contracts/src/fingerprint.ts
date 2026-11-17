@@ -14,7 +14,9 @@ export function canonicalJson(value: Json): string {
 }
 
 export async function fingerprint(value: Json) {
-  const bytes = new TextEncoder().encode(canonicalJson(value));
+  const encoded = canonicalJson(value);
+  if (typeof Bun !== "undefined") return new Bun.CryptoHasher("sha256").update(encoded).digest("hex");
+  const bytes = new TextEncoder().encode(encoded);
   const digest = await crypto.subtle.digest("SHA-256", bytes);
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }

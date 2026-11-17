@@ -53,31 +53,51 @@ export const runWorkspaceProvisioning = async <
   }
 };
 
-const projectProvisionQueues = new Map<string, Promise<void>>();
+const projectQueues = new Map<string, Promise<unknown>>();
+const pendingRemovals = new Map<string, number>();
+// Runs one project's provisioning and removal in order, so removal never interleaves with a config write.
+const inProjectWorkspaceQueue = <T>(projectId: string, task: () => Promise<T>) => {
+  const queued = (projectQueues.get(projectId) ?? Promise.resolve()).catch(() => undefined).then(task);
+  projectQueues.set(projectId, queued);
+  return queued.finally(() => {
+    if (projectQueues.get(projectId) === queued) projectQueues.delete(projectId);
+  });
+};
+
+/**
+ * Removes a project after its queued provisioning. Provisioning writes the folder config, so a removal
+ * running beside it could see the config written back. A pass that is already running skips its
+ * remaining workspaces, so removal waits for at most one workspace's provisioning.
+ */
+export const removeProjectAfterProvisioning = async <T>(projectId: string, task: () => Promise<T>) => {
+  pendingRemovals.set(projectId, (pendingRemovals.get(projectId) ?? 0) + 1);
+  try {
+    return await inProjectWorkspaceQueue(projectId, task);
+  } finally {
+    const remaining = (pendingRemovals.get(projectId) ?? 1) - 1;
+    if (remaining > 0) pendingRemovals.set(projectId, remaining);
+    else pendingRemovals.delete(projectId);
+  }
+};
+
 export const provisionProjectWorkspaces = (
   deps: ProvisionCoordinatorDeps,
   projectId: string,
   hooks: WorkspaceProvisioningHooks = defaultHooks(),
-) => {
-  const previous = projectProvisionQueues.get(projectId) ?? Promise.resolve();
-  const queued = previous
-    .catch(() => undefined)
-    .then(async () => {
-      for (const workspace of await deps.workspaceService.list(projectId)) {
-        if (workspace.provider_state !== "ready" || workspace.execution_kind !== "local" || !workspace.root_path)
-          continue;
-        await runWorkspaceProvisioning(
-          deps,
-          { projectId, workspace, repoPath: workspace.root_path },
-          { ...hooks, fireReadyAsync: () => {} },
-        );
-      }
-    });
-  projectProvisionQueues.set(projectId, queued);
-  return queued.finally(() => {
-    if (projectProvisionQueues.get(projectId) === queued) projectProvisionQueues.delete(projectId);
+) =>
+  inProjectWorkspaceQueue(projectId, async () => {
+    for (const workspace of await deps.workspaceService.list(projectId)) {
+      if (pendingRemovals.has(projectId)) return;
+      if (workspace.provider_state !== "ready" || workspace.execution_kind !== "local" || !workspace.root_path)
+        continue;
+      await runWorkspaceProvisioning(
+        deps,
+        { projectId, workspace, repoPath: workspace.root_path },
+        { ...hooks, fireReadyAsync: () => {} },
+      );
+    }
   });
-};
+
 export const scheduleProjectWorkspaceProvisioning = (
   deps: ProvisionCoordinatorDeps,
   projectId: string,

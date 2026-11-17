@@ -36,22 +36,3 @@ export const showSidenavEntry = async (page: Page, label: string) => {
   await page.keyboard.press("Escape");
   return getSidenavEntry(page, label);
 };
-
-// Navigation rows may be virtualized when extensions add more groups to the sidebar.
-export const scrollSidenavToEnd = async (page: Page) => {
-  await expect
-    .poll(async () => {
-      await page
-        .locator('[data-workbench-region="sidenav"] [data-scope="scroll-area"][data-part="viewport"]')
-        .evaluateAll((elements) => {
-          for (const element of elements) element.scrollTop = element.scrollHeight;
-        });
-      // Let the virtual tree publish the rows for the new scroll offset before
-      // checking visibility; the previous render can still contain Lab mode.
-      await page.evaluate(
-        () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
-      );
-      return page.getByRole("option", { name: "Lab mode", exact: true }).isVisible();
-    })
-    .toBe(true);
-};

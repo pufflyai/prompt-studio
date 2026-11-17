@@ -50,9 +50,9 @@ export type ExtensionClient = ReturnType<typeof createExtensionControlsClient> &
       installName: string,
       request: EnableInstalledExtensionRequest,
     ): Promise<EnableInstalledExtensionResponse>;
-    listAppearance(projectId: string): Promise<ListExtensionAppearanceResponse>;
+    listAppearance(projectId: string, options?: { signal?: AbortSignal }): Promise<ListExtensionAppearanceResponse>;
     listCommands(projectId: string): Promise<ListExtensionCommandsResponse>;
-    listProject(projectId: string): Promise<ListProjectExtensionsResponse>;
+    listProject(projectId: string, options?: { signal?: AbortSignal }): Promise<ListProjectExtensionsResponse>;
     upgradeProject(projectId: string, instanceId: string): Promise<UpgradeProjectExtensionResponse>;
     listConnections(projectId: string): Promise<ListExtensionConnectionsResponse>;
     configureConnection(
@@ -93,9 +93,9 @@ export const createExtensionClient = (
       method: "POST",
       body,
     }),
-  listAppearance: (projectId) => request(`/v1/projects/${projectId}/extensions/appearance`),
+  listAppearance: (projectId, options) => request(`/v1/projects/${projectId}/extensions/appearance`, options),
   listCommands: (projectId) => request(`/v1/projects/${projectId}/extensions/commands`),
-  listProject: (projectId) => request(`/v1/projects/${projectId}/extensions`),
+  listProject: (projectId, options) => request(`/v1/projects/${projectId}/extensions`, options),
   upgradeProject: (projectId, instanceId) =>
     request(`/v1/projects/${projectId}/extensions/${encodeURIComponent(instanceId)}/upgrade`, { method: "POST" }),
   listConnections: (projectId) => request(`/v1/projects/${projectId}/extension-connections`),

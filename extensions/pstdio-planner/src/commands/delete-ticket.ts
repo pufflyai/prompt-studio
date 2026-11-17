@@ -1,7 +1,7 @@
 import { defineCommand, l10n } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
-import { plannerTicketsChanged } from "../events";
+import { emitPlannerTicketsChanged } from "../events";
 import { ticketMenuSlots } from "../resource-kinds";
 import { ticketRefFromCommandContext } from "./ticket-command-ref";
 
@@ -11,7 +11,7 @@ export const deleteTicketCommand = defineCommand({
   id: "delete-ticket",
   mutating: true,
   title: "Delete ticket",
-  cli: { globalAliases: [["tickets", "delete"]], examples: ["pstdio tickets delete --id PS-1"] },
+  cli: { examples: ["pstdio pstdio.planner delete-ticket --id PS-1"] },
   menus: [
     {
       slot: ticketMenuSlots.headerOverflow,
@@ -27,7 +27,7 @@ export const deleteTicketCommand = defineCommand({
     await ticketsCollection(ctx).delete(id);
     if (ticket) await deleteUnusedLinkedWorkspaces(ctx, [ticket]);
     await ctx.resources.removed({ type: "ticket", id });
-    await ctx.events.emit(plannerTicketsChanged, { ticketId: id });
+    await emitPlannerTicketsChanged(ctx, { ticketId: id });
     return { id };
   },
 });

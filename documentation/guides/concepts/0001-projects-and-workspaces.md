@@ -20,6 +20,8 @@ Deleting a project removes its saved host data and its matching `.pstdio/config.
 
 Every project has a default workspace. For a project opened from a local folder, it is that folder. Sessions in it share the same files. When one agent changes a file, the others see the change. A folder workspace has no separate branch and no diff or merge actions. It also does not sandbox the agent: the agent can reach anything its own process can reach.
 
+Opening project files keeps the project navigation. Opening a workspace view replaces it with that workspace's sessions. Use the return control above the sessions to return to project navigation.
+
 A provider can also create a project whose default workspace is remote. That project has no local project folder. Its file access and other actions depend on the provider. See [Local and remote work](0004-local-and-remote.md).
 
 Other workspaces come from workspace providers. A provider creates the workspace and owns its files.
@@ -31,6 +33,8 @@ Other workspaces come from workspace providers. A provider creates the workspace
 | Remote environment | Another machine | The extension that provides it |
 
 A Git worktree gives a session its own copy of the repository on a new branch. Work there does not touch your folder until you merge it with `pst workspaces merge`. Git worktrees need a repository with at least one commit. If the project is a subfolder of a repository, the session works in the same subfolder of the worktree.
+
+The installed Git Workspaces extension supplies these workspaces. Prompt Studio owns their identity, permissions, readiness and session cancellation; the extension owns Git branch and checkout operations. Disabling the extension preserves existing folders, branches and session history. Provider operations become available again when you re-enable it. Your default project folder remains available without a Git provider.
 
 Workspaces get short names that you can pass to `pst` commands instead of their IDs:
 
@@ -46,13 +50,13 @@ Remote environments are covered in [Local and remote work](0004-local-and-remote
 
 ## Files and Workspaces in the sidebar
 
-The bundled Workspaces extension adds a **Project Workspaces** group. **Files** opens the project folder directly. It has no Changes tab. **Workspaces** groups workspace rows by device: this device first, online devices by name, then offline devices by last seen. Expand a workspace to see its sessions, or choose Compact for an ungrouped list without sessions.
+The bundled Workspaces extension adds a **Project Workspaces** group. **Files** opens the project folder directly. It has no Changes tab. **Workspaces** groups workspace rows by device: this device first, online devices by name, then offline devices by last seen. Choose Compact for an ungrouped list. Sessions appear inside a workspace’s own navigation when you open it; project Files keeps project navigation.
 
 Each row shows its kind, short name, title, related ticket, type and creation date. Local workspaces offer Open, Open session, Rename and Delete when the provider supports them. Workspaces on another device open synced session history. Their files and execution actions remain on the owning device.
 
 Files uses the shared searchable tree and editor. Create files or folders from the tree, rename inline, drag entries between folders, and confirm deletion before removing them. Save text with the editor's Save action or shortcut. Copy paths and Reveal in Finder use the host's supported actions. Git worktrees also have a Changes panel; file bodies load as you open them.
 
-Right-click a device header to open its menu. Choose **This device** or **Device details** to see presence and capacity in a modal. **Create workspace** is available on this device and opens a creation modal, keeping the current page in place until creation succeeds. The forms use the standard dialog header and Cancel/primary actions. Online counts come from that device. Offline details show last seen and the last observed limit, with capacity marked unavailable. Settings → Workspaces changes the serving device's limit. Turn on **Limit workspaces** to enable the count, then apply the change. Turn it off to remove the limit. Edit another device's limit on that device.
+Choose **Create workspace** from the **Workspaces** title dropdown, the sidebar row’s menu, or the local device header’s menu. It opens the creation dialog and keeps the current page in place until creation succeeds. The title and sidebar menu actions use a plus icon. Workspace limits and device details have no UI controls for now; capacity remains available through the CLI and SDK.
 
 ## Active workspace limits
 
@@ -73,3 +77,5 @@ The project folder holds only what belongs to the project: `.pstdio/config.json`
 - [Open a project](../getting-started/0002-open-a-project.md)
 - [CLI projects](../../references/cli/0004-projects.md)
 - [CLI workspaces](../../references/cli/0005-workspaces.md)
+
+*Updated at: 2026-11-06*

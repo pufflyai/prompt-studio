@@ -1,5 +1,6 @@
 import { createClient, parseSyncDeleteEvent as parseSdkSyncDeleteEvent, type SyncWriter } from "@pstdio/sdk/client";
 import type { ResourceAnchorChangeEvent, ResourceRemovedEvent } from "@pstdio/sdk/extensions";
+import { queryChangeEnvelopeSchema } from "pstdio-api-contracts/extension-kernel";
 import { apiClientOptions } from "@/lib/api";
 import { publishExtensionEvent, publishExtensionEventReset } from "@/shared/extensions/extension-webview-broadcast";
 import { publishResourceAnchorChange } from "@/shared/extensions/resource-anchor-feed";
@@ -19,16 +20,39 @@ export const parseSyncDeleteEvent = parseSdkSyncDeleteEvent;
 
 export const createDashboardSyncWriterProvider = (collections = getRuntimeCollections()) => {
   const events: Record<string, SyncWriter> = {
+    webview_preferences: {
+      truncateAndWrite: () => undefined,
+      upsert: (row) => {
+        if (typeof row.name !== "string" || typeof row.extension_id !== "string") return;
+        publishExtensionEvent(
+          {
+            id: "preferences.changed",
+            extensionId: row.extension_id,
+            resourceIds: [row.name],
+            ...(row.scope_type === "project" && typeof row.scope_id === "string" ? { projectId: row.scope_id } : {}),
+          },
+          collections,
+        );
+      },
+      remove: () => publishExtensionEventReset({}, collections),
+    },
     extension_events: {
       truncateAndWrite: () => undefined,
       upsert: (row) => {
         const eventId = typeof row.eventId === "string" ? row.eventId : undefined;
         const projectId = typeof row.projectId === "string" ? row.projectId : undefined;
         if (eventId === "pstdio.event.storage-changed") {
-          publishExtensionEventReset({ projectId }, collections);
+          publishExtensionEventReset(
+            { ...(queryChangeEnvelopeSchema.safeParse(row).data ?? {}), projectId },
+            collections,
+          );
           return;
         }
-        if (eventId) publishExtensionEvent({ id: eventId, projectId }, collections);
+        if (eventId)
+          publishExtensionEvent(
+            { ...(queryChangeEnvelopeSchema.safeParse(row).data ?? {}), id: eventId, projectId },
+            collections,
+          );
       },
       remove: () => undefined,
     },

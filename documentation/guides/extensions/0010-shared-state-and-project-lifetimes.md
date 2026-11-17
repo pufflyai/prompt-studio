@@ -1,0 +1,221 @@
+# Share state and retain project data
+
+Share one query owner across views and project switches. Release optional observation while accepted data and required saves keep their owners.
+
+## Published support
+
+Retained finite-command queries were added in extension API **0.4.0**; retained account, Performance and preference queries and controlled presentation were added in **0.4.2**. These contracts are included in the published API **0.5.0** SDK/UI preview `0.48.0-preview.sha-3b41d415bd0c5c2d607249ba8bdd47a499d62a77` ([publication](https://github.com/pufflyai/prompt-studio/actions/runs/43662124895)). Compatible host support was published in `0.48.0-nightly.20261117030256` ([host publication](https://github.com/pufflyai/prompt-studio/actions/runs/44007226995/job/133789772069)); follow the [Nightly channel](../getting-started/0001-install.md#choose-an-update-channel) for current desktop builds.
+
+Use a host, SDK and UI that support the APIs your extension declares. Installing an SDK/UI preview alone does not add host behavior, and a local packed-package check does not establish publication.
+
+## Choose the owner
+
+| State | Owner |
+| --- | --- |
+| A finite command result retained across recreated frames | `client.commands.read.query(...)`, observed through `useWebviewCommandQuery` |
+| Account status, project sync or devices | `client.account.query(source)`, observed through the readonly hook |
+| A window monitoring snapshot | `client.performance.query()`, sharing the existing host collector |
+| An accepted presentation preference | `client.preferences.query(name, scope)` with `client.preferences.set` for ordered durable writes |
+| Other finite data local to a guest or runtime | `client.queries` or a runtime-owned `createScopedQueryClient` |
+| A shared editable document, gesture or save queue | Public editing session and the extension's domain commands |
+| Synced rows | Existing host collections and storage; query results are projections |
+| Selected UI values | A Zustand store scoped to the view, project or runtime that owns them |
+| Focus, pointer capture and DOM geometry | The mounted view and its existing interaction controller |
+| Transcript, terminal, text/presence protocol | Its existing stream or editing controller |
+
+A query cache does not become a second editable document. A mounted view observes its owner and releases optional work when hidden. Accepted saves retain their original project and executor until they settle.
+
+## Read finite data
+
+Create a typed client with `createWebviewClient<typeof commands>(host)`. For a finite, read-only command, declare the `commands.query` webview capability and prepare a host-owned command query. The command's result remains available when switching projects destroys and recreates its iframe.
+
+```tsx
+import { createWebviewClient, type GuestHost } from "@pstdio/sdk/extensions";
+import { useWebviewCommandQuery, useWebviewVisibility } from "@pstdio/sdk/extensions/react";
+import type { commands } from "./commands";
+import { useState } from "react";
+import { itemChanged } from "./events";
+
+function Item({ host, id }: { host: GuestHost; id: string }) {
+  const [client] = useState(() => createWebviewClient<typeof commands>(host));
+  const active = useWebviewVisibility();
+  const query = client.commands.read.query({ id }, {
+    events: [itemChanged],
+    dependency: { resourceId: id },
+  });
+  const result = useWebviewCommandQuery(query, active);
+  // Render result.data, result.loading, result.fetching and result.error.
+  // result.refresh() explicitly retries or marks this dependency stale.
+  return null;
+}
+```
+
+`commands.read` above is the author's own command. Return `null`, `[]` or another explicit empty value when nothing exists. `undefined` is not a successful query value. A loaded empty result remains loaded during refresh. A refresh error keeps accepted data; an initial error has no accepted data. Provide a visible Retry action instead of starting a retry timer.
+
+The host key includes runtime, account ID and origin, project, extension and installed source, webview, command, parameters, workspace and resource. A fresh frame receives accepted data before its first observation; a scoped event received while inactive causes one catch-up on return. Private host commands also include the owning Workbench core. Only `workbenchCommands.recentResources` currently supports a finite built-in query. Use `client.queries.command(commandRef, params, options)` for a typed command reference from another extension or the host.
+
+Command queries expose `getSnapshot`, `subscribe`, `read`, `refresh` and `isDisposed`. They do not accept local writes. Run mutations through their domain commands and emit the declared events. Subscribe only while visible; a finite `read(signal)` or `refresh(signal)` releases its optional membership on settlement, cancellation, frame disconnection or core retirement without cancelling a surviving peer's read. A refresh error preserves accepted data. Account or installed-source retirement clears the guest projection and fences pending replies.
+
+The hook's `result.refresh()` is a fire-and-forget UI Retry. Hiding, replacing or unmounting that hook cancels its Retry demand and fences delayed replies; independent explicit readers and visible peers remain active. Use the query handle's `refresh(signal)` when a caller needs to await a finite result and owns its cancellation lifetime.
+
+For an arbitrary callback reader, `useWebviewQuery(client.queries, { id, params, events, dependency, read }, active)` remains available. That root belongs to the guest and cannot retain values after the iframe is destroyed. Use a runtime-owned query or the host command path when warm return across recreated frames is required. Put every input that changes the result in the descriptor. Use stable serializable parameters. Do not place a callback, DOM node or mutable draft in a query key.
+
+`useWebviewQuery` follows project/account props supplied by the host. `useScopedQuery` observes an already chosen query; callers choosing that query from props must also follow those props. `useWebviewScope` supplies a selected identity for non-query operations. Theme or sizing changes do not select a new data owner.
+
+When choosing several owners manually, observe `useWebviewScope(client.queries)` before choosing their handles. Use that identity to reset local presentation when its project or account authority changes. Observe the host fields the view needs; subscribing to the entire props object also renders for unrelated command results and page metadata.
+
+The React entry has optional peer dependencies on **both** `react` and `@tanstack/react-query`. Declare both in an extension importing that entry, including when using the scoped hooks. Framework-neutral code can use `createWebviewClient`, `query.subscribe`, `getSnapshot` and `read` without React. The legacy `useCommandQuery` remains available with its existing QueryClientProvider contract.
+
+## Read retained services and presentation
+
+Service queries use the same readonly snapshots and optional membership contract as finite command queries. Declare `account.read`, `performance.read` or `preferences.get` for the service being read. Initial props carry only values covered by the calling view's grants and installed source. Service ownership is explicit: account status belongs to the runtime identity guard; project sync is project/account/server scoped; device lists require the expected account and server; Performance samples belong to their window controller. Hiding a view releases its optional members without cancelling the mandatory identity guard, another visible view, an explicit required operation or the collector's supported domain lifetime.
+
+A preference query returns `{ value }`, including a loaded empty object when no value exists. This keeps an absent preference distinct from an unread snapshot. The key includes its runtime/account authority, calling extension, actual installation/source, project, preference name and explicit scope. Registering a native preference still routes through the existing registry; undeclared extension preferences still use the captured installed/project preference store. `client.preferences.set` admits the choice to the host owner immediately and retains its ordered persistence after a guest closes. A recreated guest receives the accepted choice before another preference GET. Older or failed reads cannot overwrite a newer choice; failed persistence remains an error with the choice visible. Retry the supported operation explicitly. Cross-window server preference events invalidate only the matching extension/name and known project on the existing shared connection.
+
+Use `useWebviewCommandQuery(query, useWebviewVisibility())` for all readonly service projections. Do not create another guest query around an account read or Performance subscription. Do not use `accept` or `invalidate` on the readonly projection. Mutations go through their existing public APIs. The host's accepted state, not a cached local snapshot from a returning project, supplies the new view.
+
+`DiffViewer` from `@pstdio/ui` also accepts a controlled `selectedPath` and `onSelectedPathChange`. Keep the selection in its presentation owner and pass it back to the component. The existing uncontrolled `defaultSelectedPath` behavior remains available. An unloaded diff body or a pending summary does not replace a valid controlled choice.
+
+These service and controlled-selection additions require the supporting host, SDK and UI. Publish them before independently released extensions adopt the new APIs. Existing account, performance and preference methods remain supported for unchanged consumers.
+
+## Declare changes once
+
+After a successful write, emit the declared event with its known public scope:
+
+```ts
+await ctx.events.emit(itemChanged, {}, {
+  refresh: {
+    resourceIds: [id],
+    changedFields: ["title"],
+    membership: false,
+  },
+});
+```
+
+The host binds the emitting project and extension. `QueryChangeEnvelope` carries invalidation metadata, never document data or event payloads. It supports resource keys/IDs, changed fields, list membership and at most 128 opaque `recordIds`. Obtain a record identity with `ctx.storage.records.id(key)`; it is not a public resource ID. Use list membership for inserts, removals and edits to filter/sort fields. Unknown scope is conservative: omit information that the producer cannot establish.
+
+The root routes events to matching dependencies, including retained inactive queries. Do not also attach a per-component listener that calls `refresh` for the same event. This duplicates ownership and work. Host reset/reconnect hints use the same dependency matching. A transport reconnection is not a reason to throw away all project caches.
+
+Host tabs include the requested locale and fallback hierarchy in their query identity.
+They depend on `viewDataEvents.extensionCatalogChanged` and
+`viewDataEvents.extensionTranslationsChanged` as well as their declared events.
+The latter identifies the project and extension whose accepted bundles changed,
+including removed translations. Unchanged bundles on project return leave warm
+results valid; translation freshness does not reset conversation streams or other projects.
+
+A descriptor's optional `subscribe(invalidate)` covers a custom source. The query installs it before its first read, shares it among observers and closes it after the last observer. That detached source has no retained cursor: the next observation performs one catch-up while retaining accepted content. For a clean warm return without that catch-up, route cheap scoped hints through the root, or use an existing revision/cursor that proves freshness.
+
+## Keep project return warm
+
+Ordinary A → B → A selection releases A's optional observations and retains its accepted values. The SDK root defaults to **128 inactive query owners**. The dashboard explicitly retains **512** because its shared root includes native renderers, catalogs and editing sources across ten projects. Active observations and entered reads are protected. Access touches normal least-recently-used retention order, including unread descriptors. After an unobserved read settles, the inactive bound applies again. Eviction removes the owner and makes the next use a real initial read. Do not keep using a disposed handle; choose the current owner again from its descriptor. Account/origin/runtime retirement purges private accepted data before notifying observers.
+
+In a browser, dispose a guest's root when the view is actually destroyed, not when its project is merely hidden. Host command queries retain finite results in the dashboard's existing bounded root; arbitrary guest callback queries do not share JavaScript memory across iframes or windows. For independently mounted iframes needing one document authority, use host-owned editing sessions.
+
+Invalidations coalesce into the current read and one latest follow-up. Old completions cannot overwrite a newer accepted value. Pass cancellation to I/O that supports it. Cancellation fences publication but does not mean an uncooperative child stopped: its admission remains occupied until the actual work settles. Read cancellation never cancels an accepted domain write.
+
+Closing the last presentation stops optional refresh work and retains accepted data.
+Use `query.refreshObserved()` when a presentation refresh must await its current
+observed read. It invalidates inactive data without reading it; active work remains
+optional and cancels when its final observer leaves. An independent required reader
+still retains the shared operation. Awaiting refresh alone does not keep a view alive.
+An explicit `read()` caller owns its coalesced read until settlement, even when a
+presentation leaves. Explicit cancellation and authority retirement still cancel
+that work. A custom source detached without a retained cursor reconciles on the next
+observation or explicit read; repeated unobserved reads cannot assume that source
+stayed current.
+
+An optional parent awaiting another query should await its automatic subscription's settled snapshot and release that subscription on cancellation. Calling `read()` promotes the shared operation to required work, which can survive the parent's cancellation and start I/O after a held source becomes ready. Preserve subscriptions and required reads belonging to surviving peers.
+
+Never acquire subscriptions or retention leases in a React render. Abandoned Suspense renders do not have a cleanup phase. Acquire them at commit and keep the committed placement identity stable when a cache handle is replaced.
+
+Keep a live row's observation for its mounted lifetime. A one-shot decoration read releases its source after acceptance and leaves copied metadata stale. Native hosts can supply `renderTreeNodeEndContent(resource)` when registering extension contributions. Return a component that observes the canonical query with captured runtime/project authority; root, lazy and continuation rows share that mapper. An authored badge keeps precedence. Activity and virtualization release hidden cells independently, while visible peers keep their shared source. Treat initial, unreconciled and refreshing totals as pending; accepted empty totals are ready. Performance checks must include visible totals reaching that accepted state.
+
+Nonvirtual tree rows stay mounted during collapse animations. Pass `useTreeListRowVisibility()` from `@pstdio/ui` as the observation's active flag so collapsed sections and ancestors stop optional work without removing that DOM. Gate query preparation when a captured runtime has retired; a disposed owner must not recreate collections during a later render or read finalizer. Keep accepted totals through refresh failures and show recovery beside the row.
+
+## Share editing across views
+
+Use `client.editing.openCommand<State>({ key, read, command, dependsOn })` when commands own validation, undo or atomic storage transactions. Declare the public `editing.session` and command execution capabilities. The host owns one session per runtime/account/project/extension/document key across its views. Separate windows/hosts converge through the domain's normal storage and project synchronization, not through an in-memory singleton.
+
+The first read returns `{ value, sources }`. Each source has an `id`, a read command, declared events and optional storage/resource dependency. Give a small presentation source its own record and reader so changing the tool does not reread the document.
+
+The execute command and every source-read command must return `WebviewEditingCommandResult`: either `{ value }`, replacing the complete accepted object, or `{ changes }`, applying field patches to that object. A void result or an ordinary unwrapped command value is invalid. `sourceIds` optionally names the sources whose freshness the response covers. Without it, a source read covers itself; an execute result with `value` covers all sources; execute patches cover none. Name only sources whose current invalidations the returned data includes. Accepted patches can update the shared value while another stale source still needs its own reconciliation.
+
+For example, a command that has persisted and acknowledged a tool change can return a small presentation patch:
+
+```ts
+import type { WebviewEditingCommandResult } from "@pstdio/sdk/extensions";
+
+const acceptedTool = {
+  changes: [{ path: ["tool"], value: "brush" }],
+  sourceIds: ["presentation"],
+} satisfies WebviewEditingCommandResult;
+```
+
+The initial read declares a source with ID `presentation` and its small read command. That source-read command returns the same result shape; a full reload is not needed to acknowledge the presentation record.
+
+- `preview(changes)` publishes a tentative view value without a durable write. Optional previews have one actual publication and one latest replacement.
+- `execute(params, { changes, channel })` admits one completed domain operation, with optional optimistic changes and `"document"` or `"presentation"` acknowledgement channel.
+- `cancel()` removes the caller's unfinished preview. It does not undo another accepted operation.
+- `save()` waits for or retries failed accepted operations. Commands receive stable operation IDs; implement idempotent retries using storage outcomes.
+- `close()` releases the view. Accepted commands retain their captured authority and drain before that workbench retires.
+
+Read `hasDrafts`, `pendingCommands`, acknowledgement revisions, channel/source errors and terminal `retired` state. Do not label a preview or failed operation saved. Never prune a required command merely because a later snapshot looks like its optimistic result. Keep undo in the domain command authority.
+
+Marmalade is the maintained example in `extensions/extension-lab/src/apps/marmalade/`. Its presentation identity is **project + extension + document**. Tool, selection, expansion, zoom and pan are shared between authorized participants and persist across reopen/reload/restart. Focus and unfinished pointer mechanics remain local. Pure presentation actions write only the small presentation record; document edits atomically save document, history and affected selection/expansion. Undo restores selection/expansion alongside document edits while keeping tool and viewport. Missing records read the bundled initial scene without writing storage; commands persist authored document or presentation fields.
+
+Explicit undo/redo advances a domain history boundary, cancelling unfinished document gestures. Completed gestures carry their starting boundary so a delayed pointer-up cannot resurrect a cancelled edit; an already accepted operation still uses its stored outcome on retry. Compatible peer edits retain the boundary and rebase drafts normally. Keep accepted-command admission synchronous so closing or switching a view cannot move required work to another owner.
+
+## Observe command-side metadata
+
+`ctx.storage.observe(changed, { recordIds?, signal? })` observes committed records in the caller's project and extension, including local signed-out writes and received project-sync changes. Subscribe before reading and close the handle in `finally`; the command invocation also retires it. A hint contains opaque identities, not values. Scope narrowing follows `storage.scope(...)` automatically.
+
+Observe only records the projection uses. For a collection whose future record IDs are unknown, change one small owner record in the same commit group as each collection mutation and observe that record. Sessions uses one native-input anchor per conversation, retained with its recoverable input history; another conversation's draft or submission does not refresh it. Keep the anchor outside the collection's index.
+
+`ctx.sessions.observeMetadata(sessionId, changed, { signal? })` returns a shared handle for exact session/link, workspace/diff, harness command and execution-availability changes. The callback names the affected group: `session`, `workspace`, `harness` or `execution`. Read only that group. Transcript, queue and approval updates remain on `ctx.sessions.stream` and keep their own revision rules.
+
+Harnesses can supply optional `watchCommandState`. Install it before reading and close it with the last observer. Recovery polling is appropriate only for an evidenced provider coverage gap; bound its payload, cadence and lifetime and record its removal condition. A consumer should replace an unconditional full snapshot timer only after its exact observation coverage is complete. See [temporary metadata recovery](../../adrs/0141-temporary-session-metadata-recovery.md).
+
+## Reuse the contract fixtures
+
+`createQueryLifecycleFixture` from `@pstdio/sdk/testing` provides a finite source with real subscribe/read separation, read counts, observed signals and a held child. Connect its `descriptor` to a scoped query or a native adapter. `holdNext()` exposes `entered` and `release()`; the held child deliberately remains entered after abort. Always release/close it during cleanup.
+
+Use it to check duplicate readers, loaded-empty values, a 100-hint burst during a held read, stale completion, final release and authority retirement. The [SDK query contracts](../../../packages/sdk/src/extensions/scoped-query.p0.test.ts) cover scoped lifecycle behavior. The [native adapter contract](../../../packages/pstdio-workbench/src/core/registries/views/query-lifecycle-contract.p0.test.ts) exercises its actual owner with this public fixture.
+
+### Reuse the fixture across projects
+
+Create one source per project and choose its query through the same root. Keep the resource key equal so the check would expose missing project identity:
+
+```ts
+import { createScopedQueryClient } from "@pstdio/sdk/extensions";
+import { createQueryLifecycleFixture } from "@pstdio/sdk/testing";
+
+const scope = {
+  runtimeId: "runtime",
+  accountId: "account",
+  accountOrigin: "https://account.example",
+  extensionId: "example.tool",
+};
+const root = createScopedQueryClient(scope, { maxInactive: 128 });
+const projects = Array.from({ length: 2 }, (_, index) => {
+  const projectId = `project-${index}`;
+  const source = createQueryLifecycleFixture({ projectId, value: 0 }, {
+    id: "document",
+    resourceKey: "same-document",
+  });
+  const query = root.forScope({ projectId }).query(source.descriptor);
+  return { projectId, source, query };
+});
+```
+
+Use this setup first with two projects, then with ten. Subscribe only the selected project's view and release its subscription when selecting another project; keep the root. Wait for the admitted read through `query.read()` or the consuming view's readiness, then inspect the snapshot, source read count and subscriber count. Release every subscription, close every source and dispose the root in cleanup, including after a failed assertion.
+
+- For a custom source using `descriptor.subscribe`, load A and B, release A, change A while detached, then return to A. Accepted A content stays available while one necessary catch-up runs; B keeps its own value. After final release, each source has zero subscribers.
+- Separately cover a fresh source with root-routed hints: omit the descriptor's `subscribe`, give it a declared `dependsOn` event ID, and route changes through `root.invalidate` with that ID and the changed project. An unchanged A → B → A return adds zero reads. A hint while A is inactive marks only A stale; returning reconciles it once without clearing accepted content.
+- Use `holdNext()` before a change to delay an actual child, then switch projects or retire the account. Release the held child and verify its old result cannot publish into the new identity. Keep accepted writes with the document's real command/editing owner; a query fixture does not simulate durable save acknowledgement.
+- In the ten-project run, record `root.inspect()` alongside each source's read/subscriber counts. Retained owner count follows the configured inactive bound; only selected observations stay active. Lower the bound in a separate eviction check, reacquire disposed handles from their descriptors and verify the evicted project performs an initial read.
+
+Connect the same fixture pattern to the extension's own view or native adapter. For document previews, commit/cancel, pending saves and shared history, use the supported editing owner; [command-editing contracts](../../../packages/pstdio-workbench/src/extensions/bridge/webview-command-editing.p0.test.ts) show the shared five-view boundary without depending on an example application's test suite. An actual offline/restart or cross-user check still needs the host and authenticated participants that the feature supports.
+
+Record topology and actual counts in qualification evidence. Two iframes are not two users, a page reload is not an app restart, and JavaScript heap is not process physical footprint. Query owner counts do not establish whole-app native memory or idle-work budgets.
+
+*Updated at: 2026-11-17*

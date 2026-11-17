@@ -1,4 +1,5 @@
 import type { TreeListNode, TreeListSection } from "./tree-list.types";
+import type { TreeListPagination } from "./tree-list-page-boundary";
 
 export const isInList = (id: string, values: string[]) => values.includes(id);
 
@@ -10,7 +11,7 @@ export const isNavigableNode = (node: TreeListNode) => node.isNavigable || node.
 export const getNodeChildren = (node: TreeListNode) => (node.children as TreeListNode[] | undefined) ?? [];
 
 export const hasExpandableChildren = (node: TreeListNode) =>
-  getNodeChildren(node).length > 0 || node.isContainer === true;
+  getNodeChildren(node).length > 0 || node.isContainer === true || Boolean(node.pagination);
 
 export type VirtualRow =
   | {
@@ -22,7 +23,8 @@ export type VirtualRow =
       expanded: boolean;
     }
   | { kind: "node"; key: string; sectionId: string; node: TreeListNode; level: number; parentNodeId?: string }
-  | { kind: "section-empty"; key: string; sectionId: string; emptyState: TreeListSection["emptyState"] };
+  | { kind: "section-empty"; key: string; sectionId: string; emptyState: TreeListSection["emptyState"] }
+  | { kind: "continuation"; key: string; sectionId: string; pagination: TreeListPagination };
 
 export type VirtualNodeRow = Extract<VirtualRow, { kind: "node" }>;
 export type VirtualSectionHeaderRow = Extract<VirtualRow, { kind: "section-header" }>;
@@ -44,7 +46,7 @@ const appendVisibleNodeRows = (input: {
     rows.push({ kind: "node", key: `${sectionId}:${node.id}`, sectionId, node, level, parentNodeId });
 
     const children = getNodeChildren(node);
-    if (children.length === 0 || !isInList(node.id, expandedNodeIds)) continue;
+    if (!isInList(node.id, expandedNodeIds)) continue;
 
     appendVisibleNodeRows({
       rows,
@@ -54,6 +56,8 @@ const appendVisibleNodeRows = (input: {
       level: level + 1,
       parentNodeId: node.id,
     });
+    if (node.pagination)
+      rows.push({ kind: "continuation", key: `page:node:${node.id}`, sectionId, pagination: node.pagination });
   }
 };
 
@@ -86,9 +90,15 @@ export const buildVirtualRows = (
           emptyState: section.emptyState,
         });
       }
-      continue;
     }
     appendVisibleNodeRows({ rows, sectionId: section.id, nodes: section.nodes, expandedNodeIds, level: 0 });
+    if (section.pagination)
+      rows.push({
+        kind: "continuation",
+        key: `page:section:${section.id}`,
+        sectionId: section.id,
+        pagination: section.pagination,
+      });
   }
   return rows;
 };

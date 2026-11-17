@@ -47,6 +47,7 @@ export const createNativeRoomOpener = (deps: {
       owner: loaded.owner,
       documentKey: loaded.documentKey,
       generation: loaded.generation,
+      backingRecordId: loaded.backingRecordId,
       syncDocument,
       recordField,
       queue: Promise.resolve(),

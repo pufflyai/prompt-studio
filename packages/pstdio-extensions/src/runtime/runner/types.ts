@@ -45,6 +45,7 @@ export const DEFAULT_MAX_COMMAND_DEPTH = 10;
 export type ScopedHostApis = Pick<
   CommandRunnerEnvironment,
   | "sessions"
+  | "resources"
   | "workspaces"
   | "connections"
   | "process"
@@ -59,6 +60,7 @@ export type ScopedHostApis = Pick<
   | "skills"
   | "settings"
   | "extensions"
+  | "account"
 >;
 
 export interface CommandRunnerEnvironment {
@@ -79,6 +81,8 @@ export interface CommandRunnerEnvironment {
   sessions: ExtensionSessionsApi;
   workspaces: ExtensionWorkspacesApi;
   activity: ExtensionActivityApi;
+  /** Attribute command-generated Activity to the invocation rather than its resource owner. */
+  activityForInvocation?: (source?: CommandSource) => ExtensionActivityApi;
   notify: ExtensionNotifyApi;
   automation: ExtensionAutomationApi;
   process: ExtensionProcessApi;
@@ -108,9 +112,15 @@ export interface BuildEnvironmentInput {
 export interface CommandRunnerHostDeps {
   buildEnvironment: (input: BuildEnvironmentInput) => Promise<CommandRunnerEnvironment> | CommandRunnerEnvironment;
   /** Receives each transient extension event before its hooks run. */
-  onWillDispatchEvent?: (eventId: string) => void;
+  onWillDispatchEvent?: (
+    eventId: string,
+    refresh?: import("pstdio-api-contracts/extension-kernel").QueryChangeEnvelope,
+  ) => void;
   /** Receives each transient extension event after its hooks have run. */
-  onDidDispatchEvent?: (eventId: string) => void;
+  onDidDispatchEvent?: (
+    eventId: string,
+    refresh?: import("pstdio-api-contracts/extension-kernel").QueryChangeEnvelope,
+  ) => void;
   /** Optional logger forwarded to extension contexts. */
   logger?: ExtensionLoggerApi;
   /** Binds each command, middleware and hook context to its owning extension. */
@@ -144,7 +154,7 @@ export interface HostCommandExecuteInput<TResult = unknown> extends CommandExecu
 }
 
 export interface CommandRunner {
-  buildExtensionContext(input: BuildEnvironmentInput): Promise<ExtensionContextBase>;
+  buildExtensionContext(input: BuildEnvironmentInput, scope?: InvocationScope): Promise<ExtensionContextBase>;
   execute(input: CommandExecuteInput): Promise<CommandOutcome>;
   executeHostCommand<TResult = unknown>(input: HostCommandExecuteInput<TResult>): Promise<CommandOutcome<TResult>>;
   dispatchEvent(input: ExtensionEventDispatchInput): Promise<EventDeliveryResult>;
@@ -159,4 +169,5 @@ export interface ExtensionEventDispatchInput {
   eventId: string;
   projectId: string;
   payload?: JsonObject;
+  refresh?: import("pstdio-api-contracts/extension-kernel").QueryChangeEnvelope;
 }

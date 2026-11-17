@@ -151,19 +151,35 @@ test("numbered tab chords match shifted digit keys without consuming AltGraph in
   expect(requests).toEqual([{ id: "tab4", repeat: false }]);
 });
 
-test("typing without Alt, Ctrl or Cmd never looks up shortcuts", () => {
+test("a negotiated plain view chord runs once and unowned ordinary keys remain local", () => {
   const target = new EventTarget();
-  let lookups = 0;
+  const requests: unknown[] = [];
   installKeyboardShortcuts(
     target,
-    () => {
-      lookups++;
-      return [leader];
-    },
-    () => {},
+    () => [{ id: "move", key: "V", ignoreInputs: true }],
+    (request) => requests.push(request),
   );
-  for (const key of ["a", "Z", " ", "/", "Enter"]) target.dispatchEvent(keydown(key, { shiftKey: key === "Z" }));
-  expect(lookups).toBe(0);
-  target.dispatchEvent(keydown(" ", { altKey: true, shiftKey: true }));
-  expect(lookups).toBe(1);
+  const move = keydown("v");
+  target.dispatchEvent(move);
+  expect(move.defaultPrevented).toBe(true);
+  for (const key of ["a", "Z", " ", "/", "Enter"]) {
+    const event = keydown(key);
+    target.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
+  }
+  expect(requests).toEqual([{ id: "move", repeat: false }]);
+});
+
+test("a symbol chord fires when the layout needs Shift to type the symbol", () => {
+  const target = new EventTarget();
+  const requests: unknown[] = [];
+  installKeyboardShortcuts(
+    target,
+    () => [{ id: "help", key: "/", metaKey: true }],
+    (request) => requests.push(request),
+  );
+  // German layout: Cmd+Shift+7 types "/". US layout: Cmd+Shift+/ types "?" and is a different chord.
+  target.dispatchEvent(keydown("/", { code: "Digit7", metaKey: true, shiftKey: true }));
+  target.dispatchEvent(keydown("?", { code: "Slash", metaKey: true, shiftKey: true }));
+  expect(requests).toEqual([{ id: "help", repeat: false }]);
 });

@@ -1,4 +1,6 @@
 {
   "harness.pi": "Pi",
-  "params.thinking": "Réflexion"
+  "params.thinking": "Réflexion",
+  "quotas.title": "Consulter les quotas du compte",
+  "quotas.description": "Indiquer si Pi fournit les quotas du compte."
 }

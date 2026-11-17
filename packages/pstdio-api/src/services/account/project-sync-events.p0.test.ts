@@ -2,6 +2,36 @@ import { expect, test } from "bun:test";
 import type { ProjectSyncStatus } from "pstdio-api-contracts";
 import { createProjectSyncEvents } from "./project-sync-events";
 
+test("a burst of owner notifications reads one current project status", async () => {
+  let reads = 0;
+  const events = createProjectSyncEvents({
+    status: async () => {
+      reads++;
+      return { state: "waiting-to-sync", offlineReady: true };
+    },
+    publish: () => {},
+  });
+  const pending = Array.from({ length: 20 }, () => events.changed("cloud"));
+  await Promise.all(pending);
+  expect(reads).toBe(1);
+  await events.close();
+});
+
+test("closing cancels a queued observation before it reads storage", async () => {
+  let reads = 0;
+  const events = createProjectSyncEvents({
+    status: async () => {
+      reads++;
+      return { state: "synced", offlineReady: true };
+    },
+    publish: () => {},
+  });
+  const queued = events.changed("cloud");
+  await events.close();
+  await queued;
+  expect(reads).toBe(0);
+});
+
 test("progress changes are announced while the coarse project state stays the same", async () => {
   let completed = 0;
   const published: ProjectSyncStatus[] = [];
@@ -46,10 +76,12 @@ test("a project's sync event fires only when its derived status changes from the
 
 test("signals that arrive during a status read are coalesced into one more read", async () => {
   let reads = 0;
+  const started = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();
   const events = createProjectSyncEvents({
     status: async () => {
       reads++;
+      started.resolve();
       await release.promise;
       return { state: "waiting-to-sync", offlineReady: true };
     },
@@ -57,6 +89,7 @@ test("signals that arrive during a status read are coalesced into one more read"
   });
 
   const first = events.changed("cloud");
+  await started.promise;
   void events.changed("cloud");
   void events.changed("cloud");
   release.resolve();
@@ -66,10 +99,12 @@ test("signals that arrive during a status read are coalesced into one more read"
 });
 
 test("closing waits for a status read that is still running, so storage can close after it", async () => {
+  const started = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();
   let finished = false;
   const events = createProjectSyncEvents({
     status: async () => {
+      started.resolve();
       await release.promise;
       finished = true;
       return { state: "synced", offlineReady: true };
@@ -78,6 +113,7 @@ test("closing waits for a status read that is still running, so storage can clos
   });
 
   void events.changed("cloud");
+  await started.promise;
   let closed = false;
   const closing = Promise.resolve(events.close()).then(() => {
     closed = true;

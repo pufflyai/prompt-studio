@@ -55,3 +55,58 @@ describe("webview change subscriptions", () => {
     stop();
   });
 });
+
+test("scoped events retain dependency identity and old publishers still invalidate safely", () => {
+  let emit!: (payload: unknown) => void;
+  const host: GuestHost = {
+    extensionId: "example",
+    call: async () => {
+      throw new Error("No RPC");
+    },
+    onEvent: (_scope, listener) => {
+      emit = listener;
+      return () => {};
+    },
+  };
+  const client = createWebviewClient(host);
+  const seen: unknown[] = [];
+  const stop = client.events.subscribe("example.event.changed", (event) => seen.push(event));
+  const event = {
+    type: "changed",
+    id: "example.event.changed",
+    projectId: "a",
+    resourceIds: ["one"],
+    changedFields: ["title"],
+  };
+  emit(event);
+  expect(seen).toEqual([event]);
+  stop();
+});
+
+test("scoped storage resets respect explicit event providers while legacy string references remain conservative", () => {
+  const callbacks = new Set<(payload: unknown) => void>();
+  const host: GuestHost = {
+    extensionId: "notes",
+    call: async () => {
+      throw new Error("No RPC");
+    },
+    onEvent: (_scope, listener) => {
+      callbacks.add(listener);
+      return () => {
+        callbacks.delete(listener);
+      };
+    },
+  };
+  const client = createWebviewClient(host);
+  let explicit = 0;
+  let legacy = 0;
+  const stops = [
+    client.events.subscribe({ kind: "event", extensionId: "notes", id: "changed" }, () => explicit++),
+    client.events.subscribe("custom.event.changed", () => legacy++),
+  ];
+  for (const callback of callbacks) callback({ type: "reset", extensionId: "marmalade", recordIds: ["presentation"] });
+  expect([explicit, legacy]).toEqual([0, 1]);
+  for (const callback of callbacks) callback({ type: "reset" });
+  expect([explicit, legacy]).toEqual([1, 2]);
+  for (const stop of stops) stop();
+});

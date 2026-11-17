@@ -4,7 +4,7 @@ import { link, unlink } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 // Nx's supported HTTP cache protocol stores portable archives. Its local SQLite cache is machine-bound.
-export const createBuildCache = (directory: string) => {
+export const createBuildCache = (directory: string, statistics = { hits: 0, misses: 0, stored: 0, existing: 0 }) => {
   mkdirSync(directory, { recursive: true });
   return Bun.serve({
     hostname: "127.0.0.1",
@@ -16,16 +16,25 @@ export const createBuildCache = (directory: string) => {
       const path = join(directory, `${hash}.tar.gz`);
       if (request.method === "GET") {
         const file = Bun.file(path);
-        return (await file.exists()) ? new Response(file) : new Response(null, { status: 404 });
+        if (await file.exists()) {
+          statistics.hits++;
+          return new Response(file);
+        }
+        statistics.misses++;
+        return new Response(null, { status: 404 });
       }
       if (request.method !== "PUT") return new Response(null, { status: 405 });
       const temporary = join(directory, `${randomUUID()}.tmp`);
       try {
         await Bun.write(temporary, new Response(request.body));
         await link(temporary, path);
+        statistics.stored++;
         return new Response(null, { status: 200 });
       } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === "EEXIST") return new Response(null, { status: 409 });
+        if ((error as NodeJS.ErrnoException).code === "EEXIST") {
+          statistics.existing++;
+          return new Response(null, { status: 409 });
+        }
         throw error;
       } finally {
         await unlink(temporary);

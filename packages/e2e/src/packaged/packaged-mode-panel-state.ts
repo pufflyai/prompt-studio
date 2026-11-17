@@ -12,17 +12,17 @@ export const verifyModePanelState = async (page: Page, terminal: Locator) => {
   const modeRoundTrip = async () => {
     const previous = page.url();
     const destination = new URL(previous);
-    destination.pathname = `/projects/${destination.pathname.split("/")[2]}/extensions/pstdio.workbench-fixture/lab-mode`;
+    destination.pathname = `/projects/${destination.pathname.split("/")[2]}/extensions/test.mode/mode`;
     destination.search = "";
     await page.evaluate((url) => {
       window.history.pushState(null, "", url);
       window.dispatchEvent(new PopStateEvent("popstate"));
     }, destination.href);
-    await expect(page.getByRole("tab", { name: "Overview", exact: true })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Mode content", exact: true })).toBeVisible();
     await expect(bottom).toHaveCount(0);
     await expect(terminal).toBeHidden();
-    const status = page.frameLocator('iframe[title="Lab status"]:visible');
-    await expect(status.getByText("Extension Lab", { exact: true })).toBeVisible();
+    const status = page.frameLocator('iframe[title="Mode status"]:visible');
+    await expect(status.getByText("Mode context", { exact: true })).toBeVisible();
     await page.goBack();
     await expect(page).toHaveURL(previous);
   };
@@ -58,8 +58,8 @@ export const verifyModePanelState = async (page: Page, terminal: Locator) => {
 
 export const verifyExtensionModeSessionRestore = async (page: Page, projectId: string) => {
   const previous = page.url();
-  await page.goto(new URL(`/projects/${projectId}/extensions/pstdio.workbench-fixture/lab-mode`, previous).href);
-  await expect(page.getByRole("tab", { name: "Overview", exact: true })).toBeVisible();
+  await page.goto(new URL(`/projects/${projectId}/extensions/test.mode/mode`, previous).href);
+  await expect(page.getByRole("tab", { name: "Mode content", exact: true })).toBeVisible();
   const hideSide = page
     .getByRole("group", { name: "Panel controls" })
     .getByRole("button", { name: "Hide Side Panel", exact: true });
@@ -69,14 +69,26 @@ export const verifyExtensionModeSessionRestore = async (page: Page, projectId: s
   const composer = floating.locator('[data-testid="content-editable"][contenteditable="true"]:visible');
   await expect(composer).toBeVisible();
   await composer.fill("Keep this extension mode draft after reload");
-  await tabAction(page, floating.getByRole("tab", { selected: true }), "Pin tab");
+  const createdTab = floating.getByRole("tab", { selected: true });
+  await createdTab.focus();
+  await page.keyboard.press("Shift+F10");
+  const pin = page.getByRole("menuitem", { name: "Pin tab", exact: true });
+  const unpin = page.getByRole("menuitem", { name: "Unpin tab", exact: true });
+  await expect(pin.or(unpin)).toBeVisible();
+  // Explicit provider creation can already pin the draft; preserve that retained tab.
+  if (await pin.count()) await pin.click();
+  else {
+    await expect(unpin).toBeVisible();
+    await page.keyboard.press("Escape");
+  }
+  await expect(createdTab).toHaveCSS("font-style", "normal");
   await page.reload();
   await expect(composer).toHaveText("Keep this extension mode draft after reload");
   const sessionTab = floating.getByRole("tab", { selected: true });
   await sessionTab.click({ button: "right" });
   const menu = page.getByRole("menu");
   await expect(menu.getByRole("menuitem", { name: "Unpin tab", exact: true })).toBeVisible();
-  await page.frameLocator('iframe[title="Lab status"]:visible').getByText("Extension Lab", { exact: true }).click();
+  await page.frameLocator('iframe[title="Mode status"]:visible').getByText("Mode context", { exact: true }).click();
   await expect(menu).toBeHidden();
   await page.goto(previous);
 };

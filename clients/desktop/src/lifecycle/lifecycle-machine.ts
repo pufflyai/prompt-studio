@@ -38,6 +38,8 @@ export type DesktopStartupPhase =
   | "database"
   | "retiring"
   | "migrations"
+  | "cleanup"
+  | "compacting"
   | "extensions"
   | "readiness";
 

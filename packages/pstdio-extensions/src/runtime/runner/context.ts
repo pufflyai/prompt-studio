@@ -13,8 +13,10 @@ import type {
   JsonObject,
   Struct,
 } from "@pstdio/sdk/extensions";
-import { qualifyNavigationTarget } from "pstdio-api-contracts";
+import { qualifyNavigationTarget, queryChangeEnvelopeSchema } from "pstdio-api-contracts";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { ExtensionRuntime } from "../../types/runtime";
+import { canonicalNavigationOwners } from "../canonical-navigation-owners";
 import { type EventDispatcher, refId } from "./dispatch";
 import type { NavigationScope } from "./navigation-scope";
 import type { InvocationScope } from "./scope";
@@ -92,8 +94,10 @@ const unavailableAccount: ExtensionAccountApi = {
   renameDevice: unavailableAccountCall,
   removeDevice: unavailableAccountCall,
   projectSyncStatus: unavailableAccountCall,
+  retryProjectSyncSource: unavailableAccountCall,
   syncProject: unavailableAccountCall,
   stopProjectSync: unavailableAccountCall,
+  resolveReturnedChanges: unavailableAccountCall,
 };
 
 const unavailableViews = (): never => {
@@ -108,8 +112,26 @@ const unavailableViewsApi: ExtensionViewsApi = {
   setDefault: unavailableViews,
 };
 
-const buildEventsApi = (dispatcher: EventDispatcher, origin: BuildEnvironmentInput): ExtensionEventsApi => ({
-  emit: async (event, payload) => dispatcher.dispatch(refId(event, origin.extensionId), payload as Struct, origin),
+const buildEventsApi = (
+  dispatcher: EventDispatcher,
+  origin: BuildEnvironmentInput,
+  runtime: ExtensionRuntime,
+): ExtensionEventsApi => ({
+  emit: async (event, payload, options) =>
+    dispatcher.dispatch(
+      refId(
+        typeof event !== "string" &&
+          runtime.extensions.some(
+            (provider) => provider.id === canonicalExtensionId(event.extensionId ?? origin.extensionId),
+          )
+          ? { ...event, extensionId: canonicalExtensionId(event.extensionId ?? origin.extensionId) }
+          : event,
+        origin.extensionId,
+      ),
+      payload as Struct,
+      origin,
+      options?.refresh ? queryChangeEnvelopeSchema.parse(options.refresh) : undefined,
+    ),
 });
 
 const buildCommandsApi = (
@@ -152,6 +174,7 @@ export const createContextFactory = (
   dispatcher: EventDispatcher,
   createLogger: (extensionId: string) => ExtensionLoggerApi,
   createExecute: (origin: NestedExecuteOrigin) => CommandHelpersApi["execute"],
+  runtime: ExtensionRuntime,
 ): ContextFactory => ({
   buildExtensionContext(env, ids, depth, scope, navigationScope) {
     const hostApis: ScopedHostApis = scope ? env.withScope(scope) : env;
@@ -172,11 +195,14 @@ export const createContextFactory = (
       extensionId: ids.extensionId,
       name: ids.name,
       storage: hostApis.storage,
-      resources: env.resources,
+      resources: hostApis.resources,
       views: env.views ?? unavailableViewsApi,
       navigation: {
         open: (target) => {
-          if (navigationScope) navigationScope.open(qualifyNavigationTarget(target, ids.extensionId, ids.projectId));
+          if (navigationScope)
+            navigationScope.open(
+              canonicalNavigationOwners(qualifyNavigationTarget(target, ids.extensionId, ids.projectId)),
+            );
         },
       },
       artifacts: hostApis.artifacts,
@@ -190,7 +216,7 @@ export const createContextFactory = (
       sessions: hostApis.sessions,
       workspaces: hostApis.workspaces,
       commands: buildCommandsApi(createExecute, origin),
-      events: buildEventsApi(dispatcher, ids),
+      events: buildEventsApi(dispatcher, ids, runtime),
       activity: env.activity,
       notify: env.notify,
       automation: env.automation,
@@ -200,7 +226,7 @@ export const createContextFactory = (
       terminal: hostApis.terminal,
       logger: createLogger(ids.extensionId),
       settings: hostApis.settings,
-      account: env.account ?? unavailableAccount,
+      account: hostApis.account ?? unavailableAccount,
     };
   },
 
@@ -232,6 +258,7 @@ export const createContextFactory = (
     );
     return {
       ...base,
+      activity: env.activityForInvocation?.(source) ?? base.activity,
       stream: { write: async () => {} },
       commandId,
       invocationId,

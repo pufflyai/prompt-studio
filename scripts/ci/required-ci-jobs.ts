@@ -1,3 +1,4 @@
+import { nativeSourceGroups } from "./native-source-coverage";
 import type { resolveCiScope } from "./pull-request-ci-scope";
 import { type PlannedJob, priorityForJob, type TestPriority } from "./test-policy";
 
@@ -9,6 +10,25 @@ const matrixPlan = <T extends { priority: TestPriority }>(id: string, rows: T[],
     return { id: name, priority, count: names.length, names };
   });
 };
+
+const quarantinePlan = (scope: Scope) => {
+  if (!scope.production) return [];
+  const names = scope.quarantineBunOs.map((os) => `quarantined_bun_tests (${os})`);
+  return [
+    ...(names.length ? [{ id: "quarantined_bun_tests", priority: "P2" as const, count: names.length, names }] : []),
+    ...(scope.diagnosticPlatform === "win32" || !scope.quarantineBunOs.length
+      ? []
+      : ["quarantined_native_ui_tests", ...(!scope.diagnosticPlatform ? ["quarantined_browser_tests"] : [])]
+    ).map((id) => ({
+      id,
+      priority: "P2" as const,
+      count: 1,
+      names: [id],
+    })),
+  ];
+};
+
+const linuxCliSelected = (scope: Scope) => scope.harnessCli && !scope.diagnosticPlatform;
 
 export const plannedCiJobs = (scope: Scope) => {
   const jobs: PlannedJob[] = [];
@@ -40,15 +60,16 @@ export const plannedCiJobs = (scope: Scope) => {
   if (scope.sharedBuild) add("build_host", ["build_host"], "P0");
   jobs.push(...matrixPlan("integration_contracts", scope.integrationMatrix, (row) => row.shard));
   jobs.push(...matrixPlan("components", scope.componentMatrix, (row) => row.package));
-  if (scope.stage === "full") {
-    jobs.push(...matrixPlan("e2e", scope.appMatrix, (row) => `${row.shard}/${row.total}`));
-    jobs.push(...matrixPlan("packaged_and_vite_e2e", scope.packagedMatrix, (row) => `${row.suite} ${row.shard}`));
-    add("e2e_cli", ["e2e_cli"], scope.production ? "P2" : "P1");
+  if (scope.clientMatrix.length)
     add(
       "build_clients",
       scope.clientMatrix.map((row) => `build_clients (${row.target} ${row.shard}/${row.shards})`),
       scope.production ? "P2" : "P1",
     );
+  jobs.push(...matrixPlan("packaged_and_vite_e2e", scope.packagedMatrix, (row) => `${row.suite} ${row.shard}`));
+  if (scope.stage === "full") {
+    jobs.push(...matrixPlan("e2e", scope.appMatrix, (row) => `${row.shard}/${row.total}`));
+    if (linuxCliSelected(scope)) add("e2e_cli", ["e2e_cli"], scope.production ? "P2" : "P1");
     if (scope.production)
       add(
         "packaged_toolchain",
@@ -74,35 +95,13 @@ export const plannedCiJobs = (scope: Scope) => {
       ["pstdio/landing-page", "pstdio/api"].map((image) => `build_docker (${image})`),
       "P2",
     );
-  if (scope.windows) {
+  if (scope.windows)
     add(
-      "windows_test_and_build",
-      ["lint", "unit-1", "unit-2", "unit-3", "unit-4"].map((lane) => `windows_test_and_build (${lane})`),
+      "windows_native_contracts",
+      nativeSourceGroups.map((group) => `windows_native_contracts (${group})`),
       "P2",
     );
-    add(
-      "windows_database_tests",
-      [
-        { name: "pstdio-api", count: 8 },
-        { name: "pstdio-db", count: 4 },
-      ].flatMap((pkg) =>
-        Array.from(
-          { length: pkg.count },
-          (_, index) => `windows_database_tests (${pkg.name} ${index + 1}/${pkg.count})`,
-        ),
-      ),
-      "P2",
-    );
-  }
-  if (scope.production) {
-    add(
-      "quarantined_bun_tests",
-      scope.quarantineBunOs.map((os) => `quarantined_bun_tests (${os})`),
-      "P2",
-    );
-    add("quarantined_browser_tests", ["quarantined_browser_tests"], "P2");
-    add("quarantined_native_ui_tests", ["quarantined_native_ui_tests"], "P2");
-  }
+  jobs.push(...quarantinePlan(scope));
   return jobs;
 };
 export const requiredCiJobs = (scope: Scope) => plannedCiJobs(scope).map((job) => job.id);

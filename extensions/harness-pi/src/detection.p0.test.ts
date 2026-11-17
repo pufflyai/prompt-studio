@@ -12,7 +12,7 @@ test.each([
   ["not pi", false],
 ])("checks Pi version %s", async (stdout, available) => {
   const ctx = { process: { run: async () => ({ exitCode: 0, stdout, stderr: "" }) } } as unknown as HarnessContext;
-  expect((await detectPi(ctx)).available).toBe(available);
+  expect((await detectPi(ctx, { command: ["external-pi"] })).available).toBe(available);
 });
 
 test("reports a missing Pi installation", async () => {
@@ -23,5 +23,8 @@ test("reports a missing Pi installation", async () => {
       },
     },
   } as unknown as HarnessContext;
-  expect(await detectPi(ctx)).toMatchObject({ available: false, reason: expect.stringContaining("Install Pi") });
+  expect(await detectPi(ctx, { command: ["external-pi"] })).toMatchObject({
+    available: false,
+    reason: expect.stringContaining("Install Pi"),
+  });
 });

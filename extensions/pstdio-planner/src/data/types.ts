@@ -45,9 +45,8 @@ export interface StoredTicket {
   title: string;
   content: string;
   statusId: string | null;
-  // Keyed by tag ID, so edits to different tags merge across devices. A single-select tag
-  // holds one option ID and merges as one value; a multi-select tag holds a list that merges
-  // item by item.
+  // Logical tag values. ticketRecords translates multi-select membership to independent
+  // persisted option paths; generic storage arrays remain whole values.
   tags?: StoredTicketTags;
   // Optional so tickets created before these fields existed still read cleanly;
   // the data layer defaults them on read.

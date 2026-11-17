@@ -2,14 +2,18 @@ import { Center, Text } from "@chakra-ui/react";
 import type { ResourceRef } from "@pstdio/sdk/extensions";
 import { getThemePreferenceMode, useThemePreference, useToaster } from "@pstdio/ui";
 import type { WorkbenchCore, WorkbenchPanelInstance, WorkbenchTerminalController } from "@pstdio/workbench";
-import { createExtensionWebviewHostCapabilities } from "@pstdio/workbench/extensions";
+import {
+  createExtensionWebviewHostCapabilities,
+  getBridgeWebviewHostEventPublisher,
+} from "@pstdio/workbench/extensions";
 import type { NativeDocumentTarget } from "pstdio-api-contracts";
-import { parseExtensionWebviewPath } from "pstdio-api-contracts/extension-webview-path";
+import { parseExtensionWebviewPath } from "pstdio-api-contracts/extension-host";
 import { createHostEventPublisher } from "pstdio-extensions/bridge/host";
 import { useEffect, useState } from "react";
 import i18n from "@/i18n";
 import { buildAbsoluteApiUrl, getApiClient } from "@/lib/api";
 import { getRuntimeCollections } from "@/lib/sync/collections";
+import { getPerformanceDiagnosticsAdapter } from "@/shared/app/performance-diagnostics";
 import { useActionError } from "@/shared/components/use-action-error";
 import { getExtensionTranslationContext, resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import {
@@ -21,12 +25,16 @@ import { createDashboardExtensionWebviewAdapters } from "../extension-webview-ca
 import { subscribeWebviewExtensionEvents } from "../extension-webview-events";
 import { usePausedExtensions } from "../paused-extensions";
 import { useExecuteExtensionCommand, useProjectExtensions } from "../use-project-extensions";
+import { useDashboardQueryScope } from "../use-query-scope";
 import { useWebviewPageProps } from "../use-webview-page-props";
+import { createDashboardWebviewCommandQueries } from "../webview-command-queries";
 import { createDashboardOwnedPreferences } from "../webview-owned-preferences";
+import { authorizedWebviewQuerySeeds } from "../webview-query-seeds";
 import {
   createDashboardWebviewNotificationsAdapter,
   createDashboardWebviewSettingsAdapter,
 } from "../webview-service-adapters";
+import { createDashboardWebviewServiceQueries } from "../webview-service-queries";
 import { executeWebviewCommand, webviewCommandSlot } from "./extension-webview-command";
 import { BridgedWebviewSurface, StaticWebviewSurface, type WebviewDescriptor } from "./extension-webview-surfaces";
 import { PausedExtensionView } from "./paused-extension-view";
@@ -49,10 +57,22 @@ interface ExtensionWebviewFrameProps {
   workbench?: WorkbenchCore;
 }
 
+const webviewOwnerKey = (props: ExtensionWebviewFrameProps, installedExtensionId?: string) =>
+  JSON.stringify([
+    props.projectId,
+    props.extensionId,
+    props.extensionInstanceId,
+    installedExtensionId,
+    props.webviewId,
+    props.webview?.runtimeUrl,
+    props.webview?.moduleUrl,
+  ]);
+
 const currentLocale = () => i18n.resolvedLanguage ?? i18n.language ?? "en";
 export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   const toaster = useToaster();
   const owner = getRuntimeCollections();
+  const queryScope = useDashboardQueryScope();
   const { extensionId, extensionInstanceId, installName, projectId, resource, terminal, title, webview, webviewId } =
     props;
   const { themePreference, themePreferences } = useThemePreference();
@@ -61,7 +81,11 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
     if (notice.type === "error" || notice.type === "warning") showError(notice);
     else toaster.create(notice);
   });
-  const [hostEvents] = useState(createHostEventPublisher);
+  const [fallbackHostEvents] = useState(createHostEventPublisher);
+  const hostEvents =
+    props.workbench && props.placement
+      ? getBridgeWebviewHostEventPublisher(props.workbench, props.placement, projectId)
+      : fallbackHostEvents;
   const { pageLocation, pageParams } = useWebviewPageProps(props.workbench, props.placement);
   const [lastCommand, setLastCommand] = useState<ExtensionCommandEvent | null>(null);
   const [locale, setLocale] = useState(currentLocale);
@@ -82,69 +106,102 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   if (!webview) return null;
 
   const colorScheme = getThemePreferenceMode(themePreference, themePreferences);
-  const frameTitle = webview.title ? resolveLocalizableString(webview.title, extensionId) : (title ?? "Extension view");
-  const translations = getExtensionTranslationContext(extensionId, locale);
+  const frameTitle = webview.title
+    ? resolveLocalizableString(webview.title, extensionId, undefined, owner, projectId)
+    : (title ?? "Extension view");
+  const translations = getExtensionTranslationContext(extensionId, locale, owner, projectId);
+  const commandQueries = projectId
+    ? createDashboardWebviewCommandQueries({
+        runtime: owner,
+        queryScope,
+        projectId,
+        extensionId,
+        extensionInstanceId,
+        webviewId,
+        source: [installedExtensionId, webview.runtimeUrl, webview.moduleUrl],
+        slotKind: props.slotKind,
+        resource: resource ?? props.placement?.resource,
+        workbench: props.workbench,
+        placement: props.placement,
+        events: hostEvents,
+      })
+    : undefined;
 
-  const capabilities = createExtensionWebviewHostCapabilities(
-    createDashboardExtensionWebviewAdapters({
-      base: {
-        hostEvents,
-        terminal,
-        executeCommand: (commandInput, signal, invocation) => {
-          clearError();
-          return executeWebviewCommand({
-            ...commandInput,
-            placement: props.placement?.placementIdentity,
-            isViewerCurrent: invocation?.isViewerCurrent,
-            signal,
-            resource: commandInput.resource ?? resource ?? props.placement?.resource,
-            slot: webviewCommandSlot({ projectId, webviewId, slotKind: props.slotKind }),
-            workbench: props.workbench,
-            projectId,
-            executeExtensionCommand: (input) =>
-              executeCommand.mutateAsync({
-                signal,
-                commandId: input.commandId,
-                body: {
-                  metadata: input.metadata,
-                  params: input.params,
-                  workspaceId: input.workspaceId,
-                  resource: input.resource,
-                  slot: input.slot,
-                  source: "dashboard",
-                },
-              }),
-          });
-        },
-        streamCommand: projectId
-          ? (input, signal) => {
-              const { commandId, ...body } = input;
-              return getApiClient().extensions.stream(
-                commandId,
-                { ...body, projectId, source: "dashboard" },
-                { signal },
-              );
-            }
-          : undefined,
-        commandCompleted: (response) => publishExtensionCommandEvent(response, { projectId }, owner),
-        settings: createDashboardWebviewSettingsAdapter({ projectId, extensionInstanceId, installName }),
-        notifications: createDashboardWebviewNotificationsAdapter({
+  const serviceQueries = createDashboardWebviewServiceQueries({
+    workbench: props.workbench,
+    runtime: owner,
+    projectId,
+    queryScope,
+    extensionId,
+    source: [extensionInstanceId, installedExtensionId, webview.runtimeUrl, webview.moduleUrl],
+    events: hostEvents,
+    performance: props.workbench ? getPerformanceDiagnosticsAdapter(props.workbench.settings) : undefined,
+  });
+
+  const adapters = createDashboardExtensionWebviewAdapters({
+    base: {
+      commandQueries,
+      accountQueries: serviceQueries.account,
+      performanceQueries: serviceQueries.performance,
+      hostEvents,
+      terminal,
+      executeCommand: (commandInput, signal, invocation) => {
+        clearError();
+        return executeWebviewCommand({
+          ...commandInput,
+          placement: props.placement?.placementIdentity,
+          isViewerCurrent: invocation?.isViewerCurrent,
+          signal,
+          resource: commandInput.resource ?? resource ?? props.placement?.resource,
+          slot: webviewCommandSlot({ projectId, webviewId, slotKind: props.slotKind }),
+          workbench: props.workbench,
           projectId,
-          extensionId,
-          showError,
-          showNotice: (notice) => toaster.create(notice),
-        }),
+          executeExtensionCommand: (input) =>
+            executeCommand.mutateAsync({
+              signal,
+              commandId: input.commandId,
+              body: {
+                metadata: input.metadata,
+                params: input.params,
+                workspaceId: input.workspaceId,
+                resource: input.resource,
+                slot: input.slot,
+                source: "dashboard",
+              },
+            }),
+        });
       },
-      extensionId,
-      extensionInstanceId,
+      streamCommand: projectId
+        ? (input, signal) => {
+            const { commandId, ...body } = input;
+            return getApiClient().extensions.stream(commandId, { ...body, projectId, source: "dashboard" }, { signal });
+          }
+        : undefined,
+      commandCompleted: (response) => publishExtensionCommandEvent(response, { projectId }, owner),
+      settings: createDashboardWebviewSettingsAdapter({ projectId, extensionInstanceId, installName }),
+      notifications: createDashboardWebviewNotificationsAdapter({
+        projectId,
+        extensionId,
+        showError,
+        showNotice: (notice) => toaster.create(notice),
+      }),
+    },
+    queryAuthority: { id: JSON.stringify(queryScope), assertCurrent: serviceQueries.requireCurrent },
+    extensionId,
+    extensionInstanceId,
+    projectId,
+    webviewId,
+    workbench: props.workbench,
+    placement: props.placement,
+    textTarget: props.textTarget,
+    ownedPreferences: createDashboardOwnedPreferences({
+      runtime: owner,
       projectId,
-      webviewId,
-      workbench: props.workbench,
-      placement: props.placement,
-      textTarget: props.textTarget,
-      ownedPreferences: createDashboardOwnedPreferences({ projectId, instanceId: extensionInstanceId, installName }),
+      instanceId: extensionInstanceId,
+      installName,
     }),
-  );
+  });
+  const capabilities = createExtensionWebviewHostCapabilities(adapters, webviewOwnerKey(props, installedExtensionId));
 
   if (!webview.runtimeUrl || !webview.moduleUrl) {
     if (!webview.assetUrl) {
@@ -189,6 +246,15 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
         view={view}
         extensionProps={{
           projectId,
+          queryScope,
+          ...authorizedWebviewQuerySeeds({
+            declared: webview.capabilities,
+            capabilities,
+            commands: commandQueries?.seeds,
+            account: serviceQueries.account.seeds,
+            performance: serviceQueries.performance?.seeds,
+            preferences: adapters.preferenceQueries?.seeds,
+          }),
           presentation: props.workbench?.layout
             .getLayout()
             .regions.overlay.widgets.some((item) => item.widgetId === props.placement?.instanceId)

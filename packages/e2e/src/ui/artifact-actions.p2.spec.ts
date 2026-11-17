@@ -16,7 +16,7 @@ for (const action of ["rename", "delete"] as const) {
     });
     expect(response.ok()).toBe(true);
     const project = (await response.json()) as { id: string };
-    const extensionId = "pstdio.pstdio-artifacts";
+    const extensionId = "pstdio.artifacts";
     const execute = async (command: string, params: Record<string, unknown>) => {
       const response = await request.post(
         `${uiOrigin}/v1/projects/${project.id}/extensions/commands/${extensionId}.command.${command}/execute`,
@@ -57,7 +57,7 @@ for (const action of ["rename", "delete"] as const) {
       } else {
         await expect(dialog).toBeVisible();
         expect(await execute("list", {})).toHaveLength(2);
-        await dialog.getByRole("button", { name: "Delete", exact: true }).click();
+        await dialog.getByRole("button", { name: "Delete artifact", exact: true }).click();
         // The deleted artifact's viewer closes; only the library tab remains.
         await expect(page.locator('[data-workbench-panel="main"]').getByRole("tab")).toHaveText(["Artifacts"]);
         await expect(frame.getByRole("button", { name: "Reference page", exact: true })).toBeVisible();

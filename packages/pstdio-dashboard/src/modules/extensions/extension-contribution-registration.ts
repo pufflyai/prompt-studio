@@ -1,30 +1,38 @@
 import type { Disposable, WorkbenchModuleContext } from "@pstdio/workbench";
 import {
   fileRendererRefreshEnvelopeFromCommand,
+  type RegisterWorkbenchExtensionContributionsInput,
   registerWorkbenchExtensionContributions,
   toWorkbenchWhenExpression,
 } from "@pstdio/workbench/extensions";
 import { createElement } from "react";
 import { buildAbsoluteApiUrl, getApiClient } from "@/lib/api";
+import { getDashboardScopedQueries } from "@/lib/scoped-queries";
 import { getRuntimeCollections } from "@/lib/sync/collections";
+import { readLegacySessionChatDraft } from "@/shared/app/legacy-session-chat-draft";
+import { createDashboardChatHost } from "@/shared/chat/native-chat-host";
+import { createDashboardParamFieldRenderer } from "@/shared/command-params/dashboard-param-field";
 import { uploadExtensionCommandFile } from "@/shared/extensions/api";
 import { collectExtensionCommandNotifications } from "@/shared/extensions/command-outcome";
 import {
+  getExtensionPresentationLocale,
   localizeExtensionValue,
   type ResolvedLocalizable,
   type ResolvedWorkbenchExtensionMetadata,
+  resolveLocalizableString,
 } from "@/shared/extensions/extension-localization";
 import {
   publishExtensionCommandEvent,
   subscribeToExtensionEventFeed,
   subscribeToExtensionEventReset,
 } from "@/shared/extensions/extension-webview-broadcast";
-import { subscribeToResourceRemovals } from "@/shared/extensions/resource-removal-feed";
+import { canonicalDashboardResource } from "@/shared/extensions/resource-identity";
 import {
   buildDashboardExtensionMenuRegistrations,
   buildDashboardWorkbenchWhenExpression,
   dashboardMenuTargetsById,
 } from "@/shared/extensions/workbench-extension-contributions";
+import { workspaceTreeSources } from "@/shared/workspaces/workspace-files-source";
 import { ExtensionViewWidget } from "./components/extension-view-widget";
 import { createSharedTableViews } from "./extension-board-views";
 import {
@@ -36,7 +44,7 @@ import { createDashboardKanbanAdapter, toDashboardExtensionResource } from "./ex
 import { registerExtensionResourceHierarchy } from "./extension-resource-hierarchy";
 import { watchOpenExtensionResource } from "./extension-resource-sync";
 import { registerExtensionSetupShortcuts } from "./extension-setup-shortcuts";
-import { withWorkspaceDiffMetadata } from "./extension-tree-workspace-diffs";
+import { ExtensionTreeWorkspaceDiff } from "./extension-tree-workspace-diff";
 
 // Shown once for the registered set, never for the trial sets that isolate a failing extension.
 export const notifyUnresolvedExtensionMenus = (
@@ -57,6 +65,9 @@ export const disposeExtensionContributions = (disposables: Disposable[]) => {
 };
 
 interface RegisterExtensionContributionsInput {
+  owner?: ReturnType<typeof getRuntimeCollections>;
+  terminalRendererOwners?: RegisterWorkbenchExtensionContributionsInput["terminalRendererOwners"];
+  chatRendererOwners?: RegisterWorkbenchExtensionContributionsInput["chatRendererOwners"];
   ctx: WorkbenchModuleContext;
   executeCommand: ExecuteDashboardExtensionCommand;
   metadata: ResolvedWorkbenchExtensionMetadata;
@@ -87,27 +98,38 @@ export const withDashboardWebviewUrls = (
 export const localizeDashboardExtensionCommandResponse = <T extends { extensionId: string }>(
   response: T,
   owner = getRuntimeCollections(),
-) => localizeExtensionValue(response, response.extensionId, owner) as ResolvedLocalizable<T>;
+  projectId?: string,
+) => localizeExtensionValue(response, response.extensionId, owner, projectId) as ResolvedLocalizable<T>;
 
 export const registerExtensionContributions = (input: RegisterExtensionContributionsInput) => {
-  const owner = getRuntimeCollections();
+  const owner = input.owner ?? getRuntimeCollections();
   const disposables: Disposable[] = [];
   try {
-    disposables.push({
-      dispose: subscribeToResourceRemovals((resource) => {
-        if (resource.projectId === input.projectId) input.ctx.resources.removed(resource);
-      }),
-    });
-    const menuResult = buildDashboardExtensionMenuRegistrations(input.metadata);
+    const menuResult = buildDashboardExtensionMenuRegistrations(input.metadata, (value, extensionId, args) =>
+      resolveLocalizableString(value, extensionId, args, owner, input.projectId),
+    );
     const kanban = createDashboardKanbanAdapter(input);
     disposables.push({
       dispose: subscribeToExtensionEventReset((reset) => {
         if (reset.projectId !== undefined && reset.projectId !== input.projectId) return;
-        for (const view of input.metadata.views) input.ctx.views.refreshView(view.id);
+        for (const view of input.metadata.views)
+          if (!reset.extensionId || reset.extensionId === view.extensionId) input.ctx.views.refreshView(view.id, reset);
       }),
     });
     disposables.push(
       registerWorkbenchExtensionContributions({
+        queries: getDashboardScopedQueries(owner),
+        treeSources: workspaceTreeSources(owner),
+        presentationLocale: getExtensionPresentationLocale(),
+        chatRendererOwners: input.chatRendererOwners,
+        chatDraftStorageScope: buildAbsoluteApiUrl("/"),
+        terminalRendererOwners: input.terminalRendererOwners,
+        readLegacySessionDraft: readLegacySessionChatDraft,
+        createChatHost: createDashboardChatHost,
+        resolveChatResource: canonicalDashboardResource,
+        createChatParamField: createDashboardParamFieldRenderer,
+        streamChatCommand: (commandId, body, signal) =>
+          getApiClient().extensions.streamCommand(input.projectId, commandId, body, { signal }),
         createKeybindingWhenExpression: buildDashboardWorkbenchWhenExpression,
         createMenuWhenExpression: (contribution) => buildDashboardWorkbenchWhenExpression(contribution.when),
         createNavigationWhenExpression: (when) =>
@@ -116,10 +138,7 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
           const reportActionError = input.ctx.notifications.captureActionError("Extension command");
           const rawResponse = await input.executeCommand(input.projectId, commandId, body, signal);
           signal?.throwIfAborted();
-          const treeId = body.slot?.context?.treeId;
-          const decoratedResponse =
-            typeof treeId === "string" ? await withWorkspaceDiffMetadata(rawResponse, undefined, signal) : rawResponse;
-          const response = localizeDashboardExtensionCommandResponse(decoratedResponse, owner);
+          const response = localizeDashboardExtensionCommandResponse(rawResponse, owner, input.projectId);
           for (const notification of collectExtensionCommandNotifications(response)) {
             if (notification.level === "error") {
               reportActionError(new Error(notification.message ?? notification.title));
@@ -147,6 +166,37 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
         },
         kanbanAdapter: kanban,
         nativeDocuments: getApiClient().nativeDocuments,
+        resourceActivity: {
+          api: getApiClient().activity,
+          watch: (resource, options) => getApiClient().activity.watch(resource, options),
+          targets: async () => {
+            const api = getApiClient().agents;
+            const targets: { harnessId: string; modelId: string; label: string }[] = [];
+            let cursor: string | undefined;
+            do {
+              const page = await api.query(input.projectId, { cursor, limit: 100 });
+              for (const harness of page.items) {
+                let modelCursor: string | undefined;
+                do {
+                  const models = await api.queryModels(input.projectId, harness.id, {
+                    cursor: modelCursor,
+                    limit: 100,
+                  });
+                  targets.push(
+                    ...models.items.map((model) => ({
+                      harnessId: harness.id,
+                      modelId: model.id,
+                      label: `${harness.name} · ${model.label ?? model.id}`,
+                    })),
+                  );
+                  modelCursor = models.nextCursor ?? undefined;
+                } while (modelCursor);
+              }
+              cursor = page.nextCursor ?? undefined;
+            } while (cursor);
+            return targets;
+          },
+        },
         textEditing: getApiClient().textEditing,
         dataTableAdapter: {
           resolveRowResource: (_record, row) =>
@@ -168,6 +218,10 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
         projectId: input.projectId,
         resolveTreeNodeResource: (resource) =>
           toDashboardExtensionResource(resource, input.projectId, input.metadata.resourceKinds)!,
+        renderTreeNodeEndContent: (resource) =>
+          resource.type === "workspace" && (!resource.projectId || resource.projectId === input.projectId)
+            ? createElement(ExtensionTreeWorkspaceDiff, { owner, projectId: input.projectId, workspaceId: resource.id })
+            : undefined,
         renderWebview: (renderInput) => createElement(ExtensionViewWidget, { input: renderInput }),
         settingsSectionId: "project",
         settingsSectionTitle: "Project",

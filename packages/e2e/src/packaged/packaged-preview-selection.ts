@@ -2,15 +2,11 @@ import { expect, type Page } from "@playwright/test";
 import { selectMenuAction } from "../helpers/menu-actions";
 import { logTestPhase } from "../scripts/log-test-phase";
 import { type RuntimeDescriptor, runtimeAuthorization, signInBrowser } from "./packaged-serve-helpers";
+import { createPackagedSessionWorkspace } from "./packaged-session-workspace";
 
 export const verifyPackagedPreviewSelection = async (page: Page, projectId: string, descriptor: RuntimeDescriptor) => {
   const authorization = runtimeAuthorization(descriptor);
-  const response = await fetch(`${descriptor.origin}/v1/workspaces?project_id=${projectId}`, {
-    headers: authorization,
-  });
-  expect(response.ok).toBe(true);
-  const workspaces = (await response.json()) as Array<{ id: string; is_default: boolean }>;
-  const workspace = workspaces.find((entry) => entry.is_default)!;
+  const workspace = await createPackagedSessionWorkspace(descriptor.origin, projectId, authorization);
   for (const title of ["Selection kept", "Selection old", "Selection replacement"]) {
     const created = await fetch(`${descriptor.origin}/v1/sessions`, {
       method: "POST",

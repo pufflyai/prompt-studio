@@ -3,6 +3,7 @@ import {
   defineKeybinding,
   defineNavigationItem,
   definePage,
+  defineSchedule,
   defineView,
   l10n,
   packageAsset,
@@ -16,7 +17,7 @@ const view = defineView({
   body: {
     kind: "webview",
     entry: packageAsset("./src/view.tsx", import.meta.url),
-    capabilities: ["commands.execute", "navigation.open"],
+    capabilities: ["commands.query", "commands.execute", "navigation.open"],
   },
 });
 export const home = definePage({
@@ -33,6 +34,14 @@ export default defineExtension({
   defaultLocale: "en",
   translations: { fr: packageAsset("./l10n/fr.json", import.meta.url) },
   commands: Object.values(commands),
+  schedules: [
+    defineSchedule({
+      id: "quota-history",
+      title: l10n("quotas.schedule", "Record quota history"),
+      schedule: "0 * * * *",
+      command: commands.quotas.ref,
+    }),
+  ],
   views: [view],
   pages: [home],
   navigationItems: [

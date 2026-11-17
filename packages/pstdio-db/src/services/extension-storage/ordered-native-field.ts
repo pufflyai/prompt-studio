@@ -5,13 +5,14 @@ import { readTextDocumentSeed } from "pstdio-sync/text";
 import { fingerprint, type Json } from "pstdio-sync-contracts";
 import * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
+import { ensureOrderedOwner } from "./ordered-conversion";
+import { readConversion } from "./ordered-conversion-state";
 import { withOrderedOwner } from "./ordered-journal";
 import { exposeOrderedTextFrontier, readOrderedTextFrontier } from "./ordered-native-frontier";
 import { type OrderedFieldMarker, orderedFieldMarkerId, readOrderedMarker } from "./ordered-native-metadata";
 import { queueOrderedNativeOperation } from "./ordered-native-queue";
 import { rememberOrderedTextGeneration } from "./ordered-native-recovery";
 import { findOrderedNativeField } from "./ordered-native-source";
-import { initializeOrderedOwner } from "./ordered-projection";
 import { rebaseOrderedProjection } from "./ordered-rebase";
 
 const prepareField = async (
@@ -47,9 +48,9 @@ export const runOrderedNativeField = async <T>(input: {
   external?: boolean;
   generation?: string;
 }) => {
+  if (await readConversion(input.db, input.owner)) await ensureOrderedOwner(input.db, input.owner);
   if (!(await findOrderedNativeField(input.db, input.owner, input.key))) return undefined;
-  return withOrderedOwner(input.db, input.owner, async (journal, tx, created) => {
-    await initializeOrderedOwner(journal, tx, input.owner, created);
+  return withOrderedOwner(input.db, input.owner, async (journal, tx) => {
     const binding = await findOrderedNativeField(tx, input.owner, input.key);
     if (!binding) throw new NativeSourceRetiredError(input.key);
     if (input.external && binding.generation !== input.generation)
@@ -120,6 +121,7 @@ export const orderedNativeSnapshot = async (db: DbClient, owner: StorageOwner, k
 };
 
 export const orderedNativeRevision = async (db: DbClient, owner: StorageOwner, key: string) => {
+  if (await readConversion(db, owner)) await ensureOrderedOwner(db, owner);
   if (!(await findOrderedNativeField(db, owner, key))) return undefined;
   return (await readOrderedMarker<OrderedFieldMarker>(db, owner, orderedFieldMarkerId(key)))?.revision ?? 0;
 };

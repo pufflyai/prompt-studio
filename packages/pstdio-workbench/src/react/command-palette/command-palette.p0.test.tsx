@@ -4,6 +4,78 @@ import { createWorkbench, workbenchCommandPaletteMenuPath } from "../../core";
 import { createWorkbenchCommandPaletteEntries, createWorkbenchResourcePaletteEntries } from "./command-palette";
 import { createWorkbenchThemePreferencePaletteEntries, getThemePaletteEntryIndex } from "./theme-palette";
 
+describe("palette discovery metadata", () => {
+  test("updates palette hints when a shortcut is reassigned or disabled", async () => {
+    const workbench = createWorkbench();
+    workbench.commands.registerCommand({ id: "draft.create", label: "New draft" }, { execute() {} });
+    workbench.keybindings.registerKeybinding({
+      id: "draft.create",
+      action: { kind: "command", commandId: "draft.create" },
+      keybinding: "D",
+      layer: "create",
+    });
+    await workbench.keyboard.setAssignment("workbench.keyboard.leader", { keybinding: "Alt+K Alt+L" });
+    await workbench.keyboard.setAssignment("draft.create", { keybinding: "R" });
+    const entry = () =>
+      createWorkbenchCommandPaletteEntries({ workbench, onClose() {} }).find(
+        (entry) => entry.commandId === "draft.create",
+      );
+    expect(entry()?.shortcut).toMatchObject({ props: { binding: ["Alt+K", "Alt+L", "C", "R"] } });
+    await workbench.keyboard.setAssignment("workbench.keyboard.leader", { disabled: true });
+    expect(entry()?.shortcut).toBeUndefined();
+    await workbench.keyboard.setAssignment("workbench.keyboard.leader", { keybinding: "Alt+K Alt+L" });
+    await workbench.keyboard.setAssignment("draft.create", { disabled: true });
+    expect(entry()?.shortcut).toBeUndefined();
+    await workbench.keyboard.setAssignment("draft.create", { keybinding: "" });
+    expect(entry()?.shortcut).toBeUndefined();
+  });
+  test("shows full assigned shortcut sequences outside keyboard mode and while typing", () => {
+    const workbench = createWorkbench();
+    workbench.commands.registerCommand({ id: "draft.create", label: "New draft" }, { execute() {} });
+    workbench.commands.registerCommand({ id: "draft.open", label: "Open draft" }, { execute() {} });
+    workbench.keybindings.registerKeybinding({
+      action: { kind: "command", commandId: "draft.open" },
+      keybinding: "Alt+Shift+D",
+      when: "!inputFocus",
+    });
+    workbench.keybindings.registerKeybinding({
+      id: "draft.create",
+      action: { kind: "command", commandId: "draft.create" },
+      keybinding: "D",
+      layer: "create",
+      when: "!inputFocus",
+    });
+    workbench.context.set("inputFocus", true);
+    const entries = createWorkbenchCommandPaletteEntries({ workbench, onClose() {} });
+    expect(entries.find((entry) => entry.commandId === "draft.create")?.shortcut).toMatchObject({
+      props: { binding: ["Alt+Shift+Space", "C", "D"] },
+    });
+    expect(entries.find((entry) => entry.commandId === "draft.open")?.shortcut).toMatchObject({
+      props: { binding: "Alt+Shift+D" },
+    });
+  });
+
+  test("uses the source command's icon and category for a palette alias", () => {
+    const workbench = createWorkbench();
+    workbench.commands.registerCommand(
+      { id: "draft.create", label: "New draft", icon: "FilePlus", category: "Drafts" },
+      { execute() {} },
+    );
+    workbench.commands.registerCommand({ id: "draft.palette", label: "New draft" }, { execute() {} });
+    workbench.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
+      commandId: "draft.palette",
+      sourceCommandId: "draft.create",
+    });
+    const entry = createWorkbenchCommandPaletteEntries({
+      workbench,
+      menuPath: workbenchCommandPaletteMenuPath,
+      onClose() {},
+    }).find((entry) => entry.commandId === "draft.palette");
+    expect(entry?.group).toBe("Drafts");
+    expect(entry?.icon).toMatchObject({ props: { name: "FilePlus" } });
+  });
+});
+
 describe("createWorkbenchCommandPaletteEntries", () => {
   test.each([
     ["workbench.action.changeTheme", "theme", ""],
@@ -139,7 +211,9 @@ describe("createWorkbenchCommandPaletteEntries", () => {
       menuPath: workbenchCommandPaletteMenuPath,
       onClose: () => undefined,
     });
-    const contributedEntries = entries.filter((entry) => entry.group !== "Workbench");
+    const contributedEntries = entries.filter((entry) =>
+      ["projects.show", "projects.create", "sessions.open"].includes(entry.commandId),
+    );
     expect(contributedEntries.map((entry) => ({ group: entry.group, label: entry.label }))).toEqual([
       { group: "Projects", label: "Show projects" },
       { group: "Projects", label: "Create project" },
@@ -159,11 +233,11 @@ describe("createWorkbenchCommandPaletteEntries", () => {
       commandId: "notes.palette.create",
       sourceCommandId: "notes.create",
     });
-    const [entry] = createWorkbenchCommandPaletteEntries({
+    const entry = createWorkbenchCommandPaletteEntries({
       workbench,
       menuPath: workbenchCommandPaletteMenuPath,
       onClose: () => undefined,
-    });
+    }).find((entry) => entry.commandId === "notes.palette.create");
     expect(entry?.shortcut).toMatchObject({ props: { binding: "Mod+Alt+N" } });
   });
   test("matches shortcut arguments to the palette action", () => {
@@ -181,11 +255,11 @@ describe("createWorkbenchCommandPaletteEntries", () => {
       commandId: "notes.open",
       args: { noteId: "one" },
     });
-    const [entry] = createWorkbenchCommandPaletteEntries({
+    const entry = createWorkbenchCommandPaletteEntries({
       workbench,
       menuPath: workbenchCommandPaletteMenuPath,
       onClose: () => undefined,
-    });
+    }).find((entry) => entry.commandId === "notes.open");
     expect(entry?.shortcut).toMatchObject({ props: { binding: "Alt+1" } });
   });
   test("tags command palette entries with the command mode", () => {

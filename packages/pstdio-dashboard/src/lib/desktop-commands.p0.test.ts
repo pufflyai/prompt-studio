@@ -14,7 +14,7 @@ test("native commands use the workbench command handlers and unsubscribe on tear
         };
       },
     },
-    workbench,
+    () => workbench,
   );
 
   await receive?.("dashboard.openCommandPalette");
@@ -37,7 +37,7 @@ test("keeps failed native commands in the originating workbench region", async (
         return () => {};
       },
     },
-    workbench,
+    () => workbench,
   );
   workbench.commands.registerCommand(
     { id: "unavailable", label: "Unavailable action" },
@@ -55,5 +55,5 @@ test("keeps failed native commands in the originating workbench region", async (
 });
 
 test("does not connect native commands in a browser", () => {
-  expect(connectDesktopCommands(undefined, createDashboardWorkbench())).toBeUndefined();
+  expect(connectDesktopCommands(undefined, () => createDashboardWorkbench())).toBeUndefined();
 });

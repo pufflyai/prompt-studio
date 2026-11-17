@@ -37,6 +37,8 @@ export interface TextWireSnapshot {
 }
 export interface TextWireParticipant {
   id: string;
+  /** Stable connected-device identity for participant chrome; id still identifies one editor's cursor. */
+  deviceId?: string;
   label: string;
   deviceName: string;
   selection: { anchor: string; head: string } | null;

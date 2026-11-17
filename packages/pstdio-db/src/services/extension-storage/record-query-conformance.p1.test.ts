@@ -454,3 +454,25 @@ test("Unicode predicates, wrapped arrays and reserved object keys match memory",
   expect(outputs[0].filters[2]).toEqual(["1"]);
   expect(outputs[0].filters[3]).toEqual(["1"]);
 });
+
+test("memory and database queries select a 500-row page", async () => {
+  const f = await fixture();
+  const memory = createMemoryStorage({ workbenchId: f.owner.workbenchId, extensionId: f.owner.extensionId }).records;
+  const index: StorageRecordIndex = {
+    name: "bulk",
+    fields: { rank: { path: ["rank"], type: "number" } },
+    orderBy: [{ field: "rank", direction: "asc" }],
+  };
+  for (const records of [f.records, memory]) {
+    await records.defineIndexes([index]);
+    await records.commit({
+      operationId: "seed-bulk",
+      edits: Array.from({ length: 501 }, (_, rank) => ({ recordId: `item-${rank}`, replace: { rank } })),
+    });
+    const first = await records.query({ index: "bulk", limit: 500, fields: ["rank"] });
+    expect(first.records).toHaveLength(500);
+    expect(first.cursor).not.toBeNull();
+    const last = await records.query({ index: "bulk", limit: 500, fields: ["rank"], cursor: first.cursor! });
+    expect(last.records.map((record) => record.fields.rank)).toEqual([500]);
+  }
+});

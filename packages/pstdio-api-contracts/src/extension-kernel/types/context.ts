@@ -15,6 +15,7 @@ import type { ExtensionConnectionsApi, ExtensionLoggerApi } from "./connections"
 import type { EventDeliveryResult, EventRef } from "./events";
 import type { JsonObject, JsonValue, MaybePromise, Struct } from "./json";
 import type { NavigationTarget } from "./navigation-target";
+import type { ResourceActivityApi } from "./resource-activity";
 import type { ExtensionResourcesApi, RendererContext, ResourceRef } from "./resources";
 import type { ExtensionViewsApi } from "./saved-views";
 import type { ExtensionSessionsApi } from "./sessions";
@@ -71,6 +72,14 @@ export interface ExtensionArtifactApi {
   mount(key: string): ArtifactMount;
 }
 
+/** Host-managed local files owned by one provider's workspace identity. */
+export interface WorkspaceProviderDirectory {
+  readonly path: string;
+  readonly files: ArtifactMount;
+  /** Remove only this workspace's managed directory; its record and history remain host-owned. */
+  remove(): Promise<void>;
+}
+
 export interface ExtensionFilesApi {
   readText(fileId: string): Promise<string>;
   writeText(fileId: string, value: string): Promise<void>;
@@ -105,10 +114,20 @@ export type {
 } from "./sessions";
 
 export interface ExtensionEventsApi {
-  emit<TPayload extends Struct>(event: EventRef<TPayload> | string, payload: TPayload): Promise<EventDeliveryResult>;
+  /** `refresh` is shared invalidation metadata; hook payloads remain private to their delivery. */
+  emit<TPayload extends Struct>(
+    event: EventRef<TPayload> | string,
+    payload: TPayload,
+    options?: { refresh?: Omit<import("./events").QueryChangeEnvelope, "projectId"> },
+  ): Promise<EventDeliveryResult>;
 }
 
-export interface ExtensionActivityApi {
+export interface ExtensionActivityApi extends ResourceActivityApi {
+  /** Resource owners may preserve immutable historical evidence during migration. */
+  importEntry(
+    resource: ResourceRef,
+    input: import("../../resource-activity").ResourceActivityImport,
+  ): Promise<import("../../resource-activity").ResourceActivityEntry>;
   record(input: {
     message: string;
     target?: ResourceRef;
@@ -200,6 +219,8 @@ export interface ExtensionContextBase<TSettings extends Record<string, unknown> 
   projectFiles?: ArtifactMount;
   /** Files of the workspace this context targets, scoped to its working dir. */
   workspaceFiles?: WorkspaceFilesMount;
+  /** Available during workspace provider lifecycle calls, including before the target is ready. */
+  localDirectory?(): Promise<WorkspaceProviderDirectory>;
   /** Read-only files packaged with the installed extension, scoped to its package root. */
   packageFiles: ExtensionPackageFilesApi;
   /** Project directory allocated to this extension. Present wherever projectFiles is present. */

@@ -3,6 +3,7 @@ import {
   getNavigationTreeNodeSource,
   setNavigationTreeNodeSource,
 } from "../../registries/navigation/navigation-tree-node-source";
+import { mergeNavigationTreePages } from "../../registries/navigation/navigation-tree-pages";
 import type { NavigationTreeRegistry, NavigationTreeSlot } from "../../registries/navigation/navigation-tree-registry";
 import type { WorkbenchPageContribution } from "../../registries/pages/page-registry";
 import type { TreeViewSection } from "../../registries/renderers/tree-renderer-types";
@@ -29,6 +30,7 @@ const pinnedOnly = (sections: TreeViewSection[]) =>
     .filter((section) => section.nodes.length > 0)
     .map((section) => ({
       ...section,
+      nextPage: undefined,
       nodes: section.nodes.map((node) => {
         const pinned = { ...node, pinnedOnly: true };
         const source = getNavigationTreeNodeSource(node);
@@ -42,7 +44,16 @@ const mergeSections = (sections: TreeViewSection[]) => {
   const merged = new Map<string, TreeViewSection>();
   for (const section of sections) {
     const current = merged.get(section.id);
-    merged.set(section.id, current ? { ...current, nodes: [...current.nodes, ...section.nodes] } : section);
+    merged.set(
+      section.id,
+      current
+        ? {
+            ...current,
+            nodes: [...current.nodes, ...section.nodes],
+            nextPage: mergeNavigationTreePages(current.nextPage, section.nextPage),
+          }
+        : section,
+    );
   }
   return [...merged.values()];
 };
@@ -126,6 +137,15 @@ export const createLevelNavigation = (host: LevelNavigationHost) => {
           ? (["header", "content", "footer"] as const)
           : (["header", "footer"] as const)
         ).flatMap((slot) => host.navigationTrees.getDefaultExpandedSectionIds(owner, slot)),
+      );
+    },
+    getDefaultExpandedNodeIds: () => {
+      const all = queries();
+      return all.flatMap(({ owner }, index) =>
+        (index === all.length - 1
+          ? (["header", "content", "footer"] as const)
+          : (["header", "footer"] as const)
+        ).flatMap((slot) => host.navigationTrees.getDefaultExpandedNodeIds(owner, slot)),
       );
     },
   };

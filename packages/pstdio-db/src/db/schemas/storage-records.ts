@@ -37,6 +37,10 @@ export const storage_current_records = pgTable(
     record_id: text("record_id").notNull(),
     deleted: boolean("deleted").notNull(),
     value: jsonb("value").$type<StorageRecord["value"]>(),
+    query_values: jsonb("query_values")
+      .$type<Record<string, Record<string, import("pstdio-sync-contracts").Json>>>()
+      .notNull()
+      .default({}),
     asset: jsonb("asset").$type<StorageRecord["asset"]>(),
     shared: jsonb("shared").$type<StorageRecord["shared"]>(),
     native_sources: jsonb("native_sources").$type<NativeRecordSources>().notNull().default({}),

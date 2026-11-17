@@ -1,10 +1,13 @@
 # Write an extension
 
+For session tools, [native chat](../../references/extensions/0028-native-chat.md)
+provides the shared conversation and composer through serializable bindings.
+
 Build a Bookmarks tool with a native table, saved filters, and matching `pst` commands, then install it in a project.
 
 The finished tool saves links, marks them read, filters unread links, and deletes links. People use it from a table in the workbench. Agents use the same commands through `pst`. Each project keeps its own bookmarks.
 
-Every code block on this page is a complete file from the [maintained Bookmarks example](../../../infra/local/extensions/bookmarks/extension.ts). Prompt Studio's checks compare these blocks with that example, and its [tests](../../../infra/local/extensions/bookmarks/extension.p0.test.ts) run against the SDK version below.
+Every code block on this page is a complete file from the [maintained Bookmarks example](../../../infra/local/extensions/bookmarks/extension.ts). Prompt Studio's checks compare these blocks with that example, and its source uses the SDK version below.
 
 ## Versions this guide uses
 
@@ -81,11 +84,10 @@ Create `package.json`:
   "type": "module",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.1.6 || ^0.2.0 || ^0.3.0 || ^0.4.0"
+    "pstdio": "^0.1.6 || ^0.2.0 || ^0.3.0 || ^0.4.0 || ^0.5.0"
   },
   "scripts": {
-    "lint": "bun check",
-    "test": "bun test"
+    "lint": "bun check"
   },
   "dependencies": {
     "@pstdio/sdk": "0.43.1"
@@ -101,7 +103,7 @@ Create `package.json`:
 - `publisher` and `name` form the extension ID, here `acme.bookmarks`. You can use your own publisher name; then also change `extensionId` in `src/bookmarks.ts` in step 3. Each part starts with a lowercase letter and contains only lowercase letters, numbers, and dashes.
 - `main` is the entry file.
 - `icon` names the icon shown in Extensions.
-- `engines.pstdio` lists the extension API versions this extension works with. `^0.1.6` accepts 0.1.6 and later 0.1 releases. `^0.2.0`, `^0.3.0`, and `^0.4.0` accept the next three breaking releases. Claim a version only after you run the extension on it.
+- `engines.pstdio` lists the extension API versions this extension works with. `^0.1.6` accepts 0.1.6 and later 0.1 releases. `^0.2.0`, `^0.3.0`, `^0.4.0`, and `^0.5.0` accept the next four breaking releases. Claim a version only after you run the extension on it.
 - `@pstdio/sdk` is pinned to the SDK release that matches your Prompt Studio version.
 
 Create `tsconfig.json`, so the type checker knows the files and Bun's types:
@@ -480,7 +482,7 @@ pst extensions check ~/bookmarks
 
 It prints `Errors: 0` and lists the four commands with their CLI paths. If it reports `extension_import_failed` with `Could not resolve: "@pstdio/sdk/extensions"`, run `bun install` in `~/bookmarks` first. It reports invalid IDs, missing references, unknown icons, and features your Prompt Studio does not support. Run `pst extensions check` without a path to check every installed extension.
 
-To test the commands without Prompt Studio, copy [`extension.p0.test.ts`](../../../infra/local/extensions/bookmarks/extension.p0.test.ts) from the example into `~/bookmarks` and run `bun test`. It uses `@pstdio/sdk/testing`: each test calls a command's `run` with `makeCommandArgs({ storage: createMemoryStorage(), params })`, so the storage lives in memory.
+Exercise the installed commands through the CLI and workbench. Demo extensions do not carry their own automated suites; production extension tests should cover supported user behavior through public APIs.
 
 [Smoke checks](0006-smoke-checks.md) explains `pst extensions test`, which opens your pages in a real browser and reports errors.
 
@@ -489,7 +491,7 @@ To test the commands without Prompt Studio, copy [`extension.p0.test.ts`](../../
 This page is tested with Prompt Studio 0.43.1. The `main` branch already contains the next breaking extension API, 0.2.0, which ships in the release after 0.43.x. See [Versions in current releases](../../references/extensions/0014-api-versioning.md#versions-in-current-releases).
 
 - API 0.2.0 adds `ctx.storage.records`, which saves a group of related changes at once and refuses writes based on stale data, and `ctx.storage.assets`. Prompt Studio 0.43.1 does not have them.
-- This guide saves bookmarks with `storage.collection`, which is the right choice on 0.43.1. API 0.2.0 marks `collection` as deprecated in favor of `storage.records`. It remains supported through API 0.4, which is why this extension declares `^0.1.6 || ^0.2.0 || ^0.3.0 || ^0.4.0`. API 0.3 refuses storage records over 256 KiB; a bookmark is far smaller. Move to `storage.records` when you no longer need to support 0.43.1. See [Save related records](../sdk/0003-storage.md).
+- This guide saves bookmarks with `storage.collection`, which is the right choice on 0.43.1. API 0.2.0 marks `collection` as deprecated in favor of `storage.records`. It remains supported through API 0.5, which is why this extension declares `^0.1.6 || ^0.2.0 || ^0.3.0 || ^0.4.0 || ^0.5.0`. API 0.3 refuses storage records over 256 KiB; a bookmark is far smaller. Move to `storage.records` when you no longer need to support 0.43.1. See [Save related records](../sdk/0003-storage.md).
 
 When your Prompt Studio updates, run `pst extensions check`. If it reports `extension_manifest_unsupported_api_version`, follow the repair it prints.
 
@@ -512,4 +514,6 @@ describes allocation, current identities, aliases, and change events available o
 
 ## Project Home on main
 
-The default `pstdio.pstdio-home` extension owns the project home presentation. It uses public session/workspace queries, webview commands and navigation. Prompt Studio directly configures its ordinary Home page as the project default. If Home is disabled or uninstalled, the dashboard uses its existing empty-panel UI. See [dashboard commands and session ordering](../../references/extensions/0004-contribution-api.md#dashboard-commands-and-session-ordering-api-031-on-main).
+The default `pstdio.home` extension owns the project home presentation. It uses public session/workspace queries, webview commands and navigation. Prompt Studio directly configures its ordinary Home page as the project default. If Home is disabled or uninstalled, the dashboard uses its existing empty-panel UI. See [dashboard commands and session ordering](../../references/extensions/0004-contribution-api.md#dashboard-commands-and-session-ordering-api-031-on-main).
+
+*Updated at: 2026-11-12*

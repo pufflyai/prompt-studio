@@ -26,6 +26,7 @@ import { createOrderedReceiptResolver } from "./ordered-receipts-resolver";
 import { receiptRoots, sameReceiptRoot, saveReceiptRoots } from "./ordered-receipts-state";
 import { decodeOrderedJson, type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { orderedOwnerJoinedCloud, readOrderedOwner, saveOrderedCursor } from "./ordered-stream-state";
+import { captureProjectedRecordChanges } from "./projected-record-changes";
 
 const checkpointEntries = async (remote: Map<string, Uint8Array[]>) => {
   const entries = [];
@@ -99,6 +100,7 @@ export const adoptOrderedCheckpoint = async (input: {
   ) => Promise<string[]>;
 }) => {
   const { journal, tx, owner, index, cursor } = input;
+  const changedRecords = await captureProjectedRecordChanges(tx, owner);
   const entries = await checkpointEntries(input.remote);
   const metadata = entries.filter((entry) => entry.type === "meta");
   if (metadata.length !== 1) throw new Error("A checkpoint requires exactly one order identity");
@@ -162,6 +164,7 @@ export const adoptOrderedCheckpoint = async (input: {
   await saveOrderedCursor(tx, owner, cursor, meta.epoch);
   return {
     events: saved.events,
+    recordIds: changedRecords(saved.records),
     rejected: [] as string[],
     cursor: { ...cursor, receiptRoot: meta.receiptRoot, receiptStateId: cursor.stateId },
   };

@@ -1,4 +1,4 @@
-import { resourceEvents, workspaceEvents } from "pstdio-api-contracts/extension-kernel";
+import { resourceEvents, viewDataEvents, workspaceEvents } from "pstdio-api-contracts/extension-kernel";
 import { createAssetBytesStorage, createFilesStorageService } from "pstdio-storage";
 import type { createAppDatabaseServices } from "./app-database";
 import type { RouteDeps } from "./features/deps";
@@ -88,6 +88,19 @@ export const createCoreDomainServices = (input: {
     }),
     extensionSettingsService: createExtensionSettingsService({
       extensionSettingsDBService: dbs.extensionSettingsDBService,
+      onChanged: async (context, definition) => {
+        // Settings can change derived catalog entries, such as setup visibility.
+        // Device/global owners affect every project; instance owners affect one.
+        const instance =
+          definition.scope === "project"
+            ? await dbs.extensionInstancesDBService.get(context.extensionInstanceId)
+            : undefined;
+        eventBus.emit("extension_events", "set", {
+          id: crypto.randomUUID(),
+          eventId: viewDataEvents.extensionCatalogChanged.id,
+          ...(instance && { projectId: instance.scope_id }),
+        });
+      },
     }),
     workspaceSessionService: createWorkspaceSessionService({
       workspaceSessionsDBService: dbs.workspaceSessionsDBService,

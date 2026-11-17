@@ -25,7 +25,7 @@ The form starts with the column's status and editable properties that match the 
 
 Clicking the background keeps the form open. **Cancel** and Escape close it and keep your draft, including attachments, while this dashboard stays open. Reopen the same view and filter to continue, even after visiting another page. Each view and filter keeps its own draft, so new filtered forms inherit matching properties without replacing earlier drafts. The **X** discards the current draft. Successful creation clears it.
 
-You can also create tickets from a terminal with [`pst tickets create`](0004-cli.md#tickets), or let an agent do it with Planner's `create-ticket` skill.
+You can also create tickets from a terminal with [`pst pstdio.planner create-ticket`](0004-cli.md#tickets), or let an agent do it with Planner's `create-ticket` skill.
 
 ### Move and change tickets
 
@@ -70,7 +70,7 @@ The editor shows the document you selected in the sidebar: the description, a ti
 
 Selecting a saved document puts it in the page URL. Open the menu after the ticket name in the header and choose **Copy link** to copy that URL. Reload, Back, and Forward restore that document. File links keep working after a rename. A deleted document shows an unavailable error.
 
-Chat links to `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/<ticket>/ticket.md` open the exact workspace draft. They do not open or save the Planner document.
+Chat links to `.pstdio/extension-storage/pstdio.planner/tickets/<ticket>/ticket.md` open the exact workspace draft. They do not open or save the Planner document.
 
 ### Properties
 
@@ -118,3 +118,5 @@ Archiving or deleting a ticket deletes linked workspaces once no active ticket u
 **Archive all** updates the board as soon as the tickets are archived. Linked workspace cleanup continues in the background. The host processes up to two workspace deletions at a time across archive batches, API requests, and extension commands. If a deletion fails, cleanup continues with the remaining workspaces and sends a failure notification. The tickets stay archived.
 
 The project setting **Mark done on merge** (`tickets.markDoneOnMerge`) is also on by default. Local merges move linked tickets to the status after merge chosen in Planner workflow settings. Without that choice, tickets stay unchanged. Planner checks GitHub pull request links and linked workspace branches every five minutes with up to eight parallel checks. Install and authenticate GitHub CLI (`gh`) on the host for these checks. Failed GitHub checks leave tickets unchanged and log the failure. Merges do not archive tickets or delete workspaces.
+
+*Updated at: 2026-11-05*

@@ -39,12 +39,12 @@ For a first check, create a note, type a heading and a short list, then close it
 Agents can manage notes too:
 
 ```sh
-pst pstdio-notes notes create
-pst pstdio-notes folders create --title "Research"
-pst pstdio-notes notes move --note-id <note-id> --folder-id <folder-id>
-pst pstdio-notes notes create --title "Meeting notes"
-pst pstdio-notes notes rename --note-id <note-id> --title "New title"
-pst pstdio-notes notes delete --note-id <note-id>
+pst pstdio.notes create
+pst pstdio.notes folders create --title "Research"
+pst pstdio.notes notes move --note-id <note-id> --folder-id <folder-id>
+pst pstdio.notes create --title "Meeting notes"
+pst pstdio.notes rename --note-id <note-id> --title "New title"
+pst pstdio.notes delete --note-id <note-id>
 ```
 
 ## Where notes are stored
@@ -52,7 +52,7 @@ pst pstdio-notes notes delete --note-id <note-id>
 Each note is a folder in the project's default workspace. The title lives in the Markdown front matter of `content.md`; the editor shows the body:
 
 ```txt
-<project-folder>/.pstdio/extension-storage/pstdio.pstdio-notes/documents/<note-id>/
+<project-folder>/.pstdio/extension-storage/pstdio.notes/documents/<note-id>/
   content.md
   folder.txt    # present when the note belongs to a folder
 ```
@@ -60,3 +60,5 @@ Each note is a folder in the project's default workspace. The title lives in the
 An empty front matter `title` permits the first automatic rename. Existing sidecar titles are preserved and moved into front matter when that note is next saved or renamed. Named folders are stored under `documents/.folders/<folder-id>/title.txt`. Notes keep their IDs when moved. Manual note order is stored in `documents/.order.json`.
 
 Git is optional. In a Git project, commit that folder to share notes with your team, or leave it out of Git to keep them on your computer.
+
+*Updated at: 2026-11-02*

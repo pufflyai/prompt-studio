@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import catalogData from "../../../files/extension-catalog.json";
 import { loadExtensionCatalog, packagedExtensionCatalog, parseExtensionCatalog } from "./extension-catalog";
 
@@ -25,7 +26,7 @@ describe("extension catalog", () => {
       const manifest = JSON.parse(
         readFileSync(join(import.meta.dir, "../../../../..", extension.origin.path, "package.json"), "utf8"),
       );
-      expect(extension.extensionId).toBe(`${manifest.publisher}.${manifest.name}`);
+      expect(extension.extensionId).toBe(canonicalExtensionId(`${manifest.publisher}.${manifest.name}`));
       expect(typeof extension.icon).toBe("string");
       expect(extension.icon).toBe(manifest.icon);
     }
@@ -106,23 +107,19 @@ describe("extension catalog", () => {
     }
   });
 
-  test("keeps bundled Workspaces enabled through the ordinary catalog policy", () => {
-    expect(
-      packagedExtensionCatalog.extensions.find((entry) => entry.installName === "pstdio-workspaces"),
-    ).toMatchObject({ default: true, alwaysEnabled: true, extensionId: "pstdio.pstdio-workspaces" });
-  });
   test("ships onboarding and platform defaults so projects choose their own harnesses", () => {
     const defaults = packagedExtensionCatalog.extensions
       .filter((catalogEntry) => catalogEntry.default)
       .map((catalogEntry) => catalogEntry.installName);
 
     expect(defaults).toEqual([
-      "pstdio-home",
-      "pstdio-onboarding",
-      "pstdio-workspaces",
-      "pstdio-base-themes",
-      "pstdio-skills",
-      "pstdio-performance",
+      "home",
+      "session-browser",
+      "onboarding",
+      "base-themes",
+      "skills",
+      "github",
+      "git-workspaces",
     ]);
   });
 });

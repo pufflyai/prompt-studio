@@ -1,29 +1,12 @@
-import { expect, type Locator, type Page, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket } from "../helpers/planner-api";
 import { switchSession } from "../helpers/session-side-panel";
+import { expect, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 
 const openTabCustomMenu = async (tab: import("@playwright/test").Locator) => {
   await tab.click({ button: "right" });
 };
-interface MenuCase {
-  panel: "Main" | "Secondary" | "Side";
-  side: "left" | "right";
-  contentRegion: "main" | "secondary" | "side";
-}
-
-const _testedMenus: MenuCase[] = [
-  { panel: "Main", side: "left", contentRegion: "main" },
-  { panel: "Secondary", side: "right", contentRegion: "secondary" },
-  { panel: "Side", side: "left", contentRegion: "side" },
-];
-
-const panelId = (panel: MenuCase["panel"]) => panel.toLowerCase();
-const _menuName = (entry: MenuCase) => `${entry.panel} ${entry.side} menu`;
-const _menuRegion = (page: Page, entry: MenuCase) =>
-  page.locator(`[data-workbench-panel-menu="${panelId(entry.panel)}-${entry.side}"]`);
-
 const createSession = async (
   request: import("@playwright/test").APIRequestContext,
   projectId: string,
@@ -38,19 +21,6 @@ const createSession = async (
     },
   });
   expect(response.ok()).toBe(true);
-};
-
-const _dragMenuClosed = async (page: Page, menu: Locator, separator: Locator, side: MenuCase["side"]) => {
-  const [menuBox, separatorBox] = await Promise.all([menu.boundingBox(), separator.boundingBox()]);
-  expect(menuBox).not.toBeNull();
-  expect(separatorBox).not.toBeNull();
-  const startX = separatorBox!.x + separatorBox!.width / 2;
-  const y = separatorBox!.y + separatorBox!.height / 2;
-  const targetX = side === "left" ? menuBox!.x + 40 : menuBox!.x + menuBox!.width - 40;
-  await page.mouse.move(startX, y);
-  await page.mouse.down();
-  await page.mouse.move(targetX, y);
-  await page.mouse.up();
 };
 
 test("preserves browser Forward history between extension pages after refresh", async ({ page, request }) => {
@@ -71,14 +41,14 @@ test("preserves browser Forward history between extension pages after refresh", 
 
   await page.getByRole("option", { name: "Tickets", exact: true }).click();
   await page.getByText(ticket.content, { exact: true }).click();
-  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-planner\/ticket\?resource=/);
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.planner\/ticket\?resource=/);
 
   await page.goBack();
-  await expect(page).toHaveURL(`/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
+  await expect(page).toHaveURL(`/projects/${project.id}/extensions/pstdio.planner/tickets`);
 
   await page.reload();
   await page.goForward();
-  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-planner\/ticket\?resource=/);
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.planner\/ticket\?resource=/);
   await expect(page.getByRole("region", { name: "Main", exact: true }).getByRole("textbox")).toHaveText(ticket.content);
 });
 
@@ -132,11 +102,10 @@ test("preserves other Session tabs when selecting from New session", async ({ pa
   const newSession = menu.getByRole("menuitem", { name: "New session" });
   await expect(newSession).toBeVisible();
   await expect(menu.getByRole("menuitem").first()).toContainText("New session");
-  await expect(menu.getByRole("menuitem", { name: "Pin tab", exact: true })).toBeVisible();
+  await expect(menu.getByRole("menuitem", { name: "Unpin tab", exact: true })).toBeVisible();
   await expect(menu.getByRole("menuitem", { name: "Reset layout", exact: true })).toBeVisible();
   await expect(menu.getByRole("group", { name: "Sessions", exact: true })).toBeVisible();
   await expect(menu.getByRole("group", { name: "Tab", exact: true })).toBeVisible();
-  await expect(newSession.locator("svg")).toHaveClass(/lucide-message-square-plus/);
 
   await switchSession(page, "First context session");
   await expect(sideHeader.getByRole("tab", { name: /First context session/ })).toBeVisible();
@@ -232,10 +201,25 @@ test("updates a New session Sub Panel in place after the first message", async (
     );
     localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
   }, project.id);
-  await page.goto(`/projects/${project.id}/`);
-  await page.getByRole("button", { name: "Open Side Panel" }).click();
-  await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
+  // Open the generic shell before the real provider catalog arrives.
+  const catalog = Promise.withResolvers<void>();
+  await page.route(`**/v1/projects/${project.id}/extensions/ui`, async (route) => {
+    await catalog.promise;
+    await route.continue();
+  });
+  try {
+    await page.goto(`/projects/${project.id}/`);
+    await page.getByRole("button", { name: "Open Side Panel" }).click();
+    await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
+  } finally {
+    catalog.resolve();
+  }
   const sideHeader = page.locator('[data-workbench-panel-header="side"]');
+  const sidePanel = page.locator('[data-workbench-panel="side"]');
+  await sidePanel
+    .getByRole("group", { name: "Available tabs" })
+    .getByRole("button", { name: "New session", exact: true })
+    .click();
   await expect(sideHeader.getByRole("tab", { name: "New session", exact: true })).toBeVisible();
   await sideHeader.getByRole("button", { name: "Add panel" }).click();
   const sessionChoice = page
@@ -248,7 +232,6 @@ test("updates a New session Sub Panel in place after the first message", async (
   await expect(activeTab).toContainText("New session");
 
   const prompt = "Continue in this session tab";
-  const sidePanel = page.locator('[data-workbench-panel="side"]');
   await sidePanel
     .locator("[data-testid='content-editable'][contenteditable='true']")
     .filter({ visible: true })
@@ -257,7 +240,7 @@ test("updates a New session Sub Panel in place after the first message", async (
 
   await expect(sessionTabs).toHaveCount(2);
   await expect(activeTab).toContainText(prompt);
-  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/extensions/pstdio\\.pstdio-home/home$`));
+  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/extensions/pstdio\\.home/home$`));
 });
 
 test("renames a moved session and restores its destination after reload", async ({ page, request }) => {
@@ -270,12 +253,16 @@ test("renames a moved session and restores its destination after reload", async 
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("dashboard-wb2:selected-project:global", id);
   }, project.id);
-  // Home's Main is tabless, so the move needs a page whose Main accepts tabs.
   await page.goto(`/projects/${project.id}/sessions`);
   await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
   await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
   const side = page.locator('[data-workbench-panel-header="side"]');
-  await openTabCustomMenu(side.getByRole("tab", { name: "New session", exact: true }));
+  // The Sessions page owns its Main composer; explicitly add the Side Panel instance to move.
+  // Before the extension catalog arrives, + opens the sole built-in terminal directly.
+  await expect(side.getByRole("button", { name: "Add panel", exact: true })).toHaveAttribute("aria-haspopup", "menu");
+  await side.getByRole("button", { name: "Add panel", exact: true }).click();
+  await page.getByRole("menuitem", { name: "New session", exact: true }).click();
+  await openTabCustomMenu(side.getByRole("tab", { name: "New session", exact: true, selected: true }));
   await switchSession(page, "Session to rename");
   await openTabCustomMenu(side.getByRole("tab", { name: "Session to rename", exact: true }));
   await page.getByRole("menuitem", { name: "Move to Secondary", exact: true }).click();

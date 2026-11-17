@@ -13,7 +13,7 @@ Prompt Studio publishes these tools as extensions. They use the public extension
 | [Reports](../../../extensions/pstdio-reports/README.md) | Reports that agents hand to each other | `pstdio-reports` |
 | [Artifacts](../../../extensions/pstdio-artifacts/README.md) | Interactive HTML pages with saved revisions | `pstdio-artifacts` |
 
-New projects start with Home, Onboarding, base themes, Prompt Studio Skills, and performance monitoring. Onboarding offers agent harnesses and optional tools; you can choose them there or install them later through Extensions.
+New projects start with Home, Onboarding, base themes, and Prompt Studio Skills. Onboarding offers agent harnesses and optional tools. Choosing Coding also installs Workspaces. Cloud and performance monitoring can be installed later through Extensions.
 
 ## Install from the dashboard
 
@@ -75,12 +75,12 @@ Tools can expose their actions as CLI commands. That lets an agent use a tool di
 
 ```sh
 pst --help
-pst pstdio-notes --help
-pst pstdio-notes notes create --help
-pst pstdio-notes notes create --title "Reading list"
+pst pstdio.notes --help
+pst pstdio.notes create --help
+pst pstdio.notes create --title "Reading list"
 ```
 
-With Notes installed and enabled, the last command creates the same empty note as **New note** in the sidebar. Open it in Notes to check the result. Planner adds shorter aliases such as `pst tickets list`; an extension's help shows its own paths and aliases.
+With Notes installed and enabled, the last command creates the same empty note as **New note** in the sidebar. Open it in Notes to check the result. Planner exposes commands such as `pst pstdio.planner list-tickets`. Each extension's help lists its commands under its full namespace.
 
 For extension commands, `--json` returns the execution response, including its success or failure outcome. Agents can read that response and pass returned IDs to later commands. Use `--help` before guessing an action's flags.
 
@@ -107,3 +107,5 @@ Tools can work together when their authors expose commands, events, or resource 
 If you want to write the code yourself, read [Write an extension](../extensions/0001-authoring.md). To learn how extensions load and run, read [Extensions](../concepts/0002-extensions.md).
 
 Next, [run agents](0004-run-agents.md).
+
+*Updated at: 2026-11-07*

@@ -54,7 +54,8 @@ export const queueRecordUpload = async (
         eq(storage_record_sync.extension_id, owner.extensionId),
       ),
     );
-  if (!synced) return;
+  // A device that has not joined, or that signed out, never queues uploads.
+  if (!synced?.joined) return;
   const records = changed.map((change) => ({ recordId: change.record.recordId, bytes: change.update! }));
   await insert(tx, owner, records, recordAssets(changed.map((change) => change.record)));
 };

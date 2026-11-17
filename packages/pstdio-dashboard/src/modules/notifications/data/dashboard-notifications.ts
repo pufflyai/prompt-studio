@@ -1,6 +1,6 @@
 import { standardResourceIcons } from "@pstdio/workbench";
 import type { ResourceRef as ExtensionResourceRef, Notification, NotificationAction } from "pstdio-api-contracts";
-import { getCollection, type SyncedRow } from "@/lib/sync/collections";
+import { getIndexedRows, type SyncedRow } from "@/lib/sync/collections";
 import { createDashboardResource, createDashboardSessionResource } from "@/shared/app/resources";
 
 const pendingStatuses = new Set(["open", "read"]);
@@ -11,7 +11,7 @@ const arrayValue = <T>(value: unknown) => (Array.isArray(value) ? (value as T[])
 const objectValue = <T extends object>(value: unknown) =>
   value && typeof value === "object" && !Array.isArray(value) ? (value as T) : undefined;
 
-const readRows = () => Array.from(getCollection("notifications").state.values()) as SyncedRow[];
+const readRows = (projectId?: string) => (projectId ? getIndexedRows("notifications", "project_id", projectId) : []);
 
 const toNotification = (row: SyncedRow): Notification => ({
   id: row.id,
@@ -46,7 +46,7 @@ const byPriorityThenUpdated = (left: Notification, right: Notification) => {
 };
 
 export const createDashboardNotifications = (projectId: string | undefined) =>
-  readRows()
+  readRows(projectId)
     .map(toNotification)
     .filter((notification) => notification.projectId === projectId && pendingStatuses.has(notification.status))
     .sort(byPriorityThenUpdated);

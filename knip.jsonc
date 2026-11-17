@@ -145,14 +145,18 @@
         "src/perf/storage-scale-prepare.ts",
         "src/perf/storage-scale-extension.ts",
         "src/**/*.test.ts",
+        "src/**/*.test.tsx",
         "src/**/*.fixture.ts",
         "src/**/*.fixture.tsx",
+        // UI Canvas discovers public-build regression fixtures by path.
+        "src/**/*.canvas.tsx",
         // Packaged smoke tests bundle these extension entries by path.
         "src/packaged/fixtures/*-extension.ts",
         // Specs install fixture extensions by path.
         "src/fixtures/**/extension.ts",
         // Extension manifests load this webview entry by packageAsset path.
-        "src/fixtures/editing-session/view.ts",
+        "src/fixtures/{editing-session,document,mode,settings}/view.ts",
+        "src/fixtures/panel-views/letter-{browser,reader}.tsx",
         "src/fixtures/public-text-editor/view.tsx"
       ],
       "project": ["playwright*.config.ts", "src/**/*.{ts,tsx}"],
@@ -160,29 +164,36 @@
       // Extensions e2e installs at runtime by path, and the dashboard it builds and serves.
       // Declared so CI treats their changes as e2e changes.
       "ignoreDependencies": [
+        "github",
         "canvas",
         "extension-lab",
+        "git-workspaces",
         "harness-claude-code",
         "harness-codex",
         "harness-open-code",
         "harness-pi",
         "local-example",
-        "pstdio-artifacts",
-        "pstdio-base-themes",
+        "artifacts",
+        "base-themes",
+        "cloud",
         "pstdio-dashboard",
-        "pstdio-home",
-        "pstdio-workspaces",
-        "pstdio-notes",
-        "pstdio-performance",
-        "pstdio-planner",
-        "pstdio-reports",
-        "pstdio-skills",
+        "home",
+        "session-browser",
+        "workspaces",
+        "notes",
+        "performance",
+        "planner",
+        "reports",
+        "skills",
+        "pstdio-skill-browser",
         "remote-workspaces",
         "workbench-fixture"
       ]
     },
     "packages/pstdio-api": {
       "entry": [
+        // The API and compiled CLI start preparation in an isolated worker by path.
+        "src/features/extensions/extension-preparation-worker.ts",
         "package.json",
         "src/index.ts",
         "src/server.ts",
@@ -199,11 +210,13 @@
       "ignore": ["dist/**"],
       // Tests install these extensions and fixtures from source. Declared so CI treats their changes as API changes.
       "ignoreDependencies": [
+        "github",
         "extension-lab",
-        "pstdio-base-themes",
-        "pstdio-planner",
-        "pstdio-skills",
-        "workbench-fixture"
+        "base-themes",
+        "planner",
+        "skills",
+        "workbench-fixture",
+        "git-workspaces"
       ]
     },
     "packages/pstdio-db": {
@@ -213,8 +226,7 @@
         "src/index.ts",
         // The database asset build bundles this isolated child entrypoint by path.
         "src/db/pglite-export-worker.ts",
-        "src/services/sessions/session-query.p3.bench.ts",
-        "src/services/extension-storage/document-storage.p3.bench.ts",
+        "src/services/extension-storage/critical-store.p3.bench.ts",
         "src/services/extension-storage/document-scale.diagnostic.ts",
         "src/services/extension-storage/record-read-scale.diagnostic.ts",
         "src/services/extension-storage/ordered-log-query-plan.diagnostic.ts",
@@ -254,10 +266,12 @@
       "project": ["*.ts", "src/**/*.{ts,tsx}"],
       "ignore": ["dist/**"],
       // Tests load these extensions from source. Declared so CI treats their changes as testbench changes.
-      "ignoreDependencies": ["pstdio-base-themes", "pstdio-planner"]
+      "ignoreDependencies": ["base-themes", "planner"]
     },
     "packages/pstdio-extensions": {
       "entry": [
+        // The source runtime starts this default preparation worker by path.
+        "src/runtime/preparation-worker.ts",
         "package.json",
         "scripts/**/*.ts",
         "src/index.ts",
@@ -276,10 +290,10 @@
         "package.json",
         "rolldown.*.config.ts",
         "src/{api,client,extensions,extensions/keyboard,extensions/react,prompts,hooks,resources,testing,data}/index.ts",
-        "src/**/*.test.ts",
+        "src/**/*.test.{ts,tsx}",
         "src/**/*.typecheck.ts"
       ],
-      "project": ["src/**/*.ts"],
+      "project": ["src/**/*.{ts,tsx}"],
       "ignore": ["dist/**"],
       // Public declarations inline private contracts, including their Zod types.
       "ignoreDependencies": ["pstdio-sync-contracts", "zod"]
@@ -353,6 +367,7 @@
       // Tests launch fixture scripts by path.
       "entry": [
         "package.json",
+        "test-setup.ts",
         "extension.ts",
         "*.test.ts",
         "src/**/*.test.ts",
@@ -366,11 +381,18 @@
     },
     // Webview entries are referenced by path through packageAsset(), so each extension lists its own.
     "extensions/pstdio-onboarding": {
-      "entry": ["package.json", "extension.ts", "src/**/*.test.ts", "src/**/*.canvas.tsx", "src/setup-entry.tsx"],
+      "entry": ["package.json", "extension.ts", "src/**/*.test.{ts,tsx}", "src/**/*.canvas.tsx", "src/setup-entry.tsx"],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "extensions/pstdio-workspaces": {
-      "entry": ["package.json", "extension.ts", "src/**/*.test.ts", "src/**/*.canvas.tsx", "src/*-view.tsx"],
+      "entry": [
+        "package.json",
+        "test-setup.ts",
+        "extension.ts",
+        "src/**/*.test.ts",
+        "src/**/*.canvas.tsx",
+        "src/*-view.tsx"
+      ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "extensions/requirement-book": {
@@ -378,7 +400,14 @@
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "extensions/pstdio-home": {
-      "entry": ["package.json", "extension.ts", "src/**/*.test.ts", "src/**/*.canvas.tsx", "src/view.tsx"],
+      "entry": [
+        "package.json",
+        "test-setup.ts",
+        "extension.ts",
+        "src/**/*.test.ts",
+        "src/**/*.canvas.tsx",
+        "src/view.tsx"
+      ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "extensions/extension-lab": {
@@ -387,6 +416,8 @@
         "extension.ts",
         "*.test.ts",
         "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+        "src/**/*.canvas.tsx",
         // The packaged host compatibility test bundles this entry by path.
         "src/legacy-state.fixture.ts",
         "src/views/*.tsx"
@@ -401,6 +432,18 @@
         "src/**/*.test.ts",
         "src/**/*.canvas.tsx",
         "src/{view,open-artifact}.tsx"
+      ],
+      "project": ["*.ts", "src/**/*.{ts,tsx}"]
+    },
+    "extensions/pstdio-cloud": {
+      "entry": [
+        "package.json",
+        "test-setup.ts",
+        "extension.ts",
+        "src/**/*.test.{ts,tsx}",
+        "src/**/*.canvas.tsx",
+        "src/.canvas/**/*.{ts,tsx}",
+        "src/{status,details,settings}-view.tsx"
       ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
@@ -434,11 +477,23 @@
       // The skill's example extensions are typechecked source.
       "entry": [
         "extension.ts",
+        "test-setup.ts",
         "src/**/*.canvas.tsx",
         "*.test.ts",
         "skills/create-pstdio-extension/references/examples/**/*.{ts,tsx}"
       ],
       "project": ["*.ts", "skills/create-pstdio-extension/references/examples/**/*.{ts,tsx}"]
+    },
+    "extensions/pstdio-skill-browser": {
+      "entry": [
+        "extension.ts",
+        "src/view.tsx",
+        ".canvas/**/*.{ts,tsx}",
+        "src/**/*.canvas.tsx",
+        "src/**/*.test.ts",
+        "*.test.ts"
+      ],
+      "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "infra/local/extensions/*": {
       "entry": ["extension.ts", "src/**/*.canvas.tsx", "*.test.ts"],

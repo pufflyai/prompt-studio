@@ -9,6 +9,7 @@ import {
 describe("session indicator", () => {
   it("lists every supported session state", () => {
     expect(sessionCompletionStatuses).toEqual([
+      "pending",
       "in_progress",
       "awaiting_input",
       "queued",

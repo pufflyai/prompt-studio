@@ -6,21 +6,22 @@ import { createOrderedReceiptIndex, type OrderedIndexReference } from "pstdio-sy
 import { fingerprint, type Json } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_ordered_records as canonical } from "../../db/schemas.pg";
+import { indexNodeFilesFor } from "./index-node-files";
 import { createOrderedCanonicalBatch } from "./ordered-canonical-batch";
 import { indexOrderedCheckpoint, stageOrderedCheckpoint } from "./ordered-checkpoint";
 import { type OrderedJournal, withOrderedOwner } from "./ordered-journal";
+import { createDisplacedSaves } from "./ordered-move-reauthor";
 import { applyOrderedNativeAdmission } from "./ordered-native-apply";
 import { applyOrderedNumberPolicy } from "./ordered-number-admission";
 import { combineNumberEvents } from "./ordered-number-projection";
 import { applyBoundedOrderedOperation } from "./ordered-policy";
-import { initializeOrderedOwner } from "./ordered-projection";
 import { admissionDecisions, rebaseOrderedProjection } from "./ordered-rebase";
-import { adoptOrderedCheckpoint } from "./ordered-receipts-adoption";
-import { createOrderedManifestCache } from "./ordered-receipts-blobs";
+import { collectOrderedReceiptNodes, createOrderedManifestCache } from "./ordered-receipts-blobs";
 import { coverOrderedReceiptRoot, coversOrderedReceipts } from "./ordered-receipts-covered";
 import { createOrderedReceiptResolver } from "./ordered-receipts-resolver";
 import { receiptRoots, sameReceiptRoot, saveReceiptRoots } from "./ordered-receipts-state";
 import { nextOrderedUpload } from "./ordered-receipts-upload";
+import { recordOrderedReplaced } from "./ordered-return-review";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { admissibleOrderedFrame, applyOrderedStreamFrame } from "./ordered-stream-frames";
 import { readOrderedPending } from "./ordered-stream-pending";
@@ -31,6 +32,35 @@ import type { NumberChange } from "./resource-number-repair";
 const hasCanonicalRecords = async (tx: OrderedTransaction, owner: StorageOwner) =>
   (await tx.select({ id: canonical.record_id }).from(canonical).where(orderedOwnerWhere(canonical, owner)).limit(1))
     .length > 0;
+
+// Once per runtime and owner: later connections reuse the files this pass left in order.
+const collectedOwners = new WeakMap<DbClient, Set<string>>();
+const collectSavedReceiptNodes = async (db: DbClient, owner: StorageOwner) => {
+  const done = collectedOwners.get(db) ?? new Set<string>();
+  collectedOwners.set(db, done);
+  const key = JSON.stringify([owner.workbenchId, owner.extensionId]);
+  if (done.has(key)) return;
+  done.add(key);
+  // Only reading the roots holds the owner lock; the walk reads file headers outside it.
+  await collectOrderedReceiptNodes(indexNodeFilesFor(db), owner, () =>
+    withOrderedOwner(db, owner, async (_journal, tx) => {
+      const roots = receiptRoots((await readOrderedOwner(tx, owner)).receipt_root);
+      return [roots.root, roots.published];
+    }),
+  ).catch((error: unknown) => {
+    // Collection only reclaims space; it must never stop an owner from syncing.
+    console.warn("Receipt node collection did not finish; it retries in the next runtime.", error);
+  });
+};
+
+const notifyChanges = (
+  deps: Parameters<typeof createRecordStreamStore>[2],
+  events: NumberChange[] = [],
+  recordIds?: readonly string[],
+) => {
+  if (!recordIds || recordIds.length) deps.changed(recordIds);
+  deps.numbersChanged?.(combineNumberEvents(events));
+};
 
 export const createOrderedStreamStore = (
   db: DbClient,
@@ -46,14 +76,9 @@ export const createOrderedStreamStore = (
     return index;
   };
   const run = <T>(action: (journal: OrderedJournal, tx: OrderedTransaction) => Promise<T>) =>
-    withOrderedOwner(db, owner, async (journal, tx, created) => {
-      await initializeOrderedOwner(journal, tx, owner, created);
-      return cache ? cache.transaction(tx, () => action(journal, tx)) : action(journal, tx);
-    });
-  const notify = (events: NumberChange[] = []) => {
-    deps.changed();
-    deps.numbersChanged?.(combineNumberEvents(events));
-  };
+    withOrderedOwner(db, owner, action);
+  const displaced = createDisplacedSaves(owner);
+  const notify = (events?: NumberChange[], recordIds?: readonly string[]) => notifyChanges(deps, events, recordIds);
   const applyAdmission = async (
     journal: OrderedJournal,
     tx: OrderedTransaction,
@@ -74,7 +99,9 @@ export const createOrderedStreamStore = (
       previous,
       await admissionDecisions(journal, admission),
     );
+    await recordOrderedReplaced(journal, tx, owner, operation, applied.skipped);
     const result = await applyOrderedNumberPolicy(tx, owner, operation, epoch, applied, !!previous);
+    await displaced.note(journal, tx, operation, result.decision, applied.skipped);
     await journal.saveCanonical(result.records);
     await journal.recordDecision(result.decision, await fingerprint(admission as unknown as Json));
     return [
@@ -86,8 +113,7 @@ export const createOrderedStreamStore = (
     tx: OrderedTransaction,
     remote: Map<string, Uint8Array[]>,
     cursor: RecordStreamCursor,
-  ) =>
-    adoptOrderedCheckpoint({ journal, tx, owner, index: receiptIndex(), remote, cursor, applyAdmission, applyNative });
+  ) => displaced.adopt({ journal, tx, owner, index: receiptIndex(), remote, cursor, applyAdmission, applyNative });
   const applyNative = (
     journal: OrderedJournal,
     tx: OrderedTransaction,
@@ -102,7 +128,9 @@ export const createOrderedStreamStore = (
     async connect(space: SyncSpace, relay: DocumentRelay) {
       if (connected === relay) return;
       if (!relay.manifestBlobs) throw new Error("Ordered receipts require relay manifest graph support");
-      cache = createOrderedManifestCache(db, owner, space, await relay.manifestBlobs());
+      // Before the receipt index exists nothing writes receipt nodes, so the saved roots are the only roots.
+      if (!index) await collectSavedReceiptNodes(db, owner);
+      cache = createOrderedManifestCache(indexNodeFilesFor(db), owner, "receipts", space, await relay.manifestBlobs());
       index = createOrderedReceiptIndex({ space, blobs: cache.blobs });
       connected = relay;
     },
@@ -143,6 +171,7 @@ export const createOrderedStreamStore = (
           for (const id of await applyOrderedStreamFrame(journal, tx, frame, epoch, group, native)) changed.add(id);
         }
         await batch?.flush();
+        await displaced.reauthor(journal, tx, changed);
         const saved = await rebaseOrderedProjection(journal, tx, owner, [...changed]);
         const next = await coverOrderedReceiptRoot(journal, tx, owner, receiptIndex(), {
           ...cursor,
@@ -152,7 +181,7 @@ export const createOrderedStreamStore = (
         return { ...saved, rejected, cursor: next };
       });
       if (result.projected) deps.statistics.record(result.projected);
-      notify(result.events);
+      notify(result.events, result.recordIds);
       return { rejected: result.rejected, cursor: result.cursor };
     },
     async merge(
@@ -175,7 +204,7 @@ export const createOrderedStreamStore = (
       const result = await run((journal, tx) =>
         mergeIn(journal, tx, incoming, { ...cursor, skipped: cursor.skipped || rejectedFrames.length > 0 }),
       );
-      notify(result.events);
+      notify(result.events, result.recordIds);
       return { rejected: result.rejected, rejectedFrames, cursor: result.cursor };
     },
     outbox: (limit: number) => run((journal, tx) => nextOrderedUpload(journal, tx, owner, receiptIndex(), limit)),
@@ -224,15 +253,15 @@ export const createOrderedStreamStore = (
           };
           await saveOrderedCursor(tx, owner, next);
           await journal.markIndexed(snapshot.receipts);
-          return { cursor: next, events: [] as NumberChange[] };
+          return { cursor: next, events: [] as NumberChange[], recordIds: [] as string[] };
         }
         const remote = new Map(snapshot.records.map((record) => [record.recordId, [record.bytes]]));
         const result = await mergeIn(journal, tx, remote, cursor);
         for (const included of snapshot.native) await journal.completeNative(included.operation, included.state);
         await journal.markIndexed(snapshot.receipts);
-        return { cursor: result.cursor, events: result.events };
+        return { cursor: result.cursor, events: result.events, recordIds: result.recordIds };
       });
-      notify(saved.events);
+      notify(saved.events, saved.recordIds);
       return saved.cursor;
     },
     hasRecords: () =>

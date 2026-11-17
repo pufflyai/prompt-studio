@@ -49,6 +49,8 @@ Agents can use the same operation with `client.projects.open(projectId)`. This p
 
 If a download or extension activation failed, `client.account.retryProjectSync(projectId)` retries discovery and wakes the project's sync owners immediately. It also clears the extension activation retry delay. The opening dialog uses this operation for Retry while waiting for content.
 
+To get the whole project folder back from another of your computers, including uncommitted files and local Git history, restore its folder copy before opening the project. Opening first creates the managed folder, and a restored folder then stays beside it instead of becoming the project's folder. On macOS and Linux, run `pst projects folder sources PROJECT_ID`, then `pst projects folder restore PROJECT_ID --device DEVICE_ID --source SOURCE_ID --path /absolute/path/to/new-folder`, or use `client.projects.folderSources` and `client.projects.restoreFolder`. See [restore a project folder](../concepts/0007-cloud-sync.md#restore-a-project-folder-on-another-computer).
+
 To use a folder you already have instead, bind the project ID before opening it on the new machine:
 
 ```sh
@@ -67,7 +69,7 @@ pst devices remove DEVICE_ID
 pst logout
 ```
 
-`devices list` marks the current device with `*`. Removing a device stops it from renewing access. Access it already has ends within the access lifetime the service sets. Data already on that device stays there. `pst logout` removes the current device and stops its sync. If the account service cannot be reached, it still logs out here; remove the device from another one later.
+`devices list` marks the current device with `*`. Removing a device stops it from renewing access. Access it already has ends within the access lifetime the service sets. Data already on that device stays there. `pst logout` removes the current device and ends sync on it. Edits made while signed out stay on the device and upload when you sign in again. Fields another device changed meanwhile keep that device's version, and an unusually large set of changes waits on the device until you apply or discard it with `pst projects returned-changes PROJECT_ID apply` or `discard`. Run `pst projects returned-changes PROJECT_ID` to list what is waiting. Signing in to another account keeps your projects from the first one on the device the same way, and signing back in to the first account sends only your own changes. If the account service cannot be reached, it still logs out here; remove the device from another one later.
 
 ## Native storage and SDK
 
@@ -97,3 +99,5 @@ On `main`, `account.cancelLogin(id)` cancels a pending native login. `account.pr
 ## Extensions
 
 Extensions use the same account through `ctx.account` and, in webviews, `client.account` with the `account.read` and `account.manage` capabilities. They receive `accountEvents.projectSyncChanged` when a project's sync status changes. See [Cloud account and sync status](../../references/extensions/0003-command-and-process-api.md#cloud-account-and-sync-status) for the methods and the meaning of each sync state.
+
+*Updated at: 2026-11-07*

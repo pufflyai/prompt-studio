@@ -1,4 +1,5 @@
 import type { SSEStreamingApi } from "hono/streaming";
+import { sessionLogger } from "../../lib/logger";
 
 export interface SessionEventSink {
   readonly aborted: boolean;
@@ -44,10 +45,31 @@ export const createSessionStreamConnections = () => {
           await connection.stream.writeSSE({ event, data: JSON.stringify({ subscription_id: subscriptionId, data }) });
         },
       };
-      void run(sink).finally(() => {
-        if (connection.subscriptions.get(subscriptionId) === controller)
-          connection.subscriptions.delete(subscriptionId);
-      });
+      void run(sink)
+        .catch(async (error) => {
+          if (controller.signal.aborted && error instanceof Error && error.name === "AbortError") return;
+          sessionLogger.error(
+            {
+              err: error,
+              event: "session.stream.subscription_failed",
+              connection_id: connectionId,
+              subscription_id: subscriptionId,
+            },
+            "Shared stream subscription failed",
+          );
+          try {
+            await sink.write("error", { message: error instanceof Error ? error.message : String(error) });
+          } catch (writeError) {
+            sessionLogger.error(
+              { err: writeError, event: "session.stream.error_delivery_failed", subscription_id: subscriptionId },
+              "Shared stream error delivery failed",
+            );
+          }
+        })
+        .finally(() => {
+          if (connection.subscriptions.get(subscriptionId) === controller)
+            connection.subscriptions.delete(subscriptionId);
+        });
       return true;
     },
     unsubscribe(connectionId: string, subscriptionId: string) {

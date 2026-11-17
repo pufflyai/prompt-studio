@@ -29,7 +29,13 @@ export const startResearch = defineCommand({
     ctx.navigation.open({
       kind: "panel",
       panel: workbenchPanels.projectSession,
-      resource: { type: "session", id: run.sessionId, label: "Social radar research" },
+      resource: {
+        type: "session",
+        extensionId: "pstdio",
+        projectId: ctx.projectId,
+        id: run.sessionId,
+        label: "Social radar research",
+      },
       open: "pin",
     });
     return run;

@@ -7,7 +7,21 @@ import { createViewRegistry } from "./registries/views/view-registry";
 import type { createWorkbenchInput, WorkbenchRenderers } from "./workbench-core-types";
 
 export const createCoreViews = (input: createWorkbenchInput, renderers: WorkbenchRenderers, layout: LayoutModel) => {
-  const views = createViewRegistry({ registerBody: createWorkbenchViewBodyRegistration(renderers) });
+  const views = createViewRegistry({
+    queries: input.queries,
+    registerBody: createWorkbenchViewBodyRegistration(renderers),
+    subscribeRefresh: (invalidate) => {
+      const subscriptions = [
+        renderers.onDidRefresh((event) => invalidate(event.treeId, event)),
+        renderers.onDidRefreshControlsRenderer((event) => invalidate(event.controlsRendererId, event)),
+        renderers.onDidRefreshDataTableRenderer((event) => invalidate(event.dataTableRendererId, event)),
+        renderers.onDidRefreshKanbanRenderer((event) => invalidate(event.kanbanRendererId, event)),
+      ];
+      return () => {
+        for (const subscription of subscriptions) subscription.dispose();
+      };
+    },
+  });
   const viewMenus = createWorkbenchViewMenuRegistry({ views });
   return {
     views,

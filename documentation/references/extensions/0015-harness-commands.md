@@ -37,3 +37,5 @@ Chat completes native commands in an editor popover at a valid caret boundary, i
 The authenticated endpoints are `GET` and `POST /v1/sessions/:id/harness-commands`. POST accepts `{ operation, harnessId? }` and returns `status: "completed" | "started"` with an optional native message. Started operations report subsequent status and conversation changes through existing session sync and streams. Exclusive operations reject conflicts rather than creating a second queue. Controls do not reserve another slot.
 
 Send executes tagged input or leading native command text directly, without a separate command toggle. Unknown manually entered commands still reach the provider. Absolute paths and embedded slash text remain ordinary prompts, as does slash input for harnesses without native command support. Failed commands retain or restore their draft. Mode tags show short provider labels such as Goal and Plan; hover, keyboard focus and compact details expose the objective and native state. Reconnect reads provider state again.
+
+*Updated at: 2026-10-04*

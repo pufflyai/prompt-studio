@@ -6,6 +6,7 @@ const emit = (row: object) => writeSync(1, `${JSON.stringify(row)}\n`);
 await completeBenchmarkWorker(async () => {
   const mode = process.argv[2];
   if (mode === "success") return;
+  if (mode === "slow") return await Bun.sleep(200);
   if (mode === "unexpected-exit") process.exit(0);
   if (mode === "failure") throw new Error("Expected fixture failure");
   if (["descendants", "exit-with-descendants", "fail-with-descendants"].includes(mode)) {

@@ -6,6 +6,7 @@ import { registerKeyboardCommands } from "./controllers/keyboard/keyboard-regist
 import { connectWorkbenchPageBreadcrumbs } from "./controllers/page-location/page-breadcrumbs";
 import type { createCoreLayoutCache } from "./controllers/page-runtime/workbench-layout-cache-input";
 import { connectModeLayoutCache } from "./controllers/page-runtime/workbench-layout-context";
+import { runWorkbenchEffect } from "./shared/workbench-effect";
 import { connectWorkbenchCoreState } from "./workbench-core-connections";
 import type { createCoreRenderers } from "./workbench-core-renderers";
 import type { createWorkbenchInput, WorkbenchCore } from "./workbench-core-types";
@@ -19,8 +20,8 @@ export const connectWorkbenchRuntime = (
   setWorkbenchRenderers(core, renderers);
   const disposeFullscreen = connectMainFullscreen(core);
   registerArrangementCommands(core);
-  registerKeyboardCommands(core);
-  connectModeLayoutCache(core, layoutCache);
+  const disposeKeyboard = registerKeyboardCommands(core);
+  const layout = connectModeLayoutCache(core, layoutCache);
   const breadcrumbSources = {
     breadcrumbs: core.breadcrumbs,
     locations: core.pageLocations,
@@ -28,14 +29,23 @@ export const connectWorkbenchRuntime = (
     navigationTrees: core.navigationTrees,
     modes: core.modes,
   };
-  connectWorkbenchPageBreadcrumbs({
+  const breadcrumbs = connectWorkbenchPageBreadcrumbs({
     ...breadcrumbSources,
     layout: core.layout,
     resources: input.pageResources ?? defaultPageResourceCodec,
   });
-  connectWorkbenchCoreState(core, input);
+  const state = connectWorkbenchCoreState(core, input);
 
-  return disposeFullscreen;
+  return () => {
+    for (const release of [
+      () => state.dispose(),
+      () => breadcrumbs.dispose(),
+      () => layout.dispose(),
+      disposeKeyboard,
+      disposeFullscreen,
+    ])
+      runWorkbenchEffect("runtime connection disposal", release);
+  };
 };
 
 export const listOpenResources = (core: WorkbenchCore, resources: ResourceRef[]) => {

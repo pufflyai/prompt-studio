@@ -1,10 +1,10 @@
 import type { createWebviewClient, GuestHost } from "@pstdio/sdk/extensions";
 import { useQueryClient } from "@tanstack/react-query";
 import { createContext, useContext, useEffect } from "react";
-import type { benchmarkCommands } from "../benchmarks/commands";
 import { benchmarksChanged } from "../benchmarks/events";
+import type { devCommands } from "../commands";
 
-export type BenchmarksClient = ReturnType<typeof createWebviewClient<typeof benchmarkCommands>>;
+export type BenchmarksClient = ReturnType<typeof createWebviewClient<typeof devCommands>>;
 interface BenchmarksContextValue {
   host: GuestHost;
   client: BenchmarksClient;

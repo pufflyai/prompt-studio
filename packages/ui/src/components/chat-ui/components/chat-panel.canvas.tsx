@@ -581,3 +581,8 @@ export const PromptHistoryReset: Story = {
   id: "patterns-chat-chat-panel--prompt-history-reset",
   render: () => <PromptHistoryResetPanel />,
 };
+
+export const PromptHistoryPendingReceipt: Story = {
+  id: "patterns-chat-chat-panel--prompt-history-pending-receipt",
+  render: () => <PromptHistoryPanel pendingPrompt="Accepted follow-up" />,
+};

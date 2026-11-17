@@ -70,6 +70,8 @@ test("a text source resolves and projects through its owner and refreshes subscr
       await ctx.storage.set("domain-effect", content);
       await ctx.events.emit({ kind: "event", id: "changed" }, {});
       await ctx.events.emit({ kind: "event", id: "changed" }, {});
+      await ctx.events.emit({ kind: "event", id: "changed" }, {}, { refresh: { projectId: ctx.projectId } });
+      await ctx.events.emit({ kind: "event", id: "changed" }, {}, { refresh: { resourceIds: ["another-document"] } });
     },
   }] };`,
   );
@@ -91,6 +93,7 @@ test("a text source resolves and projects through its owner and refreshes subscr
   expect(domainEvents()).toMatchObject([
     { projectId: "project-1", eventId: "example.context.event.resolved" },
     { projectId: "project-1", eventId: "example.context.event.changed" },
+    { projectId: "project-1", eventId: "example.context.event.changed", resourceIds: ["another-document"] },
   ]);
   await expect(loadNativeMarkdownFile(fixture.deps, { ...input, extensionId: "foreign.owner" })).rejects.toMatchObject({
     code: "native_document_source_unavailable",

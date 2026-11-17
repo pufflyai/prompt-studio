@@ -1,5 +1,8 @@
 import { z } from "zod";
 import { dockedWorkbenchRegions, extensionPanelRegions } from "../extension-kernel/types/composition";
+import { projectCompositionSchema } from "../project-composition";
+import { resourceActivityCapabilitiesSchema } from "../resource-activity";
+import { chatRendererSnapshotSchema } from "./chat-renderer";
 import {
   extensionCommandPaletteContributionSchema,
   extensionCommandRecordSchema,
@@ -106,6 +109,28 @@ const dataTableBodySchema = extensionDataTableRendererRecordSchema
   });
 
 export const workbenchExtensionViewBodySchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("terminal"),
+    resourceKind: z.string().optional(),
+    sessionHandlerId: z.string(),
+  }),
+  z.object({
+    kind: z.literal("chat"),
+    draftKey: z.string().min(1),
+    legacySessionDraft: z.boolean().optional(),
+    initial: chatRendererSnapshotSchema.optional(),
+    queryHandlerId: z.string(),
+    actionHandlerId: z.string(),
+    loadDraftHandlerId: z.string().optional(),
+    saveDraftHandlerId: z.string().optional(),
+    resolveLinkHandlerId: z.string().optional(),
+    resolveImageHandlerId: z.string().optional(),
+    stream: commandRefSchema.optional(),
+    refreshEventIds: z.array(z.string()).optional(),
+    resourceKind: z.string().optional(),
+    emptyTitle: localizableStringSchema.optional(),
+    emptyDescription: localizableStringSchema.optional(),
+  }),
   webviewBodySchema,
   treeBodySchema,
   fileBodySchema,
@@ -187,6 +212,8 @@ const workbenchExtensionNavigationTreeRecordSchema = z.object({
 });
 
 const workbenchExtensionResourceKindRecordSchema = z.object({
+  activity: resourceActivityCapabilitiesSchema.optional(),
+  activityHandoff: z.boolean().optional(),
   id: z.string(),
   localId: z.string(),
   extensionId: z.string(),
@@ -211,6 +238,7 @@ const workbenchExtensionResourceKindRecordSchema = z.object({
 
 const workbenchExtensionSettingsPanelRecordSchema = z.object({
   id: z.string(),
+  localId: z.string().optional(),
   extensionId: z.string(),
   view: viewRefSchema,
   slot: z.object({ id: z.string() }),
@@ -228,6 +256,7 @@ const workbenchExtensionStatusBarItemRecordSchema = z.object({
 });
 
 export const workbenchExtensionMetadataSchema = z.object({
+  composition: projectCompositionSchema.optional(),
   projectSetups: z
     .array(z.object({ extensionId: z.string(), view: viewRefSchema, hiddenSetting: z.string().optional() }))
     .optional(),

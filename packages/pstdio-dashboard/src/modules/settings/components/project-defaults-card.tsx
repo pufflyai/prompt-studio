@@ -9,12 +9,9 @@ import { findAgentModel, resolveAgentModelParams } from "pstdio-api-contracts/ag
 import { useTranslation } from "react-i18next";
 import { useAgentModels } from "@/shared/agents/use-agent-models";
 import { useAgents } from "@/shared/agents/use-agents";
+import { useHarnessParamDefaults, useUpdateHarnessParamDefaults } from "@/shared/agents/use-harness-param-defaults";
 import { useActionError } from "@/shared/components/use-action-error";
 import { WorkspaceAgentMenu } from "@/shared/components/workspace-agent-menu";
-import {
-  useHarnessParamDefaults,
-  useUpdateHarnessParamDefaults,
-} from "../../sessions/hooks/use-harness-param-defaults";
 import { useProjectDefaults, useUpdateProjectDefaults } from "../data/use-project-defaults";
 
 interface ProjectDefaultsCardProps {

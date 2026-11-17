@@ -5,6 +5,7 @@ import type { HostEventPublisher } from "pstdio-extensions/bridge/host";
 import { registerPlacementCloseGuard } from "../controllers/composition/placement-close-guards";
 import type { WorkbenchPanelInstance } from "../registries/layout/layout-model";
 import type { WorkbenchCore } from "../workbench-core-types";
+import { isWorkbenchRetiring } from "../workbench-required-work";
 import { createPlacementTextPresence } from "./placement-text-presence";
 import { retainPlacementTextOnRemoval } from "./placement-text-removal";
 
@@ -23,6 +24,7 @@ interface Owner {
 interface Ownership {
   live: Map<HostEventPublisher, Owner>;
   retiring: Set<Owner>;
+  retirementJobs: Map<Owner, { promise: Promise<void>; failed: boolean }>;
   disposal?: Promise<void>;
 }
 const ownership = new WeakMap<WorkbenchCore, Ownership>();
@@ -44,18 +46,36 @@ const scopeKey = (scope: Scope) =>
 const getOwnership = (workbench: WorkbenchCore) => {
   let state = ownership.get(workbench);
   if (!state) {
-    state = { live: new Map(), retiring: new Set() };
+    state = { live: new Map(), retiring: new Set(), retirementJobs: new Map() };
     ownership.set(workbench, state);
   }
   return state;
 };
 
-const retire = async (state: Ownership, owner: Owner) => {
+const retire = (state: Ownership, owner: Owner, retryFailed = true) => {
+  const existing = state.retirementJobs.get(owner);
+  if (existing && (!existing.failed || !retryFailed)) return existing.promise;
+  const settled = Promise.withResolvers<void>();
+  const job = { promise: settled.promise, failed: false };
+  state.retirementJobs.set(owner, job);
   state.retiring.add(owner);
-  owner.detach();
-  const connection = await owner.connection.catch(() => undefined);
-  if (connection) await connection.disconnect();
-  state.retiring.delete(owner);
+  // Publish one barrier before detaching can synchronously issue another cleanup.
+  void (async () => {
+    owner.detach();
+    const connection = await owner.connection.catch(() => undefined);
+    if (connection) await connection.disconnect();
+  })().then(
+    () => {
+      state.retirementJobs.delete(owner);
+      state.retiring.delete(owner);
+      settled.resolve();
+    },
+    (error) => {
+      job.failed = true;
+      settled.reject(error);
+    },
+  );
+  return settled.promise;
 };
 
 const createOwner = (input: PlacementTextGuestInput, state: Ownership) => {
@@ -116,8 +136,9 @@ const createOwner = (input: PlacementTextGuestInput, state: Ownership) => {
     },
     async close() {
       await input.prepareSessionClose?.();
-      const guest = await owner.guest;
-      await guest.close();
+      // Admission can fail after removal retains this placement. No guest then owns a recoverable draft.
+      const guest = await owner.guest.catch(() => undefined);
+      await guest?.close();
       owner.detach();
     },
   };
@@ -154,14 +175,22 @@ const createOwner = (input: PlacementTextGuestInput, state: Ownership) => {
         ) {
           // Explicit close discards this removed resource's recovery view, never its admitted durability.
           await retire(state, owner);
-        } else await owner.close();
+        } else {
+          try {
+            await owner.close();
+          } catch (error) {
+            if (owner.current() || (error as { code?: unknown })?.code !== "session_closed") throw error;
+            await retire(state, owner);
+          }
+        }
       }),
     );
   return owner;
 };
 
 /** One public guest belongs to one live presentation, including while its connection opens. */
-const placementTextOwner = (input: PlacementTextGuestInput) => {
+const placementTextOwner = (input: PlacementTextGuestInput, removalVersion: number) => {
+  if (isWorkbenchRetiring(input.workbench)) throw closed();
   const state = getOwnership(input.workbench);
   // Failed forced cleanup stays owned. A later request or Workbench disposal retries it.
   for (const owner of state.retiring)
@@ -172,7 +201,11 @@ const placementTextOwner = (input: PlacementTextGuestInput) => {
     owner = undefined;
   }
   if (!owner) {
-    if (state.disposal) throw closed();
+    if (
+      state.disposal ||
+      (input.placement.resource && input.workbench.resources.wasRemovedSince(input.placement.resource, removalVersion))
+    )
+      throw closed();
     owner = createOwner(input, state);
   }
   return owner;
@@ -195,7 +228,8 @@ export const createPlacementTextRequester = (input: PlacementTextGuestInput) => 
       const guest = await owner.guest;
       return owner.presence.request(request, () => guest.host.call("editing.text", request));
     }
-    const owner = placementTextOwner(input);
+    // A retained owner can drain after removal; its old requester cannot admit another member.
+    const owner = placementTextOwner(input, invocation.removalVersion ?? 0);
     admittedOwner = owner;
     const guest = await owner.guest;
     if (!owner.current(input.scope)) throw closed();
@@ -216,8 +250,25 @@ export const disposePlacementTextGuests = (workbench: WorkbenchCore) => {
   const state = getOwnership(workbench);
   state.disposal ??= Promise.resolve()
     .then(async () => {
-      await Promise.all([...state.live.values()].map((owner) => owner.close()));
-      await Promise.all([...state.retiring].map((owner) => retire(state, owner)));
+      const attempted = new Set(state.retiring);
+      const results = await Promise.allSettled([
+        ...[...attempted].map((owner) => retire(state, owner)),
+        ...[...state.live.values()].map((owner) => owner.close()),
+      ]);
+      // A live close can fail after its publisher starts forced cleanup. Drain that
+      // actual work as well, retaining failures for the next explicit disposal.
+      let next = [...state.retiring].filter((owner) => !attempted.has(owner));
+      while (next.length) {
+        for (const owner of next) attempted.add(owner);
+        results.push(...(await Promise.allSettled(next.map((owner) => retire(state, owner, false)))));
+        next = [...state.retiring].filter((owner) => !attempted.has(owner));
+      }
+      const errors = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+      if (errors.length === 1) throw errors[0];
+      if (errors.length)
+        throw Object.assign(new AggregateError(errors, "Text guest cleanup failed"), {
+          retryable: errors.some((error) => (error as { retryable?: boolean })?.retryable === true),
+        });
     })
     .catch((error) => {
       state.disposal = undefined;

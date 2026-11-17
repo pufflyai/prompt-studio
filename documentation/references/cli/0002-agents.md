@@ -23,3 +23,5 @@ The enabled extension and project skills are the source, and the agent folders h
 Keeping existing skill folders, `--force`, and this automatic-copy behavior arrive in the release after 0.43.x. In 0.43.x, `setup`, `install-skills`, and the automatic copy replace installed skill files with the source, so local edits in them are lost.
 
 Run `pst agents --help` to list the commands and `pst agents <command> --help` for current options.
+
+*Updated at: 2026-10-18*

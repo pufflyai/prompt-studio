@@ -43,7 +43,7 @@ export interface ExtensionWebviewPreferencesAdapter {
   get(
     name: string,
     scope?: WebviewPreferencesGetParams["scope"],
-  ): MaybePromise<WebviewHostCapabilityResults["preferences.get"]>;
+  ): MaybePromise<WebviewPreferencesSetParams["value"] | undefined>;
   set(
     name: string,
     value: WebviewPreferencesSetParams["value"],
@@ -58,6 +58,28 @@ export interface ExtensionWebviewFilesAdapter {
 }
 
 export interface ExtensionWebviewHostAdapters {
+  preferenceQueries?: Pick<
+    ReturnType<typeof import("./webview-preference-queries").createWebviewPreferenceQueries>,
+    "request" | "seeds"
+  >;
+  accountQueries?: {
+    request(
+      input: import("pstdio-api-contracts/extension-kernel").WebviewServiceQueryRequest<
+        import("pstdio-api-contracts/extension-kernel").WebviewAccountQuery
+      >,
+    ): Promise<import("pstdio-api-contracts/extension-kernel").WebviewCommandQuerySnapshot | undefined>;
+  };
+  performanceQueries?: {
+    request(
+      input: import("pstdio-api-contracts/extension-kernel").WebviewServiceQueryRequest<
+        import("pstdio-api-contracts/extension-kernel").WebviewPerformanceQuery
+      >,
+    ): Promise<import("pstdio-api-contracts/extension-kernel").WebviewCommandQuerySnapshot | undefined>;
+  };
+  commandQueries?: Pick<
+    ReturnType<typeof import("./webview-command-queries").createWebviewCommandQueryAdapter>,
+    "request"
+  >;
   textEditing?: {
     request<Request extends WebviewHostCapabilityParams["editing.text"]>(
       input: Request,
@@ -75,13 +97,15 @@ export interface ExtensionWebviewHostAdapters {
     signal?: AbortSignal,
     invocation?: import("../../core/registries/navigation/navigation-registry").NavigationInvocationContext,
   ): MaybePromise<unknown>;
+  /** Captured persistence authority used only after editing admission; it outlives its presentation. */
+  executeEditingCommand?: ExtensionWebviewHostAdapters["executeCommand"];
   streamCommand?(input: WebviewCommandsExecuteParams, signal: AbortSignal): AsyncIterable<CommandStreamClientEvent>;
   commandCompleted?(response: CommandExecutionResult): void;
   hostEvents?: HostEventPublisher;
   editing?: {
     request(
       input: WebviewEditingSessionParams,
-      execute: (input: WebviewCommandsExecuteParams) => Promise<unknown>,
+      execute: (input: WebviewCommandsExecuteParams, signal?: AbortSignal) => Promise<unknown>,
     ): Promise<WebviewEditingSnapshot | undefined>;
   };
   navigation?: { open(target: NavigationTarget): MaybePromise<unknown> };

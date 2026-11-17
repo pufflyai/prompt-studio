@@ -14,7 +14,7 @@ const statusColor = (state: string) => {
 const statusIcon = (state: string): CloudIconName => {
   if (state === "Offline") return "wifi-off";
   if (state === "Local") return "cloud-off";
-  if (state === "Sign in" || state === "Sign in again") return "log-in";
+  if (state === "Sign in" || state === "Sign in again") return "user-round-key";
   if (state === "Needs attention") return "triangle-alert";
   if (state === "Synced") return "circle-check";
   return "cloud";
@@ -35,10 +35,6 @@ const CloudDetails = (props: CloudStatusProps) => {
   else if (state === "Local") settingsPreview = "CloudSettingsLocal";
   return (
     <Stack gap="md">
-      <HStack gap="xs" color={statusColor(state)}>
-        <CloudIcon name={statusIcon(state)} />
-        <Text textStyle="paragraph/S/regular">{earlyAccess ? state : "Cloud sync · Coming soon"}</Text>
-      </HStack>
       {earlyAccess && connected && (
         <Stack gap="xs">
           <Text textStyle="label/S/medium" color="fg.muted">

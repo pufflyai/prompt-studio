@@ -6,15 +6,16 @@ import { join } from "node:path";
 import { expect as expectEventually } from "@playwright/test";
 import { EXTENSION_API_VERSION } from "@pstdio/sdk/extensions";
 import { folderProjectInput } from "../helpers/folder-project";
+import { stopChildProcess } from "../scripts/child-process";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
 setupPackagedSmokeTests();
 
-test(
-  "packaged extension commands return sessions before harness startup finishes",
-  async () => {
+test.each([false, true])(
+  "packaged extension commands return sessions before harness startup finishes (restart=%s)",
+  async (restart) => {
     const root = mkdtempSync(join(tmpdir(), "packaged-session-launch-"));
     let child: ChildProcess | undefined;
     try {
@@ -35,14 +36,17 @@ test(
         join(source, "extension.ts"),
         `
         const gate = Promise.withResolvers();
+        let disposed = false;
         export default {
           harnesses: [{
             id: "worker", ref: { kind: "harness", id: "worker" }, label: "Worker",
             capabilities: () => [], listModels: () => [],
-              resume() { throw new Error("Not used by the startup fixture"); },
-            async start() {
+            dispose() { disposed = true; gate.resolve(); },
+            resume() { throw new Error("Not used by the startup fixture"); },
+            async start(_ctx, input) {
               await gate.promise;
-              return { agentSessionId: "accepted", done: new Promise(() => {}), stop() {} };
+              if (disposed) throw new Error("Harness disposed before startup completed");
+              return { agentSessionId: "accepted:" + input.prompt, done: new Promise(() => {}), stop() {} };
             },
           }],
           commands: [{
@@ -55,9 +59,10 @@ test(
         };
       `,
       );
-      const started = await startPackagedServe(root, {
+      const env = {
         PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([{ source, installName: "launch-smoke" }]),
-      });
+      };
+      let started = await startPackagedServe(root, env);
       child = started.child;
       const request = async (path: string, body?: unknown) => {
         const response = await fetch(`${started.baseUrl}/v1${path}`, {
@@ -89,6 +94,23 @@ test(
           status: "in_progress",
           agent_session_id: null,
         });
+        if (restart) {
+          // Interrupt the host before startup completes. Forced API shutdown deliberately cancels active work.
+          console.info("Packaged launch: stopping with harness startup pending");
+          await stopChildProcess(child);
+          child = undefined;
+          started = await startPackagedServe(root, env);
+          child = started.child;
+          console.info("Packaged launch: restart ready");
+          await command("release");
+          await expectEventually
+            .poll(() => request(`/sessions/${result.outcome.value.id}`))
+            .toMatchObject({
+              status: "in_progress",
+              agent_session_id: "accepted:Implement",
+            });
+          console.info("Packaged launch: original prompt recovered");
+        }
       } finally {
         await command("release");
         await launching;

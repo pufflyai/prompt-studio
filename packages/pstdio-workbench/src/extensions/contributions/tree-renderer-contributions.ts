@@ -11,6 +11,8 @@ import type {
   TreeViewSection,
   WorkbenchModuleContext,
 } from "../../core";
+import { resourceReadIdentity } from "../../core/registries/resources/resource-read-identity";
+import { rendererQueryKey } from "../../react/renderers/renderer-query-key";
 import { shareEqualValue } from "../../react/renderers/share-equal-value";
 import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
 import type { InternalWorkbenchExtensionMetadata as WorkbenchExtensionMetadata } from "../host/internal-workbench-extension-metadata";
@@ -32,9 +34,11 @@ import {
   resolveHostTreeHeaderNodes,
   treeViewsFor,
 } from "./tree-renderer-host-defaults";
+import { treePageLoader } from "./tree-renderer-pages";
 import { extensionTreeStructure } from "./tree-renderer-structure";
 export interface RegisterWorkbenchExtensionTreeRenderersInput {
-  executeCommand(commandId: string, body: CommandExecuteRequest): Promise<unknown> | unknown;
+  treeSources?: ReadonlyMap<string, (resource: ResourceRef | undefined, invalidate: () => void) => () => void>;
+  executeCommand(commandId: string, body: CommandExecuteRequest, signal?: AbortSignal): Promise<unknown> | unknown;
   getHostTreeFooterNodes?: HostTreeDefaultNodesResolver;
   getHostTreeHeaderNodes?: HostTreeDefaultNodesResolver;
   metadata: WorkbenchExtensionMetadata;
@@ -46,6 +50,8 @@ export interface RegisterWorkbenchExtensionTreeRenderersInput {
    * gets a second identity when opened from a tree.
    */
   resolveNodeResource?: (resource: ExtensionTreeResource) => ResourceRef;
+  /** Host presentation whose effects belong to the mounted row, including lazy and continuation rows. */
+  renderNodeEndContent?: (resource: ResourceRef) => unknown;
   workbench: WorkbenchModuleContext;
 }
 const toActionParams = (params: unknown, fallback: Record<string, unknown> | undefined) => {
@@ -110,13 +116,15 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
     const commandId = action.command
       ? commandRefId({ ...action.command, extensionId: action.command.extensionId ?? record.extensionId })
       : undefined;
+    const command = input.metadata.commands.find((entry) => entry.id === commandId);
     return {
       id: action.id,
-      resourceMutation: input.metadata.commands.find((command) => command.id === commandId)?.resourceMutation,
+      resourceMutation: command?.resourceMutation,
+      copyResultToClipboard: command?.copyResultToClipboard,
       label: text(action.label),
       icon: action.icon,
       args: toRecordParams(action.params),
-      params: localizeParamSchema(action.input, text, record.extensionId),
+      params: localizeParamSchema(action.input, text, record.extensionId, command?.confirmation?.confirmedParam),
       submitLabel: action.submitLabel,
       copyText: action.copyText,
       inlineInput: action.inputPresentation ? { ...action.inputPresentation, nodeId: node?.id } : undefined,
@@ -125,15 +133,16 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       // Actions mutate tree data (create/delete/...), so refresh afterwards. Plain
       // node-target navigation runs through the runner command and must not refetch.
       run: commandId
-        ? async (params) => {
+        ? async (params, execution) => {
+            const resource = node?.resource ?? (execution === undefined ? ctx.resource : execution.resource);
             const actionParams = toActionParams(params, toRecordParams(action.params));
             if (action.command?.extensionId === "pstdio") {
               await input.workbench.commands.executeCommand(commandId, actionParams, {
-                resource: node?.resource ?? ctx.resource,
+                resource,
               });
               return;
             }
-            await executeTreeActionCommand(input, record, commandId, actionParams, node?.resource ?? ctx.resource);
+            await executeTreeActionCommand(input, record, commandId, actionParams, resource);
             ctx.refresh();
           }
         : undefined,
@@ -141,31 +150,35 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
   };
   // Each load maps fresh extension data, with new action functions. A node whose data equals its previous
   // load keeps its previous mapping, so the tree shares it and does not render that row again. Mapped actions
-  // read only the node data, the bound resource, and the tree's own refresh.
-  // A new bound resource, including a new label or metadata, starts over. The map holds one entry per node id.
+  // and continuation reads use their captured query scope, so scope changes start over.
+  // The map holds one entry per node id.
   let previousMappings = {
-    resource: undefined as ResourceRef | undefined,
+    scope: "",
     nodes: new Map<string, { node: ExtensionTreeNode; mapped: TreeNode }>(),
   };
   const mapNode = (node: ExtensionTreeNode, ctx: TreeContext): TreeNode => {
-    const resource = shareEqualValue(previousMappings.resource, ctx.resource);
-    if (resource !== previousMappings.resource || previousMappings.nodes.size > maxReusedTreeNodes) {
-      previousMappings = { resource, nodes: new Map() };
+    const scope = JSON.stringify([ctx.resource, ctx.filter, ctx.pageParams, ctx.viewId, ctx.state]);
+    if (scope !== previousMappings.scope || previousMappings.nodes.size > maxReusedTreeNodes) {
+      previousMappings = { scope, nodes: new Map() };
     }
     const previous = previousMappings.nodes.get(node.id);
     if (previous && shareEqualValue(previous.node, node) === previous.node) return previous.mapped;
+    const resource = node.resource ? resolveResource(node.resource) : undefined;
     const mapped: TreeNode = {
       id: node.id,
       selected: node.selected,
       label: text(node.label),
       icon: node.icon,
       iconColor: node.iconColor,
+      tone: node.tone,
       fileName: node.fileName,
       showContextMenuTrigger: node.showContextMenuTrigger,
       badge: node.badge,
+      tags: node.tags,
       iconTooltip: node.iconTooltip,
       tooltip: node.tooltip,
-      resource: node.resource ? resolveResource(node.resource) : undefined,
+      resource,
+      endContent: resource && !node.badge ? input.renderNodeEndContent?.(resource) : undefined,
       target: mapTarget(node.target, node, ctx),
       rowVariant: node.rowVariant,
       actions: node.actions?.map((action) => mapAction(action, node, ctx)),
@@ -173,6 +186,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       collapsible: node.collapsible,
       disabled: node.disabled,
       children: node.children?.map((child) => mapNode(child, ctx)),
+      nextPage: treePageLoader(input, record, ctx, { kind: "node", node }, mapNode, node.nextCursor),
       description: node.description,
       contextValue: node.contextValue,
       hiddenByDefault: node.hiddenByDefault,
@@ -192,6 +206,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       collapsible: section.collapsible,
       emptyState: mapEmptyState(section),
       nodes: section.nodes.map((node) => mapNode(node, ctx)),
+      nextPage: treePageLoader(input, record, ctx, { kind: "section", id: section.id }, mapNode, section.nextCursor),
       hiddenByDefault: section.hiddenByDefault,
       canHide: section.canHide,
     }));
@@ -207,6 +222,7 @@ const hostNodeSection = (id: string, nodes: TreeNode[]): TreeViewSection[] =>
   nodes.length > 0 ? [{ id, nodes, canReorder: false }] : [];
 const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, record: ExtensionTreeRendererRecord) => {
   const mapper = createTreeMapper(input, record);
+  const subscribe = input.treeSources?.get(record.id);
   const treeViews = treeViewsFor(input.metadata, record);
   const commandDisposable = input.workbench.commands.registerCommand(
     { id: mapper.runnerCommandId, label: `${text(record.title, record.id)} tree command` },
@@ -227,8 +243,11 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
     icon: record.icon,
     body: {
       kind: "tree",
-      // Callback results include document selection and other bound resource metadata.
-      getReadKey: (ctx) => JSON.stringify([ctx.resource, ctx.pageParams]),
+      queryEvents: record.refreshEventIds,
+      queryScope: { projectId: input.projectId, extensionId: record.extensionId },
+      // Bound selection and authority affect reads; resolved display labels do not.
+      getReadKey: (ctx) => rendererQueryKey([resourceReadIdentity(ctx.resource), ctx.pageParams]),
+      subscribe: subscribe ? (ctx, invalidate) => subscribe(ctx.resource, invalidate) : undefined,
       getStructure: record.structure ? (ctx) => extensionTreeStructure(record, ctx.resource) : undefined,
       searchable: record.searchable,
       searchPlaceholder: text(record.searchPlaceholder, "Search files"),

@@ -202,7 +202,7 @@ export const createFakeHarness = (longStream: LongStreamShape = DEFAULT_LONG_STR
     id: "fake",
     label: l10n("harness.fake", "Fake Agent"),
 
-    capabilities: () => [],
+    capabilities: () => ["SessionFork"],
     listModels: () => [{ id: "fake" }],
 
     start: (_ctx, input) => {
@@ -244,8 +244,33 @@ export const createFakeHarness = (longStream: LongStreamShape = DEFAULT_LONG_STR
     },
 
     resume: (_ctx, input) => {
-      const existing = sessions.get(input.agentSessionId);
+      const existing = sessions.get(input.agentSessionId) ?? input.events.getMessages();
       const startIndex = input.messageOffset ?? existing?.length ?? 0;
+      if (input.prompt.includes(LONG_STREAM_PROMPT_TRIGGER)) {
+        const messages = [...(existing ?? [])];
+        const user = createMessage({
+          agentSessionId: input.agentSessionId,
+          index: startIndex,
+          role: "user",
+          text: input.prompt,
+          attachments: input.attachments,
+        });
+        messages[startIndex] = user;
+        sessions.set(input.agentSessionId, messages);
+        pushMessages(input.events, startIndex, [user]);
+        return createSession(input.agentSessionId, (signal) =>
+          replayLongStream({
+            agentSessionId: input.agentSessionId,
+            startIndex: startIndex + 1,
+            shape: longStream,
+            signal,
+            push: (patch) => {
+              messages[Number(patch.path.slice("/messages/".length))] = patch.value as SessionMessage;
+              input.events.push(patch);
+            },
+          }),
+        );
+      }
       const newMessages = buildResumeMessages(input, startIndex);
       const nextMessages = [...(existing ?? [])];
 
@@ -260,9 +285,21 @@ export const createFakeHarness = (longStream: LongStreamShape = DEFAULT_LONG_STR
 
       if (input.prompt.includes("__fake_async_questions__"))
         return createAsyncQuestionSession(input.agentSessionId, input, nextMessages);
+      if (input.prompt.includes(HOLD_PROMPT_TRIGGER))
+        return createSession(input.agentSessionId, (signal) => waitForRelease(input.cwd, signal));
       return createSession(input.agentSessionId);
     },
 
+    fork: (_ctx, input) => {
+      const history = sessions.get(input.agentSessionId) ?? [];
+      const boundary = input.messageId
+        ? history.findIndex((message) => message.id === input.messageId)
+        : history.length - 1;
+      if (boundary < 0) throw new Error("Fixture reply not found.");
+      const agentSessionId = `fake-${randomUUID()}`;
+      sessions.set(agentSessionId, structuredClone(history.slice(0, boundary + 1)));
+      return { agentSessionId };
+    },
     getMessages: (_ctx, input) => sessions.get(input.agentSessionId) ?? [],
     recoverMessages: (_ctx, input) => reconcileMessageHistory(input),
   } satisfies Omit<HarnessProvider, "ref">;

@@ -1,7 +1,7 @@
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { expect, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 import { openSessionSidePanel } from "./helpers/resource-actions";
 import { prepareDashboard } from "./helpers/workspace-files";
@@ -13,11 +13,11 @@ test("opens chat workspace files and restores selected documents through history
 }) => {
   const root = createGitRepo("pstdio-chat-links-", "Workspace README\n");
   mkdirSync(join(root, "src", "nested"), { recursive: true });
-  mkdirSync(join(root, ".pstdio", "extension-storage", "pstdio.pstdio-planner", "tickets", "PS-105"), {
+  mkdirSync(join(root, ".pstdio", "extension-storage", "pstdio.planner", "tickets", "PS-105"), {
     recursive: true,
   });
   writeFileSync(
-    join(root, ".pstdio", "extension-storage", "pstdio.pstdio-planner", "tickets", "PS-105", "ticket.md"),
+    join(root, ".pstdio", "extension-storage", "pstdio.planner", "tickets", "PS-105", "ticket.md"),
     "Exact workspace draft bytes\n",
   );
   writeFileSync(
@@ -37,7 +37,7 @@ test("opens chat workspace files and restores selected documents through history
         workspace_id: workspaces[0].id,
         title: "Chat link review",
         prompt:
-          "Inspect [Source](src/nested/app.ts:2) and [README](README.md). Also `src/nested/app.ts`, not `origin/main` or github.com, and [Draft](.pstdio/extension-storage/pstdio.pstdio-planner/tickets/PS-105/ticket.md).\n\n| Ref |\n| --- |\n| `origin/main` |",
+          "Inspect [Source](src/nested/app.ts:2) and [README](README.md). Also `src/nested/app.ts`, not `origin/main` or github.com, and [Draft](.pstdio/extension-storage/pstdio.planner/tickets/PS-105/ticket.md).\n\n| Ref |\n| --- |\n| `origin/main` |",
         agent: "pstdio.workbench-fixture.harness.fake",
       },
     });
@@ -95,7 +95,7 @@ test("opens chat workspace files and restores selected documents through history
     await page.getByRole("link", { name: "Draft", exact: true }).last().click();
     await expect(page.locator(".monaco-editor .view-lines:visible")).toContainText(/Exact\s+workspace\s+draft\s+bytes/);
     await expect(page).toHaveURL(
-      /document=.pstdio%2Fextension-storage%2Fpstdio.pstdio-planner%2Ftickets%2FPS-105%2Fticket.md/,
+      /document=.pstdio%2Fextension-storage%2Fpstdio.planner%2Ftickets%2FPS-105%2Fticket.md/,
     );
   } finally {
     await request.delete(`${apiBase}/v1/projects/${project.id}`);
@@ -127,8 +127,26 @@ test("retains Side chat and the editor draft during repeated file-position navig
       })
     ).json();
     await prepareDashboard(page, project.id);
-    await page.goto(`/projects/${project.id}`);
-    await openSessionSidePanel(page, session.title);
+    // Establish the subject after the real provider catalog reaches an already-open generic Side shell.
+    const catalog = Promise.withResolvers<void>();
+    await page.route(`**/v1/projects/${project.id}/extensions/ui`, async (route) => {
+      await catalog.promise;
+      await route.continue();
+    });
+    const opening: Promise<unknown>[] = [];
+    try {
+      await page.goto(`/projects/${project.id}`);
+      opening.push(
+        openSessionSidePanel(page, session.title),
+        expect(page.getByTestId("workbench-side-panel-attached"))
+          .toBeVisible()
+          .finally(() => catalog.resolve()),
+      );
+      await Promise.all(opening);
+    } finally {
+      catalog.resolve();
+      await Promise.allSettled(opening);
+    }
     const side = page.getByTestId("workbench-side-panel-attached");
     const composer = side.locator('[data-testid="content-editable"][contenteditable="true"]').last();
     await composer.fill("Keep this reply draft");
@@ -202,18 +220,26 @@ test("opens a same-origin canonical document in another project and returns to i
     createGitRepo("pstdio-chat-project-b-", "Destination project"),
   ];
   const projects: { id: string }[] = [];
+  const failures: unknown[] = [];
   try {
-    for (const [index, root] of roots.entries())
-      projects.push(
-        await (
-          await request.post(`${apiBase}/v1/projects`, {
-            data: folderProjectInput({ name: `Chat project ${index}` }, root),
-          })
-        ).json(),
-      );
+    const created = await Promise.allSettled(
+      roots.map(async (root, index) => {
+        const response = await request.post(`${apiBase}/v1/projects`, {
+          data: folderProjectInput({ name: `Chat project ${index}` }, root),
+        });
+        expect(response.ok()).toBe(true);
+        return (await response.json()) as { id: string };
+      }),
+    );
+    const creationFailures: unknown[] = [];
+    for (const result of created) {
+      if (result.status === "fulfilled") projects.push(result.value);
+      else creationFailures.push(result.reason);
+    }
+    if (creationFailures.length) throw new AggregateError(creationFailures, "Cross-project fixture creation failed");
     const [source, destination] = projects;
     const [workspace] = await (await request.get(`${apiBase}/v1/workspaces?project_id=${destination!.id}`)).json();
-    const destinationHref = `/projects/${destination!.id}/extensions/pstdio.pstdio-workspaces/files?resource=${encodeURIComponent(`pstdio://extension-resource/workspace/${workspace.id}`)}&document=README.md`;
+    const destinationHref = `/projects/${destination!.id}/extensions/pstdio.workspaces/files?resource=${encodeURIComponent(`pstdio://extension-resource/workspace/${workspace.id}`)}&document=README.md`;
     const session = await (
       await request.post(`${apiBase}/v1/sessions`, {
         data: {
@@ -231,14 +257,27 @@ test("opens a same-origin canonical document in another project and returns to i
     await expect(link).toHaveAttribute("href", destinationHref);
     await link.click();
     await expect(page.locator(".monaco-editor .view-lines:visible")).toContainText(/Destination\s+project/);
-    await expect(page).toHaveURL(new RegExp(`/projects/${destination!.id}/extensions/pstdio.pstdio-workspaces/files`));
+    await expect(page).toHaveURL(new RegExp(`/projects/${destination!.id}/extensions/pstdio.workspaces/files`));
     await page.goBack();
     await expect(page.getByRole("link", { name: "Source file", exact: true }).last()).toBeVisible();
     await page.getByRole("link", { name: "Source file", exact: true }).last().click();
     await expect(page.locator(".monaco-editor .view-lines:visible")).toContainText(/Source\s+project/);
-    await expect(page).toHaveURL(new RegExp(`/projects/${source!.id}/extensions/pstdio.pstdio-workspaces/files`));
+    await expect(page).toHaveURL(new RegExp(`/projects/${source!.id}/extensions/pstdio.workspaces/files`));
+  } catch (error) {
+    failures.push(error);
   } finally {
-    for (const project of projects) await request.delete(`${apiBase}/v1/projects/${project.id}`);
-    for (const root of roots) rmSync(root, { recursive: true, force: true });
+    const removed = await Promise.allSettled(
+      projects.map((project) => request.delete(`${apiBase}/v1/projects/${project.id}`)),
+    );
+    for (const result of removed) if (result.status === "rejected") failures.push(result.reason);
+    for (const root of roots) {
+      try {
+        rmSync(root, { recursive: true, force: true });
+      } catch (error) {
+        failures.push(error);
+      }
+    }
   }
+  if (failures.length === 1) throw failures[0];
+  if (failures.length) throw new AggregateError(failures, "Cross-project navigation or cleanup failed");
 });

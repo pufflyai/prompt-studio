@@ -49,6 +49,8 @@ Commands are executable operations used by the CLI, dashboard menus, command pal
 
 Set `automation: true` only on commands that a scoped machine token may run. The host validates the declared params before it creates a durable automation run. Commands without this flag cannot be added to a machine token.
 
+On `main`, a command can set `copyResultToClipboard: true` to copy its successful text result when invoked from the dashboard. Return a string from `run`; other result types show an action error. The host starts the clipboard write during menu selection, before waiting for the command. Clipboard permission failures use the action's normal error surface. CLI and API calls return the text without changing a clipboard. This additive option shares the planned extension API 0.4.0 release; publish its SDK and host before extensions adopt it.
+
 ```ts
 import { defineCommand } from "@pstdio/sdk/extensions";
 import { defineExtension, params } from "@pstdio/sdk/extensions";
@@ -73,8 +75,13 @@ export default defineExtension({
 
 Use `params.template({ type: "ticket" })` when a command selects a template. The dashboard lists templates from the
 matching extension-owned template type and renders a dropdown. Use `params.resource({ resourceType: "workspace" })`
-for project resources. The dashboard lists registered resources of that type and passes the selected `{ type, id }`
-reference to the command.
+for project resources. A command with one required resource parameter opens the native, virtualized
+resource search. It combines registered resources with matching `commandPaletteResources` providers,
+refreshes from their declared events, and preserves the complete selected reference (including owner,
+project and device) as the command argument. Selection executes the original command in its captured
+viewer context, rather than activating the provider's ordinary navigation target. Other forms keep
+resource fields beside their remaining parameters. Providers may page their public data to honor the
+requested aggregate `limit`; More resources retains the current query and focus.
 
 Use `params.workspace({ providers: ["pstdio.worktree"] })` when a command creates a workspace. The dashboard shows
 the same fields as **Create workspace**: a workspace type, then that provider's parameters, such as **Base branch** for
@@ -85,19 +92,18 @@ JSON on the CLI.
 
 ## CLI contributions
 
-Set `cli: true` to expose a command as `pst <package-name> <command-id>`. Dots in the local command ID become path segments: package `bookmarks` and ID `links.add` produce `pst bookmarks links add`. Installing and enabling the extension makes its CLI paths available in that project.
+Set `cli: true` to expose a command as `pst <publisher>.<name> <command-id>`. Dots in the local command ID become path segments: extension `acme.bookmarks` and ID `links.add` produce `pst acme.bookmarks links add`. Installing and enabling the extension makes its CLI paths available in that project.
 
-Use a CLI contribution object when you need a different path, a shorter global alias, or examples:
+Use a CLI contribution object to choose the path inside the owning extension namespace or add examples:
 
 ```ts
 cli: {
   path: ["links", "add"],
-  globalAliases: [["bookmarks", "add"]],
-  examples: ['pst bookmarks add --title "Prompt Studio" --url https://prompt.studio'],
+  examples: ['pst acme.bookmarks links add --title "Prompt Studio" --url https://prompt.studio'],
 },
 ```
 
-`path` is relative to the package name. `globalAliases` are complete paths after `pst`; they do not add a package prefix. Choose aliases that do not conflict with another enabled extension or a core command. `cli: true` does not by itself add a palette entry or toolbar action; declare those separately and point them to the same command.
+`path` is relative to the full extension ID. Extensions cannot register global shortcuts or claim another provider's namespace. The extension API 0.5.0 release removes `globalAliases`; remove that field and update command examples to use the qualified namespace. Host-managed deprecated namespace paths remain available during identity upgrades. `cli: true` does not by itself add a palette entry or toolbar action; declare those separately and point them to the same command.
 
 ### Help and parameter flags
 
@@ -352,9 +358,11 @@ On `main`, `ctx.account` reads this device's Cloud account, the account's device
 | `ctx.account.devices()` | Lists the account's devices with `name`, `platform`, `lastSeenAt`, `online`, and `current` for this device. |
 | `ctx.account.renameDevice(id, name)` | Renames a device. |
 | `ctx.account.removeDevice(id)` | Stops a device from renewing Cloud access. Removing the current device signs it out. |
-| `ctx.account.projectSyncStatus(projectId?)` | Returns `{ state, offlineReady, pendingItems?, download? }` for a project. |
+| `ctx.account.projectSyncStatus(projectId?)` | Returns `{ state, offlineReady, pendingItems?, download?, sources?, away?, replaced? }` for a project. |
+| `ctx.account.retryProjectSyncSource(sourceId, projectId?)` | Cancels and drains one source, then retries it without restarting other sources. |
 | `ctx.account.syncProject(projectId?)` | Syncs the project on every device of the account that has it. |
 | `ctx.account.stopProjectSync(projectId?)` | Makes the project local on every device. |
+| `ctx.account.resolveReturnedChanges(action, projectId?)` | `apply` uploads changes held for review on this device, `discard` drops them and takes Cloud's copy, `dismiss` clears the replaced-changes list in `projectSyncStatus().replaced`. |
 
 `state` is one of these values. The host derives it on each read from the local documents, the record assets and the relay connections. It never stores a second status.
 
@@ -365,7 +373,7 @@ On `main`, `ctx.account` reads this device's Cloud account, the account's device
 | `synced` | Every known document and required file is on this device, and saved changes have reached Cloud. |
 | `offline` | The Cloud connection is lost, or the account service has not confirmed which projects sync. Work continues locally. |
 | `first-download-incomplete` | The first download since the relay connection started has not finished, so some documents or files may not be on this device yet. |
-| `needs-attention` | Some encrypted data could not be read. Healthy updates continue. |
+| `needs-attention` | Some encrypted data could not be read or a source requires manual attention. Healthy sources continue. |
 
 `offlineReady` is `true` only when every known document and required file was verified on this device. The host never reports `synced` or `offlineReady` while content is missing. An incomplete first download stays `first-download-incomplete` when the connection drops. Later downloads, such as catching up after a reconnect, report `waiting-to-sync` with `offlineReady` set to `false` until they finish. The first download starts again when the runtime restarts or a project starts syncing again.
 
@@ -376,6 +384,24 @@ Stopping and restarting sync are account-wide. Stopping keeps the project keys, 
 `download` reports `{ completed, total }` in the same document units. A document counts as completed only after its required files are verified too. `total` is `null` while any owner directory is unknown. Once known, `Math.floor(100 * completed / total)` gives the percentage for a nonzero total. Newly discovered documents can increase the total, and reconnects can restart verification. This is verified-document progress, not bytes transferred. The fields are optional additions to API 0.3.1; older hosts omit them. Status reads use document revision metadata and indexed outbox presence, without loading owner or record content or listing every record.
 
 Listen to `accountEvents.projectSyncChanged` from `@pstdio/sdk/extensions` for changes. The host sends it for one project only when any derived status field changes, including progress while the state stays the same. Read the status once when the extension starts; the first value is not announced. The payload contains `projectId` and the status fields. Webviews receive only the event ID, so read the status again.
+
+On `main`, `sources` adds independent source IDs, display names, connection and busy flags,
+the real pending `phase`, `phaseStartedAt`, `lastProgressAt`, completed document counts,
+and recent `files`. `startedAt` and `completedAt` retain elapsed time after a pass.
+Files expose available metadata names, direction, queued/active/completed/failed status,
+original `byteLength` and encrypted `completedBytes`/`totalBytes`. Internal records have
+no invented file names. Recent terminal file entries are bounded to 50 per source;
+active and queued entries are retained. This is transient local activity, not a durable history.
+Retryable request failures appear in each source's `error`; they do not replace the
+aggregate initial-download or connection state.
+
+When `canRetry` is true, call `retryProjectSyncSource(source.id, projectId)` to cancel
+that source and await its running work before retry. Durable cursors, operation IDs,
+local edits and staged file bytes are preserved. No shared socket is restarted.
+The webview operation uses `account.manage`. HTTP clients use
+`POST /v1/account/projects/{id}/sync/sources/{sourceId}/retry`, or
+`client.account.retryProjectSyncSource(projectId, sourceId)`. Unknown sources fail.
+These additive API 0.4.1 changes require a matching published SDK and host.
 
 `signInRequired` distinguishes a rejected device credential from an ordinary sign-out. It survives a host restart and clears after successful sign-in or explicit sign-out. Network loss, scheduled relay-token renewal, a removed project, and lack of early access do not set it. Local project data stays on this device. Listen to `accountEvents.changed` for changes to the public account status, even when project sync state stays the same. Its payload is `AccountStatus`; webviews receive the event ID and read `account.status()` again. Read once on startup because the first value is not announced.
 
@@ -442,6 +468,62 @@ Workspace providers must validate instance and template ownership in `create`.
 Choice lists help discovery; they do not authorize a resource. The host still
 checks required fields, value types, fixed choices, and provider availability.
 Harness params and Kanban create-row forms require fixed options.
+
+## Local workspace providers on main
+
+These additions share API 0.4.0 on `main`, after 0.46.0. Publish the supporting
+host and SDK before a separately released extension adopts them. SDK 0.46.0 does
+not contain them.
+
+`defineWorkspaceType` accepts an optional `discover(ctx)` callback. Return
+`{ params }` to supply this project's current creation fields, choices and
+defaults. Return `null` when the provider is unavailable. Omit the callback to
+keep the static `params` schema; omit `params` from a discovery result to reuse
+that schema. Discovery runs when providers are listed and before a new create is accepted.
+The host persists validated parameters before allocation; accepted operations
+replay those parameters without rediscovering choices or applying new defaults. Do not cache project-dependent choices in module state.
+A failed discovery hides that provider from the current list and logs the error;
+other providers remain available. Creation validates the discovered schema and
+providers must still enforce their own resource ownership rules. Command-backed
+choice references are qualified to the provider and checked against installed
+commands, sibling fields and dependency cycles, just like static schemas.
+
+Use optional `validateParams(ctx, params)` for provider-specific checks, such as
+whether a revision exists. It receives schema-validated values with defaults
+applied. Throw a useful error to reject creation before the host saves a workspace.
+It runs in project context, without an allocated workspace directory. Keep it
+read-only; allocate resources in `create` after the host owns their identity.
+This preflight runs only before initial allocation. `create` and `resolve` must
+still check backing-resource invariants when the environment changes afterward.
+
+The default Git Workspaces extension uses these public provider callbacks and
+`ctx.process` for Git operations. The host's existing `pstdio.worktree` identity
+routes to its installed workspace type, including stored legacy references.
+Backing references remain provider-owned JSON. Disabling the extension retains
+the workspace and files; enabling it again resolves that same reference. Core
+continues to protect the default folder and cancel sessions before deletion.
+
+During workspace-bound provider callbacks, the optional `ctx.localDirectory()`
+allocates or reopens a host-managed local directory owned by that provider,
+project and workspace. It is available before the workspace is ready and returns
+`{ path, files, remove }`. `files` is an `ArtifactMount`; use `path` as the explicit
+`cwd` for a local process. The same workspace reopens the same directory after a
+restart. `remove()` deletes that directory, retaining the workspace record and
+history. The host rejects default workspaces, another provider's or project's
+workspace, and paths resolving outside the workspace's own managed directory.
+The method is absent in project-only discovery and ordinary command contexts.
+Feature-detect it when supporting hosts that predate this addition.
+
+Provider callbacks use invocation-owned process and file APIs. A ready local
+workspace remains the default process directory. Preparation and cleanup can run
+before target readiness, using the project's default local folder as the process
+directory, or the owned managed directory when no local project folder exists.
+An explicit `cwd` can select either source or destination. Ordinary commands
+retain their ready-local-target checks. Await every process and file operation:
+the host stops running child processes when a provider callback ends, is
+cancelled, or exceeds its existing 30-second operation limit. Retained directory
+handles reject operations after the callback ends. Explicit `spawnDetached`
+continues to mean an independently running process.
 
 ## Migrating from older API versions
 
@@ -631,3 +713,5 @@ Use `workbenchCommands.openWorkspaceTerminal` with a workspace resource to open 
 Installation continues in the background and survives a runtime restart. Selecting an extension again while it is pending has no effect. Selecting it again after it finished re-enables it in this project; after it failed, it runs again. Restarting the runtime does not replay finished work or retry failures on its own. Use `ctx.extensions.list()` to see which extensions the project has enabled.
 
 The call takes no project argument. Older hosts omit `ctx.extensions`; extensions that need it declare API `^0.3.1`.
+
+*Updated at: 2026-11-12*

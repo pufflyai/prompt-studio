@@ -10,7 +10,7 @@ import { createBootstrapModule } from "../bootstrap";
 import { createExtensionsModule } from "../extensions/module";
 import { emptyAppearance, flushMicrotasks, metadataWithResourceExtension } from "../extensions/module-test-fixtures";
 import { createSessionsModule } from "../sessions/module";
-import { DesktopProjectTabsController } from "./desktop-project-tabs-controller";
+import { registerSessionProvider } from "../sessions/session-provider.fixture";
 import { createProjectsModule } from "./module";
 
 test("opens the first created project without losing its active mode when the creation dialog closes", async () => {
@@ -48,12 +48,8 @@ test("opens the first created project without losing its active mode when the cr
   }
 });
 
-test.each([
-  false,
-  true,
-])("project tabs preserve extension page context across switches (core child: %s)", async (coreChild) => {
+test.each([false, true])("project switches preserve extension page context (core child: %s)", async (coreChild) => {
   const workbench = createWorkbench({ startPage: dashboardHomePage });
-  const tabs = new DesktopProjectTabsController([], async () => {});
   workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
   getWriter("projects")?.truncateAndWrite([
     { id: "first", name: "First" },
@@ -65,16 +61,17 @@ test.each([
       loadAppearance: async () => emptyAppearance,
       loadMetadata: async () => metadataWithResourceExtension,
     }),
-    createProjectsModule({ projectTabs: tabs }),
+    createProjectsModule(),
     createSessionsModule(),
     createHomeModule(),
     createBootstrapModule(),
   ].map((module) => workbench.registerModule(module));
   const select = async (id: string) => {
-    await tabs.select(workbench, id);
+    await workbench.commands.executeCommand(dashboardCommandIds.selectProject, { project: { id, name: id } });
     await flushMicrotasks();
     await flushMicrotasks();
   };
+  registerSessionProvider(workbench, { projectId: "first" });
   const firstPage = { extensionId: "pstdio.extension-lab", kind: "page", id: "labPage" } as const;
   const secondPage = { extensionId: "acme.issue-tracker", kind: "page", id: "issue" } as const;
   try {
@@ -107,8 +104,7 @@ test.each([
     await select("second");
     expect(workbench.pages.store.getState().location?.page).toEqual(workbenchPages.sessionComposer);
     expect(workbench.pageLocations.replay(secondLocation!).ok).toBe(true);
-    await tabs.close(workbench, "first");
-    await tabs.close(workbench, "second");
+    await select("first");
     await select("second");
     expect(workbench.pages.store.getState().location).toEqual(secondLocation);
   } finally {

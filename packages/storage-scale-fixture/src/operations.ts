@@ -56,5 +56,21 @@ export const editOperation = (
   return { recordId, expected, change, restore };
 };
 
-export const rowSummary = (row: FixtureRow) =>
-  `${row.ordinal} | ${row.tags.join(", ")} | ${row.details.progress ?? ""} | ${"content" in row ? row.content.trim().split("\n").at(-1) : ""}`;
+// The fields a view needs for this summary are the indexed ones, so a page can render it.
+export interface SummaryFields {
+  ordinal: number;
+  tags: string[];
+  progress?: unknown;
+  // An indexed page returns null for a field the row does not have.
+  content?: string | null;
+}
+
+export const summaryFields = (row: FixtureRow): SummaryFields => ({
+  ordinal: row.ordinal,
+  tags: row.tags,
+  progress: row.details.progress,
+  ...("content" in row && { content: row.content }),
+});
+
+export const rowSummary = (row: SummaryFields) =>
+  `${row.ordinal} | ${row.tags.join(", ")} | ${row.progress ?? ""} | ${typeof row.content === "string" ? row.content.trim().split("\n").at(-1) : ""}`;

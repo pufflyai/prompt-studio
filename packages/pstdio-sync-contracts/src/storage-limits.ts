@@ -9,6 +9,10 @@ export const storageLimits = {
   recordBytes: 256 * 1024,
   /** Largest encoded JSON of all records that one commit writes. */
   commitBytes: 4 * 1024 * 1024,
+  /** Largest page a storage record query can select. */
+  queryLimit: 500,
+  /** Page size used when a record query omits its limit. */
+  queryDefaultLimit: 100,
 } as const;
 
 /** A save that the host refused because it was over a storage limit. Nothing in the save was written. */

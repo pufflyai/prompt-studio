@@ -1,5 +1,5 @@
-// PowerShell startup must not compete with PGlite cold starts. Keep this boundary
-// in the scheduler so every API suite caller follows the same isolation rule.
+// Deadline-sensitive process and SQL fixtures must not compete with other files.
+// Keep this boundary in the scheduler so every API caller follows the same rule.
 const runsAlone = (file: string) => /\.exclusive\.p[0-3]\.test\.ts$/.test(file);
 
 interface SchedulerOptions {

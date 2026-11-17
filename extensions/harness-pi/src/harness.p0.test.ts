@@ -1,12 +1,72 @@
 import { afterEach, expect, test } from "bun:test";
 import { ProjectTrustStore, SessionManager } from "@earendil-works/pi-coding-agent";
+import { resolvePiCommand } from "./cli";
 import { piFixture } from "./cli.test-helpers";
+import { detectPi } from "./detection";
 import { createPiHarness } from "./harness";
 
 let fixture: Awaited<ReturnType<typeof piFixture>>;
 afterEach(async () => {
   await fixture?.close();
 });
+
+test("fork copies native context without a model request and resumes independently", async () => {
+  fixture = await piFixture();
+  const input = {
+    prompt: "Use the tool",
+    sessionId: "source",
+    cwd: fixture.root,
+    model: "fixture/test",
+    events: fixture.sink(),
+  };
+  const source = await fixture.harness.start(fixture.context, input);
+  await source.done;
+  const original = await fixture.harness.getMessages(fixture.context, {
+    agentSessionId: source.agentSessionId!,
+    cwd: fixture.root,
+  });
+  const selectedIndex = original.findIndex((message) => message.parts.some((part) => part.type === "tool"));
+  expect(selectedIndex).toBeGreaterThan(0);
+  const prefix = original.slice(0, selectedIndex + 1);
+  const laterEvents = fixture.sink(original);
+  const later = await fixture.harness.resume(fixture.context, {
+    ...input,
+    agentSessionId: source.agentSessionId!,
+    prompt: "A later question",
+    events: laterEvents,
+  });
+  await later.done;
+  const fullHistory = structuredClone(laterEvents.getMessages());
+  const requests = fixture.requests.length;
+  // Both operations read the completed source. Keep the live snapshot as an independent baseline.
+  const [nativeHistory, fork] = await Promise.all([
+    fixture.harness.getMessages(fixture.context, {
+      agentSessionId: source.agentSessionId!,
+      cwd: fixture.root,
+    }),
+    fixture.harness.fork(fixture.context, {
+      sessionId: "source",
+      agentSessionId: source.agentSessionId!,
+      cwd: fixture.root,
+      messageId: prefix.at(-1)!.id,
+    }),
+  ]);
+  expect(nativeHistory).toEqual(fullHistory);
+  expect(fork.agentSessionId).not.toBe(source.agentSessionId);
+  expect(fixture.requests).toHaveLength(requests);
+  expect(await fixture.harness.getMessages(fixture.context, { ...fork, cwd: fixture.root })).toEqual(prefix);
+  const resumed = await fixture.harness.resume(fixture.context, {
+    ...input,
+    ...fork,
+    sessionId: "fork",
+    prompt: "Another approach",
+    events: fixture.sink(prefix),
+  });
+  await resumed.done;
+  expect(
+    await fixture.harness.getMessages(fixture.context, { agentSessionId: source.agentSessionId!, cwd: fixture.root }),
+  ).toEqual(fullHistory);
+}, 10_000);
 
 test.each(["start", "resume", "getMessages"] as const)("refuses vulnerable Pi during %s", async (action) => {
   fixture = await piFixture();
@@ -33,6 +93,22 @@ test.each(["start", "resume", "getMessages"] as const)("refuses vulnerable Pi du
   expect(await Bun.file(marker).exists()).toBe(false);
 });
 
+test("detects the bundled Pi version without initializing the agent", async () => {
+  fixture = await piFixture();
+  const commands: unknown[] = [];
+  const run = fixture.context.process.run;
+  fixture.context.process.run = async (input) => {
+    commands.push(input.command);
+    return run(input);
+  };
+  const resolved = resolvePiCommand({ which: () => null });
+  expect(await detectPi(fixture.context, { ...resolved, env: { ...resolved.env, PI_PACKAGE_DIR: "" } })).toMatchObject({
+    available: true,
+    version: "0.79.0",
+  });
+  expect(commands).toEqual([]);
+});
+
 test("discovers authenticated Pi models", async () => {
   fixture = await piFixture();
   const [account, detection, models] = await Promise.all([
@@ -48,51 +124,6 @@ test("discovers authenticated Pi models", async () => {
     label: "Local fixture",
     paramOverrides: { thinking: null },
   });
-});
-
-test("streams a real tool run, reads history and resumes the same native session", async () => {
-  fixture = await piFixture();
-  const events = fixture.sink();
-  const input = {
-    prompt: "Use the tool",
-    sessionId: "host-session",
-    cwd: fixture.root,
-    model: "fixture/test",
-    params: { thinking: "off" },
-    events,
-  };
-  const session = await fixture.harness.start(fixture.context, input);
-  expect(session.agentSessionId).toBeTruthy();
-  expect(await session.done).toEqual({ status: "completed" });
-  expect(events.patches.length).toBeGreaterThan(3);
-  expect(events.getMessages().flatMap((message) => message.parts)).toContainEqual(
-    expect.objectContaining({
-      type: "tool",
-      tool: "read",
-      status: "completed",
-      state: expect.objectContaining({ output: "Hello file" }),
-    }),
-  );
-  const history = await fixture.harness.getMessages!(fixture.context, {
-    agentSessionId: session.agentSessionId!,
-    cwd: fixture.root,
-  });
-  expect(history).toEqual(events.getMessages());
-  const resumed = await fixture.harness.resume(fixture.context, {
-    ...input,
-    prompt: "Follow up",
-    agentSessionId: session.agentSessionId!,
-    messageOffset: history.length,
-  });
-  expect(resumed.agentSessionId).toBe(session.agentSessionId);
-  expect(await resumed.done).toEqual({ status: "completed" });
-  expect(events.getMessages().filter((message) => message.role === "user")).toHaveLength(2);
-  const recovered = await fixture.harness.getMessages!(fixture.context, {
-    agentSessionId: session.agentSessionId!,
-    cwd: fixture.root,
-  });
-  expect(recovered).toEqual(events.getMessages());
-  expect(JSON.stringify(fixture.requests.at(-1))).toContain("Hello file");
 });
 
 test("marks a real provider error as failed", async () => {

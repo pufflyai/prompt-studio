@@ -1,8 +1,10 @@
 import { PstdioApiError } from "@pstdio/sdk/client";
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useQueries } from "@tanstack/react-query";
+import { useState } from "react";
 import { apiClientOptions } from "./api";
 import { safeApiFileBlob } from "./api-file-blob";
+import { createApiFilePartsResolver } from "./api-file-parts";
 
 export const API_FILE_URL_QUERY_KEY = "api-file-url";
 
@@ -28,35 +30,29 @@ const apiFileUrlQuery = (url: string) => {
   };
 };
 
-/** Returns a URL an <img> can load. API files resolve to a blob URL, other URLs stay as they are. */
-export const useApiFileUrl = (url: string) => {
-  const apiFile = isApiFilePath(url);
-  const { data } = useQuery({ ...apiFileUrlQuery(url), enabled: apiFile });
-  return apiFile ? data : url;
-};
-
-const apiFileUrlsIn = (messages: SessionMessage[]) => [
+const apiFileUrlsIn = (messages: SessionMessage[], allowed: (url: string) => boolean) => [
   ...new Set(
     messages.flatMap((message) =>
-      message.parts.flatMap((part) => (part.type === "file" && isApiFilePath(part.url) ? [part.url] : [])),
+      message.parts.flatMap((part) =>
+        part.type === "file" && isApiFilePath(part.url) && allowed(part.url) ? [part.url] : [],
+      ),
     ),
   ),
 ];
 
 /** Resolves API file parts to blob URLs, so the chat can show and open them. */
-export const useApiFileParts = (messages: SessionMessage[]) => {
-  const urls = apiFileUrlsIn(messages);
+export const useApiFileParts = (messages: SessionMessage[], allowed: (url: string) => boolean = () => true) => {
+  const [resolveParts] = useState(createApiFilePartsResolver);
+  const urls = apiFileUrlsIn(messages, allowed);
+  const blobUrls = useApiFileUrls(urls);
+  return resolveParts(messages, blobUrls);
+};
+
+/** Resolve an already scoped set of API file URLs with the existing authenticated cache. */
+export const useApiFileUrls = (urls: string[]) => {
   const resolved = useQueries({
     queries: urls.map(apiFileUrlQuery),
     combine: (results) => results.map((result) => result.data),
   });
-  if (urls.length === 0) return messages;
-
-  const blobUrls = new Map(urls.map((url, index) => [url, resolved[index] ?? ""]));
-  return messages.map((message) => ({
-    ...message,
-    parts: message.parts.map((part) =>
-      part.type === "file" && blobUrls.has(part.url) ? { ...part, url: blobUrls.get(part.url) ?? "" } : part,
-    ),
-  }));
+  return new Map(urls.map((url, index) => [url, resolved[index] ?? ""]));
 };

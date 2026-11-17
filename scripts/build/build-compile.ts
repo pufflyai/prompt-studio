@@ -9,6 +9,19 @@ import { assertCoreBinarySize } from "./core-binary-size";
 process.chdir(join(import.meta.dirname, "..", ".."));
 
 const CLI_ENTRY = "./packages/pstdio/src/index.ts";
+const RECOVERY_WORKER = join(process.cwd(), "packages/pstdio-api/src/services/project-recovery/recovery-worker.ts");
+const PREPARATION_ENTRIES = [
+  join(process.cwd(), "packages/pstdio-api/src/features/extensions/extension-preparation-worker.ts"),
+  join(process.cwd(), "packages/pstdio-extensions/src/runtime/preparation-worker.ts"),
+  RECOVERY_WORKER,
+];
+// --root . retains repository-relative worker paths in the compiled virtual filesystem.
+const recoveryWorkerDefine = (target: string) => [
+  "--define",
+  `PSTDIO_BUILD_RECOVERY_WORKER=${JSON.stringify(
+    `${target.includes("windows") ? "B:/~BUN/root/" : "/$bunfs/root/"}packages/pstdio-api/src/services/project-recovery/recovery-worker.js`,
+  )}`,
+];
 const EMBED_MANIFEST = "./packages/pstdio/src/_embed-manifest.generated.ts";
 
 // 0. Vendor PGlite runtime assets locally so the embedded imports do not reach
@@ -45,7 +58,7 @@ const extensionReleaseRef = process.env.PSTDIO_EXTENSION_RELEASE_REF?.trim();
 const defines = extensionReleaseRef ? ["--define", `PSTDIO_BUILD_EXTENSION_RELEASE_REF=${JSON.stringify(extensionReleaseRef)}`] : [];
 
 console.log(`\nCompiling for ${target}...`);
-await $`bun build ${CLI_ENTRY} --compile --external playwright-core --external "chromium-bidi/*" --target=${target} --asset-naming [dir]/[name].[ext] ${defines} --outfile ${outfile}`;
+await $`bun build ${CLI_ENTRY} ${PREPARATION_ENTRIES} --compile --splitting --root . --external playwright-core --external "chromium-bidi/*" --target=${target} --asset-naming [dir]/[name].[ext] ${defines} ${recoveryWorkerDefine(target)} --outfile ${outfile}`;
 assertCoreBinarySize(outfile);
 
 // 4. Verify the binary works

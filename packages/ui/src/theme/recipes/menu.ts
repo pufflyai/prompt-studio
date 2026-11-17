@@ -113,8 +113,8 @@ export const menuSlotRecipe = defineSlotRecipe({
           width: "64",
           minWidth: "64",
           maxWidth: "64",
-          // An iframe needs a definite viewport; it cannot size a menu from its guest content.
-          "&:has(iframe)": {
+          // Embedded and virtualized content need a definite viewport to render their rows.
+          "&:has(iframe, [data-tree-list-virtual])": {
             h: "64",
             maxH: "var(--available-height)",
           },

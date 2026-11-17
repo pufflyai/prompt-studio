@@ -2,7 +2,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import { agentDetailsSchema, agentModelSchema, pageQuerySchema } from "pstdio-api-contracts";
 import { catalogPage } from "../../../services/catalog-page";
 import type { AppRouteHandler } from "../../../types";
-import { toAgentInfo } from "../agent-info";
+import { agentExtensionIcons, toAgentInfo } from "../agent-info";
 import type { AgentsRouteDeps } from "../deps";
 import { agentProjectQuerySchema } from "../dto";
 
@@ -48,8 +48,9 @@ export const queryAgentsHandler = (deps: AgentsRouteDeps) => {
     const input = c.req.valid("query");
     const projectId = input.projectId ?? input.project;
     const page = catalogPage(await deps.harnessRegistry.list({ projectId }), `agents:${projectId ?? ""}`, input);
+    const icons = await agentExtensionIcons(deps, projectId);
     return c.json(
-      { ...page, items: await Promise.all(page.items.map((harness) => toAgentInfo(harness, projectId))) },
+      { ...page, items: await Promise.all(page.items.map((harness) => toAgentInfo(harness, projectId, icons))) },
       200,
     );
   };

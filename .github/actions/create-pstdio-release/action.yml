@@ -57,6 +57,12 @@ runs:
         else
           # Notes start at the previous stable release, so nightly tags never shape stable notes.
           PREVIOUS_TAG=$(gh release list --exclude-drafts --exclude-pre-releases --limit 100 --json tagName --jq 'map(select(.tagName | startswith("pstdio@")))[0].tagName')
-          gh release create "$TAG" --title "v$VERSION" --notes-file "$NOTES_FILE" --generate-notes --notes-start-tag "$PREVIOUS_TAG" --draft --verify-tag "${PRERELEASE_FLAGS[@]}"
+          # GitHub rejects bodies over 125,000 characters, so its pull request list joins only when it fits.
+          GENERATED_FILE="$(mktemp)"
+          BODY_FILE="$(mktemp)"
+          gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" -f tag_name="$TAG" -f previous_tag_name="$PREVIOUS_TAG" --jq .body > "$GENERATED_FILE"
+          bun scripts/release/release-body.ts "$NOTES_FILE" "$GENERATED_FILE" \
+            "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/compare/$PREVIOUS_TAG...$TAG" > "$BODY_FILE"
+          gh release create "$TAG" --title "v$VERSION" --notes-file "$BODY_FILE" --draft --verify-tag "${PRERELEASE_FLAGS[@]}"
           gh release upload "$TAG" "$RELEASE_ASSETS_DIR"/*
         fi

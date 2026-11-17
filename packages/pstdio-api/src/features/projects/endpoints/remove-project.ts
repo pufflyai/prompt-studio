@@ -1,6 +1,9 @@
+import { join } from "node:path";
 import { createRoute, z } from "@hono/zod-openapi";
 import { apiLogger } from "../../../lib/logger";
 import type { AppRouteHandler } from "../../../types";
+import { resolvePstdioHome } from "../../extensions/install-extension-source";
+import { removeProjectAfterProvisioning } from "../../workspaces/provision-coordinator";
 import { cleanupProjectArtifacts } from "../cleanup-project";
 import type { ProjectsRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
@@ -52,11 +55,28 @@ export const removeProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<t
 
     const home = await deps.workspaceService.getDefault(id);
     return withFolderCreation(home?.root_path ?? null, async () => {
-      await cleanupProjectArtifacts(deps, id, {
-        removeProjectStorage: deps.fileService.removeProjectStorage,
+      const removeConnectionSecrets = await removeProjectAfterProvisioning(id, async () => {
+        await cleanupProjectArtifacts(deps, id, {
+          removeProjectStorage: deps.fileService.removeProjectStorage,
+        });
+        const removeSecrets = await deps.extensionConnectionService.prepareProjectRemoval(id);
+        await deps.projectService.delete(id);
+        return removeSecrets;
       });
-      const removeConnectionSecrets = await deps.extensionConnectionService.prepareProjectRemoval(id);
-      await deps.projectService.delete(id);
+      // The project's own extensions were installed from its folder. Without an instance they would
+      // stay installed, watched and rebuilt for every later project in this runtime. A project in the
+      // home folder shares that folder with the user's installed extensions, which it does not own.
+      const folderExtensions = home?.root_path ? join(home.root_path, ".pstdio", "extensions") : null;
+      if (folderExtensions && folderExtensions !== join(resolvePstdioHome({ env: process.env }), "extensions")) {
+        try {
+          await deps.extensionService.removeUnusedFolderSources(folderExtensions);
+        } catch (error) {
+          apiLogger.error(
+            { err: error, event: "extension.project_source_cleanup.failed", projectId: id },
+            "Extensions from the deleted project's folder stay installed",
+          );
+        }
+      }
       try {
         await removeConnectionSecrets();
       } catch (error) {

@@ -36,10 +36,9 @@ export const createMenuEndContent = (input: {
   external?: boolean;
   binding?: KeybindingSequence;
   disabledReason?: string;
-  readOnly?: boolean;
 }) => {
-  const { binding, external, disabledReason, readOnly } = input;
-  if (readOnly && disabledReason)
+  const { binding, external, disabledReason } = input;
+  if (disabledReason)
     return (
       <Tooltip content={disabledReason}>
         <Box as="span" tabIndex={0} aria-label={disabledReason}>
@@ -67,14 +66,14 @@ const toMenuItem = (
     <WorkbenchShortcutHint workbench={workbench} action={entry.action}>
       {createMenuEndContent({
         external: entry.external,
-        disabledReason: entry.description,
-        readOnly: entry.readOnly,
+        disabledReason: entry.disabledReason,
       })}
     </WorkbenchShortcutHint>
   ),
   disabled: entry.disabled,
   readOnly: entry.readOnly,
   separatorBefore: entry.separatorBefore,
+  runOnSelect: entry.runOnSelect,
   onAction: entry.run
     ? () => {
         void entry.run?.().catch((error) => {

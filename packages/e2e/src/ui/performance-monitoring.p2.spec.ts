@@ -35,14 +35,12 @@ test("measures while the Performance Monitoring extension is loaded and shows it
   await expect(meter(page).getByTestId("performance-status-fps")).toBeVisible();
   const details = page.frameLocator('iframe[title="Performance details"]').getByTestId("performance-popover");
   const preparedFrame = page.locator('iframe[title="Performance details"]');
-  await expect(preparedFrame).toHaveCount(1);
-  await expect(details).toHaveCount(1);
-  await expect.poll(() => details.evaluate(() => document.visibilityState)).toBe("hidden");
+  await expect(preparedFrame).toHaveCount(0);
+  await expect(details).toHaveCount(0);
   const operations = () => page.evaluate(() => Reflect.get(window, "performanceDetailsOperations") as string[]);
   expect(await operations()).not.toContain("subscribe");
-  const preparedDocument = await preparedFrame.elementHandle();
   await meter(page).click();
-  expect(await preparedFrame.evaluate((frame, original) => frame === original, preparedDocument)).toBe(true);
+  await expect(preparedFrame).toHaveCount(1);
   await expect.poll(() => details.evaluate(() => document.visibilityState)).toBe("visible");
   await expect.poll(operations).toContain("subscribe");
   await expect(details.getByText("CPU is measured in the desktop app", { exact: true })).toBeVisible();

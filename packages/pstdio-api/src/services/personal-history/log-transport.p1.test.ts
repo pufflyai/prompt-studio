@@ -5,7 +5,6 @@ import { join } from "node:path";
 import { createSyncSpace, openLive, openUpdate } from "pstdio-sync/encryption";
 import { inertSessionChannelHooks } from "../../features/sessions/session-store.test-utils";
 import { createTestApp } from "../../test-utils/create-test-app";
-import { discardLegacyHistory } from "../relay/personal-context";
 import { createLiveReceiver } from "./live-messages";
 import { messageEntries } from "./log-entries";
 import { createSessionLogFiles } from "./log-files";
@@ -190,36 +189,4 @@ test("catch-up commits each expanded blob before downloading the next and resume
   await createLogReceiver({ files, namespace: "reader", received() {} }).read(["catch-up"], space, () => transport);
   expect((await files.read("reader", "catch-up")).map((row) => row.id)).toEqual(["0", "1"]);
   expect(await files.readPosition("reader", "catch-up")).toEqual({ after: 2 });
-});
-
-test("upgrade discards legacy transcript journals without opening them or deleting local conversations", async () => {
-  const config = {
-    workbenchId: project.id,
-    accountId: "alice",
-    managerOrigin: "https://manager.example",
-    relayOrigin: "https://relay.example",
-    renewalGrant: "credential",
-    environmentId: "device",
-  };
-  const owner = {
-    workbenchId: project.id,
-    extensionId: JSON.stringify(["pstdio.personal-history", config.managerOrigin, config.accountId]),
-  };
-  const documents = app.deps.extensionStorageService.documents;
-  const name = JSON.stringify(["transcript", "old-session"]);
-  await documents.open(name).transaction(owner, async ({ document }) => {
-    document.getText("content").insert(0, "old transcript".repeat(100_000));
-  });
-  const open = documents.open;
-  documents.open = (id) => {
-    if (id === name) throw new Error("Upgrade opened a legacy transcript");
-    return open(id);
-  };
-  try {
-    await discardLegacyHistory(config, app.deps);
-  } finally {
-    documents.open = open;
-  }
-  expect(await documents.open(name).revision(owner)).toBe(0);
-  expect(await app.deps.projectService.get(project.id)).not.toBeNull();
 });

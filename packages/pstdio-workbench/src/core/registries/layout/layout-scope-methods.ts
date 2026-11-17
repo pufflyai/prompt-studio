@@ -1,3 +1,4 @@
+import { notifyWorkbenchChange } from "../../shared/store/workbench-batch";
 import { runWorkbenchEffect } from "../../shared/workbench-effect";
 import { createWorkbenchEvent } from "../../shared/workbench-event";
 import type { LayoutModel, LayoutPersistenceAdapter, LayoutScope } from "./layout-model-types";
@@ -23,11 +24,29 @@ export const createLayoutScopeMethods = (input: CreateLayoutScopeMethodsInput) =
     runWorkbenchEffect("layout cache read for unscoped", () => input.persistence?.getLayout(undefined)) !== undefined;
   const willChangeScope = createWorkbenchEvent<LayoutScope | undefined>("layout scope subscriber");
   const didChangeScope = createWorkbenchEvent<LayoutScope | undefined>("layout scope subscriber");
+  const pending = new Map<LayoutScope | undefined, { layout: WorkbenchLayout }>();
+  const readLayout = (scope: LayoutScope | undefined) =>
+    pending.get(scope)?.layout ?? input.persistence?.getLayout(scope);
 
-  const persistLayout = () =>
-    runWorkbenchEffect(`layout cache for ${currentScope ?? "unscoped"}`, () =>
-      input.persistence?.setLayout(input.getLayout(), currentScope),
-    );
+  const persistLayout = () => {
+    if (!input.persistence) return;
+    const scope = currentScope;
+    const previous = pending.get(scope);
+    if (previous) {
+      previous.layout = input.getLayout();
+      return;
+    }
+    const write = { layout: input.getLayout() };
+    pending.set(scope, write);
+    // Module transitions register and remove many panels. Persist their completed
+    // layout once, retaining the outgoing scope if that same transition switches projects.
+    notifyWorkbenchChange(write, () => {
+      pending.delete(scope);
+      runWorkbenchEffect(`layout cache for ${scope ?? "unscoped"}`, () =>
+        input.persistence?.setLayout(write.layout, scope),
+      );
+    });
+  };
 
   const setPersistenceScope: LayoutModel["setPersistenceScope"] = (nextScope, scopeInput = {}) => {
     if (currentScope === nextScope) return;
@@ -35,7 +54,7 @@ export const createLayoutScopeMethods = (input: CreateLayoutScopeMethodsInput) =
     willChangeScope.notify(nextScope);
     currentScope = nextScope;
     const incoming = runWorkbenchEffect(`layout cache read for ${currentScope ?? "unscoped"}`, () =>
-      input.persistence?.getLayout(currentScope),
+      readLayout(currentScope),
     );
     enteredWithLayout = incoming !== undefined;
     const scopedLayout = resolveScopedLayout(input.defaultRegionVisibility, incoming);
@@ -55,9 +74,8 @@ export const createLayoutScopeMethods = (input: CreateLayoutScopeMethodsInput) =
     getPersistenceScope: () => currentScope,
     // Live: whether anything is stored for the active scope right now.
     hasPersistedLayout: () =>
-      runWorkbenchEffect(`layout cache read for ${currentScope ?? "unscoped"}`, () =>
-        input.persistence?.getLayout(currentScope),
-      ) !== undefined,
+      runWorkbenchEffect(`layout cache read for ${currentScope ?? "unscoped"}`, () => readLayout(currentScope)) !==
+      undefined,
     enteredWithPersistedLayout: () => enteredWithLayout,
     onDidChangePersistenceScope: didChangeScope.subscribe,
     onWillChangePersistenceScope: willChangeScope.subscribe,

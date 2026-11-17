@@ -81,9 +81,9 @@ const createAction = (parent: string, directory = false): TreeAction => ({
 const fileNode = (
   workspace: Awaited<ReturnType<typeof requireWorkspace>>,
   projectId: string,
-  entry: { name: string; path: string; type: "file" | "directory" },
+  entry: { name: string; path: string; type: "file" | "directory"; git_ignored?: boolean },
   selected?: string,
-): TreeNode => {
+) => {
   const writable = workspace.capabilities?.files === "write";
   const directory = entry.type === "directory";
   const actions: TreeAction[] = [
@@ -130,7 +130,8 @@ const fileNode = (
     id: entry.path,
     label: entry.name,
     tooltip: entry.path,
-    rowVariant: "file",
+    rowVariant: "file" as const,
+    tone: entry.git_ignored ? ("muted" as const) : undefined,
     ...(directory
       ? { icon: "folder", collapsible: true }
       : { fileName: entry.name, target: workspaceTarget(workspace, projectId, { workspaceFilePath: entry.path }) }),
@@ -181,7 +182,7 @@ export const filesTree = defineView({
           },
         ];
       const result = await ctx.workspaces.listFiles(workspace.id, { query: filter, limit: 500 });
-      let nodes = result.entries.map((entry) =>
+      let nodes: TreeNode[] = result.entries.map((entry) =>
         fileNode(workspace, ctx.project.id, entry, filePath(renderer.resource)),
       );
       if (!filter)

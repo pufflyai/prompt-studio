@@ -1,4 +1,4 @@
-import { Box, Text, useSlotRecipe } from "@chakra-ui/react";
+import { Avatar, Box, useSlotRecipe } from "@chakra-ui/react";
 import { Tooltip } from "./tooltip";
 
 export const documentParticipantColors = [
@@ -30,21 +30,31 @@ export const DocumentParticipants = (props: DocumentParticipantsProps) => {
   const { participants, label } = props;
   const styles = useSlotRecipe({ key: "documentPresence" })({});
   if (!participants.length) return null;
+  const visible = participants.slice(0, 3);
+  const remaining = participants.slice(3);
   return (
     <Box role="list" aria-label={label} css={styles.participants}>
-      {participants.map((participant) => {
+      {visible.map((participant) => {
         const identity = participant.label;
         return (
           <Tooltip key={participant.id} content={identity}>
             <Box role="listitem" aria-label={identity} colorPalette={participant.color} css={styles.participant}>
-              <Box aria-hidden="true" css={styles.dot} />
-              <Text as="span" truncate>
-                {identity}
-              </Text>
+              <Avatar.Root size="2xs" colorPalette={participant.color}>
+                <Avatar.Fallback name={identity} />
+              </Avatar.Root>
             </Box>
           </Tooltip>
         );
       })}
+      {remaining.length > 0 ? (
+        <Tooltip content={remaining.map((person) => person.label).join(", ")}>
+          <Box role="listitem" aria-label={remaining.map((person) => person.label).join(", ")} css={styles.participant}>
+            <Avatar.Root size="2xs">
+              <Avatar.Fallback>+{remaining.length}</Avatar.Fallback>
+            </Avatar.Root>
+          </Box>
+        </Tooltip>
+      ) : null}
     </Box>
   );
 };

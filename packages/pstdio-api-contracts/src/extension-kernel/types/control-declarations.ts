@@ -5,6 +5,12 @@ export type HarnessControlValue = Pick<ExtensionHarnessInput, keyof ExtensionHar
 /** The host supplies the same harness, model and option picker used by command forms. */
 export interface HarnessControl extends BaseControl {
   type: "harness";
+  /** Lock only harness identity, keeping models and parameters editable. */
+  lockIdentity?: boolean;
+  /** Keep saved request model/params even when discovery no longer advertises them. */
+  preserveSettings?: boolean;
+  /** Emit resolved defaults on edits for services that merge persisted settings. Defaults to overrides only. */
+  settingsMode?: "overrides" | "resolved";
   defaultValue: HarnessControlValue;
 }
 

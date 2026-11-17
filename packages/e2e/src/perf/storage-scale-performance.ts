@@ -21,7 +21,7 @@ export const createObservedScaleRuntime = (root: string, emit: (row: object) => 
   const start = async (home: string, environment: Record<string, string> = {}) => {
     const name = `performance-${randomUUID()}`;
     const directory = join(root, name);
-    const recorder = createPerformanceRecording(directory);
+    const recorder = await createPerformanceRecording(directory);
     const container = configuredContainer(home);
     let runtime: ScaleRuntime | undefined;
     let observed: PackagedRuntimeObservation | undefined;

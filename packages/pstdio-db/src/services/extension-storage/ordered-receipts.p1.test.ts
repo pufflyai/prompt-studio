@@ -17,6 +17,7 @@ import {
   storage_record_projections,
 } from "../../db/schemas.pg";
 import { createDocumentStorageDBService } from "./document-storage";
+import { attachIndexNodeFiles, createIndexNodeFiles } from "./index-node-files";
 import { withOrderedOwner } from "./ordered-journal";
 import { createRelay } from "./record-stream-relay.fixture";
 
@@ -37,6 +38,11 @@ const fixture = async () => {
   const device = async (path = ":memory:") => {
     const { db, close } = await createDb({ path });
     cleanup.push(close);
+    // An on-disk device keeps its index nodes in a folder of its own, as the app does.
+    if (path !== ":memory:") {
+      attachIndexNodeFiles(db, createIndexNodeFiles(`${path}-index-nodes`));
+      cleanup.push(() => rm(`${path}-index-nodes`, { recursive: true, force: true }));
+    }
     const now = new Date().toISOString();
     await db
       .insert(projects)
@@ -193,6 +199,34 @@ test("the encrypted receipt cache survives closing and reopening the full writer
   await cold.sync.synchronize();
   expect((await cold.records.read("settings")).value).toEqual({ model: "retained" });
   expect((await reopened.records.outcome("on-disk"))?.state).toBe("synced");
+});
+
+test("reopening a full writer removes replaced receipt nodes and keeps a graph that refounds after relay loss", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "ordered-receipt-collect-"));
+  cleanup.push(() => rm(directory, { recursive: true, force: true }));
+  const f = await fixture();
+  const writer = await f.device(directory);
+  for (let index = 0; index < 5; index++) {
+    await writer.records.commit(save(`change-${index}`, `model-${index}`));
+    await writer.sync.synchronize();
+  }
+  const nodes = createIndexNodeFiles(`${directory}-index-nodes`);
+  const before = await nodes.list(f.owner, "receipts");
+  await writer.close();
+
+  const reopened = await f.device(directory);
+  await reopened.sync.synchronize();
+  const after = await nodes.list(f.owner, "receipts");
+  expect(after.length).toBeGreaterThan(0);
+  expect(after.length).toBeLessThan(before.length);
+  expect(after.every((id) => before.includes(id))).toBe(true);
+
+  f.relay.lose();
+  f.relay.loseBlobs();
+  await reopened.sync.synchronize();
+  const cold = await f.device();
+  await cold.sync.synchronize();
+  expect((await cold.records.read("settings")).value).toEqual({ model: "model-4" });
 });
 
 test("a receipt learned while a checkpoint uploads is not marked indexed by that earlier CAS", async () => {

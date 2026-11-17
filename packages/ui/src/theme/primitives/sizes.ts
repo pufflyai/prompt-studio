@@ -1,3 +1,5 @@
+import { dashboardGeometry } from "./dashboard";
+
 export const sp = {
   0: "0rem", // 0px
   25: "0.125rem", // 2px
@@ -47,6 +49,9 @@ export const spacing = {
 };
 
 export const sizes = {
+  "dashboard-grid-row": { value: `${dashboardGeometry.row}px` },
+  "dashboard-guide": { value: sp[50] },
+  "document-content": { value: "45rem" },
   "alert-max-height": { value: "min(24rem, 50dvh)" },
   "kanban-create-editor-min": { value: "min(9rem, 40dvh)" },
   "kanban-create-editor-max": { value: "min(20rem, 40dvh)" },
@@ -68,6 +73,7 @@ export const sizes = {
   "performance-meter": { value: "0.625rem" },
   "performance-chart": { value: "2.25rem" },
   "performance-popover": { value: "23.75rem" },
+  "harness-menu": { value: "22rem" },
   "popover-panel": { value: "27.5rem" },
   "folder-picker-width": { value: "36.5rem" },
   "folder-picker-height": { value: "31rem" },

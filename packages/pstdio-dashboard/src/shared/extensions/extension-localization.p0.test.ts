@@ -3,10 +3,33 @@ import i18n from "@/i18n";
 import { createRuntimeCollections } from "@/lib/sync/collections";
 import {
   getExtensionTranslationContext,
+  localizeExtensionAppearance,
   localizeExtensionValue,
   registerExtensionTranslationBundles,
   resolveLocalizableString,
 } from "./extension-localization";
+
+test("retained projects keep distinct translation bundles for the same extension", () => {
+  const owner = createRuntimeCollections();
+  const appearance = (label: string) => ({
+    themes: [],
+    fileIconThemes: [],
+    diagnostics: [],
+    translations: [{ extensionId: "retained.same", defaultLocale: "en", bundles: { en: { label } } }],
+  });
+  const a = registerExtensionTranslationBundles(appearance("Project A"), owner, "a");
+  const b = registerExtensionTranslationBundles(appearance("Project B"), owner, "b");
+  try {
+    expect(getExtensionTranslationContext("retained.same", "en", owner, "a").bundle).toEqual({ label: "Project A" });
+    expect(getExtensionTranslationContext("retained.same", "en", owner, "b").bundle).toEqual({ label: "Project B" });
+    expect(resolveLocalizableString({ $l10n: "label" }, "retained.same", undefined, owner, "a")).toBe("Project A");
+    expect(resolveLocalizableString({ $l10n: "label" }, "retained.same", undefined, owner, "b")).toBe("Project B");
+  } finally {
+    a.dispose();
+    b.dispose();
+    owner.dispose();
+  }
+});
 
 test("localizing a label retains unchanged payloads and leaves the source intact", () => {
   const tokens = { colors: { background: "#123456" }, rules: [{ token: "comment", color: "#abcdef" }] };
@@ -64,7 +87,7 @@ test("bulk labels retain their namespace, fallback and current locale", async ()
 
 test("disposing the runtime owner removes its translation resources", async () => {
   const owner = createRuntimeCollections();
-  const namespace = `ext:${owner.id}:same`;
+  const namespace = `ext:${JSON.stringify([owner.id, null, "same"])}`;
   const registration = registerExtensionTranslationBundles(
     {
       themes: [],
@@ -104,6 +127,27 @@ test("replacing project translations survives disposal of the previous appearanc
   }
 });
 
+test("closing one loaded project keeps the translations another loaded project uses", async () => {
+  await i18n.changeLanguage("en");
+  const owner = createRuntimeCollections();
+  const appearance = (label: string) => ({
+    themes: [],
+    fileIconThemes: [],
+    diagnostics: [],
+    translations: [{ extensionId: "same", defaultLocale: "en", bundles: { en: { label } } }],
+  });
+  const visible = registerExtensionTranslationBundles(appearance("Visible project"), owner);
+  const closed = registerExtensionTranslationBundles(appearance("Closed project"), owner);
+  try {
+    closed.dispose();
+    expect(getExtensionTranslationContext("same", "en", owner).bundle).toEqual({ label: "Visible project" });
+    expect(resolveLocalizableString({ $l10n: "label" }, "same", undefined, owner)).toBe("Visible project");
+  } finally {
+    visible.dispose();
+    await owner.dispose();
+  }
+});
+
 test("runtime translation bundles keep the same extension's local revisions separate", async () => {
   await i18n.changeLanguage("en");
   const first = createRuntimeCollections();
@@ -127,4 +171,55 @@ test("runtime translation bundles keep the same extension's local revisions sepa
     await first.dispose();
     await second.dispose();
   }
+});
+
+test("appearance localization preserves literal theme payloads and translation keys", () => {
+  const tokens = { $l10n: "literal-token", "colors.bg": "#123456" };
+  const monacoTheme = {
+    base: "vs-dark" as const,
+    inherit: true as const,
+    rules: [{ $l10n: "literal-rule" }],
+    colors: {},
+  };
+  const definitions = { $l10n: "literal-icon", file: { iconPath: "data:image/svg+xml;base64,PHN2Zy8+" } };
+  const translations = [{ extensionId: "palette", defaultLocale: "en", bundles: { en: { $l10n: "A literal key" } } }];
+  const source = { kind: "package-asset" as const, path: "./theme.json", baseUrl: "file:///palette/extension.ts" };
+  const localized = localizeExtensionAppearance({
+    themes: [
+      {
+        id: "theme",
+        extensionId: "palette",
+        title: { $l10n: "title", default: "Palette" },
+        description: { $l10n: "description", default: "Description" },
+        format: "vscode-color-theme",
+        mode: "dark",
+        source,
+        tokens,
+        monacoTheme,
+      },
+    ],
+    fileIconThemes: [
+      {
+        id: "icons",
+        extensionId: "palette",
+        title: { $l10n: "icons", default: "Icons" },
+        format: "vscode-file-icon-theme",
+        source,
+        definitions,
+        fileExtensions: {},
+        fileNames: {},
+        defaults: {},
+        fonts: [],
+      },
+    ],
+    translations,
+    diagnostics: [],
+  });
+  expect(localized.themes[0]?.title).toBe("Palette");
+  expect(localized.themes[0]?.description).toBe("Description");
+  expect(localized.themes[0]?.tokens).toBe(tokens);
+  expect(localized.themes[0]?.monacoTheme).toBe(monacoTheme);
+  expect(localized.fileIconThemes[0]?.title).toBe("Icons");
+  expect(localized.fileIconThemes[0]?.definitions).toBe(definitions);
+  expect(localized.translations).toBe(translations);
 });

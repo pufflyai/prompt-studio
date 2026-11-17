@@ -14,3 +14,5 @@ An API that misses stable 0.44 moves to the next breaking release.
   name in `extensions/`, `.pstdio/extensions/` and `packages/*/src` returns no callers.
 - In 0.44, a test loads an extension that uses the deprecated slot placement, form and event names
   and gets the same behavior as with the new names.
+
+*Updated at: 2026-10-18*

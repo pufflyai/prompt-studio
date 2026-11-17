@@ -17,7 +17,7 @@ export interface PerformanceHost {
   setEnabled: (enabled: boolean) => Promise<void>;
   snapshot: () => Promise<PerformanceSnapshot | null>;
   recordings?: () => Promise<PerformanceRecordingExport | null>;
-  retainCapture?: () => Promise<() => Promise<void>>;
+  retainCapture?: (monitoring?: boolean) => Promise<() => Promise<void>>;
   reportFrames: (report: SlowFrameReport) => void;
   reportState: (report: RendererStateReport) => void;
 }
@@ -27,7 +27,7 @@ interface DesktopPerformanceBridge {
   setPerformanceMonitoring: (enabled: boolean) => Promise<void>;
   getPerformanceSnapshot: () => Promise<PerformanceSnapshot | null>;
   getPerformanceRecordings?: () => Promise<PerformanceRecordingExport | null>;
-  retainPerformanceCapture?: (id: string) => Promise<void>;
+  retainPerformanceCapture?: (id: string, monitoring?: boolean) => Promise<void>;
   releasePerformanceCapture?: (id: string) => Promise<void>;
   reportSlowFrames: (report: SlowFrameReport) => Promise<void>;
   reportRendererState: (report: RendererStateReport) => Promise<void>;
@@ -45,9 +45,9 @@ const hasPerformanceBridge = (bridge: unknown): bridge is DesktopPerformanceBrid
 
 const desktopHost = (bridge: DesktopPerformanceBridge): PerformanceHost => ({
   kind: "desktop",
-  retainCapture: async () => {
+  retainCapture: async (monitoring = false) => {
     const id = crypto.randomUUID();
-    await bridge.retainPerformanceCapture?.(id);
+    await bridge.retainPerformanceCapture?.(id, monitoring);
     return async () => {
       await bridge.releasePerformanceCapture?.(id);
     };

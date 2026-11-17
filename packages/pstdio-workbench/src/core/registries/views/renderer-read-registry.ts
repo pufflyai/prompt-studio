@@ -1,7 +1,24 @@
+import type {
+  QueryChangeEnvelope,
+  QueryDependency,
+  QueryScope,
+  ScopedQuery,
+  ScopedQueryClient,
+} from "@pstdio/sdk/extensions";
+import { createRendererQueryCache } from "./renderer-query-cache";
+import type { createRendererQueryLease } from "./renderer-query-lease";
 export interface RendererReadRequest<T> {
   queryKey: string;
+  queryScope?: Partial<QueryScope>;
+  sourceId?: string;
+  queryEvents?: readonly string[];
+  dependency?: QueryDependency;
+  subscribe?(invalidate: () => void): () => void;
   load(signal: AbortSignal, publish: (value: T) => void): Promise<T> | T;
   onProgress?(value: T): void;
+  onRetire?(): void;
+  /** Replace pagination parameters before the old query can admit another read. */
+  onInvalidate?(): boolean;
   onValue(value: T): void;
   onError(error: unknown): void;
 }
@@ -9,14 +26,15 @@ export interface RendererReadRequest<T> {
 interface ReadJob {
   token: symbol;
   generation: number;
-  queryKey: string;
   run(signal: AbortSignal): Promise<void>;
   onError(error: unknown): void;
 }
 
 interface ReadOwner {
   binding?: symbol;
-  queryKey?: string;
+  query?: ScopedQuery<unknown>;
+  lease?: ReturnType<typeof createRendererQueryLease>;
+  notify?(): void;
   generation: number;
   pending?: ReadJob;
   active?: { controller: AbortController; settled: Promise<void> };
@@ -25,16 +43,54 @@ interface ReadOwner {
 }
 
 export interface RendererReadBinding {
-  request<T>(request: RendererReadRequest<T>, reason?: "refresh" | "retry"): Promise<void>;
+  request<T>(request: RendererReadRequest<T>, reason?: "refresh" | "retry" | "observe"): Promise<void>;
+  hold(): () => void;
   dispose(): void;
 }
 
 export interface RendererReadRegistry {
   bind(key: string): RendererReadBinding;
+  peek: ReturnType<typeof createRendererQueryCache>["peek"];
+  holdForMutation: ReturnType<typeof createRendererQueryCache>["holdForMutation"];
+  markStale: ReturnType<typeof createRendererQueryCache>["markStale"];
+  invalidate(sourceId: string, event?: QueryChangeEnvelope): void;
   dispose(): Promise<void>;
 }
 
-export const createRendererReadRegistry = (): RendererReadRegistry => {
+const caches = new WeakMap<RendererReadRegistry, ReturnType<typeof createRendererQueryCache>>();
+/** Internal projections borrow the existing query owner; they never create another cache root. */
+export const getRendererReadCache = (registry: RendererReadRegistry) => caches.get(registry)!;
+
+const prepareReadQuery = (
+  owner: ReadOwner,
+  query: ScopedQuery<unknown>,
+  createLease: () => ReturnType<typeof createRendererQueryLease>,
+  retry: boolean,
+) => {
+  const changed = owner.query !== query;
+  if (changed || retry) owner.generation++;
+  if (changed) {
+    owner.lease?.dispose();
+    owner.lease = undefined;
+  }
+  if (changed || retry) {
+    owner.active?.controller.abort();
+  }
+  if (changed) {
+    owner.query = query;
+    owner.lease = createLease();
+  }
+  return changed;
+};
+
+export const createRendererReadRegistry = (
+  input: {
+    queries?: ScopedQueryClient;
+    subscribeRefresh?(invalidate: RendererReadRegistry["invalidate"]): () => void;
+  } = {},
+): RendererReadRegistry => {
+  const cache = createRendererQueryCache(input.queries);
+  const stopRefresh = input.subscribeRefresh?.(cache.invalidate);
   const owners = new Map<string, ReadOwner>();
   let disposed = false;
   const release = (key: string, owner: ReadOwner) => {
@@ -76,25 +132,71 @@ export const createRendererReadRegistry = (): RendererReadRegistry => {
     });
   };
 
-  return {
+  const registry: RendererReadRegistry = {
+    peek: cache.peek,
+    holdForMutation: cache.holdForMutation,
+    markStale: cache.markStale,
+    invalidate: cache.invalidate,
     bind(key) {
       if (disposed) throw new Error("Read registry is disposed");
       const owner = owners.get(key) ?? { generation: 0, queued: false, waiters: new Set<() => void>() };
       owners.set(key, owner);
+      owner.binding = undefined;
+      owner.generation++;
+      owner.lease?.dispose();
+      owner.lease = undefined;
       owner.active?.controller.abort();
+      owner.query = undefined;
+      owner.notify = undefined;
       owner.pending = undefined;
       const token = Symbol(key);
+      let requested = false;
       owner.binding = token;
-      owner.generation++;
       return {
-        request<T>(request: RendererReadRequest<T>, reason: "refresh" | "retry" = "refresh") {
+        hold: () => owner.lease?.hold() ?? (() => {}),
+        request<T>(request: RendererReadRequest<T>, reason: "refresh" | "retry" | "observe" = "refresh") {
           if (owner.binding !== token || disposed) return Promise.resolve();
-          if (owner.queryKey !== request.queryKey || reason === "retry") {
-            owner.generation++;
-            owner.active?.controller.abort();
-          }
-          owner.queryKey = request.queryKey;
+          const query = cache.prepare(request).query;
+          const changed = prepareReadQuery(
+            owner,
+            query as ScopedQuery<unknown>,
+            () => cache.lease(query as ScopedQuery<unknown>, () => owner.notify?.(), request.onInvalidate),
+            reason === "retry",
+          );
+          if (reason !== "observe" && ((requested && !changed) || reason === "retry"))
+            cache.refresh(request, reason === "retry");
+          else cache.prepare(request);
+          requested = true;
+          // A queued refresh supersedes progress and publication from the older presentation job.
+          owner.generation++;
           const generation = owner.generation;
+          let published = false;
+          let lastValue: T;
+          let lastError: unknown;
+          const publishError = (error: unknown) => {
+            if (owner.binding !== token || owner.generation !== generation || error === lastError) return;
+            lastError = error;
+            request.onError(error);
+          };
+          const publishValue = (value: T) => {
+            if (owner.binding !== token || owner.generation !== generation) return;
+            if (published && value === lastValue && lastError === undefined) return;
+            lastError = undefined;
+            published = true;
+            lastValue = value;
+            request.onValue(value);
+          };
+          owner.notify = () => {
+            if (query.isDisposed() && owner.binding === token) {
+              owner.generation++;
+              owner.active?.controller.abort();
+              request.onRetire?.();
+              return;
+            }
+            const snapshot = query.getSnapshot();
+            if (!snapshot.fetching && snapshot.error) publishError(snapshot.error);
+            if (!snapshot.fetching && !snapshot.error && snapshot.data !== undefined) publishValue(snapshot.data);
+          };
           let finish!: () => void;
           const completed = new Promise<void>((resolve) => {
             finish = resolve;
@@ -103,21 +205,22 @@ export const createRendererReadRegistry = (): RendererReadRegistry => {
           const job: ReadJob = {
             token,
             generation,
-            queryKey: request.queryKey,
-            onError: request.onError,
+            onError: publishError,
             async run(signal) {
               signal.throwIfAborted();
+              // Retain event-driven freshness only after the placement's admission barrier opens.
+              if (!owner.lease?.admit()) return;
               let reading = true;
               const publish = (value: T) => {
                 if (reading && !signal.aborted && isCurrent(owner, job)) request.onProgress?.(value);
               };
               let value: T;
               try {
-                value = await request.load(signal, publish);
+                value = await cache.read(request, signal, publish);
               } finally {
                 reading = false;
               }
-              if (!signal.aborted && isCurrent(owner, job)) request.onValue(value);
+              if (!signal.aborted && isCurrent(owner, job)) publishValue(value);
             },
           };
           owner.pending = job;
@@ -127,6 +230,10 @@ export const createRendererReadRegistry = (): RendererReadRegistry => {
         dispose() {
           if (owner.binding !== token) return;
           owner.binding = undefined;
+          owner.lease?.dispose();
+          owner.lease = undefined;
+          owner.query = undefined;
+          owner.notify = undefined;
           owner.pending = undefined;
           owner.generation++;
           owner.active?.controller.abort();
@@ -136,9 +243,14 @@ export const createRendererReadRegistry = (): RendererReadRegistry => {
     },
     async dispose() {
       disposed = true;
+      const projections = cache.dispose();
+      stopRefresh?.();
       const pending: Promise<void>[] = [];
       for (const [key, owner] of owners) {
         owner.binding = undefined;
+        owner.lease?.dispose();
+        owner.lease = undefined;
+        owner.query = undefined;
         owner.pending = undefined;
         if (owner.active) {
           owner.active.controller.abort();
@@ -147,6 +259,9 @@ export const createRendererReadRegistry = (): RendererReadRegistry => {
         release(key, owner);
       }
       await Promise.allSettled(pending);
+      await projections;
     },
   };
+  caches.set(registry, cache);
+  return registry;
 };

@@ -22,7 +22,14 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await close?.();
+  try {
+    await close?.();
+  } finally {
+    // Hooks recreate these owners; release closed engines between cases and files.
+    close = undefined!;
+    db = undefined!;
+    projects = undefined!;
+  }
 });
 
 test("projects service supports basic CRUD", async () => {

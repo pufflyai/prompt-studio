@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { getWorkbenchRenderers, type WorkbenchCore } from "../../../core";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
-import { WorkbenchDataTableView } from "./data-table-view";
+import { WorkbenchDataTableView } from "./lazy-data-table-view";
 
 const installed = new WeakSet<WorkbenchCore>();
 

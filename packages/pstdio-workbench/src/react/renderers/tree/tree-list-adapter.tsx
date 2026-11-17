@@ -1,9 +1,10 @@
-import { Badge, Box, Spinner } from "@chakra-ui/react";
+import { Box, Spinner } from "@chakra-ui/react";
 import {
   resolveFileIconElement,
   Tooltip,
   type TreeListActionMenuItem,
   type TreeListNode,
+  TreeRowTags,
   useFileIconThemePreference,
 } from "@pstdio/ui";
 import { DiffBubble } from "@pstdio/ui/diff";
@@ -15,6 +16,10 @@ import {
   type TreeViewSection,
   type WorkbenchCore,
 } from "../../../core";
+import {
+  getNavigationTreeNodeSource,
+  getNavigationTreeSectionSource,
+} from "../../../core/registries/navigation/navigation-tree-node-source";
 import { WorkbenchShortcutHint } from "../../keybindings/shortcut-hint";
 import { createWorkbenchResourceActions } from "../../menus/resource-actions";
 import { WorkbenchIcon } from "../../shared/icon";
@@ -22,6 +27,8 @@ import { createTreeActionItems, createTreeContextMenuItems, type TreeActionParam
 
 interface TreeNodeRenderContext {
   workbench: WorkbenchCore;
+  resource?: ResourceRef;
+  sectionSource?: { resource?: ResourceRef };
   /** Row and section actions give way to keyboard hints while shortcut mode or its preview shows them. */
   shortcutHints?: boolean;
   onCommandError?: (error: unknown) => void;
@@ -90,13 +97,7 @@ const resolveTreeNodeResource = (node: TreeNode): ResourceRef | undefined => {
 };
 const resolveTreeNodeEndContent = (node: TreeNode, resource: ResourceRef | undefined) => {
   if (node.endContent !== undefined) return node.endContent as ReactNode;
-  if (node.badge) {
-    return (
-      <Badge size="sm" variant="subtle" colorPalette={node.badge.color ?? "gray"} flexShrink={0}>
-        {node.badge.label}
-      </Badge>
-    );
-  }
+  if (node.badge || node.tags?.length) return <TreeRowTags tags={node.tags} badge={node.badge} />;
   const additions = resource?.metadata?.diffAdditions;
   const deletions = resource?.metadata?.diffDeletions;
   if (resource?.type !== "workspace" || typeof additions !== "number" || typeof deletions !== "number") {
@@ -130,7 +131,10 @@ const toTreeListNode = (
 ) => {
   const navigationIntent = resolveTreeNodeNavigationIntent(node);
   const resource = resolveTreeNodeResource(node);
-  const commandContext = resource ? { resource } : undefined;
+  const owner = getNavigationTreeNodeSource(node);
+  const commandContext = {
+    resource: resource ?? (owner ? owner.resource : (context.resource ?? context.sectionSource?.resource)),
+  };
   const customPath = node.contextMenuPath ?? node.menuPath;
   const resourcePath = resource ? resourceContextMenuPath(resource.type) : undefined;
   // Building a row menu resolves commands, context, and shortcuts. Large trees adapt every row but mount only
@@ -152,7 +156,9 @@ const toTreeListNode = (
           disabled: action.isDisabled,
           endContent: action.endContent,
           separatorBefore: action.separatorBefore,
+          runOnSelect: Boolean(action.onSelect),
           onAction: () => {
+            action.onSelect?.();
             void action.onClick?.();
           },
         }))
@@ -171,12 +177,14 @@ const toTreeListNode = (
     return menuItems;
   };
   const treeNode: TreeListNode = {
+    pagination: node.pagination,
     id: node.id,
     moveScope: node.moveScope,
     label: node.label,
     description: node.description,
     icon: resolveTreeNodeIcon(node),
     iconColor: node.iconColor,
+    tone: node.tone,
     tooltip: node.tooltip,
     disabled: node.disabled,
     rowVariant: node.rowVariant,
@@ -232,18 +240,28 @@ export const toTreeListSection = (
 ) => {
   const sectionContext = {
     ...context,
+    sectionSource: getNavigationTreeSectionSource(section),
     onRequestParams: (request: TreeActionParamsRequest) =>
       context.onRequestParams?.({ ...request, sectionId: section.id }),
   };
   const emptyNode = toTreeListSectionEmptyNode(section);
   return {
     id: section.id,
+    pagination: section.pagination,
     moveScope: section.moveScope,
     label: section.label,
     menuLabel: section.menuLabel,
     actions: createTreeActionItems({
       actions: context.shortcutHints ? undefined : section.actions,
       workbench: context.workbench,
+      context: { resource: sectionContext.sectionSource ? sectionContext.sectionSource.resource : context.resource },
+      onCommandError: context.onCommandError,
+      onRequestParams: sectionContext.onRequestParams,
+    }),
+    contextMenuItems: createTreeContextMenuItems({
+      actions: section.actions,
+      workbench: context.workbench,
+      context: { resource: sectionContext.sectionSource ? sectionContext.sectionSource.resource : context.resource },
       onCommandError: context.onCommandError,
       onRequestParams: sectionContext.onRequestParams,
     }),

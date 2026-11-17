@@ -1,5 +1,17 @@
 # Prompt Studio Skills
 
+## 0.45.2
+
+_2026-11-12_
+
+### Patch Changes
+
+- 5c1e728: Provide the existing project Home page as a default project-local extension using public navigation, recently opened resources with session status, and setup recovery. Each project owns editable Home source under `.pstdio/extensions/pstdio-home/`; setup preserves its customizations.
+- 93d1e74: Declare extension IDs and official harness SVG logos with Gallery Thumbnails for UI Canvas, optional Agent Reports, Themes, and unlisted Remote Workspaces.
+- f26039d: Restore focused title editing, reliable retained notes, bounded presence avatars, Cloud connection and preparation feedback, pending conversations, and native menus that preserve drafts across floating and attached presentation.
+- ed40a9d: Keep maintained extensions loadable across the existing and upcoming ordered-storage API hosts.
+- 547e56b: Keep Canvas and Lab state in ordered record fields, migrate retained shared content, and document explicit collaborative text and paged logs.
+
 ## 0.45.1
 
 _2026-10-31_

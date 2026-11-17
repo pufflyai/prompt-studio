@@ -6,7 +6,7 @@ The Workspaces extension composes the shared native file renderer and public dif
 
 Covers the workspace screen and diff summary badges:
 
-- Page: the resource page declared by the ordinary `pstdio.pstdio-workspaces` extension; ticket navigation supplies context without owning its route.
+- Page: the resource page declared by the ordinary `pstdio.workspaces` extension; ticket navigation supplies context without owning its route.
 - Diff source: `GET /v1/workspaces/:id/diff-files` plus on-demand `GET /v1/workspaces/:id/diff-file`; both accept `mode=current|fork_point`
 - File source: workspace file, directory, and entry endpoints under `GET`, `POST`, `PUT`, `PATCH`, and `DELETE`
 - Renderers: workspace-owned `Files` and `Changes` Main sub-panels
@@ -40,7 +40,7 @@ The native file renderer uses the scoped workspace read and shared Monaco editor
 
 ### 4) Workspaces list
 
-The extension's native resource list groups workspaces by device and nests session rows beneath them. Compact hides sessions. Related ticket chips use scoped, paginated resource links. Browsing this list does not calculate Git diffs. Device headers show live authenticated capacity when available, and last seen with a cached limit when offline.
+The extension's native resource list groups workspace rows by device. Compact removes grouping. Sessions belong to workspace navigation and the separate history view. Related ticket chips use scoped, paginated resource links. Browsing this list does not calculate Git diffs. The Workspaces title and sidebar menus open the existing creation dialog. The local device header also offers creation. Capacity controls and device-details entry points are omitted.
 
 Workspace resources keep their host-owned kind and provider capabilities. The project folder opens the separate Files page, without Changes. Foreign workspaces open session history. New callers use `workspacePages` and `workspaceCommands`; deprecated `workbenchPages.workspace` and `workbenchPages.workspaces` remain compatibility declarations using provider-owned views, available only while that provider is installed.
 
@@ -173,7 +173,7 @@ One card per changed file:
 ## Artifact Source Of Truth
 
 Ticket attachments are planner-owned. Agent-produced validation, review, test,
-and implementation evidence is report-owned and lives under `.pstdio/extension-storage/pstdio.pstdio-reports/reports/`.
+and implementation evidence is report-owned and lives under `.pstdio/extension-storage/pstdio.reports/reports/`.
 The dashboard loads planner ticket file metadata/content through planner
 commands and should not treat ticket folders as the source of truth for result
 artifacts.
@@ -183,12 +183,12 @@ planner file query so re-saved artifact content updates in place.
 
 ## Artifact Persistence Flow
 
-`pst tickets save --id <ticket>` uploads planning/support files from:
+`pst pstdio.planner save-ticket --id <ticket>` uploads planning/support files from:
 
-- `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/<ticket>/files/` as regular ticket attachments
+- `.pstdio/extension-storage/pstdio.planner/tickets/<ticket>/files/` as regular ticket attachments
 
-`pst reports save --name <name>` uploads report evidence from
-`.pstdio/extension-storage/pstdio.pstdio-reports/reports/<name>/files/` into report-owned blob storage.
+`pst pstdio.reports reports save --name <name>` uploads report evidence from
+`.pstdio/extension-storage/pstdio.reports/reports/<name>/files/` into report-owned blob storage.
 
 ## Errors and Empty States
 

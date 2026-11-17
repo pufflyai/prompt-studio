@@ -11,6 +11,7 @@ interface ResourceItem {
   label: string;
   description?: string;
   icon?: string;
+  indicator?: { icon: string; color?: string; label?: string };
   keywords?: string[];
   target: NavigationTarget;
 }
@@ -74,6 +75,7 @@ const toResult = (
   label: item.label,
   description: item.description,
   icon: item.icon,
+  indicator: item.indicator,
   keywords: item.keywords,
   group: groupLabel,
   activate: () => activateTarget(context, record, item),
@@ -88,7 +90,9 @@ export const registerWorkbenchExtensionCommandPaletteResources = (
     disposables.push(
       context.workbench.commandPaletteResources.registerProvider({
         id: record.id,
+        extensionId: record.extensionId,
         title: groupLabel,
+        resourceKind: record.resourceKind,
         refreshEventIds: record.refreshEventIds,
         query: async ({ query, limit, signal }) => {
           const activeResource = context.workbench.getActiveResource();

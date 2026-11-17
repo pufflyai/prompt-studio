@@ -165,7 +165,11 @@ async function searchWorkspaceDirectory(context: WorkspaceSearchContext, directo
   context.visitedDirectories.add(directory.realPath);
 
   for (const item of await sortedDirectoryEntries(directory.operationPath)) {
+    // Dependency trees can contain thousands of files per installed tool. Keep them
+    // available through direct browsing without traversing them for project search.
+    if (item.name === "node_modules" && item.isDirectory()) continue;
     const entry = await workspaceEntry(context.safeRoot, directoryPath, item.name);
+    if (entry?.type === "directory" && entry.name === "node_modules") continue;
     if (entry && !(await collectSearchEntry(context, entry))) return false;
   }
   return true;

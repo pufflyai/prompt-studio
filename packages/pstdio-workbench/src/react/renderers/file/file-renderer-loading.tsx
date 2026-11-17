@@ -1,7 +1,8 @@
-import { Center, Spinner } from "@chakra-ui/react";
+import { Box } from "@chakra-ui/react";
+import { MarkdownEditorSkeleton } from "@pstdio/ui/lazy-markdown-editor";
 
 export const FileRendererLoading = () => (
-  <Center h="full" minH="0" bg="bg">
-    <Spinner size="sm" />
-  </Center>
+  <Box w="full" h="full" minH="0" overflow="hidden" bg="bg">
+    <MarkdownEditorSkeleton />
+  </Box>
 );

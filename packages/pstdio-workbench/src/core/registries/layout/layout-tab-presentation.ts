@@ -1,5 +1,8 @@
 import type { WorkbenchLayout, WorkbenchWidgetPlacement } from "./layout-types";
 
+const isLiveTab = (tab: WorkbenchWidgetPlacement["tab"]) =>
+  typeof tab?.getSnapshot === "function" && !tab.isDisposed?.();
+
 const mapPlacements = (
   layout: WorkbenchLayout,
   map: (placement: WorkbenchWidgetPlacement) => WorkbenchWidgetPlacement,
@@ -18,8 +21,19 @@ export const cacheLayoutData = (layout: WorkbenchLayout) =>
 export const restoreLayoutPresentation = (
   layout: WorkbenchLayout,
   getTab: (contributionId: string) => WorkbenchWidgetPlacement["tab"],
-) =>
-  mapPlacements(layout, (placement) => ({
-    ...placement,
-    tab: typeof placement.tab?.getSnapshot === "function" ? placement.tab : getTab(placement.contributionId),
-  }));
+) => {
+  let regions = layout.regions;
+  for (const [id, region] of Object.entries(layout.regions)) {
+    let widgets = region.widgets;
+    for (const [index, placement] of region.widgets.entries()) {
+      const registered = isLiveTab(placement.tab) ? placement.tab : getTab(placement.contributionId);
+      const tab = isLiveTab(registered) ? registered : undefined;
+      if (tab === placement.tab) continue;
+      if (widgets === region.widgets) widgets = [...widgets];
+      widgets[index] = { ...placement, tab };
+    }
+    if (widgets === region.widgets) continue;
+    regions = { ...regions, [id]: { ...region, widgets } };
+  }
+  return regions === layout.regions ? layout : { ...layout, regions };
+};

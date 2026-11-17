@@ -1,8 +1,25 @@
 import type { PageLocation, PageParams, ViewLocation } from "./pages";
 import type { ResourceRef } from "./resources";
+import type { WebviewCommandQuerySeed } from "./webview-command-query";
+import type {
+  WebviewAccountQuery,
+  WebviewPerformanceQuery,
+  WebviewPreferenceQuery,
+  WebviewServiceQuerySeeds,
+} from "./webview-service-query";
 
 export interface WebviewHostProps {
   projectId?: string;
+  /** Cache authorization boundary; no credentials are exposed. */
+  queryScope?: { runtimeId: string; accountId?: string; accountOrigin?: string };
+  /** Accepted finite-query values for this authorized source; never values from another frame owner. */
+  commandQueries?: { owner: string; values: readonly WebviewCommandQuerySeed[] };
+  /** Retained service projections are seeded independently of placement and project command owners. */
+  serviceQueries?: {
+    preferences?: WebviewServiceQuerySeeds<WebviewPreferenceQuery>;
+    account?: WebviewServiceQuerySeeds<WebviewAccountQuery>;
+    performance?: WebviewServiceQuerySeeds<WebviewPerformanceQuery>;
+  };
   /** Present only when this view is hosted in a modal dialog. */
   presentation?: "dialog";
   themePreference: string;

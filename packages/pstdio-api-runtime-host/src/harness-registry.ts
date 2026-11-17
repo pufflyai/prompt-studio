@@ -34,6 +34,7 @@ import type {
 } from "pstdio-api-contracts/extension-kernel";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
 import { createHarnessAuthenticationLifetime } from "./harness-authentication";
+import { createHarnessCommandObservations } from "./harness-command-observation";
 import { detectHarness } from "./harness-detection";
 import { HarnessDisposedError } from "./harness-disposed-error";
 import { createHarnessSessionResources, type HarnessSessionResources } from "./harness-session-resources";
@@ -55,6 +56,8 @@ export type HarnessHandle = {
   id: string;
   localId: string;
   extensionId: string;
+  /** Entry file of the exact registered extension source. */
+  sourcePath?: string;
   label: Localizable<string>;
   /** Normalized skill directories when the provider declares them. */
   skills: { dir: string; globalDir: string } | null;
@@ -66,6 +69,12 @@ export type HarnessHandle = {
   supportsFork: boolean;
   /** The harness offers a model choice through `listModels`. */
   supportsModels: boolean;
+  supportsCommandState: boolean;
+  watchCommandState?(
+    input: HarnessCommandDiscoveryContext,
+    changed: () => void,
+    options?: HarnessCallOptions,
+  ): Promise<() => void>;
   capabilities(options?: HarnessCallOptions): Promise<AgentCapability[]>;
   detect(options?: HarnessCallOptions): Promise<HarnessDetectionResult>;
   getAuthentication?(options?: HarnessCallOptions): Promise<HarnessAuthentication>;
@@ -148,6 +157,7 @@ const toHandle = (
   };
   const provider = record.provider;
   const authentication = createHarnessAuthenticationLifetime();
+  const commandWatches = createHarnessCommandObservations(provider, ctx, () => disposed);
   const retained = createRetainedHarnessCalls(provider, ctx, resources);
   if (provider.getMessages && !provider.recoverMessages) {
     throw new Error(`Harness with native history must provide recoverMessages: ${record.id}`);
@@ -169,6 +179,7 @@ const toHandle = (
     id: record.id,
     localId: record.localId,
     extensionId: record.extensionId,
+    sourcePath: record.sourcePath,
     label: provider.label,
     skills: normalizeSkills(provider.skills),
     params,
@@ -238,6 +249,8 @@ const toHandle = (
       provider.recoverMessages
         ? provider.recoverMessages(await ctx(options), input)
         : { kind: "recovered", messages: [...input.knownMessages] },
+    supportsCommandState: Boolean(provider.getCommandState),
+    watchCommandState: commandWatches.watch,
     getCommandState: async (input, options) =>
       retained.invoke(input, options, async () =>
         provider.getCommandState
@@ -280,9 +293,14 @@ const toHandle = (
     },
     dispose: () => {
       disposed = true;
-      closing ??= (async () => {
-        await authentication.dispose();
-        await retained.retire();
+      retained.closeAdmission();
+      // Publish the shared settlement before any external cleanup can reenter.
+      closing ??= Promise.resolve().then(async () => {
+        const ownership = await Promise.allSettled([
+          Promise.resolve().then(() => commandWatches.dispose()),
+          Promise.resolve().then(() => authentication.dispose()),
+        ]);
+        const admitted = await Promise.allSettled([Promise.resolve().then(() => retained.retire())]);
         const results = await Promise.allSettled(
           [...contexts.values()].map((context) =>
             context.then(
@@ -291,9 +309,11 @@ const toHandle = (
             ),
           ),
         );
-        const errors = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+        const errors = [...ownership, ...admitted, ...results].flatMap((result) =>
+          result.status === "rejected" ? [result.reason] : [],
+        );
         if (errors.length) throw new AggregateError(errors, `Harness cleanup failed: ${record.id}`);
-      })();
+      });
       return closing;
     },
   };
@@ -317,7 +337,15 @@ export const createHarnessRegistry = (
     list: () => [...handles.values()],
     duplicates,
     dispose: async () => {
-      const results = await Promise.allSettled([...handles.values()].map((handle) => handle.dispose()));
+      const results = await Promise.allSettled(
+        [...handles.values()].map((handle) => {
+          try {
+            return handle.dispose();
+          } catch (error) {
+            return Promise.reject(error);
+          }
+        }),
+      );
       const errors = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
       if (errors.length) throw new AggregateError(errors, "Harness registry cleanup failed.");
     },

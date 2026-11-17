@@ -1,6 +1,6 @@
-import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, executePlannerCommand, getPlannerTicketStatuses } from "../helpers/planner-api";
+import { type APIRequestContext, expect, type Page, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 
 const deleteAllProjects = async (request: APIRequestContext) => {
@@ -88,7 +88,7 @@ test.describe("Ticket sidenav sessions", () => {
           id: ticket.id,
           projectId,
           label: ticket.shorthand,
-          extensionId: "pstdio.pstdio-planner",
+          extensionId: "pstdio.planner",
         },
       },
     );

@@ -57,9 +57,19 @@ test("paged boards retain their page contract while legacy queries still return 
         return { rows: [{ id: "selected", title: "Saved", attributes: {} }], page };
       },
     },
-    [{ id: "board", extensionId: "owner.one", title: "Board", queryHandlerId: "board.query", queryMode: "paged" }],
+    [
+      {
+        id: "board",
+        extensionId: "owner.one",
+        title: "Board",
+        queryHandlerId: "board.query",
+        queryMode: "paged",
+        initialPageSize: 500,
+      },
+    ],
   );
   const renderer = getWorkbenchRenderers(workbench).getKanbanRenderer("board")!;
+  expect(renderer.initialPageSize).toBe(500);
   const result = await renderer.executePage!({ ...queryState, page: request }, new AbortController().signal);
   expect(result.page).toEqual(page);
   expect(result.rows).toMatchObject([{ id: "selected" }]);

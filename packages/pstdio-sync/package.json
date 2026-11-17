@@ -12,7 +12,7 @@
     "./logs": "./src/logs/index.ts"
   },
   "scripts": {
-    "test": "bun ../../scripts/ci/run-bun-tests.ts",
+    "test": "bun ../../scripts/test.ts --scope pstdio-sync",
     "typecheck": "bun check",
     "lint": "bun run typecheck && biome check ."
   },

@@ -46,6 +46,7 @@ export type {
   ApprovalResponse,
   HarnessApprovalChannel,
   HarnessAttachment,
+  HarnessBackgroundTask,
   HarnessEventSink,
   HarnessExit,
   HarnessExitStatus,
@@ -65,6 +66,7 @@ export type {
   HarnessStartInput,
   HarnessSteeringInput,
   HarnessSteeringResult,
+  HarnessTurnChannel,
   JsonPatch,
   QuestionResponse,
   TimeoutStrategy,
@@ -151,6 +153,13 @@ export interface HarnessProvider extends ContributionDefinition<"harness"> {
   label: Localizable<string>;
   /** Native commands and optional mode presentation. Older harnesses may omit both methods. */
   getCommandState?(ctx: HarnessContext, input: HarnessCommandDiscoveryContext): MaybePromise<HarnessCommandState>;
+  /** Complete native command/mode changes for this session. Session parameter changes are observed by the host.
+   * Install before discovery. Return a cleanup; omit only when native discovery needs bounded recovery. */
+  watchCommandState?(
+    ctx: HarnessContext,
+    input: HarnessCommandDiscoveryContext,
+    changed: () => void,
+  ): MaybePromise<() => void>;
   /** Validate and describe execution needs without performing a mutation. */
   prepareOperation?(
     ctx: HarnessContext,

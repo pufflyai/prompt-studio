@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
 import {
+  storage_document_updates,
   storage_documents,
   storage_ordered_operations,
   storage_ordered_owners,
@@ -269,18 +270,29 @@ test("overlapping old frames retain latest authored intent and original frame ev
   ).toHaveLength(1); // The earlier write is fully superseded; both original frames remain above as evidence.
 });
 
-test("missing legacy causal source blocks conversion atomically while pending frame bytes remain", async () => {
+test("missing legacy causal source leaves a resumable conversion while pending frame bytes remain", async () => {
   const { first, second } = await peers();
   await first.legacy.commit({ operationId: "seed", edits: [{ recordId: "card", replace: "base" }] });
   await first.oldSync.synchronize();
   await second.oldSync.synchronize();
   await second.legacy.commit({ operationId: "offline", edits: [{ recordId: "card", replace: "pending" }] });
   const evidence = await second.db.select().from(storage_record_outbox);
+  const [source] = await second.db
+    .select()
+    .from(storage_documents)
+    .where(eq(storage_documents.document_id, resourceDocumentId("card")));
+  const updates = await second.db
+    .select()
+    .from(storage_document_updates)
+    .where(eq(storage_document_updates.document_id, resourceDocumentId("card")));
   await second.db.delete(storage_documents).where(eq(storage_documents.document_id, resourceDocumentId("card")));
   await expect(second.upgrade().records.read("card")).rejects.toThrow("missing its conversion source");
-  expect(await second.db.select().from(storage_ordered_owners)).toHaveLength(0);
+  expect(await second.db.select().from(storage_ordered_owners)).toHaveLength(1);
   expect(await second.db.select().from(storage_ordered_operations)).toHaveLength(0);
   expect(await second.db.select().from(storage_record_outbox)).toEqual(evidence);
+  await second.db.insert(storage_documents).values(source!);
+  if (updates.length) await second.db.insert(storage_document_updates).values(updates);
+  expect((await second.upgrade().records.read("card")).value).toBe("pending");
 });
 
 test("a conditional child of a newly created legacy pending record resolves the same creation occurrence", async () => {

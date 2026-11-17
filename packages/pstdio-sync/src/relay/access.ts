@@ -1,4 +1,5 @@
-import { serviceAddress, serviceUrl } from "./http";
+import { fetchWithBackoff, serviceAddress, serviceUrl } from "./http";
+import { fetchWithInactivity } from "./inactivity-response";
 
 export const createRelayAccess = (input: {
   managerOrigin: string;
@@ -12,12 +13,20 @@ export const createRelayAccess = (input: {
   let access: { token: string; expiresAt: string } | undefined;
   let renewing: Promise<{ token: string; expiresAt: string }> | undefined;
   const renew = async () => {
-    const response = await fetch(serviceUrl(address, "/v1/environment-access"), {
-      method: "POST",
-      signal: input.signal,
-      headers: { authorization: `Bearer ${input.renewalGrant}`, "content-type": "application/json" },
-      body: JSON.stringify({ workbenchId: input.workbenchId }),
-    });
+    const response = await fetchWithBackoff(
+      () =>
+        fetchWithInactivity(
+          serviceUrl(address, "/v1/environment-access"),
+          {
+            method: "POST",
+            signal: input.signal,
+            headers: { authorization: `Bearer ${input.renewalGrant}`, "content-type": "application/json" },
+            body: JSON.stringify({ workbenchId: input.workbenchId }),
+          },
+          { signal: input.signal, inactivityMs: 30_000 },
+        ),
+      input.signal,
+    );
     if (!response.ok) {
       await response.body?.cancel();
       if (response.status === 401) input.denied?.();

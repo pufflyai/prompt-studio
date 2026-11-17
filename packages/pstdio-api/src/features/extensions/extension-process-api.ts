@@ -98,7 +98,7 @@ const createStopGate = (kill: () => Promise<void>) => {
 export interface ProcessApiOptions {
   /** Invocation that owns the spawned children. Absent for host-level probes. */
   scope?: InvocationScope;
-  resolveCwd?: () => Promise<string>;
+  resolveCwd?: (input: ProcessRunInput) => Promise<string>;
   spawner?: ProcessSpawner;
 }
 
@@ -112,7 +112,7 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
   };
   const resolveInput = async (input: ProcessRunInput) => {
     ensureActive();
-    const cwd = await options.resolveCwd?.();
+    const cwd = await options.resolveCwd?.(input);
     return { ...input, cwd: input.cwd ?? cwd };
   };
 

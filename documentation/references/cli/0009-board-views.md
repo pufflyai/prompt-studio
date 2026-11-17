@@ -78,7 +78,7 @@ The new-view button uses the layers-plus icon. Saved views offer Rename and Dupl
 
 ## Display settings
 
-Board views take `--mode board|list`, `--columns <field>`, `--rows <field|none>`, and `--show <ids>` for the card properties. Data table views take `--group <column|none>`, `--row-numbers show|hide`, `--wrap-rows on|off`, `--stats on|off`, and `--show <ids>` for the visible columns in order. Columns not listed in `--show` are hidden. Resource list views take `--group <field|none>`, `--children nested|hidden`, and `--show <ids>` for visible properties. Each kind refuses flags that do not apply to it.
+Board views take `--mode board|list`, `--columns <field>`, `--rows <field|none>`, and `--show <ids>` for the card properties. Data table views take `--group <column|none>`, `--row-numbers show|hide`, `--wrap-rows on|off`, `--stats on|off`, and `--show <ids>` for the visible columns in order. Columns not listed in `--show` are hidden. Resource list views take `--group <field|none>`, `--subgroup <field,field…|none>`, `--children nested|hidden`, and `--show <ids>` for visible properties. Each kind refuses flags that do not apply to it.
 
 ## Defaults and cleanup
 
@@ -108,3 +108,5 @@ All paths below start with `/v1/projects/{projectId}`.
 | PUT | `/boards/{boardId}/views/default` | Set or clear: `{viewId: string \| null}` |
 
 Use `createClient().views` in the SDK. Built-in mutations return 409 with duplication guidance. Invalid input returns 400 with the valid choices: an unknown field lists the fields that allow filtering or sorting, a condition the field does not accept lists that field's conditions, an unknown option lists the field's option values. Settings of the other board kind are refused. See [the ownership decision](../../adrs/0060-shared-project-board-views.md).
+
+*Updated at: 2026-11-04*

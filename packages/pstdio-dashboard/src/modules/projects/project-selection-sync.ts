@@ -9,7 +9,6 @@ import {
 import type { DashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
-import { isProjectWorkspaceReady } from "@/shared/workspaces/workspace-state";
 import { createDashboardProjects, findDashboardProject } from "./data/project-data";
 
 export type DashboardProjectSelectionContext = {
@@ -19,7 +18,6 @@ export type DashboardProjectSelectionContext = {
 const projectSelectionOverlayWidgetIds = new Set<string>([
   dashboardWidgetIds.projectPicker,
   dashboardWidgetIds.createProject,
-  dashboardWidgetIds.projectOpening,
 ]);
 
 export const closeProjectSelectionOverlays = (ctx: WorkbenchModuleContext) => {
@@ -52,6 +50,22 @@ const validateProjectSelection = (input: SelectProjectInput) => {
   return project;
 };
 
+export interface DesktopProjectTabs {
+  select(projectId: string): void;
+  clear(): void;
+}
+
+// Desktop shows each project in its own workbench, so selecting one shows its tab.
+export const selectProjectTab = (
+  ctx: WorkbenchModuleContext,
+  projectTabs: DesktopProjectTabs,
+  input: SelectProjectInput,
+) => {
+  const project = validateProjectSelection(input);
+  closeProjectSelectionOverlays(ctx);
+  projectTabs.select(project.id);
+};
+
 export const selectProject = (
   ctx: WorkbenchModuleContext,
   selectedProjectContext: DashboardProjectSelectionContext,
@@ -73,8 +87,6 @@ export const selectProject = (
     if (ctx.views.getView(dashboardWidgetIds.dashboardSidenav))
       ctx.views.refreshView(dashboardWidgetIds.dashboardSidenav);
   });
-  if (!isProjectWorkspaceReady(project.id) && ctx.views.getView(dashboardWidgetIds.projectOpening))
-    ctx.overlays.openOverlay(dashboardWidgetIds.projectOpening, { title: "Opening project" });
 };
 
 export const clearSelectedProject = (

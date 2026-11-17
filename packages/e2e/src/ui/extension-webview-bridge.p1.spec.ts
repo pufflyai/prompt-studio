@@ -1,6 +1,7 @@
-import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { expect, test } from "../scripts/webview-test";
 import { uiOrigin } from "../ui-server";
+import { deleteAllProjects } from "./helpers/session-follow-up";
 
 // The script runs in a sandboxed frame next to the webview, like an HTML artifact or another
 // extension would. It forges the rimless handshake and init calls that only the host may send.
@@ -27,6 +28,19 @@ const forgedHostScript = `
 `;
 
 test("host messages to a webview leave no listeners on the host window", async ({ page, request }) => {
+  await deleteAllProjects(request);
+  await page.goto("/");
+  const picker = page.getByRole("dialog", { name: "Projects", exact: true }).last();
+  await expect(picker).toBeVisible();
+  const cdp = await page.context().newCDPSession(page);
+  const hostMessageListeners = async () => {
+    const { result } = await cdp.send("Runtime.evaluate", { expression: "window" });
+    const objectId = result.objectId as string;
+    const { listeners } = await cdp.send("DOMDebugger.getEventListeners", { objectId });
+    await cdp.send("Runtime.releaseObject", { objectId });
+    return listeners.filter((listener) => listener.type === "message").length;
+  };
+  const withoutWebviews = await hostMessageListeners();
   const response = await request.post(`${uiOrigin}/v1/projects`, {
     data: folderProjectInput({ name: "Webview bridge listeners" }),
   });
@@ -36,19 +50,11 @@ test("host messages to a webview leave no listeners on the host window", async (
     await page.addInitScript((projectId: string) => {
       localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
     }, project.id);
-    await page.goto(`/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`);
-    const lab = page.frameLocator('iframe[title="Lab"]');
+    await page.goto(`/projects/${project.id}/extensions/test.webview-host/host`);
+    const lab = page.frameLocator('iframe[title="Host page"]');
     const increment = lab.getByRole("button", { name: "Increment" });
     await expect(lab.getByText("0", { exact: true })).toBeVisible();
 
-    const cdp = await page.context().newCDPSession(page);
-    const hostMessageListeners = async () => {
-      const { result } = await cdp.send("Runtime.evaluate", { expression: "window" });
-      const objectId = result.objectId as string;
-      const { listeners } = await cdp.send("DOMDebugger.getEventListeners", { objectId });
-      await cdp.send("Runtime.releaseObject", { objectId });
-      return listeners.filter((listener) => listener.type === "message").length;
-    };
     await increment.click();
     await expect(lab.getByText("1", { exact: true })).toBeVisible();
     const baseline = await hostMessageListeners();
@@ -60,7 +66,11 @@ test("host messages to a webview leave no listeners on the host window", async (
     }
 
     await expect.poll(hostMessageListeners).toBeLessThanOrEqual(baseline);
+    expect((await request.delete(`${uiOrigin}/v1/projects/${project.id}`)).ok()).toBe(true);
+    await expect(page.locator("iframe")).toHaveCount(0);
+    await expect.poll(hostMessageListeners).toBeLessThanOrEqual(withoutWebviews);
   } finally {
+    await cdp.detach().catch(() => {});
     await request.delete(`${uiOrigin}/v1/projects/${project.id}`);
   }
 });
@@ -75,9 +85,9 @@ test("a webview ignores bridge messages from frames other than its host", async 
     await page.addInitScript((projectId: string) => {
       localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
     }, project.id);
-    await page.goto(`/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`);
-    const lab = page.frameLocator('iframe[title="Lab"]');
-    await expect(lab.getByRole("heading", { name: "Sandbox webview" })).toBeVisible();
+    await page.goto(`/projects/${project.id}/extensions/test.webview-host/host`);
+    const lab = page.frameLocator('iframe[title="Host page"]');
+    await expect(lab.getByRole("heading", { name: "Host contract" })).toBeVisible();
 
     await page.evaluate((script) => {
       const sent = new Promise<void>((resolve) => {
@@ -95,7 +105,7 @@ test("a webview ignores bridge messages from frames other than its host", async 
     await page.waitForTimeout(500);
 
     await expect(lab.locator("body")).not.toHaveAttribute("data-forged", "mounted");
-    await expect(lab.getByRole("heading", { name: "Sandbox webview" })).toBeVisible();
+    await expect(lab.getByRole("heading", { name: "Host contract" })).toBeVisible();
   } finally {
     await request.delete(`${uiOrigin}/v1/projects/${project.id}`);
   }

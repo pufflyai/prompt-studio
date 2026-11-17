@@ -6,6 +6,7 @@ import { useVirtualizer } from "@/utils/use-virtualizer";
 import { CollectionLoadMore } from "../collection-view/collection-load-more";
 import type { KanbanRendererBoardColumn } from "./kanban-renderer-board";
 import { BoardEntry, type BoardEntryData } from "./kanban-renderer-board-entry";
+import { shouldVirtualizeKanban } from "./kanban-renderer-virtualization";
 
 interface BoardColumnCardsProps {
   onLoadMore?: () => void;
@@ -41,8 +42,10 @@ export const BoardColumnCards = (props: BoardColumnCardsProps) => {
             }))),
       ])
     : column.items.map((item) => ({ key: JSON.stringify(["row", column.id, item.id]), item }));
+  const virtualize = shouldVirtualizeKanban(entries.length);
   const { virtualizer, virtualItems, totalSize } = useVirtualizer<HTMLDivElement, HTMLDivElement>({
     count: entries.length,
+    enabled: virtualize,
     onChange: (instance, scrolling) => {
       if (scrolling && instance.range && instance.range.endIndex >= entries.length - 1) props.onLoadMore?.();
     },
@@ -64,17 +67,26 @@ export const BoardColumnCards = (props: BoardColumnCardsProps) => {
     },
   });
   const revealIndex = entries.findIndex((entry) => entry.item?.id === revealedItemId);
+  const revealKey = revealIndex >= 0 ? entries[revealIndex]?.key : undefined;
   useLayoutEffect(() => {
-    if (revealIndex >= 0) virtualizer.scrollToIndex(revealIndex, { align: "auto" });
-  }, [revealIndex, virtualizer]);
+    if (!revealKey) return;
+    if (virtualize) {
+      virtualizer.scrollToIndex(revealIndex, { align: "auto" });
+      return;
+    }
+    const target = [...(viewport.current?.querySelectorAll<HTMLElement>("[data-board-key]") ?? [])].find(
+      (element) => element.dataset.boardKey === revealKey,
+    );
+    target?.scrollIntoView({ block: "nearest" });
+  }, [revealIndex, revealKey, virtualize, virtualizer]);
   useLayoutEffect(() => {
     if (!focusTarget) return;
     const target = [...(viewport.current?.querySelectorAll<HTMLElement>("[data-board-key]") ?? [])].find(
       (element) => element.dataset.boardKey === focusTarget,
     );
-    target?.focus({ preventScroll: true });
+    target?.focus({ preventScroll: virtualize });
     if (target) setFocusTarget(null);
-  }, [focusTarget]);
+  }, [focusTarget, virtualize]);
 
   const handleKeyboard = (event: KeyboardEvent<HTMLDivElement>, index: number) => {
     if (event.target !== event.currentTarget) return;
@@ -85,7 +97,7 @@ export const BoardColumnCards = (props: BoardColumnCardsProps) => {
     else if (event.key === "End") target = entries.length - 1;
     else return;
     event.preventDefault();
-    virtualizer.scrollToIndex(target, { align: "auto" });
+    if (virtualize) virtualizer.scrollToIndex(target, { align: "auto" });
     setFocusTarget(entries[target].key);
   };
   const dragOver = (event: DragEvent<HTMLDivElement>, key: string, card: boolean) => {
@@ -95,6 +107,9 @@ export const BoardColumnCards = (props: BoardColumnCardsProps) => {
     setDropKey(key);
     if (card) onDragTarget();
   };
+  const renderedEntries = virtualize
+    ? virtualItems.map((virtual) => ({ entry: entries[virtual.index], index: virtual.index, start: virtual.start }))
+    : entries.map((entry, index) => ({ entry, index, start: undefined }));
 
   return (
     <ScrollArea
@@ -105,6 +120,12 @@ export const BoardColumnCards = (props: BoardColumnCardsProps) => {
       viewportProps={{
         ...{ "data-board-column-viewport": column.id },
         "aria-label": column.label,
+        onScroll: (event) => {
+          if (virtualize) return;
+          const viewport = event.currentTarget;
+          if (viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight > 8) return;
+          if (!props.loadingMore) props.onLoadMore?.();
+        },
         onWheel: (event) => {
           const viewport = event.currentTarget;
           if (event.deltaY > 0 && viewport.scrollHeight <= viewport.clientHeight) props.onLoadMore?.();
@@ -122,9 +143,8 @@ export const BoardColumnCards = (props: BoardColumnCardsProps) => {
           </Text>
         </Stack>
       ) : null}
-      <Box position="relative" height={`${totalSize}px`}>
-        {virtualItems.map((virtual) => {
-          const entry = entries[virtual.index];
+      <Box position={virtualize ? "relative" : undefined} height={virtualize ? `${totalSize}px` : undefined}>
+        {renderedEntries.map(({ entry, index, start }) => {
           const { item, group } = entry;
           const groupKey = group?.key ?? entry.groupKey;
           const drop = (event: DragEvent<HTMLDivElement>) => {
@@ -134,11 +154,11 @@ export const BoardColumnCards = (props: BoardColumnCardsProps) => {
           return (
             <Box
               key={entry.key}
-              data-index={virtual.index}
-              ref={virtualizer.measureElement}
-              position="absolute"
-              top={`${virtual.start}px`}
-              left="0"
+              data-index={index}
+              ref={start === undefined ? undefined : virtualizer.measureElement}
+              position={start === undefined ? undefined : "absolute"}
+              top={start === undefined ? undefined : `${start}px`}
+              left={start === undefined ? undefined : "0"}
               width="full"
               css={styles.entry}
               data-column-id={column.id}
@@ -146,7 +166,7 @@ export const BoardColumnCards = (props: BoardColumnCardsProps) => {
             >
               <BoardEntry
                 entry={entry}
-                index={virtual.index}
+                index={index}
                 selectedItemId={selectedItemId}
                 collapsed={Boolean(group && collapsed[group.key])}
                 dropTarget={dropKey === entry.key}

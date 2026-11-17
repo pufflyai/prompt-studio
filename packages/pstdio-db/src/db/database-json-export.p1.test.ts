@@ -16,7 +16,7 @@ const lines = async (path: string) =>
 test("an old database exports its tables and decoded extension records as JSON lines", async () => {
   const directory = await mkdtemp(join(tmpdir(), "database-json-export-"));
   const db = await PGlite.create();
-  const owner = { workbenchId: "project-1", extensionId: "pstdio.pstdio-planner" };
+  const owner = { workbenchId: "project-1", extensionId: "pstdio.planner" };
   const old = createDocumentStorage({ owner, store: createMemoryDocumentStore() });
   await old.records.commit({
     operationId: "seed",
@@ -53,7 +53,7 @@ test("an old database exports its tables and decoded extension records as JSON l
     expect(await lines(join(directory, "tables", "public.projects.jsonl"))).toEqual([
       { id: "project-1", name: "Prompt Studio", logo: "\\x0102", source: "cli" },
     ]);
-    const records = await lines(join(directory, "extension-records", "project-1", "pstdio.pstdio-planner.jsonl"));
+    const records = await lines(join(directory, "extension-records", "project-1", "pstdio.planner.jsonl"));
     expect(records.map(({ recordId, deleted, value, shared }) => ({ recordId, deleted, value, shared }))).toEqual([
       { recordId: "draft", deleted: false, value: null, shared: { kind: "text", value: "Shared text" } },
       { recordId: "gone", deleted: true, value: null, shared: null },
@@ -75,7 +75,7 @@ test("an old database exports its tables and decoded extension records as JSON l
 test("an unreadable document is listed in errors.txt and every other part still exports", async () => {
   const directory = await mkdtemp(join(tmpdir(), "database-json-export-errors-"));
   const db = await PGlite.create();
-  const owner = { workbenchId: "project-1", extensionId: "pstdio.pstdio-planner" };
+  const owner = { workbenchId: "project-1", extensionId: "pstdio.planner" };
   const healthy = createDocumentStorage({ owner, store: createMemoryDocumentStore() });
   await healthy.records.commit({ operationId: "seed", edits: [{ recordId: "ticket-1", replace: { title: "Kept" } }] });
   try {
@@ -100,9 +100,9 @@ test("an unreadable document is listed in errors.txt and every other part still 
     await exportDatabaseAsJson(db, directory);
 
     expect(await Bun.file(join(directory, "errors.txt")).text()).toStartWith(
-      "extension-records/project-1/pstdio.pstdio-planner.jsonl (document a-damaged): ",
+      "extension-records/project-1/pstdio.planner.jsonl (document a-damaged): ",
     );
-    const records = await lines(join(directory, "extension-records", "project-1", "pstdio.pstdio-planner.jsonl"));
+    const records = await lines(join(directory, "extension-records", "project-1", "pstdio.planner.jsonl"));
     expect(records.map(({ recordId, value }) => ({ recordId, value }))).toEqual([
       { recordId: "ticket-1", value: { title: "Kept" } },
     ]);

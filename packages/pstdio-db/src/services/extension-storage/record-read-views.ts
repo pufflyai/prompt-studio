@@ -37,7 +37,7 @@ export const createViewReader = (
     const index = "scale-rows";
     const selected = await records.aggregate({
       index,
-      where: scaleScopePredicate(false, scaleSelectionPredicate(count, selection)),
+      where: scaleScopePredicate(scaleSelectionPredicate(count, selection)),
     });
     // A view without a filter asks for every live record, which the owner's stored count answers.
     const total = await records.aggregate({ index });
@@ -48,7 +48,7 @@ export const createViewReader = (
   const page = async (selection: Selection, position: { offset: number } | { cursor: string }) => {
     const result = await records.query({
       index: "scale-rows",
-      where: scaleScopePredicate(false, scaleSelectionPredicate(count, selection)),
+      where: scaleScopePredicate(scaleSelectionPredicate(count, selection)),
       fields: scaleViewFields,
       limit: 100,
       ...position,
@@ -87,7 +87,7 @@ export const createViewReader = (
     secondPageCursor: async () => {
       const first = await records.query({
         index: "scale-rows",
-        where: scaleScopePredicate(false, scaleSelectionPredicate(count, "pages")),
+        where: scaleScopePredicate(scaleSelectionPredicate(count, "pages")),
         fields: scaleViewFields,
         limit: 100,
       });

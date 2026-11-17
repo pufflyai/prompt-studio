@@ -11,7 +11,7 @@ const handler = (input: {
   index: RegistryIndex;
   viewId: string;
   localId: string;
-  kind: "controls" | "dataTable" | "file" | "kanban" | "resourceList" | "tree";
+  kind: "chat" | "controls" | "dataTable" | "file" | "kanban" | "resourceList" | "terminal" | "tree";
   operation: string;
   value: unknown;
 }) =>
@@ -38,12 +38,30 @@ export const normalizeViewBody = (input: {
 }) => {
   const body = input.body as ViewBody & Record<string, unknown>;
   if (body.kind === "webview") return body;
+  if (body.kind === "terminal") {
+    return {
+      ...body,
+      sessionHandlerId: handler({ ...input, kind: "terminal", operation: "session", value: body.session }),
+    };
+  }
+  if (body.kind === "chat") {
+    return {
+      ...body,
+      queryHandlerId: handler({ ...input, kind: "chat", operation: "query", value: body.query }),
+      actionHandlerId: handler({ ...input, kind: "chat", operation: "onAction", value: body.onAction }),
+      loadDraftHandlerId: handler({ ...input, kind: "chat", operation: "loadDraft", value: body.loadDraft }),
+      saveDraftHandlerId: handler({ ...input, kind: "chat", operation: "saveDraft", value: body.saveDraft }),
+      resolveLinkHandlerId: handler({ ...input, kind: "chat", operation: "resolveLink", value: body.resolveLink }),
+      resolveImageHandlerId: handler({ ...input, kind: "chat", operation: "resolveImage", value: body.resolveImage }),
+    };
+  }
   if (body.kind === "tree") {
     return {
       ...body,
       headerHandlerId: handler({ ...input, kind: "tree", operation: "header", value: body.header }),
       bodyHandlerId: handler({ ...input, kind: "tree", operation: "body", value: body.body }),
       childrenHandlerId: handler({ ...input, kind: "tree", operation: "children", value: body.children }),
+      pageHandlerId: handler({ ...input, kind: "tree", operation: "page", value: body.page }),
       footerHandlerId: handler({ ...input, kind: "tree", operation: "footer", value: body.footer }),
       moveHandlerId: handler({ ...input, kind: "tree", operation: "onMove", value: body.onMove }),
     };

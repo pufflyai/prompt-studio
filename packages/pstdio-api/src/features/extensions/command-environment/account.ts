@@ -1,4 +1,5 @@
 import type { ExtensionAccountApi } from "pstdio-api-contracts/extension-kernel";
+import { createReadBoundary } from "pstdio-extensions";
 import { AccountRequestError, accountUnavailableMessage } from "../../../services/account/native-account";
 import type { ExtensionsRouteDeps } from "../deps";
 
@@ -12,25 +13,37 @@ const safe = async <T>(request: () => Promise<T>) => {
   }
 };
 
-export const createAccountApi = (account: ExtensionsRouteDeps["accountService"], projectId: string) =>
-  ({
-    status: () => safe(() => account.status()),
+export const createAccountApi = (
+  account: ExtensionsRouteDeps["accountService"],
+  projectId: string,
+  signal?: AbortSignal,
+) => {
+  const read = createReadBoundary(signal);
+  return {
+    status: () => read(() => safe(() => account.status())),
     login: (managerOrigin) => safe(() => account.login(managerOrigin)),
     loginStatus: async (id) => account.loginStatus(id).status,
     cancelLogin: async (id) => (await safe(() => account.cancelLogin(id))).status,
     logout: async () => ({ removed: (await safe(() => account.logout())).removed }),
-    devices: () => safe(() => account.devices()),
+    devices: () => read(() => safe(() => account.devices(signal))),
     renameDevice: async (id, name) => {
       await safe(() => account.renameDevice(id, name));
     },
     removeDevice: async (id) => {
       await safe(() => account.removeDevice(id));
     },
-    projectSyncStatus: (id = projectId) => safe(() => account.projectSyncStatus(id)),
+    retryProjectSyncSource: async (sourceId, id = projectId) => {
+      await safe(() => account.retryProjectSync(id, sourceId));
+    },
+    projectSyncStatus: (id = projectId) => read(() => safe(() => account.projectSyncStatus(id, signal))),
     syncProject: async (id = projectId) => {
       await safe(() => account.syncProject(id));
     },
     stopProjectSync: async (id = projectId) => {
       await safe(() => account.stopProjectSync(id));
     },
-  }) satisfies ExtensionAccountApi;
+    resolveReturnedChanges: async (action, id = projectId) => {
+      await safe(() => account.resolveReturnedChanges(id, action));
+    },
+  } satisfies ExtensionAccountApi;
+};

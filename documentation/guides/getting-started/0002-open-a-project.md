@@ -66,3 +66,5 @@ If none of the project's enabled harness extensions is available, Start shows **
 The example project has Notes and Planner enabled, so its sidebar includes **Notes** and **Tickets**. Those are extension tools. Your sidebar depends on the extensions you turn on.
 
 Next, [add tools](0003-add-tools.md).
+
+*Updated at: 2026-11-05*

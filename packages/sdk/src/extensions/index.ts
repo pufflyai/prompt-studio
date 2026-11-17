@@ -1,9 +1,11 @@
 export type {
+  ChatRendererStreamEvent,
   HistoryProjection,
   HistoryRecoveryInput,
   HistoryRecoveryResult,
   ToolResultSummary,
 } from "pstdio-api-contracts";
+export { chatRendererStreamFrames } from "pstdio-api-contracts";
 export {
   createToolOutputBuffer,
   HistoryConflict,
@@ -35,6 +37,7 @@ export type {
 export {
   accountEvents,
   applyEditingChanges,
+  DEFAULT_COLLECTION_PAGE_SIZE,
   DEFAULT_DATA_TABLE_SETTINGS,
   defineSlot,
   diffEditingState,
@@ -52,6 +55,7 @@ export {
   l10n,
   localContributionIdGrammar,
   localContributionIdPattern,
+  MAX_COLLECTION_PAGE_SIZE,
   normalizeBooleanViewRule,
   packageAsset,
   pagePlaceholderView,
@@ -59,6 +63,8 @@ export {
   projectSlots,
   rebaseEditingChanges,
   resourceEvents,
+  sessionBrowser,
+  sessionBrowserId,
   sessionEvents,
   sessionSlots,
   storageLimits,
@@ -78,6 +84,7 @@ export {
   workspaceSlots,
   worktreeEvents,
 } from "pstdio-api-contracts/extension-kernel";
+export { deriveMarkdownTitle, resolveSelectedValues } from "pstdio-sync-contracts";
 export { SDK_VERSION } from "../version";
 export { CommandOutcomeError, type CommandResponse, getCommandValue, unwrapCommandOutcome } from "./command-outcome";
 export { commandRefId, contributionRefId } from "./contribution-reference";
@@ -142,6 +149,7 @@ export { params } from "./params";
 export { type QualifiedRef, qualifyRef } from "./qualify-ref";
 export { artifactChanged, commandEvent, commandRef, eventRef } from "./refs";
 export { resourceKey } from "./resource-key";
+export { applySessionMessagePatch, type SessionMessagePatch } from "./session-message-patch";
 export {
   createTerminalSessionBridge,
   type TerminalSessionAdapter,
@@ -159,8 +167,11 @@ export {
   type WebviewSettingsClient,
 } from "./webview-client";
 export type {
+  EditingCommandOptions,
+  EditingCommandSessionOptions,
   EditingSessionOptions,
   EditingSnapshot,
+  WebviewCommandEditingSession,
   WebviewEditingClient,
   WebviewEditingSession,
 } from "./webview-editing";
@@ -194,6 +205,7 @@ export {
   WEBVIEW_HOST_CAPABILITY_VERSION,
   WEBVIEW_SCOPED_DECLARABLE_CAPABILITIES,
 } from "./host-compat";
+export { matchesQueryDependency, type QueryChangeEnvelope, type QueryDependency } from "./query-dependency";
 export type {
   AssetReference,
   AssetTransfer,
@@ -209,9 +221,22 @@ export type {
   NotificationStatus,
   UpdateNotificationInput,
 } from "./resource-compat";
+export type { ScopedQueryClient } from "./scoped-query";
+export {
+  createScopedQueryClient,
+  isScopedQueryCancellation,
+  type QueryScope,
+  type ScopedQuery,
+  type ScopedQueryDescriptor,
+  type ScopedQuerySnapshot,
+  scopedQueryKey,
+} from "./scoped-query";
 export { createTextEditingClient } from "./text-editing-client";
 export type * from "./text-editing-types";
 export { isWebviewCapabilityError, type WebviewCapabilityError } from "./webview-capability-error";
+export type { WebviewCommandQuery, WebviewCommandQueryOptions } from "./webview-command-query";
 export type { WebviewPageClient } from "./webview-page-client";
 export type { WebviewPerformanceClient } from "./webview-performance-client";
+export { createWebviewQueryClient, type WebviewQueryDescriptor } from "./webview-query";
+export type { WebviewServiceQuery } from "./webview-service-query";
 export type { CommandStream, CommandStreamOptions, WebviewStreamsClient } from "./webview-streams";

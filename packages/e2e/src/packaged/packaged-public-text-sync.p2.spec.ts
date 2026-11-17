@@ -200,7 +200,7 @@ for (const presentation of ["native", "installed"] as const) {
     for (const bytes of [...payloads, ...contents.blobs.map((value) => Buffer.from(value, "base64"))])
       expect(Buffer.from(bytes).toString("latin1")).not.toContain("public-two-host-secret");
     const space = await createSyncSpace({ projectId: project.id, spaceOwner: null, keys: [packagedProjectKey] });
-    const streamId = await space.documentId(JSON.stringify(["paper.public-text-source", "record-stream"]));
+    const streamId = await space.documentId(JSON.stringify(["paper.public-text-source", "record-stream-v2"]));
     const stream = documents.get(`~${streamId}`);
     expect(stream?.updates.length).toBeGreaterThan(0);
     for (const update of stream!.updates) {

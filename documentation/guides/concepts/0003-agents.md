@@ -44,3 +44,5 @@ These installed folders are copies. The source of a skill is the extension that 
 - [Run agents](../getting-started/0004-run-agents.md)
 - [CLI agents](../../references/cli/0002-agents.md)
 - [CLI sessions](../../references/cli/0006-sessions.md)
+
+*Updated at: 2026-10-18*

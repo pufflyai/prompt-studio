@@ -45,6 +45,8 @@ Some more text under a subheading.
 
 ### Heading 3
 
+### A longer heading that wraps across multiple lines to show the spacing between lines when reading and editing Markdown in a narrow document
+
 This paragraph has **bold**, *italic*, ~~strikethrough~~ text and <u>underline</u>.
 
 Inline link to [Chakra UI](https://chakra-ui.com).

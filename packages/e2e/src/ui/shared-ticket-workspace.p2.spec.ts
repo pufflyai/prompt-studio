@@ -1,7 +1,7 @@
 import { existsSync, rmSync } from "node:fs";
-import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, executePlannerCommand } from "../helpers/planner-api";
+import { expect, test } from "../scripts/session-test";
 import { uiOrigin } from "../ui-server";
 import { showSidenavEntry } from "./helpers/sidenav-navigation";
 
@@ -31,7 +31,7 @@ test("ticket work opens a shared non-Git folder and loads files without Git requ
     page.on("request", (request) => {
       if (/\/v1\/workspaces\/[^/]+\/diff/.test(request.url())) gitRequests.push(request.url());
     });
-    await page.goto(`/projects/${projectId}/extensions/pstdio.pstdio-planner/tickets`);
+    await page.goto(`/projects/${projectId}/extensions/pstdio.planner/tickets`);
     const workspaceNavigation = await showSidenavEntry(page, "Workspaces");
     await workspaceNavigation.hover();
     await expect(workspaceNavigation.getByRole("button", { name: "New workspace", exact: true })).toHaveCount(0);
@@ -49,7 +49,7 @@ test("ticket work opens a shared non-Git folder and loads files without Git requ
       page.getByRole("region", { name: "Main", exact: true }).getByRole("option").filter({ hasText: workspace.name }),
     ).toBeVisible();
     await page.unroute(providerRoute);
-    await page.goto(`/projects/${projectId}/extensions/pstdio.pstdio-planner/tickets`);
+    await page.goto(`/projects/${projectId}/extensions/pstdio.planner/tickets`);
     await page.getByTestId("renderer-card").getByText("Plain folder ticket", { exact: true }).click();
     await expect(page.getByRole("option", { name: "Project folder", exact: true })).toBeVisible();
     await page.getByText("Workspaces", { exact: true }).last().hover();

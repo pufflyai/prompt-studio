@@ -1,8 +1,10 @@
+import { isWorkbenchRetiring } from "../../core/workbench-required-work";
 import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
 import type { ExtensionWebviewHostAdapters } from "./extension-webview-host-adapters";
 import { createExtensionWebviewHostCapabilities } from "./extension-webview-host-capabilities";
 import { updateOverlayPageParams } from "./overlay-page-params";
-import { createWorkbenchEditingSessionAdapter } from "./webview-editing-session";
+import { createWorkbenchEditingSessionAdapter } from "./webview-editing-adapter";
+import { createWebviewPreferenceQueries } from "./webview-preference-queries";
 import { createWebviewPreferencesAdapter, type WebviewOwnedPreferences } from "./webview-preferences-capability";
 import { createWebviewResourceActions } from "./webview-resource-actions";
 import { createWorkbenchTextEditingAdapter, type WorkbenchTextEditingInput } from "./webview-text-editing";
@@ -10,6 +12,7 @@ import { createWorkbenchTextEditingAdapter, type WorkbenchTextEditingInput } fro
 interface CreateWorkbenchWebviewHostAdaptersInput extends WorkbenchTextEditingInput {
   extensionId?: string;
   ownedPreferences?: WebviewOwnedPreferences;
+  queryAuthority?: { id: string; assertCurrent(): void };
   warn?: (message: string) => void;
   executeCommand?: ExtensionWebviewHostAdapters["executeCommand"];
 }
@@ -30,31 +33,62 @@ export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebview
   const isOverlay = () =>
     workbench.layout.getLayout().regions.overlay.widgets.some((widget) => widget.widgetId === placement?.instanceId);
   const resourceActions = createWebviewResourceActions(workbench, projectId, hostEvents, placement?.placementIdentity);
+  const editing = createWorkbenchEditingSessionAdapter(input);
+  const executeCaptured: NonNullable<ExtensionWebviewHostAdapters["executeCommand"]> = async (
+    request,
+    signal,
+    context = invocation,
+  ) => {
+    // Accepted persistence keeps its captured project/resource; late UI navigation still checks the original viewer.
+    if (input.executeCommand)
+      return input.executeCommand(request, signal, { ...context, isViewerCurrent: invocation.isViewerCurrent });
+    return {
+      outcome: {
+        ok: true,
+        status: "success",
+        value: await workbench.commands.executeCommand(request.commandId, request.params, {
+          resource: request.resource ?? placement?.resource,
+          placement: placement?.placementIdentity,
+          projectId,
+          signal,
+          removalVersion: context.removalVersion,
+          isViewerCurrent: context.isViewerCurrent,
+        }),
+      },
+    };
+  };
+  const preferences = createWebviewPreferencesAdapter(input);
+  const preferenceQueries =
+    hostEvents && extensionId
+      ? createWebviewPreferenceQueries({
+          workbench,
+          extensionId,
+          projectId,
+          events: hostEvents,
+          identity: input.ownedPreferences?.identity,
+          authority: input.queryAuthority,
+          preferences,
+        })
+      : undefined;
   return {
+    preferenceQueries,
     resourceActions: async (request) => {
       requireCurrentViewer();
       return resourceActions(request);
     },
     hostEvents,
     textEditing: createWorkbenchTextEditingAdapter(input),
-    editing: createWorkbenchEditingSessionAdapter(input),
+    editing: editing && {
+      request(request, execute) {
+        if (request.operation !== "close" && !isWorkbenchRetiring(workbench)) requireCurrentViewer();
+        return editing.request(request, execute);
+      },
+    },
+    executeEditingCommand: (request, signal) =>
+      executeCaptured(request, signal, { ...invocation, isViewerCurrent: undefined }),
     executeCommand: async (request, signal) => {
       requireCurrentViewer();
-      if (input.executeCommand) return input.executeCommand(request, signal, invocation);
-      return {
-        outcome: {
-          ok: true,
-          status: "success",
-          value: await workbench.commands.executeCommand(request.commandId, request.params, {
-            resource: request.resource ?? placement?.resource,
-            placement: placement?.placementIdentity,
-            projectId,
-            signal,
-            removalVersion: invocation.removalVersion,
-            isViewerCurrent: invocation.isViewerCurrent,
-          }),
-        },
-      };
+      return executeCaptured(request, signal);
     },
     placement:
       placement && (placement.placementIdentity || isOverlay())
@@ -104,10 +138,18 @@ export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebview
         });
       },
     },
-    preferences: createWebviewPreferencesAdapter(input),
+    preferences: preferenceQueries ? { ...preferences, set: preferenceQueries.set } : preferences,
     terminal: workbench.terminal,
   } satisfies ExtensionWebviewHostAdapters;
 };
 
 export const createWorkbenchWebviewHostCapabilities = (input: CreateWorkbenchWebviewHostAdaptersInput) =>
-  createExtensionWebviewHostCapabilities(createWorkbenchWebviewHostAdapters(input));
+  createExtensionWebviewHostCapabilities(
+    createWorkbenchWebviewHostAdapters(input),
+    JSON.stringify([
+      input.projectId ?? input.workbench.pages.store.getState().projectId,
+      input.extensionId,
+      input.webviewId ?? input.placement?.viewId,
+      input.placement?.instanceId,
+    ]),
+  );

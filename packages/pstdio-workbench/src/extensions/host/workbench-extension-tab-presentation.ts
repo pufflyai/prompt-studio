@@ -1,11 +1,17 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import { isNavigationTarget, resourceKey } from "@pstdio/sdk/extensions";
+import {
+  createScopedQueryClient,
+  isNavigationTarget,
+  resourceKey,
+  type ScopedQuery,
+  viewDataEvents,
+} from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import type { Disposable, WorkbenchPanelTab, WorkbenchTabSnapshot } from "../../core";
+import { resolveWebviewPageProps } from "../bridge/webview-page-props";
 import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
 import { executeWorkbenchExtensionCommand } from "./workbench-extension-command";
 import type { RegisterWorkbenchExtensionContributionsInput } from "./workbench-extension-host-types";
-import type { WorkbenchExtensionRefreshEvent } from "./workbench-extension-refresh";
 
 type MetadataPlacement = WorkbenchExtensionMetadata["placements"][number];
 type MetadataPageSlot = WorkbenchExtensionMetadata["pages"][number]["slots"][number];
@@ -70,93 +76,143 @@ export const toWorkbenchPresentationSnapshot = (
 export const createWorkbenchExtensionTabPresentation = (
   input: RegisterWorkbenchExtensionContributionsInput,
   metadata: WorkbenchExtensionTabMetadata,
-): WorkbenchPanelTab => {
-  const snapshots = new Map<string, WorkbenchTabSnapshot>();
-  const instances = new Map<string, Parameters<WorkbenchPanelTab["getSnapshot"]>[0]>();
-  const loading = new Map<string, Promise<void>>();
-  const listeners = new Set<() => void>();
-  const refreshEvents = new Set(metadata.refreshEventIds ?? []);
-  let revision = 0;
-  const keyOf = (instance: Parameters<WorkbenchPanelTab["getSnapshot"]>[0]) =>
-    JSON.stringify([instance.instanceId, instance.resource]);
-  const load = (instance: Parameters<WorkbenchPanelTab["getSnapshot"]>[0]): Promise<void> => {
-    instances.set(instance.instanceId, instance);
-    const key = keyOf(instance);
-    const pending = loading.get(key);
-    if (pending) return pending;
-    const resource = instance.resource;
-    const currentRevision = revision;
-    const pendingLoad = Promise.resolve(
-      executeWorkbenchExtensionCommand(input, metadata.queryHandlerId, {
-        resource,
-        params: {
-          renderer: {
-            rendererId: metadata.placementId,
-            projectId: input.projectId,
-            ...(resource ? { resource } : {}),
-            invocation: { placement: "visible" },
-          },
+): WorkbenchPanelTab & Disposable => {
+  const root =
+    input.queries ??
+    createScopedQueryClient(
+      { runtimeId: "workbench", projectId: input.projectId, extensionId: metadata.extensionId },
+      {
+        subscribe: (invalidate) => {
+          const events = input.subscribeRefreshEvents?.((event) => invalidate({ ...event, type: "changed" }));
+          const resets = input.subscribeRefreshReset?.((event) => invalidate({ ...event, type: "reset" }));
+          return () => {
+            events?.dispose();
+            resets?.dispose();
+          };
         },
-      }),
-    )
-      .then(async (value) => {
-        const current = instances.get(instance.instanceId);
-        if (!current || keyOf(current) !== key) return;
-        if (currentRevision !== revision) {
-          loading.delete(key);
-          await load(current);
-          return;
-        }
-        snapshots.set(key, toWorkbenchPresentationSnapshot(value, metadata.extensionId, input.projectId));
-        for (const listener of listeners) listener();
-      })
-      .finally(async () => {
-        if (loading.get(key) !== pendingLoad) return;
-        loading.delete(key);
-        const current = instances.get(instance.instanceId);
-        // A reset can arrive from a notified listener before this completed load is retired.
-        if (currentRevision !== revision && current && keyOf(current) === key) await load(current);
-      });
-    loading.set(key, pendingLoad);
-    return pendingLoad;
+      },
+    );
+  const scoped = root.forScope({ projectId: input.projectId, extensionId: metadata.extensionId });
+  const queries = new Map<string, { resourceKey: string; query: ScopedQuery<WorkbenchTabSnapshot> }>();
+  const legacy = new Map<() => void, Map<string, () => void>>();
+  const releases = new Set<() => void>();
+  let disposed = false;
+  const empty: WorkbenchTabSnapshot = {};
+  const observe = (query: ScopedQuery<WorkbenchTabSnapshot>, listener: () => void) => {
+    let previous = query.getSnapshot().data;
+    return query.subscribe(() => {
+      const next = query.getSnapshot().data;
+      if (previous === next) return;
+      previous = next;
+      listener();
+    });
   };
+  const queryFor = (instance: Parameters<WorkbenchPanelTab["getSnapshot"]>[0]) => {
+    const resource = instance.resource;
+    const state = input.workbench.pages.store.getState();
+    const owner = instance.placementIdentity;
+    const pageParams =
+      instance.pageContext || (owner?.kind === "page" && owner.pageId === state.activePageId)
+        ? resolveWebviewPageProps(state, instance).pageParams
+        : undefined;
+    const resourceIdentity = resourceKey(resource) ?? "unbound";
+    const key = JSON.stringify([resourceIdentity, pageParams]);
+    let query = queries.get(key)?.query;
+    if (!query || query.isDisposed()) {
+      query = scoped.query({
+        id: `tab:${metadata.placementId}:${metadata.queryHandlerId}`,
+        resourceKey: resourceIdentity,
+        params: { locale: input.presentationLocale, pageParams },
+        dependsOn: [
+          viewDataEvents.extensionCatalogChanged.id,
+          viewDataEvents.extensionTranslationsChanged.id,
+          ...(metadata.refreshEventIds ?? []),
+        ],
+        dependency: { resourceKey: resourceKey(resource), resourceId: resource?.id },
+        read: async (signal) =>
+          toWorkbenchPresentationSnapshot(
+            await executeWorkbenchExtensionCommand(input, metadata.queryHandlerId, {
+              resource,
+              signal,
+              params: {
+                renderer: {
+                  rendererId: metadata.placementId,
+                  projectId: input.projectId,
+                  ...(resource ? { resource } : {}),
+                  ...(pageParams ? { pageParams } : {}),
+                  invocation: { placement: "visible" },
+                },
+              },
+            }),
+            metadata.extensionId,
+            input.projectId,
+          ),
+      });
+      queries.set(key, { resourceKey: resourceIdentity, query });
+      for (const [listener, bindings] of legacy) bindings.set(key, observe(query, listener));
+      for (const [oldKey, old] of queries)
+        if (oldKey !== key && queries.size > 128 && !old.query.active()) queries.delete(oldKey);
+    }
+    return query;
+  };
+  const preview = input.workbench.resources.preview.subscribeRefresh(async (resource) => {
+    await Promise.all(
+      [...queries.values()]
+        .filter((entry) => entry.resourceKey === resourceKey(resource))
+        .map((entry) => entry.query.refreshObserved()),
+    );
+  });
   return {
     refreshEvents: metadata.refreshEventIds,
+    isDisposed: () => disposed,
     getSnapshot(instance) {
-      const previous = instances.get(instance.instanceId);
-      const key = keyOf(instance);
-      if (previous && keyOf(previous) !== key) snapshots.delete(keyOf(previous));
-      instances.set(instance.instanceId, instance);
-      if (!snapshots.has(key)) void load(instance).catch(() => undefined);
-      return snapshots.get(key) ?? {};
+      if (disposed) return empty;
+      const query = queryFor(instance);
+      const state = query.getSnapshot();
+      return state.data ?? empty;
     },
-    subscribe(listener) {
-      listeners.add(listener);
-      const resourceSubscription = input.workbench.resources.preview.subscribeRefresh(async (resource) => {
-        const affected = [...instances.values()].filter(
-          (instance) => instance.resource && resourceKey(instance.resource) === resourceKey(resource),
-        );
-        if (!affected.length) return;
-        revision++;
-        await Promise.all(affected.map(load));
-      });
-      const refresh = () => {
-        revision++;
-        for (const instance of instances.values()) void load(instance).catch(() => undefined);
+    subscribe(listener, instance) {
+      if (disposed) return { dispose() {} };
+      let stop: () => void;
+      if (instance) {
+        let query = queryFor(instance);
+        let unobserve = observe(query, listener);
+        const unsubscribe = input.workbench.pages.store.subscribe(() => {
+          const next = queryFor(instance);
+          if (next === query) return;
+          unobserve();
+          query = next;
+          unobserve = observe(query, listener);
+          listener();
+        });
+        stop = () => {
+          unobserve();
+          unsubscribe();
+        };
+      } else {
+        const bindings = new Map([...queries].map(([key, entry]) => [key, observe(entry.query, listener)]));
+        legacy.set(listener, bindings);
+        stop = () => {
+          legacy.delete(listener);
+          for (const release of bindings.values()) release();
+          bindings.clear();
+        };
+      }
+      const release = () => {
+        releases.delete(release);
+        stop();
       };
-      const refreshSubscription = input.subscribeRefreshEvents?.((event: WorkbenchExtensionRefreshEvent) => {
-        if (refreshEvents.has(event.id)) refresh();
-      });
-      const resetSubscription = input.subscribeRefreshReset?.(refresh);
-      const disposable: Disposable = {
-        dispose() {
-          listeners.delete(listener);
-          refreshSubscription?.dispose();
-          resetSubscription?.dispose();
-          resourceSubscription.dispose();
-        },
-      };
-      return disposable;
+      releases.add(release);
+      return { dispose: release };
+    },
+    dispose() {
+      if (disposed) return;
+      disposed = true;
+      for (const release of releases) release();
+      preview.dispose();
+      legacy.clear();
+      queries.clear();
+      if (!input.queries) root.dispose();
     },
   };
 };

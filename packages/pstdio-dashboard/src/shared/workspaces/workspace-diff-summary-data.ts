@@ -1,15 +1,14 @@
-import { settleReadBatch } from "@pstdio/workbench";
-import { getApiClient } from "@/lib/api";
+import type { ScopedQuery } from "@pstdio/sdk/extensions";
+import { getRuntimeApiClient } from "@/lib/api";
+import { getDashboardQueryClient } from "@/lib/query-client";
+import { getDashboardScopedQueries } from "@/lib/scoped-queries";
 import { getRuntimeCollections, type RuntimeCollections } from "@/lib/sync/collections";
 import { createRuntimeState } from "@/lib/sync/runtime-state";
+import { createWorkspaceDiffAdmission } from "./workspace-diff-admission";
+import { waitForWorkspaceDiffSummary } from "./workspace-diff-query-wait";
+import { settleWorkspaceDiffReads } from "./workspace-diff-reads";
+import { createWorkspaceDiffSource } from "./workspace-diff-source";
 import { workspaceState } from "./workspace-state";
-
-interface DashboardWorkspaceDiffSummaryResponse {
-  workspace_id: string;
-  additions: number;
-  deletions: number;
-  file_count: number;
-}
 
 export interface DashboardWorkspaceDiffSummary {
   workspaceId: string;
@@ -18,59 +17,157 @@ export interface DashboardWorkspaceDiffSummary {
   fileCount: number;
 }
 
+const queryId = "workspaces.diff-summary";
+const sourceKeyFor = (projectId: string | undefined, workspaceId: string) => JSON.stringify([projectId, workspaceId]);
+const workspaceDiffLocation = (row: Record<string, unknown>) =>
+  JSON.stringify([row.execution_kind, row.provider_id, row.root_path, row.provider_ref_json, row.branch]);
 const runtimeState = createRuntimeState(
-  () => ({
-    summaries: new Map<string, DashboardWorkspaceDiffSummary>(),
-    listeners: new Set<(workspaceId: string) => void>(),
-  }),
+  (owner) => {
+    const queries = new Map<string, ScopedQuery<DashboardWorkspaceDiffSummary | null>>();
+    let pruning = false;
+    const stopRetirement = getDashboardScopedQueries(owner).subscribeRetirement(() => {
+      if (pruning) return;
+      pruning = true;
+      // Retirement can occur during row creation; prune once after the current render batch.
+      queueMicrotask(() => {
+        pruning = false;
+        for (const [id, query] of queries) if (query.isDisposed()) queries.delete(id);
+      });
+    });
+    return {
+      queries,
+      stopRetirement,
+      sources: new Map<string, ReturnType<typeof createWorkspaceDiffSource> & { location: string }>(),
+      admit: createWorkspaceDiffAdmission(),
+    };
+  },
   (state) => {
-    state.summaries.clear();
-    state.listeners.clear();
+    state.stopRetirement();
+    for (const source of state.sources.values()) source.close();
+    state.sources.clear();
+    state.queries.clear();
   },
 );
+const readyWorkspace = (workspaceId: string, owner: RuntimeCollections) => {
+  if (owner.isDisposed()) return undefined;
+  const workspace = owner.getCollection("workspaces").get(workspaceId);
+  const capabilities = workspace?.provider_capabilities_json as { diff?: boolean } | undefined;
+  return workspace && workspaceState(workspace) === "ready" && capabilities?.diff === true ? workspace : undefined;
+};
+
+export const getDashboardWorkspaceDiffQuery = (
+  workspaceId: string,
+  owner = getRuntimeCollections(),
+  expectedProjectId?: string,
+) => {
+  if (owner.isDisposed()) throw new Error("Runtime is disposed");
+  const state = runtimeState(owner);
+  const workspace = owner.getCollection("workspaces").get(workspaceId);
+  const projectId = expectedProjectId ?? (typeof workspace?.project_id === "string" ? workspace.project_id : undefined);
+  const sourceKey = sourceKeyFor(projectId, workspaceId);
+  const cached = state.queries.get(sourceKey);
+  if (cached && !cached.isDisposed()) return cached;
+  const query = getDashboardScopedQueries(owner)
+    .forScope({ projectId })
+    .query({
+      id: queryId,
+      resourceKey: workspaceId,
+      read: async (signal) => {
+        const row = readyWorkspace(workspaceId, owner);
+        if (!row || row.project_id !== projectId) return null;
+        const location = workspaceDiffLocation(row);
+        const currentLocation = () => {
+          const current = readyWorkspace(workspaceId, owner);
+          return current && current.project_id === projectId && workspaceDiffLocation(current) === location;
+        };
+        await state.sources.get(sourceKey)?.ready;
+        signal.throwIfAborted();
+        // Watch setup and finite admission can both outlive a scope or capability change.
+        const response = await state.admit(signal, async () =>
+          currentLocation()
+            ? getRuntimeApiClient(owner).workspaces.diffSummary(workspaceId, "fork_point", signal)
+            : null,
+        );
+        signal.throwIfAborted();
+        if (!currentLocation()) return null;
+        return response
+          ? {
+              workspaceId: response.workspace_id,
+              additions: response.additions,
+              deletions: response.deletions,
+              fileCount: response.file_count,
+            }
+          : null;
+      },
+      subscribe: (invalidate) => {
+        const readIdentity = () => {
+          const row = readyWorkspace(workspaceId, owner);
+          if (!row || row.project_id !== projectId) return undefined;
+          // Only local workspaces have a file stream; others still need revision hints.
+          const revision = row.execution_kind === "local" ? undefined : row.updated_at;
+          return JSON.stringify([workspaceDiffLocation(row), revision]);
+        };
+        let observedIdentity = readIdentity();
+        const syncSource = () => {
+          const row = readyWorkspace(workspaceId, owner);
+          const current = state.sources.get(sourceKey);
+          if (
+            !row ||
+            row.execution_kind !== "local" ||
+            typeof row.project_id !== "string" ||
+            row.project_id !== projectId
+          ) {
+            current?.close();
+            state.sources.delete(sourceKey);
+          } else {
+            const location = workspaceDiffLocation(row);
+            if (current?.location === location) return;
+            current?.close();
+            state.sources.set(sourceKey, {
+              location,
+              ...createWorkspaceDiffSource(owner, workspaceId, row.project_id, invalidate),
+            });
+          }
+        };
+        const stop = owner.subscribeCollections((change) => {
+          if (change && (change.table !== "workspaces" || !change.changes.some((row) => row.key === workspaceId)))
+            return;
+          const identity = readIdentity();
+          if (identity === observedIdentity) return;
+          observedIdentity = identity;
+          syncSource();
+          invalidate();
+        });
+        syncSource();
+        return () => {
+          stop();
+          state.sources.get(sourceKey)?.close();
+          state.sources.delete(sourceKey);
+        };
+      },
+    });
+  state.queries.set(sourceKey, query);
+  return query;
+};
 
 export const formatDashboardWorkspaceDiffOverview = (summary: DashboardWorkspaceDiffSummary) =>
   `+${summary.additions} -${summary.deletions}`;
 
-const toDashboardWorkspaceDiffSummary = (response: DashboardWorkspaceDiffSummaryResponse) => ({
-  workspaceId: response.workspace_id,
-  additions: response.additions,
-  deletions: response.deletions,
-  fileCount: response.file_count,
-});
-
-const fetchDashboardWorkspaceDiffSummary = async (
-  workspaceId: string,
-  owner: RuntimeCollections,
-  signal?: AbortSignal,
-) => {
-  const response = await getApiClient(owner.connection).workspaces.diffSummary(workspaceId, "fork_point", signal);
-
-  return response ? toDashboardWorkspaceDiffSummary(response) : null;
+export const getDashboardWorkspaceDiffSummary = (workspaceId: string, owner = getRuntimeCollections()) => {
+  if (owner.isDisposed()) return undefined;
+  const projectId = owner.getCollection("workspaces").get(workspaceId)?.project_id;
+  const query = runtimeState(owner).queries.get(
+    sourceKeyFor(typeof projectId === "string" ? projectId : undefined, workspaceId),
+  );
+  return !query?.isDisposed() ? (query?.getSnapshot().data ?? undefined) : undefined;
 };
-
-const writeDashboardWorkspaceDiffSummary = (
-  summary: DashboardWorkspaceDiffSummary | null,
-  owner: RuntimeCollections,
-) => {
-  if (!summary || owner.isDisposed()) return null;
-  const state = runtimeState(owner);
-  state.summaries.set(summary.workspaceId, summary);
-  for (const listener of state.listeners) listener(summary.workspaceId);
-  return summary;
-};
-
-export const getDashboardWorkspaceDiffSummary = (workspaceId: string, owner = getRuntimeCollections()) =>
-  runtimeState(owner).summaries.get(workspaceId);
 
 export const getDashboardWorkspaceDiffSummaries = (workspaceIds: string[], owner = getRuntimeCollections()) => {
   const summaries = new Map<string, DashboardWorkspaceDiffSummary>();
-
-  for (const workspaceId of workspaceIds) {
-    const summary = runtimeState(owner).summaries.get(workspaceId);
-    if (summary) summaries.set(workspaceId, summary);
+  for (const id of workspaceIds) {
+    const summary = getDashboardWorkspaceDiffSummary(id, owner);
+    if (summary) summaries.set(id, summary);
   }
-
   return summaries;
 };
 
@@ -80,17 +177,9 @@ export const resolveDashboardWorkspaceDiffSummary = async (
   owner = getRuntimeCollections(),
 ) => {
   signal?.throwIfAborted();
-  const workspace = owner.getCollection("workspaces").state.get(workspaceId);
-  if (!workspace || workspaceState(workspace) !== "ready") return null;
-  const capabilities = workspace.provider_capabilities_json as { diff?: boolean } | undefined;
-  if (capabilities?.diff !== true) return null;
-  const cached = runtimeState(owner).summaries.get(workspaceId);
-  if (cached) return cached;
-
-  return writeDashboardWorkspaceDiffSummary(
-    await fetchDashboardWorkspaceDiffSummary(workspaceId, owner, signal),
-    owner,
-  );
+  if (!readyWorkspace(workspaceId, owner)) return null;
+  const query = getDashboardWorkspaceDiffQuery(workspaceId, owner);
+  return waitForWorkspaceDiffSummary(query, signal);
 };
 
 export const requestDashboardWorkspaceDiffSummaries = async (
@@ -100,33 +189,35 @@ export const requestDashboardWorkspaceDiffSummaries = async (
 ) => {
   const summaries = new Map<string, DashboardWorkspaceDiffSummary>();
   const ids = [...new Set(workspaceIds)];
-  for (let index = 0; index < ids.length; index += 4) {
-    const loaded = await settleReadBatch(
-      ids.slice(index, index + 4).map((id) => async (signal) => {
-        try {
-          const summary = await resolveDashboardWorkspaceDiffSummary(id, signal, owner);
-          return [id, summary] as const;
-        } catch (error) {
-          signal.throwIfAborted();
-          if (error instanceof Error && error.name === "AbortError") throw error;
-          return [id, null] as const;
-        }
-      }),
-      signal,
-    );
-    for (const [id, summary] of loaded) if (summary) summaries.set(id, summary);
-  }
-
+  const loaded = await settleWorkspaceDiffReads(
+    ids.map((id) => async (signal) => {
+      try {
+        return [id, await resolveDashboardWorkspaceDiffSummary(id, signal, owner)] as const;
+      } catch (error) {
+        signal.throwIfAborted();
+        if (error instanceof Error && error.name === "AbortError") throw error;
+        return [id, null] as const;
+      }
+    }),
+    signal,
+  );
+  for (const [id, summary] of loaded) if (summary) summaries.set(id, summary);
   return summaries;
 };
 
 export const subscribeDashboardWorkspaceDiffSummaries = (
   listener: (workspaceId: string) => void,
   owner = getRuntimeCollections(),
-) => {
-  const workspaceDiffSummaryListeners = runtimeState(owner).listeners;
-  workspaceDiffSummaryListeners.add(listener);
-  return () => {
-    workspaceDiffSummaryListeners.delete(listener);
-  };
-};
+) =>
+  getDashboardQueryClient(owner)
+    .getQueryCache()
+    .subscribe((event) => {
+      const key = event.query.queryKey;
+      if (
+        key[0] === "pstdio" &&
+        key[6] === queryId &&
+        typeof key[7] === "string" &&
+        (event.type === "removed" || (event.type === "updated" && event.action.type === "success"))
+      )
+        listener(key[7]);
+    });

@@ -13,55 +13,60 @@ const isValueRef = (value: unknown): value is { kind: "param-value"; key: string
 const validSource = (source: ParamOptionSource) =>
   source?.command && typeof source.valueField === "string" && typeof source.labelField === "string";
 
+export const normalizeParamOptions = (
+  schema: ParamObjectSchema | undefined,
+  owner: { extensionId: string; sourcePath: string },
+  input: { commandIds: ReadonlySet<string>; diagnostics: ExtensionRuntime["diagnostics"] },
+) => {
+  const { commandIds } = input;
+  if (!schema) return schema;
+  const edges = new Map<string, string[]>();
+  const error = (code: string, message: string) =>
+    input.diagnostics.push(createDiagnostic({ ...owner, code, message }));
+  const normalized = Object.fromEntries(
+    Object.entries(schema).map(([key, param]) => {
+      if ((param.type !== "select" && param.type !== "multi-select") || Array.isArray(param.options))
+        return [key, param];
+      const source = param.options as ParamOptionSource;
+      if (!validSource(source)) {
+        error("invalid_param_option_source", `Parameter "${key}" needs an option command, valueField and labelField.`);
+        return [key, param];
+      }
+      const command = { ...source.command, extensionId: source.command.extensionId ?? owner.extensionId };
+      const commandId = contributionRefId(command, owner.extensionId);
+      if (!commandIds.has(commandId))
+        error("unknown_param_option_command", `Parameter "${key}" refers to unknown command "${commandId}".`);
+      const dependencies = Object.values(source.params ?? {})
+        .filter(isValueRef)
+        .map((ref) => ref.key);
+      edges.set(key, dependencies);
+      for (const dependency of dependencies) {
+        if (!Object.hasOwn(schema, dependency))
+          error("unknown_param_option_field", `Parameter "${key}" refers to unknown field "${dependency}".`);
+      }
+      return [key, { ...param, options: { ...source, command } }];
+    }),
+  );
+  const done = new Set<string>();
+  const visiting = new Set<string>();
+  const visit = (key: string): boolean => {
+    if (visiting.has(key)) return true;
+    if (done.has(key)) return false;
+    visiting.add(key);
+    const cyclic = (edges.get(key) ?? []).some(visit);
+    visiting.delete(key);
+    done.add(key);
+    return cyclic;
+  };
+  if ([...edges.keys()].some(visit))
+    error("param_option_dependency_cycle", "Parameter option dependencies contain a cycle.");
+  return normalized as ParamObjectSchema;
+};
+
 export const validateParamOptions = (runtime: ExtensionRuntime) => {
   const commandIds = new Set(runtime.commands.map((command) => command.id));
-  const normalize = (schema: ParamObjectSchema | undefined, owner: { extensionId: string; sourcePath: string }) => {
-    if (!schema) return schema;
-    const edges = new Map<string, string[]>();
-    const error = (code: string, message: string) =>
-      runtime.diagnostics.push(createDiagnostic({ ...owner, code, message }));
-    const normalized = Object.fromEntries(
-      Object.entries(schema).map(([key, param]) => {
-        if ((param.type !== "select" && param.type !== "multi-select") || Array.isArray(param.options))
-          return [key, param];
-        const source = param.options as ParamOptionSource;
-        if (!validSource(source)) {
-          error(
-            "invalid_param_option_source",
-            `Parameter "${key}" needs an option command, valueField and labelField.`,
-          );
-          return [key, param];
-        }
-        const command = { ...source.command, extensionId: source.command.extensionId ?? owner.extensionId };
-        const commandId = contributionRefId(command, owner.extensionId);
-        if (!commandIds.has(commandId))
-          error("unknown_param_option_command", `Parameter "${key}" refers to unknown command "${commandId}".`);
-        const dependencies = Object.values(source.params ?? {})
-          .filter(isValueRef)
-          .map((ref) => ref.key);
-        edges.set(key, dependencies);
-        for (const dependency of dependencies) {
-          if (!Object.hasOwn(schema, dependency))
-            error("unknown_param_option_field", `Parameter "${key}" refers to unknown field "${dependency}".`);
-        }
-        return [key, { ...param, options: { ...source, command } }];
-      }),
-    );
-    const done = new Set<string>();
-    const visiting = new Set<string>();
-    const visit = (key: string): boolean => {
-      if (visiting.has(key)) return true;
-      if (done.has(key)) return false;
-      visiting.add(key);
-      const cyclic = (edges.get(key) ?? []).some(visit);
-      visiting.delete(key);
-      done.add(key);
-      return cyclic;
-    };
-    if ([...edges.keys()].some(visit))
-      error("param_option_dependency_cycle", "Parameter option dependencies contain a cycle.");
-    return normalized as ParamObjectSchema;
-  };
+  const normalize = (schema: ParamObjectSchema | undefined, owner: { extensionId: string; sourcePath: string }) =>
+    normalizeParamOptions(schema, owner, { commandIds, diagnostics: runtime.diagnostics });
   const rejectUnsupported = (
     schema: ParamObjectSchema | undefined,
     owner: { extensionId: string; sourcePath: string },

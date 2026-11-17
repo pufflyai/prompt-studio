@@ -27,7 +27,7 @@ export const storyRuns: RunRecord[] = [
     status: "running",
     progress: 0.2,
     commits: [{ ref: "pstdio@0.46.0", sha: "4b2c9e10aa" }],
-    platforms: ["linux-x64", "darwin-arm64", "darwin-x64", "win32-x64"],
+    platforms: ["linux-x64", "darwin-arm64", "win32-x64"],
     detail: "Linux x64 · Storage finished\nmacOS arm64 · Storage running",
     createdAt: "2026-11-01T09:58:00Z",
     updatedAt: "2026-11-01T10:15:00Z",

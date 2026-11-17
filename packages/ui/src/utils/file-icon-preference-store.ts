@@ -1,29 +1,15 @@
 import { createBrowserStorage } from "./browser-storage";
+import { createPreferenceChoiceStore } from "./preference-choice-store";
 
 const storageKey = "file-icon-theme-preference";
 const stores = new WeakMap<Window, ReturnType<typeof createFileIconPreferenceStore>>();
 
 /** The global choice belongs to the window; registries only decide which fallback to display. */
 export const createFileIconPreferenceStore = (storage: Pick<Storage, "getItem" | "setItem">) => {
-  let choice = storage.getItem(storageKey);
-  const listeners = new Set<() => void>();
-  const update = (next: string | null) => {
-    if (choice === next) return;
-    choice = next;
-    for (const listener of listeners) listener();
-  };
+  const store = createPreferenceChoiceStore(storage, storageKey);
+  const update = store.update;
   return {
-    getSnapshot: () => choice,
-    subscribe(listener: () => void) {
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
-    },
-    setChoice(next: string) {
-      update(next);
-      storage.setItem(storageKey, next);
-    },
+    ...store,
     onStorage(event: StorageEvent) {
       if (event.key === storageKey) update(event.newValue);
       else if (event.key === null) update(null);

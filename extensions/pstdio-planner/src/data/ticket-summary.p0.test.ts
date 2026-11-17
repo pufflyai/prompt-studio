@@ -11,7 +11,7 @@ const ticket = (id: string, parentId?: string): Ticket => ({
   id,
   shorthand: `T-${id}`,
   title: id,
-  content: "Full ticket body",
+  content: `# ${id}\n\nFull ticket body`,
   files: [{ id: "file", name: "notes.md", blobId: "file-body", createdAt: "before", updatedAt: "after" }],
   userPrompt: "Implementation instructions",
   statusId: "ready",

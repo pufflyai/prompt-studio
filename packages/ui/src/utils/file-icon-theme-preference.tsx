@@ -37,8 +37,13 @@ export const FileIconThemePreferenceProvider = (props: FileIconThemePreferencePr
     store?.getSnapshot ?? emptyChoice,
     emptyChoice,
   );
-  const fileIconThemePreference = isFileIconThemePreference(choice, themePreferences)
-    ? choice
+  const canonical =
+    choice &&
+    (themePreferences.find((theme) => theme.id === choice)?.id ??
+      themePreferences.find((theme) => theme.aliases?.includes(choice))?.id ??
+      choice);
+  const fileIconThemePreference = isFileIconThemePreference(canonical, themePreferences)
+    ? canonical
     : getDefaultFileIconThemePreference(themePreferences);
   const activeFileIconTheme = themePreferences.find((theme) => theme.id === fileIconThemePreference);
 

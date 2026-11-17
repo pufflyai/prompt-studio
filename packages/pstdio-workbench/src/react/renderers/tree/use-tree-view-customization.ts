@@ -145,7 +145,20 @@ export const useTreeViewCustomization = (
   const setNodeOrder = useTreeListOrderStore(storageKey, (state) => state.setNodeOrder);
   const setSectionSlot = useTreeListOrderStore(storageKey, (state) => state.setSectionSlot);
   const resetOrder = useTreeListOrderStore(storageKey, (state) => state.reset);
-  const sourceSections = [...regions.headerSections, ...regions.sections, ...regions.footerSections];
+  const dropScopes = [
+    ...new Set(
+      [...regions.headerSections, ...regions.sections, ...regions.footerSections]
+        .filter((section) => section.nodes.some((node) => !options?.pinnedOnlyNodeIds?.has(node.id)))
+        .map((section) => section.moveScope),
+    ),
+  ];
+  const contentDropSections: TreeListSection[] = dropScopes.map((moveScope) => ({
+    id: `tree-list-loose:content:${moveScope ?? "default"}`,
+    moveScope,
+    nodes: [],
+  }));
+  const contentSources = options?.allowGroups ? [...regions.sections, ...contentDropSections] : regions.sections;
+  const sourceSections = [...regions.headerSections, ...contentSources, ...regions.footerSections];
   const {
     groups,
     nodeOrderBySection: activeNodeOrder,
@@ -163,7 +176,7 @@ export const useTreeViewCustomization = (
 
   const defaultSlotBySectionId = new Map([
     ...regions.headerSections.map((section) => [section.id, "header" as const] as const),
-    ...regions.sections.map((section) => [section.id, "content" as const] as const),
+    ...contentSources.map((section) => [section.id, "content" as const] as const),
     ...regions.footerSections.map((section) => [section.id, "footer" as const] as const),
   ]);
   const orderedSectionsBySlot: Record<TreeViewSlot, TreeListSection[]> = { header: [], content: [], footer: [] };
@@ -210,6 +223,7 @@ export const useTreeViewCustomization = (
     );
   const visibleHeaderSections = visibleIn(headerSections);
   const visibleSections = visibleIn(contentSections);
+  if (options?.allowGroups && visibleSections.length === 0) visibleSections.push(...contentDropSections);
   const visibleFooterSections = visibleIn(footerSections);
   const visibilityMenuItems = buildTreeVisibilityMenuActions(
     { headerSections: orderedHeaderSections, sections: orderedSections, footerSections: orderedFooterSections },

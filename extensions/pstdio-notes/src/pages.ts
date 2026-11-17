@@ -27,7 +27,9 @@ export const editor = defineView({
   icon: "file-text",
   body: {
     kind: "file",
-    refreshEvents: [notesChanged, viewDataEvents.workspacesChanged],
+    // The public text session owns live content. Title changes refresh the tab
+    // and navigation below without reloading the open document.
+    refreshEvents: [viewDataEvents.workspacesChanged],
     load: async (ctx, { renderer }) => {
       const id = renderer.resource?.id;
       const { readable, writable } = await notesFileAccess(ctx);
@@ -128,6 +130,7 @@ export const noteTarget = (
   id: string,
   label: string,
   context?: Pick<ExtensionContextBase, "extensionId" | "projectId">,
+  writable?: boolean,
 ) => ({
   kind: "compound" as const,
   targets: [
@@ -135,7 +138,7 @@ export const noteTarget = (
     {
       kind: "panel" as const,
       panel: notesPage.panels.note,
-      resource: noteResource(id, label, context),
+      resource: noteResource(id, label, context, writable),
       open: "pin" as const,
     },
   ],

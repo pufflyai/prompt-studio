@@ -8,7 +8,7 @@ import {
   ticketPageTarget,
   ticketRequestsTarget,
 } from "../data/ticket-page-target";
-import { readTicketParentLookup, ticketResourceReference } from "../data/ticket-resource-hierarchy";
+import { plannerOwnerFor, readTicketParentLookup, ticketResourceReference } from "../data/ticket-resource-hierarchy";
 import { isImageAttachment } from "../utils/is-image-attachment";
 
 export const resolveTicketResourcesCommand = defineCommand({
@@ -27,7 +27,7 @@ export const resolveTicketResourcesCommand = defineCommand({
       const ticket = resource.type === "ticket" ? byId.get(resource.id) : undefined;
       if (!ticket) return [];
       const reference = {
-        ...ticketResourceReference(ticket, parentLookup),
+        ...ticketResourceReference(ticket, parentLookup, plannerOwnerFor(ctx)),
         icon: TICKET_RESOURCE_ICON,
         projectId: ctx.projectId,
         extensionId: ctx.extensionId,

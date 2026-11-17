@@ -9,6 +9,8 @@ test("shows the work following the latest completed startup step", () => {
   expect(readRuntimeStartupPhase(log("database_retiring"))).toBe("retiring");
   expect(readRuntimeStartupPhase(log("database_image_restored"))).toBe("database");
   expect(readRuntimeStartupPhase(log("database_opened"))).toBe("migrations");
+  expect(readRuntimeStartupPhase(log("database_cleaning"))).toBe("cleanup");
+  expect(readRuntimeStartupPhase(log("database_compacting"))).toBe("compacting");
   expect(readRuntimeStartupPhase(log("database_migrated"))).toBe("extensions");
   expect(readRuntimeStartupPhase(log("extensions_ready"))).toBe("readiness");
   expect(readRuntimeStartupPhase(log("app_ready"))).toBe("readiness");

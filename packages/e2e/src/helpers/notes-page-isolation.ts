@@ -4,6 +4,7 @@ export const verifyNotesPageIsolation = async (page: Page) => {
   const main = page.locator('[data-workbench-panel="main"]');
   const nav = page.locator('[data-workbench-region="sidenav"]');
   const notes = nav.getByRole("option", { name: "Notes", exact: true });
+  const firstRow = nav.getByRole("option", { name: "Isolation first", exact: true });
   const first = main.getByRole("tab", { name: "Isolation first", exact: true });
   const second = main.getByRole("tab", { name: "Isolation second", exact: true });
   const add = page.locator('[data-workbench-panel-header="main"]').getByRole("button", { name: "Add panel" });
@@ -15,8 +16,8 @@ export const verifyNotesPageIsolation = async (page: Page) => {
     await dialog.getByRole("button", { name: "Run", exact: true }).click();
     await expect(main.getByRole("tab", { name: title, exact: true })).toHaveAttribute("aria-selected", "true");
   };
-  await notes.click();
-  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-notes\/notes$/);
+  // Closing the created note leaves the Notes page open; the Notes row itself only expands its list.
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.notes\/notes$/);
   const cards = main.getByRole("group", { name: "Available tabs" });
   await expect(cards.getByRole("button", { name: "New note", exact: true })).toBeVisible();
   await expect(cards.getByRole("button", { name: "New session", exact: true })).toBeVisible();
@@ -29,7 +30,7 @@ export const verifyNotesPageIsolation = async (page: Page) => {
   await expect(page.getByRole("menuitem", { name: "Tickets", exact: true })).toHaveCount(0);
   await page.keyboard.press("Escape");
   await cards.getByRole("button", { name: "New session", exact: true }).click();
-  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-notes\/notes$/);
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.notes\/notes$/);
   await expect(main.getByRole("tab", { name: "New session", exact: true })).toBeVisible();
   await main.getByRole("button", { name: "Close New session", exact: true }).click();
   await cards.getByRole("button", { name: "New note", exact: true }).click();
@@ -59,7 +60,7 @@ export const verifyNotesPageIsolation = async (page: Page) => {
   await page.keyboard.press("Escape");
   await expect(page.getByRole("menu")).toHaveCount(0);
   await cards.getByRole("button", { name: "New session", exact: true }).click();
-  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-artifacts\/artifacts$/);
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.artifacts\/artifacts$/);
   await expect(main.getByRole("tab", { name: "New session", exact: true })).toBeVisible();
   await main.getByRole("button", { name: "Close New session", exact: true }).click();
   await cards.getByRole("button", { name: "Artifacts", exact: true }).click();
@@ -67,7 +68,7 @@ export const verifyNotesPageIsolation = async (page: Page) => {
   await expect(first).toHaveCount(0);
   await expect(second).toHaveCount(0);
   const artifactTabs = await main.getByRole("tab").allTextContents();
-  await notes.click();
+  await firstRow.click();
   await expect(first).toHaveAttribute("aria-selected", "true");
   await expect(second).toBeVisible();
   await expect(main.getByRole("tab")).toHaveCount(2);
@@ -79,7 +80,7 @@ export const verifyNotesPageIsolation = async (page: Page) => {
   await expect(main.getByRole("tab")).toHaveText(artifactTabs);
   await page.reload();
   await expect(main.getByRole("tab")).toHaveText(artifactTabs);
-  await notes.click();
+  await firstRow.click();
   await expect(first).toHaveAttribute("aria-selected", "true");
   await expect(second).toBeVisible();
 };

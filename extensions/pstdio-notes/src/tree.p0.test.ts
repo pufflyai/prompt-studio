@@ -10,7 +10,7 @@ test("lists notes from a local project workspace without repository context", as
   const mount = createNotesMount();
   const note = await createNote(mount, coreIds.create(), "Folder notes");
   const groups = await notesTree.body.body({
-    extensionId: "pstdio.pstdio-notes",
+    extensionId: "pstdio.notes",
     projectId: "notes-project",
     artifacts: { mount: () => mount },
     workspaces: {
@@ -26,10 +26,13 @@ test("lists notes from a local project workspace without repository context", as
     {
       id: note.id,
       label: "Folder notes",
-      resource: { type: "note", id: note.id, extensionId: "pstdio.pstdio-notes", projectId: "notes-project" },
+      resource: { type: "note", id: note.id, extensionId: "pstdio.notes", projectId: "notes-project" },
     },
   ]);
   expect(groups[0].nodes[0].actions[0].disabled).toBe(false);
+  const opened = groups[0].nodes[0].children[0];
+  if (!("target" in opened)) throw new Error("Expected a note navigation target");
+  expect(opened.target.targets.find((target) => target.kind === "panel")?.resource).toEqual(opened.resource);
 });
 
 test("unavailable files do not load a note mount", async () => {
@@ -70,6 +73,9 @@ test("read-only files remain readable without offering note mutations", async ()
   expect(tree.children).toMatchObject([{ id: note.id }]);
   expect(tree.actions[0].disabled).toBe(true);
   expect(tree.children[0]).toMatchObject({ resource: { metadata: { writable: false } } });
+  const opened = tree.children[0];
+  if (!("target" in opened)) throw new Error("Expected a note navigation target");
+  expect(opened.target.targets.find((target) => target.kind === "panel")?.resource).toEqual(opened.resource);
 });
 
 test("remote-only projects do not read local note files", async () => {

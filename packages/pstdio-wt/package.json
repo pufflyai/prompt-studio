@@ -10,7 +10,7 @@
     "typecheck": "bun check",
     "lint": "bun run typecheck && biome check .",
     "format": "biome check --write .",
-    "test": "bun ../../scripts/ci/run-bun-tests.ts --timeout 30000 --silent",
+    "test": "bun ../../scripts/test.ts --scope pstdio-wt",
     "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --timeout 30000 --coverage"
   },
   "dependencies": {

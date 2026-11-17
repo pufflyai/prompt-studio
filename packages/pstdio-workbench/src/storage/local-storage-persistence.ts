@@ -2,8 +2,6 @@ import type {
   PersistedTreeRendererStates,
   PersistedWorkbenchPageLocation,
   PersistedWorkbenchPanelMenuState,
-  PreferencePersistenceAdapter,
-  PreferenceValue,
   TreeRendererPersistenceAdapter,
   WorkbenchPageLocationPersistence,
   WorkbenchPanelMenuStatePersistenceAdapter,
@@ -18,6 +16,7 @@ import {
   workbenchHostStorageKey,
   workbenchStoragePersistenceKey,
 } from "./local-storage-persistence-helpers";
+import { createLocalStoragePreferencePersistence } from "./local-storage-preference-persistence";
 
 export type {
   WorkbenchStorageLike,
@@ -97,19 +96,7 @@ export const createLocalStorageTreePersistence = (
 export const createLocalStorageWorkbenchPersistence = (input: CreateLocalStorageWorkbenchPersistenceInput) => {
   const storage = resolveStorage(input.storage);
   const preferenceKey = workbenchStoragePersistenceKey(input.namespace, "preferences", undefined);
-  const preferencePersistence: PreferencePersistenceAdapter = {
-    getValue: (name, scope) =>
-      readJson<Record<string, PreferenceValue>>(storage, preferenceKey)?.[
-        JSON.stringify([name, scope.scope, scope.scopeId])
-      ],
-    setValue: (name, value, scope) => {
-      const values = readJson<Record<string, PreferenceValue>>(storage, preferenceKey) ?? {};
-      storage.setItem(
-        preferenceKey,
-        JSON.stringify({ ...values, [JSON.stringify([name, scope.scope, scope.scopeId])]: value }),
-      );
-    },
-  };
+  const preferencePersistence = createLocalStoragePreferencePersistence(storage, preferenceKey);
   const layoutPersistence = createLocalStorageLayoutPersistence({
     scope: input.scope,
     debounceMs: input.debounceMs,

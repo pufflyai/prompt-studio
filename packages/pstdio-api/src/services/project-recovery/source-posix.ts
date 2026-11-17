@@ -1,8 +1,8 @@
 import { dlopen, ptr, toArrayBuffer } from "bun:ffi";
 import { type BigIntStats, constants, fstat, read } from "node:fs";
-import { open, realpath, unlink } from "node:fs/promises";
-import { join } from "node:path";
+import { realpath } from "node:fs/promises";
 import { getSystemErrorName } from "node:util";
+import { supportsNativeRecovery } from "./platform";
 
 const component = (name: string) => {
   if (!name || name === "." || name === ".." || name.includes("/") || name.includes("\0"))
@@ -18,28 +18,41 @@ const sameIdentity = (before: BigIntStats, after: BigIntStats) => before.dev ===
 /** Private held-directory access. See ADR 0138. A path is never reconstructed for
  * child reads; swapping a parent pathname cannot redirect the selected handle. */
 export const openRecoverySource = async (selected: string) => {
-  if (process.platform !== "darwin" && process.platform !== "linux")
-    throw new Error("Recovery requires a qualified native source adapter for this platform");
+  if (!supportsNativeRecovery())
+    throw Object.assign(new Error("Recovery requires a qualified native source adapter for this platform"), {
+      code: "ENOTSUP",
+    });
   const darwin = process.platform === "darwin";
-  const library = dlopen(darwin ? "/usr/lib/libSystem.B.dylib" : "libc.so.6", {
-    openat: { args: ["int", "ptr", "int"], returns: "int" },
-    linkat: { args: ["int", "ptr", "int", "ptr", "int"], returns: "int" },
-    close: { args: ["int"], returns: "int" },
-    fdopendir: { args: ["int"], returns: "ptr" },
-    readdir: { args: ["ptr"], returns: "ptr" },
-    closedir: { args: ["ptr"], returns: "int" },
-    readlinkat: { args: ["int", "ptr", "ptr", "u64"], returns: "i64" },
-    [darwin ? "__error" : "__errno_location"]: { args: [], returns: "ptr" },
-  });
+  const load = () =>
+    dlopen(darwin ? "/usr/lib/libSystem.B.dylib" : "libc.so.6", {
+      openat: { args: ["int", "ptr", "int"], returns: "int" },
+      close: { args: ["int"], returns: "int" },
+      fdopendir: { args: ["int"], returns: "ptr" },
+      readdir: { args: ["ptr"], returns: "ptr" },
+      closedir: { args: ["ptr"], returns: "int" },
+      readlinkat: { args: ["int", "ptr", "ptr", "u64"], returns: "i64" },
+      [darwin ? "__error" : "__errno_location"]: { args: [], returns: "ptr" },
+    });
+  let library: ReturnType<typeof load>;
+  try {
+    library = load();
+  } catch (cause) {
+    throw Object.assign(new Error("This system's C library is not supported for folder recovery"), {
+      code: "ENOTSUP",
+      cause,
+    });
+  }
   const native = library.symbols;
   const handles = new Set<number>();
   const streams = new Set<NonNullable<ReturnType<typeof native.fdopendir>>>();
   const errno = new DataView(toArrayBuffer(native[darwin ? "__error" : "__errno_location"]!()!, 0, 4));
-  const failure = () =>
-    Object.assign(new Error("Recovery source filesystem access failed"), {
-      errno: errno.getInt32(0, true),
-      code: getSystemErrorName(-errno.getInt32(0, true)),
+  const failure = () => {
+    const value = errno.getInt32(0, true);
+    return Object.assign(new Error("Recovery source filesystem access failed"), {
+      errno: value,
+      code: value > 0 ? getSystemErrorName(-value) : "EIO",
     });
+  };
   const common = (darwin ? 0x1000000 : 0x80000) | constants.O_NONBLOCK;
   const metadata = darwin ? 0x8000 | 0x200000 : 0x200000;
   let closed = false;
@@ -86,24 +99,6 @@ export const openRecoverySource = async (selected: string) => {
       if (ended || !handles.has(fd)) throw new Error("Recovery source handle is closed");
     };
     return {
-      async create(name: string, bytes: Uint8Array, stagingRoot: string) {
-        active();
-        const target = component(name);
-        const temporary = join(stagingRoot, `${crypto.randomUUID()}.policy-pending`);
-        const prepared = await open(temporary, "wx", 0o600);
-        try {
-          await prepared.writeFile(bytes);
-          await prepared.sync();
-          active();
-          // Linking a complete file refuses an existing destination atomically.
-          // EXDEV blocks setup; there is no direct-write fallback.
-          if (native.linkat(darwin ? -2 : -100, ptr(Buffer.from(`${temporary}\0`)), fd, ptr(target), 0) !== 0)
-            throw failure();
-        } finally {
-          await prepared.close();
-          await unlink(temporary);
-        }
-      },
       stat: async () => {
         active();
         return stat(fd);

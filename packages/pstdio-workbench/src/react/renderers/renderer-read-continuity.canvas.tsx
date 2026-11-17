@@ -40,7 +40,6 @@ const ProgressiveRead = () => {
       signal.throwIfAborted();
       return sections;
     },
-    subscribe: () => () => {},
   });
   return (
     <WorkbenchThemeProvider>

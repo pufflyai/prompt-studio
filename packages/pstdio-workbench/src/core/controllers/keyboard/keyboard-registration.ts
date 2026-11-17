@@ -7,9 +7,9 @@ import type { WorkbenchCore } from "../../workbench-core-types";
 import { registerKeyboardPanelCommands } from "./keyboard-panel-commands";
 
 export const registerKeyboardCommands = (core: WorkbenchCore) => {
-  core.navigationTrees.onDidChange(() => core.keyboard.refresh());
-  core.layout.menuStore.subscribe(() => core.keyboard.refresh());
-  core.preferences.onDidChangeValue(() => core.keyboard.refresh());
+  const navigation = core.navigationTrees.onDidChange(() => core.keyboard.refresh());
+  const stopMenus = core.layout.menuStore.subscribe(() => core.keyboard.refresh());
+  const preferences = core.preferences.onDidChangeValue(() => core.keyboard.refresh());
   core.preferences.registerSchema({
     properties: {
       [SHORTCUT_PREFERENCE_KEY]: {
@@ -91,4 +91,9 @@ export const registerKeyboardCommands = (core: WorkbenchCore) => {
     keybinding: "Alt+Shift+0",
     allowInInputs: true,
   });
+  return () => {
+    navigation.dispose();
+    stopMenus();
+    preferences.dispose();
+  };
 };

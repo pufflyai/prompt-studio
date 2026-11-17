@@ -8,6 +8,22 @@ export interface WorkbenchResourcePaletteEntry extends PaletteEntry {
   resourceKey: string;
   mode: typeof SEARCH_MODE_ID;
 }
+export const WorkbenchResourcePaletteIcon = (props: {
+  icon?: string;
+  indicator?: ResourceBrowseEntry["indicator"];
+}) => {
+  const { indicator } = props;
+  const icon = indicator?.icon ?? props.icon;
+  return icon ? (
+    <WorkbenchIcon
+      name={icon}
+      color={indicator?.color}
+      role={indicator?.label ? "img" : undefined}
+      aria-label={indicator?.label}
+      aria-hidden={indicator?.label ? undefined : true}
+    />
+  ) : null;
+};
 const createResourceEntry = (input: {
   workbench: WorkbenchCore;
   entry: ResourceBrowseEntry;
@@ -29,15 +45,7 @@ const createResourceEntry = (input: {
     searchText: entry.searchText ?? label,
     description: entry.description,
     group: entry.group,
-    icon: icon ? (
-      <WorkbenchIcon
-        name={icon}
-        color={indicator?.color}
-        role={indicator?.label ? "img" : undefined}
-        aria-label={indicator?.label}
-        aria-hidden={indicator?.label ? undefined : true}
-      />
-    ) : undefined,
+    icon: <WorkbenchResourcePaletteIcon icon={icon} indicator={indicator} />,
     onActivate: () => {
       void runUserAction(workbench, label, () => activate(resource), {
         inlineTarget: "command-palette",

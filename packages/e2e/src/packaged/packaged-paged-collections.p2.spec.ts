@@ -102,6 +102,53 @@ test("collapsed paged groups retain their expand controls", async () => {
   }
 });
 
+// Critical risk: during sync, a change between two page requests must not block page navigation.
+test("paged tables open the next page after the data changed", async () => {
+  const root = mkdtempSync(join(tmpdir(), "paged-continuation-browser-"));
+  let child: ChildProcess | undefined;
+  let browser: Browser | undefined;
+  try {
+    const extensions = await writePagedCollectionFixtures(root);
+    const runtime = await startPackagedServe(root, {
+      PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify(extensions.slice(0, 1)),
+    });
+    child = runtime.child;
+    const headers = { ...runtimeAuthorization(runtime.descriptor), "content-type": "application/json" };
+    const created = await fetch(`${runtime.baseUrl}/v1/projects`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(folderProjectInput({ name: "Paged continuation" }, root)),
+    });
+    expect(created.status).toBe(201);
+    const project = (await created.json()) as { id: string };
+    const command = (id: string, params: object) =>
+      fetch(
+        `${runtime.baseUrl}/v1/projects/${project.id}/extensions/commands/example.paged-owner-0.command.${id}/execute`,
+        {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ params }),
+        },
+      ).then((response) => response.json());
+    expect((await command("seed", {})).outcome.ok).toBe(true);
+    browser = await chromium.launch(PROVISIONED_CHROMIUM);
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    await signInBrowser(page, runtime.descriptor);
+    await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
+    await page.goto(`${runtime.baseUrl}/projects/${project.id}`);
+    await page.getByRole("option", { name: "paged-owner-0 table", exact: true }).click();
+    await expect(page.getByRole("cell", { name: "paged-owner-0 row 0000", exact: true })).toBeVisible();
+    expect((await command("touch", { id: "row-0249" })).outcome.ok).toBe(true);
+    await page.getByRole("button", { name: "Go to next page", exact: true }).click();
+    await expect(page.getByRole("cell", { name: "paged-owner-0 row 0100", exact: true })).toBeVisible();
+    await expect(page.getByRole("cell", { name: "paged-owner-0 row 0000", exact: true })).toHaveCount(0);
+  } finally {
+    await browser?.close();
+    if (child) await stopProcess(child);
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("paged tables request discovered and changed columns", async () => {
   const root = mkdtempSync(join(tmpdir(), "paged-columns-browser-"));
   let child: ChildProcess | undefined;
