@@ -81,14 +81,20 @@ type DiffResponse = {
 };
 
 test.describe("Workspace diff", () => {
-  let projectId: string;
+  let projectId: string | undefined;
   const repoDirs: string[] = [];
 
   test.beforeEach(async ({ request }) => {
+    projectId = undefined;
     await deleteAllProjects(request);
   });
 
-  test.afterEach(() => {
+  test.afterEach(async ({ page, request }) => {
+    await page.close();
+    if (projectId) {
+      const response = await request.delete(`${apiBase}/v1/projects/${projectId}`);
+      expect(response.ok()).toBe(true);
+    }
     for (const dir of repoDirs) {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -190,14 +196,20 @@ test.describe("Workspace diff", () => {
 });
 
 test.describe("Grouped Workspaces", () => {
-  let projectId: string;
+  let projectId: string | undefined;
   const repoDirs: string[] = [];
 
   test.beforeEach(async ({ request }) => {
+    projectId = undefined;
     await deleteAllProjects(request);
   });
 
-  test.afterEach(() => {
+  test.afterEach(async ({ page, request }) => {
+    await page.close();
+    if (projectId) {
+      const response = await request.delete(`${apiBase}/v1/projects/${projectId}`);
+      expect(response.ok()).toBe(true);
+    }
     for (const dir of repoDirs) {
       rmSync(dir, { recursive: true, force: true });
     }
