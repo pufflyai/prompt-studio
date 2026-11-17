@@ -76,7 +76,6 @@ jobs:
           CI_PLAN_OUTPUT_DIR: test-results/ci/startup-cpu/execution-${{ matrix.job }}
           BUN_CPU_PROFILE: "1"
           BUN_CPU_PROFILE_DIR: ${{ github.workspace }}/test-results/ci/startup-cpu/processes
-          BUN_OPTIONS: --cpu-prof --cpu-prof-dir ${{ github.workspace }}/test-results/ci/startup-cpu/processes
           PS146_WORKER_PROFILE_DIR: ${{ github.workspace }}/test-results/ci/startup-cpu/workers
         run: |
           python3 - <<'PY'
