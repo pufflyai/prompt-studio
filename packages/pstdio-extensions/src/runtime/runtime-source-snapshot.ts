@@ -36,7 +36,7 @@ const transpilerLoader = (filePath: string) => {
 };
 
 const transpilers = new Map<Bun.JavaScriptLoader, Bun.Transpiler>();
-const importsByPath = new Map<string, { digest: string; imports: string[] }>();
+const importsByContent = new Map<string, string[]>();
 const importsByBytes = new WeakMap<Buffer, { digest: string; imports: Map<string, string[]> }>();
 
 export const readRuntimeModuleImports = (
@@ -50,26 +50,27 @@ export const readRuntimeModuleImports = (
     bytes = { digest: createHash("sha256").update(contents).digest("hex"), imports: new Map() };
     importsByBytes.set(contents, bytes);
   }
-  const { digest } = bytes;
-  const cacheKey = `${filePath}\0${foldConstants}`;
-  const inspected = bytes.imports.get(cacheKey);
+  const loader = transpilerLoader(filePath);
+  const mode = `${extname(filePath) === ".css" ? "css" : loader}\0${foldConstants}`;
+  const inspected = bytes.imports.get(mode);
   if (inspected) return inspected;
-  const cached = importsByPath.get(cacheKey);
-  if (cached?.digest === digest) {
-    bytes.imports.set(cacheKey, cached.imports);
-    return cached.imports;
+  const cacheKey = `${mode}\0${bytes.digest}`;
+  const cached = importsByContent.get(cacheKey);
+  if (cached) {
+    bytes.imports.set(mode, cached);
+    return cached;
   }
 
-  const loader = transpilerLoader(filePath);
   let transpiler = transpilers.get(loader);
   if (!transpiler) {
     transpiler = new Bun.Transpiler({ loader });
     transpilers.set(loader, transpiler);
   }
 
+  // CSS regex captures can retain the whole stylesheet. Copy their UTF-16 code units before caching.
   const imports =
     extname(filePath) === ".css"
-      ? cssModuleInputs(contents.toString())
+      ? cssModuleInputs(contents.toString()).map((path) => Buffer.from(path, "utf16le").toString("utf16le"))
       : [
           ...new Set([
             ...(foldConstants
@@ -80,11 +81,12 @@ export const readRuntimeModuleImports = (
               : []),
           ]),
         ];
-  // Keep one parse per path, without retaining source bytes or previous versions. Content
-  // checks catch edits even when timestamps match; import resolution below stays fresh.
-  if (importsByPath.size >= 4096) importsByPath.delete(importsByPath.keys().next().value!);
-  importsByPath.set(cacheKey, { digest, imports });
-  bytes.imports.set(cacheKey, imports);
+  // Staged and installed copies share parsing, not filesystem identities. Fresh bytes
+  // still validate every read, and graph/package resolution below remains uncached.
+  // Bound retained parse results without retaining their source buffers.
+  if (importsByContent.size >= 12_288) importsByContent.delete(importsByContent.keys().next().value!);
+  importsByContent.set(cacheKey, imports);
+  bytes.imports.set(mode, imports);
   return imports;
 };
 
