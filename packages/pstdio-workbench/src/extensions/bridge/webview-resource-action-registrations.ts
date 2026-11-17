@@ -7,7 +7,7 @@ import type { WorkbenchTextEditingInput } from "./webview-text-editing";
 
 const scope = "resources.actions.invoke";
 type Pending = { finish(error?: string): void; cancel(): void };
-type Owner = { actions: Map<string, () => void>; pending: Map<string, Pending> };
+type Owner = { id: string; actions: Map<string, () => void>; pending: Map<string, Pending> };
 const owners = new WeakMap<HostEventPublisher, Owner>();
 
 // A live guest owns these actions. Disconnect drops the commands and pending work;
@@ -15,7 +15,7 @@ const owners = new WeakMap<HostEventPublisher, Owner>();
 const ownerFor = (events: HostEventPublisher) => {
   const existing = owners.get(events);
   if (existing) return existing;
-  const owner: Owner = { actions: new Map(), pending: new Map() };
+  const owner: Owner = { id: crypto.randomUUID(), actions: new Map(), pending: new Map() };
   owners.set(events, owner);
   const stop = events.onDisconnect(() => {
     for (const pending of owner.pending.values()) pending.finish("The action's view disconnected.");
@@ -66,7 +66,7 @@ export const createWebviewResourceActionRegistrations = (
     const owner = ownerFor(hostEvents);
     if (owner.actions.has(request.registrationId)) throw new Error("This resource action is already registered.");
     if (owner.actions.size >= 32) throw new Error("A view can register at most 32 resource actions.");
-    const commandId = `webview.resource-action.${request.registrationId}`;
+    const commandId = `webview.resource-action.${owner.id}.${request.registrationId}`;
     let active: string | undefined;
     const disposables: Disposable[] = [];
     const dispose = () => {
