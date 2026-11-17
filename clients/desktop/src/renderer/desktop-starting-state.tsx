@@ -1,4 +1,4 @@
-import { Spinner } from "@chakra-ui/react";
+import { Spinner, Stack, Text } from "@chakra-ui/react";
 import { EmptyState } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import type { DesktopStartupPhase } from "../lifecycle/lifecycle-machine";
@@ -29,14 +29,19 @@ export const DesktopStartupProgress = (props: DesktopStartupProgressProps) => {
     <EmptyState
       role="status"
       title={phase === "migrations" ? "Updating Prompt Studio" : "Opening Prompt Studio"}
-      description={
-        waitingWithoutProgress
-          ? "Startup hasn’t reported progress for a while. Something may be wrong."
-          : phaseCopy[phase]
-      }
+      description={phaseCopy[phase]}
       icon={<Spinner size="lg" color="fg.muted" aria-hidden="true" _motionReduce={{ display: "none" }} />}
     >
-      {takingLonger && <CopyStartupLogsButton copyStartupLogs={copyStartupLogs} />}
+      {takingLonger && (
+        <Stack align="center" gap="xs" textAlign="center">
+          <Text color="fg.muted" textStyle="paragraph/S/regular">
+            {waitingWithoutProgress
+              ? "Startup hasn’t reported progress for a while. Something may be wrong."
+              : "It’s taking longer than expected."}
+          </Text>
+          <CopyStartupLogsButton copyStartupLogs={copyStartupLogs} />
+        </Stack>
+      )}
     </EmptyState>
   );
 };

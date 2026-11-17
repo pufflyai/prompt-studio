@@ -44,10 +44,13 @@ test("keeps waiting for a slow runtime and opens automatically without replacing
     await app.lifecyclePage.reload();
     await expect(app.lifecyclePage.getByRole("status")).toContainText("Opening Prompt Studio");
     const copyLogs = app.lifecyclePage.getByRole("status").getByRole("button", { name: "Copy startup logs" });
+    const slowMessage = app.lifecyclePage.getByText(/taking longer than expected/);
     await app.lifecyclePage.clock.runFor(14_000);
     await expect(copyLogs).not.toBeVisible();
+    await expect(slowMessage).not.toBeVisible();
     await app.lifecyclePage.clock.runFor(2_000);
     await expect(copyLogs).toBeVisible();
+    await expect(slowMessage).toBeVisible();
     await expect(app.lifecyclePage.getByRole("status")).toHaveCount(1);
     await expect(app.lifecyclePage.getByRole("alert")).toHaveCount(0);
     await copyLogs.click();
