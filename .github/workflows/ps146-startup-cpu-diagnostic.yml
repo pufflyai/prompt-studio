@@ -75,9 +75,9 @@ jobs:
           PLAN_DISPLAY: "true"
           CI_PLAN_OUTPUT_DIR: test-results/ci/startup-cpu/execution-${{ matrix.job }}
           BUN_CPU_PROFILE: "1"
-          BUN_CPU_PROFILE_DIR: ${{ github.workspace }}/test-results/ci/startup-cpu/processes
-          PS146_WORKER_PROFILE_DIR: ${{ github.workspace }}/test-results/ci/startup-cpu/workers
         run: |
+          export BUN_CPU_PROFILE_DIR="$GITHUB_WORKSPACE/test-results/ci/startup-cpu/processes"
+          export PS146_WORKER_PROFILE_DIR="$GITHUB_WORKSPACE/test-results/ci/startup-cpu/workers"
           python3 - <<'PY'
           import json, os, pathlib, subprocess, time
           root = pathlib.Path('test-results/ci/startup-cpu')
