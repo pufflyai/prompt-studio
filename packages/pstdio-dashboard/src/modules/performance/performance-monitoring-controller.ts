@@ -3,13 +3,19 @@ import type { PerformanceSnapshot } from "pstdio-api-contracts/performance-diagn
 import { pausedExtensions } from "@/shared/extensions/paused-extensions";
 import { createFrameRateCounter } from "./frame-rate";
 import type { PerformanceHost } from "./performance-host";
+import type { ReactRenderOverlay } from "./react-render-overlay";
 import { observeSlowFrames } from "./slow-frame-observer";
 
 // Owns this renderer's slow-frame observer and frame counter. Both run exactly
 // while monitoring is on, so a second reader never starts a second one.
-export const createPerformanceMonitoringController = (host: PerformanceHost) => {
+export const createPerformanceMonitoringController = (host: PerformanceHost, renderOverlay?: ReactRenderOverlay) => {
   const frameRate = createFrameRateCounter();
   let enabled: boolean | undefined;
+  let overlayOwner: object | undefined;
+  const stopOverlay = () => {
+    overlayOwner = undefined;
+    renderOverlay?.setEnabled(false);
+  };
   let stopObserver: (() => void) | undefined;
   let stopStateReports: (() => void) | undefined;
   let disposed = false;
@@ -70,6 +76,7 @@ export const createPerformanceMonitoringController = (host: PerformanceHost) => 
       if (observingSnapshots) stopSnapshots ??= startSnapshots();
       void snapshotQuery.refreshObserved().catch(() => {});
     } else {
+      stopOverlay();
       stopObserver?.();
       stopObserver = undefined;
       stopStateReports?.();
@@ -96,6 +103,16 @@ export const createPerformanceMonitoringController = (host: PerformanceHost) => 
 
   return {
     host,
+    getRenderOverlay: () => renderOverlay?.state(),
+    setRenderOverlayEnabled: (next: boolean, owner?: object) => {
+      if (!renderOverlay) throw new Error("React Scan is unavailable in this build");
+      if (next && !enabled) throw new Error("Enable performance monitoring before highlighting renders");
+      renderOverlay.setEnabled(next);
+      overlayOwner = next ? owner : undefined;
+    },
+    releaseControlOwner: (owner: object) => {
+      if (owner === overlayOwner) stopOverlay();
+    },
     snapshotQuery,
     // A loaded monitoring extension is the person's choice to measure, so monitoring runs exactly
     // while one holds a capture, and stops when the last one is disabled or unloaded.
@@ -113,6 +130,7 @@ export const createPerformanceMonitoringController = (host: PerformanceHost) => 
         if (released) return;
         released = true;
         leases -= 1;
+        if (leases === 0) stopOverlay();
         await release();
         if (leases === 0 && !disposed) {
           if (host.kind === "desktop") {
@@ -147,6 +165,7 @@ export const createPerformanceMonitoringController = (host: PerformanceHost) => 
       return stop;
     },
     dispose: () => {
+      stopOverlay();
       disposed = true;
       void releaseCapture?.().catch(() => {});
       releaseCapture = undefined;

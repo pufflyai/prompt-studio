@@ -2,6 +2,50 @@ import { expect, test } from "bun:test";
 import { createHostCapabilityGate } from "pstdio-extensions/bridge/contract";
 import { createHostEventPublisher } from "pstdio-extensions/bridge/host";
 import { createExtensionWebviewHostCapabilities } from "./extension-webview-host-capabilities";
+import { parseWebviewCapabilityParams } from "./webview-capability-params";
+
+test("disconnect releases the overlay only for the view that enabled it", async () => {
+  let owner: object | undefined;
+  const adapter = {
+    state: async () => ({ enabled: true, host: "browser" as const }),
+    recordings: async () => null,
+    retain: async () => async () => {},
+    snapshot: async () => null,
+    subscribe: () => () => {},
+    control: async (_request: unknown, caller?: object) => {
+      owner = caller;
+    },
+    releaseControlOwner: (caller: object) => {
+      if (owner === caller) owner = undefined;
+    },
+  };
+  const first = createHostEventPublisher();
+  const second = createHostEventPublisher();
+  const firstControl = createExtensionWebviewHostCapabilities({ performance: adapter, hostEvents: first })[
+    "performance.control"
+  ]!;
+  const secondControl = createExtensionWebviewHostCapabilities({ performance: adapter, hostEvents: second })[
+    "performance.control"
+  ]!;
+  await firstControl({ operation: "set-render-overlay", enabled: true });
+  expect(owner).toBe(first);
+  await secondControl({ operation: "set-render-overlay", enabled: true });
+  first.unbind();
+  expect(owner).toBe(second);
+  second.unbind();
+  expect(owner).toBeUndefined();
+});
+
+test("render overlay controls validate a boolean and require a manifest grant", async () => {
+  const request = { operation: "set-render-overlay", enabled: true } as const;
+  expect(parseWebviewCapabilityParams("performance.control", request)).toEqual(request);
+  expect(() => parseWebviewCapabilityParams("performance.control", { ...request, enabled: "true" })).toThrow();
+  const denied = createHostCapabilityGate({
+    capabilities: { "performance.control": async () => {} },
+    declaredCapabilities: ["performance.read"],
+  });
+  await expect(denied.call({ method: "performance.control", params: request })).rejects.toThrow();
+});
 
 test("requires declared diagnostics access and releases the subscription on disconnect", async () => {
   let subscriptions = 0;

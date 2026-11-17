@@ -1,4 +1,5 @@
 import type { SettingsRegistry, WorkbenchModuleContribution } from "@pstdio/workbench";
+import { reactRenderOverlay } from "@/react-scan-bootstrap";
 import { resolveDashboardStorage } from "@/shared/app/dashboard-storage";
 import { registerPerformanceDiagnostics } from "@/shared/app/performance-diagnostics";
 import { createPerformanceHost } from "./performance-host";
@@ -13,6 +14,7 @@ export const createPerformanceMonitoring = () => {
   const bridge = (globalThis as { promptStudioDesktop?: unknown }).promptStudioDesktop;
   const controller = createPerformanceMonitoringController(
     createPerformanceHost(bridge, resolveDashboardStorage(undefined)),
+    reactRenderOverlay,
   );
   void controller.load();
   return controller;
