@@ -6,6 +6,9 @@ import { test } from "../helpers/causal-evidence-test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { homeFrame, homePage } from "../helpers/home-loading";
 
+// Two cold project installs and source rebuilds share this whole-case allowance.
+test.setTimeout(120_000);
+
 // Critical risk: changing one project's default Home must not change another project's Home.
 test("projects own editable Home sources and keep their customizations through setup", async ({
   page,
@@ -40,7 +43,10 @@ test("projects own editable Home sources and keep their customizations through s
   await page.goto(`/projects/${custom.id}`);
   await expect(homePage(page)).toBeVisible();
   writeFileSync(join(custom.home.sourcePath, component), customizedSource);
-  await expect(homeFrame(page).getByText("Project-specific welcome notes", { exact: true })).toBeVisible();
+  // The retained failure spent 4.4 s building the edited webview before its frame could reload.
+  await expect(homeFrame(page).getByText("Project-specific welcome notes", { exact: true })).toBeVisible({
+    timeout: 15_000,
+  });
   causalEvidence.mark("custom-home:edited");
 
   await page.goto(`/projects/${original.id}`);
