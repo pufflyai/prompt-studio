@@ -47,7 +47,7 @@ jobs:
           merge-multiple: true
           run-id: "44106857357"
           github-token: ${{ github.token }}
-          path: test-results/ci
+          path: .
       - name: Record exact source and add worker-only CPU instrumentation
         shell: bash
         run: |
