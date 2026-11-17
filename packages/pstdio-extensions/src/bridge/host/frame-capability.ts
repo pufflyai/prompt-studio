@@ -1,8 +1,9 @@
 import { capabilityReply } from "./capability-reply";
 
-export const frameDimensionChanged = (enabled: boolean, update: (size: number) => void) => (size: number) => {
-  if (enabled && Number.isFinite(size) && size >= 0) update(size);
-};
+export const frameDimensionChanged =
+  (enabled: boolean, update: (size: number) => void, visible: () => boolean) => (size: number) => {
+  if (enabled && Number.isFinite(size) && size >= 0 && (size > 0 || visible())) update(size);
+  };
 
 /** Old RPC listeners may outlive their frame. Admission belongs to its live browsing context. */
 export const callFrameCapability = <T>(
