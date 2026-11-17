@@ -58,6 +58,7 @@ describe("createDb", () => {
       const started = performance.now();
       const phase = (name: string) =>
         console.info(`Default database fixture: ${name} +${Math.round(performance.now() - started)}ms`);
+      phase("starting");
       const client = await createDb({ onPhase: phase });
       phase("created");
 
