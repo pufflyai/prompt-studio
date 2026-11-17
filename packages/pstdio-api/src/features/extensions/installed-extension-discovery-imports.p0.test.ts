@@ -119,14 +119,21 @@ test("discovery joins first admission after its accepted marker has been publish
   expect(readRuntimeImportCount() - before).toBe(1);
 });
 
-test("an obsolete cold admission still discovers the revision that was accepted while it evaluated", async () => {
+test.each([
+  "throw",
+  "diagnostics",
+])("an obsolete cold admission adopts the newer revision after %s", async (failure) => {
   const { source, manifests, discover } = fixture();
   const started = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();
+  if (failure === "diagnostics")
+    writeFileSync(join(source, "extension.ts"), 'throw new Error("Obsolete module could not import");');
   const first = loadAcceptedExtensionSource(source, async (accepted) => {
     if (accepted) return loadExtensionSource(source);
+    const failed = failure === "diagnostics" ? await loadExtensionSource(source) : undefined;
     started.resolve();
     await release.promise;
+    if (failed) return failed;
     throw new Error("Another revision won acceptance");
   });
   let second: ReturnType<typeof discover> | undefined;

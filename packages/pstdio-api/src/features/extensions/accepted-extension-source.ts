@@ -51,25 +51,31 @@ export const loadAcceptedExtensionSource = async (
     acceptance.key = revisionKey(revision);
   })
     .then(async (loaded) => {
-      if (loaded.preparedRevision && !loaded.diagnostics.some((diagnostic) => diagnostic.severity === "error")) {
-        const actual = revisionKey(await readAcceptedRevision(sourcePath));
-        // An install can accept a newer revision while this import is evaluating.
-        if (actual && actual === revisionKey(loaded.preparedRevision))
-          retainLoadedSource(path, { key: actual, loaded });
-      }
-      return loaded;
+      const actual = revisionKey(await readAcceptedRevision(sourcePath));
+      const loadedKey = loaded.preparedRevision ? revisionKey(loaded.preparedRevision) : key;
+      const replaced = actual !== null && actual !== loadedKey;
+      if (
+        actual &&
+        !replaced &&
+        loaded.preparedRevision &&
+        !loaded.diagnostics.some(({ severity }) => severity === "error")
+      )
+        retainLoadedSource(path, { key: actual, loaded });
+      return { loaded, replaced };
     })
     .finally(() => {
       if (pending.get(key)?.promise === loading) pending.delete(key);
       if (pending.size === 0 && loadingByPath.get(path) === pending) loadingByPath.delete(path);
     })
-    .catch(async (error) => {
-      const current = revisionKey(await readAcceptedRevision(sourcePath));
-      // A failed compare-and-set can mean a newer revision is already available.
-      // The obsolete in-flight entry has been released, so all callers can join the newer load.
-      if (current && current !== key) return loadAcceptedExtensionSource(sourcePath, load);
-      throw error;
-    });
+    .then(
+      ({ loaded, replaced }) => (replaced ? loadAcceptedExtensionSource(sourcePath, load) : loaded),
+      async (error) => {
+        const current = revisionKey(await readAcceptedRevision(sourcePath));
+        // Release the old load before joining a newer revision. A replacement may appear during a failed import or CAS.
+        if (current && current !== key) return loadAcceptedExtensionSource(sourcePath, load);
+        throw error;
+      },
+    );
   pending.set(key, { promise: loading, acceptance });
   loadingByPath.set(path, pending);
   return loading;
