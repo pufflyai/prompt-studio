@@ -4,6 +4,7 @@ import { junitCases } from "./bun-test-evidence";
 interface ExpectedCase {
   file: string;
   name: string;
+  failureMessageIncludes?: string[];
 }
 interface ReportedCase {
   file: string;
@@ -48,7 +49,11 @@ export const assertStableQuarantineExclusions = (reported: ReportedCase[], expec
 
 interface BrowserSuite {
   suites?: BrowserSuite[];
-  specs?: { title: string; file: string; tests: { results: { status: string }[] }[] }[];
+  specs?: {
+    title: string;
+    file: string;
+    tests: { results: { status: string; error?: { message?: string }; errors?: { message?: string }[] }[] }[];
+  }[];
 }
 export const verifyPlaywrightQuarantineReport = (
   report: { config: { rootDir: string }; suites: BrowserSuite[]; errors?: unknown[] },
@@ -64,11 +69,19 @@ export const verifyPlaywrightQuarantineReport = (
     const results = entry.tests.flatMap((test) => test.results);
     if (results.length !== 1 || !["passed", "failed", "timedOut"].includes(results[0]!.status))
       throw new Error(`Quarantine case must execute exactly once: ${entry.title}`);
-    return {
+    const actual = {
       file: relative(root, resolve(report.config.rootDir, entry.file)).replaceAll("\\", "/"),
       title: entry.title,
       outcome: results[0]!.status === "passed" ? "success" : "failure",
     };
+    const signature = expected.find((candidate) => matchesCase(actual, candidate))?.failureMessageIncludes;
+    if (actual.outcome === "failure" && signature) {
+      const result = results[0]!;
+      const errors = result.errors?.length ? result.errors : [result.error];
+      if (!signature.length || errors.some((error) => !signature.every((text) => error?.message?.includes(text))))
+        throw new Error(`Unexpected quarantine failure: ${actual.file}: ${actual.title}`);
+    }
+    return actual;
   });
   return verifyBunQuarantineCases(records, expected);
 };
