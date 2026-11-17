@@ -1,4 +1,4 @@
-import type { ExtensionStorageApi, StorageRecord } from "@pstdio/sdk/extensions";
+import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 
 export { TICKET_KEY_PREFIX, TICKETS_COLLECTION, ticketRecordId } from "./ticket-record-address";
 
@@ -19,19 +19,31 @@ export const ticketRecords = (storage: ExtensionStorageApi) => {
     const record = await storage.records.read(ticketRecordId(storage, id));
     return { record, stored: live(record) ? (record.value as unknown as StoredTicketRecord) : undefined };
   };
-  const save = async (id: string, value: StoredTicket, record: StorageRecord, stored?: StoredTicketRecord) => {
-    const outcome = await storage.records.commit({
-      operationId: storage.ids.create(),
-      edits: [
-        {
-          recordId: ticketRecordId(storage, id),
-          observedRevision: record.revision,
-          replace: json(writeTicketTags(value, stored)),
-          ...(record.deleted ? { deleted: false } : {}),
-        },
-      ],
-    });
-    return outcome.state !== "refused";
+  // Like the collection writes before, a save keeps the observed lifetime: a ticket another
+  // device deleted is not brought back, and a stale read is read again before saving.
+  const save = async (id: string, value: StoredTicket, requireLive: boolean) => {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const { record, stored } = await observe(id);
+      if (requireLive && !stored) throw new Error(`Item not found: ${id}`);
+      const recordId = ticketRecordId(storage, id);
+      const replace = json(writeTicketTags(value, stored));
+      if (stored) {
+        const saved = await storage.records.commitIfCurrent({
+          operationId: storage.ids.create(),
+          edits: [{ recordId, expectedRevision: record.revision, replace }],
+        });
+        if (saved) return;
+        continue;
+      }
+      await storage.records.commit({
+        operationId: storage.ids.create(),
+        edits: [
+          { recordId, expectedRevision: record.revision, replace, ...(record.deleted ? { deleted: false } : {}) },
+        ],
+      });
+      return;
+    }
+    throw new Error(`Ticket ${id} kept changing while saving`);
   };
   return {
     get: async (id: string) => {
@@ -48,15 +60,8 @@ export const ticketRecords = (storage: ExtensionStorageApi) => {
       const { record, stored } = await observe(id);
       return stored && { revision: record.revision, stored, value: readTicketTags(stored) };
     },
-    put: async (id: string, value: StoredTicket) => {
-      const { record, stored } = await observe(id);
-      await save(id, value, record, stored);
-    },
-    update: async (id: string, value: StoredTicket) => {
-      const { record, stored } = await observe(id);
-      if (!stored) throw new Error(`Item not found: ${id}`);
-      await save(id, value, record, stored);
-    },
+    put: (id: string, value: StoredTicket) => save(id, value, false),
+    update: (id: string, value: StoredTicket) => save(id, value, true),
     /** Saves only while the ticket still has the revision `read` returned; false for changed or deleted tickets. */
     updateIfUnchanged: async (id: string, revision: string, value: StoredTicket, stored?: StoredTicketRecord) => {
       const current = stored ?? (await observe(id)).stored;

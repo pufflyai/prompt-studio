@@ -116,3 +116,57 @@ describe("importTicketsCommand", () => {
     expect((await ticketsCollection(storage).get(result.tickets.new!.id))?.parentId).toBe("legacy");
   });
 });
+
+describe("importTicketsCommand validation and failures", () => {
+  test("rejects self-references and dependency or parent cycles before anything is written", async () => {
+    const storage = createMemoryStorage();
+    await seedDefaultStatuses(storage);
+    for (const tickets of [
+      [{ key: "a", title: "A", dependsOn: ["a"] }],
+      [
+        { key: "a", title: "A", dependsOn: ["b"] },
+        { key: "b", title: "B", dependsOn: ["a"] },
+      ],
+      [
+        { key: "a", title: "A", parent: "b" },
+        { key: "b", title: "B", parent: "a" },
+      ],
+    ] satisfies ImportedTicket[][])
+      await expect(importTickets(storage, tickets)).rejects.toThrow("cycle");
+    await expect(importTickets(storage, [{ key: "a", title: "A", links: [{} as never] }])).rejects.toThrow(
+      "without a workspace or session",
+    );
+    expect(await ticketsCollection(storage).list()).toEqual([]);
+  });
+
+  test("a failure after some groups still announces the saved tickets and says how many were saved", async () => {
+    const storage = createMemoryStorage();
+    await seedDefaultStatuses(storage);
+    let commits = 0;
+    const failing = {
+      ...storage,
+      records: {
+        ...storage.records,
+        commit: async (group: Parameters<typeof storage.records.commit>[0]) => {
+          // The second group of imported tickets is refused.
+          if (group.edits.length && ++commits === 2)
+            return { operationId: group.operationId, state: "refused" as const, status: "saved-locally" as const };
+          return storage.records.commit(group);
+        },
+      },
+    } as typeof storage;
+    const emitted: unknown[] = [];
+    await expect(
+      importTicketsCommand.run(
+        ...makeCommandArgs({
+          storage: failing,
+          params: { tickets: Array.from({ length: 150 }, (_, index) => ({ key: `k${index}`, title: `T${index}` })) },
+          overrides: { events: { emit: async (event: unknown) => void emitted.push(event) } as never },
+        }),
+      ),
+    ).rejects.toThrow("after saving 100 of 150 tickets");
+    expect(emitted).toHaveLength(1);
+    // The fixture keeps ticket numbers per storage object, so read through the importing one.
+    expect(await ticketsCollection(failing).list()).toHaveLength(100);
+  });
+});

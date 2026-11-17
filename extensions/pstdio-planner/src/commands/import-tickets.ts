@@ -30,8 +30,38 @@ const MAX_TICKETS = 1000;
 // Bounded save groups keep each records.commit under the 4 MiB group limit.
 const GROUP_TICKETS = 100;
 const GROUP_BYTES = 1024 * 1024;
+const MAX_TICKET_BYTES = 200 * 1024;
 
 const json = (value: unknown) => JSON.parse(JSON.stringify(value)) as never;
+
+// Existing tickets cannot name new ones, so only links between imported keys can form a cycle.
+const rejectCycles = (tickets: ImportedTicket[], next: (ticket: ImportedTicket) => string[], kind: string) => {
+  const byKey = new Map(tickets.map((ticket) => [ticket.key, ticket]));
+  const done = new Set<string>();
+  const visit = (key: string, path: Set<string>) => {
+    if (path.has(key)) throw new Error(`Ticket "${key}" is part of a ${kind} cycle.`);
+    if (done.has(key)) return;
+    path.add(key);
+    for (const value of next(byKey.get(key)!)) if (byKey.has(value)) visit(value, path);
+    path.delete(key);
+    done.add(key);
+  };
+  for (const ticket of tickets) visit(ticket.key, new Set());
+};
+
+const validLink = (link: unknown) =>
+  !!link &&
+  (typeof (link as { workspace?: unknown }).workspace === "string" ||
+    typeof (link as { session?: unknown }).session === "string");
+
+const validateTicket = (ticket: ImportedTicket) => {
+  if (!ticket.title && !ticket.content) throw new Error(`Ticket "${ticket.key}" needs a title or content.`);
+  if (!(ticket.links ?? []).every(validLink))
+    throw new Error(`Ticket "${ticket.key}" has a link without a workspace or session.`);
+  // One ticket is one record, and a record holds at most 256 KiB.
+  if (new TextEncoder().encode(JSON.stringify(ticket)).length > MAX_TICKET_BYTES)
+    throw new Error(`Ticket "${ticket.key}" is larger than ${MAX_TICKET_BYTES / 1024} KiB.`);
+};
 
 const validate = (tickets: unknown) => {
   if (!Array.isArray(tickets) || tickets.length === 0 || tickets.length > MAX_TICKETS)
@@ -41,8 +71,10 @@ const validate = (tickets: unknown) => {
     if (!ticket || typeof ticket.key !== "string" || !ticket.key) throw new Error("Every ticket needs a key.");
     if (keys.has(ticket.key)) throw new Error(`Ticket key "${ticket.key}" appears twice.`);
     keys.add(ticket.key);
-    if (!ticket.title && !ticket.content) throw new Error(`Ticket "${ticket.key}" needs a title or content.`);
+    validateTicket(ticket);
   }
+  rejectCycles(tickets as ImportedTicket[], (ticket) => ticket.dependsOn ?? [], "dependency");
+  rejectCycles(tickets as ImportedTicket[], (ticket) => (ticket.parent ? [ticket.parent] : []), "parent");
   return tickets as ImportedTicket[];
 };
 
@@ -110,6 +142,7 @@ const allocate = async (ctx: CommandContext, count: number) => {
 const saveGroups = async (ctx: CommandContext, tickets: StoredTicket[]) => {
   let group: StoredTicket[] = [];
   let bytes = 0;
+  let saved = 0;
   const flush = async () => {
     if (!group.length) return;
     const outcome = await ctx.storage.records.commit({
@@ -119,12 +152,14 @@ const saveGroups = async (ctx: CommandContext, tickets: StoredTicket[]) => {
         replace: json(ticketRecord(ticket)),
       })),
     });
-    if (outcome.state === "refused") throw new Error("The ticket import was refused; no later groups were saved.");
+    if (outcome.state === "refused")
+      throw new Error(`The ticket import was refused after saving ${saved} of ${tickets.length} tickets.`);
+    saved += group.length;
     group = [];
     bytes = 0;
   };
   for (const ticket of tickets) {
-    const size = JSON.stringify(ticket).length;
+    const size = new TextEncoder().encode(JSON.stringify(ticket)).length;
     if (group.length >= GROUP_TICKETS || (group.length && bytes + size > GROUP_BYTES)) await flush();
     group.push(ticket);
     bytes += size;
@@ -170,39 +205,51 @@ export const importTicketsCommand = defineCommand({
     const tickets = validate(input.tickets);
     await ensureTicketStorage(ctx);
     const resolved = await resolveInputs(ctx, tickets);
+    // Tag rules such as single-select are checked before any number is allocated.
+    const tags: Awaited<ReturnType<typeof ticketTagsForIds>>[] = [];
+    for (const ticket of tickets)
+      tags.push(
+        await ticketTagsForIds(
+          ctx.storage,
+          (ticket.tags ?? []).map((value) => resolved.tagIds.get(value)!),
+        ),
+      );
     const identities = await allocate(ctx, tickets.length);
     const ids = new Map(tickets.map((ticket, index) => [ticket.key, identities[index]!.id]));
     const reference = (value: string) => ids.get(value) ?? resolved.existing.get(value)!;
     const now = new Date().toISOString();
-    await withTicketOrder(ctx, async () => {
-      await ensureTicketStorage(ctx);
-      let position = await appendTicketPositionFromStorage(ctx.storage);
-      const stored: StoredTicket[] = [];
-      for (const [index, ticket] of tickets.entries()) {
-        position = ctx.storage.positions.between(position);
-        const tagIds = (ticket.tags ?? []).map((value) => resolved.tagIds.get(value)!);
-        stored.push({
-          id: identities[index]!.id,
-          title: ticket.content ? deriveTitle(ticket.content) : ticket.title!,
-          content: ticket.content ?? "",
-          statusId: resolved.status(ticket.status),
-          tags: await ticketTagsForIds(ctx.storage, tagIds),
-          attachments: [],
-          parentId: ticket.parent ? reference(ticket.parent) : null,
-          dependsOn: (ticket.dependsOn ?? []).map(reference),
-          blockedReason: null,
-          userPrompt: null,
-          draft: false,
-          archived: false,
-          position,
-          createdAt: now,
-          updatedAt: now,
-        } as StoredTicket);
-      }
-      await saveGroups(ctx, stored);
-    });
-    await addLinks(ctx, tickets, ids, resolved.targets);
-    await emitPlannerTicketsChanged(ctx, {});
+    try {
+      await withTicketOrder(ctx, async () => {
+        await ensureTicketStorage(ctx);
+        let position = await appendTicketPositionFromStorage(ctx.storage);
+        const stored: StoredTicket[] = [];
+        for (const [index, ticket] of tickets.entries()) {
+          position = ctx.storage.positions.between(position);
+          stored.push({
+            id: identities[index]!.id,
+            title: ticket.content ? deriveTitle(ticket.content) : ticket.title!,
+            content: ticket.content ?? "",
+            statusId: resolved.status(ticket.status),
+            tags: tags[index]!,
+            attachments: [],
+            parentId: ticket.parent ? reference(ticket.parent) : null,
+            dependsOn: (ticket.dependsOn ?? []).map(reference),
+            blockedReason: null,
+            userPrompt: null,
+            draft: false,
+            archived: false,
+            position,
+            createdAt: now,
+            updatedAt: now,
+          } as StoredTicket);
+        }
+        await saveGroups(ctx, stored);
+      });
+      await addLinks(ctx, tickets, ids, resolved.targets);
+    } finally {
+      // Groups saved before a failure are already visible, so views refresh either way.
+      await emitPlannerTicketsChanged(ctx, {});
+    }
     return {
       tickets: Object.fromEntries(tickets.map((ticket, index) => [ticket.key, identities[index]!])),
     };

@@ -8,7 +8,8 @@ import { timelineViewSchema } from "../timeline/commands/view-schema";
 import { tagsCollection } from "./collections";
 import { migratePlannerStorage } from "./migrate-storage";
 import { seedTicketIdentity, ticketsCollection } from "./ticket-context.fixture";
-import { ticketRecords } from "./ticket-records";
+import { changeTicketRecord, ticketRecords } from "./ticket-records";
+import { queueTicketWrite } from "./ticket-write-queue";
 import type { Ticket } from "./types";
 
 const ticket = {
@@ -104,4 +105,25 @@ test("concurrent first reads of an upgraded project wait for the move instead of
   const read = await Promise.all(["a", "b", "c"].map((id) => records.get(id)));
 
   expect(read.map((ticket) => ticket?.title)).toEqual(["A", "B", "C"]);
+});
+
+test("a ticket write queued by another command during an old project's upgrade does not block it", async () => {
+  const storage = createMemoryStorage({
+    collections: {
+      tickets: Object.fromEntries(
+        ["a", "b", "c"].map((id, index) => [id, { id, title: id, content: "", sortOrder: index + 1 }]),
+      ),
+    },
+  });
+  // Below version 4 the upgrade also imports ticket order.
+  await storage.migrate(3, async () => {});
+  const upgrade = migratePlannerStorage({ storage });
+  // Another command holds the same ticket's write queue with its own storage object.
+  const save = queueTicketWrite("c", () =>
+    changeTicketRecord({ ...storage }, "c", (ticket) => ({ ...ticket, title: "edited" })),
+  );
+  await Promise.all([upgrade, save]);
+
+  expect((await ticketRecords(storage).get("c"))?.title).toBe("edited");
+  expect((await ticketRecords(storage).get("c"))?.position).toBeString();
 });
