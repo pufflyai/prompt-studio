@@ -1,5 +1,6 @@
 import type { CanvasMeta } from "@pstdio/canvas";
 import { MarmaladeEditingPreview } from "../../apps/marmalade/marmalade-editing-preview";
+import { PropertyControls } from "./marmalade-property-controls";
 import { InspectorLayout, NativeActions } from "./marmalade-workflows";
 
 export default {
@@ -11,3 +12,4 @@ export default {
 export const ActionsAndExport = () => <NativeActions />;
 export const InspectorGroups = () => <InspectorLayout />;
 export const SharedEditing = () => <MarmaladeEditingPreview />;
+export const PropertyEditing = () => <PropertyControls />;
