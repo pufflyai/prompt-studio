@@ -169,5 +169,7 @@ test(
     });
     return current.done;
   },
-  PACKAGED_TEST_TIMEOUT,
+  // Two cold devices, offline moves, reconnect and another cold restart reached
+  // 28.95s before final sync on Linux CI; keep the complete scenario and cleanup.
+  Math.max(PACKAGED_TEST_TIMEOUT, 120_000),
 );

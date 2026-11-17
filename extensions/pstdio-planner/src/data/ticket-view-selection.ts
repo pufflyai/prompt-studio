@@ -52,7 +52,21 @@ export const prepareTicketViewQuery = async (
     ...(input.sorts ?? []).map(({ attributeId }) => attributeId),
     ...(input.page?.search ? (input.page.searchFields ?? input.page.fields) : []),
   ]);
-  const fields = ticketViewFields(attributes, tags, computed, requested);
+  const dateSort = input.sorts?.[0]?.attributeId;
+  const calendarField = ({ created: "createdCalendarOnly", updated: "updatedCalendarOnly" } as Record<string, string>)[
+    dateSort ?? ""
+  ];
+  const calendarRows = calendarField
+    ? await ctx.storage.records.query({
+        index: "ticket-view",
+        fields: [],
+        limit: 1,
+        orderBy: [],
+        revision: before.revision,
+        where: { field: calendarField, op: "eq", value: true },
+      })
+    : undefined;
+  const fields = ticketViewFields(attributes, tags, computed, requested, !calendarRows?.records.length);
   const scope = collectionViewSelection({
     index: "ticket-view",
     computed,

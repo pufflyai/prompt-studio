@@ -108,3 +108,39 @@ test("Board does not resolve hidden relationship badges or query reviews for an 
   expect(empty.rows).toEqual([]);
   expect(empty.page.total).toBe(0);
 });
+
+test.each([
+  "created",
+  "updated",
+])("Board preserves viewer-zone ordering for historical date-only %s metadata", async (attributeId) => {
+  const storage = createMemoryStorage();
+  for (const [id, date] of [
+    ["calendar", "2026-01-01"],
+    ["instant", "2026-01-01T03:00:00.000Z"],
+  ]) {
+    await putTicket(storage, {
+      id,
+      shorthand: `T-${id}`,
+      title: id,
+      content: `# ${id}`,
+      statusId: "ready",
+      archived: false,
+      position: id,
+      createdAt: date,
+      updatedAt: date,
+    });
+  }
+  const ctx = makeCommandContext({ storage, params: {} });
+  const result = await queryTickets(ctx, {
+    sorts: [{ attributeId, direction: "asc" }],
+    page: {
+      limit: 100,
+      offset: 0,
+      fields: ["id"],
+      search: "",
+      viewer: { locale: "en-US", timeZone: "America/New_York", now: "2026-01-01T00:00:00.000Z" },
+    },
+    settings: { viewMode: "list", columnGrouping: "none", rowGrouping: "none", displayProperties: ["id"] },
+  } as never);
+  expect(result.rows.map(({ id }) => id)).toEqual(["instant", "calendar"]);
+});

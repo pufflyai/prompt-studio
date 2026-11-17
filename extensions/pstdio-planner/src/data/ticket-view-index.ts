@@ -9,6 +9,17 @@ const projected = <T extends StorageRecordIndex["fields"][string]["type"]>(path:
   derive: { kind: "expression" as const, expression: { variable: "value" } },
 });
 
+// Historical date-only metadata keeps viewer-zone midnight semantics. This indexed
+// flag lets normal ISO instant metadata use its stored numeric order without a scan.
+const calendarOnly = (path: string): StorageRecordIndex["fields"][string] => ({
+  path: [path],
+  type: "boolean",
+  derive: {
+    kind: "expression",
+    expression: { op: "eq", args: [{ op: "length", args: [{ variable: "value" }] }, { literal: 10 }] },
+  },
+});
+
 export const ticketViewIndex: StorageRecordIndex = {
   name: "ticket-view",
   collection: "tickets",
@@ -35,8 +46,10 @@ export const ticketViewIndex: StorageRecordIndex = {
     draft: projected("draft", "boolean"),
     position: projected("position", "string"),
     createdAt: projected("createdAt", "string"),
+    createdCalendarOnly: calendarOnly("createdAt"),
     createdInstant: { path: ["createdAt"], type: "number", derive: { kind: "timestamp" } },
     updatedAt: projected("updatedAt", "string"),
+    updatedCalendarOnly: calendarOnly("updatedAt"),
     updatedInstant: { path: ["updatedAt"], type: "number", derive: { kind: "timestamp" } },
     parentId: projected("parentId", "string"),
     blockedReason: projected("blockedReason", "string"),
@@ -83,6 +96,6 @@ export const ticketViewIndex: StorageRecordIndex = {
       lookup: { index: "timeline-gates", on: [{ sourceField: "id", relatedField: "ticketId" }], field: "ticketId" },
     },
   },
-  equality: ["id", "archived", "statusId"],
+  equality: ["id", "archived", "statusId", "createdCalendarOnly", "updatedCalendarOnly"],
   orderBy: [{ field: "position", direction: "asc" }],
 };

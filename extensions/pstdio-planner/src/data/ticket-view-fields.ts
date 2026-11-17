@@ -9,6 +9,7 @@ export const ticketViewFields = (
   tags: StoredTag[],
   computed: NonNullable<StorageRecordQuery["computed"]>,
   requested: ReadonlySet<string>,
+  instantOrder = true,
 ) => {
   const names: Record<string, string> = {
     id: "breadcrumb",
@@ -48,8 +49,8 @@ export const ticketViewFields = (
     fields[attribute.id] = {
       field: names[attribute.id] ?? attribute.id,
       kind,
-      ...(attribute.id === "created" ? { orderField: "createdInstant" } : {}),
-      ...(attribute.id === "updated" ? { orderField: "updatedInstant" } : {}),
+      ...(instantOrder && attribute.id === "created" ? { orderField: "createdInstant" } : {}),
+      ...(instantOrder && attribute.id === "updated" ? { orderField: "updatedInstant" } : {}),
       ...("options" in attribute.type
         ? {
             options: attribute.type.options.map(({ value, label }) => ({
