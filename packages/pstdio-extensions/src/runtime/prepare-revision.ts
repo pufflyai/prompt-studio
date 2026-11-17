@@ -84,8 +84,8 @@ export const prepareRevision = async (
   const generationRoot = join(root, crypto.randomUUID());
   const packagePath = revisionSnapshotPath(generationRoot, realpathSync(sourcePath));
   try {
-    copyRevisionSource(sourcePath, packagePath);
-    copyRevisionDependencies(inputs.dependencies, sourcePath, packagePath, generationRoot);
+    await copyRevisionSource(sourcePath, packagePath);
+    await copyRevisionDependencies(inputs.dependencies, sourcePath, packagePath, generationRoot);
     copyRevisionCompilerInputs(inputs.dependencies.compilerInputs, generationRoot);
     const entryPath = await bundleEntry(
       join(packagePath, relative(sourcePath, inputs.entryPath)),

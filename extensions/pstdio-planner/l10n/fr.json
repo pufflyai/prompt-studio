@@ -41,6 +41,7 @@
   "settings.implementation.defaultTargetBranch.description": "Branche distante visée par les nouveaux travaux. Effacez-la pour utiliser la branche par défaut du dépôt.",
   "ticketWorkspaces.project": "Dossier du projet",
   "commands.linkTicket": "Lier le ticket",
+  "commands.importTickets": "Importer des tickets",
   "commands.unlinkTicket": "Délier le ticket",
   "commands.refinementPolicy.title": "Lire les options d’affinement des tickets",
   "settings.canvasDesign.title": "Mettre à jour les designs du canevas pour les changements d’interface",

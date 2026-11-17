@@ -29,6 +29,7 @@ export {
   localContributionIdGrammar,
   localContributionIdPattern,
 } from "./contribution-id";
+export { dataTableImageText, readDataTableImageValue } from "./data-table-image-values";
 export { resolveDataTableComparableValue, resolveDataTableFieldKind } from "./data-table-values";
 export { applyEditingChanges, diffEditingState, rebaseEditingChanges } from "./editing-state";
 export * from "./event-reference";

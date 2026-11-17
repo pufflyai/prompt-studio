@@ -1,7 +1,9 @@
 import { readDataTableChartValue } from "./data-table-chart-values";
+import { dataTableImageText } from "./data-table-image-values";
 
 /** The value used by table filters and sorts, independent of its rendered label. */
 export const resolveDataTableComparableValue = (value: unknown, renderer?: { type: string }) => {
+  if (renderer?.type === "image") return value == null ? value : dataTableImageText(value);
   if (typeof value !== "object" || value === null) return value;
   if (renderer?.type === "sparkline" || renderer?.type === "bar-chart") {
     const values = readDataTableChartValue(value)?.values ?? [];

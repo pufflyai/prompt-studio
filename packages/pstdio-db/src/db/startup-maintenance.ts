@@ -4,7 +4,7 @@ import type { PGlite } from "@electric-sql/pglite";
 
 // This retired host-owned format stored transcripts in CRDT documents. Current device logs
 // and local conversation files have separate owners and must survive this cleanup.
-const legacyOwnerPrefix = '["pstdio.personal-history",';
+export const legacyOwnerPrefix = '["pstdio.personal-history",';
 
 export type DatabaseMaintenancePhase = "database_cleaning" | "database_compacting";
 
