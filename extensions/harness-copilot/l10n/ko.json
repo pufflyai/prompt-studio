@@ -1,0 +1,7 @@
+{
+  "harness.copilot": "GitHub Copilot",
+  "params.permissionMode": "권한 모드",
+  "params.reasoning": "추론",
+  "quotas.description": "GitHub Copilot 할당량과 이번 달 토큰 사용량을 표시합니다.",
+  "quotas.title": "계정 할당량 확인"
+}

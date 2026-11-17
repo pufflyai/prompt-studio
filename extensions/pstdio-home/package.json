@@ -15,8 +15,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun test",
-    "test:coverage": "bun test --coverage",
+    "test": "bun ../../scripts/ci/run-bun-tests.ts",
+    "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --coverage",
     "typecheck": "bun check"
   },
   "dependencies": {
@@ -34,5 +34,9 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "typescript": "6.0.2"
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    "./testing": "./src/testing.ts"
   }
 }

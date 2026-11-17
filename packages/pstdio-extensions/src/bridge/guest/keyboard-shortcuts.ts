@@ -7,6 +7,10 @@ const normalizeKey = (key: string) => (key === " " ? "SPACE" : key.toUpperCase()
 const shortcutEventKey = (event: KeyboardEvent) =>
   event.altKey && !/^[a-z]$/i.test(event.key) && /^Key[A-Z]$/.test(event.code) ? event.code.slice(3) : event.key;
 
+// Some layouts need Shift to type a symbol, such as "/" on German keyboards (Shift+7).
+const shiftTypedSymbol = (event: KeyboardEvent, shortcut: WebviewKeyboardShortcut) =>
+  event.shiftKey && !shortcut.shiftKey && /^[^\p{L}\p{N}\s]$/u.test(shortcut.key) && event.key === shortcut.key;
+
 export const matchesKeyboardShortcut = (event: KeyboardEvent, shortcut: WebviewKeyboardShortcut) =>
   !(event.isComposing || event.getModifierState?.("AltGraph")) &&
   (normalizeKey(shortcutEventKey(event)) === normalizeKey(shortcut.key) ||
@@ -15,7 +19,7 @@ export const matchesKeyboardShortcut = (event: KeyboardEvent, shortcut: WebviewK
   event.ctrlKey === Boolean(shortcut.ctrlKey) &&
   event.metaKey === Boolean(shortcut.metaKey) &&
   event.altKey === Boolean(shortcut.altKey) &&
-  event.shiftKey === Boolean(shortcut.shiftKey);
+  (event.shiftKey === Boolean(shortcut.shiftKey) || shiftTypedSymbol(event, shortcut));
 
 /** Only negotiated host chords cross this boundary. Editable controls keep their own actions. */
 export const installKeyboardShortcuts = (

@@ -164,6 +164,7 @@
       // Extensions e2e installs at runtime by path, and the dashboard it builds and serves.
       // Declared so CI treats their changes as e2e changes.
       "ignoreDependencies": [
+        "github",
         "canvas",
         "extension-lab",
         "git-workspaces",
@@ -184,6 +185,7 @@
         "planner",
         "reports",
         "skills",
+        "pstdio-skill-browser",
         "remote-workspaces",
         "workbench-fixture"
       ]
@@ -207,7 +209,15 @@
       "project": ["src/**/*.ts"],
       "ignore": ["dist/**"],
       // Tests install these extensions and fixtures from source. Declared so CI treats their changes as API changes.
-      "ignoreDependencies": ["extension-lab", "git-workspaces", "base-themes", "planner", "skills", "workbench-fixture"]
+      "ignoreDependencies": [
+        "github",
+        "extension-lab",
+        "base-themes",
+        "planner",
+        "skills",
+        "workbench-fixture",
+        "git-workspaces"
+      ]
     },
     "packages/pstdio-db": {
       "entry": [
@@ -375,11 +385,25 @@
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "extensions/pstdio-workspaces": {
-      "entry": ["package.json", "extension.ts", "src/**/*.test.ts", "src/**/*.canvas.tsx", "src/*-view.tsx"],
+      "entry": [
+        "package.json",
+        "test-setup.ts",
+        "extension.ts",
+        "src/**/*.test.ts",
+        "src/**/*.canvas.tsx",
+        "src/*-view.tsx"
+      ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "extensions/pstdio-home": {
-      "entry": ["package.json", "extension.ts", "src/**/*.test.ts", "src/**/*.canvas.tsx", "src/view.tsx"],
+      "entry": [
+        "package.json",
+        "test-setup.ts",
+        "extension.ts",
+        "src/**/*.test.ts",
+        "src/**/*.canvas.tsx",
+        "src/view.tsx"
+      ],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "extensions/extension-lab": {
@@ -388,6 +412,8 @@
         "extension.ts",
         "*.test.ts",
         "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+        "src/**/*.canvas.tsx",
         // The packaged host compatibility test bundles this entry by path.
         "src/legacy-state.fixture.ts",
         "src/views/*.tsx"
@@ -408,8 +434,9 @@
     "extensions/pstdio-cloud": {
       "entry": [
         "package.json",
+        "test-setup.ts",
         "extension.ts",
-        "src/**/*.test.ts",
+        "src/**/*.test.{ts,tsx}",
         "src/**/*.canvas.tsx",
         "src/.canvas/**/*.{ts,tsx}",
         "src/{status,details,settings}-view.tsx"
@@ -452,6 +479,17 @@
         "skills/create-pstdio-extension/references/examples/**/*.{ts,tsx}"
       ],
       "project": ["*.ts", "skills/create-pstdio-extension/references/examples/**/*.{ts,tsx}"]
+    },
+    "extensions/pstdio-skill-browser": {
+      "entry": [
+        "extension.ts",
+        "src/view.tsx",
+        ".canvas/**/*.{ts,tsx}",
+        "src/**/*.canvas.tsx",
+        "src/**/*.test.ts",
+        "*.test.ts"
+      ],
+      "project": ["*.ts", "src/**/*.{ts,tsx}"]
     },
     "infra/local/extensions/*": {
       "entry": ["extension.ts", "src/**/*.canvas.tsx", "*.test.ts"],

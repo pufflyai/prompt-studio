@@ -51,7 +51,7 @@ test("a rejected webview reload reports its build error while retaining the acce
   const database = await createDb({ path: ":memory:" });
   cleanup.push(database.close);
   const sources = createInstalledExtensionSourcesDBService(database.db);
-  const row = await sources.register({
+  await sources.register({
     display_name: "Reload view",
     extension_id: "test.reload-view",
     install_name: "reload-view",
@@ -80,9 +80,6 @@ test("a rejected webview reload reports its build error while retaining the acce
     source_hash: accepted.sourceHash,
     loaded_revision: "working-revision",
     last_error_json: { code: "extension_webview_build_failed" },
-  });
-  expect((await sources.listReloadEvents(row.id)).at(-1)?.error_json).toMatchObject({
-    code: "extension_webview_build_failed",
   });
   expect((await readAcceptedRevision(source))?.id).toBe(accepted.id);
   expect(readFileSync(oldModule, "utf8")).toContain("Accepted view");

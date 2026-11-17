@@ -2,7 +2,7 @@
 name: pstdio
 description: Use Prompt Studio and its pst CLI. Covers project setup, .pstdio/config.json, agent setup, commands, extensions, and troubleshooting. Use for Prompt Studio questions, requests to configure a project or agent, or when the shell cannot find the pst command.
 metadata:
-  version: 0.0.9
+  version: 0.0.10
 ---
 
 # Prompt Studio
@@ -68,6 +68,8 @@ Skills are Markdown instructions for agents. Their source is an enabled extensio
 - `pst agents install-skills <agent-id> --force` replaces the folder of each enabled skill with the source and discards local edits in it. It never touches folders of skills that are not enabled. `setup` has no `--force`.
 - Automatic sync during workspace setup updates only files Prompt Studio wrote that are still unchanged. It keeps edited files and same-name files it did not write. Delete a kept file to let the next sync write the current version.
 
+Refresh skills from the matching installed host and extension version. Source on `main` can document commands that an older host does not expose; check `pst <command> --help` before using it. Compare kept folders with their source before replacement and preserve local edits. A successful missing-only install does not mean existing skills were updated.
+
 To change a skill for good, edit its source, not the installed copy. See [Agents](https://prompt.studio/docs/references/cli/agents/).
 
 ### Tickets
@@ -82,7 +84,7 @@ Tickets belong to the Planner extension (`planner`). Each ticket has a shorthand
 ├── extensions/                  # Repo-scoped extension source
 └── extension-storage/           # All extension-owned project files
     ├── pstdio.planner/tickets/  # Ticket copies and planning files
-    ├── pstdio.reports/reports/  # Reports and evidence
+    ├── pstdio.reports/reports/  # Historical report checkouts
     └── pstdio.artifacts/        # Artifact drafts and prototypes
 ```
 
@@ -124,3 +126,7 @@ See [Add tools](https://prompt.studio/docs/guides/getting-started/add-tools/).
 
 - [CLI reference and troubleshooting](references/cli-reference.md), including what to do when the shell cannot find `pst`
 - [Troubleshooting](https://prompt.studio/docs/guides/getting-started/troubleshooting/)
+
+### Resource Activity
+
+Opted-in resources keep discussion, meaningful changes, and implementation/review outcomes together. Sessions keep their own conversation and have no Activity feed. Use `use-resource-activity` to read context, attach evidence, and publish an immutable outcome on the worked-on resource. `pst resources activity --help` lists the commands. Planner owns ticket status and exact revision checks. New handoffs do not require Reports; historical RP references remain readable through compatibility links.

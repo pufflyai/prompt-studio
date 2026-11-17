@@ -1,4 +1,4 @@
-import { type KanbanRendererEnumOption, type Localizable, l10n } from "@pstdio/sdk/extensions";
+import { type KanbanRendererEnumOption, type Localizable, l10n, type NavigationTarget } from "@pstdio/sdk/extensions";
 import type { KanbanRendererCreateRowConfig } from "@pstdio/ui/kanban-renderer";
 export const ticketCreateForm = {
   title: l10n("kanbanRenderers.tickets.createRow.title", "New ticket"),
@@ -28,13 +28,24 @@ export const localizeTicketFormValue = (value: Localizable, t: (key: string, fal
 export const localizeTicketFormOption = (
   option: KanbanRendererEnumOption,
   t: (key: string, fallback?: string) => string,
+  open?: (target: NavigationTarget) => void,
 ) => {
-  // Filter and create-form choices use presentation values, not renderer navigation actions.
-  const { label, note, noteAction: _noteAction, contextMenuActions: _contextMenuActions, ...rest } = option;
+  const { label, note, noteAction, contextMenuActions, ...rest } = option;
   return {
     ...rest,
     label: localizeTicketFormValue(label, t),
     ...(note === undefined ? {} : { note: localizeTicketFormValue(note, t) }),
+    ...(noteAction && open ? { onNoteClick: () => open(noteAction) } : {}),
+    ...(contextMenuActions && open
+      ? {
+          contextMenuActions: contextMenuActions.map(({ id, label, disabled, action }) => ({
+            id,
+            label: localizeTicketFormValue(label, t),
+            disabled,
+            onAction: () => open(action),
+          })),
+        }
+      : {}),
   };
 };
 export const createTicketFormConfig = (t: (key: string, fallback?: string) => string) =>

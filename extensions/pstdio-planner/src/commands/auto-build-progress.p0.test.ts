@@ -61,8 +61,11 @@ async function monitorFixture() {
     if (id === worker.id) return worker;
     return null;
   };
-  ctx.sessions.query = async () => {
-    throw new Error("Scheduled wake must not query project session history");
+  const query = ctx.sessions.query;
+  ctx.sessions.query = async (input) => {
+    if (!input?.status || input.limit !== 100)
+      throw new Error("Scheduled wake must use a bounded live-session capacity query");
+    return query(input);
   };
   ctx.workspaces.list = async () => {
     throw new Error("Scheduled wake must not list project workspaces");
@@ -272,6 +275,8 @@ test.each([
   const process = ctx.process.run;
   let changed = false;
   const evidence = () => ({
+    id: "https://github.com/example/project/pull/1",
+    baseRefName: "main",
     headRefOid: "submitted-head",
     state: "OPEN",
     mergeable: changed && change === "merge conflict" ? "CONFLICTING" : "MERGEABLE",
@@ -380,6 +385,7 @@ test("unchanged PR evidence wakes once while a review request prevents repair, t
           exitCode: 0,
           stderr: "",
           stdout: JSON.stringify({
+            baseRefName: "main",
             headRefOid: "submitted-head",
             state: "OPEN",
             mergeable: conflict ? "CONFLICTING" : "MERGEABLE",

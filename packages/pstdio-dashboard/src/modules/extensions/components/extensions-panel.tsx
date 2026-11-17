@@ -246,6 +246,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
       {replacementDialog}
       {errorNotice}
       <ExtensionsPanelView
+        projectId={projectId}
         extensions={extensions}
         marketplace={marketplace}
         diagnostics={metadataQuery.data?.diagnostics ?? []}

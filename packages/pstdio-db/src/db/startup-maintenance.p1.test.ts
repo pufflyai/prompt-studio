@@ -19,39 +19,52 @@ const relation = async (client: Awaited<ReturnType<typeof createDb>>, table = "s
 test(
   "a failed vacuum keeps the database usable and retries maintenance on the next start",
   async () => {
+    const started = performance.now();
+    const phase = (name: string) =>
+      console.log(`[maintenance failure +${Math.round(performance.now() - started)}ms] ${name}`);
     const root = await mkdtemp(join(tmpdir(), "pstdio-maintenance-failure-"));
     const path = join(root, "database");
-    let client = await createDb({ path });
+    const open = async (name: string) => {
+      phase(`${name}:start`);
+      const client = await createDb({ path, onPhase: (step) => phase(`${name}:${step}`) });
+      phase(`${name}:ready`);
+      return client;
+    };
+    let client = await open("initial");
     const originalExec = PGlite.prototype.exec;
     const execute = spyOn(PGlite.prototype, "exec");
     const warning = spyOn(console, "warn").mockImplementation(() => {});
     try {
       const before = await relation(client);
       await client.close();
+      phase("initial:closed");
       await rm(join(path, ".pstdio-maintenance.json"));
       execute.mockImplementation(function (this: PGlite, query, options) {
         if (query === "VACUUM (FULL, ANALYZE)")
           throw Object.assign(new Error("could not extend file: No space left on device"), { code: "53100" });
         return originalExec.call(this, query, options);
       });
-      client = await createDb({ path });
+      client = await open("failed-vacuum");
       expect((await client.pglite.query("SELECT 1 AS ready")).rows).toEqual([{ ready: 1 }]);
       expect(warning).toHaveBeenCalledTimes(1);
       expect(await Bun.file(join(path, ".pstdio-maintenance.json")).exists()).toBe(false);
       expect((await relation(client)).node).toBe(before.node);
       await client.close();
+      phase("failed-vacuum:closed");
       execute.mockRestore();
-      client = await createDb({ path });
+      client = await open("recovery");
       expect((await relation(client)).node).not.toBe(before.node);
       await access(join(path, ".pstdio-maintenance.json"));
     } finally {
       execute.mockRestore();
       warning.mockRestore();
       await client.close();
+      phase("cleanup:closed");
       await rm(root, { recursive: true, force: true });
+      phase("removed");
     }
   },
-  diskLimit,
+  process.platform === "linux" ? 10_000 : diskLimit,
 );
 
 test(

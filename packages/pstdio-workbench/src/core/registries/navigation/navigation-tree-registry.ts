@@ -2,6 +2,7 @@ import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore } from "../../shared/store/workbench-store";
 import { runWorkbenchEffect } from "../../shared/workbench-effect";
 import type { TreeViewSection } from "../renderers/tree-renderer-registry";
+import { resourceReadIdentity } from "../resources/resource-read-identity";
 import { settleReadBatch } from "../views/settle-read-batch";
 import { stableNavigationValue } from "./navigation-target-key";
 import { getNavigationTreeNodeSource } from "./navigation-tree-node-source";
@@ -26,6 +27,8 @@ const ownersEqual = (left: NavigationTreeOwner, right: NavigationTreeOwner) => o
 
 const contributionOrder =
   (owner: NavigationTreeOwner) => (left: NavigationTreeContribution, right: NavigationTreeContribution) => {
+    const groupOrder = (left.order ?? 0) - (right.order ?? 0);
+    if (groupOrder !== 0) return groupOrder;
     const leftOwn = left.sourceExtensionId === owner.extensionId;
     const rightOwn = right.sourceExtensionId === owner.extensionId;
     if (leftOwn !== rightOwn) return leftOwn ? -1 : 1;
@@ -41,6 +44,10 @@ const readContext = (contribution: NavigationTreeContribution, context: Navigati
   projectId: context.projectId ?? context.resource?.projectId,
   resource: contribution.resolveResource ? contribution.resolveResource(context.resource) : context.resource,
 });
+const readIdentity = (contribution: NavigationTreeContribution, context: NavigationTreeContext) => [
+  contribution.id,
+  resourceReadIdentity(readContext(contribution, context).resource),
+];
 
 export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistryInput = {}): NavigationTreeRegistry => {
   const contributions = new Map<string, NavigationTreeContribution>();
@@ -144,7 +151,7 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
       return JSON.stringify(
         stableNavigationValue(
           (["header", "content", "footer"] as const).flatMap((slot) =>
-            matching(owner, slot).map((contribution) => [contribution.id, readContext(contribution, context).resource]),
+            matching(owner, slot).map((contribution) => readIdentity(contribution, context)),
           ),
         ),
       );

@@ -46,7 +46,7 @@
   },
   "dependencies": {
     "@pstdio/sdk": "workspace:*",
-    "@tanstack/hotkeys": "^0.7.1",
+    "@tanstack/hotkeys": "0.30.0",
     "pstdio-api-contracts": "workspace:*",
     "pstdio-paths": "workspace:*",
     "rimless": "0.8.3",

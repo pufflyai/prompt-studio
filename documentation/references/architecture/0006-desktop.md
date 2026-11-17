@@ -258,7 +258,7 @@ bun run --cwd clients/desktop make -- --skip-package
 bun run --cwd clients/desktop verify:fuses
 ```
 
-Use Node 24, the same version as CI, for Electron Forge packaging.
+Use Node 26.7.0, the same version as CI, for Electron Forge packaging.
 
 The desktop Playwright suites and benchmarks allow 60 seconds per test on Windows and hosted Intel macOS, and 30 seconds on other platforms. The user approved the Windows limit on 2026-09-26 after packaged tests took 20 to 24 seconds and first project creation varied from 8 to 18 seconds while cloning and installing default extensions. The user approved the Intel limit on 2026-10-10: the Intel project-tabs test passed in up to 29.2 seconds and timed out four times at about 31 seconds, while it takes 6.1 seconds on Apple Silicon. This changes the whole-test execution allowance; the startup and recovery budgets below still apply ([ADR 0067](../../adrs/0067-separate-performance-budgets-from-execution-allowances.md)).
 

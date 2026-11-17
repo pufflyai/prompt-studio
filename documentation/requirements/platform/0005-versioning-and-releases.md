@@ -18,7 +18,7 @@ Do not edit versions by hand. Add new released workspace packages to the fixed g
 
 ## Release pipeline
 
-`.github/workflows/release-packages.yml` releases stable versions and nightlies with the same jobs, using Bun from the root `packageManager` field and Node 24. It builds and verifies every artifact from one commit, then publishes npm packages and desktop apps together. Nothing is published until every check passed. See [ADR 0072](../../adrs/0072-gate-merges-on-builds-and-publish-releases-all-or-nothing.md).
+`.github/workflows/release-packages.yml` releases stable versions and nightlies with the same jobs, using Bun from the root `packageManager` field and Node 26.7.0. It builds and verifies every artifact from one commit, then publishes npm packages and desktop apps together. Nothing is published until every check passed. See [ADR 0072](../../adrs/0072-gate-merges-on-builds-and-publish-releases-all-or-nothing.md).
 
 1. **plan.** A stable release is pending while the GitHub release `pstdio@<version>` is missing or still a draft. `scripts/release/plan-release.ts` decides this and fails early when a public package was never published, because npm trusted publishing cannot create a package. It then places the tag `pstdio@<version>` on the commit to release. Packaged apps include catalog extension sources from that checkout and record their source commit. A nightly instead versions, commits and tags `main` as described below.
 2. **Verify.** Every job builds from the planned commit:

@@ -89,7 +89,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: "24.22.1"
+          node-version: "26.7.0"
       - name: "[phase:install] Install native dependencies and restore host build cache"
         uses: ./.github/actions/setup-ci-cache
         with:
