@@ -254,6 +254,26 @@ const PROJECT_AFTER_API_MS = 5 * 60_000;
 const REJECTED_TOKEN_LIMIT = 30;
 const DOCKER_FAILURE_LIMIT = 5;
 
+type ProjectAnswer = { project?: { id: string; name: string }; status?: number };
+
+/** One request for the demo project; a container that is still booting answers nothing. */
+const askForProject = async (apiPort: number, token: string | undefined): Promise<ProjectAnswer> => {
+  try {
+    const response = await fetch(`http://127.0.0.1:${apiPort}/v1/projects`, {
+      headers: token ? { authorization: `Bearer ${token}` } : undefined,
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!response.ok) return { status: response.status };
+    const projects = (await response.json()) as Array<{ id: string; name: string }>;
+    return {
+      status: response.status,
+      project: projects.find((entry) => entry.name === SEEDED_PROJECT_NAME) ?? projects[0],
+    };
+  } catch {
+    return {};
+  }
+};
+
 // A cold start installs and validates every extension before the API answers, which can take
 // several minutes, so the wait has no fixed limit while the container runs and the API has not
 // answered. `token` is read on every attempt: the desktop runtime may replace a descriptor left
@@ -280,30 +300,16 @@ const waitForSeededProject = async (
     }
   };
   while (running()) {
-    try {
-      const current = token();
-      const response = await fetch(`http://127.0.0.1:${apiPort}/v1/projects`, {
-        headers: current ? { authorization: `Bearer ${current}` } : undefined,
-        signal: AbortSignal.timeout(10_000),
-      });
-      if (response.status === 401 || response.status === 403) {
-        if (++rejected >= REJECTED_TOKEN_LIMIT)
-          throw new Error(`The isolated API keeps rejecting its token (HTTP ${response.status}).`);
-      } else rejected = 0;
-      if (response.ok) {
-        answeredAt ??= Date.now();
-        const projects = (await response.json()) as Array<{ id: string; name: string }>;
-        const project = projects.find((entry) => entry.name === SEEDED_PROJECT_NAME) ?? projects[0];
-        if (project) return project;
-        if (Date.now() - answeredAt > PROJECT_AFTER_API_MS)
-          throw new Error(
-            `The isolated API answered, but no project appeared within ${PROJECT_AFTER_API_MS / 60_000} minutes.\n${monitor.readContainerLogs()}`,
-          );
-      }
-    } catch (error) {
-      if (error instanceof Error && /^The isolated API /.test(error.message)) throw error;
-      // The container is still booting.
-    }
+    const { project, status } = await askForProject(apiPort, token());
+    if (project) return project;
+    rejected = status === 401 || status === 403 ? rejected + 1 : 0;
+    if (rejected >= REJECTED_TOKEN_LIMIT)
+      throw new Error(`The isolated API keeps rejecting its token (HTTP ${status}).`);
+    if (status === 200) answeredAt ??= Date.now();
+    if (answeredAt !== undefined && Date.now() - answeredAt > PROJECT_AFTER_API_MS)
+      throw new Error(
+        `The isolated API answered, but no project appeared within ${PROJECT_AFTER_API_MS / 60_000} minutes.\n${monitor.readContainerLogs()}`,
+      );
     if (Date.now() - lastNotice >= STILL_WAITING_EVERY_MS) {
       lastNotice = Date.now();
       process.stdout.write(
