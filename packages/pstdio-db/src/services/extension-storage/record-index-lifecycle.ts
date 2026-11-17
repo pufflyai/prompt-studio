@@ -3,7 +3,6 @@ import type { StorageOwner } from "pstdio-sync";
 import { fingerprint, type Json, type StorageRecordIndex } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_record_indexes } from "../../db/schemas.pg";
-import { formatCacheSource } from "./record-format-key";
 import { encodeProjectionValue } from "./record-projection-codec";
 import { arrayIndexFields, recordFieldSql, recordIndexKeys, recordScopeSql } from "./record-query-sql";
 
@@ -30,7 +29,7 @@ export const installRecordIndex = async (
   index: StorageRecordIndex,
 ) => {
   const name = await recordIndexName(owner, index);
-  const keys = formatCacheSource(index.name) ? [] : recordIndexKeys(index);
+  const keys = recordIndexKeys(index);
   if (keys.length) {
     await tx.execute(
       sql`CREATE INDEX ${sql.identifier(name)} ON storage_current_records (${sql.join(keys, sql`, `)}) WHERE ${recordScopeSql(owner, { ...index, identity: undefined })}`,

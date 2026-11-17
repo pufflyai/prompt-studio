@@ -10,6 +10,7 @@ import {
   loadExtensionSource,
   readExtensionSourceMetadata,
 } from "./extension-runtime";
+import { type RepoExtensionWorkspace, readyRepoExtensionFolder } from "./repo-extension-roots";
 
 type ExtensionService = Pick<
   ReturnType<typeof createExtensionService>,
@@ -38,7 +39,7 @@ type SyncRepoExtensionsForProjectInput = {
 };
 
 type SyncRepoExtensionsForProjectFolderInput = Omit<SyncRepoExtensionsForProjectInput, "repoPath"> & {
-  workspaceService: { getDefault(projectId: string): Promise<{ root_path: string | null } | null> };
+  workspaceService: { getDefault(projectId: string): Promise<RepoExtensionWorkspace | null> };
 };
 
 export type SyncRepoExtensionsResult = {
@@ -182,7 +183,6 @@ export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForP
 };
 
 export const syncRepoExtensionsForProjectFolder = async (input: SyncRepoExtensionsForProjectFolderInput) => {
-  const workspace = await input.workspaceService.getDefault(input.projectId);
-  if (!workspace?.root_path) return null;
-  return syncRepoExtensionsForProject({ ...input, repoPath: workspace.root_path });
+  const repoPath = readyRepoExtensionFolder(await input.workspaceService.getDefault(input.projectId));
+  return repoPath ? syncRepoExtensionsForProject({ ...input, repoPath }) : null;
 };

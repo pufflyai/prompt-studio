@@ -62,6 +62,60 @@ test("viewer date text and calendar predicates run before page selection and sta
   }
 });
 
+test("a revision-only query does not backfill date formats", async () => {
+  const fixture = await createExtensionStorageFixture();
+  try {
+    let backfillReads = 0;
+    const service = createDocumentStorageDBService(fixture.db, undefined, (event) => {
+      if (event.phase === "format-index-records-read") backfillReads += event.records;
+    });
+    const records = service.open({ owner: { workbenchId: fixture.projectAId, extensionId: "dates" } }).records;
+    await records.defineIndexes([{ name: "dates", fields: { date: { path: ["date"], type: "string" } } }]);
+    await records.commit({ operationId: "seed", edits: [{ recordId: "a", replace: { date: "2026-11-14" } }] });
+    const query = {
+      index: "dates",
+      formats: { day: { field: "date", locale: "en", timeZone: "UTC", part: "day" as const } },
+      fields: ["day"],
+    };
+    const empty = await records.query({ ...query, limit: 0 });
+    expect(empty.records).toEqual([]);
+    expect(backfillReads).toBe(0);
+    const page = await records.query({ ...query, limit: 1, revision: empty.revision });
+    expect(page.records.map(({ fields }) => fields.day)).toEqual([20261114]);
+    expect(backfillReads).toBe(1);
+  } finally {
+    await fixture.close();
+  }
+});
+
+test("public index names in the old format prefix survive catalog and format preparation", async () => {
+  const fixture = await createExtensionStorageFixture();
+  try {
+    const records = createDocumentStorageDBService(fixture.db).open({
+      owner: { workbenchId: fixture.projectAId, extensionId: "legacy-calendar" },
+    }).records;
+    const index: StorageRecordIndex = {
+      name: "@pstdio/query-format/dates",
+      fields: { date: { path: ["date"], type: "string" } },
+    };
+    const format: StorageDateFormat = { field: "date", locale: "en", timeZone: "UTC", part: "day" };
+    const collision = `@pstdio/query-format/${JSON.stringify([
+      index.name,
+      await fingerprint(index as unknown as Json),
+      await fingerprint(format as unknown as Json),
+    ])}`;
+    const declarations = [index, { ...index, name: collision }];
+    await records.defineIndexes(declarations);
+    await records.commit({ operationId: "seed", edits: [{ recordId: "a", replace: { date: "2026-11-14" } }] });
+    const page = await records.query({ index: index.name, formats: { day: format }, fields: ["day"] });
+    expect(page.records[0]?.fields.day).toBe(20261114);
+    await records.defineIndexes(declarations);
+    expect((await records.query({ index: collision })).records[0]?.fields.date).toBe("2026-11-14");
+  } finally {
+    await fixture.close();
+  }
+});
+
 test("active root and related date formats survive eviction of older viewer caches", async () => {
   const fixture = await createExtensionStorageFixture();
   try {
