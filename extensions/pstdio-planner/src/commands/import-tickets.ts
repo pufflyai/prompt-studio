@@ -1,4 +1,4 @@
-import { type CommandContext, defineCommand, params, type ResourceAnchor } from "@pstdio/sdk/extensions";
+import { type CommandContext, defineCommand, l10n, params, type ResourceAnchor } from "@pstdio/sdk/extensions";
 import { appendTicketPositionFromStorage } from "../data/indexed-ticket-order";
 import { ensureTicketStorage } from "../data/read-migrated-tickets";
 import { resolveStatusId, resolveTagOptionIds, resolveTicketId } from "../data/resolve";
@@ -50,6 +50,26 @@ const rejectCycles = (tickets: ImportedTicket[], next: (ticket: ImportedTicket) 
 };
 
 // Exactly one of workspace or session, as a string.
+// Imported parents and prerequisites are saved before the tickets that name them, so a failure
+// partway through never leaves a saved ticket pointing at a ticket that was not saved.
+const saveOrder = (tickets: ImportedTicket[]) => {
+  const byKey = new Map(tickets.map((ticket, index) => [ticket.key, index]));
+  const order: number[] = [];
+  const seen = new Set<number>();
+  const visit = (index: number) => {
+    if (seen.has(index)) return;
+    seen.add(index);
+    const ticket = tickets[index]!;
+    for (const ref of [...(ticket.parent ? [ticket.parent] : []), ...(ticket.dependsOn ?? [])]) {
+      const target = byKey.get(ref);
+      if (target !== undefined) visit(target);
+    }
+    order.push(index);
+  };
+  for (const index of tickets.keys()) visit(index);
+  return order;
+};
+
 const validLink = (link: unknown) => {
   if (!link || typeof link !== "object") return false;
   const { workspace, session } = link as { workspace?: unknown; session?: unknown };
@@ -153,7 +173,7 @@ const allocate = async (ctx: CommandContext, count: number) => {
   return identities;
 };
 
-const saveGroups = async (ctx: CommandContext, tickets: StoredTicket[], progress: { saved: number }) => {
+const saveGroups = async (ctx: CommandContext, tickets: StoredTicket[], progress: { ids: string[] }) => {
   let group: StoredTicket[] = [];
   let bytes = 0;
   const flush = async () => {
@@ -166,7 +186,7 @@ const saveGroups = async (ctx: CommandContext, tickets: StoredTicket[], progress
       })),
     });
     if (outcome.state === "refused") throw new Error("Relay order refused a group of tickets.");
-    progress.saved += group.length;
+    progress.ids.push(...group.map((ticket) => ticket.id));
     group = [];
     bytes = 0;
   };
@@ -208,7 +228,7 @@ const addLinks = async (
 export const importTicketsCommand = defineCommand({
   id: "import-tickets",
   mutating: true,
-  title: "Import tickets",
+  title: l10n("commands.importTickets", "Import tickets"),
   cli: {
     examples: ['pst pstdio.planner import-tickets --tickets "$(cat tickets.json)"'],
   },
@@ -230,7 +250,7 @@ export const importTicketsCommand = defineCommand({
     const ids = new Map(tickets.map((ticket, index) => [ticket.key, identities[index]!.id]));
     const reference = (value: string) => ids.get(value) ?? resolved.existing.get(value)!;
     const now = new Date().toISOString();
-    const progress = { saved: 0 };
+    const progress = { ids: [] as string[] };
     try {
       await withTicketOrder(ctx, async () => {
         await ensureTicketStorage(ctx);
@@ -255,15 +275,20 @@ export const importTicketsCommand = defineCommand({
             updatedAt: now,
           } as StoredTicket);
         }
-        await saveGroups(ctx, stored, progress);
+        await saveGroups(
+          ctx,
+          saveOrder(tickets).map((index) => stored[index]!),
+          progress,
+        );
       });
       await addLinks(ctx, tickets, ids, resolved.targets);
     } catch (error) {
-      // Saved groups stay; say which tickets exist so a retry can leave them out.
-      const saved = tickets.slice(0, progress.saved).map((ticket) => ticket.key);
+      // Saved groups stay; name them so a retry can leave them out and point at their IDs.
+      const keys = new Map([...ids].map(([key, id]) => [id, key]));
+      const saved = progress.ids.map((id) => `${keys.get(id)}=${id}`);
       throw new Error(
-        `The ticket import stopped after saving ${progress.saved} of ${tickets.length} tickets` +
-          (saved.length ? ` (keys ${saved[0]} to ${saved.at(-1)})` : "") +
+        `The ticket import stopped after saving ${saved.length} of ${tickets.length} tickets` +
+          (saved.length ? ` (${saved.join(", ")})` : "") +
           `: ${error instanceof Error ? error.message : String(error)}`,
         { cause: error },
       );

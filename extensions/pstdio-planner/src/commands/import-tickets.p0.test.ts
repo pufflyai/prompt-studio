@@ -160,14 +160,25 @@ describe("importTicketsCommand validation and failures", () => {
       importTicketsCommand.run(
         ...makeCommandArgs({
           storage: failing,
-          params: { tickets: Array.from({ length: 150 }, (_, index) => ({ key: `k${index}`, title: `T${index}` })) },
+          // The first ticket depends on the last, so the last must be saved first.
+          params: {
+            tickets: Array.from({ length: 150 }, (_, index) => ({
+              key: `k${index}`,
+              title: `T${index}`,
+              ...(index === 0 ? { dependsOn: ["k149"] } : {}),
+            })),
+          },
           overrides: { events: { emit: async (event: unknown) => void emitted.push(event) } as never },
         }),
       ),
     ).rejects.toThrow("after saving 100 of 150 tickets");
     expect(emitted).toHaveLength(1);
     // The fixture keeps ticket numbers per storage object, so read through the importing one.
-    expect(await ticketsCollection(failing).list()).toHaveLength(100);
+    const saved = await ticketsCollection(failing).list();
+    expect(saved).toHaveLength(100);
+    // No saved ticket points at a ticket that was not saved.
+    const ids = new Set(saved.map(({ id }) => id));
+    for (const ticket of saved) for (const dependency of ticket.dependsOn ?? []) expect(ids.has(dependency)).toBe(true);
   });
 });
 

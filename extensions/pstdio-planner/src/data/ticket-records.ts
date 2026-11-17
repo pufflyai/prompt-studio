@@ -1,4 +1,4 @@
-import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
+import type { ExtensionStorageApi, StorageRecord } from "@pstdio/sdk/extensions";
 
 export { TICKET_KEY_PREFIX, TICKETS_COLLECTION, ticketRecordId } from "./ticket-record-address";
 
@@ -11,6 +11,31 @@ import type { StoredTicket } from "./types";
 const live = liveRecord;
 // Like the collection writes before, saved JSON drops undefined fields.
 const json = (value: unknown) => JSON.parse(JSON.stringify(value)) as never;
+
+// One attempt: a live ticket saves only while unchanged; a missing or deleted one is created on the
+// condition that it is still missing. False means another write won and the caller reads again.
+const saveOnce = async (
+  storage: ExtensionStorageApi,
+  id: string,
+  value: StoredTicket,
+  record: StorageRecord,
+  stored: StoredTicketRecord | undefined,
+) => {
+  const recordId = ticketRecordId(storage, id);
+  const replace = json(writeTicketTags(value, stored));
+  if (stored) {
+    const saved = await storage.records.commitIfCurrent({
+      operationId: storage.ids.create(),
+      edits: [{ recordId, expectedRevision: record.revision, replace }],
+    });
+    return !!saved && saved.state !== "refused";
+  }
+  const created = await storage.records.commit({
+    operationId: storage.ids.create(),
+    edits: [{ recordId, expectedRevision: record.revision, replace, ...(record.deleted ? { deleted: false } : {}) }],
+  });
+  return created.state !== "refused";
+};
 
 export const ticketRecords = (storage: ExtensionStorageApi) => {
   // Reads must not see the records before an older project's tickets have moved into them.
@@ -29,23 +54,7 @@ export const ticketRecords = (storage: ExtensionStorageApi) => {
       // Deleted while this save retried: the delete wins, as it did for the collection before.
       if (seenLive && !stored) return;
       seenLive ||= !!stored;
-      const recordId = ticketRecordId(storage, id);
-      const replace = json(writeTicketTags(value, stored));
-      if (stored) {
-        const saved = await storage.records.commitIfCurrent({
-          operationId: storage.ids.create(),
-          edits: [{ recordId, expectedRevision: record.revision, replace }],
-        });
-        if (saved) return;
-        continue;
-      }
-      await storage.records.commit({
-        operationId: storage.ids.create(),
-        edits: [
-          { recordId, expectedRevision: record.revision, replace, ...(record.deleted ? { deleted: false } : {}) },
-        ],
-      });
-      return;
+      if (await saveOnce(storage, id, value, record, stored)) return;
     }
     throw new Error(`Ticket ${id} kept changing while saving`);
   };
@@ -132,7 +141,9 @@ export const changeTicketRecord = async (
   change: (current: StoredTicket) => StoredTicket | Promise<StoredTicket>,
 ) => {
   const records = ticketRecords(storage);
-  for (;;) {
+  // Revision conflicts retry; a refusal that keeps repeating, such as an oversized edit, ends.
+  for (let attempt = 0; ; attempt++) {
+    if (attempt === 20) throw new Error(`Ticket ${id} could not be saved: the save was refused repeatedly`);
     const observed = await records.read(id);
     if (!observed) return undefined;
     const next = await change(observed.value);
