@@ -2,6 +2,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type Browser, chromium, type Page } from "@playwright/test";
+import { stopChildProcess } from "../scripts/child-process";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { removeTestDirectory } from "./remove-test-directory";
@@ -20,7 +21,23 @@ export const createComposerFixture = (allowance: number, began: number) => {
       for (const release of releases) release();
       const results = await Promise.allSettled([
         browser?.then((owned) => owned.close()),
-        runtime?.then((owned) => stopProcess(owned.child)),
+        runtime?.then(
+          async (owned) => {
+            // Cancellation already retires the child through its signal. Do not
+            // race that physical stop with a new authenticated shutdown request.
+            if (controller.signal.aborted) return stopChildProcess(owned.child);
+            try {
+              await stopProcess(owned.child);
+            } catch (error) {
+              if (!controller.signal.aborted) throw error;
+              await stopChildProcess(owned.child);
+            }
+          },
+          (error) => {
+            // startPackagedServe settles its child before rejecting readiness.
+            if (!controller.signal.aborted) throw error;
+          },
+        ),
       ]);
       try {
         await removeTestDirectory(root);
