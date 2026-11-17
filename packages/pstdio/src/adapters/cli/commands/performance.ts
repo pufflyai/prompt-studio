@@ -69,7 +69,7 @@ export const createHandler =
     }
     if (!isDesktopSnapshot(snapshot)) throw new Error("The performance endpoint returned an unexpected response.");
     if (args.action === "renders") {
-      if (!("renderCapture" in snapshot) || !snapshot.renderCapture) {
+      if (typeof snapshot !== "object" || !("renderCapture" in snapshot) || !snapshot.renderCapture) {
         throw new Error("Start a React render capture in the Performance popover on this desktop.");
       }
       resolvedDeps.log(JSON.stringify(renderCaptureSchema.parse(snapshot.renderCapture), null, 2));
