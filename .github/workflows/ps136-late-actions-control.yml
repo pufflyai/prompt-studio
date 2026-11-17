@@ -1,4 +1,4 @@
-name: PS136 controlled late panel actions
+name: PS136 Node lifecycle capture correction
 on:
   push:
     branches: [test/ps136-late-actions-control-20261117]
@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        owner: [controlled-canvas, original-packaged]
+        owner: [original-packaged]
     env:
       GH_TOKEN: ${{ github.token }}
       UI_PERF_ASSERT_BUDGETS: "1"

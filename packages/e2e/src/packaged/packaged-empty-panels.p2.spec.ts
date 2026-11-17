@@ -1,5 +1,5 @@
 import type { ChildProcess } from "node:child_process";
-import { mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { e2eExtensions } from "../default-extensions";
@@ -159,10 +159,10 @@ test("adding a tool keeps the other empty panel open", async () => {
     const diagnosticRoot = "test-results/panel-menu-dom";
     mkdirSync(diagnosticRoot, { recursive: true });
     try {
-      await Bun.write(`${diagnosticRoot}/events.json`, JSON.stringify(diagnosticEvents, null, 2));
+      writeFileSync(`${diagnosticRoot}/events.json`, JSON.stringify(diagnosticEvents, null, 2));
       if (diagnosticPage && !diagnosticPage.isClosed()) {
-        await Bun.write(`${diagnosticRoot}/page.html`, await diagnosticPage.content());
-        await Bun.write(
+        writeFileSync(`${diagnosticRoot}/page.html`, await diagnosticPage.content());
+        writeFileSync(
           `${diagnosticRoot}/state.json`,
           JSON.stringify(
             await diagnosticPage.evaluate(() => ({
@@ -187,25 +187,29 @@ test("adding a tool keeps the other empty panel open", async () => {
     }
     throw error;
   } finally {
-    const diagnosticRoot = "test-results/panel-menu-lifecycle";
-    mkdirSync(diagnosticRoot, { recursive: true });
-    await Bun.write(`${diagnosticRoot}/events.json`, JSON.stringify(diagnosticEvents, null, 2));
-    if (diagnosticPage && !diagnosticPage.isClosed()) {
-      await Bun.write(
-        `${diagnosticRoot}/state.json`,
-        JSON.stringify(
-          await diagnosticPage.evaluate(() => ({
-            active: document.activeElement?.outerHTML,
-            input: (window as unknown as { __ps136Input?: unknown[] }).__ps136Input,
-            lifecycle: (window as unknown as { __ps136Lifecycle?: unknown[] }).__ps136Lifecycle,
-            headers: [...document.querySelectorAll("[data-workbench-panel-header]")].map(
-              (element) => element.outerHTML,
-            ),
-          })),
-          null,
-          2,
-        ),
-      );
+    try {
+      const diagnosticRoot = "test-results/panel-menu-lifecycle";
+      mkdirSync(diagnosticRoot, { recursive: true });
+      writeFileSync(`${diagnosticRoot}/events.json`, JSON.stringify(diagnosticEvents, null, 2));
+      if (diagnosticPage && !diagnosticPage.isClosed()) {
+        writeFileSync(
+          `${diagnosticRoot}/state.json`,
+          JSON.stringify(
+            await diagnosticPage.evaluate(() => ({
+              active: document.activeElement?.outerHTML,
+              input: (window as unknown as { __ps136Input?: unknown[] }).__ps136Input,
+              lifecycle: (window as unknown as { __ps136Lifecycle?: unknown[] }).__ps136Lifecycle,
+              headers: [...document.querySelectorAll("[data-workbench-panel-header]")].map(
+                (element) => element.outerHTML,
+              ),
+            })),
+            null,
+            2,
+          ),
+        );
+      }
+    } catch (captureError) {
+      console.log("PS136 final diagnostic capture failed", String(captureError));
     }
     phase("cleanup");
     await browser?.close();
