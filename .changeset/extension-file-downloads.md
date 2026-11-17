@@ -8,4 +8,4 @@ Let extensions download generated files through the host and register view-scope
 
 Allow live resource actions to supply a bounded choice group and update its selected value without cancelling an accepted callback.
 
-Preserve entry stylesheets in batched webview preparation so installed extensions load their icon fonts.
+Preserve entry stylesheets in batched webview preparation so installed extensions load their icon fonts, and rebuild incompatible prepared revisions after host upgrades.
