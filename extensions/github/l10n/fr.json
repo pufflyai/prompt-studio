@@ -1,0 +1,10 @@
+{
+  "commands.import": "Importer une pull request",
+  "commands.read": "Lire les preuves de pull request",
+  "commands.resolve": "Résoudre les pull requests",
+  "commands.findMerged": "Trouver les pull requests fusionnées des branches",
+  "resource.pullRequest": "Pull request",
+  "view.pullRequest": "Pull request",
+  "page.pullRequest": "Pull request",
+  "search.pullRequests": "Pull requests GitHub"
+}

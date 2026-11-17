@@ -330,9 +330,9 @@ test("user bindings persist through the preference adapter and reset removes the
     },
   };
   const first = createWorkbench({ preferencePersistence: persistence });
-  await first.keyboard.setAssignment("test", { keybinding: "U" });
+  await first.keyboard.setAssignment("test", { keybinding: "Alt+Shift+U" });
   const second = createWorkbench({ preferencePersistence: persistence });
-  expect(second.keyboard.getAssignment("test")).toEqual({ keybinding: "U" });
+  expect(second.keyboard.getAssignment("test")).toEqual({ keybinding: "Alt+Shift+U" });
   await second.keyboard.resetAssignment("test");
   expect(second.keyboard.getAssignment("test")).toBeUndefined();
 });

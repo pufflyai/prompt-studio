@@ -16,7 +16,7 @@ export const createWebviewKeyboardShortcuts = (workbench: WorkbenchCore, command
     return {
       id: registration.requestId!,
       entry: registration.entry,
-      key: parsed.key,
+      key: parsed.key ?? "",
       ctrlKey: parsed.ctrl,
       metaKey: parsed.meta,
       altKey: parsed.alt,

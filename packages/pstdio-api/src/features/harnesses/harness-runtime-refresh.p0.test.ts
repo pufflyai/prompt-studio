@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { acceptPreparedRevision, prepareExtensionRevision } from "pstdio-extensions";
 import { createProjectExtensionRuntimeCatalog } from "../extensions/project-extension-runtime-catalog";
 import { createHarnessRegistryService } from "./harness-registry-service";
 
@@ -123,7 +124,7 @@ test("a source change event keeps workers of an unchanged harness source running
   }
 });
 
-test("a source change event replaces workers of an edited harness source", async () => {
+test("a source change event replaces workers after adopting an edited harness source", async () => {
   const sourcePath = join(root, "worker");
   writeHarnessExtension(sourcePath, "Worker");
   const { catalog, registry } = createRegistry(sourcePath);
@@ -132,6 +133,7 @@ test("a source change event replaces workers of an edited harness source", async
     await running.capabilities({ projectId: "p1" });
 
     writeHarnessExtension(sourcePath, "Edited worker");
+    await acceptPreparedRevision(sourcePath, await prepareExtensionRevision(sourcePath));
     catalog.invalidate({ sourcePath, reason: "source_changed" });
     await registry.get(workerId, { projectId: "p1" });
 
@@ -141,7 +143,7 @@ test("a source change event replaces workers of an edited harness source", async
   }
 });
 
-test("a full extension runtime refresh replaces workers of edited harness sources", async () => {
+test("a full extension runtime refresh replaces workers after adopting edited harness sources", async () => {
   const sourcePath = join(root, "worker");
   writeHarnessExtension(sourcePath, "Worker");
   const { catalog, registry } = createRegistry(sourcePath);
@@ -150,6 +152,7 @@ test("a full extension runtime refresh replaces workers of edited harness source
     await running.capabilities({ projectId: "p1" });
 
     writeHarnessExtension(sourcePath, "Edited worker");
+    await acceptPreparedRevision(sourcePath, await prepareExtensionRevision(sourcePath));
     catalog.invalidate({ reason: "runtime_refresh" });
     await registry.get(workerId, { projectId: "p1" });
 

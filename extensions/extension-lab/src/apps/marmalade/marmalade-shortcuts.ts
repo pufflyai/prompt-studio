@@ -21,12 +21,15 @@ const actions: readonly (readonly [string, MarmaladeAction])[] = [
   ["Delete", { type: "delete" }],
 ];
 
-export const marmaladeShortcuts = (views: ViewRef[]) =>
+export const marmaladeShortcuts = (views: ViewRef[], canvas: ViewRef) =>
   actions.map(([key, action]) =>
     defineKeybinding({
       id: action.type === "tool" ? `marmalade-tool-${action.tool}` : `marmalade-${action.type}`,
       key,
-      when: { view: views },
+      // Single-letter tool keys type text, so they live in shortcut mode; modifier chords stay direct.
+      // Tools act on the canvas only, so the inspector beside it never adds a second target to choose.
+      ...(action.type === "tool" ? { layer: "current" as const } : {}),
+      when: { view: action.type === "tool" ? [canvas] : views },
       action: { kind: "command", target: { command: executeMarmalade.ref, params: { action } } },
     }),
   );

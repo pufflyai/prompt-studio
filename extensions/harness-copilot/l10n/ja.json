@@ -1,0 +1,7 @@
+{
+  "harness.copilot": "GitHub Copilot",
+  "params.permissionMode": "権限モード",
+  "params.reasoning": "推論",
+  "quotas.description": "GitHub Copilot のクォータと今月のトークン使用量を表示します。",
+  "quotas.title": "アカウントのクォータを確認"
+}

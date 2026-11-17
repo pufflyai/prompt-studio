@@ -1,8 +1,9 @@
 import type { CommandContext } from "@pstdio/sdk/extensions";
+import { readTicketAttempts } from "../data/attempt-queries";
 import { readRetiredWorkspaceIds } from "../data/attempt-retirement";
-import { attemptSelectionsCollection, listAttempts } from "../data/attempt-storage";
+import { attemptSelectionsCollection } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
-import { readSessionHistory } from "../data/session-history";
+import { hasWorkspaceWriter } from "../data/workspace-writers";
 import { loadAttemptReadiness } from "./attempt-readiness";
 import { isLiveSession } from "./auto-build-sessions";
 import { WorkspaceUnavailableError, workspaceHead } from "./change-requests";
@@ -24,18 +25,21 @@ export async function prepareManualRecovery(
   const headSha = await readRecoverySeed(ctx, previous, readiness.baseHeadSha);
   const check = async () => {
     await beforeDispatch?.(readiness.baseHeadSha);
-    const [attempts, selection, retired] = await Promise.all([
-      listAttempts(ctx.storage),
+    const [attempts, selection] = await Promise.all([
+      readTicketAttempts(ctx.storage, [previous.ticketId]),
       attemptSelectionsCollection(ctx.storage).get(previous.ticketId),
-      readRetiredWorkspaceIds(ctx.storage),
     ]);
+    const retired = await readRetiredWorkspaceIds(
+      ctx.storage,
+      attempts.map(({ workspaceId }) => workspaceId),
+    );
     const variants = attempts.filter(
       (attempt) => attempt.ticketId === previous.ticketId && !retired.has(attempt.workspaceId),
     );
     const chosen = selection ? variants.filter((attempt) => attempt.workspaceId === selection.workspaceId) : variants;
     if (chosen.length !== 1 || chosen[0]?.workspaceId !== previous.workspaceId)
       throw new Error("The implementation variant changed before recovery. Resume the current selection.");
-    if ((await readSessionHistory(ctx.sessions, { workspaceId: previous.workspaceId })).some(isLiveSession))
+    if (await hasWorkspaceWriter(ctx.sessions, previous.workspaceId))
       throw new Error("Another session is using the previous workspace. Wait for its handoff.");
     try {
       await workspaceHead(ctx, previous.workspaceId);

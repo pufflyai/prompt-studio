@@ -1,8 +1,9 @@
 import type { AssetStore, StorageObserver, StorageOwner } from "pstdio-sync";
-import { createLegacyRecordStorage, scopeRecordStorage, storageRecordId } from "pstdio-sync/records";
+import { createLegacyRecordStorage, moveCollection, scopeRecordStorage, storageRecordId } from "pstdio-sync/records";
 import type { Json, StorageTextDeclaration } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { createArtifactFileProjectionsDBService } from "./artifact-file-projections";
+import { dataMigrationContext } from "./data-migration-context";
 import { createStorageMigrations } from "./data-migrations";
 import { createDocumentStorageDBService } from "./document-storage";
 import type { CollectionScope, KvScope, SetCollectionItemInput, SetKvInput } from "./legacy-types";
@@ -46,8 +47,10 @@ export const createExtensionStorageDBService = (
     return item ? { ...scope, item_id: item.id, value_json: item.value, sort_order: item.sortOrder } : null;
   };
   return {
-    resolveNativeRecordAddress: (owner: StorageOwner, input: { recordId: string; documentKey: string }) =>
-      resolveNativeRecordAddress(db, owner, input),
+    resolveNativeRecordAddress: (
+      owner: StorageOwner,
+      input: { recordId: string; documentKey: string; field?: string },
+    ) => resolveNativeRecordAddress(db, owner, input),
     upgradeNativeSources: (options: Parameters<typeof upgradeNativeSourceLifetimes>[1]) =>
       upgradeNativeSourceLifetimes(db, options),
     installIndexes: (owners: Parameters<typeof installRecordIndexes>[1], validate: () => void = () => {}) =>
@@ -67,6 +70,18 @@ export const createExtensionStorageDBService = (
     nativeFileProjections: createNativeFileProjectionsDBService(db),
     fileProjections: createArtifactFileProjectionsDBService(db),
     migrate: createStorageMigrations(db, documents),
+    /** Only valid while `migrate` runs for the same scope. */
+    moveCollection: async (scope: CollectionScope, keyPrefix: string) => {
+      if (!dataMigrationContext.getStore()) throw new Error("A collection can only move inside storage.migrate");
+      const owner = await getExtensionStorageOwner(db, scope.extension_instance_id);
+      if (!owner) throw new Error("Storage owner not found");
+      return moveCollection(documents.open({ owner }).records, {
+        scopeType: scope.scope_type,
+        scopeId: scope.scope_id,
+        name: scope.collection,
+        keyPrefix,
+      });
+    },
     recordId: (scopeType: string, scopeId: string, key: string) => storageRecordId([scopeType, scopeId, "kv"], key),
     open: async (input: { owner: StorageOwner; assets?: AssetStore; textFields?: StorageTextDeclaration[] }) => {
       const storage = documents.open(input);

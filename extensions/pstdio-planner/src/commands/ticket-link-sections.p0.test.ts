@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import { loadTicketLinkedResources } from "../data/ticket-linked-resources";
 import type { Ticket } from "../data/types";
+import { sessionRecord } from "./session-record.fixture";
 import { mergeTicketLinkSections, ticketRelationshipSections } from "./ticket-link-sections";
 
 const ticket = (id: string, extra: Partial<Ticket> = {}): Ticket => ({
@@ -41,7 +42,7 @@ test("ticket resource navigation merges bidirectional session links without empt
       resource,
       target: {
         kind: "page",
-        page: { kind: "page", extensionId: "pstdio.pstdio-session-browser", id: "conversation" },
+        page: { kind: "page", extensionId: "pstdio.session-browser", id: "conversation" },
         resource,
       },
     }));
@@ -85,10 +86,18 @@ test("ticket navigation queries canonical project-scoped links", async () => {
       resource,
       target: {
         kind: "page",
-        page: { kind: "page", id: "conversation", extensionId: "pstdio.pstdio-session-browser" },
+        page: { kind: "page", id: "conversation", extensionId: "pstdio.session-browser" },
         resource,
       },
     }));
+  ctx.sessions.query = async (input) => {
+    expect(input?.anchor).toMatchObject(resource);
+    expect(input?.includeWorkspaceAnchors).toBe(true);
+    return {
+      items: [sessionRecord({ id: "session", title: "Linked session", status: "completed" })],
+      nextCursor: null,
+    };
+  };
   const sections = await listTicketFilesTree(ctx, { renderer: { rendererId: "ticket-files", resource } });
   expect(sections.find((section) => section.id === "sessions")?.nodes[0].resource?.id).toBe("session");
 });

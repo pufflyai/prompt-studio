@@ -2,6 +2,7 @@
   "name": "pstdio-api",
   "private": true,
   "exports": {
+    "./extension-input-inspector": "./src/features/extensions/webview-input-inspector.ts",
     "./app": "./src/app.ts",
     "./runtime": "./src/features/runtime/routes.ts"
   },
@@ -47,10 +48,10 @@
     "base-themes": "workspace:*",
     "planner": "workspace:*",
     "skills": "workspace:*",
-
     "typescript": "6.0.2",
     "workbench-fixture": "workspace:*",
-    "git-workspaces": "workspace:*",
-    "pstdio-scripts": "workspace:*"
+    "pstdio-scripts": "workspace:*",
+    "github": "workspace:*",
+    "git-workspaces": "workspace:*"
   }
 }

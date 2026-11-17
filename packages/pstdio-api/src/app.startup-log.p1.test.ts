@@ -6,7 +6,18 @@ test("startup logs each step with the time since the process started at the defa
   const logPath = process.env.PSTDIO_LOG_PATH as string;
   const previousLines = existsSync(logPath) ? readFileSync(logPath, "utf8").split("\n").filter(Boolean).length : 0;
   const app = await createTestApp({ databasePath: ":memory:" });
-  await app.close();
+  // Readiness excludes background discovery; let that phase finish before requesting shutdown.
+  try {
+    while (
+      !readFileSync(logPath, "utf8")
+        .split("\n")
+        .slice(previousLines)
+        .some((line) => line.includes('"phase":"extensions_ready"'))
+    )
+      await Bun.sleep(10);
+  } finally {
+    await app.close();
+  }
 
   const phases = readFileSync(logPath, "utf8")
     .trim()
@@ -16,15 +27,16 @@ test("startup logs each step with the time since the process started at the defa
     .map((line) => JSON.parse(line) as { event?: string; phase?: string; elapsedMs?: number })
     .filter((entry) => entry.event === "runtime.startup.phase");
 
-  expect(phases.slice(0, 4).map((entry) => entry.phase)).toEqual([
+  expect(phases.slice(0, 5).map((entry) => entry.phase)).toEqual([
     "database_locked",
     "database_engine_loaded",
     "database_opened",
+    "database_index_nodes",
     "database_migrated",
   ]);
   expect(
     phases
-      .slice(4)
+      .slice(5)
       .map((entry) => entry.phase)
       .sort(),
   ).toEqual(["app_ready", "extensions_ready"]);

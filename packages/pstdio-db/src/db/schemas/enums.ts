@@ -22,5 +22,3 @@ export const extensionLoadStatusEnum = pgEnum("extension_load_status", [
   "missing",
   "disabled",
 ]);
-
-export const extensionReloadStatusEnum = pgEnum("extension_reload_status", ["success", "error", "skipped"]);

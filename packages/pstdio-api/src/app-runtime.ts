@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { projectEvents } from "pstdio-api-contracts/extension-kernel";
+import { withBackgroundPreparation } from "pstdio-extensions";
 import type { RouteDeps } from "./features/deps";
 import { createArtifactMountWatchService } from "./features/extensions/artifact-mount-watch/watch-service";
 import { fireExtensionEvent } from "./features/extensions/extension-event-runtime";
@@ -125,8 +126,9 @@ const createAppCloser = (input: {
   startupDone: Promise<void>;
   getStartupBackgroundDone: () => Promise<void>;
   notificationWakeTimer: ReturnType<typeof setInterval>;
+  stopDeadRowCleanup: () => Promise<void>;
   unsubscribeExtensionEvents: () => void;
-  extensionRuntime: { dispose(): Promise<void> };
+  extensionRuntime: { dispose(): Promise<void>; stopPreparation?: () => Promise<void> };
   extensionScheduler: { dispose(): Promise<void> };
   artifactMountWatch: { dispose(): Promise<void> };
   automationService: { close(): Promise<void> };
@@ -143,6 +145,9 @@ const createAppCloser = (input: {
   let closePromise: Promise<void> | null = null;
   return async () => {
     closePromise ??= (async () => {
+      // A vacuum holds PGlite's only thread, so database cleanup stops before any other part waits on it.
+      const deadRowCleanupStopped = traceShutdownPhase("dead_row_cleanup", () => input.stopDeadRowCleanup());
+      deadRowCleanupStopped.catch(() => {});
       const hooksStopped = traceShutdownPhase("session_hooks", () => input.closeSessionHooks());
       const installationsStopped = traceShutdownPhase("extension_installations", () =>
         input.extensionInstallations.dispose(),
@@ -153,6 +158,8 @@ const createAppCloser = (input: {
       );
       try {
         input.startupAbort.abort();
+        const preparationStopped = input.extensionRuntime.stopPreparation?.() ?? Promise.resolve();
+        preparationStopped.catch(() => {});
         const queueStopped = traceShutdownPhase("session_queue", () => input.sessionQueueLifecycle.close());
         // A queued startup can need worker disposal to settle. Stop admission first,
         // then begin cleanup before waiting for those dispatches to finish.
@@ -166,12 +173,14 @@ const createAppCloser = (input: {
         await nativeDocumentsStopped;
         clearInterval(input.notificationWakeTimer);
         input.unsubscribeExtensionEvents();
+        await installationsStopped;
         await traceShutdownPhase("extension_runtime", () => input.extensionRuntime.dispose());
         await traceShutdownPhase("artifact_mounts", () => input.artifactMountWatch.dispose());
         await traceShutdownPhase("extension_scheduler", () => input.extensionScheduler.dispose());
         await traceShutdownPhase("automation", () => input.automationService.close());
         await traceShutdownPhase("terminals", () => input.terminalSupervisor.dispose());
         await harnessesStopped;
+        await preparationStopped;
       } finally {
         // A part that fails to stop must not leave PGlite open (lessons 0002 and 0014).
         try {
@@ -180,7 +189,11 @@ const createAppCloser = (input: {
           try {
             await nativeDocumentsStopped;
           } finally {
-            await traceShutdownPhase("database", () => input.closeDb());
+            try {
+              await deadRowCleanupStopped;
+            } finally {
+              await traceShutdownPhase("database", () => input.closeDb());
+            }
           }
         }
       }
@@ -207,8 +220,9 @@ export const closeAppDatabase = async (
 export const startAppLifecycle = async (input: {
   deps: RouteDeps;
   notificationWakeTimer: ReturnType<typeof setInterval>;
+  stopDeadRowCleanup: () => Promise<void>;
   unsubscribeExtensionEvents: () => void;
-  extensionRuntime: { dispose(): Promise<void> };
+  extensionRuntime: { dispose(): Promise<void>; stopPreparation?: () => Promise<void> };
   extensionStartup: Promise<void>;
   extensionScheduler: { dispose(): Promise<void> };
   artifactMountWatch: { dispose(): Promise<void> };
@@ -231,22 +245,24 @@ export const startAppLifecycle = async (input: {
     createSessionScheduler(input.deps).drainQueue(),
   );
   const startupBackgroundTasks: Promise<void>[] = [input.extensionStartup];
-  const startupDone = runStartupTasks(input.deps, startupAbort.signal, {
-    recoverOrphanedSessions,
-    onBackgroundTask: (task) => {
-      startupBackgroundTasks.push(
-        task.catch((err) => {
-          if (!startupAbort.signal.aborted) {
-            apiLogger.error({ err, event: "api.startup.background.error" }, "Startup task failed");
-          }
-        }),
-      );
-    },
-    recoverQueuedAutomation: async () => {
-      await input.automationService.recoverQueuedRuns();
-    },
-    recoverQueuedSessions,
-  }).catch((err) => {
+  const startupDone = withBackgroundPreparation(() =>
+    runStartupTasks(input.deps, startupAbort.signal, {
+      recoverOrphanedSessions,
+      onBackgroundTask: (task) => {
+        startupBackgroundTasks.push(
+          task.catch((err) => {
+            if (!startupAbort.signal.aborted) {
+              apiLogger.error({ err, event: "api.startup.background.error" }, "Startup task failed");
+            }
+          }),
+        );
+      },
+      recoverQueuedAutomation: async () => {
+        await input.automationService.recoverQueuedRuns();
+      },
+      recoverQueuedSessions,
+    }),
+  ).catch((err) => {
     if (!startupAbort.signal.aborted) apiLogger.error({ err, event: "api.startup.error" }, "Startup task failed");
   });
 
