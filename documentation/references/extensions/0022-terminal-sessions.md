@@ -81,4 +81,11 @@ A terminal panel opens its PTY with an attach key made of its project and panel 
 
 Logs record only lifecycle data: session ID, process ID, exit code, and signal. Terminal content is never logged.
 
+
+## Default Terminal tool
+
+`pstdio.pstdio-terminal` owns the default Open terminal action, workspace menu, tab names, search results and Bottom placement. Its native view uses the shared host renderer and PTY transport. Disabling the tool removes its actions and stops only its owned terminals; re-enabling it creates fresh shells when opened. No shell is restored across a host restart.
+
+The host retains hidden compatibility for `workbench.terminal.open` and `dashboard.openWorkspaceTerminal`, delegating to the installed tool. Saved host-terminal tabs migrate to its ordinary placement while preserving their title, workspace and chosen region. The exported workbench terminal module and helper are deprecated for existing embedders; the dashboard uses the installed tool.
+
 *Updated at: 2026-11-11*

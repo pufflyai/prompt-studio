@@ -64,6 +64,7 @@
     "pstdio-scripts": "workspace:*",
     "@pstdio/canvas": "workspace:*",
     "home": "workspace:*",
-    "session-browser": "workspace:*"
+    "session-browser": "workspace:*",
+    "pstdio-terminal": "workspace:*"
   }
 }

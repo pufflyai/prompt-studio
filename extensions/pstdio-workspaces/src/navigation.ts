@@ -127,16 +127,6 @@ export const openTerminal = defineCommand({
   id: "open-terminal",
   title: "Open terminal",
   cli: true,
-  menus: [
-    {
-      slot: workspaceSlots.headerOverflow,
-      icon: "square-terminal",
-      when: {
-        resourceType: [workbenchResourceKinds.workspace],
-        metadata: { workspaceReadOnly: false, workspaceExecutionKind: "local", workspaceProviderState: "ready" },
-      },
-    },
-  ],
   async run(ctx) {
     const workspace = await ctx.workspaces.get(ctx.resource?.id ?? "");
     if (

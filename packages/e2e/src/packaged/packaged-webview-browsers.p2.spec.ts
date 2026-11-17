@@ -84,6 +84,7 @@ const verifyPackagedBehavior = async (browserCase: (typeof webviewBrowsers)[numb
         "pstdio-home",
         "pstdio-session-browser",
         "pstdio-workspaces",
+        ...(behavior === "workspace panels and session tabs" ? ["pstdio-terminal"] : []),
         "git-workspaces",
         ...(behavior === "documents, collections and preview" ? ["pstdio-artifacts", "pstdio-notes"] : []),
       ],

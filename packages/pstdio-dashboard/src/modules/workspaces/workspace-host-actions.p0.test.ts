@@ -72,11 +72,18 @@ test("terminal and reveal use the live scoped target instead of caller path meta
 
 test("command navigation opens the explicit clicked workspace when another workspace is active", async () => {
   const { createWorkbench } = await import("@pstdio/workbench");
-  const { createWorkbenchTerminalModule, WORKBENCH_TERMINAL_WIDGET_ID } = await import("@pstdio/workbench/react");
   const { registerWorkspaceHostActions } = await import("./workspace-host-actions");
   const { dashboardCommandIds } = await import("@/shared/app/commands");
   const workbench = createWorkbench();
-  workbench.registerModule(createWorkbenchTerminalModule());
+  let opened: unknown;
+  workbench.commands.registerCommand(
+    { id: "pstdio.pstdio-terminal.command.open-workspace", label: "Open terminal" },
+    {
+      execute: (args, context) => {
+        opened = { args, resource: context?.resource };
+      },
+    },
+  );
   workbench.modes.registerMode({ id: "project", activate() {} });
   workbench.views.registerView({
     id: "test.workspace",
@@ -123,9 +130,9 @@ test("command navigation opens the explicit clicked workspace when another works
     { projectId: "project" },
   );
   expect(resolved).toBe("clicked");
-  expect(
-    workbench.layout.listPanelInstances("secondary").find((panel) => panel.viewId === WORKBENCH_TERMINAL_WIDGET_ID)
-      ?.resource?.metadata?.workspaceId,
-  ).toBe("clicked");
+  expect(opened).toMatchObject({
+    args: { workspaceId: "clicked" },
+    resource: { id: "clicked", metadata: { workspaceId: "clicked" } },
+  });
   workbench.dispose();
 });

@@ -9,7 +9,7 @@ export const verifyPackagedTerminal = async (page: Page, origin: string, project
   if (await showSecondary.isVisible()) await showSecondary.click();
   await page.locator('[data-workbench-panel-header="secondary"]').getByRole("button", { name: "Add panel" }).click();
   const choice = page.getByRole("menuitem", { name: "Open terminal", exact: true });
-  if (await choice.isVisible()) await choice.click();
+  await choice.click();
   const socket = await connection;
   expect(new URL(socket.url()).origin).toBe(origin.replace(/^http/, "ws"));
   expect(socket.url().includes(token)).toBe(false);
