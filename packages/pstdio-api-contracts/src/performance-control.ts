@@ -8,7 +8,7 @@ export interface PerformanceMonitoringState {
   enabled: boolean;
   host: "desktop" | "browser";
   /** Absent on older hosts. Scans this window's workbench, not extension frames. */
-  renderOverlay?: { supported: boolean; enabled: boolean; scope: "workbench" };
+  renderOverlay?: { supported: boolean; captureSupported?: boolean; enabled: boolean; scope: "workbench" };
 }
 
 export interface PerformanceRecordingExport {
@@ -24,6 +24,7 @@ export type PerformanceReadRequest =
 export type PerformanceControlRequest =
   | { operation: "set-enabled"; enabled: boolean }
   | { operation: "set-render-overlay"; enabled: boolean }
+  | { operation: "start-render-capture" }
   | { operation: "pause-extension" | "resume-extension"; installedExtensionId: string };
 export type PerformanceReadResult =
   | PerformanceMonitoringState

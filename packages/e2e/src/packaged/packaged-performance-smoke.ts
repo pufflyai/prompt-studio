@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
@@ -82,6 +83,50 @@ export const expectPackagedSavedRecordings = async () => {
     expect(exported.files).toHaveLength(1);
     expect(JSON.parse(exported.files[0].content)).toMatchObject({ captureId: "saved", sample: { sequence: 0 } });
   } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+};
+
+export const expectPackagedRenderCapture = async () => {
+  const home = mkdtempSync(join(tmpdir(), "pstdio-render-capture-"));
+  const token = "a".repeat(64);
+  const renderCapture = {
+    status: "complete",
+    startedAt: "2026-11-17T12:00:00.000Z",
+    endedAt: "2026-11-17T12:00:10.000Z",
+    components: [{ name: "SidebarRow", renders: 3, unchanged: 2, unknown: 0, renderMs: 10, unchangedRenderMs: 8 }],
+    truncated: false,
+  };
+  const server = createServer((socket) => {
+    const lines = createInterface({ input: socket });
+    lines.once("line", (credential) => {
+      lines.close();
+      if (credential !== token) {
+        socket.destroy();
+        return;
+      }
+      socket.end(`${JSON.stringify({ version: 1, host: "desktop", processes: [], renderCapture })}\n`);
+    });
+  });
+  try {
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", resolve);
+    });
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("Missing local endpoint");
+    const endpoint = join(home, "performance");
+    mkdirSync(endpoint);
+    writeFileSync(join(endpoint, "endpoint.json"), JSON.stringify({ port: address.port, token }));
+    const child = Bun.spawn([PACKAGED_BINARY_PATH, "performance", "renders"], {
+      env: { ...process.env, PSTDIO_HOME: home },
+      stdout: "pipe",
+    });
+    const [stdout, status] = await Promise.all([new Response(child.stdout).text(), child.exited]);
+    expect(status).toBe(0);
+    expect(JSON.parse(stdout)).toEqual(renderCapture);
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
     rmSync(home, { recursive: true, force: true });
   }
 };

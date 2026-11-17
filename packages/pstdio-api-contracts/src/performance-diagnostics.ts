@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { PerformanceCapture } from "./performance-capture";
+import { type ReactRenderCapture, renderCaptureSchema } from "./render-capture";
 
 // Local performance diagnostics are shared by the desktop host, the dashboard, and
 // the `pst performance` command. Nothing here is sent to the runtime or a server.
@@ -46,6 +47,7 @@ export const slowFrameReportSchema = z.strictObject({
 export const rendererStateReportSchema = z.strictObject({
   frameRate: z.array(z.number().int().nonnegative().max(1_000)).max(PERFORMANCE_LIMITS.frameRateSeconds),
   pausedExtensionIds: z.array(boundedText).max(PERFORMANCE_LIMITS.pausedExtensions),
+  renderCapture: renderCaptureSchema.optional(),
 });
 
 export type RendererStateReport = z.infer<typeof rendererStateReportSchema>;
@@ -111,6 +113,8 @@ export interface PerformanceSnapshotV1 {
   frameRate: number[];
   // Extensions whose views are unloaded until the person resumes them.
   pausedExtensionIds: string[];
+  /** Latest explicitly requested workbench capture. It is not part of performance recordings. */
+  renderCapture?: ReactRenderCapture;
 }
 
 export type {
@@ -136,3 +140,9 @@ export type {
 } from "./performance-control";
 
 export { performanceRuntimeReadingSchema } from "./performance-runtime-schema";
+export {
+  RENDER_CAPTURE_LIMITS,
+  type ReactRenderCapture,
+  type ReactRenderSummaryRow,
+  renderCaptureSchema,
+} from "./render-capture";

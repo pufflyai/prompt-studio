@@ -1,16 +1,17 @@
 import { resolve } from "node:path";
+import { renderCaptureSchema } from "pstdio-api-contracts/performance-diagnostics";
 import { readPerformanceRecordings } from "pstdio-diagnostics";
 import { resolvePstdioPerformanceEndpoint } from "pstdio-paths";
 import type { Argv } from "yargs";
 import { readPerformanceEndpoint } from "@/features/performance";
 
 export const command = "performance [action] [directory]";
-export const describe = "Read the local performance snapshot or export saved recordings";
+export const describe = "Read local performance, React render captures, or saved recordings";
 
 export const builder = (yargs: Argv) =>
   yargs
     .positional("action", {
-      choices: ["snapshot", "recordings"] as const,
+      choices: ["snapshot", "renders", "recordings"] as const,
       default: "snapshot",
       describe: "Evidence to read",
     })
@@ -67,6 +68,13 @@ export const createHandler =
       );
     }
     if (!isDesktopSnapshot(snapshot)) throw new Error("The performance endpoint returned an unexpected response.");
+    if (args.action === "renders") {
+      if (!("renderCapture" in snapshot) || !snapshot.renderCapture) {
+        throw new Error("Start a React render capture in the Performance popover on this desktop.");
+      }
+      resolvedDeps.log(JSON.stringify(renderCaptureSchema.parse(snapshot.renderCapture), null, 2));
+      return;
+    }
     resolvedDeps.log(JSON.stringify(snapshot, null, 2));
   };
 

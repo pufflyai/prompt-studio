@@ -12,9 +12,18 @@ export const createPerformanceMonitoringController = (host: PerformanceHost, ren
   const frameRate = createFrameRateCounter();
   let enabled: boolean | undefined;
   let overlayOwner: object | undefined;
+  let captureOwner: object | undefined;
+  const clearRenderCapture = () => {
+    captureOwner = undefined;
+    if (!renderOverlay?.readCapture()) return;
+    renderOverlay.clearCapture();
+    reportRendererState();
+    snapshotQuery.invalidate();
+  };
   const stopOverlay = () => {
     overlayOwner = undefined;
     renderOverlay?.setEnabled(false);
+    clearRenderCapture();
   };
   let stopObserver: (() => void) | undefined;
   let stopStateReports: (() => void) | undefined;
@@ -53,12 +62,18 @@ export const createPerformanceMonitoringController = (host: PerformanceHost, ren
   };
 
   // The snapshot that people copy and agents read includes this window's state.
+  const reportRendererState = () => {
+    const renderCapture = renderOverlay?.readCapture();
+    host.reportState({
+      frameRate: frameRate.getBuckets(),
+      pausedExtensionIds: [...pausedExtensions.get()],
+      ...(renderCapture ? { renderCapture } : {}),
+    });
+  };
   const reportStateChanges = () => {
-    const report = () =>
-      host.reportState({ frameRate: frameRate.getBuckets(), pausedExtensionIds: [...pausedExtensions.get()] });
-    report();
-    const stopFrames = frameRate.subscribe(report);
-    const stopPaused = pausedExtensions.subscribe(report);
+    reportRendererState();
+    const stopFrames = frameRate.subscribe(reportRendererState);
+    const stopPaused = pausedExtensions.subscribe(reportRendererState);
     return () => {
       stopFrames();
       stopPaused();
@@ -111,7 +126,20 @@ export const createPerformanceMonitoringController = (host: PerformanceHost, ren
       overlayOwner = next ? owner : undefined;
     },
     releaseControlOwner: (owner: object) => {
-      if (owner === overlayOwner) stopOverlay();
+      if (owner === overlayOwner) {
+        overlayOwner = undefined;
+        renderOverlay?.setEnabled(false);
+      }
+      if (owner === captureOwner) clearRenderCapture();
+    },
+    startRenderCapture: (owner?: object) => {
+      if (!renderOverlay) throw new Error("React Scan is unavailable in this build");
+      if (!enabled) throw new Error("Enable performance monitoring before capturing renders");
+      renderOverlay.startCapture(() => {
+        reportRendererState();
+        snapshotQuery.invalidate();
+      });
+      captureOwner = owner;
     },
     snapshotQuery,
     // A loaded monitoring extension is the person's choice to measure, so monitoring runs exactly

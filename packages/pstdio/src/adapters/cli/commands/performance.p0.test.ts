@@ -88,6 +88,21 @@ test("reads saved recordings after the live endpoint is gone", async () => {
   expect(JSON.parse(exported.files[0].content).captureId).toBe("saved-capture");
 });
 
+test("reads only an explicitly collected render capture from the local endpoint", async () => {
+  const path = endpointPath();
+  const renderCapture = {
+    status: "complete",
+    startedAt: "2026-11-17T12:00:00.000Z",
+    endedAt: "2026-11-17T12:00:10.000Z",
+    components: [{ name: "Sidebar", renders: 3, unchanged: 2, unknown: 0, renderMs: 12, unchangedRenderMs: 7 }],
+    truncated: false,
+  };
+  await serve(path, `${JSON.stringify({ version: 1, host: "desktop", processes: [], renderCapture })}\n`);
+  const log = mock();
+  await createHandler({ log, resolveEndpoint: () => path })({ action: "renders" });
+  expect(JSON.parse(log.mock.calls[0]?.[0])).toEqual(renderCapture);
+});
+
 test("requires the saved recording directory without starting monitoring", async () => {
   const log = mock();
   await expect(createHandler({ log, resolveEndpoint: endpointPath })({ action: "recordings" })).rejects.toThrow(
