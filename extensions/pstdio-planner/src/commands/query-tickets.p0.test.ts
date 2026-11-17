@@ -76,7 +76,7 @@ describe("queryTicketsCommand", () => {
         reviewLinks: [
           {
             id: "legacy-12",
-            url,
+            url: "http://github.com/Acme/Tools/pull/0012/files?review=1",
             provider: "github",
             kind: "pull_request",
             externalId: "12",
@@ -97,6 +97,20 @@ describe("queryTicketsCommand", () => {
       { label: "#12", action: { kind: "href", href: url } },
     ]);
     expect(counter.writes).toBe(0);
+
+    const ticket = result.rows[0]!.resource;
+    const pullRequest = {
+      type: "pull-request",
+      id: url,
+      extensionId: "pstdio.github",
+      projectId: ctx.projectId,
+      label: "acme/tools #12",
+    };
+    await ctx.resources.addAnchors(ticket, [pullRequest]);
+    const linked = await queryTicketsCommand.run(ctx, commandParamsFor(ctx));
+    expect(linked.rows[0]?.attributes.linkedResourceItems).toMatchObject([
+      { id: resourceKey(pullRequest), label: "acme/tools #12" },
+    ]);
   });
 
   test.each([

@@ -55,7 +55,11 @@ export const readTicketViewPage = async (
     for (const { id } of tickets)
       links.set(
         id,
-        appendLegacyPullRequestBadges(links.get(id) ?? [], readReviewLinkProjections(projections.get(id)!)),
+        appendLegacyPullRequestBadges(
+          links.get(id) ?? [],
+          readReviewLinkProjections(projections.get(id)!),
+          ctx.projectId,
+        ),
       );
   }
   const toRow = createTicketRowMapper(ctx.projectId, tags, links, parents, extensionId);

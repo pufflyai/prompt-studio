@@ -13,7 +13,7 @@ import { ensureTicketStorage } from "./read-migrated-tickets";
 import { seedDefaultStatuses, seedDefaultTags } from "./seed";
 import { ticketSummaryFields } from "./ticket-query-summary";
 import { ticketViewFields } from "./ticket-view-fields";
-import { ticketViewState } from "./ticket-view-state";
+import { activeMilestoneValue, ticketViewState } from "./ticket-view-state";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "./workflow-statuses";
 
 export type TicketQueryContext = Pick<
@@ -80,9 +80,12 @@ export const prepareTicketViewQuery = async (
       })
     : undefined;
   const fields = ticketViewFields(attributes, tags, computed, requested, !calendarRows?.records.length);
+  // The date-control translator requests calendar projections for indexed inputs.
+  // Translate these locally after it emits the format, using Planner's milestone metadata.
+  const { milestoneDate: _milestoneDate, ...viewComputed } = computed;
   const scope = collectionViewSelection({
     index: "ticket-view",
-    computed,
+    computed: viewComputed,
     fields,
     groups,
     filter: input.filter,
@@ -108,7 +111,7 @@ export const prepareTicketViewQuery = async (
     );
     computed[name] = {
       type: format.part === "text" ? "string" : "number",
-      expression: { get: { literal: values }, key: { field: "deadlineId" } },
+      expression: activeMilestoneValue(values, null),
     };
   }
   scope.page = {

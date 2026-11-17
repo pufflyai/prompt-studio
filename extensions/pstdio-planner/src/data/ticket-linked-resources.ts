@@ -5,7 +5,6 @@ import {
   type ResourceResolution,
   resourceKey,
 } from "@pstdio/sdk/extensions";
-import { inferReviewLinkTarget } from "./review-links";
 import { ticketPageTarget } from "./ticket-page-target";
 import type { StoredTicketReviewLink } from "./types";
 
@@ -33,25 +32,39 @@ const badgeItem = (saved: ResourceRef, resolved: ResourceResolution | undefined)
   } satisfies CollectionBadgeItem;
 };
 
-export const appendLegacyPullRequestBadges = (items: CollectionBadgeItem[], links: StoredTicketReviewLink[]) => {
-  const saved = new Set(
-    items.filter((item) => item.resource?.type === "pull-request").map((item) => item.resource?.id),
-  );
+export const appendLegacyPullRequestBadges = (
+  items: CollectionBadgeItem[],
+  links: StoredTicketReviewLink[],
+  projectId: string,
+) => {
+  const saved = new Set(items.map(({ id }) => id));
   const badges = [...items];
   for (const link of links) {
     if (badges.length >= 8) break;
     if (link.provider !== "github" || link.kind !== "pull_request") continue;
     const url = URL.parse(link.url);
-    if (url?.protocol !== "https:" || url.username || url.password) continue;
-    const { externalId } = inferReviewLinkTarget(url.href);
-    if (!externalId || saved.has(url.href)) continue;
-    saved.add(url.href);
+    if (
+      !url ||
+      url.hostname !== "github.com" ||
+      !["http:", "https:"].includes(url.protocol) ||
+      url.username ||
+      url.password ||
+      url.port
+    )
+      continue;
+    const match = /^\/([A-Za-z0-9][A-Za-z0-9-]*)\/([A-Za-z0-9._-]+)\/pull\/(\d+)(?:\/.*)?$/.exec(url.pathname);
+    const number = Number(match?.[3]);
+    if (!match || !Number.isSafeInteger(number) || number < 1) continue;
+    const href = `https://github.com/${match[1].toLowerCase()}/${match[2].toLowerCase()}/pull/${number}`;
+    const id = resourceKey({ extensionId: "pstdio.github", projectId, type: "pull-request", id: href });
+    if (saved.has(id)) continue;
+    saved.add(id);
     badges.push({
-      id: `saved-review:${link.id}`,
-      label: `#${externalId}`,
+      id,
+      label: `#${number}`,
       icon: "git-pull-request",
-      tooltip: url.href,
-      action: { kind: "href", href: url.href },
+      tooltip: href,
+      action: { kind: "href", href },
     });
   }
   return badges;

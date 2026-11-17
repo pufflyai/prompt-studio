@@ -1,5 +1,6 @@
 import type {
   ExtensionStorageApi,
+  JsonValue,
   StorageExpression,
   StoragePredicate,
   StorageRecordQuery,
@@ -11,6 +12,21 @@ import { independentBlocker } from "./ticket-independent-blocker";
 import type { WorkflowStatusSelections } from "./workflow-statuses";
 
 export const activeTicket: StoragePredicate = { field: "archived", op: "ne", value: true };
+export const activeMilestoneValue = (values: Record<string, JsonValue>, fallback: JsonValue): StorageExpression => ({
+  op: "if",
+  args: [
+    {
+      op: "or",
+      args: [
+        { op: "eq", args: [{ field: "archived" }, { literal: true }] },
+        { op: "missing", args: [{ get: { literal: values }, key: { field: "deadlineId" } }] },
+      ],
+    },
+    { literal: fallback },
+    { get: { literal: values }, key: { field: "deadlineId" } },
+  ],
+});
+
 export const ticketViewState = async (
   storage: ExtensionStorageApi,
   workflow: WorkflowStatusSelections,
@@ -45,20 +61,6 @@ export const ticketViewState = async (
       return [deadline.id, state];
     }),
   );
-  const lookup = (values: Record<string, string>, fallback: string | null): StorageExpression => ({
-    op: "if",
-    args: [
-      {
-        op: "or",
-        args: [
-          { op: "eq", args: [{ field: "archived" }, { literal: true }] },
-          { op: "missing", args: [{ get: { literal: values }, key: { field: "deadlineId" } }] },
-        ],
-      },
-      { literal: fallback },
-      { get: { literal: values }, key: { field: "deadlineId" } },
-    ],
-  });
   const relatedUnfinished = (reverse = false): StoragePredicate => ({
     exists: {
       index: "ticket-view",
@@ -124,7 +126,7 @@ export const ticketViewState = async (
         ],
       },
     },
-    milestoneState: { type: "string", expression: lookup(states, "unscheduled") },
+    milestoneState: { type: "string", expression: activeMilestoneValue(states, "unscheduled") },
     needsAttention: {
       type: "string",
       cases: [
@@ -184,7 +186,7 @@ export const ticketViewState = async (
       },
     },
   };
-  computed.milestoneDate = { type: "string", expression: lookup(dates, null) };
+  computed.milestoneDate = { type: "string", expression: activeMilestoneValue(dates, null) };
   computed.independentBlockedReason = {
     type: "boolean",
     cases: [{ when: independentBlocker, value: true }],

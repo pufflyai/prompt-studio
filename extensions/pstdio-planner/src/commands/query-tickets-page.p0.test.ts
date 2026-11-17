@@ -1,8 +1,41 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { putTicket } from "../data/ticket-context.fixture";
+import { createDeadlineCommand } from "../timeline/commands/deadline-commands";
+import { planPlacements } from "../timeline/commands/placement-store";
 import { makeCommandContext } from "./command-context.fixture";
 import { queryTickets } from "./query-tickets";
+
+test("Board milestone date controls select active tickets with that date", async () => {
+  const storage = createMemoryStorage();
+  const ctx = makeCommandContext({ storage, params: {} });
+  const deadline = (await createDeadlineCommand.run(ctx, { name: "Release", date: "2030-01-02" }))!;
+  for (const archived of [false, true]) {
+    const id = archived ? "archived" : "active";
+    await putTicket(storage, {
+      id,
+      shorthand: archived ? "T-2" : "T-1",
+      title: id,
+      content: `# ${id}`,
+      statusId: "ready",
+      archived,
+      createdAt: "2026-01-01",
+      updatedAt: "2026-01-01",
+    });
+    await planPlacements(storage).put(id, { ticketId: id, deadlineId: deadline.id, position: id });
+  }
+
+  const result = await queryTickets(ctx, {
+    filter: {
+      conjunction: "and",
+      rules: [{ attributeId: "milestoneDate", condition: "is", value: "2030-01-02" }],
+    },
+    sorts: [{ attributeId: "milestoneDate", direction: "asc" }],
+    page: { limit: 10, offset: 0, fields: ["milestoneDate"], searchFields: ["milestoneDate"], search: "2030" },
+  });
+
+  expect(result.rows.map(({ id }) => id)).toEqual(["active"]);
+});
 
 test("Board selects late matching tickets and global counts without loading ticket bodies or collections", async () => {
   const storage = createMemoryStorage();
