@@ -1,6 +1,6 @@
 {
   "name": "git-workspaces",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "displayName": "Git Workspaces",
   "description": "Create isolated Git branches and worktrees for project work.",
   "publisher": "pstdio",

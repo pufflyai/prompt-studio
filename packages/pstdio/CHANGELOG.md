@@ -1,5 +1,66 @@
 # pstdio
 
+## 0.48.0
+
+_2026-11-17_
+
+### Minor Changes
+
+- a1eb6ac: Add opt-in resource Activity with synced discussions, confirmed agent handoffs, evidence attachments, and revision-bound work outcomes.
+- 1b443d1: Let extensions number up to 100 resources of one kind in one call with `ctx.resources.allocateMany`, and keep numbering fast in projects with hundreds of numbered resources.
+- 62fc94e: Add an optional GitHub Copilot harness. Sessions stream text, reasoning, tool calls and token usage, resume and fork Copilot's own sessions, take steered input, route permission prompts to approvals, and load the project's Copilot instructions and skills. Home lists Copilot quotas, and plans billed by tokens show this month's token use instead.
+- 3b41d41: Use shorter first-party extension identities while preserving historical commands, project data, saved views and encrypted sync streams.
+
+  Remove extension-defined global CLI shortcuts and the `globalAliases` SDK option. Use publisher-qualified commands; historical namespace migration paths remain available.
+
+- 52fbda2: Run Git workspace discovery and lifecycle through the installed Git Workspaces provider while retaining existing workspace identities and history.
+- 3a1c8b6: Expose synced project composition and configured resource opening through public SDK and CLI APIs; allow navigation trees to share an optional foreign view.
+- 324e652: Preserve project views and accepted actions across navigation, scope native observations to their active owners, and share presentation and resource metadata without restarting unrelated work. Read workspace totals in one Git comparison, retain renamed, staged and untracked changes, and stop cancelled summary reads without interrupting independent readers.
+- 72d3dc2: Link reusable GitHub pull request resources to tickets while preserving delivery and repair automation.
+
+### Patch Changes
+
+- 88d67ac: Remove a deleted project's folder config even when the project is deleted right after Prompt Studio starts.
+- 59f803e: Keep restored local tools from running during discovery while they remain disabled.
+- 86bbbef: Keep sessions and navigation within reach: refresh session pins without waiting for unrelated resources, open resource and collection pages by dragging, reopen closed tabs, and preview complete shortcuts in open menus. Add project-tab settings actions, compact Cloud status, fix retained Home reads and editor toolbars, and show nonempty linked-resource groups with relationships discoverable from either end. Expose session links through a right panel menu that follows attached and floating sessions and hides when empty; keep session navigation focused on conversations and keep the Side launcher floating above Main. Deliver streaming refresh events immediately and hide empty chat attachment trays.
+- e4c6d26: Type `_` and `?` in the file editor without opening Keyboard shortcuts. Keyboard shortcuts now opens with Mod+/, and direct shortcuts can no longer use keys that type text.
+- 69efa88: Recover stalled Cloud sources safely and show source phases and named file transfer activity.
+- b126b73: Keep incompatible extensions visible with compatibility diagnostics while healthy tools continue running.
+- 1170295: Run all eight fixed performance workloads on Linux x64, Apple Silicon Mac and Windows x64, and reject incomplete evidence. Leave benchmark PRs for human review and merge.
+- e43cf6a: Reuse accepted tools on warm starts and prepare extension updates in a shared background worker.
+
+  Prepare independent extension installs with up to two shared workers while preserving source ownership and the total build-process limit.
+
+- 84b0ca6: Pass the session's approval channel to harnesses on a session's first turn, not only when it resumes. `HarnessStartInput.approvals` is now part of the start input; older hosts pass it only on resume, so treat it as optional.
+- de66f90: Hide session workspace information when Workspaces is unavailable and refresh open conversations when tools change.
+- b0da1c9: Keep open files stable when unrelated tools are prepared or sync supplies an unchanged extension configuration. Refresh only the changed tool's project and extension scope.
+- b961eed: Keep encrypted sync index nodes in files beside the database instead of in it, remove the ones no saved root needs, and reclaim the space on first start. Renaming extensions no longer stalls startup on large homes.
+- 34f00bd: Fix Home appearing in two panels when returning from Canvas after its retained view expires.
+- c2e7a01: Keep keyboard menu selection when layout moves a previously hovered item away from a stationary pointer.
+- eb4d205: Keep stopped chat reading in place when visible content shrinks during a panel resize, and preserve automatic following across overlapping resize observations.
+- dc3d342: Keep completed chat rows and resolved attachments stable while replies stream.
+- dc72ed7: Forward backend performance probes through the packaged server so startup captures record real responses.
+- 0145c2a: Export a controlled DashboardRenderer from @pstdio/ui/dashboard-renderer with caller-owned metric, chart, and table data, responsive drag and resize editing, layout modes, and popover settings.
+- 538e7e5: Use an ordered access path for record pages without equality filters, including databases with existing index definitions.
+- 8cda3c3: Prepare immutable extension revisions faster by copying snapshot files with bounded parallel I/O while retaining complete inputs and cleanup guards.
+- c41a3ac: Keep a Canvas pan from activating its control again after keyboard activation during the drag.
+- ccae1c5: Observe workspace files, expose Git-ignore decorations, and retain expanded tree rows while selection refreshes, and let extension commands use the host delete confirmation.
+- e85a85b: Keep built-in collection views read-only in the view bar: saving edits to one creates a new view, and built-in tabs offer Duplicate instead of Rename and Delete.
+- baa1675: Keep the local database from growing with edit history: reclaim space from rewritten rows while the app runs, and remove two tables that stored data nothing read. Automation run events now number each run's steps 1 to 3.
+- 0ac27ac: Discover installed tools across projects while folder watchers reconnect or another project's frontend refresh is pending.
+- e89584c: Reduce repeated row-layout styling while streamed replies update. Shared theme rules emit static row geometry and token spacing once rather than serializing them on every streaming measurement.
+- c795b8f: Retain readonly account, performance and preference queries across webview recreation, cancel optional read memberships independently, persist accepted preference choices in order, and support controlled diff selection and tree-row observation lifetimes.
+- 4b24eef: Add bounded collection pages, relationship selection, requested sort order, numeric summaries and canonical Markdown title query fields.
+- 447cd2a: Sort installed and available extensions alphabetically in the extensions list.
+- 21494ed: Keep note editors closed while their initial presentation is replaced
+- a0adbef: Keep extension work bounded with collection-scoped indexes, indexed batch reads and conditional field saves, object-key selection, distinct related-resource pages, scoped workspace queries, and paged local and remote session history.
+- 0eb8f3a: Paint the startup window before loading the workbench and avoid preparing Cloud keys twice per synchronization pass.
+- d957387: Keep an open menu focused when a terminal finishes loading, so tab actions can complete.
+- 3293ce7: Keep durable receipt writes from stalling when native directory paths use a different spelling.
+- 2e61d22: Keep the selected model at the top of model selector lists and show the harness icon in the selector button.
+- 3979b1a: Ask for tool approvals, such as running a shell command, in the same composer form as agent questions. Skip denies the request.
+- a2e8cbb: Recover dropped page requests silently while retaining loaded content.
+
 ## 0.47.0
 
 _2026-11-12_

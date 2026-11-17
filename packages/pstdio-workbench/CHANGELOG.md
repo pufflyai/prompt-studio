@@ -1,5 +1,33 @@
 # @pstdio/workbench
 
+## 0.48.0
+
+_2026-11-17_
+
+### Minor Changes
+
+- a1eb6ac: Add opt-in resource Activity with synced discussions, confirmed agent handoffs, evidence attachments, and revision-bound work outcomes.
+- 3b41d41: Use shorter first-party extension identities while preserving historical commands, project data, saved views and encrypted sync streams.
+
+  Remove extension-defined global CLI shortcuts and the `globalAliases` SDK option. Use publisher-qualified commands; historical namespace migration paths remain available.
+
+- 324e652: Preserve project views and accepted actions across navigation, scope native observations to their active owners, and share presentation and resource metadata without restarting unrelated work. Read workspace totals in one Git comparison, retain renamed, staged and untracked changes, and stop cancelled summary reads without interrupting independent readers.
+- c795b8f: Retain readonly account, performance and preference queries across webview recreation, cancel optional read memberships independently, persist accepted preference choices in order, and support controlled diff selection and tree-row observation lifetimes.
+
+### Patch Changes
+
+- 86bbbef: Keep sessions and navigation within reach: refresh session pins without waiting for unrelated resources, open resource and collection pages by dragging, reopen closed tabs, and preview complete shortcuts in open menus. Add project-tab settings actions, compact Cloud status, fix retained Home reads and editor toolbars, and show nonempty linked-resource groups with relationships discoverable from either end. Expose session links through a right panel menu that follows attached and floating sessions and hides when empty; keep session navigation focused on conversations and keep the Side launcher floating above Main. Deliver streaming refresh events immediately and hide empty chat attachment trays.
+- e4c6d26: Type `_` and `?` in the file editor without opening Keyboard shortcuts. Keyboard shortcuts now opens with Mod+/, and direct shortcuts can no longer use keys that type text.
+- 69efa88: Recover stalled Cloud sources safely and show source phases and named file transfer activity.
+- de66f90: Hide session workspace information when Workspaces is unavailable and refresh open conversations when tools change.
+- b0da1c9: Keep open files stable when unrelated tools are prepared or sync supplies an unchanged extension configuration. Refresh only the changed tool's project and extension scope.
+- 34f00bd: Fix Home appearing in two panels when returning from Canvas after its retained view expires.
+- dc3d342: Keep completed chat rows and resolved attachments stable while replies stream.
+- ccae1c5: Observe workspace files, expose Git-ignore decorations, and retain expanded tree rows while selection refreshes, and let extension commands use the host delete confirmation.
+- 21494ed: Keep note editors closed while their initial presentation is replaced
+- 3979b1a: Ask for tool approvals, such as running a shell command, in the same composer form as agent questions. Skip denies the request.
+- a2e8cbb: Recover dropped page requests silently while retaining loaded content.
+
 ## 0.47.0
 
 _2026-11-12_

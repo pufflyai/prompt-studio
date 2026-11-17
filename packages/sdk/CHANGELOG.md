@@ -1,5 +1,30 @@
 # @pstdio/sdk
 
+## 0.48.0
+
+_2026-11-17_
+
+### Minor Changes
+
+- a1eb6ac: Add opt-in resource Activity with synced discussions, confirmed agent handoffs, evidence attachments, and revision-bound work outcomes.
+- 1b443d1: Let extensions number up to 100 resources of one kind in one call with `ctx.resources.allocateMany`, and keep numbering fast in projects with hundreds of numbered resources.
+- 3b41d41: Use shorter first-party extension identities while preserving historical commands, project data, saved views and encrypted sync streams.
+
+  Remove extension-defined global CLI shortcuts and the `globalAliases` SDK option. Use publisher-qualified commands; historical namespace migration paths remain available.
+
+- 3a1c8b6: Expose synced project composition and configured resource opening through public SDK and CLI APIs; allow navigation trees to share an optional foreign view.
+- c795b8f: Retain readonly account, performance and preference queries across webview recreation, cancel optional read memberships independently, persist accepted preference choices in order, and support controlled diff selection and tree-row observation lifetimes.
+
+### Patch Changes
+
+- e4c6d26: Type `_` and `?` in the file editor without opening Keyboard shortcuts. Keyboard shortcuts now opens with Mod+/, and direct shortcuts can no longer use keys that type text.
+- 69efa88: Recover stalled Cloud sources safely and show source phases and named file transfer activity.
+- 84b0ca6: Pass the session's approval channel to harnesses on a session's first turn, not only when it resumes. `HarnessStartInput.approvals` is now part of the start input; older hosts pass it only on resume, so treat it as optional.
+- ccae1c5: Observe workspace files, expose Git-ignore decorations, and retain expanded tree rows while selection refreshes, and let extension commands use the host delete confirmation.
+- 4b24eef: Add bounded collection pages, relationship selection, requested sort order, numeric summaries and canonical Markdown title query fields.
+- a0adbef: Keep extension work bounded with collection-scoped indexes, indexed batch reads and conditional field saves, object-key selection, distinct related-resource pages, scoped workspace queries, and paged local and remote session history.
+- a2e8cbb: Recover dropped page requests silently while retaining loaded content.
+
 ## 0.47.0
 
 _2026-11-12_
