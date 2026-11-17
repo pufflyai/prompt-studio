@@ -73,6 +73,28 @@ describe("importTicketsCommand", () => {
     expect(await ticketsCollection(storage).list()).toEqual([]);
   });
 
+  test("tags resolve by name, a single-select tag takes one value, and tags are read once per import", async () => {
+    const storage = createMemoryStorage();
+    await seedDefaultStatuses(storage);
+    let tagReads = 0;
+    const get = storage.get.bind(storage);
+    storage.get = (key: string) => {
+      if (key.includes("default-tags-seeded")) tagReads++;
+      return get(key);
+    };
+    await expect(importTickets(storage, [{ key: "a", title: "A", tags: ["Bug", "Feature"] }])).rejects.toThrow();
+    expect(await ticketsCollection(storage).list()).toEqual([]);
+
+    tagReads = 0;
+    const tickets = Array.from({ length: 50 }, (_, index) => ({ key: `k${index}`, title: `T${index}`, tags: ["Bug"] }));
+    await importTickets(storage, tickets);
+
+    expect(tagReads).toBeLessThanOrEqual(2);
+    const saved = await ticketsCollection(storage).list();
+    expect(saved).toHaveLength(50);
+    for (const ticket of saved) expect(ticket.tags?.["default-type"]).toBe("default-type-bug");
+  });
+
   test("links each workspace to its imported tickets with one anchor update", async () => {
     const storage = createMemoryStorage();
     await seedDefaultStatuses(storage);
