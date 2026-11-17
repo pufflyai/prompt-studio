@@ -109,6 +109,8 @@ The CLI `globalAliases` declaration is removed in API 0.5.0. Root shortcuts such
 
 The shorter first-party extension identities also share API 0.5.0. Canonical discovery and output use names such as `pstdio.notes`; historical invocations remain deprecated aliases. Ship the migration-capable host before renamed packages. See [identity upgrades](../../guides/extensions/0011-identity-upgrades.md).
 
+Data-table image columns, resource list `subGroupings` (any number of levels) with children nested to any depth, and tree row `tags` are additive and share API 0.5.0. Existing columns, saved views and tree rows keep their behavior. Publish the supporting host, SDK and UI before independent extensions adopt them. See [image columns](0004-contribution-api.md#image-columns-on-main) and [resource lists](0004-contribution-api.md#resource-lists).
+
 `ctx.resources.allocateMany` also shares API 0.5.0. It numbers 1 to 100 resources of one kind in one save, so imports do not allocate one number per call.
 
 The optional `files.download` webview capability and typed `client.files.download`

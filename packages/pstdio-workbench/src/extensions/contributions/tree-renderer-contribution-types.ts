@@ -49,6 +49,7 @@ export interface ExtensionTreeNode {
   fileName?: string;
   showContextMenuTrigger?: boolean;
   badge?: import("@pstdio/sdk/extensions").TreeNode["badge"];
+  tags?: import("@pstdio/sdk/extensions").TreeNode["tags"];
   iconTooltip?: string;
   tooltip?: string;
   resource?: ExtensionTreeResource;

@@ -5,7 +5,7 @@ import type {
   WorkbenchExtensionAutomationRecord,
 } from "@pstdio/sdk/api";
 import { Switch, type SwitchProps, Tooltip } from "@pstdio/ui";
-import { ArrowUpCircle, Folder, Globe } from "lucide-react";
+import { ArrowUpCircle, Clock, Folder, Globe } from "lucide-react";
 import type { AgentInfo } from "pstdio-api-contracts";
 import { useTranslation } from "react-i18next";
 import { ExtensionAutomationsPopover } from "./extension-automations-popover";
@@ -21,6 +21,7 @@ export interface ExtensionListRowProps {
   unavailableHarnesses?: AgentInfo[];
   toggling: boolean;
   upgrading: boolean;
+  queued?: boolean;
   togglingAutomation?: boolean;
   onToggle: (enabled: boolean) => void;
   onToggleAutomation: (automation: WorkbenchExtensionAutomationRecord, enabled: boolean) => Promise<unknown>;
@@ -38,6 +39,7 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
     unavailableHarnesses = [],
     toggling,
     upgrading,
+    queued = false,
     togglingAutomation,
     onToggle,
     onToggleAutomation,
@@ -45,6 +47,9 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
     onOpen,
   } = props;
   const { t } = useTranslation("projects");
+  const upgradeLabel = t(
+    queued ? "projectSettings.extensionsPanel.upgrade.waiting" : "projectSettings.extensionsPanel.upgrade.action",
+  );
   const handleCheckedChange: NonNullable<SwitchProps["onCheckedChange"]> = (details) => {
     onToggle(details.checked);
   };
@@ -130,16 +135,17 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
           opens on Enter, so a key press on the button must not reach it either. */}
       <Box boxSize="6" flexShrink="0" onClick={stopRowClick} onKeyDown={stopRowClick}>
         {extension.canUpgrade && (
-          <Tooltip content={t("projectSettings.extensionsPanel.upgrade.action")}>
+          <Tooltip content={upgradeLabel}>
             <IconButton
               variant="ghost"
               size="2xs"
-              loading={upgrading}
+              loading={upgrading && !queued}
+              disabled={upgrading}
               onClick={onUpgrade}
-              aria-label={t("projectSettings.extensionsPanel.upgrade.action")}
+              aria-label={upgradeLabel}
               data-testid="extension-row-upgrade"
             >
-              <ArrowUpCircle />
+              {queued ? <Clock /> : <ArrowUpCircle />}
             </IconButton>
           </Tooltip>
         )}

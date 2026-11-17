@@ -67,5 +67,7 @@
   "commands.requestReview.title": "검토 요청",
   "commands.requestReview.description": "검토 요청을 만들고 티켓을 주의가 필요한 상태로 표시합니다.",
   "commands.cleanupBoard.title": "보드 정리",
-  "commands.cleanupBoard.model": "모델"
+  "commands.cleanupBoard.model": "모델",
+  "activity.context": "활동 컨텍스트 읽기",
+  "activity.migrate": "이전 결과를 티켓 활동으로 이동"
 }

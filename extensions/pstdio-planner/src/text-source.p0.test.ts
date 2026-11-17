@@ -6,6 +6,7 @@ import { createTicketCommand } from "./commands/create-ticket";
 import { createTicketFileCommand } from "./commands/ticket-files";
 import { deleteTicketFile, updateTicketFile } from "./data/file-operations";
 import { ticketContext, ticketsCollection } from "./data/ticket-context.fixture";
+import { ticketRecordId } from "./data/ticket-record-address";
 
 const provider = () => {
   const source = extension.textSources?.find(({ id }) => id === "ticket-document");
@@ -37,7 +38,7 @@ test("Planner selects a public body source and projects its derived title and ch
   const source = provider();
   const params = { ticketId: ticket.id, documentId: "__ticket__" };
   expect(await source.resolve(ctx, { params })).toMatchObject({
-    source: { kind: "collection", collection: "tickets", id: ticket.id, field: "/content" },
+    source: { kind: "record", recordId: ticketRecordId(storage, ticket.id), field: "/content" },
     editable: true,
   });
   await source.project(ctx, { params, content: "# Shared title\n\nShared body" });
