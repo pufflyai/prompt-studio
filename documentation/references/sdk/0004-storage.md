@@ -133,6 +133,13 @@ selected storage scope, keeping other collections and scopes out of the index.
 Declare these in `storageIndexes` to install them before commands become available;
 the first action must not build indexes. Do not parse opaque record addresses.
 This addition requires extension API 0.4.2 and a matching SDK build.
+
+For records saved at `records.id(keyPrefix + key)`, such as a collection moved with
+`migration.moveCollection`, set `keyPrefix` instead. Field paths are relative to the
+record value, and the host resolves the prefix in the selected storage scope, so a
+manifest can declare it without knowing the project ID. `keyPrefix` cannot be combined
+with `collection` or `prefix`. It requires extension API 0.5.0.
+
 `readCollectionRecords` reads up to 100 opaque addresses from a query page and
 returns collection values in request order, with `undefined` for missing or
 deleted rows. It requires an SDK build that exports this helper.
@@ -544,8 +551,9 @@ when incidental timestamps overlap. They still require the observed record
 lifetime: a save from before deletion cannot modify a recreated record. Explicit
 `records.commit` conditions keep their written-path and lifetime checks.
 
-Legacy collections retain their own names and ordering. Continue their supported
-access while planning an explicit extension data migration to domain record IDs.
+Legacy collections retain their own names and ordering until the extension moves
+them. Move a collection to domain record IDs with `migration.moveCollection` inside
+`storage.migrate`; see [data migrations](../extensions/0018-data-migrations.md#move-a-collection-to-records).
 Do not change stored data formats merely by renaming method calls. Blob files and
 collection attachments also keep their existing contract; asset references are a
 separate contract.

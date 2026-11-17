@@ -102,9 +102,9 @@ const WorkbenchPanelMenuOpener = (props: WorkbenchPanelMenuOpenerProps) => {
       ref={triggerRef}
       variant="ghost"
       size={PANEL_HEADER_CONTROL_SIZE}
-      aria-label={`Open ${view.label}`}
+      aria-label={`${view.collapsed ? "Open" : "Close"} ${view.label}`}
       flexShrink={0}
-      onClick={canAttach ? view.onOpen : undefined}
+      onClick={canAttach ? () => view.onCollapsedChange(!view.collapsed) : undefined}
     >
       <WorkbenchIcon name={view.icon} size={14} />
     </IconButton>
@@ -152,10 +152,14 @@ const WorkbenchPanelMenuOpener = (props: WorkbenchPanelMenuOpenerProps) => {
   );
 };
 
-export const WorkbenchPanelMenuOpeners = (props: { workbench: WorkbenchCore; panel: WorkbenchPanelRegion }) => {
-  const { panel, workbench } = props;
+export const WorkbenchPanelMenuOpeners = (props: {
+  workbench: WorkbenchCore;
+  panel: WorkbenchPanelRegion;
+  toggle?: boolean;
+}) => {
+  const { panel, workbench, toggle = false } = props;
   const [left, right] = useWorkbenchPanelMenus(workbench, panel);
-  const closedMenus = [left, right].filter((view) => view.has && view.collapsed);
+  const closedMenus = [left, right].filter((view) => view.has && (view.collapsed || (toggle && view.collapsible)));
 
   if (closedMenus.length === 0) return null;
 

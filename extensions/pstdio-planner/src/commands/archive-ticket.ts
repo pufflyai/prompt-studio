@@ -1,4 +1,3 @@
-import { patchCollectionRecords } from "@pstdio/sdk/data";
 import {
   defineCommand,
   type ExtensionContextBase,
@@ -69,9 +68,14 @@ const archiveSelectedTickets = (
       let current = selected;
       for (;;) {
         if (!current.length) return [];
-        const outcome = await patchCollectionRecords(ctx.storage, current, {
-          archived: true,
-          updatedAt: new Date().toISOString(),
+        // Tickets are records since storage version 5, so the archive fields sit at the record root.
+        const outcome = await ctx.storage.records.commitIfCurrent({
+          operationId: ctx.storage.ids.create(),
+          edits: current.map(({ recordId, revision }) => ({
+            recordId,
+            expectedRevision: revision,
+            set: { "/archived": true, "/updatedAt": new Date().toISOString() },
+          })),
         });
         if (outcome) {
           if (outcome.state === "refused" || outcome.state === "needs-attention")

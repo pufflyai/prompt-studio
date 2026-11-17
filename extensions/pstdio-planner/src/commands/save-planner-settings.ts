@@ -60,19 +60,23 @@ export const savePlannerSettings = defineCommand({
     for (const stored of tags) {
       const record = records.find((tag) => tag.id === stored.id);
       if (!record) {
-        await editTicketTagValues(ctx.storage, stored.id, () => undefined);
+        await editTicketTagValues(ctx, stored.id, () => undefined, [stored]);
         await tagsCollection(ctx.storage).delete(stored.id);
       }
     }
     for (const record of records) {
       await putTag(ctx.storage, record);
       const allowed = new Set(record.options.map((option) => option.id));
-      await editTicketTagValues(ctx.storage, record.id, (value) =>
-        tagValue(
-          record,
-          tagValueIds(value).filter((id) => allowed.has(id)),
-          value,
-        ),
+      await editTicketTagValues(
+        ctx,
+        record.id,
+        (value) =>
+          tagValue(
+            record,
+            tagValueIds(value).filter((id) => allowed.has(id)),
+            value,
+          ),
+        previous.has(record.id) ? [previous.get(record.id)!] : [],
       );
     }
     await ctx.events.emit(plannerTicketsChanged, {});

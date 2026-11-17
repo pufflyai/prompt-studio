@@ -57,7 +57,9 @@ export const verifyPackagedNoteHeadings = async (page: Page, origin: string, pro
   const notes = await showSidenavEntry(page, "Notes");
   if ((await notes.getAttribute("aria-expanded")) !== "true") await notes.click();
   await page.locator('[data-workbench-region="sidenav"]').getByText("Heading formatting", { exact: true }).click();
-  const editor = page.locator('[contenteditable="true"]:visible');
+  const editor = page
+    .getByRole("region", { name: "Main", exact: true })
+    .getByRole("textbox", { name: "", exact: true });
   await expect(editor).toContainText("Third paragraph.");
   await editor.click();
   await editor.press("ControlOrMeta+a");

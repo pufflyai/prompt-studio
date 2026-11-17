@@ -1,7 +1,13 @@
 import type { ExtensionStorageApi, ResourceIdentity } from "@pstdio/sdk/extensions";
-import { connectMemoryQueryResources, makeCommandContext } from "@pstdio/sdk/testing";
+import {
+  connectMemoryQueryResources,
+  createMemoryStorage,
+  type MemoryStorageOptions,
+  makeCommandContext,
+} from "@pstdio/sdk/testing";
 import { ticketsCollection as collection, putTicket as put } from "./collections";
 import { withTicketIdentities } from "./ticket-identity";
+import { TICKET_KEY_PREFIX, TICKETS_COLLECTION } from "./ticket-record-address";
 import { readTicketTags, type StoredTicketRecord } from "./ticket-tag-storage";
 import type { Ticket } from "./types";
 
@@ -81,4 +87,19 @@ export const ticketsCollection = (storage: ExtensionStorageApi) => {
       return true;
     },
   };
+};
+
+/**
+ * A project already on storage version 5: each ticket is a record, and the deprecated collection
+ * redirects to them. Seeding records skips the one-time move of large ticket sets.
+ */
+export const createTicketRecordStorage = async (tickets: Ticket[], options: MemoryStorageOptions = {}) => {
+  const storage = createMemoryStorage({
+    ...options,
+    kv: { ...options.kv, ...Object.fromEntries(tickets.map((ticket) => [`${TICKET_KEY_PREFIX}${ticket.id}`, ticket])) },
+  });
+  await storage.migrate(5, (_previous, migration) =>
+    migration.moveCollection(TICKETS_COLLECTION, { keyPrefix: TICKET_KEY_PREFIX }).then(() => undefined),
+  );
+  return storage;
 };

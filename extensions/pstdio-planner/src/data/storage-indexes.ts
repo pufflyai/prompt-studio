@@ -5,6 +5,7 @@ import { autoBuildDispatchIndex } from "./auto-build-dispatches";
 import { reviewRequestLinkIndexes } from "./auto-build-request-links";
 import { definitionIndexes, legacyCleanupIndexes } from "./definition-query";
 import { mergeTicketIndex } from "./merge-ticket-query";
+import { migratePlannerStorage } from "./migrate-storage";
 import { plannerNavigationIndexes } from "./navigation-queries";
 import { reviewQueryIndexes } from "./review-query-indexes";
 import { reviewThreadIndex } from "./review-thread-page";
@@ -26,5 +27,8 @@ export const plannerStorageIndexes = () => [
   ...reviewRequestLinkIndexes,
   reviewThreadIndex,
 ];
-export const preparePlannerIndexes = (storage: ExtensionStorageApi) =>
-  storage.records.defineIndexes(plannerStorageIndexes());
+// Queries must not run before an older project's tickets have moved into the indexed records.
+export const preparePlannerIndexes = async (storage: ExtensionStorageApi) => {
+  await migratePlannerStorage({ storage });
+  await storage.records.defineIndexes(plannerStorageIndexes());
+};

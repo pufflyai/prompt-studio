@@ -95,7 +95,8 @@ test("batch resolution reads a shared ancestor once and stops at cycles", async 
   );
 
   expect(resolved.map(({ resource }) => resource.id)).toEqual([child.id, parent.id, child.id]);
-  expect(observed.reads).toEqual([`tickets/${child.id}`, `tickets/${parent.id}`]);
+  // Concurrent reads finish in any order; each ticket is read once.
+  expect(observed.reads.toSorted()).toEqual([`tickets/${child.id}`, `tickets/${parent.id}`].toSorted());
 });
 
 test("batch resolution reads a missing ancestor once across different branch depths", async () => {
@@ -130,5 +131,5 @@ test("batch resolution reads a missing ancestor once across different branch dep
 
   expect(resolved.map(({ resource }) => resource.id)).toEqual(["a", "b", "a"]);
   expect(resolved[0].resource.metadata?.archived).toBe(true);
-  expect(observed.reads).toEqual(["tickets/a", "tickets/b", "tickets/missing"]);
+  expect(observed.reads.toSorted()).toEqual(["tickets/a", "tickets/b", "tickets/missing"]);
 });

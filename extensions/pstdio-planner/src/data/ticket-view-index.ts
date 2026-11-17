@@ -1,5 +1,6 @@
 import type { StorageRecordIndex } from "@pstdio/sdk/extensions";
 import { reviewLinkProjections } from "./review-link-projections";
+import { TICKET_KEY_PREFIX } from "./ticket-record-address";
 
 // Global predicates and small card fields read the narrow projection, avoiding decompression
 // of every matching ticket body. Installation backfills these fields in bounded pages.
@@ -22,7 +23,7 @@ const calendarOnly = (path: string): StorageRecordIndex["fields"][string] => ({
 
 export const ticketViewIndex: StorageRecordIndex = {
   name: "ticket-view",
-  collection: "tickets",
+  keyPrefix: TICKET_KEY_PREFIX,
   identity: { kind: "ticket", idField: "id", shorthandField: "shorthand", aliasesField: "aliases" },
   hierarchy: {
     idField: "id",

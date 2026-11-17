@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { seedTicketIdentity } from "../data/ticket-context.fixture";
+import { migratePlannerStorage } from "../data/migrate-storage";
+import { observeTicketRecords } from "../data/storage-reads.fixture";
+import { createTicketRecordStorage, seedTicketIdentity } from "../data/ticket-context.fixture";
 import type { Ticket } from "../data/types";
 import { loadAttemptDependencies, readImplementationCapacity } from "./attempt-readiness";
 import { makeCommandContext } from "./command-context.fixture";
@@ -19,10 +21,10 @@ test("readiness selects the dependency closure without reading unrelated tickets
     updatedAt: "2026-11-14",
     ...(index === 0 ? { dependsOn: ["ticket-1"] } : {}),
   }));
-  const storage = createMemoryStorage({
-    collections: { tickets: Object.fromEntries(rows.map((row) => [row.id, row])) },
-  });
+  const storage = await createTicketRecordStorage(rows);
   for (const row of rows) seedTicketIdentity(storage, row);
+  const tickets = observeTicketRecords(storage);
+  storage.records = tickets.storage.records;
   const collection = storage.collection.bind(storage);
   const reads = new Set<string>();
   storage.collection = <T>(name: string) => {
@@ -51,6 +53,7 @@ test("readiness selects the dependency closure without reading unrelated tickets
     decision: "wait",
     reason: "dependency-not-ready",
   });
+  for (const id of tickets.reads) reads.add(id);
   expect([...reads].sort()).toEqual(["ticket-0"]);
 });
 
@@ -74,6 +77,8 @@ test("implementation capacity pages live sessions and reads only indexed ownersh
     await storage
       .collection("planner-attempts")
       .put(`duplicate-${i}`, { schemaVersion: 2, implementationSessionId: "session-0", workspaceId: `duplicate-${i}` });
+  // The project's one-time storage upgrade may list its small legacy collections; capacity must not.
+  await migratePlannerStorage({ storage });
   const collection = storage.collection.bind(storage);
   storage.collection = <T>(name: string) => ({
     ...collection<T>(name),

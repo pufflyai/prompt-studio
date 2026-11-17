@@ -69,7 +69,10 @@ test.beforeAll(() => {
   buildBinary();
 });
 
-const synced = (device: CloudAcceptanceDevice, projectId: string, completion = expect) =>
+// Relay reconnect backoff can reach 30 seconds during this deliberate offline interval.
+// Observe completion beyond that backoff; every convergence assertion remains required.
+const cloudCompletion = expect.configure({ timeout: 45_000 });
+const synced = (device: CloudAcceptanceDevice, projectId: string, completion = cloudCompletion) =>
   completion
     .poll(() => device.client.account.projectSyncStatus(projectId), {
       message: `${device.name}: waiting for Cloud sync`,

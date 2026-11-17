@@ -1,9 +1,10 @@
 import type { ExtensionStorageApi, StorageRecordIndex } from "@pstdio/sdk/extensions";
 import { preparePlannerIndexes } from "./storage-indexes";
+import { TICKET_KEY_PREFIX } from "./ticket-record-address";
 
 export const mergeTicketIndex: StorageRecordIndex = {
   name: "merge-check-tickets",
-  collection: "tickets",
+  keyPrefix: TICKET_KEY_PREFIX,
   fields: {
     id: { path: ["id"], type: "string" },
     statusId: { path: ["statusId"], type: "string" },
