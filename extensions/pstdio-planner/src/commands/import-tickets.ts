@@ -31,6 +31,8 @@ const MAX_TICKETS = 1000;
 const GROUP_TICKETS = 100;
 const GROUP_BYTES = 1024 * 1024;
 const MAX_TICKET_BYTES = 200 * 1024;
+// Below the 4 MiB group limit, leaving room for record metadata.
+const MAX_COMPONENT_BYTES = 3 * 1024 * 1024;
 
 const json = (value: unknown) => JSON.parse(JSON.stringify(value)) as never;
 
@@ -50,23 +52,48 @@ const rejectCycles = (tickets: ImportedTicket[], next: (ticket: ImportedTicket) 
 };
 
 // Exactly one of workspace or session, as a string.
-// Imported parents and prerequisites are saved before the tickets that name them, so a failure
-// partway through never leaves a saved ticket pointing at a ticket that was not saved.
-const saveOrder = (tickets: ImportedTicket[]) => {
+// Tickets that name each other through parents and dependencies (an epic that depends on its own
+// child, say) form one component. Components come out with the ones they name first, so groups saved
+// in this order never leave a saved ticket naming one that was not saved, and a component is never
+// split across two saves.
+export const saveComponents = (tickets: ImportedTicket[]) => {
   const byKey = new Map(tickets.map((ticket, index) => [ticket.key, index]));
-  const order: number[] = [];
-  const seen = new Set<number>();
-  const visit = (index: number) => {
-    if (seen.has(index)) return;
-    seen.add(index);
+  const refs = (index: number) => {
     const ticket = tickets[index]!;
-    for (const ref of [...(ticket.parent ? [ticket.parent] : []), ...(ticket.dependsOn ?? [])]) {
-      const target = byKey.get(ref);
-      if (target !== undefined) visit(target);
-    }
-    order.push(index);
+    return [...(ticket.parent ? [ticket.parent] : []), ...(ticket.dependsOn ?? [])].flatMap((key) => {
+      const target = byKey.get(key);
+      return target === undefined ? [] : [target];
+    });
   };
-  for (const index of tickets.keys()) visit(index);
+  // Tarjan's strongly connected components emit each component after the components it reaches.
+  const order: number[][] = [];
+  const low = new Map<number, number>();
+  const found = new Map<number, number>();
+  const stack: number[] = [];
+  const onStack = new Set<number>();
+  let next = 0;
+  const visit = (index: number) => {
+    found.set(index, next);
+    low.set(index, next++);
+    stack.push(index);
+    onStack.add(index);
+    for (const target of refs(index)) {
+      if (!found.has(target)) {
+        visit(target);
+        low.set(index, Math.min(low.get(index)!, low.get(target)!));
+      } else if (onStack.has(target)) low.set(index, Math.min(low.get(index)!, found.get(target)!));
+    }
+    if (low.get(index) !== found.get(index)) return;
+    const component: number[] = [];
+    let member: number;
+    do {
+      member = stack.pop()!;
+      onStack.delete(member);
+      component.push(member);
+    } while (member !== index);
+    order.push(component);
+  };
+  for (const index of tickets.keys()) if (!found.has(index)) visit(index);
   return order;
 };
 
@@ -109,6 +136,15 @@ const validate = (tickets: unknown) => {
   }
   rejectCycles(tickets as ImportedTicket[], (ticket) => ticket.dependsOn ?? [], "dependency");
   rejectCycles(tickets as ImportedTicket[], (ticket) => (ticket.parent ? [ticket.parent] : []), "parent");
+  for (const component of saveComponents(tickets as ImportedTicket[])) {
+    const members = component.map((index) => (tickets as ImportedTicket[])[index]!);
+    const bytes = members.reduce(
+      (sum, ticket) => sum + new TextEncoder().encode(JSON.stringify({ ...ticket, ...ticketText(ticket) })).length,
+      0,
+    );
+    if (bytes > MAX_COMPONENT_BYTES)
+      throw new Error(`Tickets that name each other (${members[0]!.key} and others) must fit in one save of 3 MiB.`);
+  }
   return tickets as ImportedTicket[];
 };
 
@@ -173,7 +209,7 @@ const allocate = async (ctx: CommandContext, count: number) => {
   return identities;
 };
 
-const saveGroups = async (ctx: CommandContext, tickets: StoredTicket[], progress: { ids: string[] }) => {
+const saveGroups = async (ctx: CommandContext, components: StoredTicket[][], progress: { ids: string[] }) => {
   let group: StoredTicket[] = [];
   let bytes = 0;
   const flush = async () => {
@@ -190,10 +226,11 @@ const saveGroups = async (ctx: CommandContext, tickets: StoredTicket[], progress
     group = [];
     bytes = 0;
   };
-  for (const ticket of tickets) {
-    const size = new TextEncoder().encode(JSON.stringify(ticket)).length;
-    if (group.length >= GROUP_TICKETS || (group.length && bytes + size > GROUP_BYTES)) await flush();
-    group.push(ticket);
+  // A component stays in one save even when it alone is larger than a usual group.
+  for (const component of components) {
+    const size = component.reduce((sum, ticket) => sum + new TextEncoder().encode(JSON.stringify(ticket)).length, 0);
+    if (group.length && (group.length + component.length > GROUP_TICKETS || bytes + size > GROUP_BYTES)) await flush();
+    group.push(...component);
     bytes += size;
   }
   await flush();
@@ -277,7 +314,7 @@ export const importTicketsCommand = defineCommand({
         }
         await saveGroups(
           ctx,
-          saveOrder(tickets).map((index) => stored[index]!),
+          saveComponents(tickets).map((component) => component.map((index) => stored[index]!)),
           progress,
         );
       });

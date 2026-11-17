@@ -207,3 +207,44 @@ describe("importTicketsCommand input checks", () => {
     expect((await ticketsCollection(storage).get(result.tickets.b!.id))?.dependsOn).toEqual([result.tickets.a!.id]);
   });
 });
+
+test("tickets that name each other through parents and dependencies are never split across saves", async () => {
+  const storage = createMemoryStorage();
+  await seedDefaultStatuses(storage);
+  const committed: number[] = [];
+  let commits = 0;
+  const failing = {
+    ...storage,
+    records: {
+      ...storage.records,
+      commit: async (group: Parameters<typeof storage.records.commit>[0]) => {
+        if (group.edits.length) committed.push(group.edits.length);
+        // The second group of imported tickets is refused.
+        if (group.edits.length && ++commits === 2)
+          return { operationId: group.operationId, state: "refused" as const, status: "saved-locally" as const };
+        return storage.records.commit(group);
+      },
+    },
+  } as typeof storage;
+  // 60 independent tickets, then a 150-ticket parent chain that the last ticket's dependency closes.
+  const tickets: ImportedTicket[] = [
+    ...Array.from({ length: 60 }, (_, index) => ({ key: `free${index}`, title: `Free ${index}` })),
+    ...Array.from({ length: 150 }, (_, index) => ({
+      key: `c${index}`,
+      title: `Chain ${index}`,
+      ...(index < 149 ? { parent: `c${index + 1}` } : { dependsOn: ["c0"] }),
+    })),
+  ];
+  await expect(importTicketsCommand.run(...makeCommandArgs({ storage: failing, params: { tickets } }))).rejects.toThrow(
+    "stopped after saving",
+  );
+
+  // The 150-ticket component went into one save of its own.
+  expect(committed).toContain(150);
+  const saved = await ticketsCollection(failing).list();
+  const ids = new Set(saved.map(({ id }) => id));
+  for (const ticket of saved) {
+    if (ticket.parentId) expect(ids.has(ticket.parentId)).toBe(true);
+    for (const dependency of ticket.dependsOn ?? []) expect(ids.has(dependency)).toBe(true);
+  }
+});
