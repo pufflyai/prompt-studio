@@ -32,12 +32,12 @@ test("keeps performance measurements live when switching and closing project tab
     const highlighting = performanceDetails(app.page).getByRole("checkbox", { name: "Highlight React renders" });
     await expect(highlighting).toBeEnabled();
     await expect(highlighting).not.toBeChecked();
-    await highlighting.check();
+    await performanceDetails(app.page).getByText("Highlight React renders", { exact: true }).click();
     await expect(app.page.locator("[data-react-scan] canvas")).toBeVisible();
     await performanceMeter(app.page).click();
     await expect(app.page.locator("[data-react-scan] canvas")).toBeVisible();
     await performanceMeter(app.page).click();
-    await highlighting.uncheck();
+    await performanceDetails(app.page).getByText("Highlight React renders", { exact: true }).click();
     await expect(app.page.locator("[data-react-scan] canvas")).toBeHidden();
     await performanceMeter(app.page).click();
     const capture = async () => {

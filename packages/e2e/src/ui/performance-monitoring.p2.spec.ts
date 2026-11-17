@@ -13,6 +13,7 @@ test("measures while the Performance Monitoring extension is loaded and shows it
     await request.post(`${apiBase}/v1/projects`, { data: folderProjectInput({ name: "Performance monitoring" }) })
   ).json();
   await page.addInitScript((projectId: string) => {
+    if (window !== window.top) return;
     const operations: string[] = [];
     Reflect.set(window, "performanceDetailsOperations", operations);
     window.addEventListener("message", (event) => {
@@ -28,6 +29,7 @@ test("measures while the Performance Monitoring extension is loaded and shows it
       if (request?.method === "performance.read") operations.push(request.params.operation);
     });
     localStorage.setItem("onboarding-complete", "true");
+    localStorage.setItem("react-scan-options", JSON.stringify({ enabled: true }));
     localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
   }, project.id);
   await page.goto(`/projects/${project.id}/`);
@@ -48,7 +50,7 @@ test("measures while the Performance Monitoring extension is loaded and shows it
   await expect(highlighting).toBeEnabled();
   await expect(highlighting).not.toBeChecked();
   // Critical: the extension controls the workbench's scanner, not its own iframe.
-  await highlighting.check();
+  await details.getByText("Highlight React renders", { exact: true }).click();
   await expect(highlighting).toBeChecked();
   await expect(page.locator("[data-react-scan] canvas")).toBeVisible();
 
@@ -71,6 +73,6 @@ test("measures while the Performance Monitoring extension is loaded and shows it
     .toBe(true);
   expect(await detailFrame.evaluate((frame, original) => frame === original, loadedFrame)).toBe(true);
   await expect(highlighting).toBeChecked();
-  await highlighting.uncheck();
+  await details.getByText("Highlight React renders", { exact: true }).click();
   await expect(page.locator("[data-react-scan] canvas")).toBeHidden();
 });
