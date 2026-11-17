@@ -8,6 +8,7 @@ import { useCollectionViews } from "../collection-view/use-collection-views";
 import { DisplayMenu } from "./display-menu";
 import { countFilterValues } from "./kanban-renderer-grouping";
 import { buildDisplayPropertyOptions, buildFilterCategories, buildGroupingOptions } from "./kanban-renderer-helpers";
+import { resourceListSettings } from "./resource-list-view-model";
 import type {
   AttributeDescriptor,
   KanbanRendererRow,
@@ -74,9 +75,10 @@ export const KanbanRendererToolbar = <TRow extends KanbanRendererRow>(props: Kan
       actions={actions}
       displayControl={
         <DisplayMenu
-          settings={settings}
+          settings={props.resourceList ? resourceListSettings(settings) : settings}
           resourceList={props.resourceList}
           onShowChildrenChange={(showChildren) => setSettings({ showChildren })}
+          onSubGroupingsChange={(subGroupings) => setSettings({ subGroupings })}
           sortControl={
             <DisplaySortControl fields={withTitleField(attributes)} sorts={sorts} onSortsChange={setSorts} />
           }

@@ -57,7 +57,8 @@ const buildBoardSettings = (flags: ViewFlags) => {
 const buildResourceListSettings = (flags: ViewFlags) => {
   const settings: Partial<KanbanRendererSettings> = {};
   if (flags.group !== undefined) settings.columnGrouping = flags.group;
-  if (flags.subgroup !== undefined) settings.rowGrouping = flags.subgroup;
+  if (flags.subgroup !== undefined)
+    settings.subGroupings = flags.subgroup === "none" ? [] : flags.subgroup.split(",").filter(Boolean);
   if (flags.children !== undefined) settings.showChildren = toggle(flags.children, "nested", "hidden", "children");
   if (flags.show !== undefined) settings.displayProperties = flags.show.split(",").filter(Boolean);
   return settings;

@@ -1,6 +1,8 @@
 import type { ViewFilterGroup, ViewSort } from "@pstdio/sdk/extensions";
+import { normalizeSubGroupings } from "pstdio-api-contracts/collections";
 import type { CollectionPageControl } from "../collection-view/collection-page";
 import { withTitleField } from "../collection-view/collection-view-fields";
+import { groupRowsByField } from "../collection-view/collection-view-grouping";
 import { sortRowsByView } from "../collection-view/collection-view-sort";
 import type { ResourceContextAction } from "../overlays/resource-context-menu";
 import { getIconComponent } from "../primitives/icon-options";
@@ -13,6 +15,7 @@ import { applyKanbanPageCounts } from "./kanban-renderer-page";
 import {
   type AttributeDescriptor,
   DEFAULT_KANBAN_RENDERER_SETTINGS,
+  findAttribute,
   type KanbanRendererRow,
   type KanbanRendererSettings,
 } from "./types";
@@ -20,9 +23,8 @@ import {
 /** Persisted or shared views cannot turn a resource list into a board, or sub-group without a grouping. */
 export const resourceListSettings = (settings: Partial<KanbanRendererSettings>): KanbanRendererSettings => {
   const merged = { ...DEFAULT_KANBAN_RENDERER_SETTINGS, showChildren: true, ...settings };
-  const rowGrouping =
-    merged.columnGrouping === "none" || merged.rowGrouping === merged.columnGrouping ? "none" : merged.rowGrouping;
-  return { ...merged, viewMode: "list", rowGrouping };
+  const subGroupings = normalizeSubGroupings(merged.columnGrouping, merged.subGroupings);
+  return { ...merged, viewMode: "list", rowGrouping: "none", subGroupings };
 };
 
 interface ResourceListItemsInput {
@@ -85,11 +87,26 @@ export const buildResourceListItems = (input: ResourceListItemsInput): KanbanRen
   });
   if (settings.columnGrouping === "none") return sorted(visibleRows).map((row) => rowItem(row));
   const field = attributes.find((field) => field.id === settings.columnGrouping);
-  const subField = attributes.find((field) => field.id === settings.rowGrouping);
+  const subFields = (settings.subGroupings ?? []).flatMap((id) => findAttribute(attributes, id) ?? []);
+  // Sub-groups are built from the loaded rows, one field per level; empty sub-groups are left out.
+  const nest = (path: string[], groupRows: KanbanRendererRow[], level: number): KanbanRendererListItem[] => {
+    const subField = subFields[level];
+    if (!subField) return sorted(groupRows).map(rowItem);
+    return groupRowsByField(groupRows, subField)
+      .filter((subgroup) => subgroup.rows.length > 0)
+      .map((subgroup) =>
+        resourceListGroupItem({
+          path: [...path, subgroup.key],
+          group: subgroup,
+          field: subField,
+          children: nest([...path, subgroup.key], subgroup.rows, level + 1),
+        }),
+      );
+  };
   const grouped = groupRows(visibleRows, {
     attributes,
     columnGrouping: settings.columnGrouping,
-    rowGrouping: settings.rowGrouping,
+    rowGrouping: "none",
     structureRows: rows,
   });
   return applyKanbanPageCounts(
@@ -98,28 +115,15 @@ export const buildResourceListItems = (input: ResourceListItemsInput): KanbanRen
     attributes,
     settings,
     input.page?.result?.filteredTotal,
-  ).map((group) => {
-    const children = subField
-      ? group.subgroups
-          // Providers without sub-group counts report 0, so loaded rows also keep a sub-group.
-          .filter((subgroup) => subgroup.rows.length > 0 || (subgroup.count ?? 0) > 0)
-          .map((subgroup) =>
-            resourceListGroupItem({
-              path: [group.key, subgroup.key],
-              group: subgroup,
-              field: subField,
-              children: sorted(subgroup.rows).map(rowItem),
-            }),
-          )
-      : sorted(group.rows).map(rowItem);
-    return resourceListGroupItem({
+  ).map((group) =>
+    resourceListGroupItem({
       path: [group.key],
       group,
       field,
-      children,
+      children: nest([group.key], group.rows, 0),
       onCreate: onCreate ? () => onCreate(group.key) : undefined,
-    });
-  });
+    }),
+  );
 };
 
 interface ResourceListGroupItemInput {
@@ -138,8 +142,7 @@ const resourceListGroupItem = (input: ResourceListGroupItemInput): KanbanRendere
     id: JSON.stringify(["group", ...path]),
     title: group.label,
     isGroup: true,
-    // A paged provider may omit sub-group counts; never show fewer than the rows already loaded.
-    countBadge: Math.max(group.count ?? 0, group.rows.length),
+    countBadge: group.count ?? group.rows.length,
     statusIcon: getIconComponent(option?.icon),
     statusColorPalette: option?.color,
     note: option?.note,

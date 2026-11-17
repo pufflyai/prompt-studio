@@ -61,6 +61,7 @@ export const kanbanViewSettingsSchema = z.object({
   viewMode: z.enum(["board", "list"]),
   columnGrouping: z.string(),
   rowGrouping: z.string(),
+  subGroupings: z.array(z.string()).optional(),
   displayProperties: z.array(z.string()),
   showChildren: z.boolean().optional(),
 });

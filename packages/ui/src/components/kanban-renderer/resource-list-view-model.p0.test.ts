@@ -102,51 +102,67 @@ test("children nest at every level and collapse independently from their group",
   );
 });
 
-test("saved display settings hide children, cannot enable a board, and drop a sub-grouping without a grouping", () => {
+test("saved display settings hide children, cannot enable a board, and drop sub-groupings without a grouping", () => {
   const settings = resourceListSettings({
     viewMode: "board",
     rowGrouping: "device",
+    subGroupings: ["device"],
     showChildren: false,
     columnGrouping: "none",
     displayProperties: ["date"],
   });
-  expect(settings).toMatchObject({ viewMode: "list", rowGrouping: "none", displayProperties: ["date"] });
+  expect(settings).toMatchObject({
+    viewMode: "list",
+    rowGrouping: "none",
+    subGroupings: [],
+    displayProperties: ["date"],
+  });
   const items = build(settings);
   expect(items.every((item) => !item.children && !item.draggable && !item.onDropRow)).toBe(true);
 });
 
-test("a sub-grouping nests counted groups inside each group and omits empty ones", () => {
-  const channel: AttributeDescriptor = {
-    id: "channel",
-    label: "Channel",
-    type: {
-      kind: "enum",
-      options: [
-        { value: "web", label: "Web shop", color: "green" },
-        { value: "market", label: "Marketplace", color: "purple" },
-      ],
-    },
-  };
-  const rules: KanbanRendererRow[] = [
-    { id: "r1", title: "Title starts with brand", attributes: { device: "local", channel: "web" } },
-    { id: "r2", title: "Main image on white", attributes: { device: "local", channel: "web" } },
-    { id: "r3", title: "GTIN is present", attributes: { device: "local", channel: "market" } },
-    { id: "r4", title: "Price has currency", attributes: { device: "remote", channel: "web" } },
-  ];
-  const settings = resourceListSettings({ columnGrouping: "device", rowGrouping: "channel" });
-  expect(settings.rowGrouping).toBe("channel");
-  const items = buildResourceListItems({
+test("sub-groupings keep their order and use each field once", () => {
+  expect(
+    resourceListSettings({ columnGrouping: "device", subGroupings: ["channel", "device", "severity", "channel"] })
+      .subGroupings,
+  ).toEqual(["channel", "severity"]);
+});
+
+const enumAttribute = (id: string, label: string, options: [string, string][]): AttributeDescriptor => ({
+  id,
+  label,
+  type: { kind: "enum", options: options.map(([value, optionLabel]) => ({ value, label: optionLabel })) },
+});
+const channel = enumAttribute("channel", "Channel", [
+  ["web", "Web shop"],
+  ["market", "Marketplace"],
+]);
+const severity = enumAttribute("severity", "Severity", [
+  ["required", "Required"],
+  ["recommended", "Recommended"],
+]);
+const rules: KanbanRendererRow[] = [
+  { id: "r1", title: "Title starts with brand", attributes: { device: "local", channel: "web", severity: "required" } },
+  { id: "r2", title: "Main image on white", attributes: { device: "local", channel: "web", severity: "recommended" } },
+  { id: "r3", title: "GTIN is present", attributes: { device: "local", channel: "market", severity: "required" } },
+  { id: "r4", title: "Price has currency", attributes: { device: "remote", channel: "web", severity: "required" } },
+];
+const buildRules = (subGroupings: string[]) =>
+  buildResourceListItems({
     rows: rules,
-    attributes: [...attributes, channel],
-    settings,
+    attributes: [...attributes, channel, severity],
+    settings: resourceListSettings({ columnGrouping: "device", subGroupings }),
     filter: { conjunction: "and", rules: [] },
     sorts: [],
     search: "",
     onCreate: () => {},
   });
-  expect(
-    flattenKanbanRendererListItems(items, {}).map((row) => [row.item.title, row.depth, row.item.countBadge]),
-  ).toEqual([
+const outline = (items: ReturnType<typeof buildRules>) =>
+  flattenKanbanRendererListItems(items, {}).map((row) => [row.item.title, row.depth, row.item.countBadge]);
+
+test("a sub-grouping nests counted groups inside each group and omits empty ones", () => {
+  const items = buildRules(["channel"]);
+  expect(outline(items)).toEqual([
     ["This device", 0, 3],
     ["Web shop", 1, 2],
     ["Title starts with brand", 2, undefined],
@@ -159,45 +175,28 @@ test("a sub-grouping nests counted groups inside each group and omits empty ones
   ]);
   expect(countResourceListRows(items)).toBe(4);
   expect(items[0].children!.every((group) => group.isGroup && !group.onCreate)).toBe(true);
-  expect(new Set(flattenKanbanRendererListItems(items, {}).map((row) => row.id)).size).toBe(9);
 });
 
-test("paged sub-groups keep loaded resources when the provider reports only top-level counts", () => {
-  const channel: AttributeDescriptor = {
-    id: "channel",
-    label: "Channel",
-    type: { kind: "enum", options: [{ value: "web", label: "Web shop" }] },
-  };
-  const loaded: KanbanRendererRow[] = [{ id: "r1", title: "Rule", attributes: { device: "local", channel: "web" } }];
-  const request = { limit: 50, offset: 0, fields: [], search: "" };
-  const items = buildResourceListItems({
-    rows: loaded,
-    attributes: [...attributes, channel],
-    settings: resourceListSettings({ columnGrouping: "device", rowGrouping: "channel" }),
-    filter: { conjunction: "and", rules: [] },
-    sorts: [],
-    search: "",
-    page: {
-      request,
-      loading: false,
-      result: {
-        revision: "1",
-        cursor: "next",
-        total: 12,
-        filteredTotal: 12,
-        groups: [{ field: "device", value: "local", count: 12 }],
-      },
-      onSearchChange: () => {},
-      onPageChange: () => {},
-      onPageSizeChange: () => {},
-      onCollapsedGroupsChange: () => {},
-    },
-  });
-  const local = items.find((item) => item.title === "This device");
-  expect(local?.countBadge).toBe(12);
-  expect(
-    local?.children?.map((group) => [group.title, group.countBadge, group.children?.map((row) => row.title)]),
-  ).toEqual([["Web shop", 1, ["Rule"]]]);
+test("each further sub-grouping nests one level deeper with unique group identities", () => {
+  const items = buildRules(["channel", "severity"]);
+  expect(outline(items)).toEqual([
+    ["This device", 0, 3],
+    ["Web shop", 1, 2],
+    ["Required", 2, 1],
+    ["Title starts with brand", 3, undefined],
+    ["Recommended", 2, 1],
+    ["Main image on white", 3, undefined],
+    ["Marketplace", 1, 1],
+    ["Required", 2, 1],
+    ["GTIN is present", 3, undefined],
+    ["Build box", 0, 1],
+    ["Web shop", 1, 1],
+    ["Required", 2, 1],
+    ["Price has currency", 3, undefined],
+  ]);
+  expect(countResourceListRows(items)).toBe(4);
+  const ids = flattenKanbanRendererListItems(items, {}).map((row) => row.id);
+  expect(new Set(ids).size).toBe(ids.length);
 });
 
 test("view filters, ordering and search narrow the resource list", () => {

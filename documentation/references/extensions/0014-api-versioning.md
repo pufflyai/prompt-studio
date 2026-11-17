@@ -109,7 +109,7 @@ The CLI `globalAliases` declaration is removed in API 0.5.0. Root shortcuts such
 
 The shorter first-party extension identities also share API 0.5.0. Canonical discovery and output use names such as `pstdio.notes`; historical invocations remain deprecated aliases. Ship the migration-capable host before renamed packages. See [identity upgrades](../../guides/extensions/0011-identity-upgrades.md).
 
-Data-table image columns, resource list sub-grouping with children nested to any depth, and tree row `tags` are additive and share API 0.5.0. Existing columns, saved views and tree rows keep their behavior. Publish the supporting host, SDK and UI before independent extensions adopt them. See [image columns](0004-contribution-api.md#image-columns-on-main) and [resource lists](0004-contribution-api.md#resource-lists).
+Data-table image columns, resource list `subGroupings` (any number of levels) with children nested to any depth, and tree row `tags` are additive and share API 0.5.0. Existing columns, saved views and tree rows keep their behavior. Publish the supporting host, SDK and UI before independent extensions adopt them. See [image columns](0004-contribution-api.md#image-columns-on-main) and [resource lists](0004-contribution-api.md#resource-lists).
 
 ### Which version each check uses
 

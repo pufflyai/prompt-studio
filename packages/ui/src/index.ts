@@ -26,6 +26,7 @@ export {
 } from "@/components/activity";
 // Curated design-system groups (see components/<group>/index.ts).
 export * from "@/components/command-palette";
+export { ImageViewer, type ImageViewerImage, type ImageViewerProps } from "@/components/image-viewer/image-viewer";
 export * from "@/components/layout";
 export { ListRow } from "@/components/list-row/list-row";
 export type {

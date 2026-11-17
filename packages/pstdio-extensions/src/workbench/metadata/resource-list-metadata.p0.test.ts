@@ -67,7 +67,7 @@ test("an extension declares a native resource list through the public SDK", () =
   });
 });
 
-test("a resource list keeps its declared sub-grouping in default and saved views", () => {
+test("a resource list keeps its declared sub-groupings in default and saved views", () => {
   const enumType = (value: string) => ({ kind: "enum" as const, options: [{ value, label: value }] });
   const view = defineView({
     id: "rules",
@@ -77,15 +77,16 @@ test("a resource list keeps its declared sub-grouping in default and saved views
       attributes: [
         { id: "region", label: "Region", groupable: true, type: enumType("eu") },
         { id: "channel", label: "Channel", groupable: true, type: enumType("web") },
+        { id: "severity", label: "Severity", groupable: true, type: enumType("required") },
       ],
-      defaultSettings: { columnGrouping: "region", rowGrouping: "channel" },
+      defaultSettings: { columnGrouping: "region", subGroupings: ["channel", "severity"] },
       defaultViews: [
-        { id: "by-region", title: "By region", settings: { columnGrouping: "region", displayProperties: [] } },
         {
-          id: "flat",
-          title: "Flat",
-          settings: { columnGrouping: "region", rowGrouping: "none", displayProperties: [] },
+          id: "by-channel",
+          title: "By channel",
+          settings: { columnGrouping: "region", subGroupings: ["channel"], displayProperties: [] },
         },
+        { id: "flat", title: "Flat", settings: { columnGrouping: "region", displayProperties: [] } },
       ],
       query: async () => ({
         rows: [
@@ -124,7 +125,15 @@ test("a resource list keeps its declared sub-grouping in default and saved views
     createWorkbenchExtensionMetadata({ runtime: normalizeExtensionSources([source]) }),
   );
   expect(metadata.views[0].body).toMatchObject({
-    defaultSettings: { viewMode: "list", columnGrouping: "region", rowGrouping: "channel" },
-    defaultViews: [{ settings: { rowGrouping: "channel" } }, { settings: { rowGrouping: "none" } }],
+    defaultSettings: {
+      viewMode: "list",
+      columnGrouping: "region",
+      rowGrouping: "none",
+      subGroupings: ["channel", "severity"],
+    },
+    defaultViews: [
+      { settings: { rowGrouping: "none", subGroupings: ["channel"] } },
+      { settings: { rowGrouping: "none" } },
+    ],
   });
 });

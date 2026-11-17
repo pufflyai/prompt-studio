@@ -91,6 +91,8 @@ export interface KanbanRendererSettings {
   viewMode: ViewMode;
   columnGrouping: string | typeof NO_GROUPING;
   rowGrouping: string | typeof NO_GROUPING;
+  /** Resource lists only: further grouping levels below `columnGrouping`, outermost first. */
+  subGroupings?: string[];
   displayProperties: string[];
   showChildren?: boolean;
 }

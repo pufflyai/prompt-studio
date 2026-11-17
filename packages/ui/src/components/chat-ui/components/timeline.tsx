@@ -1,8 +1,9 @@
-import { Box, Button, Card, Timeline as ChakraTimeline, Image, Span, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, Card, Timeline as ChakraTimeline, chakra, Image, Span, Stack, Text } from "@chakra-ui/react";
 import { ChevronUpIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { DiffEditor } from "@/components/diff-viewer/lazy-diff-editor";
+import { ImageViewer } from "@/components/image-viewer/image-viewer";
 import { ResourceBadge } from "@/components/primitives/resource-badge";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import type { ChatLinkProps } from "../links/chat-link";
@@ -188,16 +189,20 @@ function BlockView({ b, onOpenFile }: { b: Block; onOpenFile?: (filePath: string
       return (
         <Card.Root border="0" padding="0" background="transparent">
           <Card.Body padding="0">
-            <Image
-              src={b.src}
-              alt={b.alt}
-              maxH="18rem"
-              maxW="full"
-              objectFit="contain"
-              borderRadius="sm"
-              borderWidth="1px"
-              borderColor="border.subtle"
-            />
+            <ImageViewer images={[{ src: b.src, alt: b.alt }]}>
+              <chakra.button type="button" aria-label={`View ${b.alt || "image"}`} cursor="zoom-in" maxW="full">
+                <Image
+                  src={b.src}
+                  alt={b.alt}
+                  maxH="18rem"
+                  maxW="full"
+                  objectFit="contain"
+                  borderRadius="sm"
+                  borderWidth="1px"
+                  borderColor="border.subtle"
+                />
+              </chakra.button>
+            </ImageViewer>
             {b.caption ? (
               <Text mt="2xs" textStyle="label/XS/regular" color="fg.muted">
                 {b.caption}

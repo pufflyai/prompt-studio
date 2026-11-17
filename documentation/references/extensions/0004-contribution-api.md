@@ -521,7 +521,7 @@ columns: [
 // A row value: { photo: { src: "https://cdn.example.com/shoe.png", alt: "Trail shoe, side view" } }
 ```
 
-Thumbnails fill the row, so Comfortable and Tall row heights show larger previews. A gallery shows three thumbnails and counts the rest. Clicking a thumbnail opens a larger preview without activating the row. An image that fails to load shows a placeholder, and an empty value shows a dash. `fit` is `cover` (default) or `contain`; `shape` is `square` (default) or `circle`; `showLabel` shows the first image's alt text beside it. Image columns are text fields for filters. This addition shares API 0.5.0 on `main`; publish the host, SDK and UI before an independent extension adopts it.
+Thumbnails fill the row, so Comfortable and Tall row heights show larger previews. A gallery shows three thumbnails and counts the rest. Clicking a thumbnail opens the shared image viewer without activating the row; a gallery opens as a carousel. An image that fails to load shows a placeholder, and an empty value shows a dash. `fit` is `cover` (default) or `contain`; `shape` is `square` (default) or `circle`; `showLabel` shows the first image's alt text beside it. Image columns are text fields for filters. This addition shares API 0.5.0 on `main`; publish the host, SDK and UI before an independent extension adopts it.
 
 The query receives `filter`, `sorts`, and the display `settings`. For default full-result providers, use them only to narrow what you load. The renderer applies the full filter and sorts to the returned rows, so returning more rows than the view shows is correct. Opt-in [paged providers](#paged-tables-and-boards) apply these controls before returning a bounded page.
 
@@ -546,7 +546,7 @@ Use [board view commands and APIs](../cli/0009-board-views.md) for agent workflo
 
 ## Resource lists
 
-Available on `main`, after 0.46.0 (`view.resourceList.v1`). A `resourceList` body renders the native kanban detailed list with the shared view bar, filters, ordering and properties. It has one display, a grouping with an optional sub-grouping, and no row dragging. Extensions supply data through the public SDK; no webview is needed.
+Available on `main`, after 0.46.0 (`view.resourceList.v1`). A `resourceList` body renders the native kanban detailed list with the shared view bar, filters, ordering and properties. It has one display, a grouping with any number of sub-groupings, and no row dragging. Extensions supply data through the public SDK; no webview is needed.
 
 ```ts
 import { defineView } from "@pstdio/sdk/extensions";
@@ -574,11 +574,11 @@ const resources = defineView({
 
 Enum options define group labels, dot colors and optional short `note` text. `canCreate: true` shows an Add action when the body also declares `createRow`. Its `columnParam` receives the group value, using the same creation form as kanban. Groups count parent resources and collapse independently. Children can have their own `children`; each level nests one indent further and collapses independently. Row IDs must be unique across parents and all levels of children.
 
-Set `rowGrouping` to a second groupable attribute to split each group, such as rules grouped by region and then by channel. Sub-groups show their own counts and collapse independently; sub-groups without resources are absent. Add actions stay on the top-level groups. Choosing no grouping, or the same attribute for both, turns sub-grouping off. Paged providers report sub-group counts with `parent`, as boards do. Sub-grouping and deeper children share API 0.5.0 on `main`.
+Set `subGroupings` to further groupable attributes, outermost first, to split each group again, such as rules grouped by region, then channel, then severity. Each level uses a different attribute. Sub-groups count the loaded resources they contain and collapse independently; sub-groups without resources are absent. Add actions stay on the top-level groups. Without a grouping there are no sub-groupings. `rowGrouping` stays `"none"` for resource lists. Sub-groupings and deeper children share API 0.5.0 on `main`.
 
 Groups without source resources are absent, so their Add actions are also absent. Supply a creation toolbar action for a new empty collection or to create the first resource in an unused group.
 
-Rows reuse kanban shorthand (`attributes.id`), property chips, badges, dates and resource menus. Each row can declare an optional icon and navigation target. The Display menu offers grouping, sub-grouping, Children (Nested or Hidden), ordering and visible properties. `defaultViews` uses `ResourceListRendererSettings`: `columnGrouping`, `displayProperties` and optional `rowGrouping` and `showChildren`. The host persists these alongside the filter and sorts using the existing collection-view store. Its wire settings also contain the fixed `viewMode: "list"` field, and `rowGrouping: "none"` when no sub-grouping is set.
+Rows reuse kanban shorthand (`attributes.id`), property chips, badges, dates and resource menus. Each row can declare an optional icon and navigation target. The Display menu offers Grouping, then Sub-grouping, Sub-grouping 2 and so on (added with **Add sub-grouping**), Child rows (Show or Hide), ordering and visible properties. `defaultViews` uses `ResourceListRendererSettings`: `columnGrouping`, `displayProperties` and optional `subGroupings` and `showChildren`. The host persists these alongside the filter and sorts using the existing collection-view store. Its wire settings also contain the fixed `viewMode: "list"` and `rowGrouping: "none"` fields.
 
 See the [example extension](../../../packages/pstdio-workbench/src/examples/onboarding/extensions/resource-list-extension.ts) and the **ResourceList** onboarding Canvas preview. The shared list skeleton and empty state cover first load and empty queries. `queryMode: "paged"`, refresh events, toolbar actions, row actions and activation callbacks follow the kanban contracts.
 

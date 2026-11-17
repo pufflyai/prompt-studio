@@ -78,13 +78,13 @@ const channelOptions = [
   { value: "marketplace", label: "Marketplace", color: "purple" },
 ];
 
-/** Grouping and Sub-grouping both appear in the Display menu; children nest more than one level. */
+/** Display offers Sub-grouping, Sub-grouping 2 and more; child rows nest more than one level. */
 export const NestedGroups = () => {
   const [opened, setOpened] = useState("");
   return (
     <Stack height="full" minH="0" gap="0">
       <Text aria-live="polite" paddingX="sm" paddingY="2xs" textStyle="label/XS/regular" color="fg.muted">
-        {opened ? `Opened ${opened}` : "Open Display to change Grouping, Sub-grouping or Children"}
+        {opened ? `Opened ${opened}` : "Open Display to add sub-groupings or hide child rows"}
       </Text>
       <ResourceListRenderer
         storageKey="resource-list-nested-groups-preview"
@@ -108,7 +108,7 @@ export const NestedGroups = () => {
         defaultSettings={{
           viewMode: "list",
           columnGrouping: "region",
-          rowGrouping: "channel",
+          subGroupings: ["channel"],
           showChildren: true,
           displayProperties: ["date"],
         }}
