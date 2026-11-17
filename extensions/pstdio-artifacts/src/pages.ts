@@ -1,5 +1,7 @@
 import { definePage, defineView, l10n, packageAsset, workbenchModes } from "@pstdio/sdk/extensions";
 import { artifactPage, libraryPageRef } from "./artifact-refs";
+import { queryArtifactTitle } from "./artifact-title";
+import { changedEvent } from "./events";
 import { artifact } from "./resource-kinds";
 
 export { artifact } from "./resource-kinds";
@@ -38,6 +40,12 @@ export const detail = definePage({
   mode: workbenchModes.project,
   parent: library.ref,
   resource: { kinds: [artifact.ref] },
-  main: { kind: "view", presentation: "page", view: view.ref, cardinality: "one" },
+  main: {
+    kind: "view",
+    presentation: "page",
+    view: view.ref,
+    cardinality: "one",
+    tab: { query: queryArtifactTitle, refreshEvents: [changedEvent] },
+  },
   slots: [],
 });
