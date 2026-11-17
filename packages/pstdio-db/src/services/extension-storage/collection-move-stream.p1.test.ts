@@ -173,7 +173,27 @@ test("a refused first page does not lose writes to items on later pages", async 
   }
 });
 
-test("a refused move whose target was written meanwhile leaves the item in place and keeps syncing", async () => {
+test("a move whose target another device took leaves the item in place and keeps syncing", async () => {
+  const [editor, mover] = await peers();
+  await editor.tickets.set("x", { title: "X" });
+  await syncAll([editor, mover]);
+  // An unrelated record takes the address the move would use.
+  await editor.records.commit({
+    operationId: crypto.randomUUID(),
+    edits: [{ recordId: (await editor.record("x")).recordId, replace: { title: "Other record" } }],
+  });
+  await editor.sync.synchronize();
+  await mover.move();
+  await syncAll([mover, editor], 3);
+
+  for (const device of [editor, mover]) {
+    expect(await device.moved("x")).toEqual({ title: "Other record" });
+    expect((await device.old("x")).value).toEqual({ value: { title: "X" }, sortOrder: null });
+    expect(await device.tickets.get("x")).toMatchObject({ value: { title: "X" } });
+  }
+});
+
+test("a write to the record a refused move created follows the item to its moved record", async () => {
   const [editor, mover] = await peers();
   await editor.tickets.set("x", { title: "X" });
   await syncAll([editor, mover]);
@@ -188,7 +208,7 @@ test("a refused move whose target was written meanwhile leaves the item in place
 
   for (const device of [editor, mover]) {
     expect(await device.moved("x")).toEqual({ title: "X new code" });
-    expect((await device.old("x")).value).toEqual({ value: { title: "X edited" }, sortOrder: null });
+    expect((await device.old("x")).deleted).toBe(true);
   }
 });
 
@@ -248,4 +268,35 @@ test("an offline write that a compacted checkpoint refuses still reaches the mov
   await syncAll([restored, mover], 3);
 
   for (const device of [mover, restored]) expect(await device.moved("a")).toEqual({ title: "A offline" });
+});
+
+test("edits a device makes to items it moved itself survive when another device's move wins", async () => {
+  const [first, second] = await peers();
+  await first.tickets.set("a", { title: "A" });
+  await syncAll([first, second]);
+  // Offline from each other: the second device creates two items, then both devices move.
+  await second.tickets.set("d", { title: "D" });
+  await second.tickets.set("e", { title: "E", status: "open" });
+  await first.move();
+  await second.move();
+  const d = await second.record("d");
+  await second.records.commitIfCurrent({
+    operationId: crypto.randomUUID(),
+    edits: [{ recordId: d.recordId, expectedRevision: d.revision, replace: { title: "D edited" } }],
+  });
+  const e = await second.record("e");
+  await second.records.commit({
+    operationId: crypto.randomUUID(),
+    edits: [{ recordId: e.recordId, observedRevision: e.revision, replace: { title: "E edited", status: "open" } }],
+  });
+  await syncAll([first, second], 4);
+
+  for (const device of [first, second]) {
+    expect(await device.moved("a")).toEqual({ title: "A" });
+    expect(await device.moved("d")).toEqual({ title: "D edited" });
+    expect(await device.moved("e")).toEqual({ title: "E edited", status: "open" });
+    // The item lives at one address: the old-format API sees the moved, edited record.
+    expect((await device.old("e")).deleted).toBe(true);
+    expect(await device.tickets.get("e")).toMatchObject({ value: { title: "E edited", status: "open" } });
+  }
 });

@@ -120,3 +120,84 @@ test("list keeps one entry per item when an item stays in place because its targ
   expect(await tickets.list()).toEqual([{ title: "A in place" }, { title: "B" }]);
   expect(await tickets.get("a")).toEqual({ title: "A in place" });
 });
+
+test("edits a device makes to items it moved itself survive when another device's move wins", async () => {
+  const { devices, merge } = await createMemoryStorageDevices();
+  const [first, second] = devices;
+  await first.collection("tickets").put("a", { title: "A" });
+  await merge();
+  // Offline from each other: the second device creates two items, then both devices move.
+  await second.collection("tickets").put("d", { title: "D" });
+  await second.collection("tickets").put("e", { title: "E", status: "open" });
+  await moveTickets(first);
+  await moveTickets(second);
+  const d = await second.records.read(second.records.id("ticket:d"));
+  await second.records.commitIfCurrent({
+    operationId: crypto.randomUUID(),
+    edits: [{ recordId: d.recordId, expectedRevision: d.revision, replace: { title: "D edited" } }],
+  });
+  const e = await second.records.read(second.records.id("ticket:e"));
+  await second.records.commit({
+    operationId: crypto.randomUUID(),
+    edits: [{ recordId: e.recordId, observedRevision: e.revision, replace: { title: "E edited", status: "open" } }],
+  });
+  for (let round = 0; round < 4; round++) await merge();
+
+  for (const storage of devices) {
+    expect((await storage.records.read(storage.records.id("ticket:a"))).value).toEqual({ title: "A" });
+    expect((await storage.records.read(storage.records.id("ticket:d"))).value).toEqual({ title: "D edited" });
+    expect((await storage.records.read(storage.records.id("ticket:e"))).value).toEqual({
+      title: "E edited",
+      status: "open",
+    });
+    // The item lives at one address: the old-format API sees the moved, edited record.
+    expect(await storage.collection("tickets").get("e")).toEqual({ title: "E edited", status: "open" });
+    expect(await storage.collection("tickets").list()).toHaveLength(3);
+  }
+});
+
+test("a refused save is not forwarded onto a record another device recreated after the move", async () => {
+  const { devices, merge } = await createMemoryStorageDevices();
+  const [first, second] = devices;
+  await first.collection("tickets").put("a", { title: "A" });
+  await merge();
+  await moveTickets(first);
+  await merge();
+  await merge();
+  const a = await first.records.read(first.records.id("ticket:a"));
+  await first.records.commit({
+    operationId: crypto.randomUUID(),
+    edits: [{ recordId: a.recordId, observedRevision: a.revision, deleted: true }],
+  });
+  const gone = await first.records.read(first.records.id("ticket:a"));
+  await first.records.commit({
+    operationId: crypto.randomUUID(),
+    edits: [{ recordId: gone.recordId, observedRevision: gone.revision, deleted: false, replace: { title: "A new" } }],
+  });
+  const seen = await second.records.read(second.records.id("ticket:a"));
+  await second.records.commitIfCurrent({
+    operationId: crypto.randomUUID(),
+    edits: [{ recordId: seen.recordId, expectedRevision: seen.revision, replace: { title: "A offline" } }],
+  });
+  for (let round = 0; round < 4; round++) await merge();
+
+  for (const storage of devices)
+    expect((await storage.records.read(storage.records.id("ticket:a"))).value).toEqual({ title: "A new" });
+});
+
+test("deleting an item a device moved itself stays deleted when another device's move wins", async () => {
+  const { devices, merge } = await createMemoryStorageDevices();
+  const [first, second] = devices;
+  await first.collection("tickets").put("a", { title: "A" });
+  await merge();
+  await second.collection("tickets").put("d", { title: "D" });
+  await moveTickets(first);
+  await moveTickets(second);
+  await second.collection("tickets").delete("d");
+  for (let round = 0; round < 5; round++) await merge();
+
+  for (const storage of devices) {
+    expect(await storage.collection("tickets").get("d")).toBeUndefined();
+    expect((await storage.records.read(storage.records.id("ticket:d"))).deleted).not.toBe(false);
+  }
+});

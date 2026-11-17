@@ -46,23 +46,21 @@ export const migrateTicketOrder = async (storage: ExtensionStorageApi, migration
     for await (const key of sortedLegacyKeys(storage)) {
       const position = migration.position(rank++, String(key.fields.id));
       if (key.fields.position) continue;
-      await queueTicketWrite(String(key.fields.id), () =>
-        changeTicketRecord(storage, String(key.fields.id), (current) =>
-          current.position ? current : { ...current, position },
-        ),
+      // Inside the storage migration every other ticket write waits for it, so these writes take
+      // no ticket queue: a queued writer waiting for this migration would otherwise block it forever.
+      await changeTicketRecord(storage, String(key.fields.id), (current) =>
+        current.position ? current : { ...current, position },
       );
     }
   }
   // Keep ranks until every position exists, preserving interrupted-import ordering.
   for await (const page of ticketKeyPages(storage, { field: "sortOrder", op: "exists" })) {
     for (const key of page)
-      await queueTicketWrite(String(key.fields.id), () =>
-        changeTicketRecord(storage, String(key.fields.id), (current) => {
-          if (!current.position || !("sortOrder" in current)) return current;
-          const { sortOrder: _legacy, ...ticket } = current;
-          return ticket;
-        }),
-      );
+      await changeTicketRecord(storage, String(key.fields.id), (current) => {
+        if (!current.position || !("sortOrder" in current)) return current;
+        const { sortOrder: _legacy, ...ticket } = current;
+        return ticket;
+      });
   }
 };
 

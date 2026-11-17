@@ -28,7 +28,7 @@ Creation runs the same UI flow as the rest of the application. Notes open immedi
 The host derives setup actions from public metadata:
 
 - C S lists new session drafts with the exact harness provider. Select its numbered choice directly; no arrow navigation is required. Creating a draft does not start an agent.
-- G E opens Extensions; Mod+, opens agent defaults; S S opens skill setup; S I opens appearance and icon settings.
+- G E opens Extensions; Mod+, opens agent defaults; G S offers Skills and Sessions through the numbered destination chooser; S I opens appearance and icon settings.
 - Alt+Shift+T is the single color-theme action, regardless of the number of theme providers.
 - Alt+Shift+R reopens the most recently closed tab in the current project.
 

@@ -43,7 +43,7 @@ export const createKanbanRendererQuery = (input: {
       if (Array.isArray(value)) wireRows = value;
       else if (isQueryResult(value)) wireRows = value.rows ?? [];
       const nextCache = new Map<string, { signature: string; row: KanbanRendererRow }>();
-      const mapRow = (row: unknown, child = false): KanbanRendererRow => {
+      const mapRow = (row: unknown): KanbanRendererRow => {
         const candidate = row as KanbanRendererRow;
         const signature = JSON.stringify(row);
         const cached = rowCache.get(candidate.id);
@@ -53,9 +53,8 @@ export const createKanbanRendererQuery = (input: {
             ? cached.row
             : {
                 ...toWorkbenchRow(row, rowResource),
-                ...(!child && candidate.children
-                  ? { children: candidate.children.map((row) => mapRow(row, true)) }
-                  : {}),
+                // Resource list children nest to any depth; each level needs mapped targets.
+                ...(candidate.children ? { children: candidate.children.map(mapRow) } : {}),
                 ...(target
                   ? {
                       target: toWorkbenchNavigationTarget(target, {
@@ -69,7 +68,7 @@ export const createKanbanRendererQuery = (input: {
         nextCache.set(mapped.id, { signature, row: mapped });
         return mapped;
       };
-      const rows = wireRows.map((row) => mapRow(row));
+      const rows = wireRows.map(mapRow);
       if (queryId === latestQueryId) {
         rowCache = nextCache;
         if (isQueryResult(value)) onMetadata(value);

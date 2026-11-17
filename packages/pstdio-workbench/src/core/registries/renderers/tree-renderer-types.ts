@@ -84,6 +84,7 @@ export interface TreeNode {
   /** Subdued foreground without disabling row actions or navigation. */
   tone?: "default" | "muted";
   badge?: { label: string; color?: string };
+  tags?: { id: string; label: string; icon?: string; color?: string; tooltip?: string }[];
   iconTooltip?: string;
   tooltip?: string;
   endContent?: unknown;
