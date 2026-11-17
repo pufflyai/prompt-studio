@@ -1,5 +1,5 @@
-import { appendFileSync } from "node:fs";
 import { spawn } from "node:child_process";
+import { appendFileSync } from "node:fs";
 import { userInfo } from "node:os";
 import { basename } from "node:path";
 
@@ -45,7 +45,10 @@ const readShellPath = (shell: string, env: NodeJS.ProcessEnv, signal: AbortSigna
       diagnostic("stdout", { pid: child.pid, chunk: chunk.slice(-8192) });
       stdout = (stdout + chunk).slice(-OUTPUT_LIMIT);
     });
-    child.once("error", (error) => { diagnostic("error", { pid: child.pid, error: String(error) }); reject(error); });
+    child.once("error", (error) => {
+      diagnostic("error", { pid: child.pid, error: String(error) });
+      reject(error);
+    });
     child.once("close", (code, signalName) => {
       diagnostic("close", { pid: child.pid, code, signalName, stderr, aborted: signal.aborted });
       signal.removeEventListener("abort", cancel);
