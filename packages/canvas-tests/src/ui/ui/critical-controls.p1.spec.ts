@@ -80,3 +80,24 @@ test("motion studies load their project provider", async ({ page }) => {
   const preview = await openCanvasPreview(page, "design/motion/studies/tabs/study.canvas.tsx#Subtle");
   await expect(preview.getByLabel("README.md", { exact: true })).toBeVisible();
 });
+
+// Critical: a clipped selected value must remain readable without breaking dropdown activation.
+test("clipped dropdown captions reveal their full value and keep the menu usable", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/overlays/menu-selection.canvas.tsx#CheckmarksAndAlignment",
+  );
+  const trigger = preview.getByRole("button", { name: "Layout options", exact: true });
+  await trigger.hover();
+  await expect(preview.getByRole("tooltip")).toHaveCount(0);
+  await preview.getByRole("button", { name: "Toggle long dropdown label", exact: true }).click();
+  const caption = "Layout options — a long selected value whose full text remains available in a tooltip";
+  const clipped = preview.getByRole("button", { name: caption, exact: true });
+  await clipped.hover();
+  await expect(preview.getByRole("tooltip")).toHaveText(caption);
+  await clipped.click();
+  await expect(preview.getByRole("tooltip")).toBeHidden();
+  await expect(preview.getByRole("menu").first()).toBeVisible();
+  await preview.getByRole("menu").first().press("Escape");
+  await expect(clipped).toBeFocused();
+});

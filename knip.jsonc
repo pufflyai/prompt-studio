@@ -328,6 +328,7 @@
         "scripts/**/*.ts",
         // Keep in sync with build-entries.ts and vite.monaco.config.ts.
         "src/index.ts",
+        "src/scrollbars.ts",
         "src/theme/index.ts",
         // The Canvas build loads these themes by absolute path.
         "src/theme/custom/vscode-theme.canvas-fixture.ts",

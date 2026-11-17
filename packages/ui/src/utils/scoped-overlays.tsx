@@ -1,33 +1,12 @@
-import { Dialog, Menu, Popover, Tooltip, useMenu } from "@chakra-ui/react";
-import { forwardRef, useState } from "react";
+import { Dialog, Menu, Popover, useMenu, useMenuContext, usePopoverContext } from "@chakra-ui/react";
+import { forwardRef } from "react";
+import { TriggerTooltip } from "../components/overlays/trigger-tooltip";
 import { OverlayTriggerContext, useOverlayTriggerId, useOverlayTriggerRef } from "./overlay-trigger";
 import { useUiScope } from "./ui-scope";
+import { useScopedOpen } from "./use-scoped-open";
 
-/** Closing the machine releases focus traps and document listeners without forgetting an open overlay. */
-const useScopedOpen = <
-  Props extends {
-    open?: boolean;
-    defaultOpen?: boolean;
-    unmountOnExit?: boolean;
-    onOpenChange?: (details: { open: boolean }) => void;
-  },
->(
-  props: Props,
-) => {
-  const scope = useUiScope();
-  const [open, setOpen] = useState(props.defaultOpen ?? false);
-  if (!scope) return props;
-  return {
-    ...props,
-    open: scope.active && (props.open ?? open),
-    unmountOnExit: scope.active ? props.unmountOnExit : false,
-    onOpenChange: (details: { open: boolean }) => {
-      if (!scope.active) return;
-      setOpen(details.open);
-      props.onOpenChange?.(details);
-    },
-  };
-};
+export { ScopedTooltip } from "./scoped-tooltip";
+
 const DialogRoot = (props: Dialog.RootProps) => <Dialog.Root {...useScopedOpen(props)} />;
 const MenuRoot = (props: Menu.RootProps) => {
   const { triggerId, setTriggerId } = useOverlayTriggerId();
@@ -45,14 +24,23 @@ const PopoverRoot = (props: Popover.RootProps) => {
     </OverlayTriggerContext>
   );
 };
-const TooltipRoot = (props: Tooltip.RootProps) => <Tooltip.Root {...useScopedOpen(props)} />;
 
-const MenuTrigger = forwardRef<HTMLButtonElement, Menu.TriggerProps>((props, ref) => (
-  <Menu.Trigger {...props} ref={useOverlayTriggerRef(ref)} />
-));
-const PopoverTrigger = forwardRef<HTMLButtonElement, Popover.TriggerProps>((props, ref) => (
-  <Popover.Trigger {...props} ref={useOverlayTriggerRef(ref)} />
-));
+const MenuTrigger = forwardRef<HTMLButtonElement, Menu.TriggerProps>((props, ref) => {
+  const menu = useMenuContext();
+  return (
+    <TriggerTooltip disabled={menu.open}>
+      <Menu.Trigger {...props} ref={useOverlayTriggerRef(ref)} />
+    </TriggerTooltip>
+  );
+});
+const PopoverTrigger = forwardRef<HTMLButtonElement, Popover.TriggerProps>((props, ref) => {
+  const popover = usePopoverContext();
+  return (
+    <TriggerTooltip disabled={popover.open}>
+      <Popover.Trigger {...props} ref={useOverlayTriggerRef(ref)} />
+    </TriggerTooltip>
+  );
+});
 
 const MenuRootProvider = (props: Menu.RootProviderProps) => {
   const scope = useUiScope();
@@ -81,5 +69,4 @@ export const ScopedPopover: typeof Popover = {
   RootProvider: PopoverRootProvider,
   Trigger: PopoverTrigger,
 };
-export const ScopedTooltip: typeof Tooltip = { ...Tooltip, Root: TooltipRoot };
 export const useScopedMenu: typeof useMenu = (props) => useMenu(useScopedOpen(props ?? {}));

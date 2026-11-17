@@ -9,11 +9,18 @@ import { SearchableMenu } from "./searchable-menu";
 const SelectionMenus = () => {
   const [branch, setBranch] = useState("main");
   const [pinned, setPinned] = useState(true);
+  const [longLabel, setLongLabel] = useState(false);
+  const label = longLabel
+    ? "Layout options — a long selected value whose full text remains available in a tooltip"
+    : "Layout options";
   return (
     <Stack align="start">
+      <Button onClick={() => setLongLabel((value) => !value)}>Toggle long dropdown label</Button>
       <Menu.Root closeOnSelect={false}>
         <Menu.Trigger asChild>
-          <Button>Layout options</Button>
+          <Button maxWidth="64" minWidth="0">
+            <Text truncate>{label}</Text>
+          </Button>
         </Menu.Trigger>
         <Menu.Positioner>
           <Menu.Content>
@@ -79,6 +86,8 @@ const SelectionMenus = () => {
 const meta = {
   title: "Design system/Components/Overlays/Menu selection",
   component: SelectionMenus,
+  description:
+    "Clipped dropdown labels reveal their complete text on hover or keyboard focus. Short labels need no tooltip; opening the menu dismisses its label tooltip.",
 } satisfies CanvasMeta<typeof SelectionMenus>;
 export default meta;
 type Story = CanvasFrame<typeof meta>;
