@@ -67,5 +67,7 @@
   "commands.requestReview.title": "Solicitar revisión",
   "commands.requestReview.description": "Crea una solicitud de revisión y marca el ticket como pendiente de atención.",
   "commands.cleanupBoard.title": "Limpiar tablero",
-  "commands.cleanupBoard.model": "Modelo"
+  "commands.cleanupBoard.model": "Modelo",
+  "activity.context": "Leer el contexto de actividad",
+  "activity.migrate": "Mover los resultados históricos a la actividad de la tarea"
 }

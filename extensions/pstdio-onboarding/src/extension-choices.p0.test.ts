@@ -8,7 +8,7 @@ test("uses current default-extension names and icons from the catalog with insta
     marketplace: previewExtensions,
   };
   const choices = resolveExtensionChoices(inventory);
-  for (const name of ["base-themes", "skills", "planner", "reports", "artifacts"]) {
+  for (const name of ["base-themes", "skills", "planner", "reports", "artifacts", "pstdio-skill-browser"]) {
     const entry = previewExtensions.find((e) => e.installName === name)!;
     expect(choices[name]).toEqual({ name: entry.displayName, icon: entry.icon });
   }
