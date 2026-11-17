@@ -6,8 +6,8 @@ import { updateOverlayPageParams } from "./overlay-page-params";
 import { createWorkbenchEditingSessionAdapter } from "./webview-editing-adapter";
 import { createWebviewPreferenceQueries } from "./webview-preference-queries";
 import { createWebviewPreferencesAdapter, type WebviewOwnedPreferences } from "./webview-preferences-capability";
-import { createWebviewResourceActions } from "./webview-resource-actions";
 import { createWebviewResourceActionRegistrations } from "./webview-resource-action-registrations";
+import { createWebviewResourceActions } from "./webview-resource-actions";
 import { createWorkbenchTextEditingAdapter, type WorkbenchTextEditingInput } from "./webview-text-editing";
 
 interface CreateWorkbenchWebviewHostAdaptersInput extends WorkbenchTextEditingInput {
