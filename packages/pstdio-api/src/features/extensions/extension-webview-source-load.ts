@@ -1,4 +1,4 @@
-import { extensionLoadKey } from "pstdio-extensions";
+import { inspectExtensionLoadKey } from "pstdio-extensions";
 import type { LoadedExtension, LoadedExtensionSnapshot } from "./extension-runtime";
 import type { createWebviewBuildBackoff } from "./extension-webview-build-backoff";
 import type { InstalledSourceWithManifest } from "./extension-webview-build-runner";
@@ -11,19 +11,27 @@ interface SourceLoadInput {
   onError?: (error: unknown) => void;
   row: InstalledSourceWithManifest;
   validatedSource?: LoadedExtensionSnapshot;
+  inspectLoadKey?: typeof inspectExtensionLoadKey;
+  isSnapshotCurrent?: (sourcePath: string, snapshot: LoadedExtensionSnapshot, key: string) => Promise<boolean>;
 }
 
 const loadWebviewSource = async (input: SourceLoadInput) => {
-  const { backoff, loadSource, onError, row } = input;
+  const { backoff, loadSource, onError, row, inspectLoadKey = inspectExtensionLoadKey } = input;
   let key: string | undefined;
   try {
     while (true) {
-      key = extensionLoadKey(row.source_path);
-      if (input.validatedSource?.loadKey === key) return input.validatedSource;
+      key = await inspectLoadKey(row.source_path);
+      if (
+        input.validatedSource &&
+        (input.isSnapshotCurrent
+          ? await input.isSnapshotCurrent(row.source_path, input.validatedSource, key)
+          : input.validatedSource.loadKey === key)
+      )
+        return { ...input.validatedSource, loadKey: key };
       if (backoff.isBlocked(row.id, key)) return null;
       const loaded = await loadSource(row.source_path);
       if (loaded.diagnostics.some((diagnostic) => diagnostic.severity === "error")) break;
-      if (key !== extensionLoadKey(row.source_path)) continue;
+      if (key !== (await inspectLoadKey(row.source_path))) continue;
       return { loaded, loadKey: key };
     }
   } catch (error) {
@@ -47,7 +55,11 @@ export const loadCurrentWebviewSource = async (
     if (!snapshot) return null;
     const current = await input.getInstalledSource(input.installedExtensionId);
     if (!current) return null;
-    if (row.source_path !== current.source_path || snapshot.loadKey !== extensionLoadKey(current.source_path)) continue;
+    if (
+      row.source_path !== current.source_path ||
+      snapshot.loadKey !== (await (input.inspectLoadKey ?? inspectExtensionLoadKey)(current.source_path))
+    )
+      continue;
     return { row: current, snapshot };
   }
 };

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { writeFile } from "node:fs/promises";
 import type { TerminalSessionRequest } from "pstdio-api-contracts";
+import { acceptPreparedRevision, prepareExtensionRevision } from "pstdio-extensions";
 import { createWorkspaceContextFixture } from "../extensions/workspace-context.test-fixture";
 import { openNativeTerminalSession } from "./native-terminal-session";
 
@@ -102,6 +103,7 @@ test("closing the view releases the PTY and removing its installed owner release
   expect(kills).toBe(1);
   const second = await openNativeTerminalSession(fixture.deps, binding, new AbortController().signal);
   await writeFile(`${fixture.root}/extension.ts`, "export default {};");
+  await acceptPreparedRevision(fixture.root, await prepareExtensionRevision(fixture.root));
   fixture.deps.extensionRuntimeCatalog.invalidate({ sourcePath: fixture.root, reason: "source_changed" });
   // Catalog invalidation completion is observable through the same catalog read.
   await fixture.deps.extensionRuntimeCatalog.get(binding.projectId);
@@ -116,6 +118,7 @@ test("reloading another contribution retains the enabled terminal owner", async 
   const path = `${fixture.root}/extension.ts`;
   const source = await Bun.file(path).text();
   await writeFile(path, source.replace('title: "Console"', 'title: "Localized console"'));
+  await acceptPreparedRevision(fixture.root, await prepareExtensionRevision(fixture.root));
   fixture.deps.extensionRuntimeCatalog.invalidate({ sourcePath: fixture.root, reason: "source_changed" });
   await fixture.deps.extensionRuntimeCatalog.get(binding.projectId);
   await Bun.sleep(0);

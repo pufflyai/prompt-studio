@@ -73,6 +73,7 @@ export interface RegisterWorkbenchExtensionContributionsInput extends ChatComman
   projectId: string;
   resolveTreeNodeResource?: RegisterWorkbenchExtensionTreeRenderersInput["resolveNodeResource"];
   treeSources?: RegisterWorkbenchExtensionTreeRenderersInput["treeSources"];
+  renderTreeNodeEndContent?: RegisterWorkbenchExtensionTreeRenderersInput["renderNodeEndContent"];
   renderWebview?(input: WorkbenchPanelRenderInput): unknown;
   settingsSectionId?: string;
   settingsSectionTitle?: string;

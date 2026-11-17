@@ -1,3 +1,8 @@
+import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
+
 export const extensionId = "pstdio.artifacts";
-// This exported raw event key is historical public API, independent of the current package owner.
+// Preserve the historical public event key independently of the current owner.
 export const changedEvent = "pstdio.pstdio-artifacts.artifacts.changed";
+
+export const emitArtifactChanged = (ctx: ExtensionContextBase, artifactId: string) =>
+  ctx.events.emit(changedEvent, { artifactId }, { refresh: { extensionId, resourceIds: [artifactId] } });

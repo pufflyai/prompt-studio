@@ -6,14 +6,15 @@ import {
   type ExtensionViewRenderContext,
   type ResourceRef,
 } from "@pstdio/sdk/extensions";
+import { useScopedQueries, useWebviewCommandQuery, useWebviewVisibility } from "@pstdio/sdk/extensions/react";
 import { AlertMessage, ChakraProvider, psTheme } from "@pstdio/ui";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
-import type { ArtifactContent, ArtifactSummary } from "./artifacts";
+import { createArtifactQueries, createArtifactRevisionSelection } from "./artifact-queries";
+import type { ArtifactSummary } from "./artifacts";
 import type { commands } from "./commands";
 import { ArtifactLibrary } from "./components/artifact-library";
 import { ArtifactReader } from "./components/artifact-reader";
-import { artifactUrl, changedEvent } from "./contracts";
 import type { ArtifactExample } from "./create-artifact";
 import { ArtifactTranslations } from "./translations";
 
@@ -31,53 +32,23 @@ const ArtifactsApp = (props: AppProps) => {
   const { context, hostProps } = props;
   const { host } = context;
   const [client] = useState(() => createWebviewClient<typeof commands>(host));
-  const [items, setItems] = useState<ArtifactSummary[]>();
-  const [content, setContent] = useState<ArtifactContent>();
-  const [selected, setSelected] = useState<string>();
-  const [refresh, setRefresh] = useState(0);
-  const [error, setError] = useState<string>();
+  const [actionError, setActionError] = useState<string>();
   const [creating, setCreating] = useState<ArtifactExample>();
   const id = hostProps.resource?.id;
-  const url = id ? artifactUrl(hostProps.projectId, id) : undefined;
-  useEffect(() => client.events.subscribe(changedEvent, () => setRefresh((value) => value + 1)), [client]);
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Artifact changes invalidate the server query.
-  useEffect(() => {
-    let cancelled = false;
-    const query = url ? client.commands.revisions({ url }) : client.commands.list();
-    void query
-      .then((items) => {
-        if (!cancelled) {
-          setItems(items);
-          setError(undefined);
-        }
-      })
-      .catch((error) => {
-        if (!cancelled) setError(String(error));
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [client, url, refresh]);
-
-  useEffect(() => {
-    if (!url) return;
-    let cancelled = false;
-    void client.commands
-      .read({ url, revisionId: selected })
-      .then((content) => {
-        if (!cancelled) {
-          setContent(content);
-          setError(undefined);
-        }
-      })
-      .catch((error) => {
-        if (!cancelled) setError(String(error));
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [client, url, selected]);
+  const visible = useWebviewVisibility();
+  const selection = createArtifactRevisionSelection(client, hostProps.projectId, id ?? "library");
+  const preference = useWebviewCommandQuery(selection.query, Boolean(id) && visible);
+  const selected =
+    typeof preference.data?.value === "string" && preference.data.value ? preference.data.value : undefined;
+  const setSelected = (revision: string) => {
+    void selection.save(revision).catch((error) => setActionError(String(error)));
+  };
+  const queries = createArtifactQueries(client, hostProps.projectId);
+  const index = useWebviewCommandQuery(id ? queries.revisions(id) : queries.list(), visible);
+  const reads = useScopedQueries(id && preference.data !== undefined ? [queries.content(id, selected)] : [], visible);
+  const items = index.data;
+  const content = reads[0]?.data;
+  const error = actionError ?? preference.error?.message ?? index.error?.message ?? reads[0]?.error?.message;
 
   const open = async (item: ArtifactSummary) => {
     await host.call("navigation.open", { target: item.target });
@@ -85,11 +56,11 @@ const ArtifactsApp = (props: AppProps) => {
 
   const create = async (example: ArtifactExample) => {
     setCreating(example);
-    setError(undefined);
+    setActionError(undefined);
     try {
       await client.commands["start-creation"]({ example });
     } catch (error) {
-      setError(String(error));
+      setActionError(String(error));
     } finally {
       setCreating(undefined);
     }
@@ -111,9 +82,9 @@ const ArtifactsApp = (props: AppProps) => {
           void create(example);
         }}
         onOpen={(item) => {
-          void open(item);
+          void open(item).catch((error) => setActionError(String(error)));
         }}
-        loadPreview={async (item) => (await client.commands.read({ url: item.url, revisionId: item.revisionId })).html}
+        loadPreview={queries.preview}
       />
     );
   }
@@ -145,6 +116,9 @@ export default defineExtensionView<HostProps>({
   render(context) {
     const root = createRoot(context.mount);
     root.render(<View context={context} />);
-    return () => root.unmount();
+    return () => {
+      root.unmount();
+      createWebviewClient(context.host).queries.dispose();
+    };
   },
 });

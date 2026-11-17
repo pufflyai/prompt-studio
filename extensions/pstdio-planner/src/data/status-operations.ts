@@ -1,7 +1,8 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { sortedBySortOrder } from "../utils/sort";
-import { putStatus, putTicket, statusesCollection, ticketsCollection } from "./collections";
+import { putStatus, statusesCollection } from "./collections";
 import { seedDefaultStatuses } from "./seed";
+import { reassignTicketStatuses } from "./ticket-bulk-edit";
 import type { TicketContext } from "./ticket-identity";
 import type { StoredStatus } from "./types";
 
@@ -15,9 +16,7 @@ export interface StatusActionFlags {
 }
 
 export const createTicketStatus = async (
-  input: {
-    storage: ExtensionStorageApi;
-    resources: TicketContext["resources"];
+  input: TicketContext & {
     name: string;
     color?: string;
     icon?: string | null;
@@ -39,9 +38,7 @@ export const createTicketStatus = async (
 };
 
 export const updateTicketStatus = async (
-  input: {
-    storage: ExtensionStorageApi;
-    resources: TicketContext["resources"];
+  input: TicketContext & {
     statusId: string;
     name?: string;
     color?: string;
@@ -65,19 +62,15 @@ export const updateTicketStatus = async (
 
 // Reassign tickets in the removed column to the remaining default so they stay
 // visible on the board instead of pointing at a status that no longer exists.
-export const deleteTicketStatus = async (input: {
-  storage: ExtensionStorageApi;
-  resources: TicketContext["resources"];
-  statusId: string;
-}) => {
+export const deleteTicketStatus = async (
+  input: TicketContext & {
+    statusId: string;
+  },
+) => {
   const remaining = (await statusesCollection(input.storage).list()).filter((status) => status.id !== input.statusId);
   const fallbackId = (remaining.find((status) => status.isDefault) ?? remaining[0])?.id ?? null;
 
-  await Promise.all(
-    (await ticketsCollection(input).list()).map((ticket) =>
-      ticket.statusId === input.statusId ? putTicket(input, { ...ticket, statusId: fallbackId }) : undefined,
-    ),
-  );
+  await reassignTicketStatuses(input, [input.statusId], fallbackId);
 
   await statusesCollection(input.storage).delete(input.statusId);
   return { statusId: input.statusId };
@@ -85,11 +78,11 @@ export const deleteTicketStatus = async (input: {
 
 // Exactly one status is the default new-ticket column, so promoting one demotes
 // the rest. Only the statuses whose flag actually changes are rewritten.
-export const setDefaultStatus = async (input: {
-  storage: ExtensionStorageApi;
-  resources: TicketContext["resources"];
-  statusId: string;
-}) => {
+export const setDefaultStatus = async (
+  input: TicketContext & {
+    statusId: string;
+  },
+) => {
   const statuses = await seedDefaultStatuses(input.storage);
   if (!statuses.some((status) => status.id === input.statusId)) {
     throw new Error(`Unknown ticket status: ${input.statusId}`);
@@ -104,11 +97,11 @@ export const setDefaultStatus = async (input: {
   return readTicketStatuses(input.storage);
 };
 
-export const reorderTicketStatuses = async (input: {
-  storage: ExtensionStorageApi;
-  resources: TicketContext["resources"];
-  statusIds: string[];
-}) => {
+export const reorderTicketStatuses = async (
+  input: TicketContext & {
+    statusIds: string[];
+  },
+) => {
   const statuses = sortedBySortOrder(await statusesCollection(input.storage).list());
   const statusesById = new Map(statuses.map((status) => [status.id, status]));
   const requestedIds = new Set<string>();

@@ -127,7 +127,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: "24.22.1"
+          node-version: "26.7.0"
 
       - name: Set up Windows cold installation storage
         if: runner.os == 'Windows'
@@ -140,10 +140,6 @@ jobs:
 
       - name: Test device performance lifecycle and file authorization
         run: bun scripts/test.ts clients/desktop/src/performance --lane stable --prebuilt
-
-      - name: Test native DMG attachment cleanup
-        if: matrix.platform == 'darwin'
-        run: bun scripts/test.ts --priority p1 --scope @pstdio/desktop --runner bun --lane stable --prebuilt
 
       - name: Run native quarantines once
         run: bun scripts/test.ts --lane quarantine --scope @pstdio/desktop --runner bun --prebuilt

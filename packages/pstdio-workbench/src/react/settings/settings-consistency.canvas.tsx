@@ -8,7 +8,7 @@ export default {
   component: SettingsPreview,
   fullscreen: true,
   description:
-    "Production settings shell, navigation, fixed-height header with Reset/Save icon buttons shown only for unsaved edits, leave warning and skeletons. Preview values stay in local state.",
+    "Production settings shell with a standard md gap between navigation groups, fixed-height header with Reset/Save icon buttons shown only for unsaved edits, leave warning and skeletons. Preview values stay in local state.",
   decorators: [
     (Frame, { theme }) => (
       <WorkbenchThemeProvider defaultThemePreference={theme.id} themePreferences={[theme]} themeStorage={themeStorage}>

@@ -1,4 +1,4 @@
-import type { ResourceRef } from "@pstdio/sdk/extensions";
+import type { NavigationTarget, ResourceRef } from "@pstdio/sdk/extensions";
 import { withTitleField } from "@pstdio/ui/collection-view";
 import type { AttributeDescriptor, KanbanRendererRow } from "@pstdio/ui/kanban-renderer";
 import { localizeTicketFormOption, localizeTicketFormValue } from "../../ticket-create-form";
@@ -9,6 +9,7 @@ export type TimelineTicketRow = KanbanRendererRow & { resource?: ResourceRef };
 export function timelineQueryData(
   plan: Awaited<ReturnType<typeof readPlanCommand.run>>,
   t: (key: string, fallback?: string) => string,
+  open?: (target: NavigationTarget) => void,
 ) {
   const attributes = plan.ticketAttributes.flatMap<AttributeDescriptor>((attribute) => {
     const type = attribute.type;
@@ -20,7 +21,7 @@ export function timelineQueryData(
           type: {
             ...type,
             options: Array.isArray(type.options)
-              ? type.options.map((option) => localizeTicketFormOption(option, t))
+              ? type.options.map((option) => localizeTicketFormOption(option, t, open))
               : [],
           },
         },

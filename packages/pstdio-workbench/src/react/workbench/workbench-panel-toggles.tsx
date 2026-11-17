@@ -16,7 +16,7 @@ export const useWorkbenchPanelToggles = (workbench: WorkbenchCore) => {
   const secondary = usePanelPolicy(workbench, "secondary");
   const side = usePanelPolicy(workbench, "side");
   const hasNavigation = useWorkbenchRegionContent(workbench, "sidenav");
-  const composition = useWorkbenchCompositionPanels(workbench);
+  const composition = useWorkbenchCompositionPanels(workbench, ["secondary", "side"]);
   const hasSide = useWorkbenchRegionContent(workbench, "side") || composition.side.addable.length > 0;
   const hasBottom = useWorkbenchRegionContent(workbench, "secondary") || composition.secondary.addable.length > 0;
   const panels = [

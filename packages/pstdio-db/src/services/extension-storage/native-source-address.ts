@@ -16,7 +16,7 @@ type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 export const nativeSourceAddressIn = async (
   tx: Transaction,
   owner: StorageOwner,
-  input: { recordId: string; documentKey: string },
+  input: { recordId: string; documentKey: string; field?: string },
 ) => {
   const [ordered] = await tx
     .select({ id: storage_ordered_owners.workbench_id })
@@ -48,7 +48,7 @@ export const nativeSourceAddressIn = async (
 export const resolveNativeRecordAddress = async (
   db: DbClient,
   owner: StorageOwner,
-  input: { recordId: string; documentKey: string },
+  input: { recordId: string; documentKey: string; field?: string },
 ) => {
   await ensureOrderedOwner(db, owner);
   return db.transaction(async (tx) => {

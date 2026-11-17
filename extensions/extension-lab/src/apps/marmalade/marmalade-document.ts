@@ -1,7 +1,14 @@
 import type { MarmaladeAction, MarmaladeState } from "./marmalade.types";
 import { applyMarmaladeAuthoring } from "./marmalade-authoring";
 import { createMarmaladeState } from "./marmalade-data";
-import { editable, findLayer, finite, marmaladeAncestors, range } from "./marmalade-layers";
+import { editable, findLayer, finite, marmaladeAncestors, range, setMarmaladeParent } from "./marmalade-layers";
+
+import {
+  applyMarmaladePresentation,
+  isMarmaladePresentationAction,
+  marmaladeLayerIndex,
+  marmaladePresentation,
+} from "./marmalade-presentation";
 
 const translate = (state: MarmaladeState, ids: string[], dx: number, dy: number) => {
   finite(dx);
@@ -42,7 +49,7 @@ const reorder = (state: MarmaladeState, action: Extract<MarmaladeAction, { type:
     )
       index += 1;
   }
-  for (const root of roots) root.parentId = parentId;
+  for (const root of roots) setMarmaladeParent(root, parentId);
   remaining.splice(index, 0, ...moving);
   state.document.layers = remaining;
   if (parentId && !state.expandedIds.includes(parentId)) state.expandedIds.push(parentId);
@@ -86,42 +93,17 @@ const editLayer = (state: MarmaladeState, action: LayerAction) => {
 export const applyMarmaladeAction = (current: MarmaladeState, action: MarmaladeAction) => {
   if (action.type === "reset") return createMarmaladeState();
   const state = structuredClone(current);
+  if (isMarmaladePresentationAction(action))
+    return {
+      ...state,
+      ...applyMarmaladePresentation(marmaladePresentation(state), marmaladeLayerIndex(state.document), action),
+    };
   switch (action.type) {
     case "empty":
       state.document.layers = [];
       state.selectedIds = [];
       state.expandedIds = [];
       break;
-    case "select":
-      state.selectedIds = [...new Set(action.ids)];
-      for (const id of state.selectedIds) {
-        if (findLayer(state, id).disabled) throw new Error("The layer is unavailable");
-      }
-      break;
-    case "tool":
-      if (!["move", "text", "rectangle", "ellipse", "brush", "hand", "zoom"].includes(action.tool))
-        throw new Error("Unknown tool");
-      state.tool = action.tool;
-      break;
-    case "viewport":
-      if (action.zoom !== undefined) {
-        range(action.zoom, 0.25, 4);
-        state.zoom = action.zoom;
-      }
-      if (action.pan) {
-        finite(action.pan.x);
-        finite(action.pan.y);
-        state.pan = action.pan;
-      }
-      break;
-    case "expand": {
-      const layer = findLayer(state, action.id);
-      if (layer.kind !== "group") throw new Error("Only groups expand");
-      state.expandedIds = state.expandedIds.includes(layer.id)
-        ? state.expandedIds.filter((id) => id !== layer.id)
-        : [...state.expandedIds, layer.id];
-      break;
-    }
     case "visibility":
     case "lock":
     case "text":

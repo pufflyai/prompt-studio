@@ -10,11 +10,8 @@ Planner is not installed by default. Open **Settings → Project → Extensions*
 pst extensions add pstdio-planner
 ```
 
-Agents hand in their work as reports, so managed attempts also need the [Reports](../pstdio-reports/README.md) extension:
+Agents publish implementation and independent review outcomes to the ticket’s core Activity feed. New managed attempts do not require Reports. Keep the [Reports compatibility extension](../pstdio-reports/README.md) only while reading or migrating historical evidence.
 
-```sh
-pst extensions add pstdio-reports
-```
 
 ## What Planner adds
 

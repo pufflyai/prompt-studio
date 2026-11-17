@@ -11,6 +11,7 @@ const WORKING_TREE_EXTENSIONS = [
   ["base-themes", "extensions/pstdio-base-themes"],
   ["notes", "extensions/pstdio-notes"],
   ["performance", "extensions/pstdio-performance"],
+  ["github", "extensions/github"],
   ["planner", "extensions/pstdio-planner"],
   ["skills", "extensions/pstdio-skills"],
   ["extension-lab", "extensions/extension-lab"],

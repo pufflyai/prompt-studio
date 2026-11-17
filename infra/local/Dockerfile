@@ -1,12 +1,12 @@
 FROM oven/bun:1.4.4
 
-COPY --from=node:24.19.0-slim /usr/local/bin/node /usr/local/bin/node
+COPY --from=node:26.7.0-slim /usr/local/bin/node /usr/local/bin/node
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PATH="/home/bun/.local/bin:/opt/bun/bin:${PATH}"
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends bash ca-certificates curl git ripgrep unzip \
+  && apt-get install -y --no-install-recommends bash ca-certificates curl git libatomic1 ripgrep unzip \
   && rm -rf /var/lib/apt/lists/*
 
 # A network whose proxy re-signs TLS needs its CA here. The folder is empty unless one is supplied.

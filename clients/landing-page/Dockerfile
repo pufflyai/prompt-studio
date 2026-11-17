@@ -1,4 +1,4 @@
-FROM node:24-bookworm-slim AS builder
+FROM node:26.7.0-bookworm-slim AS builder
 
 COPY --from=oven/bun:1.4.4 /usr/local/bin/bun /usr/local/bin/bun
 

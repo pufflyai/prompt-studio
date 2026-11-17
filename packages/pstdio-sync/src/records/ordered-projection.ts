@@ -9,7 +9,8 @@ export type OrderedBody = {
   nativeSources: NativeRecordSources;
 };
 export const orderedBody = (record: OrderedRecord) => {
-  const body = record.value as Partial<OrderedBody>;
+  // A deleted record joining from a device that never synced can carry a null body.
+  const body = (record.value ?? {}) as Partial<OrderedBody>;
   return {
     value: body.value ?? null,
     asset: body.asset ?? null,

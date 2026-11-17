@@ -8,6 +8,7 @@ export const streamWorkspaceChanges = async (
   sink: SessionEventSink,
   kind: "diff" | "files",
 ) => {
+  const abort = new AbortController();
   const stopped = Promise.withResolvers<void>();
   let stop: (() => void) | undefined;
   let dirty = false;
@@ -16,10 +17,12 @@ export const streamWorkspaceChanges = async (
   let ended = false;
   const end = () => {
     ended = true;
+    abort.abort();
     stop?.();
     stopped.resolve();
   };
   sink.onAbort(end);
+  if (sink.aborted) return end();
   const pump = () => {
     dirty = true;
     if (writing || !ready || ended || sink.aborted) return;
@@ -47,7 +50,11 @@ export const streamWorkspaceChanges = async (
       }
     },
     kind,
-  );
+    abort.signal,
+  ).catch((error) => {
+    if (!ended && !sink.aborted) throw error;
+  });
+  if (!observation) return end();
   stop = observation.close;
   if (ended || sink.aborted) return end();
   // Do not wait for socket backpressure to release a cancelled OS observation.

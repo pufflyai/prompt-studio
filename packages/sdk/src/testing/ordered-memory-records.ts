@@ -2,14 +2,19 @@ import {
   applyBoundedOrderedOperation,
   compileOrderedGroup,
   type DocumentSnapshot,
+  forwardDisplacedSave,
   type OrderedDecision,
+  type OrderedMoveInput,
   type OrderedOperation,
   type OrderedRecord,
   observeOrderedRecord,
   operationDependencies,
   orderedBody,
   orderedProjection,
+  planCatchUpMoves,
+  prepareCatchUpMoves,
   prepareOrderedLocalAdoption,
+  prepareOrderedMove,
   projectBoundedOrderedOperation,
   projectOrderedOperation,
 } from "pstdio-sync/records";
@@ -90,6 +95,43 @@ export const createOrderedMemoryRecords = (
       revision: await observeOrderedRecord(undefined),
     };
   };
+  const queue = async (operation: OrderedOperation, identity: string) => {
+    if (joined) pending.set(operation.operationId, operation);
+    else {
+      const result = await applyBoundedOrderedOperation(canonical, operation, localEpoch, undefined, decisions);
+      decisions.set(operation.operationId, result.decision);
+      for (const record of result.records) canonical.set(record.recordId, record);
+    }
+    identities.set(operation.operationId, identity);
+    await rebuild();
+    changed?.(operation.edits.map((edit) => edit.recordId));
+  };
+  // Like the database store: forward this device's refused saves that a move displaced, and move old
+  // collection items still live although their collection moved. Skipped saves are not tracked here.
+  const settleMoves = async (refused: OrderedOperation[], changed: string[]) => {
+    const read = async (ids: string[]) =>
+      new Map(ids.flatMap((id) => (canonical.has(id) ? [[id, canonical.get(id)!]] : [])));
+    const current = async () => views;
+    const list = async (prefix: string) =>
+      [...views].filter(([id, record]) => id.startsWith(prefix) && !record.deleted).map(([id]) => id);
+    const prepared = [];
+    for (const operation of refused) {
+      const next = await forwardDisplacedSave({
+        operation,
+        refused: true,
+        skipped: new Set(),
+        canonical: read,
+        views: current,
+      });
+      if (next) prepared.push(next);
+    }
+    prepared.push(...(await prepareCatchUpMoves(await planCatchUpMoves({ changed, canonical: read, list }), current)));
+    for (const next of prepared) {
+      pending.set(next.operation.operationId, next.operation);
+      identities.set(next.operation.operationId, next.identity);
+    }
+    if (prepared.length) await rebuild();
+  };
   return {
     read,
     list: async (prefix = "") =>
@@ -114,16 +156,14 @@ export const createOrderedMemoryRecords = (
       assertStorageLimits(
         await Promise.all(projectOrderedOperation(views, operation, decisions).map(orderedProjection)),
       );
-      if (joined) pending.set(operation.operationId, operation);
-      else {
-        const result = await applyBoundedOrderedOperation(canonical, operation, localEpoch, undefined, decisions);
-        decisions.set(operation.operationId, result.decision);
-        for (const record of result.records) canonical.set(record.recordId, record);
-      }
-      identities.set(operation.operationId, identity);
-      await rebuild();
-      changed?.(group.edits.map((edit) => edit.recordId));
+      await queue(operation, identity);
       return (await outcome(operation.operationId))!;
+    },
+    /** Host-only: move live records to new IDs with their text history and native sources. */
+    move: async (input: OrderedMoveInput) => {
+      const { moved, remaining, operation, identity } = await prepareOrderedMove(views, input);
+      if (operation) await queue(operation, identity!);
+      return { moved, remaining };
     },
     seed: (records: OrderedRecord[]) => {
       canonical = new Map(records.map((record) => [record.recordId, structuredClone(record)]));
@@ -149,6 +189,7 @@ export const createOrderedMemoryRecords = (
     pending: () => structuredClone([...pending.values()]),
     install: async (state: OrderedMemoryState) => {
       verifyIdentities(identities, state.identities);
+      const before = canonical;
       const local = joined ? [] : [...canonical.values()];
       const previous = decisions;
       ({ canonical, decisions } = structuredClone(state));
@@ -162,8 +203,15 @@ export const createOrderedMemoryRecords = (
         const operation = await prepareOrderedLocalAdoption(record, canonical.get(record.recordId));
         if (operation) pending.set(operation.operationId, operation);
       }
+      const refused = [...pending.values()].filter(
+        (operation) => decisions.get(operation.operationId)?.state === "refused",
+      );
       for (const id of decisions.keys()) pending.delete(id);
       await rebuild();
+      const changed = [...new Set([...before.keys(), ...canonical.keys()])].filter(
+        (id) => JSON.stringify(before.get(id)) !== JSON.stringify(canonical.get(id)),
+      );
+      await settleMoves(refused, changed);
     },
   };
 };

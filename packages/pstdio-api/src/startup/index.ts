@@ -62,7 +62,11 @@ const ensureDefaultExtensionsInstalled = async (deps: RouteDeps, signal?: AbortS
   if (!sourceMode && (await deps.projectService.list()).length > 0) return;
 
   try {
-    const installed = await installDefaultExtensions({
+    await installDefaultExtensions({
+      registerInstalledSources: (installed) =>
+        traceSetupPhase("default_extensions.register", {}, () =>
+          registerInstalledExtensionSources(deps.extensionService, installed),
+        ),
       forceSourceDefaults: sourceMode,
       onInstallFailure: ({ error, installName, source }) => {
         if (signal?.aborted) return;
@@ -79,10 +83,6 @@ const ensureDefaultExtensionsInstalled = async (deps: RouteDeps, signal?: AbortS
       releaseRef: deps.extensionUpgradeService.releaseRef,
       signal,
     });
-    signal?.throwIfAborted();
-    await traceSetupPhase("default_extensions.register", {}, () =>
-      registerInstalledExtensionSources(deps.extensionService, installed),
-    );
   } catch (err) {
     if (signal?.aborted) return;
     apiLogger.warn(

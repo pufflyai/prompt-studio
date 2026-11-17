@@ -6,11 +6,12 @@ import type { OrderedIndexBlobs } from "pstdio-sync/relay";
 import type { Json, StorageLogDefinition } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { createEnvironmentDBService } from "../environment/environment";
+import { indexNodeFilesFor } from "./index-node-files";
+import { createLogIndexCache } from "./log-index-cache";
 import { hasOrderedLogPending } from "./ordered-log-pending";
 import type { LogPayloads } from "./ordered-log-sql";
 import { orderedLogStatistics } from "./ordered-log-statistics";
 import { createOrderedLogStore } from "./ordered-log-store";
-import { createOrderedManifestCache } from "./ordered-receipts-blobs";
 
 type Connector = (entry: LogDirectoryEntry, store: LogStreamStore) => Promise<LogRemote>;
 const ownerKey = (owner: StorageOwner) => JSON.stringify([owner.workbenchId, canonicalExtensionId(owner.extensionId)]);
@@ -88,7 +89,7 @@ export const createOrderedLogs = (
     notify,
     watch,
     manifests: (owner: StorageOwner, space: SyncSpace, remote: OrderedIndexBlobs) =>
-      createOrderedManifestCache(db, canonicalOwner(owner), space, remote).blobs,
+      createLogIndexCache(indexNodeFilesFor(db), canonicalOwner(owner), space, remote),
     attach(owner: StorageOwner, connector: Connector) {
       const key = ownerKey(owner);
       connectors.set(key, connector);

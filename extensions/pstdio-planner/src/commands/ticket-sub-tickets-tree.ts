@@ -2,7 +2,8 @@ import type { TreeNode, TreeViewSection } from "@pstdio/sdk/extensions";
 import { ticketDisplayTitle } from "../data/mappers";
 import { ticketPageTarget } from "../data/ticket-page-target";
 import { ticketResourceReference } from "../data/ticket-resource-hierarchy";
-import type { StoredStatus, Ticket } from "../data/types";
+import type { TicketSummary as Ticket } from "../data/ticket-summary";
+import type { StoredStatus } from "../data/types";
 
 const ticketShorthandSort = (left: Ticket, right: Ticket) =>
   left.shorthand.localeCompare(right.shorthand, undefined, { numeric: true });
@@ -42,14 +43,16 @@ export const buildSubTicketsSection = (input: {
   tickets: Ticket[];
   parentTicketId: string;
   statusesById: Map<string, StoredStatus>;
+  children?: Ticket[];
+  nextCursor?: string;
 }): TreeViewSection | undefined => {
   const ticketsById = new Map(input.tickets.map((ticket) => [ticket.id, ticket]));
-  const nodes = input.tickets
+  const nodes = (input.children ?? input.tickets)
     .filter((ticket) => !ticket.archived && ticket.parentId === input.parentTicketId)
     .sort(ticketShorthandSort)
     .map((ticket) => subTicketNode(ticket, input.statusesById, ticketsById));
 
-  if (nodes.length === 0) return undefined;
+  if (nodes.length === 0 && !input.nextCursor) return undefined;
 
   return {
     id: "sub-tickets",
@@ -57,5 +60,6 @@ export const buildSubTicketsSection = (input: {
     collapsible: true,
     canHide: true,
     nodes,
+    ...(input.nextCursor ? { nextCursor: input.nextCursor } : {}),
   };
 };

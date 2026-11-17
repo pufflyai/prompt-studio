@@ -1,9 +1,10 @@
 import { getTableColumns, sql } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
-import { extensionIdentityRenames } from "pstdio-api-contracts/extension-host";
+import { type ExtensionIdentityRename, extensionIdentityRenames } from "pstdio-api-contracts/extension-host";
 import * as Y from "yjs";
 import type { DbClient } from "../db/connection.pglite";
 import * as s from "../db/schemas.pg";
+import { indexNodeFilesFor } from "./extension-storage/index-node-files";
 
 // Ordered by foreign-key dependency. Only these composite-key parents need a new key before moving children.
 const parents = [
@@ -107,14 +108,19 @@ const cloneParent = async (tx: Transaction, table: PgTable, from: string, to: st
 /** Startup runs under the database lock, before any extension, writer, relay or projection cache can open. */
 export const migrateExtensionIdentities = async (
   db: DbClient,
-  options: { extensionId?: string; onConflict?: (error: ExtensionIdentityConflictError) => Promise<void> } = {},
+  options: {
+    extensionId?: string;
+    onConflict?: (error: ExtensionIdentityConflictError) => Promise<void>;
+    /** Runs once before the first rename commits, so space reclamation is recorded as owed first. */
+    beforeChange?: () => Promise<void>;
+  } = {},
 ) => {
   const renames = extensionIdentityRenames.filter(
     ({ from, to }) =>
       !options.extensionId ||
       [`${from.publisher}.${from.name}`, `${to.publisher}.${to.name}`].includes(options.extensionId),
   );
-  if (!renames.length) return;
+  if (!renames.length) return false;
   const projects = await db.execute(sql`SELECT id FROM ${s.projects} p WHERE NOT EXISTS
     (SELECT 1 FROM ${s.storage_documents} d WHERE d.workbench_id = p.id AND d.extension_id = 'pstdio' AND d.document_id = ${markerId})`);
   const pending = projects.rows.map((row) => String(row.id));
@@ -159,11 +165,13 @@ export const migrateExtensionIdentities = async (
     WHERE last_error_json->>'code' = 'extension_identity_conflict'`);
   const gatedOwners = new Set(gated.rows.map((row) => String(row.extension_id)));
   let conflicted = false;
+  let renamed = false;
   for (const { from: previous, to: canonical } of renames) {
     const from = `${previous.publisher}.${previous.name}`;
     const to = `${canonical.publisher}.${canonical.name}`;
     if (!presentOwners.has(from) && !gatedOwners.has(from) && !gatedOwners.has(to)) continue;
     try {
+      if (!renamed) await options.beforeChange?.();
       await db.transaction(async (tx) => {
         await assertNoConflicts(tx, from, to);
         for (const table of parents) await cloneParent(tx, table, from, to);
@@ -191,6 +199,7 @@ export const migrateExtensionIdentities = async (
         await tx.execute(sql`UPDATE ${s.installed_extension_sources} SET status = 'pending', last_error_json = NULL
         WHERE extension_id = ${to} AND last_error_json->>'code' = 'extension_identity_conflict'`);
       });
+      renamed = true;
     } catch (error) {
       if (!(error instanceof ExtensionIdentityConflictError) || !options.onConflict) throw error;
       conflicted = true;
@@ -207,5 +216,24 @@ export const migrateExtensionIdentities = async (
       .insert(s.storage_documents)
       .values(pending.map((workbench_id) => ({ workbench_id, extension_id: "pstdio", document_id: markerId, state })))
       .onConflictDoNothing();
+  }
+  await moveRenamedIndexNodes(db, renames);
+  return renamed;
+};
+
+/**
+ * Index node files follow their rows. This also runs when no rows moved now, so files left under an
+ * old id by a crash after an earlier rename committed still move. A refused rename keeps its rows,
+ * and therefore its files, under the old id.
+ */
+const moveRenamedIndexNodes = async (db: DbClient, renames: readonly ExtensionIdentityRename[]) => {
+  const files = indexNodeFilesFor(db);
+  for (const { from: previous, to: canonical } of renames) {
+    const from = `${previous.publisher}.${previous.name}`;
+    if (!(await files.hasExtension(from))) continue;
+    const remaining = await db.execute(
+      sql`SELECT 1 FROM ${s.storage_ordered_owners} WHERE extension_id = ${from} LIMIT 1`,
+    );
+    if (!remaining.rows.length) await files.moveExtension(from, `${canonical.publisher}.${canonical.name}`);
   }
 };

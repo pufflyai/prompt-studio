@@ -9,6 +9,7 @@ import {
 } from "../../../core";
 import { resolveNavigationLevels } from "../../../core/controllers/page-location/navigation-level";
 import { useOptionalWorkbenchStore } from "../../shared/use-workbench-store";
+import { rendererQueryKey } from "../renderer-query-key";
 import { usePageParams } from "../use-page-params";
 import { useRendererRead } from "../use-renderer-read";
 import { type LoadedTreeData, loadExpandedTreeChildren, loadTreeData, treeStructure } from "./tree-view-load";
@@ -76,7 +77,7 @@ export const useTreeRead = (
     ?.getReadKey?.({ resource, viewId, filter, pageParams });
   const queryScope = treeQueryScope(workbench, treeViewId, resource?.projectId ?? project);
   const refreshKey = JSON.stringify(scope ?? [resourceKey(resource), resourceKey(location?.resource), mode, pageOwner]);
-  const queryKey = JSON.stringify([
+  const queryKey = rendererQueryKey([
     treeViewId,
     viewId,
     project,

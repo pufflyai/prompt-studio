@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type {
@@ -8,7 +8,9 @@ import type {
   WebviewCapabilityDeclaration,
 } from "pstdio-api-contracts/extension-kernel";
 import { type LoadedExtensionSource, normalizeExtensionSources } from "pstdio-extensions";
+import { readPublishedWebviewRevision, recordPublishedWebviewRevision } from "pstdio-extensions/prepared-cache";
 import { createExtensionWebviewAccess } from "./extension-webview-access";
+import { prepareWebviewBuildCache } from "./extension-webview-build-cache";
 import {
   type BuildWorkbenchExtensionMetadataInput,
   buildWorkbenchExtensionMetadata as buildMetadata,
@@ -83,6 +85,55 @@ const webviewRuntime = (entryPath: string, capabilities?: WebviewCapabilityDecla
 };
 
 describe("buildWorkbenchExtensionMetadata", () => {
+  test("legacy cache preparation cannot overwrite an established publication marker", () => {
+    const root = mkdtempSync(join(tmpdir(), "webview-publication-migration-"));
+    const dist = join(root, "dist");
+    mkdirSync(dist);
+    writeFileSync(join(dist, "module.js"), "old bytes");
+    writeFileSync(join(dist, "build-signature.txt"), "old-signature");
+    recordPublishedWebviewRevision(dist, "new-publication");
+    try {
+      prepareWebviewBuildCache(dist, new Set());
+      expect(readPublishedWebviewRevision(dist)).toBe("new-publication");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+  test("keeps published bytes as the URL identity while a replacement is still being validated", () => {
+    const root = mkdtempSync(join(tmpdir(), "webview-publication-identity-"));
+    const dist = join(root, "installed-lab", "pstdio.lab.view.page", "dist");
+    mkdirSync(dist, { recursive: true });
+    writeFileSync(join(dist, "module.js"), 'console.log("published A");');
+    writeFileSync(join(dist, "build-signature.txt"), "prepared:artifact-a");
+    const revisions = new Map([["pstdio.lab", "reported-a"]]);
+    const metadata = () => {
+      const view = buildWorkbenchExtensionMetadata({
+        installedExtensionIdsByExtensionId: new Map([["pstdio.lab", "installed-lab"]]),
+        installNamesByExtensionId: new Map(),
+        assetRevisionsByExtensionId: revisions,
+        runtime: webviewRuntime("./src/main.tsx"),
+        webviewCacheRoot: root,
+      }).views[0]!;
+      if (view.body.kind !== "webview") throw new Error("Expected webview");
+      return view.body.webview.moduleUrl;
+    };
+    try {
+      const published = metadata();
+      // The guarded success report precedes the final input guard and publication.
+      revisions.set("pstdio.lab", "validated-b");
+      expect(metadata()).toBe(published);
+      prepareWebviewBuildCache(dist, new Set());
+      expect(metadata()).toBe(published);
+      writeFileSync(join(dist, "module.js"), 'console.log("published B");');
+      writeFileSync(join(dist, "build-signature.txt"), "prepared:artifact-b");
+      recordPublishedWebviewRevision(dist, "prepared:artifact-b");
+      expect(metadata()).not.toBe(published);
+      expect(readFileSync(join(dist, "module.js"), "utf8")).toContain("published B");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("loads the entry stylesheet once instead of also mounting deferred chunk styles", () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-styles-"));
     const dist = join(root, "installed-lab", "pstdio.lab.view.page", "dist");

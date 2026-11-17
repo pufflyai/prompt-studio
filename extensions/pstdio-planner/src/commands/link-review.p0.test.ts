@@ -7,33 +7,6 @@ import { createTicketCommand } from "./create-ticket";
 import { linkReviewCommand } from "./link-review";
 
 describe("link review command", () => {
-  test("stores GitHub pull request metadata", async () => {
-    const storage = createMemoryStorage();
-    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Add feature" } }));
-
-    const updated = await linkReviewCommand.run(
-      ...makeCommandArgs({
-        storage,
-        params: { id: ticket.shorthand, url: "https://github.com/org/repo/pull/456" },
-      }),
-    );
-
-    expect(updated.reviewLinks).toHaveLength(1);
-    expect(updated.reviewLinks?.[0]).toMatchObject({
-      url: "https://github.com/org/repo/pull/456",
-      provider: "github",
-      kind: "pull_request",
-      externalId: "456",
-      title: null,
-    });
-    expect(updated.reviewLinks?.[0]?.id).toEqual(expect.any(String));
-    expect(updated.reviewLinks?.[0]?.createdAt).toEqual(expect.any(String));
-    expect(updated.reviewLinks?.[0]?.updatedAt).toEqual(expect.any(String));
-
-    const persisted = await ticketsCollection(storage).get(ticket.id);
-    expect(persisted?.reviewLinks?.[0]?.externalId).toBe("456");
-  });
-
   test("stores GitLab merge request metadata", async () => {
     const storage = createMemoryStorage();
     const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Add feature" } }));
@@ -81,7 +54,7 @@ describe("link review command", () => {
     await linkReviewCommand.run(
       ...makeCommandArgs({
         storage,
-        params: { id: ticket.id, url: "https://github.com/org/repo/pull/456" },
+        params: { id: ticket.id, url: "https://gitlab.com/org/repo/-/merge_requests/456" },
       }),
     );
     const updated = await linkReviewCommand.run(
@@ -97,7 +70,7 @@ describe("link review command", () => {
   test("reuses the stored link when the same PR is linked again", async () => {
     const storage = createMemoryStorage();
     const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Add feature" } }));
-    const url = "https://github.com/org/repo/pull/456";
+    const url = "https://gitlab.com/org/repo/-/merge_requests/456";
     const linked = await linkReviewCommand.run(
       ...makeCommandArgs({ storage, params: { id: ticket.id, url, title: "Review changes" } }),
     );
@@ -117,7 +90,7 @@ describe("link review command", () => {
       linkReviewCommand.run(
         ...makeCommandArgs({
           storage,
-          params: { id: "missing", url: "https://github.com/org/repo/pull/456" },
+          params: { id: "missing", url: "https://gitlab.com/org/repo/-/merge_requests/456" },
         }),
       ),
     ).rejects.toThrow(/Unknown ticket "missing"/);
