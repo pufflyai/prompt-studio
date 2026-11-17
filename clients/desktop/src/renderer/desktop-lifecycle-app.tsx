@@ -52,25 +52,26 @@ const RecoveryState = (props: {
   return (
     <SimpleCard width="full" maxHeight="full" display="flex" minHeight="0">
       <SimpleCardBody display="flex" minHeight="0" width="full">
-        <Stack gap="lg" role="alert" minHeight="0" minWidth="0" width="full">
+        <Stack gap="lg" minHeight="0" minWidth="0" width="full">
           <Heading textStyle="heading/M" flexShrink="0">
-            Prompt Studio needs attention
+            Prompt Studio encountered an error
           </Heading>
           <AlertMessage
-            status="neutral"
-            variant="surface"
-            colorPalette="gray"
+            status="error"
+            role="alert"
             title="Something is wrong"
             endElement={
-              availableActions.has("copy_diagnostics") && (
-                <CopyStartupLogsButton copyStartupLogs={actions.copyDiagnostics} />
-              )
+              <>
+                {availableActions.has("copy_diagnostics") && (
+                  <CopyStartupLogsButton copyStartupLogs={actions.copyDiagnostics} />
+                )}
+                {availableActions.has("retry") && <Button onClick={actions.retryRuntime}>Retry</Button>}
+              </>
             }
           >
             {state.error.message}
           </AlertMessage>
           <HStack gap="xs" flexWrap="wrap" flexShrink="0">
-            {availableActions.has("retry") && <Button onClick={actions.retryRuntime}>Retry</Button>}
             {availableActions.has("open_logs") && (
               <Button variant="outline" onClick={actions.openLogs}>
                 Open logs

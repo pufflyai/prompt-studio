@@ -10,11 +10,15 @@ test("shows the work following the latest completed startup step", () => {
   expect(readRuntimeStartupPhase(log("database_image_restored"))).toBe("database");
   expect(readRuntimeStartupPhase(log("database_opened"))).toBe("migrations");
   expect(readRuntimeStartupPhase(log("database_index_nodes"))).toBe("migrations");
-  expect(readRuntimeStartupPhase(log("database_cleaning"))).toBe("cleanup");
-  expect(readRuntimeStartupPhase(log("database_compacting"))).toBe("compacting");
   expect(readRuntimeStartupPhase(log("database_migrated"))).toBe("extensions");
   expect(readRuntimeStartupPhase(log("extensions_ready"))).toBe("readiness");
   expect(readRuntimeStartupPhase(log("app_ready"))).toBe("readiness");
+});
+
+test("offline database maintenance does not replace the current startup step", () => {
+  const output = ["database_index_nodes", "database_cleaning", "database_compacting"].map(log).join("\n");
+
+  expect(readRuntimeStartupPhase(output)).toBe("migrations");
 });
 
 test("reads progress from a bounded log tail without exposing unrelated output", () => {

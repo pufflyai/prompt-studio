@@ -8,8 +8,6 @@ const startupPhases: Record<string, DesktopStartupPhase> = {
   database_image_restored: "database",
   database_opened: "migrations",
   database_index_nodes: "migrations",
-  database_cleaning: "cleanup",
-  database_compacting: "compacting",
   database_migrated: "extensions",
   extensions_ready: "readiness",
   app_ready: "readiness",
