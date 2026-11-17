@@ -119,7 +119,7 @@ If a newer source arrives after acceptance, the accepted candidate owns those
 definitions while the host retries the newer load; a failed retry falls back to
 that matching candidate rather than the earlier handlers.
 
-Each definition names fields by paths within `record.value`, optional leading
+Each definition names fields by paths within `record.value` (`path: []` selects the complete value), optional leading
 `equality` fields and a default `orderBy`. Field types are `string`, `number`,
 `boolean`, `array` (strings only), and `object` (JSON objects only). Timestamps use consistently formatted strings.
 Selectable fields are not implicitly equality keys. Omitted `equality` means none.
