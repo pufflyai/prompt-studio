@@ -12,6 +12,7 @@ import type {
   WebviewEditingSnapshot,
   WebviewExtensionSettingSetParams,
   WebviewFilesDeleteParams,
+  WebviewFilesDownloadParams,
   WebviewFilesListParams,
   WebviewFilesUploadParams,
   WebviewHostCapabilityParams,
@@ -52,6 +53,7 @@ export interface ExtensionWebviewPreferencesAdapter {
 }
 
 export interface ExtensionWebviewFilesAdapter {
+  download?(input: WebviewFilesDownloadParams): MaybePromise<void>;
   upload(input: WebviewFilesUploadParams): MaybePromise<WebviewHostCapabilityResults["files.upload"]>;
   list(input: WebviewFilesListParams): MaybePromise<WebviewHostCapabilityResults["files.list"]>;
   delete(input: WebviewFilesDeleteParams): MaybePromise<void>;

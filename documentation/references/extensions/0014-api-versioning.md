@@ -111,6 +111,12 @@ The shorter first-party extension identities also share API 0.5.0. Canonical dis
 
 `ctx.resources.allocateMany` also shares API 0.5.0. It numbers 1 to 100 resources of one kind in one save, so imports do not allocate one number per call.
 
+The optional `files.download` webview capability and typed `client.files.download`
+also share API 0.5.0 on `main`. They deliver bytes the extension already holds to
+the user's browser download UI, without adding sandbox permissions or file read
+access. Publish the host and SDK before independent extensions adopt it. See
+[webview files](0005-webview-and-storage-api.md#webview-files).
+
 The optional `HarnessStartInput.approvals` channel also shares API 0.5.0. A supporting host passes the session's approval channel on a session's first turn as well as on resume. Hosts up to 0.47 pass it only on resume, so providers must treat it as optional on start.
 
 ### Which version each check uses

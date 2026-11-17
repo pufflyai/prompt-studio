@@ -84,8 +84,19 @@ const imports = defineView({
 | --- | --- | --- | --- |
 | `files.pick(options?)` | None | `{ accept?, multiple? }` | Browser `File[]`; an empty array means the user cancelled. |
 | `files.upload(input)` | `files.upload` | `{ name, data, mimeType?, scope? }` | The stored `ExtensionBlobRef`. `data` accepts `Uint8Array` or `ArrayBuffer`. |
+| `files.download(input)` | `files.download` | `{ name, data, mimeType? }` | Starts a download on the user's device. `data` accepts `Uint8Array` or `ArrayBuffer`; `name` is a filename, without a directory. |
 | `files.list(input?)` | `files.list` | `{ scope? }` | `ExtensionBlobRef[]` for the exact scope. |
 | `files.delete(id)` | `files.delete` | A file id returned by upload or list. | Resolves after the host deletes the owned file. |
+
+On `main`, the API 0.5.0 host and SDK add `client.files.download`. Read or generate
+the bytes through the extension's existing commands, then pass them to this
+method. The host initiates the download outside the sandbox; extension and
+artifact frames retain their existing sandbox permissions. No URL or filesystem
+path is accepted, and this capability grants no additional file read access.
+The promise resolves after initiation. The browser's download UI owns completion,
+cancellation and the final location; it does not report a successful disk save to
+the extension. A rejected bridge call can be shown beside the export control and
+retried. Publish the supporting SDK and host before releasing a consumer.
 
 ```ts
 import { createWebviewClient, defineExtensionView } from "@pstdio/sdk/extensions";

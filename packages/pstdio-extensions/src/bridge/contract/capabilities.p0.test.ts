@@ -20,6 +20,21 @@ describe("capability list sync with pstdio-api-contracts", () => {
 });
 
 describe("createHostCapabilityGate", () => {
+  test("file downloads require their own capability declaration", async () => {
+    const calls: unknown[] = [];
+    const capabilities = {
+      "files.download": async (params: unknown) => {
+        calls.push(params);
+      },
+    };
+    const request = { method: "files.download", params: { name: "page.html", data: new Uint8Array([1, 2, 3]) } };
+    const denied = createHostCapabilityGate({ capabilities, declaredCapabilities: ["files.upload"] });
+    await expect(denied.call(request)).rejects.toThrow("Webview did not declare host capability: files.download");
+    expect(calls).toEqual([]);
+    const allowed = createHostCapabilityGate({ capabilities, declaredCapabilities: ["files.download"] });
+    await expect(allowed.call(request)).resolves.toBeUndefined();
+    expect(calls).toEqual([request.params]);
+  });
   test("allows declared v1 capabilities", async () => {
     const calls: unknown[] = [];
     const gate = createHostCapabilityGate({

@@ -64,6 +64,7 @@ export const WEBVIEW_DECLARABLE_CAPABILITIES = [
   "extension.settings.delete",
   "terminal.session",
   "files.upload",
+  "files.download",
   "files.list",
   "files.delete",
   "account.read",
@@ -162,6 +163,9 @@ export interface WebviewFilesListParams {
   scope?: WebviewFileScope;
 }
 
+/** Download bytes already available to the extension onto the user's device. */
+export type WebviewFilesDownloadParams = Pick<WebviewFilesUploadParams, "name" | "data" | "mimeType">;
+
 export interface WebviewFilesDeleteParams {
   id: string;
 }
@@ -245,6 +249,7 @@ export interface WebviewHostCapabilityParams {
   /** @deprecated Use the host terminal surface. */
   "terminal.session": TerminalSessionOperation;
   "files.upload": WebviewFilesUploadParams;
+  "files.download": WebviewFilesDownloadParams;
   /** @deprecated Use extension commands and owned storage. */
   "files.list": WebviewFilesListParams;
   /** @deprecated Use extension commands and owned storage. */
@@ -290,6 +295,8 @@ export interface WebviewHostCapabilityResults {
   /** @deprecated Use the host terminal surface. */
   "terminal.session": TerminalSessionResult;
   "files.upload": ExtensionBlobRef;
+  /** The browser accepted the download; completion and cancellation belong to its download UI. */
+  "files.download": void;
   /** @deprecated Use extension commands and owned storage. */
   "files.list": { files: ExtensionBlobRef[] };
   /** @deprecated Use extension commands and owned storage. */

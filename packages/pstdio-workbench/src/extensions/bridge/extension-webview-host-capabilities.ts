@@ -216,6 +216,7 @@ export const createExtensionWebviewHostCapabilities = (
       terminalCapability && ((request) => terminalCapability(request)),
     ),
     "files.upload": capability("files.upload", files && ((request) => files.upload(request))),
+    "files.download": capability("files.download", files?.download?.bind(files)),
     "files.list": capability("files.list", files && ((request) => files.list(request))),
     "files.delete": capability("files.delete", files && ((request) => files.delete(request))),
     "artifacts.read": capability("artifacts.read", artifacts && ((request) => artifacts.read(request))),

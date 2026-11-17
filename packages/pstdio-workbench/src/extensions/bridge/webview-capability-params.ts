@@ -182,6 +182,13 @@ const schemas = {
     scope: fileScope.optional(),
   }),
   "files.list": z.object({ scope: fileScope.optional() }),
+  "files.download": z.object({
+    name: identifier
+      .regex(/^[^/\\]+$/)
+      .refine((name) => name !== "." && name !== ".." && [...name].every((char) => char.charCodeAt(0) >= 32)),
+    data: binary,
+    mimeType: z.string().optional(),
+  }),
   "files.delete": z.object({ id: identifier }),
   "artifacts.read": z.discriminatedUnion("op", [
     z.object({ op: z.literal("list"), mount: identifier, prefix: z.string().optional() }),
